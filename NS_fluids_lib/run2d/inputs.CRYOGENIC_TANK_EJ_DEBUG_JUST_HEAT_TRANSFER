@@ -27,11 +27,8 @@ ns.num_species_var  = 0
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
 #
 ns.material_type    = 0 0 999
-# if make_interface_incomp==1:
 # density equation is Drho/Dt=0 in the incompressible zone.
-# if make_interface_incomp==2:
 # density equation is rhot_t+div(rho u)=0 in the incompressible zone.
-ns.make_interface_incomp=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)

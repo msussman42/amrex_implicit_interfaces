@@ -1767,7 +1767,6 @@ protected:
     static int use_lsa; 
     static int last_finest_level;
 
-    static Real pgrad_dt_factor;  
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
 
@@ -1946,11 +1945,6 @@ protected:
     static Real vinletgas;
     static Real twall;
     static Real walltemp;
-    // if make_interface_incomp==1:
-    // density equation is Drho/Dt=0 in the incompressible zone.
-    // if make_interface_incomp==2:
-    // density equation is rhot_t+div(rho u)=0 in the incompressible zone.
-    static int make_interface_incomp;
     static Vector<int> advection_order;
     static Vector<int> density_advection_order;
      // 0=Sussman and Puckett algorithm 

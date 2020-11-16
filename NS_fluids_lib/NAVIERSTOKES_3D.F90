@@ -12417,7 +12417,6 @@ END SUBROUTINE SIMP
         finest_level, &
         xlo,dx, &
         dt, &
-        make_interface_incomp, &
         maskcov,DIMS(maskcov), &
         lsnew,DIMS(lsnew), &
         csnd,DIMS(csnd), &
@@ -12427,7 +12426,7 @@ END SUBROUTINE SIMP
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         nmat,nden, &
-        pgrad_dt_factor, &
+        compressible_dt_factor, &
         pressure_select_criterion, &
         project_option)
 
@@ -12438,12 +12437,13 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
 
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: project_option
-      REAL_T, intent(in) :: pgrad_dt_factor
+      REAL_T, intent(in) :: compressible_dt_factor(nmat)
       INTEGER_T, intent(in) :: pressure_select_criterion
-      INTEGER_T, intent(in) :: nmat,nden
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -12451,7 +12451,6 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
-      INTEGER_T, intent(in) :: make_interface_incomp
 
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
@@ -12467,7 +12466,7 @@ END SUBROUTINE SIMP
       REAL_T, intent(inout) :: mdot(DIMV(mdot),num_materials_vel) 
 
       INTEGER_T i,j,k
-      INTEGER_T im,imcrit,im_weight,im_opp
+      INTEGER_T im,imcrit,im_weight
       INTEGER_T ibase
       REAL_T temperature,internal_energy,soundsqr
       REAL_T pres(nmat)
@@ -12514,12 +12513,17 @@ END SUBROUTINE SIMP
        print *,"num_state_base invalid"
        stop
       endif
-      if (pgrad_dt_factor.ge.one) then
-       ! do nothing
-      else
-       print *,"pgrad_dt_factor too small"
-       stop
-      endif
+
+      do im=1,nmat
+       if ((compressible_dt_factor(im).ge.one).and. &
+           (compressible_dt_factor(im).le.1.0D+20)) then
+        ! do nothing
+       else
+        print *,"compressible_dt_factor invalid"
+        stop
+       endif
+      enddo
+
       if (nden.eq.nmat*num_state_material) then
        ! do nothing
       else
@@ -12627,7 +12631,7 @@ END SUBROUTINE SIMP
 
 
         if ((project_option.eq.0).or. &
-            (project_option.eq.10).or. &
+            (project_option.eq.10).or. & !sync project prior to advection
             (project_option.eq.11).or. & !FSI_material_exists 2nd project
             (project_option.eq.13)) then !FSI_material_exists 1st project
 
@@ -12654,14 +12658,14 @@ END SUBROUTINE SIMP
            print *,"div_hold(1) ",div_hold(1)
            print *,"project_option ",project_option
            print *,"dt=",dt
-           print *,"make_interface_incomp ",make_interface_incomp
            print *,"nmat,nden,bfact ",nmat,nden,bfact
-           print *,"pgrad_dt_factor ",pgrad_dt_factor
            print *,"pressure_select_criterion ",pressure_select_criterion
            do im=1,nmat
             localLS(im)=lsnew(D_DECL(i,j,k),im)
             print *,"im,localLS(im) ",im,localLS(im)
             print *,"im,vfrac(im) ",im,vfrac(im)
+            print *,"im, compressible_dt_factor ", &
+                    im,compressible_dt_factor(im)
            enddo
            print *,"imcrit ",imcrit
            print *,"vfrac_solid_sum ",vfrac_solid_sum
@@ -12734,35 +12738,6 @@ END SUBROUTINE SIMP
             one_over_c2(im)=one/soundsqr
             one_over_c(im)=sqrt(one_over_c2(im))
 
-            do im_opp=1,nmat
-             if (im_opp.ne.im) then
-              if (make_interface_incomp.eq.0) then
-               ! do nothing
-              else if ((make_interface_incomp.eq.1).or. &
-                       (make_interface_incomp.eq.2)) then
-               if ((abs(localLS(im)).le.cutoff).and. & ! cutoff=2 * DXMAXLS
-                   (abs(localLS(im_opp)).le.cutoff)) then
-                one_over_c2(im)=zero
-                one_over_c(im)=zero
-               else if ((abs(localLS(im)).gt.cutoff).or. &
-                        (abs(localLS(im_opp)).gt.cutoff)) then
-                ! do nothing
-               else
-                print *,"localLS invalid"
-                stop
-               endif  
-              else
-               print *,"make_interface_incomp invalid"
-               stop
-              endif
-             else if (im_opp.eq.im) then
-              ! do nothing
-             else
-              print *,"im_opp or im invalid"
-              stop
-             endif
-            enddo ! im_opp=1,nmat
-
            else if ((fort_material_type(im).eq.0).or. &
                     (vfrac(im).eq.zero)) then
             pres(im)=zero
@@ -12799,6 +12774,8 @@ END SUBROUTINE SIMP
          if (imcrit.eq.0) then ! rigid material(s) dominate
           im_weight=imcrit
           infinite_weight=1
+
+          ! fluid material dominates
          else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
   
           if (is_rigid(nmat,imcrit).eq.0) then
@@ -12810,7 +12787,8 @@ END SUBROUTINE SIMP
             if (is_rigid(nmat,im).eq.1) then
              ! do nothing
             else if (is_rigid(nmat,im).eq.0) then
-             if ((vfrac(im).gt.zero).and.(vfrac(im).le.one+VOFTOL)) then
+             if ((vfrac(im).gt.zero).and. &
+                 (vfrac(im).le.one+VOFTOL)) then
               if (pressure_select_criterion.eq.0) then ! vol. frac.
                ! do nothing (vfrac_weight=vfrac)
               else if (pressure_select_criterion.eq.1) then ! mass frac. 
@@ -12886,12 +12864,12 @@ END SUBROUTINE SIMP
 
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
-           if ((project_option.eq.10).or. &
-               (project_option.eq.11)) then
+           if ((project_option.eq.10).or. & ! sync project prior to advection
+               (project_option.eq.11)) then ! FSI_material_exists (2nd project)
             ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
             mdot(D_DECL(i,j,k),1)=div_hold(1)/dt
            else if ((project_option.eq.0).or. &
-                    (project_option.eq.13)) then
+                    (project_option.eq.13)) then !FSI_material_exists 1st proj
             ! do nothing
            else
             print *,"project_option invalid"
@@ -12904,7 +12882,9 @@ END SUBROUTINE SIMP
             print *,"im_weight invalid"
             stop
            endif
-           if (vfrac_weight(im_weight).le.zero) then
+           if (vfrac_weight(im_weight).gt.zero) then
+            ! do nothing
+           else
             print *,"vfrac_weight(im_weight) invalid"
             stop
            endif
@@ -12913,7 +12893,9 @@ END SUBROUTINE SIMP
            if ((fort_material_type(im_weight).ge.1).and. &
                (fort_material_type(im_weight).le.MAX_NUM_EOS)) then
 
-            if (rho(im_weight).le.zero) then
+            if (rho(im_weight).gt.zero) then
+             ! do nothing
+            else
              print *,"rho(im_weight) invalid"
              stop
             endif
@@ -12922,13 +12904,13 @@ END SUBROUTINE SIMP
             csnd(D_DECL(i,j,k),2)=pres(im_weight)
 
             csound_hold=one_over_c2(im_weight)/ &
-              (pgrad_dt_factor*rho(im_weight)*dt*dt)
+              (compressible_dt_factor(im_weight)*rho(im_weight)*dt*dt)
 
              ! coeff
             csnd(D_DECL(i,j,k),1)=csound_hold
 
-            if ((project_option.eq.10).or. &
-                (project_option.eq.11)) then
+            if ((project_option.eq.10).or. & !sync project prior to advection
+                (project_option.eq.11)) then !FSI_material_exists (2nd project)
 
              if (csound_hold.eq.zero) then ! incomp
               csnd(D_DECL(i,j,k),2)=zero ! padvect
@@ -12943,7 +12925,7 @@ END SUBROUTINE SIMP
               stop
              endif
             else if ((project_option.eq.0).or. &
-                     (project_option.eq.13)) then
+                     (project_option.eq.13)) then !FSI_material_exists 1st prj
              ! do nothing
             else
              print *,"project_option invalid"
@@ -12955,11 +12937,11 @@ END SUBROUTINE SIMP
 
             csnd(D_DECL(i,j,k),1)=zero ! coeff
             csnd(D_DECL(i,j,k),2)=zero ! padvect
-            if ((project_option.eq.10).or. &
-                (project_option.eq.11)) then
+            if ((project_option.eq.10).or. & !sync project prior to advection
+                (project_option.eq.11)) then !FSI_material_exists 2nd project
              mdot(D_DECL(i,j,k),1)=div_hold(1)/dt ! localMF[DIFFUSIONRHS_MF]
             else if ((project_option.eq.0).or. &
-                     (project_option.eq.13)) then
+                     (project_option.eq.13)) then !FSI_material_exists 1st prj
              ! do nothing
             else
              print *,"project_option invalid"

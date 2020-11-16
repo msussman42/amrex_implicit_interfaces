@@ -312,7 +312,6 @@ namespace amrex{
         int* massface_index,
         int* vofface_index,
         int* ncphys,
-        int* make_interface_incomp,
         int* override_density,
         int* solvability_projection,
         int* presbc,
@@ -383,7 +382,6 @@ namespace amrex{
         int* level,
         int* finest_level,
         int* face_flag,
-        int* make_interface_incomp,
         int* local_solvability_projection,
         int* project_option,
         int* enable_spectral,
@@ -579,7 +577,6 @@ namespace amrex{
 
       void FORT_BUILD_MASK_UNSPLIT(
         int* unsplit_flag,
-        int* make_interface_incomp,
         const Real* xlo,const Real* dx,
         Real* maskunsplit,AMREX_ARLIM_P(maskunsplitlo),AMREX_ARLIM_P(maskunsplithi), 
         Real* vofls0,AMREX_ARLIM_P(vofls0lo),AMREX_ARLIM_P(vofls0hi), 

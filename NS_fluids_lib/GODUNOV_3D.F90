@@ -18605,7 +18605,6 @@ stop
        nsolveMM_FACE, &
        nprocessed, &
        tid, &
-       make_interface_incomp, &
        added_weight, &
        density_floor, &
        density_ceiling, &
@@ -18700,7 +18699,6 @@ stop
       INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
       INTEGER_T, intent(in) :: solidheat_flag
       INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: make_interface_incomp
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -18833,7 +18831,7 @@ stop
       INTEGER_T isidedonate
       INTEGER_T iside_low,iside_high
       INTEGER_T vofcomp
-      INTEGER_T im,im_opp
+      INTEGER_T im
       REAL_T mom2(SDIM)
       REAL_T xsten_MAC(-1:1,SDIM)
       REAL_T xsten_accept(-1:1,SDIM)
@@ -18945,8 +18943,7 @@ stop
       REAL_T sign_face_displace
 
       REAL_T cutoff,DXMAXLS
-      REAL_T localLS(nmat)
-      INTEGER_T all_incomp,local_incomp
+      INTEGER_T all_incomp
       REAL_T divuterm,vol_target_local
       INTEGER_T i1,j1,k1,k1lo,k1hi
       REAL_T local_cor(nmat)
@@ -19178,13 +19175,6 @@ stop
 
       if ((map_forward.ne.0).and.(map_forward.ne.1)) then
        print *,"map_forward invalid"
-       stop
-      endif
-
-      if ((make_interface_incomp.ne.0).and. &
-          (make_interface_incomp.ne.1).and. &
-          (make_interface_incomp.ne.2)) then
-       print *,"make_interface_incomp invalid"
        stop
       endif
 
@@ -20748,52 +20738,6 @@ stop
 
          divuterm=one-voltotal_depart/voltotal_target
 
-         local_incomp=0
-         if (all_incomp.eq.1) then
-          local_incomp=1
-         else if (all_incomp.eq.0) then
-          if ((make_interface_incomp.eq.1).or. & !Drho/Dt=0 incomp zone
-              (make_interface_incomp.eq.2)) then !rho_t+div(rho u) incomp zone
-            do im=1,nmat
-             localLS(im)=vofls0(D_DECL(icrse,jcrse,kcrse),nmat+im)
-            enddo
-            do im=1,nmat
-             if (abs(localLS(im)).le.cutoff) then ! cutoff=DXMAXLS
-              do im_opp=1,nmat
-               if (im.ne.im_opp) then
-                if (abs(localLS(im_opp)).le.cutoff) then
-                 local_incomp=1
-                else if (abs(localLS(im_opp)).gt.cutoff) then
-                 ! do nothing
-                else
-                 print *,"localLS invalid"
-                 stop
-                endif
-               else if (im.eq.im_opp) then
-                ! do nothing
-               else
-                print *,"im or im_opp invalid"
-                stop
-               endif
-              enddo ! im_opp=1..nmat 
-             else if (abs(localLS(im)).gt.cutoff) then ! cutoff=DXMAXLS
-              ! do nothing
-             else
-              print *,"localLS invalid"
-              stop
-             endif
-            enddo ! im=1..nmat
-          else if (make_interface_incomp.eq.0) then
-           ! do nothing
-          else
-           print *,"make_interface_incomp invalid"
-           stop
-          endif
-         else
-          print *,"all_incomp invalid"
-          stop
-         endif 
-
          do im=1,nmat
           vofcomp=(im-1)*ngeom_raw+1 
 
@@ -20859,7 +20803,7 @@ stop
            conscor(D_DECL(icrse,jcrse,kcrse),im)=local_cor(im)
           enddo
           if (dir_counter.eq.SDIM-1) then
-           if (local_incomp.eq.1) then
+           if (all_incomp.eq.1) then
             do im=1,nmat
              Fmin=vofls0(D_DECL(icrse,jcrse,kcrse),im)
              Fmax=Fmin
@@ -20886,10 +20830,10 @@ stop
              newvfrac_cor(im)=Ftest
             enddo ! im=1..nmat
             call consistent_materials(newvfrac_cor,newcen,nmat)
-           else if (local_incomp.eq.0) then
+           else if (all_incomp.eq.0) then
             ! no correction
            else
-            print *,"local_incomp invalid"
+            print *,"all_incomp invalid"
             stop
            endif
           else if ((dir_counter.eq.0).or.(dir_counter.eq.SDIM-2)) then 
@@ -20931,26 +20875,12 @@ stop
            ! else if mat_type>0 then
            !  den=massdepart/voltarget
            ! endif
-          if (local_incomp.eq.1) then
-           if (all_incomp.eq.1) then
-            vol_target_local=volmat_depart_cor(im)
-           else if (all_incomp.eq.0) then
-            if (make_interface_incomp.eq.1) then ! Drho/Dt=0
-             vol_target_local=volmat_depart_cor(im)
-            else if (make_interface_incomp.eq.2) then ! rho_t+div(rho u)=0
-             vol_target_local=volmat_target_cor(im)
-            else
-             print *,"make_interface_incomp invalid"
-             stop
-            endif
-           else
-            print *,"all_incomp invalid"
-            stop
-           endif
-          else if (local_incomp.eq.0) then
+          if (all_incomp.eq.1) then
+           vol_target_local=volmat_depart_cor(im)
+          else if (all_incomp.eq.0) then
            vol_target_local=volmat_target_cor(im)
           else
-           print *,"local_incomp invalid"
+           print *,"all_incomp invalid"
            stop
           endif
 
@@ -21476,7 +21406,6 @@ stop
        nsolveMM_FACE, &
        nprocessed, &
        tid, &
-       make_interface_incomp, &
        added_weight, &
        density_floor, &
        density_ceiling, &
@@ -21561,7 +21490,6 @@ stop
       INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
       INTEGER_T, intent(in) :: solidheat_flag
       INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: make_interface_incomp
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -21675,7 +21603,7 @@ stop
       INTEGER_T iside_part
       INTEGER_T iside_part_sten
       INTEGER_T vofcomp
-      INTEGER_T u_im,u_im_opp
+      INTEGER_T u_im
       REAL_T mom2(SDIM)
       REAL_T u_xsten_crse(-1:1,SDIM)
       REAL_T u_xsten_MAC(-1:1,SDIM)
@@ -21773,8 +21701,7 @@ stop
       INTEGER_T nsolveMM_FACE_test
 
       REAL_T cutoff,DXMAXLS
-      REAL_T localLS(nmat)
-      INTEGER_T all_incomp,local_incomp
+      INTEGER_T all_incomp
       REAL_T vol_target_local
       INTEGER_T k1lo,k1hi
       REAL_T velnode(D_DECL(-1:1,-1:1,-1:1),SDIM)
@@ -22022,13 +21949,6 @@ stop
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
-       stop
-      endif
-
-      if ((make_interface_incomp.ne.0).and. &
-          (make_interface_incomp.ne.1).and. & ! Drho/Dt=0 in incomp zone
-          (make_interface_incomp.ne.2)) then ! rho_t + div(rho u)=0 " "
-       print *,"make_interface_incomp invalid"
        stop
       endif
 
@@ -23754,52 +23674,6 @@ stop
            stop
           endif
 
-          local_incomp=0
-          if (all_incomp.eq.1) then
-           local_incomp=1
-          else if (all_incomp.eq.0) then
-           if ((make_interface_incomp.eq.1).or. & !Drho/Dt=0 incomp zone
-               (make_interface_incomp.eq.2)) then !rho_t+div(rho u) incomp zone
-            do u_im=1,nmat
-             localLS(u_im)=vofls0(D_DECL(icrse,jcrse,kcrse),nmat+u_im)
-            enddo
-            do u_im=1,nmat
-             if (abs(localLS(u_im)).le.cutoff) then ! cutoff=DXMAXLS
-              do u_im_opp=1,nmat
-               if (u_im.ne.u_im_opp) then
-                if (abs(localLS(u_im_opp)).le.cutoff) then
-                 local_incomp=1
-                else if (abs(localLS(u_im_opp)).gt.cutoff) then
-                 ! do nothing
-                else
-                 print *,"localLS invalid"
-                 stop
-                endif
-               else if (u_im.eq.u_im_opp) then
-                ! do nothing
-               else
-                print *,"u_im or u_im_opp invalid"
-                stop
-               endif
-              enddo ! u_im_opp=1..nmat 
-             else if (abs(localLS(u_im)).gt.cutoff) then ! cutoff=DXMAXLS
-              ! do nothing
-             else
-              print *,"localLS invalid"
-              stop
-             endif
-            enddo ! u_im=1..nmat
-           else if (make_interface_incomp.eq.0) then
-            ! do nothing
-           else
-            print *,"make_interface_incomp invalid"
-            stop
-           endif
-          else
-           print *,"all_incomp invalid"
-           stop
-          endif 
-
           do u_im=1,nmat
            vofcomp=(u_im-1)*ngeom_raw+1 
 
@@ -23847,26 +23721,12 @@ stop
            ! else if mat_type>0 then
            !  den=massdepart/voltarget
            ! endif
-           if (local_incomp.eq.1) then
-            if (all_incomp.eq.1) then
-             vol_target_local=volmat_depart(u_im)
-            else if (all_incomp.eq.0) then
-             if (make_interface_incomp.eq.1) then ! Drho/Dt=0
-              vol_target_local=volmat_depart(u_im)
-             else if (make_interface_incomp.eq.2) then ! rho_t+div(rho u)=0
-              vol_target_local=volmat_target(u_im)
-             else
-              print *,"make_interface_incomp invalid"
-              stop
-             endif
-            else
-             print *,"all_incomp invalid"
-             stop
-            endif
-           else if (local_incomp.eq.0) then
+           if (all_incomp.eq.1) then
+            vol_target_local=volmat_depart(u_im)
+           else if (all_incomp.eq.0) then
             vol_target_local=volmat_target(u_im)
            else
-            print *,"local_incomp invalid"
+            print *,"all_incomp invalid"
             stop
            endif
 

@@ -11,7 +11,6 @@ ns.num_divu_outer_sweeps=4
 # 0=cell
 # 1=face
 ns.face_flag=1  # staggared grid avoids checkerboard instability
-ns.make_interface_incomp=1
 
 ns.post_init_pressure_solve=1
 ns.slice_dir=1 # 0..sdim-1

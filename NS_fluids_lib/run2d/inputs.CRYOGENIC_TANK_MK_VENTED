@@ -25,11 +25,8 @@ ns.material_type_evap = 0 24 999
 
 #ns.truncate_volume_fractions = 0 0 1
 
-# if make_interface_incomp==1:
 # density equation is Drho/Dt=0 in the incompressible zone.
-# if make_interface_incomp==2:
 # density equation is rhot_t+div(rho u)=0 in the incompressible zone.
-#ns.make_interface_incomp=1
 
 # for k=0...num_divu_outer_sweeps-1
 #  S_t + u^{n+1,(k)} dot grad S=0

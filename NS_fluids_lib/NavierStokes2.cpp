@@ -1427,8 +1427,16 @@ void NavierStokes::apply_cell_pressure_gradient(
  if (presmf->nComp()!=nsolveMM)
   amrex::Error("presmf->nComp() invalid");
 
-  // old velocity before application of pressure gradient.
+  // old cell velocity before application of pressure gradient.
  MultiFab* ustar;
+
+ if (enable_spectral!=0) {
+  std::cout << "non-conservative: \n";
+  std::cout << "divup (1) rho div u , (2) p div u \n";
+  std::cout << "conservative: \n";
+  std::cout << "divup (1) 0 , (2) div (up) \n";
+  amrex::Error("upgrade space time spectral element");
+ }
 
  MultiFab* divup;
  if ((energyflag==0)|| //do not update the energy
@@ -1436,6 +1444,8 @@ void NavierStokes::apply_cell_pressure_gradient(
   ustar=getState(1,0,num_materials_vel*AMREX_SPACEDIM,cur_time_slab);
   divup=new MultiFab(grids,dmap,nsolveMM,0,
    MFInfo().SetTag("divup"),FArrayBoxFactory());
+
+  //Spectral deferred correction:
   //get grad p,div(up) instead of \pm dt grad p/rho, -dt div(up)/rho
  } else if (energyflag==2) { 
   debug_ngrow(idx_gpcell,0,101);
@@ -1626,7 +1636,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &massface_index,
     &vofface_index,
     &ncphys,
-    &make_interface_incomp,
     override_density.dataPtr(),
     &solvability_projection,
     presbc.dataPtr(),
@@ -1704,7 +1713,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
 
   // 0=use_face_pres
-  // 1=grid flag
+  // 1=grid flag (coarse/fine boundary?)
   // 2=face pressure
  if (nsolveMM_FACE!=1)
   amrex::Error("nsolveMM_FACE!=1");
@@ -1716,7 +1725,7 @@ void NavierStokes::apply_cell_pressure_gradient(
   // isweep=1 calculate cell velocity from mass weighted average of face
   // velocity.
   // isweep=2 calculate cell pressure gradient, update cell velocity,
-  //  update energy.
+  //  update density (if non conservative), update energy.
  for (int isweep=1;isweep<=2;isweep++) {
 
   if (thread_class::nthreads<1)
@@ -1838,7 +1847,6 @@ void NavierStokes::apply_cell_pressure_gradient(
      &level, 
      &finest_level,
      &face_flag,
-     &make_interface_incomp,
      &solvability_projection,
      &project_option,
      &local_enable_spectral,
@@ -1884,6 +1892,7 @@ void NavierStokes::apply_cell_pressure_gradient(
      ARLIM(divupfab.loVect()),ARLIM(divupfab.hiVect()),
      Snewfab.dataPtr(),
      ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // veldest
+      // scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
      Snewfab.dataPtr(scomp_den),
      ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // dendest
      maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
@@ -2607,7 +2616,6 @@ void NavierStokes::increment_face_velocity(
        &massface_index,
        &vofface_index,
        &ncphys,
-       &make_interface_incomp,
        override_density.dataPtr(),
        &solvability_projection,
        velbc.dataPtr(),  // presbc
@@ -2943,7 +2951,6 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &massface_index,
         &vofface_index,
         &ncphys,
-        &make_interface_incomp,
         override_density.dataPtr(),
         &solvability_projection,
         denbc.dataPtr(),  // presbc
@@ -3210,7 +3217,6 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    &level,
    &finest_level,
    &face_flag,
-   &make_interface_incomp,
    &solvability_projection,
    &project_option,
    &local_enable_spectral,
@@ -4525,7 +4531,6 @@ void NavierStokes::apply_pressure_grad(
      &massface_index,
      &vofface_index,
      &ncphys,
-     &make_interface_incomp,
      override_density.dataPtr(),
      &solvability_projection,
      presbc.dataPtr(),
@@ -6099,7 +6104,6 @@ void NavierStokes::process_potential_force_face() {
     &massface_index,
     &vofface_index,
     &ncphys,
-    &make_interface_incomp,
     override_density.dataPtr(),
     &solvability_projection,
     presbc.dataPtr(),
@@ -6357,7 +6361,6 @@ void NavierStokes::process_potential_force_cell() {
    &level, 
    &finest_level,
    &face_flag,
-   &make_interface_incomp,
    &solvability_projection,
    &local_project_option,
    &local_enable_spectral,
@@ -9362,9 +9365,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
 
- if (pgrad_dt_factor<1.0)
-  amrex::Error("pgrad_dt_factor too small");
-
  debug_ngrow(FACE_VAR_MF,0,660);
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
@@ -9381,6 +9381,14 @@ void NavierStokes::init_advective_pressure(int project_option) {
   amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
+
+ for (int im=0;im<nmat;im++) {
+  if ((compressible_dt_factor[im]>=1.0)&&
+      (compressible_dt_factor[im]<=1.0e+20)) {
+   // do nothing
+  } else
+   amrex::Error("compressible_dt_factor[im] invalid");
+ }
 
  MultiFab* denmf=getStateDen(1,cur_time_slab);  // nmat x den,temp, ...
  int nden=denmf->nComp();
@@ -9490,7 +9498,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
    &finest_level,
    xlo,dx,
    &dt_slab,
-   &make_interface_incomp,
    maskcov.dataPtr(),
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
    lsnewfab.dataPtr(),
@@ -9504,7 +9511,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
    tilelo,tilehi,
    fablo,fabhi,&bfact,
    &nmat,&nden,
-   &pgrad_dt_factor,
+   compressible_dt_factor.dataPtr(),
    &pressure_select_criterion, 
    &project_option);
 
