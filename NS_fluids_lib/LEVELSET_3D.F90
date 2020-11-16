@@ -11029,14 +11029,14 @@ stop
          LStest(im)=levelPC(D_DECL(i,j,k),im)
          if (vfrac(im).ge.VOFTOL) then
           if (is_rigid(nmat,im).eq.1) then
-           use_face_pres_cen=2  ! no div(up)
+           use_face_pres_cen=2  ! no div(up), no rho divu (if non-cons)
           else if (is_rigid(nmat,im).eq.0) then
            if (is_ice(nmat,im).eq.1) then
-            use_face_pres_cen=2 ! no div(up)
+            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
            else if (is_FSI_rigid(nmat,im).eq.1) then
-            use_face_pres_cen=2 ! no div(up)
+            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
            else if (imattype.eq.0) then
-            use_face_pres_cen=2 ! no div(up)
+            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
            else if ((imattype.ge.1).and. &
                     (imattype.le.MAX_NUM_EOS)) then
             ! do nothing
@@ -11046,7 +11046,7 @@ stop
            endif
 
            if (ignore_div_up.eq.1) then
-            use_face_pres_cen=2 ! no div(up)
+            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
            else if (ignore_div_up.eq.0) then
             ! do nothing
            else
@@ -11558,10 +11558,32 @@ stop
              endif
 
              if (temperature_primitive_variable(im).eq.0) then
+              ! do nothing, rho div u term included during advection
+             else if (temperature_primitive_variable(im).eq.1) then
+
+              if (RHO_force.ge.zero) then 
+               ! RHO_force = -dt divu
+               NEW_DENSITY=rho*(one+RHO_force)
+              else if (RHO_force.le.zero) then
+               ! d^n+1 = d^n + f * d^n+1
+               ! (1-f)d^n+1 = d^n
+               ! d^n+1=d^n/(1-f)
+               NEW_DENSITY=rho/(one-RHO_force)
+              else
+               print *,"RHO_force invalid"
+               stop
+              endif
+
+             else
+              print *,"temp prim var invalid"
+              stop
+             endif
+
+             if (local_primitive.eq.0) then
 
               internal_e=internal_e+KE_diff+Eforce_conservative
 
-             else if (temperature_primitive_variable(im).eq.1) then
+             else if (local_primitive.eq.1) then
 
               if (Eforce_primitive.ge.zero) then
                internal_e=internal_e+Eforce_primitive
@@ -11580,21 +11602,8 @@ stop
                stop
               endif
 
-              if (RHO_force.ge.zero) then 
-               ! RHO_force = -dt divu
-               NEW_DENSITY=rho*(one+RHO_force)
-              else if (RHO_force.le.zero) then
-               ! d^n+1 = d^n + f * d^n+1
-               ! (1-f)d^n+1 = d^n
-               ! d^n+1=d^n/(1-f)
-               NEW_DENSITY=rho/(one-RHO_force)
-              else
-               print *,"RHO_force invalid"
-               stop
-              endif
-
              else
-              print *,"temp prim var invalid"
+              print *,"local_primitive invalid"
               stop
              endif
 
