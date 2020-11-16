@@ -559,8 +559,6 @@ int  NavierStokes::ignore_div_up=0;
 //
 int NavierStokes::interp_presgrad_increment_from_face=1; 
 
-// TODO: if fixed_dt>0.0, then automatically reduce the surface tension
-// coefficient, truncated displacement variables where necessary, etc.
 Vector<Real> NavierStokes::compressible_dt_factor; 
 
 int  NavierStokes::disable_advection=0;
@@ -628,11 +626,6 @@ Real NavierStokes::rgasinlet=0.0;
 Real NavierStokes::slipcoeff=0.0;
 Real NavierStokes::vinletgas=0.0;
 Real NavierStokes::twall=0.1;
-// if make_interface_incomp==1:
-// density equation is Drho/Dt=0 in the incompressible zone.
-// if make_interface_incomp==2:
-// density equation is rhot_t+div(rho u)=0 in the incompressible zone.
-int  NavierStokes::make_interface_incomp=0; 
 Vector<int> NavierStokes::advection_order; // def=1
 // def=advection_order
 Vector<int> NavierStokes::density_advection_order; 
@@ -863,7 +856,6 @@ int  NavierStokes::use_lsa=0;
 Real NavierStokes::Uref=0.0;
 Real NavierStokes::Lref=0.0;
 
-Real NavierStokes::pgrad_dt_factor=1.0;
 // 0=volume fraction  1=mass fraction 2=impedance fraction
 int  NavierStokes::pressure_select_criterion=0;
 
@@ -2848,12 +2840,6 @@ NavierStokes::read_params ()
     num_state_material=SpeciesVar;  // den,Temperature
     num_state_material+=num_species_var;
 
-    pp.query("make_interface_incomp",make_interface_incomp);
-    if ((make_interface_incomp!=0)&&
-        (make_interface_incomp!=1)&&
-        (make_interface_incomp!=2))
-     amrex::Error("make_interface_incomp invalid");
-
     advection_order.resize(nmat);
     density_advection_order.resize(nmat);
     for (int i=0;i<nmat;i++) {
@@ -3566,10 +3552,6 @@ NavierStokes::read_params ()
      amrex::Error("Uref invalid");
     if (Lref<0.0)
      amrex::Error("Lref invalid");
-
-    pp.query("pgrad_dt_factor",pgrad_dt_factor);
-    if (pgrad_dt_factor<1.0)
-     amrex::Error("pgrad_dt_factor too small");
 
     pp.query("pressure_select_criterion",pressure_select_criterion);
     if ((pressure_select_criterion<0)||
@@ -4377,8 +4359,6 @@ NavierStokes::read_params ()
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
 
-     std::cout << "make_interface_incomp " << make_interface_incomp << '\n';
- 
      for (int i=0;i<nmat;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
@@ -4641,7 +4621,6 @@ NavierStokes::read_params ()
      std::cout << "Uref " << Uref << '\n';
      std::cout << "Lref " << Lref << '\n';
      std::cout << "use_lsa " << use_lsa << '\n';
-     std::cout << "pgrad_dt_factor " << pgrad_dt_factor << '\n';
      std::cout << "pressure_select_criterion " << 
        pressure_select_criterion << '\n';
 
@@ -4752,21 +4731,14 @@ NavierStokes::read_params ()
     if (some_materials_compressible()==1) {
      if (num_divu_outer_sweeps<2)
       amrex::Error("num_divu_outer_sweeps>=2 for comp materials");
+
      if (face_flag==0) {
-      if ((make_interface_incomp==0)||
-          (make_interface_incomp==1)||
-          (make_interface_incomp==2)) {
-       // do nothing
-      } else 
-       amrex::Error("make_interface_incomp invalid 1");
+      // do nothing
      } else if (face_flag==1) {
-      if ((make_interface_incomp==1)||
-          (make_interface_incomp==2)) {
-       // do nothing
-      } else
-       amrex::Error("make_interface_incomp invalid 2");
+      // do nothing
      } else
       amrex::Error("face_flag invalid");
+
     } else if (some_materials_compressible()==0) {
      // do nothing
     } else
@@ -13893,7 +13865,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &massface_index,
       &vofface_index,
       &nfluxSEM, // ncphys (nflux for advection)
-      &make_interface_incomp,
       override_density.dataPtr(),
       &solvability_projection,
       denbc.dataPtr(),  // presbc
@@ -14083,7 +14054,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &level, 
       &finest_level,
       &face_flag,
-      &make_interface_incomp,
       &solvability_projection,
       &project_option_visc,
       &local_enable_spectral,
@@ -14966,7 +14936,6 @@ NavierStokes::split_scalar_advection() {
    &nsolveMM_FACE,
    &nprocessed[tid_current],
    &tid_current,
-   &make_interface_incomp,
    added_weight.dataPtr(),
    density_floor.dataPtr(),
    density_ceiling.dataPtr(),
@@ -15474,7 +15443,6 @@ NavierStokes::unsplit_scalar_advection() {
 
   FORT_BUILD_MASK_UNSPLIT( 
    &unsplit_flag,
-   &make_interface_incomp,
    xlo,dx,
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    vofls0fab.dataPtr(),ARLIM(vofls0fab.loVect()),ARLIM(vofls0fab.hiVect()),
@@ -15786,7 +15754,6 @@ NavierStokes::unsplit_scalar_advection() {
    &nsolveMM_FACE,
    &nprocessed[tid_current],
    &tid_current,
-   &make_interface_incomp,
    added_weight.dataPtr(),
    density_floor.dataPtr(),
    density_ceiling.dataPtr(),

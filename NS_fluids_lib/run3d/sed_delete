@@ -1,7 +1,7 @@
 #!/bin/bash
 for file in inp*
 do
-sed '/RunStats.statvar/d' ${file} > ${file}_mod_
+sed '/make_interface_incomp/d' ${file} > ${file}_mod_
 cp ${file}_mod_ ${file}
 rm ${file}_mod_
 done

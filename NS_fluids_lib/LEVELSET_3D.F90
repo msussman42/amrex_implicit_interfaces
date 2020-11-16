@@ -9086,7 +9086,6 @@ stop
       ! 3=unsplit in fluid cells that neighbor a prescribed solid cell
       subroutine FORT_BUILD_MASK_UNSPLIT( &
        unsplit_flag, &
-       make_interface_incomp, &
        xlo,dx, &
        maskunsplit, &
        DIMS(maskunsplit), &
@@ -9103,7 +9102,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T unsplit_flag
-      INTEGER_T make_interface_incomp
       INTEGER_T level,finest_level
       INTEGER_T nmat
       INTEGER_T tilelo(SDIM),tilehi(SDIM)
@@ -9117,11 +9115,10 @@ stop
 
       INTEGER_T i,j,k
       INTEGER_T im
-      INTEGER_T im_opp
       INTEGER_T im_primary
 
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T all_incomp,local_incomp
+      INTEGER_T all_incomp
       INTEGER_T local_mask
       REAL_T cutoff,DXMAXLS
       REAL_T localLS(nmat)
@@ -9197,53 +9194,6 @@ stop
 
       enddo  ! im=1..nmat
 
-      if ((make_interface_incomp.ne.0).and. &
-          (make_interface_incomp.ne.1).and. & ! Drho/Dt=0 in incomp zone
-          (make_interface_incomp.ne.2)) then ! rho_t + div(rho u)=0 " "
-       print *,"make_interface_incomp invalid"
-       stop
-      endif
-
-      if (all_incomp.eq.0) then
-       if (unsplit_flag.eq.1) then ! unsplit everywhere
-        print *,"unsplit is not conservative, cannot use in shock regions"
-        stop
-       else if (unsplit_flag.eq.0) then ! never unsplit
-        ! do nothing
-       else if (unsplit_flag.eq.2) then ! unsplit in incomp zones
-        ! do nothing
-        
-        ! unsplit in fluid cells that neighbor a prescribed solid cell
-       else if (unsplit_flag.eq.3) then  
-        if (make_interface_incomp.eq.0) then
-         print *,"unsplit is not conservative, cannot use in shock regions"
-         stop
-        else if ((make_interface_incomp.eq.1).or. &
-                 (make_interface_incomp.eq.2)) then
-         ! do nothing
-        else
-         print *,"make_interface_incomp invalid"
-         stop
-        endif
-       else
-        print *,"unsplit_flag invalid"
-        stop
-       endif
-      else if (all_incomp.eq.1) then
-       if ((unsplit_flag.eq.0).or. &
-           (unsplit_flag.eq.1).or. &
-           (unsplit_flag.eq.2).or. &
-           (unsplit_flag.eq.3)) then
-        ! do nothing
-       else
-        print *,"unsplit_flag invalid"
-        stop
-       endif
-      else
-       print *,"all_incomp invalid"
-       stop
-      endif
-
        ! the band thickness in FORT_ADVECTIVE_PRESSURE is 2 * DXMAXLS
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
@@ -9259,49 +9209,6 @@ stop
        enddo
        call get_primary_material(localLS,nmat,im_primary)
 
-       local_incomp=0
-       if (all_incomp.eq.1) then
-        local_incomp=1
-       else if (all_incomp.eq.0) then
-        if ((make_interface_incomp.eq.1).or. & !Drho/Dt=0 incomp zone
-            (make_interface_incomp.eq.2)) then !rho_t+div(rho u) incomp zone
-         do im=1,nmat
-          if (abs(localLS(im)).le.cutoff) then ! cutoff=DXMAXLS
-           do im_opp=1,nmat
-            if (im.ne.im_opp) then
-             if (abs(localLS(im_opp)).le.cutoff) then
-              local_incomp=1
-             else if (abs(localLS(im_opp)).gt.cutoff) then
-              ! do nothing
-             else
-              print *,"localLS invalid"
-              stop
-             endif
-            else if (im.eq.im_opp) then
-             ! do nothing
-            else
-             print *,"im or im_opp invalid"
-             stop
-            endif
-           enddo ! im_opp=1..nmat 
-          else if (abs(localLS(im)).gt.cutoff) then ! cutoff=DXMAXLS
-           ! do nothing
-          else
-           print *,"localLS invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
-        else if (make_interface_incomp.eq.0) then
-         ! do nothing
-        else
-         print *,"make_interface_incomp invalid"
-         stop
-        endif
-       else
-        print *,"all_incomp invalid"
-        stop
-       endif 
-
        local_mask=0
 
        if (unsplit_flag.eq.0) then ! split
@@ -9309,9 +9216,9 @@ stop
        else if (unsplit_flag.eq.1) then ! unsplit everywhere
         local_mask=1
        else if (unsplit_flag.eq.2) then ! unsplit in incomp. zones
-        if (local_incomp.eq.1) then
+        if (all_incomp.eq.1) then
          local_mask=1
-        else if (local_incomp.eq.0) then
+        else if (all_incomp.eq.0) then
          if ((fort_material_type(im_primary).eq.0).or. &
              (fort_material_type(im_primary).eq.999)) then
           local_mask=1
@@ -9323,7 +9230,7 @@ stop
           stop
          endif
         else
-         print *,"local_incomp invalid"
+         print *,"all_incomp invalid"
          stop
         endif
         ! unsplit in fluid cells that neighbor a prescribed solid cell
@@ -9357,7 +9264,7 @@ stop
         stop
        endif 
 
-       maskunsplit(D_DECL(i,j,k))=local_incomp
+       maskunsplit(D_DECL(i,j,k))=local_mask
 
       enddo
       enddo
@@ -9582,7 +9489,8 @@ stop
        ! operation_flag=0 (right hand side for solver)
        ! operation_flag=1 (divergence)
        ! operation_flag=2 (mac -> cell velocity in solver or MAC_TO_CELL)
-       ! operation_flag=3 (cell pressure gradient, cell energy)
+       ! operation_flag=3 (cell pressure gradient, 
+       !     cell density (if non conservative), cell energy)
        ! operation_flag=4 (gravity and surface tension force at cell)
        ! in the face_gradients routine, operation_flag=5 (interp grad U^T)
        ! operation_flag=6 (advection)
@@ -9604,7 +9512,6 @@ stop
        level, &
        finest_level, &
        face_flag, &
-       make_interface_incomp, &
        local_solvability_projection, &
        project_option, &
        enable_spectral, &
@@ -9693,7 +9600,6 @@ stop
       INTEGER_T, intent(in) :: enable_spectral
       INTEGER_T, intent(in) :: SDC_outer_sweeps 
       INTEGER_T, intent(in) :: face_flag 
-      INTEGER_T, intent(in) :: make_interface_incomp
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: energyflag 
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
@@ -9803,8 +9709,9 @@ stop
 
       REAL_T DXMAXLS,cutoff
       INTEGER_T all_incomp
-      INTEGER_T local_primitive,local_incomp
+      INTEGER_T local_primitive
       REAL_T Eforce_conservative,Eforce_primitive
+      REAL_T RHO_force  ! -dt div u
       REAL_T cell_pressure
       REAL_T KE_diff
 
@@ -9816,7 +9723,7 @@ stop
       INTEGER_T veldir
       INTEGER_T veldir_left
       INTEGER_T veldir_right
-      INTEGER_T im,im_opp
+      INTEGER_T im
       INTEGER_T vofcomp
       INTEGER_T sidecomp,ibase
       INTEGER_T ii,jj,kk
@@ -9830,7 +9737,9 @@ stop
       REAL_T AZL,AZR
       REAL_T pgrad
       REAL_T VOLTERM,hx,RR
-      REAL_T dencell,dencellgrav,rho
+      REAL_T dencell,dencellgrav
+      REAL_T rho
+      REAL_T NEW_DENSITY
       REAL_T TEMPERATURE,internal_e
       REAL_T NEW_TEMPERATURE
       REAL_T CC,CC_DUAL,MSKDV,MSKRES,MDOT,divu,dp
@@ -9847,6 +9756,8 @@ stop
       REAL_T pfacetenright(2)
       REAL_T pfaceten(2)
       REAL_T pres_face(2)
+      REAL_T GP_CEN_HOLD(SDIM)
+      REAL_T GP_CEN_OVER_RHO_HOLD(SDIM)
 
        ! 0=no gp or div(up)
        ! 1=no gp but div(up)
@@ -9982,12 +9893,6 @@ stop
        print *,"local_solvability_projection invalid"
        stop
       endif
-      if ((make_interface_incomp.ne.0).and. &
-          (make_interface_incomp.ne.1).and. &
-          (make_interface_incomp.ne.2)) then
-       print *,"make_interface_incomp invalid"
-       stop
-      endif
 
       do im=1,nmat
        imattype=fort_material_type(im)
@@ -10095,7 +10000,9 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.3) then ! cell grad p, cell energy
+       ! cell grad p, 
+       ! cell density (if non-conservative), cell energy
+      else if (operation_flag.eq.3) then 
  
        if (ncomp_veldest.ge. &
            num_materials_vel*SDIM+num_state_material*nmat) then
@@ -10352,7 +10259,9 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.3) then ! gradp^cell, div(up)
+        ! gradp^cell, div(up)
+        ! future: p div u, rho div u
+      else if (operation_flag.eq.3) then 
        if (homflag.ne.0) then
         print *,"homflag invalid"
         stop
@@ -11108,7 +11017,11 @@ stop
 
          ! note, in FORT_BUILD_CONSERVE, if 
          ! temperature_primitive_variable==1,
-         ! then (rho T) is advected instead of (rho cv T + rho u dot u/2)
+         ! then 
+         ! (1) (rho T) is advected instead of (rho cv T + rho u dot u/2)
+         ! (2) rho_t + u dot grad rho=0 instead of
+         !     rho_t + div(rho u)=0
+         ! 
         do im=1,nmat
          imattype=fort_material_type(im)
          vofcomp=(im-1)*ngeom_recon+1
@@ -11161,55 +11074,26 @@ stop
            print *,"is_rigid(nmat,im) invalid"
            stop
           endif 
-         endif ! vfrac(im).ge.voftol
+         else if (abs(vfrac(im)).le.VOFTOL) then
+          ! do nothing
+         else
+          print *,"vfrac(im) invalid (1) FORT_MAC_TO_CELL op_flag==3"
+          stop
+         endif 
         enddo ! im=1..nmat
 
         local_primitive=0
-        local_incomp=0
         if (all_incomp.eq.1) then
-         local_incomp=1
          local_primitive=1
         else if (all_incomp.eq.0) then
-         if ((make_interface_incomp.eq.1).or. &
-             (make_interface_incomp.eq.2)) then
-          do im=1,nmat
-           if (abs(LStest(im)).le.cutoff) then ! cutoff=DXMAXLS
-            do im_opp=1,nmat
-             if (im.ne.im_opp) then
-              if (abs(LStest(im_opp)).le.cutoff) then ! cutoff=DXMAXLS
-               local_incomp=1
-              else if (abs(LStest(im_opp)).gt.cutoff) then
-               ! do nothing
-              else
-               print *,"localLS invalid"
-               stop
-              endif
-             else if (im.eq.im_opp) then
-              ! do nothing
-             else
-              print *,"im or im_opp invalid"
-              stop
-             endif
-            enddo ! im_opp=1..nmat 
-           else if (abs(LStest(im)).gt.cutoff) then ! cutoff=DXMAXLS
-            ! do nothing
-           else
-            print *,"LStest invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-         else if (make_interface_incomp.eq.0) then
-          ! do nothing
-         else
-          print *,"make_interface_incomp invalid"
-          stop
-         endif
+         ! do nothing
         else
          print *,"all_incomp invalid"
          stop
         endif 
+
         do im=1,nmat
-         if (LStest(im).ge.zero) then
+         if (vfrac(im).ge.VOFTOL) then
           if (temperature_primitive_variable(im).eq.1) then
            local_primitive=1
           else if (temperature_primitive_variable(im).eq.0) then
@@ -11218,10 +11102,10 @@ stop
            print *,"temperature_primitive_variable(im) invalid"
            stop
           endif
-         else if (LStest(im).lt.zero) then
+         else if (abs(vfrac(im)).le.VOFTOL) then
           ! do nothing
          else
-          print *,"LStest(im) invalid"
+          print *,"vfrac(im) invalid (2) FORT_MAC_TO_CELL op_flag==3"
           stop
          endif
         enddo ! im=1..nmat
@@ -11230,6 +11114,8 @@ stop
         im_vel=1
         Eforce_conservative=zero
         Eforce_primitive=zero
+        RHO_force=zero
+
         cell_pressure=pold(D_DECL(i,j,k),im_vel)
         if (cell_pressure.lt.zero) then
          cell_pressure=zero
@@ -11348,7 +11234,9 @@ stop
          endif
 
          dencell=masscell/VOLTERM
-         if (dencell.le.zero) then
+         if (dencell.gt.zero) then
+          ! do nothing
+         else
           print *,"dencell invalid"
           stop
          endif
@@ -11446,6 +11334,67 @@ stop
           use_face_pres_cen=0
          endif
 
+         if (energyflag.eq.0) then
+          ! do nothing
+         else if (energyflag.eq.1) then
+          im_vel=1
+
+          if (all_incomp.eq.0) then
+
+           RHO_force=RHO_force- &
+            dt*(aface(2)*uface(2,im_vel)- &
+                aface(1)*uface(1,im_vel))/VOLTERM
+
+           Eforce_primitive=Eforce_primitive- &
+            dt*(aface(2)*uface(2,im_vel)- &
+                aface(1)*uface(1,im_vel))*cell_pressure/ &
+               (dencell*VOLTERM)
+           Eforce_conservative=Eforce_conservative- &
+            dt*(aface(2)*uface(2,im_vel)*pres_face(2)- &
+                aface(1)*uface(1,im_vel)*pres_face(1))/ &
+               (dencell*VOLTERM)
+
+          else if (all_incomp.eq.1) then
+           ! do nothing
+          else
+           print *,"all_incomp invalid"
+           stop
+          endif
+         else if (energyflag.eq.2) then
+          im_vel=1
+          if (all_incomp.eq.0) then
+
+           RHO_force=RHO_force+ &
+            (aface(2)*uface(2,im_vel)- &
+             aface(1)*uface(1,im_vel))/VOLTERM
+
+           Eforce_primitive=Eforce_primitive+ &
+            (aface(2)*uface(2,im_vel)- &
+             aface(1)*uface(1,im_vel))*cell_pressure/VOLTERM
+           Eforce_conservative=Eforce_conservative+ &
+            (aface(2)*uface(2,im_vel)*pres_face(2)- &
+             aface(1)*uface(1,im_vel)*pres_face(1))/VOLTERM
+
+          else if (all_incomp.eq.1) then
+           ! do nothing
+          else
+           print *,"all_incomp invalid"
+           stop
+          endif
+         else
+          print *,"energyflag invalid"
+          stop
+         endif
+
+         GP_CEN_HOLD(dir+1)=(pres_face(2)-pres_face(1))/hx
+         GP_CEN_OVER_RHO_HOLD(dir+1)=GP_CEN_HOLD(dir+1)/dencell
+
+        enddo ! dir=0..sdim-1 (operation_flag.eq.3)  (grad p)_CELL, div(up)
+
+         ! replace average MAC velocity with less dissipative
+         !  ustar- gp^cell ?
+        do dir=0,SDIM-1
+
          ! do not overwrite veldest with (un-grad p)^Cell
          if ((use_face_pres_cen.eq.0).or. &
              (use_face_pres_cen.eq.1)) then 
@@ -11468,7 +11417,7 @@ stop
            im_vel=1
            velcomp=dir+1
 
-           dp=dt*(pres_face(2)-pres_face(1))/(dencell*hx)
+           dp=dt*GP_CEN_OVER_RHO_HOLD(velcomp)
            veldest(D_DECL(i,j,k),velcomp)=ustar(D_DECL(i,j,k),velcomp)-dp
 
            if (1.eq.0) then
@@ -11485,7 +11434,7 @@ stop
 
            im_vel=1
            velcomp=dir+1
-           ustar(D_DECL(i,j,k),velcomp)=(pres_face(2)-pres_face(1))/hx
+           ustar(D_DECL(i,j,k),velcomp)=GP_CEN_HOLD(velcomp)
 
           else
            print *,"energyflag invalid"
@@ -11505,47 +11454,7 @@ stop
           print *,"level,finest_level ",level,finest_level
          endif
 
-         if (energyflag.eq.0) then
-          ! do nothing
-         else if (energyflag.eq.1) then
-          im_vel=1
-
-          if (local_incomp.eq.0) then
-           Eforce_primitive=Eforce_primitive- &
-            dt*(aface(2)*uface(2,im_vel)- &
-                aface(1)*uface(1,im_vel))*cell_pressure/ &
-               (dencell*VOLTERM)
-           Eforce_conservative=Eforce_conservative- &
-            dt*(aface(2)*uface(2,im_vel)*pres_face(2)- &
-                aface(1)*uface(1,im_vel)*pres_face(1))/ &
-               (dencell*VOLTERM)
-          else if (local_incomp.eq.1) then
-           ! do nothing
-          else
-           print *,"local_incomp invalid"
-           stop
-          endif
-         else if (energyflag.eq.2) then
-          im_vel=1
-          if (local_incomp.eq.0) then
-           Eforce_primitive=Eforce_primitive+ &
-            (aface(2)*uface(2,im_vel)- &
-             aface(1)*uface(1,im_vel))*cell_pressure/VOLTERM
-           Eforce_conservative=Eforce_conservative+ &
-            (aface(2)*uface(2,im_vel)*pres_face(2)- &
-             aface(1)*uface(1,im_vel)*pres_face(1))/VOLTERM
-          else if (local_incomp.eq.1) then
-           ! do nothing
-          else
-           print *,"local_incomp invalid"
-           stop
-          endif
-         else
-          print *,"energyflag invalid"
-          stop
-         endif
-
-        enddo ! dir=0..sdim-1 (operation_flag.eq.3)  (grad p)_CELL, div(up)
+        enddo ! dir=0..sdim-1
 
         im_vel=1
         rhs(D_DECL(i,j,k),im_vel)=zero
@@ -11559,6 +11468,7 @@ stop
          if ((use_face_pres_cen.eq.0).or. &
              (use_face_pres_cen.eq.2)) then
 
+          RHO_force=zero
           Eforce_conservative=zero
           Eforce_primitive=zero
           rhs(D_DECL(i,j,k),im_vel)=zero
@@ -11575,7 +11485,8 @@ stop
            stop
           endif
 
-          if (energyflag.eq.1) then ! update the temperature
+           ! update the density (if non conservative) and temperature
+          if (energyflag.eq.1) then 
 
            do im=1,nmat
 
@@ -11592,8 +11503,12 @@ stop
              imattype=fort_material_type(im)
 
              ibase=(im-1)*num_state_material
-            
+           
+              ! dendest is Snewfab.dataPtr(scomp_den) 
+
              rho=dendest(D_DECL(i,j,k),ibase+1)
+             NEW_DENSITY=rho
+
              TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)
 
              if (rho.gt.zero) then
@@ -11642,11 +11557,42 @@ stop
               stop
              endif
 
-
              if (temperature_primitive_variable(im).eq.0) then
+
               internal_e=internal_e+KE_diff+Eforce_conservative
+
              else if (temperature_primitive_variable(im).eq.1) then
-              internal_e=internal_e+Eforce_primitive
+
+              if (Eforce_primitive.ge.zero) then
+               internal_e=internal_e+Eforce_primitive
+              else if (Eforce_primitive.le.zero) then
+               ! e^n+1 = e^n + f e^n+1/e^n
+               ! (1-f/e^n)e^n+1 = e^n
+               internal_e=internal_e/(one-Eforce_primitive/internal_e)
+              else
+               print *,"Eforce_primitive invalid"
+               stop
+              endif
+              if (internal_e.gt.zero) then
+               ! do nothing
+              else
+               print *,"internal_e invalid"
+               stop
+              endif
+
+              if (RHO_force.ge.zero) then 
+               ! RHO_force = -dt divu
+               NEW_DENSITY=rho*(one+RHO_force)
+              else if (RHO_force.le.zero) then
+               ! d^n+1 = d^n + f * d^n+1
+               ! (1-f)d^n+1 = d^n
+               ! d^n+1=d^n/(1-f)
+               NEW_DENSITY=rho/(one-RHO_force)
+              else
+               print *,"RHO_force invalid"
+               stop
+              endif
+
              else
               print *,"temp prim var invalid"
               stop
@@ -11669,7 +11615,20 @@ stop
               print *,"NEW_TEMPERATURE must be positive"
               stop
              endif
-            endif ! vfrac(im)>voftol
+
+             if (NEW_DENSITY.gt.zero) then
+              dendest(D_DECL(i,j,k),ibase+1)=NEW_DENSITY
+             else
+              print *,"NEW_DENSITY must be positive"
+              stop
+             endif
+
+            else if (abs(vfrac(im)).le.VOFTOL) then
+             ! do nothing
+            else
+             print *,"vfrac(im) invalid"
+             stop
+            endif 
            enddo ! im=1..nmat
 
           else if (energyflag.eq.2) then ! for spectral method
@@ -12501,7 +12460,6 @@ stop
        massface_index, &
        vofface_index, &
        ncphys, &  ! nflux for advection
-       make_interface_incomp, &
        override_density, &
        solvability_projection, &
        presbc_in, &  ! denbc for advection
@@ -12606,7 +12564,6 @@ stop
       INTEGER_T, intent(in) :: massface_index
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
-      INTEGER_T, intent(in) :: make_interface_incomp
       INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: solvability_projection
       REAL_T, intent(in) :: dt,time,beta,visc_coef
@@ -12773,7 +12730,7 @@ stop
       INTEGER_T partid_solid
       INTEGER_T partid_prescribed
       INTEGER_T partid_check
-      INTEGER_T all_incomp,local_incomp
+      INTEGER_T all_incomp
       REAL_T cutoff
       REAL_T local_tension_force
       INTEGER_T typeleft,typeright,typeface
@@ -12895,13 +12852,6 @@ stop
       if ((solvability_projection.ne.0).and. &
           (solvability_projection.ne.1)) then
        print *,"solvability_projection invalid"
-       stop
-      endif
-
-      if ((make_interface_incomp.ne.0).and. &
-          (make_interface_incomp.ne.1).and. &
-          (make_interface_incomp.ne.2)) then
-       print *,"make_interface_incomp invalid"
        stop
       endif
 
@@ -13409,8 +13359,7 @@ stop
           stop
          endif
 
-          ! set local_incomp, LSleft, LSright, localLS, xmac
-         local_incomp=-1
+          ! set LSleft, LSright, localLS, xmac
          if ((operation_flag.eq.2).or. &
              (operation_flag.eq.3).or. &
              (operation_flag.eq.4).or. &
@@ -13429,49 +13378,6 @@ stop
           do dir2=1,SDIM
            xmac(dir2)=xstenMAC(0,dir2)
           enddo
-
-          local_incomp=0
-          if (all_incomp.eq.1) then
-           local_incomp=1
-          else if (all_incomp.eq.0) then
-           if ((make_interface_incomp.eq.1).or. &
-               (make_interface_incomp.eq.2)) then
-            do im=1,nmat
-             if (abs(localLS(im)).le.cutoff) then ! cutoff=DXMAXLS
-              do im_opp=1,nmat
-               if (im.ne.im_opp) then
-                if (abs(localLS(im_opp)).le.cutoff) then ! cutoff=DXMAXLS
-                 local_incomp=1
-                else if (abs(localLS(im_opp)).gt.cutoff) then
-                 ! do nothing
-                else
-                 print *,"localLS invalid"
-                 stop
-                endif
-               else if (im.eq.im_opp) then
-                ! do nothing
-               else
-                print *,"im or im_opp invalid"
-                stop
-               endif
-              enddo ! im_opp=1..nmat 
-             else if (abs(localLS(im)).gt.cutoff) then ! cutoff=DXMAXLS
-              ! do nothing
-             else
-              print *,"localLS invalid"
-              stop
-             endif
-            enddo ! im=1..nmat
-           else if (make_interface_incomp.eq.0) then
-            ! do nothing
-           else
-            print *,"make_interface_incomp invalid"
-            stop
-           endif
-          else
-           print *,"all_incomp invalid"
-           stop
-          endif 
 
          else if ((operation_flag.eq.0).or. &
                   ((operation_flag.ge.6).and. &
@@ -13847,15 +13753,14 @@ stop
                   print *,"face_flag invalid"
                   stop
                  endif
-                 if (local_incomp.eq.1) then
+                 if (all_incomp.eq.1) then
                   velcomp=1
                   velmaterial=local_vel(1)
-                 else if (local_incomp.eq.0) then
+                 else if (all_incomp.eq.0) then
                   velcomp=dir+1
                   velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
                  else
-                  print *,"local_incomp or "
-                  print *,"interp_vel_increment_from_cell invalid"
+                  print *,"all_incomp invalid"
                   stop
                  endif 
                  ! called after advection to update u^{advect,MAC}
@@ -13864,18 +13769,18 @@ stop
                   print *,"face_flag invalid"
                   stop
                  endif
-                 if ((local_incomp.eq.1).or. &
+                 if ((all_incomp.eq.1).or. &
                      (interp_vel_increment_from_cell.eq.0)) then
                   velcomp=1
                   velmaterial=local_vel(1) ! UMAC^{ADVECT}
-                 else if ((local_incomp.eq.0).and. &
+                 else if ((all_incomp.eq.0).and. &
                           (interp_vel_increment_from_cell.eq.1)) then
                       ! UMAC^{ADVECT}=UMAC^n + 
                       !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
                   velcomp=dir+1
                   velmaterial=local_vel_old(1)+vel(D_DECL(ic,jc,kc),velcomp)
                  else
-                  print *,"local_incomp or "
+                  print *,"all_incomp or "
                   print *,"interp_vel_increment_from_cell invalid"
                   stop
                  endif
@@ -14130,14 +14035,7 @@ stop
 
           if (face_flag.eq.1) then
 
-           if (local_incomp.eq.1) then
-            use_face_pres=one  ! div(up) ok, but not gp
-           else if (local_incomp.eq.0) then
-            use_face_pres=one  ! div(up) ok, but not gp
-           else
-            print *,"local_incomp invalid"
-            stop
-           endif
+           use_face_pres=one  ! div(up) ok, but not gp
  
           else if (face_flag.eq.0) then
            use_face_pres=three  ! div(up) and gp ok.

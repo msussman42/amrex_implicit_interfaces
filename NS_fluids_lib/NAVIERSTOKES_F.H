@@ -169,7 +169,6 @@ extern "C" {
      int* finest_level,
      const Real* xlo,const Real* dx,
      Real* dt,
-     int* make_interface_incomp,
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
      Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
      Real* csound,AMREX_ARLIM_P(csoundlo),AMREX_ARLIM_P(csoundhi),
@@ -180,7 +179,7 @@ extern "C" {
      const int* fablo,const int* fabhi,
      int* bfact,
      int* nmat,int* nden,
-     Real* pgrad_dt_factor,
+     Real* compressible_dt_factor,
      int* pressure_select_criterion,
      int* project_option);
 

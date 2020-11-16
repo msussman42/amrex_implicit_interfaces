@@ -20,7 +20,7 @@ geometry.prob_lo   = 0.0 0.0
 geometry.prob_hi   = 0.125  0.5   
 geometry.is_periodic = 0 0 # 0 0 = RZ  0 0 0 = XYZ
 ns.projection_pressure_scale=1.0e+8
-ns.pgrad_dt_factor=1.0
+ns.compressible_dt_factor=1.0 1.0 1.0
 # 0: use volume fraction
 # 1: use mass fraction
 ns.pressure_select_criterion=0

@@ -10926,18 +10926,19 @@ void NavierStokes::multiphase_project(int project_option) {
    NavierStokes& ns_level=getLevel(ilev);
 
      // presBILINEAR2 and get_new_data(Umac_type+dir) are inputs.
-     // Update cell velocity, total Energy, and internal energy.
+     // Update cell velocity, density (if non-conservative),
+     // total Energy, and internal energy.
      // initializes ns_level.conservative_energy_mask
 
      // (multiphase_project)
-     // If update_energy=1, then E,T,consmask updated.
+     // If update_energy=1, then rho (if non-cons),E,T,consmask updated.
      // Copies UMAC to Umac_new: "save_to_macvel_state(UMAC_MF)"
    int idx_gpcell=-1;
    int idx_divup=-1;
    int update_energy=0;
    if ((project_option==0)||
        (project_option==13)) { //FSI_material_exists(1st project)
-    update_energy=1;
+    update_energy=1; // update temperature and density (if non-cons)
    } else if ((project_option==1)||   //initial project
   	      (project_option==10)||  //sync project prior to advection
 	      (project_option==11)) { //FSI_material_exists(2nd project)
