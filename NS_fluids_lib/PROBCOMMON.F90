@@ -366,8 +366,20 @@ implicit none
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
+      subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
+         pres_hydrostatic,rho_hydrostatic, &
+         xpos, &
+         gravity_normalized, &
+         gravity_dir_parm)
+      REAL_T, intent(inout) :: rho_hydrostatic
+      REAL_T, intent(inout) :: pres_hydrostatic
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      end subroutine TEMPLATE_correct_pres_rho_hydrostatic
+        
       subroutine TEMPLATE_hydro_pressure_density( &
-                        xpos,rho,pres,from_boundary_hydrostatic)
+           xpos,rho,pres,from_boundary_hydrostatic)
       REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(inout) :: rho
       REAL_T, intent(inout) :: pres
@@ -585,6 +597,8 @@ implicit none
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
       PROCEDURE(TEMPLATE_hydro_pressure_density), POINTER :: &
               SUB_hydro_pressure_density
+      PROCEDURE(TEMPLATE_correct_pres_rho_hydrostatic), POINTER :: &
+              SUB_correct_pres_rho_hydrostatic
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS

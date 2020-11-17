@@ -307,6 +307,7 @@ stop
       SUB_nucleation=>STUB_nucleation
       SUB_CFL_HELPER=>STUB_CFL_HELPER
       SUB_hydro_pressure_density=>STUB_hydro_pressure_density
+      SUB_correct_pres_rho_hydrostatic=>STUB_correct_pres_rho_hydrostatic
       SUB_ASSIMILATE=>STUB_ASSIMILATE
       SUB_SUMINT=>STUB_SUMINT
       
@@ -357,6 +358,8 @@ stop
        SUB_VEL_BC=>CRYOGENIC_TANK_MK_VEL_BC
        SUB_PRES_BC=>CRYOGENIC_TANK_MK_PRES_BC
        SUB_STATE_BC=>CRYOGENIC_TANK_MK_STATE_BC
+       SUB_correct_pres_rho_hydrostatic=> &
+              CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic
        SUB_HEATSOURCE=>CRYOGENIC_TANK_MK_HEATSOURCE
 
       else if (probtype.eq.424) then
@@ -479,6 +482,7 @@ stop
        SUB_nucleation=>NULL()
        SUB_CFL_HELPER=>NULL()
        SUB_hydro_pressure_density=>NULL()
+       SUB_correct_pres_rho_hydrostatic=>NULL()
       endif
       
       global_pressure_scale=one

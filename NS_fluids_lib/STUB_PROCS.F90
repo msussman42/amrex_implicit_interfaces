@@ -590,6 +590,22 @@ pres=zero
 return
 end subroutine STUB_hydro_pressure_density
 
+
+subroutine STUB_correct_pres_rho_hydrostatic( &
+  pres_hydrostatic,rho_hydrostatic, &
+  xpos, &
+  gravity_normalized, &
+  gravity_dir_parm)
+IMPLICIT NONE
+
+REAL_T, intent(inout) :: rho_hydrostatic
+REAL_T, intent(inout) :: pres_hydrostatic
+REAL_T, intent(in) :: xpos(SDIM)
+REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
+INTEGER_T, intent(in) :: gravity_dir_parm
+
+end subroutine STUB_correct_pres_rho_hydrostatic
+
 subroutine STUB_ASSIMILATE( &
   assimilate_in,assimilate_out,i,j,k,cell_flag)
 use probcommon_module
