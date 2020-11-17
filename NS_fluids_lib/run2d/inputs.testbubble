@@ -134,7 +134,7 @@ ns.use_lsa=0
 # U^2=50/(1 L 0.0025)
 ns.tension        = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
-ns.sum_interval   = -1     # default 1
+ns.sum_interval   = 1     # default 1
 ns.usekluge       = 0
 
 ns.axis_dir=0

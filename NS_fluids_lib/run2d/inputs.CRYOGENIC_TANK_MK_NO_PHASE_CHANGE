@@ -20,15 +20,12 @@ ns.num_species_var  = 1
 # 24 => compressible 
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
-ns.material_type    = 0 24 999
+#ns.material_type    = 0 24 999
+ns.material_type    = 0 0 999
+ns.material_type_evap = 0 24 999
+#ns.override_density=0 1 0 # needed if incomp and phase change and vented
+ns.override_density=0 0 0
 
-# density equation is Drho/Dt=0 in the incompressible zone.
-# density equation is rhot_t+div(rho u)=0 in the incompressible zone.
-# for k=0...num_divu_outer_sweeps-1
-#  S_t + u^{n+1,(k)} dot grad S=0
-#  rho^{n+1}(u* - u_adv)/dt = div (2 mu D^*) - dt grad p^{n+1,(k)}
-#  div (1/rho) grad p^{n+1,(k+1)}=rho c^2 (p^{n+1,(k+1)}-p^adv)/dt
-# endfor
 ns.num_divu_outer_sweeps=2
 
 # Solid defifnition for FSI
@@ -36,13 +33,6 @@ ns.num_divu_outer_sweeps=2
 ns.FSI_flag         = 0 0 1
 
 solvability_projection = 0  # Compressible gas
-
-# temperature_primitive_variable=0:
-#   (rho E)_{t} + div (rho u E) = 0  (energy advection)
-#   E=1/2  u dot u + e  e=e(T)
-# temperature_primitive_variable=1:
-#   (rho T)_{t} + div (rho u T) = 0  (energy advection)
-ns.temperature_primitive_variable = 1 1 1
 
 # Coordinate origin is at the center of the tank
 ns.xblob            = 0.1016 # Tank cavity radius
@@ -69,7 +59,7 @@ amr.n_cell          = 16 64
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 16
+amr.max_grid_size   = 64
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4  # number of buffer cells in error est 
@@ -86,7 +76,7 @@ ns.change_max       = 1.1
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
 #0=only at t=0 1=always account for sound speed 2=ignore
-ns.shock_timestep=2 1 2 
+ns.shock_timestep=2 2 2 
 
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
@@ -96,13 +86,13 @@ ns.shock_timestep=2 1 2
 # output file -2=> tecplot -1=> plot files (visit or paraview)
 ns.visual_option    =-2
 
-amr.check_int       = 1000    # number of timesteps between checkpoints
+amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-amr.plot_int        = 10      # number of timesteps between plot files
+amr.plot_int        = 100      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
-ns.sum_interval     = 100     # timesteps between computing mass 
+ns.sum_interval     = 10     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -119,6 +109,7 @@ ns.v=0
 ns.gravity          = 9.8
 ns.gravity_dir      = 2
 ns.invert_gravity   = 0
+ns.gravity_potential_form=0
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
 ns.vinletgas        = 0.0
@@ -152,7 +143,7 @@ ns.speciesconst= 1.0 1.0 1.0
 # Diffusion coefficient [m^2/s]
 # Not used ???
 # liquid, vapor, solid
-ns.speciesviscconst = 0.0 1E-07 0.0
+ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 
 # 1. input to the Schrage velocity model: Temperature, gas mixture density,
 #    mass fraction, liquid density
@@ -163,7 +154,7 @@ ns.species_evaporation_density=1.0
 
 # Specific heat capacity [J/(kg.K)]
 ns.stiffCP=1300 2400.0          1500
-ns.stiffCV=1300 2358.4276869092 1500  #CV used in CRYOGENIC_TANK_MK to calc CP
+ns.stiffCV=1300 2358.4276869092 1500  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
 ns.heatviscconst=0.075 0.00375 0.189
@@ -187,10 +178,12 @@ ns.tension=0.0 0.0 0.0
 # 12 13 23 21 31 32
 # 12 liquid->vapor (boiling)
 # 21 vapor->liquid (condensation)
+#ns.latent_heat=1.42E+05 0.0 0.0 0.0 0.0 0.0
 ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
-ns.distribute_from_target= 1 0 0 0 0 0
+#ns.distribute_from_target= 1 0 0 0 0 0
+ns.distribute_from_target= 0 0 0 0 0 0
 
 # MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
@@ -223,23 +216,36 @@ ns.hi_bc          = 3 3
 ns.temperature_lo_bc = 3 3
 ns.temperature_hi_bc = 3 3
 
+# Pressure at the top based on the initial compressible gas pressure [Pa]
+ns.outflow_pressure=65606.52
 
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0
 ns.face_flag=1
+ns.interp_vel_increment_from_cell=0
+ns.interp_presgrad_increment_from_face=1
+ns.compressible_dt_factor=2.0 2.0 2.0
+# temperature_primitive_variable=0:
+#   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
+#   rho_t + div (rho u) =0
+#   E=1/2  u dot u + e  e=e(T)
+# temperature_primitive_variable=1:
+#   (rho T)_{t} + div (rho u T) = -p div u  (energy advection)
+#   rho_t + u dot grad rho = -rho div u
+ns.temperature_primitive_variable=1 1 1
 
 # Embedded boundary BC
 # 0=diffuse in solid 1=dirichlet 2=neumann
 ns.solidheat_flag   =0
 
-# Heat flux from band heater [W/m^2]
-ns.xblob3 = 61.6726637934 # -q dot n
+# Heat flux from band heater
+ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 0
+ns.continuous_mof   = 2 # 0=MOF 2=CMOF
 ns.FD_curv_interp   = 1
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 

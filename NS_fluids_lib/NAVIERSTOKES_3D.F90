@@ -11534,14 +11534,16 @@ END SUBROUTINE SIMP
 
        im=1
 
+        ! surface tension and maybe gravity
+       gravity_increment= &
+          denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
+
        if (gravity_potential_form.eq.1) then
-        gravity_increment= &
-           denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
+        ! do nothing
        else if (gravity_potential_form.eq.0) then
-        gravity_increment=zero
         if (dir+1.eq.gravity_dir_parm) then
-         gravity_increment= &
-           -dt*gravity_normalized*local_cut
+         gravity_increment=gravity_increment- &
+           dt*gravity_normalized*local_cut
         endif
        else
         print *,"gravity_potential_form invalid"
@@ -11636,16 +11638,17 @@ END SUBROUTINE SIMP
          stop
         endif
 
+        gravity_increment=denface_gravity*grav_component
+
         if (gravity_potential_form.eq.1) then
 
-         gravity_increment=denface_gravity*grav_component
+         ! do nothing
 
         else if (gravity_potential_form.eq.0) then
 
-         gravity_increment=zero
          if (dir+1.eq.gravity_dir_parm) then
-          gravity_increment= &
-            -dt*gravity_normalized
+          gravity_increment=gravity_increment- &
+            dt*gravity_normalized
          endif
 
         else
