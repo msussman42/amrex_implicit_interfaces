@@ -486,22 +486,12 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK_MK
 !***********************************************
 ! called by the boundary condition routine
 ! might be called at initialization, so put a placeholder pressure here.
-subroutine CRYOGENIC_TANK_MK_PRES(x,t,LS,PRES,nmat)
+subroutine CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
-
-if (num_materials.eq.nmat) then
- ! do nothing
-else
- print *,"nmat invalid"
- stop
-endif
 
 !PRES=TANK_MK_INITIAL_GAS_PRESSURE
 if(fort_material_type(2).eq.0) then
@@ -545,7 +535,31 @@ else
 endif
 
 return 
+end subroutine CRYOGENIC_TANK_MK_PRES_UTIL
+
+
+subroutine CRYOGENIC_TANK_MK_PRES(x,t,LS,PRES,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: PRES
+
+if (num_materials.eq.nmat) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+call CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES)
+
+return 
 end subroutine CRYOGENIC_TANK_MK_PRES
+
 
 
 subroutine CRYOGENIC_TANK_MK_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
@@ -598,7 +612,7 @@ if ((num_materials.eq.3).and. &
    else
     print *,"material type invalid for density setup!"
     stop
-   endif ! mater_type
+   endif ! material_type
   else
    STATE(ibase+1)=fort_denconst(im)
   endif
@@ -866,10 +880,10 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   ! in liquid, the heater band is wetting
     ! right side of domain
   heat_source=zero
-  if ((abs(xsten(-1,1)).lt.TANK_MK_HEATER_R).and.&
-      (abs(xsten(1,1)).gt.TANK_MK_HEATER_R).and.&
-      (xsten(1,2).gt.TANK_MK_HEATER_LOW).and.&
-      (xsten(-1,2).lt.TANK_MK_HEATER_HIGH)) then
+  if ((abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
+      (abs(xsten(1,1)).ge.TANK_MK_HEATER_R).and.&
+      (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
+      (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
       ! area=2 pi rf dz
       ! vol =2 pi rc dr dz
       ! area/vol=rf/(rc dr)
@@ -946,6 +960,42 @@ REAL_T, intent(inout) :: pres_hydrostatic
 REAL_T, intent(in) :: xpos(SDIM)
 REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
 INTEGER_T, intent(in) :: gravity_dir_parm
+
+if ((num_materials.eq.3).and. &
+    (num_state_material.ge.2).and. &
+    (probtype.eq.423)) then
+
+ if (1.eq.0) then
+
+  call CRYOGENIC_TANK_MK_PRES_UTIL(xpos,pres_hydrostatic)
+
+  if (xpos(2).ge.TANK_MK_INTERFACE_LOCATION) then
+   if(fort_material_type(2).eq.0) then
+    ! incompressible
+    rho_hydrostatic=fort_denconst(2)
+   elseif(fort_material_type(2).eq.24) then
+    ! compressible
+    ! rho =P/(R_sp T)
+    rho_hydrostatic = pres_hydrostatic/&
+      (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2))
+   else
+    print *,"material type invalid for pres den hydrostatic!"
+    stop
+   endif ! material_type
+
+  else if (xpos(2).le.TANK_MK_INTERFACE_LOCATION) then
+   rho_hydrostatic=fort_denconst(1)
+  else
+   print *,"xpos(2) invalid"
+   stop
+  endif
+
+ endif
+
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
 
 end subroutine CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic
 

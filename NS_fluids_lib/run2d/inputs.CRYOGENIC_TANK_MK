@@ -85,6 +85,10 @@ ns.visual_option    =-2
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
+ns.slice_dir=1 # y or z direction
+# 2 * 0.0643=.1286
+ns.xslice=0.0643 0.127
+amr.slice_int=100
 amr.plot_int        = 100      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
@@ -232,7 +236,8 @@ ns.temperature_primitive_variable=1 1 1
 ns.solidheat_flag   =0
 
 # Heat flux from band heater
-ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
+#ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
+ns.xblob3 = 61.6726637934e+4 # -q dot n=Watts/m^2
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
