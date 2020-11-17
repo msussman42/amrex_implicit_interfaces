@@ -11069,7 +11069,8 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: override_density,level
-      INTEGER_T, intent(in) :: gravity_dir_parm,isweep
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      INTEGER_T, intent(in) :: isweep
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: gravity_normalized  
       REAL_T, intent(in) :: angular_velocity
@@ -11319,7 +11320,14 @@ END SUBROUTINE SIMP
       end subroutine FORT_INITPOTENTIAL
 
 
+! gravity_normalized>0 means that gravity is directed downwards.
+! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
       subroutine FORT_ADDGRAVITY( &
+       dt, &
+       gravity_potential_form, &
+       gravity_normalized, &
+       gravity_dir_parm, &
+       angular_velocity, &
        denconst_gravity, &
        nsolveMM_FACE, &
        level, &
@@ -11346,6 +11354,11 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: gravity_potential_form
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      REAL_T, intent(in) :: gravity_normalized  
+      REAL_T, intent(in) :: angular_velocity
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: level
@@ -11391,6 +11404,7 @@ END SUBROUTINE SIMP
       REAL_T local_macnewR
 
       REAL_T vol_total,mass_total,volside,denface_gravity
+      REAL_T gravity_increment
 
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -11438,6 +11452,16 @@ END SUBROUTINE SIMP
       nsolveMM_FACE_test=num_materials_vel
       if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
        print *,"nsolveMM_FACE invalid"
+       stop
+      endif
+      if ((gravity_dir_parm.lt.1).or.(gravity_dir_parm.gt.SDIM)) then
+       print *,"gravity dir invalid addgravity"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid in addgravity"
        stop
       endif
 
@@ -11509,8 +11533,22 @@ END SUBROUTINE SIMP
        endif
 
        im=1
-       local_macnewL=macnew(D_DECL(i,j,k),im)+ &
-         denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
+
+       if (gravity_potential_form.eq.1) then
+        gravity_increment= &
+           denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
+       else if (gravity_potential_form.eq.0) then
+        gravity_increment=zero
+        if (dir+1.eq.gravity_dir_parm) then
+         gravity_increment= &
+           -dt*gravity_normalized*local_cut
+        endif
+       else
+        print *,"gravity_potential_form invalid"
+        stop
+       endif
+
+       local_macnewL=macnew(D_DECL(i,j,k),im)+gravity_increment
 
        local_macnewR=local_macnewL
 
@@ -11598,9 +11636,26 @@ END SUBROUTINE SIMP
          stop
         endif
 
+        if (gravity_potential_form.eq.1) then
+
+         gravity_increment=denface_gravity*grav_component
+
+        else if (gravity_potential_form.eq.0) then
+
+         gravity_increment=zero
+         if (dir+1.eq.gravity_dir_parm) then
+          gravity_increment= &
+            -dt*gravity_normalized
+         endif
+
+        else
+         print *,"gravity_potential_form invalid"
+         stop
+        endif
+
         velcomp=dir+1 
         snew(D_DECL(i,j,k),velcomp)= &
-          snew(D_DECL(i,j,k),velcomp)+denface_gravity*grav_component
+          snew(D_DECL(i,j,k),velcomp)+gravity_increment
 
        else if (local_cut.eq.zero) then
         ! do nothing

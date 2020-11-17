@@ -132,7 +132,7 @@ ns.conservative_tension_force=0
 # For comparison with Borodulin et al Figure 8, surface tension
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
-ns.tension=1.0e-5  # 72.8 cgs
+ns.tension=0.0  # 72.8 cgs
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
@@ -239,17 +239,17 @@ ns.output_drop_distribution=1
 # 1=dirichlet at inflow and outflow
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=0
+ns.prescribe_temperature_outflow=1
 #ns.lo_bc          = 3 3 5  # XYZ
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
 #ns.species_hi_bc  = 3 3 2  # XYZ
 ns.lo_bc          = 3 2  
 ns.hi_bc          = 2 2  
-ns.temperature_lo_bc  = 3 3
-ns.temperature_hi_bc  = 3 3  
-ns.species_lo_bc  = 3 3
-ns.species_hi_bc  = 3 3  
+ns.temperature_lo_bc  = 3 1
+ns.temperature_hi_bc  = 1 1  
+ns.species_lo_bc  = 3 1
+ns.species_hi_bc  = 1 1  
 ns.num_divu_outer_sweeps=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<

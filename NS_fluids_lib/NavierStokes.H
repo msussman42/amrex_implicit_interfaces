@@ -1550,6 +1550,7 @@ protected:
     static int        extend_pressure_into_solid; // default=0
     static Real       MUSHY_THICK; // default==2.0
     static Real       gravity;
+    static int        gravity_potential_form; //default=1
     static int        invert_gravity;
     static int        gravity_dir;
     // terminal_velocity_dt==1 =>
