@@ -169,7 +169,7 @@ ns.visc_abs_tol   = 1.0e-10
 # NOV 2018 (3 or 4 materials)
 ns.gravity_dir = 2  # 1,2, or 3  (2 in 2D is default)
 ns.gravity        = -9.8 #  dimensional  MKS
-
+ns.gravity_potential_form=0
 
 ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
@@ -378,7 +378,8 @@ ns.microlayer_angle=0.663225 0.0 0.0 0.0
 # JULY 17
 #ns.microlayer_size=  0.0 0.0 0.0  
 # NOV 2018 (3 or 4 materials)
-ns.microlayer_size=  1.0e-9 0.0 0.0 0.0 
+# NOV 2020 increase microlayer_size from 1.0e-9 to 1.0e-7
+ns.microlayer_size=  1.0e-7 0.0 0.0 0.0 
 #ns.microlayer_size=  1.157e-7 0.0 0.0                    # dimensionless
 # 2 * dx_coarse=2 * 5.0e-3/48=2.08333e-4
 ns.macrolayer_size=3.9063e-5 0.0 0.0 0.0   #dimensionless
@@ -464,6 +465,10 @@ ns.pos_sites=0.0 3.928e-4 0.0 0.125e-3
 ns.xblob2=0.0 
 #ns.yblob2=0.6944e-4 # 2 * dxcoarsest=2 * 2.5e-3/72=2.5e-3/36=0.6944e-4
 #ns.yblob2=0.027698                         # dimensionless
+#n_cell=32 128
+#prob_hi=5e-3  20e-3
+#dxcoarsest=1.5625e-4
+#3.125e-4/1.5625e-4=2
 ns.yblob2=3.125e-4 # 2 * dxcoarsest=2 * 5.0e-3/32=3.125e-4
 
 ns.zblob2=0.0
