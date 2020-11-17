@@ -5551,6 +5551,14 @@ void NavierStokes::increment_potential_force() {
  if (localMF[POTENTIAL_FORCE_CELL_MF]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[POTENTIAL_FORCE_CELL_MF]->nComp() invalid");
 
+ Real gravity_normalized=std::abs(gravity);
+ if (invert_gravity==1)
+  gravity_normalized=-gravity_normalized;
+ else if (invert_gravity==0) {
+  // do nothing
+ } else
+  amrex::Error("invert_gravity invalid");
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
   debug_ngrow(POTENTIAL_FORCE_EDGE_MF+dir,0,261);
@@ -5604,6 +5612,11 @@ void NavierStokes::increment_potential_force() {
     // u+=facegrav 
     // u+=cellgrav 
    FORT_ADDGRAVITY(
+     &dt_slab,
+     &gravity_potential_form,
+     &gravity_normalized,
+     &gravity_dir,
+     &angular_velocity,
      denconst_gravity.dataPtr(),
      &nsolveMM_FACE,
      &level,

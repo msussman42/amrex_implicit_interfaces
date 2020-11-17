@@ -326,6 +326,8 @@ Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::MUSHY_THICK  = 2.0;
 Real NavierStokes::gravity      = 0.0;
+int  NavierStokes::gravity_potential_form = 1;
+
 // terminal_velocity_dt==1 =>
 // use the terminal velocity for CFL condition instead 
 // of the default condition: u dt < dx  u=g dt  g dt^2 < dx   dt<sqrt(dx/g)
@@ -1247,7 +1249,7 @@ void read_geometry_raw(int& geometry_coord,
     amrex::Error("geometry_is_periodic[dir] invalid");
  } // dir=0...sdim-1
 
-} // subroutine read_geometry_raw
+} // end subroutine read_geometry_raw
 
 void fortran_parameters() {
 
@@ -1797,13 +1799,13 @@ void fortran_parameters() {
  Real MUSHY_THICK=2.0;
  pp.query("MUSHY_THICK",MUSHY_THICK);
 
- Real gravity=0.0; 
- int gravity_dir=AMREX_SPACEDIM;
- int invert_gravity=0;
- pp.query("gravity",gravity);
- pp.query("gravity_dir",gravity_dir);
- pp.query("invert_gravity",invert_gravity);
- if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
+ Real gravity_temp=0.0; 
+ int gravity_dir_temp=AMREX_SPACEDIM;
+ int invert_gravity_temp=0;
+ pp.query("gravity",gravity_temp);
+ pp.query("gravity_dir",gravity_dir_temp);
+ pp.query("invert_gravity",invert_gravity_temp);
+ if ((gravity_dir_temp<1)||(gravity_dir_temp>AMREX_SPACEDIM))
   amrex::Error("gravity dir invalid");
 
  int n_sites=0;
@@ -1922,9 +1924,9 @@ void fortran_parameters() {
   tension_mintemp.dataPtr(),
   prefreeze_tensiontemp.dataPtr(),
   &MUSHY_THICK,
-  &gravity,
-  &gravity_dir,
-  &invert_gravity,
+  &gravity_temp,
+  &gravity_dir_temp,
+  &invert_gravity_temp,
   &fort_stop_time,
   &ioproc);
 
@@ -2432,6 +2434,7 @@ NavierStokes::read_params ()
 
     pp.query("gravity",gravity);
     pp.query("gravity_dir",gravity_dir);
+    pp.query("gravity_potential_form",gravity_potential_form);
     pp.query("terminal_velocity_dt",terminal_velocity_dt);
     pp.query("invert_gravity",invert_gravity);
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
@@ -2472,6 +2475,8 @@ NavierStokes::read_params ()
      std::cout << "MUSHY_THICK " << MUSHY_THICK << '\n';
 
      std::cout << "gravity " << gravity << '\n';
+     std::cout << "gravity_potential_form " << 
+	     gravity_potential_form << '\n';
      std::cout << "invert_gravity " << invert_gravity << '\n';
      std::cout << "gravity_dir " << gravity_dir << '\n';
      std::cout << "terminal_velocity_dt " << terminal_velocity_dt << '\n';
