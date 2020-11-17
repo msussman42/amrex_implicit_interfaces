@@ -907,21 +907,18 @@ enddo
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
  heat_source=zero
- if (im.eq.1) then
-  ! in liquid, the heater band is wetting
-    ! right side of domain
-  heat_source=zero
-  if ((abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
-      (abs(xsten(1,1)).ge.TANK_MK_HEATER_R).and.&
-      (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
-      (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
-      ! area=2 pi rf dz
-      ! vol =2 pi rc dr dz
-      ! area/vol=rf/(rc dr)
-   ! input file value in J/(s.m^2) (flux into the face)
-   ! Transforming to J/(s.m^3) (flux into the control volume)
-   flux_magnitude=TANK_MK_HEATER_FLUX
-   if (levelrz.eq.1) then
+
+ if (levelrz.eq.1) then
+   if ((abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
+    (abs(xsten(1,1)).ge.TANK_MK_HEATER_R).and.&
+    (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
+    (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
+    ! area=2 pi rf dz
+    ! vol =2 pi rc dr dz
+    ! area/vol=rf/(rc dr)
+    ! input file value in J/(s.m^2) (flux into the face)
+    ! Transforming to J/(s.m^3) (flux into the control volume)
+    flux_magnitude=TANK_MK_HEATER_FLUX
     denom=xsten(0,1)*local_dx(1)
     if (denom.gt.zero) then
      flux_magnitude=flux_magnitude*xsten(1,1)/denom
@@ -929,19 +926,20 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      print *,"denom invalid 3"
      stop
     endif
-   else if (levelrz.eq.0) then
-    flux_magnitude=flux_magnitude/local_dx(1)
-   else
-    print *,"levelrz invalid"
-    stop
    endif
-   heat_source=heat_source+flux_magnitude
+ else if (levelrz.eq.0) then
+   if ((abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
+    (abs(xsten(1,1)).ge.(-TANK_MK_HEATER_R)).and.&
+    (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
+    (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
 
-   if (1.eq.0) then
-    print *,"right trigger x,heat_source ",xsten(0,1),xsten(0,2),heat_source
+    flux_magnitude=TANK_MK_HEATER_FLUX/local_dx(2)
    endif
-  endif
-
+ else
+   print *,"levelrz invalid"
+   stop
+ endif
+ heat_source=heat_source+flux_magnitude
   ! if ((xsten(0,SDIM).lt.TANK_MK_HEIGHT).and. &
   !     (xsten(2,SDIM).gt.TANK_MK_HEIGHT)) then
   !     ! area=2 pi rc dr
@@ -959,14 +957,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   !  flux_magnitude=TANK_MK_HETAER_FLUX/local_dx(SDIM)
   !  heat_source=heat_source+flux_magnitude
   ! endif
- else if (im.eq.2) then
-  ! do nothing (gas)
- else if (im.eq.3) then
-  ! do nothing (solid)
- else
-  print *,"im invalid in CRYOGENIC_TANK_MK_HEATSOURCE"
-  stop
- endif
+
 else
  print *,"num_materials ", num_materials
  print *,"probtype ", probtype

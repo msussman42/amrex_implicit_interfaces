@@ -44,6 +44,10 @@ ns.yblob4	    = 0.0127 # X_2 of spherical cap center
 
 ns.zblob3	    = -0.1429 # X_2 of heater top 
 ns.yblob3	    = -0.1683 # X_2 of heater bottom
+#n_cell=16 64
+# 0 < r < 0.127
+# 0.09525 - (1/2) 0.127/16 = 0.09128125
+ns.radblob3         = 0.09128125  # radius of location of heater filament
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
@@ -114,6 +118,10 @@ ns.gravity          = 9.8
 ns.gravity_dir      = 2
 ns.invert_gravity   = 0
 ns.gravity_potential_form=1
+ns.override_density=1 0 0
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
+
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
 ns.vinletgas        = 0.0
@@ -241,7 +249,7 @@ ns.solidheat_flag   =0
 
 # Heat flux from band heater
 #ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
-ns.xblob3 = 61.6726637934e+4 # -q dot n=Watts/m^2
+ns.xblob3 = 61.6726637934e+2 # -q dot n=Watts/m^2
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------

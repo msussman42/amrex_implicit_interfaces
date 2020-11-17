@@ -1713,20 +1713,28 @@ stop
        stop
       endif
       do im=1,nmat
-       if ((VFRAC(im).lt.-VOFTOL).or. &
-           (VFRAC(im).ge.one+VOFTOL)) then
+       if ((VFRAC(im).ge.-VOFTOL).and. &
+           (VFRAC(im).le.one+VOFTOL)) then
+        ! do nothing
+       else
         print *,"VFRAC invalid"
         stop
        endif 
-       if (DENSITY(im).le.zero) then
+       if (DENSITY(im).gt.zero) then
+        ! do nothing
+       else
         print *,"DENSITY must be positive"
         stop
        endif
-       if (TEMPERATURE(im).le.zero) then
+       if (TEMPERATURE(im).gt.zero) then
+        ! do nothing
+       else
         print *,"TEMPERATURE must be positive"
         stop
        endif
-       if (CV(im).le.zero) then
+       if (CV(im).gt.zero) then
+        ! do nothing
+       else
         print *,"CV must be positive"
         stop
        endif

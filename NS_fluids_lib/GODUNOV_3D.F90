@@ -9486,8 +9486,10 @@ stop
         dencomp=(im-1)*num_state_material+1
         den_local(im)=Tnew(D_DECL(i,j,k),dencomp)
         T_local(im)=Tnew(D_DECL(i,j,k),dencomp+1)
-        if ((VFRAC(im).lt.-VOFTOL).or. &
-            (VFRAC(im).ge.one+VOFTOL)) then
+        if ((VFRAC(im).ge.-VOFTOL).and. &
+            (VFRAC(im).le.one+VOFTOL)) then
+         ! do nothing
+        else
          print *,"VFRAC invalid"
          stop
         endif 
