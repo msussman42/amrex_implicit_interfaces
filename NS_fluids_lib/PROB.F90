@@ -3929,6 +3929,7 @@ end subroutine dynamic_contact_angle
               -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
        else if (override_density.eq.1) then
 
+         ! in: GLOBALUTIL.F90
          ! rho_hydrostatic=rho_hydrostatic(T,Y,z)
         call default_hydrostatic_pressure_density(xpos, &
          rho_hydrostatic,pres_hydrostatic,liquid_temp, &
@@ -3979,7 +3980,16 @@ end subroutine dynamic_contact_angle
        print *,"levelrz invalid general hydrostatic pressure density"
        stop
       endif
- 
+
+      if (is_in_probtype_list().eq.1) then
+       call SUB_correct_pres_rho_hydrostatic( &
+         pres_hydrostatic,rho_hydrostatic, &
+         xpos, &
+         gravity_normalized, &
+         gravity_dir_parm)
+      endif
+
+
         ! dt multiplied by velocity scale.
       pres_hydrostatic=pres_hydrostatic*dt/global_pressure_scale
 

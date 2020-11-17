@@ -932,4 +932,21 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_HEATSOURCE
 
+
+subroutine CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic( &
+   pres_hydrostatic,rho_hydrostatic, &
+   xpos, &
+   gravity_normalized, &
+   gravity_dir_parm)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(inout) :: rho_hydrostatic
+REAL_T, intent(inout) :: pres_hydrostatic
+REAL_T, intent(in) :: xpos(SDIM)
+REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
+INTEGER_T, intent(in) :: gravity_dir_parm
+
+end subroutine CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic
+
 end module CRYOGENIC_TANK_MK_module
