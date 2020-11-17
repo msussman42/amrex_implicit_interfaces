@@ -5507,7 +5507,8 @@ void NavierStokes::solid_temperature() {
 
 } // solid_temperature
 
-// adds gravity force to cell and face velocity (all components).
+// adds gravity force and surface tension 
+// to cell and face velocity (all components).
 void NavierStokes::increment_potential_forceALL() {
 
  if (level!=0)
@@ -5609,6 +5610,7 @@ void NavierStokes::increment_potential_force() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: NAVIERSTOKES_3D.F90
+    // (gravity and surface tension)
     // u+=facegrav 
     // u+=cellgrav 
    FORT_ADDGRAVITY(
@@ -5757,6 +5759,14 @@ void NavierStokes::init_gravity_potential() {
   dombcpres[m]=b_rec[m];
 
  Real gravity_normalized=std::abs(gravity);
+
+ if (gravity_potential_form==1) {
+  // do nothing
+ } else if (gravity_potential_form==0) {
+  gravity_normalized=0.0;
+ } else
+  amrex::Error("gravity_potential_form invalid");
+
  if (invert_gravity==1)
   gravity_normalized=-gravity_normalized;
  else if (invert_gravity==0) {
