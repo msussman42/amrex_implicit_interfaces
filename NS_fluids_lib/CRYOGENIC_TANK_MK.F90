@@ -242,65 +242,96 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
   print *,"Dimension bust at DIST_FINITE_CYLINDER"
   stop
  endif
+
+ if (TANK_MK_END_RADIUS.eq.0.0d0) then
+
+  if (Z.le.TANK_MK_HEIGHT/2.0) then
+   if (R.ge.TANK_MK_RADIUS) then
+    SOLID_TOP_HALF_DIST=R-TANK_MK_RADIUS
+   else
+    D1 = TANK_MK_RADIUS - R
+    D2 = TANK_MK_HEIGHT/2.0-Z
+    if (D1.lt.D2) then
+     SOLID_TOP_HALF_DIST=-D1
+    else
+     SOLID_TOP_HALF_DIST=-D2
+    endif
+   endif
+  else 
+   if (R.le.TANK_MK_RADIUS) then
+    SOLID_TOP_HALF_DIST=Z-TANK_MK_HEIGHT/2.0
+   else
+    SOLID_TOP_HALF_DIST= &
+     sqrt( (Z-TANK_MK_HEIGHT/2.0)**2+ &
+           (R-TANK_MK_RADIUS)**2 )
+   endif
+  endif
+    
+ else if (TANK_MK_END_RADIUS.gt.0.0d0) then
  
- ! Equation of the line passing through
- ! (0,TANK_MK_END_CENTER)
- !          and
- ! (TANK_MK_RADIUS,TANK_MK_HEIGHT/2)
- FRZ=R*(TANK_MK_END_CENTER-TANK_MK_HEIGHT/2)/TANK_MK_RADIUS &
+  ! Equation of the line passing through
+  ! (0,TANK_MK_END_CENTER)
+  !          and
+  ! (TANK_MK_RADIUS,TANK_MK_HEIGHT/2)
+  FRZ=R*(TANK_MK_END_CENTER-TANK_MK_HEIGHT/2.0d0)/TANK_MK_RADIUS &
      + Z - TANK_MK_END_CENTER
 
- if (FRZ.le.zero) then
-  ! Below line
-  if (R.le.TANK_MK_RADIUS) then
-   ! In the tank
-   D1 = TANK_MK_RADIUS - R
-   D2 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
-   SOLID_TOP_HALF_DIST = -min(D1,D2)
-  elseif (R.gt.TANK_MK_RADIUS) then
-   ! Out of the tank
-   if(Z.le.TANK_MK_HEIGHT/2) then
-    ! Below the cap base line
-    SOLID_TOP_HALF_DIST = R - TANK_MK_RADIUS
-   elseif (Z.gt.TANK_MK_HEIGHT/2) then
-    ! Above the cap baseline
-    SOLID_TOP_HALF_DIST = &
-     sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
-   else
-    print *,"Z invalid!"
-    stop
-   endif ! Z
-  else
-   print *,"Z invalid!"
-   stop
-  endif ! R
- elseif (FRZ.gt.zero) then
-  ! Above line
-  ! Distance to curvature center
-  D2 = sqrt(R**2 + (Z-TANK_MK_END_CENTER)**2)
-  if (D2.le.TANK_MK_END_RADIUS) then
-   ! Inside tank
-   if (Z.le.TANK_MK_HEIGHT/2) then
-    ! Below the cap baseline
+  if (FRZ.le.zero) then
+   ! Below line
+   if (R.le.TANK_MK_RADIUS) then
+    ! In the tank
     D1 = TANK_MK_RADIUS - R
-   elseif (Z.gt.TANK_MK_HEIGHT/2) then
-    ! Above the cap baseline
-    D1 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+    D2 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+    SOLID_TOP_HALF_DIST = -min(D1,D2)
+   elseif (R.gt.TANK_MK_RADIUS) then
+    ! Out of the tank
+    if(Z.le.TANK_MK_HEIGHT/2) then
+     ! Below the cap base line
+     SOLID_TOP_HALF_DIST = R - TANK_MK_RADIUS
+    elseif (Z.gt.TANK_MK_HEIGHT/2) then
+     ! Above the cap baseline
+     SOLID_TOP_HALF_DIST = &
+      sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+    else
+     print *,"Z invalid!"
+     stop
+    endif ! Z
    else
     print *,"Z invalid!"
     stop
-   endif ! Z
-   SOLID_TOP_HALF_DIST = -min(TANK_MK_END_RADIUS-D2,D1)
-  elseif (D2.gt.TANK_MK_END_RADIUS) then
-   SOLID_TOP_HALF_DIST = D2-TANK_MK_END_RADIUS
-  else
-   print *,"Distance to curvature center invalid!"
-   stop
-  end if ! D2
+   endif ! R
+  elseif (FRZ.gt.zero) then
+   ! Above line
+   ! Distance to curvature center
+   D2 = sqrt(R**2 + (Z-TANK_MK_END_CENTER)**2)
+   if (D2.le.TANK_MK_END_RADIUS) then
+    ! Inside tank
+    if (Z.le.TANK_MK_HEIGHT/2) then
+     ! Below the cap baseline
+     D1 = TANK_MK_RADIUS - R
+    elseif (Z.gt.TANK_MK_HEIGHT/2) then
+     ! Above the cap baseline
+     D1 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+    else
+     print *,"Z invalid!"
+     stop
+    endif ! Z
+    SOLID_TOP_HALF_DIST = -min(TANK_MK_END_RADIUS-D2,D1)
+   elseif (D2.gt.TANK_MK_END_RADIUS) then
+    SOLID_TOP_HALF_DIST = D2-TANK_MK_END_RADIUS
+   else
+    print *,"Distance to curvature center invalid!"
+    stop
+   end if ! D2
   
- else
-  print *,"Line equation invalid!"
- end if ! FRZ
+  else
+   print *,"Line equation invalid!"
+   stop
+  end if ! FRZ
+ else 
+  print *,"TANK_MK_END_RADIUS invalid"
+  stop
+ endif
 
 end function SOLID_TOP_HALF_DIST
 
@@ -965,7 +996,7 @@ if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
     (probtype.eq.423)) then
 
- if (1.eq.0) then
+ if (1.eq.1) then
 
   call CRYOGENIC_TANK_MK_PRES_UTIL(xpos,pres_hydrostatic)
 

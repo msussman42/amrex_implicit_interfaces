@@ -67,7 +67,7 @@ ns.radblob3	    =  0.0925 # X_1 of heater
 # 0 => cart, 1 => RZ
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0   -0.254
-geometry.prob_hi    = 0.1286 0.2
+geometry.prob_hi    = 0.127  0.254
 geometry.is_periodic= 0 0
 
 amr.n_cell          = 16 64 

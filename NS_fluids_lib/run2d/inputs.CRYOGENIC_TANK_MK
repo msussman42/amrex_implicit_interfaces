@@ -31,12 +31,15 @@ ns.FSI_flag         = 0 0 1
 solvability_projection = 0  # Compressible gas
 
 # Coordinate origin is at the center of the tank
-ns.xblob            = 0.1016 # Tank cavity radius
-ns.yblob            = 0.4064 # Height of Cylindrical part 
+#ns.xblob            = 0.1016 # Tank cavity radius
+ns.xblob            = 0.09525 # Tank cavity radius
+#ns.yblob            = 0.4064 # Height of Cylindrical part 
+ns.yblob            = 0.396875 # Height of Cylindrical part 
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
 
-ns.xblob4 	    = 0.2159 # End cap radius
+#ns.xblob4 	    = 0.2159 # End cap radius
+ns.xblob4 	    = 0.0 # End cap radius
 ns.yblob4	    = 0.0127 # X_2 of spherical cap center 
 
 ns.zblob3	    = -0.1429 # X_2 of heater top 
@@ -46,9 +49,10 @@ ns.yblob3	    = -0.1683 # X_2 of heater bottom
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
 # 0 => cart, 1 => RZ
+# n_cell=16x64       
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0   -0.254
-geometry.prob_hi    = 0.1286 0.254
+geometry.prob_hi    = 0.127  0.254
 geometry.is_periodic= 0 0
 
 amr.n_cell          = 16 64 
@@ -85,14 +89,14 @@ ns.visual_option    =-2
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-ns.slice_dir=1 # y or z direction
-# 2 * 0.0643=.1286
-ns.xslice=0.0643 0.127
+ns.slice_dir=1 # y (aka z) direction
+# 2 * 0.0635=.127
+ns.xslice=0.0635 0.127
 amr.slice_int=100
 amr.plot_int        = 100      # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
-ns.sum_interval     = 10     # timesteps between computing mass 
+ns.sum_interval     = 1     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
