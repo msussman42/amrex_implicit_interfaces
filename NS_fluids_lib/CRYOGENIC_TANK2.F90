@@ -42,6 +42,12 @@ REAL_T :: TANK2_GAS_GAMMA
 REAL_T :: TANK2_GAS_CP
 REAL_T :: TANK2_GAS_CV
 
+REAL_T :: TANK2_HEATER_FLUX
+! Heater location in dim=2 direction
+REAL_T :: TANK2_HEATER_LOW
+REAL_T :: TANK2_HEATER_HIGH
+REAL_T :: TANK2_HEATER_R
+
 contains
 
  ! do any initial preparation needed
@@ -53,6 +59,10 @@ contains
   TANK2_THICKNESS = radblob
   TANK2_LIQUID_HEIGHT = zblob
 
+  TANK2_HEATER_FLUX      = xblob3
+  TANK2_HEATER_LOW       = yblob3
+  TANK2_HEATER_HIGH      = zblob3
+  TANK2_HEATER_R         = radblob3
 
   ! ASSUMING IDEA GAS => The gas heat cpacities should satisfy this
   ! R_spc = C_{p,spc}-C_{v,spc}
@@ -705,6 +715,7 @@ endif
 return
 end subroutine CRYOGENIC_TANK2_STATE_BC
 
+
 ! suppose inhomogeneous flux condition: -k grad T = q
 ! 1. T_t - div k grad T = 0
 ! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
@@ -713,7 +724,21 @@ end subroutine CRYOGENIC_TANK2_STATE_BC
 ! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
 !      (1/V)A_{right} (-q_{right} dot n_right)
 !
-! xblob3 \equiv -q dot n
+! TANK_MK_HEATER_FLUX \equiv -q dot n
+! MEHDI VAHAB HEAT SOURCE
+! T^new=T^* + dt * (tildeQ)/(rho cv)    
+! dt=seconds  rho=kg/m^3   cv=Joules/(kg K)
+! second * J/(m^3 s)  * (m^3/kg)  *  (K kg/J) = degrees Kelvin
+! tildeQ units: J/(m^3 s)
+! Q = k grad T = W/(m K) K/m = W/m^2= J/(m^2 s)
+! tildeQ=Q * area/volume
+! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
+! in FORT_HEATSOURCE:
+! T_local(im)=T_local(im)+ &
+!   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
+!      (1/V)A_{right} (-q_{right} dot n_right)  => tildeQ corresponds
+! to q * A/V
+
 subroutine CRYOGENIC_TANK2_HEATSOURCE( &
      im,VFRAC, &
      time, &
@@ -721,7 +746,8 @@ subroutine CRYOGENIC_TANK2_HEATSOURCE( &
      xsten, & ! xsten(-nhalf:nhalf,SDIM)
      nhalf, &
      temp, &
-     heat_source,den,CV,dt, &
+     heat_source, & ! unit of tildeQ not Q
+     den,CV,dt, &
      nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -763,62 +789,38 @@ enddo
 
 if ((num_materials.eq.3).and.(probtype.eq.422)) then
  heat_source=zero
- if (im.eq.1) then
-  ! do nothing (liquid)
- else if (im.eq.2) then
-  ! do nothing (gas)
- else if (im.eq.3) then
-  ! right side of domain
-  heat_source=zero
-  if ((xsten(0,1).lt.TANK2_RADIUS).and. &
-      (xsten(2,1).gt.TANK2_RADIUS)) then
-      ! area=2 pi rf dz
-      ! vol =2 pi rc dr dz
-      ! area/vol=rf/(rc dr)
-   flux_magnitude=xblob3
-   if (levelrz.eq.1) then
-    denom=xsten(0,1)*local_dx(1)
-    if (denom.gt.zero) then
-     flux_magnitude=flux_magnitude*xsten(1,1)/denom
-    else
-     print *,"denom invalid 3"
-     stop
-    endif
-   else if (levelrz.eq.0) then
-    flux_magnitude=flux_magnitude/local_dx(1)
+ if (levelrz.eq.1) then
+  if ((abs(xsten(-1,1)).le.TANK2_HEATER_R).and.&
+   (abs(xsten(1,1)).ge.TANK2_HEATER_R).and.&
+   (xsten(1,2).ge.TANK2_HEATER_LOW).and.&
+   (xsten(-1,2).le.TANK2_HEATER_HIGH)) then
+   ! area=2 pi rf dz
+   ! vol =2 pi rc dr dz
+   ! area/vol=rf/(rc dr)
+   ! input file value in J/(s.m^2) (flux into the face)
+   ! Transforming to J/(s.m^3) (flux into the control volume)
+   flux_magnitude=TANK2_HEATER_FLUX
+   denom=xsten(0,1)*local_dx(1)
+   if (denom.gt.zero) then
+    flux_magnitude=flux_magnitude*xsten(1,1)/denom
    else
-    print *,"levelrz invalid"
+    print *,"denom invalid 3"
     stop
    endif
-   heat_source=heat_source+flux_magnitude
-
-   if (1.eq.0) then
-    print *,"right trigger x,heat_source ",xsten(0,1),xsten(0,2),heat_source
-   endif
   endif
+ else if (levelrz.eq.0) then
+  if ((abs(xsten(-1,1)).le.TANK2_HEATER_R).and.&
+   (abs(xsten(1,1)).ge.(-TANK2_HEATER_R)).and.&
+   (xsten(1,2).ge.TANK2_HEATER_LOW).and.&
+   (xsten(-1,2).le.TANK2_HEATER_HIGH)) then
 
-  if ((xsten(0,SDIM).lt.TANK2_HEIGHT).and. &
-      (xsten(2,SDIM).gt.TANK2_HEIGHT)) then
-      ! area=2 pi rc dr
-      ! vol =2 pi rc dr dz
-      ! area/vol=1/(dz)
-   flux_magnitude=xblob3/local_dx(SDIM)
-   heat_source=heat_source+flux_magnitude
+   flux_magnitude=TANK2_HEATER_FLUX/local_dx(2)
   endif
-
-  if ((xsten(0,SDIM).gt.zero).and. &
-      (xsten(-2,SDIM).lt.zero)) then
-      ! area=2 pi rc dr
-      ! vol =2 pi rc dr dz
-      ! area/vol=1/(dz)
-   flux_magnitude=xblob3/local_dx(SDIM)
-   heat_source=heat_source+flux_magnitude
-  endif
-
  else
-  print *,"im invalid in CRYOGENIC_TANK2_HEATSOURCE"
+  print *,"levelrz invalid"
   stop
  endif
+ heat_source=heat_source+flux_magnitude
 else
  print *,"num_materials ", num_materials
  print *,"probtype ", probtype
