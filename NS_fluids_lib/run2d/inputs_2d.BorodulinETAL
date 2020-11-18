@@ -20,6 +20,7 @@ stop_time = 750.0  # 750 seconds Borodulin et al Figure 8 row 3
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
 geometry.prob_lo   =  0.0 0.0   
+geometry.is_periodic=0 1
 # make square domain so that solver converges quickly.
 # 0.0012 cm upper prediction diameter of sneeze drop
 # Borodulin ET AL: 50 percent relative humidity ?
@@ -244,12 +245,12 @@ ns.prescribe_temperature_outflow=1
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
 #ns.species_hi_bc  = 3 3 2  # XYZ
-ns.lo_bc          = 3 2  
-ns.hi_bc          = 2 2  
-ns.temperature_lo_bc  = 3 1
-ns.temperature_hi_bc  = 1 1  
-ns.species_lo_bc  = 3 1
-ns.species_hi_bc  = 1 1  
+ns.lo_bc          = 3 0  
+ns.hi_bc          = 2 0  
+ns.temperature_lo_bc  = 3 0
+ns.temperature_hi_bc  = 1 0  
+ns.species_lo_bc  = 3 0
+ns.species_hi_bc  = 1 0  
 ns.num_divu_outer_sweeps=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
