@@ -905,6 +905,8 @@ do dir=1,SDIM
  endif
 enddo
 
+flux_magnitude=zero
+
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
  heat_source=zero
 
