@@ -148,10 +148,6 @@ adept::adouble cost_function(
  DistributionMapping dm=uinput[ntime]->DistributionMap();
  int Ncomp=uinput[ntime]->nComp();
  int Nghost=uinput[ntime]->nGrow();
- int Nghost_array[3];
- for (int i=0;i<3;i++) 
-  Nghost_array[i]=0;
- Nghost_array[0]=Nghost;
 
  adept::adouble xlo=geom.ProbLo(0);
  adept::adouble xhi=geom.ProbHi(1);;
@@ -201,24 +197,26 @@ adept::adouble cost_function(
    Array4< adept::adouble > const& wt_obs_array=
 	   wt_obs_fab.array();
 
-   Dim3 lo = lbound(v_array);
-   Dim3 hi = ubound(v_array);
+//   Dim3 lo = lbound(v_array);
+//   Dim3 hi = ubound(v_array);
+   Dim3 lo=lbound(v_fab.box());
+   Dim3 hi=ubound(v_fab.box());
 
-   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
-   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
-   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
+   for (int k = lo.z; k <= hi.z[2]; ++k) {
+   for (int j = lo.y; j <= hi.y[1]; ++j) {
+   for (int i = lo.x; i <= hi.x[0]; ++i) {
 
-    adept::adouble local_x=xlo+dx[0]*i;
+    adept::adouble local_x=xlo+dx[0]*(i+0.5);
 
     uback_array(i,j,k)=0.0;
     wt_back_array(i,j,k)=0.0;
     if (ntime==0) {
      wt_back_array(i,j,k)=1.0;
     }
-    if (i==-1) {
+    if (local_x<=xlo) {
      wt_back_array(i,j,k)=1.0;
     }
-    if (i==hi.x+1) {
+    if (local_x>=xhi) {
      wt_back_array(i,j,k)=1.0;
     }
     wt_obs_array(i,j,k)=0.0;
@@ -255,10 +253,7 @@ adept::adouble cost_function(
   My_adept_MFAB* qnp1_obs_frame=q_obs[ntime+1];
   My_adept_MFAB* wtnp1_obs_frame=wt_obs[ntime+1];
 
-   // in 1 dimension the fluxes are at the nodes
-   // in higher dimensions, the fluxes are on the "MAC" grid.
-   // old: finite difference method, unknowns located at nodes.
-   // new: finite volume method, unknowns located at cell centers.
+   // finite volume method, unknowns located at cell centers.
   My_adept_MFAB* fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
   My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
   My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
