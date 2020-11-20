@@ -1,3 +1,4 @@
+// get rid of autoindent   :setl noai nocin nosi inde=
 #include <AMReX_FArrayBox.H>
 #include <AMReX_CoordSys.H>
 #include <AMReX_ParmParse.H>
@@ -2169,6 +2170,27 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   } else
    amrex::Error("AMR_volume_history_recorded invalid");
 
+  for (int im=0;im<nmat;im++) {
+   Real F_ratio=0.0;
+   if (parent->AMR_volume_history[im]==0.0) {
+    // do nothing
+   } else if (parent->AMR_volume_history[im]>0.0) {
+    F_ratio=F_MAT[im]/parent->AMR_volume_history[im];
+   } else
+    amrex::Error("parent->AMR_volume_history[im] invalid");
+
+   std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" FRATIO=" << 
+             F_ratio << '\n';
+
+   Real A_ratio=F_ratio;
+   if (F_ratio>0.0) {
+    if (AMREX_SPACEDIM==2) {
+     if ((rz_flag==1)||(rz_flag==3)) {
+      A_ratio=exp(log(A_ratio)*2.0/3.0);
+ 
+
+  }
+
   for (int im=1;im<=nmat;im++) {
    for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
     for (int ireverse=0;ireverse<=1;ireverse++) {
@@ -2518,6 +2540,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    std::cout << "TIME= " << upper_slab_time << " EFFECTIVE RAD=  " << 
     radbubble << '\n';
   } // probtype==55 and axis_dir==6 or 7
+
   std::cout << "TIME= " << upper_slab_time << " number_mfiter_loops=  " << 
     thread_class::number_mfiter_loops << '\n';
 
