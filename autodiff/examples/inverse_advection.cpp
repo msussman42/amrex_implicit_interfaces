@@ -35,6 +35,7 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
         Hreturn=1.0/(1.0+exp(-x/eps));
 	return Hreturn;
 }
+
 // to express the data assimilation problem precisely:
 // find min J(q(u),u) under the constraint that
 //          N(q(u),u)=0   q(u)=state variables u=control
@@ -56,7 +57,8 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 //
 // this sample code solves PDE constrained optimization, first pass:
 // PDE constraint is q_{t} + a q_{x}=0  (*)
-// inverse problem: find q_{0}(x) (initial conditions) and boundary conditions so that
+// inverse problem: find q_{0}(x) (initial conditions) and 
+// boundary conditions so that
 // the solution to (*) at time t=T is q(x,T)=q^{observation}(x)
 
 void plot_adept_data(std::string plt_name_string,
@@ -67,69 +69,29 @@ void plot_adept_data(std::string plt_name_string,
  const std::string& pltfile1 = amrex::Concatenate(plt_name_string,ntime,5);
  const std::string& pltfile = 
 	 amrex::Concatenate(pltfile1,steepest_descent_iter,5);
- BoxArray ba_node=data_to_plot->boxArray();
+ BoxArray ba_cell=data_to_plot->boxArray();
  DistributionMapping dm=data_to_plot->DistributionMap();
  int Ncomp=data_to_plot->nComp();
  int Nghost=data_to_plot->nGrow();
- MultiFab* data_plot_mf=new MultiFab(ba_node,dm,Ncomp,Nghost);
- BoxArray ba_cell(ba_node);
- ba_cell.convert({D_DECL(0,0,0)});
- MultiFab* data_plot_cell_mf=new MultiFab(ba_cell,dm,Ncomp,Nghost+1);
+ MultiFab* data_plot_mf=new MultiFab(ba_cell,dm,Ncomp,Nghost);
 
  for (MFIter mfi(*data_plot_mf,false); mfi.isValid(); ++mfi) {
    const int gridno = mfi.index();
    My_adept_FAB& v_fab=(*data_to_plot)[gridno]; // type: adouble
    FArrayBox& plot_fab=(*data_plot_mf)[gridno]; // type: double
-   FArrayBox& plot_cell_fab=(*data_plot_cell_mf)[gridno]; // type: double
 
    Array4< adept::adouble > const& v_array=v_fab.array(); // type: adouble
 
    Array4< Real > const& plot_array=plot_fab.array(); // type: double
    Array4< Real > const& plot_cell_array=plot_cell_fab.array(); //type:double
-   Dim3 lo = lbound(v_array);
-   Dim3 hi = ubound(v_array);
+//   Dim3 lo = lbound(v_array);
+//   Dim3 hi = ubound(v_array);
+   Dim3 lo=lbound(plot_fab.box());
+   Dim3 hi=ubound(plot_fab.box());
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
     plot_array(i,j,k)=v_array(i,j,k).value();
-   }
-   }
-   }
-   Dim3 loc = lbound(plot_cell_array);
-   Dim3 hic = ubound(plot_cell_array);
-   for (int k = loc.z; k <= hic.z; ++k) {
-   for (int j = loc.y; j <= hic.y; ++j) {
-   for (int i = loc.x; i <= hic.x; ++i) {
-    int ind=i;
-    if (ind<lo.x)
-     ind=lo.x;
-    if (ind+1>hi.x)
-     ind=hi.x-1;
-    int jnd=0;
-    int knd=0;
-    if (1==0) {
-     plot_cell_array(i,j,k)=(plot_array(ind,jnd,knd)+
-		    plot_array(ind+1,jnd,knd)+
-		    plot_array(ind,jnd+1,knd)+
-		    plot_array(ind+1,jnd+1,knd))/4.0;
-    } else {
-     if (i<lo.x) {
-      plot_cell_array(i,j,k)=1.5*plot_array(lo.x,jnd,knd)-
-		    0.5*plot_array(lo.x+1,jnd,knd);
-     } else if (i==hi.x) {
-      plot_cell_array(i,j,k)=1.5*plot_array(hi.x,jnd,knd)-
-		    0.5*plot_array(hi.x-1,jnd,knd);
-     } else {
-
-      plot_cell_array(i,j,k)=(plot_array(ind,jnd,knd)+
-		    plot_array(ind+1,jnd,knd))/2.0;
-     }
-     if (1==0) {
-      std::cout << "i= " << i << " j= " << j << " k= " << k << " data= " <<
-	     plot_cell_array(i,j,k) << '\n';
-     }
-    }
-
    }
    }
    }
@@ -138,13 +100,12 @@ void plot_adept_data(std::string plt_name_string,
  std::cout << "plotting " << pltfile << '\n';
  int nghost_cell=1;
  bool local=false;
- std::cout << " max= " << data_plot_cell_mf->max(0,nghost_cell,local) << '\n';
- std::cout << " min= " << data_plot_cell_mf->min(0,nghost_cell,local) << '\n';
- WriteSingleLevelPlotfile(pltfile, *data_plot_cell_mf, 
-		 {"data_plot_cell_mf"}, 
+ std::cout << " max= " << data_plot_mf->max(0,nghost_cell,local) << '\n';
+ std::cout << " min= " << data_plot_mf->min(0,nghost_cell,local) << '\n';
+ WriteSingleLevelPlotfile(pltfile, *data_plot_mf, 
+		 {"data_plot_mf"}, 
 		 geom, time, 0);
  delete data_plot_mf;
- delete data_plot_cell_mf;
 } // plot_adept_data
 
 adept::adouble cost_function(
@@ -474,12 +435,8 @@ Real algorithm_and_gradient(
   DistributionMapping dm=x[ntime]->DistributionMap();
   int Ncomp=x[ntime]->nComp();
   int Nghost=x[ntime]->nGrow();
-  int Nghost_array[3];
-  for (int i=0;i<3;i++) 
-   Nghost_array[i]=0;
-  Nghost_array[0]=Nghost;
 
-  adept_x[ntime]=new My_adept_MFAB(ba_node,dm,Ncomp,Nghost);
+  adept_x[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
 
   My_adept_MFAB* cur_frame_adept=adept_x[ntime];
   MultiFab* cur_frame=x[ntime];
@@ -489,11 +446,13 @@ Real algorithm_and_gradient(
    FArrayBox& Real_fab=(*cur_frame)[gridno];
    Array4< adept::adouble > const& adept_array=adept_fab.array();
    Array4<Real> const& Real_array=Real_fab.array();
-   Dim3 lo = lbound(adept_array);
-   Dim3 hi = ubound(adept_array);
-   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
-   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
-   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
+//   Dim3 lo = lbound(adept_array);
+//   Dim3 hi = ubound(adept_array);
+   Dim3 lo=lbound(adept_fab.box());
+   Dim3 hi=ubound(adept_fab.box());
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
     adept_array(i,j,k)=Real_array(i,j,k);
    } // i
    } // j
@@ -517,12 +476,14 @@ Real algorithm_and_gradient(
    Array4< adept::adouble > const& x_array=x_fab.array();
    Array4< double > const& dJdx_array=dJdx_fab.array();
 
-   Dim3 lo = lbound(x_array);
-   Dim3 hi = ubound(x_array);
+//   Dim3 lo = lbound(x_array);
+//   Dim3 hi = ubound(x_array);
+   Dim3 lo=lbound(x_fab.box());
+   Dim3 hi=ubound(x_fab.box());
 
-   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
-   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
-   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
     dJdx_array(i,j,k)=x_array(i,j,k).get_gradient();
    } // i
    } // j
@@ -574,8 +535,8 @@ int main(int argc,char* argv[]) {
  Real xlo[AMREX_SPACEDIM];
  Real xhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-	 xlo[dir]=0.0;
-	 xhi[dir]=1.0;
+  xlo[dir]=0.0;
+  xhi[dir]=1.0;
  }
  Real stop_time=1.0;
 
@@ -637,23 +598,8 @@ int main(int argc,char* argv[]) {
   geom.define(domain,&real_box,CoordSys::cartesian,is_periodic.data());
  }
 
-  // for the sake of expediancy,
-  // finite difference method in the x-direction, and just
-  // 1 cell in the y direction.  So,
-  // IndexType::NODE in the x-direction  (old before November 5, 2020)
-  // IndexType::CELL in the x-direction  (new starting November 5, 2020)
-  // IndexType::CELL in the y-direction
-  // TheUMACType
-// BoxArray ba_node(ba);
-// IndexType node_type=IndexType::TheUMACType();
-// ba_node.convert(node_type);
-
  // Nghost = number of ghost cells for each array 
  int Nghost = 1;
- int Nghost_array[3];
- for (int i=0;i<3;i++) 
-  Nghost_array[i]=0;
- Nghost_array[0]=Nghost;
     
  // Ncomp = number of components for each array
  int Ncomp  = 1;
@@ -730,11 +676,13 @@ int main(int argc,char* argv[]) {
 
      Array4<Real> const& x_array=x_fab.array();
      Array4<Real> const& dJdx_array=dJdx_fab.array();
-     Dim3 lo = lbound(x_array);
-     Dim3 hi = ubound(x_array);
-     for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
-     for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
-     for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
+//     Dim3 lo = lbound(x_array);
+//     Dim3 hi = ubound(x_array);
+     Dim3 lo=lbound(x_fab.box());
+     Dim3 hi=ubound(x_fab.box());
+     for (int k = lo.z; k <= hi.z; ++k) {
+     for (int j = lo.y; j <= hi.y; ++j) {
+     for (int i = lo.x; i <= hi.x; ++i) {
       x_array(i,j,k)=x_array(i,j,k)-learning_rate*dJdx_array(i,j,k);
      } // i
      } // j

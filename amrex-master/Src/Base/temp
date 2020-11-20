@@ -1,8 +1,0 @@
-// SUSSMAN  dummy parameter: alloc -> alloc_in
-template <class T>
-BaseFab<T>::BaseFab (const Box& bx, int n, bool alloc_in, 
-  bool shared, Arena* ar)
-    : DataAllocator{ar}, domain(bx), nvar(n), shared_memory(shared)
-{
-    if (!this->shared_memory && alloc_in) define();
-}
