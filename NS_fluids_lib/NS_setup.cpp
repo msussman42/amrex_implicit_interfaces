@@ -2187,9 +2187,25 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     if (AMREX_SPACEDIM==2) {
      if ((rz_flag==1)||(rz_flag==3)) {
       A_ratio=exp(log(A_ratio)*2.0/3.0);
- 
+     } else if (rz_flag==0) {
+      A_ratio=exp(log(A_ratio)/2.0);
+     } else
+      amrex::Error("rz_flag invalid"); 
+    } else if (AMREX_SPACEDIM==3) {
+     if ((rz_flag==0)||(rz_flag==3)) {
+      A_ratio=exp(log(A_ratio)*2.0/3.0);
+     } else
+      amrex::Error("rz_flag invalid"); 
+    } else
+     amrex::Error("dimension bust");
+   } else if (F_ratio==0.0) {
+    // do nothing
+   } else
+    amrex::Error("F_ratio invalid");
 
-  }
+   std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" ARATIO=" << 
+             A_ratio << '\n';
+  } // im=0..nmat-1
 
   for (int im=1;im<=nmat;im++) {
    for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
