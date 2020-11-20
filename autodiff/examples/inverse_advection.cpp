@@ -36,6 +36,11 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 	return Hreturn;
 }
 
+// wave equation:
+//   q_tt = c^2 q_xx   c=speed of wave propagation
+//   if q(0,x)=f(x) and q_{t}(0,x)=0
+//   the exact solution to the wave equation is:
+//   q(t,x)=(1/2)(f(x-ct) + f(x+ct))
 // to express the data assimilation problem precisely:
 // find min J(q(u),u) under the constraint that
 //          N(q(u),u)=0   q(u)=state variables u=control
