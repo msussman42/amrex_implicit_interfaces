@@ -5800,7 +5800,13 @@ end subroutine volume_sanity_check
 ! tessellate:
 ! 0=solids and fluids treated separately
 ! 1=non-tessellating slopes, but tessellating output
-! 2=is_rigid_local is zero for all materials
+! 2=is_rigid_local is zero for all materials; tessellating slopes and
+!   tessellating output for all materials.
+! 3=if a rigid material dominates the cell, then that cell is considered
+!   to only have that one dominant rigid material.  This routine should
+!   not be called if tessellate=3 (it would be called with tessellate=0
+!   in the non-raster cells)
+!
       subroutine tets_box_planes( &
        tessellate, &
        bfact,dx,xsten0,nhalf0, &
@@ -5853,6 +5859,10 @@ end subroutine volume_sanity_check
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
         ! do nothing
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0"
+        stop
        else
         print *,"tessellate invalid"
         stop
@@ -6041,7 +6051,13 @@ end subroutine volume_sanity_check
 ! tessellate:
 ! 0=solids and fluids treated separately
 ! 1=non-tessellating slopes, but tessellating output
-! 2=is_rigid_local is zero for all materials
+! 2=is_rigid_local is zero for all materials; tessellating slopes and
+!   tessellating output for all materials.
+! 3=if a rigid material dominates the cell, then that cell is considered
+!   to only have that one dominant rigid material.  This routine should
+!   not be called if tessellate=3 (it would be called with tessellate=0
+!   in the non-raster cells)
+!
       subroutine tets_box_planes_super( &
        tessellate, &
        tid, &
@@ -6233,6 +6249,10 @@ end subroutine volume_sanity_check
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
         ! do nothing
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0"
+        stop
        else
         print *,"tessellate invalid"
         stop
