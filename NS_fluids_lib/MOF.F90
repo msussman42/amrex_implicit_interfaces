@@ -14410,8 +14410,8 @@ FIX ME
         !   multi_get_volume should work the same regardless of 
         !      tessellate=1 or 2.
         !   The routines that perform intersections on the other hand,
-        !       do not work if tessellate=1, so they have to be fooled
-        !       by making all materials fluids, and using tessellate=0.
+        !       do not take "tessellate" as an input, they only use
+        !       "is_rigid" as an input by way of common module ???
         ! 
         ! shapeflag=0 find volumes within xsten_grid
         ! shapeflag=1 find volumes within xtet
@@ -15901,7 +15901,7 @@ FIX ME
         nmat,sdim,3000)
 
        ! if tessellate_in==2:
-       ! before (mofdata): fluids tessellate
+       ! before (mofdata): fluids tessellate, solids embedded
        ! after  (mofdata): fluids and solids tessellate
        ! The slope of fluid material whose volume fraction changes from
        ! one to less than one is initialized from a solid slope.
