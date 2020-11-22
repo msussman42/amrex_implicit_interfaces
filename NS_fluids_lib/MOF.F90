@@ -15665,6 +15665,7 @@ contains
         !
         ! output: multi_area_pair,multi_area_cen_pair (absolute coordinates)
         !
+        ! 
       subroutine multi_get_area_pairs( &
        bfact,dx, &
        xsten0_plus, &
@@ -15873,6 +15874,11 @@ contains
         mofdata_minus,mofdatavalid_minus, &
         nmat,sdim,3000)
 
+       ! before (mofdata): fluids tessellate
+       ! after  (mofdata): fluids and solids tessellate
+       ! The slope of fluid material whose volume fraction changes from
+       ! one to less than one is initialized from a solid slope.
+       ! The "order" for this fluid is set to nmat.
       call multi_get_volume_tessellate( &
         bfact,dx, &
         xsten0_plus,nhalf0, &
@@ -18422,8 +18428,9 @@ contains
 
        ! before (mofdata): fluids tessellate
        ! after  (mofdata): fluids and solids tessellate
-       ! slopes of fluid materials that change from one to less than
-       ! one are initialized from a solid slope.
+       ! The slope of fluid material whose volume fraction changes from
+       ! one to less than one is initialized from a solid slope.
+       ! The "order" for this fluid is set to nmat.
       subroutine multi_get_volume_tessellate( &
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
@@ -18547,7 +18554,7 @@ contains
       if (abs(fluid_vfrac_sum-one).le.VOFTOL) then
        ! do nothing
       else
-       print *,"fluid_vfrac_sum invalid"
+       print *,"fluid_vfrac_sum invalid: ",fluid_vfrac_sum
        stop
       endif
 
@@ -18638,7 +18645,8 @@ contains
          enddo
 
          if (is_rigid_local(im).eq.0) then
-          if (vfrac_save.gt.one-VOFTOL) then
+          if ((vfrac_save.le.one+VOFTOL).and. &
+              (vfrac_save.gt.one-VOFTOL) then
            do im_solid=1,nmat
             vofcomp_solid=(im_solid-1)*ngeom_recon+1
             vfracsolid(im_solid)=mofdata(vofcomp_solid)
@@ -18678,6 +18686,12 @@ contains
             print *,"imcrit invalid"
             stop
            endif
+          else if ((vfrac_save.ge.-VOFTOL).and. &
+                   (vfrac_save.le.one-VOFTOL)) then
+           ! do nothing
+          else
+           print *,"vfrac_save invalid: ",vfrac_save
+           stop
           endif
          else if (is_rigid_local(im).eq.1) then
           ! do nothing
