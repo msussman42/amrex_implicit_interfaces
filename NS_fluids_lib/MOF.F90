@@ -14403,15 +14403,23 @@ contains
       return
       end subroutine project_slopes_to_face
 
-FIX ME
 
-        ! There is a subtle difference between tessellate==2 
-        ! and tessellate==1: 
-        !   multi_get_volume should work the same regardless of 
-        !      tessellate=1 or 2.
-        !   The routines that perform intersections on the other hand,
-        !       do not take "tessellate" as an input, they only use
-        !       "is_rigid" as an input by way of common module ???
+        ! for tessellate==2:
+        !  it is assumed that the reconstruction is tessellating for all solids
+        !  and fluids.  Override is_rigid to be all zeros in this case.
+        ! for tessellate==1:
+        !  it is assumed that the reconstruction is tessellating for the 
+        !  fluids, and the solids are embedded.  The solids are reconstructed
+        !  first in this case, then the fluids.
+        ! for tessellate==0:
+        !  fluids and solids done independantly of each other.
+        ! for tessellate==3:
+        !  it is assumed that the reconstruction is tessellating for the 
+        !  fluids, and the solids are embedded.  
+        !  For cells in which F_solid<F_fluid, treat this the same as 
+        !  the tessellate==0 case, otherwise assume the cell is filled with the
+        !  dominant solid material.
+        !
         ! 
         ! shapeflag=0 find volumes within xsten_grid
         ! shapeflag=1 find volumes within xtet
@@ -18461,13 +18469,14 @@ FIX ME
 
       end subroutine LS_tessellate
 
-       ! before (mofdata): fluids tessellate
+       ! before (mofdata): fluids tessellate, solids are embedded.
        ! after  (mofdata): fluids and solids tessellate
-       ! The slope of fluid material whose volume fraction changes from
-       ! one to less than one is initialized from a solid slope.
-       ! The "order" for this fluid is set to nmat.
+       ! if tessellate_in==1:
+       !  The slope of fluid material whose volume fraction changes from
+       !  one to less than one is initialized from a solid slope.
+       !  The "order" for this fluid is set to nmat.
       subroutine multi_get_volume_tessellate( &
-       tessellate_in, & ! =2 or 3
+       tessellate_in, & ! =1 or 3
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xtetlist, &
@@ -18489,7 +18498,7 @@ FIX ME
       INTEGER_T shapeflag
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0
-      INTEGER_T, intent(in) :: tessellate_in  ! =2 or 3
+      INTEGER_T, intent(in) :: tessellate_in  ! =1 or 3
       REAL_T xtet(sdim+1,sdim)
       REAL_T, intent(inout) :: mofdata(nmat*(2*sdim+3))
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
@@ -18520,26 +18529,18 @@ FIX ME
 
       nhalf_box=1
 
-      if (tessellate_in.eq.2) then !non-tess data in, want tess output.
-       local_tessellate=1
-      else if (tessellate_in.eq.3) then !non-tess data in, want raster output.
-       local_tessellate=3
-      else
-       print *,"tessellate_in invalid"
-       stop
-      endif
       renorm_tessellate=0
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
-       if (local_tessellate.eq.2) then
+       if (renorm_tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((local_tessellate.eq.0).or. &
-                (local_tessellate.eq.1).or. & ! tessellate output
-                (local_tessellate.eq.3)) then ! raster output
+       else if ((renorm_tessellate.eq.0).or. &
+                (renorm_tessellate.eq.1).or. & ! tessellate output
+                (renorm_tessellate.eq.3)) then ! raster output
         ! do nothing
        else
-        print *,"local_tessellate invalid"
+        print *,"renorm_tessellate invalid"
         stop
        endif
       enddo ! im=1..nmat
@@ -18590,9 +18591,29 @@ FIX ME
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
+
+      im_raster_solid=0
+      vfrac_raster_solid=zero
+
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.1) then
+
+        if (im_raster_solid.eq.0) then
+         im_raster_solid=im
+         vfrac_raster_solid=mofdata(vofcomp)
+        else if ((im_raster_solid.ge.1).and. &
+                 (im_raster_solid.le.nmat).and. &
+                 (is_rigid_local(im_raster_solid).eq.1)) then
+         if (vfrac_raster_solid.lt.mofdata(vofcomp)) then
+          im_raster_solid=im
+          vfrac_raster_solid=mofdata(vofcomp)
+         endif
+        else
+         print *,"im_raster_solid invalid"
+         stop
+        endif
+
         solid_vfrac_sum=solid_vfrac_sum+mofdata(vofcomp)
        else if (is_rigid_local(im).eq.0) then
         fluid_vfrac_sum=fluid_vfrac_sum+mofdata(vofcomp)
@@ -18641,7 +18662,15 @@ FIX ME
 
       else if ((solid_vfrac_sum.ge.VOFTOL).and. &
                (solid_vfrac_sum.le.one-VOFTOL)) then
-       
+      
+       if (tessellate_in.eq.1) then
+        ! do nothing 
+       else if (tessellate_in.eq.3) then
+
+       else
+               print *,"tessellate_in invalid"
+               stop
+       endif
        shapeflag=0
        call multi_get_volume_grid( &
         local_tessellate, & ! =1 or 3
