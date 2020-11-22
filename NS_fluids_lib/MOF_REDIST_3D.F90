@@ -4139,7 +4139,9 @@ stop
        print *,"bfact invalid87"
        stop
       endif
-      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
+      if ((tessellate.ne.0).and. &
+          (tessellate.ne.1).and. &
+          (tessellate.ne.3)) then  ! raster
        print *,"tessellate invalid"
        stop
       endif
@@ -4351,7 +4353,10 @@ stop
           right_total=right_total+frac_right(im)
          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
           ! do nothing
-         else
+         else if (tessellate.eq.3) then
+          print *,"tessellate==3 not supported yet"
+          stop
+         else 
           print *,"tessellate or is_rigid invalid"
           stop
          endif 
@@ -4406,6 +4411,9 @@ stop
 
          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
           ! do nothing
+         else if (tessellate.eq.3) then
+          print *,"tessellate==3 not supported yet"
+          stop
          else
           print *,"tessellate or is_rigid invalid"
           stop
@@ -4430,6 +4438,9 @@ stop
             mofdata_left(vofcomp+dir2-1)=zero 
             mofdata_right(vofcomp+dir2-1)=zero 
            enddo
+          else if (tessellate.eq.3) then
+           print *,"tessellate==3 not supported yet"
+           stop
           else
            print *,"tessellate or is_rigid invalid"
            stop
@@ -4573,6 +4584,9 @@ stop
 
          else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
           ! do nothing
+         else if (tessellate.eq.3) then
+          print *,"tessellate==3 not supported yet"
+          stop
          else
           print *,"tessellate or is_rigid invalid"
           stop

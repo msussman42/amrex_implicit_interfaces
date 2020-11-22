@@ -5857,7 +5857,8 @@ end subroutine volume_sanity_check
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -6247,7 +6248,8 @@ end subroutine volume_sanity_check
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -11447,7 +11449,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -12837,7 +12840,8 @@ contains
        is_rigid_local(imaterial)=is_rigid(nmat,imaterial)
        if (tessellate.eq.2) then
         is_rigid_local(imaterial)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -13981,7 +13985,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -14183,7 +14188,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -14397,7 +14403,16 @@ contains
       return
       end subroutine project_slopes_to_face
 
- 
+FIX ME
+
+        ! There is a subtle difference between tessellate==2 
+        ! and tessellate==1: 
+        !   multi_get_volume should work the same regardless of 
+        !      tessellate=1 or 2.
+        !   The routines that perform intersections on the other hand,
+        !       do not work if tessellate=1, so they have to be fooled
+        !       by making all materials fluids, and using tessellate=0.
+        ! 
         ! shapeflag=0 find volumes within xsten_grid
         ! shapeflag=1 find volumes within xtet
         ! multi_cen is "absolute" (not relative to cell centroid)
@@ -15666,7 +15681,9 @@ contains
         ! output: multi_area_pair,multi_area_cen_pair (absolute coordinates)
         !
         ! 
+        ! tessellate_in=2 or 3
       subroutine multi_get_area_pairs( &
+       tessellate_in, &
        bfact,dx, &
        xsten0_plus, &
        xsten0_minus, & !phi = n dot (x-x0) + intercept (phi>0 in omega_m)
@@ -15691,6 +15708,7 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: tessellate_in
       INTEGER_T, intent(in) :: nlist_alloc_plus
       INTEGER_T, intent(in) :: nlist_alloc_minus
       INTEGER_T, intent(in) :: nmax
@@ -15754,7 +15772,8 @@ contains
       INTEGER_T num_processed_fluid
       INTEGER_T material_used(nmat)
 
-      INTEGER_T tessellate
+      INTEGER_T local_tessellate     !=0
+      INTEGER_T local_tessellate_in  !=2
 
       INTEGER_T nlist
       INTEGER_T loop_counter 
@@ -15823,6 +15842,13 @@ contains
        stop
       endif 
 
+      if ((tessellate_in.eq.2).or.(tessellate_in.eq.3)) then
+       ! do nothing
+      else
+       print *,"tessellate_in invalid: ",tessellate_in
+       stop
+      endif
+
        ! left index: mofdata_minus
        ! right index: mofdata_plus
       do im=1,nmat
@@ -15860,26 +15886,32 @@ contains
       xsten_thin(0,dir_plus)=half*(xsten0_plus(-1,dir_plus)+ &
                                    xsten0_minus(1,dir_plus))
 
-      tessellate=0  ! do not override "is_rigid"
+      local_tessellate=0  ! do not override "is_rigid"
       call make_vfrac_sum_ok_copy( &
         xsten0_plus,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate, &
+        local_tessellate, &
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
       call make_vfrac_sum_ok_copy( &
         xsten0_minus,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate, &
+        local_tessellate, &
         mofdata_minus,mofdatavalid_minus, &
         nmat,sdim,3000)
 
+       ! if tessellate_in==2:
        ! before (mofdata): fluids tessellate
        ! after  (mofdata): fluids and solids tessellate
        ! The slope of fluid material whose volume fraction changes from
        ! one to less than one is initialized from a solid slope.
        ! The "order" for this fluid is set to nmat.
+       ! if tessellate_in==3:
+       !   a) if solid_vfrac>=fluid_vfrac then
+       !        consider cell as F_{im_solid_max}=1
+       !   b) else, only consider fluids.
       call multi_get_volume_tessellate( &
+        tessellate_in, & ! = 2 or 3
         bfact,dx, &
         xsten0_plus,nhalf0, &
         mofdatavalid_plus, &
@@ -15891,6 +15923,7 @@ contains
         caller_id)
 
       call multi_get_volume_tessellate( &
+        tessellate_in, & ! =2 or 3
         bfact,dx, &
         xsten0_minus,nhalf0, &
         mofdatavalid_minus, &
@@ -15915,12 +15948,8 @@ contains
 
       shapeflag=0
 
-      tessellate=2  ! 0=solids and fluids treated separately
-                    ! 1=non-tessellating slopes, but tessellating output
-                    ! 2=is_rigid_local is zero for all materials
-
       call multi_get_volume_grid( &
-       tessellate, &
+       tessellate_in, &  ! =2 or =3
        bfact,dx, &
        xsten0_plus,nhalf0, &
        mofdataproject_plus, &
@@ -16081,8 +16110,11 @@ contains
          ! intersects xsten_thin with the compliments of already
          ! initialized materials. (i.e. materials with 
          ! 1<=material_used(im)<=nmat)
+
+         local_tessellate_in=2
+
          call tets_box_planes( &
-           tessellate, &
+           local_tessellate_in, & ! =2
            bfact,dx, &
            xsten0_minus,nhalf0, &
            xsten_thin,nhalf_thin, &
@@ -16120,7 +16152,7 @@ contains
               (material_used(critical_material).le.nmat)) then
 
             call multi_get_volume_tetlist( &
-             tessellate, &
+             local_tessellate_in, &  ! =2
              bfact,dx, &
              xsten0_plus,nhalf0, &
              mofdataproject_plus, &
@@ -16551,7 +16583,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -18307,7 +18340,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -18386,7 +18420,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -18432,6 +18467,7 @@ contains
        ! one to less than one is initialized from a solid slope.
        ! The "order" for this fluid is set to nmat.
       subroutine multi_get_volume_tessellate( &
+       tessellate_in, & ! =2 or 3
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xtetlist, &
@@ -18453,11 +18489,15 @@ contains
       INTEGER_T shapeflag
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0
-      INTEGER_T tessellate
+      INTEGER_T, intent(in) :: tessellate_in  ! =2 or 3
       REAL_T xtet(sdim+1,sdim)
       REAL_T, intent(inout) :: mofdata(nmat*(2*sdim+3))
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, intent(in) :: dx(sdim)
+
+      INTEGER_T :: local_tessellate
+      INTEGER_T :: renorm_tessellate
+
       REAL_T multi_volume(nmat)
       REAL_T multi_cen(sdim,nmat)
       REAL_T multi_area(nmat)
@@ -18480,16 +18520,26 @@ contains
 
       nhalf_box=1
 
-      tessellate=0
+      if (tessellate_in.eq.2) then !non-tess data in, want tess output.
+       local_tessellate=1
+      else if (tessellate_in.eq.3) then !non-tess data in, want raster output.
+       local_tessellate=3
+      else
+       print *,"tessellate_in invalid"
+       stop
+      endif
+      renorm_tessellate=0
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
-       if (tessellate.eq.2) then
+       if (local_tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((local_tessellate.eq.0).or. &
+                (local_tessellate.eq.1).or. & ! tessellate output
+                (local_tessellate.eq.3)) then ! raster output
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"local_tessellate invalid"
         stop
        endif
       enddo ! im=1..nmat
@@ -18535,7 +18585,8 @@ contains
       call make_vfrac_sum_ok_base( &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
-       tessellate,mofdata,nmat,sdim,1)
+       renorm_tessellate, & !=0
+       mofdata,nmat,sdim,1)
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
@@ -18591,10 +18642,9 @@ contains
       else if ((solid_vfrac_sum.ge.VOFTOL).and. &
                (solid_vfrac_sum.le.one-VOFTOL)) then
        
-       tessellate=1
        shapeflag=0
        call multi_get_volume_grid( &
-        tessellate, &
+        local_tessellate, & ! =1 or 3
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
         xsten0,nhalf0, &
@@ -18819,7 +18869,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -19507,7 +19558,8 @@ contains
         is_rigid_local(im)=is_rigid(nmat,im)
         if (tessellate.eq.2) then
          is_rigid_local(im)=0
-        else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        else if ((tessellate.eq.0).or. &
+                 (tessellate.eq.1)) then
          ! do nothing
         else
          print *,"tessellate invalid"
@@ -19693,7 +19745,8 @@ contains
         ! material.
        if (tessellate.eq.2) then 
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -20248,7 +20301,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -20476,7 +20530,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -20570,7 +20625,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -20677,7 +20733,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. & 
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -20841,7 +20898,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
@@ -20932,7 +20990,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
        else
         print *,"tessellate invalid"
