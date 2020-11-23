@@ -24459,6 +24459,7 @@ stop
       REAL_T Tgamma
       REAL_T TorYgamma_BC
       INTEGER_T tsat_comp
+      INTEGER_T local_tessellate
 
       DATA_FLOOR=zero
 
@@ -24665,8 +24666,11 @@ stop
         do im=1,nmat*ngeom_recon
          mofdata(im)=vof(D_DECL(i,j,k),im)
         enddo
+        local_tessellate=1
         call multi_get_volume_tessellate( &
-         bfact,dx,xsten,nhalf, &
+         local_tessellate, &
+         bfact, &
+         dx,xsten,nhalf, &
          mofdata, &
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
@@ -25711,6 +25715,7 @@ stop
       REAL_T lsleft(nmat)
       REAL_T lsright(nmat)
       REAL_T xface_local
+      INTEGER_T local_tessellate
 
       nhalf=3
       nmax=POLYGON_LIST_MAX ! in: COMBINEVELFACE
@@ -25895,8 +25900,11 @@ stop
          do im=1,nmat*ngeom_recon
           mofdata(im)=vof(D_DECL(icell,jcell,kcell),im)
          enddo
+         local_tessellate=1
          call multi_get_volume_tessellate( &
-          bfact,dx,xsten,nhalf, &
+          local_tessellate, &
+          bfact, &
+          dx,xsten,nhalf, &
           mofdata, &
           geom_xtetlist(1,1,1,tid+1), &
           nmax, &

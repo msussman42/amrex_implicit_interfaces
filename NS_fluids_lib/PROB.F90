@@ -23630,6 +23630,7 @@ end subroutine RatePhaseChange
       REAL_T vfluid_sum
       REAL_T VOF_source,VOF_dest
       INTEGER_T nhalf_box
+      INTEGER_T local_tessellate
 
       nhalf_box=1
 
@@ -23859,7 +23860,9 @@ end subroutine RatePhaseChange
          continuous_mof, &
          nmat,SDIM,4)
 
+        local_tessellate=1
         call multi_get_volume_tessellate( &
+         local_tessellate, &
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
