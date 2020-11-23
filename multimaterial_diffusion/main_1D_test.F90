@@ -343,7 +343,7 @@ problenz=probhiz-probloz
 sci_max_level=0
 fort_max_level=0
 fort_finest_level=0
-do im=1,100
+do im=1,MAX_NUM_MATERIALS
   FSI_flag(im)=0
 enddo
 
