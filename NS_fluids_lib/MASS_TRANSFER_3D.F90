@@ -953,6 +953,7 @@ stop
       REAL_T volcell
       REAL_T cencell(SDIM)
       INTEGER_T nmax
+      INTEGER_T local_tessellate
 
       call checkbound(lo,hi,DIMS(recon),ngrow,-1,1222)
 
@@ -991,7 +992,9 @@ stop
        mofdata(im)=recon(D_DECL(ic,jc,kc),im)
       enddo
 
+      local_tessellate=1
       call multi_get_volume_tessellate( &
+        local_tessellate, &
         bfact, &
         dx, &
         xsten,nhalf, &

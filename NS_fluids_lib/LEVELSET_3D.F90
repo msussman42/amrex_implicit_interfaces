@@ -6519,6 +6519,7 @@ stop
       INTEGER_T im_prescribed_primary
       INTEGER_T ispec
       REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T local_tessellate
 
 ! INIT_PHYSICS_VARS code starts here:
 
@@ -8502,8 +8503,11 @@ stop
         enddo
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
+        local_tessellate=1
         call multi_get_volume_tessellate( &
-         bfact,dx,xsten,nhalf, &
+         local_tessellate, &
+         bfact, &
+         dx,xsten,nhalf, &
          mofdata, &
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
@@ -15841,6 +15845,7 @@ stop
       INTEGER_T partid
       INTEGER_T partid_max
       INTEGER_T tessellate
+      INTEGER_T tessellate_transfer
       INTEGER_T LS_extrap_radius
       INTEGER_T extrap_radius
       INTEGER_T least_sqr_radius
@@ -16981,9 +16986,12 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              nmat,SDIM,2)
-      
+     
+            tessellate_transfer=1 
             call multi_get_volume_tessellate( &
-             bfact,dx,xsten,nhalf, &
+             tessellate_transfer, &
+             bfact, &
+             dx,xsten,nhalf, &
              local_mof, &
              geom_xtetlist(1,1,1,tid+1), &
              nmax, &

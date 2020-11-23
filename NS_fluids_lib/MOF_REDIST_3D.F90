@@ -4122,6 +4122,7 @@ stop
       REAL_T L_face
       INTEGER_T nmax
       INTEGER_T caller_id
+      INTEGER_T local_tessellate
  
       L_face=dx(dir+1)
 
@@ -4431,9 +4432,11 @@ stop
 
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
-          if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+          if ((tessellate.eq.1).or. &
+              (is_rigid(nmat,im).eq.0)) then
            ! do nothing
-          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+          else if ((tessellate.eq.0).and. &
+                   (is_rigid(nmat,im).eq.1)) then
            do dir2=1,ngeom_recon
             mofdata_left(vofcomp+dir2-1)=zero 
             mofdata_right(vofcomp+dir2-1)=zero 
@@ -4455,8 +4458,11 @@ stop
 
            ! x_pair in absolute coordinate system.
          caller_id=12
+         local_tessellate=1
          call multi_get_area_pairs( &
-           bfact,dx, &
+           local_tessellate, &
+           bfact, &
+           dx, &
            xsten_right, &
            xsten_left, &
            nhalf, &
