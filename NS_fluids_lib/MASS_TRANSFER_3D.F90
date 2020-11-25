@@ -5214,7 +5214,7 @@ stop
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one+EBVOFTOL)) then
 
-             tessellate=1
+             tessellate=3
              call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
@@ -5853,7 +5853,7 @@ stop
 
              LS_dest_old=cell_data_interp(im_dest)
 
-             tessellate=1
+             tessellate=3
              call multi_get_volumePOINT( &
               tessellate, &
               bfact,dx, &
@@ -5862,7 +5862,7 @@ stop
               xstar, & ! absolute coordinate system
               im_old_crit,nmat,SDIM)
 
-             tessellate=1
+             tessellate=3
              call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
