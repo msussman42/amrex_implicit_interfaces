@@ -11451,12 +11451,15 @@ contains
         is_rigid_local(im)=0
         print *,"tessellate should be 0"
         stop
-       else if ((tessellate.eq.0).or. &
-                (tessellate.eq.1)) then
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"tessellate should be 0"
+        stop
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
         print *,"if non-raster cell, pass tessellate=0"
+        print *,"subroutine individual_MOF: tessellate should be 0"
         stop
        else
         print *,"tessellate invalid"
@@ -14629,7 +14632,7 @@ contains
          endif
         endif
        endif
-      endif
+      endif  ! sanity_check==1
 
       if (shapeflag.eq.0) then
  
@@ -14747,6 +14750,8 @@ contains
          else if (is_rigid_local(im).eq.1) then
           do dir=0,sdim
            mofdatasave(vofcomp+dir)=zero
+           mofdatavalid(vofcomp+dir)=zero
+           mofdatalocal(vofcomp+dir)=zero
           enddo
          else
           print *,"is_rigid_local invalid"
@@ -15932,7 +15937,7 @@ contains
        ! The "order" for this fluid is set to nmat.
        !
        ! if tessellate_in==3:
-       !   a) if solid_vfrac>=fluid_vfrac then
+       !   a) if solid_vfrac>=1/2 then
        !        consider cell as F_{im_solid_max}=1
        !   b) else, only consider fluids.
       call multi_get_volume_tessellate( &
@@ -16824,6 +16829,8 @@ contains
          else if (is_rigid_local(im).eq.1) then
           do dir=0,sdim
            mofdatasave(vofcomp+dir)=zero
+           mofdatalocal(vofcomp+dir)=zero
+           mofdatavalid(vofcomp+dir)=zero
           enddo
          else
           print *,"is_rigid_local invalid"
@@ -17646,10 +17653,15 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate_local.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate_local.eq.0).or.(tessellate_local.eq.1)) then
+        print *,"expecting tessellate_local==0"
+        stop
+       else if (tessellate_local.eq.0) then
         ! do nothing
+       else if (tessellate_local.eq.1) then
+        print *,"expecting tessellate_local==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate_local invalid"
         stop
        endif
       enddo ! im=1..nmat
@@ -18687,6 +18699,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (renorm_tessellate.eq.2) then
         is_rigid_local(im)=0
+        print *,"expecting renorm_tessellate==0"
+        stop
        else if ((renorm_tessellate.eq.0).or. &
                 (renorm_tessellate.eq.1).or. & ! tessellate output
                 (renorm_tessellate.eq.3)) then ! raster output
@@ -18820,7 +18834,7 @@ contains
        if (tessellate_in.eq.1) then
         ! do nothing         
        else if (tessellate_in.eq.3) then
-        if (solid_vfrac_sum.ge.fluid_vfrac_sum) then
+        if (solid_vfrac_sum.ge.half) then
          do im=1,nmat*ngeom_recon
           mofdata(im)=zero
          enddo
@@ -18832,12 +18846,11 @@ contains
           print *,"im_raster_solid invalid"
           stop
          endif
-        else if (solid_vfrac_sum.le.fluid_vfrac_sum) then
+        else if (solid_vfrac_sum.le.half) then
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           if (is_rigid_local(im).eq.1) then
-           mofdata(vofcomp)=zero
-           do dir=1,sdim
+           do dir=0,sdim
             mofdata(vofcomp+dir)=zero
            enddo
           else if (is_rigid_local(im).eq.0) then
