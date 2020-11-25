@@ -5798,14 +5798,14 @@ end subroutine volume_sanity_check
 ! then intersects this region with the plane (LS<0 side)
 ! of already initialized materials.
 ! tessellate:
-! 0=solids and fluids treated separately
+! 0=fluids tessellate, solids embedded
 ! 1=non-tessellating slopes, but tessellating output
 ! 2=is_rigid_local is zero for all materials; tessellating slopes and
 !   tessellating output for all materials.
 ! 3=if rigid materials dominate the cell, then that cell is considered
 !   to only have the one dominant rigid material.  This routine should
 !   not be called if tessellate=3 (it would be called with tessellate=0
-!   in the non-raster cells)
+!   in the non-raster cells, and the solids would have no volume)
 !
       subroutine tets_box_planes( &
        tessellate, &
@@ -11449,6 +11449,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
+        print *,"tessellate should be 0"
+        stop
        else if ((tessellate.eq.0).or. &
                 (tessellate.eq.1)) then
         ! do nothing
@@ -14412,7 +14414,8 @@ contains
         !  fluids, and the solids are embedded.  The solids are reconstructed
         !  first in this case, then the fluids.
         ! for tessellate==0:
-        !  fluids and solids done independantly of each other.
+        !  fluids and solids done independantly of each other.  Fluids 
+        !  tessellate, and solids are embedded.
         ! for tessellate==3:
         !  it is assumed that the reconstruction is tessellating for the 
         !  fluids, and the solids are embedded.  
@@ -14720,7 +14723,7 @@ contains
       return_raster_info=0
 
       if (tessellate.eq.3) then
-       if (vfrac_solid_sum.ge.vfrac_fluid_sum) then
+       if (vfrac_solid_sum.ge.half) then
         return_raster_info=1
 
         if ((im_raster_solid.ge.1).and. &
@@ -14735,8 +14738,21 @@ contains
          stop
         endif
 
-       else if (vfrac_solid_sum.lt.vfrac_fluid_sum) then
-        ! do nothing
+       else if (vfrac_solid_sum.lt.half) then
+        vfrac_solid_sum=zero
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
+         if (is_rigid_local(im).eq.0) then
+          ! do nothing
+         else if (is_rigid_local(im).eq.1) then
+          do dir=0,sdim
+           mofdatasave(vofcomp+dir)=zero
+          enddo
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
        else
         print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
         stop
@@ -16784,7 +16800,7 @@ contains
       return_raster_info=0
 
       if (tessellate.eq.3) then
-       if (vfrac_solid_sum.ge.vfrac_fluid_sum) then
+       if (vfrac_solid_sum.ge.half) then
         return_raster_info=1
 
         if ((im_raster_solid.ge.1).and. &
@@ -16799,8 +16815,21 @@ contains
          stop
         endif
 
-       else if (vfrac_solid_sum.lt.vfrac_fluid_sum) then
-        ! do nothing
+       else if (vfrac_solid_sum.lt.half) then
+        vfrac_solid_sum=zero
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
+         if (is_rigid_local(im).eq.0) then
+          ! do nothing
+         else if (is_rigid_local(im).eq.1) then
+          do dir=0,sdim
+           mofdatasave(vofcomp+dir)=zero
+          enddo
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
        else
         print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
         stop
@@ -20602,7 +20631,7 @@ contains
        return_raster_info=0
 
        if (tessellate.eq.3) then
-        if (vfrac_solid_sum.ge.vfrac_fluid_sum) then
+        if (vfrac_solid_sum.ge.half) then
          return_raster_info=1
 
          if ((im_raster_solid.ge.1).and. &
@@ -20613,8 +20642,21 @@ contains
           stop
          endif
 
-        else if (vfrac_solid_sum.lt.vfrac_fluid_sum) then
-         ! do nothing
+        else if (vfrac_solid_sum.lt.half) then
+         vfrac_solid_sum=zero
+         do im=1,nmat
+          vofcomp=(im-1)*ngeom_recon+1
+          if (is_rigid_local(im).eq.0) then
+           ! do nothing
+          else if (is_rigid_local(im).eq.1) then
+           do dir=0,sdim
+            mofdatavalid(vofcomp+dir)=zero
+           enddo
+          else
+           print *,"is_rigid_local invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
         else
          print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
          stop
