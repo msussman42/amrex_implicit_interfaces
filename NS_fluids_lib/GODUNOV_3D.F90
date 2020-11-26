@@ -24666,9 +24666,9 @@ stop
         do im=1,nmat*ngeom_recon
          mofdata(im)=vof(D_DECL(i,j,k),im)
         enddo
-        local_tessellate=1
+        local_tessellate=3
         call multi_get_volume_tessellate( &
-         local_tessellate, &
+         local_tessellate, &  ! =3
          bfact, &
          dx,xsten,nhalf, &
          mofdata, &
@@ -25900,9 +25900,9 @@ stop
          do im=1,nmat*ngeom_recon
           mofdata(im)=vof(D_DECL(icell,jcell,kcell),im)
          enddo
-         local_tessellate=1
+         local_tessellate=3
          call multi_get_volume_tessellate( &
-          local_tessellate, &
+          local_tessellate, & !  =3
           bfact, &
           dx,xsten,nhalf, &
           mofdata, &

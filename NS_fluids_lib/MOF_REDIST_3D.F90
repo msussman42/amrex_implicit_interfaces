@@ -2863,7 +2863,7 @@ stop
       endif
 
       if ((tessellate.ne.0).and.(tessellate.ne.1)) then
-       print *,"tessellate invalid"
+       print *,"tessellate invalid45"
        stop
       endif
 
@@ -3144,7 +3144,7 @@ stop
              stop
             endif
            else
-            print *,"tessellate invalid"
+            print *,"tessellate invalid46"
             stop
            endif
           enddo ! im=1..nmat
@@ -3421,7 +3421,7 @@ stop
             else if (tessellate.eq.0) then
              ! do nothing
             else
-             print *,"tessellate invalid"
+             print *,"tessellate invalid47"
              stop
             endif
 
@@ -3560,7 +3560,7 @@ stop
                               (tessellate.eq.0)) then
                       ! do nothing
                      else
-                      print *,"is_rigid or tessellate invalid"
+                      print *,"is_rigid or tessellate invalid48"
                       stop
                      endif
                     enddo !im_opp
@@ -3821,7 +3821,7 @@ stop
       endif
 
       if ((tessellate.ne.0).and.(tessellate.ne.1)) then
-       print *,"tessellate invalid"
+       print *,"tessellate invalid49"
        stop
       endif
  
@@ -3974,7 +3974,7 @@ stop
               stop
              endif
             else
-             print *,"tessellate invalid"
+             print *,"tessellate invalid50"
              stop
             endif
            enddo !im=1..nmat 
@@ -4143,7 +4143,7 @@ stop
       if ((tessellate.ne.0).and. &
           (tessellate.ne.1).and. &
           (tessellate.ne.3)) then  ! raster
-       print *,"tessellate invalid"
+       print *,"tessellate invalid51"
        stop
       endif
 
