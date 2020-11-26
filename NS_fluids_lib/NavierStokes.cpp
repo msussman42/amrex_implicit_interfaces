@@ -22435,7 +22435,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
  int finest_level=parent->finestLevel();
 
  if ((tessellate!=0)&&(tessellate!=1)&&(tessellate!=3))
-  amrex::Error("tessellate invalid");
+  amrex::Error("tessellate invalid60");
 
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid ProcessFaceFrac");
@@ -22666,7 +22666,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  int finest_level=parent->finestLevel();
 
  if ((tessellate!=0)&&(tessellate!=1)&&(tessellate!=3))
-  amrex::Error("tessellate invalid");
+  amrex::Error("tessellate invalid61");
 
  if (localMF_grow[idx]>=0)
   amrex::Error("makeFaceTest: forgot to delete");

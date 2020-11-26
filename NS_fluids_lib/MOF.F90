@@ -5870,7 +5870,7 @@ end subroutine volume_sanity_check
         print *,"vfrac=0.0 for solids"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid4"
         stop
        endif
       enddo ! im=1..nmat
@@ -6270,7 +6270,7 @@ end subroutine volume_sanity_check
         print *,"tessellate=1 after zeroing out the solids"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid5"
         stop
        endif
       enddo ! im=1..nmat
@@ -11477,7 +11477,7 @@ contains
         print *,"subroutine individual_MOF: tessellate should be 0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid6"
         stop
        endif
       enddo ! im=1..nmat
@@ -12872,7 +12872,7 @@ contains
         print *,"if non-raster cell, pass tessellate=0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid7"
         stop
        endif
       enddo ! imaterial=1..nmat
@@ -14018,7 +14018,7 @@ contains
         print *,"if non-raster cell, pass tessellate=0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid8"
         stop
        endif
       enddo ! im=1..nmat
@@ -14221,7 +14221,7 @@ contains
         print *,"if non-raster cell, pass tessellate=0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid9"
         stop
        endif
       enddo ! im=1..nmat
@@ -14279,6 +14279,7 @@ contains
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
+       print *,"tessellate=",tessellate
        stop
       endif
 
@@ -14560,7 +14561,7 @@ contains
        else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid10"
         stop
        endif
       enddo ! im=1..nmat
@@ -14572,7 +14573,7 @@ contains
                (tessellate.eq.2)) then
        local_tessellate=tessellate
       else
-       print *,"tessellate invalid"
+       print *,"tessellate invalid11"
        stop
       endif
 
@@ -14794,7 +14795,7 @@ contains
                (tessellate.eq.2)) then
        ! do nothing
       else
-       print *,"tessellate invalid"
+       print *,"tessellate invalid12"
        stop
       endif
       
@@ -14818,7 +14819,7 @@ contains
        else if (local_tessellate.eq.2) then 
         vfrac_mult=one
        else
-        print *,"local_tessellate invalid"
+        print *,"local_tessellate invalid13"
         stop
        endif
  
@@ -14863,7 +14864,7 @@ contains
           stop
          endif
         else
-         print *,"local_tessellate invalid"
+         print *,"local_tessellate invalid14"
          stop
         endif
 
@@ -15153,7 +15154,7 @@ contains
         else if (local_tessellate.eq.2) then
          ! do nothing
         else
-         print *,"local_tessellate invalid"
+         print *,"local_tessellate invalid15"
          stop
         endif
 
@@ -15223,7 +15224,7 @@ contains
           else if (local_tessellate.eq.2) then
            num_processed_total=num_processed_fluid
           else
-           print *,"local_tessellate invalid"
+           print *,"local_tessellate invalid16"
            stop
           endif
 
@@ -15274,7 +15275,7 @@ contains
             endif
 
            else
-            print *,"local_tessellate invalid"
+            print *,"local_tessellate invalid17"
             stop
            endif
           enddo ! im=1..nmat
@@ -15287,7 +15288,7 @@ contains
           else if (local_tessellate.eq.2) then
            num_processed_total=num_processed_fluid
           else
-           print *,"local_tessellate invalid"
+           print *,"local_tessellate invalid18"
            stop
           endif
 
@@ -15473,7 +15474,7 @@ contains
            else if (local_tessellate.eq.2) then
             num_processed_total=num_processed_fluid
            else
-            print *,"local_tessellate invalid"
+            print *,"local_tessellate invalid19"
             stop
            endif
 
@@ -15537,7 +15538,7 @@ contains
       end subroutine multi_get_volume_grid
 
       subroutine multi_get_volume_tetlist( &
-       tessellate, &
+       tessellate, & ! =2
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -15589,7 +15590,12 @@ contains
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
       endif
-
+      if (tessellate.eq.2) then
+       ! do nothing
+      else
+       print *,"expecting tessellate==2 multi_get_volume_tetlist"
+       stop
+      endif
       if (nmax.lt.4) then
        print *,"nmax invalid multi_get_volume_tetlist nmax=",nmax
        stop
@@ -15642,7 +15648,7 @@ contains
         shapeflag=1
          ! multi_cen_sub is "absolute" (not relative to cell centroid)
         call multi_get_volume_grid( &
-          tessellate, &
+          tessellate, &  ! =2
           bfact,dx, &
           xsten0,nhalf0, &
           mofdata, &
@@ -16661,7 +16667,7 @@ contains
        else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid20"
         stop
        endif
       enddo ! im=1..nmat
@@ -16673,7 +16679,7 @@ contains
                (tessellate.eq.2)) then
        local_tessellate=tessellate
       else
-       print *,"tessellate invalid"
+       print *,"tessellate invalid21"
        stop
       endif
 
@@ -16739,7 +16745,7 @@ contains
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
-       mofdata,mofdatavalid,nmat,sdim,1)
+       mofdata,mofdatavalid,nmat,sdim,101)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -16881,7 +16887,7 @@ contains
                (tessellate.eq.2)) then
        ! do nothing
       else
-       print *,"tessellate invalid"
+       print *,"tessellate invalid22"
        stop
       endif
       
@@ -16905,7 +16911,7 @@ contains
        else if (local_tessellate.eq.2) then 
         vfrac_mult=one
        else
-        print *,"local_tessellate invalid"
+        print *,"local_tessellate invalid23"
         stop
        endif
   
@@ -16950,7 +16956,7 @@ contains
           stop
          endif
         else
-         print *,"local_tessellate invalid"
+         print *,"local_tessellate invalid24"
          stop
         endif
 
@@ -17219,7 +17225,7 @@ contains
         else if (local_tessellate.eq.2) then
          ! do nothing
         else
-         print *,"local_tessellate invalid"
+         print *,"local_tessellate invalid25"
          stop
         endif
 
@@ -17288,7 +17294,7 @@ contains
           else if (local_tessellate.eq.2) then
            num_processed_total=num_processed_fluid
           else
-           print *,"local_tessellate invalid"
+           print *,"local_tessellate invalid26"
            stop
           endif
 
@@ -17340,7 +17346,7 @@ contains
             endif
 
            else
-            print *,"local_tessellate invalid"
+            print *,"local_tessellate invalid27"
             stop
            endif
           enddo ! im=1..nmat
@@ -17353,7 +17359,7 @@ contains
           else if (local_tessellate.eq.2) then
            num_processed_total=num_processed_fluid
           else
-           print *,"local_tessellate invalid"
+           print *,"local_tessellate invalid28"
            stop
           endif
 
@@ -17519,7 +17525,7 @@ contains
            else if (local_tessellate.eq.2) then
             num_processed_total=num_processed_fluid
            else
-            print *,"tessellate invalid"
+            print *,"tessellate invalid29"
             stop
            endif
 
@@ -17768,7 +17774,7 @@ contains
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
-        mofdata,mofdatavalid,nmat,sdim,1)
+        mofdata,mofdatavalid,nmat,sdim,102)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -18569,7 +18575,7 @@ contains
         print *,"expecting tessellate==0 here"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid30"
         stop
        endif
       enddo ! im=1..nmat
@@ -18893,11 +18899,14 @@ contains
       else if ((solid_vfrac_sum.ge.VOFTOL).and. &
                (solid_vfrac_sum.le.one-VOFTOL)) then
      
-       local_tessellate=1
-
        if (tessellate_in.eq.1) then
-        ! do nothing         
+
+        local_tessellate=1
+
        else if (tessellate_in.eq.3) then
+
+        local_tessellate=2
+
         if (solid_vfrac_sum.ge.half) then
          do im=1,nmat*ngeom_recon
           mofdata(im)=zero
@@ -18935,7 +18944,7 @@ contains
 
        shapeflag=0
        call multi_get_volume_grid( &
-        local_tessellate, & ! =1 
+        local_tessellate, & ! =1 or 2
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
         xsten0,nhalf0, &
@@ -19176,7 +19185,7 @@ contains
         print *,"expecting tessellate==0 here"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid31"
         stop
        endif
       enddo ! im=1..nmat
@@ -19872,7 +19881,7 @@ contains
          print *,"expecting tessellate==0 here"
          stop
         else
-         print *,"tessellate invalid"
+         print *,"tessellate invalid32"
          stop
         endif
        enddo ! im=1..nmat
@@ -20066,7 +20075,7 @@ contains
         print *,"expecting tessellate==0 here"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid33"
         stop
        endif
       enddo ! im=1..nmat
@@ -20638,7 +20647,7 @@ contains
        else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid34"
         stop
        endif
       enddo ! im=1..nmat
@@ -20654,7 +20663,7 @@ contains
        print *,"expecting tessellate=0 or 3"
        stop
       else
-       print *,"tessellate invalid"
+       print *,"tessellate invalid35"
        stop
       endif
 
@@ -20787,7 +20796,7 @@ contains
         print *,"expecting tessellate=0 or 3"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid36"
         stop
        endif
       
@@ -20848,7 +20857,7 @@ contains
         else if (local_tessellate.eq.0) then
          ! do nothing
         else
-         print *,"local_tessellate invalid"
+         print *,"local_tessellate invalid37"
          stop
         endif
 
@@ -20993,7 +21002,7 @@ contains
         print *,"expecting tessellate==0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid38"
         stop
        endif
       enddo ! im=1..nmat
@@ -21095,7 +21104,7 @@ contains
         print *,"expecting tessellate==0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid39"
         stop
        endif
       enddo ! im=1..nmat
@@ -21208,7 +21217,7 @@ contains
        else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid40"
         stop
        endif
       enddo ! im=1..nmat
@@ -21222,7 +21231,7 @@ contains
       if ((tessellate.ne.0).and. &
           (tessellate.ne.1).and. &
           (tessellate.ne.3)) then
-       print *,"tessellate invalid"
+       print *,"tessellate invalid41"
        stop
       endif
 
@@ -21383,7 +21392,7 @@ contains
         print *,"expecting tessellate==0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid42"
         stop
        endif
       enddo ! im=1..nmat
@@ -21482,7 +21491,7 @@ contains
         print *,"expecting tessellate==0"
         stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid43"
         stop
        endif
       enddo ! im=1..nmat

@@ -727,7 +727,7 @@ stop
         endif
        enddo ! im 
       else
-       print *,"tessellate invalid"
+       print *,"tessellate invalid63"
        stop
       endif
      
@@ -7760,7 +7760,7 @@ END SUBROUTINE Adist
        endif
         ! in: get_symmetric_error
        call multi_get_volume_grid_simple( &
-        tessellate, &
+        tessellate, &  ! =1
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
         xsten,nhalf, &
@@ -23843,7 +23843,8 @@ end subroutine RatePhaseChange
           xsten,nhalf,nhalf_box, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
-          tessellate,mofdata,nmat,SDIM,204)
+          tessellate, &  ! =0
+          mofdata,nmat,SDIM,204)
 
         call multimaterial_MOF( &
          nucleate_in%bfact, &
@@ -23861,9 +23862,9 @@ end subroutine RatePhaseChange
          continuous_mof, &
          nmat,SDIM,4)
 
-        local_tessellate=1
+        local_tessellate=3
         call multi_get_volume_tessellate( &
-         local_tessellate, &
+         local_tessellate, & ! =3
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
@@ -29117,7 +29118,8 @@ end subroutine initialize2d
           call make_vfrac_sum_ok_base( &
             xsten,nhalf,nhalf_box, &
             bfact,dx, &
-            tessellate,mofdata,nmat,SDIM,204)
+            tessellate, &  ! =0
+            mofdata,nmat,SDIM,204)
 
           call multimaterial_MOF( &
            bfact,dx,xsten,nhalf, &
@@ -32547,7 +32549,8 @@ end subroutine initialize2d
         call make_vfrac_sum_ok_base( &
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
-          tessellate,mofdata,nmat,SDIM,201)
+          tessellate, &  ! =0
+          mofdata,nmat,SDIM,201)
 
         do im=1,nmat
          vofcomp_recon=(im-1)*ngeom_recon+1

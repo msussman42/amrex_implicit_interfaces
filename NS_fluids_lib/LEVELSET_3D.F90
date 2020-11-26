@@ -2674,7 +2674,7 @@ stop
       endif
 
       if ((tessellate.ne.0).and.(tessellate.ne.1)) then
-       print *,"tessellate invalid"
+       print *,"tessellate invalid1"
        stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -8503,9 +8503,9 @@ stop
         enddo
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
-        local_tessellate=1
+        local_tessellate=3
         call multi_get_volume_tessellate( &
-         local_tessellate, &
+         local_tessellate, & ! =3
          bfact, &
          dx,xsten,nhalf, &
          mofdata, &
@@ -8781,8 +8781,10 @@ stop
        print *,"tid invalid"
        stop
       endif
-      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
-       print *,"tessellate invalid"
+      if ((tessellate.ne.0).and. &
+          (tessellate.ne.1).and. &
+          (tessellate.ne.3)) then
+       print *,"tessellate invalid2"
        stop
       endif
       if (bfact.lt.1) then
@@ -9040,11 +9042,12 @@ stop
            if (tessellate.eq.0) then
             voltotal=voltotal_fluid
             mass_total=mass_total_fluid
-           else if (tessellate.eq.1) then
+           else if ((tessellate.eq.1).or. &
+                    (tessellate.eq.3)) then
             voltotal=voltotal_fluid+voltotal_solid
             mass_total=mass_total_fluid+mass_total_solid
            else
-            print *,"tessellate invalid"
+            print *,"tessellate invalid3"
             stop
            endif
  
