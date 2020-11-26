@@ -1382,7 +1382,6 @@ END SUBROUTINE SIMP
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T mask_local
       INTEGER_T vcdeb,imdeb
-      INTEGER_T local_tessellate
 
       nhalf=3
       nmax=POLYGON_LIST_MAX ! in: ISOGRID
@@ -1419,7 +1418,8 @@ END SUBROUTINE SIMP
         mofdata(dir)=recon(D_DECL(i,j,k),dir)
        enddo
 
-       if (visual_tessellate_vfrac.eq.1) then
+       if ((visual_tessellate_vfrac.eq.1).or. &
+           (visual_tessellate_vfrac.eq.3)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
 
@@ -1440,9 +1440,8 @@ END SUBROUTINE SIMP
             (vfrac_sum_solid.le.1.1)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
-         local_tessellate=1
          call multi_get_volume_tessellate( &
-          local_tessellate, &
+          visual_tessellate_vfrac, &
           bfact, &
           dx,xsten,nhalf, &
           mofdata, &
