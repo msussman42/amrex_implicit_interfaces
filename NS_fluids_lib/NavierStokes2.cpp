@@ -4658,7 +4658,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   int do_face_decomp=0;
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   int tessellate=1;
+   int tessellate=3;
    ns_level.makeFaceFrac(tessellate,1,FACEFRAC_MM_MF,do_face_decomp);
    ns_level.ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
    ns_level.makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
@@ -5050,7 +5050,7 @@ void NavierStokes::make_physics_vars(int project_option) {
   FArrayBox& cenFfab=(*cenF)[mfi];
   FArrayBox& massFfab=(*massF)[mfi];
 
-  int tessellate=1;
+  int tessellate=3;
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -5061,7 +5061,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     // centroid in absolute coordinates.
   FORT_BUILD_SEMIREFINEVOF(
    &tid_current,
-   &tessellate,
+   &tessellate,  // =3
    &ngrow_refine,
    &nrefine_vof,
    &nrefine_cen,
@@ -7441,7 +7441,7 @@ void NavierStokes::output_triangles() {
     // in: NAVIERSTOKES_3D.F90
    FORT_ISOGRID(
     &tid_current,
-    &visual_tessellate_vfrac,
+    &visual_tessellate_vfrac,  // =0,1, or 3
     reconfab.dataPtr(),
     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     xlo,dx,
@@ -8049,7 +8049,7 @@ void NavierStokes::output_zones(
      &level,
      &finest_level,
      &gridno,
-     &visual_tessellate_vfrac,
+     &visual_tessellate_vfrac,  // = 0,1,3
      &visual_option,
      &rzflag,
      &nmat,

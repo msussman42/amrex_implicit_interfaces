@@ -304,7 +304,7 @@ int  NavierStokes::SEM_upwind=1;
 //0=div(uS)-S div(u)    1=u dot grad S
 int  NavierStokes::SEM_advection_algorithm=0;
 // default: tessellating fluid => default==1
-//          non-tesselating or tesselating solid => default==0
+//          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
 // default=1
@@ -2539,7 +2539,8 @@ NavierStokes::read_params ()
     pp.query("visual_option",visual_option);
 
     if ((visual_tessellate_vfrac!=0)&&
-        (visual_tessellate_vfrac!=1))
+        (visual_tessellate_vfrac!=1)&&
+	(visual_tessellate_vfrac!=3))
      amrex::Error("visual_tessellate_vfrac invalid");
 
     if (visual_revolve<0) {
@@ -14598,7 +14599,7 @@ NavierStokes::split_scalar_advection() {
     // centroid in absolute coordinates.
    FORT_BUILD_SEMIREFINEVOF(
     &tid_current,
-    &tessellate,
+    &tessellate,  // =0
     &ngrow,
     &nrefine_vof,
     &nrefine_cen,
@@ -15554,7 +15555,7 @@ NavierStokes::unsplit_scalar_advection() {
     // centroid in absolute coordinates.
    FORT_BUILD_SEMIREFINEVOF(
     &tid_current,
-    &tessellate,
+    &tessellate,  // =0
     &ngrow,
     &nrefine_vof,
     &nrefine_cen,
@@ -22433,7 +22434,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
  int finest_level=parent->finestLevel();
 
- if ((tessellate!=0)&&(tessellate!=1))
+ if ((tessellate!=0)&&(tessellate!=1)&&(tessellate!=3))
   amrex::Error("tessellate invalid");
 
  if ((level<0)||(level>finest_level))
@@ -22664,7 +22665,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
 
  int finest_level=parent->finestLevel();
 
- if ((tessellate!=0)&&(tessellate!=1))
+ if ((tessellate!=0)&&(tessellate!=1)&&(tessellate!=3))
   amrex::Error("tessellate invalid");
 
  if (localMF_grow[idx]>=0)

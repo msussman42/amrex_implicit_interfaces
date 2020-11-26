@@ -5800,8 +5800,8 @@ end subroutine volume_sanity_check
 ! tessellate:
 ! 0=fluids tessellate, solids embedded
 ! 1=fluids tessellate, solids embedded upon input, but tessellating output
-! 2=is_rigid_local is zero for all materials; tessellating slopes and
-!   tessellating output for all materials.
+! 2=is_rigid_local is zero for all materials; tessellating slopes on
+!   input and tessellating output for all materials.
 ! 3=if rigid materials dominate the cell, then that cell is considered
 !   to only have the one dominant rigid material.  This routine should
 !   not be called if tessellate=3 (it would be called with tessellate=0
@@ -5857,8 +5857,9 @@ end subroutine volume_sanity_check
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or. &
-                (tessellate.eq.1)) then
+       else if (tessellate.eq.0) then ! called from slope recon routine
+        ! do nothing
+       else if (tessellate.eq.1) then ! called from 1st or 2nd pass
         ! do nothing
        else if (tessellate.eq.3) then
         print *,"tessellate==3 invalid"
@@ -5955,7 +5956,8 @@ end subroutine volume_sanity_check
          endif
         else if ((tessellate.eq.0).and. &
                  (is_rigid_local(im).eq.1)) then
-         ! do nothing
+         ! do nothing, we do not substract off solid
+         ! materials from the original cell domain. 
         else
          print *,"tessellate or is_rigid_local invalid"
          stop
@@ -11558,7 +11560,7 @@ contains
            (continuous_mof.eq.5)) then
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! 0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -11566,7 +11568,7 @@ contains
          nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! 0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -11575,7 +11577,7 @@ contains
        else if (continuous_mof.eq.2) then
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! 0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -11583,7 +11585,7 @@ contains
          nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
         use_super_cell=1
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! 0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -13041,7 +13043,8 @@ contains
         ! sum of F_rigid<=1
       call make_vfrac_sum_ok_base( &
         xsten0,nhalf0,nhalf_box,bfact,dx, &
-        tessellate,mofdata,nmat,sdim,6)
+        tessellate, &  ! 0
+        mofdata,nmat,sdim,6)
 
        ! clear flag for all nmat materials.
        ! vfrac,centroid,order,slope,intercept x nmat
@@ -14276,7 +14279,8 @@ contains
       call make_vfrac_sum_ok_base( &
        xsten,nhalf,nhalf_box, &
        bfact,dx, &
-       tessellate,mofdatavalid,nmat, &
+       tessellate, &
+       mofdatavalid,nmat, &
        sdim,errorid)
 
       return
@@ -14443,7 +14447,8 @@ contains
         ! shapeflag=1 find volumes within xtet
         ! multi_cen is "absolute" (not relative to cell centroid)
         ! tessellate==2 => is_rigid_local is zero for all materials;
-        !    tessellating slopes and tessellating output for all materials.
+        !    tessellating slopes on inputs and 
+        !    tessellating output for all materials.
         ! tessellate==1 => both fluids and rigid materials considered and
         !                  they tessellate the region (output).
         ! tessellate==0 => both fluids and rigid materials considered;
@@ -14613,7 +14618,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        local_tessellate, &
+        local_tessellate, & ! makes is_rigid_local=0 if tessellate==2
         mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
@@ -16719,7 +16724,7 @@ contains
       call make_vfrac_sum_ok_copy( &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
-       local_tessellate, & ! only local_tessellate==2 is used in order
+       local_tessellate, & ! local_tessellate==2 is used in order
                            ! to set is_rigid=0.        
        mofdata,mofdatavalid,nmat,sdim,1)
 
@@ -17983,7 +17988,7 @@ contains
            ! since tessellate_local==1, mofdata(vofcomp+sdim+1) is used.
            ! in: multi_volume_grid_and_map
           call tets_box_planes( &
-            tessellate_local, &
+            tessellate_local, &  ! =1
             bfact,dx,xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
             mofdatalocal, &
@@ -18277,7 +18282,7 @@ contains
            ! only xsten0(0,dir) dir=1..sdim used
            ! in: multi_volume_grid
           call tets_box_planes( &
-           tessellate_local, & ! 0,1,2,3
+           tessellate_local, & ! =0
            bfact,dx,xsten0,nhalf0, &
            xsten_grid,nhalf_grid, &
            mofdatalocal, &
@@ -18534,6 +18539,9 @@ contains
        else if (tessellate.eq.1) then
         print *,"expecting tessellate==0 here"
         stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0 here"
+        stop
        else
         print *,"tessellate invalid"
         stop
@@ -18616,6 +18624,9 @@ contains
        else if (tessellate.eq.0) then
         ! do nothing
        else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.3) then
         print *,"expecting tessellate==0"
         stop
        else
@@ -19029,7 +19040,12 @@ contains
           print *,"-----------end sanity multi_get_volume_tessellate-------"
          endif
         endif
-       endif
+       else if (sanity_check.eq.0) then
+        ! do nothing
+       else
+        print *,"sanity_check invalid"
+        stop
+       endif 
 
       else
        print *,"solid_vfrac_sum invalid"
@@ -19128,6 +19144,9 @@ contains
        else if (tessellate.eq.0) then
         ! do nothing
        else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.3) then
         print *,"expecting tessellate==0 here"
         stop
        else
@@ -19823,6 +19842,9 @@ contains
         else if (tessellate.eq.1) then
          print *,"expecting tessellate==0 here"
          stop
+        else if (tessellate.eq.3) then
+         print *,"expecting tessellate==0 here"
+         stop
         else
          print *,"tessellate invalid"
          stop
@@ -20012,6 +20034,9 @@ contains
        else if (tessellate.eq.0) then
         ! do nothing
        else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.3) then
         print *,"expecting tessellate==0 here"
         stop
        else
