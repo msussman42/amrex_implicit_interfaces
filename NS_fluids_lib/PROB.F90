@@ -716,7 +716,8 @@ stop
 
       if (tessellate.eq.0) then
        call get_primary_material_VFRAC(vof,nmat,im_primary,4)
-      else if (tessellate.eq.1) then
+      else if ((tessellate.eq.1).or. &
+               (tessellate.eq.3)) then
        im_primary=0
        do im=1,nmat
         if (im_primary.eq.0) then

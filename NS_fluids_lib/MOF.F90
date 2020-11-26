@@ -5807,6 +5807,9 @@ end subroutine volume_sanity_check
 !   not be called if tessellate=3 (it would be called with tessellate=0
 !   in the non-raster cells, and the solids would have no volume)
 !
+! if tessellate==0, then material regions with is_rigid_local==1 are 
+!  not subtracted from the uncaptured region.
+!
       subroutine tets_box_planes( &
        tessellate, &
        bfact,dx,xsten0,nhalf0, &
@@ -5956,8 +5959,8 @@ end subroutine volume_sanity_check
          endif
         else if ((tessellate.eq.0).and. &
                  (is_rigid_local(im).eq.1)) then
-         ! do nothing, we do not substract off solid
-         ! materials from the original cell domain. 
+         ! do nothing, we do not subtract off solid
+         ! regions from the original uncaptured region.
         else
          print *,"tessellate or is_rigid_local invalid"
          stop
@@ -6061,6 +6064,9 @@ end subroutine volume_sanity_check
 !   to have only the one dominant rigid material.  This routine should
 !   not be called if tessellate=3 (it would be called with tessellate=0
 !   in the non-raster cells)
+!
+! if tessellate==0, then material regions with is_rigid_local==1 are 
+!  not subtracted from the uncaptured region.
 !
       subroutine tets_box_planes_super( &
        tessellate, &
@@ -11560,7 +11566,7 @@ contains
            (continuous_mof.eq.5)) then
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, & ! 0
+         tessellate, & ! =0 (is_rigid==1 regions not subtracted)
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -11568,7 +11574,7 @@ contains
          nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, & ! 0
+         tessellate, & ! =0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -11577,7 +11583,7 @@ contains
        else if (continuous_mof.eq.2) then
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, & ! 0
+         tessellate, & ! =0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -11585,7 +11591,7 @@ contains
          nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
         use_super_cell=1
         call tets_box_planes_super( &
-         tessellate, & ! 0
+         tessellate, & ! =0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
@@ -13043,7 +13049,7 @@ contains
         ! sum of F_rigid<=1
       call make_vfrac_sum_ok_base( &
         xsten0,nhalf0,nhalf_box,bfact,dx, &
-        tessellate, &  ! 0
+        tessellate, &  ! =0
         mofdata,nmat,sdim,6)
 
        ! clear flag for all nmat materials.
@@ -14618,7 +14624,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        local_tessellate, & ! makes is_rigid_local=0 if tessellate==2
+        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
         mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
@@ -14842,6 +14848,9 @@ contains
        else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
                 (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
 
+         ! if local_tessellate==0, then the uncaptured region will be
+         ! reset after the first sweep through the is_rigid==1 
+         ! materials.
         if ((local_tessellate.eq.0).or. &
             (local_tessellate.eq.1)) then
          new_tessellate_local=1
@@ -15132,8 +15141,11 @@ contains
                ! uncaptured_volume_solid>0 
 
         if (local_tessellate.eq.0) then
-         ! do nothing
+         ! do nothing; uncaptured_volume_fluid remains to represent
+         ! the original uncaptured space.
         else if (local_tessellate.eq.1) then
+         ! modify the uncaptured fluid region to recognize the presence
+         ! of the is_rigid==1 materials.
          uncaptured_volume_fluid=uncaptured_volume_solid
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
@@ -15145,6 +15157,8 @@ contains
          stop
         endif
 
+         ! if local_tessellate==0 then is_rigid==1 materials are not
+         ! recognized during the following sweep.
         new_tessellate_local=local_tessellate
 
         loop_counter=0
@@ -15822,7 +15836,7 @@ contains
       INTEGER_T num_processed_fluid
       INTEGER_T material_used(nmat)
 
-      INTEGER_T local_tessellate     !=0
+      INTEGER_T normalize_tessellate     !=0
       INTEGER_T local_tessellate_in  !=2
 
       INTEGER_T nlist
@@ -15936,17 +15950,17 @@ contains
       xsten_thin(0,dir_plus)=half*(xsten0_plus(-1,dir_plus)+ &
                                    xsten0_minus(1,dir_plus))
 
-      local_tessellate=0  ! do not override "is_rigid"
+      normalize_tessellate=0  ! do not override "is_rigid"
       call make_vfrac_sum_ok_copy( &
         xsten0_plus,nhalf0,nhalf_box, &
         bfact,dx, &
-        local_tessellate, &
+        normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
       call make_vfrac_sum_ok_copy( &
         xsten0_minus,nhalf0,nhalf_box, &
         bfact,dx, &
-        local_tessellate, &
+        normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
         nmat,sdim,3000)
 
@@ -16724,8 +16738,7 @@ contains
       call make_vfrac_sum_ok_copy( &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
-       local_tessellate, & ! local_tessellate==2 is used in order
-                           ! to set is_rigid=0.        
+       local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
        mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
@@ -16742,7 +16755,7 @@ contains
          sanity_check=1
         endif
        endif
-      endif
+      endif ! sanity_check==1
 
       call Box_volumeFAST(bfact,dx,xsten_grid,nhalf_grid, &
          uncaptured_volume_target, &
@@ -16922,6 +16935,9 @@ contains
        else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
                 (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
 
+         ! if local_tessellate==0, then the uncaptured region will be
+         ! reset after the first sweep through the is_rigid==1 
+         ! materials.
         if ((local_tessellate.eq.0).or. &
             (local_tessellate.eq.1)) then
          new_tessellate_local=1
@@ -17191,8 +17207,11 @@ contains
                ! uncaptured_volume_solid>0 
 
         if (local_tessellate.eq.0) then
-         ! do nothing
+         ! do nothing; uncaptured_volume_fluid remains to represent
+         ! the original uncaptured space.
         else if (local_tessellate.eq.1) then
+         ! modify the uncaptured fluid region to recognize the presence
+         ! of the is_rigid==1 materials.
          uncaptured_volume_fluid=uncaptured_volume_solid
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
@@ -17204,7 +17223,9 @@ contains
          stop
         endif
 
-        new_tessellate_local=local_tessellate ! 0,1, or 2.
+         ! if local_tessellate==0 then is_rigid==1 materials are not
+         ! recognized during the following sweep.
+        new_tessellate_local=local_tessellate 
 
         loop_counter=0
         do while ((loop_counter.lt.nmat_fluid).and. &
@@ -17746,7 +17767,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate_local, & ! only tessellate_local==2 is used.
+        tessellate_local, & ! =0 (only tessellate_local==2 is used)
         mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
@@ -17877,6 +17898,8 @@ contains
       else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
                (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
 
+        ! first sweep: find volumes for non-tessellating is_rigid==1 
+        ! materials.
        tessellate_local=1
 
        loop_counter=0
@@ -17987,8 +18010,9 @@ contains
            ! only xsten0(0,dir) dir=1..sdim used
            ! since tessellate_local==1, mofdata(vofcomp+sdim+1) is used.
            ! in: multi_volume_grid_and_map
+           ! STILL in first sweep: only is_rigid==1 materials in this sweep.
           call tets_box_planes( &
-            tessellate_local, &  ! =1
+            tessellate_local, &  ! =1 (recognize the is_rigid==1 mat.)
             bfact,dx,xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
             mofdatalocal, &
@@ -18168,6 +18192,8 @@ contains
         ! ABOVE: solid materials
         ! BELOW: fluid materials
 
+        ! the second sweep: uncaptured fluid region does not recognize
+        ! the presence of is_rigid==1 materials.  
        tessellate_local=0
 
        loop_counter=0
@@ -18508,7 +18534,7 @@ contains
         enddo
        enddo
        print *,"-----------end sanity check-----------------"
-      endif
+      endif ! sanity_check==1
 
       return
       end subroutine multi_get_volume_grid_and_map
@@ -19885,7 +19911,7 @@ contains
        call make_vfrac_sum_ok_copy( &
          xsten0,nhalf0,nhalf_box, &
          bfact,dx, &
-         tessellate, & ! if tessellate==2 then is_rigid=0
+         tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
          mofdata,mofdatavalid,nmat,sdim,3)
 
        do im=1,nmat
@@ -20080,7 +20106,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         xsten_recon,nhalf_recon,nhalf_box, &
         bfact,dx, &
-        tessellate, &  ! if tessellate==2, set is_rigid=0
+        tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
         mofdata,mofdatavalid,nmat,sdim,30)
 
       do im=1,nmat
@@ -20107,7 +20133,7 @@ contains
         x0(dir)=xsten_recon(0,dir)
        enddo
        call multi_get_volumePOINT( &
-        tessellate, &
+        tessellate, &  ! =0
         bfact,dx,xsten_recon,nhalf_recon, &
         mofdata,x0,im0,nmat,sdim)
 
@@ -20151,12 +20177,12 @@ contains
 
             if (inboxflag.eq.1) then
              call multi_get_volumePOINT( &
-              tessellate, &
+              tessellate, & ! =0
               bfact,dx,xsten_recon,nhalf_recon, &
               mofdata,xgrid_plus, &
               im_plus,nmat,sdim)
              call multi_get_volumePOINT( &
-              tessellate, &
+              tessellate, & ! =0
               bfact,dx,xsten_recon,nhalf_recon, &
               mofdata,xgrid_minus, &
               im_minus,nmat,sdim)
@@ -20228,12 +20254,12 @@ contains
 
               if (inboxflag.eq.1) then
                call multi_get_volumePOINT( &
-                 tessellate, &
+                 tessellate, & ! =0
                  bfact,dx,xsten_recon,nhalf_recon, &
                  mofdata,xgrid_plus, &
                  im_plus,nmat,sdim)
                call multi_get_volumePOINT( &
-                 tessellate, &
+                 tessellate, & ! =0
                  bfact,dx,xsten_recon,nhalf_recon, &
                  mofdata,xgrid_minus, &
                  im_minus,nmat,sdim)
@@ -20308,12 +20334,12 @@ contains
 
                   if (inboxflag.eq.1) then
                    call multi_get_volumePOINT( &
-                    tessellate, &
+                    tessellate, & ! =0
                     bfact,dx,xsten_recon,nhalf_recon, &
                     mofdata,xgrid_plus, &
                     im_plus,nmat,sdim)
                    call multi_get_volumePOINT( &
-                    tessellate, &
+                    tessellate, & ! =0
                     bfact,dx,xsten_recon,nhalf_recon, &
                     mofdata,xgrid_minus, &
                     im_minus,nmat,sdim)
@@ -20391,22 +20417,22 @@ contains
           inboxflag,nmat)
          if (inboxflag.eq.1) then
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_plus, &
             im_plus,nmat,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_minus, &
             im_minus,nmat,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_plus2, &
             im_plus2,nmat,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_minus2, &
             im_minus2,nmat,sdim)
@@ -20470,22 +20496,22 @@ contains
 
            if (inboxflag.eq.1) then
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_plus, &
              im_plus,nmat,sdim)
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_minus, &
              im_minus,nmat,sdim)
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_plus2, &
              im_plus2,nmat,sdim)
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_minus2, &
              im_minus2,nmat,sdim)
@@ -20654,7 +20680,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        local_tessellate, & ! 0
+        local_tessellate, & ! =0
         mofdata,mofdatavalid,nmat,sdim,300)
 
       do im=1,nmat
@@ -20705,12 +20731,16 @@ contains
         endif
        enddo ! im=1..nmat
 
-       if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
+       if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
+        ! do nothing
+       else
         print *,"vfrac_fluid_sum invalid"
         stop
        endif
-       if ((vfrac_solid_sum.gt.one+VOFTOL).or. &
-           (vfrac_solid_sum.lt.zero)) then
+       if ((vfrac_solid_sum.le.one+VOFTOL).and. &
+           (vfrac_solid_sum.ge.zero)) then
+        ! do nothing
+       else
         print *,"vfrac_solid_sum invalid"
         stop
        endif
@@ -20748,10 +20778,14 @@ contains
          print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
          stop
         endif
-       else if ((tessellate.eq.0).or. &
-                (tessellate.eq.1).or. &
-                (tessellate.eq.2)) then
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate=0 or 3"
+        stop
+       else if (tessellate.eq.2) then
+        print *,"expecting tessellate=0 or 3"
+        stop
        else
         print *,"tessellate invalid"
         stop
@@ -20762,6 +20796,8 @@ contains
        else if (return_raster_info.eq.0) then
 
         if (local_tessellate.eq.1) then
+         print *,"expecting local_tessellate=0"
+         stop
 
          do im=1,nmat
           if (is_rigid_local(im).eq.1) then
@@ -21164,6 +21200,8 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
+        print *,"expecting tessellate=0,1, or 3 in check_full_cell_vfrac"
+        stop
        else if ((tessellate.eq.0).or. & 
                 (tessellate.eq.1)) then
         ! do nothing
