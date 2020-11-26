@@ -31,15 +31,16 @@ ns.FSI_flag         = 0 0 1
 solvability_projection = 0  # Compressible gas
 
 # Coordinate origin is at the center of the tank
-#ns.xblob            = 0.1016 # Tank cavity radius
-ns.xblob            = 0.09525 # Tank cavity radius
-#ns.yblob            = 0.4064 # Height of Cylindrical part 
-ns.yblob            = 0.396875 # Height of Cylindrical part 
+ns.xblob            = 0.1016 # Tank cavity radius NOT ALIGNED
+#ns.xblob            = 0.09525 # Tank cavity radius ALIGNED
+ns.yblob            = 0.4064 # Height of Cylindrical part NOT ALIGNED
+#ns.yblob            = 0.396875 # Height of Cylindrical part ALIGNED
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
 
-#ns.xblob4 	    = 0.2159 # End cap radius
-ns.xblob4 	    = 0.0 # End cap radius
+ns.xblob4 	    = 0.2159 # End cap radius NOT ALIGNED
+#ns.xblob4 	    = 0.0 # End cap radius ALIGNED
+
 ns.yblob4	    = 0.0127 # X_2 of spherical cap center 
 
 ns.zblob3	    = -0.1429 # X_2 of heater top 
