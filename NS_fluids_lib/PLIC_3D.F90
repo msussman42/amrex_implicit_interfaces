@@ -152,7 +152,8 @@ stop
       INTEGER_T nten_test
       REAL_T volume_super
       REAL_T volume_super_mofdata
-      REAL_T volsten,volmat
+      REAL_T volsten
+      REAL_T volmat
       REAL_T censten(SDIM)
       REAL_T cen_super(SDIM)
       REAL_T voflist(nmat)
@@ -163,6 +164,16 @@ stop
       INTEGER_T debugslope
       INTEGER_T tessellate
       INTEGER_T nhalf_box
+
+      REAL_T vfrac_fluid_sum
+      REAL_T vfrac_solid_sum
+      REAL_T vfrac_solid_sum_center
+      REAL_T vfrac_raster_solid
+      REAL_T vfrac_local
+      INTEGER_T im_raster_solid
+      INTEGER_T mod_cmoflo_cmofhi
+      INTEGER_T isweep
+      INTEGER_T in_cmof_box
 
 #include "mofdata.H"
 
@@ -521,7 +532,7 @@ stop
            mofdata_super(vofcomprecon+dir)=zero
           enddo
           vof_super(im)=zero
-         enddo
+         enddo ! im=1..nmat
 
          do isweep=0,1
 
@@ -533,30 +544,31 @@ stop
             bfact,level, &
             volsten,censten,SDIM)
 
-           in_cmof_box=1
-           if ((i1.lt.cmoflo(1)).or. &
-               (i1.gt.cmofhi(1)).or. &
-               (j1.lt.cmoflo(2)).or. &
-               (j1.gt.cmofhi(2))) then
-            in_cmof_box=0
-           endif
-           if (SDIM.eq.3) then
-            if ((k1.lt.cmoflo(SDIM)).or. &
-                (k1.gt.cmofhi(SDIM))) then
+           if (isweep.eq.0) then
+            in_cmof_box=1
+           else if (isweep.eq.1) then
+
+            in_cmof_box=1
+            if ((i1.lt.cmoflo(1)).or. &
+                (i1.gt.cmofhi(1)).or. &
+                (j1.lt.cmoflo(2)).or. &
+                (j1.gt.cmofhi(2))) then
              in_cmof_box=0
             endif
-           endif
+            if (SDIM.eq.3) then
+             if ((k1.lt.cmoflo(SDIM)).or. &
+                 (k1.gt.cmofhi(SDIM))) then
+              in_cmof_box=0
+             endif
+            endif
 
-           if (isweep.eq.0) then
-            ! do nothing
-           else if (isweep.eq.1) then
             if (in_cmof_box.eq.1) then 
              volume_super=volume_super+volsten
              do dir=1,SDIM
               cen_super(dir)=cen_super(dir)+volsten*censten(dir)
              enddo
             else if (in_cmof_box.eq.0) then 
-             ! do nothing
+             mod_cmoflo_cmofhi=1
             else
              print *,"in_cmof_box invalid"
              stop
@@ -623,12 +635,14 @@ stop
             endif
 
             volmat=volsten*vfrac_local
-            vof_super(im)=vof_super(im)+volmat
 
             if (isweep.eq.0) then
              ! do nothing
             else if (isweep.eq.1) then
+
              if (in_cmof_box.eq.1) then 
+
+              vof_super(im)=vof_super(im)+volmat
               do dir=1,SDIM
                mofdata_super(vofcomprecon+dir)= &
                 mofdata_super(vofcomprecon+dir)+ &
@@ -662,57 +676,66 @@ stop
             stop
            endif
 
-           if (vfrac_solid_sum_center.ge.half) then
-            ! do nothing
-           else if (vfrac_solid_sum_center.lt.half) then
+           if (isweep.eq.0) then
 
-            if (vfrac_solid_sum.ge.half) then
-             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
-              print *,"expecting i1 or j1 or k1 not 0"
-              stop
-             endif
-             if (i1.eq.-1) then
-              cmoflo(1)=0
-             else if (i1.eq.1) then
-              cmofhi(1)=0
-             else if (i1.eq.0) then
-              ! do nothing
-             else
-              print *,"i1 invalid"
-              stop
-             endif
-
-             if (j1.eq.-1) then
-              cmoflo(2)=0
-             else if (j1.eq.1) then
-              cmofhi(2)=0
-             else if (j1.eq.0) then
-              ! do nothing
-             else
-              print *,"j1 invalid"
-              stop
-             endif
-
-             if (k1.eq.-1) then
-              cmoflo(SDIM)=0
-             else if (k1.eq.1) then
-              cmofhi(SDIM)=0
-             else if (k1.eq.0) then
-              ! do nothing
-             else
-              print *,"k1 invalid"
-              stop
-             endif
-
-            else if (vfrac_solid_sum.lt.half) then
+            if (vfrac_solid_sum_center.ge.half) then
              ! do nothing
+            else if (vfrac_solid_sum_center.lt.half) then
+
+             if (vfrac_solid_sum.ge.half) then
+              if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+               print *,"expecting i1 or j1 or k1 not 0"
+               stop
+              endif
+              if (i1.eq.-1) then
+               cmoflo(1)=0
+              else if (i1.eq.1) then
+               cmofhi(1)=0
+              else if (i1.eq.0) then
+               ! do nothing
+              else
+               print *,"i1 invalid"
+               stop
+              endif
+
+              if (j1.eq.-1) then
+               cmoflo(2)=0
+              else if (j1.eq.1) then
+               cmofhi(2)=0
+              else if (j1.eq.0) then
+               ! do nothing
+              else
+               print *,"j1 invalid"
+               stop
+              endif
+
+              if (k1.eq.-1) then
+               cmoflo(SDIM)=0
+              else if (k1.eq.1) then
+               cmofhi(SDIM)=0
+              else if (k1.eq.0) then
+               ! do nothing
+              else
+               print *,"k1 invalid"
+               stop
+              endif
+
+             else if (vfrac_solid_sum.lt.half) then
+              ! do nothing
+             else
+              print *,"vfrac_solid_sum invalid"
+              stop
+             endif
+
             else
-             print *,"vfrac_solid_sum invalid"
+             print *,"vfrac_solid_sum_center invalid"
              stop
             endif
 
+           else if (isweep.eq.1) then
+            ! do nothig
            else
-            print *,"vfrac_solid_sum_center invalid"
+            print *,"isweep invalid"
             stop
            endif
 
