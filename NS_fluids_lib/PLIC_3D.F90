@@ -346,6 +346,7 @@ stop
         ! sum of F_rigid<=1
        nhalf_box=1
        call make_vfrac_sum_ok_base( &
+         cmoflo,cmofhi, &
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
          tessellate, & ! =0
@@ -521,8 +522,9 @@ stop
          ! center cell for volume constraint.
         if (continuous_mof_parm.eq.2) then
   
-         volume_super=zero
-         volume_super_mofdata=zero
+         volume_super=zero ! volume of the extended region
+         volume_super_mofdata=zero !same as volume_super, except by im_fluid.
+
          do dir=1,SDIM
           cen_super(dir)=zero
          enddo
@@ -539,6 +541,7 @@ stop
           do i1=-1,1
           do j1=-1,1
           do k1=klosten,khisten
+
            call CISBOX(xstenbox,nhalfbox_sten, &
             xlo,dx,i+i1,j+j1,k+k1, &
             bfact,level, &
@@ -596,6 +599,7 @@ stop
            ! sum of F_rigid<=1
            nhalf_box=1
            call make_vfrac_sum_ok_base( &
+            cmoflo,cmofhi, &
             xstenbox,nhalfbox_sten,nhalf_box, &
             bfact,dx, &
             tessellate, & ! =0
@@ -657,7 +661,12 @@ stop
                stop
               endif
              else if (in_cmof_box.eq.0) then 
-              ! do nothing 
+              if (mod_cmoflo_cmofhi.eq.1) then
+               ! do nothing
+              else
+               print *,"mod_cmoflo_cmofhi invalid"
+               stop
+              endif
              else
               print *,"in_cmof_box invalid"
               stop
@@ -745,11 +754,15 @@ stop
 
          enddo ! isweep=0,1
 
-         if (volume_super.le.zero) then
+         if (volume_super.gt.zero) then
+          ! do nothing
+         else
           print *,"volume_super invalid"
           stop
          endif
-         if (volume_super_mofdata.le.zero) then
+         if (volume_super_mofdata.gt.zero) then
+          ! do nothing
+         else
           print *,"volume_super_mofdata invalid"
           stop
          endif
@@ -776,7 +789,7 @@ stop
            stop
           endif
 
-           ! always standard MOF for the rigid materials.
+           ! always standard MOF centroid for the rigid materials.
           if (is_rigid(nmat,im).eq.1) then
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
@@ -790,6 +803,20 @@ stop
 
          enddo ! im=1..nmat
 
+         if (1.eq.1) then
+          if (mod_cmoflo_cmofhi.eq.1) then
+           print *,"mod_cmoflo,cmofhi=1:i,j,k ",i,j,k
+           print *,"x,y,z ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+           do dir=1,SDIM
+            print *,"dir,cmoflo,cmofhi ",dir,cmoflo(dir),cmofhi(dir)
+           enddo
+          else if (mod_cmoflo_cmofhi.eq.0) then
+           ! do nothing
+          else
+           print *,"mod_cmoflo_cmofhi invalid"
+           stop
+          endif 
+         endif
         else if ((continuous_mof_parm.eq.0).or. &
                  (continuous_mof_parm.eq.5)) then
          ! do nothing

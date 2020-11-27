@@ -2854,6 +2854,7 @@ stop
       REAL_T X2(SDIM)
       REAL_T XSTRIP(SDIM)
       INTEGER_T nhalf_box
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
 
       nhalf_box=1
   
@@ -3075,6 +3076,7 @@ stop
 
          ! sum F_fluid=1  sum F_solid<=1
          call make_vfrac_sum_ok_copy( &
+           cmoflo,cmofhi, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate,mofdata,mofdatavalid, &

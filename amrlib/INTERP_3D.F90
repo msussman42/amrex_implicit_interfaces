@@ -260,6 +260,7 @@ stop
 
         ! sum F_fluid=1  sum F_solid <= 1
        call make_vfrac_sum_ok_base( &
+         cmoflo,cmofhi, &
          xsten,nhalf,nhalf_box, &
          bfact_coarse,dxc, &
          tessellate,mofdata,nmat,SDIM,304)
@@ -1059,6 +1060,7 @@ stop
 
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
+         cmoflo,cmofhi, &
          xstenfine,nhalf,nhalf_box, &
          bfact_fine,dxf, &
          tessellate,mofdata,nmat,SDIM,304)
