@@ -133,7 +133,8 @@ ns.conservative_tension_force=0
 # For comparison with Borodulin et al Figure 8, surface tension
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
-ns.tension=1.0e-3  # 72.8 cgs
+ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
+#ns.tension=1.0e-4  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
