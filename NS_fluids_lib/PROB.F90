@@ -23617,6 +23617,7 @@ end subroutine RatePhaseChange
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       INTEGER_T continuous_mof
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
       INTEGER_T tessellate
       INTEGER_T ibasesrc,ibasedst
       INTEGER_T ibase_raw,ibase_recon
@@ -23860,6 +23861,7 @@ end subroutine RatePhaseChange
          mofdata, &
          multi_centroidA, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          nmat,SDIM,4)
 
         local_tessellate=3
@@ -28913,6 +28915,7 @@ end subroutine initialize2d
        INTEGER_T ibasedst
        INTEGER_T use_ls_data,mof_verbose
        INTEGER_T continuous_mof
+       INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
        REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
        REAL_T multi_centroidA(num_materials,SDIM)
        REAL_T mofdata(num_materials*ngeom_recon)
@@ -29133,6 +29136,7 @@ end subroutine initialize2d
            mofdata, &
            multi_centroidA, &
            continuous_mof, &
+           cmoflo,cmofhi, &
            nmat,SDIM,4)
 
           do dir3=1,nmat*ngeom_recon

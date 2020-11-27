@@ -157,6 +157,7 @@ stop
       REAL_T multi_volume(nmat)
       REAL_T multi_cen(SDIM,nmat)
       INTEGER_T continuous_mof
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM) 
       INTEGER_T mof_verbose,use_ls_data
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
       REAL_T xsten(-3:3,SDIM)
@@ -275,6 +276,7 @@ stop
          mofdata, &
          multi_centroidA, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          nmat,SDIM,5)
 
        do dir=1,nmat*ngeom_recon
@@ -796,6 +798,7 @@ stop
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       INTEGER_T continuous_mof
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM) 
       REAL_T multi_centroidA(nmat,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
 
@@ -1072,6 +1075,7 @@ stop
          mofdata, &
          multi_centroidA, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          nmat,SDIM,6)
 
        do dir=1,nmat*ngeom_recon

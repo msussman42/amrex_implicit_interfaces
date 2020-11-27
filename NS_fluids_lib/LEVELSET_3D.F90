@@ -15864,6 +15864,7 @@ stop
       INTEGER_T im_fluid_critical
       INTEGER_T im_local
       INTEGER_T continuous_mof_parm
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
       REAL_T user_tension(nten)
       INTEGER_T nten_test
       INTEGER_T iten
@@ -16988,6 +16989,7 @@ stop
              local_mof, &
              multi_centroidA, &
              continuous_mof_parm, &
+             cmoflo,cmofhi, &
              nmat,SDIM,2)
      
             tessellate_transfer=1 
