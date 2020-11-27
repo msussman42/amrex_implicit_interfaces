@@ -13196,6 +13196,7 @@ contains
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
       call make_vfrac_sum_ok_base( &
+        cmoflo,cmofhi, &
         xsten0,nhalf0,nhalf_box,bfact,dx, &
         tessellate, &  ! =0
         mofdata,nmat,sdim,6)
@@ -14123,6 +14124,7 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_base( &
+        cmoflo,cmofhi, &
         xsten,nhalf,nhalf_box, &
         bfact,dx, &
         tessellate, &
@@ -14136,6 +14138,7 @@ contains
 
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: nhalf,nhalf_box
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, intent(in) :: dx(sdim)
@@ -14328,6 +14331,7 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten,nhalf,nhalf_box, &
         bfact,dx, &
         tessellate, &
@@ -14341,6 +14345,7 @@ contains
 
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: nhalf,nhalf_box
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, intent(in) :: dx(sdim)
@@ -14444,6 +14449,7 @@ contains
       endif
 
       call make_vfrac_sum_ok_base( &
+       cmoflo,cmofhi, &
        xsten,nhalf,nhalf_box, &
        bfact,dx, &
        tessellate, &
@@ -14648,10 +14654,12 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nmat,sdim,shapeflag,caller_id,bfact
+      INTEGER_T, intent(in) :: nmat,shapeflag,caller_id,bfact
       INTEGER_T, intent(in) :: nhalf0,nhalf_grid
       REAL_T, intent(in) :: xtet(sdim+1,sdim)
       REAL_T, intent(in) :: mofdata(nmat*(2*sdim+3))
@@ -14783,6 +14791,7 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
         local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
@@ -15944,6 +15953,7 @@ contains
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: nhalf0
@@ -16118,12 +16128,14 @@ contains
 
       normalize_tessellate=0  ! do not override "is_rigid"
       call make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten0_plus,nhalf0,nhalf_box, &
         bfact,dx, &
         normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
       call make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten0_minus,nhalf0,nhalf_box, &
         bfact,dx, &
         normalize_tessellate, & ! =0
@@ -16760,6 +16772,7 @@ contains
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: caller_id,bfact,nhalf0,nhalf_grid
       REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
       REAL_T mofdatalocal(nmat*ngeom_recon)
@@ -16902,6 +16915,7 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
+       cmoflo,cmofhi, &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
@@ -17793,6 +17807,7 @@ contains
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0,nhalf_grid
       INTEGER_T, intent(in) :: normdir
@@ -17931,6 +17946,7 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
@@ -18884,7 +18900,9 @@ contains
 
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: nmat,sdim
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T shapeflag
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0
@@ -18980,6 +18998,7 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_base( &
+       cmoflo,cmofhi, &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
        renorm_tessellate, & !=0
@@ -20005,8 +20024,10 @@ contains
        use global_utility_module
        IMPLICIT NONE
 
+       INTEGER_T, intent(in) :: sdim
+       INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
        INTEGER_T, intent(out) :: imslope
-       INTEGER_T, intent(in) :: nmat,sdim,bfact,nhalf0
+       INTEGER_T, intent(in) :: nmat,bfact,nhalf0
        REAL_T, intent(in) :: mofdata(nmat*(2*sdim+3))
        REAL_T mofdatavalid(nmat*(2*sdim+3))
        REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
@@ -20078,6 +20099,7 @@ contains
         ! sum F_fluid=1  
         ! sum F_solid<=1 
        call make_vfrac_sum_ok_copy( &
+         cmoflo,cmofhi, &
          xsten0,nhalf0,nhalf_box, &
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
@@ -20168,7 +20190,9 @@ contains
 
       INTEGER_T, intent(in) :: nhalf_recon
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: nmat,sdim
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T dir,side,l
       INTEGER_T, intent(in) :: center_stencil
       INTEGER_T, intent(in) :: donateflag(nmat+1)
@@ -20273,6 +20297,7 @@ contains
        ! sum F_fluid = 1
        ! sum F_solid <= 1
       call make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten_recon,nhalf_recon,nhalf_box, &
         bfact,dx, &
         tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
@@ -20764,8 +20789,10 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nmat,sdim,bfact,nhalf0
+      INTEGER_T, intent(in) :: nmat,bfact,nhalf0
       REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
       REAL_T mofdatavalid(nmat*ngeom_recon)
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
@@ -20847,6 +20874,7 @@ contains
 
        ! sum voffluid=1 ,  sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
+        cmoflo,cmofhi, &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
         local_tessellate, & ! =0

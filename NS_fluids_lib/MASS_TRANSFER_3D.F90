@@ -6210,6 +6210,7 @@ stop
             ! sum of F_rigid<=1
             tessellate=0
             call make_vfrac_sum_ok_base( &
+              cmoflo,cmofhi, &
               u_xsten_updatecell,nhalf,nhalf_box, &
               bfact,dx, &
               tessellate,mofdata,nmat,SDIM,106)

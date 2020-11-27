@@ -9162,6 +9162,7 @@ END SUBROUTINE SIMP
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
       INTEGER_T nmax
       INTEGER_T nhalf_box
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
 
       INTEGER_T tid
 #ifdef _OPENMP
@@ -9332,6 +9333,7 @@ END SUBROUTINE SIMP
 
                 ! sum F_fluid=1  sum F_solid<=1
                call make_vfrac_sum_ok_base( &
+                 cmoflo,cmofhi, &
                  xstenfine,nhalf,nhalf_box, &
                  bfact_f,dxf, &
                  tessellate,mofdatafine,nmat,SDIM,304)
@@ -9348,6 +9350,7 @@ END SUBROUTINE SIMP
                 mofdatafine, &
                 multi_centroidA, &
                 continuous_mof, &
+                cmoflo,cmofhi, &
                 nmat,SDIM,3)
 
                call multi_get_volume_grid_simple( &
