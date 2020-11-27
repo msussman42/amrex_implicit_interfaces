@@ -337,13 +337,54 @@ stop
        call make_vfrac_sum_ok_base( &
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
-         tessellate,mofdata,nmat,SDIM,6)
+         tessellate, & ! =0
+         mofdata,nmat,SDIM,6)
+
+       vfrac_fluid_sum=zero
+       vfrac_solid_sum=zero
+       im_raster_solid=0
+       vfrac_raster_solid=zero
+       mod_cmoflo_cmofhi=0
 
        do im=1,nmat
         vofcomprecon=(im-1)*ngeom_recon+1
         voflist(im)=mofdata(vofcomprecon)
         voflist_stencil(im)=zero
+
+        if (is_rigid(nmat,im).eq.0) then
+         vfrac_fluid_sum=vfrac_fluid_sum+voflist(im)
+        else if (is_rigid(nmat,im).eq.1) then
+         if (im_raster_solid.eq.0) then
+          im_raster_solid=im
+          vfrac_raster_solid=voflist(im)
+         else if ((im_raster_solid.ge.1).and. &
+                  (im_raster_solid.le.nmat).and. &
+                  (is_rigid(nmat,im_raster_solid).eq.1)) then
+          if (vfrac_raster_solid.lt.voflist(im)) then
+           im_raster_solid=im
+           vfrac_raster_solid=voflist(im)
+          endif
+         else
+          print *,"im_raster_solid invalid"
+          stop
+         endif
+      
+         vfrac_solid_sum=vfrac_solid_sum+voflist(im)
+        else
+         print *,"is_rigid(nmat,im) invalid"
+         stop
+        endif
+
        enddo ! im=1..nmat
+
+       vfrac_solid_sum_center=vfrac_solid_sum
+
+       if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+        ! do nothing
+       else
+        print *,"vfrac_fluid_sum invalid"
+        stop
+       endif
 
        if ((level.ge.0).and. &
            (level.le.finest_level)) then
@@ -481,60 +522,205 @@ stop
           enddo
           vof_super(im)=zero
          enddo
-         do i1=-1,1
-         do j1=-1,1
-         do k1=klosten,khisten
-          call CISBOX(xstenbox,nhalfbox_sten, &
-           xlo,dx,i+i1,j+j1,k+k1, &
-           bfact,level, &
-           volsten,censten,SDIM)
-          volume_super=volume_super+volsten
-          do dir=1,SDIM
-           cen_super(dir)=cen_super(dir)+volsten*censten(dir)
-          enddo
 
-          do im=1,nmat
-           vofcomprecon=(im-1)*ngeom_recon+1
-           vofcompraw=(im-1)*ngeom_raw+1
-           do dir=0,SDIM
-            mofsten(vofcomprecon+dir)= &
-             vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
-           enddo
-           orderflag=zero
-           mofsten(vofcomprecon+SDIM+1)=orderflag
-           do dir=SDIM+3,ngeom_recon
-            mofsten(vofcomprecon+dir-1)=zero
-           enddo
-          enddo  ! im=1..nmat
+         do isweep=0,1
+
+          do i1=-1,1
+          do j1=-1,1
+          do k1=klosten,khisten
+           call CISBOX(xstenbox,nhalfbox_sten, &
+            xlo,dx,i+i1,j+j1,k+k1, &
+            bfact,level, &
+            volsten,censten,SDIM)
+
+           in_cmof_box=1
+           if ((i1.lt.cmoflo(1)).or. &
+               (i1.gt.cmofhi(1)).or. &
+               (j1.lt.cmoflo(2)).or. &
+               (j1.gt.cmofhi(2))) then
+            in_cmof_box=0
+           endif
+           if (SDIM.eq.3) then
+            if ((k1.lt.cmoflo(SDIM)).or. &
+                (k1.gt.cmofhi(SDIM))) then
+             in_cmof_box=0
+            endif
+           endif
+
+           if (isweep.eq.0) then
+            ! do nothing
+           else if (isweep.eq.1) then
+            if (in_cmof_box.eq.1) then 
+             volume_super=volume_super+volsten
+             do dir=1,SDIM
+              cen_super(dir)=cen_super(dir)+volsten*censten(dir)
+             enddo
+            else if (in_cmof_box.eq.0) then 
+             ! do nothing
+            else
+             print *,"in_cmof_box invalid"
+             stop
+            endif
+           else
+            print *,"isweep invalid"
+            stop
+           endif
+
+           do im=1,nmat
+            vofcomprecon=(im-1)*ngeom_recon+1
+            vofcompraw=(im-1)*ngeom_raw+1
+            do dir=0,SDIM
+             mofsten(vofcomprecon+dir)= &
+              vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
+            enddo
+            orderflag=zero
+            mofsten(vofcomprecon+SDIM+1)=orderflag
+            do dir=SDIM+3,ngeom_recon
+             mofsten(vofcomprecon+dir-1)=zero
+            enddo
+           enddo  ! im=1..nmat
 
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
-          nhalf_box=1
-          call make_vfrac_sum_ok_base( &
+           nhalf_box=1
+           call make_vfrac_sum_ok_base( &
             xstenbox,nhalfbox_sten,nhalf_box, &
-            bfact,dx,tessellate,mofsten,nmat,SDIM,6)
+            bfact,dx, &
+            tessellate, & ! =0
+            mofsten,nmat,SDIM,6)
 
-          do im=1,nmat
-           vofcomprecon=(im-1)*ngeom_recon+1
-           volmat=volsten*mofsten(vofcomprecon)
-           vof_super(im)=vof_super(im)+volmat
-           do dir=1,SDIM
-            mofdata_super(vofcomprecon+dir)= &
-             mofdata_super(vofcomprecon+dir)+ &
-             volmat*(censten(dir)+mofsten(vofcomprecon+dir))
-           enddo ! dir
-           if (is_rigid(nmat,im).eq.0) then
-            volume_super_mofdata=volume_super_mofdata+volmat
-           else if (is_rigid(nmat,im).eq.1) then
+           vfrac_fluid_sum=zero
+           vfrac_solid_sum=zero
+           im_raster_solid=0
+           vfrac_raster_solid=zero
+
+           do im=1,nmat
+            vofcomprecon=(im-1)*ngeom_recon+1
+            vfrac_local=mofsten(vofcomprecon)
+
+            if (is_rigid(nmat,im).eq.0) then
+             vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local
+            else if (is_rigid(nmat,im).eq.1) then
+             if (im_raster_solid.eq.0) then
+              im_raster_solid=im
+              vfrac_raster_solid=vfrac_local
+             else if ((im_raster_solid.ge.1).and. &
+                      (im_raster_solid.le.nmat).and. &
+                      (is_rigid(nmat,im_raster_solid).eq.1)) then
+              if (vfrac_raster_solid.lt.vfrac_local) then
+               im_raster_solid=im
+               vfrac_raster_solid=vfrac_local
+              endif
+             else
+              print *,"im_raster_solid invalid"
+              stop
+             endif
+      
+             vfrac_solid_sum=vfrac_solid_sum+vfrac_local
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+
+            volmat=volsten*vfrac_local
+            vof_super(im)=vof_super(im)+volmat
+
+            if (isweep.eq.0) then
+             ! do nothing
+            else if (isweep.eq.1) then
+             if (in_cmof_box.eq.1) then 
+              do dir=1,SDIM
+               mofdata_super(vofcomprecon+dir)= &
+                mofdata_super(vofcomprecon+dir)+ &
+                volmat*(censten(dir)+mofsten(vofcomprecon+dir))
+              enddo ! dir
+              if (is_rigid(nmat,im).eq.0) then
+               volume_super_mofdata=volume_super_mofdata+volmat
+              else if (is_rigid(nmat,im).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid(nmat,im) invalid"
+               stop
+              endif
+             else if (in_cmof_box.eq.0) then 
+              ! do nothing 
+             else
+              print *,"in_cmof_box invalid"
+              stop
+             endif
+            else
+             print *,"isweep invalid"
+             stop
+            endif
+
+           enddo ! im=1..nmat
+
+           if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
             ! do nothing
            else
-            print *,"is_rigid(nmat,im) invalid"
+            print *,"vfrac_fluid_sum invalid"
             stop
            endif
-          enddo ! im=1..nmat
-         enddo
-         enddo
-         enddo ! i1,j1,k1
+
+           if (vfrac_solid_sum_center.ge.half) then
+            ! do nothing
+           else if (vfrac_solid_sum_center.lt.half) then
+
+            if (vfrac_solid_sum.ge.half) then
+             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+              print *,"expecting i1 or j1 or k1 not 0"
+              stop
+             endif
+             if (i1.eq.-1) then
+              cmoflo(1)=0
+             else if (i1.eq.1) then
+              cmofhi(1)=0
+             else if (i1.eq.0) then
+              ! do nothing
+             else
+              print *,"i1 invalid"
+              stop
+             endif
+
+             if (j1.eq.-1) then
+              cmoflo(2)=0
+             else if (j1.eq.1) then
+              cmofhi(2)=0
+             else if (j1.eq.0) then
+              ! do nothing
+             else
+              print *,"j1 invalid"
+              stop
+             endif
+
+             if (k1.eq.-1) then
+              cmoflo(SDIM)=0
+             else if (k1.eq.1) then
+              cmofhi(SDIM)=0
+             else if (k1.eq.0) then
+              ! do nothing
+             else
+              print *,"k1 invalid"
+              stop
+             endif
+
+            else if (vfrac_solid_sum.lt.half) then
+             ! do nothing
+            else
+             print *,"vfrac_solid_sum invalid"
+             stop
+            endif
+
+           else
+            print *,"vfrac_solid_sum_center invalid"
+            stop
+           endif
+
+          enddo
+          enddo
+          enddo ! i1,j1,k1
+
+         enddo ! isweep=0,1
 
          if (volume_super.le.zero) then
           print *,"volume_super invalid"
