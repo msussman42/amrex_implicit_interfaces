@@ -6074,14 +6074,20 @@ end subroutine volume_sanity_check
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xtetlist, &
-       nlist_alloc,nlist,nmax,nmat,use_super_cell,sdim)
+       nlist_alloc,nlist,nmax,nmat, &
+       use_super_cell, &
+       cmoflo,cmofhi, &
+       sdim)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: nmat,sdim,use_super_cell,bfact,nhalf0
+      INTEGER_T, intent(in) :: nmat,bfact,nhalf0
+      INTEGER_T, intent(in) :: use_super_cell
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T isten,nhalf2
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
@@ -6146,8 +6152,8 @@ end subroutine volume_sanity_check
       else if (use_super_cell.eq.1) then
 
        if (sdim.eq.3) then
-        ksten_low=-1
-        ksten_high=1
+        ksten_low=cmoflo(sdim)
+        ksten_high=cmofhi(sdim)
        else if (sdim.eq.2) then
         ksten_low=0
         ksten_high=0
@@ -6156,10 +6162,41 @@ end subroutine volume_sanity_check
         stop
        endif
 
+       if ((ksten_low.eq.-1).or. &
+           (ksten_low.eq.0)) then
+        ! do nothing
+       else
+        print *,"ksten_low invalid"
+        stop
+       endif
+       if ((ksten_high.eq.1).or. &
+           (ksten_high.eq.0)) then
+        ! do nothing
+       else
+        print *,"ksten_high invalid"
+        stop
+       endif
+       do dir=1,sdim
+        if ((cmoflo(dir).eq.-1).or. &
+            (cmoflo(dir).eq.0)) then
+         ! do nothing
+        else
+         print *,"cmoflo(dir) invalid"
+         stop
+        endif
+        if ((cmofhi(dir).eq.1).or. &
+            (cmofhi(dir).eq.0)) then
+         ! do nothing
+        else
+         print *,"cmofhi(dir) invalid"
+         stop
+        endif
+       enddo ! dir=1..sdim
+
        nlist=0
 
-       do i1=-1,1
-       do j1=-1,1
+       do i1=cmoflo(1),cmofhi(1)
+       do j1=cmoflo(2),cmofhi(2)
        do k1=ksten_low,ksten_high
 
         do isten=-1,1
@@ -7174,12 +7211,16 @@ end subroutine volume_sanity_check
       end subroutine Box_volumeFAST_and_map
 
 
-      subroutine Box_volume_super(bfact,dx,xsten0,nhalf0, &
+      subroutine Box_volume_super( &
+       cmoflo,cmofhi, &
+       bfact,dx,xsten0,nhalf0, &
        volume,centroid,sdim)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: sdim,bfact,nhalf0
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
+      INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T nhalf2
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
@@ -7207,8 +7248,8 @@ end subroutine volume_sanity_check
       enddo
 
       if (sdim.eq.3) then
-        ksten_low=-1
-        ksten_high=1
+        ksten_low=cmoflo(sdim)
+        ksten_high=cmofhi(sdim)
       else if (sdim.eq.2) then
         ksten_low=0
         ksten_high=0
@@ -7216,9 +7257,41 @@ end subroutine volume_sanity_check
         print *,"sdim invalid"
         stop
       endif
+
+      if ((ksten_low.eq.-1).or. &
+          (ksten_low.eq.0)) then
+       ! do nothing
+      else
+       print *,"ksten_low invalid"
+       stop
+      endif
+      if ((ksten_high.eq.1).or. &
+          (ksten_high.eq.0)) then
+       ! do nothing
+      else
+       print *,"ksten_high invalid"
+       stop
+      endif
+      do dir=1,sdim
+       if ((cmoflo(dir).eq.-1).or. &
+           (cmoflo(dir).eq.0)) then
+        ! do nothing
+       else
+        print *,"cmoflo(dir) invalid"
+        stop
+       endif
+       if ((cmofhi(dir).eq.1).or. &
+           (cmofhi(dir).eq.0)) then
+        ! do nothing
+       else
+        print *,"cmofhi(dir) invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
  
-      do i1=-1,1
-      do j1=-1,1
+      do i1=cmoflo(1),cmofhi(1)
+      do j1=cmoflo(2),cmofhi(2)
       do k1=ksten_low,ksten_high
 
        do isten=-1,1
@@ -8833,6 +8906,7 @@ contains
       subroutine multi_ff(bfact,dx,xsten0,nhalf0, &
         ff,slope,intercept, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         arean, &
         vtarget, &
         xtetlist, &
@@ -8842,9 +8916,12 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: nlist_alloc
-      INTEGER_T, intent(in) :: continuous_mof,bfact,nhalf0
-      INTEGER_T, intent(in) :: nlist,nmax,sdim,fastflag
+      INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
+      INTEGER_T, intent(in) :: bfact,nhalf0
+      INTEGER_T, intent(in) :: nlist,nmax,fastflag
       REAL_T, intent(in) :: xtetlist(4,3,nlist_alloc)
       REAL_T, intent(in) :: slope(sdim)
       REAL_T, intent(in) :: intercept
@@ -9129,6 +9206,7 @@ contains
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
        continuous_mof, &
+       cmoflo,cmofhi, &
        xtetlist, &
        nlist_alloc, &
        nlist, &
@@ -9143,11 +9221,13 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T, intent(in):: nlist
       INTEGER_T, intent(in):: nlist_alloc
-      INTEGER_T, intent(in) :: nmax,sdim,fastflag
+      INTEGER_T, intent(in) :: nmax,fastflag
       REAL_T,intent(in):: xtetlist(4,3,nlist_alloc)
       REAL_T, dimension(:,:,:), allocatable :: local_xtetlist
       REAL_T, intent(in) :: slope(sdim)
@@ -9443,6 +9523,7 @@ contains
        call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
         fc_default,slope,intercept_default, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         arean_default,vtarget, &
         local_xtetlist, &
         local_nlist,centroid,nlist,nmax, &
@@ -9472,6 +9553,7 @@ contains
          call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
           fc,slope,intercept, &
           continuous_mof, &
+          cmoflo,cmofhi, &
           arean, &
           vtarget,local_xtetlist, &
           local_nlist,centroid,nlist,nmax, &
@@ -9526,12 +9608,14 @@ contains
              call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
               fa,slope,aa, &
               continuous_mof, &
+              cmoflo,cmofhi, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
              call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
               fb,slope,bb, &
               continuous_mof, &
+              cmoflo,cmofhi, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
@@ -9553,6 +9637,7 @@ contains
              call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
               fc,slope,intercept, &
               continuous_mof, &
+              cmoflo,cmofhi, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
@@ -9599,6 +9684,7 @@ contains
            call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
             fc,slope,intercept, &
             continuous_mof, &
+            cmoflo,cmofhi, &
             arean,vtarget,local_xtetlist, &
             local_nlist,centroid,nlist,nmax, &
             fastflag,sdim)
@@ -10019,6 +10105,7 @@ contains
         nmax, &
         refcentroid,refvfrac, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         angle, &
         ff, &
         intercept, &
@@ -10033,13 +10120,15 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: use_MilcentLemoine
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: nhalf0
       INTEGER_T,intent(in):: nlist_vof
       INTEGER_T,intent(in):: nlist_cen
-      INTEGER_T, intent(in) :: nmax,sdim,fastflag
+      INTEGER_T, intent(in) :: nmax,fastflag
       REAL_T, intent(in) :: xtetlist_vof(4,3,nlist_vof)
       REAL_T, intent(in) :: xtetlist_cen(4,3,nlist_cen)
       REAL_T, intent(in) :: refcentroid(sdim)
@@ -10134,6 +10223,7 @@ contains
          volcell_vof, &
          cencell_vof,sdim)
         call Box_volume_super( &
+         cmoflo,cmofhi, &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen,cencell_cen, &
          sdim)
@@ -10163,6 +10253,7 @@ contains
          bfact,dx,xsten0,nhalf0, &
          nslope,intercept, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          xtetlist_vof, &
          nlist_vof, &
          nlist_vof, &
@@ -10224,8 +10315,8 @@ contains
          enddo 
 
          if (sdim.eq.3) then
-          ksten_low=-1
-          ksten_high=1
+          ksten_low=cmoflo(sdim)
+          ksten_high=cmofhi(sdim)
          else if (sdim.eq.2) then
           ksten_low=0
           ksten_high=0
@@ -10233,9 +10324,39 @@ contains
           print *,"sdim invalid"
           stop
          endif
+         if ((ksten_low.eq.-1).or. &
+             (ksten_low.eq.0)) then
+          ! do nothing
+         else
+          print *,"ksten_low invalid"
+          stop
+         endif
+         if ((ksten_high.eq.1).or. &
+             (ksten_high.eq.0)) then
+          ! do nothing
+         else
+          print *,"ksten_high invalid"
+          stop
+         endif
+         do dir=1,sdim
+          if ((cmoflo(dir).eq.-1).or. &
+              (cmoflo(dir).eq.0)) then
+           ! do nothing
+          else
+           print *,"cmoflo(dir) invalid"
+           stop
+          endif
+          if ((cmofhi(dir).eq.1).or. &
+              (cmofhi(dir).eq.0)) then
+           ! do nothing
+          else
+           print *,"cmofhi(dir) invalid"
+           stop
+          endif
+         enddo ! dir=1..sdim
 
-         do i1=-1,1
-         do j1=-1,1
+         do i1=cmoflo(1),cmofhi(1)
+         do j1=cmoflo(2),cmofhi(2)
          do k1=ksten_low,ksten_high
 
           do isten=-1,1
@@ -10560,6 +10681,7 @@ contains
         refcentroid,refvfrac, &
         npredict, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         nslope,intercept, &
         xtetlist_vof,nlist_vof, &
         xtetlist_cen,nlist_cen, &
@@ -10577,13 +10699,14 @@ contains
 
 #include "mofdata.H"
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nlist_vof
       INTEGER_T, intent(in) :: nlist_cen
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: critical_material
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: fastflag
@@ -10888,6 +11011,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          angle_init, &
          finit,intercept_init,cen_derive_init, &
          use_initial_guess,fastflag,sdim)
@@ -10983,6 +11107,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          angle_plus, &
          fp,intp(i_angle),cenp, &
          use_initial_guess, &
@@ -11005,6 +11130,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          angle_minus, &
          fm,intm(i_angle),cenm, &
          use_initial_guess, &
@@ -11120,6 +11246,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmoflo,cmofhi, &
          angle_base, &
          fopt,intopt,cenopt, &
          use_initial_guess, &
@@ -11260,6 +11387,7 @@ contains
         bfact,dx_scale,xsten0_scale,nhalf0, &
         nslope,intercept, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         local_xtetlist_vof, &
         local_nlist_vof, &
         local_nlist_vof, &
@@ -11390,6 +11518,7 @@ contains
         uncaptured_volume_cen, &
         multi_centroidA, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         nmat,sdim)
 
       use probcommon_module
@@ -11406,6 +11535,7 @@ contains
       REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
       REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmoflo(sdim),cmofhi(sdim)
       INTEGER_T, intent(in) :: nmat
       INTEGER_T dir
       INTEGER_T, intent(in) :: nmax
@@ -11538,7 +11668,9 @@ contains
       else if (continuous_mof.eq.2) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
          cencell_vof,sdim)
-       call Box_volume_super(bfact,dx,xsten0,nhalf0, &
+       call Box_volume_super( &
+         cmoflo,cmofhi, &
+         bfact,dx,xsten0,nhalf0, &
          volcell_cen,cencell_cen, &
          sdim)
       else
@@ -11571,7 +11703,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
-         nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_vof,nmax,nmat, &
+         use_super_cell, &
+         cmoflo,cmofhi, &
+         sdim)
         use_super_cell=0
         call tets_box_planes_super( &
          tessellate, & ! =0
@@ -11579,7 +11714,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_cen,nmax,nmat, &
+         use_super_cell, &
+         cmoflo,cmofhi, &
+         sdim)
        else if (continuous_mof.eq.2) then
         use_super_cell=0
         call tets_box_planes_super( &
@@ -11588,7 +11726,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
-         nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_vof,nmax,nmat, &
+         use_super_cell, &
+         cmoflo,cmofhi, &
+         sdim)
         use_super_cell=1
         call tets_box_planes_super( &
          tessellate, & ! =0
@@ -11596,7 +11737,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_cen,nmax,nmat, &
+         use_super_cell, &
+         cmoflo,cmofhi, &
+         sdim)
        else
         print *,"continuous_mof invalid"
         stop
@@ -11827,6 +11971,7 @@ contains
           refcentroid,refvfrac, &
           npredict, &
           continuous_mof, &
+          cmoflo,cmofhi, &
           nslope,intercept, &
           xtetlist_vof,nlist_vof, &
           xtetlist_cen,nlist_cen, &
@@ -11983,6 +12128,7 @@ contains
           bfact,dx,xsten0,nhalf0, &
           npredict,intercept, &
           continuous_mof, &
+          cmoflo,cmofhi, &
           xtetlist_vof, &
           nlist_alloc, &
           nlist_vof, &
@@ -12707,7 +12853,7 @@ contains
 ! xcell is cell center (not cell centroid)
 !
 ! if continuous_mof=2:
-!  centroids: 3x3 super cell
+!  centroids: 3x3 super cell unless near Fsolid>1/2 cell (cmoflo,cmofhi)
 !  vfrac    : center cell
 !
 ! if continuous_mof=5:
@@ -12746,6 +12892,7 @@ contains
         mofdata, &
         multi_centroidA, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         nmat, &
         sdim, &
         caller_id)
@@ -12765,6 +12912,7 @@ contains
       INTEGER_T, INTENT (IN) :: nlist_alloc
       INTEGER_T, INTENT (IN) :: nmax
       INTEGER_T, INTENT (IN) :: continuous_mof
+      INTEGER_T, INTENT (IN) :: cmoflo(sdim),cmofhi(sdim)
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
@@ -13135,6 +13283,7 @@ contains
            refcentroid,refvfrac, &
            npredict, &
            continuous_mof_rigid, &
+           cmoflo,cmofhi, &
            nslope,intercept, &
            xtetlist_vof,nlist_vof, &
            xtetlist_cen,nlist_cen, &
@@ -13418,6 +13567,7 @@ contains
          call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
           uncaptured_centroid_vof,sdim)
          call Box_volume_super( &
+          cmoflo,cmofhi, &
           bfact,dx,xsten0,nhalf0, &
           uncaptured_volume_cen,uncaptured_centroid_cen, &
           sdim)
@@ -13447,6 +13597,7 @@ contains
           uncaptured_volume_cen, &
           multi_centroidA, &
           continuous_mof, &
+          cmoflo,cmofhi, &
           nmat,sdim)
          imaterial_count=imaterial_count+1
         enddo
@@ -13499,6 +13650,7 @@ contains
            uncaptured_volume_vof, &
            uncaptured_centroid_vof,sdim)
           call Box_volume_super( &
+           cmoflo,cmofhi, &
            bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_cen,uncaptured_centroid_cen, &
            sdim)
@@ -13528,6 +13680,7 @@ contains
            uncaptured_volume_cen, &
            multi_centroidA, &
            continuous_mof, &
+           cmoflo,cmofhi, &
            nmat,sdim)
           imaterial_count=imaterial_count+1
          enddo ! while not all of uncaptured space filled
@@ -13704,6 +13857,7 @@ contains
       REAL_T mofdata(nmat*(2*sdim+3))
       REAL_T multi_centroidA(nmat,sdim)
       INTEGER_T continuous_mof
+      INTEGER_T cmoflo(sdim),cmofhi(sdim)
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
       INTEGER_T nrecon,nsamples,im,ntry,iangle,vofcomp
@@ -13788,7 +13942,9 @@ contains
        print *,"sdim invalid"
        stop
       endif
+
       continuous_mof=0
+
       if (levelrz.ne.0) then
        print *,"levelrz should be 0 for this sanity check"
        stop
@@ -13907,6 +14063,7 @@ contains
         mofdata, &
         multi_centroidA, &
         continuous_mof, &
+        cmoflo,cmofhi, &
         nmat,sdim,1)
 
        moferror=zero
@@ -14044,7 +14201,10 @@ contains
       if (nhalf_box.eq.1) then
        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
       else if (nhalf_box.eq.3) then
-       call Box_volume_super(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
+       call Box_volume_super( &
+         cmoflo,cmofhi, &
+         bfact,dx,xsten,nhalf, &
+         volcell,cencell,sdim)
       else
        print *,"nhalf_box invalid"
        stop

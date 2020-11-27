@@ -77,39 +77,41 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T gridno
-      INTEGER_T level,finest_level,max_level
-      INTEGER_T nsteps
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: gridno
+      INTEGER_T, intent(in) :: level,finest_level,max_level
+      INTEGER_T, intent(in) :: nsteps
 
-      INTEGER_T nmat
+      INTEGER_T, intent(in) :: nmat
 
-      INTEGER_T radius_cutoff(nmat)
+      INTEGER_T, intent(in) :: radius_cutoff(nmat)
 
-      INTEGER_T continuous_mof
-      INTEGER_T nten
-      INTEGER_T update_flag
-      REAL_T time
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T ngrow
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(slopes)
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: update_flag
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(slopes)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
      
-      REAL_T  masknbr(DIMV(masknbr),4) 
-      REAL_T  vof(DIMV(vof),nmat*ngeom_raw) 
-      REAL_T  LS(DIMV(LS),nmat) 
-      REAL_T  slopes(DIMV(slopes),nmat*ngeom_recon) 
-      REAL_T  snew(DIMV(snew),nmat*ngeom_raw+1) 
-      REAL_T latent_heat(2*nten)
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4) 
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw) 
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat) 
+      REAL_T, intent(out) :: slopes(DIMV(slopes),nmat*ngeom_recon) 
+      REAL_T, intent(inout) :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, intent(in) :: latent_heat(2*nten)
       
       INTEGER_T i,j,k,dir
       INTEGER_T igridlo(3),igridhi(3)
+
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
 
       INTEGER_T im
       REAL_T mofdata(nmat*ngeom_recon)
@@ -300,6 +302,11 @@ stop
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        use_ls_data=1
+
+       do dir=1,SDIM
+        cmoflo(dir)=-1
+        cmofhi(dir)=1
+       enddo
 
        do im=1,nmat
 
@@ -596,6 +603,7 @@ stop
           mofdata_super, &
           multi_centroidA, &
           continuous_mof_parm, &
+          cmoflo,cmofhi, &
           nmat,SDIM,2)
 
         if (continuous_mof_parm.eq.2) then

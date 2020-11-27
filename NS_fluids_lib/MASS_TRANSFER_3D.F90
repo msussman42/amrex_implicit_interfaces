@@ -3665,6 +3665,7 @@ stop
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T continuous_mof_parm
+      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
@@ -5190,6 +5191,7 @@ stop
              mofdata_new, &
              multi_centroidA, &
              continuous_mof_parm, &
+             cmoflo,cmofhi, &
              nmat,SDIM,2)
 
              !isweep==0 so we save mofdata_new for isweep=1
