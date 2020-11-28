@@ -2675,7 +2675,10 @@ stop
         enddo ! im
 
          ! uses VOFTOL
-        call check_full_cell_vfrac(vcenter,tessellate,nmat,im_crit)
+        call check_full_cell_vfrac( &
+                vcenter, &
+                tessellate, &  ! =0
+                nmat,im_crit)
 
         if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
 
@@ -2703,7 +2706,7 @@ stop
           istar_array(3)=k3
 
           call multi_get_volumePOINT( &
-           tessellate, &
+           tessellate, &  ! =0
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
            im_test,nmat,SDIM)
@@ -2863,7 +2866,9 @@ stop
        stop
       endif
 
-      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
+      if ((tessellate.ne.0).and. &
+          (tessellate.ne.1).and. &
+          (tessellate.ne.3)) then
        print *,"tessellate invalid45"
        stop
       endif
@@ -2973,13 +2978,49 @@ stop
          mofdata(im)=vofrecon(D_DECL(i,j,k),im)
         enddo
 
+        normalize_tessellate=0
+        call make_vfrac_sum_ok_copy( &
+         cmoflo,cmofhi, &
+         xsten,nhalf,nhalf_box, &
+         bfact,dx, &
+         normalize_tessellate, &  ! =0
+         mofdata,mofdatavalid, &
+         nmat,SDIM,3000)
+
+        if (tessellate.eq.3) then
+
+         local_tessellate=2
+
+         call multi_get_volume_tessellate( &
+          tessellate, & 
+          bfact,dx, &
+          xsten,nhalf, &
+          mofdatavalid, &
+          geom_xtetlist_uncapt(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          nmat, &
+          SDIM, &
+          3)  ! caller_id=3
+
+        else if ((tessellate.eq.0).or. &
+                 (tessellate.eq.1)) then
+         local_tessellate=tessellate
+        else
+         print *,"tessellate invalid"
+         stop
+        endif
+
           ! vcenter = volume fraction 
         do im=1,nmat
          vofcomp=(im-1)*ngeom_recon+1
-         vcenter(im)=mofdata(vofcomp)
+         vcenter(im)=mofdatavalid(vofcomp)
         enddo ! im
 
-        call check_full_cell_vfrac(vcenter,tessellate,nmat,im_crit)
+        call check_full_cell_vfrac( &
+                vcenter, &
+                tessellate, & ! 0,1, or 3
+                nmat,im_crit)
 
         do dir=1,SDIM
          do side=1,2
@@ -3074,14 +3115,6 @@ stop
 
         else if (im_crit.eq.0) then
 
-         ! sum F_fluid=1  sum F_solid<=1
-         call make_vfrac_sum_ok_copy( &
-           cmoflo,cmofhi, &
-           xsten,nhalf,nhalf_box, &
-           bfact,dx, &
-           tessellate,mofdata,mofdatavalid, &
-           nmat,SDIM,3000)
-
          shapeflag=0
 
          do dir=1,SDIM
@@ -3118,7 +3151,7 @@ stop
            ! centroid)
            ! in: FORT_FACEINIT
           call multi_get_volume_grid( &
-            tessellate, &
+            local_tessellate, &  ! 0,1, or 2
             bfact,dx,xsten,nhalf, &
             mofdataproject, &
             xsten_thin,nhalf_thin, &
@@ -3134,7 +3167,8 @@ stop
 
           total_vol=zero
           do im=1,nmat
-           if (tessellate.eq.1) then
+           if ((tessellate.eq.1).or. &
+               (tessellate.eq.3)) then
             total_vol=total_vol+multi_volume(im)
            else if (tessellate.eq.0) then
             if (is_rigid(nmat,im).eq.0) then
@@ -3170,7 +3204,20 @@ stop
 
           if (nface_decomp.gt.0) then
 
-           call check_full_cell_vfrac(vcenter_thin,tessellate, &
+           if (tessellate.eq.0) then
+            ! do nothing
+           else if ((tessellate.eq.1).or. &
+                    (tessellate.eq.3)) then
+            print *,"expecting nface_decomp=0 if tessellate=1,3"
+            stop
+           else
+            print *,"tessellate invalid"
+            stop
+           endif
+
+           call check_full_cell_vfrac( &
+             vcenter_thin, &
+             tessellate, & ! 0,1, or 3
              nmat,im_crit_thin)
 
            if ((im_crit_thin.ge.1).and.(im_crit_thin.le.nmat)) then
@@ -4030,6 +4077,11 @@ stop
       return
       end subroutine FORT_FACEINITTEST
 
+       ! 1. NavierStokes::makeFaceFrac
+       !      -> FORT_FACEINIT
+       ! 2. NavierStokes::ProcessFaceFrac
+       !      -> FORT_FACEPROCESS
+       ! called from: NavierStokes::ProcessFaceFrac (NavierStokes.cpp)
        ! facefab is initialized in FORT_FACEINIT
        ! centroids in facefab are in an absolute coordinate system.
       subroutine FORT_FACEPROCESS( &
@@ -4124,7 +4176,6 @@ stop
       REAL_T L_face
       INTEGER_T nmax
       INTEGER_T caller_id
-      INTEGER_T local_tessellate
  
       L_face=dx(dir+1)
 
@@ -4424,8 +4475,8 @@ stop
 
         enddo ! im=1..nmat
 
-        if ((left_face_ok.eq.1).and. &
-            (right_face_ok.eq.1)) then
+        if ((left_face_ok.eq.1).and. &  ! cell to left of face is in FAB
+            (right_face_ok.eq.1)) then  ! cell to right of face is in FAB
 
          do im=1,nmat*ngeom_recon
           mofdata_left(im)=vofrecon(D_DECL(i-ii,j-jj,k-kk),im)

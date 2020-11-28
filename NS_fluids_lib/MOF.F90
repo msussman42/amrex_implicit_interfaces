@@ -16082,7 +16082,8 @@ contains
        stop
       endif 
 
-      if ((tessellate_in.eq.1).or.(tessellate_in.eq.3)) then
+      if ((tessellate_in.eq.1).or. &
+          (tessellate_in.eq.3)) then
        ! do nothing
       else
        print *,"tessellate_in invalid: ",tessellate_in

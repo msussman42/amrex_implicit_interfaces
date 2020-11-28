@@ -22086,6 +22086,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  int tessellate=0;
   // FACEINIT is in: MOF_REDIST_3D.F90
  makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MF,do_face_decomp);
+  // FACEPROCESS is in: MOF_REDIST_3D.F90
  ProcessFaceFrac(tessellate,FACEFRAC_MF,FACEFRAC_SOLVE_MM_MF,ngrow_distance);
 
  if (profile_dist==1) {
@@ -22101,7 +22102,9 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
 
   // FACEINITTEST is in MOF_REDIST_3D.F90
   // FACETEST_MF has nmat * sdim components.
- makeFaceTest(tessellate,ngrow_distance,FACETEST_MF);
+ makeFaceTest(
+	 tessellate,  // =0
+	 ngrow_distance,FACETEST_MF);
 
  if (profile_dist==1) {
   after_profile = ParallelDescriptor::second();
@@ -22543,9 +22546,13 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
 
 // WARNING: makeFaceFrac allocates, but does not delete.
+// do_face_decomp=0 if called from makeStateDist (tessellate==0)
+// do_face_decomp=0 if called from make_physics_varsALL (tessellate==3)
+// do_face_decomp=0 if called from ColorSum (tessellate==1)
 void
 NavierStokes::makeFaceFrac(
- int tessellate,int ngrow,int idx,int do_face_decomp) {
+ int tessellate,int ngrow,int idx,
+ int do_face_decomp) {
 
  
  bool use_tiling=ns_tiling;
