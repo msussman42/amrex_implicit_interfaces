@@ -2748,7 +2748,7 @@ stop
        ! 
       subroutine FORT_FACEINIT( &
          tid, &
-         tessellate, &
+         tessellate, &  ! =0,1, or 3
          nten, &
          level, &
          finest_level, &
@@ -2774,7 +2774,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: tessellate ! 0,1, or 3
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -2856,6 +2856,9 @@ stop
       REAL_T X1(SDIM)
       REAL_T X2(SDIM)
       REAL_T XSTRIP(SDIM)
+      INTEGER_T normalize_tessellate
+      INTEGER_T local_tessellate
+      INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
       INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
 
@@ -2992,7 +2995,7 @@ stop
          local_tessellate=2
 
          call multi_get_volume_tessellate( &
-          tessellate, & 
+          tessellate, &  ! =3
           bfact,dx, &
           xsten,nhalf, &
           mofdatavalid, &
@@ -3224,6 +3227,20 @@ stop
             ! do nothing, there are no internal interfaces
            else if (im_crit_thin.eq.0) then
 
+            do im=1,nmat
+             is_rigid_local(im)=is_rigid(nmat,im)
+             if (local_tessellate.eq.2) then
+              is_rigid_local(im)=0
+             else if (local_tessellate.eq.0) then 
+              ! do nothing
+             else if (local_tessellate.eq.1) then 
+              ! do nothing
+             else
+              print *,"local_tessellate invalid4"
+              stop
+             endif
+            enddo ! im=1..nmat
+
             do iten=1,nten
              is_processed(iten)=0
             enddo
@@ -3236,24 +3253,37 @@ stop
             vfrac_solid_sum=zero
 
             do im=1,nmat
-             if (is_rigid(nmat,im).eq.0) then
+             if (is_rigid_local(im).eq.0) then
               nmat_fluid=nmat_fluid+1
               vfrac_fluid_sum=vfrac_fluid_sum+vcenter_thin(im)
-             else if (is_rigid(nmat,im).eq.1) then
+             else if (is_rigid_local(im).eq.1) then
               nmat_rigid=nmat_rigid+1
               vfrac_solid_sum=vfrac_solid_sum+vcenter_thin(im)
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid_local invalid"
               stop
              endif
             enddo ! im=1..nmat
 
-            if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
-             print *,"vfrac_fluid_sum invalid"
+            if ((tessellate.eq.0).or. &
+                (tessellate.eq.3)) then
+             if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
+              ! do nothing
+             else
+              print *,"vfrac_fluid_sum invalid"
+              stop
+             endif
+            else if (tessellate.eq.1) then
+             ! do nothing
+            else
+             print *,"tessellate invalid"
              stop
             endif
-            if ((vfrac_solid_sum.gt.one+VOFTOL).or. &
-                (vfrac_solid_sum.lt.zero)) then
+
+            if ((vfrac_solid_sum.le.one+VOFTOL).and. &
+                (vfrac_solid_sum.ge.zero)) then
+             ! do nothing
+            else
              print *,"vfrac_solid_sum invalid"
              stop
             endif
@@ -3265,8 +3295,9 @@ stop
             num_processed_solid=0
             num_processed_fluid=0
 
-            if (tessellate.eq.1) then
- 
+            if ((tessellate.eq.1).or. &
+                (tessellate.eq.3)) then
+
              loop_counter=0
              do while ((loop_counter.lt.nmat_rigid).and. &
                        (num_processed_solid.lt.nmat_rigid).and. &
@@ -3275,7 +3306,7 @@ stop
 
                ! F,CEN,ORDER,SLOPE,INTERCEPT
               do im=1,nmat
-               if (is_rigid(nmat,im).eq.1) then
+               if (is_rigid_local(im).eq.1) then
                 vofcomp=(im-1)*ngeom_recon+1
                 testflag=NINT(mofdataproject(vofcomp+SDIM+1))
 
@@ -3314,7 +3345,7 @@ stop
                     ! rigid material
                     ! in: FORT_FACEINIT
                    call multi_get_volume_grid_simple( &
-                    tessellate, &
+                    local_tessellate, &
                     bfact,dx,xsten,nhalf, &
                     mofdataproject, &
                     xsten_thin,nhalf_thin, &
@@ -3454,10 +3485,10 @@ stop
                  print *,"testflag invalid"
                  stop
                 endif  
-               else if (is_rigid(nmat,im).eq.0) then
+               else if (is_rigid_local(im).eq.0) then
                 ! do nothing
                else
-                print *,"is_rigid invalid"
+                print *,"is_rigid_local invalid"
                 stop
                endif
               enddo ! im=1..nmat
@@ -3482,7 +3513,7 @@ stop
 
               ! F,CEN,ORDER,SLOPE,INTERCEPT
              do im=1,nmat
-              if (is_rigid(nmat,im).eq.0) then
+              if (is_rigid_local(im).eq.0) then
                vofcomp=(im-1)*ngeom_recon+1
                testflag=NINT(mofdataproject(vofcomp+SDIM+1))
 
@@ -3521,7 +3552,7 @@ stop
                    ! fluid material
                    ! in: FORT_FACEINIT
                   call multi_get_volume_grid_simple( &
-                   tessellate, &
+                   local_tessellate, &
                    bfact,dx,xsten,nhalf, &
                    mofdataproject, &
                    xsten_thin,nhalf_thin, &
@@ -3553,8 +3584,8 @@ stop
 
                     do im_opp=1,nmat
 
-                     if ((is_rigid(nmat,im_opp).eq.0).or. &
-                         (tessellate.eq.1)) then
+                     if ((is_rigid_local(im_opp).eq.0).or. &
+                         (local_tessellate.eq.1)) then
 
                       if (im_opp.ne.im) then
                        call get_iten(im,im_opp,iten,nmat)
@@ -3605,11 +3636,11 @@ stop
                        print *,"im_opp or im bust"
                        stop
                       endif
-                     else if ((is_rigid(nmat,im_opp).eq.1).and. &
-                              (tessellate.eq.0)) then
+                     else if ((is_rigid_local(im_opp).eq.1).and. &
+                              (local_tessellate.eq.0)) then
                       ! do nothing
                      else
-                      print *,"is_rigid or tessellate invalid48"
+                      print *,"is_rigid_local or local_tessellate invalid48"
                       stop
                      endif
                     enddo !im_opp
@@ -3671,10 +3702,10 @@ stop
 
                endif  ! testflag==num_processed_fluid+1
            
-              else if (is_rigid(nmat,im).eq.1) then
+              else if (is_rigid_local(im).eq.1) then
                ! do nothing
               else
-               print *,"is_rigid invalid"
+               print *,"is_rigid_local invalid"
                stop
               endif
 
@@ -4089,7 +4120,7 @@ stop
        ngrow_dest, &
        tid, &
        dir, &
-       tessellate, &
+       tessellate, & ! 0,1, or 3
        level, &
        finest_level, &
        dstfab,DIMS(dstfab), &
@@ -4113,7 +4144,7 @@ stop
       INTEGER_T, intent(in) :: ngrow_dest
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: dir
-      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: tessellate ! 0,1, or 3
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nface_src,nface_dst
@@ -4175,6 +4206,7 @@ stop
       INTEGER_T at_RZ_face
       REAL_T L_face
       INTEGER_T nmax
+      INTEGER_T local_tessellate
       INTEGER_T caller_id
  
       L_face=dx(dir+1)
@@ -4402,14 +4434,13 @@ stop
          frac_left(im)=leftface(im,1)
          frac_right(im)=rightface(im,1)
 
-         if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+         if ((tessellate.eq.1).or. &
+             (tessellate.eq.3).or. &
+             (is_rigid(nmat,im).eq.0)) then
           left_total=left_total+frac_left(im)
           right_total=right_total+frac_right(im)
          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
           ! do nothing
-         else if (tessellate.eq.3) then
-          print *,"tessellate==3 not supported yet"
-          stop
          else 
           print *,"tessellate or is_rigid invalid"
           stop
@@ -4443,7 +4474,9 @@ stop
 
         do im = 1,nmat
 
-         if ((tessellate.eq.1).or.(is_rigid(nmat,im).eq.0)) then
+         if ((tessellate.eq.1).or. &
+             (tessellate.eq.3).or. &
+             (is_rigid(nmat,im).eq.0)) then
 
           if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
               (frac_left(im).lt.zero).or. &
@@ -4465,9 +4498,6 @@ stop
 
          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
           ! do nothing
-         else if (tessellate.eq.3) then
-          print *,"tessellate==3 not supported yet"
-          stop
          else
           print *,"tessellate or is_rigid invalid"
           stop
@@ -4486,6 +4516,7 @@ stop
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           if ((tessellate.eq.1).or. &
+              (tessellate.eq.3).or. &
               (is_rigid(nmat,im).eq.0)) then
            ! do nothing
           else if ((tessellate.eq.0).and. &
@@ -4494,9 +4525,6 @@ stop
             mofdata_left(vofcomp+dir2-1)=zero 
             mofdata_right(vofcomp+dir2-1)=zero 
            enddo
-          else if (tessellate.eq.3) then
-           print *,"tessellate==3 not supported yet"
-           stop
           else
            print *,"tessellate or is_rigid invalid"
            stop
@@ -4511,9 +4539,18 @@ stop
 
            ! x_pair in absolute coordinate system.
          caller_id=12
-         local_tessellate=1
+         if (tessellate.eq.0) then
+          local_tessellate=1 ! is_rigid data has been zeroed out.
+         else if ((tessellate.eq.1).or. &
+                  (tessellate.eq.3)) then
+          local_tessellate=tessellate
+         else
+          print *,"tessellate invalid"
+          stop
+         endif
+
          call multi_get_area_pairs( &
-           local_tessellate, &
+           local_tessellate, & ! =1 or 3
            bfact, &
            dx, &
            xsten_right, &
@@ -4586,11 +4623,15 @@ stop
 
         do ml = 1, nmat
 
-         if ((tessellate.eq.1).or.(is_rigid(nmat,ml).eq.0)) then
+         if ((tessellate.eq.1).or. &
+             (tessellate.eq.3).or. &
+             (is_rigid(nmat,ml).eq.0)) then
 
           do mr = 1, nmat
 
-           if ((tessellate.eq.1).or.(is_rigid(nmat,mr).eq.0)) then
+           if ((tessellate.eq.1).or. &
+               (tessellate.eq.3).or. &
+               (is_rigid(nmat,mr).eq.0)) then
 
             if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
                 (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
@@ -4643,9 +4684,6 @@ stop
 
          else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
           ! do nothing
-         else if (tessellate.eq.3) then
-          print *,"tessellate==3 not supported yet"
-          stop
          else
           print *,"tessellate or is_rigid invalid"
           stop
