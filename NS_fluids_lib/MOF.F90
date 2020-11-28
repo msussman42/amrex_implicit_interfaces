@@ -15921,6 +15921,7 @@ contains
         !
         ! 
         ! tessellate_in=0,1, or 3
+        ! calls multi_get_volume_tessellate if tessellate_in=1 or 3.
       subroutine multi_get_area_pairs( &
        tessellate_in, &
        bfact,dx, &
