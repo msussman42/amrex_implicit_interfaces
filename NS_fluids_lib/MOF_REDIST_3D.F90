@@ -4549,6 +4549,13 @@ stop
           stop
          endif
 
+          ! if local_tessellate==1 or 3:
+          !  a) call multi_get_volume_tessellate
+          !  b) local_tessellate_in=2
+          !  c) is_rigid_local=0 for all materials
+          ! else if local_tessellate==0
+          !  a) local_tessellate_in=0
+          ! 
          call multi_get_area_pairs( &
            local_tessellate, & ! =1 or 3
            bfact, &
