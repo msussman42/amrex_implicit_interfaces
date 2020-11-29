@@ -23617,7 +23617,7 @@ end subroutine RatePhaseChange
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       INTEGER_T continuous_mof
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T tessellate
       INTEGER_T ibasesrc,ibasedst
       INTEGER_T ibase_raw,ibase_recon
@@ -23841,7 +23841,7 @@ end subroutine RatePhaseChange
         enddo  ! im_local=1..nmat
 
         call make_vfrac_sum_ok_base( &
-          cmoflo,cmofhi, &
+          cmofsten, &
           xsten,nhalf,nhalf_box, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
@@ -23862,7 +23862,7 @@ end subroutine RatePhaseChange
          mofdata, &
          multi_centroidA, &
          continuous_mof, &
-         cmoflo,cmofhi, &
+         cmofsten, &
          nmat,SDIM,4)
 
         local_tessellate=3
@@ -28916,7 +28916,7 @@ end subroutine initialize2d
        INTEGER_T ibasedst
        INTEGER_T use_ls_data,mof_verbose
        INTEGER_T continuous_mof
-       INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
        REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
        REAL_T multi_centroidA(num_materials,SDIM)
        REAL_T mofdata(num_materials*ngeom_recon)
@@ -29120,7 +29120,7 @@ end subroutine initialize2d
           enddo  ! im
 
           call make_vfrac_sum_ok_base( &
-            cmoflo,cmofhi, &
+            cmofsten, &
             xsten,nhalf,nhalf_box, &
             bfact,dx, &
             tessellate, &  ! =0
@@ -29138,7 +29138,7 @@ end subroutine initialize2d
            mofdata, &
            multi_centroidA, &
            continuous_mof, &
-           cmoflo,cmofhi, &
+           cmofsten, &
            nmat,SDIM,4)
 
           do dir3=1,nmat*ngeom_recon
@@ -31396,7 +31396,7 @@ end subroutine initialize2d
        INTEGER_T bcflag
        INTEGER_T from_boundary_hydrostatic
        INTEGER_T nhalf_box
-       INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
        nhalf_box=1
 
@@ -32554,7 +32554,7 @@ end subroutine initialize2d
 
         ! sum F_fluid=1  sum F_solid <= 1
         call make_vfrac_sum_ok_base( &
-          cmoflo,cmofhi, &
+          cmofsten, &
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
           tessellate, &  ! =0

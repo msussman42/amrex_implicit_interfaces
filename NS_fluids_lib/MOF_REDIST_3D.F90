@@ -2860,7 +2860,7 @@ stop
       INTEGER_T local_tessellate
       INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       nhalf_box=1
   
@@ -2983,7 +2983,7 @@ stop
 
         normalize_tessellate=0
         call make_vfrac_sum_ok_copy( &
-         cmoflo,cmofhi, &
+         cmofsten, &
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
          normalize_tessellate, &  ! =0

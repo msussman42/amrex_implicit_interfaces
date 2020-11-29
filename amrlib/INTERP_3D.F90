@@ -157,7 +157,7 @@ stop
       REAL_T multi_volume(nmat)
       REAL_T multi_cen(SDIM,nmat)
       INTEGER_T continuous_mof
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM) 
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T mof_verbose,use_ls_data
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
       REAL_T xsten(-3:3,SDIM)
@@ -260,7 +260,7 @@ stop
 
         ! sum F_fluid=1  sum F_solid <= 1
        call make_vfrac_sum_ok_base( &
-         cmoflo,cmofhi, &
+         cmofsten, &
          xsten,nhalf,nhalf_box, &
          bfact_coarse,dxc, &
          tessellate,mofdata,nmat,SDIM,304)
@@ -277,7 +277,7 @@ stop
          mofdata, &
          multi_centroidA, &
          continuous_mof, &
-         cmoflo,cmofhi, &
+         cmofsten, &
          nmat,SDIM,5)
 
        do dir=1,nmat*ngeom_recon
@@ -799,7 +799,7 @@ stop
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       INTEGER_T continuous_mof
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM) 
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T multi_centroidA(nmat,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
 
@@ -1060,7 +1060,7 @@ stop
 
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
-         cmoflo,cmofhi, &
+         cmofsten, &
          xstenfine,nhalf,nhalf_box, &
          bfact_fine,dxf, &
          tessellate,mofdata,nmat,SDIM,304)
@@ -1077,7 +1077,7 @@ stop
          mofdata, &
          multi_centroidA, &
          continuous_mof, &
-         cmoflo,cmofhi, &
+         cmofsten, &
          nmat,SDIM,6)
 
        do dir=1,nmat*ngeom_recon

@@ -2666,7 +2666,7 @@ stop
       INTEGER_T nten_test
       INTEGER_T is_processed(nten)
       INTEGER_T nhalf_box
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T caller_id
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -2812,7 +2812,7 @@ stop
 
          ! sum F_fluid=1  sum F_solid<=1
          call make_vfrac_sum_ok_copy( &
-           cmoflo,cmofhi, &
+           cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate,mofdata,mofdatavalid, &
@@ -15866,7 +15866,7 @@ stop
       INTEGER_T im_fluid_critical
       INTEGER_T im_local
       INTEGER_T continuous_mof_parm
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T user_tension(nten)
       INTEGER_T nten_test
       INTEGER_T iten
@@ -16973,7 +16973,7 @@ stop
             ! sum of F_rigid<=1
             tessellate=0
             call make_vfrac_sum_ok_base( &
-              cmoflo,cmofhi, &
+              cmofsten, &
               xsten,nhalf,nhalf_box, &
               bfact,dx, &
               tessellate,local_mof,nmat,SDIM,6)
@@ -16992,7 +16992,7 @@ stop
              local_mof, &
              multi_centroidA, &
              continuous_mof_parm, &
-             cmoflo,cmofhi, &
+             cmofsten, &
              nmat,SDIM,2)
      
             tessellate_transfer=1 
@@ -17126,7 +17126,7 @@ stop
           ! sum of F_fluid=1
           ! sum of F_rigid<=1
          call make_vfrac_sum_ok_base( &
-           cmoflo,cmofhi, &
+           cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate,mofnew,nmat,SDIM,12)
@@ -17144,7 +17144,7 @@ stop
          endif
 
          call make_vfrac_sum_ok_base( &
-           cmoflo,cmofhi, &
+           cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate,mofnew,nmat,SDIM,13)
@@ -17243,7 +17243,7 @@ stop
       INTEGER_T FSI_exclude
       INTEGER_T tessellate
       INTEGER_T nhalf_box
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       tessellate=0
 
@@ -17418,7 +17418,7 @@ stop
 
          ! sum F_fluid=1  sum F_solid <=1
         call make_vfrac_sum_ok_base( &
-          cmoflo,cmofhi, &
+          cmofsten, &
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
           tessellate,mofdata,nmat,SDIM,14)
