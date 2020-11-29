@@ -19127,7 +19127,9 @@ contains
         if (is_rigid_local(im).eq.1) then
          mofdata(vofcomp)=mofdata(vofcomp)/solid_vfrac_sum
         else if (is_rigid_local(im).eq.0) then
-         mofdata(vofcomp)=zero
+         do dir=0,ngeom_recon-1
+          mofdata(vofcomp+dir)=zero
+         enddo
         else
          print *,"is_rigid invalid"
          stop
@@ -19140,7 +19142,9 @@ contains
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
         if (is_rigid_local(im).eq.1) then
-         mofdata(vofcomp)=zero
+         do dir=0,ngeom_recon-1
+          mofdata(vofcomp+dir)=zero
+         enddo
         else if (is_rigid_local(im).eq.0) then
          mofdata(vofcomp)=mofdata(vofcomp)/fluid_vfrac_sum
         else
@@ -19176,7 +19180,7 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
           if (is_rigid_local(im).eq.1) then
-           do dir=0,sdim
+           do dir=0,ngeom_recon-1
             mofdata(vofcomp+dir)=zero
            enddo
           else if (is_rigid_local(im).eq.0) then

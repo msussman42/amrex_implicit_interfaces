@@ -728,7 +728,7 @@ stop
 
          enddo ! im=1..nmat
 
-         if (1.eq.1) then
+         if (1.eq.0) then
           if (mod_cmofsten.eq.1) then
            print *,"mod_cmofsten=1:level,finest_level ", &
                    level,finest_level
@@ -739,6 +739,9 @@ stop
            do k1=klosten,khisten
             print *,"i1,j1,k1,cmofsten(i1,j1,k1) ",i1,j1,k1, &
                     cmofsten(D_DECL(i1,j1,k1))
+           enddo
+           enddo
+           enddo
           else if (mod_cmofsten.eq.0) then
            ! do nothing
           else
