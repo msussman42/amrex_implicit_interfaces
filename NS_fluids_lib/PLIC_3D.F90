@@ -156,7 +156,7 @@ stop
       REAL_T volmat
       REAL_T censten(SDIM)
       REAL_T cen_super(SDIM)
-      REAL_T voflist(nmat)
+      REAL_T voflist_center(nmat)
       REAL_T voflist_stencil(nmat)
       REAL_T voflist_test
       INTEGER_T mof_verbose,use_ls_data,nhalfbox_sten
@@ -360,28 +360,28 @@ stop
 
        do im=1,nmat
         vofcomprecon=(im-1)*ngeom_recon+1
-        voflist(im)=mofdata(vofcomprecon)
+        voflist_center(im)=mofdata(vofcomprecon)
         voflist_stencil(im)=zero
 
         if (is_rigid(nmat,im).eq.0) then
-         vfrac_fluid_sum=vfrac_fluid_sum+voflist(im)
+         vfrac_fluid_sum=vfrac_fluid_sum+voflist_center(im)
         else if (is_rigid(nmat,im).eq.1) then
          if (im_raster_solid.eq.0) then
           im_raster_solid=im
-          vfrac_raster_solid=voflist(im)
+          vfrac_raster_solid=voflist_center(im)
          else if ((im_raster_solid.ge.1).and. &
                   (im_raster_solid.le.nmat).and. &
                   (is_rigid(nmat,im_raster_solid).eq.1)) then
-          if (vfrac_raster_solid.lt.voflist(im)) then
+          if (vfrac_raster_solid.lt.voflist_center(im)) then
            im_raster_solid=im
-           vfrac_raster_solid=voflist(im)
+           vfrac_raster_solid=voflist_center(im)
           endif
          else
           print *,"im_raster_solid invalid"
           stop
          endif
       
-         vfrac_solid_sum=vfrac_solid_sum+voflist(im)
+         vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
         else
          print *,"is_rigid(nmat,im) invalid"
          stop
@@ -439,7 +439,7 @@ stop
           if (voflist_stencil(im).gt.VOFTOL) then
            nmat_in_stencil=nmat_in_stencil+1
           endif
-          if (voflist(im).gt.VOFTOL) then
+          if (voflist_center(im).gt.VOFTOL) then
            nmat_in_cell=nmat_in_cell+1
           endif
          else if (is_rigid(nmat,im).eq.1) then
@@ -688,7 +688,8 @@ stop
            if (isweep.eq.0) then
 
             if (vfrac_solid_sum_center.ge.half) then
-             ! do nothing
+             ! do nothing, we can do the full cmof stencil in masked
+             ! off is_rigid=1 cells
             else if (vfrac_solid_sum_center.lt.half) then
 
              if (vfrac_solid_sum.ge.half) then
@@ -805,6 +806,8 @@ stop
 
          if (1.eq.1) then
           if (mod_cmoflo_cmofhi.eq.1) then
+           print *,"mod_cmoflo,cmofhi=1:level,finest_level ", &
+                   level,finest_level
            print *,"mod_cmoflo,cmofhi=1:i,j,k ",i,j,k
            print *,"x,y,z ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
            do dir=1,SDIM
@@ -904,7 +907,7 @@ stop
           stencil_valid, &
           level,max_level, &
           xsten,nhalf,dx,bfact, &
-          voflist, &
+          voflist_center, &
           LS_stencil, &
           nmat, &
           nten, &
