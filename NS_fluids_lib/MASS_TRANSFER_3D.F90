@@ -3665,7 +3665,7 @@ stop
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T continuous_mof_parm
-      INTEGER_T cmoflo(SDIM),cmofhi(SDIM)
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
@@ -5191,7 +5191,7 @@ stop
              mofdata_new, &
              multi_centroidA, &
              continuous_mof_parm, &
-             cmoflo,cmofhi, &
+             cmofsten, &
              nmat,SDIM,2)
 
              !isweep==0 so we save mofdata_new for isweep=1
@@ -6210,7 +6210,7 @@ stop
             ! sum of F_rigid<=1
             tessellate=0
             call make_vfrac_sum_ok_base( &
-              cmoflo,cmofhi, &
+              cmofsten, &
               u_xsten_updatecell,nhalf,nhalf_box, &
               bfact,dx, &
               tessellate,mofdata,nmat,SDIM,106)
