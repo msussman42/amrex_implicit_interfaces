@@ -1849,6 +1849,7 @@ protected:
     static int visual_tessellate_vfrac; // def=0
     static int visual_revolve;
     static int visual_option;
+    static int visual_phase_change_plot_int; //def=0
 
     static Vector<int> visual_ncell;
     static int visual_compare;
