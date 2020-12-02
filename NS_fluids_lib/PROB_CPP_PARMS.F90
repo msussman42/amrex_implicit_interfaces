@@ -289,6 +289,7 @@ stop
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
+      SUB_CLAMPED_LS=>STUB_CLAMPED_LS
       SUB_VEL=>STUB_VEL
       SUB_EOS=>EOS_STUB
       SUB_SOUNDSQR=>SOUNDSQR_STUB
@@ -432,6 +433,7 @@ stop
        SUB_ASSIMILATE=>SIMPLE_KASSEMI_ASSIMILATE
       else if (probtype.eq.2000) then
        SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
+       SUB_clamped_LS=>flexible_plate_clamped_LS
        SUB_LS=>flexible_plate_impact_LS
        SUB_VEL=>flexible_plate_impact_VEL
        SUB_PRES=>flexible_plate_impact_PRES
@@ -464,6 +466,7 @@ stop
        ! if called.
        SUB_INIT_MODULE=>NULL()
        SUB_LS=>NULL()
+       SUB_clamped_LS=>NULL()
        SUB_VEL=>NULL()
        SUB_EOS=>NULL()
        SUB_SOUNDSQR=>NULL()

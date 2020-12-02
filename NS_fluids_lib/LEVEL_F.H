@@ -814,6 +814,7 @@ namespace amrex{
         const void* particles,
         int Np, 
 	Real* dt,
+	Real* vel_time_slab,
         Real* umac,AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
         Real* vmac,AMREX_ARLIM_P(vmaclo),AMREX_ARLIM_P(vmachi),
         Real* wmac,AMREX_ARLIM_P(wmaclo),AMREX_ARLIM_P(wmachi),

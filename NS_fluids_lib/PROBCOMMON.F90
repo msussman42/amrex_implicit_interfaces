@@ -409,6 +409,14 @@ implicit none
       REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
+      subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
+       REAL_T, intent(in) :: x(SDIM)
+       REAL_T, intent(in) :: t
+       REAL_T, intent(out) :: LS
+       REAL_T, intent(out) :: vel(SDIM)
+       REAL_T, intent(out) :: temperature
+      end subroutine TEMPLATE_clamped_LS
+
       subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: x(SDIM)
@@ -602,6 +610,7 @@ implicit none
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
       PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR

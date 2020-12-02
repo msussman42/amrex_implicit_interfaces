@@ -90,6 +90,30 @@ REAL_T, intent(out) :: LS(nmat)
 return
 end subroutine STUB_LS
 
+
+subroutine STUB_CLAMPED_LS(x,t,LS,vel,temperature)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(out) :: LS
+REAL_T, intent(out) :: vel(SDIM)
+REAL_T, intent(out) :: temperature
+INTEGER_T dir
+
+ LS=-99999.0D0
+ do dir=1,SDIM
+  vel(dir)=zero
+ enddo
+ temperature=293.0d0
+
+return
+end subroutine STUB_clamped_LS
+
+
+
 ! initial velocity is zero
 subroutine STUB_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
