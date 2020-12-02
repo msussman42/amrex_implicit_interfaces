@@ -77,7 +77,7 @@ void plot_adept_data(std::string plt_name_string,
  BoxArray ba_cell=data_to_plot->boxArray();
  DistributionMapping dm=data_to_plot->DistributionMap();
  int Ncomp=data_to_plot->nComp();
- int Nghost=data_to_plot->nGrow();
+ IntVect Nghost=data_to_plot->nGrowVect();
  MultiFab* data_plot_mf=new MultiFab(ba_cell,dm,Ncomp,Nghost);
 
  for (MFIter mfi(*data_plot_mf,false); mfi.isValid(); ++mfi) {
@@ -89,8 +89,6 @@ void plot_adept_data(std::string plt_name_string,
 
    Array4< Real > const& plot_array=plot_fab.array(); // type: double
    Array4< Real > const& plot_cell_array=plot_cell_fab.array(); //type:double
-//   Dim3 lo = lbound(v_array);
-//   Dim3 hi = ubound(v_array);
    Dim3 lo=lbound(plot_fab.box());
    Dim3 hi=ubound(plot_fab.box());
    for (int k = lo.z; k <= hi.z; ++k) {
@@ -103,7 +101,7 @@ void plot_adept_data(std::string plt_name_string,
  }
 
  std::cout << "plotting " << pltfile << '\n';
- int nghost_cell=1;
+ int nghost_cell=0; // max and min not upgraded yet to take IntVect nghost
  bool local=false;
  std::cout << " max= " << data_plot_mf->max(0,nghost_cell,local) << '\n';
  std::cout << " min= " << data_plot_mf->min(0,nghost_cell,local) << '\n';
@@ -152,7 +150,7 @@ adept::adouble cost_function(
 
  DistributionMapping dm=uinput[ntime]->DistributionMap();
  int Ncomp=uinput[ntime]->nComp();
- int Nghost=uinput[ntime]->nGrow();
+ IntVect Nghost=uinput[ntime]->nGrowVect();
 
  adept::adouble xlo=geom.ProbLo(0);
  adept::adouble xhi=geom.ProbHi(1);;
@@ -202,8 +200,6 @@ adept::adouble cost_function(
    Array4< adept::adouble > const& wt_obs_array=
 	   wt_obs_fab.array();
 
-//   Dim3 lo = lbound(v_array);
-//   Dim3 hi = ubound(v_array);
    Dim3 lo=lbound(v_fab.box());
    Dim3 hi=ubound(v_fab.box());
 
@@ -298,18 +294,26 @@ adept::adouble cost_function(
    Array4< adept::adouble > const& H_nodes_array=H_nodes_fab.array();
    Array4< adept::adouble > const& a_fluxes_array=a_fluxes_fab.array();
 
-   Dim3 lo = lbound(v_array);
-   Dim3 hi = ubound(v_array);
+   Dim3 lo=lbound(v_fab.box());
+   Dim3 hi=ubound(v_fab.box());
 
-   for (int k = lo.z-Nghost_array[2]; k <= hi.z+Nghost_array[2]; ++k) {
-   for (int j = lo.y-Nghost_array[1]; j <= hi.y+Nghost_array[1]; ++j) {
-   for (int i = lo.x-Nghost_array[0]; i <= hi.x+Nghost_array[0]; ++i) {
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
     // H_smooth is a differentiable Heaviside function
     H_cells_array(i,j,k)=H_smooth(a_array(i,j,k),eps); 
-	 
-    // nodes: x_i=i*h  i=lo.x ... hi.x
-    // flux locations: x_{i+1/2}=(i+1/2)h  i=lo.x ... hi.x-1
-    if (i<hi.x) {
+   } //i
+   } //j
+   } //k
+
+   Dim3 lo_x=lbound(fluxes_fab.box());
+   Dim3 hi_x=ubound(fluxes_fab.box());
+
+    // cells: x_i=(i+1/2)*h  i=0,..,n_cells-1
+    // flux locations: x_{i+1/2}=i * h  i=0 .. n_cells
+   for (int k = lo_x.z; k <= hi_x.z; ++k) {
+   for (int j = lo_x.y; j <= hi_x.y; ++j) {
+   for (int i = lo_x.x; i <= hi_x.x; ++i) {
      a_fluxes_array(i,j,k)=
         0.5*(a_array(i,j,k)+a_array(i+1,j,k));
      H_fluxes_array(i,j,k)=
@@ -318,19 +322,18 @@ adept::adouble cost_function(
         (H_fluxes_array(i,j,k)*v_array(i,j,k)+
  	 (1.0-H_fluxes_array(i,j,k))*v_array(i+1,j,k))*
 	a_fluxes_array(i,j,k);
-    }
    } //i
    } //j
    } //k
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
-    if ((i>lo.x)&&(i<hi.x)) {
-     // nodes: x_i=i*h  i=lo.x .. hi.x
-     // flux locations: x_{i+1/2}=(i+1/2)h  i=lo.x .. hi.x-1
+
+   Dim3 lo_int=lbound(ba[gridno]);
+   Dim3 hi_int=ubound(ba[gridno]);
+
+   for (int k = lo_int.z; k <= hi_int.z; ++k) {
+   for (int j = lo_int.y; j <= hi_int.y; ++j) {
+   for (int i = lo_int.x; i <= hi_int.x; ++i) {
      vnp1_array(i,j,k)=v_array(i,j,k)-
-	     (dt/dx[0])*(fluxes_array(i,j,k)-fluxes_array(i-1,j,k));
-    }
+	     (dt/dx[0])*(fluxes_array(i+1,j,k)-fluxes_array(i,j,k));
    } //i
    } //j
    } //k
@@ -434,7 +437,7 @@ Real algorithm_and_gradient(
   BoxArray ba=x[ntime]->boxArray();
   DistributionMapping dm=x[ntime]->DistributionMap();
   int Ncomp=x[ntime]->nComp();
-  int Nghost=x[ntime]->nGrow();
+  IntVect Nghost=x[ntime]->nGrowVect();
 
   adept_x[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
 
@@ -446,8 +449,6 @@ Real algorithm_and_gradient(
    FArrayBox& Real_fab=(*cur_frame)[gridno];
    Array4< adept::adouble > const& adept_array=adept_fab.array();
    Array4<Real> const& Real_array=Real_fab.array();
-//   Dim3 lo = lbound(adept_array);
-//   Dim3 hi = ubound(adept_array);
    Dim3 lo=lbound(adept_fab.box());
    Dim3 hi=ubound(adept_fab.box());
    for (int k = lo.z; k <= hi.z; ++k) {
@@ -476,8 +477,6 @@ Real algorithm_and_gradient(
    Array4< adept::adouble > const& x_array=x_fab.array();
    Array4< double > const& dJdx_array=dJdx_fab.array();
 
-//   Dim3 lo = lbound(x_array);
-//   Dim3 hi = ubound(x_array);
    Dim3 lo=lbound(x_fab.box());
    Dim3 hi=ubound(x_fab.box());
 
@@ -554,9 +553,12 @@ int main(int argc,char* argv[]) {
   //   a square (or cubic) domain.
   pp.get("n_cell",n_cell[0]);
   n_cell[1]=1;
+  n_cell[AMREX_SPACEDIM-1]=1;
 
   // The domain is broken into boxes of size max_grid_size
   pp.get("max_grid_size",max_grid_size[0]);
+  max_grid_size[1]=max_grid_size[0];
+  max_grid_size[AMREX_SPACEDIM-1]=max_grid_size[0];
 
   // Default plot_int to -1, allow us to set it to 
   // something else in the inputs file
@@ -573,6 +575,8 @@ int main(int argc,char* argv[]) {
   pp.get("xhi",xhi[0]);
   xlo[1]=xlo[0];
   xhi[1]=xhi[0];
+  xlo[AMREX_SPACEDIM-1]=xlo[0];
+  xhi[AMREX_SPACEDIM-1]=xhi[0];
   pp.get("stop_time",stop_time);
  }
 
@@ -598,8 +602,10 @@ int main(int argc,char* argv[]) {
   geom.define(domain,&real_box,CoordSys::cartesian,is_periodic.data());
  }
 
- // Nghost = number of ghost cells for each array 
- int Nghost = 1;
+ IntVect nGrowVect(AMREX_SPACEDIM);
+ nGrowVect[0]=1;
+ nGrowVect[1]=0;
+ nGrowVect[AMREX_SPACEDIM-1]=0;
     
  // Ncomp = number of components for each array
  int Ncomp  = 1;
@@ -610,20 +616,6 @@ int main(int argc,char* argv[]) {
  const Real* dx = geom.CellSize();
  Real dt=stop_time/nsteps;
 
-/*
-    if (plot_int > 0)
-    {
-        int n = 0;
-        const std::string& pltfile = amrex::Concatenate("plt",n,5);
-        WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, time, 0);
-    }
-    if (plot_int > 0 && n%plot_int == 0)
-    {
-      const std::string& pltfile = amrex::Concatenate("plt",n,5);
-      WriteSingleLevelPlotfile(pltfile, phi_new, {"phi"}, geom, time, n);
-    }
-*/
-  
  vector< MultiFab* > x;  // control
  vector< MultiFab* > dJdx; 
  x.resize(nsteps+1);
@@ -634,8 +626,8 @@ int main(int argc,char* argv[]) {
 
 
  for (int ntime=0;ntime<=nsteps;ntime++) {
-	 x[ntime]=new MultiFab(ba,dm,Ncomp,Nghost);
-	 dJdx[ntime]=new MultiFab(ba,dm,Ncomp,Nghost);
+	 x[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
+	 dJdx[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
 
 	 x[ntime]->setVal(0.0);
 	 dJdx[ntime]->setVal(0.0);
@@ -676,8 +668,6 @@ int main(int argc,char* argv[]) {
 
      Array4<Real> const& x_array=x_fab.array();
      Array4<Real> const& dJdx_array=dJdx_fab.array();
-//     Dim3 lo = lbound(x_array);
-//     Dim3 hi = ubound(x_array);
      Dim3 lo=lbound(x_fab.box());
      Dim3 hi=ubound(x_fab.box());
      for (int k = lo.z; k <= hi.z; ++k) {
