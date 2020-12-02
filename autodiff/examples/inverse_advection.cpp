@@ -338,36 +338,27 @@ adept::adouble cost_function(
    } //j
    } //k
 
-    // at i=0, if a>0, then vnp1=boundary value
-    //         if a<0, then vnp1=vn-(k/h)(fluxes[0]-a[0]*vn[0])
-    // left_flux is a numerical flux assumed to be located at
-    // x=-h/2
-   int i=lo.x;
-   int j=0;
-   int k=0;
-   adept::adouble left_flux=a_array(i,j,k)*v_array(i,j,k);
-   adept::adouble numerical_vnp1_left=
-    v_array(i,j,k)-(dt/dx[0])*(fluxes_array(i,j,k)-left_flux);
-   adept::adouble bc_vnp1_left=unp1_array(i,j,k);
-   vnp1_array(i,j,k)=
-      H_nodes_array(i,j,k)*bc_vnp1_left+
-      (1.0-H_nodes_array(i,j,k))*numerical_vnp1_left;
-
-    // right_flux is a numerical flux assumed to be located at
-    // x=1+h/2
-   i=hi.x;
-   adept::adouble right_flux=a_array(i,j,k)*v_array(i,j,k);
-   adept::adouble numerical_vnp1_right= 
-    v_array(i,j,k)-(dt/dx[0])*(right_flux-fluxes_array(i-1,j,k));
-   adept::adouble bc_vnp1_right=unp1_array(i,j,k);
-   vnp1_array(i,j,k)= 
-     (1.0-H_nodes_array(i,j,k))*bc_vnp1_right+
-      H_nodes_array(i,j,k)*numerical_vnp1_right;
-
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
+    // ok to have this "if" statement here since the 
+    // contents of the conditional rule does not depend on
+    // the control "u" or the state "v"
+    if ((i<lo_int.x)||(i>hi_int.x)||
+        (j<lo_int.y)||(j>hi_int.y)||
+        (k<lo_int.z)||(k<hi_int.z)) {
+     vnp1_array(i,j,k)=unp1_array(i,j,k);
+    }
+   }
+   }
+   }
+
+   for (int k = lo_int.z; k <= hi_int.z; ++k) {
+   for (int j = lo_int.y; j <= hi_int.y; ++j) {
+   for (int i = lo_int.x; i <= hi_int.x; ++i) {
+
     adept::adouble local_wt=0.0;
+     // conditional does not depend on the control or state.
     if (wtnp1_back_array(i,j,k)>0.0)
      local_wt=1.0;
     vnp1_array(i,j,k)=
