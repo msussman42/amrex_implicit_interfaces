@@ -132,6 +132,55 @@ endif
 return
 end subroutine flexible_plate_impact_LS
 
+
+subroutine flexible_plate_clamped_LS(x,t,LS,vel,temperature)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(in) :: t
+  REAL_T, intent(out) :: LS
+  REAL_T, intent(out) :: vel(SDIM)
+  REAL_T, intent(out) :: temperature
+  REAL_T :: LS_left,LS_right
+  INTEGER_T :: dir
+
+if (probtype.eq.2000) then
+ if (SDIM.eq.2) then
+  call squaredist(x(1),x(2), & ! LS_right<0 in object
+   xblob2+radblob2-radblob5, &
+   xblob2+radblob2, &
+   yblob2-radblob3, &
+   yblob2+radblob3, &
+   LS_right)
+  call squaredist(x(1),x(2), & ! LS_left<0 in object
+   xblob2-radblob2, &
+   xblob2-radblob2+radblob5, &
+   yblob2-radblob3, &
+   yblob2+radblob3, &
+   LS_left)
+  LS_left=-LS_left
+  LS_right=-LS_right
+  LS=max(LS_left,LS_right)
+  do dir=1,SDIM
+   vel(dir)=zero
+  enddo
+  temperature=293.0d0  ! room temperature
+ else
+  print *,"this code only for 2d for now"
+  stop
+ endif
+else
+ print *,"probtype invalid"
+ stop
+endif
+
+return
+end subroutine flexible_plate_clamped_LS
+
+
+
 subroutine flexible_plate_impact_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE

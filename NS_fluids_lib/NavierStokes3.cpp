@@ -2528,7 +2528,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
      if (disable_advection==0) {
+
       nonlinear_advection();
+
      } else if (disable_advection==1) {
       
       if (face_flag==1) {

@@ -7240,6 +7240,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
      particles_AoS.data(),
      Np,  // pass by value
      &dt_slab,
+     &vel_time_slab,
      xvelfab.dataPtr(),
      ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
      yvelfab.dataPtr(),
