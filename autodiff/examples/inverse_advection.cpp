@@ -203,9 +203,9 @@ adept::adouble cost_function(
    Dim3 lo=lbound(v_fab.box());
    Dim3 hi=ubound(v_fab.box());
 
-   for (int k = lo.z; k <= hi.z[2]; ++k) {
-   for (int j = lo.y; j <= hi.y[1]; ++j) {
-   for (int i = lo.x; i <= hi.x[0]; ++i) {
+   for (int k = lo.z; k <= hi.z; ++k) {
+   for (int j = lo.y; j <= hi.y; ++j) {
+   for (int i = lo.x; i <= hi.x; ++i) {
 
     adept::adouble local_x=xlo+dx[0]*(i+0.5);
 
@@ -347,7 +347,45 @@ adept::adouble cost_function(
     if ((i<lo_int.x)||(i>hi_int.x)||
         (j<lo_int.y)||(j>hi_int.y)||
         (k<lo_int.z)||(k<hi_int.z)) {
-     vnp1_array(i,j,k)=unp1_array(i,j,k);
+     int iface=i;
+     int jface=j;
+     int kface=k;
+     int i_interior=i;
+     int j_interior=j;
+     int k_interior=k;
+     double face_normal=0.0;
+     if (i<lo_int.x) {
+      iface=lo_int.x;
+      i_interior=lo_int.x;
+      face_normal=-1.0;
+     } else if (i>hi_int.x) {
+      iface=hi_int.x+1;
+      i_interior=hi_int.x;
+      face_normal=1.0;
+     }
+     if (j<lo_int.y) {
+      jface=lo_int.y;
+      j_interior=lo_int.y;
+      face_normal=-1.0;
+     } else if (j>hi_int.y) {
+      jface=hi_int.y+1;
+      j_interior=hi_int.y;
+      face_normal=1.0;
+     }
+     if (k<lo_int.z) {
+      kface=lo_int.z;
+      k_interior=lo_int.z;
+      face_normal=-1.0;
+     } else if (k>hi_int.z) {
+      kface=hi_int.z+1;
+      k_interior=hi_int.z;
+      face_normal=1.0;
+     }
+     adept::adouble a_bias=a_fluxes_array(iface,jface,kface)*face_normal;
+     adept::adouble H_bias=H_smooth(a_bias,eps);
+     
+     vnp1_array(i,j,k)=(1.0-H_bias)*unp1_array(i,j,k)+
+       H_bias*vnp1_array(i_interior,j_interior,k_interior);
     }
    }
    }
