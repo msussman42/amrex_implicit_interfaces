@@ -2434,6 +2434,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          (advance_status==1));
         divu_outer_sweeps++) {
 
+    int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+    int very_last_sweep=0;
+
+    if ((SDC_outer_sweeps+1==SDC_outer_sweeps_end)&&
+        (slab_step+1==ns_time_order)&&
+        (divu_outer_sweeps+1==num_divu_outer_sweeps))
+     very_last_sweep=1;
+
     // allocate_physics_vars()
     // mdot=0.0
     for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -2980,6 +2988,23 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          -1); // data_dir==-1 (cell centered)
        }
 
+       if (visual_phase_change_plot_int>0) {
+        if (very_last_sweep==1) {
+         int ratio=(nsteps+1)/visual_phase_change_plot_int;
+	 ratio=ratio*visual_phase_change_plot_int;
+	 if (ratio==nsteps+1) {
+
+	 }
+	} else if (very_last_sweep==0) {
+	 // do nothing
+	} else
+	 amrex::Error("very_last_sweep invalid");
+
+       } else if (visual_phase_change_plot_int==0) {
+        // do nothing
+       } else
+        amrex::Error("visual_phase_change_plot_int invalid");
+
        // 1..nmat             dF
        // nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
        //                     den_new F_new - den_old F_old  target 
@@ -3434,15 +3459,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       debug_memory();
 
-      int very_last_sweep=0;
-      if ((SDC_outer_sweeps+1==SDC_outer_sweeps_end)&&
-          (slab_step+1==ns_time_order)&&
-          (divu_outer_sweeps+1==num_divu_outer_sweeps))
-       very_last_sweep=1;
-      
       if (very_last_sweep==0) {
 
-       int nsteps=parent->levelSteps(0);
        Real local_fixed_dt;
        if (nsteps==0) {
         local_fixed_dt=fixed_dt_init;
