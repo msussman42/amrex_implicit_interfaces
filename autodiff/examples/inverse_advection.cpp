@@ -88,7 +88,6 @@ void plot_adept_data(std::string plt_name_string,
    Array4< adept::adouble > const& v_array=v_fab.array(); // type: adouble
 
    Array4< Real > const& plot_array=plot_fab.array(); // type: double
-   Array4< Real > const& plot_cell_array=plot_cell_fab.array(); //type:double
    Dim3 lo=lbound(plot_fab.box());
    Dim3 hi=ubound(plot_fab.box());
    for (int k = lo.z; k <= hi.z; ++k) {
@@ -255,9 +254,9 @@ adept::adouble cost_function(
   My_adept_MFAB* wtnp1_obs_frame=wt_obs[ntime+1];
 
    // finite volume method, unknowns located at cell centers.
-  My_adept_MFAB* fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
-  My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
-  My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,Nghost);
+  My_adept_MFAB* fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
+  My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
+  My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
   My_adept_MFAB* H_cells=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
 
   for (MFIter mfi(*H_cells,false); mfi.isValid(); ++mfi) {
@@ -276,7 +275,7 @@ adept::adouble cost_function(
 
    My_adept_FAB& fluxes_fab=(*fluxes)[gridno];
    My_adept_FAB& H_fluxes_fab=(*H_fluxes)[gridno];
-   My_adept_FAB& H_nodes_fab=(*H_nodes)[gridno];
+   My_adept_FAB& H_cells_fab=(*H_cells)[gridno];
    My_adept_FAB& a_fluxes_fab=(*a_fluxes)[gridno];
 
    Array4< adept::adouble > const& a_array=a_fab.array();
@@ -291,7 +290,7 @@ adept::adouble cost_function(
 
    Array4< adept::adouble > const& fluxes_array=fluxes_fab.array();
    Array4< adept::adouble > const& H_fluxes_array=H_fluxes_fab.array();
-   Array4< adept::adouble > const& H_nodes_array=H_nodes_fab.array();
+   Array4< adept::adouble > const& H_cells_array=H_cells_fab.array();
    Array4< adept::adouble > const& a_fluxes_array=a_fluxes_fab.array();
 
    Dim3 lo=lbound(v_fab.box());
@@ -416,7 +415,6 @@ adept::adouble cost_function(
    delete fluxes;
    delete H_fluxes;
    delete a_fluxes;
-   delete H_nodes;
 
   } // mfi
 
