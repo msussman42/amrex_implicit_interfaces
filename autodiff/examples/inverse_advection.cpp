@@ -177,6 +177,7 @@ adept::adouble cost_function(
 
   for (MFIter mfi(*v_frame,false); mfi.isValid(); ++mfi) {
    const int gridno = mfi.index();
+
    My_adept_FAB& uinput_fab=(*uinput_frame)[gridno];
 
    My_adept_FAB& v_fab=(*v_frame)[gridno];
@@ -223,6 +224,7 @@ adept::adouble cost_function(
     q_obs_array(i,j,k)=0.0;
     if (ntime==nsteps) {
      q_obs_array(i,j,k)=sin(2.0*local_pi*local_x);
+     wt_obs_array(i,j,k)=1.0;
     }
     v_array(i,j,k)=uinput_array(i,j,k);
     a_array(i,j,k)=1.0;
@@ -236,10 +238,6 @@ adept::adouble cost_function(
  adept::adouble y=0.0;
 
  double time=0.0;
- ntime = 0;
- My_adept_MFAB* v_frame_plot=v[ntime];
- plot_adept_data("plt",ntime,steepest_descent_iter,geom,v_frame_plot,
-		 time);
 
  for (ntime=0;ntime<nsteps;ntime++) {
 
@@ -258,6 +256,13 @@ adept::adouble cost_function(
   My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
   My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
   My_adept_MFAB* H_cells=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
+
+  if (plot_int>0) {
+   int ntime_div=ntime/plot_int;
+   if (ntime_div*plot_int==ntime) {
+    plot_adept_data("plt",ntime,nsteps,geom,v_frame,time);
+   }
+  }
 
   for (MFIter mfi(*H_cells,false); mfi.isValid(); ++mfi) {
 
@@ -309,17 +314,17 @@ adept::adouble cost_function(
    Dim3 hi_x=ubound(fluxes_fab.box());
 
     // cells: x_i=(i+1/2)*h  i=0,..,n_cells-1
-    // flux locations: x_{i+1/2}=i * h  i=0 .. n_cells
+    // flux locations: x_{i-1/2}=i * h  i=0 .. n_cells
    for (int k = lo_x.z; k <= hi_x.z; ++k) {
    for (int j = lo_x.y; j <= hi_x.y; ++j) {
    for (int i = lo_x.x; i <= hi_x.x; ++i) {
      a_fluxes_array(i,j,k)=
-        0.5*(a_array(i,j,k)+a_array(i+1,j,k));
+        0.5*(a_array(i,j,k)+a_array(i-1,j,k));
      H_fluxes_array(i,j,k)=
 	H_smooth(a_fluxes_array(i,j,k),eps);
      fluxes_array(i,j,k)=
         (H_fluxes_array(i,j,k)*v_array(i,j,k)+
- 	 (1.0-H_fluxes_array(i,j,k))*v_array(i+1,j,k))*
+ 	 (1.0-H_fluxes_array(i,j,k))*v_array(i-1,j,k))*
 	a_fluxes_array(i,j,k);
    } //i
    } //j
@@ -412,13 +417,21 @@ adept::adouble cost_function(
    } // j
    } // k
 
-   delete fluxes;
-   delete H_fluxes;
-   delete a_fluxes;
-
   } // mfi
 
+  delete fluxes;
+  delete H_fluxes;
+  delete a_fluxes;
+  delete H_cells;
+
+  time=time+dt;
+
   if (ntime==nsteps-1) {
+
+   if (plot_int>0) {
+    plot_adept_data("plt",ntime,nsteps+1,geom,v_frame,time);
+   }
+
    plot_adept_data("plt_obs",ntime+1,steepest_descent_iter,geom,
 		 qnp1_obs_frame,
 		 time);
@@ -597,6 +610,8 @@ int main(int argc,char* argv[]) {
   // to something else in the inputs file
   nsteps = 10;
   pp.query("nsteps",nsteps);
+  int max_opt_steps=10;
+  pp.query("max_opt_steps",max_opt_steps);
 
   pp.get("xlo",xlo[0]);
   pp.get("xhi",xhi[0]);
@@ -677,8 +692,7 @@ int main(int argc,char* argv[]) {
  // of resorting to AMR or standard level set methods.
  Real learning_rate=0.001;  // steepest descent parameter
 
- int max_iterations=100;
- for (int iter=0;iter<max_iterations;iter++) {
+ for (int iter=0;iter<max_opt_steps;iter++) {
 
     // compute cost function and gradient of cost function 
    Real y=algorithm_and_gradient(
