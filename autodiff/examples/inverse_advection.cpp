@@ -323,8 +323,8 @@ adept::adouble cost_function(
      H_fluxes_array(i,j,k)=
 	H_smooth(a_fluxes_array(i,j,k),eps);
      fluxes_array(i,j,k)=
-        (H_fluxes_array(i,j,k)*v_array(i,j,k)+
- 	 (1.0-H_fluxes_array(i,j,k))*v_array(i-1,j,k))*
+        (1.0-H_fluxes_array(i,j,k)*v_array(i,j,k)+
+ 	 (H_fluxes_array(i,j,k))*v_array(i-1,j,k))*
 	a_fluxes_array(i,j,k);
    } //i
    } //j
@@ -583,6 +583,8 @@ int main(int argc,char* argv[]) {
  // is_periodic(dir)=0 in all direction by default (dir=0,1,.., sdim-1)
  Vector<int> is_periodic(AMREX_SPACEDIM,0);  
      
+ int max_opt_steps=10;
+
  // inputs parameters
  {
   // ParmParse is way of reading inputs from the inputs file
@@ -610,7 +612,6 @@ int main(int argc,char* argv[]) {
   // to something else in the inputs file
   nsteps = 10;
   pp.query("nsteps",nsteps);
-  int max_opt_steps=10;
   pp.query("max_opt_steps",max_opt_steps);
 
   pp.get("xlo",xlo[0]);
@@ -668,12 +669,42 @@ int main(int argc,char* argv[]) {
 
 
  for (int ntime=0;ntime<=nsteps;ntime++) {
-	 x[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
-	 dJdx[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
+    x[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
+    dJdx[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
 
-	 x[ntime]->setVal(0.0);
-	 dJdx[ntime]->setVal(0.0);
- }
+    x[ntime]->setVal(0.0);
+    dJdx[ntime]->setVal(0.0);
+
+    MultiFab* cur_frame=x[ntime];
+    for (MFIter mfi(*cur_frame,false); mfi.isValid(); ++mfi) {
+     const int gridno = mfi.index();
+     FArrayBox& x_fab=(*cur_frame)[gridno];
+     Array4<Real> const& x_array=x_fab.array();
+     Dim3 lo=lbound(x_fab.box());
+     Dim3 hi=ubound(x_fab.box());
+     for (int k = lo.z; k <= hi.z; ++k) {
+     for (int j = lo.y; j <= hi.y; ++j) {
+     for (int i = lo.x; i <= hi.x; ++i) {
+      double xi=xlo[0]+(i+0.5)*dx[0];
+      if (xi<xlo[0]) {
+       x_array(i,j,k)=1.0;
+      } else if (xi>xhi[0]) {
+       x_array(i,j,k)=1.0;
+      } else {
+       double local_pi=4.0*atan(1.0);
+       if (ntime==0) {
+//        x_array(i,j,k)=sin(2.0*local_pi*xi);
+        x_array(i,j,k)=0.0;
+       } else {
+        x_array(i,j,k)=0.0;
+       }
+      }
+
+     }
+     }
+     }
+    } // mfi
+ } // ntime=0 ..nsteps
 
  // future: use Wolfe condition
  // future: use Fletcher Reeve's method (a.k.a. nonlinear CG)
@@ -698,6 +729,9 @@ int main(int argc,char* argv[]) {
    Real y=algorithm_and_gradient(
              x,dJdx,
 	     dx,dt,geom,plot_int,iter);
+
+   std::cout << "iter, cost function " << iter << ' ' <<
+    y << '\n';
  
    for (int ntime=0;ntime<=nsteps;ntime++) {
     MultiFab* cur_frame=x[ntime];

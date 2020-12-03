@@ -11,8 +11,8 @@
 # 9. make window with line(s) active (button in Upper Left)
 # 10. hit play button
 # NOTE: use "bc_value" instead of hard wiring the boundary conditions.
-stop_time=0.25
-nsteps = 32
+stop_time=0.5
+nsteps = 64
 max_opt_steps=1
 plot_int = 1
 xlo=0.0 0.0

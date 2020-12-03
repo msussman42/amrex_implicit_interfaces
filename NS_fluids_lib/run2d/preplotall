@@ -9,4 +9,7 @@ do
 #/Applications/Tecplot\ 360\ EX\ 2019\ R1/bin/preplot ${file}
 # TECPLOT ON A MAC:
 #/Applications/Tecplot ..../Tecplot ...app/Contents/MacOS/Tecplot ....
+# VisIt:
+#/Users/sussman/Desktop/VisIt.app/Contents/MacOS/VisIt
+#~/visit2_13_3.linux-x86_64/bin/visit
 done
