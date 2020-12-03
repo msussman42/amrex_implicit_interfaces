@@ -31,8 +31,19 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 //	double local_pi=4.0*atan(1.0);
 
 	adept::adouble Hreturn;
+	if (eps==0.0) {
+		if (x>=0.0)
+			return 1.0;
+		else if (x<0.0)
+			return 0.0;
+		else
+			amrex::Error("x invalid");
+	} else if (eps>0.0) {
          // "Logistic function"
-        Hreturn=1.0/(1.0+exp(-x/eps));
+         Hreturn=1.0/(1.0+exp(-x/eps));
+	} else
+		amrex::Error("eps invalid");
+
 	return Hreturn;
 }
 
@@ -125,6 +136,7 @@ adept::adouble cost_function(
 // recommended eps from MF De Pando, D Sipp, PJ Schmid
 // Journal of Computational Physics 231 (23), 7739-7755
  adept::adouble eps=sqrt(1.0e-15);
+// eps=0.0;
 
  vector< My_adept_MFAB* > v;  // approximate solution
  vector< My_adept_MFAB* > a;
@@ -209,7 +221,9 @@ adept::adouble cost_function(
 
     adept::adouble local_x=xlo+dx[0]*(i+0.5);
 
+     // background solution
     uback_array(i,j,k)=0.0;
+     // background error weight
     wt_back_array(i,j,k)=0.0;
     if (ntime==0) {
      wt_back_array(i,j,k)=1.0;
@@ -220,6 +234,7 @@ adept::adouble cost_function(
     if (local_x>=xhi) {
      wt_back_array(i,j,k)=1.0;
     }
+     // observation data only considered at t=Tstop
     wt_obs_array(i,j,k)=0.0;
     q_obs_array(i,j,k)=0.0;
     if (ntime==nsteps) {
@@ -227,7 +242,7 @@ adept::adouble cost_function(
      wt_obs_array(i,j,k)=1.0;
     }
     v_array(i,j,k)=uinput_array(i,j,k);
-    a_array(i,j,k)=1.0;
+    a_array(i,j,k)=1.0; // speed =1
    } // i
    } // j
    } // k
@@ -305,6 +320,7 @@ adept::adouble cost_function(
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
     // H_smooth is a differentiable Heaviside function
+    // if eps==0 then H(a)=1 if a>0 and H(a)=0 if a<0
     H_cells_array(i,j,k)=H_smooth(a_array(i,j,k),eps); 
    } //i
    } //j
@@ -320,11 +336,15 @@ adept::adouble cost_function(
    for (int i = lo_x.x; i <= hi_x.x; ++i) {
      a_fluxes_array(i,j,k)=
         0.5*(a_array(i,j,k)+a_array(i-1,j,k));
+
      H_fluxes_array(i,j,k)=
 	H_smooth(a_fluxes_array(i,j,k),eps);
+
+       // cell(i) lives at xi=(i+1/2)dx
+       // face(i) lives at i*dx
      fluxes_array(i,j,k)=
-        (1.0-H_fluxes_array(i,j,k)*v_array(i,j,k)+
- 	 (H_fluxes_array(i,j,k))*v_array(i-1,j,k))*
+        (1.0-H_fluxes_array(i,j,k))*v_array(i,j,k)+
+ 	 (H_fluxes_array(i,j,k))*v_array(i-1,j,k)*
 	a_fluxes_array(i,j,k);
    } //i
    } //j
@@ -357,6 +377,11 @@ adept::adouble cost_function(
      int i_interior=i;
      int j_interior=j;
      int k_interior=k;
+      // face_normal points out of the domain
+      // if a * face_normal < 0 => Dirichlet boundary condition
+      //   wave moves from outside the domain into the inside.
+      // if a * face_normal >0  => numerical boundary condition 
+      //   wave moves from inside the domain  to the outside
      double face_normal=0.0;
      if (i<lo_int.x) {
       iface=lo_int.x;
@@ -385,11 +410,14 @@ adept::adouble cost_function(
       k_interior=hi_int.z;
       face_normal=1.0;
      }
+      // a_bias < 0 => Dirichlet boundary
      adept::adouble a_bias=a_fluxes_array(iface,jface,kface)*face_normal;
+      // H_bias = 0 => Dirichlet boundary
      adept::adouble H_bias=H_smooth(a_bias,eps);
      
      vnp1_array(i,j,k)=(1.0-H_bias)*unp1_array(i,j,k)+
        H_bias*vnp1_array(i_interior,j_interior,k_interior);
+
     }
    }
    }
@@ -399,13 +427,20 @@ adept::adouble cost_function(
    for (int j = lo_int.y; j <= hi_int.y; ++j) {
    for (int i = lo_int.x; i <= hi_int.x; ++i) {
 
+    double xi=(i+0.5)*dx[0];
+
     adept::adouble local_wt=0.0;
      // conditional does not depend on the control or state.
     if (wtnp1_back_array(i,j,k)>0.0)
      local_wt=1.0;
-    vnp1_array(i,j,k)=
+
+     // prescribe the control solution where background error weight > 0.0
+    if (1==1) {
+     vnp1_array(i,j,k)=
 	 local_wt*unp1_array(i,j,k)+ 
 	 (1.0-local_wt)*vnp1_array(i,j,k);
+    }
+    
     y=y+wtnp1_back_array(i,j,k)*dx[0]*
         (unp1_array(i,j,k)-unp1_back_array(i,j,k))*
         (unp1_array(i,j,k)-unp1_back_array(i,j,k));
@@ -429,7 +464,7 @@ adept::adouble cost_function(
   if (ntime==nsteps-1) {
 
    if (plot_int>0) {
-    plot_adept_data("plt",ntime,nsteps+1,geom,v_frame,time);
+    plot_adept_data("plt",ntime,nsteps+1,geom,vnp1_frame,time);
    }
 
    plot_adept_data("plt_obs",ntime+1,steepest_descent_iter,geom,
@@ -686,6 +721,18 @@ int main(int argc,char* argv[]) {
      for (int j = lo.y; j <= hi.y; ++j) {
      for (int i = lo.x; i <= hi.x; ++i) {
       double xi=xlo[0]+(i+0.5)*dx[0];
+       // initially, the control variable u(t,x)=0 at t=0
+       //                                 u(t,x)=1 at x=0
+       //                                 u(t,x)=1 at x=1 should not be
+       //                                 changed since a=1 > 0
+       //                                 cost function:
+       //                                 a) v_t + a v_x = 0
+       //                                   v(t,x)=u(t,x) on the boundaries
+       //                                   and initial condition
+       //                                   v(T,x)=u(0,x-aT)=0  if x-aT>0
+       //                                         =1  if x-aT<0
+       //                                 b) C=||v(T,.)-v^{obs}(T,.)||_w1+
+       //                                      ||u(t,x)-u^{back}(t,x)||_w2
       if (xi<xlo[0]) {
        x_array(i,j,k)=1.0;
       } else if (xi>xhi[0]) {

@@ -12,8 +12,13 @@
 # 10. hit play button
 # NOTE: use "bc_value" instead of hard wiring the boundary conditions.
 stop_time=0.5
-nsteps = 64
-max_opt_steps=1
+nsteps = 64  # number of steps for 1D advection (the cost function)
+# currently: steepest descent
+# Fletcher Reeves
+# ADAM
+# Gauss Newton
+# BFGS
+max_opt_steps=1  # maximum number of steepest descent steps
 plot_int = 1
 xlo=0.0 0.0
 xhi=1.0 1.0
