@@ -9354,7 +9354,7 @@ END SUBROUTINE SIMP
                 nmat,SDIM,3)
 
                call multi_get_volume_grid_simple( &
-                tessellate, &
+                tessellate, &  !=0
                 bfact_f,dxf,xstenfine,nhalf, &
                 mofdatafine, &
                 xstengrid,nhalfgrid, &

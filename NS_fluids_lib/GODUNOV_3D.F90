@@ -19702,7 +19702,7 @@ stop
                  stop
                 endif
                 call multi_get_volume_grid_simple( &
-                  tessellate, &
+                  tessellate, &  !=0
                   bfact,dx, &
                   xsten_recon,1, &
                   mofdata_grid, &
@@ -20510,7 +20510,7 @@ stop
               stop
              endif
              call multi_get_volume_grid_simple( &
-              tessellate, &
+              tessellate, & !=0
               bfact,dx, &
               xsten_recon,1, &
               mofdata_grid, &
@@ -20661,7 +20661,7 @@ stop
                stop
               endif
               call multi_get_volume_grid_simple( &
-               tessellate, &
+               tessellate, & !=0
                bfact,dx, &
                xsten_recon,1, &
                mofdata_grid, &
@@ -22778,7 +22778,7 @@ stop
                  tessellate=0
                  nhalf=1
                  call multi_get_volume_grid( &
-                  tessellate, &
+                  tessellate, & !=0
                   bfact,dx, &
                   u_xsten_departmap,nhalf, &
                   mofdata_target, &
@@ -22792,7 +22792,7 @@ stop
 
                  ! find volumes within u_xsten_grid_part/xinttri
                  call multi_get_volume_grid( &
-                  tessellate, &
+                  tessellate, & !=0
                   bfact,dx, &
                   u_xsten_grid_contain,nhalf, &
                   mofdata_depart, &
@@ -23419,7 +23419,7 @@ stop
               tessellate=0
               nhalf=1
               call multi_get_volume_grid( &
-               tessellate, &
+               tessellate, & !=0
                bfact,dx, &
                u_xsten_departmap,nhalf, &
                mofdata_target, &
@@ -23433,7 +23433,7 @@ stop
 
               ! find volumes within u_xsten_grid_contain/xinttri
               call multi_get_volume_grid( &
-               tessellate, &
+               tessellate, & ! =0
                bfact,dx, &
                u_xsten_grid_contain,nhalf, &
                mofdata_depart, &

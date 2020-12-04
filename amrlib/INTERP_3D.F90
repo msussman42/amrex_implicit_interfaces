@@ -263,7 +263,8 @@ stop
          cmofsten, &
          xsten,nhalf,nhalf_box, &
          bfact_coarse,dxc, &
-         tessellate,mofdata,nmat,SDIM,304)
+         tessellate, & !=0
+         mofdata,nmat,SDIM,304)
 
        call multimaterial_MOF( &
          bfact_coarse,dxc,xsten,nhalf, &
@@ -362,7 +363,7 @@ stop
               enddo ! dir
 
               call multi_get_volume_grid_simple( &
-               tessellate, &
+               tessellate, &  !=0
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
                xstengrid,nhalfgrid, &
@@ -942,7 +943,7 @@ stop
               enddo ! dir
 
               call multi_get_volume_grid_simple( &
-               tessellate, &
+               tessellate, &  !=0
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
                xstengrid,nhalfgrid, &
@@ -1063,7 +1064,8 @@ stop
          cmofsten, &
          xstenfine,nhalf,nhalf_box, &
          bfact_fine,dxf, &
-         tessellate,mofdata,nmat,SDIM,304)
+         tessellate, & !=0
+         mofdata,nmat,SDIM,304)
 
        call multimaterial_MOF( &
          bfact_fine,dxf,xstenfine,nhalf, &

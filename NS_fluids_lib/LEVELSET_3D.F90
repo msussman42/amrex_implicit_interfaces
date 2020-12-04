@@ -2815,7 +2815,8 @@ stop
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
-           tessellate,mofdata,mofdatavalid, &
+           tessellate, & ! =0 or 1
+           mofdata,mofdatavalid, &
            nmat,SDIM,3)
 
          shapeflag=0
@@ -2823,7 +2824,7 @@ stop
           ! base case
           ! in: FORT_CELLFACEINIT
          call multi_get_volume_grid( &
-          tessellate, &
+          tessellate, &  ! =0 or 1
           bfact,dx, &
           xsten,nhalf, &
           mofdatavalid, &
@@ -2928,7 +2929,7 @@ stop
                 ! no need to compute multi_area here.
                 ! also, target volume is a cube, not a tet.
                call multi_get_volume_grid_simple( &
-                tessellate, &
+                tessellate, &  ! =0 or 1
                 bfact,dx,xsten,nhalf, &
                 mofdatavalid, &
                 xsten,nhalf, &
@@ -3158,7 +3159,7 @@ stop
                ! fluid case
                ! in: FORT_CELLFACEINIT
               call multi_get_volume_grid_simple( &
-               tessellate, &
+               tessellate, &  !=0 or 1
                bfact,dx,xsten,nhalf, &
                mofdatavalid, &
                xsten,nhalf, &
@@ -8973,7 +8974,7 @@ stop
            enddo 
            ! multi_cen is "absolute" (not relative to cell centroid)
            call multi_get_volume_grid_simple( &
-             tessellate, &
+             tessellate, &  !=0,1, or 3
              bfact,dx,xsten_recon,1, &
              mofdata, &
              xsten_donate,1, &
