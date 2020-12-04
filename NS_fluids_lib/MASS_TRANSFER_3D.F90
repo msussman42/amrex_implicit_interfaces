@@ -4468,7 +4468,7 @@ stop
                shapeflag=1  
                tessellate=0
                call multi_get_volume_grid( &
-                 tessellate, &
+                 tessellate, & ! =0
                  bfact,dx, &
                  u_xsten_departmap,nhalf0, & ! nhalf0=1
                  mofdata, &

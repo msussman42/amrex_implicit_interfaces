@@ -6274,8 +6274,7 @@ end subroutine volume_sanity_check
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if (tessellate.eq.0) then
-        print *,"tessellate==0 not allowed for tets_tet_planes"
-        stop
+        ! do nothing
        else if (tessellate.eq.1) then
         ! do nothing
        else if (tessellate.eq.3) then
@@ -6333,8 +6332,8 @@ end subroutine volume_sanity_check
          endif
         else if ((tessellate.eq.0).and. &
                  (is_rigid_local(im).eq.1)) then
-         print *,"tessellate==0 not allowed for tets_tet_planes"
-         stop
+         ! do nothing, we do not subtract off solid
+         ! regions from the original uncaptured region.
         else
          print *,"tessellate or is_rigid_local invalid"
          stop
@@ -14562,8 +14561,12 @@ contains
         ! tessellate==0 => both fluids and rigid materials considered;
         !                  fluids tessellate the region and the rigid
         !                  materials are immersed.
-        ! 3=if rigid materials dominate the cell, then that cell is considered
-        !   to only have the one dominant rigid material.  
+        ! tessellate==3 => if rigid materials dominate the cell, 
+        !   then that cell is considered
+        !   to only have the one dominant rigid material, otherwise
+        !   the cell is treated as a local_tessellate==0 cell with
+        !   all rigid material vfracs and centroids zapped out.
+        !   
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid( &
@@ -15068,7 +15071,7 @@ contains
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
             call tets_box_planes( &
-              new_tessellate_local, &
+              new_tessellate_local, & ! new_tessellate_local=1 or 2
               bfact,dx,xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
               mofdatalocal, &
@@ -15080,7 +15083,7 @@ contains
              ! only xsten0(0,dir) dir=1..sdim used
              ! xtetlist=xtet - highest order material
             call tets_tet_planes( &
-              new_tessellate_local, &
+              new_tessellate_local, &  ! new_tessellate_local=1 or 2
               bfact,dx,xsten0,nhalf0, &
               xtet,mofdatalocal, &
               xtetlist, &
@@ -15264,7 +15267,7 @@ contains
 
          ! if local_tessellate==0 then is_rigid==1 materials are not
          ! recognized during the following sweep.
-        new_tessellate_local=local_tessellate
+        new_tessellate_local=local_tessellate ! =0,1, or 2
 
         loop_counter=0
         do while ((loop_counter.lt.nmat_fluid).and. &
@@ -15412,7 +15415,7 @@ contains
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
             call tets_box_planes( &
-             new_tessellate_local, &
+             new_tessellate_local, & ! =0,1, or 2
              bfact,dx,xsten0,nhalf0, &
              xsten_grid,nhalf_grid, &
              mofdatalocal, &
@@ -15424,7 +15427,7 @@ contains
 
              ! only xsten0(0,dir) dir=1..sdim used
             call tets_tet_planes( &
-             new_tessellate_local, &
+             new_tessellate_local, &  ! = 0,1, or 2
              bfact,dx,xsten0,nhalf0, &
              xtet,mofdatalocal, &
              xtetlist, &
@@ -16818,7 +16821,12 @@ contains
         ! tessellate==0 => both fluids and rigid materials considered;
         !                  fluids tessellate the region and the rigid
         !                  materials are immersed.
-        ! tessellate==3 => same as tessellate==0 if fluids dominate cell.
+        ! tessellate==3 => if rigid materials dominate the cell, 
+        !   then that cell is considered
+        !   to only have the one dominant rigid material, otherwise
+        !   the cell is treated as a local_tessellate==0 cell with
+        !   all rigid material vfracs and centroids zapped out.
+        !
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid_simple( &

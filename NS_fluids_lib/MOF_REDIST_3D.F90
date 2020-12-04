@@ -3345,7 +3345,7 @@ stop
                     ! rigid material
                     ! in: FORT_FACEINIT
                    call multi_get_volume_grid_simple( &
-                    local_tessellate, &
+                    local_tessellate, &  !=0,1, or 2
                     bfact,dx,xsten,nhalf, &
                     mofdataproject, &
                     xsten_thin,nhalf_thin, &
@@ -3552,7 +3552,7 @@ stop
                    ! fluid material
                    ! in: FORT_FACEINIT
                   call multi_get_volume_grid_simple( &
-                   local_tessellate, &
+                   local_tessellate, &  ! 0,1, or 2
                    bfact,dx,xsten,nhalf, &
                    mofdataproject, &
                    xsten_thin,nhalf_thin, &
