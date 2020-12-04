@@ -6226,9 +6226,7 @@ end subroutine volume_sanity_check
       return
       end subroutine tets_box_planes_super
 
-       ! only called when tessellate=1 or 2.
-       ! not called when tessellate==0 since slope reconstruction does not
-       ! need this routine.
+       ! only called when tessellate=0, 1 or 2.
       subroutine tets_tet_planes( &
         tessellate, &
         bfact,dx,xsten0,nhalf0, &
