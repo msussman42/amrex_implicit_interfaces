@@ -5072,8 +5072,9 @@ stop
             !             if yes, then 
             !             SWEPTFACTOR=1-(phi_np1/(phi_np1-phi_n)     
 
-            ! this is just an isweep=0 placeholder; this variable
-            ! will never be used.
+            ! this is a placeholder for what used to be implemented.
+            ! Now, the swept factor is calculated much more precisely.
+            !
            SWEPTFACTOR_GFM=one
            if ((oldvfrac(im_dest).lt.half).and. &
                (newvfrac(im_dest).gt.half)) then
