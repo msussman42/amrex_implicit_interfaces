@@ -2905,11 +2905,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*nten,ngrow_expansion,-1); 
         ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,2*nten,ngrow_expansion);
 
-        ns_level.new_localMF(MOFDATA_NEW_MF,nmat*ngeom_recon,0,-1); 
-        ns_level.setVal_localMF(MOFDATA_NEW_MF,0.0,0,nmat*ngeom_recon,0);
        } // ilev=level ... finest_level
 
-       debug_ngrow(MOFDATA_NEW_MF,0,30);
        debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,30);
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
@@ -3009,13 +3006,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        allocate_array(1,2*nten*AMREX_SPACEDIM,-1,nodevel_MF);
        setVal_array(1,2*nten*AMREX_SPACEDIM,0.0,nodevel_MF);
 
-       DVOF.resize(thread_class::nthreads);
-       for (int tid=0;tid<thread_class::nthreads;tid++) {
-        DVOF[tid].resize(nmat);
-        for (int im=0;im<nmat;im++)
-         DVOF[tid][im]=0.0;
-       } // tid
-
        delta_mass.resize(thread_class::nthreads);
        for (int tid=0;tid<thread_class::nthreads;tid++) {
         delta_mass[tid].resize(2*nmat); // source 1..nmat  dest 1..nmat
@@ -3051,14 +3041,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        delete_array(BURNING_VELOCITY_MF);
        delete_array(FD_NRM_ND_MF);
        delete_array(FD_CURV_CELL_MF);
-
-       if (verbose>0) {
-        for (int im=0;im<nmat;im++) {
-         if (ParallelDescriptor::IOProcessor()) {
-          std::cout << "im= " << im << " DVOF = " << DVOF[0][im] << '\n';
-         } // IOProc?
-        }
-       } // verbose>0
 
        if (verbose>0) {
         if (ParallelDescriptor::IOProcessor()) {
@@ -3229,7 +3211,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        phase_change_redistributeALL();
 
        delete_array(JUMP_STRENGTH_MF);
-       delete_array(MOFDATA_NEW_MF);
    
       } else if (mass_transfer_active==0) {
        // do nothing

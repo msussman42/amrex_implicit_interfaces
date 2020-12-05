@@ -276,9 +276,7 @@ namespace amrex{
 
 #define GMRES_BUFFER_W_MF (GMRES_BUFFER_LAST_Z_MF+1)
 
-#define MOFDATA_NEW_MF (GMRES_BUFFER_W_MF+1)
-
-#define NEXT_MF (MOFDATA_NEW_MF+1)
+#define NEXT_MF (GMRES_BUFFER_W_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
