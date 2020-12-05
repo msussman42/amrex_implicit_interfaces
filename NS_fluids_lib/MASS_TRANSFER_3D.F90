@@ -3355,7 +3355,6 @@ stop
         ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine FORT_CONVERTMATERIAL( &
        tid, &
-       isweep, &
        solvability_projection, &
        ngrow_expansion, &
        level,finest_level, &
@@ -3382,9 +3381,7 @@ stop
        xlo,dx, &
        dt, &
        delta_mass, &
-       DVOF, &
        maskcov,DIMS(maskcov), &
-       deltaVOF,DIMS(deltaVOF), &
        nodevel,DIMS(nodevel), &
        MOFnewFAB,DIMS(MOFnewFAB), &
        JUMPFAB,DIMS(JUMPFAB), &
@@ -3413,7 +3410,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep,tid
+      INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: solvability_projection
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3443,10 +3440,7 @@ stop
       REAL_T, intent(in),target :: dx(SDIM)
       REAL_T, intent(in) :: dt
       REAL_T, intent(inout) :: delta_mass(2*nmat)
-      REAL_T, intent(inout) :: DVOF(nmat)
-      REAL_T :: DVOF_FACT(nmat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(deltaVOF)
       INTEGER_T, intent(in) :: DIMDEC(nodevel)
       INTEGER_T, intent(in) :: DIMDEC(MOFnewFAB)
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
@@ -3459,11 +3453,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(swept)
 
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-
-       ! 1..nmat             dF
-       ! nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
-       !                     den_new F_new - den_old F_old  target 
-      REAL_T, intent(inout) :: deltaVOF(DIMV(deltaVOF),3*nmat)
 
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, intent(inout) :: MOFnewFAB(DIMV(MOFnewFAB),nmat*ngeom_recon)
