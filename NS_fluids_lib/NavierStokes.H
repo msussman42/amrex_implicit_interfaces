@@ -1733,12 +1733,11 @@ protected:
     static Vector<int> spec_material_id_LIQUID; 
     static Vector<int> spec_material_id_AMBIENT; 
      // 0 - distribute to the destination material 
-     //  (default for freezing and melting)
-     //     V=mdot/rho_src
+     //     V=u_src dot n + mdot/rho_src
      // 1 - distribute to the source material
-     //  (default for boiling and evaporation)
-     //     V=mdot/rho_dst
+     //     V=u_dst dot n + mdot/rho_dst
     static Vector<int> distribute_from_target;
+    static Vector<int> distribute_evenly;
     static int is_phasechange;
     static int normal_probe_size;  // should always be 1
     static int ngrow_distance;  // should always be 4
