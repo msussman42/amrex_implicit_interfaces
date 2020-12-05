@@ -1595,7 +1595,6 @@ NavierStokes::process_recalesce_data(
  Vector<Real>& recalesce_state_new,
  Vector<Real>& integrated_quantities,
  int isweep) {
-
  
 
  int nmat=num_materials;
@@ -3007,11 +3006,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        } else
         amrex::Error("visual_phase_change_plot_int invalid");
 
-       // 1..nmat             dF
-       // nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
-       //                     den_new F_new - den_old F_old  target 
-       allocate_array(0,3*nmat,-1,deltaVOF_MF);
-       setVal_array(0,3*nmat,0.0,deltaVOF_MF);
        allocate_array(1,2*nten*AMREX_SPACEDIM,-1,nodevel_MF);
        setVal_array(1,2*nten*AMREX_SPACEDIM,0.0,nodevel_MF);
 
@@ -3035,35 +3029,23 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.getStateDen_localMF(DEN_RECON_MF,1,cur_time_slab);
        }
 
-       // isweep==0:
        // 1.initialize node velocity from BURNING_VELOCITY_MF
        // 2.unsplit advection of materials changing phase
-       // 3.determine overall change in volume
-       // isweep==1:
-       // 1.scale overall change in volume so that amount evaporated equals the
-       //   amount condensed if heat pipe problem.
-       // 2.update volume fractions, jump strength, temperature
-       for (int isweep=0;isweep<2;isweep++) {
-
-        for (int ilev=finest_level;ilev>=level;ilev--) {
+       // 3.update volume fractions, jump strength, temperature
+       for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
 
           // unsplit advection using:
 	  // BURNING_VELOCITY_MF (interpolated to the nodes)
 	  //
-	  // of temperature, mass fraction,
-	  // volume fraction and moments,
-          // and level set functions.
 	  // updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
-         ns_level.level_phase_change_convert(isweep);
+         ns_level.level_phase_change_convert();
 
          ns_level.avgDown(LS_Type,0,nmat,0);
          ns_level.MOFavgDown();
          scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
          ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
-        } // ilev=finest_level ... level
-
-       } // isweep=0..1
+       } // ilev=finest_level ... level
 
        delete_array(LS_NRM_FD_MF);
        delete_array(BURNING_VELOCITY_MF);
@@ -3090,7 +3072,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // in: do_the_advance
        delete_array(DEN_RECON_MF);
        delete_array(nodevel_MF);
-       delete_array(deltaVOF_MF);
 
        update_flag=1;  // update the error in S_new
        int init_vof_ls_prev_time=0;

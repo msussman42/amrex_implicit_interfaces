@@ -88,7 +88,6 @@ namespace amrex{
 #define FACEFRAC_MF 61
 #define STENCIL_MF 62
 #define ORIGDIST_MF 63
-#define deltaVOF_MF 64
 
 #define HYDROSTATIC_PRESDEN_MF 65
 #define MDOT_MF 66
@@ -814,7 +813,7 @@ protected:
 
     void build_NRM_FD_MF(int fd_mf,int ls_mf, int ngrow);
 
-    void level_phase_change_convert(int isweep);
+    void level_phase_change_convert();
     void level_phase_change_rate(Vector<blobclass> blobdata,
        int color_count,int nucleation_flag);
     void level_phase_change_rate_extend();
@@ -1425,7 +1424,6 @@ protected:
 
     static Vector< Vector<Real> > min_face_wt;
     static Vector< Vector<Real> > max_face_wt;
-    static Vector< Vector<Real> > DVOF;
     static Vector< Vector<Real> > delta_mass;
 
     static Real max_problen;

@@ -425,7 +425,6 @@ Vector<int> NavierStokes::number_solver_calls;
 Vector< Vector<Real> > NavierStokes::min_face_wt;
 Vector< Vector<Real> > NavierStokes::max_face_wt;
 
-Vector< Vector<Real> > NavierStokes::DVOF;
 Vector< Vector<Real> > NavierStokes::delta_mass;
 
 Real NavierStokes::max_problen=0.0;
@@ -11720,16 +11719,11 @@ NavierStokes::level_phase_change_rate_extend() {
 
 } // subroutine level_phase_change_rate_extend
 
-// isweep==0:
 // 1. initialize node velocity from BURNING_VELOCITY_MF
 // 2. unsplit advection of materials changing phase
-// 3. determine overall change in volume
-// isweep==1:
-// 1. scale overall change in volume so that amount evaporated equals the
-//    amount condensed if heat pipe problem.
-// 2. update volume fractions, jump strength, temperature
+// 3. update volume fractions, jump strength, temperature
 void
-NavierStokes::level_phase_change_convert(int isweep) {
+NavierStokes::level_phase_change_convert() {
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
@@ -11778,14 +11772,12 @@ NavierStokes::level_phase_change_convert(int isweep) {
  if (localMF[nodevel_MF]->nComp()!=2*nten*AMREX_SPACEDIM)
   amrex::Error("localMF[nodevel_MF]->nComp()  invalid");
 
- if (localMF[deltaVOF_MF]->nComp()!=3*nmat)
-  amrex::Error("localMF[deltaVOF_MF]->nComp()  invalid");
-
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
   amrex::Error("burning vel invalid ncomp");
 
   // in: level_phase_change_convert
-  // DEN_RECON_MF is initialized prior to isweep==0
+  // DEN_RECON_MF is initialized prior to the call
+  // to this routine.
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
@@ -11803,14 +11795,6 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
  const Real* dx = geom.CellSize();
 
- Vector< Vector<Real> > DVOF_local;
- DVOF_local.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  DVOF_local[tid].resize(nmat);
-  for (int im=0;im<nmat;im++)
-   DVOF_local[tid][im]=0.0;
- } // tid
-
  Vector< Vector<Real> > delta_mass_local;
  delta_mass_local.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -11820,40 +11804,38 @@ NavierStokes::level_phase_change_convert(int isweep) {
  } // tid
 
 
- if (isweep==0) {
+ if (level==finest_level) {
 
-  if (level==finest_level) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   parent->AMR_max_phase_change_rate[dir]=0.0;
+   parent->AMR_min_phase_change_rate[dir]=0.0;
+  }
 
+  for (int iten=0;iten<nten;iten++) {
+   int scomp=nten+iten*AMREX_SPACEDIM;
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    parent->AMR_max_phase_change_rate[dir]=0.0;
-    parent->AMR_min_phase_change_rate[dir]=0.0;
-   }
+    Real local_max=
+     localMF[BURNING_VELOCITY_MF]->max(scomp+dir); //def nghost=0
+    parent->AMR_max_phase_change_rate[dir]=
+      max(parent->AMR_max_phase_change_rate[dir],local_max);
 
-   for (int iten=0;iten<nten;iten++) {
-    int scomp=nten+iten*AMREX_SPACEDIM;
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     Real local_max=
-      localMF[BURNING_VELOCITY_MF]->max(scomp+dir); //def nghost=0
-     parent->AMR_max_phase_change_rate[dir]=
-       max(parent->AMR_max_phase_change_rate[dir],local_max);
+    Real local_min=
+     localMF[BURNING_VELOCITY_MF]->min(scomp+dir); //def nghost=0
+    parent->AMR_min_phase_change_rate[dir]=
+      min(parent->AMR_min_phase_change_rate[dir],local_min);
+   } //dir=0..sdim-1
+  } //iten=0..nten-1
+ }  // level==finest_level
 
-     Real local_min=
-      localMF[BURNING_VELOCITY_MF]->min(scomp+dir); //def nghost=0
-     parent->AMR_min_phase_change_rate[dir]=
-       min(parent->AMR_min_phase_change_rate[dir],local_min);
-    } //dir=0..sdim-1
-   } //iten=0..nten-1
-  }  // level==finest_level
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -11903,11 +11885,11 @@ NavierStokes::level_phase_change_convert(int isweep) {
     ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
     xlo,dx, 
     &level,&finest_level);
-  } // mfi
+ } // mfi
 } // omp
-  ns_reconcile_d_num(72);
+ ns_reconcile_d_num(72);
 
-  if (1==0) {
+ if (1==0) {
    int gridno=0;
    const Box& fabgrid = grids[gridno];
    const int* fablo=fabgrid.loVect();
@@ -11923,20 +11905,7 @@ NavierStokes::level_phase_change_convert(int isweep) {
    std::cout << "dt_slab = " << dt_slab << '\n';
    tecplot_debug(nodevelfab,xlo,fablo,fabhi,dxplot,dirplot,id,
      scomp,ncomp,interior_only);
-  }
-
- } else if (isweep==1) {
-  // do nothing
- } else
-  amrex::Error("isweep invalid");
-
- if (isweep==0) {
-  // do nothing
- } else if (isweep==1) {
-  for (int im=0;im<nmat;im++)
-   DVOF_local[0][im]=DVOF[0][im];
- } else
-  amrex::Error("isweep invalid");
+ }
 
  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
 
@@ -11965,8 +11934,6 @@ NavierStokes::level_phase_change_convert(int isweep) {
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
-   FArrayBox& deltafab=(*localMF[deltaVOF_MF])[mfi];
-
    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
    if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
     // do nothing
@@ -11991,14 +11958,6 @@ NavierStokes::level_phase_change_convert(int isweep) {
 
    int bfact=parent->Space_blockingFactor(level);
 
-   int tid_update=0;
-   if (isweep==0) {
-    tid_update=ns_thread();
-   } else if (isweep==1) {
-    tid_update=0; // only use 0th component for 2nd sweep
-   } else
-    amrex::Error("isweep invalid");
-
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -12008,7 +11967,6 @@ NavierStokes::level_phase_change_convert(int isweep) {
     // in: MASS_TRANSFER_3D.F90
    FORT_CONVERTMATERIAL( 
     &tid_current,
-    &isweep, 
     &solvability_projection, // if solvability_projection==1 => net growth=0
     &ngrow_expansion,
     &level,&finest_level,
@@ -12035,11 +11993,8 @@ NavierStokes::level_phase_change_convert(int isweep) {
     xlo,dx,
     &dt_slab,
     delta_mass_local[tid_current].dataPtr(),
-    DVOF_local[tid_update].dataPtr(),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    deltafab.dataPtr(),
-    ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
     nodevelfab.dataPtr(),
     ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
     MOFnewfab.dataPtr(),
@@ -12064,35 +12019,18 @@ NavierStokes::level_phase_change_convert(int isweep) {
 } // omp
  ns_reconcile_d_num(73);
 
- if (isweep==0) {
-  for (int tid=1;tid<thread_class::nthreads;tid++) {
-   for (int im=0;im<nmat;im++) 
-    DVOF_local[0][im]+=DVOF_local[tid][im];
-  } // tid
- } else if (isweep==1) {
-  for (int tid=1;tid<thread_class::nthreads;tid++) {
-   for (int im=0;im<2*nmat;im++) {
-    delta_mass_local[0][im]+=delta_mass_local[tid][im];
-   }
-  } // tid
- } else {
-  amrex::Error("isweep invalid");
- }
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+  for (int im=0;im<2*nmat;im++) {
+   delta_mass_local[0][im]+=delta_mass_local[tid][im];
+  }
+ } // tid
 
  ParallelDescriptor::Barrier();
 
- if (isweep==0) {
-  for (int im=0;im<nmat;im++) {
-   ParallelDescriptor::ReduceRealSum(DVOF_local[0][im]);
-   DVOF[0][im]+=DVOF_local[0][im];
-  }  // im
- } else if (isweep==1) {
-  for (int im=0;im<2*nmat;im++) {
-   ParallelDescriptor::ReduceRealSum(delta_mass_local[0][im]);
-   delta_mass[0][im]+=delta_mass_local[0][im];
-  }
- } else
-  amrex::Error("isweep invalid");
+ for (int im=0;im<2*nmat;im++) {
+  ParallelDescriptor::ReduceRealSum(delta_mass_local[0][im]);
+  delta_mass[0][im]+=delta_mass_local[0][im];
+ }
 
  localMF[JUMP_STRENGTH_MF]->FillBoundary(geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,0,2*nten,0);
