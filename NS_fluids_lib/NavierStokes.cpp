@@ -846,6 +846,8 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //   distribute_from_target=0  ok. 
 
 Vector<int> NavierStokes::distribute_from_target;
+Vector<int> NavierStokes::distribute_evenly;
+
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
 // 0=dirichlet at inflow
@@ -2983,6 +2985,7 @@ NavierStokes::read_params ()
     Tanasawa_or_Schrage_or_Kassemi.resize(2*nten);
     mass_fraction_id.resize(2*nten);
     distribute_from_target.resize(2*nten);
+    distribute_evenly.resize(2*nten);
     tension.resize(nten);
     tension_slope.resize(nten);
     tension_T0.resize(nten);
@@ -3054,6 +3057,8 @@ NavierStokes::read_params ()
      mass_fraction_id[i+nten]=0;
      distribute_from_target[i]=0;
      distribute_from_target[i+nten]=0;
+     distribute_evenly[i]=0;
+     distribute_evenly[i+nten]=0;
     } // i=0..nten-1
 
     density_floor.resize(nmat);
@@ -3410,6 +3415,7 @@ NavierStokes::read_params ()
     } // iten
 
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
+    pp.queryarr("distribute_evenly",distribute_evenly,0,2*nten);
 
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -3423,11 +3429,17 @@ NavierStokes::read_params ()
                   distribute_from_target[iten_local]) {
         // do nothing
        } else {
-        std::cout << "iten_local=" << iten_local << 
-         " expected value=" << fixed_parm[iten_local] << 
-         " entered value=" << distribute_from_target[iten_local] <<
-         '\n';
-        amrex::Error("distribute_from_target[iten_local] invalid");
+        if (distribute_evenly[iten_local]==1) {
+         // do nothing
+        } else if (distribute_evenly[iten_local]==0) {
+         std::cout << "iten_local=" << iten_local << 
+          " expected value=" << fixed_parm[iten_local] << 
+          " entered value=" << distribute_from_target[iten_local] << '\n';
+         std::cout << "iten_local=" << iten_local << 
+          " distribute_evenly=" << distribute_evenly[iten_local] << '\n';
+         amrex::Error("distribute_from_target[iten_local] invalid");
+	} else
+  	 amrex::Error("distribute_evenly invalid");
        }
 
       } else
@@ -3491,6 +3503,10 @@ NavierStokes::read_params ()
       amrex::Error("distribute_from_target invalid in read_params (i)");
      if ((distribute_from_target[i+nten]<0)||(distribute_from_target[i+nten]>1))
       amrex::Error("distribute_from_target invalid in read_params (i+nten)");
+     if ((distribute_evenly[i]<0)||(distribute_evenly[i]>1))
+      amrex::Error("distribute_evenly invalid in read_params (i)");
+     if ((distribute_evenly[i+nten]<0)||(distribute_evenly[i+nten]>1))
+      amrex::Error("distribute_evenly invalid in read_params (i+nten)");
      if (mass_fraction_id[i]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i)");
      if (mass_fraction_id[i+nten]<0)
@@ -4605,6 +4621,10 @@ NavierStokes::read_params ()
       std::cout << "distribute_from_target i+nten=" << i+nten << "  " << 
        distribute_from_target[i+nten] << '\n';
 
+      std::cout << "distribute_evenly i=" << i << "  " << 
+       distribute_evenly[i] << '\n';
+      std::cout << "distribute_evenly i+nten=" << i+nten << "  " << 
+       distribute_evenly[i+nten] << '\n';
 
       std::cout << "tension i=" << i << "  " << tension[i] << '\n';
       std::cout << "tension_slope i=" << i << "  " << tension_slope[i] << '\n';
