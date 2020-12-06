@@ -12191,17 +12191,9 @@ NavierStokes::phase_change_redistributeALL() {
   } // IOProc?
  } // verbose>0
 
- if (solvability_projection==1) { // require net growth = 0
+ if (solvability_projection==1) { 
 
-  int isweep_solvability=4;
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.level_phase_change_redistribute(
-    expect_mdot_sign_filler,
-    im_source_filler,im_dest_filler,
-    indexEXP_filler,isweep_solvability);
-  } // ilev=finest_level ... level
+  amrex::Error("if sealed domain, then make gas compressible");
 
  } else if (solvability_projection==0) {
   // do nothing
@@ -12258,7 +12250,7 @@ NavierStokes::level_phase_change_redistribute(
   } else
    amrex::Error("indexEXP invalid");
 
- } else if ((isweep==3)||(isweep==4)) {
+ } else if (isweep==3) {
 
   if (indexEXP==-1) {
    LL=0.0;
@@ -12610,61 +12602,6 @@ NavierStokes::level_phase_change_redistribute(
   mdotplus[0]+=mdotplus_local[0];
   mdotminus[0]+=mdotminus_local[0];
   mdotcount[0]+=mdotcount_local[0];
-
- } else if (isweep==4) {
-
-  if (solvability_projection!=1)
-   amrex::Error("solvability_projection!=1");
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[MDOT_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[MDOT_MF],use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   const Real* xlo = grid_loc[gridno].lo();
-
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-   FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
-
-   int bfact=parent->Space_blockingFactor(level);
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // NavierStokes::allocate_mdot() called at the beginning of
-    //  NavierStokes::do_the_advance
-    // mdot initialized in NavierStokes::prelim_alloc()
-    // mdot updated in nucleate_bubbles.
-   FORT_RENORM_MDOT( 
-    &mdotplus[0],&mdotminus[0],&mdotcount[0],
-    &level,&finest_level,
-    &nmat,&nten,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact, 
-    xlo,dx,&dt_slab,
-    maskcov.dataPtr(),
-    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    mdotfab.dataPtr(),
-    ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()));
-
-  } // mfi
-} // omp
-  ns_reconcile_d_num(78);
 
  } else
   amrex::Error("isweep invalid");

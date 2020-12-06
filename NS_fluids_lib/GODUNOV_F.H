@@ -11,7 +11,6 @@
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_INITJUMPTERM initjumpterm
 #    define FORT_INIT_ICEMASK init_icemask
-#    define FORT_RENORM_MDOT renorm_mdot
 #    define FORT_TAGEXPANSION tagexpansion
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
@@ -58,7 +57,6 @@
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_INITJUMPTERM INITJUMPTERM
 #    define FORT_INIT_ICEMASK INIT_ICEMASK
-#    define FORT_RENORM_MDOT RENORM_MDOT
 #    define FORT_TAGEXPANSION TAGEXPANSION
 #    define FORT_DISTRIBUTEEXPANSION DISTRIBUTEEXPANSION
 #    define FORT_CLEAREXPANSION CLEAREXPANSION
@@ -105,7 +103,6 @@
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_INITJUMPTERM initjumpterm
 #    define FORT_INIT_ICEMASK init_icemask
-#    define FORT_RENORM_MDOT renorm_mdot
 #    define FORT_TAGEXPANSION tagexpansion
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
@@ -151,7 +148,6 @@
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_INITJUMPTERM initjumpterm_
 #    define FORT_INIT_ICEMASK init_icemask_
-#    define FORT_RENORM_MDOT renorm_mdot_
 #    define FORT_TAGEXPANSION tagexpansion_
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion_
 #    define FORT_CLEAREXPANSION clearexpansion_
@@ -929,19 +925,6 @@ extern "C"
     Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
-
-
-   void FORT_RENORM_MDOT(
-    Real* mdotplus,Real* mdotminus,Real* mdotcount,
-    int* level,int* finest_level,
-    int* nmat,int* nten,
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    const Real* xlo,const Real* dx,Real* dt,
-    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-    Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi));
-
 
    void FORT_TAGEXPANSION(
     Real* latent_heat,
