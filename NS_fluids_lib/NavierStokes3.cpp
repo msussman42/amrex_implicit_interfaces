@@ -5297,8 +5297,11 @@ NavierStokes::ColorSumALL(
  int tessellate,  // 1 or 3
  int coarsest_level,
  int& color_count,
- int idx_type,int idx_color,
- Vector<blobclass>& blobdata) {
+ int idx_type,
+ int idx_color,
+ int idx_mdot,
+ Vector<blobclass>& blobdata,
+ Vector< Vector<Real> >& mdot_data) {
 
  int finest_level=parent->finestLevel();
 

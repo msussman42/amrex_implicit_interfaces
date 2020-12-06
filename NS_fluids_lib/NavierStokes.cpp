@@ -12203,6 +12203,21 @@ NavierStokes::phase_change_redistributeALL() {
  delete_array(LSNEW_MF);
  delete_array(HOLD_LS_DATA_MF);
 
+ Vector<blobclass> blobdata;
+ Vector< Vector<Real> > mdot_data;
+ int color_count=0;
+ int coarsest_level=0;
+ int idx_mdot=MDOT_MF;
+ int tessellate=3;
+ ColorSumALL(
+  tessellate,  //=3
+  coarsest_level,
+  color_count,
+  TYPE_MF,COLOR_MF,
+  idx_mdot,
+  blobdata,
+  mdot_data);
+
 } // subroutine phase_change_redistributeALL
 
 void
@@ -20588,16 +20603,23 @@ NavierStokes::post_init_state () {
  } // ilev=finest_level ... level
 
  Vector<blobclass> blobdata;
+ Vector< Vector<Real> > mdot_data;
 
  int color_count=0;
  int coarsest_level=0;
-
+ int idx_mdot=-1;
  int tessellate=1;
+
  ColorSumALL(
   tessellate,  //=1
   coarsest_level,
   color_count,
-  TYPE_MF,COLOR_MF,blobdata);
+  TYPE_MF,
+  COLOR_MF,
+  idx_mdot,
+  blobdata,
+  mdot_data);
+
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
 
