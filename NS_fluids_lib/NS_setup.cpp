@@ -1880,8 +1880,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  if (output_drop_distribution==1) {
   int color_count=0;
   int coarsest_level=0;
-   // tessellate==1
-  ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
+  int tessellate=1;
+  ColorSumALL(
+    tessellate, // =1
+    coarsest_level,
+    color_count,
+    TYPE_MF,COLOR_MF,blobdata);
   if (color_count!=blobdata.size())
    amrex::Error("color_count!=blobdata.size()");
   delete_array(TYPE_MF);

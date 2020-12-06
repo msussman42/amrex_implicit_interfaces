@@ -966,11 +966,13 @@ protected:
      int* color_count,
      Vector<int> type_flag);
     void ColorSum(
+     int tessellate, // =1 or 3
      int sweep_num,
      MultiFab* typemf,MultiFab* color,
      Vector<blobclass>& level_blobdata,
      Vector<blobclass> cum_blobdata);
     void ColorSumALL(
+     int tessellate,  // =1 or 3
      int coarsest_level,
      int& color_count,
      int idx_type,int idx_color,
