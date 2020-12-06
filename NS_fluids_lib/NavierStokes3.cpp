@@ -3213,7 +3213,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   
       if (mass_transfer_active==1) {
 
-       // mdot is incremented. 
+       // 1. modifies localMF[JUMP_STRENGTH_MF] (size 2 * nten)
+       //    a) FORT_TAGEXPANSION
+       //    b) FORT_DISTRIBUTEEXPANSION
+       //    c) FORT_CLEAREXPANSION
+       //    d) FORT_INITJUMPTERM ( modifies localMF[MDOT_MF] )
        phase_change_redistributeALL();
 
        delete_array(JUMP_STRENGTH_MF);
