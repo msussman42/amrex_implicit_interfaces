@@ -968,9 +968,15 @@ protected:
     void ColorSum(
      int tessellate, // =1 or 3
      int sweep_num,
-     MultiFab* typemf,MultiFab* color,
+     int mdot_count,
+     MultiFab* typemf,
+     MultiFab* color,
+     MultiFab* mdot,
      Vector<blobclass>& level_blobdata,
-     Vector<blobclass> cum_blobdata);
+     Vector<blobclass> cum_blobdata,
+     Vector< Vector<Real> >& level_mdot_data,
+     Vector< Vector<Real> > cum_mdot_data,
+     );
     void ColorSumALL(
      int tessellate,  // =1 or 3
      int coarsest_level,
