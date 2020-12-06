@@ -14568,7 +14568,7 @@ contains
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid( &
-       tessellate, &
+       tessellate, & ! =0,1,2,3
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -14594,7 +14594,7 @@ contains
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: tessellate !=0,1,2,3
       INTEGER_T, intent(in) :: nmat,shapeflag,caller_id,bfact
       INTEGER_T, intent(in) :: nhalf0,nhalf_grid
       REAL_T, intent(in) :: xtet(sdim+1,sdim)
@@ -16828,7 +16828,7 @@ contains
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid_simple( &
-       tessellate, &
+       tessellate, & !=0,1,2,3
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xsten_grid,nhalf_grid, &
@@ -16849,7 +16849,7 @@ contains
 
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: tessellate ! =0,1,2,3
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))

@@ -20655,8 +20655,12 @@ NavierStokes::post_init_state () {
  int color_count=0;
  int coarsest_level=0;
 
-  // tessellate==1
- ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
+ int tessellate=1;
+ ColorSumALL(
+  tessellate,  //=1
+  coarsest_level,
+  color_count,
+  TYPE_MF,COLOR_MF,blobdata);
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
 
@@ -22473,7 +22477,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
     &ngrow_dest,
     &tid_current,
     &dir,
-    &tessellate,
+    &tessellate, // =0,1, or 3
     &level,
     &finest_level,
     dstfab.dataPtr(),
@@ -22585,7 +22589,7 @@ NavierStokes::makeFaceFrac(
     // in: MOF_REDIST_3D.F90
    FORT_FACEINIT( 
     &tid_current,
-    &tessellate,
+    &tessellate,  // 0,1, or 3
     &nten,
     &level,
     &finest_level,
@@ -22820,7 +22824,9 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
 
 // WARNING: makeCellFrac allocates, but does not delete.
 void
-NavierStokes::makeCellFrac(int tessellate,int ngrow,int idx) {
+NavierStokes::makeCellFrac(
+  int tessellate, // = 0,1, or 3
+  int ngrow,int idx) {
  
  bool use_tiling=ns_tiling;
 
@@ -22892,7 +22898,7 @@ NavierStokes::makeCellFrac(int tessellate,int ngrow,int idx) {
     // in: LEVELSET_3D.F90
    FORT_CELLFACEINIT( 
     &tid_current,
-    &tessellate,
+    &tessellate,  // = 0,1, or 3
     &nten,
     &level,
     &finest_level,

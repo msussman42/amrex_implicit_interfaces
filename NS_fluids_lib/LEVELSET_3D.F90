@@ -2567,7 +2567,7 @@ stop
        ! 
       subroutine FORT_CELLFACEINIT( &
          tid, &
-         tessellate, &
+         tessellate, &  ! = 0,1, or 3
          nten, &
          level, &
          finest_level, &
@@ -2591,7 +2591,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: tessellate  ! =0,1, or 3
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -2667,6 +2667,7 @@ stop
       INTEGER_T is_processed(nten)
       INTEGER_T nhalf_box
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T local_tessellate
       INTEGER_T caller_id
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -2674,7 +2675,9 @@ stop
        stop
       endif
 
-      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
+      if ((tessellate.ne.0).and. &
+          (tessellate.ne.1).and. &
+          (tessellate.ne.3)) then
        print *,"tessellate invalid1"
        stop
       endif
@@ -2785,7 +2788,9 @@ stop
          vcenter(im)=mofdata(vofcomp)
         enddo ! im
 
-        call check_full_cell_vfrac(vcenter,tessellate,nmat,im_crit)
+        call check_full_cell_vfrac(vcenter, &
+          tessellate, &  !=0,1, or 3
+          nmat,im_crit)
 
         iface=0
         do im=1,nmat
@@ -2811,11 +2816,12 @@ stop
         else if (im_crit.eq.0) then
 
          ! sum F_fluid=1  sum F_solid<=1
+         local_tessellate=0
          call make_vfrac_sum_ok_copy( &
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
-           tessellate, & ! =0 or 1
+           local_tessellate, & ! =0 
            mofdata,mofdatavalid, &
            nmat,SDIM,3)
 
@@ -2824,7 +2830,7 @@ stop
           ! base case
           ! in: FORT_CELLFACEINIT
          call multi_get_volume_grid( &
-          tessellate, &  ! =0 or 1
+          tessellate, &  ! =0,1, or 3
           bfact,dx, &
           xsten,nhalf, &
           mofdatavalid, &
@@ -2929,7 +2935,7 @@ stop
                 ! no need to compute multi_area here.
                 ! also, target volume is a cube, not a tet.
                call multi_get_volume_grid_simple( &
-                tessellate, &  ! =0 or 1
+                tessellate, &  ! =1
                 bfact,dx,xsten,nhalf, &
                 mofdatavalid, &
                 xsten,nhalf, &
@@ -3121,7 +3127,9 @@ stop
                  ! num_processed_fluid<nmat_fluid and
                  ! uncaptured_volume_fraction>0
 
-         else if ((tessellate.eq.0).or.(vfrac_solid_sum.eq.zero)) then
+         else if ((tessellate.eq.0).or. &
+                  (tessellate.eq.3).or. &
+                  (vfrac_solid_sum.eq.zero)) then
           ! do nothing
          else
           print *,"tessellate or vfrac_solid_sum invalid"
@@ -3159,7 +3167,7 @@ stop
                ! fluid case
                ! in: FORT_CELLFACEINIT
               call multi_get_volume_grid_simple( &
-               tessellate, &  !=0 or 1
+               tessellate, &  !=0,1, or 3
                bfact,dx,xsten,nhalf, &
                mofdatavalid, &
                xsten,nhalf, &
@@ -3208,7 +3216,8 @@ stop
                     stop
                    endif
                   else if ((is_rigid(nmat,im_opp).eq.1).and. &
-                           (tessellate.eq.0)) then
+                           ((tessellate.eq.0).or. &
+                            (tessellate.eq.3))) then
                    ! do nothing
                   else
                    print *,"is_rigid or tessellate invalid"
@@ -3284,7 +3293,8 @@ stop
                      stop
                     endif
                    else if ((is_rigid(nmat,im_opp).eq.1).and. &
-                            (tessellate.eq.0)) then
+                            ((tessellate.eq.0).or. &
+                             (tessellate.eq.3))) then
                     ! do nothing
                    else
                     print *,"is_rigid or tessellate invalid"

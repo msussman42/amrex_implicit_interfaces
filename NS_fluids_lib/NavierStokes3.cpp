@@ -2312,6 +2312,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
 
+ int tessellate=1;
+
  if (level>0) 
   amrex::Error("level should equal zero in do_the_advance");
  if (finest_level>max_level)
@@ -2736,8 +2738,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        ParallelDescriptor::Barrier();
 
-       // tessellate==1
-       ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
+       tessellate=1;
+       ColorSumALL( 
+         tessellate, //=1
+         coarsest_level,
+         color_count,
+         TYPE_MF,COLOR_MF,blobdata);
 
        ParallelDescriptor::Barrier();
 
@@ -4811,6 +4817,7 @@ int ilev;
 
 void
 NavierStokes::ColorSum(
+ int tessellate,  // =1 or 3
  int sweep_num,
  MultiFab* typemf,MultiFab* color,
  Vector<blobclass>& level_blobdata,
@@ -4890,7 +4897,6 @@ NavierStokes::ColorSum(
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  int do_face_decomp=0;
- int tessellate=1;
 
  if (sweep_num==0) {
   getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,20);
@@ -5284,6 +5290,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 
 void
 NavierStokes::ColorSumALL(
+ int tessellate,  // 1 or 3
  int coarsest_level,
  int& color_count,
  int idx_type,int idx_color,
@@ -5352,6 +5359,7 @@ NavierStokes::ColorSumALL(
 
    NavierStokes& ns_level = getLevel(ilev);
    ns_level.ColorSum(
+    tessellate,  // =1 or 3
     sweep_num,
     ns_level.localMF[idx_type],
     ns_level.localMF[idx_color],
@@ -9157,8 +9165,12 @@ void NavierStokes::multiphase_project(int project_option) {
     check_value_max(41,DIFFUSIONRHS_MF,0,1,0,0.0);
    }
 
-    // tessellate==1
-   ColorSumALL(coarsest_level,color_count,TYPE_MF,COLOR_MF,blobdata);
+   int tessellate=1;
+   ColorSumALL(
+     tessellate, //=1
+     coarsest_level,
+     color_count,
+     TYPE_MF,COLOR_MF,blobdata);
    if (color_count!=blobdata.size())
     amrex::Error("color_count!=blobdata.size()");
 
