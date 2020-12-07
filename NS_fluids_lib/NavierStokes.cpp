@@ -3394,10 +3394,24 @@ NavierStokes::read_params ()
         } else
          amrex::Error("ireverse invalid");
 
+	 // if freezing, we want distribute_from_target (from ice) to
+	 // be 0 otherwise there will be no place to put mdot in the
+	 // liquid once the liquid is almost all frozen.
+	 // But, rho_ice=rho_dest < rho_source=rho_liquid
         Real den_source=denconst[im_source-1];
         Real den_dest=denconst[im_dest-1];
         if ((den_source>0.0)&&(den_dest>0.0)) {
-         if (den_source==den_dest) {
+
+         Real min_den=den_dest;
+         Real max_den=den_dest;
+	 if (den_source<min_den)
+	  min_den=den_source;
+	 if (den_source>max_den)
+	  max_den=den_source;
+
+	 if (max_den/min_den<1.0) {
+ 	  amrex::Error("max_den or min_den bust");
+	 } else if (max_den/min_den<2.0) {
           distribute_from_target[iten_local]=0;
          } else if (den_dest<den_source) {
             // s= n dot u_dest + mdot/rho_dest
