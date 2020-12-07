@@ -4626,7 +4626,7 @@ stop
       REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
-      REAL_T, intent(in) :: mdot(DIMV(mdot),ncomp_mdot_alloc)
+      REAL_T, intent(in) :: mdot(DIMV(mdot),ncomp_mdot)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM)
@@ -4693,6 +4693,7 @@ stop
       REAL_T phi_col(3)
       INTEGER_T irow,icol,veltype
       REAL_T DXMAXLS,cutoff
+      INTEGER_T i_mdot
       REAL_T im_interior_wt(3)
 
       nhalf=3
@@ -5358,6 +5359,19 @@ stop
             ! blob_cell_count
            if (vfrac.ge.half) then
             level_blobdata(ic)=level_blobdata(ic)+one
+            if (ncomp_mdot.ge.1) then
+             ic_base=(opposite_color(im)-1)*ncomp_mdot
+             do i_mdot=1,ncomp_mdot
+              level_mdot_data(ic_base+i_mdot)= &
+                 level_mdot_data(ic_base+i_mdot)+ &
+                 mdot(D_DECL(i,j,k),i_mdot)
+             enddo
+            else if (ncomp_mdot.eq.0) then
+             ! do nothing
+            else
+             print *,"ncomp_mdot invalid"
+             stop
+            endif
            endif
            ic=ic+1
 
