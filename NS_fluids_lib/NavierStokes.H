@@ -1752,7 +1752,7 @@ protected:
      // 1 - distribute to the source material
      //     V=u_dst dot n + mdot/rho_dst
     static Vector<int> distribute_from_target;
-    static Vector<int> distribute_evenly;
+    static Vector<int> distribute_mdot_evenly;
     static int is_phasechange;
     static int normal_probe_size;  // should always be 1
     static int ngrow_distance;  // should always be 4
