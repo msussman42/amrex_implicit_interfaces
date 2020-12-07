@@ -376,6 +376,7 @@ public:
    // fluid_interior,fluid,solid
   Real blob_mass_for_velocity[3];
   Real blob_volume;
+  Real blob_cell_count;
   Real blob_center_integral[AMREX_SPACEDIM];
   Real blob_center_actual[AMREX_SPACEDIM];
   Real blob_perim;  // surface area of the blob
@@ -965,24 +966,30 @@ protected:
      int idx_color,int idx_type,
      int* color_count,
      Vector<int> type_flag);
+
     void ColorSum(
      int tessellate, // =1 or 3
      int sweep_num,
-     int mdot_count,
+     int ncomp_mdot_alloc,
+     int ncomp_mdot,
      MultiFab* typemf,
      MultiFab* color,
      MultiFab* mdot,
      Vector<blobclass>& level_blobdata,
      Vector<blobclass> cum_blobdata,
      Vector< Vector<Real> >& level_mdot_data,
-     Vector< Vector<Real> > cum_mdot_data,
-     );
+     Vector< Vector<Real> > cum_mdot_data);
+
     void ColorSumALL(
      int tessellate,  // =1 or 3
      int coarsest_level,
      int& color_count,
-     int idx_type,int idx_color,
-     Vector<blobclass>& blobdata);
+     int idx_type,
+     int idx_color,
+     int idx_mdot,  // ==-1 if no mdot
+     Vector<blobclass>& blobdata,
+     Vector< Vector<Real> >& mdot_data);
+
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag);
     void TypeALL(
@@ -1756,6 +1763,7 @@ protected:
     // blob_volume, 
     // blob_center_integral,blob_center_actual
     // blob_perim, blob_perim_mat, blob_triple_perim, 
+    // blob_cell_count, 
     static int num_elements_blobclass;
 
     static int ngrowFSI;//should be 3

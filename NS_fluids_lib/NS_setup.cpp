@@ -1876,16 +1876,23 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  FORT_FLUSH_FORTRAN();
 
  Vector<blobclass> blobdata;
+ Vector< Vector<Real> > mdot_data;
 
  if (output_drop_distribution==1) {
   int color_count=0;
   int coarsest_level=0;
   int tessellate=1;
+  int idx_mdot=-1;
   ColorSumALL(
     tessellate, // =1
     coarsest_level,
     color_count,
-    TYPE_MF,COLOR_MF,blobdata);
+    TYPE_MF,
+    COLOR_MF,
+    idx_mdot,
+    blobdata,
+    mdot_data);
+
   if (color_count!=blobdata.size())
    amrex::Error("color_count!=blobdata.size()");
   delete_array(TYPE_MF);
