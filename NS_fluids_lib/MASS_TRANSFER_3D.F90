@@ -7145,12 +7145,14 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat) then
+          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
        print *,"num_elements_blobclass invalid rate mass change:", &
          num_elements_blobclass
+       print *,"blob_cell_count added December 6, 2020"
        stop
       endif
 
@@ -8111,7 +8113,8 @@ stop
                      ! blob_mass_for_velocity, (3 comp)
                      ! volume, 
                      ! centroid_integral, centroid_actual, 
-                     ! perim, perim_mat
+                     ! perim, perim_mat, 
+                     ! blob_cell_count
                      ic=(icolor-1)*num_elements_blobclass+ &
                       3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
                       2*(2*SDIM)+1+ &

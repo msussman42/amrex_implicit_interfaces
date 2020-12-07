@@ -4734,11 +4734,13 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat) then
+          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
        print *,"num_elements_blobclass invalid"
+       print *,"blob_cell_count added December 6, 2020"
        stop
       endif
       if (arraysize.ne.num_elements_blobclass*num_colors) then
@@ -5312,12 +5314,19 @@ stop
            enddo ! im2=1..nmat
            enddo ! im1=1..nmat
 
+            ! blob_cell_count
+           if (vfrac.ge.half) then
+            level_blobdata(ic)=level_blobdata(ic)+one
+           endif
+           ic=ic+1
+
            if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
             print *,"ic invalid in getcolorsum"
             print *,"ic=",ic
             print *,"im=",im
             print *,"opposite_color(im)=",opposite_color(im)
             print *,"num_elements_blobclass=",num_elements_blobclass
+            print *,"blob_cell_count added December 6, 2020"
             stop
            endif
 
@@ -5444,6 +5453,7 @@ stop
               ic=ic+1
              enddo ! im_opp=1..nmat
              ic=ic+nmat*nmat
+             ic=ic+1  ! blob_cell_count added December 6, 2020
  
              if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
               print *,"ic invalid in getcolorsum 2"
@@ -5451,6 +5461,7 @@ stop
               print *,"im=",im
               print *,"opposite_color(im)=",opposite_color(im)
               print *,"num_elements_blobclass=",num_elements_blobclass
+              print *,"blob_cell_count added December 6, 2020"
               stop
              endif
 
@@ -12905,10 +12916,11 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat) then
+          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
        print *,"num_elements_blobclass invalid"
        stop
       endif

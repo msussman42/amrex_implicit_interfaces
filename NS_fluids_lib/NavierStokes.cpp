@@ -659,6 +659,7 @@ int NavierStokes::ngrow_make_distance=3;
 // blob_volume, 
 // blob_center_integral,blob_center_actual
 // blob_perim, blob_perim_mat, blob_triple_perim, 
+// blob_cell_count
 int NavierStokes::num_elements_blobclass=0;
 
 int NavierStokes::ngrowFSI=3;
@@ -2115,14 +2116,20 @@ NavierStokes::read_params ()
     // blob_volume, 
     // blob_center_integral,blob_center_actual
     // blob_perim, blob_perim_mat, blob_triple_perim, 
+    // blob_cell_count
     num_elements_blobclass=
-     3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)+
-     3*(2*AMREX_SPACEDIM)+
-     3*(2*AMREX_SPACEDIM)+
-     2*(2*AMREX_SPACEDIM)+
-     1+
-     3+1+
-     2*AMREX_SPACEDIM+1+nmat+nmat*nmat;
+     3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)+  // blob_matrix * 3
+     3*(2*AMREX_SPACEDIM)+                     // blob_RHS * 3
+     3*(2*AMREX_SPACEDIM)+                     // blob_velocity * 3
+     2*(2*AMREX_SPACEDIM)+                     // blob_integral_momentum * 2
+     1+                                        // blob_energy
+     3+                                        // blob_mass_for_velocity
+     1+                                        // blob_volume
+     2*AMREX_SPACEDIM+                         // blob_center_integral/actual
+     1+                                        // blob_perim
+     nmat+                                     // blob_perim_mat
+     nmat*nmat+                                // blob_triple_perim
+     1;                                        // blob_cell_count
 
     int ns_max_level;
     Vector<int> ns_max_grid_size;
@@ -12213,7 +12220,8 @@ NavierStokes::phase_change_redistributeALL() {
   tessellate,  //=3
   coarsest_level,
   color_count,
-  TYPE_MF,COLOR_MF,
+  TYPE_MF,
+  COLOR_MF,
   idx_mdot,
   blobdata,
   mdot_data);
@@ -12328,6 +12336,7 @@ NavierStokes::level_phase_change_redistribute(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: GODUNOV_3D.F90
     // isweep==0 
    FORT_TAGEXPANSION( 
     latent_heat.dataPtr(),
@@ -12577,6 +12586,7 @@ NavierStokes::level_phase_change_redistribute(
     // NavierStokes::allocate_mdot() called at the beginning of
     //  NavierStokes::do_the_advance
     // mdot initialized in NavierStokes::prelim_alloc()
+    // in: GODUNOV_3D.F90
     FORT_INITJUMPTERM( 
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],

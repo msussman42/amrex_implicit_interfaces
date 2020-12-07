@@ -17022,32 +17022,33 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T mdotplus
-      REAL_T mdotminus
-      REAL_T mdotcount
-      INTEGER_T ngrow_expansion
-      REAL_T time
-      INTEGER_T level,finest_level
-      INTEGER_T nmat,nten
-      REAL_T latent_heat(2*nten)
-      REAL_T saturation_temp(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      INTEGER_T distribute_from_target(2*nten)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(JUMPFAB)
-      INTEGER_T DIMDEC(mdot)
-      INTEGER_T DIMDEC(LSnew)
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T JUMPFAB(DIMV(JUMPFAB),2*nten)
-      REAL_T mdot(DIMV(mdot))
-      REAL_T LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(inout) :: mdotplus
+      REAL_T, intent(inout) :: mdotminus
+      REAL_T, intent(inout) :: mdotcount
+      INTEGER_T, intent(in) :: ngrow_expansion
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat,nten
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(LSnew)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, intent(inout) :: mdot(DIMV(mdot))
+      REAL_T, intent(in) :: LSnew(DIMV(LSnew),nmat)
+
       INTEGER_T i,j,k
       INTEGER_T im,im_opp,ireverse,iten
       INTEGER_T im_source,im_dest
@@ -17578,34 +17579,37 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T ngrow_expansion
-       REAL_T time
-       REAL_T mdot_sum
-       REAL_T expect_mdot_sign
-       INTEGER_T im_source,im_dest,im_ice
-       INTEGER_T indexEXP
-       INTEGER_T level,finest_level
-       INTEGER_T nmat,nten,nten_test
-       REAL_T latent_heat(2*nten)
-       INTEGER_T freezing_model(2*nten)
-       INTEGER_T distribute_from_target(2*nten)
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, intent(in) :: ngrow_expansion
+       REAL_T, intent(in) :: time
+       REAL_T, intent(inout) :: mdot_sum
+       REAL_T, intent(in) :: expect_mdot_sign
+       INTEGER_T, intent(in) :: im_source,im_dest
+       INTEGER_T :: im_ice
+       INTEGER_T, intent(in) :: indexEXP
+       INTEGER_T, intent(in) :: level,finest_level
+       INTEGER_T, intent(in) :: nmat,nten
+       INTEGER_T :: nten_test
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*nten)
+       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
-       REAL_T xlo(SDIM)
-       REAL_T dx(SDIM)
-       REAL_T dt
-       INTEGER_T DIMDEC(maskcov)
-       INTEGER_T DIMDEC(tag)
-       INTEGER_T DIMDEC(expan)
-       INTEGER_T DIMDEC(LS)
-       INTEGER_T DIMDEC(recon)
-       REAL_T maskcov(DIMV(maskcov))
-       REAL_T tag(DIMV(tag))
-       REAL_T expan(DIMV(expan),2*nten)
-       REAL_T LS(DIMV(LS),nmat*(1+SDIM))
-       REAL_T recon(DIMV(recon),nmat*ngeom_recon)
+       INTEGER_T, intent(in) :: bfact
+       REAL_T, intent(in) :: xlo(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: dt
+       INTEGER_T, intent(in) :: DIMDEC(maskcov)
+       INTEGER_T, intent(in) :: DIMDEC(tag)
+       INTEGER_T, intent(in) :: DIMDEC(expan)
+       INTEGER_T, intent(in) :: DIMDEC(LS)
+       INTEGER_T, intent(in) :: DIMDEC(recon)
+       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+       REAL_T, intent(out) :: tag(DIMV(tag))
+       REAL_T, intent(in) :: expan(DIMV(expan),2*nten)
+       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
+       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+
        INTEGER_T local_freezing_model
        INTEGER_T distribute_from_targ
        INTEGER_T vofbc(SDIM,2)
@@ -17964,26 +17968,27 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T im_source,im_dest,indexEXP,ngrow_expansion
-       INTEGER_T level,finest_level
-       INTEGER_T nmat,nten
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T stenlo(3),stenhi(3)
-       INTEGER_T stenlo2(3),stenhi2(3)
-       INTEGER_T bfact
-       REAL_T xlo(SDIM)
-       REAL_T dx(SDIM)
-       REAL_T dt
-       INTEGER_T DIMDEC(maskcov)
-       INTEGER_T DIMDEC(LS)
-       INTEGER_T DIMDEC(tag)
-       INTEGER_T DIMDEC(expan)
-       REAL_T maskcov(DIMV(maskcov))
-       REAL_T LS(DIMV(LS),nmat)
-       REAL_T tag(DIMV(tag))
-       REAL_T expan(DIMV(expan),2*nten)
+       INTEGER_T, intent(in) :: im_source,im_dest,indexEXP,ngrow_expansion
+       INTEGER_T, intent(in) :: level,finest_level
+       INTEGER_T, intent(in) :: nmat,nten
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T :: stenlo(3),stenhi(3)
+       INTEGER_T :: stenlo2(3),stenhi2(3)
+       INTEGER_T, intent(in) :: bfact
+       REAL_T, intent(in) :: xlo(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: dt
+       INTEGER_T, intent(in) :: DIMDEC(maskcov)
+       INTEGER_T, intent(in) :: DIMDEC(LS)
+       INTEGER_T, intent(in) :: DIMDEC(tag)
+       INTEGER_T, intent(in) :: DIMDEC(expan)
+       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+       REAL_T, intent(in) :: LS(DIMV(LS),nmat)
+       REAL_T, intent(in) :: tag(DIMV(tag))
+       REAL_T, intent(inout) :: expan(DIMV(expan),2*nten)
+
        INTEGER_T i,j,k,isweep
        REAL_T DLS
        REAL_T maxgrad,maxgrad2,curgrad
@@ -18279,25 +18284,26 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T ngrow_expansion
-       REAL_T mdot_sum,mdot_lost
-       INTEGER_T im_source,im_dest,indexEXP
-       INTEGER_T level,finest_level
-       INTEGER_T nmat,nten
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T stenlo(3),stenhi(3)
-       INTEGER_T bfact
-       REAL_T xlo(SDIM)
-       REAL_T dx(SDIM)
-       REAL_T dt
-       INTEGER_T DIMDEC(maskcov)
-       INTEGER_T DIMDEC(tag)
-       INTEGER_T DIMDEC(expan)
-       REAL_T maskcov(DIMV(maskcov))
-       REAL_T tag(DIMV(tag))
-       REAL_T expan(DIMV(expan),2*nten)
+       INTEGER_T, intent(in) :: ngrow_expansion
+       REAL_T, intent(inout) :: mdot_sum,mdot_lost
+       INTEGER_T, intent(in) :: im_source,im_dest,indexEXP
+       INTEGER_T, intent(in) :: level,finest_level
+       INTEGER_T, intent(in) :: nmat,nten
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T :: stenlo(3),stenhi(3)
+       INTEGER_T, intent(in) :: bfact
+       REAL_T, intent(in) :: xlo(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: dt
+       INTEGER_T, intent(in) :: DIMDEC(maskcov)
+       INTEGER_T, intent(in) :: DIMDEC(tag)
+       INTEGER_T, intent(in) :: DIMDEC(expan)
+       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+       REAL_T, intent(in) :: tag(DIMV(tag))
+       REAL_T, intent(inout) :: expan(DIMV(expan),2*nten)
+
        INTEGER_T i,j,k
        INTEGER_T i_n,j_n,k_n,receive_flag,nhalf
        INTEGER_T TAGLOC,TAGSIDE

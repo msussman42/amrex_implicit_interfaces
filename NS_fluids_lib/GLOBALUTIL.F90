@@ -1864,11 +1864,13 @@ contains
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat) then
+          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
        print *,"num_elements_blobclass invalid"
+       print *,"blob_cell_count added December 6, 2020"
        stop
       endif
 
