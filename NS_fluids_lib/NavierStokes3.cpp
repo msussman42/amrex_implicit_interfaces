@@ -4834,7 +4834,7 @@ NavierStokes::ColorSum(
  int ncomp_mdot,
  MultiFab* typemf,
  MultiFab* color,
- MultiFab* mdot,
+ MultiFab* mdot, // holds typemf if ncomp_mdot==0
  Vector<blobclass>& level_blobdata,
  Vector<blobclass> cum_blobdata,
  Vector< Vector<Real> >& level_mdot_data,
@@ -4871,6 +4871,21 @@ NavierStokes::ColorSum(
   amrex::Error("num_colors!=cum_mdot_data.size()");
  if (num_colors!=level_mdot_data.size())
   amrex::Error("num_colors!=level_mdot_data.size()");
+
+ if (ncomp_mdot==0) {
+  if (ncomp_mdot_alloc==1) {
+   // do nothing  
+  } else
+   amrex::Error("ncomp_mdot_alloc invalid");
+ } else if (ncomp_mdot>0) {
+  int ncomp_mdot_test=mdot->nComp();
+  if ((ncomp_mdot==ncomp_mdot_test)&&
+      (ncomp_mdot==ncomp_mdot_alloc)) {
+   // do nothing
+  } else
+   amrex::Error("ncomp_mdot_test or ncomp_mdot_alloc invalid");
+ } else
+  amrex::Error("ncomp_mdot invalid"); 
 
  for (int i=0;i<num_colors;i++) {
   clear_blobdata(i,level_blobdata);
@@ -4992,6 +5007,10 @@ NavierStokes::ColorSum(
   amrex::Error("typemf->nGrow()!=1");
  if (color->nGrow()!=1)
   amrex::Error("color->nGrow()!=1");
+ if (mdot->nGrow()>=0) {
+  // do nothing
+ } else
+  amrex::Error("mdot->nGrow() invalid");
 
   // mask=tag if not covered by level+1 and at fine/fine ghost cell.
  int ngrowmask=1;
@@ -5021,6 +5040,7 @@ NavierStokes::ColorSum(
   int bfact=parent->Space_blockingFactor(level);
 
   const Real* xlo = grid_loc[gridno].lo();
+  FArrayBox& mdotfab=(*mdot)[mfi];
   FArrayBox& typefab=(*typemf)[mfi];
   FArrayBox& lsfab=(*localMF[LS_COLORSUM_MF])[mfi];
   FArrayBox& velfab=(*localMF[VEL_COLORSUM_MF])[mfi];
@@ -5053,6 +5073,7 @@ NavierStokes::ColorSum(
    &sweep_num,
    dx,xlo,
    &nmat,
+   mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -5075,10 +5096,15 @@ NavierStokes::ColorSum(
    &rzflag,
    &num_colors,
    cum_blob_array.dataPtr(),
+   cum_mdot_array.dataPtr(),
    level_blob_array[tid_current].dataPtr(),
    level_blob_type_array[tid_current].dataPtr(),
+   level_mdot_array[tid_current].dataPtr(),
    &blob_array_size,
+   &mdot_array_size,
    &num_elements_blobclass,
+   &ncomp_mdot_alloc,
+   &ncomp_mdot,
    levelbc.dataPtr(),
    velbc.dataPtr(),
    &nface,&nface_dst,&ncellfrac);

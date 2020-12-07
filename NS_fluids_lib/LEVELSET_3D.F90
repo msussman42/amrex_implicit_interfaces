@@ -4536,6 +4536,7 @@ stop
        sweep_num, &
        dx,xlo, &
        nmat, &
+       mdot,DIMS(mdot), &
        LS,DIMS(LS), &
        VEL,DIMS(VEL), &
        DEN,DIMS(DEN), &
@@ -4558,9 +4559,15 @@ stop
        rzflag, &
        num_colors, &
        cum_blobdata, &
+       cum_mdot_data, &
        level_blobdata, &
        level_blobtypedata, &
-       arraysize,num_elements_blobclass, &
+       level_mdot_data, &
+       arraysize, &
+       mdot_arraysize, &
+       num_elements_blobclass, &
+       ncomp_mdot_alloc, &
+       ncomp_mdot, &
        levelbc, &
        velbc, &
        nface,nface_dst,ncellfrac)
@@ -4581,17 +4588,23 @@ stop
       INTEGER_T, intent(in) :: levelbc(SDIM,2)
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: num_elements_blobclass
+      INTEGER_T, intent(in) :: ncomp_mdot_alloc
+      INTEGER_T, intent(in) :: ncomp_mdot
 
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
       INTEGER_T :: iface,jface,kface
       INTEGER_T :: face_index
  
-      INTEGER_T, intent(in) :: rzflag,num_colors,arraysize
+      INTEGER_T, intent(in) :: rzflag
+      INTEGER_T, intent(in) :: num_colors
+      INTEGER_T, intent(in) :: arraysize
+      INTEGER_T, intent(in) :: mdot_arraysize
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(VEL)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
@@ -4608,9 +4621,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(color)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(inout) :: level_blobdata(arraysize)
+      REAL_T, intent(inout) :: level_mdot_data(mdot_arraysize)
       REAL_T, intent(in) :: cum_blobdata(arraysize)
+      REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
+      REAL_T, intent(in) :: mdot(DIMV(mdot),ncomp_mdot_alloc)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM)
@@ -4702,7 +4718,24 @@ stop
        print *,"ncellfrac invalid"
        stop
       endif
-
+      if (ncomp_mdot.eq.0) then
+       if (ncomp_mdot_alloc.eq.1) then
+        ! do nothing
+       else
+        print *,"ncomp_mdot_alloc invalid"
+        stop
+       endif
+      else if (ncomp_mdot.ge.1) then
+       if (ncomp_mdot_alloc.eq.ncomp_mdot) then
+        ! do nothing
+       else
+        print *,"ncomp_mdot_alloc invalid"
+        stop
+       endif
+      else
+       print *,"ncomp_mdot invalid"
+       stop
+      endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid get color sum"
        stop
@@ -4712,6 +4745,7 @@ stop
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=two*DXMAXLS
 
+      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(VEL),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(DEN),1,-1,6615)
@@ -4745,6 +4779,13 @@ stop
       endif
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
+       stop
+      endif
+       
+      if (mdot_arraysize.eq.ncomp_mdot_alloc*num_colors) then
+       ! do nothing
+      else
+       print *,"mdot_arraysize invalid"
        stop
       endif
 
