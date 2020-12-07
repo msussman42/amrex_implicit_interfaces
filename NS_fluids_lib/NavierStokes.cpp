@@ -847,7 +847,7 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //   distribute_from_target=0  ok. 
 
 Vector<int> NavierStokes::distribute_from_target;
-Vector<int> NavierStokes::distribute_evenly;
+Vector<int> NavierStokes::distribute_mdot_evenly;
 
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
@@ -2992,7 +2992,7 @@ NavierStokes::read_params ()
     Tanasawa_or_Schrage_or_Kassemi.resize(2*nten);
     mass_fraction_id.resize(2*nten);
     distribute_from_target.resize(2*nten);
-    distribute_evenly.resize(2*nten);
+    distribute_mdot_evenly.resize(nmat);
     tension.resize(nten);
     tension_slope.resize(nten);
     tension_T0.resize(nten);
@@ -3064,9 +3064,10 @@ NavierStokes::read_params ()
      mass_fraction_id[i+nten]=0;
      distribute_from_target[i]=0;
      distribute_from_target[i+nten]=0;
-     distribute_evenly[i]=0;
-     distribute_evenly[i+nten]=0;
     } // i=0..nten-1
+
+    for (int i=0;i<nmat;i++)
+     distribute_mdot_evenly[i]=0;
 
     density_floor.resize(nmat);
     density_floor_expansion.resize(nmat);
@@ -3436,11 +3437,35 @@ NavierStokes::read_params ()
     } // iten
 
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
-    pp.queryarr("distribute_evenly",distribute_evenly,0,2*nten);
+    pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,nmat);
 
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
       int iten_local=ireverse*nten+iten;
+
+      int im1=0;
+      int im2=0;
+      int im_source=0;
+      int im_dest=0;
+
+      if (freezing_model[iten_local]>=0) {
+
+       if (latent_heat[iten_local]!=0.0) {
+        get_inverse_iten_cpp(im1,im2,iten+1,nmat);
+        if (ireverse==0) {
+         im_source=im1;  
+         im_dest=im2;  
+        } else if (ireverse==1) {
+         im_source=im2;  
+         im_dest=im1;  
+        } else
+         amrex::Error("ireverse invalid");
+       } else if (latent_heat[iten_local]==0) {
+        // do nothing
+       } else
+        amrex::Error("latent_heat invalid");
+      } else
+       amrex::Error("freezing_model invalid");
 
       if ((distribute_from_target[iten_local]==0)||
           (distribute_from_target[iten_local]==1)) {
@@ -3449,19 +3474,41 @@ NavierStokes::read_params ()
        } else if (fixed_parm[iten_local]==
                   distribute_from_target[iten_local]) {
         // do nothing
-       } else {
-        if (distribute_evenly[iten_local]==1) {
+       } else if (distribute_from_target[iten_local]==0) {
+
+        if (distribute_mdot_evenly[im_dest-1]==1) {
          // do nothing
-        } else if (distribute_evenly[iten_local]==0) {
+        } else if (distribute_mdot_evenly[im_dest-1]==0) {
          std::cout << "iten_local=" << iten_local << 
           " expected value=" << fixed_parm[iten_local] << 
           " entered value=" << distribute_from_target[iten_local] << '\n';
-         std::cout << "iten_local=" << iten_local << 
-          " distribute_evenly=" << distribute_evenly[iten_local] << '\n';
+         std::cout << "im_source,im_dest=" << im_source << ' ' <<
+	   im_dest <<
+           " distribute_mdot_evenly[im_dest-1]=" << 
+	   distribute_mdot_evenly[im_dest-1] << '\n';
          amrex::Error("distribute_from_target[iten_local] invalid");
 	} else
-  	 amrex::Error("distribute_evenly invalid");
-       }
+  	 amrex::Error("distribute_mdot_evenly invalid");
+
+       } else if (distribute_from_target[iten_local]==1) {
+
+        if (distribute_mdot_evenly[im_source-1]==1) {
+         // do nothing
+        } else if (distribute_mdot_evenly[im_source-1]==0) {
+         std::cout << "iten_local=" << iten_local << 
+          " expected value=" << fixed_parm[iten_local] << 
+          " entered value=" << distribute_from_target[iten_local] << '\n';
+         std::cout << "im_source,im_dest=" << im_source << ' ' <<
+	   im_dest <<
+           " distribute_mdot_evenly[im_source-1]=" << 
+	   distribute_mdot_evenly[im_source-1] << '\n';
+         amrex::Error("distribute_from_target[iten_local] invalid");
+	} else
+  	 amrex::Error("distribute_mdot_evenly invalid");
+
+       } else {
+	amrex::Error("distribute_from_target[iten_local] invalid");
+       } 
 
       } else
        amrex::Error("distribute_from_target invalid");
@@ -3524,15 +3571,16 @@ NavierStokes::read_params ()
       amrex::Error("distribute_from_target invalid in read_params (i)");
      if ((distribute_from_target[i+nten]<0)||(distribute_from_target[i+nten]>1))
       amrex::Error("distribute_from_target invalid in read_params (i+nten)");
-     if ((distribute_evenly[i]<0)||(distribute_evenly[i]>1))
-      amrex::Error("distribute_evenly invalid in read_params (i)");
-     if ((distribute_evenly[i+nten]<0)||(distribute_evenly[i+nten]>1))
-      amrex::Error("distribute_evenly invalid in read_params (i+nten)");
      if (mass_fraction_id[i]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i)");
      if (mass_fraction_id[i+nten]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i+nten)");
     }  // i=0..nten-1
+
+    for (int i=0;i<nmat;i++) 
+     if ((distribute_mdot_evenly[i]<0)||(distribute_mdot_evenly[i]>1))
+      amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
+
 
     shock_timestep.resize(nmat);
     for (int i=0;i<nmat;i++) 
@@ -4642,11 +4690,6 @@ NavierStokes::read_params ()
       std::cout << "distribute_from_target i+nten=" << i+nten << "  " << 
        distribute_from_target[i+nten] << '\n';
 
-      std::cout << "distribute_evenly i=" << i << "  " << 
-       distribute_evenly[i] << '\n';
-      std::cout << "distribute_evenly i+nten=" << i+nten << "  " << 
-       distribute_evenly[i+nten] << '\n';
-
       std::cout << "tension i=" << i << "  " << tension[i] << '\n';
       std::cout << "tension_slope i=" << i << "  " << tension_slope[i] << '\n';
       std::cout << "tension_T0 i=" << i << "  " << tension_T0[i] << '\n';
@@ -4658,6 +4701,8 @@ NavierStokes::read_params ()
      }  // i=0..nten-1
 
      for (int i=0;i<nmat;i++) {
+      std::cout << "distribute_mdot_evenly i=" << i << "  " << 
+       distribute_mdot_evenly[i] << '\n';
       std::cout << "cavitation_pressure i=" << i << "  " << 
        cavitation_pressure[i] << '\n';
       std::cout << "cavitation_vapor_density i=" << i << "  " << 
