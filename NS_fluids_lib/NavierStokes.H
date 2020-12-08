@@ -809,6 +809,8 @@ protected:
      Vector<blobclass>& level_blobdata,int sweep_num);
     void copy_to_blobdata(int i,int& counter,
      Vector<Real>& blob_array,Vector<blobclass>& blobdata);
+    void copy_blobdata(Vector<blobclass>& dest_blobdata,
+       Vector<blobclass>& source_blobdata);
 
     void build_NRM_FD_MF(int fd_mf,int ls_mf, int ngrow);
 
