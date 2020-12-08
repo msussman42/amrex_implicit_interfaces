@@ -2654,6 +2654,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     Vector<blobclass> blobdata;
     Vector< Vector<Real> > mdot_data;
+    Vector<int> type_flag;
+
     blobdata.resize(1);
     int color_count=0;
     int coarsest_level=0;
@@ -2741,14 +2743,17 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        tessellate=1;
        int idx_mdot=-1;
+       int operation_flag=0;
 
        ColorSumALL( 
+         operation_flag, //=0
          tessellate, //=1
          coarsest_level,
          color_count,
          TYPE_MF,
 	 COLOR_MF,
 	 idx_mdot,
+         type_flag,
 	 blobdata,
 	 mdot_data);
 
@@ -3225,6 +3230,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        //    b) FORT_DISTRIBUTEEXPANSION
        //    c) FORT_CLEAREXPANSION
        //    d) FORT_INITJUMPTERM ( modifies localMF[MDOT_MF] )
+       //    e) FORT_GETCOLORSUM (twice)
        phase_change_redistributeALL();
 
        delete_array(JUMP_STRENGTH_MF);
@@ -4828,6 +4834,7 @@ int ilev;
 
 void
 NavierStokes::ColorSum(
+ int operation_flag, //=0 or 1
  int tessellate,  // =1 or 3
  int sweep_num,
  int ncomp_mdot_alloc,
@@ -5387,12 +5394,14 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 
 void
 NavierStokes::ColorSumALL(
+ int operation_flag, // =0 or 1
  int tessellate,  // 1 or 3
  int coarsest_level,
  int& color_count,
  int idx_type,
  int idx_color,
  int idx_mdot,  // ==-1 if no mdot
+ Vector<int>& type_flag, 
  Vector<blobclass>& blobdata,
  Vector< Vector<Real> >& mdot_data) {
 
@@ -5406,8 +5415,6 @@ NavierStokes::ColorSumALL(
 
  // type_flag[im]=1 if material im exists in the domain.
  // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
- Vector<int> type_flag;
-
  // updates one ghost cell of TYPE_MF
  // fluid(s) and solid(s) tessellate the domain.
  TypeALL(idx_type,type_flag);
@@ -5498,6 +5505,7 @@ NavierStokes::ColorSumALL(
     amrex::Error("ncomp_mdot invalid");
 
    ns_level.ColorSum(
+    operation_flag, // =0 or 1
     tessellate,  // =1 or 3
     sweep_num,
     ncomp_mdot_alloc,
@@ -9284,6 +9292,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   Vector<blobclass> blobdata;
   Vector< Vector<Real> > mdot_data;
+  Vector<int> type_flag;
 
   int alloc_blobdata=0;
   
@@ -9313,11 +9322,14 @@ void NavierStokes::multiphase_project(int project_option) {
    int idx_mdot=-1;
 
    int tessellate=1;
+   int operation_flag=0;
    ColorSumALL(
+     operation_flag, // =0
      tessellate, //=1
      coarsest_level,
      color_count,
      TYPE_MF,COLOR_MF,idx_mdot,
+     type_flag,
      blobdata,
      mdot_data);
    if (color_count!=blobdata.size())

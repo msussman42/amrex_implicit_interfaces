@@ -12246,7 +12246,8 @@ NavierStokes::phase_change_redistributeALL() {
   ns_level.level_phase_change_redistribute(
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
-   indexEXP_filler,isweep_combine);
+   indexEXP_filler,
+   isweep_combine); // ==3
  } // ilev=finest_level ... level
 
  if (verbose>0) {
@@ -12271,17 +12272,36 @@ NavierStokes::phase_change_redistributeALL() {
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
+ Vector<int> type_flag;
+
  int color_count=0;
  int coarsest_level=0;
  int idx_mdot=MDOT_MF;
  int tessellate=3;
+ int operation_flag=0; 
  ColorSumALL(
+  operation_flag, // =0
   tessellate,  //=3
   coarsest_level,
   color_count,
   TYPE_MF,
   COLOR_MF,
   idx_mdot,
+  type_flag,
+  blobdata,
+  mdot_data);
+
+ operation_flag=1; // scatter to mdot or density
+
+ ColorSumALL(
+  operation_flag, //=1
+  tessellate,  //=3
+  coarsest_level,
+  color_count,
+  TYPE_MF,
+  COLOR_MF,
+  idx_mdot,
+  type_flag,
   blobdata,
   mdot_data);
 
@@ -20673,19 +20693,23 @@ NavierStokes::post_init_state () {
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
+ Vector<int> type_flag;
 
  int color_count=0;
  int coarsest_level=0;
  int idx_mdot=-1;
  int tessellate=1;
+ int operation_flag=0;
 
  ColorSumALL(
+  operation_flag, //=0
   tessellate,  //=1
   coarsest_level,
   color_count,
   TYPE_MF,
   COLOR_MF,
   idx_mdot,
+  type_flag,
   blobdata,
   mdot_data);
 
