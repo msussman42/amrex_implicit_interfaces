@@ -2100,7 +2100,7 @@ stop
        DIMS(PROBE_PARMS%recon), &
        F_tess)
 
-      do iprobe=1,2
+      do iprobe=1,2 ! iprobe=1 source    iprobe=2 dest
 
        if (iprobe.eq.1) then ! source
         do dir=1,SDIM
@@ -6870,6 +6870,7 @@ stop
       REAL_T local_Tsat(0:1)
       REAL_T delta_Tsat
       REAL_T local_Tsat_base(0:1)
+      REAL_T local_Tsat_unstable(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T, target :: LL(0:1)
       INTEGER_T valid_phase_change(0:1)
@@ -6928,6 +6929,8 @@ stop
       REAL_T molar_mass_ambient
       REAL_T molar_mass_vapor
       INTEGER_T interp_valid_flag(2) ! iprobe=1 source iprobe=2 dest
+      INTEGER_T interp_valid_flag_initial(2) ! iprobe=1 source iprobe=2 dest
+      INTEGER_T interface_resolved
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
       type(nucleation_parm_type_input) :: create_in
@@ -7605,7 +7608,7 @@ stop
                    ngrow_make_distance, & ! ngrow_tsat
                    fablo,fabhi, &
                    Tsatfab,DIMS(Tsatfab), & ! not used since use_tsatfab==0
-                   local_Tsat(ireverse), &
+                   local_Tsat(ireverse), & ! interface temperature from routine
                    iten+ireverse*nten, &
                    saturation_temp, &
                    use_exact_temperature, &
@@ -7731,52 +7734,6 @@ stop
                   stop
                  endif
 
-                  ! for T_INTERFACE= TSAT - eps1 K - eps2 V
-                  ! 1. T_I^(0)=TSAT - eps1 K - eps2 ( 0 )
-                  ! 2. n=0, V^{0}=0
-                  ! 2. while not converged
-                  ! 3.  V^{n+1}=-[k grad T dot n]/L=
-                  !     [(Tprobe^1(T_I^{n}) - T_I^{n})/dxprobe^1 -
-                  !     (Tprobe^2(T_I^{n}) - T_I^{n})/dxprobe^2 ]/L
-                  !     n points from material 1 to material 2.
-                  ! 4.  T_I^{n+1}=T_I^{n} - eps2 (V^{n+1}-V^{n})
-                  ! 5.  convergence when |T_{I}^{n+1}-T_{I}^{n}|<tol
-                  !
-                 if (hardwire_flag(ireverse).eq.0) then
-
-                  delta_Tsat= &
-                    saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
-
-                  local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
-
-                  if (local_Tsat(ireverse).lt.TI_min) then
-                   local_Tsat(ireverse)=TI_min
-                  endif
-                  if (local_Tsat(ireverse).gt.TI_max) then
-                   local_Tsat(ireverse)=TI_max
-                  endif
-
-                  Y_predict=one
-
-                 else if (hardwire_flag(ireverse).eq.1) then
-
-                  local_Tsat(ireverse)=local_hardwire_T(ireverse)
-                  Y_predict=local_hardwire_Y(ireverse)
-
-                 else
-                  print *,"hardwire_flag(ireverse) invalid"
-                  stop
-                 endif
-                
-                 TSAT_predict=local_Tsat(ireverse)
-                 TSAT_correct=TSAT_predict
-
-                 VEL_predict=zero
-                 VEL_correct=zero
-
-                 TSAT_iter=0
-                 TSAT_converge=0
-
                  PROBE_PARMS%dxprobe_source=>dxprobe_source
                  PROBE_PARMS%dxprobe_dest=>dxprobe_dest
                  PROBE_PARMS%local_freezing_model=>local_freezing_model
@@ -7821,6 +7778,97 @@ stop
                   print *,"LL invalid"
                   stop
                  endif
+
+
+                  ! for T_INTERFACE= TSAT - eps1 K - eps2 V
+                  ! 1. T_I^(0)=TSAT - eps1 K - eps2 ( 0 )
+                  ! 2. n=0, V^{0}=0
+                  ! 2. while not converged
+                  ! 3.  V^{n+1}=-[k grad T dot n]/L=
+                  !     [(Tprobe^1(T_I^{n}) - T_I^{n})/dxprobe^1 -
+                  !     (Tprobe^2(T_I^{n}) - T_I^{n})/dxprobe^2 ]/L
+                  !     n points from material 1 to material 2.
+                  ! 4.  T_I^{n+1}=T_I^{n} - eps2 (V^{n+1}-V^{n})
+                  ! 5.  convergence when |T_{I}^{n+1}-T_{I}^{n}|<tol
+                  !
+                 if (hardwire_flag(ireverse).eq.0) then
+
+                  delta_Tsat= &
+                    saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
+
+                  local_Tsat_unstable(ireverse)=local_Tsat(ireverse)
+                  local_Tsat(ireverse)=local_Tsat_unstable(ireverse)-delta_Tsat
+
+                  if (local_Tsat(ireverse).lt.TI_min) then
+                   local_Tsat(ireverse)=TI_min
+                  endif
+                  if (local_Tsat(ireverse).gt.TI_max) then
+                   local_Tsat(ireverse)=TI_max
+                  endif
+
+                  Y_predict=one
+
+                 else if (hardwire_flag(ireverse).eq.1) then
+
+                  local_Tsat(ireverse)=local_hardwire_T(ireverse)
+                  local_Tsat_unstable(ireverse)=local_Tsat(ireverse)
+                  Y_predict=local_hardwire_Y(ireverse)
+
+                 else
+                  print *,"hardwire_flag(ireverse) invalid"
+                  stop
+                 endif
+               
+                 !iprobe=1 source
+                 !iprobe=2 dest
+                 call probe_interpolation( &
+                  PROBE_PARMS, &
+                  local_Tsat_unstable(ireverse), &
+                  Y_predict, &
+                  T_probe,Y_probe, &
+                  den_I_interp, &
+                  den_probe, &
+                  T_I_interp,Y_I_interp, &
+                  pres_I_interp, &
+                  vfrac_I, &
+                  T_probe_raw, &
+                  dxprobe_target, &
+                  interp_valid_flag_initial, &
+                  at_interface)
+
+                 interface_resolved=1
+
+                 if ((interp_valid_flag_initial(1).eq.1).and. &
+                     (interp_valid_flag_initial(2).eq.1)) then
+                  ! do nothing
+                 else if ((interp_valid_flag_initial(1).eq.0).or. &
+                          (interp_valid_flag_initial(1).eq.2).or. &
+                          (interp_valid_flag_initial(2).eq.0).or. &
+                          (interp_valid_flag_initial(2).eq.2)) then
+                  interface_resolved=0
+                  local_Tsat(ireverse)=local_Tsat_unstable(ireverse)
+                 else
+                  print *,"interp_valid_flag_initial invalid"
+                  stop
+                 endif
+
+                 if (interface_resolved.eq.1) then
+                  TSAT_predict=local_Tsat(ireverse)
+                 else if (interface_resolved.eq.0) then
+                  TSAT_predict=local_Tsat_unstable(ireverse)
+                 else
+                  print *,"interface_resolved invalid"
+                  stop
+                 endif
+
+                 TSAT_correct=TSAT_predict
+
+                 VEL_predict=zero
+                 VEL_correct=zero
+
+                 TSAT_iter=0
+                 TSAT_converge=0
+
 
 !    local_freezing_model=4  Tanasawa or Schrage
 !    local_freezing_model=5  fully saturated evaporation?
@@ -8501,9 +8549,16 @@ stop
 
                   if (hardwire_flag(ireverse).eq.0) then
 
-                   delta_Tsat= &
+                   if (interface_resolved.eq.1) then
+                    delta_Tsat= &
                      saturation_temp_vel(iten+ireverse*nten)* &
                      (VEL_correct-VEL_predict)
+                   else if (interface_resolved.eq.0) then
+                    delta_Tsat=zero
+                   else
+                    print *,"interface_resolved invalid"
+                    stop
+                   endif
 
                    TSAT_correct=TSAT_correct-delta_Tsat
 
