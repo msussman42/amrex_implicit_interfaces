@@ -6870,7 +6870,6 @@ stop
       REAL_T local_Tsat(0:1)
       REAL_T delta_Tsat
       REAL_T local_Tsat_base(0:1)
-      REAL_T local_Tsat_unstable(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T, target :: LL(0:1)
       INTEGER_T valid_phase_change(0:1)
@@ -7608,7 +7607,7 @@ stop
                    ngrow_make_distance, & ! ngrow_tsat
                    fablo,fabhi, &
                    Tsatfab,DIMS(Tsatfab), & ! not used since use_tsatfab==0
-                   local_Tsat(ireverse), & ! interface temperature from routine
+                   local_Tsat(ireverse), & !user def. interface temperature 
                    iten+ireverse*nten, &
                    saturation_temp, &
                    use_exact_temperature, &
@@ -7623,8 +7622,7 @@ stop
                  if (local_Tsat(ireverse).ge.zero) then
                   ! do nothing
                  else
-                  print *,"local_Tsat(ireverse) invalid: ", &
-                          local_Tsat(ireverse)
+                  print *,"local_Tsat(ireverse) bad:",local_Tsat(ireverse)
                   print *,"ireverse=",ireverse
                   stop
                  endif
@@ -7796,8 +7794,8 @@ stop
                   delta_Tsat= &
                     saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
 
-                  local_Tsat_unstable(ireverse)=local_Tsat(ireverse)
-                  local_Tsat(ireverse)=local_Tsat_unstable(ireverse)-delta_Tsat
+                   ! T_Gamma = Tsat - eps1 * kappa
+                  local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
 
                   if (local_Tsat(ireverse).lt.TI_min) then
                    local_Tsat(ireverse)=TI_min
@@ -7811,7 +7809,6 @@ stop
                  else if (hardwire_flag(ireverse).eq.1) then
 
                   local_Tsat(ireverse)=local_hardwire_T(ireverse)
-                  local_Tsat_unstable(ireverse)=local_Tsat(ireverse)
                   Y_predict=local_hardwire_Y(ireverse)
 
                  else
@@ -7823,7 +7820,7 @@ stop
                  !iprobe=2 dest
                  call probe_interpolation( &
                   PROBE_PARMS, &
-                  local_Tsat_unstable(ireverse), &
+                  local_Tsat(ireverse), &
                   Y_predict, &
                   T_probe,Y_probe, &
                   den_I_interp, &
@@ -7840,26 +7837,18 @@ stop
 
                  if ((interp_valid_flag_initial(1).eq.1).and. &
                      (interp_valid_flag_initial(2).eq.1)) then
-                  ! do nothing
+                  ! do nothing (valid probe on both sides of Gamma)
                  else if ((interp_valid_flag_initial(1).eq.0).or. &
                           (interp_valid_flag_initial(1).eq.2).or. &
                           (interp_valid_flag_initial(2).eq.0).or. &
                           (interp_valid_flag_initial(2).eq.2)) then
                   interface_resolved=0
-                  local_Tsat(ireverse)=local_Tsat_unstable(ireverse)
                  else
                   print *,"interp_valid_flag_initial invalid"
                   stop
                  endif
 
-                 if (interface_resolved.eq.1) then
-                  TSAT_predict=local_Tsat(ireverse)
-                 else if (interface_resolved.eq.0) then
-                  TSAT_predict=local_Tsat_unstable(ireverse)
-                 else
-                  print *,"interface_resolved invalid"
-                  stop
-                 endif
+                 TSAT_predict=local_Tsat(ireverse)
 
                  TSAT_correct=TSAT_predict
 
@@ -8549,17 +8538,24 @@ stop
 
                   if (hardwire_flag(ireverse).eq.0) then
 
-                   if (interface_resolved.eq.1) then
+                   if ((interface_resolved.eq.1).or. &
+                       (TSAT_iter.eq.0)) then
                     delta_Tsat= &
                      saturation_temp_vel(iten+ireverse*nten)* &
                      (VEL_correct-VEL_predict)
-                   else if (interface_resolved.eq.0) then
+                   else if ((interface_resolved.eq.0).and. &
+                            (TSAT_iter.gt.0)) then
                     delta_Tsat=zero
                    else
-                    print *,"interface_resolved invalid"
+                    print *,"interface_resolved or TSAT_iter invalid"
                     stop
                    endif
 
+                    ! if interface_resolved==1 or first iteration,
+                    !  Tgamma^{k+1}=Tgamma^{k}- 
+                    !    eps2 * (V^{k+1}(Tgamma^{k})-
+                    !            V^{k}(Tgamma^{k-1}) ) 
+                    !  V^{0}=0
                    TSAT_correct=TSAT_correct-delta_Tsat
 
                    if (TSAT_correct.lt.TI_min) then
