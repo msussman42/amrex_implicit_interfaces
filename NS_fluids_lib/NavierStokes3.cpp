@@ -5699,13 +5699,13 @@ NavierStokes::ColorSumALL(
        for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
         for (int icol=0;icol<2*AMREX_SPACEDIM;icol++) {
          AA3D[irow][icol]=blobdata[i].blob_matrix[imatrix];
-	if (irow!=icol)
-	 AA3D[irow][icol]=0.0;  // basis functions form an orthogonal set
+         if (irow!=icol)
+	  AA3D[irow][icol]=0.0;  // basis functions form an orthogonal set
          if ((irow<AMREX_SPACEDIM+1)&&(icol<AMREX_SPACEDIM+1)) {
           AA2D[irow][icol]=blobdata[i].blob_matrix[imatrix];
-	 if (irow!=icol)
-	  AA2D[irow][icol]=0.0;  // basis functions form an orthogonal set
-	}
+	  if (irow!=icol)
+	   AA2D[irow][icol]=0.0;  // basis functions form an orthogonal set
+	 }
          imatrix++;
         }
        } 
@@ -5715,21 +5715,21 @@ NavierStokes::ColorSumALL(
         BB3D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
         XX3D[irow]=0.0;
         if (irow>=AMREX_SPACEDIM) {
-	if (symmetric_flag==1) {
-	 BB3D[irow]=0.0;
-	} else if (symmetric_flag==0) {
-	 // do nothing
-	} else
+	 if (symmetric_flag==1) {
+	  BB3D[irow]=0.0;
+	 } else if (symmetric_flag==0) {
+	  // do nothing
+	 } else
           amrex::Error("symmetric_flag invalid");
 
          if (veltype==1)
-	 BB3D[irow]=0.0;
+	  BB3D[irow]=0.0;
         }
         if (irow<AMREX_SPACEDIM+1) {
          BB2D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
          XX2D[irow]=0.0;
          if (irow>=AMREX_SPACEDIM) {
-	 if (symmetric_flag==1) {
+	  if (symmetric_flag==1) {
            BB2D[irow]=0.0;
           } else if (symmetric_flag==0) {
            // do nothing
@@ -5737,7 +5737,7 @@ NavierStokes::ColorSumALL(
            amrex::Error("symmetric_flag invalid");
 
           if (veltype==1)
-  	  BB2D[irow]=0.0;
+  	   BB2D[irow]=0.0;
          }
         } // irow<sdim+1
        }
