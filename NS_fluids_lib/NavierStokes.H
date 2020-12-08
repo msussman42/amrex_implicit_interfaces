@@ -968,6 +968,7 @@ protected:
      Vector<int> type_flag);
 
     void ColorSum(
+     int operation_flag, // =0 or 1
      int tessellate, // =1 or 3
      int sweep_num,
      int ncomp_mdot_alloc,
@@ -981,12 +982,14 @@ protected:
      Vector< Vector<Real> > cum_mdot_data);
 
     void ColorSumALL(
+     int operation_flag, // =0 or 1
      int tessellate,  // =1 or 3
      int coarsest_level,
      int& color_count,
      int idx_type,
      int idx_color,
      int idx_mdot,  // ==-1 if no mdot
+     Vector<int>& type_flag, 
      Vector<blobclass>& blobdata,
      Vector< Vector<Real> >& mdot_data);
 

@@ -1877,19 +1877,24 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
+ Vector<int> type_flag;
 
  if (output_drop_distribution==1) {
   int color_count=0;
   int coarsest_level=0;
   int tessellate=1;
   int idx_mdot=-1;
+  int operation_flag=0;
+
   ColorSumALL(
+    operation_flag, // =0
     tessellate, // =1
     coarsest_level,
     color_count,
     TYPE_MF,
     COLOR_MF,
     idx_mdot,
+    type_flag,
     blobdata,
     mdot_data);
 
