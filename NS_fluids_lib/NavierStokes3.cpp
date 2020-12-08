@@ -5236,6 +5236,73 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
 
 } // end subroutine copy_to_blobdata
 
+
+void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
+  Vector<blobclass>& source_blobdata) {
+
+ int nmat=num_materials;
+ int num_colors=source_blobdata.size();
+ int num_colors_test=dest_blobdata.size();
+
+ if ((num_colors>0)&&
+     (num_colors==num_colors_test)) {
+
+  for (int i=0;i<num_colors;i++) {
+
+   for (int dir=0;dir<3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);dir++) {
+    dest_blobdata[i].blob_matrix[dir]=
+      source_blobdata[i].blob_matrix[dir];
+   }
+   for (int dir=0;dir<3*(2*AMREX_SPACEDIM);dir++) {
+    dest_blobdata[i].blob_RHS[dir]=source_blobdata[i].blob_RHS[dir];
+   }
+   for (int dir=0;dir<3*(2*AMREX_SPACEDIM);dir++) {
+    dest_blobdata[i].blob_velocity[dir]=
+      source_blobdata[i].blob_velocity[dir];
+   }
+   for (int dir=0;dir<2*(2*AMREX_SPACEDIM);dir++) {
+    dest_blobdata[i].blob_integral_momentum[dir]=
+      source_blobdata[i].blob_integral_momentum[dir];
+   }
+   dest_blobdata[i].blob_energy=source_blobdata[i].blob_energy;
+   for (int dir=0;dir<3;dir++) {
+    dest_blobdata[i].blob_mass_for_velocity[dir]=
+      source_blobdata[i].blob_mass_for_velocity[dir];
+   }
+   dest_blobdata[i].blob_volume=
+      source_blobdata[i].blob_volume;
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    dest_blobdata[i].blob_center_integral[dir]=
+      source_blobdata[i].blob_center_integral[dir];
+   }
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    dest_blobdata[i].blob_center_actual[dir]=
+      source_blobdata[i].blob_center_actual[dir];
+   }
+   dest_blobdata[i].blob_perim=
+     source_blobdata[i].blob_perim;
+   for (int imnbr=0;imnbr<nmat;imnbr++) {
+    dest_blobdata[i].blob_perim_mat[imnbr]=
+      source_blobdata[i].blob_perim_mat[imnbr];
+   }
+   for (int im1=0;im1<nmat;im1++) {
+    for (int im2=0;im2<nmat;im2++) {
+     dest_blobdata[i].blob_triple_perim[im1][im2]=
+       source_blobdata[i].blob_triple_perim[im1][im2];
+    } // im2
+   } // im1
+
+   dest_blobdata[i].blob_cell_count=
+     source_blobdata[i].blob_cell_count;
+
+  } // i=0..num_colors-1
+
+ } else
+  amrex::Error("num_colors invalid");
+
+} // end subroutine copy_blobdata
+
+
 void NavierStokes::sum_blobdata(int i,
   Vector<blobclass>& blobdata,
   Vector<blobclass>& level_blobdata,int sweep_num) {
@@ -5413,16 +5480,25 @@ NavierStokes::ColorSumALL(
  if (level!=0)
   amrex::Error("level=0 in ColorSumALL");
 
- // type_flag[im]=1 if material im exists in the domain.
- // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
- // updates one ghost cell of TYPE_MF
- // fluid(s) and solid(s) tessellate the domain.
- TypeALL(idx_type,type_flag);
+ if (operation_flag==0) {
 
- // color_count=number of colors
- // ngrow=1, FORT_EXTRAPFILL, pc_interp for COLOR_MF
- color_variable(coarsest_level,
-  idx_color,idx_type,&color_count,type_flag);
+  // type_flag[im]=1 if material im exists in the domain.
+  // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
+  // updates one ghost cell of TYPE_MF
+  // fluid(s) and solid(s) tessellate the domain.
+  TypeALL(idx_type,type_flag);
+
+  // color_count=number of colors
+  // ngrow=1, FORT_EXTRAPFILL, pc_interp for COLOR_MF
+  color_variable(coarsest_level,
+   idx_color,idx_type,&color_count,type_flag);
+
+ } else if (operation_flag==1) {
+
+  // do nothing
+
+ } else
+  amrex::Error("operation_flag invalid");
 
  Real problo_array[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
@@ -5469,14 +5545,23 @@ NavierStokes::ColorSumALL(
  } else
   amrex::Error("idx_mdot invalid");
 
- blobdata.resize(color_count);
- mdot_data.resize(color_count);
- for (int i=0;i<color_count;i++) {
-  clear_blobdata(i,blobdata);
-  mdot_data[i].resize(ncomp_mdot_alloc);
-  for (int j=0;j<ncomp_mdot_alloc;j++)
-   mdot_data[i][j]=0.0;
- }  // i=0..color_count-1
+ if (operation_flag==0) {
+
+  blobdata.resize(color_count);
+  mdot_data.resize(color_count);
+  for (int i=0;i<color_count;i++) {
+   clear_blobdata(i,blobdata);
+   mdot_data[i].resize(ncomp_mdot_alloc);
+   for (int j=0;j<ncomp_mdot_alloc;j++)
+    mdot_data[i][j]=0.0;
+  }  // i=0..color_count-1
+
+ } else if (operation_flag==1) {
+
+  // do nothing
+
+ } else
+  amrex::Error("operation_flag invalid");
 
  Vector<blobclass> level_blobdata;
  level_blobdata.resize(color_count);
@@ -5490,7 +5575,20 @@ NavierStokes::ColorSumALL(
    level_mdot_data[i][j]=0.0;
  } // i=0..color_count-1
 
- for (int sweep_num=0;sweep_num<2;sweep_num++) {
+ int num_sweeps=2;
+ if (operation_flag==0) {
+  // do nothing
+ } else if (operation_flag==1) {
+  copy_blobdata(level_blobdata,blobdata);
+  for (int i=0;i<color_count;i++) {
+   for (int j=0;j<ncomp_mdot_alloc;j++)
+    level_mdot_data[i][j]=mdot_data[i][j];
+  }
+  num_sweeps=1;
+ } else
+  amrex::Error("operation_flag invalid");
+
+ for (int sweep_num=0;sweep_num<num_sweeps;sweep_num++) {
 
   for (int ilev = coarsest_level; ilev <= finest_level; ilev++) {
 
@@ -5518,188 +5616,197 @@ NavierStokes::ColorSumALL(
     level_mdot_data,
     mdot_data);
 
-   if (sweep_num==0) {
+   if (operation_flag==0) {
 
-    for (int i=0;i<color_count;i++) {
+    if (sweep_num==0) {
+
+     for (int i=0;i<color_count;i++) {
       // blob_volume, blob_center_integral, blob_perim, blob_perim_mat,
       // blob_triple_perim, blob_cell_count
-     sum_blobdata(i,blobdata,level_blobdata,sweep_num);
+      sum_blobdata(i,blobdata,level_blobdata,sweep_num);
 
-     if (level_blobdata[i].im>0) {
-      int im_test=level_blobdata[i].im;
-      if ((im_test<1)||(im_test>nmat))
-       amrex::Error("im_test invalid");
-      blobdata[i].im=im_test;
-     } else if (level_blobdata[i].im==0) {
-      // do nothing
-     } else
-      amrex::Error("level_blobdata[i].im invalid");
+      if (level_blobdata[i].im>0) {
+       int im_test=level_blobdata[i].im;
+       if ((im_test<1)||(im_test>nmat))
+        amrex::Error("im_test invalid");
+       blobdata[i].im=im_test;
+      } else if (level_blobdata[i].im==0) {
+       // do nothing
+      } else
+       amrex::Error("level_blobdata[i].im invalid");
 
-    }  // i=0..color_count-1
+     }  // i=0..color_count-1
 
-   } else if (sweep_num==1) {
+    } else if (sweep_num==1) {
 
      // blob_energy, blob_matrix, blob_RHS, blob_integral_momentum,
      // blob_mass_for_velocity
-    for (int i=0;i<color_count;i++) {
-     sum_blobdata(i,blobdata,level_blobdata,sweep_num);
-    }  // i=0..color_count-1
+     for (int i=0;i<color_count;i++) {
+      sum_blobdata(i,blobdata,level_blobdata,sweep_num);
+     }  // i=0..color_count-1
 
+    } else
+     amrex::Error("sweep_num invalid");
+
+   } else if (operation_flag==1) {
+    // do nothing
    } else
-    amrex::Error("sweep_num invalid");
+    amrex::Error("operation_flag invalid");
 
   } // ilev=coarsest_level..finest_level
 
-  if (sweep_num==0) {
+  if (operation_flag==0) {
 
-   for (int i=0;i<color_count;i++) {
-    Real blobvol=blobdata[i].blob_volume;
-    if (blobvol>0.0) {
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-      blobdata[i].blob_center_actual[dir]= 
-       blobdata[i].blob_center_integral[dir]/blobvol;
-     }
-     if (symmetric_flag==1) {
-      for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
-       blobdata[i].blob_center_actual[dir]=0.0;
-     }
-    } else if (blobvol==0.0) {
-     // do nothing
-    } else
-     amrex::Error("blobvol invalid");
-   } // i=0..color_count-1
+   if (sweep_num==0) {
 
-  } else if (sweep_num==1) {
+    for (int i=0;i<color_count;i++) {
+     Real blobvol=blobdata[i].blob_volume;
+     if (blobvol>0.0) {
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+       blobdata[i].blob_center_actual[dir]= 
+        blobdata[i].blob_center_integral[dir]/blobvol;
+      }
+      if (symmetric_flag==1) {
+       for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
+        blobdata[i].blob_center_actual[dir]=0.0;
+      }
+     } else if (blobvol==0.0) {
+      // do nothing
+     } else
+      amrex::Error("blobvol invalid");
+    } // i=0..color_count-1
 
-   for (int i=0;i<color_count;i++) {
+   } else if (sweep_num==1) {
 
-    for (int veltype=0;veltype<3;veltype++) {
+    for (int i=0;i<color_count;i++) {
 
-     if (blobdata[i].blob_mass_for_velocity[veltype]>0.0) {
-      Real** AA3D = new Real*[2*AMREX_SPACEDIM];
-      Real** AA2D = new Real*[AMREX_SPACEDIM+1];
-      for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) 
-       AA3D[irow]=new Real[2*AMREX_SPACEDIM];
-      for (int irow=0;irow<AMREX_SPACEDIM+1;irow++) 
-       AA2D[irow]=new Real[AMREX_SPACEDIM+1];
+     for (int veltype=0;veltype<3;veltype++) {
 
-      Real BB3D[2*AMREX_SPACEDIM];
-      Real BB2D[AMREX_SPACEDIM+1];
-      Real XX3D[2*AMREX_SPACEDIM];
-      Real XX2D[AMREX_SPACEDIM+1];
-      int matrix_ncomp=(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);
-      int imatrix=matrix_ncomp*veltype;
-      for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
-       for (int icol=0;icol<2*AMREX_SPACEDIM;icol++) {
-        AA3D[irow][icol]=blobdata[i].blob_matrix[imatrix];
+      if (blobdata[i].blob_mass_for_velocity[veltype]>0.0) {
+       Real** AA3D = new Real*[2*AMREX_SPACEDIM];
+       Real** AA2D = new Real*[AMREX_SPACEDIM+1];
+       for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) 
+        AA3D[irow]=new Real[2*AMREX_SPACEDIM];
+       for (int irow=0;irow<AMREX_SPACEDIM+1;irow++) 
+        AA2D[irow]=new Real[AMREX_SPACEDIM+1];
+
+       Real BB3D[2*AMREX_SPACEDIM];
+       Real BB2D[AMREX_SPACEDIM+1];
+       Real XX3D[2*AMREX_SPACEDIM];
+       Real XX2D[AMREX_SPACEDIM+1];
+       int matrix_ncomp=(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);
+       int imatrix=matrix_ncomp*veltype;
+       for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
+        for (int icol=0;icol<2*AMREX_SPACEDIM;icol++) {
+         AA3D[irow][icol]=blobdata[i].blob_matrix[imatrix];
 	if (irow!=icol)
 	 AA3D[irow][icol]=0.0;  // basis functions form an orthogonal set
-        if ((irow<AMREX_SPACEDIM+1)&&(icol<AMREX_SPACEDIM+1)) {
-         AA2D[irow][icol]=blobdata[i].blob_matrix[imatrix];
+         if ((irow<AMREX_SPACEDIM+1)&&(icol<AMREX_SPACEDIM+1)) {
+          AA2D[irow][icol]=blobdata[i].blob_matrix[imatrix];
 	 if (irow!=icol)
 	  AA2D[irow][icol]=0.0;  // basis functions form an orthogonal set
 	}
-        imatrix++;
-       }
-      } 
-      if (imatrix!=matrix_ncomp*(veltype+1))
-       amrex::Error("imatrix invalid");
-      for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
-       BB3D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
-       XX3D[irow]=0.0;
-       if (irow>=AMREX_SPACEDIM) {
+         imatrix++;
+        }
+       } 
+       if (imatrix!=matrix_ncomp*(veltype+1))
+        amrex::Error("imatrix invalid");
+       for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
+        BB3D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
+        XX3D[irow]=0.0;
+        if (irow>=AMREX_SPACEDIM) {
 	if (symmetric_flag==1) {
 	 BB3D[irow]=0.0;
 	} else if (symmetric_flag==0) {
 	 // do nothing
 	} else
-         amrex::Error("symmetric_flag invalid");
-
-        if (veltype==1)
-	 BB3D[irow]=0.0;
-       }
-       if (irow<AMREX_SPACEDIM+1) {
-        BB2D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
-        XX2D[irow]=0.0;
-        if (irow>=AMREX_SPACEDIM) {
-	 if (symmetric_flag==1) {
-          BB2D[irow]=0.0;
-         } else if (symmetric_flag==0) {
-          // do nothing
-         } else
           amrex::Error("symmetric_flag invalid");
 
          if (veltype==1)
- 	  BB2D[irow]=0.0;
+	 BB3D[irow]=0.0;
         }
-       } // irow<sdim+1
-      }
-      int mat_status=0;
-      if (AMREX_SPACEDIM==3) {
-       matrix_solveCPP(AA3D,XX3D,BB3D,mat_status,2*AMREX_SPACEDIM);
-      } else if (AMREX_SPACEDIM==2) {
-       matrix_solveCPP(AA2D,XX2D,BB2D,mat_status,AMREX_SPACEDIM+1);
-      } else
-       amrex::Error("dimension bust");
+        if (irow<AMREX_SPACEDIM+1) {
+         BB2D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
+         XX2D[irow]=0.0;
+         if (irow>=AMREX_SPACEDIM) {
+	 if (symmetric_flag==1) {
+           BB2D[irow]=0.0;
+          } else if (symmetric_flag==0) {
+           // do nothing
+          } else
+           amrex::Error("symmetric_flag invalid");
 
-      if (mat_status==1) {
+          if (veltype==1)
+  	  BB2D[irow]=0.0;
+         }
+        } // irow<sdim+1
+       }
+       int mat_status=0;
        if (AMREX_SPACEDIM==3) {
-        for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
-         blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX3D[dir];
-        }
-        if (symmetric_flag==1) {
-         for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
-          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-         for (int dir=AMREX_SPACEDIM;dir<2*AMREX_SPACEDIM;dir++)
-          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-        } else if (symmetric_flag==0) {
-         // do nothing
-        } else {
-         amrex::Error("symmetric_flag invalid");
-        }
+        matrix_solveCPP(AA3D,XX3D,BB3D,mat_status,2*AMREX_SPACEDIM);
        } else if (AMREX_SPACEDIM==2) {
-        for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
-         blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX2D[dir];
-        }
-        if ((geom.IsRZ())||(symmetric_flag==1)) {
-         int dir=0;
-         blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-         dir=AMREX_SPACEDIM;
-         blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-        } else if ((!geom.IsRZ())&&(symmetric_flag==0)) {
-         // do nothing
-        } else {
-         amrex::Error("IsRZ or symmetric_flag invalid");
-        }
+        matrix_solveCPP(AA2D,XX2D,BB2D,mat_status,AMREX_SPACEDIM+1);
        } else
         amrex::Error("dimension bust");
 
-      } else if (mat_status==0) {
-       std::cout << "mat_status==0  for i= " << i << '\n';
-       amrex::Error("mat_status==0 error");
-      } else
-       amrex::Error("mat_status invalid");
+       if (mat_status==1) {
+        if (AMREX_SPACEDIM==3) {
+         for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
+          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX3D[dir];
+         }
+         if (symmetric_flag==1) {
+          for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
+           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
+          for (int dir=AMREX_SPACEDIM;dir<2*AMREX_SPACEDIM;dir++)
+           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
+         } else if (symmetric_flag==0) {
+          // do nothing
+         } else {
+          amrex::Error("symmetric_flag invalid");
+         }
+        } else if (AMREX_SPACEDIM==2) {
+         for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
+          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX2D[dir];
+         }
+         if ((geom.IsRZ())||(symmetric_flag==1)) {
+          int dir=0;
+          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
+          dir=AMREX_SPACEDIM;
+          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
+         } else if ((!geom.IsRZ())&&(symmetric_flag==0)) {
+          // do nothing
+         } else {
+          amrex::Error("IsRZ or symmetric_flag invalid");
+         }
+        } else
+         amrex::Error("dimension bust");
 
-      for (int irow=0;irow<2*AMREX_SPACEDIM;irow++)
-       delete [] AA3D[irow];
-      for (int irow=0;irow<AMREX_SPACEDIM+1;irow++)
-       delete [] AA2D[irow];
+       } else if (mat_status==0) {
+        std::cout << "mat_status==0  for i= " << i << '\n';
+        amrex::Error("mat_status==0 error");
+       } else
+        amrex::Error("mat_status invalid");
 
-      delete [] AA3D;
-      delete [] AA2D;
+       for (int irow=0;irow<2*AMREX_SPACEDIM;irow++)
+        delete [] AA3D[irow];
+       for (int irow=0;irow<AMREX_SPACEDIM+1;irow++)
+        delete [] AA2D[irow];
 
-      if ((veltype==0)||(veltype==2)) {
+       delete [] AA3D;
+       delete [] AA2D;
 
-       for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
+       if ((veltype==0)||(veltype==2)) {
+
+        for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
 	 // integral u rho dV
-        Real original_mom=blobdata[i].blob_integral_momentum[irow];
-        int ibase=veltype*(2*AMREX_SPACEDIM)+irow;
+         Real original_mom=blobdata[i].blob_integral_momentum[irow];
+         int ibase=veltype*(2*AMREX_SPACEDIM)+irow;
 	 // momentum = velocity * mass
 	Real corrected_velocity=blobdata[i].blob_velocity[ibase];
 	Real proposed_velocity=corrected_velocity;
 	Real mass=blobdata[i].blob_integral_momentum[irow+2*AMREX_SPACEDIM];
 
-        Real proposed_mom=proposed_velocity*mass;
+         Real proposed_mom=proposed_velocity*mass;
 
 	if ((original_mom*proposed_mom<=0.0)|| 
 	    (std::abs(original_mom)<std::abs(proposed_mom))) {
@@ -5712,13 +5819,13 @@ NavierStokes::ColorSumALL(
 
 	 blobdata[i].blob_velocity[ibase]=corrected_velocity;
 	
-         if (verbose>0) {
-          if (ParallelDescriptor::IOProcessor()) {
+          if (verbose>0) {
+           if (ParallelDescriptor::IOProcessor()) {
 	   std::cout << " ------------------------------------\n";
-           std::cout << " avoid momentum overshoot i= " << i << " im= " <<
-             blobdata[i].im << '\n';
-           std::cout << " irow= " << irow << " veltype= " << veltype << 
-            " orig_mom " << original_mom << " proposed_mom " << 
+            std::cout << " avoid momentum overshoot i= " << i << " im= " <<
+              blobdata[i].im << '\n';
+            std::cout << " irow= " << irow << " veltype= " << veltype << 
+             " orig_mom " << original_mom << " proposed_mom " << 
 	    proposed_mom << 
 	    " corrected_mom " << corrected_velocity*mass << '\n';
 	   std::cout << " irow= " << irow << " veltype= " << veltype <<
@@ -5734,64 +5841,69 @@ NavierStokes::ColorSumALL(
 	} else
 	 amrex::Error("original_mom or proposed_mom invalid");
 
-       } // irow=0...2*sdim-1
-       
-       Real original_KE=blobdata[i].blob_energy;
-       if (original_KE>=0.0) {
-        Real proposed_KE=0.0;
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-         int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
-	 Real mass=blobdata[i].blob_integral_momentum[dir+2*AMREX_SPACEDIM];
-	  // (1/2)*mass*(u^2)
-         proposed_KE+=
-		 blobdata[i].blob_velocity[ibase]*
- 		 blobdata[i].blob_velocity[ibase]*mass;
-        } // dir=0..sdim-1
-        proposed_KE=0.5*proposed_KE;
-        if (proposed_KE>original_KE) {
+        } // irow=0...2*sdim-1
+        
+        Real original_KE=blobdata[i].blob_energy;
+        if (original_KE>=0.0) {
+         Real proposed_KE=0.0;
          for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
           int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
- 	  blobdata[i].blob_velocity[ibase]*=sqrt(original_KE/proposed_KE);
+	 Real mass=blobdata[i].blob_integral_momentum[dir+2*AMREX_SPACEDIM];
+	  // (1/2)*mass*(u^2)
+          proposed_KE+=
+		 blobdata[i].blob_velocity[ibase]*
+  		 blobdata[i].blob_velocity[ibase]*mass;
+         } // dir=0..sdim-1
+         proposed_KE=0.5*proposed_KE;
+         if (proposed_KE>original_KE) {
+          for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+           int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
+  	  blobdata[i].blob_velocity[ibase]*=sqrt(original_KE/proposed_KE);
 	 }
-         if (verbose>0) {
-          if (ParallelDescriptor::IOProcessor()) {
+          if (verbose>0) {
+           if (ParallelDescriptor::IOProcessor()) {
 	   std::cout << " ------------------------------------\n";
-           std::cout << " avoid energy overshoot i= " << i << " im= " <<
-             blobdata[i].im << '\n';
-           std::cout << " veltype= " << veltype << 
-            " orig_KE " << original_KE << " proposed_KE " << proposed_KE << 
+            std::cout << " avoid energy overshoot i= " << i << " im= " <<
+              blobdata[i].im << '\n';
+            std::cout << " veltype= " << veltype << 
+             " orig_KE " << original_KE << " proposed_KE " << proposed_KE << 
 	    " orig/proposed " << original_KE/proposed_KE;
-           for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-            int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
+            for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+             int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
 	    std::cout << " dir= " << dir << " veltype= " << veltype <<
- 	     " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
+  	     " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
 	   }
 	   std::cout << " ------------------------------------\n";
 	  }
 	 }
-        } else if ((proposed_KE>=0.0)&&(proposed_KE<=original_KE)) {
+         } else if ((proposed_KE>=0.0)&&(proposed_KE<=original_KE)) {
 	 // do nothing
 	} else
 	 amrex::Error("proposed_KE invalid");
-       } else
+        } else
 	amrex::Error("original_KE invalid");
 
-      } else if (veltype==1) {
+       } else if (veltype==1) {
+        // do nothing
+       } else
+        amrex::Error("veltype invalid");
+
+      } else if (blobdata[i].blob_mass_for_velocity[veltype]==0.0) {
        // do nothing
       } else
-       amrex::Error("veltype invalid");
+       amrex::Error("blobdata[i].blob_mass_for_velocity[veltype] invalid");
 
-     } else if (blobdata[i].blob_mass_for_velocity[veltype]==0.0) {
-      // do nothing
-     } else
-      amrex::Error("blobdata[i].blob_mass_for_velocity[veltype] invalid");
+     } // veltype=0,1,2
 
-    } // veltype=0,1,2
+    } // i=0..color_count-1
 
-   } // i=0..color_count-1
+   } else
+    amrex::Error("sweep_num invalid");
 
+  } else if (operation_flag==1) {
+   // do nothing
   } else
-   amrex::Error("sweep_num invalid");
+   amrex::Error("operation_flag invalid");
 
  } // sweep_num=0..1
 
