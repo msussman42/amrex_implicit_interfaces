@@ -24312,7 +24312,7 @@ stop
       REAL_T cell_vfrac(nmat)
       REAL_T cell_mfrac(nmat)
 
-      INTEGER_T is_solid_cell
+      INTEGER_T is_solid_cell ! =0 no solid  1<=is_solid_cell<=nmat+1 o.t.
 
       INTEGER_T dencomp
       INTEGER_T cellcomp
@@ -24365,6 +24365,10 @@ stop
       REAL_T TorYgamma_BC
       INTEGER_T tsat_comp
       INTEGER_T local_tessellate
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
 
       DATA_FLOOR=zero
 
@@ -24567,6 +24571,9 @@ stop
        if (mask_test.eq.1) then
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
+        do dir=1,SDIM
+         xclamped(dir)=xsten(0,dir)
+        enddo
 
         do im=1,nmat*ngeom_recon
          mofdata(im)=vof(D_DECL(i,j,k),im)
@@ -24854,9 +24861,34 @@ stop
             stop
            endif
           enddo ! cellcomp=1..sdim
-            
+          
+           ! LS>0 if clamped
+          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+                vel_clamped,temperature_clamped)
+
+          if (LS_clamped.ge.zero) then
+           is_solid_cell=nmat+1
+           if (hflag.eq.0) then ! inhomogeneous
+            do dir=1,SDIM
+             vsol(dir)=vel_clamped(dir)
+            enddo
+           else if (hflag.eq.1) then
+            do dir=1,SDIM
+             vsol(dir)=zero
+            enddo
+           else
+            print *,"hflag invalid3 hflag=",hflag
+            stop
+           endif
+          else if (LS_clamped.lt.zero) then
+           ! do nothing
+          else
+           print *,"LS_clamped is NaN"
+           stop
+          endif
+
           if ((is_solid_cell.ge.1).and. &
-              (is_solid_cell.le.nmat)) then
+              (is_solid_cell.le.nmat+1)) then
    
            do cellcomp=1,SDIM
             ucombine(cellcomp)=vsol(cellcomp)
@@ -24869,7 +24901,7 @@ stop
            enddo ! cellcomp
 
           else
-           print *,"is_solid_cell invalid"
+           print *,"is_solid_cell invalid: ",is_solid_cell
            stop
           endif
 
@@ -25620,6 +25652,11 @@ stop
       REAL_T lsleft(nmat)
       REAL_T lsright(nmat)
       REAL_T xface_local
+      INTEGER_T dir_local
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
       INTEGER_T local_tessellate
 
       nhalf=3
@@ -25628,6 +25665,13 @@ stop
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
        print *,"tid invalid"
+       stop
+      endif
+
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid"
        stop
       endif
 
@@ -25741,6 +25785,9 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
+       do dir_local=1,SDIM
+        xclamped(dir_local)=xstenMAC(0,dir_local)
+       enddo
 
        if (dir.eq.0) then
         idx=i
@@ -26082,6 +26129,34 @@ stop
 
         if (nsolve.ne.1) then
          print *,"nsolve invalid"
+         stop
+        endif
+
+          ! LS>0 if clamped
+        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+                vel_clamped,temperature_clamped)
+        if (LS_clamped.ge.zero) then
+         if (is_solid_face.eq.0) then
+          is_solid_face=2
+          if (hflag.eq.1) then
+           vsol=zero
+          else if (hflag.eq.0) then
+           vsol=vel_clamped(dir+1)
+          else
+           print *,"hflag invalid"
+           stop
+          endif
+         else if ((is_solid_face.ge.1).and. &
+                  (is_solid_face.le.5)) then
+          ! do nothing
+         else
+          print *,"is_solid_face invalid"
+          stop
+         endif
+        else if (LS_clamped.lt.zero) then
+         ! do nothing
+        else
+         print *,"LS_clamped is NaN"
          stop
         endif
 
