@@ -4983,7 +4983,7 @@ NavierStokes::ColorSum(
   } else
    amrex::Error("operation_flag invalid");
 
- } // tid
+ } // tid=0..thread_class::nthreads-1
 
  resize_metrics(1);
 
@@ -5054,6 +5054,13 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("mdot->nGrow() invalid");
 
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+  nmat*(num_state_material+ngeom_raw)+1;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+
   // mask=tag if not covered by level+1 and at fine/fine ghost cell.
  int ngrowmask=1;
  Real tag=1.0;
@@ -5082,6 +5089,9 @@ NavierStokes::ColorSum(
   int bfact=parent->Space_blockingFactor(level);
 
   const Real* xlo = grid_loc[gridno].lo();
+
+  FArrayBox& snewfab=S_new[mfi];
+
   FArrayBox& mdotfab=(*mdot)[mfi];
   FArrayBox& typefab=(*typemf)[mfi];
   FArrayBox& lsfab=(*localMF[LS_COLORSUM_MF])[mfi];
@@ -5112,9 +5122,12 @@ NavierStokes::ColorSum(
 
    // in: LEVELSET_3D.F90
   FORT_GETCOLORSUM(
+   &operation_flag,
    &sweep_num,
    dx,xlo,
    &nmat,
+   &nstate,
+   snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
    mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
@@ -5154,57 +5167,77 @@ NavierStokes::ColorSum(
 } // omp
  ns_reconcile_d_num(182);
 
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int i=0;i<blob_array_size;i++) {
-   level_blob_array[0][i]+=level_blob_array[tid][i];
-  }
-  for (int i=0;i<num_colors;i++) {
-   if (level_blob_type_array[tid][i]>level_blob_type_array[0][i])
-    level_blob_type_array[0][i]=level_blob_type_array[tid][i];
-  }
-  for (int i=0;i<mdot_array_size;i++) {
-   level_mdot_array[0][i]+=level_mdot_array[tid][i];
-  }
- } // tid
+ if (operation_flag==0) {
+
+  for (int tid=1;tid<thread_class::nthreads;tid++) {
+   for (int i=0;i<blob_array_size;i++) {
+    level_blob_array[0][i]+=level_blob_array[tid][i];
+   }
+   for (int i=0;i<num_colors;i++) {
+    if (level_blob_type_array[tid][i]>level_blob_type_array[0][i])
+     level_blob_type_array[0][i]=level_blob_type_array[tid][i];
+   }
+   for (int i=0;i<mdot_array_size;i++) {
+    level_mdot_array[0][i]+=level_mdot_array[tid][i];
+   }
+  } // tid
+
+ } else if (operation_flag==1) {
+
+  // do nothing
+
+ } else
+  amrex::Error("operation_flag invalid");
+ 
  
  ParallelDescriptor::Barrier();
 
- for (int i=0;i<blob_array_size;i++) 
-  ParallelDescriptor::ReduceRealSum(level_blob_array[0][i]);
- for (int i=0;i<num_colors;i++) 
-  ParallelDescriptor::ReduceIntMax(level_blob_type_array[0][i]);
+ if (operation_flag==0) {
 
- for (int i=0;i<mdot_array_size;i++) 
-  ParallelDescriptor::ReduceRealSum(level_mdot_array[0][i]);
+  for (int i=0;i<blob_array_size;i++) 
+   ParallelDescriptor::ReduceRealSum(level_blob_array[0][i]);
+  for (int i=0;i<num_colors;i++) 
+   ParallelDescriptor::ReduceIntMax(level_blob_type_array[0][i]);
 
- counter=0;
- mdot_counter=0;
+  for (int i=0;i<mdot_array_size;i++) 
+   ParallelDescriptor::ReduceRealSum(level_mdot_array[0][i]);
 
- for (int i=0;i<num_colors;i++) {
-  copy_to_blobdata(i,counter,level_blob_array[0],level_blobdata);
-  level_blobdata[i].im=level_blob_type_array[0][i];
+  counter=0;
+  mdot_counter=0;
 
-  for (int j=0;j<ncomp_mdot_alloc;j++) {
-   level_mdot_data[i][j]=level_mdot_array[0][mdot_counter];
-   mdot_counter++;
-  }
+  for (int i=0;i<num_colors;i++) {
+   copy_to_blobdata(i,counter,level_blob_array[0],level_blobdata);
+   level_blobdata[i].im=level_blob_type_array[0][i];
 
- }  // i=0..num_colors-1
- if (counter!=blob_array_size)
-  amrex::Error("counter invalid");
- if (mdot_counter!=mdot_array_size)
-  amrex::Error("mdot_counter invalid");
+   for (int j=0;j<ncomp_mdot_alloc;j++) {
+    level_mdot_data[i][j]=level_mdot_array[0][mdot_counter];
+    mdot_counter++;
+   }
+
+  }  // i=0..num_colors-1
+
+  if (counter!=blob_array_size)
+   amrex::Error("counter invalid");
+  if (mdot_counter!=mdot_array_size)
+   amrex::Error("mdot_counter invalid");
+
+ } else if (operation_flag==1) {
+
+  // do nothing
+
+ } else
+  amrex::Error("operation_flag invalid");
 
  delete mask;
 
- if (sweep_num==0) {
+ if ((sweep_num==0)&&(operation_flag==0)) {
   // do nothing
- } else if (sweep_num==1) {
+ } else if ((sweep_num==1)||(operation_flag==1)) {
   delete_localMF(LS_COLORSUM_MF,1);
   delete_localMF(DEN_COLORSUM_MF,1);
   delete_localMF(VEL_COLORSUM_MF,1);
  } else
-  amrex::Error("sweep_num invalid");
+  amrex::Error("sweep_num or operation_flag invalid");
 
 }  // subroutine ColorSum
 

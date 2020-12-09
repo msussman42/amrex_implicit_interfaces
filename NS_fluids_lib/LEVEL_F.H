@@ -124,10 +124,13 @@ namespace amrex{
      int* type_flag,int* nmat);
 
      void FORT_GETCOLORSUM(
+       int* operation_flag,
        int* sweep_num,
        const Real* dx,
        const Real* xlo,
        int* nmat,
+       int* nstate,
+       Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
        Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
        Real* VEL,AMREX_ARLIM_P(VELlo),AMREX_ARLIM_P(VELhi),
