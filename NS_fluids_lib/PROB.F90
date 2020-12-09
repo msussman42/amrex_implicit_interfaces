@@ -6546,8 +6546,9 @@ END SUBROUTINE Adist
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(out) :: facecut_solid !surface tension coefficient is zero
-      REAL_T, intent(out) :: facecut_prescribed ! grad p coefficient is zero
+        !surface tension coefficient is zero
+      REAL_T, intent(inout) :: facecut_solid 
+      REAL_T, intent(inout) :: facecut_prescribed ! grad p coefficient is zero
       REAL_T, intent(in) :: LSleft(nmat)
       REAL_T, intent(in) :: LSright(nmat)
       REAL_T LScrit_solid,LScrit_prescribed,LStest

@@ -3275,10 +3275,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         int project_option_combine=3; // velocity in do_the_advance
-        int combine_flag=2;
-        int hflag=0;
+        int combine_flag=2; // combine if vfrac<VOFTOL
+        int hflag=0; // inhomogeneous option
         int combine_idx=-1;  // update state variables
         int update_flux=0;
+	  // in: Diffusion.cpp
         ns_level.combine_state_variable(
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux);
