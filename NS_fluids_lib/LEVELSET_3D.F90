@@ -4533,9 +4533,12 @@ stop
       end subroutine FORT_GETTYPEFAB
 
       subroutine FORT_GETCOLORSUM( &
+       operation_flag, &
        sweep_num, &
        dx,xlo, &
        nmat, &
+       nstate, &
+       snew,DIMS(snew), &
        mdot,DIMS(mdot), &
        LS,DIMS(LS), &
        VEL,DIMS(VEL), &
@@ -4578,6 +4581,9 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T :: nstate_test
       INTEGER_T, intent(in) :: sweep_num
       INTEGER_T, intent(in) :: nface,nface_dst,ncellfrac
       INTEGER_T, intent(in) :: nmat
@@ -4604,6 +4610,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(snew)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(VEL)
@@ -4626,6 +4633,7 @@ stop
       REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
+      REAL_T, intent(in) :: snew(DIMV(snew),nstate)
       REAL_T, intent(in) :: mdot(DIMV(mdot),ncomp_mdot)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
@@ -4742,10 +4750,20 @@ stop
        stop
       endif
 
+      nstate_test=num_materials_vel*(SDIM+1)+ &
+        nmat*(num_state_material+ngeom_raw)+1
+      if (nstate.ne.nstate_test) then
+       print *,"nstate invalid in LEVELSET_3D.F90 "
+       print *,"nstate=",nstate
+       print *,"nstate_test=",nstate_test
+       stop
+      endif
+
        ! in: FORT_GETCOLORSUM
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=two*DXMAXLS
 
+      call checkbound(fablo,fabhi,DIMS(snew),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(VEL),1,-1,6615)
