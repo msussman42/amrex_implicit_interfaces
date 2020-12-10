@@ -48,6 +48,7 @@ stop
          visc_coef, &
          angular_velocity, &
          dt, &
+         cur_time, &
          project_option, &
          rzflag, &
          solidheat_flag)
@@ -78,6 +79,7 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(mu)
        REAL_T, intent(in) :: visc_coef,angular_velocity
        REAL_T, intent(in) :: dt
+       REAL_T, intent(in) :: cur_time
        INTEGER_T, intent(in) :: project_option,rzflag
 
        REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
@@ -93,6 +95,7 @@ stop
        INTEGER_T in_rigid
        INTEGER_T in_prescribed
        INTEGER_T veldir
+       INTEGER_T dir_local
        REAL_T rigid_mask
        REAL_T prescribed_mask
        REAL_T den_inverse,dedt_inverse
@@ -149,11 +152,39 @@ stop
         stop
        endif
 
+       if (dt.gt.zero) then
+        ! do nothing
+       else
+        print *,"dt invalid"
+        stop
+       endif
+       if (cur_time.ge.zero) then
+        ! do nothing
+       else
+        print *,"cur_time invalid"
+        stop
+       endif
+
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         call gridsten_level(xsten,i,j,k,level,nhalf)
+        do dir_local=1,SDIM
+         xclamped(dir_local)=xsten(0,dir_local)
+        enddo
+         ! LS>0 if clamped
+        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+                vel_clamped,temperature_clamped)
+
+        if (LS_clamped.ge.zero) then
+         is_clamped_cell=1
+        else if (LS_clamped.lt.zero) then
+         is_clamped_cell=0
+        else
+         print *,"LS_clamped invalid"
+         stop
+        endif
 
         rigid_mask=one
         in_rigid=0
@@ -273,7 +304,9 @@ stop
 
         else if (project_option.eq.2) then  ! temperature diffusion
 
-         if (dt.le.zero) then
+         if (dt.gt.zero) then
+          ! do nothing
+         else
           print *,"dt invalid"
           stop
          endif
@@ -389,7 +422,9 @@ stop
          enddo ! veldir=0..nsolve-1
         else if ((project_option.ge.100).and. &
                  (project_option.lt.100+num_species_var)) then
-         if (dt.le.zero) then
+         if (dt.gt.zero) then
+          ! do nothing
+         else
           print *,"dt invalid"
           stop
          endif

@@ -7017,6 +7017,7 @@ stop
          wtR=wtR/wtsum
 
          do iside=0,1
+
           if (iside.eq.0) then
            icell=i-ii
            jcell=j-jj
@@ -7507,9 +7508,11 @@ stop
           ! both adjoining cells are solid cells.
          if (solid_present_flag.eq.1) then
 
-          facevisc_local= &
-           half*(localvisc_plus(implus_majority)+ &
-                 localvisc_minus(imminus_majority))
+          if (1.eq.0) then
+           facevisc_local= &
+            half*(localvisc_plus(implus_majority)+ &
+                  localvisc_minus(imminus_majority))
+          endif
 
           facevisc_local=zero  ! dirichlet cond for velocity at the solid.
 
@@ -7523,25 +7526,33 @@ stop
                    fort_speciesviscconst((imspec-1)*nmat+imminus_majority))
           enddo
 
-           ! both adjoining cells are solid cells.
-          if (solidheat_flag.eq.0) then ! diffuse in solid
-           ! do nothing (faceheat_local already defined)
-          else if (solidheat_flag.eq.1) then ! dirichlet
-           faceheat_local=zero
-           do imspec=1,num_species_var
-            facespecies_local(imspec)=zero
-           enddo
-          else if (solidheat_flag.eq.2) then ! neumann
-           faceheat_local=zero
-           do imspec=1,num_species_var
-            facespecies_local(imspec)=zero
-           enddo
+          if (is_clamped_face.ge.1) then
+           ! diffuse temperature and species in the clamped solid
+          else if (is_clamped_face.eq.0) then
+ 
+            ! both adjoining cells are solid cells.
+           if (solidheat_flag.eq.0) then ! diffuse in solid
+            ! do nothing (faceheat_local already defined)
+           else if (solidheat_flag.eq.1) then ! dirichlet
+            faceheat_local=zero
+            do imspec=1,num_species_var
+             facespecies_local(imspec)=zero
+            enddo
+           else if (solidheat_flag.eq.2) then ! neumann
+            faceheat_local=zero
+            do imspec=1,num_species_var
+             facespecies_local(imspec)=zero
+            enddo
+           else
+            print *,"solidheat_flag invalid"
+            stop
+           endif
           else
-           print *,"solidheat_flag invalid"
+           print *,"is_clamped_face invalid"
            stop
           endif
 
-          ! one adjoining cell is a solid cell.
+           ! one adjoining cell is a solid cell.
          else if ((solid_present_flag.eq.2).or. &
                   (solid_present_flag.eq.3)) then
          
@@ -7555,107 +7566,116 @@ stop
             wtL*fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
           enddo
 
-          iten_micro=0
-          if (solidheat_flag.eq.0) then ! diffuse in solid
-           im_solid_micro=0
-           im_fluid_micro=0
-           if (is_rigid(nmat,implus_majority).eq.1) then
-            im_solid_micro=implus_majority
-           else if (is_rigid(nmat,implus_majority).eq.0) then
-            im_fluid_micro=implus_majority
-           else
-            print *,"is_rigid(nmat,implus_majority) invalid"
-            stop
-           endif
-           if (is_rigid(nmat,imminus_majority).eq.1) then
-            im_solid_micro=imminus_majority
-           else if (is_rigid(nmat,imminus_majority).eq.0) then
-            im_fluid_micro=imminus_majority
-           else
-            print *,"is_rigid(nmat,imminus_majority) invalid"
-            stop
-           endif
-           if ((im_fluid_micro.ge.1).and. &
-               (im_fluid_micro.le.nmat).and. &
-               (im_solid_micro.ge.1).and. &
-               (im_solid_micro.le.nmat)) then
-            iten_micro=micro_table(im_fluid_micro,im_solid_micro)
-           else if ((im_fluid_micro.eq.0).or. &
-                    (im_solid_micro.eq.0)) then
+          if (is_clamped_face.ge.1) then
+           ! do nothing special for temperature or mass fraction
+          else if (is_clamped_face.eq.0) then
+
+           iten_micro=0
+           if (solidheat_flag.eq.0) then ! diffuse in solid
+            im_solid_micro=0
+            im_fluid_micro=0
+            if (is_rigid(nmat,implus_majority).eq.1) then
+             im_solid_micro=implus_majority
+            else if (is_rigid(nmat,implus_majority).eq.0) then
+             im_fluid_micro=implus_majority
+            else
+             print *,"is_rigid(nmat,implus_majority) invalid"
+             stop
+            endif
+            if (is_rigid(nmat,imminus_majority).eq.1) then
+             im_solid_micro=imminus_majority
+            else if (is_rigid(nmat,imminus_majority).eq.0) then
+             im_fluid_micro=imminus_majority
+            else
+             print *,"is_rigid(nmat,imminus_majority) invalid"
+             stop
+            endif
+            if ((im_fluid_micro.ge.1).and. &
+                (im_fluid_micro.le.nmat).and. &
+                (im_solid_micro.ge.1).and. &
+                (im_solid_micro.le.nmat)) then
+             iten_micro=micro_table(im_fluid_micro,im_solid_micro)
+            else if ((im_fluid_micro.eq.0).or. &
+                     (im_solid_micro.eq.0)) then
+             ! do nothing
+            else
+             print *,"im_fluid_micro or im_solid_micro invalid"
+             stop
+            endif
+           else if ((solidheat_flag.eq.1).or. & ! dirichlet
+                    (solidheat_flag.eq.2)) then ! neumann
             ! do nothing
            else
-            print *,"im_fluid_micro or im_solid_micro invalid"
+            print *,"solidheat_flag invalid"
             stop
            endif
-          else if ((solidheat_flag.eq.1).or. & ! dirichlet
-                   (solidheat_flag.eq.2)) then ! neumann
-           ! do nothing
-          else
-           print *,"solidheat_flag invalid"
-           stop
-          endif
  
-          if (solidheat_flag.eq.0) then
-           ! temperature diffusion in the solid
-           if (iten_micro.eq.0) then
-            ! do nothing
-           else if ((iten_micro.ge.1).and.(iten_micro.le.nten)) then
-            faceheat_local=zero ! internal TSAT dirichlet bc 
+           if (solidheat_flag.eq.0) then
+            ! temperature diffusion in the solid
+            if (iten_micro.eq.0) then
+             ! do nothing
+            else if ((iten_micro.ge.1).and.(iten_micro.le.nten)) then
+             faceheat_local=zero ! internal TSAT dirichlet bc 
+             do imspec=1,num_species_var
+              facespecies_local(imspec)=zero
+             enddo
+            else
+             print *,"iten_micro invalid"
+             stop
+            endif  
+           else if (solidheat_flag.eq.1) then
+            ! dirichlet temperature bc
+            if (is_in_probtype_list().eq.1) then
+             call SUB_microcell_heat_coeff(faceheat_local,dx,veldir)
+            endif
+            do imspec=1,num_species_var
+             facespecies_local(imspec)=zero
+            enddo
+           else if (solidheat_flag.eq.2) then
+            faceheat_local=zero  ! neumann temperature bc
             do imspec=1,num_species_var
              facespecies_local(imspec)=zero
             enddo
            else
-            print *,"iten_micro invalid"
+            print *,"solidheat_flag invalid"
             stop
-           endif  
-          else if (solidheat_flag.eq.1) then
-           ! dirichlet temperature bc
-           if (is_in_probtype_list().eq.1) then
-            call SUB_microcell_heat_coeff(faceheat_local,dx,veldir)
            endif
-           do imspec=1,num_species_var
-            facespecies_local(imspec)=zero
-           enddo
-          else if (solidheat_flag.eq.2) then
-           faceheat_local=zero  ! neumann temperature bc
-           do imspec=1,num_species_var
-            facespecies_local(imspec)=zero
-           enddo
+
+            ! check if face coefficient needs to be replaced
+            ! prescribed interface coefficient.
+           if (implus_majority.ne.imminus_majority) then
+            call get_iten(imminus_majority,implus_majority,iten,nmat)
+
+            if (heatvisc_interface(iten).eq.zero) then
+             ! do nothing
+            else if (heatvisc_interface(iten).gt.zero) then
+
+             if (latent_heat(iten).ne.zero) then
+              if ((freezing_model(iten).eq.0).or. &
+                  (freezing_model(iten).eq.5)) then
+               print *,"heatvisc_interface invalid"
+               stop
+              endif 
+             endif 
+             if (latent_heat(iten+nten).ne.zero) then
+              if ((freezing_model(iten+nten).eq.0).or. &
+                  (freezing_model(iten+nten).eq.5)) then
+               print *,"heatvisc_interface invalid"
+               stop
+              endif 
+             endif 
+
+             faceheat_local=heatvisc_interface(iten)
+            else
+             print *,"heatvisc_interface invalid"
+             stop
+            endif
+           endif ! implus <> imminus
+
           else
-           print *,"solidheat_flag invalid"
+           print *,"is_clamped_face invalid"
            stop
           endif
-
-           ! check if face coefficient needs to be replaced
-           ! prescribed interface coefficient.
-          if (implus_majority.ne.imminus_majority) then
-           call get_iten(imminus_majority,implus_majority,iten,nmat)
-
-           if (heatvisc_interface(iten).eq.zero) then
-            ! do nothing
-           else if (heatvisc_interface(iten).gt.zero) then
-
-            if (latent_heat(iten).ne.zero) then
-             if ((freezing_model(iten).eq.0).or. &
-                 (freezing_model(iten).eq.5)) then
-              print *,"heatvisc_interface invalid"
-              stop
-             endif 
-            endif 
-            if (latent_heat(iten+nten).ne.zero) then
-             if ((freezing_model(iten+nten).eq.0).or. &
-                 (freezing_model(iten+nten).eq.5)) then
-              print *,"heatvisc_interface invalid"
-              stop
-             endif 
-            endif 
-
-            faceheat_local=heatvisc_interface(iten)
-           else
-            print *,"heatvisc_interface invalid"
-            stop
-           endif
-          endif ! implus <> imminus
 
          else if (solid_present_flag.eq.0) then
 
@@ -8035,15 +8055,16 @@ stop
 
          do iside=0,1
 
-          icell=i+ii*(iside-1)  ! i-ii,i
-          jcell=j+jj*(iside-1)  ! j-jj,j
-
-          if (SDIM.eq.3) then
-           kcell=k+kk*(iside-1)  ! k-kk,k
-          else if (SDIM.eq.2) then
-           kcell=0
+          if (iside.eq.0) then
+           icell=i-ii
+           jcell=j-jj
+           kcell=k-kk
+          else if (iside.eq.1) then
+           icell=i
+           jcell=j
+           kcell=k
           else
-           print *,"dimension bust"
+           print *,"iside invalid"
            stop
           endif
 
