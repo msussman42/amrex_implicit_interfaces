@@ -77,14 +77,17 @@ adept::adouble H_smooth(adept::adouble x,adept::adouble eps) {
 // boundary conditions so that
 // the solution to (*) at time t=T is q(x,T)=q^{observation}(x)
 
-void plot_adept_data(std::string plt_name_string,
-	int ntime,int steepest_descent_iter,
+void plot_adept_data(
+	std::string plt_name_string,
+	int steepest_descent_iter,
+	int ntime,
 	const Geometry& geom,
 	My_adept_MFAB* data_to_plot,double time) {
 
- const std::string& pltfile1 = amrex::Concatenate(plt_name_string,ntime,5);
+ const std::string& pltfile1 = 
+	 amrex::Concatenate(plt_name_string,steepest_descent_iter,5);
  const std::string& pltfile = 
-	 amrex::Concatenate(pltfile1,steepest_descent_iter,5);
+	 amrex::Concatenate(pltfile1,ntime,5);
  BoxArray ba_cell=data_to_plot->boxArray();
  DistributionMapping dm=data_to_plot->DistributionMap();
  int Ncomp=data_to_plot->nComp();
@@ -169,6 +172,7 @@ adept::adouble cost_function(
  adept::adouble stop_time=dt*nsteps;
 
  for (ntime=0;ntime<=nsteps;ntime++) {
+
   adept::adouble local_t=ntime*dt;
 
   v[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
@@ -221,18 +225,20 @@ adept::adouble cost_function(
 
     adept::adouble local_x=xlo+dx[0]*(i+0.5);
 
+    adept::adouble wt_back=0.1;
+
      // background solution
     uback_array(i,j,k)=0.0;
      // background error weight
     wt_back_array(i,j,k)=0.0;
     if (ntime==0) {
-     wt_back_array(i,j,k)=1.0;
+     wt_back_array(i,j,k)=wt_back;
     }
     if (local_x<=xlo) {
-     wt_back_array(i,j,k)=1.0;
+     wt_back_array(i,j,k)=wt_back;
     }
     if (local_x>=xhi) {
-     wt_back_array(i,j,k)=1.0;
+     wt_back_array(i,j,k)=wt_back;
     }
      // observation data only considered at t=Tstop
     wt_obs_array(i,j,k)=0.0;
@@ -275,7 +281,8 @@ adept::adouble cost_function(
   if (plot_int>0) {
    int ntime_div=ntime/plot_int;
    if (ntime_div*plot_int==ntime) {
-    plot_adept_data("plt",ntime,nsteps,geom,v_frame,time);
+    plot_adept_data("plt",steepest_descent_iter,
+		    ntime,geom,v_frame,time);
    }
   }
 
@@ -464,12 +471,10 @@ adept::adouble cost_function(
   if (ntime==nsteps-1) {
 
    if (plot_int>0) {
-    plot_adept_data("plt",ntime,nsteps+1,geom,vnp1_frame,time);
+    plot_adept_data("plt",steepest_descent_iter,
+		    ntime,geom,vnp1_frame,time);
    }
 
-   plot_adept_data("plt_obs",ntime+1,steepest_descent_iter,geom,
-		 qnp1_obs_frame,
-		 time);
   }
 
  } //ntime=0..nsteps-1
@@ -619,6 +624,7 @@ int main(int argc,char* argv[]) {
  Vector<int> is_periodic(AMREX_SPACEDIM,0);  
      
  int max_opt_steps=10;
+ Real learning_rate=0.01;
 
  // inputs parameters
  {
@@ -648,6 +654,7 @@ int main(int argc,char* argv[]) {
   nsteps = 10;
   pp.query("nsteps",nsteps);
   pp.query("max_opt_steps",max_opt_steps);
+  pp.query("learning_rate",learning_rate);
 
   pp.get("xlo",xlo[0]);
   pp.get("xhi",xhi[0]);
@@ -765,10 +772,6 @@ int main(int argc,char* argv[]) {
  // then g(x)=x - r * dJdx(x) is also contained within
  // the same hypercube.
  //
- // future: grid stretching parameters and level set advection
- // velocity will be learned, instead
- // of resorting to AMR or standard level set methods.
- Real learning_rate=0.001;  // steepest descent parameter
 
  for (int iter=0;iter<max_opt_steps;iter++) {
 
