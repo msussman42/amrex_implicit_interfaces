@@ -12666,6 +12666,9 @@ NavierStokes::level_phase_change_redistribute(
     //  NavierStokes::do_the_advance
     // mdot initialized in NavierStokes::prelim_alloc()
     // in: GODUNOV_3D.F90
+    //   a)  jump_strength=JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)
+    //   b)  divu_material=jump_strength  cm^3/s^2
+    //   c)  mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
     FORT_INITJUMPTERM( 
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],
