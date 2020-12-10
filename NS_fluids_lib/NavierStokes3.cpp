@@ -4907,7 +4907,10 @@ NavierStokes::ColorSum(
  } else if (operation_flag==1) {
 
   if (sweep_num==0) {
-   // do nothing
+   if (ncomp_mdot>=1) {
+    // do nothing
+   } else
+    amrex::Error("ncomp_mdot invalid");
   } else
    amrex::Error("sweep_num invalid");
 
@@ -5125,6 +5128,7 @@ NavierStokes::ColorSum(
   FORT_GETCOLORSUM(
    &operation_flag,
    &sweep_num,
+   distribute_mdot_evenly.dataPtr(),
    dx,xlo,
    &nmat,
    &nstate,
