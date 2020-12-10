@@ -18,8 +18,9 @@ nsteps = 64  # number of steps for 1D advection (the cost function)
 # ADAM
 # Gauss Newton
 # BFGS
-max_opt_steps=1  # maximum number of steepest descent steps
-plot_int = 1
+max_opt_steps=100  # maximum number of steepest descent steps
+learning_rate=1.0
+plot_int = 10
 xlo=0.0 0.0
 xhi=1.0 1.0
 n_cell = 64 1
