@@ -4535,6 +4535,7 @@ stop
       subroutine FORT_GETCOLORSUM( &
        operation_flag, &
        sweep_num, &
+       distribute_mdot_evenly, &
        dx,xlo, &
        nmat, &
        nstate, &
@@ -4596,6 +4597,7 @@ stop
       INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: ncomp_mdot_alloc
       INTEGER_T, intent(in) :: ncomp_mdot
+      INTEGER_T, intent(in) :: distribute_mdot_evenly(nmat)
 
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
@@ -4634,7 +4636,7 @@ stop
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
       REAL_T, intent(in) :: snew(DIMV(snew),nstate)
-      REAL_T, intent(in) :: mdot(DIMV(mdot),ncomp_mdot)
+      REAL_T, intent(inout) :: mdot(DIMV(mdot),ncomp_mdot)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM)
@@ -4703,6 +4705,8 @@ stop
       REAL_T DXMAXLS,cutoff
       INTEGER_T i_mdot
       REAL_T im_interior_wt(3)
+      REAL_T blob_cell_count
+      REAL_T mdot_total
 
       nhalf=3
 
@@ -4844,22 +4848,51 @@ stop
          print *,"base_type invalid"
          stop
         endif
-        if (level_blobtypedata(icolor).eq.0) then
-         level_blobtypedata(icolor)=base_type
-        else
-         if (level_blobtypedata(icolor).ne.base_type) then
-          print *,"type problems in GETCOLORSUM"
-          print *,"level,finest_level ",level,finest_level
-          print *,"num_colors= ",num_colors
-          print *,"current blobtype ",level_blobtypedata(icolor)
-          print *,"base_type ",base_type
-          print *,"icolor=",icolor
-          print *,"i,j,k ",i,j,k
-          print *,"growlo,growhi ", &
-           growlo(1),growlo(2),growlo(3), &
-           growhi(1),growhi(2),growhi(3)
+
+        if (operation_flag.eq.0) then
+
+         if (level_blobtypedata(icolor).eq.0) then
+          level_blobtypedata(icolor)=base_type
+         else
+          if (level_blobtypedata(icolor).ne.base_type) then
+           print *,"type problems in GETCOLORSUM"
+           print *,"level,finest_level ",level,finest_level
+           print *,"num_colors= ",num_colors
+           print *,"current blobtype ",level_blobtypedata(icolor)
+           print *,"base_type ",base_type
+           print *,"icolor=",icolor
+           print *,"i,j,k ",i,j,k
+           print *,"growlo,growhi ", &
+            growlo(1),growlo(2),growlo(3), &
+            growhi(1),growhi(2),growhi(3)
+           stop
+          endif
+         endif
+
+        else if (operation_flag.eq.1) then
+         if (sweep_num.eq.0) then
+
+          if (level_blobtypedata(icolor).ne.base_type) then
+           print *,"type problems in GETCOLORSUM operation_flag==1"
+           print *,"level,finest_level ",level,finest_level
+           print *,"num_colors= ",num_colors
+           print *,"current blobtype ",level_blobtypedata(icolor)
+           print *,"base_type ",base_type
+           print *,"icolor=",icolor
+           print *,"i,j,k ",i,j,k
+           print *,"growlo,growhi ", &
+            growlo(1),growlo(2),growlo(3), &
+            growhi(1),growhi(2),growhi(3)
+           stop
+          endif
+
+         else
+          print *,"sweep_num invalid"
           stop
          endif
+        else
+         print *,"operation_flag invalid"
+         stop
         endif
 
         do im=1,nmat
@@ -5192,354 +5225,415 @@ stop
            ic_base=(opposite_color(im)-1)*num_elements_blobclass
            ic=ic_base+1
 
-           if (LScen(im).ge.cutoff) then ! cutoff=2 * DXMAXLS
-            im_interior_wt(1)=one
-           else if (LScen(im).lt.cutoff) then
-            im_interior_wt(1)=1.0E-3
-           else
-            print *,"LScen(im) invalid"
-            stop
-           endif
+           if (operation_flag.eq.0) then
 
-           im_interior_wt(2)=solid_fraction
+            if (LScen(im).ge.cutoff) then ! cutoff=2 * DXMAXLS
+             im_interior_wt(1)=one
+            else if (LScen(im).lt.cutoff) then
+             im_interior_wt(1)=1.0E-3
+            else
+             print *,"LScen(im) invalid"
+             stop
+            endif
 
-           if (LScen(im).ge.zero) then
-            im_interior_wt(3)=one
-           else if (LScen(im).lt.zero) then
-            im_interior_wt(3)=1.0E-3
-           else
-            print *,"LScen(im) invalid"
-            stop
-           endif
+            im_interior_wt(2)=solid_fraction
 
-            ! blob_matrix
-           do veltype=1,3
-            do irow=1,2*SDIM
-             do icol=1,2*SDIM
+            if (LScen(im).ge.zero) then
+             im_interior_wt(3)=one
+            else if (LScen(im).lt.zero) then
+             im_interior_wt(3)=1.0E-3
+            else
+             print *,"LScen(im) invalid"
+             stop
+            endif
+
+             ! blob_matrix
+            do veltype=1,3
+             do irow=1,2*SDIM
+              do icol=1,2*SDIM
+               call init_basis(blob_center_actual, &
+                blob_x0,irow,phi_row)
+               call init_basis(blob_center_actual, &
+                blob_x0,icol,phi_col)
+               dotprod=zero
+               do dir=1,SDIM
+                dotprod=dotprod+phi_row(dir)*phi_col(dir)
+               enddo
+               dotprod=dotprod*im_interior_wt(veltype)
+               level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
+               ic=ic+1
+              enddo ! icol
+             enddo ! irow
+            enddo ! veltype=1..3 (blob_matrix)
+
+             ! blob_RHS
+            do veltype=1,3
+             do irow=1,2*SDIM
               call init_basis(blob_center_actual, &
                blob_x0,irow,phi_row)
-              call init_basis(blob_center_actual, &
-               blob_x0,icol,phi_col)
               dotprod=zero
               do dir=1,SDIM
-               dotprod=dotprod+phi_row(dir)*phi_col(dir)
-              enddo
+               if (veltype.eq.1) then
+                dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
+               else if (veltype.eq.2) then
+                dotprod=dotprod+phi_row(dir)*solid_velocity(dir)
+               else if (veltype.eq.3) then
+                dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
+               else
+                print *,"veltype invalid"
+                stop
+               endif
+              enddo ! dir=1..sdim
+
               dotprod=dotprod*im_interior_wt(veltype)
+
               level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
               ic=ic+1
-             enddo ! icol
-            enddo ! irow
-           enddo ! veltype=1..3 (blob_matrix)
+             enddo ! irow=1..2*sdim
+            enddo ! veltype=1..3
 
-            ! blob_RHS
-           do veltype=1,3
+            ic=ic+3*(2*SDIM) ! skip over blob_velocity 
+
+             ! blob_integral_momentum  2 * (2 * sdim) components
+             ! first group: momentum
+             ! second group: mass for momentum
+            veltype=3
             do irow=1,2*SDIM
              call init_basis(blob_center_actual, &
               blob_x0,irow,phi_row)
              dotprod=zero
              do dir=1,SDIM
-              if (veltype.eq.1) then
-               dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
-              else if (veltype.eq.2) then
-               dotprod=dotprod+phi_row(dir)*solid_velocity(dir)
-              else if (veltype.eq.3) then
-               dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
-              else
-               print *,"veltype invalid"
-               stop
-              endif
-             enddo ! dir=1..sdim
-
+              dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
+             enddo
              dotprod=dotprod*im_interior_wt(veltype)
-
              level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
              ic=ic+1
-            enddo ! irow=1..2*sdim
-           enddo ! veltype=1..3
+            enddo ! irow=1..2 * sdim
 
-           ic=ic+3*(2*SDIM) ! skip over blob_velocity 
-
-            ! blob_integral_momentum  2 * (2 * sdim) components
-            ! first group: momentum
-            ! second group: mass for momentum
-           veltype=3
-           do irow=1,2*SDIM
-            call init_basis(blob_center_actual, &
-             blob_x0,irow,phi_row)
-            dotprod=zero
-            do dir=1,SDIM
-             dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
-            enddo
-            dotprod=dotprod*im_interior_wt(veltype)
-            level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
-            ic=ic+1
-           enddo ! irow=1..2 * sdim
-
-           do irow=1,2*SDIM
-            call init_basis(blob_center_actual, &
-             blob_x0,irow,phi_row)
-            dotprod=zero
-            do dir=1,SDIM
-             dotprod=dotprod+phi_row(dir)**2
-            enddo
-            dotprod=dotprod*im_interior_wt(veltype)
-            level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
-            ic=ic+1
-           enddo ! irow=1..2 * sdim
-
-            ! blob_energy
-           dotprod=zero
-           do dir=1,SDIM
-            dotprod=dotprod+fluid_velocity(dir)**2
-           enddo
-           dotprod=dotprod*im_interior_wt(veltype)
-           level_blobdata(ic)=level_blobdata(ic)+half*mass*dotprod
-           ic=ic+1
-
-            ! blob_mass_for_velocity
-           do veltype=1,3
-            dotprod=im_interior_wt(veltype)
-            level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
-            ic=ic+1
-           enddo ! veltype=1..3
-
-           if (ic.ne.ic_base+3*(2*SDIM)*(2*SDIM)+ &
-               3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1) then
-            print *,"ic invalid ic=",ic
-            print *,"expecting ic=", &
-             ic_base+3*(2*SDIM)*(2*SDIM)+ &
-               3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1
-            stop
-           endif
-
-            ! blob_volume
-           vofcomp=(im-1)*ngeom_recon+1
-           vfrac=VOF(D_DECL(i,j,k),vofcomp)
-           level_blobdata(ic)=level_blobdata(ic)+vol*vfrac
-
-            ! centroid integral
-           ic=ic+1
-           do dir=1,SDIM
-            level_blobdata(ic)=level_blobdata(ic)+ &
-             (cencell(dir)+VOF(D_DECL(i,j,k),vofcomp+dir))*vfrac*vol
-            ic=ic+1
-           enddo
-
-           ! centroid actual
-           ic=ic+SDIM
-           
-            ! perimeter (internal faces)
-           do im_opp=1,nmat
-            if (im_opp.ne.im) then
-             level_blobdata(ic)=level_blobdata(ic)+local_facearea(im,im_opp) 
-            endif
-           enddo
-
-            ! perimeter decomposed by material.
-           ic=ic+1
-           do im_opp=1,nmat
-            if (im_opp.ne.im) then
-             level_blobdata(ic)=level_blobdata(ic)+local_facearea(im,im_opp) 
-            endif
-            ic=ic+1
-           enddo ! im_opp
-
-            ! contact line perimeter
-           do im1=1,nmat
-           do im2=1,nmat
-            if ((im1.eq.im).or.(im2.eq.im)) then
-             ! do nothing
-            else if (im1.eq.im2) then
-             ! do nothing
-            else if ((im1.ne.im).and. &
-                     (im2.ne.im).and. &
-                     (im1.ne.im2)) then
-             if ((LS_change_sign(im).eq.1).and. &
-                 (LS_change_sign(im1).eq.1).and. &
-                 (LS_change_sign(im2).eq.1)) then
-              level_blobdata(ic)=level_blobdata(ic)+dperim
-             else if ((LS_change_sign(im).eq.0).or. &
-                      (LS_change_sign(im1).eq.0).or. &
-                      (LS_change_sign(im2).eq.0)) then
-              ! do nothing
-             else
-              print *,"LS_change_sign invalid"
-              stop
-             endif 
-            else
-             print *,"im1 or im2 invalid"
-             stop
-            endif
-            ic=ic+1
-           enddo ! im2=1..nmat
-           enddo ! im1=1..nmat
-
-            ! blob_cell_count
-           if (vfrac.ge.half) then
-            level_blobdata(ic)=level_blobdata(ic)+one
-            if (ncomp_mdot.ge.1) then
-             ic_base=(opposite_color(im)-1)*ncomp_mdot
-             do i_mdot=1,ncomp_mdot
-              level_mdot_data(ic_base+i_mdot)= &
-                 level_mdot_data(ic_base+i_mdot)+ &
-                 mdot(D_DECL(i,j,k),i_mdot)
+            do irow=1,2*SDIM
+             call init_basis(blob_center_actual, &
+              blob_x0,irow,phi_row)
+             dotprod=zero
+             do dir=1,SDIM
+              dotprod=dotprod+phi_row(dir)**2
              enddo
-            else if (ncomp_mdot.eq.0) then
-             ! do nothing
-            else
-             print *,"ncomp_mdot invalid"
-             stop
-            endif
-           endif
-           ic=ic+1
+             dotprod=dotprod*im_interior_wt(veltype)
+             level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
+             ic=ic+1
+            enddo ! irow=1..2 * sdim
 
-           if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
-            print *,"ic invalid in getcolorsum"
-            print *,"ic=",ic
-            print *,"im=",im
-            print *,"opposite_color(im)=",opposite_color(im)
-            print *,"num_elements_blobclass=",num_elements_blobclass
-            print *,"blob_cell_count added December 6, 2020"
-            stop
-           endif
+             ! blob_energy
+            dotprod=zero
+            do dir=1,SDIM
+             dotprod=dotprod+fluid_velocity(dir)**2
+            enddo
+            dotprod=dotprod*im_interior_wt(veltype)
+            level_blobdata(ic)=level_blobdata(ic)+half*mass*dotprod
+            ic=ic+1
 
-            ! perimeter (cell faces)
-           do dir=1,SDIM
-            ii=0
-            jj=0
-            kk=0
-            if (dir.eq.1) then
-             ii=1
-            else if (dir.eq.2) then
-             jj=1
-            else if ((dir.eq.3).and.(SDIM.eq.3)) then
-             kk=1
-            else
-             print *,"dir invalid getcolorsum"
+             ! blob_mass_for_velocity
+            do veltype=1,3
+             dotprod=im_interior_wt(veltype)
+             level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
+             ic=ic+1
+            enddo ! veltype=1..3
+
+            if (ic.ne.ic_base+3*(2*SDIM)*(2*SDIM)+ &
+                3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1) then
+             print *,"ic invalid ic=",ic
+             print *,"expecting ic=", &
+              ic_base+3*(2*SDIM)*(2*SDIM)+ &
+                3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1
              stop
             endif
 
-            do side=1,2
-             iface=i
-             jface=j
-             kface=k
-             if (side.eq.1) then
+             ! blob_volume
+            vofcomp=(im-1)*ngeom_recon+1
+            vfrac=VOF(D_DECL(i,j,k),vofcomp)
+            level_blobdata(ic)=level_blobdata(ic)+vol*vfrac
+
+             ! centroid integral
+            ic=ic+1
+            do dir=1,SDIM
+             level_blobdata(ic)=level_blobdata(ic)+ &
+              (cencell(dir)+VOF(D_DECL(i,j,k),vofcomp+dir))*vfrac*vol
+             ic=ic+1
+            enddo
+
+            ! centroid actual
+            ic=ic+SDIM
+            
+             ! perimeter (internal faces)
+            do im_opp=1,nmat
+             if (im_opp.ne.im) then
+              level_blobdata(ic)=level_blobdata(ic)+local_facearea(im,im_opp) 
+             endif
+            enddo
+
+             ! perimeter decomposed by material.
+            ic=ic+1
+            do im_opp=1,nmat
+             if (im_opp.ne.im) then
+              level_blobdata(ic)=level_blobdata(ic)+local_facearea(im,im_opp) 
+             endif
+             ic=ic+1
+            enddo ! im_opp
+
+             ! contact line perimeter
+            do im1=1,nmat
+            do im2=1,nmat
+             if ((im1.eq.im).or.(im2.eq.im)) then
               ! do nothing
-             else if (side.eq.2) then
-              iface=i+ii
-              jface=j+jj
-              kface=k+kk
+             else if (im1.eq.im2) then
+              ! do nothing
+             else if ((im1.ne.im).and. &
+                      (im2.ne.im).and. &
+                      (im1.ne.im2)) then
+              if ((LS_change_sign(im).eq.1).and. &
+                  (LS_change_sign(im1).eq.1).and. &
+                  (LS_change_sign(im2).eq.1)) then
+               level_blobdata(ic)=level_blobdata(ic)+dperim
+              else if ((LS_change_sign(im).eq.0).or. &
+                       (LS_change_sign(im1).eq.0).or. &
+                       (LS_change_sign(im2).eq.0)) then
+               ! do nothing
+              else
+               print *,"LS_change_sign invalid"
+               stop
+              endif 
              else
-              print *,"side invalid"
+              print *,"im1 or im2 invalid"
               stop
              endif
+             ic=ic+1
+            enddo ! im2=1..nmat
+            enddo ! im1=1..nmat
+
+             ! blob_cell_count
+            if (vfrac.ge.half) then
+             if (ic.eq.opposite_color(im)*num_elements_blobclass) then
+              level_blobdata(ic)=level_blobdata(ic)+one
+             else
+              print *,"ic invalid"
+              stop
+             endif
+             if (ncomp_mdot.ge.1) then
+              ic_base=(opposite_color(im)-1)*ncomp_mdot
+              do i_mdot=1,ncomp_mdot
+               level_mdot_data(ic_base+i_mdot)= &
+                  level_mdot_data(ic_base+i_mdot)+ &
+                  mdot(D_DECL(i,j,k),i_mdot)
+              enddo
+             else if (ncomp_mdot.eq.0) then
+              ! do nothing
+             else
+              print *,"ncomp_mdot invalid"
+              stop
+             endif
+            endif
+            ic=ic+1
+
+            if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
+             print *,"ic invalid in getcolorsum"
+             print *,"ic=",ic
+             print *,"im=",im
+             print *,"opposite_color(im)=",opposite_color(im)
+             print *,"num_elements_blobclass=",num_elements_blobclass
+             print *,"blob_cell_count added December 6, 2020"
+             stop
+            endif
+
+             ! perimeter (cell faces)
+            do dir=1,SDIM
+             ii=0
+             jj=0
+             kk=0
              if (dir.eq.1) then
-              areaface=areax(D_DECL(iface,jface,kface))
-              face_index=0
-              do ml = 1, nmat
-              do mr = 1, nmat
-               !(ml,mr,2) 
-               face_index=face_index+1
-               frac_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
-               face_index=face_index+1
-               dist_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
-              enddo ! mr
-              enddo ! ml
-              if (face_index.ne.nface_dst) then
-               print *,"face_index invalid"
-               stop
-              endif
+              ii=1
              else if (dir.eq.2) then
-              areaface=areay(D_DECL(iface,jface,kface))
-              face_index=0
-              do ml = 1, nmat
-              do mr = 1, nmat
-               !(ml,mr,2) 
-               face_index=face_index+1
-               frac_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
-               face_index=face_index+1
-               dist_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
-              enddo ! mr
-              enddo ! ml
-              if (face_index.ne.nface_dst) then
-               print *,"face_index invalid"
-               stop
-              endif
+              jj=1
              else if ((dir.eq.3).and.(SDIM.eq.3)) then
-              areaface=areaz(D_DECL(iface,jface,kface))
-              face_index=0
-              do ml = 1, nmat
-              do mr = 1, nmat
-               !(ml,mr,2) 
-               face_index=face_index+1
-               frac_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
-               face_index=face_index+1
-               dist_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
-              enddo ! mr
-              enddo ! ml
-              if (face_index.ne.nface_dst) then
-               print *,"face_index invalid"
-               stop
-              endif
-             else 
+              kk=1
+             else
               print *,"dir invalid getcolorsum"
               stop
              endif
 
-              ! F,CEN_INTEGRATE,CEN_ACTUAL,AREA,AREA(im_opp)
-             ic=(opposite_color(im)-1)*num_elements_blobclass+ &
-              3*(2*SDIM)*(2*SDIM)+ &
-              3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1+2*SDIM+1
-             do im_opp=1,nmat
-              if (im_opp.ne.im) then
-               if (side.eq.1) then
-                ml=im_opp
-                mr=im
-               else if (side.eq.2) then
-                mr=im_opp
-                ml=im
-               else
-                print *,"side invalid"
+             do side=1,2
+              iface=i
+              jface=j
+              kface=k
+              if (side.eq.1) then
+               ! do nothing
+              else if (side.eq.2) then
+               iface=i+ii
+               jface=j+jj
+               kface=k+kk
+              else
+               print *,"side invalid"
+               stop
+              endif
+              if (dir.eq.1) then
+               areaface=areax(D_DECL(iface,jface,kface))
+               face_index=0
+               do ml = 1, nmat
+               do mr = 1, nmat
+                !(ml,mr,2) 
+                face_index=face_index+1
+                frac_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
+                face_index=face_index+1
+                dist_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
+               enddo ! mr
+               enddo ! ml
+               if (face_index.ne.nface_dst) then
+                print *,"face_index invalid"
                 stop
                endif
-                ! overall perimeter
-               level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
+              else if (dir.eq.2) then
+               areaface=areay(D_DECL(iface,jface,kface))
+               face_index=0
+               do ml = 1, nmat
+               do mr = 1, nmat
+                !(ml,mr,2) 
+                face_index=face_index+1
+                frac_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
+                face_index=face_index+1
+                dist_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
+               enddo ! mr
+               enddo ! ml
+               if (face_index.ne.nface_dst) then
+                print *,"face_index invalid"
+                stop
+               endif
+              else if ((dir.eq.3).and.(SDIM.eq.3)) then
+               areaface=areaz(D_DECL(iface,jface,kface))
+               face_index=0
+               do ml = 1, nmat
+               do mr = 1, nmat
+                !(ml,mr,2) 
+                face_index=face_index+1
+                frac_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
+                face_index=face_index+1
+                dist_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
+               enddo ! mr
+               enddo ! ml
+               if (face_index.ne.nface_dst) then
+                print *,"face_index invalid"
+                stop
+               endif
+              else 
+               print *,"dir invalid getcolorsum"
+               stop
               endif
-             enddo !im_opp=1..nmat
 
-              ! perimeter decomposed (nmat components)
-             ic=ic+1
-             do im_opp=1,nmat
-              if (im_opp.ne.im) then
-               if (side.eq.1) then
-                ml=im_opp
-                mr=im
-               else if (side.eq.2) then
-                mr=im_opp
-                ml=im
+               ! F,CEN_INTEGRATE,CEN_ACTUAL,AREA,AREA(im_opp)
+              ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+               3*(2*SDIM)*(2*SDIM)+ &
+               3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1+2*SDIM+1
+              do im_opp=1,nmat
+               if (im_opp.ne.im) then
+                if (side.eq.1) then
+                 ml=im_opp
+                 mr=im
+                else if (side.eq.2) then
+                 mr=im_opp
+                 ml=im
+                else
+                 print *,"side invalid"
+                 stop
+                endif
+                 ! overall perimeter
+                level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
+               endif
+              enddo !im_opp=1..nmat
+
+               ! perimeter decomposed (nmat components)
+              ic=ic+1
+              do im_opp=1,nmat
+               if (im_opp.ne.im) then
+                if (side.eq.1) then
+                 ml=im_opp
+                 mr=im
+                else if (side.eq.2) then
+                 mr=im_opp
+                 ml=im
+                else
+                 print *,"side invalid"
+                 stop
+                endif
+                level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
+               endif
+               ic=ic+1
+              enddo ! im_opp=1..nmat
+              ic=ic+nmat*nmat
+              ic=ic+1  ! blob_cell_count added December 6, 2020
+  
+              if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
+               print *,"ic invalid in getcolorsum 2"
+               print *,"ic=",ic
+               print *,"im=",im
+               print *,"opposite_color(im)=",opposite_color(im)
+               print *,"num_elements_blobclass=",num_elements_blobclass
+               print *,"blob_cell_count added December 6, 2020"
+               stop
+              endif
+
+             enddo ! side
+            enddo ! dir
+
+           else if (operation_flag.eq.1) then
+            if (sweep_num.eq.0) then
+              ! blob_volume
+             vofcomp=(im-1)*ngeom_recon+1
+             vfrac=VOF(D_DECL(i,j,k),vofcomp)
+             if (vfrac.ge.half) then
+              if (distribute_mdot_evenly(im).eq.1) then
+               ic=opposite_color(im)*num_elements_blobclass
+               blob_cell_count=cum_blobdata(ic)
+               if (blob_cell_count.gt.zero) then
+
+                if (ncomp_mdot.ge.1) then
+                 ic_base=(opposite_color(im)-1)*ncomp_mdot
+                 mdot_total=cum_mdot_data(ic_base+1)
+                 if (fort_material_type(im).eq.0) then
+                  mdot(D_DECL(i,j,k),1)=mdot_total/blob_cell_count
+                 else if ((fort_material_type(im).gt.0).and. &
+                          (fort_material_type(im).le.MAX_NUM_EOS)) then
+                 else 
+                  print *,"fort_material_type(im) invalid"
+                  stop
+                 endif
+                else
+                 print *,"ncomp_mdot invalid"
+                 stop
+                endif
+
                else
-                print *,"side invalid"
+                print *,"blob_cell_count invalid"
                 stop
                endif
-               level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
+              else if (distribute_mdot_evenly(im).eq.0) then
+               ! do nothing
+              else
+               print *,"distribute_mdot_evenly(im) invalid"
+               stop
               endif
-              ic=ic+1
-             enddo ! im_opp=1..nmat
-             ic=ic+nmat*nmat
-             ic=ic+1  ! blob_cell_count added December 6, 2020
- 
-             if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
-              print *,"ic invalid in getcolorsum 2"
-              print *,"ic=",ic
-              print *,"im=",im
-              print *,"opposite_color(im)=",opposite_color(im)
-              print *,"num_elements_blobclass=",num_elements_blobclass
-              print *,"blob_cell_count added December 6, 2020"
+             else if (vfrac.lt.half) then
+              ! do nothing
+             else
+              print *,"vfrac invalid"
               stop
              endif
 
-            enddo ! side
-           enddo ! dir
+            else
+             print *,"sweep_num invalid"
+             stop
+            endif
+
+           else
+            print *,"operation_flag invalid"
+            stop
+           endif
 
           else if (opposite_color(im).eq.0) then
            ! do nothing
