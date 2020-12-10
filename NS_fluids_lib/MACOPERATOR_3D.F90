@@ -106,6 +106,11 @@ stop
        INTEGER_T velcomp
        REAL_T LSTEST
        REAL_T local_diag
+       REAL_T xclamped(SDIM)
+       REAL_T LS_clamped
+       REAL_T vel_clamped(SDIM)
+       REAL_T temperature_clamped
+       INTEGER_T is_clamped_cell
 
        nhalf=1
 
@@ -188,52 +193,66 @@ stop
 
         rigid_mask=one
         in_rigid=0
-        do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
-          LSTEST=lsnew(D_DECL(i,j,k),im)
-          if (LSTEST.ge.zero) then
-           rigid_mask=1.0D+6
-           in_rigid=1
-          else if (LSTEST.lt.zero) then
-           ! do nothing
-          else
-           print *,"LSTEST invalid"
-           stop
-          endif
-         else if (is_rigid(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
 
         prescribed_mask=one
         in_prescribed=0
-        do im=1,nmat
-         if (is_prescribed(nmat,im).eq.1) then
+
+        if (is_clamped_cell.eq.1) then
+         rigid_mask=1.0D+6
+         in_rigid=1
+         prescribed_mask=1.0D+6
+         in_prescribed=1
+        else if (is_clamped_cell.eq.0) then
+
+         do im=1,nmat
           if (is_rigid(nmat,im).eq.1) then
            LSTEST=lsnew(D_DECL(i,j,k),im)
            if (LSTEST.ge.zero) then
-            prescribed_mask=1.0D+6
-            in_prescribed=1
+            rigid_mask=1.0D+6
+            in_rigid=1
            else if (LSTEST.lt.zero) then
             ! do nothing
            else
             print *,"LSTEST invalid"
             stop
            endif
+          else if (is_rigid(nmat,im).eq.0) then
+           ! do nothing
           else
            print *,"is_rigid(nmat,im) invalid"
            stop
           endif
-         else if (is_prescribed(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_prescribed(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
+         enddo ! im=1..nmat
+
+         do im=1,nmat
+          if (is_prescribed(nmat,im).eq.1) then
+           if (is_rigid(nmat,im).eq.1) then
+            LSTEST=lsnew(D_DECL(i,j,k),im)
+            if (LSTEST.ge.zero) then
+             prescribed_mask=1.0D+6
+             in_prescribed=1
+            else if (LSTEST.lt.zero) then
+             ! do nothing
+            else
+             print *,"LSTEST invalid"
+             stop
+            endif
+           else
+            print *,"is_rigid(nmat,im) invalid"
+            stop
+           endif
+          else if (is_prescribed(nmat,im).eq.0) then
+           ! do nothing
+          else
+           print *,"is_prescribed(nmat,im) invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
+
+        else
+         print *,"is_clamped_cell invalid"
+         stop
+        endif
 
         if ((project_option.eq.0).or. & ! regular project
             (project_option.eq.1).or. & ! initial project
@@ -325,22 +344,32 @@ stop
 
           local_cterm(im_vel)=one/(dt*dedt_inverse) ! den cv / dt
 
-           ! solidheat_flag==0 diffuse in solid
-           ! solidheat_flag==1 dirichlet bc at solid-fluid
-           ! solidheat_flag==2 insulating bc at solid-fluid
-          if (solidheat_flag.eq.0) then
-           ! do nothing 
-          else if (solidheat_flag.eq.2) then ! face coeff==0.0 at solid/fluid
-           ! do nothing 
-          else if (solidheat_flag.eq.1) then
+          if (is_clamped_cell.eq.1) then
+           ! do nothing
+          else if (is_clamped_cell.eq.0) then
+
+            ! solidheat_flag==0 diffuse in solid
+            ! solidheat_flag==1 dirichlet bc at solid-fluid
+            ! solidheat_flag==2 insulating bc at solid-fluid
+           if (solidheat_flag.eq.0) then
+            ! do nothing 
+           else if (solidheat_flag.eq.2) then ! face coeff==0.0 at solid/fluid
+            ! do nothing 
+           else if (solidheat_flag.eq.1) then
             ! T=Tsolid in solid so coeff>>1
             ! rigid_mask>>1 if solid material occupies cell. (rigid_mask==1
             ! otherwise)
-           local_cterm(im_vel)=local_cterm(im_vel)*rigid_mask 
+            local_cterm(im_vel)=local_cterm(im_vel)*rigid_mask 
+           else
+            print *,"solidheat_flag invalid"
+            stop
+           endif
+
           else
-           print *,"solidheat_flag invalid"
+           print *,"is_clamped_cell invalid"
            stop
           endif
+
          enddo ! im_vel=1,num_materials_scalar_solve
 
          if (DEBUG_THERMAL_WEIGHT.eq.1) then
@@ -414,7 +443,7 @@ stop
            endif
 
           else
-           print *,"in_rigid invalid"
+           print *,"in_prescribed invalid"
            stop
           endif
           ! vel=velsolid in solid, so cterm>>1 there.
