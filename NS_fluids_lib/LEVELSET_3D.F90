@@ -13096,6 +13096,21 @@ stop
       INTEGER_T colorleft,colorright,colorface
       INTEGER_T face_velocity_override
       INTEGER_T FSI_prescribed_flag
+
+      REAL_T xclamped_minus_sten(-3:3,SDIM)
+      REAL_T xclamped_plus_sten(-3:3,SDIM)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+      REAL_T LS_clamped_plus
+      REAL_T LS_clamped_minus
+      REAL_T vel_clamped_plus(SDIM)
+      REAL_T vel_clamped_minus(SDIM)
+      REAL_T temperature_clamped_plus
+      REAL_T temperature_clamped_minus
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      INTEGER_T is_clamped_face
+
       REAL_T test_local_icefacecut
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
@@ -13741,8 +13756,12 @@ stop
            xmac(dir2)=xstenMAC(0,dir2)
           enddo
 
-          call gridsten_level(xclamped_minus,im1,jm1,km1,level,nhalf)
-          call gridsten_level(xclamped_plus,i,j,k,level,nhalf)
+          call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
+          call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+          do dir2=1,SDIM
+           xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+           xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+          enddo
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
               vel_clamped_minus,temperature_clamped_minus)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
@@ -13755,7 +13774,7 @@ stop
              vel_clamped_plus(dir2))
            enddo
            temperature_clamped=half*(temperature_clamped_minus+ &
-             temperature_clamped_plus(dir2))
+             temperature_clamped_plus)
           else if ((LS_clamped_plus.lt.zero).and. &
                    (LS_clamped_minus.lt.zero)) then
            is_clamped_face=0
@@ -19785,6 +19804,7 @@ stop
       subroutine interp_mac_velocity(grid_PARM,xpart,vel_time_slab,u)
       use global_utility_module
       use probcommon_module
+      use probf90_module
 
       implicit none
 
