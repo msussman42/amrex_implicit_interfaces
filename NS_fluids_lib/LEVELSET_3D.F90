@@ -13605,6 +13605,8 @@ stop
 
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
 
+         is_clamped_face=-1
+
          if (levelrz.eq.0) then
           RR=one
          else if (levelrz.eq.1) then
@@ -13738,6 +13740,43 @@ stop
           do dir2=1,SDIM
            xmac(dir2)=xstenMAC(0,dir2)
           enddo
+
+          call gridsten_level(xclamped_minus,im1,jm1,km1,level,nhalf)
+          call gridsten_level(xclamped_plus,i,j,k,level,nhalf)
+          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
+              vel_clamped_minus,temperature_clamped_minus)
+          call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
+              vel_clamped_plus,temperature_clamped_plus)
+          if ((LS_clamped_plus.ge.zero).and. &
+              (LS_clamped_minus.ge.zero)) then
+           is_clamped_face=1
+           do dir2=1,SDIM
+            vel_clamped(dir2)=half*(vel_clamped_minus(dir2)+ &
+             vel_clamped_plus(dir2))
+           enddo
+           temperature_clamped=half*(temperature_clamped_minus+ &
+             temperature_clamped_plus(dir2))
+          else if ((LS_clamped_plus.lt.zero).and. &
+                   (LS_clamped_minus.lt.zero)) then
+           is_clamped_face=0
+          else if ((LS_clamped_plus.ge.zero).and. &
+                   (LS_clamped_minus.lt.zero)) then
+           is_clamped_face=2
+           do dir2=1,SDIM
+            vel_clamped(dir2)=vel_clamped_plus(dir2)
+           enddo
+           temperature_clamped=temperature_clamped_plus
+          else if ((LS_clamped_plus.lt.zero).and. &
+                   (LS_clamped_minus.ge.zero)) then
+           is_clamped_face=3
+           do dir2=1,SDIM
+            vel_clamped(dir2)=vel_clamped_minus(dir2)
+           enddo
+           temperature_clamped=temperature_clamped_minus
+          else
+           print *,"LS_clamped_plus or LS_clamped_minus NaN"
+           stop
+          endif
 
          else if ((operation_flag.eq.0).or. &
                   ((operation_flag.ge.6).and. &
