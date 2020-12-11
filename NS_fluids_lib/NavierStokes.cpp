@@ -12665,10 +12665,24 @@ NavierStokes::level_phase_change_redistribute(
     // NavierStokes::allocate_mdot() called at the beginning of
     //  NavierStokes::do_the_advance
     // mdot initialized in NavierStokes::prelim_alloc()
-    // in: GODUNOV_3D.F90
+    // in: GODUNOV_3D.F90 (distribute_from_target==0)
     //   a)  jump_strength=JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)
+    //      dF * volgrid * (den_source/den_dest-1)/ dt^2 
     //   b)  divu_material=jump_strength  cm^3/s^2
     //   c)  mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+    //   V = U*  - dt grad p/rho
+    //   0 = div U* - dt div grad p/rho
+    //   -div U*/dt = -div grad p/rho
+    //   mdot - vol div U*/dt = -vol div grad p/rho
+    //   cm^3  * (1/cm) (cm/s) (1/s) = cm^3/s^2
+    //   vol div V/dt = mdot     div V= dt mdot / vol  
+    //   dt div V=dt^2 mdot/vol=dF * (den_source/den_dst-1)
+    //   if compressible, then instead of increasing the volume, the 
+    //   mass is increased instead: rho^expand - rho = -dt rho^expand div V
+    //   rho=rho^expand (1+ dt div V)
+    //   1+dt div V=1+dt^2 mdot/vol = 1+ dF * (den_source/den_dest-1)
+    //   rho=den^dest * (1 + dF *(den_source/den_dest-1))=
+    //    (1-dF)*den^dest + dF * den_source
     FORT_INITJUMPTERM( 
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],
