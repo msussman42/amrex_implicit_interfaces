@@ -244,7 +244,13 @@ adept::adouble cost_function(
     wt_obs_array(i,j,k)=0.0;
     q_obs_array(i,j,k)=0.0;
     if (ntime==nsteps) {
-     q_obs_array(i,j,k)=sin(2.0*local_pi*local_x);
+//     q_obs_array(i,j,k)=sin(2.0*local_pi*local_x);
+     if ((local_x<=0.25)||(local_x>=0.75)) {
+	     q_obs_array(i,j,k)=0.0;
+     } else {
+	     q_obs_array(i,j,k)=1.0;
+     }
+
      wt_obs_array(i,j,k)=1.0;
     }
     v_array(i,j,k)=uinput_array(i,j,k);
@@ -740,6 +746,11 @@ int main(int argc,char* argv[]) {
        //                                         =1  if x-aT<0
        //                                 b) C=||v(T,.)-v^{obs}(T,.)||_w1+
        //                                      ||u(t,x)-u^{back}(t,x)||_w2
+       //  v_observation(T,x)=sin(2 pi x)
+       //  background solution: u^background = 0
+       //  w2 = 0.1 at t=0, x=0, x=1, w2=0.0 otherwise
+       //  The background error in the cost function is
+       //  "Tikhonov regularization?"
       if (xi<xlo[0]) {
        x_array(i,j,k)=1.0;
       } else if (xi>xhi[0]) {

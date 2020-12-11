@@ -5129,6 +5129,7 @@ NavierStokes::ColorSum(
    &operation_flag,
    &sweep_num,
    distribute_mdot_evenly.dataPtr(),
+   &dt_slab,
    dx,xlo,
    &nmat,
    &nstate,

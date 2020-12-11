@@ -4536,6 +4536,7 @@ stop
        operation_flag, &
        sweep_num, &
        distribute_mdot_evenly, &
+       dt, &
        dx,xlo, &
        nmat, &
        nstate, &
@@ -4590,6 +4591,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       INTEGER_T, intent(in) :: levelbc(SDIM,2)
@@ -4635,7 +4637,7 @@ stop
       REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
-      REAL_T, intent(in) :: snew(DIMV(snew),nstate)
+      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
       REAL_T, intent(inout) :: mdot(DIMV(mdot),ncomp_mdot)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
@@ -4707,8 +4709,18 @@ stop
       REAL_T im_interior_wt(3)
       REAL_T blob_cell_count
       REAL_T mdot_total
+      REAL_T mdot_avg
+      REAL_T dt_div_V
+      REAL_T original_density
 
       nhalf=3
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid92"
@@ -4751,6 +4763,12 @@ stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid get color sum"
+       stop
+      endif
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else
+       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -5595,10 +5613,22 @@ stop
                 if (ncomp_mdot.ge.1) then
                  ic_base=(opposite_color(im)-1)*ncomp_mdot
                  mdot_total=cum_mdot_data(ic_base+1)
+                 mdot_avg=mdot_total/blob_cell_count
                  if (fort_material_type(im).eq.0) then
-                  mdot(D_DECL(i,j,k),1)=mdot_total/blob_cell_count
+                  mdot(D_DECL(i,j,k),1)=mdot_avg
                  else if ((fort_material_type(im).gt.0).and. &
                           (fort_material_type(im).le.MAX_NUM_EOS)) then
+                  mdot(D_DECL(i,j,k),1)=zero
+                  dt_div_V=mdot_avg*dt*dt/vol
+                  dencomp=(SDIM+1)*num_materials_vel+ &
+                          (im-1)*num_state_material+1
+                  original_density=snew(D_DECL(i,j,k),dencomp)
+                  if (original_density.gt.zero) then
+                   snew(D_DECL(i,j,k),dencomp)=(one+dt_div_V)*original_density
+                  else
+                   print *,"original_density invalid"
+                   stop
+                  endif
                  else 
                   print *,"fort_material_type(im) invalid"
                   stop
