@@ -18694,6 +18694,36 @@ END SUBROUTINE Adist
       return
       end subroutine SEM_MAC_TO_CELL
 
+      subroutine SUB_clamped_LS(x,t,LS,vel,temperature)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: t
+      REAL_T, intent(out) :: LS
+      REAL_T, intent(out) :: vel(SDIM)
+      REAL_T, intent(out) :: temperature
+
+      INTEGER_T dir
+
+      call SUB_clamped_LS_no_scale(x,t,LS,vel,temperature)
+      do dir=1,SDIM
+       if (vel_homflag.eq.1) then
+        vel(dir)=zero
+       else if (vel_homflag.eq.0) then
+        if (global_velocity_scale.gt.zero) then
+         vel(dir)=vel(dir)/global_velocity_scale
+        else
+         print *,"globa_velocity_scale invalid"
+         stop
+        endif
+       else
+        print *,"vel_homflag invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      return
+      end subroutine SUB_clamped_LS 
 
        ! 1<=dir<=sdim  1<=side<=2
        ! 1<=veldir<=sdim
@@ -19823,7 +19853,13 @@ END SUBROUTINE Adist
        endif ! non-hydrate problems
 
        vel=velcell(veldir)
-       vel_in=vel/global_velocity_scale
+
+       if (global_velocity_scale.gt.zero) then
+        vel_in=vel/global_velocity_scale
+       else
+        print *,"globa_velocity_scale invalid"
+        stop
+       endif
 
       else
        print *,"vel_homflag invalid"
