@@ -14399,21 +14399,42 @@ stop
             print *,"idx invalid"
             stop 
            endif
-           if ((iboundary.eq.1).and. &
-               ((side.eq.1).or.(side.eq.2))) then
-            if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
-             face_velocity_override=1
-             uedge(im_vel)=zero
-            else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
-             face_velocity_override=1
-             call velbc_override(time,dir+1,side,dir+1, &
-              uedge(im_vel), &
-              xstenMAC,nhalf,dx,bfact)
+           if (iboundary.eq.1) then
+
+            if ((side.eq.1).or.(side.eq.2)) then
+             if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
+              face_velocity_override=1
+              uedge(im_vel)=zero
+             else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
+              face_velocity_override=1
+              call velbc_override(time,dir+1,side,dir+1, &
+               uedge(im_vel), &
+               xstenMAC,nhalf,dx,bfact)
+             endif
+            else
+             print *,"side invalid"
+             stop
             endif
-           else if ((iboundary.eq.0).and.(side.eq.0)) then
-            ! do nothing
+
+           else if (iboundary.eq.0) then
+            if (side.eq.0) then
+             if ((is_clamped_face.eq.1).or. &
+                 (is_clamped_face.eq.2).or. &
+                 (is_clamped_face.eq.3)) then
+              uedge(im_vel)=vel_clamped(dir+1)
+              face_velocity_override=1
+             else if (is_clamped_face.eq.0) then
+              ! do nothing
+             else
+              print *,"is_clamped_face invalid"
+              stop
+             endif
+            else
+             print *,"side invalid"
+             stop
+            endif
            else 
-            print *,"iboundary or side invalid"
+            print *,"iboundary invalid"
             stop
            endif
 
@@ -14618,7 +14639,7 @@ stop
             ! at least 1 side is covered
            if ((mask_covered(1).eq.0).or. &
                (mask_covered(2).eq.0)) then
-            use_face_pres=one ! do not use gp 
+            use_face_pres=min(use_face_pres,one) ! do not use gp 
            else if ((mask_covered(1).eq.1).and. &
                     (mask_covered(2).eq.1)) then
             ! do nothing
@@ -14732,6 +14753,18 @@ stop
            print *,"is_prescribed_face invalid"
            stop
           endif
+
+          if ((is_clamped_face.eq.1).or. &
+              (is_clamped_face.eq.2).or. &
+              (is_clamped_face.eq.3)) then
+           use_face_pres=zero ! do not use gp or div(up)
+           face_velocity_override=1
+          else if (is_clamped_face.eq.0) then
+           ! do nothing
+          else
+           print *,"is_clamped_face invalid"
+           stop
+          endif 
 
           if (at_reflect_wall.eq.0) then
            if (denface.le.zero) then
@@ -14940,8 +14973,17 @@ stop
            if (is_solid_face.eq.1) then
             gradh=zero
            else if (is_solid_face.eq.0) then
-            call fluid_interface_tension(LSleft,LSright,gradh, &
-             im_opp,im,nmat,nten)
+            if ((is_clamped_face.eq.1).or. &
+                (is_clamped_face.eq.2).or. &
+                (is_clamped_face.eq.3)) then
+             gradh=zero
+            else if (is_clamped_face.eq.0) then
+             call fluid_interface_tension(LSleft,LSright,gradh, &
+              im_opp,im,nmat,nten)
+            else
+             print *,"is_clamped_face invalid"
+             stop
+            endif
            else
             print *,"is_solid_face invalid 9 ",is_solid_face
             stop
