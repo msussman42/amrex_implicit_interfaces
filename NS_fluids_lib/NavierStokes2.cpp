@@ -4259,6 +4259,7 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      xlo,dx,
      &dt_slab,
+     &cur_time_slab,
      velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
@@ -8973,11 +8974,13 @@ void NavierStokes::build_masksem(int mask_sweep) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // in: GODUNOV_3D.F90
   FORT_BUILD_MASKSEM( 
    spectral_cells_level[tid_current].dataPtr(),
    &mask_sweep,
    &level,
    &finest_level,
+   &cur_time_slab,
    &enable_spectral,
    domlo,domhi,
    vofbc.dataPtr(),

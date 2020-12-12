@@ -12530,6 +12530,8 @@ void NavierStokes::APPLY_REGISTERS(
   int advect_face_mf,
   int nsolve) {
 
+ int finest_level=parent->finestLevel();
+
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
@@ -12641,6 +12643,9 @@ void NavierStokes::APPLY_REGISTERS(
    // in: GODUNOV_3D.F90
    // snew=advect+du
   FORT_VELADVANCE(
+    &level,
+    &finest_level,
+    &cur_time_slab,
     &nmat,
     &nparts,
     &nparts_def,
