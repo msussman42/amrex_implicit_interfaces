@@ -26485,6 +26485,19 @@ stop
       INTEGER_T partidL,partidR
       INTEGER_T conservative_div_uu
 
+      REAL_T xclamped_minus_sten(-3:3,SDIM)
+      REAL_T xclamped_plus_sten(-3:3,SDIM)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+      REAL_T LS_clamped_minus
+      REAL_T LS_clamped_plus
+      REAL_T vel_clamped_minus(SDIM)
+      REAL_T vel_clamped_plus(SDIM)
+      REAL_T vel_clamped_face(SDIM)
+      REAL_T temperature_clamped_minus
+      REAL_T temperature_clamped_plus
+      INTEGER_T is_clamped_face
+
       nhalf=1
       nhalfcell=3
 
@@ -26497,7 +26510,9 @@ stop
        print *,"slab_step invalid face gradients "
        stop
       endif
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
@@ -26885,16 +26900,61 @@ stop
           call get_primary_material(lsleft,nmat,imL)
           call get_primary_material(lsright,nmat,imR)
 
-          if (mask_boundary.eq.0) then
-           if (imL.eq.imR) then
-            faceLS(D_DECL(i,j,k),dir)=imL
-           else
-            faceLS(D_DECL(i,j,k),dir)=zero
-           endif
-          else if (mask_boundary.eq.1) then
-           faceLS(D_DECL(i,j,k),dir)=zero
+          call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
+          call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+          do dir2=1,SDIM
+           xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+           xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+          enddo
+
+           ! LS>0 if clamped
+          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
+                vel_clamped_minus,temperature_clamped_minus)
+          call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
+                vel_clamped_plus,temperature_clamped_plus)
+          if ((LS_clamped_minus.ge.zero).or. &
+              (LS_clamped_plus.ge.zero)) then
+           is_clamped_face=1
+           do dir2=1,SDIM
+            if (LS_clamped_minus.lt.zero) then
+             vel_clamped_face(dir2)=vel_clamped_plus(dir2)
+             is_clamped_face=2
+            else if (LS_clamped_plus.lt.zero) then
+             vel_clamped_face(dir2)=vel_clamped_minus(dir2)
+             is_clamped_face=3
+            else
+             vel_clamped_face(dir2)=half*(vel_clamped_plus(dir2)+ &
+               vel_clamped_minus(dir2))
+            endif
+           enddo
+          else if ((LS_clamped_minus.lt.zero).and. &
+                   (LS_clamped_plus.lt.zero)) then
+           is_clamped_face=0
           else
-           print *,"mask_boundary invalid"
+           print *,"LS_clamped plus or minus is NaN"
+           stop
+          endif
+
+
+          if ((is_clamped_face.eq.1).or. &
+              (is_clamped_face.eq.2).or. &
+              (is_clamped_face.eq.3)) then
+           faceLS(D_DECL(i,j,k),dir)=zero
+          else if (is_clamped_face.eq.0) then
+           if (mask_boundary.eq.0) then
+            if (imL.eq.imR) then
+             faceLS(D_DECL(i,j,k),dir)=imL
+            else
+             faceLS(D_DECL(i,j,k),dir)=zero
+            endif
+           else if (mask_boundary.eq.1) then
+            faceLS(D_DECL(i,j,k),dir)=zero
+           else
+            print *,"mask_boundary invalid"
+            stop
+           endif
+          else
+           print *,"is_clamped_face invalid"
            stop
           endif
 
@@ -27014,7 +27074,10 @@ stop
             right_rigid=1
             solidvelright(nc)=vel(D_DECL(i,j,k),velcomp)
            endif
- 
+
+FIX ME
+
+
            if (homflag.eq.1) then
             solidvelleft(nc)=zero
             solidvelright(nc)=zero
