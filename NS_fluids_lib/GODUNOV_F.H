@@ -449,6 +449,7 @@ extern "C"
     int* mask_sweep,
     int* level,
     int* finest_level,
+    Real* cur_time,
     int* enable_spectral,
     const int* domlo,const int* domhi,
     int* vofbc,
@@ -1267,9 +1268,10 @@ extern "C"
      Real* maskSEM,AMREX_ARLIM_P(maskSEMlo),AMREX_ARLIM_P(maskSEMhi),
      const Real* xlo,const Real* dx,
      Real* dt,
+     Real* cur_time,
      Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
      Real* levelpc,
-    AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
+     AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
      Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
      Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
      Real* xfacemm,AMREX_ARLIM_P(xfacemmlo),AMREX_ARLIM_P(xfacemmhi), 
@@ -1376,6 +1378,9 @@ extern "C"
      int* nmat,int* nden);
 
    void FORT_VELADVANCE(
+     int* level,
+     int* finest_level,
+     Real* cur_time,
      int* nmat,
      int* nparts,
      int* nparts_def,

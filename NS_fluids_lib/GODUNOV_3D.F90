@@ -860,7 +860,7 @@ stop
           do k1=ks,ke 
 
             !im_face=0 if, wrt i1,j1,k1, imL_1<>imR_1 or 
-            !coarse/fine or exterior BC
+            !coarse/fine or exterior BC or is_clamped_face>=1
            im_face=NINT(faceLS(D_DECL(i1,j1,k1),dirtan))
            if ((im_face.ge.0).and.(im_face.le.nmat)) then
             ! do nothing
@@ -2827,6 +2827,7 @@ stop
        mask_sweep, &
        level, &
        finest_level, &
+       cur_time, &
        enable_spectral, &
        domlo,domhi, &
        vofbc, &
@@ -2843,6 +2844,7 @@ stop
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
+      use probf90_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nmat
@@ -2850,6 +2852,7 @@ stop
       INTEGER_T, intent(in) :: mask_sweep
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: cur_time
       INTEGER_T, intent(in) :: enable_spectral
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -2891,9 +2894,25 @@ stop
       REAL_T vfrac_sum_fluid,vfrac_sum_solid
       INTEGER_T touch_coarsefine
       INTEGER_T localbc
+      INTEGER_T clamped_cell_in_element
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      nhalf=3
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
+       stop
+      endif
+
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid"
        stop
       endif
 
@@ -2953,9 +2972,28 @@ stop
          stop
         endif
 
+        clamped_cell_in_element=0
+
         do iofs=0,bfact-1
         do jofs=0,bfact-1
         do kofs=0,kofs_hi
+
+         call gridsten_level(xsten,i+iofs,j+jofs,k+kofs,level,nhalf)
+         do dir=1,SDIM
+          xclamped(dir)=xsten(0,dir)
+         enddo
+          ! LS>0 if clamped
+         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+             vel_clamped,temperature_clamped)
+
+         if (LS_clamped.ge.zero) then
+          clamped_cell_in_element=1
+         else if (LS_clamped.lt.zero) then
+          ! do nothing
+         else
+          print *,"LS_clamped is NaN"
+          stop
+         endif
 
          vfrac_sum_fluid=zero
          vfrac_sum_solid=zero
@@ -2988,7 +3026,14 @@ stop
              (vfrac_sum_solid.gt.one+VOFTOL)) then
           print *,"vfrac_sum_solid out of range"
           stop
+         else if ((vfrac_sum_solid.ge.-VOFTOL).and. &
+                  (vfrac_sum_solid.le.one+VOFTOL)) then
+          ! do nothing
+         else
+          print *,"vfrac_sum_solid is NaN"
+          stop
          endif
+
          if (abs(one-vfrac_sum_fluid).gt.0.01) then
           print *,"vfrac_sum_fluid out of range in build mask sem"
           print *,"vfrac_sum_solid=",vfrac_sum_solid
@@ -3054,19 +3099,27 @@ stop
          print *,"sumtag invalid"
          stop
         else if (sumtag.eq.1) then
-         if (is_rigid(nmat,imcrit).eq.1) then
+         if (clamped_cell_in_element.eq.1) then
           local_maskSEM=0
-         else if (is_ice(nmat,imcrit).eq.1) then
-          local_maskSEM=0
-         else if (is_FSI_rigid(nmat,imcrit).eq.1) then
-          local_maskSEM=0
-         else if ((FSI_flag(imcrit).eq.0).or. &
-                  (FSI_flag(imcrit).eq.7)) then
-          local_maskSEM=imcrit
+         else if (clamped_cell_in_element.eq.0) then
+          if (is_rigid(nmat,imcrit).eq.1) then
+           local_maskSEM=0
+          else if (is_ice(nmat,imcrit).eq.1) then
+           local_maskSEM=0
+          else if (is_FSI_rigid(nmat,imcrit).eq.1) then
+           local_maskSEM=0
+          else if ((FSI_flag(imcrit).eq.0).or. &
+                   (FSI_flag(imcrit).eq.7)) then
+           local_maskSEM=imcrit
+          else
+           print *,"FSI_flag invalid"
+           stop
+          endif
          else
-          print *,"FSI_flag invalid"
+          print *,"clamped_cell_in_element invalid"
           stop
          endif
+
         else if (sumtag.gt.1) then
          local_maskSEM=0
         else
@@ -26489,11 +26542,15 @@ stop
       REAL_T xclamped_plus_sten(-3:3,SDIM)
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
+      REAL_T xclamped_cen(SDIM)
+      REAL_T LS_clamped_cen
       REAL_T LS_clamped_minus
       REAL_T LS_clamped_plus
+      REAL_T vel_clamped_cen(SDIM)
       REAL_T vel_clamped_minus(SDIM)
       REAL_T vel_clamped_plus(SDIM)
       REAL_T vel_clamped_face(SDIM)
+      REAL_T temperature_clamped_cen
       REAL_T temperature_clamped_minus
       REAL_T temperature_clamped_plus
       INTEGER_T is_clamped_face
@@ -27075,8 +27132,23 @@ stop
             solidvelright(nc)=vel(D_DECL(i,j,k),velcomp)
            endif
 
-FIX ME
-
+           if (is_clamped_face.eq.1) then
+            left_rigid=1
+            right_rigid=1
+            solidvelleft(nc)=vel_clamped_face(nc)
+            solidvelright(nc)=vel_clamped_face(nc)
+           else if (is_clamped_face.eq.2) then
+            right_rigid=1
+            solidvelright(nc)=vel_clamped_face(nc)
+           else if (is_clamped_face.eq.3) then
+            left_rigid=1
+            solidvelleft(nc)=vel_clamped_face(nc)
+           else if (is_clamped_face.eq.0) then
+            ! do nothing
+           else
+            print *,"is_clamped_face invalid"
+            stop
+           endif
 
            if (homflag.eq.1) then
             solidvelleft(nc)=zero
@@ -27273,6 +27345,14 @@ FIX ME
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
          call gridsten_level(xsten,i,j,k,level,nhalfcell)
+         do dir2=1,SDIM
+          xclamped_cen(dir2)=xsten(0,dir2)
+         enddo
+
+          ! LS>0 if clamped
+         call SUB_clamped_LS(xclamped_cen,time,LS_clamped_cen, &
+                vel_clamped_cen,temperature_clamped_cen)
+
          im1=i-ii
          jm1=j-jj
          km1=k-kk
@@ -27288,54 +27368,65 @@ FIX ME
           stop
          endif
 
-         if (is_prescribed(nmat,im_primary).eq.1) then
+         if (LS_clamped_cen.ge.zero) then
           do nc=1,SDIM
            gradu(nc)=zero
           enddo
-         else if (is_prescribed(nmat,im_primary).eq.0) then
-          int_xlo=max(xsten(-2,dir),xsten(-1,dir))
-          int_xhi=min(xsten(0,dir),xsten(1,dir))
-          if (int_xhi.gt.int_xlo) then
-           leftwt=int_xhi-int_xlo
-          else
-           leftwt=zero
-          endif
-          int_xlo=max(xsten(0,dir),xsten(-1,dir))
-          int_xhi=min(xsten(2,dir),xsten(1,dir))
-          if (int_xhi.gt.int_xlo) then
-           rightwt=int_xhi-int_xlo
-          else
-           rightwt=zero
-          endif
-          if ((leftwt.le.zero).or.(rightwt.le.zero)) then
-           print *,"weights invalid"
-           stop
-          endif
-          lsleft(im_primary)=levelpc(D_DECL(im1,jm1,km1),im_primary)
-          lsright(im_primary)=levelpc(D_DECL(ip1,jp1,kp1),im_primary)
-            
-          do nc=1,SDIM
-           tensorcomponent=nbase+nc
-           slopeLT=tdata(D_DECL(i,j,k),tensorcomponent)
-           slopeRT=tdata(D_DECL(ip1,jp1,kp1),tensorcomponent)
+         else if (LS_clamped_cen.lt.zero) then
 
-           if (((lsleft(im_primary).ge.zero).and. &
-                (lsright(im_primary).ge.zero)).or. &
-               ((lsleft(im_primary).lt.zero).and. &
-                (lsright(im_primary).lt.zero))) then
-            gradu(nc)=(leftwt*slopeLT+rightwt*slopeRT)/(leftwt+rightwt)
-           else if (lsleft(im_primary).ge.zero) then
-            gradu(nc)=slopeLT
-           else if (lsright(im_primary).ge.zero) then
-            gradu(nc)=slopeRT
+          if (is_prescribed(nmat,im_primary).eq.1) then
+           do nc=1,SDIM
+            gradu(nc)=zero
+           enddo
+          else if (is_prescribed(nmat,im_primary).eq.0) then
+           int_xlo=max(xsten(-2,dir),xsten(-1,dir))
+           int_xhi=min(xsten(0,dir),xsten(1,dir))
+           if (int_xhi.gt.int_xlo) then
+            leftwt=int_xhi-int_xlo
            else
-            print *,"lsleft or lsright invalid"
+            leftwt=zero
+           endif
+           int_xlo=max(xsten(0,dir),xsten(-1,dir))
+           int_xhi=min(xsten(2,dir),xsten(1,dir))
+           if (int_xhi.gt.int_xlo) then
+            rightwt=int_xhi-int_xlo
+           else
+            rightwt=zero
+           endif
+           if ((leftwt.le.zero).or.(rightwt.le.zero)) then
+            print *,"weights invalid"
             stop
            endif
+           lsleft(im_primary)=levelpc(D_DECL(im1,jm1,km1),im_primary)
+           lsright(im_primary)=levelpc(D_DECL(ip1,jp1,kp1),im_primary)
+            
+           do nc=1,SDIM
+            tensorcomponent=nbase+nc
+            slopeLT=tdata(D_DECL(i,j,k),tensorcomponent)
+            slopeRT=tdata(D_DECL(ip1,jp1,kp1),tensorcomponent)
 
-          enddo ! nc=1..sdim
+            if (((lsleft(im_primary).ge.zero).and. &
+                 (lsright(im_primary).ge.zero)).or. &
+                ((lsleft(im_primary).lt.zero).and. &
+                 (lsright(im_primary).lt.zero))) then
+             gradu(nc)=(leftwt*slopeLT+rightwt*slopeRT)/(leftwt+rightwt)
+            else if (lsleft(im_primary).ge.zero) then
+             gradu(nc)=slopeLT
+            else if (lsright(im_primary).ge.zero) then
+             gradu(nc)=slopeRT
+            else
+             print *,"lsleft or lsright invalid"
+             stop
+            endif
+
+           enddo ! nc=1..sdim
+          else
+           print *,"is_prescribed(im_primary) invalid"
+           stop
+          endif
+
          else
-          print *,"is_prescribed(im_primary) invalid"
+          print *,"LS_clamped_cen is NaN"
           stop
          endif
             
@@ -27703,6 +27794,7 @@ FIX ME
        maskSEM,DIMS(maskSEM), &
        xlo,dx, &
        dt, &
+       cur_time, &
        vel,DIMS(vel), &
        levelpc,DIMS(levelpc), &
        xflux,DIMS(xflux), &
@@ -27785,6 +27877,7 @@ FIX ME
       INTEGER_T, intent(in) :: DIMDEC(recon)
   
       REAL_T, intent(in) :: dt 
+      REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
       REAL_T, intent(in) :: mask(DIMV(mask))
       REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
@@ -27811,7 +27904,8 @@ FIX ME
       INTEGER_T jlo,jhi 
       INTEGER_T klo,khi 
 
-      INTEGER_T i,j,k,dir,dir2
+      INTEGER_T i,j,k
+      INTEGER_T dir,dir2
       INTEGER_T ic,jc,kc
       INTEGER_T dirtan(2)
       INTEGER_T coupling(2)
@@ -27837,6 +27931,19 @@ FIX ME
       REAL_T massF(2*nmat)
       REAL_T xsten(-1:1,SDIM)
       REAL_T xstenMAC(-1:1,SDIM)
+      REAL_T xclamped_minus_sten(-1:1,SDIM)
+      REAL_T xclamped_plus_sten(-1:1,SDIM)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+
+      REAL_T LS_clamped_minus
+      REAL_T LS_clamped_plus
+      REAL_T vel_clamped_minus(SDIM)
+      REAL_T vel_clamped_plus(SDIM)
+      REAL_T vel_clamped_face(SDIM)
+      REAL_T temperature_clamped_minus
+      REAL_T temperature_clamped_plus
+      INTEGER_T is_clamped_face
       INTEGER_T nhalf
       INTEGER_T nbr_outside_domain_flag(2)
       INTEGER_T nbr_covered_flag ! 0=covered 1=not covered
@@ -27932,7 +28039,13 @@ FIX ME
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt must be positive"
+       print *,"dt must be positive in crossterm"
+       stop
+      endif
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time must be nonneg in crossterm"
        stop
       endif
       if ((constant_viscosity.ne.0).and. &
@@ -28917,16 +29030,61 @@ FIX ME
           stop
          endif
 
+         call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
+         call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+         do dir2=1,SDIM
+          xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+          xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+         enddo
+
+          ! LS>0 if clamped
+         call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+              vel_clamped_minus,temperature_clamped_minus)
+         call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+              vel_clamped_plus,temperature_clamped_plus)
+         if ((LS_clamped_minus.ge.zero).or. &
+             (LS_clamped_plus.ge.zero)) then
+          is_clamped_face=1
+          do dir2=1,SDIM
+           if (LS_clamped_minus.lt.zero) then
+            vel_clamped_face(dir2)=vel_clamped_plus(dir2)
+            is_clamped_face=2
+           else if (LS_clamped_plus.lt.zero) then
+            vel_clamped_face(dir2)=vel_clamped_minus(dir2)
+            is_clamped_face=3
+           else
+            vel_clamped_face(dir2)=half*(vel_clamped_plus(dir2)+ &
+              vel_clamped_minus(dir2))
+           endif
+          enddo
+         else if ((LS_clamped_minus.lt.zero).and. &
+                  (LS_clamped_plus.lt.zero)) then
+          is_clamped_face=0
+         else
+          print *,"LS_clamped plus or minus is NaN"
+          stop
+         endif
+
          compressible_face=1
 
-         if ((is_rigid(nmat,imL).eq.1).or. &
-             (is_rigid(nmat,imR).eq.1)) then
+         if ((is_clamped_face.eq.1).or. &
+             (is_clamped_face.eq.2).or. &
+             (is_clamped_face.eq.3)) then
           compressible_face=0
-         else if ((is_rigid(nmat,imL).eq.0).and. &
-                  (is_rigid(nmat,imR).eq.0)) then
-          ! do nothing
+         else if (is_clamped_face.eq.0) then
+
+          if ((is_rigid(nmat,imL).eq.1).or. &
+              (is_rigid(nmat,imR).eq.1)) then
+           compressible_face=0
+          else if ((is_rigid(nmat,imL).eq.0).and. &
+                   (is_rigid(nmat,imR).eq.0)) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
          else
-          print *,"is_rigid invalid"
+          print *,"is_clamped_face invalid"
           stop
          endif
 
@@ -29309,7 +29467,11 @@ FIX ME
       return 
       end subroutine FORT_CROSSTERM
 
+       ! called from: NavierStokes3.cpp
       subroutine FORT_VELADVANCE( &
+       level, &
+       finest_level, &
+       cur_time, &
        nmat, &
        nparts, &
        nparts_def, &
@@ -29329,9 +29491,13 @@ FIX ME
        fablo,fabhi,bfact)
       use probcommon_module
       use global_utility_module
+      use probf90_module
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: cur_time
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
@@ -29370,7 +29536,23 @@ FIX ME
       INTEGER_T partid,im_solid,partid_crit
       REAL_T LStest,LScrit
       INTEGER_T num_materials_face
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
 
+      nhalf=3
+
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid veladvance"
+       stop
+      endif
+      if (finest_level.ne.fort_finest_level) then
+       print *,"finest_level invalid veladvance"
+       stop
+      endif
       if ((nsolve.ne.SDIM).and.(nsolve.ne.1)) then
        print *,"nsolve invalid"
        stop
@@ -29425,7 +29607,16 @@ FIX ME
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       if (nsolve.eq.SDIM) then
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xclamped(dir)=xsten(0,dir)
+       enddo
+
+        ! LS>0 if clamped
+       call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+             vel_clamped,temperature_clamped)
+
+       if (nsolve.eq.SDIM) then ! viscosity
 
         partid=0
         im_solid=0
@@ -29477,42 +29668,52 @@ FIX ME
          stop
         endif
 
-        if ((im_solid.ge.1).and. &
-            (im_solid.le.nmat)) then ! in the prescribed solid
-         if (im_solid_map(partid_crit+1)+1.ne.im_solid) then
-          print *,"im_solid_map(partid_crit+1)+1.ne.im_solid"
-          stop
-         endif
-         dir=1
-         velcomp=partid_crit*SDIM+dir
-         snew(D_DECL(i,j,k),dir)=half* &
-            (solxfab(D_DECL(i,j,k),velcomp)+ &
-             solxfab(D_DECL(i+1,j,k),velcomp))
-         dir=2
-         velcomp=partid_crit*SDIM+dir
-         snew(D_DECL(i,j,k),dir)=half* &
-            (solyfab(D_DECL(i,j,k),velcomp)+ &
-             solyfab(D_DECL(i,j+1,k),velcomp))
-         if (SDIM.eq.3) then
-          dir=SDIM
+        if (LS_clamped.ge.zero) then
+         do dir=1,SDIM
+          snew(D_DECL(i,j,k),dir)=vel_clamped(dir)
+         enddo
+        else if (LS_clamped.lt.zero) then
+
+         if ((im_solid.ge.1).and. &
+             (im_solid.le.nmat)) then ! in the prescribed solid
+          if (im_solid_map(partid_crit+1)+1.ne.im_solid) then
+           print *,"im_solid_map(partid_crit+1)+1.ne.im_solid"
+           stop
+          endif
+          dir=1
           velcomp=partid_crit*SDIM+dir
           snew(D_DECL(i,j,k),dir)=half* &
+            (solxfab(D_DECL(i,j,k),velcomp)+ &
+             solxfab(D_DECL(i+1,j,k),velcomp))
+          dir=2
+          velcomp=partid_crit*SDIM+dir
+          snew(D_DECL(i,j,k),dir)=half* &
+            (solyfab(D_DECL(i,j,k),velcomp)+ &
+             solyfab(D_DECL(i,j+1,k),velcomp))
+          if (SDIM.eq.3) then
+           dir=SDIM
+           velcomp=partid_crit*SDIM+dir
+           snew(D_DECL(i,j,k),dir)=half* &
             (solzfab(D_DECL(i,j,k),velcomp)+ &
              solzfab(D_DECL(i,j,k+1),velcomp))
-         endif
+          endif
 
-        else if (im_solid.eq.0) then ! in the fluid
-         do dir=1,SDIM
-          snew(D_DECL(i,j,k),dir)= &
-           advect(D_DECL(i,j,k),dir)+ &
-           du(D_DECL(i,j,k),dir)
-         enddo ! dir
+         else if (im_solid.eq.0) then ! in the fluid
+          do dir=1,SDIM
+           snew(D_DECL(i,j,k),dir)= &
+            advect(D_DECL(i,j,k),dir)+ &
+            du(D_DECL(i,j,k),dir)
+          enddo ! dir
+         else
+          print *,"im_solid invalid 4"
+          stop
+         endif
         else
-         print *,"im_solid invalid 4"
+         print *,"LS_clamped is NaN"
          stop
         endif
 
-       else if (nsolve.eq.1) then
+       else if (nsolve.eq.1) then ! temperature
 
         do im=1,nmat
          ibase=num_materials_vel*(SDIM+1)+(im-1)*num_state_material
