@@ -10114,7 +10114,6 @@ stop
        ! 2=no div(up) but gp
        ! 3=both
       INTEGER_T use_face_pres_cen
-       ! REALs since they are stored with other vars in "xp","yp","zp"
       INTEGER_T use_face_pres(2)  ! faces that are on either side of a cell.
       INTEGER_T use_face_pres_combine
       REAL_T coarse_fine_face(2)
