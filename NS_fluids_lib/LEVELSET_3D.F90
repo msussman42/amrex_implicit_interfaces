@@ -10115,8 +10115,8 @@ stop
        ! 3=both
       INTEGER_T use_face_pres_cen
        ! REALs since they are stored with other vars in "xp","yp","zp"
-      REAL_T use_face_pres(2)  ! faces that are on either side of a cell.
-      REAL_T use_face_pres_combine
+      INTEGER_T use_face_pres(2)  ! faces that are on either side of a cell.
+      INTEGER_T use_face_pres_combine
       REAL_T coarse_fine_face(2)
       REAL_T ASIDE(2,ncphys)
       REAL_T mass_side(2)
@@ -11376,9 +11376,9 @@ stop
 
         enddo  ! dir=0..sdim-1
 
-        ! use_face_pres.eq.one   ! div(up) ok, not gp
-        ! use_face_pres.eq.two   ! div(up) not ok, gp ok
-        ! use_face_pres.eq.three ! div(up) and gp ok
+        ! use_face_pres.eq.1   ! div(up) ok, not gp
+        ! use_face_pres.eq.2   ! div(up) not ok, gp ok
+        ! use_face_pres.eq.3 ! div(up) and gp ok
         ! note: use_face_pres<=1 at faces if face_flag=1
         ! note: use_face_pres<=3 at faces if face_flag=0
         ! in: FORT_MAC_TO_CELL
@@ -11568,7 +11568,7 @@ stop
            enddo
            uface(side,im_vel)=xvel(D_DECL(iface,jface,kface),im_vel)
            pres_face(side)=xp(D_DECL(iface,jface,kface),3)
-           use_face_pres(side)=xp(D_DECL(iface,jface,kface),1)
+           use_face_pres(side)=NINT(xp(D_DECL(iface,jface,kface),1))
            coarse_fine_face(side)=xp(D_DECL(iface,jface,kface),2)
           else if (dir.eq.1) then
            aface(side)=ay(D_DECL(iface,jface,kface))
@@ -11577,7 +11577,7 @@ stop
            enddo
            uface(side,im_vel)=yvel(D_DECL(iface,jface,kface),im_vel)
            pres_face(side)=yp(D_DECL(iface,jface,kface),3)
-           use_face_pres(side)=yp(D_DECL(iface,jface,kface),1)
+           use_face_pres(side)=NINT(yp(D_DECL(iface,jface,kface),1))
            coarse_fine_face(side)=yp(D_DECL(iface,jface,kface),2)
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            aface(side)=az(D_DECL(iface,jface,kface))
@@ -11586,7 +11586,7 @@ stop
            enddo
            uface(side,im_vel)=zvel(D_DECL(iface,jface,kface),im_vel)
            pres_face(side)=zp(D_DECL(iface,jface,kface),3)
-           use_face_pres(side)=zp(D_DECL(iface,jface,kface),1)
+           use_face_pres(side)=NINT(zp(D_DECL(iface,jface,kface),1))
            coarse_fine_face(side)=zp(D_DECL(iface,jface,kface),2)
           else
            print *,"dir invalid mac to cell 3"
@@ -11654,53 +11654,53 @@ stop
           endif
          enddo ! im=1..nmat
 
-           ! use_face_pres.eq.one   ! div(up) ok, not gp
-           ! use_face_pres.eq.two   ! div(up) not ok, gp ok
-           ! use_face_pres.eq.three ! div(up) and gp ok
+           ! use_face_pres.eq.1   ! div(up) ok, not gp
+           ! use_face_pres.eq.2   ! div(up) not ok, gp ok
+           ! use_face_pres.eq.3 ! div(up) and gp ok
          if (use_face_pres(1).eq.use_face_pres(2)) then
           use_face_pres_combine=use_face_pres(1)
-         else if ((use_face_pres(1).eq.three).or. &
-                  (use_face_pres(2).eq.three)) then
+         else if ((use_face_pres(1).eq.3).or. &
+                  (use_face_pres(2).eq.3)) then
           use_face_pres_combine=min(use_face_pres(1),use_face_pres(2))
-         else if ((use_face_pres(1).eq.zero).or. &
-                  (use_face_pres(2).eq.zero)) then
-          use_face_pres_combine=zero
-         else if ((use_face_pres(1).eq.one).and. &
-                  (use_face_pres(2).eq.two)) then
-          use_face_pres_combine=zero
-         else if ((use_face_pres(1).eq.two).and. &
-                  (use_face_pres(2).eq.one)) then
-          use_face_pres_combine=zero
+         else if ((use_face_pres(1).eq.0).or. &
+                  (use_face_pres(2).eq.0)) then
+          use_face_pres_combine=0
+         else if ((use_face_pres(1).eq.1).and. &
+                  (use_face_pres(2).eq.2)) then
+          use_face_pres_combine=0
+         else if ((use_face_pres(1).eq.2).and. &
+                  (use_face_pres(2).eq.1)) then
+          use_face_pres_combine=0
          else
           print *,"use_face_pres invalid"
           stop
          endif
         
          if (use_face_pres_cen.eq.3) then
-          use_face_pres_cen=NINT(use_face_pres_combine)
+          use_face_pres_cen=use_face_pres_combine
          else if (use_face_pres_cen.eq.0) then
           ! do nothing
          else if (use_face_pres_cen.eq.2) then
-          if (use_face_pres_combine.eq.zero) then
+          if (use_face_pres_combine.eq.0) then
            use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.one) then
+          else if (use_face_pres_combine.eq.1) then
            use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.two) then
+          else if (use_face_pres_combine.eq.2) then
            use_face_pres_cen=2
-          else if (use_face_pres_combine.eq.three) then
+          else if (use_face_pres_combine.eq.3) then
            use_face_pres_cen=2
           else
            print *,"use_face_pres_combine invalid"
            stop
           endif
          else if (use_face_pres_cen.eq.1) then
-          if (use_face_pres_combine.eq.zero) then
+          if (use_face_pres_combine.eq.0) then
            use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.one) then
+          else if (use_face_pres_combine.eq.1) then
            use_face_pres_cen=1
-          else if (use_face_pres_combine.eq.two) then
+          else if (use_face_pres_combine.eq.2) then
            use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.three) then
+          else if (use_face_pres_combine.eq.3) then
            use_face_pres_cen=1
           else
            print *,"use_face_pres_combine invalid"
@@ -14510,17 +14510,17 @@ stop
           at_coarse_fine_wallF=0
           at_coarse_fine_wallC=0
 
-          use_face_pres=three ! use both gp and div(up)
+          use_face_pres=3 ! use both gp and div(up)
           solid_velocity=local_face(facevel_index+1)
 
           face_velocity_override=0
 
           if (face_flag.eq.1) then
 
-           use_face_pres=one  ! div(up) ok, but not gp
+           use_face_pres=1  ! div(up) ok, but not gp
  
           else if (face_flag.eq.0) then
-           use_face_pres=three  ! div(up) and gp ok.
+           use_face_pres=3  ! div(up) and gp ok.
           else
            print *,"face_flag invalid"
            stop
@@ -14548,14 +14548,14 @@ stop
              solid_velocity=zero
             else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
              face_velocity_override=1
-             use_face_pres=one ! do not use gp 
+             use_face_pres=1 ! do not use gp 
              at_ext_wall=side
             else if (velbc_in(dir+1,side,dir+1).eq.INT_DIR) then
              if (mask_coarsefine(side).eq.0) then  
               at_coarse_fine_wallF=side
               if ((project_option.eq.1).or. &
                   (COARSE_FINE_VELAVG.eq.1)) then
-               use_face_pres=one ! do not use gp 
+               use_face_pres=1 ! do not use gp 
               else if (((project_option.eq.0).or. &
                         (project_option.eq.10).or. &
                         (project_option.eq.13).or. &  !FSI_material_exists 1st
@@ -14613,7 +14613,7 @@ stop
           if ((AFACE.ge.zero).and. &
               (AFACE.le.half)) then
            if (at_reflect_wall.eq.0) then
-            use_face_pres=one ! do not use gp
+            use_face_pres=1 ! do not use gp
            else if ((at_reflect_wall.eq.1).or. &
                     (at_reflect_wall.eq.2)) then
             ! do nothing
@@ -14634,7 +14634,7 @@ stop
                (CTML_FSI_mat(nmat,im).eq.1)) then  
             if ((levelPC(D_DECL(i,j,k),im).ge.zero).or. &
                 (levelPC(D_DECL(im1,jm1,km1),im).ge.zero)) then
-             use_face_pres=zero ! do not use gp or div(up)
+             use_face_pres=0 ! do not use gp or div(up)
             endif
            else if ((FSI_flag(im).eq.0).or. &
                     (FSI_flag(im).eq.7)) then ! regular fluid material
@@ -14648,7 +14648,7 @@ stop
           enddo ! im=1..nmat
 
           if (local_face(icemask_index+1).eq.zero) then
-           use_face_pres=zero ! do not use gp or div(up)
+           use_face_pres=0 ! do not use gp or div(up)
           else if (local_face(icemask_index+1).eq.one) then
            ! do nothing
           else
@@ -14682,7 +14682,7 @@ stop
             ! at least 1 side is covered
            if ((mask_covered(1).eq.0).or. &
                (mask_covered(2).eq.0)) then
-            use_face_pres=min(use_face_pres,one) ! do not use gp 
+            use_face_pres=min(use_face_pres,1) ! do not use gp 
            else if ((mask_covered(1).eq.1).and. &
                     (mask_covered(2).eq.1)) then
             ! do nothing
@@ -14698,7 +14698,7 @@ stop
            ! both sides are covered
            if ((mask_covered(1).eq.0).and. &
                (mask_covered(2).eq.0)) then
-            use_face_pres=zero  ! do not use gp or div(up)
+            use_face_pres=0  ! do not use gp or div(up)
            else if ((mask_covered(1).eq.1).or. &
                     (mask_covered(2).eq.1)) then
             ! do nothing
@@ -14771,7 +14771,7 @@ stop
              if ((im_prescribed.ge.1).and. &
                  (im_prescribed.le.nmat)) then
               if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
-               use_face_pres=zero ! do not use gp or div(up)
+               use_face_pres=0 ! do not use gp or div(up)
                face_velocity_override=1
               else
                print *,"im_solid_map(partid_prescribed+1)+1 invalid"
@@ -14800,7 +14800,7 @@ stop
           if ((is_clamped_face.eq.1).or. &
               (is_clamped_face.eq.2).or. &
               (is_clamped_face.eq.3)) then
-           use_face_pres=zero ! do not use gp or div(up)
+           use_face_pres=0 ! do not use gp or div(up)
            face_velocity_override=1
           else if (is_clamped_face.eq.0) then
            ! do nothing
