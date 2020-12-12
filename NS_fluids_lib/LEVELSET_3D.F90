@@ -10140,6 +10140,11 @@ stop
       INTEGER_T partid_ghost
       INTEGER_T nparts_temp,im_solid
       INTEGER_T cell_velocity_override
+      
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
 
       REAL_T local_div_val
 
@@ -10752,6 +10757,10 @@ stop
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
+       do dir=1,SDIM
+        xclamped(dir)=xsten(0,dir)
+       enddo
+
        AXL=ax(D_DECL(i,j,k))
        AXR=ax(D_DECL(i+1,j,k))
        AYL=ay(D_DECL(i,j,k))
@@ -11081,6 +11090,10 @@ stop
        ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
        else if (operation_flag.eq.2) then
 
+         ! LS>0 if clamped
+        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+                vel_clamped,temperature_clamped)
+
         do dir=0,SDIM-1 
          ii=0
          jj=0
@@ -11333,17 +11346,25 @@ stop
           stop
          endif
 
+         if (LS_clamped.ge.zero) then
+          veldest(D_DECL(i,j,k),velcomp)=vel_clamped(dir+1)
+         else if (LS_clamped.lt.zero) then
 
-         if (cell_velocity_override.eq.1) then
-          veldest(D_DECL(i,j,k),velcomp)= &
-           (mass_side(1)*ufacesolid(1)+ &
-            mass_side(2)*ufacesolid(2))/masscell
-         else if (cell_velocity_override.eq.0) then
-          fluid_velocity=(mass_side(1)*uface(1,im_vel)+ &
-                          mass_side(2)*uface(2,im_vel))/masscell
-          veldest(D_DECL(i,j,k),velcomp)=fluid_velocity
+          if (cell_velocity_override.eq.1) then
+           veldest(D_DECL(i,j,k),velcomp)= &
+            (mass_side(1)*ufacesolid(1)+ &
+             mass_side(2)*ufacesolid(2))/masscell
+          else if (cell_velocity_override.eq.0) then
+           fluid_velocity=(mass_side(1)*uface(1,im_vel)+ &
+                           mass_side(2)*uface(2,im_vel))/masscell
+           veldest(D_DECL(i,j,k),velcomp)=fluid_velocity
+          else
+           print *,"cell_velocity_override invalid"
+           stop
+          endif
+
          else
-          print *,"cell_velocity_override invalid"
+          print *,"LS_clamped is NaN"
           stop
          endif
 
@@ -11363,7 +11384,20 @@ stop
         ! in: FORT_MAC_TO_CELL
        else if (operation_flag.eq.3) then ! (grad p)_CELL, div(up)
 
+         ! LS>0 if clamped
+        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+                vel_clamped,temperature_clamped)
+
         use_face_pres_cen=3 ! both gp and div(up)
+
+        if (LS_clamped.ge.zero) then
+         use_face_pres_cen=2  ! no div(up), no rho divu (if non-cons)
+        else if (LS_clamped.lt.zero) then
+         ! do nothing
+        else
+         print *,"LS_clamped invalid"
+         stop
+        endif
 
          ! note, in FORT_BUILD_CONSERVE, if 
          ! temperature_primitive_variable==1,
@@ -11682,6 +11716,15 @@ stop
          if ((cell_is_ice.eq.1).or. &
              (cell_is_FSI_rigid.eq.1)) then
           use_face_pres_cen=0
+         endif
+
+         if (LS_clamped.ge.zero) then
+          use_face_pres_cen=0  
+         else if (LS_clamped.lt.zero) then
+          ! do nothing
+         else
+          print *,"LS_clamped invalid"
+          stop
          endif
 
          if (energyflag.eq.0) then
