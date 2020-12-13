@@ -2387,6 +2387,16 @@ stop
  
       end subroutine getGhostVel
 
+        ! FUTURE: Storing both the displacement and tensor at the
+        !  cell centers (colocated) results in a large stencil for 
+        !  the elastic force.  THIS MUST BE CHANGED:
+        !    a) store displacement at cell centers.
+        !    b) store tensor on the MAC grid
+        !    c) store force at cell centers
+        !    
+        ! CURRENT STENCIL WIDTH: 5x5x5 stencil
+        ! FUTURE STENCIL WIDTH: 3x3x3 stencil
+        !
         ! u_t + u dot grad u = -grad p/density + div tau
         ! div u = 0
         ! phi_t + u dot grad phi=0   
