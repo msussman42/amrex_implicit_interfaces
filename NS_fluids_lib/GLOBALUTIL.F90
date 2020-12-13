@@ -9186,6 +9186,9 @@ contains
         dist=xhi-x
        else
         print *,"dist invalid in squaredist"
+        print *,"x,y,xlo,xhi,ylo,yhi,xmid,ymid ", &
+              x,y,xlo,xhi,ylo,yhi,xmid,ymid
+         ! gdb: break GLOBALUTIL.F90:9188
         stop
        endif
 

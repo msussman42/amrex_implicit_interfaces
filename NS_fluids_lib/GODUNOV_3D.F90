@@ -2684,8 +2684,10 @@ stop
         do dir_x=1,SDIM 
         do dir_space=1,SDIM
          do dir_inner=1,SDIM
+           ! C=F^T F
           C(dir_x,dir_space)=C(dir_x,dir_space)+ &
                   F(dir_inner,dir_x)*F(dir_inner,dir_space)
+           ! B=F F^T
           B(dir_x,dir_space)=B(dir_x,dir_space)+ &
                   F(dir_x,dir_inner)*F(dir_space,dir_inner)
          enddo
@@ -2693,18 +2695,33 @@ stop
         enddo
         do dir_x=1,SDIM 
         do dir_space=1,SDIM
-         if (abs(C(dir_x,dir_space)-B(dir_space,dir_x)).le. &
-             1.0D-2*scale_factor) then
+         if (abs(C(dir_x,dir_space)-C(dir_space,dir_x)).le. &
+             1.0D-5*scale_factor) then
           ! do nothing
          else
+          print *,"i,j,k ",i,j,k
           print *,"scale_factor = ",scale_factor
           print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
           print *,"dir_x,dir_space ",dir_x,dir_space
           print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
-          print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
-          print *,"expecting C^T=B"
+          print *,"C(dir_space,dir_x)=",C(dir_space,dir_x)
+          print *,"expecting C^T=C"
           stop
          endif 
+         if (abs(B(dir_x,dir_space)-B(dir_space,dir_x)).le. &
+             1.0D-5*scale_factor) then
+          ! do nothing
+         else
+          print *,"i,j,k ",i,j,k
+          print *,"scale_factor = ",scale_factor
+          print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+          print *,"dir_x,dir_space ",dir_x,dir_space
+          print *,"B(dir_x,dir_space)=",B(dir_x,dir_space)
+          print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
+          print *,"expecting B^T=B"
+          stop
+         endif
+
         enddo
         enddo
         trace_E=zero
@@ -26600,8 +26617,8 @@ stop
       INTEGER_T partidL,partidR
       INTEGER_T conservative_div_uu
 
-      REAL_T xclamped_minus_sten(-3:3,SDIM)
-      REAL_T xclamped_plus_sten(-3:3,SDIM)
+      REAL_T xclamped_minus_sten(-1:1,SDIM)
+      REAL_T xclamped_plus_sten(-1:1,SDIM)
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
       REAL_T xclamped_cen(SDIM)
