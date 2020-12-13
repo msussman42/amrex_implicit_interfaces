@@ -61,7 +61,7 @@ ns.num_species_var=0
 # 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
 ns.slope_limiter_option=1
-ns.advection_order=2 2 1
+ns.advection_order=1 1 1
 # 0 = MOF (moment of fluid)
 # 2 = CMOF (continuous moment of fluid)
 # 3 = CLSVOF in 2 material cells and MOF in >2 material cells.
@@ -201,12 +201,13 @@ ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.1053027 Kensuke
 ns.xblob=0.0  # center of falling droplet ZEYU
 ns.yblob=2.5e-3
-ns.zblob=2.5e-3  # 1.5e-3+1.0e-3
+ns.zblob=2.5e-3  # (1.5e-3)+(1.0e-3)
 # 0.18 Yongsheng
 # 0.186/2=0.093 Kensuke
 ns.radblob=1.0e-3 # ZEYU
 ns.xblob2=0.0
-ns.radblob2=1.0e+10  # plate extends the whole domain 
+#ns.radblob2=1.0e+10  # plate extends the whole domain 
+ns.radblob2=1.5e-3  # plate extends halfway to end of domain. 
 # SUBSTRATE THICKNESS SHOULD BE A MULTIPLE OF dx_{coarsest}
 # if n_cell=32 32 and domain height=0.4 cm then
 # dx_coarsest=0.4/32=0.0125
@@ -214,10 +215,11 @@ ns.radblob2=1.0e+10  # plate extends the whole domain
 #ns.zblob2=0.125  # center of plate
 #ns.radblob3=0.025 
 #ns.radblob4=0.025 
-ns.yblob2=0.0
+ns.yblob2=1.25e-3
 ns.zblob2=0.0
-ns.radblob3=1.5e-3
-ns.radblob4=1.5e-3
+ns.radblob3=0.25e-3  # vertical radius of the plate (2D)
+ns.radblob4=0.25e-3
+ns.radblob5=0.25e-3  # width of clamped region
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2000
@@ -248,8 +250,8 @@ ns.added_weight=1.0 1.0 1000.0
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 3 3
-ns.hi_bc          = 3 3
+ns.lo_bc          = 3 2
+ns.hi_bc          = 2 2
 #ns.v=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<

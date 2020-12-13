@@ -2897,7 +2897,8 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
 
  MultiFab::Subtract(*localMF[POLDHOLD_MF],*mac_phi_crse,0,0,nsolveMM,0);
 
-   // UMAC=UMAC+GRADPEDGE
+  // in: NavierStokes3.cpp
+  // UMAC=UMAC+GRADPEDGE
  correct_velocity(project_option,
    UMAC_MF,UMAC_MF,GRADPEDGE_MF,nsolve);
 
