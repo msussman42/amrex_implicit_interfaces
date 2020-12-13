@@ -25706,10 +25706,17 @@ stop
       REAL_T lsright(nmat)
       REAL_T xface_local
       INTEGER_T dir_local
-      REAL_T xclamped(SDIM)
-      REAL_T LS_clamped
-      REAL_T vel_clamped(SDIM)
-      REAL_T temperature_clamped
+      REAL_T xclamped_face(SDIM)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+      REAL_T LS_clamped_minus
+      REAL_T LS_clamped_plus
+      REAL_T vel_clamped_minus(SDIM)
+      REAL_T vel_clamped_plus(SDIM)
+      REAL_T vel_clamped_face(SDIM)
+      REAL_T temperature_clamped_minus
+      REAL_T temperature_clamped_plus
+      INTEGER_T is_clamped_face
       INTEGER_T local_tessellate
 
       nhalf=3
@@ -25839,8 +25846,35 @@ stop
 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
        do dir_local=1,SDIM
-        xclamped(dir_local)=xstenMAC(0,dir_local)
+        xclamped_face(dir_local)=xstenMAC(0,dir_local)
        enddo
+
+       do side=1,2
+        if (side.eq.1) then
+         icell=i-ii
+         jcell=j-jj
+         kcell=k-kk
+        else if (side.eq.2) then
+         icell=i
+         jcell=j
+         kcell=k
+        else
+         print *,"side invalid"
+         stop
+        endif
+
+        call gridsten_level(xsten,icell,jcell,kcell,level,nhalf)
+        do dir_local=1,SDIM
+         if (side.eq.1) then
+          xclamped_minus(dir_local)=xsten(0,dir_local)
+         else if (side.eq.2) then
+          xclamped_plus(dir_local)=xsten(0,dir_local)
+         else
+          print *,"side invalid"
+          stop
+         endif
+        enddo ! dir_local=1..sdim
+       enddo ! side=1,2
 
        if (dir.eq.0) then
         idx=i
@@ -25902,6 +25936,7 @@ stop
          endif
 
          call gridsten_level(xsten,icell,jcell,kcell,level,nhalf)
+
          do im=1,nmat*ngeom_recon
           mofdata(im)=vof(D_DECL(icell,jcell,kcell),im)
          enddo
@@ -26186,15 +26221,42 @@ stop
         endif
 
           ! LS>0 if clamped
-        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped)
-        if (LS_clamped.ge.zero) then
+        call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+            vel_clamped_minus,temperature_clamped_minus)
+        call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+            vel_clamped_plus,temperature_clamped_plus)
+        if ((LS_clamped_minus.ge.zero).or. &
+            (LS_clamped_plus.ge.zero)) then
+         is_clamped_face=1
+         do dir_local=1,SDIM
+          if (LS_clamped_minus.lt.zero) then
+           vel_clamped_face(dir_local)=vel_clamped_plus(dir_local)
+           is_clamped_face=2
+          else if (LS_clamped_plus.lt.zero) then
+           vel_clamped_face(dir_local)=vel_clamped_minus(dir_local)
+           is_clamped_face=3
+          else
+           vel_clamped_face(dir_local)=half*(vel_clamped_plus(dir_local)+ &
+             vel_clamped_minus(dir_local))
+          endif
+         enddo ! dir_local=1..sdim
+        else if ((LS_clamped_minus.lt.zero).and. &
+                 (LS_clamped_plus.lt.zero)) then
+         is_clamped_face=0
+        else
+         print *,"LS_clamped plus or minus is NaN"
+         stop
+        endif
+
+        if ((is_clamped_face.eq.1).or. &
+            (is_clamped_face.eq.2).or. &
+            (is_clamped_face.eq.3)) then
          if (is_solid_face.eq.0) then
           is_solid_face=2
           if (hflag.eq.1) then
            vsol=zero
           else if (hflag.eq.0) then
-           vsol=vel_clamped(dir+1)
+           vsol=vel_clamped_face(dir+1)
           else
            print *,"hflag invalid"
            stop
@@ -26206,10 +26268,10 @@ stop
           print *,"is_solid_face invalid"
           stop
          endif
-        else if (LS_clamped.lt.zero) then
+        else if (is_clamped_face.eq.0) then
          ! do nothing
         else
-         print *,"LS_clamped is NaN"
+         print *,"is_clamped_face invalid"
          stop
         endif
 
