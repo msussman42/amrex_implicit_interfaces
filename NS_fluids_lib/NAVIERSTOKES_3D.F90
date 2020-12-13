@@ -11332,11 +11332,12 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_INITPOTENTIAL
 
-
+! NavierStokes3.cpp: NavierStokes::increment_potential_force()
 ! gravity_normalized>0 means that gravity is directed downwards.
 ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
       subroutine FORT_ADDGRAVITY( &
        dt, &
+       cur_time, &
        gravity_potential_form, &
        gravity_normalized, &
        gravity_dir_parm, &
@@ -11364,10 +11365,12 @@ END SUBROUTINE SIMP
 
       use global_utility_module
       use probcommon_module
+      use probf90_module
 
       IMPLICIT NONE
 
       REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: cur_time
       INTEGER_T, intent(in) :: gravity_potential_form
       INTEGER_T, intent(in) :: gravity_dir_parm
       REAL_T, intent(in) :: gravity_normalized  
@@ -11418,6 +11421,13 @@ END SUBROUTINE SIMP
 
       REAL_T vol_total,mass_total,volside,denface_gravity
       REAL_T gravity_increment
+
+      INTEGER_T dir_local
+
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
 
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -11475,6 +11485,12 @@ END SUBROUTINE SIMP
        ! do nothing
       else
        print *,"dt invalid in addgravity"
+       stop
+      endif
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid in addgravity"
        stop
       endif
 
@@ -11547,7 +11563,8 @@ END SUBROUTINE SIMP
 
        im=1
 
-        ! surface tension and maybe gravity
+        ! 1. surface tension 
+        ! 2. gravity if gravity_potential_form==1
        gravity_increment= &
           denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
 
@@ -11597,26 +11614,43 @@ END SUBROUTINE SIMP
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       local_cut=one
-       do im=1,nmat
-        if (is_prescribed(nmat,im).eq.1) then
-         if (lsnew(D_DECL(i,j,k),im).ge.zero) then
-          local_cut=zero
-         else if (lsnew(D_DECL(i,j,k),im).lt.zero) then
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir_local=1,SDIM
+        xclamped(dir_local)=xsten(0,dir_local)
+       enddo
+         ! LS>0 if clamped
+       call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+           vel_clamped,temperature_clamped)
+
+       if (LS_clamped.ge.zero) then
+        local_cut=zero
+       else if (LS_clamped.lt.zero) then
+        local_cut=one
+        do im=1,nmat
+         if (is_prescribed(nmat,im).eq.1) then
+          if (lsnew(D_DECL(i,j,k),im).ge.zero) then
+           local_cut=zero
+          else if (lsnew(D_DECL(i,j,k),im).lt.zero) then
+           ! do nothing
+          else
+           print *,"lsnew bust"
+           stop
+          endif
+         else if (is_prescribed(nmat,im).eq.0) then
           ! do nothing
          else
-          print *,"lsnew bust"
+          print *,"is_prescribed(nmat,im) invalid"
           stop
          endif
-        else if (is_prescribed(nmat,im).eq.0) then
-         ! do nothing
-        else
-         print *,"is_prescribed(nmat,im) invalid"
-         stop
-        endif
-       enddo ! im=1..nmat
+        enddo ! im=1..nmat
+       else
+        print *,"LS_clamped invalid"
+        stop
+       endif
 
        if (local_cut.eq.one) then
+        ! 1. surface tension 
+        ! 2. gravity if gravity_potential_form==1
         grav_component=cellgrav(D_DECL(i,j,k),dir+1)
 
         vol_total=zero
@@ -11634,6 +11668,7 @@ END SUBROUTINE SIMP
           stop
          endif
          vol_total=vol_total+volside
+          ! default is denconst_gravity(im)=1.0 im=1..nmat
          if (denconst_gravity(im).ge.zero) then
           mass_total=mass_total+denconst_gravity(im)*volside
          else

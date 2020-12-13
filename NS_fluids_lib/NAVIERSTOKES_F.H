@@ -587,6 +587,7 @@ extern "C" {
 
     void FORT_ADDGRAVITY(
       Real* dt,
+      Real* cur_time,
       int* gravity_potential_form,
       Real* gravity_normalized,
       int* gravity_dir,

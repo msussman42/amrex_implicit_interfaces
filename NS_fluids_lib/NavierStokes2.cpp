@@ -5616,6 +5616,7 @@ void NavierStokes::increment_potential_force() {
     // u+=cellgrav 
    FORT_ADDGRAVITY(
      &dt_slab,
+     &cur_time_slab,
      &gravity_potential_form,
      &gravity_normalized,
      &gravity_dir,
