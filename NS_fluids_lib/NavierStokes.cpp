@@ -11634,6 +11634,7 @@ NavierStokes::level_phase_change_rate_extend() {
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
 
+  // flag 1 .. nten, vel 1 .. nten
  int nburning=nten*(ncomp_per_burning+1);
  int ntsat=nten*(ncomp_per_tsat+1);
 
