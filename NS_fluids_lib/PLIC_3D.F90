@@ -640,14 +640,14 @@ stop
           endif
           if (continuous_mof_base.eq.4) then ! CLSVOF if 2 materials in stencil
            continuous_mof_parm=5
-          else if ((continuous_mof.eq.0).or. & ! MOF
-                   (continuous_mof.eq.2)) then ! CMOF
+          else if ((continuous_mof_base.eq.0).or. & ! MOF
+                   (continuous_mof_base.eq.2)) then ! CMOF
            if (continuous_mof_parm.ne.continuous_mof_base) then
-            print *,"continuous_mof_parm.ne.continuous_mof"
+            print *,"continuous_mof_parm.ne.continuous_mof_base"
             stop
            endif
           else
-           print *,"continuous_mof invalid"
+           print *,"continuous_mof_base invalid"
            stop
           endif
          else
