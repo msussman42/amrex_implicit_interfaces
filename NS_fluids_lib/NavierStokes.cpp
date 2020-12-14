@@ -264,17 +264,9 @@ continuous_mof=2 (if same number of materials in center cell as in stencil)
    F_ij^derived=derived volume fraction in cell for a given
      slope and intercept.
 
-continuous_mof=3 
-
-  use CLSVOF in 2 material cells and MOF in >2 mat cells.
-
 continuous_mof=4 
 
   use CLSVOF in 2 material cells and CMOF in >2 mat cells.
-
-continuous_mof=5 
-
-  use CLSVOF everywhere.
 
 
 NOTE: rigid materials are not counted as materials in a cell.  Rigid 
@@ -292,6 +284,8 @@ on an interface, growth rate of perturbations, pressure drop)
 
 int  NavierStokes::VOF_reflux=0;
 int  NavierStokes::continuous_mof=0;
+int  NavierStokes::force_cmof_at_walls=1;
+int  NavierStokes::partial_cmof_stencil_at_walls=0;
 
 // 0  low order space and time
 // 1  SEM space and time
@@ -2398,6 +2392,9 @@ NavierStokes::read_params ()
      amrex::Error("SEM_advection_algorithm invalid");
 
     pp.query("continuous_mof",continuous_mof);
+    pp.query("force_cmof_at_walls",force_cmof_at_walls);
+    pp.query("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
+
     pp.query("VOF_reflux",VOF_reflux);
 
     pp.query("init_shrink",init_shrink);
@@ -2499,6 +2496,11 @@ NavierStokes::read_params ()
      std::cout << "SEM_advection_algorithm " << 
        SEM_advection_algorithm << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
+     std::cout << "force_cmof_at_walls " << force_cmof_at_walls << '\n';
+     std::cout << "partial_cmof_stencil_at_walls " << 
+	    partial_cmof_stencil_at_walls << '\n';
+
+
      std::cout << "VOF_reflux " << VOF_reflux << '\n';
     }
 

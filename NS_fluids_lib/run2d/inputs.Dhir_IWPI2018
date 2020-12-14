@@ -11,7 +11,7 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  5.0e-3 7.5e-3   # MKS
 ns.EILE_flag=-1
-ns.continuous_mof=3 # CLSVOF in 2 material cells, and MOF in >2 mat cells.
+ns.continuous_mof=4 # CLSVOF in 2 material cells, and MOF in >2 mat cells.
 ns.MOFITERMAX=15
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.advection_order=1 1 1 1

@@ -35,7 +35,6 @@ ns.ns_tiling=false
 ns.MOFITERMAX=15
 # continuous_mof=0 regular MOF
 # continuous_mof=2 CMOF
-# continuous_mof=3 CLSVOF + MOF hybrid
 # continuous_mof=4 CLSVOF + CMOF hybrid
 ns.continuous_mof=0
 ns.conservative_tension_force=0
