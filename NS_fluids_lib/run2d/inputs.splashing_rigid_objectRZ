@@ -21,7 +21,7 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 4.0      # cgs
 ns.EILE_flag=-1
-ns.continuous_mof=2  # 0=MOF 2=CMOF 3,4,5=CLSVOF
+ns.continuous_mof=2  # 0=MOF 2=CMOF 4=CLSVOF/CMOF
 ns.MOFITERMAX=15
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.advection_order=1 1 1 1

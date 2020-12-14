@@ -42,8 +42,8 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 512
 ns.EILE_flag=-1
-# 0=MOF 2=CMOF 3,4,5=CLSVOF 
-ns.continuous_mof=5
+# 0=MOF 2=CMOF 4=CLSVOF/CMOF
+ns.continuous_mof=4
 ns.MOFITERMAX=15
 ns.fab_verbose=0 # for circle, fab_verbose=1, for plane (210), fab_verbose=0
 #amr.restart         = chk0100

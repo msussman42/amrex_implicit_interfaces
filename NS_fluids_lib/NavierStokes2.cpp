@@ -8744,6 +8744,8 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
    // (4) =1 interior+ngrow    =0 otherwise
    FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
 
+   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -8757,6 +8759,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     &finest_level,
     &max_level,
     &ngrow,
+    vofbc.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
@@ -8775,6 +8778,8 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     total_calls[tid_current].dataPtr(),
     total_iterations[tid_current].dataPtr(),
     &continuous_mof, 
+    &force_cmof_at_walls, 
+    &partial_cmof_stencil_at_walls, 
     radius_cutoff.dataPtr());
  }  // mfi
 } // omp

@@ -8903,9 +8903,11 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -9260,9 +9262,11 @@ contains
        stop
       endif
 
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -10139,9 +10143,11 @@ contains
        stop
       endif
 
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -10777,9 +10783,11 @@ contains
        print *,"critical_material invalid"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -11576,9 +11584,11 @@ contains
        print *,"nmax too small"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -12772,12 +12782,10 @@ contains
 !   F_ij^ref=reference volume fraction in cell
 !   F_ij^derived=derived volume fraction in cell for a given
 !     slope and intercept.
-!continuous_mof=3 
-!  use CLSVOF in 2 material cells and MOF in >2 mat cells.
 !continuous_mof=4 
 !  use CLSVOF in 2 material cells and CMOF in >2 mat cells.
-!continuous_mof=5 
-!  use CLSVOF everywhere.
+!continuous_mof=5 => this is the value passed if just 2 materials in a cell
+!    and continuous_mof=4 originally.
 
 ! normal points from light to dark   phi=n dot (x-x0) + intercept
 ! vof, ref centroid, order,slope,intercept  x nmat
@@ -12787,12 +12795,11 @@ contains
 ! if continuous_mof=2:
 !  centroids: 3x3 super cell unless near Fsolid>1/2 cell (cmofsten)
 !  vfrac    : center cell
-!
 ! if continuous_mof=5:
 !  centroids: center cell
 !  vfrac    : center cell
 !  slopes   : level set 
-! 
+!
 ! RIGID materials are always reconstructed using standard MOF.
 !
 ! xtetlist is workspace data (use POLYGON_LIST_MAX)
@@ -13059,9 +13066,8 @@ contains
 
         else if ((continuous_mof.eq.0).or. &
                  (continuous_mof.eq.2).or. &
-                 (continuous_mof.eq.3).or. &
                  (continuous_mof.eq.4).or. &
-                 (continuous_mof.le.5)) then
+                 (continuous_mof.eq.5)) then
  
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -13145,9 +13151,8 @@ contains
 
        if ((continuous_mof.eq.0).or. &
            (continuous_mof.eq.2).or. &
-           (continuous_mof.eq.3).or. &
            (continuous_mof.eq.4).or. &
-           (continuous_mof.le.5)) then
+           (continuous_mof.eq.5)) then
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -13290,9 +13295,8 @@ contains
 
         if ((continuous_mof.eq.0).or. &
             (continuous_mof.eq.2).or. &
-            (continuous_mof.eq.3).or. &
             (continuous_mof.eq.4).or. &
-            (continuous_mof.le.5)) then
+            (continuous_mof.eq.5)) then
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
  
          if (order_algorithm(imaterial).eq.0) then

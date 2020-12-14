@@ -1538,6 +1538,8 @@ protected:
      // continuous_mof = 4 => CLSVOF except use CMOF in cells w/ >2 materials.
      // continuous_mof = 5 => use CLSVOF everywhere (not recommended)
     static int  continuous_mof; // default is 0
+    static int  force_cmof_at_walls; // default is 1
+    static int  partial_cmof_stencil_at_walls;  // default is 0
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
     static Real fixed_dt;      // set > 0 to specify dt
