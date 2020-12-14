@@ -1700,6 +1700,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   // vort_error (1 comp)
   // vel_error (1 comp)
   // energy_moment (1 comp)
+  // enstrophy (nmat comp)
+  // user defined (ncomp_sum_int_user comp)
+  // species mass (num_species_var * nmat comp)
 
  int filler_comp=0;
  int FE_sum_comp=filler_comp+1;
@@ -1731,7 +1734,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int energy_moment=vel_error+1; 
  int enstrophy=energy_moment+1; // integral of w dot w
  int user_comp=enstrophy+nmat;
- int total_comp=user_comp+ncomp_sum_int_user; 
+ int species_mass_comp=user_comp+ncomp_sum_int_user;
+ int total_comp=species_mass_comp+num_species_var*nmat; 
 
  Vector<Real> sumdata;
  sumdata.resize(total_comp);
@@ -2269,7 +2273,15 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
    MASS_MAT[im]=sumdata[im+mass_sum_comp];
 
-   std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<" mass="<<MASS_MAT[im]<< '\n';
+   std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<
+	   " mass="<<MASS_MAT[im]<< '\n';
+
+   for (int ispec=0;ispec<num_species_var;ispec++) {
+    Real mass_spec=sumdata[im+species_mass_comp+ispec*nmat];
+    std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<
+     " ispec="<<ispec<< " species mass="<<mass_spec<< '\n';
+   }
+
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" dir= "<<
       dir << " mom=" << sumdata[3*im+dir+mom_sum_comp] << '\n';
