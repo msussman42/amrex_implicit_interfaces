@@ -981,7 +981,8 @@ protected:
      Vector<blobclass>& level_blobdata,
      Vector<blobclass> cum_blobdata,
      Vector< Vector<Real> >& level_mdot_data,
-     Vector< Vector<Real> > cum_mdot_data);
+     Vector< Vector<Real> > cum_mdot_data,
+     Vector< Vector<Real> >& level_mdot_data_redistribute);
 
     void ColorSumALL(
      int operation_flag, // =0 or 1

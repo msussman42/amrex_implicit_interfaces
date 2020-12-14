@@ -9097,7 +9097,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
 
  resize_metrics(2);
 
- MultiFab* CL_velocity;
+ MultiFab* CL_velocity=nullptr;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
@@ -9124,6 +9124,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
   if (CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp())
    amrex::Error("CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp()");
  } else {
+  CL_velocity=nullptr;
   amrex::Error("isweep invalid");
  }
  if (CL_velocity->nGrow()!=2)
@@ -18248,7 +18249,7 @@ void NavierStokes::writeSanityCheckData(
  Vector<BoxArray> cgrids_minusBA_array;
  cgrids_minusBA_array.resize(finest_level+1);
 
- MultiFab* raw_data_lev0_mf;
+ MultiFab* raw_data_lev0_mf=nullptr;
 
  if (data_mf>=0) {
   if (state_type_mf==-1) {
@@ -18267,8 +18268,10 @@ void NavierStokes::writeSanityCheckData(
 
   if (state_type_mf>=0) {
    raw_data_lev0_mf=&get_new_data(state_type_mf,slab_step+1);
-  } else
+  } else {
+   raw_data_lev0_mf=nullptr;
    amrex::Error("state_type_mf invalid");
+  }
 
   if (raw_data_lev0_mf->nGrow()>=0) {
    // do nothing
@@ -18285,7 +18288,7 @@ void NavierStokes::writeSanityCheckData(
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  MultiFab* raw_data_mf;
+  MultiFab* raw_data_mf=nullptr;
 
   if (data_mf>=0) {
    if (state_type_mf==-1) {
@@ -18305,8 +18308,10 @@ void NavierStokes::writeSanityCheckData(
 
    if (state_type_mf>=0) {
     raw_data_mf=&ns_level.get_new_data(state_type_mf,slab_step+1);
-   } else
+   } else {
+    raw_data_mf=nullptr;
     amrex::Error("state_type_mf invalid");
+   }
 
    if (raw_data_mf->nGrow()>=0) {
     // do nothing
@@ -18596,7 +18601,7 @@ NavierStokes::writePlotFile (
    for (i = 0; i < plot_var_map.size(); i++) {
      int typ  = plot_var_map[i].first;
      int comp = plot_var_map[i].second;
-     MultiFab* this_dat;
+     MultiFab* this_dat=nullptr;
      ncomp=1;
 
      if (typ==State_Type) {
