@@ -2992,25 +2992,33 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.level_phase_change_rate_extend();
        }
 
-        //MEHDI
-       if (1==0) {
-	int caller_id=1;
-         //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
-        writeSanityCheckData(
-         "TY_GAMMA",
-         "SATURATION_TEMP_MF: flag12,flag13,flag23,T_GAMMA12,Y_GAMMA12, ...",
-         caller_id,
-         localMF[SATURATION_TEMP_MF]->nComp(), 
-         SATURATION_TEMP_MF,
-         -1,  // State_Type==-1 
-         -1); // data_dir==-1 (cell centered)
-       }
-
        if (visual_phase_change_plot_int>0) {
         if (very_last_sweep==1) {
          int ratio=(nsteps+1)/visual_phase_change_plot_int;
 	 ratio=ratio*visual_phase_change_plot_int;
 	 if (ratio==nsteps+1) {
+
+	  int caller_id=1;
+           //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
+          writeSanityCheckData(
+           "TY_GAMMA",
+           "SATURATION_TEMP_MF: flag12,flag13,flag23,T_GAMMA12,Y_GAMMA12, ...",
+           caller_id,
+           localMF[SATURATION_TEMP_MF]->nComp(), 
+           SATURATION_TEMP_MF,
+           -1,  // State_Type==-1 
+           -1); // data_dir==-1 (cell centered)
+
+	  caller_id=2;
+           //BURNVEL<stuff>.plt (visit can open binary tecplot files)
+          writeSanityCheckData(
+           "BURNVEL",
+           "BURNING_VELOCITY_MF: flag12,flag13,flag23,[xyz]V12,[xyz]V13, ..",
+           caller_id,
+           localMF[BURNING_VELOCITY_MF]->nComp(), 
+           BURNING_VELOCITY_MF,
+           -1,  // State_Type==-1 
+           -1); // data_dir==-1 (cell centered)
 
 	 }
 	} else if (very_last_sweep==0) {
