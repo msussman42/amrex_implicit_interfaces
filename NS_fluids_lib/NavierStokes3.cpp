@@ -3456,8 +3456,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         local_fixed_dt=fixed_dt_init;
        } else if (nsteps>0) {
         local_fixed_dt=fixed_dt;
-       } else
+       } else {
+        local_fixed_dt=0.0;
         amrex::Error("nsteps invalid");
+       }
 
        Real dt_predict=estTimeStep(local_fixed_dt);
        Real dt_predict_max=dt_predict;
@@ -5228,7 +5230,7 @@ NavierStokes::ColorSum(
  for (int i=0;i<num_colors;i++) {
   for (int j=0;j<ncomp_mdot_alloc;j++) {
    level_mdot_data_redistribute[i][j]=
-     level_mdot_distribute_array[0][mdot_counter];
+     level_mdot_redistribute_array[0][mdot_counter];
    mdot_counter++;
   }
  }
@@ -5699,7 +5701,8 @@ NavierStokes::ColorSumALL(
  int num_sweeps=2;
  if (operation_flag==0) {
   // do nothing
- } else if (operation_flag==1) {
+ } else if (operation_flag==1) { 
+   // (dest,source)
   copy_blobdata(level_blobdata,blobdata);
   for (int i=0;i<color_count;i++) {
    for (int j=0;j<ncomp_mdot_alloc;j++) {
@@ -5747,6 +5750,11 @@ NavierStokes::ColorSumALL(
       // blob_volume, blob_center_integral, blob_perim, blob_perim_mat,
       // blob_triple_perim, blob_cell_count
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
+
+      for (int j=0;j<ncomp_mdot_alloc;j++) {
+       mdot_data[i][j]+=level_mdot_data[i][j];
+       mdot_data_redistribute[i][j]+=level_mdot_data_redistribute[i][j];
+      }
 
       if (level_blobdata[i].im>0) {
        int im_test=level_blobdata[i].im;

@@ -4568,6 +4568,7 @@ stop
        level_blobdata, &
        level_blobtypedata, &
        level_mdot_data, &
+       level_mdot_data_redistribute, &
        arraysize, &
        mdot_arraysize, &
        num_elements_blobclass, &
@@ -4633,6 +4634,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(inout) :: level_blobdata(arraysize)
       REAL_T, intent(inout) :: level_mdot_data(mdot_arraysize)
+      REAL_T, intent(inout) :: level_mdot_data_redistribute(mdot_arraysize)
       REAL_T, intent(in) :: cum_blobdata(arraysize)
       REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
@@ -5600,6 +5602,7 @@ stop
             enddo ! dir
 
            else if (operation_flag.eq.1) then
+
             if (sweep_num.eq.0) then
               ! blob_volume
              vofcomp=(im-1)*ngeom_recon+1
@@ -5614,6 +5617,13 @@ stop
                  ic_base=(opposite_color(im)-1)*ncomp_mdot
                  mdot_total=cum_mdot_data(ic_base+1)
                  mdot_avg=mdot_total/blob_cell_count
+
+                 do i_mdot=1,ncomp_mdot
+                  level_mdot_data_redistribute(ic_base+i_mdot)= &
+                    level_mdot_data_redistribute(ic_base+i_mdot)+ &
+                    mdot_avg
+                 enddo
+                 
                  if (fort_material_type(im).eq.0) then
                   mdot(D_DECL(i,j,k),1)=mdot_avg
                  else if ((fort_material_type(im).gt.0).and. &

@@ -161,6 +161,7 @@ namespace amrex{
        Real* level_blobarray,
        int* level_blobtypearray,
        Real* level_mdot_array,
+       Real* level_mdot_redistribute_array,
        int* arraysize,
        int* mdot_arraysize,
        int* num_elements_blobclass,
