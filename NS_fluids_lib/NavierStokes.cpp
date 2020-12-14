@@ -12197,21 +12197,25 @@ NavierStokes::phase_change_redistributeALL() {
         isweep_redistribute);
       } // ilev=finest_level ... level
 
-      if (isweep_redistribute==0) {
-       std::cout << "before:imsrc,imdst,mdot_sum " <<
-        im_source << ' ' << im_dest << ' ' << mdot_sum[0] << '\n';
-      } else if (isweep_redistribute==1) {
-       // do nothing
-      } else if (isweep_redistribute==2) {
-       std::cout << "after:imsrc,imdst,mdot_sum2 " <<   
-        im_source << ' ' << im_dest << ' ' << mdot_sum2[0] << '\n';
-       std::cout << "after:imsrc,imdst,mdot_lost " <<   
-        im_source << ' ' << im_dest << ' ' << mdot_lost[0] << '\n';
-       std::cout << "imsrc,imdst,mdot_sum2+mdot_lost " <<   
-        im_source << ' ' << im_dest << ' ' <<   
-        mdot_sum2[0]+mdot_lost[0] << '\n';
-      } else
-       amrex::Error("isweep_redistribute invalid");
+      if (ParallelDescriptor::IOProcessor()) {
+
+       if (isweep_redistribute==0) {
+        std::cout << "before:imsrc,imdst,mdot_sum " <<
+         im_source << ' ' << im_dest << ' ' << mdot_sum[0] << '\n';
+       } else if (isweep_redistribute==1) {
+        // do nothing
+       } else if (isweep_redistribute==2) {
+        std::cout << "after:imsrc,imdst,mdot_sum2 " <<   
+         im_source << ' ' << im_dest << ' ' << mdot_sum2[0] << '\n';
+        std::cout << "after:imsrc,imdst,mdot_lost " <<   
+         im_source << ' ' << im_dest << ' ' << mdot_lost[0] << '\n';
+        std::cout << "imsrc,imdst,mdot_sum2+mdot_lost " <<   
+         im_source << ' ' << im_dest << ' ' <<   
+         mdot_sum2[0]+mdot_lost[0] << '\n';
+       } else
+        amrex::Error("isweep_redistribute invalid");
+
+      } // if ParallelDescriptor::IOProcessor()
 
      } // isweep_redistribute=0,1,2
 
@@ -12272,6 +12276,7 @@ NavierStokes::phase_change_redistributeALL() {
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
+ Vector< Vector<Real> > mdot_data_redistribute;
  Vector<int> type_flag;
 
  int color_count=0;
@@ -12289,7 +12294,8 @@ NavierStokes::phase_change_redistributeALL() {
   idx_mdot,
   type_flag,
   blobdata,
-  mdot_data);
+  mdot_data,
+  mdot_data_redistribute);
 
  operation_flag=1; // scatter to mdot or density
 
@@ -12303,8 +12309,44 @@ NavierStokes::phase_change_redistributeALL() {
   idx_mdot,
   type_flag,
   blobdata,
-  mdot_data);
+  mdot_data,
+  mdot_data_redistribute);
 
+ if (mdot_data.size()==mdot_data_redistribute.size()) {
+  if (mdot_data.size()==color_count) {
+   // do nothing
+  } else
+   amrex::Error("mdot_data.size() invalid");
+  if (blobdata.size()==color_count) {
+   // do nothing
+  } else
+   amrex::Error("blobdata.size() invalid");
+ } else
+  amrex::Error("mdot_data or mdot_data_redistribute have wrong size");
+
+ for (int i=0;i<mdot_data.size();i++) {
+  if ((mdot_data[i].size()==1)&&
+      (mdot_data_redistribute[i].size()==1)&&
+      (mdot_data[i].size()==mdot_data_redistribute[i].size())) {
+   // do nothing
+  } else
+   amrex::Error("mdot_data[i] or mdot_data_redistribute[i] have wrong size");
+ }
+ 
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "color_count=" << color_count << '\n';
+  for (int i=0;i<mdot_data.size();i++) {
+   for (int j=0;j<mdot_data_redistribute[i].size();j++) {
+    std::cout << "i=" << i << " j=" << j << " im=" <<
+      blobdata[i].im << " blobdata[i].blob_cell_count=" <<
+      blobdata[i].blob_cell_count << 
+      " mdot_data[i][j]=" << mdot_data[i][j] << 
+      " mdot_data_redistribute[i][j]=" <<
+      mdot_data_redistribute[i][j] << '\n';
+   } // j=0..0
+  } // i=0..color_count-1
+ } // if (ParallelDescriptor::IOProcessor())
+ 
 } // subroutine phase_change_redistributeALL
 
 void
@@ -20710,6 +20752,7 @@ NavierStokes::post_init_state () {
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
+ Vector< Vector<Real> > mdot_data_redistribute;
  Vector<int> type_flag;
 
  int color_count=0;
@@ -20728,7 +20771,8 @@ NavierStokes::post_init_state () {
   idx_mdot,
   type_flag,
   blobdata,
-  mdot_data);
+  mdot_data,
+  mdot_data_redistribute);
 
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
