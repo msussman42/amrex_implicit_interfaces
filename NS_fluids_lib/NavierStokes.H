@@ -993,7 +993,8 @@ protected:
      int idx_mdot,  // ==-1 if no mdot
      Vector<int>& type_flag, 
      Vector<blobclass>& blobdata,
-     Vector< Vector<Real> >& mdot_data);
+     Vector< Vector<Real> >& mdot_data,
+     Vector< Vector<Real> >& mdot_data_redistribute);
 
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag);

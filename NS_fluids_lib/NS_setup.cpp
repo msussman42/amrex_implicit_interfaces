@@ -1877,6 +1877,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
+ Vector< Vector<Real> > mdot_data_redistribute;
  Vector<int> type_flag;
 
  if (output_drop_distribution==1) {
@@ -1896,7 +1897,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     idx_mdot,
     type_flag,
     blobdata,
-    mdot_data);
+    mdot_data,
+    mdot_data_redistribute);
 
   if (color_count!=blobdata.size())
    amrex::Error("color_count!=blobdata.size()");

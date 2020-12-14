@@ -2654,6 +2654,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     Vector<blobclass> blobdata;
     Vector< Vector<Real> > mdot_data;
+    Vector< Vector<Real> > mdot_data_redistribute;
     Vector<int> type_flag;
 
     blobdata.resize(1);
@@ -2755,7 +2756,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	 idx_mdot,
          type_flag,
 	 blobdata,
-	 mdot_data);
+	 mdot_data,
+         mdot_data_redistribute);
 
        ParallelDescriptor::Barrier();
 
@@ -4846,7 +4848,8 @@ NavierStokes::ColorSum(
  Vector<blobclass>& level_blobdata,
  Vector<blobclass> cum_blobdata,
  Vector< Vector<Real> >& level_mdot_data,
- Vector< Vector<Real> > cum_mdot_data) {
+ Vector< Vector<Real> > cum_mdot_data,
+ Vector< Vector<Real> >& level_mdot_data_redistribute) {
 
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
@@ -4879,6 +4882,8 @@ NavierStokes::ColorSum(
   amrex::Error("num_colors!=cum_mdot_data.size()");
  if (num_colors!=level_mdot_data.size())
   amrex::Error("num_colors!=level_mdot_data.size()");
+ if (num_colors!=level_mdot_data_redistribute.size())
+  amrex::Error("num_colors!=level_mdot_data_redistribute.size()");
 
  if (ncomp_mdot==0) {
   if (ncomp_mdot_alloc==1) {
@@ -4894,6 +4899,12 @@ NavierStokes::ColorSum(
    amrex::Error("ncomp_mdot_test or ncomp_mdot_alloc invalid");
  } else
   amrex::Error("ncomp_mdot invalid"); 
+
+ for (int i=0;i<num_colors;i++) {
+  for (int j=0;j<ncomp_mdot_alloc;j++) {
+   level_mdot_data_redistribute[i][j]=0.0;
+  }
+ } // i=0..num_colors-1
 
  if (operation_flag==0) {
 
@@ -4951,6 +4962,9 @@ NavierStokes::ColorSum(
  Vector< Vector<Real> > level_mdot_array;
  level_mdot_array.resize(thread_class::nthreads);
 
+ Vector< Vector<Real> > level_mdot_redistribute_array;
+ level_mdot_redistribute_array.resize(thread_class::nthreads);
+
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   level_blob_type_array[tid].resize(num_colors);
   level_blob_array[tid].resize(blob_array_size);
@@ -4960,9 +4974,12 @@ NavierStokes::ColorSum(
    level_blob_type_array[tid][i]=0;
 
   level_mdot_array[tid].resize(mdot_array_size);
+  level_mdot_redistribute_array[tid].resize(mdot_array_size);
 
-  for (int i=0;i<mdot_array_size;i++) 
+  for (int i=0;i<mdot_array_size;i++) {
    level_mdot_array[tid][i]=0.0;
+   level_mdot_redistribute_array[tid][i]=0.0;
+  }
 
   if (operation_flag==0) {
    // do nothing
@@ -5161,6 +5178,7 @@ NavierStokes::ColorSum(
    level_blob_array[tid_current].dataPtr(),
    level_blob_type_array[tid_current].dataPtr(),
    level_mdot_array[tid_current].dataPtr(),
+   level_mdot_redistribute_array[tid_current].dataPtr(),
    &blob_array_size,
    &mdot_array_size,
    &num_elements_blobclass,
@@ -5172,6 +5190,12 @@ NavierStokes::ColorSum(
  } // mfi
 } // omp
  ns_reconcile_d_num(182);
+
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+  for (int i=0;i<mdot_array_size;i++) {
+   level_mdot_redistribute_array[0][i]+=level_mdot_redistribute_array[tid][i];
+  }
+ }
 
  if (operation_flag==0) {
 
@@ -5197,6 +5221,19 @@ NavierStokes::ColorSum(
  
  
  ParallelDescriptor::Barrier();
+
+ for (int i=0;i<mdot_array_size;i++) 
+  ParallelDescriptor::ReduceRealSum(level_mdot_redistribute_array[0][i]);
+ mdot_counter=0;
+ for (int i=0;i<num_colors;i++) {
+  for (int j=0;j<ncomp_mdot_alloc;j++) {
+   level_mdot_data_redistribute[i][j]=
+     level_mdot_distribute_array[0][mdot_counter];
+   mdot_counter++;
+  }
+ }
+ if (mdot_counter!=mdot_array_size)
+  amrex::Error("mdot_counter invalid");
 
  if (operation_flag==0) {
 
@@ -5544,7 +5581,8 @@ NavierStokes::ColorSumALL(
  int idx_mdot,  // ==-1 if no mdot
  Vector<int>& type_flag, 
  Vector<blobclass>& blobdata,
- Vector< Vector<Real> >& mdot_data) {
+ Vector< Vector<Real> >& mdot_data,
+ Vector< Vector<Real> >& mdot_data_redistribute) {
 
  int finest_level=parent->finestLevel();
 
@@ -5623,11 +5661,15 @@ NavierStokes::ColorSumALL(
 
   blobdata.resize(color_count);
   mdot_data.resize(color_count);
+  mdot_data_redistribute.resize(color_count);
   for (int i=0;i<color_count;i++) {
    clear_blobdata(i,blobdata);
    mdot_data[i].resize(ncomp_mdot_alloc);
-   for (int j=0;j<ncomp_mdot_alloc;j++)
+   mdot_data_redistribute[i].resize(ncomp_mdot_alloc);
+   for (int j=0;j<ncomp_mdot_alloc;j++) {
     mdot_data[i][j]=0.0;
+    mdot_data_redistribute[i][j]=0.0;
+   }
   }  // i=0..color_count-1
 
  } else if (operation_flag==1) {
@@ -5641,12 +5683,17 @@ NavierStokes::ColorSumALL(
  level_blobdata.resize(color_count);
  Vector< Vector<Real> > level_mdot_data;
  level_mdot_data.resize(color_count);
+ Vector< Vector<Real> > level_mdot_data_redistribute;
+ level_mdot_data_redistribute.resize(color_count);
 
  for (int i=0;i<color_count;i++) {
   clear_blobdata(i,level_blobdata); 
   level_mdot_data[i].resize(ncomp_mdot_alloc);
-  for (int j=0;j<ncomp_mdot_alloc;j++)
+  level_mdot_data_redistribute[i].resize(ncomp_mdot_alloc);
+  for (int j=0;j<ncomp_mdot_alloc;j++) {
    level_mdot_data[i][j]=0.0;
+   level_mdot_data_redistribute[i][j]=0.0;
+  }
  } // i=0..color_count-1
 
  int num_sweeps=2;
@@ -5655,8 +5702,9 @@ NavierStokes::ColorSumALL(
  } else if (operation_flag==1) {
   copy_blobdata(level_blobdata,blobdata);
   for (int i=0;i<color_count;i++) {
-   for (int j=0;j<ncomp_mdot_alloc;j++)
+   for (int j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data[i][j]=mdot_data[i][j];
+   }
   }
   num_sweeps=1;
  } else
@@ -5688,7 +5736,8 @@ NavierStokes::ColorSumALL(
     level_blobdata,
     blobdata,
     level_mdot_data,
-    mdot_data);
+    mdot_data,
+    level_mdot_data_redistribute);
 
    if (operation_flag==0) {
 
@@ -9478,6 +9527,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   Vector<blobclass> blobdata;
   Vector< Vector<Real> > mdot_data;
+  Vector< Vector<Real> > mdot_data_redistribute;
   Vector<int> type_flag;
 
   int alloc_blobdata=0;
@@ -9517,7 +9567,8 @@ void NavierStokes::multiphase_project(int project_option) {
      TYPE_MF,COLOR_MF,idx_mdot,
      type_flag,
      blobdata,
-     mdot_data);
+     mdot_data,
+     mdot_data_redistribute);
    if (color_count!=blobdata.size())
     amrex::Error("color_count!=blobdata.size()");
 
