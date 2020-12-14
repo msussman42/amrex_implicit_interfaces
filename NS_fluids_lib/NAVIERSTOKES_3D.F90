@@ -9702,6 +9702,7 @@ END SUBROUTINE SIMP
        INTEGER_T energy_moment
        INTEGER_T enstrophy
        INTEGER_T user_comp
+       INTEGER_T species_mass_comp
        INTEGER_T total_comp
 
        INTEGER_T isrc,idest
@@ -9827,9 +9828,10 @@ END SUBROUTINE SIMP
        vort_error=vort_sum_comp+3
        vel_error=vort_error+1
        energy_moment=vel_error+1
-       enstrophy=energy_moment+1; ! integral of w dot w
-       user_comp=enstrophy+nmat;
-       total_comp=user_comp+ncomp_sum_int_user; 
+       enstrophy=energy_moment+1 ! integral of w dot w
+       user_comp=enstrophy+nmat
+       species_mass_comp=user_comp+ncomp_sum_int_user
+       total_comp=species_mass_comp+num_species_var*nmat
 
        if (resultsize.ne.total_comp) then
         print *,"mismatch between resultsize and total_comp"
@@ -10092,6 +10094,13 @@ END SUBROUTINE SIMP
           idest=mass_sum_comp+im
           local_result(idest)=local_result(idest)+ &
             dencore*volgrid*mofdata_tess(vofcomp)
+
+          do ispec=1,num_species_var
+           idest=species_mass_comp+(ispec-1)*nmat+im
+           local_result(idest)=local_result(idest)+ &
+             dencore*volgrid*mofdata_tess(vofcomp)* &
+             den(D_DECL(i,j,k),2+ispec+num_state_material*(im-1))
+          enddo ! ispec=1..num_species_var
 
           KECELL=zero
 

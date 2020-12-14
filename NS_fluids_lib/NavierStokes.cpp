@@ -17241,6 +17241,9 @@ void NavierStokes::volWgtSum(
   // vort_error (1 comp)
   // vel_error (1 comp)
   // energy_moment (1 comp)
+  // enstrophy (nmat comp)
+  // user defined (ncomp_sum_int_user comp)
+  // species mass (num_species_var * nmat comp)
 
  int filler_comp=0;
  int FE_sum_comp=filler_comp+1;
@@ -17272,7 +17275,8 @@ void NavierStokes::volWgtSum(
  int energy_moment=vel_error+1; 
  int enstrophy=energy_moment+1; // integral of w dot w
  int user_comp=enstrophy+nmat;
- int total_comp=user_comp+ncomp_sum_int_user; 
+ int species_mass_comp=user_comp+ncomp_sum_int_user;
+ int total_comp=species_mass_comp+num_species_var*nmat; 
 
  if (total_comp!=result.size())
   amrex::Error("result size invalid");
@@ -17412,6 +17416,7 @@ void NavierStokes::volWgtSum(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: NAVIERSTOKES_3D.F90
    FORT_SUMMASS(
     &tid_current,
     &ncomp_sum_int_user,
