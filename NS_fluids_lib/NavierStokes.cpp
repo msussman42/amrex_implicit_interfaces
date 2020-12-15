@@ -12352,6 +12352,9 @@ NavierStokes::phase_change_redistributeALL() {
    } // j=0..0
   } // i=0..color_count-1
  } // if (ParallelDescriptor::IOProcessor())
+
+ delete_array(TYPE_MF);
+ delete_array(COLOR_MF);
  
 } // subroutine phase_change_redistributeALL
 
