@@ -284,7 +284,8 @@ on an interface, growth rate of perturbations, pressure drop)
 
 int  NavierStokes::VOF_reflux=0;
 int  NavierStokes::continuous_mof=0;
-int  NavierStokes::force_cmof_at_walls=1;
+// =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
+int  NavierStokes::force_cmof_at_triple_junctions=1;
 int  NavierStokes::partial_cmof_stencil_at_walls=0;
 
 // 0  low order space and time
@@ -2392,7 +2393,7 @@ NavierStokes::read_params ()
      amrex::Error("SEM_advection_algorithm invalid");
 
     pp.query("continuous_mof",continuous_mof);
-    pp.query("force_cmof_at_walls",force_cmof_at_walls);
+    pp.query("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
     pp.query("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
 
     pp.query("VOF_reflux",VOF_reflux);
@@ -2496,7 +2497,8 @@ NavierStokes::read_params ()
      std::cout << "SEM_advection_algorithm " << 
        SEM_advection_algorithm << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
-     std::cout << "force_cmof_at_walls " << force_cmof_at_walls << '\n';
+     std::cout << "force_cmof_at_triple_junctions " << 
+       force_cmof_at_triple_junctions << '\n';
      std::cout << "partial_cmof_stencil_at_walls " << 
 	    partial_cmof_stencil_at_walls << '\n';
 
