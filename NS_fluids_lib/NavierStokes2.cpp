@@ -8778,7 +8778,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     total_calls[tid_current].dataPtr(),
     total_iterations[tid_current].dataPtr(),
     &continuous_mof, 
-    &force_cmof_at_walls, 
+    &force_cmof_at_triple_junctions, 
     &partial_cmof_stencil_at_walls, 
     radius_cutoff.dataPtr());
  }  // mfi

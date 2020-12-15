@@ -66,7 +66,7 @@ stop
         total_calls, &
         total_iterations, &
         continuous_mof, &
-        force_cmof_at_walls, &
+        force_cmof_at_triple_junctions, &
         partial_cmof_stencil_at_walls, &
         radius_cutoff)
 #if (STANDALONE==0)
@@ -90,7 +90,7 @@ stop
       INTEGER_T, intent(in) :: radius_cutoff(nmat)
 
       INTEGER_T, intent(in) :: continuous_mof
-      INTEGER_T, intent(in) :: force_cmof_at_walls
+      INTEGER_T, intent(in) :: force_cmof_at_triple_junctions
       INTEGER_T, intent(in) :: partial_cmof_stencil_at_walls
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: update_flag
@@ -593,12 +593,13 @@ stop
 
         continuous_mof_base=continuous_mof
         if (mod_cmofsten.eq.1) then
-         if (force_cmof_at_walls.eq.0) then
+         if (force_cmof_at_triple_junctions.eq.0) then
           ! do nothing
-         else if (force_cmof_at_walls.eq.1) then
+         else if ((force_cmof_at_triple_junctions.eq.1).or. &
+                  (force_cmof_at_triple_junctions.eq.2)) then
           continuous_mof_base=2
          else
-          print *,"force_cmof_at_walls invalid"
+          print *,"force_cmof_at_triple_junctions invalid"
           stop
          endif
         else if (mod_cmofsten.eq.0) then
@@ -617,6 +618,17 @@ stop
 
          if ((nmat_in_stencil.ge.3).and. &
              (nmat_in_stencil.le.nmat)) then
+
+          if (force_cmof_at_triple_junctions.eq.2) then
+           continuous_mof_base=2
+          else if ((force_cmof_at_triple_junctions.eq.0).or. &
+                   (force_cmof_at_triple_junctions.eq.1)) then
+           ! do nothing
+          else
+           print *,"force_cmof_at_triple_junctions invalid"
+           stop
+          endif
+
           if ((continuous_mof_base.eq.4).or. & ! CLSVOF 2 mat., CMOF > 2 mat
               (continuous_mof_base.eq.2)) then ! CMOF
            if (nmat_in_cell.eq.nmat_in_stencil) then

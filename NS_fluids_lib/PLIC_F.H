@@ -44,7 +44,7 @@ extern "C"
         int* total_calls,
         int* total_iterations,
         int* continuous_mof,
-        int* force_cmof_at_walls, 
+        int* force_cmof_at_triple_junctions, 
         int* partial_cmof_stencil_at_walls, 
         int* radius_cutoff);
 
