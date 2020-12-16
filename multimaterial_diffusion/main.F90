@@ -81,9 +81,9 @@ INTEGER,PARAMETER          :: plot_int = 1
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
 ! VALIDATION TSTOP:
-!real(kind=8),parameter     :: TSTOP = 0.5d0
+real(kind=8),parameter     :: TSTOP = 0.5d0
 ! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.02d0
+!real(kind=8),parameter     :: TSTOP = 0.02d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -226,7 +226,7 @@ print *,"constant_K_test= ",constant_K_test
 N_START=64
 N_FINISH=64
 ! VERIFICATION: M_START=50,100,200 corresponding to 64,128,256
-M_START=50
+M_START=1000
 M_FACTOR=2
 height_function_flag_global=0
 
@@ -256,9 +256,9 @@ else if (probtype_in.eq.400) then ! gingerbread man
  ! fixed_dt=0.0d0 => use CFL condition
  ! fixed_dt=-1.0d0 => use TSTOP/M
  ! VALIDATION:
- ! fixed_dt_main=0.0d0
+ fixed_dt_main=0.0d0
  ! VERIFICATION:
- fixed_dt_main=-1.0d0
+ ! fixed_dt_main=-1.0d0
  print *,"gingeroutline should be in run directory"
 else
  print *,"probtype_in invalid"
