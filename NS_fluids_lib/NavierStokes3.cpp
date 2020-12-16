@@ -4910,18 +4910,13 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("ncomp_mdot invalid"); 
 
- for (int i=0;i<num_colors;i++) {
-  for (int j=0;j<ncomp_mdot_alloc;j++) {
-   level_mdot_data_redistribute[i][j]=0.0;
-  }
- } // i=0..num_colors-1
-
  if (operation_flag==0) {
 
   for (int i=0;i<num_colors;i++) {
    clear_blobdata(i,level_blobdata);
    for (int j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data[i][j]=0.0;
+    level_mdot_data_redistribute[i][j]=0.0;
    }
   } // i=0..num_colors-1
 
@@ -4929,7 +4924,11 @@ NavierStokes::ColorSum(
 
   if (sweep_num==0) {
    if (ncomp_mdot>=1) {
-    // do nothing
+    for (int i=0;i<num_colors;i++) {
+     for (int j=0;j<ncomp_mdot_alloc;j++) {
+      level_mdot_data_redistribute[i][j]=0.0;
+     }
+    } // i=0..num_colors-1
    } else
     amrex::Error("ncomp_mdot invalid");
   } else
@@ -5206,12 +5205,6 @@ NavierStokes::ColorSum(
 } // omp
  ns_reconcile_d_num(182);
 
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int i=0;i<mdot_array_size;i++) {
-   level_mdot_redistribute_array[0][i]+=level_mdot_redistribute_array[tid][i];
-  }
- }
-
  if (operation_flag==0) {
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
@@ -5229,26 +5222,16 @@ NavierStokes::ColorSum(
 
  } else if (operation_flag==1) {
 
-  // do nothing
+  for (int tid=1;tid<thread_class::nthreads;tid++) {
+   for (int i=0;i<mdot_array_size;i++) {
+    level_mdot_redistribute_array[0][i]+=level_mdot_redistribute_array[tid][i];
+   }
+  }
 
  } else
   amrex::Error("operation_flag invalid");
  
- 
  ParallelDescriptor::Barrier();
-
- for (int i=0;i<mdot_array_size;i++) 
-  ParallelDescriptor::ReduceRealSum(level_mdot_redistribute_array[0][i]);
- mdot_counter=0;
- for (int i=0;i<num_colors;i++) {
-  for (int j=0;j<ncomp_mdot_alloc;j++) {
-   level_mdot_data_redistribute[i][j]=
-     level_mdot_redistribute_array[0][mdot_counter];
-   mdot_counter++;
-  }
- }
- if (mdot_counter!=mdot_array_size)
-  amrex::Error("mdot_counter invalid");
 
  if (operation_flag==0) {
 
@@ -5281,7 +5264,19 @@ NavierStokes::ColorSum(
 
  } else if (operation_flag==1) {
 
-  // do nothing
+  for (int i=0;i<mdot_array_size;i++) 
+   ParallelDescriptor::ReduceRealSum(level_mdot_redistribute_array[0][i]);
+
+  mdot_counter=0;
+  for (int i=0;i<num_colors;i++) {
+   for (int j=0;j<ncomp_mdot_alloc;j++) {
+    level_mdot_data_redistribute[i][j]=
+      level_mdot_redistribute_array[0][mdot_counter];
+    mdot_counter++;
+   }
+  }
+  if (mdot_counter!=mdot_array_size)
+   amrex::Error("mdot_counter invalid");
 
  } else
   amrex::Error("operation_flag invalid");
@@ -5770,7 +5765,6 @@ NavierStokes::ColorSumALL(
 
       for (int j=0;j<ncomp_mdot_alloc;j++) {
        mdot_data[i][j]+=level_mdot_data[i][j];
-       mdot_data_redistribute[i][j]+=level_mdot_data_redistribute[i][j];
       }
 
       if ((level_blobdata[i].im>=1)&&
@@ -5798,7 +5792,27 @@ NavierStokes::ColorSumALL(
      amrex::Error("sweep_num invalid");
 
    } else if (operation_flag==1) {
-    // do nothing
+
+    if (sweep_num==0) {
+
+     for (int i=0;i<color_count;i++) {
+
+      for (int j=0;j<ncomp_mdot_alloc;j++) {
+       mdot_data_redistribute[i][j]+=level_mdot_data_redistribute[i][j];
+      }
+      if ((level_blobdata[i].im>=1)&&
+          (level_blobdata[i].im<=nmat)) {
+       if (level_blobdata[i].im==blobdata[i].im) {
+        // do nothing
+       } else
+        amrex::Error("level_blobdata[i].im!=blobdata[i].im");
+      } else
+       amrex::Error("level_blobdata[i].im invalid");
+     }  // i=0..color_count-1
+
+    } else
+     amrex::Error("sweep_num invalid for operation_flag==1 case");
+
    } else
     amrex::Error("operation_flag invalid");
 
