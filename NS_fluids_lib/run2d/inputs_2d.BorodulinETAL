@@ -133,8 +133,8 @@ ns.conservative_tension_force=0
 # For comparison with Borodulin et al Figure 8, surface tension
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
-ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
-#ns.tension=1.0e-4  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
+#ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
+ns.tension=1.0e-4  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
@@ -142,8 +142,8 @@ ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
-ns.distribute_from_target = 0 0 
-ns.distribute_mdot_evenly = 0 1
+ns.distribute_from_target = 0 0 # 2 * num_interfaces components
+ns.distribute_mdot_evenly = 0 1 # num_materials components
 #evaporation: freezing_model=6 Palmore and Desjardins 
 #             freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 ns.freezing_model=6 0

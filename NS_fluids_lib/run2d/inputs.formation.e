@@ -18,7 +18,10 @@ geometry.prob_hi   =  16.0 48.0
 geometry.is_periodic = 0 0 0     
 
 ns.EILE_flag=-1
+# =0 MOF =2 CMOF =4 CLSVOF/CMOF
 ns.continuous_mof=2
+ns.force_cmof_at_triple_junctions=1
+ns.partial_cmof_stencil_at_walls=0
 ns.MOFITERMAX=15
 ns.conservative_tension_force=0
 ns.face_flag=1
