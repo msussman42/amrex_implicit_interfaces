@@ -5982,13 +5982,13 @@ NavierStokes::ColorSumALL(
 
 	 blobdata[i].blob_velocity[ibase]=corrected_velocity;
 	
-          if (verbose>0) {
-           if (ParallelDescriptor::IOProcessor()) {
+         if (verbose>=2) {
+          if (ParallelDescriptor::IOProcessor()) {
 	   std::cout << " ------------------------------------\n";
-            std::cout << " avoid momentum overshoot i= " << i << " im= " <<
-              blobdata[i].im << '\n';
-            std::cout << " irow= " << irow << " veltype= " << veltype << 
-             " orig_mom " << original_mom << " proposed_mom " << 
+           std::cout << " avoid momentum overshoot i= " << i << " im= " <<
+             blobdata[i].im << '\n';
+           std::cout << " irow= " << irow << " veltype= " << veltype << 
+            " orig_mom " << original_mom << " proposed_mom " << 
 	    proposed_mom << 
 	    " corrected_mom " << corrected_velocity*mass << '\n';
 	   std::cout << " irow= " << irow << " veltype= " << veltype <<
@@ -5996,9 +5996,9 @@ NavierStokes::ColorSumALL(
 	   std::cout << " irow= " << irow << " veltype= " << veltype <<
 	    " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
 	   std::cout << " ------------------------------------\n";
-	  }
-	 }
-	} else if ((original_mom*proposed_mom>0.0)&& 
+	  } // ParallelDescriptor::IOProcessor()
+ 	 }  // verbose>=2
+        } else if ((original_mom*proposed_mom>0.0)&& 
 		   (std::abs(original_mom)>=std::abs(proposed_mom))) {
 	 // do nothing
 	} else
@@ -6070,7 +6070,7 @@ NavierStokes::ColorSumALL(
 
  } // sweep_num=0..1
 
- if (verbose>0) {
+ if (verbose>=2) {
   if (ParallelDescriptor::IOProcessor()) {
 
    std::cout << "in color sum color_count = " << color_count << '\n';
@@ -6150,7 +6150,7 @@ NavierStokes::ColorSumALL(
      amrex::Error("blobdata[i].blob_volume invalid");
    } // i=0..color_count-1
   } // if IOproc
- } else if (verbose==0) {
+ } else if ((verbose==0)||(verbose==1)) {
   // do nothing
  } else
   amrex::Error("verbose must be >=0");
