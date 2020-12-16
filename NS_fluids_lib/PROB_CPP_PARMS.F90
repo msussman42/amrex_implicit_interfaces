@@ -463,10 +463,11 @@ stop
        SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
       else
        ! assign null routines here that would cause the program to abort
-       ! if called.
+       ! if called.  In otherwords, these are routines THAT MUST BE DEFINED
+       ! and CANNOT depend on the STUB routines.
        SUB_INIT_MODULE=>NULL()
        SUB_LS=>NULL()
-       SUB_clamped_LS_no_scale=>NULL()
+!       SUB_clamped_LS_no_scale=>NULL()
        SUB_VEL=>NULL()
        SUB_EOS=>NULL()
        SUB_SOUNDSQR=>NULL()

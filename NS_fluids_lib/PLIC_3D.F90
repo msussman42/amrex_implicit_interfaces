@@ -492,12 +492,14 @@ stop
             print *,"dir invalid"
             stop
            endif
-           if ((loc_indx.lt.fablo(dir)).and. &
-               (vofbc(dir,1).ne.INT_DIR)) then
-            mod_cmofsten=1
-           else if ((loc_indx.gt.fabhi(dir)).and. &
-                    (vofbc(dir,2).ne.INT_DIR)) then
-            mod_cmofsten=1
+           if (loc_indx.lt.fablo(dir)) then
+            if (vofbc(dir,1).ne.INT_DIR) then
+             mod_cmofsten=1
+            endif
+           else if (loc_indx.gt.fabhi(dir)) then
+            if (vofbc(dir,2).ne.INT_DIR) then
+             mod_cmofsten=1
+            endif
            else if ((loc_indx.ge.fablo(dir)).and. &
                     (loc_indx.le.fabhi(dir))) then
             ! do nothing
