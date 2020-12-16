@@ -36,7 +36,7 @@ geometry.is_periodic=0 0
 # Borodulin ET AL: drop sizes: diameter 1,2,3 mm
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #
-geometry.prob_hi=0.1 0.2  # cm   
+geometry.prob_hi=0.1 0.1  # cm   
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.num_materials_vel=1
@@ -85,7 +85,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
-amr.n_cell=32 64 # convergence 32 x 64 coarsest
+amr.n_cell=32 32 # convergence 32 x 32 coarsest
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -221,8 +221,8 @@ ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 ns.xblob=0.0
-ns.yblob=0.1
-ns.zblob=0.1
+ns.yblob=0.0
+ns.zblob=0.0
 #Borodulin et al Figure 8, row 3
 ns.radblob=0.05
 ns.denfact=1.0
@@ -247,11 +247,11 @@ ns.prescribe_temperature_outflow=1
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
 #ns.species_hi_bc  = 3 3 2  # XYZ
-ns.lo_bc          = 3 2
+ns.lo_bc          = 3 3
 ns.hi_bc          = 2 2  
-ns.temperature_lo_bc  = 3 1
-ns.temperature_hi_bc  = 1 1
-ns.species_lo_bc  = 3 1
+ns.temperature_lo_bc  = 3 3
+ns.temperature_hi_bc  = 1 1  
+ns.species_lo_bc  = 3 3
 ns.species_hi_bc  = 1 1
 ns.num_divu_outer_sweeps=1
 
