@@ -13439,7 +13439,7 @@ void NavierStokes::aggressive_debug(
 
  if (((verbose==0)||(verbose==1))&&(force_check==0)) {
   // do nothing
- } else if ((verbose==2)||(force_check==1)) {
+ } else if ((verbose>=2)||(force_check==1)) {
   std::fflush(NULL);
   int finest_level=parent->finestLevel();
   const Real* dx = geom.CellSize();
@@ -13449,7 +13449,7 @@ void NavierStokes::aggressive_debug(
   if (mf->nGrow()<ngrow)
    amrex::Error("ngrow invalid in aggressive debug");
 
-  if (verbose==2) {
+  if (verbose>=2) {
    std::cout << "AGGRESSIVE DEBUG scomp= " << scomp << '\n';
    std::cout << "AGGRESSIVE DEBUG ncomp= " << ncomp << '\n';
    std::cout << "AGGRESSIVE DEBUG ngrow= " << ngrow << '\n';
