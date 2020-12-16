@@ -1076,7 +1076,8 @@ stop
        comp, &
        ngrow, &
        lo,hi, &
-       data,DIMS(data), &
+       data, &
+       DIMS(data), &
        dest)
       use global_utility_module
       IMPLICIT NONE
@@ -1087,8 +1088,10 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xtarget(SDIM)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: comp,ngrow
+      INTEGER_T, intent(in) :: lo(SDIM)
+      INTEGER_T, intent(in) :: hi(SDIM)
+      INTEGER_T, intent(in) :: comp
+      INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(data)
       REAL_T, intent(in) :: data(DIMV(data),comp)
       REAL_T, intent(out) :: dest
