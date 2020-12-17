@@ -840,7 +840,9 @@ protected:
      int itensor_iter,MultiFab* mask3,
      int simple_AMR_BC_flag_viscosity);
 
-    void init_gradu_tensorALL(int idx,int do_alloc,
+    void init_gradu_tensorALL(
+     int im_tensor, // =-1 if input is velocity, >=0 if input is displacement.
+     int idx,int do_alloc,
      int idx_cell,int idx_face,
      int simple_AMR_BC_flag_viscosity);
 
