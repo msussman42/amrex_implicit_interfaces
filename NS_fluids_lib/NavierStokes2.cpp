@@ -3452,13 +3452,17 @@ void NavierStokes::init_gradu_tensorALL(
 
  for (int i=0;i<ntensorMM;i++) {
   Vector<int> scompBC_map;
+   // desc_lstGHOST.setComponent(State_Type, ...
+   // desc_lstGHOST.setComponent(Tensor_Type, ...
+   // "set_extrap_bc"
+   // FORT_EXTRAPFILL
   scompBC_map.resize(1);
   scompBC_map[0]=0;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
   if (im_tensor==-1) {
    PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
   } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
-   amrex::Error("FIX ME");
+   PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
   } else
    amrex::Error("im_tensor invalid");
 
@@ -3480,12 +3484,39 @@ void NavierStokes::init_gradu_tensorALL(
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
 // itensor_iter=0 face grad U
 // itensor_iter=1 cell grad U
-void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
+void NavierStokes::doit_gradu_tensor(
+ int im_tensor, //-1, or, 0..nmat-1
+ int homflag,int idx_vel,
  int idx_cell,int idx_face,int spectral_loop,int itensor_iter,
  MultiFab* mask3,
  int simple_AMR_BC_flag_viscosity) {
 
  int finest_level = parent->finestLevel();
+
+ int elastic_partid=-1;
+
+ if (im_tensor==-1) {
+  // check nothing (gradient of velocity)
+ } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
+  // sanity checks for gradient of displacement vector.
+  if (homflag==0) {
+   // do nothing
+  } else
+   amrex::Error("expecting homflag=0 for grad displacement vector");
+  if (enable_spectral==0) {
+   elastic_partid=-1;
+   for (int i=0;i<im_elastic_map.size();i++) {
+    if (im_elastic_map[i]==im_tensor)
+     elastic_partid=i;
+   }
+   if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
+    // do nothing
+   } else
+    amrex::Error("elastic_partid invalid");
+  } else
+   amrex::Error("enable_spectral invalid");
+ } else
+  amrex::Error("im_tensor invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -3670,6 +3701,9 @@ void NavierStokes::doit_gradu_tensor(int homflag,int idx_vel,
 
     // FORT_FACE_GRADIENTS is declared in GODUNOV_3D.F90
     FORT_FACE_GRADIENTS(
+     &im_tensor,
+     &elastic_partid,
+     im_elastic_map.dataPtr(),
      &ns_time_order,
      &divu_outer_sweeps,
      &num_divu_outer_sweeps,
@@ -3907,6 +3941,29 @@ void NavierStokes::init_gradu_tensor(
  int idx_cell,int idx_face,
  int simple_AMR_BC_flag_viscosity) {
 
+ if (im_tensor==-1) {
+  // check nothing (gradient of velocity)
+ } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
+  // sanity checks for gradient of displacement vector.
+  if (homflag==0) {
+   // do nothing
+  } else
+   amrex::Error("expecting homflag=0 for grad displacement vector");
+  if (enable_spectral==0) {
+   int elastic_partid=-1;
+   for (int i=0;i<im_elastic_map.size();i++) {
+    if (im_elastic_map[i]==im_tensor)
+     elastic_partid=i;
+   }
+   if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
+    // do nothing
+   } else
+    amrex::Error("elastic_partid invalid");
+  } else
+   amrex::Error("enable_spectral invalid");
+ } else
+  amrex::Error("im_tensor invalid");
+
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");
 
@@ -3960,16 +4017,22 @@ void NavierStokes::init_gradu_tensor(
   //   average of flux values shared at face.
  int spectral_loop=0;
  for (spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
-  doit_gradu_tensor(homflag,idx_vel,idx_cell,idx_face,spectral_loop,
-    itensor_iter,mask3,
-    simple_AMR_BC_flag_viscosity);
+  doit_gradu_tensor(
+   im_tensor,
+   homflag,
+   idx_vel,idx_cell,idx_face,spectral_loop,
+   itensor_iter,mask3,
+   simple_AMR_BC_flag_viscosity);
   synchronize_flux_register(operation_flag,spectral_loop);
  }
 
   // interpolate grad U from MAC grid to CELL grid.
  itensor_iter=1;  // tensor cell
  spectral_loop=0;
- doit_gradu_tensor(homflag,idx_vel,idx_cell,idx_face,spectral_loop,
+ doit_gradu_tensor(
+   im_tensor,
+   homflag,
+   idx_vel,idx_cell,idx_face,spectral_loop,
    itensor_iter,mask3,
    simple_AMR_BC_flag_viscosity);
 
