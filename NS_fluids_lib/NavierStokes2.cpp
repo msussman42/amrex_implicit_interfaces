@@ -3380,7 +3380,9 @@ void NavierStokes::increment_KE(Real beta) {
 
 // do_alloc=1 => allocate variable
 // do_alloc=0 => variable already allocated
-void NavierStokes::init_gradu_tensorALL(int idx,int do_alloc,
+void NavierStokes::init_gradu_tensorALL(
+ int im_tensor,  // =-1 if input is velocity, >=0 if input is displacement. 
+ int idx,int do_alloc,
  int idx_cell,int idx_face,
  int simple_AMR_BC_flag_viscosity) {
 
@@ -3867,7 +3869,8 @@ void NavierStokes::FillBoundaryTENSOR(
 } // subroutine FillBoundaryTENSOR
 
 // called from apply_pressure_grad, init_gradu_tensorALL
-void NavierStokes::init_gradu_tensor(int homflag,int idx_vel,
+void NavierStokes::init_gradu_tensor(
+ int homflag,int idx_vel,
  int idx_cell,int idx_face,
  int simple_AMR_BC_flag_viscosity) {
 
@@ -4719,7 +4722,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
  // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
- init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,
+ int im_tensor=-1;
+ init_gradu_tensorALL(
+   im_tensor,
+   HOLD_VELOCITY_DATA_MF,
+   do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
 

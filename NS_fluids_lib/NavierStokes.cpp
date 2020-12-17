@@ -16258,7 +16258,11 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
- init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,CELLTENSOR_MF,
+ int im_tensor=-1;
+ init_gradu_tensorALL(
+  im_tensor,
+  HOLD_VELOCITY_DATA_MF,
+  do_alloc,CELLTENSOR_MF,
   FACETENSOR_MF,
   simple_AMR_BC_flag_viscosity);
 
@@ -17845,7 +17849,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
- init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,
+ int im_tensor=-1;
+ init_gradu_tensorALL(
+   im_tensor,
+   HOLD_VELOCITY_DATA_MF,
+   do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
 
@@ -19854,7 +19862,10 @@ NavierStokes::volWgtSumALL(
 
  int do_alloc=1;
  int simple_AMR_BC_flag_viscosity=1;
- init_gradu_tensorALL(HOLD_VELOCITY_DATA_MF,do_alloc,
+ int im_tensor=-1;
+ init_gradu_tensorALL(
+   im_tensor,
+   HOLD_VELOCITY_DATA_MF,do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
 
@@ -21757,53 +21768,74 @@ MultiFab* NavierStokes::getStateTensor (
 
  int nmat=num_materials;
 
-  // nparts x NUM_TENSOR_TYPE
- int nparts=im_elastic_map.size();
- int scomp_bias=scomp-nparts*NUM_TENSOR_TYPE;
- int ntotal_test=nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM);
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
 
- if ((nparts<0)||(nparts>nmat))
-  amrex::Error("nparts invalid");
- if ((ncomp==ntotal_test)&&
-     (scomp==0)&&
-     (scomp_bias<0)) {
-  // do nothing
- } else if ((ncomp==AMREX_SPACEDIM)&&
-            (scomp_bias%AMREX_SPACEDIM==0)&&
-	    (scomp_bias>=0)) {
-  int partid=scomp_bias/AMREX_SPACEDIM;
-  if ((partid<0)||(partid>=nparts))
-   amrex::Error("partid invalid");
- } else if ((ncomp%NUM_TENSOR_TYPE==0)&&
-            (scomp_bias<0)) {
-  int partid=scomp/NUM_TENSOR_TYPE;
-  if ((partid<0)||(partid>=nparts))
-   amrex::Error("partid invalid");
+   // 0<=im_elastic_map[i]<nmat
+  int nparts=im_elastic_map.size();
+
+  if (nparts==num_materials_viscoelastic) {
+
+   if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("NUM_TENSOR_TYPE became corrupted");
+
+    // Tensor_Type:
+    //  a) nparts * NUM_TENSOR_TYPE, then
+    //  b) nparts * AMREX_SPACEDIM
+   int scomp_bias=scomp-nparts*NUM_TENSOR_TYPE;
+   int ntotal_test=nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM);
+
+   if ((ncomp==ntotal_test)&&
+       (scomp==0)) {
+    if (scomp_bias==-nparts*NUM_TENSOR_TYPE) {
+     // do nothing
+    } else
+     amrex::Error("scomp_bias became corrupted");
+   } else if ((ncomp==AMREX_SPACEDIM)&&
+              (scomp_bias%AMREX_SPACEDIM==0)&&
+  	      (scomp_bias>=0)) {
+    int partid=scomp_bias/AMREX_SPACEDIM;
+    if ((partid<0)||(partid>=nparts))
+     amrex::Error("partid invalid");
+   } else if ((ncomp%NUM_TENSOR_TYPE==0)&&
+              (scomp_bias<0)) {
+    int partid=scomp/NUM_TENSOR_TYPE;
+    if ((partid<0)||(partid>=nparts))
+     amrex::Error("partid invalid");
+   } else
+    amrex::Error("ncomp or scomp invalid");
+
+   MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+   int ntotal=Tensor_new.nComp();
+   if (ntotal==ntotal_test) {
+    // do nothing
+   } else
+    amrex::Error("ntotal invalid");
+
+   if (scomp<0)
+    amrex::Error("scomp invalid getStateTensor"); 
+   if (ncomp<=0)
+    amrex::Error("ncomp invalid in getstateTensor"); 
+   if (scomp+ncomp>ntotal)
+    amrex::Error("scomp,ncomp invalid");
+
+   MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),dmap,ncomp,
+    ngrow,MFInfo().SetTag("mf getStateTensor"),FArrayBoxFactory());
+
+   FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp, debug_fillpatch);
+
+   ParallelDescriptor::Barrier();
+
+   return mf;
+  } else
+   amrex::Error("nparts!=num_materials_viscoelastic");
  } else
-  amrex::Error("ncomp or scomp invalid");
+  amrex::Error("num_materials_viscoelastic out of range");
 
- MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
- int ntotal=Tensor_new.nComp();
- if (ntotal==ntotal_test) {
-  // do nothing
- } else
-  amrex::Error("ntotal invalid");
+ return nullptr;
 
- if (scomp<0)
-  amrex::Error("scomp invalid getStateTensor"); 
- if (ncomp<=0)
-  amrex::Error("ncomp invalid in getstateTensor"); 
- if (scomp+ncomp>ntotal)
-  amrex::Error("scomp,ncomp invalid");
-
- MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),dmap,ncomp,
-   ngrow,MFInfo().SetTag("mf getStateTensor"),FArrayBoxFactory());
-
- FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp, debug_fillpatch);
-
- ParallelDescriptor::Barrier();
-
- return mf;
 } // end subroutine getStateTensor
 
 
