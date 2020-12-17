@@ -107,7 +107,9 @@ void plot_adept_data(
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
-    plot_array(i,j,k)=v_array(i,j,k).value();
+   for (int n = 0; n<Ncomp; ++n) {
+    plot_array(i,j,k,n)=v_array(i,j,k,n).value();
+   }
    }
    }
    }
@@ -134,6 +136,10 @@ adept::adouble cost_function(
 
  int nsteps=uinput.size()-1;
 
+ int num_state_vars=1; // the number of state variables for each material
+ int num_materials=2;
+ int num_interfaces=1;
+
  adept::adouble local_pi=4.0*atan(1.0);
 
 // recommended eps from MF De Pando, D Sipp, PJ Schmid
@@ -142,14 +148,12 @@ adept::adouble cost_function(
 // eps=0.0;
 
  vector< My_adept_MFAB* > v;  // approximate solution
- vector< My_adept_MFAB* > a;
  vector< My_adept_MFAB* > uback;
  vector< My_adept_MFAB* > wt_back;
  vector< My_adept_MFAB* > q_obs;
  vector< My_adept_MFAB* > wt_obs;
 
  v.resize(nsteps+1);
- a.resize(nsteps+1);
  uback.resize(nsteps+1);
  wt_back.resize(nsteps+1);
  q_obs.resize(nsteps+1);
@@ -173,10 +177,10 @@ adept::adouble cost_function(
 
  for (ntime=0;ntime<=nsteps;ntime++) {
 
+  int Ncomp=uinput[ntime]->nComp();
   adept::adouble local_t=ntime*dt;
 
   v[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
-  a[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
   uback[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
   wt_back[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
   q_obs[ntime]=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
@@ -185,7 +189,6 @@ adept::adouble cost_function(
   My_adept_MFAB* uinput_frame=uinput[ntime];
 
   My_adept_MFAB* v_frame=v[ntime];
-  My_adept_MFAB* a_frame=a[ntime];
   My_adept_MFAB* uback_frame=uback[ntime];
   My_adept_MFAB* wt_back_frame=wt_back[ntime];
   My_adept_MFAB* q_obs_frame=q_obs[ntime];
@@ -197,7 +200,6 @@ adept::adouble cost_function(
    My_adept_FAB& uinput_fab=(*uinput_frame)[gridno];
 
    My_adept_FAB& v_fab=(*v_frame)[gridno];
-   My_adept_FAB& a_fab=(*a_frame)[gridno];
    My_adept_FAB& uback_fab=(*uback_frame)[gridno];
    My_adept_FAB& wt_back_fab=(*wt_back_frame)[gridno];
    My_adept_FAB& q_obs_fab=(*q_obs_frame)[gridno];
@@ -206,7 +208,6 @@ adept::adouble cost_function(
    Array4< adept::adouble > const& uinput_array=uinput_fab.array();
 
    Array4< adept::adouble > const& v_array=v_fab.array();
-   Array4< adept::adouble > const& a_array=a_fab.array();
    Array4< adept::adouble > const& uback_array=
 	   uback_fab.array();
    Array4< adept::adouble > const& wt_back_array=
@@ -222,33 +223,44 @@ adept::adouble cost_function(
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
+   for (int n = 0; n<Ncomp; ++n) {
 
     adept::adouble local_x=xlo+dx[0]*(i+0.5);
 
     adept::adouble wt_back=0.1;
+    if (n==Ncomp-1)
+     wt_back=0.0;
 
      // background solution
-    uback_array(i,j,k)=0.0;
+    uback_array(i,j,k,n)=0.0;
      // background error weight
-    wt_back_array(i,j,k)=0.0;
+    wt_back_array(i,j,k,n)=0.0;
     if (ntime==0) {
-     wt_back_array(i,j,k)=wt_back;
+     wt_back_array(i,j,k,n)=wt_back;
     }
     if (local_x<=xlo) {
-     wt_back_array(i,j,k)=wt_back;
+     wt_back_array(i,j,k,n)=wt_back;
     }
     if (local_x>=xhi) {
-     wt_back_array(i,j,k)=wt_back;
+     wt_back_array(i,j,k,n)=wt_back;
     }
      // observation data only considered at t=Tstop
-    wt_obs_array(i,j,k)=0.0;
-    q_obs_array(i,j,k)=0.0;
+    wt_obs_array(i,j,k,n)=0.0;
+    q_obs_array(i,j,k,n)=0.0;
     if (ntime==nsteps) {
-     q_obs_array(i,j,k)=sin(2.0*local_pi*local_x);
-     wt_obs_array(i,j,k)=1.0;
+     if (n==0) {
+      q_obs_array(i,j,k,n)=1.0; //state1
+     } else if (n==1) {
+      q_obs_array(i,j,k,n)=0.0; //state2
+     } else if (n==2) {  
+      q_obs_array(i,j,k,n)=0.25-fabs(x-0.5); //phi (levelset function)
+     } else
+      amrex::Error("n invalid");
+
+     wt_obs_array(i,j,k,n)=1.0;
     }
-    v_array(i,j,k)=uinput_array(i,j,k);
-    a_array(i,j,k)=1.0; // speed =1
+    v_array(i,j,k,n)=uinput_array(i,j,k,n);
+   } // n
    } // i
    } // j
    } // k
@@ -261,8 +273,8 @@ adept::adouble cost_function(
  double time=0.0;
 
  for (ntime=0;ntime<nsteps;ntime++) {
+  int Ncomp=uinput[ntime]->nComp();
 
-  My_adept_MFAB* a_frame=a[ntime];
   My_adept_MFAB* v_frame=v[ntime];
   My_adept_MFAB* vnp1_frame=v[ntime+1];
   My_adept_MFAB* unp1_frame=uinput[ntime+1];
@@ -274,9 +286,6 @@ adept::adouble cost_function(
 
    // finite volume method, unknowns located at cell centers.
   My_adept_MFAB* fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
-  My_adept_MFAB* H_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
-  My_adept_MFAB* a_fluxes=new My_adept_MFAB(ba_flux_x,dm,Ncomp,0);
-  My_adept_MFAB* H_cells=new My_adept_MFAB(ba,dm,Ncomp,Nghost);
 
   if (plot_int>0) {
    int ntime_div=ntime/plot_int;
@@ -290,7 +299,6 @@ adept::adouble cost_function(
 
    const int gridno = mfi.index();
 
-   My_adept_FAB& a_fab=(*a_frame)[gridno];
    My_adept_FAB& v_fab=(*v_frame)[gridno];
    My_adept_FAB& vnp1_fab=(*vnp1_frame)[gridno];
    My_adept_FAB& unp1_fab=(*unp1_frame)[gridno];
@@ -301,11 +309,7 @@ adept::adouble cost_function(
    My_adept_FAB& wtnp1_obs_fab=(*wtnp1_obs_frame)[gridno];
 
    My_adept_FAB& fluxes_fab=(*fluxes)[gridno];
-   My_adept_FAB& H_fluxes_fab=(*H_fluxes)[gridno];
-   My_adept_FAB& H_cells_fab=(*H_cells)[gridno];
-   My_adept_FAB& a_fluxes_fab=(*a_fluxes)[gridno];
 
-   Array4< adept::adouble > const& a_array=a_fab.array();
    Array4< adept::adouble > const& v_array=v_fab.array();
    Array4< adept::adouble > const& vnp1_array=vnp1_fab.array();
    Array4< adept::adouble > const& unp1_array=unp1_fab.array();
@@ -316,22 +320,9 @@ adept::adouble cost_function(
    Array4< adept::adouble > const& wtnp1_obs_array=wtnp1_obs_fab.array();
 
    Array4< adept::adouble > const& fluxes_array=fluxes_fab.array();
-   Array4< adept::adouble > const& H_fluxes_array=H_fluxes_fab.array();
-   Array4< adept::adouble > const& H_cells_array=H_cells_fab.array();
-   Array4< adept::adouble > const& a_fluxes_array=a_fluxes_fab.array();
 
    Dim3 lo=lbound(v_fab.box());
    Dim3 hi=ubound(v_fab.box());
-
-   for (int k = lo.z; k <= hi.z; ++k) {
-   for (int j = lo.y; j <= hi.y; ++j) {
-   for (int i = lo.x; i <= hi.x; ++i) {
-    // H_smooth is a differentiable Heaviside function
-    // if eps==0 then H(a)=1 if a>0 and H(a)=0 if a<0
-    H_cells_array(i,j,k)=H_smooth(a_array(i,j,k),eps); 
-   } //i
-   } //j
-   } //k
 
    Dim3 lo_x=lbound(fluxes_fab.box());
    Dim3 hi_x=ubound(fluxes_fab.box());
@@ -341,18 +332,15 @@ adept::adouble cost_function(
    for (int k = lo_x.z; k <= hi_x.z; ++k) {
    for (int j = lo_x.y; j <= hi_x.y; ++j) {
    for (int i = lo_x.x; i <= hi_x.x; ++i) {
-     a_fluxes_array(i,j,k)=
-        0.5*(a_array(i,j,k)+a_array(i-1,j,k));
+   for (int n = 0; n<Ncomp; ++n) {
 
-     H_fluxes_array(i,j,k)=
-	H_smooth(a_fluxes_array(i,j,k),eps);
-
+    adept::adouble a=1.0;
+    adept::adouble H=H_smooth(a,eps);
        // cell(i) lives at xi=(i+1/2)dx
        // face(i) lives at i*dx
-     fluxes_array(i,j,k)=
-        (1.0-H_fluxes_array(i,j,k))*v_array(i,j,k)+
- 	 (H_fluxes_array(i,j,k))*v_array(i-1,j,k)*
-	a_fluxes_array(i,j,k);
+    fluxes_array(i,j,k,n)=
+        a*( (1.0-H)*v_array(i,j,k,n)+H*v_array(i-1,j,k,n) )
+   } //n
    } //i
    } //j
    } //k
@@ -363,8 +351,10 @@ adept::adouble cost_function(
    for (int k = lo_int.z; k <= hi_int.z; ++k) {
    for (int j = lo_int.y; j <= hi_int.y; ++j) {
    for (int i = lo_int.x; i <= hi_int.x; ++i) {
+   for (int n = 0; n<Ncomp; ++n) {
      vnp1_array(i,j,k)=v_array(i,j,k)-
 	     (dt/dx[0])*(fluxes_array(i+1,j,k)-fluxes_array(i,j,k));
+   } //n
    } //i
    } //j
    } //k
@@ -372,6 +362,7 @@ adept::adouble cost_function(
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
+   for (int n = 0; n<Ncomp; ++n) {
     // ok to have this "if" statement here since the 
     // contents of the conditional rule does not depend on
     // the control "u" or the state "v"
@@ -417,19 +408,27 @@ adept::adouble cost_function(
       k_interior=hi_int.z;
       face_normal=1.0;
      }
+     adept::adouble a=1.0;
       // a_bias < 0 => Dirichlet boundary
-     adept::adouble a_bias=a_fluxes_array(iface,jface,kface)*face_normal;
+     adept::adouble a_bias=a*face_normal;
       // H_bias = 0 => Dirichlet boundary
      adept::adouble H_bias=H_smooth(a_bias,eps);
      
-     vnp1_array(i,j,k)=(1.0-H_bias)*unp1_array(i,j,k)+
-       H_bias*vnp1_array(i_interior,j_interior,k_interior);
+     vnp1_array(i,j,k,n)=(1.0-H_bias)*unp1_array(i,j,k,n)+
+       H_bias*vnp1_array(i_interior,j_interior,k_interior,n);
 
     }
    }
    }
    }
+   }
 
+     // next time, levelset redistancing and state variable extrapolation
+     // go here.
+     // Note: for nonlinear problems (e.g. Stefan problem, or Burger's
+     // equation), the speed for interface propagation must be extrapolated
+     // too.
+     //
    for (int k = lo_int.z; k <= hi_int.z; ++k) {
    for (int j = lo_int.y; j <= hi_int.y; ++j) {
    for (int i = lo_int.x; i <= hi_int.x; ++i) {
@@ -534,7 +533,9 @@ Real algorithm_and_gradient(
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
-    adept_array(i,j,k)=Real_array(i,j,k);
+   for (int n = 0; n<Ncomp; ++n) {
+    adept_array(i,j,k,n)=Real_array(i,j,k,n);
+   } // n
    } // i
    } // j
    } // k
@@ -549,6 +550,7 @@ Real algorithm_and_gradient(
 
   My_adept_MFAB* x_frame=adept_x[ntime];
   MultiFab* dJdx_frame=dJdx[ntime];
+  int Ncomp=x_frame[ntime]->nComp();
 
   for (MFIter mfi(*x_frame,false); mfi.isValid(); ++mfi) {
    const int gridno = mfi.index();
@@ -563,7 +565,9 @@ Real algorithm_and_gradient(
    for (int k = lo.z; k <= hi.z; ++k) {
    for (int j = lo.y; j <= hi.y; ++j) {
    for (int i = lo.x; i <= hi.x; ++i) {
-    dJdx_array(i,j,k)=x_array(i,j,k).get_gradient();
+   for (int n = 0; n<Ncomp; ++n) {
+    dJdx_array(i,j,k,n)=x_array(i,j,k,n).get_gradient();
+   } // n
    } // i
    } // j
    } // k
@@ -618,6 +622,10 @@ int main(int argc,char* argv[]) {
   xhi[dir]=1.0;
  }
  Real stop_time=1.0;
+
+ int num_state_vars=1; // the number of state variables for each material
+ int num_materials=2;
+ int num_interfaces=1;
 
  // DEFAULT: NONE PERIODIC 
  // is_periodic(dir)=0 in all direction by default (dir=0,1,.., sdim-1)
@@ -693,7 +701,11 @@ int main(int argc,char* argv[]) {
  nGrowVect[AMREX_SPACEDIM-1]=0;
     
  // Ncomp = number of components for each array
- int Ncomp  = 1;
+ // state1  state2   Levelset function
+ // if levelset(t,x)<0 => state2
+ // if levelset(t,x)>0 => state1
+ //
+ int Ncomp  = num_materials*num_state_vars+num_interfaces;
   
  // How Boxes are distrubuted among MPI processes
  DistributionMapping dm(ba);
@@ -715,6 +727,11 @@ int main(int argc,char* argv[]) {
     dJdx[ntime]=new MultiFab(ba,dm,Ncomp,nGrowVect);
 
     x[ntime]->setVal(0.0);
+
+    int comp=num_materials*num_state_vars;
+    Real smallest_distance=-(xhi[0]-xlo[0]);
+    x[ntime]->setVal(smallest_distance,comp,1,nGrowVect);
+
     dJdx[ntime]->setVal(0.0);
 
     MultiFab* cur_frame=x[ntime];
@@ -728,31 +745,48 @@ int main(int argc,char* argv[]) {
      for (int j = lo.y; j <= hi.y; ++j) {
      for (int i = lo.x; i <= hi.x; ++i) {
       double xi=xlo[0]+(i+0.5)*dx[0];
-       // initially, the control variable u(t,x)=0 at t=0
-       //                                 u(t,x)=1 at x=0
-       //                                 u(t,x)=1 at x=1 should not be
-       //                                 changed since a=1 > 0
+       // initially, the control variable state1(t,x)=0 at t=0
+       //                                 state1(t,x)=0 at x=0,1
+       //                                 state2(t,x)=0 at t=0
+       //                                 state2(t,x)=0 at x=0,1
        //                                 cost function:
-       //                                 a) v_t + a v_x = 0
-       //                                   v(t,x)=u(t,x) on the boundaries
+       //                                 a) vi_t + a vi_x = 0
+       //                                   vi(t,x)=ui(t,x) on the boundaries
        //                                   and initial condition
-       //                                   v(T,x)=u(0,x-aT)=0  if x-aT>0
-       //                                         =1  if x-aT<0
-       //                                 b) C=||v(T,.)-v^{obs}(T,.)||_w1+
-       //                                      ||u(t,x)-u^{back}(t,x)||_w2
-      if (xi<xlo[0]) {
-       x_array(i,j,k)=1.0;
-      } else if (xi>xhi[0]) {
-       x_array(i,j,k)=1.0;
-      } else {
-       double local_pi=4.0*atan(1.0);
-       if (ntime==0) {
-//        x_array(i,j,k)=sin(2.0*local_pi*xi);
-        x_array(i,j,k)=0.0;
-       } else {
-        x_array(i,j,k)=0.0;
-       }
-      }
+       //                                   vi(T,x)=ui(0,x-aT)=0  if x-aT>0
+       //                                         =0  if x-aT<0
+       //
+       //                                         i=1,2
+       //                                    extension PDEs:
+       //                                    n points from 2 to 1
+       //                                    n = grad phi/|grad phi|
+       //       Peng, Merriman, Osher, Kang, Zhou equation (21):
+       //                             characteristics point from 1 to 2:
+       //                             v1(t,x)_tau - n H(-phi) dot grad v1 =0
+       //                             characteristics point from 2 to 1:
+       //                             v2(t,x)_tau + n H(phi) dot grad v2 =0
+       //                                 b) phi_t + a phi_x = 0
+       //                                    redistance:
+       //                                    Hamilton-Jacobi equation: 
+       //                                    phi_tau + s(phi_tilde) *
+       //                                      (1-|grad phi|)=0
+       //                                    Sussman, Smereka, Osher 1994
+       //                 Peng, Merriman, Osher, Kang, Zhou equation (29)
+       //
+       //                         c) C=sum_{i=1}^{num_mat} 
+       //                            ||vi(T,.)-vi^{obs}(T,.)||_w1i+
+       //                            ||ui(t,x)-ui^{back}(t,x)||_w2i +
+       //                            sum_{j=1}^{num_interfaces}
+       //                            ||phi_j(T,.)-phi_j^{obs}(T,.)||_w3j
+       //
+       //  v1_observation(T,x)=1  
+       //  v2_observation(T,x)=0
+       //  phi_observation(T,x)=1/4-|x-1/2|
+       //
+       //  background solution: u^background = 0
+       //  w2 = 0.1 at t=0, x=0, x=1, w2=0.0 otherwise
+       //  The background error in the cost function is
+       //  "Tikhonov regularization?"
 
      }
      }
@@ -786,6 +820,7 @@ int main(int argc,char* argv[]) {
    for (int ntime=0;ntime<=nsteps;ntime++) {
     MultiFab* cur_frame=x[ntime];
     MultiFab* cur_frame_dJdx=dJdx[ntime];
+    int Ncomp=x[ntime]->nComp();
     for (MFIter mfi(*cur_frame,false); mfi.isValid(); ++mfi) {
      const int gridno = mfi.index();
      FArrayBox& x_fab=(*cur_frame)[gridno];
@@ -798,7 +833,9 @@ int main(int argc,char* argv[]) {
      for (int k = lo.z; k <= hi.z; ++k) {
      for (int j = lo.y; j <= hi.y; ++j) {
      for (int i = lo.x; i <= hi.x; ++i) {
-      x_array(i,j,k)=x_array(i,j,k)-learning_rate*dJdx_array(i,j,k);
+     for (int n = 0; n<Ncomp; ++n) {
+      x_array(i,j,k,n)=x_array(i,j,k,n)-learning_rate*dJdx_array(i,j,k,n);
+     } // n
      } // i
      } // j
      } // k
