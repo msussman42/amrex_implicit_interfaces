@@ -26433,6 +26433,9 @@ stop
        !   (only called when spectral_loop==0)
        !     
       subroutine FORT_FACE_GRADIENTS( &
+       im_tensor, &
+       elastic_partid, &
+       im_elastic_map, &
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
@@ -26489,6 +26492,9 @@ stop
 
       REAL_T def_dt
 
+      INTEGER_T, intent(in) :: im_tensor
+      INTEGER_T, intent(in) :: elastic_partid
+      INTEGER_T, intent(in) :: im_elastic_map(num_materials_viscoelastic)
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: ntensorMM
       INTEGER_T, intent(in) :: ns_time_order
@@ -26702,6 +26708,42 @@ stop
        endif
       else
        print *,"itensor_iter invalid"
+       stop
+      endif
+
+      if (im_tensor.eq.-1) then
+       ! do nothing
+      else if ((im_tensor.ge.0).and.(im_tensor.lt.nmat)) then
+       if ((elastic_partid.ge.0).and. &
+           (elastic_partid.lt.num_materials_viscoelastic)) then
+        if (im_tensor.eq.im_elastic_map(elastic_partid+1)) then
+         if (im_elastic_map(elastic_partid+1).eq. &
+             fort_im_elastic_map(elastic_partid+1)) then
+          if (enable_spectral.eq.0) then
+           if (homflag.eq.0) then
+            ! do nothing
+           else
+            print *,"homflag invalid"
+            stop
+           endif
+          else
+           print *,"enable_spectral invalid"
+           stop
+          endif
+         else
+          print *,"im_elastic_map invalid"
+          stop
+         endif
+        else
+         print *,"im_tensor invalid"
+         stop
+        endif
+       else
+        print *,"elastic_partid invalid"
+        stop
+       endif
+      else
+       print *,"im_tensor invalid"
        stop
       endif
 

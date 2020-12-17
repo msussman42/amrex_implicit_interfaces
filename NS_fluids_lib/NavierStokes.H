@@ -837,7 +837,9 @@ protected:
      int idx_cell,int idx_face,
      int simple_AMR_BC_flag_viscosity);
 
-    void doit_gradu_tensor(int homflag,int idx_vel,
+    void doit_gradu_tensor(
+     int im_tensor,  //-1, or, 0 .. nmat-1
+     int homflag,int idx_vel,
      int idx_cell,int idx_face,int spectral_loop,
      int itensor_iter,MultiFab* mask3,
      int simple_AMR_BC_flag_viscosity);
