@@ -3404,10 +3404,34 @@ void NavierStokes::init_gradu_tensorALL(
   NavierStokes& ns_level=getLevel(ilev);
 
   if (do_alloc==1) {
-    // ngrow,scomp,ncomp
-   ns_level.getState_localMF(idx,1,0,nsolveMM,cur_time_slab);
+
+   if (im_tensor==-1) {
+     // ngrow,scomp,ncomp
+    ns_level.getState_localMF(idx,1,0,nsolveMM,cur_time_slab);
+   } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
+    if (enable_spectral==0) {
+     int elastic_partid=-1;
+     for (int i=0;i<im_elastic_map.size();i++) {
+      if (im_elastic_map[i]==im_tensor)
+       elastic_partid=i;
+     }
+
+     if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
+      int scomp=num_materials_viscoelastic*NUM_TENSOR_TYPE+ 
+                elastic_partid*AMREX_SPACEDIM;
+      ns_level.getStateTensor_localMF(idx,1,scomp,AMREX_SPACEDIM,cur_time_slab);
+     } else
+      amrex::Error("elastic_partid invalid");
+    } else
+     amrex::Error("enable_spectral invalid");
+   } else
+    amrex::Error("im_tensor invalid");
+      
   } else if (do_alloc==0) {
-   // do nothing
+   if (im_tensor==-1) {
+    // do nothing
+   } else
+    amrex::Error("im_tensor=-1 if do_alloc==0");
   } else
    amrex::Error("do_alloc invalid");
 
@@ -3416,8 +3440,10 @@ void NavierStokes::init_gradu_tensorALL(
    amrex::Error("ns_level.localMF[idx]->nComp() invalid");
 
   int homflag=0;
-  ns_level.init_gradu_tensor(homflag,idx,idx_cell,idx_face,
-       simple_AMR_BC_flag_viscosity);
+  ns_level.init_gradu_tensor(
+    im_tensor,
+    homflag,idx,idx_cell,idx_face,
+    simple_AMR_BC_flag_viscosity);
  } // ilev=finest_level ... level
 
    // grad U.
@@ -3429,7 +3455,13 @@ void NavierStokes::init_gradu_tensorALL(
   scompBC_map.resize(1);
   scompBC_map[0]=0;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
+  if (im_tensor==-1) {
+   PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
+  } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
+   amrex::Error("FIX ME");
+  } else
+   amrex::Error("im_tensor invalid");
+
  } // i=0..ntensorMM-1
 
  if (do_alloc==1) {
@@ -3870,6 +3902,7 @@ void NavierStokes::FillBoundaryTENSOR(
 
 // called from apply_pressure_grad, init_gradu_tensorALL
 void NavierStokes::init_gradu_tensor(
+ int im_tensor, //-1, or, 0 .. nmat-1
  int homflag,int idx_vel,
  int idx_cell,int idx_face,
  int simple_AMR_BC_flag_viscosity) {
@@ -4149,7 +4182,11 @@ void NavierStokes::apply_pressure_grad(
   } else
    amrex::Error("simple_AMR_BC_flag_viscosity invalid");
 
-  init_gradu_tensor(homflag,pboth_mf,LOCAL_CELLTENSOR_MF,
+  int im_tensor=-1;
+  init_gradu_tensor(
+    im_tensor,
+    homflag,
+    pboth_mf,LOCAL_CELLTENSOR_MF,
     LOCAL_FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
 
   show_norm2(localMF[pboth_mf],0,localMF[pboth_mf]->nComp(),20);
