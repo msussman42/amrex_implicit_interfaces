@@ -14470,6 +14470,7 @@ stop
             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                     from_boundary_hydrostatic)
            else
+              ! defined in: GLOBALUTIL.F90
               ! only takes into account fort_drhodz
             call default_hydrostatic_pressure_density( &
               xpos,rhohydro,preshydro,temperature, &
@@ -14529,10 +14530,18 @@ stop
             im_spec=spec_material_id_AMBIENT(ispec)
             if (im_spec.eq.im) then
              massfrac=dennew(D_DECL(i,j,k),dencomp+1+ispec)
-              ! in: GLOBALUTIL.F90
+              ! make_mixture_density defined in: GLOBALUTIL.F90
+
+             if (1.eq.1) then
+              print *,"BEFORE: i,j,k,density_of_TZ,massfrac,evap_den ", &
+               i,j,k,density_of_TZ,massfrac,species_evaporation_density(ispec)
+             endif
              call make_mixture_density(massfrac, &
                density_of_TZ,species_evaporation_density(ispec))
-       FIX ME
+             if (1.eq.1) then
+              print *,"AFTER: i,j,k,density_of_TZ,massfrac,evap_den ", &
+               i,j,k,density_of_TZ,massfrac,species_evaporation_density(ispec)
+             endif
             else if ((im_spec.ge.0).and.(im_spec.le.nmat)) then
              ! do nothing
             else
