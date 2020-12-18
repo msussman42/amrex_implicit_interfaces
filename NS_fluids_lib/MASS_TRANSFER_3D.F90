@@ -4894,12 +4894,20 @@ stop
            temp_mix_new(2)=temperature_new(2)
            temp_mix_new(1)=temperature_new(1)
 
-           if (LL.gt.zero) then ! evaporation
+           if (LL.gt.zero) then ! evaporation or boiling
 
             temp_new_vfrac=oldvfrac(im_dest)+dF
             if (temp_new_vfrac.gt.EBVOFTOL) then 
              density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
                vapor_den*dF)/temp_new_vfrac
+
+             if (1.eq.0) then
+              print *,"i,j,k,temp_new_vfrac ",i,j,k,temp_new_vfrac
+              print *,"denold,oldF,vapor_den,dF,dennew ", &
+               density_old(2),oldvfrac(im_dest),vapor_den,dF, &
+               density_mix_new(2)
+             endif
+
               ! If liquid and gas mixture are incompressible, then
               ! determine Y so that den_mix= 
               !   (denV denA)/(Y denA + (1-Y) denV )
