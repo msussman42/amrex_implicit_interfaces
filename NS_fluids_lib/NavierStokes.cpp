@@ -10557,7 +10557,8 @@ void NavierStokes::tensor_extrapolate() {
 
 }   // subroutine tensor_extrapolate
 
-
+// called from NavierStokes::do_the_advance and
+//             NavierStokes::multiphase_project
 void 
 NavierStokes::correct_density() {
 
