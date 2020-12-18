@@ -27127,16 +27127,16 @@ stop
           if ((is_clamped_face.eq.1).or. &
               (is_clamped_face.eq.2).or. &
               (is_clamped_face.eq.3)) then
-           faceLS(D_DECL(i,j,k),dir)=zero
+           faceLS(D_DECL(i,j,k),dir)=zero ! mask off this gradient
           else if (is_clamped_face.eq.0) then
            if (mask_boundary.eq.0) then
             if (imL.eq.imR) then
              faceLS(D_DECL(i,j,k),dir)=imL
             else
-             faceLS(D_DECL(i,j,k),dir)=zero
+             faceLS(D_DECL(i,j,k),dir)=zero ! mask off this gradient
             endif
            else if (mask_boundary.eq.1) then
-            faceLS(D_DECL(i,j,k),dir)=zero
+            faceLS(D_DECL(i,j,k),dir)=zero ! mask off this gradient
            else
             print *,"mask_boundary invalid"
             stop
@@ -27297,7 +27297,9 @@ stop
            else if ((left_rigid.eq.1).or.(right_rigid.eq.1)) then
             if (shift_flag.eq.0) then
              ! do nothing
-            else if (shift_flag.eq.1) then
+
+             !prevent reading solidvel outside the array bounds
+            else if (shift_flag.eq.1) then 
              mdata(D_DECL(i,j,k),dir)=zero
             else
              print *,"shift_flag invalid"
@@ -27344,23 +27346,49 @@ stop
 
            theta_factor=one
 
-           if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
+            ! gradient of displacement vector.
+           if ((im_tensor.ge.0).and.(im_tensor.lt.nmat)) then
+
             vplus(nc)=vel(D_DECL(i,j,k),velcomp)
             vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
-           else if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
-            vplus(nc)=solidvelright(nc)
-            vminus(nc)=solidvelleft(nc)
-            theta_factor=zero
-           else if ((left_rigid.eq.0).and.(right_rigid.eq.1)) then
-            vplus(nc)=solidvelright(nc)
-            vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
-            theta_factor=two
-           else if ((left_rigid.eq.1).and.(right_rigid.eq.0)) then
-            vplus(nc)=vel(D_DECL(i,j,k),velcomp)
-            vminus(nc)=solidvelleft(nc)
-            theta_factor=two
+            if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
+             ! do nothing
+            else if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
+             theta_factor=zero ! zero out the gradient.
+            else if ((left_rigid.eq.0).and.(right_rigid.eq.1)) then
+             theta_factor=zero ! zero out the gradient.
+            else if ((left_rigid.eq.1).and.(right_rigid.eq.0)) then
+             theta_factor=zero ! zero out the gradient.
+            else
+             print *,"left_rigid or right_rigid invalid"
+             stop
+            endif
+
+            ! gradient of velocity vector.
+           else if (im_tensor.eq.-1) then
+
+            if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
+             vplus(nc)=vel(D_DECL(i,j,k),velcomp)
+             vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
+            else if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
+             vplus(nc)=solidvelright(nc)
+             vminus(nc)=solidvelleft(nc)
+             theta_factor=zero ! zero out the gradient.
+            else if ((left_rigid.eq.0).and.(right_rigid.eq.1)) then
+             vplus(nc)=solidvelright(nc)
+             vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
+             theta_factor=two
+            else if ((left_rigid.eq.1).and.(right_rigid.eq.0)) then
+             vplus(nc)=vel(D_DECL(i,j,k),velcomp)
+             vminus(nc)=solidvelleft(nc)
+             theta_factor=two
+            else
+             print *,"left_rigid or right_rigid invalid"
+             stop
+            endif
+
            else
-            print *,"left_rigid or right_rigid invalid"
+            print *,"im_tensor invalid"
             stop
            endif
 
@@ -27585,6 +27613,13 @@ stop
        ! in: FACE_GRADIENTS
       if ((enable_spectral.eq.1).or. &  ! SEM space and time
           (enable_spectral.eq.2)) then  ! SEM space only
+
+       if (im_tensor.eq.-1) then
+        ! do nothing
+       else
+        print *,"expecting im_tensor==-1 for spectral method"
+        stop
+       endif
 
        if (bfact.ge.2) then
 
