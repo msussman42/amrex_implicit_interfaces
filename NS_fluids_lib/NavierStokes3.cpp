@@ -612,12 +612,13 @@ void NavierStokes::nonlinear_advection() {
      init_vof_ls_prev_time,SLOPE_RECON_MF);
 
      // uses SLOPE_RECON_MF
-     // in: NavierStokes::nonlinear_advection()
+     // prior to split_scalar_advection, in 
+     //  NavierStokes::nonlinear_advection()
     if ((num_materials_viscoelastic>=1)&&
 	(num_materials_viscoelastic<=nmat)) {
      for (int ilev=finest_level;ilev>=level;ilev--) {
       NavierStokes& ns_level=getLevel(ilev);
-      ns_level.tensor_extrapolate();
+      ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
      }
     } else
      amrex::Error("num_materials_viscoelastic invalid");
@@ -888,10 +889,11 @@ void NavierStokes::tensor_advection_updateALL() {
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
    // uses SLOPE_RECON_MF
-   // in NavierStokes::tensor_advection_updateALL() {
+   // prior to tensor_advection_update(), in
+   //  NavierStokes::tensor_advection_updateALL() 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate();
+   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
   }
   avgDownALL_TENSOR();
 
@@ -955,10 +957,11 @@ void NavierStokes::tensor_advection_updateALL() {
   avgDownALL_TENSOR();
 
    // uses SLOPE_RECON_MF
-   // in NavierStokes::tensor_advection_updateALL() {
+   // after tensor_advection_update(), in
+   //  NavierStokes::tensor_advection_updateALL() 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate();
+   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
   }
   avgDownALL_TENSOR();
 
@@ -11986,11 +11989,12 @@ void NavierStokes::veldiffuseALL() {
   avgDownALL(State_Type,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // in: NavierStokes::veldiffuseALL()
+   // after make_viscoelastic_force(), in
+   //  NavierStokes::veldiffuseALL()
    // uses SLOPE_RECON_MF
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate();
+   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
   }
   avgDownALL_TENSOR();
 
