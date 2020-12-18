@@ -249,8 +249,8 @@ print *,"constant_K_test= ",constant_K_test
 ! M_START=32,64,128
 ! saturation_temp_vel=0.0
 ! saturation_temp_curv=0.002
-N_START=64
-N_FINISH=64
+N_START=128
+N_FINISH=128
 M_START=1600
 M_FACTOR=2
 
@@ -1014,7 +1014,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    saturation_temp_curv(2)=0.0d0 
    saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al
    saturation_temp_vel(2)=0.0d0 
- 
+
+   print *,"saturation_temp_curv(1)=",saturation_temp_curv(1) 
+   print *,"saturation_temp_curv(2)=",saturation_temp_curv(2) 
+   print *,"saturation_temp_vel(1)=",saturation_temp_vel(1) 
+   print *,"saturation_temp_vel(2)=",saturation_temp_vel(2) 
    fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
    fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
 
