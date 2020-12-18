@@ -14529,8 +14529,10 @@ stop
             im_spec=spec_material_id_AMBIENT(ispec)
             if (im_spec.eq.im) then
              massfrac=dennew(D_DECL(i,j,k),dencomp+1+ispec)
+              ! in: GLOBALUTIL.F90
              call make_mixture_density(massfrac, &
                density_of_TZ,species_evaporation_density(ispec))
+       FIX ME
             else if ((im_spec.ge.0).and.(im_spec.le.nmat)) then
              ! do nothing
             else
@@ -20907,6 +20909,7 @@ stop
           !   if override_density=1 then density=mass_depart/vol_depart
           ! if compressible,
           !   density=massdepart/voltarget
+          ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
           call derive_density(volmat_depart_cor(im), &
            vol_target_local,voltotal_depart, &
            override_density,massdepart,im,nmat, &

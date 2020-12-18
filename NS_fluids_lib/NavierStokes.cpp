@@ -283,7 +283,7 @@ on an interface, growth rate of perturbations, pressure drop)
 */
 
 int  NavierStokes::VOF_reflux=0;
-int  NavierStokes::continuous_mof=0;
+int  NavierStokes::continuous_mof=2;
 // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
 int  NavierStokes::force_cmof_at_triple_junctions=1;
 int  NavierStokes::partial_cmof_stencil_at_walls=0;
@@ -10557,7 +10557,8 @@ void NavierStokes::tensor_extrapolate() {
 
 }   // subroutine tensor_extrapolate
 
-
+// called from NavierStokes::do_the_advance and
+//             NavierStokes::multiphase_project
 void 
 NavierStokes::correct_density() {
 

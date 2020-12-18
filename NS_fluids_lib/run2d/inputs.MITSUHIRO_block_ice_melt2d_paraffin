@@ -213,8 +213,9 @@ ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
 # 1=distribute to the source material.      V=u_dest dot n + mdot/rho_dest
 # if rho_source < rho_dest then choose "0"
 # if rho_dest < rho_source then choose "1"
-#12 13 14 23 24 34 21 31 41 32 42 43
-ns.distribute_from_target = 0 0 0 0 0 0 0 1 0 0 0 0
+#12 13 14 23 24 34 21 31 41 32 42 43 (31=>0)
+ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
+ns.distribute_mdot_evenly=1 0 0 0
 #no evaporation:
 #1=liquid, 2=air, 3=ice, 4=substrate
 #12 13 14 23 24 34 21 31 41 32 42 43

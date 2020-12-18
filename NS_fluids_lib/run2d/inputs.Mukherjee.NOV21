@@ -184,6 +184,12 @@ ns.stiffCP=4217.0 2029.0 2029.0 385.0
 # Joule/kg
 # NOV 2018 (3 or 4 materials)
 ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+# distribute_from_target=0 => distribute mdot to the vapor
+# 1 ... 2 * num_interfaces
+ns.distribute_from_target=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+# 1..num_materials
+# mdot uniformly distributed in the vapor
+ns.distribute_mdot_evenly=0 1 0 0
 # if latent_heat<>0,
 # if nucleation_period==0.0, only nucleate one bubble, 
 # if nucleation_period>0.0, periodically nucleate bubbles.
