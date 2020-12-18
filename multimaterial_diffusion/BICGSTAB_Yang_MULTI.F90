@@ -547,7 +547,7 @@
       local_level=0
       ncomp_gap=1
        ! VERIFICATION
-      if (1.eq.1) then
+      if (1.eq.0) then
        call FORT_TECPLOTFAB_SANITY( &
         root_char_array, &
         n_root, &
