@@ -20907,6 +20907,7 @@ stop
           !   if override_density=1 then density=mass_depart/vol_depart
           ! if compressible,
           !   density=massdepart/voltarget
+          ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
           call derive_density(volmat_depart_cor(im), &
            vol_target_local,voltotal_depart, &
            override_density,massdepart,im,nmat, &
