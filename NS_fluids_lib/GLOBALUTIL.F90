@@ -13255,6 +13255,8 @@ contains
        ! rho=rho(T,Y,z)
       if (override_density.eq.1) then
 
+           FIX ME THIS IS ONLY IF BEING CALLED FROM THE HYDROSTATIC PRESSURE
+           ROUTINES FOR USE ON THE BOUNDARY OR GRAVITY FORCE
        if ((DrhoDz.eq.zero).and.(gravity_normalized.eq.zero)) then
         rho=fort_denconst(1)
         pres=zero
