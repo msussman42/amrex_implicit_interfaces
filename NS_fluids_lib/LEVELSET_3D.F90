@@ -4533,6 +4533,7 @@ stop
       end subroutine FORT_GETTYPEFAB
 
       subroutine FORT_GETCOLORSUM( &
+       tid_current, &
        operation_flag, &
        sweep_num, &
        tessellate, &
@@ -4585,6 +4586,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: tid_current
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: nstate
       INTEGER_T :: nstate_test
@@ -4716,8 +4718,17 @@ stop
       REAL_T mdot_avg
       REAL_T dt_div_V
       REAL_T original_density
+      REAL_T mofdata(nmat*ngeom_recon)
+      INTEGER_T caller_id
+      INTEGER_T nmax
+
+      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+       print *,"tid_current invalid"
+       stop
+      endif
 
       nhalf=3
+      nmax=POLYGON_LIST_MAX ! in: GETCOLORSUM
 
       if (dt.gt.zero) then
        ! do nothing
@@ -4872,9 +4883,31 @@ stop
          stop
         endif
 
+        call gridsten_level(xsten,i,j,k,level,nhalf)
 
+        do im=1,nmat*ngeom_recon
+         mofdata(im)=VOF(D_DECL(i,j,k),im)
+        enddo
 
-
+        if ((tessellate.eq.1).or. &
+            (tessellate.eq.3)) then
+         caller_id=15
+         call multi_get_volume_tessellate( &
+          tessellate, & ! =1 or 3
+          bfact, &
+          dx, &
+          xsten,nhalf, &
+          mofdata, &
+          geom_xtetlist(1,1,1,tid_current+1), &
+          nmax, &
+          nmax, &
+          nmat, &
+          SDIM, &
+          caller_id)
+        else
+         print *,"tessellate invalid"
+         stop
+        endif
 
         if (operation_flag.eq.0) then
 
@@ -5096,13 +5129,12 @@ stop
          stop
         endif
 
-        call gridsten_level(xsten,i,j,k,level,nhalf)
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
          vol,cencell,SDIM)
         mass=zero
         do im=1,nmat
          vofcomp=(im-1)*ngeom_recon+1
-         vfrac=VOF(D_DECL(i,j,k),vofcomp)
+         vfrac=mofdata(vofcomp)
          if (vfrac.ge.-VOFTOL) then
           if (vfrac.le.one+VOFTOL) then
            if (vfrac.lt.zero) then
@@ -5376,14 +5408,14 @@ stop
 
              ! blob_volume
             vofcomp=(im-1)*ngeom_recon+1
-            vfrac=VOF(D_DECL(i,j,k),vofcomp)
+            vfrac=mofdata(vofcomp)
             level_blobdata(ic)=level_blobdata(ic)+vol*vfrac
 
              ! centroid integral
             ic=ic+1
             do dir=1,SDIM
              level_blobdata(ic)=level_blobdata(ic)+ &
-              (cencell(dir)+VOF(D_DECL(i,j,k),vofcomp+dir))*vfrac*vol
+              (cencell(dir)+mofdata(vofcomp+dir))*vfrac*vol
              ic=ic+1
             enddo
 
@@ -5613,7 +5645,7 @@ stop
             if (sweep_num.eq.0) then
               ! blob_volume
              vofcomp=(im-1)*ngeom_recon+1
-             vfrac=VOF(D_DECL(i,j,k),vofcomp)
+             vfrac=mofdata(vofcomp)
              if (vfrac.ge.half) then
               if (distribute_mdot_evenly(im).eq.1) then
                ic=opposite_color(im)*num_elements_blobclass
@@ -8867,12 +8899,15 @@ stop
         call multi_get_volume_tessellate( &
          local_tessellate, & ! =3
          bfact, &
-         dx,xsten,nhalf, &
+         dx, &
+         xsten,nhalf, &
          mofdata, &
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         nmat,SDIM,3)
+         nmat, &
+         SDIM, &
+         3)
 
         voltotal=zero
         do im=1,nmat

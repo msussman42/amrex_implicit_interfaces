@@ -5164,6 +5164,7 @@ NavierStokes::ColorSum(
 
    // in: LEVELSET_3D.F90
   FORT_GETCOLORSUM(
+   &tid_current,
    &operation_flag,
    &sweep_num,
    &tessellate,
