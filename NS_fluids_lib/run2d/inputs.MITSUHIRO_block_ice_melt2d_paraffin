@@ -99,6 +99,7 @@ ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2 # 0=MOF 2=CMOF 
+ns.partial_cmof_stencil_at_walls=0
 ns.mof_error_ordering=0
 # water,air,ice,substrate
 ns.mof_ordering=0 2 0 1 
@@ -214,6 +215,9 @@ ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
 # if rho_source < rho_dest then choose "0"
 # if rho_dest < rho_source then choose "1"
 #12 13 14 23 24 34 21 31 41 32 42 43 (31=>0)
+#distribute to the melt is preferred since it will
+# (a) have less transients in the "solid" ice
+# (b) enable mdot to be evenly distributed throughout the melt
 ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 ns.distribute_mdot_evenly=1 0 0 0
 #no evaporation:
