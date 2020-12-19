@@ -13155,10 +13155,14 @@ contains
 
        ! only called if override_density=1 or override_density=2
        ! only takes into account fort_drhodz.
+       ! caller_id==0  => called from DENCOR
+       ! caller_id==1  => called from general_hydrostatic_pressure_density
+       !                  (which is called from INITPOTENTIAL)
       subroutine default_hydrostatic_pressure_density( &
         xpos,rho,pres,liquid_temp, &
         gravity_normalized, &
-        imat,override_density)
+        imat,override_density, &
+        caller_id)
       use probcommon_module
       IMPLICIT NONE
 

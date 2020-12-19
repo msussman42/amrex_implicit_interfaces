@@ -14383,6 +14383,7 @@ stop
       INTEGER_T ispec,im_spec
       REAL_T massfrac
       INTEGER_T from_boundary_hydrostatic
+      INTEGER_T caller_id
 
       nhalf=3
 
@@ -14472,10 +14473,12 @@ stop
            else
               ! defined in: GLOBALUTIL.F90
               ! only takes into account fort_drhodz
+            caller_id=0
             call default_hydrostatic_pressure_density( &
               xpos,rhohydro,preshydro,temperature, &
               gravity_normalized, &
-              im,override_density(im))
+              im,override_density(im), &
+              caller_id)
            endif
 
            if (DrhoDT(im).gt.zero) then
@@ -14532,13 +14535,13 @@ stop
              massfrac=dennew(D_DECL(i,j,k),dencomp+1+ispec)
               ! make_mixture_density defined in: GLOBALUTIL.F90
 
-             if (1.eq.1) then
+             if (1.eq.0) then
               print *,"BEFORE: i,j,k,density_of_TZ,massfrac,evap_den ", &
                i,j,k,density_of_TZ,massfrac,species_evaporation_density(ispec)
              endif
              call make_mixture_density(massfrac, &
                density_of_TZ,species_evaporation_density(ispec))
-             if (1.eq.1) then
+             if (1.eq.0) then
               print *,"AFTER: i,j,k,density_of_TZ,massfrac,evap_den ", &
                i,j,k,density_of_TZ,massfrac,species_evaporation_density(ispec)
              endif

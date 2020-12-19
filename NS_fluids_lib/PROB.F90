@@ -3877,6 +3877,7 @@ end subroutine dynamic_contact_angle
       REAL_T, intent(in) :: liquid_temp
       INTEGER_T imat
       INTEGER_T from_boundary_hydrostatic
+      INTEGER_T caller_id
 
       from_boundary_hydrostatic=0
 
@@ -3940,10 +3941,12 @@ end subroutine dynamic_contact_angle
 
          ! in: GLOBALUTIL.F90
          ! rho_hydrostatic=rho_hydrostatic(T,Y,z)
+        caller_id=1
         call default_hydrostatic_pressure_density(xpos, &
          rho_hydrostatic,pres_hydrostatic,liquid_temp, &
          gravity_normalized, &
-         imat,override_density)
+         imat,override_density, &
+         caller_id)
        else if (override_density.eq.2) then
         ! temperature dependence handled in DIFFUSION_3D.F90
         rho_hydrostatic=fort_denconst(imat) 
