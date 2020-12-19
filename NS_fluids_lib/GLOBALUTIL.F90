@@ -13166,7 +13166,9 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imat,override_density
+      INTEGER_T, intent(in) :: imat
+      INTEGER_T, intent(in) :: override_density
+      INTEGER_T, intent(in) :: caller_id
       INTEGER_T nmat
       REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(inout) :: rho,pres
@@ -13191,6 +13193,13 @@ contains
        ! do nothing
       else
        print *,"liquid_temp cannot be negative"
+       stop
+      endif
+      if ((caller_id.eq.0).or. &
+          (caller_id.eq.1)) then
+       ! do nothing
+      else
+       print *,"caller_id invalid"
        stop
       endif
 
@@ -13259,10 +13268,19 @@ contains
        ! rho=rho(T,Y,z)
       if (override_density.eq.1) then
 
-           FIX ME THIS IS ONLY IF BEING CALLED FROM THE HYDROSTATIC PRESSURE
-           ROUTINES FOR USE ON THE BOUNDARY OR GRAVITY FORCE
-       if ((DrhoDz.eq.zero).and.(gravity_normalized.eq.zero)) then
-        rho=fort_denconst(1)
+       if ((DrhoDz.eq.zero).and. &
+           (gravity_normalized.eq.zero)) then
+
+        if (caller_id.eq.0) then
+         ! do nothing, called from DENCOR, keep rho=denfree=denconst(imat)
+        else if (caller_id.eq.1) then 
+          ! called from general_hydrostatic_pressure_density
+         rho=fort_denconst(1)
+        else
+         print *,"caller_id invalid"
+         stop
+        endif
+
         pres=zero
        else if ((DrhoDz.eq.zero).and. &
                 (gravity_normalized.ne.zero)) then
