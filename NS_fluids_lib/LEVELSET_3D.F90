@@ -4535,6 +4535,7 @@ stop
       subroutine FORT_GETCOLORSUM( &
        operation_flag, &
        sweep_num, &
+       tessellate, &
        distribute_mdot_evenly, &
        dt, &
        dx,xlo, &
@@ -4588,6 +4589,7 @@ stop
       INTEGER_T, intent(in) :: nstate
       INTEGER_T :: nstate_test
       INTEGER_T, intent(in) :: sweep_num
+      INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nface,nface_dst,ncellfrac
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: level
@@ -4857,6 +4859,7 @@ stop
       do k=growlo(3),growhi(3)
        local_mask=NINT(mask(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
+
         icolor=NINT(color(D_DECL(i,j,k)))
         if ((icolor.gt.num_colors).or.(icolor.le.0)) then
          print *,"icolor invalid in GETCOLORSUM icolor=",icolor
@@ -4868,6 +4871,10 @@ stop
          print *,"base_type invalid"
          stop
         endif
+
+
+
+
 
         if (operation_flag.eq.0) then
 

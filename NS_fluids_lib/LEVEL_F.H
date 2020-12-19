@@ -126,6 +126,7 @@ namespace amrex{
      void FORT_GETCOLORSUM(
        int* operation_flag,
        int* sweep_num,
+       int* tessellate,
        int* distribute_mdot_evenly,
        Real* dt,
        const Real* dx,

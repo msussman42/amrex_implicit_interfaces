@@ -5166,6 +5166,7 @@ NavierStokes::ColorSum(
   FORT_GETCOLORSUM(
    &operation_flag,
    &sweep_num,
+   &tessellate,
    distribute_mdot_evenly.dataPtr(),
    &dt_slab,
    dx,xlo,
