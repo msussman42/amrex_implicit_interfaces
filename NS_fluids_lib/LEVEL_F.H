@@ -124,6 +124,7 @@ namespace amrex{
      int* type_flag,int* nmat);
 
      void FORT_GETCOLORSUM(
+       int* tid_current,
        int* operation_flag,
        int* sweep_num,
        int* tessellate,
