@@ -1370,6 +1370,9 @@ stop
             ! do nothing
            else
             print *,"mdot invalid in nsgenerate"
+            print *,"level,finest_level ",level,finest_level
+            print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k),veldir)
+            print *,"i,j,k,maskcov ",i,j,k,maskcov(D_DECL(i,j,k))
             stop
            endif
           else
