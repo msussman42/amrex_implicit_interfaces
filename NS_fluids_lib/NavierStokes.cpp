@@ -12469,6 +12469,8 @@ NavierStokes::level_phase_change_redistribute(
 
     // in: GODUNOV_3D.F90
     // isweep==0 
+    // A cell that is dominated by an is_rigid(nmat,im)=1
+    // material is neither a donor or a receiver.
    FORT_TAGEXPANSION( 
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
