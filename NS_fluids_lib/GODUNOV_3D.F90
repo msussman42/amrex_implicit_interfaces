@@ -5252,6 +5252,9 @@ stop
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
+       xflux,DIMS(xflux), &
+       yflux,DIMS(yflux), &
+       zflux,DIMS(zflux), &
        lsfab,DIMS(lsfab), &
        rhoinverse, &
        DIMS(rhoinverse), &
@@ -5259,7 +5262,10 @@ stop
        tensor,DIMS(tensor), &
        tilelo,tilehi, &
        fablo,fabhi,bfact,level, &
-       dt,irz,im_parm,nmat,nden)
+       dt,irz, &
+       im_parm, &
+       viscoelastic_model, &
+       nmat,nden)
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
@@ -5271,6 +5277,7 @@ stop
       INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: viscoelastic_model
       INTEGER_T, intent(in) :: nden,nstate
       INTEGER_T, intent(in) :: level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -5281,6 +5288,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(xflux)
+      INTEGER_T, intent(in) :: DIMDEC(yflux)
+      INTEGER_T, intent(in) :: DIMDEC(zflux)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
       INTEGER_T, intent(in) :: DIMDEC(rhoinverse)
       INTEGER_T, intent(in) :: DIMDEC(velnew)
@@ -5292,6 +5302,9 @@ stop
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(inout) :: xflux(DIMV(xflux),SDIM)
+      REAL_T, intent(inout) :: yflux(DIMV(yflux),SDIM)
+      REAL_T, intent(inout) :: zflux(DIMV(zflux),SDIM)
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
       REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
       REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
@@ -5377,6 +5390,10 @@ stop
       call checkbound(fablo,fabhi,DIMS(xface),0,0,263)
       call checkbound(fablo,fabhi,DIMS(yface),0,1,263)
       call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,263)
+
+      call checkbound(fablo,fabhi,DIMS(xflux),0,0,263)
+      call checkbound(fablo,fabhi,DIMS(yflux),0,1,263)
+      call checkbound(fablo,fabhi,DIMS(zflux),0,SDIM-1,263)
 
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,7)
       call checkbound(fablo,fabhi, &
@@ -5617,29 +5634,73 @@ stop
        hy=(xsten(1,2)-xsten(-1,2))*RRY
        hz=xsten(1,SDIM)-xsten(-1,SDIM)
 
-       if ((hx.le.zero).or.(hy.le.zero).or.(hz.le.zero)) then
+       if ((hx.gt.zero).and. &
+           (hy.gt.zero).and. &
+           (hz.gt.zero)) then
+        ! do nothing
+       else
         print *,"hx,hy, or hz invalid"
         stop
        endif
 
-       dir=1
-       force(dir)= &
-        (tpx*rplus*(Q(D_DECL(1,0,0),1,1)+ &
-                    Q(D_DECL(0,0,0),1,1))/two- &
-         tmx*rminus*(Q(D_DECL(0,0,0),1,1)+ &
-                     Q(D_DECL(-1,0,0),1,1))/two)/hx+ &
-        (tpy*(Q(D_DECL(0,1,0),1,2)+ &
-              Q(D_DECL(0,0,0),1,2))/two- &
-         tmy*(Q(D_DECL(0,-1,0),1,2)+ &
-              Q(D_DECL(0,0,0),1,2))/two)/hy
-#if (AMREX_SPACEDIM==3)
-       force(dir)=force(dir)+ &
-        (tpz*(Q(0,0,1,1,3)+ &
-              Q(0,0,0,1,3))/two- &
-         tmz*(Q(0,0,-1,1,3)+ &
-              Q(0,0,0,1,3))/two)/hz
-#endif
+       if ((viscoelastic_model.eq.0).or. &
+           (viscoelastic_model.eq.1)) then
 
+        do veldir=1,SDIM
+         dir=1
+         xflux(D_DECL(i+1,j,k),veldir)= &
+               (Q(D_DECL(1,0,0),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+         xflux(D_DECL(i,j,k),veldir)= &
+               (Q(D_DECL(-1,0,0),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+
+         dir=2
+         yflux(D_DECL(i,j+1,k),veldir)= &
+               (Q(D_DECL(0,1,0),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+         yflux(D_DECL(i,j,k),veldir)= &
+               (Q(D_DECL(0,-1,0),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+
+         if (SDIM.eq.3) then
+          dir=SDIM
+          zflux(D_DECL(i,j,k+1),veldir)= &
+               (Q(D_DECL(0,0,1),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+          zflux(D_DECL(i,j,k),veldir)= &
+               (Q(D_DECL(0,0,-1),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+         else if (SDIM.eq.2) then
+          ! do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+        enddo ! veldir=1..sdim
+
+       else if (viscoelastic_model.eq.2) then
+        ! do nothing
+       else
+        print *,"viscoelastic_model invalid"
+        stop
+       endif
+
+       do veldir=1,SDIM
+
+        force(veldir)= &
+         (tpx*rplus*xflux(D_DECL(i+1,j,k),veldir)- &
+          tmx*rminus*xflux(D_DECL(i,j,k),veldir))/hx+ &
+         (tpy*yflux(D_DECL(i,j+1,k),veldir)- &
+          tmy*yflux(D_DECL(i,j,k),veldir))/hy
+        if (SDIM.eq.3) then
+         force(veldir)=force(veldir)+ &
+           (tpz*zflux(D_DECL(i,j,k+1),veldir)- &
+            tmz*zflux(D_DECL(i,j,k),veldir))/hz
+        endif
+
+       enddo ! veldir=1..sdim
+                 
        if (irz.eq.0) then
         ! do nothing
        else if (irz.eq.1) then
@@ -5648,36 +5709,18 @@ stop
          stop
         endif
          ! -T33/r
-        dir=1
+        veldir=1
         bodyforce=-tcen*Q(D_DECL(0,0,0),3,3)/rval
-        force(dir)=force(dir)+bodyforce
+        force(veldir)=force(veldir)+bodyforce
        else if (irz.eq.3) then
          ! -T22/r
-        dir=1
+        veldir=1
         bodyforce=-tcen*Q(D_DECL(0,0,0),2,2)/rval
-        force(dir)=force(dir)+bodyforce
+        force(veldir)=force(veldir)+bodyforce
        else
         print *,"irz invalid"
         stop
        endif 
-
-       dir=2
-       force(dir)= &
-        (tpx*rplus*(Q(D_DECL(1,0,0),2,1)+ &
-                    Q(D_DECL(0,0,0),2,1))/two- &
-         tmx*rminus*(Q(D_DECL(0,0,0),2,1)+ &
-                     Q(D_DECL(-1,0,0),2,1))/two)/hx+ &
-        (tpy*(Q(D_DECL(0,1,0),2,2)+ &
-              Q(D_DECL(0,0,0),2,2))/two- &
-         tmy*(Q(D_DECL(0,-1,0),2,2)+ &
-              Q(D_DECL(0,0,0),2,2))/two)/hy
-#if (AMREX_SPACEDIM==3)
-       force(dir)=force(dir)+ &
-        (tpz*(Q(0,0,1,2,3)+ &
-              Q(0,0,0,2,3))/two- &
-         tmz*(Q(0,0,-1,2,3)+ &
-              Q(0,0,0,2,3))/two)/hz
-#endif
 
        if (irz.eq.0) then
         ! do nothing
@@ -5688,37 +5731,13 @@ stop
         endif
         ! do nothing
        else if (irz.eq.3) then ! T12/r
-        dir=2
+        veldir=2
         bodyforce=tcen*Q(D_DECL(0,0,0),1,2)/rval
-        force(dir)=force(dir)+bodyforce
+        force(veldir)=force(veldir)+bodyforce
        else
         print *,"irz invalid"
         stop
        endif 
-
-
-#if (AMREX_SPACEDIM==3)
-       dir=3
-       force(dir)= &
-        (tpx*(Q(1,0,0,3,1)+ &
-              Q(0,0,0,3,1))/two- &
-         tmx*(Q(0,0,0,3,1)+ &
-              Q(-1,0,0,3,1))/two)/hx+ &
-        (tpy*(Q(0,1,0,3,2)+ &
-              Q(0,0,0,3,2))/two- &
-         tmy*(Q(0,-1,0,3,2)+ &
-              Q(0,0,0,3,2))/two)/hy+ &
-        (tpz*(Q(0,0,1,3,3)+ &
-              Q(0,0,0,3,3))/two- &
-         tmz*(Q(0,0,-1,3,3)+ &
-              Q(0,0,0,3,3))/two)/hz
-
-#elif (AMREX_SPACEDIM==2)
-         ! do nothing
-#else
-       print *,"dimension bust"
-       stop
-#endif
 
        imlocal=ldata(D_DECL(0,0,0))
        if (is_prescribed(nmat,imlocal).eq.1) then
@@ -5736,9 +5755,14 @@ stop
 
        do veldir=1,SDIM
         deninv=rhoinverse(D_DECL(i,j,k),1)
- 
-        velnew(D_DECL(i,j,k),veldir)= &
-         velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
+
+        if (deninv.ge.zero) then 
+         velnew(D_DECL(i,j,k),veldir)= &
+          velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
+        else
+         print *,"deninv invalid"
+         stop
+        endif
        enddo ! veldir
 
       enddo

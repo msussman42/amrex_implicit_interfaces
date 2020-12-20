@@ -8914,8 +8914,14 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
  int ngrow=1;
 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(XDISP_FLUX_MF+dir,0,2);
+  if (localMF[XDISP_FLUX_MF+dir]->nComp()==AMREX_SPACEDIM) {
+   // do nothing
+  } else
+   amrex::Error("localMF[XDISP_FLUX_MF+dir].nComp() invalid");
+ }
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,3);
 
@@ -8938,6 +8944,13 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
  if ((im<0)||(im>=nmat))
   amrex::Error("im invalid54");
+
+ if ((viscoelastic_model[im]==0)||
+     (viscoelastic_model[im]==1)||
+     (viscoelastic_model[im]==2)) {
+  // do nothing
+ } else
+  amrex::Error("viscoelastic_model[im] invalid");
 
  if (ns_is_rigid(im)==0) {
 
@@ -9013,6 +9026,10 @@ void NavierStokes::make_viscoelastic_force(int im) {
     FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
     FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
 
+    FArrayBox& xflux=(*localMF[XDISP_FLUX_MF])[mfi];
+    FArrayBox& yflux=(*localMF[XDISP_FLUX_MF+1])[mfi];
+    FArrayBox& zflux=(*localMF[XDISP_FLUX_MF+AMREX_SPACEDIM-1])[mfi];
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -9029,6 +9046,9 @@ void NavierStokes::make_viscoelastic_force(int im) {
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
      yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()), 
      zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()), 
+     xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()), 
+     yflux.dataPtr(),ARLIM(yflux.loVect()),ARLIM(yflux.hiVect()), 
+     zflux.dataPtr(),ARLIM(zflux.loVect()),ARLIM(zflux.hiVect()), 
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      rhoinversefab.dataPtr(),
      ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
@@ -9038,7 +9058,10 @@ void NavierStokes::make_viscoelastic_force(int im) {
      ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,&bfact,&level,
-     &dt_slab,&rzflag,&im,&nmat,&nden);
+     &dt_slab,&rzflag,
+     &im,
+     &viscoelastic_model[im],
+     &nmat,&nden);
    }  // mfi  
 } // omp
 

@@ -11980,48 +11980,52 @@ void NavierStokes::veldiffuseALL() {
          (elastic_viscosity[im]>0.0)) {
 
       if (store_elastic_data[im]==1) {
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+        allocate_array(0,AMREX_SPACEDIM,dir,XDISP_FLUX_MF+dir);
+        setVal_array(0,AMREX_SPACEDIM,0.0,XDISP_FLUX_MF+dir);
+       }
+
        if (viscoelastic_model[im]==2) {
 
 	int push_enable_spectral=enable_spectral;
 	int elastic_enable_spectral=0;
 	override_enable_spectral(elastic_enable_spectral);
-	  // particles only appear on the finest level.
-          // The flexible substrate is wholly contained on
-          // the finest level.
-        NavierStokes& ns_finest=getLevel(finest_level);
 
           // new elastic force material goes here.
         int elastic_idx=-1;
 	int do_alloc=1;
+        int simple_AMR_BC_flag_viscosity=1;
 	init_gradu_tensorALL(
           im,
-	  XDISPLACE_MF,
+	  XDISPLACE_MF, // deleted at end since do_alloc==1
 	  do_alloc,
 	  CELLTENSOR_MF,
 	  FACETENSOR_MF,
 	  XDISP_FLUX_MF,
           simple_AMR_BC_flag_viscosity);
 
-
 	override_enable_spectral(push_enable_spectral);
         delete_array(CELLTENSOR_MF);
         delete_array(FACETENSOR_MF);
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-         delete_array(XDISP_FLUX_MF+dir);
 
        } else if ((viscoelastic_model[im]==1)||
   		  (viscoelastic_model[im]==0)) {
-
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         // note: tensor_advection_updateALL is called before veldiffuseALL.
-         ns_level.make_viscoelastic_tensor(im);
-         ns_level.make_viscoelastic_force(im);
-        }
-        delete_array(VISCOTEN_MF);
-
+        // do nothing
        } else
         amrex::Error("viscoelastic_model[im] invalid");
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        // note: tensor_advection_updateALL is called before veldiffuseALL.
+        ns_level.make_viscoelastic_tensor(im);
+        ns_level.make_viscoelastic_force(im);
+       }
+
+       delete_array(VISCOTEN_MF);
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+        delete_array(XDISP_FLUX_MF+dir);
 
       } else
        amrex::Error("store_elastic_data invalid");

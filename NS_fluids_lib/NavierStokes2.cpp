@@ -3382,10 +3382,11 @@ void NavierStokes::increment_KE(Real beta) {
 // do_alloc=0 => variable already allocated
 void NavierStokes::init_gradu_tensorALL(
  int im_tensor,  // =-1 if input is velocity, >=0 if input is displacement. 
- int idx, //source velocity or displacement; allocated if do_alloc==1,
-          //deleted if do_alloc==1.
+ int idx_vel, //source velocity or displacement; allocated if do_alloc==1,
+              //deleted if do_alloc==1.
  int do_alloc,
- int idx_cell,int idx_face,
+ int idx_cell,
+ int idx_face,
  int idx_elastic_flux, //xflux,yflux,zflux
  int simple_AMR_BC_flag_viscosity) {
 
@@ -3410,7 +3411,7 @@ void NavierStokes::init_gradu_tensorALL(
 
    if (im_tensor==-1) {
      // ngrow,scomp,ncomp
-    ns_level.getState_localMF(idx,1,0,nsolveMM,cur_time_slab);
+    ns_level.getState_localMF(idx_vel,1,0,nsolveMM,cur_time_slab);
     if (idx_elastic_flux==-1) {
      // do nothing
     } else
@@ -3430,7 +3431,8 @@ void NavierStokes::init_gradu_tensorALL(
      if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
       int scomp=num_materials_viscoelastic*NUM_TENSOR_TYPE+ 
                 elastic_partid*AMREX_SPACEDIM;
-      ns_level.getStateTensor_localMF(idx,1,scomp,AMREX_SPACEDIM,cur_time_slab);
+      ns_level.getStateTensor_localMF(idx_vel,1,scomp,
+		  AMREX_SPACEDIM,cur_time_slab);
      } else
       amrex::Error("elastic_partid invalid");
     } else
@@ -3446,16 +3448,17 @@ void NavierStokes::init_gradu_tensorALL(
   } else
    amrex::Error("do_alloc invalid");
 
-  ns_level.debug_ngrow(idx,1,945);
-  if (ns_level.localMF[idx]->nComp()<nsolveMM)
-   amrex::Error("ns_level.localMF[idx]->nComp() invalid");
+  ns_level.debug_ngrow(idx_vel,1,945);
+  if (ns_level.localMF[idx_vel]->nComp()<nsolveMM)
+   amrex::Error("ns_level.localMF[idx_vel]->nComp() invalid");
 
   int homflag=0;
   ns_level.init_gradu_tensor(
     im_tensor,
     homflag,
-    idx,
-    idx_cell,idx_face,
+    idx_vel,
+    idx_cell,
+    idx_face,
     idx_elastic_flux,
     simple_AMR_BC_flag_viscosity);
  } // ilev=finest_level ... level
@@ -3483,7 +3486,7 @@ void NavierStokes::init_gradu_tensorALL(
  } // i=0..ntensorMM-1
 
  if (do_alloc==1) {
-  delete_array(idx);
+  delete_array(idx_vel);
  } else if (do_alloc==0) {
   // do nothing
  } else
@@ -3953,7 +3956,8 @@ void NavierStokes::init_gradu_tensor(
  int im_tensor, //-1, or, 0 .. nmat-1
  int homflag,
  int idx_vel,
- int idx_cell,int idx_face,
+ int idx_cell,
+ int idx_face,
  int idx_elastic_flux, //xflux,yflux,zflux
  int simple_AMR_BC_flag_viscosity) {
 

@@ -226,18 +226,24 @@ extern "C"
     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
     Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
     Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
+    Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
+    Real* yflux,AMREX_ARLIM_P(yfluxlo),AMREX_ARLIM_P(yfluxhi),
+    Real* zflux,AMREX_ARLIM_P(zfluxlo),AMREX_ARLIM_P(zfluxhi),
     Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),
     Real* rhoinverse,
-   AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
+    AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
     Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
     Real* tenfab,
-   AMREX_ARLIM_P(tenfablo),AMREX_ARLIM_P(tenfabhi),
+    AMREX_ARLIM_P(tenfablo),AMREX_ARLIM_P(tenfabhi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,int* bfact,
     int* level,
     Real* dt,
     int* irz,
-    int* im,int* nmat,int* nden);
+    int* im,
+    int* viscoelastic_model,
+    int* nmat,
+    int* nden);
 
    void FORT_TENSORHEAT(
     int* elasticface_flag,
