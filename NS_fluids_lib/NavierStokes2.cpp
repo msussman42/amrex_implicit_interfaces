@@ -3382,8 +3382,11 @@ void NavierStokes::increment_KE(Real beta) {
 // do_alloc=0 => variable already allocated
 void NavierStokes::init_gradu_tensorALL(
  int im_tensor,  // =-1 if input is velocity, >=0 if input is displacement. 
- int idx,int do_alloc,
+ int idx, //source velocity or displacement; allocated if do_alloc==1,
+          //deleted if do_alloc==1.
+ int do_alloc,
  int idx_cell,int idx_face,
+ int idx_elastic_flux, //xflux,yflux,zflux
  int simple_AMR_BC_flag_viscosity) {
 
  int finest_level=parent->finestLevel();
@@ -3408,7 +3411,15 @@ void NavierStokes::init_gradu_tensorALL(
    if (im_tensor==-1) {
      // ngrow,scomp,ncomp
     ns_level.getState_localMF(idx,1,0,nsolveMM,cur_time_slab);
+    if (idx_elastic_flux==-1) {
+     // do nothing
+    } else
+     amrex::Error("idx_elastic_flux invalid");
    } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
+    if (idx_elastic_flux>=0) {
+     // do nothing
+    } else
+     amrex::Error("idx_elastic_flux invalid");
     if (enable_spectral==0) {
      int elastic_partid=-1;
      for (int i=0;i<im_elastic_map.size();i++) {
@@ -3428,10 +3439,10 @@ void NavierStokes::init_gradu_tensorALL(
     amrex::Error("im_tensor invalid");
       
   } else if (do_alloc==0) {
-   if (im_tensor==-1) {
+   if ((im_tensor==-1)&&(idx_elastic_flux==-1)) {
     // do nothing
    } else
-    amrex::Error("im_tensor=-1 if do_alloc==0");
+    amrex::Error("im_tensor and idx_elastic_flux = -1 if do_alloc==0");
   } else
    amrex::Error("do_alloc invalid");
 
@@ -3442,7 +3453,10 @@ void NavierStokes::init_gradu_tensorALL(
   int homflag=0;
   ns_level.init_gradu_tensor(
     im_tensor,
-    homflag,idx,idx_cell,idx_face,
+    homflag,
+    idx,
+    idx_cell,idx_face,
+    idx_elastic_flux,
     simple_AMR_BC_flag_viscosity);
  } // ilev=finest_level ... level
 
@@ -3937,8 +3951,10 @@ void NavierStokes::FillBoundaryTENSOR(
 // called from apply_pressure_grad, init_gradu_tensorALL
 void NavierStokes::init_gradu_tensor(
  int im_tensor, //-1, or, 0 .. nmat-1
- int homflag,int idx_vel,
+ int homflag,
+ int idx_vel,
  int idx_cell,int idx_face,
+ int idx_elastic_flux, //xflux,yflux,zflux
  int simple_AMR_BC_flag_viscosity) {
 
  if (im_tensor==-1) {
@@ -4040,6 +4056,7 @@ void NavierStokes::init_gradu_tensor(
 
 } // subroutine init_gradu_tensor
 
+  
 // if projection:
 // - dt*(grad p)*face_weight  
 // face_weight=0 at embedded solid faces and on 
@@ -4246,11 +4263,15 @@ void NavierStokes::apply_pressure_grad(
    amrex::Error("simple_AMR_BC_flag_viscosity invalid");
 
   int im_tensor=-1;
+  int idx_elastic_flux=-1;
   init_gradu_tensor(
     im_tensor,
     homflag,
-    pboth_mf,LOCAL_CELLTENSOR_MF,
-    LOCAL_FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
+    pboth_mf,
+    LOCAL_CELLTENSOR_MF,
+    LOCAL_FACETENSOR_MF,
+    idx_elastic_flux,
+    simple_AMR_BC_flag_viscosity);
 
   show_norm2(localMF[pboth_mf],0,localMF[pboth_mf]->nComp(),20);
   show_norm2(localMF[LOCAL_CELLTENSOR_MF],0,
@@ -4823,11 +4844,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  int im_tensor=-1;
+ int idx_elastic_flux=-1;
  init_gradu_tensorALL(
    im_tensor,
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,
+   idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
  override_enable_spectral(save_enable_spectral);

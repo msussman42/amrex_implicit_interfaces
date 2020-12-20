@@ -16262,11 +16262,14 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
  int im_tensor=-1;
+ int idx_elastic_flux=-1;
  init_gradu_tensorALL(
   im_tensor,
   HOLD_VELOCITY_DATA_MF,
-  do_alloc,CELLTENSOR_MF,
+  do_alloc,
+  CELLTENSOR_MF,
   FACETENSOR_MF,
+  idx_elastic_flux,
   simple_AMR_BC_flag_viscosity);
 
  for (int isweep=0;isweep<2;isweep++) {
@@ -17853,11 +17856,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  int im_tensor=-1;
+ int idx_elastic_flux=-1;
  init_gradu_tensorALL(
    im_tensor,
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,
+   idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
@@ -19866,10 +19871,12 @@ NavierStokes::volWgtSumALL(
  int do_alloc=1;
  int simple_AMR_BC_flag_viscosity=1;
  int im_tensor=-1;
+ int idx_elastic_flux=-1;
  init_gradu_tensorALL(
    im_tensor,
    HOLD_VELOCITY_DATA_MF,do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,
+   idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
  for (int ilev = 0; ilev <= finest_level; ilev++) {

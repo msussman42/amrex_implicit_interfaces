@@ -835,6 +835,7 @@ protected:
      int im_tensor,  //-1, or, 0 .. nmat-1
      int homflag,int idx_vel,
      int idx_cell,int idx_face,
+     int idx_elastic_flux, //xflux,yflux,zflux
      int simple_AMR_BC_flag_viscosity);
 
     void doit_gradu_tensor(
@@ -848,6 +849,7 @@ protected:
      int im_tensor, // =-1 if input is velocity, >=0 if input is displacement.
      int idx,int do_alloc,
      int idx_cell,int idx_face,
+     int idx_elastic_flux, //xflux,yflux,zflux
      int simple_AMR_BC_flag_viscosity);
 
     void make_viscoelastic_tensor(int im);
