@@ -906,11 +906,15 @@ void NavierStokes::tensor_advection_updateALL() {
   int do_alloc=1;
   int simple_AMR_BC_flag_viscosity=1;
   int im_tensor=-1;
+  int idx_elastic_flux=-1;
   init_gradu_tensorALL(
     im_tensor,
     HOLD_VELOCITY_DATA_MF,
     do_alloc,
-    CELLTENSOR_MF,FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
+    CELLTENSOR_MF,
+    FACETENSOR_MF,
+    idx_elastic_flux,
+    simple_AMR_BC_flag_viscosity);
 
    // in: NavierStokes.cpp
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -11471,11 +11475,16 @@ void NavierStokes::multiphase_project(int project_option) {
    int do_alloc=1;
    int simple_AMR_BC_flag_viscosity=1;
    int im_tensor=-1;
+   int idx_elastic_flux=-1;
    init_gradu_tensorALL(
      im_tensor,
      HOLD_VELOCITY_DATA_MF,
      do_alloc,
-     CELLTENSOR_MF,FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
+     CELLTENSOR_MF,
+     FACETENSOR_MF,
+     idx_elastic_flux,
+     simple_AMR_BC_flag_viscosity);
+
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.init_pressure_error_indicator();  
@@ -12390,11 +12399,15 @@ void NavierStokes::veldiffuseALL() {
 
   int simple_AMR_BC_flag_viscosity=1;
   int im_tensor=-1;
+  int idx_elastic_flux=-1;
   init_gradu_tensorALL(
     im_tensor,
     VISCHEAT_SOURCE_MF,
     do_alloc,
-    CELLTENSOR_MF,FACETENSOR_MF,simple_AMR_BC_flag_viscosity);
+    CELLTENSOR_MF,
+    FACETENSOR_MF,
+    idx_elastic_flux,
+    simple_AMR_BC_flag_viscosity);
 
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=nmat)) {
