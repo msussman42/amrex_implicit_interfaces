@@ -11981,12 +11981,33 @@ void NavierStokes::veldiffuseALL() {
 
       if (store_elastic_data[im]==1) {
        if (viscoelastic_model[im]==2) {
+
+	int push_enable_spectral=enable_spectral;
+	int elastic_enable_spectral=0;
+	override_enable_spectral(elastic_enable_spectral);
 	  // particles only appear on the finest level.
           // The flexible substrate is wholly contained on
           // the finest level.
         NavierStokes& ns_finest=getLevel(finest_level);
 
           // new elastic force material goes here.
+        int elastic_idx=-1;
+	int do_alloc=1;
+	init_gradu_tensorALL(
+          im,
+	  XDISPLACE_MF,
+	  do_alloc,
+	  CELLTENSOR_MF,
+	  FACETENSOR_MF,
+	  XDISP_FLUX_MF,
+          simple_AMR_BC_flag_viscosity);
+
+
+	override_enable_spectral(push_enable_spectral);
+        delete_array(CELLTENSOR_MF);
+        delete_array(FACETENSOR_MF);
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+         delete_array(XDISP_FLUX_MF+dir);
 
        } else if ((viscoelastic_model[im]==1)||
   		  (viscoelastic_model[im]==0)) {
