@@ -11973,26 +11973,50 @@ void NavierStokes::veldiffuseALL() {
      (num_materials_viscoelastic<=nmat)) {
 
   for (int im=0;im<nmat;im++) {
-   if (ns_is_rigid(im)==0) {
-    if ((elastic_time[im]>0.0)&&
-        (elastic_viscosity[im]>0.0)) {
-     for (int ilev=finest_level;ilev>=level;ilev--) {
-      NavierStokes& ns_level=getLevel(ilev);
-      // note: tensor_advection_updateALL is called before veldiffuseALL.
-      ns_level.make_viscoelastic_tensor(im);
-      ns_level.make_viscoelastic_force(im);
-     }
-     delete_array(VISCOTEN_MF);
-    } else if ((elastic_time[im]==0.0)||
-	       (elastic_viscosity[im]==0.0)) {
+   if ((particleLS_flag[im]==1)||
+       (particleLS_flag[im]==0)) { 
+    if (ns_is_rigid(im)==0) {
+     if ((elastic_time[im]>0.0)&&
+         (elastic_viscosity[im]>0.0)) {
+
+      if (store_elastic_data[im]==1) {
+       if (viscoelastic_model[im]==2) {
+	  // particles only appear on the finest level.
+          // The flexible substrate is wholly contained on
+          // the finest level.
+        NavierStokes& ns_finest=getLevel(finest_level);
+
+          // new elastic force material goes here.
+
+       } else if ((viscoelastic_model[im]==1)||
+  		  (viscoelastic_model[im]==0)) {
+
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         // note: tensor_advection_updateALL is called before veldiffuseALL.
+         ns_level.make_viscoelastic_tensor(im);
+         ns_level.make_viscoelastic_force(im);
+        }
+        delete_array(VISCOTEN_MF);
+
+       } else
+        amrex::Error("viscoelastic_model[im] invalid");
+
+      } else
+       amrex::Error("store_elastic_data invalid");
+ 
+     } else if ((elastic_time[im]==0.0)||
+  	        (elastic_viscosity[im]==0.0)) {
+      // do nothing
+     } else
+      amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
+
+    } else if (ns_is_rigid(im)==1) {
      // do nothing
     } else
-     amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
-
-   } else if (ns_is_rigid(im)==1) {
-    // do nothing
+     amrex::Error("ns_is_rigid invalid");
    } else
-    amrex::Error("ns_is_rigid invalid");
+    amrex::Error("particleLS_flag[im] invalid");
   } // im=0..nmat-1
    
    // diffuse_register+=(unew-register_mark)
