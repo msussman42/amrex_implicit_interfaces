@@ -9333,12 +9333,17 @@ void NavierStokes::make_marangoni_force(int isweep) {
   delete CL_velocity;
   int spectral_override=0;  // always do low order average down
   int ncomp_edge=-1;
+  int caller_id=1;
   avgDownEdge_localMF(
    CONSERVE_FLUXES_MF,
-   0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,1);
+   0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id);
+  
+  caller_id=2;
+
   avgDownEdge_localMF(
    POTENTIAL_EDGE_MF,
-   0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,2);
+   0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id);
+
  } else if (isweep==1) {
   delete_localMF(GHOSTDIST_MF,1);
   delete_localMF(DEN_RECON_MF,1);

@@ -4060,15 +4060,59 @@ void NavierStokes::init_gradu_tensor(
   // do nothing
  } else if (im_tensor>=0) {
   bool use_tiling=ns_tiling;
+  int nsolve=AMREX_SPACEDIM;
+  int nsolveMM=nsolve*num_materials_vel;
+  int nsolveMM_FACE=nsolveMM;
+  if (num_materials_vel==1) {
+   // do nothing
+  } else 
+   amrex::Error("num_materials_vel invalid");
+
+  int rzflag=0;
+  if (geom.IsRZ())
+   rzflag=1;
+  else if (geom.IsCartesian())
+   rzflag=0;
+  else if (geom.IsCYLINDRICAL())
+   rzflag=3;
+  else
+   amrex::Error("CoordSys bust 20");
+
+
+  const Real* dx = geom.CellSize();
+  int bfact=parent->Space_blockingFactor(level);
+
+  int nmat=num_materials;
+  int nden=nmat*num_state_material;
 
   resize_levelsetLO(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,110);
 
   for (int dir=1;dir<=AMREX_SPACEDIM;dir++) {
+
+   debug_ngrow(idx_elastic_flux+dir-1,0,845);
+ 
+   MultiFab* umac_new=&get_new_data(Umac_Type+dir-1,slab_step+1);
+   MultiFab* xdisp_mf=localMF[idx_elastic_flux+dir-1];
+   if (xdisp_mf->boxArray()==umac_new->boxArray()) {
+    // do nothing
+   } else
+    amrex::Error("xdisp_mf->boxArray()!=umac_new->boxArray()");
+
+   if (xdisp_mf->nComp()==AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("xdisp_mf->nComp()!=AMREX_SPACEDIM"); 
+
+   if (enable_spectral==0) {
+    // do nothing
+   } else
+    amrex::Error("enable_spectral invalid");
+
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
    thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
-
+  
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -4088,16 +4132,13 @@ void NavierStokes::init_gradu_tensor(
     Vector<int> velbc=getBCArray(State_Type,gridno,0,
      num_materials_vel*AMREX_SPACEDIM);
 
-    FArrayBox& velfab=(*localMF[pboth_mf])[mfi];
+    FArrayBox& velfab=(*localMF[idx_vel])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
-    FArrayBox& xflux=(*localMF[gp_mf+dir-1])[mfi];
+    FArrayBox& xflux=(*xdisp_mf)[mfi];
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
 
-    FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir-1])[mfi];  
-    FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
  
     FArrayBox& tensor_data=(*localMF[LOCAL_FACETENSOR_MF])[mfi];
@@ -4109,26 +4150,16 @@ void NavierStokes::init_gradu_tensor(
     // maskcoef=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcoef_fab=(*localMF[MASKCOEF_MF])[mfi];
 
-    FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
-    int ncfluxreg=semfluxfab.nComp();
-    int local_enable_spectral=enable_spectral;
-
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // -dt * visc_coef * viscface * (grad U + grad U^T)
-    FORT_CROSSTERM(
+    // in: GODUNOV_3D.F90
+    //  visc_coef * viscface * (grad X + grad X^T)
+    FORT_CROSSTERM_ELASTIC(
      &nsolveMM_FACE,
-     &tileloop,
      &dir,
-     &operation_flag, // 8
-     &local_enable_spectral,
-     &spectral_loop,
-     &ncfluxreg,
-     semfluxfab.dataPtr(),
-     ARLIM(semfluxfab.loVect()),ARLIM(semfluxfab.hiVect()),
      maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
      ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      maskcoef_fab.dataPtr(), // maskcoef=tag if not cov by level+1 or outside.
@@ -4141,8 +4172,6 @@ void NavierStokes::init_gradu_tensor(
      ARLIM(tensor_data.loVect()),ARLIM(tensor_data.hiVect()),
      cell_tensor_data.dataPtr(),
      ARLIM(cell_tensor_data.loVect()),ARLIM(cell_tensor_data.hiVect()),
-     maskSEMfab.dataPtr(),
-     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      xlo,dx,
      &dt_slab,
      &cur_time_slab,
@@ -4151,8 +4180,6 @@ void NavierStokes::init_gradu_tensor(
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-     xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      &facevisc_index,
      &vofface_index,
@@ -4167,23 +4194,28 @@ void NavierStokes::init_gradu_tensor(
      &visc_coef,
      &nmat,
      &nden,
-     &nfacefrac,
-     &ncellfrac,
      &ntensor,
-     &ntensorMM,
-     &constant_viscosity,
-     &homflag);
+     &ntensorMM);
    } // mfi
 } // omp
    ns_reconcile_d_num(142);
 
-average down
-fillboundary
   } // dir=1..sdim
+
+  int spectral_override=0;  // always do low order average down
+  int ncomp_edge=-1;
+  int caller_id=1;
+  avgDownEdge_localMF(
+    idx_elastic_flux,
+    0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id); 
+
+  for (int dir=1;dir<=AMREX_SPACEDIM;dir++) {
+   localMF[idx_elastic_flux+dir-1]->
+      FillBoundary(0,AMREX_SPACEDIM,geom.periodicity());
+  }
 
  } else
   amrex::Error("im_tensor invalid");
-
 
  delete mask3; 
 
@@ -4467,8 +4499,6 @@ void NavierStokes::apply_pressure_grad(
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
 
-    FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir-1])[mfi];  
-    FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
  
     FArrayBox& tensor_data=(*localMF[LOCAL_FACETENSOR_MF])[mfi];
@@ -4489,6 +4519,7 @@ void NavierStokes::apply_pressure_grad(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // in: GODUNOV_3D.F90
     // -dt * visc_coef * viscface * (grad U + grad U^T)
     FORT_CROSSTERM(
      &nsolveMM_FACE,
@@ -4522,8 +4553,6 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-     xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      &facevisc_index,
      &vofface_index,
@@ -4538,8 +4567,6 @@ void NavierStokes::apply_pressure_grad(
      &visc_coef,
      &nmat,
      &nden,
-     &nfacefrac,
-     &ncellfrac,
      &ntensor,
      &ntensorMM,
      &constant_viscosity,

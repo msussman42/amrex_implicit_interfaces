@@ -18,6 +18,7 @@
 #    define FORT_VFRAC_UNSPLIT vfrac_unsplit
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
+#    define FORT_CROSSTERM_ELASTIC crossterm_elastic
 #    define FORT_FACE_GRADIENTS face_gradients
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
@@ -64,6 +65,7 @@
 #    define FORT_VFRAC_UNSPLIT VFRAC_UNSPLIT
 #    define FORT_ESTDT        ESTDT
 #    define FORT_CROSSTERM    CROSSTERM
+#    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
 #    define FORT_FACE_GRADIENTS FACE_GRADIENTS
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
@@ -110,6 +112,7 @@
 #    define FORT_VFRAC_UNSPLIT vfrac_unsplit
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
+#    define FORT_CROSSTERM_ELASTIC crossterm_elastic
 #    define FORT_FACE_GRADIENTS face_gradients
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
@@ -155,6 +158,7 @@
 #    define FORT_VFRAC_UNSPLIT vfrac_unsplit_
 #    define FORT_ESTDT        estdt_
 #    define FORT_CROSSTERM    crossterm_
+#    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
 #    define FORT_FACE_GRADIENTS face_gradients_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
@@ -1280,8 +1284,6 @@ extern "C"
      AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
      Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
      Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
-     Real* xfacemm,AMREX_ARLIM_P(xfacemmlo),AMREX_ARLIM_P(xfacemmhi), 
-     Real* xcellmm,AMREX_ARLIM_P(xcellmmlo),AMREX_ARLIM_P(xcellmmhi), 
      Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
      int* facevisc_index,
      int* vofface_index,
@@ -1296,12 +1298,45 @@ extern "C"
      Real* visc_coef, 
      int* nmat,
      int* nden,
-     int* nfacefrac,
-     int* ncellfrac,
      int* ntensor,
      int* ntensorMM,
      int* constant_viscosity,
      int* homflag);
+
+
+   void FORT_CROSSTERM_ELASTIC(
+     int* nsolveMM_FACE,
+     int* dir,
+     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+     Real* faceLS,AMREX_ARLIM_P(faceLSlo),AMREX_ARLIM_P(faceLShi),
+     Real* mdata,AMREX_ARLIM_P(mdatalo),AMREX_ARLIM_P(mdatahi),
+     Real* tdata,AMREX_ARLIM_P(tdatalo),AMREX_ARLIM_P(tdatahi),
+     Real* c_tdata,AMREX_ARLIM_P(c_tdatalo),AMREX_ARLIM_P(c_tdatahi),
+     const Real* xlo,const Real* dx,
+     Real* dt,
+     Real* cur_time,
+     Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
+     Real* levelpc,
+     AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
+     Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
+     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
+     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
+     int* facevisc_index,
+     int* vofface_index,
+     int* massface_index,
+     int* ncphys,
+     const int* tilelo,const int* tilehi, 
+     const int* fablo,const int* fabhi, 
+     int* bfact,
+     int* level,
+     int* rzflag,
+     int* velbc,
+     Real* visc_coef, 
+     int* nmat,
+     int* nden,
+     int* ntensor,
+     int* ntensorMM);
 
 
    void FORT_FACE_GRADIENTS(
