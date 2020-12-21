@@ -4056,6 +4056,135 @@ void NavierStokes::init_gradu_tensor(
    itensor_iter,mask3,
    simple_AMR_BC_flag_viscosity);
 
+ if (im_tensor==-1) {
+  // do nothing
+ } else if (im_tensor>=0) {
+  bool use_tiling=ns_tiling;
+
+  resize_levelsetLO(2,LEVELPC_MF);
+  debug_ngrow(LEVELPC_MF,2,110);
+
+  for (int dir=1;dir<=AMREX_SPACEDIM;dir++) {
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+   for (MFIter mfi(*localMF[LEVELPC_MF],use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+ 
+    const Real* xlo = grid_loc[gridno].lo();
+
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,
+     num_materials_vel*AMREX_SPACEDIM);
+
+    FArrayBox& velfab=(*localMF[pboth_mf])[mfi];
+    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
+
+    FArrayBox& xflux=(*localMF[gp_mf+dir-1])[mfi];
+
+    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
+
+    FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir-1])[mfi];  
+    FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
+    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
+ 
+    FArrayBox& tensor_data=(*localMF[LOCAL_FACETENSOR_MF])[mfi];
+    FArrayBox& cell_tensor_data=(*localMF[LOCAL_CELLTENSOR_MF])[mfi];
+    FArrayBox& mask_tensor_data=(*localMF[MASKSOLIDTENSOR_MF])[mfi];
+    FArrayBox& faceLS=(*localMF[LSTENSOR_MF])[mfi];
+
+    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
+    // maskcoef=tag if not covered by level+1 or outside the domain.
+    FArrayBox& maskcoef_fab=(*localMF[MASKCOEF_MF])[mfi];
+
+    FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
+    int ncfluxreg=semfluxfab.nComp();
+    int local_enable_spectral=enable_spectral;
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // -dt * visc_coef * viscface * (grad U + grad U^T)
+    FORT_CROSSTERM(
+     &nsolveMM_FACE,
+     &tileloop,
+     &dir,
+     &operation_flag, // 8
+     &local_enable_spectral,
+     &spectral_loop,
+     &ncfluxreg,
+     semfluxfab.dataPtr(),
+     ARLIM(semfluxfab.loVect()),ARLIM(semfluxfab.hiVect()),
+     maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
+     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+     maskcoef_fab.dataPtr(), // maskcoef=tag if not cov by level+1 or outside.
+     ARLIM(maskcoef_fab.loVect()),ARLIM(maskcoef_fab.hiVect()),
+     faceLS.dataPtr(),
+     ARLIM(faceLS.loVect()),ARLIM(faceLS.hiVect()),
+     mask_tensor_data.dataPtr(),
+     ARLIM(mask_tensor_data.loVect()),ARLIM(mask_tensor_data.hiVect()),
+     tensor_data.dataPtr(),
+     ARLIM(tensor_data.loVect()),ARLIM(tensor_data.hiVect()),
+     cell_tensor_data.dataPtr(),
+     ARLIM(cell_tensor_data.loVect()),ARLIM(cell_tensor_data.hiVect()),
+     maskSEMfab.dataPtr(),
+     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+     xlo,dx,
+     &dt_slab,
+     &cur_time_slab,
+     velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+     xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
+     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
+     xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
+     xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
+     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+     &facevisc_index,
+     &vofface_index,
+     &massface_index,
+     &ncphys,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,
+     &rzflag,
+     velbc.dataPtr(),
+     &visc_coef,
+     &nmat,
+     &nden,
+     &nfacefrac,
+     &ncellfrac,
+     &ntensor,
+     &ntensorMM,
+     &constant_viscosity,
+     &homflag);
+   } // mfi
+} // omp
+   ns_reconcile_d_num(142);
+
+average down
+fillboundary
+  } // dir=1..sdim
+
+ } else
+  amrex::Error("im_tensor invalid");
+
+
  delete mask3; 
 
 } // subroutine init_gradu_tensor
