@@ -748,7 +748,8 @@ stop
       REAL_T, intent(in) :: total_mass
 
       INTEGER_T, intent(in) :: ii,jj,kk
-      INTEGER_T, intent(in) :: i,j,k,dir,dirtan,tcomp
+      INTEGER_T, intent(in) :: i,j,k,dir,dirtan
+      INTEGER_T, intent(in) :: tcomp
       INTEGER_T, intent(in) :: is,ie,js,je,ks,ke
       REAL_T, intent(out) :: slopeterm
 
@@ -28094,13 +28095,15 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
       REAL_T, intent(in) :: visc_coef
+
+      INTEGER_T, intent(in) :: dir
  
       INTEGER_T ilo,ihi 
       INTEGER_T jlo,jhi 
       INTEGER_T klo,khi 
 
       INTEGER_T i,j,k
-      INTEGER_T dir,dir2
+      INTEGER_T dir2
       INTEGER_T ic,jc,kc
       INTEGER_T dirtan(2)
       INTEGER_T coupling(2)
@@ -29738,19 +29741,22 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
       REAL_T, intent(in) :: visc_coef
+
+      INTEGER_T, intent(in) :: dir
  
       INTEGER_T ilo,ihi 
       INTEGER_T jlo,jhi 
       INTEGER_T klo,khi 
 
       INTEGER_T i,j,k
-      INTEGER_T dir,dir2
+      INTEGER_T space_dir
+      INTEGER_T velcomp
       INTEGER_T dirtan(2)
-      INTEGER_T coupling(2)
+      INTEGER_T coupling(SDIM,SDIM)
       INTEGER_T ii,jj,kk,im1,jm1,km1
       REAL_T gradterm,alpha
       INTEGER_T side
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
+      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
       INTEGER_T uxMM
       INTEGER_T vyMM
       INTEGER_T wzMM
@@ -29762,7 +29768,7 @@ stop
       INTEGER_T compressible_face
       REAL_T uxterm,vyterm,wzterm
       REAL_T visc_constant
-      REAL_T diff_flux(SDIM)
+      REAL_T diff_flux(SDIM,SDIM)
       INTEGER_T imL,imR
       REAL_T total_mass,DMface
       REAL_T massfrac(nmat)
@@ -29783,7 +29789,6 @@ stop
       INTEGER_T is_clamped_face
       INTEGER_T nhalf
 
-      INTEGER_T velcomp
       INTEGER_T tcompMM
       INTEGER_T constant_viscosity_override
       INTEGER_T side_face
@@ -29902,33 +29907,44 @@ stop
       jj=0
       kk=0
 
+       ! coupling(velcomp,space_dir)
+      velcomp=1
+      coupling(velcomp,1)=ux
+      coupling(velcomp,2)=uy
+      if (SDIM.eq.3) then
+       coupling(velcomp,SDIM)=uz
+      endif
+      velcomp=2
+      coupling(velcomp,1)=vx
+      coupling(velcomp,2)=vy
+      if (SDIM.eq.3) then
+       coupling(velcomp,SDIM)=vz
+      endif
+      if (SDIM.eq.3) then
+       velcomp=SDIM
+       coupling(velcomp,1)=wx
+       coupling(velcomp,2)=wy
+       coupling(velcomp,SDIM)=wz
+      endif
+
       if (dir.eq.1) then
        ii=1
-       nbase=ux-1
       else if (dir.eq.2) then
        jj=1
-       nbase=uy-1
       else if ((dir.eq.3).and.(SDIM.eq.3)) then
        kk=1
-       nbase=uz-1
       else
        print *,"dir invalid crossterm"
        stop
       endif
 
       if (dir.eq.1) then  ! fluxes on x-face
-       coupling(1)=uy
-       coupling(2)=uz
        dirtan(1)=2
        dirtan(2)=SDIM
       else if (dir.eq.2) then  ! fluxes on y-face
-       coupling(1)=vx
-       coupling(2)=vz
        dirtan(1)=1
        dirtan(2)=SDIM
       else if ((dir.eq.3).and.(SDIM.eq.3)) then ! fluxes on z-face
-       coupling(1)=wx
-       coupling(2)=wy
        dirtan(1)=1
        dirtan(2)=2
       else
@@ -30027,59 +30043,63 @@ stop
        endif
 
        do velcomp=1,SDIM
-        diff_flux(velcomp)=zero
+       do space_dir=1,SDIM
+        diff_flux(velcomp,space_dir)=zero
+       enddo  ! space_dir
        enddo  ! velcomp
 
        if (constant_viscosity_override.eq.0) then
 
-        do nc=1,SDIM-1
+        do velcomp=1,SDIM
+         
+         do nc=1,SDIM-1
 
           ! find face stencil
-         ilo=i
-         ihi=i
-         jlo=j
-         jhi=j
-         klo=k
-         khi=k
+          ilo=i
+          ihi=i
+          jlo=j
+          jhi=j
+          klo=k
+          khi=k
 
-         if (dir.eq.1) then ! u component  x-face
-          ilo=i-1
-          if (nc.eq.1) then  ! du/dy
-           jhi=j+1
-          else if (nc.eq.2) then  ! du/dz
-           khi=k+1
+          if (dir.eq.1) then ! x-face
+           ilo=i-1
+           if (dirtan(nc).eq.2) then  ! d/dy
+            jhi=j+1
+           else if ((dirtan(nc).eq.3).and.(SDIM.eq.3)) then  ! d/dz
+            khi=k+1
+           else
+            print *,"dirtan(nc) invalid"
+            stop
+           endif
+          else if (dir.eq.2) then  ! y-face
+           jlo=j-1
+           if (dirtan(nc).eq.1) then  ! d/dx
+            ihi=i+1
+           else if ((dirtan(nc).eq.3).and.(SDIM.eq.3)) then  ! d/dz
+            khi=k+1
+           else
+            print *,"dirtan(nc) invalid"
+            stop
+           endif
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then ! z-face
+           klo=k-1
+           if (dirtan(nc).eq.1) then  ! d/dx
+            ihi=i+1
+           else if (dirtan(nc).eq.2) then  ! d/dy
+            jhi=j+1
+           else
+            print *,"dirtan(nc) invalid"
+            stop
+           endif
           else
-           print *,"nc invalid"
+           print *,"dir invalid crossterm_elastic 3"
            stop
           endif
-         else if (dir.eq.2) then  ! v component y-face
-          jlo=j-1
-          if (nc.eq.1) then ! dv/dx
-           ihi=i+1
-          else if (nc.eq.2) then ! dv/dz
-           khi=k+1
-          else
-           print *,"nc invalid"
-           stop
-          endif
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then ! w component z-face
-          klo=k-1
-          if (nc.eq.1) then ! dw/dx
-           ihi=i+1
-          else if (nc.eq.2) then  ! dw/dy
-           jhi=j+1
-          else
-           print *,"nc invalid"
-           stop
-          endif
-         else
-          print *,"dir invalid crossterm 3"
-          stop
-         endif
 
-         ! mdata=0 if both adjoining cells to a face are solid cells or
-         ! a cell pair is outside the grid.
-         call slopecrossterm( &
+          ! mdata=0 if both adjoining cells to a face are solid cells or
+          ! a cell pair is outside the grid.
+          call slopecrossterm( &
            ntensor, &
            ntensorMM, &
            nmat,  &
@@ -30092,13 +30112,15 @@ stop
            ii,jj,kk, &
            i,j,k,dir, &
            dirtan(nc), &
-           coupling(nc), &
+           coupling(velcomp,dirtan(nc)), &
            ilo,ihi, &
            jlo,jhi, &
            klo,khi, &
-           diff_flux(dirtan(nc)))
+           diff_flux(velcomp,dirtan(nc)))
 
-        enddo ! nc=1..sdim-1
+         enddo ! nc=1..sdim-1
+
+        enddo ! velcomp=1..sdim
 
        else if (constant_viscosity_override.eq.1) then
         ! do nothing
