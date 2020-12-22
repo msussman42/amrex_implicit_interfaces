@@ -58,7 +58,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
-amr.n_cell=16 16 # convergence 16x16 coarsest
+amr.n_cell=32 32 # convergence 16x16 coarsest
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -108,6 +108,7 @@ ns.latent_heat = 1.0e+10 0.0 #CODY:specific latent heat of boiling J/kg
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
 ns.distribute_from_target = 1 0 
+ns.distribute_mdot_evenly=0 0
 #evaporation: 
 ns.freezing_model=6 0
 ns.mass_fraction_id=1 0 
@@ -119,7 +120,7 @@ ns.temperature_primitive_variable=1 1 1 1
 # case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.3125 
 # case 2: velocity 0<t<1.28 is about u=0.05 dx/u=0.125
 #ns.fixed_dt	  = 0.08     # case 1 0.08 is coarsest
-ns.fixed_dt	  = 0.032    # case 2 0.032 is coarsest
+ns.fixed_dt	  = 0.016    # case 2 0.032 is coarsest
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0   
@@ -148,7 +149,7 @@ ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # 1=water 2=gas  
 #ns.speciesconst=1.0 1.0  # case 1 film boiling
 ns.speciesconst=0.22132139799031397 0.20030719855787860 # case 2 
-ns.hardwire_Y_gamma=0.22132139799031397 0.0
+#ns.hardwire_Y_gamma=0.22132139799031397 0.0
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
@@ -170,7 +171,7 @@ ns.solidheat_flag=0
 # 1=water 2=gas   
 #ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
 ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
-ns.hardwire_T_gamma=296.163 0.0
+#ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 #0.02cm
 ns.xblob2=0.025 #CODY this is physical location corresponding to x=0
