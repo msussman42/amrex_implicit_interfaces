@@ -5113,9 +5113,9 @@ stop
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(inout) :: xflux(DIMV(xflux),SDIM)
-      REAL_T, intent(inout) :: yflux(DIMV(yflux),SDIM)
-      REAL_T, intent(inout) :: zflux(DIMV(zflux),SDIM)
+      REAL_T, intent(in) :: xflux(DIMV(xflux),SDIM)
+      REAL_T, intent(in) :: yflux(DIMV(yflux),SDIM)
+      REAL_T, intent(in) :: zflux(DIMV(zflux),SDIM)
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
       REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
       REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
@@ -5145,6 +5145,9 @@ stop
       INTEGER_T ii,jj,kk
       INTEGER_T base_index,imloop
       REAL_T vleft,vright,voftotal_sum,vofmat_sum,vleftleft,vrightright
+      REAL_T xflux_local(0:1,SDIM)
+      REAL_T yflux_local(0:1,SDIM)
+      REAL_T zflux_local(0:1,SDIM)
 
       nhalf=3
 
@@ -5459,27 +5462,27 @@ stop
 
         do veldir=1,SDIM
          dir=1
-         xflux(D_DECL(i+1,j,k),veldir)= &
+         xflux_local(1,veldir)= &
                (Q(D_DECL(1,0,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-         xflux(D_DECL(i,j,k),veldir)= &
+         xflux_local(0,veldir)= &
                (Q(D_DECL(-1,0,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
 
          dir=2
-         yflux(D_DECL(i,j+1,k),veldir)= &
+         yflux_local(1,veldir)= &
                (Q(D_DECL(0,1,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-         yflux(D_DECL(i,j,k),veldir)= &
+         yflux_local(0,veldir)= &
                (Q(D_DECL(0,-1,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
 
          if (SDIM.eq.3) then
           dir=SDIM
-          zflux(D_DECL(i,j,k+1),veldir)= &
+          zflux_local(1,veldir)= &
                (Q(D_DECL(0,0,1),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-          zflux(D_DECL(i,j,k),veldir)= &
+          zflux_local(0,veldir)= &
                (Q(D_DECL(0,0,-1),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
          else if (SDIM.eq.2) then
@@ -5491,7 +5494,25 @@ stop
         enddo ! veldir=1..sdim
 
        else if (viscoelastic_model.eq.2) then
-        ! do nothing
+
+        do veldir=1,SDIM
+         xflux_local(1,veldir)=xflux(D_DECL(i+1,j,k),veldir)
+         xflux_local(0,veldir)=xflux(D_DECL(i,j,k),veldir)
+         yflux_local(1,veldir)=yflux(D_DECL(i,j+1,k),veldir)
+         yflux_local(0,veldir)=yflux(D_DECL(i,j,k),veldir)
+
+
+         if (SDIM.eq.3) then
+          zflux_local(1,veldir)=zflux(D_DECL(i,j,k+1),veldir)
+          zflux_local(0,veldir)=zflux(D_DECL(i,j,k),veldir)
+         else if (SDIM.eq.2) then
+          ! do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+        enddo ! veldir=1..sdim
+
        else
         print *,"viscoelastic_model invalid"
         stop
@@ -5500,14 +5521,14 @@ stop
        do veldir=1,SDIM
 
         force(veldir)= &
-         (tpx*rplus*xflux(D_DECL(i+1,j,k),veldir)- &
-          tmx*rminus*xflux(D_DECL(i,j,k),veldir))/hx+ &
-         (tpy*yflux(D_DECL(i,j+1,k),veldir)- &
-          tmy*yflux(D_DECL(i,j,k),veldir))/hy
+         (tpx*rplus*xflux_local(1,veldir)- &
+          tmx*rminus*xflux_local(0,veldir))/hx+ &
+         (tpy*yflux_local(1,veldir)- &
+          tmy*yflux_local(0,veldir))/hy
         if (SDIM.eq.3) then
          force(veldir)=force(veldir)+ &
-           (tpz*zflux(D_DECL(i,j,k+1),veldir)- &
-            tmz*zflux(D_DECL(i,j,k),veldir))/hz
+           (tpz*zflux_local(1,veldir)- &
+            tmz*zflux_local(0,veldir))/hz
         endif
 
        enddo ! veldir=1..sdim
@@ -10862,7 +10883,8 @@ stop
       end subroutine FORT_SDC_TIME_QUAD_FACE
 
       subroutine FORT_MAKETENSOR( &
-       ncomp_visc,im_parm, &
+       ncomp_visc, &
+       im_parm, & ! 0..nmat-1
        xlo,dx, &
        visc,DIMS(visc), &
        tensor,DIMS(tensor), &
@@ -29469,9 +29491,11 @@ stop
 
 
       subroutine FORT_CROSSTERM_ELASTIC( &
+       ncomp_visc, &
        im_tensor, & ! 0..nmat-1
        nsolveMM_FACE, &
        dir, &  ! dir=1..sdim
+       visc,DIMS(visc), &
        mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
        maskcoef,DIMS(maskcoef), & ! 1=not cov by level+1 or outside.
        faceLS,DIMS(faceLS), & 
@@ -29508,6 +29532,7 @@ stop
  
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: ncomp_visc
       INTEGER_T, intent(in) :: im_tensor ! 0..nmat-1
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T :: nsolveMM_FACE_test
@@ -29526,6 +29551,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(maskcoef)
       INTEGER_T, intent(in) :: DIMDEC(faceLS)
@@ -29541,6 +29567,8 @@ stop
       REAL_T, intent(in) :: dt 
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+
+      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(in) :: mask(DIMV(mask))
       REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
 
@@ -29594,6 +29622,7 @@ stop
       REAL_T hoop_22
       REAL_T xdisplace_local
       REAL_T ydisplace_local
+      REAL_T visc_local
 
       nhalf=1
 
@@ -29688,8 +29717,13 @@ stop
        print *,"rzflag invalid"
        stop
       endif
+      if (ncomp_visc.ne.3*nmat) then
+       print *,"ncomp_visc invalid"
+       stop
+      endif
 
       if (dir.eq.1) then
+        call checkbound(fablo,fabhi,DIMS(visc),1,-1,11)
         call checkbound(fablo,fabhi,DIMS(faceLS),1,-1,1277)
         call checkbound(fablo,fabhi,DIMS(mdata),1,-1,1278)
         call checkbound(fablo,fabhi,DIMS(tdata),1,-1,1279)
@@ -29964,8 +29998,20 @@ stop
        ydisplace_local=half*(vel(D_DECL(i,j,k),2)+ &
          vel(D_DECL(im1,jm1,km1),2))
 
+       visc_local=half*(visc(D_DECL(i,j,k),nmat+im_elastic)+ &
+         visc(D_DECL(im1,jm1,km1),nmat+im_elastic))
+
+       if (visc_local.ge.zero) then
+        ! do nothing
+       else
+        print *,"visc_local invalid"
+        stop
+       endif
+        
+
+        ! declared in GLOBALUTIL.F90
        call stress_from_strain( &
-         im_elastic, &
+         im_elastic, & ! 1<=im_elastic<=nmat
          xstenMAC,nhalf, &
          diff_flux, &
          xdisplace_local, &
@@ -29974,7 +30020,7 @@ stop
          hoop_22) ! in RZ, DISP_TEN does not have theta,theta component.
 
        do velcomp=1,SDIM
-        xflux(D_DECL(i,j,k),velcomp)=DISP_TEN(velcomp,dir)
+        xflux(D_DECL(i,j,k),velcomp)=visc_local*DISP_TEN(velcomp,dir)
        enddo  ! velcomp
 
       enddo

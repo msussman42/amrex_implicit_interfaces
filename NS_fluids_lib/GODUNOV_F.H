@@ -575,7 +575,8 @@ extern "C"
 
  
    void FORT_MAKETENSOR(
-    int* ncomp_visc,int* im,
+    int* ncomp_visc,
+    int* im,
     const Real* xlo,const Real* dx,
     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
     Real* tensor,AMREX_ARLIM_P(tlo),AMREX_ARLIM_P(thi),
@@ -1305,9 +1306,11 @@ extern "C"
 
 
    void FORT_CROSSTERM_ELASTIC(
+     int* ncomp_visc,
      int* im_elastic, //0..nmat-1
      int* nsolveMM_FACE,
-     int* dir,
+     int* dir, //1..sdim
+     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
      Real* faceLS,AMREX_ARLIM_P(faceLSlo),AMREX_ARLIM_P(faceLShi),

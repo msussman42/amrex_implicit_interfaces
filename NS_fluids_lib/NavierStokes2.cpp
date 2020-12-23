@@ -4150,6 +4150,9 @@ void NavierStokes::init_gradu_tensor(
     // maskcoef=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcoef_fab=(*localMF[MASKCOEF_MF])[mfi];
 
+    FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+    int ncomp_visc=viscfab.nComp();
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -4158,9 +4161,11 @@ void NavierStokes::init_gradu_tensor(
     // in: GODUNOV_3D.F90
     //  visc_coef * viscface * (grad X + grad X^T)
     FORT_CROSSTERM_ELASTIC(
+     &ncomp_visc,
      &im_tensor, // 0..nmat-1
      &nsolveMM_FACE,
      &dir,
+     viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
      maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
      ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      maskcoef_fab.dataPtr(), // maskcoef=tag if not cov by level+1 or outside.
@@ -4351,12 +4356,6 @@ void NavierStokes::apply_pressure_grad(
   // do nothing
  } else
   amrex::Error("num_materials_face invalid");
-
-  //(ml,mr,2) frac_pair(ml,mr),dist_pair(ml,mr)
- int nfacefrac=nmat*nmat*2;
-  // im_inside,im_outside,3+sdim -->
-  //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(AMREX_SPACEDIM+3);
 
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();

@@ -8664,7 +8664,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
      FORT_MAKETENSOR(
-      &ncomp_visc,&im, 
+      &ncomp_visc,
+      &im,  // 0..nmat-1
       xlo,dx,
       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
       tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
