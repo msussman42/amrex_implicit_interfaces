@@ -17068,8 +17068,252 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
+subroutine stress_from_strain( &
+ xsten,nhalf, &
+ gradu, &  ! dir_x,dir_space
+ xdisplace_local, &
+ ydisplace_local, &
+ DISP_TEN)  ! dir_x,dir_space
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: gradu(SDIM,SDIM)
+REAL_T, intent(in) :: xdisplace
+REAL_T, intent(in) :: ydisplace
+REAL_T, intent(out) :: DISP_TEN(SDIM,SDIM)
+REAL_T :: gradu_local(SDIM,SDIM)
+INTEGER_T :: dir_x,dir_space
+REAL_T :: dx_local(SDIM)
+
+do dir_x=1,SDIM
+do dir_space=1,SDIM
+ gradu_local(dir_x,dir_space)=gradu(dir_x,dir_space)
+enddo
+enddo
+
+do dir_x=1,SDIM
+ dx_local(dir_x)=xsten(1,dir_x)-xsten(-1,dir_x)
+ if (dx_local(dir_x).gt.zero) then
+  ! do nothing
+ else
+  print *,"dx_local invalid"
+  stop
+ endif
+enddo
+
+hoop_12=0.0d0
+hoop_22=0.0d0
+if (SDIM.eq.2) then
+ if (levelrz.eq.0) then
+  ! do nothing
+ else if (levelrz.eq.1) then
+  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
+   hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
+  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+   hoop_22=zero
+  else 
+   print *,"xsten(0,1) invalid"
+   stop
+  endif
+ else if (levelrz.eq.3) then
+  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
+   hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
+   hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+   enddo
+   gradu_local(1,2)=gradu_local(1,2)+hoop_12
+   gradu_local(2,2)=gradu_local(2,2)+hoop_22
+  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+   hoop_12=zero
+   hoop_22=zero
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=zero
+   enddo
+  else 
+   print *,"xsten(0,1) invalid"
+   stop
+  endif
+ else
+  print *,"levelrz invalid"
+  stop
+ endif
+else if (SDIM.eq.3) then
+ if (levelrz.eq.0) then
+  ! do nothing
+ else if (levelrz.eq.3) then
+  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
+   hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
+   hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+   enddo
+   gradu_local(1,2)=gradu_local(1,2)+hoop_12
+   gradu_local(2,2)=gradu_local(2,2)+hoop_22
+  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+   hoop_12=zero
+   hoop_22=zero
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=zero
+   enddo
+  else 
+   print *,"xsten(0,1) invalid"
+   stop
+  endif
+ else
+  print *,"levelrz invalid"
+  stop
+ endif
+else
+ print *,"dimension bust"
+ stop
+endif
 
 
+scale_factor=zero
+
+ ! gradu(i,j)=partial XD_{i}/partial x_j
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (dir_x.eq.dir_space) then
+  Identity_comp=one
+ else
+  Identity_comp=zero
+ endif
+
+ F(dir_x,dir_space)=gradu_local(dir_x,dir_space)+Identity_comp
+
+ if (scale_factor.le.abs(F(dir_x,dir_space))) then
+  scale_factor=abs(F(dir_x,dir_space))
+ endif
+
+ C(dir_x,dir_space)=zero
+ B(dir_x,dir_space)=zero
+  ! look for ``linear elasticity'' on wikipedia (eij)
+ strain_displacement(dir_x,dir_space)=half* &
+    (gradu_local(dir_x,dir_space)+ &
+     gradu_local(dir_space,dir_x))
+  ! isotropic
+  ! Cijkl=K dij dkl + mu(dik djl + dil djk -(2/3)dij dkl)
+  ! Cijkl ekl=K dij ekk + mu(dik djl ekl + dil djk ekl -
+  !  (2/3)dij dkl ekl )=
+  ! K dij ekk + mu(eij+eji-(2/3)dij ekk)=
+  ! K dij ekk + 2mu(eij-(1/3)dij ekk)
+
+enddo
+enddo
+
+if (scale_factor.lt.one) then
+ scale_factor=one
+endif
+scale_factor=scale_factor*scale_factor
+
+ ! C=F^T F = right cauchy green tensor
+ ! E=(1/2)*(C-I)  Green Lagrange strain tensor
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ do dir_inner=1,SDIM
+   ! C=F^T F
+  C(dir_x,dir_space)=C(dir_x,dir_space)+ &
+          F(dir_inner,dir_x)*F(dir_inner,dir_space)
+   ! B=F F^T
+  B(dir_x,dir_space)=B(dir_x,dir_space)+ &
+          F(dir_x,dir_inner)*F(dir_space,dir_inner)
+ enddo
+enddo
+enddo
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (abs(C(dir_x,dir_space)-C(dir_space,dir_x)).le. &
+     1.0D-5*scale_factor) then
+  ! do nothing
+ else
+  print *,"i,j,k ",i,j,k
+  print *,"scale_factor = ",scale_factor
+  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"dir_x,dir_space ",dir_x,dir_space
+  print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
+  print *,"C(dir_space,dir_x)=",C(dir_space,dir_x)
+  print *,"expecting C^T=C"
+  stop
+ endif 
+ if (abs(B(dir_x,dir_space)-B(dir_space,dir_x)).le. &
+     1.0D-5*scale_factor) then
+  ! do nothing
+ else
+  print *,"i,j,k ",i,j,k
+  print *,"scale_factor = ",scale_factor
+  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"dir_x,dir_space ",dir_x,dir_space
+  print *,"B(dir_x,dir_space)=",B(dir_x,dir_space)
+  print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
+  print *,"expecting B^T=B"
+  stop
+ endif
+
+enddo
+enddo
+trace_E=zero
+trace_SD=zero ! trace of the strain displacement
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (dir_x.eq.dir_space) then
+  Identity_comp=one
+ else
+  Identity_comp=zero
+ endif
+  ! C=F^T F=right cauchy green tensor
+  ! strain_displacement=(1/2)(grad u + (grad u)^T) = eps_ij
+  ! E=(C-I)/2=( (grad u + I)^T(grad u +I) - I)/2=eps_ij +
+  !  grad u^T gradu/2
+ E(dir_x,dir_space)=half*(C(dir_x,dir_space)-Identity_comp)
+ trace_E=trace_E+Identity_comp*E(dir_x,dir_space)
+ trace_SD=trace_SD+Identity_comp*strain_displacement(dir_x,dir_space)
+enddo
+enddo 
+ ! Sigma=2 mu_s E + lambda Tr(E) I
+ ! structure force is div Sigma=div mu_s (Sigma/mu_s)
+ ! Richter, JCP, 2013
+ ! MKS: mu_s=1E+4   lambda=4E+4  density_struct=1E+3
+ ! bulk modulus units:
+ ! steel 160 giga Pa=160 * 1E+9  N/m^2
+ ! N/m^2=kg m/s^2 / m^2 = kg /(m s^2) = 1000/100 g/(cm s^2)
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (dir_x.eq.dir_space) then
+  Identity_comp=one
+ else
+  Identity_comp=zero
+ endif
+
+ bulk_modulus=fort_elastic_viscosity(im_elastic)
+ lame_coefficient=fort_lame_coefficient(im_elastic)
+ linear_elastic_model=fort_linear_elastic_model(im_elastic)
+
+ if (bulk_modulus.gt.zero) then
+
+  if (linear_elastic_model.eq.1) then
+         ! only valid for small deformations
+   DISP_TEN(dir_x,dir_space)=( &
+       two*bulk_modulus*strain_displacement(dir_x,dir_space)+ &
+          lame_coefficient*trace_SD*Identity_comp)/bulk_modulus
+  else if (linear_elastic_model.eq.0) then
+   DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
+          lame_coefficient*trace_E*Identity_comp)/bulk_modulus
+  else
+   print *,"linear_elastic_model invalid"
+   stop
+  endif
+ else 
+  print *,"bulk_modulus invalid ",bulk_modulus
+  stop
+ endif
+enddo
+enddo
+
+end subroutine stress_from_strain
 
 end module global_utility_module
 
