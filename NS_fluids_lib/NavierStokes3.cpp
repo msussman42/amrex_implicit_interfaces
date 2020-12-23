@@ -11992,8 +11992,6 @@ void NavierStokes::veldiffuseALL() {
 	int elastic_enable_spectral=0;
 	override_enable_spectral(elastic_enable_spectral);
 
-          // new elastic force material goes here.
-        int elastic_idx=-1;
 	int do_alloc=1;
         int simple_AMR_BC_flag_viscosity=1;
 	init_gradu_tensorALL(
@@ -12002,7 +12000,7 @@ void NavierStokes::veldiffuseALL() {
 	  do_alloc,
 	  CELLTENSOR_MF,
 	  FACETENSOR_MF,
-	  XDISP_FLUX_MF,
+	  XDISP_FLUX_MF, // elastic_idx
           simple_AMR_BC_flag_viscosity);
 
 	override_enable_spectral(push_enable_spectral);
