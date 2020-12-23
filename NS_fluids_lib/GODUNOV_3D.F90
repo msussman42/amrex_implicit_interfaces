@@ -2595,12 +2595,22 @@ stop
           print *,"dxplus or dxminus invalid"
           stop
          endif
-        enddo
-        enddo
-        hoop_12=0.0d0
-        hoop_22=0.0d0
+        enddo ! dir_space
+        enddo ! dir_x
+
         xdisplace_local=XDISP_fab(D_DECL(i,j,k),1)
         ydisplace_local=XDISP_fab(D_DECL(i,j,k),2)
+
+         ! declared in GLOBALUTIL.F90
+        call stress_from_strain( &
+          xsten,nhalf, &
+          gradu, &  ! dir_x,dir_space
+          xdisplace_local, &
+          ydisplace_local, &
+          DISP_TEN)  ! dir_x,dir_space
+
+        hoop_12=0.0d0
+        hoop_22=0.0d0
         if (SDIM.eq.2) then
          if (levelrz.eq.0) then
           ! do nothing
