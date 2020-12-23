@@ -10909,14 +10909,18 @@ stop
        stop
       endif
 
+      if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
+          (viscoelastic_model.eq.1)) then ! (visc-etaS)
        ! For incompressible flow, the equations using Q or A are equivalent.
        ! For compressible flow, one should probably set: use_A=1.
-      use_A=0
-
-      if (viscoelastic_model.lt.0) then
+       use_A=0
+      else if (viscoelastic_model.eq.2) then ! elastic model
+       use_A=0
+      else
        print *,"viscoelastic_model invalid"
        stop
       endif
+
       if (ngrow.ne.1) then
        print *,"ngrow invalid"
        stop
