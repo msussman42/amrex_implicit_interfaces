@@ -17114,7 +17114,7 @@ else
  stop
 endif
 
-do dir_x=1,SDIM
+do dir_x=1,SDIM  ! dir_x (displace)
 do dir_space=1,SDIM
  gradu_local(dir_x,dir_space)=gradu(dir_x,dir_space)
 enddo
