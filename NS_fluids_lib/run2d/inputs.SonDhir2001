@@ -70,13 +70,17 @@ geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  1.0 2.0    # r/l_0  y/l_0
 geometry.prob_hi   =  5.0e-3 20.0e-3   # MKS
 ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-# distribute_from_target=0: mdot in dest material, 
+# distribute_from_target=0: mdot in dest material (vapor), 
 #   V=[k grad T dot n]/rho_source
-# distribute_from_target=1: mdot in source material, 
+# distribute_from_target=1: mdot in source material (liquid), 
 #   V=[k grad T dot n]/rho_dest
 # liquid, vapor, gas, solid
 # 12,13,14
-ns.distribute_from_target=1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ns.distribute_from_target=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+# 1..num_materials
+# mdot uniformly distributed in the vapor
+ns.distribute_mdot_evenly=0 1 0 0
+
 ns.EILE_flag=-1
 #   continuous_mof=2 CMOF everywhere 
 #   continuous_mof=4 CLSVOF in 2 material cells, CMOF in >2 mat cells
@@ -84,7 +88,7 @@ ns.continuous_mof=2
 ns.MOFITERMAX=15
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.face_flag=1
-ns.num_divu_outer_sweeps=2
+ns.num_divu_outer_sweeps=1
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
