@@ -4158,6 +4158,7 @@ void NavierStokes::init_gradu_tensor(
     // in: GODUNOV_3D.F90
     //  visc_coef * viscface * (grad X + grad X^T)
     FORT_CROSSTERM_ELASTIC(
+     &im_tensor, // 0..nmat-1
      &nsolveMM_FACE,
      &dir,
      maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine

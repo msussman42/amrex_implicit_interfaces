@@ -17069,23 +17069,50 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 end subroutine smooth_init
 
 subroutine stress_from_strain( &
+ im_elastic, &
  xsten,nhalf, &
- gradu, &  ! dir_x,dir_space
- xdisplace_local, &
- ydisplace_local, &
- DISP_TEN)  ! dir_x,dir_space
+ gradu, &  ! dir_x (displace),dir_space
+ xdisplace, &
+ ydisplace, &
+ DISP_TEN, &  ! dir_x (displace),dir_space
+ hoop_22) ! if RZ, no "theta,theta" component, no place to put hoop_22
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: im_elastic
 INTEGER_T, intent(in) :: nhalf
 REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
 REAL_T, intent(in) :: gradu(SDIM,SDIM)
 REAL_T, intent(in) :: xdisplace
 REAL_T, intent(in) :: ydisplace
 REAL_T, intent(out) :: DISP_TEN(SDIM,SDIM)
+REAL_T, intent(out) :: hoop_22
 REAL_T :: gradu_local(SDIM,SDIM)
-INTEGER_T :: dir_x,dir_space
+INTEGER_T :: dir_x,dir_space,dir_inner
 REAL_T :: dx_local(SDIM)
+
+REAL_T :: hoop_12
+REAL_T strain_displacement(SDIM,SDIM)
+REAL_T F(SDIM,SDIM)
+REAL_T C(SDIM,SDIM)
+REAL_T B(SDIM,SDIM)
+REAL_T E(SDIM,SDIM)
+REAL_T scale_factor
+REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
+INTEGER_T linear_elastic_model
+
+if (nhalf.ge.1) then
+ ! do nothing
+else
+ print *,"nhalf invalid"
+ stop
+endif
+if ((im_elastic.ge.1).and.(im_elastic.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im_elastic invalid"
+ stop
+endif
 
 do dir_x=1,SDIM
 do dir_space=1,SDIM
@@ -17093,9 +17120,9 @@ do dir_space=1,SDIM
 enddo
 enddo
 
-do dir_x=1,SDIM
- dx_local(dir_x)=xsten(1,dir_x)-xsten(-1,dir_x)
- if (dx_local(dir_x).gt.zero) then
+do dir_space=1,SDIM
+ dx_local(dir_space)=xsten(1,dir_space)-xsten(-1,dir_space)
+ if (dx_local(dir_space).gt.zero) then
   ! do nothing
  else
   print *,"dx_local invalid"
@@ -17110,7 +17137,7 @@ if (SDIM.eq.2) then
   ! do nothing
  else if (levelrz.eq.1) then
   if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
+   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
   else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
    hoop_22=zero
   else 
@@ -17119,8 +17146,8 @@ if (SDIM.eq.2) then
   endif
  else if (levelrz.eq.3) then
   if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-   hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
+   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
+   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
    do dir_x=1,SDIM
     gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
    enddo
@@ -17145,8 +17172,8 @@ else if (SDIM.eq.3) then
   ! do nothing
  else if (levelrz.eq.3) then
   if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-   hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
+   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
+   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
    do dir_x=1,SDIM
     gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
    enddo
@@ -17230,7 +17257,6 @@ do dir_space=1,SDIM
      1.0D-5*scale_factor) then
   ! do nothing
  else
-  print *,"i,j,k ",i,j,k
   print *,"scale_factor = ",scale_factor
   print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
   print *,"dir_x,dir_space ",dir_x,dir_space
@@ -17243,7 +17269,6 @@ do dir_space=1,SDIM
      1.0D-5*scale_factor) then
   ! do nothing
  else
-  print *,"i,j,k ",i,j,k
   print *,"scale_factor = ",scale_factor
   print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
   print *,"dir_x,dir_space ",dir_x,dir_space
