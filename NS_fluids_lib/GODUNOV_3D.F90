@@ -2472,7 +2472,7 @@ stop
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
       INTEGER_T ibase
-      INTEGER_T dir_x,dir_space,dir_inner
+      INTEGER_T dir_x,dir_space
       INTEGER_T iii,jjj,kkk
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -2480,19 +2480,11 @@ stop
       REAL_T dxminus,dxplus
       REAL_T grad_cen,grad_plus,grad_minus
       REAL_T LS_plus,LS_minus
-      REAL_T gradu(SDIM,SDIM)
-      REAL_T DISP_TEN(SDIM,SDIM)
-      REAL_T strain_displacement(SDIM,SDIM)
-      REAL_T F(SDIM,SDIM)
-      REAL_T C(SDIM,SDIM)
-      REAL_T B(SDIM,SDIM)
-      REAL_T E(SDIM,SDIM)
-      REAL_T hoop_12,hoop_22
+      REAL_T gradu(SDIM,SDIM)  ! dir_x (displace), dir_space
+      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
       REAL_T xdisplace_local,ydisplace_local
-      REAL_T scale_factor
+      REAL_T hoop_22
       INTEGER_T vofcomp
-      REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
-      INTEGER_T linear_elastic_model
 
       nhalf=3
 
@@ -2539,311 +2531,119 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do dir_x=1,SDIM ! velocity component u,v,w
-        do dir_space=1,SDIM ! direction x,y,z
+       do dir_x=1,SDIM ! velocity (displacement) component u,v,w
+       do dir_space=1,SDIM ! direction x,y,z
 
-         iii=0
-         jjj=0
-         kkk=0
-         if (dir_space.eq.1) then
-          iii=1
-         else if (dir_space.eq.2) then
-          jjj=1
-         else if ((dir_space.eq.3).and.(SDIM.eq.3)) then
-          kkk=1
-         else
-          print *,"dir_space invalid"
-          stop
-         endif 
-         dxplus=xsten(2,dir_space)-xsten(0,dir_space)
-         dxminus=xsten(0,dir_space)-xsten(-2,dir_space)
-         if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
-          grad_plus=(XDISP_fab(D_DECL(i+iii,j+jjj,k+kkk),dir_x)- &
-                     XDISP_fab(D_DECL(i,j,k),dir_x))/dxplus
-          grad_minus=(XDISP_fab(D_DECL(i,j,k),dir_x)- &
-                      XDISP_fab(D_DECL(i-iii,j-jjj,k-kkk),dir_x))/dxminus
-
-          if (LS_or_VOF_flag.eq.0) then
-           LS_plus=LS(D_DECL(i+iii,j+jjj,k+kkk),im_elastic)
-           LS_minus=LS(D_DECL(i-iii,j-jjj,k-kkk),im_elastic)
-          else if (LS_or_VOF_flag.eq.1) then
-           vofcomp=(im_elastic-1)*ngeom_recon+1
-           LS_plus=VOF(D_DECL(i+iii,j+jjj,k+kkk),vofcomp)-half
-           LS_minus=VOF(D_DECL(i-iii,j-jjj,k-kkk),vofcomp)-half
-          else
-           print *,"LS_or_VOF_flag invalid"
-           stop
-          endif
-
-          if ((LS_plus.ge.zero).and.(LS_minus.ge.zero)) then
-           grad_cen=half*(grad_plus+grad_minus)
-          else if ((LS_plus.lt.zero).and.(LS_minus.lt.zero)) then
-           grad_cen=half*(grad_plus+grad_minus)
-          else if ((LS_plus.ge.zero).and.(LS_minus.lt.zero)) then
-           grad_cen=grad_plus
-          else if ((LS_plus.lt.zero).and.(LS_minus.ge.zero)) then
-           grad_cen=grad_minus
-          else
-           print *,"LS_plus or LS_minus invalid"
-           stop
-          endif
-
-          gradu(dir_x,dir_space)=grad_cen
-         else
-          print *,"dxplus or dxminus invalid"
-          stop
-         endif
-        enddo ! dir_space
-        enddo ! dir_x
-
-        xdisplace_local=XDISP_fab(D_DECL(i,j,k),1)
-        ydisplace_local=XDISP_fab(D_DECL(i,j,k),2)
-
-         ! declared in GLOBALUTIL.F90
-        call stress_from_strain( &
-          xsten,nhalf, &
-          gradu, &  ! dir_x,dir_space
-          xdisplace_local, &
-          ydisplace_local, &
-          DISP_TEN)  ! dir_x,dir_space
-
-        hoop_12=0.0d0
-        hoop_22=0.0d0
-        if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.1) then
-          if (xsten(0,1).gt.zero) then
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else if (levelrz.eq.3) then
-          if (xsten(0,1).gt.zero) then
-           hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-           do dir_x=1,SDIM
-            gradu(dir_x,2)=gradu(dir_x,2)/xsten(0,1)
-           enddo
-           gradu(1,2)=gradu(1,2)+hoop_12
-           gradu(2,2)=gradu(2,2)+hoop_22
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else if (SDIM.eq.3) then
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.3) then
-          if (xsten(0,1).gt.zero) then
-           hoop_12=-ydisplace_local/xsten(0,1)  ! -ydisplace/r
-           hoop_22=xdisplace_local/xsten(0,1)  ! xdisplace/r
-           do dir_x=1,SDIM
-            gradu(dir_x,2)=gradu(dir_x,2)/xsten(0,1)
-           enddo
-           gradu(1,2)=gradu(1,2)+hoop_12
-           gradu(2,2)=gradu(2,2)+hoop_22
-          else 
-           print *,"xsten(0,1) invalid"
-           stop
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
+        iii=0
+        jjj=0
+        kkk=0
+        if (dir_space.eq.1) then
+         iii=1
+        else if (dir_space.eq.2) then
+         jjj=1
+        else if ((dir_space.eq.3).and.(SDIM.eq.3)) then
+         kkk=1
         else
-         print *,"dimension bust"
+         print *,"dir_space invalid"
+         stop
+        endif 
+        dxplus=xsten(2,dir_space)-xsten(0,dir_space)
+        dxminus=xsten(0,dir_space)-xsten(-2,dir_space)
+        if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
+         grad_plus=(XDISP_fab(D_DECL(i+iii,j+jjj,k+kkk),dir_x)- &
+                    XDISP_fab(D_DECL(i,j,k),dir_x))/dxplus
+         grad_minus=(XDISP_fab(D_DECL(i,j,k),dir_x)- &
+                     XDISP_fab(D_DECL(i-iii,j-jjj,k-kkk),dir_x))/dxminus
+
+         if (LS_or_VOF_flag.eq.0) then
+          LS_plus=LS(D_DECL(i+iii,j+jjj,k+kkk),im_elastic)
+          LS_minus=LS(D_DECL(i-iii,j-jjj,k-kkk),im_elastic)
+         else if (LS_or_VOF_flag.eq.1) then
+          vofcomp=(im_elastic-1)*ngeom_recon+1
+          LS_plus=VOF(D_DECL(i+iii,j+jjj,k+kkk),vofcomp)-half
+          LS_minus=VOF(D_DECL(i-iii,j-jjj,k-kkk),vofcomp)-half
+         else
+          print *,"LS_or_VOF_flag invalid"
+          stop
+         endif
+
+         if ((LS_plus.ge.zero).and.(LS_minus.ge.zero)) then
+          grad_cen=half*(grad_plus+grad_minus)
+         else if ((LS_plus.lt.zero).and.(LS_minus.lt.zero)) then
+          grad_cen=half*(grad_plus+grad_minus)
+         else if ((LS_plus.ge.zero).and.(LS_minus.lt.zero)) then
+          grad_cen=grad_plus
+         else if ((LS_plus.lt.zero).and.(LS_minus.ge.zero)) then
+          grad_cen=grad_minus
+         else
+          print *,"LS_plus or LS_minus invalid"
+          stop
+         endif
+
+         gradu(dir_x,dir_space)=grad_cen  ! dir_x (displace), dir_space
+        else
+         print *,"dxplus or dxminus invalid"
          stop
         endif
+       enddo ! dir_space
+       enddo ! dir_x (displace)
 
-        scale_factor=zero
+       xdisplace_local=XDISP_fab(D_DECL(i,j,k),1)
+       ydisplace_local=XDISP_fab(D_DECL(i,j,k),2)
 
-         ! gradu(i,j)=partial XD_{i}/partial x_j
-        do dir_x=1,SDIM 
-        do dir_space=1,SDIM
-         if (dir_x.eq.dir_space) then
-          Identity_comp=one
-         else
-          Identity_comp=zero
-         endif
+        ! declared in GLOBALUTIL.F90
+       call stress_from_strain( &
+         im_elastic, &
+         xsten,nhalf, &
+         gradu, &  ! dir_x (displace),dir_space
+         xdisplace_local, &
+         ydisplace_local, &
+         DISP_TEN, &  ! dir_x (displace),dir_space
+         hoop_22)
 
-         F(dir_x,dir_space)=gradu(dir_x,dir_space)+Identity_comp
+       ibase=1
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
+       ibase=ibase+1
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,2)
+       ibase=ibase+1
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,2)
 
-         if (scale_factor.le.abs(F(dir_x,dir_space))) then
-          scale_factor=abs(F(dir_x,dir_space))
-         endif
-
-         C(dir_x,dir_space)=zero
-         B(dir_x,dir_space)=zero
-          ! look for ``linear elasticity'' on wikipedia (eij)
-         strain_displacement(dir_x,dir_space)=half* &
-            (gradu(dir_x,dir_space)+gradu(dir_space,dir_x))
-          ! isotropic
-          ! Cijkl=K dij dkl + mu(dik djl + dil djk -(2/3)dij dkl)
-          ! Cijkl ekl=K dij ekk + mu(dik djl ekl + dil djk ekl -
-          !  (2/3)dij dkl ekl )=
-          ! K dij ekk + mu(eij+eji-(2/3)dij ekk)=
-          ! K dij ekk + 2mu(eij-(1/3)dij ekk)
-
-        enddo
-        enddo
-
-        if (scale_factor.lt.one) then
-         scale_factor=one
-        endif
-        scale_factor=scale_factor*scale_factor
-
-         ! C=F^T F = right cauchy green tensor
-         ! E=(1/2)*(C-I)  Green Lagrange strain tensor
-        do dir_x=1,SDIM 
-        do dir_space=1,SDIM
-         do dir_inner=1,SDIM
-           ! C=F^T F
-          C(dir_x,dir_space)=C(dir_x,dir_space)+ &
-                  F(dir_inner,dir_x)*F(dir_inner,dir_space)
-           ! B=F F^T
-          B(dir_x,dir_space)=B(dir_x,dir_space)+ &
-                  F(dir_x,dir_inner)*F(dir_space,dir_inner)
-         enddo
-        enddo
-        enddo
-        do dir_x=1,SDIM 
-        do dir_space=1,SDIM
-         if (abs(C(dir_x,dir_space)-C(dir_space,dir_x)).le. &
-             1.0D-5*scale_factor) then
-          ! do nothing
-         else
-          print *,"i,j,k ",i,j,k
-          print *,"scale_factor = ",scale_factor
-          print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-          print *,"dir_x,dir_space ",dir_x,dir_space
-          print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
-          print *,"C(dir_space,dir_x)=",C(dir_space,dir_x)
-          print *,"expecting C^T=C"
-          stop
-         endif 
-         if (abs(B(dir_x,dir_space)-B(dir_space,dir_x)).le. &
-             1.0D-5*scale_factor) then
-          ! do nothing
-         else
-          print *,"i,j,k ",i,j,k
-          print *,"scale_factor = ",scale_factor
-          print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-          print *,"dir_x,dir_space ",dir_x,dir_space
-          print *,"B(dir_x,dir_space)=",B(dir_x,dir_space)
-          print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
-          print *,"expecting B^T=B"
-          stop
-         endif
-
-        enddo
-        enddo
-        trace_E=zero
-        trace_SD=zero ! trace of the strain displacement
-        do dir_x=1,SDIM 
-        do dir_space=1,SDIM
-         if (dir_x.eq.dir_space) then
-          Identity_comp=one
-         else
-          Identity_comp=zero
-         endif
-          ! C=F^T F=right cauchy green tensor
-          ! strain_displacement=(1/2)(grad u + (grad u)^T) = eps_ij
-          ! E=(C-I)/2=( (grad u + I)^T(grad u +I) - I)/2=eps_ij +
-          !  grad u^T gradu/2
-         E(dir_x,dir_space)=half*(C(dir_x,dir_space)-Identity_comp)
-         trace_E=trace_E+Identity_comp*E(dir_x,dir_space)
-         trace_SD=trace_SD+Identity_comp*strain_displacement(dir_x,dir_space)
-        enddo
-        enddo 
-         ! Sigma=2 mu_s E + lambda Tr(E) I
-         ! structure force is div Sigma=div mu_s (Sigma/mu_s)
-         ! Richter, JCP, 2013
-         ! MKS: mu_s=1E+4   lambda=4E+4  density_struct=1E+3
-         ! bulk modulus units:
-         ! steel 160 giga Pa=160 * 1E+9  N/m^2
-         ! N/m^2=kg m/s^2 / m^2 = kg /(m s^2) = 1000/100 g/(cm s^2)
-        do dir_x=1,SDIM 
-        do dir_space=1,SDIM
-         if (dir_x.eq.dir_space) then
-          Identity_comp=one
-         else
-          Identity_comp=zero
-         endif
-
-         bulk_modulus=fort_elastic_viscosity(im_elastic)
-         lame_coefficient=fort_lame_coefficient(im_elastic)
-         linear_elastic_model=fort_linear_elastic_model(im_elastic)
-
-         if (bulk_modulus.gt.zero) then
-
-          if (linear_elastic_model.eq.1) then
-                 ! only valid for small deformations
-           DISP_TEN(dir_x,dir_space)=( &
-               two*bulk_modulus*strain_displacement(dir_x,dir_space)+ &
-                  lame_coefficient*trace_SD*Identity_comp)/bulk_modulus
-          else if (linear_elastic_model.eq.0) then
-           DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
-                  lame_coefficient*trace_E*Identity_comp)/bulk_modulus
-          else
-           print *,"linear_elastic_model invalid"
-           stop
-          endif
-         else 
-          print *,"bulk_modulus invalid ",bulk_modulus
-          stop
-         endif
-        enddo
-        enddo
-
-        ibase=1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
-        ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,2)
-        ibase=ibase+1
-        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,2)
-
-        ibase=ibase+1
-        if (SDIM.eq.3) then
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
-        else if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          TNEWfab(D_DECL(i,j,k),ibase)=zero
-         else if (levelrz.eq.1) then
-           ! T33 (theta coordinate)
-           ! dX/dx + dX/dx
-          TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
-         else if (levelrz.eq.3) then
-           ! T33 (z coordinate)
-          TNEWfab(D_DECL(i,j,k),ibase)=zero
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
+       ibase=ibase+1
+       if (SDIM.eq.3) then
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
+       else if (SDIM.eq.2) then
+        if (levelrz.eq.0) then
+         TNEWfab(D_DECL(i,j,k),ibase)=zero
+        else if (levelrz.eq.1) then
+          ! T33 (theta coordinate)
+          ! dX/dx + dX/dx
+         TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
+        else if (levelrz.eq.3) then
+          ! T33 (z coordinate)
+         TNEWfab(D_DECL(i,j,k),ibase)=zero
         else
-         print *,"dimension bust"
+         print *,"levelrz invalid"
          stop
         endif
-                     
-        if (SDIM.eq.3) then                
-         ibase=ibase+1
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,SDIM)
-         ibase=ibase+1
-         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,SDIM)
-        endif
-        if (ibase.eq.2*SDIM) then
-         ! do nothing
-        else
-         print *,"ibase invalid (7) ibase=",ibase
-         stop
-        endif
+       else
+        print *,"dimension bust"
+        stop
+       endif
+                    
+       if (SDIM.eq.3) then                
+        ibase=ibase+1
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,SDIM)
+        ibase=ibase+1
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,SDIM)
+       endif
+       if (ibase.eq.2*SDIM) then
+        ! do nothing
+       else
+        print *,"ibase invalid (7) ibase=",ibase
+        stop
+       endif
 
       enddo
       enddo
@@ -29665,6 +29465,7 @@ stop
 
 
       subroutine FORT_CROSSTERM_ELASTIC( &
+       im_tensor, & ! 0..nmat-1
        nsolveMM_FACE, &
        dir, &  ! dir=1..sdim
        mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
@@ -29703,6 +29504,7 @@ stop
  
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: im_tensor ! 0..nmat-1
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: ntensor
@@ -29764,39 +29566,16 @@ stop
       INTEGER_T dirtan(2)
       INTEGER_T coupling(SDIM,SDIM)
       INTEGER_T ii,jj,kk,im1,jm1,km1
-      REAL_T gradterm,alpha
       INTEGER_T side
       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
-      INTEGER_T uxMM
-      INTEGER_T vyMM
-      INTEGER_T wzMM
 
       INTEGER_T im
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      REAL_T divterm
-      INTEGER_T compressible_face
-      REAL_T uxterm,vyterm,wzterm
-      REAL_T visc_constant
-      REAL_T diff_flux(SDIM,SDIM)
-      INTEGER_T imL,imR
+      REAL_T diff_flux(SDIM,SDIM) ! dir_x (displace),dir_space
+      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace),dir_space
       REAL_T total_mass,DMface
       REAL_T massfrac(nmat)
       REAL_T massF(2*nmat)
       REAL_T xstenMAC(-1:1,SDIM)
-      REAL_T xclamped_minus_sten(-1:1,SDIM)
-      REAL_T xclamped_plus_sten(-1:1,SDIM)
-      REAL_T xclamped_minus(SDIM)
-      REAL_T xclamped_plus(SDIM)
-
-      REAL_T LS_clamped_minus
-      REAL_T LS_clamped_plus
-      REAL_T vel_clamped_minus(SDIM)
-      REAL_T vel_clamped_plus(SDIM)
-      REAL_T vel_clamped_face(SDIM)
-      REAL_T temperature_clamped_minus
-      REAL_T temperature_clamped_plus
-      INTEGER_T is_clamped_face
       INTEGER_T nhalf
 
       INTEGER_T tcompMM
@@ -29806,8 +29585,11 @@ stop
       INTEGER_T inorm
       INTEGER_T local_bc
 
-      REAL_T local_flux_val
       INTEGER_T project_option
+      INTEGER_T im_elastic
+      REAL_T hoop_22
+      REAL_T xdisplace_local
+      REAL_T ydisplace_local
 
       nhalf=1
 
@@ -29819,6 +29601,14 @@ stop
        print *,"bfact invalid79"
        stop
       endif
+
+      if ((im_tensor.ge.0).and.(im_tensor.lt.num_materials)) then
+       ! do nothing
+      else
+       print *,"im_tensor invalid"
+       stop
+      endif
+      im_elastic=im_tensor+1
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
@@ -30142,44 +29932,50 @@ stop
        do velcomp=1,SDIM
         tcompMM=coupling(velcomp,dir)
         diff_flux(velcomp,dir)=tdata(D_DECL(i,j,k),tcompMM)
-       enddo
 
-       if (side_face.eq.0) then
-        ! do nothing
-       else if ((side_face.eq.1).or.(side_face.eq.2)) then
-        local_bc=velbc(dir,side_face,nc)
-        if ((local_bc.eq.INT_DIR).or. &
-            (local_bc.eq.REFLECT_ODD).or. &
-            (local_bc.eq.EXT_DIR)) then
+        if (side_face.eq.0) then
          ! do nothing
-        else if ((local_bc.eq.REFLECT_EVEN).or. &
-                 (local_bc.eq.FOEXTRAP)) then
-         gradterm=zero
+        else if ((side_face.eq.1).or.(side_face.eq.2)) then
+         local_bc=velbc(dir,side_face,velcomp)
+         if ((local_bc.eq.INT_DIR).or. &
+             (local_bc.eq.REFLECT_ODD).or. &
+             (local_bc.eq.EXT_DIR)) then
+          ! do nothing
+         else if ((local_bc.eq.REFLECT_EVEN).or. &
+                  (local_bc.eq.FOEXTRAP)) then
+          diff_flux(velcomp,dir)=zero
+         else
+          print *,"local_bc invalid"
+          stop
+         endif
         else
-         print *,"local_bc invalid"
+         print *,"side_face invalid"
          stop
         endif
-       else
-        print *,"side_face invalid"
-        stop
-       endif
-    
+
+       enddo ! velcomp=1..sdim
+
+       xdisplace_local=half*(vel(D_DECL(i,j,k),1)+ &
+         vel(D_DECL(im1,jm1,km1),1))
+       ydisplace_local=half*(vel(D_DECL(i,j,k),2)+ &
+         vel(D_DECL(im1,jm1,km1),2))
+
+       call stress_from_strain( &
+         im_elastic, &
+         xstenMAC,nhalf, &
+         diff_flux, &
+         xdisplace_local, &
+         ydisplace_local, &
+         DISP_TEN, & ! velcomp,space_dir
+         hoop_22) ! in RZ, DISP_TEN does not have theta,theta component.
+
        do velcomp=1,SDIM
-        xflux(D_DECL(i,j,k),velcomp)=diff_flux(velcomp)
+        xflux(D_DECL(i,j,k),velcomp)=DISP_TEN(velcomp,dir)
        enddo  ! velcomp
 
       enddo
       enddo
       enddo  ! i,j,k faces
-
-
-        xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
-
-       enddo  ! velcomp
-
-      enddo
-      enddo
-      enddo  ! i,j,k add divterm to fluxes and multiply by visc_constant
 
       return 
       end subroutine FORT_CROSSTERM_ELASTIC

@@ -1305,6 +1305,7 @@ extern "C"
 
 
    void FORT_CROSSTERM_ELASTIC(
+     int* im_elastic, //0..nmat-1
      int* nsolveMM_FACE,
      int* dir,
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
