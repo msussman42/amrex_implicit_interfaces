@@ -30129,52 +30129,31 @@ stop
         stop
        endif
     
+       do velcomp=1,SDIM
+        tcompMM=coupling(velcomp,dir)
+        diff_flux(velcomp,dir)=tdata(D_DECL(i,j,k),tcompMM)
+       enddo
 
-! 2 u_x, v_x, w_x or
-! u_y, 2 v_y, w_y or
-! u_z, v_z, 2 w_z 
-
-       do nc=1,SDIM
-
-        if (nc.eq.dir) then
-         alpha=two
-        else
-         alpha=one
-        endif
-
-         ! ux,vx, wx  or
-         ! uy,vy, wy  or
-         ! uz,vz, wz  
-        tcompMM=nbase+nc
-
-        local_flux_val=tdata(D_DECL(i,j,k),tcompMM)
-
-        gradterm=alpha*local_flux_val
-
-        if (side_face.eq.0) then
+       if (side_face.eq.0) then
+        ! do nothing
+       else if ((side_face.eq.1).or.(side_face.eq.2)) then
+        local_bc=velbc(dir,side_face,nc)
+        if ((local_bc.eq.INT_DIR).or. &
+            (local_bc.eq.REFLECT_ODD).or. &
+            (local_bc.eq.EXT_DIR)) then
          ! do nothing
-        else if ((side_face.eq.1).or.(side_face.eq.2)) then
-         local_bc=velbc(dir,side_face,nc)
-         if ((local_bc.eq.INT_DIR).or. &
-             (local_bc.eq.REFLECT_ODD).or. &
-             (local_bc.eq.EXT_DIR)) then
-          ! do nothing
-         else if ((local_bc.eq.REFLECT_EVEN).or. &
-                  (local_bc.eq.FOEXTRAP)) then
-          gradterm=zero
-         else
-          print *,"local_bc invalid"
-          stop
-         endif
+        else if ((local_bc.eq.REFLECT_EVEN).or. &
+                 (local_bc.eq.FOEXTRAP)) then
+         gradterm=zero
         else
-         print *,"side_face invalid"
+         print *,"local_bc invalid"
          stop
         endif
+       else
+        print *,"side_face invalid"
+        stop
+       endif
     
-        diff_flux(nc)=diff_flux(nc)+gradterm
-
-       enddo  ! nc=1..sdim
-
        do velcomp=1,SDIM
         xflux(D_DECL(i,j,k),velcomp)=diff_flux(velcomp)
        enddo  ! velcomp
@@ -30183,211 +30162,6 @@ stop
       enddo
       enddo  ! i,j,k faces
 
-        ! does not include the right face of the tile unless
-        ! tilehi==fabhi
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-       growlo,growhi,0,dir-1)
-
-       ! u_x+v_y+w_z on flux face
-       ! multiply by visc_constant
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       call gridstenMAC_level(xstenMAC, &
-         i,j,k,level,nhalf,dir)
-
-       im1=i-ii
-       jm1=j-jj
-       km1=k-kk
-
-       if (dir.eq.1) then
-        inorm=i
-       else if (dir.eq.2) then
-        inorm=j
-       else if ((dir.eq.3).and.(SDIM.eq.3)) then
-        inorm=k
-       else
-        print *,"dir invalid"
-        stop
-       endif
-
-       side_face=0
-       if (inorm.eq.fablo(dir)) then
-        side_face=1
-       else if (inorm.eq.fabhi(dir)+1) then
-        side_face=2
-       else if ((inorm.gt.fablo(dir)).and. &
-                (inorm.lt.fabhi(dir)+1)) then
-        ! do nothing
-       else
-        print *,"inorm invalid"
-        stop
-       endif
-
-       do im=1,nmat
-        LSleft(im)=levelpc(D_DECL(im1,jm1,km1),im)
-        LSright(im)=levelpc(D_DECL(i,j,k),im)
-       enddo
-       call get_primary_material(LSleft,nmat,imL)
-       call get_primary_material(LSright,nmat,imR)
-
-       if ((imL.lt.1).or.(imL.gt.nmat)) then
-        print *,"imL invalid"
-        stop
-       endif
-       if ((imR.lt.1).or.(imR.gt.nmat)) then
-        print *,"imR invalid"
-        stop
-       endif
-
-       call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
-       call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
-       do dir2=1,SDIM
-        xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
-        xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
-       enddo
-
-        ! LS>0 if clamped
-       call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-            vel_clamped_minus,temperature_clamped_minus)
-       call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-            vel_clamped_plus,temperature_clamped_plus)
-       if ((LS_clamped_minus.ge.zero).or. &
-           (LS_clamped_plus.ge.zero)) then
-        is_clamped_face=1
-        do dir2=1,SDIM
-         if (LS_clamped_minus.lt.zero) then
-          vel_clamped_face(dir2)=vel_clamped_plus(dir2)
-          is_clamped_face=2
-         else if (LS_clamped_plus.lt.zero) then
-          vel_clamped_face(dir2)=vel_clamped_minus(dir2)
-          is_clamped_face=3
-         else
-          vel_clamped_face(dir2)=half*(vel_clamped_plus(dir2)+ &
-            vel_clamped_minus(dir2))
-         endif
-        enddo
-       else if ((LS_clamped_minus.lt.zero).and. &
-                (LS_clamped_plus.lt.zero)) then
-        is_clamped_face=0
-       else
-        print *,"LS_clamped plus or minus is NaN"
-        stop
-       endif
-
-       compressible_face=1
-
-       if ((is_clamped_face.eq.1).or. &
-           (is_clamped_face.eq.2).or. &
-           (is_clamped_face.eq.3)) then
-        compressible_face=0
-       else if (is_clamped_face.eq.0) then
-
-        if ((is_rigid(nmat,imL).eq.1).or. &
-            (is_rigid(nmat,imR).eq.1)) then
-         compressible_face=0
-        else if ((is_rigid(nmat,imL).eq.0).and. &
-                 (is_rigid(nmat,imR).eq.0)) then
-         ! do nothing
-        else
-         print *,"is_rigid invalid"
-         stop
-        endif
-       else
-        print *,"is_clamped_face invalid"
-        stop
-       endif
-
-       if ((fort_material_type(imL).eq.0).or. &
-           (fort_material_type(imR).eq.0)) then
-        compressible_face=0
-       endif
-
-       do velcomp_alt=1,SDIM
-        if (side_face.eq.0) then
-         ! do nothing
-        else if ((side_face.eq.1).or.(side_face.eq.2)) then
-         local_bc=velbc(dir,side_face,velcomp_alt)
-         if ((local_bc.eq.EXT_DIR).or. &
-             (local_bc.eq.REFLECT_EVEN).or. &
-             (local_bc.eq.REFLECT_ODD).or. &
-             (local_bc.eq.FOEXTRAP)) then
-          compressible_face=0
-         else if (local_bc.eq.INT_DIR) then
-          ! do nothing
-         else
-          print *,"local_bc invalid"
-          stop
-         endif
-        else
-         print *,"side_face invalid"
-         stop
-        endif
-       enddo ! velcomp_alt=1..sdim
-
-       uxMM=ux
-       vyMM=vy
-       wzMM=wz
-
-       wzterm=zero
-
-       if (dir.eq.1) then
-
-        uxterm=tdata(D_DECL(i,j,k),uxMM)
-        vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
-         tdata(D_DECL(i-1,j,k),vyMM)+tdata(D_DECL(i-1,j+1,k),vyMM))/four
-        if (SDIM.eq.3) then
-         wzterm= &
-          (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
-           tdata(D_DECL(i-1,j,k),wzMM)+tdata(D_DECL(i-1,j,k+1),wzMM))/four
-        endif
-
-       else if (dir.eq.2) then
-
-        uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
-         tdata(D_DECL(i,j-1,k),uxMM)+tdata(D_DECL(i+1,j-1,k),uxMM))/four
-        vyterm=tdata(D_DECL(i,j,k),vyMM)
-        if (SDIM.eq.3) then
-         wzterm= &
-          (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
-           tdata(D_DECL(i,j-1,k),wzMM)+tdata(D_DECL(i,j-1,k+1),wzMM))/four
-        endif
-
-       else if ((dir.eq.3).and.(SDIM.eq.3)) then
-
-        uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
-         tdata(D_DECL(i,j,k-1),uxMM)+tdata(D_DECL(i+1,j,k-1),uxMM))/four
-        vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
-         tdata(D_DECL(i,j,k-1),vyMM)+tdata(D_DECL(i,j+1,k-1),vyMM))/four
-        wzterm=tdata(D_DECL(i,j,k),wzMM)
-
-       else
-        print *,"dir invalid crossterm 6"
-        stop
-       endif
-
-       if (compressible_face.eq.0) then
-        divterm=zero
-       else if (mdata(D_DECL(i,j,k),dir).eq.zero) then
-        divterm=zero
-       else if (compressible_face.eq.1) then
-        divterm=-(two/SDIM)*(uxterm+vyterm+wzterm)
-       else
-        print *,"compressible_face bust"
-        stop
-       endif
-
-       visc_constant=visc_coef*xface(D_DECL(i,j,k),facevisc_index+1)
-       if (visc_constant.lt.zero) then
-        print *,"visc_constant cannot be negative"
-        stop
-       endif
-       visc_constant=-dt*visc_constant
-
-       do velcomp=1,SDIM
-
-        local_flux_val=xflux(D_DECL(i,j,k),velcomp)+divterm
 
         xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
 

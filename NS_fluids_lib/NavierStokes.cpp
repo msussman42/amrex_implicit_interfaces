@@ -286,7 +286,7 @@ int  NavierStokes::VOF_reflux=0;
 int  NavierStokes::continuous_mof=2;
 // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
 int  NavierStokes::force_cmof_at_triple_junctions=1;
-int  NavierStokes::partial_cmof_stencil_at_walls=0;
+int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 // 0  low order space and time
 // 1  SEM space and time
@@ -3490,7 +3490,7 @@ NavierStokes::read_params ()
 	   im_dest <<
            " distribute_mdot_evenly[im_dest-1]=" << 
 	   distribute_mdot_evenly[im_dest-1] << '\n';
-         amrex::Error("distribute_from_target[iten_local] invalid");
+         amrex::Warning("distribute_from_target[iten_local] not optimal");
 	} else
   	 amrex::Error("distribute_mdot_evenly invalid");
 
