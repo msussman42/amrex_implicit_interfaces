@@ -20263,10 +20263,10 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
  const Vector<BoxArray>& ns_ba=parent->boxArray();
 
- Vector<int> rr;
- rr.resize(ns_ba.size());
- for (int ilev=0;ilev<rr.size();ilev++)
-  rr[ilev]=2;
+ Vector<int> refinement_ratio;
+ refinement_ratio.resize(ns_ba.size());
+ for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+  refinement_ratio[ilev]=2;
  int nnbr=1;
 
  bool local_copy_flag=true; 
@@ -20348,7 +20348,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
-   localPC(ns_geom,ns_dmap,ns_ba,rr,nnbr);
+   localPC(ns_geom,ns_dmap,ns_ba,
+   refinement_ratio,nnbr);
   // the two PC have same hierarchy, no need to call Redistribute after the
   // copy.
   localPC.copyParticles(localPC_no_nbr,local_copy_flag);

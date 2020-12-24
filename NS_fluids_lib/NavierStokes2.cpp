@@ -7439,12 +7439,28 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
  else
   amrex::Error("divu_outer_sweeps invalid");
 
- if (NS_ncomp_particles>0) {
+ if ((im_PLS>=0)&&(im_PLS<nmat)) {
+  // do nothing
+ } else
+  amrex::Error("im_PLS invalid");
 
-  if ((im_PLS>=0)&&(im_PLS<nmat)) {
-   // do nothing
-  } else
-   amrex::Error("im_PLS invalid");
+ const Vector<Geometry>& ns_geom=parent->Geom();
+ const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+ const Vector<BoxArray>& ns_ba=parent->boxArray();
+
+ Vector<int> refinement_ratio;
+ refinement_ratio.resize(ns_ba.size());
+ for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+  refinement_ratio[ilev]=2;
+ int nnbr=particle_interaction_ngrow[im_PLS];
+ if (nnbr>=1) {
+  // do nothing
+ } else
+  amrex::Error("nnbr invalid");
+
+ bool local_copy_flag=true; 
+
+ if (NS_ncomp_particles>0) {
 
   int append_flag=1;
   init_particle_container(im_PLS,ipart_id,append_flag);
@@ -7481,6 +7497,16 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
+  NeighborParticleContainer<N_EXTRA_REAL,0> 
+   localPC_NBR(ns_geom,ns_dmap,ns_ba,
+   refinement_ratio,nnbr);
+
+  // the two PC have same hierarchy, no need to call Redistribute after the
+  // copy.
+  localPC_NBR.copyParticles(localPC,local_copy_flag);
+
+  localPC_NBR.fillNeighbors();
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -7508,6 +7534,32 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
    auto& particles_AoS = particles.GetArrayOfStructs();
    int Np=particles_AoS.size();
 
+   auto& particles_NBR = localPC_NBR.GetParticles(level)
+     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+   auto& particles_AoS_NBR = particles_NBR.GetArrayOfStructs();
+   int Np_NBR=particles_AoS_NBR.size();
+
+     // ParticleVector&
+   auto& neighbors_local = 
+     localPC_NBR.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+   int Nn=neighbors_local.size();
+
+    // component 1: number of particles linked to the cell.
+    // component 2: the link to the list of particles.
+   Box tilebox_grow=grow(tilegrid,nnbr);
+   BaseFab<int> cell_particle_count(tilebox_grow,2);
+   cell_particle_count.setVal(0);
+
+    // The link index will start at 1.
+   Vector< int > particle_link_data;
+    // i_particle_link_1,i1,j1,k1,   (child link, parent link)
+    // i_particle_link_2,i2,j2,k2,  ...
+   particle_link_data.resize(Np_NBR*(1+AMREX_SPACEDIM));
+    for (int i_link=0;i_link<Np_NBR*(1+AMREX_SPACEDIM);i_link++)
+     particle_link_data[i_link]=0;
+
+   int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
+
    int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
    Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
       nmat*num_state_material);
@@ -7523,6 +7575,10 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
    fort_move_particle_container( 
      &tid_current,
      &im_PLS,
+     &single_particle_size,
+     &particle_volume[im_PLS],
+     &particle_relaxation_time_to_fluid[im_PLS],
+     &particle_interaction_ngrow[im_PLS],
      &nmat,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
@@ -7531,6 +7587,14 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
      xlo,dx,
      particles_AoS.data(),
      Np,  // pass by value
+     particles_AoS_NBR.data(),
+     Np_NBR,  // pass by value
+     neighbors_local.data(),
+     Nn,       //pass by value
+     particle_link_data.dataPtr(),
+     cell_particle_count.dataPtr(),
+     ARLIM(cell_particle_count.loVect()),
+     ARLIM(cell_particle_count.hiVect()),
      &dt_slab,
      &vel_time_slab,
      xvelfab.dataPtr(),
