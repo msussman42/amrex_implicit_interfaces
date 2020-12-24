@@ -307,6 +307,12 @@ Vector<int> NavierStokes::particle_nsubdivide;
 Vector<int> NavierStokes::particle_max_per_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
 Vector<Real> NavierStokes::particles_weight; 
+
+Vector<Real> NavierStokes::particle_volume;
+Vector<Real> NavierStokes::particle_relaxation_time_to_fluid;
+Vector<Real> NavierStokes::fluid_relaxation_time_to_particle;
+Vector<int> NavierStokes::particle_interaction_ngrow;
+
 int NavierStokes::NS_ncomp_particles=0;
 
 Real NavierStokes::truncate_thickness=2.0;  
@@ -2672,6 +2678,12 @@ NavierStokes::read_params ()
     store_elastic_data.resize(nmat);
     particleLS_flag.resize(nmat);
     particles_weight.resize(nmat);
+
+    particle_volume.resize(nmat);
+    particle_relaxation_time_to_fluid.resize(nmat);
+    fluid_relaxation_time_to_particle.resize(nmat);
+    particle_interaction_ngrow.resize(nmat);
+
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
      lame_coefficient[im]=0.0;
@@ -2681,6 +2693,11 @@ NavierStokes::read_params ()
      store_elastic_data[im]=0;
      particleLS_flag[im]=0;
      particles_weight[im]=0.0;
+
+     particle_volume[im]=1.0;
+     particle_relaxation_time_to_fluid[im]=0.0;
+     fluid_relaxation_time_to_particle[im]=1.0e+20;
+     particle_interaction_ngrow[im]=1;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
     pp.queryarr("damping_coefficient",damping_coefficient,0,nmat);
@@ -2689,6 +2706,14 @@ NavierStokes::read_params ()
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
     pp.queryarr("particles_weight",particles_weight,0,nmat);
+
+    pp.queryarr("particle_volume",particle_volume,0,nmat);
+    pp.queryarr("particle_relaxation_time_to_fluid",
+       particle_relaxation_time_to_fluid,0,nmat);
+    pp.queryarr("fluid_relaxation_time_to_particle",
+       fluid_relaxation_time_to_particle,0,nmat);
+    pp.queryarr("particle_interaction_ngrow",
+       particle_interaction_ngrow,0,nmat);
 
     for (int im=0;im<nmat;im++) {
      if (elastic_viscosity[im]>0.0) {
@@ -4467,8 +4492,18 @@ NavierStokes::read_params ()
         particle_max_per_nsubdivide[i] << '\n';
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
+
       std::cout << "particles_weight i= " << i << ' ' <<
         particles_weight[i] << '\n';
+
+      std::cout << "particle_volume i= " << i << ' ' <<
+        particle_volume[i] << '\n';
+      std::cout << "particle_relaxation_time_to_fluid i= " << i << ' ' <<
+        particle_relaxation_time_to_fluid[i] << '\n';
+      std::cout << "fluid_relaxation_time_to_particle i= " << i << ' ' <<
+        fluid_relaxation_time_to_particle[i] << '\n';
+      std::cout << "particle_interaction_ngrow i= " << i << ' ' <<
+        particle_interaction_ngrow[i] << '\n';
 
       std::cout << "NS_ncomp_particles= " << NS_ncomp_particles << '\n';
 
