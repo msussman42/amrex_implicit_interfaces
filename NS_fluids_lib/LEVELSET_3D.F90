@@ -18924,6 +18924,8 @@ stop
 
 
       subroutine update_particle_link_data( &
+       nnbr, &
+       accum_PARM, &
        cell_particle_count, &
        particles, &
        particle_link_data, &
@@ -18931,10 +18933,13 @@ stop
 
       use global_utility_module
 
+      INTEGER_T, intent(in) :: nnbr
+
+      type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(inout), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
-      type(particle_t), intent(inout) :: particles(Np)
+      type(particle_t), intent(in) :: particles(Np)
        ! child link 1, parent link 1,
        ! child link 2, parent link 2, ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
@@ -18945,23 +18950,23 @@ stop
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
-      REAL_T LSpart,LSpart_trial
-      INTEGER_T :: local_ngrow
       INTEGER_T :: ok_to_add_link
       INTEGER_T :: previous_link
       INTEGER_T :: ibase
       INTEGER_T :: ibase_new
       INTEGER_T :: i_parent,j_parent,k_parent
-      type(interp_from_grid_parm_type) :: data_in 
-      type(interp_from_grid_out_parm_type) :: data_out
-      REAL_T, target, dimension(1) :: data_interp_local
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
 
-      local_ngrow=1
+      if (nnbr.ge.1) then
+       ! do nothing
+      else
+       print *,"nnbr invalid"
+       stop
+      endif
 
       do dir=1,SDIM
        dx_local(dir)=accum_PARM%dx(dir)
@@ -18969,25 +18974,6 @@ stop
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
-
-      data_out%data_interp=>data_interp_local
-      data_in%scomp=accum_PARM%im_PLS_cpp+1
-      data_in%ncomp=1
-      data_in%level=accum_PARM%level
-      data_in%finest_level=accum_PARM%finest_level
-      data_in%bfact=accum_PARM%bfact
-      data_in%nmat=num_materials
-      data_in%im_PLS=0 ! no weighting
-      data_in%ngrowfab=local_ngrow
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
-      data_in%state=>LS_local
-      data_in%LS=>LS_local
-
-      call checkbound(fablo_local,fabhi_local,DIMS(LS_local), &
-         local_ngrow,-1,2872)
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -19003,13 +18989,12 @@ stop
 
        interior_ok=1
        do dir=1,SDIM
-        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
-            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-nnbr).or. &
+            (cell_index(dir).gt.accum_PARM%tilehi(dir)+nnbr)) then
          interior_ok=0
         endif
        enddo
        if (interior_ok.eq.1) then
-        LSpart=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
         i=cell_index(1)
         j=cell_index(2)
@@ -19079,57 +19064,6 @@ stop
          stop
         endif
 
-        if (1.eq.0) then
-          ! this is least squares interpolation
-         call interpfab( &
-          accum_PARM%bfact, &
-          accum_PARM%level, &
-          accum_PARM%finest_level, &
-          accum_PARM%dx, &
-          accum_PARM%xlo, &
-          xpart, &
-          accum_PARM%im_PLS_cpp+1, &
-          local_ngrow, &
-          accum_PARM%fablo, &
-          accum_PARM%fabhi, &
-          accum_PARM%LS, &
-          DIMS(accum_PARM%LS), &
-          LSpart_trial)
-        else if (1.eq.1) then
-         data_in%xtarget=>xpart
-         data_in%interp_foot_flag=0
-          ! bilinear interpolation
-         call interp_from_grid_util(data_in,data_out)
-         LSpart_trial=data_out%data_interp(1)
-        else
-         print *,"must select a form of interpolation"
-         stop
-        endif
-
-        if (LSpart.eq.zero) then
-         LSpart_trial=zero
-        else if (LSpart.ne.zero) then
-         if (LSpart_trial*LSpart.le.zero) then
-          LSpart_trial=half*(LSpart_trial+LSpart)
-          if (LSpart_trial*LSpart.le.zero) then
-           LSpart_trial=half*LSpart
-          else if (LSpart_trial*LSpart.gt.zero) then
-           ! do nothing
-          else
-           print *,"LSpart_trial or LSpart invalid"
-           stop
-          endif
-         else if (LSpart_trial*LSpart.gt.zero) then
-          ! do nothing
-         else
-          print *,"LSpart_trial or LSpart invalid"
-          stop
-         endif
-         particles(interior_ID)%extra_state(SDIM+1)=LSpart_trial
-        else
-         print *,"LSpart invalid"
-         stop
-        endif
        else if (interior_ok.eq.0) then
         ! do nothing
        else
@@ -20563,6 +20497,10 @@ stop
       REAL_T, target :: problo_arr(3)
       REAL_T, target :: probhi_arr(3)
 
+      type(accum_parm_type_count) :: accum_PARM
+      INTEGER_T, pointer, &
+        dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
+
       INTEGER_T interior_ID
       INTEGER_T dir
       REAL_T xpart1(SDIM)
@@ -20573,6 +20511,10 @@ stop
       REAL_T u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
       type(grid_parm_type) grid_PARM
       INTEGER_T num_RK_stages
+
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T i,j,k
+      INTEGER_T local_count,current_link,current_count
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -20632,6 +20574,87 @@ stop
        print *,"single_particle_size invalid"
        stop
       endif
+
+      accum_PARM%append_flag=0
+
+      accum_PARM%fablo=>fablo 
+      accum_PARM%fabhi=>fabhi
+      accum_PARM%tilelo=>tilelo 
+      accum_PARM%tilehi=>tilehi
+      accum_PARM%bfact=bfact
+      accum_PARM%level=level
+      accum_PARM%finest_level=finest_level
+      accum_PARM%dx=>dx
+      accum_PARM%xlo=>xlo
+
+      accum_PARM%im_PLS_cpp=im_PLS_cpp
+      accum_PARM%nsubdivide=1
+
+      cell_particle_count_ptr=>cell_particle_count
+
+      call copy_dimdec( &
+        DIMS(accum_PARM%cell_particle_count), &
+        DIMS(cell_particle_count))
+      accum_PARM%cell_particle_count=>cell_particle_count
+
+      accum_PARM%particles=>particles_NBR
+      accum_PARM%Npart=Np_NBR
+
+      call update_particle_link_data( &
+         particle_interaction_ngrow, &
+         accum_PARM, &
+         cell_particle_count_ptr, &
+         particles_NBR, &  
+         particle_link_data, &
+         Np_NBR)
+
+       ! stub for calculating the interaction force
+      do interior_ID=1,Np
+       do dir=1,SDIM
+        xpart1(dir)=particles(interior_ID)%pos(dir)
+       enddo
+
+       call containing_cell(bfact, &
+         dx, &
+         xlo, &
+         fablo, &
+         xpart1, &
+         cell_index)
+
+       i=cell_index(1)
+       j=cell_index(2)
+       k=cell_index(SDIM)
+       local_count=cell_particle_count(D_DECL(i,j,k),1)
+       current_link=cell_particle_count(D_DECL(i,j,k),2)
+       current_count=1
+       do while ((current_link.ne.interior_ID).and. &
+                 (current_count.lt.local_count))
+        current_count=current_count+1
+        if ((current_link.ge.1).and. &
+            (current_link.le.Np)) then
+         current_link=particle_link_data((current_link-1)*(1+SDIM)+1)
+        else
+         print *,"current_link invalid"
+         stop
+        endif
+       enddo
+       if (current_link.eq.interior_ID) then
+        do dir=1,SDIM
+         xpart2(dir)=particles_NBR(interior_ID)%pos(dir)
+         if (abs(xpart1(dir)-xpart2(dir)).le.VOFTOL*dx(dir)) then
+          ! do nothing
+         else
+          print *,"particles_NBR and particles out of sync"
+          stop
+         endif
+        enddo ! dir=1..sdim
+       else
+        print *,"current_link.ne.interior_ID"
+        stop
+       endif
+
+      enddo ! interior_ID=1..Np, checking particles_NBR, stub for 
+            ! interaction force. 
 
       num_RK_stages=2
       
