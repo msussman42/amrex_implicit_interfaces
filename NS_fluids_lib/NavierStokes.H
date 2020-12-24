@@ -1526,6 +1526,10 @@ protected:
     static Vector<Real> particles_weight; //=0.0 particles have no effect  
     static Vector<int> particle_nsubdivide;  
     static Vector<int> particle_max_per_nsubdivide;  
+    static Vector<Real> particle_volume;
+    static Vector<Real> particle_relaxation_time_to_fluid;
+    static Vector<Real> fluid_relaxation_time_to_particle;
+    static Vector<int> particle_interaction_ngrow;
 
     static int NS_ncomp_particles;
 
