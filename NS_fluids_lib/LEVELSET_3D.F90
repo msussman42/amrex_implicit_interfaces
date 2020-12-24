@@ -18922,6 +18922,227 @@ stop
       return
       end subroutine count_particles
 
+
+      subroutine update_particle_link_data( &
+       cell_particle_count, &
+       particles, &
+       particle_link_data, &
+       Np)
+
+      use global_utility_module
+
+      INTEGER_T, intent(inout), pointer, &
+        dimension(D_DECL(:,:,:),:) :: cell_particle_count
+      INTEGER_T, intent(in) :: Np 
+      type(particle_t), intent(inout) :: particles(Np)
+       ! child link 1, parent link 1,
+       ! child link 2, parent link 2, ...
+      INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
+
+      INTEGER_T :: interior_ID
+      INTEGER_T :: dir
+      REAL_T, target :: xpart(SDIM)
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T interior_ok
+      INTEGER_T i,j,k
+      REAL_T LSpart,LSpart_trial
+      INTEGER_T :: local_ngrow
+      INTEGER_T :: ok_to_add_link
+      INTEGER_T :: previous_link
+      INTEGER_T :: ibase
+      INTEGER_T :: ibase_new
+      INTEGER_T :: i_parent,j_parent,k_parent
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out
+      REAL_T, target, dimension(1) :: data_interp_local
+
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
+
+      local_ngrow=1
+
+      do dir=1,SDIM
+       dx_local(dir)=accum_PARM%dx(dir)
+       xlo_local(dir)=accum_PARM%xlo(dir)
+       fablo_local(dir)=accum_PARM%fablo(dir)
+       fabhi_local(dir)=accum_PARM%fabhi(dir)
+      enddo
+
+      data_out%data_interp=>data_interp_local
+      data_in%scomp=accum_PARM%im_PLS_cpp+1
+      data_in%ncomp=1
+      data_in%level=accum_PARM%level
+      data_in%finest_level=accum_PARM%finest_level
+      data_in%bfact=accum_PARM%bfact
+      data_in%nmat=num_materials
+      data_in%im_PLS=0 ! no weighting
+      data_in%ngrowfab=local_ngrow
+      data_in%dx=>dx_local
+      data_in%xlo=>xlo_local
+      data_in%fablo=>fablo_local
+      data_in%fabhi=>fabhi_local
+      data_in%state=>LS_local
+      data_in%LS=>LS_local
+
+      call checkbound(fablo_local,fabhi_local,DIMS(LS_local), &
+         local_ngrow,-1,2872)
+
+      do interior_ID=1,accum_PARM%Npart
+
+       do dir=1,SDIM
+        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+       enddo
+       call containing_cell(accum_PARM%bfact, &
+         accum_PARM%dx, &
+         accum_PARM%xlo, &
+         accum_PARM%fablo, &
+         xpart, &
+         cell_index)
+
+       interior_ok=1
+       do dir=1,SDIM
+        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+         interior_ok=0
+        endif
+       enddo
+       if (interior_ok.eq.1) then
+        LSpart=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
+
+        i=cell_index(1)
+        j=cell_index(2)
+        k=cell_index(SDIM)
+
+        ok_to_add_link=1
+
+        previous_link=cell_particle_count(D_DECL(i,j,k),2)
+        if (previous_link.eq.0) then
+         ! do nothing; no particles attached to cell (i,j,k)
+        else if ((previous_link.ge.1).and. &
+                 (previous_link.le.Np)) then
+         ibase=(previous_link-1)*(SDIM+1)
+         i_parent=particle_link_data(ibase+2) 
+         j_parent=particle_link_data(ibase+3) 
+         k_parent=particle_link_data(ibase+1+SDIM) 
+         if ((i.eq.i_parent).and. &
+             (j.eq.j_parent)) then
+          ! do nothing
+         else
+          ok_to_add_link=0
+         endif
+         if (SDIM.eq.3) then
+          if (k.eq.k_parent) then
+           ! do nothing
+          else
+           ok_to_add_link=0
+          endif
+         endif
+        else
+         print *,"previous_link invalid"
+         stop
+        endif
+
+        if (ok_to_add_link.eq.1) then
+
+         if (previous_link.eq.interior_ID) then
+          print *,"links should be unique"
+          stop
+         endif
+
+         cell_particle_count(D_DECL(i,j,k),1)= &
+           cell_particle_count(D_DECL(i,j,k),1)+1
+
+         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
+
+         ibase_new=(interior_ID-1)*(SDIM+1)
+         particle_link_data(ibase_new+1)=previous_link
+         particle_link_data(ibase_new+2)=i 
+         particle_link_data(ibase_new+3)=j
+         if (SDIM.eq.3) then 
+          particle_link_data(ibase_new+SDIM+1)=k
+         endif
+
+        else if (ok_to_add_link.eq.0) then
+         print *,"ok_to_add_link==0"
+         print *,"the parent of a particle added to (i,j,k) should"
+         print *,"always be (i,j,k)"
+         print *,"i,j,k ",i,j,k
+         print *,"i_parent,j_parent,k_parent ", &
+           i_parent,j_parent,k_parent
+         print *,"previous_link,interior_ID ", &
+            previous_link,interior_ID 
+         stop
+        else
+         print *,"ok_to_add_link invalid"
+         stop
+        endif
+
+        if (1.eq.0) then
+          ! this is least squares interpolation
+         call interpfab( &
+          accum_PARM%bfact, &
+          accum_PARM%level, &
+          accum_PARM%finest_level, &
+          accum_PARM%dx, &
+          accum_PARM%xlo, &
+          xpart, &
+          accum_PARM%im_PLS_cpp+1, &
+          local_ngrow, &
+          accum_PARM%fablo, &
+          accum_PARM%fabhi, &
+          accum_PARM%LS, &
+          DIMS(accum_PARM%LS), &
+          LSpart_trial)
+        else if (1.eq.1) then
+         data_in%xtarget=>xpart
+         data_in%interp_foot_flag=0
+          ! bilinear interpolation
+         call interp_from_grid_util(data_in,data_out)
+         LSpart_trial=data_out%data_interp(1)
+        else
+         print *,"must select a form of interpolation"
+         stop
+        endif
+
+        if (LSpart.eq.zero) then
+         LSpart_trial=zero
+        else if (LSpart.ne.zero) then
+         if (LSpart_trial*LSpart.le.zero) then
+          LSpart_trial=half*(LSpart_trial+LSpart)
+          if (LSpart_trial*LSpart.le.zero) then
+           LSpart_trial=half*LSpart
+          else if (LSpart_trial*LSpart.gt.zero) then
+           ! do nothing
+          else
+           print *,"LSpart_trial or LSpart invalid"
+           stop
+          endif
+         else if (LSpart_trial*LSpart.gt.zero) then
+          ! do nothing
+         else
+          print *,"LSpart_trial or LSpart invalid"
+          stop
+         endif
+         particles(interior_ID)%extra_state(SDIM+1)=LSpart_trial
+        else
+         print *,"LSpart invalid"
+         stop
+        endif
+       else if (interior_ok.eq.0) then
+        ! do nothing
+       else
+        print *,"interior_ok invalid"
+        stop
+       endif
+
+      enddo ! do interior_ID=1,accum_PARM%Npart
+
+      return
+      end subroutine update_particle_link_data
+
+
       subroutine containing_sub_box( &
          accum_PARM, &
          xpart, &
@@ -19502,7 +19723,7 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
-      call checkbound(fablo,fabhi,DIMS(cell_particle_count),0,-1,2872)
+      call checkbound(tilelo,tilehi,DIMS(cell_particle_count),0,-1,2872)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
        ! do nothing
@@ -20402,6 +20623,15 @@ stop
       call checkbound(fablo,fabhi,DIMS(umac),2,0,2871)
       call checkbound(fablo,fabhi,DIMS(vmac),2,1,2871)
       call checkbound(fablo,fabhi,DIMS(wmac),2,SDIM-1,2871)
+      call checkbound(tilelo,tilehi,DIMS(cell_particle_count), &
+              particle_interaction_ngrow,-1,2872)
+
+      if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
+       ! do nothing
+      else
+       print *,"single_particle_size invalid"
+       stop
+      endif
 
       num_RK_stages=2
       
