@@ -20092,7 +20092,9 @@ stop
       end subroutine fort_init_particle_container
 
 
-      subroutine interp_mac_velocity(grid_PARM,xpart,vel_time_slab,u)
+      subroutine interp_mac_velocity(grid_PARM,xpart, &
+        vel_part,relaxation_time, &
+        vel_time_slab,u)
       use global_utility_module
       use probcommon_module
       use probf90_module
@@ -20101,6 +20103,8 @@ stop
 
       type(grid_parm_type), intent(in) :: grid_PARM
       REAL_T, intent(in) :: xpart(SDIM)
+      REAL_T, intent(in) :: vel_part(SDIM)
+      REAL_T, intent(in) :: relaxation_time
       REAL_T, intent(in) :: vel_time_slab
       REAL_T, intent(out) :: u(SDIM)
 
@@ -20130,6 +20134,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      REAL_T wt_lagrangian
 
       nhalf=3      
 
@@ -20286,6 +20291,25 @@ stop
 
        enddo ! dir=1..sdim
 
+       if (relaxation_time.eq.zero) then
+        wt_lagrangian=zero
+       else if (relaxation_time.gt.zero) then
+        wt_lagrangian=exp(-one/relaxation_time)
+       else
+        print *,"relaxation_time invalid"
+        stop
+       endif
+
+       if ((wt_lagrangian.ge.zero).and. &
+           (wt_lagrangian.le.one)) then
+        do dir=1,SDIM
+         u(dir)=wt_lagrangian*vel_part(dir)+ &
+           (one-wt_lagrangian)*u(dir)
+        enddo
+       else
+        print *,"wt_lagrangian invalid"
+        stop
+       endif 
       else
        print *,"LS_clamped invalid"
        stop
@@ -20508,6 +20532,7 @@ stop
       REAL_T xpart3(SDIM)
       REAL_T xpart4(SDIM)
       REAL_T xpart_last(SDIM)
+      REAL_T u_last(SDIM)
       REAL_T u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
       type(grid_parm_type) grid_PARM
       INTEGER_T num_RK_stages
@@ -20515,6 +20540,15 @@ stop
       INTEGER_T cell_index(SDIM)
       INTEGER_T i,j,k
       INTEGER_T local_count,current_link,current_count
+      REAL_T density_part
+      REAL_T mass_part
+      REAL_T local_relaxation_time
+      REAL_T vel_part(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      REAL_T wt_lagrangian
+      REAL_T temp_relaxation_time
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -20777,6 +20811,48 @@ stop
        do dir=1,SDIM
         particles(interior_ID)%pos(dir)=xpart_last(dir)
        enddo
+
+       call SUB_clamped_LS(xpart_last,vel_time_slab,LS_clamped, &
+              vel_clamped,temperature_clamped)
+
+       if (LS_clamped.ge.zero) then
+
+        do dir=1,SDIM
+         particles(interior_ID)%extra_state(SDIM+1+dir)=vel_clamped(dir)
+        enddo
+
+       else if (LS_clamped.lt.zero) then
+
+        if (local_relaxation_time.eq.zero) then
+         wt_lagrangian=zero
+        else if (local_relaxation_time.gt.zero) then
+         wt_lagrangian=exp(-one/local_relaxation_time)
+        else
+         print *,"local_relaxation_time invalid"
+         stop
+        endif
+
+        temp_relaxation_time=zero
+        call interp_mac_velocity(grid_PARM,xpart_last, &
+         vel_part,temp_relaxation_time, &
+         vel_time_slab,u_last)
+
+        if ((wt_lagrangian.ge.zero).and. &
+            (wt_lagrangian.le.one)) then
+         do dir=1,SDIM
+          particles(interior_ID)%extra_state(SDIM+1+dir)= &
+            wt_lagrangian*vel_part(dir)+ &
+            (one-wt_lagrangian)*u_last(dir)
+         enddo
+        else
+         print *,"wt_lagrangian invalid"
+         stop
+        endif 
+
+       else
+        print *,"LS_clamped invalid"
+        stop
+       endif
 
       enddo!traverse all particles
 

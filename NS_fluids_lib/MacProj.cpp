@@ -1519,7 +1519,7 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
  if (dcomp!=nsolveMM)
   amrex::Error("dcomp invalid"); 
 
- MultiFab* cmf;
+ MultiFab* cmf=nullptr;
 
  if (level>0) {
   NavierStokes& ns_coarse=getLevel(level-1);
