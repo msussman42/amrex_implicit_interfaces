@@ -20523,6 +20523,19 @@ stop
        stop
       endif
 
+      if (Np+Np_NBR_only.eq.Np_NBR) then
+       ! do nothing
+      else
+       print *,"Np+Np_NBR_only.ne.Np_NBR"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
       problo_arr(1)=problox
       problo_arr(2)=probloy
       problo_arr(3)=probloz
@@ -20659,11 +20672,51 @@ stop
       num_RK_stages=2
       
       do interior_ID=1,Np
+
+       mass_part=zero
+       local_relaxation_time=-one
+
+       density_part=particles(interior_ID)%extra_state(2*SDIM+2)
+       if (density_part.gt.zero) then
+        if (particle_volume.gt.zero) then
+         mass_part=density_part*particle_volume
+         do dir=1,SDIM
+          vel_part(dir)=particles(interior_ID)%extra_state(SDIM+1+dir)
+          if (abs(vel_part(dir))*dt.le.dx(dir)) then
+           ! do nothing
+          else
+           print *,"abs(vel_part(dir))*dt.gt.dx(dir)"
+           stop
+          endif
+         enddo ! dir=1..sdim
+         if (particle_relaxation_time_to_fluid.ge.zero) then
+          if (dt.gt.zero) then
+           local_relaxation_time=particle_relaxation_time_to_fluid* &
+             mass_part/dt
+          else
+           print *,"dt invalid"
+           stop
+          endif
+         else
+          print *,"particle_relaxation_time_to_fluid invalid"
+          stop
+         endif  
+        else
+         print *,"particle_volume invalid"
+         stop
+        endif
+       else
+        print *,"density_part invalid"
+        stop
+       endif
+
        !4th-RK
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)
        enddo
-       call interp_mac_velocity(grid_PARM,xpart1,vel_time_slab,u1)
+       call interp_mac_velocity(grid_PARM,xpart1, &
+        vel_part,local_relaxation_time, &
+        vel_time_slab,u1)
 
        if (num_RK_stages.eq.4) then
 
@@ -20672,7 +20725,9 @@ stop
         enddo
         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
-        call interp_mac_velocity(grid_PARM,xpart2,vel_time_slab,u2)
+        call interp_mac_velocity(grid_PARM,xpart2, &
+         vel_part,local_relaxation_time, &
+         vel_time_slab,u2)
 
         do dir=1,SDIM
          xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
@@ -20680,7 +20735,9 @@ stop
 
         call check_cfl_BC(grid_PARM,xpart1,xpart3)
 
-        call interp_mac_velocity(grid_PARM,xpart3,vel_time_slab,u3)
+        call interp_mac_velocity(grid_PARM,xpart3, &
+         vel_part,local_relaxation_time, &
+         vel_time_slab,u3)
 
         do dir=1,SDIM
          xpart4(dir)=xpart1(dir)+dt*u3(dir)
@@ -20688,7 +20745,9 @@ stop
 
         call check_cfl_BC(grid_PARM,xpart1,xpart4)
 
-        call interp_mac_velocity(grid_PARM,xpart4,vel_time_slab,u4)
+        call interp_mac_velocity(grid_PARM,xpart4, &
+         vel_part,local_relaxation_time, &
+         vel_time_slab,u4)
 
         do dir=1,SDIM
          xpart_last(dir)=xpart1(dir)+(1.0d0/6.d0)*dt &
@@ -20700,7 +20759,9 @@ stop
         enddo
         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
-        call interp_mac_velocity(grid_PARM,xpart2,vel_time_slab,u2)
+        call interp_mac_velocity(grid_PARM,xpart2, &
+         vel_part,local_relaxation_time, &
+         vel_time_slab,u2)
 
         do dir=1,SDIM
          xpart_last(dir)=xpart1(dir)+0.5d0*dt &

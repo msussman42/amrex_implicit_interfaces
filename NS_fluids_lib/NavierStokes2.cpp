@@ -7555,8 +7555,9 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
     // i_particle_link_1,i1,j1,k1,   (child link, parent link)
     // i_particle_link_2,i2,j2,k2,  ...
    particle_link_data.resize(Np_NBR*(1+AMREX_SPACEDIM));
-    for (int i_link=0;i_link<Np_NBR*(1+AMREX_SPACEDIM);i_link++)
-     particle_link_data[i_link]=0;
+
+   for (int i_link=0;i_link<Np_NBR*(1+AMREX_SPACEDIM);i_link++)
+    particle_link_data[i_link]=0;
 
    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
 
