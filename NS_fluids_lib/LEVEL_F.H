@@ -810,10 +810,15 @@ namespace amrex{
 	int* cell_particle_count,
 	AMREX_ARLIM_P(cell_particle_countlo),
 	AMREX_ARLIM_P(cell_particle_counthi),
+        Real* velfab,
+	AMREX_ARLIM_P(velfablo),
+	AMREX_ARLIM_P(velfabhi),
         Real* xdisplace,
 	AMREX_ARLIM_P(xdisplacelo),
 	AMREX_ARLIM_P(xdisplacehi),
-        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
+        Real* LS,
+	AMREX_ARLIM_P(LSlo),
+	AMREX_ARLIM_P(LShi));
 
 
      void fort_move_particle_container(
