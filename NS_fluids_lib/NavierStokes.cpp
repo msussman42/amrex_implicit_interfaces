@@ -20591,6 +20591,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
      // i_particle_link_1,i1,j1,k1,   (child link, parent link)
      // i_particle_link_2,i2,j2,k2,  ...
     particle_link_data.resize(Np*(1+AMREX_SPACEDIM));
+
     for (int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++)
      particle_link_data[i_link]=0;
 
