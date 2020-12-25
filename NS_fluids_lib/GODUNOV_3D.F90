@@ -30348,6 +30348,456 @@ stop
 
       contains
 
+      subroutine traverse_particlesVEL( &
+       accum_PARM, &
+       matrixfab, &
+       DIMS(matrixfab), &
+       LS, &
+       DIMS(LS), &
+       VEL_fab, &
+       DIMS(VEL_fab), &
+       ncomp_accumulate)
+
+      use probcommon_module
+      use global_utility_module
+
+      INTEGER_T, intent(in) :: ncomp_accumulate
+      type(accum_parm_type), intent(in) :: accum_PARM
+      INTEGER_T, intent(in) :: DIMDEC(LS) 
+      INTEGER_T, intent(in) :: DIMDEC(VEL_fab) 
+      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      REAL_T, target, intent(in) :: LS( &
+        DIMV(LS), &
+        num_materials*(1+SDIM))
+      REAL_T, target, intent(in) :: VEL_fab( &
+        DIMV(VEL_fab), &
+        num_materials_vel*SDIM)
+      REAL_T, intent(inout) :: matrixfab( &
+        DIMV(matrixfab), &
+        ncomp_accumulate)
+
+      INTEGER_T :: nhalf
+      REAL_T :: eps
+      INTEGER_T :: interior_ID
+      INTEGER_T :: dir
+      REAL_T, target :: xpart(SDIM)
+      REAL_T xpartfoot(SDIM)
+      REAL_T xdisp(SDIM)
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T interior_ok
+      INTEGER_T i,j,k
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T tmp,w_p
+      REAL_T xc(SDIM)
+      REAL_T local_dist
+      INTEGER_T npart_local
+
+      REAL_T, target :: cell_data_interp(SDIM)
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
+
+      type(interp_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+
+      do dir=1,SDIM
+       dx_local(dir)=accum_PARM%dx(dir)
+       xlo_local(dir)=accum_PARM%xlo(dir)
+       fablo_local(dir)=accum_PARM%fablo(dir)
+       fabhi_local(dir)=accum_PARM%fabhi(dir)
+      enddo
+
+      FIX ME
+      call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
+      call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),1,-1,1271)
+      call checkbound(fablo_local,fabhi_local,DIMS(VEL_fab),2,-1,1271)
+
+      data_out%data_interp=>cell_data_interp
+
+      data_in%level=accum_PARM%level
+      data_in%finest_level=accum_PARM%finest_level
+      data_in%bfact=accum_PARM%bfact
+      data_in%nmat=accum_PARM%nmat
+      data_in%im_PLS=accum_PARM%im_PLS
+      data_in%dx=>dx_local
+      data_in%xlo=>xlo_local
+      data_in%fablo=>fablo_local
+      data_in%fabhi=>fabhi_local
+      data_in%ngrowfab=2
+
+      data_in%state=>XDISP_fab
+      data_in%LS=>LS
+
+      data_in%ncomp=SDIM
+      data_in%scomp=1
+
+      nhalf=3
+
+      eps=accum_PARM%dx(1)/10.0d0
+      if (eps.gt.zero) then
+       ! do nothing
+      else
+       print *,"eps invalid"
+       stop
+      endif
+
+      if (accum_PARM%Npart.ge.0) then
+       npart_local=accum_PARM%Npart
+      else
+       print *,"accum_PARM%Npart invalid"
+       stop
+      endif
+
+      do interior_ID=1,npart_local
+
+       if (accum_PARM%Npart.ge.0) then
+        do dir=1,SDIM
+         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+         xpartfoot(dir)=accum_PARM%particles(interior_ID)%extra_state(dir)
+         xdisp(dir)=xpart(dir)-xpartfoot(dir)
+        enddo
+        local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
+
+        data_in%xtarget=>xpart
+        data_in%interp_foot_flag=0
+        call interp_from_grid_util(data_in,data_out)
+
+        call containing_cell(accum_PARM%bfact, &
+          accum_PARM%dx, &
+          accum_PARM%xlo, &
+          accum_PARM%fablo, &
+          xpart, &
+          cell_index)
+
+        interior_ok=1
+        do dir=1,SDIM
+         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+             (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+          interior_ok=0
+         endif
+        enddo
+
+        if (interior_ok.eq.1) then
+         i=cell_index(1)
+         j=cell_index(2)
+         k=cell_index(SDIM)
+         call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+         tmp=0.0d0
+         do dir=1,SDIM
+          xc(dir)=xsten(0,dir)
+          tmp=tmp+(xpart(dir)-xc(dir))**2
+         enddo
+         tmp=sqrt(tmp)
+         w_p=(1.0d0/(eps+tmp))
+         if (local_dist.lt.zero) then
+          w_p=w_p/1.0D+3
+         else if (local_dist.ge.zero) then
+          ! do nothing
+         else
+          print *,"local_dist invalid"
+          stop
+         endif
+
+         if (w_p.gt.zero) then
+          matrixfab(D_DECL(i,j,k),1)= &
+           matrixfab(D_DECL(i,j,k),1)+w_p
+          do dir=1,SDIM
+           matrixfab(D_DECL(i,j,k),1+dir)= &
+            matrixfab(D_DECL(i,j,k),1+dir)+ &
+            w_p*(data_out%data_interp(dir)-xdisp(dir))
+          enddo
+         else
+          print *,"w_p invalid"
+          stop
+         endif
+        else if (interior_ok.eq.0) then
+         ! do nothing
+        else
+         print *,"interior_ok invalid"
+         stop
+        endif
+
+       else
+        print *,"accum_PARM%Npart invalid"
+        stop
+       endif
+
+      enddo ! do interior_ID=1,accum_PARM%Npart
+
+      return
+      end subroutine traverse_particles
+
+       ! called from NavierStokes.cpp:
+       !  NavierStokes::accumulate_PC_info(int im_elastic)
+       ! 1. isweep==0: gets displacement data from particle data 
+       !    and Eulerian data.
+       ! 2. isweep==1: calculates the elastic stress tensor from 
+       !    u=X(t,x0)-x0
+      subroutine fort_assimilate_tensor_from_particles( &
+        particles_weight, &
+        im_PLS_cpp, & ! 0..nmat-1
+        isweep, &
+        tid, &  ! thread id
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        particles, &      ! a list of particles in the elastic structure
+        nbr_particles, &  ! a list of nbr particles in the elastic structure
+        Np,Nn, & ! pass by value Np = number of particles, Nn=number nbr part.
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
+        RHS_points, &    ! least squares in 3D: 4
+        ncomp_accumulate, & ! matrix_points+sdim * RHS_points
+        nmat, &
+        LS, &
+        DIMS(LS), &
+        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
+        DIMS(TNEWfab), &
+        XDNEWfab, &       
+        DIMS(XDNEWfab), &
+        XDISP_fab, &      
+        DIMS(XDISP_fab), &
+        matrixfab, &     ! accumulation FAB
+        DIMS(matrixfab)) &
+      bind(c,name='fort_assimilate_tensor_from_particles')
+
+      use global_utility_module
+      use probcommon_module
+      use godunov_module
+      implicit none
+
+      INTEGER_T, intent(in) :: im_PLS_cpp
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: particles_weight(nmat)
+      INTEGER_T, intent(in) :: ncomp_tensor
+      INTEGER_T, intent(in) :: matrix_points
+      INTEGER_T, intent(in) :: RHS_points
+      INTEGER_T, intent(in) :: ncomp_accumulate
+      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(LS) 
+      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
+      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(XDNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
+      REAL_T, intent(inout) :: matrixfab( &
+        DIMV(matrixfab), &
+        ncomp_accumulate)
+      REAL_T, intent(in) :: LS( &  
+        DIMV(LS), &
+        nmat*(1+SDIM))
+      REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
+        DIMV(TNEWfab), &
+        ncomp_tensor)
+      REAL_T, intent(inout) :: XDNEWfab( &  
+        DIMV(XDNEWfab), &
+        SDIM)
+      REAL_T, intent(in) :: XDISP_fab( &
+        DIMV(XDISP_fab), &
+        SDIM)
+      type(particle_t), intent(in), target :: particles(Np)
+      type(particle_t), intent(in), target :: nbr_particles(Nn)
+
+      type(accum_parm_type) :: accum_PARM
+
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
+      INTEGER_T i,j,k
+      INTEGER_T dir
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      REAL_T A_matrix,B_matrix
+      REAL_T lambda
+      REAL_T XDISP_local
+      INTEGER_T LS_or_VOF_flag
+      INTEGER_T im_elastic
+      REAL_T local_wt
+
+      nhalf=3
+
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+
+      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
+       ! do nothing
+      else
+       print *,"im_PLS_cpp invalid"
+       stop
+      endif
+
+       ! 6 in 3D, 4 in 2D
+      if (ncomp_tensor.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ncomp_tensor invalid"
+       stop
+      endif
+      if (matrix_points.eq.1) then
+       ! do nothing
+      else
+       print *,"matrix_points invalid"
+       stop
+      endif
+      if (RHS_points.eq.1) then
+       ! do nothing
+      else
+       print *,"RHS_points invalid"
+       stop
+      endif
+      if (ncomp_accumulate.eq.matrix_points+SDIM*RHS_points) then
+       ! do nothing
+      else
+       print *,"ncomp_accumulate invalid"
+       stop
+      endif
+
+      call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
+
+      accum_PARM%fablo=>fablo 
+      accum_PARM%fabhi=>fabhi
+      accum_PARM%tilelo=>tilelo 
+      accum_PARM%tilehi=>tilehi
+      accum_PARM%bfact=bfact
+      accum_PARM%level=level
+      accum_PARM%finest_level=finest_level
+      accum_PARM%matrix_points=matrix_points
+      accum_PARM%RHS_points=RHS_points
+      accum_PARM%ncomp_accumulate=ncomp_accumulate
+      accum_PARM%dx=>dx
+      accum_PARM%xlo=>xlo
+      accum_PARM%nmat=nmat
+      accum_PARM%im_PLS=im_PLS_cpp+1
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      if (isweep.eq.0) then
+
+       accum_PARM%particles=>particles
+       accum_PARM%Npart=Np
+
+       call traverse_particles( &
+         accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
+         XDISP_fab, &
+         DIMS(XDISP_fab), &
+         ncomp_accumulate)
+
+       accum_PARM%particles=>nbr_particles
+       accum_PARM%Npart=Nn
+
+       call traverse_particles( &
+         accum_PARM, &
+         matrixfab, &
+         DIMS(matrixfab), &
+         LS, &
+         DIMS(LS), &
+         XDISP_fab, &
+         DIMS(XDISP_fab), &
+         ncomp_accumulate)
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
+        do dir=1,SDIM
+         B_matrix=matrixfab(D_DECL(i,j,k),1+dir) ! sum w*(X_cell(xp)-X_cell_p)
+         XDISP_local=XDISP_fab(D_DECL(i,j,k),dir)
+         if (A_matrix.eq.zero) then
+          XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local
+         else if (A_matrix.gt.zero) then
+           ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
+          lambda=B_matrix/A_matrix
+          local_wt=particles_weight(im_PLS_cpp+1)
+          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+           XDNEWFAB(D_DECL(i,j,k),dir)= &
+            XDISP_local-local_wt*lambda
+          else
+           print *,"local_wt invalid"
+           stop
+          endif
+         else
+          print *,"A_matrix invalid"
+          stop
+         endif
+        enddo ! dir=1..SDIM
+       enddo
+       enddo
+       enddo
+
+      else if (isweep.eq.1) then
+
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
+! in RZ:  T33 gets u/r=x_displace/r
+! in RTZ: T12=u_t/r - v/r
+!         T22=v_t/r + u/r
+! later:
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
+
+
+       LS_or_VOF_flag=0 ! =0 => use LS for upwinding near interfaces
+       im_elastic=im_PLS_cpp+1
+       call local_tensor_from_xdisplace( &
+        LS_or_VOF_flag, &
+        im_elastic, &
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        nmat, &
+        LS, &
+        DIMS(LS), &
+        LS, &  ! VOF placeholder
+        DIMS(LS), & ! VOF placeholder
+        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
+        DIMS(TNEWfab), &
+        XDISP_fab, &      
+        DIMS(XDISP_fab)) 
+
+      else 
+       print *,"isweep invalid"
+       stop
+      endif
+
+      end subroutine fort_assimilate_tensor_from_particles
+
+
+
+
+
+
+
       subroutine traverse_particles( &
        accum_PARM, &
        matrixfab, &
@@ -30729,11 +31179,12 @@ stop
          if (A_matrix.eq.zero) then
           XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local
          else if (A_matrix.gt.zero) then
+           ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
           lambda=B_matrix/A_matrix
           local_wt=particles_weight(im_PLS_cpp+1)
           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
            XDNEWFAB(D_DECL(i,j,k),dir)= &
-            (one-local_wt)*XDISP_local+local_wt*(XDISP_local-lambda)
+            XDISP_local-local_wt*lambda
           else
            print *,"local_wt invalid"
            stop
