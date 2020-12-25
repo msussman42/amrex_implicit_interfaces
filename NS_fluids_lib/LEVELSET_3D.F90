@@ -18526,9 +18526,10 @@ stop
         else if (A_matrix.gt.zero) then
          local_wt=particles_weight(im_PLS_cpp+1)
          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+           ! lambda=sum (interp(LS)-LS_p)w_p/sum w_p
           lambda=B_matrix/A_matrix
-          lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=(one-local_wt)*LS_local+ &
-            local_wt*(LS_local-lambda)
+          lsnew(D_DECL(i,j,k),im_PLS_cpp+1)= &
+            LS_local-local_wt*lambda
          else
           print *,"local_wt invalid"
           stop
