@@ -19272,8 +19272,11 @@ stop
       REAL_T, intent(out) :: x_foot_interp(SDIM)
       REAL_T, intent(out) :: vel_interp(SDIM)
       REAL_T :: x_foot_interp_local(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(velfab)
       INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      REAL_T, intent(in), target ::  &
+        velfab(DIMV(velfab),SDIM) 
       REAL_T, intent(in), target ::  &
         xdisplacefab(DIMV(xdisplacefab),SDIM) 
       REAL_T, intent(in), target ::  &
@@ -19283,10 +19286,12 @@ stop
       INTEGER_T :: dir
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T A_LS,b_LS
-      REAL_T A_X,b_X(SDIM)
+      REAL_T A_X,b_X(SDIM),b_VEL(SDIM)
       INTEGER_T :: current_link
       REAL_T, target :: xpart(SDIM)
       REAL_T :: xfoot(SDIM)
+      REAL_T :: velpart(SDIM)
+      REAL_T :: vel_interp_local(SDIM)
       REAL_T :: LS
       INTEGER_T :: ibase
 
@@ -19313,6 +19318,13 @@ stop
        stop
       endif
 
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else
+       print *,"num_materials_vel invalid"
+       stop
+      endif
+
       eps=dx_local(1)/10.0d0
 
       nhalf=3
@@ -19324,6 +19336,8 @@ stop
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
+
+      call checkbound(fablo_local,fabhi_local,DIMS(velfab),1,-1,2872)
       call checkbound(fablo_local,fabhi_local,DIMS(xdisplacefab),1,-1,2872)
       call checkbound(fablo_local,fabhi_local,DIMS(lsfab),1,-1,2872)
 
@@ -19352,6 +19366,7 @@ stop
       b_LS=zero
       do dir=1,SDIM
        b_X(dir)=zero
+       b_VEL(dir)=zero
       enddo
 
       test_cell_particle_count= &
@@ -19365,6 +19380,8 @@ stop
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
         xfoot(dir)=accum_PARM%particles(current_link)%extra_state(dir)
+        velpart(dir)= &
+            accum_PARM%particles(current_link)%extra_state(SDIM+1+dir)
        enddo 
        LS=accum_PARM%particles(current_link)%extra_state(SDIM+1)
 
@@ -19380,6 +19397,8 @@ stop
         do dir=1,SDIM
          x_foot_interp_local(dir)=xpart(dir)
         enddo
+        print *,"there should not be any particles if append_flag==0"
+        stop
        else if (accum_PARM%append_flag.eq.1) then
         ! bilinear interpolation
         call interp_from_grid_util(data_in,data_out)
@@ -19421,7 +19440,9 @@ stop
        data_in%state=>lsfab  
        data_in%LS=>lsfab  
 
-       FIX ME
+        ! if im_PLS==0 then bilinear weights are not modified
+        ! if 1<=im_PLS<=nmat, then bilinear weights are multiplied by
+        ! 1D-3 if LS<0.
        call interp_from_grid_util(data_in,data_out)
        do dir=1,num_materials*(1+SDIM)
         local_LS_interp(dir)=data_out%data_interp(dir)
@@ -19429,6 +19450,33 @@ stop
 
        A_LS=A_LS+w_p
        b_LS=b_LS+w_p*(local_LS_interp(accum_PARM%im_PLS_cpp+1)-LS)
+
+       data_in%xtarget=>xpart
+       data_in%interp_foot_flag=0
+       data_in%scomp=1
+       data_in%ncomp=SDIM
+       data_in%im_PLS=accum_PARM%im_PLS_cpp+1
+       data_in%state=>velfab  
+       data_in%LS=>lsfab  
+
+        ! bilinear interpolation
+       call interp_from_grid_util(data_in,data_out)
+       do dir=1,SDIM
+        vel_interp_local(dir)=data_out%data_interp(dir)
+       enddo
+
+       if (accum_PARM%append_flag.eq.0) then
+        print *,"there should not be any particles if append_flag==0"
+        stop
+       else if (accum_PARM%append_flag.eq.1) then
+        ! do nothing
+       else 
+        print *,"accum_PARM%append_flag invalid" 
+        stop
+       endif
+       do dir=1,SDIM
+        b_VEL(dir)=b_VEL(dir)+w_p*wt_LS*(vel_interp_local(dir)-velpart(dir))
+       enddo
 
        ibase=(current_link-1)*(1+SDIM)
        current_link=particle_link_data(ibase+1)
@@ -19461,6 +19509,12 @@ stop
        do dir=1,SDIM
         x_foot_interp(dir)=xtarget(dir)
        enddo
+       if (A_X.eq.zero) then
+        ! do nothing
+       else
+        print *,"expecting A_X=0.0 if append_flag==0"
+        stop
+       endif
       else if (accum_PARM%append_flag.eq.1) then
        ! bilinear interpolation
        call interp_from_grid_util(data_in,data_out)
@@ -19525,6 +19579,53 @@ stop
        print *,"A_LS invalid"
        stop
       endif
+
+      data_in%xtarget=>xtarget
+      data_in%interp_foot_flag=0
+      data_in%scomp=1
+      data_in%ncomp=SDIM
+      data_in%im_PLS=accum_PARM%im_PLS_cpp+1
+      data_in%state=>velfab  
+      data_in%LS=>lsfab  
+
+       ! bilinear interpolation
+      call interp_from_grid_util(data_in,data_out)
+      do dir=1,SDIM
+       vel_interp(dir)=data_out%data_interp(dir)
+      enddo
+
+      if (accum_PARM%append_flag.eq.0) then
+       if (A_X.eq.zero) then
+        ! do nothing
+       else
+        print *,"expecting A_X==0 if append_flag==0"
+        stop
+       endif
+      else if (accum_PARM%append_flag.eq.1) then
+
+       if (A_X.gt.zero) then
+        local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
+        if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+         do dir=1,SDIM
+          vel_interp(dir)=(one-local_wt)*vel_interp(dir)+ &
+            local_wt*(vel_interp(dir)-b_VEL(dir)/A_X)
+         enddo
+        else
+         print *,"local_wt invalid"
+         stop
+        endif
+       else if (A_X.eq.zero) then
+        ! do nothing
+       else
+        print *,"A_X invalid"
+        stop
+       endif
+
+      else 
+       print *,"accum_PARM%append_flag invalid" 
+       stop
+      endif
+
 
       end subroutine interp_eul_lag_dist
 
