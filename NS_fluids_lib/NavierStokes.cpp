@@ -20479,6 +20479,11 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
 
+ if (num_materials_vel==1) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_vel invalid");
+
  if (slab_step==ns_time_order-1) {
   // do nothing
  } else
@@ -20532,6 +20537,9 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
    if (LSmf->nGrow()!=1)
     amrex::Error("LSmf->nGrow()!=1");
 
+   MultiFab* init_velocity_mf=getState(1,0,
+     num_materials_vel*(AMREX_SPACEDIM+1),cur_time_slab);
+
     // All the particles should live on level==0.
     // particle levelset==0.0 for interface particles.
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
@@ -20566,6 +20574,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& lsfab=(*LSmf)[mfi];
+    FArrayBox& velfab=(*init_velocity_mf)[mfi];
     FArrayBox& xdisplacefab=(*x_displace_mf)[mfi];
 
      // component 1: number of particles linked to the cell.
@@ -20645,8 +20654,12 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),
        ARLIM(cell_particle_count.hiVect()),
+       velfab.dataPtr(),
+       ARLIM(velfab.loVect()),
+       ARLIM(velfab.hiVect()),
        xdisplacefab.dataPtr(),
-       ARLIM(xdisplacefab.loVect()),ARLIM(xdisplacefab.hiVect()),
+       ARLIM(xdisplacefab.loVect()),
+       ARLIM(xdisplacefab.hiVect()),
        lsfab.dataPtr(),
        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
 
@@ -20728,6 +20741,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
 } // omp
    ns_reconcile_d_num(81);
 
+   delete init_velocity_mf;
    delete x_displace_mf;
    delete LSmf;
 

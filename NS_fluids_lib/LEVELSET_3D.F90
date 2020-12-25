@@ -19240,6 +19240,8 @@ stop
       subroutine interp_eul_lag_dist( &
          nmat, &
          particles_weight, &
+         velfab, &
+         DIMS(velfab), &
          lsfab, &
          DIMS(lsfab), &
          xdisplacefab, &
@@ -19251,7 +19253,8 @@ stop
          Np, &
          dist_interp, &
          grad_dist_interp, &
-         x_foot_interp)  ! x_foot_interp=xtarget if append_flag==0
+         x_foot_interp, &  ! x_foot_interp=xtarget if append_flag==0
+         vel_interp)
       use probcommon_module
       use global_utility_module
 
@@ -19267,6 +19270,7 @@ stop
       REAL_T, intent(out) :: dist_interp
       REAL_T, intent(out) :: grad_dist_interp(SDIM)
       REAL_T, intent(out) :: x_foot_interp(SDIM)
+      REAL_T, intent(out) :: vel_interp(SDIM)
       REAL_T :: x_foot_interp_local(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
@@ -19417,6 +19421,7 @@ stop
        data_in%state=>lsfab  
        data_in%LS=>lsfab  
 
+       FIX ME
        call interp_from_grid_util(data_in,data_out)
        do dir=1,num_materials*(1+SDIM)
         local_LS_interp(dir)=data_out%data_interp(dir)
@@ -19551,6 +19556,7 @@ stop
         particle_delete_flag, & ! 1=> delete
         cell_particle_count, &
         DIMS(cell_particle_count), &
+        velfab,DIMS(velfab), &
         xdisplacefab,DIMS(xdisplacefab), &
         lsfab,DIMS(lsfab)) &
       bind(c,name='fort_init_particle_container')
@@ -19593,6 +19599,7 @@ stop
       INTEGER_T, intent(inout) :: particle_delete_flag(Np) ! 1=>delete
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
+      INTEGER_T, intent(in) :: DIMDEC(velfab)
       INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
    
@@ -19602,6 +19609,8 @@ stop
               DIMV(cell_particle_count), &
               2) 
       REAL_T, intent(in), target :: xdisplacefab(DIMV(xdisplacefab),SDIM) 
+      REAL_T, intent(in), target :: velfab(DIMV(velfab), &
+              num_materials_vel*(SDIM+1)) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
       type(accum_parm_type_count) :: accum_PARM
@@ -19632,6 +19641,7 @@ stop
       REAL_T :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
       REAL_T :: xsub_I(SDIM)
+      REAL_T :: vel_sub(SDIM)
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
       REAL_T, allocatable, dimension(:) :: sort_data_time
@@ -19655,6 +19665,7 @@ stop
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(velfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
       call checkbound(tilelo,tilehi,DIMS(cell_particle_count),0,-1,2872)
@@ -19914,7 +19925,7 @@ stop
            stop
           endif 
 
-         else if (local_count.eq.0) then
+         else if (local_count.eq.0) then ! no particles in the subbox.
 
           call sub_box_cell_center( &
             accum_PARM, &
@@ -19926,6 +19937,8 @@ stop
           call interp_eul_lag_dist( &
             nmat, &
             particles_weight, &
+            velfab, &
+            DIMS(velfab), &
             lsfab, &
             DIMS(lsfab), &
             xdisplacefab, &
@@ -19937,7 +19950,8 @@ stop
             Np, &
             dist_sub, &
             grad_dist_sub, & ! this output is used to find closest point.
-            x_foot_sub)  ! x_foot_sub=xsub if append_flag==0
+            x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
+            vel_sub)
 
           if (dist_sub.ge.zero) then  ! only add particles in the material
 
@@ -19950,7 +19964,7 @@ stop
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub(dir)
              new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
-             new_particles(ibase+2*SDIM+1+dir)=zero  ! stub for velocity
+             new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
             enddo
             new_particles(ibase+2*SDIM+1)=dist_sub
             new_particles(ibase+3*SDIM+2)=one  ! stub for density
@@ -19985,6 +19999,8 @@ stop
             call interp_eul_lag_dist( &
              nmat, &
              particles_weight, &
+             velfab, &
+             DIMS(velfab), &
              lsfab, &
              DIMS(lsfab), &
              xdisplacefab, &
@@ -19996,7 +20012,8 @@ stop
              Np, &
              dist_sub, &
              grad_dist_sub, &  ! this output is discarded.
-             x_foot_sub)  ! x_foot_sub=xsub if append_flag==0
+             x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
+             vel_sub)
 
             if (mod_flag.eq.0) then !xCP did not have to be projected.
              dist_sub_I=zero
@@ -20017,7 +20034,7 @@ stop
               do dir=1,SDIM
                new_particles(ibase+dir)=xsub_I(dir)
                new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
-               new_particles(ibase+2*SDIM+1+dir)=zero  ! stub for velocity
+               new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
               enddo
               new_particles(ibase+3*SDIM+2)=one  ! stub for density
               new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
