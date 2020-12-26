@@ -20348,13 +20348,13 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
-   localPC(ns_geom,ns_dmap,ns_ba,
+   localPC_nbr(ns_geom,ns_dmap,ns_ba,
    refinement_ratio,nnbr);
   // the two PC have same hierarchy, no need to call Redistribute after the
   // copy.
-  localPC.copyParticles(localPC_no_nbr,local_copy_flag);
+  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
 
-  localPC.fillNeighbors();
+  localPC_nbr.fillNeighbors();
 
   for (int isweep=0;isweep<=1;isweep++) {
 
@@ -20389,16 +20389,19 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // particles is of type:
     //  amrex::ParticleTile<SDIM,0,0,0>
     //
-
-    auto& particles = localPC.GetParticles(level)
+    auto& particles_no_nbr = localPC_no_nbr.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-    auto& particles_AoS = particles.GetArrayOfStructs();
+    auto& particles_AoS_no_nbr = particles_no_nbr.GetArrayOfStructs();
+    int Np_no_nbr=particles_AoS_no_nbr.size();
 
-    int Np=particles_AoS.size();
+    auto& particles_nbr = localPC_nbr.GetParticles(level)
+     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+    auto& particles_AoS_nbr = particles_nbr.GetArrayOfStructs();
+    int Np_nbr=particles_AoS_nbr.size();
 
      // ParticleVector&
     auto& neighbors_local = 
-	localPC.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+	localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
     int Nn=neighbors_local.size();
 
     FArrayBox& matrixfab=(*accumulate_mf)[mfi];
@@ -20425,10 +20428,12 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      &level,
      &finest_level,
      xlo,dx,
-     particles_AoS.data(),
+     particles_AoS_no_nbr.data(),
+     particles_AoS_nbr.data(),
      neighbors_local.data(),
-     Np,       //pass by value
-     Nn,       //pass by value
+     Np_no_nbr,  //pass by value
+     Np_nbr,     //pass by value
+     Nn,         //pass by value
      &ncomp_tensor,
      &matrix_points,
      &RHS_points,
@@ -20451,7 +20456,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    delete_localMF(VISCOTEN_MF,1);
   } // isweep=0,1
 
-  localPC.clearNeighbors();
+  localPC_nbr.clearNeighbors();
 
  } else {
 
@@ -20539,11 +20544,6 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
 
  bool local_copy_flag=true; 
 
- if (localMF_grow[VISCOTEN_MF]==-1) {
-  // do nothing
- } else 
-  amrex::Error("VISCOTEN_MF should not be allocated");
-
   // All the particles should live on level==0.
   // particle levelset==0.0 for interface particles.
 
@@ -20551,13 +20551,13 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
  NeighborParticleContainer<N_EXTRA_REAL,0> 
-   localPC(ns_geom,ns_dmap,ns_ba,
+   localPC_nbr(ns_geom,ns_dmap,ns_ba,
    refinement_ratio,nnbr);
   // the two PC have same hierarchy, no need to call Redistribute after the
   // copy.
- localPC.copyParticles(localPC_no_nbr,local_copy_flag);
+ localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
 
- localPC.fillNeighbors();
+ localPC_nbr.fillNeighbors();
 
   // 2 ghost cells in order to interpolate the velocity
   // to the particle positions.   1 ghost cell layer of 
@@ -20594,38 +20594,42 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
   //  amrex::ParticleTile<SDIM,0,0,0>
   //
 
-  auto& particles = localPC.GetParticles(level)
-   [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-  auto& particles_AoS = particles.GetArrayOfStructs();
+  auto& particles_no_nbr = localPC_no_nbr.GetParticles(level)
+    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& particles_AoS_no_nbr = particles_no_nbr.GetArrayOfStructs();
+  int Np_no_nbr=particles_AoS_no_nbr.size();
 
-  int Np=particles_AoS.size();
+  auto& particles_nbr = localPC_nbr.GetParticles(level)
+    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& particles_AoS_nbr = particles_nbr.GetArrayOfStructs();
+  int Np_nbr=particles_AoS_nbr.size();
 
    // ParticleVector&
   auto& neighbors_local = 
-    localPC.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-    int Nn=neighbors_local.size();
+    localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+  int Nn=neighbors_local.size();
 
   Box tilebox_grow=grow(tilegrid,nnbr);
   FArrayBox matrixfab(tilebox_grow,ncomp_accumulate);
   matrixfab.setVal(0.0);
 
+  FArrayBox& SNEWfab=State_new[mfi];
+  FArrayBox& UMAC_NEWfab=Umac_new[mfi];
+  FArrayBox& VMAC_NEWfab=Vmac_new[mfi];
+  FArrayBox& WMAC_NEWfab=Wmac_new[mfi];
 
-  FArrayBox& TNEWfab=Tensor_new[mfi];
-  FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+  FArrayBox& vel_fab=(*velocity_mf)[mfi];
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
  
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
-    // updates (1) configuration tensor and
-    // (2) XDISPLACE data.
-    fort_assimilate_tensor_from_particles( 
-     particles_weight.dataPtr(),
-     &im_elastic, // 0..nmat-1
-     &isweep,
+  // in: GODUNOV_3D.F90
+  fort_assimilate_VEL_from_particles( 
+     &fluid_relaxation_time_to_particle[im_particle_couple],
+     &im_particle_couple, // 0..nmat-1
      &tid_current,
      tilelo,tilehi,
      fablo,fabhi,
@@ -20633,23 +20637,28 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
      &level,
      &finest_level,
      xlo,dx,
-     particles_AoS.data(),
+     particles_AoS_no_nbr.data(),
+     particles_AoS_nbr.data(),
      neighbors_local.data(),
-     Np,       //pass by value
-     Nn,       //pass by value
-     &ncomp_tensor,
+     Np_no_nbr,  //pass by value
+     Np_nbr,     //pass by value
+     Nn,         //pass by value
      &matrix_points,
      &RHS_points,
      &ncomp_accumulate,
      &nmat,
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     TNEWfab.dataPtr(scomp_tensor),
-     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     TNEWfab.dataPtr(scomp_xdisplace),
-     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     XDISP_fab.dataPtr(),
-     ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
+     SNEWfab.dataPtr(),
+     ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()),
+     UMAC_NEWfab.dataPtr(),
+     ARLIM(UMAC_NEWfab.loVect()),ARLIM(UMAC_NEWfab.hiVect()),
+     VMAC_NEWfab.dataPtr(),
+     ARLIM(VMAC_NEWfab.loVect()),ARLIM(VMAC_NEWfab.hiVect()),
+     WMAC_NEWfab.dataPtr(),
+     ARLIM(WMAC_NEWfab.loVect()),ARLIM(WMAC_NEWfab.hiVect()),
+     vel_fab.dataPtr(),
+     ARLIM(vel_fab.loVect()),ARLIM(vel_fab.hiVect()),
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
    } // mfi
@@ -20658,10 +20667,8 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
 
   delete velocity_mf;
 
-  localPC.clearNeighbors();
+  localPC_nbr.clearNeighbors();
 
-
- delete accumulate_mf;
 
 } // end subroutine assimilate_vel_from_particles
 

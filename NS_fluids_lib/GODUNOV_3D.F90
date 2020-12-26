@@ -30542,15 +30542,10 @@ stop
       end subroutine traverse_particlesVEL
 
        ! called from NavierStokes.cpp:
-       !  NavierStokes::accumulate_PC_info(int im_elastic)
-       ! 1. isweep==0: gets displacement data from particle data 
-       !    and Eulerian data.
-       ! 2. isweep==1: calculates the elastic stress tensor from 
-       !    u=X(t,x0)-x0
+       ! NavierStokes::assimilate_vel_from_particles(int im_particle_couple)
       subroutine fort_assimilate_VEL_from_particles( &
-        particles_weight, &
+        fluid_relaxation_time_to_particle, &
         im_PLS_cpp, & ! 0..nmat-1
-        isweep, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
@@ -30558,25 +30553,31 @@ stop
         level, &          ! 0<=level<=finest_level
         finest_level, &
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        particles, &      ! a list of particles in the elastic structure
-        nbr_particles, &  ! a list of nbr particles in the elastic structure
-        Np,Nn, & ! pass by value Np = number of particles, Nn=number nbr part.
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
-        RHS_points, &    ! least squares in 3D: 4
+        particles_no_nbr, & 
+        particles_nbr, & 
+        particles_only_nbr, & 
+        Np_no_nbr, & ! pass by value
+        Np_nbr, & ! pass by value
+        Nn, & ! pass by value
+        matrix_points, & 
+        RHS_points, &    
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
         nmat, &
         LS, &
         DIMS(LS), &
-        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
-        XDNEWfab, &       
-        DIMS(XDNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab), &
+        SNEWfab, &  
+        DIMS(SNEWfab), &
+        UMACNEW, &  
+        DIMS(UMACNEW), &
+        VMACNEW, &  
+        DIMS(VMACNEW), &
+        WMACNEW, &  
+        DIMS(WMACNEW), &
+        vel_fab, &      
+        DIMS(vel_fab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
-      bind(c,name='fort_assimilate_tensor_from_particles')
+      bind(c,name='fort_assimilate_VEL_from_particles')
 
       use global_utility_module
       use probcommon_module
@@ -30584,14 +30585,12 @@ stop
       implicit none
 
       INTEGER_T, intent(in) :: im_PLS_cpp
-      INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: particles_weight(nmat)
-      INTEGER_T, intent(in) :: ncomp_tensor
+      REAL_T, intent(in) :: fluid_relaxation_time_to_particle
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
+      INTEGER_T, value, intent(in) :: Np_no_nbr,Np_nbr,Nn ! pass by value
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -30602,26 +30601,33 @@ stop
       REAL_T, intent(in), target :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(XDNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
+      INTEGER_T, intent(in) :: DIMDEC(SNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(UMACNEW) 
+      INTEGER_T, intent(in) :: DIMDEC(VMACNEW) 
+      INTEGER_T, intent(in) :: DIMDEC(WMACNEW) 
+      INTEGER_T, intent(in) :: DIMDEC(vel_fab) 
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
       REAL_T, intent(in) :: LS( &  
         DIMV(LS), &
         nmat*(1+SDIM))
-      REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
-        DIMV(TNEWfab), &
-        ncomp_tensor)
-      REAL_T, intent(inout) :: XDNEWfab( &  
-        DIMV(XDNEWfab), &
-        SDIM)
-      REAL_T, intent(in) :: XDISP_fab( &
-        DIMV(XDISP_fab), &
-        SDIM)
-      type(particle_t), intent(in), target :: particles(Np)
-      type(particle_t), intent(in), target :: nbr_particles(Nn)
+      REAL_T, intent(inout) :: SNEWfab( & 
+        DIMV(SNEWfab), &
+        num_materials_vel*SDIM)
+      REAL_T, intent(inout) :: UMACNEW( & 
+        DIMV(UMACNEW))
+      REAL_T, intent(inout) :: VMACNEW( & 
+        DIMV(VMACNEW))
+      REAL_T, intent(inout) :: WMACNEW( & 
+        DIMV(WMACNEW))
+      REAL_T, intent(in) :: vel_fab( &
+        DIMV(vel_fab), &
+        num_materials_vel*SDIM)
+
+      type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
+      type(particle_t), intent(in) :: particles_nbr(Np_nbr)
+      type(particle_t), intent(in), target :: particles_only_nbr(Nn)
 
       type(accum_parm_type) :: accum_PARM
 
@@ -30638,6 +30644,8 @@ stop
       INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
       REAL_T local_wt
+      INTEGER_T interior_ID
+      REAL_T xpart1,xpart2
 
       nhalf=3
 
@@ -30683,9 +30691,11 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
       call checkbound(tilelo,tilehi,DIMS(matrixfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(SNEWfab),1,-1,1271)
+      call checkbound(fablo,fabhi,DIMS(UMACNEW),0,0,1271)
+      call checkbound(fablo,fabhi,DIMS(VMACNEW),0,1,1271)
+      call checkbound(fablo,fabhi,DIMS(WMACNEW),0,SDIM-1,1271)
+      call checkbound(fablo,fabhi,DIMS(vel_fab),2,-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -30703,6 +30713,27 @@ stop
       accum_PARM%im_PLS=im_PLS_cpp+1
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      if (Np_no_nbr+Nn.eq.Np_nbr) then
+       ! do nothing
+      else
+       print *,"Np_no_nbr+Nn.ne.Np_nbr"
+       stop
+      endif
+
+       ! sanity check
+      do interior_ID=1,Np_no_nbr
+       do dir=1,SDIM
+        xpart1=particles_nbr(interior_ID)%pos(dir)
+        xpart2=particles_no_nbr(interior_ID)%pos(dir)
+        if (abs(xpart1-xpart2).le.dx(dir)*VOFTOL) then
+         ! do nothing
+        else
+         print *,"xpart1 or xpart2 invalid"
+         stop
+        endif
+       enddo
+      enddo 
 
       if (isweep.eq.0) then
 
@@ -31016,12 +31047,15 @@ stop
         level, &          ! 0<=level<=finest_level
         finest_level, &
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        particles, &      ! a list of particles in the elastic structure
-        nbr_particles, &  ! a list of nbr particles in the elastic structure
-        Np,Nn, & ! pass by value Np = number of particles, Nn=number nbr part.
+        particles_no_nbr, & 
+        particles_nbr, & 
+        particles_only_nbr, & 
+        Np_no_nbr, & ! pass by value
+        Np_nbr, & ! pass by value
+        Nn, & ! pass by value
         ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
-        RHS_points, &    ! least squares in 3D: 4
+        matrix_points, & 
+        RHS_points, &    
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
         nmat, &
         LS, &
@@ -31049,7 +31083,7 @@ stop
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
+      INTEGER_T, value, intent(in) :: Np_no_nbr,Np_nbr,Nn ! pass by value
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -31078,8 +31112,9 @@ stop
       REAL_T, intent(in) :: XDISP_fab( &
         DIMV(XDISP_fab), &
         SDIM)
-      type(particle_t), intent(in), target :: particles(Np)
-      type(particle_t), intent(in), target :: nbr_particles(Nn)
+      type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
+      type(particle_t), intent(in) :: particles_nbr(Np_nbr)
+      type(particle_t), intent(in), target :: particles_only_nbr(Nn)
 
       type(accum_parm_type) :: accum_PARM
 
@@ -31096,6 +31131,8 @@ stop
       INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
       REAL_T local_wt
+      INTEGER_T interior_ID
+      REAL_T xpart1,xpart2
 
       nhalf=3
 
@@ -31162,10 +31199,30 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
+      if (Np_no_nbr+Nn.eq.Np_nbr) then
+       ! do nothing
+      else
+       print *,"Np_no_nbr+Nn.ne.Np_nbr"
+       stop
+      endif
+       ! sanity check
+      do interior_ID=1,Np_no_nbr
+       do dir=1,SDIM
+        xpart1=particles_nbr(interior_ID)%pos(dir)
+        xpart2=particles_no_nbr(interior_ID)%pos(dir)
+        if (abs(xpart1-xpart2).le.dx(dir)*VOFTOL) then
+         ! do nothing
+        else
+         print *,"xpart1 or xpart2 invalid"
+         stop
+        endif
+       enddo
+      enddo 
+
       if (isweep.eq.0) then
 
-       accum_PARM%particles=>particles
-       accum_PARM%Npart=Np
+       accum_PARM%particles=>particles_no_nbr
+       accum_PARM%Npart=Np_no_nbr
 
        call traverse_particles( &
          accum_PARM, &
@@ -31177,7 +31234,7 @@ stop
          DIMS(XDISP_fab), &
          ncomp_accumulate)
 
-       accum_PARM%particles=>nbr_particles
+       accum_PARM%particles=>particles_only_nbr
        accum_PARM%Npart=Nn
 
        call traverse_particles( &
