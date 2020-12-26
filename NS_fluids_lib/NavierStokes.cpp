@@ -20628,46 +20628,47 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
 
   // in: GODUNOV_3D.F90
   fort_assimilate_VEL_from_particles( 
-     &fluid_relaxation_time_to_particle[im_particle_couple],
-     &im_particle_couple, // 0..nmat-1
-     &tid_current,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     &level,
-     &finest_level,
-     xlo,dx,
-     particles_AoS_no_nbr.data(),
-     particles_AoS_nbr.data(),
-     neighbors_local.data(),
-     Np_no_nbr,  //pass by value
-     Np_nbr,     //pass by value
-     Nn,         //pass by value
-     &matrix_points,
-     &RHS_points,
-     &ncomp_accumulate,
-     &nmat,
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     SNEWfab.dataPtr(),
-     ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()),
-     UMAC_NEWfab.dataPtr(),
-     ARLIM(UMAC_NEWfab.loVect()),ARLIM(UMAC_NEWfab.hiVect()),
-     VMAC_NEWfab.dataPtr(),
-     ARLIM(VMAC_NEWfab.loVect()),ARLIM(VMAC_NEWfab.hiVect()),
-     WMAC_NEWfab.dataPtr(),
-     ARLIM(WMAC_NEWfab.loVect()),ARLIM(WMAC_NEWfab.hiVect()),
-     vel_fab.dataPtr(),
-     ARLIM(vel_fab.loVect()),ARLIM(vel_fab.hiVect()),
-     matrixfab.dataPtr(),
-     ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
-   } // mfi
+   &fluid_relaxation_time_to_particle[im_particle_couple],
+   &dt_slab,
+   &im_particle_couple, // 0..nmat-1
+   &tid_current,
+   tilelo,tilehi,
+   fablo,fabhi,
+   &bfact,
+   &level,
+   &finest_level,
+   xlo,dx,
+   particles_AoS_no_nbr.data(),
+   particles_AoS_nbr.data(),
+   neighbors_local.data(),
+   Np_no_nbr,  //pass by value
+   Np_nbr,     //pass by value
+   Nn,         //pass by value
+   &matrix_points,
+   &RHS_points,
+   &ncomp_accumulate,
+   &nmat,
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+   SNEWfab.dataPtr(),
+   ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()),
+   UMAC_NEWfab.dataPtr(),
+   ARLIM(UMAC_NEWfab.loVect()),ARLIM(UMAC_NEWfab.hiVect()),
+   VMAC_NEWfab.dataPtr(),
+   ARLIM(VMAC_NEWfab.loVect()),ARLIM(VMAC_NEWfab.hiVect()),
+   WMAC_NEWfab.dataPtr(),
+   ARLIM(WMAC_NEWfab.loVect()),ARLIM(WMAC_NEWfab.hiVect()),
+   vel_fab.dataPtr(),
+   ARLIM(vel_fab.loVect()),ARLIM(vel_fab.hiVect()),
+   matrixfab.dataPtr(),
+   ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
+ } // mfi
 } // omp
-   ns_reconcile_d_num(81);
+ ns_reconcile_d_num(81);
 
-  delete velocity_mf;
+ delete velocity_mf;
 
-  localPC_nbr.clearNeighbors();
+ localPC_nbr.clearNeighbors();
 
 
 } // end subroutine assimilate_vel_from_particles
