@@ -30398,6 +30398,8 @@ stop
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
+      INTEGER_T, target :: tilelo_local(SDIM)
+      INTEGER_T, target :: tilehi_local(SDIM)
 
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
@@ -30407,6 +30409,8 @@ stop
        xlo_local(dir)=accum_PARM%xlo(dir)
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
+       tilelo_local(dir)=accum_PARM%tilelo(dir)
+       tilehi_local(dir)=accum_PARM%tilehi(dir)
       enddo
 
       call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
@@ -30644,7 +30648,6 @@ stop
       REAL_T lambda
       REAL_T vel_local
       INTEGER_T LS_or_VOF_flag
-      INTEGER_T im_elastic
       REAL_T local_wt
       INTEGER_T interior_ID
       REAL_T xpart1,xpart2
