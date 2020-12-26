@@ -20691,6 +20691,11 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
 
+ if (finest_level<=max_level) {
+  // do nothing
+ } else
+  amrex::Error("max_level invalid");
+
  if (num_materials_vel==1) {
   // do nothing
  } else

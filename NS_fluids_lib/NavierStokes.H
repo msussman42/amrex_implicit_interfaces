@@ -591,6 +591,7 @@ public:
 
     void init_particle_container(int imPLS,int ipart,int append_flag);
     void accumulate_PC_info(int im);
+    void assimilate_vel_from_particles(int im_particle_couple);
 
     //
     // Advance grids at this level in time.

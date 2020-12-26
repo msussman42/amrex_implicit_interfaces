@@ -12516,6 +12516,40 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("include_viscous_heating invalid");
 
+ for (int im_assimilate=0;im_assimilate<nmat;im_assimilate++) {
+  if (particleLS_flag[im_assimilate]==1) {
+   if (ns_is_rigid(im_assimilate)==0) {
+    if ((elastic_time[im_assimilate]>=0.0)&&
+        (elastic_viscosity[im_assimilate]>=0.0)) {
+     if (store_elastic_data[im_assimilate]==1) {
+      if (viscoelastic_model[im_assimilate]==2) {
+       // particles only appear on the finest level.
+       // The flexible substrate is wholly contained on
+       // the finest level.
+       NavierStokes& ns_finest=getLevel(finest_level);
+       ns_finest.assimilate_vel_from_particles(im_assimilate);
+      } else if ((viscoelastic_model[im_assimilate]==1)||
+ 	         (viscoelastic_model[im_assimilate]==0)) {
+       // do nothing
+      } else
+       amrex::Error("viscoelastic_model[im_assimilate] invalid");
+     } else if (store_elastic_data[im_assimilate]==0) {
+      // do nothing
+     } else
+      amrex::Error("store_elastic_data invalid");
+    } else
+     amrex::Error("elastic_time or elastic_viscosity invalid");
+   } else if (ns_is_rigid(im_assimilate)==1) {
+    // do nothing
+   } else
+    amrex::Error("ns_is_rigid(im_assimilate) invalid");
+  } else if (particleLS_flag[im_assimilate]==0) {
+	  // do nothing
+  } else
+   amrex::Error("particleLS_flag[im_assimilate] invalid");
+
+ } // im_assimilate=0..nmat-1
+
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.assimilate_state_data();

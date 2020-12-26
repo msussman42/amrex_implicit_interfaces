@@ -30384,6 +30384,7 @@ stop
       REAL_T, target :: xpart(SDIM)
       REAL_T xpartfoot(SDIM)
       REAL_T xdisp(SDIM)
+      REAL_T velpart(SDIM)
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
@@ -30514,15 +30515,13 @@ stop
           stop
          endif
 
-         FIX ME matrixfab has to be defined within the mfiter loop and have
-          grow(tilebox,1) box in order to work with openMP
          if (w_p.gt.zero) then
           matrixfab(D_DECL(i,j,k),1)= &
            matrixfab(D_DECL(i,j,k),1)+w_p
           do dir=1,SDIM
            matrixfab(D_DECL(i,j,k),1+dir)= &
             matrixfab(D_DECL(i,j,k),1+dir)+ &
-            w_p*(data_out%data_interp(dir)-xdisp(dir))
+            w_p*(data_out%data_interp(dir)-velpart(dir))
           enddo
          else
           print *,"w_p invalid"
@@ -30647,10 +30646,11 @@ stop
       REAL_T A_matrix,B_matrix
       REAL_T lambda
       REAL_T vel_local
-      INTEGER_T LS_or_VOF_flag
       REAL_T local_wt
       INTEGER_T interior_ID
       REAL_T xpart1,xpart2
+      INTEGER_T dirmac
+      INTEGER_T ii,jj,kk
 
       nhalf=3
 
