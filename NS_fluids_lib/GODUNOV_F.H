@@ -1519,6 +1519,50 @@ extern "C"
      AMREX_ARLIM_P(matrixfabhi));
 
 
+   void fort_assimilate_VEL_from_particles(
+     Real* fluid_relaxation_time_to_particle,
+     Real* dt_slab,
+     int* im_PLS_cpp,
+     int* tid,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,
+     int* level,
+     int* finest_level,
+     const Real* xlo,const Real* dx,
+     const void* particles_no_nbr,
+     const void* particles_nbr,
+     const void* particles_only_nbr,
+     int Np_no_nbr, //pass by value just in case "long" on the c++ side.
+     int Np_nbr, //pass by value just in case "long" on the c++ side.
+     int Nn,     // pass by value just in case "long" on the c++ side.
+     int* matrix_points,
+     int* RHS_points,
+     int* ncomp_accumulate,
+     int* nmat,
+     Real* LS,
+     AMREX_ARLIM_P(LSlo),
+     AMREX_ARLIM_P(LShi),
+     Real* SNEWfab,
+     AMREX_ARLIM_P(SNEWfablo),
+     AMREX_ARLIM_P(SNEWfabhi),
+     Real* UMACNEWfab,
+     AMREX_ARLIM_P(UMACNEWfablo),
+     AMREX_ARLIM_P(UMACNEWfabhi),
+     Real* VMACNEWfab,
+     AMREX_ARLIM_P(VMACNEWfablo),
+     AMREX_ARLIM_P(VMACNEWfabhi),
+     Real* WMACNEWfab,
+     AMREX_ARLIM_P(WMACNEWfablo),
+     AMREX_ARLIM_P(WMACNEWfabhi),
+     Real* vel_fab,
+     AMREX_ARLIM_P(vel_fablo),
+     AMREX_ARLIM_P(vel_fabhi),
+     Real* matrixfab,
+     AMREX_ARLIM_P(matrixfablo),
+     AMREX_ARLIM_P(matrixfabhi));
+
+
    void fort_assimilate_tensor_from_xdisplace(
      int* im_PLS_cpp,
      int* tid,

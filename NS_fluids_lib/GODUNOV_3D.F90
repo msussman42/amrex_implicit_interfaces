@@ -30545,6 +30545,7 @@ stop
        ! NavierStokes::assimilate_vel_from_particles(int im_particle_couple)
       subroutine fort_assimilate_VEL_from_particles( &
         fluid_relaxation_time_to_particle, &
+        dt, &
         im_PLS_cpp, & ! 0..nmat-1
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
@@ -30586,6 +30587,7 @@ stop
 
       INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: fluid_relaxation_time_to_particle
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
@@ -30640,7 +30642,7 @@ stop
 
       REAL_T A_matrix,B_matrix
       REAL_T lambda
-      REAL_T XDISP_local
+      REAL_T vel_local
       INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
       REAL_T local_wt
@@ -30655,6 +30657,12 @@ stop
        print *,"nmat invalid"
        stop
       endif
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else
+       print *,"num_materials_vel invalid"
+       stop
+      endif
 
       if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
        ! do nothing
@@ -30663,13 +30671,6 @@ stop
        stop
       endif
 
-       ! 6 in 3D, 4 in 2D
-      if (ncomp_tensor.eq.2*SDIM) then
-       ! do nothing
-      else
-       print *,"ncomp_tensor invalid"
-       stop
-      endif
       if (matrix_points.eq.1) then
        ! do nothing
       else
@@ -30686,6 +30687,12 @@ stop
        ! do nothing
       else
        print *,"ncomp_accumulate invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
        stop
       endif
 
@@ -30735,110 +30742,133 @@ stop
        enddo
       enddo 
 
-      if (isweep.eq.0) then
+      accum_PARM%particles=>particles_no_nbr
+      accum_PARM%Npart=Np_no_nbr
 
-       accum_PARM%particles=>particles
-       accum_PARM%Npart=Np
+      call traverse_particlesVEL( &
+        accum_PARM, &
+        matrixfab, &
+        DIMS(matrixfab), &
+        LS, &
+        DIMS(LS), &
+        vel_fab, &
+        DIMS(vel_fab), &
+        ncomp_accumulate)
 
-       call traverse_particlesVEL( &
-         accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         LS, &
-         DIMS(LS), &
-         XDISP_fab, &
-         DIMS(XDISP_fab), &
-         ncomp_accumulate)
+      accum_PARM%particles=>particles_only_nbr
+      accum_PARM%Npart=Nn
 
-       accum_PARM%particles=>nbr_particles
-       accum_PARM%Npart=Nn
+      call traverse_particlesVEL( &
+        accum_PARM, &
+        matrixfab, &
+        DIMS(matrixfab), &
+        LS, &
+        DIMS(LS), &
+        vel_fab, &
+        DIMS(vel_fab), &
+        ncomp_accumulate)
 
-       call traverse_particlesVEL( &
-         accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         LS, &
-         DIMS(LS), &
-         XDISP_fab, &
-         DIMS(XDISP_fab), &
-         ncomp_accumulate)
+
+      if (dt.gt.zero) then
+       if (fluid_relaxation_time_to_particle.eq.zero) then
+        local_wt=one
+       else if (fluid_relaxation_time_to_particle.gt.zero) then
+        local_wt=one-exp(-dt/fluid_relaxation_time_to_particle)
+       else
+        print *,"fluid_relaxation_time_to_particle invalid"
+        stop
+       endif
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
+       do dir=1,SDIM
+        B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(vel(xp)-vel_p)
+        vel_local=vel_fab(D_DECL(i,j,k),dir)
+        if (A_matrix.eq.zero) then
+         SNEWfab(D_DECL(i,j,k),dir)=vel_local
+        else if (A_matrix.gt.zero) then
+         ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
+         lambda=B_matrix/A_matrix
+         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+          SNEWFAB(D_DECL(i,j,k),dir)= &
+            vel_local-local_wt*lambda
+         else
+          print *,"local_wt invalid"
+          stop
+         endif
+        else
+         print *,"A_matrix invalid"
+         stop
+        endif
+       enddo ! dir=1..SDIM
+      enddo
+      enddo
+      enddo
+
+      do dirmac=1,SDIM
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+          growlo,growhi,0,dirmac-1)
+
+       ii=0
+       jj=0
+       kk=0
+       if (dirmac.eq.1) then
+        ii=1
+       else if (dirmac.eq.2) then
+        jj=1
+       else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
+        kk=1
+       else
+        print *,"dirmac invalid"
+        stop
+       endif
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
-        do dir=1,SDIM
-         B_matrix=matrixfab(D_DECL(i,j,k),1+dir) ! sum w*(X_cell(xp)-X_cell_p)
-         XDISP_local=XDISP_fab(D_DECL(i,j,k),dir)
-         if (A_matrix.eq.zero) then
-          XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local
-         else if (A_matrix.gt.zero) then
-           ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
-          lambda=B_matrix/A_matrix
-          local_wt=particles_weight(im_PLS_cpp+1)
-          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-           XDNEWFAB(D_DECL(i,j,k),dir)= &
-            XDISP_local-local_wt*lambda
-          else
-           print *,"local_wt invalid"
-           stop
-          endif
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac)
+
+        A_matrix=matrixfab(D_DECL(i,j,k),1)+ &
+                 matrixfab(D_DECL(i-ii,j-jj,k-kk),1) ! sum w(xp)
+        B_matrix=matrixfab(D_DECL(i,j,k),1+dirmac)+ &
+           matrixfab(D_DECL(i-ii,j-jj,k-kk),1+dirmac) !sum w*(vel(xp)-vel_p)
+        if (A_matrix.eq.zero) then
+         ! do nothing
+        else if (A_matrix.gt.zero) then
+         ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
+         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+          lambda=local_wt*B_matrix/A_matrix
          else
-          print *,"A_matrix invalid"
+          print *,"local_wt invalid"
           stop
          endif
-        enddo ! dir=1..SDIM
+         if (dirmac.eq.1) then
+          UMACNEW(D_DECL(i,j,k))=UMACNEW(D_DECL(i,j,k))-lambda
+         else if (dirmac.eq.2) then
+          VMACNEW(D_DECL(i,j,k))=VMACNEW(D_DECL(i,j,k))-lambda
+         else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
+          WMACNEW(D_DECL(i,j,k))=WMACNEW(D_DECL(i,j,k))-lambda
+         else
+          print *,"dirmac invalid"
+          stop
+         endif
+        else
+         print *,"A_matrix invalid"
+         stop
+        endif
        enddo
        enddo
        enddo
-
-      else if (isweep.eq.1) then
-
-! grad u=| u_r  u_t/r-v/r  u_z  |
-!        | v_r  v_t/r+u/r  v_z  |
-!        | w_r  w_t/r      w_z  |
-! in RZ:  T33 gets u/r=x_displace/r
-! in RTZ: T12=u_t/r - v/r
-!         T22=v_t/r + u/r
-! later:
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-
-
-       LS_or_VOF_flag=0 ! =0 => use LS for upwinding near interfaces
-       im_elastic=im_PLS_cpp+1
-       call local_tensor_from_xdisplace( &
-        LS_or_VOF_flag, &
-        im_elastic, &
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        nmat, &
-        LS, &
-        DIMS(LS), &
-        LS, &  ! VOF placeholder
-        DIMS(LS), & ! VOF placeholder
-        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab)) 
-
-      else 
-       print *,"isweep invalid"
-       stop
-      endif
+      enddo ! dirmac=1..sdim
 
       end subroutine fort_assimilate_VEL_from_particles
-
-
-
-
 
 
 
