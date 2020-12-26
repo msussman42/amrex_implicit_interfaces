@@ -30322,6 +30322,7 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
+           ! xfoot,dist,vel,den,T,insert time
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -30408,7 +30409,6 @@ stop
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      FIX ME
       call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
       call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),1,-1,1271)
       call checkbound(fablo_local,fabhi_local,DIMS(VEL_fab),2,-1,1271)
@@ -30419,14 +30419,23 @@ stop
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=accum_PARM%nmat
-      data_in%im_PLS=accum_PARM%im_PLS
+      data_in%im_PLS=accum_PARM%im_PLS ! weight depends on LS
+
+      if ((data_in%im_PLS.ge.1).and. &
+          (data_in%im_PLS.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"data_in%im_PLS invalid"
+       stop
+      endif
+
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
       data_in%ngrowfab=2
 
-      data_in%state=>XDISP_fab
+      data_in%state=>VEL_fab
       data_in%LS=>LS
 
       data_in%ncomp=SDIM
@@ -30456,6 +30465,8 @@ stop
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
          xpartfoot(dir)=accum_PARM%particles(interior_ID)%extra_state(dir)
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
+         velpart(dir)= &
+          accum_PARM%particles(interior_ID)%extra_state(SDIM+1+dir)
         enddo
         local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
@@ -30472,8 +30483,8 @@ stop
 
         interior_ok=1
         do dir=1,SDIM
-         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
-             (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-1).or. &
+             (cell_index(dir).gt.accum_PARM%tilehi(dir)+1)) then
           interior_ok=0
          endif
         enddo
@@ -30499,6 +30510,8 @@ stop
           stop
          endif
 
+         FIX ME matrixfab has to be defined within the mfiter loop and have
+          grow(tilebox,1) box in order to work with openMP
          if (w_p.gt.zero) then
           matrixfab(D_DECL(i,j,k),1)= &
            matrixfab(D_DECL(i,j,k),1)+w_p
@@ -30869,6 +30882,15 @@ stop
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=accum_PARM%nmat
       data_in%im_PLS=accum_PARM%im_PLS
+
+      if ((data_in%im_PLS.ge.1).and. &
+          (data_in%im_PLS.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"data_in%im_PLS invalid"
+       stop
+      endif
+
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
