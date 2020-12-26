@@ -7546,6 +7546,8 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
     // component 1: number of particles linked to the cell.
     // component 2: the link to the list of particles.
+    // Declare cell_particle_count local to the MFIter loop
+    // so that this routine is thread safe.
    Box tilebox_grow=grow(tilegrid,nnbr);
    BaseFab<int> cell_particle_count(tilebox_grow,2);
    cell_particle_count.setVal(0);

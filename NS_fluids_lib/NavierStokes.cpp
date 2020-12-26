@@ -20464,6 +20464,210 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 } // end subroutine accumulate_PC_info
 
 
+void 
+NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
+
+ NavierStokes& ns_level0=getLevel(0);
+
+ int nmat=num_materials;
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ if (level==finest_level) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==finest_level");
+
+  // 2 ghost cells in order to interpolate the velocity
+  // to the particle positions (levelset needed for the weights).   
+  // 1 ghost cell layer of neighbor particles.
+ resize_levelsetLO(2,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,2,8);
+ if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
+
+ if ((im_particle_couple>=0)&&(im_particle_couple<nmat)) {
+  // do nothing
+ } else
+  amrex::Error("im_particle_couple invalid");
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+
+ const Real* dx = geom.CellSize();
+
+ int ipart=0;
+ if (particleLS_flag[im_particle_couple]==1) {
+  for (int im_local=0;im_local<im_particle_couple;im_local++) {
+   if (particleLS_flag[im_local]==1) {
+    ipart++; 
+   } else if (particleLS_flag[im_local]==0) {
+    // do nothing
+   } else
+    amrex::Error("particleLS_flag invalid");
+  } // im_local=0..im_particle_couple-1
+
+  if (NS_ncomp_particles>=ipart+1) {
+   // do nothing
+  } else
+   amrex::Error("NS_ncomp_particles invalid");
+ } else if (particleLS_flag[im_particle_couple]==0) {
+  amrex::Error("particleLS_flag[im_particle_couple] cannot be 0");
+ } else
+  amrex::Error("particleLS_flag[im_particle_couple] invalid");
+
+ MultiFab& State_new=get_new_data(State_Type,slab_step+1);
+
+ MultiFab& Umac_new=get_new_data(Umac_Type,slab_step+1);
+ MultiFab& Vmac_new=get_new_data(Umac_Type+1,slab_step+1);
+ MultiFab& Wmac_new=get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
+
+ int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
+ int RHS_points=1;     // sum_{xp in Omega_cell} (vel_cell(xp)-vel_cell_p)*W
+ int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
+
+ const Vector<Geometry>& ns_geom=parent->Geom();
+ const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+ const Vector<BoxArray>& ns_ba=parent->boxArray();
+
+ Vector<int> refinement_ratio;
+ refinement_ratio.resize(ns_ba.size());
+ for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+  refinement_ratio[ilev]=2;
+ int nnbr=1;
+
+ bool local_copy_flag=true; 
+
+ if (localMF_grow[VISCOTEN_MF]==-1) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF should not be allocated");
+
+  // All the particles should live on level==0.
+  // particle levelset==0.0 for interface particles.
+
+ AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+
+ NeighborParticleContainer<N_EXTRA_REAL,0> 
+   localPC(ns_geom,ns_dmap,ns_ba,
+   refinement_ratio,nnbr);
+  // the two PC have same hierarchy, no need to call Redistribute after the
+  // copy.
+ localPC.copyParticles(localPC_no_nbr,local_copy_flag);
+
+ localPC.fillNeighbors();
+
+  // 2 ghost cells in order to interpolate the velocity
+  // to the particle positions.   1 ghost cell layer of 
+  // neighbor particles.
+ MultiFab* velocity_mf=getState(2,0,
+   num_materials_vel*AMREX_SPACEDIM,cur_time_slab);
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(velocity_mf->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*velocity_mf,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+   // std::cout << tilegrid << '\n';
+   // std::cout << gridno << '\n';
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  // particles is of type "ParticleTileType::AoS"
+  // see AMReX_ArrayOfStructs.H
+  // particles is of type:
+  //  amrex::ParticleTile<SDIM,0,0,0>
+  //
+
+  auto& particles = localPC.GetParticles(level)
+   [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& particles_AoS = particles.GetArrayOfStructs();
+
+  int Np=particles_AoS.size();
+
+   // ParticleVector&
+  auto& neighbors_local = 
+    localPC.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
+    int Nn=neighbors_local.size();
+
+  Box tilebox_grow=grow(tilegrid,nnbr);
+  FArrayBox matrixfab(tilebox_grow,ncomp_accumulate);
+  matrixfab.setVal(0.0);
+
+
+  FArrayBox& TNEWfab=Tensor_new[mfi];
+  FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+  FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+ 
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // in: GODUNOV_3D.F90
+    // updates (1) configuration tensor and
+    // (2) XDISPLACE data.
+    fort_assimilate_tensor_from_particles( 
+     particles_weight.dataPtr(),
+     &im_elastic, // 0..nmat-1
+     &isweep,
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,
+     &finest_level,
+     xlo,dx,
+     particles_AoS.data(),
+     neighbors_local.data(),
+     Np,       //pass by value
+     Nn,       //pass by value
+     &ncomp_tensor,
+     &matrix_points,
+     &RHS_points,
+     &ncomp_accumulate,
+     &nmat,
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+     TNEWfab.dataPtr(scomp_tensor),
+     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
+     TNEWfab.dataPtr(scomp_xdisplace),
+     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
+     XDISP_fab.dataPtr(),
+     ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
+     matrixfab.dataPtr(),
+     ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
+   } // mfi
+} // omp
+   ns_reconcile_d_num(81);
+
+  delete velocity_mf;
+
+  localPC.clearNeighbors();
+
+
+ delete accumulate_mf;
+
+} // end subroutine assimilate_vel_from_particles
+
+
+
+
 // initialize particles and copy to all "slab locations"
 // ONLY LEVEL==max_level STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
 // PARTICLES THAT APPEAR ON ALL THE LEVELS.
