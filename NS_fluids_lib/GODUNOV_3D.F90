@@ -30410,7 +30410,7 @@ stop
       enddo
 
       call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
-      call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),1,-1,1271)
+      call checkbound(tilelo_local,tilehi_local,DIMS(matrixfab),1,-1,1271)
       call checkbound(fablo_local,fabhi_local,DIMS(VEL_fab),2,-1,1271)
 
       data_out%data_interp=>cell_data_interp
@@ -30539,7 +30539,7 @@ stop
       enddo ! do interior_ID=1,accum_PARM%Npart
 
       return
-      end subroutine traverse_particles
+      end subroutine traverse_particlesVEL
 
        ! called from NavierStokes.cpp:
        !  NavierStokes::accumulate_PC_info(int im_elastic)
@@ -30547,7 +30547,7 @@ stop
        !    and Eulerian data.
        ! 2. isweep==1: calculates the elastic stress tensor from 
        !    u=X(t,x0)-x0
-      subroutine fort_assimilate_tensor_from_particles( &
+      subroutine fort_assimilate_VEL_from_particles( &
         particles_weight, &
         im_PLS_cpp, & ! 0..nmat-1
         isweep, &
@@ -30682,7 +30682,7 @@ stop
       endif
 
       call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
+      call checkbound(tilelo,tilehi,DIMS(matrixfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
@@ -30709,7 +30709,7 @@ stop
        accum_PARM%particles=>particles
        accum_PARM%Npart=Np
 
-       call traverse_particles( &
+       call traverse_particlesVEL( &
          accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
@@ -30722,7 +30722,7 @@ stop
        accum_PARM%particles=>nbr_particles
        accum_PARM%Npart=Nn
 
-       call traverse_particles( &
+       call traverse_particlesVEL( &
          accum_PARM, &
          matrixfab, &
          DIMS(matrixfab), &
@@ -30803,7 +30803,7 @@ stop
        stop
       endif
 
-      end subroutine fort_assimilate_tensor_from_particles
+      end subroutine fort_assimilate_VEL_from_particles
 
 
 
