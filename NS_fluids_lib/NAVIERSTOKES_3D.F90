@@ -11879,7 +11879,6 @@ END SUBROUTINE SIMP
       endif
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.10).or. &
           (project_option.eq.13).or. & !FSI_material_exists 1st project
           (project_option.eq.11).or. & !FSI_material_exists 2nd project
           (project_option.eq.12).or. & !pressure extrap
@@ -11992,7 +11991,6 @@ END SUBROUTINE SIMP
 
          if ((project_option.eq.0).or. &
              (project_option.eq.1).or. &
-             (project_option.eq.10).or. &
              (project_option.eq.11).or. & !FSI_material_exists 2nd project
              (project_option.eq.13).or. & !FSI_material_exists 1st project
              (project_option.eq.12)) then !pressure extrap.
@@ -12653,7 +12651,6 @@ END SUBROUTINE SIMP
        stop
       endif
       if ((project_option.eq.0).or. &
-          (project_option.eq.10).or. &
           (project_option.eq.11).or. & !FSI_material_exists 2nd project
           (project_option.eq.13)) then !FSI_material_exists 1st project
        ! do nothing
@@ -12746,15 +12743,13 @@ END SUBROUTINE SIMP
 
 
         if ((project_option.eq.0).or. &
-            (project_option.eq.10).or. & !sync project prior to advection
             (project_option.eq.11).or. & !FSI_material_exists 2nd project
             (project_option.eq.13)) then !FSI_material_exists 1st project
 
          if ((project_option.eq.0).or. &
              (project_option.eq.13)) then
           div_hold(1)=zero
-         else if ((project_option.eq.10).or. & !sync project prior to advection
-                  (project_option.eq.11)) then !FSI_material_exists 2nd project
+         else if (project_option.eq.11) then !FSI_material_exists 2nd project
            ! coeff_avg,p_avg
           div_hold(1)=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
                                               ! of DIV_TYPE)
@@ -12979,8 +12974,7 @@ END SUBROUTINE SIMP
 
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
-           if ((project_option.eq.10).or. & ! sync project prior to advection
-               (project_option.eq.11)) then ! FSI_material_exists (2nd project)
+           if (project_option.eq.11) then ! FSI_material_exists (2nd project)
             ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
             mdot(D_DECL(i,j,k),1)=div_hold(1)/dt
            else if ((project_option.eq.0).or. &
@@ -13024,8 +13018,7 @@ END SUBROUTINE SIMP
              ! coeff
             csnd(D_DECL(i,j,k),1)=csound_hold
 
-            if ((project_option.eq.10).or. & !sync project prior to advection
-                (project_option.eq.11)) then !FSI_material_exists (2nd project)
+            if (project_option.eq.11) then !FSI_material_exists (2nd project)
 
              if (csound_hold.eq.zero) then ! incomp
               csnd(D_DECL(i,j,k),2)=zero ! padvect
@@ -13052,8 +13045,7 @@ END SUBROUTINE SIMP
 
             csnd(D_DECL(i,j,k),1)=zero ! coeff
             csnd(D_DECL(i,j,k),2)=zero ! padvect
-            if ((project_option.eq.10).or. & !sync project prior to advection
-                (project_option.eq.11)) then !FSI_material_exists 2nd project
+            if (project_option.eq.11) then !FSI_material_exists 2nd project
              mdot(D_DECL(i,j,k),1)=div_hold(1)/dt ! localMF[DIFFUSIONRHS_MF]
             else if ((project_option.eq.0).or. &
                      (project_option.eq.13)) then !FSI_material_exists 1st prj

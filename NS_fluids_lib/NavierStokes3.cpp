@@ -502,57 +502,6 @@ void NavierStokes::nonlinear_advection() {
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
   init_vof_ls_prev_time,SLOPE_RECON_MF);
 
-  // projection in order to preserve free stream property.
- if (slab_step==0) {
-  if (SDC_outer_sweeps==0) {
-   if (divu_outer_sweeps==0) {
-    if (prev_time_slab>0.0) {
-     if (is_zalesak()==0) {
-
-      if (1==0) {
-       int debug_int=1;
-       int basestep_debug=nStep()+1;
-       if ((basestep_debug/debug_int)*debug_int==basestep_debug) {
-        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
-         std::cout << "press any number then enter: nonlinear\n";
-        int n_input;
-        std::cin >> n_input;
-       }
-      }  // debugging
-
-        // u dot grad u = div(uu) - u_GG div u_GL, sync project
-      if (conservative_div_uu==2) {
-       int project_option=10;
-       int post_restart_flag=0;
-       make_physics_varsALL(project_option,post_restart_flag,4);
-       multiphase_project(project_option); // project for after regrid.
-      } else if (conservative_div_uu==1) {
-        // do nothing
-        // 1=> grad dot (uu) - u_GG div u_GL, no sync project
-      } else if (conservative_div_uu==0) {
-       // do nothing
-       // 0=> I(u_GL) dot grad u_GG, no sync project
-      } else {
-       amrex::Error("conservative_div_uu invalid");
-      }
- 
-     } else if (is_zalesak()==1) {
-      // do nothing
-     } else
-      amrex::Error("is_zalesak invalid");
-
-    } else if (prev_time_slab==0.0) {
-     // do nothing
-    } else
-     amrex::Error("prev_time_slab invalid");
-   } else if ((divu_outer_sweeps>0)&&
-              (divu_outer_sweeps<num_divu_outer_sweeps)) {
-    // do nothing
-   } else
-    amrex::Error("divu_outer_sweeps invalid");
-  }  // SDC_outer_sweeps==0?
- } //slab_step==0?
-
  if (face_flag==1) {
    // delete_advect_vars() called in NavierStokes::do_the_advance
    // right after increment_face_velocityALL. 
@@ -6379,7 +6328,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| // sync project at advection
      (project_option==11)|| // FSI_material_exists (2nd project)
      (project_option==12)|| // pressure extrapolation
      (project_option==13)|| // FSI_material_exists (1st project)
@@ -6476,7 +6424,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
      if ((project_option==0)||
          (project_option==1)||
-         (project_option==10)||  // sync project at advection
          (project_option==13)||  // FSI_material_exists: 1st project
          (project_option==11)) { // FSI_material_exists: 2nd project
 
@@ -6562,7 +6509,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
   } // im=0..2 nten -1
  } else if ((project_option==0)||
             (project_option==1)||
-            (project_option==10)||
             (project_option==11)|| //FSI_material_exists: 2nd project
             (project_option==13)|| //FSI_material_exists: 1st project
             (project_option==12)|| //pressure extrapolation
@@ -6588,7 +6534,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
  int local_face_index=faceden_index;  // 1/rho
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==13)||  //FSI_material_exists 1st project
      (project_option==11)) { //FSI_material_exists 2nd project
   local_face_index=faceden_index;  // 1/rho
@@ -6791,7 +6736,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)||  // FSI_material_exists 2nd project
      (project_option==13)||  // FSI_material_exists 1st project
      (project_option==12)||  // pressure extrapolation
@@ -7001,7 +6945,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
  } else if ((project_option==0)||
             (project_option==1)||
-            (project_option==10)||
             (project_option==11)|| //FSI_material_exists 2nd project
             (project_option==13)|| //FSI_material_exists 1st project
 	    (project_option==12)) { // pressure extension
@@ -7021,7 +6964,6 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)||  // FSI_material_exists 2nd project
      (project_option==13)||  // FSI_material_exists 1st project
      (project_option==12)||  // pressure extrapolation
@@ -7161,7 +7103,6 @@ void NavierStokes::correct_velocity(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)||
@@ -7221,7 +7162,6 @@ void NavierStokes::correct_velocity(
 
  if ((project_option==0)||
      (project_option==1)|| 
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extension
@@ -7362,7 +7302,6 @@ void NavierStokes::residual_correction_form(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extension
@@ -7384,7 +7323,6 @@ void NavierStokes::residual_correction_form(
   amrex::Error("num_materials_face invalid");
 
  if ((project_option==0)||
-     (project_option==10)||
      (project_option==11)|| // FSI_material_exists 2nd project
      (project_option==13)|| // FSI_material_exists 1st project
      (project_option==12)|| // pressure extension
@@ -7445,7 +7383,6 @@ void NavierStokes::mg_cycleALL(int presmooth,
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extension
@@ -7531,7 +7468,6 @@ void NavierStokes::relaxLEVEL(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extension
@@ -7876,7 +7812,6 @@ void NavierStokes::jacobi_cycles(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extension
@@ -8042,7 +7977,6 @@ void NavierStokes::updatevelALL(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extension
@@ -8105,7 +8039,6 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project prior to advection
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| // pressure extension
@@ -8141,8 +8074,7 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } // dir
 
  new_localMF(DIFFUSIONRHS_MF,nsolveMM,0,-1);
- if ((project_option==10)|| //sync project prior to advection
-     (project_option==11)|| //FSI_material_exists 2nd project
+ if ((project_option==11)|| //FSI_material_exists 2nd project
      (project_option==12)) {//pressure extension
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
  } else if ((project_option==0)||   // regular project
@@ -8209,7 +8141,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| // sync project prior to advection
      (project_option==11)|| // FSI_material_exists 2nd project
      (project_option==13)|| // FSI_material_exists 1st project
      (project_option==12)|| // pressure extension
@@ -9046,7 +8977,6 @@ void NavierStokes::multiphase_preconditioner(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| // FSI_material_exists 2nd project
      (project_option==13)|| // FSI_material_exists 1st project
      (project_option==12)|| // pressure extension
@@ -9160,7 +9090,6 @@ void NavierStokes::set_local_tolerances(int project_option) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||  //sync project prior to advection
      (project_option==11)||  //FSI_material_exists (2nd project)
      (project_option==13)||  //FSI_material_exists (1st project)
      (project_option==12)) { // pressure extrap
@@ -9192,7 +9121,6 @@ void NavierStokes::set_local_tolerances(int project_option) {
 // project_option=1  initial project
 // project_option=2  temperature solve
 // project_option=3  viscous forces.
-// project_option=10 sync project prior to advection
 // project_option=11 FSI_material_exists (2nd project)
 // project_option=13 FSI_material_exists (1st project)
 // project_option=12 extend pressure into cells where all coefficients==0.0
@@ -9278,7 +9206,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if ((project_option==0)||   // regular project
      (project_option==1)||   // initial_project
-     (project_option==10)||  // sync project prior to advection
      (project_option==13)||  //FSI_material_exists 1st project
      (project_option==11)) { //FSI_material_exists 2nd project
   override_enable_spectral(projection_enable_spectral);
@@ -9301,7 +9228,6 @@ void NavierStokes::multiphase_project(int project_option) {
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| // sync project prior to advection
      (project_option==11)|| // FSI_material_exists 2nd project
      (project_option==13)|| // FSI_material_exists 1st project
      (project_option==12)|| // pressure extension
@@ -9323,7 +9249,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||  //sync project prior to advection
      (project_option==13)||  //FSI_material_exists 1st project
      (project_option==11)) { // FSI_material_exists 2nd project
 
@@ -9332,7 +9257,6 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option==1) {
    // do nothing
   } else if ((project_option==0)||
-             (project_option==10)||  //sync project prior to advection
              (project_option==13)||  //FSI_material_exists 1st project
              (project_option==11)) { //FSI_material_exists 2nd project
    if (some_materials_compressible())
@@ -9416,11 +9340,10 @@ void NavierStokes::multiphase_project(int project_option) {
     // diffusionRHS=0.0 UMAC=0 project_option==2 (thermal conduction)
     // diffusionRHS=0.0 UMAC=0 project_option==3 (viscosity)
     // diffusionRHS=0.0 UMAC=0 project_option==100.. (species)
-    // diffusionRHS=0.0 if project_option=10 (sync project prior adv)
     // diffusionRHS=0.0 if project_option=11 (FSI_material_exists 2nd project)
     // diffusionRHS=0.0 if project_option=12 (pressure_extension)
     // (DIV_Type contents cannot be zapped because it is needed for
-    //  initializing CELL_SOUND_MF, DIFFUSIONRHS if project_option==10,11)
+    //  initializing CELL_SOUND_MF, DIFFUSIONRHS if project_option==11)
    ns_level.Prepare_UMAC_for_solver(project_option,nsolve);
  }  // ilev=level ... finest_level
 
@@ -9543,7 +9466,6 @@ void NavierStokes::multiphase_project(int project_option) {
  }
 
  if ((project_option==0)||
-     (project_option==10)|| // sync project prior to advection
      (project_option==11)|| // FSI_material_exists 2nd project
      (project_option==13)|| // FSI_material_exists 1st project
      (project_option==12)) {// pressure extension
@@ -9578,7 +9500,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==13)||  //FSI_material_exists 1st project
      (project_option==11)) { //FSI_material_exists 2nd project
 
@@ -9654,7 +9575,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
 
   if ((project_option==0)||
-      (project_option==10)||
       (project_option==13)||  //FSI_material_exists 1st project
       (project_option==11)) { //FSI_material_exists 2nd project
    // unew^{f} = unew^{f} 
@@ -9757,14 +9677,13 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option==1) { // initial project
    // do nothing
   } else if ((project_option==0)||   // regular project
-             (project_option==10)||  // sync project prior to advection
              (project_option==13)||  // FSI_material_exists 1st project
              (project_option==11)) { // FSI_material_exists 2nd project
 
    // updates CELL_SOUND_MF, DIFFUSIONRHS, and 
    // S_new 
    //  State_Type if project_option==0 or project_opton==13
-   //  DIV_Type if project_option==10 or project_option==11
+   //  DIV_Type if project_option==11
    ns_level.init_advective_pressure(project_option); 
   } else if (project_option==12) {
    // do nothing (pressure extrapolation)
@@ -9849,9 +9768,8 @@ void NavierStokes::multiphase_project(int project_option) {
  energyflag=0;
  int homflag_residual_correction_form=0; 
 
- if ((project_option==10)|| // sync project
-      (project_option==11)|| // FSI_material_exists 2nd project
-      (project_option==1)) { // initial project
+ if ((project_option==11)|| // FSI_material_exists 2nd project
+     (project_option==1)) { // initial project
   homflag_residual_correction_form=1; 
  } else if ((project_option==0)|| // regular projection
             (project_option==12)|| // pressure extrapolation
@@ -10072,7 +9990,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
     if ((project_option==0)||
         (project_option==1)||
-        (project_option==10)||
         (project_option==11)||  //FSI_material_exists (2nd project)
         (project_option==13)||  //FSI_material_exists (1st project)
        (project_option==12)) { // pressure extrap
@@ -10352,7 +10269,6 @@ void NavierStokes::multiphase_project(int project_option) {
                 (enable_spectral==3)) {  // SEM time
       if ((project_option==0)||
           (project_option==1)||
-          (project_option==10)|| // sync project at advection
           (project_option==11)|| // FSI_material_exists (2nd project)
           (project_option==12)|| // pressure extrapolation
           (project_option==13)|| // FSI_material_exists (1st project)
@@ -11325,7 +11241,6 @@ void NavierStokes::multiphase_project(int project_option) {
  int homflag_dual_time=0;
 
  if ((project_option==1)||   // initial project
-     (project_option==10)||  // sync project prior to advection
      (project_option==11)) { // FSI_material_exists (2nd project)
   homflag_dual_time=1;
  } else if (project_option==12) { // pressure extrapolation
@@ -11360,7 +11275,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if ((project_option==0)||   //regular project
      (project_option==1)||   //initial project
-     (project_option==10)||  //sync project prior to advection
      (project_option==13)||  //FSI_material_exists (1st project)
      (project_option==11)) { //FSI_material_exists (2nd project)
 
@@ -11391,7 +11305,6 @@ void NavierStokes::multiphase_project(int project_option) {
        (project_option==13)) { //FSI_material_exists(1st project)
     update_energy=1; // update temperature and density (if non-cons)
    } else if ((project_option==1)||   //initial project
-  	      (project_option==10)||  //sync project prior to advection
 	      (project_option==11)) { //FSI_material_exists(2nd project)
     // do nothing
    } else 
@@ -11437,8 +11350,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
    } else if (project_option==1) {
     ns_level.avgDown(State_Type,0,num_materials_vel*AMREX_SPACEDIM,1);
-   } else if ((project_option==10)||
-              (project_option==11)) { //FSI_material_exists (2nd project)
+   } else if (project_option==11) { //FSI_material_exists (2nd project)
     ns_level.avgDown(State_Type,0,num_materials_vel*AMREX_SPACEDIM,1);
    } else
     amrex::Error("project_option invalid 54");
@@ -11448,7 +11360,6 @@ void NavierStokes::multiphase_project(int project_option) {
   delete_array(PRESPC2_MF);
 
   if ((project_option==0)||
-      (project_option==10)|| // sync project prior to advection
       (project_option==13)|| // FSI_material_exists (1st project)
       (project_option==11)) {// FSI_material_exists (2nd project)
 
@@ -11458,16 +11369,6 @@ void NavierStokes::multiphase_project(int project_option) {
    // do nothing
   } else
    amrex::Error("project_option invalid");
-
-   // Copy new MAC and new Cell velocity to old.
-   // This is done after the variables are unscaled since the
-   // old velocity is not a scaled quantity.
-  if (project_option==10) {
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.mac_sync();
-   } // ilev
-  }
 
   if ((project_option==0)||
       (project_option==13)) { //FSI_material_exists (1st project)
@@ -11495,7 +11396,6 @@ void NavierStokes::multiphase_project(int project_option) {
    delete_array(CELLTENSOR_MF);
 
   } else if ((project_option==1)||
-             (project_option==10)||
              (project_option==11)) { //FSI_material_exists (2nd project)
    // do nothing
   } else
@@ -11555,19 +11455,6 @@ void NavierStokes::multiphase_project(int project_option) {
  }
 
  remove_MAC_velocityALL(UMAC_MF);
-
- if (1==0) {
-  if (project_option==10) {
-   int debug_int=1;
-   int basestep_debug=nStep()+1;
-   if ((basestep_debug/debug_int)*debug_int==basestep_debug) {
-    parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
-    std::cout << "press any number then enter: multiphase project\n";
-    int n_input;
-    std::cin >> n_input;
-   }
-  }
- }
 
  if (project_option==11) { //FSI_material_exists (2nd project)
   for (int ilev=level;ilev<=finest_level;ilev++) {

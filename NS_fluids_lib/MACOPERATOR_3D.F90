@@ -256,7 +256,6 @@ stop
 
         if ((project_option.eq.0).or. & ! regular project
             (project_option.eq.1).or. & ! initial project
-            (project_option.eq.10).or. & ! sync project
             (project_option.eq.13).or. & ! FSI_material_exists 1st project
             (project_option.eq.11)) then ! FSI_material_exists 2nd project
 
