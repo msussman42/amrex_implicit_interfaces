@@ -6881,8 +6881,7 @@ stop
       endif
 
       if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.10)) then
+          (project_option.eq.1)) then
        ! do nothing
       else
        print *,"project_option invalid PHYSVARS"
@@ -8810,8 +8809,6 @@ stop
                 local_face(pforce_index+1)=wtL*curvL(3)+wtR*curvR(3)
                endif
 
-              else if (project_option.eq.10) then
-               ! do nothing
               else if ((project_option.eq.11).or. & ! FSI_material_exists 2nd 
                        (project_option.eq.13)) then ! FSI_material_exists 1st
                print *,"FORT_INIT_PHYSICS_VARS should not be called here"
@@ -10718,7 +10715,6 @@ stop
 
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.10).or. &
           (project_option.eq.11).or. & ! FSI_material_exists 2nd project
           (project_option.eq.13).or. & ! FSI_material_exists 1st project
           (project_option.eq.12).or. & ! pressure extension
@@ -10907,7 +10903,6 @@ stop
 
           if ((project_option.eq.0).or. &
               (project_option.eq.1).or. &
-              (project_option.eq.10).or. &
               (project_option.eq.11).or. & ! FSI_material_exists 2nd project
               (project_option.eq.13).or. & ! FSI_material_exists 1st project
               (project_option.eq.12)) then ! pressure extension
@@ -12101,8 +12096,6 @@ stop
 
         else if (project_option.eq.1) then
          ! do nothing if initial project
-        else if (project_option.eq.10) then
-         ! do nothing if sync project
         else if (project_option.eq.11) then !FSI_material_exists 2nd project
          ! do nothing if rigid body project
         else
@@ -13538,7 +13531,6 @@ stop
        if ((project_option.eq.0).or. &
            (project_option.eq.1).or. &
            (project_option.eq.3).or. & 
-           (project_option.eq.10).or. &
            (project_option.eq.13).or. & !FSI_material_exists 1st project
            (project_option.eq.11)) then !FSI_material_exists 2nd project
         ! do nothing
@@ -13575,7 +13567,6 @@ stop
 
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.10).or. &
           (project_option.eq.11).or. & !FSI_material_exists 2nd project
           (project_option.eq.13).or. & !FSI_material_exists 1st project
           (project_option.eq.12).or. & !pressure extrapolation
@@ -14608,7 +14599,6 @@ stop
                   (COARSE_FINE_VELAVG.eq.1)) then
                use_face_pres=1 ! do not use gp 
               else if (((project_option.eq.0).or. &
-                        (project_option.eq.10).or. &
                         (project_option.eq.13).or. &  !FSI_material_exists 1st
                         (project_option.eq.11)).and. &!FSI_material_exists 2nd
                        (COARSE_FINE_VELAVG.eq.0)) then
@@ -14742,7 +14732,6 @@ stop
             stop
            endif
           else if (((project_option.eq.0).or. &
-                    (project_option.eq.10).or. &
                     (project_option.eq.13).or. &  !FSI_material_exists 1st
                     (project_option.eq.11)).and. &!FSI_material_exists 2nd
                    (COARSE_FINE_VELAVG.eq.0)) then
@@ -15185,7 +15174,6 @@ stop
            ! xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi] 
           if ((project_option.eq.0).or. &
               (project_option.eq.1).or. &
-              (project_option.eq.10).or. &
               (project_option.eq.11).or. & !FSI_material_exists 2nd project
               (project_option.eq.13).or. & !FSI_material_exists 1st project
               (project_option.eq.12).or. & !pressure extrapolation
@@ -15913,7 +15901,6 @@ stop
 
           if ((project_option.eq.0).or. &  !regular project
               (project_option.eq.1).or. &  !initial project
-              (project_option.eq.10).or. & !sync project
               (project_option.eq.13).or. & !FSI_material_exists 1st project
               (project_option.eq.11)) then !FSI_material_exists 2nd project
 

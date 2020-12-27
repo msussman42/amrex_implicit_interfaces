@@ -917,7 +917,6 @@ stop
 
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.10).or. &
           (project_option.eq.11).or. &
           (project_option.eq.12).or. & ! pressure extrapolation
           (project_option.eq.13).or. &
@@ -1075,7 +1074,6 @@ stop
       endif
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.10).or. &
           (project_option.eq.11).or. &
           (project_option.eq.12).or. & ! pressure extrapolation
           (project_option.eq.13).or. &
@@ -13754,7 +13752,6 @@ END SUBROUTINE Adist
 
        if ((project_option.eq.0).or. &  !regular project
            (project_option.eq.1).or. &  !initial project
-           (project_option.eq.10).or. & !sync project
            (project_option.eq.13).or. & !FSI_material_exists 1st project
            (project_option.eq.11)) then !FSI_material_exists 2nd project
 
@@ -13764,8 +13761,7 @@ END SUBROUTINE Adist
          cc_group=cc*cc_ice  ! cc_ice comes from LOCAL_ICEFACECUT_MF
         else if (project_option.eq.1) then ! initial projection
          cc_group=cc*cc_ice
-        else if ((project_option.eq.10).or. & !sync project (advection)
-                 (project_option.eq.11)) then !FSI_material_exists 2nd project
+        else if (project_option.eq.11) then !FSI_material_exists 2nd project
          cc_group=cc*cc_ice
         else
          print *,"project_option invalid"
@@ -14636,35 +14632,6 @@ END SUBROUTINE Adist
        print *,"SEM_CELL_TO_MAC parms corrupt"
        stop
       endif
-
-      if (1.eq.0) then
-       if (operation_flag.eq.0) then ! pressure gradient on MAC grid
-        if (project_option.eq.10) then
-         if (level.eq.3) then
-          if ((j.eq.0).and.(i.eq.120).and.(k.eq.18)) then
-           print *,"TO_MAC: i,j,k ",i,j,k
-           print *,"dir,spectral_loop ",dir,spectral_loop
-           print *,"presbc(dir,1) ",presbc_in(dir,1,1)  
-           print *,"presbc(dir,2) ",presbc_in(dir,2,1)  
-           print *,"maskCF0123 ", &
-            maskCF(D_DECL(i-ii,j-jj,k-kk)), &
-            maskCF(D_DECL(i,j,k)), &
-            maskCF(D_DECL(i+ii,j+jj,k+kk)), &
-            maskCF(D_DECL(i+2*ii,j+2*jj,k+2*kk))
-           print *,"xcut012 ", &
-            xcut(D_DECL(i,j,k)), &
-            xcut(D_DECL(i+ii,j+jj,k+kk)), &
-            xcut(D_DECL(i+2*ii,j+2*jj,k+2*kk))
-           print *,"maskSEM0123 ", &
-            maskSEM(D_DECL(i-ii,j-jj,k-kk)), &
-            maskSEM(D_DECL(i,j,k)), &
-            maskSEM(D_DECL(i+ii,j+jj,k+kk)), &
-            maskSEM(D_DECL(i+2*ii,j+2*jj,k+2*kk))
-          endif
-         endif
-        endif
-       endif
-      endif  ! debugging
 
        ! local_incomp presently not used.
       local_incomp=0
@@ -17210,7 +17177,6 @@ END SUBROUTINE Adist
 
        if ((project_option.eq.0).or. &
            (project_option.eq.1).or. &
-           (project_option.eq.10).or. &
            (project_option.eq.13).or. & !FSI_material_exists 1st project
            (project_option.eq.11)) then !FSI_material_exists 2nd project
         if (ncomp.ne.1) then
@@ -17736,39 +17702,6 @@ END SUBROUTINE Adist
         endif
        endif
       enddo ! dir2=1..sdim
-
-
-      if (1.eq.0) then
-       if (operation_flag.eq.0) then ! right hand side for solver
-        if (project_option.eq.10) then ! sync project
-         if (level.eq.3) then
-          if ((j.eq.0).and.(i.eq.120).and.(k.eq.18)) then
-           print *,"TO_CELL: i,j,k,maskSEM,homflag ",i,j,k,maskSEM,homflag
-           print *,"dir_main ",dir_main
-           print *,"presbc(dir_main,1) ",presbc_in(dir_main,1)  
-           print *,"presbc(dir_main,2) ",presbc_in(dir_main,2)  
-           print *,"vol01 ", &
-            vol(D_DECL(i,j,k)), &
-            vol(D_DECL(i+ii,j+jj,k+kk))
-           print *,"cterm01 ", &
-            cterm(D_DECL(i,j,k),1), &
-            cterm(D_DECL(i+ii,j+jj,k+kk),1)
-           print *,"mdotcell01 ", &
-            mdotcell(D_DECL(i,j,k),1), &
-            mdotcell(D_DECL(i+ii,j+jj,k+kk),1)
-           print *,"maskcoef01 ", &
-            maskcoef(D_DECL(i,j,k)), &
-            maskcoef(D_DECL(i+ii,j+jj,k+kk))
-           print *,"xvel012 ", &
-            xvel(D_DECL(i,j,k),1), &
-            xvel(D_DECL(i+ii,j+jj,k+kk),1), &
-            xvel(D_DECL(i+2*ii,j+2*jj,k+2*kk),1)
-          endif
-         endif
-        endif
-       endif
-      endif  ! debugging
-
 
       do nc=1,ncomp
 
@@ -18653,8 +18586,6 @@ END SUBROUTINE Adist
 
            else if (project_option.eq.1) then
             ! do nothing if initial project
-           else if (project_option.eq.10) then
-            ! do nothing if sync project
            else if (project_option.eq.11) then !FSI_material_exists 2nd 
             ! do nothing if rigid body project
            else if (project_option.eq.12) then
@@ -26727,7 +26658,6 @@ end subroutine initialize2d
 
        if ((project_option.eq.0).or. &
            (project_option.eq.1).or. &
-           (project_option.eq.10).or. &
            (project_option.eq.13).or. & !FSI_material_exists 1st project
            (project_option.eq.11).or. & !FSI_material_exists 2nd project
            (project_option.eq.12)) then  ! pressure extension

@@ -54,7 +54,6 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||  // sync project
      (project_option==11)||  // FSI_material_exists (2nd project)
      (project_option==13)||  // FSI_material_exists (1st project)
      (project_option==12)) { // pressure extrapolation
@@ -91,7 +90,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||  //sync project
      (project_option==13)||  //FSI_material_exists 1st project
      (project_option==11)) { //FSI_material_exists 2nd project
 
@@ -901,7 +899,6 @@ NavierStokes::deallocate_maccoef(int project_option) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -939,7 +936,6 @@ NavierStokes::AllinterpScalarMAC(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==12)) {// pressure extrapolation
@@ -1160,7 +1156,6 @@ NavierStokes::averageRhs(int idx_MF,int nsolve,int project_option) {
   int num_materials_face=num_materials_vel;
   if ((project_option==0)||
       (project_option==1)||
-      (project_option==10)|| //sync project
       (project_option==11)|| //FSI_material_exists 2nd project
       (project_option==13)|| //FSI_material_exists 1st project
       (project_option==12)|| //pressure extrapolation
@@ -1267,7 +1262,6 @@ void NavierStokes::DiagInverse(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -1452,7 +1446,6 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -1553,7 +1546,6 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -1728,7 +1720,6 @@ void NavierStokes::apply_div(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -2787,7 +2778,6 @@ void NavierStokes::mac_project_rhs(int project_option,
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -2848,7 +2838,6 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| //sync project
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -2921,7 +2910,6 @@ void NavierStokes::adjust_tolerance(Real& error0,Real& error0_max,
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)|| // sync project
      (project_option==11)|| // FSI_material_exists 2nd project
      (project_option==13)|| // FSI_material_exists 1st project
      (project_option==12)|| // pressure extension project

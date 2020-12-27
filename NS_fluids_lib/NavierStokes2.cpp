@@ -1315,9 +1315,8 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| //FSI_material_exists (2nd project)
-     (project_option==13)|| //FSI_material_exists (1st project)
-     (project_option==10)) {//sync project prior to advection
+     (project_option==11)||  //FSI_material_exists (2nd project)
+     (project_option==13)) { //FSI_material_exists (1st project)
   // do nothing
  } else
   amrex::Error("project_option invalid20");
@@ -1971,30 +1970,6 @@ void NavierStokes::save_to_macvel_state(int idx_umac) {
 
 } // save_to_macvel_state
 
-// replace the old velocity with a synchonized old velocity since
-// regridding or a change in maskSEM can upset the divergence condition.
-// called from: NavierStokes::multiphase_project (project_option==10)
-void NavierStokes::mac_sync() {
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel!=1");
- 
- int nsolve=1;
- int nsolveMM=nsolve*num_materials_vel;
- int nsolveMM_FACE=nsolveMM;
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-  MultiFab& Umac_old=get_new_data(Umac_Type+dir,slab_step);
-  MultiFab::Copy(Umac_old,Umac_new,0,0,nsolveMM_FACE,0);
- } 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- MultiFab& S_old=get_new_data(State_Type,slab_step);
- MultiFab::Copy(S_old,S_new,0,0,num_materials_vel*AMREX_SPACEDIM,0);
-
-} // mac_sync
-
-
 void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
  int im,im_opp;
 
@@ -2229,8 +2204,7 @@ void NavierStokes::increment_face_velocity(
     amrex::Error("blobdata or num_colors invalid");
 
   } else if ((project_option==0)||
-             (project_option==1)||
-             (project_option==10)) {
+             (project_option==1)) {
    // do nothing
   } else
    amrex::Error("project_option invalid22");
@@ -4248,7 +4222,6 @@ void NavierStokes::apply_pressure_grad(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==10)||
      (project_option==11)|| //FSI_material_exists 2nd project
      (project_option==13)|| //FSI_material_exists 1st project
      (project_option==12)|| //pressure extrapolation
@@ -4625,7 +4598,6 @@ void NavierStokes::apply_pressure_grad(
 
  } else if ((project_option==0)||
             (project_option==1)||
-            (project_option==10)||
             (project_option==11)|| //FSI_material_exists 2nd project
             (project_option==13)|| //FSI_material_exists 1st project
             (project_option==12)|| //pressure extrapolation
@@ -4918,8 +4890,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   amrex::Error("level invalid make_physics_varsALL");
 
  if ((project_option==0)||
-     (project_option==1)||
-     (project_option==10)) {
+     (project_option==1)) {
   // do nothing
  } else
   amrex::Error("project_option invalid make_physics_varsALL");
@@ -5215,8 +5186,7 @@ void NavierStokes::make_physics_vars(int project_option) {
  int num_curv=nten*(AMREX_SPACEDIM+5); 
 
  if ((project_option==0)||
-     (project_option==1)||
-     (project_option==10)) {
+     (project_option==1)) {
   // do nothing
  } else
   amrex::Error("project_option invalid make_physics_vars");
@@ -9732,7 +9702,7 @@ void NavierStokes::init_pressure_error_indicator() {
 //    Equation of state to be used depends on vofPC
 // 3. in incompressible regions, p=0
 //
-// if project_option==10 or project_option==11
+// if project_option==11
 // 1. div_hold/dt is put in localMF[DIFFUSIONRHS_MF]
 // 2. div_hold/(csound_hold*dt) is put in the 2nd component of cell_sound where
 //    there are compressible materials.
@@ -9810,8 +9780,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
      (project_option==13)) { //FSI_material_exists 1st project
   if (state_index!=State_Type)
    amrex::Error("state_index invalid");
- } else if ((project_option==10)||
-            (project_option==11)) { //FSI_material_exists 2nd project
+ } else if (project_option==11) { //FSI_material_exists 2nd project
   if (state_index!=DIV_Type)
    amrex::Error("state_index invalid");
  } else
@@ -9825,8 +9794,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
  if ((project_option==0)||
      (project_option==13)) { //FSI_material_exists 1st project
   // do nothing
- } else if ((project_option==10)||
-            (project_option==11)) { //FSI_material_exists 2nd project
+ } else if (project_option==11) { //FSI_material_exists 2nd project
    // dst,src,scomp,dcomp,ncomp,ngrow
   int sc=scomp[0];
   int dc=1; // copy 1st component of DIV_TYPE contents 

@@ -1289,8 +1289,6 @@ void apply_pressure_grad(
      int idx_gpcell,
      int idx_divup);
 
-    void mac_sync();
-
     void update_SEM_delta_force(int project_option,
      int idx_gp,int idx_gpmac,int idx_div,
      int update_spectral,int update_stable,
