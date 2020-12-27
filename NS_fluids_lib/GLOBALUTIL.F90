@@ -6836,8 +6836,7 @@ contains
 
        do i1=0,bfact
         if ((nc.ge.1).and.(nc.le.SDIM)) then
-         if ((conservative_div_uu.eq.1).or. &
-             (conservative_div_uu.eq.2)) then
+         if (conservative_div_uu.eq.1) then
           dest_interp(i1)=dest_interp(i1)*vel(i1)
          else if (conservative_div_uu.eq.0) then
           ! do nothing

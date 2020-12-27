@@ -10357,8 +10357,7 @@ stop
       endif
 
       if ((conservative_div_uu.eq.0).or. &
-          (conservative_div_uu.eq.1).or. &
-          (conservative_div_uu.eq.2)) then
+          (conservative_div_uu.eq.1)) then
        ! do nothing
       else
        print *,"conservative_div_uu invalid"
@@ -13484,8 +13483,7 @@ stop
        stop
       endif
       if ((conservative_div_uu.eq.0).or. &
-          (conservative_div_uu.eq.1).or. &
-          (conservative_div_uu.eq.2)) then
+          (conservative_div_uu.eq.1)) then
        ! do nothing
       else
        print *,"conservative_div_uu invalid"
