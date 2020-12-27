@@ -14912,8 +14912,7 @@ END SUBROUTINE Adist
              ! (u_{i+1/2}+u_{i-1/2})(S_{i+1/2}-S_{i-1/2})/2
              ! u dot grad u = div(umac u)-I(umac) div umac
              if ((conservative_div_uu.eq.0).or. &
-                 (conservative_div_uu.eq.1).or. &
-                 (conservative_div_uu.eq.2)) then
+                 (conservative_div_uu.eq.1)) then
               local_data_side(side)= &
                vel(D_DECL(ic,jc,kc),velcomp) ! NONCONSERVATIVE
              else
@@ -15139,8 +15138,7 @@ END SUBROUTINE Adist
 
                velcomp=nc
                if ((conservative_div_uu.eq.0).or. &
-                   (conservative_div_uu.eq.1).or. &
-                   (conservative_div_uu.eq.2)) then
+                   (conservative_div_uu.eq.1)) then
                 local_bcval(side)= &
                  vel(D_DECL(i_out,j_out,k_out),velcomp) !NONCONSERVATIVE
                else
@@ -15416,8 +15414,7 @@ END SUBROUTINE Adist
               endif
               velcomp=nc
               if ((conservative_div_uu.eq.0).or. &
-                  (conservative_div_uu.eq.1).or. &
-                  (conservative_div_uu.eq.2)) then
+                  (conservative_div_uu.eq.1)) then
                local_data_side(side)= &
                 xp(D_DECL(iface_out,jface_out,kface_out),velcomp)
               else
@@ -15858,8 +15855,7 @@ END SUBROUTINE Adist
             velcomp=nc
 
             if ((conservative_div_uu.eq.0).or. &
-                (conservative_div_uu.eq.1).or. &
-                (conservative_div_uu.eq.2)) then
+                (conservative_div_uu.eq.1)) then
              local_data(isten+1)= &
               vel(D_DECL(ic,jc,kc),velcomp) !NONCONSERVATIVE
             else
@@ -18078,8 +18074,7 @@ END SUBROUTINE Adist
             ! velocity = div (umac u) - u div(u)
             ! mdotcell corresponds to VELADVECT_MF in the caller.
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
-            if ((conservative_div_uu.eq.1).or. &
-                (conservative_div_uu.eq.2)) then
+            if (conservative_div_uu.eq.1) then
              local_div(isten+1)=local_div(isten+1)- &
                 mdotcell(D_DECL(ic,jc,kc),nc)*local_vel_div_div(isten+1)
             else if (conservative_div_uu.eq.0) then
