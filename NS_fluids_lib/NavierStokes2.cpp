@@ -4026,13 +4026,19 @@ void NavierStokes::init_gradu_tensor(
  doit_gradu_tensor(
    im_tensor,
    homflag,
-   idx_vel,idx_cell,idx_face,spectral_loop,
+   idx_vel,
+   idx_cell,
+   idx_face,
+   spectral_loop,
    itensor_iter,mask3,
    simple_AMR_BC_flag_viscosity);
 
  if (im_tensor==-1) {
+
   // do nothing
+
  } else if (im_tensor>=0) {
+
   bool use_tiling=ns_tiling;
   int nsolve=AMREX_SPACEDIM;
   int nsolveMM=nsolve*num_materials_vel;
@@ -4115,8 +4121,8 @@ void NavierStokes::init_gradu_tensor(
 
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
  
-    FArrayBox& tensor_data=(*localMF[LOCAL_FACETENSOR_MF])[mfi];
-    FArrayBox& cell_tensor_data=(*localMF[LOCAL_CELLTENSOR_MF])[mfi];
+    FArrayBox& tensor_data=(*localMF[idx_face])[mfi];
+    FArrayBox& cell_tensor_data=(*localMF[idx_cell])[mfi];
     FArrayBox& mask_tensor_data=(*localMF[MASKSOLIDTENSOR_MF])[mfi];
     FArrayBox& faceLS=(*localMF[LSTENSOR_MF])[mfi];
 
