@@ -18565,9 +18565,9 @@ stop
 
           local_wt=particles_weight(im_PLS_cpp+1)
           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-           F_local=(one-local_wt)*F_old+local_wt*F_local
+           F_local=F_old-local_wt*(F_old-F_local)
            do dir=1,SDIM
-            X_local(dir)=(one-local_wt)*X_old(dir)+local_wt*X_local(dir)
+            X_local(dir)=X_old(dir)-local_wt*(X_old(dir)-X_local(dir))
            enddo
           else
            print *,"local_wt invalid"
@@ -19512,8 +19512,8 @@ stop
         local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
          do dir=1,SDIM
-          x_foot_interp(dir)=(one-local_wt)*x_foot_interp(dir)+ &
-            local_wt*(x_foot_interp(dir)-b_X(dir)/A_X)
+          x_foot_interp(dir)=x_foot_interp(dir)- &
+            local_wt*b_X(dir)/A_X
          enddo
         else
          print *,"local_wt invalid"
@@ -19553,8 +19553,7 @@ stop
       if (A_LS.gt.zero) then
        local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
        if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-        dist_interp=(one-local_wt)*dist_interp+ &
-         local_wt*(dist_interp-b_LS/A_LS)
+        dist_interp=dist_interp-local_wt*b_LS/A_LS
        else
         print *,"local_wt invalid"
         stop
@@ -19593,8 +19592,7 @@ stop
         local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
          do dir=1,SDIM
-          vel_interp(dir)=(one-local_wt)*vel_interp(dir)+ &
-            local_wt*(vel_interp(dir)-b_VEL(dir)/A_X)
+          vel_interp(dir)=vel_interp(dir)-local_wt*b_VEL(dir)/A_X
          enddo
         else
          print *,"local_wt invalid"
