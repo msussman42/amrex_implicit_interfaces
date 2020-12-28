@@ -1971,7 +1971,9 @@ void NavierStokes::save_to_macvel_state(int idx_umac) {
 } // save_to_macvel_state
 
 void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
- int im,im_opp;
+
+ int im=-1;
+ int im_opp=-1;
 
  if (nmat<1)
   amrex::Error("nmat invalid");
@@ -2155,8 +2157,8 @@ void NavierStokes::increment_face_velocity(
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
- MultiFab* levelcolor;
- MultiFab* leveltype;
+ MultiFab* levelcolor=nullptr;
+ MultiFab* leveltype=nullptr;
 
  int num_colors=blobdata.size();
  int blob_array_size=num_colors*num_elements_blobclass;
