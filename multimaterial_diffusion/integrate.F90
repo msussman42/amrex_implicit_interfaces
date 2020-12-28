@@ -223,6 +223,8 @@ do while (finished_flag.eq.0)
   use_tsatfab=1
  endif
 
+ print *,"BEFORE INIT_GLOBALS 1; tm= ",tm
+
   ! UOLD=UOLD_in  UNEW=UNEW_in
   ! in: BICGSTAB_Yang_MULTI.F90
  allocate_flag=1
@@ -257,6 +259,8 @@ do while (finished_flag.eq.0)
           fixed_dt_main)
 
  endif
+
+ print *,"BEFORE update_interface; tm= ",tm
 
   ! in: MOVE_INTERFACE_3D.F90
   ! interface updated here: 
@@ -309,6 +313,7 @@ do while (finished_flag.eq.0)
   enddo
  endif
 
+ print *,"BEFORE INIT_GLOBALS 2; tm= ",tm
   ! UOLD=UOLD_in  UNEW=UNEW_in
   ! in: BICGSTAB_Yang_MULTI.F90
   ! uses tsatfab and swept
@@ -327,6 +332,8 @@ do while (finished_flag.eq.0)
   beta_in,h_in,precond_type_in,bicgstab_tol_in, &
   VFRAC_MOF_in,nmat_in,alpha_in,deltat_in, &
   mofdata_FAB_in,current_time_in)
+
+ print *,"BEFORE bicgstab; tm= ",tm
 
   ! uses tsatfab and swept
  call bicgstab(UNEW_in,hflag,iter)
@@ -364,6 +371,8 @@ do while (finished_flag.eq.0)
  else if (probtype_in.eq.403) then
   ! do nothing
  else if (probtype_in.eq.404) then
+  ! do nothing
+ else if (probtype_in.eq.405) then
   ! do nothing
  else if (probtype_in.eq.5) then
   ! do nothing
@@ -597,6 +606,8 @@ do while (finished_flag.eq.0)
   ! do nothing
  else if (probtype_in.eq.404) then
   ! do nothing
+ else if (probtype_in.eq.405) then
+  ! do nothing
  else if (probtype_in.eq.5) then
   expect_radius=0.1d0+Ts(tm+1)
   print *,"TIME= ",Ts(tm+1)," MAT= ",im," EXACT RADIUS= ",expect_radius
@@ -711,7 +722,8 @@ do while (finished_flag.eq.0)
      (probtype_in.eq.401).or. &
      (probtype_in.eq.402).or. &
      (probtype_in.eq.403).or. &
-     (probtype_in.eq.404)) then 
+     (probtype_in.eq.404).or. &
+     (probtype_in.eq.405)) then 
 
   max_front_vel=0.0
   do i= 0,N_CURRENT-1

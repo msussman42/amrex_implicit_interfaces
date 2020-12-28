@@ -60,7 +60,7 @@ IMPLICIT NONE
 ! 402=NASA boiling (material 1 liquid, material 2 gas, material 3 substrate)
 ! 403=Dendrite problem From Tryggvason or Chen Merriman Osher Smereka 1997
 !  Figure 8.
-INTEGER,PARAMETER          :: probtype_in=403
+INTEGER,PARAMETER          :: probtype_in=405
 INTEGER        :: stefan_flag ! VARIABLE TSAT
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
@@ -68,8 +68,8 @@ real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 real(kind=8),PARAMETER     :: radblob2_in = 0.05d0  
 ! adjust this for shrinking circle and maybe planar moving front.
 ! for dendrite problem, center is (2,2)
-real(kind=8),PARAMETER     :: xblob_in = 2.0d0
-real(kind=8),PARAMETER     :: yblob_in = 2.0d0
+real(kind=8),PARAMETER     :: xblob_in = 0.5d0
+real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 ! for probtype=16 , top and bot temperature profile
 ! for dendrite problem: St=-0.5  Tinfinity=-0.5  T_ice=-1.0
 !   Tsat=0.0
@@ -81,7 +81,9 @@ real(kind=8),parameter     :: NB_top=1.5d0, NB_bot=1.5d0
 ! for probtype==5, T(x=0)=273.0  T(x=1)=272.0+e^{-V(1-Vt)}
 ! material 1 on the left, material 2 on the right.
 ! 1.0d0 for probtype==400 (gingerbread)
-!  (T=TSAT interior domain initially, T=TSAT+TDIFF on walls)
+!  => T=TSAT on the material 12 interface, TSAT=2
+!     T=TDIFF_in in the far field and initially at the center of the 
+!     annulus.
 real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
@@ -121,7 +123,7 @@ real(kind=8),parameter     :: TSTOP = 0.8D0
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
 real(kind=8),parameter     :: CFL = 0.5d0
-real(kind=8),parameter     :: problo= 0.0d0, probhi= 4.0d0
+real(kind=8),parameter     :: problo= 0.0d0, probhi= 1.0d0
 integer,parameter          :: sdim_in = 2
 
 INTEGER :: nmax
@@ -222,7 +224,7 @@ real(kind=8) :: local_center(2)
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= November 15, 2020, 13:00pm"
+print *,"PROTOTYPE CODE DATE= December 28, 2020, 14:40pm"
 
 stefan_flag=1 ! VARIABLE TSAT
 
@@ -236,66 +238,29 @@ constant_K_test=0
 print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
-! dendrite probtype_in.eq.403
+! filament_grow probtype_in.eq.405
 ! N space
 ! M time
-! for dendrite growth test problem, time step is variable
-! (fixed_dt_main==0.0)
-! 64,128,256
-! VERIFICATION: M_START=1600, 1600, 1600 corresponding to 64,128,256
+! fixed_dt_main==-1.0
+! 32 64 128 256
+! VERIFICATION: M_START=64 128 256 512
 !
-!For convergence study:
-! 32,64,128, radblob10=1.0, fixed_dt_main=-1.0,
-! M_START=32,64,128
-! saturation_temp_vel=0.0
-! saturation_temp_curv=0.002
-N_START=128
-N_FINISH=128
-M_START=1600
+N_START=32
+N_FINISH=32
+M_START=64
 M_FACTOR=2
 
-axis_dir=0 !standard dendrite problem non-circular seed probtype_in.eq.403
-!axis_dir=1 ! circular seed for probtype_in.eq.403
-!radblob10=1.0d0  ! 0.1d0 is from the earlier articles
+axis_dir=0 
 radblob10=0.1d0  ! 0.1d0 is from the earlier articles
-height_function_flag_global=1  ! =1 for height function
+height_function_flag_global=0  ! =1 for height function
                                ! =2 for sanity check
 ! set transition_region=0.0d0 for seed problem from Chen and Smereka
 ! or Juric and Tryggvason.
 !transition_region=0.25d0 ! initial circular seed (transition_region>0.0)
 transition_region=0.0d0 ! initial circular seed (transition_region>0.0)
 
-if (probtype_in.eq.4) then ! expanding or shrinking circle
-        ! time step hardwire for this test
- fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
-else if ((probtype_in.eq.13).or. & ! hypocycloid
-         (probtype_in.eq.15).or. &
-         (probtype_in.eq.20)) then
- fixed_dt_main=-1.0d0 ! dt=1.25D-2 N=32  M=1  TSTOP=1.25D-2
-else if (probtype_in.eq.16) then ! multiscale
- fixed_dt_main=-1.0d0 ! TSTOP=2.0
-else if (probtype_in.eq.1) then ! annulus
- fixed_dt_main=-1.0d0 ! TSTOP=1.25D-2 
-else if (probtype_in.eq.19) then ! polar solver
- fixed_dt_main=-1.0d0 ! TSTOP=0.004
-else if (probtype_in.eq.0) then ! flat interface
- fixed_dt_main=-1.0d0 
-else if (probtype_in.eq.2) then ! vertical
- fixed_dt_main=-1.0d0 
-else if (probtype_in.eq.3) then ! expanding circle
- fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
-else if (probtype_in.eq.5) then ! phase change vertical planar interface
- fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
-else if (probtype_in.eq.400) then ! gingerbread man
- fixed_dt_main=0.0d0
-else if (probtype_in.eq.403) then ! dendrite
- fixed_dt_main=0.0d0
- ! VERIFICATION:
- fixed_dt_main=-1.0d0
-else
- print *,"probtype_in invalid"
- stop
-endif
+! time step hardwire for this test
+fixed_dt_main=-1.0d0 
 
 if (fixed_dt_main.eq.-1.0d0) then
  ! do nothing fixed_dt_current=TSTOP/M_CURRENT
@@ -419,303 +384,31 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    enddo
  enddo
 
- if (probtype_in.eq.0) then
+  ! latent heat   12 13 23 21 31 32
+  !                x  0  0 0  0   0 
+ order_algorithm(1)=1  ! inside the annulus
+ order_algorithm(2)=3  ! this is the growing seed
+ order_algorithm(3)=2
+ nmat_in=3
+ fort_heatviscconst(1)=1.0 
+ fort_heatviscconst(2)=1.0 
+ fort_heatviscconst(3)=1.0 
+ do dir=1,sdim_in
+ do side=1,2
+  physbc(dir,side)=EXT_DIR
+  physbc_value(dir,side)=1.0d0
+ enddo
+ enddo
 
-   nmat_in=2
-   fort_heatviscconst(1)=1.0
-   fort_heatviscconst(2)=0.1
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=3.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=2.0d0
-
- else if (probtype_in.eq.1) then
-
-   order_algorithm(1)=1
-   order_algorithm(2)=3
-   order_algorithm(3)=2
-   nmat_in=3
-   fort_heatviscconst(1)=0.0 
-   fort_heatviscconst(2)=1.0 
-   fort_heatviscconst(3)=0.0 
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=EXT_DIR
-    physbc_value(dir,side)=0.0d0
-   enddo
-   enddo
-
- else if (probtype_in.eq.2) then
-   nmat_in=2
-   fort_heatviscconst(1)=1.0
-   fort_heatviscconst(2)=0.1
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=3.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=2.0d0
- else if (probtype_in.eq.3) then
-   nmat_in=2
-   fort_heatviscconst(1)=1.0
-   fort_heatviscconst(2)=1.0
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-
-   ! distance function: see subroutine dist_concentric in multimat_FVM.F90
- else if (probtype_in.eq.4) then
-   nmat_in=2
-   fort_heatviscconst(1)=1.0  ! inside material (supercooled liquid)
-   fort_heatviscconst(2)=0.0  ! outside (ice)
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   if ((stefan_flag.eq.1).and. &
-       (local_operator_internal.eq.3).and. &
-       (local_operator_external.eq.1).and. &
-       (local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==4"
-    stop
-   endif
-
- else if (probtype_in.eq.400) then
-
-   sci_max_level=2
-   nmat_in=2
-   fort_heatviscconst(1)=1.0  ! inside gingerbread (T=TSAT init.)
-   fort_heatviscconst(2)=1.0  ! outside gingerbread (T=TSAT init.)
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=273.0d0+TDIFF_in
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=273.0d0+TDIFF_in
-   if ((stefan_flag.eq.1).and. &
-       (local_operator_internal.eq.3).and. &
-       (local_operator_external.eq.1).and. &
-       (local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==400"
-    stop
-   endif
-
-   FSI_flag(1)=7 ! gingerbread (in the man)
-
- else if (probtype_in.eq.403) then  ! dendrite
-
-   sci_max_level=0
-   nmat_in=2
-   fort_heatviscconst(1)=1.0d0  ! outside dendrite (T0=1.5) 
-   fort_heatviscconst(2)=1.0d0  ! inside dendrite  (T0=1.0)
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   if (1.eq.0) then
-    physbc(2,1)=EXT_DIR
-    physbc_value(2,1)=0.5d0
-    physbc(2,2)=EXT_DIR
-    physbc_value(2,2)=0.5d0
-    physbc(1,1)=EXT_DIR
-    physbc_value(1,1)=0.5d0
-    physbc(1,2)=EXT_DIR
-    physbc_value(1,2)=0.5d0
-   endif
-   if ((stefan_flag.eq.1).and. &
-       (local_operator_internal.eq.3).and. &
-       (local_operator_external.eq.1).and. &
-       (local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==400"
-    stop
-   endif
-
- else if (probtype_in.eq.5) then
-
-   nmat_in=2
-   fort_heatviscconst(1)=0.0  ! inside material (left material)
-   fort_heatviscconst(2)=1.0  ! outside (right material)
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   dir=1
-   side=1
-   physbc(dir,side)=EXT_DIR
-   physbc_value(dir,side)=273.0d0
-
-   if ((stefan_flag.eq.1).and.(local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag or local_linear_exact invalid for probtype==4"
-    stop
-   endif
-
- else if(probtype_in.eq.19)then
-
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=0.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=0.0d0
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=0.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=0.0d0
-
-   order_algorithm(1)=1
-   order_algorithm(2)=3
-   order_algorithm(3)=2
-   nmat_in=3
-   fort_heatviscconst(1)=0.0d0
-   fort_heatviscconst(2)=1.0d0
-   fort_heatviscconst(3)=0.0d0
-
- else if(probtype_in.eq.13)then
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=0.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=0.0d0
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=0.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=0.0d0
-   order_algorithm(1)=1
-   order_algorithm(2)=3
-   order_algorithm(3)=2
-   nmat_in=3
-   fort_heatviscconst(1) = 0.0d0
-   fort_heatviscconst(2) = 1.0d0
-   fort_heatviscconst(3) = 0.0d0
-
- elseif(probtype_in.eq.14)then
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=0.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=0.0d0
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=0.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=0.0d0
-   nmat_in=2 
-   fort_heatviscconst(1) = 1.0d0           ! interior region
-   fort_heatviscconst(2) = 2.0d0          ! exterior region
- elseif(probtype_in.eq.15)then
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=10.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=10.0d0
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=10.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=10.0d0
-   nmat_in=2
-   fort_heatviscconst(1) = 0.1d0           ! interior region
-   fort_heatviscconst(2) = 10.0d0          ! exterior region
- else if (probtype_in.eq.16) then
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=NB_bot
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=NB_top
-   nmat_in=3
-   order_algorithm(1)=1
-   order_algorithm(2)=2
-   order_algorithm(3)=3
-   if (constant_K_test.eq.1) then
-    fort_heatviscconst(1) = 1.0d0
-    fort_heatviscconst(2) = 1.0d0
-    fort_heatviscconst(3) = 1.0d0 ! 0.001d0 for standard case
-   else if (constant_K_test.eq.0) then
-    fort_heatviscconst(1) = 1.0d0
-    fort_heatviscconst(2) = 1.0d0
-    fort_heatviscconst(3) = 0.001d0 ! 0.001d0 for standard case
-   else
-    print *,"constant_K_test invalid"
-    stop
-   endif
-
-   print *,"filament_test_type= ",filament_test_type
- elseif(probtype_in.eq.17)then
-   nmat_in=5
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=0.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=0.0d0
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=0.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=0.0d0
-   order_algorithm(1)=1
-   order_algorithm(2)=2
-   order_algorithm(3)=3
-   order_algorithm(4)=4
-   order_algorithm(5)=5
-   fort_heatviscconst(1) = 1.0d0
-   fort_heatviscconst(2) = 0.1d0
-   fort_heatviscconst(3) = 1.0d0
-   fort_heatviscconst(4) = 0.1d0
-   fort_heatviscconst(5) = 1.0d0
- elseif(probtype_in.eq.20)then
-   physbc(1,1)=EXT_DIR
-   physbc_value(1,1)=10.0d0
-   physbc(1,2)=EXT_DIR
-   physbc_value(1,2)=10.0d0
-   physbc(2,1)=EXT_DIR
-   physbc_value(2,1)=10.0d0
-   physbc(2,2)=EXT_DIR
-   physbc_value(2,2)=10.0d0
-   nmat_in=6
-   order_algorithm(1)=1
-   order_algorithm(6)=2
-   fort_heatviscconst(1) = 10.0d0
-   fort_heatviscconst(6) = 0.1d0
-
-   if (1.eq.0) then  ! type 3
-    fort_heatviscconst(2) = 0.5d0  ! 0.1=type ii   0.5=type iii
-    fort_heatviscconst(3) = 1.0d0  ! 0.1=type ii   1.0=type iii
-    fort_heatviscconst(4) = 0.5d0  ! 0.1=type ii   0.5=type iii
-    fort_heatviscconst(5) = 1.0d0  ! 0.1=type ii   1.0=type iii
-   else if (1.eq.1) then ! type 2
-    fort_heatviscconst(2) = 0.1d0  ! 0.1=type ii   0.5=type iii
-    fort_heatviscconst(3) = 0.1d0  ! 0.1=type ii   1.0=type iii
-    fort_heatviscconst(4) = 0.1d0  ! 0.1=type ii   0.5=type iii
-    fort_heatviscconst(5) = 0.1d0  ! 0.1=type ii   1.0=type iii
-   else
-    print *,"must be type 3 or type 2"
-    stop
-   endif
-
+ sci_max_level=0
+ if ((stefan_flag.eq.1).and. &
+     (local_operator_internal.eq.3).and. &
+     (local_operator_external.eq.1).and. &
+     (local_linear_exact.eq.1)) then
+  ! do nothing
  else
-   print *,"probtype_in invalid1 ",probtype_in
-   stop
+  print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==405"
+  stop
  endif
 
  num_state_material=2
@@ -856,353 +549,59 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    freezing_model(iten)=0
    freezing_model(iten+local_nten)=0
  enddo
+ 
+  ! 1=inner 2=filament 3=outer
+  ! 12 13 23 21 31 32
+  ! x  0  0  0  0   0
+ do iten=1,2*local_nten
+  saturation_temp(iten)=0.0
+  saturation_temp_curv(iten)=0.0
+  saturation_temp_vel(iten)=0.0
+ enddo
 
- if (probtype_in.eq.3) then
+ saturation_temp(1)=2.0d0
 
-   saturation_temp(1)=0.0d0
-   saturation_temp(2)=273.0d0
-   fort_tempconst(1)=273.0
-   fort_tempconst(2)=273.0-TDIFF_in
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-   latent_heat(1)=0.0d0 ! material 1 converted to material 2
-   latent_heat(2)=-abs(latent_heat_in) ! material 2 converted to material 1
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
-   fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
+ print *,"saturation_temp_curv(1)=",saturation_temp_curv(1) 
+ print *,"saturation_temp_vel(1)=",saturation_temp_vel(1) 
+ fort_tempconst(1)=1.0d0   ! placeholder inner
+ fort_tempconst(2)=1.0d0   ! placeholder seed
+ fort_tempconst(3)=1.0d0   ! placeholder outer
 
-   call find_lambda(lmSt,fort_stefan_number(2))
-
-   print *,"lmSt= ",lmSt
-
-   fort_beta(1)=lmSt
-   fort_beta(2)=lmSt
-    ! sqrt(alpha time_radblob)*two*lmSt=radblob
-   call solidification_front_time(lmSt, &
-    fort_alpha(2),fort_time_radblob(2),radblob)
-   fort_time_radblob(1)=fort_time_radblob(2)
-
-   call solidification_front_radius_driver(fort_time_radblob(2),test_radblob)
-   print *,"radblob= ",radblob
-   print *,"test_radblob=",test_radblob
-
-   call solidification_front_speed_driver(fort_time_radblob(2),max_front_vel) 
-
-   fort_time_radblob(1)=fort_time_radblob(2)
-   print *,"probtype_in=",probtype_in
-   print *,"Stefan_number= ",fort_stefan_number(2)
-   print *,"Jacob_number= ",fort_jacob_number(2)
-   print *,"lmSt= ",lmSt
-   print *,"alpha= ",fort_alpha(2)
-   print *,"beta= ",fort_beta(2)
-   print *,"time_radblob is the time for the front to grow from"
-   print *,"r=0 to r=radblob"
-   print *,"time_radblob=",fort_time_radblob(2)
-   print *,"radius doubling time=4 * time_radblob - time_radblob=", &
-      3.0d0*fort_time_radblob(2)
-   print *,"max_front_vel=",max_front_vel
-   print *,"front location: 2 beta sqrt(alpha t) "
-
- else if (probtype_in.eq.4) then
-
-    ! material 1 is inside the circle
-   saturation_temp(1)=273.0d0
-   saturation_temp(2)=273.0d0
-   fort_tempconst(1)=273.0
-   fort_tempconst(2)=273.0
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-   latent_heat(1)=-abs(latent_heat_in) ! material 1 converted to material 2
-   latent_heat(2)=0.0d0 ! material 2 converted to material 1
-   ireverse=0
-   isink=0
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
-   fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-
-     ! variable_temperature_drop.F90
-     ! TDIFF=T_DISK_CENTER - TSAT
-   call axisymmetric_disk_init(latent_heat(1),saturation_temp(1), &
-     TDIFF_in,fort_heatviscconst(1),radblob_in,stefan_flag, &
-     ireverse,isink,probtype_in,1)  ! polar_flag=1
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-
-   call disk_get_speed(1,max_front_vel)
-   max_front_vel=abs(max_front_vel) 
-
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
- else if (probtype_in.eq.400) then
-
-    ! max_front_vel
-   if ((abs(latent_heat_in).gt.0.0d0).and. &
-       (fort_tempconst(1).ge.0.0d0).and. &
-       (fort_tempconst(2).ge.0.0d0)) then
-    max_front_vel=abs(TDIFF_in)* &
-      (fort_tempconst(1)+fort_tempconst(2))/abs(latent_heat_in)
-    if (max_front_vel.gt.0.0d0) then
-     ! do nothing
-    else
-     print *,"max_front_vel invalid probtype_in=",probtype_in
-     stop
-    endif
-   else
-    print *,"latent_heat_in or fort_tempconst invalid"
-    stop
-   endif
-
-   saturation_temp(1)=273.0d0
-   saturation_temp(2)=273.0d0
-   fort_tempconst(1)=273.0
-   fort_tempconst(2)=273.0
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-   latent_heat(1)=abs(latent_heat_in) ! material 1 converted to material 2
-   latent_heat(2)=0.0d0 ! material 2 converted to material 1
-   ireverse=0
-   isink=0
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
-   fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
- else if (probtype_in.eq.403) then
-
-    ! ST=-.5
-    ! in dimensionless units:
-    ! Twater=-0.5
-    ! Tsolid=0.0
-    ! Tsat=0.0
-    ! add 1.0:
-    ! Twater=0.5
-    ! Tsolid=1.0
-    ! Tsat=1.0
-   saturation_temp(1)=1.0 ! liquid -> solid
-   saturation_temp(2)=0.0
-    ! phi_{12}=(phi_1 - phi_2)/2  < 0 in the dendrite
-    ! phi_{12} > 0 in the liquid
-    ! div grad phi12/|grad phi12| > 0 everywhere if phi12=sqrt(x^2+y^2) - r
-    ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
-    ! curvature is positive when the center of curvature lies in the solid
-    ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is "twice
-    ! the mean curvature" but in Chen, Merriman, Osher, and Smereka, the
-    ! extra factor of 2 is not included.   Recommended to compare
-    ! with Chen et al since they observed less numerically induced 
-    ! instability, than what observed by Juric and Tryggvason.
-   saturation_temp_curv(1)=0.00d0  ! 0.002d0 in Chen et al
-   saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.00d0   ! 0.002d0 in Chen et al
-   saturation_temp_vel(2)=0.0d0 
-
-   print *,"saturation_temp_curv(1)=",saturation_temp_curv(1) 
-   print *,"saturation_temp_curv(2)=",saturation_temp_curv(2) 
-   print *,"saturation_temp_vel(1)=",saturation_temp_vel(1) 
-   print *,"saturation_temp_vel(2)=",saturation_temp_vel(2) 
-   fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
-   fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
-
-   if (transition_region.gt.0.0d0) then
-    fort_tempconst(1)=fort_tempconst(1)-saturation_temp_curv(1)/radblob10
-    fort_tempconst(2)=fort_tempconst(2)-saturation_temp_curv(1)/radblob10
-    
-    physbc(2,1)=EXT_DIR
-    physbc_value(2,1)=fort_tempconst(1)
-    physbc(2,2)=EXT_DIR
-    physbc_value(2,2)=fort_tempconst(1)
-    physbc(1,1)=EXT_DIR
-    physbc_value(1,1)=fort_tempconst(1)
-    physbc(1,2)=EXT_DIR
-    physbc_value(1,2)=fort_tempconst(1)
-   else if (transition_region.eq.0.0d0) then
-    ! do nothing
-   else
-    print *,"transition region invalid"
-    stop
-   endif
-
-    ! max_front_vel
-   if ((abs(latent_heat_in).gt.0.0d0).and. &
-       (fort_tempconst(1).gt.0.0d0).and. &
-       (fort_tempconst(2).gt.0.0d0)) then
-    max_front_vel=4.0d0 * 0.5d0/dx_in(1)
-    if (max_front_vel.gt.0.0d0) then
-     ! do nothing
-    else
-     print *,"max_front_vel invalid probtype_in=",probtype_in
-     stop
-    endif
-   else
-    print *,"latent_heat_in or fort_tempconst invalid"
-    stop
-   endif
-
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-     ! material 1 converted to material 2 (freezing)
-   latent_heat(1)=-abs(latent_heat_in) 
-   latent_heat(2)=0.0d0 ! material 2 converted to material 1
-   ireverse=0
-   isink=0
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_stefan_number(1)=1.0d0/abs(latent_heat_in)
-   fort_stefan_number(2)=1.0d0/abs(latent_heat_in)
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
- else if (probtype_in.eq.5) then
-
-   saturation_temp(1)=273.0d0
-   saturation_temp(2)=273.0d0
-   fort_tempconst(1)=273.0d0  ! initial temperature on the left
-   fort_tempconst(2)=273.0d0  ! should not be used.
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-   latent_heat(1)=0.0d0 ! material 1 converted to material 2
-   latent_heat(2)=-abs(latent_heat_in) ! material 2 converted to material 1
-   ireverse=0
-   isink=0
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
-   fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-
-   max_front_vel=1.0d0
-
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
- else if (probtype_in.eq.0) then
-   ! do nothing
- else if (probtype_in.eq.1) then
-
-   if (dirichlet_annulus.eq.1) then
-
-     ! 12,13,23,21,31,32
-     ! material 2 is in the middle
-    if (local_nten.eq.3) then
-     latent_heat(1)=1.0d0  ! material 1 converted to material 2
-     use_exact_temperature(1)=2  ! pass material id=2 to exact_temperature
-     latent_heat(2)=0.0d0  ! no 1-3 interface
-     latent_heat(3)=1.0d0  ! material 2 converted to material 3
-     use_exact_temperature(3)=2 ! pass material id=2 to exact_temperature
-     latent_heat(4)=0.0d0  ! no 2 -> 1
-     latent_heat(5)=0.0d0  ! no 3 -> 1
-     latent_heat(6)=0.0d0  ! no 3 -> 2
-    else
-     print *,"local_nten invalid"
-     stop
-    endif
-
-   else if (dirichlet_annulus.eq.0) then
-    ! do nothing
-   else
-    print *,"dirichlet_annulus invalid"
-    stop
-   endif
-
- else if (probtype_in.eq.2) then
-   ! do nothing
- else if(probtype_in.eq.19)then
-
-   if (local_nten.eq.3) then
-    ! material 2 is in the middle
-    latent_heat(1)=1.0d0  ! material 1 converted to material 2
-    use_exact_temperature(1)=2  ! pass material id=2 to exact_temperature
-    latent_heat(2)=0.0d0  ! no 1-3 interface
-    latent_heat(3)=1.0d0  ! material 2 converted to material 3
-    use_exact_temperature(3)=2 ! pass material id=2 to exact_temperature
-    latent_heat(4)=0.0d0  ! no 2 -> 1
-    latent_heat(5)=0.0d0  ! no 3 -> 1
-    latent_heat(6)=0.0d0  ! no 3 -> 2
-   else
-    print *,"local_nten invalid"
-    stop
-   endif
-
- else if(probtype_in.eq.13)then
-
-   if (dirichlet_pentafoil.eq.1) then
-
-     ! material 2 is in the middle
-    latent_heat(1)=1.0d0  ! material 1 converted to material 2
-    use_exact_temperature(1)=2  ! pass material id=2 to exact_temperature
-    latent_heat(2)=0.0d0  ! no 1-3 interface
-    latent_heat(3)=1.0d0  ! material 2 converted to material 3
-    use_exact_temperature(3)=2 ! pass material id=2 to exact_temperature
-    latent_heat(4)=0.0d0  ! no 2 -> 1
-    latent_heat(5)=0.0d0  ! no 3 -> 1
-    latent_heat(6)=0.0d0  ! no 3 -> 2
-
-   else if (dirichlet_pentafoil.eq.0) then
-    ! do nothing
-   else
-    print *,"dirichlet_pentafoil invalid"
-    stop
-   endif
-
- else if(probtype_in.eq.14)then
-   ! do nothing
- else if(probtype_in.eq.15)then
-   ! do nothing
- else if (probtype_in.eq.16) then ! multiscale
-
-  ! variable_temperature_drop.F90
-  ! TDIFF=T_DISK_CENTER - TSAT
-  ! L=1.0d0
-  ! TSAT=NB_top
-  ! TDIFF=NB_bot
-  ! RR=probleny
-  ! ireverse=0
-  ! isink=0
-  call axisymmetric_disk_init(1.0d0,NB_top, &
-    NB_bot,fort_heatviscconst(1),probleny,stefan_flag, &
-    0,0,probtype_in,0)  ! polar_flag=0
-
- else if(probtype_in.eq.17)then
-   ! do nothing
- else if(probtype_in.eq.20)then
-   ! do nothing
+  ! max_front_vel , placeholder
+ max_front_vel=1.0/dx_in(1)
+ if (max_front_vel.gt.0.0d0) then
+  ! do nothing
  else
-   print *,"probtype_in invalid2 ",probtype_in
-   stop
+  print *,"max_front_vel invalid probtype_in=",probtype_in
+  stop
  endif
+
+ fort_initial_temperature(1)=fort_tempconst(1)
+ fort_initial_temperature(2)=fort_tempconst(2)
+ fort_initial_temperature(3)=fort_tempconst(3)
+     ! material 1 converted to material 2 (freezing)
+ latent_heat(1)=-abs(latent_heat_in) 
+ ireverse=0
+ isink=0
+ fort_alpha(1)=1.0d0
+ fort_alpha(2)=1.0d0
+ fort_alpha(3)=1.0d0
+ fort_stefan_number(1)=1.0d0/abs(latent_heat_in)
+ fort_stefan_number(2)=1.0d0/abs(latent_heat_in)
+ fort_stefan_number(3)=1.0d0/abs(latent_heat_in)
+ fort_jacob_number(1)=fort_stefan_number(1)
+ fort_jacob_number(2)=fort_stefan_number(2)
+ fort_jacob_number(3)=fort_stefan_number(3)
+
+ fort_beta(1)=0.0d0
+ fort_beta(2)=0.0d0
+ fort_beta(3)=0.0d0
+ fort_time_radblob(1)=0.0d0
+ fort_time_radblob(2)=0.0d0
+ fort_time_radblob(3)=0.0d0
+
+ print *,"probtype_in=",probtype_in
+ print *,"max_front_vel=",max_front_vel
 
  MOFITERMAX=15
  ngeom_raw=1+AMREX_SPACEDIM
@@ -1329,47 +728,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  print *,"deltat_in=",deltat_in
 
- if (probtype_in.eq.3) then
-    print *,"approx number time steps to double radius: ", &
-     NINT(3.0d0*fort_time_radblob(2)/deltat_in)
- else if (probtype_in.eq.4) then
-     ! max_front_vel * N * dt \approx radblob
-     ! N=2*radblob/(max_front_vel * dt)
-    print *,"approx number time steps to double radius: ", &
-     NINT(radblob/(max_front_vel*deltat_in))
- else if (probtype_in.eq.400) then
-  ! do nothing
- else if (probtype_in.eq.403) then
-  ! do nothing
- else if (probtype_in.eq.5) then
-  print *,"Velocity is 1"
-  print *,"number of steps to move 1 unit: ", &
-    NINT(1.0d0/(deltat_in*max_front_vel))
- else if (probtype_in.eq.0) then
-    ! do nothing
- else if (probtype_in.eq.1) then
-    ! do nothing
- else if (probtype_in.eq.2) then
-    ! do nothing
- else if(probtype_in.eq.19)then
-    ! do nothing
- else if(probtype_in.eq.13)then
-    ! do nothing
- else if(probtype_in.eq.14)then
-    ! do nothing
- else if(probtype_in.eq.15)then
-    ! do nothing
- else if (probtype_in.eq.16) then
-    ! do nothing
- else if(probtype_in.eq.17)then
-    ! do nothing
- else if(probtype_in.eq.20)then
-    ! do nothing
- else
-    print *,"probtype_in invalid3 ",probtype_in
-    stop
- endif
-
  if (M_MAX_TIME_STEP.ge.M_CURRENT) then
   allocate(Ts(M_MAX_TIME_STEP+1))
   do i = 1,M_MAX_TIME_STEP+1
@@ -1413,14 +771,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     enddo
  enddo
 
- if (probtype_in.eq.19) then
-    ! Np,Mp,r_polar,z_polar,dr_polar,dz_polar,upolar
-    ! declared in vof_cisl.F90
-  call set_polar_2d(sdim_in,Np,Mp,fort_heatviscconst(2),deltat_in, &
-      r_polar,z_polar,dr_polar,dz_polar,upolar,deltat_polar, &
-      subcycling_step)
- endif
-
  do i= -1,N_CURRENT
  do j= -1,N_CURRENT
 
@@ -1447,194 +797,26 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      xcen_vec(2)=ycen
 
      time_init=0.0
+     test_radblob=sqrt((xcen-xblob_in)**2+(ycen-yblob_in)**2)
 
-     if ((probtype_in.eq.0).or. &
-         (probtype_in.eq.2)) then
-      T(i,j,im)=2.0
-      if (1.eq.0) then
-        ! in: multimat_FVM.F90
-       T(i,j,im)=exact_temperature(xcen_vec,time_init,im,probtype_in, &
-        nmat_in,fort_heatviscconst)
-      endif
-     else if (probtype_in.eq.1) then
-        ! in: multimat_FVM.F90
-      T(i,j,im)=exact_temperature(xcen_vec,time_init,im,probtype_in, &
-       nmat_in,fort_heatviscconst)
-     else if (probtype_in.eq.3) then
-      rstefan=sqrt((xcen-xblob)**2+(ycen-yblob)**2)
-      if (im.eq.1) then
-       T_FIELD=saturation_temp(2)
-      else if (im.eq.2) then
-       if (rstefan.le.radblob) then
-        T_FIELD=saturation_temp(2)
-       else if (rstefan.ge.radblob) then
-        call liquid_temperature( &
-         fort_beta(2), &
-         fort_tempconst(2), &
-         abs(latent_heat_in), &
-         fort_stiffCP(2), &
-         fort_stefan_number(2), &
-         rstefan, &
-         fort_time_radblob(2), &
-         fort_heatviscconst(2), &
-         T_FIELD)
-       else
-        print *,"rstefan invalid"
-        stop
-       endif
-      else
-       print *,"im invalid 114"
-       stop
-      endif
-      T(i,j,im)=T_FIELD
-      if (1.eq.0) then
-       print *,"i,j,r,im,T_FIELD ",i,j,rstefan,im,T_FIELD
-      endif
-      if (T_FIELD.lt.fort_tempconst(2)-1.0D-7) then
-       print *,"bust: fort_time_radblob(2)= ",fort_time_radblob(2)
-       stop
-      endif
-
-     else if (probtype_in.eq.4) then
-
-      rstefan=sqrt((xcen-xblob)**2+(ycen-yblob)**2)
-      if (im.eq.2) then
-       T_FIELD=saturation_temp(2)
-      else if (im.eq.1) then
-       if (rstefan.ge.radblob) then
-        T_FIELD=saturation_temp(2)
-       else if (rstefan.le.radblob) then
-         ! TDIFF=T_DISK_CENTER - TSAT 
-        call disk_eval_initial_temp(rstefan,T_FIELD)
-       else
-        print *,"rstefan invalid"
-        stop
-       endif
-      else
-       print *,"im invalid 115"
-       stop
-      endif
-      T(i,j,im)=T_FIELD
-      if (1.eq.0) then
-       print *,"i,j,r,im,T_FIELD ",i,j,rstefan,im,T_FIELD
-      endif
-      if (T_FIELD.lt.fort_tempconst(2)-abs(TDIFF_in)) then
-       print *,"bust: fort_tempconst(2)= ",fort_tempconst(2)
-       print *,"bust: TDIFF_in= ",TDIFF_in
-       stop
-      endif
-
-     else if (probtype_in.eq.400) then
-
-      T_FIELD=saturation_temp(1)
-      T(i,j,im)=T_FIELD
-
-     else if (probtype_in.eq.403) then
-
-      if (im.eq.2) then ! seed (inside)
-       T_FIELD=fort_tempconst(im)
-      else if (im.eq.1) then ! melt (outside)
-       local_center(1)=xblob_in
-       local_center(2)=yblob_in
-       if (transition_region.gt.0.0d0) then
-         ! radblob10: radius of seed
-        call smooth_init(local_center,radblob10,fort_tempconst(2), &
-               fort_tempconst(1),xcen_vec,T_FIELD,transition_region)
-       else if (transition_region.eq.0.0d0) then
-        T_FIELD=fort_tempconst(im)
-       else
-        print *,"transition_region invalid"
-        stop
-       endif
-      else
-       print *,"im invalid"
-       stop
-      endif
-      T(i,j,im)=T_FIELD
-
-     else if (probtype_in.eq.5) then
-
-      if (im.eq.1) then
-       T_FIELD=saturation_temp(1)
-      else if (im.eq.2) then
-       ! (xcen,ycen)
-       T_FIELD=272.0d0+exp(-(xcen-0.2d0))
-      else
-       print *,"im invalid 116"
-       stop
-      endif
-      T(i,j,im)=T_FIELD
-      if (1.eq.0) then
-       print *,"i,j,r,im,T_FIELD ",i,j,rstefan,im,T_FIELD
-      endif
-
-     else if (probtype_in.eq.19) then   ! annulus cvg test
-
-       ! pcenter declared in vof_cisl.F90
-      pcenter(1)=0.5d0
-      pcenter(2)=0.5d0
-
-      T(i,j,im)=0.0d0
-
-      if (im.eq.2) then   
-       if (local_vof.gt.0.0d0) then
-        call polar_cart_interpolate(Np,Mp,upolar,pcenter,rlo,rhi, &
-                 xcen_vec,T(i,j,im))
-       else if (local_vof.eq.0.0d0) then
-        ! do nothing
-       else
-        print *,"local_vof invalid"
-        stop
-       endif
-      else if ((im.eq.1).or.(im.eq.3)) then
-       ! do nothing
-      else
-       print *,"im invalid 117"
-       stop
-      endif
-
-     elseif (probtype_in.eq.13)then
-       T(i,j,im)=exact_temperature(xcen_vec,time_init,im,probtype_in, &
-        nmat_in,fort_heatviscconst)
-
-     elseif(probtype_in.eq.14)then
-      T(i,j,im)=2.0
-
-     elseif(probtype_in.eq.15)then
-
-      cc=0.5d0
-      if((xcen .eq. 0.5d0).and. &
-         (ycen .eq. 0.5d0))then
-        T(i,j,im)=1.0d0
-      else
-        call dist_to_boundary(xcen_vec,dtemp1)
-        call l2normd(2,xcen_vec,cc, dtemp2)
-        T(i,j,im)= 1.0d0+dtemp2/dtemp1*(10.0d0-1.0d0)
-      endif
-
-     else if (probtype_in.eq.16) then
-
-        ! (xcen,ycen) is centroid of material im region.
-       call disk_eval_initial_temp(ycen,T_FIELD)
-       T(i,j,im)=T_FIELD
-
-     elseif(probtype_in.eq.17)then
-      T(i,j,im)=2.0
-     elseif(probtype_in.eq.20)then
-      cc =0.5d0
-      if((xcen .eq. 0.5d0).and. &
-         (ycen .eq. 0.5d0))then
-        T(i,j,im)=1.0d0
-      else
-        call dist_to_boundary(xcen_vec,dtemp1)
-        call l2normd(2,xcen_vec,cc, dtemp2)
-        T(i,j,im)= 1.0d0+dtemp2/dtemp1*(10.0d0-1.0d0)
-      endif
-
+     if (im.eq.2) then
+             T_FIELD=2.0d0  ! saturation temp (seed)
+     else if (im.eq.1) then ! inner material
+             T_FIELD=1.0+test_radblob/rlo
+     else if (im.eq.3) then  ! outer material
+             if (test_radblob.gt.probhi-yblob_in) then
+                     T_FIELD=1.0d0
+             else
+                ! rhi=2   probhi-yblob_in=1
+                     T_FIELD=2.0d0-(test_radblob-rhi)/ &
+                             (probhi-yblob_in-rhi)
+             endif
      else
-      print *,"probtype_in invalid4 ",probtype_in
+      print *,"im invalid"
       stop
      endif
+     T(i,j,im)=T_FIELD
+
     enddo ! im=1..nmat_in
 
  enddo
@@ -1717,17 +899,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  flxavg1=flxavg1/real(M_CURRENT,8)
  flxavg2=flxavg2/real(M_CURRENT,8)
-
- if (probtype_in.eq.16) then
-    ! time should be 0.0125
-   print *,"M_CURRENT,time,dx,y_fluxtest1,flxavg1 ", &
-           M_CURRENT,Ts(M_CURRENT+1),dx_in(1),y_fluxtest1,flxavg1
-   print *,"M_CURRENT,time,dx,y_fluxtest2,flxavg2 ", &
-           M_CURRENT,Ts(M_CURRENT+1),dx_in(1),y_fluxtest2,flxavg2
-    ! 32,1  -1.74E-2  VPerr=0.112
-    ! 64,2  -6.28E-2  VPerr=0.067
-    ! 128,4 -12.6E-2  VPerr=0.009
- endif
 
  print *,"PROCESSING FOR RELATIVE ERRORS N_CURRENT, im_measure= ", &
    N_CURRENT,im_measure
@@ -1928,13 +1099,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  deallocate(domlo_level)
  deallocate(domhi_level)
 
-
- if ((probtype_in.eq.4).or. &
-     (probtype_in.eq.16)) then
-  call axisymmetric_disk_close()
- else
-  ! do nothing
- endif
 
  print *,"AFTER TIME LOOP, N_CURRENT= ",N_CURRENT
  print *,"AFTER TIME LOOP, M_CURRENT= ",M_CURRENT
