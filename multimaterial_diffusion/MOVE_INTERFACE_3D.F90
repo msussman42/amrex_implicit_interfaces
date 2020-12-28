@@ -500,6 +500,8 @@ stop
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.403) then
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
+      else if (probtype.eq.405) then
+       call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.5) then
        ! material 1: left  material 2: right
        LS=0.1d0+time-xblob
@@ -610,7 +612,8 @@ stop
                (probtype.eq.404).or. &
                (probtype.eq.401).or. &
                (probtype.eq.402).or. &
-               (probtype.eq.403)) then
+               (probtype.eq.403).or. &
+               (probtype.eq.405)) then
        h_opt=1.0D-6
        dir=1
        call dist_concentric(im,xgrid(1)+h_opt,xgrid(2),LSp1,probtype)
@@ -747,6 +750,12 @@ stop
         print *,"probtype=",probtype
         stop
        endif
+
+      else if (probtype.eq.405) then
+
+       test_front_vel=0.0d0
+       VEL(1)=0.0d0
+       VEL(2)=0.0d0
 
       else if (probtype.eq.401) then
         ! 1=liquid 2=gas 3=ice
@@ -2429,6 +2438,8 @@ stop
          n_normal, &
          ngrow_dest)
 
+       print *,"BEFORE FORT_RATEMASSCHANGE"
+
        if (1.eq.1) then 
         ! burnvel flag==1 if valid rate of phase change.
         call FORT_RATEMASSCHANGE( &
@@ -2700,6 +2711,8 @@ stop
          2*nmat)
        endif
 
+       print *,"BEFORE EXTEND_BURNING_VEL 1"
+
        !burnvel is cell centered.
        !burnvel flag set from 0 to 2 if
        !foot of characteristic within range.
@@ -2718,6 +2731,8 @@ stop
          fablo,fabhi,bfact, &
          burnvel,DIMS(burnvel), & ! ngrow_make_distance
          LS,DIMS(LS))
+
+       print *,"BEFORE EXTEND_BURNING_VEL 2"
 
        velflag=0
        call FORT_EXTEND_BURNING_VEL( &
@@ -2756,6 +2771,9 @@ stop
        do isweep=0,1
 
         if (isweep.eq.0) then
+
+         print *,"BEFORE NODEDISPLACE isweep=",isweep
+
          call FORT_NODEDISPLACE( &
           nmat, &
           nten, &
@@ -2805,6 +2823,8 @@ stop
          print *,"stefan_flag invalid"
          stop
         endif
+
+        print *,"BEFORE CONVERTMATERIAL isweep=",isweep
 
         call FORT_CONVERTMATERIAL( &
          tid_data, &
@@ -2933,6 +2953,8 @@ stop
 
        print *,"first sloperecon"
 
+       print *,"BEFORE SLOPERECON"
+
        call FORT_SLOPERECON( &
         tid, &
         gridno, &
@@ -2973,6 +2995,7 @@ stop
        tessellate=0
        cur_time=prev_time+dt
 
+       print *,"BEFORE FACEINIT"
        call FORT_FACEINIT( &
         tid, &
         tessellate, &
@@ -2996,6 +3019,7 @@ stop
         nface, &
         nface_decomp)
 
+       print *,"BEFORE FACEPROCESS X"
        dir=0
        call FORT_FACEPROCESS( &
         ngrow_distance, &
@@ -3016,6 +3040,7 @@ stop
         nmat,nface,npair)
 
 
+       print *,"BEFORE FACEPROCESS Y"
        dir=1
        call FORT_FACEPROCESS( &
         ngrow_distance, &
@@ -3035,6 +3060,7 @@ stop
         cur_time, &
         nmat,nface,npair)
 
+       print *,"BEFORE FACEINITTEST"
        call FORT_FACEINITTEST(  &
         tid, &
         tessellate, &
@@ -3057,6 +3083,7 @@ stop
         nmat, &
         nface)
 
+       print *,"BEFORE STENINIT"
        call FORT_STENINIT( & 
         level, &
         finest_level, &
@@ -3078,6 +3105,7 @@ stop
 
        keep_all_interfaces=1
 
+       print *,"BEFORE LEVELSTRIP"
        call FORT_LEVELSTRIP(  &
         keep_all_interfaces, &
         nprocessed, &
@@ -3123,6 +3151,7 @@ stop
         ngrow_distance, &
         nmat,nten,nstar,nface,npair)
 
+       print *,"BEFORE CORRECT_UNINIT"
        call FORT_CORRECT_UNINIT(  &
         minLS, &
         maxLS, &
@@ -3155,8 +3184,8 @@ stop
        total_iterations=0
        continuous_mof=0
 
-       print *,"second sloperecon"
-
+       print *,"BEFORE (second) SLOPERECON"
+       
        call FORT_SLOPERECON( &
         tid, &
         gridno, &

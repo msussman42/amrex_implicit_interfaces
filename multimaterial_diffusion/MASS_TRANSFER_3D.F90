@@ -3676,6 +3676,8 @@ stop
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
       INTEGER_T nhalf_box
+      INTEGER_T im_local
+      REAL_T fixed_vfrac_sum,avail_vfrac
 
 
       if ((tid.lt.0).or. &
@@ -4718,8 +4720,48 @@ stop
             stop
            endif
 
-           dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
-           dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
+            ! The new volume fractions should be tessellating, while
+            ! at the same time materials not involved in the phase change
+            ! should not have a change in volume.
+           fixed_vfrac_sum=zero
+           do im_local=1,nmat
+            if ((im_local.eq.im_source).or. &
+                (im_local.eq.im_dest)) then
+             ! do nothing
+            else
+             newvfrac(im_local)=oldvfrac(im_local)
+             if (is_rigid(nmat,im_local).eq.0) then
+              fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
+             else if (is_rigid(nmat,im_local).eq.1) then
+              ! ignore, solids are embedded
+             else
+              print *,"is_rigid invalid"
+              stop
+             endif
+            endif
+           enddo ! im_local=1..nmat
+
+           if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
+               (fixed_vfrac_sum.le.one+VOFTOL)) then
+            avail_vfrac=zero
+           else if ((fixed_vfrac_sum.ge.-VOFTOL).and. &
+                    (fixed_vfrac_sum.le.zero)) then
+            avail_vfrac=one
+           else if ((fixed_vfrac_sum.gt.zero).and. &
+                    (fixed_vfrac_sum.le.one-VOFTOL)) then
+            avail_vfrac=one-fixed_vfrac_sum
+           else
+            print *,"fixed_vfrac_sum invalid"
+            stop
+           endif
+           if (avail_vfrac.eq.zero) then
+            dF=zero
+            newvfrac(im_dest)=oldvfrac(im_dest)
+            newvfrac(im_source)=oldvfrac(im_source)
+           else if ((avail_vfrac.gt.zero).and. &
+                    (avail_vfrac.le.one)) then
+            dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
+            dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
 
             ! mass fraction equation:
             ! in a given cell with m species.
@@ -4729,46 +4771,50 @@ stop
             ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
             ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
 
-           dF=max(dFdst,dFsrc)
-           if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
-            dF=min(dF,oldvfrac(im_source))
-           else if (LL.lt.zero) then ! freezing, condensation, implosion
-            dF=min(dF,oldvfrac(im_source))
+            dF=max(dFdst,dFsrc)
+            if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
+             dF=min(dF,oldvfrac(im_source))
+            else if (LL.lt.zero) then ! freezing, condensation, implosion
+             dF=min(dF,oldvfrac(im_source))
+            else
+             print *,"LL invalid"
+             stop
+            endif
+
+            newvfrac(im_dest)=oldvfrac(im_dest)
+            newvfrac(im_source)=oldvfrac(im_source)
+
+            if (dF.lt.zero) then
+             dF=zero
+            endif
+            newvfrac(im_dest)=oldvfrac(im_dest)+dF
+            if (newvfrac(im_dest).gt.avail_vfrac) then
+             dF=avail_vfrac-oldvfrac(im_dest)
+             newvfrac(im_dest)=avail_vfrac
+            endif
+            newvfrac(im_source)=oldvfrac(im_source)-dF
+            if (newvfrac(im_source).lt.zero) then
+             dF=oldvfrac(im_source)
+             newvfrac(im_source)=zero
+             newvfrac(im_dest)=oldvfrac(im_dest)+dF
+             if (newvfrac(im_dest).gt.avail_vfrac) then
+              newvfrac(im_dest)=avail_vfrac
+             endif
+            endif
+            if (dF.le.zero) then
+             dF=zero
+            endif
+            if (dF.ge.one) then
+             dF=one
+            endif
+
+            dF=newvfrac(im_dest)-oldvfrac(im_dest)
+            DVOF(im_dest)=DVOF(im_dest)+dF
+            deltaVOF(D_DECL(i,j,k),im_dest)=dF
            else
-            print *,"LL invalid"
+            print *,"avail_vfrac invalid"
             stop
            endif
-
-           newvfrac(im_dest)=oldvfrac(im_dest)
-           newvfrac(im_source)=oldvfrac(im_source)
-
-           if (dF.lt.zero) then
-            dF=zero
-           endif
-           newvfrac(im_dest)=oldvfrac(im_dest)+dF
-           if (newvfrac(im_dest).gt.one) then
-            dF=one-oldvfrac(im_dest)
-            newvfrac(im_dest)=one
-           endif
-           newvfrac(im_source)=oldvfrac(im_source)-dF
-           if (newvfrac(im_source).lt.zero) then
-            dF=oldvfrac(im_source)
-            newvfrac(im_source)=zero
-            newvfrac(im_dest)=oldvfrac(im_dest)+dF
-            if (newvfrac(im_dest).gt.one) then
-             newvfrac(im_dest)=one
-            endif
-           endif
-           if (dF.le.zero) then
-            dF=zero
-           endif
-           if (dF.ge.one) then
-            dF=one
-           endif
-
-           dF=newvfrac(im_dest)-oldvfrac(im_dest)
-           DVOF(im_dest)=DVOF(im_dest)+dF
-           deltaVOF(D_DECL(i,j,k),im_dest)=dF
 
             ! 1. the MAC and cell velocity field should be extrapolated
             !    from the old destination material side into the cells/faces
@@ -5187,7 +5233,7 @@ stop
              mofdata_new, &
              multi_centroidA, &
              continuous_mof_parm, &
-             nmat,SDIM,2)
+             nmat,SDIM,202)
 
              !isweep==0 so we save mofdata_new for isweep=1
             do u_im=1,nmat*ngeom_recon

@@ -2455,7 +2455,33 @@ else if (probtype_in.eq.402) then
 else if (probtype_in.eq.403) then
         ! call dist_concentric
 else if (probtype_in.eq.405) then
-        ! call dist_concentric
+
+
+ if (im.eq. 1) then ! inner material
+   dist= r1 - dist1
+   mx = (x - 0.5d0)/(dist - r1)
+   my = (y - 0.5d0)/(dist - r1)
+ elseif(im .eq. 2) then
+   if (dist1.le.radcen) then
+    mx = (x - 0.5d0)/dist1
+    my = (y - 0.5d0)/dist1
+   else if (dist1.ge.radcen) then
+    mx = -(x - 0.5d0)/dist1
+    my = -(y - 0.5d0)/dist1
+   else
+    print *,"dist1 is bad"
+    stop
+   endif 
+ elseif(im .eq. 3)then
+   dist = dist1 - r2  ! outer material
+   mx = (x - 0.5d0)/(dist + r2)
+   my = (y - 0.5d0)/(dist + r2)
+ else
+   print *,"wrong number of mat"
+ endif
+
+
+
 else if (probtype_in.eq.5) then
 
  my=0.0d0
@@ -2840,7 +2866,6 @@ if ((probtype_in.eq.0).or. &
     (probtype_in.eq.400).or. & ! gingerbread man
     (probtype_in.eq.404).or. & ! Xue
     (probtype_in.eq.403).or. & ! dendrite
-    (probtype_in.eq.405).or. & ! filament_grow
     (probtype_in.eq.5).or. &
     (probtype_in.eq.14).or. &
     (probtype_in.eq.15)) then
@@ -2949,6 +2974,7 @@ else if (probtype_in.eq.402) then ! NASA boiling
  endif
 
 else if ((probtype_in.eq.1).or. &
+         (probtype_in.eq.405).or. &
          (probtype_in.eq.13).or. &
          (probtype_in.eq.19)) then
  if (nmat_in.ne.3) then
@@ -3206,14 +3232,13 @@ else if (probtype_in.eq.402) then
  ! do nothing
 else if (probtype_in.eq.403) then
  ! do nothing
-else if (probtype_in.eq.405) then
- ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
 elseif(probtype_in .eq. 15)then   
  ! vf_temp(2)=1.0-vf_temp(1)
 
 else if ((probtype_in.eq.1).or. &
+         (probtype_in.eq.405).or. &
          (probtype_in.eq.13).or. &
          (probtype_in.eq.19)) then
  vf_temp(2) = 1.0d0 - vf_temp(1) -vf_temp(3)
@@ -3350,8 +3375,6 @@ else if (probtype_in.eq.402) then
  ! do nothing
 else if (probtype_in.eq.403) then
  ! do nothing
-else if (probtype_in.eq.405) then
- ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
 else if (probtype_in.eq.14) then
@@ -3365,6 +3388,7 @@ elseif(probtype_in .eq. 15) then
 
 
 else if ((probtype_in.eq.1).or. &
+         (probtype_in.eq.405).or. &
          (probtype_in.eq.13).or. &
          (probtype_in.eq.19)) then
  if(vf_temp(2) .gt. FACETOL_DVOL)then

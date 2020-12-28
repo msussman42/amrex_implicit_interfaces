@@ -5149,7 +5149,7 @@ stop
             multi_centroidA, &
             continuous_mof_parm, &
             cmofsten, &
-            nmat,SDIM,2)
+            nmat,SDIM,202)
 
             ! xPOINT_supermesh is needed in order to determine
             ! whether to interpolate old temperature and mass fraction
