@@ -6577,7 +6577,9 @@ stop
        print *,"cur_time invalid"
        stop
       endif
-      if (visc_coef.lt.zero) then
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
        print *,"visc_coef invalid"
        stop
       endif
@@ -11525,7 +11527,7 @@ stop
 
       if (viscoelastic_model.eq.2) then ! elastic material
 
-       LS_or_VOF_flag=1
+       LS_or_VOF_flag=1 ! =1 => use VOF for upwinding near interfaces
        im_elastic=im_critical+1
        call local_tensor_from_xdisplace( &
         LS_or_VOF_flag, &
@@ -12568,7 +12570,9 @@ stop
        smallestL=dxmin
       endif
 
-      if (visc_coef.lt.zero) then
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
        print *,"visc_coef invalid"
        stop
       endif
@@ -28088,7 +28092,9 @@ stop
        stop
       endif
 
-      if (visc_coef.lt.zero) then
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
        print *,"visc_coef invalid"
        stop
       endif
@@ -29668,7 +29674,9 @@ stop
        stop
       endif
 
-      if (visc_coef.lt.zero) then
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
        print *,"visc_coef invalid"
        stop
       endif
@@ -29998,6 +30006,8 @@ stop
        ydisplace_local=half*(vel(D_DECL(i,j,k),2)+ &
          vel(D_DECL(im1,jm1,km1),2))
 
+        ! visc(D_DECL(i,j,k),nmat+im_elastic)=
+        !  elastic_viscosity * visc_coef (DERVISC)
        visc_local=half*(visc(D_DECL(i,j,k),nmat+im_elastic)+ &
          visc(D_DECL(im1,jm1,km1),nmat+im_elastic))
 

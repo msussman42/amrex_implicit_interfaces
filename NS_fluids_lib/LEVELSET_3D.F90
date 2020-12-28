@@ -7040,6 +7040,8 @@ stop
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
+        ! sanity check: the real viscosity coefficient(s) are derived from
+        ! modvisc(D_DECL(:,:,:),nmat)
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
        if (mu.ge.zero) then
         ! do nothing
@@ -9823,6 +9825,8 @@ stop
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
        endif
+        ! sanity check: the real viscosity coefficient(s) are derived from
+        ! viscstate(D_DECL(:,:,:),nmat)
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
        if (mu.ge.zero) then
         ! do nothing

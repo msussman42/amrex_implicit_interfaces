@@ -580,6 +580,7 @@ stop
       INTEGER_T numstatetest,ii,jj
       REAL_T Q(3,3)
       REAL_T traceA,modtime,viscoelastic_coeff
+      REAL_T bulk_modulus
 
       if (bfact.lt.1) then
        print *,"bfact invalid3"
@@ -619,11 +620,15 @@ stop
        stop
       endif
 
-      if (dt.lt.zero) then 
-       print *,"dt invalid"
+      if (dt.gt.zero) then 
+       ! do nothing
+      else
+       print *,"dt invalid in FORT_DERVISCOSITY"
        stop
       endif
-      if (polymer_factor.lt.zero) then
+      if (polymer_factor.ge.zero) then
+       ! do nothing
+      else
        print *,"polymer_factor invalid"
        stop
       endif
@@ -632,15 +637,21 @@ stop
        print *,"shear_thinning_fluid invalid"
        stop
       endif
-      if (viscosity_coefficient.lt.zero) then
+      if (viscosity_coefficient.ge.zero) then
+       ! do nothing
+      else
        print *,"viscosity_coefficient invalid"
        stop
       endif
-      if (abs(viscosity_coefficient-fort_viscconst(im_parm)).gt.1.0E-14) then
+      if (abs(viscosity_coefficient-fort_viscconst(im_parm)).le.1.0E-14) then
+       ! do nothing
+      else
        print *,"viscosity_coefficient invalid"
        stop
       endif
-      if (visc_coef.lt.zero) then
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
        print *,"visc_coef invalid"
        stop
       endif
@@ -670,9 +681,7 @@ stop
        enddo
       else if (is_rigid(nmat,im_parm).eq.0) then
 
-       if (shear_thinning_fluid.eq.1) then
-        call checkbound(fablo,fabhi,DIMS(vel),ngrow+1,-1,321)
-       endif
+       call checkbound(fablo,fabhi,DIMS(vel),ngrow+1,-1,321)
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
@@ -692,6 +701,40 @@ stop
         endif
 
         mu=get_user_viscconst(im_parm,density,temperature)
+
+        if ((viscoelastic_model.eq.0).or. &
+            (Viscoelastic_model.eq.1)) then
+         ! do nothing
+        else if (viscoelastic_model.eq.2) then
+         bulk_modulus=elastic_viscosity
+         if (bulk_modulus.gt.zero) then
+          if (visc_coef.gt.zero) then
+            ! note: viscoelastic_coeff*visc_coef down below.
+            !dd_group=dd*visc_coef in PROB.F90 
+            !xflux*=-dt * visc_coef * facevisc_index in CROSSTERM
+           if (mu.ge.zero) then
+            mu=mu+dt*bulk_modulus  
+           else
+            print *,"mu invalid"
+            stop
+           endif
+          else if (visc_coef.eq.zero) then
+           ! do nothing
+          else
+           print *,"visc_coef invalid"
+           stop
+          endif
+         else if (bulk_modulus.eq.zero) then
+          ! do nothing
+         else
+          print *,"bulk_modulus invalid"
+          stop
+         endif
+        else
+         print *,"viscoelastic_model invalid"
+         stop
+        endif
+
         visc(D_DECL(i,j,k),im_parm) = mu
 
         if (shear_thinning_fluid.eq.1) then

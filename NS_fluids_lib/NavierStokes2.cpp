@@ -5395,6 +5395,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // in: LEVELSET_3D.F90
    // visc_coef passed as a parameter so that Guibo can
    // calculate the dynamic contact angle condition. 
   FORT_BUILD_MODVISC(
