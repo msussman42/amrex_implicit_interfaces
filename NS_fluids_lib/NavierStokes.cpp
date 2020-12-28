@@ -1,11 +1,8 @@
-// tensor, num_materials_viscoelastic, Tensor_Type, im_elastic_map,
-// elastic_time, elastic_viscosity, NUM_TENSOR_TYPE,
-// Tensor_new, increase num_materials_viscoelastic if elastic_viscosity>0
-// or particleLS_flag==1 (or make elastic_viscosity=max(elastic_visc,1.0e-20
-// if particleLS_flag==1).
+// I-scheme,thermal and species conduction,viscosity,div(u),gp,-force
 // nstate_SDC (c++ and fortran)
+// =nfluxSEM+1+num_species_var+AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM
 // nfluxSEM (c++ and fortran)
-//
+// =AMREX_SPACEDIM+num_state_material
 //#include <winstd.H>
 
 #include <algorithm>
@@ -8436,7 +8433,7 @@ NavierStokes::SDC_setup_step() {
   amrex::Error("nmat out of range");
 
  nfluxSEM=AMREX_SPACEDIM+num_state_material;
-  // I-scheme,thermal and species conduction,viscosity,div(up),gp,-force
+  //I-scheme,thermal and species conduction,viscosity,div(u),gp,-force
  nstate_SDC=nfluxSEM+1+num_species_var+
     AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM;
 
@@ -9480,7 +9477,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 
   const Real* xlo = grid_loc[gridno].lo();
 
-  // I-scheme,thermal conduction,viscosity,div(up),gp,-force
+  // I-scheme,thermal and species conduction,viscosity,div(u),gp,-force
   FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
   int deltacomp=0;
   if (project_option==3) { // viscosity
@@ -9493,8 +9490,8 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
   } else if ((project_option>=100)&& // species conduction
              (project_option<=100+num_species_var-1)) {
    deltacomp=slab_step*nstate_SDC+nfluxSEM+project_option-100+1;
-  } else if (project_option==0) { // div up and gp 
-     // advection, thermal conduction,viscosity,div(up),gp
+  } else if (project_option==0) { // div(u) and gp 
+     // advection, thermal and species conduction,viscosity,div(u),gp
    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var+AMREX_SPACEDIM;
   } else
    amrex::Error("project_option invalid4");
