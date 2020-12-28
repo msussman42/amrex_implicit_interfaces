@@ -3314,19 +3314,53 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    b. surface tension
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
-
+ 
+        int elastic_material_exists=0;
+        for (int im=0;im<nmat;im++) {
+         if (ns_is_rigid(im)==0) {
+          if ((elastic_time[im]>0.0)&&
+              (elastic_viscosity[im]>0.0)) {
+           if (viscoelastic_model[im]==2) {
+            elastic_material_exists=1;
+           } else if ((viscoelastic_model[im]==1)||
+  	   	      (viscoelastic_model[im]==0)) {
+            // do nothing
+           } else
+            amrex::Error("viscoelastic_model[im] invalid");
+          } else if ((elastic_time[im]==0.0)||
+  	             (elastic_viscosity[im]==0.0)) {
+           // do nothing
+          } else
+           amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
+         } else if (ns_is_rigid(im)==1) {
+          // do nothing
+         } else
+          amrex::Error("ns_is_rigid invalid");
+        } // im=0..nmat-1
+   
 	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
-        if (FSI_material_exists()==1) {
+        if ((FSI_material_exists()==1)||
+            (elastic_material_exists==1)) {
           // MDOT term included
          int rigid_project_option=0;
          multiphase_project(rigid_project_option);
+
+         if (elastic_material_exists==1) {
+          rigid_project_option=13;
+          multiphase_project(rigid_project_option);
+         } else if (elastic_material_exists==0) {
+          // do nothing
+         } else {
+          amrex::Error("elastic_material_exists invalid");
+         }
 
           // MDOT term not included, instead 
           // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
           // if incompressible: DIV_new=MDOT_MF dt
          rigid_project_option=11;
          multiphase_project(rigid_project_option);
-        } else if (FSI_material_exists()==0) {
+        } else if ((FSI_material_exists()==0)&&
+                   (elastic_material_exists==0)) {
          multiphase_project(project_option); // pressure
         } else
          amrex::Error("FSI_material_exists invalid");

@@ -709,9 +709,10 @@ stop
          bulk_modulus=elastic_viscosity
          if (bulk_modulus.gt.zero) then
           if (visc_coef.gt.zero) then
-            ! note: viscoelastic_coeff*visc_coef down below.
-            !dd_group=dd*visc_coef in PROB.F90 
-            !xflux*=-dt * visc_coef * facevisc_index in CROSSTERM
+            ! notes: 
+            !  viscoelastic_coeff*visc_coef down below.
+            !  dd_group=dd*visc_coef in PROB.F90 
+            !  xflux*=-dt * visc_coef * facevisc_index in CROSSTERM
            if (mu.ge.zero) then
             mu=mu+dt*bulk_modulus  
            else
