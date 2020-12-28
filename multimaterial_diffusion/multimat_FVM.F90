@@ -2112,6 +2112,33 @@ else if (probtype_in.eq.403) then
 
  call dendrite_dist(imat,x,y,dist)
 
+else if (probtype_in.eq.405) then
+
+ r1=radcen-radeps
+ r2=radcen+radeps
+ dist1= sqrt((x-center(1))**2.0d0+(y-center(2))**2.0d0)
+
+ if (imat .eq. 1) then
+   dist= r1 - dist1  ! inner material
+ else if(imat .eq. 2) then
+   if((dist1.le.r2).and.(dist1.ge.r1))then
+      dist2 = r2 - dist1
+      dist3 = dist1 - r1
+      dist = min(dist2,dist3)
+   else if (dist1.ge.r2) then
+    dist=r2-dist1
+   else if (dist1.le.r1) then
+    dist=dist1-r1
+   else
+    print *,"dist1 bust"
+    stop
+   endif
+ elseif(imat .eq. 3)then  
+   dist = dist1 - r2  ! outer material
+ else
+   print *,"wrong number of mat"
+   stop
+ endif
 else
  print *,"probtype_in invalid6 ",probtype_in
  stop
@@ -2426,6 +2453,8 @@ else if (probtype_in.eq.401) then
 else if (probtype_in.eq.402) then
         ! call dist_concentric
 else if (probtype_in.eq.403) then
+        ! call dist_concentric
+else if (probtype_in.eq.405) then
         ! call dist_concentric
 else if (probtype_in.eq.5) then
 
@@ -2811,6 +2840,7 @@ if ((probtype_in.eq.0).or. &
     (probtype_in.eq.400).or. & ! gingerbread man
     (probtype_in.eq.404).or. & ! Xue
     (probtype_in.eq.403).or. & ! dendrite
+    (probtype_in.eq.405).or. & ! filament_grow
     (probtype_in.eq.5).or. &
     (probtype_in.eq.14).or. &
     (probtype_in.eq.15)) then
@@ -3176,6 +3206,8 @@ else if (probtype_in.eq.402) then
  ! do nothing
 else if (probtype_in.eq.403) then
  ! do nothing
+else if (probtype_in.eq.405) then
+ ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
 elseif(probtype_in .eq. 15)then   
@@ -3317,6 +3349,8 @@ else if (probtype_in.eq.401) then
 else if (probtype_in.eq.402) then
  ! do nothing
 else if (probtype_in.eq.403) then
+ ! do nothing
+else if (probtype_in.eq.405) then
  ! do nothing
 else if (probtype_in.eq.5) then
  ! do nothing
@@ -3669,6 +3703,18 @@ real(kind=8) :: radial_slope
    G_in=0.0
   else
    print *,"im invalid 4 probtype_in==403"
+   stop
+  endif
+
+ else if (probtype_in.eq.405) then
+  if (im.eq.1) then
+   G_in=0.0
+  else if (im.eq.2) then
+   G_in=0.0
+  else if (im.eq.3) then
+   G_in=0.0
+  else
+   print *,"im invalid 4 probtype_in==405"
    stop
   endif
  else if (probtype_in.eq.5) then
@@ -4434,6 +4480,8 @@ else if (local_probtype.eq.402) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.403) then
         Uprescribe=0.0d0
+else if (local_probtype.eq.405) then
+        Uprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.13) then
@@ -4503,6 +4551,8 @@ else if (local_probtype.eq.401) then
 else if (local_probtype.eq.402) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.403) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.405) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.5) then
         Vprescribe=0.0d0
@@ -5019,6 +5069,9 @@ real(kind=8)              :: radial_slope
   exact_temperature=0.0d0
 
  else if (probtype_in.eq.403)then
+
+  exact_temperature=0.0d0
+ else if (probtype_in.eq.405)then
 
   exact_temperature=0.0d0
  else

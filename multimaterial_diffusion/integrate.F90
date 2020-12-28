@@ -432,6 +432,15 @@ do while (finished_flag.eq.0)
 
    else if (probtype_in.eq.404) then
     ! do nothing
+   else if (probtype_in.eq.405) then ! growing annulus seed
+    local_dist=sqrt((xcen-xblob)**2+(ycen-yblob)**2)
+    if (local_dist.gt.probhiy-yblob) then
+            T_FIELD=1.0d0
+    else if (local_dist.gt.probhiy-yblob-0.1) then
+            T_FIELD=2.0d0-(local_dist-rhi)/ &
+                          (probhiy-yblob-rhi)
+    endif
+
    else if (probtype_in.eq.5) then
     if (xcen.ge.1.0d0-1.0d0/16.0d0) then !buffer size:1 cell coarse grid
      T_FIELD=272.0d0+exp(-(xcen-0.1d0-Ts(tm+1)))
