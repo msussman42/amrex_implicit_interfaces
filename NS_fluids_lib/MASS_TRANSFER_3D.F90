@@ -6,6 +6,7 @@
 #define STANDALONE 0
 
 #define DEBUG_TRIPLE 0
+#define DEBUG_ACTIVE_CELL 0
 #define DEBUG_I 22
 #define DEBUG_J 13
 #define DEBUG_K 0
@@ -3493,6 +3494,7 @@ stop
       REAL_T volgrid
       REAL_T cengrid(SDIM)
       REAL_T new_centroid(nmat,SDIM)
+      REAL_T old_centroid(nmat,SDIM)
       REAL_T EBVOFTOL
       REAL_T SWEPTFACTOR
       REAL_T SWEPTFACTOR_GFM
@@ -3669,6 +3671,13 @@ stop
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
       INTEGER_T nhalf_box
+      INTEGER_T im_local
+      INTEGER_T im_trust
+      INTEGER_T im_distrust
+      REAL_T LS_MAX_fixed
+      REAL_T fixed_vfrac_sum
+      REAL_T fixed_centroid_sum(SDIM)
+      REAL_T avail_vfrac
 
 
       if ((tid.lt.0).or. &
@@ -4013,6 +4022,12 @@ stop
           enddo ! im_opp
          enddo ! im
 
+         if (DEBUG_ACTIVE_CELL.eq.1) then
+          if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+           print *,"i,j,do_unsplit_advection ",i,j,do_unsplit_advection
+          endif
+         endif
+
           ! do the 3x3x3 stencil volume fractions satisfy:
           !  0 < F_source < 1 and
           !  0 < F_dest < 1
@@ -4220,6 +4235,16 @@ stop
              ! node velocity initialized in "nodedisplace"
             do udir=1,SDIM
              velnode=nodevel(D_DECL(imac,jmac,kmac),scomp+udir)
+
+             if (DEBUG_ACTIVE_CELL.eq.1) then
+              if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+               print *,"iten_crit,ireverse_crit,udir ", &
+                       iten_crit,ireverse_crit,udir
+               print *,"inode1,jnode1,knode1,velnode ", &
+                       inode1,jnode1,knode1,velnode
+              endif
+             endif
+
              if (udir.eq.1) then
               xtargetnode(inode,udir)=u_xsten_updatecell(inode1,udir)
              else if (udir.eq.2) then
@@ -4606,6 +4631,8 @@ stop
            vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
            newvfrac(u_imaterial)=unsplit_snew(vofcomp_raw)
            do dir=1,SDIM
+            old_centroid(u_imaterial,dir)= &
+              recon(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
             new_centroid(u_imaterial,dir)= &
               unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
            enddo
@@ -4650,6 +4677,7 @@ stop
               (is_rigid(nmat,im_primary_old).eq.1)) then
            away_from_interface=1
           endif
+
           if ((solid_vof_new.ge.half).or. &
               (solid_vof_old.ge.half)) then
            away_from_interface=1
@@ -4661,66 +4689,237 @@ stop
            away_from_interface=1
           endif
 
+          if (DEBUG_ACTIVE_CELL.eq.1) then
+           if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+            print *,"im_source,im_dest,away_from_interface ", &
+               im_source,im_dest,away_from_interface
+           endif
+          endif
+
           if (away_from_interface.eq.1) then
            newvfrac(im_source)=oldvfrac(im_source)
            newvfrac(im_dest)=oldvfrac(im_dest)
+           do udir=1,SDIM 
+            new_centroid(im_source,udir)=old_centroid(im_source,udir)
+            new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+           enddo
           else if (away_from_interface.eq.0) then
-           LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
-           LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+
+            ! only the interface changing phase should move
+           LS_MAX_fixed=-1.0D+20
+           do im_local=1,nmat
+            lsdata(im_local)=LSold(D_DECL(i,j,k),im_local)
+            if ((im_local.eq.im_source).or.(im_local.eq.im_dest)) then
+             ! do nothing
+            else if ((im_local.ge.1).and.(im_local.le.nmat)) then
+             if (is_rigid(nmat,im_local).eq.1) then
+              ! do nothing
+             else if (is_rigid(nmat,im_local).eq.0) then  
+              LS_MAX_fixed=max(LS_MAX_fixed,lsdata(im_local))
+             else
+              print *,"is_rigid(nmat,im_local) invalid"
+              stop
+             endif
+            else
+             print *,"im_local bust"
+             stop
+            endif
+           enddo ! im_local=1..nmat
+           lsdata(im_source)=half*(unsplit_lsnew(im_source)- &
+             max(LS_MAX_fixed,unsplit_lsnew(im_dest)))
+           lsdata(im_dest)=half*(unsplit_lsnew(im_dest)- &
+             max(LS_MAX_fixed,unsplit_lsnew(im_source)))
+
+           LSnew(D_DECL(i,j,k),im_source)=lsdata(im_source)
+           LSnew(D_DECL(i,j,k),im_dest)=lsdata(im_dest)
+
           else
            print *,"away_from_interface invalid"
            stop
           endif
 
-          dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
-          dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
+           ! The new volume fractions should be tessellating, while
+           ! at the same time materials not involved in the phase change
+           ! should not have a change in volume.
+          fixed_vfrac_sum=zero
+          do udir=1,SDIM 
+           fixed_centroid_sum(udir)=zero
+          enddo
+          do im_local=1,nmat
+           if ((im_local.eq.im_source).or. &
+               (im_local.eq.im_dest)) then
+            ! do nothing
+           else if ((im_local.ge.1).and.(im_local.le.nmat)) then
+            newvfrac(im_local)=oldvfrac(im_local)
+            do udir=1,SDIM 
+             new_centroid(im_local,udir)=old_centroid(im_local,udir)
+            enddo
+            if (is_rigid(nmat,im_local).eq.0) then
+             fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
+             do udir=1,SDIM 
+              fixed_centroid_sum(udir)=fixed_centroid_sum(udir)+ &
+                newvfrac(im_local)*new_centroid(im_local,udir)
+             enddo
+            else if (is_rigid(nmat,im_local).eq.1) then
+             ! ignore, solids are embedded
+            else
+             print *,"is_rigid invalid"
+             stop
+            endif
+           else
+            print *,"im_local became corrupt"
+            stop
+           endif
+          enddo ! im_local=1..nmat
 
-           ! mass fraction equation:
-           ! in a given cell with m species.
-           ! mass= sum_i=1^m  Y_i overall_mass = 
-           !     = sum_i=1^m  density_i F_i V_cell
-           ! F_i = volume fraction of material i.
-           ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
-           ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
-
-          dF=max(dFdst,dFsrc)
-          if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
-           dF=min(dF,oldvfrac(im_source))
-          else if (LL.lt.zero) then ! freezing, condensation, implosion
-           dF=min(dF,oldvfrac(im_source))
+          if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
+              (fixed_vfrac_sum.le.one+VOFTOL)) then
+           avail_vfrac=zero
+          else if ((fixed_vfrac_sum.ge.-VOFTOL).and. &
+                   (fixed_vfrac_sum.le.zero)) then
+           avail_vfrac=one
+          else if ((fixed_vfrac_sum.gt.zero).and. &
+                   (fixed_vfrac_sum.le.one-VOFTOL)) then
+           avail_vfrac=one-fixed_vfrac_sum
           else
-           print *,"LL invalid"
+           print *,"fixed_vfrac_sum invalid"
            stop
           endif
 
-          newvfrac(im_dest)=oldvfrac(im_dest)
-          newvfrac(im_source)=oldvfrac(im_source)
-
-          if (dF.lt.zero) then
-           dF=zero
-          endif
-          newvfrac(im_dest)=oldvfrac(im_dest)+dF
-          if (newvfrac(im_dest).gt.one) then
-           dF=one-oldvfrac(im_dest)
-           newvfrac(im_dest)=one
-          endif
-          newvfrac(im_source)=oldvfrac(im_source)-dF
-          if (newvfrac(im_source).lt.zero) then
-           dF=oldvfrac(im_source)
-           newvfrac(im_source)=zero
-           newvfrac(im_dest)=oldvfrac(im_dest)+dF
-           if (newvfrac(im_dest).gt.one) then
-            newvfrac(im_dest)=one
+          if (DEBUG_ACTIVE_CELL.eq.1) then
+           if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+            print *,"im_source,im_dest,avail_vfrac,oldvfrac(im_dest) ", &
+               im_source,im_dest,avail_vfrac,oldvfrac(im_dest)
            endif
           endif
-          if (dF.le.zero) then
+
+          if ((avail_vfrac.eq.zero).or. &
+              (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
            dF=zero
-          endif
-          if (dF.ge.one) then
-           dF=one
+           newvfrac(im_dest)=oldvfrac(im_dest)
+           newvfrac(im_source)=oldvfrac(im_source)
+           do udir=1,SDIM 
+            new_centroid(im_source,udir)=old_centroid(im_source,udir)
+            new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+           enddo
+           LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+           LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+          else if ((avail_vfrac.gt.zero).and. &
+                   (avail_vfrac.le.one)) then
+           dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
+           dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
+
+           if (DEBUG_ACTIVE_CELL.eq.1) then
+            if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+             print *,"im_source,im_dest,dFdst,dFsrc ", &
+               im_source,im_dest,dFdst,dFsrc
+            endif
+           endif
+
+           if ((dFdst.le.zero).and. &
+               (dFsrc.le.zero)) then
+            dF=zero
+            newvfrac(im_dest)=oldvfrac(im_dest)
+            newvfrac(im_source)=oldvfrac(im_source)
+            do udir=1,SDIM 
+             new_centroid(im_source,udir)=old_centroid(im_source,udir)
+             new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+            enddo
+            LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+            LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+           else if ((dFdst.gt.zero).or. &
+                    (dFsrc.gt.zero)) then
+
+            ! mass fraction equation:
+            ! in a given cell with m species.
+            ! mass= sum_i=1^m  Y_i overall_mass = 
+            !     = sum_i=1^m  density_i F_i V_cell
+            ! F_i = volume fraction of material i.
+            ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
+            ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
+
+             ! if there are 2 materials, dFdst=dFsrc, but if there
+             ! are 3 materials or more, the larger value is to be
+             ! trusted over the smaller, due to interference from the
+             ! extra materials (which hypothetically, should be fixed)
+            im_trust=0
+            im_distrust=0
+            if (dFdst.ge.dFsrc) then
+             im_trust=im_dest
+             im_distrust=im_source
+             dF=dFdst
+            else if (dFdst.le.dFsrc) then
+             im_trust=im_source
+             im_distrust=im_dest
+             dF=dFsrc
+            else
+             print *,"dFdst or dFsrc bust"
+             stop
+            endif
+
+            if ((LL.gt.zero).or. & !evaporation,boiling,melting,cavitation
+                (LL.lt.zero)) then !freezing, condensation
+             dF=min(dF,oldvfrac(im_source))
+             dF=min(dF,avail_vfrac-oldvfrac(im_dest))
+            else
+             print *,"LL invalid"
+             stop
+            endif
+
+            newvfrac(im_dest)=oldvfrac(im_dest)+dF
+            newvfrac(im_source)=oldvfrac(im_source)-dF
+ 
+            if (dF.eq.zero) then
+             newvfrac(im_dest)=oldvfrac(im_dest)
+             newvfrac(im_source)=oldvfrac(im_source)
+             do udir=1,SDIM 
+              new_centroid(im_source,udir)=old_centroid(im_source,udir)
+              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+             enddo
+             LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+             LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+            else if (dF.gt.zero) then
+             if (fixed_vfrac_sum.gt.VOFTOL) then
+              do udir=1,SDIM 
+               if (newvfrac(im_distrust).gt.VOFTOL) then
+                new_centroid(im_distrust,udir)= &
+                 (cengrid(udir)- &
+                  (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
+                   fixed_centroid_sum(udir)))/newvfrac(im_distrust)
+               else if (abs(newvfrac(im_distrust)).le.VOFTOL) then
+                new_centroid(im_distrust,udir)=cengrid(udir)
+               else
+                print *,"newvfrac(im_distrust) invalid"
+                stop
+               endif
+              enddo ! udir=1..sdim
+             else if (abs(fixed_vfrac_sum).le.VOFTOL) then
+              ! do nothing
+             else
+              print *,"fixed_vfrac_sum invalid"
+              stop
+             endif
+                
+            else
+             print *,"dF invalid"
+             stop
+            endif
+           else
+            print *,"dF became corrupt1 dF=",dF
+            stop
+           endif
+          else
+           print *,"avail_vfrac invalid"
+           stop
           endif
 
-          dF=newvfrac(im_dest)-oldvfrac(im_dest)
+          if (DEBUG_ACTIVE_CELL.eq.1) then
+           if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+            print *,"im_source,im_dest,dF ", &
+               im_source,im_dest,dF
+            stop
+           endif
+          endif
 
            ! 1. the MAC and cell velocity field should be extrapolated
            !    from the old destination material side into the cells/faces
@@ -5101,14 +5300,13 @@ stop
             ! => new_centroid(im_dest,udir) (absolute coord)
            do u_im=1,nmat
             vofcomp_recon=(u_im-1)*ngeom_recon+1
-            mofdata(vofcomp_recon)= &
-               recon(D_DECL(i,j,k),vofcomp_recon)  !vfrac
 
+            mofdata(vofcomp_recon)=oldvfrac(u_im)
             mofdata_new(vofcomp_recon)=newvfrac(u_im)
 
             do udir=1,SDIM 
              mofdata(vofcomp_recon+udir)= &
-              recon(D_DECL(i,j,k),vofcomp_recon+udir) ! centroid
+               old_centroid(u_im,udir)-cengrid(udir)
 
              mofdata_new(vofcomp_recon+udir)= &
                new_centroid(u_im,udir)-cengrid(udir)
