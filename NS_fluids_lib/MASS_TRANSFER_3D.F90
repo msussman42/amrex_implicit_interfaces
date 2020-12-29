@@ -6098,7 +6098,7 @@ stop
           else if ((dF.ge.zero).and.(dF.le.EBVOFTOL)) then
            ! do nothing
           else
-           print *,"dF became corrupt"
+           print *,"dF became corrupt2 dF=",dF
            print *,"dF invalid"
            stop
           endif 
