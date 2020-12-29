@@ -4812,6 +4812,8 @@ stop
              new_centroid(im_source,udir)=old_centroid(im_source,udir)
              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
             enddo
+            LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+            LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
            else if ((avail_vfrac.gt.zero).and. &
                     (avail_vfrac.le.one)) then
             dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
@@ -4884,17 +4886,17 @@ stop
                do udir=1,SDIM 
                 if (newvfrac(im_distrust).gt.VOFTOL) then
                  new_centroid(im_distrust,udir)= &
-                  (cengrid(udir)-
+                  (cengrid(udir)- &
                    (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
                     fixed_centroid_sum(udir)))/newvfrac(im_distrust)
-                else if (newvfrac(im_distrust).gt.-VOFTOL) then
+                else if (abs(newvfrac(im_distrust)).le.VOFTOL) then
                  new_centroid(im_distrust,udir)=cengrid(udir)
                 else
-                 print *,"oldvfrac(im_distrust) invalid"
+                 print *,"newvfrac(im_distrust) invalid"
                  stop
                 endif
                enddo ! udir=1..sdim
-              else if (fixed_vfrac_sum.gt.-VOFTOL) then
+              else if (abs(fixed_vfrac_sum).le.VOFTOL) then
                ! do nothing
               else
                print *,"fixed_vfrac_sum invalid"
