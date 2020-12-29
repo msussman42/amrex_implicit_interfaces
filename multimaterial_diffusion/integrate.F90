@@ -130,10 +130,12 @@ real(kind=8) :: stefan_time
 real(kind=8) :: sum_alpha
 real(kind=8) :: sumvf,sumvf2
 REAL(kind=8) :: alpha_in(100)
-real(kind=8) :: local_dist
+real(kind=8) :: local_dist,TDIFF_in_mat3
 
 integer local_state_ncomp_test
 integer allocate_flag
+
+TDIFF_in_mat3=0.0d0
 
 ! temperature, velocity, interface reconstruction, level set
 local_state_ncomp_test=nmat_in+local_nten*sdim_in+ &
@@ -444,9 +446,9 @@ do while (finished_flag.eq.0)
    else if (probtype_in.eq.405) then ! growing annulus seed
     local_dist=sqrt((xcen-xblob)**2+(ycen-yblob)**2)
     if (local_dist.gt.probhiy-yblob) then
-            T_FIELD=1.0d0
+            T_FIELD=2.0d0-TDIFF_in_mat3
     else if (local_dist.gt.probhiy-yblob-0.1) then
-            T_FIELD=2.0d0-(local_dist-rhi)/ &
+            T_FIELD=2.0d0-TDIFF_in_mat3*(local_dist-rhi)/ &
                           (probhiy-yblob-rhi)
     endif
 

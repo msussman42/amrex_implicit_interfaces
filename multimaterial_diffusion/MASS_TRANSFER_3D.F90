@@ -4763,54 +4763,74 @@ stop
             dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
             dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
 
-            ! mass fraction equation:
-            ! in a given cell with m species.
-            ! mass= sum_i=1^m  Y_i overall_mass = 
-            !     = sum_i=1^m  density_i F_i V_cell
-            ! F_i = volume fraction of material i.
-            ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
-            ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
-
-            dF=max(dFdst,dFsrc)
-            if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
-             dF=min(dF,oldvfrac(im_source))
-            else if (LL.lt.zero) then ! freezing, condensation, implosion
-             dF=min(dF,oldvfrac(im_source))
-            else
-             print *,"LL invalid"
-             stop
-            endif
-
-            newvfrac(im_dest)=oldvfrac(im_dest)
-            newvfrac(im_source)=oldvfrac(im_source)
-
-            if (dF.lt.zero) then
+            if ((dFdst.le.zero).or. &
+                (dFsrc.le.zero)) then
              dF=zero
-            endif
-            newvfrac(im_dest)=oldvfrac(im_dest)+dF
-            if (newvfrac(im_dest).gt.avail_vfrac) then
-             dF=avail_vfrac-oldvfrac(im_dest)
-             newvfrac(im_dest)=avail_vfrac
-            endif
-            newvfrac(im_source)=oldvfrac(im_source)-dF
-            if (newvfrac(im_source).lt.zero) then
-             dF=oldvfrac(im_source)
-             newvfrac(im_source)=zero
+             newvfrac(im_dest)=oldvfrac(im_dest)
+             newvfrac(im_source)=oldvfrac(im_source)
+            else if ((dFdst.ge.zero).and. &
+                     (dFsrc.ge.zero)) then
+
+             ! mass fraction equation:
+             ! in a given cell with m species.
+             ! mass= sum_i=1^m  Y_i overall_mass = 
+             !     = sum_i=1^m  density_i F_i V_cell
+             ! F_i = volume fraction of material i.
+             ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
+             ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
+
+             dF=max(dFdst,dFsrc)
+             if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
+              dF=min(dF,oldvfrac(im_source))
+             else if (LL.lt.zero) then ! freezing, condensation, implosion
+              dF=min(dF,oldvfrac(im_source))
+             else
+              print *,"LL invalid"
+              stop
+             endif
+
+             newvfrac(im_dest)=oldvfrac(im_dest)
+             newvfrac(im_source)=oldvfrac(im_source)
+ 
+             if (dF.lt.zero) then
+              dF=zero
+             endif
              newvfrac(im_dest)=oldvfrac(im_dest)+dF
              if (newvfrac(im_dest).gt.avail_vfrac) then
+              dF=avail_vfrac-oldvfrac(im_dest)
               newvfrac(im_dest)=avail_vfrac
              endif
-            endif
-            if (dF.le.zero) then
-             dF=zero
-            endif
-            if (dF.ge.one) then
-             dF=one
-            endif
+             newvfrac(im_source)=oldvfrac(im_source)-dF
+             if (newvfrac(im_source).lt.zero) then
+              dF=oldvfrac(im_source)
+              newvfrac(im_source)=zero
+              newvfrac(im_dest)=oldvfrac(im_dest)+dF
+              if (newvfrac(im_dest).gt.avail_vfrac) then
+               newvfrac(im_dest)=avail_vfrac
+              endif
+             endif
+             if (dF.le.zero) then
+              dF=zero
+             endif
+             if (dF.ge.one) then
+              dF=one
+             endif
 
-            dF=newvfrac(im_dest)-oldvfrac(im_dest)
-            DVOF(im_dest)=DVOF(im_dest)+dF
-            deltaVOF(D_DECL(i,j,k),im_dest)=dF
+             if (dF.eq.zero) then
+              newvfrac(im_dest)=oldvfrac(im_dest)
+              newvfrac(im_source)=oldvfrac(im_source)
+             else if (dF.gt.zero) then
+              dF=newvfrac(im_dest)-oldvfrac(im_dest)
+              DVOF(im_dest)=DVOF(im_dest)+dF
+              deltaVOF(D_DECL(i,j,k),im_dest)=dF
+             else
+              print *,"dF invalid"
+              stop
+             endif
+            else
+             print *,"dF became corrupt1 dF=",dF
+             stop
+            endif
            else
             print *,"avail_vfrac invalid"
             stop
@@ -5559,7 +5579,7 @@ stop
            else if ((dF.ge.zero).and.(dF.le.EBVOFTOL)) then
             ! do nothing
            else
-            print *,"dF became corrupt"
+            print *,"dF became corrupt2 dF=",dF
             print *,"dF invalid"
             stop
            endif 

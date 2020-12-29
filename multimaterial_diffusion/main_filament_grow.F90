@@ -75,16 +75,8 @@ real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 !   Tsat=0.0
 ! bias temperature by 2 => Tinfinity=1.5  T_ice=1.0  Tsat=2.0
 real(kind=8),parameter     :: NB_top=1.5d0, NB_bot=1.5d0  
-! 1.0d0 for probtype==3
-! -4.0d0 for probtype==4 (TDIFF=T_DISK_CENTER - TSAT)
-! 10.0d0 for probtype==16
-! for probtype==5, T(x=0)=273.0  T(x=1)=272.0+e^{-V(1-Vt)}
-! material 1 on the left, material 2 on the right.
-! 1.0d0 for probtype==400 (gingerbread)
-!  => T=TSAT on the material 12 interface, TSAT=2
-!     T=TDIFF_in in the far field and initially at the center of the 
-!     annulus.
 real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
+real(kind=8),PARAMETER     :: TDIFF_in_mat3 = 0.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
@@ -101,7 +93,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
-INTEGER,PARAMETER          :: plot_int = 20  ! 20
+INTEGER,PARAMETER          :: plot_int = 1  ! 20
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -118,7 +110,7 @@ INTEGER,PARAMETER          :: plot_int = 20  ! 20
 ! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
 ! probtype_in==403: TSTOP=0.4d0 (smooth test)
 ! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.8D0
+real(kind=8),parameter     :: TSTOP = 0.02D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -252,7 +244,7 @@ M_FACTOR=2
 
 axis_dir=0 
 radblob10=0.1d0  ! 0.1d0 is from the earlier articles
-height_function_flag_global=1  ! =1 for height function
+height_function_flag_global=0  ! =1 for height function
                                ! =2 for sanity check
 ! set transition_region=0.0d0 for seed problem from Chen and Smereka
 ! or Juric and Tryggvason.
@@ -278,7 +270,7 @@ endif
 ! r1=radcen-radeps
 ! r2=radcen+radeps
 radcen=0.25d0
-radeps=0.005d0  ! ! thick:0.1d0  thin:0.005d0
+radeps=0.05d0  ! ! thick:0.1d0  thin:0.005d0
 rlo=radcen-radeps
 rhi=radcen+radeps
 ! radial_variation=0 for thin annulus Dirichlet test problem.
@@ -396,7 +388,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  do dir=1,sdim_in
  do side=1,2
   physbc(dir,side)=EXT_DIR
-  physbc_value(dir,side)=1.0d0
+  physbc_value(dir,side)=2.0d0-TDIFF_in_mat3
  enddo
  enddo
 
@@ -802,13 +794,13 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      if (im.eq.2) then
              T_FIELD=2.0d0  ! saturation temp (seed)
      else if (im.eq.1) then ! inner material
-             T_FIELD=1.0+test_radblob/rlo
+             T_FIELD=2.0d0-TDIFF_in*(rlo-test_radblob)/rlo
      else if (im.eq.3) then  ! outer material
              if (test_radblob.gt.probhi-yblob_in) then
-                     T_FIELD=1.0d0
+                     T_FIELD=2.0d0-TDIFF_in_mat3
              else
                 ! rhi=2   probhi-yblob_in=1
-                     T_FIELD=2.0d0-(test_radblob-rhi)/ &
+                     T_FIELD=2.0d0-TDIFF_in_mat3*(test_radblob-rhi)/ &
                              (probhi-yblob_in-rhi)
              endif
      else
