@@ -4732,6 +4732,7 @@ stop
                 (abs(oldLS_point(im_source)).gt.dxmaxLS))) then
             away_from_interface=1
            endif
+
            if (DEBUG_ACTIVE_CELL.eq.1) then
             if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
              print *,"im_source,im_dest,away_from_interface ", &
