@@ -86,7 +86,7 @@ real(kind=8),PARAMETER     :: latent_heat_in = -1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 3
 INTEGER,PARAMETER          :: local_operator_external = 1
-INTEGER,PARAMETER          :: local_linear_exact = 1
+INTEGER,PARAMETER          :: local_linear_exact = 0
 INTEGER                    :: ilev,max_ncell
 INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
@@ -270,7 +270,7 @@ endif
 ! r1=radcen-radeps
 ! r2=radcen+radeps
 radcen=0.25d0
-radeps=0.05d0  ! ! thick:0.1d0  thin:0.005d0
+radeps=0.005d0  ! ! thick:0.1d0  thin:0.005d0
 rlo=radcen-radeps
 rhi=radcen+radeps
 ! radial_variation=0 for thin annulus Dirichlet test problem.
@@ -396,7 +396,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  if ((stefan_flag.eq.1).and. &
      (local_operator_internal.eq.3).and. &
      (local_operator_external.eq.1).and. &
-     (local_linear_exact.eq.1)) then
+     ((local_linear_exact.eq.1).or. &
+      (local_linear_exact.eq.0))) then
   ! do nothing
  else
   print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==405"
