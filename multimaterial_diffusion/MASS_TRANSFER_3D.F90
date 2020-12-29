@@ -3678,8 +3678,12 @@ stop
       REAL_T mass_frac_limit
       INTEGER_T nhalf_box
       INTEGER_T im_local
-      REAL_T fixed_vfrac_sum,avail_vfrac
-
+      INTEGER_T im_trust
+      INTEGER_T im_distrust
+      REAL_T LS_MAX_fixed
+      REAL_T fixed_vfrac_sum
+      REAL_T fixed_centroid_sum(SDIM)
+      REAL_T avail_vfrac
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4720,8 +4724,33 @@ stop
              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
             enddo
            else if (away_from_interface.eq.0) then
-            LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
-            LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+             ! only the interface changing phase should move
+            LS_MAX_fixed=-1.0D+20
+            do im_local=1,nmat
+             lsdata(im_local)=LSold(D_DECL(i,j,k),im_local)
+             if ((im_local.eq.im_source).or.(im_local.eq.im_dest)) then
+              ! do nothing
+             else if ((im_local.ge.1).and.(im_local.le.nmat)) then
+              if (is_rigid(nmat,im_local).eq.1) then
+               ! do nothing
+              else if (is_rigid(nmat,im_local).eq.0) then  
+               LS_MAX_fixed=max(LS_MAX_fixed,lsdata(im_local))
+              else
+               print *,"is_rigid(nmat,im_local) invalid"
+               stop
+              endif
+             else
+              print *,"im_local bust"
+              stop
+             endif
+            enddo ! im_local=1..nmat
+            lsdata(im_source)=half*(unsplit_lsnew(im_source)- &
+             max(LS_MAX_fixed,unsplit_lsnew(im_dest)))
+            lsdata(im_dest)=half*(unsplit_lsnew(im_dest)- &
+             max(LS_MAX_fixed,unsplit_lsnew(im_source)))
+
+            LSnew(D_DECL(i,j,k),im_source)=lsdata(im_source)
+            LSnew(D_DECL(i,j,k),im_dest)=lsdata(im_dest)
            else
             print *,"away_from_interface invalid"
             stop
@@ -4731,6 +4760,9 @@ stop
             ! at the same time materials not involved in the phase change
             ! should not have a change in volume.
            fixed_vfrac_sum=zero
+           do udir=1,SDIM 
+            fixed_centroid_sum(udir)=zero
+           enddo
            do im_local=1,nmat
             if ((im_local.eq.im_source).or. &
                 (im_local.eq.im_dest)) then
@@ -4742,6 +4774,10 @@ stop
              enddo
              if (is_rigid(nmat,im_local).eq.0) then
               fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
+              do udir=1,SDIM 
+               fixed_centroid_sum(udir)=fixed_centroid_sum(udir)+ &
+                 newvfrac(im_local)*new_centroid(im_local,udir)
+              enddo
              else if (is_rigid(nmat,im_local).eq.1) then
               ! ignore, solids are embedded
              else
@@ -4790,6 +4826,8 @@ stop
               new_centroid(im_source,udir)=old_centroid(im_source,udir)
               new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
              enddo
+             LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+             LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
             else if ((dFdst.gt.zero).and. &
                      (dFsrc.gt.zero)) then
 
@@ -4839,7 +4877,30 @@ stop
                new_centroid(im_source,udir)=old_centroid(im_source,udir)
                new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
               enddo
+              LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+              LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
              else if (dF.gt.zero) then
+              if (fixed_vfrac_sum.gt.VOFTOL) then
+               do udir=1,SDIM 
+                if (newvfrac(im_distrust).gt.VOFTOL) then
+                 new_centroid(im_distrust,udir)= &
+                  (cengrid(udir)-
+                   (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
+                    fixed_centroid_sum(udir)))/newvfrac(im_distrust)
+                else if (newvfrac(im_distrust).gt.-VOFTOL) then
+                 new_centroid(im_distrust,udir)=cengrid(udir)
+                else
+                 print *,"oldvfrac(im_distrust) invalid"
+                 stop
+                endif
+               enddo ! udir=1..sdim
+              else if (fixed_vfrac_sum.gt.-VOFTOL) then
+               ! do nothing
+              else
+               print *,"fixed_vfrac_sum invalid"
+               stop
+              endif
+                 
               DVOF(im_dest)=DVOF(im_dest)+dF
               deltaVOF(D_DECL(i,j,k),im_dest)=dF
              else
