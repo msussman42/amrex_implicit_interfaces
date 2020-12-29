@@ -6,8 +6,9 @@
 #define STANDALONE 1
 
 #define DEBUG_TRIPLE 0
-#define DEBUG_I 22
-#define DEBUG_J 13
+#define DEBUG_ACTIVE_CELL 0
+#define DEBUG_I 19
+#define DEBUG_J 23
 #define DEBUG_K 0
 
 #include "AMReX_REAL.H"
@@ -4064,6 +4065,12 @@ stop
           enddo ! im_opp
          enddo ! im
 
+         if (DEBUG_ACTIVE_CELL.eq.1) then
+          if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+           print *,"i,j,do_unsplit_advection ",i,j,do_unsplit_advection
+          endif
+         endif
+
           ! do the 3x3x3 stencil volume fractions satisfy:
           !  0 < F_source < 1 and
           !  0 < F_dest < 1
@@ -4273,6 +4280,16 @@ stop
               ! node velocity initialized in "nodedisplace"
              do udir=1,SDIM
               velnode=nodevel(D_DECL(imac,jmac,kmac),scomp+udir)
+
+              if (DEBUG_ACTIVE_CELL.eq.1) then
+               if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+                print *,"iten_crit,ireverse_crit,udir ", &
+                        iten_crit,ireverse_crit,udir
+                print *,"inode1,jnode1,knode1,velnode ", &
+                        inode1,jnode1,knode1,velnode
+               endif
+              endif
+
               if (udir.eq.1) then
                xtargetnode(inode,udir)=u_xsten_updatecell(inode1,udir)
               else if (udir.eq.2) then
@@ -4715,6 +4732,12 @@ stop
                 (abs(oldLS_point(im_source)).gt.dxmaxLS))) then
             away_from_interface=1
            endif
+           if (DEBUG_ACTIVE_CELL.eq.1) then
+            if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+             print *,"im_source,im_dest,away_from_interface ", &
+                im_source,im_dest,away_from_interface
+            endif
+           endif
 
            if (away_from_interface.eq.1) then
             newvfrac(im_source)=oldvfrac(im_source)
@@ -4803,6 +4826,14 @@ stop
             print *,"fixed_vfrac_sum invalid"
             stop
            endif
+
+           if (DEBUG_ACTIVE_CELL.eq.1) then
+            if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+             print *,"im_source,im_dest,avail_vfrac,oldvfrac(im_dest) ", &
+                im_source,im_dest,avail_vfrac,oldvfrac(im_dest)
+            endif
+           endif
+
            if ((avail_vfrac.eq.zero).or. &
                (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
             dF=zero
@@ -4819,7 +4850,14 @@ stop
             dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
             dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
 
-            if ((dFdst.le.zero).or. &
+            if (DEBUG_ACTIVE_CELL.eq.1) then
+             if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+              print *,"im_source,im_dest,dFdst,dFsrc ", &
+                im_source,im_dest,dFdst,dFsrc
+             endif
+            endif
+
+            if ((dFdst.le.zero).and. &
                 (dFsrc.le.zero)) then
              dF=zero
              newvfrac(im_dest)=oldvfrac(im_dest)
@@ -4830,7 +4868,7 @@ stop
              enddo
              LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
              LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
-            else if ((dFdst.gt.zero).and. &
+            else if ((dFdst.gt.zero).or. &
                      (dFsrc.gt.zero)) then
 
              ! mass fraction equation:
@@ -4916,6 +4954,13 @@ stop
            else
             print *,"avail_vfrac invalid"
             stop
+           endif
+           if (DEBUG_ACTIVE_CELL.eq.1) then
+            if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+             print *,"im_source,im_dest,dF ", &
+                im_source,im_dest,dF
+             stop
+            endif
            endif
 
             ! 1. the MAC and cell velocity field should be extrapolated
