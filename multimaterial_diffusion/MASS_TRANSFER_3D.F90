@@ -3501,6 +3501,7 @@ stop
       REAL_T volgrid
       REAL_T cengrid(SDIM)
       REAL_T new_centroid(nmat,SDIM)
+      REAL_T old_centroid(nmat,SDIM)
       REAL_T EBVOFTOL
       REAL_T SWEPTFACTOR
       REAL_T SWEPTFACTOR_GFM
@@ -4654,6 +4655,8 @@ stop
             vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
             newvfrac(u_imaterial)=unsplit_snew(vofcomp_raw)
             do dir=1,SDIM
+             old_centroid(u_imaterial,dir)= &
+               recon(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
              new_centroid(u_imaterial,dir)= &
                unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
             enddo
@@ -4712,6 +4715,10 @@ stop
            if (away_from_interface.eq.1) then
             newvfrac(im_source)=oldvfrac(im_source)
             newvfrac(im_dest)=oldvfrac(im_dest)
+            do udir=1,SDIM 
+             new_centroid(im_source,udir)=old_centroid(im_source,udir)
+             new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+            enddo
            else if (away_from_interface.eq.0) then
             LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
             LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
@@ -4728,8 +4735,11 @@ stop
             if ((im_local.eq.im_source).or. &
                 (im_local.eq.im_dest)) then
              ! do nothing
-            else
+            else if ((im_local.ge.1).and.(im_local.le.nmat)) then
              newvfrac(im_local)=oldvfrac(im_local)
+             do udir=1,SDIM 
+              new_centroid(im_local,udir)=old_centroid(im_local,udir)
+             enddo
              if (is_rigid(nmat,im_local).eq.0) then
               fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
              else if (is_rigid(nmat,im_local).eq.1) then
@@ -4738,6 +4748,9 @@ stop
               print *,"is_rigid invalid"
               stop
              endif
+            else
+             print *,"im_local became corrupt"
+             stop
             endif
            enddo ! im_local=1..nmat
 
@@ -4754,10 +4767,15 @@ stop
             print *,"fixed_vfrac_sum invalid"
             stop
            endif
-           if (avail_vfrac.eq.zero) then
+           if ((avail_vfrac.eq.zero).or. &
+               (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
             dF=zero
             newvfrac(im_dest)=oldvfrac(im_dest)
             newvfrac(im_source)=oldvfrac(im_source)
+            do udir=1,SDIM 
+             new_centroid(im_source,udir)=old_centroid(im_source,udir)
+             new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+            enddo
            else if ((avail_vfrac.gt.zero).and. &
                     (avail_vfrac.le.one)) then
             dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
@@ -4768,8 +4786,12 @@ stop
              dF=zero
              newvfrac(im_dest)=oldvfrac(im_dest)
              newvfrac(im_source)=oldvfrac(im_source)
-            else if ((dFdst.ge.zero).and. &
-                     (dFsrc.ge.zero)) then
+             do udir=1,SDIM 
+              new_centroid(im_source,udir)=old_centroid(im_source,udir)
+              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+             enddo
+            else if ((dFdst.gt.zero).and. &
+                     (dFsrc.gt.zero)) then
 
              ! mass fraction equation:
              ! in a given cell with m species.
@@ -4779,48 +4801,45 @@ stop
              ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
              ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
 
-             dF=max(dFdst,dFsrc)
-             if (LL.gt.zero) then ! evaporation, boiling, melting, cavitation
+              ! if there are 2 materials, dFdst=dFsrc, but if there
+              ! are 3 materials or more, the larger value is to be
+              ! trusted over the smaller, due to interference from the
+              ! extra materials (which hypothetically, should be fixed)
+             im_trust=0
+             im_distrust=0
+             if (dFdst.ge.dFsrc) then
+              im_trust=im_dest
+              im_distrust=im_source
+              dF=dFdst
+             else if (dFdst.le.dFsrc) then
+              im_trust=im_source
+              im_distrust=im_dest
+              dF=dFsrc
+             else
+              print *,"dFdst or dFsrc bust"
+              stop
+             endif
+
+             if ((LL.gt.zero).or. & !evaporation,boiling,melting,cavitation
+                 (LL.lt.zero)) then !freezing, condensation
               dF=min(dF,oldvfrac(im_source))
-             else if (LL.lt.zero) then ! freezing, condensation, implosion
-              dF=min(dF,oldvfrac(im_source))
+              dF=min(dF,avail_vfrac-oldvfrac(im_dest))
              else
               print *,"LL invalid"
               stop
              endif
 
-             newvfrac(im_dest)=oldvfrac(im_dest)
-             newvfrac(im_source)=oldvfrac(im_source)
- 
-             if (dF.lt.zero) then
-              dF=zero
-             endif
              newvfrac(im_dest)=oldvfrac(im_dest)+dF
-             if (newvfrac(im_dest).gt.avail_vfrac) then
-              dF=avail_vfrac-oldvfrac(im_dest)
-              newvfrac(im_dest)=avail_vfrac
-             endif
              newvfrac(im_source)=oldvfrac(im_source)-dF
-             if (newvfrac(im_source).lt.zero) then
-              dF=oldvfrac(im_source)
-              newvfrac(im_source)=zero
-              newvfrac(im_dest)=oldvfrac(im_dest)+dF
-              if (newvfrac(im_dest).gt.avail_vfrac) then
-               newvfrac(im_dest)=avail_vfrac
-              endif
-             endif
-             if (dF.le.zero) then
-              dF=zero
-             endif
-             if (dF.ge.one) then
-              dF=one
-             endif
-
+ 
              if (dF.eq.zero) then
               newvfrac(im_dest)=oldvfrac(im_dest)
               newvfrac(im_source)=oldvfrac(im_source)
+              do udir=1,SDIM 
+               new_centroid(im_source,udir)=old_centroid(im_source,udir)
+               new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+              enddo
              else if (dF.gt.zero) then
-              dF=newvfrac(im_dest)-oldvfrac(im_dest)
               DVOF(im_dest)=DVOF(im_dest)+dF
               deltaVOF(D_DECL(i,j,k),im_dest)=dF
              else
@@ -5206,14 +5225,13 @@ stop
              ! => new_centroid(im_dest,udir) (absolute coord)
             do u_im=1,nmat
              vofcomp_recon=(u_im-1)*ngeom_recon+1
-             mofdata(vofcomp_recon)= &
-                recon(D_DECL(i,j,k),vofcomp_recon)  !vfrac
 
+             mofdata(vofcomp_recon)=oldvfrac(u_im)
              mofdata_new(vofcomp_recon)=newvfrac(u_im)
 
              do udir=1,SDIM 
               mofdata(vofcomp_recon+udir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+udir) ! centroid
+                old_centroid(u_im,udir)-cengrid(udir)
 
               mofdata_new(vofcomp_recon+udir)= &
                 new_centroid(u_im,udir)-cengrid(udir)
