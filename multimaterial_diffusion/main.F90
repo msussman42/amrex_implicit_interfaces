@@ -76,7 +76,8 @@ real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 ! bias temperature by 2 => Tinfinity=1.5  T_ice=1.0  Tsat=2.0
 real(kind=8),parameter     :: NB_top=1.5d0, NB_bot=1.5d0  
 real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
-real(kind=8),PARAMETER     :: TDIFF_in_mat3 = 0.0d0
+real(kind=8),PARAMETER     :: TDIFF_in_mat3 = 1.0d0
+integer,PARAMETER     :: two_interfaces = 1
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
@@ -377,7 +378,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  enddo
 
   ! latent heat   12 13 23 21 31 32
-  !                x  0  0 0  0   0 
+  !                x  0  0 0  0   x 
  order_algorithm(1)=1  ! inside the annulus
  order_algorithm(2)=3  ! this is the growing seed
  order_algorithm(3)=2
@@ -545,7 +546,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  
   ! 1=inner 2=filament 3=outer
   ! 12 13 23 21 31 32
-  ! x  0  0  0  0   0
+  ! x  0  0  0  0   x
  do iten=1,2*local_nten
   saturation_temp(iten)=0.0
   saturation_temp_curv(iten)=0.0
@@ -553,6 +554,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  enddo
 
  saturation_temp(1)=2.0d0
+ if (two_interfaces.eq.1) then
+  saturation_temp(6)=2.0d0
+ endif
 
  print *,"saturation_temp_curv(1)=",saturation_temp_curv(1) 
  print *,"saturation_temp_vel(1)=",saturation_temp_vel(1) 
@@ -574,6 +578,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  fort_initial_temperature(3)=fort_tempconst(3)
      ! material 1 converted to material 2 (freezing)
  latent_heat(1)=-abs(latent_heat_in) 
+ if (two_interfaces.eq.1) then
+     ! material 3 converted to material 2 (freezing)
+  latent_heat(6)=-abs(latent_heat_in) 
+ endif
  ireverse=0
  isink=0
  fort_alpha(1)=1.0d0

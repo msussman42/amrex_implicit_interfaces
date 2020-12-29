@@ -135,7 +135,7 @@ real(kind=8) :: local_dist,TDIFF_in_mat3
 integer local_state_ncomp_test
 integer allocate_flag
 
-TDIFF_in_mat3=0.0d0
+TDIFF_in_mat3=1.0d0
 
 ! temperature, velocity, interface reconstruction, level set
 local_state_ncomp_test=nmat_in+local_nten*sdim_in+ &

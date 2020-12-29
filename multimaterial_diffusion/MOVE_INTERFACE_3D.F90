@@ -2767,6 +2767,41 @@ stop
         ncomp_per_tsat,ntsat, &
         ngrow_make_distance)
 
+       if (diagnostic_output.eq.1) then
+
+        n_root=6
+        root_char_array='extBVL'
+        data_dir=-1
+        SDC_outer_sweeps=0
+        slab_step=0
+        data_id=stefan_flag
+        visual_revolve=0
+        visual_option=-2
+
+        call FORT_TECPLOTFAB_SANITY( &
+         root_char_array, &
+         n_root, &
+         data_dir, &
+         bfact, & 
+         fablo,fabhi, &
+         burnvel, &
+         DIMS(burnvel), &
+         problo,probhi, &
+         dx, &
+         SDC_outer_sweeps, &
+         slab_step, &
+         data_id, &
+         nsteps, &
+         prev_time, &  ! cur_time will not show on same mesh as prev_time.
+         visual_option, &
+         visual_revolve, &
+         level, &
+         finest_level, &
+         nburning)
+
+       endif
+
+
 
        do isweep=0,1
 
