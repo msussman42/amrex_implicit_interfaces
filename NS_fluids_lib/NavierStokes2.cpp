@@ -2286,14 +2286,6 @@ void NavierStokes::increment_face_velocity(
   debug_ngrow(FACE_VAR_MF+dir,0,111);
  }
 
- int local_icefacecut=FACE_VAR_MF;
- if (project_option==13) {
-  local_icefacecut=LOCAL_ICEFACECUT_MF;
- }
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(local_icefacecut+dir,0,111);
- }
-
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
@@ -2502,7 +2494,6 @@ void NavierStokes::increment_face_velocity(
       const Real* xlo = grid_loc[gridno].lo();
     
       FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];  
-      FArrayBox& local_xface=(*localMF[local_icefacecut+dir])[mfi];  
 
       FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir])[mfi];  
       FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
@@ -2615,9 +2606,10 @@ void NavierStokes::increment_face_velocity(
        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
        solfab.dataPtr(),
        ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()), //FSI_GHOST_MAC_MF
-       local_xface.dataPtr(),
-       ARLIM(local_xface.loVect()),ARLIM(local_xface.hiVect()), //xcut
-       xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
+       xface.dataPtr(),
+       ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
+       xface.dataPtr(),
+       ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
        xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
        xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
        reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
