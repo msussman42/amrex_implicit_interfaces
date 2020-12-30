@@ -3366,7 +3366,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           // If incompressible: DIV_new=MDOT_MF dt
           // If one of the adjoining cells of a face are in the 
           // "flexible solid," then the face coefficient = 0. 
-          // See: FORT_BUILDFACEWT, alt_FACE_VAR_MF
+          // See: FORT_BUILDFACEWT, FACE_VAR_MF
          rigid_project_option=11; // final project
          multiphase_project(rigid_project_option);
         } else if ((FSI_material_exists()==0)&&
@@ -6419,15 +6419,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (ncomp_check!=nsolveMM)
   amrex::Error("ncomp_check alid");
 
-  // in: allocate_FACE_WEIGHT
- int alt_FACE_VAR_MF=FACE_VAR_MF;
- if (project_option==13) {
-  alt_FACE_VAR_MF=LOCAL_ICEFACECUT_MF;
- }
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,850);
-  debug_ngrow(alt_FACE_VAR_MF+dir,0,850);
  }
 
  resize_mask_nbr(1);
@@ -6657,9 +6650,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
    FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];  
    FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
    FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
-   FArrayBox& alt_xface=(*localMF[alt_FACE_VAR_MF])[mfi];  
-   FArrayBox& alt_yface=(*localMF[alt_FACE_VAR_MF+1])[mfi];  
-   FArrayBox& alt_zface=(*localMF[alt_FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
 
    FArrayBox& xfacemm=(*localMF[mm_areafrac_index])[mfi];  
    FArrayBox& yfacemm=(*localMF[mm_areafrac_index+1])[mfi];  
@@ -6716,9 +6706,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-    alt_xface.dataPtr(),ARLIM(alt_xface.loVect()),ARLIM(alt_xface.hiVect()),
-    alt_yface.dataPtr(),ARLIM(alt_yface.loVect()),ARLIM(alt_yface.hiVect()),
-    alt_zface.dataPtr(),ARLIM(alt_zface.loVect()),ARLIM(alt_zface.hiVect()),
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -7147,8 +7134,8 @@ void NavierStokes::correct_velocity(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| //FSI_material_exists 2nd project
-     (project_option==13)|| //FSI_material_exists 1st project
+     (project_option==11)|| //FSI_material_exists, last project
+     (project_option==13)|| //elastic material, middle project
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
@@ -7206,8 +7193,8 @@ void NavierStokes::correct_velocity(
 
  if ((project_option==0)||
      (project_option==1)|| 
-     (project_option==11)|| //FSI_material_exists 2nd project
-     (project_option==13)|| //FSI_material_exists 1st project
+     (project_option==11)|| //FSI_material_exists, last project
+     (project_option==13)|| //elastic material, middle project
      (project_option==12)|| //pressure extension
      (project_option==2)||
      (project_option==3)||
@@ -7217,15 +7204,8 @@ void NavierStokes::correct_velocity(
  } else
   amrex::Error("project option invalid");
 
-  // in: correct_velocity
- int alt_FACE_VAR_MF=FACE_VAR_MF;
- if (project_option==13) {
-  alt_FACE_VAR_MF=LOCAL_ICEFACECUT_MF;
- }
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,862);
-  debug_ngrow(alt_FACE_VAR_MF+dir,0,850);
  }
 
  resize_maskfiner(1,MASKCOEF_MF);
@@ -7275,9 +7255,6 @@ void NavierStokes::correct_velocity(
   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& alt_xface=(*localMF[alt_FACE_VAR_MF])[mfi];
-  FArrayBox& alt_yface=(*localMF[alt_FACE_VAR_MF+1])[mfi];
-  FArrayBox& alt_zface=(*localMF[alt_FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
 
   Vector<int> presbc;
   getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
@@ -7310,9 +7287,6 @@ void NavierStokes::correct_velocity(
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-    alt_xface.dataPtr(),ARLIM(alt_xface.loVect()),ARLIM(alt_xface.hiVect()),
-    alt_yface.dataPtr(),ARLIM(alt_yface.loVect()),ARLIM(alt_yface.hiVect()),
-    alt_zface.dataPtr(),ARLIM(alt_zface.loVect()),ARLIM(alt_zface.hiVect()),
     xgp.dataPtr(velcomp),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),
     ygp.dataPtr(velcomp),ARLIM(ygp.loVect()),ARLIM(ygp.hiVect()),
     zgp.dataPtr(velcomp),ARLIM(zgp.loVect()),ARLIM(zgp.hiVect()),
@@ -9209,10 +9183,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  const Real* coarse_dx=geom.CellSize();
 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  allocate_array(0,1,dir,LOCAL_ICEFACECUT_MF+dir);
-  setVal_array(0,1,1.0,LOCAL_ICEFACECUT_MF+dir);
- }
  
   // FSI_material_exists 2nd project
   // The independent variable is "DIV_Type"
@@ -11512,10 +11482,6 @@ void NavierStokes::multiphase_project(int project_option) {
       0,0,1,1);
   } // ilev=level ... finest_level
   delete_array(DIV_SAVE_MF);
- }
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete_array(LOCAL_ICEFACECUT_MF+dir);
  }
 
 #if (profile_solver==1)

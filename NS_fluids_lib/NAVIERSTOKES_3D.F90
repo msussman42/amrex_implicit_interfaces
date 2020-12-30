@@ -11756,12 +11756,6 @@ END SUBROUTINE SIMP
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
-       alt_xface, &
-       DIMS(alt_xface), &
-       alt_yface, &
-       DIMS(alt_yface), &
-       alt_zface, &
-       DIMS(alt_zface), &
        xgp,DIMS(xgp), &
        ygp,DIMS(ygp), &
        zgp,DIMS(zgp), &
@@ -11794,9 +11788,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(alt_xface)
-      INTEGER_T, intent(in) :: DIMDEC(alt_yface)
-      INTEGER_T, intent(in) :: DIMDEC(alt_zface)
       INTEGER_T, intent(in) :: DIMDEC(xgp)
       INTEGER_T, intent(in) :: DIMDEC(ygp)
       INTEGER_T, intent(in) :: DIMDEC(zgp)
@@ -11818,9 +11809,6 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: alt_xface(DIMV(alt_xface))
-      REAL_T, intent(in) :: alt_yface(DIMV(alt_yface))
-      REAL_T, intent(in) :: alt_zface(DIMV(alt_zface))
 
       REAL_T, intent(in) :: xgp(DIMV(xgp))
       REAL_T, intent(in) :: ygp(DIMV(ygp))
@@ -11842,8 +11830,6 @@ END SUBROUTINE SIMP
       REAL_T local_dest,local_src,local_gp
       REAL_T AL
       REAL_T AL_ice
-      REAL_T alt_AL_ice
-      REAL_T local_AL_ice
       REAL_T local_dd,local_visc_coef,cc_group,local_dd_group
       INTEGER_T local_constant_viscosity
       INTEGER_T icrit,side,bccrit
@@ -11879,8 +11865,8 @@ END SUBROUTINE SIMP
       endif
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.13).or. & !FSI_material_exists 1st project
-          (project_option.eq.11).or. & !FSI_material_exists 2nd project
+          (project_option.eq.13).or. & !elastic material, middle project
+          (project_option.eq.11).or. & !FSI_material_exists last project
           (project_option.eq.12).or. & !pressure extrap
           (project_option.eq.2).or. & ! thermal diffusion
           (project_option.eq.3)) then ! viscosity
@@ -11902,9 +11888,6 @@ END SUBROUTINE SIMP
       call checkbound(fablo,fabhi,DIMS(xface),0,0,268)
       call checkbound(fablo,fabhi,DIMS(yface),0,1,269)
       call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,270)
-      call checkbound(fablo,fabhi,DIMS(alt_xface),0,0,244)
-      call checkbound(fablo,fabhi,DIMS(alt_yface),0,1,244)
-      call checkbound(fablo,fabhi,DIMS(alt_zface),0,SDIM-1,244)
 
       call checkbound(fablo,fabhi,DIMS(xgp),0,0,2333)
       call checkbound(fablo,fabhi,DIMS(ygp),0,1,2334)
@@ -11960,7 +11943,6 @@ END SUBROUTINE SIMP
           local_gp=xgp(D_DECL(i,j,k))
           AL=xface(D_DECL(i,j,k),facecut_index+1)
           AL_ice=xface(D_DECL(i,j,k),icefacecut_index+1)
-          alt_AL_ice=alt_xface(D_DECL(i,j,k))
           icrit=i
          else if (dir.eq.1) then
           local_dest=ydest(D_DECL(i,j,k))
@@ -11968,7 +11950,6 @@ END SUBROUTINE SIMP
           local_gp=ygp(D_DECL(i,j,k))
           AL=yface(D_DECL(i,j,k),facecut_index+1)
           AL_ice=yface(D_DECL(i,j,k),icefacecut_index+1)
-          alt_AL_ice=alt_yface(D_DECL(i,j,k))
           icrit=j
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           local_dest=zdest(D_DECL(i,j,k))
@@ -11976,23 +11957,16 @@ END SUBROUTINE SIMP
           local_gp=zgp(D_DECL(i,j,k))
           AL=zface(D_DECL(i,j,k),facecut_index+1)
           AL_ice=zface(D_DECL(i,j,k),icefacecut_index+1)
-          alt_AL_ice=alt_zface(D_DECL(i,j,k))
           icrit=k
          else
           print *,"dir invalid fluid solid cor"
           stop
          endif
 
-         if (project_option.eq.13) then
-          local_AL_ice=alt_AL_ice
-         else
-          local_AL_ice=AL_ice
-         endif
-
          if ((project_option.eq.0).or. &
              (project_option.eq.1).or. &
-             (project_option.eq.11).or. & !FSI_material_exists 2nd project
-             (project_option.eq.13).or. & !FSI_material_exists 1st project
+             (project_option.eq.11).or. & !FSI_material_exists, last project
+             (project_option.eq.13).or. & !elastic material, middle project
              (project_option.eq.12)) then !pressure extrap.
           if ((nsolve.eq.1).and.(nsolveMM.eq.1).and.(velcomp.eq.0)) then
            veldir=1
@@ -12074,11 +12048,12 @@ END SUBROUTINE SIMP
           stop
          endif
 
+          ! declared in: PROB.F90
          caller_id=2
          call eval_face_coeff( &
            caller_id, &
            level,finest_level, &
-           AL,local_AL_ice,cc_group, &
+           AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
            local_visc_coef, &
            nsolve,nsolveMM,im_vel,dir,veldir,project_option, &

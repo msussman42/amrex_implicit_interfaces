@@ -12925,7 +12925,7 @@ stop
        maskSEM,DIMS(maskSEM), &
        levelPC,DIMS(levelPC), &
        solfab,DIMS(solfab), &
-       xcut,DIMS(xcut), &   ! coeff*areafrac, local_xface in increment_face_vel
+       xcut,DIMS(xcut), &   ! coeff*areafrac
        xface,DIMS(xface), &  ! xflux for advection
        xfacemm,DIMS(xfacemm), &  
        xcellmm,DIMS(xcellmm), &  
@@ -14392,36 +14392,6 @@ stop
                     uedge(im_vel)=test_current_icemask*uedge(im_vel)+ &
                             (one-test_current_icemask)*uedge_rigid
 
-                    if (project_option.eq.13) then
-
-                     if (operation_flag.eq.4) then
-                      test_local_icefacecut=xcut(D_DECL(i,j,k),1)
-                      if ((test_local_icefacecut.ge.zero).and. &
-                          (test_local_icefacecut.le.one)) then
-                       if (FSI_prescribed_flag.eq.0) then
-                        if (test_local_icefacecut.eq.one) then
-                         ! do nothing
-                        else
-                         print *,"test_local_icefacecut invalid"
-                         stop
-                        endif
-                       else if (FSI_prescribed_flag.eq.1) then
-                        xcut(D_DECL(i,j,k),1)=test_current_icefacecut
-                       else
-                        print *,"FSI_prescribed_flag invalid"
-                        stop
-                       endif
-                      else
-                       print *,"test_local_icefacecut invalid"
-                       stop
-                      endif
-                     else
-                      print *,"operation_flag invalid"
-                      stop
-                     endif
-
-                    endif ! project_option==13
-
                    else if (colorface.eq.0) then
                     ! do nothing
                    else
@@ -15620,12 +15590,6 @@ stop
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
-       alt_xface, &
-       DIMS(alt_xface), &
-       alt_yface, &
-       DIMS(alt_yface), &
-       alt_zface, &
-       DIMS(alt_zface), &
        mask,DIMS(mask), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
@@ -15682,9 +15646,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(alt_xface)
-      INTEGER_T, intent(in) :: DIMDEC(alt_yface)
-      INTEGER_T, intent(in) :: DIMDEC(alt_zface)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, intent(inout) :: offdiagcheck(DIMV(offdiagcheck),nsolveMM) 
@@ -15701,9 +15662,6 @@ stop
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: alt_xface(DIMV(alt_xface))
-      REAL_T, intent(in) :: alt_yface(DIMV(alt_yface))
-      REAL_T, intent(in) :: alt_zface(DIMV(alt_zface))
       REAL_T, intent(in) :: mask(DIMV(mask))
       INTEGER_T, intent(in) :: singular_possible
       INTEGER_T, intent(in) :: solvability_projection
@@ -15717,8 +15675,6 @@ stop
       REAL_T dd,dd_group
       REAL_T cc,cc_group
       REAL_T cc_ice
-      REAL_T alt_cc_ice
-      REAL_T local_cc_ice
       INTEGER_T side
       INTEGER_T dir
       INTEGER_T veldir
@@ -15836,9 +15792,6 @@ stop
       call checkbound(fablo,fabhi,DIMS(xface),0,0,244)
       call checkbound(fablo,fabhi,DIMS(yface),0,1,244)
       call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,244)
-      call checkbound(fablo,fabhi,DIMS(alt_xface),0,0,244)
-      call checkbound(fablo,fabhi,DIMS(alt_yface),0,1,244)
-      call checkbound(fablo,fabhi,DIMS(alt_zface),0,SDIM-1,244)
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,246)
 
       if (facewt_iter.eq.0) then
@@ -16006,15 +15959,12 @@ stop
             if (dir.eq.0) then
              cc=xface(D_DECL(i,j,k),facecut_index+1)
              cc_ice=xface(D_DECL(i,j,k),icefacecut_index+1)
-             alt_cc_ice=alt_xface(D_DECL(i,j,k))
             else if (dir.eq.1) then
              cc=yface(D_DECL(i,j,k),facecut_index+1)
              cc_ice=yface(D_DECL(i,j,k),icefacecut_index+1)
-             alt_cc_ice=alt_yface(D_DECL(i,j,k))
             else if ((dir.eq.2).and.(SDIM.eq.3)) then
              cc=zface(D_DECL(i,j,k),facecut_index+1)
              cc_ice=zface(D_DECL(i,j,k),icefacecut_index+1)
-             alt_cc_ice=alt_zface(D_DECL(i,j,k))
             else
              print *,"dir invalid buildfacewt"
              stop
@@ -16031,18 +15981,12 @@ stop
              stop
             endif
 
-            if (project_option.eq.13) then !elastic material, middle  project
-             local_cc_ice=alt_cc_ice
-            else
-             local_cc_ice=cc_ice
-            endif
-
              ! in: PROB.F90
             caller_id=1
             call eval_face_coeff( &
              caller_id, &
              level,finest_level, &
-             cc,local_cc_ice,cc_group, &
+             cc,cc_ice,cc_group, &
              dd,dd_group, &
              visc_coef, &
              nsolve,nsolveMM,im_vel,dir,veldir,project_option, &
