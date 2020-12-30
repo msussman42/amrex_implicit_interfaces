@@ -15903,8 +15903,8 @@ stop
 
           if ((project_option.eq.0).or. &  !regular project
               (project_option.eq.1).or. &  !initial project
-              (project_option.eq.13).or. & !FSI_material_exists 1st project
-              (project_option.eq.11)) then !FSI_material_exists 2nd project
+              (project_option.eq.13).or. & !elastic material, middle project
+              (project_option.eq.11)) then !FSI_material_exists final project
 
            if (singular_possible.eq.1) then
 
@@ -16031,7 +16031,7 @@ stop
              stop
             endif
 
-            if (project_option.eq.13) then !FSI_material_exists 1st project
+            if (project_option.eq.13) then !elastic material, middle  project
              local_cc_ice=alt_cc_ice
             else
              local_cc_ice=cc_ice

@@ -13752,16 +13752,16 @@ END SUBROUTINE Adist
 
        if ((project_option.eq.0).or. &  !regular project
            (project_option.eq.1).or. &  !initial project
-           (project_option.eq.13).or. & !FSI_material_exists 1st project
-           (project_option.eq.11)) then !FSI_material_exists 2nd project
+           (project_option.eq.13).or. & !elastic material, middle project
+           (project_option.eq.11)) then !FSI_material_exists final project
 
         if (project_option.eq.0) then !regular pressure projection
          cc_group=cc
-        else if (project_option.eq.13) then !FSI_material_exists 1st project
+        else if (project_option.eq.13) then !elastic material, middle project
          cc_group=cc*cc_ice  ! cc_ice comes from LOCAL_ICEFACECUT_MF
         else if (project_option.eq.1) then ! initial projection
          cc_group=cc*cc_ice
-        else if (project_option.eq.11) then !FSI_material_exists 2nd project
+        else if (project_option.eq.11) then !FSI_material_exists final project
          cc_group=cc*cc_ice
         else
          print *,"project_option invalid"
