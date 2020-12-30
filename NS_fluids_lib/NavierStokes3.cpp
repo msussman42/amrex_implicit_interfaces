@@ -3346,6 +3346,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          multiphase_project(rigid_project_option);
 
          if (elastic_material_exists==1) {
+           // If both adjoining cells of a face are NOT in the 
+           // "flexible solid," then the face coefficient = 0.
+           // The diagonal coefficient is magnified in the cells NOT
+           // in the "flexible solid."  This projection is a 
+           // continuation of the previous projection, pressure and
+           // velocity start from where the previous projection left
+           // off.  There should be "mdot" in this project.
           rigid_project_option=13;
           multiphase_project(rigid_project_option);
          } else if (elastic_material_exists==0) {
@@ -3355,8 +3362,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          }
 
           // MDOT term not included, instead 
-          // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
-          // if incompressible: DIV_new=MDOT_MF dt
+          // If compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
+          // If incompressible: DIV_new=MDOT_MF dt
+          // If one of the adjoining cells of a face are in the 
+          // "flexible solid," then the face coefficient = 0. 
+          // See: FORT_BUILDFACEWT
          rigid_project_option=11;
          multiphase_project(rigid_project_option);
         } else if ((FSI_material_exists()==0)&&
