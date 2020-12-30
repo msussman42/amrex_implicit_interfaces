@@ -3353,7 +3353,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
            // continuation of the previous projection, pressure and
            // velocity start from where the previous projection left
            // off.  There should be "mdot" in this project.
-          rigid_project_option=13;
+          rigid_project_option=13; // middle project
           multiphase_project(rigid_project_option);
          } else if (elastic_material_exists==0) {
           // do nothing
@@ -3366,8 +3366,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           // If incompressible: DIV_new=MDOT_MF dt
           // If one of the adjoining cells of a face are in the 
           // "flexible solid," then the face coefficient = 0. 
-          // See: FORT_BUILDFACEWT
-         rigid_project_option=11;
+          // See: FORT_BUILDFACEWT, alt_FACE_VAR_MF
+         rigid_project_option=11; // final project
          multiphase_project(rigid_project_option);
         } else if ((FSI_material_exists()==0)&&
                    (elastic_material_exists==0)) {
@@ -9217,7 +9217,7 @@ void NavierStokes::multiphase_project(int project_option) {
   // FSI_material_exists 2nd project
   // The independent variable is "DIV_Type"
   // which means the contents must be saved.
- if (project_option==11) { // FSI_material_exists (2nd project)
+ if (project_option==11) { // FSI_material_exists (last project)
   allocate_array(1,1,-1,DIV_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -9250,9 +9250,10 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if ((project_option==0)||   // regular project
      (project_option==1)||   // initial_project
-     (project_option==13)||  //FSI_material_exists 1st project
-     (project_option==11)) { //FSI_material_exists 2nd project
+     (project_option==11)) { //FSI_material_exists, last project
   override_enable_spectral(projection_enable_spectral);
+ } else if (project_option==13) { //elastic material, middle project
+  override_enable_spectral(0); // always low order
  } else if (project_option==12) { // pressure extension
   override_enable_spectral(0); // always low order
  } else if (project_option==2) { // thermal diffusion
@@ -9272,8 +9273,8 @@ void NavierStokes::multiphase_project(int project_option) {
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| // FSI_material_exists 2nd project
-     (project_option==13)|| // FSI_material_exists 1st project
+     (project_option==11)|| // FSI_material_exists final project
+     (project_option==13)|| // elastic material middle project
      (project_option==12)|| // pressure extension
      (project_option==3)) { // viscosity
   if (num_materials_face!=1)
@@ -9293,22 +9294,23 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==13)||  //FSI_material_exists 1st project
-     (project_option==11)) { // FSI_material_exists 2nd project
+     (project_option==11)) { // FSI_material_exists last project
 
   singular_possible=1; // all zero coefficients possible in solid regions.
   local_solvability_projection=solvability_projection;
   if (project_option==1) {
    // do nothing
   } else if ((project_option==0)||
-             (project_option==13)||  //FSI_material_exists 1st project
-             (project_option==11)) { //FSI_material_exists 2nd project
+             (project_option==11)) { //FSI_material_exists last project
    if (some_materials_compressible())
     local_solvability_projection=0;
   } else
    amrex::Error("project_option invalid 45"); 
+ } else if (project_option==13) { // elastic material, middle project
+  singular_possible=1; //all zero coefficients possible in non-elastic regions.
+  local_solvability_projection=0;
  } else if (project_option==12) { // pressure extension
-  singular_possible=1; // all zero coefficients possible in non-solid regions.
+  singular_possible=1; //all zero coefficients possible in non-solid regions.
   local_solvability_projection=0;
  } else if (project_option==2) { // thermal conduction
   singular_possible=0; // diagonally dominant everywhere.
