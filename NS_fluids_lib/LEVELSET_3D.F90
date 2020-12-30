@@ -14325,8 +14325,8 @@ stop
               endif
 
               if (num_colors.eq.0) then
-               if ((project_option.eq.11).or. & !FSI_material_exists 2nd project
-                   (project_option.eq.13)) then !FSI_material_exists 1st project
+               if ((project_option.eq.11).or. & !FSI_material_exists last proj
+                   (project_option.eq.13)) then !elastic material, middle proj
                 print *,"project_option invalid"
                 stop
                endif

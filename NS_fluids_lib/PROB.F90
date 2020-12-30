@@ -1247,6 +1247,7 @@ stop
       INTEGER_T im_tertiary
       INTEGER_T im_ice
       INTEGER_T im_FSI_rigid
+      INTEGER_T im_elastic_material
       INTEGER_T im_dest,im_source
       INTEGER_T iten
       REAL_T LL(0:1)
@@ -1370,7 +1371,30 @@ stop
        stop
       endif
 
-      if (im_FSI_rigid.eq.im_primary) then
+      if ((is_elastic_material(nmat,im).eq.0).and. &
+          (is_elastic_material(nmat,im_opp).eq.0)) then
+       im_elastic_material=0
+      else if ((is_elastic_material(nmat,im).eq.1).and. &
+               (is_elastic_material(nmat,im_opp).eq.0)) then
+       im_elastic_material=im
+      else if ((is_elastic_material(nmat,im).eq.0).and. &
+               (is_elastic_material(nmat,im_opp).eq.1)) then
+       im_elastic_material=im_opp
+      else if ((is_elastic_material(nmat,im).eq.1).and. &
+               (is_elastic_material(nmat,im_opp).eq.1)) then
+       im_elastic_material=im_primary
+      else
+       print *,"is_elastic_material invalid"
+       stop
+      endif
+
+      if (im_elastic_material.eq.im_primary) then
+
+       ireverse=-1
+       icemask=zero
+       icefacecut=ICEFACECUT_EPS
+
+      else if (im_FSI_rigid.eq.im_primary) then
 
        ireverse=-1
        icemask=zero
@@ -1378,7 +1402,10 @@ stop
 
       else if ((im_FSI_rigid.ge.0).and. &
                (im_FSI_rigid.le.nmat).and. &
-               (im_FSI_rigid.ne.im_primary)) then
+               (im_FSI_rigid.ne.im_primary).and. &
+               (im_elastic_material.ge.0).and. &
+               (im_elastic_material.le.nmat).and. &
+               (im_elastic_material.ne.im_primary)) then
 
         ! either the primary or secondary material is "ice"
        if ((im_ice.ge.1).and.(im_ice.le.nmat)) then 
@@ -1590,7 +1617,7 @@ stop
        endif
 
       else
-       print *,"im_FSI_rigid invalid"
+       print *,"im_FSI_rigid or im_elastic_material invalid"
        stop
       endif
    

@@ -1315,8 +1315,8 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)||  //FSI_material_exists (2nd project)
-     (project_option==13)) { //FSI_material_exists (1st project)
+     (project_option==11)||  //FSI_material_exists (last project)
+     (project_option==13)) { //elastic_material_exists (middle project)
   // do nothing
  } else
   amrex::Error("project_option invalid20");
@@ -2198,8 +2198,8 @@ void NavierStokes::increment_face_velocity(
 
  } else if (interp_option==1) { // unew^{f}=unew^{f}
 
-  if ((project_option==11)||  //FSI_material_exists 2nd project
-      (project_option==13)) { //FSI_material_exists 1st project 
+  if ((project_option==11)||  //FSI_material_exists last project
+      (project_option==13)) { //elastic_material_exists middle project 
    if (num_colors>=1) {
     // do nothing
    } else
@@ -4222,8 +4222,8 @@ void NavierStokes::apply_pressure_grad(
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| //FSI_material_exists 2nd project
-     (project_option==13)|| //FSI_material_exists 1st project
+     (project_option==11)|| //FSI_material_exists last project
+     (project_option==13)|| //elastic_material_exists middle project
      (project_option==12)|| //pressure extrapolation
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
@@ -4598,8 +4598,8 @@ void NavierStokes::apply_pressure_grad(
 
  } else if ((project_option==0)||
             (project_option==1)||
-            (project_option==11)|| //FSI_material_exists 2nd project
-            (project_option==13)|| //FSI_material_exists 1st project
+            (project_option==11)|| //FSI_material_exists last project
+            (project_option==13)|| //elastic_material_exists middle project
             (project_option==12)|| //pressure extrapolation
             (project_option==2)||  //thermal diffusion
             ((project_option>=100)&&
@@ -9778,10 +9778,10 @@ void NavierStokes::init_advective_pressure(int project_option) {
   amrex::Error("ncomp[0] invalid");
   
  if ((project_option==0)||
-     (project_option==13)) { //FSI_material_exists 1st project
+     (project_option==13)) { //elastic_material_exists middle project
   if (state_index!=State_Type)
    amrex::Error("state_index invalid");
- } else if (project_option==11) { //FSI_material_exists 2nd project
+ } else if (project_option==11) { //FSI_material_exists last project
   if (state_index!=DIV_Type)
    amrex::Error("state_index invalid");
  } else
@@ -9793,9 +9793,9 @@ void NavierStokes::init_advective_pressure(int project_option) {
   // CELL_SOUND_MF
   // coeff_avg,padvect_avg 
  if ((project_option==0)||
-     (project_option==13)) { //FSI_material_exists 1st project
+     (project_option==13)) { //elastic_material_exists middle project
   // do nothing
- } else if (project_option==11) { //FSI_material_exists 2nd project
+ } else if (project_option==11) { //FSI_material_exists last project
    // dst,src,scomp,dcomp,ncomp,ngrow
   int sc=scomp[0];
   int dc=1; // copy 1st component of DIV_TYPE contents 

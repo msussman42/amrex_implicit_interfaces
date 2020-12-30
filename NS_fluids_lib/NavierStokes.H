@@ -1386,6 +1386,7 @@ void apply_pressure_grad(
     static int CTML_FSI_flagC();
     static int CTML_FSI_matC(int im);
     static int FSI_material_exists();
+    static int elastic_material_exists();
 
     void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
     void init_FSI_GHOST_MAC_MF(int dealloc_history);
