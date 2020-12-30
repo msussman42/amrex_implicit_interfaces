@@ -17162,6 +17162,9 @@ stop
         ! if nmat=2, nten=1
         ! if nmat=3, nten=3    12 13 23
         ! if nmat=4, nten=6    12 13 14 23 24 34
+        ! called from NavierStokes.cpp: NavierStokes::level_init_icemask()
+        !   which is called from
+        !     NavierStokes::make_physics_varsALL
       subroutine FORT_INIT_ICEMASK( &
        time, &
        facecut_index, &
@@ -17384,7 +17387,8 @@ stop
           dx,bfact, &
           icemask_left, &  ! 0 or 1
           icefacecut_left, & ! 0<=f<=1
-          im_left,im_opp_left, &
+          im_left, &
+          im_opp_left, &
           ireverse_left, &
           LSleft, &
           latent_heat, &
@@ -17399,7 +17403,8 @@ stop
           dx,bfact, &
           icemask_right, &  ! 0 or 1
           icefacecut_right, & ! 0<=f<=1
-          im_right,im_opp_right, &
+          im_right, &
+          im_opp_right, &
           ireverse_right, &
           LSright, &
           latent_heat, &

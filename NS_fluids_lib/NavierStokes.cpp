@@ -1905,6 +1905,9 @@ void fortran_parameters() {
   viscconst_temp.dataPtr(),
   viscconst_eddy_temp.dataPtr(),
   viscosity_state_model_temp.dataPtr(),
+
+  FIX ME: elastic_time,viscoelastic_model
+
   elastic_viscosity_temp.dataPtr(),
   lame_coefficient_temp.dataPtr(),
   linear_elastic_model_temp.dataPtr(),
@@ -4981,13 +4984,13 @@ NavierStokes::get_mm_scomp_solver(
  int nlist=1;
 
  if ((project_option==0)||
-     (project_option==13)||  // FSI_material_exists (1st project)
+     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==1)) { // pressure
   nsolve=1;
   nlist=1;
   if (num_materials_combine!=num_materials_vel)
    amrex::Error("num_materials_combine invalid");
- } else if ((project_option==11)||  // FSI_material_exists (2nd project)
+ } else if ((project_option==11)||  // FSI_material_exists (last project)
 	    (project_option==12)) { // pressure extension
   nsolve=1;
   nlist=1;
@@ -5022,14 +5025,14 @@ NavierStokes::get_mm_scomp_solver(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==13)|| //FSI_material_exists (1st project)
+     (project_option==13)|| //elastic_material_exists (middle project)
      (project_option==12)) { // pressure extrapolation
  
   scomp[0]=num_materials_vel*AMREX_SPACEDIM;
   ncomp[0]=nsolveMM; 
   state_index=State_Type;
 
- } else if (project_option==11) { // FSI_material_exists (2nd project);
+ } else if (project_option==11) { // FSI_material_exists (last project);
 	                          // divu pressure is independent var.
 
   scomp[0]=0;
@@ -5090,8 +5093,8 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| // FSI_material_exists (2nd project)
-     (project_option==13)|| // FSI_material_exists (1st project)
+     (project_option==11)|| // FSI_material_exists (last project)
+     (project_option==13)|| // elastic_material_exists (middle project)
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
@@ -5143,9 +5146,9 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| // FSI_material_exists (2nd project)
-     (project_option==13)|| // FSI_material_exists (1st project)
-     (project_option==12)||
+     (project_option==11)|| // FSI_material_exists (last project)
+     (project_option==13)|| // elastic_material_exists (middle project)
+     (project_option==12)|| // pressure extrapolation.
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
@@ -5375,6 +5378,35 @@ int NavierStokes::is_ice_matC(int im) {
 
 }  // is_ice_matC()
 
+
+int NavierStokes::elastic_material_exists() {
+
+ int nmat=num_materials;
+ int local_flag=0;
+ for (int im=0;im<nmat;im++) {
+  if (ns_is_rigid(im)==0) {
+   if ((elastic_time[im]>0.0)&&
+       (elastic_viscosity[im]>0.0)) {
+    if (viscoelastic_model[im]==2) {
+     local_flag=1;
+    } else if ((viscoelastic_model[im]==1)||
+    	       (viscoelastic_model[im]==0)) {
+     // do nothing
+    } else
+     amrex::Error("viscoelastic_model[im] invalid");
+   } else if ((elastic_time[im]==0.0)||
+  	      (elastic_viscosity[im]==0.0)) {
+    // do nothing
+   } else
+    amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
+  } else if (ns_is_rigid(im)==1) {
+   // do nothing
+  } else
+   amrex::Error("ns_is_rigid invalid");
+ } // im=0..nmat-1
+ return local_flag;
+
+} // elastic_material_exists()
 
 int NavierStokes::FSI_material_exists() {
 
@@ -16715,8 +16747,8 @@ void NavierStokes::project_right_hand_side(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)||  // FSI_material_exists (2nd project)
-     (project_option==13)||  // FSI_material_exists (1st project)
+     (project_option==11)||  // FSI_material_exists (last project)
+     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==12)) { // pressure extension
 
   int finest_level=parent->finestLevel();
@@ -16856,8 +16888,8 @@ void NavierStokes::init_checkerboardALL(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)||  // FSI_material_exists (2nd project)
-     (project_option==13)||  // FSI_material_exists (1st project)
+     (project_option==11)||  // FSI_material_exists (last project)
+     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==12)) { // pressure extension
 
   int finest_level=parent->finestLevel();
@@ -17044,8 +17076,8 @@ NavierStokes::dotSum(int project_option,
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| //FSI_material_exists (2nd project)
-     (project_option==13)|| //FSI_material_exists (1st project)
+     (project_option==11)|| //FSI_material_exists (last project)
+     (project_option==13)|| //elastic_material_exists (middle project)
      (project_option==12)|| //pressure extrapolation
      (project_option==3)) { //viscosity
   if (num_materials_face!=1)
@@ -17184,8 +17216,8 @@ void NavierStokes::levelCombine(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)|| //FSI_material_exists (2nd project)
-     (project_option==13)|| //FSI_material_exists (1st project)
+     (project_option==11)|| //FSI_material_exists (last project)
+     (project_option==13)|| //elastic_material_exists (middle project)
      (project_option==12)|| //pressure extrapolation
      (project_option==3)) { //viscosity
   if (num_materials_face!=1)
@@ -22187,7 +22219,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");
 
- int project_option=11; //FSI_material_exists 2nd project
+ int project_option=11; //FSI_material_exists last project
  int save_bc_status=override_bc_to_homogeneous;
  CPP_OVERRIDEPBC(1,project_option);
 
@@ -23200,8 +23232,8 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
  int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)||  // FSI_material_exists (2nd project)
-     (project_option==13)||  // FSI_material_exists (1st project)
+     (project_option==11)||  // FSI_material_exists (last project)
+     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==12)||  // pressure extension
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
