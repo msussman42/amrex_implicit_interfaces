@@ -597,6 +597,7 @@ Vector<int> NavierStokes::temperature_primitive_variable;
 
 Vector<int> NavierStokes::store_elastic_data; // def=0
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
+Vector<Real> NavierStokes::elastic_regularization; // def=1
 Vector<Real> NavierStokes::lame_coefficient; // def=0
 Vector<int> NavierStokes::linear_elastic_model; // def=0
 Vector<Real> NavierStokes::shear_modulus; // def=0
@@ -2686,6 +2687,7 @@ NavierStokes::read_params ()
      amrex::Error("nparts!=im_solid_map.size()");
 
     elastic_viscosity.resize(nmat);
+    elastic_regularization.resize(nmat);
     lame_coefficient.resize(nmat);
     linear_elastic_model.resize(nmat);
     shear_modulus.resize(nmat);
@@ -2701,6 +2703,7 @@ NavierStokes::read_params ()
 
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
+     elastic_regularization[im]=1.0;
      lame_coefficient[im]=0.0;
      linear_elastic_model[im]=0;
      shear_modulus[im]=0.0;
@@ -2715,6 +2718,7 @@ NavierStokes::read_params ()
      particle_interaction_ngrow[im]=1;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
+    pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
     pp.queryarr("damping_coefficient",damping_coefficient,0,nmat);
     pp.queryarr("lame_coefficient",lame_coefficient,0,nmat);
     pp.queryarr("linear_elastic_model",linear_elastic_model,0,nmat);
@@ -3985,6 +3989,8 @@ NavierStokes::read_params ()
        std::cout << "etaP0=elastic_viscosity=" << etaP[i] << '\n';
        std::cout << "etaS=etaL0-etaP0= " << etaS[i] << '\n';
        std::cout << "elastic_viscosity= " << elastic_viscosity[i] << '\n';
+       std::cout << "elastic_regularization= " << 
+	       elastic_regularization[i] << '\n';
        std::cout << "store_elastic_data= " << store_elastic_data[i] << '\n';
        std::cout << "elastic_time= " << elastic_time[i] << '\n';
       }

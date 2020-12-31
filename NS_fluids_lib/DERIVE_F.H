@@ -201,6 +201,7 @@ extern "C" {
       int* viscosity_state_model,
       int* viscoelastic_model,
       Real* elastic_viscosity,
+      Real* elastic_regularization,
       Real* etaL,Real* etaP,Real* etaS,
       Real* polymer_factor,
       Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
