@@ -1506,19 +1506,30 @@ void fortran_parameters() {
  num_state_material+=num_species_var;
 
  Vector<Real> elastic_viscosity_temp;
+ Vector<Real> elastic_time_temp;
+ Vector<int> viscoelastic_model_temp;
+
  Vector<Real> lame_coefficient_temp;
  Vector<int> linear_elastic_model_temp;
  Vector<Real> shear_modulus_temp;
  Vector<int> store_elastic_data_temp;
  Vector<int> particleLS_flag_temp;
+
  elastic_viscosity_temp.resize(nmat);
+ elastic_time_temp.resize(nmat);
+ viscoelastic_model_temp.resize(nmat);
+
  lame_coefficient_temp.resize(nmat);
  linear_elastic_model_temp.resize(nmat);
  shear_modulus_temp.resize(nmat);
  store_elastic_data_temp.resize(nmat);
  particleLS_flag_temp.resize(nmat);
  for (int im=0;im<nmat;im++) {
+
   elastic_viscosity_temp[im]=0.0;
+  elastic_time_temp[im]=0.0;
+  viscoelastic_model_temp[im]=0;
+
   lame_coefficient_temp[im]=0.0;
   linear_elastic_model_temp[im]=0;
   shear_modulus_temp[im]=0.0;
@@ -1526,6 +1537,9 @@ void fortran_parameters() {
   particleLS_flag_temp[im]=0;
  }
  pp.queryarr("elastic_viscosity",elastic_viscosity_temp,0,nmat);
+ pp.queryarr("elastic_time",elastic_time_temp,0,nmat);
+ pp.queryarr("viscoelastic_model",viscoelastic_model_temp,0,nmat);
+
  pp.queryarr("lame_coefficient",lame_coefficient_temp,0,nmat);
  pp.queryarr("linear_elastic_model",linear_elastic_model_temp,0,nmat);
  pp.queryarr("shear_modulus",shear_modulus_temp,0,nmat);
@@ -1905,10 +1919,9 @@ void fortran_parameters() {
   viscconst_temp.dataPtr(),
   viscconst_eddy_temp.dataPtr(),
   viscosity_state_model_temp.dataPtr(),
-
-  FIX ME: elastic_time,viscoelastic_model
-
   elastic_viscosity_temp.dataPtr(),
+  elastic_time_temp.dataPtr(),
+  viscoelastic_model_temp.dataPtr(),
   lame_coefficient_temp.dataPtr(),
   linear_elastic_model_temp.dataPtr(),
   shear_modulus_temp.dataPtr(),

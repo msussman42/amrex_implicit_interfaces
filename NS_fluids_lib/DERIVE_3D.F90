@@ -600,6 +600,25 @@ stop
        stop
       endif
 
+      if (elastic_viscosity.eq.fort_elastic_viscosity(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_elastic_viscosity(im_parm) invalid"
+       stop
+      endif
+      if (elastic_time.eq.fort_elastic_time(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_elastic_time(im_parm) invalid"
+       stop
+      endif
+      if (viscoelastic_model.eq.fort_viscoelastic_model(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_viscoelastic_model(im_parm) invalid"
+       stop
+      endif
+
       if (viscosity_state_model.ne. &
           fort_viscosity_state_model(im_parm)) then
        print *,"viscosity_state_model invalid"

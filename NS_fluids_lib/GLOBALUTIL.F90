@@ -8309,7 +8309,7 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: is_elastic_material
+      INTEGER_T :: is_elastic_material
       INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then
@@ -8359,7 +8359,7 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: is_FSI_rigid
+      INTEGER_T :: is_FSI_rigid
       INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then

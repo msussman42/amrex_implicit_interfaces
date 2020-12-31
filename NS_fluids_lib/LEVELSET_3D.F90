@@ -13201,7 +13201,6 @@ stop
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
 
-      REAL_T test_local_icefacecut
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
       INTEGER_T DEBUG_PRESCRIBED

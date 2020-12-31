@@ -91,6 +91,8 @@ stop
         ccviscconst_eddy, &
         ccviscosity_state_model, &
         ccelastic_viscosity, &
+        ccelastic_time, &
+        ccviscoelastic_model, &
         cclame_coefficient, &
         cclinear_elastic_model, &
         ccshear_modulus, &
@@ -219,6 +221,8 @@ stop
       REAL_T, intent(in) :: ccviscconst_eddy(ccnum_materials)
       INTEGER_T, intent(in) :: ccviscosity_state_model(ccnum_materials)
       REAL_T, intent(in) :: ccelastic_viscosity(ccnum_materials)
+      REAL_T, intent(in) :: ccelastic_time(ccnum_materials)
+      INTEGER_T, intent(in) :: ccviscoelastic_model(ccnum_materials)
       REAL_T, intent(in) :: cclame_coefficient(ccnum_materials)
       INTEGER_T, intent(in) :: cclinear_elastic_model(ccnum_materials)
       REAL_T, intent(in) :: ccshear_modulus(ccnum_materials)
@@ -832,6 +836,8 @@ stop
        fort_viscosity_state_model(im)= &
          ccviscosity_state_model(im)
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)
+       fort_elastic_time(im)=ccelastic_time(im)
+       fort_viscoelastic_model(im)=ccviscoelastic_model(im)
        fort_lame_coefficient(im)=cclame_coefficient(im)
        fort_linear_elastic_model(im)=cclinear_elastic_model(im)
        fort_shear_modulus(im)=ccshear_modulus(im)
@@ -943,6 +949,8 @@ stop
         print *,"im,viscosity_state_model ",im, &
          fort_viscosity_state_model(im)
         print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)
+        print *,"im,fort_elastic_time ",im,fort_elastic_time(im)
+        print *,"im,fort_viscoelastic_model ",im,fort_viscoelastic_model(im)
         print *,"im,fort_lame_coefficient ",im,fort_lame_coefficient(im)
         print *,"im,fort_linear_elastic_model ",im, &
                 fort_linear_elastic_model(im)
