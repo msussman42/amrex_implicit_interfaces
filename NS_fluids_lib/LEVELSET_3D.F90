@@ -8811,8 +8811,7 @@ stop
                 local_face(pforce_index+1)=wtL*curvL(3)+wtR*curvR(3)
                endif
 
-              else if ((project_option.eq.11).or. & ! FSI_material_exists 2nd 
-                       (project_option.eq.13)) then ! FSI_material_exists 1st
+              else if (project_option.eq.11) then ! FSI_material_exists last
                print *,"FORT_INIT_PHYSICS_VARS should not be called here"
                stop
               else
@@ -10718,8 +10717,7 @@ stop
 
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.11).or. & ! FSI_material_exists 2nd project
-          (project_option.eq.13).or. & ! FSI_material_exists 1st project
+          (project_option.eq.11).or. & ! FSI_material_exists last project
           (project_option.eq.12).or. & ! pressure extension
           (project_option.eq.2).or. &
           (project_option.ge.3).or. &
@@ -10906,8 +10904,7 @@ stop
 
           if ((project_option.eq.0).or. &
               (project_option.eq.1).or. &
-              (project_option.eq.11).or. & ! FSI_material_exists 2nd project
-              (project_option.eq.13).or. & ! FSI_material_exists 1st project
+              (project_option.eq.11).or. & ! FSI_material_exists last project
               (project_option.eq.12)) then ! pressure extension
 
            if (MDOT.eq.zero) then
@@ -11902,8 +11899,7 @@ stop
         rhs(D_DECL(i,j,k),im_vel)=zero
 
          ! update the total energy in partial cells (regular project)
-        if ((project_option.eq.0).or. &
-            (project_option.eq.13)) then ! FSI_material_exists 1st project
+        if (project_option.eq.0) then
 
          im_vel=1
  
@@ -13532,8 +13528,7 @@ stop
        if ((project_option.eq.0).or. &
            (project_option.eq.1).or. &
            (project_option.eq.3).or. & 
-           (project_option.eq.13).or. & !FSI_material_exists 1st project
-           (project_option.eq.11)) then !FSI_material_exists 2nd project
+           (project_option.eq.11)) then !FSI_material_exists last project
         ! do nothing
        else
         print *,"project_option invalid"
@@ -13568,8 +13563,7 @@ stop
 
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.11).or. & !FSI_material_exists 2nd project
-          (project_option.eq.13).or. & !FSI_material_exists 1st project
+          (project_option.eq.11).or. & !FSI_material_exists last project
           (project_option.eq.12).or. & !pressure extrapolation
           (project_option.eq.2).or. &  ! thermal diffusion
           (project_option.ge.3).or. &  ! viscosity
@@ -14324,8 +14318,7 @@ stop
               endif
 
               if (num_colors.eq.0) then
-               if ((project_option.eq.11).or. & !FSI_material_exists last proj
-                   (project_option.eq.13)) then !elastic material, middle proj
+               if (project_option.eq.11) then !FSI_material_exists last proj
                 print *,"project_option invalid"
                 stop
                endif
@@ -14570,8 +14563,7 @@ stop
                   (COARSE_FINE_VELAVG.eq.1)) then
                use_face_pres=1 ! do not use gp 
               else if (((project_option.eq.0).or. &
-                        (project_option.eq.13).or. &  !FSI_material_exists 1st
-                        (project_option.eq.11)).and. &!FSI_material_exists 2nd
+                        (project_option.eq.11)).and. &!FSI_material_exists last
                        (COARSE_FINE_VELAVG.eq.0)) then
                ! do nothing
               else
@@ -14703,8 +14695,7 @@ stop
             stop
            endif
           else if (((project_option.eq.0).or. &
-                    (project_option.eq.13).or. &  !FSI_material_exists 1st
-                    (project_option.eq.11)).and. &!FSI_material_exists 2nd
+                    (project_option.eq.11)).and. &!FSI_material_exists last
                    (COARSE_FINE_VELAVG.eq.0)) then
            ! both sides are covered
            if ((mask_covered(1).eq.0).and. &
@@ -15145,8 +15136,7 @@ stop
            ! xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi] 
           if ((project_option.eq.0).or. &
               (project_option.eq.1).or. &
-              (project_option.eq.11).or. & !FSI_material_exists 2nd project
-              (project_option.eq.13).or. & !FSI_material_exists 1st project
+              (project_option.eq.11).or. & !FSI_material_exists last project
               (project_option.eq.12).or. & !pressure extrapolation
               (project_option.eq.2).or. &  ! thermal diffusion
               (project_option.ge.3).or. &  ! viscosity
@@ -15855,7 +15845,6 @@ stop
 
           if ((project_option.eq.0).or. &  !regular project
               (project_option.eq.1).or. &  !initial project
-              (project_option.eq.13).or. & !elastic material, middle project
               (project_option.eq.11)) then !FSI_material_exists final project
 
            if (singular_possible.eq.1) then

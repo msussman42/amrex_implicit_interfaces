@@ -4997,7 +4997,6 @@ NavierStokes::get_mm_scomp_solver(
  int nlist=1;
 
  if ((project_option==0)||   // regular project
-     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==1)) {  // initial project
   nsolve=1;
   nlist=1;
@@ -5038,7 +5037,6 @@ NavierStokes::get_mm_scomp_solver(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==13)|| //elastic_material_exists (middle project)
      (project_option==12)) { // pressure extrapolation
  
   scomp[0]=num_materials_vel*AMREX_SPACEDIM;
@@ -5107,7 +5105,6 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)|| // FSI_material_exists (last project)
-     (project_option==13)|| // elastic_material_exists (middle project)
      (project_option==12)||
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
@@ -5160,7 +5157,6 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)|| // FSI_material_exists (last project)
-     (project_option==13)|| // elastic_material_exists (middle project)
      (project_option==12)|| // pressure extrapolation.
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
@@ -16761,7 +16757,6 @@ void NavierStokes::project_right_hand_side(
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)||  // FSI_material_exists (last project)
-     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==12)) { // pressure extension
 
   int finest_level=parent->finestLevel();
@@ -16902,7 +16897,6 @@ void NavierStokes::init_checkerboardALL(
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)||  // FSI_material_exists (last project)
-     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==12)) { // pressure extension
 
   int finest_level=parent->finestLevel();
@@ -17090,7 +17084,6 @@ NavierStokes::dotSum(int project_option,
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)|| //FSI_material_exists (last project)
-     (project_option==13)|| //elastic_material_exists (middle project)
      (project_option==12)|| //pressure extrapolation
      (project_option==3)) { //viscosity
   if (num_materials_face!=1)
@@ -17230,7 +17223,6 @@ void NavierStokes::levelCombine(
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)|| //FSI_material_exists (last project)
-     (project_option==13)|| //elastic_material_exists (middle project)
      (project_option==12)|| //pressure extrapolation
      (project_option==3)) { //viscosity
   if (num_materials_face!=1)
@@ -23246,7 +23238,6 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)||  // FSI_material_exists (last project)
-     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==12)||  // pressure extension
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
