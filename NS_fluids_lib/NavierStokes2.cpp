@@ -1315,8 +1315,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  if ((project_option==0)||
      (project_option==1)||
-     (project_option==11)||  //FSI_material_exists (last project)
-     (project_option==13)) { //elastic_material_exists (middle project)
+     (project_option==11)) {  //FSI_material_exists (last project)
   // do nothing
  } else
   amrex::Error("project_option invalid20");
@@ -2198,8 +2197,8 @@ void NavierStokes::increment_face_velocity(
 
  } else if (interp_option==1) { // unew^{f}=unew^{f}
 
-  if ((project_option==11)||  //FSI_material_exists last project
-      (project_option==13)) { //elastic_material_exists middle project 
+  if (project_option==11) {  //FSI_material_exists last project
+
    if (num_colors>=1) {
     // do nothing
    } else
@@ -4223,7 +4222,6 @@ void NavierStokes::apply_pressure_grad(
  if ((project_option==0)||
      (project_option==1)||
      (project_option==11)|| //FSI_material_exists last project
-     (project_option==13)|| //elastic_material_exists middle project
      (project_option==12)|| //pressure extrapolation
      (project_option==3)) {  // viscosity
   if (num_materials_face!=1)
@@ -4599,7 +4597,6 @@ void NavierStokes::apply_pressure_grad(
  } else if ((project_option==0)||
             (project_option==1)||
             (project_option==11)|| //FSI_material_exists last project
-            (project_option==13)|| //elastic_material_exists middle project
             (project_option==12)|| //pressure extrapolation
             (project_option==2)||  //thermal diffusion
             ((project_option>=100)&&
@@ -5915,7 +5912,7 @@ void NavierStokes::increment_potential_force() {
 } // increment_potential_force
 
 // called from multiphase_project when 
-// project_option==0 or project_option==13
+// project_option==0 
 void NavierStokes::deallocate_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -5929,7 +5926,7 @@ void NavierStokes::deallocate_potential_forceALL() {
 } // deallocate_potential_forceALL
 
 // called from multiphase_project when 
-// project_option==0 or project_option==13
+// project_option==0 
 void NavierStokes::process_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -9495,7 +9492,7 @@ MultiFab* NavierStokes::derive_EOS_pressure() {
 } // subroutine derive_EOS_pressure()
 
 // in NavierStokes::multiphase_project when:
-// project_option==0 or project_option==13
+// project_option==0 
 //  and homflag=0,
 //  the following commands are given:
 //  for ilev=finest ... coarsest,
@@ -9695,7 +9692,7 @@ void NavierStokes::init_pressure_error_indicator() {
 
 } // subroutine init_pressure_error_indicator
 
-// if project_option==0 or project_option==13:
+// if project_option==0:
 // 1. calculates p(rho^n+1,e_advect) and puts it in 2nd component
 //    of cell_sound.
 //    Equation of state to be used depends on vofPC
@@ -9777,8 +9774,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
  if (ncomp[0]!=num_materials_vel)
   amrex::Error("ncomp[0] invalid");
   
- if ((project_option==0)||
-     (project_option==13)) { //elastic_material_exists middle project
+ if (project_option==0) {
   if (state_index!=State_Type)
    amrex::Error("state_index invalid");
  } else if (project_option==11) { //FSI_material_exists last project
@@ -9792,8 +9788,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
 
   // CELL_SOUND_MF
   // coeff_avg,padvect_avg 
- if ((project_option==0)||
-     (project_option==13)) { //elastic_material_exists middle project
+ if (project_option==0) {
   // do nothing
  } else if (project_option==11) { //FSI_material_exists last project
    // dst,src,scomp,dcomp,ncomp,ngrow

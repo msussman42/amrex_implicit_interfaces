@@ -11865,7 +11865,6 @@ END SUBROUTINE SIMP
       endif
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.13).or. & !elastic material, middle project
           (project_option.eq.11).or. & !FSI_material_exists last project
           (project_option.eq.12).or. & !pressure extrap
           (project_option.eq.2).or. & ! thermal diffusion
@@ -11966,7 +11965,6 @@ END SUBROUTINE SIMP
          if ((project_option.eq.0).or. &
              (project_option.eq.1).or. &
              (project_option.eq.11).or. & !FSI_material_exists, last project
-             (project_option.eq.13).or. & !elastic material, middle project
              (project_option.eq.12)) then !pressure extrap.
           if ((nsolve.eq.1).and.(nsolveMM.eq.1).and.(velcomp.eq.0)) then
            veldir=1
@@ -12626,8 +12624,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if ((project_option.eq.0).or. &
-          (project_option.eq.11).or. & !FSI_material_exists 2nd project
-          (project_option.eq.13)) then !FSI_material_exists 1st project
+          (project_option.eq.11)) then !FSI_material_exists last project
        ! do nothing
       else
        print *,"project_option invalid advective pressure"
@@ -12718,11 +12715,9 @@ END SUBROUTINE SIMP
 
 
         if ((project_option.eq.0).or. &
-            (project_option.eq.11).or. & !FSI_material_exists 2nd project
-            (project_option.eq.13)) then !FSI_material_exists 1st project
+            (project_option.eq.11)) then !FSI_material_exists last project
 
-         if ((project_option.eq.0).or. &
-             (project_option.eq.13)) then
+         if (project_option.eq.0) then
           div_hold(1)=zero
          else if (project_option.eq.11) then !FSI_material_exists 2nd project
            ! coeff_avg,p_avg
@@ -12949,11 +12944,10 @@ END SUBROUTINE SIMP
 
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
-           if (project_option.eq.11) then ! FSI_material_exists (2nd project)
+           if (project_option.eq.11) then ! FSI_material_exists (last project)
             ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
             mdot(D_DECL(i,j,k),1)=div_hold(1)/dt
-           else if ((project_option.eq.0).or. &
-                    (project_option.eq.13)) then !FSI_material_exists 1st proj
+           else if (project_option.eq.0) then
             ! do nothing
            else
             print *,"project_option invalid"
@@ -13007,8 +13001,8 @@ END SUBROUTINE SIMP
               print *,"csound_hold invalid"
               stop
              endif
-            else if ((project_option.eq.0).or. &
-                     (project_option.eq.13)) then !FSI_material_exists 1st prj
+
+            else if (project_option.eq.0) then
              ! do nothing
             else
              print *,"project_option invalid"
@@ -13020,10 +13014,9 @@ END SUBROUTINE SIMP
 
             csnd(D_DECL(i,j,k),1)=zero ! coeff
             csnd(D_DECL(i,j,k),2)=zero ! padvect
-            if (project_option.eq.11) then !FSI_material_exists 2nd project
+            if (project_option.eq.11) then !FSI_material_exists last project
              mdot(D_DECL(i,j,k),1)=div_hold(1)/dt ! localMF[DIFFUSIONRHS_MF]
-            else if ((project_option.eq.0).or. &
-                     (project_option.eq.13)) then !FSI_material_exists 1st prj
+            else if (project_option.eq.0) then
              ! do nothing
             else
              print *,"project_option invalid"

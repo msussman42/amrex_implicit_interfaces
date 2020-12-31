@@ -789,7 +789,6 @@ void NavierStokes::combine_state_variable(
 
  int nsolve=1;
  if ((project_option==1)||   // initial projection
-     (project_option==13)||  // elastic_material_exists (middle project)
      (project_option==11)) { // FSI_material_exists (last project)
   amrex::Error("project_option invalid in combine_state_variable");
  } else if (project_option==0) {    // regular projection

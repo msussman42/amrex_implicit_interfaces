@@ -917,10 +917,9 @@ stop
 
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.11).or. &
+          (project_option.eq.11).or. & ! last project
           (project_option.eq.12).or. & ! pressure extrapolation
-          (project_option.eq.13).or. &
-          (project_option.eq.3).or. &
+          (project_option.eq.3).or. &  ! viscosity
           (project_option.eq.2).or. &
           ((project_option.ge.100).and. &
            (project_option.lt.100+num_species_var))) then
@@ -1074,10 +1073,9 @@ stop
       endif
       if ((project_option.eq.0).or. &
           (project_option.eq.1).or. &
-          (project_option.eq.11).or. &
+          (project_option.eq.11).or. & ! FSI_material_exists, last_project
           (project_option.eq.12).or. & ! pressure extrapolation
-          (project_option.eq.13).or. &
-          (project_option.eq.3).or. &
+          (project_option.eq.3).or. &  ! viscosity
           (project_option.eq.2).or. &
           ((project_option.ge.100).and. &
            (project_option.lt.100+num_species_var))) then
@@ -13779,13 +13777,10 @@ END SUBROUTINE Adist
 
        if ((project_option.eq.0).or. &  !regular project
            (project_option.eq.1).or. &  !initial project
-           (project_option.eq.13).or. & !elastic material, middle project
            (project_option.eq.11)) then !FSI_material_exists final project
 
         if (project_option.eq.0) then !regular pressure projection
          cc_group=cc
-        else if (project_option.eq.13) then !elastic material, middle project
-         cc_group=cc*(one-cc_ice) !cc_ice comes from FACE_VAR_MF[iceface_cut]
         else if (project_option.eq.1) then ! initial projection
          cc_group=cc*cc_ice
         else if (project_option.eq.11) then !FSI_material_exists final project
@@ -17200,8 +17195,7 @@ END SUBROUTINE Adist
 
        if ((project_option.eq.0).or. &
            (project_option.eq.1).or. &
-           (project_option.eq.13).or. & !FSI_material_exists 1st project
-           (project_option.eq.11)) then !FSI_material_exists 2nd project
+           (project_option.eq.11)) then !FSI_material_exists last project
         if (ncomp.ne.1) then
          print *,"ncomp invalid2"
          stop
@@ -18535,8 +18529,7 @@ END SUBROUTINE Adist
 
           if (dir_main.eq.SDIM) then
 
-           if ((project_option.eq.0).or. &
-               (project_option.eq.13)) then !FSI_material_exists 1st project
+           if (project_option.eq.0) then
 
             if ((maskSEM.ge.1).and.(maskSEM.le.nmat)) then
 
@@ -26680,8 +26673,7 @@ end subroutine initialize2d
 
        if ((project_option.eq.0).or. &
            (project_option.eq.1).or. &
-           (project_option.eq.13).or. & !FSI_material_exists 1st project
-           (project_option.eq.11).or. & !FSI_material_exists 2nd project
+           (project_option.eq.11).or. & !FSI_material_exists last project
            (project_option.eq.12)) then  ! pressure extension
         if (homflag.eq.0) then
          pres_homflag=0
