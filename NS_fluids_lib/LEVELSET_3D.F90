@@ -14466,6 +14466,7 @@ stop
             endif
 
            else if (iboundary.eq.0) then
+
             if (side.eq.0) then
              if ((is_clamped_face.eq.1).or. &
                  (is_clamped_face.eq.2).or. &

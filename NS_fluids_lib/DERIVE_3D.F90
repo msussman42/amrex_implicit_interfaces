@@ -512,6 +512,7 @@ stop
         viscosity_state_model, &
         viscoelastic_model, &
         elastic_viscosity, &
+        elastic_regularization, &
         etaL,etaP,etaS, &
         polymer_factor, &
         vof,DIMS(vof), &
@@ -549,6 +550,7 @@ stop
       REAL_T, intent(in) :: concentration,etaL,etaP,etaS
       REAL_T, intent(in) :: elastic_time
       REAL_T, intent(in) :: elastic_viscosity
+      REAL_T, intent(in) :: elastic_regularization
       INTEGER_T, intent(in) :: viscosity_state_model
       INTEGER_T, intent(in) :: viscoelastic_model
       REAL_T, intent(in) :: polymer_factor
@@ -597,6 +599,13 @@ stop
       endif
       if ((im_parm.lt.1).or.(im_parm.gt.nmat)) then
        print *,"im_parm invalid3"
+       stop
+      endif
+
+      if (elastic_regularization.ge.one) then
+       ! do nothing
+      else
+       print *,"elastic_regularization must be >= 1.0"
        stop
       endif
 
@@ -733,7 +742,12 @@ stop
             !  dd_group=dd*visc_coef in PROB.F90 
             !  xflux*=-dt * visc_coef * facevisc_index in CROSSTERM
            if (mu.ge.zero) then
-            mu=mu+dt*bulk_modulus  
+            if (elastic_regularization.ge.one) then
+             mu=mu+dt*elastic_regularization*bulk_modulus  
+            else
+             print *,"elastic_regularization invalid"
+             stop
+            endif
            else
             print *,"mu invalid"
             stop
