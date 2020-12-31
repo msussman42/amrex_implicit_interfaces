@@ -103,6 +103,8 @@ namespace amrex{
        Real* viscconst_eddy,
        int*  viscosity_state_model,
        Real* elastic_viscosity,
+       Real* elastic_time,
+       int* viscoelastic_model,
        Real* lame_coefficient,
        int* linear_elastic_model,
        Real* shear_modulus,
