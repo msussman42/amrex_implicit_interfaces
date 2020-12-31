@@ -903,7 +903,7 @@ NavierStokes::deallocate_maccoef(int project_option) {
      (project_option==13)|| //elastic_material_exists middle project
      (project_option==12)|| //pressure extrapolation
      (project_option==2)||
-     (project_option==3)||
+     (project_option==3)|| //viscosity
      ((project_option>=100)&&
       (project_option<100+num_species_var))) {
   delete mac_op;

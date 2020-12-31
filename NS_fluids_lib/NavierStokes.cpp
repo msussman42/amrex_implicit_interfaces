@@ -4996,9 +4996,9 @@ NavierStokes::get_mm_scomp_solver(
  int nsolve=1;
  int nlist=1;
 
- if ((project_option==0)||
+ if ((project_option==0)||   // regular project
      (project_option==13)||  // elastic_material_exists (middle project)
-     (project_option==1)) { // pressure
+     (project_option==1)) {  // initial project
   nsolve=1;
   nlist=1;
   if (num_materials_combine!=num_materials_vel)
