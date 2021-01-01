@@ -939,7 +939,6 @@ Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
 int NavierStokes::diffusionface_flag=1; // 0=use LS  1=use VOF
-int NavierStokes::elasticface_flag=1; // 0=use LS  1=use VOF
 int NavierStokes::temperatureface_flag=1; // 0=use LS  1=use VOF
 
 Vector<int> NavierStokes::material_type;
@@ -4162,10 +4161,6 @@ NavierStokes::read_params ()
     if ((diffusionface_flag<0)||(diffusionface_flag>1))
      amrex::Error("diffusionface_flag invalid"); 
 
-    pp.query("elasticface_flag",elasticface_flag);
-    if ((elasticface_flag<0)||(elasticface_flag>1))
-     amrex::Error("elasticface_flag invalid"); 
-
     pp.query("temperatureface_flag",temperatureface_flag);
     if ((temperatureface_flag!=0)&&
         (temperatureface_flag!=1))
@@ -4482,7 +4477,6 @@ NavierStokes::read_params ()
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
      std::cout << "diffusionface_flag= " << diffusionface_flag << '\n';
-     std::cout << "elasticface_flag= " << elasticface_flag << '\n';
      std::cout << "temperatureface_flag= " << temperatureface_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
      std::cout << "face_flag= " << face_flag << '\n';
@@ -8879,6 +8873,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
    resize_levelsetLO(2,LEVELPC_MF);
    debug_ngrow(LEVELPC_MF,2,5);
+   if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+    amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
    int rzflag=0;
    if (geom.IsRZ())
@@ -8944,7 +8940,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     FORT_TENSORHEAT(
-     &elasticface_flag,
      &massface_index,
      &vofface_index,
      &ncphys,
@@ -9131,7 +9126,6 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
      // in: GODUNOV_3D.F90
     FORT_TENSORFORCE(
-     &elasticface_flag,
      &massface_index,
      &vofface_index,
      &ncphys,

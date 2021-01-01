@@ -5054,7 +5054,6 @@ stop
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
       subroutine FORT_TENSORFORCE( &
-       elasticface_flag, &
        massface_index, &
        vofface_index, &
        ncphys, &
@@ -5082,7 +5081,6 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: elasticface_flag
       INTEGER_T, intent(in) :: massface_index
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys
@@ -5092,9 +5090,6 @@ stop
       INTEGER_T, intent(in) :: nden,nstate
       INTEGER_T, intent(in) :: level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T :: i,j,k
-      INTEGER_T :: veldir
-      REAL_T    :: deninv
 
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
@@ -5122,17 +5117,18 @@ stop
       REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: irz
+      INTEGER_T :: i,j,k
+      INTEGER_T :: xflux_comp
+      INTEGER_T :: veldir
+      REAL_T    :: deninv
       INTEGER_T dir,side
       REAL_T rplus,rminus,rval,RRX,RRY
-      REAL_T tpx,tpy,tpz
-      REAL_T tmx,tmy,tmz,tcen
-      INTEGER_T ldata(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T mask_left,mask_right
+      INTEGER_T mask_center(SDIM)
+      INTEGER_T local_mask
+      INTEGER_T mask_array(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T i1,j1,k1
       REAL_T hx,hy,hz
-      REAL_T tparr(SDIM,2)
-      REAL_T tparr_sum
-      REAL_T vofmat_sum_side(SDIM,2)
-      REAL_T voftotal_sum_side(SDIM,2)
       REAL_T force(SDIM)
       REAL_T bodyforce
       INTEGER_T klo_stencil,khi_stencil
@@ -5143,11 +5139,11 @@ stop
       REAL_T Q(D_DECL(-1:1,-1:1,-1:1),3,3)
 
       INTEGER_T ii,jj,kk
-      INTEGER_T base_index,imloop
-      REAL_T vleft,vright,voftotal_sum,vofmat_sum,vleftleft,vrightright
       REAL_T xflux_local(0:1,SDIM,SDIM)
       REAL_T yflux_local(0:1,SDIM,SDIM)
       REAL_T zflux_local(0:1,SDIM,SDIM)
+
+      REAL_T n_elastic(SDIM)
 
       nhalf=3
 
@@ -5161,11 +5157,6 @@ stop
       endif
       if (vofface_index.ne.massface_index+2*nmat) then
        print *,"vofface_index or massface_index invalid"
-       stop
-      endif
-      if ((elasticface_flag.ne.0).and. &  ! use LS
-          (elasticface_flag.ne.1)) then   ! use VOF
-       print *,"elasticface_flag invalid"
        stop
       endif
 
@@ -5261,7 +5252,17 @@ stop
         do imlocal=1,nmat
          LScen(imlocal)=lsfab(D_DECL(i+i1,j+j1,k+k1),imlocal)
         enddo
-        call get_primary_material(LScen,nmat,ldata(D_DECL(i1,j1,k1)))
+        call get_primary_material(LScen,nmat,local_mask)
+        if ((local_mask.eq.im_parm+1).and. &
+            (LScen(im_parm+1).gt.zero)) then
+         local_mask=1
+        else if ((local_mask.ge.1).and.(local_mask.le.nmat)) then
+         local_mask=0
+        else
+         print *,"local_mask invalid"
+         stop
+        endif
+        mask_array(D_DECL(i1,j1,k1))=local_mask
 
         do ii=1,3
         do jj=1,3
@@ -5280,9 +5281,9 @@ stop
         Q(D_DECL(i1,j1,k1),3,1)=Q(D_DECL(i1,j1,k1),1,3)
         Q(D_DECL(i1,j1,k1),3,2)=Q(D_DECL(i1,j1,k1),2,3)
 
-       enddo
-       enddo
-       enddo
+       enddo !k1
+       enddo !j1
+       enddo !i1
 
        if (irz.eq.0) then
         rval=one
@@ -5311,300 +5312,212 @@ stop
         stop
        endif
 
-       if (elasticface_flag.eq.0) then
+       local_mask=mask_array(D_DECL(0,0,0))
 
-        if (ldata(D_DECL(0,0,0)).ne.im_parm+1) then
-         do dir=1,SDIM
-         do side=1,2
-          tparr(dir,side)=zero
-         enddo
-         enddo
-         tcen=zero
-        else if (ldata(D_DECL(0,0,0)).eq.im_parm+1) then
-         tcen=one
-         do dir=1,SDIM
-         do side=1,2
-          tparr(dir,side)=one
-         enddo
-         enddo
- 
-         if (ldata(D_DECL(1,0,0)).ne.im_parm+1) then
-          tparr(1,2)=zero
-         endif
-         if (ldata(D_DECL(-1,0,0)).ne.im_parm+1) then
-          tparr(1,1)=zero
-         endif
-         if (ldata(D_DECL(0,1,0)).ne.im_parm+1) then
-          tparr(2,2)=zero
-         endif
-         if (ldata(D_DECL(0,-1,0)).ne.im_parm+1) then
-          tparr(2,1)=zero
-         endif
-         if (SDIM.eq.3) then
-          if (ldata(D_DECL(0,0,1)).ne.im_parm+1) then
-           tparr(SDIM,2)=zero
-          endif
-          if (ldata(D_DECL(0,0,-1)).ne.im_parm+1) then
-           tparr(SDIM,1)=zero
-          endif
-         endif
-        else
-         print *,"ldata(D_DECL(0,0,0)) invalid"
-         stop
-        endif 
+       if (local_mask.eq.1) then
 
-       else if (elasticface_flag.eq.1) then
-
-        vofmat_sum=zero
-        voftotal_sum=zero
         do dir=1,SDIM
-        do side=1,2
-         vofmat_sum_side(dir,side)=zero
-         voftotal_sum_side(dir,side)=zero
+         n_elastic(dir)=lsfab(D_DECL(i,j,k),nmat+im_parm*SDIM+dir)
         enddo
-        enddo
-      
-        do imloop=1,nmat
-         base_index=vofface_index+2*(imloop-1)+1
-         do dir=1,SDIM
-          ii=0
-          jj=0
-          kk=0
-          if (dir.eq.1) then
-           ii=1
-           vleftleft=xface(D_DECL(i,j,k),base_index)
-           vleft=xface(D_DECL(i,j,k),base_index+1)
-           vright=xface(D_DECL(i+ii,j+jj,k+kk),base_index)
-           vrightright=xface(D_DECL(i+ii,j+jj,k+kk),base_index+1)
-          else if (dir.eq.2) then
-           jj=1
-           vleftleft=yface(D_DECL(i,j,k),base_index)
-           vleft=yface(D_DECL(i,j,k),base_index+1)
-           vright=yface(D_DECL(i+ii,j+jj,k+kk),base_index)
-           vrightright=yface(D_DECL(i+ii,j+jj,k+kk),base_index+1)
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           kk=1
-           vleftleft=zface(D_DECL(i,j,k),base_index)
-           vleft=zface(D_DECL(i,j,k),base_index+1)
-           vright=zface(D_DECL(i+ii,j+jj,k+kk),base_index)
-           vrightright=zface(D_DECL(i+ii,j+jj,k+kk),base_index+1)
+        call normalize_vector(n_elastic)
+
+        hx=(xsten(1,1)-xsten(-1,1))*RRX
+        hy=(xsten(1,2)-xsten(-1,2))*RRY
+        hz=xsten(1,SDIM)-xsten(-1,SDIM)
+
+        if ((hx.gt.zero).and. &
+            (hy.gt.zero).and. &
+            (hz.gt.zero)) then
+         ! do nothing
+        else
+         print *,"hx,hy, or hz invalid"
+         stop
+        endif
+
+        if ((viscoelastic_model.eq.0).or. &
+            (viscoelastic_model.eq.1)) then
+
+         do veldir=1,SDIM
+          dir=1
+          xflux_local(1,veldir,dir)= &
+                (Q(D_DECL(1,0,0),veldir,dir)+ &
+                 Q(D_DECL(0,0,0),veldir,dir))/two
+          xflux_local(0,veldir,dir)= &
+                (Q(D_DECL(-1,0,0),veldir,dir)+ &
+                 Q(D_DECL(0,0,0),veldir,dir))/two
+
+          dir=2
+          yflux_local(1,veldir,dir)= &
+                (Q(D_DECL(0,1,0),veldir,dir)+ &
+                 Q(D_DECL(0,0,0),veldir,dir))/two
+          yflux_local(0,veldir,dir)= &
+                (Q(D_DECL(0,-1,0),veldir,dir)+ &
+                 Q(D_DECL(0,0,0),veldir,dir))/two
+
+          if (SDIM.eq.3) then
+           dir=SDIM
+           zflux_local(1,veldir,dir)= &
+                (Q(D_DECL(0,0,1),veldir,dir)+ &
+                 Q(D_DECL(0,0,0),veldir,dir))/two
+           zflux_local(0,veldir,dir)= &
+                (Q(D_DECL(0,0,-1),veldir,dir)+ &
+                 Q(D_DECL(0,0,0),veldir,dir))/two
+          else if (SDIM.eq.2) then
+           ! do nothing
           else
-           print *,"dir invalid"
+           print *,"dimension bust"
            stop
           endif
-          voftotal_sum=voftotal_sum+vleft+vright+vleftleft+vrightright
-          voftotal_sum_side(dir,1)=voftotal_sum_side(dir,1)+vleft+vleftleft
-          voftotal_sum_side(dir,2)=voftotal_sum_side(dir,2)+vright+vrightright
-          if (imloop.eq.im_parm+1) then
-           vofmat_sum=vofmat_sum+vleft+vright+vleftleft+vrightright
-           vofmat_sum_side(dir,1)=vofmat_sum_side(dir,1)+vleft+vleftleft
-           vofmat_sum_side(dir,2)=vofmat_sum_side(dir,2)+vright+vrightright
+         enddo ! veldir=1..sdim
+
+        else if (viscoelastic_model.eq.2) then
+
+         xflux_comp=1
+         do veldir=1,SDIM
+         do dir=1,SDIM
+          xflux_local(1,veldir,dir)=xflux(D_DECL(i+1,j,k),xflux_comp)
+          xflux_local(0,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
+          yflux_local(1,veldir,dir)=yflux(D_DECL(i,j+1,k),xflux_comp)
+          yflux_local(0,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
+
+          if (SDIM.eq.3) then
+           zflux_local(1,veldir,dir)=zflux(D_DECL(i,j,k+1),xflux_comp)
+           zflux_local(0,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
+          else if (SDIM.eq.2) then
+           ! do nothing
+          else
+           print *,"dimension bust"
+           stop
           endif
+          xflux_comp=xflux_comp+1
          enddo ! dir=1..sdim
-        enddo ! imloop=1..nmat
-
-        if (voftotal_sum.le.zero) then
-         print *,"voftotal_sum invalid"
-         stop
-        endif
-        if (voftotal_sum.lt.vofmat_sum) then
-         print *,"voftotal_sum or vofmat_sum invalid"
-         stop
-        endif
-        tcen=vofmat_sum/voftotal_sum
-        tparr_sum=zero
-        do dir=1,SDIM
-        do side=1,2
-         if (voftotal_sum_side(dir,side).le.zero) then
-          print *,"voftotal_sum_side invalid"
+         enddo ! veldir=1..sdim
+         if (xflux_comp-1.eq.SDIM*SDIM) then
+          ! do nothing
+         else
+          print *,"xflux_comp invalid"
           stop
          endif
-         if (voftotal_sum_side(dir,side).lt.vofmat_sum_side(dir,side)) then
-          print *,"voftotal_sum_side or vofmat_sum_side invalid"
-          stop
-         endif
-         tparr(dir,side)=vofmat_sum_side(dir,side)/ &
-                         voftotal_sum_side(dir,side)
-         tparr_sum=tparr_sum+tparr(dir,side)
-        enddo ! side
-        enddo ! dir
-        if ((tcen.le.zero).and.(tparr_sum.gt.zero)) then
-         print *,"tcen or tparr_sum invalid"
+
+        else
+         print *,"viscoelastic_model invalid"
          stop
         endif
-       else
-        print *,"elasticface_flag invalid"
-        stop
-       endif
 
-       tpx=tparr(1,2)
-       tmx=tparr(1,1)
-       tpy=tparr(2,2)
-       tmy=tparr(2,1)
-       tpz=tparr(SDIM,2)
-       tmz=tparr(SDIM,1)
+        dir=1
+        mask_left=mask_array(D_DECL(-1,0,0))
+        mask_right=mask_array(D_DECL(1,0,0))
+        call project_tensor(mask_center(dir),n_elastic, &
+         mask_left,mask_right,xflux_local)
 
-       hx=(xsten(1,1)-xsten(-1,1))*RRX
-       hy=(xsten(1,2)-xsten(-1,2))*RRY
-       hz=xsten(1,SDIM)-xsten(-1,SDIM)
+        dir=2
+        mask_left=mask_array(D_DECL(0,-1,0))
+        mask_right=mask_array(D_DECL(0,1,0))
+        call project_tensor(mask_center(dir),n_elastic, &
+         mask_left,mask_right,yflux_local)
 
-       if ((hx.gt.zero).and. &
-           (hy.gt.zero).and. &
-           (hz.gt.zero)) then
-        ! do nothing
-       else
-        print *,"hx,hy, or hz invalid"
-        stop
-       endif
-
-       if ((viscoelastic_model.eq.0).or. &
-           (viscoelastic_model.eq.1)) then
+        if (SDIM.eq.3) then
+         dir=SDIM
+         mask_left=mask_array(D_DECL(0,0,-1))
+         mask_right=mask_array(D_DECL(0,0,1))
+         call project_tensor(mask_center(dir),n_elastic, &
+           mask_left,mask_right,zflux_local)
+        endif
 
         do veldir=1,SDIM
+
+         force(veldir)=zero
+
          dir=1
-         xflux_local(1,veldir,dir)= &
-               (Q(D_DECL(1,0,0),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-         xflux_local(0,veldir,dir)= &
-               (Q(D_DECL(-1,0,0),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
+         force(veldir)=force(veldir)+ &
+          mask_center(dir)* &
+            (rplus*xflux_local(1,veldir,dir)- &
+             rminus*xflux_local(0,veldir,dir))/hx
 
          dir=2
-         yflux_local(1,veldir,dir)= &
-               (Q(D_DECL(0,1,0),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-         yflux_local(0,veldir,dir)= &
-               (Q(D_DECL(0,-1,0),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
+         force(veldir)=force(veldir)+ &
+          mask_center(dir)* &
+            (yflux_local(1,veldir,dir)- &
+             yflux_local(0,veldir,dir))/hy
 
          if (SDIM.eq.3) then
           dir=SDIM
-          zflux_local(1,veldir,dir)= &
-               (Q(D_DECL(0,0,1),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-          zflux_local(0,veldir,dir)= &
-               (Q(D_DECL(0,0,-1),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-         else if (SDIM.eq.2) then
-          ! do nothing
-         else
-          print *,"dimension bust"
-          stop
+          force(veldir)=force(veldir)+ &
+           mask_center(dir)* &
+             (zflux_local(1,veldir,dir)- &
+              zflux_local(0,veldir,dir))/hz
          endif
+
         enddo ! veldir=1..sdim
-
-       else if (viscoelastic_model.eq.2) then
-
-        xflux_comp=1
-        do veldir=1,SDIM
-        do dir=1,SDIM
-         xflux_local(1,veldir,dir)=xflux(D_DECL(i+1,j,k),xflux_comp)
-         xflux_local(0,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
-         yflux_local(1,veldir,dir)=yflux(D_DECL(i,j+1,k),xflux_comp)
-         yflux_local(0,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
-
-         if (SDIM.eq.3) then
-          zflux_local(1,veldir,dir)=zflux(D_DECL(i,j,k+1),xflux_comp)
-          zflux_local(0,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
-         else if (SDIM.eq.2) then
-          ! do nothing
-         else
-          print *,"dimension bust"
-          stop
-         endif
-         xflux_comp=xflux_comp+1
-        enddo ! dir=1..sdim
-        enddo ! veldir=1..sdim
-        if (xflux_comp-1.eq.SDIM*SDIM) then
-         ! do nothing
-        else
-         print *,"xflux_comp invalid"
-         stop
-        endif
-
-       else
-        print *,"viscoelastic_model invalid"
-        stop
-       endif
-
-       do veldir=1,SDIM
-
-        force(veldir)= &
-         (tpx*rplus*xflux_local(1,veldir)- &
-          tmx*rminus*xflux_local(0,veldir))/hx+ &
-         (tpy*yflux_local(1,veldir)- &
-          tmy*yflux_local(0,veldir))/hy
-        if (SDIM.eq.3) then
-         force(veldir)=force(veldir)+ &
-           (tpz*zflux_local(1,veldir)- &
-            tmz*zflux_local(0,veldir))/hz
-        endif
-
-       enddo ! veldir=1..sdim
                  
-       if (irz.eq.0) then
-        ! do nothing
-       else if (irz.eq.1) then
-        if (SDIM.ne.2) then
-         print *,"dimension bust"
+        if (irz.eq.0) then
+         ! do nothing
+        else if (irz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+          ! -T33/r
+         veldir=1
+         bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
+         force(veldir)=force(veldir)+bodyforce
+        else if (irz.eq.3) then
+          ! -T22/r
+         veldir=1
+         bodyforce=-Q(D_DECL(0,0,0),2,2)/rval
+         force(veldir)=force(veldir)+bodyforce
+        else
+         print *,"irz invalid"
+         stop
+        endif 
+
+        if (irz.eq.0) then
+         ! do nothing
+        else if (irz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+         ! do nothing
+        else if (irz.eq.3) then ! T12/r
+         veldir=2
+         bodyforce=Q(D_DECL(0,0,0),1,2)/rval
+         force(veldir)=force(veldir)+bodyforce
+        else
+         print *,"irz invalid"
+         stop
+        endif 
+
+        if (is_prescribed(nmat,imparm+1).eq.1) then
+         print *,"imparm should not be a is_prescribed material"
+         stop
+        else if (is_prescribed(nmat,imparm+1).eq.0) then
+         do veldir=1,SDIM
+          force(veldir)=force(veldir)*dt
+         enddo
+        else
+         print *,"is_prescribed invalid"
          stop
         endif
-         ! -T33/r
-        veldir=1
-        bodyforce=-tcen*Q(D_DECL(0,0,0),3,3)/rval
-        force(veldir)=force(veldir)+bodyforce
-       else if (irz.eq.3) then
-         ! -T22/r
-        veldir=1
-        bodyforce=-tcen*Q(D_DECL(0,0,0),2,2)/rval
-        force(veldir)=force(veldir)+bodyforce
-       else
-        print *,"irz invalid"
-        stop
-       endif 
 
-       if (irz.eq.0) then
-        ! do nothing
-       else if (irz.eq.1) then
-        if (SDIM.ne.2) then
-         print *,"dimension bust"
-         stop
-        endif
-        ! do nothing
-       else if (irz.eq.3) then ! T12/r
-        veldir=2
-        bodyforce=tcen*Q(D_DECL(0,0,0),1,2)/rval
-        force(veldir)=force(veldir)+bodyforce
-       else
-        print *,"irz invalid"
-        stop
-       endif 
+        do veldir=1,SDIM
+         deninv=rhoinverse(D_DECL(i,j,k),1)
 
-       imlocal=ldata(D_DECL(0,0,0))
-       if (is_prescribed(nmat,imlocal).eq.1) then
-        do veldir=1,SDIM
-         force(veldir)=zero
-        enddo
-       else if (is_prescribed(nmat,imlocal).eq.0) then
-        do veldir=1,SDIM
-         force(veldir)=force(veldir)*dt
-        enddo
+         if (deninv.ge.zero) then 
+          velnew(D_DECL(i,j,k),veldir)= &
+           velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
+         else
+          print *,"deninv invalid"
+          stop
+         endif
+        enddo ! veldir
+
+       else if (local_mask.eq.0) then
+        ! do nothing
        else
-        print *,"is_prescribed invalid"
+        print *,"local_mask invalid"
         stop
        endif
-
-       do veldir=1,SDIM
-        deninv=rhoinverse(D_DECL(i,j,k),1)
-
-        if (deninv.ge.zero) then 
-         velnew(D_DECL(i,j,k),veldir)= &
-          velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
-        else
-         print *,"deninv invalid"
-         stop
-        endif
-       enddo ! veldir
 
       enddo
       enddo
@@ -5618,7 +5531,6 @@ stop
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
       subroutine FORT_TENSORHEAT( &
-       elasticface_flag, &
        massface_index, &
        vofface_index, &
        ncphys, &
@@ -5646,7 +5558,6 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T elasticface_flag
       INTEGER_T massface_index
       INTEGER_T vofface_index
       INTEGER_T ncphys
@@ -5695,7 +5606,6 @@ stop
       REAL_T Q(3,3)
       INTEGER_T ii,jj,kk
       INTEGER_T base_index,imloop
-      REAL_T vleft,vright,voftotal_sum,vofmat_sum,vleftleft,vrightright
 
       nhalf=3
 
