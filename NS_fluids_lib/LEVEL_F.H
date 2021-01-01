@@ -787,6 +787,7 @@ namespace amrex{
         int* append_flag,
         int* particle_nsubdivide,
         int* particle_max_per_nsubdivide,
+        int* particle_min_per_nsubdivide,
         int* particleLS_flag,
         int* imPLS,
         int* nmat,

@@ -81,8 +81,9 @@ amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
 ns.particleLS_flag=0 0 1
-ns.particles_weight=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
-ns.particle_nsubdivide=1 1 1
+ns.particles_weight=0 0 1.0 # 0.0=>particles have no weight   0<=wt<=1
+ns.particle_nsubdivide=1 1 4
+ns.particle_min_per_nsubdivide=0 0 0
 ns.particle_max_per_nsubdivide=100 100 100
 
 ns.particle_volume=1.0 1.0 1.0
@@ -170,7 +171,7 @@ ns.gravity        = -980.0  # ZEYU
 #  if theta=90 degrees,
 #  sigma_SV=sigma_SL
 #  12=LV,13=SL,23=SV
-ns.tension=73.0 73.0 73.0  #ZEYU  dyne/cm
+ns.tension=73.0 0.0 0.0  #ZEYU  dyne/cm
 # law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 #law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 

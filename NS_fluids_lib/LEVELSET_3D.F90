@@ -19560,6 +19560,7 @@ stop
         append_flag, &
         particle_nsubdivide, &
         particle_max_per_nsubdivide, &
+        particle_min_per_nsubdivide, &
         particleLS_flag, &
         im_PLS_cpp, &
         nmat, &
@@ -19606,6 +19607,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
       INTEGER_T, intent(in) :: particle_max_per_nsubdivide(nmat)
+      INTEGER_T, intent(in) :: particle_min_per_nsubdivide(nmat)
       INTEGER_T, intent(in) :: particleLS_flag(nmat)
       REAL_T, intent(in)    :: cur_time_slab
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
@@ -19947,7 +19949,11 @@ stop
            stop
           endif 
 
-         else if (local_count.eq.0) then ! no particles in the subbox.
+           ! insufficient particles in the subbox or adding the
+           ! particles for the very first time.
+         else if ((local_count.lt. &
+                   particle_min_per_nsubdivide(im_PLS_CPP+1)).or. &
+                  (append_flag.eq.0)) then 
 
           call sub_box_cell_center( &
             accum_PARM, &
@@ -20084,10 +20090,15 @@ stop
            print *,"dist_sub invalid"
            stop
           endif
+         else if ((local_count.ge. &
+                   particle_min_per_nsubdivide(im_PLS_CPP+1)).and. &
+                  (append_flag.eq.1)) then
+          ! do nothing
          else
           print *,"local_count invalid"
           stop
          endif
+
         enddo ! ksub
         enddo ! jsub
         enddo ! isub
