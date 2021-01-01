@@ -5552,47 +5552,47 @@ stop
        level, &
        dt, &
        irz, &
-       im,nmat,nden)
+       im_parm, &
+       nmat,nden)
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T massface_index
-      INTEGER_T vofface_index
-      INTEGER_T ncphys
-      INTEGER_T nmat
-      INTEGER_T im
-      INTEGER_T nden,nstate,level
-      INTEGER_T ntensor
-      INTEGER_T ntensorMM
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T DIMDEC(xface)
-      INTEGER_T DIMDEC(yface)
-      INTEGER_T DIMDEC(zface)
-      INTEGER_T DIMDEC(lsfab)
-      INTEGER_T DIMDEC(DeDTinverse)
-      INTEGER_T DIMDEC(vischeat)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T DIMDEC(gradu)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xface(DIMV(xface),ncphys)
-      REAL_T yface(DIMV(yface),ncphys)
-      REAL_T zface(DIMV(zface),ncphys)
-      REAL_T lsfab(DIMV(lsfab),nmat)
-      REAL_T DeDTinverse(DIMV(DeDTinverse),nmat+1)
-      REAL_T vischeat(DIMV(vischeat),num_materials_vel)
-      REAL_T tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
-      REAL_T gradu(DIMV(gradu),ntensorMM)
-      REAL_T dt
-      INTEGER_T irz
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: nden,nstate,level
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: ntensorMM
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(DeDTinverse)
+      INTEGER_T, intent(in) :: DIMDEC(vischeat)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: DIMDEC(gradu)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
+      REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
+      REAL_T, intent(inout) :: vischeat(DIMV(vischeat),num_materials_vel)
+      REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: gradu(DIMV(gradu),ntensorMM)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: irz
+      INTEGER_T :: i,j,k
       INTEGER_T veldir,dir
-      REAL_T tcen
-      INTEGER_T ldata
+      INTEGER_T local_mask
       REAL_T IEforce,Tforce
       REAL_T one_over_DeDT
       REAL_T xsten(-3:3,SDIM)
@@ -5623,12 +5623,6 @@ stop
        stop
       endif
      
-      if ((elasticface_flag.ne.0).and. &  ! use LS
-          (elasticface_flag.ne.1)) then   ! use VOF
-       print *,"elasticface_flag invalid"
-       stop
-      endif
-
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
        stop
@@ -5650,8 +5644,8 @@ stop
        print *,"nstate invalid"
        stop
       endif
-      if ((im.lt.0).or.(im.ge.nmat)) then
-       print *,"im invalid24"
+      if ((im_parm.lt.0).or.(im_parm.ge.nmat)) then
+       print *,"im_parm invalid24"
        stop
       endif
 
@@ -5736,7 +5730,17 @@ stop
        do imlocal=1,nmat
         LScen(imlocal)=lsfab(D_DECL(i,j,k),imlocal)
        enddo
-       call get_primary_material(LScen,nmat,ldata)
+       call get_primary_material(LScen,nmat,local_mask)
+
+       if ((local_mask.eq.im_parm+1).and. &
+           (LScen(im_parm+1).gt.zero)) then
+        local_mask=1
+       else if ((local_mask.ge.1).and.(local_mask.le.nmat)) then
+        local_mask=0
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
 
        do ii=1,3
        do jj=1,3
@@ -5755,72 +5759,12 @@ stop
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
 
-       if (elasticface_flag.eq.0) then
-        if (ldata.ne.im+1) then
-         tcen=zero
-        else if (ldata.eq.im+1) then
-         tcen=one
-        else
-         print *,"ldata invalid"
-         stop
-        endif 
-       else if (elasticface_flag.eq.1) then
-        vofmat_sum=zero
-        voftotal_sum=zero
-        do imloop=1,nmat
-         base_index=vofface_index+2*(imloop-1)+1
-         do dir=1,SDIM
-          ii=0
-          jj=0
-          kk=0
-          if (dir.eq.1) then
-           ii=1
-           vleftleft=xface(D_DECL(i,j,k),base_index)
-           vleft=xface(D_DECL(i,j,k),base_index+1)
-           vright=xface(D_DECL(i+ii,j+jj,k+kk),base_index)
-           vrightright=xface(D_DECL(i+ii,j+jj,k+kk),base_index+1)
-          else if (dir.eq.2) then
-           jj=1
-           vleftleft=yface(D_DECL(i,j,k),base_index)
-           vleft=yface(D_DECL(i,j,k),base_index+1)
-           vright=yface(D_DECL(i+ii,j+jj,k+kk),base_index)
-           vrightright=yface(D_DECL(i+ii,j+jj,k+kk),base_index+1)
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           kk=1
-           vleftleft=zface(D_DECL(i,j,k),base_index)
-           vleft=zface(D_DECL(i,j,k),base_index+1)
-           vright=zface(D_DECL(i+ii,j+jj,k+kk),base_index)
-           vrightright=zface(D_DECL(i+ii,j+jj,k+kk),base_index+1)
-          else
-           print *,"dir invalid"
-           stop
-          endif
-          voftotal_sum=voftotal_sum+vleft+vright+vleftleft+vrightright
-          if (imloop.eq.im+1) then
-           vofmat_sum=vofmat_sum+vleft+vright+vleftleft+vrightright
-          endif
-         enddo ! dir=1..sdim
-        enddo ! imloop=1..nmat
-        if (voftotal_sum.le.zero) then
-         print *,"voftotal_sum invalid"
-         stop
-        endif
-        if (voftotal_sum.lt.vofmat_sum) then
-         print *,"voftotal_sum or vofmat_sum invalid"
-         stop
-        endif
-        tcen=vofmat_sum/voftotal_sum
-       else
-        print *,"elasticface_flag invalid"
-        stop
-       endif 
-
         ! E: div( u dot tau )=(u tau_11)_x+(u tau_12)_y+(u tau_13)_z+...
         ! e: grad u : tau
 
-       if (tcen.eq.zero) then
+       if (local_mask.eq.0) then
         IEforce=zero
-       else if (tcen.eq.one) then
+       else if (local_mask.eq.1) then
 
         IEforce=zero
         do veldir=1,SDIM
@@ -5841,7 +5785,7 @@ stop
         vischeat(D_DECL(i,j,k),1)=vischeat(D_DECL(i,j,k),1)+Tforce
 
        else
-        print *,"tcen invalid"
+        print *,"local_mask invalid"
         stop
        endif
 
