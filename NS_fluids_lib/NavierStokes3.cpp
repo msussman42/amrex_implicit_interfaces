@@ -11803,8 +11803,10 @@ void NavierStokes::veldiffuseALL() {
       if (store_elastic_data[im]==1) {
 
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-        allocate_array(0,AMREX_SPACEDIM,dir,XDISP_FLUX_MF+dir);
-        setVal_array(0,AMREX_SPACEDIM,0.0,XDISP_FLUX_MF+dir);
+        allocate_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
+          dir,XDISP_FLUX_MF+dir);
+        setVal_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
+          0.0,XDISP_FLUX_MF+dir);
        }
 
        if (viscoelastic_model[im]==2) {
