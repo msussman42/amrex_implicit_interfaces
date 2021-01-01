@@ -17388,5 +17388,73 @@ enddo
 
 end subroutine stress_from_strain
 
+subroutine project_tensor(mask_center,n_elastic, &
+        mask_left,mask_right,tensor_data)
+IMPLICIT NONE
+
+INTEGER_T, intent(out) :: mask_center
+INTEGER_T, intent(in) :: mask_left
+INTEGER_T, intent(in) :: mask_right
+REAL_T, intent(in) :: n_elastic(SDIM)
+REAL_T, intent(inout) :: tensor_data(0:1,SDIM,SDIM)
+
+INTEGER_T idest,isource
+INTEGER_T iprod,jprod,kprod
+REAL_T PIK,PKJ
+REAL_T PT(SDIM,SDIM)
+REAL_T PTP(SDIM,SDIM)
+
+
+if ((mask_left.eq.0).and.(mask_right.eq.0)) then
+ mask_center=0
+else if ((mask_left.eq.1).and.(mask_right.eq.1)) then
+ mask_center=1
+else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
+         ((mask_left.eq.1).and.(mask_right.eq.0))) then
+ mask_center=1
+ if ((mask_left.eq.0).and.(mask_right.eq.1)) then
+  idest=0
+  isource=1
+ else if ((mask_right.eq.0).and.(mask_left.eq.1)) then
+  idest=1
+  isource=0
+ else
+  print *,"mask_left or mask_right invalid"
+  stop
+ endif
+  ! P=(I - n^T n)
+ do iprod=1,SDIM
+ do jprod=1,SDIM
+  PT(iprod,jprod)=zero
+  do kprod=1,SDIM
+   PIK=-n_elastic(iprod)*n_elastic(kprod)  
+   if (iprod.eq.kprod) then
+    PIK=PIK+one
+   endif
+   PT(iprod,jprod)=PT(iprod,jprod)+PIK*tensor_data(isource,kprod,jprod)
+  enddo ! kprod=1..sdim
+ enddo ! jprod
+ enddo ! iprod
+
+ do iprod=1,SDIM
+ do jprod=1,SDIM
+  PTP(iprod,jprod)=zero
+  do kprod=1,SDIM
+   PKJ=-n_elastic(kprod)*n_elastic(jprod)  
+   if (jprod.eq.kprod) then
+    PKJ=PKJ+one
+   endif
+   PTP(iprod,jprod)=PTP(iprod,jprod)+PKJ*PT(iprod,kprod)
+  enddo ! kprod=1..sdim
+  tensor_data(idest,iprod,jprod)=PTP(iprod,jprod)
+ enddo ! jprod
+ enddo ! iprod
+else
+ print *,"mask_left or mask_right invalid"
+ stop
+endif
+
+end subroutine project_tensor
+
 end module global_utility_module
 

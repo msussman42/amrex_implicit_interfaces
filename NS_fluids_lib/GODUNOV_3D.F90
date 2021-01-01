@@ -5121,7 +5121,7 @@ stop
       INTEGER_T :: xflux_comp
       INTEGER_T :: veldir
       REAL_T    :: deninv
-      INTEGER_T dir,side
+      INTEGER_T dir
       REAL_T rplus,rminus,rval,RRX,RRY
       INTEGER_T mask_left,mask_right
       INTEGER_T mask_center(SDIM)
@@ -5138,12 +5138,12 @@ stop
       REAL_T LScen(nmat)
       REAL_T Q(D_DECL(-1:1,-1:1,-1:1),3,3)
 
-      INTEGER_T ii,jj,kk
       REAL_T xflux_local(0:1,SDIM,SDIM)
       REAL_T yflux_local(0:1,SDIM,SDIM)
       REAL_T zflux_local(0:1,SDIM,SDIM)
 
       REAL_T n_elastic(SDIM)
+      INTEGER_T ii,jj
 
       nhalf=3
 
@@ -5488,10 +5488,10 @@ stop
          stop
         endif 
 
-        if (is_prescribed(nmat,imparm+1).eq.1) then
-         print *,"imparm should not be a is_prescribed material"
+        if (is_prescribed(nmat,im_parm+1).eq.1) then
+         print *,"im_parm should not be an is_prescribed material"
          stop
-        else if (is_prescribed(nmat,imparm+1).eq.0) then
+        else if (is_prescribed(nmat,im_parm+1).eq.0) then
          do veldir=1,SDIM
           force(veldir)=force(veldir)*dt
          enddo
@@ -5604,8 +5604,7 @@ stop
       INTEGER_T imlocal
       REAL_T LScen(nmat)
       REAL_T Q(3,3)
-      INTEGER_T ii,jj,kk
-      INTEGER_T base_index,imloop
+      INTEGER_T ii,jj
 
       nhalf=3
 
