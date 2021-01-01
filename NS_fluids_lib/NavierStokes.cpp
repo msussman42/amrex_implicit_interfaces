@@ -299,9 +299,10 @@ int  NavierStokes::SEM_advection_algorithm=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
-// default=1
+// default=1   nmat components.
 Vector<int> NavierStokes::particle_nsubdivide; 
 Vector<int> NavierStokes::particle_max_per_nsubdivide; 
+Vector<int> NavierStokes::particle_min_per_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
 Vector<Real> NavierStokes::particles_weight; 
 
@@ -4202,11 +4203,13 @@ NavierStokes::read_params ()
     truncate_volume_fractions.resize(nmat);
     particle_nsubdivide.resize(nmat);
     particle_max_per_nsubdivide.resize(nmat);
+    particle_min_per_nsubdivide.resize(nmat);
 
     for (int i=0;i<nmat;i++) {
 
      particle_nsubdivide[i]=1;
      particle_max_per_nsubdivide[i]=3;
+     particle_min_per_nsubdivide[i]=1;
 
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
@@ -4228,6 +4231,8 @@ NavierStokes::read_params ()
     pp.queryarr("particle_nsubdivide",particle_nsubdivide,0,nmat);
     pp.queryarr("particle_max_per_nsubdivide",
 	    particle_max_per_nsubdivide,0,nmat);
+    pp.queryarr("particle_min_per_nsubdivide",
+	    particle_min_per_nsubdivide,0,nmat);
 
     NS_ncomp_particles=0;
     for (int i=0;i<nmat;i++) {
@@ -4246,6 +4251,9 @@ NavierStokes::read_params ()
      if ((particle_max_per_nsubdivide[i]<2)||
          (particle_max_per_nsubdivide[i]>100))
       amrex::Error("particle_max_per_nsubdivide invalid");
+     if ((particle_min_per_nsubdivide[i]<0)||
+         (particle_min_per_nsubdivide[i]>100))
+      amrex::Error("particle_min_per_nsubdivide invalid");
      if ((particleLS_flag[i]<0)||
          (particleLS_flag[i]>1))
       amrex::Error("particleLS_flag invalid");
@@ -4516,6 +4524,8 @@ NavierStokes::read_params ()
         particle_nsubdivide[i] << '\n';
       std::cout << "particle_max_per_nsubdivide i= " << i << ' ' <<
         particle_max_per_nsubdivide[i] << '\n';
+      std::cout << "particle_min_per_nsubdivide i= " << i << ' ' <<
+        particle_min_per_nsubdivide[i] << '\n';
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
 
@@ -20891,6 +20901,7 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
        &append_flag,
        particle_nsubdivide.dataPtr(),
        particle_max_per_nsubdivide.dataPtr(),
+       particle_min_per_nsubdivide.dataPtr(),
        particleLS_flag.dataPtr(),
        &im_PLS,
        &nmat,
