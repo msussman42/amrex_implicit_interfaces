@@ -2066,7 +2066,6 @@ protected:
      // default is solidheat_flag=0
     static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
     static int diffusionface_flag; // 0=use LS 1=use VOF (def=1)
-    static int elasticface_flag; // 0=use LS 1=use VOF (def=1)
     static int temperatureface_flag; // 0=use LS 1=use VOF (def=1)
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_type_evap; // 0 incomp   

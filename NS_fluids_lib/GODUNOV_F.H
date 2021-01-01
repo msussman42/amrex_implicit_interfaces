@@ -221,7 +221,6 @@ extern "C"
     Real* mf,AMREX_ARLIM_P(mflo),AMREX_ARLIM_P(mfhi));
 
    void FORT_TENSORFORCE(
-    int* elasticface_flag,
     int* massface_index,
     int* vofface_index,
     int* ncphys,
@@ -250,7 +249,6 @@ extern "C"
     int* nden);
 
    void FORT_TENSORHEAT(
-    int* elasticface_flag,
     int* massface_index,
     int* vofface_index,
     int* ncphys,

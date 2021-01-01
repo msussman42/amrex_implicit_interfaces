@@ -28,7 +28,6 @@ ns.temperature_primitive_variable=1 1 1 1 1
 ns.face_flag=1  # face_flag=0 should work fine too and is faster, but maybe
                 # not as accurate.
 # 0=use LS  1=use VOF
-ns.elasticface_flag=1  
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
