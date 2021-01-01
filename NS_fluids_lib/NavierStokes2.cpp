@@ -4066,16 +4066,16 @@ void NavierStokes::init_gradu_tensor(
    debug_ngrow(idx_elastic_flux+dir-1,0,845);
  
    MultiFab* umac_new=&get_new_data(Umac_Type+dir-1,slab_step+1);
-   MultiFab* xdisp_mf=localMF[idx_elastic_flux+dir-1];
-   if (xdisp_mf->boxArray()==umac_new->boxArray()) {
+   MultiFab* grad_xdisp_mf=localMF[idx_elastic_flux+dir-1];
+   if (grad_xdisp_mf->boxArray()==umac_new->boxArray()) {
     // do nothing
    } else
-    amrex::Error("xdisp_mf->boxArray()!=umac_new->boxArray()");
+    amrex::Error("grad_xdisp_mf->boxArray()!=umac_new->boxArray()");
 
-   if (xdisp_mf->nComp()==AMREX_SPACEDIM) {
+   if (grad_xdisp_mf->nComp()==AMREX_SPACEDIM*AMREX_SPACEDIM) {
     // do nothing
    } else
-    amrex::Error("xdisp_mf->nComp()!=AMREX_SPACEDIM"); 
+    amrex::Error("grad_xdisp_mf->nComp()!=AMREX_SPACEDIM^{2}"); 
 
    if (enable_spectral==0) {
     // do nothing
@@ -4108,7 +4108,7 @@ void NavierStokes::init_gradu_tensor(
     FArrayBox& velfab=(*localMF[idx_vel])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
-    FArrayBox& xflux=(*xdisp_mf)[mfi];
+    FArrayBox& xflux=(*grad_xdisp_mf)[mfi];
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
 
@@ -4184,13 +4184,14 @@ void NavierStokes::init_gradu_tensor(
   int spectral_override=0;  // always do low order average down
   int ncomp_edge=-1;
   int caller_id=1;
+   // idxMF,scomp,ncomp,start_dir,ndir,spectral_override,caller_id
   avgDownEdge_localMF(
     idx_elastic_flux,
     0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id); 
 
   for (int dir=1;dir<=AMREX_SPACEDIM;dir++) {
    localMF[idx_elastic_flux+dir-1]->
-      FillBoundary(0,AMREX_SPACEDIM,geom.periodicity());
+      FillBoundary(0,AMREX_SPACEDIM*AMREX_SPACEDIM,geom.periodicity());
   }
 
  } else

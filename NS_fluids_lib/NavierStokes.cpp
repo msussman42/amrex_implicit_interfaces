@@ -9010,10 +9010,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
   debug_ngrow(XDISP_FLUX_MF+dir,0,2);
-  if (localMF[XDISP_FLUX_MF+dir]->nComp()==AMREX_SPACEDIM) {
+  if (localMF[XDISP_FLUX_MF+dir]->nComp()==
+      AMREX_SPACEDIM*AMREX_SPACEDIM) {
    // do nothing
   } else
-   amrex::Error("localMF[XDISP_FLUX_MF+dir].nComp() invalid");
+   amrex::Error("localMF[XDISP_FLUX_MF+dir].nComp()!=AMREX_SPACEDIM^{2}");
  }
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,3);

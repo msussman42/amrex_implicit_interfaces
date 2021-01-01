@@ -5113,9 +5113,9 @@ stop
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: xflux(DIMV(xflux),SDIM)
-      REAL_T, intent(in) :: yflux(DIMV(yflux),SDIM)
-      REAL_T, intent(in) :: zflux(DIMV(zflux),SDIM)
+      REAL_T, intent(in) :: xflux(DIMV(xflux),SDIM*SDIM)
+      REAL_T, intent(in) :: yflux(DIMV(yflux),SDIM*SDIM)
+      REAL_T, intent(in) :: zflux(DIMV(zflux),SDIM*SDIM)
       REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
       REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
       REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
@@ -5145,9 +5145,9 @@ stop
       INTEGER_T ii,jj,kk
       INTEGER_T base_index,imloop
       REAL_T vleft,vright,voftotal_sum,vofmat_sum,vleftleft,vrightright
-      REAL_T xflux_local(0:1,SDIM)
-      REAL_T yflux_local(0:1,SDIM)
-      REAL_T zflux_local(0:1,SDIM)
+      REAL_T xflux_local(0:1,SDIM,SDIM)
+      REAL_T yflux_local(0:1,SDIM,SDIM)
+      REAL_T zflux_local(0:1,SDIM,SDIM)
 
       nhalf=3
 
@@ -5462,27 +5462,27 @@ stop
 
         do veldir=1,SDIM
          dir=1
-         xflux_local(1,veldir)= &
+         xflux_local(1,veldir,dir)= &
                (Q(D_DECL(1,0,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-         xflux_local(0,veldir)= &
+         xflux_local(0,veldir,dir)= &
                (Q(D_DECL(-1,0,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
 
          dir=2
-         yflux_local(1,veldir)= &
+         yflux_local(1,veldir,dir)= &
                (Q(D_DECL(0,1,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-         yflux_local(0,veldir)= &
+         yflux_local(0,veldir,dir)= &
                (Q(D_DECL(0,-1,0),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
 
          if (SDIM.eq.3) then
           dir=SDIM
-          zflux_local(1,veldir)= &
+          zflux_local(1,veldir,dir)= &
                (Q(D_DECL(0,0,1),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-          zflux_local(0,veldir)= &
+          zflux_local(0,veldir,dir)= &
                (Q(D_DECL(0,0,-1),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
          else if (SDIM.eq.2) then
@@ -5495,23 +5495,32 @@ stop
 
        else if (viscoelastic_model.eq.2) then
 
+        xflux_comp=1
         do veldir=1,SDIM
-         xflux_local(1,veldir)=xflux(D_DECL(i+1,j,k),veldir)
-         xflux_local(0,veldir)=xflux(D_DECL(i,j,k),veldir)
-         yflux_local(1,veldir)=yflux(D_DECL(i,j+1,k),veldir)
-         yflux_local(0,veldir)=yflux(D_DECL(i,j,k),veldir)
-
+        do dir=1,SDIM
+         xflux_local(1,veldir,dir)=xflux(D_DECL(i+1,j,k),xflux_comp)
+         xflux_local(0,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
+         yflux_local(1,veldir,dir)=yflux(D_DECL(i,j+1,k),xflux_comp)
+         yflux_local(0,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
 
          if (SDIM.eq.3) then
-          zflux_local(1,veldir)=zflux(D_DECL(i,j,k+1),veldir)
-          zflux_local(0,veldir)=zflux(D_DECL(i,j,k),veldir)
+          zflux_local(1,veldir,dir)=zflux(D_DECL(i,j,k+1),xflux_comp)
+          zflux_local(0,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
          else if (SDIM.eq.2) then
           ! do nothing
          else
           print *,"dimension bust"
           stop
          endif
+         xflux_comp=xflux_comp+1
+        enddo ! dir=1..sdim
         enddo ! veldir=1..sdim
+        if (xflux_comp-1.eq.SDIM*SDIM) then
+         ! do nothing
+        else
+         print *,"xflux_comp invalid"
+         stop
+        endif
 
        else
         print *,"viscoelastic_model invalid"
@@ -29590,14 +29599,14 @@ stop
 
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_vel)
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
-      REAL_T, intent(out) :: xflux(DIMV(xflux),nsolveMM_FACE)  ! u
+      REAL_T, intent(out) :: xflux(DIMV(xflux),ntensorMM)
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
 
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
       REAL_T, intent(in) :: visc_coef
 
-      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: dir  ! dir=1..sdim
  
       INTEGER_T ilo,ihi 
       INTEGER_T jlo,jhi 
@@ -29605,6 +29614,7 @@ stop
 
       INTEGER_T i,j,k
       INTEGER_T space_dir
+      INTEGER_T xflux_comp
       INTEGER_T velcomp
       INTEGER_T dirtan(2)
       INTEGER_T coupling(SDIM,SDIM)
@@ -30034,9 +30044,20 @@ stop
          DISP_TEN, & ! velcomp,space_dir
          hoop_22) ! in RZ, DISP_TEN does not have theta,theta component.
 
+       xflux_comp=1
        do velcomp=1,SDIM
-        xflux(D_DECL(i,j,k),velcomp)=visc_local*DISP_TEN(velcomp,dir)
+       do space_dir=1,SDIM
+        xflux(D_DECL(i,j,k),xflux_comp)= &
+          visc_local*DISP_TEN(velcomp,space_dir)
+        xflux_comp=xflux_comp+1
+       enddo  ! space_dir
        enddo  ! velcomp
+       if (xflux_comp-1.eq.SDIM*SDIM) then
+        ! do nothing
+       else
+        print *,"xflux_comp invalid"
+        stop
+       endif
 
       enddo
       enddo
