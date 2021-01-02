@@ -3554,7 +3554,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         override_enable_spectral(viscous_enable_spectral);
 
          // velocity here to be used later.
-        project_option_op=3;
+        project_option_op=3; // viscosity project_option
 
         get_mm_scomp_solver(
          num_materials_vel,
@@ -3584,7 +3584,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
          // -div(k grad T)-THERMAL_FORCE_MF
         update_stableF=0;
-        project_option_op=2;
+        project_option_op=2; // temperature project_option
 
         get_mm_scomp_solver(
          num_materials_scalar_solve,
@@ -3632,7 +3632,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
          // -momforce
         update_stableF=0;
-        project_option_op=4; 
+        project_option_op=4;  // project_option for prescribed Mom. force
 
         nsolve=AMREX_SPACEDIM;
         nsolveMM=nsolve*num_materials_vel;
@@ -3654,7 +3654,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
         // calls: UPDATESEMFORCE in GODUNOV_3D.F90
         update_stableF=0;
-        project_option_op=3;
+        project_option_op=3;  // viscosity project option
 
         get_mm_scomp_solver(
          num_materials_vel,
@@ -3673,7 +3673,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          amrex::Error("ncomp_check invalid");
 
         allocate_array(1,nsolveMM,-1,HOOP_FORCE_MARK_MF);
-        update_state=0;
+         // update_state==1:
+         //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
+         // update_state==0:
+         //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
+        update_state=0;  
         diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          HOOP_FORCE_MARK_MF,update_state);
 
@@ -3771,7 +3775,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
  } else 
   amrex::Error("advance status invalid");
 
-}  // subroutine do_the_advance
+}  // end subroutine do_the_advance
 
 
 void push_stack(Vector<int>& stackdata,
@@ -11488,6 +11492,134 @@ void NavierStokes::avgDownALL_TENSOR() {
 
 } // subroutine avgDownALL_TENSOR
 
+// VISCOELASTIC, CTML FORCE
+void NavierStokes::vel_elastic_ALL() {
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+
+  for (int im=0;im<nmat;im++) {
+   if ((particleLS_flag[im]==1)||
+       (particleLS_flag[im]==0)) { 
+    if (ns_is_rigid(im)==0) {
+     if ((elastic_time[im]>0.0)&&
+         (elastic_viscosity[im]>0.0)) {
+
+      if (store_elastic_data[im]==1) {
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+        allocate_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
+          dir,XDISP_FLUX_MF+dir);
+        setVal_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
+          0.0,XDISP_FLUX_MF+dir);
+       }
+
+       if (viscoelastic_model[im]==2) {
+
+	int push_enable_spectral=enable_spectral;
+	int elastic_enable_spectral=0;
+	override_enable_spectral(elastic_enable_spectral);
+
+	int do_alloc=1;
+        int simple_AMR_BC_flag_viscosity=1;
+	init_gradu_tensorALL(
+          im,
+	  XDISPLACE_MF, // deleted at end since do_alloc==1
+	  do_alloc,
+	  CELLTENSOR_MF,
+	  FACETENSOR_MF,
+	  XDISP_FLUX_MF, // elastic_idx
+          simple_AMR_BC_flag_viscosity);
+
+	override_enable_spectral(push_enable_spectral);
+        delete_array(CELLTENSOR_MF);
+        delete_array(FACETENSOR_MF);
+
+       } else if ((viscoelastic_model[im]==1)||
+  		  (viscoelastic_model[im]==0)) {
+        // do nothing
+       } else
+        amrex::Error("viscoelastic_model[im] invalid");
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        // note: tensor_advection_updateALL is called before veldiffuseALL.
+        // initializes VISCOTEN_MF
+        ns_level.make_viscoelastic_tensor(im);
+        ns_level.make_viscoelastic_force(im);
+       }
+
+       delete_array(VISCOTEN_MF);
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+        delete_array(XDISP_FLUX_MF+dir);
+
+      } else
+       amrex::Error("store_elastic_data invalid");
+ 
+     } else if ((elastic_time[im]==0.0)||
+  	        (elastic_viscosity[im]==0.0)) {
+      // do nothing
+     } else
+      amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
+
+    } else if (ns_is_rigid(im)==1) {
+     // do nothing
+    } else
+     amrex::Error("ns_is_rigid invalid");
+   } else
+    amrex::Error("particleLS_flag[im] invalid");
+  } // im=0..nmat-1
+   
+   // diffuse_register+=(unew-register_mark)
+   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+
+  avgDownALL(State_Type,0,
+    num_materials_vel*(AMREX_SPACEDIM+1),1);
+
+   // after make_viscoelastic_force(), in
+   //  NavierStokes::vel_elastic_ALL()
+   // uses SLOPE_RECON_MF
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
+  }
+  avgDownALL_TENSOR();
+
+   // register_mark=unew
+  SET_STOKES_MARK(REGISTER_MARK_MF);
+
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+
+ if (CTML_FSI_flagC()==1) {
+
+  // Add the solid force term on the right hand side
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.ctml_fsi_transfer_force();
+  }
+
+   // diffuse_register+=(unew-register_mark)
+   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+
+  avgDownALL(State_Type,0,
+   num_materials_vel*(AMREX_SPACEDIM+1),1);
+
+    // register_mark=unew
+  SET_STOKES_MARK(REGISTER_MARK_MF);
+
+ } else if (CTML_FSI_flagC()==0) {
+  // do nothing
+ } else
+  amrex::Error("CTML_FSI_flagC() invalid");
+
+} // end subroutine vel_elastic_ALL
+
+
 void NavierStokes::veldiffuseALL() {
 
  if ((SDC_outer_sweeps>=0)&&
@@ -11692,7 +11824,11 @@ void NavierStokes::veldiffuseALL() {
  //
 
   // HOOP_FORCE_MARK_MF=(unp1-un)rho/dt
-  // unew=unp1 if update_state==1
+  // update_state==1:
+  //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
+  //  unew=unp1
+  // update_state==0:
+  //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
  int update_state=1;
  diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
    HOOP_FORCE_MARK_MF,update_state);
@@ -11721,6 +11857,8 @@ void NavierStokes::veldiffuseALL() {
   // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF);
 
+ vel_elastic_ALL();
+
 // -----------veldiffuseALL: viscosity -----------------------------
 
 
@@ -11731,7 +11869,8 @@ void NavierStokes::veldiffuseALL() {
   if (ns_time_order>=2) {
 
    // UPDATESEMFORCE:
-   // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF
+   // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF (update_state=0 at end of
+   //                                          NavierStokes::do_the_advance)
    // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
    if ((viscous_enable_spectral==1)||  // SEM space and time
        (viscous_enable_spectral==3)) { // SEM time
@@ -11787,130 +11926,6 @@ void NavierStokes::veldiffuseALL() {
 // ---------------- end viscosity ---------------------
 
 
-
- // VISCOELASTIC, CTML FORCE, CONSERVATIVE SURFACE TENSION (Marangoni) FORCE
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=nmat)) {
-
-  for (int im=0;im<nmat;im++) {
-   if ((particleLS_flag[im]==1)||
-       (particleLS_flag[im]==0)) { 
-    if (ns_is_rigid(im)==0) {
-     if ((elastic_time[im]>0.0)&&
-         (elastic_viscosity[im]>0.0)) {
-
-      if (store_elastic_data[im]==1) {
-
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-        allocate_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
-          dir,XDISP_FLUX_MF+dir);
-        setVal_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
-          0.0,XDISP_FLUX_MF+dir);
-       }
-
-       if (viscoelastic_model[im]==2) {
-
-	int push_enable_spectral=enable_spectral;
-	int elastic_enable_spectral=0;
-	override_enable_spectral(elastic_enable_spectral);
-
-	int do_alloc=1;
-        int simple_AMR_BC_flag_viscosity=1;
-	init_gradu_tensorALL(
-          im,
-	  XDISPLACE_MF, // deleted at end since do_alloc==1
-	  do_alloc,
-	  CELLTENSOR_MF,
-	  FACETENSOR_MF,
-	  XDISP_FLUX_MF, // elastic_idx
-          simple_AMR_BC_flag_viscosity);
-
-	override_enable_spectral(push_enable_spectral);
-        delete_array(CELLTENSOR_MF);
-        delete_array(FACETENSOR_MF);
-
-       } else if ((viscoelastic_model[im]==1)||
-  		  (viscoelastic_model[im]==0)) {
-        // do nothing
-       } else
-        amrex::Error("viscoelastic_model[im] invalid");
-
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        // note: tensor_advection_updateALL is called before veldiffuseALL.
-        ns_level.make_viscoelastic_tensor(im);
-        ns_level.make_viscoelastic_force(im);
-       }
-
-       delete_array(VISCOTEN_MF);
-
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        delete_array(XDISP_FLUX_MF+dir);
-
-      } else
-       amrex::Error("store_elastic_data invalid");
- 
-     } else if ((elastic_time[im]==0.0)||
-  	        (elastic_viscosity[im]==0.0)) {
-      // do nothing
-     } else
-      amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
-
-    } else if (ns_is_rigid(im)==1) {
-     // do nothing
-    } else
-     amrex::Error("ns_is_rigid invalid");
-   } else
-    amrex::Error("particleLS_flag[im] invalid");
-  } // im=0..nmat-1
-   
-   // diffuse_register+=(unew-register_mark)
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
-
-  avgDownALL(State_Type,0,
-    num_materials_vel*(AMREX_SPACEDIM+1),1);
-
-   // after make_viscoelastic_force(), in
-   //  NavierStokes::veldiffuseALL()
-   // uses SLOPE_RECON_MF
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
-  }
-  avgDownALL_TENSOR();
-
-   // register_mark=unew
-  SET_STOKES_MARK(REGISTER_MARK_MF);
-
- } else
-  amrex::Error("num_materials_viscoelastic invalid");
-
-
- if (CTML_FSI_flagC()==1) {
-
-  // Add the solid force term on the right hand side
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.ctml_fsi_transfer_force();
-  }
-
-   // diffuse_register+=(unew-register_mark)
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
-
-  avgDownALL(State_Type,0,
-   num_materials_vel*(AMREX_SPACEDIM+1),1);
-
-    // register_mark=unew
-  SET_STOKES_MARK(REGISTER_MARK_MF);
-
- } else if (CTML_FSI_flagC()==0) {
-  // do nothing
- } else
-  amrex::Error("CTML_FSI_flagC() invalid");
-
    // back to "enable_spectral" for momentum eqn
  override_enable_spectral(save_enable_spectral);
 
@@ -11926,7 +11941,8 @@ void NavierStokes::veldiffuseALL() {
 
   if (ns_time_order>=2) {
    // UPDATESEMFORCE:
-   // HOFAB=NEG_MOM_FORCE_MF
+   // HOFAB=NEG_MOM_FORCE_MF (update_state=0 at end of 
+   //                         NavierStokes::do_the_advance)
    // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
@@ -11966,6 +11982,7 @@ void NavierStokes::veldiffuseALL() {
   ADVECT_REGISTER_MF,ADVECT_REGISTER_FACE_MF,
   nsolve_vel);
 
+  // CONSERVATIVE SURFACE TENSION (Marangoni) FORCE
   // rhonew unew+=dt F_marangoni
   // 1. initialize CONSERVE_FLUXES_MF to store the force on the MAC grid and
   //    update the MAC velocity.

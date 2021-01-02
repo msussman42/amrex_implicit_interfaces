@@ -238,7 +238,7 @@ ns.heatviscconst=0.0 0.0 0.0
 #material 2 is gas
 #material 3 is substrate
 ns.elastic_viscosity=0.0 0.0 1000.0 # 100000.0 baseline
-ns.elastic_regularization=10.0 10.0 10.0
+ns.elastic_regularization=1.0 1.0 1.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1

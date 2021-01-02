@@ -406,6 +406,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // in: DIFFUSION_3D.F90
   FORT_COMPUTE_NEG_MOM_FORCE(
    forcefab.dataPtr(),
    ARLIM(forcefab.loVect()),ARLIM(forcefab.hiVect()),
