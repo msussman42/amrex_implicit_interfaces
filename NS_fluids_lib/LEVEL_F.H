@@ -746,7 +746,7 @@ namespace amrex{
 
 
      void fort_assimilate_lvlset_from_particles(
-       Real* particles_weight,
+       Real* particles_weight_LS,
        int* tid,
        int* im_PLS,
        int* isweep,
@@ -780,7 +780,9 @@ namespace amrex{
 
 
      void fort_init_particle_container(
-        Real* particles_weight,
+        Real* particles_weight_LS,
+        Real* particles_weight_XD,
+        Real* particles_weight_VEL,
         int* tid,
         int* single_particle_size,
         int* isweep,

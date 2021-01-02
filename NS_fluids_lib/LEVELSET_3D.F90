@@ -18216,7 +18216,7 @@ stop
 
        ! called from NavierStokes::PLS_correct (NavierStokes2.cpp)
       subroutine fort_assimilate_lvlset_from_particles( &
-        particles_weight, &
+        particles_weight_LS, &
         tid, &  ! thread id
         im_PLS_cpp, &
         isweep, &
@@ -18270,7 +18270,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: bfact
 
-      REAL_T, intent(in) :: particles_weight(nmat)
+      REAL_T, intent(in) :: particles_weight_LS(nmat)
 
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
       INTEGER_T, intent(in) :: DIMDEC(LS)
@@ -18446,7 +18446,7 @@ stop
         if (A_matrix.eq.zero) then
          lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=LS_local
         else if (A_matrix.gt.zero) then
-         local_wt=particles_weight(im_PLS_cpp+1)
+         local_wt=particles_weight_LS(im_PLS_cpp+1)
          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
            ! lambda=sum (interp(LS)-LS_p)w_p/sum w_p
           lambda=B_matrix/A_matrix
@@ -18500,7 +18500,7 @@ stop
 
          if ((F_old.ge.-VOFTOL).and.(F_old.le.one+VOFTOL)) then
 
-          local_wt=particles_weight(im_PLS_cpp+1)
+          local_wt=particles_weight_LS(im_PLS_cpp+1)
           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
            F_local=F_old-local_wt*(F_old-F_local)
            do dir=1,SDIM
@@ -19162,7 +19162,9 @@ stop
 
       subroutine interp_eul_lag_dist( &
          nmat, &
-         particles_weight, &
+         particles_weight_LS, &
+         particles_weight_XD, &
+         particles_weight_VEL, &
          velfab, &
          DIMS(velfab), &
          lsfab, &
@@ -19185,7 +19187,9 @@ stop
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: particles_weight(nmat)
+      REAL_T, intent(in) :: particles_weight_LS(nmat)
+      REAL_T, intent(in) :: particles_weight_XD(nmat)
+      REAL_T, intent(in) :: particles_weight_VEL(nmat)
       INTEGER_T, intent(in) :: i,j,k
       REAL_T, target, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: Np
@@ -19446,7 +19450,7 @@ stop
        enddo
 
        if (A_X.gt.zero) then
-        local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
+        local_wt=particles_weight_XD(accum_PARM%im_PLS_cpp+1)
         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
          do dir=1,SDIM
           x_foot_interp(dir)=x_foot_interp(dir)- &
@@ -19488,7 +19492,7 @@ stop
 
       dist_interp=local_LS_interp(accum_PARM%im_PLS_cpp+1)
       if (A_LS.gt.zero) then
-       local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
+       local_wt=particles_weight_LS(accum_PARM%im_PLS_cpp+1)
        if ((local_wt.ge.zero).and.(local_wt.le.one)) then
         dist_interp=dist_interp-local_wt*b_LS/A_LS
        else
@@ -19526,7 +19530,7 @@ stop
       else if (accum_PARM%append_flag.eq.1) then
 
        if (A_X.gt.zero) then
-        local_wt=particles_weight(accum_PARM%im_PLS_cpp+1)
+        local_wt=particles_weight_VEL(accum_PARM%im_PLS_cpp+1)
         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
          do dir=1,SDIM
           vel_interp(dir)=vel_interp(dir)-local_wt*b_VEL(dir)/A_X
@@ -19553,7 +19557,9 @@ stop
        ! called from NavierStokes.cpp:
        !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
-        particles_weight, &
+        particles_weight_LS, &
+        particles_weight_XD, &
+        particles_weight_VEL, &
         tid, &
         single_particle_size, &
         isweep, &
@@ -19600,7 +19606,9 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_PLS_cpp
 
-      REAL_T, intent(in) :: particles_weight(nmat)
+      REAL_T, intent(in) :: particles_weight_LS(nmat)
+      REAL_T, intent(in) :: particles_weight_XD(nmat)
+      REAL_T, intent(in) :: particles_weight_VEL(nmat)
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -19964,7 +19972,9 @@ stop
             ! add bulk particles
           call interp_eul_lag_dist( &
             nmat, &
-            particles_weight, &
+            particles_weight_LS, &
+            particles_weight_XD, &
+            particles_weight_VEL, &
             velfab, &
             DIMS(velfab), &
             lsfab, &
@@ -20026,7 +20036,9 @@ stop
             ! add interface particles
             call interp_eul_lag_dist( &
              nmat, &
-             particles_weight, &
+             particles_weight_LS, &
+             particles_weight_XD, &
+             particles_weight_VEL, &
              velfab, &
              DIMS(velfab), &
              lsfab, &
