@@ -395,6 +395,7 @@ stop
         endif
  
         if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+
          if (im_solid_map(partid_crit+1)+1.ne.im_solid) then
           print *,"im_solid_map(partid_crit+1)+1.ne.im_solid"
           stop
@@ -773,6 +774,7 @@ stop
         enddo
 
          ! force at time = cur_time
+         ! declared in: PROB.F90
         call get_local_neg_mom_force(xlocal,prev_time,cur_time, &
           dt,update_state,local_neg_force)
 
