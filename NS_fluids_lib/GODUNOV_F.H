@@ -1479,7 +1479,7 @@ extern "C"
 
 
    void fort_assimilate_tensor_from_particles(
-     Real* particles_weight,
+     Real* particles_weight_XD,
      int* im_PLS_cpp,
      int* isweep,
      int* tid,

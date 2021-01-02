@@ -304,7 +304,11 @@ Vector<int> NavierStokes::particle_nsubdivide;
 Vector<int> NavierStokes::particle_max_per_nsubdivide; 
 Vector<int> NavierStokes::particle_min_per_nsubdivide; 
 Vector<int> NavierStokes::particleLS_flag; 
-Vector<Real> NavierStokes::particles_weight; 
+
+//=0.0 particles have no effect
+Vector<Real> NavierStokes::particles_weight_LS; 
+Vector<Real> NavierStokes::particles_weight_XD; 
+Vector<Real> NavierStokes::particles_weight_VEL; 
 
 Vector<Real> NavierStokes::particle_volume;
 Vector<Real> NavierStokes::particle_relaxation_time_to_fluid;
@@ -2694,7 +2698,9 @@ NavierStokes::read_params ()
     damping_coefficient.resize(nmat);
     store_elastic_data.resize(nmat);
     particleLS_flag.resize(nmat);
-    particles_weight.resize(nmat);
+    particles_weight_LS.resize(nmat);
+    particles_weight_XD.resize(nmat);
+    particles_weight_VEL.resize(nmat);
 
     particle_volume.resize(nmat);
     particle_relaxation_time_to_fluid.resize(nmat);
@@ -2710,7 +2716,9 @@ NavierStokes::read_params ()
      damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
      particleLS_flag[im]=0;
-     particles_weight[im]=0.0;
+     particles_weight_LS[im]=0.0;
+     particles_weight_XD[im]=0.0;
+     particles_weight_VEL[im]=0.0;
 
      particle_volume[im]=1.0;
      particle_relaxation_time_to_fluid[im]=0.0;
@@ -2724,7 +2732,9 @@ NavierStokes::read_params ()
     pp.queryarr("linear_elastic_model",linear_elastic_model,0,nmat);
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
     pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
-    pp.queryarr("particles_weight",particles_weight,0,nmat);
+    pp.queryarr("particles_weight_LS",particles_weight_LS,0,nmat);
+    pp.queryarr("particles_weight_XD",particles_weight_XD,0,nmat);
+    pp.queryarr("particles_weight_VEL",particles_weight_VEL,0,nmat);
 
     pp.queryarr("particle_volume",particle_volume,0,nmat);
     pp.queryarr("particle_relaxation_time_to_fluid",
@@ -4523,8 +4533,12 @@ NavierStokes::read_params ()
       std::cout << "particleLS_flag i= " << i << ' ' <<
         particleLS_flag[i] << '\n';
 
-      std::cout << "particles_weight i= " << i << ' ' <<
-        particles_weight[i] << '\n';
+      std::cout << "particles_weight_LS i= " << i << ' ' <<
+        particles_weight_LS[i] << '\n';
+      std::cout << "particles_weight_XD i= " << i << ' ' <<
+        particles_weight_XD[i] << '\n';
+      std::cout << "particles_weight_VEL i= " << i << ' ' <<
+        particles_weight_VEL[i] << '\n';
 
       std::cout << "particle_volume i= " << i << ' ' <<
         particle_volume[i] << '\n';
@@ -20462,7 +20476,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
     fort_assimilate_tensor_from_particles( 
-     particles_weight.dataPtr(),
+     particles_weight_XD.dataPtr(),
      &im_elastic, // 0..nmat-1
      &isweep,
      &tid_current,
@@ -20889,7 +20903,9 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
      // 2. for each small sub-box, add a particles at the sub-box center
      //    and add a particle "x-phi grad phi/|grad phi|"
      fort_init_particle_container( 
-       particles_weight.dataPtr(),
+       particles_weight_LS.dataPtr(),
+       particles_weight_XD.dataPtr(),
+       particles_weight_VEL.dataPtr(),
        &tid_current,
        &single_particle_size,
        &isweep,

@@ -30959,7 +30959,7 @@ stop
        ! 2. isweep==1: calculates the elastic stress tensor from 
        !    u=X(t,x0)-x0
       subroutine fort_assimilate_tensor_from_particles( &
-        particles_weight, &
+        particles_weight_XD, &
         im_PLS_cpp, & ! 0..nmat-1
         isweep, &
         tid, &  ! thread id
@@ -31000,7 +31000,7 @@ stop
       INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: particles_weight(nmat)
+      REAL_T, intent(in) :: particles_weight_XD(nmat)
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
@@ -31182,7 +31182,7 @@ stop
          else if (A_matrix.gt.zero) then
            ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
           lambda=B_matrix/A_matrix
-          local_wt=particles_weight(im_PLS_cpp+1)
+          local_wt=particles_weight_XD(im_PLS_cpp+1)
           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
            XDNEWFAB(D_DECL(i,j,k),dir)= &
             XDISP_local-local_wt*lambda
