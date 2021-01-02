@@ -11495,6 +11495,9 @@ void NavierStokes::avgDownALL_TENSOR() {
 // VISCOELASTIC, CTML FORCE
 void NavierStokes::vel_elastic_ALL() {
 
+ int nmat=num_materials;
+ int finest_level=parent->finestLevel();
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
 
@@ -11629,9 +11632,10 @@ void NavierStokes::veldiffuseALL() {
   amrex::Error("SDC_outer_sweeps invalid");
 
  int nmat=num_materials;
+ int finest_level=parent->finestLevel();
+
  int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);
  int nden=nmat*num_state_material;
- int finest_level=parent->finestLevel();
 
  int save_enable_spectral=enable_spectral;
  override_enable_spectral(viscous_enable_spectral);
