@@ -212,16 +212,24 @@
   end subroutine INIT_CONE3D_MODULE
 
   ! fluids tessellate the domain, solids are immersed. 
-  subroutine CONE3D_LS(x,t,LS)
-   use probcommon_module
-   IMPLICIT NONE
+  subroutine CONE3D_LS(x,t,LS,nmat)
+  use probcommon_module
+  IMPLICIT NONE
 
-   REAL_T x(SDIM)
-   REAL_T t
-   INTEGER_T im
-   REAL_T LS(num_materials)
+  INTEGER_T, intent(in) :: nmat
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(in) :: t
+  REAL_T, intent(out) :: LS(nmat)
+  INTEGER_T im
 
-   if ((num_materials.eq.2).and.(probtype.eq.222)) then
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
+
+  if ((num_materials.eq.2).and.(probtype.eq.222)) then
     do im=1,num_materials
      if (im.eq.1) then !air
       LS(im)=9999.0
@@ -247,12 +255,12 @@
       stop
      endif
     enddo ! im=1..num_materials
-   else
+  else
     print *,"num_materials or probtype invalid"
     stop
-   endif
+  endif
 
-   return
+  return
   end subroutine CONE3D_LS
 
   !****************************************************
@@ -365,93 +373,103 @@
 
 
   !****************************************************
-  subroutine CONE3D_VEL(x,t,LS,VEL,velsolid_flag)
-   use probcommon_module
-   IMPLICIT NONE
+subroutine CONE3D_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
 
-   REAL_T x(SDIM)
-   REAL_T t
-   REAL_T LS(num_materials)
-   REAL_T VEL(SDIM)
-   INTEGER_T dir
-   REAL_T local_PI
-   INTEGER_T velsolid_flag
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T dir
+INTEGER_T, intent(in) :: velsolid_flag
 
-   if ((velsolid_flag.eq.0).or. &
-       (velsolid_flag.eq.1)) then
-    ! do nothing
-   else 
-    print *,"velsolid_flag invalid"
-    stop
-   endif
+REAL_T local_PI
 
-   local_PI=4.0d0*atan(one)
+if ((velsolid_flag.eq.0).or. &
+    (velsolid_flag.eq.1)) then
+ ! do nothing
+else 
+ print *,"velsolid_flag invalid"
+ stop
+endif
 
-   if ((LS(2).ge.zero).or. &
-       (velsolid_flag.eq.1)) then
-    ! in solid
-    do dir=1,SDIM
-     VEL(dir)=zero
-    enddo
-   else if ((LS(2).le.zero).and. &
-            (velsolid_flag.eq.0)) then
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 
-    ! boundary values
-    do dir=1,SDIM
-     VEL(dir)=MEHDI_IN_VEL(dir)
-    enddo
-    if (xblob9.gt.zero) then
-     if ((t.ge.zero).and.(t.le.xblob9)) then
-      if (yblob8.eq.zero) then
-       if (radblob9.gt.zero) then
-        VEL(1) = VEL(1)*(one+yblob9*x(2)*exp(-t/radblob9))
-       else
-        print *,"radblob9 invalid"
-        stop
-       endif
-      else if (yblob8.gt.zero) then
-       if (abs(x(2)).le.yblob8) then
-        if (radblob9.gt.zero) then
-         VEL(1) = VEL(1)*(one+yblob9*exp(-t/radblob9)* &
-            sin(local_PI*x(2)/yblob8)*cos(2*local_PI*t/radblob8))
-        else
-         print *,"radblob9 invalid"
-         stop
-        endif
-       else if (abs(x(2)).ge.yblob8) then
-        ! do nothing
-       else
-        print *,"x(2) invalid"
-        stop
-       endif
-      else
-       print *,"yblob8 invalid"
-       stop
-      endif
-     else if (t.ge.xblob9) then
-      ! do nothing
-     else
-      print *,"t invalid"
-      stop
-     endif
-    else if (xblob9.eq.zero) then
-     ! do nothing
+local_PI=4.0d0*atan(one)
+
+if ((LS(2).ge.zero).or. &
+    (velsolid_flag.eq.1)) then
+ ! in solid
+ do dir=1,SDIM
+  VEL(dir)=zero
+ enddo
+else if ((LS(2).le.zero).and. &
+         (velsolid_flag.eq.0)) then
+
+ ! boundary values
+ do dir=1,SDIM
+  VEL(dir)=MEHDI_IN_VEL(dir)
+ enddo
+ if (xblob9.gt.zero) then
+  if ((t.ge.zero).and.(t.le.xblob9)) then
+   if (yblob8.eq.zero) then
+    if (radblob9.gt.zero) then
+     VEL(1) = VEL(1)*(one+yblob9*x(2)*exp(-t/radblob9))
     else
-     print *,"xblob9 invalid"
+     print *,"radblob9 invalid"
      stop
     endif
-
+   else if (yblob8.gt.zero) then
+    if (abs(x(2)).le.yblob8) then
+     if (radblob9.gt.zero) then
+      VEL(1) = VEL(1)*(one+yblob9*exp(-t/radblob9)* &
+         sin(local_PI*x(2)/yblob8)*cos(2*local_PI*t/radblob8))
+     else
+      print *,"radblob9 invalid"
+      stop
+     endif
+    else if (abs(x(2)).ge.yblob8) then
+     ! do nothing
+    else
+     print *,"x(2) invalid"
+     stop
+    endif
    else
-    print *,"LS(2) bust"
-    print *,"t=",t
-    print *,"num_materials=",num_materials
-    print *,"LS(1),LS(2) ",LS(1),LS(2)
-    print *,"velsolid_flag ",velsolid_flag
+    print *,"yblob8 invalid"
     stop
    endif
+  else if (t.ge.xblob9) then
+   ! do nothing
+  else
+   print *,"t invalid"
+   stop
+  endif
+ else if (xblob9.eq.zero) then
+  ! do nothing
+ else
+  print *,"xblob9 invalid"
+  stop
+ endif
 
-   return 
-  end subroutine CONE3D_VEL
+else
+ print *,"LS(2) bust"
+ print *,"t=",t
+ print *,"num_materials=",num_materials
+ print *,"LS(1),LS(2) ",LS(1),LS(2)
+ print *,"velsolid_flag ",velsolid_flag
+ stop
+endif
+
+return 
+end subroutine CONE3D_VEL
 
   !****************************************************
   subroutine CONE3D_PRES(x,t,LS,PRES)
