@@ -194,12 +194,13 @@ REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
 
-  if (nmat.eq.num_materials) then
-   ! do nothing
-  else
-   print *,"nmat invalid"
-   stop
-  endif
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
  ! do nothing
