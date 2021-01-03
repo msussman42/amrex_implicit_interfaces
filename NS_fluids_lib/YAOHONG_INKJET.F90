@@ -30,6 +30,25 @@
 
  contains
 
+
+
+subroutine pressure_input(t, press)
+implicit none
+
+! time vs. pressure, time unit(ms), pressure unit (kPa)
+
+integer, parameter   :: N=500
+real(kind=8)         :: t(N), press(N)
+integer              :: i
+
+open(30,file='press_YAOHONG.in')
+do i=1,N
+   read(30,*) t(i), press(i)
+end do
+close(30)
+end subroutine pressure_input
+
+
   ! initial preparations
   subroutine INIT_YAOHONG_INKJET_MODULE()
    use probcommon_module
