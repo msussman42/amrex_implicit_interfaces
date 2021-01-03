@@ -12861,6 +12861,11 @@ stop
              local_elastic_time=elastic_time(im)
             endif
 
+             ! rho u_t = div beta (grad X + grad X^T)/2
+             ! kg/m^3  m/s^2  = (1/m^2) beta m
+             ! kg/(m^2 s^2) = (1/m) beta
+             ! beta = kg/(m s^2)
+             ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
             elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
                 (local_elastic_time*fort_denconst(im))
             if (elastic_wave_speed.gt.zero) then
