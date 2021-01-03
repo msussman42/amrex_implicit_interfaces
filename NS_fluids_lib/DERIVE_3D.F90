@@ -602,10 +602,10 @@ stop
        stop
       endif
 
-      if (elastic_regularization.ge.one) then
+      if (elastic_regularization.ge.zero) then
        ! do nothing
       else
-       print *,"elastic_regularization must be >= 1.0"
+       print *,"elastic_regularization must be >= 0.0"
        stop
       endif
 
@@ -742,7 +742,7 @@ stop
             !  dd_group=dd*visc_coef in PROB.F90 
             !  xflux*=-dt * visc_coef * facevisc_index in CROSSTERM
            if (mu.ge.zero) then
-            if (elastic_regularization.ge.one) then
+            if (elastic_regularization.ge.zero) then
              mu=mu+dt*elastic_regularization*bulk_modulus  
             else
              print *,"elastic_regularization invalid"

@@ -602,7 +602,7 @@ Vector<int> NavierStokes::temperature_primitive_variable;
 
 Vector<int> NavierStokes::store_elastic_data; // def=0
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
-Vector<Real> NavierStokes::elastic_regularization; // def=1
+Vector<Real> NavierStokes::elastic_regularization; // def=0
 Vector<Real> NavierStokes::lame_coefficient; // def=0
 Vector<int> NavierStokes::linear_elastic_model; // def=0
 Vector<Real> NavierStokes::shear_modulus; // def=0
@@ -2709,7 +2709,7 @@ NavierStokes::read_params ()
 
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
-     elastic_regularization[im]=1.0;
+     elastic_regularization[im]=0.0;
      lame_coefficient[im]=0.0;
      linear_elastic_model[im]=0;
      shear_modulus[im]=0.0;

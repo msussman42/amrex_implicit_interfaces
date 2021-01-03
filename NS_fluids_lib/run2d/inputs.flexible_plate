@@ -16,7 +16,7 @@ geometry.prob_lo   =  0.0 0.0  # ZEYU
 #   drop radius=1 mm
 #   flexible string=6 mm
 # symmetric BC at r=0
-geometry.prob_hi   =  3.0e-3 6.0e-3 
+geometry.prob_hi   =  3.0e-3 6.0e-3  # MKS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -82,12 +82,12 @@ amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 amr.max_level=0 # ZEYU
 ns.particleLS_flag=0 0 1
 ns.particles_weight_LS=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
-ns.particles_weight_XD=0 0 1.0 # 0.0=>particles have no weight   0<=wt<=1
+ns.particles_weight_XD=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
 # particles_weight_VEL used for initializing particle velocity
 # from existing fluid and particle velocity.
 ns.particles_weight_VEL=0 0 1.0 # 0.0=>particles have no weight   0<=wt<=1
-ns.particle_nsubdivide=1 1 4
-ns.particle_min_per_nsubdivide=0 0 0
+ns.particle_nsubdivide=1 1 2
+ns.particle_min_per_nsubdivide=1 1 1
 ns.particle_max_per_nsubdivide=100 100 100
 
 ns.particle_volume=1.0 1.0 1.0
@@ -152,7 +152,7 @@ ns.change_max     = 1.1      # scale back initial timestep
 #ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
 ns.visc_coef=1.0 # ZEYU - leave as 1.0
 #ns.gravity=0.0  # Yongsheng
-ns.gravity        = -980.0  # ZEYU
+ns.gravity        = -9.8  # ZEYU
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 45 degrees=>sigma_{SV}=sigma_{LV}  and
 # sigma_{SL}/sigma_{LV}=1-2^{-1/2}
@@ -175,7 +175,7 @@ ns.gravity        = -980.0  # ZEYU
 #  if theta=90 degrees,
 #  sigma_SV=sigma_SL
 #  12=LV,13=SL,23=SV
-ns.tension=73.0 0.0 0.0  #ZEYU  dyne/cm
+ns.tension=0.073 0.0 0.0  #ZEYU  N/m
 # law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 #law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 
@@ -212,7 +212,7 @@ ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.1053027 Kensuke
 ns.xblob=0.0  # center of falling droplet ZEYU
 ns.yblob=2.5e-3
-ns.zblob=2.5e-3  # (1.5e-3)+(1.0e-3)
+ns.zblob=2.5e-3  # (1.5e-3)+(1.0e-3) MKS
 # 0.18 Yongsheng
 # 0.186/2=0.093 Kensuke
 ns.radblob=1.0e-3 # ZEYU
@@ -241,14 +241,20 @@ ns.heatviscconst=0.0 0.0 0.0
 #material 1 is water
 #material 2 is gas
 #material 3 is substrate
-ns.elastic_viscosity=0.0 0.0 1000.0 # 100000.0 baseline
-ns.elastic_regularization=1.0 1.0 1.0
+#speed of sound in air: 343 m/s
+#speed of sound in water: 1481 m/s
+#elastic wave speed should be at least comparable to water?
+#1500=sqrt(beta/rho)
+#2.25E+6=beta/1E+3  beta=2.25E+9
+#note: bulk modulus of rubber: 1.5E+9 Pascal  1Pascal=kg/(m s^2)
+ns.elastic_viscosity=0.0 0.0 1.5e+9
+ns.elastic_regularization=0.0 0.0 0.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.viscoelastic_model=0 0 2
-ns.viscconst=8.9e-3 0.000181 1.0 # ZEYU
+ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
 ns.added_weight=1.0 1.0 1000.0
