@@ -498,6 +498,9 @@ end subroutine STUB_STATE_BC
 !  x(1)=xsten(0,1)
 !  x(2)=xsten(0,2)
 !  x(SDIM)=xsten(0,SDIM)
+!
+! this routine called from PROB.F90: subroutine get_local_heat_source
+! get_local_heat_source is called from GODUNOV_3D.F90: FORT_HEATSOURCE
 subroutine STUB_HEATSOURCE(im,VFRAC,time,x, &
      xsten,nhalf,temp, &
      heat_source,den,CV,dt,nmat)
@@ -523,6 +526,8 @@ else
  print *,"nmat invalid"
  stop
 endif
+
+heat_source=zero
  
 
 return

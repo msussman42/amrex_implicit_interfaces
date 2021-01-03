@@ -472,255 +472,309 @@ return
 end subroutine CONE3D_VEL
 
   !****************************************************
-  subroutine CONE3D_PRES(x,t,LS,PRES)
+subroutine CONE3D_PRES(x,t,LS,PRES,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: PRES
+
+REAL_T gravity_dz
+
+if (SDIM.eq.2) then
+ gravity_dz=x(SDIM)-probhiy
+else if (SDIM.eq.3) then
+ if (1.eq.0) then
+  gravity_dz=x(SDIM)-probhiz
+ else if (1.eq.1) then
+  gravity_dz=x(2)-probhiy
+ else
+  print *,"do not know what the gravity orientation is"
+  stop
+ endif
+else
+ print *,"dimension bust"
+ stop
+endif
+
+PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
+
+return 
+end subroutine CONE3D_PRES
+
+!****************************************************
+subroutine CONE3D_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
    use probcommon_module
    IMPLICIT NONE
 
-   REAL_T x(SDIM)
-   REAL_T t
-   REAL_T LS(num_materials)
-   REAL_T PRES
-   REAL_T gravity_dz
+INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: nstate_mat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T im,ibase
 
-   if (SDIM.eq.2) then
-    gravity_dz=x(SDIM)-probhiy
-   else if (SDIM.eq.3) then
-    if (1.eq.0) then
-     gravity_dz=x(SDIM)-probhiz
-    else if (1.eq.1) then
-     gravity_dz=x(2)-probhiy
-    else
-     print *,"do not know what the gravity orientation is"
-     stop
-    endif
-   else
-    print *,"dimension bust"
-    stop
-   endif
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if (nstate_mat.eq.num_state_material) then
+ ! do nothing
+else
+ print *,"nstate_mat invalid"
+ stop
+endif
 
-   PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
-
-   return 
-  end subroutine CONE3D_PRES
-  !****************************************************
-  subroutine CONE3D_STATE(x,t,LS,STATE)
-   use probcommon_module
-   IMPLICIT NONE
-
-   REAL_T, intent(in) :: x(SDIM)
-   REAL_T, intent(in) :: t
-   REAL_T, intent(in) :: LS(num_materials)
-   REAL_T, intent(out) :: STATE(num_materials*num_state_material)
-   INTEGER_T im,ibase
-
-   if ((num_materials.eq.2).and. &
+if ((num_materials.eq.2).and. &
     (num_state_material.eq.2).and. &
     (probtype.eq.222)) then
-    do im=1,num_materials
+ do im=1,num_materials
 
-     ibase=(im-1)*num_state_material
-     STATE(ibase+1)=fort_denconst(im)
+  ibase=(im-1)*num_state_material
+  STATE(ibase+1)=fort_denconst(im)
 
-     if (t.eq.zero) then
-      STATE(ibase+2)=fort_initial_temperature(im)
-     else if (t.gt.zero) then
-      STATE(ibase+2)=fort_tempconst(im)
-     else
-      print *,"t invalid"
-      stop
-     endif
+  if (t.eq.zero) then
+   STATE(ibase+2)=fort_initial_temperature(im)
+  else if (t.gt.zero) then
+   STATE(ibase+2)=fort_tempconst(im)
+  else
+   print *,"t invalid"
+   stop
+  endif
 
-    enddo ! im=1..num_materials
-   else
-    print *,"num_materials,num_state_material, or probtype invalid"
-    stop
-   endif
+ enddo ! im=1..num_materials
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
 
-   return
-  end subroutine CONE3D_STATE
+return
+end subroutine CONE3D_STATE
 
   !****************************************************
   ! dir=1..sdim  side=1..2
-  subroutine CONE3D_LS_BC(xwall,xghost,t,LS, &
-   LS_in,dir,side,dx)
-   use probcommon_module
-   IMPLICIT NONE
+subroutine CONE3D_LS_BC(xwall,xghost,t,LS, &
+ LS_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
 
-   REAL_T xwall
-   REAL_T xghost(SDIM)
-   REAL_T t
-   REAL_T LS(num_materials)
-   REAL_T LS_in(num_materials)
-   INTEGER_T dir,side
-   REAL_T dx(SDIM)
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(inout) :: LS(nmat)
+REAL_T, intent(in) :: LS_in(nmat)
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
 
-   if ((dir.ge.1).and.(dir.le.SDIM).and. &
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
-    call CONE3D_LS(xghost,t,LS)
-   else
-    print *,"dir or side invalid"
-    stop
-   endif
+ call CONE3D_LS(xghost,t,LS,nmat)
+else
+ print *,"dir or side invalid"
+ stop
+endif
 
-   return
-  end subroutine CONE3D_LS_BC
+return
+end subroutine CONE3D_LS_BC
 
   !****************************************************
   ! dir=1..sdim  side=1..2 veldir=1..sdim
-  subroutine CONE3D_VEL_BC(xwall,xghost,t,LS, &
-   VEL,VEL_in,veldir,dir,side,dx)
-   use probcommon_module
-   IMPLICIT NONE
+subroutine CONE3D_VEL_BC(xwall,xghost,t,LS, &
+ VEL,VEL_in,veldir,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
 
-   REAL_T xwall
-   REAL_T xghost(SDIM)
-   REAL_T t
-   REAL_T LS(num_materials)
-   REAL_T VEL
-   REAL_T VEL_in
-   INTEGER_T veldir,dir,side
-   REAL_T dx(SDIM)
-   REAL_T local_VEL(SDIM)
-   INTEGER_T velsolid_flag
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: VEL
+REAL_T, intent(in) :: VEL_in
+INTEGER_T, intent(in) :: veldir,dir,side
+REAL_T, intent(in) :: dx(SDIM)
 
-   velsolid_flag=0
-   if ((dir.ge.1).and.(dir.le.SDIM).and. &
+REAL_T local_VEL(SDIM)
+INTEGER_T velsolid_flag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+velsolid_flag=0
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
-    call CONE3D_VEL(xghost,t,LS,local_VEL,velsolid_flag)
-    VEL=local_VEL(veldir)
+ call CONE3D_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
 
-   else
-    print *,"dir,side, or veldir invalid"
-    stop
-   endif
+else
+ print *,"dir,side, or veldir invalid"
+ stop
+endif
 
-   return
-  end subroutine CONE3D_VEL_BC
+return
+end subroutine CONE3D_VEL_BC
 
-  !****************************************************
-  ! dir=1..sdim  side=1..2
-  subroutine CONE3D_PRES_BC(xwall,xghost,t,LS, &
-   PRES,PRES_in,dir,side,dx)
-   use probcommon_module
-   IMPLICIT NONE
+!****************************************************
+! dir=1..sdim  side=1..2
+subroutine CONE3D_PRES_BC(xwall,xghost,t,LS, &
+  PRES,PRES_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
 
-   REAL_T xwall
-   REAL_T xghost(SDIM)
-   REAL_T t
-   REAL_T LS(num_materials)
-   REAL_T PRES
-   REAL_T PRES_in
-   INTEGER_T dir,side
-   REAL_T dx(SDIM)
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: PRES
+REAL_T, intent(in) :: PRES_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
 
-   if ((dir.ge.1).and.(dir.le.SDIM).and. &
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
-    call CONE3D_PRES(xghost,t,LS,PRES)
+ call CONE3D_PRES(xghost,t,LS,PRES,nmat)
 
+else
+ print *,"dir or side invalid"
+ stop
+endif
+
+return
+end subroutine CONE3D_PRES_BC
+
+
+function is_CONE3D_overlay(nmat,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T is_CONE3D_overlay
+INTEGER_T, intent(in) :: nmat,im
+
+if (nmat.eq.num_materials) then
+ if (num_materials.eq.2) then
+  if ((im.ge.1).and.(im.le.nmat)) then
+   if (im.eq.2) then 
+    is_CONE3D_overlay=1
    else
-    print *,"dir or side invalid"
-    stop
-   endif
-
-   return
-  end subroutine CONE3D_PRES_BC
-
-
- function is_CONE3D_overlay(nmat,im)
- use probcommon_module
- IMPLICIT NONE
-
- INTEGER_T is_CONE3D_overlay
- INTEGER_T nmat,im
-
- if (nmat.eq.num_materials) then
-  if (num_materials.eq.2) then
-   if ((im.ge.1).and.(im.le.nmat)) then
-    if (im.eq.2) then 
-     is_CONE3D_overlay=1
-    else
-     is_CONE3D_overlay=0
-    endif
-   else
-    print *,"im invalid in is_CONE3D_overlay"
-    stop
+    is_CONE3D_overlay=0
    endif
   else
-   print *,"num_materials invalid in is_CONE3D_overlay"
+   print *,"im invalid in is_CONE3D_overlay"
    stop
   endif
  else
-  print *,"nmat invalid in is_CONE3D_overlay"
+  print *,"num_materials invalid in is_CONE3D_overlay"
   stop
  endif
-  
- return
- end function is_CONE3D_overlay
+else
+ print *,"nmat invalid in is_CONE3D_overlay"
+ stop
+endif
+ 
+return
+end function is_CONE3D_overlay
 
 
-  !****************************************************
-  ! dir=1..sdim  side=1..2
-  subroutine CONE3D_STATE_BC(xwall,xghost,t,LS, &
-   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
-   use probcommon_module
-   IMPLICIT NONE
+!****************************************************
+! dir=1..sdim  side=1..2
+subroutine CONE3D_STATE_BC(xwall,xghost,t,LS, &
+ STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
 
-   REAL_T xwall
-   REAL_T xghost(SDIM)
-   REAL_T t
-   REAL_T LS(num_materials)
-   REAL_T local_STATE(num_materials*num_state_material)
-   REAL_T STATE
-   REAL_T STATE_merge
-   REAL_T STATE_in
-   INTEGER_T dir,side
-   REAL_T dx(SDIM)
-   INTEGER_T istate,im
-   INTEGER_T ibase,im_crit,im_loop
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T local_STATE(nmat*num_state_material)
+REAL_T, intent(inout) :: STATE
+REAL_T, intent(inout) :: STATE_merge
+REAL_T, intent(in) :: STATE_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, intent(in) :: istate,im
+INTEGER_T ibase,im_crit,im_loop
+INTEGER_T local_bcflag
 
-   if ((istate.ge.1).and. &
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+local_bcflag=1
+
+if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
-    call CONE3D_STATE(xghost,t,LS,local_STATE)
-    ibase=(im-1)*num_state_material
-    STATE=local_STATE(ibase+istate)
-    im_crit=1
-    do im_loop=2,num_materials
-     if (LS(im_loop).gt.LS(im_crit)) then
-      im_crit=im_loop
-     endif
-    enddo
+ call CONE3D_STATE(xghost,t,LS,local_STATE, &
+   local_bcflag,nmat,num_state_material)
+ ibase=(im-1)*num_state_material
+ STATE=local_STATE(ibase+istate)
+ im_crit=1
+ do im_loop=2,num_materials
+  if (LS(im_loop).gt.LS(im_crit)) then
+   im_crit=im_loop
+  endif
+ enddo
 
-    do im_loop=1,num_materials
-     if (is_CONE3D_overlay(num_materials,im_loop).eq.1) then
-      if (LS(im_loop).ge.zero) then
-       im_crit=im_loop
-      else if (LS(im_loop).le.zero) then
-       ! do nothing
-      else
-       print *,"LS(im_loop) invalid"
-       stop
-      endif
-     else if (is_CONE3D_overlay(num_materials,im_loop).eq.0) then
-      ! do nothing
-     else
-      print *,"is_CONE3D_overlay(num_materials,im_loop) invalid"
-      stop
-     endif
-    enddo ! im_loop=1,num_materials
-
-    ibase=(im_crit-1)*num_state_material
-    STATE_merge=local_STATE(ibase+istate)
+ do im_loop=1,num_materials
+  if (is_CONE3D_overlay(num_materials,im_loop).eq.1) then
+   if (LS(im_loop).ge.zero) then
+    im_crit=im_loop
+   else if (LS(im_loop).le.zero) then
+    ! do nothing
    else
-    print *,"istate invalid"
+    print *,"LS(im_loop) invalid"
     stop
    endif
+  else if (is_CONE3D_overlay(num_materials,im_loop).eq.0) then
+   ! do nothing
+  else
+   print *,"is_CONE3D_overlay(num_materials,im_loop) invalid"
+   stop
+  endif
+ enddo ! im_loop=1,num_materials
 
-   return
-  end subroutine CONE3D_STATE_BC
+ ibase=(im_crit-1)*num_state_material
+ STATE_merge=local_STATE(ibase+istate)
+else
+ print *,"istate invalid"
+ stop
+endif
 
- end module CONE3D_module
+return
+end subroutine CONE3D_STATE_BC
+
+end module CONE3D_module
