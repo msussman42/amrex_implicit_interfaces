@@ -512,7 +512,7 @@ int  NavierStokes::NUM_STATE_TYPE=AMREX_SPACEDIM+5;
 
 // 0=velocity stored at cells  
 // 1=velocity stored at faces
-int  NavierStokes::face_flag=0;
+int  NavierStokes::face_flag=1;
 
 // if interp_vel_increment_from_cell==0
 //  face velocity after advection=CISL advection of face velocities
