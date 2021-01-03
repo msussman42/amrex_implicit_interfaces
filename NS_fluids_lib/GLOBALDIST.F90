@@ -1671,7 +1671,6 @@ end subroutine nozzle2d
       use ZEYU_droplet_impact_module
       use CAV3D_module
       use TSPRAY_module
-      use CONE3D_module
       use WAVY_Channel_module
 
       IMPLICIT NONE
@@ -1739,10 +1738,6 @@ end subroutine nozzle2d
 
        else if (probtype.eq.413) then ! zeyu's droplet impact problem
         call ZEYU_droplet_impact_LS(xvec,time,dist_array)
-        dist=dist_array(im)
-
-       else if (probtype.eq.222) then ! cone3D
-        call CONE3D_LS(xvec,time,dist_array)
         dist=dist_array(im)
 
        else if (probtype.eq.915) then ! wavy channel

@@ -144,6 +144,7 @@ stop
       use CRYOGENIC_TANK_MK_module
       use flexible_plate_impact_module
       use CONE3D_module
+      use YAOHONG_INKJET_module
       use WAVY_Channel_module
       use rigid_FSI_module
       
@@ -279,7 +280,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=10
+      probtype_list_size=12
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -290,6 +291,8 @@ stop
       used_probtypes(8)=423  ! CRYOGENIC_TANK_MK
       used_probtypes(9)=424  ! DROP_IN_SHEAR
       used_probtypes(10)=2003 ! 1D TEST, Kassemi model for PD test 
+      used_probtypes(11)=222 ! CONE3D_module 
+      used_probtypes(12)=2011 ! YAOHONG_INKJET 
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -435,6 +438,26 @@ stop
        SUB_HEATSOURCE=>SIMPLE_KASSEMI_HEATSOURCE
        SUB_SUMINT=>SIMPLE_KASSEMI_SUMINT ! compare with analytical
        SUB_ASSIMILATE=>SIMPLE_KASSEMI_ASSIMILATE
+      else if (probtype.eq.222) then
+       SUB_INIT_MODULE=>INIT_CONE3D_MODULE
+       SUB_LS=>CONE3D_LS
+       SUB_VEL=>CONE3D_VEL
+       SUB_PRES=>CONE3D_PRES
+       SUB_STATE=>CONE3D_STATE
+       SUB_LS_BC=>CONE3D_LS_BC
+       SUB_VEL_BC=>CONE3D_VEL_BC
+       SUB_PRES_BC=>CONE3D_PRES_BC
+       SUB_STATE_BC=>CONE3D_STATE_BC
+      else if (probtype.eq.2011) then
+       SUB_INIT_MODULE=>INIT_YAOHONG_INKJET_MODULE
+       SUB_LS=>YAOHONG_INKJET_LS
+       SUB_VEL=>YAOHONG_INKJET_VEL
+       SUB_PRES=>YAOHONG_INKJET_PRES
+       SUB_STATE=>YAOHONG_INKJET_STATE
+       SUB_LS_BC=>YAOHONG_INKJET_LS_BC
+       SUB_VEL_BC=>YAOHONG_INKJET_VEL_BC
+       SUB_PRES_BC=>YAOHONG_INKJET_PRES_BC
+       SUB_STATE_BC=>YAOHONG_INKJET_STATE_BC
       else if (probtype.eq.2000) then
        SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
        SUB_clamped_LS_no_scale=>flexible_plate_clamped_LS
@@ -1067,10 +1090,6 @@ stop
       else if (probtype.eq.311) then
       
        call INIT_USERDEF_MODULE()
-      
-      else if (probtype.eq.222) then
-      
-       call INIT_CONE3D_MODULE()
       
       else if (probtype.eq.915) then
       
