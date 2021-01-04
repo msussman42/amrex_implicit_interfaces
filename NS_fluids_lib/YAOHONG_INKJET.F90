@@ -23,27 +23,28 @@
  ! probtype==2011
  module YAOHONG_INKJET_module
 
-  implicit none
+ implicit none
 
-    ! module vars declared here.
-
+! time vs. pressure, time unit(ms), pressure unit (kPa)
+ INTEGER_T, parameter :: N_pressure=500
+ REAL_T :: t_pressure(N_pressure), press_nozzle(N_pressure)
 
  contains
 
 
 
-subroutine pressure_input(t, press)
+subroutine pressure_input()
 implicit none
 
 ! time vs. pressure, time unit(ms), pressure unit (kPa)
 
-integer, parameter   :: N=500
-real(kind=8)         :: t(N), press(N)
-integer              :: i
+INTEGER_T  :: i
+
+print *,"opening press_YAOHONG.in"
 
 open(30,file='press_YAOHONG.in')
-do i=1,N
-   read(30,*) t(i), press(i)
+do i=1,N_pressure
+   read(30,*) t_pressure(i), press_nozzle(i)
 end do
 close(30)
 end subroutine pressure_input
@@ -54,9 +55,111 @@ end subroutine pressure_input
    use probcommon_module
    IMPLICIT NONE
 
+   call pressure_input()
 
    return
   end subroutine INIT_YAOHONG_INKJET_MODULE
+
+
+subroutine press_interp(t_input,t, press, N, p_output)                        
+implicit none
+INTEGER_T   :: N
+REAL_T         :: t(N), press(N)
+REAL_T         :: t_input, p_output
+INTEGER_T              :: m  
+m=floor(t_input*5)
+if (m<N) then
+   p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
+else
+   write(*,*) "press_interp: input time is out of initial set up"
+end if
+end subroutine press_interp
+
+subroutine LS_geometry(x,y,ls)
+implicit none
+
+! setup the computational domain with level set function
+! 11.5x1.5 (mm) domain
+! ls for nozzel geometry
+
+REAL_T   :: x, y, ls
+REAL_T   :: d1,d2
+REAL_T   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
+REAL_T   :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0
+
+if (y<=l1.and.y>=0) then
+   if (x<=w1) then
+      ls=sqrt((x-w1)**2+(l1-y)**2)
+   else
+      ls=l1-y
+   end if
+else if (y-l1<=l2.and.y>=0) then
+   if (x<=w1) then
+      ls= w1-x
+   else 
+      d1=x-w1
+      d2=y-l1
+      ls=-min(d1,d2)
+   end if
+else if (y-l1-l2<l3) then
+   ls=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+else if (y-l1-l2-l3<=l4.and.y>=0) then
+   if (x<w2) then
+      d1=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+      d2=w2-x
+      ls=min(d1,d2)
+   else
+      ls=w2-x
+   end if
+else
+   write(*,*) "ls geometry, (x,y) is out of the domain",x,y
+end if
+end subroutine LS_geometry
+
+subroutine LS_air_water(x,y,ls)
+implicit none
+REAL_T   :: x, y, ls
+REAL_T   :: d1,d2
+REAL_T   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
+REAL_T   :: l1=4.0,  l2 =2.5, l3=4.5, l4=0.5, l=11.5
+
+if (y<=l1.and.y>=0) then
+   if (x<=w1) then
+      ls=y-l1
+   else
+      ls=-sqrt((x-w1)**2+(l1-y)**2)
+   end if
+else if (y-l1<=l2.and.y>=0) then
+   if (x<=w1) then
+      d1=w1-x
+      d2=y-l1
+      ls= min(d1,d2)
+   else
+      ls=w1-x
+   end if
+else if (y-l1-l2<=l3.and.y>=0) then
+   if (x<=w1) then
+      d1=y-l1
+      d2=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+      ls= min(d1,d2)
+   else
+      ls=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+   end if
+else if (y-l1-l2-l3<=l4.and.y>=0) then
+   if (x<=w2) then
+      d1=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+      d2=w2-x
+      ls=min(d1,d2)
+   else
+      ls=w2-x
+   end if
+else
+   write(*,*) "ls air_water, (x,y) is out of the domain",x,y
+end if
+end subroutine LS_air_water
+
+
+
 
   ! fluids tessellate the domain, solids are immersed. 
   subroutine YAOHONG_INKJET_LS(x,t,LS,nmat)
@@ -78,8 +181,17 @@ end subroutine pressure_input
 
   if ((num_materials.eq.3).and.(probtype.eq.2011)) then
     do im=1,num_materials
-
-
+     if (im.eq.1) then
+      call LS_air_water(x(1),x(2),LS(1))
+     else if (im.eq.2) then
+      call LS_air_water(x(1),x(2),LS(2))
+      LS(2)=-LS(2)
+     else if (im.eq.3) then
+      call LS_geometry(x(1),x(2),LS(3))
+     else
+      print *,"im invalid"
+      stop
+     endif
     enddo ! im=1..num_materials
   else
     print *,"num_materials or probtype invalid"
