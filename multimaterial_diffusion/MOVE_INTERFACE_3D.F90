@@ -2963,7 +2963,7 @@ stop
         total_iterations, &
         continuous_mof, &
         force_cmof_at_triple_junctions, &
-        partial_cmof_stencil_at_walls,
+        partial_cmof_stencil_at_walls, &
         radius_cutoff)
 
        call set_boundary_recon( &
@@ -3197,7 +3197,7 @@ stop
         total_iterations, &
         continuous_mof, &
         force_cmof_at_triple_junctions, &
-        partial_cmof_stencil_at_walls,
+        partial_cmof_stencil_at_walls, &
         radius_cutoff)
 
        call set_boundary_recon( &
