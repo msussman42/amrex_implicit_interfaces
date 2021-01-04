@@ -206,6 +206,7 @@ contains
        ! x_pair in absolute coordinate system.
       caller_id=12
       call multi_get_area_pairs( &
+        tessellate, &
         bfact,dx, &
         xsten_right, &  ! aka xsten0_plus
         xsten_left, &   ! aka xsten0_minus
@@ -1169,6 +1170,7 @@ contains
 
     integer                     :: is_processed(nmat)
     integer :: nhalf_box
+    INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
     nhalf_box=1
 
@@ -1246,6 +1248,7 @@ contains
     else if (vcenter(im_crit).gt.zero) then
      ! normalize the volume fractions so that the sum is 1.
      call make_vfrac_sum_ok_copy( &
+       cmofsten, &
        xsten,nhalf,nhalf_box, &
        bfact,dx, &
        tessellate,mofdata,mofdatavalid,nmat,SDIM,3001)

@@ -3508,6 +3508,7 @@ real(kind=8)                     :: xtetlist_vof(sdim+1,sdim,2000)
 real(kind=8)                     :: xtetlist_cen(sdim+1,sdim,2000)
 real(kind=8)                     :: multi_centroidA(nmat_in,sdim)
 integer                          :: ngeom_recon_in,vofcomp
+integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
 print *,"in init_mofdata"
 print *,"N,sdim,nmat_in,nten = ",N,sdim,nmat_in,nten
@@ -3600,6 +3601,7 @@ do  i = 0,N-1
       local_mofdata, &
       multi_centroidA, &
       continuous_mof, &
+      cmofsten, &
       nmat_in, &
       sdim, &
       caller_id)

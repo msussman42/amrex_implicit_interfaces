@@ -77,7 +77,7 @@ real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 real(kind=8),parameter     :: NB_top=1.5d0, NB_bot=1.5d0  
 real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 real(kind=8),PARAMETER     :: TDIFF_in_mat3 = 1.0d0
-integer,PARAMETER     :: two_interfaces = 1
+integer,PARAMETER     :: two_interfaces = 0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
