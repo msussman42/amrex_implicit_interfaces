@@ -1,6 +1,8 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
+#define PROTOTYPE_PROBCOMMON 0
+
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -248,13 +250,24 @@ implicit none
 
       REAL_T, PARAMETER :: ICEFACECUT_EPS=1.0D-5
 
-       ! Default: FACETOL_DVOL=1.0D-3 
-       ! Default: FACETOL_DVOL=1.0D-6 (prototype code)
-       ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
+      ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
+#if (PROTOTYPE_PROBCOMMON==0)
       REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-3
-       ! Default: VOFTOL=1.0D-3
-       ! Default: VOFTOL=1.0D-10 (prototype code)
+#elif (PROTOTYPE_PROBCOMMON==1)
+      REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-6
+#else
+      print *,"PROTOTYPE_PROBCOMMON bust"
+      stop
+#endif
+
+#if (PROTOTYPE_PROBCOMMON==0)
       REAL_T, PARAMETER :: VOFTOL_REDIST=1.0D-3
+#elif (PROTOTYPE_PROBCOMMON==1)
+      REAL_T, PARAMETER :: VOFTOL_REDIST=1.0D-10
+#else
+      print *,"PROTOTYPE_PROBCOMMON bust"
+      stop
+#endif
       REAL_T, PARAMETER :: FACETOL_REDIST=1.0D-2
       REAL_T, PARAMETER :: FACETOL_SANITY=1.0D-3
        ! Default: LS_CURV_TOL=1.0D-2 
@@ -262,9 +275,16 @@ implicit none
       REAL_T, PARAMETER :: LS_CURV_TOL=1.0D-2
       REAL_T, PARAMETER :: LSTOL=1.0D-2
       REAL_T, PARAMETER :: VOFTOL_SLOPES=1.0D-2
-       ! Default: VOFTOL=1.0D-8
-       ! Default: VOFTOL=1.0D-10 (prototype code)
+
+#if (PROTOTYPE_PROBCOMMON==0)
       REAL_T, PARAMETER :: VOFTOL=1.0D-8
+#elif (PROTOTYPE_PROBCOMMON==1)
+      REAL_T, PARAMETER :: VOFTOL=1.0D-10
+#else
+      print *,"PROTOTYPE_PROBCOMMON bust"
+      stop
+#endif
+
       REAL_T, PARAMETER :: VOFTOL_AREAFRAC=1.0D-1
        ! Default: VOFTOL_MULTI_VOLUME=1.0D-12
       REAL_T, PARAMETER :: VOFTOL_MULTI_VOLUME=1.0D-12

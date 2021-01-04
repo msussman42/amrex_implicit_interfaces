@@ -1864,11 +1864,13 @@ contains
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat) then
+          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
        print *,"num_elements_blobclass invalid"
+       print *,"blob_cell_count added December 6, 2020"
        stop
       endif
 
@@ -6834,8 +6836,7 @@ contains
 
        do i1=0,bfact
         if ((nc.ge.1).and.(nc.le.SDIM)) then
-         if ((conservative_div_uu.eq.1).or. &
-             (conservative_div_uu.eq.2)) then
+         if (conservative_div_uu.eq.1) then
           dest_interp(i1)=dest_interp(i1)*vel(i1)
          else if (conservative_div_uu.eq.0) then
           ! do nothing
@@ -8303,14 +8304,63 @@ contains
       return
       end function is_ice
 
+      function is_elastic_material(nmat,im)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T :: is_elastic_material
+      INTEGER_T, intent(in) :: nmat,im
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid is_elastic_material"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid16"
+       stop
+      endif
+      is_elastic_material=0
+
+      if (is_rigid(nmat,im).eq.0) then
+       if ((fort_elastic_time(im).gt.zero).and. &
+           (fort_elastic_viscosity(im).gt.zero)) then
+        if (fort_viscoelastic_model(im).eq.2) then
+         is_elastic_material=1
+        else if ((fort_viscoelastic_model(im).eq.1).or. &
+                 (fort_viscoelastic_model(im).eq.0)) then
+         ! do nothing
+        else
+         print *,"viscoelastic_model(im) invalid"
+         stop
+        endif
+       else if ((fort_elastic_time(im).eq.zero).or. &
+                (fort_elastic_viscosity(im).eq.zero)) then
+        ! do nothing
+       else
+        print *,"fort_elastic_time(im) or fort_elastic_viscosity(im) invalid"
+        stop
+       endif
+      else if (is_rigid(nmat,im).eq.1) then
+       ! do nothing
+      else
+       print *,"is_rigid invalid"
+       stop
+      endif
+
+      return
+      end function is_elastic_material
+
 
       function is_FSI_rigid(nmat,im)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T is_FSI_rigid
-      INTEGER_T nmat,im
+      INTEGER_T :: is_FSI_rigid
+      INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_FSI_rigid"
@@ -9184,6 +9234,9 @@ contains
         dist=xhi-x
        else
         print *,"dist invalid in squaredist"
+        print *,"x,y,xlo,xhi,ylo,yhi,xmid,ymid ", &
+              x,y,xlo,xhi,ylo,yhi,xmid,ymid
+         ! gdb: break GLOBALUTIL.F90:9188
         stop
        endif
 
@@ -13150,14 +13203,20 @@ contains
 
        ! only called if override_density=1 or override_density=2
        ! only takes into account fort_drhodz.
+       ! caller_id==0  => called from DENCOR
+       ! caller_id==1  => called from general_hydrostatic_pressure_density
+       !                  (which is called from INITPOTENTIAL)
       subroutine default_hydrostatic_pressure_density( &
         xpos,rho,pres,liquid_temp, &
         gravity_normalized, &
-        imat,override_density)
+        imat,override_density, &
+        caller_id)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imat,override_density
+      INTEGER_T, intent(in) :: imat
+      INTEGER_T, intent(in) :: override_density
+      INTEGER_T, intent(in) :: caller_id
       INTEGER_T nmat
       REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(inout) :: rho,pres
@@ -13182,6 +13241,13 @@ contains
        ! do nothing
       else
        print *,"liquid_temp cannot be negative"
+       stop
+      endif
+      if ((caller_id.eq.0).or. &
+          (caller_id.eq.1)) then
+       ! do nothing
+      else
+       print *,"caller_id invalid"
        stop
       endif
 
@@ -13250,8 +13316,19 @@ contains
        ! rho=rho(T,Y,z)
       if (override_density.eq.1) then
 
-       if ((DrhoDz.eq.zero).and.(gravity_normalized.eq.zero)) then
-        rho=fort_denconst(1)
+       if ((DrhoDz.eq.zero).and. &
+           (gravity_normalized.eq.zero)) then
+
+        if (caller_id.eq.0) then
+         ! do nothing, called from DENCOR, keep rho=denfree=denconst(imat)
+        else if (caller_id.eq.1) then 
+          ! called from general_hydrostatic_pressure_density
+         rho=fort_denconst(1)
+        else
+         print *,"caller_id invalid"
+         stop
+        endif
+
         pres=zero
        else if ((DrhoDz.eq.zero).and. &
                 (gravity_normalized.ne.zero)) then
@@ -17039,8 +17116,345 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
+subroutine stress_from_strain( &
+ im_elastic, &
+ xsten,nhalf, &
+ gradu, &  ! dir_x (displace),dir_space
+ xdisplace, &
+ ydisplace, &
+ DISP_TEN, &  ! dir_x (displace),dir_space
+ hoop_22) ! if RZ, no "theta,theta" component, no place to put hoop_22
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: im_elastic
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: gradu(SDIM,SDIM)
+REAL_T, intent(in) :: xdisplace
+REAL_T, intent(in) :: ydisplace
+REAL_T, intent(out) :: DISP_TEN(SDIM,SDIM)
+REAL_T, intent(out) :: hoop_22
+REAL_T :: gradu_local(SDIM,SDIM)
+INTEGER_T :: dir_x,dir_space,dir_inner
+REAL_T :: dx_local(SDIM)
+
+REAL_T :: hoop_12
+REAL_T strain_displacement(SDIM,SDIM)
+REAL_T F(SDIM,SDIM)
+REAL_T C(SDIM,SDIM)
+REAL_T B(SDIM,SDIM)
+REAL_T E(SDIM,SDIM)
+REAL_T scale_factor
+REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
+INTEGER_T linear_elastic_model
+
+if (nhalf.ge.1) then
+ ! do nothing
+else
+ print *,"nhalf invalid"
+ stop
+endif
+if ((im_elastic.ge.1).and.(im_elastic.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im_elastic invalid"
+ stop
+endif
+
+do dir_x=1,SDIM  ! dir_x (displace)
+do dir_space=1,SDIM
+ gradu_local(dir_x,dir_space)=gradu(dir_x,dir_space)
+enddo
+enddo
+
+do dir_space=1,SDIM
+ dx_local(dir_space)=xsten(1,dir_space)-xsten(-1,dir_space)
+ if (dx_local(dir_space).gt.zero) then
+  ! do nothing
+ else
+  print *,"dx_local invalid"
+  stop
+ endif
+enddo
+
+hoop_12=0.0d0
+hoop_22=0.0d0
+if (SDIM.eq.2) then
+ if (levelrz.eq.0) then
+  ! do nothing
+ else if (levelrz.eq.1) then
+  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
+   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+   hoop_22=zero
+  else 
+   print *,"xsten(0,1) invalid"
+   stop
+  endif
+ else if (levelrz.eq.3) then
+  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
+   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
+   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+   enddo
+   gradu_local(1,2)=gradu_local(1,2)+hoop_12
+   gradu_local(2,2)=gradu_local(2,2)+hoop_22
+  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+   hoop_12=zero
+   hoop_22=zero
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=zero
+   enddo
+  else 
+   print *,"xsten(0,1) invalid"
+   stop
+  endif
+ else
+  print *,"levelrz invalid"
+  stop
+ endif
+else if (SDIM.eq.3) then
+ if (levelrz.eq.0) then
+  ! do nothing
+ else if (levelrz.eq.3) then
+  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
+   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
+   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+   enddo
+   gradu_local(1,2)=gradu_local(1,2)+hoop_12
+   gradu_local(2,2)=gradu_local(2,2)+hoop_22
+  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+   hoop_12=zero
+   hoop_22=zero
+   do dir_x=1,SDIM
+    gradu_local(dir_x,2)=zero
+   enddo
+  else 
+   print *,"xsten(0,1) invalid"
+   stop
+  endif
+ else
+  print *,"levelrz invalid"
+  stop
+ endif
+else
+ print *,"dimension bust"
+ stop
+endif
 
 
+scale_factor=zero
+
+ ! gradu(i,j)=partial XD_{i}/partial x_j
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (dir_x.eq.dir_space) then
+  Identity_comp=one
+ else
+  Identity_comp=zero
+ endif
+
+ F(dir_x,dir_space)=gradu_local(dir_x,dir_space)+Identity_comp
+
+ if (scale_factor.le.abs(F(dir_x,dir_space))) then
+  scale_factor=abs(F(dir_x,dir_space))
+ endif
+
+ C(dir_x,dir_space)=zero
+ B(dir_x,dir_space)=zero
+  ! look for ``linear elasticity'' on wikipedia (eij)
+ strain_displacement(dir_x,dir_space)=half* &
+    (gradu_local(dir_x,dir_space)+ &
+     gradu_local(dir_space,dir_x))
+  ! isotropic
+  ! Cijkl=K dij dkl + mu(dik djl + dil djk -(2/3)dij dkl)
+  ! Cijkl ekl=K dij ekk + mu(dik djl ekl + dil djk ekl -
+  !  (2/3)dij dkl ekl )=
+  ! K dij ekk + mu(eij+eji-(2/3)dij ekk)=
+  ! K dij ekk + 2mu(eij-(1/3)dij ekk)
+
+enddo
+enddo
+
+if (scale_factor.lt.one) then
+ scale_factor=one
+endif
+scale_factor=scale_factor*scale_factor
+
+ ! C=F^T F = right cauchy green tensor
+ ! E=(1/2)*(C-I)  Green Lagrange strain tensor
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ do dir_inner=1,SDIM
+   ! C=F^T F
+  C(dir_x,dir_space)=C(dir_x,dir_space)+ &
+          F(dir_inner,dir_x)*F(dir_inner,dir_space)
+   ! B=F F^T
+  B(dir_x,dir_space)=B(dir_x,dir_space)+ &
+          F(dir_x,dir_inner)*F(dir_space,dir_inner)
+ enddo
+enddo
+enddo
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (abs(C(dir_x,dir_space)-C(dir_space,dir_x)).le. &
+     1.0D-5*scale_factor) then
+  ! do nothing
+ else
+  print *,"scale_factor = ",scale_factor
+  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"dir_x,dir_space ",dir_x,dir_space
+  print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
+  print *,"C(dir_space,dir_x)=",C(dir_space,dir_x)
+  print *,"expecting C^T=C"
+  stop
+ endif 
+ if (abs(B(dir_x,dir_space)-B(dir_space,dir_x)).le. &
+     1.0D-5*scale_factor) then
+  ! do nothing
+ else
+  print *,"scale_factor = ",scale_factor
+  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"dir_x,dir_space ",dir_x,dir_space
+  print *,"B(dir_x,dir_space)=",B(dir_x,dir_space)
+  print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
+  print *,"expecting B^T=B"
+  stop
+ endif
+
+enddo
+enddo
+trace_E=zero
+trace_SD=zero ! trace of the strain displacement
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (dir_x.eq.dir_space) then
+  Identity_comp=one
+ else
+  Identity_comp=zero
+ endif
+  ! C=F^T F=right cauchy green tensor
+  ! strain_displacement=(1/2)(grad u + (grad u)^T) = eps_ij
+  ! E=(C-I)/2=( (grad u + I)^T(grad u +I) - I)/2=eps_ij +
+  !  grad u^T gradu/2
+ E(dir_x,dir_space)=half*(C(dir_x,dir_space)-Identity_comp)
+ trace_E=trace_E+Identity_comp*E(dir_x,dir_space)
+ trace_SD=trace_SD+Identity_comp*strain_displacement(dir_x,dir_space)
+enddo
+enddo 
+ ! Sigma=2 mu_s E + lambda Tr(E) I
+ ! structure force is div Sigma=div mu_s (Sigma/mu_s)
+ ! Richter, JCP, 2013
+ ! MKS: mu_s=1E+4   lambda=4E+4  density_struct=1E+3
+ ! bulk modulus units:
+ ! steel 160 giga Pa=160 * 1E+9  N/m^2
+ ! N/m^2=kg m/s^2 / m^2 = kg /(m s^2) = 1000/100 g/(cm s^2)
+do dir_x=1,SDIM 
+do dir_space=1,SDIM
+ if (dir_x.eq.dir_space) then
+  Identity_comp=one
+ else
+  Identity_comp=zero
+ endif
+
+ bulk_modulus=fort_elastic_viscosity(im_elastic)
+ lame_coefficient=fort_lame_coefficient(im_elastic)
+ linear_elastic_model=fort_linear_elastic_model(im_elastic)
+
+ if (bulk_modulus.gt.zero) then
+
+  if (linear_elastic_model.eq.1) then
+         ! only valid for small deformations
+   DISP_TEN(dir_x,dir_space)=( &
+       two*bulk_modulus*strain_displacement(dir_x,dir_space)+ &
+          lame_coefficient*trace_SD*Identity_comp)/bulk_modulus
+  else if (linear_elastic_model.eq.0) then
+   DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
+          lame_coefficient*trace_E*Identity_comp)/bulk_modulus
+  else
+   print *,"linear_elastic_model invalid"
+   stop
+  endif
+ else 
+  print *,"bulk_modulus invalid ",bulk_modulus
+  stop
+ endif
+enddo
+enddo
+
+end subroutine stress_from_strain
+
+subroutine project_tensor(mask_center,n_elastic, &
+        mask_left,mask_right,tensor_data)
+IMPLICIT NONE
+
+INTEGER_T, intent(out) :: mask_center
+INTEGER_T, intent(in) :: mask_left
+INTEGER_T, intent(in) :: mask_right
+REAL_T, intent(in) :: n_elastic(SDIM)
+REAL_T, intent(inout) :: tensor_data(0:1,SDIM,SDIM)
+
+INTEGER_T idest,isource
+INTEGER_T iprod,jprod,kprod
+REAL_T PIK,PKJ
+REAL_T PT(SDIM,SDIM)
+REAL_T PTP(SDIM,SDIM)
+
+
+if ((mask_left.eq.0).and.(mask_right.eq.0)) then
+ mask_center=0
+else if ((mask_left.eq.1).and.(mask_right.eq.1)) then
+ mask_center=1
+else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
+         ((mask_left.eq.1).and.(mask_right.eq.0))) then
+ mask_center=1
+ if ((mask_left.eq.0).and.(mask_right.eq.1)) then
+  idest=0
+  isource=1
+ else if ((mask_right.eq.0).and.(mask_left.eq.1)) then
+  idest=1
+  isource=0
+ else
+  print *,"mask_left or mask_right invalid"
+  stop
+ endif
+  ! P=(I - n^T n)
+ do iprod=1,SDIM
+ do jprod=1,SDIM
+  PT(iprod,jprod)=zero
+  do kprod=1,SDIM
+   PIK=-n_elastic(iprod)*n_elastic(kprod)  
+   if (iprod.eq.kprod) then
+    PIK=PIK+one
+   endif
+   PT(iprod,jprod)=PT(iprod,jprod)+PIK*tensor_data(isource,kprod,jprod)
+  enddo ! kprod=1..sdim
+ enddo ! jprod
+ enddo ! iprod
+
+ do iprod=1,SDIM
+ do jprod=1,SDIM
+  PTP(iprod,jprod)=zero
+  do kprod=1,SDIM
+   PKJ=-n_elastic(kprod)*n_elastic(jprod)  
+   if (jprod.eq.kprod) then
+    PKJ=PKJ+one
+   endif
+   PTP(iprod,jprod)=PTP(iprod,jprod)+PKJ*PT(iprod,kprod)
+  enddo ! kprod=1..sdim
+  tensor_data(idest,iprod,jprod)=PTP(iprod,jprod)
+ enddo ! jprod
+ enddo ! iprod
+else
+ print *,"mask_left or mask_right invalid"
+ stop
+endif
+
+end subroutine project_tensor
 
 end module global_utility_module
 

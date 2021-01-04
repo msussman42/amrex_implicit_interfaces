@@ -49,6 +49,7 @@ stop
         finest_level, &
         max_level, &
         ngrow, &
+        vofbc, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         xlo,dx, &
@@ -65,6 +66,8 @@ stop
         total_calls, &
         total_iterations, &
         continuous_mof, &
+        force_cmof_at_triple_junctions, &
+        partial_cmof_stencil_at_walls, &
         radius_cutoff)
 #if (STANDALONE==0)
       use probf90_module
@@ -77,39 +80,44 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T tid
-      INTEGER_T gridno
-      INTEGER_T level,finest_level,max_level
-      INTEGER_T nsteps
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: gridno
+      INTEGER_T, intent(in) :: level,finest_level,max_level
+      INTEGER_T, intent(in) :: nsteps
 
-      INTEGER_T nmat
+      INTEGER_T, intent(in) :: nmat
 
-      INTEGER_T radius_cutoff(nmat)
+      INTEGER_T, intent(in) :: radius_cutoff(nmat)
 
-      INTEGER_T continuous_mof
-      INTEGER_T nten
-      INTEGER_T update_flag
-      REAL_T time
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T ngrow
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(slopes)
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: force_cmof_at_triple_junctions
+      INTEGER_T, intent(in) :: partial_cmof_stencil_at_walls
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: update_flag
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: vofbc(SDIM,2)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(slopes)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
      
-      REAL_T  masknbr(DIMV(masknbr),4) 
-      REAL_T  vof(DIMV(vof),nmat*ngeom_raw) 
-      REAL_T  LS(DIMV(LS),nmat) 
-      REAL_T  slopes(DIMV(slopes),nmat*ngeom_recon) 
-      REAL_T  snew(DIMV(snew),nmat*ngeom_raw+1) 
-      REAL_T latent_heat(2*nten)
+      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4) 
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw) 
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat) 
+      REAL_T, intent(out) :: slopes(DIMV(slopes),nmat*ngeom_recon) 
+      REAL_T, intent(inout) :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, intent(in) :: latent_heat(2*nten)
       
       INTEGER_T i,j,k,dir
       INTEGER_T igridlo(3),igridhi(3)
+
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T im
       REAL_T mofdata(nmat*ngeom_recon)
@@ -140,6 +148,7 @@ stop
       INTEGER_T nmax
 
       INTEGER_T continuous_mof_parm
+      INTEGER_T continuous_mof_base
      
       INTEGER_T klosten,khisten
       INTEGER_T nhalf
@@ -150,10 +159,11 @@ stop
       INTEGER_T nten_test
       REAL_T volume_super
       REAL_T volume_super_mofdata
-      REAL_T volsten,volmat
+      REAL_T volsten
+      REAL_T volmat
       REAL_T censten(SDIM)
       REAL_T cen_super(SDIM)
-      REAL_T voflist(nmat)
+      REAL_T voflist_center(nmat)
       REAL_T voflist_stencil(nmat)
       REAL_T voflist_test
       INTEGER_T mof_verbose,use_ls_data,nhalfbox_sten
@@ -161,6 +171,16 @@ stop
       INTEGER_T debugslope
       INTEGER_T tessellate
       INTEGER_T nhalf_box
+
+      REAL_T vfrac_fluid_sum
+      REAL_T vfrac_solid_sum
+      REAL_T vfrac_solid_sum_center
+      REAL_T vfrac_raster_solid
+      REAL_T vfrac_local(nmat)
+      INTEGER_T im_raster_solid
+      INTEGER_T mod_cmofsten
+      INTEGER_T local_mod_cmofsten
+      INTEGER_T loc_indx
 
 #include "mofdata.H"
 
@@ -223,11 +243,11 @@ stop
        print *,"ngrow invalid in slope recon"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.3).and. &
-          (continuous_mof.ne.4).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. & ! MOF
+          (continuous_mof.eq.2).or. & ! CMOF
+          (continuous_mof.eq.4)) then ! CLSVOF/CMOF
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -301,6 +321,14 @@ stop
 
        use_ls_data=1
 
+       do i1=-1,1
+       do j1=-1,1
+       do k1=klosten,khisten
+        cmofsten(D_DECL(i1,j1,k1))=1
+       enddo
+       enddo
+       enddo
+
        do im=1,nmat
 
         vofcomprecon=(im-1)*ngeom_recon+1
@@ -328,15 +356,58 @@ stop
         ! sum of F_rigid<=1
        nhalf_box=1
        call make_vfrac_sum_ok_base( &
+         cmofsten, &
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
-         tessellate,mofdata,nmat,SDIM,6)
+         tessellate, & ! =0
+         mofdata,nmat,SDIM,6)
+
+       vfrac_fluid_sum=zero
+       vfrac_solid_sum=zero
+       im_raster_solid=0
+       vfrac_raster_solid=zero
+       mod_cmofsten=0
+       local_mod_cmofsten=0
 
        do im=1,nmat
         vofcomprecon=(im-1)*ngeom_recon+1
-        voflist(im)=mofdata(vofcomprecon)
+        voflist_center(im)=mofdata(vofcomprecon)
         voflist_stencil(im)=zero
+
+        if (is_rigid(nmat,im).eq.0) then
+         vfrac_fluid_sum=vfrac_fluid_sum+voflist_center(im)
+        else if (is_rigid(nmat,im).eq.1) then
+         if (im_raster_solid.eq.0) then
+          im_raster_solid=im
+          vfrac_raster_solid=voflist_center(im)
+         else if ((im_raster_solid.ge.1).and. &
+                  (im_raster_solid.le.nmat).and. &
+                  (is_rigid(nmat,im_raster_solid).eq.1)) then
+          if (vfrac_raster_solid.lt.voflist_center(im)) then
+           im_raster_solid=im
+           vfrac_raster_solid=voflist_center(im)
+          endif
+         else
+          print *,"im_raster_solid invalid"
+          stop
+         endif
+      
+         vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
+        else
+         print *,"is_rigid(nmat,im) invalid"
+         stop
+        endif
+
        enddo ! im=1..nmat
+
+       vfrac_solid_sum_center=vfrac_solid_sum
+
+       if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+        ! do nothing
+       else
+        print *,"vfrac_fluid_sum invalid"
+        stop
+       endif
 
        if ((level.ge.0).and. &
            (level.le.finest_level)) then
@@ -379,7 +450,7 @@ stop
           if (voflist_stencil(im).gt.VOFTOL) then
            nmat_in_stencil=nmat_in_stencil+1
           endif
-          if (voflist(im).gt.VOFTOL) then
+          if (voflist_center(im).gt.VOFTOL) then
            nmat_in_cell=nmat_in_cell+1
           endif
          else if (is_rigid(nmat,im).eq.1) then
@@ -402,18 +473,166 @@ stop
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volume_super,cen_super,SDIM)
 
+        mod_cmofsten=0
+
+         ! check if fluid cell near a wall.
+        if (vfrac_solid_sum_center.lt.half) then
+         do i1=-1,1
+         do j1=-1,1
+         do k1=klosten,khisten
+
+          do dir=1,SDIM
+           if (dir.eq.1) then
+            loc_indx=i+i1
+           else if (dir.eq.2) then
+            loc_indx=j+j1
+           else if ((dir.eq.3).and.(SDIM.eq.3)) then
+            loc_indx=k+k1
+           else
+            print *,"dir invalid"
+            stop
+           endif
+           if (loc_indx.lt.fablo(dir)) then
+            if (vofbc(dir,1).ne.INT_DIR) then
+             mod_cmofsten=1
+            endif
+           else if (loc_indx.gt.fabhi(dir)) then
+            if (vofbc(dir,2).ne.INT_DIR) then
+             mod_cmofsten=1
+            endif
+           else if ((loc_indx.ge.fablo(dir)).and. &
+                    (loc_indx.le.fabhi(dir))) then
+            ! do nothing
+           else
+            print *,"loc_indx invalid"
+            stop
+           endif
+          enddo ! dir=1..sdim
+
+          if (mod_cmofsten.eq.0) then
+
+           do im=1,nmat
+            vofcomprecon=(im-1)*ngeom_recon+1
+            vofcompraw=(im-1)*ngeom_raw+1
+            do dir=0,SDIM
+             mofsten(vofcomprecon+dir)= &
+              vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
+            enddo
+            orderflag=zero
+            mofsten(vofcomprecon+SDIM+1)=orderflag
+            do dir=SDIM+3,ngeom_recon
+             mofsten(vofcomprecon+dir-1)=zero
+            enddo
+           enddo  ! im=1..nmat
+
+           call CISBOX(xstenbox,nhalfbox_sten, &
+            xlo,dx,i+i1,j+j1,k+k1, &
+            bfact,level, &
+            volsten,censten,SDIM)
+
+           ! sum of F_fluid=1
+           ! sum of F_rigid<=1
+           nhalf_box=1
+           call make_vfrac_sum_ok_base( &
+            cmofsten, &
+            xstenbox,nhalfbox_sten,nhalf_box, &
+            bfact,dx, &
+            tessellate, & ! =0
+            mofsten,nmat,SDIM,6)
+
+           vfrac_fluid_sum=zero
+           vfrac_solid_sum=zero
+
+           do im=1,nmat
+            vofcomprecon=(im-1)*ngeom_recon+1
+            vfrac_local(im)=mofsten(vofcomprecon)
+
+            if (is_rigid(nmat,im).eq.0) then
+             vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
+            else if (is_rigid(nmat,im).eq.1) then
+             vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+           enddo ! im=1..nmat
+
+           if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+            ! do nothing
+           else
+            print *,"vfrac_fluid_sum invalid"
+            stop
+           endif
+
+           if (vfrac_solid_sum.ge.half) then
+            if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+             print *,"expecting i1 or j1 or k1 not 0"
+             stop
+            endif
+            mod_cmofsten=1
+           else if (vfrac_solid_sum.lt.half) then
+            ! do nothing
+           else
+            print *,"vfrac_solid_sum invalid"
+            stop
+           endif
+
+          else if (mod_cmofsten.eq.1) then
+           ! do nothing
+          else
+           print *,"mod_cmofsten invalid"
+           stop
+          endif
+         enddo !k1
+         enddo !j1
+         enddo !i1
+        else if (vfrac_solid_sum_center.ge.half) then
+         ! do nothing (ok to use MOF)
+        else
+         print *,"vfrac_solid_sum_center invalid"
+         stop
+        endif
+
+        continuous_mof_base=continuous_mof
+        if (mod_cmofsten.eq.1) then
+         if (force_cmof_at_triple_junctions.eq.0) then
+          ! do nothing
+         else if ((force_cmof_at_triple_junctions.eq.1).or. &
+                  (force_cmof_at_triple_junctions.eq.2)) then
+          continuous_mof_base=2
+         else
+          print *,"force_cmof_at_triple_junctions invalid"
+          stop
+         endif
+        else if (mod_cmofsten.eq.0) then
+         ! do nothing
+        else
+         print *,"mod_cmofsten invalid"
+         stop
+        endif
+
         if (nmat_in_cell.eq.1) then
          continuous_mof_parm=0
-        else if ((nmat_in_cell.ge.2).and.(nmat_in_cell.le.nmat)) then
+        else if ((nmat_in_cell.ge.2).and. &
+                 (nmat_in_cell.le.nmat)) then
 
-         continuous_mof_parm=continuous_mof
+         continuous_mof_parm=continuous_mof_base
 
          if ((nmat_in_stencil.ge.3).and. &
              (nmat_in_stencil.le.nmat)) then
-          if (continuous_mof.eq.3) then ! CLSVOF 2 materials, MOF > 2mat
-           continuous_mof_parm=0 ! MOF
-          else if ((continuous_mof.eq.4).or. & ! CLSVOF 2 mat., CMOF > 2 mat
-                   (continuous_mof.eq.2)) then ! CMOF
+
+          if (force_cmof_at_triple_junctions.eq.2) then
+           continuous_mof_base=2
+          else if ((force_cmof_at_triple_junctions.eq.0).or. &
+                   (force_cmof_at_triple_junctions.eq.1)) then
+           ! do nothing
+          else
+           print *,"force_cmof_at_triple_junctions invalid"
+           stop
+          endif
+
+          if ((continuous_mof_base.eq.4).or. & ! CLSVOF 2 mat., CMOF > 2 mat
+              (continuous_mof_base.eq.2)) then ! CMOF
            if (nmat_in_cell.eq.nmat_in_stencil) then
             continuous_mof_parm=2 ! CMOF
            else if (nmat_in_cell.lt.nmat_in_stencil) then
@@ -422,11 +641,10 @@ stop
             print *,"nmat_in_cell invalid"
             stop
            endif
-          else if ((continuous_mof.eq.0).or. & ! mof
-                   (continuous_mof.eq.5)) then ! clsvof
+          else if (continuous_mof_base.eq.0) then
            ! do nothing
           else
-           print *,"continuous_mof invalid"
+           print *,"continuous_mof_base invalid"
            stop
           endif
          else if (nmat_in_stencil.eq.2) then
@@ -434,18 +652,16 @@ stop
            print *,"nmat_in_cell invalid"
            stop
           endif
-          if ((continuous_mof.eq.3).or. & ! CLSVOF if 2 materials in stencil
-              (continuous_mof.eq.4).or. & ! CLSVOF if 2 materials in stencil
-              (continuous_mof.eq.5)) then ! CLSVOF if 2 materials in stencil
+          if (continuous_mof_base.eq.4) then ! CLSVOF if 2 materials in stencil
            continuous_mof_parm=5
-          else if ((continuous_mof.eq.0).or. & ! MOF
-                   (continuous_mof.eq.2)) then ! CMOF
-           if (continuous_mof_parm.ne.continuous_mof) then
-            print *,"continuous_mof_parm.ne.continuous_mof"
+          else if ((continuous_mof_base.eq.0).or. & ! MOF
+                   (continuous_mof_base.eq.2)) then ! CMOF
+           if (continuous_mof_parm.ne.continuous_mof_base) then
+            print *,"continuous_mof_parm.ne.continuous_mof_base"
             stop
            endif
           else
-           print *,"continuous_mof invalid"
+           print *,"continuous_mof_base invalid"
            stop
           endif
          else
@@ -457,13 +673,17 @@ stop
          print *,"nmat_in_cell invalid"
          stop
         endif
-           
+
+        mod_cmofsten=0
+        local_mod_cmofsten=0
+
          ! supercell for centroid cost function.
          ! center cell for volume constraint.
         if (continuous_mof_parm.eq.2) then
   
-         volume_super=zero
-         volume_super_mofdata=zero
+         volume_super=zero ! volume of the extended region
+         volume_super_mofdata=zero !same as volume_super, except by im_fluid.
+
          do dir=1,SDIM
           cen_super(dir)=zero
          enddo
@@ -473,18 +693,16 @@ stop
            mofdata_super(vofcomprecon+dir)=zero
           enddo
           vof_super(im)=zero
-         enddo
+         enddo ! im=1..nmat
+
          do i1=-1,1
          do j1=-1,1
          do k1=klosten,khisten
+
           call CISBOX(xstenbox,nhalfbox_sten, &
-           xlo,dx,i+i1,j+j1,k+k1, &
-           bfact,level, &
-           volsten,censten,SDIM)
-          volume_super=volume_super+volsten
-          do dir=1,SDIM
-           cen_super(dir)=cen_super(dir)+volsten*censten(dir)
-          enddo
+            xlo,dx,i+i1,j+j1,k+k1, &
+            bfact,level, &
+            volsten,censten,SDIM)
 
           do im=1,nmat
            vofcomprecon=(im-1)*ngeom_recon+1
@@ -504,36 +722,136 @@ stop
            ! sum of F_rigid<=1
           nhalf_box=1
           call make_vfrac_sum_ok_base( &
+            cmofsten, &
             xstenbox,nhalfbox_sten,nhalf_box, &
-            bfact,dx,tessellate,mofsten,nmat,SDIM,6)
+            bfact,dx, &
+            tessellate, & ! =0
+            mofsten,nmat,SDIM,6)
+
+          vfrac_fluid_sum=zero
+          vfrac_solid_sum=zero
+          im_raster_solid=0
+          vfrac_raster_solid=zero
 
           do im=1,nmat
            vofcomprecon=(im-1)*ngeom_recon+1
-           volmat=volsten*mofsten(vofcomprecon)
-           vof_super(im)=vof_super(im)+volmat
-           do dir=1,SDIM
-            mofdata_super(vofcomprecon+dir)= &
-             mofdata_super(vofcomprecon+dir)+ &
-             volmat*(censten(dir)+mofsten(vofcomprecon+dir))
-           enddo ! dir
+           vfrac_local(im)=mofsten(vofcomprecon)
+
            if (is_rigid(nmat,im).eq.0) then
-            volume_super_mofdata=volume_super_mofdata+volmat
+            vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
            else if (is_rigid(nmat,im).eq.1) then
-            ! do nothing
+            if (im_raster_solid.eq.0) then
+             im_raster_solid=im
+             vfrac_raster_solid=vfrac_local(im)
+            else if ((im_raster_solid.ge.1).and. &
+                     (im_raster_solid.le.nmat).and. &
+                     (is_rigid(nmat,im_raster_solid).eq.1)) then
+             if (vfrac_raster_solid.lt.vfrac_local(im)) then
+              im_raster_solid=im
+              vfrac_raster_solid=vfrac_local(im)
+             endif
+            else
+             print *,"im_raster_solid invalid"
+             stop
+            endif
+     
+            vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
            else
             print *,"is_rigid(nmat,im) invalid"
             stop
            endif
           enddo ! im=1..nmat
+
+          if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+           ! do nothing
+          else
+           print *,"vfrac_fluid_sum invalid"
+           stop
+          endif
+
+          local_mod_cmofsten=0
+
+          if (vfrac_solid_sum_center.ge.half) then
+           ! do nothing, we can do the full cmof stencil in masked
+           ! off is_rigid=1 cells
+          else if (vfrac_solid_sum_center.lt.half) then
+
+           if (vfrac_solid_sum.ge.half) then
+            if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+             print *,"expecting i1 or j1 or k1 not 0"
+             stop
+            endif
+
+            if (partial_cmof_stencil_at_walls.eq.1) then
+             cmofsten(D_DECL(i1,j1,k1))=0
+             mod_cmofsten=1
+             local_mod_cmofsten=1
+            else if (partial_cmof_stencil_at_walls.eq.0) then
+             ! do nothing
+            else
+             print *,"partial_cmof_stencil_at_walls invalid"
+             stop
+            endif
+           else if (vfrac_solid_sum.lt.half) then
+            ! do nothing
+           else
+            print *,"vfrac_solid_sum invalid"
+            stop
+           endif
+
+          else
+           print *,"vfrac_solid_sum_center invalid"
+           stop
+          endif
+
+          if (local_mod_cmofsten.eq.0) then
+
+           volume_super=volume_super+volsten
+           do dir=1,SDIM
+            cen_super(dir)=cen_super(dir)+volsten*censten(dir)
+           enddo
+
+           do im=1,nmat
+
+            vofcomprecon=(im-1)*ngeom_recon+1
+            volmat=volsten*vfrac_local(im)
+            vof_super(im)=vof_super(im)+volmat
+            do dir=1,SDIM
+             mofdata_super(vofcomprecon+dir)= &
+                mofdata_super(vofcomprecon+dir)+ &
+                volmat*(censten(dir)+mofsten(vofcomprecon+dir))
+            enddo ! dir
+            if (is_rigid(nmat,im).eq.0) then
+             volume_super_mofdata=volume_super_mofdata+volmat
+            else if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+
+           enddo ! im=1..nmat
+
+          else if (local_mod_cmofsten.eq.1) then
+           ! do nothing
+          else
+           print *,"local_mod_cmofsten invalid"
+           stop
+          endif
+
          enddo
          enddo
          enddo ! i1,j1,k1
 
-         if (volume_super.le.zero) then
+         if (volume_super.gt.zero) then
+          ! do nothing
+         else
           print *,"volume_super invalid"
           stop
          endif
-         if (volume_super_mofdata.le.zero) then
+         if (volume_super_mofdata.gt.zero) then
+          ! do nothing
+         else
           print *,"volume_super_mofdata invalid"
           stop
          endif
@@ -560,7 +878,7 @@ stop
            stop
           endif
 
-           ! always standard MOF for the rigid materials.
+           ! always standard MOF centroid for the rigid materials.
           if (is_rigid(nmat,im).eq.1) then
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
@@ -574,6 +892,27 @@ stop
 
          enddo ! im=1..nmat
 
+         if (1.eq.0) then
+          if (mod_cmofsten.eq.1) then
+           print *,"mod_cmofsten=1:level,finest_level ", &
+                   level,finest_level
+           print *,"mod_cmofsten=1:i,j,k ",i,j,k
+           print *,"x,y,z ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+           do i1=-1,1
+           do j1=-1,1
+           do k1=klosten,khisten
+            print *,"i1,j1,k1,cmofsten(i1,j1,k1) ",i1,j1,k1, &
+                    cmofsten(D_DECL(i1,j1,k1))
+           enddo
+           enddo
+           enddo
+          else if (mod_cmofsten.eq.0) then
+           ! do nothing
+          else
+           print *,"mod_cmofsten invalid"
+           stop
+          endif 
+         endif
         else if ((continuous_mof_parm.eq.0).or. &
                  (continuous_mof_parm.eq.5)) then
          ! do nothing
@@ -596,6 +935,7 @@ stop
           mofdata_super, &
           multi_centroidA, &
           continuous_mof_parm, &
+          cmofsten, &
           nmat,SDIM,2)
 
         if (continuous_mof_parm.eq.2) then
@@ -660,7 +1000,7 @@ stop
           stencil_valid, &
           level,max_level, &
           xsten,nhalf,dx,bfact, &
-          voflist, &
+          voflist_center, &
           LS_stencil, &
           nmat, &
           nten, &

@@ -7,8 +7,8 @@
 
 #define DEBUG_TRIPLE 0
 #define DEBUG_ACTIVE_CELL 0
-#define DEBUG_I 19
-#define DEBUG_J 23
+#define DEBUG_I 22
+#define DEBUG_J 13
 #define DEBUG_K 0
 
 #include "AMReX_REAL.H"
@@ -954,6 +954,7 @@ stop
       REAL_T volcell
       REAL_T cencell(SDIM)
       INTEGER_T nmax
+      INTEGER_T local_tessellate
 
       call checkbound(lo,hi,DIMS(recon),ngrow,-1,1222)
 
@@ -992,7 +993,9 @@ stop
        mofdata(im)=recon(D_DECL(ic,jc,kc),im)
       enddo
 
+      local_tessellate=3
       call multi_get_volume_tessellate( &
+        local_tessellate, & ! =3
         bfact, &
         dx, &
         xsten,nhalf, &
@@ -1074,7 +1077,8 @@ stop
        comp, &
        ngrow, &
        lo,hi, &
-       data,DIMS(data), &
+       data, &
+       DIMS(data), &
        dest)
       use global_utility_module
       IMPLICIT NONE
@@ -1085,8 +1089,10 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xtarget(SDIM)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: comp,ngrow
+      INTEGER_T, intent(in) :: lo(SDIM)
+      INTEGER_T, intent(in) :: hi(SDIM)
+      INTEGER_T, intent(in) :: comp
+      INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(data)
       REAL_T, intent(in) :: data(DIMV(data),comp)
       REAL_T, intent(out) :: dest
@@ -2098,7 +2104,7 @@ stop
        DIMS(PROBE_PARMS%recon), &
        F_tess)
 
-      do iprobe=1,2
+      do iprobe=1,2 ! iprobe=1 source    iprobe=2 dest
 
        if (iprobe.eq.1) then ! source
         do dir=1,SDIM
@@ -3353,7 +3359,6 @@ stop
         ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine FORT_CONVERTMATERIAL( &
        tid, &
-       isweep, &
        solvability_projection, &
        ngrow_expansion, &
        level,finest_level, &
@@ -3380,11 +3385,8 @@ stop
        xlo,dx, &
        dt, &
        delta_mass, &
-       DVOF, &
        maskcov,DIMS(maskcov), &
-       deltaVOF,DIMS(deltaVOF), &
        nodevel,DIMS(nodevel), &
-       MOFnewFAB,DIMS(MOFnewFAB), &
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
        LSold,DIMS(LSold), &
@@ -3411,7 +3413,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep,tid
+      INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: solvability_projection
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3441,12 +3443,8 @@ stop
       REAL_T, intent(in),target :: dx(SDIM)
       REAL_T, intent(in) :: dt
       REAL_T, intent(inout) :: delta_mass(2*nmat)
-      REAL_T, intent(inout) :: DVOF(nmat)
-      REAL_T :: DVOF_FACT(nmat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(deltaVOF)
       INTEGER_T, intent(in) :: DIMDEC(nodevel)
-      INTEGER_T, intent(in) :: DIMDEC(MOFnewFAB)
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
       INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
       INTEGER_T, intent(in) :: DIMDEC(LSold)
@@ -3458,13 +3456,7 @@ stop
 
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
 
-       ! 1..nmat             dF
-       ! nmat+1 .. 2 nmat    den_new F_new - den_old F_old  source
-       !                     den_new F_new - den_old F_old  target 
-      REAL_T, intent(inout) :: deltaVOF(DIMV(deltaVOF),3*nmat)
-
       REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
-      REAL_T, intent(inout) :: MOFnewFAB(DIMV(MOFnewFAB),nmat*ngeom_recon)
       REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
       REAL_T, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
       REAL_T, intent(in), target :: LSold(DIMV(LSold),nmat*(1+SDIM))
@@ -3643,7 +3635,7 @@ stop
       REAL_T numerator,denominator
       REAL_T ambient_den
       REAL_T gas_den_ratio
-      REAL_T delta_mass_local
+      REAL_T delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
       REAL_T xPOINT_supermesh(SDIM)
       REAL_T xPOINT_GFM(SDIM)
       REAL_T, target :: xstar(SDIM)
@@ -3664,6 +3656,7 @@ stop
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T continuous_mof_parm
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
@@ -3685,6 +3678,7 @@ stop
       REAL_T fixed_vfrac_sum
       REAL_T fixed_centroid_sum(SDIM)
       REAL_T avail_vfrac
+
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -3814,18 +3808,6 @@ stop
        stop
       endif
 
-       ! DVOF is accumulated material to change phase.
-       ! for heat pipe: we must have sum_m (sign L_m) DVOF_m = 0
-      do im=1,nmat
-       if (DVOF(im).ge.zero) then
-        ! do nothing
-       else
-        print *,"DVOF invalid"
-        stop
-       endif
-       DVOF_FACT(im)=one
-      enddo ! im
-
       do im=1,nmat-1
        do im_opp=im+1,nmat
         do ireverse=0,1
@@ -3858,8 +3840,6 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-           ! require V_evaporate = V_condense (Tanasawa model or Schrage)
-           ! if solvability_projection==1
           if (local_freezing_model.eq.4) then 
            if (LL.ne.zero) then
             if (ireverse.eq.0) then ! evaporation
@@ -3888,30 +3868,12 @@ stop
              print *,"ireverse invalid"
              stop
             endif
-
-            if (isweep.eq.0) then
-             ! do nothing
-            else if (isweep.eq.1) then
-
-             if (solvability_projection.eq.0) then
-              ! do nothing
-             else if (solvability_projection.eq.1) then
-              if (DVOF(im_dest).lt.DVOF(im_source)) then
-               DVOF_FACT(im_source)=DVOF(im_dest)/DVOF(im_source)
-              else if (DVOF(im_source).lt.DVOF(im_dest)) then
-               DVOF_FACT(im_dest)=DVOF(im_source)/DVOF(im_dest)
-              endif
-             else
-              print *,"solvability_projection invalid"
-              stop
-             endif
-
-            else
-             print *,"isweep invalid"
-             stop
-            endif
-
-           endif ! LL <> 0
+           else if (LL.eq.zero) then
+            ! do nothing
+           else
+            print *,"LL invalid"
+            stop
+           endif 
           else if (local_freezing_model.eq.5) then  ! stefan evap/cond
            ! do nothing
           else if (local_freezing_model.eq.6) then  ! Palmore/Desjardin
@@ -3936,11 +3898,6 @@ stop
       call checkbound(fablo,fabhi, &
        DIMS(maskcov),1,-1,1256)
 
-      call checkbound(fablo,fabhi, &
-       DIMS(deltaVOF),0,-1,1256)
-
-      call checkbound(fablo,fabhi, &
-       DIMS(MOFnewFAB),0,-1,1256)
       call checkbound(fablo,fabhi, &
        DIMS(JUMPFAB),ngrow_expansion,-1,1256)
       call checkbound(fablo,fabhi, &
@@ -4199,644 +4156,668 @@ stop
            stop
           endif
 
-           ! sweep==0: advection: unsplit_lsnew, unsplit_snew, dF, deltaVOF
-           !                      unsplit_density,unsplit_temperature
+           ! advection: unsplit_lsnew, unsplit_snew, dF
+           !               unsplit_density,unsplit_temperature
            ! unsplit advection: backward tracing of characteristics, but
            !  evaluate volumes, centroids, level set functions, and
            !  temperatures in the target cell.
 
-          if (isweep.eq.0) then
+          symmetry_flag=0 
+          call get_ntetbox(ntetbox,symmetry_flag,SDIM)
 
-           symmetry_flag=0 
-           call get_ntetbox(ntetbox,symmetry_flag,SDIM)
+          absolute_voltotal=zero
+          voltotal=zero
+          do u_im=1,nmat
+           density_mat(u_im)=zero
+           temperature_mat(u_im)=zero
+           do ispec=1,num_species_var
+            species_mat((ispec-1)*nmat+u_im)=zero
+           enddo
+           volmat(u_im)=zero
+           do udir=1,SDIM
+            cenmat(udir,u_im)=zero
+           enddo
+          enddo
+          do u_im=1,nmat
+           lsmat(u_im)=zero
+          enddo
 
-           absolute_voltotal=zero
-           voltotal=zero
-           do u_im=1,nmat
-            density_mat(u_im)=zero
-            temperature_mat(u_im)=zero
-            do ispec=1,num_species_var
-             species_mat((ispec-1)*nmat+u_im)=zero
-            enddo
-            volmat(u_im)=zero
+           ! backwards tracing of characteristics:
+           ! add up contributions from neighboring cells.
+           ! (i,j,k) is the cell to be updated.
+          do igrid=-1,1
+          do jgrid=-1,1
+          do kgrid=klosten,khisten
+
+           call gridsten_level(u_xsten_grid, &
+             i+igrid,j+jgrid,k+kgrid,level,nhalf)
+
+           inode=1
+
+            ! index order must be knode1,jnode1,inode1
+           do knode1=klosten,khisten,2
+           do jnode1=-1,1,2
+           do inode1=-1,1,2
+            if (inode1.eq.-1) then
+             imac=i
+            else if (inode1.eq.1) then
+             imac=i+1
+            else
+             print *,"inode1 invalid"
+             stop
+            endif
+            if (jnode1.eq.-1) then
+             jmac=j
+            else if (jnode1.eq.1) then
+             jmac=j+1
+            else
+             print *,"jnode1 invalid"
+             stop
+            endif
+            if (SDIM.eq.2) then
+             kmac=0
+            else if (SDIM.eq.3) then
+             if (knode1.eq.-1) then
+              kmac=k
+             else if (knode1.eq.1) then
+              kmac=k+1
+             else
+              print *,"knode1 invalid"
+              stop
+             endif
+            else
+             print *,"dimension bust"
+             stop
+            endif
+
+            scomp=(iten_crit+ireverse_crit*nten-1)*SDIM
+
+             ! node velocity initialized in "nodedisplace"
             do udir=1,SDIM
-             cenmat(udir,u_im)=zero
-            enddo
-           enddo
-           do u_im=1,nmat
-            lsmat(u_im)=zero
-           enddo
+             velnode=nodevel(D_DECL(imac,jmac,kmac),scomp+udir)
 
-            ! backwards tracing of characteristics:
-            ! add up contributions from neighboring cells.
-            ! (i,j,k) is the cell to be updated.
-           do igrid=-1,1
-           do jgrid=-1,1
-           do kgrid=klosten,khisten
-
-            call gridsten_level(u_xsten_grid, &
-              i+igrid,j+jgrid,k+kgrid,level,nhalf)
-
-            inode=1
-
-             ! index order must be knode1,jnode1,inode1
-            do knode1=klosten,khisten,2
-            do jnode1=-1,1,2
-            do inode1=-1,1,2
-             if (inode1.eq.-1) then
-              imac=i
-             else if (inode1.eq.1) then
-              imac=i+1
-             else
-              print *,"inode1 invalid"
-              stop
-             endif
-             if (jnode1.eq.-1) then
-              jmac=j
-             else if (jnode1.eq.1) then
-              jmac=j+1
-             else
-              print *,"jnode1 invalid"
-              stop
-             endif
-             if (SDIM.eq.2) then
-              kmac=0
-             else if (SDIM.eq.3) then
-              if (knode1.eq.-1) then
-               kmac=k
-              else if (knode1.eq.1) then
-               kmac=k+1
-              else
-               print *,"knode1 invalid"
-               stop
+             if (DEBUG_ACTIVE_CELL.eq.1) then
+              if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+               print *,"iten_crit,ireverse_crit,udir ", &
+                       iten_crit,ireverse_crit,udir
+               print *,"inode1,jnode1,knode1,velnode ", &
+                       inode1,jnode1,knode1,velnode
               endif
-             else
-              print *,"dimension bust"
-              stop
              endif
 
-             scomp=(iten_crit+ireverse_crit*nten-1)*SDIM
+             if (udir.eq.1) then
+              xtargetnode(inode,udir)=u_xsten_updatecell(inode1,udir)
+             else if (udir.eq.2) then
+              xtargetnode(inode,udir)=u_xsten_updatecell(jnode1,udir)
+             else if ((udir.eq.3).and.(SDIM.eq.3)) then
+              xtargetnode(inode,udir)=u_xsten_updatecell(knode1,udir)
+             else
+              print *,"udir invalid"
+              stop
+             endif
+             xdepartnode(inode,udir)=xtargetnode(inode,udir)-velnode
+            enddo ! udir
 
-              ! node velocity initialized in "nodedisplace"
+            tempdatanode(inode)=one
+
+            inode=inode+1
+           enddo
+           enddo
+           enddo ! inode1,jnode1,knode1
+
+           do id=1,ntetbox
+            call extract_tet(xdepartnode,tempdatanode,xtri,datatri, &
+              id,symmetry_flag,SDIM)
+            call extract_tet(xtargetnode,tempdatanode, &
+              xtargettri,datatri,id,symmetry_flag,SDIM)
+
+            call intersect_cube( &
+              xtri, &
+              u_xsten_grid,nhalf, &
+              geom_xtetlist_old(1,1,1,tid+1), &
+              geom_xtetlist(1,1,1,tid+1), &
+              nmax, &
+              nlist,nmax,SDIM)
+
+            if (nlist.gt.0) then
+
+              ! find mapping from departure to target
+              ! xt(dir)=coeff(dir,1)*xd(1)+coeff(dir,2)*xd(2)+coeff(dir,3)
+              ! and from target back to departure
+              ! xd(dir)=coeffINV(dir,1)*xt(1)+coeffINV(dir,2)*xt(2)+
+              !         coeffINV(dir,3)
+              ! "AS" "short A" -- coefficients of x,y's
+              ! phi=n dot (x-x0)+b
+              ! phi^{map}=nmap dot (x-x0map)+b
+              ! phi^{map}(x)=phi(xmap^{-1}(x))
+              ! nmap dot (x-x0map)+b=n dot (AS^{-1}(x-x0map)) +b
+              ! nmap^{T}=n^{T}AS^{-1}  or nmap=AS^{-T}n
+              ! x0map=A(x0)+gamma
+
              do udir=1,SDIM
-              velnode=nodevel(D_DECL(imac,jmac,kmac),scomp+udir)
-
-              if (DEBUG_ACTIVE_CELL.eq.1) then
-               if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
-                print *,"iten_crit,ireverse_crit,udir ", &
-                        iten_crit,ireverse_crit,udir
-                print *,"inode1,jnode1,knode1,velnode ", &
-                        inode1,jnode1,knode1,velnode
-               endif
-              endif
-
-              if (udir.eq.1) then
-               xtargetnode(inode,udir)=u_xsten_updatecell(inode1,udir)
-              else if (udir.eq.2) then
-               xtargetnode(inode,udir)=u_xsten_updatecell(jnode1,udir)
-              else if ((udir.eq.3).and.(SDIM.eq.3)) then
-               xtargetnode(inode,udir)=u_xsten_updatecell(knode1,udir)
-              else
-               print *,"udir invalid"
+              do itri=1,SDIM+1
+               do udir2=1,SDIM
+                AA(itri,udir2)=xtri(itri,udir2)           ! xdepart
+                AAINV(itri,udir2)=xtargettri(itri,udir2)  ! xtarget
+               enddo
+               AA(itri,SDIM+1)=one
+               AAINV(itri,SDIM+1)=one
+               bb(itri)=xtargettri(itri,udir)  ! xtarget
+               bbINV(itri)=xtri(itri,udir)     ! xdepart
+              enddo  ! itri
+              call matrix_solve(AA,xx,bb,matrix_status,SDIM+1)
+              if (matrix_status.ne.1) then
+               print *,"mapping bust: matrix_solve failed"
                stop
               endif
-              xdepartnode(inode,udir)=xtargetnode(inode,udir)-velnode
+              do udir2=1,SDIM+1
+               coeff(udir,udir2)=xx(udir2)
+              enddo
+              do udir2=1,SDIM
+               AS(udir,udir2)=xx(udir2)
+              enddo
+              call matrix_solve(AAINV,xx,bbINV,matrix_status,SDIM+1)
+              if (matrix_status.eq.0) then
+               print *,"mapping bust"
+               stop
+              endif
+              do udir2=1,SDIM+1
+               coeffINV(udir,udir2)=xx(udir2)
+              enddo
+              do udir2=1,SDIM
+               ASINV(udir,udir2)=xx(udir2)
+              enddo
+             enddo  ! udir
+
+              ! find expression for interface reconstruction in the mapped
+              ! target cell.  u_xsten_departmap is the mapped location of 
+              ! u_xsten_grid.  
+              ! Only the u_xsten_departmap(0,udir) information is used:
+              ! used for evaluating n dot (x-x0).
+              ! interface reconstruction in target cell is
+              ! n_mapped dot (x-x0_mapped)  (*)
+              ! if (*) mapped back to departure cell, one should
+              ! have n dot (x-x0)
+              ! given 3 points on the plane in the departure region:
+              ! n dot (xi-x0)=0  i=1..3
+              ! this implies that nmapped dot (xi_mapped - x0mapped)=0
+              ! nmapped dot (A(xi-x0))=0  
+              ! nmapped^T A(xi-x0)=0
+              ! (A^T nmapped)^T (xi-x0)=0
+              ! n=A^T nmapped
+              ! nmapped=(A^T)^{-1} n
+             do udir=1,SDIM
+              dxgrid(udir)=u_xsten_grid(1,udir)-u_xsten_grid(-1,udir)
+              if (dxgrid(udir).le.zero) then
+               print *,"u_xsten_grid became corrupt" 
+               stop
+              endif 
+             enddo
+          
+             do udir=1,SDIM
+              u_xsten_departmap(0,udir)=coeff(udir,SDIM+1)
+              do udir2=1,SDIM
+               u_xsten_departmap(0,udir)=u_xsten_departmap(0,udir)+ &
+                 coeff(udir,udir2)*u_xsten_grid(0,udir2)
+              enddo ! udir2
+              u_xsten_departmap(-1,udir)=u_xsten_departmap(0,udir)- &
+                half*dxgrid(udir)
+              u_xsten_departmap(1,udir)=u_xsten_departmap(0,udir)+ &
+                half*dxgrid(udir)
              enddo ! udir
 
-             tempdatanode(inode)=one
+             do u_im=1,nmat
+              lsdata(u_im)= &
+               LSold(D_DECL(i+igrid,j+jgrid,k+kgrid),u_im) 
+             enddo
 
-             inode=inode+1
-            enddo
-            enddo
-            enddo ! inode1,jnode1,knode1
+             do u_im=1,nmat
 
-            do id=1,ntetbox
-             call extract_tet(xdepartnode,tempdatanode,xtri,datatri, &
-               id,symmetry_flag,SDIM)
-             call extract_tet(xtargetnode,tempdatanode, &
-               xtargettri,datatri,id,symmetry_flag,SDIM)
-
-             call intersect_cube( &
-               xtri, &
-               u_xsten_grid,nhalf, &
-               geom_xtetlist_old(1,1,1,tid+1), &
-               geom_xtetlist(1,1,1,tid+1), &
-               nmax, &
-               nlist,nmax,SDIM)
-
-             if (nlist.gt.0) then
-
-               ! find mapping from departure to target
-               ! xt(dir)=coeff(dir,1)*xd(1)+coeff(dir,2)*xd(2)+coeff(dir,3)
-               ! and from target back to departure
-               ! xd(dir)=coeffINV(dir,1)*xt(1)+coeffINV(dir,2)*xt(2)+
-               !         coeffINV(dir,3)
-               ! "AS" "short A" -- coefficients of x,y's
-               ! phi=n dot (x-x0)+b
-               ! phi^{map}=nmap dot (x-x0map)+b
-               ! phi^{map}(x)=phi(xmap^{-1}(x))
-               ! nmap dot (x-x0map)+b=n dot (AS^{-1}(x-x0map)) +b
-               ! nmap^{T}=n^{T}AS^{-1}  or nmap=AS^{-T}n
-               ! x0map=A(x0)+gamma
-
-              do udir=1,SDIM
-               do itri=1,SDIM+1
-                do udir2=1,SDIM
-                 AA(itri,udir2)=xtri(itri,udir2)           ! xdepart
-                 AAINV(itri,udir2)=xtargettri(itri,udir2)  ! xtarget
-                enddo
-                AA(itri,SDIM+1)=one
-                AAINV(itri,SDIM+1)=one
-                bb(itri)=xtargettri(itri,udir)  ! xtarget
-                bbINV(itri)=xtri(itri,udir)     ! xdepart
-               enddo  ! itri
-               call matrix_solve(AA,xx,bb,matrix_status,SDIM+1)
-               if (matrix_status.ne.1) then
-                print *,"mapping bust: matrix_solve failed"
-                stop
-               endif
-               do udir2=1,SDIM+1
-                coeff(udir,udir2)=xx(udir2)
-               enddo
-               do udir2=1,SDIM
-                AS(udir,udir2)=xx(udir2)
-               enddo
-               call matrix_solve(AAINV,xx,bbINV,matrix_status,SDIM+1)
-               if (matrix_status.eq.0) then
-                print *,"mapping bust"
-                stop
-               endif
-               do udir2=1,SDIM+1
-                coeffINV(udir,udir2)=xx(udir2)
-               enddo
-               do udir2=1,SDIM
-                ASINV(udir,udir2)=xx(udir2)
-               enddo
-              enddo  ! udir
-
-               ! find expression for interface reconstruction in the mapped
-               ! target cell.  u_xsten_departmap is the mapped location of 
-               ! u_xsten_grid.  
-               ! Only the u_xsten_departmap(0,udir) information is used:
-               ! used for evaluating n dot (x-x0).
-               ! interface reconstruction in target cell is
-               ! n_mapped dot (x-x0_mapped)  (*)
-               ! if (*) mapped back to departure cell, one should
-               ! have n dot (x-x0)
-               ! given 3 points on the plane in the departure region:
-               ! n dot (xi-x0)=0  i=1..3
-               ! this implies that nmapped dot (xi_mapped - x0mapped)=0
-               ! nmapped dot (A(xi-x0))=0  
-               ! nmapped^T A(xi-x0)=0
-               ! (A^T nmapped)^T (xi-x0)=0
-               ! n=A^T nmapped
-               ! nmapped=(A^T)^{-1} n
-              do udir=1,SDIM
-               dxgrid(udir)=u_xsten_grid(1,udir)-u_xsten_grid(-1,udir)
-               if (dxgrid(udir).le.zero) then
-                print *,"u_xsten_grid became corrupt" 
-                stop
-               endif 
+              dencomp=(u_im-1)*num_state_material+1
+              tcomp=dencomp+1
+               ! mixture density of gas if u_im corresponds to gas
+              density_data(u_im)=EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),dencomp)
+              temperature_data(u_im)= &
+                EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp)
+              do ispec=1,num_species_var
+               species_data((ispec-1)*nmat+u_im)= &
+                EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp+ispec)
               enddo
-           
+         
+              vofcomp_recon=(u_im-1)*ngeom_recon+1
+              mofdata(vofcomp_recon)= &
+               recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon) 
+              do udir=1,SDIM 
+               mofdata(vofcomp_recon+udir)= &
+                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+udir)
+              enddo
+              mofdata(vofcomp_recon+SDIM+1)= &
+               recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+SDIM+1) !ord
+              mofdata(vofcomp_recon+2*SDIM+2)= &
+               recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+2*SDIM+2) 
               do udir=1,SDIM
-               u_xsten_departmap(0,udir)=coeff(udir,SDIM+1)
-               do udir2=1,SDIM
-                u_xsten_departmap(0,udir)=u_xsten_departmap(0,udir)+ &
-                  coeff(udir,udir2)*u_xsten_grid(0,udir2)
-               enddo ! udir2
-               u_xsten_departmap(-1,udir)=u_xsten_departmap(0,udir)- &
-                 half*dxgrid(udir)
-               u_xsten_departmap(1,udir)=u_xsten_departmap(0,udir)+ &
-                 half*dxgrid(udir)
+               nn(udir)= &
+                recon(D_DECL(i+igrid,j+jgrid,k+kgrid), &
+                      vofcomp_recon+SDIM+1+udir) 
               enddo ! udir
 
-              do u_im=1,nmat
-               lsdata(u_im)= &
-                LSold(D_DECL(i+igrid,j+jgrid,k+kgrid),u_im) 
+              ! ASINV maps target back to departure
+              ! e.g. in 1D, if compression => AS<1 => ASINV>1
+              ! 1D:AS=(xtarget_left-xtarget_right)/(xdeptleft-xeptright)
+              ! ASINV=(xdeptleft-xdeptright)/(xtarget_left-xtarget_right)
+              do udir=1,SDIM
+               nnmap(udir)=zero
+               do udir2=1,SDIM
+                nnmap(udir)=nnmap(udir)+ASINV(udir2,udir)*nn(udir2)
+               enddo
+               mofdata(vofcomp_recon+SDIM+1+udir)=nnmap(udir)
+              enddo ! udir
+             enddo ! u_im
+
+             do n=1,nlist
+
+               ! xinttri is in the departure region
+              do ivert=1,SDIM+1
+              do udir=1,SDIM
+               xinttri(ivert,udir)=geom_xtetlist(ivert,udir,n,tid+1)
               enddo
+              enddo
+           
+              ! target triangle (xinttri mapped), confined to target cell
+              do ivert=1,SDIM+1
+               do udir=1,SDIM
+                xmaptri(ivert,udir)=coeff(udir,SDIM+1)
+                do udir2=1,SDIM
+                 xmaptri(ivert,udir)=xmaptri(ivert,udir)+ &
+                  coeff(udir,udir2)*xinttri(ivert,udir2)
+                enddo
+               enddo ! udir
+              enddo ! ivert
+
+              call tetrahedron_volume(xmaptri,uncaptured_volume, &
+               uncaptured_centroid,SDIM)
+
+              absolute_voltotal=absolute_voltotal+uncaptured_volume
+
+                ! find volumes within u_xsten_updatecell (target)
+              shapeflag=1  
+              tessellate=0
+              call multi_get_volume_grid( &
+                tessellate, & ! =0
+                bfact,dx, &
+                u_xsten_departmap,nhalf0, & ! nhalf0=1
+                mofdata, &
+                u_xsten_updatecell,nhalf, & ! nhalf=3
+                xmaptri, &
+                multi_volume,multi_cen,multi_area, &
+                geom_xtetlist_uncapt(1,1,1,tid+1),  &
+                nmax, &
+                nmax, &
+                nmat,SDIM,shapeflag,102)
+
+              multi_volume_total=zero
+              do u_im=1,nmat
+               if (is_rigid(nmat,u_im).eq.0) then 
+                multi_volume_total=multi_volume_total+multi_volume(u_im)
+               else if (is_rigid(nmat,u_im).eq.1) then 
+                ! do nothing
+               else
+                print *,"is_rigid invalid"
+                stop
+               endif
+               density_mat(u_im)=density_mat(u_im)+ &
+                 multi_volume(u_im)*density_data(u_im)
+               temperature_mat(u_im)=temperature_mat(u_im)+ &
+                 multi_volume(u_im)*temperature_data(u_im)
+               do ispec=1,num_species_var
+                species_mat((ispec-1)*nmat+u_im)= &
+                 species_mat((ispec-1)*nmat+u_im)+ &
+                 multi_volume(u_im)*species_data((ispec-1)*nmat+u_im)
+               enddo
+              enddo ! u_im=1..nmat
+
+              voltotal=voltotal+multi_volume_total
 
               do u_im=1,nmat
-
-               dencomp=(u_im-1)*num_state_material+1
-               tcomp=dencomp+1
-                ! mixture density of gas if u_im corresponds to gas
-               density_data(u_im)=EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),dencomp)
-               temperature_data(u_im)= &
-                 EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp)
-               do ispec=1,num_species_var
-                species_data((ispec-1)*nmat+u_im)= &
-                 EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp+ispec)
+               lsmat(u_im)=lsmat(u_im)+multi_volume_total*lsdata(u_im)
+              enddo
+              do u_im=1,nmat 
+               volmat(u_im)=volmat(u_im)+multi_volume(u_im)
+               do udir=1,SDIM
+                cenmat(udir,u_im)=cenmat(udir,u_im)+ &
+                  multi_volume(u_im)*multi_cen(udir,u_im)
                enddo
+              enddo  ! u_im
+             enddo ! n - traversing triangles in intersection 
+            else if (nlist.eq.0) then
+             ! do nothing
+            else
+             print *,"nlist invalid"
+             stop
+            endif 
+           enddo ! id=1..ntetbox
+
+          enddo
+          enddo
+          enddo ! igrid,jgrid,kgrid
           
-               vofcomp_recon=(u_im-1)*ngeom_recon+1
-               mofdata(vofcomp_recon)= &
-                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon) 
-               do udir=1,SDIM 
-                mofdata(vofcomp_recon+udir)= &
-                 recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+udir)
-               enddo
-               mofdata(vofcomp_recon+SDIM+1)= &
-                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+SDIM+1) !ord
-               mofdata(vofcomp_recon+2*SDIM+2)= &
-                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+2*SDIM+2) 
-               do udir=1,SDIM
-                nn(udir)= &
-                 recon(D_DECL(i+igrid,j+jgrid,k+kgrid), &
-                       vofcomp_recon+SDIM+1+udir) 
-               enddo ! udir
+          if (voltotal.le.zero) then
+           print *,"voltotal bust"
+           stop
+          endif
 
-               ! ASINV maps target back to departure
-               ! e.g. in 1D, if compression => AS<1 => ASINV>1
-               ! 1D:AS=(xtarget_left-xtarget_right)/(xdeptleft-xeptright)
-               ! ASINV=(xdeptleft-xdeptright)/(xtarget_left-xtarget_right)
-               do udir=1,SDIM
-                nnmap(udir)=zero
-                do udir2=1,SDIM
-                 nnmap(udir)=nnmap(udir)+ASINV(udir2,udir)*nn(udir2)
-                enddo
-                mofdata(vofcomp_recon+SDIM+1+udir)=nnmap(udir)
-               enddo ! udir
-              enddo ! u_im
+          call Box_volumeFAST(bfact,dx,u_xsten_updatecell,nhalf, &
+           volcell,cencell,SDIM)
 
-              do n=1,nlist
+          do u_imaterial=1,nmat
+           unsplit_lsnew(u_imaterial)=lsmat(u_imaterial)/voltotal
+          enddo
 
-                ! xinttri is in the departure region
-               do ivert=1,SDIM+1
-               do udir=1,SDIM
-                xinttri(ivert,udir)=geom_xtetlist(ivert,udir,n,tid+1)
-               enddo
-               enddo
-            
-               ! target triangle (xinttri mapped), confined to target cell
-               do ivert=1,SDIM+1
-                do udir=1,SDIM
-                 xmaptri(ivert,udir)=coeff(udir,SDIM+1)
-                 do udir2=1,SDIM
-                  xmaptri(ivert,udir)=xmaptri(ivert,udir)+ &
-                   coeff(udir,udir2)*xinttri(ivert,udir2)
-                 enddo
-                enddo ! udir
-               enddo ! ivert
+          iten=iten_crit
+          ireverse=ireverse_crit
+          im_dest=im_dest_crit
+          im_source=im_source_crit 
 
-               call tetrahedron_volume(xmaptri,uncaptured_volume, &
-                uncaptured_centroid,SDIM)
+          if (interface_near(iten+ireverse*nten).ne.1) then
+           print *,"interface_near invalid"
+           stop
+          endif
 
-               absolute_voltotal=absolute_voltotal+uncaptured_volume
+          Tgamma_default=saturation_temp(iten+ireverse*nten)
+          Ygamma_default=one
 
-                 ! find volumes within u_xsten_updatecell (target)
-               shapeflag=1  
-               tessellate=0
-               call multi_get_volume_grid( &
-                 tessellate, &
-                 bfact,dx, &
-                 u_xsten_departmap,nhalf0, & ! nhalf0=1
-                 mofdata, &
-                 u_xsten_updatecell,nhalf, & ! nhalf=3
-                 xmaptri, &
-                 multi_volume,multi_cen,multi_area, &
-                 geom_xtetlist_uncapt(1,1,1,tid+1),  &
-                 nmax, &
-                 nmax, &
-                 nmat,SDIM,shapeflag,102)
+          Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
+          if (ireverse.eq.0) then
+            ! do nothing
+          else if (ireverse.eq.1) then
+            Tsat_flag=-Tsat_flag
+          else
+            print *,"ireverse invalid"
+            stop
+          endif
 
-               multi_volume_total=zero
-               do u_im=1,nmat
-                if (is_rigid(nmat,u_im).eq.0) then 
-                 multi_volume_total=multi_volume_total+multi_volume(u_im)
-                else if (is_rigid(nmat,u_im).eq.1) then 
-                 ! do nothing
-                else
-                 print *,"is_rigid invalid"
-                 stop
-                endif
-                density_mat(u_im)=density_mat(u_im)+ &
-                  multi_volume(u_im)*density_data(u_im)
-                temperature_mat(u_im)=temperature_mat(u_im)+ &
-                  multi_volume(u_im)*temperature_data(u_im)
-                do ispec=1,num_species_var
-                 species_mat((ispec-1)*nmat+u_im)= &
-                  species_mat((ispec-1)*nmat+u_im)+ &
-                  multi_volume(u_im)*species_data((ispec-1)*nmat+u_im)
-                enddo
-               enddo ! u_im=1..nmat
-
-               voltotal=voltotal+multi_volume_total
-
-               do u_im=1,nmat
-                lsmat(u_im)=lsmat(u_im)+multi_volume_total*lsdata(u_im)
-               enddo
-               do u_im=1,nmat 
-                volmat(u_im)=volmat(u_im)+multi_volume(u_im)
-                do udir=1,SDIM
-                 cenmat(udir,u_im)=cenmat(udir,u_im)+ &
-                   multi_volume(u_im)*multi_cen(udir,u_im)
-                enddo
-               enddo  ! u_im
-              enddo ! n - traversing triangles in intersection 
-             else if (nlist.eq.0) then
-              ! do nothing
-             else
-              print *,"nlist invalid"
-              stop
-             endif 
-            enddo ! id=1..ntetbox
-
-           enddo
-           enddo
-           enddo ! igrid,jgrid,kgrid
+          LL=latent_heat(iten+ireverse*nten)
+          local_freezing_model=freezing_model(iten+ireverse*nten)
+          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
+          mass_frac_id=mass_fraction_id(iten+ireverse*nten)
            
-           if (voltotal.le.zero) then
-            print *,"voltotal bust"
-            stop
-           endif
-
-           call Box_volumeFAST(bfact,dx,u_xsten_updatecell,nhalf, &
-            volcell,cencell,SDIM)
-
-           do u_imaterial=1,nmat
-            unsplit_lsnew(u_imaterial)=lsmat(u_imaterial)/voltotal
-           enddo
-
-           iten=iten_crit
-           ireverse=ireverse_crit
-           im_dest=im_dest_crit
-           im_source=im_source_crit 
-
-           if (interface_near(iten+ireverse*nten).ne.1) then
-            print *,"interface_near invalid"
-            stop
-           endif
-
-           Tgamma_default=saturation_temp(iten+ireverse*nten)
-           Ygamma_default=one
-
-           Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
-           if (ireverse.eq.0) then
-             ! do nothing
-           else if (ireverse.eq.1) then
-             Tsat_flag=-Tsat_flag
-           else
-             print *,"ireverse invalid"
-             stop
-           endif
-
-           LL=latent_heat(iten+ireverse*nten)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
-            
-           if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
-             Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
-              nten+(iten-1)*ncomp_per_tsat+1)
-             if ((mass_frac_id.ge.1).and. &
-                 (mass_frac_id.le.num_species_var)) then
-              Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
-               nten+(iten-1)*ncomp_per_tsat+2)
-             else if (mass_frac_id.eq.0) then
-              Ygamma_default=one
-             else
-              print *,"mass_frac_id invalid"
-              stop
-             endif
-           else if ((Tsat_flag.eq.-1).or. &
-                    (Tsat_flag.eq.-2)) then
-             ! do nothing
-           else if (Tsat_flag.eq.0) then
-             ! do nothing
-           else
-             print *,"Tsat_flag invalid"
-             stop
-           endif
-
-           do u_imaterial=1,nmat
-
-            vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
-
-            tempvfrac=volmat(u_imaterial)/voltotal
-            if ((tempvfrac.ge.EBVOFTOL).and.(tempvfrac.le.1.1d0)) then
-             if (tempvfrac.gt.one) then
-              tempvfrac=one
-             endif
-            else if ((tempvfrac.ge.zero).and.(tempvfrac.le.EBVOFTOL)) then
-             tempvfrac=zero
+          if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
+            Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
+             nten+(iten-1)*ncomp_per_tsat+1)
+            if ((mass_frac_id.ge.1).and. &
+                (mass_frac_id.le.num_species_var)) then
+             Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
+              nten+(iten-1)*ncomp_per_tsat+2)
+            else if (mass_frac_id.eq.0) then
+             Ygamma_default=one
             else
-             print *,"tempvfrac bust1 tempvfrac=",tempvfrac
+             print *,"mass_frac_id invalid"
              stop
             endif
+          else if ((Tsat_flag.eq.-1).or. &
+                   (Tsat_flag.eq.-2)) then
+            ! do nothing
+          else if (Tsat_flag.eq.0) then
+            ! do nothing
+          else
+            print *,"Tsat_flag invalid"
+            stop
+          endif
 
-            do udir=1,SDIM
-             if ((tempvfrac.gt.zero).and.(tempvfrac.le.one)) then
-              tempcen(udir)=cenmat(udir,u_imaterial)/volmat(u_imaterial)- &
-               cencell(udir)
-             else if (tempvfrac.eq.zero) then
-              tempcen(udir)=zero
-             else
-              print *,"tempvfrac bust2 tempvfrac=",tempvfrac
-              print *,"udir=",udir
-              stop
-             endif
-            enddo ! udir
-            
-            unsplit_snew(vofcomp_raw)=tempvfrac
-            do udir=1,SDIM
-             unsplit_snew(vofcomp_raw+udir)=tempcen(udir)
-            enddo
+          do u_imaterial=1,nmat
 
+           vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
+
+           tempvfrac=volmat(u_imaterial)/voltotal
+           if ((tempvfrac.ge.EBVOFTOL).and.(tempvfrac.le.1.1d0)) then
+            if (tempvfrac.gt.one) then
+             tempvfrac=one
+            endif
+           else if ((tempvfrac.ge.zero).and.(tempvfrac.le.EBVOFTOL)) then
+            tempvfrac=zero
+           else
+            print *,"tempvfrac bust1 tempvfrac=",tempvfrac
+            stop
+           endif
+
+           do udir=1,SDIM
             if ((tempvfrac.gt.zero).and.(tempvfrac.le.one)) then
-             unsplit_density(u_imaterial)= &
-              density_mat(u_imaterial)/volmat(u_imaterial)
-             unsplit_temperature(u_imaterial)= &
-              temperature_mat(u_imaterial)/volmat(u_imaterial)
-             do ispec=1,num_species_var
-              unsplit_species((ispec-1)*nmat+u_imaterial)= &
-               species_mat((ispec-1)*nmat+u_imaterial)/volmat(u_imaterial)
-             enddo
+             tempcen(udir)=cenmat(udir,u_imaterial)/volmat(u_imaterial)- &
+              cencell(udir)
             else if (tempvfrac.eq.zero) then
-             unsplit_density(u_imaterial)=fort_denconst(u_imaterial)
-             unsplit_temperature(u_imaterial)=Tgamma_default
-             do ispec=1,num_species_var
-              unsplit_species((ispec-1)*nmat+u_imaterial)=Ygamma_default
-             enddo
+             tempcen(udir)=zero
             else
-             print *,"tempvfrac bust3 tempvfrac=",tempvfrac
+             print *,"tempvfrac bust2 tempvfrac=",tempvfrac
+             print *,"udir=",udir
              stop
             endif
-
-           enddo  ! u_imaterial=1..nmat
-
-           vcompsrc_snew=num_materials_vel*(SDIM+1)+ &
-            nmat*num_state_material+(im_source-1)*ngeom_raw+1
-           vcompdst_snew=num_materials_vel*(SDIM+1)+ &
-            nmat*num_state_material+(im_dest-1)*ngeom_raw+1
-
-           do u_imaterial=1,nmat
-            vofcomp_recon=(u_imaterial-1)*ngeom_recon+1
-            oldvfrac(u_imaterial)=recon(D_DECL(i,j,k),vofcomp_recon)
-            vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
-            newvfrac(u_imaterial)=unsplit_snew(vofcomp_raw)
-            do dir=1,SDIM
-             old_centroid(u_imaterial,dir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
-             new_centroid(u_imaterial,dir)= &
-               unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
-            enddo
-           enddo ! u_imaterial=1,nmat
-
-           do u_imaterial=1,nmat*(1+SDIM)
-            oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
+           enddo ! udir
+           
+           unsplit_snew(vofcomp_raw)=tempvfrac
+           do udir=1,SDIM
+            unsplit_snew(vofcomp_raw+udir)=tempcen(udir)
            enddo
-           call normalize_LS_normals(nmat,oldLS_point)
 
-           vofcomp_raw_dest=(im_dest-1)*ngeom_raw+1
-           vofcomp_recon_source=(im_source-1)*ngeom_recon+1
-
-           do dir=1,SDIM
-            if ((newvfrac(im_dest).gt.zero).and. &
-                (newvfrac(im_dest).le.one)) then
-             new_centroid(im_dest,dir)= &
-               unsplit_snew(vofcomp_raw_dest+dir)+cengrid(dir)
-
-             ! all the source material can be converted into
-             ! destination material.
-            else if ((newvfrac(im_dest).eq.zero).and. &
-                     (oldvfrac(im_source).gt.zero)) then
-             new_centroid(im_dest,dir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon_source+dir)+cengrid(dir)
-            else if ((newvfrac(im_dest).eq.zero).and. &
-                     (abs(oldvfrac(im_source)).le.VOFTOL)) then
-             new_centroid(im_dest,dir)=cengrid(dir)
-            else
-             print *,"newvfrac(im_dest) or oldvfrac(im_source) invalid"
-             stop
-            endif
-           enddo ! dir=1..sdim
-
-           call get_primary_material(unsplit_lsnew,nmat,im_primary_new)
-           call get_primary_material(oldLS_point,nmat,im_primary_old)
-           call combine_solid_VOF(newvfrac,nmat,solid_vof_new)
-           call combine_solid_VOF(oldvfrac,nmat,solid_vof_old)
-
-           away_from_interface=0
-           if ((is_rigid(nmat,im_primary_new).eq.1).or. &
-               (is_rigid(nmat,im_primary_old).eq.1)) then
-            away_from_interface=1
-           endif
-           if ((solid_vof_new.ge.half).or. &
-               (solid_vof_old.ge.half)) then
-            away_from_interface=1
-           endif
-           if (((abs(unsplit_lsnew(im_source)).gt.dxmaxLS).or. &
-                (abs(unsplit_lsnew(im_dest)).gt.dxmaxLS)).and. &
-               ((abs(oldLS_point(im_dest)).gt.dxmaxLS).or. &
-                (abs(oldLS_point(im_source)).gt.dxmaxLS))) then
-            away_from_interface=1
-           endif
-
-           if (DEBUG_ACTIVE_CELL.eq.1) then
-            if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
-             print *,"im_source,im_dest,away_from_interface ", &
-                im_source,im_dest,away_from_interface
-            endif
-           endif
-
-           if (away_from_interface.eq.1) then
-            newvfrac(im_source)=oldvfrac(im_source)
-            newvfrac(im_dest)=oldvfrac(im_dest)
-            do udir=1,SDIM 
-             new_centroid(im_source,udir)=old_centroid(im_source,udir)
-             new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+           if ((tempvfrac.gt.zero).and.(tempvfrac.le.one)) then
+            unsplit_density(u_imaterial)= &
+             density_mat(u_imaterial)/volmat(u_imaterial)
+            unsplit_temperature(u_imaterial)= &
+             temperature_mat(u_imaterial)/volmat(u_imaterial)
+            do ispec=1,num_species_var
+             unsplit_species((ispec-1)*nmat+u_imaterial)= &
+              species_mat((ispec-1)*nmat+u_imaterial)/volmat(u_imaterial)
             enddo
-           else if (away_from_interface.eq.0) then
-             ! only the interface changing phase should move
-            LS_MAX_fixed=-1.0D+20
-            do im_local=1,nmat
-             lsdata(im_local)=LSold(D_DECL(i,j,k),im_local)
-             if ((im_local.eq.im_source).or.(im_local.eq.im_dest)) then
-              ! do nothing
-             else if ((im_local.ge.1).and.(im_local.le.nmat)) then
-              if (is_rigid(nmat,im_local).eq.1) then
-               ! do nothing
-              else if (is_rigid(nmat,im_local).eq.0) then  
-               LS_MAX_fixed=max(LS_MAX_fixed,lsdata(im_local))
-              else
-               print *,"is_rigid(nmat,im_local) invalid"
-               stop
-              endif
-             else
-              print *,"im_local bust"
-              stop
-             endif
-            enddo ! im_local=1..nmat
-            lsdata(im_source)=half*(unsplit_lsnew(im_source)- &
-             max(LS_MAX_fixed,unsplit_lsnew(im_dest)))
-            lsdata(im_dest)=half*(unsplit_lsnew(im_dest)- &
-             max(LS_MAX_fixed,unsplit_lsnew(im_source)))
-
-            LSnew(D_DECL(i,j,k),im_source)=lsdata(im_source)
-            LSnew(D_DECL(i,j,k),im_dest)=lsdata(im_dest)
+           else if (tempvfrac.eq.zero) then
+            unsplit_density(u_imaterial)=fort_denconst(u_imaterial)
+            unsplit_temperature(u_imaterial)=Tgamma_default
+            do ispec=1,num_species_var
+             unsplit_species((ispec-1)*nmat+u_imaterial)=Ygamma_default
+            enddo
            else
-            print *,"away_from_interface invalid"
+            print *,"tempvfrac bust3 tempvfrac=",tempvfrac
             stop
            endif
 
-            ! The new volume fractions should be tessellating, while
-            ! at the same time materials not involved in the phase change
-            ! should not have a change in volume.
-           fixed_vfrac_sum=zero
-           do udir=1,SDIM 
-            fixed_centroid_sum(udir)=zero
+          enddo  ! u_imaterial=1..nmat
+
+          vcompsrc_snew=num_materials_vel*(SDIM+1)+ &
+           nmat*num_state_material+(im_source-1)*ngeom_raw+1
+          vcompdst_snew=num_materials_vel*(SDIM+1)+ &
+           nmat*num_state_material+(im_dest-1)*ngeom_raw+1
+
+          do u_imaterial=1,nmat
+           vofcomp_recon=(u_imaterial-1)*ngeom_recon+1
+           oldvfrac(u_imaterial)=recon(D_DECL(i,j,k),vofcomp_recon)
+           vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
+           newvfrac(u_imaterial)=unsplit_snew(vofcomp_raw)
+           do dir=1,SDIM
+            old_centroid(u_imaterial,dir)= &
+              recon(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
+            new_centroid(u_imaterial,dir)= &
+              unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
            enddo
+          enddo ! u_imaterial=1,nmat
+
+          do u_imaterial=1,nmat*(1+SDIM)
+           oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
+          enddo
+          call normalize_LS_normals(nmat,oldLS_point)
+
+          vofcomp_raw_dest=(im_dest-1)*ngeom_raw+1
+          vofcomp_recon_source=(im_source-1)*ngeom_recon+1
+
+          do dir=1,SDIM
+           if ((newvfrac(im_dest).gt.zero).and. &
+               (newvfrac(im_dest).le.one)) then
+            new_centroid(im_dest,dir)= &
+              unsplit_snew(vofcomp_raw_dest+dir)+cengrid(dir)
+
+            ! all the source material can be converted into
+            ! destination material.
+           else if ((newvfrac(im_dest).eq.zero).and. &
+                    (oldvfrac(im_source).gt.zero)) then
+            new_centroid(im_dest,dir)= &
+              recon(D_DECL(i,j,k),vofcomp_recon_source+dir)+cengrid(dir)
+           else if ((newvfrac(im_dest).eq.zero).and. &
+                    (abs(oldvfrac(im_source)).le.VOFTOL)) then
+            new_centroid(im_dest,dir)=cengrid(dir)
+           else
+            print *,"newvfrac(im_dest) or oldvfrac(im_source) invalid"
+            stop
+           endif
+          enddo ! dir=1..sdim
+
+          call get_primary_material(unsplit_lsnew,nmat,im_primary_new)
+          call get_primary_material(oldLS_point,nmat,im_primary_old)
+          call combine_solid_VOF(newvfrac,nmat,solid_vof_new)
+          call combine_solid_VOF(oldvfrac,nmat,solid_vof_old)
+
+          away_from_interface=0
+          if ((is_rigid(nmat,im_primary_new).eq.1).or. &
+              (is_rigid(nmat,im_primary_old).eq.1)) then
+           away_from_interface=1
+          endif
+
+          if ((solid_vof_new.ge.half).or. &
+              (solid_vof_old.ge.half)) then
+           away_from_interface=1
+          endif
+          if (((abs(unsplit_lsnew(im_source)).gt.dxmaxLS).or. &
+               (abs(unsplit_lsnew(im_dest)).gt.dxmaxLS)).and. &
+              ((abs(oldLS_point(im_dest)).gt.dxmaxLS).or. &
+               (abs(oldLS_point(im_source)).gt.dxmaxLS))) then
+           away_from_interface=1
+          endif
+
+          if (DEBUG_ACTIVE_CELL.eq.1) then
+           if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+            print *,"im_source,im_dest,away_from_interface ", &
+               im_source,im_dest,away_from_interface
+           endif
+          endif
+
+          if (away_from_interface.eq.1) then
+           newvfrac(im_source)=oldvfrac(im_source)
+           newvfrac(im_dest)=oldvfrac(im_dest)
+           do udir=1,SDIM 
+            new_centroid(im_source,udir)=old_centroid(im_source,udir)
+            new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+           enddo
+          else if (away_from_interface.eq.0) then
+
+            ! only the interface changing phase should move
+           LS_MAX_fixed=-1.0D+20
            do im_local=1,nmat
-            if ((im_local.eq.im_source).or. &
-                (im_local.eq.im_dest)) then
+            lsdata(im_local)=LSold(D_DECL(i,j,k),im_local)
+            if ((im_local.eq.im_source).or.(im_local.eq.im_dest)) then
              ! do nothing
             else if ((im_local.ge.1).and.(im_local.le.nmat)) then
-             newvfrac(im_local)=oldvfrac(im_local)
-             do udir=1,SDIM 
-              new_centroid(im_local,udir)=old_centroid(im_local,udir)
-             enddo
-             if (is_rigid(nmat,im_local).eq.0) then
-              fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
-              do udir=1,SDIM 
-               fixed_centroid_sum(udir)=fixed_centroid_sum(udir)+ &
-                 newvfrac(im_local)*new_centroid(im_local,udir)
-              enddo
-             else if (is_rigid(nmat,im_local).eq.1) then
-              ! ignore, solids are embedded
+             if (is_rigid(nmat,im_local).eq.1) then
+              ! do nothing
+             else if (is_rigid(nmat,im_local).eq.0) then  
+              LS_MAX_fixed=max(LS_MAX_fixed,lsdata(im_local))
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid(nmat,im_local) invalid"
               stop
              endif
             else
-             print *,"im_local became corrupt"
+             print *,"im_local bust"
              stop
             endif
            enddo ! im_local=1..nmat
+           lsdata(im_source)=half*(unsplit_lsnew(im_source)- &
+             max(LS_MAX_fixed,unsplit_lsnew(im_dest)))
+           lsdata(im_dest)=half*(unsplit_lsnew(im_dest)- &
+             max(LS_MAX_fixed,unsplit_lsnew(im_source)))
 
-           if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
-               (fixed_vfrac_sum.le.one+VOFTOL)) then
-            avail_vfrac=zero
-           else if ((fixed_vfrac_sum.ge.-VOFTOL).and. &
-                    (fixed_vfrac_sum.le.zero)) then
-            avail_vfrac=one
-           else if ((fixed_vfrac_sum.gt.zero).and. &
-                    (fixed_vfrac_sum.le.one-VOFTOL)) then
-            avail_vfrac=one-fixed_vfrac_sum
+           LSnew(D_DECL(i,j,k),im_source)=lsdata(im_source)
+           LSnew(D_DECL(i,j,k),im_dest)=lsdata(im_dest)
+
+          else
+           print *,"away_from_interface invalid"
+           stop
+          endif
+
+           ! The new volume fractions should be tessellating, while
+           ! at the same time materials not involved in the phase change
+           ! should not have a change in volume.
+          fixed_vfrac_sum=zero
+          do udir=1,SDIM 
+           fixed_centroid_sum(udir)=zero
+          enddo
+          do im_local=1,nmat
+           if ((im_local.eq.im_source).or. &
+               (im_local.eq.im_dest)) then
+            ! do nothing
+           else if ((im_local.ge.1).and.(im_local.le.nmat)) then
+            newvfrac(im_local)=oldvfrac(im_local)
+            do udir=1,SDIM 
+             new_centroid(im_local,udir)=old_centroid(im_local,udir)
+            enddo
+            if (is_rigid(nmat,im_local).eq.0) then
+             fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
+             do udir=1,SDIM 
+              fixed_centroid_sum(udir)=fixed_centroid_sum(udir)+ &
+                newvfrac(im_local)*new_centroid(im_local,udir)
+             enddo
+            else if (is_rigid(nmat,im_local).eq.1) then
+             ! ignore, solids are embedded
+            else
+             print *,"is_rigid invalid"
+             stop
+            endif
            else
-            print *,"fixed_vfrac_sum invalid"
+            print *,"im_local became corrupt"
             stop
            endif
+          enddo ! im_local=1..nmat
+
+          if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
+              (fixed_vfrac_sum.le.one+VOFTOL)) then
+           avail_vfrac=zero
+          else if ((fixed_vfrac_sum.ge.-VOFTOL).and. &
+                   (fixed_vfrac_sum.le.zero)) then
+           avail_vfrac=one
+          else if ((fixed_vfrac_sum.gt.zero).and. &
+                   (fixed_vfrac_sum.le.one-VOFTOL)) then
+           avail_vfrac=one-fixed_vfrac_sum
+          else
+           print *,"fixed_vfrac_sum invalid"
+           stop
+          endif
+
+          if (DEBUG_ACTIVE_CELL.eq.1) then
+           if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+            print *,"im_source,im_dest,avail_vfrac,oldvfrac(im_dest) ", &
+               im_source,im_dest,avail_vfrac,oldvfrac(im_dest)
+           endif
+          endif
+
+          if ((avail_vfrac.eq.zero).or. &
+              (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
+           dF=zero
+           newvfrac(im_dest)=oldvfrac(im_dest)
+           newvfrac(im_source)=oldvfrac(im_source)
+           do udir=1,SDIM 
+            new_centroid(im_source,udir)=old_centroid(im_source,udir)
+            new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
+           enddo
+           LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
+           LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+          else if ((avail_vfrac.gt.zero).and. &
+                   (avail_vfrac.le.one)) then
+           dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
+           dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
 
            if (DEBUG_ACTIVE_CELL.eq.1) then
             if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
-             print *,"im_source,im_dest,avail_vfrac,oldvfrac(im_dest) ", &
-                im_source,im_dest,avail_vfrac,oldvfrac(im_dest)
+             print *,"im_source,im_dest,dFdst,dFsrc ", &
+               im_source,im_dest,dFdst,dFsrc
             endif
            endif
 
-           if ((avail_vfrac.eq.zero).or. &
-               (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
+           if ((dFdst.le.zero).and. &
+               (dFsrc.le.zero)) then
             dF=zero
             newvfrac(im_dest)=oldvfrac(im_dest)
             newvfrac(im_source)=oldvfrac(im_source)
@@ -4846,21 +4827,49 @@ stop
             enddo
             LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
             LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
-           else if ((avail_vfrac.gt.zero).and. &
-                    (avail_vfrac.le.one)) then
-            dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
-            dFsrc=(oldvfrac(im_source)-newvfrac(im_source))
+           else if ((dFdst.gt.zero).or. &
+                    (dFsrc.gt.zero)) then
 
-            if (DEBUG_ACTIVE_CELL.eq.1) then
-             if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
-              print *,"im_source,im_dest,dFdst,dFsrc ", &
-                im_source,im_dest,dFdst,dFsrc
-             endif
+            ! mass fraction equation:
+            ! in a given cell with m species.
+            ! mass= sum_i=1^m  Y_i overall_mass = 
+            !     = sum_i=1^m  density_i F_i V_cell
+            ! F_i = volume fraction of material i.
+            ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
+            ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
+
+             ! if there are 2 materials, dFdst=dFsrc, but if there
+             ! are 3 materials or more, the larger value is to be
+             ! trusted over the smaller, due to interference from the
+             ! extra materials (which hypothetically, should be fixed)
+            im_trust=0
+            im_distrust=0
+            if (dFdst.ge.dFsrc) then
+             im_trust=im_dest
+             im_distrust=im_source
+             dF=dFdst
+            else if (dFdst.le.dFsrc) then
+             im_trust=im_source
+             im_distrust=im_dest
+             dF=dFsrc
+            else
+             print *,"dFdst or dFsrc bust"
+             stop
             endif
 
-            if ((dFdst.le.zero).and. &
-                (dFsrc.le.zero)) then
-             dF=zero
+            if ((LL.gt.zero).or. & !evaporation,boiling,melting,cavitation
+                (LL.lt.zero)) then !freezing, condensation
+             dF=min(dF,oldvfrac(im_source))
+             dF=min(dF,avail_vfrac-oldvfrac(im_dest))
+            else
+             print *,"LL invalid"
+             stop
+            endif
+
+            newvfrac(im_dest)=oldvfrac(im_dest)+dF
+            newvfrac(im_source)=oldvfrac(im_source)-dF
+ 
+            if (dF.eq.zero) then
              newvfrac(im_dest)=oldvfrac(im_dest)
              newvfrac(im_source)=oldvfrac(im_source)
              do udir=1,SDIM 
@@ -4869,904 +4878,788 @@ stop
              enddo
              LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
              LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
-            else if ((dFdst.gt.zero).or. &
-                     (dFsrc.gt.zero)) then
-
-             ! mass fraction equation:
-             ! in a given cell with m species.
-             ! mass= sum_i=1^m  Y_i overall_mass = 
-             !     = sum_i=1^m  density_i F_i V_cell
-             ! F_i = volume fraction of material i.
-             ! (rho Y_i)_t + div (rho u Y_i) = div rho D_i  grad Y_i
-             ! (Y_i)_t + div (u Y_i) = div rho D_i  grad Y_i/rho
-
-              ! if there are 2 materials, dFdst=dFsrc, but if there
-              ! are 3 materials or more, the larger value is to be
-              ! trusted over the smaller, due to interference from the
-              ! extra materials (which hypothetically, should be fixed)
-             im_trust=0
-             im_distrust=0
-             if (dFdst.ge.dFsrc) then
-              im_trust=im_dest
-              im_distrust=im_source
-              dF=dFdst
-             else if (dFdst.le.dFsrc) then
-              im_trust=im_source
-              im_distrust=im_dest
-              dF=dFsrc
-             else
-              print *,"dFdst or dFsrc bust"
-              stop
-             endif
-
-             if ((LL.gt.zero).or. & !evaporation,boiling,melting,cavitation
-                 (LL.lt.zero)) then !freezing, condensation
-              dF=min(dF,oldvfrac(im_source))
-              dF=min(dF,avail_vfrac-oldvfrac(im_dest))
-             else
-              print *,"LL invalid"
-              stop
-             endif
-
-             newvfrac(im_dest)=oldvfrac(im_dest)+dF
-             newvfrac(im_source)=oldvfrac(im_source)-dF
- 
-             if (dF.eq.zero) then
-              newvfrac(im_dest)=oldvfrac(im_dest)
-              newvfrac(im_source)=oldvfrac(im_source)
+            else if (dF.gt.zero) then
+             if (fixed_vfrac_sum.gt.VOFTOL) then
               do udir=1,SDIM 
-               new_centroid(im_source,udir)=old_centroid(im_source,udir)
-               new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
-              enddo
-              LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
-              LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
-             else if (dF.gt.zero) then
-              if (fixed_vfrac_sum.gt.VOFTOL) then
-               do udir=1,SDIM 
-                if (newvfrac(im_distrust).gt.VOFTOL) then
-                 new_centroid(im_distrust,udir)= &
-                  (cengrid(udir)- &
-                   (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
-                    fixed_centroid_sum(udir)))/newvfrac(im_distrust)
-                else if (abs(newvfrac(im_distrust)).le.VOFTOL) then
-                 new_centroid(im_distrust,udir)=cengrid(udir)
-                else
-                 print *,"newvfrac(im_distrust) invalid"
-                 stop
-                endif
-               enddo ! udir=1..sdim
-              else if (abs(fixed_vfrac_sum).le.VOFTOL) then
-               ! do nothing
-              else
-               print *,"fixed_vfrac_sum invalid"
-               stop
-              endif
-                 
-              DVOF(im_dest)=DVOF(im_dest)+dF
-              deltaVOF(D_DECL(i,j,k),im_dest)=dF
+               if (newvfrac(im_distrust).gt.VOFTOL) then
+                new_centroid(im_distrust,udir)= &
+                 (cengrid(udir)- &
+                  (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
+                   fixed_centroid_sum(udir)))/newvfrac(im_distrust)
+               else if (abs(newvfrac(im_distrust)).le.VOFTOL) then
+                new_centroid(im_distrust,udir)=cengrid(udir)
+               else
+                print *,"newvfrac(im_distrust) invalid"
+                stop
+               endif
+              enddo ! udir=1..sdim
+             else if (abs(fixed_vfrac_sum).le.VOFTOL) then
+              ! do nothing
              else
-              print *,"dF invalid"
+              print *,"fixed_vfrac_sum invalid"
               stop
              endif
+                
             else
-             print *,"dF became corrupt1 dF=",dF
+             print *,"dF invalid"
              stop
             endif
            else
-            print *,"avail_vfrac invalid"
+            print *,"dF became corrupt1 dF=",dF
             stop
            endif
-           if (DEBUG_ACTIVE_CELL.eq.1) then
-            if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
-             print *,"im_source,im_dest,dF ", &
-                im_source,im_dest,dF
-             stop
-            endif
+          else
+           print *,"avail_vfrac invalid"
+           stop
+          endif
+
+          if (DEBUG_ACTIVE_CELL.eq.1) then
+           if ((i.eq.DEBUG_I).and.(j.eq.DEBUG_J)) then
+            print *,"im_source,im_dest,dF ", &
+               im_source,im_dest,dF
+            stop
            endif
+          endif
 
-            ! 1. the MAC and cell velocity field should be extrapolated
-            !    from the old destination material side into the cells/faces
-            !    that were swept by the interface. (SWEPTFACTOR>0.0)
-            ! 2. the destination temperature and species should be set 
-            !    to the interface values at destination centroids which were
-            !    swept by the interface. (SWEPTFACTOR_centroid==1)
-            ! 3. the source and destination temperature and species should 
-            !    be recalculated in non-swept partial cells.  They should 
-            !    be interpolated from the old supermesh grid to the new
-            !    taking into consideration the interface boundary condition.
-           if (dF.gt.EBVOFTOL) then
+           ! 1. the MAC and cell velocity field should be extrapolated
+           !    from the old destination material side into the cells/faces
+           !    that were swept by the interface. (SWEPTFACTOR>0.0)
+           ! 2. the destination temperature and species should be set 
+           !    to the interface values at destination centroids which were
+           !    swept by the interface. (SWEPTFACTOR_centroid==1)
+           ! 3. the source and destination temperature and species should 
+           !    be recalculated in non-swept partial cells.  They should 
+           !    be interpolated from the old supermesh grid to the new
+           !    taking into consideration the interface boundary condition.
+          if (dF.gt.EBVOFTOL) then
 
-            do iprobe=1,2
+           do iprobe=1,2
 
-             if (iprobe.eq.1) then ! source
-              im_probe=im_source
-             else if (iprobe.eq.2) then ! dest
-              im_probe=im_dest
-             else
-              print *,"iprobe invalid"
-              stop
-             endif
-
-             dencomp_probe=(im_probe-1)*num_state_material+1
-             tcomp_probe=dencomp_probe+1
-             if ((mass_frac_id.ge.1).and. &
-                 (mass_frac_id.le.num_species_var)) then
-              mfrac_comp_probe=tcomp_probe+mass_frac_id
-              ispec_probe=(mass_frac_id-1)*nmat+im_probe
-             else if (mass_frac_id.eq.0) then
-              mfrac_comp_probe=0
-              ispec_probe=0
-             else
-              print *,"mass_frac_id invalid"
-              stop
-             endif
-
-             if (newvfrac(im_probe).ge.EBVOFTOL) then
-              mtype=fort_material_type(im_probe)
-              if (mtype.eq.0) then
-               density_new(iprobe)=unsplit_density(im_probe) 
-              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-               density_new(iprobe)=unsplit_density(im_probe) 
-              else
-               print *,"mtype invalid"
-               stop
-              endif
-              temperature_new(iprobe)=unsplit_temperature(im_probe)
-              if (mfrac_comp_probe.eq.0) then ! no species vars
-               species_new(iprobe)=one
-              else if (mfrac_comp_probe.gt.0) then
-               species_new(iprobe)= &
-                 unsplit_species((mass_frac_id-1)*nmat+im_probe)
-              else
-               print *,"mfrac_comp_probe invalid"
-               stop
-              endif
-             else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
-                      (newvfrac(im_probe).ge.-EBVOFTOL)) then
-              density_new(iprobe)=fort_denconst(im_probe)
-              temperature_new(iprobe)=Tgamma_default
-              species_new(iprobe)=Ygamma_default
-             else
-              print *,"newvfrac invalid"
-              stop
-             endif
-
-             if (oldvfrac(im_probe).ge.EBVOFTOL) then
-              mtype=fort_material_type(im_probe)
-              if (mtype.eq.0) then
-               density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
-              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-               density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
-              else
-               print *,"mtype invalid"
-               stop
-              endif
-              temperature_old(iprobe)=EOS(D_DECL(i,j,k),tcomp_probe)
-              if (mfrac_comp_probe.eq.0) then ! no species var
-               species_old(iprobe)=one
-              else if (mfrac_comp_probe.gt.0) then
-               species_old(iprobe)=EOS(D_DECL(i,j,k),mfrac_comp_probe)
-              else
-               print *,"mfrac_comp_probe invalid"
-               stop
-              endif
-             else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
-                      (oldvfrac(im_probe).ge.-EBVOFTOL)) then
-              density_old(iprobe)=fort_denconst(im_probe)
-              temperature_old(iprobe)=Tgamma_default
-              species_old(iprobe)=Ygamma_default
-             else
-              print *,"oldvfrac invalid"
-              stop
-             endif
-
-            enddo ! iprobe=1,2
-
-             ! for evaporation:
-             ! den_new=(den_old * F_old + vapor_den * dF)/(F_old+dF)
-            if (LL.gt.zero) then !evaporation
-              im_vapor=im_dest
-              im_condensed=im_source
-              iprobe_vapor=2 ! dest
-              iprobe_condensed=1 !source
-            else if (LL.lt.zero) then ! condensation
-              im_vapor=im_source
-              im_condensed=im_dest
-              iprobe_vapor=1 ! source
-              iprobe_condensed=2 ! dest
+            if (iprobe.eq.1) then ! source
+             im_probe=im_source
+            else if (iprobe.eq.2) then ! dest
+             im_probe=im_dest
             else
-              print *,"im_vapor invalid"
-              stop
-            endif
-
-            ambient_den=fort_denconst(im_vapor)
-            if (ambient_den.gt.zero) then
-             ! do nothing
-            else
-             print *,"ambient_den invalid"
+             print *,"iprobe invalid"
              stop
             endif
 
-             ! at CONSTANT DENSITY:
-             ! "vapor" is what material transforms TO if system is HEATED.
-             ! "condensed" is what material transforms FROM if system is HEATED.
-             ! "vapor" is what material transforms FROM if system is COOLED.
-             ! "condensed" is what material transforms TO if system is COOLED.
-             ! 
-            if (local_freezing_model.eq.0) then !Stefan model
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if (local_freezing_model.eq.1) then !source term
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if (local_freezing_model.eq.2) then !hydrate
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if (local_freezing_model.eq.3) then !wildfire
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if ((local_freezing_model.eq.4).or. & !Tannasawa or Schrage
-                     (local_freezing_model.eq.5).or. & !Stefan evap/cond model
-                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
-                     (local_freezing_model.eq.7)) then !Cavitation
-
-             if ((mass_frac_id.ge.1).and. &
-                 (mass_frac_id.le.num_species_var)) then
-
-              vapor_den=species_evaporation_density(mass_frac_id)
-              condensed_den=density_old(iprobe_condensed)
-
-              if ((vapor_den.gt.zero).and.(condensed_den.gt.zero)) then
-               ! do nothing
-              else
-               print *,"vapor_den or condensed_den invalid"
-               stop
-              endif
-
-             else
-              print *,"mass_frac_id invalid"
-              stop
-             endif
-
+            dencomp_probe=(im_probe-1)*num_state_material+1
+            tcomp_probe=dencomp_probe+1
+            if ((mass_frac_id.ge.1).and. &
+                (mass_frac_id.le.num_species_var)) then
+             mfrac_comp_probe=tcomp_probe+mass_frac_id
+             ispec_probe=(mass_frac_id-1)*nmat+im_probe
+            else if (mass_frac_id.eq.0) then
+             mfrac_comp_probe=0
+             ispec_probe=0
             else
-             print *,"local_freezing_model invalid 1"
+             print *,"mass_frac_id invalid"
              stop
             endif
 
-            temp_mix_new(2)=temperature_new(2)
-            temp_mix_new(1)=temperature_new(1)
-
-            if (LL.gt.zero) then ! evaporation
-
-             temp_new_vfrac=oldvfrac(im_dest)+dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
-                vapor_den*dF)/temp_new_vfrac
-               ! If liquid and gas mixture are incompressible, then
-               ! determine Y so that den_mix= 
-               !   (denV denA)/(Y denA + (1-Y) denV )
-               ! den_mix * ( Y(denA-denV) + denV ) = denA denV
-               ! Y(denA -denV) + denV = denA denV/den_mix
-               ! Y=((denA denV)/den_mix - denV)/(denA-denV)
-               !  =denV (denA-den_mix)/((denA-denV)den_mix)
-              mtype=fort_material_type(im_vapor)
-              if (mtype.eq.0) then
-               gas_den_ratio=vapor_den/ambient_den
-               if (abs(gas_den_ratio-one).gt.1.0D-3) then
-                numerator=vapor_den*(ambient_den-density_mix_new(2)) 
-                denominator=density_mix_new(2)*(ambient_den-vapor_den) 
-                if (numerator*denominator.gt.zero) then
-                 mass_frac_new(2)=numerator/denominator
-                else
-                 print *,"numerator/denominator invalid"
-                 stop
-                endif
-                if ((mass_frac_new(2).ge.zero).and. &
-                    (mass_frac_new(2).le.one)) then
-                 ! do nothing
-                else if (mass_frac_new(2).gt.one) then
-                 mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
-                   dF)/temp_new_vfrac
-                else
-                 print *,"mass_frac_new(2) invalid"
-                 stop
-                endif
-               else if (abs(gas_den_ratio-one).le.1.0D-3) then
-                mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
-                  dF)/temp_new_vfrac
-               else
-                print *,"abs(gas_den_ratio-one) invalid"
-                stop
-               endif
-              else if (((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)).or. &
-                       (abs(ambient_den-vapor_den).le.1.0D-3*vapor_den)) then
-               mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
-                dF)/temp_new_vfrac
-              else
-               print *,"type invalid"
-               stop
-              endif
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              density_mix_new(2)=density_old(2)
-              mass_frac_new(2)=species_old(2)
+            if (newvfrac(im_probe).ge.EBVOFTOL) then
+             mtype=fort_material_type(im_probe)
+             if (mtype.eq.0) then
+              density_new(iprobe)=unsplit_density(im_probe) 
+             else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
+              density_new(iprobe)=unsplit_density(im_probe) 
              else
-              print *,"temp_new_vfrac invalid"
+              print *,"mtype invalid"
               stop
              endif
-            
-             if (im_source.eq.im_condensed) then 
-              temp_new_vfrac=oldvfrac(im_source)-dF
-              if (temp_new_vfrac.gt.EBVOFTOL) then 
-               mtype=fort_material_type(im_source)
-               if (mtype.eq.0) then
-                density_mix_new(1)=density_old(1)
-               else if ((mtype.ge.1).and. &
-                        (mtype.le.MAX_NUM_EOS)) then
-                density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
-                 condensed_den*dF)/temp_new_vfrac
-                if (density_mix_new(1).gt.zero) then
-                 ! do nothing
-                else
-                 print *,"density_mix_new(1) invalid",density_mix_new(1)
-                 print *,"LL=",LL
-                 print *,"density_old(1)=",density_old(1)
-                 print *,"oldvfrac(im_source)=",oldvfrac(im_source)
-                 print *,"dF=",dF
-                 print *,"condensed_den=",condensed_den
-                 stop
-                endif
-               else
-                print *,"mtype invalid"
-                stop
-               endif
-              else if (temp_new_vfrac.le.EBVOFTOL) then
-               density_mix_new(1)=density_old(1)
-              else
-               print *,"temp_new_vfrac invalid"
-               stop
-              endif
-             else
-              print *,"expecting im_source==im_condensed"
-              stop
-             endif
-             mass_frac_new(1)=Ygamma_default
-
-            else if (LL.lt.zero) then ! condensation
-
-             if (im_dest.eq.im_condensed) then 
-              temp_new_vfrac=oldvfrac(im_dest)+dF
-              if (temp_new_vfrac.gt.EBVOFTOL) then 
-               mtype=fort_material_type(im_dest)
-               if (mtype.eq.0) then
-                density_mix_new(2)=density_old(2)
-               else if ((mtype.ge.1).and. &
-                        (mtype.le.MAX_NUM_EOS)) then
-                density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
-                 condensed_den*dF)/temp_new_vfrac
-               else
-                print *,"mtype invalid"
-                stop
-               endif
-              else if (temp_new_vfrac.le.EBVOFTOL) then
-               density_mix_new(2)=density_old(2)
-              else
-               print *,"temp_new_vfrac invalid"
-               stop
-              endif
-             else
-              print *,"expecting im_dest==im_condensed"
-              stop
-             endif
-
-             temp_new_vfrac=oldvfrac(im_source)-dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              denratio_factor=density_old(1)/vapor_den-one
-              if (abs(denratio_factor).le.EBVOFTOL) then
-               density_mix_new(1)=density_old(1)
-              else if (abs(denratio_factor).gt.EBVOFTOL) then
-               density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
-                vapor_den*dF)/temp_new_vfrac
-              else
-               print *,"denratio_factor invalid"
-               stop
-              endif
-              mass_frac_new(1)=(species_old(1)*oldvfrac(im_source)- &
-               dF)/temp_new_vfrac
-              if (mass_frac_new(1).lt.zero) then
-               mass_frac_new(1)=zero
-              endif
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              density_mix_new(1)=density_old(1)
-              mass_frac_new(1)=zero
-             else
-              print *,"temp_new_vfrac invalid"
-              stop
-             endif
-             mass_frac_new(2)=Ygamma_default
-            else
-             print *,"LL invalid"
-             stop
-            endif
-
-             ! dF>EBVOFTOL in this section, so now let's see
-             ! if the cell center has been swept and also the
-             ! destination centroid.
-             ! for GFM, if a cell center is not occupied by the
-             ! destination material at tn but is occupied at tnp1, then
-             ! (theta^{n+1} - theta_{I})/(tnp1 - tswept) = L(theta^{n+1}
-             ! tswept is the crossing time.
-             ! Suppose 1D and GFM:
-             !  at t=tn      F=Fn
-             !  at t=tswept  F=1/2
-             !  at t=tnp1    F=Fnp1
-             !  F(t)=(Fnp1 - Fn)/(tnp1-tn)  * (t-tnp1) + Fnp1
-             !  1/2 = dF/(tnp1-tn)   * (tswept-tnp1)  + Fnp1
-             !  dF/(tnp1-tn)  * (tswept-tnp1) = Fnp1-1/2
-             !  SWEPTFACTOR=(tswept-tnp1)/(tnp1-tn)  = (Fnp1-1/2)/dF
-             !  new approach (motivated by supermesh):
-             !  1. given an estimate of phase change velocity "USTEFAN",
-             !     dt is chosen such that USTEFAN * dt <= dx/4
-             !     This assures that a swept cell will NOT be full at tnp1.
-             !  2. Strategy is this: 
-             !     a) we have the signed distance function at tn.
-             !     b) let x^* be either (i) cell center if GFM, or (ii)
-             !        cell centroid at tnp1 of the destination material.
-             !     c) if phi(tn,x^*)<0 then:
-             !         (i) find MOF reconstruction and determine if
-             !             phi^reconstruct(tnp1,x^*)>0
-             !             if yes, then 
-             !             SWEPTFACTOR=1-(phi_np1/(phi_np1-phi_n)     
-
-             ! this is just an isweep=0 placeholder; this variable
-             ! will never be used.
-            SWEPTFACTOR_GFM=one
-            if ((oldvfrac(im_dest).lt.half).and. &
-                (newvfrac(im_dest).gt.half)) then
-             SWEPTFACTOR_GFM=(newvfrac(im_dest)-half)/dF
-            else if ((oldvfrac(im_dest).ge.half).or. &
-                     (newvfrac(im_dest).le.half)) then
-             SWEPTFACTOR_GFM=one
-            else
-             print *,"oldvfrac or newvfrac invalid"
-             stop
-            endif
-
-             ! => new_centroid(im_dest,udir) (absolute coord)
-            do u_im=1,nmat
-             vofcomp_recon=(u_im-1)*ngeom_recon+1
-
-             mofdata(vofcomp_recon)=oldvfrac(u_im)
-             mofdata_new(vofcomp_recon)=newvfrac(u_im)
-
-             do udir=1,SDIM 
-              mofdata(vofcomp_recon+udir)= &
-                old_centroid(u_im,udir)-cengrid(udir)
-
-              mofdata_new(vofcomp_recon+udir)= &
-                new_centroid(u_im,udir)-cengrid(udir)
-             enddo
-             mofdata(vofcomp_recon+SDIM+1)= &
-              recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
-
-             mofdata_new(vofcomp_recon+SDIM+1)=0  ! placeholder order
-
-             mofdata(vofcomp_recon+2*SDIM+2)= & 
-              recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  !intercept
-
-             mofdata_new(vofcomp_recon+2*SDIM+2)=zero  ! placeholder intercept
-
-             do udir=1,SDIM
-              mofdata(vofcomp_recon+SDIM+1+udir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
-
-              mofdata_new(vofcomp_recon+SDIM+1+udir)=zero ! placeholder slope
-             enddo ! udir
-            enddo ! u_im=1..nmat
-
-            mof_verbose=0
-            use_ls_data=0
-            continuous_mof_parm=0
-
-             ! LS=n dot (x-x0)+intercept
-            call multimaterial_MOF( &
-             bfact,dx,u_xsten_updatecell,nhalf, &
-             mof_verbose, &
-             use_ls_data, &
-             LS_stencil, &
-             geom_xtetlist(1,1,1,tid+1), &
-             geom_xtetlist_old(1,1,1,tid+1), &
-             nmax, &
-             nmax, &
-             mofdata_new, &
-             multi_centroidA, &
-             continuous_mof_parm, &
-             nmat,SDIM,202)
-
-             !isweep==0 so we save mofdata_new for isweep=1
-            do u_im=1,nmat*ngeom_recon
-             MOFnewFAB(D_DECL(i,j,k),u_im)=mofdata_new(u_im)
-            enddo
-
-             ! xPOINT_supermesh is needed in order to determine
-             ! whether to interpolate old temperature and mass fraction
-             ! data from the old supermesh to the new supermesh.
-            do udir=1,SDIM
-             xPOINT_supermesh(udir)=new_centroid(im_dest,udir)
-            enddo
-
-             ! now we check if new_centroid(im_dest,dir) is in the
-             ! old dest material.
-             ! If new_centroid(im_dest) in the old dest material, then
-             ! the cell centroid HAS NOT been swept and the temperature
-             ! at this point needs to be interpolated from the t=tn
-             ! im_dest supermesh.
-            SWEPTFACTOR_centroid=0
-            if ((newvfrac(im_dest).gt.zero).and. &
-                (newvfrac(im_dest).le.one+EBVOFTOL)) then
-
-             tessellate=1
-             call multi_get_volumePOINT( &
-               tessellate, &
-               bfact,dx, &
-               u_xsten_updatecell,nhalf, &  ! absolute coordinate system
-               mofdata, &
-               xPOINT_supermesh, & ! absolute coordinate system
-               im_old_crit,nmat,SDIM)
-
-              ! im_old_crit=material at t=tn that occupies the new 
-              ! centroid location
-             if ((im_old_crit.eq.im_dest).or. &
-                 (oldvfrac(im_dest).ge.half)) then
-              ! do nothing
-             else if ((im_old_crit.ge.1).and. &
-                      (im_old_crit.le.nmat).and. &
-                      (im_old_crit.ne.im_dest).and. &
-                      (oldvfrac(im_dest).le.half)) then
-              SWEPTFACTOR_centroid=1
-
-              if (1.eq.0) then
-               print *,"setting SWEPTFACTOR_centroid=1"
-               print *,"im_dest= ",im_dest
-               print *,"xPOINT_supermesh= ", &
-                 xPOINT_supermesh(1),xPOINT_supermesh(2),xPOINT_supermesh(SDIM)
-               print *,"xPOINT_supermesh(1)-xsten(0,1)= ", &
-                       xPOINT_supermesh(1)-u_xsten_updatecell(0,1)
-               print *,"oldvfrac(im_dest)=",oldvfrac(im_dest)
-               print *,"newvfrac(im_dest)=",newvfrac(im_dest)
-               print *,"im_old_crit=",im_old_crit
-               print *,"i,j,k ",i,j,k
-               print *,"u_xsten_updatecell xlo ",u_xsten_updatecell(-1,1)
-               print *,"u_xsten_updatecell xhi ",u_xsten_updatecell(1,1)
-               print *,"u_xsten_updatecell ",u_xsten_updatecell(0,1), &
-                       u_xsten_updatecell(0,2), &
-                       u_xsten_updatecell(0,SDIM)
-               do u_im=1,nmat
-                do udir=1,ngeom_recon
-                 print *,"im,mofcomp,mofdata ",u_im,udir, &
-                         mofdata((u_im-1)*ngeom_recon+udir)
-                enddo
-               enddo
-              endif
-             else
-              print *,"im_old_crit invalid"
-              stop
-             endif 
-
-            else
-             print *,"expecting newvfrac(im_dest)>0 since dF>0"
-             stop
-            endif
-
-            interp_to_new_supermesh=1
-
-            if (oldLS_point(im_dest).ge.zero) then
-             do udir=1,SDIM
-              old_nrm(udir)=oldLS_point(nmat+(im_source-1)*SDIM+udir)
-              old_xI(udir)=u_xsten_updatecell(0,udir)- &
-                oldLS_point(im_source)*old_nrm(udir)
-             enddo
-            else if (oldLS_point(im_source).ge.zero) then
-             do udir=1,SDIM
-              old_nrm(udir)=oldLS_point(nmat+(im_dest-1)*SDIM+udir)
-              old_xI(udir)=u_xsten_updatecell(0,udir)- &
-                oldLS_point(im_dest)*old_nrm(udir)
-             enddo
-            else if ((oldLS_point(im_dest).le.zero).and. &
-                     (oldLS_point(im_source).le.zero)) then
-             interp_to_new_supermesh=0
-            else
-             print *,"oldLS_point(im_dest) or oldLS_point(im_source) invalid"
-             stop
-            endif
-
-            do iprobe=1,2
-
-             if (iprobe.eq.1) then ! source
-              im_probe=im_source
-             else if (iprobe.eq.2) then ! dest
-              im_probe=im_dest
-             else
-              print *,"iprobe invalid"
-              stop
-             endif
-             vofcomp_recon=(im_probe-1)*ngeom_recon+1
-
-             dencomp_probe=(im_probe-1)*num_state_material+1
-             tcomp_probe=dencomp_probe+1
-             if ((mass_frac_id.ge.1).and. &
-                 (mass_frac_id.le.num_species_var)) then
-              mfrac_comp_probe=tcomp_probe+mass_frac_id
-             else if (mass_frac_id.eq.0) then
-              mfrac_comp_probe=0
-             else
-              print *,"mass_frac_id invalid"
-              stop
-             endif
-             base_index=num_materials_vel*(SDIM+1)
-
-             denratio_factor=density_mix_new(iprobe)/density_old(iprobe)-one
-               ! avoid loss of precision errors.
-             if (abs(denratio_factor).le.EBVOFTOL) then
-              if (iprobe.eq.1) then ! source
-               delta_mass_local=-density_old(iprobe)*dF
-              else if (iprobe.eq.2) then ! dest
-               delta_mass_local=density_old(iprobe)*dF
-              else
-               print *,"iprobe invalid"
-               stop
-              endif
-             else if (abs(denratio_factor).ge.EBVOFTOL) then
-              delta_mass_local= &
-                density_mix_new(iprobe)*newvfrac(im_probe)- &
-                density_old(iprobe)*oldvfrac(im_probe)
-             else
-              print *,"denratio_factor invalid"
-              stop
-             endif
-             if (iprobe.eq.1) then ! source
-              if (delta_mass_local.le.zero) then
-               ! do nothing
-              else
-               print *,"delta_mass_local invalid"
-               stop
-              endif
-             else if (iprobe.eq.2) then ! dest
-              if (delta_mass_local.ge.zero) then
-               ! do nothing
-              else
-               print *,"delta_mass_local invalid"
-               stop
-              endif
-             else
-              print *,"iprobe invalid"
-              stop
-             endif
-
-             deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_dest)= &
-                delta_mass_local
-
-             snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
-                     density_mix_new(iprobe)
-
-             if ((SWEPTFACTOR_centroid.eq.1).and. &
-                 (iprobe.eq.2)) then ! destination
-              temp_mix_new(iprobe)=Tgamma_default
-              mass_frac_new(iprobe)=Ygamma_default
-             else if ((SWEPTFACTOR_centroid.eq.0).or. &
-                      (iprobe.eq.1)) then ! source
-              ! here we interpolate from old supermesh to new, making
-              ! sure to take into account Tgamma_default and Ygamma_default
-              if (interp_to_new_supermesh.eq.1) then
-
-               do i1=-1,1
-               do j1=-1,1
-               do k1=klosten,khisten
-                call gridsten_level(xsten_ofs,i+i1,j+j1,k+k1,level,nhalf)
-                call Box_volumeFAST(bfact,dx,xsten_ofs,nhalf, &
-                 volcell_ofs,cencell_ofs,SDIM)
-                do udir=1,SDIM
-                 XC_sten(D_DECL(i1,j1,k1),udir)= &
-                  recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon+udir)+ &
-                  cencell_ofs(udir)
-                enddo
-                VF_sten(D_DECL(i1,j1,k1))= &
-                 recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
-                LS_sten(D_DECL(i1,j1,k1))= &
-                 LSold(D_DECL(i+i1,j+j1,k+k1),im_probe)
-                temperature_sten(D_DECL(i1,j1,k1))= &
-                 EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
-                if (mfrac_comp_probe.eq.0) then
-                 massfrac_sten(D_DECL(i1,j1,k1))=Ygamma_default
-                else 
-                 massfrac_sten(D_DECL(i1,j1,k1))= &
-                  EOS(D_DECL(i+i1,j+j1,k+k1),mfrac_comp_probe)
-                endif
-               enddo
-               enddo
-               enddo ! i1,j1,k1
-
-               if ((oldvfrac(im_probe).le.VOFTOL).and. &
-                   (oldvfrac(im_probe).ge.-VOFTOL)) then
-                temp_mix_new(iprobe)=Tgamma_default
-                mass_frac_new(iprobe)=Ygamma_default
-               else if ((oldvfrac(im_probe).ge.VOFTOL).and. &
-                        (oldvfrac(im_probe).le.one+VOFTOL)) then
-
-                DATA_FLOOR=zero
-                combine_flag=0
-                nsolve_interp=1
-                do udir=1,SDIM
-                 xtarget_interp(udir)=new_centroid(im_probe,udir)
-                enddo
-
-                call center_centroid_interchange( &
-                 DATA_FLOOR, &
-                 nsolve_interp, &
-                 combine_flag, & !0=>centroid -> center   1=>center->centroid
-                 interp_to_new_supermesh, &
-                 bfact, &
-                 level, &
-                 finest_level, &
-                 dx,xlo, &
-                 u_xsten_updatecell,nhalf, &
-                 temperature_sten, &
-                 XC_sten, &
-                 old_xI, &
-                 xtarget_interp, &
-                 VF_sten, &
-                 LS_sten, &
-                 Tgamma_default, &
-                 temp_mix_new(iprobe))
-
-                if (1.eq.0) then
-                 print *,"correcting mass fraction"
-                 print *,"i,j,k ",i,j,k
-                 print *,"iprobe=",iprobe
-                 print *,"im_probe=",im_probe
-                 print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
-                 print *,"newvfrac(im_probe) ",newvfrac(im_probe)
-                endif
-
-                call center_centroid_interchange( &
-                 DATA_FLOOR, &
-                 nsolve_interp, &
-                 combine_flag, & !0=>centroid -> center   1=>center->centroid
-                 interp_to_new_supermesh, &
-                 bfact, &
-                 level, &
-                 finest_level, &
-                 dx,xlo, &
-                 u_xsten_updatecell,nhalf, &
-                 massfrac_sten, &
-                 XC_sten, &
-                 old_xI, &
-                 xtarget_interp, &
-                 VF_sten, &
-                 LS_sten, &
-                 Ygamma_default, &
-                 mass_frac_new(iprobe))
-
-               else
-                print *,"oldvfrac(im_probe) invalid"
-                stop
-               endif
-
-              else if (interp_to_new_supermesh.eq.0) then
-               ! do nothing
-              else
-               print *,"interp_to_new_supermesh invalid"
-               stop
-              endif
-
-             else
-              print *,"SWEPTFACTOR_centroid invalid"
-              stop
-             endif
-
-             snew(D_DECL(i,j,k),base_index+tcomp_probe)= &
-                     temp_mix_new(iprobe)
-             if (mfrac_comp_probe.eq.0) then
-              ! do nothing
+             temperature_new(iprobe)=unsplit_temperature(im_probe)
+             if (mfrac_comp_probe.eq.0) then ! no species vars
+              species_new(iprobe)=one
              else if (mfrac_comp_probe.gt.0) then
-              snew(D_DECL(i,j,k),base_index+mfrac_comp_probe)=  &
-               mass_frac_new(iprobe)
+              species_new(iprobe)= &
+                unsplit_species((mass_frac_id-1)*nmat+im_probe)
              else
               print *,"mfrac_comp_probe invalid"
               stop
              endif
-
-             if ((temp_mix_new(iprobe).lt.TEMPERATURE_FLOOR).or. &
-                 (density_mix_new(iprobe).le.zero)) then
-              print *,"temp_mix_new or density_mix_new invalid"
-              print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
-              print *,"newvfrac(im_probe) ",newvfrac(im_probe)
-              print *,"density_mix_new(im_probe) ",density_mix_new(im_probe)
-              print *,"temp_mix_new(im_probe) ",temp_mix_new(im_probe)
-             endif
-
-            enddo !iprobe=1,2
-
-             ! volume fractions updated on the 2nd sweep using
-             ! deltaVOF which has "dF"
-             ! centroids updated here.
-            do udir=1,SDIM
-             snew(D_DECL(i,j,k),vcompdst_snew+udir)= &
-              new_centroid(im_dest,udir)-cengrid(udir)
-             snew(D_DECL(i,j,k),vcompsrc_snew+udir)= &
-              new_centroid(im_source,udir)-cengrid(udir)
-            enddo ! udir
-            if (ngeom_raw.eq.SDIM+1) then
-             ! do nothing
+            else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
+                     (newvfrac(im_probe).ge.-EBVOFTOL)) then
+             density_new(iprobe)=fort_denconst(im_probe)
+             temperature_new(iprobe)=Tgamma_default
+             species_new(iprobe)=Ygamma_default
             else
-             print *,"ngeom_raw invalid in convert material"
-             print *,"ngeom_raw= ",ngeom_raw
+             print *,"newvfrac invalid"
              stop
             endif
 
-           else if ((dF.ge.zero).and.(dF.le.EBVOFTOL)) then
-            ! do nothing
+            if (oldvfrac(im_probe).ge.EBVOFTOL) then
+             mtype=fort_material_type(im_probe)
+             if (mtype.eq.0) then
+              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+             else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
+              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+             else
+              print *,"mtype invalid"
+              stop
+             endif
+             temperature_old(iprobe)=EOS(D_DECL(i,j,k),tcomp_probe)
+             if (mfrac_comp_probe.eq.0) then ! no species var
+              species_old(iprobe)=one
+             else if (mfrac_comp_probe.gt.0) then
+              species_old(iprobe)=EOS(D_DECL(i,j,k),mfrac_comp_probe)
+             else
+              print *,"mfrac_comp_probe invalid"
+              stop
+             endif
+            else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
+                     (oldvfrac(im_probe).ge.-EBVOFTOL)) then
+             density_old(iprobe)=fort_denconst(im_probe)
+             temperature_old(iprobe)=Tgamma_default
+             species_old(iprobe)=Ygamma_default
+            else
+             print *,"oldvfrac invalid"
+             stop
+            endif
+
+           enddo ! iprobe=1,2
+
+            ! for evaporation:
+            ! den_new=(den_old * F_old + vapor_den * dF)/(F_old+dF)
+           if (LL.gt.zero) then !evaporation
+             im_vapor=im_dest
+             im_condensed=im_source
+             iprobe_vapor=2 ! dest
+             iprobe_condensed=1 !source
+           else if (LL.lt.zero) then ! condensation
+             im_vapor=im_source
+             im_condensed=im_dest
+             iprobe_vapor=1 ! source
+             iprobe_condensed=2 ! dest
            else
-            print *,"dF became corrupt2 dF=",dF
-            print *,"dF invalid"
-            stop
-           endif 
-
-           ! above, CISL unsplit advection and update source and destination
-           ! centroids.  Source and destination volume fractions are corrected
-           ! below.
-          else if (isweep.eq.1) then
-
-           iten=iten_crit
-           ireverse=ireverse_crit
-           im_dest=im_dest_crit
-           im_source=im_source_crit 
-
-           if (interface_near(iten+ireverse*nten).ne.1) then
-            print *,"interface_near invalid"
-            stop
-           endif
-
-           LL=latent_heat(iten+ireverse*nten)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
-
-           Tgamma_default=saturation_temp(iten+ireverse*nten)
-           Ygamma_default=one
-
-           Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
-           if (ireverse.eq.0) then
-             ! do nothing
-           else if (ireverse.eq.1) then
-             Tsat_flag=-Tsat_flag
-           else
-             print *,"ireverse invalid"
+             print *,"im_vapor invalid"
              stop
            endif
-            
-           if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
 
-             Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
-              nten+(iten-1)*ncomp_per_tsat+1)
-             if ((mass_frac_id.ge.1).and. &
-                 (mass_frac_id.le.num_species_var)) then
-              Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
-               nten+(iten-1)*ncomp_per_tsat+2)
-             else if (mass_frac_id.eq.0) then
-              Ygamma_default=one
+           ambient_den=fort_denconst(im_vapor)
+           if (ambient_den.gt.zero) then
+            ! do nothing
+           else
+            print *,"ambient_den invalid"
+            stop
+           endif
+
+            ! at CONSTANT DENSITY:
+            ! "vapor" is what material transforms TO if system is HEATED.
+            ! "condensed" is what material transforms FROM if system is HEATED.
+            ! "vapor" is what material transforms FROM if system is COOLED.
+            ! "condensed" is what material transforms TO if system is COOLED.
+            ! 
+           if (local_freezing_model.eq.0) then !Stefan model
+             vapor_den=density_old(iprobe_vapor)
+             condensed_den=density_old(iprobe_condensed)
+           else if (local_freezing_model.eq.1) then !source term
+             vapor_den=density_old(iprobe_vapor)
+             condensed_den=density_old(iprobe_condensed)
+           else if (local_freezing_model.eq.2) then !hydrate
+             vapor_den=density_old(iprobe_vapor)
+             condensed_den=density_old(iprobe_condensed)
+           else if (local_freezing_model.eq.3) then !wildfire
+             vapor_den=density_old(iprobe_vapor)
+             condensed_den=density_old(iprobe_condensed)
+           else if ((local_freezing_model.eq.4).or. & !Tannasawa or Schrage
+                    (local_freezing_model.eq.5).or. & !Stefan evap/cond model
+                    (local_freezing_model.eq.6).or. & !Palmore/Desjardins
+                    (local_freezing_model.eq.7)) then !Cavitation
+
+            if ((mass_frac_id.ge.1).and. &
+                (mass_frac_id.le.num_species_var)) then
+
+             vapor_den=species_evaporation_density(mass_frac_id)
+             condensed_den=density_old(iprobe_condensed)
+
+             if ((vapor_den.gt.zero).and.(condensed_den.gt.zero)) then
+              ! do nothing
              else
-              print *,"mass_frac_id invalid"
+              print *,"vapor_den or condensed_den invalid"
               stop
              endif
 
-           else if ((Tsat_flag.eq.-1).or. &
-                    (Tsat_flag.eq.-2)) then
-             ! do nothing
-           else if (Tsat_flag.eq.0) then
-             ! do nothing
-           else
-             print *,"Tsat_flag invalid"
+            else
+             print *,"mass_frac_id invalid"
              stop
+            endif
+
+           else
+            print *,"local_freezing_model invalid 1"
+            stop
+           endif
+
+           temp_mix_new(2)=temperature_new(2)
+           temp_mix_new(1)=temperature_new(1)
+
+           if (LL.gt.zero) then ! evaporation or boiling
+
+            temp_new_vfrac=oldvfrac(im_dest)+dF
+            if (temp_new_vfrac.gt.EBVOFTOL) then 
+             density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+               vapor_den*dF)/temp_new_vfrac
+
+             if (1.eq.0) then
+              print *,"i,j,k,temp_new_vfrac ",i,j,k,temp_new_vfrac
+              print *,"denold,oldF,vapor_den,dF,dennew ", &
+               density_old(2),oldvfrac(im_dest),vapor_den,dF, &
+               density_mix_new(2)
+             endif
+
+              ! If liquid and gas mixture are incompressible, then
+              ! determine Y so that den_mix= 
+              !   (denV denA)/(Y denA + (1-Y) denV )
+              ! den_mix * ( Y(denA-denV) + denV ) = denA denV
+              ! Y(denA -denV) + denV = denA denV/den_mix
+              ! Y=((denA denV)/den_mix - denV)/(denA-denV)
+              !  =denV (denA-den_mix)/((denA-denV)den_mix)
+             mtype=fort_material_type(im_vapor)
+             if (mtype.eq.0) then
+              gas_den_ratio=vapor_den/ambient_den
+              if (abs(gas_den_ratio-one).gt.1.0D-3) then
+               numerator=vapor_den*(ambient_den-density_mix_new(2)) 
+               denominator=density_mix_new(2)*(ambient_den-vapor_den) 
+               if (numerator*denominator.gt.zero) then
+                mass_frac_new(2)=numerator/denominator
+               else
+                print *,"numerator/denominator invalid"
+                stop
+               endif
+               if ((mass_frac_new(2).ge.zero).and. &
+                   (mass_frac_new(2).le.one)) then
+                ! do nothing
+               else if (mass_frac_new(2).gt.one) then
+                mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+                  dF)/temp_new_vfrac
+               else
+                print *,"mass_frac_new(2) invalid"
+                stop
+               endif
+              else if (abs(gas_den_ratio-one).le.1.0D-3) then
+               mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+                 dF)/temp_new_vfrac
+              else
+               print *,"abs(gas_den_ratio-one) invalid"
+               stop
+              endif
+             else if (((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)).or. &
+                      (abs(ambient_den-vapor_den).le.1.0D-3*vapor_den)) then
+              mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
+               dF)/temp_new_vfrac
+             else
+              print *,"type invalid"
+              stop
+             endif
+            else if (temp_new_vfrac.le.EBVOFTOL) then
+             density_mix_new(2)=density_old(2)
+             mass_frac_new(2)=species_old(2)
+            else
+             print *,"temp_new_vfrac invalid"
+             stop
+            endif
+           
+            if (im_source.eq.im_condensed) then 
+             temp_new_vfrac=oldvfrac(im_source)-dF
+             if (temp_new_vfrac.gt.EBVOFTOL) then 
+              mtype=fort_material_type(im_source)
+              if (mtype.eq.0) then
+               density_mix_new(1)=density_old(1)
+              else if ((mtype.ge.1).and. &
+                       (mtype.le.MAX_NUM_EOS)) then
+               density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+                condensed_den*dF)/temp_new_vfrac
+               if (density_mix_new(1).gt.zero) then
+                ! do nothing
+               else
+                print *,"density_mix_new(1) invalid",density_mix_new(1)
+                print *,"LL=",LL
+                print *,"density_old(1)=",density_old(1)
+                print *,"oldvfrac(im_source)=",oldvfrac(im_source)
+                print *,"dF=",dF
+                print *,"condensed_den=",condensed_den
+                stop
+               endif
+              else
+               print *,"mtype invalid"
+               stop
+              endif
+             else if (temp_new_vfrac.le.EBVOFTOL) then
+              density_mix_new(1)=density_old(1)
+             else
+              print *,"temp_new_vfrac invalid"
+              stop
+             endif
+            else
+             print *,"expecting im_source==im_condensed"
+             stop
+            endif
+            mass_frac_new(1)=Ygamma_default
+
+           else if (LL.lt.zero) then ! condensation
+
+            if (im_dest.eq.im_condensed) then 
+             temp_new_vfrac=oldvfrac(im_dest)+dF
+             if (temp_new_vfrac.gt.EBVOFTOL) then 
+              mtype=fort_material_type(im_dest)
+              if (mtype.eq.0) then
+               density_mix_new(2)=density_old(2)
+              else if ((mtype.ge.1).and. &
+                       (mtype.le.MAX_NUM_EOS)) then
+               density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
+                condensed_den*dF)/temp_new_vfrac
+              else
+               print *,"mtype invalid"
+               stop
+              endif
+             else if (temp_new_vfrac.le.EBVOFTOL) then
+              density_mix_new(2)=density_old(2)
+             else
+              print *,"temp_new_vfrac invalid"
+              stop
+             endif
+            else
+             print *,"expecting im_dest==im_condensed"
+             stop
+            endif
+
+            temp_new_vfrac=oldvfrac(im_source)-dF
+            if (temp_new_vfrac.gt.EBVOFTOL) then 
+             denratio_factor=density_old(1)/vapor_den-one
+             if (abs(denratio_factor).le.EBVOFTOL) then
+              density_mix_new(1)=density_old(1)
+             else if (abs(denratio_factor).gt.EBVOFTOL) then
+              density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
+               vapor_den*dF)/temp_new_vfrac
+             else
+              print *,"denratio_factor invalid"
+              stop
+             endif
+             mass_frac_new(1)=(species_old(1)*oldvfrac(im_source)- &
+              dF)/temp_new_vfrac
+             if (mass_frac_new(1).lt.zero) then
+              mass_frac_new(1)=zero
+             endif
+            else if (temp_new_vfrac.le.EBVOFTOL) then
+             density_mix_new(1)=density_old(1)
+             mass_frac_new(1)=zero
+            else
+             print *,"temp_new_vfrac invalid"
+             stop
+            endif
+            mass_frac_new(2)=Ygamma_default
+           else
+            print *,"LL invalid"
+            stop
+           endif
+
+            ! dF>EBVOFTOL in this section, so now let's see
+            ! if the cell center has been swept and also the
+            ! destination centroid.
+            ! for GFM, if a cell center is not occupied by the
+            ! destination material at tn but is occupied at tnp1, then
+            ! (theta^{n+1} - theta_{I})/(tnp1 - tswept) = L(theta^{n+1}
+            ! tswept is the crossing time.
+            ! Suppose 1D and GFM:
+            !  at t=tn      F=Fn
+            !  at t=tswept  F=1/2
+            !  at t=tnp1    F=Fnp1
+            !  F(t)=(Fnp1 - Fn)/(tnp1-tn)  * (t-tnp1) + Fnp1
+            !  1/2 = dF/(tnp1-tn)   * (tswept-tnp1)  + Fnp1
+            !  dF/(tnp1-tn)  * (tswept-tnp1) = Fnp1-1/2
+            !  SWEPTFACTOR=(tswept-tnp1)/(tnp1-tn)  = (Fnp1-1/2)/dF
+            !  new approach (motivated by supermesh):
+            !  1. given an estimate of phase change velocity "USTEFAN",
+            !     dt is chosen such that USTEFAN * dt <= dx/4
+            !     This assures that a swept cell will NOT be full at tnp1.
+            !  2. Strategy is this: 
+            !     a) we have the signed distance function at tn.
+            !     b) let x^* be either (i) cell center if GFM, or (ii)
+            !        cell centroid at tnp1 of the destination material.
+            !     c) if phi(tn,x^*)<0 then:
+            !         (i) find MOF reconstruction and determine if
+            !             phi^reconstruct(tnp1,x^*)>0
+            !             if yes, then 
+            !             SWEPTFACTOR=1-(phi_np1/(phi_np1-phi_n)     
+
+            ! this is a placeholder for what used to be implemented.
+            ! Now, the swept factor is calculated much more precisely.
+            !
+           SWEPTFACTOR_GFM=one
+           if ((oldvfrac(im_dest).lt.half).and. &
+               (newvfrac(im_dest).gt.half)) then
+            SWEPTFACTOR_GFM=(newvfrac(im_dest)-half)/dF
+           else if ((oldvfrac(im_dest).ge.half).or. &
+                    (newvfrac(im_dest).le.half)) then
+            SWEPTFACTOR_GFM=one
+           else
+            print *,"oldvfrac or newvfrac invalid"
+            stop
+           endif
+
+            ! => new_centroid(im_dest,udir) (absolute coord)
+           do u_im=1,nmat
+            vofcomp_recon=(u_im-1)*ngeom_recon+1
+
+            mofdata(vofcomp_recon)=oldvfrac(u_im)
+            mofdata_new(vofcomp_recon)=newvfrac(u_im)
+
+            do udir=1,SDIM 
+             mofdata(vofcomp_recon+udir)= &
+               old_centroid(u_im,udir)-cengrid(udir)
+
+             mofdata_new(vofcomp_recon+udir)= &
+               new_centroid(u_im,udir)-cengrid(udir)
+            enddo
+            mofdata(vofcomp_recon+SDIM+1)= &
+             recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
+
+            mofdata_new(vofcomp_recon+SDIM+1)=0  ! placeholder order
+
+            mofdata(vofcomp_recon+2*SDIM+2)= & 
+             recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  !intercept
+
+            mofdata_new(vofcomp_recon+2*SDIM+2)=zero  ! placeholder intercept
+
+            do udir=1,SDIM
+             mofdata(vofcomp_recon+SDIM+1+udir)= &
+              recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
+
+             mofdata_new(vofcomp_recon+SDIM+1+udir)=zero ! placeholder slope
+            enddo ! udir
+           enddo ! u_im=1..nmat
+
+           mof_verbose=0
+           use_ls_data=0
+           continuous_mof_parm=0
+
+            ! LS=n dot (x-x0)+intercept
+           call multimaterial_MOF( &
+            bfact,dx,u_xsten_updatecell,nhalf, &
+            mof_verbose, &
+            use_ls_data, &
+            LS_stencil, &
+            geom_xtetlist(1,1,1,tid+1), &
+            geom_xtetlist_old(1,1,1,tid+1), &
+            nmax, &
+            nmax, &
+            mofdata_new, &
+            multi_centroidA, &
+            continuous_mof_parm, &
+            cmofsten, &
+            nmat,SDIM,202)
+
+            ! xPOINT_supermesh is needed in order to determine
+            ! whether to interpolate old temperature and mass fraction
+            ! data from the old supermesh to the new supermesh.
+           do udir=1,SDIM
+            xPOINT_supermesh(udir)=new_centroid(im_dest,udir)
+           enddo
+
+            ! now we check if new_centroid(im_dest,dir) is in the
+            ! old dest material.
+            ! If new_centroid(im_dest) in the old dest material, then
+            ! the cell centroid HAS NOT been swept and the temperature
+            ! at this point needs to be interpolated from the t=tn
+            ! im_dest supermesh.
+           SWEPTFACTOR_centroid=0
+           if ((newvfrac(im_dest).gt.zero).and. &
+               (newvfrac(im_dest).le.one+EBVOFTOL)) then
+
+            tessellate=3
+            call multi_get_volumePOINT( &
+              tessellate, &
+              bfact,dx, &
+              u_xsten_updatecell,nhalf, &  ! absolute coordinate system
+              mofdata, &
+              xPOINT_supermesh, & ! absolute coordinate system
+              im_old_crit,nmat,SDIM)
+
+             ! im_old_crit=material at t=tn that occupies the new 
+             ! centroid location
+            if ((im_old_crit.eq.im_dest).or. &
+                (oldvfrac(im_dest).ge.half)) then
+             ! do nothing
+            else if ((im_old_crit.ge.1).and. &
+                     (im_old_crit.le.nmat).and. &
+                     (im_old_crit.ne.im_dest).and. &
+                     (oldvfrac(im_dest).le.half)) then
+             SWEPTFACTOR_centroid=1
+
+             if (1.eq.0) then
+              print *,"setting SWEPTFACTOR_centroid=1"
+              print *,"im_dest= ",im_dest
+              print *,"xPOINT_supermesh= ", &
+                xPOINT_supermesh(1),xPOINT_supermesh(2),xPOINT_supermesh(SDIM)
+              print *,"xPOINT_supermesh(1)-xsten(0,1)= ", &
+                      xPOINT_supermesh(1)-u_xsten_updatecell(0,1)
+              print *,"oldvfrac(im_dest)=",oldvfrac(im_dest)
+              print *,"newvfrac(im_dest)=",newvfrac(im_dest)
+              print *,"im_old_crit=",im_old_crit
+              print *,"i,j,k ",i,j,k
+              print *,"u_xsten_updatecell xlo ",u_xsten_updatecell(-1,1)
+              print *,"u_xsten_updatecell xhi ",u_xsten_updatecell(1,1)
+              print *,"u_xsten_updatecell ",u_xsten_updatecell(0,1), &
+                      u_xsten_updatecell(0,2), &
+                      u_xsten_updatecell(0,SDIM)
+              do u_im=1,nmat
+               do udir=1,ngeom_recon
+                print *,"im,mofcomp,mofdata ",u_im,udir, &
+                        mofdata((u_im-1)*ngeom_recon+udir)
+               enddo
+              enddo
+             endif
+            else
+             print *,"im_old_crit invalid"
+             stop
+            endif 
+
+           else
+            print *,"expecting newvfrac(im_dest)>0 since dF>0"
+            stop
+           endif
+
+           interp_to_new_supermesh=1
+
+           if (oldLS_point(im_dest).ge.zero) then
+            do udir=1,SDIM
+             old_nrm(udir)=oldLS_point(nmat+(im_source-1)*SDIM+udir)
+             old_xI(udir)=u_xsten_updatecell(0,udir)- &
+               oldLS_point(im_source)*old_nrm(udir)
+            enddo
+           else if (oldLS_point(im_source).ge.zero) then
+            do udir=1,SDIM
+             old_nrm(udir)=oldLS_point(nmat+(im_dest-1)*SDIM+udir)
+             old_xI(udir)=u_xsten_updatecell(0,udir)- &
+               oldLS_point(im_dest)*old_nrm(udir)
+            enddo
+           else if ((oldLS_point(im_dest).le.zero).and. &
+                    (oldLS_point(im_source).le.zero)) then
+            interp_to_new_supermesh=0
+           else
+            print *,"oldLS_point(im_dest) or oldLS_point(im_source) invalid"
+            stop
+           endif
+
+           do iprobe=1,2
+
+            if (iprobe.eq.1) then ! source
+             im_probe=im_source
+            else if (iprobe.eq.2) then ! dest
+             im_probe=im_dest
+            else
+             print *,"iprobe invalid"
+             stop
+            endif
+            vofcomp_recon=(im_probe-1)*ngeom_recon+1
+
+            dencomp_probe=(im_probe-1)*num_state_material+1
+            tcomp_probe=dencomp_probe+1
+            if ((mass_frac_id.ge.1).and. &
+                (mass_frac_id.le.num_species_var)) then
+             mfrac_comp_probe=tcomp_probe+mass_frac_id
+            else if (mass_frac_id.eq.0) then
+             mfrac_comp_probe=0
+            else
+             print *,"mass_frac_id invalid"
+             stop
+            endif
+            base_index=num_materials_vel*(SDIM+1)
+
+            denratio_factor=density_mix_new(iprobe)/density_old(iprobe)-one
+              ! avoid loss of precision errors.
+            if (abs(denratio_factor).le.EBVOFTOL) then
+             if (iprobe.eq.1) then ! source
+              delta_mass_local(iprobe)=-density_old(iprobe)*dF
+             else if (iprobe.eq.2) then ! dest
+              delta_mass_local(iprobe)=density_old(iprobe)*dF
+             else
+              print *,"iprobe invalid"
+              stop
+             endif
+            else if (abs(denratio_factor).ge.EBVOFTOL) then
+             delta_mass_local(iprobe)= &
+               density_mix_new(iprobe)*newvfrac(im_probe)- &
+               density_old(iprobe)*oldvfrac(im_probe)
+            else
+             print *,"denratio_factor invalid"
+             stop
+            endif
+            if (iprobe.eq.1) then ! source
+             if (delta_mass_local(iprobe).le.zero) then
+              ! do nothing
+             else
+              print *,"delta_mass_local invalid"
+              stop
+             endif
+            else if (iprobe.eq.2) then ! dest
+             if (delta_mass_local(iprobe).ge.zero) then
+              ! do nothing
+             else
+              print *,"delta_mass_local invalid"
+              stop
+             endif
+            else
+             print *,"iprobe invalid"
+             stop
+            endif
+
+            snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
+                    density_mix_new(iprobe)
+
+            if ((SWEPTFACTOR_centroid.eq.1).and. &
+                (iprobe.eq.2)) then ! destination
+             temp_mix_new(iprobe)=Tgamma_default
+             mass_frac_new(iprobe)=Ygamma_default
+            else if ((SWEPTFACTOR_centroid.eq.0).or. &
+                     (iprobe.eq.1)) then ! source
+             ! here we interpolate from old supermesh to new, making
+             ! sure to take into account Tgamma_default and Ygamma_default
+             if (interp_to_new_supermesh.eq.1) then
+
+              do i1=-1,1
+              do j1=-1,1
+              do k1=klosten,khisten
+               call gridsten_level(xsten_ofs,i+i1,j+j1,k+k1,level,nhalf)
+               call Box_volumeFAST(bfact,dx,xsten_ofs,nhalf, &
+                volcell_ofs,cencell_ofs,SDIM)
+               do udir=1,SDIM
+                XC_sten(D_DECL(i1,j1,k1),udir)= &
+                 recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon+udir)+ &
+                 cencell_ofs(udir)
+               enddo
+               VF_sten(D_DECL(i1,j1,k1))= &
+                recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
+               LS_sten(D_DECL(i1,j1,k1))= &
+                LSold(D_DECL(i+i1,j+j1,k+k1),im_probe)
+               temperature_sten(D_DECL(i1,j1,k1))= &
+                EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
+               if (mfrac_comp_probe.eq.0) then
+                massfrac_sten(D_DECL(i1,j1,k1))=Ygamma_default
+               else 
+                massfrac_sten(D_DECL(i1,j1,k1))= &
+                 EOS(D_DECL(i+i1,j+j1,k+k1),mfrac_comp_probe)
+               endif
+              enddo
+              enddo
+              enddo ! i1,j1,k1
+
+              if ((oldvfrac(im_probe).le.VOFTOL).and. &
+                  (oldvfrac(im_probe).ge.-VOFTOL)) then
+               temp_mix_new(iprobe)=Tgamma_default
+               mass_frac_new(iprobe)=Ygamma_default
+              else if ((oldvfrac(im_probe).ge.VOFTOL).and. &
+                       (oldvfrac(im_probe).le.one+VOFTOL)) then
+
+               DATA_FLOOR=zero
+               combine_flag=0
+               nsolve_interp=1
+               do udir=1,SDIM
+                xtarget_interp(udir)=new_centroid(im_probe,udir)
+               enddo
+
+               call center_centroid_interchange( &
+                DATA_FLOOR, &
+                nsolve_interp, &
+                combine_flag, & !0=>centroid -> center   1=>center->centroid
+                interp_to_new_supermesh, &
+                bfact, &
+                level, &
+                finest_level, &
+                dx,xlo, &
+                u_xsten_updatecell,nhalf, &
+                temperature_sten, &
+                XC_sten, &
+                old_xI, &
+                xtarget_interp, &
+                VF_sten, &
+                LS_sten, &
+                Tgamma_default, &
+                temp_mix_new(iprobe))
+
+               if (1.eq.0) then
+                print *,"correcting mass fraction"
+                print *,"i,j,k ",i,j,k
+                print *,"iprobe=",iprobe
+                print *,"im_probe=",im_probe
+                print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
+                print *,"newvfrac(im_probe) ",newvfrac(im_probe)
+               endif
+
+               call center_centroid_interchange( &
+                DATA_FLOOR, &
+                nsolve_interp, &
+                combine_flag, & !0=>centroid -> center   1=>center->centroid
+                interp_to_new_supermesh, &
+                bfact, &
+                level, &
+                finest_level, &
+                dx,xlo, &
+                u_xsten_updatecell,nhalf, &
+                massfrac_sten, &
+                XC_sten, &
+                old_xI, &
+                xtarget_interp, &
+                VF_sten, &
+                LS_sten, &
+                Ygamma_default, &
+                mass_frac_new(iprobe))
+
+              else
+               print *,"oldvfrac(im_probe) invalid"
+               stop
+              endif
+
+             else if (interp_to_new_supermesh.eq.0) then
+              ! do nothing
+             else
+              print *,"interp_to_new_supermesh invalid"
+              stop
+             endif
+
+            else
+             print *,"SWEPTFACTOR_centroid invalid"
+             stop
+            endif
+
+            snew(D_DECL(i,j,k),base_index+tcomp_probe)= &
+                    temp_mix_new(iprobe)
+            if (mfrac_comp_probe.eq.0) then
+             ! do nothing
+            else if (mfrac_comp_probe.gt.0) then
+             snew(D_DECL(i,j,k),base_index+mfrac_comp_probe)=  &
+              mass_frac_new(iprobe)
+            else
+             print *,"mfrac_comp_probe invalid"
+             stop
+            endif
+
+            if ((temp_mix_new(iprobe).lt.TEMPERATURE_FLOOR).or. &
+                (density_mix_new(iprobe).le.zero)) then
+             print *,"temp_mix_new or density_mix_new invalid"
+             print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
+             print *,"newvfrac(im_probe) ",newvfrac(im_probe)
+             print *,"density_mix_new(im_probe) ",density_mix_new(im_probe)
+             print *,"temp_mix_new(im_probe) ",temp_mix_new(im_probe)
+            endif
+
+           enddo !iprobe=1,2
+
+            ! volume fractions updated on the 2nd sweep using
+            ! deltaVOF which has "dF"
+            ! centroids updated here.
+           do udir=1,SDIM
+            snew(D_DECL(i,j,k),vcompdst_snew+udir)= &
+             new_centroid(im_dest,udir)-cengrid(udir)
+            snew(D_DECL(i,j,k),vcompsrc_snew+udir)= &
+             new_centroid(im_source,udir)-cengrid(udir)
+           enddo ! udir
+           if (ngeom_raw.eq.SDIM+1) then
+            ! do nothing
+           else
+            print *,"ngeom_raw invalid in convert material"
+            print *,"ngeom_raw= ",ngeom_raw
+            stop
            endif
 
            if ((local_freezing_model.lt.0).or. &
@@ -5777,23 +5670,6 @@ stop
            if ((distribute_from_targ.lt.0).or. &
                (distribute_from_targ.gt.1)) then
             print *,"distribute_from_targ invalid"
-            stop
-           endif
-
-             ! deltaVOF init when isweep==0
-           dF=deltaVOF(D_DECL(i,j,k),im_dest)
-           dF=DVOF_FACT(im_dest)*dF
-           if (dF.ge.zero) then
-            ! do nothing
-           else
-            print *,"dF invalid: ",dF
-            stop
-           endif
-           if ((DVOF_FACT(im_dest).ge.zero).and. &
-               (DVOF_FACT(im_dest).le.one)) then
-            ! do nothing
-           else
-            print *,"DVOF_FACT invalid"
             stop
            endif
 
@@ -5820,8 +5696,7 @@ stop
              ! iprobe==1: source
              ! iprobe==2: dest
              ! (rho F)^new - (rho F)^old
-            den_dF(iprobe)= &
-                 deltaVOF(D_DECL(i,j,k),nmat+(iprobe-1)*nmat+im_dest)
+            den_dF(iprobe)=delta_mass_local(iprobe)
 
             if (newvfrac(im_probe).gt.one+VOFTOL) then
              print *,"newvfrac(im_probe) overflow"
@@ -5945,7 +5820,8 @@ stop
            JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)=jump_strength
          
            if (dF.le.EBVOFTOL) then
-            ! do nothing
+            print *,"expecting dF>EBVOFTOL"
+            stop
            else if (dF.ge.zero) then
 
              ! find mass weighted average of cv
@@ -5989,11 +5865,6 @@ stop
               !t-tn=dt(1/2 - Fn)/dF
               !tnp1-t=-dt(1/2-Fn)/dF+dt=
               !dt(dF-1/2+Fn)/dF=dt(Fnp1-1/2)/dF
-
-             do u_im=1,nmat*ngeom_recon
-              mofdata_new(u_im)=MOFnewFAB(D_DECL(i,j,k),u_im)
-              mofdata(u_im)=recon(D_DECL(i,j,k),u_im)  
-             enddo
 
              vofcomp_recon=(im_dest-1)*ngeom_recon+1
              do udir=1,SDIM
@@ -6043,7 +5914,7 @@ stop
 
              LS_dest_old=cell_data_interp(im_dest)
 
-             tessellate=1
+             tessellate=3
              call multi_get_volumePOINT( &
               tessellate, &
               bfact,dx, &
@@ -6052,7 +5923,7 @@ stop
               xstar, & ! absolute coordinate system
               im_old_crit,nmat,SDIM)
 
-             tessellate=1
+             tessellate=3
              call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
@@ -6398,6 +6269,7 @@ stop
             ! sum of F_rigid<=1
             tessellate=0
             call make_vfrac_sum_ok_base( &
+              cmofsten, &
               u_xsten_updatecell,nhalf,nhalf_box, &
               bfact,dx, &
               tessellate,mofdata,nmat,SDIM,106)
@@ -6420,11 +6292,14 @@ stop
             print *,"dF bust"
             stop
            endif
-       
+
+          else if ((dF.ge.zero).and.(dF.le.EBVOFTOL)) then
+           ! do nothing
           else
-           print *,"isweep invalid"
+           print *,"dF became corrupt2 dF=",dF
+           print *,"dF invalid"
            stop
-          endif
+          endif 
 
          else if (do_unsplit_advection.eq.0) then
           ! do nothing
@@ -6958,8 +6833,6 @@ stop
       ! Y_{n+1} = Y_{n} - g(Y_n)/( (g(Y_{n})-g(Y_{n-1}))/(Y_{n}-Y_{n-1}))
       ! Palmore and Desjardins
       ! Secant method will be implemented.
-
-
       subroutine FORT_RATEMASSCHANGE( &
        tid, &
        nucleation_flag, &
@@ -7487,7 +7360,7 @@ stop
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat) then ! +1 in live version
+          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
        print *,"num_elements_blobclass invalid rate mass change:", &
          num_elements_blobclass
        print *,"blob_cell_count added December 6, 2020"
@@ -9415,7 +9288,6 @@ stop
 
       return
       end subroutine FORT_RATEMASSCHANGE
-
 
 #if (STANDALONE==1)
       end module mass_transfer_cpp_module
