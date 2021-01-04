@@ -1,6 +1,8 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
+#define PROTOTYPE_PROBCOMMON 1
+
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -172,6 +174,8 @@ implicit none
 ! fort_lame_coefficient added October 21.
 ! fort_shear_modulus added October 28.
 ! fort_linear_elastic_model added November 4.
+! fort_elastic_time added December 30
+! fort_viscoelastic_model added December 30
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
@@ -246,13 +250,24 @@ implicit none
 
       REAL_T, PARAMETER :: ICEFACECUT_EPS=1.0D-5
 
-       ! Default: FACETOL_DVOL=1.0D-3 
-       ! Default: FACETOL_DVOL=1.0D-6 (prototype code)
-       ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
+      ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
+#if (PROTOTYPE_PROBCOMMON==0)
+      REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-3
+#elif (PROTOTYPE_PROBCOMMON==1)
       REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-6
-       ! Default: VOFTOL=1.0D-3
-       ! Default: VOFTOL=1.0D-10 (prototype code)
+#else
+      print *,"PROTOTYPE_PROBCOMMON bust"
+      stop
+#endif
+
+#if (PROTOTYPE_PROBCOMMON==0)
+      REAL_T, PARAMETER :: VOFTOL_REDIST=1.0D-3
+#elif (PROTOTYPE_PROBCOMMON==1)
       REAL_T, PARAMETER :: VOFTOL_REDIST=1.0D-10
+#else
+      print *,"PROTOTYPE_PROBCOMMON bust"
+      stop
+#endif
       REAL_T, PARAMETER :: FACETOL_REDIST=1.0D-2
       REAL_T, PARAMETER :: FACETOL_SANITY=1.0D-3
        ! Default: LS_CURV_TOL=1.0D-2 
@@ -260,9 +275,16 @@ implicit none
       REAL_T, PARAMETER :: LS_CURV_TOL=1.0D-2
       REAL_T, PARAMETER :: LSTOL=1.0D-2
       REAL_T, PARAMETER :: VOFTOL_SLOPES=1.0D-2
-       ! Default: VOFTOL=1.0D-8
-       ! Default: VOFTOL=1.0D-10 (prototype code)
+
+#if (PROTOTYPE_PROBCOMMON==0)
+      REAL_T, PARAMETER :: VOFTOL=1.0D-8
+#elif (PROTOTYPE_PROBCOMMON==1)
       REAL_T, PARAMETER :: VOFTOL=1.0D-10
+#else
+      print *,"PROTOTYPE_PROBCOMMON bust"
+      stop
+#endif
+
       REAL_T, PARAMETER :: VOFTOL_AREAFRAC=1.0D-1
        ! Default: VOFTOL_MULTI_VOLUME=1.0D-12
       REAL_T, PARAMETER :: VOFTOL_MULTI_VOLUME=1.0D-12
@@ -366,8 +388,20 @@ implicit none
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
+      subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
+         pres_hydrostatic,rho_hydrostatic, &
+         xpos, &
+         gravity_normalized, &
+         gravity_dir_parm)
+      REAL_T, intent(inout) :: rho_hydrostatic
+      REAL_T, intent(inout) :: pres_hydrostatic
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      end subroutine TEMPLATE_correct_pres_rho_hydrostatic
+        
       subroutine TEMPLATE_hydro_pressure_density( &
-                        xpos,rho,pres,from_boundary_hydrostatic)
+           xpos,rho,pres,from_boundary_hydrostatic)
       REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(inout) :: rho
       REAL_T, intent(inout) :: pres
@@ -396,6 +430,14 @@ implicit none
       REAL_T, intent(in) :: t
       REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
+
+      subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
+       REAL_T, intent(in) :: x(SDIM)
+       REAL_T, intent(in) :: t
+       REAL_T, intent(out) :: LS
+       REAL_T, intent(out) :: vel(SDIM)
+       REAL_T, intent(out) :: temperature
+      end subroutine TEMPLATE_clamped_LS
 
       subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
       INTEGER_T, intent(in) :: nmat
@@ -585,9 +627,12 @@ implicit none
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
       PROCEDURE(TEMPLATE_hydro_pressure_density), POINTER :: &
               SUB_hydro_pressure_density
+      PROCEDURE(TEMPLATE_correct_pres_rho_hydrostatic), POINTER :: &
+              SUB_correct_pres_rho_hydrostatic
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
       PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR

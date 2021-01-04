@@ -1698,7 +1698,6 @@ stop
       INTEGER_T DIMDEC(maskcov)
       INTEGER_T DIMDEC(masknbr)
       INTEGER_T DIMDEC(nodevel)
-      INTEGER_T DIMDEC(deltaVOF)
       INTEGER_T DIMDEC(LS)
       INTEGER_T DIMDEC(LSnew)
       INTEGER_T DIMDEC(LS_slopes_FD)
@@ -1707,7 +1706,6 @@ stop
       INTEGER_T DIMDEC(Snew)
       INTEGER_T DIMDEC(EOS)
       INTEGER_T DIMDEC(recon)
-      INTEGER_T DIMDEC(MOFnew)
       INTEGER_T DIMDEC(pres)
       INTEGER_T DIMDEC(FD_NRM_ND)
       INTEGER_T DIMDEC(FD_CURV_CELL)
@@ -1722,7 +1720,6 @@ stop
       REAL_T, dimension(:,:), allocatable :: maskcov
       REAL_T, dimension(:,:,:), allocatable :: masknbr
       REAL_T, dimension(:,:,:), allocatable :: nodevel
-      REAL_T, dimension(:,:,:), allocatable :: deltaVOF
       REAL_T, dimension(:,:,:), allocatable :: LS
       REAL_T, dimension(:,:,:), allocatable :: LSnew
       REAL_T, dimension(:,:,:), allocatable :: LS_slopes_FD
@@ -1731,7 +1728,6 @@ stop
       REAL_T, dimension(:,:,:), allocatable :: Snew
       REAL_T, dimension(:,:,:), allocatable :: EOS
       REAL_T, dimension(:,:,:), allocatable :: recon
-      REAL_T, dimension(:,:,:), allocatable :: MOFnew
       REAL_T, dimension(:,:), allocatable :: pres
         ! (nmat+nten)*(sdim+1), ngrow_distance
       REAL_T, dimension(:,:,:), allocatable :: FD_NRM_ND
@@ -1753,8 +1749,6 @@ stop
         ! ncomp=nmat*ngeom_recon, ngrow=ngrow_distance
       REAL_T, dimension(:,:,:), allocatable :: slopes
 
-      REAL_T DVOF(num_materials)
-      REAL_T DVOF_local(num_materials)
       REAL_T delta_mass(2*num_materials)
       REAL_T delta_mass_local(2*num_materials)
 
@@ -1786,7 +1780,6 @@ stop
       INTEGER_T im_primary
       INTEGER_T im_primary_side
       INTEGER_T is_phase_change
-      INTEGER_T isweep
       INTEGER_T iten
       INTEGER_T nhalf
       REAL_T max_problen
@@ -1894,11 +1887,16 @@ stop
       REAL_T accommodation_coefficient(2*nten_in)
       REAL_T reference_pressure(2*nten_in)
       REAL_T min_stefan_velocity_for_dt
+      INTEGER_T force_cmof_at_triple_junctions
+      INTEGER_T partial_cmof_stencil_at_walls
 
 
        ! VERIFICATION
       diagnostic_output=0
       nhalf=3
+
+      force_cmof_at_triple_junctions=0
+      partial_cmof_stencil_at_walls=0
 
       do im=1,num_materials
        molar_mass(im)=1.0d0
@@ -2112,7 +2110,7 @@ stop
        num_elements_blobclass= &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat
+          3+1+2*SDIM+1+nmat+nmat*nmat+1
 
        arraysize=num_elements_blobclass
        color_count=0
@@ -2122,7 +2120,6 @@ stop
        call set_dimdec(DIMS(burnvel),fablo,fabhi,ngrow_make_distance)
        call set_dimdec(DIMS(tsatfab),fablo,fabhi,ngrow_make_distance)
        call set_dimdec(DIMS(nodevel),fablo,fabhi,1)
-       call set_dimdec(DIMS(deltaVOF),fablo,fabhi,0)
        call set_dimdec(DIMS(LS),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(LSnew),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(LS_slopes_FD),fablo,fabhi,ngrow)
@@ -2130,7 +2127,6 @@ stop
        call set_dimdec(DIMS(Snew),fablo,fabhi,1)
        call set_dimdec(DIMS(EOS),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
-       call set_dimdec(DIMS(MOFnew),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance+1)
        call set_dimdec(DIMS(VOF_HT),fablo,fabhi,ngrow_distance+1)
@@ -2151,7 +2147,6 @@ stop
         allocate(tsatfab(DIMV(tsatfab),ntsat))
        endif
        allocate(nodevel(DIMV(nodevel),2*nten*SDIM))
-       allocate(deltaVOF(DIMV(deltaVOF),3*nmat))
        allocate(LS(DIMV(LS),nmat*(SDIM+1)))
        allocate(LSnew(DIMV(LSnew),nmat*(SDIM+1)))
        allocate(LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM))
@@ -2160,7 +2155,6 @@ stop
        allocate(Snew(DIMV(Snew),nstate))
        allocate(EOS(DIMV(EOS),nden))
        allocate(recon(DIMV(recon),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
-       allocate(MOFnew(DIMV(MOFnew),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
        allocate(pres(DIMV(pres)))
        allocate(FD_NRM_ND(DIMV(FD_NRM_ND),n_normal))
        allocate(FD_CURV_CELL(DIMV(FD_CURV_CELL),2*(nmat+nten)))
@@ -2173,10 +2167,6 @@ stop
        allocate(facetest(DIMV(facetest),nmat*SDIM))
        allocate(slopes(DIMV(slopes),nmat*ngeom_recon))
 
-       do im=1,nmat
-        DVOF(im)=0.0d0
-        DVOF_local(im)=0.0d0
-       enddo
        do im=1,2*nmat
         delta_mass(im)=0.0d0
         delta_mass_local(im)=0.0d0
@@ -2307,7 +2297,6 @@ stop
         do im=1,nmat*ngeom_recon
          scomp=nmat+nten*SDIM
          recon(i,j,im)=UOLD(i,j,scomp+im)
-         MOFnew(i,j,im)=UOLD(i,j,scomp+im)
         enddo
        enddo
        enddo
@@ -2317,10 +2306,6 @@ stop
         nmat,ngrow)
        call set_boundary_recon( &
         recon,DIMS(recon), &
-        fablo,fabhi, &
-        nmat,ngrow)
-       call set_boundary_recon( &
-        MOFnew,DIMS(MOFnew), &
         fablo,fabhi, &
         nmat,ngrow)
        call set_boundary_EOS( &
@@ -2803,50 +2788,29 @@ stop
 
 
 
-       do isweep=0,1
+       print *,"BEFORE NODEDISPLACE "
 
-        if (isweep.eq.0) then
+       call FORT_NODEDISPLACE( &
+        nmat, &
+        nten, &
+        nburning, &
+        fablo,fabhi, &
+        fablo,fabhi, &
+        bfact, &
+        velbc, &
+        dt, &
+        nodevel, &
+        DIMS(nodevel), &
+        burnvel, &
+        DIMS(burnvel), &
+        xlo,dx, &
+        level,finest_level)
 
-         print *,"BEFORE NODEDISPLACE isweep=",isweep
+       solvability_projection=0
 
-         call FORT_NODEDISPLACE( &
-          nmat, &
-          nten, &
-          nburning, &
-          fablo,fabhi, &
-          fablo,fabhi, &
-          bfact, &
-          velbc, &
-          dt, &
-          nodevel, &
-          DIMS(nodevel), &
-          burnvel, &
-          DIMS(burnvel), &
-          xlo,dx, &
-          level,finest_level)
-        else if (isweep.eq.1) then
+       if (stefan_flag.eq.1) then
          ! do nothing
-        else
-         print *,"isweep invalid"
-         stop
-        endif
-
-        if (isweep.eq.0) then
-                ! do nothing
-        else if (isweep.eq.1) then
-         do im=1,nmat
-          DVOF_local(im)=DVOF(im)
-         enddo
-        else
-         print *,"isweep invalid"
-         stop
-        endif
-
-        solvability_projection=0
-
-        if (stefan_flag.eq.1) then
-         ! do nothing
-        else if (stefan_flag.eq.0) then
+       else if (stefan_flag.eq.0) then
          do i=fablo(1)-1,fabhi(1)+1
          do j=fablo(2)-1,fabhi(2)+1
          do im=1,2*nten*SDIM
@@ -2854,16 +2818,15 @@ stop
          enddo
          enddo
          enddo
-        else
+       else
          print *,"stefan_flag invalid"
          stop
-        endif
+       endif
 
-        print *,"BEFORE CONVERTMATERIAL isweep=",isweep
+       print *,"BEFORE CONVERTMATERIAL"
 
-        call FORT_CONVERTMATERIAL( &
+       call FORT_CONVERTMATERIAL( &
          tid_data, &
-         isweep, &
          solvability_projection, &
          ngrow_expansion, &
          level,finest_level, &
@@ -2890,12 +2853,8 @@ stop
          xlo,dx, &
          dt, &
          delta_mass_local, &
-         DVOF_local, &
          maskcov,DIMS(maskcov), &
-         deltaVOF,DIMS(deltaVOF), &
          nodevel,DIMS(nodevel), &
-         MOFnew, &
-         DIMS(MOFnew), &
          jump_strength, &
          DIMS(jump_strength), &
          tsatfab,DIMS(tsatfab), &
@@ -2906,20 +2865,9 @@ stop
          EOS,DIMS(EOS), &
          swept,DIMS(swept))
 
-        if (isweep.eq.0) then
-         do im=1,nmat
-          DVOF(im)=DVOF(im)+DVOF_local(im)
-         enddo
-        else if (isweep.eq.1) then
-         do im=1,2*nmat
-          delta_mass(im)=delta_mass(im)+delta_mass_local(im)
-         enddo
-        else
-         print *,"isweep invalid"
-         stop
-        endif
-
-       enddo ! isweep=0..1
+       do im=1,2*nmat
+        delta_mass(im)=delta_mass(im)+delta_mass_local(im)
+       enddo
 
 
        if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
@@ -2997,6 +2945,7 @@ stop
         finest_level, &
         max_level, &
         ngrow_recon, &
+        vofbc, &
         fablo,fabhi, &
         fablo,fabhi,bfact, &
         xlo,dx, &
@@ -3013,6 +2962,8 @@ stop
         total_calls, &
         total_iterations, &
         continuous_mof, &
+        force_cmof_at_triple_junctions, &
+        partial_cmof_stencil_at_walls,
         radius_cutoff)
 
        call set_boundary_recon( &
@@ -3228,6 +3179,7 @@ stop
         finest_level, &
         max_level, &
         ngrow_recon, &
+        vofbc, &
         fablo,fabhi, &
         fablo,fabhi,bfact, &
         xlo,dx, &
@@ -3244,6 +3196,8 @@ stop
         total_calls, &
         total_iterations, &
         continuous_mof, &
+        force_cmof_at_triple_junctions, &
+        partial_cmof_stencil_at_walls,
         radius_cutoff)
 
        call set_boundary_recon( &
@@ -3614,7 +3568,6 @@ stop
        endif
 
        deallocate(nodevel)
-       deallocate(deltaVOF)
        deallocate(LS)
        deallocate(LSnew)
        deallocate(LS_slopes_FD)
@@ -3623,7 +3576,6 @@ stop
        deallocate(Snew)
        deallocate(EOS)
        deallocate(recon)
-       deallocate(MOFnew)
        deallocate(pres)
        deallocate(FD_NRM_ND)
        deallocate(FD_CURV_CELL)

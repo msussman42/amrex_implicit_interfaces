@@ -5798,9 +5798,18 @@ end subroutine volume_sanity_check
 ! then intersects this region with the plane (LS<0 side)
 ! of already initialized materials.
 ! tessellate:
-! 0=solids and fluids treated separately
-! 1=non-tessellating slopes, but tessellating output
-! 2=is_rigid_local is zero for all materials
+! 0=fluids tessellate, solids embedded
+! 1=fluids tessellate, solids embedded upon input, but tessellating output
+! 2=is_rigid_local is zero for all materials; tessellating slopes on
+!   input and tessellating output for all materials.
+! 3=if rigid materials dominate the cell, then that cell is considered
+!   to only have the one dominant rigid material.  This routine should
+!   not be called if tessellate=3 (it would be called with tessellate=0
+!   in the non-raster cells, and the solids would have no volume)
+!
+! if tessellate==0, then material regions with is_rigid_local==1 are 
+!  not subtracted from the uncaptured region.
+!
       subroutine tets_box_planes( &
        tessellate, &
        bfact,dx,xsten0,nhalf0, &
@@ -5851,10 +5860,17 @@ end subroutine volume_sanity_check
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if (tessellate.eq.0) then ! called from slope recon routine
         ! do nothing
+       else if (tessellate.eq.1) then ! called from 1st or 2nd pass
+        ! do nothing
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0, and make sure"
+        print *,"vfrac=0.0 for solids"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid4"
         stop
        endif
       enddo ! im=1..nmat
@@ -5943,7 +5959,8 @@ end subroutine volume_sanity_check
          endif
         else if ((tessellate.eq.0).and. &
                  (is_rigid_local(im).eq.1)) then
-         ! do nothing
+         ! do nothing, we do not subtract off solid
+         ! regions from the original uncaptured region.
         else
          print *,"tessellate or is_rigid_local invalid"
          stop
@@ -6039,23 +6056,38 @@ end subroutine volume_sanity_check
       end subroutine tets_box_planes
 
 ! tessellate:
-! 0=solids and fluids treated separately
-! 1=non-tessellating slopes, but tessellating output
-! 2=is_rigid_local is zero for all materials
+! 0=fluids tessellate, solids embedded; input and output
+! 1=fluids tessellate, solids embedded for inputs, but tessellating output
+! 2=is_rigid_local is zero for all materials; tessellating slopes (input) and
+!   tessellating output for all materials.
+! 3=if rigid materials dominate the cell, then that cell is considered
+!   to have only the one dominant rigid material.  This routine should
+!   not be called if tessellate=3 (it would be called with tessellate=0
+!   in the non-raster cells)
+!
+! if tessellate==0, then material regions with is_rigid_local==1 are 
+!  not subtracted from the uncaptured region.
+!
       subroutine tets_box_planes_super( &
        tessellate, &
        tid, &
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xtetlist, &
-       nlist_alloc,nlist,nmax,nmat,use_super_cell,sdim)
+       nlist_alloc,nlist,nmax,nmat, &
+       use_super_cell, &
+       cmofsten, &
+       sdim)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: nmat,sdim,use_super_cell,bfact,nhalf0
+      INTEGER_T, intent(in) :: nmat,bfact,nhalf0
+      INTEGER_T, intent(in) :: use_super_cell
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T isten,nhalf2
       INTEGER_T, intent(out) :: nlist
       INTEGER_T, intent(in) :: nmax
@@ -6136,44 +6168,52 @@ end subroutine volume_sanity_check
        do j1=-1,1
        do k1=ksten_low,ksten_high
 
-        do isten=-1,1
-         xsten2(isten,1)=xsten0(isten+2*i1,1)
-         xsten2(isten,2)=xsten0(isten+2*j1,2)
-         if (sdim.eq.3) then
-          xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
-         endif
-        enddo ! isten
+        if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+
+         do isten=-1,1
+          xsten2(isten,1)=xsten0(isten+2*i1,1)
+          xsten2(isten,2)=xsten0(isten+2*j1,2)
+          if (sdim.eq.3) then
+           xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
+          endif
+         enddo ! isten
 
          ! in: tets_box_planes_super
-        call tets_box_planes( &
-         tessellate, &
-         bfact,dx,xsten0,nhalf0, &
-         xsten2,nhalf2, &
-         mofdata, &
-         geom_xtetlist_local(1,1,1,tid+1), &
-         geom_nmax, &
-         nlist_local,nmax,nmat,sdim)
-        if (nlist_local+nlist.gt.nmax) then
-         print *,"too many tetrahedrons in tets_box_planes_super"
-         print *,"tessellate=",tessellate
-         print *,"bfact=",bfact
-         print *,"tid=",tid
-         print *,"nlist_local=",nlist_local
-         print *,"nlist=",nlist
-         print *,"nmax=",nmax
-         print *,"nmat=",nmat
-         print *,"sdim=",sdim
+         call tets_box_planes( &
+          tessellate, &
+          bfact,dx,xsten0,nhalf0, &
+          xsten2,nhalf2, &
+          mofdata, &
+          geom_xtetlist_local(1,1,1,tid+1), &
+          geom_nmax, &
+          nlist_local,nmax,nmat,sdim)
+         if (nlist_local+nlist.gt.nmax) then
+          print *,"too many tetrahedrons in tets_box_planes_super"
+          print *,"tessellate=",tessellate
+          print *,"bfact=",bfact
+          print *,"tid=",tid
+          print *,"nlist_local=",nlist_local
+          print *,"nlist=",nlist
+          print *,"nmax=",nmax
+          print *,"nmat=",nmat
+          print *,"sdim=",sdim
+          stop
+         endif
+         do nn=1,nlist_local
+          nlist=nlist+1
+          do itri=1,sdim+1
+          do dir=1,sdim
+           xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid+1)
+          enddo
+          enddo
+         enddo  ! nn
+          
+        else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+         ! do nothing
+        else
+         print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
          stop
         endif
-        do nn=1,nlist_local
-         nlist=nlist+1
-         do itri=1,sdim+1
-         do dir=1,sdim
-          xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid+1)
-         enddo
-         enddo
-        enddo  ! nn
-          
        enddo
        enddo
        enddo ! i1,j1,k1
@@ -6186,7 +6226,7 @@ end subroutine volume_sanity_check
       return
       end subroutine tets_box_planes_super
 
-
+       ! only called when tessellate=0, 1 or 2.
       subroutine tets_tet_planes( &
         tessellate, &
         bfact,dx,xsten0,nhalf0, &
@@ -6231,10 +6271,17 @@ end subroutine volume_sanity_check
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        ! do nothing
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0 or pass"
+        print *,"tessellate=1 after zeroing out the solids"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid5"
         stop
        endif
       enddo ! im=1..nmat
@@ -6283,7 +6330,8 @@ end subroutine volume_sanity_check
          endif
         else if ((tessellate.eq.0).and. &
                  (is_rigid_local(im).eq.1)) then
-         ! do nothing
+         ! do nothing, we do not subtract off solid
+         ! regions from the original uncaptured region.
         else
          print *,"tessellate or is_rigid_local invalid"
          stop
@@ -7137,12 +7185,16 @@ end subroutine volume_sanity_check
       end subroutine Box_volumeFAST_and_map
 
 
-      subroutine Box_volume_super(bfact,dx,xsten0,nhalf0, &
+      subroutine Box_volume_super( &
+       cmofsten, &
+       bfact,dx,xsten0,nhalf0, &
        volume,centroid,sdim)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: sdim,bfact,nhalf0
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T nhalf2
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
@@ -7179,25 +7231,34 @@ end subroutine volume_sanity_check
         print *,"sdim invalid"
         stop
       endif
- 
+
       do i1=-1,1
       do j1=-1,1
       do k1=ksten_low,ksten_high
+ 
+       if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
 
-       do isten=-1,1
-        xsten2(isten,1)=xsten0(isten+2*i1,1)
-        xsten2(isten,2)=xsten0(isten+2*j1,2)
-        if (sdim.eq.3) then
-         xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
-        endif
-       enddo ! isten
+        do isten=-1,1
+         xsten2(isten,1)=xsten0(isten+2*i1,1)
+         xsten2(isten,2)=xsten0(isten+2*j1,2)
+         if (sdim.eq.3) then
+          xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
+         endif
+        enddo ! isten
 
-       call Box_volumeFAST(bfact,dx,xsten2,nhalf2,volsten,censten,sdim)
+        call Box_volumeFAST(bfact,dx,xsten2,nhalf2,volsten,censten,sdim)
 
-       volume=volume+volsten
-       do dir=1,sdim
-        centroid(dir)=centroid(dir)+censten(dir)*volsten
-       enddo
+        volume=volume+volsten
+        do dir=1,sdim
+         centroid(dir)=centroid(dir)+censten(dir)*volsten
+        enddo
+       else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+        ! do nothing
+       else
+        print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+        stop
+       endif
+
       enddo
       enddo
       enddo  ! i1,j1,k1
@@ -8796,6 +8857,7 @@ contains
       subroutine multi_ff(bfact,dx,xsten0,nhalf0, &
         ff,slope,intercept, &
         continuous_mof, &
+        cmofsten, &
         arean, &
         vtarget, &
         xtetlist, &
@@ -8805,9 +8867,12 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: nlist_alloc
-      INTEGER_T, intent(in) :: continuous_mof,bfact,nhalf0
-      INTEGER_T, intent(in) :: nlist,nmax,sdim,fastflag
+      INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T, intent(in) :: bfact,nhalf0
+      INTEGER_T, intent(in) :: nlist,nmax,fastflag
       REAL_T, intent(in) :: xtetlist(4,3,nlist_alloc)
       REAL_T, intent(in) :: slope(sdim)
       REAL_T, intent(in) :: intercept
@@ -8838,9 +8903,11 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -9092,6 +9159,7 @@ contains
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
        continuous_mof, &
+       cmofsten, &
        xtetlist, &
        nlist_alloc, &
        nlist, &
@@ -9106,11 +9174,13 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T, intent(in):: nlist
       INTEGER_T, intent(in):: nlist_alloc
-      INTEGER_T, intent(in) :: nmax,sdim,fastflag
+      INTEGER_T, intent(in) :: nmax,fastflag
       REAL_T,intent(in):: xtetlist(4,3,nlist_alloc)
       REAL_T, dimension(:,:,:), allocatable :: local_xtetlist
       REAL_T, intent(in) :: slope(sdim)
@@ -9192,9 +9262,11 @@ contains
        stop
       endif
 
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -9406,6 +9478,7 @@ contains
        call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
         fc_default,slope,intercept_default, &
         continuous_mof, &
+        cmofsten, &
         arean_default,vtarget, &
         local_xtetlist, &
         local_nlist,centroid,nlist,nmax, &
@@ -9435,6 +9508,7 @@ contains
          call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
           fc,slope,intercept, &
           continuous_mof, &
+          cmofsten, &
           arean, &
           vtarget,local_xtetlist, &
           local_nlist,centroid,nlist,nmax, &
@@ -9489,12 +9563,14 @@ contains
              call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
               fa,slope,aa, &
               continuous_mof, &
+              cmofsten, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
              call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
               fb,slope,bb, &
               continuous_mof, &
+              cmofsten, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
@@ -9516,6 +9592,7 @@ contains
              call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
               fc,slope,intercept, &
               continuous_mof, &
+              cmofsten, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
@@ -9562,6 +9639,7 @@ contains
            call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
             fc,slope,intercept, &
             continuous_mof, &
+            cmofsten, &
             arean,vtarget,local_xtetlist, &
             local_nlist,centroid,nlist,nmax, &
             fastflag,sdim)
@@ -9982,6 +10060,7 @@ contains
         nmax, &
         refcentroid,refvfrac, &
         continuous_mof, &
+        cmofsten, &
         angle, &
         ff, &
         intercept, &
@@ -9996,13 +10075,15 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: use_MilcentLemoine
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: nhalf0
       INTEGER_T,intent(in):: nlist_vof
       INTEGER_T,intent(in):: nlist_cen
-      INTEGER_T, intent(in) :: nmax,sdim,fastflag
+      INTEGER_T, intent(in) :: nmax,fastflag
       REAL_T, intent(in) :: xtetlist_vof(4,3,nlist_vof)
       REAL_T, intent(in) :: xtetlist_cen(4,3,nlist_cen)
       REAL_T, intent(in) :: refcentroid(sdim)
@@ -10062,9 +10143,11 @@ contains
        stop
       endif
 
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -10097,6 +10180,7 @@ contains
          volcell_vof, &
          cencell_vof,sdim)
         call Box_volume_super( &
+         cmofsten, &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen,cencell_cen, &
          sdim)
@@ -10126,6 +10210,7 @@ contains
          bfact,dx,xsten0,nhalf0, &
          nslope,intercept, &
          continuous_mof, &
+         cmofsten, &
          xtetlist_vof, &
          nlist_vof, &
          nlist_vof, &
@@ -10188,7 +10273,7 @@ contains
 
          if (sdim.eq.3) then
           ksten_low=-1
-          ksten_high=1
+          ksten_high=-1
          else if (sdim.eq.2) then
           ksten_low=0
           ksten_high=0
@@ -10201,29 +10286,40 @@ contains
          do j1=-1,1
          do k1=ksten_low,ksten_high
 
-          do isten=-1,1
-           xsten2(isten,1)=xsten0(isten+2*i1,1)
-           xsten2(isten,2)=xsten0(isten+2*j1,2)
-           if (sdim.eq.3) then
-            xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
-           endif
-          enddo ! isten
-          call fast_cut_cell_intersection( &
-           bfact,dx,xsten0,nhalf0, &
-           nslope,intercept, &
-           volsten,censten,areasten, &
-           areacentroidsten, &
-           xsten2,nhalf2,xtet,shapeflag,sdim) 
-          volume_cut=volume_cut+volsten
-          facearea=facearea+areasten
-          do dir=1,sdim
-           testcen(dir)=testcen(dir)+volsten*censten(dir)
-           areacentroid(dir)=areacentroid(dir)+ &
+          if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+
+           do isten=-1,1
+            xsten2(isten,1)=xsten0(isten+2*i1,1)
+            xsten2(isten,2)=xsten0(isten+2*j1,2)
+            if (sdim.eq.3) then
+             xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
+            endif
+           enddo ! isten
+           call fast_cut_cell_intersection( &
+            bfact,dx,xsten0,nhalf0, &
+            nslope,intercept, &
+            volsten,censten,areasten, &
+            areacentroidsten, &
+            xsten2,nhalf2,xtet,shapeflag,sdim) 
+           volume_cut=volume_cut+volsten
+           facearea=facearea+areasten
+           do dir=1,sdim
+            testcen(dir)=testcen(dir)+volsten*censten(dir)
+            areacentroid(dir)=areacentroid(dir)+ &
              areasten*areacentroidsten(dir) 
-          enddo
+           enddo
+
+          else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+           ! do nothing
+          else
+           print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+           stop
+          endif
+
          enddo
          enddo
          enddo  ! i1,j1,k1
+
          do dir=1,sdim
           if (volume_cut.gt.zero) then
            testcen(dir)=testcen(dir)/volume_cut
@@ -10523,6 +10619,7 @@ contains
         refcentroid,refvfrac, &
         npredict, &
         continuous_mof, &
+        cmofsten, &
         nslope,intercept, &
         xtetlist_vof,nlist_vof, &
         xtetlist_cen,nlist_cen, &
@@ -10540,13 +10637,14 @@ contains
 
 #include "mofdata.H"
 
+      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nlist_vof
       INTEGER_T, intent(in) :: nlist_cen
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: critical_material
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: fastflag
@@ -10685,9 +10783,11 @@ contains
        print *,"critical_material invalid"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -10851,6 +10951,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmofsten, &
          angle_init, &
          finit,intercept_init,cen_derive_init, &
          use_initial_guess,fastflag,sdim)
@@ -10946,6 +11047,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmofsten, &
          angle_plus, &
          fp,intp(i_angle),cenp, &
          use_initial_guess, &
@@ -10968,6 +11070,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmofsten, &
          angle_minus, &
          fm,intm(i_angle),cenm, &
          use_initial_guess, &
@@ -11083,6 +11186,7 @@ contains
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
+         cmofsten, &
          angle_base, &
          fopt,intopt,cenopt, &
          use_initial_guess, &
@@ -11223,6 +11327,7 @@ contains
         bfact,dx_scale,xsten0_scale,nhalf0, &
         nslope,intercept, &
         continuous_mof, &
+        cmofsten, &
         local_xtetlist_vof, &
         local_nlist_vof, &
         local_nlist_vof, &
@@ -11353,6 +11458,7 @@ contains
         uncaptured_volume_cen, &
         multi_centroidA, &
         continuous_mof, &
+        cmofsten, &
         nmat,sdim)
 
       use probcommon_module
@@ -11369,6 +11475,7 @@ contains
       REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
       REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       INTEGER_T, intent(in) :: continuous_mof
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: nmat
       INTEGER_T dir
       INTEGER_T, intent(in) :: nmax
@@ -11427,10 +11534,20 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"tessellate should be 0"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"tessellate should be 0"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0"
+        print *,"subroutine individual_MOF: tessellate should be 0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid6"
         stop
        endif
       enddo ! im=1..nmat
@@ -11467,9 +11584,11 @@ contains
        print *,"nmax too small"
        stop
       endif
-      if ((continuous_mof.ne.0).and. &
-          (continuous_mof.ne.2).and. &
-          (continuous_mof.ne.5)) then
+      if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.2).or. &
+          (continuous_mof.eq.5)) then
+       ! do nothing
+      else
        print *,"continuous_mof invalid"
        stop
       endif
@@ -11491,7 +11610,9 @@ contains
       else if (continuous_mof.eq.2) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
          cencell_vof,sdim)
-       call Box_volume_super(bfact,dx,xsten0,nhalf0, &
+       call Box_volume_super( &
+         cmofsten, &
+         bfact,dx,xsten0,nhalf0, &
          volcell_cen,cencell_cen, &
          sdim)
       else
@@ -11519,37 +11640,49 @@ contains
            (continuous_mof.eq.5)) then
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! =0 (is_rigid==1 regions not subtracted)
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
-         nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_vof,nmax,nmat, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! =0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_cen,nmax,nmat, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
        else if (continuous_mof.eq.2) then
         use_super_cell=0
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! =0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
-         nlist_alloc,nlist_vof,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_vof,nmax,nmat, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
         use_super_cell=1
         call tets_box_planes_super( &
-         tessellate, &
+         tessellate, & ! =0
          tid, &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
          xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax,nmat,use_super_cell,sdim)
+         nlist_alloc,nlist_cen,nmax,nmat, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
        else
         print *,"continuous_mof invalid"
         stop
@@ -11780,6 +11913,7 @@ contains
           refcentroid,refvfrac, &
           npredict, &
           continuous_mof, &
+          cmofsten, &
           nslope,intercept, &
           xtetlist_vof,nlist_vof, &
           xtetlist_cen,nlist_cen, &
@@ -11936,6 +12070,7 @@ contains
           bfact,dx,xsten0,nhalf0, &
           npredict,intercept, &
           continuous_mof, &
+          cmofsten, &
           xtetlist_vof, &
           nlist_alloc, &
           nlist_vof, &
@@ -12647,12 +12782,10 @@ contains
 !   F_ij^ref=reference volume fraction in cell
 !   F_ij^derived=derived volume fraction in cell for a given
 !     slope and intercept.
-!continuous_mof=3 
-!  use CLSVOF in 2 material cells and MOF in >2 mat cells.
 !continuous_mof=4 
 !  use CLSVOF in 2 material cells and CMOF in >2 mat cells.
-!continuous_mof=5 
-!  use CLSVOF everywhere.
+!continuous_mof=5 => this is the value passed if just 2 materials in a cell
+!    and continuous_mof=4 originally.
 
 ! normal points from light to dark   phi=n dot (x-x0) + intercept
 ! vof, ref centroid, order,slope,intercept  x nmat
@@ -12660,14 +12793,13 @@ contains
 ! xcell is cell center (not cell centroid)
 !
 ! if continuous_mof=2:
-!  centroids: 3x3 super cell
+!  centroids: 3x3 super cell unless near Fsolid>1/2 cell (cmofsten)
 !  vfrac    : center cell
-!
 ! if continuous_mof=5:
 !  centroids: center cell
 !  vfrac    : center cell
 !  slopes   : level set 
-! 
+!
 ! RIGID materials are always reconstructed using standard MOF.
 !
 ! xtetlist is workspace data (use POLYGON_LIST_MAX)
@@ -12699,6 +12831,7 @@ contains
         mofdata, &
         multi_centroidA, &
         continuous_mof, &
+        cmofsten, &
         nmat, &
         sdim, &
         caller_id)
@@ -12718,6 +12851,7 @@ contains
       INTEGER_T, INTENT (IN) :: nlist_alloc
       INTEGER_T, INTENT (IN) :: nmax
       INTEGER_T, INTENT (IN) :: continuous_mof
+      INTEGER_T, INTENT (IN) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
@@ -12813,10 +12947,19 @@ contains
        is_rigid_local(imaterial)=is_rigid(nmat,imaterial)
        if (tessellate.eq.2) then
         is_rigid_local(imaterial)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"only tessellate==0 allowed for multimaterial_MOF"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"only tessellate==0 allowed for multimaterial_MOF"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid7"
         stop
        endif
       enddo ! imaterial=1..nmat
@@ -12923,9 +13066,8 @@ contains
 
         else if ((continuous_mof.eq.0).or. &
                  (continuous_mof.eq.2).or. &
-                 (continuous_mof.eq.3).or. &
                  (continuous_mof.eq.4).or. &
-                 (continuous_mof.le.5)) then
+                 (continuous_mof.eq.5)) then
  
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -12992,8 +13134,10 @@ contains
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
       call make_vfrac_sum_ok_base( &
+        cmofsten, &
         xsten0,nhalf0,nhalf_box,bfact,dx, &
-        tessellate,mofdata,nmat,sdim,6)
+        tessellate, &  ! =0
+        mofdata,nmat,sdim,6)
 
        ! clear flag for all nmat materials.
        ! vfrac,centroid,order,slope,intercept x nmat
@@ -13007,9 +13151,8 @@ contains
 
        if ((continuous_mof.eq.0).or. &
            (continuous_mof.eq.2).or. &
-           (continuous_mof.eq.3).or. &
            (continuous_mof.eq.4).or. &
-           (continuous_mof.le.5)) then
+           (continuous_mof.eq.5)) then
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -13078,6 +13221,7 @@ contains
            refcentroid,refvfrac, &
            npredict, &
            continuous_mof_rigid, &
+           cmofsten, &
            nslope,intercept, &
            xtetlist_vof,nlist_vof, &
            xtetlist_cen,nlist_cen, &
@@ -13151,9 +13295,8 @@ contains
 
         if ((continuous_mof.eq.0).or. &
             (continuous_mof.eq.2).or. &
-            (continuous_mof.eq.3).or. &
             (continuous_mof.eq.4).or. &
-            (continuous_mof.le.5)) then
+            (continuous_mof.eq.5)) then
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
  
          if (order_algorithm(imaterial).eq.0) then
@@ -13361,6 +13504,7 @@ contains
          call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
           uncaptured_centroid_vof,sdim)
          call Box_volume_super( &
+          cmofsten, &
           bfact,dx,xsten0,nhalf0, &
           uncaptured_volume_cen,uncaptured_centroid_cen, &
           sdim)
@@ -13390,6 +13534,7 @@ contains
           uncaptured_volume_cen, &
           multi_centroidA, &
           continuous_mof, &
+          cmofsten, &
           nmat,sdim)
          imaterial_count=imaterial_count+1
         enddo
@@ -13442,6 +13587,7 @@ contains
            uncaptured_volume_vof, &
            uncaptured_centroid_vof,sdim)
           call Box_volume_super( &
+           cmofsten, &
            bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_cen,uncaptured_centroid_cen, &
            sdim)
@@ -13471,6 +13617,7 @@ contains
            uncaptured_volume_cen, &
            multi_centroidA, &
            continuous_mof, &
+           cmofsten, &
            nmat,sdim)
           imaterial_count=imaterial_count+1
          enddo ! while not all of uncaptured space filled
@@ -13647,6 +13794,7 @@ contains
       REAL_T mofdata(nmat*(2*sdim+3))
       REAL_T multi_centroidA(nmat,sdim)
       INTEGER_T continuous_mof
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
       INTEGER_T nrecon,nsamples,im,ntry,iangle,vofcomp
@@ -13731,7 +13879,9 @@ contains
        print *,"sdim invalid"
        stop
       endif
+
       continuous_mof=0
+
       if (levelrz.ne.0) then
        print *,"levelrz should be 0 for this sanity check"
        stop
@@ -13850,6 +14000,7 @@ contains
         mofdata, &
         multi_centroidA, &
         continuous_mof, &
+        cmofsten, &
         nmat,sdim,1)
 
        moferror=zero
@@ -13909,6 +14060,7 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_base( &
+        cmofsten, &
         xsten,nhalf,nhalf_box, &
         bfact,dx, &
         tessellate, &
@@ -13922,6 +14074,7 @@ contains
 
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: nhalf,nhalf_box
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, intent(in) :: dx(sdim)
@@ -13953,10 +14106,15 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid8"
         stop
        endif
       enddo ! im=1..nmat
@@ -13982,7 +14140,10 @@ contains
       if (nhalf_box.eq.1) then
        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
       else if (nhalf_box.eq.3) then
-       call Box_volume_super(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
+       call Box_volume_super( &
+         cmofsten, &
+         bfact,dx,xsten,nhalf, &
+         volcell,cencell,sdim)
       else
        print *,"nhalf_box invalid"
        stop
@@ -14106,6 +14267,7 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten,nhalf,nhalf_box, &
         bfact,dx, &
         tessellate, &
@@ -14119,6 +14281,7 @@ contains
 
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: nhalf,nhalf_box
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, intent(in) :: dx(sdim)
@@ -14151,10 +14314,15 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
         ! do nothing
+       else if (tessellate.eq.3) then
+        print *,"tessellate==3 invalid"
+        print *,"if non-raster cell, pass tessellate=0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid9"
         stop
        endif
       enddo ! im=1..nmat
@@ -14212,13 +14380,16 @@ contains
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
+       print *,"tessellate=",tessellate
        stop
       endif
 
       call make_vfrac_sum_ok_base( &
+       cmofsten, &
        xsten,nhalf,nhalf_box, &
        bfact,dx, &
-       tessellate,mofdatavalid,nmat, &
+       tessellate, &
+       mofdatavalid,nmat, &
        sdim,errorid)
 
       return
@@ -14361,20 +14532,47 @@ contains
       return
       end subroutine project_slopes_to_face
 
- 
+
+        ! for tessellate==2:
+        !  it is assumed that the reconstruction is tessellating for all solids
+        !  and fluids.  Override is_rigid to be all zeros in this case.
+        ! for tessellate==1:
+        !  it is assumed that the reconstruction is tessellating for the 
+        !  fluids, and the solids are embedded.  The solids are reconstructed
+        !  first in this case, then the fluids.
+        ! for tessellate==0:
+        !  fluids and solids done independantly of each other.  Fluids 
+        !  tessellate, and solids are embedded.
+        ! for tessellate==3:
+        !  it is assumed that the reconstruction is tessellating for the 
+        !  fluids, and the solids are embedded.  
+        !  For cells in which F_solid<1/2, treat this the same as 
+        !  the tessellate==0 case with solid volumes zeroed out, 
+        !  otherwise assume the cell is filled with the
+        !  dominant solid material.
+        !
+        ! 
         ! shapeflag=0 find volumes within xsten_grid
         ! shapeflag=1 find volumes within xtet
         ! multi_cen is "absolute" (not relative to cell centroid)
-        ! tessellate==2 => is_rigid_local is zero for all materials
+        ! tessellate==2 => is_rigid_local is zero for all materials;
+        !    tessellating slopes on inputs and 
+        !    tessellating output for all materials.
         ! tessellate==1 => both fluids and rigid materials considered and
-        !                  they tessellate the region.
+        !                  they tessellate the region (output).
         ! tessellate==0 => both fluids and rigid materials considered;
         !                  fluids tessellate the region and the rigid
         !                  materials are immersed.
+        ! tessellate==3 => if rigid materials dominate the cell, 
+        !   then that cell is considered
+        !   to only have the one dominant rigid material, otherwise
+        !   the cell is treated as a local_tessellate==0 cell with
+        !   all rigid material vfracs and centroids zapped out.
+        !   
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid( &
-       tessellate, &
+       tessellate, & ! =0,1,2,3
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -14396,10 +14594,12 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nmat,sdim,shapeflag,caller_id,bfact
+      INTEGER_T, intent(in) :: tessellate !=0,1,2,3
+      INTEGER_T, intent(in) :: nmat,shapeflag,caller_id,bfact
       INTEGER_T, intent(in) :: nhalf0,nhalf_grid
       REAL_T, intent(in) :: xtet(sdim+1,sdim)
       REAL_T, intent(in) :: mofdata(nmat*(2*sdim+3))
@@ -14436,6 +14636,8 @@ contains
       REAL_T uncaptured_volume_fraction_solid
       REAL_T uncaptured_volume_save
       INTEGER_T material_used(nmat)
+      INTEGER_T im_raster_solid
+      INTEGER_T return_raster_info
       INTEGER_T im_test
       INTEGER_T fastflag
 
@@ -14448,10 +14650,12 @@ contains
       INTEGER_T num_processed_fluid
       INTEGER_T num_processed_total
       INTEGER_T loop_counter
-      INTEGER_T tessellate_local
+      INTEGER_T new_tessellate_local
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
+      INTEGER_T local_tessellate
+      REAL_T vfrac_raster_solid
 
       nhalf_box=1
 
@@ -14459,13 +14663,27 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
+        ! do nothing
+       else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid10"
         stop
        endif
       enddo ! im=1..nmat
+
+      if (tessellate.eq.3) then
+       local_tessellate=0
+      else if ((tessellate.eq.0).or. &
+               (tessellate.eq.1).or. &
+               (tessellate.eq.2)) then
+       local_tessellate=tessellate
+      else
+       print *,"tessellate invalid11"
+       stop
+      endif
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
@@ -14513,9 +14731,11 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate,mofdata,mofdatavalid,nmat,sdim,1)
+        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
+        mofdata,mofdatavalid,nmat,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -14543,7 +14763,7 @@ contains
          endif
         endif
        endif
-      endif
+      endif  ! sanity_check==1
 
       if (shapeflag.eq.0) then
  
@@ -14586,19 +14806,39 @@ contains
       vfrac_solid_sum=zero
       nmat_solid=0
       nmat_fluid=0
+
+      im_raster_solid=0
+      vfrac_raster_solid=zero
+
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
         nmat_fluid=nmat_fluid+1
        else if (is_rigid_local(im).eq.1) then
+        if (im_raster_solid.eq.0) then
+         im_raster_solid=im
+         vfrac_raster_solid=mofdatasave(vofcomp)
+        else if ((im_raster_solid.ge.1).and. &
+                 (im_raster_solid.le.nmat).and. &
+                 (is_rigid_local(im_raster_solid).eq.1)) then
+         if (vfrac_raster_solid.lt.mofdatasave(vofcomp)) then
+          im_raster_solid=im
+          vfrac_raster_solid=mofdatasave(vofcomp)
+         endif
+        else
+         print *,"im_raster_solid invalid"
+         stop
+        endif
+      
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
         print *,"is_rigid_local invalid"
         stop
        endif
-      enddo ! im
+      enddo ! im=1..nmat
+
       if (nmat_fluid+nmat_solid.ne.nmat) then
        print *,"nmat_fluid or nmat_solid invalid"
        stop
@@ -14612,447 +14852,527 @@ contains
           (vfrac_solid_sum.lt.zero)) then
        print *,"vfrac_solid_sum invalid"
        stop
-      endif
-
-      uncaptured_volume_fraction_fluid=one
-      uncaptured_volume_fraction_solid=one
-      num_processed_solid=0
-      num_processed_fluid=0
-      num_processed_total=0
-      do im=1,nmat
-       material_used(im)=0
-      enddo ! im=1..nmat
-
-      if (tessellate.eq.0) then
-       vfrac_mult=one
-      else if (tessellate.eq.1) then 
-       vfrac_mult=abs(one-vfrac_solid_sum)
-      else if (tessellate.eq.2) then 
-       vfrac_mult=one
+      else if ((vfrac_solid_sum.ge.zero).and. &
+               (vfrac_solid_sum.le.one+VOFTOL)) then
+       ! do nothing
       else
-       print *,"tessellate invalid"
+       print *,"vfrac_solid_sum bust"
        stop
       endif
- 
-      fastflag=1
 
-      if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
-          (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
+      return_raster_info=0
 
-       do im=1,nmat
-        vofcomp=(im-1)*ngeom_recon+1
+      if (tessellate.eq.3) then
+       if (vfrac_solid_sum.ge.half) then
+        return_raster_info=1
 
-        if (is_rigid_local(im).eq.0) then
-         multi_volume(im)=uncaptured_volume_fluid* &
-           vfrac_mult*mofdatasave(vofcomp)
-        else if (is_rigid_local(im).eq.1) then
-         multi_volume(im)=uncaptured_volume_fluid*mofdatasave(vofcomp)
+        if ((im_raster_solid.ge.1).and. &
+            (im_raster_solid.le.nmat)) then
+         vofcomp=(im_raster_solid-1)*ngeom_recon+1
+         multi_volume(im_raster_solid)=uncaptured_volume_solid
+         do dir=1,sdim
+          multi_cen(dir,im_raster_solid)=uncaptured_centroid_solid(dir)
+         enddo
         else
-         print *,"is_rigid_local invalid"
+         print *,"im_raster_solid invalid"
          stop
         endif
 
-        do dir=1,sdim
-         multi_cen(dir,im)=uncaptured_centroid_fluid(dir)
-        enddo
+       else if (vfrac_solid_sum.lt.half) then
+        vfrac_solid_sum=zero
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
+         if (is_rigid_local(im).eq.0) then
+          ! do nothing
+         else if (is_rigid_local(im).eq.1) then
+          do dir=0,sdim
+           mofdatasave(vofcomp+dir)=zero
+           mofdatavalid(vofcomp+dir)=zero
+           mofdatalocal(vofcomp+dir)=zero
+          enddo
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+       else
+        print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
+        stop
+       endif
+      else if ((tessellate.eq.0).or. &
+               (tessellate.eq.1).or. &
+               (tessellate.eq.2)) then
+       ! do nothing
+      else
+       print *,"tessellate invalid12"
+       stop
+      endif
+      
+      if (return_raster_info.eq.1) then
+       ! do nothing
+      else if (return_raster_info.eq.0) then
+ 
+       uncaptured_volume_fraction_fluid=one
+       uncaptured_volume_fraction_solid=one
+       num_processed_solid=0
+       num_processed_fluid=0
+       num_processed_total=0
+       do im=1,nmat
+        material_used(im)=0
        enddo ! im=1..nmat
 
-      else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
-               (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
-
-       if ((tessellate.eq.0).or. &
-           (tessellate.eq.1)) then
-        tessellate_local=1
-       else if (tessellate.eq.2) then
-        tessellate_local=2
-        if ((nmat_solid.eq.0).and.(nmat_fluid.eq.nmat)) then
-         ! do nothing
-        else
-         print *,"nmat_solid or nmat_fluid invalid"
-         stop
-        endif
+       if (local_tessellate.eq.0) then
+        vfrac_mult=one
+       else if (local_tessellate.eq.1) then 
+        vfrac_mult=abs(one-vfrac_solid_sum)
+       else if (local_tessellate.eq.2) then 
+        vfrac_mult=one
        else
-        print *,"tessellate invalid"
+        print *,"local_tessellate invalid13"
         stop
        endif
+ 
+       fastflag=1
 
-       loop_counter=0
-       do while ((loop_counter.lt.nmat_solid).and. &
-                 (num_processed_solid.lt.nmat_solid).and. &
-                 (uncaptured_volume_fraction_solid.gt. &
-                  one-vfrac_solid_sum).and. &
-                 (uncaptured_volume_solid.gt.zero)) 
+       if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
+           (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
 
-        remaining_vfrac=zero
-        single_material=0
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
 
-        do im_test=1,nmat
-         vofcomp=(im_test-1)*ngeom_recon+1
+         if (is_rigid_local(im).eq.0) then
+          multi_volume(im)=uncaptured_volume_fluid* &
+            vfrac_mult*mofdatasave(vofcomp)
+         else if (is_rigid_local(im).eq.1) then
+          multi_volume(im)=uncaptured_volume_fluid*mofdatasave(vofcomp)
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
 
-         if ((material_used(im_test).eq.0).and. &
-             (is_rigid_local(im_test).eq.1)) then
-          if (mofdatasave(vofcomp).gt. &
-              uncaptured_volume_fraction_solid-VOFTOL) then
-           if (single_material.ne.0) then
-            print *,"cannot have two rigid materials at once"
-            print *,"single_material ",single_material
-            print *,"im_test ",im_test
-            print *,"mofdatavalid ",mofdatavalid(vofcomp)
-            print *,"uncaptured_volume_fraction_solid ", &
-             uncaptured_volume_fraction_solid
-            stop
-           endif
-           single_material=im_test
-          else
-           remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-          endif
-         else if (((material_used(im_test).ge.1).and. &
-                   (material_used(im_test).le.nmat_solid)).or. &
-                   (is_rigid_local(im_test).eq.0)) then
+         do dir=1,sdim
+          multi_cen(dir,im)=uncaptured_centroid_fluid(dir)
+         enddo
+        enddo ! im=1..nmat
+
+       else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
+                (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
+
+         ! if local_tessellate==0, then the uncaptured region will be
+         ! reset after the first sweep through the is_rigid==1 
+         ! materials.
+        if ((local_tessellate.eq.0).or. &
+            (local_tessellate.eq.1)) then
+         new_tessellate_local=1
+        else if (local_tessellate.eq.2) then
+         new_tessellate_local=2
+         if ((nmat_solid.eq.0).and.(nmat_fluid.eq.nmat)) then
           ! do nothing
          else
-          print *,"material used bust"
+          print *,"nmat_solid or nmat_fluid invalid"
           stop
          endif
-        enddo  ! im_test=1..nmat
+        else
+         print *,"local_tessellate invalid14"
+         stop
+        endif
 
-        if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.VOFTOL)) then
+        loop_counter=0
+        do while ((loop_counter.lt.nmat_solid).and. &
+                  (num_processed_solid.lt.nmat_solid).and. &
+                  (uncaptured_volume_fraction_solid.gt. &
+                   one-vfrac_solid_sum).and. &
+                  (uncaptured_volume_solid.gt.zero)) 
 
-         vofcomp=(single_material-1)*ngeom_recon+1
-         multi_volume(single_material)=uncaptured_volume_solid
-         do dir=1,sdim
-          multi_cen(dir,single_material)=uncaptured_centroid_solid(dir)
-         enddo
+         remaining_vfrac=zero
+         single_material=0
 
-         uncaptured_volume_solid=zero
-         uncaptured_volume_fraction_solid=zero
+         do im_test=1,nmat
+          vofcomp=(im_test-1)*ngeom_recon+1
 
-         num_processed_solid=num_processed_solid+1
-         material_used(single_material)=num_processed_solid
-
-        else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.VOFTOL)) then
-
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-          mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (is_rigid_local(im).eq.1) then
-            ! flag>0 for solids already processed.
-           if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat_solid)) then
-            mofdatalocal(vofcomp+sdim+1)=material_used(im)
-           else if (material_used(im).eq.0) then
-            ! do nothing
+          if ((material_used(im_test).eq.0).and. &
+              (is_rigid_local(im_test).eq.1)) then
+           if (mofdatasave(vofcomp).gt. &
+               uncaptured_volume_fraction_solid-VOFTOL) then
+            if (single_material.ne.0) then
+             print *,"cannot have two rigid materials at once"
+             print *,"single_material ",single_material
+             print *,"im_test ",im_test
+             print *,"mofdatavalid ",mofdatavalid(vofcomp)
+             print *,"uncaptured_volume_fraction_solid ", &
+              uncaptured_volume_fraction_solid
+             stop
+            endif
+            single_material=im_test
            else
-            print *,"material_used invalid"
-            stop
+            remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
            endif
-          else if (is_rigid_local(im).eq.0) then
+          else if (((material_used(im_test).ge.1).and. &
+                    (material_used(im_test).le.nmat_solid)).or. &
+                    (is_rigid_local(im_test).eq.0)) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"material used bust"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo  ! im_test=1..nmat
 
-         if ((num_processed_solid.gt.0).and. &
-             (num_processed_solid.lt.nmat_solid)) then
-          fastflag=0
-         else if (num_processed_solid.eq.0) then
-          fastflag=1
-         else          
-          print *,"num_processed_solid invalid"
-          stop
-         endif
+         if ((single_material.gt.0).and. &
+             (remaining_vfrac.lt.VOFTOL)) then
 
-         if (fastflag.eq.0) then
-
-          if (shapeflag.eq.0) then ! volumes in a box
-            ! only xsten0(0,dir) dir=1..sdim used
-            ! in: multi_volume_grid
-           call tets_box_planes( &
-             tessellate_local, &
-             bfact,dx,xsten0,nhalf0, &
-             xsten_grid,nhalf_grid, &
-             mofdatalocal, &
-             xtetlist, &
-             nlist_alloc,nlist,nmax,nmat,sdim)
-
-          else if (shapeflag.eq.1) then ! volumes in a tet.
-
-            ! only xsten0(0,dir) dir=1..sdim used
-            ! xtetlist=xtet - highest order material
-           call tets_tet_planes( &
-             tessellate_local, &
-             bfact,dx,xsten0,nhalf0, &
-             xtet,mofdatalocal, &
-             xtetlist, &
-             nlist_alloc,nlist,nmax,nmat,sdim)
-
-          else
-           print *,"shapeflag invalid"
-           stop
-          endif
-
-          call get_cut_geom3D(xtetlist, &
-              nlist_alloc,nlist,nmax, &
-              volcut,cencut,sdim)
-
-          if (abs(volcut-uncaptured_volume_solid).gt. &
-              VOFTOL_MULTI_VOLUME_SANITY*volcell) then
-           print *,"volcut invalid multi volume get volume grid 1"
-           print *,"CHECK IF RIGID BODIES INTERSECT"
-           print *,"volcut= ",volcut
-           print *,"uncaptured_volume_solid=",uncaptured_volume_solid
-           print *,"volcell= ",volcell
-           print *,"VOFTOL= ",VOFTOL
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
-           print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
-           print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
-             xsten_grid(0,sdim)
-           do im=1,nmat
-            vofcomp=(im-1)*ngeom_recon+1
-            print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
-           enddo 
-           stop
-          endif
-
-         else if (fastflag.eq.1) then
-
-          ! do nothing; unnecessary to intersect the original box with
-          ! the compliment of materials already processed.
-
-         else 
-          print *,"fastflag invalid multi get volume grid"
-          stop
-         endif
-
-         critical_material=0
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-
-          if (is_rigid_local(im).eq.1) then
-           testflag=NINT(mofdatalocal(vofcomp+sdim+1))
-           testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
-           if ((testflag_save.eq.1).and. & ! old flag= processed
-               (testflag.eq.0).and. &      ! new flag= unprocessed
-               (material_used(im).eq.0)) then
-            critical_material=im
-           else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
-                    ((testflag.ge.1).and. &    ! new flag=processed
-                     (testflag.le.nmat_solid)).or. &
-                     ((material_used(im).ge.1).and. &
-                      (material_used(im).le.nmat_solid))) then
-            ! do nothing
-           else
-            print *,"testflag invalid"
-            stop         
-           endif 
-          else if (is_rigid_local(im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
-         
-         if ((critical_material.ge.1).and. &
-             (critical_material.le.nmat)) then        
-          vofcomp=(critical_material-1)*ngeom_recon+1
+          vofcomp=(single_material-1)*ngeom_recon+1
+          multi_volume(single_material)=uncaptured_volume_solid
           do dir=1,sdim
-           nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
+           multi_cen(dir,single_material)=uncaptured_centroid_solid(dir)
           enddo
-          intercept=mofdatalocal(vofcomp+2*sdim+2)
 
-          if (fastflag.eq.0) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call multi_cell_intersection( &
-             bfact,dx,xsten0,nhalf0, &
-             nrecon,intercept, &
-             voltemp,centemp,areatemp, &
-             xtetlist, &
-             nlist_alloc, &
-             nlist, &
-             nmax,sdim) 
-          else if (fastflag.eq.1) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call fast_cut_cell_intersection( &
-             bfact,dx,xsten0,nhalf0, &
-             nrecon,intercept, &
-             voltemp,centemp,areatemp, &
-             areacentroidtemp, &
-             xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
-          else 
-           print *,"fastflag invalid multi get volume grid 2"
-           stop
-          endif
-
-          multi_volume(critical_material)=voltemp
-          do dir=1,sdim
-           if (voltemp.gt.zero) then
-            multi_cen(dir,critical_material)=centemp(dir)
-           else
-            multi_cen(dir,critical_material)=zero
-           endif
-          enddo ! dir=1..sdim
-          multi_area(critical_material)=areatemp
-
-          uncaptured_volume_save=uncaptured_volume_solid
-          uncaptured_volume_solid=uncaptured_volume_solid-voltemp
-          if (uncaptured_volume_solid.lt. &
-              VOFTOL*uncaptured_volume_START) then
-           uncaptured_volume_solid=zero
-          endif
-
-           ! V^{uncapt,k}=V+V^{uncapt,k+1}
-           ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
-
-          do dir=1,sdim
-           if (uncaptured_volume_solid.le.zero) then
-            uncaptured_centroid_solid(dir)=zero
-           else
-            uncaptured_centroid_solid(dir)= &
-             (uncaptured_volume_save*uncaptured_centroid_solid(dir)- &
-              voltemp*centemp(dir))/uncaptured_volume_solid
-           endif
-          enddo ! dir=1..sdim
-  
-          uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
-           mofdatalocal(vofcomp)
-          if (uncaptured_volume_fraction_solid.lt. &
-              one-vfrac_solid_sum+VOFTOL) then
-           uncaptured_volume_fraction_solid=one-vfrac_solid_sum
-          endif
+          uncaptured_volume_solid=zero
+          uncaptured_volume_fraction_solid=zero
 
           num_processed_solid=num_processed_solid+1
-          material_used(critical_material)=num_processed_solid
+          material_used(single_material)=num_processed_solid
 
-         else if (critical_material.eq.0) then
-          ! do nothing
+         else if ((single_material.eq.0).or. &
+                  (remaining_vfrac.ge.VOFTOL)) then
+
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
+           if (is_rigid_local(im).eq.1) then
+             ! flag>0 for solids already processed.
+            if ((material_used(im).ge.1).and. &
+                (material_used(im).le.nmat_solid)) then
+             mofdatalocal(vofcomp+sdim+1)=material_used(im)
+            else if (material_used(im).eq.0) then
+             ! do nothing
+            else
+             print *,"material_used invalid"
+             stop
+            endif
+           else if (is_rigid_local(im).eq.0) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+
+          if ((num_processed_solid.gt.0).and. &
+              (num_processed_solid.lt.nmat_solid)) then
+           fastflag=0
+          else if (num_processed_solid.eq.0) then
+           fastflag=1
+          else          
+           print *,"num_processed_solid invalid"
+           stop
+          endif
+
+          if (fastflag.eq.0) then
+
+           if (shapeflag.eq.0) then ! volumes in a box
+             ! only xsten0(0,dir) dir=1..sdim used
+             ! in: multi_volume_grid
+            call tets_box_planes( &
+              new_tessellate_local, & ! new_tessellate_local=1 or 2
+              bfact,dx,xsten0,nhalf0, &
+              xsten_grid,nhalf_grid, &
+              mofdatalocal, &
+              xtetlist, &
+              nlist_alloc,nlist,nmax,nmat,sdim)
+
+           else if (shapeflag.eq.1) then ! volumes in a tet.
+
+             ! only xsten0(0,dir) dir=1..sdim used
+             ! xtetlist=xtet - highest order material
+            call tets_tet_planes( &
+              new_tessellate_local, &  ! new_tessellate_local=1 or 2
+              bfact,dx,xsten0,nhalf0, &
+              xtet,mofdatalocal, &
+              xtetlist, &
+              nlist_alloc,nlist,nmax,nmat,sdim)
+
+           else
+            print *,"shapeflag invalid"
+            stop
+           endif
+
+           call get_cut_geom3D(xtetlist, &
+               nlist_alloc,nlist,nmax, &
+               volcut,cencut,sdim)
+
+           if (abs(volcut-uncaptured_volume_solid).gt. &
+               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+            print *,"volcut invalid multi volume get volume grid 1"
+            print *,"CHECK IF RIGID BODIES INTERSECT"
+            print *,"volcut= ",volcut
+            print *,"uncaptured_volume_solid=",uncaptured_volume_solid
+            print *,"volcell= ",volcell
+            print *,"VOFTOL= ",VOFTOL
+            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
+            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
+                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
+            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
+              xsten_grid(0,sdim)
+            do im=1,nmat
+             vofcomp=(im-1)*ngeom_recon+1
+             print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
+            enddo 
+            stop
+           endif
+
+          else if (fastflag.eq.1) then
+
+           ! do nothing; unnecessary to intersect the original box with
+           ! the compliment of materials already processed.
+
+          else 
+           print *,"fastflag invalid multi get volume grid"
+           stop
+          endif
+
+          critical_material=0
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+
+           if (is_rigid_local(im).eq.1) then
+            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
+            testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
+            if ((testflag_save.eq.1).and. & ! old flag= processed
+                (testflag.eq.0).and. &      ! new flag= unprocessed
+                (material_used(im).eq.0)) then
+             critical_material=im
+            else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
+                     ((testflag.ge.1).and. &    ! new flag=processed
+                      (testflag.le.nmat_solid)).or. &
+                      ((material_used(im).ge.1).and. &
+                       (material_used(im).le.nmat_solid))) then
+             ! do nothing
+            else
+             print *,"testflag invalid"
+             stop         
+            endif 
+           else if (is_rigid_local(im).eq.0) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+          
+          if ((critical_material.ge.1).and. &
+              (critical_material.le.nmat)) then        
+           vofcomp=(critical_material-1)*ngeom_recon+1
+           do dir=1,sdim
+            nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
+           enddo
+           intercept=mofdatalocal(vofcomp+2*sdim+2)
+
+           if (fastflag.eq.0) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call multi_cell_intersection( &
+              bfact,dx,xsten0,nhalf0, &
+              nrecon,intercept, &
+              voltemp,centemp,areatemp, &
+              xtetlist, &
+              nlist_alloc, &
+              nlist, &
+              nmax,sdim) 
+           else if (fastflag.eq.1) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call fast_cut_cell_intersection( &
+              bfact,dx,xsten0,nhalf0, &
+              nrecon,intercept, &
+              voltemp,centemp,areatemp, &
+              areacentroidtemp, &
+              xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
+           else 
+            print *,"fastflag invalid multi get volume grid 2"
+            stop
+           endif
+
+           multi_volume(critical_material)=voltemp
+           do dir=1,sdim
+            if (voltemp.gt.zero) then
+             multi_cen(dir,critical_material)=centemp(dir)
+            else
+             multi_cen(dir,critical_material)=zero
+            endif
+           enddo ! dir=1..sdim
+           multi_area(critical_material)=areatemp
+
+           uncaptured_volume_save=uncaptured_volume_solid
+           uncaptured_volume_solid=uncaptured_volume_solid-voltemp
+           if (uncaptured_volume_solid.lt. &
+               VOFTOL*uncaptured_volume_START) then
+            uncaptured_volume_solid=zero
+           endif
+
+            ! V^{uncapt,k}=V+V^{uncapt,k+1}
+            ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
+
+           do dir=1,sdim
+            if (uncaptured_volume_solid.le.zero) then
+             uncaptured_centroid_solid(dir)=zero
+            else
+             uncaptured_centroid_solid(dir)= &
+              (uncaptured_volume_save*uncaptured_centroid_solid(dir)- &
+               voltemp*centemp(dir))/uncaptured_volume_solid
+            endif
+           enddo ! dir=1..sdim
+   
+           uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
+            mofdatalocal(vofcomp)
+           if (uncaptured_volume_fraction_solid.lt. &
+               one-vfrac_solid_sum+VOFTOL) then
+            uncaptured_volume_fraction_solid=one-vfrac_solid_sum
+           endif
+
+           num_processed_solid=num_processed_solid+1
+           material_used(critical_material)=num_processed_solid
+
+          else if (critical_material.eq.0) then
+           ! do nothing
+          else
+           print *,"critical_material invalid"
+           stop
+          endif
+  
          else
-          print *,"critical_material invalid"
+          print *,"single_material or remaining_vfrac invalid"
           stop
          endif
- 
+
+         loop_counter=loop_counter+1
+        enddo  ! while 
+               ! loop_counter<nmat_solid and
+               ! num_processed_solid<nmat_solid and
+               ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
+               ! uncaptured_volume_solid>0 
+
+        if (local_tessellate.eq.0) then
+         ! do nothing; uncaptured_volume_fluid remains to represent
+         ! the original uncaptured space.
+        else if (local_tessellate.eq.1) then
+         ! modify the uncaptured fluid region to recognize the presence
+         ! of the is_rigid==1 materials.
+         uncaptured_volume_fluid=uncaptured_volume_solid
+         do dir=1,sdim
+          uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
+         enddo
+        else if (local_tessellate.eq.2) then
+         ! do nothing
         else
-         print *,"single_material or remaining_vfrac invalid"
+         print *,"local_tessellate invalid15"
          stop
         endif
 
-        loop_counter=loop_counter+1
-       enddo  ! while 
-              ! loop_counter<nmat_solid and
-              ! num_processed_solid<nmat_solid and
-              ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
-              ! uncaptured_volume_solid>0 
+         ! if local_tessellate==0 then is_rigid==1 materials are not
+         ! recognized during the following sweep.
+        new_tessellate_local=local_tessellate ! =0,1, or 2
 
-       if (tessellate.eq.0) then
-        ! do nothing
-       else if (tessellate.eq.1) then
-        uncaptured_volume_fluid=uncaptured_volume_solid
-        do dir=1,sdim
-         uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
-        enddo
-       else if (tessellate.eq.2) then
-        ! do nothing
-       else
-        print *,"tessellate invalid"
-        stop
-       endif
+        loop_counter=0
+        do while ((loop_counter.lt.nmat_fluid).and. &
+                  (num_processed_fluid.lt.nmat_fluid).and. &
+                  (uncaptured_volume_fraction_fluid.gt.zero).and. &
+                  (uncaptured_volume_fluid.gt.zero)) 
 
-       tessellate_local=tessellate
+         remaining_vfrac=zero
+         single_material=0
 
-       loop_counter=0
-       do while ((loop_counter.lt.nmat_fluid).and. &
-                 (num_processed_fluid.lt.nmat_fluid).and. &
-                 (uncaptured_volume_fraction_fluid.gt.zero).and. &
-                 (uncaptured_volume_fluid.gt.zero)) 
+         do im_test=1,nmat
+          vofcomp=(im_test-1)*ngeom_recon+1
 
-        remaining_vfrac=zero
-        single_material=0
+          if ((material_used(im_test).eq.0).and. &
+              (is_rigid_local(im_test).eq.0)) then
+           if (mofdatasave(vofcomp).gt. &
+               uncaptured_volume_fraction_fluid-VOFTOL) then
 
-        do im_test=1,nmat
-         vofcomp=(im_test-1)*ngeom_recon+1
-
-         if ((material_used(im_test).eq.0).and. &
-             (is_rigid_local(im_test).eq.0)) then
-          if (mofdatasave(vofcomp).gt. &
-              uncaptured_volume_fraction_fluid-VOFTOL) then
-
-           if (single_material.ne.0) then
-            print *,"cannot have two materials at once"
-            print *,"single_material ",single_material
-            print *,"im_test ",im_test
-            print *,"mofdatavalid ",mofdatavalid(vofcomp)
-            print *,"uncaptured_volume_fraction_fluid ", &
-             uncaptured_volume_fraction_fluid
-            stop
-           endif
-           single_material=im_test
-          else
-           remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-          endif
-         else if (((material_used(im_test).ge.1).and. &
-                   (material_used(im_test).le.nmat)).or. &
-                  (is_rigid_local(im_test).eq.1)) then
-          ! do nothing
-         else
-          print *,"material used bust"
-          stop
-         endif
-        enddo  ! im_test=1..nmat
-
-        if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.VOFTOL)) then
-
-         vofcomp=(single_material-1)*ngeom_recon+1
-         multi_volume(single_material)=uncaptured_volume_fluid
-         do dir=1,sdim
-          multi_cen(dir,single_material)=uncaptured_centroid_fluid(dir)
-         enddo
-
-         uncaptured_volume_fluid=zero
-         uncaptured_volume_fraction_fluid=zero
-
-         num_processed_fluid=num_processed_fluid+1
-
-         if (tessellate.eq.0) then
-          num_processed_total=num_processed_fluid
-         else if (tessellate.eq.1) then
-          num_processed_total= &
-            num_processed_fluid+num_processed_solid
-         else if (tessellate.eq.2) then
-          num_processed_total=num_processed_fluid
-         else
-          print *,"tessellate invalid"
-          stop
-         endif
-
-         material_used(single_material)=num_processed_total
-
-        else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.VOFTOL)) then
-
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-          mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (tessellate.eq.1) then
-           if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat)) then
-            mofdatalocal(vofcomp+sdim+1)=material_used(im)
-           else if (material_used(im).eq.0) then
-            ! do nothing
+            if (single_material.ne.0) then
+             print *,"cannot have two materials at once"
+             print *,"single_material ",single_material
+             print *,"im_test ",im_test
+             print *,"mofdatavalid ",mofdatavalid(vofcomp)
+             print *,"uncaptured_volume_fraction_fluid ", &
+              uncaptured_volume_fraction_fluid
+             stop
+            endif
+            single_material=im_test
            else
-            print *,"material_used invalid"
-            stop
+            remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
            endif
-          else if (tessellate.eq.0) then
-           if (is_rigid_local(im).eq.1) then
-            ! do nothing
-           else if (is_rigid_local(im).eq.0) then
+          else if (((material_used(im_test).ge.1).and. &
+                    (material_used(im_test).le.nmat)).or. &
+                   (is_rigid_local(im_test).eq.1)) then
+           ! do nothing
+          else
+           print *,"material used bust"
+           stop
+          endif
+         enddo  ! im_test=1..nmat
+
+         if ((single_material.gt.0).and. &
+             (remaining_vfrac.lt.VOFTOL)) then
+
+          vofcomp=(single_material-1)*ngeom_recon+1
+          multi_volume(single_material)=uncaptured_volume_fluid
+          do dir=1,sdim
+           multi_cen(dir,single_material)=uncaptured_centroid_fluid(dir)
+          enddo
+
+          uncaptured_volume_fluid=zero
+          uncaptured_volume_fraction_fluid=zero
+
+          num_processed_fluid=num_processed_fluid+1
+
+          if (local_tessellate.eq.0) then
+           num_processed_total=num_processed_fluid
+          else if (local_tessellate.eq.1) then
+           num_processed_total= &
+             num_processed_fluid+num_processed_solid
+          else if (local_tessellate.eq.2) then
+           num_processed_total=num_processed_fluid
+          else
+           print *,"local_tessellate invalid16"
+           stop
+          endif
+
+          material_used(single_material)=num_processed_total
+
+         else if ((single_material.eq.0).or. &
+                  (remaining_vfrac.ge.VOFTOL)) then
+
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
+           if (local_tessellate.eq.1) then
+            if ((material_used(im).ge.1).and. &
+                (material_used(im).le.nmat)) then
+             mofdatalocal(vofcomp+sdim+1)=material_used(im)
+            else if (material_used(im).eq.0) then
+             ! do nothing
+            else
+             print *,"material_used invalid"
+             stop
+            endif
+           else if (local_tessellate.eq.0) then
+            if (is_rigid_local(im).eq.1) then
+             ! do nothing
+            else if (is_rigid_local(im).eq.0) then
+             if ((material_used(im).ge.1).and. &
+                 (material_used(im).le.nmat_fluid)) then
+              mofdatalocal(vofcomp+sdim+1)=material_used(im)
+             else if (material_used(im).eq.0) then
+              ! do nothing
+             else
+              print *,"material_used invalid"
+              stop
+             endif
+            else
+             print *,"is_rigid invalid"
+             stop
+            endif
+           else if (local_tessellate.eq.2) then
             if ((material_used(im).ge.1).and. &
                 (material_used(im).le.nmat_fluid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -15062,257 +15382,248 @@ contains
              print *,"material_used invalid"
              stop
             endif
+
+           else
+            print *,"local_tessellate invalid17"
+            stop
+           endif
+          enddo ! im=1..nmat
+
+          if (local_tessellate.eq.0) then
+           num_processed_total=num_processed_fluid
+          else if (local_tessellate.eq.1) then
+           num_processed_total= &
+             num_processed_fluid+num_processed_solid
+          else if (local_tessellate.eq.2) then
+           num_processed_total=num_processed_fluid
+          else
+           print *,"local_tessellate invalid18"
+           stop
+          endif
+
+          if ((num_processed_total.gt.0).and. &
+              (num_processed_total.lt.nmat)) then
+           fastflag=0
+          else if (num_processed_total.eq.0) then
+           fastflag=1
+          else          
+           print *,"num_processed_total invalid"
+           stop
+          endif
+
+          if (fastflag.eq.0) then
+
+           if (shapeflag.eq.0) then ! volumes in a box
+             ! only xsten0(0,dir) dir=1..sdim used
+             ! in: multi_volume_grid
+            call tets_box_planes( &
+             new_tessellate_local, & ! =0,1, or 2
+             bfact,dx,xsten0,nhalf0, &
+             xsten_grid,nhalf_grid, &
+             mofdatalocal, &
+             xtetlist, &
+             nlist_alloc, &
+             nlist,nmax,nmat,sdim)
+
+           else if (shapeflag.eq.1) then ! volumes in a tet.
+
+             ! only xsten0(0,dir) dir=1..sdim used
+            call tets_tet_planes( &
+             new_tessellate_local, &  ! = 0,1, or 2
+             bfact,dx,xsten0,nhalf0, &
+             xtet,mofdatalocal, &
+             xtetlist, &
+             nlist_alloc, &
+             nlist,nmax,nmat,sdim)
+
+           else
+            print *,"shapeflag invalid"
+            stop
+           endif
+
+           call get_cut_geom3D(xtetlist, &
+              nlist_alloc,nlist,nmax, &
+              volcut,cencut,sdim)
+
+           if (abs(volcut-uncaptured_volume_fluid).gt. &
+               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+            print *,"volcut invalid multi volume get volume grid 2 "
+            print *,"volcut= ",volcut
+            print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
+            print *,"volcell= ",volcell
+            if (volcell.gt.zero) then
+             print *,"abs(volcut-uncapt_vol)/volcell=", &
+               abs(volcut-uncaptured_volume_fluid)/volcell
+            endif
+            print *,"VOFTOL= ",VOFTOL
+            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
+            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
+                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
+            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
+             xsten_grid(0,sdim)
+            do im=1,nmat
+             vofcomp=(im-1)*ngeom_recon+1
+             print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
+            enddo 
+            stop
+           endif
+
+          else if (fastflag.eq.1) then
+
+           ! do nothing; unnecessary to intersect the original box with
+           ! the compliment of materials already processed.
+
+          else 
+           print *,"fastflag invalid multi get volume grid"
+           stop
+          endif
+
+          critical_material=0
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+
+           if (is_rigid_local(im).eq.0) then
+            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
+            testflag_save=NINT(mofdatasave(vofcomp+sdim+1))
+            if ((testflag_save.eq.num_processed_fluid+1).and. &
+                (testflag.eq.0).and. &
+                (material_used(im).eq.0)) then
+             critical_material=im
+            else if ((testflag_save.eq.0).or. &
+                     ((testflag_save.ge.1).and. &
+                      (testflag_save.le.nmat_fluid)).or. &
+                     ((testflag.ge.1).and.(testflag.le.nmat)).or. &
+                     ((material_used(im).ge.1).and. &
+                      (material_used(im).le.nmat))) then
+             ! do nothing
+            else
+             print *,"testflag invalid"
+             stop         
+            endif 
+           else if (is_rigid_local(im).eq.1) then
+            ! do nothing
            else
             print *,"is_rigid invalid"
             stop
            endif
-          else if (tessellate.eq.2) then
-           if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat_fluid)) then
-            mofdatalocal(vofcomp+sdim+1)=material_used(im)
-           else if (material_used(im).eq.0) then
-            ! do nothing
-           else
-            print *,"material_used invalid"
+          enddo ! im=1..nmat
+
+          if ((critical_material.ge.1).and. &
+              (critical_material.le.nmat)) then        
+           vofcomp=(critical_material-1)*ngeom_recon+1
+           do dir=1,sdim
+            nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
+           enddo
+           intercept=mofdatalocal(vofcomp+2*sdim+2)
+
+           if (fastflag.eq.0) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call multi_cell_intersection( &
+             bfact,dx,xsten0,nhalf0, &
+             nrecon,intercept, &
+             voltemp,centemp,areatemp, &
+             xtetlist, &
+             nlist_alloc,nlist,nmax,sdim) 
+           else if (fastflag.eq.1) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call fast_cut_cell_intersection( &
+             bfact,dx,xsten0,nhalf0, &
+             nrecon,intercept, &
+             voltemp,centemp,areatemp, &
+             areacentroidtemp, &
+             xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
+           else 
+            print *,"fastflag invalid multi get volume grid 2"
             stop
            endif
 
-          else
-           print *,"tessellate invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
+           multi_volume(critical_material)=voltemp
+           do dir=1,sdim
+            if (voltemp.gt.zero) then
+             multi_cen(dir,critical_material)=centemp(dir)
+            else
+             multi_cen(dir,critical_material)=zero
+            endif
+           enddo
+           multi_area(critical_material)=areatemp
 
-         if (tessellate.eq.0) then
-          num_processed_total=num_processed_fluid
-         else if (tessellate.eq.1) then
-          num_processed_total= &
-            num_processed_fluid+num_processed_solid
-         else if (tessellate.eq.2) then
-          num_processed_total=num_processed_fluid
-         else
-          print *,"tessellate invalid"
-          stop
-         endif
-
-         if ((num_processed_total.gt.0).and. &
-             (num_processed_total.lt.nmat)) then
-          fastflag=0
-         else if (num_processed_total.eq.0) then
-          fastflag=1
-         else          
-          print *,"num_processed_total invalid"
-          stop
-         endif
-
-         if (fastflag.eq.0) then
-
-          if (shapeflag.eq.0) then ! volumes in a box
-            ! only xsten0(0,dir) dir=1..sdim used
-            ! in: multi_volume_grid
-           call tets_box_planes( &
-            tessellate_local, &
-            bfact,dx,xsten0,nhalf0, &
-            xsten_grid,nhalf_grid, &
-            mofdatalocal, &
-            xtetlist, &
-            nlist_alloc, &
-            nlist,nmax,nmat,sdim)
-
-          else if (shapeflag.eq.1) then ! volumes in a tet.
-
-            ! only xsten0(0,dir) dir=1..sdim used
-           call tets_tet_planes( &
-            tessellate_local, &
-            bfact,dx,xsten0,nhalf0, &
-            xtet,mofdatalocal, &
-            xtetlist, &
-            nlist_alloc, &
-            nlist,nmax,nmat,sdim)
-
-          else
-           print *,"shapeflag invalid"
-           stop
-          endif
-
-          call get_cut_geom3D(xtetlist, &
-             nlist_alloc,nlist,nmax, &
-             volcut,cencut,sdim)
-
-          if (abs(volcut-uncaptured_volume_fluid).gt. &
-              VOFTOL_MULTI_VOLUME_SANITY*volcell) then
-           print *,"volcut invalid multi volume get volume grid 2 "
-           print *,"volcut= ",volcut
-           print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
-           print *,"volcell= ",volcell
-           if (volcell.gt.zero) then
-            print *,"abs(volcut-uncapt_vol)/volcell=", &
-              abs(volcut-uncaptured_volume_fluid)/volcell
+           uncaptured_volume_save=uncaptured_volume_fluid
+           uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
+           if (uncaptured_volume_fluid.lt. &
+               VOFTOL*uncaptured_volume_START) then
+            uncaptured_volume_fluid=zero
            endif
-           print *,"VOFTOL= ",VOFTOL
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
-           print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
-           print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
-            xsten_grid(0,sdim)
-           do im=1,nmat
-            vofcomp=(im-1)*ngeom_recon+1
-            print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
-           enddo 
-           stop
-          endif
 
-         else if (fastflag.eq.1) then
+            ! V^{uncapt,k}=V+V^{uncapt,k+1}
+            ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
 
-          ! do nothing; unnecessary to intersect the original box with
-          ! the compliment of materials already processed.
+           do dir=1,sdim
+            if (uncaptured_volume_fluid.le.zero) then
+             uncaptured_centroid_fluid(dir)=zero
+            else
+             uncaptured_centroid_fluid(dir)= &
+              (uncaptured_volume_save*uncaptured_centroid_fluid(dir)- &
+               voltemp*centemp(dir))/uncaptured_volume_fluid
+            endif
+           enddo ! dir=1..sdim
+   
+           uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
+            mofdatalocal(vofcomp)
+           if (uncaptured_volume_fraction_fluid.lt.VOFTOL) then
+            uncaptured_volume_fraction_fluid=zero
+           endif
 
-         else 
-          print *,"fastflag invalid multi get volume grid"
-          stop
-         endif
-
-         critical_material=0
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-
-          if (is_rigid_local(im).eq.0) then
-           testflag=NINT(mofdatalocal(vofcomp+sdim+1))
-           testflag_save=NINT(mofdatasave(vofcomp+sdim+1))
-           if ((testflag_save.eq.num_processed_fluid+1).and. &
-               (testflag.eq.0).and. &
-               (material_used(im).eq.0)) then
-            critical_material=im
-           else if ((testflag_save.eq.0).or. &
-                    ((testflag_save.ge.1).and. &
-                     (testflag_save.le.nmat_fluid)).or. &
-                    ((testflag.ge.1).and.(testflag.le.nmat)).or. &
-                    ((material_used(im).ge.1).and. &
-                     (material_used(im).le.nmat))) then
-            ! do nothing
+           num_processed_fluid=num_processed_fluid+1
+           if (local_tessellate.eq.0) then
+            num_processed_total=num_processed_fluid
+           else if (local_tessellate.eq.1) then
+            num_processed_total= &
+             num_processed_fluid+num_processed_solid
+           else if (local_tessellate.eq.2) then
+            num_processed_total=num_processed_fluid
            else
-            print *,"testflag invalid"
-            stop         
-           endif 
-          else if (is_rigid_local(im).eq.1) then
+            print *,"local_tessellate invalid19"
+            stop
+           endif
+
+           material_used(critical_material)=num_processed_total
+
+          else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"critical_material invalid"
            stop
-          endif
-         enddo ! im=1..nmat
+          endif 
 
-         if ((critical_material.ge.1).and. &
-             (critical_material.le.nmat)) then        
-          vofcomp=(critical_material-1)*ngeom_recon+1
-          do dir=1,sdim
-           nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
-          enddo
-          intercept=mofdatalocal(vofcomp+2*sdim+2)
-
-          if (fastflag.eq.0) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call multi_cell_intersection( &
-            bfact,dx,xsten0,nhalf0, &
-            nrecon,intercept, &
-            voltemp,centemp,areatemp, &
-            xtetlist, &
-            nlist_alloc,nlist,nmax,sdim) 
-          else if (fastflag.eq.1) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call fast_cut_cell_intersection( &
-            bfact,dx,xsten0,nhalf0, &
-            nrecon,intercept, &
-            voltemp,centemp,areatemp, &
-            areacentroidtemp, &
-            xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
-          else 
-           print *,"fastflag invalid multi get volume grid 2"
-           stop
-          endif
-
-          multi_volume(critical_material)=voltemp
-          do dir=1,sdim
-           if (voltemp.gt.zero) then
-            multi_cen(dir,critical_material)=centemp(dir)
-           else
-            multi_cen(dir,critical_material)=zero
-           endif
-          enddo
-          multi_area(critical_material)=areatemp
-
-          uncaptured_volume_save=uncaptured_volume_fluid
-          uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
-          if (uncaptured_volume_fluid.lt. &
-              VOFTOL*uncaptured_volume_START) then
-           uncaptured_volume_fluid=zero
-          endif
-
-           ! V^{uncapt,k}=V+V^{uncapt,k+1}
-           ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
-
-          do dir=1,sdim
-           if (uncaptured_volume_fluid.le.zero) then
-            uncaptured_centroid_fluid(dir)=zero
-           else
-            uncaptured_centroid_fluid(dir)= &
-             (uncaptured_volume_save*uncaptured_centroid_fluid(dir)- &
-              voltemp*centemp(dir))/uncaptured_volume_fluid
-           endif
-          enddo ! dir=1..sdim
-  
-          uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
-           mofdatalocal(vofcomp)
-          if (uncaptured_volume_fraction_fluid.lt.VOFTOL) then
-           uncaptured_volume_fraction_fluid=zero
-          endif
-
-          num_processed_fluid=num_processed_fluid+1
-          if (tessellate.eq.0) then
-           num_processed_total=num_processed_fluid
-          else if (tessellate.eq.1) then
-           num_processed_total= &
-            num_processed_fluid+num_processed_solid
-          else if (tessellate.eq.2) then
-           num_processed_total=num_processed_fluid
-          else
-           print *,"tessellate invalid"
-           stop
-          endif
-
-          material_used(critical_material)=num_processed_total
-
-         else if (critical_material.eq.0) then
-          ! do nothing
          else
-          print *,"critical_material invalid"
+          print *,"single_material or remaining_vfrac invalid"
           stop
-         endif 
+         endif
 
-        else
-         print *,"single_material or remaining_vfrac invalid"
-         stop
+         loop_counter=loop_counter+1
+        enddo  ! while 
+               ! loop_counter<nmat_fluid and
+               ! num_processed_fluid<nmat_fluid and 
+               ! uncaptured_volume_fraction_fluid>0 and 
+               ! uncaptured_volume_fluid>0
+
+        if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
+          print *,"not all volume accounted for multi get volume"
+          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
+          print *,"volcell ",volcell
+          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
+          print *,"tolerance: ",UNCAPT_TOL
+          stop
         endif
 
-        loop_counter=loop_counter+1
-       enddo  ! while 
-              ! loop_counter<nmat_fluid and
-              ! num_processed_fluid<nmat_fluid and 
-              ! uncaptured_volume_fraction_fluid>0 and 
-              ! uncaptured_volume_fluid>0
-
-       if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
-         print *,"not all volume accounted for multi get volume"
-         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
-         print *,"volcell ",volcell
-         print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-         print *,"tolerance: ",UNCAPT_TOL
-         stop
+       else
+        print *,"uncaptured_volume_fluid or uncaptured_volume_solid invalid"
+        stop
        endif
 
       else
-       print *,"uncaptured_volume_fluid or uncaptured_volume_solid invalid"
+       print *,"return_raster_info invalid"
        stop
       endif
 
@@ -15336,7 +15647,7 @@ contains
       end subroutine multi_get_volume_grid
 
       subroutine multi_get_volume_tetlist( &
-       tessellate, &
+       tessellate, & ! =0 or 2
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -15388,7 +15699,12 @@ contains
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
       endif
-
+      if ((tessellate.eq.0).or.(tessellate.eq.2)) then
+       ! do nothing
+      else
+       print *,"expecting tessellate==0 or 2 multi_get_volume_tetlist"
+       stop
+      endif
       if (nmax.lt.4) then
        print *,"nmax invalid multi_get_volume_tetlist nmax=",nmax
        stop
@@ -15441,7 +15757,7 @@ contains
         shapeflag=1
          ! multi_cen_sub is "absolute" (not relative to cell centroid)
         call multi_get_volume_grid( &
-          tessellate, &
+          tessellate, &  ! =0 or 2
           bfact,dx, &
           xsten0,nhalf0, &
           mofdata, &
@@ -15543,7 +15859,11 @@ contains
         !
         ! output: multi_area_pair,multi_area_cen_pair (absolute coordinates)
         !
+        ! 
+        ! tessellate_in=0,1, or 3
+        ! calls multi_get_volume_tessellate if tessellate_in=1 or 3.
       subroutine multi_get_area_pairs( &
+       tessellate_in, &
        bfact,dx, &
        xsten0_plus, &
        xsten0_minus, & !phi = n dot (x-x0) + intercept (phi>0 in omega_m)
@@ -15568,11 +15888,13 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: tessellate_in ! 0,1, or 3
       INTEGER_T, intent(in) :: nlist_alloc_plus
       INTEGER_T, intent(in) :: nlist_alloc_minus
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: nhalf0
@@ -15631,7 +15953,9 @@ contains
       INTEGER_T num_processed_fluid
       INTEGER_T material_used(nmat)
 
-      INTEGER_T tessellate
+      INTEGER_T normalize_tessellate     !=0
+      INTEGER_T local_tessellate_in  !=0 or 2
+      INTEGER_T is_rigid_local(nmat)
 
       INTEGER_T nlist
       INTEGER_T loop_counter 
@@ -15700,6 +16024,15 @@ contains
        stop
       endif 
 
+      if ((tessellate_in.eq.0).or. &
+          (tessellate_in.eq.1).or. &
+          (tessellate_in.eq.3)) then
+       ! do nothing
+      else
+       print *,"tessellate_in invalid: ",tessellate_in
+       stop
+      endif
+
        ! left index: mofdata_minus
        ! right index: mofdata_plus
       do im=1,nmat
@@ -15719,7 +16052,7 @@ contains
          centroid_plus,sdim)
 
       dxthin=FACETOL_DVOL*half* &
-              (xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
+          (xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
       if (dxthin.gt.zero) then
        ! do nothing
       else
@@ -15737,21 +16070,40 @@ contains
       xsten_thin(0,dir_plus)=half*(xsten0_plus(-1,dir_plus)+ &
                                    xsten0_minus(1,dir_plus))
 
-      tessellate=0  ! do not override "is_rigid"
+      normalize_tessellate=0  ! do not override "is_rigid"
       call make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten0_plus,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate, &
+        normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
       call make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten0_minus,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate, &
+        normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
         nmat,sdim,3000)
 
-      call multi_get_volume_tessellate( &
+      if ((tessellate_in.eq.1).or. &
+          (tessellate_in.eq.3)) then
+
+       local_tessellate_in=2
+
+       ! if tessellate_in==1:
+       ! before (mofdata): fluids tessellate, solids embedded
+       ! after  (mofdata): fluids and solids tessellate
+       ! The slope of fluid material whose volume fraction changes from
+       ! one to less than one is initialized from a solid slope.
+       ! The "order" for this fluid is set to nmat.
+       !
+       ! if tessellate_in==3:
+       !   a) if solid_vfrac>=1/2 then
+       !        consider cell as F_{im_solid_max}=1
+       !   b) else, only consider fluids.
+       call multi_get_volume_tessellate( &
+        tessellate_in, & ! = 1 or 3
         bfact,dx, &
         xsten0_plus,nhalf0, &
         mofdatavalid_plus, &
@@ -15762,7 +16114,8 @@ contains
         sdim, &
         caller_id)
 
-      call multi_get_volume_tessellate( &
+       call multi_get_volume_tessellate( &
+        tessellate_in, & ! =1 or 3
         bfact,dx, &
         xsten0_minus,nhalf0, &
         mofdatavalid_minus, &
@@ -15772,6 +16125,25 @@ contains
         nmat, &
         sdim, &
         caller_id)
+
+      else if (tessellate_in.eq.0) then
+       local_tessellate_in=0
+      else
+       print *,"tessellate_in invalid"
+       stop
+      endif
+
+      do im=1,nmat
+       is_rigid_local(im)=is_rigid(nmat,im)
+       if (local_tessellate_in.eq.2) then
+        is_rigid_local(im)=0
+       else if (local_tessellate_in.eq.0) then
+        ! do nothing
+       else
+        print *,"local_tessellate_in invalid10"
+        stop
+       endif
+      enddo ! im=1..nmat
 
        ! only slopes and intercepts modified.
       side=1
@@ -15787,12 +16159,10 @@ contains
 
       shapeflag=0
 
-      tessellate=2  ! 0=solids and fluids treated separately
-                    ! 1=non-tessellating slopes, but tessellating output
-                    ! 2=is_rigid_local is zero for all materials
-
+       ! since multi_get_volume_tessellate tessellates each cell with 
+       ! fluids and solids (tess=1,3), the flag "is_rigid" should be ignored.
       call multi_get_volume_grid( &
-       tessellate, &
+       local_tessellate_in, &  ! =0 or 2
        bfact,dx, &
        xsten0_plus,nhalf0, &
        mofdataproject_plus, &
@@ -15864,8 +16234,15 @@ contains
        vfrac_fluid_sum=zero
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
-        vfrac_fluid_sum=vfrac_fluid_sum+mofdataproject_minus(vofcomp)
-       enddo ! im
+        if (is_rigid_local(im).eq.0) then
+         vfrac_fluid_sum=vfrac_fluid_sum+mofdataproject_minus(vofcomp)
+        else if (is_rigid_local(im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid_local invalid"
+         stop
+        endif
+       enddo ! im=1..nmat
 
        if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
         ! do nothing
@@ -15896,43 +16273,60 @@ contains
         do im_test=1,nmat
          vofcomp=(im_test-1)*ngeom_recon+1
 
-         if (material_used(im_test).eq.0) then
+         if (is_rigid_local(im_test).eq.0) then
 
-          if (mofdataproject_minus(vofcomp).gt. &
-              uncaptured_volume_fraction_fluid-VOFTOL) then
+          if (material_used(im_test).eq.0) then
 
-           if (single_material.ne.0) then
-            print *,"cannot have two materials at once"
-            print *,"single_material ",single_material
-            print *,"im_test ",im_test
-            print *,"mofdatavalid ",mofdataproject_minus(vofcomp)
-            print *,"uncaptured_volume_fraction_fluid ", &
-             uncaptured_volume_fraction_fluid
-            stop
+           if (mofdataproject_minus(vofcomp).gt. &
+               uncaptured_volume_fraction_fluid-VOFTOL) then
+
+            if (single_material.ne.0) then
+             print *,"cannot have two materials at once"
+             print *,"single_material ",single_material
+             print *,"im_test ",im_test
+             print *,"mofdatavalid ",mofdataproject_minus(vofcomp)
+             print *,"uncaptured_volume_fraction_fluid ", &
+              uncaptured_volume_fraction_fluid
+             stop
+            endif
+            single_material=im_test
+           else
+            remaining_vfrac=remaining_vfrac+mofdataproject_minus(vofcomp)
            endif
-           single_material=im_test
+          else if ((material_used(im_test).ge.1).and. &
+                   (material_used(im_test).le.nmat)) then
+           ! do nothing
           else
-           remaining_vfrac=remaining_vfrac+mofdataproject_minus(vofcomp)
+           print *,"material used bust"
+           stop
           endif
-         else if ((material_used(im_test).ge.1).and. &
-                  (material_used(im_test).le.nmat)) then
+
+         else if (is_rigid_local(im_test).eq.1) then
           ! do nothing
          else
-          print *,"material used bust"
+          print *,"is_rigid_local invalid"
           stop
          endif
+
         enddo  ! im_test=1..nmat
 
         do im=1,nmat
          vofcomp=(im-1)*ngeom_recon+1
          mofdataproject_minus(vofcomp+sdim+1)=zero ! order=0
-         if ((material_used(im).ge.1).and. &
-             (material_used(im).le.nmat)) then
-          mofdataproject_minus(vofcomp+sdim+1)=material_used(im)
-         else if (material_used(im).eq.0) then
+         if (is_rigid_local(im).eq.0) then
+          if ((material_used(im).ge.1).and. &
+              (material_used(im).le.nmat)) then
+           mofdataproject_minus(vofcomp+sdim+1)=material_used(im)
+          else if (material_used(im).eq.0) then
+           ! do nothing
+          else
+           print *,"material_used invalid"
+           stop
+          endif
+         else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
-          print *,"material_used invalid"
+          print *,"is_rigid_local invalid"
           stop
          endif
         enddo ! im=1..nmat
@@ -15953,8 +16347,9 @@ contains
          ! intersects xsten_thin with the compliments of already
          ! initialized materials. (i.e. materials with 
          ! 1<=material_used(im)<=nmat)
+
          call tets_box_planes( &
-           tessellate, &
+           local_tessellate_in, & ! =0 or 2
            bfact,dx, &
            xsten0_minus,nhalf0, &
            xsten_thin,nhalf_thin, &
@@ -15992,7 +16387,7 @@ contains
               (material_used(critical_material).le.nmat)) then
 
             call multi_get_volume_tetlist( &
-             tessellate, &
+             local_tessellate_in, &  ! =0 or 2
              bfact,dx, &
              xsten0_plus,nhalf0, &
              mofdataproject_plus, &
@@ -16009,69 +16404,77 @@ contains
              caller_id)
 
             do im_opp=1,nmat
-             vol_old=multi_volume_plus_thin(im_opp)
-             vol_new=multi_volume_plus_thin_shrink(im_opp)
-             if (vol_old-vol_new.ge.-VOFTOL*volume_plus) then
-              if (vol_old-vol_new.le.zero) then
-               vol_diff=zero
+             if (is_rigid_local(im_opp).eq.0) then
+
+              vol_old=multi_volume_plus_thin(im_opp)
+              vol_new=multi_volume_plus_thin_shrink(im_opp)
+              if (vol_old-vol_new.ge.-VOFTOL*volume_plus) then
+               if (vol_old-vol_new.le.zero) then
+                vol_diff=zero
+               else
+                vol_diff=vol_old-vol_new
+               endif
+               multi_volume_pair(critical_material,im_opp)=vol_diff
+               if (vol_diff.gt.zero) then
+                do dir_local=1,sdim
+                 cen_diff(dir_local)= &
+                  (multi_cen_plus_thin(dir_local,im_opp)*vol_old- &
+                   multi_cen_plus_thin_shrink(dir_local,im_opp)*vol_new)/ &
+                  vol_diff
+                enddo
+
+                call project_centroid_box(cen_diff,xsten_thin,nhalf_thin,sdim)
+
+                multi_volume_plus_thin(im_opp)=vol_new
+
+                do dir_local=1,sdim
+                 multi_volume_cen_pair(critical_material,im_opp,dir_local)= &
+                         cen_diff(dir_local)
+                 multi_cen_plus_thin(dir_local,im_opp)= &
+                     multi_cen_plus_thin_shrink(dir_local,im_opp)
+                enddo
+               else if (vol_diff.eq.zero) then
+                ! do nothing
+               else
+                print *,"vol_diff invalid"
+                stop
+               endif
               else
-               vol_diff=vol_old-vol_new
-              endif
-              multi_volume_pair(critical_material,im_opp)=vol_diff
-              if (vol_diff.gt.zero) then
-               do dir_local=1,sdim
-                cen_diff(dir_local)= &
-                 (multi_cen_plus_thin(dir_local,im_opp)*vol_old- &
-                  multi_cen_plus_thin_shrink(dir_local,im_opp)*vol_new)/ &
-                 vol_diff
+               print *,"vol_old or vol_new invalid"
+               print *,"dir_plus ",dir_plus
+               print *,"dxthin=",dxthin
+               print *,"uncaptured_volume_START=",uncaptured_volume_START
+               print *,"uncaptured_area=",uncaptured_area
+               print *,"volume_plus=",volume_plus
+               print *,"vol_old=",vol_old
+               print *,"vol_new=",vol_new
+               print *,"critical_material=",critical_material
+               print *,"im_opp=",im_opp
+               print *,"loop_counter=",loop_counter
+               print *,"num_processed_fluid=",num_processed_fluid
+               print *,"nmat=",nmat
+               print *,"uncaptured_volume_fraction_fluid=", &
+                       uncaptured_volume_fraction_fluid
+               print *,"uncaptured_volume_fluid=", &
+                 uncaptured_volume_fluid
+               do im_test=1,nmat*ngeom_recon
+                print *,"im_test,mofdata_plus,mofdata_minus ", &
+                  im_test,mofdata_plus(im_test),mofdata_minus(im_test)
                enddo
-
-               call project_centroid_box(cen_diff,xsten_thin,nhalf_thin,sdim)
-
-               multi_volume_plus_thin(im_opp)=vol_new
-
+               do im_test=-nhalf0,nhalf0
                do dir_local=1,sdim
-                multi_volume_cen_pair(critical_material,im_opp,dir_local)= &
-                        cen_diff(dir_local)
-                multi_cen_plus_thin(dir_local,im_opp)= &
-                    multi_cen_plus_thin_shrink(dir_local,im_opp)
+                print *,"ii,dir,xsten0_plus ",im_test,dir_local, &
+                        xsten0_plus(im_test,dir_local)
+                print *,"ii,dir,xsten0_minus ",im_test,dir_local, &
+                        xsten0_minus(im_test,dir_local)
                enddo
-              else if (vol_diff.eq.zero) then
-               ! do nothing
-              else
-               print *,"vol_diff invalid"
+               enddo
                stop
               endif
+             else if (is_rigid_local(im_opp).eq.1) then
+              ! do nothing
              else
-              print *,"vol_old or vol_new invalid"
-              print *,"dir_plus ",dir_plus
-              print *,"dxthin=",dxthin
-              print *,"uncaptured_volume_START=",uncaptured_volume_START
-              print *,"uncaptured_area=",uncaptured_area
-              print *,"volume_plus=",volume_plus
-              print *,"vol_old=",vol_old
-              print *,"vol_new=",vol_new
-              print *,"critical_material=",critical_material
-              print *,"im_opp=",im_opp
-              print *,"loop_counter=",loop_counter
-              print *,"num_processed_fluid=",num_processed_fluid
-              print *,"nmat=",nmat
-              print *,"uncaptured_volume_fraction_fluid=", &
-                      uncaptured_volume_fraction_fluid
-              print *,"uncaptured_volume_fluid=", &
-                uncaptured_volume_fluid
-              do im_test=1,nmat*ngeom_recon
-               print *,"im_test,mofdata_plus,mofdata_minus ", &
-                 im_test,mofdata_plus(im_test),mofdata_minus(im_test)
-              enddo
-              do im_test=-nhalf0,nhalf0
-              do dir_local=1,sdim
-               print *,"ii,dir,xsten0_plus ",im_test,dir_local, &
-                       xsten0_plus(im_test,dir_local)
-               print *,"ii,dir,xsten0_minus ",im_test,dir_local, &
-                       xsten0_minus(im_test,dir_local)
-              enddo
-              enddo
+              print *,"is_rigid_local invalid"
               stop
              endif
             enddo ! im_opp=1..nmat
@@ -16106,13 +16509,20 @@ contains
 
          vofcomp=(single_material-1)*ngeom_recon+1
          do im_opp=1,nmat
-          multi_volume_pair(single_material,im_opp)= &
+          if (is_rigid_local(im_opp).eq.0) then
+           multi_volume_pair(single_material,im_opp)= &
                   multi_volume_plus_thin(im_opp)
-          do dir_local=1,sdim
-           multi_volume_cen_pair(single_material,im_opp,dir_local)= &
+           do dir_local=1,sdim
+            multi_volume_cen_pair(single_material,im_opp,dir_local)= &
               multi_cen_plus_thin(dir_local,im_opp)
-          enddo
-         enddo
+           enddo
+          else if (is_rigid_local(im_opp).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid_local invalid"
+           stop
+          endif
+         enddo ! im_opp=1..nmat
 
          uncaptured_volume_fluid=zero
          uncaptured_volume_fraction_fluid=zero
@@ -16127,30 +16537,48 @@ contains
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
 
-          testflag=NINT(mofdataproject_minus(vofcomp+sdim+1))
-          testflag_save=NINT(mofdatavalid_minus(vofcomp+sdim+1))
-          if ((testflag_save.eq.num_processed_fluid+1).and. &
-              (testflag.eq.0).and. &
-              (material_used(im).eq.0)) then
-           critical_material=im
-          else if (((testflag_save.ge.0).and. &
-                    (testflag_save.le.nmat)).or. &
-                   ((testflag.ge.1).and. &
-                    (testflag.le.nmat)).or. &
-                   ((material_used(im).ge.1).and. &
-                    (material_used(im).le.nmat))) then
+          if (is_rigid_local(im).eq.0) then
+
+           testflag=NINT(mofdataproject_minus(vofcomp+sdim+1))
+           testflag_save=NINT(mofdatavalid_minus(vofcomp+sdim+1))
+           if ((testflag_save.eq.num_processed_fluid+1).and. &
+               (testflag.eq.0).and. &
+               (material_used(im).eq.0)) then
+            critical_material=im
+           else if (((testflag_save.ge.0).and. &
+                     (testflag_save.le.nmat)).or. &
+                    ((testflag.ge.1).and. &
+                     (testflag.le.nmat)).or. &
+                    ((material_used(im).ge.1).and. &
+                     (material_used(im).le.nmat))) then
+            ! do nothing
+           else
+            print *,"testflag,testflag_save or material_used invalid"
+            print *,"testflag ",testflag
+            print *,"testflag_save ",testflag_save
+            print *,"im, material_used ",im,material_used(im)
+            stop         
+           endif 
+
+          else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
-           print *,"testflag,testflag_save or material_used invalid"
-           print *,"testflag ",testflag
-           print *,"testflag_save ",testflag_save
-           print *,"im, material_used ",im,material_used(im)
-           stop         
-          endif 
+           print *,"is_rigid_local invalid"
+           stop
+          endif
+
          enddo ! im=1..nmat
 
          if ((critical_material.ge.1).and. &
              (critical_material.le.nmat)) then        
+
+          if (is_rigid_local(critical_material).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid_local(critical_material) invalid"
+           stop
+          endif
+
           vofcomp=(critical_material-1)*ngeom_recon+1
           do dir_local=1,sdim
            nrecon(dir_local)=mofdataproject_minus(vofcomp+sdim+1+dir_local)
@@ -16230,15 +16658,35 @@ contains
 
        if ((critical_material.ge.1).and. &
            (critical_material.le.nmat)) then        
+
+        if (is_rigid_local(critical_material).eq.0) then
+         ! do nothing
+        else
+         print *,"is_rigid_local(critical_material) invalid"
+         stop
+        endif
+
         vofcomp=(critical_material-1)*ngeom_recon+1
         do im_opp=1,nmat
-         multi_volume_pair(critical_material,im_opp)= &
+
+         if (is_rigid_local(im_opp).eq.0) then
+
+          multi_volume_pair(critical_material,im_opp)= &
                 multi_volume_plus_thin(im_opp)
-         do dir_local=1,sdim
-          multi_volume_cen_pair(critical_material,im_opp,dir_local)= &
+          do dir_local=1,sdim
+           multi_volume_cen_pair(critical_material,im_opp,dir_local)= &
              multi_cen_plus_thin(dir_local,im_opp)
-         enddo
-        enddo
+          enddo
+
+         else if (is_rigid_local(im_opp).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+
+        enddo ! im_opp=1..nmat
+
        else if (critical_material.eq.0) then
         ! do nothing
        else
@@ -16257,35 +16705,71 @@ contains
        enddo
 
        do im=1,nmat
-        do im_opp=1,nmat
-         voltemp=voltemp+multi_volume_pair(im,im_opp)
-         do dir_local=1,sdim
-          cen_diff(dir_local)=multi_volume_cen_pair(im,im_opp,dir_local)
-         enddo
-         call project_centroid_box(cen_diff,xsten_thin,nhalf_thin,sdim)
-         do dir_local=1,sdim
-          multi_area_cen_pair(im,im_opp,dir_local)=cen_diff(dir_local)
-          centemp(dir_local)=centemp(dir_local)+cen_diff(dir_local)* &
+
+        if (is_rigid_local(im).eq.0) then
+
+         do im_opp=1,nmat
+
+          if (is_rigid_local(im_opp).eq.0) then
+
+           voltemp=voltemp+multi_volume_pair(im,im_opp)
+           do dir_local=1,sdim
+            cen_diff(dir_local)=multi_volume_cen_pair(im,im_opp,dir_local)
+           enddo
+           call project_centroid_box(cen_diff,xsten_thin,nhalf_thin,sdim)
+           do dir_local=1,sdim
+            multi_area_cen_pair(im,im_opp,dir_local)=cen_diff(dir_local)
+            centemp(dir_local)=centemp(dir_local)+cen_diff(dir_local)* &
                   multi_volume_pair(im,im_opp)
-         enddo
-        enddo
-       enddo
+           enddo
+
+          else if (is_rigid_local(im_opp).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid_local invalid"
+           stop
+          endif
+
+         enddo !im_opp=1..nmat
+
+        else if (is_rigid_local(im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid_local invalid"
+         stop
+        endif
+
+       enddo ! im=1..nmat
        if (voltemp.gt.zero) then
         do dir_local=1,sdim
          centemp(dir_local)=centemp(dir_local)/voltemp
         enddo
         call project_centroid_box(centemp,xsten_thin,nhalf_thin,sdim)
         do im=1,nmat
-         do im_opp=1,nmat
-          if (multi_volume_pair(im,im_opp).le.voltemp) then
-           multi_area_pair(im,im_opp)= &
-             uncaptured_area*multi_volume_pair(im,im_opp)/voltemp
-          else
-           print *,"voltemp underflow"
-           stop
-          endif
-         enddo
-        enddo
+         if (is_rigid_local(im).eq.0) then
+          do im_opp=1,nmat
+           if (is_rigid_local(im_opp).eq.0) then
+            if (multi_volume_pair(im,im_opp).le.voltemp) then
+             multi_area_pair(im,im_opp)= &
+              uncaptured_area*multi_volume_pair(im,im_opp)/voltemp
+            else
+             print *,"voltemp underflow"
+             stop
+            endif
+           else if (is_rigid_local(im_opp).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid_local invalid"
+            stop
+           endif
+          enddo ! im_opp=1..nmat
+         else if (is_rigid_local(im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
        else
         print *,"voltemp invalid"
         stop
@@ -16339,10 +16823,16 @@ contains
         ! tessellate==0 => both fluids and rigid materials considered;
         !                  fluids tessellate the region and the rigid
         !                  materials are immersed.
+        ! tessellate==3 => if rigid materials dominate the cell, 
+        !   then that cell is considered
+        !   to only have the one dominant rigid material, otherwise
+        !   the cell is treated as a local_tessellate==0 cell with
+        !   all rigid material vfracs and centroids zapped out.
+        !
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid_simple( &
-       tessellate, &
+       tessellate, & !=0,1,2,3
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xsten_grid,nhalf_grid, &
@@ -16363,9 +16853,10 @@ contains
 
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: tessellate
+      INTEGER_T, intent(in) :: tessellate ! =0,1,2,3
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: caller_id,bfact,nhalf0,nhalf_grid
       REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
       REAL_T mofdatalocal(nmat*ngeom_recon)
@@ -16412,10 +16903,14 @@ contains
       INTEGER_T num_processed_fluid
       INTEGER_T num_processed_total
       INTEGER_T loop_counter
-      INTEGER_T tessellate_local
+      INTEGER_T local_tessellate
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
+      INTEGER_T im_raster_solid
+      INTEGER_T new_tessellate_local
+      INTEGER_T return_raster_info
+      REAL_T vfrac_raster_solid
 
       nhalf_box=1
 
@@ -16423,13 +16918,28 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+       else if ((tessellate.eq.0).or. &
+                (tessellate.eq.1)) then
+        ! do nothing
+       else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid20"
         stop
        endif
       enddo ! im=1..nmat
+
+      if (tessellate.eq.3) then
+       local_tessellate=0
+      else if ((tessellate.eq.0).or. &
+               (tessellate.eq.1).or. &
+               (tessellate.eq.2)) then
+       local_tessellate=tessellate
+      else
+       print *,"tessellate invalid21"
+       stop
+      endif
+
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
@@ -16489,9 +16999,11 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
+       cmofsten, &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
-       tessellate,mofdata,mofdatavalid,nmat,sdim,1)
+       local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
+       mofdata,mofdatavalid,nmat,sdim,101)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -16507,7 +17019,7 @@ contains
          sanity_check=1
         endif
        endif
-      endif
+      endif ! sanity_check==1
 
       call Box_volumeFAST(bfact,dx,xsten_grid,nhalf_grid, &
          uncaptured_volume_target, &
@@ -16541,12 +17053,32 @@ contains
       vfrac_solid_sum=zero
       nmat_solid=0
       nmat_fluid=0
+
+      im_raster_solid=0
+      vfrac_raster_solid=zero
+
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
         nmat_fluid=nmat_fluid+1
        else if (is_rigid_local(im).eq.1) then
+
+        if (im_raster_solid.eq.0) then
+         im_raster_solid=im
+         vfrac_raster_solid=mofdatasave(vofcomp)
+        else if ((im_raster_solid.ge.1).and. &
+                 (im_raster_solid.le.nmat).and. &
+                 (is_rigid_local(im_raster_solid).eq.1)) then
+         if (vfrac_raster_solid.lt.mofdatasave(vofcomp)) then
+          im_raster_solid=im
+          vfrac_raster_solid=mofdatasave(vofcomp)
+         endif
+        else
+         print *,"im_raster_solid invalid"
+         stop
+        endif
+      
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
@@ -16569,403 +17101,498 @@ contains
        stop
       endif
 
-      uncaptured_volume_fraction_fluid=one
-      uncaptured_volume_fraction_solid=one
-      num_processed_solid=0
-      num_processed_fluid=0
-      num_processed_total=0
-      do im=1,nmat
-       material_used(im)=0
-      enddo ! im=1..nmat
+      return_raster_info=0
 
-      if (tessellate.eq.0) then
-       vfrac_mult=one
-      else if (tessellate.eq.1) then 
-       vfrac_mult=abs(one-vfrac_solid_sum)
-      else
-       print *,"tessellate invalid"
-       stop
-      endif
- 
-      fastflag=1
+      if (tessellate.eq.3) then
+       if (vfrac_solid_sum.ge.half) then
+        return_raster_info=1
 
-      if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
-          (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
-
-       do im=1,nmat
-        vofcomp=(im-1)*ngeom_recon+1
-
-        if (is_rigid_local(im).eq.0) then
-         multi_volume(im)=uncaptured_volume_target* &
-           vfrac_mult*mofdatasave(vofcomp)
-        else if (is_rigid_local(im).eq.1) then
-         multi_volume(im)=uncaptured_volume_target*mofdatasave(vofcomp)
-        else
-         print *,"is_rigid invalid"
-         stop
-        endif
-
-        do dir=1,sdim
-         multi_cen(dir,im)=uncaptured_centroid_target(dir)
-        enddo
-       enddo ! im=1..nmat
-
-      else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
-               (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
-
-       tessellate_local=1
-
-       loop_counter=0
-       do while ((loop_counter.lt.nmat_solid).and. &
-                 (num_processed_solid.lt.nmat_solid).and. &
-                 (uncaptured_volume_fraction_solid.gt. &
-                  one-vfrac_solid_sum).and. &
-                 (uncaptured_volume_solid.gt.zero)) 
-
-        remaining_vfrac=zero
-        single_material=0
-
-        do im_test=1,nmat
-         vofcomp=(im_test-1)*ngeom_recon+1
-
-         if ((material_used(im_test).eq.0).and. &
-             (is_rigid_local(im_test).eq.1)) then
-          if (mofdatasave(vofcomp).gt. &
-              uncaptured_volume_fraction_solid-VOFTOL) then
-           if (single_material.ne.0) then
-            print *,"cannot have two rigid materials at once"
-            print *,"single_material ",single_material
-            print *,"im_test ",im_test
-            print *,"mofdatavalid ",mofdatavalid(vofcomp)
-            print *,"uncaptured_volume_fraction_solid ", &
-             uncaptured_volume_fraction_solid
-            stop
-           endif
-           single_material=im_test
-          else
-           remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-          endif
-         else if (((material_used(im_test).ge.1).and. &
-                   (material_used(im_test).le.nmat_solid)).or. &
-                   (is_rigid_local(im_test).eq.0)) then
-          ! do nothing
-         else
-          print *,"material used bust"
-          stop
-         endif
-        enddo  ! im_test=1..nmat
-
-        if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.VOFTOL)) then
-
-         vofcomp=(single_material-1)*ngeom_recon+1
-         multi_volume(single_material)=uncaptured_volume_solid
+        if ((im_raster_solid.ge.1).and. &
+            (im_raster_solid.le.nmat)) then
+         vofcomp=(im_raster_solid-1)*ngeom_recon+1
+         multi_volume(im_raster_solid)=uncaptured_volume_solid
          do dir=1,sdim
-          multi_cen(dir,single_material)=uncaptured_centroid_solid(dir)
+          multi_cen(dir,im_raster_solid)=uncaptured_centroid_solid(dir)
          enddo
-
-         uncaptured_volume_solid=zero
-         uncaptured_volume_fraction_solid=zero
-
-         num_processed_solid=num_processed_solid+1
-         material_used(single_material)=num_processed_solid
-
-        else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.VOFTOL)) then
-
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-          mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (is_rigid_local(im).eq.1) then
-            ! flag>0 for solids already processed.
-           if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat_solid)) then
-            mofdatalocal(vofcomp+sdim+1)=material_used(im)
-           else if (material_used(im).eq.0) then
-            ! do nothing
-           else
-            print *,"material_used invalid"
-            stop
-           endif
-          else if (is_rigid_local(im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
-
-         if ((num_processed_solid.gt.0).and. &
-             (num_processed_solid.lt.nmat_solid)) then
-          fastflag=0
-         else if (num_processed_solid.eq.0) then
-          fastflag=1
-         else          
-          print *,"num_processed_solid invalid"
-          stop
-         endif
-
-         if (fastflag.eq.0) then
-
-           ! only xsten0(0,dir) dir=1..sdim used
-           ! in: multi_volume_grid_simple
-          call tets_box_planes( &
-             tessellate_local, &
-             bfact,dx,xsten0,nhalf0, &
-             xsten_grid,nhalf_grid, &
-             mofdatalocal, &
-             xtetlist, &
-             nlist_alloc,nlist,nmax,nmat,sdim)
-
-          call get_cut_geom3D(xtetlist, &
-              nlist_alloc,nlist,nmax, &
-              volcut,cencut,sdim)
-
-          if (abs(volcut-uncaptured_volume_solid).gt. &
-              VOFTOL_MULTI_VOLUME_SANITY*volcell) then
-           print *,"volcut invalid multi volume get volume grid 3"
-           print *,"CHECK IF RIGID BODIES INTERSECT"
-           print *,"volcut= ",volcut
-           print *,"uncaptured_volume_solid=",uncaptured_volume_solid
-           print *,"volcell= ",volcell
-           print *,"VOFTOL= ",VOFTOL
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
-           print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
-           print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
-             xsten_grid(0,sdim)
-           do im=1,nmat
-            vofcomp=(im-1)*ngeom_recon+1
-            print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
-           enddo 
-           stop
-          endif
-
-         else if (fastflag.eq.1) then
-
-          ! do nothing; unnecessary to intersect the original box with
-          ! the compliment of materials already processed.
-
-         else 
-          print *,"fastflag invalid multi get volume grid simple"
-          stop
-         endif
-
-         critical_material=0
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-
-          if (is_rigid_local(im).eq.1) then
-           testflag=NINT(mofdatalocal(vofcomp+sdim+1)) ! new flag
-           testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
-           if ((testflag_save.eq.1).and. & ! old flag= processed
-               (testflag.eq.0).and. &      ! new flag= unprocessed
-               (material_used(im).eq.0)) then
-            critical_material=im
-           else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
-                    ((testflag.ge.1).and. &    ! new flag=processed
-                     (testflag.le.nmat_solid)).or. &
-                     ((material_used(im).ge.1).and. &
-                      (material_used(im).le.nmat_solid))) then
-            ! do nothing
-           else
-            print *,"testflag invalid"
-            stop         
-           endif 
-          else if (is_rigid_local(im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
-         
-         if ((critical_material.ge.1).and. &
-             (critical_material.le.nmat)) then        
-          vofcomp=(critical_material-1)*ngeom_recon+1
-          do dir=1,sdim
-           nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
-          enddo
-          intercept=mofdatalocal(vofcomp+2*sdim+2)
-
-          if (fastflag.eq.0) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call multi_cell_intersection_simple( &
-             bfact,dx,xsten0,nhalf0, &
-             nrecon,intercept, &
-             voltemp,centemp, &
-             xtetlist, &
-             nlist_alloc,nlist,nmax,sdim) 
-          else if (fastflag.eq.1) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call fast_cut_cell_intersection_simple( &
-             bfact,dx,xsten0,nhalf0, &
-             nrecon,intercept, &
-             voltemp,centemp, &
-             xsten_grid,nhalf_grid,sdim) 
-          else 
-           print *,"fastflag invalid multi get volume grid simple 2"
-           stop
-          endif
-
-          multi_volume(critical_material)=voltemp
-          do dir=1,sdim
-           if (voltemp.gt.zero) then
-            multi_cen(dir,critical_material)=centemp(dir)
-           else
-            multi_cen(dir,critical_material)=zero
-           endif
-          enddo ! dir=1..sdim
-
-          uncaptured_volume_save=uncaptured_volume_solid
-          uncaptured_volume_solid=uncaptured_volume_solid-voltemp
-          if (uncaptured_volume_solid.lt. &
-              VOFTOL*uncaptured_volume_target) then
-           uncaptured_volume_solid=zero
-          endif
-
-           ! V^{uncapt,k}=V+V^{uncapt,k+1}
-           ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
-
-          do dir=1,sdim
-           if (uncaptured_volume_solid.le.zero) then
-            uncaptured_centroid_solid(dir)=zero
-           else
-            uncaptured_centroid_solid(dir)= &
-             (uncaptured_volume_save*uncaptured_centroid_solid(dir)- &
-              voltemp*centemp(dir))/uncaptured_volume_solid
-           endif
-          enddo ! dir=1..sdim
-  
-          uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
-           mofdatalocal(vofcomp)
-          if (uncaptured_volume_fraction_solid.lt. &
-              one-vfrac_solid_sum+VOFTOL) then
-           uncaptured_volume_fraction_solid=one-vfrac_solid_sum
-          endif
-
-          num_processed_solid=num_processed_solid+1
-          material_used(critical_material)=num_processed_solid
-
-         else if (critical_material.eq.0) then
-          ! do nothing
-         else
-          print *,"critical_material invalid"
-          stop
-         endif
- 
         else
-         print *,"single_material or remaining_vfrac invalid"
+         print *,"im_raster_solid invalid"
          stop
         endif
 
-        loop_counter=loop_counter+1
-       enddo  ! while 
-              ! loop_counter<nmat_solid and
-              ! num_processed_solid<nmat_solid and
-              ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
-              ! uncaptured_volume_solid>0 
-
-       if (tessellate.eq.0) then
-        ! do nothing
-       else if (tessellate.eq.1) then
-        uncaptured_volume_fluid=uncaptured_volume_solid
-        do dir=1,sdim
-         uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
-        enddo
+       else if (vfrac_solid_sum.lt.half) then
+        vfrac_solid_sum=zero
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
+         if (is_rigid_local(im).eq.0) then
+          ! do nothing
+         else if (is_rigid_local(im).eq.1) then
+          do dir=0,sdim
+           mofdatasave(vofcomp+dir)=zero
+           mofdatalocal(vofcomp+dir)=zero
+           mofdatavalid(vofcomp+dir)=zero
+          enddo
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
        else
-        print *,"tessellate invalid"
+        print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
         stop
        endif
+      else if ((tessellate.eq.0).or. &
+               (tessellate.eq.1).or. &
+               (tessellate.eq.2)) then
+       ! do nothing
+      else
+       print *,"tessellate invalid22"
+       stop
+      endif
+      
+      if (return_raster_info.eq.1) then
+       ! do nothing
+      else if (return_raster_info.eq.0) then
 
-       tessellate_local=tessellate
+       uncaptured_volume_fraction_fluid=one
+       uncaptured_volume_fraction_solid=one
+       num_processed_solid=0
+       num_processed_fluid=0
+       num_processed_total=0
+       do im=1,nmat
+        material_used(im)=0
+       enddo ! im=1..nmat
 
-       loop_counter=0
-       do while ((loop_counter.lt.nmat_fluid).and. &
-                 (num_processed_fluid.lt.nmat_fluid).and. &
-                 (uncaptured_volume_fraction_fluid.gt.zero).and. &
-                 (uncaptured_volume_fluid.gt.zero)) 
+       if (local_tessellate.eq.0) then
+        vfrac_mult=one
+       else if (local_tessellate.eq.1) then 
+        vfrac_mult=abs(one-vfrac_solid_sum)
+       else if (local_tessellate.eq.2) then 
+        vfrac_mult=one
+       else
+        print *,"local_tessellate invalid23"
+        stop
+       endif
+  
+       fastflag=1
 
-        remaining_vfrac=zero
-        single_material=0
+       if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
+           (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
 
-        do im_test=1,nmat
-         vofcomp=(im_test-1)*ngeom_recon+1
+        do im=1,nmat
+         vofcomp=(im-1)*ngeom_recon+1
 
-         if ((material_used(im_test).eq.0).and. &
-             (is_rigid_local(im_test).eq.0)) then
-          if (mofdatasave(vofcomp).gt. &
-              uncaptured_volume_fraction_fluid-VOFTOL) then
+         if (is_rigid_local(im).eq.0) then
+          multi_volume(im)=uncaptured_volume_target* &
+            vfrac_mult*mofdatasave(vofcomp)
+         else if (is_rigid_local(im).eq.1) then
+          multi_volume(im)=uncaptured_volume_target*mofdatasave(vofcomp)
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
 
-           if (single_material.ne.0) then
-            print *,"cannot have two materials at once"
-            print *,"single_material ",single_material
-            print *,"im_test ",im_test
-            print *,"mofdatavalid ",mofdatavalid(vofcomp)
-            print *,"uncaptured_volume_fraction_fluid ", &
-             uncaptured_volume_fraction_fluid
-            stop
-           endif
-           single_material=im_test
-          else
-           remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-          endif
-         else if (((material_used(im_test).ge.1).and. &
-                   (material_used(im_test).le.nmat)).or. &
-                  (is_rigid_local(im_test).eq.1)) then
+         do dir=1,sdim
+          multi_cen(dir,im)=uncaptured_centroid_target(dir)
+         enddo
+        enddo ! im=1..nmat
+
+       else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
+                (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
+
+         ! if local_tessellate==0, then the uncaptured region will be
+         ! reset after the first sweep through the is_rigid==1 
+         ! materials.
+        if ((local_tessellate.eq.0).or. &
+            (local_tessellate.eq.1)) then
+         new_tessellate_local=1
+        else if (local_tessellate.eq.2) then
+         new_tessellate_local=2
+         if ((nmat_solid.eq.0).and.(nmat_fluid.eq.nmat)) then
           ! do nothing
          else
-          print *,"material used bust"
+          print *,"nmat_solid or nmat_fluid invalid"
           stop
          endif
-        enddo  ! im_test=1..nmat
+        else
+         print *,"local_tessellate invalid24"
+         stop
+        endif
 
-        if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.VOFTOL)) then
+        loop_counter=0
+        do while ((loop_counter.lt.nmat_solid).and. &
+                  (num_processed_solid.lt.nmat_solid).and. &
+                  (uncaptured_volume_fraction_solid.gt. &
+                   one-vfrac_solid_sum).and. &
+                  (uncaptured_volume_solid.gt.zero)) 
 
-         vofcomp=(single_material-1)*ngeom_recon+1
-         multi_volume(single_material)=uncaptured_volume_fluid
-         do dir=1,sdim
-          multi_cen(dir,single_material)=uncaptured_centroid_fluid(dir)
-         enddo
+         remaining_vfrac=zero
+         single_material=0
 
-         uncaptured_volume_fluid=zero
-         uncaptured_volume_fraction_fluid=zero
+         do im_test=1,nmat
+          vofcomp=(im_test-1)*ngeom_recon+1
 
-         num_processed_fluid=num_processed_fluid+1
-         if (tessellate.eq.0) then
-          num_processed_total=num_processed_fluid
-         else if (tessellate.eq.1) then
-          num_processed_total= &
-            num_processed_fluid+num_processed_solid
-         else
-          print *,"tessellate invalid"
-          stop
-         endif
+          if ((material_used(im_test).eq.0).and. &
+              (is_rigid_local(im_test).eq.1)) then
+           if (mofdatasave(vofcomp).gt. &
+               uncaptured_volume_fraction_solid-VOFTOL) then
+            if (single_material.ne.0) then
+             print *,"cannot have two rigid materials at once"
+             print *,"single_material ",single_material
+             print *,"im_test ",im_test
+             print *,"mofdatavalid ",mofdatavalid(vofcomp)
+             print *,"uncaptured_volume_fraction_solid ", &
+              uncaptured_volume_fraction_solid
+             stop
+            endif
+            single_material=im_test
+           else
+            remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
+           endif
+          else if (((material_used(im_test).ge.1).and. &
+                    (material_used(im_test).le.nmat_solid)).or. &
+                    (is_rigid_local(im_test).eq.0)) then
+           ! do nothing
+          else
+           print *,"material used bust"
+           stop
+          endif
+         enddo  ! im_test=1..nmat
 
-         material_used(single_material)=num_processed_total
+         if ((single_material.gt.0).and. &
+             (remaining_vfrac.lt.VOFTOL)) then
 
-        else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.VOFTOL)) then
+          vofcomp=(single_material-1)*ngeom_recon+1
+          multi_volume(single_material)=uncaptured_volume_solid
+          do dir=1,sdim
+           multi_cen(dir,single_material)=uncaptured_centroid_solid(dir)
+          enddo
 
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
-          mofdatalocal(vofcomp+sdim+1)=zero ! order=0
-          if (tessellate.eq.1) then
-           if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat)) then
-            mofdatalocal(vofcomp+sdim+1)=material_used(im)
-           else if (material_used(im).eq.0) then
+          uncaptured_volume_solid=zero
+          uncaptured_volume_fraction_solid=zero
+
+          num_processed_solid=num_processed_solid+1
+          material_used(single_material)=num_processed_solid
+
+         else if ((single_material.eq.0).or. &
+                  (remaining_vfrac.ge.VOFTOL)) then
+
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
+           if (is_rigid_local(im).eq.1) then
+             ! flag>0 for solids already processed.
+            if ((material_used(im).ge.1).and. &
+                (material_used(im).le.nmat_solid)) then
+             mofdatalocal(vofcomp+sdim+1)=material_used(im)
+            else if (material_used(im).eq.0) then
+             ! do nothing
+            else
+             print *,"material_used invalid"
+             stop
+            endif
+           else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"material_used invalid"
+            print *,"is_rigid invalid"
             stop
            endif
-          else if (tessellate.eq.0) then
+          enddo ! im=1..nmat
+
+          if ((num_processed_solid.gt.0).and. &
+              (num_processed_solid.lt.nmat_solid)) then
+           fastflag=0
+          else if (num_processed_solid.eq.0) then
+           fastflag=1
+          else          
+           print *,"num_processed_solid invalid"
+           stop
+          endif
+
+          if (fastflag.eq.0) then
+
+            ! only xsten0(0,dir) dir=1..sdim used
+            ! in: multi_volume_grid_simple
+           call tets_box_planes( &
+              new_tessellate_local, & ! 1 or 2
+              bfact,dx,xsten0,nhalf0, &
+              xsten_grid,nhalf_grid, &
+              mofdatalocal, &
+              xtetlist, &
+              nlist_alloc,nlist,nmax,nmat,sdim)
+
+           call get_cut_geom3D(xtetlist, &
+               nlist_alloc,nlist,nmax, &
+               volcut,cencut,sdim)
+
+           if (abs(volcut-uncaptured_volume_solid).gt. &
+               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+            print *,"volcut invalid multi volume get volume grid 3"
+            print *,"CHECK IF RIGID BODIES INTERSECT"
+            print *,"volcut= ",volcut
+            print *,"uncaptured_volume_solid=",uncaptured_volume_solid
+            print *,"volcell= ",volcell
+            print *,"VOFTOL= ",VOFTOL
+            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
+            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
+                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
+            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
+              xsten_grid(0,sdim)
+            do im=1,nmat
+             vofcomp=(im-1)*ngeom_recon+1
+             print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
+            enddo 
+            stop
+           endif
+
+          else if (fastflag.eq.1) then
+
+           ! do nothing; unnecessary to intersect the original box with
+           ! the compliment of materials already processed.
+
+          else 
+           print *,"fastflag invalid multi get volume grid simple"
+           stop
+          endif
+
+          critical_material=0
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+
            if (is_rigid_local(im).eq.1) then
-            ! do nothing
+            testflag=NINT(mofdatalocal(vofcomp+sdim+1)) ! new flag
+            testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
+            if ((testflag_save.eq.1).and. & ! old flag= processed
+                (testflag.eq.0).and. &      ! new flag= unprocessed
+                (material_used(im).eq.0)) then
+             critical_material=im
+            else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
+                     ((testflag.ge.1).and. &    ! new flag=processed
+                      (testflag.le.nmat_solid)).or. &
+                      ((material_used(im).ge.1).and. &
+                       (material_used(im).le.nmat_solid))) then
+             ! do nothing
+            else
+             print *,"testflag invalid"
+             stop         
+            endif 
            else if (is_rigid_local(im).eq.0) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+          
+          if ((critical_material.ge.1).and. &
+              (critical_material.le.nmat)) then        
+           vofcomp=(critical_material-1)*ngeom_recon+1
+           do dir=1,sdim
+            nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
+           enddo
+           intercept=mofdatalocal(vofcomp+2*sdim+2)
+
+           if (fastflag.eq.0) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call multi_cell_intersection_simple( &
+              bfact,dx,xsten0,nhalf0, &
+              nrecon,intercept, &
+              voltemp,centemp, &
+              xtetlist, &
+              nlist_alloc,nlist,nmax,sdim) 
+           else if (fastflag.eq.1) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call fast_cut_cell_intersection_simple( &
+              bfact,dx,xsten0,nhalf0, &
+              nrecon,intercept, &
+              voltemp,centemp, &
+              xsten_grid,nhalf_grid,sdim) 
+           else 
+            print *,"fastflag invalid multi get volume grid simple 2"
+            stop
+           endif
+
+           multi_volume(critical_material)=voltemp
+           do dir=1,sdim
+            if (voltemp.gt.zero) then
+             multi_cen(dir,critical_material)=centemp(dir)
+            else
+             multi_cen(dir,critical_material)=zero
+            endif
+           enddo ! dir=1..sdim
+
+           uncaptured_volume_save=uncaptured_volume_solid
+           uncaptured_volume_solid=uncaptured_volume_solid-voltemp
+           if (uncaptured_volume_solid.lt. &
+               VOFTOL*uncaptured_volume_target) then
+            uncaptured_volume_solid=zero
+           endif
+
+            ! V^{uncapt,k}=V+V^{uncapt,k+1}
+            ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
+
+           do dir=1,sdim
+            if (uncaptured_volume_solid.le.zero) then
+             uncaptured_centroid_solid(dir)=zero
+            else
+             uncaptured_centroid_solid(dir)= &
+              (uncaptured_volume_save*uncaptured_centroid_solid(dir)- &
+               voltemp*centemp(dir))/uncaptured_volume_solid
+            endif
+           enddo ! dir=1..sdim
+   
+           uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
+            mofdatalocal(vofcomp)
+           if (uncaptured_volume_fraction_solid.lt. &
+               one-vfrac_solid_sum+VOFTOL) then
+            uncaptured_volume_fraction_solid=one-vfrac_solid_sum
+           endif
+
+           num_processed_solid=num_processed_solid+1
+           material_used(critical_material)=num_processed_solid
+
+          else if (critical_material.eq.0) then
+           ! do nothing
+          else
+           print *,"critical_material invalid"
+           stop
+          endif
+  
+         else
+          print *,"single_material or remaining_vfrac invalid"
+          stop
+         endif
+
+         loop_counter=loop_counter+1
+        enddo  ! while 
+               ! loop_counter<nmat_solid and
+               ! num_processed_solid<nmat_solid and
+               ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
+               ! uncaptured_volume_solid>0 
+
+        if (local_tessellate.eq.0) then
+         ! do nothing; uncaptured_volume_fluid remains to represent
+         ! the original uncaptured space.
+        else if (local_tessellate.eq.1) then
+         ! modify the uncaptured fluid region to recognize the presence
+         ! of the is_rigid==1 materials.
+         uncaptured_volume_fluid=uncaptured_volume_solid
+         do dir=1,sdim
+          uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
+         enddo
+        else if (local_tessellate.eq.2) then
+         ! do nothing
+        else
+         print *,"local_tessellate invalid25"
+         stop
+        endif
+
+         ! if local_tessellate==0 then is_rigid==1 materials are not
+         ! recognized during the following sweep.
+        new_tessellate_local=local_tessellate 
+
+        loop_counter=0
+        do while ((loop_counter.lt.nmat_fluid).and. &
+                  (num_processed_fluid.lt.nmat_fluid).and. &
+                  (uncaptured_volume_fraction_fluid.gt.zero).and. &
+                  (uncaptured_volume_fluid.gt.zero)) 
+
+         remaining_vfrac=zero
+         single_material=0
+
+         do im_test=1,nmat
+          vofcomp=(im_test-1)*ngeom_recon+1
+
+          if ((material_used(im_test).eq.0).and. &
+              (is_rigid_local(im_test).eq.0)) then
+           if (mofdatasave(vofcomp).gt. &
+               uncaptured_volume_fraction_fluid-VOFTOL) then
+
+            if (single_material.ne.0) then
+             print *,"cannot have two materials at once"
+             print *,"single_material ",single_material
+             print *,"im_test ",im_test
+             print *,"mofdatavalid ",mofdatavalid(vofcomp)
+             print *,"uncaptured_volume_fraction_fluid ", &
+              uncaptured_volume_fraction_fluid
+             stop
+            endif
+            single_material=im_test
+           else
+            remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
+           endif
+          else if (((material_used(im_test).ge.1).and. &
+                    (material_used(im_test).le.nmat)).or. &
+                   (is_rigid_local(im_test).eq.1)) then
+           ! do nothing
+          else
+           print *,"material used bust"
+           stop
+          endif
+         enddo  ! im_test=1..nmat
+
+         if ((single_material.gt.0).and. &
+             (remaining_vfrac.lt.VOFTOL)) then
+
+          vofcomp=(single_material-1)*ngeom_recon+1
+          multi_volume(single_material)=uncaptured_volume_fluid
+          do dir=1,sdim
+           multi_cen(dir,single_material)=uncaptured_centroid_fluid(dir)
+          enddo
+
+          uncaptured_volume_fluid=zero
+          uncaptured_volume_fraction_fluid=zero
+
+          num_processed_fluid=num_processed_fluid+1
+          if (local_tessellate.eq.0) then
+           num_processed_total=num_processed_fluid
+          else if (local_tessellate.eq.1) then
+           num_processed_total= &
+             num_processed_fluid+num_processed_solid
+          else if (local_tessellate.eq.2) then
+           num_processed_total=num_processed_fluid
+          else
+           print *,"local_tessellate invalid26"
+           stop
+          endif
+
+          material_used(single_material)=num_processed_total
+
+         else if ((single_material.eq.0).or. &
+                  (remaining_vfrac.ge.VOFTOL)) then
+
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+           mofdatalocal(vofcomp+sdim+1)=zero ! order=0
+           if (local_tessellate.eq.1) then
+            if ((material_used(im).ge.1).and. &
+                (material_used(im).le.nmat)) then
+             mofdatalocal(vofcomp+sdim+1)=material_used(im)
+            else if (material_used(im).eq.0) then
+             ! do nothing
+            else
+             print *,"material_used invalid"
+             stop
+            endif
+           else if (local_tessellate.eq.0) then
+            if (is_rigid_local(im).eq.1) then
+             ! do nothing
+            else if (is_rigid_local(im).eq.0) then
+             if ((material_used(im).ge.1).and. &
+                 (material_used(im).le.nmat_fluid)) then
+              mofdatalocal(vofcomp+sdim+1)=material_used(im)
+             else if (material_used(im).eq.0) then
+              ! do nothing
+             else
+              print *,"material_used invalid"
+              stop
+             endif
+            else
+             print *,"is_rigid invalid"
+             stop
+            endif
+
+           else if (local_tessellate.eq.2) then
             if ((material_used(im).ge.1).and. &
                 (material_used(im).le.nmat_fluid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -16975,222 +17602,228 @@ contains
              print *,"material_used invalid"
              stop
             endif
+
+           else
+            print *,"local_tessellate invalid27"
+            stop
+           endif
+          enddo ! im=1..nmat
+
+          if (local_tessellate.eq.0) then
+           num_processed_total=num_processed_fluid
+          else if (local_tessellate.eq.1) then
+           num_processed_total= &
+             num_processed_fluid+num_processed_solid
+          else if (local_tessellate.eq.2) then
+           num_processed_total=num_processed_fluid
+          else
+           print *,"local_tessellate invalid28"
+           stop
+          endif
+
+          if ((num_processed_total.gt.0).and. &
+              (num_processed_total.lt.nmat)) then
+           fastflag=0
+          else if (num_processed_total.eq.0) then
+           fastflag=1
+          else          
+           print *,"num_processed_total invalid"
+           stop
+          endif
+
+          if (fastflag.eq.0) then
+
+            ! only xsten0(0,dir) dir=1..sdim used
+            ! in: multi_volume_grid
+           call tets_box_planes( &
+            new_tessellate_local, & ! 0,1, or 2
+            bfact,dx,xsten0,nhalf0, &
+            xsten_grid,nhalf_grid, &
+            mofdatalocal, &
+            xtetlist, &
+            nlist_alloc,nlist,nmax,nmat,sdim)
+
+           call get_cut_geom3D(xtetlist, &
+              nlist_alloc,nlist,nmax, &
+              volcut,cencut,sdim)
+
+           if (abs(volcut-uncaptured_volume_fluid).gt. &
+               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+            print *,"volcut invalid multi volume get volume grid 4"
+            print *,"volcut= ",volcut
+            print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
+            print *,"volcell= ",volcell
+            print *,"VOFTOL= ",VOFTOL
+            if (volcell.gt.zero) then
+             print *,"abs(volcut-uncapt_vol)/volcell=", &
+               abs(volcut-uncaptured_volume_fluid)/volcell
+            endif
+            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
+            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
+                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
+            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
+             xsten_grid(0,sdim)
+            do im=1,nmat
+             vofcomp=(im-1)*ngeom_recon+1
+             print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
+            enddo 
+            stop
+           endif
+
+          else if (fastflag.eq.1) then
+
+           ! do nothing; unnecessary to intersect the original box with
+           ! the compliment of materials already processed.
+
+          else 
+           print *,"fastflag invalid multi get volume grid"
+           stop
+          endif
+
+          critical_material=0
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+
+           if (is_rigid_local(im).eq.0) then
+            testflag=NINT(mofdatalocal(vofcomp+sdim+1))
+            testflag_save=NINT(mofdatasave(vofcomp+sdim+1))
+            if ((testflag_save.eq.num_processed_fluid+1).and. &
+                (testflag.eq.0).and. &
+                (material_used(im).eq.0)) then
+             critical_material=im
+            else if ((testflag_save.eq.0).or. &
+                     ((testflag_save.ge.1).and. &
+                      (testflag_save.le.nmat_fluid)).or. &
+                     ((testflag.ge.1).and.(testflag.le.nmat)).or. &
+                     ((material_used(im).ge.1).and. &
+                      (material_used(im).le.nmat))) then
+             ! do nothing
+            else
+             print *,"testflag invalid"
+             stop         
+            endif 
+           else if (is_rigid_local(im).eq.1) then
+            ! do nothing
            else
             print *,"is_rigid invalid"
             stop
            endif
-          else
-           print *,"tessellate invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
+          enddo ! im=1..nmat
 
-         if (tessellate.eq.0) then
-          num_processed_total=num_processed_fluid
-         else if (tessellate.eq.1) then
-          num_processed_total= &
-            num_processed_fluid+num_processed_solid
-         else
-          print *,"tessellate invalid"
-          stop
-         endif
+          if ((critical_material.ge.1).and. &
+              (critical_material.le.nmat)) then        
+           vofcomp=(critical_material-1)*ngeom_recon+1
+           do dir=1,sdim
+            nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
+           enddo
+           intercept=mofdatalocal(vofcomp+2*sdim+2)
 
-         if ((num_processed_total.gt.0).and. &
-             (num_processed_total.lt.nmat)) then
-          fastflag=0
-         else if (num_processed_total.eq.0) then
-          fastflag=1
-         else          
-          print *,"num_processed_total invalid"
-          stop
-         endif
-
-         if (fastflag.eq.0) then
-
-           ! only xsten0(0,dir) dir=1..sdim used
-           ! in: multi_volume_grid
-          call tets_box_planes( &
-           tessellate_local, &
-           bfact,dx,xsten0,nhalf0, &
-           xsten_grid,nhalf_grid, &
-           mofdatalocal, &
-           xtetlist, &
-           nlist_alloc,nlist,nmax,nmat,sdim)
-
-          call get_cut_geom3D(xtetlist, &
-             nlist_alloc,nlist,nmax, &
-             volcut,cencut,sdim)
-
-          if (abs(volcut-uncaptured_volume_fluid).gt. &
-              VOFTOL_MULTI_VOLUME_SANITY*volcell) then
-           print *,"volcut invalid multi volume get volume grid 4"
-           print *,"volcut= ",volcut
-           print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
-           print *,"volcell= ",volcell
-           print *,"VOFTOL= ",VOFTOL
-           if (volcell.gt.zero) then
-            print *,"abs(volcut-uncapt_vol)/volcell=", &
-              abs(volcut-uncaptured_volume_fluid)/volcell
+           if (fastflag.eq.0) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call multi_cell_intersection_simple( &
+             bfact,dx,xsten0,nhalf0, &
+             nrecon,intercept, &
+             voltemp,centemp, &
+             xtetlist, &
+             nlist_alloc,nlist,nmax,sdim) 
+           else if (fastflag.eq.1) then
+             ! only xsten0(0,dir) dir=1..sdim used
+            call fast_cut_cell_intersection_simple( &
+             bfact,dx,xsten0,nhalf0, &
+             nrecon,intercept, &
+             voltemp,centemp, &
+             xsten_grid,nhalf_grid,sdim) 
+           else 
+            print *,"fastflag invalid multi get volume grid 2"
+            stop
            endif
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
-           print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
-           print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
-            xsten_grid(0,sdim)
-           do im=1,nmat
-            vofcomp=(im-1)*ngeom_recon+1
-            print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
-           enddo 
-           stop
-          endif
 
-         else if (fastflag.eq.1) then
+           multi_volume(critical_material)=voltemp
+           do dir=1,sdim
+            if (voltemp.gt.zero) then
+             multi_cen(dir,critical_material)=centemp(dir)
+            else
+             multi_cen(dir,critical_material)=zero
+            endif
+           enddo
 
-          ! do nothing; unnecessary to intersect the original box with
-          ! the compliment of materials already processed.
+           uncaptured_volume_save=uncaptured_volume_fluid
+           uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
+           if (uncaptured_volume_fluid.lt. &
+               VOFTOL*uncaptured_volume_target) then
+            uncaptured_volume_fluid=zero
+           endif
 
-         else 
-          print *,"fastflag invalid multi get volume grid"
-          stop
-         endif
+            ! V^{uncapt,k}=V+V^{uncapt,k+1}
+            ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
 
-         critical_material=0
-         do im=1,nmat
-          vofcomp=(im-1)*ngeom_recon+1
+           do dir=1,sdim
+            if (uncaptured_volume_fluid.le.zero) then
+             uncaptured_centroid_fluid(dir)=zero
+            else
+             uncaptured_centroid_fluid(dir)= &
+              (uncaptured_volume_save*uncaptured_centroid_fluid(dir)- &
+               voltemp*centemp(dir))/uncaptured_volume_fluid
+            endif
+           enddo ! dir=1..sdim
+   
+           uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
+            mofdatalocal(vofcomp)
+           if (uncaptured_volume_fraction_fluid.lt.VOFTOL) then
+            uncaptured_volume_fraction_fluid=zero
+           endif
 
-          if (is_rigid_local(im).eq.0) then
-           testflag=NINT(mofdatalocal(vofcomp+sdim+1))
-           testflag_save=NINT(mofdatasave(vofcomp+sdim+1))
-           if ((testflag_save.eq.num_processed_fluid+1).and. &
-               (testflag.eq.0).and. &
-               (material_used(im).eq.0)) then
-            critical_material=im
-           else if ((testflag_save.eq.0).or. &
-                    ((testflag_save.ge.1).and. &
-                     (testflag_save.le.nmat_fluid)).or. &
-                    ((testflag.ge.1).and.(testflag.le.nmat)).or. &
-                    ((material_used(im).ge.1).and. &
-                     (material_used(im).le.nmat))) then
-            ! do nothing
+           num_processed_fluid=num_processed_fluid+1
+           if (local_tessellate.eq.0) then
+            num_processed_total=num_processed_fluid
+           else if (local_tessellate.eq.1) then
+            num_processed_total= &
+             num_processed_fluid+num_processed_solid
+           else if (local_tessellate.eq.2) then
+            num_processed_total=num_processed_fluid
            else
-            print *,"testflag invalid"
-            stop         
-           endif 
-          else if (is_rigid_local(im).eq.1) then
+            print *,"tessellate invalid29"
+            stop
+           endif
+
+           material_used(critical_material)=num_processed_total
+
+          else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"critical_material invalid"
            stop
-          endif
-         enddo ! im=1..nmat
+          endif 
 
-         if ((critical_material.ge.1).and. &
-             (critical_material.le.nmat)) then        
-          vofcomp=(critical_material-1)*ngeom_recon+1
-          do dir=1,sdim
-           nrecon(dir)=mofdatalocal(vofcomp+sdim+1+dir)
-          enddo
-          intercept=mofdatalocal(vofcomp+2*sdim+2)
-
-          if (fastflag.eq.0) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call multi_cell_intersection_simple( &
-            bfact,dx,xsten0,nhalf0, &
-            nrecon,intercept, &
-            voltemp,centemp, &
-            xtetlist, &
-            nlist_alloc,nlist,nmax,sdim) 
-          else if (fastflag.eq.1) then
-            ! only xsten0(0,dir) dir=1..sdim used
-           call fast_cut_cell_intersection_simple( &
-            bfact,dx,xsten0,nhalf0, &
-            nrecon,intercept, &
-            voltemp,centemp, &
-            xsten_grid,nhalf_grid,sdim) 
-          else 
-           print *,"fastflag invalid multi get volume grid 2"
-           stop
-          endif
-
-          multi_volume(critical_material)=voltemp
-          do dir=1,sdim
-           if (voltemp.gt.zero) then
-            multi_cen(dir,critical_material)=centemp(dir)
-           else
-            multi_cen(dir,critical_material)=zero
-           endif
-          enddo
-
-          uncaptured_volume_save=uncaptured_volume_fluid
-          uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
-          if (uncaptured_volume_fluid.lt. &
-              VOFTOL*uncaptured_volume_target) then
-           uncaptured_volume_fluid=zero
-          endif
-
-           ! V^{uncapt,k}=V+V^{uncapt,k+1}
-           ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
-
-          do dir=1,sdim
-           if (uncaptured_volume_fluid.le.zero) then
-            uncaptured_centroid_fluid(dir)=zero
-           else
-            uncaptured_centroid_fluid(dir)= &
-             (uncaptured_volume_save*uncaptured_centroid_fluid(dir)- &
-              voltemp*centemp(dir))/uncaptured_volume_fluid
-           endif
-          enddo ! dir=1..sdim
-  
-          uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
-           mofdatalocal(vofcomp)
-          if (uncaptured_volume_fraction_fluid.lt.VOFTOL) then
-           uncaptured_volume_fraction_fluid=zero
-          endif
-
-          num_processed_fluid=num_processed_fluid+1
-          if (tessellate.eq.0) then
-           num_processed_total=num_processed_fluid
-          else if (tessellate.eq.1) then
-           num_processed_total= &
-            num_processed_fluid+num_processed_solid
-          else
-           print *,"tessellate invalid"
-           stop
-          endif
-
-          material_used(critical_material)=num_processed_total
-
-         else if (critical_material.eq.0) then
-          ! do nothing
          else
-          print *,"critical_material invalid"
+          print *,"single_material or remaining_vfrac invalid"
           stop
-         endif 
+         endif
 
-        else
-         print *,"single_material or remaining_vfrac invalid"
-         stop
+         loop_counter=loop_counter+1
+        enddo  ! while 
+               ! loop_counter<nmat_fluid and
+               ! num_processed_fluid<nmat_fluid and 
+               ! uncaptured_volume_fraction_fluid>0 and 
+               ! uncaptured_volume_fluid>0
+
+        if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
+          print *,"not all volume accounted for multi get volume"
+          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
+          print *,"volcell ",volcell
+          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
+          print *,"tolerance: ",UNCAPT_TOL
+          stop
         endif
 
-        loop_counter=loop_counter+1
-       enddo  ! while 
-              ! loop_counter<nmat_fluid and
-              ! num_processed_fluid<nmat_fluid and 
-              ! uncaptured_volume_fraction_fluid>0 and 
-              ! uncaptured_volume_fluid>0
-
-       if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
-         print *,"not all volume accounted for multi get volume"
-         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
-         print *,"volcell ",volcell
-         print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-         print *,"tolerance: ",UNCAPT_TOL
-         stop
+       else
+        print *,"uncaptured_volume_fluid or uncaptured_volume_solid invalid"
+        stop
        endif
 
       else
-       print *,"uncaptured_volume_fluid or uncaptured_volume_solid invalid"
+       print *,"return_raster_info invalid"
        stop
       endif
 
@@ -17258,6 +17891,7 @@ contains
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0,nhalf_grid
       INTEGER_T, intent(in) :: normdir
@@ -17327,10 +17961,15 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate_local.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate_local.eq.0).or.(tessellate_local.eq.1)) then
+        print *,"expecting tessellate_local==0"
+        stop
+       else if (tessellate_local.eq.0) then
         ! do nothing
+       else if (tessellate_local.eq.1) then
+        print *,"expecting tessellate_local==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate_local invalid"
         stop
        endif
       enddo ! im=1..nmat
@@ -17391,10 +18030,11 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate_local, &
-        mofdata,mofdatavalid,nmat,sdim,1)
+        tessellate_local, & ! =0 (only tessellate_local==2 is used)
+        mofdata,mofdatavalid,nmat,sdim,102)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -17524,6 +18164,8 @@ contains
       else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
                (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
 
+        ! first sweep: find volumes for non-tessellating is_rigid==1 
+        ! materials.
        tessellate_local=1
 
        loop_counter=0
@@ -17634,8 +18276,9 @@ contains
            ! only xsten0(0,dir) dir=1..sdim used
            ! since tessellate_local==1, mofdata(vofcomp+sdim+1) is used.
            ! in: multi_volume_grid_and_map
+           ! STILL in first sweep: only is_rigid==1 materials in this sweep.
           call tets_box_planes( &
-            tessellate_local, &
+            tessellate_local, &  ! =1 (recognize the is_rigid==1 mat.)
             bfact,dx,xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
             mofdatalocal, &
@@ -17815,6 +18458,8 @@ contains
         ! ABOVE: solid materials
         ! BELOW: fluid materials
 
+        ! the second sweep: uncaptured fluid region does not recognize
+        ! the presence of is_rigid==1 materials.  
        tessellate_local=0
 
        loop_counter=0
@@ -17929,7 +18574,7 @@ contains
            ! only xsten0(0,dir) dir=1..sdim used
            ! in: multi_volume_grid
           call tets_box_planes( &
-           tessellate_local, &
+           tessellate_local, & ! =0
            bfact,dx,xsten0,nhalf0, &
            xsten_grid,nhalf_grid, &
            mofdatalocal, &
@@ -18155,7 +18800,7 @@ contains
         enddo
        enddo
        print *,"-----------end sanity check-----------------"
-      endif
+      endif ! sanity_check==1
 
       return
       end subroutine multi_get_volume_grid_and_map
@@ -18179,10 +18824,18 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0 here"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid30"
         stop
        endif
       enddo ! im=1..nmat
@@ -18258,8 +18911,16 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0"
+        stop
        else
         print *,"tessellate invalid"
         stop
@@ -18298,11 +18959,14 @@ contains
 
       end subroutine LS_tessellate
 
-       ! before (mofdata): fluids tessellate
+       ! before (mofdata): fluids tessellate, solids are embedded.
        ! after  (mofdata): fluids and solids tessellate
-       ! slopes of fluid materials that change from one to less than
-       ! one are initialized from a solid slope.
+       ! if tessellate_in==1:
+       !  The slope of fluid material whose volume fraction changes from
+       !  one to less than one is initialized from a solid slope.
+       !  The "order" for this fluid is set to nmat.
       subroutine multi_get_volume_tessellate( &
+       tessellate_in, & ! =1 or 3
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
        xtetlist, &
@@ -18320,15 +18984,21 @@ contains
 
       INTEGER_T, intent(in) :: nlist_alloc
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: nmat,sdim
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T shapeflag
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0
-      INTEGER_T tessellate
+      INTEGER_T, intent(in) :: tessellate_in  ! =1 or 3
       REAL_T xtet(sdim+1,sdim)
       REAL_T, intent(inout) :: mofdata(nmat*(2*sdim+3))
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, intent(in) :: dx(sdim)
+
+      INTEGER_T :: local_tessellate
+      INTEGER_T :: renorm_tessellate
+
       REAL_T multi_volume(nmat)
       REAL_T multi_cen(sdim,nmat)
       REAL_T multi_area(nmat)
@@ -18348,19 +19018,27 @@ contains
       INTEGER_T sanity_check
       INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
+      INTEGER_T im_raster_solid
+      REAL_T vfrac_raster_solid
 
       nhalf_box=1
 
-      tessellate=0
+      renorm_tessellate=0
 
       do im=1,nmat
        is_rigid_local(im)=is_rigid(nmat,im)
-       if (tessellate.eq.2) then
+       if (renorm_tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting renorm_tessellate==0"
+        stop
+       else if (renorm_tessellate.eq.0) then
         ! do nothing
+       else if ((renorm_tessellate.eq.1).or. & ! tessellate output
+                (renorm_tessellate.eq.3)) then ! raster output
+        print *,"expecting renorm_tessellate==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"renorm_tessellate invalid"
         stop
        endif
       enddo ! im=1..nmat
@@ -18404,15 +19082,37 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_base( &
+       cmofsten, &
        xsten0,nhalf0,nhalf_box, &
        bfact,dx, &
-       tessellate,mofdata,nmat,sdim,1)
+       renorm_tessellate, & !=0
+       mofdata,nmat,sdim,1)
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
+
+      im_raster_solid=0
+      vfrac_raster_solid=zero
+
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.1) then
+
+        if (im_raster_solid.eq.0) then
+         im_raster_solid=im
+         vfrac_raster_solid=mofdata(vofcomp)
+        else if ((im_raster_solid.ge.1).and. &
+                 (im_raster_solid.le.nmat).and. &
+                 (is_rigid_local(im_raster_solid).eq.1)) then
+         if (vfrac_raster_solid.lt.mofdata(vofcomp)) then
+          im_raster_solid=im
+          vfrac_raster_solid=mofdata(vofcomp)
+         endif
+        else
+         print *,"im_raster_solid invalid"
+         stop
+        endif
+
         solid_vfrac_sum=solid_vfrac_sum+mofdata(vofcomp)
        else if (is_rigid_local(im).eq.0) then
         fluid_vfrac_sum=fluid_vfrac_sum+mofdata(vofcomp)
@@ -18425,7 +19125,7 @@ contains
       if (abs(fluid_vfrac_sum-one).le.VOFTOL) then
        ! do nothing
       else
-       print *,"fluid_vfrac_sum invalid"
+       print *,"fluid_vfrac_sum invalid: ",fluid_vfrac_sum
        stop
       endif
 
@@ -18437,7 +19137,9 @@ contains
         if (is_rigid_local(im).eq.1) then
          mofdata(vofcomp)=mofdata(vofcomp)/solid_vfrac_sum
         else if (is_rigid_local(im).eq.0) then
-         mofdata(vofcomp)=zero
+         do dir=0,ngeom_recon-1
+          mofdata(vofcomp+dir)=zero
+         enddo
         else
          print *,"is_rigid invalid"
          stop
@@ -18450,7 +19152,9 @@ contains
        do im=1,nmat
         vofcomp=(im-1)*ngeom_recon+1
         if (is_rigid_local(im).eq.1) then
-         mofdata(vofcomp)=zero
+         do dir=0,ngeom_recon-1
+          mofdata(vofcomp+dir)=zero
+         enddo
         else if (is_rigid_local(im).eq.0) then
          mofdata(vofcomp)=mofdata(vofcomp)/fluid_vfrac_sum
         else
@@ -18461,11 +19165,53 @@ contains
 
       else if ((solid_vfrac_sum.ge.VOFTOL).and. &
                (solid_vfrac_sum.le.one-VOFTOL)) then
-       
-       tessellate=1
+     
+       if (tessellate_in.eq.1) then
+
+        local_tessellate=1
+
+       else if (tessellate_in.eq.3) then
+
+        local_tessellate=2
+
+        if (solid_vfrac_sum.ge.half) then
+         do im=1,nmat*ngeom_recon
+          mofdata(im)=zero
+         enddo
+         if ((im_raster_solid.ge.1).and. &
+             (im_raster_solid.le.nmat)) then
+          vofcomp=(im_raster_solid-1)*ngeom_recon+1
+          mofdata(vofcomp)=one
+         else
+          print *,"im_raster_solid invalid"
+          stop
+         endif
+        else if (solid_vfrac_sum.le.half) then
+         do im=1,nmat
+          vofcomp=(im-1)*ngeom_recon+1
+          if (is_rigid_local(im).eq.1) then
+           do dir=0,ngeom_recon-1
+            mofdata(vofcomp+dir)=zero
+           enddo
+          else if (is_rigid_local(im).eq.0) then
+           mofdata(vofcomp)=mofdata(vofcomp)/fluid_vfrac_sum
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
+        else
+         print *,"solid_vfrac_sum or fluid_vfrac_sum bust"
+         stop
+        endif
+       else
+        print *,"tessellate_in invalid"
+        stop
+       endif
+
        shapeflag=0
        call multi_get_volume_grid( &
-        tessellate, &
+        local_tessellate, & ! =1 or 2
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
         xsten0,nhalf0, &
@@ -18516,7 +19262,8 @@ contains
          enddo
 
          if (is_rigid_local(im).eq.0) then
-          if (vfrac_save.gt.one-VOFTOL) then
+          if ((vfrac_save.le.one+VOFTOL).and. &
+              (vfrac_save.gt.one-VOFTOL)) then
            do im_solid=1,nmat
             vofcomp_solid=(im_solid-1)*ngeom_recon+1
             vfracsolid(im_solid)=mofdata(vofcomp_solid)
@@ -18556,6 +19303,12 @@ contains
             print *,"imcrit invalid"
             stop
            endif
+          else if ((vfrac_save.ge.-VOFTOL).and. &
+                   (vfrac_save.le.one-VOFTOL)) then
+           ! do nothing
+          else
+           print *,"vfrac_save invalid: ",vfrac_save
+           stop
           endif
          else if (is_rigid_local(im).eq.1) then
           ! do nothing
@@ -18589,7 +19342,12 @@ contains
           print *,"-----------end sanity multi_get_volume_tessellate-------"
          endif
         endif
-       endif
+       else if (sanity_check.eq.0) then
+        ! do nothing
+       else
+        print *,"sanity_check invalid"
+        stop
+       endif 
 
       else
        print *,"solid_vfrac_sum invalid"
@@ -18683,10 +19441,18 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0 here"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid31"
         stop
        endif
       enddo ! im=1..nmat
@@ -19346,8 +20112,10 @@ contains
        use global_utility_module
        IMPLICIT NONE
 
+       INTEGER_T, intent(in) :: sdim
+       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
        INTEGER_T, intent(out) :: imslope
-       INTEGER_T, intent(in) :: nmat,sdim,bfact,nhalf0
+       INTEGER_T, intent(in) :: nmat,bfact,nhalf0
        REAL_T, intent(in) :: mofdata(nmat*(2*sdim+3))
        REAL_T mofdatavalid(nmat*(2*sdim+3))
        REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
@@ -19371,10 +20139,18 @@ contains
         is_rigid_local(im)=is_rigid(nmat,im)
         if (tessellate.eq.2) then
          is_rigid_local(im)=0
-        else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+         print *,"expecting tessellate==0 here"
+         stop
+        else if (tessellate.eq.0) then
          ! do nothing
+        else if (tessellate.eq.1) then
+         print *,"expecting tessellate==0 here"
+         stop
+        else if (tessellate.eq.3) then
+         print *,"expecting tessellate==0 here"
+         stop
         else
-         print *,"tessellate invalid"
+         print *,"tessellate invalid32"
          stop
         endif
        enddo ! im=1..nmat
@@ -19411,9 +20187,10 @@ contains
         ! sum F_fluid=1  
         ! sum F_solid<=1 
        call make_vfrac_sum_ok_copy( &
+         cmofsten, &
          xsten0,nhalf0,nhalf_box, &
          bfact,dx, &
-         tessellate, &
+         tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
          mofdata,mofdatavalid,nmat,sdim,3)
 
        do im=1,nmat
@@ -19501,7 +20278,9 @@ contains
 
       INTEGER_T, intent(in) :: nhalf_recon
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: nmat,sdim
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T dir,side,l
       INTEGER_T, intent(in) :: center_stencil
       INTEGER_T, intent(in) :: donateflag(nmat+1)
@@ -19557,10 +20336,18 @@ contains
         ! material.
        if (tessellate.eq.2) then 
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0 here"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0 here"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid33"
         stop
        endif
       enddo ! im=1..nmat
@@ -19598,9 +20385,11 @@ contains
        ! sum F_fluid = 1
        ! sum F_solid <= 1
       call make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten_recon,nhalf_recon,nhalf_box, &
         bfact,dx, &
-        tessellate,mofdata,mofdatavalid,nmat,sdim,30)
+        tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
+        mofdata,mofdatavalid,nmat,sdim,30)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -19626,7 +20415,7 @@ contains
         x0(dir)=xsten_recon(0,dir)
        enddo
        call multi_get_volumePOINT( &
-        tessellate, &
+        tessellate, &  ! =0
         bfact,dx,xsten_recon,nhalf_recon, &
         mofdata,x0,im0,nmat,sdim)
 
@@ -19670,12 +20459,12 @@ contains
 
             if (inboxflag.eq.1) then
              call multi_get_volumePOINT( &
-              tessellate, &
+              tessellate, & ! =0
               bfact,dx,xsten_recon,nhalf_recon, &
               mofdata,xgrid_plus, &
               im_plus,nmat,sdim)
              call multi_get_volumePOINT( &
-              tessellate, &
+              tessellate, & ! =0
               bfact,dx,xsten_recon,nhalf_recon, &
               mofdata,xgrid_minus, &
               im_minus,nmat,sdim)
@@ -19747,12 +20536,12 @@ contains
 
               if (inboxflag.eq.1) then
                call multi_get_volumePOINT( &
-                 tessellate, &
+                 tessellate, & ! =0
                  bfact,dx,xsten_recon,nhalf_recon, &
                  mofdata,xgrid_plus, &
                  im_plus,nmat,sdim)
                call multi_get_volumePOINT( &
-                 tessellate, &
+                 tessellate, & ! =0
                  bfact,dx,xsten_recon,nhalf_recon, &
                  mofdata,xgrid_minus, &
                  im_minus,nmat,sdim)
@@ -19827,12 +20616,12 @@ contains
 
                   if (inboxflag.eq.1) then
                    call multi_get_volumePOINT( &
-                    tessellate, &
+                    tessellate, & ! =0
                     bfact,dx,xsten_recon,nhalf_recon, &
                     mofdata,xgrid_plus, &
                     im_plus,nmat,sdim)
                    call multi_get_volumePOINT( &
-                    tessellate, &
+                    tessellate, & ! =0
                     bfact,dx,xsten_recon,nhalf_recon, &
                     mofdata,xgrid_minus, &
                     im_minus,nmat,sdim)
@@ -19910,22 +20699,22 @@ contains
           inboxflag,nmat)
          if (inboxflag.eq.1) then
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_plus, &
             im_plus,nmat,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_minus, &
             im_minus,nmat,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_plus2, &
             im_plus2,nmat,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &
+            tessellate, &  ! =0
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_minus2, &
             im_minus2,nmat,sdim)
@@ -19989,22 +20778,22 @@ contains
 
            if (inboxflag.eq.1) then
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_plus, &
              im_plus,nmat,sdim)
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_minus, &
              im_minus,nmat,sdim)
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_plus2, &
              im_plus2,nmat,sdim)
             call multi_get_volumePOINT( &
-             tessellate, &
+             tessellate, & ! =0
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_minus2, &
              im_minus2,nmat,sdim)
@@ -20070,7 +20859,9 @@ contains
 ! phi=n dot (x-x0) + intercept
 ! x0 is center of cell (not centroid)
 ! tessellate==0 => consider only fluid materials.
-! tessellate==1 => consider both rigid and fluid materials.
+! tessellate==1 => consider both rigid and fluid materials. (this
+!   option should never be used)
+! tessellate==3 => same as tessellate==0 if fluids dominate cell.
 ! in: MOF_routines_module
       subroutine multi_get_volumePOINT( &
        tessellate, &
@@ -20086,8 +20877,10 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nmat,sdim,bfact,nhalf0
+      INTEGER_T, intent(in) :: nmat,bfact,nhalf0
       REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
       REAL_T mofdatavalid(nmat*ngeom_recon)
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
@@ -20103,6 +20896,13 @@ contains
       INTEGER_T vfrac_checked(nmat)
       INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
+      INTEGER_T im_raster_solid
+      INTEGER_T return_raster_info
+      INTEGER_T local_tessellate
+      REAL_T vfrac_fluid_sum
+      REAL_T vfrac_solid_sum
+      REAL_T vfrac_raster_solid
+
 
 #include "mofdata.H"
 
@@ -20112,13 +20912,35 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate=0 or 3"
+        stop
+       else if (tessellate.eq.0) then
+        ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate=0 or 3"
+        stop
+       else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid34"
         stop
        endif
       enddo ! im=1..nmat
+
+      if (tessellate.eq.3) then
+       local_tessellate=0
+      else if (tessellate.eq.0) then
+       local_tessellate=tessellate
+      else if (tessellate.eq.1) then
+       print *,"expecting tessellate=0 or 3"
+       stop
+      else if (tessellate.eq.2) then
+       print *,"expecting tessellate=0 or 3"
+       stop
+      else
+       print *,"tessellate invalid35"
+       stop
+      endif
 
       if (ngeom_recon.ne.(2*sdim+3)) then
        print *,"ngeom_recon invalid"
@@ -20140,9 +20962,11 @@ contains
 
        ! sum voffluid=1 ,  sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
+        cmofsten, &
         xsten0,nhalf0,nhalf_box, &
         bfact,dx, &
-        tessellate,mofdata,mofdatavalid,nmat,sdim,300)
+        local_tessellate, & ! =0
+        mofdata,mofdatavalid,nmat,sdim,300)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -20158,157 +20982,260 @@ contains
        ! do nothing, im_crit is set.
 
       else if (im_crit.eq.0) then
-       
-       if (tessellate.eq.1) then
+      
+       vfrac_fluid_sum=zero
+       vfrac_solid_sum=zero
 
-        do im=1,nmat
-         if (is_rigid_local(im).eq.1) then
-          if ((vfrac_data(im).ge.VOFTOL).and. &
-              (vfrac_data(im).lt.one)) then
-           vofcomp=(im-1)*ngeom_recon+1
-           testflag=NINT(mofdatavalid(vofcomp+sdim+1))
-           if (testflag.eq.1) then
-            do dir=1,sdim
-             slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
-            enddo
-            intercept=mofdatavalid(vofcomp+2*sdim+2)
-            ! in: GLOBALUTIL.F90  dist=intercept+n dot (xgrid-xsten0(0))
-            call distfunc(bfact,dx,xsten0,nhalf0, &
-             intercept,slopes,xgrid,ls,sdim)
-            if (ls.ge.zero) then
-             if (im_crit.eq.0) then
-              im_crit=im
-             else if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
-              if (vfrac_data(im).gt.vfrac_data(im_crit)) then
-               im_crit=im
-              endif
-             else
-              print *,"im_crit invalid"
-              stop
-             endif
-            endif
-           else if (testflag.eq.0) then
-            ! do nothing
-           else
-            print *,"testflag invalid"
-            stop
-           endif
-          else if (abs(vfrac_data(im)).le.VOFTOL) then
-           ! do nothing
-          else
-           print *,"vfrac_data invalid"
-           stop
+       im_raster_solid=0
+       vfrac_raster_solid=zero
+
+       do im=1,nmat
+        vofcomp=(im-1)*ngeom_recon+1
+        if (is_rigid_local(im).eq.0) then
+         vfrac_fluid_sum=vfrac_fluid_sum+mofdatavalid(vofcomp)
+        else if (is_rigid_local(im).eq.1) then
+         if (im_raster_solid.eq.0) then
+          im_raster_solid=im
+          vfrac_raster_solid=mofdatavalid(vofcomp)
+         else if ((im_raster_solid.ge.1).and. &
+                  (im_raster_solid.le.nmat).and. &
+                  (is_rigid_local(im_raster_solid).eq.1)) then
+          if (vfrac_raster_solid.lt.mofdatavalid(vofcomp)) then
+           im_raster_solid=im
+           vfrac_raster_solid=mofdatavalid(vofcomp)
           endif
-         else if (is_rigid_local(im).eq.0) then
-          ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"im_raster_solid invalid"
           stop
          endif
-        enddo !im=1..nmat
+      
+         vfrac_solid_sum=vfrac_solid_sum+mofdatavalid(vofcomp)
+        else
+         print *,"is_rigid_local invalid"
+         stop
+        endif
+       enddo ! im=1..nmat
 
-       else if (tessellate.eq.0) then
+       if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"vfrac_fluid_sum invalid"
+        stop
+       endif
+       if ((vfrac_solid_sum.le.one+VOFTOL).and. &
+           (vfrac_solid_sum.ge.zero)) then
+        ! do nothing
+       else
+        print *,"vfrac_solid_sum invalid"
         stop
        endif
 
-       if (im_crit.eq.0) then
+       return_raster_info=0
 
-        do im=1,nmat
-         vfrac_checked(im)=0
-        enddo
+       if (tessellate.eq.3) then
+        if (vfrac_solid_sum.ge.half) then
+         return_raster_info=1
 
-        uncaptured_volume_fraction=one
-        irank=1
-        do while ((irank.le.nmat).and. &
-                  (uncaptured_volume_fraction.gt.zero))
+         if ((im_raster_solid.ge.1).and. &
+             (im_raster_solid.le.nmat)) then
+          im_crit=im_raster_solid
+         else
+          print *,"im_raster_solid invalid"
+          stop
+         endif
 
+        else if (vfrac_solid_sum.lt.half) then
+         vfrac_solid_sum=zero
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
-          testflag=NINT(mofdatavalid(vofcomp+sdim+1))
-
           if (is_rigid_local(im).eq.0) then
-           if (testflag.eq.irank) then
-            vfrac_checked(im)=1
-            do dir=1,sdim
-             slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
-            enddo
-            intercept=mofdatavalid(vofcomp+2*sdim+2)
-            call distfunc(bfact,dx,xsten0,nhalf0, &
-             intercept,slopes,xgrid,ls,sdim)
-
-            if ((ls.ge.zero).or. &
-                (mofdatavalid(vofcomp).ge. &
-                 uncaptured_volume_fraction-VOFTOL)) then
-             im_crit=im
-             uncaptured_volume_fraction=zero
-            else 
-             uncaptured_volume_fraction=uncaptured_volume_fraction- &
-               mofdatavalid(vofcomp)
-            endif
-           endif  ! testflag=irank
-          else if (is_rigid_local(im).eq.1) then
            ! do nothing
+          else if (is_rigid_local(im).eq.1) then
+           do dir=0,sdim
+            mofdatavalid(vofcomp+dir)=zero
+           enddo
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid_local invalid"
            stop
           endif
-           
          enddo ! im=1..nmat
-         irank=irank+1
-        enddo  ! while irank<=nmat and uncaptured_volume_fraction>0 
+        else
+         print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
+         stop
+        endif
+       else if (tessellate.eq.0) then
+        ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate=0 or 3"
+        stop
+       else if (tessellate.eq.2) then
+        print *,"expecting tessellate=0 or 3"
+        stop
+       else
+        print *,"tessellate invalid36"
+        stop
+       endif
+      
+       if (return_raster_info.eq.1) then
+        ! do nothing
+       else if (return_raster_info.eq.0) then
 
-        if (uncaptured_volume_fraction.eq.zero) then
-         ! do nothing (im_crit is set)
-        else if (uncaptured_volume_fraction.gt.zero) then
-         im_crit=0
-         maxvof=zero
+        if (local_tessellate.eq.1) then
+         print *,"expecting local_tessellate=0"
+         stop
+
          do im=1,nmat
-          if (is_rigid_local(im).eq.0) then
-           if (vfrac_checked(im).eq.1) then
-            ! do nothing
-           else if (vfrac_checked(im).eq.0) then
-            if (vfrac_data(im).gt.maxvof) then
-             maxvof=vfrac_data(im)
-             im_crit=im
+          if (is_rigid_local(im).eq.1) then
+           if ((vfrac_data(im).ge.VOFTOL).and. &
+               (vfrac_data(im).lt.one)) then
+            vofcomp=(im-1)*ngeom_recon+1
+            testflag=NINT(mofdatavalid(vofcomp+sdim+1))
+            if (testflag.eq.1) then
+             do dir=1,sdim
+              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
+             enddo
+             intercept=mofdatavalid(vofcomp+2*sdim+2)
+             ! in: GLOBALUTIL.F90  dist=intercept+n dot (xgrid-xsten0(0))
+             call distfunc(bfact,dx,xsten0,nhalf0, &
+              intercept,slopes,xgrid,ls,sdim)
+             if (ls.ge.zero) then
+              if (im_crit.eq.0) then
+               im_crit=im
+              else if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+               if (vfrac_data(im).gt.vfrac_data(im_crit)) then
+                im_crit=im
+               endif
+              else
+               print *,"im_crit invalid"
+               stop
+              endif
+             endif
+            else if (testflag.eq.0) then
+             ! do nothing
+            else
+             print *,"testflag invalid"
+             stop
             endif
+           else if (abs(vfrac_data(im)).le.VOFTOL) then
+            ! do nothing
            else
-            print *,"vfrac_checked invalid"
+            print *,"vfrac_data invalid"
             stop
            endif
-          else if (is_rigid_local(im).eq.1) then
+          else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo !im=1..nmat
 
-         if (maxvof.le.zero) then
-          print *,"failed to find material that covers point"
-          do im=1,nmat
-           vofcomp=(im-1)*ngeom_recon+1
-           print *,"im,vof,flag,int ",im,mofdatavalid(vofcomp), &
-            NINT(mofdatavalid(vofcomp+sdim+1)), &
-            mofdatavalid(vofcomp+2*sdim+2)
-          enddo ! im=1..nmat
-          print *,"xgrid,xsten0 ",xgrid(1),xgrid(2),xsten0(0,1),xsten0(0,2)
-          stop
-         else
-          uncaptured_volume_fraction=zero
-         endif 
-
-        else 
-         print *,"uncaptured_volume_fraction invalid"
+        else if (local_tessellate.eq.0) then
+         ! do nothing
+        else
+         print *,"local_tessellate invalid37"
          stop
         endif
 
-       else if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
-        ! do nothing
+        if (im_crit.eq.0) then
+
+         do im=1,nmat
+          vfrac_checked(im)=0
+         enddo
+
+         uncaptured_volume_fraction=one
+         irank=1
+         do while ((irank.le.nmat).and. &
+                   (uncaptured_volume_fraction.gt.zero))
+
+          do im=1,nmat
+           vofcomp=(im-1)*ngeom_recon+1
+           testflag=NINT(mofdatavalid(vofcomp+sdim+1))
+
+           if (is_rigid_local(im).eq.0) then
+            if (testflag.eq.irank) then
+             vfrac_checked(im)=1
+             do dir=1,sdim
+              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
+             enddo
+             intercept=mofdatavalid(vofcomp+2*sdim+2)
+             call distfunc(bfact,dx,xsten0,nhalf0, &
+              intercept,slopes,xgrid,ls,sdim)
+
+             if ((ls.ge.zero).or. &
+                 (mofdatavalid(vofcomp).ge. &
+                  uncaptured_volume_fraction-VOFTOL)) then
+              im_crit=im
+              uncaptured_volume_fraction=zero
+             else 
+              uncaptured_volume_fraction=uncaptured_volume_fraction- &
+                mofdatavalid(vofcomp)
+             endif
+            endif  ! testflag=irank
+           else if (is_rigid_local(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+           
+          enddo ! im=1..nmat
+          irank=irank+1
+         enddo  ! while irank<=nmat and uncaptured_volume_fraction>0 
+
+         if (uncaptured_volume_fraction.eq.zero) then
+          ! do nothing (im_crit is set)
+         else if (uncaptured_volume_fraction.gt.zero) then
+          im_crit=0
+          maxvof=zero
+          do im=1,nmat
+           if (is_rigid_local(im).eq.0) then
+            if (vfrac_checked(im).eq.1) then
+             ! do nothing
+            else if (vfrac_checked(im).eq.0) then
+             if (vfrac_data(im).gt.maxvof) then
+              maxvof=vfrac_data(im)
+              im_crit=im
+             endif
+            else
+             print *,"vfrac_checked invalid"
+             stop
+            endif
+           else if (is_rigid_local(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+
+          if (maxvof.le.zero) then
+           print *,"failed to find material that covers point"
+           do im=1,nmat
+            vofcomp=(im-1)*ngeom_recon+1
+            print *,"im,vof,flag,int ",im,mofdatavalid(vofcomp), &
+             NINT(mofdatavalid(vofcomp+sdim+1)), &
+             mofdatavalid(vofcomp+2*sdim+2)
+           enddo ! im=1..nmat
+           print *,"xgrid,xsten0 ",xgrid(1),xgrid(2),xsten0(0,1),xsten0(0,2)
+           stop
+          else
+           uncaptured_volume_fraction=zero
+          endif 
+
+         else 
+          print *,"uncaptured_volume_fraction invalid"
+          stop
+         endif
+
+        else if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+         ! do nothing
+        else
+         print *,"im_crit invalid"
+         stop
+        endif
        else
-        print *,"im_crit invalid"
+        print *,"return_raster_info invalid"
         stop
        endif
 
@@ -20340,10 +21267,18 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid38"
         stop
        endif
       enddo ! im=1..nmat
@@ -20434,10 +21369,18 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid39"
         stop
        endif
       enddo ! im=1..nmat
@@ -20520,6 +21463,7 @@ contains
 
        ! tessellate==1 => check solid materials and fluid materials
        ! tessellate==0 => check fluid materials only
+       ! tessellate==3 => same as tessellate==0 if fluids dominate cell.
       subroutine check_full_cell_vfrac(vfrac,tessellate,nmat,im_full)
       use probcommon_module
       use geometry_intersect_module
@@ -20541,10 +21485,15 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate=0,1, or 3 in check_full_cell_vfrac"
+        stop
+       else if ((tessellate.eq.0).or. & 
+                (tessellate.eq.1)) then
+        ! do nothing
+       else if (tessellate.eq.3) then
         ! do nothing
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid40"
         stop
        endif
       enddo ! im=1..nmat
@@ -20555,8 +21504,10 @@ contains
        stop
       endif
 
-      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
-       print *,"tessellate invalid"
+      if ((tessellate.ne.0).and. &
+          (tessellate.ne.1).and. &
+          (tessellate.ne.3)) then
+       print *,"tessellate invalid41"
        stop
       endif
 
@@ -20615,7 +21566,8 @@ contains
 
       enddo !im=1..nmat
 
-      if (tessellate.eq.1) then
+      if ((tessellate.eq.1).or. &
+          (tessellate.eq.3)) then
        if (max_solid_vfrac.ge.one-VOFTOL) then
         im_full=im_solid_max
        endif
@@ -20705,10 +21657,18 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid42"
         stop
        endif
       enddo ! im=1..nmat
@@ -20796,10 +21756,18 @@ contains
        is_rigid_local(im)=is_rigid(nmat,im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
-       else if ((tessellate.eq.0).or.(tessellate.eq.1)) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.0) then
         ! do nothing
+       else if (tessellate.eq.1) then
+        print *,"expecting tessellate==0"
+        stop
+       else if (tessellate.eq.3) then
+        print *,"expecting tessellate==0"
+        stop
        else
-        print *,"tessellate invalid"
+        print *,"tessellate invalid43"
         stop
        endif
       enddo ! im=1..nmat
