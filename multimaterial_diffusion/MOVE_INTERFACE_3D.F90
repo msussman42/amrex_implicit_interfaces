@@ -1777,6 +1777,8 @@ stop
       INTEGER_T gridno
       INTEGER_T im
       INTEGER_T im_opp
+      INTEGER_T im_outer
+      INTEGER_T im_opp_outer
       INTEGER_T im_primary
       INTEGER_T im_primary_side
       INTEGER_T is_phase_change
@@ -2828,6 +2830,8 @@ stop
        do im_outer=1,nmat-1
         do im_opp_outer=im_outer+1,nmat
 
+         print *,"calling CONVERTMATERIAL im_outer,im_opp_outer ", &
+                 im_outer,im_opp_outer
          call FORT_CONVERTMATERIAL( &
           tid_data, &
           im_outer, &
@@ -2948,6 +2952,8 @@ stop
          print *,"first sloperecon"
 
          print *,"BEFORE SLOPERECON"
+         print *,"calling SLOPERECON im_outer,im_opp_outer ", &
+                 im_outer,im_opp_outer
 
          call FORT_SLOPERECON( &
           tid, &
@@ -2977,6 +2983,7 @@ stop
           partial_cmof_stencil_at_walls, &
           radius_cutoff)
 
+         print *,"AFTER SLOPERECON"
          call set_boundary_recon( &
           slopes,DIMS(slopes), &
           fablo,fabhi, &
@@ -2984,7 +2991,7 @@ stop
 
          do i=fablo(1)-ngrow,fabhi(1)+ngrow
          do j=fablo(2)-ngrow,fabhi(2)+ngrow
-          do dir=1,nmat*ngeom_raw
+          do dir=1,nmat*ngeom_recon
            recon(i,j,dir)=slopes(i,j,dir)
           enddo
          enddo
