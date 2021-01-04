@@ -65,7 +65,6 @@ ns.advection_order=1 1 1
 ns.face_flag=1
 # 0 = MOF (moment of fluid)
 # 2 = CMOF (continuous moment of fluid)
-# 3 = CLSVOF in 2 material cells and MOF in >2 material cells.
 # 4 = CLSVOF in 2 material cells and CMOF in >2 material cells.
 ns.continuous_mof=2
 ns.FD_curv_interp=1
@@ -87,8 +86,8 @@ ns.particles_weight_XD=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
 # particles_weight_VEL used for initializing particle velocity
 # from existing fluid and particle velocity.
 ns.particles_weight_VEL=0 0 1.0 # 0.0=>particles have no weight   0<=wt<=1
-ns.particle_nsubdivide=1 1 2
-ns.particle_min_per_nsubdivide=1 1 1
+ns.particle_nsubdivide=1 1 1
+ns.particle_min_per_nsubdivide=0 0 0
 ns.particle_max_per_nsubdivide=100 100 100
 
 ns.particle_volume=1.0 1.0 1.0
@@ -133,7 +132,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 4       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1      # 200 for production runs
+amr.plot_int        = 100     # 200 for production runs
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
