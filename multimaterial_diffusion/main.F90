@@ -87,7 +87,7 @@ real(kind=8),PARAMETER     :: latent_heat_in = -1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 3
 INTEGER,PARAMETER          :: local_operator_external = 1
-INTEGER,PARAMETER          :: local_linear_exact = 0
+INTEGER,PARAMETER          :: local_linear_exact = 1
 INTEGER                    :: ilev,max_ncell
 INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
@@ -111,7 +111,7 @@ INTEGER,PARAMETER          :: plot_int = 1  ! 20
 ! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
 ! probtype_in==403: TSTOP=0.4d0 (smooth test)
 ! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.02D0
+real(kind=8),parameter     :: TSTOP = 0.01D0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
