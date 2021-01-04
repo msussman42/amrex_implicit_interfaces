@@ -3359,6 +3359,8 @@ stop
         ! vof,ref centroid,order,slope,intercept  x nmat
       subroutine FORT_CONVERTMATERIAL( &
        tid, &
+       im_outer, &     ! im_outer and im_opp_outer define an interface
+       im_opp_outer, & ! between im_outer and im_opp_outer.
        solvability_projection, &
        ngrow_expansion, &
        level,finest_level, &
@@ -3414,6 +3416,8 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: im_outer
+      INTEGER_T, intent(in) :: im_opp_outer
       INTEGER_T, intent(in) :: solvability_projection
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3477,6 +3481,7 @@ stop
       INTEGER_T im_source_crit
       INTEGER_T im_primary
       INTEGER_T iten_crit
+      INTEGER_T iten_outer
       INTEGER_T ireverse_crit
       REAL_T max_velnode
       REAL_T velnode_test
@@ -3747,6 +3752,27 @@ stop
        stop
       endif
 
+      if (im_outer.ne.im_opp_outer) then
+       if ((im_outer.ge.1).and. &
+           (im_outer.le.nmat)) then
+        ! do nothing
+       else
+        print *,"im_outer invalid"
+        stop
+       endif
+       if ((im_opp_outer.ge.1).and. &
+           (im_opp_outer.le.nmat)) then
+        ! do nothing
+       else
+        print *,"im_opp_outer invalid"
+        stop
+       endif
+      else
+       print *,"cannot have im_outer==im_opp_outer"
+       stop
+      endif
+      call get_iten(im_outer,im_opp_outer,iten_outer,nmat)
+
       do im=1,nmat
        if ((density_floor_expansion(im).gt.zero).and. &
            (density_floor_expansion(im).le.fort_denconst(im))) then
@@ -3936,8 +3962,13 @@ stop
 
        if (local_mask.eq.1) then
 
-        do im=1,2*nten
-         JUMPFAB(D_DECL(i,j,k),im)=zero
+        do ireverse=0,1 
+         if (JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*nten).eq.zero) then
+          ! do nothing
+         else
+          print *,"JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*nten) init bad"
+          stop
+         endif
         enddo
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
@@ -4002,8 +4033,12 @@ stop
 
              if ((F_STEN(im_source).gt.zero).and. &
                  (F_STEN(im_dest).gt.zero)) then
-              interface_near(iten+ireverse*nten)=1
-              do_unsplit_advection=1
+              if ((im.eq.im_outer).and.(im_opp.eq.im_opp_outer)) then
+               interface_near(iten+ireverse*nten)=1
+               do_unsplit_advection=1
+              else 
+               ! do nothing
+              endif
              else if ((F_STEN(im_source).eq.zero).or. &
                       (F_STEN(im_dest).eq.zero)) then
               ! do nothing
@@ -4517,6 +4552,13 @@ stop
           ireverse=ireverse_crit
           im_dest=im_dest_crit
           im_source=im_source_crit 
+
+          if (iten.eq.iten_outer) then
+           ! do nothing
+          else
+           print *,"iten must be equal to iten_outer"
+           stop
+          endif
 
           if (interface_near(iten+ireverse*nten).ne.1) then
            print *,"interface_near invalid"

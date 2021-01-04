@@ -2825,151 +2825,183 @@ stop
 
        print *,"BEFORE CONVERTMATERIAL"
 
-       call FORT_CONVERTMATERIAL( &
-         tid_data, &
-         solvability_projection, &
-         ngrow_expansion, &
-         level,finest_level, &
-         normal_probe_size, &
-         nmat, &
-         nten, &
-         nden, &
-         nstate, &
-         ntsat, &
-         use_supermesh, &
-         fort_density_floor, &
-         fort_density_ceiling, &
-         latent_heat, &
-         saturation_temp, &
-         freezing_model, &
-         mass_fraction_id, &
-         species_evaporation_density, &
-         distribute_from_target, &
-         fablo,fabhi, &
-         fablo,fabhi, &
-         bfact,  &
-         min_stefan_velocity_for_dt, &
-         vofbc, &
-         xlo,dx, &
-         dt, &
-         delta_mass_local, &
-         maskcov,DIMS(maskcov), &
-         nodevel,DIMS(nodevel), &
-         jump_strength, &
-         DIMS(jump_strength), &
-         tsatfab,DIMS(tsatfab), &
-         LS,DIMS(LS), &
-         LSnew,DIMS(LSnew), &
-         recon,DIMS(recon), &
-         Snew,DIMS(Snew), &
-         EOS,DIMS(EOS), &
-         swept,DIMS(swept))
+       do im_outer=1,nmat-1
+        do im_opp_outer=im_outer+1,nmat
 
-       do im=1,2*nmat
-        delta_mass(im)=delta_mass(im)+delta_mass_local(im)
-       enddo
+         call FORT_CONVERTMATERIAL( &
+          tid_data, &
+          im_outer, &
+          im_opp_outer, &
+          solvability_projection, &
+          ngrow_expansion, &
+          level,finest_level, &
+          normal_probe_size, &
+          nmat, &
+          nten, &
+          nden, &
+          nstate, &
+          ntsat, &
+          use_supermesh, &
+          fort_density_floor, &
+          fort_density_ceiling, &
+          latent_heat, &
+          saturation_temp, &
+          freezing_model, &
+          mass_fraction_id, &
+          species_evaporation_density, &
+          distribute_from_target, &
+          fablo,fabhi, &
+          fablo,fabhi, &
+          bfact,  &
+          min_stefan_velocity_for_dt, &
+          vofbc, &
+          xlo,dx, &
+          dt, &
+          delta_mass_local, &
+          maskcov,DIMS(maskcov), &
+          nodevel,DIMS(nodevel), &
+          jump_strength, &
+          DIMS(jump_strength), &
+          tsatfab,DIMS(tsatfab), &
+          LS,DIMS(LS), &  ! old level set function
+          LSnew,DIMS(LSnew), &
+          recon,DIMS(recon), & ! old reconstruction
+          Snew,DIMS(Snew), &  ! holds new temperature
+          EOS,DIMS(EOS), &  ! old state
+          swept,DIMS(swept))
 
-
-       if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
-        k=0
-        do i=fablo(1)-ngrow,fabhi(1)+ngrow
-        do j=fablo(2)-ngrow,fabhi(2)+ngrow
-         call gridsten_level(xsten,i,j,k,level,nhalf)
-         do dir=1,SDIM
-          xgrid(dir)=xsten(0,dir)
+         do im=1,2*nmat
+          delta_mass(im)=delta_mass(im)+delta_mass_local(im)
          enddo
-         do im=1,nmat
-          call get_exact_LS(xgrid,cur_time,im,LSexact)
-          call get_exact_NRM(xgrid,cur_time,im,NRMexact)
-          LS(i,j,im)=LSexact
-          LSnew(i,j,im)=LSexact
+
+         if (DEBUG_LS_MOVE_INTERFACE.eq.1) then
+          k=0
+          do i=fablo(1)-ngrow,fabhi(1)+ngrow
+          do j=fablo(2)-ngrow,fabhi(2)+ngrow
+           call gridsten_level(xsten,i,j,k,level,nhalf)
+           do dir=1,SDIM
+            xgrid(dir)=xsten(0,dir)
+           enddo
+           do im=1,nmat
+            call get_exact_LS(xgrid,cur_time,im,LSexact)
+            call get_exact_NRM(xgrid,cur_time,im,NRMexact)
+            LS(i,j,im)=LSexact
+            LSnew(i,j,im)=LSexact
+            do dir=1,SDIM
+             LS(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+             LSnew(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
+             LS_slopes_FD(i,j,(im-1)*SDIM+dir)=NRMexact(dir)
+            enddo
+           enddo
+          enddo
+          enddo
+         else if (DEBUG_LS_MOVE_INTERFACE.eq.0) then
+          ! do nothing
+         else
+          print *,"DEBUG_LS_MOVE_INTERFACE invalid"
+          stop
+         endif
+
+         do i=fablo(1),fabhi(1)
+         do j=fablo(2),fabhi(2)
+          LS(i,j,im_outer)=LSnew(i,j,im_outer)
+          LS(i,j,im_opp_outer)=LSnew(i,j,im_opp_outer)
           do dir=1,SDIM
-           LS(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
-           LSnew(i,j,nmat+(im-1)*SDIM+dir)=NRMexact(dir)
-           LS_slopes_FD(i,j,(im-1)*SDIM+dir)=NRMexact(dir)
+           LS(i,j,nmat+(im_outer-1)*SDIM+dir)= &
+                   LSnew(i,j,nmat+(im_outer-1)*SDIM+dir)
+           LS(i,j,nmat+(im_opp_outer-1)*SDIM+dir)= &
+                   LSnew(i,j,nmat+(im_opp_outer-1)*SDIM+dir)
+          enddo
+
+          do im=1,ngeom_raw
+           scomp=SDIM+1+nmat*2+(im_outer-1)*ngeom_raw+im
+           VOFnew(i,j,(im_outer-1)*ngeom_raw+im)=Snew(i,j,scomp)
+           scomp=SDIM+1+nmat*2+(im_opp_outer-1)*ngeom_raw+im
+           VOFnew(i,j,(im_opp_outer-1)*ngeom_raw+im)=Snew(i,j,scomp)
           enddo
          enddo
-        enddo
-        enddo
-       else if (DEBUG_LS_MOVE_INTERFACE.eq.0) then
-        ! do nothing
-       else
-        print *,"DEBUG_LS_MOVE_INTERFACE invalid"
-        stop
-       endif
+         enddo
+         call set_boundary_VOF( &
+          VOFnew,DIMS(VOFnew), &
+          fablo,fabhi, &
+          nmat,ngrow)
+         call set_boundary_LS( &
+          LSnew,DIMS(LSnew), &
+          fablo,fabhi, &
+          nmat,ngrow)
+         call set_boundary_LS( &
+          LS,DIMS(LS), &
+          fablo,fabhi, &
+          nmat,ngrow)
 
+         tid=0
+         gridno=0
+         level=0
+         finest_level=0
+         max_level=0
+         ngrow_recon=1
+         update_flag=0
+         total_calls=0
+         total_iterations=0
+         continuous_mof=0
 
-       do i=fablo(1),fabhi(1)
-       do j=fablo(2),fabhi(2)
-        do im=1,nmat*(SDIM+1)
-         LS(i,j,im)=LSnew(i,j,im)
-        enddo
-        do im=1,nmat*ngeom_raw
-         scomp=SDIM+1+nmat*2+im
-         VOFnew(i,j,im)=Snew(i,j,scomp)
-        enddo
-       enddo
-       enddo
-       call set_boundary_VOF( &
-        VOFnew,DIMS(VOFnew), &
-        fablo,fabhi, &
-        nmat,ngrow)
-       call set_boundary_LS( &
-        LSnew,DIMS(LSnew), &
-        fablo,fabhi, &
-        nmat,ngrow)
-       call set_boundary_LS( &
-        LS,DIMS(LS), &
-        fablo,fabhi, &
-        nmat,ngrow)
+         print *,"first sloperecon"
 
-       tid=0
-       gridno=0
-       level=0
-       finest_level=0
-       max_level=0
-       ngrow_recon=1
-       update_flag=0
-       total_calls=0
-       total_iterations=0
-       continuous_mof=0
+         print *,"BEFORE SLOPERECON"
 
-       print *,"first sloperecon"
+         call FORT_SLOPERECON( &
+          tid, &
+          gridno, &
+          level, &
+          finest_level, &
+          max_level, &
+          ngrow_recon, &
+          vofbc, &
+          fablo,fabhi, &
+          fablo,fabhi,bfact, &
+          xlo,dx, &
+          masknbr,DIMS(masknbr), &
+          Snew,DIMS(Snew), &
+          VOFnew,DIMS(VOFnew), & ! nmat x ngeom_raw
+          LS,DIMS(LS), &  ! nmat
+          slopes,DIMS(slopes), & ! nmat x ngeom_recon
+          nsteps, &
+          prev_time, &
+          nmat,nten, &
+          latent_heat, &
+          update_flag, &
+          total_calls, &
+          total_iterations, &
+          continuous_mof, &
+          force_cmof_at_triple_junctions, &
+          partial_cmof_stencil_at_walls, &
+          radius_cutoff)
 
-       print *,"BEFORE SLOPERECON"
+         call set_boundary_recon( &
+          slopes,DIMS(slopes), &
+          fablo,fabhi, &
+          nmat,ngrow)
 
-       call FORT_SLOPERECON( &
-        tid, &
-        gridno, &
-        level, &
-        finest_level, &
-        max_level, &
-        ngrow_recon, &
-        vofbc, &
-        fablo,fabhi, &
-        fablo,fabhi,bfact, &
-        xlo,dx, &
-        masknbr,DIMS(masknbr), &
-        Snew,DIMS(Snew), &
-        VOFnew,DIMS(VOFnew), & ! nmat x ngeom_raw
-        LS,DIMS(LS), &  ! nmat
-        slopes,DIMS(slopes), & ! nmat x ngeom_recon
-        nsteps, &
-        prev_time, &
-        nmat,nten, &
-        latent_heat, &
-        update_flag, &
-        total_calls, &
-        total_iterations, &
-        continuous_mof, &
-        force_cmof_at_triple_junctions, &
-        partial_cmof_stencil_at_walls, &
-        radius_cutoff)
+         do i=fablo(1)-ngrow,fabhi(1)+ngrow
+         do j=fablo(2)-ngrow,fabhi(2)+ngrow
+          do dir=1,nmat*ngeom_raw
+           recon(i,j,dir)=slopes(i,j,dir)
+          enddo
+         enddo
+         enddo
+         do i=fablo(1)-1,fabhi(1)+1
+         do j=fablo(2)-1,fabhi(2)+1
+          scomp=SDIM+1+(im_outer-1)*2+2
+          dcomp=(im_outer-1)*2+2
+          EOS(i,j,dcomp)=Snew(i,j,scomp)
+          scomp=SDIM+1+(im_opp_outer-1)*2+2
+          dcomp=(im_opp_outer-1)*2+2
+          EOS(i,j,dcomp)=Snew(i,j,scomp)
+         enddo
+         enddo
 
-       call set_boundary_recon( &
-        slopes,DIMS(slopes), &
-        fablo,fabhi, &
-        nmat,ngrow)
+        enddo ! im_opp_outer
+       enddo ! im_outer
 
        do im=1,nmat
         minLS(im)=max_problen
