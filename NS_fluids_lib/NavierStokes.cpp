@@ -11958,24 +11958,25 @@ NavierStokes::level_phase_change_convert(
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
+ int iten;
+ get_iten_cpp(im,im_opp,iten,nmat);
+
  if ((im_outer>=1)&&(im_outer<=nmat)&&
      (im_opp_outer>=1)&&(im_opp_outer<=nmat)&&
      (im_outer<im_opp_outer)&&
      (i_phase_change>=0)&&
      (i_phase_change<nten)&&
-     (i_phase_change<n_phase_change)) {
-  int iten;
-  get_iten_cpp(im,im_opp,iten,nmat);
-  if ((iten<1)||(iten>nten))
-   amrex::Error("iten invalid");
+     (i_phase_change<n_phase_change)&&
+     (iten>=1)&&(iten<=nten)) {
+
   Real LL0=latent_heat[iten-1];
   Real LL1=latent_heat[iten-1+nten];
-  if ((LL0!=0.0)&&(LL1!=0.0)) {
+  if ((LL0!=0.0)||(LL1!=0.0)) {
    // do nothing
   } else
    amrex::Error("LL0 or LL1 invalid");
  } else
-  amrex::Error("im_opp,im_opp_outer,i_phase_change,or n_phase_change invalid");
+  amrex::Error("level_phase_change_convert: invalid parameters");
  
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
@@ -12043,31 +12044,31 @@ NavierStokes::level_phase_change_convert(
  } // tid
 
 
- if (level==finest_level) {
+ if (i_phase_change==0) {
 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   parent->AMR_max_phase_change_rate[dir]=0.0;
-   parent->AMR_min_phase_change_rate[dir]=0.0;
-  }
+  if (level==finest_level) {
 
-  for (int iten=0;iten<nten;iten++) {
-   int scomp=nten+iten*AMREX_SPACEDIM;
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    Real local_max=
-     localMF[BURNING_VELOCITY_MF]->max(scomp+dir); //def nghost=0
-    parent->AMR_max_phase_change_rate[dir]=
+    parent->AMR_max_phase_change_rate[dir]=0.0;
+    parent->AMR_min_phase_change_rate[dir]=0.0;
+   }
+
+   for (int iten_local=0;iten_local<nten;iten_local++) {
+    int scomp=nten+iten_local*AMREX_SPACEDIM;
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     Real local_max=
+      localMF[BURNING_VELOCITY_MF]->max(scomp+dir); //def nghost=0
+     parent->AMR_max_phase_change_rate[dir]=
       max(parent->AMR_max_phase_change_rate[dir],local_max);
 
-    Real local_min=
-     localMF[BURNING_VELOCITY_MF]->min(scomp+dir); //def nghost=0
-    parent->AMR_min_phase_change_rate[dir]=
+     Real local_min=
+      localMF[BURNING_VELOCITY_MF]->min(scomp+dir); //def nghost=0
+     parent->AMR_min_phase_change_rate[dir]=
       min(parent->AMR_min_phase_change_rate[dir],local_min);
-   } //dir=0..sdim-1
-  } //iten=0..nten-1
+    } //dir=0..sdim-1
+   } //iten_local=0..nten-1
 
- }  // level==finest_level
-
- if (i_phase_change==0) {
+  }  // level==finest_level
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -12279,8 +12280,50 @@ NavierStokes::level_phase_change_convert(
   delta_mass[0][im]+=delta_mass_local[0][im];
  }
 
- localMF[JUMP_STRENGTH_MF]->FillBoundary(geom.periodicity());
- avgDown_localMF(JUMP_STRENGTH_MF,0,2*nten,0);
+// if spectral_override==0, then always low order average down.
+ int sprectral_override=0;
+ localMF[JUMP_STRENGTH_MF]->FillBoundary(iten-1,1,geom.periodicity());
+ avgDown_localMF(JUMP_STRENGTH_MF,iten-1,1,spectral_override);
+
+ localMF[JUMP_STRENGTH_MF]->FillBoundary(nten+iten-1,1,geom.periodicity());
+ avgDown_localMF(JUMP_STRENGTH_MF,nten+iten-1,1,spectral_override);
+
+ if (i_phase_change+1<n_phase_change) {
+
+  for (int im_count=0;im_count<2;im_count++) {
+   int im_current;
+   if (im_count==0)
+    im_current=im_outer;
+   else if (im_count==1)
+    im_current=im_opp_outer;
+   else
+    amrex::Error("im_count invalid");
+
+   // dest,src,srccomp,dstcomp,ncomp,ngrow
+   MultiFab::Copy(*localMF[HOLD_LS_DATA_MF],LS_new,
+		  im_current-1,im_current-1,1,0);
+   int dstcomp=(im_current-1)*num_state_material;
+   int srccomp=(im_current-1)*num_state_material+
+	  num_materials_vel*(AMREX_SPACEDIM+1);
+   // density
+   MultiFab::Copy(*localMF[DEN_RECON_MF],S_new,
+		  srccomp,dstcomp,1,0);
+   // temperature
+   MultiFab::Copy(*localMF[DEN_RECON_MF],S_new,
+     srccomp+1,dstcomp+1,1,0);
+
+   int ispec=mass_fraction_id[iten-1];
+   if (ispec==0) {
+    // do nothing
+   } else if ((ispec>=1)&&(ispec<=num_species_var)) {
+    MultiFab::Copy(*localMF[DEN_RECON_MF],S_new,
+      srccomp+1+ispec,dstcomp+1+ispec,1,0);
+   } else
+    amrex::Error("ispec invalid");
+  } // im_count=0,1
+
+
+ }
 
 } // subroutine level_phase_change_convert
 
@@ -14417,6 +14460,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       if ((advect_iter==1)&&
           (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
        int deltacomp=slab_step*nstate_SDC;
+        // dest,src,srccomp,dstcomp,ncomp,ngrow
        MultiFab::Copy(*localMF[stableF_MF],*rhs,0,deltacomp,nfluxSEM,0);
       } else if (advect_iter==0) {
        // do nothing
