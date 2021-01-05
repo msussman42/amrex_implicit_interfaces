@@ -11946,7 +11946,9 @@ NavierStokes::level_phase_change_rate_extend() {
 // 2. unsplit advection of materials changing phase
 // 3. update volume fractions, jump strength, temperature
 void
-NavierStokes::level_phase_change_convert() {
+NavierStokes::level_phase_change_convert(
+  int im_outer,int im_opp_outer,
+  int i_phase_change,int n_phase_change) {
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
@@ -11956,6 +11958,25 @@ NavierStokes::level_phase_change_convert() {
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
+ if ((im_outer>=1)&&(im_outer<=nmat)&&
+     (im_opp_outer>=1)&&(im_opp_outer<=nmat)&&
+     (im_outer<im_opp_outer)&&
+     (i_phase_change>=0)&&
+     (i_phase_change<nten)&&
+     (i_phase_change<n_phase_change)) {
+  int iten;
+  get_iten_cpp(im,im_opp,iten,nmat);
+  if ((iten<1)||(iten>nten))
+   amrex::Error("iten invalid");
+  Real LL0=latent_heat[iten-1];
+  Real LL1=latent_heat[iten-1+nten];
+  if ((LL0!=0.0)&&(LL1!=0.0)) {
+   // do nothing
+  } else
+   amrex::Error("LL0 or LL1 invalid");
+ } else
+  amrex::Error("im_opp,im_opp_outer,i_phase_change,or n_phase_change invalid");
+ 
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
 
@@ -12043,87 +12064,96 @@ NavierStokes::level_phase_change_convert() {
       min(parent->AMR_min_phase_change_rate[dir],local_min);
    } //dir=0..sdim-1
   } //iten=0..nten-1
+
  }  // level==finest_level
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+ if (i_phase_change==0) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
 
-   const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,
-    num_materials_vel*AMREX_SPACEDIM);
+    const Real* xlo = grid_loc[gridno].lo();
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,
+     num_materials_vel*AMREX_SPACEDIM);
 
-   FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
-   FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
-   if (burnvelfab.nComp()==nburning) {
-    // do nothing
-   } else 
-    amrex::Error("burnvelfab.nComp() invalid");
+    FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
+    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
+    if (burnvelfab.nComp()==nburning) {
+     // do nothing
+    } else 
+     amrex::Error("burnvelfab.nComp() invalid");
 
-   if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
-    // do nothing
-   } else 
-    amrex::Error("nodevelfab.nComp() invalid");
+    if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
+     // do nothing
+    } else 
+     amrex::Error("nodevelfab.nComp() invalid");
 
-   int bfact=parent->Space_blockingFactor(level);
+    int bfact=parent->Space_blockingFactor(level);
 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // burnvelfab=BURNING_VELOCITY_MF is cell centered (interior: lo to hi)
-     // nodevelfab=nodevel is at the nodes. (interior: lo to hi+1)
-   FORT_NODEDISPLACE(
-    &nmat,
-    &nten,
-    &nburning,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact, 
-    velbc.dataPtr(),
-    &dt_slab,
-    nodevelfab.dataPtr(),
-    ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
-    burnvelfab.dataPtr(),
-    ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
-    xlo,dx, 
-    &level,&finest_level);
- } // mfi
+      // burnvelfab=BURNING_VELOCITY_MF is cell centered (interior: lo to hi)
+      // nodevelfab=nodevel is at the nodes. (interior: lo to hi+1)
+    FORT_NODEDISPLACE(
+     &nmat,
+     &nten,
+     &nburning,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact, 
+     velbc.dataPtr(),
+     &dt_slab,
+     nodevelfab.dataPtr(),
+     ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
+     burnvelfab.dataPtr(),
+     ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
+     xlo,dx, 
+     &level,&finest_level);
+  } // mfi
 } // omp
- ns_reconcile_d_num(72);
+  ns_reconcile_d_num(72);
 
- if (1==0) {
-   int gridno=0;
-   const Box& fabgrid = grids[gridno];
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   const Real* xlo = grid_loc[gridno].lo();
-   int interior_only=0;
-   FArrayBox& nodevelfab=(*localMF[nodevel_MF])[0];
-   const Real* dxplot = geom.CellSize();
-   int scomp=0;
-   int ncomp=2*nten*AMREX_SPACEDIM;
-   int dirplot=-1;
-   int id=0;
-   std::cout << "dt_slab = " << dt_slab << '\n';
-   tecplot_debug(nodevelfab,xlo,fablo,fabhi,dxplot,dirplot,id,
-     scomp,ncomp,interior_only);
- }
+  if (1==0) {
+    int gridno=0;
+    const Box& fabgrid = grids[gridno];
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    const Real* xlo = grid_loc[gridno].lo();
+    int interior_only=0;
+    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[0];
+    const Real* dxplot = geom.CellSize();
+    int scomp=0;
+    int ncomp=2*nten*AMREX_SPACEDIM;
+    int dirplot=-1;
+    int id=0;
+    std::cout << "dt_slab = " << dt_slab << '\n';
+    tecplot_debug(nodevelfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+  }
+
+ } else if ((i_phase_change>=1)&&(i_phase_change<n_phase_change)) {
+  // do nothing
+ } else
+  amrex::Error("i_phase_change invalid");
+  
 
  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
 
@@ -12184,6 +12214,8 @@ NavierStokes::level_phase_change_convert() {
     // in: MASS_TRANSFER_3D.F90
    FORT_CONVERTMATERIAL( 
     &tid_current,
+    &im_outer,
+    &im_opp_outer,
     &solvability_projection, // if solvability_projection==1 => net growth=0
     &ngrow_expansion,
     &level,&finest_level,

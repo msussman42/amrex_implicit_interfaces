@@ -35,6 +35,8 @@ extern "C"
 
    void FORT_CONVERTMATERIAL(
     int* tid,
+    int* im_outer,
+    int* im_opp_outer,
     int* solvability_projection,
     int* ngrow_expansion,
     int* level,int* finest_level,
