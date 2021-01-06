@@ -815,7 +815,12 @@ protected:
 
     void build_NRM_FD_MF(int fd_mf,int ls_mf, int ngrow);
 
-    void level_phase_change_convert();
+    void level_phase_change_convert(
+      int im_outer,int im_opp_outer,
+      int i_phase_change,int n_phase_change);
+
+    void level_phase_change_convertALL();
+
     void level_phase_change_rate(Vector<blobclass> blobdata,
        int color_count,int nucleation_flag);
     void level_phase_change_rate_extend();
@@ -909,6 +914,11 @@ protected:
 
     void PCINTERP_fill_coarse_patch(int idx_MF,
       int scomp,int ncomp,
+      int index,Vector<int> scompBC_map);
+
+    void GetStateFromLocal(int idx_MF,int ngrow,int scomp,int ncomp,
+      int index,Vector<int> scompBC_map);
+    void GetStateFromLocalALL(int idx_MF,int ngrow,int scomp,int ncomp,
       int index,Vector<int> scompBC_map);
 
   void mf_combine(

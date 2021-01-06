@@ -11942,6 +11942,132 @@ NavierStokes::level_phase_change_rate_extend() {
 
 } // subroutine level_phase_change_rate_extend
 
+void
+NavierStokes::level_phase_change_convertALL() {
+
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("level must be 0");
+
+ int nmat=num_materials;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int iten;
+ int im;
+ int im_opp;
+
+ int n_phase_change=0;
+ for (im=1;im<=nmat-1;im++) {
+  for (im_opp=im+1;im_opp<=nmat;im_opp++) {
+   get_iten_cpp(im,im_opp,iten,nmat);
+   Real LL0=latent_heat[iten-1];
+   Real LL1=latent_heat[iten-1+nten];
+   if ((LL0!=0.0)||(LL1!=0.0)) {
+    n_phase_change++;
+   } else if ((LL0==0.0)&&(LL1==0.0)) {
+    // do nothing
+   } else
+    amrex::Error("LL0 or LL1 invalid");
+  } // im_opp=im+1..nmat
+ } // im=1..nmat-1
+
+ int i_phase_change=0;
+ while (i_phase_change<n_phase_change) {
+
+  for (im=1;im<=nmat-1;im++) {
+   for (im_opp=im+1;im_opp<=nmat;im_opp++) {
+    get_iten_cpp(im,im_opp,iten,nmat);
+    Real LL0=latent_heat[iten-1];
+    Real LL1=latent_heat[iten-1+nten];
+    if ((LL0!=0.0)||(LL1!=0.0)) {
+
+     for (int ilev=finest_level;ilev>=level;ilev--) {
+      NavierStokes& ns_level=getLevel(ilev);
+       // unsplit advection using:
+       // BURNING_VELOCITY_MF (interpolated to the nodes)
+       //
+       // updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
+      ns_level.level_phase_change_convert(im,im_opp,
+       i_phase_change,n_phase_change);
+
+      ns_level.avgDown(LS_Type,0,nmat,0);
+      ns_level.MOFavgDown();
+      int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
+      ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
+     } // ilev=finest_level ... level
+
+     if (i_phase_change+1<n_phase_change) {
+
+      for (int im_count=0;im_count<2;im_count++) {
+       int im_current;
+       if (im_count==0) {
+        im_current=im;
+       } else if (im_count==1) {
+        im_current=im_opp;
+       } else
+        amrex::Error("im_count invalid");
+
+       Vector<int> scompBC_map;
+       scompBC_map.resize(1);
+       debug_ngrow(DEN_RECON_MF,1,30);
+       int dstcomp=(im_current-1)*num_state_material;
+       int srccomp=(im_current-1)*num_state_material+
+	  num_materials_vel*(AMREX_SPACEDIM+1);
+       // density
+       scompBC_map[0]=srccomp;
+       GetStateFromLocalALL(DEN_RECON_MF,1,
+	  dstcomp,1,State_Type,scompBC_map);
+       // temperature
+       scompBC_map[0]=srccomp+1;
+       GetStateFromLocalALL(DEN_RECON_MF,1,
+	  dstcomp+1,1,State_Type,scompBC_map);
+
+       int ispec=mass_fraction_id[iten-1];
+       if (ispec==0) {
+        // do nothing
+       } else if ((ispec>=1)&&(ispec<=num_species_var)) {
+        scompBC_map[0]=srccomp+1+ispec;
+        GetStateFromLocalALL(DEN_RECON_MF,1,
+ 	   dstcomp+1+ispec,1,State_Type,scompBC_map);
+       } else
+        amrex::Error("ispec invalid");
+      } // im_count=0,1
+
+      Vector<int> scompBC_map_LS;
+      scompBC_map_LS.resize(nmat*(AMREX_SPACEDIM+1));
+      for (int im_group=0;im_group<nmat*(AMREX_SPACEDIM+1);im_group++)
+       scompBC_map_LS[im_group]=im_group;
+      debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+      GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
+         0,nmat*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
+
+      int update_flag=0; // do not update the error indicator
+      int init_vof_ls_prev_time=0;
+        // Fluids tessellate; solids overlay.
+      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+        SLOPE_RECON_MF);
+     } else if (i_phase_change+1==n_phase_change) {
+      // do nothing
+     } else {
+      amrex::Error("i_phase_change invalid");
+     }
+     i_phase_change++;
+    } else if ((LL0==0.0)&&(LL1==0.0)) {
+     // do nothing
+    } else
+     amrex::Error("LL0 or LL1 invalid");
+   } // im_opp
+  } // im
+ } // while i_phase_change<n_phase_change
+
+ if (i_phase_change==n_phase_change) {
+  // do nothing
+ } else
+  amrex::Error("i_phase_change invalid");
+
+} // end subroutine level_phase_change_convertALL
+
 // 1. initialize node velocity from BURNING_VELOCITY_MF
 // 2. unsplit advection of materials changing phase
 // 3. update volume fractions, jump strength, temperature
@@ -11959,7 +12085,7 @@ NavierStokes::level_phase_change_convert(
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  int iten;
- get_iten_cpp(im,im_opp,iten,nmat);
+ get_iten_cpp(im_outer,im_opp_outer,iten,nmat);
 
  if ((im_outer>=1)&&(im_outer<=nmat)&&
      (im_opp_outer>=1)&&(im_opp_outer<=nmat)&&
@@ -12281,7 +12407,7 @@ NavierStokes::level_phase_change_convert(
  }
 
 // if spectral_override==0, then always low order average down.
- int sprectral_override=0;
+ int spectral_override=0;
  localMF[JUMP_STRENGTH_MF]->FillBoundary(iten-1,1,geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,iten-1,1,spectral_override);
 
@@ -12292,11 +12418,11 @@ NavierStokes::level_phase_change_convert(
 
   for (int im_count=0;im_count<2;im_count++) {
    int im_current;
-   if (im_count==0)
+   if (im_count==0) {
     im_current=im_outer;
-   else if (im_count==1)
+   } else if (im_count==1) {
     im_current=im_opp_outer;
-   else
+   } else
     amrex::Error("im_count invalid");
 
    // dest,src,srccomp,dstcomp,ncomp,ngrow
@@ -12322,7 +12448,10 @@ NavierStokes::level_phase_change_convert(
     amrex::Error("ispec invalid");
   } // im_count=0,1
 
-
+ } else if (i_phase_change+1==n_phase_change) {
+  // do nothing
+ } else {
+  amrex::Error("i_phase_change invalid");
  }
 
 } // subroutine level_phase_change_convert

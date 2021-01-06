@@ -2908,6 +2908,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // fluid LS can be positive in the solid regions.
         // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
        allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+       if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+        amrex::Error("localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
        debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
 
        for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -3010,20 +3012,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // 1.initialize node velocity from BURNING_VELOCITY_MF
        // 2.unsplit advection of materials changing phase
        // 3.update volume fractions, jump strength, temperature
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-
-          // unsplit advection using:
-	  // BURNING_VELOCITY_MF (interpolated to the nodes)
-	  //
-	  // updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
-         ns_level.level_phase_change_convert();
-
-         ns_level.avgDown(LS_Type,0,nmat,0);
-         ns_level.MOFavgDown();
-         scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
-         ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
-       } // ilev=finest_level ... level
+       level_phase_change_convertALL();
 
        delete_array(LS_NRM_FD_MF);
        delete_array(BURNING_VELOCITY_MF);
@@ -12451,7 +12440,7 @@ void NavierStokes::PCINTERP_fill_bordersALL(int idx_MF,
     index,scompBC_map);
  } // ilev
 
-} //PCINTERP_fill_bordersALL
+} //end subroutine PCINTERP_fill_bordersALL
 
 
 void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
@@ -12488,7 +12477,7 @@ void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
     ncomp,
     debug_fillpatch);   
 
-} //PCINTERP_fill_borders
+} //end subroutine PCINTERP_fill_borders
 
 
 void NavierStokes::PCINTERP_fill_coarse_patch(int idx_MF,
@@ -12518,7 +12507,63 @@ void NavierStokes::PCINTERP_fill_coarse_patch(int idx_MF,
     ncomp,
     debug_fillpatch);   
 
-} //PCINTERP_fill_coarse_patch
+} //end subroutine PCINTERP_fill_coarse_patch
+
+
+
+void NavierStokes::GetStateFromLocalALL(int idx_MF,
+  int ngrow,int scomp,int ncomp,int index,Vector<int> scompBC_map) {
+
+ int finest_level=parent->finestLevel();
+ if (level!=0)
+  amrex::Error("level invalid GetStateFromLocalALL");
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.GetStateFromLocal(idx_MF,ngrow,scomp,ncomp,
+    index,scompBC_map);
+ } // ilev
+
+} //end subroutine GetStateFromLocalALL
+
+
+void NavierStokes::GetStateFromLocal(int idx_MF,int ngrow,
+  int scomp,int ncomp,int index,Vector<int> scompBC_map) {
+
+ int ncompcheck=localMF[idx_MF]->nComp();
+ int ngrowcheck=localMF[idx_MF]->nGrow();
+
+ if (scomp+ncomp>ncompcheck)
+  amrex::Error("ncomp too big");
+ if (ngrowcheck<ngrow)
+  amrex::Error("ngrow too big in GetStateFromLocal");
+ 
+ MultiFab* cmf=nullptr;
+
+ if (level==0) {
+  cmf=localMF[idx_MF];
+ } else if (level>0) {
+  NavierStokes& ns_coarse=getLevel(level-1);
+  cmf=ns_coarse.localMF[idx_MF];
+ } else {
+  cmf=nullptr;
+  amrex::Error("level invalid GetStateFromLocal");
+ }
+
+  // uses desc_lst[index] 
+ InterpBorders(
+    *cmf,
+    *localMF[idx_MF],
+    cur_time_slab,
+    index,
+    scomp,
+    scompBC_map,
+    ncomp,
+    debug_fillpatch);   
+
+} //end subroutine GetStateFromLocal
+
+
 
 void NavierStokes::delete_advect_vars() {
 
