@@ -346,7 +346,7 @@ void
 NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
   // TODO: if num_materials_vel==nmat, then
-  //  have Super_State_Type, Super_Umac_Type,
+  //  have Super_Pres_Type, Super_Umac_Type,
   //  Super_Vmac_Type, Super_Wmac_Type, and
   //  Super_DIV_Type to hold
   //  the velocity, pressure, and divergence defined on the 
@@ -482,7 +482,7 @@ NavierStokes::variableSetUp ()
     }
 
   // TODO: if num_materials_vel==nmat, then
-  //  have Super_State_Type, Super_Umac_Type,
+  //  have Super_Pres_Type, Super_Umac_Type,
   //  Super_Vmac_Type, Super_Wmac_Type, and
   //  Super_DIV_Type to hold
   //  the velocity, pressure, and divergence defined on the 
@@ -521,7 +521,7 @@ NavierStokes::variableSetUp ()
 
 // Umac_Type  -------------------------------------------
   // TODO: if num_materials_vel==nmat, then
-  //  have Super_State_Type, Super_Umac_Type,
+  //  have Super_Pres_Type, Super_Umac_Type,
   //  Super_Vmac_Type, Super_Wmac_Type, and
   //  Super_DIV_Type to hold
   //  the velocity, pressure, and divergence defined on the 
