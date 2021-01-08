@@ -496,6 +496,7 @@ int  NavierStokes::ncomp_sum_int_user=0;
 int  NavierStokes::num_materials_viscoelastic=0;
 
 int  NavierStokes::MAC_grid_displacement=0;
+int  NavierStokes::NUM_CELL_ELASTIC=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
 
 int  NavierStokes::num_state_material=SpeciesVar; // den,T
 int  NavierStokes::num_state_base=SpeciesVar; // den,T
@@ -2811,8 +2812,9 @@ NavierStokes::read_params ()
      NUM_STATE_TYPE++;
 
      if (MAC_grid_displacement==0) {
-      // do nothing
+      NUM_CELL_ELASTIC=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
      } else if (MAC_grid_displacement==1) {
+      NUM_CELL_ELASTIC=NUM_TENSOR_TYPE;
       XDmac_Type=NUM_STATE_TYPE;
       NUM_STATE_TYPE++;
       YDmac_Type=NUM_STATE_TYPE;
@@ -4530,6 +4532,11 @@ NavierStokes::read_params ()
       im_solid_map.size() << '\n';
      std::cout << "Solid_State_Type= " << Solid_State_Type << '\n';
      std::cout << "Tensor_Type= " << Tensor_Type << '\n';
+     std::cout << "MAC_grid_displacement= " << MAC_grid_displacement << '\n';
+     std::cout << "NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
+     std::cout << "XDmac_Type= " << XDmac_Type << '\n';
+     std::cout << "YDmac_Type= " << YDmac_Type << '\n';
+     std::cout << "ZDmac_Type= " << ZDmac_Type << '\n';
      std::cout << "NUM_STATE_TYPE= " << NUM_STATE_TYPE << '\n';
 
      std::cout << "angular_velocity= " << angular_velocity << '\n';
@@ -7867,9 +7874,9 @@ NavierStokes::initData () {
 
  if ((nparts_tensor>=1)&&(nparts_tensor<=nmat)) {  
   MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
-  if (Tensor_new.nComp()!=nparts_tensor*(NUM_TENSOR_TYPE+AMREX_SPACEDIM))
-   amrex::Error("Tensor_new.nComp()!=nparts_tensor*(NUM_TENSOR_TYPE+SDIM)");
-  Tensor_new.setVal(0.0,0,nparts_tensor*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),1);
+  if (Tensor_new.nComp()!=nparts_tensor*NUM_CELL_ELASTIC)
+   amrex::Error("Tensor_new.nComp()!=nparts_tensor*NUM_CELL_ELASTIC");
+  Tensor_new.setVal(0.0,0,nparts_tensor*NUM_CELL_ELASTIC,1);
  } else 
   amrex::Error("nparts_tensor invalid");
 
@@ -8158,9 +8165,9 @@ void NavierStokes::init_boundary() {
    MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
      // ngrow=1 scomp=0
    MultiFab* tensormf=getStateTensor(1,0,
-     nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),cur_time_slab);
+     nparts*NUM_CELL_ELASTIC,cur_time_slab);
    MultiFab::Copy(Tensor_new,*tensormf,0,0,
-     nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),1);
+     nparts*NUM_CELL_ELASTIC,1);
    delete tensormf;
   } else 
    amrex::Error("k invalid");
@@ -14777,7 +14784,7 @@ NavierStokes::split_scalar_advection() {
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
-   num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),
+   num_materials_viscoelastic*NUM_CELL_ELASTIC,
    advect_time_slab);
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
@@ -14855,7 +14862,7 @@ NavierStokes::split_scalar_advection() {
  int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
  int imof_base=itensor_base+
-  num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM);
+  num_materials_viscoelastic*NUM_CELL_ELASTIC;
  int iLS_base=imof_base+nmat*ngeom_raw;
  int iFtarget_base=iLS_base+nmat;
  int iden_mom_base=iFtarget_base+nmat;
@@ -15275,7 +15282,7 @@ NavierStokes::split_scalar_advection() {
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
   Tensor_new.setVal(0.0,0,
-    num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),1);
+    num_materials_viscoelastic*NUM_CELL_ELASTIC,1);
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -15666,7 +15673,7 @@ NavierStokes::split_scalar_advection() {
       (num_materials_viscoelastic<=nmat)) {
     // spectral_override==0 => always low order
    avgDown(Tensor_Type,0,
-	num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),0);
+	num_materials_viscoelastic*NUM_CELL_ELASTIC,0);
   } else
    amrex::Error("num_materials_viscoelastic invalid");
 
@@ -15781,7 +15788,7 @@ NavierStokes::unsplit_scalar_advection() {
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
-   num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),
+   num_materials_viscoelastic*NUM_CELL_ELASTIC,
    advect_time_slab);
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
@@ -15838,7 +15845,7 @@ NavierStokes::unsplit_scalar_advection() {
  int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
  int imof_base=itensor_base+
-  num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM);
+  num_materials_viscoelastic*NUM_CELL_ELASTIC;
  int iLS_base=imof_base+nmat*ngeom_raw;
  int iFtarget_base=iLS_base+nmat;
  int iden_mom_base=iFtarget_base+nmat;
@@ -16468,7 +16475,7 @@ NavierStokes::unsplit_scalar_advection() {
       (num_materials_viscoelastic<=nmat)) {
     // spectral_override==0 => always low order
    avgDown(Tensor_Type,0,
-	num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),0);
+	num_materials_viscoelastic*NUM_CELL_ELASTIC,0);
   } else
    amrex::Error("num_materials_viscoelastic invalid");
 
@@ -18407,7 +18414,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     div_data->norm0(0,1) << '\n'; 
   }
   MultiFab* viscoelasticmf=ns_level.getStateTensor(1,0,
-     num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),
+     num_materials_viscoelastic*NUM_CELL_ELASTIC,
      cur_time_slab);
 
   ns_level.output_zones(
@@ -19049,7 +19056,7 @@ NavierStokes::writePlotFile (
           (nparts!=num_materials_viscoelastic))
        amrex::Error("nparts invalid");
       if (comp==0) {
-       ncomp=nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM);
+       ncomp=nparts*NUM_CELL_ELASTIC;
       } else
        amrex::Error("comp invalid");
 
@@ -22404,7 +22411,7 @@ MultiFab* NavierStokes::getStateTensor (
     //  a) nparts * NUM_TENSOR_TYPE, then
     //  b) nparts * AMREX_SPACEDIM
    int scomp_bias=scomp-nparts*NUM_TENSOR_TYPE;
-   int ntotal_test=nparts*(NUM_TENSOR_TYPE+AMREX_SPACEDIM);
+   int ntotal_test=nparts*NUM_CELL_ELASTIC;
 
    if ((ncomp==ntotal_test)&&
        (scomp==0)) {

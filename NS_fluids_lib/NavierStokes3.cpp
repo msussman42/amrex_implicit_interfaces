@@ -11475,7 +11475,7 @@ void NavierStokes::avgDownALL_TENSOR() {
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
   avgDownALL(Tensor_Type,0,
-    num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),0);
+    num_materials_viscoelastic*NUM_CELL_ELASTIC,0);
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
