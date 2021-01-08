@@ -11953,6 +11953,8 @@ NavierStokes::level_phase_change_convertALL() {
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nden=nmat*num_state_material;
+
  int iten;
  int im;
  int im_opp;
@@ -11972,6 +11974,14 @@ NavierStokes::level_phase_change_convertALL() {
   } // im_opp=im+1..nmat
  } // im=1..nmat-1
 
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+ if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
+  amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+
+ debug_ngrow(DEN_RECON_MF,1,30);
+ if (localMF[DEN_RECON_MF]->nComp()!=nden)
+  amrex::Error("DEN_RECON_MF invalid ncomp");
+
  int i_phase_change=0;
  while (i_phase_change<n_phase_change) {
 
@@ -11986,11 +11996,17 @@ NavierStokes::level_phase_change_convertALL() {
       NavierStokes& ns_level=getLevel(ilev);
        // unsplit advection using:
        // BURNING_VELOCITY_MF (interpolated to the nodes)
-       //
-       // updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
+       // (i) updates centroid and volume fraction for
+       //   im and im_opp materials.
+       // (ii) updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
+       // if i_phase_change+1<n_phase_change
+       //  a) copies LS_new[im_opp-1],LS_new[im-1] to HOLD_LS_DATA.
+       //  b) copies S_new to DEN_RECON_MF for density, temperature, Y
+       //     (im, im_opp)
       ns_level.level_phase_change_convert(im,im_opp,
        i_phase_change,n_phase_change);
 
+       // spectral_override==0 => always low order.
       ns_level.avgDown(LS_Type,0,nmat,0);
       ns_level.MOFavgDown();
       int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
@@ -12015,10 +12031,13 @@ NavierStokes::level_phase_change_convertALL() {
        int srccomp=(im_current-1)*num_state_material+
 	  num_materials_vel*(AMREX_SPACEDIM+1);
        // density
+       // spectral_override==0 => always low order
+       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp,1,1);
        scompBC_map[0]=srccomp;
        GetStateFromLocalALL(DEN_RECON_MF,1,
 	  dstcomp,1,State_Type,scompBC_map);
        // temperature
+       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+1,1,1);
        scompBC_map[0]=srccomp+1;
        GetStateFromLocalALL(DEN_RECON_MF,1,
 	  dstcomp+1,1,State_Type,scompBC_map);
@@ -12027,6 +12046,7 @@ NavierStokes::level_phase_change_convertALL() {
        if (ispec==0) {
         // do nothing
        } else if ((ispec>=1)&&(ispec<=num_species_var)) {
+        avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+1+ispec,1,1);
         scompBC_map[0]=srccomp+1+ispec;
         GetStateFromLocalALL(DEN_RECON_MF,1,
  	   dstcomp+1+ispec,1,State_Type,scompBC_map);
@@ -12036,6 +12056,8 @@ NavierStokes::level_phase_change_convertALL() {
 
       Vector<int> scompBC_map_LS;
       scompBC_map_LS.resize(nmat*(AMREX_SPACEDIM+1));
+       // spectral_override==0 => always low order
+      avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,nmat*(AMREX_SPACEDIM+1),0);
       for (int im_group=0;im_group<nmat*(AMREX_SPACEDIM+1);im_group++)
        scompBC_map_LS[im_group]=im_group;
       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
@@ -12144,6 +12166,7 @@ NavierStokes::level_phase_change_convert(
   // in: level_phase_change_convert
   // DEN_RECON_MF is initialized prior to the call
   // to this routine.
+ debug_ngrow(DEN_RECON_MF,1,30);
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 

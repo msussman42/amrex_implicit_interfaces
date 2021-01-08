@@ -8606,6 +8606,19 @@ void NavierStokes::Sanity_output_zones(
 }  // subroutine Sanity_output_zones
 
 
+// spectral_override==0 => always low order
+void NavierStokes::avgDown_localMF_ALL(int idxMF,int scomp,int ncomp,
+  int spectral_override) {
+
+ int finest_level = parent->finestLevel();
+ if (level!=0)
+  amrex::Error("only call with level=0");
+
+ for (int i=finest_level-1;i>=level;i--) {
+  NavierStokes& ns_level=getLevel(i);
+  ns_level.avgDown_localMF(idxMF,scomp,ncomp,spectral_override);
+ }
+}  // subroutine avgDown_localMF_ALL
 
 // spectral_override==0 => always low order
 void NavierStokes::avgDownALL(int stateidx,int startcomp,int numcomp,

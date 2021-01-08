@@ -1039,8 +1039,12 @@ protected:
     void smearvariable(int scomp,
      MultiFab* mask_extrapolate,int ngrow,Real def_value);
 
+    void avgDown_localMF_ALL(int idxMF,int scomp,int ncomp,
+      int spectral_override); 
+
     void avgDownALL(int stateidx,int startcomp,int numcomp,
       int spectral_override); 
+
     void avgDownALL_TENSOR(); 
 
      // spectral_override==1 => order derived from "enable_spectral"
