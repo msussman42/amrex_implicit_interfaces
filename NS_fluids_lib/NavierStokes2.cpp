@@ -8181,7 +8181,7 @@ void NavierStokes::output_zones(
 
    MultiFab* viscoelasticmfminus=
     new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),1,
+     num_materials_viscoelastic*NUM_CELL_ELASTIC,1,
      MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
 
    int elastic_ncomp=viscoelasticmfminus->nComp();
@@ -8253,7 +8253,7 @@ void NavierStokes::output_zones(
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
-     num_materials_viscoelastic*(NUM_TENSOR_TYPE+AMREX_SPACEDIM),
+     num_materials_viscoelastic*NUM_CELL_ELASTIC,
      1,1,geom.periodicity()); 
    check_for_NAN(viscoelasticmf,6);
    check_for_NAN(viscoelasticmfminus,16);

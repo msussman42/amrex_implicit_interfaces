@@ -718,7 +718,7 @@ NavierStokes::variableSetUp ()
 
 	// XDISPLACE appended 
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,num_materials_viscoelastic*(NUM_TENSOR_TYPE+BL_SPACEDIM),
+      1,num_materials_viscoelastic*NUM_CELL_ELASTIC,
       &pc_interp,
       null_ncomp_particles);
 
