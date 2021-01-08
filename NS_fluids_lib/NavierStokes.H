@@ -1658,6 +1658,9 @@ protected:
     static int DIV_Type;
     static int Solid_State_Type;
     static int Tensor_Type;
+    static int XDmac_Type;
+    static int YDmac_Type;
+    static int ZDmac_Type;
     static int NUM_STATE_TYPE;
 
       // 1-2 .. 1-num_materials
@@ -1942,6 +1945,8 @@ protected:
 
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
+
+    static int MAC_grid_displacement;
 
      // den,denA,E,T,P,species,configuration tensor
     static int num_state_material;
