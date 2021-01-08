@@ -495,6 +495,8 @@ int  NavierStokes::ncomp_sum_int_user=0;
 // set using elastic_viscosity, and other criteria
 int  NavierStokes::num_materials_viscoelastic=0;
 
+int  NavierStokes::MAC_grid_displacement=0;
+
 int  NavierStokes::num_state_material=SpeciesVar; // den,T
 int  NavierStokes::num_state_base=SpeciesVar; // den,T
 int  NavierStokes::ngeom_raw=AMREX_SPACEDIM+1;
@@ -508,7 +510,10 @@ int  NavierStokes::LS_Type=AMREX_SPACEDIM+1;
 int  NavierStokes::DIV_Type=AMREX_SPACEDIM+2;
 int  NavierStokes::Solid_State_Type=AMREX_SPACEDIM+3;
 int  NavierStokes::Tensor_Type=AMREX_SPACEDIM+4;
-int  NavierStokes::NUM_STATE_TYPE=AMREX_SPACEDIM+5;
+int  NavierStokes::XDmac_Type=AMREX_SPACEDIM+5;
+int  NavierStokes::YDmac_Type=AMREX_SPACEDIM+6;
+int  NavierStokes::ZDmac_Type=AMREX_SPACEDIM+4+AMREX_SPACEDIM;
+int  NavierStokes::NUM_STATE_TYPE=AMREX_SPACEDIM+5+AMREX_SPACEDIM;
 
 // 0=velocity stored at cells  
 // 1=velocity stored at faces
@@ -2804,6 +2809,24 @@ NavierStokes::read_params ()
         (num_materials_viscoelastic<=nmat)) {
      Tensor_Type=NUM_STATE_TYPE;
      NUM_STATE_TYPE++;
+
+     if (MAC_grid_displacement==0) {
+      // do nothing
+     } else if (MAC_grid_displacement==1) {
+      XDmac_Type=NUM_STATE_TYPE;
+      NUM_STATE_TYPE++;
+      YDmac_Type=NUM_STATE_TYPE;
+      NUM_STATE_TYPE++;
+      ZDmac_Type=NUM_STATE_TYPE;
+      if (AMREX_SPACEDIM==3) {
+       NUM_STATE_TYPE++;
+      } else if (AMREX_SPACEDIM==2) {
+       // do nothing
+      } else
+       amrex::Error("AMREX_SPACEDIM invalid");
+     } else
+      amrex::Error("MAC_grid_displacement invalid");
+ 
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
