@@ -111,6 +111,7 @@ if (y<=l1.and.y>=0) then
    if (x<=w1) then
       ls=sqrt((x-w1)**2+(l1-y)**2)
    else
+           FIX ME
       ls=l1-y
    end if
 else if (y-l1<=l2.and.y>=0.0) then
@@ -131,6 +132,11 @@ else if (y-l1-l2-l3<=l4.and.y>=0) then
    else
       ls=w2-x
    end if
+else if (y.ge.l1+l2+l3+l4) then
+   ls=w2-x
+else if (y.le.0.0d0) then
+         FIX ME
+   ls=l1-y
 else
    write(*,*) "ls geometry, (x,y) is out of the domain",x,y
 end if
@@ -216,6 +222,7 @@ end subroutine LS_air_water
       LS(2)=-LS(2)
      else if (im.eq.3) then
       call LS_geometry(x(1),x(2),LS(3))
+      LS(3)=-LS(3)
      else
       print *,"im invalid"
       stop
@@ -263,66 +270,32 @@ endif
 
 local_PI=4.0d0*atan(one)
 
-if ((LS(2).ge.zero).or. &
-    (velsolid_flag.eq.1)) then
- ! in solid
- do dir=1,SDIM
-  VEL(dir)=zero
- enddo
-else if ((LS(2).le.zero).and. &
-         (velsolid_flag.eq.0)) then
+if ((num_materials.eq.3).and.(probtype.eq.2011)) then
+ if ((LS(nmat).ge.zero).or. &
+     (velsolid_flag.eq.1)) then
+  ! in solid
+  do dir=1,SDIM
+   VEL(dir)=zero
+  enddo
+ else if ((LS(nmat).le.zero).and. &
+          (velsolid_flag.eq.0)) then
 
- ! boundary values
- do dir=1,SDIM
-  VEL(dir)=zero
- enddo
- if (xblob9.gt.zero) then
-  if ((t.ge.zero).and.(t.le.xblob9)) then
-   if (yblob8.eq.zero) then
-    if (radblob9.gt.zero) then
-     VEL(1) = VEL(1)*(one+yblob9*x(2)*exp(-t/radblob9))
-    else
-     print *,"radblob9 invalid"
-     stop
-    endif
-   else if (yblob8.gt.zero) then
-    if (abs(x(2)).le.yblob8) then
-     if (radblob9.gt.zero) then
-      VEL(1) = VEL(1)*(one+yblob9*exp(-t/radblob9)* &
-         sin(local_PI*x(2)/yblob8)*cos(2*local_PI*t/radblob8))
-     else
-      print *,"radblob9 invalid"
-      stop
-     endif
-    else if (abs(x(2)).ge.yblob8) then
-     ! do nothing
-    else
-     print *,"x(2) invalid"
-     stop
-    endif
-   else
-    print *,"yblob8 invalid"
-    stop
-   endif
-  else if (t.ge.xblob9) then
-   ! do nothing
-  else
-   print *,"t invalid"
-   stop
-  endif
- else if (xblob9.eq.zero) then
-  ! do nothing
+  ! boundary values
+  do dir=1,SDIM
+   VEL(dir)=zero
+  enddo
+
  else
-  print *,"xblob9 invalid"
+  print *,"LS(nmat) bust"
+  print *,"t=",t
+  print *,"num_materials=",num_materials
+  print *,"LS(1),LS(2),LS(3) ",LS(1),LS(2),LS(3)
+  print *,"velsolid_flag ",velsolid_flag
   stop
  endif
 
 else
- print *,"LS(2) bust"
- print *,"t=",t
- print *,"num_materials=",num_materials
- print *,"LS(1),LS(2) ",LS(1),LS(2)
- print *,"velsolid_flag ",velsolid_flag
+ print *,"num_materials or probtype invalid"
  stop
 endif
 
@@ -339,11 +312,33 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
+REAL_T :: zhi
 
-REAL_T gravity_dz
+if (t.ge.zero) then
+ ! do nothing
+else
+ print *,"t invalid"
+ stop
+endif
 
-
-PRES=zero
+if (SDIM.eq.3) then
+ zhi=probhiz
+else if (SDIM.eq.2) then
+ zhi=probhiy
+else
+ print *,"dimension bust"
+ stop
+endif
+call press_interp(t,t_pressure,press_nozzle, &
+        N_pressure,PRES)
+if (x(SDIM).ge.half*zhi) then
+ ! do nothing
+else if (x(SDIM).le.half*zhi) then
+ PRES=zero
+else
+ print *,"x(SDIM) or zhi invalid"
+ stop
+endif
 
 return 
 end subroutine YAOHONG_INKJET_PRES
