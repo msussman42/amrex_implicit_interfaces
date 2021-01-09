@@ -75,6 +75,11 @@ REAL_T, intent(in) :: t_input
 REAL_T, intent(out) :: p_output
 INTEGER_T              :: m  
 ! change the unit to ms
+! delta t=1/5 ms
+! M delta_t = T = 100ms
+! M=T/delta t= 100/(1/5)=500
+! m delta t = t
+! m=t/delta t = 5 t
 m=floor(t_input*5.0d0/1000.0d0)
 if (m<N) then
  p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
