@@ -31,7 +31,13 @@
 
  contains
 
-
+! 11.5x1.5 mm -> 0.0115 x 0.0015 m  axisymmetric
+! surface tension=0.064 N/m
+! static angle: 110 degrees
+! viscosity liquid: 0.017 Pa s
+! viscosity air   : 0.000018 Pa s
+! density liquid  : 1180 kg/m^3
+! density air     : 1.169 kg/m^3
 
 subroutine pressure_input()
 implicit none
@@ -63,29 +69,38 @@ end subroutine pressure_input
 
 subroutine press_interp(t_input,t, press, N, p_output)                        
 implicit none
-INTEGER_T   :: N
-REAL_T         :: t(N), press(N)
-REAL_T         :: t_input, p_output
+INTEGER_T, intent(in) :: N
+REAL_T, intent(in) :: t(N), press(N)
+REAL_T, intent(in) :: t_input
+REAL_T, intent(out) :: p_output
 INTEGER_T              :: m  
-m=floor(t_input*5)
+! change the unit to ms
+m=floor(t_input*5.0d0/1000.0d0)
 if (m<N) then
-   p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
+ p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
+ p_output=p_output*1000.0d0 ! change the units to Pa 
 else
    write(*,*) "press_interp: input time is out of initial set up"
 end if
 end subroutine press_interp
 
-subroutine LS_geometry(x,y,ls)
+! ls>0 in fluid, ls<0 in solid
+subroutine LS_geometry(x_i,y_i,ls)
 implicit none
 
 ! setup the computational domain with level set function
 ! 11.5x1.5 (mm) domain
 ! ls for nozzel geometry
 
-REAL_T   :: x, y, ls
+REAL_T, intent(in) :: x_i,y_i
+REAL_T, intent(out) :: ls
+REAL_T   :: x, y
 REAL_T   :: d1,d2
 REAL_T   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
 REAL_T   :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0
+
+x=x_i*1000.0d0  ! convert from MKS to mm
+y=y_i*1000.0d0  ! convert from MKS to mm
 
 if (y<=l1.and.y>=0) then
    if (x<=w1) then
@@ -93,7 +108,7 @@ if (y<=l1.and.y>=0) then
    else
       ls=l1-y
    end if
-else if (y-l1<=l2.and.y>=0) then
+else if (y-l1<=l2.and.y>=0.0) then
    if (x<=w1) then
       ls= w1-x
    else 
@@ -102,10 +117,10 @@ else if (y-l1<=l2.and.y>=0) then
       ls=-min(d1,d2)
    end if
 else if (y-l1-l2<l3) then
-   ls=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+   ls=-(45.0d0*x-7.0d0*y+32.0d0)/sqrt(45.0d0**2+7.0d0**2)
 else if (y-l1-l2-l3<=l4.and.y>=0) then
    if (x<w2) then
-      d1=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
+      d1=-(45.0d0*x-7.0d0*y+32.0d0)/sqrt(45.0d0**2+7.0d0**2)
       d2=w2-x
       ls=min(d1,d2)
    else
@@ -114,51 +129,59 @@ else if (y-l1-l2-l3<=l4.and.y>=0) then
 else
    write(*,*) "ls geometry, (x,y) is out of the domain",x,y
 end if
+ls=ls*0.001d0  ! change the unit to meters
 end subroutine LS_geometry
 
-subroutine LS_air_water(x,y,ls)
+! ls>0 in the water, ls<0 in the air
+subroutine LS_air_water(x_i,y_i,ls)
 implicit none
-REAL_T   :: x, y, ls
-REAL_T   :: d1,d2
-REAL_T   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
-REAL_T   :: l1=4.0,  l2 =2.5, l3=4.5, l4=0.5, l=11.5
+REAL_T, intent(in) :: x_i,y_i
+REAL_T, intent(out) :: ls
+REAL_T :: x, y
+REAL_T :: d1,d2,e1,e2,tt
+REAL_T :: w1=0.3d0, w2=1.0d0, w=1.5d0 
+REAL_T :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0, l=11.5d0
 
-if (y<=l1.and.y>=0) then
+x=x_i*1000.0d0
+y=y_i*1000.0d0
+e1=1.0D-8
+e2=0.001d0
+
+! fictitious extension of liquid-gas interface, theta=pi/4
+! interface  line x-y+3.7=0
+
+if (y<=l1+e1.and.y>=0-e1) then
    if (x<=w1) then
       ls=y-l1
-   else
-      ls=-sqrt((x-w1)**2+(l1-y)**2)
+   else 
+      tt=x+y-4.3d0
+      if (tt<=0) then
+         ls=-sqrt((x-w1)**2+(y-l1)**2)
+      else
+         ls=-(x-y+3.7d0)/sqrt(2.d0)
+      end if
    end if
-else if (y-l1<=l2.and.y>=0) then
+else if (y<=l+e1) then
    if (x<=w1) then
-      d1=w1-x
-      d2=y-l1
-      ls= min(d1,d2)
-   else
-      ls=w1-x
-   end if
-else if (y-l1-l2<=l3.and.y>=0) then
-   if (x<=w1) then
-      d1=y-l1
-      d2=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
-      ls= min(d1,d2)
-   else
-      ls=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
-   end if
-else if (y-l1-l2-l3<=l4.and.y>=0) then
-   if (x<=w2) then
-      d1=-(45.0*x-7.0*y+32)/sqrt(45.0**2+7.0**2)
-      d2=w2-x
-      ls=min(d1,d2)
-   else
-      ls=w2-x
+      tt=x+y-4.3d0
+      if (tt<=0) then
+         ls=y-l1
+      else
+         d1=y-l1
+         d2=-(x-y+3.7d0)/sqrt(2.d0)
+         ls=min(d1,d2)
+      end if
+   else 
+      d2=(x-y+3.7d0)/sqrt(2.d0)
+      ls=-d2
    end if
 else
-   write(*,*) "ls air_water, (x,y) is out of the domain",x,y
+   write(*,*) "ls geometry, (x,y) is out of the domain",x,y
 end if
+
+!   write(*,*) x,y,ls
+ls=ls*e2 ! change the unit to meter
 end subroutine LS_air_water
-
-
 
 
   ! fluids tessellate the domain, solids are immersed. 
