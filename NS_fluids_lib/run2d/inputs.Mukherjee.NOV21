@@ -156,7 +156,7 @@ ns.DrhoDz = 0.0 0.0 0.0 0.0
 # rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
 # NOV 2018 (3 or 4 materials)
 ns.override_density=2 0 0 0
-# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta_L)
 # sigma_{SL}=sigma_{LV}
 # sigma_{SV}=(1+cos(theta)) sigma_{LV}
 # theta=80 sigma_{SV}/sigma_{LV}=1.17  
