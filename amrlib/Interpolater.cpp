@@ -28,6 +28,9 @@ WMACInterp                wmac_interp;
 UMACInterp                xd_mac_interp;
 VMACInterp                yd_mac_interp;
 WMACInterp                zd_mac_interp;
+UMACInterp                xd_mac_lo_interp;
+VMACInterp                yd_mac_lo_interp;
+WMACInterp                zd_mac_lo_interp;
 maskSEMInterp             mask_sem_interp;
 
 

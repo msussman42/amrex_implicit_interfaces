@@ -890,28 +890,51 @@ NavierStokes::variableSetUp ()
 
       xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
       yd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
+      xd_mac_lo_interp.interp_enable_spectral=0;
+      yd_mac_lo_interp.interp_enable_spectral=0;
 #if (AMREX_SPACEDIM == 3)
       zd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
+      zd_mac_lo_interp.interp_enable_spectral=0;
 #endif
+
+      int ncghost_MAC_displace=1;
 
        // ngrow=0
       desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
        0,num_materials_viscoelastic,&xd_mac_interp,null_ncomp_particles);
       desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-       0,num_materials_viscoelastic,&xd_mac_interp,null_ncomp_particles);
+       0,ncghost_MAC_displace,&xd_mac_lo_interp,null_ncomp_particles);
+
+      int dcomp=0;
+      set_extrap_bc(bc,phys_bc);
+      std::string extrap_str="xd_extrap"; 
+      desc_lstGHOST.setComponent(XDmac_Type,dcomp,
+        extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
 
        // ngrow=0
       desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
        0,num_materials_viscoelastic,&yd_mac_interp,null_ncomp_particles);
       desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-       0,num_materials_viscoelastic,&yd_mac_interp,null_ncomp_particles);
+       0,ncghost_MAC_displace,&yd_mac_lo_interp,null_ncomp_particles);
+
+      dcomp=0;
+      set_extrap_bc(bc,phys_bc);
+      extrap_str="yd_extrap"; 
+      desc_lstGHOST.setComponent(YDmac_Type,dcomp,
+        extrap_str,bc,FORT_Y_EXTRAPFILL,&yd_mac_lo_interp);
 
 #if (AMREX_SPACEDIM == 3)
        // ngrow=0
       desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
        0,num_materials_viscoelastic,&zd_mac_interp,null_ncomp_particles);
       desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-       0,num_materials_viscoelastic,&zd_mac_interp,null_ncomp_particles);
+       0,ncghost_MAC_displace,&zd_mac_lo_interp,null_ncomp_particles);
+
+      dcomp=0;
+      set_extrap_bc(bc,phys_bc);
+      extrap_str="zd_extrap"; 
+      desc_lstGHOST.setComponent(ZDmac_Type,dcomp,
+        extrap_str,bc,FORT_Z_EXTRAPFILL,&zd_mac_lo_interp);
 #endif
 
       for (int partid=0;partid<num_materials_viscoelastic;partid++) {

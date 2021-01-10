@@ -350,6 +350,12 @@ extern BurnVelInterp             tsat_interp;
 extern UMACInterp                umac_interp;
 extern VMACInterp                vmac_interp;
 extern WMACInterp                wmac_interp;
+extern UMACInterp                xd_mac_interp;
+extern VMACInterp                yd_mac_interp;
+extern WMACInterp                zd_mac_interp;
+extern UMACInterp                xd_mac_lo_interp;
+extern VMACInterp                yd_mac_lo_interp;
+extern WMACInterp                zd_mac_lo_interp;
 extern maskSEMInterp             mask_sem_interp;
 
 class InterpolaterBoxCoarsener
