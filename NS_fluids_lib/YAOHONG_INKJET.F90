@@ -79,9 +79,10 @@ INTEGER_T              :: m
 ! M delta_t = T = 100ms
 ! M=T/delta t= 100/(1/5)=500
 ! m delta t = t
-! m=t/delta t = 5 t
+! m=t/delta t = 5 t 
 m=floor(t_input*5.0d0/1000.0d0)
-if (m<N) then
+m=m+1
+if (m.lt.N) then
  p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
  p_output=p_output*1000.0d0 ! change the units to Pa 
 else
@@ -107,25 +108,45 @@ REAL_T   :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0
 x=x_i*1000.0d0  ! convert from MKS to mm
 y=y_i*1000.0d0  ! convert from MKS to mm
 
-if (y<=l1.and.y>=0) then
-   if (x<=w1) then
+if (SDIM.eq.2) then
+ x=abs(x)
+else
+ print *,"not ready for 3d"
+ stop
+endif
+
+if (y.le.l1) then
+   if (x.le.w1) then
       ls=sqrt((x-w1)**2+(l1-y)**2)
+   else if (x.le.w) then
+      d1=l1-y
+      d2=w-x
+      ls=min(d1,d2)
+   else if (x.ge.w) then
+      ls=w-x
    else
-           FIX ME
-      ls=l1-y
+      print *,"x invalid"
+      stop
    end if
-else if (y-l1<=l2.and.y>=0.0) then
-   if (x<=w1) then
+else if ((y.le.l1+l2).and.(y.ge.l1)) then
+   if (x.le.w1) then
       ls= w1-x
-   else 
+   else if ((x.ge.w1).and.(x.le.w)) then
       d1=x-w1
       d2=y-l1
       ls=-min(d1,d2)
+   else if (x.ge.w) then
+      d1=x-w1
+      d2=sqrt((x-w)**2+(y-l1)**2)
+      ls=-min(d1,d2)
+   else
+    print *,"x invalid"
+    stop
    end if
-else if (y-l1-l2<l3) then
+else if ((y.le.l1+l2+l3).and.(y.ge.l1+l2)) then
    ls=-(45.0d0*x-7.0d0*y+32.0d0)/sqrt(45.0d0**2+7.0d0**2)
-else if (y-l1-l2-l3<=l4.and.y>=0) then
-   if (x<w2) then
+else if ((y.le.l1+l2+l3+l4).and.(y.ge.l1+l1+l2)) then
+   if (x.le.w2) then
       d1=-(45.0d0*x-7.0d0*y+32.0d0)/sqrt(45.0d0**2+7.0d0**2)
       d2=w2-x
       ls=min(d1,d2)
@@ -134,11 +155,9 @@ else if (y-l1-l2-l3<=l4.and.y>=0) then
    end if
 else if (y.ge.l1+l2+l3+l4) then
    ls=w2-x
-else if (y.le.0.0d0) then
-         FIX ME
-   ls=l1-y
 else
    write(*,*) "ls geometry, (x,y) is out of the domain",x,y
+   stop
 end if
 ls=ls*0.001d0  ! change the unit to meters
 end subroutine LS_geometry
@@ -149,45 +168,29 @@ implicit none
 REAL_T, intent(in) :: x_i,y_i
 REAL_T, intent(out) :: ls
 REAL_T :: x, y
-REAL_T :: d1,d2,e1,e2,tt
+REAL_T :: d1,d2,e2
 REAL_T :: w1=0.3d0, w2=1.0d0, w=1.5d0 
-REAL_T :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0, l=11.5d0
+REAL_T :: l1=4.0d0, l2 =2.5d0, l3=4.5d0, l4=0.5d0, l=11.5d0
 
 x=x_i*1000.0d0
 y=y_i*1000.0d0
-e1=1.0D-8
+
+if (SDIM.eq.2) then
+ x=abs(x)
+else
+ print *,"not ready for 3d"
+ stop
+endif
+
 e2=0.001d0
 
-! fictitious extension of liquid-gas interface, theta=pi/4
-! interface  line x-y+3.7=0
-
-if (y<=l1+e1.and.y>=0-e1) then
-   if (x<=w1) then
-      ls=y-l1
-   else 
-      tt=x+y-4.3d0
-      if (tt<=0) then
-         ls=-sqrt((x-w1)**2+(y-l1)**2)
-      else
-         ls=-(x-y+3.7d0)/sqrt(2.d0)
-      end if
-   end if
-else if (y<=l+e1) then
-   if (x<=w1) then
-      tt=x+y-4.3d0
-      if (tt<=0) then
-         ls=y-l1
-      else
-         d1=y-l1
-         d2=-(x-y+3.7d0)/sqrt(2.d0)
-         ls=min(d1,d2)
-      end if
-   else 
-      d2=(x-y+3.7d0)/sqrt(2.d0)
-      ls=-d2
-   end if
+if (x.le.w1) then
+ ls=y-l1
+else if (x.ge.w1) then
+ ls=y-l1-(x-w1)
 else
-   write(*,*) "ls geometry, (x,y) is out of the domain",x,y
+ print *,"x invalid"
+ stop
 end if
 
 !   write(*,*) x,y,ls

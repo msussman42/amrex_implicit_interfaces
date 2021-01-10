@@ -17080,6 +17080,7 @@ stop
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
             cell_CP_parm%k=k+k1
+             ! xSOLID_BULK(dir)=xsten(i+i1,j+j1,k+k1,dir)
              ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
             call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
 
@@ -17174,10 +17175,12 @@ stop
            if (im1_substencil.eq.0) then
 
             if (abs(LS_solid_new(im_solid_max)).le.dxmaxLS) then
-             print *,"all materials disappeared"
+             print *,"all materials disappeared in FORT_RENORMALIZE_PRESCRIBE"
+             print *,"level,finest_level ",level,finest_level
              cell_CP_parm%i=i
              cell_CP_parm%j=j
              cell_CP_parm%k=k
+              ! xSOLID_BULK(dir)=xsten(i,j,k,dir)
               ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
              call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
              local_mag=zero
@@ -17186,8 +17189,28 @@ stop
               local_mag=local_mag+(xCP(dir)-xSOLID_BULK(dir))**2
              enddo
              local_mag=sqrt(local_mag)
-             print *,"LS_solid_new(im_solid_max) ",LS_solid_new(im_solid_max)
-             print *,"dx,local_mag ",dx(1),local_mag
+             print *,"im_solid_max,LS_solid_new(im_solid_max) ", &
+                     im_solid_max,LS_solid_new(im_solid_max)
+             print *,"dx,dy,dz,local_mag ",dx(1),dx(2),dx(SDIM),local_mag
+
+             do im=1,nmat
+              print *,"im,is_rigid(nmat,im),ls_hold(im) ", &
+                      im,is_rigid(nmat,im),ls_hold(im)
+             enddo
+             do i1=LSstenlo(1),LSstenhi(1)
+             do j1=LSstenlo(2),LSstenhi(2)
+             do k1=LSstenlo(3),LSstenhi(3)
+              call gridsten_level(xsten,i+i1,j+j1,k+k1,level,nhalf)
+              print *,"i1,j1,k1,x,y,z ",i1,j1,k1, &
+                      xsten(0,1),xsten(0,2),xsten(0,SDIM)
+              do im=1,nmat
+               print *,"i1,j1,k1,im,LS_extend ",i1,j1,k1,im, &
+                       LS_extend(D_DECL(i1,j1,k1),im)
+              enddo
+             enddo
+             enddo
+             enddo
+
              stop
             else if (abs(LS_solid_new(im_solid_max)).ge.dxmaxLS) then
              ! do nothing
