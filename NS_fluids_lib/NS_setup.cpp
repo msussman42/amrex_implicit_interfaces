@@ -735,6 +735,7 @@ NavierStokes::variableSetUp ()
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
      std::string extrap_str_tensor="extrap_tensor"; 
+      // low order extrapolation
      desc_lstGHOST.setComponent(Tensor_Type,dcomp,
       extrap_str_tensor,bc,FORT_EXTRAPFILL,&pc_interp);
 
@@ -906,10 +907,11 @@ NavierStokes::variableSetUp ()
        0,ncghost_MAC_displace,&xd_mac_lo_interp,null_ncomp_particles);
 
       int dcomp=0;
-      set_extrap_bc(bc,phys_bc);
+      BCRec x_extrap_bc;
+      set_extrap_bc(x_extrap_bc,phys_bc);
       std::string extrap_str="xd_extrap"; 
       desc_lstGHOST.setComponent(XDmac_Type,dcomp,
-        extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
 
        // ngrow=0
       desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
@@ -917,11 +919,9 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
        0,ncghost_MAC_displace,&yd_mac_lo_interp,null_ncomp_particles);
 
-      dcomp=0;
-      set_extrap_bc(bc,phys_bc);
       extrap_str="yd_extrap"; 
       desc_lstGHOST.setComponent(YDmac_Type,dcomp,
-        extrap_str,bc,FORT_Y_EXTRAPFILL,&yd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_Y_EXTRAPFILL,&yd_mac_lo_interp);
 
 #if (AMREX_SPACEDIM == 3)
        // ngrow=0
@@ -930,11 +930,9 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
        0,ncghost_MAC_displace,&zd_mac_lo_interp,null_ncomp_particles);
 
-      dcomp=0;
-      set_extrap_bc(bc,phys_bc);
       extrap_str="zd_extrap"; 
       desc_lstGHOST.setComponent(ZDmac_Type,dcomp,
-        extrap_str,bc,FORT_Z_EXTRAPFILL,&zd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_Z_EXTRAPFILL,&zd_mac_lo_interp);
 #endif
 
       for (int partid=0;partid<num_materials_viscoelastic;partid++) {
@@ -948,23 +946,23 @@ NavierStokes::variableSetUp ()
        std::string im_string=im_string_stream.str();
 
        std::string xd_mac_name="XDMAC";
-       BCRec xd_mac_bcs;
        xd_mac_name+=im_string;
+       BCRec xd_mac_bcs;
        set_x_vel_bc(xd_mac_bcs,phys_bc);
        desc_lst.setComponent(XDmac_Type,partid,xd_mac_name,xd_mac_bcs,
          FORT_XDMACFILL,&xd_mac_interp);
 
        std::string yd_mac_name="YDMAC";
-       BCRec yd_mac_bcs;
        yd_mac_name+=im_string;
+       BCRec yd_mac_bcs;
        set_y_vel_bc(yd_mac_bcs,phys_bc);
        desc_lst.setComponent(YDmac_Type,partid,yd_mac_name,yd_mac_bcs,
          FORT_YDMACFILL,&yd_mac_interp);
 
 #if (AMREX_SPACEDIM == 3)
        std::string zd_mac_name="ZDMAC";
-       BCRec zd_mac_bcs;
        zd_mac_name+=im_string;
+       BCRec zd_mac_bcs;
        set_z_vel_bc(zd_mac_bcs,phys_bc);
        desc_lst.setComponent(ZDmac_Type,partid,zd_mac_name,zd_mac_bcs,
          FORT_ZDMACFILL,&zd_mac_interp);
