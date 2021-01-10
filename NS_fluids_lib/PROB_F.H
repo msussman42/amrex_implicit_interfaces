@@ -533,6 +533,59 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
+
+     void FORT_XDMACFILL (
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+
+     void FORT_YDMACFILL (
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+     void FORT_ZDMACFILL (
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+
+     void FORT_X_EXTRAPFILL (
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+
+     void FORT_Y_EXTRAPFILL (
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+     void FORT_Z_EXTRAPFILL (
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+
   }
 
 }/* namespace amrex */

@@ -887,7 +887,7 @@ NavierStokes::variableSetUp ()
 
      } else if (MAC_grid_displacement==1) {
 
-      displacement_enable_spectral=0;
+      int displacement_enable_spectral=0;
 
       xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
       yd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
@@ -906,11 +906,11 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
        0,ncghost_MAC_displace,&xd_mac_lo_interp,null_ncomp_particles);
 
-      int dcomp=0;
+      int dcomp_displace=0;
       BCRec x_extrap_bc;
       set_extrap_bc(x_extrap_bc,phys_bc);
       std::string extrap_str="xd_extrap"; 
-      desc_lstGHOST.setComponent(XDmac_Type,dcomp,
+      desc_lstGHOST.setComponent(XDmac_Type,dcomp_displace,
         extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
 
        // ngrow=0
@@ -920,7 +920,7 @@ NavierStokes::variableSetUp ()
        0,ncghost_MAC_displace,&yd_mac_lo_interp,null_ncomp_particles);
 
       extrap_str="yd_extrap"; 
-      desc_lstGHOST.setComponent(YDmac_Type,dcomp,
+      desc_lstGHOST.setComponent(YDmac_Type,dcomp_displace,
         extrap_str,x_extrap_bc,FORT_Y_EXTRAPFILL,&yd_mac_lo_interp);
 
 #if (AMREX_SPACEDIM == 3)
@@ -931,7 +931,7 @@ NavierStokes::variableSetUp ()
        0,ncghost_MAC_displace,&zd_mac_lo_interp,null_ncomp_particles);
 
       extrap_str="zd_extrap"; 
-      desc_lstGHOST.setComponent(ZDmac_Type,dcomp,
+      desc_lstGHOST.setComponent(ZDmac_Type,dcomp_displace,
         extrap_str,x_extrap_bc,FORT_Z_EXTRAPFILL,&zd_mac_lo_interp);
 #endif
 
