@@ -474,6 +474,9 @@ NavierStokes::variableSetUp ()
     int nmat=num_materials;
     int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
+    // null_ncomp_particles==0 => particle container not associated
+    // to most State Data Types, only "State_Type" will have
+    // particle containers associated.
     int null_ncomp_particles=0; 
 
     if ((nmat<1)||(nmat>999)) {
@@ -716,7 +719,7 @@ NavierStokes::variableSetUp ()
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
 
-	// XDISPLACE appended 
+	// XDISPLACE appended if MAC_grid_displacement==1
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,num_materials_viscoelastic*NUM_CELL_ELASTIC,
       &pc_interp,
@@ -724,6 +727,8 @@ NavierStokes::variableSetUp ()
 
      int ncghost_elastic=1;
 
+      // null_ncomp_particles==0 => particle container not associated
+      // to "Tensor_Type"  (only to "State_Type")
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
@@ -825,57 +830,126 @@ NavierStokes::variableSetUp ()
 
      } // partid=0..nparts-1
 
-     for (int partid=0;partid<num_materials_viscoelastic;partid++) {
+     if (MAC_grid_displacement==0) {
 
-      int im_part=im_elastic_map[partid];
-      if ((im_part<0)||(im_part>=nmat))
-       amrex::Error("im_part invalid");
+      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
-      std::stringstream im_string_stream(std::stringstream::in |
-       std::stringstream::out);
-      im_string_stream << im_part+1;
-      std::string im_string=im_string_stream.str();
+       int im_part=im_elastic_map[partid];
+       if ((im_part<0)||(im_part>=nmat))
+        amrex::Error("im_part invalid");
 
-      Vector<std::string> MOFxdisplace_names_tensor;
-      MOFxdisplace_names_tensor.resize(AMREX_SPACEDIM);
+       std::stringstream im_string_stream(std::stringstream::in |
+        std::stringstream::out);
+       im_string_stream << im_part+1;
+       std::string im_string=im_string_stream.str();
 
-      Vector<BCRec> MOFxdisplace_bcs_tensor;
-      MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
+       Vector<std::string> MOFxdisplace_names_tensor;
+       MOFxdisplace_names_tensor.resize(AMREX_SPACEDIM);
 
-      int dir_local=0;
-      std::string xdisplace_str="XDISPLACE";
-      xdisplace_str+=im_string;
-      MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
-      set_x_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+       Vector<BCRec> MOFxdisplace_bcs_tensor;
+       MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
 
-      dir_local++;
-      std::string ydisplace_str="YDISPLACE";
-      ydisplace_str+=im_string;
-      MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
-      set_y_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+       int dir_local=0;
+       std::string xdisplace_str="XDISPLACE";
+       xdisplace_str+=im_string;
+       MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
+       set_x_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+
+       dir_local++;
+       std::string ydisplace_str="YDISPLACE";
+       ydisplace_str+=im_string;
+       MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
+       set_y_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
 
 #if (AMREX_SPACEDIM == 3)
-      if (AMREX_SPACEDIM==3) {
-       dir_local++;
-       std::string zdisplace_str="ZDISPLACE";
-       zdisplace_str+=im_string;
-       MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
-       set_z_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
-      }
+       if (AMREX_SPACEDIM==3) {
+        dir_local++;
+        std::string zdisplace_str="ZDISPLACE";
+        zdisplace_str+=im_string;
+        MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
+        set_z_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+       }
 #endif
 
-      StateDescriptor::BndryFunc 
-       MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
-        FORT_GROUP_TENSORFILL);
+       StateDescriptor::BndryFunc 
+        MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
+         FORT_GROUP_TENSORFILL);
 
-      desc_lst.setComponent(Tensor_Type,
-        num_materials_viscoelastic*NUM_TENSOR_TYPE+partid*AMREX_SPACEDIM,
-        MOFxdisplace_names_tensor,
-        MOFxdisplace_bcs_tensor,
-        MOFxdisplace_fill_class_tensor,
-        &pc_interp);
+       desc_lst.setComponent(Tensor_Type,
+         num_materials_viscoelastic*NUM_TENSOR_TYPE+partid*AMREX_SPACEDIM,
+         MOFxdisplace_names_tensor,
+         MOFxdisplace_bcs_tensor,
+         MOFxdisplace_fill_class_tensor,
+         &pc_interp);
 
-     } // partid=0..nparts-1
+      } // partid=0..nparts-1
+
+     } else if (MAC_grid_displacement==1) {
+
+      displacement_enable_spectral=0;
+
+      xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
+      yd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
+#if (AMREX_SPACEDIM == 3)
+      zd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
+#endif
+
+       // ngrow=0
+      desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
+       0,num_materials_viscoelastic,&xd_mac_interp,null_ncomp_particles);
+      desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
+       0,num_materials_viscoelastic,&xd_mac_interp,null_ncomp_particles);
+
+       // ngrow=0
+      desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
+       0,num_materials_viscoelastic,&yd_mac_interp,null_ncomp_particles);
+      desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
+       0,num_materials_viscoelastic,&yd_mac_interp,null_ncomp_particles);
+
+#if (AMREX_SPACEDIM == 3)
+       // ngrow=0
+      desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
+       0,num_materials_viscoelastic,&zd_mac_interp,null_ncomp_particles);
+      desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
+       0,num_materials_viscoelastic,&zd_mac_interp,null_ncomp_particles);
+#endif
+
+      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
+       int im_part=im_elastic_map[partid];
+       if ((im_part<0)||(im_part>=nmat))
+        amrex::Error("im_part invalid");
+
+       std::stringstream im_string_stream(std::stringstream::in |
+        std::stringstream::out);
+       im_string_stream << im_part+1;
+       std::string im_string=im_string_stream.str();
+
+       std::string xd_mac_name="XDMAC";
+       BCRec xd_mac_bcs;
+       xd_mac_name+=im_string;
+       set_x_vel_bc(xd_mac_bcs,phys_bc);
+       desc_lst.setComponent(XDmac_Type,partid,xd_mac_name,xd_mac_bcs,
+         FORT_XDMACFILL,&xd_mac_interp);
+
+       std::string yd_mac_name="YDMAC";
+       BCRec yd_mac_bcs;
+       yd_mac_name+=im_string;
+       set_y_vel_bc(yd_mac_bcs,phys_bc);
+       desc_lst.setComponent(YDmac_Type,partid,yd_mac_name,yd_mac_bcs,
+         FORT_YDMACFILL,&yd_mac_interp);
+
+#if (AMREX_SPACEDIM == 3)
+       std::string zd_mac_name="ZDMAC";
+       BCRec zd_mac_bcs;
+       zd_mac_name+=im_string;
+       set_z_vel_bc(zd_mac_bcs,phys_bc);
+       desc_lst.setComponent(ZDmac_Type,partid,zd_mac_name,zd_mac_bcs,
+         FORT_ZDMACFILL,&zd_mac_interp);
+#endif
+      } // partid = 0..num_materials_viscoelastic-1
+
+     } else
+      amrex::Error("MAC_grid_displacement invalid");
 
     } else
      amrex::Error("num_materials_viscoelastic invalid");
