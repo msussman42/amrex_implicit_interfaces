@@ -27,7 +27,8 @@
 
 ! time vs. pressure, time unit(ms), pressure unit (kPa)
  INTEGER_T, parameter :: N_pressure=500
- REAL_T :: t_pressure(N_pressure), press_nozzle(N_pressure)
+ REAL_T :: t_pressure(N_pressure)
+ REAL_T :: press_nozzle(N_pressure)
 
  contains
 
@@ -73,20 +74,30 @@ INTEGER_T, intent(in) :: N
 REAL_T, intent(in) :: t(N), press(N)
 REAL_T, intent(in) :: t_input
 REAL_T, intent(out) :: p_output
-INTEGER_T              :: m  
+INTEGER_T           :: m  
+
 ! change the unit to ms
 ! delta t=1/5 ms
 ! M delta_t = T = 100ms
 ! M=T/delta t= 100/(1/5)=500
 ! m delta t = t
 ! m=t/delta t = 5 t 
+
+if (t_input.ge.0.0d0) then
+ ! do nothing
+else
+ print *,"t_input cannot be negative"
+ stop
+endif
+
 m=floor(t_input*5.0d0/1000.0d0)
 m=m+1
 if (m.lt.N) then
  p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
  p_output=p_output*1000.0d0 ! change the units to Pa 
 else
-   write(*,*) "press_interp: input time is out of initial set up"
+ print *,"press_interp: input time is out of initial set up"
+ stop
 end if
 end subroutine press_interp
 
@@ -503,6 +514,13 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
  call YAOHONG_INKJET_PRES(xghost,t,LS,PRES,nmat)
+
+ if (1.eq.1) then
+  if (dir.eq.SDIM) then
+   print *,"dir,side,x,y,z,t,PRES ", &
+    dir,side,xghost(1),xghost(2),xghost(SDIM),t,PRES
+  endif
+ endif
 
 else
  print *,"dir or side invalid"
