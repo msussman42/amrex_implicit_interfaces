@@ -639,7 +639,7 @@ void NavierStokes::viscous_boundary_fluxes(
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-   MultiFab* fluxdir;
+   MultiFab* fluxdir=nullptr;
    if (dir==0)
     fluxdir=xflux;
    else if (dir==1)
@@ -884,9 +884,9 @@ void NavierStokes::combine_state_variable(
  int ntsat=nten*(ncomp_per_tsat+1);
 
 
- MultiFab* LEVEL_COMBINE;
+ MultiFab* LEVEL_COMBINE=nullptr;
 
- MultiFab* STATE_INTERFACE;
+ MultiFab* STATE_INTERFACE=nullptr;
 
  if ((combine_flag==0)||  // FVM -> GFM
      (combine_flag==1)) { // GFM -> FVM
@@ -937,7 +937,7 @@ void NavierStokes::combine_state_variable(
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
 
- MultiFab* signed_distance;
+ MultiFab* signed_distance=nullptr;
  if ((combine_flag==0)||  // FVM -> GFM
      (combine_flag==1)) { // GFM -> FVM
 
@@ -986,7 +986,7 @@ void NavierStokes::combine_state_variable(
 
     debug_ngrow(FACE_VAR_MF+dir,0,832);
 
-    MultiFab* face_mf;
+    MultiFab* face_mf=nullptr;
 
     if (combine_idx==-1) {
 
@@ -1088,7 +1088,7 @@ void NavierStokes::combine_state_variable(
 
  } else if (update_flux==0) {
 
-  MultiFab* cell_mf;
+  MultiFab* cell_mf=nullptr;
   if (combine_idx==-1) {
    cell_mf=&S_new;
    if (cell_mf->nComp()!=nstate)

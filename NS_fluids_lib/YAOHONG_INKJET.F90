@@ -75,6 +75,7 @@ REAL_T, intent(in) :: t(N), press(N)
 REAL_T, intent(in) :: t_input
 REAL_T, intent(out) :: p_output
 INTEGER_T           :: m  
+REAL_T :: t_ms
 
 ! change the unit to ms
 ! delta t=1/5 ms
@@ -90,10 +91,12 @@ else
  stop
 endif
 
-m=floor(t_input*5.0d0/1000.0d0)
+t_ms=t_input*1000.0
+
+m=floor(t_ms*5.0d0)
 m=m+1
 if (m.lt.N) then
- p_output=press(m)+(t_input-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
+ p_output=press(m)+(t_ms-t(m))/(t(m+1)-t(m))*(press(m+1)-press(m))
  p_output=p_output*1000.0d0 ! change the units to Pa 
 else
  print *,"press_interp: input time is out of initial set up"
@@ -515,7 +518,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
 
  call YAOHONG_INKJET_PRES(xghost,t,LS,PRES,nmat)
 
- if (1.eq.1) then
+ if (1.eq.0) then
   if (dir.eq.SDIM) then
    print *,"dir,side,x,y,z,t,PRES ", &
     dir,side,xghost(1),xghost(2),xghost(SDIM),t,PRES
