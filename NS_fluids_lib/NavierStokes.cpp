@@ -12046,7 +12046,7 @@ NavierStokes::level_phase_change_convertALL() {
      if (i_phase_change+1<n_phase_change) {
 
       for (int im_count=0;im_count<2;im_count++) {
-       int im_current;
+       int im_current=0;
        if (im_count==0) {
         im_current=im;
        } else if (im_count==1) {
@@ -12470,7 +12470,7 @@ NavierStokes::level_phase_change_convert(
  if (i_phase_change+1<n_phase_change) {
 
   for (int im_count=0;im_count<2;im_count++) {
-   int im_current;
+   int im_current=0;
    if (im_count==0) {
     im_current=im_outer;
    } else if (im_count==1) {
