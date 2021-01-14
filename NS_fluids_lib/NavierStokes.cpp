@@ -3498,6 +3498,7 @@ NavierStokes::read_params ()
 	 if (den_source>max_den)
 	  max_den=den_source;
 
+          // fixed_parm=-1,0, or 1.
 	 if (max_den/min_den<1.0) {
  	  amrex::Error("max_den or min_den bust");
 	 } else if (max_den/min_den<2.0) {
@@ -3558,10 +3559,20 @@ NavierStokes::read_params ()
       if ((distribute_from_target[iten_local]==0)||
           (distribute_from_target[iten_local]==1)) {
        if (fixed_parm[iten_local]==-1) {
-        // user can choose
+
+        if (distribute_mdot_evenly[im_dest-1]==0) {
+         // do nothing
+        } else
+         amrex::Error("no need to have distribute_mdot_evenly==1");
+
        } else if (fixed_parm[iten_local]==
                   distribute_from_target[iten_local]) {
-        // do nothing
+
+        if (distribute_mdot_evenly[im_dest-1]==0) {
+         // do nothing
+        } else
+         amrex::Error("no need to have distribute_mdot_evenly==1");
+
        } else if (distribute_from_target[iten_local]==0) {
 
         if (distribute_mdot_evenly[im_dest-1]==1) {
