@@ -26,6 +26,7 @@ module DROP_IN_SHEAR_module
 implicit none                   
 
 REAL_T :: DEF_VAPOR_GAMMA
+REAL_T :: LOCAL_R_Palmore_Desjardins
 
 contains
 
@@ -34,6 +35,7 @@ subroutine INIT_DROP_IN_SHEAR_MODULE()
 IMPLICIT NONE
 
   DEF_VAPOR_GAMMA =  1.666666667D0
+  LOCAL_R_Palmore_Desjardins=8.31446261815324D+7
 
 return
 end subroutine INIT_DROP_IN_SHEAR_MODULE
@@ -665,6 +667,59 @@ endif
 return
 end subroutine DROP_IN_SHEAR_nucleation
 
+subroutine drop_analytical_solution(time,x,D,T,Y,VEL)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: time
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(out) :: D
+REAL_T, intent(out) :: T
+REAL_T, intent(out) :: Y
+REAL_T, intent(out) :: VEL(SDIM)
+REAL_T :: rr
+REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
+REAL_T :: WV,WA,R
+
+if (SDIM.eq.2) then
+ rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
+else if (SDIM.eq.3) then
+ rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
+else
+ print *,"dimension bust"
+ stop
+endif
+
+den_G = fort_denconst(2)
+
+if ((den_G.lt.fort_denconst(1)).and. &
+    (den_G.gt.zero)) then
+ ! do nothing
+else
+ print *,"den_G (fort_denconst(2)) invalid"
+ stop
+endif
+if (num_species_var.eq.1) then
+ ! do nothing
+else
+ print *,"num_species_var invalid"
+ stop
+endif
+C_pG = fort_stiffCP(2)
+k_G = fort_heatviscconst(2)
+lambda=k_G/(den_G*C_pG)
+T_inf = fort_tempconst(2)
+T_sat = fort_saturation_temp(1)
+L_V = fort_latent_heat(1)
+D_G = fort_speciesviscconst(2)
+Y_inf=fort_speciesconst(2)
+WV=fort_species_molar_mass(1)  !num_species components
+WA=fort_molar_mass(2)
+R=LOCAL_R_Palmore_Desjardins
+
+
+return
+end subroutine drop_analytical_solution
 
 ! This routine is called from FORT_SUMMASS
 ! set ns.ncomp_sum_int_user=
@@ -672,6 +727,7 @@ subroutine DROP_IN_SHEAR_SUMINT(GRID_DATA_IN,increment_out,nsum)
 use probcommon_module_types
 use probcommon_module
 use global_utility_module
+IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nsum
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
