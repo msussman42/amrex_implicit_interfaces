@@ -885,6 +885,7 @@ end subroutine SIMPLE_PALMORE_DESJARDINS_HEATSOURCE
 subroutine SIMPLE_PALMORE_DESJARDINS_SUMINT(GRID_DATA_IN,increment_out,nsum)
 use probcommon_module_types
 use probcommon_module
+IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nsum
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
