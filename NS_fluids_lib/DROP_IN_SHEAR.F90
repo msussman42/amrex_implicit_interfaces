@@ -679,7 +679,7 @@ REAL_T, intent(out) :: Y
 REAL_T, intent(out) :: VEL(SDIM)
 REAL_T :: rr
 REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
-REAL_T :: WV,WA,R
+REAL_T :: WV,WA,R,Le
 
 if (SDIM.eq.2) then
  rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
@@ -717,6 +717,7 @@ WV=fort_species_molar_mass(1)  !num_species components
 WA=fort_molar_mass(2)
 R=LOCAL_R_Palmore_Desjardins
 
+Le=D_G*den_G*C_pG/k_G
 
 return
 end subroutine drop_analytical_solution
