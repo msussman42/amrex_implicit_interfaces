@@ -104,14 +104,30 @@ D_G = fort_speciesviscconst(2)
 Y_inf=fort_speciesconst(2)
 WV=fort_species_molar_mass(1)  !num_species components
 WA=fort_molar_mass(2)
-
+! T_inf C_pG / L = 300.5 K * 1e+7 (erg/(g K)) / ((2.26e+10) erg/g)
+!   = 0.133
+! e.g. Le=0.1 cm^2/s * 0.001 g/cm^3 * 4.1855e+7 erg/(g K) / 
+!         (0.024e+5 g cm/(s^3 K)) = 1.74
+! erg=g cm^2/s^2
+! cm^2/s  * g/cm^3  * g cm^2 / s^2 * (1/(g K)) * (s^3 K)/(g cm) = dimensionless
+!
 Le=D_G*den_G*C_pG/k_G
 
 a=EVAP_BISECTION_TOL
 b=T_sat*(one-EVAP_BISECTION_TOL)
 call f_mdot(a,f_a)
 call f_mdot(b,f_b)
-if (f_a*f_b.lt.zero) then
+if (f_b.gt.zero) then
+ ! do nothing
+else
+ print *,"f_b invalid"
+ stop
+endif
+do while ((f_a.gt.zero).and.(a.lt.b))
+ a=a+0.001*T_sat
+ call f_mdot(a,f_a)
+enddo
+if (f_a*f_b.le.zero) then
  do iter=1,100
   c=0.5d0*(a+b)
   call f_mdot(c,f_c)
@@ -319,6 +335,7 @@ REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
 REAL_T :: vert_lo,vert_hi
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -373,6 +390,10 @@ if (probtype.eq.424) then
 
  if (axis_dir.eq.0) then ! drop in shear
   VEL(1)=-vinletgas+two*vinletgas*(x(SDIM)-vert_lo)/(vert_hi-vert_lo)
+  if (vinletgas.eq.zero) then
+   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
+      Y_analytical,VEL,LS_analytical)
+  endif
  else if (axis_dir.eq.1) then ! liquid layer in shear
   if (x(SDIM).le.radblob) then
    VEL(1)=zero ! liquid (periodic boundary conditions xlo and xhi)
@@ -436,6 +457,8 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+REAL_T :: VEL(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -468,6 +491,23 @@ if (probtype.eq.424) then
   enddo
 
  enddo ! im=1..num_materials
+
+ if (axis_dir.eq.0) then
+  if (vinletgas.eq.zero) then
+   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
+      Y_analytical,VEL,LS_analytical)
+   do im=1,num_materials
+    ibase=(im-1)*num_state_material
+    STATE(ibase+2)=T_analytical
+    STATE(ibase+3)=Y_analytical
+   enddo
+  endif
+ else if (axis_dir.eq.1) then
+  ! do nothing
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
 else
  print *,"num_materials,num_state_material, or probtype invalid"
  stop
@@ -775,17 +815,18 @@ endif
 return
 end subroutine DROP_IN_SHEAR_nucleation
 
-subroutine drop_analytical_solution(time,x,D,T,Y,VEL)
+subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL,LS_VAP)
 use probcommon_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: time
 REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(out) :: D
+REAL_T, intent(out) :: D_gamma
 REAL_T, intent(out) :: T
 REAL_T, intent(out) :: Y
+REAL_T, intent(out) :: LS_VAP
 REAL_T, intent(out) :: VEL(SDIM)
-REAL_T :: rr,mdot,D_gamma
+REAL_T :: rr,mdot,vel_r
 
 if (SDIM.eq.2) then
  rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
@@ -819,6 +860,40 @@ else
 endif
 mdot=Pi*D_gamma*den_G*D_G*Sh*B_M
 
+LS_VAP=rr-half*D_gamma
+
+if (LS_VAP.le.zero) then
+ VEL(1)=zero
+ VEL(2)=zero
+ VEL(SDIM)=zero
+ Y=Y_Gamma
+ T=T_Gamma
+else if (LS_VAP.ge.zero) then
+ vel_r = mdot/(4.0*Pi*rr*rr*den_G)
+ VEL(1)=vel_r*(x(1)-xblob)/rr
+ VEL(2)=vel_r*(x(2)-yblob)/rr
+ if (SDIM.eq.3) then
+  VEL(SDIM)=vel_r*(x(SDIM)-zblob)/rr
+ endif
+ Y=one+(Y_inf-one)*exp(-mdot/(four*Pi*den_G*D_G*rr))
+ if ((Y.ge.zero).and.(Y.lt.one)) then
+  ! do nothing
+ else
+  print *,"Y invalid"
+  stop
+ endif
+ T=T_Gamma+L_V/C_pG+(T_inf-T_Gamma-L_V/C_pG)* &
+         exp(-mdot*C_pG/(four*Pi*k_G*rr))
+ if (T.gt.zero) then
+  ! do nothing
+ else
+  print *,"T invalid"
+  stop
+ endif
+else
+ print *,"rr invalid"
+ stop
+endif
 
 return
 end subroutine drop_analytical_solution
