@@ -27,15 +27,77 @@ implicit none
 
 REAL_T :: DEF_VAPOR_GAMMA
 REAL_T :: LOCAL_R_Palmore_Desjardins
+REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
+REAL_T :: WV,WA,Le
 
 contains
 
-  ! do any initial preparation needed
-subroutine INIT_DROP_IN_SHEAR_MODULE()
+subroutine f_mdot(T_gamma_parm,f_out)
+use global_utility_module
 IMPLICIT NONE
 
-  DEF_VAPOR_GAMMA =  1.666666667D0
-  LOCAL_R_Palmore_Desjardins=8.31446261815324D+7
+REAL_T, intent(in) :: T_gamma_parm
+REAL_T, intent(out) :: f_out
+REAL_T :: X_gamma,Y_gamma
+
+call X_from_Tgamma(X_gamma,T_gamma_parm,T_sat,L_V, &
+ LOCAL_R_Palmore_Desjardins,WV)
+call massfrac_from_volfrac(X_gamma,Y_gamma,WA,WV)
+
+if ((Y_gamma.ge.zero).and.(Y_gamma.lt.one)) then
+ if (L_V.gt.zero) then
+  if (C_pG.gt.zero) then
+   if ((Y_inf.ge.zero).and.(Y_inf.lt.one)) then
+    if ((T_inf.gt.zero).and.(T_inf.lt.T_sat)) then
+     f_out=((Y_inf-one)/(Y_gamma-one))**Le - one + &
+      (T_gamma_parm-T_inf)*C_pG/L_V
+    else
+     print *,"T_inf invalid"
+     stop
+    endif
+   else
+    print *,"Y_inf invalid"
+    stop
+   endif
+  else
+   print *,"C_pG invalid"
+   stop
+  endif
+ else
+  print *,"L_V invalid"
+  stop
+ endif
+else
+ print *,"Y_gamma invalid"
+ stop
+endif
+
+return
+end subroutine f_mdot
+
+  ! do any initial preparation needed
+subroutine INIT_DROP_IN_SHEAR_MODULE()
+use probcommon_module
+IMPLICIT NONE
+
+DEF_VAPOR_GAMMA =  1.666666667D0
+
+! ergs/(mol kelvin)  (same as default for NavierStokes::R_Palmore_Desjardins)
+LOCAL_R_Palmore_Desjardins=8.31446261815324D+7
+
+den_G = fort_denconst(2)
+C_pG = fort_stiffCP(2)
+k_G = fort_heatviscconst(2)
+lambda=k_G/(den_G*C_pG)
+T_inf = fort_tempconst(2)
+T_sat = fort_saturation_temp(1)
+L_V = fort_latent_heat(1)
+D_G = fort_speciesviscconst(2)
+Y_inf=fort_speciesconst(2)
+WV=fort_species_molar_mass(1)  !num_species components
+WA=fort_molar_mass(2)
+
+Le=D_G*den_G*C_pG/k_G
 
 return
 end subroutine INIT_DROP_IN_SHEAR_MODULE
@@ -678,8 +740,6 @@ REAL_T, intent(out) :: T
 REAL_T, intent(out) :: Y
 REAL_T, intent(out) :: VEL(SDIM)
 REAL_T :: rr
-REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
-REAL_T :: WV,WA,R,Le
 
 if (SDIM.eq.2) then
  rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
@@ -689,8 +749,6 @@ else
  print *,"dimension bust"
  stop
 endif
-
-den_G = fort_denconst(2)
 
 if ((den_G.lt.fort_denconst(1)).and. &
     (den_G.gt.zero)) then
@@ -705,19 +763,6 @@ else
  print *,"num_species_var invalid"
  stop
 endif
-C_pG = fort_stiffCP(2)
-k_G = fort_heatviscconst(2)
-lambda=k_G/(den_G*C_pG)
-T_inf = fort_tempconst(2)
-T_sat = fort_saturation_temp(1)
-L_V = fort_latent_heat(1)
-D_G = fort_speciesviscconst(2)
-Y_inf=fort_speciesconst(2)
-WV=fort_species_molar_mass(1)  !num_species components
-WA=fort_molar_mass(2)
-R=LOCAL_R_Palmore_Desjardins
-
-Le=D_G*den_G*C_pG/k_G
 
 return
 end subroutine drop_analytical_solution
