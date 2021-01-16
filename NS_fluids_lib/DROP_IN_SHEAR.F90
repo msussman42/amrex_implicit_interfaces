@@ -28,7 +28,10 @@ implicit none
 REAL_T :: DEF_VAPOR_GAMMA
 REAL_T :: LOCAL_R_Palmore_Desjardins
 REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
+REAL_T :: den_L
 REAL_T :: WV,WA,Le
+REAL_T :: D_not,B_M,Sh
+REAL_T :: T_gamma,X_gamma,Y_gamma
 
 contains
 
@@ -38,18 +41,18 @@ IMPLICIT NONE
 
 REAL_T, intent(in) :: T_gamma_parm
 REAL_T, intent(out) :: f_out
-REAL_T :: X_gamma,Y_gamma
+REAL_T :: X_gamma_loc,Y_gamma_loc
 
-call X_from_Tgamma(X_gamma,T_gamma_parm,T_sat,L_V, &
+call X_from_Tgamma(X_gamma_loc,T_gamma_parm,T_sat,L_V, &
  LOCAL_R_Palmore_Desjardins,WV)
-call massfrac_from_volfrac(X_gamma,Y_gamma,WA,WV)
+call massfrac_from_volfrac(X_gamma_loc,Y_gamma_loc,WA,WV)
 
-if ((Y_gamma.ge.zero).and.(Y_gamma.lt.one)) then
+if ((Y_gamma_loc.ge.zero).and.(Y_gamma_loc.lt.one)) then
  if (L_V.gt.zero) then
   if (C_pG.gt.zero) then
    if ((Y_inf.ge.zero).and.(Y_inf.lt.one)) then
     if ((T_inf.gt.zero).and.(T_inf.lt.T_sat)) then
-     f_out=((Y_inf-one)/(Y_gamma-one))**Le - one + &
+     f_out=((Y_inf-one)/(Y_gamma_loc-one))**Le - one - &
       (T_gamma_parm-T_inf)*C_pG/L_V
     else
      print *,"T_inf invalid"
@@ -78,13 +81,18 @@ end subroutine f_mdot
   ! do any initial preparation needed
 subroutine INIT_DROP_IN_SHEAR_MODULE()
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
+
+REAL_T :: a,b,c,f_a,f_b,f_c
+INTEGER_T :: iter
 
 DEF_VAPOR_GAMMA =  1.666666667D0
 
 ! ergs/(mol kelvin)  (same as default for NavierStokes::R_Palmore_Desjardins)
 LOCAL_R_Palmore_Desjardins=8.31446261815324D+7
 
+den_L = fort_denconst(1)
 den_G = fort_denconst(2)
 C_pG = fort_stiffCP(2)
 k_G = fort_heatviscconst(2)
@@ -98,6 +106,44 @@ WV=fort_species_molar_mass(1)  !num_species components
 WA=fort_molar_mass(2)
 
 Le=D_G*den_G*C_pG/k_G
+
+a=EVAP_BISECTION_TOL
+b=T_sat*(one-EVAP_BISECTION_TOL)
+call f_mdot(a,f_a)
+call f_mdot(b,f_b)
+if (f_a*f_b.lt.zero) then
+ do iter=1,100
+  c=0.5d0*(a+b)
+  call f_mdot(c,f_c)
+  if (f_a*f_c.le.zero) then
+   b=c
+   f_b=f_c
+  else if (f_b*f_c.le.zero) then
+   a=c;
+   f_a=f_c
+  else
+   print *,"f_c became corrupt"
+   stop
+  endif
+ enddo ! iter=1..100
+else
+ print *,"f_a and f_b must have different signs"
+ stop
+endif
+
+T_gamma=c  
+call X_from_Tgamma(X_gamma,T_gamma,T_sat,L_V, &
+ LOCAL_R_Palmore_Desjardins,WV)
+call massfrac_from_volfrac(X_gamma,Y_gamma,WA,WV)
+
+B_M=(Y_gamma-Y_inf)/(one-Y_gamma)
+D_not=two*radblob
+if (B_M.gt.zero) then
+ Sh=two*log(one+B_M)/B_M
+else
+ print *,"B_M must be positive"
+ stop
+endif
 
 return
 end subroutine INIT_DROP_IN_SHEAR_MODULE
@@ -739,7 +785,7 @@ REAL_T, intent(out) :: D
 REAL_T, intent(out) :: T
 REAL_T, intent(out) :: Y
 REAL_T, intent(out) :: VEL(SDIM)
-REAL_T :: rr
+REAL_T :: rr,mdot,D_gamma
 
 if (SDIM.eq.2) then
  rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
@@ -763,6 +809,16 @@ else
  print *,"num_species_var invalid"
  stop
 endif
+
+D_Gamma=D_not**2-four*den_G*D_G*log(one+B_M)*t/den_L
+if (D_Gamma.gt.D_not**2) then
+ D_Gamma=sqrt(D_gamma)
+else
+ print *,"D_gamma invalid"
+ stop
+endif
+mdot=Pi*D_gamma*den_G*D_G*Sh*B_M
+
 
 return
 end subroutine drop_analytical_solution
