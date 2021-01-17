@@ -912,12 +912,12 @@ INTEGER_T, intent(in) :: i,j,k,cell_flag
 INTEGER_T :: nmat,nstate,nstate_test
 REAL_T :: rr,r_exact,tcrit
 REAL_T :: xcrit(SDIM)
-INTEGER_T :: use_T
 INTEGER_T :: dir
 INTEGER_T :: im
 INTEGER_T :: ibase
 REAL_T T_exact,Y_exact,LS_VAP_exact
 REAL_T VEL_exact(SDIM)
+REAL_T :: D_gamma
 
 nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
@@ -1020,6 +1020,15 @@ INTEGER_T, intent(in) :: nsum
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
 REAL_T, intent(out) :: increment_out(nsum)
 INTEGER_T :: i,j,k,dir
+REAL_T :: xlocal(SDIM)
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_VAP_analytical
+REAL_T :: vel_analytical(SDIM)
+REAL_T :: vel_compute(SDIM)
+REAL_T :: LS_compute
+REAL_T :: TEMPERATURE_compute
+REAL_T :: Y_compute
+INTEGER_T :: im_crit,tcomp
+REAL_T :: interface_thick_rad
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
@@ -1029,8 +1038,59 @@ if (nsum.gt.0) then
  do dir=1,nsum
   increment_out(dir)=zero
  enddo
- print *,"nothing here yet"
- stop
+ if (axis_dir.eq.0) then
+  if (vinletgas.eq.zero) then
+   if (nsum.eq.3+SDIM) then
+    do dir=1,SDIM
+     xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
+    enddo
+    call drop_analytical_solution(GRID_DATA_IN%time, &
+     xlocal,D_gamma,T_analytical,Y_analytical, &
+     vel_analytical,LS_VAP_analytical)
+    LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),2)
+    im_crit=2
+    tcomp=(im_crit-1)*num_state_material+2
+    TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
+    Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
+    do dir=1,SDIM
+     vel_compute(dir)=GRID_DATA_IN%vel(D_DECL(i,j,k),dir)
+    enddo
+    interface_thick_rad=two*GRID_DATA_IN%dx(1)
+ 
+    if (abs(LS_VAP_analytical).lt.interface_thick_rad) then
+     increment_out(1)= &
+       GRID_DATA_IN%volgrid*abs(LS_compute-LS_VAP_analytical)/ &
+       (two*interface_thick_rad)
+    else
+     increment_out(1)=zero
+    endif
+    if (LS_VAP_analytical.gt.zero) then
+     increment_out(2)=GRID_DATA_IN%volgrid* &
+        abs(TEMPERATURE_compute-T_analytical)
+     increment_out(3)=GRID_DATA_IN%volgrid* &
+          abs(Y_compute-Y_analytical)
+     do dir=1,SDIM
+      increment_out(3+dir)=GRID_DATA_IN%volgrid* &
+          abs(vel_compute(dir)-vel_analytical(dir))
+     enddo
+    else if (LS_VAP_analytical.le.zero) then
+     ! do nothing
+    else
+     print *,"LS_VAP_analytical invalid"
+     stop
+    endif
+   else
+    print *,"nsum invalid"
+    stop
+   endif
+  else 
+   print *,"expecting vinletgas==0.0"
+   stop
+  endif
+ else
+  print *,"expecting axis_dir==0"
+  stop
+ endif
 else if (nsum.eq.0) then
  ! do nothing
 else
