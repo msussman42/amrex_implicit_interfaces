@@ -446,6 +446,13 @@ Vector<Real> NavierStokes::mdot_sum;
 Vector<Real> NavierStokes::mdot_sum2;
 Vector<Real> NavierStokes::mdot_lost;
 
+Vector<Real> NavierStokes::mdotplus_complement;
+Vector<Real> NavierStokes::mdotminus_complement;
+Vector<Real> NavierStokes::mdotcount_complement;
+Vector<Real> NavierStokes::mdot_sum_complement;
+Vector<Real> NavierStokes::mdot_sum2_complement;
+Vector<Real> NavierStokes::mdot_lost_complement;
+
 Vector<Real> NavierStokes::curv_min;
 Vector<Real> NavierStokes::curv_max;
 
@@ -12542,6 +12549,13 @@ NavierStokes::phase_change_redistributeALL() {
  mdot_sum.resize(thread_class::nthreads);
  mdot_sum2.resize(thread_class::nthreads);
 
+ mdotplus_complement.resize(thread_class::nthreads);
+ mdotminus_complement.resize(thread_class::nthreads);
+ mdotcount_complement.resize(thread_class::nthreads);
+ mdot_lost_complement.resize(thread_class::nthreads);
+ mdot_sum_complement.resize(thread_class::nthreads);
+ mdot_sum2_complement.resize(thread_class::nthreads);
+
  for (int im=1;im<=nmat;im++) {
   for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
    for (int ireverse=0;ireverse<=1;ireverse++) {
@@ -12592,7 +12606,11 @@ NavierStokes::phase_change_redistributeALL() {
      allocate_array(2*ngrow_expansion,1,-1,donorflag_MF);
      setVal_array(2*ngrow_expansion,1,0.0,donorflag_MF);
 
-     for (int isweep_redistribute=0;isweep_redistribute<3;
+      // isweep==0: TAGEXPANSION
+      // isweep==1: DISTRIBUTEEXPANSION
+      // isweep==2: CLEAREXPANSION
+      // isweep==3: INITJUMPTERM
+     for (int isweep_redistribute=0;isweep_redistribute<=2;
 	  isweep_redistribute++) {
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
