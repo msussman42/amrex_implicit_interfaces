@@ -1481,6 +1481,13 @@ protected:
     static Vector<Real> mdot_sum2;
     static Vector<Real> mdot_lost;
 
+    static Vector<Real> mdotplus_complement;
+    static Vector<Real> mdotminus_complement;
+    static Vector<Real> mdotcount_complement;
+    static Vector<Real> mdot_sum_complement;
+    static Vector<Real> mdot_sum2_complement;
+    static Vector<Real> mdot_lost_complement;
+
     static Vector<Real> curv_min;
     static Vector<Real> curv_max;
 
