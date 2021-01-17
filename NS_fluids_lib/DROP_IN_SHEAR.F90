@@ -898,6 +898,116 @@ endif
 return
 end subroutine drop_analytical_solution
 
+
+subroutine DROP_IN_SHEAR_ASSIMILATE( &
+     assimilate_in,assimilate_out, &
+     i,j,k,cell_flag)
+use probcommon_module
+IMPLICIT NONE
+
+type(assimilate_parm_type), intent(in) :: assimilate_in
+type(assimilate_out_parm_type), intent(inout) :: assimilate_out
+INTEGER_T, intent(in) :: i,j,k,cell_flag
+
+INTEGER_T :: nmat,nstate,nstate_test
+REAL_T :: rr,r_exact,tcrit
+REAL_T :: xcrit(SDIM)
+INTEGER_T :: use_T
+INTEGER_T :: dir
+INTEGER_T :: im
+INTEGER_T :: ibase
+REAL_T T_exact,Y_exact,LS_VAP_exact
+REAL_T VEL_exact(SDIM)
+
+nmat=assimilate_in%nmat
+nstate=assimilate_in%nstate
+
+nstate_test=(SDIM+1)+nmat*(num_state_material+ngeom_raw)+1
+if (nstate.eq.nstate_test) then
+ ! do nothing
+else
+ print *,"nstate invalid"
+ print *,"nstate=",nstate
+ print *,"nstate_test=",nstate_test
+ stop
+endif
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if ((num_materials.eq.2).and. &
+    (num_state_material.eq.3).and. & ! density, temperature, species
+    (probtype.eq.424)) then
+ if (axis_dir.eq.0) then
+  if (vinletgas.eq.zero) then
+   do dir=1,SDIM
+    xcrit(dir)=assimilate_in%xsten(0,dir)
+   enddo
+   if (SDIM.eq.2) then
+    rr=sqrt((xcrit(1)-xblob)**2+(xcrit(2)-yblob)**2)
+   else if (SDIM.eq.3) then
+    rr=sqrt((xcrit(1)-xblob)**2+(xcrit(2)-yblob)**2+(xcrit(SDIM)-zblob)**2)
+   else
+    print *,"dimension bust"
+    stop
+   endif
+ 
+   r_exact=(probhix-(xblob+radblob))/5.0d0
+   tcrit=assimilate_in%time  ! cur_time_slab
+
+   if (rr.ge.probhix-xblob-r_exact) then
+    call drop_analytical_solution(tcrit,xcrit,D_gamma,T_exact,Y_exact, &
+     VEL_exact,LS_VAP_exact)
+    if (cell_flag.eq.0) then ! MAC GRID X
+     assimilate_out%macx(D_DECL(i,j,k))=VEL_exact(1)
+    else if (cell_flag.eq.1) then ! MAC GRID Y
+     assimilate_out%macy(D_DECL(i,j,k))=VEL_exact(2)
+    else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
+     assimilate_out%macz(D_DECL(i,j,k))=VEL_exact(SDIM)
+    else if (cell_flag.eq.-1) then
+     do dir=1,SDIM
+      assimilate_out%state(D_DECL(i,j,k),dir)=VEL_exact(dir)
+     enddo
+
+     do im=1,num_materials
+      ibase=SDIM+1+(im-1)*num_state_material
+      assimilate_out%state(D_DECL(i,j,k),ibase+2)=T_exact
+      assimilate_out%state(D_DECL(i,j,k),ibase+3)=Y_exact
+     enddo
+    else 
+     print *,"cell_flag invalid"
+     stop
+    endif
+   else if (rr.le.probhix-xblob-r_exact) then
+    ! do nothing
+   else
+    print *,"rr bust"
+    stop
+   endif
+  else if (vinletgas.ne.zero) then
+   ! do nothing
+  else
+   print *,"vinletgas bust"
+   stop
+  endif
+ else if (axis_dir.eq.1) then
+  ! do nothing
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+ 
+return
+end subroutine DROP_IN_SHEAR_ASSIMILATE
+
+
 ! This routine is called from FORT_SUMMASS
 ! set ns.ncomp_sum_int_user=
 subroutine DROP_IN_SHEAR_SUMINT(GRID_DATA_IN,increment_out,nsum)
