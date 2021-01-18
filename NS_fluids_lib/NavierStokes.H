@@ -276,7 +276,10 @@ namespace amrex{
 
 #define XDISPLACE_MF (GMRES_BUFFER_W_MF+1)
 #define XDISP_FLUX_MF (XDISPLACE_MF+1)
-#define NEXT_MF (XDISP_FLUX_MF+3)
+#define JUMP_STRENGTH_COMPLEMENT_MF (XDISP_FLUX_MF+3)
+#define MDOT_COMPLEMENT_MF (JUMP_STRENGTH_COMPLEMENT_MF+1)
+#define donorflag_complement_MF (MDOT_COMPLEMENT_MF+1)
+#define NEXT_MF (donorflag_complement_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
@@ -1804,7 +1807,11 @@ protected:
      // 1 - distribute to the source material
      //     V=u_dst dot n + mdot/rho_dst
     static Vector<int> distribute_from_target;
-    static Vector<int> distribute_mdot_evenly;
+
+     // 0 - mdot concentrated at full cells near interface on 1-side
+     // 1 - mdot distributed evenly to all full cells
+     // 2 - -mdot distributed evenly to all full cells on opposite side.
+    static Vector<int> distribute_mdot_evenly; // 1..nmat
     static int is_phasechange;
     static int normal_probe_size;  // should always be 1
     static int ngrow_distance;  // should always be 4
