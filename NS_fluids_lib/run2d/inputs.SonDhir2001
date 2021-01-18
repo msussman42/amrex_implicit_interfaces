@@ -79,7 +79,7 @@ ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 ns.distribute_from_target=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 # 1..num_materials
 # mdot uniformly distributed in the vapor
-ns.distribute_mdot_evenly=0 1 0 0
+ns.distribute_mdot_evenly=1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
 ns.EILE_flag=-1
 #   continuous_mof=2 CMOF everywhere 

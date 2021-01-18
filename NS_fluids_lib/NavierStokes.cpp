@@ -868,15 +868,17 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 Vector<int> NavierStokes::distribute_from_target; // 1..2*nten
 
 // 0 - mdot concentrated at full cells near interface on 1-side
-// 1 - mdot distributed evenly to all full cells on vapor side
-// 2 - -mdot distributed evenly to all full cells on vapor side.
-//     (or liquid side if melting/freezing)
+// 1 - mdot distributed evenly to all full cells on the appropriate side
+Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*nten
+
 //  For freezing in which liquid volume is fixed, the liquid density
 //  must increase.  The mass fraction of "heavy liquid" increases.
 //  For melting in which liquid volume is fixed, the liquid density
 //  must decrease.  The mass fraction of "light liquid" increases.
-//
-Vector<int> NavierStokes::distribute_mdot_evenly; // 1..nmat
+// 0 - sum mdot <>0   
+// 1 - distribute sum -mdot to the source
+// -1 - distribute sum -mdot to the dest
+Vector<int> NavierStokes::constant_volume_mdot; // 1..2*nten
 
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
@@ -3092,7 +3094,8 @@ NavierStokes::read_params ()
     Tanasawa_or_Schrage_or_Kassemi.resize(2*nten);
     mass_fraction_id.resize(2*nten);
     distribute_from_target.resize(2*nten);
-    distribute_mdot_evenly.resize(nmat);
+    distribute_mdot_evenly.resize(2*nten);
+    constant_volume_mdot.resize(2*nten);
     tension.resize(nten);
     tension_slope.resize(nten);
     tension_T0.resize(nten);
@@ -3164,10 +3167,11 @@ NavierStokes::read_params ()
      mass_fraction_id[i+nten]=0;
      distribute_from_target[i]=0;
      distribute_from_target[i+nten]=0;
-    } // i=0..nten-1
-
-    for (int i=0;i<nmat;i++)
      distribute_mdot_evenly[i]=0;
+     distribute_mdot_evenly[i+nten]=0;
+     constant_volume_mdot[i]=0;
+     constant_volume_mdot[i+nten]=0;
+    } // i=0..nten-1
 
     density_floor.resize(nmat);
     density_floor_expansion.resize(nmat);
@@ -3543,7 +3547,8 @@ NavierStokes::read_params ()
     } // iten
 
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
-    pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,nmat);
+    pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*nten);
+    pp.queryarr("constant_volume_mdot",constant_volume_mdot,0,2*nten);
 
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -3573,82 +3578,51 @@ NavierStokes::read_params ()
       } else
        amrex::Error("freezing_model invalid");
 
-      if ((distribute_from_target[iten_local]==0)||
-          (distribute_from_target[iten_local]==1)) {
+      if (latent_heat[iten_local]==0.0) {
 
-       if (fixed_parm[iten_local]==-1) {
+       if (distribute_from_target[iten_local]==0) {
+        // do nothing
+       } else
+        amrex::Error("distribute_from_target[iten_local] invalid");
+       if (distribute_mdot_evenly[iten_local]==0) {
+        // do nothing
+       } else
+        amrex::Error("distribute_mdot_evenly[iten_local] invalid");
+       if (constant_volume_mdot[iten_local]==0) {
+        // do nothing
+       } else
+        amrex::Error("constant_volume_mdot[iten_local] invalid");
 
-	if (distribute_from_target[iten_local]==0) {
-         if ((distribute_mdot_evenly[im_dest-1]==0)||
-             (distribute_mdot_evenly[im_dest-1]==2)) {
+      } else if (latent_heat[iten_local]!=0.0) {
+
+       if ((distribute_from_target[iten_local]==0)||
+           (distribute_from_target[iten_local]==1)) {
+
+        if (fixed_parm[iten_local]==-1) {
+
+         if ((distribute_mdot_evenly[iten_local]==0)||
+             (distribute_mdot_evenly[iten_local]==1)) {
           // do nothing
          } else
           amrex::Error("distribute_mdot_evenly invalid");
-	} else if (distribute_from_target[iten_local]==1) {
-         if ((distribute_mdot_evenly[im_source-1]==0)||
-             (distribute_mdot_evenly[im_source-1]==2)) {
+
+        } else if (fixed_parm[iten_local]==
+                   distribute_from_target[iten_local]) {
+
+         if ((distribute_mdot_evenly[iten_local]==0)||
+             (distribute_mdot_evenly[iten_local]==1)) {
           // do nothing
          } else
           amrex::Error("distribute_mdot_evenly invalid");
+
 	} else
-         amrex::Error("distribute_from_target invalid");
+  	 amrex::Error("fixed_parm invalid");
 
-       } else if (fixed_parm[iten_local]==
-                  distribute_from_target[iten_local]) {
-
-	if (distribute_from_target[iten_local]==0) {
-         if ((distribute_mdot_evenly[im_dest-1]==0)||
-             (distribute_mdot_evenly[im_dest-1]==2)) {
-          // do nothing
-         } else
-          amrex::Error("distribute_mdot_evenly invalid");
-	} else if (distribute_from_target[iten_local]==1) {
-         if ((distribute_mdot_evenly[im_source-1]==0)||
-             (distribute_mdot_evenly[im_source-1]==2)) {
-          // do nothing
-         } else
-          amrex::Error("distribute_mdot_evenly invalid");
-	} else
-         amrex::Error("distribute_from_target invalid");
-
-       } else if (distribute_from_target[iten_local]==0) {
-
-        if (distribute_mdot_evenly[im_dest-1]==1) {
-         // do nothing
-        } else if (distribute_mdot_evenly[im_dest-1]==0) {
-         std::cout << "iten_local=" << iten_local << 
-          " expected value=" << fixed_parm[iten_local] << 
-          " entered value=" << distribute_from_target[iten_local] << '\n';
-         std::cout << "im_source,im_dest=" << im_source << ' ' <<
-	   im_dest <<
-           " distribute_mdot_evenly[im_dest-1]=" << 
-	   distribute_mdot_evenly[im_dest-1] << '\n';
-         amrex::Warning("distribute_from_target[iten_local] not optimal");
-	} else
-  	 amrex::Error("distribute_mdot_evenly invalid");
-
-       } else if (distribute_from_target[iten_local]==1) {
-
-        if (distribute_mdot_evenly[im_source-1]==1) {
-         // do nothing
-        } else if (distribute_mdot_evenly[im_source-1]==0) {
-         std::cout << "iten_local=" << iten_local << 
-          " expected value=" << fixed_parm[iten_local] << 
-          " entered value=" << distribute_from_target[iten_local] << '\n';
-         std::cout << "im_source,im_dest=" << im_source << ' ' <<
-	   im_dest <<
-           " distribute_mdot_evenly[im_source-1]=" << 
-	   distribute_mdot_evenly[im_source-1] << '\n';
-         amrex::Error("distribute_from_target[iten_local] invalid");
-	} else
-  	 amrex::Error("distribute_mdot_evenly invalid");
-
-       } else {
-	amrex::Error("distribute_from_target[iten_local] invalid");
-       } 
+       } else
+        amrex::Error("distribute_from_target invalid");
 
       } else
-       amrex::Error("distribute_from_target invalid");
+       amrex::Error("latent_heat invalid");
 
      } // ireverse
     } // iten
@@ -3712,11 +3686,19 @@ NavierStokes::read_params ()
       amrex::Error("mass_fraction_id invalid in read_params (i)");
      if (mass_fraction_id[i+nten]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i+nten)");
-    }  // i=0..nten-1
-
-    for (int i=0;i<nmat;i++) 
-     if ((distribute_mdot_evenly[i]<0)||(distribute_mdot_evenly[i]>1))
+     if ((distribute_mdot_evenly[i]<0)||
+         (distribute_mdot_evenly[i]>1))
       amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
+     if ((distribute_mdot_evenly[i+nten]<0)||
+         (distribute_mdot_evenly[i+nten]>1))
+      amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
+     if ((constant_volume_mdot[i]<-1)||
+         (constant_volume_mdot[i]>1))
+      amrex::Error("constant_volume_mdot invalid in read_params (i)");
+     if ((constant_volume_mdot[i+nten]<-1)||
+         (constant_volume_mdot[i+nten]>1))
+      amrex::Error("constant_volume_mdot invalid in read_params (i)");
+    }  // i=0..nten-1
 
 
     shock_timestep.resize(nmat);
@@ -4860,11 +4842,17 @@ NavierStokes::read_params ()
         cap_wave_speed[i] << '\n';
       std::cout << "prefreeze_tension i=" << i << "  " << 
        prefreeze_tension[i] << '\n';
+      std::cout << "distribute_mdot_evenly i=" << i << "  " << 
+       distribute_mdot_evenly[i] << '\n';
+      std::cout << "distribute_mdot_evenly i+nten=" << i+nten << "  " << 
+       distribute_mdot_evenly[i+nten] << '\n';
+      std::cout << "constant_volume_mdot  i=" << i << "  " << 
+       constant_volume_mdot[i] << '\n';
+      std::cout << "constant_volume_mdot  i+nten=" << i+nten << "  " << 
+       constant_volume_mdot[i+nten] << '\n';
      }  // i=0..nten-1
 
      for (int i=0;i<nmat;i++) {
-      std::cout << "distribute_mdot_evenly i=" << i << "  " << 
-       distribute_mdot_evenly[i] << '\n';
       std::cout << "cavitation_pressure i=" << i << "  " << 
        cavitation_pressure[i] << '\n';
       std::cout << "cavitation_vapor_density i=" << i << "  " << 
