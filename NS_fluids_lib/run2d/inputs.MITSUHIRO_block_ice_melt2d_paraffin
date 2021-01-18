@@ -225,7 +225,7 @@ ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
 # speed is u_{solid} dot n + mdot/rho_{solid}
 ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 # mdot in the melt is distributed throughout the melt.
-ns.distribute_mdot_evenly=1 0 0 0
+ns.distribute_mdot_evenly=0 0 0 0 0 0 0 1 0 0 0 0
 #no evaporation:
 #1=liquid, 2=air, 3=ice, 4=substrate
 #12 13 14 23 24 34 21 31 41 32 42 43

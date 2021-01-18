@@ -189,7 +189,7 @@ ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.distribute_from_target=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 # 1..num_materials
 # mdot uniformly distributed in the vapor
-ns.distribute_mdot_evenly=0 1 0 0
+ns.distribute_mdot_evenly=1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 # if latent_heat<>0,
 # if nucleation_period==0.0, only nucleate one bubble, 
 # if nucleation_period>0.0, periodically nucleate bubbles.
