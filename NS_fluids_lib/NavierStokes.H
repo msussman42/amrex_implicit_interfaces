@@ -1000,6 +1000,7 @@ protected:
      MultiFab* typemf,
      MultiFab* color,
      MultiFab* mdot,
+     MultiFab* mdot_complement,
      Vector<blobclass>& level_blobdata,
      Vector<blobclass> cum_blobdata,
      Vector< Vector<Real> >& level_mdot_data,

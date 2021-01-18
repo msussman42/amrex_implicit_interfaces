@@ -12777,6 +12777,7 @@ NavierStokes::phase_change_redistributeALL() {
  int color_count=0;
  int coarsest_level=0;
  int idx_mdot=MDOT_MF;
+ int idx_mdot_complement=MDOT_COMPLEMENT_MF;
  int tessellate=3;
  int operation_flag=0; 
  ColorSumALL(
@@ -12787,6 +12788,7 @@ NavierStokes::phase_change_redistributeALL() {
   TYPE_MF,
   COLOR_MF,
   idx_mdot,
+  idx_mdot_complement,
   type_flag,
   blobdata,
   mdot_data,
@@ -12802,6 +12804,7 @@ NavierStokes::phase_change_redistributeALL() {
   TYPE_MF,
   COLOR_MF,
   idx_mdot,
+  idx_mdot_complement,
   type_flag,
   blobdata,
   mdot_data,
