@@ -17389,6 +17389,7 @@ stop
        vofbc, &
        expect_mdot_sign, &
        mdot_sum, &
+       mdot_sum_complement, &
        im_source, &
        im_dest, &
        indexEXP, &
@@ -17400,7 +17401,9 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov), &
        tag,DIMS(tag), &
+       tag_comp,DIMS(tag_comp), &
        expan,DIMS(expan), &
+       expan_comp,DIMS(expan_comp), &
        LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
        recon,DIMS(recon))
        use probf90_module
@@ -17520,7 +17523,9 @@ stop
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1272)
       call checkbound(fablo,fabhi,DIMS(recon),1,-1,1273)
       call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,1274)
+      call checkbound(fablo,fabhi,DIMS(expan_comp),ngrow_expansion,-1,1274)
       call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,1275)
+      call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,1275)
 
       local_freezing_model=freezing_model(indexEXP+1)
       distribute_from_targ=distribute_from_target(indexEXP+1)
@@ -17564,6 +17569,7 @@ stop
          ! between donor and receiver.
               
         tag(D_DECL(i,j,k)) = zero
+        tag_comp(D_DECL(i,j,k)) = zero
 
         do im=1,nmat
          vofcomp=(im-1)*ngeom_recon+1
@@ -17663,6 +17669,7 @@ stop
         endif
 
         mdot_sum=mdot_sum+VDOT
+        mdot_sum_comp=mdot_sum_comp+VDOT
 
         if ((is_rigid(nmat,im_primary).eq.0).and. &
             (is_FSI_rigid(nmat,im_primary).eq.0)) then ! in the fluid
@@ -17682,6 +17689,17 @@ stop
             stop      
            endif
 
+           if ((VFRAC(im_source).lt.half).or. &
+               (ICEMASK.le.zero)) then
+            tag_comp(D_DECL(i,j,k)) = one ! donor cell
+           else if ((VFRAC(im_source).ge.half).and. &
+                    (ICEMASK.gt.zero)) then
+            ! do nothing - acceptor cell
+           else
+            print *,"VFRAC or ICEMASK bust"     
+            stop
+           endif
+
           else if (distribute_from_targ.eq.1) then
 
            if ((VFRAC(im_source).lt.half).or. &
@@ -17695,6 +17713,16 @@ stop
             stop
            endif
 
+           if ((VFRAC(im_dest).lt.half).or. &
+               (ICEMASK.le.zero)) then
+            tag_comp(D_DECL(i,j,k)) = one ! donor cell
+           else if ((VFRAC(im_dest).ge.half).and. &
+                    (ICEMASK.gt.zero)) then
+            ! do nothing - acceptor cell
+           else
+            print *,"VFRAC or ICEMASK bust"
+            stop      
+           endif
           else
            print *,"distribute_from_targ invalid"
            stop
@@ -17720,6 +17748,17 @@ stop
            stop      
           endif
 
+          if ((VFRAC(im_source).ge.half).and. &
+              (ICEMASK.gt.zero)) then
+           tag_comp(D_DECL(i,j,k)) = two ! receiver
+          else if ((VFRAC(im_source).lt.half).or. &
+                   (ICEMASK.le.zero)) then
+           ! do nothing - donor cell
+          else
+           print *,"VFRAC or ICEMASK bust"     
+           stop
+          endif
+
          else if (distribute_from_targ.eq.1) then
 
           if ((VFRAC(im_source).ge.half).and. &
@@ -17731,6 +17770,17 @@ stop
           else
            print *,"VFRAC or ICEMASK bust"     
            stop
+          endif
+
+          if ((VFRAC(im_dest).ge.half).and. &
+              (ICEMASK.gt.zero)) then
+           tag_comp(D_DECL(i,j,k)) = two ! receiver
+          else if ((VFRAC(im_dest).lt.half).or. &
+                   (ICEMASK.le.zero)) then
+           ! do nothing - donor cell
+          else
+           print *,"VFRAC or ICEMASK bust"
+           stop      
           endif
 
          else
@@ -17791,7 +17841,11 @@ stop
        maskcov,DIMS(maskcov),&
        LS,DIMS(LS),&
        tag,DIMS(tag),&
-       expan,DIMS(expan))
+       tag_comp, &
+       DIMS(tag_comp),&
+       expan,DIMS(expan), &
+       expan_comp, &
+       DIMS(expan_comp) )
        use probf90_module
        use global_utility_module
        use geometry_intersect_module
@@ -17814,11 +17868,15 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(maskcov)
        INTEGER_T, intent(in) :: DIMDEC(LS)
        INTEGER_T, intent(in) :: DIMDEC(tag)
+       INTEGER_T, intent(in) :: DIMDEC(tag_comp)
        INTEGER_T, intent(in) :: DIMDEC(expan)
+       INTEGER_T, intent(in) :: DIMDEC(expan_comp)
        REAL_T, intent(in) :: maskcov(DIMV(maskcov))
        REAL_T, intent(in) :: LS(DIMV(LS),nmat)
        REAL_T, intent(in) :: tag(DIMV(tag))
+       REAL_T, intent(in) :: tag_comp(DIMV(tag_comp))
        REAL_T, intent(inout) :: expan(DIMV(expan),2*nten)
+       REAL_T, intent(inout) :: expan_comp(DIMV(expan_comp),2*nten)
 
        INTEGER_T i,j,k,isweep
        REAL_T DLS
@@ -17883,7 +17941,9 @@ stop
        call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1272)
        call checkbound(fablo,fabhi,DIMS(LS),2*ngrow_expansion,-1,1272)
        call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,122)
+       call checkbound(fablo,fabhi,DIMS(expan_comp),ngrow_expansion,-1,122)
        call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,122)
+       call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,122)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -18058,7 +18118,7 @@ stop
               print *,"isweep invalid"
               stop
              endif
-            enddo ! isweep
+            enddo ! isweep=0..1
 
            else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
              ! do nothing
@@ -18076,6 +18136,192 @@ stop
           print *,"TAGLOC invalid"
           stop
          end if ! receiving cell
+
+          ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
+
+         ! if a receiving cell
+         TAGLOC=tag_comp(D_DECL(i,j,k))
+         if(TAGLOC.eq.two) then
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_expansion)
+
+          do i_n=stenlo(1),stenhi(1)
+          do j_n=stenlo(2),stenhi(2)
+          do k_n=stenlo(3),stenhi(3)
+
+           is_inner_main=1
+           if ((abs(i_n-i).gt.1).or. &
+               (abs(j_n-j).gt.1).or. &
+               (abs(k_n-k).gt.1)) then
+            is_inner_main=0
+           endif
+
+           ! if there is donor neighbor cell
+           TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
+           if(TAGSIDE.eq.one) then
+
+            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
+            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
+              ngrow_expansion)
+
+              ! first: find the maximum of |d phi/d n_grid|
+              ! second: use the maximum to find the weights.
+            crit_weight=zero
+            total_weight=zero
+            maxgrad=-one
+
+            crit_weight2=zero
+            total_weight2=zero
+            maxgrad2=-one
+
+            do isweep=0,1
+
+             do i_nn=stenlo2(1),stenhi2(1)
+             do j_nn=stenlo2(2),stenhi2(2)
+             do k_nn=stenlo2(3),stenhi2(3)
+
+              is_inner=1
+              if ((abs(i_nn-i_n).gt.1).or. &
+                  (abs(j_nn-j_n).gt.1).or. &
+                  (abs(k_nn-k_n).gt.1)) then
+               is_inner=0
+              endif
+
+              if (tag_comp(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
+               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
+               weight=zero
+               do dir=1,SDIM
+                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
+               enddo
+               if (weight.le.zero) then
+                print *,"weight invalid"
+                stop
+               endif
+               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
+               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
+               DLS=(LS_receiver-LS_donor)**2
+               curgrad=sqrt(DLS/weight)
+               if (isweep.eq.0) then
+
+                if (is_inner.eq.1) then
+                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
+                  maxgrad=curgrad
+                 endif
+                endif 
+
+                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
+                 maxgrad2=curgrad
+                endif
+               
+               else if (isweep.eq.1) then
+
+                if (is_inner.eq.1) then
+
+                 if (maxgrad.lt.zero) then
+                  weight=zero
+                  if (is_inner_main.eq.1) then
+                   print *,"maxgrad invalid"
+                   stop
+                  endif
+                 else if (maxgrad.eq.zero) then
+                  weight=one
+                 else if (curgrad/maxgrad.lt.crit_ratio) then
+                  weight=zero
+                 else
+                  weight=(curgrad/maxgrad)**2
+                 endif
+                 total_weight=total_weight+weight
+                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
+                  crit_weight=weight
+                  if (is_inner_main.eq.0) then
+                   print *,"is_inner_main invalid"
+                   stop
+                  endif
+                 endif
+
+                endif  ! is_inner=1
+
+                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
+                 print *,"maxgrad2 invalid"
+                 stop
+                else if (maxgrad2.eq.zero) then
+                 weight=one
+                else if (curgrad/maxgrad2.lt.crit_ratio) then
+                 weight=zero
+                else
+                 weight=(curgrad/maxgrad2)**2
+                endif
+                total_weight2=total_weight2+weight
+                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
+                 crit_weight2=weight
+                endif
+
+               else
+                print *,"isweep invalid"
+                stop
+               endif
+              end if  ! receiver
+             end do ! k_nn
+             end do ! j_nn
+             end do ! i_nn
+
+             if (isweep.eq.0) then
+              if (maxgrad.lt.zero) then
+               if (is_inner_main.eq.1) then
+                print *,"maxgrad: a donor cell has no receiving cell"
+                stop
+               endif
+              end if
+              if (maxgrad2.lt.zero) then
+               print *,"maxgrad2: a donor cell has no receiving cell"
+               stop
+              end if
+             else if (isweep.eq.1) then
+              if (crit_weight.lt.zero) then
+               print *,"crit_weight invalid"
+               stop
+              endif
+              if (crit_weight2.lt.zero) then
+               print *,"crit_weight2 invalid"
+               stop
+              endif
+              if (total_weight.gt.zero) then
+               factor=crit_weight/total_weight
+              else if ((is_inner_main.eq.0).and. &
+                       (total_weight2.gt.zero)) then
+               factor=crit_weight2/total_weight2
+              else
+               print *,"a donor cell has no receiving cell"
+               stop
+              end if
+
+               ! transfer from donor to receiving cell
+               ! with weight crit_weight/total_weight
+              expan_comp(D_DECL(i,j,k),indexEXP+1) = &
+               expan_comp(D_DECL(i,j,k),indexEXP+1) + &
+               expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
+             else
+              print *,"isweep invalid"
+              stop
+             endif
+            enddo ! isweep=0..1
+
+           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
+             ! do nothing
+           else
+            print *,"TAGSIDE invalid"
+            stop
+           end if ! donor cell
+          end do ! k_n
+          end do ! j_n
+          end do ! i_n
+
+         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+          ! do nothing
+         else
+          print *,"TAGLOC invalid"
+          stop
+         end if ! receiving cell
+
 
         else if (local_mask.eq.0) then
          ! do nothing
@@ -18097,6 +18343,8 @@ stop
        ngrow_expansion, &
        mdot_sum, &
        mdot_lost, &
+       mdot_sum_comp, &
+       mdot_lost_comp, &
        im_source, &
        im_dest, &
        indexEXP, &
@@ -18108,7 +18356,11 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov),&
        tag,DIMS(tag),&
-       expan,DIMS(expan))
+       tag_comp, &
+       DIMS(tag_comp),&
+       expan,DIMS(expan), &
+       expan_comp, &
+       DIMS(expan_comp) )
        use probf90_module
        use global_utility_module
        use geometry_intersect_module
@@ -18117,6 +18369,7 @@ stop
 
        INTEGER_T, intent(in) :: ngrow_expansion
        REAL_T, intent(inout) :: mdot_sum,mdot_lost
+       REAL_T, intent(inout) :: mdot_sum_comp,mdot_lost_comp
        INTEGER_T, intent(in) :: im_source,im_dest,indexEXP
        INTEGER_T, intent(in) :: level,finest_level
        INTEGER_T, intent(in) :: nmat,nten
@@ -18130,10 +18383,14 @@ stop
        REAL_T, intent(in) :: dt
        INTEGER_T, intent(in) :: DIMDEC(maskcov)
        INTEGER_T, intent(in) :: DIMDEC(tag)
+       INTEGER_T, intent(in) :: DIMDEC(tag_comp)
        INTEGER_T, intent(in) :: DIMDEC(expan)
+       INTEGER_T, intent(in) :: DIMDEC(expan_comp)
        REAL_T, intent(in) :: maskcov(DIMV(maskcov))
        REAL_T, intent(in) :: tag(DIMV(tag))
+       REAL_T, intent(in) :: tag_comp(DIMV(tag_comp))
        REAL_T, intent(inout) :: expan(DIMV(expan),2*nten)
+       REAL_T, intent(inout) :: expan_comp(DIMV(expan_comp),2*nten)
 
        INTEGER_T i,j,k
        INTEGER_T i_n,j_n,k_n,receive_flag,nhalf

@@ -945,6 +945,7 @@ extern "C"
     int* vofbc,
     Real* expect_mdot_sign,
     Real* mdot_sum,
+    Real* mdot_sum_complement,
     int* im_source,
     int* im_dest,
     int* indexEXP,
@@ -956,7 +957,14 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* tag,AMREX_ARLIM_P(tablo),AMREX_ARLIM_P(taghi),
-    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* tag_comp,
+    AMREX_ARLIM_P(tab_comp_lo),
+    AMREX_ARLIM_P(tag_comp_hi),
+    Real* jump,
+    AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* jump_comp,
+    AMREX_ARLIM_P(jump_complo),
+    AMREX_ARLIM_P(jump_comp_hi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
@@ -974,13 +982,21 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
-    Real* tag,AMREX_ARLIM_P(tablo),AMREX_ARLIM_P(taghi),
-    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi));
+    Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
+    Real* tag_comp,
+    AMREX_ARLIM_P(tag_comp_lo),
+    AMREX_ARLIM_P(tag_comp_hi),
+    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* jump_comp,
+    AMREX_ARLIM_P(jump_comp_lo),
+    AMREX_ARLIM_P(jump_comp_hi) );
 
    void FORT_CLEAREXPANSION(
     int* ngrow_expansion,
     Real* mdot_sum,
     Real* mdot_lost,
+    Real* mdot_sum_comp,
+    Real* mdot_lost_comp,
     int* im_source,
     int* im_dest,
     int* indexEXP,
@@ -992,7 +1008,13 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
-    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi));
+    Real* tag_comp,
+    AMREX_ARLIM_P(tag_comp_lo),
+    AMREX_ARLIM_P(tag_comp_hi),
+    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* jump_comp,
+    AMREX_ARLIM_P(jump_comp_lo),
+    AMREX_ARLIM_P(jump_comp_hi) );
 
 
    void FORT_VFRAC_SPLIT(

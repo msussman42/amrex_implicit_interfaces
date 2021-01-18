@@ -3584,10 +3584,12 @@ NavierStokes::read_params ()
         // do nothing
        } else
         amrex::Error("distribute_from_target[iten_local] invalid");
+
        if (distribute_mdot_evenly[iten_local]==0) {
         // do nothing
        } else
         amrex::Error("distribute_mdot_evenly[iten_local] invalid");
+
        if (constant_volume_mdot[iten_local]==0) {
         // do nothing
        } else
@@ -3611,6 +3613,14 @@ NavierStokes::read_params ()
 
          if ((distribute_mdot_evenly[iten_local]==0)||
              (distribute_mdot_evenly[iten_local]==1)) {
+          // do nothing
+         } else
+          amrex::Error("distribute_mdot_evenly invalid");
+
+	} else if (fixed_parm[iten_local]!=
+                   distribute_from_target[iten_local]) {
+
+         if (distribute_mdot_evenly[iten_local]==1) {
           // do nothing
          } else
           amrex::Error("distribute_mdot_evenly invalid");
@@ -3691,13 +3701,13 @@ NavierStokes::read_params ()
       amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
      if ((distribute_mdot_evenly[i+nten]<0)||
          (distribute_mdot_evenly[i+nten]>1))
-      amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
+      amrex::Error("distribute_mdot_evenly invalid in read_params (i+nten)");
      if ((constant_volume_mdot[i]<-1)||
          (constant_volume_mdot[i]>1))
       amrex::Error("constant_volume_mdot invalid in read_params (i)");
      if ((constant_volume_mdot[i+nten]<-1)||
          (constant_volume_mdot[i+nten]>1))
-      amrex::Error("constant_volume_mdot invalid in read_params (i)");
+      amrex::Error("constant_volume_mdot invalid in read_params (i+nten)");
     }  // i=0..nten-1
 
 
@@ -12578,10 +12588,6 @@ NavierStokes::phase_change_redistributeALL() {
  allocate_array(ngrow_expansion,2*nten,-1,JUMP_STRENGTH_COMPLEMENT_MF); 
  copyALL(ngrow_expansion,2*nten,JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
 
- int nsolve=1;
- allocate_array(0,nsolve,-1,MDOT_COMPLEMENT_MF); 
- copyALL(0,nsolve,MDOT_COMPLEMENT_MF,MDOT_MF);
-
  for (int im=1;im<=nmat;im++) {
   for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
    for (int ireverse=0;ireverse<=1;ireverse++) {
@@ -12745,15 +12751,6 @@ NavierStokes::phase_change_redistributeALL() {
   } // IOProc?
  } // verbose>0
 
- if (solvability_projection==1) { 
-
-  amrex::Error("if sealed domain, then make gas compressible");
-
- } else if (solvability_projection==0) {
-  // do nothing
- } else
-  amrex::Error("solvability_projection invalid");
-
  delete_array(LSNEW_MF);
  delete_array(HOLD_LS_DATA_MF);
 
@@ -12837,7 +12834,6 @@ NavierStokes::phase_change_redistributeALL() {
  delete_array(COLOR_MF);
 
  delete_array(JUMP_STRENGTH_COMPLEMENT_MF);
- delete_array(MDOT_COMPLEMENT_MF);
 
 } // subroutine phase_change_redistributeALL
 
@@ -12861,6 +12857,10 @@ NavierStokes::level_phase_change_redistribute(
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
   amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten level_phase ...");
 
+ debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_expansion,355);
+ if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*nten)
+  amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*nten");
+
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
  
@@ -12876,10 +12876,16 @@ NavierStokes::level_phase_change_redistribute(
  Real LL=0.0;
 
  if ((isweep==0)||(isweep==1)||(isweep==2)) {
+
   if (localMF[donorflag_MF]->nGrow()!=2*ngrow_expansion)
    amrex::Error("localMF[donorflag_MF]->ngrow() invalid");
   if (localMF[donorflag_MF]->nComp()!=1)
    amrex::Error("localMF[donorflag_MF]->nComp() invalid");
+
+  if (localMF[donorflag_complement_MF]->nGrow()!=2*ngrow_expansion)
+   amrex::Error("localMF[donorflag_complement_MF]->ngrow() invalid");
+  if (localMF[donorflag_complement_MF]->nComp()!=1)
+   amrex::Error("localMF[donorflag_complement_MF]->nComp() invalid");
 
   if ((indexEXP>=0)&&(indexEXP<2*nten)) {
    LL=latent_heat[indexEXP];
@@ -12917,6 +12923,12 @@ NavierStokes::level_phase_change_redistribute(
    mdot_sum_local[tid]=0.0;
   }
 
+  Vector< Real > mdot_sum_complement_local;
+  mdot_sum_complement_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum_complement_local[tid]=0.0;
+  }
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -12941,6 +12953,11 @@ NavierStokes::level_phase_change_redistribute(
 
    FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
    FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+
+   FArrayBox& donor_comp_fab=(*localMF[donorflag_complement_MF])[mfi];
+   FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
+
+
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
    int bfact=parent->Space_blockingFactor(level);
@@ -12963,10 +12980,12 @@ NavierStokes::level_phase_change_redistribute(
     vofbc.dataPtr(),
     &expect_mdot_sign,
     &mdot_sum_local[tid_current],
+    &mdot_sum_complement_local[tid_current],
     &im_source,
     &im_dest,
     &indexEXP,
-    &level,&finest_level,
+    &level,
+    &finest_level,
     &nmat,&nten, 
     tilelo,tilehi,
     fablo,fabhi,
@@ -12976,8 +12995,12 @@ NavierStokes::level_phase_change_redistribute(
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     donorfab.dataPtr(),
     ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
+    donor_comp_fab.dataPtr(),
+    ARLIM(donor_comp_fab.loVect()),ARLIM(donor_comp_fab.hiVect()),
     JUMPfab.dataPtr(),
     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
+    JUMP_comp_fab.dataPtr(),
+    ARLIM(JUMP_comp_fab.loVect()),ARLIM(JUMP_comp_fab.hiVect()),
     newdistfab.dataPtr(),
     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
     reconfab.dataPtr(),
@@ -13033,7 +13056,9 @@ NavierStokes::level_phase_change_redistribute(
 
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
+    FArrayBox& donor_comp_fab=(*localMF[donorflag_complement_MF])[mfi];
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+    FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
 
     int bfact=parent->Space_blockingFactor(level);
@@ -13063,8 +13088,14 @@ NavierStokes::level_phase_change_redistribute(
      ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
      donorfab.dataPtr(),
      ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
+     donor_comp_fab.dataPtr(),
+     ARLIM(donor_comp_fab.loVect()),
+     ARLIM(donor_comp_fab.hiVect()),
      JUMPfab.dataPtr(),
-     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()));
+     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect())
+     JUMP_comp_fab.dataPtr(),
+     ARLIM(JUMP_comp_fab.loVect()),
+     ARLIM(JUMP_comp_fab.hiVect()) );
   } // mfi
 } //omp
   ns_reconcile_d_num(75);
@@ -13092,6 +13123,17 @@ NavierStokes::level_phase_change_redistribute(
    mdot_sum2_local[tid]=0.0;
    mdot_lost_local[tid]=0.0;
   }
+
+  Vector< Real > mdot_lost_complement_local;
+  Vector< Real > mdot_sum2_complement_local;
+  mdot_lost_complement_local.resize(thread_class::nthreads);
+  mdot_sum2_complement_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_complement_local[tid]=0.0;
+   mdot_lost_complement_local[tid]=0.0;
+  }
+
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -13114,7 +13156,9 @@ NavierStokes::level_phase_change_redistribute(
 
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
+    FArrayBox& donor_comp_fab=(*localMF[donorflag_complement_MF])[mfi];
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+    FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
 
     int bfact=parent->Space_blockingFactor(level);
     int tid_current=ns_thread();
@@ -13129,6 +13173,8 @@ NavierStokes::level_phase_change_redistribute(
      &ngrow_expansion,
      &mdot_sum2_local[tid_current],
      &mdot_lost_local[tid_current],
+     &mdot_sum2_complement_local[tid_current],
+     &mdot_lost_complement_local[tid_current],
      &im_source,
      &im_dest,
      &indexEXP,
@@ -13142,8 +13188,14 @@ NavierStokes::level_phase_change_redistribute(
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      donorfab.dataPtr(),
      ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
+     donor_comp_fab.dataPtr(),
+     ARLIM(donor_comp_fab.loVect()),
+     ARLIM(donor_comp_fab.hiVect()),
      JUMPfab.dataPtr(),
-     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()));
+     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
+     JUMP_comp_fab.dataPtr(),
+     ARLIM(JUMP_comp_fab.loVect()),
+     ARLIM(JUMP_comp_fab.hiVect()) );
   } // mfi
 } // omp
   ns_reconcile_d_num(76);
@@ -13151,11 +13203,18 @@ NavierStokes::level_phase_change_redistribute(
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    mdot_sum2_local[0]+=mdot_sum2_local[tid];
    mdot_lost_local[0]+=mdot_lost_local[tid];
+   mdot_sum2_complement_local[0]+=mdot_sum2_complement_local[tid];
+   mdot_lost_complement_local[0]+=mdot_lost_complement_local[tid];
   } // tid
   ParallelDescriptor::ReduceRealSum(mdot_sum2_local[0]);
   ParallelDescriptor::ReduceRealSum(mdot_lost_local[0]);
   mdot_sum2[0]+=mdot_sum2_local[0];
   mdot_lost[0]+=mdot_lost_local[0];
+
+  ParallelDescriptor::ReduceRealSum(mdot_sum2_complement_local[0]);
+  ParallelDescriptor::ReduceRealSum(mdot_lost_complement_local[0]);
+  mdot_sum2_complement[0]+=mdot_sum2_complement_local[0];
+  mdot_lost_complement[0]+=mdot_lost_complement_local[0];
 
  } else if (isweep==3) {
 
