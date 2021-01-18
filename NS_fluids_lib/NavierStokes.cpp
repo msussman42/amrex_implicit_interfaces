@@ -12705,55 +12705,6 @@ NavierStokes::phase_change_redistributeALL() {
  } // im=1..nmat
 
 
-   // copy contributions from all materials changing phase to a single
-   // source term.
- int isweep_combine=3;
-
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  mdotplus[tid]=0.0;
-  mdotminus[tid]=0.0;
-  mdotcount[tid]=0.0;
-  mdot_sum[tid]=0.0;
-  mdot_sum2[tid]=0.0;
-  mdot_lost[tid]=0.0;
-
-  mdotplus_complement[tid]=0.0;
-  mdotminus_complement[tid]=0.0;
-  mdotcount_complement[tid]=0.0;
-  mdot_sum_complement[tid]=0.0;
-  mdot_sum2_complement[tid]=0.0;
-  mdot_lost_complement[tid]=0.0;
- }
-
- Real expect_mdot_sign_filler=0.0;
- int im_source_filler=-1;
- int im_dest_filler=-1;
- int indexEXP_filler=-1;
-  
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.level_phase_change_redistribute(
-   expect_mdot_sign_filler,
-   im_source_filler,im_dest_filler,
-   indexEXP_filler,
-   isweep_combine); // ==3
- } // ilev=finest_level ... level
-
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "mdotplus = " << mdotplus[0] << '\n';
-   std::cout << "mdotminus = " << mdotminus[0] << '\n';
-   std::cout << "mdotcount = " << mdotcount[0] << '\n';
-
-   std::cout << "mdotplus_complement = " << mdotplus_complement[0] << '\n';
-   std::cout << "mdotminus_complement = " << mdotminus_complement[0] << '\n';
-   std::cout << "mdotcount_complement = " << mdotcount_complement[0] << '\n';
-  } // IOProc?
- } // verbose>0
-
- delete_array(LSNEW_MF);
- delete_array(HOLD_LS_DATA_MF);
-
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
  Vector< Vector<Real> > mdot_data_redistribute;
@@ -12761,8 +12712,8 @@ NavierStokes::phase_change_redistributeALL() {
 
  int color_count=0;
  int coarsest_level=0;
- int idx_mdot=MDOT_MF;
- int idx_mdot_complement=MDOT_COMPLEMENT_MF;
+ int idx_mdot=JUMP_STRENGTH_MF;
+ int idx_mdot_complement=JUMP_STRENGTH_COMPLEMENT_MF;
  int tessellate=3;
  int operation_flag=0; 
  ColorSumALL(
@@ -12833,6 +12784,44 @@ NavierStokes::phase_change_redistributeALL() {
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
 
+ // copy contributions from all materials changing phase to a single
+ // source term.
+ int isweep_combine=3;
+
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  mdotplus[tid]=0.0;
+  mdotminus[tid]=0.0;
+  mdotcount[tid]=0.0;
+  mdot_sum[tid]=0.0;
+  mdot_sum2[tid]=0.0;
+  mdot_lost[tid]=0.0;
+ }
+
+ Real expect_mdot_sign_filler=0.0;
+ int im_source_filler=-1;
+ int im_dest_filler=-1;
+ int indexEXP_filler=-1;
+  
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_phase_change_redistribute(
+   expect_mdot_sign_filler,
+   im_source_filler,im_dest_filler,
+   indexEXP_filler,
+   isweep_combine); // ==3
+ } // ilev=finest_level ... level
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after FORT_INITJUMPTERM\n";
+   std::cout << "mdotplus = " << mdotplus[0] << '\n';
+   std::cout << "mdotminus = " << mdotminus[0] << '\n';
+   std::cout << "mdotcount = " << mdotcount[0] << '\n';
+  } // IOProc?
+ } // verbose>0
+
+ delete_array(LSNEW_MF);
+ delete_array(HOLD_LS_DATA_MF);
  delete_array(JUMP_STRENGTH_COMPLEMENT_MF);
 
 } // subroutine phase_change_redistributeALL
@@ -21582,6 +21571,7 @@ NavierStokes::post_init_state () {
   color_count,
   TYPE_MF,
   COLOR_MF,
+  idx_mdot,
   idx_mdot,
   type_flag,
   blobdata,
