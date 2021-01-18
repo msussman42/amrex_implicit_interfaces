@@ -1003,8 +1003,12 @@ protected:
      Vector<blobclass>& level_blobdata,
      Vector<blobclass> cum_blobdata,
      Vector< Vector<Real> >& level_mdot_data,
+     Vector< Vector<Real> >& level_mdot_comp_data,
      Vector< Vector<Real> > cum_mdot_data,
-     Vector< Vector<Real> >& level_mdot_data_redistribute);
+     Vector< Vector<Real> > cum_mdot_comp_data,
+     Vector< Vector<Real> >& level_mdot_data_redistribute,
+     Vector< Vector<Real> >& level_mdot_comp_data_redistribute 
+     );
 
     void ColorSumALL(
      int operation_flag, // =0 or 1
@@ -1018,7 +1022,10 @@ protected:
      Vector<int>& type_flag, 
      Vector<blobclass>& blobdata,
      Vector< Vector<Real> >& mdot_data,
-     Vector< Vector<Real> >& mdot_data_redistribute);
+     Vector< Vector<Real> >& mdot_comp_data,
+     Vector< Vector<Real> >& mdot_data_redistribute,
+     Vector< Vector<Real> >& mdot_comp_data_redistribute
+     );
 
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag);

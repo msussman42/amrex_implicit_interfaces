@@ -2614,7 +2614,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     Vector<blobclass> blobdata;
     Vector< Vector<Real> > mdot_data;
+    Vector< Vector<Real> > mdot_comp_data;
     Vector< Vector<Real> > mdot_data_redistribute;
+    Vector< Vector<Real> > mdot_comp_data_redistribute;
     Vector<int> type_flag;
 
     blobdata.resize(1);
@@ -2718,7 +2720,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          type_flag,
 	 blobdata,
 	 mdot_data,
-         mdot_data_redistribute);
+	 mdot_comp_data,
+         mdot_data_redistribute,
+         mdot_comp_data_redistribute
+	 );
 
        ParallelDescriptor::Barrier();
 
@@ -4820,13 +4825,18 @@ NavierStokes::ColorSum(
  Vector<blobclass>& level_blobdata,
  Vector<blobclass> cum_blobdata,
  Vector< Vector<Real> >& level_mdot_data,
+ Vector< Vector<Real> >& level_mdot_comp_data,
  Vector< Vector<Real> > cum_mdot_data,
- Vector< Vector<Real> >& level_mdot_data_redistribute) {
+ Vector< Vector<Real> > cum_mdot_comp_data,
+ Vector< Vector<Real> >& level_mdot_data_redistribute,
+ Vector< Vector<Real> >& level_mdot_comp_data_redistribute
+ ) {
 
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  if (level>finest_level)
   amrex::Error("level invalid ColorSum");
@@ -4864,11 +4874,20 @@ NavierStokes::ColorSum(
    amrex::Error("ncomp_mdot_alloc invalid");
  } else if (ncomp_mdot>0) {
   int ncomp_mdot_test=mdot->nComp();
+  if (ncomp_mdot_test==2*nten) {
+   // do nothing
+  } else
+   amrex::Error("ncomp_mdot_test invalid");
   if ((ncomp_mdot==ncomp_mdot_test)&&
       (ncomp_mdot==ncomp_mdot_alloc)) {
    // do nothing
   } else
    amrex::Error("ncomp_mdot_test or ncomp_mdot_alloc invalid");
+  ncomp_mdot_test=mdot_complement->nComp();
+  if (ncomp_mdot_test==2*nten) {
+   // do nothing
+  } else
+   amrex::Error("ncomp_mdot_test invalid");
  } else
   amrex::Error("ncomp_mdot invalid"); 
 
@@ -4887,9 +4906,14 @@ NavierStokes::ColorSum(
   if (sweep_num==0) {
    if (ncomp_mdot>=1) {
     for (int i=0;i<num_colors;i++) {
-     for (int j=0;j<ncomp_mdot_alloc;j++) {
+     int j=0;
+     for (j=0;j<ncomp_mdot_alloc;j++) {
       level_mdot_data_redistribute[i][j]=0.0;
      }
+     if (j==2*nten) {
+      // do nothing
+     } else 
+      amrex::Error("expecting j==2*nten");
     } // i=0..num_colors-1
    } else
     amrex::Error("ncomp_mdot invalid");
@@ -4967,10 +4991,16 @@ NavierStokes::ColorSum(
     } else
      amrex::Error("level_blobdata[i].im invalid");
 
-    for (int j=0;j<ncomp_mdot_alloc;j++) {
+    int j=0;
+    for (j=0;j<ncomp_mdot_alloc;j++) {
      level_mdot_array[tid][mdot_counter]=level_mdot_data[i][j];
      mdot_counter++;
     }
+    if (j==2*nten) {
+     // do nothing
+    } else
+     amrex::Error("j invalid");
+
    } // i=0..num_colors
    if (counter!=blob_array_size)
     amrex::Error("counter invalid");
@@ -5050,6 +5080,10 @@ NavierStokes::ColorSum(
   // do nothing
  } else
   amrex::Error("mdot->nGrow() invalid");
+ if (mdot_complement->nGrow()>=0) {
+  // do nothing
+ } else
+  amrex::Error("mdot_complement->nGrow() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
@@ -5090,6 +5124,8 @@ NavierStokes::ColorSum(
   FArrayBox& snewfab=S_new[mfi];
 
   FArrayBox& mdotfab=(*mdot)[mfi];
+  FArrayBox& mdot_comp_fab=(*mdot_complement)[mfi];
+
   FArrayBox& typefab=(*typemf)[mfi];
   FArrayBox& lsfab=(*localMF[LS_COLORSUM_MF])[mfi];
   FArrayBox& velfab=(*localMF[VEL_COLORSUM_MF])[mfi];
@@ -5124,12 +5160,19 @@ NavierStokes::ColorSum(
    &sweep_num,
    &tessellate,
    distribute_mdot_evenly.dataPtr(),
+   constant_volume_mdot.dataPtr(),
    &dt_slab,
    dx,xlo,
    &nmat,
+   &nten,
    &nstate,
    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-   mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
+   mdotfab.dataPtr(),
+   ARLIM(mdotfab.loVect()),
+   ARLIM(mdotfab.hiVect()),
+   mdot_comp_fab.dataPtr(),
+   ARLIM(mdot_comp_fab.loVect()),
+   ARLIM(mdot_comp_fab.hiVect()),
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -5559,7 +5602,10 @@ NavierStokes::ColorSumALL(
  Vector<int>& type_flag, 
  Vector<blobclass>& blobdata,
  Vector< Vector<Real> >& mdot_data,
- Vector< Vector<Real> >& mdot_data_redistribute) {
+ Vector< Vector<Real> >& mdot_comp_data,
+ Vector< Vector<Real> >& mdot_data_redistribute,
+ Vector< Vector<Real> >& mdot_comp_data_redistribute
+ ) {
 
  int finest_level=parent->finestLevel();
 
@@ -5612,6 +5658,7 @@ NavierStokes::ColorSumALL(
   amrex::Error("num_colors=0 in ColorSumALL");
 
  int nmat=num_materials;
+ int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  int ncomp_mdot_alloc=1;
  int ncomp_mdot=0;
@@ -5621,7 +5668,7 @@ NavierStokes::ColorSumALL(
  } else if (idx_mdot>=0) {
   ncomp_mdot=localMF[idx_mdot]->nComp();
   ncomp_mdot_alloc=ncomp_mdot;
-  if (ncomp_mdot>0) {
+  if (ncomp_mdot==2*nten) {
    // do nothing
   } else
    amrex::Error("ncomp_mdot invalid");
@@ -5643,10 +5690,22 @@ NavierStokes::ColorSumALL(
    clear_blobdata(i,blobdata);
    mdot_data[i].resize(ncomp_mdot_alloc);
    mdot_data_redistribute[i].resize(ncomp_mdot_alloc);
-   for (int j=0;j<ncomp_mdot_alloc;j++) {
+   int j=0;
+   for (j=0;j<ncomp_mdot_alloc;j++) {
     mdot_data[i][j]=0.0;
     mdot_data_redistribute[i][j]=0.0;
    }
+
+   if (idx_mdot>=0) {
+    if (j==2*nten) {
+     // do nothing
+    } else
+     amrex::Error("expecting j==2*nten");
+   } else if (idx_mdot==-1) {
+    // check nothing
+   } else
+    amrex::Error("idx_mdot invalid");
+
   }  // i=0..color_count-1
 
  } else if (operation_flag==1) {
@@ -5667,10 +5726,22 @@ NavierStokes::ColorSumALL(
   clear_blobdata(i,level_blobdata); 
   level_mdot_data[i].resize(ncomp_mdot_alloc);
   level_mdot_data_redistribute[i].resize(ncomp_mdot_alloc);
-  for (int j=0;j<ncomp_mdot_alloc;j++) {
+  int j=0;
+  for (j=0;j<ncomp_mdot_alloc;j++) {
    level_mdot_data[i][j]=0.0;
    level_mdot_data_redistribute[i][j]=0.0;
   }
+
+  if (idx_mdot>=0) {
+   if (j==2*nten) {
+    // do nothing
+   } else
+    amrex::Error("expecting j==2*nten");
+  } else if (idx_mdot==-1) {
+   // check nothing
+  } else
+   amrex::Error("idx_mdot invalid");
+
  } // i=0..color_count-1
 
  int num_sweeps=2;
@@ -5680,9 +5751,19 @@ NavierStokes::ColorSumALL(
    // (dest,source)
   copy_blobdata(level_blobdata,blobdata);
   for (int i=0;i<color_count;i++) {
-   for (int j=0;j<ncomp_mdot_alloc;j++) {
+   int j=0;
+   for (j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data[i][j]=mdot_data[i][j];
    }
+   if (idx_mdot>=0) {
+    if (j==2*nten) {
+     // do nothing
+    } else
+     amrex::Error("expecting j==2*nten");
+   } else if (idx_mdot==-1) {
+    amrex::Error("expecting idx_mdot>=0");
+   } else
+    amrex::Error("idx_mdot invalid");
   }
   num_sweeps=1;
  } else
@@ -5699,7 +5780,7 @@ NavierStokes::ColorSumALL(
    if (ncomp_mdot==0) {
     mdot=ns_level.localMF[idx_type];
     mdot_complement=ns_level.localMF[idx_type];
-   } else if (ncomp_mdot>0) {
+   } else if (ncomp_mdot==2*nten) {
     mdot=ns_level.localMF[idx_mdot];
     mdot_complement=ns_level.localMF[idx_mdot_complement];
    } else {
@@ -5721,8 +5802,12 @@ NavierStokes::ColorSumALL(
     level_blobdata,
     blobdata,
     level_mdot_data,
+    level_mdot_comp_data,
     mdot_data,
-    level_mdot_data_redistribute);
+    mdot_comp_data,
+    level_mdot_data_redistribute,
+    level_mdot_comp_data_redistribute
+    );
 
    if (operation_flag==0) {
 
@@ -5733,9 +5818,19 @@ NavierStokes::ColorSumALL(
       // blob_triple_perim, blob_cell_count
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
 
-      for (int j=0;j<ncomp_mdot_alloc;j++) {
+      int j=0;
+      for (j=0;j<ncomp_mdot_alloc;j++) {
        mdot_data[i][j]+=level_mdot_data[i][j];
       }
+      if (idx_mdot>=0) {
+       if (j==2*nten) {
+        // do nothing
+       } else
+        amrex::Error("expecting j==2*nten");
+      } else if (idx_mdot==-1) {
+       // check nothing
+      } else
+       amrex::Error("idx_mdot invalid");
 
       if ((level_blobdata[i].im>=1)&&
           (level_blobdata[i].im<=nmat)) {
@@ -5767,9 +5862,15 @@ NavierStokes::ColorSumALL(
 
      for (int i=0;i<color_count;i++) {
 
-      for (int j=0;j<ncomp_mdot_alloc;j++) {
+      int j=0;
+      for (j=0;j<ncomp_mdot_alloc;j++) {
        mdot_data_redistribute[i][j]+=level_mdot_data_redistribute[i][j];
       }
+      if (j==2*nten) {
+       // do nothing
+      } else
+       amrex::Error("expecting j==2*nsten");
+
       if ((level_blobdata[i].im>=1)&&
           (level_blobdata[i].im<=nmat)) {
        if (level_blobdata[i].im==blobdata[i].im) {
@@ -9455,7 +9556,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
   Vector<blobclass> blobdata;
   Vector< Vector<Real> > mdot_data;
+  Vector< Vector<Real> > mdot_comp_data;
   Vector< Vector<Real> > mdot_data_redistribute;
+  Vector< Vector<Real> > mdot_comp_data_redistribute;
   Vector<int> type_flag;
 
   int alloc_blobdata=0;
@@ -9498,7 +9601,10 @@ void NavierStokes::multiphase_project(int project_option) {
      type_flag,
      blobdata,
      mdot_data,
-     mdot_data_redistribute);
+     mdot_comp_data,
+     mdot_data_redistribute,
+     mdot_comp_data_redistribute 
+     );
    if (color_count!=blobdata.size())
     amrex::Error("color_count!=blobdata.size()");
 
