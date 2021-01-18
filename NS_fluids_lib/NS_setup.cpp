@@ -1994,6 +1994,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     TYPE_MF,
     COLOR_MF,
     idx_mdot,
+    idx_mdot,
     type_flag,
     blobdata,
     mdot_data,

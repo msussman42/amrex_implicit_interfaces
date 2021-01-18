@@ -2714,6 +2714,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          TYPE_MF,
 	 COLOR_MF,
 	 idx_mdot,
+	 idx_mdot,
          type_flag,
 	 blobdata,
 	 mdot_data,
@@ -4815,6 +4816,7 @@ NavierStokes::ColorSum(
  MultiFab* typemf,
  MultiFab* color,
  MultiFab* mdot, // holds typemf if ncomp_mdot==0
+ MultiFab* mdot_complement, // holds typemf if ncomp_mdot==0
  Vector<blobclass>& level_blobdata,
  Vector<blobclass> cum_blobdata,
  Vector< Vector<Real> >& level_mdot_data,
@@ -5553,6 +5555,7 @@ NavierStokes::ColorSumALL(
  int idx_type,
  int idx_color,
  int idx_mdot,  // ==-1 if no mdot
+ int idx_mdot_complement,  // ==-1 if no mdot_complement
  Vector<int>& type_flag, 
  Vector<blobclass>& blobdata,
  Vector< Vector<Real> >& mdot_data,
@@ -5692,12 +5695,16 @@ NavierStokes::ColorSumALL(
    NavierStokes& ns_level = getLevel(ilev);
 
    MultiFab* mdot=nullptr;
+   MultiFab* mdot_complement=nullptr;
    if (ncomp_mdot==0) {
     mdot=ns_level.localMF[idx_type];
+    mdot_complement=ns_level.localMF[idx_type];
    } else if (ncomp_mdot>0) {
     mdot=ns_level.localMF[idx_mdot];
+    mdot_complement=ns_level.localMF[idx_mdot_complement];
    } else {
     mdot=nullptr;
+    mdot_complement=nullptr;
     amrex::Error("ncomp_mdot invalid");
    }
 
@@ -5710,6 +5717,7 @@ NavierStokes::ColorSumALL(
     ns_level.localMF[idx_type],
     ns_level.localMF[idx_color],
     mdot,
+    mdot_complement,
     level_blobdata,
     blobdata,
     level_mdot_data,
@@ -9484,7 +9492,9 @@ void NavierStokes::multiphase_project(int project_option) {
      tessellate, //=1
      coarsest_level,
      color_count,
-     TYPE_MF,COLOR_MF,idx_mdot,
+     TYPE_MF,COLOR_MF,
+     idx_mdot,
+     idx_mdot,
      type_flag,
      blobdata,
      mdot_data,

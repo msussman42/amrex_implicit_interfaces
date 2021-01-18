@@ -17003,11 +17003,15 @@ stop
             endif
             
             mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
-              
-           endif  ! latent_heat<>0
-          enddo ! ireverse
-         enddo ! im_opp
-        enddo ! im
+           else if (LL.eq.zero) then
+            ! do nothing
+           else
+            print *,"LL bust"
+            stop
+           endif  
+          enddo ! ireverse=0...1
+         enddo ! im_opp=im+1...nmat
+        enddo ! im=1...nmat-1
 
        else if (local_mask.eq.0) then
         ! do nothing
@@ -17840,10 +17844,12 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov),&
        LS,DIMS(LS),&
-       tag,DIMS(tag),&
+       tag, &
+       DIMS(tag),&
        tag_comp, &
        DIMS(tag_comp),&
-       expan,DIMS(expan), &
+       expan, &
+       DIMS(expan), &
        expan_comp, &
        DIMS(expan_comp) )
        use probf90_module
@@ -18355,10 +18361,12 @@ stop
        bfact, &
        xlo,dx,dt, &
        maskcov,DIMS(maskcov),&
-       tag,DIMS(tag),&
+       tag, &
+       DIMS(tag),&
        tag_comp, &
        DIMS(tag_comp),&
-       expan,DIMS(expan), &
+       expan, &
+       DIMS(expan), &
        expan_comp, &
        DIMS(expan_comp) )
        use probf90_module
@@ -18440,7 +18448,9 @@ stop
 
        call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,122)
        call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,122)
+       call checkbound(fablo,fabhi,DIMS(expan_comp),ngrow_expansion,-1,122)
        call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,122)
+       call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,122)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -18486,6 +18496,46 @@ stop
           stop
          endif
          mdot_sum=mdot_sum+expan(D_DECL(i,j,k),indexEXP+1)
+
+          ! --------------- COMPLEMENT -----------------
+
+          ! if a donor cell
+         TAGLOC=NINT(tag_comp(D_DECL(i,j,k)))
+         if(TAGLOC.eq.1) then
+          if (1.eq.1) then  ! SANITY CHECK
+           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_expansion)
+           receive_flag=0
+           do i_n=stenlo(1),stenhi(1)
+           do j_n=stenlo(2),stenhi(2)
+           do k_n=stenlo(3),stenhi(3)
+            TAGSIDE=NINT(tag_comp(D_DECL(i_n,j_n,k_n)))
+            if (TAGSIDE.eq.2) then
+             receive_flag=1
+            endif
+           enddo
+           enddo
+           enddo
+           if (receive_flag.eq.0) then
+            mdot_lost_comp=mdot_lost_comp+ &
+                  expan_comp(D_DECL(i,j,k),indexEXP+1)
+            call gridsten_level(xsten,i,j,k,level,nhalf)
+            if (1.eq.0) then
+             print *,"donor has no receiver (complement) "
+             print *,"i,j,k ",i,j,k
+             print *,"x,y,z ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+             print *,"LOST: ",expan_comp(D_DECL(i,j,k),indexEXP+1)
+            endif
+           endif
+          endif
+          expan_comp(D_DECL(i,j,k),indexEXP+1)=zero
+         else if ((TAGLOC.eq.2).or.(TAGLOC.eq.0)) then
+          ! do nothing
+         else
+          print *,"TAGLOC invalid"
+          stop
+         endif
+         mdot_sum_comp=mdot_sum_comp+ &
+            expan_comp(D_DECL(i,j,k),indexEXP+1)
 
         else if (local_mask.eq.0) then
          ! do nothing

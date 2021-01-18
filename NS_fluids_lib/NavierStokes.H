@@ -1014,6 +1014,7 @@ protected:
      int idx_type,
      int idx_color,
      int idx_mdot,  // ==-1 if no mdot
+     int idx_mdot_complement,  // ==-1 if no mdot_complement
      Vector<int>& type_flag, 
      Vector<blobclass>& blobdata,
      Vector< Vector<Real> >& mdot_data,
