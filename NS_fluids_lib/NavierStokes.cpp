@@ -865,8 +865,18 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 // for freezing and melting den_dst ~ den_src =>
 //   distribute_from_target=0  ok. 
 
-Vector<int> NavierStokes::distribute_from_target;
-Vector<int> NavierStokes::distribute_mdot_evenly;
+Vector<int> NavierStokes::distribute_from_target; // 1..2*nten
+
+// 0 - mdot concentrated at full cells near interface on 1-side
+// 1 - mdot distributed evenly to all full cells on vapor side
+// 2 - -mdot distributed evenly to all full cells on vapor side.
+//     (or liquid side if melting/freezing)
+//  For freezing in which liquid volume is fixed, the liquid density
+//  must increase.  The mass fraction of "heavy liquid" increases.
+//  For melting in which liquid volume is fixed, the liquid density
+//  must decrease.  The mass fraction of "light liquid" increases.
+//
+Vector<int> NavierStokes::distribute_mdot_evenly; // 1..nmat
 
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
@@ -3565,20 +3575,41 @@ NavierStokes::read_params ()
 
       if ((distribute_from_target[iten_local]==0)||
           (distribute_from_target[iten_local]==1)) {
+
        if (fixed_parm[iten_local]==-1) {
 
-        if (distribute_mdot_evenly[im_dest-1]==0) {
-         // do nothing
-        } else
-         amrex::Error("no need to have distribute_mdot_evenly==1");
+	if (distribute_from_target[iten_local]==0) {
+         if ((distribute_mdot_evenly[im_dest-1]==0)||
+             (distribute_mdot_evenly[im_dest-1]==2)) {
+          // do nothing
+         } else
+          amrex::Error("distribute_mdot_evenly invalid");
+	} else if (distribute_from_target[iten_local]==1) {
+         if ((distribute_mdot_evenly[im_source-1]==0)||
+             (distribute_mdot_evenly[im_source-1]==2)) {
+          // do nothing
+         } else
+          amrex::Error("distribute_mdot_evenly invalid");
+	} else
+         amrex::Error("distribute_from_target invalid");
 
        } else if (fixed_parm[iten_local]==
                   distribute_from_target[iten_local]) {
 
-        if (distribute_mdot_evenly[im_dest-1]==0) {
-         // do nothing
-        } else
-         amrex::Error("no need to have distribute_mdot_evenly==1");
+	if (distribute_from_target[iten_local]==0) {
+         if ((distribute_mdot_evenly[im_dest-1]==0)||
+             (distribute_mdot_evenly[im_dest-1]==2)) {
+          // do nothing
+         } else
+          amrex::Error("distribute_mdot_evenly invalid");
+	} else if (distribute_from_target[iten_local]==1) {
+         if ((distribute_mdot_evenly[im_source-1]==0)||
+             (distribute_mdot_evenly[im_source-1]==2)) {
+          // do nothing
+         } else
+          amrex::Error("distribute_mdot_evenly invalid");
+	} else
+         amrex::Error("distribute_from_target invalid");
 
        } else if (distribute_from_target[iten_local]==0) {
 
@@ -12556,6 +12587,13 @@ NavierStokes::phase_change_redistributeALL() {
  mdot_sum_complement.resize(thread_class::nthreads);
  mdot_sum2_complement.resize(thread_class::nthreads);
 
+ allocate_array(ngrow_expansion,2*nten,-1,JUMP_STRENGTH_COMPLEMENT_MF); 
+ copyALL(ngrow_expansion,2*nten,JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
+
+ int nsolve=1;
+ allocate_array(0,nsolve,-1,MDOT_COMPLEMENT_MF); 
+ copyALL(0,nsolve,MDOT_COMPLEMENT_MF,MDOT_MF);
+
  for (int im=1;im<=nmat;im++) {
   for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
    for (int ireverse=0;ireverse<=1;ireverse++) {
@@ -12601,10 +12639,20 @@ NavierStokes::phase_change_redistributeALL() {
       mdot_sum[tid]=0.0;
       mdot_sum2[tid]=0.0;
       mdot_lost[tid]=0.0;
+
+      mdotplus_complement[tid]=0.0;
+      mdotminus_complement[tid]=0.0;
+      mdotcount_complement[tid]=0.0;
+      mdot_sum_complement[tid]=0.0;
+      mdot_sum2_complement[tid]=0.0;
+      mdot_lost_complement[tid]=0.0;
      }
 
      allocate_array(2*ngrow_expansion,1,-1,donorflag_MF);
      setVal_array(2*ngrow_expansion,1,0.0,donorflag_MF);
+
+     allocate_array(2*ngrow_expansion,1,-1,donorflag_complement_MF);
+     setVal_array(2*ngrow_expansion,1,0.0,donorflag_complement_MF);
 
       // isweep==0: TAGEXPANSION
       // isweep==1: DISTRIBUTEEXPANSION
@@ -12625,6 +12673,8 @@ NavierStokes::phase_change_redistributeALL() {
        if (isweep_redistribute==0) {
         std::cout << "before:imsrc,imdst,mdot_sum " <<
          im_source << ' ' << im_dest << ' ' << mdot_sum[0] << '\n';
+        std::cout << "before:imsrc,imdst,mdot_sum_complement " <<
+         im_source << ' ' << im_dest << ' ' << mdot_sum_complement[0] << '\n';
        } else if (isweep_redistribute==1) {
         // do nothing
        } else if (isweep_redistribute==2) {
@@ -12635,6 +12685,16 @@ NavierStokes::phase_change_redistributeALL() {
         std::cout << "imsrc,imdst,mdot_sum2+mdot_lost " <<   
          im_source << ' ' << im_dest << ' ' <<   
          mdot_sum2[0]+mdot_lost[0] << '\n';
+
+        std::cout << "after:imsrc,imdst,mdot_sum2_complement " <<   
+         im_source << ' ' << im_dest << ' ' << mdot_sum2_complement[0] << '\n';
+        std::cout << "after:imsrc,imdst,mdot_lost_complement " <<   
+         im_source << ' ' << im_dest << ' ' << mdot_lost_complement[0] << '\n';
+        std::cout << 
+         "imsrc,imdst,mdot_sum2_complement+mdot_lost_complement " <<   
+         im_source << ' ' << im_dest << ' ' <<   
+         mdot_sum2_complement[0]+mdot_lost_complement[0] << '\n';
+
        } else
         amrex::Error("isweep_redistribute invalid");
 
@@ -12643,6 +12703,7 @@ NavierStokes::phase_change_redistributeALL() {
      } // isweep_redistribute=0,1,2
 
      delete_array(donorflag_MF);
+     delete_array(donorflag_complement_MF);
 
     } // LL!=0
    } // ireverse
@@ -12661,6 +12722,13 @@ NavierStokes::phase_change_redistributeALL() {
   mdot_sum[tid]=0.0;
   mdot_sum2[tid]=0.0;
   mdot_lost[tid]=0.0;
+
+  mdotplus_complement[tid]=0.0;
+  mdotminus_complement[tid]=0.0;
+  mdotcount_complement[tid]=0.0;
+  mdot_sum_complement[tid]=0.0;
+  mdot_sum2_complement[tid]=0.0;
+  mdot_lost_complement[tid]=0.0;
  }
 
  Real expect_mdot_sign_filler=0.0;
@@ -12682,6 +12750,10 @@ NavierStokes::phase_change_redistributeALL() {
    std::cout << "mdotplus = " << mdotplus[0] << '\n';
    std::cout << "mdotminus = " << mdotminus[0] << '\n';
    std::cout << "mdotcount = " << mdotcount[0] << '\n';
+
+   std::cout << "mdotplus_complement = " << mdotplus_complement[0] << '\n';
+   std::cout << "mdotminus_complement = " << mdotminus_complement[0] << '\n';
+   std::cout << "mdotcount_complement = " << mdotcount_complement[0] << '\n';
   } // IOProc?
  } // verbose>0
 
@@ -12772,7 +12844,10 @@ NavierStokes::phase_change_redistributeALL() {
 
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
- 
+
+ delete_array(JUMP_STRENGTH_COMPLEMENT_MF);
+ delete_array(MDOT_COMPLEMENT_MF);
+
 } // subroutine phase_change_redistributeALL
 
 void
@@ -12887,6 +12962,7 @@ NavierStokes::level_phase_change_redistribute(
     // isweep==0 
     // A cell that is dominated by an is_rigid(nmat,im)=1
     // material is neither a donor or a receiver.
+    // donorfab is modified.
    FORT_TAGEXPANSION( 
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
@@ -12977,6 +13053,8 @@ NavierStokes::level_phase_change_redistribute(
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // isweep==1
+     // declared in: GODUNOV_3D.F90
+     // JUMPfab is modified.
     FORT_DISTRIBUTEEXPANSION( 
      &ngrow_expansion,
      &im_source,
@@ -13054,6 +13132,8 @@ NavierStokes::level_phase_change_redistribute(
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // isweep==2
+     // declared in: GODUNOV_3D.F90
+     // JUMPfab is modified.
     FORT_CLEAREXPANSION( 
      &ngrow_expansion,
      &mdot_sum2_local[tid_current],
@@ -13135,7 +13215,7 @@ NavierStokes::level_phase_change_redistribute(
     // NavierStokes::allocate_mdot() called at the beginning of
     //  NavierStokes::do_the_advance
     // mdot initialized in NavierStokes::prelim_alloc()
-    // in: GODUNOV_3D.F90 (distribute_from_target==0)
+    // declared in: GODUNOV_3D.F90 (distribute_from_target==0)
     //   a)  jump_strength=JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)
     //      dF * volgrid * (den_source/den_dest-1)/ dt^2 
     //   b)  divu_material=jump_strength  cm^3/s^2
