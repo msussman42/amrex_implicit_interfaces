@@ -4539,6 +4539,8 @@ stop
        tessellate, &
        distribute_mdot_evenly, &
        constant_volume_mdot, &
+       latent_heat, &
+       distribute_from_target, &
        dt, &
        dx,xlo, &
        nmat, &
@@ -4616,6 +4618,8 @@ stop
       INTEGER_T, intent(in) :: ncomp_mdot
       INTEGER_T, intent(in) :: distribute_mdot_evenly(2*nten)
       INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
@@ -5506,12 +5510,15 @@ stop
               print *,"ic invalid"
               stop
              endif
-             if (ncomp_mdot.ge.1) then
+             if (ncomp_mdot.eq.2*nten) then
               ic_base=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
                level_mdot_data(ic_base+i_mdot)= &
                   level_mdot_data(ic_base+i_mdot)+ &
                   mdot(D_DECL(i,j,k),i_mdot)
+               level_mdot_comp_data(ic_base+i_mdot)= &
+                  level_mdot_comp_data(ic_base+i_mdot)+ &
+                  mdot_comp(D_DECL(i,j,k),i_mdot)
               enddo
              else if (ncomp_mdot.eq.0) then
               ! do nothing
@@ -5519,7 +5526,13 @@ stop
               print *,"ncomp_mdot invalid"
               stop
              endif
+            else if (vfrac.lt.half) then
+             ! do nothing
+            else
+             print *,"vfrac bust"
+             stop
             endif
+
             ic=ic+1
 
             if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
