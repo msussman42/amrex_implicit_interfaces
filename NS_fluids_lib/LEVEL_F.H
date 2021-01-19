@@ -130,7 +130,7 @@ namespace amrex{
        int* tessellate,
        int* distribute_mdot_evenly,
        int* constant_volume_mdot,
-       int* latent_heat,
+       Real* latent_heat,
        int* distribute_from_target,
        Real* dt,
        const Real* dx,

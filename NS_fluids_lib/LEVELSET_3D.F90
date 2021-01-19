@@ -4742,6 +4742,11 @@ stop
       INTEGER_T caller_id
       INTEGER_T nmax
       INTEGER_T nten_test
+      INTEGER_T im_alt,im_mdot,im_opp_mdot
+      INTEGER_T im_source,im_dest
+      INTEGER_T im_evenly
+      INTEGER_T iten,iten_shift
+      INTEGER_T ireverse
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -5690,56 +5695,114 @@ stop
              vofcomp=(im-1)*ngeom_recon+1
              vfrac=mofdata(vofcomp)
              if (vfrac.ge.half) then
-              if (distribute_mdot_evenly(im).eq.1) then
-               ic=opposite_color(im)*num_elements_blobclass
-               blob_cell_count=cum_blobdata(ic)
-               if (blob_cell_count.gt.zero) then
-
-                if (ncomp_mdot.ge.1) then
-                 ic_base=(opposite_color(im)-1)*ncomp_mdot
-                 mdot_total=cum_mdot_data(ic_base+1)
-                 mdot_avg=mdot_total/blob_cell_count
-
-                 do i_mdot=1,ncomp_mdot
-                  level_mdot_data_redistribute(ic_base+i_mdot)= &
-                    level_mdot_data_redistribute(ic_base+i_mdot)+ &
-                    mdot_avg
-                 enddo
-                 
-                 if (fort_material_type(im).eq.0) then
-                  mdot(D_DECL(i,j,k),1)=mdot_avg
-                 else if ((fort_material_type(im).gt.0).and. &
-                          (fort_material_type(im).le.MAX_NUM_EOS)) then
-                  mdot(D_DECL(i,j,k),1)=zero
-                  dt_div_V=mdot_avg*dt*dt/vol
-                  dencomp=(SDIM+1)*num_materials_vel+ &
-                          (im-1)*num_state_material+1
-                  original_density=snew(D_DECL(i,j,k),dencomp)
-                  if (original_density.gt.zero) then
-                   snew(D_DECL(i,j,k),dencomp)=(one+dt_div_V)*original_density
-                  else
-                   print *,"original_density invalid"
-                   stop
-                  endif
-                 else 
-                  print *,"fort_material_type(im) invalid"
+              do im_alt=1,nmat
+               if (im_alt.ne.im) then
+                do ireverse=0,1
+                 if (im_alt.lt.im) then
+                  im_mdot=im_alt
+                  im_opp_mdot=im
+                 else if (im_alt.gt.im) then
+                  im_mdot=im
+                  im_opp_mdot=im_alt
+                 else
+                  print *,"im_alt bust"
                   stop
                  endif
-                else
-                 print *,"ncomp_mdot invalid"
-                 stop
-                endif
+                 call get_iten(im_mdot,im_opp_mdot,iten,nmat)
+                 iten_shift=ireverse*nten+iten
+                 if (latent_heat(iten_shift).eq.zero) then
+                  ! do nothing
+                 else if (latent_heat(iten_shift).ne.zero) then
+                  if (ireverse.eq.0) then
+                   im_source=im_mdot
+                   im_dest=im_opp_mdot
+                  else if (ireverse.eq.1) then
+                   im_source=im_opp_mdot
+                   im_dest=im_mdot
+                  else
+                   print *,"ireverse bust"
+                   stop
+                  endif
 
+                  if (distribute_mdot_evenly(iten_shift).eq.0) then
+                   ! do nothing
+                  else if (distribute_mdot_evenly(iten_shift).eq.1) then
+
+                   if (distribute_from_target(iten_shift).eq.0) then
+                    im_evenly=im_dest
+                   else if (distribute_from_target(iten_shift).eq.1) then
+                    im_evenly=im_source
+                   else
+                    print *,"distribute_from_target(iten_shift) invalid"
+                    stop
+                   endif
+               
+                   if (im.eq.im_evenly) then 
+                    ic=opposite_color(im)*num_elements_blobclass
+                    blob_cell_count=cum_blobdata(ic)
+                    if (blob_cell_count.gt.zero) then
+
+                     if (ncomp_mdot.eq.2*nten) then
+                      ic_base=(opposite_color(im)-1)*ncomp_mdot
+                      mdot_total=cum_mdot_data(ic_base+iten_shift)
+                      mdot_avg=mdot_total/blob_cell_count
+
+                      level_mdot_data_redistribute(ic_base+iten_shift)= &
+                       level_mdot_data_redistribute(ic_base+iten_shift)+ &
+                       mdot_avg
+                 
+                      if (fort_material_type(im).eq.0) then
+                       mdot(D_DECL(i,j,k),iten_shift)=mdot_avg
+                      else if ((fort_material_type(im).gt.0).and. &
+                               (fort_material_type(im).le.MAX_NUM_EOS)) then
+                       mdot(D_DECL(i,j,k),iten_shift)=zero
+                       dt_div_V=mdot_avg*dt*dt/vol
+                       dencomp=(SDIM+1)*num_materials_vel+ &
+                          (im-1)*num_state_material+1
+                       original_density=snew(D_DECL(i,j,k),dencomp)
+                       if (original_density.gt.zero) then
+                        snew(D_DECL(i,j,k),dencomp)= &
+                           (one+dt_div_V)*original_density
+                       else
+                        print *,"original_density invalid"
+                        stop
+                       endif
+                      else 
+                       print *,"fort_material_type(im) invalid"
+                       stop
+                      endif
+                     else
+                      print *,"ncomp_mdot invalid"
+                      stop
+                     endif
+
+                    else
+                     print *,"blob_cell_count invalid"
+                     stop
+                    endif
+                   else if (im.ne.im_evenly) then
+                    ! do nothing
+                   else
+                    print *,"im or im_evenly bust"
+                    stop
+                   endif
+                  else
+                   print *,"distribute_mdot_evenly(iten_shift) invalid"
+                   stop
+                  endif
+                 else
+                  print *,"latent_heat(iten_shift) invalid"
+                  stop
+                 endif
+                enddo ! ireverse=0...1
+               else if (im_alt.eq.im) then
+                ! do nothing
                else
-                print *,"blob_cell_count invalid"
+                print *,"im_alt or im bust"
                 stop
                endif
-              else if (distribute_mdot_evenly(im).eq.0) then
-               ! do nothing
-              else
-               print *,"distribute_mdot_evenly(im) invalid"
-               stop
-              endif
+              enddo ! im_alt=1..nmat
+
              else if (vfrac.lt.half) then
               ! do nothing
              else
