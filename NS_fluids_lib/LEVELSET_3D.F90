@@ -20206,7 +20206,7 @@ stop
       return
       end subroutine fort_init_particle_container
 
-
+       ! relaxation_time=particle_relaxation_time_to_fluid*mass_part/dt
       subroutine interp_mac_velocity(grid_PARM,xpart, &
         vel_part,relaxation_time, &
         vel_time_slab,u)
@@ -20406,6 +20406,7 @@ stop
 
        enddo ! dir=1..sdim
 
+        ! relaxation_time=particle_relaxation_time_to_fluid*mass_part/dt
        if (relaxation_time.eq.zero) then
         wt_lagrangian=zero
        else if (relaxation_time.gt.zero) then
@@ -20414,7 +20415,8 @@ stop
         print *,"relaxation_time invalid"
         stop
        endif
-
+    
+        ! du_part/dt = -alpha*(u_part - u_fluid) + F_particle_interaction
        if ((wt_lagrangian.ge.zero).and. &
            (wt_lagrangian.le.one)) then
         do dir=1,SDIM

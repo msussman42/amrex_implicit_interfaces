@@ -311,7 +311,9 @@ Vector<Real> NavierStokes::particles_weight_XD;
 Vector<Real> NavierStokes::particles_weight_VEL; 
 
 Vector<Real> NavierStokes::particle_volume;
+ // d u_part /dt = -(1/relaxation_time)*(u_part - u_fluid)
 Vector<Real> NavierStokes::particle_relaxation_time_to_fluid;
+ // d u_fluid /dt = -(1/relaxation_time)*(u_fluid - u_part)
 Vector<Real> NavierStokes::fluid_relaxation_time_to_particle;
 Vector<int> NavierStokes::particle_interaction_ngrow;
 
