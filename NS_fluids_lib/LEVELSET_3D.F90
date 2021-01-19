@@ -4538,12 +4538,17 @@ stop
        sweep_num, &
        tessellate, &
        distribute_mdot_evenly, &
+       constant_volume_mdot, &
        dt, &
        dx,xlo, &
        nmat, &
+       nten, &
        nstate, &
        snew,DIMS(snew), &
-       mdot,DIMS(mdot), &
+       mdot, &
+       DIMS(mdot), &
+       mdot_comp, &
+       DIMS(mdot_comp), &
        LS,DIMS(LS), &
        VEL,DIMS(VEL), &
        DEN,DIMS(DEN), &
@@ -4560,17 +4565,21 @@ stop
        color,DIMS(color), &
        mask,DIMS(mask), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
        level, &
        finest_level, &
        rzflag, &
        num_colors, &
        cum_blobdata, &
        cum_mdot_data, &
+       cum_mdot_comp_data, &
        level_blobdata, &
        level_blobtypedata, &
        level_mdot_data, &
+       level_mdot_comp_data, &
        level_mdot_data_redistribute, &
+       level_mdot_comp_data_redistribute, &
        arraysize, &
        mdot_arraysize, &
        num_elements_blobclass, &
@@ -4594,6 +4603,7 @@ stop
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nface,nface_dst,ncellfrac
       INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: dt
@@ -4604,7 +4614,8 @@ stop
       INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: ncomp_mdot_alloc
       INTEGER_T, intent(in) :: ncomp_mdot
-      INTEGER_T, intent(in) :: distribute_mdot_evenly(nmat)
+      INTEGER_T, intent(in) :: distribute_mdot_evenly(2*nten)
+      INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
 
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
@@ -4621,6 +4632,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(snew)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(mdot_comp)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(VEL)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
@@ -4636,15 +4648,19 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(typefab)
       INTEGER_T, intent(in) :: DIMDEC(color)
       INTEGER_T, intent(in) :: DIMDEC(mask)
-      REAL_T, intent(inout) :: level_blobdata(arraysize)
-      REAL_T, intent(inout) :: level_mdot_data(mdot_arraysize)
-      REAL_T, intent(inout) :: level_mdot_data_redistribute(mdot_arraysize)
+      REAL_T, intent(inout) ::level_blobdata(arraysize)
+      REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
+      REAL_T, intent(inout) ::level_mdot_comp_data(mdot_arraysize)
+      REAL_T, intent(inout) ::level_mdot_data_redistribute(mdot_arraysize)
+      REAL_T, intent(inout) ::level_mdot_comp_data_redistribute(mdot_arraysize)
       REAL_T, intent(in) :: cum_blobdata(arraysize)
       REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
+      REAL_T, intent(in) :: cum_mdot_comp_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
       REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
       REAL_T, intent(inout) :: mdot(DIMV(mdot),ncomp_mdot)
+      REAL_T, intent(inout) :: mdot_comp(DIMV(mdot_comp),ncomp_mdot)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM)
@@ -4721,6 +4737,7 @@ stop
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T caller_id
       INTEGER_T nmax
+      INTEGER_T nten_test
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -4746,6 +4763,12 @@ stop
        print *,"nmat invalid"
        stop
       endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid GETCOLORSUM nten nten_test ",nten,nten_test
+       stop
+      endif
+
       if (nface.ne.nmat*SDIM*2*(1+SDIM)) then
        print *,"nface invalid"
        stop
@@ -4767,6 +4790,12 @@ stop
        endif
       else if (ncomp_mdot.ge.1) then
        if (ncomp_mdot_alloc.eq.ncomp_mdot) then
+        ! do nothing
+       else
+        print *,"ncomp_mdot_alloc invalid"
+        stop
+       endif
+       if (ncomp_mdot_alloc.eq.2*nten) then
         ! do nothing
        else
         print *,"ncomp_mdot_alloc invalid"
@@ -4802,6 +4831,7 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(snew),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(mdot_comp),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(VEL),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(DEN),1,-1,6615)

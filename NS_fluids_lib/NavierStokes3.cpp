@@ -4867,6 +4867,13 @@ NavierStokes::ColorSum(
  if (num_colors!=level_mdot_data_redistribute.size())
   amrex::Error("num_colors!=level_mdot_data_redistribute.size()");
 
+ if (num_colors!=cum_mdot_comp_data.size())
+  amrex::Error("num_colors!=cum_mdot_comp_data.size()");
+ if (num_colors!=level_mdot_comp_data.size())
+  amrex::Error("num_colors!=level_mdot_comp_data.size()");
+ if (num_colors!=level_mdot_comp_data_redistribute.size())
+  amrex::Error("num_colors!=level_mdot_comp_data_redistribute.size()");
+
  if (ncomp_mdot==0) {
   if (ncomp_mdot_alloc==1) {
    // do nothing  
@@ -4898,6 +4905,8 @@ NavierStokes::ColorSum(
    for (int j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data[i][j]=0.0;
     level_mdot_data_redistribute[i][j]=0.0;
+    level_mdot_comp_data[i][j]=0.0;
+    level_mdot_comp_data_redistribute[i][j]=0.0;
    }
   } // i=0..num_colors-1
 
@@ -4909,6 +4918,7 @@ NavierStokes::ColorSum(
      int j=0;
      for (j=0;j<ncomp_mdot_alloc;j++) {
       level_mdot_data_redistribute[i][j]=0.0;
+      level_mdot_comp_data_redistribute[i][j]=0.0;
      }
      if (j==2*nten) {
       // do nothing
@@ -4933,6 +4943,9 @@ NavierStokes::ColorSum(
  Vector<Real> cum_mdot_array;
  cum_mdot_array.resize(mdot_array_size);
 
+ Vector<Real> cum_mdot_comp_array;
+ cum_mdot_comp_array.resize(mdot_array_size);
+
  int counter=0;
  int mdot_counter=0;
 
@@ -4940,6 +4953,7 @@ NavierStokes::ColorSum(
   copy_from_blobdata(i,counter,cum_blob_array,cum_blobdata);
   for (int j=0;j<ncomp_mdot_alloc;j++) {
    cum_mdot_array[mdot_counter]=cum_mdot_data[i][j];
+   cum_mdot_comp_array[mdot_counter]=cum_mdot_comp_data[i][j];
    mdot_counter++;
   }
  }  // i=0..num_colors-1
@@ -4957,8 +4971,14 @@ NavierStokes::ColorSum(
  Vector< Vector<Real> > level_mdot_array;
  level_mdot_array.resize(thread_class::nthreads);
 
+ Vector< Vector<Real> > level_mdot_comp_array;
+ level_mdot_comp_array.resize(thread_class::nthreads);
+
  Vector< Vector<Real> > level_mdot_redistribute_array;
  level_mdot_redistribute_array.resize(thread_class::nthreads);
+
+ Vector< Vector<Real> > level_mdot_comp_redistribute_array;
+ level_mdot_comp_redistribute_array.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   level_blob_type_array[tid].resize(num_colors);
@@ -4971,9 +4991,14 @@ NavierStokes::ColorSum(
   level_mdot_array[tid].resize(mdot_array_size);
   level_mdot_redistribute_array[tid].resize(mdot_array_size);
 
+  level_mdot_comp_array[tid].resize(mdot_array_size);
+  level_mdot_comp_redistribute_array[tid].resize(mdot_array_size);
+
   for (int i=0;i<mdot_array_size;i++) {
    level_mdot_array[tid][i]=0.0;
    level_mdot_redistribute_array[tid][i]=0.0;
+   level_mdot_comp_array[tid][i]=0.0;
+   level_mdot_comp_redistribute_array[tid][i]=0.0;
   }
 
   if (operation_flag==0) {
@@ -4994,6 +5019,7 @@ NavierStokes::ColorSum(
     int j=0;
     for (j=0;j<ncomp_mdot_alloc;j++) {
      level_mdot_array[tid][mdot_counter]=level_mdot_data[i][j];
+     level_mdot_comp_array[tid][mdot_counter]=level_mdot_comp_data[i][j];
      mdot_counter++;
     }
     if (j==2*nten) {
@@ -5189,17 +5215,21 @@ NavierStokes::ColorSum(
    colorfab.dataPtr(),ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    tilelo,tilehi,
-   fablo,fabhi,&bfact,
+   fablo,fabhi,
+   &bfact,
    &level,
    &finest_level,
    &rzflag,
    &num_colors,
    cum_blob_array.dataPtr(),
    cum_mdot_array.dataPtr(),
+   cum_mdot_comp_array.dataPtr(),
    level_blob_array[tid_current].dataPtr(),
    level_blob_type_array[tid_current].dataPtr(),
    level_mdot_array[tid_current].dataPtr(),
+   level_mdot_comp_array[tid_current].dataPtr(),
    level_mdot_redistribute_array[tid_current].dataPtr(),
+   level_mdot_comp_redistribute_array[tid_current].dataPtr(),
    &blob_array_size,
    &mdot_array_size,
    &num_elements_blobclass,
@@ -5224,6 +5254,7 @@ NavierStokes::ColorSum(
    }
    for (int i=0;i<mdot_array_size;i++) {
     level_mdot_array[0][i]+=level_mdot_array[tid][i];
+    level_mdot_comp_array[0][i]+=level_mdot_comp_array[tid][i];
    }
   } // tid
 
@@ -5231,7 +5262,10 @@ NavierStokes::ColorSum(
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    for (int i=0;i<mdot_array_size;i++) {
-    level_mdot_redistribute_array[0][i]+=level_mdot_redistribute_array[tid][i];
+    level_mdot_redistribute_array[0][i]+=
+      level_mdot_redistribute_array[tid][i];
+    level_mdot_comp_redistribute_array[0][i]+=
+      level_mdot_comp_redistribute_array[tid][i];
    }
   }
 
@@ -5247,8 +5281,10 @@ NavierStokes::ColorSum(
   for (int i=0;i<num_colors;i++) 
    ParallelDescriptor::ReduceIntMax(level_blob_type_array[0][i]);
 
-  for (int i=0;i<mdot_array_size;i++) 
+  for (int i=0;i<mdot_array_size;i++) {
    ParallelDescriptor::ReduceRealSum(level_mdot_array[0][i]);
+   ParallelDescriptor::ReduceRealSum(level_mdot_comp_array[0][i]);
+  }
 
   counter=0;
   mdot_counter=0;
@@ -5259,6 +5295,7 @@ NavierStokes::ColorSum(
 
    for (int j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data[i][j]=level_mdot_array[0][mdot_counter];
+    level_mdot_comp_data[i][j]=level_mdot_comp_array[0][mdot_counter];
     mdot_counter++;
    }
 
@@ -5271,14 +5308,18 @@ NavierStokes::ColorSum(
 
  } else if (operation_flag==1) {
 
-  for (int i=0;i<mdot_array_size;i++) 
+  for (int i=0;i<mdot_array_size;i++) {
    ParallelDescriptor::ReduceRealSum(level_mdot_redistribute_array[0][i]);
+   ParallelDescriptor::ReduceRealSum(level_mdot_comp_redistribute_array[0][i]);
+  }
 
   mdot_counter=0;
   for (int i=0;i<num_colors;i++) {
    for (int j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data_redistribute[i][j]=
       level_mdot_redistribute_array[0][mdot_counter];
+    level_mdot_comp_data_redistribute[i][j]=
+      level_mdot_comp_redistribute_array[0][mdot_counter];
     mdot_counter++;
    }
   }
@@ -5686,14 +5727,20 @@ NavierStokes::ColorSumALL(
   blobdata.resize(color_count);
   mdot_data.resize(color_count);
   mdot_data_redistribute.resize(color_count);
+  mdot_comp_data.resize(color_count);
+  mdot_comp_data_redistribute.resize(color_count);
   for (int i=0;i<color_count;i++) {
    clear_blobdata(i,blobdata);
    mdot_data[i].resize(ncomp_mdot_alloc);
    mdot_data_redistribute[i].resize(ncomp_mdot_alloc);
+   mdot_comp_data[i].resize(ncomp_mdot_alloc);
+   mdot_comp_data_redistribute[i].resize(ncomp_mdot_alloc);
    int j=0;
    for (j=0;j<ncomp_mdot_alloc;j++) {
     mdot_data[i][j]=0.0;
     mdot_data_redistribute[i][j]=0.0;
+    mdot_comp_data[i][j]=0.0;
+    mdot_comp_data_redistribute[i][j]=0.0;
    }
 
    if (idx_mdot>=0) {
@@ -5717,19 +5764,33 @@ NavierStokes::ColorSumALL(
 
  Vector<blobclass> level_blobdata;
  level_blobdata.resize(color_count);
+
  Vector< Vector<Real> > level_mdot_data;
  level_mdot_data.resize(color_count);
  Vector< Vector<Real> > level_mdot_data_redistribute;
  level_mdot_data_redistribute.resize(color_count);
 
+ Vector< Vector<Real> > level_mdot_comp_data;
+ level_mdot_comp_data.resize(color_count);
+ Vector< Vector<Real> > level_mdot_comp_data_redistribute;
+ level_mdot_comp_data_redistribute.resize(color_count);
+
  for (int i=0;i<color_count;i++) {
   clear_blobdata(i,level_blobdata); 
+
   level_mdot_data[i].resize(ncomp_mdot_alloc);
   level_mdot_data_redistribute[i].resize(ncomp_mdot_alloc);
+
+  level_mdot_comp_data[i].resize(ncomp_mdot_alloc);
+  level_mdot_comp_data_redistribute[i].resize(ncomp_mdot_alloc);
+
   int j=0;
   for (j=0;j<ncomp_mdot_alloc;j++) {
    level_mdot_data[i][j]=0.0;
    level_mdot_data_redistribute[i][j]=0.0;
+
+   level_mdot_comp_data[i][j]=0.0;
+   level_mdot_comp_data_redistribute[i][j]=0.0;
   }
 
   if (idx_mdot>=0) {
@@ -5754,6 +5815,7 @@ NavierStokes::ColorSumALL(
    int j=0;
    for (j=0;j<ncomp_mdot_alloc;j++) {
     level_mdot_data[i][j]=mdot_data[i][j];
+    level_mdot_comp_data[i][j]=mdot_comp_data[i][j];
    }
    if (idx_mdot>=0) {
     if (j==2*nten) {
@@ -5821,6 +5883,7 @@ NavierStokes::ColorSumALL(
       int j=0;
       for (j=0;j<ncomp_mdot_alloc;j++) {
        mdot_data[i][j]+=level_mdot_data[i][j];
+       mdot_comp_data[i][j]+=level_mdot_comp_data[i][j];
       }
       if (idx_mdot>=0) {
        if (j==2*nten) {
@@ -5864,7 +5927,10 @@ NavierStokes::ColorSumALL(
 
       int j=0;
       for (j=0;j<ncomp_mdot_alloc;j++) {
-       mdot_data_redistribute[i][j]+=level_mdot_data_redistribute[i][j];
+       mdot_data_redistribute[i][j]+=
+	   level_mdot_data_redistribute[i][j];
+       mdot_comp_data_redistribute[i][j]+=
+	   level_mdot_comp_data_redistribute[i][j];
       }
       if (j==2*nten) {
        // do nothing

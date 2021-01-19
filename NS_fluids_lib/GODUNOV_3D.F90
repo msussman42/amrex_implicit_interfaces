@@ -17393,7 +17393,7 @@ stop
        vofbc, &
        expect_mdot_sign, &
        mdot_sum, &
-       mdot_sum_complement, &
+       mdot_sum_comp, &
        im_source, &
        im_dest, &
        indexEXP, &
@@ -17404,8 +17404,10 @@ stop
        bfact, &
        xlo,dx,dt, &
        maskcov,DIMS(maskcov), &
-       tag,DIMS(tag), &
-       tag_comp,DIMS(tag_comp), &
+       tag, &
+       DIMS(tag), &
+       tag_comp, &
+       DIMS(tag_comp), &
        expan,DIMS(expan), &
        expan_comp,DIMS(expan_comp), &
        LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
@@ -17420,6 +17422,7 @@ stop
        INTEGER_T, intent(in) :: ngrow_expansion
        REAL_T, intent(in) :: time
        REAL_T, intent(inout) :: mdot_sum
+       REAL_T, intent(inout) :: mdot_sum_comp
        REAL_T, intent(in) :: expect_mdot_sign
        INTEGER_T, intent(in) :: im_source,im_dest
        INTEGER_T :: im_ice
@@ -17439,12 +17442,16 @@ stop
        REAL_T, intent(in) :: dt
        INTEGER_T, intent(in) :: DIMDEC(maskcov)
        INTEGER_T, intent(in) :: DIMDEC(tag)
+       INTEGER_T, intent(in) :: DIMDEC(tag_comp)
        INTEGER_T, intent(in) :: DIMDEC(expan)
+       INTEGER_T, intent(in) :: DIMDEC(expan_comp)
        INTEGER_T, intent(in) :: DIMDEC(LS)
        INTEGER_T, intent(in) :: DIMDEC(recon)
        REAL_T, intent(in) :: maskcov(DIMV(maskcov))
        REAL_T, intent(out) :: tag(DIMV(tag))
+       REAL_T, intent(out) :: tag_comp(DIMV(tag_comp))
        REAL_T, intent(in) :: expan(DIMV(expan),2*nten)
+       REAL_T, intent(in) :: expan_comp(DIMV(expan_comp),2*nten)
        REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
        REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
