@@ -5790,6 +5790,90 @@ stop
                    print *,"distribute_mdot_evenly(iten_shift) invalid"
                    stop
                   endif
+
+                  if (constant_volume_mdot(iten_shift).eq.0) then
+                   im_negate=0
+                   complement_flag=0 
+                  else if (constant_volume_mdot(iten_shift).eq.1) then
+                   ! distribute -sum mdot to the source:
+                   im_negate=im_source
+                   if (distribute_from_target(iten_shift).eq.0) then
+                    complement_flag=1 
+                   else if (distribute_from_target(iten_shift).eq.1) then
+                    complement_flag=0 
+                   else
+                    print *,"distribute_from_target(iten_shift) invalid"
+                    stop
+                   endif
+                  else if (constant_volume_mdot(iten_shift).eq.-1) then
+                   ! distribute -sum mdot to the dest:
+                   im_negate=im_dest
+                   if (distribute_from_target(iten_shift).eq.0) then
+                    complement_flag=0 
+                   else if (distribute_from_target(iten_shift).eq.1) then
+                    complement_flag=1 
+                   else
+                    print *,"distribute_from_target(iten_shift) invalid"
+                    stop
+                   endif
+                  else
+                   print *,"constant_volume_mdot(iten_shift) invalid"
+                   stop
+                  endif
+
+                  if (im_negate.eq.0) then
+                   ! do nothing
+                  else if (im_negate.eq.im) then
+                   ic=opposite_color(im)*num_elements_blobclass
+                   blob_cell_count=cum_blobdata(ic)
+                   if (blob_cell_count.gt.zero) then
+
+                    if (ncomp_mdot.eq.2*nten) then
+                     ic_base=(opposite_color(im)-1)*ncomp_mdot
+                     if (complement_flag.eq.0) then
+                      mdot_total=cum_mdot_data(ic_base+iten_shift)
+                     else if (complement_flag.eq.1) then
+                      mdot_total=cum_mdot_comp_data(ic_base+iten_shift)
+                     else
+                      print *,"complement_flag invalid"
+                      stop
+                     endif
+                     mdot_avg=mdot_total/blob_cell_count
+
+                     level_mdot_data_redistribute(ic_base+iten_shift)= &
+                      level_mdot_data_redistribute(ic_base+iten_shift)+ &
+                      mdot_avg
+
+FIX ME              
+                     mdot(D_DECL(i,j,k),iten_shift)= &
+                       mdot(D_DECL(i,j,k),iten_shift)-mdot_avg
+                     dt_div_V=mdot_avg*dt*dt/vol
+                     dencomp=(SDIM+1)*num_materials_vel+ &
+                          (im-1)*num_state_material+1
+                     original_density=snew(D_DECL(i,j,k),dencomp)
+                     if (original_density.gt.zero) then
+                      snew(D_DECL(i,j,k),dencomp)= &
+                         (one+dt_div_V)*original_density
+                     else
+                      print *,"original_density invalid"
+                      stop
+                     endif
+                    else
+                     print *,"ncomp_mdot invalid"
+                     stop
+                    endif
+
+                   else
+                    print *,"blob_cell_count invalid"
+                    stop
+                   endif
+                  else if (im.ne.im_negate) then
+                   ! do nothing
+                  else
+                   print *,"im or im_negate bust"
+                   stop
+                  endif
+
                  else
                   print *,"latent_heat(iten_shift) invalid"
                   stop
