@@ -3506,6 +3506,12 @@ NavierStokes::read_params ()
         } else
          amrex::Error("ireverse invalid");
 
+        if ((material_type[im_source-1]==0)&&
+            (material_type[im_dest-1]==0)) {
+         // do nothing
+        } else
+         amrex::Error("comp. divu source term model for phase change invalid");
+
 	 // if freezing, we want distribute_from_target (from ice) to
 	 // be 0 otherwise there will be no place to put mdot in the
 	 // liquid once the liquid is almost all frozen.
@@ -3623,9 +3629,20 @@ NavierStokes::read_params ()
                    distribute_from_target[iten_local]) {
 
          if (distribute_mdot_evenly[iten_local]==1) {
-          // do nothing
+          if (freezing_model[iten_local]==0) { //energy jump model
+           // do nothing
+          } else if ((freezing_model[iten_local]==1)|| //source term model
+                     (freezing_model[iten_local]==2)|| //hydrate model
+                     (freezing_model[iten_local]==3)|| //combustion
+                     (freezing_model[iten_local]==4)|| //Tanasawa or Shrage
+                     (freezing_model[iten_local]==5)|| //Stefan evap model
+                     (freezing_model[iten_local]==6)|| //Palmore, Deshardins
+                     (freezing_model[iten_local]==7)) {//cavitation
+           amrex::Error("distribute_from_target invalid");
+          } else 
+           amrex::Error("freezing_model invalid"); 
          } else
-          amrex::Error("distribute_mdot_evenly invalid");
+          amrex::Error("distribute_mdot_evenly or dist_from_targ invalid");
 
 	} else
   	 amrex::Error("fixed_parm invalid");
