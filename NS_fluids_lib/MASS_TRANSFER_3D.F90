@@ -4582,7 +4582,9 @@ stop
           local_freezing_model=freezing_model(iten+ireverse*nten)
           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
-           
+          
+           ! TgammaFAB has valid values corresponding to the
+           ! given value for "ireverse". 
           if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
             Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
              nten+(iten-1)*ncomp_per_tsat+1)
@@ -4596,6 +4598,8 @@ stop
              print *,"mass_frac_id invalid"
              stop
             endif
+           ! TgammaFAB has valid values corresponding to the
+           ! given value for 1-ireverse
           else if ((Tsat_flag.eq.-1).or. &
                    (Tsat_flag.eq.-2)) then
             ! do nothing
@@ -5005,7 +5009,8 @@ stop
              if (mtype.eq.0) then
               density_new(iprobe)=unsplit_density(im_probe) 
              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-              density_new(iprobe)=unsplit_density(im_probe) 
+              print *,"only spatially uniform density phase change allowed"
+              stop
              else
               print *,"mtype invalid"
               stop
@@ -5035,7 +5040,8 @@ stop
              if (mtype.eq.0) then
               density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+              print *,"only spatially uniform density phase change allowed"
+              stop
              else
               print *,"mtype invalid"
               stop
@@ -5112,7 +5118,9 @@ stop
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
 
-             vapor_den=species_evaporation_density(mass_frac_id)
+!             The total density is spatially uniform
+!             vapor_den=species_evaporation_density(mass_frac_id)
+             vapor_den=density_old(iprobe_vapor)
              condensed_den=density_old(iprobe_condensed)
 
              if ((vapor_den.gt.zero).and.(condensed_den.gt.zero)) then
@@ -5139,9 +5147,8 @@ stop
 
             temp_new_vfrac=oldvfrac(im_dest)+dF
             if (temp_new_vfrac.gt.EBVOFTOL) then 
-             density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
-               vapor_den*dF)/temp_new_vfrac
-
+             density_mix_new(2)=density_old(2)
+             
              if (1.eq.0) then
               print *,"i,j,k,temp_new_vfrac ",i,j,k,temp_new_vfrac
               print *,"denold,oldF,vapor_den,dF,dennew ", &
@@ -5149,53 +5156,19 @@ stop
                density_mix_new(2)
              endif
 
-              ! If liquid and gas mixture are incompressible, then
-              ! determine Y so that den_mix= 
-              !   (denV denA)/(Y denA + (1-Y) denV )
-              ! den_mix * ( Y(denA-denV) + denV ) = denA denV
-              ! Y(denA -denV) + denV = denA denV/den_mix
-              ! Y=((denA denV)/den_mix - denV)/(denA-denV)
-              !  =denV (denA-den_mix)/((denA-denV)den_mix)
              mtype=fort_material_type(im_vapor)
              if (mtype.eq.0) then
-              gas_den_ratio=vapor_den/ambient_den
-              if (abs(gas_den_ratio-one).gt.1.0D-3) then
-               numerator=vapor_den*(ambient_den-density_mix_new(2)) 
-               denominator=density_mix_new(2)*(ambient_den-vapor_den) 
-               if (numerator*denominator.gt.zero) then
-                mass_frac_new(2)=numerator/denominator
-               else
-                print *,"numerator/denominator invalid"
-                stop
-               endif
-               if ((mass_frac_new(2).ge.zero).and. &
-                   (mass_frac_new(2).le.one)) then
-                ! do nothing
-               else if (mass_frac_new(2).gt.one) then
-                mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
-                  dF)/temp_new_vfrac
-               else
-                print *,"mass_frac_new(2) invalid"
-                stop
-               endif
-              else if (abs(gas_den_ratio-one).le.1.0D-3) then
-               mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
-                 dF)/temp_new_vfrac
-              else
-               print *,"abs(gas_den_ratio-one) invalid"
-               stop
-              endif
-             else if (((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)).or. &
-                      (abs(ambient_den-vapor_den).le.1.0D-3*vapor_den)) then
-              mass_frac_new(2)=(species_old(2)*oldvfrac(im_dest)+ &
-               dF)/temp_new_vfrac
+              mass_frac_new(2)=Ygamma_default
+             else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
+              print *,"only spatially uniform density phase change allowed"
+              stop 
              else
-              print *,"type invalid"
+              print *,"mtype invalid"
               stop
              endif
             else if (temp_new_vfrac.le.EBVOFTOL) then
              density_mix_new(2)=density_old(2)
-             mass_frac_new(2)=species_old(2)
+             mass_frac_new(2)=Ygamma_default
             else
              print *,"temp_new_vfrac invalid"
              stop
@@ -5209,19 +5182,8 @@ stop
                density_mix_new(1)=density_old(1)
               else if ((mtype.ge.1).and. &
                        (mtype.le.MAX_NUM_EOS)) then
-               density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
-                condensed_den*dF)/temp_new_vfrac
-               if (density_mix_new(1).gt.zero) then
-                ! do nothing
-               else
-                print *,"density_mix_new(1) invalid",density_mix_new(1)
-                print *,"LL=",LL
-                print *,"density_old(1)=",density_old(1)
-                print *,"oldvfrac(im_source)=",oldvfrac(im_source)
-                print *,"dF=",dF
-                print *,"condensed_den=",condensed_den
-                stop
-               endif
+               print *,"only spatially uniform density phase change allowed"
+               stop
               else
                print *,"mtype invalid"
                stop
@@ -5248,8 +5210,8 @@ stop
                density_mix_new(2)=density_old(2)
               else if ((mtype.ge.1).and. &
                        (mtype.le.MAX_NUM_EOS)) then
-               density_mix_new(2)=(density_old(2)*oldvfrac(im_dest)+ &
-                condensed_den*dF)/temp_new_vfrac
+               print *,"only spatially uniform density phase change allowed"
+               stop
               else
                print *,"mtype invalid"
                stop
@@ -5267,24 +5229,15 @@ stop
 
             temp_new_vfrac=oldvfrac(im_source)-dF
             if (temp_new_vfrac.gt.EBVOFTOL) then 
-             denratio_factor=density_old(1)/vapor_den-one
-             if (abs(denratio_factor).le.EBVOFTOL) then
-              density_mix_new(1)=density_old(1)
-             else if (abs(denratio_factor).gt.EBVOFTOL) then
-              density_mix_new(1)=(density_old(1)*oldvfrac(im_source)- &
-               vapor_den*dF)/temp_new_vfrac
+             density_mix_new(1)=density_old(1)
              else
               print *,"denratio_factor invalid"
               stop
              endif
-             mass_frac_new(1)=(species_old(1)*oldvfrac(im_source)- &
-              dF)/temp_new_vfrac
-             if (mass_frac_new(1).lt.zero) then
-              mass_frac_new(1)=zero
-             endif
+             mass_frac_new(1)=Ygamma_default
             else if (temp_new_vfrac.le.EBVOFTOL) then
              density_mix_new(1)=density_old(1)
-             mass_frac_new(1)=zero
+             mass_frac_new(1)=Ygamma_default
             else
              print *,"temp_new_vfrac invalid"
              stop
