@@ -379,6 +379,7 @@ public:
   Real blob_mass_for_velocity[3];
   Real blob_volume;
   Real blob_cell_count;
+  Real blob_mass;
   Real blob_center_integral[AMREX_SPACEDIM];
   Real blob_center_actual[AMREX_SPACEDIM];
   Real blob_perim;  // surface area of the blob
@@ -1835,6 +1836,7 @@ protected:
     // blob_center_integral,blob_center_actual
     // blob_perim, blob_perim_mat, blob_triple_perim, 
     // blob_cell_count, 
+    // blob_mass, 
     static int num_elements_blobclass;
 
     static int ngrowFSI;//should be 3

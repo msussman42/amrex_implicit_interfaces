@@ -4864,12 +4864,20 @@ stop
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
       !blob_cell_count
+      !blob_mass
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
+          2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
+          3+ & ! blob_mass_for_velocity
+          1+ & ! blob_volume
+          2*SDIM+ & ! blob_center_integral,blob_center_actual
+          1+ & ! blob_perim
+          nmat+ & ! blob_perim_mat 
+          nmat*nmat+ & ! blob_triple_perim
+          1+1) then ! blob_cell_count,blob_mass
        print *,"num_elements_blobclass invalid"
        print *,"blob_cell_count added December 6, 2020"
+       print *,"blob_mass added January 23, 2021"
        stop
       endif
       if (arraysize.ne.num_elements_blobclass*num_colors) then
@@ -5325,6 +5333,8 @@ stop
 
            if (operation_flag.eq.0) then
 
+             ! im_interior_wt(1) is for projecting velocity deep enough
+             ! into a rigid body onto rigid body motion.
             if (LScen(im).ge.cutoff) then ! cutoff=2 * DXMAXLS
              im_interior_wt(1)=one
             else if (LScen(im).lt.cutoff) then
@@ -5334,6 +5344,7 @@ stop
              stop
             endif
 
+             ! sum_3x3x3 H(phi_solid)/sum_3x3x3 1
             im_interior_wt(2)=solid_fraction
 
             if (LScen(im).ge.zero) then
@@ -5507,14 +5518,16 @@ stop
             enddo ! im2=1..nmat
             enddo ! im1=1..nmat
 
+            if (ic.eq.opposite_color(im)*num_elements_blobclass-1) then
+             ! do nothing
+            else
+             print *,"ic invalid, blob_cell_count 2nd to last?"
+             stop
+            endif
+
              ! blob_cell_count
             if (vfrac.ge.half) then
-             if (ic.eq.opposite_color(im)*num_elements_blobclass) then
-              level_blobdata(ic)=level_blobdata(ic)+one
-             else
-              print *,"ic invalid"
-              stop
-             endif
+             level_blobdata(ic)=level_blobdata(ic)+one
              if (ncomp_mdot.eq.2*nten) then
               ic_base=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
@@ -5540,13 +5553,42 @@ stop
 
             ic=ic+1
 
-            if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
+            if (ic.eq.opposite_color(im)*num_elements_blobclass) then
+             ! do nothing
+            else
+             print *,"ic invalid, blob_mass is last?"
+             stop
+            endif
+
+             ! blob_mass
+            dencomp=(im-1)*num_state_material+1
+            den_mat=DEN(D_DECL(i,j,k),dencomp)
+            if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
+             if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
+              level_blobdata(ic)=level_blobdata(ic)+vol*vfrac*den_mat
+             else
+              print *,"den_mat overflow"
+              print *,"den_mat= ",den_mat
+              print *,"fort_density_ceiling(im)=",fort_density_ceiling(im)
+              stop
+             endif
+            else
+             print *,"den_mat underflow"
+             stop
+            endif
+
+            ic=ic+1
+
+            if (ic.eq.opposite_color(im)*num_elements_blobclass+1) then
+             ! do nothing
+            else
              print *,"ic invalid in getcolorsum"
              print *,"ic=",ic
              print *,"im=",im
              print *,"opposite_color(im)=",opposite_color(im)
              print *,"num_elements_blobclass=",num_elements_blobclass
              print *,"blob_cell_count added December 6, 2020"
+             print *,"blob_mass added January 23, 2021"
              stop
             endif
 
@@ -5635,8 +5677,16 @@ stop
 
                ! F,CEN_INTEGRATE,CEN_ACTUAL,AREA,AREA(im_opp)
               ic=(opposite_color(im)-1)*num_elements_blobclass+ &
-               3*(2*SDIM)*(2*SDIM)+ &
-               3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1+2*SDIM+1
+               3*(2*SDIM)*(2*SDIM)+ & ! blob_matrix
+               3*(2*SDIM)+ & ! blob_RHS
+               3*(2*SDIM)+ & ! blob_velocity
+               2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
+               3+ & ! blob_mass_for_velocity
+               1+ & ! blob_volume
+               2*SDIM+ & ! blob_center_integral,blob_center_actual
+               1 ! blob_perim  
+
+               ! ic component is blob_perim
               do im_opp=1,nmat
                if (im_opp.ne.im) then
                 if (side.eq.1) then
@@ -5674,6 +5724,7 @@ stop
               enddo ! im_opp=1..nmat
               ic=ic+nmat*nmat
               ic=ic+1  ! blob_cell_count added December 6, 2020
+              ic=ic+1  ! blob_mass added January 23, 2021
   
               if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
                print *,"ic invalid in getcolorsum 2"
@@ -5682,6 +5733,7 @@ stop
                print *,"opposite_color(im)=",opposite_color(im)
                print *,"num_elements_blobclass=",num_elements_blobclass
                print *,"blob_cell_count added December 6, 2020"
+               print *,"blob_mass added January 23, 2021"
                stop
               endif
 
@@ -5738,7 +5790,7 @@ stop
                    endif
                
                    if (im.eq.im_evenly) then 
-                    ic=opposite_color(im)*num_elements_blobclass
+                    ic=opposite_color(im)*num_elements_blobclass-1
                     blob_cell_count=cum_blobdata(ic)
                     if (blob_cell_count.gt.zero) then
 
@@ -5824,7 +5876,7 @@ stop
                   if (im_negate.eq.0) then
                    ! do nothing
                   else if (im_negate.eq.im) then
-                   ic=opposite_color(im)*num_elements_blobclass
+                   ic=opposite_color(im)*num_elements_blobclass-1
                    blob_cell_count=cum_blobdata(ic)
                    if (blob_cell_count.gt.zero) then
 
@@ -13526,10 +13578,14 @@ FIX ME
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
       !blob_cell_count
+      !blob_mass
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
+          2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
+          3+1+ & ! blob_mass_for_velocity, blob_volume
+          2*SDIM+ & ! blob_center_integral,blob_center_actual
+          1+nmat+nmat*nmat+ & ! blob_perim, blob_perim_mat, blob_triple_perim
+          1+1) then
        print *,"num_elements_blobclass invalid"
        stop
       endif
