@@ -881,6 +881,7 @@ Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*nten
 // 1 - distribute sum -mdot to the source
 // -1 - distribute sum -mdot to the dest
 Vector<int> NavierStokes::constant_volume_mdot; // 1..2*nten
+Vector<int> NavierStokes::constant_density_all_time; // 1..nmat, def=1
 
 int NavierStokes::is_phasechange=0;
 int NavierStokes::normal_probe_size=1;
@@ -3098,6 +3099,9 @@ NavierStokes::read_params ()
     distribute_from_target.resize(2*nten);
     distribute_mdot_evenly.resize(2*nten);
     constant_volume_mdot.resize(2*nten);
+
+    constant_density_all_time.resize(nmat);
+
     tension.resize(nten);
     tension_slope.resize(nten);
     tension_T0.resize(nten);
@@ -3177,8 +3181,10 @@ NavierStokes::read_params ()
 
     density_floor.resize(nmat);
     density_floor_expansion.resize(nmat);
-    for (int i=0;i<nmat;i++)
+    for (int i=0;i<nmat;i++) {
      density_floor[i]=0.0;
+     constant_density_all_time[i]=1;
+    }
     pp.queryarr("density_floor",density_floor,0,nmat);
     density_ceiling.resize(nmat);
     density_ceiling_expansion.resize(nmat);
@@ -3557,6 +3563,8 @@ NavierStokes::read_params ()
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
     pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*nten);
     pp.queryarr("constant_volume_mdot",constant_volume_mdot,0,2*nten);
+
+    pp.queryarr("constant_density_all_time",constant_density_all_time,0,nmat);
 
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -4882,6 +4890,8 @@ NavierStokes::read_params ()
      }  // i=0..nten-1
 
      for (int i=0;i<nmat;i++) {
+      std::cout << "constant_density_all_time i=" << i << "  " << 
+       constant_density_all_time[i] << '\n';
       std::cout << "cavitation_pressure i=" << i << "  " << 
        cavitation_pressure[i] << '\n';
       std::cout << "cavitation_vapor_density i=" << i << "  " << 

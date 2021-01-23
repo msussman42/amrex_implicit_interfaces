@@ -3638,8 +3638,6 @@ stop
       REAL_T species_new(2)
       REAL_T species_old(2)
       REAL_T numerator,denominator
-      REAL_T ambient_den
-      REAL_T gas_den_ratio
       REAL_T delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
       REAL_T xPOINT_supermesh(SDIM)
       REAL_T xPOINT_GFM(SDIM)
@@ -5082,14 +5080,6 @@ stop
            else
              print *,"im_vapor invalid"
              stop
-           endif
-
-           ambient_den=fort_denconst(im_vapor)
-           if (ambient_den.gt.zero) then
-            ! do nothing
-           else
-            print *,"ambient_den invalid"
-            stop
            endif
 
             ! at CONSTANT DENSITY:
