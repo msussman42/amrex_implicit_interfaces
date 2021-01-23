@@ -3565,6 +3565,17 @@ NavierStokes::read_params ()
     pp.queryarr("constant_volume_mdot",constant_volume_mdot,0,2*nten);
 
     pp.queryarr("constant_density_all_time",constant_density_all_time,0,nmat);
+    for (int i=0;i<nmat;i++) {
+     if (material_type[i]==0) {
+      // do nothing
+     } else if (material_type[i]==999) {
+      // do nothing
+     } else if ((material_type[i]>0)&&
+                (material_type[i]<999)) {
+      constant_density_all_time[i]=0
+     } else
+      amrex::Error("material_type invalid");
+    }
 
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -3579,6 +3590,12 @@ NavierStokes::read_params ()
 
        if (latent_heat[iten_local]!=0.0) {
         get_inverse_iten_cpp(im1,im2,iten+1,nmat);
+        if ((im1>=1)&&(im1<=nmat)&&(im2>=1)&&(im2<=nmat)&&
+            (im1!=im2)) { 
+         // do nothing
+        } else
+         amrex::Error("im1 or im2 invalid");
+        
         if (ireverse==0) {
          im_source=im1;  
          im_dest=im2;  
@@ -3587,6 +3604,24 @@ NavierStokes::read_params ()
          im_dest=im1;  
         } else
          amrex::Error("ireverse invalid");
+
+        int im_constant=0;
+        if (constant_volume_mdot[iten_local]==0) {
+         // do nothing
+        } else if (constant_volume_mdot[iten_local]==1) {
+         im_constant=im_source;
+        } else if (constant_volume_mdot[iten_local]==-1) {
+         im_constant=im_dest;
+        } else
+         amrex::Error("constant_volume_mdot[iten_local] invalid");
+
+        if (im_constant==0) {
+         // do nothing
+        } else if ((im_constant>=1)&&(im_constant<=nmat)) {
+         constant_density_all_time[im_constant-1]=0;
+        } else
+         amrex::Error("im_constant invalid");
+ 
        } else if (latent_heat[iten_local]==0) {
         // do nothing
        } else
