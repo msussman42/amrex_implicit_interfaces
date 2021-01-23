@@ -679,6 +679,7 @@ int NavierStokes::ngrow_make_distance=3;
 // blob_center_integral,blob_center_actual
 // blob_perim, blob_perim_mat, blob_triple_perim, 
 // blob_cell_count
+// blob_mass
 int NavierStokes::num_elements_blobclass=0;
 
 int NavierStokes::ngrowFSI=3;
@@ -2166,6 +2167,7 @@ NavierStokes::read_params ()
     // blob_center_integral,blob_center_actual
     // blob_perim, blob_perim_mat, blob_triple_perim, 
     // blob_cell_count
+    // blob_mass
     num_elements_blobclass=
      3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)+  // blob_matrix * 3
      3*(2*AMREX_SPACEDIM)+                     // blob_RHS * 3
@@ -2178,7 +2180,8 @@ NavierStokes::read_params ()
      1+                                        // blob_perim
      nmat+                                     // blob_perim_mat
      nmat*nmat+                                // blob_triple_perim
-     1;                                        // blob_cell_count
+     1+                                        // blob_cell_count
+     1;                                        // blob_mass
 
     int ns_max_level;
     Vector<int> ns_max_grid_size;
@@ -12869,8 +12872,11 @@ NavierStokes::phase_change_redistributeALL() {
    int j=0;
    for (j=0;j<mdot_data_redistribute[i].size();j++) {
     std::cout << "i=" << i << " j=" << j << " im=" <<
-      blobdata[i].im << " blobdata[i].blob_cell_count=" <<
+      blobdata[i].im << 
+      " blobdata[i].blob_cell_count=" <<
       blobdata[i].blob_cell_count << 
+      " blobdata[i].blob_mass=" <<
+      blobdata[i].blob_mass << 
       " mdot_data[i][j]=" << mdot_data[i][j] << 
       " mdot_data_redistribute[i][j]=" <<
       mdot_data_redistribute[i][j] << '\n';
@@ -12887,8 +12893,11 @@ NavierStokes::phase_change_redistributeALL() {
    int j=0;
    for (j=0;j<mdot_comp_data_redistribute[i].size();j++) {
     std::cout << "i=" << i << " j=" << j << " im=" <<
-      blobdata[i].im << " blobdata[i].blob_cell_count=" <<
+      blobdata[i].im << 
+      " blobdata[i].blob_cell_count=" <<
       blobdata[i].blob_cell_count << 
+      " blobdata[i].blob_mass=" <<
+      blobdata[i].blob_mass << 
       " mdot_comp_data[i][j]=" << mdot_comp_data[i][j] << 
       " mdot_comp_data_redistribute[i][j]=" <<
       mdot_comp_data_redistribute[i][j] << '\n';

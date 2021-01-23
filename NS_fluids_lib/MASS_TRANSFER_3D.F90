@@ -7342,13 +7342,21 @@ stop
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
       !blob_cell_count
+      !blob_mass
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
+          3+ & ! blob_mass_for_velocity
+          1+ & ! volume
+          2*SDIM+ & ! centroid integral, actual
+          1+ & ! perim 
+          nmat+ & ! perim_mat
+          nmat*nmat+ & ! blob_triple_perim 
+          1+1) then
        print *,"num_elements_blobclass invalid rate mass change:", &
          num_elements_blobclass
        print *,"blob_cell_count added December 6, 2020"
+       print *,"blob_mass added January 23, 2021"
        stop
       endif
 
@@ -8346,11 +8354,19 @@ stop
                      ! volume, 
                      ! centroid_integral, centroid_actual, 
                      ! perim, perim_mat, 
+                     ! blob_triple_perim,
                      ! blob_cell_count
+                     ! blob_mass
+
+                      ! ic+1 is blob_triple_perim index
                      ic=(icolor-1)*num_elements_blobclass+ &
                       3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
                       2*(2*SDIM)+1+ &
-                      3+1+2*SDIM+1+nmat
+                      3+ &  ! blob_mass_for_velocity
+                      1+ &  ! volume
+                      2*SDIM+ & ! centroid integral, centroid actual
+                      1+ & ! perim 
+                      nmat ! perim_mat
 
                      im2=microlayer_substrate_probe
                      if ((im2.ge.1).and.(im2.le.nmat)) then
