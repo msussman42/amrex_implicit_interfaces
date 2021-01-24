@@ -4446,15 +4446,28 @@ NavierStokes::read_params ()
            (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
 	   (freezing_model[indexEXP]==7)) { // cavitation
         if (LL!=0.0) {
+
          int massfrac_id=mass_fraction_id[indexEXP];
          if ((massfrac_id<1)||(massfrac_id>num_species_var))
           amrex::Error("massfrac_id invalid");
          if (LL>0.0) { //evaporation
           spec_material_id_LIQUID[massfrac_id-1]=im_source;
           spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
+
+          if (material_type[im_dest-1]==0) {
+	   // do nothing
+	  } else
+	   amrex::Error("material_type[im_dest-1] invalid for evaporation");
+
          } else if (LL<0.0) { // condensation
           spec_material_id_LIQUID[massfrac_id-1]=im_dest;
           spec_material_id_AMBIENT[massfrac_id-1]=im_source;
+
+          if (material_type[im_source-1]==0) {
+	   // do nothing
+	  } else
+	   amrex::Error("material_type[im_source-1] invalid for condensation");
+
          } else
           amrex::Error("LL invalid");
         } else if (LL==0.0) {
@@ -4475,8 +4488,10 @@ NavierStokes::read_params ()
        if ((override_density[im-1]==1)||
            (override_density[im-1]==2)) {
         // do nothing
+       } else if (override_density[im-1]==0) {
+	// do nothing
        } else {
-	std::cout << "need override_density==1 if mass fraction variable\n";
+	std::cout << "override_density==0,1, or 2 if mass fraction variable\n";
 	std::cout << "defined and incompressible material.\n";
         std::cout << "nmat= " << nmat << '\n';
         std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
