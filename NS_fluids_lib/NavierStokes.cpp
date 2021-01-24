@@ -10849,43 +10849,59 @@ void NavierStokes::tensor_extrapolate() {
 // called from NavierStokes::do_the_advance (after advection) and
 //             NavierStokes::multiphase_project (project_option=0 or 13)
 void 
-NavierStokes::correct_density() {
+NavierStokes::getStateMOM_DEN(int idx,int ngrow) {
 
  bool use_tiling=ns_tiling;
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
- if (dt_slab<=0.0)
+ if (dt_slab>0.0) {
+  // do nothing
+ } else
   amrex::Error("dt_slab invalid3");
 
  int nmat=num_materials;
 
- int non_conservative_density=0;
-
  for (int im=0;im<nmat;im++) {
-  if ((DrhoDT[im]!=0.0)&&(override_density[im]==0))
-   amrex::Error("DrhoDT mismatch"); 
-  if ((DrhoDz[im]!=0.0)&&(override_density[im]==0))
-   amrex::Error("DrhoDz mismatch"); 
-  if (override_density[im]==1) { // rho=rho(T,Y,z)
-   non_conservative_density=1;
-  } else if (override_density[im]==0) {
-   // do nothing
 
-   // P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
-  } else if (override_density[im]==2) { 
+  if (DrhoDT[im]==0.0) {
+   // check nothing
+  } else if (DrhoDT[im]!=0.0) {
+   if (override_density[im]==0) {
+    amrex::Error("DrhoDT mismatch"); 
+   } else if (override_density[im]!=0) {
+    // do nothing
+   } else
+    amrex::Error("override_density[im] invalid");
+  } else
+   amrex::Error("DrhoDT[im] invalid");
+
+  if (DrhoDz[im]==0.0) {
+   // check nothing
+  } else if (DrhoDz[im]!=0.0) {
+   if (override_density[im]==0) {
+    amrex::Error("DrhoDz mismatch"); 
+   } else if (override_density[im]!=0) {
+    // do nothing
+   } else
+    amrex::Error("override_density[im] invalid");
+  } else
+   amrex::Error("DrhoDz[im] invalid");
+
+  if ((override_density[im]==0)||
+      (override_density[im]==1)||
+      (override_density[im]==2)) {
+   // do nothing
+  } else 
+   amrex::Error("override_density[im] invalid");
+	 
+  int finest_level=parent->finestLevel();
+
+  if (ngrow>=0) {
    // do nothing
   } else
-   amrex::Error("override density invalid");
- } // im
-
- if (non_conservative_density==0) {
-  // do nothing
- } else if (non_conservative_density==1) {
-
-   int finest_level=parent->finestLevel();
-
-   resize_metrics(1);
+   amrex::Error("ngrow invalid");
+  resize_metrics(1);
    resize_maskfiner(1,MASKCOEF_MF);
    resize_mask_nbr(1);
 

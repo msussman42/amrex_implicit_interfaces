@@ -105,7 +105,8 @@ end subroutine acoustic_pulse_bc
 
  ! density_at_depth previously initialized by:
  ! init_density_at_depth() 
- ! called from: FORT_DENCOR, general_hydrostatic_pressure_density,
+ ! called from: FORT_DERIVE_MOM_DEN, 
+ ! general_hydrostatic_pressure_density,
  ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
  ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
 subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density( &
