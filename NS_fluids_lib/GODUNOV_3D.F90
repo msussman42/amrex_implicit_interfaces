@@ -14052,18 +14052,23 @@ stop
        ! mask=1 if cell not covered.
        ! masknbr=1 fine-fine border cells and interior cells.
        ! masknbr=0 coarse-fine cells and cells outside domain.
+       ! called from getStateMOM_DEN
       subroutine FORT_DERIVE_MOM_DEN( &
+       im_parm, &
+       ngrow, &
        constant_density_all_time, & ! 1..nmat
        spec_material_id_AMBIENT, &  ! 1..num_species_var
        species_evaporation_density, &
        presbc_arr, &
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
        dt, &
        mask,DIMS(mask), &
        masknbr,DIMS(masknbr), &
        vol,DIMS(vol), &
-       dennew,DIMS(dennew), &
+       eosdata,DIMS(eosdata), &
+       momden,DIMS(momden), &
        xlo,dx, &
        gravity_normalized, &
        DrhoDT, &
@@ -14075,10 +14080,13 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -14086,14 +14094,16 @@ stop
 
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(dennew)
+      INTEGER_T, intent(in) :: DIMDEC(eosdata)
+      INTEGER_T, intent(in) :: DIMDEC(momden)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
      
       REAL_T, intent(in) ::  mask(DIMV(mask)) 
       REAL_T, intent(in) ::  masknbr(DIMV(masknbr)) 
       REAL_T, intent(in) ::  vol(DIMV(vol)) 
-      REAL_T, intent(inout) :: dennew(DIMV(dennew),num_state_material*nmat)
+      REAL_T, intent(in) :: eosdata(DIMV(eosdata),num_state_material*nmat)
+      REAL_T, intent(out) :: momden(DIMV(momden),nmat)
 
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
 
@@ -14103,15 +14113,13 @@ stop
       REAL_T, intent(in) :: gravity_normalized
      
       INTEGER_T i,j,k
-      INTEGER_T kstencil_lo,kstencil_hi
       INTEGER_T dir
 
-      INTEGER_T im
-      INTEGER_T dencomp,vofcomp
+      INTEGER_T dencomp
       REAL_T xpos(SDIM)
       REAL_T xsten(-3:3,SDIM)
       REAL_T rhohydro,preshydro,temperature
-      INTEGER_T check_sum,nhalf
+      INTEGER_T nhalf
       REAL_T density_of_TZ
       INTEGER_T ispec,im_spec
       REAL_T massfrac
@@ -14124,6 +14132,12 @@ stop
        print *,"bfact invalid66"
        stop
       endif
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -14131,6 +14145,12 @@ stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid dencor"
+       stop
+      endif
+      if ((im_parm.ge.1).and.(im_parm.le.nmat)) then
+       ! do nothing
+      else
+       print *,"im_parm invalid"
        stop
       endif
 
@@ -14148,28 +14168,20 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vol),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(dennew),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,12)
+      call checkbound(fablo,fabhi,DIMS(vol),ngrow,-1,12)
+      call checkbound(fablo,fabhi,DIMS(eosdata),ngrow,-1,12)
+      call checkbound(fablo,fabhi,DIMS(momden),ngrow,-1,12)
+      call checkbound(fablo,fabhi,DIMS(mask),ngrow,-1,12)
+      call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,12)
 
-      if (SDIM.eq.3) then
-       kstencil_lo=-1
-       kstencil_hi=1
-      else if (SDIM.eq.2) then
-       kstencil_lo=0
-       kstencil_hi=0
+      if (dt.gt.zero) then
+       ! do nothing
       else
-       print *,"dimension bust"
+       print *,"dt invalid"
        stop
       endif
 
-      if (dt.le.zero) then
-        print *,"dt invalid"
-        stop
-      endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -14184,123 +14196,110 @@ stop
         ! do nothing
        else if (mask(D_DECL(i,j,k)).eq.one) then
      
-         check_sum=0
+        dencomp=(im_parm-1)*num_state_material+1
 
-         do im=1,nmat
+        ! rho=rho(T,z)
+        if (override_density(im_parm).eq.1) then
 
-           ! rho=rho(T,z)
-          if (override_density(im).eq.1) then
-           dencomp=(im-1)*num_state_material+1
-           vofcomp=(im-1)*ngeom_raw+1
-
-           check_sum=check_sum+override_density(im)
-
-            ! den,T
-           temperature=dennew(D_DECL(i,j,k),dencomp+1)
-
-           if ((im.eq.1).and.  &
-               (fort_material_type(im).eq.13)) then
-            from_boundary_hydrostatic=0
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
-                    from_boundary_hydrostatic)
-           else
-              ! defined in: GLOBALUTIL.F90
-              ! only takes into account fort_drhodz
-            caller_id=0
-            call default_hydrostatic_pressure_density( &
-              xpos,rhohydro,preshydro,temperature, &
-              gravity_normalized, &
-              im,override_density(im), &
-              caller_id)
-           endif
-
-           if (DrhoDT(im).gt.zero) then
-            print *,"DrhoDT invalid"
-            stop
-           endif
-
-           density_of_TZ=rhohydro+ &
-            fort_denconst(im)*DrhoDT(im)* &
-            (temperature-fort_tempconst(im))
-
-           if ((temperature.lt.zero).or. &
-               (rhohydro.le.zero).or.(fort_tempconst(im).lt.zero).or. &
-               (fort_denconst(im).le.zero)) then
-            print *,"invalid parameters to get the density"
-            print *,"im=",im
-            print *,"temperature=",temperature
-            print *,"density_of_TZ=",density_of_TZ
-            print *,"rhohydro=",rhohydro
-            print *,"fort_tempconst(im)=",fort_tempconst(im)
-            stop
-           endif
-
-           if (density_of_TZ.le.zero) then
-            print *,"WARNING density_of_TZ.le.zero"
-            print *,"im=",im
-            print *,"temperature=",temperature
-            print *,"density_of_TZ=",density_of_TZ
-            print *,"rhohydro=",rhohydro
-            print *,"fort_tempconst(im)=",fort_tempconst(im)
-            print *,"fort_tempcutoffmax(im)=",fort_tempcutoffmax(im)
-         
-            temperature=fort_tempcutoffmax(im)
- 
-            density_of_TZ=rhohydro+ &
-             fort_denconst(im)*DrhoDT(im)* &
-             (temperature-fort_tempconst(im))
-
-            if (density_of_TZ.le.zero) then
-             print *,"density_of_TZ.le.zero (STILL)"
-             stop
-            endif
-
-           else if (density_of_TZ.gt.zero) then
-            ! do nothing
-           else
-            print *,"density_of_TZ bust"
-            stop
-           endif
-
-           do ispec=1,num_species_var
-            im_spec=spec_material_id_AMBIENT(ispec)
-            if (im_spec.eq.im) then
-             massfrac=dennew(D_DECL(i,j,k),dencomp+1+ispec)
-              ! make_mixture_density defined in: GLOBALUTIL.F90
-
-             if (1.eq.0) then
-              print *,"BEFORE: i,j,k,density_of_TZ,massfrac,evap_den ", &
-               i,j,k,density_of_TZ,massfrac,species_evaporation_density(ispec)
-             endif
-             call make_mixture_density(massfrac, &
-               density_of_TZ,species_evaporation_density(ispec))
-             if (1.eq.0) then
-              print *,"AFTER: i,j,k,density_of_TZ,massfrac,evap_den ", &
-               i,j,k,density_of_TZ,massfrac,species_evaporation_density(ispec)
-             endif
-            else if ((im_spec.ge.0).and.(im_spec.le.nmat)) then
-             ! do nothing
-            else
-             print *,"im_spec invalid"
-             stop
-            endif  
-           enddo ! ispec=1..num_species_var
-           dennew(D_DECL(i,j,k),dencomp)=density_of_TZ
-
-          else if (override_density(im).eq.0) then
-            ! do nothing
-          else if (override_density(im).eq.2) then
-            ! do nothing
-          else
-           print *,"override_density invalid"
-           stop
-          endif
-         enddo ! im
-
-         if (check_sum.le.0) then
-          print *,"check_sum invalid"
+         if (fort_material_type(im_parm).eq.0) then
+          ! do nothing
+         else
+          print *,"override_density==1 for incomp material only"
           stop
          endif
+         if (constant_density_all_time(im_parm).eq.1) then
+          ! do nothing
+         else
+          print *,"constant_density_all_time(im_parm) invalid"
+          stop
+         endif
+
+          ! den,T
+         temperature=eosdata(D_DECL(i,j,k),dencomp+1)
+
+          ! defined in: GLOBALUTIL.F90
+          ! only takes into account fort_drhodz
+         caller_id=0
+         call default_hydrostatic_pressure_density( &
+           xpos,rhohydro,preshydro,temperature, &
+           gravity_normalized, &
+           im_parm, &
+           override_density(im_parm), &
+           caller_id)
+
+         if (DrhoDT(im_parm).le.zero) then
+          ! do nothing
+         else
+          print *,"DrhoDT invalid"
+          stop
+         endif
+
+         density_of_TZ=rhohydro+ &
+           fort_denconst(im_parm)*DrhoDT(im_parm)* &
+           (temperature-fort_tempconst(im_parm))
+
+         if ((temperature.ge.zero).and. &
+             (rhohydro.gt.zero).and. &
+             (fort_tempconst(im_parm).ge.zero).and. &
+             (fort_denconst(im_parm).gt.zero)) then 
+          ! do nothing
+         else
+          print *,"invalid parameters to get the density"
+          print *,"im_parm=",im_parm
+          print *,"temperature=",temperature
+          print *,"density_of_TZ=",density_of_TZ
+          print *,"rhohydro=",rhohydro
+          print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+          stop
+         endif
+
+         if (density_of_TZ.gt.zero) then
+          ! do nothing
+         else if (density_of_TZ.le.zero) then
+          print *,"WARNING density_of_TZ.le.zero"
+          print *,"im_parm=",im_parm
+          print *,"temperature=",temperature
+          print *,"density_of_TZ=",density_of_TZ
+          print *,"rhohydro=",rhohydro
+          print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+          print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
+         
+          temperature=fort_tempcutoffmax(im_parm)
+ 
+          density_of_TZ=rhohydro+ &
+           fort_denconst(im_parm)*DrhoDT(im_parm)* &
+           (temperature-fort_tempconst(im_parm))
+
+          if (density_of_TZ.gt.zero) then
+           ! do nothing
+          else
+           print *,"density_of_TZ.le.zero (STILL)"
+           stop
+          endif
+
+         else
+          print *,"density_of_TZ bust"
+          stop
+         endif
+
+         momden(D_DECL(i,j,k),im_parm)=density_of_TZ
+
+        else if ((override_density(im_parm).eq.0).or. &
+                 (override_density(im_parm).eq.2)) then
+         if (constant_density_all_time(im_parm).eq.1) then
+          momden(D_DECL(i,j,k),im_parm)=fort_denconst(im_parm)
+         else if (constant_density_all_time(im_parm).eq.0) then
+          momden(D_DECL(i,j,k),im_parm)= &
+             eosdata(D_DECL(i,j,k),dencomp)
+         else
+          print *,"constant_density_all_time(im_parm) invalid"
+          stop
+         endif
+
+        else
+         print *,"override_density invalid"
+         stop
+        endif
 
        else
         print *,"mask invalid"
@@ -14312,7 +14311,7 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_DENCOR
+      end subroutine FORT_DERIVE_MOM_DEN
 
 
        ! adjust_temperature==1  modify temperature (Snew and coeff)

@@ -569,7 +569,7 @@ stop
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(out) :: visc(DIMV(visc),ncompvisc)
+      REAL_T, intent(out) :: visc(DIMV(visc),ncompvisc) !ncompvisc=3*nmat
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(in) :: gammadot(DIMV(gammadot))
       REAL_T, intent(in) :: eosdata(DIMV(eosdata),nmat*num_state_material)

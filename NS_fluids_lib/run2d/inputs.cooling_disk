@@ -106,7 +106,7 @@ ns.heatviscconst=4000.0 4000.0
 ns.viscconst=0.4 0.4
 ns.denconst=1.0 1.0
 ns.tempconst=293.0 293.0 
-ns.override_density=1 0
+ns.override_density=2 0 # use Boussinesq approximation
 # MIT beta=-2E-4 1/K  
 # for MIT:
 # rho=rho0(1+beta(T-T0))  drho/dT=rho0 beta  drho/dT=-2E-1 (kg/m^3)/K
