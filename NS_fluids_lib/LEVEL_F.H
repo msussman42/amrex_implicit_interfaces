@@ -132,6 +132,7 @@ namespace amrex{
        int* constant_volume_mdot,
        Real* latent_heat,
        int* distribute_from_target,
+       int* constant_density_all_time,
        Real* dt,
        const Real* dx,
        const Real* xlo,

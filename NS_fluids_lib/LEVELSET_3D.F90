@@ -4541,8 +4541,10 @@ stop
        constant_volume_mdot, &
        latent_heat, &
        distribute_from_target, &
+       constant_density_all_time, & ! 1..nmat
        dt, &
-       dx,xlo, &
+       dx, &
+       xlo, &
        nmat, &
        nten, &
        nstate, &
@@ -4620,6 +4622,7 @@ stop
       INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
 
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
@@ -5194,7 +5197,14 @@ stop
             vfrac=one
            endif
            dencomp=(im-1)*num_state_material+1
-           den_mat=DEN(D_DECL(i,j,k),dencomp)
+           if (constant_density_all_time(im).eq.1) then
+            den_mat=fort_denconst(im)
+           else if (constant_density_all_time(im).eq.0) then
+            den_mat=DEN(D_DECL(i,j,k),dencomp)
+           else
+            print *,"constant_density_all_time(im) invalid"
+            stop
+           endif
            if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
             if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
              mass=mass+den_mat*vfrac
@@ -5568,7 +5578,14 @@ stop
 
              ! blob_mass
             dencomp=(im-1)*num_state_material+1
-            den_mat=DEN(D_DECL(i,j,k),dencomp)
+            if (constant_density_all_time(im).eq.1) then
+             den_mat=fort_denconst(im)
+            else if (constant_density_all_time(im).eq.0) then
+             den_mat=DEN(D_DECL(i,j,k),dencomp)
+            else
+             print *,"constant_density_all_time(im) invalid"
+             stop
+            endif
             if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
              if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
               level_blobdata(ic)=level_blobdata(ic)+vol*vfrac*den_mat
@@ -5881,6 +5898,16 @@ stop
                  if (im_negate.eq.0) then
                   ! do nothing
                  else if (im_negate.eq.im) then
+                  if (constant_volume_all_time(im).eq.1) then
+                   print *,"constant_volume_all_time(im) invalid"
+                   stop
+                  else if (constant_volume_all_time(im).eq.0) then
+                   ! do nothing
+                  else
+                   print *,"constant_volume_all_time(im) invalid"
+                   stop
+                  endif
+            
                   ic=opposite_color(im)*num_elements_blobclass-1
                   blob_cell_count=cum_blobdata(ic)
                   ic=ic+1

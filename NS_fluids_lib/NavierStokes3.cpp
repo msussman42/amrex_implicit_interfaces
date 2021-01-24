@@ -5189,6 +5189,7 @@ NavierStokes::ColorSum(
    constant_volume_mdot.dataPtr(),
    latent_heat.dataPtr(),
    distribute_from_target.dataPtr(),
+   constant_density_all_time.dataPtr(),
    &dt_slab,
    dx,xlo,
    &nmat,

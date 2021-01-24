@@ -55,6 +55,7 @@ extern "C"
     int* mass_fraction_id,
     Real* species_evaporation_density,
     int* distribute_from_target,
+    int* constant_density_all_time,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
