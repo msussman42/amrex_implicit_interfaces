@@ -14052,8 +14052,9 @@ stop
        ! mask=1 if cell not covered.
        ! masknbr=1 fine-fine border cells and interior cells.
        ! masknbr=0 coarse-fine cells and cells outside domain.
-      subroutine FORT_DENCOR( &
-       spec_material_id_AMBIENT, &
+      subroutine FORT_DERIVE_MOM_DEN( &
+       constant_density_all_time, & ! 1..nmat
+       spec_material_id_AMBIENT, &  ! 1..num_species_var
        species_evaporation_density, &
        presbc_arr, &
        tilelo,tilehi, &

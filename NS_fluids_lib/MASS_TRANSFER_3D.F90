@@ -3379,6 +3379,7 @@ stop
        mass_fraction_id, &
        species_evaporation_density, &
        distribute_from_target, &
+       constant_density_all_time, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -3437,6 +3438,7 @@ stop
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in),target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -5026,7 +5028,15 @@ stop
 
               ! the density was extrapolated after CISL advection, so 
               ! that a valid value exists even if F_new_unsplit=0.0 
-             density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+             if (constant_density_all_time(im_probe).eq.1) then
+              density_old(iprobe)=fort_denconst(im_probe)
+             else if (constant_density_all_time(im_probe).eq.0) then
+              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+             else
+              print *,"constant_density_all_time(im_probe) invalid"
+              stop
+             endif
+
              if (density_old(iprobe).gt.zero) then
               ! do nothing
              else
