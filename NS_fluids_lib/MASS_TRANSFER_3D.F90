@@ -3470,6 +3470,8 @@ stop
       REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
       REAL_T, intent(out) :: swept(DIMV(swept),nmat)
 
+      REAL_T :: denratio_factor
+
       INTEGER_T i,j,k,dir
       INTEGER_T i1,j1,k1
       INTEGER_T im,im_opp
@@ -3487,7 +3489,6 @@ stop
       REAL_T velnode_test
       INTEGER_T nten_test
       INTEGER_T vcompsrc_snew,vcompdst_snew
-      REAL_T denratio_factor
       REAL_T oldvfrac(nmat)
       REAL_T newvfrac(nmat)
       REAL_T dF,dFdst,dFsrc
@@ -3629,9 +3630,7 @@ stop
       INTEGER_T mfrac_comp_probe
       INTEGER_T ispec_probe
       REAL_T temp_mix_new(2)
-      REAL_T density_mix_new(2)
       REAL_T mass_frac_new(2)
-      REAL_T density_new(2)
       REAL_T density_old(2)
       REAL_T temperature_new(2)
       REAL_T temperature_old(2)
@@ -5003,16 +5002,6 @@ stop
             endif
 
             if (newvfrac(im_probe).ge.EBVOFTOL) then
-             mtype=fort_material_type(im_probe)
-             if (mtype.eq.0) then
-              density_new(iprobe)=unsplit_density(im_probe) 
-             else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-              print *,"only spatially uniform density phase change allowed"
-              stop
-             else
-              print *,"mtype invalid"
-              stop
-             endif
              temperature_new(iprobe)=unsplit_temperature(im_probe)
              if (mfrac_comp_probe.eq.0) then ! no species vars
               species_new(iprobe)=one
@@ -5025,7 +5014,6 @@ stop
              endif
             else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
                      (newvfrac(im_probe).ge.-EBVOFTOL)) then
-             density_new(iprobe)=fort_denconst(im_probe)
              temperature_new(iprobe)=Tgamma_default
              species_new(iprobe)=Ygamma_default
             else
@@ -5033,17 +5021,28 @@ stop
              stop
             endif
 
-            if (oldvfrac(im_probe).ge.EBVOFTOL) then
-             mtype=fort_material_type(im_probe)
-             if (mtype.eq.0) then
-              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
-             else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-              print *,"only spatially uniform density phase change allowed"
-              stop
+            mtype=fort_material_type(im_probe)
+            if (mtype.eq.0) then
+
+              ! the density was extrapolated after CISL advection, so 
+              ! that a valid value exists even if F_new_unsplit=0.0 
+             density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
+             if (density_old(iprobe).gt.zero) then
+              ! do nothing
              else
-              print *,"mtype invalid"
+              print *,"density_old(iprobe) invalid"
               stop
              endif
+
+            else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
+             print *,"only spatially uniform density phase change allowed"
+             stop
+            else
+             print *,"mtype invalid"
+             stop
+            endif
+
+            if (oldvfrac(im_probe).ge.EBVOFTOL) then
              temperature_old(iprobe)=EOS(D_DECL(i,j,k),tcomp_probe)
              if (mfrac_comp_probe.eq.0) then ! no species var
               species_old(iprobe)=one
@@ -5055,7 +5054,6 @@ stop
              endif
             else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
                      (oldvfrac(im_probe).ge.-EBVOFTOL)) then
-             density_old(iprobe)=fort_denconst(im_probe)
              temperature_old(iprobe)=Tgamma_default
              species_old(iprobe)=Ygamma_default
             else
@@ -5065,8 +5063,6 @@ stop
 
            enddo ! iprobe=1,2
 
-            ! for evaporation:
-            ! den_new=(den_old * F_old + vapor_den * dF)/(F_old+dF)
            if (LL.gt.zero) then !evaporation
              im_vapor=im_dest
              im_condensed=im_source
@@ -5137,13 +5133,11 @@ stop
 
             temp_new_vfrac=oldvfrac(im_dest)+dF
             if (temp_new_vfrac.gt.EBVOFTOL) then 
-             density_mix_new(2)=density_old(2)
              
              if (1.eq.0) then
               print *,"i,j,k,temp_new_vfrac ",i,j,k,temp_new_vfrac
-              print *,"denold,oldF,vapor_den,dF,dennew ", &
-               density_old(2),oldvfrac(im_dest),vapor_den,dF, &
-               density_mix_new(2)
+              print *,"denold,oldF,vapor_den,dF ", &
+               density_old(2),oldvfrac(im_dest),vapor_den,dF
              endif
 
              mtype=fort_material_type(im_vapor)
@@ -5157,7 +5151,6 @@ stop
               stop
              endif
             else if (temp_new_vfrac.le.EBVOFTOL) then
-             density_mix_new(2)=density_old(2)
              mass_frac_new(2)=Ygamma_default
             else
              print *,"temp_new_vfrac invalid"
@@ -5165,25 +5158,7 @@ stop
             endif
            
             if (im_source.eq.im_condensed) then 
-             temp_new_vfrac=oldvfrac(im_source)-dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              mtype=fort_material_type(im_source)
-              if (mtype.eq.0) then
-               density_mix_new(1)=density_old(1)
-              else if ((mtype.ge.1).and. &
-                       (mtype.le.MAX_NUM_EOS)) then
-               print *,"only spatially uniform density phase change allowed"
-               stop
-              else
-               print *,"mtype invalid"
-               stop
-              endif
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              density_mix_new(1)=density_old(1)
-             else
-              print *,"temp_new_vfrac invalid"
-              stop
-             endif
+             ! do nothing
             else
              print *,"expecting im_source==im_condensed"
              stop
@@ -5193,40 +5168,16 @@ stop
            else if (LL.lt.zero) then ! condensation
 
             if (im_dest.eq.im_condensed) then 
-             temp_new_vfrac=oldvfrac(im_dest)+dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              mtype=fort_material_type(im_dest)
-              if (mtype.eq.0) then
-               density_mix_new(2)=density_old(2)
-              else if ((mtype.ge.1).and. &
-                       (mtype.le.MAX_NUM_EOS)) then
-               print *,"only spatially uniform density phase change allowed"
-               stop
-              else
-               print *,"mtype invalid"
-               stop
-              endif
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              density_mix_new(2)=density_old(2)
-             else
-              print *,"temp_new_vfrac invalid"
-              stop
-             endif
+             ! do nothing
             else
              print *,"expecting im_dest==im_condensed"
              stop
             endif
 
             temp_new_vfrac=oldvfrac(im_source)-dF
-            if (temp_new_vfrac.gt.EBVOFTOL) then 
-             density_mix_new(1)=density_old(1)
-             else
-              print *,"denratio_factor invalid"
-              stop
-             endif
+            if (temp_new_vfrac.gt.EBVOFTOL) then
              mass_frac_new(1)=Ygamma_default
             else if (temp_new_vfrac.le.EBVOFTOL) then
-             density_mix_new(1)=density_old(1)
              mass_frac_new(1)=Ygamma_default
             else
              print *,"temp_new_vfrac invalid"
@@ -5451,23 +5402,12 @@ stop
             endif
             base_index=num_materials_vel*(SDIM+1)
 
-            denratio_factor=density_mix_new(iprobe)/density_old(iprobe)-one
-              ! avoid loss of precision errors.
-            if (abs(denratio_factor).le.EBVOFTOL) then
-             if (iprobe.eq.1) then ! source
-              delta_mass_local(iprobe)=-density_old(iprobe)*dF
-             else if (iprobe.eq.2) then ! dest
-              delta_mass_local(iprobe)=density_old(iprobe)*dF
-             else
-              print *,"iprobe invalid"
-              stop
-             endif
-            else if (abs(denratio_factor).ge.EBVOFTOL) then
-             delta_mass_local(iprobe)= &
-               density_mix_new(iprobe)*newvfrac(im_probe)- &
-               density_old(iprobe)*oldvfrac(im_probe)
+            if (iprobe.eq.1) then ! source
+             delta_mass_local(iprobe)=-density_old(iprobe)*dF
+            else if (iprobe.eq.2) then ! dest
+             delta_mass_local(iprobe)=density_old(iprobe)*dF
             else
-             print *,"denratio_factor invalid"
+             print *,"iprobe invalid"
              stop
             endif
             if (iprobe.eq.1) then ! source
@@ -5488,9 +5428,6 @@ stop
              print *,"iprobe invalid"
              stop
             endif
-
-            snew(D_DECL(i,j,k),base_index+dencomp_probe)= &
-                    density_mix_new(iprobe)
 
             if ((SWEPTFACTOR_centroid.eq.1).and. &
                 (iprobe.eq.2)) then ! destination
@@ -5619,12 +5556,12 @@ stop
              stop
             endif
 
-            if ((temp_mix_new(iprobe).lt.TEMPERATURE_FLOOR).or. &
-                (density_mix_new(iprobe).le.zero)) then
-             print *,"temp_mix_new or density_mix_new invalid"
+            if (temp_mix_new(iprobe).ge.TEMPERATURE_FLOOR) then
+             ! do nothing
+            else
+             print *,"temp_mix_new invalid"
              print *,"oldvfrac(im_probe) ",oldvfrac(im_probe)
              print *,"newvfrac(im_probe) ",newvfrac(im_probe)
-             print *,"density_mix_new(im_probe) ",density_mix_new(im_probe)
              print *,"temp_mix_new(im_probe) ",temp_mix_new(im_probe)
             endif
 
