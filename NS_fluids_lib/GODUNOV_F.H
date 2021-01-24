@@ -4,7 +4,7 @@
 #ifdef BL_LANG_FORT
 #    define FORT_SOD_SANITY   sod_sanity
 #    define FORT_AGGRESSIVE   aggressive
-#    define FORT_DENCOR       dencor
+#    define FORT_DERIVE_MOM_DEN derive_mom_den
 #    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
@@ -51,7 +51,7 @@
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_SOD_SANITY   SOD_SANITY
 #    define FORT_AGGRESSIVE   AGGRESSIVE
-#    define FORT_DENCOR       DENCOR
+#    define FORT_DERIVE_MOM_DEN       DERIVE_MOM_DEN
 #    define FORT_STEFANSOLVER STEFANSOLVER
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
@@ -98,7 +98,7 @@
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_SOD_SANITY   sod_sanity
 #    define FORT_AGGRESSIVE   aggressive
-#    define FORT_DENCOR       dencor
+#    define FORT_DERIVE_MOM_DEN derive_mom_den
 #    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
@@ -144,7 +144,7 @@
 #  else
 #    define FORT_SOD_SANITY   sod_sanity_
 #    define FORT_AGGRESSIVE   aggressive_
-#    define FORT_DENCOR       dencor_
+#    define FORT_DERIVE_MOM_DEN derive_mom_den_
 #    define FORT_STEFANSOLVER stefansolver_
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
@@ -1175,8 +1175,11 @@ extern "C"
      int* dombc,
      const int* domlo,const int* domhi);
 
-   void FORT_DENCOR(
-     int* spec_material_id_AMBIENT,
+   void FORT_DERIVE_MOM_DEN(
+     int* im_parm,
+     int* ngrow,
+     int* constant_density_all_time, // 1..nmat
+     int* spec_material_id_AMBIENT, // 1..num_species_var
      Real* species_evaporation_density,
      int* presbc,
      const int* tilelo,const int* tilehi,
@@ -1186,11 +1189,14 @@ extern "C"
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
-     Real* dennew,AMREX_ARLIM_P(dennewlo),AMREX_ARLIM_P(dennewhi), 
+     Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi), 
+     Real* momden,AMREX_ARLIM_P(momdenlo),AMREX_ARLIM_P(momdenhi), 
      const Real* xlo,const Real* dx,
      Real* gravity_normalized,
-     Real* DrhoDT,int* override_density,
-     int* nmat,int* level,int* finest_level);
+     Real* DrhoDT,
+     int* override_density,
+     int* nmat,
+     int* level,int* finest_level);
 
 
    void FORT_COMBINEVEL(
