@@ -182,7 +182,7 @@ ns.elastic_time=0.0 0.0
 #   mass fraction equation is:
 #   (rho Y)_t + div(rho u Y)=div(rho D grad Y)
 ns.denconst=1.0 0.001 # CODY (density liquid, density gas) ~ rho_l = 1000 kg/m^3, rho_g - 1 kg/m^3
-ns.override_density=0 1  # for incompressible ambient gas, override_density=1
+ns.override_density=0 0
 ns.molar_mass=18.02 28.9 # CODY  (liquid, ambient) 
 ns.species_molar_mass=18.0 # CODY (vapor) ~ W_V=W_A=0.018 kg/mol 
 ns.FSI_flag=0 0 

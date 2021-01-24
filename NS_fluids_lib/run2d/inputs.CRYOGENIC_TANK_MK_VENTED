@@ -154,9 +154,7 @@ ns.species_molar_mass=0.2
 ns.denconst= 1400 5.3421449445 1190
 ns.speciesconst= 1.0 1.0 1.0 
 
-# ambient gas density will vary depending on the 
-# vapor mass fraction.
-ns.override_density=0 1 0
+ns.override_density=0 0 0
 
 # Diffusion coefficient [m^2/s]
 # Not used ???
