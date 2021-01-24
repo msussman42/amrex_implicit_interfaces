@@ -13044,7 +13044,8 @@ contains
 
        ! density_at_depth previously initialized by:
        ! init_density_at_depth() 
-       ! called from: FORT_DENCOR, general_hydrostatic_pressure_density,
+       ! called from: FORT_DERIVE_MOM_DEN, 
+       ! general_hydrostatic_pressure_density,
        ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
        ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
       subroutine tait_hydrostatic_pressure_density( &
@@ -13174,7 +13175,7 @@ contains
 
        ! only called if override_density=1 or override_density=2
        ! only takes into account fort_drhodz.
-       ! caller_id==0  => called from DENCOR
+       ! caller_id==0  => called from DERIVE_MOM_DEN
        ! caller_id==1  => called from general_hydrostatic_pressure_density
        !                  (which is called from INITPOTENTIAL)
       subroutine default_hydrostatic_pressure_density( &
@@ -13291,7 +13292,8 @@ contains
            (gravity_normalized.eq.zero)) then
 
         if (caller_id.eq.0) then
-         ! do nothing, called from DENCOR, keep rho=denfree=denconst(imat)
+         ! do nothing, called from DERIVE_MOM_DEN, 
+         !  keep rho=denfree=denconst(imat)
         else if (caller_id.eq.1) then 
           ! called from general_hydrostatic_pressure_density
          rho=fort_denconst(1)
