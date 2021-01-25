@@ -11,7 +11,6 @@
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars
 #    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_BUILD_MASK_UNSPLIT build_mask_unsplit
 #    define FORT_CELL_TO_MAC cell_to_mac
 #    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
@@ -38,7 +37,6 @@
 #    define FORT_INIT_PHYSICS_VARS INIT_PHYSICS_VARS
 #    define FORT_BUILD_SEMIREFINEVOF BUILD_SEMIREFINEVOF
 #    define FORT_BUILD_MODVISC BUILD_MODVISC
-#    define FORT_BUILD_MASK_UNSPLIT BUILD_MASK_UNSPLIT
 #    define FORT_CELL_TO_MAC CELL_TO_MAC
 #    define FORT_MAC_TO_CELL MAC_TO_CELL
 #    define FORT_INC_TEMP INC_TEMP
@@ -65,7 +63,6 @@
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars
 #    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_BUILD_MASK_UNSPLIT build_mask_unsplit
 #    define FORT_CELL_TO_MAC cell_to_mac
 #    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
@@ -90,7 +87,6 @@
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars_
 #    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof_
 #    define FORT_BUILD_MODVISC build_modvisc_
-#    define FORT_BUILD_MASK_UNSPLIT build_mask_unsplit_
 #    define FORT_CELL_TO_MAC cell_to_mac_
 #    define FORT_MAC_TO_CELL mac_to_cell_
 #    define FORT_INC_TEMP inc_temp_
@@ -595,17 +591,6 @@ namespace amrex{
         Real* vofF,AMREX_ARLIM_P(vofFlo),AMREX_ARLIM_P(vofFhi),
         Real* cenF,AMREX_ARLIM_P(cenFlo),AMREX_ARLIM_P(cenFhi),
         Real* massF,AMREX_ARLIM_P(massFlo),AMREX_ARLIM_P(massFhi),
-        const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        int* bfact,
-        int* nmat,
-        int* level,int* finest_level);
-
-      void FORT_BUILD_MASK_UNSPLIT(
-        int* unsplit_flag,
-        const Real* xlo,const Real* dx,
-        Real* maskunsplit,AMREX_ARLIM_P(maskunsplitlo),AMREX_ARLIM_P(maskunsplithi), 
-        Real* vofls0,AMREX_ARLIM_P(vofls0lo),AMREX_ARLIM_P(vofls0hi), 
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,

@@ -3638,7 +3638,6 @@ stop
       REAL_T temperature_old(2)
       REAL_T species_new(2)
       REAL_T species_old(2)
-      REAL_T numerator,denominator
       REAL_T delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
       REAL_T xPOINT_supermesh(SDIM)
       REAL_T xPOINT_GFM(SDIM)

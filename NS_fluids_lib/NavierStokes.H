@@ -614,7 +614,7 @@ public:
 
     void prepare_mask_nbr(int ngrow);
     void resize_mask_nbr(int ngrow);
-    void prepare_displacement(int mac_grow,int unsplit_displacement);
+    void prepare_displacement(int mac_grow);
 
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
@@ -871,7 +871,7 @@ protected:
     void add_perturbation();
     void make_SEM_delta_force(int project_option);
 
-    void correct_density();
+    void getStateMOM_DEN(int idx,int ngrow);
 
     void check_grid_places();
 
@@ -902,7 +902,6 @@ protected:
     void check_for_NAN(MultiFab* mf,int id);
 
     void split_scalar_advection(); 
-    void unsplit_scalar_advection(); 
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
     void synchronize_flux_register(int operation_flag,int spectral_loop);
@@ -2041,12 +2040,6 @@ protected:
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 
-     // 0=unsplit at coarse/fine boundaries.
-     // 1=unsplit everywhere
-     // 2=unsplit in incompressible zones + coarse/fine boundaries
-     // 3=unsplit in fluid cells that neighbor a prescribed solid cell + 
-     //   coarse/fine boundaries
-    static int unsplit_flag;
      // 0=no limiter 1=minmod 2=minmod with slope=0 at interface
      // 3=no limit, but slope=0 at interface
     static int slope_limiter_option;

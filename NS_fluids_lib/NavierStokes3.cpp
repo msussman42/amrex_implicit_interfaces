@@ -608,20 +608,6 @@ void NavierStokes::nonlinear_advection() {
 
  }  // dir_absolute_direct_split=0..sdim-1
 
-  // unsplit_flag >0 not a good idea.
- if (1==0) {
-  advect_time_slab=prev_time_slab;
-  init_vof_ls_prev_time=0;
-  update_flag=0;  // do not update the error. 
-  VOF_Recon_ALL(1,advect_time_slab,update_flag,
-    init_vof_ls_prev_time,SLOPE_RECON_MF);
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.unsplit_scalar_advection();
-  } // ilev
- }
-
  for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.delete_localMF(VOF_LS_PREV_TIME_MF,1);
@@ -956,6 +942,7 @@ void NavierStokes::resize_metrics(int ngrow) {
   amrex::Error("localMF_grow[VOLUME_MF]<0");
 
  if (localMF[VOLUME_MF]->nGrow()!=ngrow) {
+   // NavierStokes::metrics_data declared in NavierStokes2.cpp
   metrics_data(ngrow);
  }
 
@@ -2804,8 +2791,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux); 
        }
-
-       ns_level.correct_density();  
 
       } // ilev=finest_level ... level
 
@@ -11460,14 +11445,6 @@ void NavierStokes::multiphase_project(int project_option) {
       project_option_combine,
       combine_idx,combine_flag,hflag,update_flux); 
     }
-
-     // non-conservative correction to density.
-     // if override_density(im)==1,
-     // rho_im=rho(z)+drho/dT * (T_im - T0_im)
-     // rho_im=f(rho_im,Y)
-     // if override_density(im)=0 or 2, nothing changes:
-     //   P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
-    ns_level.correct_density();  
 
       // velocity and pressure
     ns_level.avgDown(State_Type,0,
