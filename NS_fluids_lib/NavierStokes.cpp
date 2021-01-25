@@ -10847,7 +10847,7 @@ void NavierStokes::tensor_extrapolate() {
 // if override_density(im)=0 or 2, nothing changes:
 //   P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
 void 
-NavierStokes::getStateMOM_DEN(int idx,int ngrow) {
+NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
  if (localMF_grow[idx]>=0)
   delete_localMF(idx,1);
@@ -10874,7 +10874,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow) {
   amrex::Error("ngrow>=1 required");
 
  new_localMF(idx,nmat,ngrow,-1); // sets values to 0.0
- MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
+ MultiFab* EOSdata=getStateDen(ngrow,time);
 
   // NavierStokes::resize_metrics declared in NavierStokes3.cpp
  resize_metrics(ngrow);
