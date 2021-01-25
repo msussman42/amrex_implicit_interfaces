@@ -4990,6 +4990,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.getStateDen_localMF(DEN_RECON_MF,1,cur_time_slab);
+  ns_level.getStateMOM_DEN(MOM_DEN_MF,1,cur_time_slab);
  }
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -5057,6 +5058,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  }
 
  delete_array(DEN_RECON_MF);
+ delete_array(MOM_DEN_MF);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
  delete_array(CELLTENSOR_MF);
@@ -5245,7 +5247,10 @@ void NavierStokes::make_physics_vars(int project_option) {
 
  debug_ngrow(DEN_RECON_MF,1,6001);
  if (localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material)
-  amrex::Error("den_recon has invalid ncomp");
+  amrex::Error("den_recon has invalid ncomp in make_physics_vars");
+ debug_ngrow(MOM_DEN_MF,1,6001);
+ if (localMF[MOM_DEN_MF]->nComp()!=nmat)
+  amrex::Error("mom_den has invalid ncomp in make_physics_vars");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(AMRSYNC_VEL_MF+dir,1,0,dir);
@@ -5304,6 +5309,7 @@ void NavierStokes::make_physics_vars(int project_option) {
 
   FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
+  FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
   FArrayBox& vofFfab=(*vofF)[mfi];
   FArrayBox& cenFfab=(*cenF)[mfi];
@@ -5330,11 +5336,14 @@ void NavierStokes::make_physics_vars(int project_option) {
    species_evaporation_density.dataPtr(),
    cavitation_vapor_density.dataPtr(),
    override_density.dataPtr(),
+   constant_density_all_time.dataPtr(),
    xlo,dx,
    slopefab.dataPtr(),
    ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
    denstatefab.dataPtr(),
    ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
+   mom_denfab.dataPtr(),
+   ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
    vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
    cenFfab.dataPtr(),ARLIM(cenFfab.loVect()),ARLIM(cenFfab.hiVect()),
    massFfab.dataPtr(),ARLIM(massFfab.loVect()),ARLIM(massFfab.hiVect()),

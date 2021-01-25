@@ -9387,9 +9387,13 @@ stop
        species_evaporation_density, &
        cavitation_vapor_density, &
        override_density, &
+       constant_density_all_time, &
        xlo,dx, &
        slope,DIMS(slope), &
-       denstate,DIMS(denstate), &
+       denstate, &
+       DIMS(denstate), &
+       mom_den, &
+       DIMS(mom_den), &
        vofF,DIMS(vofF), &
        cenF,DIMS(cenF), &
        massF,DIMS(massF), &
@@ -9421,16 +9425,19 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T :: veldir
       INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(slope)
       INTEGER_T, intent(in) :: DIMDEC(denstate)
+      INTEGER_T, intent(in) :: DIMDEC(mom_den)
       INTEGER_T, intent(in) :: DIMDEC(vofF)
       INTEGER_T, intent(in) :: DIMDEC(cenF)
       INTEGER_T, intent(in) :: DIMDEC(massF)
       REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
       REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat) 
       REAL_T, intent(out) :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, intent(out) :: cenF(DIMV(cenF),nrefine_cen)
       REAL_T, intent(out) :: massF(DIMV(massF),nrefine_vof)
@@ -9445,15 +9452,14 @@ stop
 
       REAL_T multi_volume(nmat)
       REAL_T multi_cen(SDIM,nmat)
-      REAL_T voldepart
       REAL_T voltotal_fluid
       REAL_T mass_total_fluid
       REAL_T voltotal_solid
       REAL_T mass_total_solid
       REAL_T voltotal
       REAL_T mass_total
-      REAL_T delta_mass
       REAL_T den
+      REAL_T mom_den_local
 
       INTEGER_T dencomp
 
@@ -9470,10 +9476,8 @@ stop
       INTEGER_T irefinecen
       REAL_T xsten_recon(-1:1,SDIM)
       REAL_T xsten_donate(-1:1,SDIM)
-      INTEGER_T for_hydrostatic_pres
       REAL_T mu
 
-      for_hydrostatic_pres=0
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -9536,6 +9540,9 @@ stop
       call checkbound(fablo,fabhi,DIMS(slope),ngrow_refine,-1,219)
       call checkbound(fablo,fabhi, &
        DIMS(denstate), &
+       ngrow_refine,-1,223)
+      call checkbound(fablo,fabhi, &
+       DIMS(mom_den), &
        ngrow_refine,-1,223)
       call checkbound(fablo,fabhi,DIMS(vofF),ngrow_refine,-1,227)
       call checkbound(fablo,fabhi,DIMS(cenF),ngrow_refine,-1,227)
@@ -9686,26 +9693,48 @@ stop
            do im=1,nmat
             dencomp=(im-1)*num_state_material+1
             den=denstate(D_DECL(i,j,k),dencomp)
-            delta_mass=den*multi_volume(im)
-            voldepart=multi_volume(im)
-            ! if is_rigid(im), density=fort_denconst(im)
-            ! if incompressible,
-            !   if override_density=0,2 then density=fort_denconst(im)
-            !   if override_density=1 then density=mass_depart/vol_depart
-            ! if compressible,
-            !   density=massdepart/voltarget
-            ! in: GODUNOV_3D.F90
-            call derive_density( &
-             voldepart,voldepart,voldonate, &
-             override_density,delta_mass, &
-             im,nmat,den,for_hydrostatic_pres)
+            mom_den_local=mom_den(D_DECL(i,j,k),nmat)
+
+            if (constant_density_all_time(im).eq.1) then
+             if (abs(den-fort_denconst(im)).le.VOFTOL) then
+              ! do nothing
+             else
+              print *,"den invalid"
+              print *,"im,i,j,k,den ",im,i,j,k,den
+              print *,"dencomp=",dencomp
+              stop
+             endif
+            else if (constant_density_all_time(im).eq.0) then 
+             ! do nothing
+            else
+             print *,"constant_density_all_time invalid"
+             stop
+            endif
+
+            if (den.gt.zero) then
+             ! do nothing
+            else
+             print *,"den must be positive build_semi_refine_vof"
+             print *,"im,den ",im,den
+             print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+             stop
+            endif  
+
+            if (mom_den_local.gt.zero) then
+             ! do nothing
+            else
+             print *,"mom_den_local must be pos build_semi_refine_vof"
+             print *,"im,mom_den_local ",im,mom_den_local
+             print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+             stop
+            endif  
  
             if (is_rigid(nmat,im).eq.0) then
              voltotal_fluid=voltotal_fluid+multi_volume(im)
-             mass_total_fluid=mass_total_fluid+den*multi_volume(im)
+             mass_total_fluid=mass_total_fluid+mom_den_local*multi_volume(im)
             else if (is_rigid(nmat,im).eq.1) then
              voltotal_solid=voltotal_solid+multi_volume(im)
-             mass_total_solid=mass_total_solid+den*multi_volume(im)
+             mass_total_solid=mass_total_solid+mom_den_local*multi_volume(im)
             else
              print *,"is_rigid invalid"
              stop
@@ -9721,7 +9750,7 @@ stop
             endif
 
             vofF(D_DECL(i,j,k),irefine)=multi_volume(im)
-            massF(D_DECL(i,j,k),irefine)=den*multi_volume(im)
+            massF(D_DECL(i,j,k),irefine)=mom_den_local*multi_volume(im)
             do dir2=1,SDIM
              if (iside.eq.-1) then
               irefinecen=veldir*2*nmat*SDIM+ &
