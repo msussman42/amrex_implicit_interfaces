@@ -1030,6 +1030,7 @@ extern "C"
      int* nten,
      int* face_flag,
      int* override_density,
+     int* constant_density_all_time,
      int* velbc,
      int* EILE_flag,
      int* VOF_reflux,
@@ -1046,6 +1047,7 @@ extern "C"
       // original data
      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
+     Real* mom_den,AMREX_ARLIM_P(mom_denlo),AMREX_ARLIM_P(mom_denhi),
      Real* tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
      Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
       // slope data

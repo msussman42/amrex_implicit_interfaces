@@ -15698,6 +15698,7 @@ NavierStokes::split_scalar_advection() {
     // this is the original data
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
   FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
+  FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
   FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF])[mfi];
   FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 
@@ -15767,6 +15768,7 @@ NavierStokes::split_scalar_advection() {
    &nten,
    &face_flag,
    override_density.dataPtr(),
+   constant_density_all_time.dataPtr(),
    velbc.dataPtr(),
    &EILE_flag,
    &VOF_reflux,
@@ -15786,6 +15788,8 @@ NavierStokes::split_scalar_advection() {
    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+   mom_denfab.dataPtr(),
+   ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
    tenfab.dataPtr(),
    ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
    velfab.dataPtr(),
