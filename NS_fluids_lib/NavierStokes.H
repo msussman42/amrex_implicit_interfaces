@@ -871,7 +871,7 @@ protected:
     void add_perturbation();
     void make_SEM_delta_force(int project_option);
 
-    void getStateMOM_DEN(int idx,int ngrow);
+    void getStateMOM_DEN(int idx,int ngrow,Real time);
 
     void check_grid_places();
 
