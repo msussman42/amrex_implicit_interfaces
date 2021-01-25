@@ -928,8 +928,7 @@ Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
-// passed to MAC_TO_CELL, CELL_TO_MAC, 
-//  VFRAC_SPLIT, VFRAC_UNSPLIT
+// passed to MAC_TO_CELL, CELL_TO_MAC, VFRAC_SPLIT
 Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
@@ -15109,6 +15108,7 @@ NavierStokes::split_scalar_advection() {
 
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
+ getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
    num_materials_viscoelastic*NUM_CELL_ELASTIC,
@@ -15163,6 +15163,8 @@ NavierStokes::split_scalar_advection() {
  int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
  if (den_recon_ncomp!=num_state_material*nmat)
    amrex::Error("den_recon invalid");
+ if (localMF[MOM_DEN_MF]->nComp()!=nmat)
+  amrex::Error("MOM_DEN_MF invalid nComp()");
 
  int LS_recon_ncomp=localMF[LS_RECON_MF]->nComp();
  if (LS_recon_ncomp!=nmat*(1+AMREX_SPACEDIM))
@@ -15214,6 +15216,7 @@ NavierStokes::split_scalar_advection() {
 
   FArrayBox& consfab=(*conserve)[mfi];
   FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
+  FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
   FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 
   int tid_current=ns_thread();
@@ -15232,9 +15235,13 @@ NavierStokes::split_scalar_advection() {
   FORT_BUILD_CONSERVE( 
    &iden_base,
    override_density.dataPtr(),
+   constant_density_all_time.dataPtr(),
    temperature_primitive_variable.dataPtr(),
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
-   denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+   denfab.dataPtr(),
+   ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+   mom_denfab.dataPtr(),
+   ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,
@@ -15363,6 +15370,7 @@ NavierStokes::split_scalar_advection() {
 
    FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
+   FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
    FArrayBox& vofFfab=(*vofF)[mfi];
    FArrayBox& cenFfab=(*cenF)[mfi];
@@ -15389,11 +15397,14 @@ NavierStokes::split_scalar_advection() {
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
     override_density.dataPtr(),
+    constant_density_all_time.dataPtr(),
     xlo,dx,
     slopefab.dataPtr(),
     ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
     denstatefab.dataPtr(),
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
+    mom_denfab.dataPtr(),
+    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
     vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
     cenFfab.dataPtr(),ARLIM(cenFfab.loVect()),ARLIM(cenFfab.hiVect()),
     massFfab.dataPtr(),ARLIM(massFfab.loVect()),ARLIM(massFfab.hiVect()),
@@ -15946,6 +15957,7 @@ NavierStokes::split_scalar_advection() {
 
  delete_localMF(VELADVECT_MF,1);
  delete_localMF(DEN_RECON_MF,1);
+ delete_localMF(MOM_DEN_MF,1);
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {

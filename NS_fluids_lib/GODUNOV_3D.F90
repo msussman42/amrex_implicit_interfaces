@@ -3274,9 +3274,13 @@ stop
       subroutine FORT_BUILD_CONSERVE( &
        iden_base, &
        override_density, &
+       constant_density_all_time, &
        temperature_primitive_variable, &
        conserve,DIMS(conserve), &
-       den,DIMS(den), &
+       den, &
+       DIMS(den), &
+       mom_den, &
+       DIMS(mom_den), &
        vel,DIMS(vel), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
@@ -3295,14 +3299,17 @@ stop
       INTEGER_T, intent(in) :: nc_den
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
       INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(conserve) 
       INTEGER_T, intent(in) :: DIMDEC(den) 
+      INTEGER_T, intent(in) :: DIMDEC(mom_den) 
       INTEGER_T, intent(in) :: DIMDEC(vel) 
       REAL_T, intent(out) :: conserve(DIMV(conserve),nc_conserve)
       REAL_T, intent(in) :: den(DIMV(den),nc_den)
+      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nc_den)
       REAL_T, intent(in) :: vel(DIMV(den),num_materials_vel*SDIM)
 
       INTEGER_T i,j,k,im
@@ -3312,6 +3319,7 @@ stop
       INTEGER_T iden_base
       INTEGER_T igridlo(3),igridhi(3)
       REAL_T dencore(nmat)
+      REAL_T mom_dencore(nmat)
       REAL_T KE,vel1D,local_temperature,local_internal
       REAL_T :: massfrac_parm(num_species_var+1)
 
@@ -3372,6 +3380,7 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(conserve),ngrow,-1,1271)
       call checkbound(fablo,fabhi,DIMS(den),ngrow,-1,1272)
+      call checkbound(fablo,fabhi,DIMS(mom_den),ngrow,-1,1272)
       call checkbound(fablo,fabhi,DIMS(vel),ngrow,-1,1272)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
@@ -3398,48 +3407,23 @@ stop
        do im=1,nmat
         istate=1
         dencomp=(im-1)*num_state_material+istate
-         ! if evaporation, and "im" corresponds to air, then this is the
-         ! total density in the air (i.e. includes the vapor content)
-         ! Y_vapor is the vapor mass fraction within the vapor/air mixture.
-         ! masscore = dencore * V_cell
-         ! mass_vapor = Y_vapor * dencore * V_cell
-         ! mass_air = (1-Y_vapor) * dencore * V_cell
-         ! F_vapor den_vapor V = Y_vapor * dencore * V
-         ! dencore * Y_vapor = F_vapor * den_vapor
-         ! dencore * (1-Y_vapor) = (1-F_vapor) * den_air
-         ! dencore = den_air * F_air + den_vapor * F_vapor 
-         !      Y_vapor = F_vapor * den_vapor/dencore
-         ! given den_air, den_vapor, and Y_vapor,
-         !      F_vapor * den_vapor/Y_vapor = (1-F_vapor)*den_air/(1-Y_vapor)
-         !      F denV (1-Y) = (1-F) denA Y
-         !      F (denV(1-Y)+denA Y) = denA Y
-         !      F=denA Y/(denV(1-Y)+denA Y)
-         !      then dencore=F_vapor denV/Y=
-         !        denV * denA/(denV(1-Y)+denA Y)
         dencore(im)=den(D_DECL(i,j,k),dencomp)
+        mom_dencore(im)=mom_den(D_DECL(i,j,k),im)
           ! sanity check
-        if (fort_material_type(im).eq.0) then
-         if ((override_density(im).eq.0).or. &
-             (override_density(im).eq.2)) then  ! PHYDRO(rho(T,Y,Z))
-          if (abs(dencore(im)-fort_denconst(im)).le.VOFTOL) then
-           ! do nothing
-          else
-           print *,"dencore(im) invalid"
-           print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
-           print *,"dencomp=",dencomp
-           print *,"normdir=",normdir
-           stop
-          endif
-         else if (override_density(im).eq.1) then ! dencore=dencore(T,Y,Z)
+        if (constant_density_all_time(im).eq.1) then
+         if (abs(dencore(im)-fort_denconst(im)).le.VOFTOL) then
           ! do nothing
          else
-          print *,"override_density invalid"
+          print *,"dencore(im) invalid"
+          print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
+          print *,"dencomp=",dencomp
+          print *,"normdir=",normdir
           stop
          endif
-        else if (fort_material_type(im).ge.1) then
+        else if (constant_density_all_time(im).eq.0) then 
          ! do nothing
         else
-         print *,"fort_material_type(im) invalid"
+         print *,"constant_density_all_time invalid"
          stop
         endif
 
@@ -3451,6 +3435,16 @@ stop
          print *,"im,fort_denconst(im) ",im,fort_denconst(im)
          stop
         endif  
+
+        if (mom_dencore(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"mom_density must be positive build_conserve"
+         print *,"im,mom_dencore(im) ",im,mom_dencore(im)
+         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+         stop
+        endif  
+
        enddo ! im=1..nmat
 
        do im=1,nmat
