@@ -18624,6 +18624,7 @@ stop
        nten, &
        face_flag, &
        override_density, &
+       constant_density_all_time, &
        velbc, &
        EILE_flag, &
        VOF_reflux, &
@@ -18641,6 +18642,7 @@ stop
                          !voffluxhix,voffluxhiy,voffluxhiz
        LS,DIMS(LS), &  ! original data
        den,DIMS(den), &
+       mom_den,DIMS(mom_den), &
        tensor,DIMS(tensor), &
        velfab,DIMS(velfab), &
        PLICSLP,DIMS(PLICSLP), &  ! slope data
@@ -18736,6 +18738,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: bfact_f
       INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       REAL_T, intent(in) :: dt,time
        !voffluxlox,voffluxloy,voffluxloz, 
        !voffluxhix,voffluxhiy,voffluxhiz
@@ -18743,6 +18746,7 @@ stop
        ! original data
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(mom_den)
       INTEGER_T, intent(in) :: DIMDEC(tensor)
       INTEGER_T, intent(in) :: DIMDEC(velfab)
        ! slope data
@@ -18784,6 +18788,7 @@ stop
        ! original data
       REAL_T, intent(in) :: LS(DIMV(LS),nmat)
       REAL_T, intent(in) :: den(DIMV(den),den_recon_ncomp)
+      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
       REAL_T, intent(in) :: tensor(DIMV(tensor),ntensor)
       REAL_T, intent(in) :: velfab(DIMV(velfab),num_materials_vel*(SDIM+1))
        ! slope data
@@ -18889,6 +18894,7 @@ stop
       INTEGER_T testmask
       REAL_T donate_data
       REAL_T donate_density
+      REAL_T donate_mom_density
       REAL_T donate_slope,donate_cen
       REAL_T ETcore
 
@@ -19205,6 +19211,7 @@ stop
        ! original data
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,136)
       call checkbound(fablo,fabhi,DIMS(den),ngrow,-1,1231)
+      call checkbound(fablo,fabhi,DIMS(mom_den),ngrow,-1,1231)
       call checkbound(fablo,fabhi,DIMS(tensor),1,-1,1231)
       call checkbound(fablo,fabhi,DIMS(velfab),ngrow,-1,125)
        ! slope data
@@ -20138,6 +20145,20 @@ stop
               ! old state variable.
              donate_density= &
               conserve(D_DECL(idonate,jdonate,kdonate),iden_base+dencomp_data) 
+             donate_mom_density= &
+              mom_den(D_DECL(idonate,jdonate,kdonate),im) 
+             if (donate_density.gt.zero) then
+              ! do nothing
+             else
+              print *,"donate_density must be positive"
+              stop
+             endif
+             if (donate_mom_density.gt.zero) then
+              ! do nothing
+             else
+              print *,"donate_mom_density must be positive"
+              stop
+             endif
              donate_slope= &
               momslope(D_DECL(idonate,jdonate,kdonate),iden_base+dencomp_data)
              massdepart=donate_density+donate_slope*moment_grid_diff(im)
