@@ -15,7 +15,6 @@
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
 #    define FORT_VFRAC_SPLIT  vfrac_split
-#    define FORT_VFRAC_UNSPLIT vfrac_unsplit
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
@@ -62,7 +61,6 @@
 #    define FORT_DISTRIBUTEEXPANSION DISTRIBUTEEXPANSION
 #    define FORT_CLEAREXPANSION CLEAREXPANSION
 #    define FORT_VFRAC_SPLIT  VFRAC_SPLIT
-#    define FORT_VFRAC_UNSPLIT VFRAC_UNSPLIT
 #    define FORT_ESTDT        ESTDT
 #    define FORT_CROSSTERM    CROSSTERM
 #    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
@@ -109,7 +107,6 @@
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
 #    define FORT_VFRAC_SPLIT  vfrac_split
-#    define FORT_VFRAC_UNSPLIT vfrac_unsplit
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
@@ -155,7 +152,6 @@
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion_
 #    define FORT_CLEAREXPANSION clearexpansion_
 #    define FORT_VFRAC_SPLIT  vfrac_split_
-#    define FORT_VFRAC_UNSPLIT vfrac_unsplit_
 #    define FORT_ESTDT        estdt_
 #    define FORT_CROSSTERM    crossterm_
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
@@ -527,7 +523,6 @@ extern "C"
 
 
    void FORT_BUILD_MACVOF(
-    int* unsplit_advection,
     int* nsolveMM_FACE,
     int* level,
     int* finest_level,
@@ -564,8 +559,6 @@ extern "C"
     Real* ymac,AMREX_ARLIM_P(ymaclo),AMREX_ARLIM_P(ymachi),
     Real* zmac,AMREX_ARLIM_P(zmaclo),AMREX_ARLIM_P(zmachi),
     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-    Real* maskunsplit,
-   AMREX_ARLIM_P(maskunsplitlo),AMREX_ARLIM_P(maskunsplithi),
     const Real* xlo,const Real* dx,
     int* nmat,
     int* level,
@@ -1099,82 +1092,6 @@ extern "C"
      int* dombc,
      const int* domlo,const int* domhi);
 
-   void FORT_VFRAC_UNSPLIT(
-     int* unsplit_flag,
-     int* nsolveMM_FACE,
-     int* nprocessed,
-     int* tid,
-     Real* added_weight,
-     Real* density_floor,
-     Real* density_ceiling,
-     int* solidheat_flag,
-     int* temperature_primitive_variable,
-     int* dencomp,int* mofcomp,int* errcomp,
-     Real* latent_heat,
-     int* freezing_model,
-     int* distribute_from_target,
-     int* nten,
-     int* face_flag,
-     int* override_density,
-     int* velbc,
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,
-     int* bfact,
-     int* bfact_f,
-     Real* dt,
-     Real* time,
-     Real* passive_veltime,
-      // original data
-     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
-     Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
-     Real* tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
-     Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
-      // slope data
-     Real* vofslope,AMREX_ARLIM_P(vofslopelo),AMREX_ARLIM_P(vofslopehi), 
-      // this is the result
-     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
-     Real* tennew,AMREX_ARLIM_P(tennewlo),AMREX_ARLIM_P(tennewhi), 
-     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
-      // other vars.
-     Real* ucell,AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
-     Real* vofls0,AMREX_ARLIM_P(vofls0lo),AMREX_ARLIM_P(vofls0hi),
-     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-     Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
-     Real* maskunsplit,
-    AMREX_ARLIM_P(maskunsplitlo),AMREX_ARLIM_P(maskunsplithi),
-     Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),
-     Real* vnode,AMREX_ARLIM_P(vnodelo),AMREX_ARLIM_P(vnodehi),
-     Real* wnode,AMREX_ARLIM_P(wnodelo),AMREX_ARLIM_P(wnodehi),
-     const Real* xlo,const Real* dx,
-      // local variables
-     Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
-     Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),
-     Real* yvel,AMREX_ARLIM_P(yvello),AMREX_ARLIM_P(yvelhi),
-     Real* zvel,AMREX_ARLIM_P(zvello),AMREX_ARLIM_P(zvelhi),
-     Real* xmomside,AMREX_ARLIM_P(xmomsidelo),AMREX_ARLIM_P(xmomsidehi),
-     Real* ymomside,AMREX_ARLIM_P(ymomsidelo),AMREX_ARLIM_P(ymomsidehi),
-     Real* zmomside,AMREX_ARLIM_P(zmomsidelo),AMREX_ARLIM_P(zmomsidehi),
-     Real* xmassside,AMREX_ARLIM_P(xmasssidelo),AMREX_ARLIM_P(xmasssidehi),
-     Real* ymassside,AMREX_ARLIM_P(ymasssidelo),AMREX_ARLIM_P(ymasssidehi),
-     Real* zmassside,AMREX_ARLIM_P(zmasssidelo),AMREX_ARLIM_P(zmasssidehi),
-     int* ngrow,
-     int* ngrow_mac_old,
-     int* nc_conserve,
-     int* iden_base,
-     int* nmat,
-     int* recon_ncomp,
-     int* den_recon_ncomp,
-     int* ncomp_state,
-     int* ntensor,
-     int* nc_bucket,
-     int* nrefine_vof,
-     int* verbose,
-     const int* gridno,int* ngrid,
-     int* level,
-     int* finest_level,
-     int* dombc,
-     const int* domlo,const int* domhi);
-
    void FORT_DERIVE_MOM_DEN(
      int* im_parm,
      int* ngrow,
@@ -1480,7 +1397,6 @@ extern "C"
 
    void FORT_VELMAC_OVERRIDE(
      int* isweep,
-     int* unsplit_displacement,
      int* nsolveMM_FACE,
      int* nmat,
      const int* tilelo,const int* tilehi,

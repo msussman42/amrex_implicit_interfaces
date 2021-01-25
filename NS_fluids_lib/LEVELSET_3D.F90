@@ -4753,6 +4753,8 @@ stop
       INTEGER_T im_evenly
       INTEGER_T iten,iten_shift
       INTEGER_T ireverse
+      INTEGER_T complement_flag
+      INTEGER_T im_negate
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -5853,7 +5855,8 @@ stop
                     print *,"im or im_evenly bust"
                     stop
                    endif
-                  else if (vfrac.lt half) then
+
+                  else if (vfrac.lt.half) then
                    ! do nothing
                   else
                    print *,"vfrac invalid"
@@ -5898,13 +5901,13 @@ stop
                  if (im_negate.eq.0) then
                   ! do nothing
                  else if (im_negate.eq.im) then
-                  if (constant_volume_all_time(im).eq.1) then
-                   print *,"constant_volume_all_time(im) invalid"
+                  if (constant_density_all_time(im).eq.1) then
+                   print *,"constant_density_all_time(im) invalid"
                    stop
-                  else if (constant_volume_all_time(im).eq.0) then
+                  else if (constant_density_all_time(im).eq.0) then
                    ! do nothing
                   else
-                   print *,"constant_volume_all_time(im) invalid"
+                   print *,"constant_density_all_time(im) invalid"
                    stop
                   endif
             
@@ -5917,7 +5920,7 @@ stop
                    3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
                    2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
                    3+ & ! blob_mass_for_velocity
-                   1  & ! blob_volume
+                   1    ! blob_volume
 
                   blob_volume=cum_blobdata(ic)
 
@@ -5944,7 +5947,7 @@ stop
 
                      mdot(D_DECL(i,j,k),iten_shift)= &
                        mdot(D_DECL(i,j,k),iten_shift)-mdot_avg
-                    else if (vfrac.lt half) then
+                    else if (vfrac.lt.half) then
                      ! do nothing
                     else
                      print *,"vfrac invalid"
@@ -9780,201 +9783,6 @@ stop
 
       return
       end subroutine FORT_BUILD_SEMIREFINEVOF
-
-      ! unsplit_flag=
-      ! 0=directionally split
-      ! 1=unsplit everywhere
-      ! 2=unsplit in incompressible zones
-      ! 3=unsplit in fluid cells that neighbor a prescribed solid cell
-      subroutine FORT_BUILD_MASK_UNSPLIT( &
-       unsplit_flag, &
-       xlo,dx, &
-       maskunsplit, &
-       DIMS(maskunsplit), &
-       vofls0,DIMS(vofls0), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       nmat, &
-       level,finest_level)
-      use global_utility_module
-      use MOF_routines_module
-      use probf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T unsplit_flag
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(maskunsplit)
-      INTEGER_T DIMDEC(vofls0)
-      REAL_T vofls0(DIMV(vofls0),2*nmat) 
-      REAL_T maskunsplit(DIMV(maskunsplit)) 
-      REAL_T xlo(SDIM),dx(SDIM)
-
-      INTEGER_T i,j,k
-      INTEGER_T im
-      INTEGER_T im_primary
-
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T all_incomp
-      INTEGER_T local_mask
-      REAL_T cutoff,DXMAXLS
-      REAL_T localLS(nmat)
-
-      if (bfact.ge.1) then
-       ! do nothing
-      else
-       print *,"bfact too small"
-       stop
-      endif
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level or finest_level invalid build mask_unsplit"
-       stop
-      endif
-
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid build mask_unsplit "
-       print *,"ngeom_recon= ",ngeom_recon
-       stop
-      endif
-      if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid build mask_unsplit "
-       print *,"ngeom_raw= ",ngeom_raw
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(maskunsplit),1,-1,219)
-      call checkbound(fablo,fabhi,DIMS(vofls0),1,-1,219)
-
-      do im=1,nmat
-
-       if (fort_material_type(im).eq.0) then
-        ! do nothing
-       else if (fort_material_type(im).eq.999) then
-        if (is_rigid(nmat,im).ne.1) then
-         print *,"is_rigid(nmat,im).ne.1"
-         stop
-        endif
-       else if ((fort_material_type(im).gt.0).and. &
-                (fort_material_type(im).le.MAX_NUM_EOS)) then
-        ! do nothing
-       else 
-        print *,"material_type invalid"
-        stop
-       endif
-
-      enddo ! im=1..nmat  (checking parameters)
-
-      all_incomp=1
-
-      do im=1,nmat
-
-       if (fort_material_type(im).eq.0) then
-        ! do nothing
-       else if (fort_material_type(im).eq.999) then
-        ! do nothing
-       else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.MAX_NUM_EOS)) then
-        all_incomp=0
-       else
-        print *,"fort_material_type invalid"
-        stop
-       endif
-
-      enddo  ! im=1..nmat
-
-       ! the band thickness in FORT_ADVECTIVE_PRESSURE is 2 * DXMAXLS
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=DXMAXLS
-         
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       do im=1,nmat
-        localLS(im)=vofls0(D_DECL(i,j,k),nmat+im)
-       enddo
-       call get_primary_material(localLS,nmat,im_primary)
-
-       local_mask=0
-
-       if (unsplit_flag.eq.0) then ! split
-        local_mask=0
-       else if (unsplit_flag.eq.1) then ! unsplit everywhere
-        local_mask=1
-       else if (unsplit_flag.eq.2) then ! unsplit in incomp. zones
-        if (all_incomp.eq.1) then
-         local_mask=1
-        else if (all_incomp.eq.0) then
-         if ((fort_material_type(im_primary).eq.0).or. &
-             (fort_material_type(im_primary).eq.999)) then
-          local_mask=1
-         else if ((fort_material_type(im_primary).gt.0).and. &
-                  (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
-          ! do nothing 
-         else 
-          print *,"material_type invalid"
-          stop
-         endif
-        else
-         print *,"all_incomp invalid"
-         stop
-        endif
-        ! unsplit in fluid cells that neighbor a prescribed solid cell
-       else if (unsplit_flag.eq.3) then 
-        do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
-          if (is_prescribed(nmat,im).eq.1) then
-           if (abs(localLS(im)).le.cutoff) then
-            local_mask=1
-           else if (abs(localLS(im)).ge.cutoff) then
-            ! do nothing
-           else
-            print *,"localLS invalid"
-            stop
-           endif
-          else if (is_prescribed(nmat,im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_prescribed(nmat,im) invalid"
-           stop
-          endif
-         else if (is_rigid(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-       else
-        print *,"unsplit_flag invalid"
-        stop
-       endif 
-
-       maskunsplit(D_DECL(i,j,k))=local_mask
-
-      enddo
-      enddo
-      enddo ! i,j,k 
-
-      return
-      end subroutine FORT_BUILD_MASK_UNSPLIT
-
 
       subroutine FORT_BUILD_MODVISC( &
        ngrow_visc, &

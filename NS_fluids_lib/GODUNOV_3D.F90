@@ -3327,8 +3327,6 @@ stop
        print *,"bfact invalid44"
        stop
       endif
-       ! for the unsplit algorithm, the cell centered state variable
-       ! slopes are zero.
       if (ngrow.lt.1) then
        print *,"ngrow out of range in BUILD_CONSERVE ngrow=",ngrow
        stop
@@ -3545,8 +3543,6 @@ stop
        ymac,DIMS(ymac), &
        zmac,DIMS(zmac), &
        mask,DIMS(mask), &
-       maskunsplit, &
-       DIMS(maskunsplit), &
        xlo,dx, &
        nmat, &
        level, &
@@ -3580,7 +3576,6 @@ stop
       INTEGER_T DIMDEC(zmac) 
 
       INTEGER_T DIMDEC(mask) 
-      INTEGER_T DIMDEC(maskunsplit)
 
       REAL_T xmomside(DIMV(xmomside),2)
       REAL_T ymomside(DIMV(ymomside),2)
@@ -3595,7 +3590,6 @@ stop
       REAL_T zmac(DIMV(zmac))
 
       REAL_T mask(DIMV(mask))
-      REAL_T maskunsplit(DIMV(maskunsplit))
 
       REAL_T xlo(SDIM)
       REAL_T dx(SDIM)
@@ -3610,8 +3604,6 @@ stop
       INTEGER_T zapvel
       REAL_T maskleft
       REAL_T maskright
-      INTEGER_T maskunsplitleft
-      INTEGER_T maskunsplitright
       REAL_T momface_total,massface_total
       REAL_T massquarter,momquarter
       REAL_T xsten(-1:1,SDIM)
@@ -3657,7 +3649,6 @@ stop
       call checkbound(fablo,fabhi,DIMS(zmassside),1,-1,1271)
 
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(maskunsplit),1,-1,134)
 
       call checkbound(fablo,fabhi,DIMS(xmac),0,0,1271)
       call checkbound(fablo,fabhi,DIMS(ymac),0,1,1271)
@@ -3727,12 +3718,6 @@ stop
 
           if ((maskleft.eq.one).and.(maskright.eq.one)) then
 
-           maskunsplitleft=NINT(maskunsplit(D_DECL(ileft,jleft,kleft)))
-           maskunsplitright=NINT(maskunsplit(D_DECL(iright,jright,kright)))
-
-           if ((maskunsplitleft.eq.1).or. &
-               (maskunsplitright.eq.1)) then
-
             momface_total=zero
             massface_total=zero
 
@@ -3798,14 +3783,6 @@ stop
              stop
             endif
 
-           else if ((maskunsplitleft.eq.0).and. &
-                    (maskunsplitright.eq.0)) then
-            ! do nothing
-           else
-            print *,"maskunsplitleft or maskunsplitright invalid"
-            stop
-           endif
-
           else if ((maskleft.eq.zero).or.(maskright.eq.zero)) then
             ! do nothing
           else 
@@ -3827,10 +3804,9 @@ stop
       return
       end subroutine FORT_BUILD_NEWMAC
 
-      ! called from split_scalar_advection and unsplit_scalar_advection after 
+      ! called from split_scalar_advection after 
       !  BUILD_SEMIREFINEVOF(tessellate==0)
       subroutine FORT_BUILD_MACVOF( &
-       unsplit_advection, &
        nsolveMM_FACE, &
        level, &
        finest_level, &
@@ -3858,7 +3834,6 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: unsplit_advection
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3913,12 +3888,6 @@ stop
        ! do nothing
       else
        print *,"normdir invalid BUILD_MACVOF"
-       stop
-      endif
-      if ((unsplit_advection.eq.0).or.(unsplit_advection.eq.1)) then
-       ! do nothing
-      else
-       print *,"unsplit_advection invalid BUILD_MACVOF"
        stop
       endif
       if (ngrow.lt.0) then
@@ -4073,35 +4042,27 @@ stop
          volquarter=vofF(D_DECL(icell,jcell,kcell),irefine)
          volmatCV(im)=volmatCV(im)+volquarter
 
-         if (unsplit_advection.eq.0) then
+         ! centroid in absolute coordinate system
+         if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
 
-          ! centroid in absolute coordinate system
-          if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-
-           if (iside.eq.-1) then !right side of left cell.
-            irefinecen=(veldir-1)*2*nmat*SDIM+ &
-             nmat*SDIM+(im-1)*SDIM+normdir+1
-           else if (iside.eq.1) then !left side of right cell.
-            irefinecen=(veldir-1)*2*nmat*SDIM+ &
-             (im-1)*SDIM+normdir+1
-           else
-            print *,"iside invalid"
-            stop
-           endif
-
-           cenmatCV(im)=cenmatCV(im)+ &
-            volquarter*cenF(D_DECL(icell,jcell,kcell),irefinecen)
+          if (iside.eq.-1) then !right side of left cell.
+           irefinecen=(veldir-1)*2*nmat*SDIM+ &
+            nmat*SDIM+(im-1)*SDIM+normdir+1
+          else if (iside.eq.1) then !left side of right cell.
+           irefinecen=(veldir-1)*2*nmat*SDIM+ &
+            (im-1)*SDIM+normdir+1
           else
-           print *,"normdir invalid BUILD_MACVOF (2)"
+           print *,"iside invalid"
            stop
           endif
 
-         else if (unsplit_advection.eq.1) then
-          ! do nothing
+          cenmatCV(im)=cenmatCV(im)+ &
+           volquarter*cenF(D_DECL(icell,jcell,kcell),irefinecen)
          else
-          print *,"unsplit_advection invalid"
+          print *,"normdir invalid BUILD_MACVOF (2)"
           stop
          endif
+
          
          if (is_rigid(nmat,im).eq.0) then 
           volCV_fluid=volCV_fluid+volquarter
@@ -4154,20 +4115,11 @@ stop
           stop
          endif
       
-         if (unsplit_advection.eq.0) then
-
-          if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
+         if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
            xvelslp(D_DECL(i,j,k),1+im)=cenmatCV(im) ! xcen
-          else
+         else
            print *,"normdir invalid BUILD_MACVOF (3)"
            stop
-          endif
-
-         else if (unsplit_advection.eq.1) then
-          ! do nothing
-         else
-          print *,"unsplit_advection invalid"
-          stop
          endif
 
          xvof(D_DECL(i,j,k),im)=volmatCV(im)
@@ -13538,7 +13490,6 @@ stop
        ! vel=vel*dt , call adjust_du if RZ, override if passive advect.
       subroutine FORT_VELMAC_OVERRIDE( &
        isweep, &
-       unsplit_displacement, &
        nsolveMM_FACE, &
        nmat, &
        tilelo,tilehi, &
@@ -13568,7 +13519,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: isweep
-      INTEGER_T, intent(in) :: unsplit_displacement
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: SDC_outer_sweeps
       INTEGER_T, intent(in) :: ns_time_order
@@ -13636,13 +13586,6 @@ stop
        ! do nothing
       else
        print *,"isweep invalid"
-       stop
-      endif
-      if ((unsplit_displacement.eq.0).or. &
-          (unsplit_displacement.eq.1)) then
-       ! do nothing
-      else
-       print *,"unsplit_displacement invalid"
        stop
       endif
  
@@ -14121,9 +14064,6 @@ stop
       REAL_T rhohydro,preshydro,temperature
       INTEGER_T nhalf
       REAL_T density_of_TZ
-      INTEGER_T ispec,im_spec
-      REAL_T massfrac
-      INTEGER_T from_boundary_hydrostatic
       INTEGER_T caller_id
 
       nhalf=3
@@ -14132,10 +14072,10 @@ stop
        print *,"bfact invalid66"
        stop
       endif
-      if (ngrow.ge.0) then
+      if (ngrow.ge.1) then
        ! do nothing
       else
-       print *,"ngrow invalid"
+       print *,"ngrow>=1 required"
        stop
       endif
 

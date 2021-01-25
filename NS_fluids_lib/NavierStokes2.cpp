@@ -10159,23 +10159,21 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
  } // im=0..nmat-1
 
- MultiFab* vel;
- MultiFab* EOSdata;
- MultiFab* tensor;
-
  new_localMF(idx,ncomp_visc,ngrow,-1); // sets values to 0.0
 
    // TODO: define Super_Mesh_State_Type of num_materials_vel>1
- vel=getState(ngrow+1,0,AMREX_SPACEDIM,cur_time_slab);
+ MultiFab* vel=getState(ngrow+1,0,AMREX_SPACEDIM,cur_time_slab);
 
- EOSdata=getStateDen(ngrow,cur_time_slab);
+ MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
-  tensor=getStateTensor(ngrow,0,
-     num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
+  // do nothing
  } else 
   amrex::Error("num_materials_viscoelastic invalid");
+
+ MultiFab* tensor=getStateTensor(ngrow,0,
+     num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
 
  for (int im=0;im<nmat;im++) {
 
