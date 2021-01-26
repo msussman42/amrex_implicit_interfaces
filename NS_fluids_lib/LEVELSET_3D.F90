@@ -6823,6 +6823,7 @@ stop
        species_evaporation_density, &
        cavitation_vapor_density, &
        override_density, &
+       constant_density_all_time, &
        time, &
        project_option, &
        problo,probhi, &
@@ -6836,7 +6837,10 @@ stop
        zface,DIMS(zface), &
        curv,DIMS(curv), &
        slope,DIMS(slope), &
-       denstate,DIMS(denstate), &
+       denstate, &
+       DIMS(denstate), &
+       mom_den, &
+       DIMS(mom_den), &
        viscstate,DIMS(viscstate), &
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
@@ -6918,6 +6922,7 @@ stop
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T :: veldir
       INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
@@ -6935,6 +6940,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(curv)
       INTEGER_T, intent(in) :: DIMDEC(slope)
       INTEGER_T, intent(in) :: DIMDEC(denstate)
+      INTEGER_T, intent(in) :: DIMDEC(mom_den)
       INTEGER_T, intent(in) :: DIMDEC(viscstate)
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
       INTEGER_T, intent(in) :: DIMDEC(solyfab)
@@ -6957,6 +6963,7 @@ stop
       REAL_T, intent(in) :: curv(DIMV(curv),num_curv) 
       REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
       REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat) 
       REAL_T, intent(in) :: viscstate(DIMV(viscstate),nmat) 
       REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
       REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
@@ -7066,7 +7073,6 @@ stop
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T for_hydrostatic_pres
 
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
@@ -7108,8 +7114,6 @@ stop
       INTEGER_T local_tessellate
 
 ! INIT_PHYSICS_VARS code starts here:
-
-      for_hydrostatic_pres=0
 
       nhalf=3
 
@@ -7252,6 +7256,9 @@ stop
       call checkbound(fablo,fabhi,DIMS(curv),1,-1,221)
       call checkbound(fablo,fabhi, &
        DIMS(denstate), &
+       1,-1,223)
+      call checkbound(fablo,fabhi, &
+       DIMS(mom_den), &
        1,-1,223)
       call checkbound(fablo,fabhi, &
        DIMS(viscstate), &
@@ -9236,19 +9243,23 @@ stop
          dencomp=(im-1)*num_state_material+1
          tempcomp=dencomp+1
 
-         delta_mass=denstate(D_DECL(i,j,k),dencomp)*volmat(im)
+!        delta_mass=denstate(D_DECL(i,j,k),dencomp)*volmat(im)
+         delta_mass=mom_den(D_DECL(i,j,k),im)*volmat(im)
          voldepart=volmat(im)
           ! if is_rigid(im), density=fort_denconst(im)
           ! if incompressible,
-          !   if override_density=0,2 then density=fort_denconst(im)
-          !   if override_density=1 then density=mass_depart/vol_depart
+          !   if constant_density_all_time==1 then density=fort_denconst(im)
+          !   if constant_density_all_time==0 
+          !    then density=mass_depart/vol_depart
           ! if compressible,
           !   density=massdepart/voltarget
          call derive_density( &
           voldepart,voldepart,voltotal, &
-          override_density,delta_mass, &
-          im,nmat,den, &
-          for_hydrostatic_pres) 
+          override_density, &
+          constant_density_all_time, &
+          delta_mass, &
+          im,nmat, &
+          den) 
 
          if (den.gt.zero) then
           ! do nothing
@@ -9388,6 +9399,7 @@ stop
        cavitation_vapor_density, &
        override_density, &
        constant_density_all_time, &
+       use_mom_den, &
        xlo,dx, &
        slope,DIMS(slope), &
        denstate, &
@@ -9426,6 +9438,7 @@ stop
       INTEGER_T :: veldir
       INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: use_mom_den
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -9460,6 +9473,7 @@ stop
       REAL_T mass_total
       REAL_T den
       REAL_T mom_den_local
+      REAL_T den_value
 
       INTEGER_T dencomp
 
@@ -9695,6 +9709,15 @@ stop
             den=denstate(D_DECL(i,j,k),dencomp)
             mom_den_local=mom_den(D_DECL(i,j,k),nmat)
 
+            if (use_mom_den.eq.0) then
+             den_value=den
+            else if (use_mom_den.eq.1) then
+             den_value=mom_den_local
+            else
+             print *,"use_mom_den invalid"
+             stop
+            endif
+
             if (constant_density_all_time(im).eq.1) then
              if (abs(den-fort_denconst(im)).le.VOFTOL) then
               ! do nothing
@@ -9728,13 +9751,21 @@ stop
              print *,"im,fort_denconst(im) ",im,fort_denconst(im)
              stop
             endif  
+            if (den_value.gt.zero) then
+             ! do nothing
+            else
+             print *,"den_value must be pos build_semi_refine_vof"
+             print *,"im,den_value ",im,den_value
+             print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+             stop
+            endif  
  
             if (is_rigid(nmat,im).eq.0) then
              voltotal_fluid=voltotal_fluid+multi_volume(im)
-             mass_total_fluid=mass_total_fluid+mom_den_local*multi_volume(im)
+             mass_total_fluid=mass_total_fluid+den_value*multi_volume(im)
             else if (is_rigid(nmat,im).eq.1) then
              voltotal_solid=voltotal_solid+multi_volume(im)
-             mass_total_solid=mass_total_solid+mom_den_local*multi_volume(im)
+             mass_total_solid=mass_total_solid+den_value*multi_volume(im)
             else
              print *,"is_rigid invalid"
              stop
@@ -9750,7 +9781,7 @@ stop
             endif
 
             vofF(D_DECL(i,j,k),irefine)=multi_volume(im)
-            massF(D_DECL(i,j,k),irefine)=mom_den_local*multi_volume(im)
+            massF(D_DECL(i,j,k),irefine)=den_value*multi_volume(im)
             do dir2=1,SDIM
              if (iside.eq.-1) then
               irefinecen=veldir*2*nmat*SDIM+ &

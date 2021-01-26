@@ -5322,6 +5322,8 @@ void NavierStokes::make_physics_vars(int project_option) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+  int use_mom_den=1;
+
     // in: LEVELSET_3D.F90
     // centroid in absolute coordinates.
   FORT_BUILD_SEMIREFINEVOF(
@@ -5337,6 +5339,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    cavitation_vapor_density.dataPtr(),
    override_density.dataPtr(),
    constant_density_all_time.dataPtr(),
+   &use_mom_den,
    xlo,dx,
    slopefab.dataPtr(),
    ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
@@ -5408,7 +5411,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    xlo,dx,
    slopefab.dataPtr(),
    ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
-   denstatefab.dataPtr(),
+   denstatefab.dataPtr(), // denstate unused for now.
    ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
    viscstatefab.dataPtr(),
    ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
@@ -5481,7 +5484,10 @@ void NavierStokes::make_physics_vars(int project_option) {
 
    FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
+
    FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
+   FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
+
    FArrayBox& viscstatefab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
 
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -5553,6 +5559,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
     override_density.dataPtr(),
+    constant_density_all_time.dataPtr(),
     &cur_time_slab,
     &project_option,
     problo,probhi,
@@ -5570,6 +5577,8 @@ void NavierStokes::make_physics_vars(int project_option) {
     ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
     denstatefab.dataPtr(),
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
+    mom_denfab.dataPtr(),
+    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
     viscstatefab.dataPtr(),
     ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
     solxfab.dataPtr(),

@@ -15383,6 +15383,8 @@ NavierStokes::split_scalar_advection() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   int use_mom_den=0;
+
     // in: LEVELSET_3D.F90
     // centroid in absolute coordinates.
    FORT_BUILD_SEMIREFINEVOF(
@@ -15398,6 +15400,7 @@ NavierStokes::split_scalar_advection() {
     cavitation_vapor_density.dataPtr(),
     override_density.dataPtr(),
     constant_density_all_time.dataPtr(),
+    &use_mom_den,
     xlo,dx,
     slopefab.dataPtr(),
     ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
