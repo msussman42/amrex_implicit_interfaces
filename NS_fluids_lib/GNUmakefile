@@ -60,7 +60,7 @@ CTML_FBC = FALSE
 COMP	  = g++
 FCOMP = gfortran
 # total view:
-#  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 54)
+#  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 56)
 #  2. module load gnu-openmpi  (can I leave out the /8.2.1-4.0.0 ?)
 #  2.5 cd multimaterialTV
 #  2.6 get latest code, USE_MPI=TRUE
@@ -81,7 +81,7 @@ FCOMP = gfortran
 # backfill
 # engineering_q
 # engineering_long
-# hpc-login.rcc.fsu.edu  "module load intel" (44 not 54)
+# hpc-login.rcc.fsu.edu  "module load intel" (44 not 56)
 # sussman + old password
 # bromwich or compute1 GNU MPI:
 #  "module load mpi/openmpi-4-gcc8"
