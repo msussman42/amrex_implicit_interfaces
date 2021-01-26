@@ -16368,7 +16368,8 @@ stop
        num_LS_extrap, &
        num_LS_extrap_iter, &
        LS_extrap_iter, &
-       ngrow_distance)
+       ngrow_distance, &
+       constant_density_all_time)
       use global_utility_module
       use global_distance_module
       use probf90_module
@@ -16400,6 +16401,7 @@ stop
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
 
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
@@ -16803,7 +16805,12 @@ stop
           F_stencil=state_mof(D_DECL(i,j,k),vofcompraw)
 
           if (is_rigid(nmat,im).eq.1) then
-           ! do nothing
+           if (constant_density_all_time(im).eq.1) then
+            ! do nothing
+           else
+            print *,"constant_density_all_time(im) invalid, RENORM"
+            stop
+           endif
           else if (is_rigid(nmat,im).eq.0) then
 
            if (F_stencil.gt.VOFTOL) then
@@ -16829,15 +16836,26 @@ stop
 
               if (istate.eq.1) then
                dencomp=(im-1)*num_state_material+istate
-                ! incompressible
-               if (fort_material_type(im).eq.0) then 
+
+               if (constant_density_all_time(im).eq.1) then 
                 state_stencil(istate)=fort_denconst(im)
-                ! compressible
-               else if ((fort_material_type(im).gt.0).and. &
-                        (fort_material_type(im).le.MAX_NUM_EOS)) then 
+                if (fort_material_type(im).eq.0) then  ! incompressible
+                 ! do nothing
+                else
+                 print *,"fort_material_type invalid"
+                 stop
+                endif
+               else if (constant_density_all_time(im).eq.0) then 
                 state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),dencomp)
+                if ((fort_material_type(im).ge.0).and. &
+                    (fort_material_type(im).le.MAX_NUM_EOS)) then 
+                 ! do nothing
+                else
+                 print *,"fort_material_type invalid"
+                 stop
+                endif
                else
-                print *,"fort_material_type invalid"
+                print *,"constant_density_all_time(im) invalid, RENORM2"
                 stop
                endif
                istate=istate+1

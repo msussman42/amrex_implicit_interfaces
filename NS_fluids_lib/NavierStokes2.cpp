@@ -6983,8 +6983,10 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 // called from:
 //  NavierStokes::prepare_post_process -> called from post_init_state 
 //  NavierStokes::prepare_post_process -> called from post_restart
+//    renormalize_only=0 when called from prepare_post_process.
 //  NavierStokes::nonlinear_advection
 //  NavierStokes::advance
+//    renormalize_only=0 when called from advance.
 //
 void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  
@@ -7178,7 +7180,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       &num_LS_extrap[tid_current],
       &num_LS_extrap_iter,
       &LS_extrap_iter,
-      &ngrow_distance);
+      &ngrow_distance,
+      constant_density_all_time.dataPtr());
 
    }  // mfi
 } // omp

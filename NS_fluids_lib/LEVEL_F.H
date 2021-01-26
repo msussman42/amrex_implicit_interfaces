@@ -281,7 +281,8 @@ namespace amrex{
        int* num_LS_extrap,
        int* num_LS_extrap_iter,
        int* LS_extrap_iter,
-       int* ngrow_distance);
+       int* ngrow_distance,
+       int* constant_density_all_time);
 
 
      void FORT_PURGEFLOTSAM(
