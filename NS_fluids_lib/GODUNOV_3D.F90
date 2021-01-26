@@ -20933,7 +20933,9 @@ stop
            massdepart,im,nmat, &
            dencore(im))
           istate=dencomp+(im-1)*num_state_material+1
-          if (dencore(im).le.zero) then
+          if (dencore(im).gt.zero) then
+           ! do nothing
+          else
            print *,"density must be positive vfrac_split 2"
            print *,"im,dencore(im) ",im,dencore(im)
            stop

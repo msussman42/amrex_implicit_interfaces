@@ -11639,7 +11639,12 @@ stop
             use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
            else if ((imattype.ge.1).and. &
                     (imattype.le.MAX_NUM_EOS)) then
-            ! do nothing
+            if (constant_density_all_time(im).eq.0) then
+             ! do nothing
+            else
+             print *,"expecting constant_density_all_time(im).eq.0"
+             stop
+            endif
            else
             print *,"imattype or FSI_flag invalid"
             stop
@@ -12115,6 +12120,22 @@ stop
               ! dendest is Snewfab.dataPtr(scomp_den) 
 
              rho=dendest(D_DECL(i,j,k),ibase+1)
+
+             if (constant_density_all_time(im).eq.1) then
+              if (abs(rho-fort_denconst(im)).le. &
+                  VOFTOL*fort_denconst(im)) then
+               ! do nothing
+              else
+               print *,"expecting rho=fort_denconst(im)"
+               stop
+              endif
+             else if (constant_density_all_time(im).eq.0) then
+              ! do nothing
+             else
+              print *,"constant_density_all_time invalid"
+              stop
+             endif
+
              NEW_DENSITY=rho
 
              TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)
@@ -14110,6 +14131,26 @@ stop
            if ((im.ge.1).and.(im.le.nmat)) then
             ibase=num_state_material*(im-1) 
             denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+1) 
+            if (denlocal.gt.zero) then
+             ! do nothing
+            else
+             print *,"denlocal invalid"
+             stop
+            endif
+            if (constant_density_all_time(im).eq.1) then
+             if (abs(denlocal-fort_denconst(im)).le. &
+                 VOFTOL*fort_denconst(im)) then
+              ! do nothing
+             else
+              print *,"expecting denlocal=fort_denconst(im)"
+              stop
+             endif
+            else if (constant_density_all_time(im).eq.0) then
+             ! do nothing
+            else
+             print *,"constant_density_all_time invalid"
+             stop
+            endif
             templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
             nc=SDIM+1  ! density
             local_face(nc)=denlocal  ! NONCONSERVATIVE
@@ -14141,6 +14182,28 @@ stop
             ibase=num_state_material*(im-1) 
             do nc=1,ncphys
              denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+1) 
+
+             if (denlocal.gt.zero) then
+              ! do nothing
+             else
+              print *,"denlocal invalid"
+              stop
+             endif
+             if (constant_density_all_time(im).eq.1) then
+              if (abs(denlocal-fort_denconst(im)).le. &
+                  VOFTOL*fort_denconst(im)) then
+               ! do nothing
+              else
+               print *,"expecting denlocal=fort_denconst(im)"
+               stop
+              endif
+             else if (constant_density_all_time(im).eq.0) then
+              ! do nothing
+             else
+              print *,"constant_density_all_time invalid"
+              stop
+             endif
+
              templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
