@@ -1955,6 +1955,7 @@ void NavierStokes::apply_div(
    &operation_flag,  // operation_flag=0
    &energyflag,
    temperature_primitive_variable.dataPtr(),
+   constant_density_all_time.dataPtr(),
    &nmat,
    &nparts,
    &nparts_def,
@@ -2653,6 +2654,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &operation_flag, // operation_flag==1
     &energyflag,
     temperature_primitive_variable.dataPtr(),
+    constant_density_all_time.dataPtr(),
     &nmat,
     &nparts,
     &nparts_def,

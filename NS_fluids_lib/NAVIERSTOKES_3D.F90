@@ -930,6 +930,7 @@ stop
          enddo
           ! den,configuration tensor,visc,trace
          do ivar_gb=1,nmat*num_state_material+ &
+              nmat+ &  ! mom_den
               num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)+ &
               nmat+5*nmat
           index3d=index3d+1
@@ -3174,6 +3175,7 @@ END SUBROUTINE SIMP
        div,DIMS(div), &
        divdat,DIMS(divdat), &
        den,DIMS(den), &
+       mom_den,DIMS(mom_den), &
        elastic,DIMS(elastic), &
        lsdist,DIMS(lsdist), &
        visc,DIMS(visc), &
@@ -3237,6 +3239,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(div)
       INTEGER_T, intent(in) :: DIMDEC(divdat)
       INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(mom_den)
       INTEGER_T, intent(in) :: DIMDEC(elastic)
       INTEGER_T, intent(in) :: DIMDEC(lsdist)
       INTEGER_T, intent(in) :: DIMDEC(visc)
@@ -3254,6 +3257,7 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: div(DIMV(div),num_materials_vel)
       REAL_T, intent(in) :: divdat(DIMV(divdat),num_materials_vel)
       REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)
+      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
       REAL_T, intent(in) :: elastic(DIMV(elastic),elastic_ncomp)
       REAL_T, intent(in) :: visc(DIMV(visc),nmat)
       REAL_T, intent(in) :: trace(DIMV(trace),5*nmat)
@@ -3272,8 +3276,10 @@ END SUBROUTINE SIMP
       REAL_T divnd(num_materials_vel)
       REAL_T divdatnd(num_materials_vel)
       REAL_T dennd(num_state_material*nmat)
+      REAL_T mom_dennd(nmat)
       REAL_T elasticnd(elastic_ncomp)
       REAL_T dencell(num_state_material*nmat)
+      REAL_T mom_dencell(nmat)
       REAL_T elasticcell(elastic_ncomp)
       REAL_T lsdistnd((SDIM+1)*nmat)
       REAL_T local_LS_data((SDIM+1)*nmat)
@@ -3464,6 +3470,7 @@ END SUBROUTINE SIMP
       call checkbound(lo,hi,DIMS(div),1,-1,411)
       call checkbound(lo,hi,DIMS(divdat),1,-1,411)
       call checkbound(lo,hi,DIMS(den),1,-1,411)
+      call checkbound(lo,hi,DIMS(mom_den),1,-1,411)
       call checkbound(lo,hi,DIMS(elastic),1,-1,411)
       call checkbound(lo,hi,DIMS(lsdist),1,-1,411)
       call checkbound(lo,hi,DIMS(visc),1,-1,411)
@@ -3624,6 +3631,9 @@ END SUBROUTINE SIMP
         do dir=1,num_state_material*nmat
          dennd(dir)=zero
         enddo
+        do dir=1,nmat
+         mom_dennd(dir)=zero
+        enddo
         do dir=1,elastic_ncomp
          elasticnd(dir)=zero
         enddo
@@ -3743,6 +3753,9 @@ END SUBROUTINE SIMP
          do dir=1,num_state_material*nmat
           dencell(dir)=den(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
+         do dir=1,nmat
+          mom_dencell(dir)=mom_den(D_DECL(i-i1,j-j1,k-k1),dir)
+         enddo
 
           ! e.g. transform temperature for rotating convection instability
           ! problem.
@@ -3750,6 +3763,9 @@ END SUBROUTINE SIMP
 
          do dir=1,num_state_material*nmat
           dennd(dir)=dennd(dir)+localwt*dencell(dir)
+         enddo
+         do dir=1,nmat
+          mom_dennd(dir)=mom_dennd(dir)+localwt*mom_dencell(dir)
          enddo
 
          do dir=1,elastic_ncomp
@@ -3828,6 +3844,9 @@ END SUBROUTINE SIMP
 
         do dir=1,num_state_material*nmat
          dennd(dir)=dennd(dir)/sumweight
+        enddo
+        do dir=1,nmat
+         mom_dennd(dir)=mom_dennd(dir)/sumweight
         enddo
 
         do dir=1,elastic_ncomp
@@ -4148,8 +4167,12 @@ END SUBROUTINE SIMP
           endif
          enddo ! istate
         enddo ! im
+        do im=1,nmat
+         iw=iw+1 
+         writend(scomp+iw)=mom_dennd(iw)
+        enddo
 
-        scomp=scomp+num_state_material*nmat
+        scomp=scomp+num_state_material*nmat+nmat
 
         do iw=1,elastic_ncomp
          writend(scomp+iw)=elasticnd(iw) 

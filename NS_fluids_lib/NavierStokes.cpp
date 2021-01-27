@@ -14675,6 +14675,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &vofface_index,
       &nfluxSEM, // ncphys (nflux for advection)
       override_density.dataPtr(),
+      constant_density_all_time.dataPtr(),
       &solvability_projection,
       denbc.dataPtr(),  // presbc
       velbc.dataPtr(),  
@@ -14854,6 +14855,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &operation_flag, // 6=advection
       &energyflag,
       temperature_primitive_variable.dataPtr(),
+      constant_density_all_time.dataPtr(),
       &nmat,
       &nparts,
       &nparts_def,
@@ -17936,6 +17938,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    amrex::Error("presmf has invalid ncomp");
 
   MultiFab* denmf=ns_level.getStateDen(1,cur_time_slab); 
+  ns_level.getStateMOM_DEN(MOM_DEN_MF,1,cur_time_slab); 
   MultiFab* lsdist=ns_level.getStateDist(1,cur_time_slab,12);
   MultiFab* div_data=ns_level.getStateDIV_DATA(1,0,num_materials_vel,
     cur_time_slab);
@@ -17958,6 +17961,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    ns_level.localMF[MACDIV_MF],
    div_data,
    denmf,
+   ns_level.localMF[MOM_DEN_MF],
    viscoelasticmf,
    lsdist,
    ns_level.localMF[CELL_VISC_MATERIAL_MF],
@@ -17980,6 +17984,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   delete denmf;
   delete presmf;
   delete lsdist;
+  ns_level.delete_localMF(MOM_DEN_MF,1);
  }  // ilev=tecplot_finest_level ... 0
 
  ParallelDescriptor::Barrier();
