@@ -10075,6 +10075,7 @@ stop
        operation_flag, &
        energyflag, &
        temperature_primitive_variable, &
+       constant_density_all_time, &
        nmat, &
        nparts, &
        nparts_def, &
@@ -10175,6 +10176,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: energyflag 
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -13097,6 +13099,7 @@ stop
        vofface_index, &
        ncphys, &  ! nflux for advection
        override_density, &
+       constant_density_all_time, &
        solvability_projection, &
        presbc_in, &  ! denbc for advection
        velbc_in, &
@@ -13201,6 +13204,7 @@ stop
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
       INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: solvability_projection
       REAL_T, intent(in) :: dt,time,beta,visc_coef
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)

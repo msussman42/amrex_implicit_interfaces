@@ -1635,6 +1635,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &vofface_index,
     &ncphys,
     override_density.dataPtr(),
+    constant_density_all_time.dataPtr(),
     &solvability_projection,
     presbc.dataPtr(),
     velbc.dataPtr(),
@@ -1836,6 +1837,7 @@ void NavierStokes::apply_cell_pressure_gradient(
      &operation_flag_interp_macvel, 
      &energyflag,
      temperature_primitive_variable.dataPtr(),
+     constant_density_all_time.dataPtr(),
      &nmat,
      &nparts,
      &nparts_def,
@@ -2583,6 +2585,7 @@ void NavierStokes::increment_face_velocity(
        &vofface_index,
        &ncphys,
        override_density.dataPtr(),
+       constant_density_all_time.dataPtr(),
        &solvability_projection,
        velbc.dataPtr(),  // presbc
        velbc.dataPtr(),  
@@ -2919,6 +2922,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &vofface_index,
         &ncphys,
         override_density.dataPtr(),
+        constant_density_all_time.dataPtr(),
         &solvability_projection,
         denbc.dataPtr(),  // presbc
         velbc.dataPtr(),  
@@ -3175,6 +3179,7 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    &operation_flag, // operation_flag=2 (mac_vel -> cell_vel)
    &energyflag,
    temperature_primitive_variable.dataPtr(),
+   constant_density_all_time.dataPtr(),
    &nmat,
    &nparts,
    &nparts_def,
@@ -4787,6 +4792,7 @@ void NavierStokes::apply_pressure_grad(
      &vofface_index,
      &ncphys,
      override_density.dataPtr(),
+     constant_density_all_time.dataPtr(),
      &solvability_projection,
      presbc.dataPtr(),
      velbc.dataPtr(),
@@ -6407,6 +6413,7 @@ void NavierStokes::process_potential_force_face() {
     &vofface_index,
     &ncphys,
     override_density.dataPtr(),
+    constant_density_all_time.dataPtr(),
     &solvability_projection,
     presbc.dataPtr(),
     velbc.dataPtr(),
@@ -6654,6 +6661,7 @@ void NavierStokes::process_potential_force_cell() {
    &operation_flag, // 4 (gravity and surface tension force at cell)
    &energyflag,
    temperature_primitive_variable.dataPtr(),
+   constant_density_all_time.dataPtr(),
    &nmat,
    &nparts,
    &nparts_def,
@@ -8057,6 +8065,7 @@ void NavierStokes::output_zones(
    MultiFab* divmf,
    MultiFab* div_data,
    MultiFab* denmf,
+   MultiFab* mom_denmf,
    MultiFab* viscoelasticmf,
    MultiFab* lsdistmf,
    MultiFab* viscmf,
@@ -8200,6 +8209,10 @@ void NavierStokes::output_zones(
      nden,1,
      MFInfo().SetTag("denmfminus"),FArrayBoxFactory());
 
+   MultiFab* mom_denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     nmat,1,
+     MFInfo().SetTag("mom_denmfminus"),FArrayBoxFactory());
+
    MultiFab* viscoelasticmfminus=
     new MultiFab(cgrids_minusBA,cgrids_minus_map,
      num_materials_viscoelastic*NUM_CELL_ELASTIC,1,
@@ -8269,8 +8282,14 @@ void NavierStokes::output_zones(
    denmfminus->ParallelCopy(*denmf,0,0,nden,
 		   1,1,geom.periodicity()); 
 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   mom_denmfminus->ParallelCopy(*mom_denmf,0,0,nmat,
+		   1,1,geom.periodicity()); 
+
    check_for_NAN(denmf,6);
    check_for_NAN(denmfminus,16);
+   check_for_NAN(mom_denmf,6);
+   check_for_NAN(mom_denmfminus,16);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
@@ -8362,6 +8381,7 @@ void NavierStokes::output_zones(
     FArrayBox& divfab=(*divmfminus)[mfi];
     FArrayBox& div_data_fab=(*div_data_minus)[mfi];
     FArrayBox& denfab=(*denmfminus)[mfi];
+    FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
     FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
     FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
     FArrayBox& viscfab=(*viscmfminus)[mfi];
@@ -8385,7 +8405,10 @@ void NavierStokes::output_zones(
      divfab.dataPtr(),ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
      div_data_fab.dataPtr(),
      ARLIM(div_data_fab.loVect()),ARLIM(div_data_fab.hiVect()),
-     denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+     denfab.dataPtr(),
+     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+     mom_denfab.dataPtr(),
+     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
      elasticfab.dataPtr(),
      ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
      lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
@@ -8425,6 +8448,7 @@ void NavierStokes::output_zones(
    delete divmfminus;
    delete div_data_minus;
    delete denmfminus;
+   delete mom_denmfminus;
    delete lsdistmfminus;
    delete viscmfminus;
    delete magtracemfminus;

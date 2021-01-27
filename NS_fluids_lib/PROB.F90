@@ -139,6 +139,7 @@ stop
        nmat+nmat+ & ! vfrac,ls
        nmat*plot_sdim+ & ! ls slope
        nmat*num_state_material+ & ! den 
+       nmat+ & ! mom_den
        num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)+ &
        nmat+ & ! visc
        5*nmat  ! trace vars and vorticity
@@ -518,6 +519,29 @@ stop
        enddo  ! ispec
 
       enddo  ! im (state variables)
+
+
+       ! mom_density
+      do im=1,nmat
+
+       write(matstr,'(I2)') im
+       do i=1,2
+        if (matstr(i:i).eq.' ') then
+         matstr(i:i)='0'
+        endif
+       enddo
+
+        ! mom_density
+       ih=1
+       Varname='MOMDEN'
+       ih=ih+6
+       do i=1,2
+        Varname(ih:ih)=matstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+
+      enddo  ! im=1..nmat mom_den
 
       do partid=1,num_materials_viscoelastic
        im=fort_im_elastic_map(partid)+1
@@ -3944,6 +3968,7 @@ end subroutine dynamic_contact_angle
          imat,override_density, &
          caller_id)
        else if (override_density.eq.2) then
+        ! same as override_density==0:
         ! temperature dependence handled in DIFFUSION_3D.F90
         rho_hydrostatic=fort_denconst(imat) 
         pres_hydrostatic= &
