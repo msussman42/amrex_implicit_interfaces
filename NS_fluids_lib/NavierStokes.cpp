@@ -2600,7 +2600,7 @@ NavierStokes::read_params ()
 
     pp.query("visual_tessellate_vfrac",visual_tessellate_vfrac);
     pp.query("visual_revolve",visual_revolve);
-    pp.query("visual_option",visual_option);
+    pp.query("visual_option",visual_option); //-2 tecplot, -1 visit files
     pp.query("visual_phase_change_plot_int",visual_phase_change_plot_int);
 
     if ((visual_tessellate_vfrac!=0)&&
@@ -10965,8 +10965,9 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
      // in: GODUNOV_3D.F90
      // if override_density[im]==1, then rho_im=rho(T,Y,z) 
+    int fort_im=im+1;
     FORT_DERIVE_MOM_DEN(
-     &im,
+     &fort_im,
      &ngrow,
      constant_density_all_time.dataPtr(),
      spec_material_id_AMBIENT.dataPtr(),

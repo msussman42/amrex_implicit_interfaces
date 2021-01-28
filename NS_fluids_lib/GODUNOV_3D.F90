@@ -14076,7 +14076,7 @@ stop
       if ((im_parm.ge.1).and.(im_parm.le.nmat)) then
        ! do nothing
       else
-       print *,"im_parm invalid"
+       print *,"FORT_DERIVE_MOM_DEN: im_parm invalid, im_parm=",im_parm
        stop
       endif
 
@@ -14137,6 +14137,9 @@ stop
           ! do nothing
          else
           print *,"constant_density_all_time(im_parm) invalid"
+          print *,"expecting constant_density_all_time(im_parm)=1"
+          print *,"when override_density==1, for now, assume fort_denconst"
+          print *,"is the base density"
           stop
          endif
 

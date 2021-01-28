@@ -27,7 +27,8 @@ ns.diffusion_minimum_relative_error=1.0e-22
 ns.gmres_precond_iter_base=4
 ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
-ns.solvability_projection=0 # 0 since one must allow for expansion
+ns.solvability_projection=0 # outflow case
+#ns.solvability_projection=1 # sealed domain case
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=2 # 1: liquid 2: air 
@@ -108,6 +109,10 @@ ns.latent_heat = 1.0e+10 0.0 #CODY:specific latent heat of boiling J/kg
 # 1=distribute to the source material.
 ns.distribute_from_target = 1 0 
 ns.distribute_mdot_evenly=0 0
+ns.constant_density_all_time=1 1  # outflow case
+#ns.constant_density_all_time=1 0  # sealed domain case
+ns.constant_volume_mdot=0 0 # outflow case
+#ns.constant_volume_mdot=-1 0 # sealed domain case
 #evaporation: 
 ns.freezing_model=6 0
 ns.mass_fraction_id=1 0 
@@ -204,9 +209,12 @@ ns.prescribe_temperature_outflow=0
 #ns.species_lo_bc  = 3 3 5  # XYZ
 #ns.species_hi_bc  = 3 3 2  # XYZ
 ns.lo_bc          = 1 3  
-ns.hi_bc          = 2 3  
+ns.hi_bc          = 2 3  # outflow case
+#ns.hi_bc          = 3 3  # sealed domain case
+ns.temperature_lo_bc  = 1 3
+ns.temperature_hi_bc  = 2 3  # outflow case
 ns.species_lo_bc  = 1 3
-ns.species_hi_bc  = 2 3  
+ns.species_hi_bc  = 2 3  # outflow case
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
