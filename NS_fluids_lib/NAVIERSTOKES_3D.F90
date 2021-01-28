@@ -4169,7 +4169,7 @@ END SUBROUTINE SIMP
         enddo ! im
         do im=1,nmat
          iw=iw+1 
-         writend(scomp+iw)=mom_dennd(iw)
+         writend(scomp+iw)=mom_dennd(im)
         enddo
 
         scomp=scomp+num_state_material*nmat+nmat
