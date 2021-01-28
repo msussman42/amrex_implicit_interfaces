@@ -10,6 +10,7 @@
 #    diesel: law of the wall, GNBC ?, evaporation (application diesel droplet)
 #    (multicomponent droplets evaporating)
 #    cryogenic regime evaporating droplets.
+# DROP_IN_SHEAR.F90
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
@@ -54,7 +55,8 @@ ns.diffusion_minimum_relative_error=1.0e-22
 ns.gmres_precond_iter_base=4
 ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
-ns.solvability_projection=0 # 0 since one must allow for expansion
+ns.solvability_projection=0 # expansion
+#ns.solvability_projection=1 # sealed
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=2 # 1: liquid 2: air 
@@ -141,8 +143,12 @@ ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
-ns.distribute_from_target = 0 0 # 2 * num_interfaces components
-ns.distribute_mdot_evenly = 1 0 # 2 * num_interfaces components
+ns.distribute_from_target = 1 0 # 2 * num_interfaces components
+ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
+ns.constant_density_all_time=1 1 # expansion
+#ns.constant_density_all_time=1 0 # sealed
+ns.constant_volume_mdot=0 0 # expansion
+#ns.constant_volume_mdot=-1 0 # sealed
 #evaporation: freezing_model=6 Palmore and Desjardins 
 #             freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 ns.freezing_model=6 0
@@ -246,8 +252,9 @@ ns.prescribe_temperature_outflow=1
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
 #ns.species_hi_bc  = 3 3 2  # XYZ
-ns.lo_bc          = 3 3
-ns.hi_bc          = 2 2  
+ns.lo_bc          = 3 3  
+ns.hi_bc          = 2 2  # expansion
+#ns.hi_bc          = 3 3  # sealed
 ns.temperature_lo_bc  = 3 3
 ns.temperature_hi_bc  = 1 1  
 ns.species_lo_bc  = 3 3

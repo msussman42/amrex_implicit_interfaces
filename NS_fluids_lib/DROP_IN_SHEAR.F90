@@ -124,8 +124,15 @@ else
  stop
 endif
 do while ((f_a.gt.zero).and.(a.lt.b))
- a=a+0.001*T_sat
- call f_mdot(a,f_a)
+ print *,"searching for bracketing interval,a,b,f_a,f_b ", &
+   a,b,f_a,f_b
+ a=a+0.001d0*T_sat
+ if (a.lt.b) then
+  call f_mdot(a,f_a)
+ else
+  print *,"a cannot exceed b: a,f_a,b,f_b ",a,f_a,b,f_b
+  stop
+ endif
 enddo
 if (f_a*f_b.le.zero) then
  do iter=1,100

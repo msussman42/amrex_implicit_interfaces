@@ -15954,6 +15954,25 @@ if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
  if (R.gt.zero) then
   if (L.ne.zero) then
    if (WV.gt.zero) then
+    if (L.gt.zero) then  ! evaporation
+     if (Tgamma.le.TSAT) then
+      ! do nothing
+     else
+      print *,"Tgamma exceeds TSAT"
+      print *,"Tgamma,TSAT,R,L,WV ",Tgamma,TSAT,R,L,WV
+      stop
+     endif
+    else if (L.lt.zero) then ! condensation
+     if (Tgamma.ge.TSAT) then
+      ! do nothing
+     else
+      print *,"Tgamma is below TSAT"
+      stop
+     endif
+    else
+     print *,"L invalid"
+     stop
+    endif
     X=exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
    else
     print *,"WV invalid in X_from_Tgamma"
@@ -16118,6 +16137,7 @@ if ((X.ge.zero).and.(X.le.one)) then
  endif
 else
  print *,"X invalid in massfrac_from_volfrac"
+ print *,"X,WA,WV ",X,WA,WV
  stop
 endif
 
