@@ -1298,6 +1298,38 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 
 } // avgDownEdge_localMF
 
+void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
+
+ int nsolve=1;
+ int nsolveMM=nsolve*num_materials_vel;
+ int nsolveMM_FACE=nsolveMM;
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel!=1");
+
+ MultiFab* XD_MAC[AMREX_SPACEDIM];
+  // see getStateMAC
+  // this routine gets the displacement on the mac grid with one ghost
+  // cell.
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  int ngrow=1;
+  XD_MAC[dir]=getStateMAC_XD(ngrow,dir,0,nsolveMM_FACE,cur_time_slab);
+ }
+
+ resize_levelsetLO(2,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,2,103);
+ if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
+
+
+
+
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete XD_MAC[dir];
+ }
+
+} // end subroutine MAC_GRID_ELASTIC_FORCE
+
 // PEDGE_MF allocated in allocate_pressure_work_vars
 void NavierStokes::apply_cell_pressure_gradient(
  int project_option,
