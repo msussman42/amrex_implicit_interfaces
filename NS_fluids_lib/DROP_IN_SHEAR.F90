@@ -51,7 +51,7 @@ if ((Y_gamma_loc.ge.zero).and.(Y_gamma_loc.lt.one)) then
  if (L_V.gt.zero) then
   if (C_pG.gt.zero) then
    if ((Y_inf.ge.zero).and.(Y_inf.lt.one)) then
-    if ((T_inf.gt.zero).and.(T_inf.lt.T_sat)) then
+    if ((T_inf.gt.zero).and.(T_inf.lt.10.0d0*T_sat)) then
      f_out=((Y_inf-one)/(Y_gamma_loc-one))**Le - one - &
       (T_gamma_parm-T_inf)*C_pG/L_V
     else
