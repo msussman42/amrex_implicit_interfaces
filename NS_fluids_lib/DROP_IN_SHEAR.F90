@@ -113,6 +113,9 @@ WA=fort_molar_mass(2)
 !
 Le=D_G*den_G*C_pG/k_G
 
+print *,"Parameters for analytical solution for evaporating droplet: "
+print *,"den_L,den_G,C_pG,k_G,lambda ",den_L,den_G,C_pG,k_G,lambda
+print *,"T_inf,T_sat,L_V,D_G,Y_inf,WV,WA,Le ",T_inf,T_sat,L_V,D_G,Y_inf,WV,WA,Le
 a=EVAP_BISECTION_TOL
 b=T_sat*(one-EVAP_BISECTION_TOL)
 call f_mdot(a,f_a)
@@ -126,7 +129,7 @@ endif
 do while ((f_a.gt.zero).and.(a.lt.b))
  print *,"searching for bracketing interval,a,b,f_a,f_b ", &
    a,b,f_a,f_b
- a=a+0.001d0*T_sat
+ a=a+0.0001d0*T_sat
  if (a.lt.b) then
   call f_mdot(a,f_a)
  else
