@@ -1340,7 +1340,10 @@ void apply_pressure_grad(
     MultiFab* getStateTensor(int ngrow,int strt_comp,
        int num_comp,Real time);
 
+    void MAC_GRID_ELASTIC_FORCE(int idx);
+
     MultiFab* getStateMAC(int ngrow,int dir,int scomp,int ncomp,Real time);
+    MultiFab* getStateMAC_XD(int ngrow,int dir,int scomp,int ncomp,Real time);
     void getStateDIV_ALL(int idx,int ngrow);
     void getStateDIV(int idx,int ngrow);
 

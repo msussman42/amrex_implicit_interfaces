@@ -719,7 +719,7 @@ NavierStokes::variableSetUp ()
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
 
-	// XDISPLACE appended if MAC_grid_displacement==1
+	// XDISPLACE appended if MAC_grid_displacement==0
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,num_materials_viscoelastic*NUM_CELL_ELASTIC,
       &pc_interp,

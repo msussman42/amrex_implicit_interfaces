@@ -1298,11 +1298,15 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 
 } // avgDownEdge_localMF
 
+// input: XD at MAC locations, levelset function(s), normal(s)
+// output: elastic force in localMF[idx+dir]  dir=0..sdim-1
+// for viscosity:
+// the ghost Tau is (I-nn)T^interior (I-nn) + nn T^exterior nn
+//   (what about derivatives normal to the face for viscosity?)
+//   (jump condition aware extrapolation?)
 void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
 
- int nsolve=1;
- int nsolveMM=nsolve*num_materials_vel;
- int nsolveMM_FACE=nsolveMM;
+ int nmat=num_materials;
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");
 
@@ -1312,7 +1316,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
   // cell.
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   int ngrow=1;
-  XD_MAC[dir]=getStateMAC_XD(ngrow,dir,0,nsolveMM_FACE,cur_time_slab);
+  XD_MAC[dir]=getStateMAC_XD(ngrow,dir,0,
+    num_materials_viscoelastic,cur_time_slab);
  }
 
  resize_levelsetLO(2,LEVELPC_MF);
