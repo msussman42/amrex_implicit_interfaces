@@ -176,6 +176,7 @@ implicit none
 ! fort_linear_elastic_model added November 4.
 ! fort_elastic_time added December 30
 ! fort_viscoelastic_model added December 30
+! fort_R_Palmore_Desjardins added January 30
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10

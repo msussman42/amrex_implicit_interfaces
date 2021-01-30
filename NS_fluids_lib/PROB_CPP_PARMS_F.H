@@ -92,6 +92,7 @@ namespace amrex{
        Real* tempcutoff,
        Real* tempcutoffmax,
        Real* stiffPINF,
+       Real* R_Palmore_Desjardins,
        Real* stiffCP,
        Real* stiffCV,
        Real* stiffGAMMA,

@@ -80,6 +80,7 @@ stop
         cctempcutoff, &
         cctempcutoffmax, &
         ccstiffPINF, &
+        ccR_Palmore_Desjardins, &
         ccstiffCP, &
         ccstiffCV, &
         ccstiffGAMMA, &
@@ -211,6 +212,7 @@ stop
       REAL_T, intent(in) :: cctempcutoff(ccnum_materials)
       REAL_T, intent(in) :: cctempcutoffmax(ccnum_materials)
       REAL_T, intent(in) :: ccstiffPINF(ccnum_materials)
+      REAL_T, intent(in) :: ccR_Palmore_Desjardins
       REAL_T, intent(in) :: ccstiffCP(ccnum_materials)
       REAL_T, intent(in) :: ccstiffCV(ccnum_materials)
       REAL_T, intent(in) :: ccstiffGAMMA(ccnum_materials)
@@ -838,6 +840,8 @@ stop
        fort_speciesconst(im)=ccspeciesconst(im)
        fort_speciesviscconst(im)=ccspeciesviscconst(im)
       enddo
+
+      fort_R_Palmore_Desjardins=ccR_Palmore_Desjardins
       
       do im=1,num_materials
       
@@ -951,6 +955,10 @@ stop
        do i=1,4*n_sites
         print *,"i,pos_sites=",i,pos_sites(i)
        enddo 
+
+       print *,"fort_R_Palmore_Desjardins ", &
+         fort_R_Palmore_Desjardins
+
        do im=1,num_materials
         print *,"im,mat type ",im,fort_material_type(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)

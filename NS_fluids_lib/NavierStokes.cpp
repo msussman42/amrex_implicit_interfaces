@@ -1747,6 +1747,9 @@ void fortran_parameters() {
  pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
  pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
 
+ Real R_Palmore_Desjardins_temp=8.31446261815324e+7;  // ergs/(mol Kelvin)
+ pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
+
  Vector<Real> molar_mass_temp(nmat);
  Vector<Real> species_molar_mass_temp(num_species_var+1);
  for (int im=0;im<nmat;im++) {
@@ -1937,6 +1940,7 @@ void fortran_parameters() {
   tempcutofftemp.dataPtr(),
   tempcutoffmaxtemp.dataPtr(),
   stiffPINFtemp.dataPtr(),
+  &R_Palmore_Desjardins_temp,
   stiffCPtemp.dataPtr(),
   stiffCVtemp.dataPtr(),
   stiffGAMMAtemp.dataPtr(),

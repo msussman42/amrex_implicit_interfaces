@@ -26,7 +26,6 @@ module DROP_IN_SHEAR_module
 implicit none                   
 
 REAL_T :: DEF_VAPOR_GAMMA
-REAL_T :: LOCAL_R_Palmore_Desjardins
 REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
 REAL_T :: den_L
 REAL_T :: WV,WA,Le
@@ -36,6 +35,7 @@ REAL_T :: T_gamma,X_gamma,Y_gamma
 contains
 
 subroutine f_mdot(T_gamma_parm,f_out)
+use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
@@ -44,7 +44,7 @@ REAL_T, intent(out) :: f_out
 REAL_T :: X_gamma_loc,Y_gamma_loc
 
 call X_from_Tgamma(X_gamma_loc,T_gamma_parm,T_sat,L_V, &
- LOCAL_R_Palmore_Desjardins,WV)
+ fort_R_Palmore_Desjardins,WV)
 call massfrac_from_volfrac(X_gamma_loc,Y_gamma_loc,WA,WV)
 
 if ((Y_gamma_loc.ge.zero).and.(Y_gamma_loc.lt.one)) then
@@ -89,8 +89,7 @@ INTEGER_T :: iter
 
 DEF_VAPOR_GAMMA =  1.666666667D0
 
-! ergs/(mol kelvin)  (same as default for NavierStokes::R_Palmore_Desjardins)
-LOCAL_R_Palmore_Desjardins=8.31446261815324D+7
+! ergs/(mol kelvin) is the default for NavierStokes::R_Palmore_Desjardins
 
 den_L = fort_denconst(1)
 den_G = fort_denconst(2)
@@ -159,7 +158,7 @@ endif
 
 T_gamma=c  
 call X_from_Tgamma(X_gamma,T_gamma,T_sat,L_V, &
- LOCAL_R_Palmore_Desjardins,WV)
+ fort_R_Palmore_Desjardins,WV)
 call massfrac_from_volfrac(X_gamma,Y_gamma,WA,WV)
 
 B_M=(Y_gamma-Y_inf)/(one-Y_gamma)
