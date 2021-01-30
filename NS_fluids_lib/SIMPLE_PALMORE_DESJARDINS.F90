@@ -27,7 +27,6 @@ implicit none
 
 REAL_T :: DEF_VAPOR_GAMMA
 REAL_T :: l_verification
-REAL_T :: LOCAL_R_Palmore_Desjardins
 
 contains
 
@@ -41,7 +40,6 @@ INTEGER_T use_T
 REAL_T C_pG,k_G,den_G,lambda
 
   DEF_VAPOR_GAMMA =  1.666666667D0
-  LOCAL_R_Palmore_Desjardins=8.31446261815324D+7
 
   call SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l_verification)
 
@@ -208,7 +206,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
  Y_G=fort_speciesconst(2)
  WV=fort_species_molar_mass(1)
  WA=fort_molar_mass(2)
- R=LOCAL_R_Palmore_Desjardins
+ R=fort_R_Palmore_Desjardins
  call volfrac_from_massfrac(X_gamma,Y_gamma,WA,WV)
  call massfrac_from_volfrac(X_gamma,Y_gamma_test,WA,WV)
  if (abs(Y_gamma-Y_gamma_test).le.1.0D-8) then
@@ -371,7 +369,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
 
  WV=fort_species_molar_mass(1)
  WA=fort_molar_mass(2)
- R=LOCAL_R_Palmore_Desjardins
+ R=fort_R_Palmore_Desjardins
  call volfrac_from_massfrac(X_gamma,Y_gamma,WA,WV)
  call massfrac_from_volfrac(X_gamma,Y_gamma_test,WA,WV)
  if (abs(Y_gamma-Y_gamma_test).le.1.0D-8) then

@@ -76,6 +76,9 @@
       REAL_T fort_jacob_number(2*MAX_NUM_INTERFACES)
 
       REAL_T fort_stiffPINF(MAX_NUM_MATERIALS)
+
+      REAL_T fort_R_Palmore_Desjardins
+
       REAL_T fort_stiffCP(MAX_NUM_MATERIALS)
       REAL_T fort_stiffCV(MAX_NUM_MATERIALS)
       REAL_T fort_stiffGAMMA(MAX_NUM_MATERIALS)

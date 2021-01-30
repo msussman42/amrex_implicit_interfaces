@@ -7098,6 +7098,13 @@ stop
        stop
       endif
 
+      if (R_Palmore_Desjardins.eq.fort_R_Palmore_Desjardins) then
+       ! do nothing
+      else
+       print *,"R_Palmore_Desjardins.ne.fort_R_Palmore_Desjardins"
+       stop
+      endif
+
       Y_TOLERANCE=0.01D0
 
       if ((stefan_flag.eq.0).or.(stefan_flag.eq.1)) then
