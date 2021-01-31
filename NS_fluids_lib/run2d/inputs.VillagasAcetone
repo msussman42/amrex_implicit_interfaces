@@ -141,6 +141,7 @@ ns.tension=5.0  # 0.005 MKS in Villagas et al
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
+# 1 J/kg = 1e7 erg/1e3 g = 1e4 erg/g
 ns.latent_heat = 5.18e+9 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
@@ -215,8 +216,13 @@ ns.elastic_time=0.0 0.0
 #   (rho Y)_t + div(rho u Y)=div(rho D grad Y)
 ns.denconst=0.7 0.001 # CODY (density liquid, density gas) ~ rho_l = 1000 kg/m^3, rho_g - 1 kg/m^3
 ns.override_density=0 0
-ns.molar_mass=58.0 29.0 # CODY  (liquid, ambient) 
-ns.species_molar_mass=29.0 # CODY (vapor) ~ W_V=W_A=0.018 kg/mol 
+# clausius clapyron from Villegas et al:exp(-L Mvap/R * (1/Tgamma-1/Tboil))
+# units of L: erg/g
+# units of L M/T = erg/g  * g/mol * (1/Kelvin)=erg/(mol kelvin)
+ns.R_Palmore_Desjardins=8.31446261815324e+7 # ergs/(mol kelvin)
+ns.molar_mass=58.0 29.0 # CODY  (liquid, ambient)  g/mol
+# liquid molar mass = vapor molar mass always.
+ns.species_molar_mass=58.0 # 58 g/mol (CODY (vapor)SIMPLE W_V=W_A=0.018 kg/mol)
 ns.FSI_flag=0 0 
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
