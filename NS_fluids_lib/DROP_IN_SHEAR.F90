@@ -85,6 +85,7 @@ use global_utility_module
 IMPLICIT NONE
 
 REAL_T :: a,b,c,f_a,f_b,f_c
+REAL_T :: a_min,f_a_min
 INTEGER_T :: iter
 
 DEF_VAPOR_GAMMA =  1.666666667D0
@@ -125,14 +126,21 @@ else
  print *,"f_b invalid"
  stop
 endif
+a_min=a
+f_a_min=f_a
 do while ((f_a.gt.zero).and.(a.lt.b))
  print *,"searching for bracketing interval,a,b,f_a,f_b ", &
    a,b,f_a,f_b
- a=a+0.0001d0*T_sat
+ a=a+0.001d0*T_sat
  if (a.lt.b) then
   call f_mdot(a,f_a)
+  if (abs(f_a).lt.abs(f_a_min)) then
+   a_min=a
+   f_a_min=f_a
+  endif
  else
   print *,"a cannot exceed b: a,f_a,b,f_b ",a,f_a,b,f_b
+  print *,"a_min,f_a_min ",a_min,f_a_min
   stop
  endif
 enddo
