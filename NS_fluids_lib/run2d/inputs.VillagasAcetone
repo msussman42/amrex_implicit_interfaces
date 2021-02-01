@@ -79,7 +79,7 @@ cg.verbose = 0 # 1=check initial residual  2=check all the residuals
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
-mg.bot_atol = 1.0e-15
+mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -118,13 +118,13 @@ amr.file_name_digits=7
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-13
+mac.mac_abs_tol    = 1.0e-9
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1 
 ns.visc_coef      = 1.0
-mac.visc_abs_tol   = 1.0e-13
+mac.visc_abs_tol   = 1.0e-11
 ns.gravity        = 0.0   # cgs
 ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -136,7 +136,7 @@ ns.conservative_tension_force=0
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
-ns.tension=5.0  # 0.005 MKS in Villagas et al
+ns.tension=1.0  # 0.005 MKS in Villagas et al
 # 1E7 erg=1j  1 ERG/g = 1E-7 J/1E-3kg=1E-4 J/kg
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
