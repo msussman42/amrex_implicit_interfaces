@@ -410,8 +410,17 @@ if (probtype.eq.424) then
  if (axis_dir.eq.0) then ! drop in shear
   VEL(1)=-vinletgas+two*vinletgas*(x(SDIM)-vert_lo)/(vert_hi-vert_lo)
   if (vinletgas.eq.zero) then
-   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
+   if (1.eq.1) then
+    ! do nothing
+   else if (1.eq.0) then
+    call drop_analytical_solution(t,x,D_gamma,T_analytical, &
       Y_analytical,VEL,LS_analytical)
+   endif
+  else if (vinletgas.ne.zero) then
+   ! do nothing
+  else
+   print *,"vinletgas invalid"
+   stop
   endif
  else if (axis_dir.eq.1) then ! liquid layer in shear
   if (x(SDIM).le.radblob) then
@@ -986,17 +995,25 @@ if ((num_materials.eq.2).and. &
    if (rr.ge.probhix-xblob-r_exact) then
     call drop_analytical_solution(tcrit,xcrit,D_gamma,T_exact,Y_exact, &
      VEL_exact,LS_VAP_exact)
-    if (cell_flag.eq.0) then ! MAC GRID X
-     assimilate_out%macx(D_DECL(i,j,k))=VEL_exact(1)
-    else if (cell_flag.eq.1) then ! MAC GRID Y
-     assimilate_out%macy(D_DECL(i,j,k))=VEL_exact(2)
-    else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
-     assimilate_out%macz(D_DECL(i,j,k))=VEL_exact(SDIM)
-    else if (cell_flag.eq.-1) then
-     do dir=1,SDIM
-      assimilate_out%state(D_DECL(i,j,k),dir)=VEL_exact(dir)
-     enddo
 
+    if (cell_flag.eq.0) then ! MAC GRID X
+     if (1.eq.0) then
+      assimilate_out%macx(D_DECL(i,j,k))=VEL_exact(1)
+     endif
+    else if (cell_flag.eq.1) then ! MAC GRID Y
+     if (1.eq.0) then
+      assimilate_out%macy(D_DECL(i,j,k))=VEL_exact(2)
+     endif
+    else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
+     if (1.eq.0) then
+      assimilate_out%macz(D_DECL(i,j,k))=VEL_exact(SDIM)
+     endif
+    else if (cell_flag.eq.-1) then
+     if (1.eq.0) then
+      do dir=1,SDIM
+       assimilate_out%state(D_DECL(i,j,k),dir)=VEL_exact(dir)
+      enddo
+     endif
      do im=1,num_materials
       ibase=SDIM+1+(im-1)*num_state_material
       assimilate_out%state(D_DECL(i,j,k),ibase+2)=T_exact
