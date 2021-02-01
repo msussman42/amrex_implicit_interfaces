@@ -870,11 +870,17 @@ else
  stop
 endif
 
-D_Gamma=D_not**2-four*den_G*D_G*log(one+B_M)*t/den_L
-if (D_Gamma.gt.D_not**2) then
+D_Gamma=D_not**2-four*den_G*D_G*log(one+B_M)*time/den_L
+if ((D_Gamma.le.D_not**2).and.(D_Gamma.ge.zero)) then
  D_Gamma=sqrt(D_gamma)
 else
  print *,"D_gamma invalid"
+ print *,"D_not= ",D_not
+ print *,"den_G= ",den_G
+ print *,"D_G= ",D_G
+ print *,"B_M= ",B_M
+ print *,"den_L=",den_L
+ print *,"time=",time
  stop
 endif
 mdot=Pi*D_gamma*den_G*D_G*Sh*B_M
@@ -901,7 +907,7 @@ else if (LS_VAP.ge.zero) then
   print *,"Y invalid"
   stop
  endif
- T=T_Gamma+L_V/C_pG+(T_inf-T_Gamma-L_V/C_pG)* &
+ T=T_Gamma-L_V/C_pG+(T_inf-T_Gamma+L_V/C_pG)* &
          exp(-mdot*C_pG/(four*Pi*k_G*rr))
  if (T.gt.zero) then
   ! do nothing
