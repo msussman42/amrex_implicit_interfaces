@@ -5768,9 +5768,14 @@ stop
            else if (operation_flag.eq.1) then
 
             if (sweep_num.eq.0) then
+
               ! blob_volume
              vofcomp=(im-1)*ngeom_recon+1
              vfrac=mofdata(vofcomp)
+
+             if (1.eq.0) then
+              print *,"i,j,k,im,vfrac (before if) ",i,j,k,im,vfrac
+             endif
 
              do im_alt=1,nmat
               if (im_alt.ne.im) then
@@ -5910,7 +5915,12 @@ stop
                    print *,"constant_density_all_time(im) invalid"
                    stop
                   endif
-                  print *,"i,j,k,im,vfrac ",i,j,k,im,vfrac
+
+                  if (1.eq.0) then
+                   print *,"i,j,k,im,im_negate,vfrac ",i,j,k,im,im_negate,vfrac
+                   print *,"complement_flag,iten_shift,im_mdot,im_opp_mdot ", &
+                    complement_flag,iten_shift,im_mdot,im_opp_mdot
+                  endif
  
                   ic=opposite_color(im)*num_elements_blobclass-1
                   blob_cell_count=cum_blobdata(ic)
@@ -5935,6 +5945,8 @@ stop
                      mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
                     else if (complement_flag.eq.1) then
                      mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
+                     print *,"cell_count,mass,volume,mdot_tot ", &
+                       blob_cell_count,blob_mass,blob_volume,mdot_total
                     else
                      print *,"complement_flag invalid"
                      stop
