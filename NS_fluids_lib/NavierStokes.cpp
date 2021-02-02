@@ -12919,6 +12919,8 @@ NavierStokes::phase_change_redistributeALL() {
  
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "color_count=" << color_count << '\n';
+  std::cout << "i=0..mdot_data.size()-1 (color_count) \n";
+  std::cout << "j=0..mdot_data_redistribute[i].size()-1 (2 * nten) \n";
 
   for (int i=0;i<mdot_data.size();i++) {
 
