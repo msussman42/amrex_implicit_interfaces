@@ -5910,7 +5910,8 @@ stop
                    print *,"constant_density_all_time(im) invalid"
                    stop
                   endif
-            
+                  print *,"i,j,k,im,vfrac ",i,j,k,im,vfrac
+ 
                   ic=opposite_color(im)*num_elements_blobclass-1
                   blob_cell_count=cum_blobdata(ic)
                   ic=ic+1
