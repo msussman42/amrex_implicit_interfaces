@@ -5945,8 +5945,10 @@ stop
                      mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
                     else if (complement_flag.eq.1) then
                      mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
-                     print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
+                     if (1.eq.0) then
+                      print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
                        i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
+                     endif
                     else
                      print *,"complement_flag invalid"
                      stop
@@ -5967,16 +5969,22 @@ stop
                      stop
                     endif
 
-                     ! the change in mass for each cell is
-                     ! density * mdot * dt * dt
-                     ! overall change in mass:
-                     ! sum_{F>=1/2} density * mdot * dt * dt =
-                     ! density * dt * dt * mdot_total
-                     ! new mass=blob_mass+density * dt * dt * mdot_total
-                     ! new density=new mass/blob_volume
-
-                     ! units of dt div V: s * (m/s) (1/m)=dimensionless
-                     ! mdot units: m^3/s^2
+                     ! mass_new-mass_old = sum_i vel_i dt * area_i * 
+                     !                     (den_dst-den_src) =
+                     !                     sum_i dF*Vcell*(den_dst-den_src)=
+                     !                     DM
+                     ! if distribute_from_target==0,
+                     !  mdot=(den_src/den_dst-1)*dF*Vcell/dt^2
+                     !  sum_i mdot_i=sum (den_src-den_dst)*dF*Vcell/
+                     !                   (den_dst*dt^2)=-DM/(den_dst*dt^2)
+                     !  rho_update-=DM/V_update
+                     !  rho_update+=sum_i mdot_i*den_dst * dt^2/V_update
+                     ! if distribute_from_target==1,
+                     !  mdot=(1-den_dst/den_src)*dF*Vcell/dt^2
+                     !  sum_i mdot_i=sum (den_src-den_dst)*dF*Vcell/
+                     !                   (den_src*dt^2)=-DM/(den_src*dt^2)
+                     !  rho_update-=DM/V_update
+                     !  rho_update+=sum_i mdot_i*den_src * dt^2/V_update
                     original_density=blob_mass/blob_volume
                     if (original_density.gt.zero) then
                      updated_density=original_density* &
