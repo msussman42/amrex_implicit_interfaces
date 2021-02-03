@@ -5945,8 +5945,8 @@ stop
                      mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
                     else if (complement_flag.eq.1) then
                      mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
-                     print *,"cell_count,mass,volume,mdot_tot ", &
-                       blob_cell_count,blob_mass,blob_volume,mdot_total
+                     print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
+                       i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
                     else
                      print *,"complement_flag invalid"
                      stop
