@@ -4744,6 +4744,7 @@ stop
       REAL_T mdot_avg
       REAL_T updated_density
       REAL_T original_density
+      REAL_T density_factor
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T caller_id
       INTEGER_T nmax
@@ -5918,8 +5919,9 @@ stop
 
                   if (1.eq.0) then
                    print *,"i,j,k,im,im_negate,vfrac ",i,j,k,im,im_negate,vfrac
-                   print *,"complement_flag,iten_shift,im_mdot,im_opp_mdot ", &
-                    complement_flag,iten_shift,im_mdot,im_opp_mdot
+                   print *,"iten_shift,im_mdot,im_opp_mdot ", &
+                    iten_shift,im_mdot,im_opp_mdot
+                   print *,"complement_flag ",complement_flag
                   endif
  
                   ic=opposite_color(im)*num_elements_blobclass-1
@@ -5941,9 +5943,27 @@ stop
 
                    if (ncomp_mdot.eq.2*nten) then
                     ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
+
+                    original_density=blob_mass/blob_volume
+                    if (original_density.gt.zero) then
+                     ! do nothing
+                    else
+                     print *,"original_density invalid"
+                     stop
+                    endif
+
                     if (complement_flag.eq.0) then
                      mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
+                     density_factor=one
                     else if (complement_flag.eq.1) then
+                     if (distribute_from_target(iten_shift).eq.0) then
+                      density_factor=fort_denconst(im_dest)/original_density
+                     else if (distribute_from_target(iten_shift).eq.1) then
+                      density_factor=fort_denconst(im_source)/original_density
+                     else
+                      print *,"distribute_from_target(iten_shift) invalid"
+                      stop
+                     endif
                      mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
                      if (1.eq.0) then
                       print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
@@ -5985,10 +6005,10 @@ stop
                      !                   (den_src*dt^2)=-DM/(den_src*dt^2)
                      !  rho_update-=DM/V_update
                      !  rho_update+=sum_i mdot_i*den_src * dt^2/V_update
-                    original_density=blob_mass/blob_volume
+
                     if (original_density.gt.zero) then
                      updated_density=original_density* &
-                         (one+dt*dt*mdot_total/blob_volume)
+                         (one+dt*dt*density_factor*mdot_total/blob_volume)
                      dencomp=(SDIM+1)*num_materials_vel+ &
                          (im-1)*num_state_material+1
                      if (updated_density.gt.zero) then
