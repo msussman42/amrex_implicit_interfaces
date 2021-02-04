@@ -14119,7 +14119,8 @@ stop
        enddo
 
        if (mask(D_DECL(i,j,k)).eq.zero) then
-        ! do nothing
+          ! a default for coarse grid cells covered by finer levels.
+        momden(D_DECL(i,j,k),im_parm)=fort_denconst(im_parm)
        else if (mask(D_DECL(i,j,k)).eq.one) then
      
         dencomp=(im_parm-1)*num_state_material+1
