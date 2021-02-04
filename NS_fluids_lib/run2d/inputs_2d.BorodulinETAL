@@ -152,7 +152,7 @@ ns.constant_volume_mdot=0 0 # expansion
 #evaporation: freezing_model=6 Palmore and Desjardins 
 #             freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 ns.freezing_model=6 0
-ns.mass_fraction_id=1 0 
+ns.mass_fraction_id=1 0  # 1..2 * nten
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
 ns.saturation_temp_min = 273.0 0.0  
 ns.temperature_primitive_variable=1 1 1 1

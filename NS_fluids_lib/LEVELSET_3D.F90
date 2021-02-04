@@ -9766,12 +9766,14 @@ stop
               print *,"den invalid"
               print *,"im,i,j,k,den ",im,i,j,k,den
               print *,"dencomp=",dencomp
+              print *,"level,finest_level ",level,finest_level
               stop
              endif
             else if (constant_density_all_time(im).eq.0) then 
              ! do nothing
             else
              print *,"constant_density_all_time invalid"
+             print *,"level,finest_level ",level,finest_level
              stop
             endif
 
@@ -9781,6 +9783,7 @@ stop
              print *,"den must be positive build_semi_refine_vof"
              print *,"im,den ",im,den
              print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+             print *,"level,finest_level ",level,finest_level
              stop
             endif  
 
@@ -9790,6 +9793,7 @@ stop
              print *,"mom_den_local must be pos build_semi_refine_vof"
              print *,"im,mom_den_local ",im,mom_den_local
              print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+             print *,"level,finest_level ",level,finest_level
              stop
             endif  
             if (den_value.gt.zero) then
@@ -9798,6 +9802,7 @@ stop
              print *,"den_value must be pos build_semi_refine_vof"
              print *,"im,den_value ",im,den_value
              print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+             print *,"level,finest_level ",level,finest_level
              stop
             endif  
  
@@ -9858,14 +9863,17 @@ stop
             print *,"fablo ",fablo(1),fablo(2),fablo(SDIM)
             print *,"fabhi ",fabhi(1),fabhi(2),fabhi(SDIM)
             print *,"i,j,k ",i,j,k
+            print *,"level,finest_level ",level,finest_level
             stop
            endif
            if ((voltotal_solid.lt.zero).or.(mass_total_solid.lt.zero)) then
             print *,"voltotal_solid or mass_total_solid invalid"
+            print *,"level,finest_level ",level,finest_level
             stop
            endif
            if ((voltotal_fluid.lt.zero).or.(mass_total_fluid.lt.zero)) then
             print *,"voltotal_fluid or mass_total_fluid invalid"
+            print *,"level,finest_level ",level,finest_level
             stop
            endif
 
