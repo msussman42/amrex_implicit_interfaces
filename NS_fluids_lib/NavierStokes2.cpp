@@ -1325,6 +1325,400 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
 
+  // https://ccse.lbl.gov/
+  // https://github.com/AMReX-Codes/amrex/
+ bool use_tiling=ns_tiling;
+
+  // density, temperature
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ int finest_level=parent->finestLevel();
+
+  // areas and volumes associated with rectangular grid cells and faces.
+ resize_metrics(1);
+  // if MASKCOEF_MF == 1 then the cell is not covered by a finer level.
+ resize_maskfiner(1,MASKCOEF_MF);
+  // mask_nbr=1 at fine-fine boundary conditions
+ resize_mask_nbr(1);
+
+ debug_ngrow(VOLUME_MF,1,100);
+ debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
+ debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  debug_ngrow(FACE_VAR_MF+dir,0,101); // faceden_index has the MAC density
+  debug_ngrow(idx+dir,0,101);  // make sure force var is allocated
+  if (localMF[idx+dir]->nComp()!=num_materials_viscoelastic)
+   amrex::Error("idx invalid ncomp");
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      localMF[idx+dir]->boxArray())
+   amrex::Error("idx boxarray does not match");
+  setVal_localMF(idx+dir,1.0e+40,0,num_materials_viscoelastic,0);
+ } // dir=0..sdim-1
+
+ VOF_Recon_resize(2,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,2,118);
+
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
+ const Real* dx = geom.CellSize();
+
+  // outer loop: each force component u_t = F_elastic/density  u,v,w
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+ 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
+ 
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*localMF[LEVELPC_MF],use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+    // Gaussian quadrature point positioning
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+    // fab = Fortran Array Block
+   FArrayBox& XDfab=(*XD_MAC[0])[mfi];
+   FArrayBox& YDfab=(*XD_MAC[1])[mfi];
+   FArrayBox& ZDfab=(*XD_MAC[AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
+
+    // output
+   FArrayBox& XFORCEfab=(*localMF[idx+dir])[mfi];
+
+   // mask=1.0 at interior fine bc ghost cells
+   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
+   // maskcoef=1 if not covered by finer level or outside domain
+   FArrayBox& maskcoef=(*localMF[MASKCOEF_MF])[mfi]; 
+
+   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+
+   FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+   int ncomp_visc=viscfab.nComp();
+
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,
+    num_materials_vel*AMREX_SPACEDIM);
+
+   int rzflag=0;
+   if (geom.IsRZ())
+    rzflag=1;
+   else if (geom.IsCartesian())
+    rzflag=0;
+   else if (geom.IsCYLINDRICAL())
+    rzflag=3;
+   else
+    amrex::Error("CoordSys bust 21");
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   FORT_MAC_ELASTIC_FORCE(
+    &dir, // dir=0,1,..sdim-1  
+    &ncomp_visc, 
+    &visc_coef,
+    &facevisc_index,
+    &faceden_index,
+    &massface_index,
+    &vofface_index,
+    &ncphys,
+    velbc.dataPtr(),
+    &dt_slab,
+    &cur_time_slab,
+    xlo,dx,
+    viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+    maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
+    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    maskcoef.dataPtr(), // maskcoef=1 if not covered by finer level or outside
+    ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
+    levelpcfab.dataPtr(),
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+    XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
+    YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
+    ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
+    XFORCEfab.dataPtr(),ARLIM(XFORCEfab.loVect()),ARLIM(XFORCEfab.hiVect()), 
+    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &level,&finest_level,
+    &rzflag,
+    domlo,domhi,
+    &nmat,
+    &nten);
+  } // mfi
+} // omp
+  ns_reconcile_d_num(132);
+ } // tileloop
+ } // dir
+
+ synchronize_flux_register(operation_flag_interp_pres,spectral_loop);
+ } // spectral_loop
+
+
+  // 0=use_face_pres
+  // 1=grid flag (coarse/fine boundary?)
+  // 2=face pressure
+ if (nsolveMM_FACE!=1)
+  amrex::Error("nsolveMM_FACE!=1");
+ int pface_comp=2;
+ int ncomp_edge=nsolveMM_FACE;
+ int caller_id=5;
+ avgDownEdge_localMF(PEDGE_MF,pface_comp,ncomp_edge,0,AMREX_SPACEDIM,1,caller_id);
+
+  // isweep=1 calculate cell velocity from mass weighted average of face
+  // velocity.
+  // isweep=2 calculate cell pressure gradient, update cell velocity,
+  //  update density (if non conservative), update energy.
+ for (int isweep=1;isweep<=2;isweep++) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& xvel=(*localMF[idx_umac])[mfi];
+   FArrayBox& yvel=(*localMF[idx_umac+1])[mfi];
+   FArrayBox& zvel=(*localMF[idx_umac+AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
+   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
+   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
+   FArrayBox& ax = (*localMF[AREA_MF])[mfi];
+   FArrayBox& ay = (*localMF[AREA_MF+1])[mfi];
+   FArrayBox& az = (*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
+   FArrayBox& vol=(*localMF[VOLUME_MF])[mfi];
+   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+
+   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
+   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];//1=fine/fine bc
+   FArrayBox& maskcoef=(*localMF[MASKCOEF_MF])[mfi];// 1=not covered.
+   FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
+   FArrayBox& presfab=(*presmf)[mfi];
+   FArrayBox& xp=(*localMF[PEDGE_MF])[mfi];
+   FArrayBox& yp=(*localMF[PEDGE_MF+1])[mfi];
+   FArrayBox& zp=(*localMF[PEDGE_MF+AMREX_SPACEDIM-1])[mfi];
+   FArrayBox& Snewfab=S_new[mfi]; // veldest
+   FArrayBox& ustarfab=(*ustar)[mfi];
+   FArrayBox& divupfab=(*divup)[mfi];
+
+   Vector<int> presbc;
+   getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
+   if (presbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
+    amrex::Error("presbc.size() invalid");
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,
+    num_materials_vel*AMREX_SPACEDIM);
+
+   int operation_flag_interp_macvel;
+   if (isweep==1)
+    operation_flag_interp_macvel=2; // mac velocity -> cell velocity
+   else if (isweep==2)
+    operation_flag_interp_macvel=3; // (grad p)_CELL, div(up)
+   else
+    amrex::Error("operation_flag_interp_macvel invalid1");
+
+   int homflag=0; // default
+ 
+   int ok_to_call=0;
+   if ((energyflag==0)||
+       (energyflag==1)) {
+    ok_to_call=1;
+
+     // just find (grad p)_CELL, div(up) for space-time algorithm
+   } else if (energyflag==2) { 
+    if (isweep==1) { // disable mac velocity->cell velocity step here.
+     ok_to_call=0;
+    } else if (isweep==2) { // (grad p)_{CELL}, div(up) only
+     ok_to_call=1;
+    } else
+     amrex::Error("isweep invalid");
+   } else
+    amrex::Error("energyflag invalid");
+ 
+   // in apply_cell_pressure_gradient 
+
+   if (ok_to_call==1) {
+    int local_enable_spectral=enable_spectral;
+    int num_materials_face=1;
+    int use_VOF_weight=1;
+
+    int ncomp_denold=presfab.nComp();
+    int ncomp_veldest=Snewfab.nComp();
+    int ncomp_dendest=Snewfab.nComp()-scomp_den;
+
+    FORT_MAC_TO_CELL(
+     &nsolveMM_FACE,
+     &num_materials_face,
+     &ns_time_order,
+     &divu_outer_sweeps,
+     &num_divu_outer_sweeps,
+     // 2 (mac_vel->cell_vel or 3 (cell gradp, cell energy)
+     &operation_flag_interp_macvel, 
+     &energyflag,
+     temperature_primitive_variable.dataPtr(),
+     constant_density_all_time.dataPtr(),
+     &nmat,
+     &nparts,
+     &nparts_def,
+     im_solid_map_ptr,
+     added_weight.dataPtr(),
+     &nten,
+     &level, 
+     &finest_level,
+     &face_flag,
+     &solvability_projection,
+     &project_option,
+     &local_enable_spectral,
+     &fluxvel_index,
+     &fluxden_index,
+     &facevel_index,
+     &facecut_index,
+     &icefacecut_index,
+     &curv_index,
+     &conservative_tension_force,
+     &conservative_div_uu,
+     &interp_presgrad_increment_from_face,
+     &ignore_div_up,
+     &pforce_index,
+     &faceden_index,
+     &icemask_index,
+     &massface_index,
+     &vofface_index,
+     &ncphys,
+     velbc.dataPtr(),
+     presbc.dataPtr(), 
+     &cur_time_slab, 
+     &slab_step,
+     &dt_slab,
+     xlo,dx,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),
+     yp.dataPtr(),ARLIM(yp.loVect()),ARLIM(yp.hiVect()),
+     zp.dataPtr(),ARLIM(zp.loVect()),ARLIM(zp.hiVect()),
+     xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()),
+     yvel.dataPtr(),ARLIM(yvel.loVect()),ARLIM(yvel.hiVect()),
+     zvel.dataPtr(),ARLIM(zvel.loVect()),ARLIM(zvel.hiVect()),
+     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
+     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
+     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
+     ax.dataPtr(),ARLIM(ax.loVect()),ARLIM(ax.hiVect()),
+     ay.dataPtr(),ARLIM(ay.loVect()),ARLIM(ay.hiVect()),
+     az.dataPtr(),ARLIM(az.loVect()),ARLIM(az.hiVect()),
+     vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+     divupfab.dataPtr(), // rhs
+     ARLIM(divupfab.loVect()),ARLIM(divupfab.hiVect()),
+     Snewfab.dataPtr(),
+     ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // veldest
+      // scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
+     Snewfab.dataPtr(scomp_den),
+     ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // dendest
+     maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
+     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+     maskcoef.dataPtr(), // 1=not covered  0=covered
+     ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
+     maskSEMfab.dataPtr(), 
+     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+     levelpcfab.dataPtr(), //levelPC
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+     solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+     solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+     solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
+     presfab.dataPtr(), 
+     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//pold
+     presfab.dataPtr(),
+     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//denold
+     ustarfab.dataPtr(),ARLIM(ustarfab.loVect()),ARLIM(ustarfab.hiVect()),
+     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskdivres
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
+     &SDC_outer_sweeps,
+     &homflag,
+     &use_VOF_weight,
+     &nsolve,
+     &ncomp_denold,
+     &ncomp_veldest,
+     &ncomp_dendest,
+     &SEM_advection_algorithm);
+
+   } else if (ok_to_call==0) {
+    // do nothing
+   } else
+    amrex::Error("ok_to_call invalid");
+
+  }   // mfi
+} // omp
+  ns_reconcile_d_num(133);
+
+ }  // isweep=1,2
+
+ if ((energyflag==0)||
+     (energyflag==1)) {
+  save_to_macvel_state(idx_umac);
+  delete divup; // div(up) is discarded.
+  delete ustar;
+ } else if (energyflag==2) { // (grad p)_CELL, div(up) for space-time
+  // do nothing
+ } else
+  amrex::Error("energyflag invalid");
+
+
+
+
+
+
+
+
+
 
 
 
