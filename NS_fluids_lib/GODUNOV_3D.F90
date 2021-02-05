@@ -17315,96 +17315,97 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine FORT_TAGEXPANSION(&
-       latent_heat, &
-       freezing_model, &
-       distribute_from_target, &
-       ngrow_expansion, &
-       time, &
-       vofbc, &
-       expect_mdot_sign, &
-       mdot_sum, &
-       mdot_sum_comp, &
-       im_source, &
-       im_dest, &
-       indexEXP, &
-       level,finest_level, &
-       nmat,nten, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       xlo,dx,dt, &
-       maskcov,DIMS(maskcov), &
-       tag, &
-       DIMS(tag), &
-       tag_comp, &
-       DIMS(tag_comp), &
-       expan,DIMS(expan), &
-       expan_comp,DIMS(expan_comp), &
-       LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
-       recon,DIMS(recon))
-       use probf90_module
-       use global_utility_module
-       use geometry_intersect_module
-       use MOF_routines_module
+      latent_heat, &
+      freezing_model, &
+      distribute_from_target, &
+      ngrow_expansion, &
+      time, &
+      vofbc, &
+      expect_mdot_sign, &
+      mdot_sum, &
+      mdot_sum_comp, &
+      im_source, &
+      im_dest, &
+      indexEXP, &
+      level,finest_level, &
+      nmat,nten, &
+      tilelo,tilehi, &
+      fablo,fabhi, &
+      bfact, &
+      xlo,dx,dt, &
+      maskcov,DIMS(maskcov), &
+      tag, &
+      DIMS(tag), &
+      tag_comp, &
+      DIMS(tag_comp), &
+      expan,DIMS(expan), &
+      expan_comp,DIMS(expan_comp), &
+      LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
+      recon,DIMS(recon))
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
 
-       IMPLICIT NONE
+      IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: ngrow_expansion
-       REAL_T, intent(in) :: time
-       REAL_T, intent(inout) :: mdot_sum
-       REAL_T, intent(inout) :: mdot_sum_comp
-       REAL_T, intent(in) :: expect_mdot_sign
-       INTEGER_T, intent(in) :: im_source,im_dest
-       INTEGER_T :: im_ice
-       INTEGER_T, intent(in) :: indexEXP
-       INTEGER_T, intent(in) :: level,finest_level
-       INTEGER_T, intent(in) :: nmat,nten
-       INTEGER_T :: nten_test
-       REAL_T, intent(in) :: latent_heat(2*nten)
-       INTEGER_T, intent(in) :: freezing_model(2*nten)
-       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-       INTEGER_T :: local_distribute_from_target(2*nten)
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       REAL_T, intent(in) :: xlo(SDIM)
-       REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: dt
-       INTEGER_T, intent(in) :: DIMDEC(maskcov)
-       INTEGER_T, intent(in) :: DIMDEC(tag)
-       INTEGER_T, intent(in) :: DIMDEC(tag_comp)
-       INTEGER_T, intent(in) :: DIMDEC(expan)
-       INTEGER_T, intent(in) :: DIMDEC(expan_comp)
-       INTEGER_T, intent(in) :: DIMDEC(LS)
-       INTEGER_T, intent(in) :: DIMDEC(recon)
-       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-       REAL_T, intent(out) :: tag(DIMV(tag))
-       REAL_T, intent(out) :: tag_comp(DIMV(tag_comp))
-       REAL_T, intent(in) :: expan(DIMV(expan),2*nten)
-       REAL_T, intent(in) :: expan_comp(DIMV(expan_comp),2*nten)
-       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      INTEGER_T, intent(in) :: ngrow_expansion
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: mdot_sum
+      REAL_T, intent(inout) :: mdot_sum_comp
+      REAL_T, intent(in) :: expect_mdot_sign
+      INTEGER_T, intent(in) :: im_source,im_dest
+      INTEGER_T :: im_ice
+      INTEGER_T, intent(in) :: indexEXP
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat,nten
+      INTEGER_T :: nten_test
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T :: local_distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(tag)
+      INTEGER_T, intent(in) :: DIMDEC(tag_comp)
+      INTEGER_T, intent(in) :: DIMDEC(expan)
+      INTEGER_T, intent(in) :: DIMDEC(expan_comp)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(out) :: tag(DIMV(tag))
+      REAL_T, intent(out) :: tag_comp(DIMV(tag_comp))
+      REAL_T, intent(in) :: expan(DIMV(expan),2*nten)
+      REAL_T, intent(in) :: expan_comp(DIMV(expan_comp),2*nten)
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
-       INTEGER_T local_freezing_model
-       INTEGER_T vofbc(SDIM,2)
-       INTEGER_T i,j,k
-       REAL_T VFRAC(nmat)
-       REAL_T VDOT
-       REAL_T LSCELL(nmat)
-       REAL_T ICEMASK
-       REAL_T icefacecut
-       INTEGER_T im,im_opp
-       INTEGER_T ireverse
-       INTEGER_T iten
-       INTEGER_T im_primary
-       INTEGER_T vofcomp
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-       REAL_T xsten_center(SDIM)
-       INTEGER_T local_mask
-       INTEGER_T dir
-       INTEGER_T index_compare
+      INTEGER_T local_freezing_model
+      INTEGER_T vofbc(SDIM,2)
+      INTEGER_T i,j,k
+      REAL_T VFRAC(nmat)
+      REAL_T VDOT
+      REAL_T LSCELL(nmat)
+      REAL_T ICEMASK
+      REAL_T icefacecut
+      INTEGER_T im,im_opp
+      INTEGER_T ireverse
+      INTEGER_T iten
+      INTEGER_T im_primary
+      INTEGER_T vofcomp
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_center(SDIM)
+      INTEGER_T local_mask
+      INTEGER_T dir
+      INTEGER_T index_compare
+      INTEGER_T complement_flag
 
       nhalf=3
 
