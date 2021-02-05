@@ -18,6 +18,7 @@
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
+#    define FORT_MAC_ELASTIC_FORCE mac_elastic_force
 #    define FORT_FACE_GRADIENTS face_gradients
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
@@ -64,6 +65,7 @@
 #    define FORT_ESTDT        ESTDT
 #    define FORT_CROSSTERM    CROSSTERM
 #    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
+#    define FORT_MAC_ELASTIC_FORCE MAC_ELASTIC_FORCE
 #    define FORT_FACE_GRADIENTS FACE_GRADIENTS
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
@@ -110,6 +112,7 @@
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
+#    define FORT_MAC_ELASTIC_FORCE mac_elastic_force
 #    define FORT_FACE_GRADIENTS face_gradients
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
@@ -155,6 +158,7 @@
 #    define FORT_ESTDT        estdt_
 #    define FORT_CROSSTERM    crossterm_
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
+#    define FORT_MAC_ELASTIC_FORCE mac_elastic_force_
 #    define FORT_FACE_GRADIENTS face_gradients_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
@@ -1290,6 +1294,43 @@ extern "C"
      int* nden,
      int* ntensor,
      int* ntensorMM);
+
+   void FORT_MAC_ELASTIC_FORCE(
+     int* dir, //0..sdim-1
+     int* ncomp_visc,
+     Real* visc_coef, 
+     int* facevisc_index,
+     int* faceden_index,
+     int* massface_index,
+     int* vofface_index,
+     int* ncphys_index,
+     int* velbc,
+     Real* dt,
+     Real* cur_time,
+     const Real* xlo,const Real* dx,
+     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
+     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+     Real* levelpc,
+     AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
+     Real* XDfab,
+     AMREX_ARLIM_P(XDfablo),AMREX_ARLIM_P(XDfabhi),
+     Real* YDfab,
+     AMREX_ARLIM_P(YDfablo),AMREX_ARLIM_P(YDfabhi),
+     Real* ZDfab,
+     AMREX_ARLIM_P(ZDfablo),AMREX_ARLIM_P(ZDfabhi),
+     Real* XFORCE,
+     AMREX_ARLIM_P(XFORCElo),AMREX_ARLIM_P(XFORCEhi),
+     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
+     const int* tilelo,const int* tilehi, 
+     const int* fablo,const int* fabhi, 
+     int* bfact,
+     int* level,
+     int* finest_level,
+     int* rzflag,
+     const int* domlo,const int* domhi,
+     int* nmat,
+     int* nten);
 
 
    void FORT_FACE_GRADIENTS(

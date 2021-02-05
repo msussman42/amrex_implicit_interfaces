@@ -1,3 +1,4 @@
+!get rid of autoindent   :setl noai nocin nosi inde=
 #undef  BL_LANG_CC
 #ifndef BL_LANG_FORT
 #define BL_LANG_FORT
@@ -26832,6 +26833,107 @@ stop
       return 
       end subroutine FORT_CROSSTERM
 
+      subroutine FORT_MAC_ELASTIC_FORCE( &
+       dir, & ! 0..sdim-1
+       ncomp_visc, &
+       visc_coef, &
+       facevisc_index, &
+       faceden_index, &
+       massface_index, &
+       vofface_index, &
+       ncphys, &
+       velbc, &
+       dt, &
+       cur_time, &
+       xlo,dx, &
+       visc,DIMS(visc), &
+       mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
+       maskcoef,DIMS(maskcoef), & ! 1=not cov by level+1 or outside.
+       levelpc,DIMS(levelpc), &
+       XDfab,DIMS(XDfab), &
+       YDfab,DIMS(YDfab), &
+       ZDfab,DIMS(ZDfab), &
+       XFORCE,DIMS(XFORCE), &
+       recon,DIMS(recon), &  
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level, &
+       finest_level, &
+       rzflag, &
+       domlo,domhi, &
+       nmat, &
+       nten)
+      use probcommon_module
+      use global_utility_module
+      use godunov_module
+      use MOF_routines_module
+ 
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: dir  ! MAC force component, dir=0..sdim-1
+      INTEGER_T, intent(in) :: ncomp_visc
+      REAL_T, intent(in) :: visc_coef
+      INTEGER_T, intent(in) :: facevisc_index
+      INTEGER_T, intent(in) :: faceden_index
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
+      REAL_T, intent(in) :: dt 
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(XDfab)
+      INTEGER_T, intent(in) :: DIMDEC(YDfab)
+      INTEGER_T, intent(in) :: DIMDEC(ZDfab)
+      INTEGER_T, intent(in) :: DIMDEC(XFORCE)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+
+      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
+      REAL_T, intent(in) :: XDfab(DIMV(XDfab),num_materials_viscoelastic)
+      REAL_T, intent(in) :: YDfab(DIMV(YDfab),num_materials_viscoelastic)
+      REAL_T, intent(in) :: ZDfab(DIMV(ZDfab),num_materials_viscoelastic)
+      REAL_T, intent(out) :: XFORCE(DIMV(XFORCE),num_materials_viscoelastic)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: rzflag 
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      INTEGER_T, intent(in) :: nmat,nten
+  
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0,dir)
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+       do dir_flux=0,SDIM-1
+       do side_flux=0,1
+
+       enddo
+       enddo
+        ! divergence of fluxes goes here
+
+
+      enddo
+      enddo
+      enddo
+      
+      return 
+      end subroutine FORT_MAC_ELASTIC_FORCE
 
 
       subroutine FORT_CROSSTERM_ELASTIC( &
