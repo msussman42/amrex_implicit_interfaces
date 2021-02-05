@@ -17571,6 +17571,7 @@ stop
           ! in: FORT_TAGEXPANSION
           ! ICEMASK=0 => mask off this cell.
           ! ICEMASK=1 => do nothing
+          ! get_icemask declared in PROB.F90
          call get_icemask( &
           xsten_center, &
           time, &
@@ -17612,8 +17613,9 @@ stop
         mdot_sum=mdot_sum+VDOT
         mdot_sum_comp=mdot_sum_comp+VDOT
 
+         ! FSI_flag=0,7,3,6 ok
         if ((is_rigid(nmat,im_primary).eq.0).and. &
-            (is_FSI_rigid(nmat,im_primary).eq.0)) then ! in the fluid
+            (is_FSI_rigid(nmat,im_primary).eq.0)) then 
 
          if (VDOT.ne.zero) then ! nonzero source
 
