@@ -26913,6 +26913,12 @@ stop
       INTEGER_T, intent(in) :: rzflag 
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, intent(in) :: nmat,nten
+      INTEGER_T :: i,j,k
+      INTEGER_T :: dir_flux,side_flux
+      REAL_T :: xstenMAC(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      nhalf=3
   
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0,dir)
