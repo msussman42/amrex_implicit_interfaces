@@ -17363,6 +17363,7 @@ stop
        REAL_T, intent(in) :: latent_heat(2*nten)
        INTEGER_T, intent(in) :: freezing_model(2*nten)
        INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+       INTEGER_T :: local_distribute_from_target(2*nten)
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
@@ -17386,7 +17387,6 @@ stop
        REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
        INTEGER_T local_freezing_model
-       INTEGER_T distribute_from_targ
        INTEGER_T vofbc(SDIM,2)
        INTEGER_T i,j,k
        REAL_T VFRAC(nmat)
@@ -17469,14 +17469,14 @@ stop
       call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,1275)
 
       local_freezing_model=freezing_model(indexEXP+1)
-      distribute_from_targ=distribute_from_target(indexEXP+1)
       if ((local_freezing_model.lt.0).or. &
           (local_freezing_model.gt.7)) then
        print *,"local_freezing_model invalid 17"
        stop
       endif
-      if ((distribute_from_targ.lt.0).or.(distribute_from_targ.gt.1)) then
-       print *,"distribute_from_targ invalid"
+      if ((distribute_from_target(indexEXP+1).lt.0).or. &
+          (distribute_from_target(indexEXP+1).gt.1)) then
+       print *,"distribute_from_target invalid"
        stop
       endif
 
@@ -17550,196 +17550,203 @@ stop
          stop
         endif
 
-        im_ice=0
-        if (is_ice(nmat,im_dest).eq.1) then
-         im_ice=im_dest
-        else if (is_ice(nmat,im_source).eq.1) then
-         im_ice=im_source
-        else if ((is_ice(nmat,im_dest).eq.0).and. &
-                 (is_ice(nmat,im_source).eq.0)) then
-         im_ice=0
-        else
-         print *,"is_ice invalid"
-         stop
-        endif
+        do complement_flag=0,1
+         do iten=1,2*nten
+          local_distribute_from_target(iten)=distribute_from_target(iten)
+          if (complement_flag.eq.0) then
+           ! do nothing
+          else if (complement_flag.eq.1) then
+           local_distribute_from_target(iten)= &
+              1-local_distribute_from_target(iten)
+          else
+           print *,"complement_flag invalid"
+           stop
+          endif
+         enddo ! iten=1..2*nten
 
-        if (im_ice.eq.0) then ! neither source nor dest are ice materials.
-         ICEMASK=one
-        else if ((im_ice.ge.1).and. &
-                 (im_ice.le.nmat)) then
+         im_ice=0
+         if (is_ice(nmat,im_dest).eq.1) then
+          im_ice=im_dest
+         else if (is_ice(nmat,im_source).eq.1) then
+          im_ice=im_source
+         else if ((is_ice(nmat,im_dest).eq.0).and. &
+                  (is_ice(nmat,im_source).eq.0)) then
+          im_ice=0
+         else
+          print *,"is_ice invalid"
+          stop
+         endif
+
+         if (im_ice.eq.0) then ! neither source nor dest are ice materials.
+          ICEMASK=one
+         else if ((im_ice.ge.1).and. &
+                  (im_ice.le.nmat)) then
 
           ! in: FORT_TAGEXPANSION
           ! ICEMASK=0 => mask off this cell.
           ! ICEMASK=1 => do nothing
           ! get_icemask declared in PROB.F90
-         call get_icemask( &
-          xsten_center, &
-          time, &
-          dx,bfact, &
-          ICEMASK, &
-          icefacecut, &
-          im,im_opp, &
-          ireverse, &
-          LSCELL, &
-          latent_heat, &
-          distribute_from_target, &
-          nmat,nten)
+          call get_icemask( &
+           xsten_center, &
+           time, &
+           dx,bfact, &
+           ICEMASK, &
+           icefacecut, &
+           im,im_opp, &
+           ireverse, &
+           LSCELL, &
+           latent_heat, &
+           local_distribute_from_target, &
+           nmat,nten)
 
-         if (ireverse.eq.-1) then
-          ICEMASK=one
-         else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
-          call get_iten(im,im_opp,iten,nmat)
-          index_compare=iten+ireverse*nten-1
-          if ((index_compare.ge.0).and.(index_compare.lt.2*nten)) then
-           if (index_compare.eq.indexEXP) then
-            ! do nothing
+          if (ireverse.eq.-1) then
+           ICEMASK=one
+          else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
+           call get_iten(im,im_opp,iten,nmat)
+           index_compare=iten+ireverse*nten-1
+           if ((index_compare.ge.0).and.(index_compare.lt.2*nten)) then
+            if (index_compare.eq.indexEXP) then
+             ! do nothing
+            else
+             ICEMASK=one
+            endif
            else
-            ICEMASK=one
+            print *,"index_compare invalid"
+            stop
            endif
           else
-           print *,"index_compare invalid"
+           print *,"ireverse invalid"
            stop
           endif
-         else
-          print *,"ireverse invalid"
+ 
+         else 
+          print *,"im_ice invalid"
           stop
          endif
- 
-        else 
-         print *,"im_ice invalid"
-         stop
-        endif
 
-        mdot_sum=mdot_sum+VDOT
-        mdot_sum_comp=mdot_sum_comp+VDOT
+         if (complement_flag.eq.0) then
+          mdot_sum=mdot_sum+VDOT
+         else if (complement_flag.eq.1) then
+          mdot_sum_comp=mdot_sum_comp+VDOT
+         else
+          print *,"complement_flag invalid"
+          stop
+         endif
 
          ! FSI_flag=0,7,3,6 ok
-        if ((is_rigid(nmat,im_primary).eq.0).and. &
-            (is_FSI_rigid(nmat,im_primary).eq.0)) then 
+         if ((is_rigid(nmat,im_primary).eq.0).and. &
+             (is_FSI_rigid(nmat,im_primary).eq.0)) then 
 
-         if (VDOT.ne.zero) then ! nonzero source
+          if (VDOT.ne.zero) then ! nonzero source
 
-          if (distribute_from_targ.eq.0) then
+           if (local_distribute_from_target(indexEXP+1).eq.0) then
 
-           if ((VFRAC(im_dest).lt.half).or. &
-               (ICEMASK.le.zero)) then
-            tag(D_DECL(i,j,k)) = one ! donor cell
-           else if ((VFRAC(im_dest).ge.half).and. &
-                    (ICEMASK.gt.zero)) then
-            ! do nothing - acceptor cell
+            if ((VFRAC(im_dest).lt.half).or. &
+                (ICEMASK.le.zero)) then
+             if (complement_flag.eq.0) then
+              tag(D_DECL(i,j,k)) = one ! donor cell
+             else if (complement_flag.eq.1) then
+              tag_comp(D_DECL(i,j,k)) = one ! donor cell
+             else
+              print *,"complement_flag invalid"
+              stop
+             endif
+            else if ((VFRAC(im_dest).ge.half).and. &
+                     (ICEMASK.gt.zero)) then
+             ! do nothing - acceptor cell
+            else
+             print *,"VFRAC or ICEMASK bust"
+             stop      
+            endif
+
+           else if (local_distribute_from_target(indexEXP+1).eq.1) then
+
+            if ((VFRAC(im_source).lt.half).or. &
+                (ICEMASK.le.zero)) then
+             if (complement_flag.eq.0) then
+              tag(D_DECL(i,j,k)) = one ! donor cell
+             else if (complement_flag.eq.1) then
+              tag_comp(D_DECL(i,j,k)) = one ! donor cell
+             else
+              print *,"complement_flag invalid"
+              stop
+             endif
+            else if ((VFRAC(im_source).ge.half).and. &
+                     (ICEMASK.gt.zero)) then
+             ! do nothing - acceptor cell
+            else
+             print *,"VFRAC or ICEMASK bust"     
+             stop
+            endif
+
            else
-            print *,"VFRAC or ICEMASK bust"
-            stop      
-           endif
-
-           if ((VFRAC(im_source).lt.half).or. &
-               (ICEMASK.le.zero)) then
-            tag_comp(D_DECL(i,j,k)) = one ! donor cell
-           else if ((VFRAC(im_source).ge.half).and. &
-                    (ICEMASK.gt.zero)) then
-            ! do nothing - acceptor cell
-           else
-            print *,"VFRAC or ICEMASK bust"     
+            print *,"local_distribute_from_target(indexEXP+1) invalid"
             stop
            endif
 
-          else if (distribute_from_targ.eq.1) then
-
-           if ((VFRAC(im_source).lt.half).or. &
-               (ICEMASK.le.zero)) then
-            tag(D_DECL(i,j,k)) = one ! donor cell
-           else if ((VFRAC(im_source).ge.half).and. &
-                    (ICEMASK.gt.zero)) then
-            ! do nothing - acceptor cell
-           else
-            print *,"VFRAC or ICEMASK bust"     
-            stop
-           endif
-
-           if ((VFRAC(im_dest).lt.half).or. &
-               (ICEMASK.le.zero)) then
-            tag_comp(D_DECL(i,j,k)) = one ! donor cell
-           else if ((VFRAC(im_dest).ge.half).and. &
-                    (ICEMASK.gt.zero)) then
-            ! do nothing - acceptor cell
-           else
-            print *,"VFRAC or ICEMASK bust"
-            stop      
-           endif
+          else if (VDOT.eq.zero) then
+           ! do nothing
           else
-           print *,"distribute_from_targ invalid"
+           print *,"VDOT became corrupt"
+           stop
+          endif 
+
+          if (local_distribute_from_target(indexEXP+1).eq.0) then
+
+           if ((VFRAC(im_dest).ge.half).and. &
+               (ICEMASK.gt.zero)) then
+            if (complement_flag.eq.0) then
+             tag(D_DECL(i,j,k)) = two ! receiver
+            else if (complement_flag.eq.1) then
+             tag_comp(D_DECL(i,j,k)) = two ! receiver
+            else
+             print *,"complement_flag invalid"
+             stop
+            endif
+           else if ((VFRAC(im_dest).lt.half).or. &
+                    (ICEMASK.le.zero)) then
+            ! do nothing - donor cell
+           else
+            print *,"VFRAC or ICEMASK bust"
+            stop      
+           endif
+ 
+          else if (local_distribute_from_target(indexEXP+1).eq.1) then
+
+           if ((VFRAC(im_source).ge.half).and. &
+               (ICEMASK.gt.zero)) then
+            if (complement_flag.eq.0) then
+             tag(D_DECL(i,j,k)) = two ! receiver
+            else if (complement_flag.eq.1) then
+             tag_comp(D_DECL(i,j,k)) = two ! receiver
+            else
+             print *,"complement_flag invalid"
+             stop
+            endif
+           else if ((VFRAC(im_source).lt.half).or. &
+                    (ICEMASK.le.zero)) then
+            ! do nothing - donor cell
+           else
+            print *,"VFRAC or ICEMASK bust"     
+            stop
+           endif
+ 
+          else
+           print *,"local_distribute_from_target(indexEXP+1) invalid"
            stop
           endif
 
-         else if (VDOT.eq.zero) then
-          ! do nothing
+         !in the prescribed solid.
+         else if ((is_rigid(nmat,im_primary).eq.1).or. &
+                  (is_FSI_rigid(nmat,im_primary).eq.1)) then 
+          ! do nothing (tag initialized to 0, neither donor nor receiver)
          else
-          print *,"VDOT became corrupt"
+          print *,"is_rigid(nmat,im_primary) invalid or"
+          print *,"is_FSI_rigid(nmat,im_primary) invalid"
           stop
          endif 
 
-         if (distribute_from_targ.eq.0) then
-
-          if ((VFRAC(im_dest).ge.half).and. &
-              (ICEMASK.gt.zero)) then
-           tag(D_DECL(i,j,k)) = two ! receiver
-          else if ((VFRAC(im_dest).lt.half).or. &
-                   (ICEMASK.le.zero)) then
-           ! do nothing - donor cell
-          else
-           print *,"VFRAC or ICEMASK bust"
-           stop      
-          endif
-
-          if ((VFRAC(im_source).ge.half).and. &
-              (ICEMASK.gt.zero)) then
-           tag_comp(D_DECL(i,j,k)) = two ! receiver
-          else if ((VFRAC(im_source).lt.half).or. &
-                   (ICEMASK.le.zero)) then
-           ! do nothing - donor cell
-          else
-           print *,"VFRAC or ICEMASK bust"     
-           stop
-          endif
-
-         else if (distribute_from_targ.eq.1) then
-
-          if ((VFRAC(im_source).ge.half).and. &
-              (ICEMASK.gt.zero)) then
-           tag(D_DECL(i,j,k)) = two ! receiver
-          else if ((VFRAC(im_source).lt.half).or. &
-                   (ICEMASK.le.zero)) then
-           ! do nothing - donor cell
-          else
-           print *,"VFRAC or ICEMASK bust"     
-           stop
-          endif
-
-          if ((VFRAC(im_dest).ge.half).and. &
-              (ICEMASK.gt.zero)) then
-           tag_comp(D_DECL(i,j,k)) = two ! receiver
-          else if ((VFRAC(im_dest).lt.half).or. &
-                   (ICEMASK.le.zero)) then
-           ! do nothing - donor cell
-          else
-           print *,"VFRAC or ICEMASK bust"
-           stop      
-          endif
-
-         else
-          print *,"distribute_from_targ invalid"
-          stop
-         endif
-
-         !in the prescribed solid.
-        else if ((is_rigid(nmat,im_primary).eq.1).or. &
-                 (is_FSI_rigid(nmat,im_primary).eq.1)) then 
-         ! do nothing (tag initialized to 0, neither donor nor receiver)
-        else
-         print *,"is_rigid(nmat,im_primary) invalid or"
-         print *,"is_FSI_rigid(nmat,im_primary) invalid"
-         stop
-        endif 
+        enddo ! complement_flag=0..1
 
        else if (local_mask.eq.0) then
         ! do nothing

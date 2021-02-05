@@ -1502,9 +1502,9 @@ stop
          if (im_ice.eq.im_dest) then  ! freezing
 
           if (distribute_from_target(iten+nten*ireverse).eq.0) then
-           ! do nothing
+           ! do nothing (distribute from the liquid to the ice)
           else if (distribute_from_target(iten+nten*ireverse).eq.1) then
-           eps_thick=zero
+           eps_thick=zero ! distribute from the ice to the liquid
           else
            print *,"distribute_from_target(iten+nten*ireverse) bad"
            stop
@@ -1536,9 +1536,9 @@ stop
          else if (im_ice.eq.im_source) then ! melting
 
           if (distribute_from_target(iten+nten*ireverse).eq.0) then
-           eps_thick=zero
+           eps_thick=zero ! dist. from the ice to the liquid
           else if (distribute_from_target(iten+nten*ireverse).eq.1) then
-           ! do nothing
+           ! do nothing (dist. from the liquid to the ice)
           else
            print *,"distribute_from_target(iten+nten*ireverse) bad"
            stop
