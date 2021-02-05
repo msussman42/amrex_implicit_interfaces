@@ -1358,6 +1358,7 @@ stop
        LL(ireverse)=latent_heat(iten+ireverse*nten)
       enddo
 
+! FSI_flag==3 or 6?
       if ((is_ice(nmat,im).eq.0).and. &
           (is_ice(nmat,im_opp).eq.0)) then
        im_ice=0
@@ -1375,6 +1376,7 @@ stop
        stop
       endif
      
+! FSI_flag==5? FSI rigid solid, tessellating (PROB.F90)
       if ((is_FSI_rigid(nmat,im).eq.0).and. &
           (is_FSI_rigid(nmat,im_opp).eq.0)) then
        im_FSI_rigid=0

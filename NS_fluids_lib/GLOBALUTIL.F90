@@ -8381,6 +8381,15 @@ contains
        print *,"im invalid16"
        stop
       endif
+! FSI_flag:
+! 0 fluid, tessellating (default)
+! 1 prescribed rigid solid, non-tessellating (PROB.F90)
+! 2 prescribed rigid solid, non-tessellating (sci_clsvof.F90)
+! 3 FSI ice,tessellating
+! 4 FSI, non-tessellating link w/Kourosh Shoele
+! 5 FSI rigid solid, tessellating (PROB.F90)
+! 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
+! 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
       is_FSI_rigid=0
       if (FSI_flag(im).eq.5) then
        is_FSI_rigid=1
