@@ -6030,7 +6030,7 @@ stop
                    endif
 
                   else
-                   print *,"blob_cellvol_count,blob_mass, or blob_volume invalid"
+                   print *,"blob_cellvol_count,blob_mass,or blob_volume bad"
                    stop
                   endif
                  else if (im.ne.im_negate) then
