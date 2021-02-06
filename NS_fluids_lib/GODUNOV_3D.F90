@@ -16765,6 +16765,8 @@ stop
        saturation_temp, &
        freezing_model, &
        distribute_from_target, &
+       constant_volume_mdot, &
+       constant_density_all_time, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -16790,6 +16792,8 @@ stop
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
