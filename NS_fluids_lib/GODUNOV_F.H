@@ -902,6 +902,8 @@ extern "C"
     Real* saturation_temp,
     int* freezing_model,
     int* distribute_from_target,
+    int* constant_volume_mdot,
+    int* constant_density_all_time,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,

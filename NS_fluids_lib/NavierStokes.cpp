@@ -12992,7 +12992,7 @@ NavierStokes::phase_change_redistributeALL() {
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
    indexEXP_filler,
-   isweep_combine); // ==3
+   isweep_combine); // ==3 (FORT_INITJUMPTERM)
  } // ilev=finest_level ... level
 
  if (verbose>0) {
@@ -13067,6 +13067,7 @@ NavierStokes::level_phase_change_redistribute(
 
  } else if (isweep==3) {
 
+   // indexEXP is a filler when isweep==3.
   if (indexEXP==-1) {
    LL=0.0;
   } else
@@ -13469,6 +13470,8 @@ NavierStokes::level_phase_change_redistribute(
      saturation_temp.dataPtr(),
      freezing_model.dataPtr(),
      distribute_from_target.dataPtr(),
+     constant_volume_mdot.dataPtr(),
+     constant_density_all_time.dataPtr(),
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 
