@@ -16611,6 +16611,14 @@ void NavierStokes::project_right_hand_side(
        Real coef;
        dot_productALL_ones(project_option,index_MF,coef);
        coef=-coef/ones_sum_global;
+       if (verbose>0) {
+        if (ParallelDescriptor::IOProcessor()) {
+         std::cout << "project_right_hand_side, coef=" << coef << '\n';
+         std::cout << "project_right_hand_side, denom=" << 
+            ones_sum_global << '\n';
+        } 
+       } // verbose>0
+
        mf_combine_ones(project_option,index_MF,coef);
        zap_resid_where_singular(index_MF);
        change_flag=1;
