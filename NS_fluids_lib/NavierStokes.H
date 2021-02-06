@@ -1045,6 +1045,8 @@ protected:
     void avgDownMacState(int spectral_override); 
     void avgDownEdge(int dir,MultiFab& S_crse,MultiFab& S_fine,
      int scomp,int ncomp,int spectral_override,int caller_id);
+     // spectral_override==1 => order derived from "enable_spectral"
+     // spectral_override==0 => always low order.
     void avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
      int start_dir,int ndir,int spectral_override,int caller_id);
     void vofflux_sum(int dir,MultiFab& S_crse,MultiFab& S_fine);
