@@ -4737,7 +4737,7 @@ stop
       REAL_T DXMAXLS,cutoff
       INTEGER_T i_mdot
       REAL_T im_interior_wt(3)
-      REAL_T blob_cell_count
+      REAL_T blob_cellvol_count
       REAL_T blob_mass
       REAL_T blob_volume
       REAL_T mdot_total
@@ -4872,7 +4872,7 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
+      !blob_cellvol_count
       !blob_mass
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
@@ -4883,9 +4883,9 @@ stop
           1+ & ! blob_perim
           nmat+ & ! blob_perim_mat 
           nmat*nmat+ & ! blob_triple_perim
-          1+1) then ! blob_cell_count,blob_mass
+          1+1) then ! blob_cellvol_count,blob_mass
        print *,"num_elements_blobclass invalid"
-       print *,"blob_cell_count added December 6, 2020"
+       print *,"blob_cellvol_count added December 6, 2020"
        print *,"blob_mass added January 23, 2021"
        stop
       endif
@@ -5187,6 +5187,7 @@ stop
 
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
          vol,cencell,SDIM)
+
         mass=zero
         do im=1,nmat
          vofcomp=(im-1)*ngeom_recon+1
@@ -5540,13 +5541,13 @@ stop
             if (ic.eq.opposite_color(im)*num_elements_blobclass-1) then
              ! do nothing
             else
-             print *,"ic invalid, blob_cell_count 2nd to last?"
+             print *,"ic invalid, blob_cellvol_count 2nd to last?"
              stop
             endif
 
-             ! blob_cell_count
+             ! blob_cellvol_count
             if (vfrac.ge.half) then
-             level_blobdata(ic)=level_blobdata(ic)+one ! blob_cell_count
+             level_blobdata(ic)=level_blobdata(ic)+vol ! blob_cellvol_count
              if (ncomp_mdot.eq.2*nten) then
               ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
@@ -5613,7 +5614,7 @@ stop
              print *,"im=",im
              print *,"opposite_color(im)=",opposite_color(im)
              print *,"num_elements_blobclass=",num_elements_blobclass
-             print *,"blob_cell_count added December 6, 2020"
+             print *,"blob_cellvol_count added December 6, 2020"
              print *,"blob_mass added January 23, 2021"
              stop
             endif
@@ -5749,7 +5750,7 @@ stop
                ic=ic+1
               enddo ! im_opp=1..nmat
               ic=ic+nmat*nmat
-              ic=ic+1  ! blob_cell_count added December 6, 2020
+              ic=ic+1  ! blob_cellvol_count added December 6, 2020
               ic=ic+1  ! blob_mass added January 23, 2021
   
               if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
@@ -5758,7 +5759,7 @@ stop
                print *,"im=",im
                print *,"opposite_color(im)=",opposite_color(im)
                print *,"num_elements_blobclass=",num_elements_blobclass
-               print *,"blob_cell_count added December 6, 2020"
+               print *,"blob_cellvol_count added December 6, 2020"
                print *,"blob_mass added January 23, 2021"
                stop
               endif
@@ -5826,20 +5827,20 @@ stop
                     ! alpha=mdot_total/(sum V_i) 
                    if (im.eq.im_evenly) then 
                     ic=opposite_color(im)*num_elements_blobclass-1
-                    blob_cell_count=cum_blobdata(ic)
-                    if (blob_cell_count.gt.zero) then
+                    blob_cellvol_count=cum_blobdata(ic)
+                    if (blob_cellvol_count.gt.zero) then
 
                      if (ncomp_mdot.eq.2*nten) then
                       ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
                       mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
-                      mdot_avg=mdot_total/blob_cell_count
+                      mdot_avg=mdot_total/blob_cellvol_count
 
                       level_mdot_data_redistribute(ic_base_mdot+iten_shift)= &
                        level_mdot_data_redistribute(ic_base_mdot+iten_shift)+ &
-                       mdot_avg
+                       mdot_avg*vol
                  
                       if (fort_material_type(im).eq.0) then
-                       mdot(D_DECL(i,j,k),iten_shift)=mdot_avg
+                       mdot(D_DECL(i,j,k),iten_shift)=mdot_avg*vol
                       else if ((fort_material_type(im).gt.0).and. &
                                (fort_material_type(im).le.MAX_NUM_EOS)) then
                        print *,"phase change only for incompressible materials"
@@ -5854,7 +5855,7 @@ stop
                      endif
 
                     else
-                     print *,"blob_cell_count invalid"
+                     print *,"blob_cellvol_count invalid"
                      stop
                     endif
                    else if (im.ne.im_evenly) then
@@ -5927,7 +5928,7 @@ stop
                   endif
  
                   ic=opposite_color(im)*num_elements_blobclass-1
-                  blob_cell_count=cum_blobdata(ic)
+                  blob_cellvol_count=cum_blobdata(ic)
                   ic=ic+1
                   blob_mass=cum_blobdata(ic)
                   ic= &
@@ -5939,7 +5940,7 @@ stop
 
                   blob_volume=cum_blobdata(ic)
 
-                  if ((blob_cell_count.gt.zero).and. &
+                  if ((blob_cellvol_count.gt.zero).and. &
                       (blob_mass.gt.zero).and. &
                       (blob_volume.gt.zero)) then
 
@@ -5969,21 +5970,21 @@ stop
                      mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
                      if (1.eq.0) then
                       print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
-                       i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
+                       i,j,k,blob_cellvol_count,blob_mass,blob_volume,mdot_total
                      endif
                     else
                      print *,"complement_flag invalid"
                      stop
                     endif
-                    mdot_avg=mdot_total/blob_cell_count
+                    mdot_avg=mdot_total/blob_cellvol_count
 
                     if (vfrac.ge.half) then
                      level_mdot_data_redistribute(ic_base_mdot+iten_shift)= &
                       level_mdot_data_redistribute(ic_base_mdot+iten_shift)+ &
-                      mdot_avg
+                      mdot_avg*vol
 
                      mdot(D_DECL(i,j,k),iten_shift)= &
-                       mdot(D_DECL(i,j,k),iten_shift)-mdot_avg
+                       mdot(D_DECL(i,j,k),iten_shift)-mdot_avg*vol
                     else if (vfrac.lt.half) then
                      ! do nothing
                     else
@@ -6029,7 +6030,7 @@ stop
                    endif
 
                   else
-                   print *,"blob_cell_count,blob_mass, or blob_volume invalid"
+                   print *,"blob_cellvol_count,blob_mass, or blob_volume invalid"
                    stop
                   endif
                  else if (im.ne.im_negate) then
@@ -13581,7 +13582,7 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
+      !blob_cellvol_count
       !blob_mass
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
