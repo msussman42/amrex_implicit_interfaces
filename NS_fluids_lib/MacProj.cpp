@@ -1364,6 +1364,7 @@ void NavierStokes::residALL(
    ns_level.averageRhs(idx_resid,nsolve,project_option);
  }
   // in: residALL
+  // project_right_hand_side declared in NavierStokes.cpp.
  int change_flag=0;
  project_right_hand_side(idx_resid,project_option,change_flag);
 } // subroutine residALL

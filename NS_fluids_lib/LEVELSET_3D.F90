@@ -5546,7 +5546,7 @@ stop
 
              ! blob_cell_count
             if (vfrac.ge.half) then
-             level_blobdata(ic)=level_blobdata(ic)+one
+             level_blobdata(ic)=level_blobdata(ic)+one ! blob_cell_count
              if (ncomp_mdot.eq.2*nten) then
               ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
@@ -5821,7 +5821,9 @@ stop
                     print *,"distribute_from_target(iten_shift) invalid"
                     stop
                    endif
-               
+              
+                    ! sum alpha V_i = mdot_total
+                    ! alpha=mdot_total/(sum V_i) 
                    if (im.eq.im_evenly) then 
                     ic=opposite_color(im)*num_elements_blobclass-1
                     blob_cell_count=cum_blobdata(ic)

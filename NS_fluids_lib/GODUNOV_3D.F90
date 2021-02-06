@@ -16812,6 +16812,7 @@ stop
 
       INTEGER_T i,j,k
       INTEGER_T im,im_opp,ireverse,iten
+      INTEGER_T iten_shift
       INTEGER_T im_source,im_dest
       INTEGER_T nten_test
       REAL_T jump_strength
@@ -16862,16 +16863,27 @@ stop
        do im_opp=im+1,nmat
         do ireverse=0,1
          call get_iten(im,im_opp,iten,nmat)
-         if ((freezing_model(iten+ireverse*nten).lt.0).or. &
-             (freezing_model(iten+ireverse*nten).gt.7)) then
+         iten_shift=iten+ireverse*nten
+         if ((freezing_model(iten_shift).lt.0).or. &
+             (freezing_model(iten_shift).gt.7)) then
           print *,"freezing_model invalid init jump term"
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
          endif
-         if ((distribute_from_target(iten+ireverse*nten).lt.0).or. &
-             (distribute_from_target(iten+ireverse*nten).gt.1)) then
+         if ((distribute_from_target(iten_shift).lt.0).or. &
+             (distribute_from_target(iten_shift).gt.1)) then
           print *,"distribute_from_target invalid init jump term"
           print *,"iten,ireverse,nten ",iten,ireverse,nten
+          stop
+         endif
+         if (constant_volume_mdot(iten_shift).eq.0) then 
+          ! do nothing
+         else if (constant_volume_mdot(iten_shift).eq.1) then
+          ! distribute -sum mdot to the source:
+         else if (constant_volume_mdot(iten_shift).eq.-1) then
+          ! distribute -sum mdot to the dest:
+         else
+          print *,"constant_volume_mdot(iten_shift) invalid"
           stop
          endif
         enddo ! ireverse
@@ -16902,9 +16914,11 @@ stop
            endif
 
            call get_iten(im,im_opp,iten,nmat)
-           LL=latent_heat(iten+ireverse*nten)
+           iten_shift=iten+ireverse*nten
 
-           jump_strength=JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)
+           LL=latent_heat(iten_shift)
+
+           jump_strength=JUMPFAB(D_DECL(i,j,k),iten_shift)
   
            if ((is_rigid(nmat,im).eq.1).or. &
                (is_rigid(nmat,im_opp).eq.1)) then 
