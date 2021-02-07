@@ -216,6 +216,7 @@ ns.override_density=0 0
 ns.molar_mass=18.02 28.9 # CODY  (liquid, ambient) 
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # CODY (vapor) (SIMPLE case W_V=W_A=0.018 kg/mol )
+ns.R_Palmore_Desjardins=8.31446261815324e+7 # ergs/(mol kelvin)
 ns.FSI_flag=0 0 
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
