@@ -3,7 +3,7 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 1
+      integer, PARAMETER :: probtype = 0
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
