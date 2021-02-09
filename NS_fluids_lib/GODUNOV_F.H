@@ -692,7 +692,6 @@ extern "C"
       int* mass_fraction_id,
       Real* molar_mass,
       Real* species_molar_mass,
-      Real* species_evaporation_density,
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
       const Real* sol, AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
@@ -1109,7 +1108,6 @@ extern "C"
      int* ngrow,
      int* constant_density_all_time, // 1..nmat
      int* spec_material_id_AMBIENT, // 1..num_species_var
-     Real* species_evaporation_density,
      int* presbc,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,

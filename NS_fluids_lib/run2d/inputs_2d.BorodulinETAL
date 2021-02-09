@@ -61,7 +61,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=2 # 1: liquid 2: air 
 ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
-ns.species_evaporation_density=0.001 #g/cm^3 CODY:rho_gas=1kg/m^3(0.001 g/cm^3)
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0

@@ -62,7 +62,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 # changes to inputs file for evaporation and condensation:
 # 1. ns.num_species_var increased accordingly, 
-#    ns.species_evaporation_density (1..num_species_var) set.
 # 2. latent_heat liquid,air  positive for evaporation.
 # 3. freezing_model liquid, air = 5
 # 4. TSAT liquid,air set accordingly.

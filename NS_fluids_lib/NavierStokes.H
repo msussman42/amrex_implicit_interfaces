@@ -1727,9 +1727,6 @@ protected:
     static Vector<Real> cavitation_vapor_density; 
     static Vector<Real> cavitation_tension; 
 
-     // used if freezing_model==5 (evaporation or condensation)
-    static Vector<Real> species_evaporation_density; 
-
       // 1-2 means "material 1 is converted into material 2"
       // 1-2 1-3 1-4 2-3 2-4 3-4
       // 2-1 3-1 4-1 3-2 4-2 4-3
@@ -2069,8 +2066,8 @@ protected:
     static Real initial_temperature_diffuse_duration; // def=0.0
     static Vector<Real> density_floor;  // def=0.0
     static Vector<Real> density_ceiling;  // def=1.0e+20
-    static Vector<Real> density_floor_expansion;  // def=denconst
-    static Vector<Real> density_ceiling_expansion;  // def=denconst
+    static Vector<Real> density_floor_expansion;  // def=0.0
+    static Vector<Real> density_ceiling_expansion;  // def=1.0e+20
     static Vector<Real> molar_mass;  // def=1
     static Vector<Real> denconst;
     static Real denconst_max;

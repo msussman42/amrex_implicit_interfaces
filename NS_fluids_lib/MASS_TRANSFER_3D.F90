@@ -2411,6 +2411,7 @@ stop
          dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
 
          ! (a) find containing cell for xtarget_probe_micro
+         !   xtarget_probe_micro=xI-microscale_probe_size * n * dx
          ! (b) if F(im_target_probe)<TOL in containing cell, then
          !     temp_target_probe=TSAT and dxprobe_target=
          !     ||x_probe-x_I||
@@ -3377,7 +3378,6 @@ stop
        saturation_temp, &
        freezing_model, &
        mass_fraction_id, &
-       species_evaporation_density, &
        distribute_from_target, &
        constant_density_all_time, &
        tilelo,tilehi, &
@@ -3436,7 +3436,6 @@ stop
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -3853,13 +3852,7 @@ stop
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
           if ((mass_frac_id.ge.1).and. &
               (mass_frac_id.le.num_species_var)) then
-           vapor_den=species_evaporation_density(mass_frac_id)
-           if (vapor_den.gt.zero) then
-            ! do nothing
-           else
-            print *,"vapor_den invalid"
-            stop
-           endif
+           ! do nothing
           else
            print *,"mass_frac_id invalid"
            stop
@@ -5113,8 +5106,6 @@ stop
             if ((mass_frac_id.ge.1).and. &
                 (mass_frac_id.le.num_species_var)) then
 
-!             The total density is spatially uniform
-!             vapor_den=species_evaporation_density(mass_frac_id)
              vapor_den=density_old(iprobe_vapor)
              condensed_den=density_old(iprobe_condensed)
 
@@ -6813,7 +6804,7 @@ stop
        Tanasawa_or_Schrage_or_Kassemi, &
        distribute_from_target, &
        mass_fraction_id, &
-       species_evaporation_density, &
+       constant_density_all_time, & ! 1..nmat
        material_type_evap, &
        molar_mass, &
        species_molar_mass, &
@@ -6909,7 +6900,7 @@ stop
       INTEGER_T, intent(in), target :: material_type_evap(nmat)
       REAL_T, intent(in) :: molar_mass(nmat)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
-      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: use_supermesh
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, target, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -7507,7 +7498,19 @@ stop
               stop
              endif
 
-             vapor_den=one
+             if (ireverse.eq.0) then
+              im_source=im
+              im_dest=im_opp
+             else if (ireverse.eq.1) then
+              im_source=im_opp
+              im_dest=im
+             else
+              print *,"ireverse invalid"
+              stop
+             endif
+
+             dencomp_source=(im_source-1)*num_state_material+1
+             dencomp_dest=(im_dest-1)*num_state_material+1
 
              if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
               ! do nothing
@@ -7516,8 +7519,35 @@ stop
               stop
              endif
 
+             vapor_den=fort_denconst(im_dest) ! default
+
+             if (LL(ireverse).eq.zero) then
+              ! do nothing
+             else if (LL(ireverse).gt.zero) then
+              if (constant_density_all_time(im_dest).eq.1) then
+               vapor_den=fort_denconst(im_dest) 
+              else if (constant_density_all_time(im_dest).eq.0) then
+               vapor_den=EOS(D_DECL(i,j,k),dencomp_dest)
+              else
+               print *,"constant_density_all_time(im_dest) invalid"
+               stop
+              endif
+             else if (LL(ireverse).lt.zero) then
+              if (constant_density_all_time(im_source).eq.1) then
+               vapor_den=fort_denconst(im_source) 
+              else if (constant_density_all_time(im_source).eq.0) then
+               vapor_den=EOS(D_DECL(i,j,k),dencomp_source)
+              else
+               print *,"constant_density_all_time(im_source) invalid"
+               stop
+              endif
+             else
+              print *,"LL invalid"
+              stop
+             endif
+
              if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-              vapor_den=species_evaporation_density(ispec)
+              ! do nothing
              else if (ispec.eq.0) then
               if ((local_freezing_model.eq.2).or. & !hydrate
                   (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
@@ -7541,17 +7571,6 @@ stop
 
              if (LL(ireverse).ne.zero) then
             
-              if (ireverse.eq.0) then
-               im_source=im
-               im_dest=im_opp
-              else if (ireverse.eq.1) then
-               im_source=im_opp
-               im_dest=im
-              else
-               print *,"ireverse invalid"
-               stop
-              endif
-
               if (im_dest.lt.im_source) then
                LSSIGN=one
               else if (im_dest.gt.im_source) then
@@ -7725,9 +7744,6 @@ stop
                   print *,"local_freezing_model invalid 3"
                   stop
                  endif
-
-                 dencomp_source=(im_source-1)*num_state_material+1
-                 dencomp_dest=(im_dest-1)*num_state_material+1
 
                  call interpfab_curv( &
                   nmat+iten, &
@@ -8391,7 +8407,6 @@ stop
                      species_molar_mass, &
                      local_freezing_model, &
                      local_Tanasawa_or_Schrage_or_Kassemi, &
-                     vapor_den, &
                      distribute_from_targ, &
                      VEL_correct, & ! vel
                      den_I_interp_SAT(1), & ! source 
