@@ -912,8 +912,6 @@ Vector<Real> NavierStokes::temperature_source_rad;
 
 Vector<Real> NavierStokes::density_floor;  // def=0.0
 Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
-Vector<Real> NavierStokes::density_floor_expansion;  // def=denconst
-Vector<Real> NavierStokes::density_ceiling_expansion;  // def=denconst
 Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Real NavierStokes::denconst_max=0.0;
@@ -3173,23 +3171,17 @@ NavierStokes::read_params ()
     molar_mass.resize(nmat);
 
     density_floor.resize(nmat);
-    density_floor_expansion.resize(nmat);
     for (int i=0;i<nmat;i++) {
      density_floor[i]=0.0;
-     density_floor_expansion[i]=0.0;
     }
     pp.queryarr("density_floor",density_floor,0,nmat);
-    pp.queryarr("density_floor_expansion",density_floor_expansion,0,nmat);
 
     density_ceiling.resize(nmat);
-    density_ceiling_expansion.resize(nmat);
     for (int i=0;i<nmat;i++) {
      density_ceiling[i]=1.0e+20;
-     density_ceiling_expansion[i]=1.0e+20;
     }
 
     pp.queryarr("density_ceiling",density_ceiling,0,nmat);
-    pp.queryarr("density_ceiling_expansion",density_ceiling_expansion,0,nmat);
 
     denconst.resize(nmat);
     pp.getarr("denconst",denconst,0,nmat);
@@ -3209,26 +3201,12 @@ NavierStokes::read_params ()
       amrex::Error("density_ceiling[i]<=denconst[i]");
      }
 
-     if (density_ceiling_expansion[i]<=0.0) {
-      amrex::Error("density_ceiling_expansion[i]<=0.0");
-     } else if (density_ceiling_expansion[i]<=denconst[i]) {
-      amrex::Error("density_ceiling_expansion[i]<=denconst[i]");
-     }
-
      if (density_floor[i]<0.0) {
       amrex::Error("density_floor[i]<0.0");
      } else if (density_floor[i]==0.0) {
       // do nothing
      } else if (density_floor[i]>=denconst[i]) {
       amrex::Error("density_floor[i]>=denconst[i]");
-     }
-
-     if (density_floor_expansion[i]<0.0) {
-      amrex::Error("density_floor_expansion[i]<0.0");
-     } else if (density_floor_expansion[i]==0.0) {
-      // do nothing
-     } else if (density_floor_expansion[i]>=denconst[i]) {
-      amrex::Error("density_floor_expansion[i]>=denconst[i]");
      }
 
     } // i=0..nmat-1
@@ -4725,10 +4703,6 @@ NavierStokes::read_params ()
       std::cout << "denconst i=" << i << " " << denconst[i] << '\n';
       std::cout << "density_floor i=" << i << " " << density_floor[i] << '\n';
       std::cout << "density_ceiling i="<<i<<" "<< density_ceiling[i] << '\n';
-      std::cout << "density_floor_expansion i=" << i << " " << 
-        density_floor_expansion[i] << '\n';
-      std::cout << "density_ceiling_expansion i="<<i<<" "<< 
-        density_ceiling_expansion[i] << '\n';
       std::cout << "molar_mass i="<<i<<" "<< 
         molar_mass[i] << '\n';
       std::cout << "tempconst i=" << i << " " << tempconst[i] << '\n';
@@ -11766,8 +11740,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &nburning,
      &ntsat,
      &nden,
-     density_floor_expansion.dataPtr(),
-     density_ceiling_expansion.dataPtr(),
      &custom_nucleation_model,
      &do_the_nucleate,
      nucleate_pos.dataPtr(),
@@ -11854,8 +11826,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &nburning,
      &ntsat,
      &nden,
-     density_floor_expansion.dataPtr(),
-     density_ceiling_expansion.dataPtr(),
      &custom_nucleation_model,
      &do_the_nucleate,
      nucleate_pos.dataPtr(),
@@ -12567,8 +12537,6 @@ NavierStokes::level_phase_change_convert(
     &nstate,
     &ntsat,
     &use_supermesh,
-    density_floor_expansion.dataPtr(),
-    density_ceiling_expansion.dataPtr(),
     latent_heat.dataPtr(),
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
