@@ -119,7 +119,7 @@
       endif
       mdot=my_pi*D_gamma*den_G*D_G*Sh*B_M
       
-      LS_VAP=rr-half*D_gamma
+      LS_VAP=rr-0.5d0*D_gamma
       
       if (LS_VAP.le.0.0d0) then
        VEL=0.0d0
@@ -128,14 +128,14 @@
       else if (LS_VAP.ge.0.0d0) then
        vel_r = mdot/(4.0*my_pi*rr*rr*den_G)
        VEL=vel_r
-       Y=1.0d0+(Y_inf-1.0d0)*exp(-mdot/(4.0d0*my_pi*den_G*D_G*rr))
+       Y=1.0d0+(Y_inf_global-1.0d0)*exp(-mdot/(4.0d0*my_pi*den_G*D_G*rr))
        if ((Y.ge.0.0d0).and.(Y.lt.1.0d0)) then
         ! do nothing
        else
         print *,"Y invalid"
         stop
        endif
-       T=T_Gamma-L_V/C_pG+(T_inf-T_Gamma+L_V/C_pG)* &
+       T=T_Gamma-L_V/C_pG+(T_inf_global-T_Gamma+L_V/C_pG)* &
                exp(-mdot*C_pG/(4.0d0*my_pi*k_G*rr))
        if (T.gt.0.0d0) then
         ! do nothing
@@ -177,6 +177,9 @@
       real*8 :: f_out
       real*8 :: aa,bb,cc,fa,fb,fc
       integer :: iter
+      real*8 TSTART,TSTOP,cur_time,dt
+      real*8 cur_x,T,Y,VEL,LS,D_gamma
+      integer nsteps,istep
 
 
       lambda=k_G/(den_G*C_pG)
@@ -184,7 +187,8 @@
 
       T_inf_global = 300.5d0
       Y_inf_global=7.1d-3
-      T_gamma=300.5
+      T_gamma=300.5  ! halfway done by cur_time=TSTOP
+      T_gamma=303.8  ! drop just disappears at cur_time=TSTOP
       cc=291.8d0
 
       do while (cc.lt.T_gamma)
@@ -246,6 +250,17 @@
       print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,Y_gamma ", &
         T_gamma,Y_gamma
 
+      TSTART=0.0d0
+      TSTOP=1000.0d0
+      cur_time=TSTART
+      nsteps=2000
+      dt=(TSTOP-TSTART)/nsteps
+      do istep=1,nsteps
+       cur_x=1.0d0
+       call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y,VEL,LS)
+       print *,cur_time," ",D_gamma/(2.0d0*radblob)
+       cur_time=cur_time+dt
+      enddo
 
       return
       end
