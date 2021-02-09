@@ -1,18 +1,22 @@
       module evap_check
       IMPLICIT NONE
 
-       !Borodulin et al Figure 8, row 3
-      real*8, PARAMETER :: radblob = 0.05d0
-      real*8, PARAMETER :: den_L = 1.0d0
-      real*8, PARAMETER :: den_G = 0.001d0
-      real*8, PARAMETER :: C_pG = 1.0d+7
-      real*8, PARAMETER :: k_G = 0.024d+5
-      real*8, PARAMETER :: L_V = 2.26d+10
-      real*8, PARAMETER :: D_G = 0.1d0
-      real*8, PARAMETER :: WV_global = 18.02d0
-      real*8, PARAMETER :: WA_global = 28.9d0
-      real*8, PARAMETER :: R_global = 8.31446261815324d+7
-      real*8, PARAMETER :: T_sat_global=373.15d0
+       ! probtype==0 => Borodulin test
+       ! probtype==1 => Villegas et al test
+      integer, PARAMETER :: probtype = 1
+
+      integer :: find_TINF_from_TGAMMA
+      real*8 :: radblob
+      real*8 :: den_L
+      real*8 :: den_G
+      real*8 :: C_pG
+      real*8 :: k_G
+      real*8 :: L_V
+      real*8 :: D_G
+      real*8 :: WV_global
+      real*8 :: WA_global
+      real*8 :: R_global
+      real*8 :: T_sat_global
       real*8 :: lambda
       real*8 :: Le
       real*8 :: T_inf_global
@@ -109,6 +113,7 @@
        D_Gamma=sqrt(D_gamma)
       else
        print *,"D_gamma invalid"
+       print *,"D_gamma= ",D_gamma
        print *,"D_not= ",D_not
        print *,"den_G= ",den_G
        print *,"D_G= ",D_G
@@ -180,19 +185,67 @@
       real*8 TSTART,TSTOP,cur_time,dt
       real*8 cur_x,T,Y,VEL,LS,D_gamma
       integer nsteps,istep
+      integer outer_iter,max_outer_iter
 
+
+      if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
+       find_TINF_from_TGAMMA=1
+       radblob = 0.05d0
+       cur_x=4.0d0*radblob
+       den_L = 1.0d0
+       den_G = 0.001d0
+       C_pG = 1.0d+7
+       k_G = 0.024d+5
+       L_V = 2.26d+10
+       D_G = 0.1d0
+       WV_global = 18.02d0
+       WA_global = 28.9d0
+       R_global = 8.31446261815324d+7
+       T_sat_global=373.15d0
+       T_inf_global = 300.5d0
+       Y_inf_global=7.1d-3
+       T_gamma=300.5  ! halfway done by cur_time=TSTOP
+       T_gamma=303.8  ! drop just disappears at cur_time=TSTOP
+       cc=0.0d0
+       TSTOP=1000.0d0
+      else if (probtype.eq.1) then
+       find_TINF_from_TGAMMA=0
+       radblob = 0.005d0
+       cur_x=4.0d0*radblob
+       den_L = 0.7d0
+       den_G = 0.001d0
+       C_pG = 1.0d+7
+       k_G = 0.052d+5
+       L_V = 5.18D+9
+       D_G = 0.52d0
+       WV_global = 58.0d0
+       WA_global = 29.0d0
+       R_global = 8.31446261815324d+7
+       T_sat_global=329.0d0
+       T_inf_global = 700.0d0
+       Y_inf_global=0.0d0
+       T_gamma=300.5d0  ! placeholder
+       cc=0.0d0
+       TSTOP=1.0d0
+      else
+       print *,"probtype invalid"
+       stop
+      endif
 
       lambda=k_G/(den_G*C_pG)
       Le=D_G*den_G*C_pG/k_G
 
-      T_inf_global = 300.5d0
-      Y_inf_global=7.1d-3
-      T_gamma=300.5  ! halfway done by cur_time=TSTOP
-      T_gamma=303.8  ! drop just disappears at cur_time=TSTOP
-      cc=291.8d0
+      outer_iter=0
 
-      do while (cc.lt.T_gamma)
+      if (find_TINF_from_TGAMMA.eq.1) then
+       max_outer_iter=100000
+      else
+       max_outer_iter=1
+      endif
 
+      do while ((cc.lt.T_gamma).and.(outer_iter.lt.max_outer_iter))
+
+      outer_iter=outer_iter+1
       aa=100.0d0
       bb=T_sat_global
       call ff(aa,fa)
@@ -229,7 +282,9 @@
       print *,"WV_global,WA_global,Le ",WV_global,WA_global,Le
       print *,"R_global ",R_global
 
-      T_inf_global=T_inf_global+0.01d0
+      if (find_TINF_from_TGAMMA.eq.1) then
+       T_inf_global=T_inf_global+0.01d0
+      endif
 
       enddo
 
@@ -251,14 +306,12 @@
         T_gamma,Y_gamma
 
       TSTART=0.0d0
-      TSTOP=1000.0d0
       cur_time=TSTART
       nsteps=2000
       dt=(TSTOP-TSTART)/nsteps
       do istep=1,nsteps
-       cur_x=1.0d0
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y,VEL,LS)
-       print *,cur_time," ",D_gamma/(2.0d0*radblob)
+       print *,cur_time," ",D_gamma/(2.0d0*radblob)," ",T," ",Y
        cur_time=cur_time+dt
       enddo
 

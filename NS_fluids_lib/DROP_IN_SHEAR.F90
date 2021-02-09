@@ -884,6 +884,7 @@ if ((D_Gamma.le.D_not**2).and.(D_Gamma.ge.zero)) then
  D_Gamma=sqrt(D_gamma)
 else
  print *,"D_gamma invalid"
+ print *,"D_gamma= ",D_gamma
  print *,"D_not= ",D_not
  print *,"den_G= ",den_G
  print *,"D_G= ",D_G
