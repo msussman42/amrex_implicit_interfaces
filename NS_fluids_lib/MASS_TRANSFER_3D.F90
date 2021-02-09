@@ -79,8 +79,6 @@ stop
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
        INTEGER_T :: DIMDEC(pres)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
-       REAL_T, pointer, dimension(:) :: density_floor_expansion
-       REAL_T, pointer, dimension(:) :: density_ceiling_expansion
       end type probe_parm_type
 
       type TSAT_MASS_FRAC_parm_type
@@ -2179,17 +2177,6 @@ stop
          DIMS(PROBE_PARMS%recon), &
          den_I_interp(iprobe))
 
-        if (den_I_interp(iprobe).lt. &
-            PROBE_PARMS%density_floor_expansion(im_target_probe(iprobe))) then
-         den_I_interp(iprobe)= &
-          PROBE_PARMS%density_floor_expansion(im_target_probe(iprobe))
-        endif
-        if (den_I_interp(iprobe).gt. &
-            PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))) then
-         den_I_interp(iprobe)= &
-          PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))
-        endif
-
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
          PROBE_PARMS%level, &
@@ -2208,17 +2195,6 @@ stop
          PROBE_PARMS%recon, &
          DIMS(PROBE_PARMS%recon), &
          den_probe(iprobe))
-
-        if (den_probe(iprobe).lt. &
-            PROBE_PARMS%density_floor_expansion(im_target_probe(iprobe))) then
-         den_probe(iprobe)= &
-          PROBE_PARMS%density_floor_expansion(im_target_probe(iprobe))
-        endif
-        if (den_probe(iprobe).gt. &
-            PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))) then
-         den_probe(iprobe)= &
-          PROBE_PARMS%density_ceiling_expansion(im_target_probe(iprobe))
-        endif
 
        else
         print *,"mtype invalid"
@@ -3372,8 +3348,6 @@ stop
        nstate, &
        ntsat, &
        supermesh_flag, &
-       density_floor_expansion, &
-       density_ceiling_expansion, &
        latent_heat, &
        saturation_temp, &
        freezing_model, &
@@ -3430,8 +3404,6 @@ stop
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: supermesh_flag
-      REAL_T, intent(in) :: density_floor_expansion(nmat)
-      REAL_T, intent(in) :: density_ceiling_expansion(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
@@ -3769,23 +3741,6 @@ stop
        stop
       endif
       call get_iten(im_outer,im_opp_outer,iten_outer,nmat)
-
-      do im=1,nmat
-       if ((density_floor_expansion(im).gt.zero).and. &
-           (density_floor_expansion(im).le.fort_denconst(im))) then
-        ! do nothing
-       else
-        print *,"density_floor_expansion invalid"
-        stop
-       endif
-       if ((density_ceiling_expansion(im).gt.zero).and. &
-           (density_ceiling_expansion(im).ge.fort_denconst(im))) then
-        ! do nothing
-       else
-        print *,"density_ceiling_expansion invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -6769,8 +6724,6 @@ stop
        nburning, &
        ntsat, &
        nden, &
-       density_floor_expansion, &
-       density_ceiling_expansion, &
        custom_nucleation_model, &
        do_the_nucleate, &
        nucleate_pos, &
@@ -6861,8 +6814,6 @@ stop
       INTEGER_T, intent(in) :: nburning
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: nden
-      REAL_T, target, intent(in) :: density_floor_expansion(nmat)
-      REAL_T, target, intent(in) :: density_ceiling_expansion(nmat)
       INTEGER_T, intent(in) :: custom_nucleation_model
       INTEGER_T, intent(in) :: do_the_nucleate
       INTEGER_T, intent(in) :: nucleate_pos_size
@@ -7222,19 +7173,6 @@ stop
        stop
       endif
 
-      do im=1,nmat
-       if ((density_floor_expansion(im).le.zero).or. &
-           (density_floor_expansion(im).gt.fort_denconst(im))) then
-        print *,"density_floor_expansion invalid"
-        stop
-       endif
-       if ((density_ceiling_expansion(im).le.zero).or. &
-           (density_ceiling_expansion(im).lt.fort_denconst(im))) then
-        print *,"density_ceiling_expansion invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
-
       if (num_materials_scalar_solve.eq.1) then ! GFM
        normal_probe_factor=half
       else if (num_materials_scalar_solve.eq.nmat) then ! FVM multimat
@@ -7437,8 +7375,6 @@ stop
       PROBE_PARMS%ngrow=>ngrow
       PROBE_PARMS%fablo=>fablo
       PROBE_PARMS%fabhi=>fabhi
-      PROBE_PARMS%density_floor_expansion=>density_floor_expansion
-      PROBE_PARMS%density_ceiling_expansion=>density_ceiling_expansion
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)

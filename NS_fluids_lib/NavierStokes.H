@@ -2066,8 +2066,6 @@ protected:
     static Real initial_temperature_diffuse_duration; // def=0.0
     static Vector<Real> density_floor;  // def=0.0
     static Vector<Real> density_ceiling;  // def=1.0e+20
-    static Vector<Real> density_floor_expansion;  // def=0.0
-    static Vector<Real> density_ceiling_expansion;  // def=1.0e+20
     static Vector<Real> molar_mass;  // def=1
     static Vector<Real> denconst;
     static Real denconst_max;
