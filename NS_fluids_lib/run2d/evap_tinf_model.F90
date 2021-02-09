@@ -1,6 +1,8 @@
       module evap_check
       IMPLICIT NONE
 
+       !Borodulin et al Figure 8, row 3
+      real*8, PARAMETER :: radblob = 0.05d0
       real*8, PARAMETER :: den_L = 1.0d0
       real*8, PARAMETER :: den_G = 0.001d0
       real*8, PARAMETER :: C_pG = 1.0d+7
@@ -15,6 +17,12 @@
       real*8 :: Le
       real*8 :: T_inf_global
       real*8 :: Y_inf_global
+      real*8 :: T_gamma
+      real*8 :: X_gamma
+      real*8 :: Y_gamma
+      real*8 :: B_M
+      real*8 :: D_not
+      real*8 :: Sh
      
 
       CONTAINS
@@ -79,6 +87,71 @@
       return
       end subroutine massfrac_from_volfrac
 
+
+      subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL,LS_VAP)
+      IMPLICIT NONE
+
+      real*8, intent(in) :: time
+      real*8, intent(in) :: x
+      real*8, intent(out) :: D_gamma
+      real*8, intent(out) :: T
+      real*8, intent(out) :: Y
+      real*8, intent(out) :: LS_VAP
+      real*8, intent(out) :: VEL
+      real*8 :: rr,mdot,vel_r,my_pi
+     
+      my_pi=4.0d0*atan(1.0d0)
+ 
+      rr=x
+      
+      D_Gamma=D_not**2-4.0d0*den_G*D_G*log(1.0d0+B_M)*time/den_L
+      if ((D_Gamma.le.D_not**2).and.(D_Gamma.ge.0.0d0)) then
+       D_Gamma=sqrt(D_gamma)
+      else
+       print *,"D_gamma invalid"
+       print *,"D_not= ",D_not
+       print *,"den_G= ",den_G
+       print *,"D_G= ",D_G
+       print *,"B_M= ",B_M
+       print *,"den_L=",den_L
+       print *,"time=",time
+       stop
+      endif
+      mdot=my_pi*D_gamma*den_G*D_G*Sh*B_M
+      
+      LS_VAP=rr-half*D_gamma
+      
+      if (LS_VAP.le.0.0d0) then
+       VEL=0.0d0
+       Y=Y_Gamma
+       T=T_Gamma
+      else if (LS_VAP.ge.0.0d0) then
+       vel_r = mdot/(4.0*my_pi*rr*rr*den_G)
+       VEL=vel_r
+       Y=1.0d0+(Y_inf-1.0d0)*exp(-mdot/(4.0d0*my_pi*den_G*D_G*rr))
+       if ((Y.ge.0.0d0).and.(Y.lt.1.0d0)) then
+        ! do nothing
+       else
+        print *,"Y invalid"
+        stop
+       endif
+       T=T_Gamma-L_V/C_pG+(T_inf-T_Gamma+L_V/C_pG)* &
+               exp(-mdot*C_pG/(4.0d0*my_pi*k_G*rr))
+       if (T.gt.0.0d0) then
+        ! do nothing
+       else
+        print *,"T invalid"
+        stop
+       endif
+      else
+       print *,"rr invalid"
+       stop
+      endif
+      
+      return
+      end subroutine drop_analytical_solution
+
+
       subroutine ff(T_gamma_parm,f_out)
       IMPLICIT NONE
 
@@ -101,7 +174,6 @@
       program main
       use evap_check
       IMPLICIT NONE
-      real*8 :: T_gamma_target
       real*8 :: f_out
       real*8 :: aa,bb,cc,fa,fb,fc
       integer :: iter
@@ -112,10 +184,10 @@
 
       T_inf_global = 300.5d0
       Y_inf_global=7.1d-3
-      T_gamma_target=300.5
+      T_gamma=300.5
       cc=291.8d0
 
-      do while (cc.lt.T_gamma_target)
+      do while (cc.lt.T_gamma)
 
       aa=100.0d0
       bb=T_sat_global
@@ -156,6 +228,24 @@
       T_inf_global=T_inf_global+0.01d0
 
       enddo
+
+      T_gamma=cc
+
+      call X_from_Tgamma(X_gamma,T_gamma,T_sat_global,L_V, &
+        R_global,WV_global)
+      call massfrac_from_volfrac(X_gamma,Y_gamma,WA_global,WV_global)
+
+      B_M=(Y_gamma-Y_inf_global)/(1.0d0-Y_gamma)
+      D_not=2.0d0*radblob
+      if (B_M.gt.0.0d0) then
+       Sh=2.0d0*log(1.0d0+B_M)/B_M
+      else
+       print *,"B_M must be positive"
+       stop
+      endif
+      print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,Y_gamma ", &
+        T_gamma,Y_gamma
+
 
       return
       end
