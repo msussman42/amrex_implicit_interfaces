@@ -215,6 +215,7 @@ ns.override_density=0 0
 ns.molar_mass=18.02 28.9 # CODY  (liquid, ambient) 
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # CODY (vapor) (SIMPLE case W_V=W_A=0.018 kg/mol )
+ns.R_Palmore_Desjardins=8.31446261815324e+7 # ergs/(mol kelvin)
 ns.FSI_flag=0 0 
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
@@ -222,7 +223,9 @@ ns.solidheat_flag=0
 #ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
 #drop=98.6 degrees F   air=70 degrees F
 #drop=27.5 degrees C   air=27.5 degrees C
-ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
+# 50 percent too slow:
+#ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
+ns.tempconst=327.6 327.6 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 ns.xblob=0.0
