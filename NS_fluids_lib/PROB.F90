@@ -23938,7 +23938,6 @@ end subroutine RatePhaseChange
        local_freezing_model, &
          ! 1=Tanasawa  2=Schrage 3=Kassemi
        local_Tanasawa_or_Schrage_or_Kassemi, & 
-       species_evaporation_density, &
        distribute_from_target, &
        vel, &
        densrc_I,dendst_I, & ! replaced with vapor_den if freezing_model=5,6
@@ -23985,7 +23984,6 @@ end subroutine RatePhaseChange
        ! MEHDI EVAPORATION
       REAL_T, intent(in) :: molar_mass(num_materials)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
-      REAL_T, intent(in) :: species_evaporation_density
       INTEGER_T, intent(in) :: distribute_from_target
        ! MEHDI EVAPORATION  im_source,im_dest = 1..nmat
       INTEGER_T, intent(in) :: im_source,im_dest

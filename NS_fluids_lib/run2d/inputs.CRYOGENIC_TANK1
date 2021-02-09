@@ -135,7 +135,6 @@ ns.molar_mass = 2.015882E-03 2.015882E-03 0.0
 #    mass fraction, liquid density
 # 2. input to the expansion model: Delta F * (liquid density/vapor density)
 #    It is assume that Y_{Interface}=1.
-ns.species_evaporation_density=2.42454875632709
 ns.denconst= 71.409 2.42454875632709 2700 
 
 # Specific heat capacity [J/(kg.K)]

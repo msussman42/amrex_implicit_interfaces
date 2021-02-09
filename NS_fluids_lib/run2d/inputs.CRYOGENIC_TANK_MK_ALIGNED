@@ -163,7 +163,6 @@ ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 # 2. input to the expansion model: Delta F * (liquid density/vapor density)
 #    It is assume that Y_{Interface}=1.
 # Not used ???
-ns.species_evaporation_density=1.0
 
 # Specific heat capacity [J/(kg.K)]
 ns.stiffCP=1300 2400.0          1500

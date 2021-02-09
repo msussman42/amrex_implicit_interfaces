@@ -755,9 +755,6 @@ Vector<Real> NavierStokes::cavitation_pressure;
 Vector<Real> NavierStokes::cavitation_vapor_density;
 Vector<Real> NavierStokes::cavitation_tension;
 
-// 1.. num_species_var
-Vector<Real> NavierStokes::species_evaporation_density;
-
 Vector<Real> NavierStokes::nucleation_pressure;
 Vector<Real> NavierStokes::nucleation_pmg;
 Vector<Real> NavierStokes::nucleation_mach;
@@ -818,8 +815,6 @@ Vector<Real> NavierStokes::reaction_rate;
 //   ->  mL  m_ambient 0.0
 //   species_molar_mass
 //   ->  m_vapor
-//   species_evaporation_density
-//   ->  density_vapor
 //   solvability_projection=0
 //   material_type
 //   0 ?? 999
@@ -3027,14 +3022,6 @@ NavierStokes::read_params ()
     }
      // in: read_params
 
-    species_evaporation_density.resize(num_species_var+1);
-    for (int i=0;i<num_species_var+1;i++)
-     species_evaporation_density[i]=0.0;
-
-    if (num_species_var>0)
-     pp.queryarr("species_evaporation_density",species_evaporation_density,
-      0,num_species_var);
-
     spec_material_id_LIQUID.resize(num_species_var+1);
     spec_material_id_AMBIENT.resize(num_species_var+1);
     for (int i=0;i<num_species_var+1;i++) {
@@ -3180,19 +3167,29 @@ NavierStokes::read_params ()
      constant_volume_mdot[i+nten]=0;
     } // i=0..nten-1
 
+    for (int i=0;i<nmat;i++) {
+     constant_density_all_time[i]=1;
+    }
+    molar_mass.resize(nmat);
+
     density_floor.resize(nmat);
     density_floor_expansion.resize(nmat);
     for (int i=0;i<nmat;i++) {
      density_floor[i]=0.0;
-     constant_density_all_time[i]=1;
+     density_floor_expansion[i]=0.0;
     }
     pp.queryarr("density_floor",density_floor,0,nmat);
+    pp.queryarr("density_floor_expansion",density_floor_expansion,0,nmat);
+
     density_ceiling.resize(nmat);
     density_ceiling_expansion.resize(nmat);
-    molar_mass.resize(nmat);
-    for (int i=0;i<nmat;i++)
+    for (int i=0;i<nmat;i++) {
      density_ceiling[i]=1.0e+20;
+     density_ceiling_expansion[i]=1.0e+20;
+    }
+
     pp.queryarr("density_ceiling",density_ceiling,0,nmat);
+    pp.queryarr("density_ceiling_expansion",density_ceiling_expansion,0,nmat);
 
     denconst.resize(nmat);
     pp.getarr("denconst",denconst,0,nmat);
@@ -3205,11 +3202,19 @@ NavierStokes::read_params ()
       denconst_min=denconst[i];
      if (denconst[i]>denconst_max)
       denconst_max=denconst[i];
+
      if (density_ceiling[i]<=0.0) {
       amrex::Error("density_ceiling[i]<=0.0");
      } else if (density_ceiling[i]<=denconst[i]) {
       amrex::Error("density_ceiling[i]<=denconst[i]");
      }
+
+     if (density_ceiling_expansion[i]<=0.0) {
+      amrex::Error("density_ceiling_expansion[i]<=0.0");
+     } else if (density_ceiling_expansion[i]<=denconst[i]) {
+      amrex::Error("density_ceiling_expansion[i]<=denconst[i]");
+     }
+
      if (density_floor[i]<0.0) {
       amrex::Error("density_floor[i]<0.0");
      } else if (density_floor[i]==0.0) {
@@ -3217,28 +3222,22 @@ NavierStokes::read_params ()
      } else if (density_floor[i]>=denconst[i]) {
       amrex::Error("density_floor[i]>=denconst[i]");
      }
-     density_ceiling_expansion[i]=denconst[i];
-     density_floor_expansion[i]=denconst[i];
-     molar_mass[i]=1.0;
-    } // i=0..nmat-1
 
-    pp.queryarr("density_floor_expansion",density_floor_expansion,0,nmat);
-    pp.queryarr("density_ceiling_expansion",density_ceiling_expansion,0,nmat);
-    pp.queryarr("molar_mass",molar_mass,0,nmat);
+     if (density_floor_expansion[i]<0.0) {
+      amrex::Error("density_floor_expansion[i]<0.0");
+     } else if (density_floor_expansion[i]==0.0) {
+      // do nothing
+     } else if (density_floor_expansion[i]>=denconst[i]) {
+      amrex::Error("density_floor_expansion[i]>=denconst[i]");
+     }
+
+    } // i=0..nmat-1
 
     for (int i=0;i<nmat;i++) {
-     if (density_ceiling_expansion[i]<=0.0) {
-      amrex::Error("density_ceiling_expansion[i]<=0.0");
-     } else if (density_ceiling_expansion[i]<denconst[i]) {
-      amrex::Error("density_ceiling_expansion[i]<denconst[i]");
-     }
-     if (density_floor_expansion[i]<=0.0) {
-      amrex::Error("density_floor_expansion[i]<=0.0");
-     } else if (density_floor_expansion[i]>denconst[i]) {
-      amrex::Error("density_floor_expansion[i]>denconst[i]");
-     }
-    } // i=0..nmat-1
+     molar_mass[i]=1.0;
+    }
 
+    pp.queryarr("molar_mass",molar_mass,0,nmat);
 
     denconst_interface.resize(nten);
     for (int i=0;i<nten;i++) 
@@ -4603,9 +4602,6 @@ NavierStokes::read_params ()
      } // i=0 ... nten-1
 
      for (int j=0;j<num_species_var;j++) {
-      std::cout << " j= " << j << 
-         " species_evaporation_density "  <<
-         species_evaporation_density[j] << '\n';
       std::cout << " j= " << j << 
          " species_molar_mass "  <<
          species_molar_mass[j] << '\n';
@@ -10975,7 +10971,6 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
      &ngrow,
      constant_density_all_time.dataPtr(),
      spec_material_id_AMBIENT.dataPtr(),
-     species_evaporation_density.dataPtr(),
      presbc.dataPtr(),
      tilelo,tilehi,
      fablo,fabhi,
@@ -11806,7 +11801,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
-     species_evaporation_density.dataPtr(),
+     constant_density_all_time.dataPtr(),
      material_type_evap.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
@@ -11894,7 +11889,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
-     species_evaporation_density.dataPtr(),
+     constant_density_all_time.dataPtr(),
      material_type_evap.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
@@ -12578,7 +12573,6 @@ NavierStokes::level_phase_change_convert(
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
     mass_fraction_id.dataPtr(),
-    species_evaporation_density.dataPtr(),
     distribute_from_target.dataPtr(),
     constant_density_all_time.dataPtr(),
     tilelo,tilehi,
@@ -15408,7 +15402,6 @@ NavierStokes::split_scalar_advection() {
     &nten,
     spec_material_id_AMBIENT.dataPtr(),
     mass_fraction_id.dataPtr(),
-    species_evaporation_density.dataPtr(),
     cavitation_vapor_density.dataPtr(),
     override_density.dataPtr(),
     constant_density_all_time.dataPtr(),
@@ -18906,7 +18899,6 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     mass_fraction_id.dataPtr(),
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
-    species_evaporation_density.dataPtr(),
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),

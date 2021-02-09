@@ -120,7 +120,6 @@ ns.molar_mass = 0.018 0.018
 ns.species_molar_mass = 0.018
 
 # Density [kg/m^3]
-ns.species_evaporation_density=1.0
 ns.denconst= 1000.0 1.0
 
 # Specific heat capacity [J/(kg.K)]

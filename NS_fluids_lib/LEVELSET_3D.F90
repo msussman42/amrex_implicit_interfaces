@@ -6864,7 +6864,6 @@ stop
        microlayer_temperature_substrate, & ! 1..nmat
        spec_material_id_AMBIENT, & ! 1..num_species_var+1
        mass_fraction_id, &
-       species_evaporation_density, &
        cavitation_vapor_density, &
        override_density, &
        constant_density_all_time, &
@@ -6969,7 +6968,6 @@ stop
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: cavitation_vapor_density(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -9439,7 +9437,6 @@ stop
        nten, &
        spec_material_id_AMBIENT, &
        mass_fraction_id, &
-       species_evaporation_density, &
        cavitation_vapor_density, &
        override_density, &
        constant_density_all_time, &
@@ -9475,7 +9472,6 @@ stop
       INTEGER_T :: nten_test
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: cavitation_vapor_density(nmat)
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat

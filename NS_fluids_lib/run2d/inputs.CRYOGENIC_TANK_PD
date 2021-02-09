@@ -196,7 +196,6 @@ ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 #    It is assume that Y_{Interface}=1.
 # It is picked as the density of the saturated vapor
 # @ (20 K, 0.2 MPa) => 1.2059 [1] p. 61)
-ns.species_evaporation_density=1.2059
 
 # Specific heat capacity [J/(kg.K)]
 # Are these c_p values used for compressible material calculations?

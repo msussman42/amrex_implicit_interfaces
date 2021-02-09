@@ -12123,7 +12123,6 @@ stop
         mass_fraction_id, &
         molar_mass, &
         species_molar_mass, &
-        species_evaporation_density, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
@@ -12196,7 +12195,6 @@ stop
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: molar_mass(nmat)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
-      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, intent(in) :: time
       REAL_T u_core,u_core_estdt,uu,uu_estdt,c_core
@@ -12873,9 +12871,26 @@ stop
           stop
          endif
 
+         if (ireverse.eq.0) then
+          im_source=im
+          im_dest=im_opp
+         else if (ireverse.eq.1) then
+          im_source=im_opp
+          im_dest=im
+         else
+          print *,"ireverse invalid"
+          stop
+         endif
+         dcompsrc=(im_source-1)*num_state_material+1
+         tcompsrc=(im_source-1)*num_state_material+2
+         vofcompsrc=(im_source-1)*ngeom_raw+1 
+         dcompdst=(im_dest-1)*num_state_material+1
+         tcompdst=(im_dest-1)*num_state_material+2
+         vofcompdst=(im_dest-1)*ngeom_raw+1 
+
          ispec=mass_fraction_id(iten+ireverse*nten)
          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-          vapor_den=species_evaporation_density(ispec)
+          ! do nothing
          else if (ispec.eq.0) then
           if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
               (local_freezing_model.eq.5).or. & ! Stefan evap model
@@ -12892,24 +12907,6 @@ stop
              (is_rigid(nmat,im_opp).eq.1)) then
           ! do nothing
          else if (LL.ne.zero) then
-
-          if (ireverse.eq.0) then
-           im_source=im
-           im_dest=im_opp
-          else if (ireverse.eq.1) then
-           im_source=im_opp
-           im_dest=im
-          else
-           print *,"ireverse invalid"
-           stop
-          endif
-
-          dcompsrc=(im_source-1)*num_state_material+1
-          tcompsrc=(im_source-1)*num_state_material+2
-          vofcompsrc=(im_source-1)*ngeom_raw+1 
-          dcompdst=(im_dest-1)*num_state_material+1
-          tcompdst=(im_dest-1)*num_state_material+2
-          vofcompdst=(im_dest-1)*ngeom_raw+1 
 
           do side=1,2
            if (side.eq.1) then
@@ -12950,17 +12947,19 @@ stop
            Dsrc=den(D_DECL(icell,jcell,kcell),dcompsrc)
            Ddst=den(D_DECL(icell,jcell,kcell),dcompdst)
 
+           if (LL.gt.zero) then ! evaporation
+            vapor_den=Ddst
+           else if (LL.lt.zero) then ! condensation
+            vapor_den=Dsrc
+           else
+            print *,"LL invalid"
+            stop
+           endif
+
            if (local_freezing_model.eq.5) then ! stefan evap model
             if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
              if (vapor_den.gt.zero) then
-              if (LL.gt.zero) then ! evaporation
-               Ddst=vapor_den
-              else if (LL.lt.zero) then ! condensation
-               Dsrc=vapor_den
-              else
-               print *,"LL invalid"
-               stop
-              endif
+              ! do nothing
              else
               print *,"vapor_den invalid"
               stop
@@ -13038,7 +13037,6 @@ stop
               species_molar_mass, &
               local_freezing_model, &
               local_Tanasawa_or_Schrage_or_Kassemi, &
-              vapor_den, &
               distribute_from_targ, &
               USTEFAN_hold, &
               Dsrc,Ddst, &
@@ -13988,7 +13986,6 @@ stop
        ngrow, &
        constant_density_all_time, & ! 1..nmat
        spec_material_id_AMBIENT, &  ! 1..num_species_var
-       species_evaporation_density, &
        presbc_arr, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -14015,7 +14012,6 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
-      REAL_T, intent(in) :: species_evaporation_density(num_species_var+1)
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
