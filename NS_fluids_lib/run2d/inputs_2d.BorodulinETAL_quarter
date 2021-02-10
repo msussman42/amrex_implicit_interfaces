@@ -138,7 +138,8 @@ ns.tension=1.0e-4  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
-ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
+#ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
+ns.latent_heat = 1.65e+10 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
@@ -224,8 +225,8 @@ ns.solidheat_flag=0
 #drop=98.6 degrees F   air=70 degrees F
 #drop=27.5 degrees C   air=27.5 degrees C
 # 50 percent too slow:
-#ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
-ns.tempconst=327.6 327.6 #CODY: case 2, T_inf for gas, T_gamma for liq.
+ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
+#ns.tempconst=327.6 327.6 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 ns.xblob=0.0

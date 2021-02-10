@@ -189,14 +189,16 @@
 
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
-       find_TINF_from_TGAMMA=1
+!      find_TINF_from_TGAMMA=1
+       find_TINF_from_TGAMMA=0
        radblob = 0.05d0
        cur_x=4.0d0*radblob
        den_L = 1.0d0
        den_G = 0.001d0
        C_pG = 1.0d+7
        k_G = 0.024d+5
-       L_V = 2.26d+10
+!      L_V = 2.26d+10  ! gives A/A0=0.63 at t=1000
+       L_V = 1.65d+10  ! gives A/A0=0.63 at t=1000
        D_G = 0.1d0
        WV_global = 18.02d0
        WA_global = 28.9d0
@@ -311,7 +313,7 @@
       dt=(TSTOP-TSTART)/nsteps
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y,VEL,LS)
-       print *,cur_time," ",D_gamma/(2.0d0*radblob)," ",T," ",Y
+       print *,cur_time," ",(D_gamma/(2.0d0*radblob))**2," ",T," ",Y
        cur_time=cur_time+dt
       enddo
 
