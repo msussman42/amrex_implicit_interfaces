@@ -14,8 +14,7 @@
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
-stop_time = 4.0  # case 1
-stop_time = 750.0  # 750 seconds Borodulin et al Figure 8 row 3
+stop_time = 1.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -249,12 +248,16 @@ ns.output_drop_distribution=1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
+# prescribe_temperature_outflow:
 # boundary conditions 
 # 0=dirichlet at inflow
 # 1=dirichlet at inflow and outflow
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=1
+
+# we prescribe exact solution in buffer zone near boundary, so
+# not necessary to have Dirichlet in the far field.
+ns.prescribe_temperature_outflow=0  
 #ns.lo_bc          = 3 3 5  # XYZ
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
@@ -263,9 +266,9 @@ ns.lo_bc          = 3 3
 ns.hi_bc          = 2 2  # expansion
 #ns.hi_bc          = 3 3  # sealed
 ns.temperature_lo_bc  = 3 3
-ns.temperature_hi_bc  = 1 1  
+ns.temperature_hi_bc  = 2 2  
 ns.species_lo_bc  = 3 3
-ns.species_hi_bc  = 1 1
+ns.species_hi_bc  = 2 2
 ns.num_divu_outer_sweeps=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
