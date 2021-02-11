@@ -246,12 +246,16 @@ ns.output_drop_distribution=1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
+# prescribe_temperature_outflow:
 # boundary conditions 
 # 0=dirichlet at inflow
 # 1=dirichlet at inflow and outflow
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=1
+#
+# we prescribe exact solution in buffer zone near boundary, so
+# not necessary to have Dirichlet in the far field.
+ns.prescribe_temperature_outflow=0  
 #ns.lo_bc          = 3 3 5  # XYZ
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
@@ -261,9 +265,9 @@ ns.lo_bc          = 3 2 # expansion
 ns.hi_bc          = 2 2  # expansion
 #ns.hi_bc          = 3 3  # sealed
 ns.temperature_lo_bc  = 3 1
-ns.temperature_hi_bc  = 1 1
+ns.temperature_hi_bc  = 2 2
 ns.species_lo_bc  = 3 1
-ns.species_hi_bc  = 1 1
+ns.species_hi_bc  = 2 2
 ns.num_divu_outer_sweeps=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
