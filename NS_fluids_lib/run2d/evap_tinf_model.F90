@@ -197,14 +197,16 @@
        den_G = 0.001d0
        C_pG = 1.0d+7
        k_G = 0.024d+5
-!      L_V = 2.26d+10  ! gives A/A0=0.63 at t=1000
-       L_V = 1.65d+10  ! gives A/A0=0.63 at t=1000
+!      L_V = 2.26d+10  ! gives A/A0=0.63 at t=1000 T_inf=300.5
+       L_V = 1.65d+10  ! gives A/A0 ~ 0 at t=1000 T_inf=300.5
+       L_V = 2.26d+10  ! gives A/A0 ~ 0 at t=1000 T_inf=327.6
        D_G = 0.1d0
        WV_global = 18.02d0
        WA_global = 28.9d0
        R_global = 8.31446261815324d+7
        T_sat_global=373.15d0
-       T_inf_global = 300.5d0
+!      T_inf_global = 300.5d0
+       T_inf_global = 327.6
        Y_inf_global=7.1d-3
        T_gamma=300.5  ! halfway done by cur_time=TSTOP
        T_gamma=303.8  ! drop just disappears at cur_time=TSTOP
