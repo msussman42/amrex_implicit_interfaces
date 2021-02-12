@@ -4737,6 +4737,7 @@ stop
       REAL_T DXMAXLS,cutoff
       INTEGER_T i_mdot
       REAL_T im_interior_wt(3)
+      REAL_T blob_cell_count
       REAL_T blob_cellvol_count
       REAL_T blob_mass
       REAL_T blob_volume
@@ -4872,6 +4873,7 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       !blob_cellvol_count
       !blob_mass
       if (num_elements_blobclass.ne. &
@@ -4883,8 +4885,11 @@ stop
           1+ & ! blob_perim
           nmat+ & ! blob_perim_mat 
           nmat*nmat+ & ! blob_triple_perim
-          1+1) then ! blob_cellvol_count,blob_mass
+          1+ &    ! blob_cell_count
+          1+ &    ! blob_cellvol_count
+          1) then ! blob_mass
        print *,"num_elements_blobclass invalid"
+       print *,"blob_cell_count readded February, 2021"
        print *,"blob_cellvol_count added December 6, 2020"
        print *,"blob_mass added January 23, 2021"
        stop
@@ -5538,16 +5543,18 @@ stop
             enddo ! im2=1..nmat
             enddo ! im1=1..nmat
 
-            if (ic.eq.opposite_color(im)*num_elements_blobclass-1) then
+            if (ic.eq.opposite_color(im)*num_elements_blobclass-2) then
              ! do nothing
             else
-             print *,"ic invalid, blob_cellvol_count 2nd to last?"
+             print *,"ic invalid, blob_cell_count 3rd to last?"
              stop
             endif
 
+             ! blob_cell_count
              ! blob_cellvol_count
             if (vfrac.ge.half) then
-             level_blobdata(ic)=level_blobdata(ic)+vol ! blob_cellvol_count
+             level_blobdata(ic)=level_blobdata(ic)+one !blob_cell_count
+             level_blobdata(ic+1)=level_blobdata(ic+1)+vol !blob_cellvol_count
              if (ncomp_mdot.eq.2*nten) then
               ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
@@ -5571,7 +5578,7 @@ stop
              stop
             endif
 
-            ic=ic+1
+            ic=ic+2
 
             if (ic.eq.opposite_color(im)*num_elements_blobclass) then
              ! do nothing
@@ -5614,6 +5621,7 @@ stop
              print *,"im=",im
              print *,"opposite_color(im)=",opposite_color(im)
              print *,"num_elements_blobclass=",num_elements_blobclass
+             print *,"blob_cell_count readded Feb 8, 2021"
              print *,"blob_cellvol_count added December 6, 2020"
              print *,"blob_mass added January 23, 2021"
              stop
@@ -5750,6 +5758,7 @@ stop
                ic=ic+1
               enddo ! im_opp=1..nmat
               ic=ic+nmat*nmat
+              ic=ic+1  ! blob_cell_count readded Feb 11, 2020
               ic=ic+1  ! blob_cellvol_count added December 6, 2020
               ic=ic+1  ! blob_mass added January 23, 2021
   
@@ -5759,6 +5768,7 @@ stop
                print *,"im=",im
                print *,"opposite_color(im)=",opposite_color(im)
                print *,"num_elements_blobclass=",num_elements_blobclass
+               print *,"blob_cell_count readded Feb 11, 2020"
                print *,"blob_cellvol_count added December 6, 2020"
                print *,"blob_mass added January 23, 2021"
                stop
@@ -5826,8 +5836,9 @@ stop
                     ! sum alpha V_i = mdot_total
                     ! alpha=mdot_total/(sum V_i) 
                    if (im.eq.im_evenly) then 
-                    ic=opposite_color(im)*num_elements_blobclass-1
-                    blob_cellvol_count=cum_blobdata(ic)
+                    ic=opposite_color(im)*num_elements_blobclass-2
+                    blob_cell_count=cum_blobdata(ic)
+                    blob_cellvol_count=cum_blobdata(ic+1)
                     if (blob_cellvol_count.gt.zero) then
 
                      if (ncomp_mdot.eq.2*nten) then
@@ -5927,10 +5938,12 @@ stop
                    print *,"complement_flag ",complement_flag
                   endif
  
-                  ic=opposite_color(im)*num_elements_blobclass-1
-                  blob_cellvol_count=cum_blobdata(ic)
-                  ic=ic+1
+                  ic=opposite_color(im)*num_elements_blobclass-2
+                  blob_cell_count=cum_blobdata(ic)
+                  blob_cellvol_count=cum_blobdata(ic+1)
+                  ic=ic+2
                   blob_mass=cum_blobdata(ic)
+
                   ic= &
                    ic_base+ &
                    3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
@@ -5940,7 +5953,8 @@ stop
 
                   blob_volume=cum_blobdata(ic)
 
-                  if ((blob_cellvol_count.gt.zero).and. &
+                  if ((blob_cell_count.gt.zero).and. &
+                      (blob_cellvol_count.gt.zero).and. &
                       (blob_mass.gt.zero).and. &
                       (blob_volume.gt.zero)) then
 
@@ -5970,6 +5984,8 @@ stop
                      mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
                      if (1.eq.0) then
                       print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
+                       i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
+                      print *,"i,j,k,cellvol_count,mass,volume,mdot_tot ", &
                        i,j,k,blob_cellvol_count,blob_mass,blob_volume,mdot_total
                      endif
                     else
@@ -6030,6 +6046,7 @@ stop
                    endif
 
                   else
+                   print *,"blob_cell_count,or ..."
                    print *,"blob_cellvol_count,blob_mass,or blob_volume bad"
                    stop
                   endif
@@ -13578,6 +13595,7 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       !blob_cellvol_count
       !blob_mass
       if (num_elements_blobclass.ne. &
@@ -13586,7 +13604,7 @@ stop
           3+1+ & ! blob_mass_for_velocity, blob_volume
           2*SDIM+ & ! blob_center_integral,blob_center_actual
           1+nmat+nmat*nmat+ & ! blob_perim, blob_perim_mat, blob_triple_perim
-          1+1) then
+          1+1+1) then
        print *,"num_elements_blobclass invalid"
        stop
       endif

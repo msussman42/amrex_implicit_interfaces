@@ -7223,6 +7223,7 @@ stop
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       !blob_cellvol_count
       !blob_mass
       if (num_elements_blobclass.ne. &
@@ -7234,9 +7235,10 @@ stop
           1+ & ! perim 
           nmat+ & ! perim_mat
           nmat*nmat+ & ! blob_triple_perim 
-          1+1) then
+          1+1+1) then
        print *,"num_elements_blobclass invalid rate mass change:", &
          num_elements_blobclass
+       print *,"blob_cell_count readded Febrary 11, 2020"
        print *,"blob_cellvol_count added December 6, 2020"
        print *,"blob_mass added January 23, 2021"
        stop
@@ -8260,6 +8262,7 @@ stop
                      ! centroid_integral, centroid_actual, 
                      ! perim, perim_mat, 
                      ! blob_triple_perim,
+                     ! blob_cell_count
                      ! blob_cellvol_count
                      ! blob_mass
 
