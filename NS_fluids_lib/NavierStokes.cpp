@@ -862,7 +862,8 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 Vector<int> NavierStokes::distribute_from_target; // 1..2*nten
 
 // 0 - mdot concentrated at full cells near interface on 1-side
-// 1 - mdot distributed evenly to all full cells on the appropriate side
+// 1 - mdot distributed evenly to all full cells; cellvol weight
+// 2 - mdot distributed evenly to all full cells; constant weight
 Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*nten
 
 //  For freezing in which liquid volume is fixed, the liquid density
@@ -3635,7 +3636,8 @@ NavierStokes::read_params ()
         if (fixed_parm[iten_local]==-1) {
 
          if ((distribute_mdot_evenly[iten_local]==0)||
-             (distribute_mdot_evenly[iten_local]==1)) {
+             (distribute_mdot_evenly[iten_local]==1)||
+             (distribute_mdot_evenly[iten_local]==2)) {
           // do nothing
          } else
           amrex::Error("distribute_mdot_evenly invalid");
@@ -3644,7 +3646,8 @@ NavierStokes::read_params ()
                    distribute_from_target[iten_local]) {
 
          if ((distribute_mdot_evenly[iten_local]==0)||
-             (distribute_mdot_evenly[iten_local]==1)) {
+             (distribute_mdot_evenly[iten_local]==1)||
+             (distribute_mdot_evenly[iten_local]==2)) {
           // do nothing
          } else
           amrex::Error("distribute_mdot_evenly invalid");
@@ -3652,7 +3655,8 @@ NavierStokes::read_params ()
 	} else if (fixed_parm[iten_local]!=
                    distribute_from_target[iten_local]) {
 
-         if (distribute_mdot_evenly[iten_local]==1) {
+         if ((distribute_mdot_evenly[iten_local]==1)||
+             (distribute_mdot_evenly[iten_local]==2)) {
           if (freezing_model[iten_local]==0) { //energy jump model
            // do nothing
           } else if ((freezing_model[iten_local]==1)|| //source term model
@@ -3740,10 +3744,10 @@ NavierStokes::read_params ()
      if (mass_fraction_id[i+nten]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i+nten)");
      if ((distribute_mdot_evenly[i]<0)||
-         (distribute_mdot_evenly[i]>1))
+         (distribute_mdot_evenly[i]>2))
       amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
      if ((distribute_mdot_evenly[i+nten]<0)||
-         (distribute_mdot_evenly[i+nten]>1))
+         (distribute_mdot_evenly[i+nten]>2))
       amrex::Error("distribute_mdot_evenly invalid in read_params (i+nten)");
      if ((constant_volume_mdot[i]<-1)||
          (constant_volume_mdot[i]>1))
