@@ -673,6 +673,7 @@ int NavierStokes::ngrow_make_distance=3;
 // blob_volume, 
 // blob_center_integral,blob_center_actual
 // blob_perim, blob_perim_mat, blob_triple_perim, 
+// blob_cell_count
 // blob_cellvol_count
 // blob_mass
 int NavierStokes::num_elements_blobclass=0;
@@ -2157,6 +2158,7 @@ NavierStokes::read_params ()
     // blob_volume, 
     // blob_center_integral,blob_center_actual
     // blob_perim, blob_perim_mat, blob_triple_perim, 
+    // blob_cell_count
     // blob_cellvol_count
     // blob_mass
     num_elements_blobclass=
@@ -2171,6 +2173,7 @@ NavierStokes::read_params ()
      1+                                        // blob_perim
      nmat+                                     // blob_perim_mat
      nmat*nmat+                                // blob_triple_perim
+     1+                                        // blob_cell_count
      1+                                        // blob_cellvol_count
      1;                                        // blob_mass
 
@@ -12890,6 +12893,8 @@ NavierStokes::phase_change_redistributeALL() {
    for (j=0;j<mdot_data_redistribute[i].size();j++) {
     std::cout << "i=" << i << " j=" << j << " im=" <<
       blobdata[i].im << 
+      " blobdata[i].blob_cell_count=" <<
+      blobdata[i].blob_cell_count << 
       " blobdata[i].blob_cellvol_count=" <<
       blobdata[i].blob_cellvol_count << 
       " blobdata[i].blob_mass=" <<
@@ -12911,6 +12916,8 @@ NavierStokes::phase_change_redistributeALL() {
    for (j=0;j<mdot_comp_data_redistribute[i].size();j++) {
     std::cout << "i=" << i << " j=" << j << " im=" <<
       blobdata[i].im << 
+      " blobdata[i].blob_cell_count=" <<
+      blobdata[i].blob_cell_count << 
       " blobdata[i].blob_cellvol_count=" <<
       blobdata[i].blob_cellvol_count << 
       " blobdata[i].blob_mass=" <<

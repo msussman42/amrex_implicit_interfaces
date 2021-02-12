@@ -1864,6 +1864,7 @@ contains
       !blob_volume, 
       !blob_center_integral,blob_center_actual
       !blob_perim, blob_perim_mat, blob_triple_perim, 
+      !blob_cell_count
       !blob_cellvol_count
       !blob_mass
       if (num_elements_blobclass.ne. &
@@ -1875,9 +1876,11 @@ contains
           1+ & ! blob_perim
           nmat+ & ! blob_perim_mat 
           nmat*nmat+ & ! blob_triple_perim
+          1+ & ! blob_cell_count
           1+ & ! blob_cellvol_count
           1) then ! blob_mass
        print *,"num_elements_blobclass invalid"
+       print *,"blob_cell_count readded Feb 11, 2021"
        print *,"blob_cellvol_count added December 6, 2020"
        print *,"blob_mass added January 23, 2021"
        stop

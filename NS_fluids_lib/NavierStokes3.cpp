@@ -5388,6 +5388,8 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
   } // im2
  } // im1
 
+ blobdata[i].blob_cell_count=blob_array[counter];
+ counter++;
  blobdata[i].blob_cellvol_count=blob_array[counter];
  counter++;
  blobdata[i].blob_mass=blob_array[counter];
@@ -5453,6 +5455,9 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
     } // im2
    } // im1
 
+   dest_blobdata[i].blob_cell_count=
+     source_blobdata[i].blob_cell_count;
+
    dest_blobdata[i].blob_cellvol_count=
      source_blobdata[i].blob_cellvol_count;
 
@@ -5480,6 +5485,7 @@ void NavierStokes::sum_blobdata(int i,
  if (sweep_num==0) {
 
   blobdata[i].blob_volume+=level_blobdata[i].blob_volume;
+  blobdata[i].blob_cell_count+=level_blobdata[i].blob_cell_count;
   blobdata[i].blob_cellvol_count+=level_blobdata[i].blob_cellvol_count;
   blobdata[i].blob_mass+=level_blobdata[i].blob_mass;
 
@@ -5578,6 +5584,8 @@ void NavierStokes::copy_from_blobdata(int i,int& counter,
    counter++;
   } // im2
  } // im1
+ blob_array[counter]=blobdata[i].blob_cell_count;
+ counter++;
  blob_array[counter]=blobdata[i].blob_cellvol_count;
  counter++;
  blob_array[counter]=blobdata[i].blob_mass;
@@ -5606,6 +5614,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
   blobdata[i].blob_mass_for_velocity[dir]=0.0;
 
  blobdata[i].blob_volume=0.0;
+ blobdata[i].blob_cell_count=0.0;
  blobdata[i].blob_cellvol_count=0.0;
  blobdata[i].blob_mass=0.0;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -5873,7 +5882,8 @@ NavierStokes::ColorSumALL(
 
      for (int i=0;i<color_count;i++) {
       // blob_volume, blob_center_integral, blob_perim, blob_perim_mat,
-      // blob_triple_perim, blob_cellvol_count, blob_mass
+      // blob_triple_perim, 
+      // blob_cell_count,blob_cellvol_count, blob_mass
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
 
       int j=0;
