@@ -2250,6 +2250,14 @@ void NavierStokes::make_MAC_velocity_consistent() {
 
 }  // subroutine make_MAC_velocity_consistent()
 
+// ucell_new=ucell+old + force_cell
+//
+//   POTENTIALLY UNSTABLE:
+// if (filter_velocity[im]==0) and (interp_option==2) then
+//  umac_new=umac_old + INTERP_CELL_TO_MAC(Force_cell)
+//   VERY DISSIPATIVE:
+// if (filter_velocity[im]==1) and (interp_option==2) then
+//  umac_new=INTERP_CELL_TO_MAC(ucell_new)
 void NavierStokes::increment_face_velocityALL(
  int interp_option,
  int project_option,
@@ -2261,6 +2269,7 @@ void NavierStokes::increment_face_velocityALL(
 
  int alloc_cell_vel=1;
 
+   FIX ME
  int idx_velcell_temp=DELTA_CELL_VEL_MF;
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -2289,11 +2298,14 @@ void NavierStokes::increment_face_velocityALL(
 
    // umacnew=unew^{c->f}
  if (interp_option==0) {
+	 FIX ME (check ngrow and ncomp on this)
   if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
    delete_array(idx_velcell_temp);
   } else
    amrex::Error("delta_velcell_temp became corrupted");
  } else if (interp_option==1) {
+	 FIX ME
+	 FIX ME (check ngrow and ncomp on this)
   if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
    delete_array(idx_velcell_temp);
   } else
@@ -2301,11 +2313,15 @@ void NavierStokes::increment_face_velocityALL(
  } else if (interp_option==2) {
   // do nothing
  } else if (interp_option==3) {
+	 FIX ME
+	 FIX ME (check ngrow and ncomp on this)
   if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
    delete_array(idx_velcell_temp);
   } else
    amrex::Error("delta_velcell_temp became corrupted");
  } else if (interp_option==4) {
+	 FIX ME
+	 FIX ME (check ngrow and ncomp on this)
   if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
    delete_array(idx_velcell_temp);
   } else
@@ -2507,12 +2523,14 @@ void NavierStokes::increment_face_velocity(
 
   // unew^{f} = unew^{c->f}
   if (interp_option==0) {
+	  FIX ME (use idx_velcell)  double check all interp_option==0 callers
    getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
    if (beta!=0.0)
     amrex::Error("beta invalid");
 
    // unew^{f} = unew^{f} in fluid (=usolid in solid)
   } else if (interp_option==1) {
+FIX ME	  check ngrow,ncomp
    getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab); //unused
    make_MAC_velocity_consistent();
    if (beta!=0.0)
@@ -2520,7 +2538,15 @@ void NavierStokes::increment_face_velocity(
 
    // unew^{f}=unew^{f}+diffuse_register^{c->f}
   } else if (interp_option==2) { 
-   idx_velcell_temp=idx_velcell;
+
+    // "idx_velcell" holds the force
+    // "DELTA_CELL_VEL_MF" holds the cell velocity
+    // check for collision  check all callers
+    FIX ME
+   getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
+
+   if (localMF[idx_velcell]->nComp()!=nsolveMM)
+    amrex::Error("localMF[idx_velcell]->nComp invalid");
    if (localMF[idx_velcell_temp]->nComp()!=nsolveMM)
     amrex::Error("localMF[idx_velcell_temp]->nComp invalid");
 
@@ -2530,6 +2556,7 @@ void NavierStokes::increment_face_velocity(
 
    // unew^{f} = unew^{c,f -> f}
   } else if (interp_option==3) {
+	  FIX ME check ncomp,ngrow
    getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
    if (beta!=0.0)
     amrex::Error("beta invalid");
@@ -2541,12 +2568,11 @@ void NavierStokes::increment_face_velocity(
    //        compressible regions.
    //   (iii) usolid in solid regions
   } else if (interp_option==4) {
-    // idx_velcell_temp=DELTA_CELL_VEL_MF
-   getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
    debug_ngrow(ADVECT_REGISTER_MF,1,2000);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
     debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,111);
-   localMF[idx_velcell_temp]->
+   FIX ME idx_velcell=DELTA_CELL_VEL_MF
+   localMF[idx_velcell]->
 	minus(*localMF[ADVECT_REGISTER_MF],0,AMREX_SPACEDIM,1); 
    if (beta!=0.0)
     amrex::Error("beta invalid");
@@ -2563,6 +2589,7 @@ void NavierStokes::increment_face_velocity(
   if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
    amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid2");
 
+    FIX ME use idx_velcell
   if (num_colors==0) {
    levelcolor=localMF[idx_velcell_temp];
    leveltype=localMF[idx_velcell_temp];
@@ -2592,6 +2619,7 @@ void NavierStokes::increment_face_velocity(
 
    if (level<finest_level) {
     avgDown_and_Copy_localMF(
+		    FIX ME use idx_velcell
      idx_velcell_temp,
      idx_velcell_temp,
      AMRSYNC_VEL_MF,
@@ -2603,6 +2631,7 @@ void NavierStokes::increment_face_velocity(
 
    if ((level>=1)&&(level<=finest_level)) {
     interp_and_Copy_localMF(
+		    FIX ME use idx_velcell
      idx_velcell_temp,
      idx_velcell_temp,
      AMRSYNC_VEL_MF,
@@ -2695,6 +2724,10 @@ void NavierStokes::increment_face_velocity(
        // FSI_GHOST_MAC_MF is initialized in 
        //  init_FSI_GHOST_MAC_MF_ALL(caller_id)
       FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+
+        // unew_cell if interp_option==2
+	FIX ME use idx_velcell
+		pass DELTA_CELL_VEL_MF too and pass filter_velocity
       FArrayBox& cellvelfab=(*localMF[idx_velcell_temp])[mfi];
 
       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
@@ -8898,11 +8931,14 @@ void NavierStokes::getStateALL(int ngrow,Real time,int scomp,
  int finest_level=parent->finestLevel();
  if (level!=0)
   amrex::Error("level!=0 in getStateALL");
+ if (level<=finest_level) {
+  // do nothing
+ } else
+  amrex::Error("level or finest_level invalid");
 
  for (int i=finest_level;i>=level;i--) { 
   NavierStokes& ns_level=getLevel(i);
-  ns_level.localMF[idx_localMF]=ns_level.getState(ngrow,scomp,ncomp,time);
-  ns_level.localMF_grow[idx_localMF]=ngrow;
+  ns_level.getState_localMF(idx_localMF,ngrow,scomp,ncomp,time);
  }
 
 } // end subroutine getStateALL

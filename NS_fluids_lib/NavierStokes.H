@@ -1992,6 +1992,7 @@ protected:
      // 0=velocity stored at cells  
      // 1=velocity stored at faces
     static int face_flag;
+    static int Vector<int> filter_velocity;  //def=0
     static int ignore_div_up; // def=0
     static int interp_vel_increment_from_cell; //def=0
     static int interp_presgrad_increment_from_face; //def=1
