@@ -4743,6 +4743,7 @@ stop
       REAL_T blob_volume
       REAL_T mdot_total
       REAL_T mdot_avg
+      REAL_T mdot_part
       REAL_T updated_density
       REAL_T original_density
       REAL_T density_factor
@@ -5547,6 +5548,12 @@ stop
              ! do nothing
             else
              print *,"ic invalid, blob_cell_count 3rd to last?"
+             print *,"ic invalid, blob_cellvol_count 2nd to last?"
+             print *,"ic invalid, blob_mass is last?"
+             print *,"ic=",ic
+             print *,"im=",im
+             print *,"opposite_color(im)=",opposite_color(im)
+             print *,"num_elements_blobclass=",num_elements_blobclass
              stop
             endif
 
@@ -5584,6 +5591,10 @@ stop
              ! do nothing
             else
              print *,"ic invalid, blob_mass is last?"
+             print *,"ic=",ic
+             print *,"im=",im
+             print *,"opposite_color(im)=",opposite_color(im)
+             print *,"num_elements_blobclass=",num_elements_blobclass
              stop
             endif
 
@@ -5757,7 +5768,7 @@ stop
                endif
                ic=ic+1
               enddo ! im_opp=1..nmat
-              ic=ic+nmat*nmat
+              ic=ic+nmat*nmat ! blob_triple_perim
               ic=ic+1  ! blob_cell_count readded Feb 11, 2020
               ic=ic+1  ! blob_cellvol_count added December 6, 2020
               ic=ic+1  ! blob_mass added January 23, 2021
@@ -5820,7 +5831,8 @@ stop
 
                  if (distribute_mdot_evenly(iten_shift).eq.0) then
                   ! do nothing
-                 else if (distribute_mdot_evenly(iten_shift).eq.1) then
+                 else if ((distribute_mdot_evenly(iten_shift).eq.1).or. &
+                          (distribute_mdot_evenly(iten_shift).eq.2)) then
 
                   if (vfrac.ge.half) then
 
@@ -5839,19 +5851,30 @@ stop
                     ic=opposite_color(im)*num_elements_blobclass-2
                     blob_cell_count=cum_blobdata(ic)
                     blob_cellvol_count=cum_blobdata(ic+1)
-                    if (blob_cellvol_count.gt.zero) then
+                    if ((blob_cellvol_count.gt.zero).and. &
+                        (blob_cell_count.gt.zero)) then
 
                      if (ncomp_mdot.eq.2*nten) then
                       ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
                       mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
-                      mdot_avg=mdot_total/blob_cellvol_count
+
+                      if (distribute_mdot_evenly(iten_shift).eq.1) then
+                       mdot_avg=mdot_total/blob_cellvol_count
+                       mdot_part=mdot_avg*vol
+                      else if (distribute_mdot_evenly(iten_shift).eq.2) then
+                       mdot_avg=mdot_total/blob_cell_count
+                       mdot_part=mdot_avg
+                      else
+                       print *,"distribute_mdot_evenly(iten_shift) invalid"
+                       stop
+                      endif
 
                       level_mdot_data_redistribute(ic_base_mdot+iten_shift)= &
                        level_mdot_data_redistribute(ic_base_mdot+iten_shift)+ &
-                       mdot_avg*vol
+                       mdot_part
                  
                       if (fort_material_type(im).eq.0) then
-                       mdot(D_DECL(i,j,k),iten_shift)=mdot_avg*vol
+                       mdot(D_DECL(i,j,k),iten_shift)=mdot_part
                       else if ((fort_material_type(im).gt.0).and. &
                                (fort_material_type(im).le.MAX_NUM_EOS)) then
                        print *,"phase change only for incompressible materials"
@@ -5866,7 +5889,7 @@ stop
                      endif
 
                     else
-                     print *,"blob_cellvol_count invalid"
+                     print *,"blob_cell_count or blob_cellvol_count invalid"
                      stop
                     endif
                    else if (im.ne.im_evenly) then
@@ -5939,10 +5962,25 @@ stop
                   endif
  
                   ic=opposite_color(im)*num_elements_blobclass-2
+
                   blob_cell_count=cum_blobdata(ic)
                   blob_cellvol_count=cum_blobdata(ic+1)
+                  blob_mass=cum_blobdata(ic+2)
                   ic=ic+2
-                  blob_mass=cum_blobdata(ic)
+
+                  if (ic_base.eq. &
+                      (opposite_color(im)-1)*num_elements_blobclass) then
+                   ! do nothing
+                  else
+                   print *,"ic_base invalid"
+                   stop
+                  endif
+                  if (ic.eq.opposite_color(im)*num_elements_blobclass) then
+                   ! do nothing
+                  else
+                   print *,"ic invalid"
+                   stop
+                  endif
 
                   ic= &
                    ic_base+ &
@@ -5985,8 +6023,7 @@ stop
                      if (1.eq.0) then
                       print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
                        i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
-                      print *,"i,j,k,cellvol_count,mass,volume,mdot_tot ", &
-                       i,j,k,blob_cellvol_count,blob_mass,blob_volume,mdot_total
+                      print *,"i,j,k,cellvol_count ",i,j,k,blob_cellvol_count
                      endif
                     else
                      print *,"complement_flag invalid"
@@ -6047,7 +6084,9 @@ stop
 
                   else
                    print *,"blob_cell_count,or ..."
-                   print *,"blob_cellvol_count,blob_mass,or blob_volume bad"
+                   print *,"blob_cellvol_count,or ..."
+                   print *,"blob_mass,or ... "
+                   print *,"blob_volume bad"
                    stop
                   endif
                  else if (im.ne.im_negate) then
@@ -13604,7 +13643,7 @@ stop
           3+1+ & ! blob_mass_for_velocity, blob_volume
           2*SDIM+ & ! blob_center_integral,blob_center_actual
           1+nmat+nmat*nmat+ & ! blob_perim, blob_perim_mat, blob_triple_perim
-          1+1+1) then
+          1+1+1) then !blob_cell_count,blob_cellvol_count,blob_mass
        print *,"num_elements_blobclass invalid"
        stop
       endif
