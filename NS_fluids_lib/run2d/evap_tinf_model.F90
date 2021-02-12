@@ -311,7 +311,7 @@
 
       TSTART=0.0d0
       cur_time=TSTART
-      nsteps=2000
+      nsteps=8000
       dt=(TSTOP-TSTART)/nsteps
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y,VEL,LS)

@@ -134,7 +134,7 @@ ns.conservative_tension_force=0
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
-ns.tension=1.0  # 0.005 MKS in Villagas et al
+ns.tension=5.0  # 0.005 MKS in Villagas et al
 # 1E7 erg=1j  1 ERG/g = 1E-7 J/1E-3kg=1E-4 J/kg
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
