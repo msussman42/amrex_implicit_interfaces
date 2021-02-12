@@ -299,6 +299,8 @@ int  NavierStokes::SEM_advection_algorithm=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
+Vector<int> NavierStokes::filter_velocity; //def=0
+
 // default=1   nmat components.
 Vector<int> NavierStokes::particle_nsubdivide; 
 Vector<int> NavierStokes::particle_max_per_nsubdivide; 
@@ -4319,6 +4321,9 @@ NavierStokes::read_params ()
     } // i
 
     truncate_volume_fractions.resize(nmat);
+
+    filter_velocity.resize(nmat);
+
     particle_nsubdivide.resize(nmat);
     particle_max_per_nsubdivide.resize(nmat);
     particle_min_per_nsubdivide.resize(nmat);
@@ -4328,6 +4333,8 @@ NavierStokes::read_params ()
      particle_nsubdivide[i]=1;
      particle_max_per_nsubdivide[i]=3;
      particle_min_per_nsubdivide[i]=1;
+
+     filter_velocity[i]=0;
 
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
@@ -4357,6 +4364,8 @@ NavierStokes::read_params ()
      if (particleLS_flag[i]==1)
       NS_ncomp_particles++;  // levelset == 0.0 for interface particles
     } // i=0..nmat-1
+
+    pp.queryarr("filter_velocity",filter_velocity,0,nmat);
 
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
     for (int i=0;i<nmat;i++) {
@@ -4651,8 +4660,12 @@ NavierStokes::read_params ()
      for (int i=0;i<nmat;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
+
       std::cout << "truncate_volume_fractions i= " << i << ' ' <<
         truncate_volume_fractions[i] << '\n';
+
+      std::cout << "filter_velocity i= " << i << ' ' <<
+        filter_velocity[i] << '\n';
 
       std::cout << "particle_nsubdivide i= " << i << ' ' <<
         particle_nsubdivide[i] << '\n';
@@ -20980,12 +20993,20 @@ NavierStokes::post_init_state () {
   // if project_option==1, then the velocity in the ice
   // is overwritten with a projected rigid body velocity.
  int interp_option=0;
- int idx_velcell=-1;
+ int idx_velcell=DELTA_CELL_VEL_MF;
  Real beta=0.0;
+ if (num_materials_vel==1) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_vel invalid");
+
+ getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
 
  increment_face_velocityALL(
    interp_option,project_option,
    idx_velcell,beta,blobdata); 
+
+ delete_array(DELTA_CELL_VEL_MF);
 
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);

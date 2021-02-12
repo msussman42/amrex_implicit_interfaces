@@ -2214,8 +2214,14 @@ void NavierStokes::prelim_alloc() {
 void NavierStokes::advance_MAC_velocity(int project_option) {
 
  int interp_option=0;
- int idx_velcell=-1;
+ int idx_velcell=DELTA_CELL_VEL_MF;
  Real beta=0.0;
+ if (num_materials_vel==1) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_vel invalid");
+
+ getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
 
  if (face_flag==0) {
   beta=0.0;
@@ -2239,6 +2245,8 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  increment_face_velocityALL(
    interp_option,project_option,
    idx_velcell,beta,blobdata);
+
+ delete_array(DELTA_CELL_VEL_MF);
 
 } // subroutine advance_MAC_velocity()
 
@@ -3213,13 +3221,21 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         // unew^{f} = unew^{c->f}
        int interp_option=0;
-       int idx_velcell=-1;
+       int idx_velcell=DELTA_CELL_VEL_MF;
+       if (num_materials_vel==1) {
+        // do nothing
+       } else
+        amrex::Error("num_materials_vel invalid");
+
+       getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
+
        Real beta=0.0;
        Vector<blobclass> local_blobdata;
        increment_face_velocityALL(
          interp_option,project_option,
          idx_velcell,beta,local_blobdata);
 
+       delete_array(DELTA_CELL_VEL_MF);
       } else if (is_zalesak()==0) {
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -9696,7 +9712,12 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("alloc_blobdata invalid");
 
-  int idx_velcell=-1;
+  int idx_velcell=DELTA_CELL_VEL_MF;
+  if (num_materials_vel==1) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_vel invalid");
+
   int interp_option=0;
   Real beta=0.0;
 
@@ -9731,9 +9752,13 @@ void NavierStokes::multiphase_project(int project_option) {
    // and if "im_FSI_rigid==im_primary" for one of a faces'
    // adjoining cells for example, then, icefacecut_index=0.0
    //
+  getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
+
   increment_face_velocityALL(
     interp_option,project_option,
     idx_velcell,beta,blobdata); 
+
+  delete_array(DELTA_CELL_VEL_MF);
 
   if (project_option==11) {
    check_value_max(43,DIFFUSIONRHS_MF,0,1,0,0.0);
@@ -12019,6 +12044,8 @@ void NavierStokes::veldiffuseALL() {
 
   // diffuse_register+=(unew-register_mark)
   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  //    or
+  //         unew^f=INTERP_TO_MAC(unew) if filter_velocity[im]==1
  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
 
  show_norm2_id(DIFFUSE_REGISTER_MF,3);
@@ -12151,6 +12178,8 @@ void NavierStokes::veldiffuseALL() {
  int nsolve_vel=AMREX_SPACEDIM;
  // update: unew=uadvect+du  (cell)
  //         unew^f=ADVECT_REGISTER_FACE_MF+INTERP_TO_MAC(DIFFUSE_REGISTER_MF)
+ //   or 
+ //         unew^f=INTERP_TO_MAC(unew) if filter_velocity[im]==1
  APPLY_REGISTERSALL(DIFFUSE_REGISTER_MF,
   ADVECT_REGISTER_MF,ADVECT_REGISTER_FACE_MF,
   nsolve_vel);
@@ -12792,11 +12821,22 @@ void NavierStokes::APPLY_REGISTERSALL(
   Real beta=1.0;
   Vector<blobclass> blobdata;
 
+  if (source_mf==DELTA_CELL_VEL_MF)
+   amrex::Error("source_mf collision with DELTA_CELL_VEL_MF");
+
+  if (num_materials_vel==1) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_vel invalid");
+
+  getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
+
    // operation_flag==5
   increment_face_velocityALL(
     interp_option,project_option,
     source_mf,beta,blobdata);  
 
+  delete_array(DELTA_CELL_VEL_MF);
  } else if (nsolve==1) {
   // do nothing
  } else
@@ -12962,6 +13002,10 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.INCREMENT_REGISTERS(dest_mf,source_mf);
  }
+ if (num_materials_vel==1) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_vel invalid");
 
   // unew^f=unew^f+beta * diffuse_register^{c->f}
   // in: INCREMENT_REGISTERS_ALL
@@ -12970,10 +13014,16 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
  Real beta=1.0;
  Vector<blobclass> blobdata;
 
+ getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
+
   // operation_flag==5
+  // if filter_velocity[im]==1,
+  //  unew^f=INTERP_TO_MAC(unew)
  increment_face_velocityALL(
    interp_option,project_option,
    REGISTER_CURRENT_MF,beta,blobdata);
+
+ delete_array(DELTA_CELL_VEL_MF);
 
  delete_array(REGISTER_CURRENT_MF);
 
