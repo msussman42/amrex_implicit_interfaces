@@ -3073,7 +3073,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
        int simple_AMR_BC_flag=0;
        int ncomp_xp=1;
        int ncomp_xgp=1;
-       int ncomp_mgoni=cellvelfab.dataPtr();
+       int ncomp_mgoni=cellvelfab.nComp();
 
        int tid_current=ns_thread();
        if ((tid_current<0)||(tid_current>=thread_class::nthreads))
