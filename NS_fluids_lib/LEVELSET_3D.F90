@@ -13227,7 +13227,7 @@ stop
        xgp,DIMS(xgp), & ! holds Umac_old if operation_flag==5 or 11
        xp,DIMS(xp), & ! holds AMRSYNC_PRES if operation_flag==0
        xvel,DIMS(xvel), &
-       vel,DIMS(vel), &
+       vel,DIMS(vel), & !primary_velfab coming from increment_face_vel
        pres,DIMS(pres), & ! holds U_old(dir) if operation_flag==11
        den,DIMS(den), &
        mgoni,DIMS(mgoni), &!DIMS(dat)=datxlo,datxhi,datylo,datyhi,datzlo,datzhi

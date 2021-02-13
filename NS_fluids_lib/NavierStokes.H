@@ -686,6 +686,8 @@ protected:
      int scomp,int dcomp,int ncomp,int ngrow);
     void Copy_localMF(int idx_dest,int idx_source,
      int scomp,int dcomp,int ncomp,int ngrow);
+    void minus_localMF(int idx_dest,int idx_source,
+     int ncomp,int ngrow);
 
     void new_localMF(int idx_MF,int ncomp,int ngrow,int dir);
     void getStateMAC_localMF(int idx_MF,int ngrow,int dir,
@@ -1275,10 +1277,8 @@ void apply_pressure_grad(
       int interp_option,
       int project_option,
       int idx_velcell,
-      int& idx_velcell_temp,
       Real beta,
-      Vector<blobclass> blobdata,
-      int alloc_cell_vel);
+      Vector<blobclass> blobdata);
 
     void increment_face_velocityALL(
       int interp_option,
@@ -1383,6 +1383,7 @@ void apply_pressure_grad(
     void mult_array(int ngrow,int ncomp,Real dataval,
       int idx_localMF);
     void copyALL(int ngrow,int ncomp,int idx_dest,int idx_source);
+    void minusALL(int ngrow,int ncomp,int idx_dest,int idx_source);
 
     void negateALL(int idx_localMF);
     void zeroALL(int ngrow,int ncomp,int idx_localMF);
