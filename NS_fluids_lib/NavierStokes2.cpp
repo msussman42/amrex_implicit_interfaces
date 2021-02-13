@@ -2461,21 +2461,6 @@ void NavierStokes::increment_face_velocity(
 
   amrex::Error("interp_option==3 not used");
 
-  if (idx_velcell==-1) {
-   primary_vel_data=CURRENT_CELL_VEL_MF; 
-   secondary_vel_data=CURRENT_CELL_VEL_MF; 
-  } else
-   amrex::Error("idx_velcell invalid");
-
-  if ((project_option==0)||
-      (project_option==1)) {
-   operation_flag=10;
-  } else
-   amrex::Error("project_option invalid24");
-
-  if (beta!=0.0)
-   amrex::Error("beta invalid");
-
   // interp_option=4 unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
@@ -2647,13 +2632,13 @@ void NavierStokes::increment_face_velocity(
    MultiFab* Umac_old;
    MultiFab* U_old;
 
-   if (interp_option==4) {
+   if (interp_option==4) { // operation_flag==11
     Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
     U_old=localMF[ADVECT_REGISTER_MF];
-   } else if ((interp_option==0)|| 
-              (interp_option==1)||
-              (interp_option==2)||
-              (interp_option==3)) {
+   } else if ((interp_option==0)|| //operation_flag==4
+              (interp_option==1)|| //operation_flag==4
+              (interp_option==2)|| //operation_flag==5
+              (interp_option==3)) {//operation_flag==10
 
     int ncomp_MAC=Umac_new.nComp();
     Umac_old=getStateMAC(0,dir,0,ncomp_MAC,cur_time_slab); 
