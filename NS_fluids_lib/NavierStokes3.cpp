@@ -12172,8 +12172,10 @@ void NavierStokes::veldiffuseALL() {
  //         unew^f=ADVECT_REGISTER_FACE_MF+INTERP_TO_MAC(DIFFUSE_REGISTER_MF)
  //   or 
  //         unew^f=INTERP_TO_MAC(unew) if filter_velocity[im]==1
- APPLY_REGISTERSALL(DIFFUSE_REGISTER_MF,
-  ADVECT_REGISTER_MF,ADVECT_REGISTER_FACE_MF,
+ APPLY_REGISTERSALL(
+  DIFFUSE_REGISTER_MF,  //increment (du)
+  ADVECT_REGISTER_MF,
+  ADVECT_REGISTER_FACE_MF,
   nsolve_vel);
 
   // CONSERVATIVE SURFACE TENSION (Marangoni) FORCE
@@ -12532,8 +12534,10 @@ void NavierStokes::veldiffuseALL() {
 
    // add viscous heating term to T_m  m=1...M
    // ADVECT_REGISTER and ADVECT_REGISTER_FACE are ignored.
-  APPLY_REGISTERSALL(VISCHEAT_MF,
-    ADVECT_REGISTER_MF,ADVECT_REGISTER_FACE_MF,
+  APPLY_REGISTERSALL(
+    VISCHEAT_MF, // increment
+    ADVECT_REGISTER_MF,
+    ADVECT_REGISTER_FACE_MF,
     nsolve_thermal);
 
      // overwrite T_m if phi_solid>0   m=1...M
@@ -12793,7 +12797,7 @@ void NavierStokes::exit_viscous_solver() {
 // nsolve=1   : theta new_m = theta new_m + dtheta  m=1..nmat  
 //              dtheta=viscous heating term
 void NavierStokes::APPLY_REGISTERSALL(
-  int source_mf,
+  int source_mf,  // increment (du)
   int advect_mf,
   int advect_face_mf,
   int nsolve) {
@@ -12821,7 +12825,7 @@ void NavierStokes::APPLY_REGISTERSALL(
   } else
    amrex::Error("num_materials_vel invalid");
 
-   // operation_flag==5
+   // interp_option==2, operation_flag==5
   increment_face_velocityALL(
     interp_option,project_option,
     source_mf,beta,blobdata);  
@@ -12979,8 +12983,9 @@ void NavierStokes::APPLY_REGISTERS(
 
 } // subroutine APPLY_REGISTERS
 
-//dest_mf+=(unew-source_mf)
-//uface+=INTERP_TO_MAC(unew-source_mf)
+//REGISTER_CURRENT_MF=unew-source_mf
+//dest_mf+=(REGISTER_CURRENT_MF)
+//uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
 void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
 
  if (level!=0)
@@ -13015,7 +13020,8 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
 
 } // subroutine INCREMENT_REGISTERS_ALL
 
-// dest+=(unew-source)
+// REGISTER_CURRENT_MF=(unew-source)
+// dest+=(REGISTER_CURRENT_MF)
 void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf) {
 
  if (num_state_base!=2)

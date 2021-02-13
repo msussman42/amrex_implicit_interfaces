@@ -74,6 +74,22 @@ void NavierStokes::Copy_localMF(int idx_dest,int idx_source,
 
 }  // copy_LocalMF
 
+
+void NavierStokes::minus_localMF(int idx_dest,int idx_source,
+  int ncomp,int ngrow) {
+
+ debug_ngrow(idx_dest,ngrow,500); 
+ debug_ngrow(idx_source,ngrow,501); 
+ if (localMF[idx_dest]->boxArray()!=
+     localMF[idx_source]->boxArray())
+  amrex::Error("minus_localMF: boxarrays do not match");
+
+ localMF[idx_dest]->
+   minus(*localMF[idx_source],0,ncomp,ngrow);
+
+}  // minus_LocalMF
+
+
 void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
 
  if (1==0) {
@@ -2272,33 +2288,35 @@ void NavierStokes::increment_face_velocityALL(
 
  if (idx_velcell==DELTA_CELL_VEL_MF)
   amrex::Error("DELTA_CELL_VEL_MF reserved");
+ if (idx_velcell==CURRENT_CELL_VEL_MF)
+  amrex::Error("CURRENT_CELL_VEL_MF reserved");
 
  int finest_level=parent->finestLevel();
 
  getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
  getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,CURRENT_CELL_VEL_MF);
 
- int alloc_cell_vel=1;
-
-   FIX ME
- int idx_velcell_temp=DELTA_CELL_VEL_MF;
-
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.increment_face_velocity(
-    interp_option,project_option,
-    idx_velcell,idx_velcell_temp,
-    beta,blobdata,alloc_cell_vel); 
+  ns_level.make_MAC_velocity_consistent();
+ } // ilev=finest_level ... level
+
+  // interp_option=4 
+  //  unew^{f} = 
+  //   (i) unew^{f} in incompressible non-solid regions
+  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
+  //        compressible regions.
+  //   (iii) usolid in solid regions
+ if (interp_option==4) {
+  minusALL(1,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
  }
 
- alloc_cell_vel=0;
-
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.increment_face_velocity(
     interp_option,project_option,
-    idx_velcell,idx_velcell_temp,
-    beta,blobdata,alloc_cell_vel); 
+    idx_velcell,
+    beta,blobdata); 
    // avgDownMacState, getStateMAC to fill EXT_DIR BC.
   ns_level.make_MAC_velocity_consistent();
   ParallelDescriptor::Barrier();
@@ -2306,39 +2324,6 @@ void NavierStokes::increment_face_velocityALL(
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
-
-   // umacnew=unew^{c->f}
- if (interp_option==0) {
-	 FIX ME (check ngrow and ncomp on this)
-  if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
-   delete_array(idx_velcell_temp);
-  } else
-   amrex::Error("delta_velcell_temp became corrupted");
- } else if (interp_option==1) {
-	 FIX ME
-	 FIX ME (check ngrow and ncomp on this)
-  if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
-   delete_array(idx_velcell_temp);
-  } else
-   amrex::Error("delta_velcell_temp became corrupted");
- } else if (interp_option==2) {
-  // do nothing
- } else if (interp_option==3) {
-	 FIX ME
-	 FIX ME (check ngrow and ncomp on this)
-  if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
-   delete_array(idx_velcell_temp);
-  } else
-   amrex::Error("delta_velcell_temp became corrupted");
- } else if (interp_option==4) {
-	 FIX ME
-	 FIX ME (check ngrow and ncomp on this)
-  if (idx_velcell_temp==DELTA_CELL_VEL_MF) {
-   delete_array(idx_velcell_temp);
-  } else
-   amrex::Error("delta_velcell_temp became corrupted");
- } else
-  amrex::Error("interp_option invalid (2) "); 
 
  delete_array(DELTA_CELL_VEL_MF);
  delete_array(CURRENT_CELL_VEL_MF);
@@ -2363,10 +2348,8 @@ void NavierStokes::increment_face_velocity(
  int interp_option,
  int project_option,
  int idx_velcell,
- int& idx_velcell_temp,
  Real beta,
- Vector<blobclass> blobdata,
- int alloc_cell_vel) {
+ Vector<blobclass> blobdata) {
 
  int finest_level = parent->finestLevel();
  int nmat=num_materials;
@@ -2401,7 +2384,17 @@ void NavierStokes::increment_face_velocity(
   amrex::Error("num_colors invalid");
 
  int operation_flag=3;
+
+ int primary_vel_data=-1;
+ int secondary_vel_data=-1;
+
  if (interp_option==0) { // unew^{f} = unew^{c->f}
+
+  if (idx_velcell==-1) {
+   primary_vel_data=CURRENT_CELL_VEL_MF; 
+   secondary_vel_data=CURRENT_CELL_VEL_MF; 
+  } else
+   amrex::Error("idx_velcell invalid");
 
   if ((project_option==0)||
       (project_option==1)) {
@@ -2409,9 +2402,18 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("project_option invalid21");
 
+  if (beta!=0.0)
+   amrex::Error("beta invalid");
+
   operation_flag=3;
 
  } else if (interp_option==1) { // unew^{f}=unew^{f}
+
+  if (idx_velcell==-1) {
+   primary_vel_data=CURRENT_CELL_VEL_MF; 
+   secondary_vel_data=CURRENT_CELL_VEL_MF; 
+  } else
+   amrex::Error("idx_velcell invalid");
 
   if (project_option==11) {  //FSI_material_exists last project
 
@@ -2426,22 +2428,50 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("project_option invalid22");
   
+  if (beta!=0.0)
+   amrex::Error("beta invalid");
+
   operation_flag=4;
 
  } else if (interp_option==2) {//unew^{f}=unew^{f}+beta*diffuse_register^{c->f}
+
+  if (idx_velcell>=0) {
+
+   if ((idx_velcell==CURRENT_CELL_VEL_MF)||
+       (idx_velcell==DELTA_CELL_VEL_MF))
+    amrex::Error("idx_velcell collision");
+
+   primary_vel_data=idx_velcell;  // increment
+   secondary_vel_data=CURRENT_CELL_VEL_MF; 
+  } else
+   amrex::Error("idx_velcell invalid");
 
   if (project_option==3) {  // viscosity
    operation_flag=5;
   } else
    amrex::Error("project_option invalid23");
 
+  if ((beta!=1.0)&&(beta!=-1.0))
+   amrex::Error("beta invalid");
+
  } else if (interp_option==3) {//unew^{c,f -> f} in fluid  (=usolid in solid)
+
+  amrex::Error("interp_option==3 not used");
+
+  if (idx_velcell==-1) {
+   primary_vel_data=CURRENT_CELL_VEL_MF; 
+   secondary_vel_data=CURRENT_CELL_VEL_MF; 
+  } else
+   amrex::Error("idx_velcell invalid");
 
   if ((project_option==0)||
       (project_option==1)) {
    operation_flag=10;
   } else
    amrex::Error("project_option invalid24");
+
+  if (beta!=0.0)
+   amrex::Error("beta invalid");
 
   // interp_option=4 unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
@@ -2450,12 +2480,22 @@ void NavierStokes::increment_face_velocity(
   //   (iii) usolid in solid regions
  } else if (interp_option==4) {
 
+  debug_ngrow(ADVECT_REGISTER_MF,1,2000);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+   debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,111);
+
   if ((project_option==0)||
       (project_option==1)) {
    operation_flag=11;
   } else
    amrex::Error("project_option invalid25");
 
+  if (idx_velcell==-1) {
+   primary_vel_data=DELTA_CELL_VEL_MF; 
+   secondary_vel_data=CURRENT_CELL_VEL_MF; 
+  } else
+   amrex::Error("idx_velcell invalid");
+   
  } else
   amrex::Error("interp_option invalid");
 
@@ -2532,177 +2572,111 @@ void NavierStokes::increment_face_velocity(
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+  debug_ngrow(FACE_VAR_MF+dir,0,122);
 
- if (alloc_cell_vel==1) {
+ allocate_flux_register(operation_flag);
+ if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
+  amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid2");
 
-  // unew^{f} = unew^{c->f}
-  if (interp_option==0) {
-	  FIX ME (use idx_velcell)  double check all interp_option==0 callers
-   getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
-   if (beta!=0.0)
-    amrex::Error("beta invalid");
+ if (num_colors==0) {
+   // placeholders
+  levelcolor=localMF[CURRENT_CELL_VEL_MF];
+  leveltype=localMF[CURRENT_CELL_VEL_MF];
+ } else if (num_colors>0) {
+  levelcolor=localMF[COLOR_MF];
+  leveltype=localMF[TYPE_MF];
+ } else
+  amrex::Error("num_colors invalid");
 
-   // unew^{f} = unew^{f} in fluid (=usolid in solid)
-  } else if (interp_option==1) {
-FIX ME	  check ngrow,ncomp
-   getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab); //unused
-   make_MAC_velocity_consistent();
-   if (beta!=0.0)
-    amrex::Error("beta invalid");
+ if (levelcolor->nGrow()<1)
+  amrex::Error("levelcolor->nGrow()<1");
+ if (leveltype->nGrow()<1)
+  amrex::Error("leveltyoe->nGrow()<1");
 
-   // unew^{f}=unew^{f}+diffuse_register^{c->f}
-  } else if (interp_option==2) { 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  new_localMF(AMRSYNC_VEL_MF+dir,1,0,dir);
+  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+40,0,1,0);
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      localMF[AMRSYNC_VEL_MF+dir]->boxArray())
+   amrex::Error("AMRSYNC_VEL boxarray does not match");
+ }
 
-    // "idx_velcell" holds the force
-    // "DELTA_CELL_VEL_MF" holds the cell velocity
-    // check for collision  check all callers
-    FIX ME
-   getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
+ if ((interp_option==0)||
+     (interp_option==2)||
+     (interp_option==3)||
+     (interp_option==4)) {
 
-   if (localMF[idx_velcell]->nComp()!=nsolveMM)
-    amrex::Error("localMF[idx_velcell]->nComp invalid");
-   if (localMF[idx_velcell_temp]->nComp()!=nsolveMM)
-    amrex::Error("localMF[idx_velcell_temp]->nComp invalid");
-
-   make_MAC_velocity_consistent();
-   if ((beta!=1.0)&&(beta!=-1.0))
-    amrex::Error("beta invalid");
-
-   // unew^{f} = unew^{c,f -> f}
-  } else if (interp_option==3) {
-	  FIX ME check ncomp,ngrow
-   getState_localMF(idx_velcell_temp,1,0,nsolveMM,cur_time_slab);
-   if (beta!=0.0)
-    amrex::Error("beta invalid");
-   make_MAC_velocity_consistent();
-
-   // interp_option=4 unew^{f} = 
-   //   (i) unew^{f} in incompressible non-solid regions
-   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
-   //        compressible regions.
-   //   (iii) usolid in solid regions
-  } else if (interp_option==4) {
-   debug_ngrow(ADVECT_REGISTER_MF,1,2000);
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-    debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,111);
-   FIX ME idx_velcell=DELTA_CELL_VEL_MF
-   localMF[idx_velcell]->
-	minus(*localMF[ADVECT_REGISTER_MF],0,AMREX_SPACEDIM,1); 
-   if (beta!=0.0)
-    amrex::Error("beta invalid");
-   make_MAC_velocity_consistent();
-  } else
-   amrex::Error("interp_option invalid (1) ");
-
- } else if (alloc_cell_vel==0) {
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-   debug_ngrow(FACE_VAR_MF+dir,0,122);
-
-  allocate_flux_register(operation_flag);
-  if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
-   amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid2");
-
-    FIX ME use idx_velcell
-  if (num_colors==0) {
-   levelcolor=localMF[idx_velcell_temp];
-   leveltype=localMF[idx_velcell_temp];
-  } else if (num_colors>0) {
-   levelcolor=localMF[COLOR_MF];
-   leveltype=localMF[TYPE_MF];
-  } else
-   amrex::Error("num_colors invalid");
-
-  if (levelcolor->nGrow()<1)
-   amrex::Error("levelcolor->nGrow()<1");
-  if (leveltype->nGrow()<1)
-   amrex::Error("leveltyoe->nGrow()<1");
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   new_localMF(AMRSYNC_VEL_MF+dir,1,0,dir);
-   setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+40,0,1,0);
-   if (localMF[AREA_MF+dir]->boxArray()!=
-       localMF[AMRSYNC_VEL_MF+dir]->boxArray())
-    amrex::Error("AMRSYNC_VEL boxarray does not match");
-  }
-
-  if ((interp_option==0)||
-      (interp_option==2)||
-      (interp_option==3)||
-      (interp_option==4)) {
-
-   if (level<finest_level) {
-    avgDown_and_Copy_localMF(
-		    FIX ME use idx_velcell
-     idx_velcell_temp,
-     idx_velcell_temp,
+  if (level<finest_level) {
+   avgDown_and_Copy_localMF(
+     primary_vel_data,  // idx_den_MF
+     primary_vel_data,  // idx_vel_MF
      AMRSYNC_VEL_MF,
      operation_flag);
-   } else if (level==finest_level) {
-    // do nothing
-   } else
-    amrex::Error("level invalid14");
-
-   if ((level>=1)&&(level<=finest_level)) {
-    interp_and_Copy_localMF(
-		    FIX ME use idx_velcell
-     idx_velcell_temp,
-     idx_velcell_temp,
-     AMRSYNC_VEL_MF,
-     operation_flag);
-   } else if (level==0) {
-    // do nothing
-   } else
-    amrex::Error("level invalid15");
-
-   // unew^{f} = unew^{f} in fluid (=usolid in solid)
-  } else if (interp_option==1) {
+  } else if (level==finest_level) {
    // do nothing
   } else
-   amrex::Error("interp_option invalid");
+   amrex::Error("level invalid14");
 
-  for (int spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
+  if ((level>=1)&&(level<=finest_level)) {
+   interp_and_Copy_localMF(
+     primary_vel_data,  // idx_den_MF
+     primary_vel_data,  // idx_vel_MF
+     AMRSYNC_VEL_MF,
+     operation_flag);
+  } else if (level==0) {
+   // do nothing
+  } else
+   amrex::Error("level invalid15");
 
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  // unew^{f} = unew^{f} in fluid (=usolid in solid)
+ } else if (interp_option==1) {
+  // do nothing
+ } else
+  amrex::Error("interp_option invalid");
 
-    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+ for (int spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
 
-    MultiFab* Umac_old;
-    MultiFab* U_old;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    if (interp_option==4) {
-     Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
-     U_old=localMF[ADVECT_REGISTER_MF];
-    } else if ((interp_option==0)|| 
-               (interp_option==1)||
-               (interp_option==2)||
-               (interp_option==3)) {
+   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
 
-     int ncomp_MAC=Umac_new.nComp();
-     Umac_old=getStateMAC(0,dir,0,ncomp_MAC,cur_time_slab); 
-     if (Umac_old->boxArray()==Umac_new.boxArray()) {
-      // do nothing
-     } else
-      amrex::Error("Umac_old->boxArray() invalid");
+   MultiFab* Umac_old;
+   MultiFab* U_old;
 
-     U_old=localMF[idx_velcell_temp];
+   if (interp_option==4) {
+    Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
+    U_old=localMF[ADVECT_REGISTER_MF];
+   } else if ((interp_option==0)|| 
+              (interp_option==1)||
+              (interp_option==2)||
+              (interp_option==3)) {
+
+    int ncomp_MAC=Umac_new.nComp();
+    Umac_old=getStateMAC(0,dir,0,ncomp_MAC,cur_time_slab); 
+    if (Umac_old->boxArray()==Umac_new.boxArray()) {
+     // do nothing
     } else
-     amrex::Error("interp_option invalid");
+     amrex::Error("Umac_old->boxArray() invalid");
 
-     // if low order, then nothing done when tileloop==1
-    for (int tileloop=0;tileloop<=1;tileloop++) {
+    U_old=localMF[CURRENT_CELL_VEL_MF];
+   } else
+    amrex::Error("interp_option invalid");
 
-     if (thread_class::nthreads<1)
-      amrex::Error("thread_class::nthreads invalid");
-     thread_class::init_d_numPts(
-	localMF[idx_velcell_temp]->boxArray().d_numPts());
+    // if low order, then nothing done when tileloop==1
+   for (int tileloop=0;tileloop<=1;tileloop++) {
+
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(
+    localMF[CURRENT_CELL_VEL_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-     for (MFIter mfi(*localMF[idx_velcell_temp],use_tiling); 
-		     mfi.isValid(); ++mfi) {
+    for (MFIter mfi(*localMF[CURRENT_CELL_VEL_MF],use_tiling); 
+  	            mfi.isValid(); ++mfi) {
       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
       int gridno=mfi.index();
       const Box& tilegrid = mfi.tilebox();
@@ -2739,10 +2713,8 @@ FIX ME	  check ngrow,ncomp
        //  init_FSI_GHOST_MAC_MF_ALL(caller_id)
       FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
 
-        // unew_cell if interp_option==2
-	FIX ME use idx_velcell
-		pass DELTA_CELL_VEL_MF too and pass filter_velocity
-      FArrayBox& cellvelfab=(*localMF[idx_velcell_temp])[mfi];
+      FArrayBox& primary_velfab=(*localMF[primary_vel_data])[mfi];
+      FArrayBox& secondary_velfab=(*localMF[secondary_vel_data])[mfi];
 
       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
@@ -2849,14 +2821,14 @@ FIX ME	  check ngrow,ncomp
        xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //holds Umac_old
        xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xp(holds AMRSYNC)
        xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
-       cellvelfab.dataPtr(),
-       ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
+       primary_velfab.dataPtr(),
+       ARLIM(primary_velfab.loVect()),ARLIM(primary_velfab.hiVect()),
        pres.dataPtr(dir), // pres holds U_old
        ARLIM(pres.loVect()),ARLIM(pres.hiVect()),
-       cellvelfab.dataPtr(), // den
-       ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-       cellvelfab.dataPtr(), // mgoni
-       ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
+       primary_velfab.dataPtr(), // den
+       ARLIM(primary_velfab.loVect()),ARLIM(primary_velfab.hiVect()),
+       secondary_velfab.dataPtr(), // mgoni
+       ARLIM(secondary_velfab.loVect()),ARLIM(secondary_velfab.hiVect()),
        colorfab.dataPtr(),
        ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
        typefab.dataPtr(),
@@ -2881,28 +2853,25 @@ FIX ME	  check ngrow,ncomp
        &project_option,
        &SEM_upwind,
        &SEM_advection_algorithm);
-     } // mfi
+    } // mfi
 } // omp
-     ns_reconcile_d_num(134);
-    } // tileloop
+    ns_reconcile_d_num(134);
+   } // tileloop
 
-    if (interp_option==4) {
-     // do nothing
-    } else if ((interp_option==0)|| 
-               (interp_option==1)||
-               (interp_option==2)||
-               (interp_option==3)) {
-     delete Umac_old;
-    } else
-     amrex::Error("interp_option invalid");
+   if (interp_option==4) {
+    // do nothing
+   } else if ((interp_option==0)|| 
+              (interp_option==1)||
+              (interp_option==2)||
+              (interp_option==3)) {
+    delete Umac_old;
+   } else
+    amrex::Error("interp_option invalid");
 
-   } // dir=0..sdim-1
+  } // dir=0..sdim-1
 
-   synchronize_flux_register(operation_flag,spectral_loop);
-  } // spectral_loop
-
- } else
-  amrex::Error("alloc_cell_vel invalid");
+  synchronize_flux_register(operation_flag,spectral_loop);
+ } // spectral_loop
 
 } // subroutine increment_face_velocity
 
@@ -9132,6 +9101,19 @@ void NavierStokes::copyALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
   ns_level.Copy_localMF(idx_dest,idx_source,0,0,ncomp,ngrow);
  }
 } // end subroutine copyALL
+
+void NavierStokes::minusALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
+
+ int finest_level = parent->finestLevel();
+ if (level!=0)
+  amrex::Error("level!=0 in minusALL");
+
+ for (int i=finest_level;i>=level;i--) {
+  NavierStokes& ns_level=getLevel(i);
+  ns_level.minus_localMF(idx_dest,idx_source,ncomp,ngrow);
+ }
+} // end subroutine minusALL
+
 
 void NavierStokes::delete_array(int idx_localMF) {
 
