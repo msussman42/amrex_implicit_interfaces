@@ -13232,6 +13232,7 @@ stop
        vel,DIMS(vel), & !primary_velfab coming from increment_face_vel
        pres,DIMS(pres), & ! holds U_old(dir) if operation_flag==11
        den,DIMS(den), &
+        ! secondary_velfab if operation_flag=3,4,5,or 10
        mgoni,DIMS(mgoni), &!DIMS(dat)=datxlo,datxhi,datylo,datyhi,datzlo,datzhi
        colorfab,DIMS(colorfab), &
        typefab,DIMS(typefab), &
@@ -13432,10 +13433,13 @@ stop
       REAL_T mass(2)
       REAL_T vol_local(2)
       REAL_T den_local(2)
-      REAL_T velsum
+      REAL_T velsum_primary
+      REAL_T velsum_secondary
       REAL_T mass_sum
+      INTEGER_T filter_velocity_any
       REAL_T DMface
-      REAL_T velmaterial
+      REAL_T primary_velmaterial
+      REAL_T secondary_velmaterial
       REAL_T velmaterialMAC
       REAL_T solid_velocity
       INTEGER_T mask_covered(2)
@@ -13811,6 +13815,7 @@ stop
         print *,"ncomp_mgoni invalid"
         stop
        endif
+
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
         stop
@@ -14596,8 +14601,10 @@ stop
              if ((test_current_icemask.eq.zero).or. &
                  (test_current_icemask.eq.one)) then
 
-              velsum=zero
+              velsum_primary=zero
+              velsum_secondary=zero
               mass_sum=zero
+              filter_velocity_any=0
 
               do side=1,2
 
@@ -14605,6 +14612,22 @@ stop
                do im=1,nmat
 
                 DMface=local_face(massface_index+2*(im-1)+side)
+                if (DMface.gt.zero) then
+                 if (filter_velocity(im).eq.0) then
+                  ! do nothing
+                 else if (filter_velocity(im).eq.1) then
+                  filter_velocity_any=1
+                 else
+                  print *,"filter_velocity invalid"
+                  stop
+                 endif
+                else if (DMface.eq.zero) then
+                 ! do nothing
+                else
+                 print *,"DMface invalid"
+                 stop
+                endif
+
                 if (added_weight(im).gt.zero) then
                  DMface=DMface*added_weight(im)
                 else
@@ -14625,22 +14648,39 @@ stop
                  stop
                 endif
 
+                 !interp_option==0 
+                 !primary_vel_data=CURRENT_CELL_VEL_MF; 
+                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 if (operation_flag.eq.3) then ! cell -> MAC
                  velcomp=dir+1
-                 velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
+                 primary_velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
+                 secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
+
+                 !interp_option==1 
+                 !primary_vel_data=CURRENT_CELL_VEL_MF; 
+                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.4) then ! mac -> MAC
                  velcomp=1
-                 velmaterial=local_vel(1)
+                 primary_velmaterial=local_vel(1)
+                 secondary_velmaterial=local_vel(1)
+
+                 FIX ME
+                 !interp_option==2
+                 !primary_vel_data=idx_velcell;  // increment
+                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.5) then ! MAC+=(cell->MAC)
                  velcomp=dir+1
                   ! local_vel=xvel
                   ! local_vel_old=xgp (a copy of xvel)
                  velmaterialMAC=local_vel_old(1)
-                 velmaterial=velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
+                 primary_velmaterial= &
+                       velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
+                 secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
                  if ((beta.ne.-one).and.(beta.ne.one)) then
                   print *,"beta invalid"
                   stop
                  endif
+
                  ! called from NavierStokes::increment_face_velocity
                  ! interp_option==3
                  ! this is an obsolete option.
@@ -14649,21 +14689,10 @@ stop
                  print *,"this option is not used"
                  stop
 
-                 if (face_flag.ne.1) then
-                  print *,"face_flag invalid"
-                  stop
-                 endif
-                 if (all_incomp.eq.1) then
-                  velcomp=1
-                  velmaterial=local_vel(1)
-                 else if (all_incomp.eq.0) then
-                  velcomp=dir+1
-                  velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
-                 else
-                  print *,"all_incomp invalid"
-                  stop
-                 endif 
-                 ! called after advection to update u^{advect,MAC}
+                 !interp_option==4
+                 !called after advection to update u^{advect,MAC}
+                 !primary_vel_data=DELTA_CELL_VEL_MF; 
+                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.11) then ! cell diff,MAC -> MAC
                  if (face_flag.ne.1) then
                   print *,"face_flag invalid"
@@ -14672,13 +14701,16 @@ stop
                  if ((all_incomp.eq.1).or. &
                      (interp_vel_increment_from_cell.eq.0)) then
                   velcomp=1
-                  velmaterial=local_vel(1) ! UMAC^{ADVECT}
+                  primary_velmaterial=local_vel(1) ! UMAC^{ADVECT}
+                  secondary_velmaterial=local_vel(1) ! UMAC^{ADVECT}
                  else if ((all_incomp.eq.0).and. &
                           (interp_vel_increment_from_cell.eq.1)) then
                       ! UMAC^{ADVECT}=UMAC^n + 
                       !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
                   velcomp=dir+1
-                  velmaterial=local_vel_old(1)+vel(D_DECL(ic,jc,kc),velcomp)
+                  primary_velmaterial= &
+                     local_vel_old(1)+vel(D_DECL(ic,jc,kc),velcomp)
+                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
                  else
                   print *,"all_incomp or "
                   print *,"interp_vel_increment_from_cell invalid"
@@ -14688,6 +14720,7 @@ stop
                  print *,"operation_flag invalid16"
                  stop
                 endif
+
                 if (is_lag_part(nmat,im).eq.1) then
                  partid_check=partid_check+1
                 else if (is_lag_part(nmat,im).eq.0) then
@@ -14697,7 +14730,8 @@ stop
                  stop
                 endif
                 mass_sum=mass_sum+DMface
-                velsum=velsum+DMface*velmaterial
+                velsum_primary=velsum_primary+DMface*primary_velmaterial
+                velsum_secondary=velsum_secondary+DMface*secondary_velmaterial
 
                enddo ! im=1..nmat
 

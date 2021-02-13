@@ -597,6 +597,7 @@ void NavierStokes::nonlinear_advection() {
       local_truncate);
 
      // velocity and pressure
+     // spectral_override==1 => order derived from "enable_spectral"
     avgDownALL(State_Type,0,num_materials_vel*(AMREX_SPACEDIM+1),1);
      // "state" (all materials)
     int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
@@ -11760,12 +11761,13 @@ void NavierStokes::vel_elastic_ALL() {
     amrex::Error("particleLS_flag[im] invalid");
   } // im=0..nmat-1
    
+   // spectral_override==1 => order derived from "enable_spectral"
+  avgDownALL(State_Type,0,
+    num_materials_vel*(AMREX_SPACEDIM+1),1);
+
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
   INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
-
-  avgDownALL(State_Type,0,
-    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
    // after make_viscoelastic_force(), in
    //  NavierStokes::vel_elastic_ALL()
@@ -11791,12 +11793,13 @@ void NavierStokes::vel_elastic_ALL() {
    ns_level.ctml_fsi_transfer_force();
   }
 
+   // spectral_override==1 => order derived from "enable_spectral"
+  avgDownALL(State_Type,0,
+   num_materials_vel*(AMREX_SPACEDIM+1),1);
+
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
   INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
-
-  avgDownALL(State_Type,0,
-   num_materials_vel*(AMREX_SPACEDIM+1),1);
 
     // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF);
@@ -12034,6 +12037,10 @@ void NavierStokes::veldiffuseALL() {
 
  show_norm2_id(REGISTER_MARK_MF,2);
 
+   // spectral_override==1 => order derived from "enable_spectral"
+ avgDownALL(State_Type,0,
+   num_materials_vel*(AMREX_SPACEDIM+1),1);
+
   // diffuse_register+=(unew-register_mark)
   // umacnew+=INTERP_TO_MAC(unew-register_mark)
   //    or
@@ -12042,8 +12049,6 @@ void NavierStokes::veldiffuseALL() {
 
  show_norm2_id(DIFFUSE_REGISTER_MF,3);
 
- avgDownALL(State_Type,0,
-   num_materials_vel*(AMREX_SPACEDIM+1),1);
  avgDownALL(State_Type,dencomp,nden,1);
 
   // register_mark=unew
@@ -12077,12 +12082,13 @@ void NavierStokes::veldiffuseALL() {
    } else
     amrex::Error("viscous_enable_spectral invalid");
 
+   // spectral_override==1 => order derived from "enable_spectral"
+   avgDownALL(State_Type,0,
+    num_materials_vel*(AMREX_SPACEDIM+1),1);
+
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
    INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
-
-   avgDownALL(State_Type,0,
-    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
    // register_mark=unew
    SET_STOKES_MARK(REGISTER_MARK_MF);
@@ -12105,12 +12111,14 @@ void NavierStokes::veldiffuseALL() {
  multiphase_project(vel_project_option); 
  SET_STOKES_MARK(VISCHEAT_SOURCE_MF);
 
+  // spectral_override==1 => order derived from "enable_spectral"
+ avgDownALL(State_Type,0,
+   num_materials_vel*(AMREX_SPACEDIM+1),1);
+
    // diffuse_register+=unew-register_mark
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
 
- avgDownALL(State_Type,0,
-   num_materials_vel*(AMREX_SPACEDIM+1),1);
  avgDownALL(State_Type,dencomp,nden,1);
 
  SET_STOKES_MARK(REGISTER_MARK_MF); //register_mark=unew
@@ -12157,12 +12165,13 @@ void NavierStokes::veldiffuseALL() {
  save_enable_spectral=enable_spectral;
  override_enable_spectral(viscous_enable_spectral);
 
-   // diffuse_register+=(unew-register_mark)
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
   // spectral_override==1 => not always low order
  avgDownALL(State_Type,0,
    num_materials_vel*(AMREX_SPACEDIM+1),1);
+
+   // diffuse_register+=(unew-register_mark)
+   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+ INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
 
    // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF);
@@ -12809,6 +12818,8 @@ void NavierStokes::APPLY_REGISTERSALL(
  }  // ilev=finest_level ... level
 
  if (nsolve==AMREX_SPACEDIM) {
+   // spectral_override==1 => order derived from "enable_spectral"
+  avgDownALL(State_Type,0,num_materials_vel*AMREX_SPACEDIM,1);
 
   // unew^f=unew^f+beta * diffuse_register^{c->f}
   // in: APPLY_REGISTERSALL
