@@ -280,7 +280,8 @@ namespace amrex{
 #define XDISP_FLUX_MF (XDISPLACE_MF+1)
 #define JUMP_STRENGTH_COMPLEMENT_MF (XDISP_FLUX_MF+3)
 #define donorflag_complement_MF (JUMP_STRENGTH_COMPLEMENT_MF+1)
-#define NEXT_MF (donorflag_complement_MF+1)
+#define CURRENT_CELL_VEL_MF (donorflag_complement_MF+1)
+#define NEXT_MF (CURRENT_CELL_VEL_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 

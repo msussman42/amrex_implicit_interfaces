@@ -20993,20 +20993,12 @@ NavierStokes::post_init_state () {
   // if project_option==1, then the velocity in the ice
   // is overwritten with a projected rigid body velocity.
  int interp_option=0;
- int idx_velcell=DELTA_CELL_VEL_MF;
+ int idx_velcell=-1;
  Real beta=0.0;
- if (num_materials_vel==1) {
-  // do nothing
- } else
-  amrex::Error("num_materials_vel invalid");
-
- getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
 
  increment_face_velocityALL(
    interp_option,project_option,
    idx_velcell,beta,blobdata); 
-
- delete_array(DELTA_CELL_VEL_MF);
 
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
