@@ -14600,6 +14600,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      int simple_AMR_BC_flag=0;
      int ncomp_xp=nfluxSEM;
      int ncomp_xgp=nfluxSEM;
+     int ncomp_mgoni=denfab.nComp();
 
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -14639,6 +14640,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      // advect: rho u, rho, temperature (non conservatively)
      // FORT_CELL_TO_MAC in LEVELSET_3D.F90
      FORT_CELL_TO_MAC(
+      &ncomp_mgoni,
       &ncomp_xp,
       &ncomp_xgp,
       &simple_AMR_BC_flag,
@@ -14652,6 +14654,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &visc_coef,
       &face_flag,
       &interp_vel_increment_from_cell,
+      filter_velocity.dataPtr(),
       temperature_primitive_variable.dataPtr(),
       &local_enable_spectral,
       &fluxvel_index,

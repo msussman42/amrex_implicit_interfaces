@@ -1794,6 +1794,7 @@ void NavierStokes::apply_cell_pressure_gradient(
    int simple_AMR_BC_flag=0;
    int ncomp_xp=2+nsolveMM_FACE;
    int ncomp_xgp=1;
+   int ncomp_mgoni=presfab.nComp();
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -1803,6 +1804,7 @@ void NavierStokes::apply_cell_pressure_gradient(
    // in apply_cell_pressure_gradient: p^CELL -> p^MAC 
    // AMR transfer data is in the 3rd component of xp.
    FORT_CELL_TO_MAC(
+    &ncomp_mgoni, 
     &ncomp_xp, 
     &ncomp_xgp, 
     &simple_AMR_BC_flag,
@@ -1816,6 +1818,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &visc_coef,
     &face_flag,
     &interp_vel_increment_from_cell,
+    filter_velocity.dataPtr(),
     temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
@@ -2748,6 +2751,7 @@ void NavierStokes::increment_face_velocity(
       int simple_AMR_BC_flag=0;
       int ncomp_xp=1;
       int ncomp_xgp=1;
+      int ncomp_mgoni=AMREX_SPACEDIM;
 
       int tid_current=ns_thread();
       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -2756,6 +2760,7 @@ void NavierStokes::increment_face_velocity(
 
       // in increment_face_velocity
       FORT_CELL_TO_MAC(
+       &ncomp_mgoni,
        &ncomp_xp,
        &ncomp_xgp,
        &simple_AMR_BC_flag,
@@ -2769,6 +2774,7 @@ void NavierStokes::increment_face_velocity(
        &visc_coef,
        &face_flag,
        &interp_vel_increment_from_cell,
+       filter_velocity.dataPtr(),
        temperature_primitive_variable.dataPtr(),
        &local_enable_spectral,
        &fluxvel_index,
@@ -3082,6 +3088,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
        int simple_AMR_BC_flag=0;
        int ncomp_xp=1;
        int ncomp_xgp=1;
+       int ncomp_mgoni=cellvelfab.dataPtr();
 
        int tid_current=ns_thread();
        if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -3090,6 +3097,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
 
         // in density_TO_MAC
        FORT_CELL_TO_MAC(
+        &ncomp_mgoni,
         &ncomp_xp,
         &ncomp_xgp,
         &simple_AMR_BC_flag,
@@ -3103,6 +3111,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &visc_coef,
         &face_flag,
         &interp_vel_increment_from_cell,
+        filter_velocity.dataPtr(),
         temperature_primitive_variable.dataPtr(),
         &local_enable_spectral,
         &fluxvel_index,
@@ -4951,6 +4960,7 @@ void NavierStokes::apply_pressure_grad(
     int local_enable_spectral=enable_spectral;
     int ncomp_xp=nsolveMM_FACE;
     int ncomp_xgp=nsolveMM_FACE;
+    int ncomp_mgoni=presfab.nComp();
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -4960,6 +4970,7 @@ void NavierStokes::apply_pressure_grad(
     // -grad p * FACE_WEIGHT * dt
     // in: apply_pressure_grad
     FORT_CELL_TO_MAC(
+     &ncomp_mgoni,
      &ncomp_xp,
      &ncomp_xgp,
      &simple_AMR_BC_flag,
@@ -4973,6 +4984,7 @@ void NavierStokes::apply_pressure_grad(
      &visc_coef,
      &face_flag,
      &interp_vel_increment_from_cell,
+     filter_velocity.dataPtr(),
      temperature_primitive_variable.dataPtr(),
      &local_enable_spectral,
      &fluxvel_index,
@@ -6571,6 +6583,7 @@ void NavierStokes::process_potential_force_face() {
 
    int ncomp_xp=3;
    int ncomp_xgp=1;
+   int ncomp_mgoni=mgonifab.nComp();
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -6579,6 +6592,7 @@ void NavierStokes::process_potential_force_face() {
 
    // process_potential_force_face 
    FORT_CELL_TO_MAC( 
+    &ncomp_mgoni,
     &ncomp_xp,
     &ncomp_xgp,
     &simple_AMR_BC_flag,
@@ -6592,6 +6606,7 @@ void NavierStokes::process_potential_force_face() {
     &visc_coef,
     &face_flag,
     &interp_vel_increment_from_cell,
+    filter_velocity.dataPtr(),
     temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
@@ -6647,7 +6662,8 @@ void NavierStokes::process_potential_force_face() {
     ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
     presdenfab.dataPtr(1),  // HYDROSTATIC_DENSITY
     ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
-    mgonifab.dataPtr(),ARLIM(mgonifab.loVect()),ARLIM(mgonifab.hiVect()), 
+    mgonifab.dataPtr(), // mgoni
+    ARLIM(mgonifab.loVect()),ARLIM(mgonifab.hiVect()), 
     mgonifab.dataPtr(), // color
     ARLIM(mgonifab.loVect()),ARLIM(mgonifab.hiVect()),
     mgonifab.dataPtr(), // type
