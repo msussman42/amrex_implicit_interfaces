@@ -13171,6 +13171,7 @@ stop
 !   (iii) usolid in solid regions
 
       subroutine FORT_CELL_TO_MAC( &
+       ncomp_mgoni, &
        ncomp_xp, &  !local_MF[AMRSYNC_PRES_MF]->nComp() if operation_flag==0
        ncomp_xgp, &
        simple_AMR_BC_flag, &
@@ -13184,6 +13185,7 @@ stop
        visc_coef, &
        face_flag, & 
        interp_vel_increment_from_cell, &
+       filter_velocity, &
        temperature_primitive_variable, &
        enable_spectral, &
        fluxvel_index, &  
@@ -13260,6 +13262,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: ncomp_mgoni
       INTEGER_T, intent(in) :: ncomp_xp
       INTEGER_T, intent(in) :: ncomp_xgp
       INTEGER_T, intent(in) :: simple_AMR_BC_flag
@@ -13285,6 +13288,7 @@ stop
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: face_flag 
       INTEGER_T, intent(in) :: interp_vel_increment_from_cell
+      INTEGER_T, intent(in) :: filter_velocity(nmat)
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
@@ -13385,7 +13389,7 @@ stop
       REAL_T, intent(in) :: pres(DIMV(pres),num_materials_face)
        ! den is the source for: density CELL->MAC
       REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
-      REAL_T, intent(in) :: mgoni(DIMV(mgoni),nmat*num_state_material)
+      REAL_T, intent(in) :: mgoni(DIMV(mgoni),ncomp_mgoni)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: colorfab(DIMV(colorfab))
   
@@ -13687,6 +13691,13 @@ stop
 
       if (operation_flag.eq.7) then ! advection
 
+       if (ncomp_mgoni.eq.nmat*num_state_material) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
+
        if (ncomp_xp.ne.SDIM+num_state_base) then
         print *,"ncomp_xp invalid"
         stop
@@ -13705,7 +13716,14 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.1) then
+      else if (operation_flag.eq.0) then
+
+       if (ncomp_mgoni.eq.1) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
 
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
@@ -13716,16 +13734,42 @@ stop
         stop
        endif
 
-      else if ((operation_flag.ge.0).and. &
-               (operation_flag.le.2)) then
+      else if (operation_flag.eq.1) then
        
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
         stop
        endif
+       if (ncomp_mgoni.eq.1) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
 
-      else if ((operation_flag.ge.3).and. &
+      else if (operation_flag.eq.2) then
+
+       if (ncphys.ne.vofface_index+2*nmat) then
+        print *,"ncphys invalid"
+        stop
+       endif
+       if (ncomp_mgoni.eq.nmat*num_state_material) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
+
+      else if ((operation_flag.eq.3).or. &
+               (operation_flag.eq.4).or. &
                (operation_flag.le.5)) then
+
+       if (ncomp_mgoni.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
 
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
@@ -13745,6 +13789,12 @@ stop
         print *,"ncphys invalid"
         stop
        endif
+       if (ncomp_mgoni.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
 
       else if (operation_flag.eq.11) then
 
@@ -13755,6 +13805,12 @@ stop
 
       else if (operation_flag.eq.9) then
 
+       if (ncomp_mgoni.eq.nmat*num_state_material) then
+        ! do nothing
+       else
+        print *,"ncomp_mgoni invalid"
+        stop
+       endif
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
         stop

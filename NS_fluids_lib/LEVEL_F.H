@@ -305,6 +305,7 @@ namespace amrex{
        int* recalesce_num_state,int* nmat);
 
       void FORT_CELL_TO_MAC(
+        int* ncomp_mgoni,
         int* ncomp_xp,
         int* ncomp_xgp,
         int* simple_AMR_BC_flag,
@@ -317,6 +318,7 @@ namespace amrex{
         Real* beta,Real* visc_coef,
         int* face_flag,
         int* interp_vel_increment_from_cell,
+        int* filter_velocity,
         int* temperature_primitive_variable,
         int* enable_spectral,
         int* fluxvel_index,
