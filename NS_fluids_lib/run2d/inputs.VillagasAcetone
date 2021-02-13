@@ -1,3 +1,7 @@
+# TESTS:
+# hardwire T and Y ?
+# filter_velocity=1 ?
+# viscconst=0 ? (especially in the ambient gas) (for Borodulin test too!)
 # TODO list:
 # 1. 
 # verify: boussinesq approximation simulation 1 fluid is space-time spectrally
@@ -14,7 +18,7 @@
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
-stop_time = 1.0
+stop_time = 0.06
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -100,11 +104,10 @@ amr.space_blocking_factor = 1 1 1 1   # this is the SEM space order
 amr.time_blocking_factor=1 # SEM time order
 ns.enable_spectral=0  # enable_spectral=0 or 1
 ns.viscous_enable_spectral=0 # set this to be the same as enable_spectral
-amr.check_int       = 100
-#amr.check_int       = 10000  # static freezing test 10 
+amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+amr.plot_int        = 1000 # was 100  (plot_int=1 for testing)
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -197,7 +200,7 @@ ns.speciesviscconst=0.52 0.52 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #ns.speciesconst=0.0121 0.0121  #initial vapor mass fraction in atmosphere
 ns.speciesconst=0.0 0.0  #initial vapor mass fraction in atmosphere
-#ns.hardwire_Y_gamma=0.22132139799031397 0.0
+#ns.hardwire_Y_gamma=0.438833577149 0.0
 #1.0016 milli pascals * s = 1.002 E-3 pa * s
 #18.1 micro pascals * s  = 1.81E-5 pa * s  kg m/s^2 / m^2 = kg/(m s^2)=
 #1000/100 g/(cm s^2)
@@ -229,7 +232,8 @@ ns.solidheat_flag=0
 #drop=98.6 degrees F   air=70 degrees F
 #drop=27.5 degrees C   air=27.5 degrees C
 ns.tempconst=700.0 700.0 #CODY: case 2, T_inf for gas, T_gamma for liq.
-#ns.hardwire_T_gamma=296.163 0.0
+#ns.hardwire_T_gamma=294.92267 0.0
+#ns.filter_velocity=1 1
 #ns.cancel_advection=1
 ns.xblob=0.0
 ns.yblob=0.0
@@ -257,7 +261,7 @@ ns.output_drop_distribution=1
 
 # we prescribe exact solution in buffer zone near boundary, so
 # not necessary to have Dirichlet in the far field.
-ns.prescribe_temperature_outflow=0  
+ns.prescribe_temperature_outflow=1
 #ns.lo_bc          = 3 3 5  # XYZ
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
@@ -266,9 +270,9 @@ ns.lo_bc          = 3 3
 ns.hi_bc          = 2 2  # expansion
 #ns.hi_bc          = 3 3  # sealed
 ns.temperature_lo_bc  = 3 3
-ns.temperature_hi_bc  = 2 2  
+ns.temperature_hi_bc  = 1 1
 ns.species_lo_bc  = 3 3
-ns.species_hi_bc  = 2 2
+ns.species_hi_bc  = 1 1
 ns.num_divu_outer_sweeps=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<

@@ -255,7 +255,7 @@ ns.output_drop_distribution=1
 
 # we prescribe exact solution in buffer zone near boundary, so
 # not necessary to have Dirichlet in the far field.
-ns.prescribe_temperature_outflow=0  
+ns.prescribe_temperature_outflow=1
 #ns.lo_bc          = 3 3 5  # XYZ
 #ns.hi_bc          = 3 3 2  # XYZ
 #ns.species_lo_bc  = 3 3 5  # XYZ
@@ -264,9 +264,9 @@ ns.lo_bc          = 3 3
 ns.hi_bc          = 2 2  # expansion
 #ns.hi_bc          = 3 3  # sealed
 ns.temperature_lo_bc  = 3 3
-ns.temperature_hi_bc  = 2 2  
+ns.temperature_hi_bc  = 1 1  
 ns.species_lo_bc  = 3 3
-ns.species_hi_bc  = 2 2
+ns.species_hi_bc  = 1 1
 ns.num_divu_outer_sweeps=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
