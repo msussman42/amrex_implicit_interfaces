@@ -2265,7 +2265,18 @@ void NavierStokes::increment_face_velocityALL(
  Real beta,
  Vector<blobclass> blobdata) {
 
+ if (num_materials_vel==1) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_vel invalid");
+
+ if (idx_velcell==DELTA_CELL_VEL_MF)
+  amrex::Error("DELTA_CELL_VEL_MF reserved");
+
  int finest_level=parent->finestLevel();
+
+ getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
+ getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,CURRENT_CELL_VEL_MF);
 
  int alloc_cell_vel=1;
 
@@ -2328,6 +2339,9 @@ void NavierStokes::increment_face_velocityALL(
    amrex::Error("delta_velcell_temp became corrupted");
  } else
   amrex::Error("interp_option invalid (2) "); 
+
+ delete_array(DELTA_CELL_VEL_MF);
+ delete_array(CURRENT_CELL_VEL_MF);
 
 } // end subroutine increment_face_velocityALL
 
