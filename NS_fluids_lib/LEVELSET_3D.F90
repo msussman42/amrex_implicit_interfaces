@@ -13520,7 +13520,7 @@ stop
        stop
       endif
       if (ncomp_xp.lt.1) then
-       print *,"ncomp_xp invalid"
+       print *,"ncomp_xp invalid(1) ",ncomp_xp
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
@@ -13703,11 +13703,11 @@ stop
        endif
 
        if (ncomp_xp.ne.SDIM+num_state_base) then
-        print *,"ncomp_xp invalid"
+        print *,"ncomp_xp invalid(2) ",ncomp_xp
         stop
        endif
        if (ncomp_xgp.ne.SDIM+num_state_base) then
-        print *,"ncomp_xp invalid"
+        print *,"ncomp_xp invalid(3) ",ncomp_xp
         stop
        endif
        
@@ -13733,10 +13733,6 @@ stop
         print *,"ncphys invalid"
         stop
        endif
-       if (ncomp_xp.ne.2+nsolveMM_FACE) then
-        print *,"ncomp_xp invalid"
-        stop
-       endif
 
       else if (operation_flag.eq.1) then
        
@@ -13748,6 +13744,10 @@ stop
         ! do nothing
        else
         print *,"ncomp_mgoni invalid"
+        stop
+       endif
+       if (ncomp_xp.ne.2+nsolveMM_FACE) then
+        print *,"ncomp_xp invalid(4) ",ncomp_xp
         stop
        endif
 
@@ -14664,7 +14664,6 @@ stop
                  primary_velmaterial=local_vel(1)
                  secondary_velmaterial=local_vel(1)
 
-                 FIX ME
                  !interp_option==2
                  !primary_vel_data=idx_velcell;  // increment
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
@@ -14744,7 +14743,23 @@ stop
 
               if (mass_sum.gt.zero) then
 
-               uedge(im_vel)=velsum/mass_sum
+               if (filter_velocity_any.eq.0) then
+                uedge(im_vel)=velsum_primary/mass_sum
+               else if (filter_velocity_any.eq.1) then
+                if ((operation_flag.eq.3).or. &
+                    (operation_flag.eq.4).or. &
+                    (operation_flag.eq.11)) then
+                 uedge(im_vel)=velsum_primary/mass_sum
+                else if (operation_flag.eq.5) then
+                 uedge(im_vel)=velsum_secondary/mass_sum
+                else
+                 print *,"operation_flag invalid"
+                 stop
+                endif
+               else
+                print *,"filter_velocity_any invalid"
+                stop
+               endif
 
               else
                print *,"mass_sum invalid tfrmac"

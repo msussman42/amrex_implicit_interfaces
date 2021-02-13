@@ -14220,7 +14220,7 @@ END SUBROUTINE Adist
       endif
 
       if (ncomp_xp.lt.1) then
-       print *,"ncomp_xp invalid"
+       print *,"ncomp_xp invalid(10) ",ncomp_xp
        stop
       endif
       if (ncomp_xgp.lt.1) then
@@ -14322,7 +14322,7 @@ END SUBROUTINE Adist
         stop
        endif
        if (ncomp_xp.ne.SDIM) then
-        print *,"ncomp_xp invalid (it is supposed to be sdim)"
+        print *,"ncomp_xp invalid (it is supposed to be sdim)",ncomp_xp
         stop
        endif
        if (update_right_flux.ne.0) then
@@ -14372,7 +14372,7 @@ END SUBROUTINE Adist
       else if (operation_flag.eq.7) then ! advection
 
        if (ncomp_xp.ne.SDIM+2) then
-        print *,"ncomp_xp invalid"
+        print *,"ncomp_xp invalid(11) ",ncomp_xp
         stop
        endif
        if (ncomp_xgp.ne.SDIM+2) then
@@ -14455,7 +14455,7 @@ END SUBROUTINE Adist
         stop
        endif
        if (ncomp_xp.ne.3) then
-        print *,"ncomp_xp invalid"
+        print *,"ncomp_xp invalid(12) ",ncomp_xp
         stop
        endif
        if (energyflag.ne.0) then
@@ -14488,7 +14488,7 @@ END SUBROUTINE Adist
         stop
        endif
        if (ncomp_xp.ne.3) then
-        print *,"ncomp_xp invalid5"
+        print *,"ncomp_xp invalid5 ",ncomp_xp
         stop
        endif
        if (ncomp_xgp.ne.1) then
