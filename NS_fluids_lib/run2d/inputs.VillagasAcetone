@@ -145,9 +145,9 @@ ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 # 1 J/kg = 1e7 erg/1e3 g = 1e4 erg/g
 ns.latent_heat = 5.18e+9 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
-# 0=distribute to the destination material (def)
+# 0=distribute to the destination material 
 # 1=distribute to the source material.
-ns.distribute_from_target = 1 0 # 2 * num_interfaces components
+ns.distribute_from_target = 0 0 # 2 * num_interfaces components
 ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 1 # expansion
 #ns.constant_density_all_time=1 0 # sealed
