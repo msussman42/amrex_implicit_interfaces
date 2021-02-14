@@ -177,11 +177,12 @@ ns.tempconst=296.163 323.15 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 #0.02cm
+#liquid: x>xblob2    gas x<xblob2
 ns.xblob2=0.025 #CODY this is physical location corresponding to x=0
 # make sure xblob corresponds to a grid cell boundary for convergence
 # study.
 # 0.1/4=0.025
-ns.xblob=0.025  
+ns.xblob=0.025 # gas x<xblob; liquid x>xblob 
 ns.yblob=0.0
 ns.zblob=0.0
 ns.radblob=0.0

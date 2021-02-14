@@ -3470,14 +3470,11 @@ NavierStokes::read_params ()
       Tanasawa_or_Schrage_or_Kassemi,0,2*nten);
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
 
-    Vector<int> fixed_parm;
-    fixed_parm.resize(2*nten);
 
+     // set defaults for "distribute_from_target"
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
       int iten_local=ireverse*nten+iten;
-
-      fixed_parm[iten_local]=-1;
 
       if (freezing_model[iten_local]>=0) {
 
@@ -3525,18 +3522,15 @@ NavierStokes::read_params ()
          } else if (den_dest<den_source) {
             // s= n dot u_dest + mdot/rho_dest
           distribute_from_target[iten_local]=1;
-          fixed_parm[iten_local]=1;
          } else if (den_source<den_dest) {
             // s= n dot u_source + mdot/rho_source
           distribute_from_target[iten_local]=0;
-          fixed_parm[iten_local]=0;
          } else
           amrex::Error("den_source or den_dest invalid");
         } else
          amrex::Error("den_source or den_dest invalid");
        } else if (latent_heat[iten_local]==0) {
         distribute_from_target[iten_local]=0;
-        fixed_parm[iten_local]=0;
        } else
         amrex::Error("latent_heat invalid");
       } else
@@ -3635,47 +3629,12 @@ NavierStokes::read_params ()
        if ((distribute_from_target[iten_local]==0)||
            (distribute_from_target[iten_local]==1)) {
 
-        if (fixed_parm[iten_local]==-1) {
-
-         if ((distribute_mdot_evenly[iten_local]==0)||
-             (distribute_mdot_evenly[iten_local]==1)||
-             (distribute_mdot_evenly[iten_local]==2)) {
-          // do nothing
-         } else
-          amrex::Error("distribute_mdot_evenly invalid");
-
-        } else if (fixed_parm[iten_local]==
-                   distribute_from_target[iten_local]) {
-
-         if ((distribute_mdot_evenly[iten_local]==0)||
-             (distribute_mdot_evenly[iten_local]==1)||
-             (distribute_mdot_evenly[iten_local]==2)) {
-          // do nothing
-         } else
-          amrex::Error("distribute_mdot_evenly invalid");
-
-	} else if (fixed_parm[iten_local]!=
-                   distribute_from_target[iten_local]) {
-
-         if ((distribute_mdot_evenly[iten_local]==1)||
-             (distribute_mdot_evenly[iten_local]==2)) {
-          if (freezing_model[iten_local]==0) { //energy jump model
-           // do nothing
-          } else if ((freezing_model[iten_local]==1)|| //source term model
-                     (freezing_model[iten_local]==2)|| //hydrate model
-                     (freezing_model[iten_local]==3)|| //combustion
-                     (freezing_model[iten_local]==4)|| //Tanasawa or Shrage
-                     (freezing_model[iten_local]==5)|| //Stefan evap model
-                     (freezing_model[iten_local]==6)|| //Palmore, Deshardins
-                     (freezing_model[iten_local]==7)) {//cavitation
-           amrex::Error("distribute_from_target invalid");
-          } else 
-           amrex::Error("freezing_model invalid"); 
-         } else
-          amrex::Error("distribute_mdot_evenly or dist_from_targ invalid");
-
-	} else
-  	 amrex::Error("fixed_parm invalid");
+        if ((distribute_mdot_evenly[iten_local]==0)||
+            (distribute_mdot_evenly[iten_local]==1)||
+            (distribute_mdot_evenly[iten_local]==2)) {
+         // do nothing
+        } else
+         amrex::Error("distribute_mdot_evenly invalid");
 
        } else
         amrex::Error("distribute_from_target invalid");
