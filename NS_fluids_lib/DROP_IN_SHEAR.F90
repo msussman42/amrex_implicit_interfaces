@@ -879,7 +879,14 @@ else
  stop
 endif
 
-D_Gamma=D_not**2-four*den_G*D_G*log(one+B_M)*time/den_L
+if (B_M.gt.zero) then
+ ! do nothing
+else
+ print *,"expecting B_M>0"
+ stop
+endif
+
+D_Gamma=D_not**2-eight*den_G*D_G*log(one+B_M)*time/den_L
 if ((D_Gamma.le.D_not**2).and.(D_Gamma.ge.zero)) then
  D_Gamma=sqrt(D_gamma)
 else

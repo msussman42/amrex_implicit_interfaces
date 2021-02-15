@@ -100,11 +100,9 @@ amr.space_blocking_factor = 1 1 1 1   # this is the SEM space order
 amr.time_blocking_factor=1 # SEM time order
 ns.enable_spectral=0  # enable_spectral=0 or 1
 ns.viscous_enable_spectral=0 # set this to be the same as enable_spectral
-amr.check_int       = 100
-#amr.check_int       = 10000  # static freezing test 10 
+amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
-# blow up: ~ 84000 steps
-amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+amr.plot_int        = 1000 
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -139,11 +137,11 @@ ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
 #ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
-ns.latent_heat = 1.65e+10 0.0  #2.26E+6 J/kg
+ns.latent_heat = 2.1e+10 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
-ns.distribute_from_target = 1 0 # 2 * num_interfaces components
+ns.distribute_from_target = 0 0 # 2 * num_interfaces components
 ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 1 # expansion 1..nmat
 #ns.constant_density_all_time=1 0 # sealed 1..nmat
@@ -201,6 +199,8 @@ ns.speciesconst=7.1e-3 7.1e-3  #initial vapor mass fraction in atmosphere
 #18.1 micro pascals * s  = 1.81E-5 pa * s  kg m/s^2 / m^2 = kg/(m s^2)=
 #1000/100 g/(cm s^2)
 ns.viscconst=0.010016 0.0018 # dynamic viscosity mu  (kinematic is mu/rho)CGS
+ns.filter_velocity=1 1
+#ns.cancel_advection=1
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
 ns.added_weight=1.0 1.0  # default
@@ -237,7 +237,7 @@ ns.radblob=0.05
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=424
-ns.ncomp_sum_int_user=0 # vof,level set,Tgas,Ygas,Tliq,Yliq errors
+ns.ncomp_sum_int_user=0 # level set,Tgas,Ygas,velocity errors
 
 #ns.mem_debug = 1
 ns.v = 1
