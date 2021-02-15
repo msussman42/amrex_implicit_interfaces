@@ -77,10 +77,11 @@ ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 # liquid, vapor, gas, solid
 # 12,13,14
 ns.distribute_from_target=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-# 1..num_materials
+# 1..2*nten=1..2*(num_interfaces)
 # 1 => mdot distributed in the vapor with cellvol weighting
 # 2 => mdot distributed in the vapor with constant weighting
-ns.distribute_mdot_evenly=2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ns.distribute_mdot_evenly=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ns.filter_velocity=1 1 1 1
 
 ns.EILE_flag=-1
 #   continuous_mof=2 CMOF everywhere 
