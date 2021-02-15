@@ -108,6 +108,7 @@ amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
 amr.plot_int        = 1000 # was 100  (plot_int=1 for testing)
+ns.visual_phase_change_plot_int = 1000
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file

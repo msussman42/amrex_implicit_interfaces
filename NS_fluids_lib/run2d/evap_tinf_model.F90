@@ -3,7 +3,7 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 0
+      integer, PARAMETER :: probtype = 1
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
@@ -92,7 +92,8 @@
       end subroutine massfrac_from_volfrac
 
 
-      subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL,LS_VAP)
+      subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL, &
+       VEL_I,LS_VAP)
       IMPLICIT NONE
 
       real*8, intent(in) :: time
@@ -102,7 +103,8 @@
       real*8, intent(out) :: Y
       real*8, intent(out) :: LS_VAP
       real*8, intent(out) :: VEL
-      real*8 :: rr,mdot,vel_r,my_pi
+      real*8, intent(out) :: VEL_I
+      real*8 :: rr,mdot,vel_r,my_pi,expand_factor
      
       my_pi=4.0d0*atan(1.0d0)
  
@@ -125,7 +127,11 @@
       mdot=my_pi*D_gamma*den_G*D_G*Sh*B_M
       
       LS_VAP=rr-0.5d0*D_gamma
-      
+     
+      VEL_I=mdot/(my_pi*D_gamma*D_gamma*den_G)
+      expand_factor=1.0d0/den_G-1.0d0/den_L
+      VEL_I=-VEL_I/(expand_factor*den_L)
+ 
       if (LS_VAP.le.0.0d0) then
        VEL=0.0d0
        Y=Y_Gamma
@@ -183,7 +189,7 @@
       real*8 :: aa,bb,cc,fa,fb,fc
       integer :: iter
       real*8 TSTART,TSTOP,cur_time,dt
-      real*8 cur_x,T,Y,VEL,LS,D_gamma
+      real*8 cur_x,T,Y,VEL,VEL_I,LS,D_gamma
       integer nsteps,istep
       integer outer_iter,max_outer_iter
 
@@ -216,6 +222,7 @@
        find_TINF_from_TGAMMA=0
        radblob = 0.005d0
        cur_x=4.0d0*radblob
+       cur_x=0.007
        den_L = 0.7d0
        den_G = 0.001d0
        C_pG = 1.0d+7
@@ -314,8 +321,10 @@
       nsteps=8000
       dt=(TSTOP-TSTART)/nsteps
       do istep=1,nsteps
-       call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y,VEL,LS)
-       print *,cur_time," ",(D_gamma/(2.0d0*radblob))**2," ",T," ",Y
+       call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
+         VEL,VEL_I,LS)
+       print *,cur_time," ",0.5d0*D_gamma," ",(D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
+        " ",VEL," ",VEL_I
        cur_time=cur_time+dt
       enddo
 
