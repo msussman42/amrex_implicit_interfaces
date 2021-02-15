@@ -11,7 +11,7 @@ geometry.prob_hi   =  1.0 0.01   # 1/100
 # 1=face
 ns.face_flag=0
 ns.interp_vel_increment_from_cell=1
-ns.interp_presgrad_increment_from_face=1
+ns.filter_velocity=0 0
 ns.compressible_dt_factor=1.0 1.0
 ns.temperature_primitive_variable=0 0
 

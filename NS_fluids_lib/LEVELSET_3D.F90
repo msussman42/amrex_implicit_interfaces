@@ -10200,7 +10200,7 @@ stop
        curv_index, &
        conservative_tension_force, &
        conservative_div_uu, &
-       interp_presgrad_increment_from_face, &
+       filter_velocity, & ! in: FORT_MAC_TO_CELL
        ignore_div_up, &
        pforce_index, &
        faceden_index, &
@@ -10300,7 +10300,7 @@ stop
       INTEGER_T, intent(in) :: curv_index
       INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: conservative_div_uu
-      INTEGER_T, intent(in) :: interp_presgrad_increment_from_face
+      INTEGER_T, intent(in) :: filter_velocity(nmat)
       INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index
@@ -10627,13 +10627,15 @@ stop
        print *,"ignore_div_up invalid"
        stop
       endif
-      if ((interp_presgrad_increment_from_face.eq.0).or. &
-          (interp_presgrad_increment_from_face.eq.1)) then
-       ! do nothing
-      else
-       print *,"interp_presgrad_increment_from_face invalid"
-       stop
-      endif
+      do im=1,nmat
+       if ((filter_velocity(im).eq.0).or. &
+           (filter_velocity(im).eq.1)) then
+        ! do nothing
+       else
+        print *,"filter_velocity invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
 
       if ((conservative_div_uu.eq.0).or. &
           (conservative_div_uu.eq.1)) then
@@ -11765,9 +11767,9 @@ stop
             stop
            endif
            
-           if (interp_presgrad_increment_from_face.eq.1) then
+           if (filter_velocity(im).eq.0) then
             ! do nothing
-           else if (interp_presgrad_increment_from_face.eq.0) then
+           else if (filter_velocity(im).eq.1) then
             if (use_face_pres_cen.eq.3) then
              use_face_pres_cen=1
             else if (use_face_pres_cen.eq.2) then
@@ -11777,7 +11779,7 @@ stop
              stop
             endif
            else
-            print *,"interp_presgrad_increment_from_face invalid"
+            print *,"filter_velocity invalid"
             stop
            endif
 
@@ -13185,7 +13187,7 @@ stop
        visc_coef, &
        face_flag, & 
        interp_vel_increment_from_cell, &
-       filter_velocity, &
+       filter_velocity, &  ! in: FORT_CELL_TO_MAC
        temperature_primitive_variable, &
        enable_spectral, &
        fluxvel_index, &  
@@ -13196,7 +13198,6 @@ stop
        curv_index, &
        conservative_tension_force, &
        conservative_div_uu, &
-       interp_presgrad_increment_from_face, &
        ignore_div_up, &
        pforce_index, &
        faceden_index, &  
@@ -13304,7 +13305,6 @@ stop
       INTEGER_T, intent(in) :: curv_index
       INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: conservative_div_uu
-      INTEGER_T, intent(in) :: interp_presgrad_increment_from_face
       INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index 
@@ -13626,13 +13626,6 @@ stop
        ! do nothing
       else
        print *,"ignore_div_up invalid"
-       stop
-      endif
-      if ((interp_presgrad_increment_from_face.eq.0).or. &
-          (interp_presgrad_increment_from_face.eq.1)) then
-       ! do nothing
-      else
-       print *,"interp_presgrad_increment_from_face invalid"
        stop
       endif
 
