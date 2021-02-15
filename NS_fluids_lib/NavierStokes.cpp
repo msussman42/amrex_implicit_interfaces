@@ -573,13 +573,12 @@ int  NavierStokes::ignore_div_up=0;
 //    (p^{n+2}-2 p^{n+1} + p^{n})/(c^2 dt^2) = div grad p^{n+2}
 // If face_flag==0 (i.e. cell velocity advected conservatively and has
 //    monotonic property):
-//  Then if interp_presgrad_increment_from_face==0 then
+//  Then if filter_velocity(im)==1 then
 //    UNEW^cell=I_{MAC}^{CELL} UNEW^MAC  (very dissipative)
-//  if interp_presgrad_increment_from_face==1 then
+//  if filter_velocity(im)==0 then
 //    UNEW^CELL=UNEW^* - dt grad (I_CELL^MAC p) /rho
 //    (we know this leads to checkerboard instability)
 //
-int NavierStokes::interp_presgrad_increment_from_face=1; 
 
 Vector<Real> NavierStokes::compressible_dt_factor; 
 
@@ -3819,14 +3818,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("ignore_div_up invalid");
 
-    pp.query("interp_presgrad_increment_from_face",
-       interp_presgrad_increment_from_face);
-    if ((interp_presgrad_increment_from_face==0)||
-        (interp_presgrad_increment_from_face==1)) {
-     // do nothing
-    } else
-     amrex::Error("interp_presgrad_increment_from_face invalid");
-
     compressible_dt_factor.resize(nmat);
     for (int i=0;i<nmat;i++) {
      compressible_dt_factor[i]=1.0;
@@ -4586,8 +4577,6 @@ NavierStokes::read_params ()
      std::cout << "interp_vel_increment_from_cell= " << 
        interp_vel_increment_from_cell << '\n';
      std::cout << "ignore_div_up= " << ignore_div_up << '\n';
-     std::cout << "interp_presgrad_increment_from_face= " << 
-       interp_presgrad_increment_from_face << '\n';
 
      for (int i=0;i<nmat;i++) {
       std::cout << "i= " << i << " compressible_dt_factor= " <<
@@ -14624,7 +14613,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &curv_index,
       &conservative_tension_force,
       &conservative_div_uu,
-      &interp_presgrad_increment_from_face,
       &ignore_div_up,
       &pforce_index,
       &faceden_index,
@@ -14834,7 +14822,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &curv_index,
       &conservative_tension_force,
       &conservative_div_uu,
-      &interp_presgrad_increment_from_face,
+      filter_velocity.dataPtr(),
       &ignore_div_up,
       &pforce_index,
       &faceden_index,

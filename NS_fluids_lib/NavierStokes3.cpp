@@ -11450,7 +11450,9 @@ void NavierStokes::multiphase_project(int project_option) {
    } else 
     amrex::Error("project_option invalid");
 
-    // at the end of apply_cell_pressure_gradient,
+    // NavierStokes::apply_cell_pressure_gradient declared
+    // in NavierStokes2.cpp.
+    // At the end of apply_cell_pressure_gradient,
     // UMAC_MF is copied to UMAC_new. 
    ns_level.apply_cell_pressure_gradient(project_option,
     update_energy,PRESPC2_MF,UMAC_MF,idx_gpcell,idx_divup);
