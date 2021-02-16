@@ -19769,7 +19769,8 @@ NavierStokes::volWgtSumALL(
 
 void
 NavierStokes::MaxPressureVelocityALL(
-   Real& minpres,Real& maxpres,Real& maxvel) {
+   Real& minpres,Real& maxpres,
+   Real& maxvel,Real& maxvel_collide) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -19778,30 +19779,41 @@ NavierStokes::MaxPressureVelocityALL(
  Real local_minpres;
  Real local_maxpres;
  Real local_maxvel;
+ Real local_maxvel_collide;
  maxpres=-1.0e+99;
  minpres=1.0e+99;
  maxvel=0.0;
+ maxvel_collide=0.0;
  for (int k = 0; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
-  ns_level.MaxPressureVelocity(local_minpres,local_maxpres,local_maxvel);
+  ns_level.MaxPressureVelocity(local_minpres,local_maxpres,
+   local_maxvel,local_maxvel_collide);
   if (local_minpres<minpres)
    minpres=local_minpres;
   if (local_maxpres>maxpres)
    maxpres=local_maxpres;
   if (local_maxvel>maxvel)
    maxvel=local_maxvel;
+  if (local_maxvel_collide>maxvel_collide)
+   maxvel_collide=local_maxvel_collide;
  }
 
 } // end subroutine MaxPressureVelocityALL
 
 void 
-NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel) {
+NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
+ Real& maxvel,Real& maxvel_collide) {
  
  bool use_tiling=ns_tiling;
 
   // ngrow=0  
  MultiFab* vel=getState(0,0,
    num_materials_vel*(AMREX_SPACEDIM+1),cur_time_slab);
+ MultiFab* velmac[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  velmac[dir]=getStateMAC(0,dir,0,1,cur_time_slab);
+ }
+ 
   // mask=tag if not covered by level+1 
   // ngrow=0 so no need to worry about ghost cells.
  int ngrowmask=0;
@@ -19817,13 +19829,16 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel) {
  Vector<Real> minpresA;
  Vector<Real> maxpresA;
  Vector<Real> maxvelA;
+ Vector<Real> maxvel_collideA;
  minpresA.resize(thread_class::nthreads);
  maxpresA.resize(thread_class::nthreads);
  maxvelA.resize(thread_class::nthreads);
+ maxvel_collideA.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   minpresA[tid]=1.0e+99;
   maxpresA[tid]=-1.0e+99;
   maxvelA[tid]=0.0;
+  maxvel_collideA[tid]=0.0;
  }
 
  if (thread_class::nthreads<1)
@@ -19848,18 +19863,26 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel) {
   const Real* xlo = grid_loc[gridno].lo();
   FArrayBox& maskfab=(*mask)[mfi];
   FArrayBox& velfab=(*vel)[mfi];
+  FArrayBox& velx=(*velmac[0])[mfi];
+  FArrayBox& velx=(*velmac[1])[mfi];
+  FArrayBox& velz=(*velmac[AMREX_SPACEDIM-1])[mfi];
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // declared in: DERIVE_3D.F90
   FORT_MAXPRESVEL(
    &minpresA[tid_current],
    &maxpresA[tid_current],
    &maxvelA[tid_current],
+   &maxvel_collideA[tid_current],
    xlo,dx,
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+   velx.dataPtr(),ARLIM(velx.loVect()),ARLIM(velx.hiVect()),
+   vely.dataPtr(),ARLIM(vely.loVect()),ARLIM(vely.hiVect()),
+   velz.dataPtr(),ARLIM(velz.loVect()),ARLIM(velz.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact);
  } // mfi
@@ -19877,9 +19900,13 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel) {
  ParallelDescriptor::ReduceRealMin(minpres);
  ParallelDescriptor::ReduceRealMax(maxpres);
  ParallelDescriptor::ReduceRealMax(maxvel);
+ ParallelDescriptor::ReduceRealMax(maxvel_collide);
 
  delete mask;
  delete vel;
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete velmac[dir];
+ }
 } // subroutine MaxPressureVelocity
 
 // called from 

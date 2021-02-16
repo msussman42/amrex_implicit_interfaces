@@ -2536,14 +2536,17 @@ stop
       end subroutine FORT_RESET_TEMPERATURE
 
 
-
-
-
       subroutine FORT_MAXPRESVEL( &
-        minpres,maxpres,maxvel, &
+        minpres, &
+        maxpres, &
+        maxvel, &
+        maxvel_collide, &
         xlo,dx, &
         mask,DIMS(mask), &
         vel,DIMS(vel), &
+        velx,DIMS(velx), &
+        vely,DIMS(vely), &
+        velz,DIMS(velz), &
         tilelo,tilehi, &
         fablo,fabhi,bfact)
 
@@ -2552,22 +2555,29 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T minpres,maxpres,maxvel
+      REAL_T, intent(inout) :: minpres,maxpres,maxvel,maxvel_collide
 
-      INTEGER_T i,j,k
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
       INTEGER_T growlo(3), growhi(3)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(velx)
+      INTEGER_T, intent(in) :: DIMDEC(vely)
+      INTEGER_T, intent(in) :: DIMDEC(velz)
 
-      REAL_T mask(DIMV(mask))
-      REAL_T vel(DIMV(vel),num_materials_vel*(SDIM+1))
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in) :: vel(DIMV(vel),num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: velx(DIMV(velx))
+      REAL_T, intent(in) :: vely(DIMV(vely))
+      REAL_T, intent(in) :: velz(DIMV(velz))
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T dir,im,ibase
-      REAL_T magvel
+      REAL_T magvel,magvel_mac,magvel_collide
+      REAL_T vello,velhi,vellohi
+      INTEGER_T i,j,k
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -2582,6 +2592,9 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(mask),0,-1,6609)
       call checkbound(fablo,fabhi,DIMS(vel),0,-1,6610)
+      call checkbound(fablo,fabhi,DIMS(velx),0,0,6610)
+      call checkbound(fablo,fabhi,DIMS(vely),0,1,6610)
+      call checkbound(fablo,fabhi,DIMS(velz),0,SDIM-1,6610)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -2602,12 +2615,38 @@ stop
         do im=1,num_materials_vel
          ibase=(im-1)*SDIM
          magvel=zero
+         magvel_mac=zero
+         magvel_collide=zero
          do dir=1,SDIM
           magvel=magvel+vel(D_DECL(i,j,k),ibase+dir)**2
+          if (dir.eq.1) then
+           vello=velx(D_DECL(i,j,k))
+           velhi=velx(D_DECL(i+1,j,k))
+          else if (dir.eq.2) then
+           vello=vely(D_DECL(i,j,k))
+           velhi=vely(D_DECL(i,j+1,k))
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           vello=velz(D_DECL(i,j,k))
+           velhi=velz(D_DECL(i,j,k+1))
+          else
+           print *,"dir invalid"
+           stop
+          endif
+          magvel_collide=magvel_collide+(velhi-vello)**2
+          vellohi=max(abs(vello),abs(velhi))
+          magvel_mac=magvel_mac+vellohi**2
          enddo
          magvel=sqrt(magvel)
+         magvel_mac=sqrt(magvel_mac)
+         magvel_collide=sqrt(magvel_collide)
          if (magvel.gt.maxvel) then
           maxvel=magvel
+         endif
+         if (magvel_mac.gt.maxvel) then
+          maxvel=magvel_mac
+         endif
+         if (magvel_collide.gt.maxvel_collide) then
+          maxvel_collide=magvel_collide
          endif
         enddo ! im
        else if (mask(D_DECL(i,j,k)).ne.zero) then

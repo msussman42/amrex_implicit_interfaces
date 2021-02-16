@@ -176,10 +176,16 @@ extern "C" {
 
 
      void FORT_MAXPRESVEL(
-       Real* minpres,Real* maxpres,Real* maxvel,
+       Real* minpres,
+       Real* maxpres,
+       Real* maxvel,
+       Real* maxvel_collide,
        const Real* xlo,const Real* dx,
        Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
        Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
+       Real* velx,AMREX_ARLIM_P(velxlo),AMREX_ARLIM_P(velxhi),
+       Real* vely,AMREX_ARLIM_P(velylo),AMREX_ARLIM_P(velyhi),
+       Real* velz,AMREX_ARLIM_P(velzlo),AMREX_ARLIM_P(velzhi),
        const int* tilelo, const int* tilehi,
        const int* fablo, const int* fabhi,int* bfact);
 

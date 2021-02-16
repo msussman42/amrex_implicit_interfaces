@@ -508,8 +508,10 @@ public:
     void init_boundary();
     void init_boundary_list(Vector<int> scomp,Vector<int> ncomp);
 
-    void MaxPressureVelocity(Real& minpres,Real& maxpres,Real& maxvel);
-    void MaxPressureVelocityALL(Real& minpres,Real& maxpres,Real& maxvel);
+    void MaxPressureVelocity(Real& minpres,Real& maxpres,
+     Real& maxvel,Real& maxvel_collide);
+    void MaxPressureVelocityALL(Real& minpres,Real& maxpres,
+     Real& maxvel,Real& maxvel_collide);
 
      // data_dir=-1 cell centered data
      // data_dir=0..sdim-1 face centered data.
