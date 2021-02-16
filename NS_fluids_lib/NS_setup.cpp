@@ -1963,7 +1963,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  Real minpres,maxpres;
  Real maxvel;
- MaxPressureVelocityALL(minpres,maxpres,maxvel);
+ Real maxvel_collide;
+ MaxPressureVelocityALL(minpres,maxpres,maxvel,maxvel_collide);
 
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
@@ -2130,9 +2131,43 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        } // dir=0..2 sdim-1
       } // veltype=0..2
       for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
+
+       std::string momstring="momentum";
+       if (dir==0) 
+        momstring="momx";
+       else if (dir==1)
+        momstring="momy";
+       else if ((dir==2)&&(AMREX_SPACEDIM==3))
+        momstring="momz";
+       else if (dir==AMREX_SPACEDIM)
+        momstring="momxy";
+       else if (dir==AMREX_SPACEDIM+1)
+        momstring="momxz";
+       else if (dir==AMREX_SPACEDIM+2)
+        momstring="momyz";
+       else
+        amrex::Error("dir invalid");
+
+       std::string velstring="vel";
+       if (dir==0) 
+        velstring="velx";
+       else if (dir==1)
+        velstring="vely";
+       else if ((dir==2)&&(AMREX_SPACEDIM==3))
+        velstring="velz";
+       else if (dir==AMREX_SPACEDIM)
+        velstring="velxy";
+       else if (dir==AMREX_SPACEDIM+1)
+        velstring="velxz";
+       else if (dir==AMREX_SPACEDIM+2)
+        velstring="velyz";
+       else
+        amrex::Error("dir invalid");
+
+
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
         " im= " << imbase <<
-        " dir= " << dir << " momentum= " <<
+        " dir= " << dir << " " << momstring << "= " <<
         blobdata[iblob].blob_integral_momentum[dir] 
 	<< '\n';
        Real numerator=blobdata[iblob].blob_integral_momentum[dir];
@@ -2142,10 +2177,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 	avg_vel/=denom;
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
         " im= " << imbase <<
-        " dir= " << dir << " average velocity= " << avg_vel << '\n';
+        " dir= " << dir << " average " << velstring << "= " << 
+        avg_vel << '\n';
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
         " im= " << imbase <<
-        " dir= " << dir << " momentum divisor= " << denom << '\n';
+        " dir= " << dir << " " << momstring << " divisor= " << denom << '\n';
       } // dir=0..2 sdim-1
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
@@ -2621,6 +2657,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   std::cout << "TIME= " << upper_slab_time << " MINPRES=  " << minpres << '\n';
   std::cout << "TIME= " << upper_slab_time << " MAXPRES=  " << maxpres << '\n';
   std::cout << "TIME= " << upper_slab_time << " MAXVEL=  " << maxvel << '\n';
+  std::cout << "TIME= " << upper_slab_time << " MAXVEL COLLIDE=  " 
+   << maxvel_collide << '\n';
 
   Real leftwt=sumdata[left_pressure_sum+2];
   Real rightwt=sumdata[left_pressure_sum+3];

@@ -6284,8 +6284,41 @@ NavierStokes::ColorSumALL(
       } // dir=0..2 sdim-1
      } // veltype=0..2
      for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
+
+      std::string momstring="momentum";
+      if (dir==0) 
+       momstring="momx";
+      else if (dir==1)
+       momstring="momy";
+      else if ((dir==2)&&(AMREX_SPACEDIM==3))
+       momstring="momz";
+      else if (dir==AMREX_SPACEDIM)
+       momstring="momxy";
+      else if (dir==AMREX_SPACEDIM+1)
+       momstring="momxz";
+      else if (dir==AMREX_SPACEDIM+2)
+       momstring="momyz";
+      else
+       amrex::Error("dir invalid");
+
+      std::string velstring="vel";
+      if (dir==0) 
+       velstring="velx";
+      else if (dir==1)
+       velstring="vely";
+      else if ((dir==2)&&(AMREX_SPACEDIM==3))
+       velstring="velz";
+      else if (dir==AMREX_SPACEDIM)
+       velstring="velxy";
+      else if (dir==AMREX_SPACEDIM+1)
+       velstring="velxz";
+      else if (dir==AMREX_SPACEDIM+2)
+       velstring="velyz";
+      else
+       amrex::Error("dir invalid");
+
       std::cout << " im= " << imbase <<
-       " dir= " << dir << " momentum= " <<
+       " dir= " << dir << " " << momstring << "= " <<
        blobdata[i].blob_integral_momentum[dir] << '\n';
       Real numerator=blobdata[i].blob_integral_momentum[dir];
       Real denom=blobdata[i].blob_integral_momentum[2*AMREX_SPACEDIM+dir];
@@ -6293,9 +6326,9 @@ NavierStokes::ColorSumALL(
       if (denom>0.0) 
        avg_vel/=denom;
       std::cout << " im= " << imbase <<
-       " dir= " << dir << " average velocity= " << avg_vel << '\n';
+       " dir= " << dir << " average " << velstring << "= " << avg_vel << '\n';
       std::cout << " im= " << imbase <<
-       " dir= " << dir << " momentum divisor= " << denom << '\n';
+       " dir= " << dir << " " << momstring << " divisor= " << denom << '\n';
      } // dir=0..2 sdim-1
      std::cout << " im= " << imbase <<
       " energy= " <<
