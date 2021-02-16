@@ -19825,6 +19825,7 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
  maxpres=-1.0e+99;
  minpres=1.0e+99;
  maxvel=0.0;
+ maxvel_collide=0.0;
 
  Vector<Real> minpresA;
  Vector<Real> maxpresA;
@@ -19864,7 +19865,7 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
   FArrayBox& maskfab=(*mask)[mfi];
   FArrayBox& velfab=(*vel)[mfi];
   FArrayBox& velx=(*velmac[0])[mfi];
-  FArrayBox& velx=(*velmac[1])[mfi];
+  FArrayBox& vely=(*velmac[1])[mfi];
   FArrayBox& velz=(*velmac[AMREX_SPACEDIM-1])[mfi];
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -19896,6 +19897,8 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
    maxpres=maxpresA[tid];
   if (maxvel<maxvelA[tid])
    maxvel=maxvelA[tid];
+  if (maxvel_collide<maxvel_collideA[tid])
+   maxvel_collide=maxvel_collideA[tid];
  }
  ParallelDescriptor::ReduceRealMin(minpres);
  ParallelDescriptor::ReduceRealMax(maxpres);
