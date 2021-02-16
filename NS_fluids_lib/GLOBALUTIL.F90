@@ -13367,6 +13367,14 @@ contains
        print *,"cp error"
        stop
       endif
+       ! (gamma-1)rho*cv T=(cp/cv -1)*rho*cv T=
+       ! (cp-cv)*rho*T=(R_universal/MolarMass)*rho*T
+       ! R_universal ergs/(mol K)
+       ! MolarMass g/mol
+       ! erg=g cm^2/s^2
+       ! R_universal/MolarMass=g cm^2 / (s^2 g K)  
+       ! (g cm^2 / (s^2 g K)) *( g/cm^3 )  * K = (g/cm)/s^2
+       ! pressure=dyne/m^2=g (cm/s^2 )/cm^2 = (g/cm)/s^2
       pressure_adjust=omega*fort_denconst(2)* &
          cv*fort_tempconst(2)
 
