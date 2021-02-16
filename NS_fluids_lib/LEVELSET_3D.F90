@@ -14599,6 +14599,15 @@ stop
               mass_sum=zero
               filter_velocity_any=0
 
+              if (face_flag.eq.0) then
+               filter_velocity_any=1
+              else if (face_flag.eq.1) then
+               ! do nothing
+              else
+               print *,"face_flag invalid"
+               stop
+              endif
+
               do side=1,2
 
                partid_check=0
