@@ -3,7 +3,7 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 1
+      integer, PARAMETER :: probtype = 0
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
@@ -197,24 +197,24 @@
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
 !      find_TINF_from_TGAMMA=1
        find_TINF_from_TGAMMA=0
-       radblob = 0.05d0
+       radblob = 0.05d0  ! cm
        cur_x=4.0d0*radblob
-       den_L = 1.0d0
-       den_G = 0.001d0
-       C_pG = 1.0d+7
-       k_G = 0.024d+5
+       den_L = 1.0d0  ! g/cm^3
+       den_G = 0.001d0 ! g/cm^3
+       C_pG = 1.0d+7  ! erg/(g K)
+       k_G = 0.024d+5 ! erg/(cm s K)
 !      L_V = 2.26d+10  
-       L_V = 2.1d+10  
-       D_G = 0.1d0
-       WV_global = 18.02d0
-       WA_global = 28.9d0
-       R_global = 8.31446261815324d+7
-       T_sat_global=373.15d0
-       T_inf_global = 300.5d0
-       Y_inf_global=7.1d-3
-       T_gamma=300.5  
+       L_V = 2.1d+10  ! erg/g
+       D_G = 0.1d0  ! cm^2/s
+       WV_global = 18.02d0  ! g/mol
+       WA_global = 28.9d0   ! g/mol
+       R_global = 8.31446261815324d+7  ! ergs/(mol K)
+       T_sat_global=373.15d0  ! K
+       T_inf_global = 300.5d0 ! K
+       Y_inf_global=7.1d-3  ! dimensionless
+       T_gamma=300.5   ! K
        cc=0.0d0
-       TSTOP=1000.0d0
+       TSTOP=1000.0d0  ! seconds
       else if (probtype.eq.1) then
        find_TINF_from_TGAMMA=0
        radblob = 0.005d0
