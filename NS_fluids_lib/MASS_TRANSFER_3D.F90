@@ -4717,6 +4717,10 @@ stop
              stop
             endif
            enddo ! im_local=1..nmat
+            ! make sure the level set functions 
+            ! LSnew(im_source), LSnew(im_dest),
+            ! LS_old(im_fluid_rest) 
+            ! are tessellating.
            lsdata(im_source)=half*(unsplit_lsnew(im_source)- &
              max(LS_MAX_fixed,unsplit_lsnew(im_dest)))
            lsdata(im_dest)=half*(unsplit_lsnew(im_dest)- &
