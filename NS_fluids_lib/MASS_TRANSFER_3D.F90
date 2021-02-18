@@ -3499,6 +3499,7 @@ stop
       INTEGER_T distribute_from_targ
       INTEGER_T debugrate
       REAL_T F_STEN(nmat)
+      REAL_T F_STEN_CENTER(nmat)
       REAL_T unsplit_snew(nmat*ngeom_raw)
       REAL_T unsplit_density(nmat)
       REAL_T unsplit_temperature(nmat)
@@ -3936,9 +3937,9 @@ stop
         if (is_rigid(nmat,im_primary).eq.0) then
 
          do im=1,nmat
-          F_STEN(im)=zero
-
           vofcomp_recon=(im-1)*ngeom_recon+1
+          F_STEN(im)=zero
+          F_STEN_CENTER(im)=recon(D_DECL(i,j,k),vofcomp_recon)
 
           do i1=-1,1
           do j1=-1,1
@@ -3977,19 +3978,28 @@ stop
               stop
              endif
 
-             if ((F_STEN(im_source).gt.zero).and. &
-                 (F_STEN(im_dest).gt.zero)) then
-              if ((im.eq.im_outer).and.(im_opp.eq.im_opp_outer)) then
-               interface_near(iten+ireverse*nten)=1
-               do_unsplit_advection=1
-              else 
+             if (F_STEN_CENTER(im_source).gt.zero) then
+
+              if ((F_STEN(im_source).gt.zero).and. &
+                  (F_STEN(im_dest).gt.zero)) then
+               if ((im.eq.im_outer).and.(im_opp.eq.im_opp_outer)) then
+                interface_near(iten+ireverse*nten)=1
+                do_unsplit_advection=1
+               else 
+                ! do nothing
+               endif
+              else if ((F_STEN(im_source).eq.zero).or. &
+                       (F_STEN(im_dest).eq.zero)) then
                ! do nothing
+              else
+               print *,"F_STEN invalid"
+               stop
               endif
-             else if ((F_STEN(im_source).eq.zero).or. &
-                      (F_STEN(im_dest).eq.zero)) then
+
+             else if (F_STEN_CENTER(im_source).eq.zero) then
               ! do nothing
              else
-              print *,"F_STEN invalid"
+              print *,"F_STEN_CENTER(im_source) invalid"
               stop
              endif
 
