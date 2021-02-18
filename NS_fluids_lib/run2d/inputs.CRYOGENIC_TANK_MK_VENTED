@@ -22,6 +22,7 @@ ns.num_species_var  = 1
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
 ns.material_type    = 0 0 999
 ns.material_type_evap = 0 24 999
+ns.material_type_lowmach = 0 24 999
 
 #ns.truncate_volume_fractions = 0 0 1
 
@@ -33,13 +34,15 @@ ns.material_type_evap = 0 24 999
 #  rho^{n+1}(u* - u_adv)/dt = div (2 mu D^*) - dt grad p^{n+1,(k)}
 #  div (1/rho) grad p^{n+1,(k+1)}=rho c^2 (p^{n+1,(k+1)}-p^adv)/dt
 # endfor
-ns.num_divu_outer_sweeps=2
+ns.face_flag=0
+ns.filter_velocity=1 1 1
+ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
 
-solvability_projection = 0  # Compressible gas
+solvability_projection = 0  # vented
 
 # temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = 0  (energy advection)
@@ -122,7 +125,7 @@ ns.v=0
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
 ns.gravity          = 9.8
-ns.gravity_dir      = 2
+ns.gravity_dir      = 2 # 1..sdim
 ns.invert_gravity   = 0
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
@@ -196,7 +199,10 @@ ns.tension=0.0 0.0 0.0
 ns.latent_heat=1.42E+05 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
-ns.distribute_from_target= 1 0 0 0 0 0
+ns.distribute_from_target= 0 0 0 0 0 0
+ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
+ns.constant_density_all_time=1 1 1 # vented 1..nmat
+ns.constant_volume_mdot=0 0 0 # vented 1..2 nten
 
 # MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
@@ -248,8 +254,7 @@ ns.xblob3 = 61.6726637934 # -q dot n
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 0
-ns.FD_curv_interp   = 1
+ns.continuous_mof   = 2
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE

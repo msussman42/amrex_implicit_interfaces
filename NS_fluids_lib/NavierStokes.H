@@ -2126,7 +2126,9 @@ protected:
     static int diffusionface_flag; // 0=use LS 1=use VOF (def=1)
     static int temperatureface_flag; // 0=use LS 1=use VOF (def=1)
     static Vector<int> material_type; // 0 incomp   
-    static Vector<int> material_type_evap; // 0 incomp   
+     //0 incomp; material_type_evap needed for the Kassemi model.
+    static Vector<int> material_type_evap; 
+    static Vector<int> material_type_lowmach; // 0 incomp   
     static Real wait_time;
     static Real advbot;
     static Real inflow_pressure;

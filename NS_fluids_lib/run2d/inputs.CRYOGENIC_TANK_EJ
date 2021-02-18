@@ -26,16 +26,20 @@ ns.num_species_var  = 0
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
 #
-ns.material_type    = 0 24 999
+ns.material_type = 0 0 999
+ns.material_type_evap = 0 24 999
+ns.material_type_lowmach = 0 24 999
 # density equation is Drho/Dt=0 in the incompressible zone.
 # density equation is rhot_t+div(rho u)=0 in the incompressible zone.
-ns.face_flag=1
+ns.face_flag=0
+ns.filter_velocity=1 1 1
+ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
 
-solvability_projection = 0  # Compressible gas
+solvability_projection = 1  # sealed container
 
 # temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = 0  (energy advection)
@@ -82,7 +86,7 @@ ns.change_max       = 1.1
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
 #0=only at t=0 1=always account for sound speed 2=ignore
-ns.shock_timestep=2 1 2 
+ns.shock_timestep=2 2 2 
 
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
@@ -90,7 +94,7 @@ ns.shock_timestep=2 1 2
 # -------- Input/output (IO) -------------------------------
 # ----------------------------------------------------------
 # output file -2=> tecplot -1=> plot files (visit or paraview)
-ns.visual_option    =-1  
+ns.visual_option    =-2  
 
 amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
@@ -113,7 +117,7 @@ ns.v=0
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
 ns.gravity          = 9.8
-ns.gravity_dir      = 2
+ns.gravity_dir      = 2 # 1,..,SDIM
 ns.invert_gravity   = 0
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
@@ -212,7 +216,10 @@ ns.tension=2.0E-03 2.0E-03 2.0E-03
 ns.latent_heat=4.3518E+05 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
-ns.distribute_from_target= 1 0 0 0 0 0
+ns.distribute_from_target= 0 0 0 0 0 0
+ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
+ns.constant_density_all_time=1 0 1 # sealed 1..nmat
+ns.constant_volume_mdot=-1 0 0 # sealed 1..2 nten
 
 # EJ model (boiling only) 
 ns.freezing_model=      0 0 0 0 0 0
@@ -265,8 +272,7 @@ ns.zblob3           = 19.894 # -q dot n=Watts/m^2
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 0
-ns.FD_curv_interp   = 1
+ns.continuous_mof   = 2
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE

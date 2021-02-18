@@ -965,7 +965,9 @@ int NavierStokes::diffusionface_flag=1; // 0=use LS  1=use VOF
 int NavierStokes::temperatureface_flag=1; // 0=use LS  1=use VOF
 
 Vector<int> NavierStokes::material_type;
+//0 incomp; material_type_evap needed for the Kassemi model.
 Vector<int> NavierStokes::material_type_evap;
+Vector<int> NavierStokes::material_type_lowmach;
 
 Real NavierStokes::wait_time=0.0;
 Real NavierStokes::advbot=1.0;
@@ -2666,10 +2668,13 @@ NavierStokes::read_params ()
     material_type.resize(nmat);
     pp.getarr("material_type",material_type,0,nmat);
     material_type_evap.resize(nmat);
+    material_type_lowmach.resize(nmat);
     for (int i=0;i<nmat;i++) {
      material_type_evap[i]=material_type[i];
+     material_type_lowmach[i]=material_type[i];
     }
     pp.queryarr("material_type_evap",material_type_evap,0,nmat);
+    pp.queryarr("material_type_lowmach",material_type_lowmach,0,nmat);
  
     for (int i=0;i<nmat;i++) {
      FSI_flag[i]=0;
@@ -4655,6 +4660,8 @@ NavierStokes::read_params ()
       std::cout << "material_type i=" << i << " " << material_type[i] << '\n';
       std::cout << "material_type_evap i=" << i << " " << 
 	      material_type_evap[i] << '\n';
+      std::cout << "material_type_lowmach i=" << i << " " << 
+	      material_type_lowmach[i] << '\n';
       std::cout << "pressure_error_cutoff i=" << i << " " << 
         pressure_error_cutoff[i] << '\n';
       std::cout << "vorterr i=" << i << " " << 

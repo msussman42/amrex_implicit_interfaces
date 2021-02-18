@@ -23,16 +23,19 @@ ns.num_species_var  = 1
 #ns.material_type    = 0 24 999
 ns.material_type    = 0 0 999
 ns.material_type_evap = 0 24 999
+ns.material_type_lowmach = 0 24 999
 #ns.override_density=0 1 0 # needed if incomp and phase change and vented
 ns.override_density=0 0 0
 
-ns.num_divu_outer_sweeps=2
+ns.face_flag=0
+ns.filter_velocity=1 1 1
+ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
 
-solvability_projection = 0  # Compressible gas
+solvability_projection = 1 # sealed
 
 # Coordinate origin is at the center of the tank
 ns.xblob            = 0.1016 # Tank cavity radius
@@ -107,7 +110,7 @@ ns.v=0
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
 ns.gravity          = 9.8
-ns.gravity_dir      = 2
+ns.gravity_dir      = 2 # 1..sdim
 ns.invert_gravity   = 0
 ns.gravity_potential_form=1
 ns.twall            = 0.0
@@ -183,6 +186,9 @@ ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 # distribution of the expansion term
 #ns.distribute_from_target= 1 0 0 0 0 0
 ns.distribute_from_target= 0 0 0 0 0 0
+ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
+ns.constant_density_all_time=1 0 1 # sealed 1..nmat
+ns.constant_volume_mdot=-1 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
@@ -221,9 +227,6 @@ ns.outflow_pressure=65606.52
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0
-ns.face_flag=1
-ns.interp_vel_increment_from_cell=0
-ns.filter_velocity=1 1 1
 ns.compressible_dt_factor=2.0 2.0 2.0
 # temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
@@ -245,7 +248,6 @@ ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof   = 2 # 0=MOF 2=CMOF
-ns.FD_curv_interp   = 1
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
