@@ -82,8 +82,10 @@ extern "C"
      int* bfact,
      int* velbc,
      Real* dt,
+     int* normal_probe_size,
      Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),
      Real* ucell,AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
+     Real* oldLS,AMREX_ARLIM_P(oldLSlo),AMREX_ARLIM_P(oldLShi),
      const Real* xlo,const Real* dx,
      int* level,int* finest_level);
 

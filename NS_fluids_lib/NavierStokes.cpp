@@ -12382,6 +12382,8 @@ NavierStokes::level_phase_change_convert(
     } else 
      amrex::Error("nodevelfab.nComp() invalid");
 
+    FArrayBox& olddistfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+
     int bfact=parent->Space_blockingFactor(level);
 
     int tid_current=ns_thread();
@@ -12400,10 +12402,13 @@ NavierStokes::level_phase_change_convert(
      &bfact, 
      velbc.dataPtr(),
      &dt_slab,
+     &normal_probe_size,
      nodevelfab.dataPtr(),
      ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
      burnvelfab.dataPtr(),
      ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
+     olddistfab.dataPtr(),
+     ARLIM(olddistfab.loVect()),ARLIM(olddistfab.hiVect()),
      xlo,dx, 
      &level,&finest_level);
   } // mfi

@@ -3108,6 +3108,8 @@ stop
 #endif
 
         ! this is for unsplit advection: for phase change.
+        ! Called from NavierStokes.cpp: 
+        !   NavierStokes::level_phase_change_convert
       subroutine FORT_NODEDISPLACE( &
        nmat, &
        nten, &
@@ -3117,12 +3119,16 @@ stop
        bfact, &
        velbc, &
        dt, &
+       normal_probe_size, &
        unode,DIMS(unode), &
        ucell,DIMS(ucell), &
+       oldLS,DIMS(oldLS), &
        xlo,dx, &
        level,finest_level)
       use probcommon_module
       use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
       use mass_transfer_module
 
       IMPLICIT NONE
@@ -3131,6 +3137,7 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
+      INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T ncomp_per_burning
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3140,9 +3147,11 @@ stop
 
       INTEGER_T, intent(in) :: DIMDEC(unode)
       INTEGER_T, intent(in) :: DIMDEC(ucell)
+      INTEGER_T, intent(in) :: DIMDEC(oldLS)
      
       REAL_T, intent(out) ::  unode(DIMV(unode),2*nten*SDIM) 
       REAL_T, intent(in) ::  ucell(DIMV(ucell),nburning) 
+      REAL_T, intent(in) :: oldLS(DIMV(oldLS),nmat*(1+SDIM))
       INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -3156,6 +3165,10 @@ stop
       INTEGER_T scomp,tag_local,nhalf
       INTEGER_T ireverse
       INTEGER_T sign_reverse
+      INTEGER_T rigid_in_stencil
+      INTEGER_T im
+      INTEGER_T im_primary
+      REAL_T LS_local(nmat)
 
       nhalf=3
 
@@ -3200,6 +3213,11 @@ stop
        stop
       endif
 
+      if (normal_probe_size.ne.1) then
+       print *,"normal_probe_size invalid"
+       stop
+      endif
+
       if (levelrz.eq.0) then
        ! do nothing
       else if (levelrz.eq.1) then
@@ -3217,6 +3235,8 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(unode),1,-1,12)
       call checkbound(fablo,fabhi,DIMS(ucell),1,-1,12)
+      call checkbound(fablo,fabhi, &
+       DIMS(oldLS),normal_probe_size+3,-1,1257)
 
       if (dt.le.zero) then
        print *,"dt invalid"
@@ -3231,6 +3251,28 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridstenND_level(xstenND,i,j,k,level,nhalf)
+
+       rigid_in_stencil=0
+
+       do i1=0,1
+       do j1=0,1
+       do k1=klosten,khisten
+        do im=1,nmat
+         LS_local(im)=oldLS(D_DECL(i-i1,j-j1,k-k1),im)
+        enddo
+        call get_primary_material(LS_local,nmat,im_primary)
+        if (is_rigid(nmat,im_primary).eq.0) then
+         ! do nothing
+        else if (is_rigid(nmat,im_primary).eq.1) then
+         rigid_in_stencil=1
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+       enddo
+       enddo
+       enddo
+
        do itencrit=1,nten
        do ireverse=0,1
 
@@ -3249,6 +3291,7 @@ stop
          do i1=0,1
          do j1=0,1
          do k1=klosten,khisten
+
           tag_local=NINT(ucell(D_DECL(i-i1,j-j1,k-k1),itencrit))
           if (tag_local.eq.0) then
            ! do nothing
@@ -3308,6 +3351,16 @@ stop
           print *,"levelrz invalid node displace 3"
           stop
          endif
+
+         if (rigid_in_stencil.eq.1) then
+          delta=zero
+         else if (rigid_in_stencil.eq.0) then
+          ! do nothing
+         else
+          print *,"rigid_in_stencil invalid"
+          stop
+         endif
+
          scomp=(itencrit+ireverse*nten-1)*ncomp_per_burning+dir
          unode(D_DECL(i,j,k),scomp)=delta
         enddo ! dir=1..sdim
@@ -3649,7 +3702,6 @@ stop
       INTEGER_T im_local
       INTEGER_T im_trust
       INTEGER_T im_distrust
-      REAL_T LS_MAX_fixed
       REAL_T fixed_vfrac_sum
       REAL_T fixed_centroid_sum(SDIM)
       REAL_T avail_vfrac
@@ -4669,12 +4721,15 @@ stop
            endif
           enddo ! dir=1..sdim
 
+           ! declared in MOF.F90: checks both is_rigid and non is_rigid
+           ! materials.
           call get_primary_material(unsplit_lsnew,nmat,im_primary_new)
           call get_primary_material(oldLS_point,nmat,im_primary_old)
           call combine_solid_VOF(newvfrac,nmat,solid_vof_new)
           call combine_solid_VOF(oldvfrac,nmat,solid_vof_old)
 
           away_from_interface=0
+          
           if ((is_rigid(nmat,im_primary_new).eq.1).or. &
               (is_rigid(nmat,im_primary_old).eq.1)) then
            away_from_interface=1
@@ -4707,37 +4762,45 @@ stop
            enddo
           else if (away_from_interface.eq.0) then
 
-            ! only the interface changing phase should move
-           LS_MAX_fixed=-1.0D+20
-           do im_local=1,nmat
-            lsdata(im_local)=LSold(D_DECL(i,j,k),im_local)
-            if ((im_local.eq.im_source).or.(im_local.eq.im_dest)) then
+           if ((im_primary_old.ne.im_source).and. &
+               (im_primary_old.ne.im_dest)) then
+            if (im_primary_old.ne.im_primary_new) then
+             ! revert to oldLS in this case.
              ! do nothing
-            else if ((im_local.ge.1).and.(im_local.le.nmat)) then
-             if (is_rigid(nmat,im_local).eq.1) then
+            else if (im_primary_old.eq.im_primary_new) then
+             LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
+             LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+            else
+             print *,"im_primary_new or im_primary_old invalid"
+             stop
+            endif
+           else if ((im_primary_old.eq.im_source).or. &
+                    (im_primary_old.eq.im_dest)) then
+            if ((im_primary_new.ne.im_source).and. &
+                (im_primary_new.ne.im_dest)) then
+             ! do nothing
+            else if ((im_primary_new.eq.im_source).or. &
+                     (im_primary_new.eq.im_dest)) then
+             if (unsplit_lsnew(im_dest).lt.oldLS_point(im_dest)) then
               ! do nothing
-             else if (is_rigid(nmat,im_local).eq.0) then  
-              LS_MAX_fixed=max(LS_MAX_fixed,lsdata(im_local))
+             else if (unsplit_lsnew(im_source).gt.oldLS_point(im_source)) then
+              ! do nothing
+             else if ((unsplit_lsnew(im_dest).ge.oldLS_point(im_dest)).and. &
+                      (unsplit_lsnew(im_source).le.oldLS_point(im_source))) then
+              LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
+              LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
              else
-              print *,"is_rigid(nmat,im_local) invalid"
+              print *,"unsplit_lsnew or lsdata invalid"
               stop
              endif
             else
-             print *,"im_local bust"
+             print *,"im_primary_new invalid"
              stop
             endif
-           enddo ! im_local=1..nmat
-            ! make sure the level set functions 
-            ! LSnew(im_source), LSnew(im_dest),
-            ! LS_old(im_fluid_rest) 
-            ! are tessellating.
-           lsdata(im_source)=half*(unsplit_lsnew(im_source)- &
-             max(LS_MAX_fixed,unsplit_lsnew(im_dest)))
-           lsdata(im_dest)=half*(unsplit_lsnew(im_dest)- &
-             max(LS_MAX_fixed,unsplit_lsnew(im_source)))
-
-           LSnew(D_DECL(i,j,k),im_source)=lsdata(im_source)
-           LSnew(D_DECL(i,j,k),im_dest)=lsdata(im_dest)
+           else
+            print *,"im_primary_old invalid"
+            stop
+           endif
 
           else
            print *,"away_from_interface invalid"
