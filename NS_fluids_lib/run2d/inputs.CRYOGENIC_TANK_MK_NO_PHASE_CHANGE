@@ -20,7 +20,6 @@ ns.num_species_var  = 1
 # 24 => compressible 
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
-#ns.material_type    = 0 24 999
 ns.material_type    = 0 0 999
 ns.material_type_evap = 0 24 999
 ns.material_type_lowmach = 0 24 999
@@ -184,7 +183,6 @@ ns.tension=0.0 0.0 0.0
 ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
-#ns.distribute_from_target= 1 0 0 0 0 0
 ns.distribute_from_target= 0 0 0 0 0 0
 ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 0 1 # sealed 1..nmat
