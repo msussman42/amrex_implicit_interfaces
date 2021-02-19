@@ -13187,11 +13187,15 @@ contains
 
        ! only called if override_density=1 or override_density=2
        ! only takes into account fort_drhodz.
-       ! caller_id==0  => called from DERIVE_MOM_DEN
+       ! caller_id==0  => called from DERIVE_MOM_DEN (GODUNOV_3D.F90)
        ! caller_id==1  => called from general_hydrostatic_pressure_density
        !                  (which is called from INITPOTENTIAL)
       subroutine default_hydrostatic_pressure_density( &
-        xpos,rho,pres,liquid_temp, &
+        xpos, &
+        rho_base, &
+        rho, &
+        pres, &
+        liquid_temp, &
         gravity_normalized, &
         imat, &
         override_density, &
@@ -13204,6 +13208,7 @@ contains
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T nmat
       REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(inout) :: rho_base
       REAL_T, intent(inout) :: rho,pres
       REAL_T, intent(in) :: gravity_normalized
       REAL_T, intent(in) :: liquid_temp
@@ -13236,8 +13241,17 @@ contains
        stop
       endif
 
-       ! in default_hydrostatic_pressure_density
-      denfree=fort_denconst(imat)
+      if (rho_base.gt.zero) then
+       ! do nothing
+      else
+       print *,"rho_base invalid"
+       stop
+      endif
+
+      ! in default_hydrostatic_pressure_density
+
+!     denfree=fort_denconst(imat)
+      denfree=rho_base
       energy_free=fort_energyconst(imat)
       if (energy_free.gt.zero) then
        ! do nothing
@@ -13306,10 +13320,16 @@ contains
 
         if (caller_id.eq.0) then
          ! do nothing, called from DERIVE_MOM_DEN, 
-         !  keep rho=denfree=denconst(imat)
+         !  keep rho=denfree=rho_base
         else if (caller_id.eq.1) then 
           ! called from general_hydrostatic_pressure_density
-         rho=fort_denconst(1)
+         if (imat.eq.1) then
+!         rho=fort_denconst(1)
+          rho=rho_base
+         else
+          print *,"imat invalid"
+          stop
+         endif
         else
          print *,"caller_id invalid"
          stop
