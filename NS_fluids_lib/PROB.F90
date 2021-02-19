@@ -3956,7 +3956,7 @@ end subroutine dynamic_contact_angle
 
         ! the force is grad p^hydrostatic/rho^hydrostatic
        if (override_density.eq.0) then
-        rho_hydrostatic=fort_denconst(imat)
+        rho_hydrostatic=fort_denconst(imat) ! imat=1
         pres_hydrostatic= &
               -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
        else if (override_density.eq.1) then
@@ -3964,15 +3964,20 @@ end subroutine dynamic_contact_angle
          ! in: GLOBALUTIL.F90
          ! rho_hydrostatic=rho_hydrostatic(T,Y,z)
         caller_id=1
-        call default_hydrostatic_pressure_density(xpos, &
-         rho_hydrostatic,pres_hydrostatic,liquid_temp, &
+        call default_hydrostatic_pressure_density( &
+         xpos, &
+         fort_denconst(imat), & ! imat=1 
+         rho_hydrostatic, &
+         pres_hydrostatic, &
+         liquid_temp, &
          gravity_normalized, &
-         imat,override_density, &
+         imat, &  ! =1
+         override_density, &
          caller_id)
        else if (override_density.eq.2) then
         ! same as override_density==0:
         ! temperature dependence handled in DIFFUSION_3D.F90
-        rho_hydrostatic=fort_denconst(imat) 
+        rho_hydrostatic=fort_denconst(imat)  ! imat=1
         pres_hydrostatic= &
              -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
        else
@@ -3981,7 +3986,7 @@ end subroutine dynamic_contact_angle
        endif
 
       else if (fort_material_type(1).gt.0) then
-       rho_hydrostatic=fort_denconst(imat)
+       rho_hydrostatic=fort_denconst(imat)  ! imat=1
        pres_hydrostatic= &
              -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
       else
@@ -4018,7 +4023,8 @@ end subroutine dynamic_contact_angle
 
       if (is_in_probtype_list().eq.1) then
        call SUB_correct_pres_rho_hydrostatic( &
-         pres_hydrostatic,rho_hydrostatic, &
+         pres_hydrostatic, &
+         rho_hydrostatic, &
          xpos, &
          gravity_normalized, &
          gravity_dir_parm)

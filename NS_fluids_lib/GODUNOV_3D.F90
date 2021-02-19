@@ -14048,6 +14048,7 @@ stop
       INTEGER_T nhalf
       REAL_T density_of_TZ
       INTEGER_T caller_id
+      REAL_T rho_base
 
       nhalf=3
 
@@ -14122,6 +14123,15 @@ stop
      
         dencomp=(im_parm-1)*num_state_material+1
 
+        if (constant_density_all_time(im_parm).eq.1) then
+         rho_base=fort_denconst(im_parm)
+        else if (constant_density_all_time(im_parm).eq.0) then
+         rho_base=eosdata(D_DECL(i,j,k),dencomp)
+        else
+         print *,"constant_density_all_time(im_parm) invalid"
+         stop
+        endif
+
         ! rho=rho(T,z)
         if (override_density(im_parm).eq.1) then
 
@@ -14129,15 +14139,6 @@ stop
           ! do nothing
          else
           print *,"override_density==1 for incomp material only"
-          stop
-         endif
-         if (constant_density_all_time(im_parm).eq.1) then
-          ! do nothing
-         else
-          print *,"constant_density_all_time(im_parm) invalid"
-          print *,"expecting constant_density_all_time(im_parm)=1"
-          print *,"when override_density==1, for now, assume fort_denconst"
-          print *,"is the base density"
           stop
          endif
 
@@ -14148,7 +14149,11 @@ stop
           ! only takes into account fort_drhodz
          caller_id=0
          call default_hydrostatic_pressure_density( &
-           xpos,rhohydro,preshydro,temperature, &
+           xpos, &
+           rho_base, &
+           rhohydro, &
+           preshydro, &
+           temperature, &
            gravity_normalized, &
            im_parm, &
            override_density(im_parm), &
@@ -14162,19 +14167,21 @@ stop
          endif
 
          density_of_TZ=rhohydro+ &
-           fort_denconst(im_parm)*DrhoDT(im_parm)* &
+           rho_base*DrhoDT(im_parm)* &
            (temperature-fort_tempconst(im_parm))
 
          if ((temperature.ge.zero).and. &
              (rhohydro.gt.zero).and. &
              (fort_tempconst(im_parm).ge.zero).and. &
-             (fort_denconst(im_parm).gt.zero)) then 
+             (fort_denconst(im_parm).gt.zero).and. &
+             (rho_base.gt.zero)) then 
           ! do nothing
          else
           print *,"invalid parameters to get the density"
           print *,"im_parm=",im_parm
           print *,"temperature=",temperature
           print *,"density_of_TZ=",density_of_TZ
+          print *,"rho_base=",rho_base
           print *,"rhohydro=",rhohydro
           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
           stop
@@ -14187,6 +14194,7 @@ stop
           print *,"im_parm=",im_parm
           print *,"temperature=",temperature
           print *,"density_of_TZ=",density_of_TZ
+          print *,"rho_base=",rho_base
           print *,"rhohydro=",rhohydro
           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
           print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
@@ -14194,7 +14202,7 @@ stop
           temperature=fort_tempcutoffmax(im_parm)
  
           density_of_TZ=rhohydro+ &
-           fort_denconst(im_parm)*DrhoDT(im_parm)* &
+           rho_base*DrhoDT(im_parm)* &
            (temperature-fort_tempconst(im_parm))
 
           if (density_of_TZ.gt.zero) then
@@ -14213,16 +14221,7 @@ stop
 
         else if ((override_density(im_parm).eq.0).or. &
                  (override_density(im_parm).eq.2)) then
-         if (constant_density_all_time(im_parm).eq.1) then
-          momden(D_DECL(i,j,k),im_parm)=fort_denconst(im_parm)
-         else if (constant_density_all_time(im_parm).eq.0) then
-          momden(D_DECL(i,j,k),im_parm)= &
-             eosdata(D_DECL(i,j,k),dencomp)
-         else
-          print *,"constant_density_all_time(im_parm) invalid"
-          stop
-         endif
-
+         momden(D_DECL(i,j,k),im_parm)=rho_base
         else
          print *,"override_density invalid"
          stop
