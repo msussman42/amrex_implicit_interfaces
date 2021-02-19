@@ -180,7 +180,7 @@ ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0
 ns.distribute_from_target= 0 0 0 0 0 0
 ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 0 1 # sealed 1..nmat
-ns.constant_volume_mdot=-1 0 0 # sealed 1..2 nten
+ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # Schrage model (evaporation only)
 ns.mass_fraction_id =   1 0 0 0 0 0
