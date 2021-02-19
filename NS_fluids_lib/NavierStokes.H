@@ -2129,6 +2129,7 @@ protected:
      //0 incomp; material_type_evap needed for the Kassemi model.
     static Vector<int> material_type_evap; 
     static Vector<int> material_type_lowmach; // 0 incomp   
+    static Vector<int> material_type_visual; // 0 incomp   
     static Real wait_time;
     static Real advbot;
     static Real inflow_pressure;
