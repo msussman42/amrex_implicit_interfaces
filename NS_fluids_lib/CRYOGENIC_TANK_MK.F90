@@ -517,35 +517,51 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK_MK
 !***********************************************
 ! called by the boundary condition routine
 ! might be called at initialization, so put a placeholder pressure here.
-subroutine CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES)
+subroutine CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 use probcommon_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(out) :: PRES
+REAL_T, intent(out) :: rho_hyd
+INTEGER_T simple_hyd_p
+
+simple_hyd_p=1
 
 !PRES=TANK_MK_INITIAL_GAS_PRESSURE
 if(fort_material_type(2).eq.0) then
- ! incompressible gas
- ! Flat open top x_2: TANK_MK_HEIGHT/two
- ! Known pressure(P_1) at top (outflow_pressure)
- ! P_2=P_1 + rho*g*(z_1-z_2)  [g>0]
- if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
-  PRES=TANK_MK_INITIAL_PRESSURE+&
+
+ if (simple_hyd_p.eq.0) then
+  rho_hyd=fort_denconst(2)
+  ! incompressible gas
+  ! Flat open top x_2: TANK_MK_HEIGHT/two
+  ! Known pressure(P_1) at top (outflow_pressure)
+  ! P_2=P_1 + rho*g*(z_1-z_2)  [g>0]
+  if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
+   PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-x(2))*(abs(gravity)) 
- elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
-  PRES=TANK_MK_INITIAL_PRESSURE+&
+  elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
+   PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-TANK_MK_INTERFACE_LOCATION)* &
        (abs(gravity))+ &
        fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
+  else
+   print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
+   stop
+  endif
+
+ else if (simple_hyd_p.eq.1) then
+  rho_hyd=fort_denconst(1)
+  PRES=-abs(gravity)*rho_hyd*(x(2)-probhiy-probhiy)
  else
-  print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
+  print *,"simple_hyd_p invalid"
   stop
  endif
 elseif (fort_material_type(2).eq.24) then
  ! compressible gas
  ! Known pressure(P_1) at top (based on given density and temperature)
  ! P_2=P_1 * exp(g*(z_1-z_2)/(R_sp*T_0))  [g>0]
+ rho_hyd=fort_denconst(2)
  if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
        exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(2))*abs(gravity)/&
@@ -578,6 +594,7 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
+REAL_T :: rho_hyd
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -586,7 +603,7 @@ else
  stop
 endif
 
-call CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES)
+call CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 
 return 
 end subroutine CRYOGENIC_TANK_MK_PRES
@@ -970,7 +987,8 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_HEATSOURCE
 
-
+! called from subroutine general_hydrostatic_pressure_density which
+! is declared in PROB.F90
 subroutine CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic( &
    pres_hydrostatic,rho_hydrostatic, &
    xpos, &
@@ -985,35 +1003,45 @@ REAL_T, intent(in) :: xpos(SDIM)
 REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
 INTEGER_T, intent(in) :: gravity_dir_parm
 
+if ((gravity_dir_parm.ge.1).and. &
+    (gravity_dir_parm.le.SDIM)) then
+ ! do nothing
+else
+ print *,"gravity_dir_parm invalid"
+ stop
+endif
+
 if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
     (probtype.eq.423)) then
 
- if (1.eq.1) then
+ call CRYOGENIC_TANK_MK_PRES_UTIL(xpos,pres_hydrostatic,rho_hydrostatic)
 
-  call CRYOGENIC_TANK_MK_PRES_UTIL(xpos,pres_hydrostatic)
-
-  if (xpos(2).ge.TANK_MK_INTERFACE_LOCATION) then
-   if(fort_material_type(2).eq.0) then
-    ! incompressible
-    rho_hydrostatic=fort_denconst(2)
-   elseif(fort_material_type(2).eq.24) then
+ if (xpos(2).ge.TANK_MK_INTERFACE_LOCATION) then
+  if(fort_material_type(2).eq.0) then
+   ! incompressible
+  elseif(fort_material_type(2).eq.24) then
     ! compressible
     ! rho =P/(R_sp T)
-    rho_hydrostatic = pres_hydrostatic/&
-      (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2))
-   else
-    print *,"material type invalid for pres den hydrostatic!"
-    stop
-   endif ! material_type
+   rho_hydrostatic = pres_hydrostatic/&
+     (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2))
+  else
+   print *,"material type invalid for pres den hydrostatic!"
+   stop
+  endif ! material_type
 
-  else if (xpos(2).le.TANK_MK_INTERFACE_LOCATION) then
+ else if (xpos(2).le.TANK_MK_INTERFACE_LOCATION) then
+  if(fort_material_type(2).eq.0) then
+   ! incompressible
+  elseif(fort_material_type(2).eq.24) then
    rho_hydrostatic=fort_denconst(1)
   else
-   print *,"xpos(2) invalid"
+   print *,"material type invalid for pres den hydrostatic!"
    stop
-  endif
-
+  endif ! material_type
+ else
+  print *,"xpos(2) invalid"
+  stop
  endif
 
 else

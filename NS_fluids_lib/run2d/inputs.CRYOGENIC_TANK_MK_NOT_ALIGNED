@@ -123,9 +123,9 @@ ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0
 ns.gravity_potential_form=1
-ns.override_density=1 0 0
+ns.override_density=1 1 0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
-ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
+ns.DrhoDT = -0.0007 -0.0034 0.0   # units: 1/degree K
 
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
@@ -200,7 +200,7 @@ ns.latent_heat=1.42E+05 0.0 0.0 0.0 0.0 0.0
 ns.distribute_from_target= 0 0 0 0 0 0
 ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 0 1 # sealed 1..nmat
-ns.constant_volume_mdot=-1 0 0 # sealed 1..2 nten
+ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1

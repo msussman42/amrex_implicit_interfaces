@@ -23,7 +23,6 @@ ns.num_species_var  = 1
 ns.material_type    = 0 0 999
 ns.material_type_evap = 0 24 999
 ns.material_type_lowmach = 0 24 999
-#ns.override_density=0 1 0 # needed if incomp and phase change and vented
 ns.override_density=0 0 0
 
 ns.face_flag=0
@@ -186,7 +185,7 @@ ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 ns.distribute_from_target= 0 0 0 0 0 0
 ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 0 1 # sealed 1..nmat
-ns.constant_volume_mdot=-1 0 0 # sealed 1..2 nten
+ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
