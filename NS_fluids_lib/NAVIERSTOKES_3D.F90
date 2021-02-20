@@ -12143,6 +12143,7 @@ END SUBROUTINE SIMP
       subroutine FORT_EOS_PRESSURE( &
         level, &
         finest_level, &
+        local_material_type, &
         xlo,dx, &
         pres,DIMS(pres), &
         recon,DIMS(recon), &
@@ -12160,25 +12161,28 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat,nden
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden
+      INTEGER_T, intent(in) :: local_material_type(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
     
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
 
-      INTEGER_T DIMDEC(pres)
-      INTEGER_T DIMDEC(recon)
-      INTEGER_T DIMDEC(levelpc)
-      INTEGER_T DIMDEC(den)
-      REAL_T pres(DIMV(pres),num_materials_vel)
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T levelpc(DIMV(levelpc),nmat*(1+SDIM))
-      REAL_T den(DIMV(den),nden) ! den,temp,Y
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      REAL_T, intent(inout) :: pres(DIMV(pres),num_materials_vel)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
+      REAL_T, intent(in) :: den(DIMV(den),nden) ! den,temp,Y
+
       INTEGER_T i,j,k
       INTEGER_T im
       INTEGER_T im_primary
@@ -12248,8 +12252,8 @@ END SUBROUTINE SIMP
        if (is_rigid(nmat,im_primary).eq.0) then
 
         ! compressible material
-        if ((fort_material_type(im_primary).gt.0).and. &
-            (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
+        if ((local_material_type(im_primary).gt.0).and. &
+            (local_material_type(im_primary).le.MAX_NUM_EOS)) then
 
          rho=den(D_DECL(i,j,k),ibase+1)
          if (rho.gt.zero) then
@@ -12271,7 +12275,7 @@ END SUBROUTINE SIMP
          enddo
          ! returns energy/scale
          call INTERNAL_material(rho,massfrac_parm,TEMP, &
-          internal_energy,fort_material_type(im_primary),im_primary)
+          internal_energy,local_material_type(im_primary),im_primary)
          if (internal_energy.gt.zero) then
           ! do nothing
          else
@@ -12282,8 +12286,8 @@ END SUBROUTINE SIMP
          call EOS_material(rho,massfrac_parm, &
           internal_energy, &
           pres(D_DECL(i,j,k),1), &
-          fort_material_type(im_primary),im_primary)
-        else if (fort_material_type(im_primary).eq.0) then
+          local_material_type(im_primary),im_primary)
+        else if (local_material_type(im_primary).eq.0) then
          ! do nothing
         else
          print *,"fort material type invalid"

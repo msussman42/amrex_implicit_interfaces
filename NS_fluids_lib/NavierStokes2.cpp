@@ -9665,7 +9665,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
 
 // If incompressible material then copy existing state pressure.
 // If compressible material then P=P(rho,e).
-MultiFab* NavierStokes::derive_EOS_pressure() {
+MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
 
  int finest_level=parent->finestLevel();
  
@@ -9733,10 +9733,12 @@ MultiFab* NavierStokes::derive_EOS_pressure() {
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
- 
+  
+   // declared in: NAVIERSTOKES_3D.F90 
   FORT_EOS_PRESSURE(
    &level,
    &finest_level,
+   local_material_type.dataPtr(),
    xlo,dx,
    presfab.dataPtr(),
    ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
