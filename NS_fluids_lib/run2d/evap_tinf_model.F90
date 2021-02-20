@@ -180,6 +180,98 @@
 
       end subroutine ff
 
+
+      ! Kassemi, Kartuzova, Hylton
+      ! Cryogenics 89(2018) 1-15, equation (6)
+      subroutine MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma, &
+       Pvapor_probe, &
+       Tgamma,Tvapor_probe,MDOT)
+       IMPLICIT NONE
+
+      real*8, intent(in) :: sigma
+      real*8, intent(in) :: MolarMassFluid
+      real*8, intent(in) :: R
+      real*8, intent(in) :: Pgamma
+      real*8, intent(in) :: Pvapor_probe
+      real*8, intent(in) :: Tgamma
+      real*8, intent(in) :: Tvapor_probe
+      real*8, intent(out) :: MDOT
+      real*8 :: my_pi
+     
+      my_pi=4.0d0*atan(1.0d0)
+
+      if ((sigma.ge.0.0d0).and.(sigma.lt.2.0d0).and. &
+          (MolarMassFluid.gt.0.0d0).and. &
+          (R.gt.0.0d0).and. &
+          (Pgamma.gt.0.0d0).and. &
+          (Pvapor_probe.gt.0.0d0).and. &
+          (Tgamma.gt.0.0d0).and. &
+          (Tvapor_probe.gt.0.0d0)) then
+       MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
+         sqrt(MolarMassFluid/(2.0d0*my_pi*R))* &
+         (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+      
+      else
+       print *,"parameter problems in MDOT_Kassemi"
+       stop
+      endif
+      
+      return
+      end subroutine MDOT_Kassemi
+
+
+      subroutine mdot_from_Y_probe(T_gamma,T_probe,dx,mdotY)
+      IMPLICIT NONE
+
+      real*8, intent(in) :: T_gamma,T_probe,dx
+      real*8, intent(out) :: mdotY
+
+      call Pgamma_Clausius_Clapyron(Pgamma, &
+        P_sat_global, &
+        T_gamma, &
+        T_gas_global, &
+        L_V, &
+        R_global, &
+        WV_global)
+
+      call INTERNAL_material(den_G,T_probe,internal_energy)
+      call EOS_material(den_G,internal_energy,Pvapor_probe)
+      call MDOT_Kassemi( &
+              accomodation_coefficient, &
+              WV_global, &
+              R_global, &
+              Pgamma, &
+              Pvapor_probe, &
+              T_gamma, &
+              T_probe, &
+              mdotY)
+
+      end subroutine mdot_from_Y_probe
+
+
+      subroutine mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
+      IMPLICIT NONE
+
+      real*8, intent(in) :: T_gamma,T_probe,dx
+      real*8, intent(out) :: mdotT
+
+      mdotT=k_G*(T_probe-T_gamma)/(L_V*dx)
+
+      end subroutine mdot_from_T_probe
+
+      subroutine mdot_diff_func(T_gamma,T_probe,dx,mdot_diff)
+      IMPLICIT NONE
+
+      real*8, intent(in) :: T_gamma,T_probe,dx
+      real*8, intent(out) :: mdot_diff
+
+      call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
+      call mdot_from_Y_probe(T_gamma,T_probe,dx,mdotY)
+
+      mdot_diff=mdotT-mdotY
+
+      end subroutine mdot_diff_func
+
       end module evap_check
 
       program main
@@ -189,9 +281,19 @@
       real*8 :: aa,bb,cc,fa,fb,fc
       integer :: iter
       real*8 TSTART,TSTOP,cur_time,dt
-      real*8 cur_x,T,Y,VEL,VEL_I,LS,D_gamma
+      real*8 cur_x,T,Y,VEL,VEL_I,LS
+      real*8 D_gamma
+      real*8 R_gamma
       integer nsteps,istep
       integer outer_iter,max_outer_iter
+      integer num_intervals
+
+      real*8, allocatable :: TNEW(:)
+      real*8, allocatable :: TOLD(:)
+      real*8, allocatable :: TOLD_grid(:)
+      real*8, allocatable :: DT_CROSSING(:)
+      real*8 :: probhi_R_domain
+      real*8 :: dx
 
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
@@ -252,46 +354,46 @@
 
       do while ((cc.lt.T_gamma).and.(outer_iter.lt.max_outer_iter))
 
-      outer_iter=outer_iter+1
-      aa=100.0d0
-      bb=T_sat_global
-      call ff(aa,fa)
-      call ff(bb,fb)
-      if (fa*fb.lt.0.0d0) then
-       do iter=1,100
-        cc=0.5d0*(aa+bb)
-        call ff(cc,fc)
-        if (fa*fc.gt.0.0d0) then
-         aa=cc
-        else if (fb*fc.gt.0.0d0) then
-         bb=cc
-        else if (fa.eq.0.0d0) then
-         bb=cc
-        else if (fb.eq.0.0d0) then
-         aa=cc
-        else if (fc.eq.0.0d0) then
-         aa=cc
-        else
-         print *,"fa or fb or fc bust"
-         stop
-        endif
-       enddo ! iter=1..100
-      else
-       print *,"fa or fb bust"
-       stop
-      endif
-      print *,"den_L,den_G ",den_L,den_G
-      print *,"C_pG,k_G,lambda ",C_pG,k_G,lambda
-      print *,"T_inf_global,T_sat_global,L_V ", &
-       T_inf_global,T_sat_global,L_V
-      print *,"cc= ",cc
-      print *,"D_G,Y_inf_global ",D_G,Y_inf_global
-      print *,"WV_global,WA_global,Le ",WV_global,WA_global,Le
-      print *,"R_global ",R_global
+       outer_iter=outer_iter+1
+       aa=100.0d0
+       bb=T_sat_global
+       call ff(aa,fa)
+       call ff(bb,fb)
+       if (fa*fb.lt.0.0d0) then
+        do iter=1,100
+         cc=0.5d0*(aa+bb)
+         call ff(cc,fc)
+         if (fa*fc.gt.0.0d0) then
+          aa=cc
+         else if (fb*fc.gt.0.0d0) then
+          bb=cc
+         else if (fa.eq.0.0d0) then
+          bb=cc
+         else if (fb.eq.0.0d0) then
+          aa=cc
+         else if (fc.eq.0.0d0) then
+          aa=cc
+         else
+          print *,"fa or fb or fc bust"
+          stop
+         endif
+        enddo ! iter=1..100
+       else
+        print *,"fa or fb bust"
+        stop
+       endif
+       print *,"den_L,den_G ",den_L,den_G
+       print *,"C_pG,k_G,lambda ",C_pG,k_G,lambda
+       print *,"T_inf_global,T_sat_global,L_V ", &
+        T_inf_global,T_sat_global,L_V
+       print *,"cc= ",cc
+       print *,"D_G,Y_inf_global ",D_G,Y_inf_global
+       print *,"WV_global,WA_global,Le ",WV_global,WA_global,Le
+       print *,"R_global ",R_global
 
-      if (find_TINF_from_TGAMMA.eq.1) then
-       T_inf_global=T_inf_global+0.01d0
-      endif
+       if (find_TINF_from_TGAMMA.eq.1) then
+        T_inf_global=T_inf_global+0.01d0
+       endif
 
       enddo
 
@@ -299,6 +401,9 @@
 
       call X_from_Tgamma(X_gamma,T_gamma,T_sat_global,L_V, &
         R_global,WV_global)
+
+      X_gamma_init_global=X_gamma
+
       call massfrac_from_volfrac(X_gamma,Y_gamma,WA_global,WV_global)
 
       B_M=(Y_gamma-Y_inf_global)/(1.0d0-Y_gamma)
@@ -319,11 +424,155 @@
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
          VEL,VEL_I,LS)
-       print *,cur_time," ",0.5d0*D_gamma," ",(D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
+       print *,cur_time," ",0.5d0*D_gamma," ", &
+        (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
         " ",VEL," ",VEL_I
        cur_time=cur_time+dt
       enddo
 
+      R_gamma_NEW=radblob
+      R_gamma_OLD=radblob
+     
+      probhi_R_domain=8.0d0*radblob+R_gamma_NEW
+      dx=(probhi_R_domain-R_gamma_NEW)/num_intervals
+      cur_time=0.0d0
+
+      allocate(TNEW(0:num_intervals))
+      allocate(TOLD(0:num_intervals))
+      allocate(TOLD_grid(0:num_intervals))
+      allocate(DT_CROSSING(0:num_intervals))
+
+      if (1.eq.0) then
+       call INTERNAL_material(den_G,T_sat_global,e_sat_global)
+       call EOS_material(den_G,e_sat_global,P_sat_global)
+       Pgamma_init_global=P_sat_global*X_gamma_init_global
+      else
+       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
+       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
+       P_sat_global=Pgamma_init_global/X_gamma_init_global
+      endif
+
+      TNEW(0)=T_gamma
+      do igrid=1,num_intervals
+       xpos=igrid*dx+R_gamma_new
+       call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
+         VEL,VEL_I,LS)
+       TNEW(igrid)=T
+       TOLD(igrid)=T
+      enddo
+
+      do istep=1,nsteps
+       T_gamma_a=100.0d0
+       T_gamma_b=T_sat_global
+       call mdot_diff_func(T_gamma_a,Tnew(1),dx,mdot_diff_a)
+       call mdot_diff_func(T_gamma_b,Tnew(1),dx,mdot_diff_b)
+
+       if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
+        do iter=1,100
+         cc=0.5d0*(T_gamma_a+T_gamma_b)
+         call mdot_diff_funct(cc,Tnew(1),dx,mdot_diff_c))
+         if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
+          T_gamma_a=cc
+         else if (mdot_diff_b*mdot_diff_c.gt.0.0d0) then
+          T_gamma_b=cc
+         else if (mdot_diff_a.eq.0.0d0) then
+          T_gamma_b=cc
+         else if (mdot_diff_b.eq.0.0d0) then
+          T_gamma_a=cc
+         else if (mdot_diff_c.eq.0.0d0) then
+          T_gamma_a=cc
+         else
+          print *,"mdot_diff_a or mdot_diff_b or mdot_diff_c bust"
+          stop
+         endif
+        enddo ! iter=1..100
+       else
+        print *,"mdot_diff_a or mdot_diff_b bust"
+        stop
+       endif
+
+       call mdot_from_T_probe(T_gamma_c,TNEW(1),dx,mdotT)
+       burnvel=mdotT/den_L
+       R_gamma_NEW=R_gamma_OLD-dt*burnvel
+
+       dx_new=(probhi_R_domain-R_gamma_NEW)/num_intervals
+       igrid_old=0
+       xpos_old=R_gamma_OLD
+       do igrid=1,num_intervals-1
+        xpos_new=igrid*dx_new+R_gamma_NEW
+        if (xpos_new.lt.R_gamma_OLD) then
+         TOLD_grid(igrid)=T_gamma_c
+         DT_CROSSING(igrid)=dt*(R_gamma_NEW-xpos_new)/ &
+                               (R_gamma_NEW-R_gamma_OLD)
+        else
+         DT_CROSSING(igrid)=dt
+         do while (xpos_new.gt.xpos_old+dx)
+          igrid_old=igrid_old+1
+          xpos_old=xpos_old+dx
+         enddo
+         TOLD_grid(igrid)=TOLD(igrid_old)+ &
+          (TOLD(igrid_old+1)-TOLD(igrid_old))* &
+          (xpos_new-xpos_old)/dx
+        endif
+       enddo ! igrid=1..num_intervals-1
+
+       DT_CROSSING(0)=0.0d0
+       DT_CROSSING(num_intervals)=dt
+       TOLD_grid(0)=T_gamma_c
+       TOLD_grid(num_intervals)=T_inf_global
+
+       alpha_G=k_G/(den_G*C_pG)
+       do igrid=1,num_intervals-1
+        xpos_new=igrid*dx_new+R_gamma_NEW
+        xpos_mh=xpos_new-0.5d0*dx_new
+        xpos_ph=xpos_new+0.5d0*dx_new
+
+        RHS(igrid)=(dx_new**2)* &
+          (xpos_new**2)*TOLD_grid(igrid)/DT_CROSSING(igrid)
+        DIAG(igrid)=(dx_new**2)* &
+          (xpos_new**2)/DT_CROSSING(igrid)
+        LDIAG(igrid)=0.0d0
+        UDIAG(igrid)=0.0d0
+        vel_mh=((R_gamma_NEW/xpos_mh)**2)*mdotT/den_G
+        vel_ph=((R_gamma_NEW/xpos_ph)**2)*mdotT/den_G
+        advect_plus=vel_ph*(xpos_ph**2)*dx_new
+        advect_minus=vel_mh*(xpos_mh**2)*dx_new
+        diffuse_plus=alpha_G*(xpos_ph**2)
+        diffuse_minus=alpha_G*(xpos_mh**2)
+
+        DIAG(igrid)=DIAG(igrid)+advect_plus
+        DIAG(igrid)=DIAG(igrid)+diffuse_plus
+        DIAG(igrid)=DIAG(igrid)+diffuse_minus
+        if (igrid.eq.1) then
+         RHS(igrid)=RHS(igrid)+advect_minus*T_gamma_c
+         RHS(igrid)=RHS(igrid)+diffuse_minus*T_gamma_c
+         LDIAG(igrid)=0.0d0
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+        else if (igrid.eq.num_intervals-1) then
+         RHS(igrid)=RHS(igrid)+diffuse_plus*T_inf_global
+         UDIAG(igrid)=0.0d0
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+        else
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+        endif
+
+
+
+        
+
+
+
+       dx=dx_new
+       R_gamma_OLD=R_gamma_NEW
+       cur_time=cur_time+dt
+      enddo
+
+      deallocate(TNEW)
+      deallocate(TOLD)
+      deallocate(DT_CROSSING)
       return
       end
 
