@@ -199,6 +199,7 @@ extern "C" {
     void FORT_EOS_PRESSURE(
      int* level,
      int* finest_level,
+     int* local_material_type,
      const Real* xlo,const Real* dx,
      Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
      Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),

@@ -11290,7 +11290,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   getState(normal_probe_size+3,num_materials_vel*AMREX_SPACEDIM,
            1,cur_time_slab);
 
- MultiFab* pres_eos_mf=derive_EOS_pressure();
+ MultiFab* pres_eos_mf=derive_EOS_pressure(material_type_evap);
  if (pres_eos_mf->nGrow()!=1)
   amrex::Error("pres_eos_mf->nGrow()!=1");
 
@@ -17907,7 +17907,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   MultiFab* velmf=ns_level.getState(1,0,
     num_materials_vel*(AMREX_SPACEDIM+1),cur_time_slab);
-  MultiFab* presmf=ns_level.derive_EOS_pressure(); 
+  MultiFab* presmf=ns_level.derive_EOS_pressure(material_type_visual); 
   if (presmf->nComp()!=num_materials_vel)
    amrex::Error("presmf has invalid ncomp");
 

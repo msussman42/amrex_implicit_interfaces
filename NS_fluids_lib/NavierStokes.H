@@ -1309,7 +1309,7 @@ void apply_pressure_grad(
       int advect_face_mf,
       int nsolve);
 
-    MultiFab* derive_EOS_pressure();
+    MultiFab* derive_EOS_pressure(Vector<int> local_material_type);
     void init_pressure_error_indicator();
     void init_advective_pressure(int project_option);
 
