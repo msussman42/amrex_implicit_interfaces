@@ -10,13 +10,21 @@
       real*8 :: den_L
       real*8 :: den_G
       real*8 :: C_pG
+      real*8 :: gamma_G
+      real*8 :: accommodation_coefficient
       real*8 :: k_G
+      real*8 :: alpha_G
       real*8 :: L_V
       real*8 :: D_G
       real*8 :: WV_global
       real*8 :: WA_global
       real*8 :: R_global
       real*8 :: T_sat_global
+      real*8 :: e_sat_global
+      real*8 :: P_sat_global
+      real*8 :: Pgamma_init_global
+      real*8 :: X_gamma_init_global
+      real*8 :: e_gamma_global
       real*8 :: lambda
       real*8 :: Le
       real*8 :: T_inf_global
@@ -30,7 +38,32 @@
      
 
       CONTAINS
+     
+      subroutine EOS_material(den,e,P)
+      IMPLICIT NONE
+
+      real*8, intent(in) :: den,e
+      real*8, intent(out) :: P
+
+      P=(gamma_G-1.0d0)*den*e
+
+      return
+      end subroutine EOS_material
+
       
+      subroutine INTERNAL_material(den,T,e)
+      IMPLICIT NONE
+
+      real*8, intent(in) :: den,T
+      real*8, intent(out) :: e
+      real*8 :: C_vG
+
+      C_vG=C_pG/gamma_G
+      e=C_vG*T
+
+      return
+      end subroutine INTERNAL_material
+
       subroutine Pgamma_Clausius_Clapyron(Pgamma,PSAT,Tgamma,TSAT,L,R,WV)
       IMPLICIT NONE
 
@@ -225,11 +258,15 @@
 
       real*8, intent(in) :: T_gamma,T_probe,dx
       real*8, intent(out) :: mdotY
+      real*8 :: internal_energy
+      real*8 :: Pvapor_probe
+      real*8 :: Pgamma
 
-      call Pgamma_Clausius_Clapyron(Pgamma, &
+      call Pgamma_Clausius_Clapyron( &
+        Pgamma, &
         P_sat_global, &
         T_gamma, &
-        T_gas_global, &
+        T_sat_global, &
         L_V, &
         R_global, &
         WV_global)
@@ -237,7 +274,7 @@
       call INTERNAL_material(den_G,T_probe,internal_energy)
       call EOS_material(den_G,internal_energy,Pvapor_probe)
       call MDOT_Kassemi( &
-              accomodation_coefficient, &
+              accommodation_coefficient, &
               WV_global, &
               R_global, &
               Pgamma, &
@@ -264,6 +301,7 @@
 
       real*8, intent(in) :: T_gamma,T_probe,dx
       real*8, intent(out) :: mdot_diff
+      real*8 :: mdotT,mdotY
 
       call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
       call mdot_from_Y_probe(T_gamma,T_probe,dx,mdotY)
@@ -324,6 +362,18 @@
       integer nsteps,istep
       integer outer_iter,max_outer_iter
       integer num_intervals
+      integer igrid,igrid_old
+      real*8 xpos
+      real*8 xpos_new
+      real*8 xpos_old
+      real*8 xpos_mh
+      real*8 xpos_ph
+      real*8 vel_mh
+      real*8 vel_ph
+      real*8 advect_plus
+      real*8 advect_minus
+      real*8 diffuse_plus
+      real*8 diffuse_minus
 
       real*8, allocatable :: TNEW(:)
       real*8, allocatable :: TOLD(:)
@@ -334,8 +384,14 @@
       real*8, allocatable :: LDIAG(:)
       real*8, allocatable :: UDIAG(:)
       real*8, allocatable :: SOLN(:)
-      real*8 :: probhi_R_domain
-      real*8 :: dx
+      real*8 :: T_gamma_a
+      real*8 :: T_gamma_b
+      real*8 :: T_gamma_c
+      real*8 :: mdot_diff_a
+      real*8 :: mdot_diff_b
+      real*8 :: mdot_diff_c
+      real*8 :: mdotT
+      real*8 :: burnvel
 
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
@@ -346,6 +402,8 @@
        den_L = 1.0d0  ! g/cm^3
        den_G = 0.001d0 ! g/cm^3
        C_pG = 1.0d+7  ! erg/(g K)
+       gamma_G = 1.4d0
+       accommodation_coefficient=1.0d0
        k_G = 0.024d+5 ! erg/(cm s K)
 !      L_V = 2.26d+10  
        L_V = 2.1d+10  ! erg/g
@@ -366,6 +424,8 @@
        den_L = 0.7d0
        den_G = 0.001d0
        C_pG = 1.0d+7
+       gamma_G = 1.4d0
+       accommodation_coefficient=1.0d0
        k_G = 0.052d+5
        L_V = 5.18D+9
        D_G = 0.52d0
@@ -518,7 +578,7 @@
        if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
         do iter=1,100
          cc=0.5d0*(T_gamma_a+T_gamma_b)
-         call mdot_diff_funct(cc,Tnew(1),dx,mdot_diff_c))
+         call mdot_diff_func(cc,Tnew(1),dx,mdot_diff_c)
          if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
           T_gamma_a=cc
          else if (mdot_diff_b*mdot_diff_c.gt.0.0d0) then
@@ -538,6 +598,7 @@
         print *,"mdot_diff_a or mdot_diff_b bust"
         stop
        endif
+       T_gamma_c=cc
 
        call mdot_from_T_probe(T_gamma_c,TNEW(1),dx,mdotT)
        burnvel=mdotT/den_L
