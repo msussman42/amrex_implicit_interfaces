@@ -272,7 +272,39 @@
 
       end subroutine mdot_diff_func
 
+
+      subroutine tridiag_solve(l,u,d,n,f,soln)
+      IMPLICIT NONE
+
+      integer n,i
+      real*8 l(n),u(n),d(n),f(n),soln(n)
+      real*8 ll(n),uu(n),dd(n),z(n)
+
+      dd(1)=d(1)
+      uu(1)=u(1)/dd(1)
+      z(1)=f(1)/dd(1)
+      do i=2,n-1
+       ll(i)=l(i)
+       dd(i)=d(i)-ll(i)*uu(i-1)
+       uu(i)=u(i)/dd(i)
+       z(i)=(f(i)-ll(i)*z(i-1))/dd(i)
+      enddo
+      ll(n)=l(n)
+      dd(n)=d(n)-ll(n)*uu(n-1)
+      z(n)=(f(n)-ll(n)*z(n-1))/dd(n)
+      soln(n)=z(n)
+      do i=n-1,1,-1
+       soln(i)=z(i)-uu(i)*soln(i+1)
+      enddo
+
+      return
+      end subroutine tridiag_solve
+
+
+
       end module evap_check
+
+
 
       program main
       use evap_check
@@ -284,6 +316,11 @@
       real*8 cur_x,T,Y,VEL,VEL_I,LS
       real*8 D_gamma
       real*8 R_gamma
+      real*8 R_gamma_NEW
+      real*8 R_gamma_OLD
+      real*8 probhi_R_domain
+      real*8 dx
+      real*8 dx_new
       integer nsteps,istep
       integer outer_iter,max_outer_iter
       integer num_intervals
@@ -292,6 +329,11 @@
       real*8, allocatable :: TOLD(:)
       real*8, allocatable :: TOLD_grid(:)
       real*8, allocatable :: DT_CROSSING(:)
+      real*8, allocatable :: RHS(:)
+      real*8, allocatable :: DIAG(:)
+      real*8, allocatable :: LDIAG(:)
+      real*8, allocatable :: UDIAG(:)
+      real*8, allocatable :: SOLN(:)
       real*8 :: probhi_R_domain
       real*8 :: dx
 
@@ -441,6 +483,11 @@
       allocate(TOLD(0:num_intervals))
       allocate(TOLD_grid(0:num_intervals))
       allocate(DT_CROSSING(0:num_intervals))
+      allocate(RHS(1:num_intervals))
+      allocate(DIAG(1:num_intervals))
+      allocate(LDIAG(1:num_intervals))
+      allocate(UDIAG(1:num_intervals))
+      allocate(SOLN(1:num_intervals))
 
       if (1.eq.0) then
        call INTERNAL_material(den_G,T_sat_global,e_sat_global)
@@ -453,6 +500,7 @@
       endif
 
       TNEW(0)=T_gamma
+      TOLD(0)=T_gamma
       do igrid=1,num_intervals
        xpos=igrid*dx+R_gamma_new
        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
@@ -559,11 +607,18 @@
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
         endif
 
+       enddo !igrid=1,num_intervals-1
 
+       call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
 
-        
-
-
+       TNEW(0)=T_gamma_c
+       TNEW(num_intervals)=T_inf_global 
+       do igrid=1,num_intervals-1
+        TNEW(igrid)=SOLN(igrid)
+       enddo
+       do igrid=0,num_intervals
+        TOLD(igrid)=TNEW(igrid)
+       enddo
 
        dx=dx_new
        R_gamma_OLD=R_gamma_NEW
@@ -572,7 +627,14 @@
 
       deallocate(TNEW)
       deallocate(TOLD)
+      deallocate(TOLD_grid)
       deallocate(DT_CROSSING)
+      deallocate(RHS)
+      deallocate(DIAG)
+      deallocate(LDIAG)
+      deallocate(UDIAG)
+      deallocate(SOLN)
+
       return
       end
 
