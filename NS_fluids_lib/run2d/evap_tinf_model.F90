@@ -12,6 +12,8 @@
        ! to boiling pressure.
       integer, PARAMETER :: evap_model=0
 
+      integer, PARAMETER :: nsteps=8000
+
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
       real*8 :: den_L
@@ -379,7 +381,7 @@
       real*8 probhi_R_domain
       real*8 dx
       real*8 dx_new
-      integer nsteps,istep
+      integer istep
       integer outer_iter,max_outer_iter
       integer num_intervals
       integer igrid,igrid_old
@@ -547,7 +549,6 @@
 
       TSTART=0.0d0
       cur_time=TSTART
-      nsteps=8000
       dt=(TSTOP-TSTART)/nsteps
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
@@ -616,6 +617,11 @@
        print *,"evap_model invalid"
        stop
       endif
+
+      istep=0
+      print *,"STEP=",istep," TIME=",cur_time," ARAT=", &
+         (R_gamma_NEW/radblob)**2," T=", &
+         TNEW(0)," Y=",YNEW(0)
 
       do istep=1,nsteps
        T_gamma_a=100.0d0
@@ -791,7 +797,11 @@
        dx=dx_new
        R_gamma_OLD=R_gamma_NEW
        cur_time=cur_time+dt
-      enddo
+       print *,"STEP=",istep," TIME=",cur_time," R=", &
+         R_gamma_NEW," T=", &
+         TNEW(0)," Y=",YNEW(0)
+
+      enddo ! istep=1..nsteps
 
       deallocate(TNEW)
       deallocate(TOLD)
