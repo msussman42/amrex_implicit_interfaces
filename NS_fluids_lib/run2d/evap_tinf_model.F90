@@ -5,6 +5,13 @@
        ! probtype==1 => Villegas et al test
       integer, PARAMETER :: probtype = 0
 
+       ! evap_model==0 => Villegas/Palmore,Desjardins model
+       ! evap_model==1 => Kassemi model
+       ! evap_model==2 => same as evap_model==0, except that initial
+       ! volume fraction comes from the initial ratio of gas pressure
+       ! to boiling pressure.
+      integer, PARAMETER :: evap_model=0
+
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
       real*8 :: den_L
@@ -253,16 +260,19 @@
       end subroutine MDOT_Kassemi
 
 
-      subroutine mdot_from_Y_probe(T_gamma,T_probe,dx,mdotY)
+      subroutine mdot_from_Y_probe(T_gamma,T_probe,Y_probe,dx,mdotY)
       IMPLICIT NONE
 
-      real*8, intent(in) :: T_gamma,T_probe,dx
+      real*8, intent(in) :: T_gamma,T_probe,Y_probe,dx
       real*8, intent(out) :: mdotY
       real*8 :: internal_energy
       real*8 :: Pvapor_probe
       real*8 :: Pgamma
+      real*8 :: local_X
+      real*8 :: local_Y
 
-      call Pgamma_Clausius_Clapyron( &
+      if (evap_model.eq.1) then
+       call Pgamma_Clausius_Clapyron( &
         Pgamma, &
         P_sat_global, &
         T_gamma, &
@@ -271,9 +281,9 @@
         R_global, &
         WV_global)
 
-      call INTERNAL_material(den_G,T_probe,internal_energy)
-      call EOS_material(den_G,internal_energy,Pvapor_probe)
-      call MDOT_Kassemi( &
+       call INTERNAL_material(den_G,T_probe,internal_energy)
+       call EOS_material(den_G,internal_energy,Pvapor_probe)
+       call MDOT_Kassemi( &
               accommodation_coefficient, &
               WV_global, &
               R_global, &
@@ -282,6 +292,16 @@
               T_gamma, &
               T_probe, &
               mdotY)
+      else if ((evap_model.eq.0).or.(evap_model.eq.2)) then
+       call X_from_Tgamma(local_X,T_gamma,T_sat_global, &
+        L_V,R_global,WV_global)
+       call massfrac_from_volfrac(local_X,local_Y,WA_global,WV_global)
+       mdotY=den_G*D_G*(local_Y-Y_probe)/((1.0d0-local_Y)*dx)
+      else
+       print *,"evap_model invalid"
+       stop
+      endif
+
 
       end subroutine mdot_from_Y_probe
 
@@ -296,15 +316,15 @@
 
       end subroutine mdot_from_T_probe
 
-      subroutine mdot_diff_func(T_gamma,T_probe,dx,mdot_diff)
+      subroutine mdot_diff_func(T_gamma,T_probe,Y_probe,dx,mdot_diff)
       IMPLICIT NONE
 
-      real*8, intent(in) :: T_gamma,T_probe,dx
+      real*8, intent(in) :: T_gamma,T_probe,Y_probe,dx
       real*8, intent(out) :: mdot_diff
       real*8 :: mdotT,mdotY
 
       call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
-      call mdot_from_Y_probe(T_gamma,T_probe,dx,mdotY)
+      call mdot_from_Y_probe(T_gamma,T_probe,Y_probe,dx,mdotY)
 
       mdot_diff=mdotT-mdotY
 
@@ -378,6 +398,9 @@
       real*8, allocatable :: TNEW(:)
       real*8, allocatable :: TOLD(:)
       real*8, allocatable :: TOLD_grid(:)
+      real*8, allocatable :: YNEW(:)
+      real*8, allocatable :: YOLD(:)
+      real*8, allocatable :: YOLD_grid(:)
       real*8, allocatable :: DT_CROSSING(:)
       real*8, allocatable :: RHS(:)
       real*8, allocatable :: DIAG(:)
@@ -387,11 +410,14 @@
       real*8 :: T_gamma_a
       real*8 :: T_gamma_b
       real*8 :: T_gamma_c
+      real*8 :: Y_gamma_c
+      real*8 :: X_gamma_c
       real*8 :: mdot_diff_a
       real*8 :: mdot_diff_b
       real*8 :: mdot_diff_c
       real*8 :: mdotT
       real*8 :: burnvel
+      real*8 :: e_grid,P_grid,X_grid
 
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
@@ -542,6 +568,9 @@
       allocate(TNEW(0:num_intervals))
       allocate(TOLD(0:num_intervals))
       allocate(TOLD_grid(0:num_intervals))
+      allocate(YNEW(0:num_intervals))
+      allocate(YOLD(0:num_intervals))
+      allocate(YOLD_grid(0:num_intervals))
       allocate(DT_CROSSING(0:num_intervals))
       allocate(RHS(1:num_intervals))
       allocate(DIAG(1:num_intervals))
@@ -549,36 +578,55 @@
       allocate(UDIAG(1:num_intervals))
       allocate(SOLN(1:num_intervals))
 
-      if (1.eq.0) then
-       call INTERNAL_material(den_G,T_sat_global,e_sat_global)
-       call EOS_material(den_G,e_sat_global,P_sat_global)
-       Pgamma_init_global=P_sat_global*X_gamma_init_global
-      else
-       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
-       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
-       P_sat_global=Pgamma_init_global/X_gamma_init_global
-      endif
-
       TNEW(0)=T_gamma
       TOLD(0)=T_gamma
+      YNEW(0)=Y_gamma
+      YOLD(0)=Y_gamma
       do igrid=1,num_intervals
        xpos=igrid*dx+R_gamma_new
        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
          VEL,VEL_I,LS)
        TNEW(igrid)=T
        TOLD(igrid)=T
+       YNEW(igrid)=Y
+       YOLD(igrid)=Y
       enddo
+
+      if (evap_model.eq.0) then ! Villegas model
+       call INTERNAL_material(den_G,T_sat_global,e_sat_global)
+       call EOS_material(den_G,e_sat_global,P_sat_global)
+       Pgamma_init_global=P_sat_global*X_gamma_init_global
+      else if (evap_model.eq.1) then ! Kassemi model
+       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
+       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
+       P_sat_global=Pgamma_init_global/X_gamma_init_global
+      else if (evap_model.eq.2) then ! same as Villegas, except X=P/P_ref
+       call INTERNAL_material(den_G,T_sat_global,e_sat_global)
+       call EOS_material(den_G,e_sat_global,P_sat_global)
+       do igrid=0,num_intervals
+        call INTERNAL_material(den_G,TNEW(igrid),e_grid)
+        call EOS_material(den_G,e_grid,P_grid)
+        X_grid=P_grid/P_sat_global
+        call massfrac_from_volfrac(X_grid,YNEW(igrid), &
+         WA_global,WV_global)
+        YOLD(igrid)=YNEW(igrid)
+       enddo
+       Y_inf_global=YNEW(num_intervals)
+      else
+       print *,"evap_model invalid"
+       stop
+      endif
 
       do istep=1,nsteps
        T_gamma_a=100.0d0
        T_gamma_b=T_sat_global
-       call mdot_diff_func(T_gamma_a,Tnew(1),dx,mdot_diff_a)
-       call mdot_diff_func(T_gamma_b,Tnew(1),dx,mdot_diff_b)
+       call mdot_diff_func(T_gamma_a,TNEW(1),YNEW(1),dx,mdot_diff_a)
+       call mdot_diff_func(T_gamma_b,TNEW(1),YNEW(1),dx,mdot_diff_b)
 
        if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
         do iter=1,100
          cc=0.5d0*(T_gamma_a+T_gamma_b)
-         call mdot_diff_func(cc,Tnew(1),dx,mdot_diff_c)
+         call mdot_diff_func(cc,TNEW(1),YNEW(1),dx,mdot_diff_c)
          if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
           T_gamma_a=cc
          else if (mdot_diff_b*mdot_diff_c.gt.0.0d0) then
@@ -599,6 +647,10 @@
         stop
        endif
        T_gamma_c=cc
+       call X_from_Tgamma(X_gamma_c,T_gamma_c,T_sat_global, &
+        L_V,R_global,WV_global)
+       call massfrac_from_volfrac(X_gamma_c,Y_gamma_c, &
+        WA_global,WV_global)
 
        call mdot_from_T_probe(T_gamma_c,TNEW(1),dx,mdotT)
        burnvel=mdotT/den_L
@@ -611,6 +663,7 @@
         xpos_new=igrid*dx_new+R_gamma_NEW
         if (xpos_new.lt.R_gamma_OLD) then
          TOLD_grid(igrid)=T_gamma_c
+         YOLD_grid(igrid)=Y_gamma_c
          DT_CROSSING(igrid)=dt*(R_gamma_NEW-xpos_new)/ &
                                (R_gamma_NEW-R_gamma_OLD)
         else
@@ -622,6 +675,9 @@
          TOLD_grid(igrid)=TOLD(igrid_old)+ &
           (TOLD(igrid_old+1)-TOLD(igrid_old))* &
           (xpos_new-xpos_old)/dx
+         YOLD_grid(igrid)=YOLD(igrid_old)+ &
+          (YOLD(igrid_old+1)-YOLD(igrid_old))* &
+          (xpos_new-xpos_old)/dx
         endif
        enddo ! igrid=1..num_intervals-1
 
@@ -629,6 +685,8 @@
        DT_CROSSING(num_intervals)=dt
        TOLD_grid(0)=T_gamma_c
        TOLD_grid(num_intervals)=T_inf_global
+       YOLD_grid(0)=Y_gamma_c
+       YOLD_grid(num_intervals)=Y_inf_global
 
        alpha_G=k_G/(den_G*C_pG)
        do igrid=1,num_intervals-1
@@ -677,8 +735,57 @@
        do igrid=1,num_intervals-1
         TNEW(igrid)=SOLN(igrid)
        enddo
+
+       do igrid=1,num_intervals-1
+        xpos_new=igrid*dx_new+R_gamma_NEW
+        xpos_mh=xpos_new-0.5d0*dx_new
+        xpos_ph=xpos_new+0.5d0*dx_new
+
+        RHS(igrid)=(dx_new**2)* &
+          (xpos_new**2)*YOLD_grid(igrid)/DT_CROSSING(igrid)
+        DIAG(igrid)=(dx_new**2)* &
+          (xpos_new**2)/DT_CROSSING(igrid)
+        LDIAG(igrid)=0.0d0
+        UDIAG(igrid)=0.0d0
+        vel_mh=((R_gamma_NEW/xpos_mh)**2)*mdotT/den_G
+        vel_ph=((R_gamma_NEW/xpos_ph)**2)*mdotT/den_G
+        advect_plus=vel_ph*(xpos_ph**2)*dx_new
+        advect_minus=vel_mh*(xpos_mh**2)*dx_new
+        diffuse_plus=D_G*(xpos_ph**2)
+        diffuse_minus=D_G*(xpos_mh**2)
+
+        DIAG(igrid)=DIAG(igrid)+advect_plus
+        DIAG(igrid)=DIAG(igrid)+diffuse_plus
+        DIAG(igrid)=DIAG(igrid)+diffuse_minus
+        if (igrid.eq.1) then
+         RHS(igrid)=RHS(igrid)+advect_minus*Y_gamma_c
+         RHS(igrid)=RHS(igrid)+diffuse_minus*Y_gamma_c
+         LDIAG(igrid)=0.0d0
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+        else if (igrid.eq.num_intervals-1) then
+         RHS(igrid)=RHS(igrid)+diffuse_plus*Y_inf_global
+         UDIAG(igrid)=0.0d0
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+        else
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+        endif
+
+       enddo !igrid=1,num_intervals-1
+
+       call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
+
+       YNEW(0)=Y_gamma_c
+       YNEW(num_intervals)=Y_inf_global 
+       do igrid=1,num_intervals-1
+        YNEW(igrid)=SOLN(igrid)
+       enddo
+
        do igrid=0,num_intervals
         TOLD(igrid)=TNEW(igrid)
+        YOLD(igrid)=YNEW(igrid)
        enddo
 
        dx=dx_new
@@ -689,6 +796,9 @@
       deallocate(TNEW)
       deallocate(TOLD)
       deallocate(TOLD_grid)
+      deallocate(YNEW)
+      deallocate(YOLD)
+      deallocate(YOLD_grid)
       deallocate(DT_CROSSING)
       deallocate(RHS)
       deallocate(DIAG)
