@@ -12,7 +12,8 @@
        ! to boiling pressure.
       integer, PARAMETER :: evap_model=0
 
-      integer, PARAMETER :: nsteps=8000
+      integer, PARAMETER :: nsteps=1000
+      integer, PARAMETER :: num_intervals=256
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
@@ -383,7 +384,6 @@
       real*8 dx_new
       integer istep
       integer outer_iter,max_outer_iter
-      integer num_intervals
       integer igrid,igrid_old
       real*8 xpos
       real*8 xpos_new
@@ -797,8 +797,8 @@
        dx=dx_new
        R_gamma_OLD=R_gamma_NEW
        cur_time=cur_time+dt
-       print *,"STEP=",istep," TIME=",cur_time," R=", &
-         R_gamma_NEW," T=", &
+       print *,"STEP=",istep," TIME=",cur_time," ARAT=", &
+         (R_gamma_NEW/radblob)**2," T=", &
          TNEW(0)," Y=",YNEW(0)
 
       enddo ! istep=1..nsteps
