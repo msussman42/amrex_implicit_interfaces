@@ -7,7 +7,9 @@
 max_step=99999999
 stop_time=1.0e+20
 
+# unique problem identifier associated with each new plug-in:
 ns.probtype         = 423
+# variable accessible from plug-in:
 ns.axis_dir         = 0
 
 # 1=liquid 2=gas(placeholder) 3=solid wall
@@ -20,20 +22,37 @@ ns.num_species_var  = 1
 # 24 => compressible 
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
-ns.material_type = 0 0 999
+ns.material_type = 0 0 999 
 ns.material_type_evap = 0 24 999
 ns.material_type_lowmach = 0 24 999
+ns.material_type_visual = 0 24 999
 
+#u_t + div(uu) = -grad p/rho + div tau/rho
+#if face_flag=0, then div(uu), div tau/rho are CC, grad p/rho MAC
+#if face_flag=1, then div(uu and grad p/rho are MAC, div tau/rho is CC
 ns.face_flag=0
-ns.filter_velocity=1 1 1
+# remark: Lax Friedrichs method:
+#   u_{i+1/2}^{n}=(u_i^{n} + u_{i+1}^{n})/2
+#   u_{i+1/2}^{n+1}=u_{i+1/2}^{n}-dt/dx  (f_{i+1}^{n}-f_{i}^{n})
+#   u_{i}^{n+1}=(u_{i+1/2}^{n+1} + u_{i-1/2}^{n+1})/2
+# if filter_velocity=1 =>
+#   (a) if face_flag=1,
+#      before div tau/rho force, let u_CC=interp_to_CC(u_MAC)
+#      then after div tau/rho force, let u_MAC=interp_to_MAC(u_CC)
+#   (b) if face_flag=0,
+#      before grad p/rho force, let u_MAC=interp_to_MAC(u_CC)
+#      then after grad/rho force, let u_CC=interp_to_CC(u_MAC)
+ns.filter_velocity=1 1 1  # 1..num_materials
 ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
 
+# currently: only one tank allowed in the domain.
 solvability_projection = 1 # sealed
 
+# these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
 ns.xblob            = 0.1016 # Tank cavity radius NOT ALIGNED
 #ns.xblob            = 0.09525 # Tank cavity radius ALIGNED
@@ -57,14 +76,18 @@ ns.radblob3         = 0.09128125  # radius of location of heater filament
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
-# 0 => cart, 1 => RZ
+# 0 => cart (XY or XYZ), 1 => RZ
 # n_cell=16x64       
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0   -0.254
 geometry.prob_hi    = 0.127  0.254
 geometry.is_periodic= 0 0
 
+# dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
+# dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
+# best to have dx=dy for now.
 amr.n_cell          = 16 64 
+# just 1 level:
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -121,9 +144,17 @@ ns.v=0
 # ----------------------------------------------------------
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
-ns.invert_gravity   = 0
+ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
 ns.gravity_potential_form=1
-ns.override_density=1 1 0
+#override_density=0 if compressible material
+#if incompressible material:
+# override_density=0 => rho independent of T or Z
+# override_density=1 => rho=rho(T,Z)  in the grad p/rho and div tau/rho
+#  force terms.
+# override_density=2 => has not been tested in a while 
+#   (Boussinesq approximation)
+#   rho independent of T or Z, but the gravity force is modified.
+ns.override_density=1 1 0  # 1..num_materials
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 -0.0034 0.0   # units: 1/degree K
 
@@ -150,8 +181,9 @@ ns.visc_coef        = 1.0
 
 # Molar mass [kg/mol]
 # Acrylic ??? (Not used)
-ns.molar_mass = 0.2 0.2 1 
-ns.species_molar_mass=0.2 
+ns.molar_mass = 0.2 0.2 1  # 1..num_materials
+ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
+                           # molar mass.
 
 # Density [kg/m^3]
 ns.denconst= 1400 5.3421449445 1190
@@ -197,14 +229,27 @@ ns.tension=0.0 0.0 0.0
 ns.latent_heat=1.42E+05 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
+# For evaporation and Boiling, this should always be 0.
 ns.distribute_from_target= 0 0 0 0 0 0
 ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
+# density in the ambient gas will increase in a sealed tank.
 ns.constant_density_all_time=1 0 1 # sealed 1..nmat
+# constant_volume_mdot=0 in an open container
+# constant_volume_mdot=-1 => redistribute -sum mdot evenly into the destination
+#  material.
+# constant_volume_mdot=1 => redistribute -sum mdot evenly into the source
+#  material.
 ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
 ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
+# freezing_model==0 => Energy jump model, no species
+# freezing_model==6 => Either Villegas etal/Palmore Desjardins model with
+#  species for evaporation/condensation or 
+#  Kassemi hybrid energy jump+Schrage model.
 ns.freezing_model=      6 0 0 0 0 0
+# Tanasawa_or_Schrage_or_Kassemi=0 => Villegas etal/Palmore Desjardins
+# Tanasawa_or_Schrage_or_Kassemi=3 => Kassemi
 ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 
 # The phase-change saturation temperature and pressure are calculated
@@ -214,6 +259,7 @@ ns.saturation_temp=307 0.0 0.0 0.0 0.0 0.0
 ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
 ns.reference_pressure=101325 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
+# Universal gas constant:
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
 
 # ----------------------------------------------------------
