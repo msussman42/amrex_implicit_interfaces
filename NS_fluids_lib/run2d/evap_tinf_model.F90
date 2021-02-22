@@ -3,14 +3,14 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 0
+      integer, PARAMETER :: probtype = 1
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model
        ! evap_model==2 => same as evap_model==0, except that initial
        ! volume fraction comes from the initial ratio of gas pressure
        ! to boiling pressure.
-      integer, PARAMETER :: evap_model=0
+      integer, PARAMETER :: evap_model=1
 
       integer, PARAMETER :: nsteps=1000
       integer, PARAMETER :: num_intervals=256
@@ -304,7 +304,6 @@
        print *,"evap_model invalid"
        stop
       endif
-
 
       end subroutine mdot_from_Y_probe
 
@@ -619,11 +618,19 @@
       endif
 
       istep=0
-      print *,"STEP=",istep," TIME=",cur_time," ARAT=", &
-         (R_gamma_NEW/radblob)**2," T=", &
-         TNEW(0)," Y=",YNEW(0)
+      print *,"probtype=",probtype
+      print *,"evap_model=",evap_model
+      print *,"nsteps=",nsteps
+      print *,"num_intervals=",num_intervals
+      print *,"radblob=",radblob
+      print *,"probhi_R_domain=",probhi_R_domain
+      print *,"STEP TIME ARAT TGAMMA YGAMMA "
+      print *,istep," ",cur_time," ", &
+         (R_gamma_NEW/radblob)**2," ", &
+         TNEW(0)," ",YNEW(0)
 
       do istep=1,nsteps
+
        T_gamma_a=100.0d0
        T_gamma_b=T_sat_global
        call mdot_diff_func(T_gamma_a,TNEW(1),YNEW(1),dx,mdot_diff_a)
@@ -797,9 +804,9 @@
        dx=dx_new
        R_gamma_OLD=R_gamma_NEW
        cur_time=cur_time+dt
-       print *,"STEP=",istep," TIME=",cur_time," ARAT=", &
-         (R_gamma_NEW/radblob)**2," T=", &
-         TNEW(0)," Y=",YNEW(0)
+       print *,istep," ",cur_time," ", &
+         (R_gamma_NEW/radblob)**2," ", &
+         TNEW(0)," ",YNEW(0)
 
       enddo ! istep=1..nsteps
 
