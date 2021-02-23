@@ -12,7 +12,11 @@
       integer, PARAMETER :: evap_model=0
 
       integer, PARAMETER :: nsteps=1000
-      integer, PARAMETER :: num_intervals=32
+        ! for convergence study: Borodulin test:
+        ! check R_gamma at t=500.0,
+        ! num_intervals=32,64,128,256,512,1024 (check the 
+        ! error between consecutive grid resolutions) |R_h - R_2h|  
+      integer, PARAMETER :: num_intervals=256
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
@@ -548,7 +552,9 @@
       TSTART=0.0d0
       cur_time=TSTART
       dt=(TSTOP-TSTART)/nsteps
-      print *,"ANALYTICAL TIME R_Gamma ARATIO T Y  VEL VEL_I "
+      print *,"START OF ANALYTICAL SOLUTION RESULTS"
+      print *,"ANALYTICAL SOLUTION ASSUMES INFINITE DOMAIN"
+      print *,"TIME R_Gamma ARATIO T Y  VEL VEL_I "
       
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
@@ -559,9 +565,17 @@
        cur_time=cur_time+dt
       enddo
 
+      print *,"END OF ANALYTICAL SOLUTION RESULTS, INFINITE DOMAIN"
+
       R_gamma_NEW=radblob
       R_gamma_OLD=radblob
-     
+    
+      print *,"START:SPHERICALLY SYMMETRIC CODE RESULTS, FINITE DOMAIN" 
+      print *,"R_gamma<=R<=prob_R_domain"
+      print *,"prob_R_domain= 8 * radblob + R_gamma"
+      print *,"radblob=",radblob
+      print *,"gas region size: 8 * radblob "
+
       probhi_R_domain=8.0d0*radblob+R_gamma_NEW
       dx=(probhi_R_domain-R_gamma_NEW)/num_intervals
       cur_time=0.0d0
@@ -631,6 +645,12 @@
 
       do istep=1,nsteps
 
+        ! STEP 1: given T_probe=T(1) Y_probe=Y(1)
+        !  \partial T/\partial r|r=R_GAMMA \approx (T_probe-T_Gamma)/dx
+        !  \partial Y/\partial r|r=R_GAMMA \approx (Y_probe-Y_Gamma)/dx
+        !  assumed that T=constant in the liquid (in the drop)
+        ! bisection method -> T_Gamma, Y_Gamma, s=velocity of the
+        ! interface.
        T_gamma_a=100.0d0
        T_gamma_b=T_sat_global
        call mdot_diff_func(T_gamma_a,TNEW(1),YNEW(1),dx,mdot_diff_a)
@@ -665,10 +685,23 @@
        call massfrac_from_volfrac(X_gamma_c,Y_gamma_c, &
         WA_global,WV_global)
 
+        ! STEP 2: advance the interface burnvel=-s>0
        call mdot_from_T_probe(T_gamma_c,TNEW(1),dx,mdotT)
        burnvel=mdotT/den_L
        R_gamma_NEW=R_gamma_OLD-dt*burnvel
 
+         ! STEP 3: interpolate old temperature from the old grid to the
+         ! new grid.  For those new grid nodes which were previously in
+         ! the liquid, but now in the vapor, a crossing time is
+         ! computed.
+         ! OLD:             x    x    x     x    x   x   t^n
+         ! CROSSING       o                              t1                    
+         ! CROSSING  o                                   t2
+         ! NEW:      x    x    x    x     x    x         t^{n+1}
+         ! R(t)=ROLD + (RNEW-ROLD)*(t-tOLD)/dt
+         ! given r_grid, the position of some grid node,
+         ! r_grid=ROLD+(RNEW-ROLD)*(tgrid-tOLD)/dt
+         ! solve for tgrid which is the crossing time.
        dx_new=(probhi_R_domain-R_gamma_NEW)/num_intervals
        igrid_old=0
        xpos_old=R_gamma_OLD
@@ -696,11 +729,14 @@
 
        DT_CROSSING(0)=0.0d0
        DT_CROSSING(num_intervals)=dt
-       TOLD_grid(0)=T_gamma_c
-       TOLD_grid(num_intervals)=T_inf_global
-       YOLD_grid(0)=Y_gamma_c
-       YOLD_grid(num_intervals)=Y_inf_global
+       TOLD_grid(0)=T_gamma_c  ! interface temperature
+       TOLD_grid(num_intervals)=T_inf_global  ! temperature at far right
+       YOLD_grid(0)=Y_gamma_c  ! interface mass fraction
+       YOLD_grid(num_intervals)=Y_inf_global  ! mass fraction at far RT.
 
+        ! STEP 4: backwards Euler method for advection and diffusion
+        !  source terms.
+        !  note: first order upwind method for the advection terms.
        alpha_G=k_G/(den_G*C_pG)
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new+R_gamma_NEW

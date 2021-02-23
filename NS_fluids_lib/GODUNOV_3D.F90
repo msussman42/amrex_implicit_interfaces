@@ -13311,13 +13311,15 @@ stop
            print *,"denmax became corrupt"
            stop
           endif
-!   u dt < dx  u=(ubase + g drho dt)  
-!   (ubase*dt+g drho dt^2) = dx   
-!   g drho dt^2 + ubase dt - dx =0 
-!   dt=(-ubase + sqrt(ubase^2 + 4 g drho dx))/(2 g drho) =
-!      4 g drho dx/( 2 g drho (ubase+sqrt(ubase^2 + 4 g drho dx)))=
-!      2 dx / (ubase+sqrt(ubase^2 + 4 g drho dx))=
-!      sqrt(dx/(g drho)) if ubase=0
+!   "delta rho" accounts for buoancy effects.
+!   u dt < dx  u=(ubase + g (delta rho) dt)  
+!   (ubase*dt+g (delta rho) dt^2) = dx   
+!   g (delta rho) dt^2 + ubase dt - dx =0 
+!   dt=(-ubase + sqrt(ubase^2 + 4 g (delta rho) dx))/(2 g drho) =
+!      4 g (delta rho) dx/( 2 g (delta rho) 
+!             (ubase+sqrt(ubase^2 + 4 g (delta rho) dx)))=
+!      2 dx / (ubase+sqrt(ubase^2 + 4 g (delta rho) dx))=
+!      sqrt(dx/(g (delta rho))) if ubase=0
 !      dx/ubase          if g=0
           ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
                   four*abs(denjump*ns_gravity)*dxmin))
