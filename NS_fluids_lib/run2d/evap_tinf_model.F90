@@ -3,14 +3,14 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 1
+      integer, PARAMETER :: probtype = 0
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model
        ! evap_model==2 => same as evap_model==0, except that initial
        ! volume fraction comes from the initial ratio of gas pressure
        ! to boiling pressure.
-      integer, PARAMETER :: evap_model=1
+      integer, PARAMETER :: evap_model=0
 
       integer, PARAMETER :: nsteps=1000
       integer, PARAMETER :: num_intervals=256
@@ -549,6 +549,8 @@
       TSTART=0.0d0
       cur_time=TSTART
       dt=(TSTOP-TSTART)/nsteps
+      print *,"ANALYTICAL TIME R_Gamma ARATIO T Y  VEL VEL_I "
+      
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
          VEL,VEL_I,LS)
@@ -606,7 +608,8 @@
        do igrid=0,num_intervals
         call INTERNAL_material(den_G,TNEW(igrid),e_grid)
         call EOS_material(den_G,e_grid,P_grid)
-        X_grid=P_grid/P_sat_global
+!       X_grid=P_grid/P_sat_global
+        X_grid=0.0
         call massfrac_from_volfrac(X_grid,YNEW(igrid), &
          WA_global,WV_global)
         YOLD(igrid)=YNEW(igrid)
