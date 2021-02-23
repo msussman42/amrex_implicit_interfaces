@@ -10,7 +10,7 @@
        ! evap_model==2 => same as evap_model==0, except that initial
        ! volume fraction comes from the initial ratio of gas pressure
        ! to boiling pressure.
-      integer, PARAMETER :: evap_model=0
+      integer, PARAMETER :: evap_model=2
 
       integer, PARAMETER :: nsteps=1000
       integer, PARAMETER :: num_intervals=256
@@ -594,22 +594,20 @@
        YOLD(igrid)=Y
       enddo
 
+      call INTERNAL_material(den_G,T_gamma,e_gamma_global)
+      call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
+      P_sat_global=Pgamma_init_global/X_gamma_init_global
+
       if (evap_model.eq.0) then ! Villegas model
-       call INTERNAL_material(den_G,T_sat_global,e_sat_global)
-       call EOS_material(den_G,e_sat_global,P_sat_global)
-       Pgamma_init_global=P_sat_global*X_gamma_init_global
+       ! do nothing
       else if (evap_model.eq.1) then ! Kassemi model
-       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
-       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
-       P_sat_global=Pgamma_init_global/X_gamma_init_global
+       ! do nothing
       else if (evap_model.eq.2) then ! same as Villegas, except X=P/P_ref
-       call INTERNAL_material(den_G,T_sat_global,e_sat_global)
-       call EOS_material(den_G,e_sat_global,P_sat_global)
        do igrid=0,num_intervals
         call INTERNAL_material(den_G,TNEW(igrid),e_grid)
         call EOS_material(den_G,e_grid,P_grid)
 !       X_grid=P_grid/P_sat_global
-        X_grid=0.0
+        X_grid=0.0d0
         call massfrac_from_volfrac(X_grid,YNEW(igrid), &
          WA_global,WV_global)
         YOLD(igrid)=YNEW(igrid)
