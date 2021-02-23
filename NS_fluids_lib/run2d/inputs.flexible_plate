@@ -62,7 +62,8 @@ ns.num_species_var=0
 # 3=no limiter with slope=0 at interface
 ns.slope_limiter_option=1
 ns.advection_order=1 1 1
-ns.face_flag=1
+ns.face_flag=0
+ns.filter_velocity=1 1 1
 # 0 = MOF (moment of fluid)
 # 2 = CMOF (continuous moment of fluid)
 # 4 = CLSVOF in 2 material cells and CMOF in >2 material cells.
@@ -132,7 +133,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 4       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100     # 200 for production runs
+amr.plot_int        = 200     # 200 for production runs
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -252,6 +253,7 @@ ns.elastic_regularization=0.0 0.0 0.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
+# elastic_time is not used for viscoelastic_model==2
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.viscoelastic_model=0 0 2
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS

@@ -1,3 +1,10 @@
+# ./NS_fluids/MITSUHIRO_MELTING.F90 (probtype=414)
+# to install a new plug in:
+#  1. create plug in .F90 file.
+#  2. add to Make.package
+#  3. add to PROB_CPP_PARMS.F90 
+#  4. (probtype_list_size by 1)
+#  (search for "414" to see what to change)
 # Figures 4 and 5 from Vu, Tryggvason, Homma, Wells, Takakura,
 # JCEJ 46 (11) 726-731 (2013)
 # Figure 1 from Enriquez et al: Physics of Fluids 24,091102 (2012)
@@ -46,7 +53,9 @@ ns.xslice=0.0 0.0
 ns.num_materials_vel=1
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
-ns.face_flag=1
+ns.face_flag=0
+# 1: liquid 2: air 3: ice 4: substrate
+ns.filter_velocity=1 1 1 1
 ns.num_divu_outer_sweeps=1
 ns.diffusionface_flag=1  # 0=LS face diffcoeff 1=VOF for face diffcoeff
 ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff
@@ -222,7 +231,8 @@ ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
 # speed is u_{solid} dot n + mdot/rho_{solid}
 # NO EVAPORATION:
 #ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
-#EVAPORATION: (distribute mdot into the melt)
+#EVAPORATION: (distribute mdot into the melt for melting, and into the
+# gas for evaporation)
 ns.distribute_from_target = 1 0 0 0 0 0 0 0 0 0 0 0
 # unnecessary to distribute mdot evenly for liquids or solids; only gases.
 ns.distribute_mdot_evenly=0 0 0 0 0 0 0 0 0 0 0 0
@@ -242,8 +252,9 @@ ns.latent_heat = 3.0e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 # freezing_model=0 => stefan law  V=[k grad T dot n]/L
 # 5 = mystery evaporation law
 #evaporation: freezing_model=6 Palmore and Desjardins 
-#        freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
+#    freezing_model=6: ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 # EVAPORATION
+ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
 # NO EVAPORATION
 #ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
@@ -269,6 +280,7 @@ ns.sum_interval   = 1        # timesteps between computing mass
 
 # initial ice block on heated substrate.
 # probtype=414
+# ./NS_fluids/MITSUHIRO_MELTING.F90
 ns.axis_dir=0   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
@@ -310,13 +322,15 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 # (rho Y)_t + div(rho u Y) = div (rho D grad Y)
 # D units: cm^2/s
 # EVAPORATION or NO EVAPORATION
+# liquid, gas, ice, substrate
 ns.speciesviscconst=0.282 0.282 0.0 0.0
 #4.24 percent when dew point is 30 degrees celcius
 #https://www.tis-gdv.de/tis_e/misc/klima-htm/
 #https://www.ready.noaa.gov/READYmoistcal.php 
 #initial vapor mass fraction.
 #EVAPORATION or NO EVAPORATION
-ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3
+#
+ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 # species 1: 1..num_materials
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
@@ -328,6 +342,14 @@ ns.viscoelastic_model=0 0 0 0
 ns.added_weight=1.0 1.0 1.0 1.0
 ns.elastic_time=0.0 0.0 0.0 0.0
 ns.denconst=0.850 0.001 0.950 8.96
+# 0 fluid, tessellating (default)
+# 1 prescribed rigid solid, non-tessellating (PROB.F90)
+# 2 prescribed rigid solid, non-tessellating (sci_clsvof.F90)
+# 3 FSI ice,tessellating
+# 4 FSI, non-tessellating link w/Kourosh Shoele
+# 5 FSI rigid solid, tessellating (PROB.F90)
+# 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
+# 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
 ns.FSI_flag=0 0 3 1  # ice is a very viscous fluid
 ns.recalesce_flag=0 0 0 0
 # remember saturation temp is 273 and we scale
