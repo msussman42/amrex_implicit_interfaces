@@ -6,14 +6,13 @@
       integer, PARAMETER :: probtype = 0
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
-       ! evap_model==1 => Kassemi model
+       ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
        ! evap_model==2 => same as evap_model==0, except that initial
-       ! volume fraction comes from the initial ratio of gas pressure
-       ! to boiling pressure.
-      integer, PARAMETER :: evap_model=2
+       ! volume fraction is zero.
+      integer, PARAMETER :: evap_model=0
 
       integer, PARAMETER :: nsteps=1000
-      integer, PARAMETER :: num_intervals=256
+      integer, PARAMETER :: num_intervals=32
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
