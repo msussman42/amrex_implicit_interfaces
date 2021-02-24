@@ -207,6 +207,7 @@ int  NavierStokes::ns_time_order=1; // time_blocking_factor
 int  NavierStokes::slab_step=0;
 int  NavierStokes::SDC_outer_sweeps=0;
 int  NavierStokes::divu_outer_sweeps=0;
+int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
 Real NavierStokes::prev_time_slab=0.0;
 Real NavierStokes::cur_time_slab=0.0;

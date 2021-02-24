@@ -66,14 +66,13 @@ ns.xblob4 	    = 0.2159 # End cap radius NOT ALIGNED
 
 ns.yblob4	    = 0.0127 # X_2 of spherical cap center 
 
-#ns.zblob3	    = -0.1429 # X_2 of heater top 
-ns.zblob3	    = -0.10 # X_2 of heater top 
+ns.zblob3	    = -0.1429 # X_2 of heater top 
 ns.yblob3	    = -0.1683 # X_2 of heater bottom
 #n_cell=16 64
 # 0 < r < 0.127
 # 0.09525 - (1/2) 0.127/16 = 0.09128125
-ns.radblob3         = 0.08  # r_end of location of heater filament
-ns.radblob4         = 0.04  # r_start of heater filament
+ns.radblob3         = 0.09128125  # r_end of location of heater filament
+ns.radblob4         = 0.09128125  # r_start of heater filament
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
@@ -119,6 +118,7 @@ ns.shock_timestep=2 2 2
 # ----------------------------------------------------------
 # output file -2=> tecplot -1=> plot files (visit or paraview)
 ns.visual_option    =-2
+#ns.visual_buoyancy_plot_int=2000
 
 amr.check_int       = 2000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
@@ -126,8 +126,8 @@ amr.check_file      = chk     # root name of checkpoint file
 ns.slice_dir=1 # y (aka z) direction
 # 2 * 0.0635=.127
 ns.xslice=0.0635 0.127
-amr.slice_int=100
-amr.plot_int        = 100      # number of timesteps between plot files
+amr.slice_int=2000
+amr.plot_int        = 2000   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 1     # timesteps between computing mass 

@@ -9636,6 +9636,7 @@ void NavierStokes::multiphase_project(int project_option) {
        -1, // State_Type==-1
        dir);
 
+       // gravity * dt
       writeSanityCheckData(
        "POTENTIAL_FORCE_EDGE",
        "project_option==0:POTENTIAL_FORCE_EDGE",
