@@ -5253,7 +5253,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
     FACE_VAR_MF+dir,
     -1, // State_Type==-1
     dir);
-  }
+  } // dir=0..sdim-1
  }
 
  delete_array(DEN_RECON_MF);
