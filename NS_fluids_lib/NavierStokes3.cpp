@@ -2256,6 +2256,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   std::cout << "do_the_advance timeSEM= " << timeSEM << 
    " dtSEM= " << dtSEM << '\n';
 
+ very_last_sweep=0;
+
  advance_status=1; // 1=success 0=failure
 
  int post_restart_flag=0; 
@@ -2389,7 +2391,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         divu_outer_sweeps++) {
 
     int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
-    int very_last_sweep=0;
+    very_last_sweep=0;
 
     if ((SDC_outer_sweeps+1==SDC_outer_sweeps_end)&&
         (slab_step+1==ns_time_order)&&
@@ -9606,6 +9608,55 @@ void NavierStokes::multiphase_project(int project_option) {
    int n_input;
    std::cin >> n_input;
   }  
+
+  if (visual_buoyancy_plot_int>0) {
+
+   int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+
+   if (very_last_sweep==1) {
+    int ratio=(nsteps+1)/visual_buoyancy_plot_int;
+    ratio=ratio*visual_buoyancy_plot_int;
+    if (ratio==nsteps+1) {
+
+     int caller_id=1;
+
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      // filenames: "FACE_VAR<stuff>.plt" (MAC data)
+      // curv_index,pforce_index (unused for now),
+      // faceden_index,facecut_index,
+      // icefacecut_index=4,icemask_index,facevisc_index,
+      // faceheat_index,facevel_index,facespecies_index,
+      // massface_index,vofface_index
+      writeSanityCheckData(
+       "FACE_VAR",
+       "project_option==0:FACE_VAR_MF",//faceden_index=2 facevisc_index=6
+       caller_id,
+       localMF[FACE_VAR_MF+dir]->nComp(),
+       FACE_VAR_MF+dir,
+       -1, // State_Type==-1
+       dir);
+
+      writeSanityCheckData(
+       "POTENTIAL_FORCE_EDGE",
+       "project_option==0:POTENTIAL_FORCE_EDGE",
+       caller_id,
+       localMF[POTENTIAL_FORCE_EDGE_MF+dir]->nComp(),
+       POTENTIAL_FORCE_EDGE_MF+dir,
+       -1, // State_Type==-1
+       dir);
+     } // dir=0..sdim-1
+
+    } // ratio==nsteps+1
+   } else if (very_last_sweep==0) {
+    // do nothing
+   } else
+    amrex::Error("very_last_sweep invalid");
+
+  } else if (visual_buoyancy_plot_int==0) {
+   // do nothing
+  } else
+   amrex::Error("visual_buoyancy_plot_int invalid");
+
 
   deallocate_potential_forceALL(); 
 

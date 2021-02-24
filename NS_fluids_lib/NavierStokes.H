@@ -1466,6 +1466,7 @@ protected:
     static int slab_step; 
     static int SDC_outer_sweeps;
     static int divu_outer_sweeps;
+    static int very_last_sweep;
     static Real upper_slab_time;
     static Real lower_slab_time;
     static Real delta_slab_time;
@@ -1945,6 +1946,7 @@ protected:
     static int visual_revolve;
     static int visual_option;
     static int visual_phase_change_plot_int; //def=0
+    static int visual_buoyancy_plot_int; //def=0
 
     static Vector<int> visual_ncell;
     static int visual_compare;
