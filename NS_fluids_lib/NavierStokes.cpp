@@ -10844,6 +10844,12 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
  debug_ngrow(MASKCOEF_MF,ngrow,28); 
  debug_ngrow(MASK_NBR_MF,ngrow,28); 
 
+  // vof,ref centroid,order,slope,intercept  x nmat
+ VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,ngrow,36);
+ if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
+  amrex::Error("slope_recon_mf has incorrect ncomp");
+
  const Real* dx = geom.CellSize();
 
  Real gravity_normalized=std::abs(gravity);
@@ -10915,6 +10921,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
     FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
     FArrayBox& eosfab=(*EOSdata)[mfi];
     FArrayBox& momfab=(*localMF[idx])[mfi];
+    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -10944,6 +10951,8 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
      ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
      momfab.dataPtr(),
      ARLIM(momfab.loVect()),ARLIM(momfab.hiVect()),
+     reconfab.dataPtr(),
+     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      xlo,dx,
      &gravity_normalized,
      DrhoDT.dataPtr(),
