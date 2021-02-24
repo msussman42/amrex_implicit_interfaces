@@ -13998,6 +13998,7 @@ stop
        vol,DIMS(vol), &
        eosdata,DIMS(eosdata), &
        momden,DIMS(momden), &
+       recon,DIMS(recon), &
        xlo,dx, &
        gravity_normalized, &
        DrhoDT, &
@@ -14024,6 +14025,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vol)
       INTEGER_T, intent(in) :: DIMDEC(eosdata)
       INTEGER_T, intent(in) :: DIMDEC(momden)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
      
@@ -14032,6 +14034,7 @@ stop
       REAL_T, intent(in) ::  vol(DIMV(vol)) 
       REAL_T, intent(in) :: eosdata(DIMV(eosdata),num_state_material*nmat)
       REAL_T, intent(out) :: momden(DIMV(momden),nmat)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
 
@@ -14051,6 +14054,8 @@ stop
       REAL_T density_of_TZ
       INTEGER_T caller_id
       REAL_T rho_base
+      INTEGER_T vofcomp
+      REAL_T local_vfrac
 
       nhalf=3
 
@@ -14079,6 +14084,7 @@ stop
        print *,"FORT_DERIVE_MOM_DEN: im_parm invalid, im_parm=",im_parm
        stop
       endif
+      vofcomp=(im_parm-1)*ngeom_recon+1
 
       if (levelrz.eq.0) then
        ! do nothing
@@ -14097,6 +14103,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(vol),ngrow,-1,12)
       call checkbound(fablo,fabhi,DIMS(eosdata),ngrow,-1,12)
       call checkbound(fablo,fabhi,DIMS(momden),ngrow,-1,12)
+      call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,12)
       call checkbound(fablo,fabhi,DIMS(mask),ngrow,-1,12)
       call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,12)
 
@@ -14144,82 +14151,95 @@ stop
           stop
          endif
 
-          ! den,T
-         temperature=eosdata(D_DECL(i,j,k),dencomp+1)
+         local_vfrac=recon(D_DECL(i,j,k),vofcomp)
 
-          ! defined in: GLOBALUTIL.F90
-          ! only takes into account fort_drhodz
-         caller_id=0
-         call default_hydrostatic_pressure_density( &
-           xpos, &
-           rho_base, &
-           rhohydro, &
-           preshydro, &
-           temperature, &
-           gravity_normalized, &
-           im_parm, &
-           override_density(im_parm), &
-           caller_id)
+         if ((local_vfrac.ge.VOFTOL).and.(local_vfrac.le.one+VOFTOL)) then
 
-         if (DrhoDT(im_parm).le.zero) then
-          ! do nothing
-         else
-          print *,"DrhoDT invalid"
-          stop
-         endif
+           ! den,T
+          temperature=eosdata(D_DECL(i,j,k),dencomp+1)
 
-         density_of_TZ=rhohydro+ &
-           rho_base*DrhoDT(im_parm)* &
-           (temperature-fort_tempconst(im_parm))
+           ! defined in: GLOBALUTIL.F90
+           ! only takes into account fort_drhodz
+          caller_id=0
+          call default_hydrostatic_pressure_density( &
+            xpos, &
+            rho_base, &
+            rhohydro, &
+            preshydro, &
+            temperature, &
+            gravity_normalized, &
+            im_parm, &
+            override_density(im_parm), &
+            caller_id)
 
-         if ((temperature.ge.zero).and. &
-             (rhohydro.gt.zero).and. &
-             (fort_tempconst(im_parm).ge.zero).and. &
-             (fort_denconst(im_parm).gt.zero).and. &
-             (rho_base.gt.zero)) then 
-          ! do nothing
-         else
-          print *,"invalid parameters to get the density"
-          print *,"im_parm=",im_parm
-          print *,"temperature=",temperature
-          print *,"density_of_TZ=",density_of_TZ
-          print *,"rho_base=",rho_base
-          print *,"rhohydro=",rhohydro
-          print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
-          stop
-         endif
-
-         if (density_of_TZ.gt.zero) then
-          ! do nothing
-         else if (density_of_TZ.le.zero) then
-          print *,"WARNING density_of_TZ.le.zero"
-          print *,"im_parm=",im_parm
-          print *,"temperature=",temperature
-          print *,"density_of_TZ=",density_of_TZ
-          print *,"rho_base=",rho_base
-          print *,"rhohydro=",rhohydro
-          print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
-          print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
-         
-          temperature=fort_tempcutoffmax(im_parm)
- 
-          density_of_TZ=rhohydro+ &
-           rho_base*DrhoDT(im_parm)* &
-           (temperature-fort_tempconst(im_parm))
-
-          if (density_of_TZ.gt.zero) then
+          if (DrhoDT(im_parm).le.zero) then
            ! do nothing
           else
-           print *,"density_of_TZ.le.zero (STILL)"
+           print *,"DrhoDT invalid"
            stop
           endif
 
+          density_of_TZ=rhohydro+ &
+            rho_base*DrhoDT(im_parm)* &
+            (temperature-fort_tempconst(im_parm))
+
+          if ((temperature.ge.zero).and. &
+              (rhohydro.gt.zero).and. &
+              (fort_tempconst(im_parm).ge.zero).and. &
+              (fort_denconst(im_parm).gt.zero).and. &
+              (rho_base.gt.zero)) then 
+           ! do nothing
+          else
+           print *,"invalid parameters to get the density"
+           print *,"im_parm=",im_parm
+           print *,"temperature=",temperature
+           print *,"density_of_TZ=",density_of_TZ
+           print *,"rho_base=",rho_base
+           print *,"rhohydro=",rhohydro
+           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+           stop
+          endif
+
+          if (density_of_TZ.gt.zero) then
+           ! do nothing
+          else if (density_of_TZ.le.zero) then
+           print *,"WARNING density_of_TZ.le.zero"
+           print *,"im_parm=",im_parm
+           print *,"temperature=",temperature
+           print *,"density_of_TZ=",density_of_TZ
+           print *,"rho_base=",rho_base
+           print *,"rhohydro=",rhohydro
+           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+           print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
+          
+           temperature=fort_tempcutoffmax(im_parm)
+  
+           density_of_TZ=rhohydro+ &
+            rho_base*DrhoDT(im_parm)* &
+            (temperature-fort_tempconst(im_parm))
+
+           if (density_of_TZ.gt.zero) then
+            ! do nothing
+           else
+            print *,"density_of_TZ.le.zero (STILL)"
+            stop
+           endif
+
+          else
+           print *,"density_of_TZ bust"
+           stop
+          endif
+
+          momden(D_DECL(i,j,k),im_parm)=density_of_TZ
+
+         else if (abs(local_vfrac).le.VOFTOL) then
+
+          momden(D_DECL(i,j,k),im_parm)=rho_base
+
          else
-          print *,"density_of_TZ bust"
+          print *,"local_vfrac invalid"
           stop
          endif
-
-         momden(D_DECL(i,j,k),im_parm)=density_of_TZ
 
         else if ((override_density(im_parm).eq.0).or. &
                  (override_density(im_parm).eq.2)) then

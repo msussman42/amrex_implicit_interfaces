@@ -1118,6 +1118,7 @@ extern "C"
      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
      Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi), 
      Real* momden,AMREX_ARLIM_P(momdenlo),AMREX_ARLIM_P(momdenhi), 
+     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
      const Real* xlo,const Real* dx,
      Real* gravity_normalized,
      Real* DrhoDT,

@@ -62,7 +62,8 @@ ns.yblob4	    = 0.0127 # X_2 of spherical cap center
 
 ns.zblob3	    = -0.1429 # X_2 of heater top 
 ns.yblob3	    = -0.1683 # X_2 of heater bottom
-ns.radblob3	    =  0.0925 # X_1 of heater 
+ns.radblob3	    =  0.0925 # X_1 of heater  RHIGH
+ns.radblob4	    =  0.0925 # X_1 of heater  RLOW
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------

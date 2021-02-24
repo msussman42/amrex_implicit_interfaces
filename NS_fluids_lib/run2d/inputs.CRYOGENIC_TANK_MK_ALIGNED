@@ -52,7 +52,8 @@ ns.yblob3	    = -0.1683 # X_2 of heater bottom
 #n_cell=16 64
 # 0 < r < 0.127
 # 0.09525 - (1/2) 0.127/16 = 0.09128125
-ns.radblob3         = 0.09128125  # radius of location of heater filament
+ns.radblob3         = 0.09128125  # radius of location of heater filament RHI
+ns.radblob4         = 0.09128125  # radius of location of heater filament RLO
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------

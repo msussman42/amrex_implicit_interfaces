@@ -42,6 +42,7 @@ REAL_T :: TANK_MK_HEATER_FLUX
 REAL_T :: TANK_MK_HEATER_LOW
 REAL_T :: TANK_MK_HEATER_HIGH
 REAL_T :: TANK_MK_HEATER_R
+REAL_T :: TANK_MK_HEATER_R_LOW
 
 ! Flat or spherical interface
 REAL_T :: TANK_MK_INTERFACE_RADIUS
@@ -80,6 +81,7 @@ contains
   TANK_MK_HEATER_LOW       = yblob3
   TANK_MK_HEATER_HIGH      = zblob3
   TANK_MK_HEATER_R         = radblob3
+  TANK_MK_HEATER_R_LOW     = radblob4
 
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
@@ -928,8 +930,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
  heat_source=zero
 
  if (levelrz.eq.1) then
-   if ((abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
-    (abs(xsten(1,1)).ge.TANK_MK_HEATER_R).and.&
+   if ( &
+    (abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
+    (abs(xsten(1,1)).ge.TANK_MK_HEATER_R_LOW).and.&
     (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
     (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
     ! area=2 pi rf dz
@@ -947,8 +950,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     endif
    endif
  else if (levelrz.eq.0) then
-   if ((abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
-    (abs(xsten(1,1)).ge.(-TANK_MK_HEATER_R)).and.&
+   if ( &
+    (abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
+    (abs(xsten(1,1)).ge.(-TANK_MK_HEATER_R_LOW)).and.&
     (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
     (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
 
