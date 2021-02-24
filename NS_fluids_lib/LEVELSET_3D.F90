@@ -8873,6 +8873,7 @@ stop
          do iside=0,1
          do im=1,nmat
 
+           ! vofface_index=11  2 * nmat components
           voldepart=local_face(vofface_index+2*(im-1)+iside+1)
           voltotal=voltotal+voldepart
           FFACE(im)=FFACE(im)+voldepart
@@ -9712,7 +9713,7 @@ stop
         stop
        endif
 
-      enddo ! im  (checking parameters)
+      enddo ! im=1..nmat  (checking parameters)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi, &
         ngrow_refine) 
@@ -9773,7 +9774,7 @@ stop
  
              cenF(D_DECL(i,j,k),irefinecen)=zero
             enddo ! dir2 
-           enddo ! im
+           enddo ! im=1..nmat
           else if (check_donate.eq.1) then
 
            call CISBOXHALF(xsten_donate,1, &
@@ -9803,7 +9804,7 @@ stop
            do im=1,nmat
             dencomp=(im-1)*num_state_material+1
             den=denstate(D_DECL(i,j,k),dencomp)
-            mom_den_local=mom_den(D_DECL(i,j,k),nmat)
+            mom_den_local=mom_den(D_DECL(i,j,k),im)
 
             if (use_mom_den.eq.0) then
              den_value=den
@@ -9822,6 +9823,23 @@ stop
               print *,"im,i,j,k,den ",im,i,j,k,den
               print *,"dencomp=",dencomp
               print *,"level,finest_level ",level,finest_level
+              stop
+             endif
+             if ((override_density(im).eq.0).or. &
+                 (override_density(im).eq.2)) then
+              if (abs(den_value-fort_denconst(im)).le.VOFTOL) then
+               ! do nothing
+              else
+               print *,"den_value invalid"
+               print *,"im,i,j,k,den_value ",im,i,j,k,den_value
+               print *,"dencomp=",dencomp
+               print *,"level,finest_level ",level,finest_level
+               stop
+              endif
+             else if (override_density(im).eq.1) then
+              ! do nothing
+             else
+              print *,"override_density invalid"
               stop
              endif
             else if (constant_density_all_time(im).eq.0) then 
