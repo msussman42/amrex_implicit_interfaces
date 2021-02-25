@@ -190,7 +190,7 @@ ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
 
 # Density [kg/m^3]
 ns.denconst= 1400 5.3421449445 1190
-ns.speciesconst= 1.0 1.0 1.0 
+ns.speciesconst= 1.0 1.0 1.0  #Kassemi
 
 # Diffusion coefficient [m^2/s]
 # Not used ???
