@@ -13045,6 +13045,7 @@ contains
       IMPLICIT NONE
       REAL_T, intent(out) :: R,cp,cv,gamma_constant,omega
 
+       ! PARAMETERS declared in PROBCOMMON.F90
       R=R_AIR_PARMS  ! ergs/(Kelvin g)
       cv=CV_AIR_PARMS ! ergs/(Kelvin g)
       cp=cv+R  ! ergs/(Kelvin g)

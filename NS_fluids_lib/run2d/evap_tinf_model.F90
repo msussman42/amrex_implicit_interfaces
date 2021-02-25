@@ -428,7 +428,7 @@
 !      find_TINF_from_TGAMMA=1
        find_TINF_from_TGAMMA=0
        radblob = 0.05d0  ! cm
-       cur_x=4.0d0*radblob
+       cur_x=2.0d0*radblob
        den_L = 1.0d0  ! g/cm^3
        den_G = 0.001d0 ! g/cm^3
        C_pG = 1.0d+7  ! erg/(g K)
@@ -638,6 +638,8 @@
       print *,"num_intervals=",num_intervals
       print *,"radblob=",radblob
       print *,"probhi_R_domain=",probhi_R_domain
+      print *,"reference pressure=",P_sat_global
+      print *,"gamma_G=CP/CV,CP,CV ",gamma_G," ",C_pG," ",C_pG/gamma_G
       print *,"STEP TIME ARAT TGAMMA YGAMMA "
       print *,istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
