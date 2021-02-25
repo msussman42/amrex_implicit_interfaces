@@ -206,6 +206,8 @@ ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 #ns.speciesconst=0.0121 0.0121  #initial vapor mass fraction in atmosphere
 #if ns.Tanasawa_or_Schrage_or_Kassemi=0,
 ns.speciesconst=7.1e-3 7.1e-3  #PD: initial vapor mass fraction in atmosphere
+ns.radblob2=7.1e-3  # since species=1 for Kassemi model, put Y_inf here.
+
 #if ns.Tanasawa_or_Schrage_or_Kassemi=3,
 ns.speciesconst=1.0 1.0  # Kassemi
 #ns.hardwire_Y_gamma=0.22132139799031397 0.0

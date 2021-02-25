@@ -25,6 +25,8 @@ module DROP_IN_SHEAR_module
 
 implicit none                   
 
+REAL_T, PARAMETER :: Y_inf_default = 7.1D-3
+
 REAL_T :: DEF_VAPOR_GAMMA
 REAL_T :: den_G,C_pG,k_G,lambda,T_inf,T_sat,L_V,D_G,Y_inf
 REAL_T :: den_L
@@ -102,6 +104,22 @@ T_sat = fort_saturation_temp(1)
 L_V = fort_latent_heat(1)
 D_G = fort_speciesviscconst(2)
 Y_inf=fort_speciesconst(2)
+if (Y_inf.eq.1.0d0) then
+ Y_inf=radblob2
+ if (Y_inf.eq.0.0d0) then
+  Y_inf=Y_inf_default
+ else if ((Y_inf.gt.0.0d0).and.(Y_inf.lt.1.0d0)) then
+  ! do nothing
+ else
+  print *,"radblob2 invalid"
+  stop
+ endif
+else if ((Y_inf.ge.0.0d0).and.(Y_inf.lt.1.0d0)) then
+ ! do nothing
+else
+ print *,"Y_inf invalid"
+ stop
+endif
 WV=fort_species_molar_mass(1)  !num_species components
 WA=fort_molar_mass(2)
 ! T_inf C_pG / L = 300.5 K * 1e+7 (erg/(g K)) / ((2.26e+10) erg/g)
