@@ -75,7 +75,7 @@ contains
   TANK_MK_INTERFACE_RADIUS = radblob2
   TANK_MK_BUBBLE_X         = xblob2
   TANK_MK_BUBBLE_Y         = yblob2
-  TANK_MK_BUBBLE_Y         = zblob2
+  TANK_MK_BUBBLE_Z         = zblob2
 
   TANK_MK_HEATER_FLUX      = xblob3
   TANK_MK_HEATER_LOW       = yblob3
