@@ -9215,6 +9215,194 @@ contains
       return
       end subroutine tridiag_solve
 
+      subroutine patterned_substrates(x,y,z,dist,time,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: x,y,z,time
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(out) :: dist
+      REAL_T :: xprime
+      REAL_T :: yprime
+      REAL_T :: zprime
+      REAL_T :: xvec(SDIM)
+      REAL_T :: local_pi
+      REAL_T :: pitch,ptb_f,ptb_disbtx,ptb_disbty,ptb_dist,rPillar
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid10"
+       stop
+      endif
+
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
+       ! do nothing
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in patterned dist"
+      else if (time.lt.zero) then
+       print *,"time invalid in patterned dist"
+       stop
+      else
+       print *,"time bust in patterned dist"
+       stop
+      endif
+
+      if (is_rigid(num_materials,im).ne.1) then
+       print *,"is_rigid invalid"
+       stop
+      endif
+
+      if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
+       print *,"adv_dir invalid patterned dist (1)"
+       stop
+      endif
+
+      xprime=x
+      yprime=y
+      zprime=z
+      xvec(1)=x
+      xvec(2)=y
+      if (SDIM.eq.3) then
+       xvec(SDIM)=z
+      endif
+
+      ! ysg patterned surface 
+      ! ptb_f=66 !3333.3333
+      ! pi=3.14159265
+      ! ptb_dist=(sin(pi/2+pi*ptb_f*x)-1.0)**2+(sin(pi/2+pi*ptb_f*y)-1.0)**2
+      !  if (ptb_dist.ge.3.95) then
+      !          ptb_dist=0.14
+      !  else 
+      !          ptb_dist=0.0
+      !  endif
+      !------------------------------------------------------------------------
+      ! Ahmed -- this is the first set of run with modified air density to see
+      ! what happens with high penetration (more SE to KE conversion)
+      ! Do not work on this anymore, copy and paste it to second one to change
+      ! and study the pitch , call this study 1 - Ahmed, 11/8/2020
+      !------------------------------------------------------------------------
+      ! Study 1 - Pillar Penetration with pitch of 0.027
+      
+      !pi=3.14159265
+      !pitch=0.027
+      !ptb_f=2/pitch
+      ! ptb_disbtx=MOD(x,pitch)
+      ! ptb_disbty=MOD(y,pitch)
+      !if((ptb_disbtx.le.0.016.or.ptb_disbtx.ge.0.044).and. &
+      ! (ptb_disbty.le.0.016.or.ptb_disbty.ge.0.044))then
+      ! if(ptb_disbtx.ge.0.044)then
+      !  ptb_disbtx=pitch-ptb_disbtx
+      ! endif
+      ! if(ptb_disbty.ge.0.044)then
+      !  ptb_disbty=pitch-ptb_disbty
+      ! endif
+      ! rPillar=SQRT(ptb_disbtx**2+ptb_disbty**2)
+      ! if(rPillar.le.0.016)then
+      !  !ptb_dist=SQRT(0.00016**2-rPillar**2)-SQRT(0.00016**2-0.00015**2)+0.002
+      !  ptb_dist=0.1
+      ! else
+      !  ptb_dist=0
+      ! endif
+      !else
+      ! ptb_dist=0
+      ! endif
+      
+      !------------------------------------------------------------------------
+      ! Study 2
+      !ptb_dist=0.01*sin(20000*pi*x)+(1*10**(-8))*y
+      ! this works like a sine function - Ahmed 10-31-2020
+      !ptb_dist = 0.03+0.5*0.04*sin((2*pi/0.030)*x) <---- this works
+      !ptb_dist = 0.03+0.5*0.04*sin((2*pi/0.031)*x) <---- did not work
+      !------------------------------------------------------------------------
+      ! Study 3
+      ! Implement Paper Guo et al. Droplet Impact on Anisotropic
+      ! Superhydrophobic Surfaces, Langmuir
+      !ptb_dist=0.05+(8*(2**0.5)/(pi**2))*((0.04*sin(200*x) &
+      !         +(0.04*sin(200*3*x)/9)-(0.04*sin(200*5*x)/25) &
+      !         -(0.04*sin(200*7*x)/49)+(0.04*sin(200*9*x)/81) &
+      !         +(0.04*sin(200*11*x)/121)))    
+      !---------------------------------------------------------------
+      ! Study 4 - Pillar Penetration with pitch of 0.02 and 0.035 
+      !           Pillar radius is held at 0.0125
+      local_pi=four*atan(one)
+
+       ! pitch value large yields larger radii posts
+      pitch=0.02d0 !0.0350 !0.080 !0.040 !0.030 !0.06 
+                   !< this controls the pitch
+      ptb_f=two/pitch
+      ptb_disbtx=MOD(x,pitch)
+      ptb_disbty=MOD(y,pitch)
+       ! ! if pitch value cross the limit below, 
+       ! ! then the radius of the pillar becomes
+       ! ! smaller (less than the .le.) or
+       ! ! bigger (if more than .ge.)
+      if((ptb_disbtx.le.0.020.or.ptb_disbtx.ge.0.040).and. &
+         (ptb_disbty.le.0.020.or.ptb_disbty.ge.0.040))then
+
+        if(ptb_disbtx.ge.0.040)then
+         ptb_disbtx=pitch-ptb_disbtx
+        endif
+        if(ptb_disbty.ge.0.040)then
+         ptb_disbty=pitch-ptb_disbty
+        endif
+        rPillar=SQRT(ptb_disbtx**2+ptb_disbty**2)
+        if(rPillar.le.0.01250)then !0.01250 !0.025 !0.025 !0.0125 
+                                   !< this controls the radius
+         
+         !ptb_dist=SQRT(0.00016**2-rPillar**2)-SQRT(0.00016**2-0.00015**2)+ &
+         ! 0.002
+         ptb_dist=0.05 !< Was 0.0005 to make a dimple surface, now turned it
+                         !to 0.001 to make all flat surface
+        else
+         ptb_dist=0.1
+        endif
+      else
+       ptb_dist=0.1
+      endif
+       
+       !---------------------------------------------------------------------
+       !---------------------------------------------------------------------
+       ! Study 5 - Pancake Bouncing on Superhydrophobic Surfaces 
+       !   Liu,Moevius,Xu,Qian 
+       !           Pancake Bouncing: Simulations and Theory and 
+       !           Experimental Verification
+       !			by Moevius, Liu, Wang, Yeomans
+       !pi=3.14159265
+       !! pitch value large yields larger radii posts
+       !pitch=0.030  !0.080 !0.040 !0.030 !0.06 !< this controls the pitch
+       !!ptb_f=2/pitch
+       ! ptb_disbtx=MOD(x,pitch)
+       ! ptb_disbty=MOD(y,pitch)
+       ! ! if pitch value cross the limit below, 
+       ! ! then the radius of the pillar becomes
+       ! ! smaller (less than the .le.) or
+       ! ! bigger (if more than .ge.)
+       !if((ptb_disbtx.le.0.010.or.ptb_disbtx.ge.0.0440).and. &
+       ! (ptb_disbty.le.0.010.or.ptb_disbty.ge.0.0440))then
+       ! if(ptb_disbtx.ge.0.040)then
+       !  ptb_disbtx=pitch-ptb_disbtx
+       ! endif
+       ! if(ptb_disbty.ge.0.040)then
+       !  ptb_disbty=pitch-ptb_disbty
+       ! endif
+       ! rPillar=SQRT(ptb_disbtx**2+ptb_disbty**2)
+       ! if(rPillar.le.0.010)then !0.01250 !0.025 !0.025 !0.0125 
+                                  !< this controls the radius
+         
+       !  !ptb_dist=SQRT(0.00016**2-rPillar**2)- &
+       !  SQRT(0.00016**2-0.00015**2)+0.002
+       !  ptb_dist=0.14
+       ! else
+       !  ptb_dist=0
+       ! endif
+       !else
+       ! ptb_dist=0
+       ! endif
+       
+       !------------------------------------------------------------------------
+      dist=z-ptb_dist
+      
+      return
+      end subroutine patterned_substrates
 
        ! negative on the inside of the square
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)

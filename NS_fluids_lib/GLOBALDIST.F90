@@ -1675,9 +1675,11 @@ end subroutine nozzle2d
 
       IMPLICIT NONE
 
-      REAL_T x,y,z,dist,time,tadv,xprime,yprime,zprime
+      REAL_T, intent(in) :: x,y,z,time
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(out) :: dist
+      REAL_T tadv,xprime,yprime,zprime
       REAL_T distz,disty,steel_rate
-      INTEGER_T im
       REAL_T xvec(SDIM)
       REAL_T dist_array(num_materials)
 
