@@ -122,10 +122,10 @@ else
 endif
 WV=fort_species_molar_mass(1)  !num_species components
 WA=fort_molar_mass(2)
-! T_inf C_pG / L = 300.5 K * 1e+7 (erg/(g K)) / ((2.26e+10) erg/g)
-!   = 0.133
-! e.g. Le=0.1 cm^2/s * 0.001 g/cm^3 * 4.1855e+7 erg/(g K) / 
-!         (0.024e+5 g cm/(s^3 K)) = 1.74
+! T_inf C_pG / L = T_inf (K) * C_pG (erg/(g K)) / (L (erg/g))
+!   = dimensionless
+! e.g. Le=D_G cm^2/s * den_G g/cm^3 * C_pG erg/(g K) / 
+!         (k_G g cm/(s^3 K)) = dimensionless
 ! erg=g cm^2/s^2
 ! cm^2/s  * g/cm^3  * g cm^2 / s^2 * (1/(g K)) * (s^3 K)/(g cm) = dimensionless
 !
