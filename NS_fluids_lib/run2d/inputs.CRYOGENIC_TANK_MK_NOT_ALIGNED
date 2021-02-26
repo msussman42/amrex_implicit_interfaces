@@ -30,7 +30,7 @@ ns.material_type_visual = 0 24 999
 #u_t + div(uu) = -grad p/rho + div tau/rho
 #if face_flag=0, then div(uu), div tau/rho are CC, grad p/rho MAC
 #if face_flag=1, then div(uu and grad p/rho are MAC, div tau/rho is CC
-ns.face_flag=0
+ns.face_flag=1
 # remark: Lax Friedrichs method:
 #   u_{i+1/2}^{n}=(u_i^{n} + u_{i+1}^{n})/2
 #   u_{i+1/2}^{n+1}=u_{i+1/2}^{n}-dt/dx  (f_{i+1}^{n}-f_{i}^{n})
@@ -42,7 +42,7 @@ ns.face_flag=0
 #   (b) if face_flag=0,
 #      before grad p/rho force, let u_MAC=interp_to_MAC(u_CC)
 #      then after grad/rho force, let u_CC=interp_to_CC(u_MAC)
-ns.filter_velocity=1 1 1  # 1..num_materials
+ns.filter_velocity=0 0 1  # 1..num_materials
 ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
@@ -302,7 +302,7 @@ ns.solidheat_flag   =0
 
 # Heat flux from band heater
 #ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
-ns.xblob3 = 61.6726637934e+2 # -q dot n=Watts/m^2
+ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
@@ -320,12 +320,12 @@ ns.truncate_thickness=2.0
 # ----------------------------------------------------------
 # -------- Advection ---------------------------------------
 # ----------------------------------------------------------
-ns.advection_order  = 1 1 1
+ns.advection_order  = 2 2 1
 
 # 0=no limiter,  1=minmod
 # 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
-ns.slope_limiter_option = 1
+ns.slope_limiter_option = 2
 
 # ----------------------------------------------------------
 # -------- Projection --------------------------------------
