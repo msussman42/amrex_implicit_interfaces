@@ -1447,6 +1447,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // declared in: GODUNOV_3D.F90
    FORT_MAC_ELASTIC_FORCE(
     &dir, // dir=0,1,..sdim-1  
     &ncomp_visc, 
