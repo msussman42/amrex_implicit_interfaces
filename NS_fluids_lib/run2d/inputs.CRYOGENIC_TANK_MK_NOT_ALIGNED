@@ -42,7 +42,7 @@ ns.face_flag=1
 #   (b) if face_flag=0,
 #      before grad p/rho force, let u_MAC=interp_to_MAC(u_CC)
 #      then after grad/rho force, let u_CC=interp_to_CC(u_MAC)
-ns.filter_velocity=0 0 1  # 1..num_materials
+ns.filter_velocity=0 0 0  # 1..num_materials
 ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
