@@ -211,7 +211,7 @@ ns.radblob2=7.1e-3  # since species=1 for Kassemi model, put Y_inf here.
 
 #if ns.Tanasawa_or_Schrage_or_Kassemi=3,
 ns.speciesconst=1.0 1.0  # Kassemi
-#ns.hardwire_Y_gamma=0.22132139799031397 0.0
+#ns.hardwire_Y_gamma=1.9009955332402406e-2 0.0 # for LV=2.1e+10
 #1.0016 milli pascals * s = 1.002 E-3 pa * s
 #18.1 micro pascals * s  = 1.81E-5 pa * s  kg m/s^2 / m^2 = kg/(m s^2)=
 #1000/100 g/(cm s^2)
@@ -244,7 +244,7 @@ ns.solidheat_flag=0
 # 50 percent too slow:
 ns.tempconst=300.5 300.5 #CODY: case 2, T_inf for gas, T_gamma for liq.
 #ns.tempconst=327.6 327.6 #CODY: case 2, T_inf for gas, T_gamma for liq.
-#ns.hardwire_T_gamma=296.163 0.0
+#ns.hardwire_T_gamma=289.91422134044990 0.0 # for LV=2.1e+10
 #ns.cancel_advection=1
 ns.xblob=0.0
 ns.yblob=0.0
