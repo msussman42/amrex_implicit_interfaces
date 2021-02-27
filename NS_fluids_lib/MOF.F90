@@ -12119,10 +12119,13 @@ contains
         ! n1d=1 => im material on top
         ! n1d=-1 => im material on bottom
       subroutine get_col_ht_LS( &
+       vof_height_function, &
        crossing_status, &
        bfact,dx,xsten0, &
        csten,csten_x,csten_HT, &
-       lsdata,ht, &
+       lsdata, &
+       vofdata, &
+       ht, &
        dircrit,n1d, &
        nmat, &
        sdim)
@@ -12131,6 +12134,7 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: vof_height_function
       INTEGER_T, intent(out) :: crossing_status
       INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: csten,csten_x,csten_HT
@@ -12138,6 +12142,7 @@ contains
       REAL_T, intent(in) :: dx(sdim)
       REAL_T, intent(in) :: xsten0(-csten_x:csten_x,sdim)
       REAL_T, intent(in) :: lsdata(-csten:csten)
+      REAL_T, intent(in) :: vofdata(-csten:csten)
       REAL_T, intent(out) :: ht
       REAL_T, intent(in) :: n1d
       INTEGER_T, intent(in) :: dircrit
