@@ -177,7 +177,8 @@ ns.stiffCV=1300 2358.4276869092 1500  #CV used CRYOGENIC_TANK_MK to get CP
 ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
-ns.viscconst=4.48E-04 1.00E-06 1.0
+# mu_gas=1.093e-6, but make zero to avoid jump condition issue.
+ns.viscconst=4.48E-04 0.0 1.0
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41

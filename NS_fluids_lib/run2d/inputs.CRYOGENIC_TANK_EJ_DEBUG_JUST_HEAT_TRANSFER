@@ -193,7 +193,8 @@ ns.heatviscconst=0.0155 0.0155 1480
 # Dynamic viscosity [Pa.s]
 # LH2 => @ 22K => 139.2 micropise [5] p.III-L-3.2
 # GH2 => @ 20K => 10.93e-7 Pa.s [4] p.II-J-2.2
-ns.viscconst=13.92e-6 10.93e-7 1 
+# mu_gas=1.093e-6, but make zero to avoid jump condition issue.
+ns.viscconst=13.92e-6 0.0 1 
 
 # Surface tension [N/m]
 # LH2 @ 20 k => ~ 2 dyn/cm = 2e-3 N/m
