@@ -3460,6 +3460,7 @@ stop
 
       subroutine FORT_CURVSTRIP( &
        post_restart_flag, &
+       vof_height_function, &
        conservative_tension_force, &
        level, &
        finest_level, &
@@ -3476,6 +3477,7 @@ stop
        masknbr,DIMS(masknbr), &
        LSPC,DIMS(LSPC), &
        LSHO,DIMS(LSHO), &
+       recon,DIMS(recon), &
        curvfab,DIMS(curvfab), &
        velfab,DIMS(velfab), &
        denfab,DIMS(denfab), &
@@ -3502,6 +3504,7 @@ stop
 
       INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: post_restart_flag
+      INTEGER_T, intent(in) :: vof_height_function
       INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3518,6 +3521,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
       INTEGER_T, intent(in) :: DIMDEC(LSPC)
       INTEGER_T, intent(in) :: DIMDEC(LSHO)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(curvfab)
       INTEGER_T, intent(in) :: DIMDEC(velfab)
       INTEGER_T, intent(in) :: DIMDEC(denfab)
@@ -3540,6 +3544,7 @@ stop
       REAL_T, intent(in) :: masknbr(DIMV(masknbr),4)
       REAL_T, intent(in) :: LSPC(DIMV(LSPC),nmat*(1+SDIM))
       REAL_T, intent(in) :: LSHO(DIMV(LSHO),nmat*(1+SDIM))
+      REAL_T, intent(in) :: recon(DIMV(LSHO),nmat*ngeom_recon)
       REAL_T, intent(out) :: curvfab(DIMV(curvfab),num_curv)
       REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM)
       REAL_T, intent(in) :: denfab(DIMV(denfab),nmat*num_state_material)
@@ -3710,6 +3715,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,2896)
       call checkbound(fablo,fabhi,DIMS(LSPC),RD,-1,2897)
       call checkbound(fablo,fabhi,DIMS(LSHO),RD,-1,2898)
+      call checkbound(fablo,fabhi,DIMS(recon),RD,-1,2898)
       call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,2899)
       call checkbound(fablo,fabhi,DIMS(curvfab),1,-1,2900)
       call checkbound(fablo,fabhi,DIMS(velfab),2,-1,2901)

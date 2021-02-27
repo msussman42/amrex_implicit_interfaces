@@ -719,6 +719,7 @@ namespace amrex{
 
      void FORT_CURVSTRIP(
        int* post_restart_flag,
+       int* vof_height_function,
        int* conservative_tension_force,
        int* level,
        int* finest_level,
@@ -735,6 +736,7 @@ namespace amrex{
        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
        Real* LSPC,AMREX_ARLIM_P(LSPClo),AMREX_ARLIM_P(LSPChi),
        Real* LSHO,AMREX_ARLIM_P(LSHOlo),AMREX_ARLIM_P(LSHOhi),
+       Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
        Real* curvfab,AMREX_ARLIM_P(curvfablo),AMREX_ARLIM_P(curvfabhi),
        Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
        Real* denfab,AMREX_ARLIM_P(denfablo),AMREX_ARLIM_P(denfabhi),
