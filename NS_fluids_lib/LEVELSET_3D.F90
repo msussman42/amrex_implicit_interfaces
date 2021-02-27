@@ -374,6 +374,9 @@ stop
       INTEGER_T icolumn
       REAL_T n1d,col_ht,xforce
       INTEGER_T crossing_status
+      INTEGER_T local_vof_height
+
+      local_vof_height=0
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
        print *,"dir invalid in initpforce, dir=",dir
@@ -454,10 +457,13 @@ stop
        endif
 
        call get_col_ht_LS( &
+        local_vof_height, & !=0
         crossing_status, &
         bfact,dx,xsten0, &
         RD,RDx,RD_HEIGHT, &
-        columnLS,col_ht, &
+        columnLS, &
+        columnLS, &
+        col_ht, &
         dir+1,n1d, &
         nmat, &
         SDIM)
@@ -496,6 +502,7 @@ stop
 
        ! called from FORT_CURVSTRIP
       subroutine initheightLS( &
+        vof_height_function, &
         conservative_tension_force, &
         icenter,jcenter,kcenter, &
         level, &
@@ -511,6 +518,7 @@ stop
         velsten, &
         mgoni_temp, &
         lssten, &
+        vofsten, &
         nrmsten, &
         vol_sten, &
         area_sten, &
@@ -529,6 +537,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: vof_height_function
       INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: icenter,jcenter,kcenter
       INTEGER_T, intent(in) :: level
@@ -560,8 +569,11 @@ stop
       INTEGER_T dir2
 
       REAL_T columnLS(-RD:RD)
+      REAL_T columnVOF(-RD:RD)
 
       REAL_T lsdata( &
+       D_DECL(-RD:RD,-RD:RD,-RD:RD))  
+      REAL_T vofdata( &
        D_DECL(-RD:RD,-RD:RD,-RD:RD))  
 
       REAL_T htfunc(-1:1,-1:1)
@@ -576,6 +588,9 @@ stop
        D_DECL(-1:1,-1:1,-1:1),nmat)
 
       REAL_T, intent(in) :: lssten( &
+       D_DECL(-RD:RD,-RD:RD,-RD:RD),nmat)
+
+      REAL_T, intent(in) :: vofsten( &
        D_DECL(-RD:RD,-RD:RD,-RD:RD),nmat)
 
       REAL_T, intent(in) :: nrmsten( &
@@ -622,6 +637,7 @@ stop
       REAL_T nproject(SDIM)
       INTEGER_T use_DCA
       REAL_T LSTEST(nmat)
+      REAL_T VOFTEST(nmat)
       REAL_T LSTEST_EXTEND
       REAL_T LSMAX
       REAL_T mag,mag1,mag2,mag3
@@ -1016,8 +1032,12 @@ stop
 
        do imhold=1,nmat
         LSTEST(imhold)=lssten(D_DECL(i,j,k),imhold)
+        VOFTEST(imhold)=vofsten(D_DECL(i,j,k),imhold)
        enddo
+        ! declared in GLOBALUTIL.F90
        call get_LS_extend(LSTEST,nmat,iten,lsdata(D_DECL(i,j,k)))
+       call get_VOF_extend(VOFTEST,nmat,iten,vofdata(D_DECL(i,j,k)))
+
        call get_primary_material(LSTEST,nmat,imhold)
        im_primary_sten(D_DECL(i,j,k))=imhold
 
@@ -1206,14 +1226,19 @@ stop
         endif
 
         columnLS(kheight)=lsdata(D_DECL(icell,jcell,kcell))
+        columnVOF(kheight)=vofdata(D_DECL(icell,jcell,kcell))
           
        enddo ! kheight
 
+        ! declared in MOF.F90
        call get_col_ht_LS( &
+        vof_height_function, &
         crossing_status, &
         bfact,dx,xsten, &
         RD,RDx,RD_HEIGHT, &
-        columnLS,col_ht, &
+        columnLS, &
+        columnVOF, &
+        col_ht, &
         dircrit,n1d, &
         nmat, &
         SDIM)
@@ -3577,6 +3602,7 @@ stop
       INTEGER_T im,im_opp
       INTEGER_T im_opp_test
       INTEGER_T im_curv
+      INTEGER_T vofcomp
       INTEGER_T im_majority
       INTEGER_T im_main,im_main_opp
       INTEGER_T nten_test
@@ -3625,6 +3651,10 @@ stop
        D_DECL(-1:1,-1:1,-1:1),nmat)
 
       REAL_T lssten( &
+        D_DECL(-RD:RD,-RD:RD,-RD:RD), &
+        nmat)
+
+      REAL_T vofsten( &
         D_DECL(-RD:RD,-RD:RD,-RD:RD), &
         nmat)
 
@@ -4270,6 +4300,10 @@ stop
 
               do im_curv=1,nmat
                LSCEN_hold(im_curv)=LSHO(D_DECL(i+i1,j+j1,k+k1),im_curv)
+               vofcomp=(im_curv-1)*ngeom_recon+1
+               vofsten(D_DECL(i1,j1,k1),im_curv)= &
+                  recon(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+
               enddo
               call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed,nmat)
  
@@ -4339,6 +4373,7 @@ stop
              ! tension used to find contact angle (scaling not 
              ! necessary)
              call initheightLS( &
+              vof_height_function, &
               conservative_tension_force, &
               i,j,k, &
               level, &
@@ -4354,6 +4389,7 @@ stop
               velsten, &
               mgoni_temp, &
               lssten, &
+              vofsten, &
               nrmsten, &
               vol_sten, &
               area_sten, &

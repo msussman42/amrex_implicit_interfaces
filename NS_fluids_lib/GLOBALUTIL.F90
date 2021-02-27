@@ -8899,6 +8899,44 @@ contains
       return
       end subroutine get_LSNRM_extend
 
+
+      subroutine get_VOF_extend(VOF,nmat,iten,VOF_extend)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T nmat,iten
+      REAL_T VOF(nmat)
+      REAL_T VOF_extend
+      INTEGER_T im,im_opp
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid get_VOF_extend"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+      call get_inverse_iten(im,im_opp,iten,nmat)
+      if (im.ge.im_opp) then
+       print *,"im or im_opp invalid"
+       stop
+      endif
+      if (VOF(im).gt.VOF(im_opp)) then
+       VOF_extend=one-VOF(im_opp)
+      else if (VOF(im_opp).gt.VOF(im)) then
+       VOF_extend=VOF(im)
+      else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL)  then
+       VOF_extend=half
+      else
+       print *,"VOF bust"
+       stop
+      endif
+      
+      return
+      end subroutine get_VOF_extend
+
+
+
         ! "minus" refers to the cell containing the interface with the
         ! largest surface area.
       subroutine gradient_at_dirichlet_boundary( &
