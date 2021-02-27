@@ -1,0 +1,6 @@
+on hopf use maple:
+
+z:=(r) -> a*(r-ri)^2 + b*(r-ri)+c;
+phi:=(r,z) -> z-z(r);
+factor(int(r*z(r),r=r1..r2)/((zp-z0)*int(r,r=r1..r2)));
+
