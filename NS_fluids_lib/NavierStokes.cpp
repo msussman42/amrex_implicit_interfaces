@@ -754,6 +754,7 @@ Vector<Real> NavierStokes::microlayer_temperature_substrate;
 int NavierStokes::custom_nucleation_model=0;
 
 int NavierStokes::FD_curv_interp=1;
+int NavierStokes::vof_height_function=0;
 
 Vector<Real> NavierStokes::cavitation_pressure;
 Vector<Real> NavierStokes::cavitation_vapor_density;
@@ -2568,6 +2569,11 @@ NavierStokes::read_params ()
     if ((FD_curv_interp!=0)&&
         (FD_curv_interp!=1))
      amrex::Error("FD_curv_interp invalid");
+
+    pp.query("vof_height_function",vof_height_function);
+    if ((vof_height_function!=0)&&
+        (vof_height_function!=1))
+     amrex::Error("vof_height_function invalid");
 
     custom_nucleation_model=0;
     pp.query("custom_nucleation_model",custom_nucleation_model);
@@ -4749,6 +4755,7 @@ NavierStokes::read_params ()
      std::cout << "conservative_tension_force " << 
        conservative_tension_force << '\n';
      std::cout << "FD_curv_interp " << FD_curv_interp << '\n';
+     std::cout << "vof_height_function " << vof_height_function << '\n';
 
      std::cout << "hydrate flag " << hydrate_flag << '\n';
      std::cout << "nucleation_period= " << nucleation_period << '\n';
@@ -23346,6 +23353,13 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  if (localMF[GHOSTDIST_MF]->nComp()!=(1+AMREX_SPACEDIM)*nmat)
   amrex::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
 
+ VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_distance,90);
+ if (localMF[SLOPE_RECON_MF]->nComp()==nmat*ngeom_recon) {
+  // do nothing
+ } else
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+
  if ((project_option==0)||
      (project_option==1)) {
 
@@ -23405,6 +23419,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
     FArrayBox& lshofab=(*localMF[GHOSTDIST_MF])[mfi];
+    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
     FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
     FArrayBox& velfab=(*CL_velocity)[mfi];
@@ -23421,9 +23436,10 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // in: LEVELSET_3D.F90
+     // declared in: LEVELSET_3D.F90
     FORT_CURVSTRIP(
      &post_restart_flag,
+     &vof_height_function,
      &conservative_tension_force,
      &level,
      &finest_level,
@@ -23444,6 +23460,8 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      lshofab.dataPtr(),
      ARLIM(lshofab.loVect()),ARLIM(lshofab.hiVect()),
+     reconfab.dataPtr(),
+     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      curvfab.dataPtr(),
      ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
      velfab.dataPtr(),

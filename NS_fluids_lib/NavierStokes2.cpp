@@ -5108,6 +5108,12 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  int finest_level = parent->finestLevel();
 
+ debug_ngrow(SLOPE_RECON_MF,0,90);
+ if (localMF[SLOPE_RECON_MF]->nComp()==nmat*ngeom_recon) {
+  // do nothing
+ } else
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+
  if (num_materials_scalar_solve==nmat) {
   int do_face_decomp=0;
   for (int ilev=level;ilev<=finest_level;ilev++) {
