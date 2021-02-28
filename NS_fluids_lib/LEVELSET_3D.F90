@@ -500,6 +500,66 @@ stop
       return
       end subroutine initpforce
 
+      subroutine hvertical_coeffRZ(r1,r2,ri,coeffs)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: r1,r2,ri
+      REAL_T, intent(out) :: coeffs(3)
+      INTEGER_T dir
+
+      if ((r1.ge.zero).and.(r2.ge.zero).and.(ri.gt.zero).and. &
+          (r2.gt.r1)) then
+     
+       coeffs(1)=three*(r1**3)+three*(r1**2)*r2-eight*(r1**2)*ri+ &
+        three*r1*(r2**2)-eight*r1*r2*ri+six*r1*(ri**2)+ &
+        three*(r2**3)-eight*(r2**2)*ri+six*r2*(ri**2)
+
+       coeffs(2)=four*(r1**2)+four*r1*r2-six*r1*ri+four*(r2**2)- &
+         six*r2*ri
+
+       coeffs(3)=six*(r1+r2)
+
+       do dir=1,3
+        coeffs(dir)=coeffs(dir)/(six*(r1+r2))
+       enddo
+
+      else
+       print *,"r1,r2, or ri invalid"
+       stop
+      endif
+
+      return
+      end subroutine hvertical_coeffRZ
+
+
+      subroutine hhorizontal_coeffRZ(z1,z2,zi,rtop,coeffs)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: z1,z2,zi,rtop
+      REAL_T, intent(out) :: coeffs(3)
+      INTEGER_T dir
+
+      if ((rtop.gt.zero).and.(z2.gt.z1)) then
+     
+       coeffs(1)=two*(z1**2)+two*z1*z2-six*z1*zi+two*(z2**2)- &
+           six*z2*zi+six*(zi**2)
+
+       coeffs(2)=three*z1+three*z2-six*zi
+
+       coeffs(3)=six
+
+       do dir=1,3
+        coeffs(dir)=coeffs(dir)/(six*rtop)
+       enddo
+
+      else
+       print *,"z1,z2, or rtop invalid"
+       stop
+      endif
+
+      return
+      end subroutine hhorizontal_coeffRZ
+ 
        ! called from FORT_CURVSTRIP
       subroutine initheightLS( &
         vof_height_function, &
@@ -714,6 +774,13 @@ stop
       REAL_T angle_im
       REAL_T dist_to_CL
       INTEGER_T im_liquid,im_vapor
+      INTEGER_T row,interval_cnt
+      REAL_T x1,x2,xnot
+      REAL_T RHS(3)
+      REAL_T AA(3,3)
+      REAL_T coeffs(3)
+      REAL_T xx(3)
+      INTEGER_T matstatus
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -1263,7 +1330,8 @@ stop
         columnLS, &
         columnVOF, &
         col_ht, &
-        dircrit,n1d, &
+        dircrit, &
+        n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
         nmat, &
         SDIM)
 
@@ -1277,6 +1345,7 @@ stop
         print *,"crossing_status invalid"
         stop
        endif
+
        if ((col_ht.ge.xbottom).and.(col_ht.le.xtop)) then
         ! do nothing
        else
@@ -1432,10 +1501,70 @@ stop
        stop
       endif
 
+      if (vof_height_function.eq.1) then
 
-      if (n1d.eq.one) then
+       if (levelrz.eq.1) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+
+        interval_cnt=-3
+
+        do row=1,3
+
+         if (dircrit.eq.1) then  ! horizontal column in the r direction
+          x1=xsten(interval_cnt,itan)
+          x2=xsten(interval_cnt+2,itan)
+          xnot=xsten(0,itan)
+          RHS(row)=htfunc(row-2,0)
+          call hhorizontal_coeffRZ(x1,x2,xnot,xtop,coeffs)
+         else if (dircrit.eq.2) then  ! vertical column in the z direction
+          x1=xsten(interval_cnt,itan)
+          x2=xsten(interval_cnt+2,itan)
+          xnot=xsten(0,itan)
+          call hvertical_coeffRZ(x1,x2,xnot,coeffs)
+         else
+          print *,"dircrit invalid"
+          stop
+         endif
+ 
+         do dir2=1,3
+          AA(row,dir2)=coeffs(dir2)
+         enddo
+         interval_cnt=interval_cnt+2
+        enddo ! row=1..3
+
+          ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+
+        call matrix_solve(AA,xx,RHS,matstatus,3) !matstatus=1 => ok.
+
+        if (matstatus.eq.1) then
+
+        else if (matstatus.eq.0) then
+         print *,"matstatus invalid for RZ curvature coeff"
+         stop
+        endif
+
+       else if (levelrz.eq.3) then
+        print *,"VFRAC height function for levelrz==3 not ready yet"
+       else if (levelrz.eq.0) then
+        print *,"VFRAC height function for levelrz==0 not ready yet"
+       else
+        print *,"levelrz invalid"
+        stop
+       endif
+
+      else if (vof_height_function.eq.0) then
+       ! do nothing
+      else
+       print *,"vof_height_function invalid"
+       stop
+      endif
+   
+      if (n1d.eq.one) then ! im material on top
        curvHT=-curvHT
-      else if (n1d.eq.-one) then
+      else if (n1d.eq.-one) then ! im material on bottom
        ! do nothing
       else 
        print *,"n1d invalid"

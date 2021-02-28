@@ -1,6 +1,8 @@
 on hopf use maple:
 
-z:=(r) -> a*(r-ri)^2 + b*(r-ri)+c;
-phi:=(r,z) -> z-z(r);
-factor(int(r*z(r),r=r1..r2)/((zp-z0)*int(r,r=r1..r2)));
+hz:=(r) -> a*(r-ri)^2 + b*(r-ri)+c;
+factor(int(r*(hz(r)-zbottom),r=r1..r2)/(int(r,r=r1..r2))+zbottom);
+
+hrsqr:=(z) -> a*(z-zi)^2 + b*(z-zi)+c;
+factor(rtop*int(hrsqr(z),z=z1..z2)/int(rtop^2,z=z1..z2));
 

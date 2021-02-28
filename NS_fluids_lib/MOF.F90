@@ -12404,10 +12404,10 @@ contains
           if (dircrit.eq.1) then ! horizontal column
            if (problox.ge.zero) then
             current_xbottom=zero
-            dr=xsten0(2*l_vof_min-1,dircrit)-current_xbottom
+            dr=xsten0(2*lvof_min-1,dircrit)-current_xbottom
             dz=xsten0(1,2)-xsten0(-1,2)
             if ((dz.gt.zero).and.(dr.ge.zero)) then
-             volcell=Pi*(xsten0(2*l_vof_min-1,dircrit)+ &
+             volcell=Pi*(xsten0(2*lvof_min-1,dircrit)+ &
                          current_xbottom)*dr*dz
             else
              print *,"dz or dr invalid"
@@ -12419,7 +12419,7 @@ contains
            endif  
           else if (dircrit.eq.2) then ! vertical column
 
-           dz=xsten0(2*l_vof_min-1,dircrit)-current_xbottom
+           dz=xsten0(2*lvof_min-1,dircrit)-current_xbottom
            dr=xsten0(1,1)-xsten0(-1,1)
            if ((dz.ge.zero).and.(dr.gt.zero)) then
             volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
