@@ -372,7 +372,10 @@ stop
       INTEGER_T is_pforce_probtype
       REAL_T columnLS(-RD:RD)
       INTEGER_T icolumn
-      REAL_T n1d,col_ht,xforce
+      REAL_T n1d
+      REAL_T col_ht_LS
+      REAL_T col_ht_VOF
+      REAL_T xforce
       INTEGER_T crossing_status
       INTEGER_T local_vof_height
 
@@ -463,7 +466,8 @@ stop
         RD,RDx,RD_HEIGHT, &
         columnLS, &
         columnLS, &
-        col_ht, &
+        col_ht_LS, &
+        col_ht_VOF, &
         dir+1,n1d, &
         nmat, &
         SDIM)
@@ -478,7 +482,7 @@ stop
        endif
 
        if (dir.eq.0) then
-        xforce=col_ht
+        xforce=col_ht_LS
        else if ((dir.gt.0).and.(dir.lt.SDIM)) then
         xforce=xsten0(0,1)
        else
@@ -532,28 +536,23 @@ stop
       end subroutine hvertical_coeffRZ
 
 
-      subroutine hhorizontal_coeffRZ(z1,z2,zi,rtop,coeffs)
+      subroutine hhorizontal_coeffRZ(z1,z2,zi,coeffs)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: z1,z2,zi,rtop
+      REAL_T, intent(in) :: z1,z2,zi
       REAL_T, intent(out) :: coeffs(3)
-      INTEGER_T dir
 
-      if ((rtop.gt.zero).and.(z2.gt.z1)) then
+      if (z2.gt.z1) then
      
-       coeffs(1)=two*(z1**2)+two*z1*z2-six*z1*zi+two*(z2**2)- &
-           six*z2*zi+six*(zi**2)
+       coeffs(1)=(z1**2)/three+z1*z2/three-z1*zi+(z2**2)/three- &
+           z2*zi+(zi**2)
 
-       coeffs(2)=three*z1+three*z2-six*zi
+       coeffs(2)=z1/two+z2/two-zi
 
-       coeffs(3)=six
-
-       do dir=1,3
-        coeffs(dir)=coeffs(dir)/(six*rtop)
-       enddo
+       coeffs(3)=one
 
       else
-       print *,"z1,z2, or rtop invalid"
+       print *,"z1 or z2,invalid"
        stop
       endif
 
@@ -582,7 +581,7 @@ stop
         nrmsten, &
         vol_sten, &
         area_sten, &
-        curvHT, &
+        curvHT_choice, &
         curvFD, &
         mgoni_force, &
         ZEYU_thet_d, &
@@ -622,7 +621,9 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: vol_sten
       REAL_T, intent(in) :: area_sten(SDIM,2)
-      REAL_T, intent(out) :: curvHT
+      REAL_T :: curvHT_LS
+      REAL_T :: curvHT_VOF
+      REAL_T, intent(out) :: curvHT_choice
       REAL_T, intent(out) :: curvFD
       REAL_T, intent(out) :: mgoni_force(SDIM)
  
@@ -636,7 +637,8 @@ stop
       REAL_T vofdata( &
        D_DECL(-RD:RD,-RD:RD,-RD:RD))  
 
-      REAL_T htfunc(-1:1,-1:1)
+      REAL_T htfunc_LS(-1:1,-1:1)
+      REAL_T htfunc_VOF(-1:1,-1:1)
 
       REAL_T, intent(in) :: xsten(-RDx:RDx,SDIM)
       REAL_T xsten_curv(-2:2,SDIM)
@@ -681,7 +683,8 @@ stop
       REAL_T hxy
       REAL_T arclen,arclenx,arcleny,arclenr,g,gx,gy,gr
 
-      REAL_T col_ht
+      REAL_T col_ht_LS
+      REAL_T col_ht_VOF
 
       REAL_T n1d
 
@@ -746,6 +749,7 @@ stop
       INTEGER_T im_primary_sten(D_DECL(-RD:RD,-RD:RD,-RD:RD))
 
       INTEGER_T crossing_status
+      INTEGER_T overall_crossing_status
 
       INTEGER_T cell_lo(3),cell_hi(3)
 
@@ -781,6 +785,9 @@ stop
       REAL_T coeffs(3)
       REAL_T xx(3)
       INTEGER_T matstatus
+      REAL_T dr
+      REAL_T h_of_z,hprime_of_z,hdprime_of_z
+      REAL_T hprime_of_r,hdprime_of_r
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -1268,6 +1275,8 @@ stop
       xbottom=xsten(2*lmin-1,dircrit)
       xtop=xsten(2*lmax+1,dircrit)
 
+      overall_crossing_status=1
+
       do iwidth=itanlo,itanhi
       do jwidth=jtanlo,jtanhi
 
@@ -1329,7 +1338,8 @@ stop
         RD,RDx,RD_HEIGHT, &
         columnLS, &
         columnVOF, &
-        col_ht, &
+        col_ht_LS, &
+        col_ht_VOF, &
         dircrit, &
         n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
         nmat, &
@@ -1340,20 +1350,28 @@ stop
        else if (crossing_status.eq.0) then
         if (1.eq.0) then
          print *,"no crossing found iwidth,jwidth= ",iwidth,jwidth
-        endif 
+        endif
+        overall_crossing_status=0 
        else
         print *,"crossing_status invalid"
         stop
        endif
 
-       if ((col_ht.ge.xbottom).and.(col_ht.le.xtop)) then
+       if ((col_ht_LS.ge.xbottom).and.(col_ht_LS.le.xtop)) then
         ! do nothing
        else
-        print *,"col_ht out of bounds"
+        print *,"col_ht_LS out of bounds"
+        stop
+       endif
+       if ((col_ht_VOF.ge.xbottom).and.(col_ht_VOF.le.xtop)) then
+        ! do nothing
+       else
+        print *,"col_ht_VOF out of bounds"
         stop
        endif
 
-       htfunc(iwidth,jwidth)=col_ht
+       htfunc_LS(iwidth,jwidth)=col_ht_LS
+       htfunc_VOF(iwidth,jwidth)=col_ht_VOF
       enddo ! jwidth
       enddo ! iwidth
 
@@ -1362,9 +1380,9 @@ stop
        ! n=grad phi/|grad phi| = (h_x,h_y,-1)/sqrt(h_x^2+h_y^2+1)
        ! div n = (n_x)_x + (n_y)_y
 
-      hxR=(htfunc(1,0)-htfunc(0,0))/(xsten(2,itan)-xsten(0,itan))
-      hxL=(htfunc(0,0)-htfunc(-1,0))/(xsten(0,itan)-xsten(-2,itan))
-      hx=(htfunc(1,0)-htfunc(-1,0))/(xsten(2,itan)-xsten(-2,itan))
+      hxR=(htfunc_LS(1,0)-htfunc_LS(0,0))/(xsten(2,itan)-xsten(0,itan))
+      hxL=(htfunc_LS(0,0)-htfunc_LS(-1,0))/(xsten(0,itan)-xsten(-2,itan))
+      hx=(htfunc_LS(1,0)-htfunc_LS(-1,0))/(xsten(2,itan)-xsten(-2,itan))
       hxx=(hxR-hxL)/(xsten(1,itan)-xsten(-1,itan))
       hyR=zero
       hyL=zero
@@ -1373,10 +1391,11 @@ stop
       hyy=zero
 
       if (SDIM.eq.3) then
-       hyR=(htfunc(0,1)-htfunc(0,0))/(xsten(2,jtan)-xsten(0,jtan))
-       hyL=(htfunc(0,0)-htfunc(0,-1))/(xsten(0,jtan)-xsten(-2,jtan))
-       hy=(htfunc(0,1)-htfunc(0,-1))/(xsten(2,jtan)-xsten(-2,jtan))
-       hxy=(htfunc(1,1)-htfunc(-1,1)-htfunc(1,-1)+htfunc(-1,-1))/ &
+       hyR=(htfunc_LS(0,1)-htfunc_LS(0,0))/(xsten(2,jtan)-xsten(0,jtan))
+       hyL=(htfunc_LS(0,0)-htfunc_LS(0,-1))/(xsten(0,jtan)-xsten(-2,jtan))
+       hy=(htfunc_LS(0,1)-htfunc_LS(0,-1))/(xsten(2,jtan)-xsten(-2,jtan))
+       hxy=(htfunc_LS(1,1)-htfunc_LS(-1,1)- &
+            htfunc_LS(1,-1)+htfunc_LS(-1,-1))/ &
            ( (xsten(2,itan)-xsten(-2,itan))* &
              (xsten(2,jtan)-xsten(-2,jtan)) )
        hyy=(hyR-hyL)/(xsten(1,jtan)-xsten(-1,jtan))
@@ -1395,7 +1414,7 @@ stop
         !n=grad phi/|grad phi|=(hx g,hy g,-g)
         !div n=hxx g + hx gx +hyy g + hy gy - gz
         !gx=(-1/2)arclen^{-3/2}arclenx
-       curvHT=hxx*g+hx*gx+hyy*g+hy*gy
+       curvHT_LS=hxx*g+hx*gx+hyy*g+hy*gy
       else if (levelrz.eq.1) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
@@ -1407,12 +1426,12 @@ stop
          ! g(z)=arclen^(-1/2)
          ! n=(-g,hz g) 
          ! div n =-(r g)_r/r + (hz g)_z=-g/r+hzz g + gz hz
-        RR=htfunc(0,0)
+        RR=htfunc_LS(0,0)
         if (RR.le.zero) then
          print *,"RR invalid"
          stop
         endif
-        curvHT=-g/RR+hxx*g+gx*hx
+        curvHT_LS=-g/RR+hxx*g+gx*hx
        else if (dircrit.eq.2) then
          ! phi=h(r)-z
          ! arclen=1+hr^2
@@ -1420,7 +1439,7 @@ stop
          ! n=(hr g,-g)
          ! div n = (r hr g)_r/r = hr g/r+hrr g + hr gr
         RR=xcenter(1) 
-        curvHT=hx*g/RR+hxx*g+hx*gx
+        curvHT_LS=hx*g/RR+hxx*g+hx*gx
        else
         print *,"dircrit invalid"
         stop
@@ -1440,7 +1459,7 @@ stop
          ! arclen_y=2hy hyy/r^2 +2hz hzy
          ! g_z=-1/2 arclen^(-3/2) arclen_z
          ! arclen_z=2hy hyz/r^2 +2hz hzz
-        RR=htfunc(0,0)
+        RR=htfunc_LS(0,0)
         arclen=one+(hx/RR)**2+hy**2
         g=one/sqrt(arclen)
         arclenr=-two*(hx**2)/(RR**3)
@@ -1449,7 +1468,7 @@ stop
         arcleny=two*hx*hxy/(RR**2)+two*hy*hyy
         gx=-half*(arclen**(-1.5))*arclenx
         gy=-half*(arclen**(-1.5))*arcleny
-        curvHT=-gr-g/RR+(hxx*g+hx*gx)/(RR**2)+hyy*g+hy*gy
+        curvHT_LS=-gr-g/RR+(hxx*g+hx*gx)/(RR**2)+hyy*g+hy*gy
        else if (dircrit.eq.2) then 
          ! phi=h(r,z)-y
          ! grad phi=(hr,-1/r,hz)
@@ -1469,7 +1488,7 @@ stop
         arcleny=two*hx*hxy+two*hy*hyy
         gx=-half*(arclen**(-1.5))*arclenx
         gy=-half*(arclen**(-1.5))*arcleny
-        curvHT=gx*hx+g*hxx+g*hx/RR+hyy*g+hy*gy
+        curvHT_LS=gx*hx+g*hxx+g*hx/RR+hyy*g+hy*gy
        else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
          ! phi=h(r,y)-z
          ! grad phi=(hr,hy/r,-1)
@@ -1491,7 +1510,7 @@ stop
         arcleny=two*hx*hxy+two*hy*hyy/(RR**2)
         gx=-half*(arclen**(-1.5))*arclenx
         gy=-half*(arclen**(-1.5))*arcleny
-        curvHT=gx*hx+g*hxx+g*hx/RR+(hyy*g+hy*gy)/(RR**2)
+        curvHT_LS=gx*hx+g*hxx+g*hx/RR+(hyy*g+hy*gy)/(RR**2)
        else
         print *,"dircrit invalid"
         stop
@@ -1501,67 +1520,108 @@ stop
        stop
       endif
 
-      if (vof_height_function.eq.1) then
+      curvHT_VOF=curvHT_LS
+      curvHT_choice=curvHT_LS
 
-       if (levelrz.eq.1) then
-        if (SDIM.ne.2) then
-         print *,"dimension bust"
-         stop
-        endif
+      if (overall_crossing_status.eq.0) then
+       ! do nothing
+      else if (overall_crossing_status.eq.1) then
 
-        interval_cnt=-3
+       if (vof_height_function.eq.1) then
 
-        do row=1,3
-
-         x1=xsten(interval_cnt,itan)
-         x2=xsten(interval_cnt+2,itan)
-         xnot=xsten(0,itan)
-         RHS(row)=htfunc(row-2,0)
-
-         if (dircrit.eq.1) then  ! horizontal column in the r direction
-          call hhorizontal_coeffRZ(x1,x2,xnot,xtop,coeffs)
-         else if (dircrit.eq.2) then  ! vertical column in the z direction
-          call hvertical_coeffRZ(x1,x2,xnot,coeffs)
-         else
-          print *,"dircrit invalid"
+        if (levelrz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
           stop
          endif
- 
-         do dir2=1,3
-          AA(row,dir2)=coeffs(dir2)
-         enddo
-         interval_cnt=interval_cnt+2
-        enddo ! row=1..3
 
-          ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+         interval_cnt=-3
 
-        call matrix_solve(AA,xx,RHS,matstatus,3) !matstatus=1 => ok.
+         do row=1,3
 
-        if (matstatus.eq.1) then
+          x1=xsten(interval_cnt,itan)
+          x2=xsten(interval_cnt+2,itan)
+          xnot=xsten(0,itan)
+          RHS(row)=htfunc_VOF(row-2,0)
 
-        else if (matstatus.eq.0) then
-         print *,"matstatus invalid for RZ curvature coeff"
+          if (dircrit.eq.1) then  ! horizontal column in the r direction
+           call hhorizontal_coeffRZ(x1,x2,xnot,coeffs)
+           RHS(row)=htfunc_VOF(row-2,0)**2
+          else if (dircrit.eq.2) then  ! vertical column in the z direction
+           call hvertical_coeffRZ(x1,x2,xnot,coeffs)
+          else
+           print *,"dircrit invalid"
+           stop
+          endif
+  
+          do dir2=1,3
+           AA(row,dir2)=coeffs(dir2)
+          enddo
+          interval_cnt=interval_cnt+2
+         enddo ! row=1..3
+
+           ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+
+         call matrix_solve(AA,xx,RHS,matstatus,3) !matstatus=1 => ok.
+
+         if (matstatus.eq.1) then
+          if (dircrit.eq.1) then  ! horizontal column in the r direction
+           if (xx(3).gt.zero) then
+            dr=xsten(1,1)-xsten(-1,1)
+            h_of_z=sqrt(xx(3))
+            if (h_of_z.ge.half*dr) then
+             hprime_of_z=xx(2)/(two*h_of_z)
+             hdprime_of_z=(xx(1)-hprime_of_z**2)/h_of_z
+             g=sqrt(one+hprime_of_z**2)
+             curvHT_VOF=-(one/(h_of_z*g))+hdprime_of_z/(g**3)
+            else if (h_of_z.gt.zero) then
+             curvHT_VOF=curvHT_LS
+            else
+             print *,"h_of_z too small"
+             stop
+            endif
+           else
+            print *,"xx(3) invalid"
+            stop
+           endif
+          else if (dircrit.eq.2) then  ! vertial column in the z direction
+           hprime_of_r=xx(2)
+           hdprime_of_r=two*xx(1)
+           g=sqrt(one+hprime_of_r**2)
+           curvHT_VOF=(hprime_of_r/(xnot*g))+hdprime_of_r/(g**3)
+          else
+           print *,"dircrit invalid"
+           stop
+          endif
+         else if (matstatus.eq.0) then
+          print *,"matstatus invalid for RZ curvature coeff"
+          stop
+         endif
+
+        else if (levelrz.eq.3) then
+         print *,"VFRAC height function for levelrz==3 not ready yet"
+        else if (levelrz.eq.0) then
+         print *,"VFRAC height function for levelrz==0 not ready yet"
+        else
+         print *,"levelrz invalid"
          stop
         endif
+        curvHT_choice=curvHT_VOF
 
-       else if (levelrz.eq.3) then
-        print *,"VFRAC height function for levelrz==3 not ready yet"
-       else if (levelrz.eq.0) then
-        print *,"VFRAC height function for levelrz==0 not ready yet"
+       else if (vof_height_function.eq.0) then
+        ! do nothing
        else
-        print *,"levelrz invalid"
+        print *,"vof_height_function invalid"
         stop
        endif
-
-      else if (vof_height_function.eq.0) then
-       ! do nothing
-      else
-       print *,"vof_height_function invalid"
+   
+      else 
+       print *,"overall_crossing_status invalid"
        stop
       endif
-   
+
       if (n1d.eq.one) then ! im material on top
-       curvHT=-curvHT
+       curvHT_choice=-curvHT_choice
       else if (n1d.eq.-one) then ! im material on bottom
        ! do nothing
       else 
@@ -2433,7 +2493,7 @@ stop
        if (user_tension(iten).gt.zero) then
         do dir2=1,SDIM
          mgoni_force(dir2)=mgoni_force(dir2)- &
-          user_tension(iten)*delta_mgoni*nfluid(dir2)*curvHT 
+          user_tension(iten)*delta_mgoni*nfluid(dir2)*curvHT_choice 
         enddo
        else if (user_tension(iten).eq.zero) then
         ! do nothing
@@ -2451,7 +2511,7 @@ stop
       if (1.eq.0) then
        print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
        print *,"dircrit,side,signside ",dircrit,side,signside
-       print *,"im3,curvFD,curvHT ",im3,curvFD,curvHT
+       print *,"im3,curvFD,curvHT_choice ",im3,curvFD,curvHT_choice
       endif
 
       return
