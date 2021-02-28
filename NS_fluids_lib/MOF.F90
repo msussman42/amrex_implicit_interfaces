@@ -12125,7 +12125,8 @@ contains
        csten,csten_x,csten_HT, &
        lsdata, &
        vofdata, &
-       ht, &
+       ht_from_LS, &
+       ht_from_VOF, &
        dircrit, & ! dircrit=1..sdim
        n1d, &
        nmat, &
@@ -12144,7 +12145,8 @@ contains
       REAL_T, intent(in) :: xsten0(-csten_x:csten_x,sdim)
       REAL_T, intent(in) :: lsdata(-csten:csten)
       REAL_T, intent(in) :: vofdata(-csten:csten)
-      REAL_T, intent(out) :: ht
+      REAL_T, intent(out) :: ht_from_LS
+      REAL_T, intent(out) :: ht_from_VOF
       REAL_T, intent(in) :: n1d
       INTEGER_T, intent(in) :: dircrit
       INTEGER_T, intent(in) :: nmat
@@ -12156,6 +12158,7 @@ contains
       INTEGER_T lcrit
       REAL_T xbottom,xtop
       REAL_T current_xbottom
+      INTEGER_T vof_ratio_ht_power
       REAL_T X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
       REAL_T ls1,ls2,x1,x2,slope
@@ -12278,12 +12281,12 @@ contains
          x2=xsten0(2*l+2,dircrit)
           ! LS=LS1+slope(x-x1)  xzero=-LS1/slope+x1
          if (ls1.eq.zero) then
-          ht=x1
+          ht_from_LS=x1
          else if (ls2.eq.zero) then 
-          ht=x2
+          ht_from_LS=x2
          else
           slope=(ls1-ls2)/(x1-x2)
-          ht=x1-ls1/slope
+          ht_from_LS=x1-ls1/slope
          endif
         endif   
        endif
@@ -12300,12 +12303,12 @@ contains
          x1=xsten0(-2*l,dircrit)
          x2=xsten0(-(2*l+2),dircrit)
          if (ls1.eq.zero) then
-          ht=x1
+          ht_from_LS=x1
          else if (ls2.eq.zero) then
-          ht=x2
+          ht_from_LS=x2
          else
           slope=(ls1-ls2)/(x1-x2)
-          ht=x1-ls1/slope
+          ht_from_LS=x1-ls1/slope
          endif
         endif   
        endif
@@ -12326,6 +12329,8 @@ contains
        print *,"crossing_status invalid"
        stop
       endif
+
+      ht_from_VOF=ht_from_LS
 
       if (crossing_status.eq.1) then
        if (vof_height_function.eq.1) then
@@ -12396,6 +12401,7 @@ contains
          enddo !l_vof=lvof_min,lvof_max
 
          current_xbottom=xbottom
+         vof_ratio_ht_power=1
 
          if (levelrz.eq.3) then
           print *,"vof_height_function not ready for levelrz==3"
@@ -12403,6 +12409,7 @@ contains
          else if (levelrz.eq.1) then
           if (dircrit.eq.1) then ! horizontal column
            if (problox.ge.zero) then
+            vof_ratio_ht_power=2
             current_xbottom=zero
             dr=xsten0(2*lvof_min-1,dircrit)-current_xbottom
             dz=xsten0(1,2)-xsten0(-1,2)
@@ -12445,8 +12452,34 @@ contains
          vof_bot_sum=vof_bot_sum+volcell
 
          if (vof_bot_sum.gt.zero) then
-          ht=vof_top_sum*(xtop-current_xbottom)/vof_bot_sum+ &
-             current_xbottom
+          if (vof_ratio_ht_power.eq.1) then
+           ht_from_VOF= &
+             vof_top_sum*(xtop-current_xbottom)/vof_bot_sum+current_xbottom
+          else if (vof_ratio_ht_power.eq.2) then
+           dr=xsten0(1,1)-xsten0(-1,1)
+           ht_from_VOF=(xtop**2)*vof_top_sum/vof_bot_sum
+           if (ht_from_VOF.ge.zero) then
+            ht_from_VOF=sqrt(ht_from_VOF)
+            if (abs(ht_from_VOF-xbottom).le.VOFTOL*dr) then
+             ht_from_VOF=xbottom
+            else if (abs(ht_from_VOF-xtop).le.VOFTOL*dr) then
+             ht_from_VOF=xtop
+            else if ((ht_from_VOF.ge.xbottom).and. &
+                     (ht_from_VOF.le.xtop)) then
+             ! do nothing
+            else
+             print*,"ht_from_VOF invalid"
+             stop
+            endif
+                    
+           else
+            print *,"ht_from_VOF invalid"
+            stop
+           endif
+          else 
+           print *,"vof_ratio_ht_power invalid"
+           stop
+          endif
          else
           print *,"vof_bot_sum invalid"
           stop
@@ -12464,7 +12497,8 @@ contains
         stop
        endif
       else if (crossing_status.eq.0) then
-       ht=X_AT_ABS_LSMIN
+       ht_from_LS=X_AT_ABS_LSMIN
+       ht_from_VOF=X_AT_ABS_LSMIN
       else
        print *,"crossing_status invalid"
        stop
