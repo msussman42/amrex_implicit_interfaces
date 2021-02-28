@@ -12115,7 +12115,7 @@ contains
       return
       end subroutine individual_MOF
 
-
+        ! input: n1d
         ! n1d=1 => im material on top
         ! n1d=-1 => im material on bottom
       subroutine get_col_ht_LS( &
@@ -12126,7 +12126,8 @@ contains
        lsdata, &
        vofdata, &
        ht, &
-       dircrit,n1d, &
+       dircrit, & ! dircrit=1..sdim
+       n1d, &
        nmat, &
        sdim)
       use probcommon_module
@@ -12148,13 +12149,18 @@ contains
       INTEGER_T, intent(in) :: dircrit
       INTEGER_T, intent(in) :: nmat
 
-      INTEGER_T l,lmin,lmax,lcrit
+      INTEGER_T l
+      INTEGER_T l_vof
+      INTEGER_T lmin,lmax
+      INTEGER_T lcrit
       REAL_T xbottom,xtop
       REAL_T XMIN,LSMIN,LSTEST
 
       REAL_T ls1,ls2,x1,x2,slope
       REAL_T charfn(-csten:csten)
       REAL_T LS
+      REAL_T vof_top_sum,vof_bot_sum
+      REAL_T dr,dz,volcell,vof_crit
 
       if (csten_x.ne.2*csten+1) then
        print *,"csten_x invalid"
@@ -12207,7 +12213,7 @@ contains
       lmin=-csten_HT
       lmax=csten_HT
       if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-       if (dircrit.eq.1) then
+       if (dircrit.eq.1) then ! horizontal column
         do while (xsten0(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
          if (2*lmin.gt.csten_x) then
@@ -12253,10 +12259,15 @@ contains
        ! n1d>0 if LS>0 material on top and LS<0 material on bottom.
        ! n1d<0 otherwise
       do l=0,csten_HT-1
+
+        ! first check upper half of stencil for a crossing
        if ((crossing_status.eq.0).and.(l+1.le.lmax)) then 
         ls1=charfn(l)
         ls2=charfn(l+1)
-        if ((ls1*ls2.lt.zero).and.((ls2-ls1)*n1d.gt.zero)) then
+        ! n1d=1 => im material on top
+        ! n1d=-1 => im material on bottom
+        if ((ls1*ls2.lt.zero).and. &
+            ((ls2-ls1)*n1d.gt.zero)) then
          lcrit=l
          crossing_status=1
          ls1=lsdata(l)
@@ -12274,7 +12285,9 @@ contains
          endif
         endif   
        endif
-       if ((crossing_status.eq.0).and.(-(l+1).ge.lmin)) then 
+        ! second: check lower half of stencil for a crossing
+       if ((crossing_status.eq.0).and. &
+           (-(l+1).ge.lmin)) then 
         ls1=charfn(-l)
         ls2=charfn(-(l+1))
         if ((ls1*ls2.lt.zero).and.((ls1-ls2)*n1d.gt.zero)) then
@@ -12313,7 +12326,132 @@ contains
       endif
 
       if (crossing_status.eq.1) then
-       ! do nothing
+       if (vof_height_function.eq.1) then
+        if ((lcrit-1.ge.lmin).and. &
+            (lcrit+2.le.lmax)) then
+
+         vof_top_sum=zero
+         vof_bot_sum=zero
+
+         do l_vof=lcrit-1,lcrit+2
+
+          if (n1d.eq.1) then ! n1d=1 => im material on top
+           vof_crit=one-vofdata(l_vof)
+          else if (n1d.eq.-1) then ! n1d=-1 => im material on bottom
+           vof_crit=vofdata(l_vof)
+          else
+           print *,"n1d invalid"
+           stop
+          endif
+
+          if (levelrz.eq.3) then
+           print *,"vof_height_function not ready for levelrz==3"
+           stop
+          else if (levelrz.eq.1) then
+           if (dircrit.eq.1) then ! horizontal column
+
+            dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+            dz=xsten0(1,2)-xsten0(-1,2)
+            if ((dz.gt.zero).and.(dr.gt.zero)) then
+             volcell=Pi*(xsten0(2*l_vof-1,dircrit)+ &
+                         xsten0(2*l_vof+1,dircrit))*dz*dr
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+             
+           else if (dircrit.eq.2) then ! vertical column
+
+            dz=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+            dr=xsten0(1,1)-xsten0(-1,1)
+            if ((dz.gt.zero).and.(dr.gt.zero)) then
+             volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+
+           else
+            print *,"dircrit invalid"
+            stop
+           endif
+
+          else if (levelrz.eq.0) then
+           print *,"vof_height_function not ready for levelrz==0"
+           stop
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+
+          vof_top_sum=vof_top_sum+vof_crit*volcell
+          vof_bot_sum=vof_bot_sum+volcell
+         enddo !l_vof=lcrit-1,lcrit+2
+
+         l_vof=lcrit-1
+
+         if (levelrz.eq.3) then
+          print *,"vof_height_function not ready for levelrz==3"
+          stop
+         else if (levelrz.eq.1) then
+          if (dircrit.eq.1) then ! horizontal column
+           dr=xsten0(2*l_vof-1,dircrit)
+           dz=xsten0(1,2)-xsten0(-1,2)
+           if ((dz.gt.zero).and.(dr.ge.zero)) then
+            volcell=Pi*dr*dr*dz
+           else
+            print *,"dz or dr invalid"
+            stop
+           endif
+             
+          else if (dircrit.eq.2) then ! vertical column
+
+           dz=xsten0(2*l_vof-1,dircrit)
+           dr=xsten0(1,1)-xsten0(-1,1)
+           if ((dz.ge.zero).and.(dr.gt.zero)) then
+            volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
+           else
+            print *,"dz or dr invalid"
+            stop
+           endif
+
+          else
+           print *,"dircrit invalid"
+           stop
+          endif
+
+         else if (levelrz.eq.0) then
+          print *,"vof_height_function not ready for levelrz==0"
+          stop
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+
+         vof_top_sum=vof_top_sum+volcell
+         vof_bot_sum=vof_bot_sum+volcell
+
+         if (vof_bot_sum.gt.zero) then
+          ht=vof_top_sum*xtop/vof_bot_sum
+         else
+          print *,"vof_bot_sum invalid"
+          stop
+         endif
+
+        else if ((lcrit.ge.lmin).and. &
+                 (lcrit+1.le.lmax)) then
+         ! do nothing
+        else
+         print *,"lcrit invalid"
+         stop
+        endif
+                ! do nothing
+       else if (vof_height_function.eq.0) then
+        ! do nothing
+       else
+        print *,"vof_height_function invalid"
+        stop
+       endif
       else if (crossing_status.eq.0) then
        ht=XMIN
       else
