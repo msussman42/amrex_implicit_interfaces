@@ -1513,16 +1513,14 @@ stop
 
         do row=1,3
 
+         x1=xsten(interval_cnt,itan)
+         x2=xsten(interval_cnt+2,itan)
+         xnot=xsten(0,itan)
+         RHS(row)=htfunc(row-2,0)
+
          if (dircrit.eq.1) then  ! horizontal column in the r direction
-          x1=xsten(interval_cnt,itan)
-          x2=xsten(interval_cnt+2,itan)
-          xnot=xsten(0,itan)
-          RHS(row)=htfunc(row-2,0)
           call hhorizontal_coeffRZ(x1,x2,xnot,xtop,coeffs)
          else if (dircrit.eq.2) then  ! vertical column in the z direction
-          x1=xsten(interval_cnt,itan)
-          x2=xsten(interval_cnt+2,itan)
-          xnot=xsten(0,itan)
           call hvertical_coeffRZ(x1,x2,xnot,coeffs)
          else
           print *,"dircrit invalid"
