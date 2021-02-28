@@ -3,6 +3,11 @@ on hopf use maple:
 hz:=(r) -> a*(r-ri)^2 + b*(r-ri)+c;
 factor(int(r*(hz(r)-zbottom),r=r1..r2)/(int(r,r=r1..r2))+zbottom);
 
+factor(int((hz(r)-zbottom),r=r1..r2)/(int(1,r=r1..r2))+zbottom);
+
+hzsym:=(r) -> a*(r-ri)^2 + 2*a*ri*(r-ri)+c
+factor(int(r*(hzsym(r)-zbottom),r=r1..r2)/(int(r,r=r1..r2))+zbottom);
+
 hrsqr:=(z) -> a*(z-zi)^2 + b*(z-zi)+c;
 factor(int(hrsqr(z),z=z1..z2)/int(1,z=z1..z2));
 

@@ -12318,12 +12318,12 @@ contains
          ! given volume for column, find the interface.
          ! for RZ, if dircrit=1, then column extends to r=0
 
-      if (crossing_status.eq.1) then
+      if (crossing_status.eq.1) then ! crossing found
        if ((lcrit.lt.lmin).or.(lcrit+1.gt.lmax)) then
         print *,"lcrit invalid"
         stop
        endif
-      else if (crossing_status.eq.0) then
+      else if (crossing_status.eq.0) then ! crossing not found
        ! do nothing
       else 
        print *,"crossing_status invalid"
@@ -12345,7 +12345,7 @@ contains
          vof_top_sum=zero
          vof_bot_sum=zero
 
-         do l_vof=lvof_min,lvof_max
+         do l_vof=lmin,lmax
 
           if (n1d.eq.1) then ! n1d=1 => im material on top
            vof_crit=one-vofdata(l_vof)
@@ -12353,6 +12353,30 @@ contains
            vof_crit=vofdata(l_vof)
           else
            print *,"n1d invalid"
+           stop
+          endif
+
+          if (l_vof.lt.lvof_min) then
+           vof_crit=one
+          else if ((l_vof.ge.lvof_min).and. &
+                   (l_vof.le.lvof_max)) then
+           ! do nothing
+          else if (l_vof.gt.lvof_max) then
+           vof_crit=zero
+          else
+           print *,"l_vof invalid"
+           stop
+          endif
+
+          if (abs(vof_crit).le.VOFTOL) then
+           vof_crit=zero
+          else if (abs(vof_crit-one).le.VOFTOL) then
+           vof_crit=one
+          else if ((vof_crit.gt.zero).and. &
+                   (vof_crit.lt.one)) then
+           ! do nothing
+          else
+           print *,"vof_crit invalid"
            stop
           endif
 
@@ -12389,8 +12413,38 @@ contains
            endif
 
           else if (levelrz.eq.0) then
-           print *,"vof_height_function not ready for levelrz==0"
-           stop
+           if (SDIM.eq.2) then
+            if (dircrit.eq.1) then ! horizontal column
+             dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+             dz=xsten0(1,2)-xsten0(-1,2)
+             if ((dz.gt.zero).and.(dr.gt.zero)) then
+              volcell=dz*dr
+             else
+              print *,"dz or dr invalid"
+              stop
+             endif
+            else if (dircrit.eq.2) then ! vertical column
+
+             dz=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+             dr=xsten0(1,1)-xsten0(-1,1)
+             if ((dz.gt.zero).and.(dr.gt.zero)) then
+              volcell=dz*dr
+             else
+              print *,"dz or dr invalid"
+              stop
+             endif
+            else
+             print *,"dircrit invalid"
+             stop
+            endif
+
+           else if (SDIM.eq.3) then
+            print *,"vof_height_function not ready for levelrz==0, sdim=3"
+            stop
+           else
+            print *,"dimension bust"
+            stop
+           endif
           else
            print *,"levelrz invalid"
            stop
@@ -12398,7 +12452,7 @@ contains
 
           vof_top_sum=vof_top_sum+vof_crit*volcell
           vof_bot_sum=vof_bot_sum+volcell
-         enddo !l_vof=lvof_min,lvof_max
+         enddo !l_vof=lmin,lmax
 
          current_xbottom=xbottom
          vof_ratio_ht_power=1
@@ -12411,10 +12465,10 @@ contains
            if (problox.ge.zero) then
             vof_ratio_ht_power=2
             current_xbottom=zero
-            dr=xsten0(2*lvof_min-1,dircrit)-current_xbottom
+            dr=xsten0(2*lmin-1,dircrit)-current_xbottom
             dz=xsten0(1,2)-xsten0(-1,2)
             if ((dz.gt.zero).and.(dr.ge.zero)) then
-             volcell=Pi*(xsten0(2*lvof_min-1,dircrit)+ &
+             volcell=Pi*(xsten0(2*lmin-1,dircrit)+ &
                          current_xbottom)*dr*dz
             else
              print *,"dz or dr invalid"
@@ -12426,7 +12480,7 @@ contains
            endif  
           else if (dircrit.eq.2) then ! vertical column
 
-           dz=xsten0(2*lvof_min-1,dircrit)-current_xbottom
+           dz=xsten0(2*lmin-1,dircrit)-current_xbottom
            dr=xsten0(1,1)-xsten0(-1,1)
            if ((dz.ge.zero).and.(dr.gt.zero)) then
             volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
@@ -12441,8 +12495,37 @@ contains
           endif
 
          else if (levelrz.eq.0) then
-          print *,"vof_height_function not ready for levelrz==0"
-          stop
+          if (SDIM.eq.2) then
+           if (dircrit.eq.1) then ! horizontal column
+            dr=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dz=xsten0(1,2)-xsten0(-1,2)
+            if ((dz.gt.zero).and.(dr.ge.zero)) then
+             volcell=dr*dz
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+           else if (dircrit.eq.2) then ! vertical column
+            dz=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dr=xsten0(1,1)-xsten0(-1,1)
+            if ((dz.ge.zero).and.(dr.gt.zero)) then
+             volcell=dz*dr
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+           else
+            print *,"dircrit invalid"
+            stop
+           endif
+
+          else if (SDIM.eq.3) then
+           print *,"vof_height_function not ready for levelrz==0, sdim=3"
+           stop
+          else
+           print *,"dimension bust"
+           stop
+          endif
          else
           print *,"levelrz invalid"
           stop

@@ -1726,7 +1726,7 @@ protected:
     static int custom_nucleation_model;
 
     static int FD_curv_interp; // def==1
-    static int vof_height_function; // def==1
+    static int vof_height_function; // def==0
 
      // index: 1..nmat
     static Vector<Real> cavitation_pressure; 

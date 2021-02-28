@@ -19,6 +19,7 @@
 #define CURVWT (1.0D-3)
 
 #define DEBUG_THERMAL_COEFF 0
+#define DEBUG_CURVATURE 1
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -504,6 +505,31 @@ stop
       return
       end subroutine initpforce
 
+
+      subroutine h_coeffXY(r1,r2,ri,coeffs)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: r1,r2,ri
+      REAL_T, intent(out) :: coeffs(3)
+
+      if (r2.gt.r1) then
+    
+       coeffs(1)=(r1**2)/three+r1*r2/three-r1*ri+(r2**2)/three- &
+                 r2*ri+(ri**2)
+
+       coeffs(2)=half*(r1+r2)-ri
+
+       coeffs(3)=one
+
+      else
+       print *,"r1,or r2 invalid"
+       print *,"r1,r2 ",r1,r2
+       stop
+      endif
+
+      return
+      end subroutine h_coeffXY
+
       subroutine hvertical_coeffRZ(r1,r2,ri,coeffs)
       IMPLICIT NONE
 
@@ -529,6 +555,7 @@ stop
 
       else
        print *,"r1,r2, or ri invalid"
+       print *,"r1,r2,ri ",r1,r2,ri
        stop
       endif
 
@@ -1289,7 +1316,7 @@ stop
          print *,"dimension bust"
          stop
         endif
-        if (itan.eq.1) then
+        if (itan.eq.1) then ! vertical columns
          if (iwidth.eq.-1) then
           if (xsten(2*iwidth,1).le.zero) then
            iwidthnew=0
@@ -1530,6 +1557,7 @@ stop
        if (vof_height_function.eq.1) then
 
         if (levelrz.eq.1) then
+
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
@@ -1548,7 +1576,22 @@ stop
            call hhorizontal_coeffRZ(x1,x2,xnot,coeffs)
            RHS(row)=htfunc_VOF(row-2,0)**2
           else if (dircrit.eq.2) then  ! vertical column in the z direction
-           call hvertical_coeffRZ(x1,x2,xnot,coeffs)
+           if (xnot.gt.zero) then
+            if (x1.ge.zero) then
+             call hvertical_coeffRZ(x1,x2,xnot,coeffs)
+            else if (x1.lt.zero) then
+             RHS(row)=zero
+             coeffs(1)=-two*xnot
+             coeffs(2)=one
+             coeffs(3)=zero
+            else
+             print *,"x1 invalid"
+             stop
+            endif
+           else
+            print *,"something wrong, xnot<=0 ",xnot
+            stop
+           endif
           else
            print *,"dircrit invalid"
            stop
@@ -1601,7 +1644,47 @@ stop
         else if (levelrz.eq.3) then
          print *,"VFRAC height function for levelrz==3 not ready yet"
         else if (levelrz.eq.0) then
-         print *,"VFRAC height function for levelrz==0 not ready yet"
+
+         if (SDIM.eq.2) then
+
+          interval_cnt=-3
+
+          do row=1,3
+
+           x1=xsten(interval_cnt,itan)
+           x2=xsten(interval_cnt+2,itan)
+           xnot=xsten(0,itan)
+           RHS(row)=htfunc_VOF(row-2,0)
+
+           call h_coeffXY(x1,x2,xnot,coeffs)
+  
+           do dir2=1,3
+            AA(row,dir2)=coeffs(dir2)
+           enddo
+           interval_cnt=interval_cnt+2
+          enddo ! row=1..3
+
+           ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+
+          call matrix_solve(AA,xx,RHS,matstatus,3) !matstatus=1 => ok.
+
+          if (matstatus.eq.1) then
+           hprime_of_r=xx(2)
+           hdprime_of_r=two*xx(1)
+           g=sqrt(one+hprime_of_r**2)
+           curvHT_VOF=hdprime_of_r/(g**3)
+          else if (matstatus.eq.0) then
+           print *,"matstatus invalid for XY curvature coeff"
+           stop
+          endif
+
+         else if (SDIM.eq.3) then
+          print *,"VFRAC height function for sdim=3 levelrz=0 not ready"
+          stop
+         else
+          print *,"dimension bust"
+          stop
+         endif
         else
          print *,"levelrz invalid"
          stop
@@ -4621,7 +4704,7 @@ stop
               im_main,im_main_opp,iten, &
               RD,RDx,RD_HEIGHT)
 
-             if (1.eq.0) then
+             if (DEBUG_CURVATURE.eq.1) then
               print *,"i,j,k,dircrossing,sidestar,nrm ", &
                i,j,k,dircrossing,sidestar, &
                nrm_center(1),nrm_center(2),nrm_center(SDIM)
