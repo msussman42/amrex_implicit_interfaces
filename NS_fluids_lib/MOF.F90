@@ -12152,9 +12152,11 @@ contains
       INTEGER_T l
       INTEGER_T l_vof
       INTEGER_T lmin,lmax
+      INTEGER_T lvof_min,lvof_max
       INTEGER_T lcrit
       REAL_T xbottom,xtop
-      REAL_T XMIN,LSMIN,LSTEST
+      REAL_T current_xbottom
+      REAL_T X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
       REAL_T ls1,ls2,x1,x2,slope
       REAL_T charfn(-csten:csten)
@@ -12229,13 +12231,13 @@ contains
        stop
       endif 
 
-      LSMIN=abs(lsdata(lmin))
-      XMIN=xsten0(2*lmin,dircrit)
+      ABS_LSMIN=abs(lsdata(lmin))
+      X_AT_ABS_LSMIN=xsten0(2*lmin,dircrit)
       do l=lmin+1,lmax
        LSTEST=abs(lsdata(l))
-       if (LSTEST.lt.LSMIN) then
-        LSMIN=LSTEST
-        XMIN=xsten0(2*l,dircrit)
+       if (LSTEST.lt.ABS_LSMIN) then
+        ABS_LSMIN=LSTEST
+        X_AT_ABS_LSMIN=xsten0(2*l,dircrit)
        endif
       enddo
 
@@ -12327,13 +12329,18 @@ contains
 
       if (crossing_status.eq.1) then
        if (vof_height_function.eq.1) then
-        if ((lcrit-1.ge.lmin).and. &
-            (lcrit+2.le.lmax)) then
+        lvof_min=max(lcrit-1,lmin)
+        lvof_max=min(lcrit+2,lmax)
+
+        if ((lvof_min.ge.lmin).and. &
+            (lvof_max.le.lmax).and. &
+            (lcrit.ge.lmin).and. &
+            (lcrit+1.le.lmax)) then
 
          vof_top_sum=zero
          vof_bot_sum=zero
 
-         do l_vof=lcrit-1,lcrit+2
+         do l_vof=lvof_min,lvof_max
 
           if (n1d.eq.1) then ! n1d=1 => im material on top
            vof_crit=one-vofdata(l_vof)
@@ -12386,27 +12393,33 @@ contains
 
           vof_top_sum=vof_top_sum+vof_crit*volcell
           vof_bot_sum=vof_bot_sum+volcell
-         enddo !l_vof=lcrit-1,lcrit+2
+         enddo !l_vof=lvof_min,lvof_max
 
-         l_vof=lcrit-1
+         current_xbottom=xbottom
 
          if (levelrz.eq.3) then
           print *,"vof_height_function not ready for levelrz==3"
           stop
          else if (levelrz.eq.1) then
           if (dircrit.eq.1) then ! horizontal column
-           dr=xsten0(2*l_vof-1,dircrit)
-           dz=xsten0(1,2)-xsten0(-1,2)
-           if ((dz.gt.zero).and.(dr.ge.zero)) then
-            volcell=Pi*dr*dr*dz
+           if (problox.ge.zero) then
+            current_xbottom=zero
+            dr=xsten0(2*l_vof_min-1,dircrit)-current_xbottom
+            dz=xsten0(1,2)-xsten0(-1,2)
+            if ((dz.gt.zero).and.(dr.ge.zero)) then
+             volcell=Pi*(xsten0(2*l_vof_min-1,dircrit)+ &
+                         current_xbottom)*dr*dz
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
            else
-            print *,"dz or dr invalid"
+            print *,"expecting  problox>=0"
             stop
-           endif
-             
+           endif  
           else if (dircrit.eq.2) then ! vertical column
 
-           dz=xsten0(2*l_vof-1,dircrit)
+           dz=xsten0(2*l_vof_min-1,dircrit)-current_xbottom
            dr=xsten0(1,1)-xsten0(-1,1)
            if ((dz.ge.zero).and.(dr.gt.zero)) then
             volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
@@ -12432,17 +12445,15 @@ contains
          vof_bot_sum=vof_bot_sum+volcell
 
          if (vof_bot_sum.gt.zero) then
-          ht=vof_top_sum*xtop/vof_bot_sum
+          ht=vof_top_sum*(xtop-current_xbottom)/vof_bot_sum+ &
+             current_xbottom
          else
           print *,"vof_bot_sum invalid"
           stop
          endif
 
-        else if ((lcrit.ge.lmin).and. &
-                 (lcrit+1.le.lmax)) then
-         ! do nothing
         else
-         print *,"lcrit invalid"
+         print *,"lcrit,lvof_min, or lvof_max invalid"
          stop
         endif
                 ! do nothing
@@ -12453,7 +12464,7 @@ contains
         stop
        endif
       else if (crossing_status.eq.0) then
-       ht=XMIN
+       ht=X_AT_ABS_LSMIN
       else
        print *,"crossing_status invalid"
        stop

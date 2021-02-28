@@ -604,6 +604,8 @@ stop
       INTEGER_T itanlo,itanhi,jtanlo,jtanhi
       INTEGER_T itan,jtan
       INTEGER_T iwidth,jwidth,kheight
+      INTEGER_T lmin,lmax
+      REAL_T xtop,xbottom
       INTEGER_T iofs,jofs,kofs
       INTEGER_T iwidthnew
       INTEGER_T icell,jcell,kcell
@@ -1177,6 +1179,28 @@ stop
        stop
       endif
 
+      lmin=-RD_HEIGHT
+      lmax=RD_HEIGHT
+
+      if ((levelrz.eq.1).or.(levelrz.eq.3)) then
+       if (dircrit.eq.1) then ! horizontal column
+        do while (xsten(2*lmin,dircrit).lt.zero)
+         lmin=lmin+1
+         if (2*lmin.gt.RDx) then
+          print *,"lmin too big"
+          stop
+         endif
+        enddo
+       endif
+      else if (levelrz.eq.0) then
+       ! do nothing
+      else
+       print *,"levelrz invalid just before call to get col ht ls"
+       stop
+      endif 
+      xbottom=xsten(2*lmin-1,dircrit)
+      xtop=xsten(2*lmax+1,dircrit)
+
       do iwidth=itanlo,itanhi
       do jwidth=jtanlo,jtanhi
 
@@ -1251,6 +1275,12 @@ stop
         endif 
        else
         print *,"crossing_status invalid"
+        stop
+       endif
+       if ((col_ht.ge.xbottom).and.(col_ht.le.xtop)) then
+        ! do nothing
+       else
+        print *,"col_ht out of bounds"
         stop
        endif
 
