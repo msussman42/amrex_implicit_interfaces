@@ -8826,9 +8826,9 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,iten
-      REAL_T LS(nmat)
-      REAL_T LS_extend
+      INTEGER_T, intent(in) :: nmat,iten
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: LS_extend
       INTEGER_T im,im_opp
 
       if (nmat.ne.num_materials) then
@@ -8905,9 +8905,9 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,iten
-      REAL_T VOF(nmat)
-      REAL_T VOF_extend
+      INTEGER_T, intent(in) :: nmat,iten
+      REAL_T, intent(in) :: VOF(nmat)
+      REAL_T, intent(out) :: VOF_extend
       INTEGER_T im,im_opp
 
       if (nmat.ne.num_materials) then
@@ -8921,12 +8921,22 @@ contains
        print *,"im or im_opp invalid"
        stop
       endif
-      if (VOF(im).gt.VOF(im_opp)) then
-       VOF_extend=one-VOF(im_opp)
-      else if (VOF(im_opp).gt.VOF(im)) then
-       VOF_extend=VOF(im)
-      else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL)  then
-       VOF_extend=half
+      if ((VOF(im).ge.-VOFTOL).and. &
+          (VOF(im).le.one+VOFTOL).and. &
+          (VOF(im_opp).ge.-VOFTOL).and. &
+          (VOF(im_opp).le.one+VOFTOL)) then 
+
+       if (VOF(im).gt.VOF(im_opp)) then
+        VOF_extend=one-VOF(im_opp)
+       else if (VOF(im_opp).gt.VOF(im)) then
+        VOF_extend=VOF(im)
+       else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL)  then
+        VOF_extend=half
+       else
+        print *,"VOF bust"
+        stop
+       endif
+
       else
        print *,"VOF bust"
        stop
