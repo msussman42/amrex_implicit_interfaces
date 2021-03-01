@@ -37,7 +37,7 @@ geometry.is_periodic=0 0
 # Borodulin ET AL: drop sizes: diameter 1,2,3 mm
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #
-geometry.prob_hi=0.1 0.1  # cm   
+geometry.prob_hi=0.4 0.4  # cm   
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.num_materials_vel=1
@@ -86,7 +86,7 @@ amr.plotfile_on_restart=1
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
 amr.n_cell=32 32 # convergence 32 x 32 coarsest
-amr.max_level = 0
+amr.max_level = 2
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 ns.radius_cutoff=0 0 0 0 
@@ -132,7 +132,7 @@ ns.conservative_tension_force=0
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
-ns.tension=1.0e-6  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
+ns.tension=1.0e-5  
 ns.vof_height_function=1
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 ns.stiffCV= 4.1855e+7 7142857.1428571437
