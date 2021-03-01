@@ -19,7 +19,7 @@
 #define CURVWT (1.0D-3)
 
 #define DEBUG_THERMAL_COEFF 0
-#define DEBUG_CURVATURE 1
+#define DEBUG_CURVATURE 0
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
