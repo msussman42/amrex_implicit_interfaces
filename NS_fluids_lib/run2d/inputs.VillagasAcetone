@@ -138,7 +138,8 @@ ns.conservative_tension_force=0
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
 #ns.tension=5.0  # 0.005 MKS in Villagas et al
-ns.tension=1.0  
+ns.tension=0.1  
+ns.vof_height_function=1
 # 1E7 erg=1j  1 ERG/g = 1E-7 J/1E-3kg=1E-4 J/kg
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
@@ -150,7 +151,7 @@ ns.latent_heat = 5.18e+9 0.0  #2.26E+6 J/kg
 # 1=distribute to the source material.
 # need to distribute to the liquid side, so that the temperature and mass
 # fraction variables "see" the correct velocity.
-ns.distribute_from_target = 1 0 # 2 * num_interfaces components
+ns.distribute_from_target = 0 0 # 2 * num_interfaces components
 ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 1 # expansion
 #ns.constant_density_all_time=1 0 # sealed
@@ -159,6 +160,7 @@ ns.constant_volume_mdot=0 0 # expansion
 #evaporation: freezing_model=6 Palmore and Desjardins 
 #             freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 ns.freezing_model=6 0
+ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 # 3 0=Kassemi 0 0=Palmore and Desjardins
 ns.mass_fraction_id=1 0 
 ns.saturation_temp = 329.0 0.0  # CODY ~ T_gamma = 373.15 K
 ns.saturation_temp_min = 273.0 0.0  
@@ -183,6 +185,14 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 
+#gamma=1.4d0  C_pG=1.0d+7   gamma=Cp/Cv  e=Cv T
+#for material_type==5, these values are hardwired:
+#CP-CV=0.287D+7  CV=0.72D+7  GAMMA=CP/CV=1.39861
+ns.material_type_evap=0 5 
+ns.material_type_lowmach=0 5 
+ns.material_type_visual=0 5 
+ns.reference_pressure=2997709.0103757810 0.0 
+ns.accommodation_coefficient=1.0 0.0
 # CODY k_water, k_gas
 ns.heatviscconst=1.0e+7 0.052e+5 #CODY:k_liquid=10^-1 W/(m*K),
 #W/(m K)=J/(s m K)=
@@ -202,8 +212,11 @@ ns.speciesviscconst=0.52 0.52 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 #https://www.tis-gdv.de/tis_e/misc/klima-htm/
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #ns.speciesconst=0.0121 0.0121  #initial vapor mass fraction in atmosphere
+#if ns.Tanasawa_or_Schrage_or_Kassemi=3,
+#ns.speciesconst=1.0 1.0  # Kassemi
 ns.speciesconst=0.0 0.0  #initial vapor mass fraction in atmosphere
-#ns.hardwire_Y_gamma=0.438833577149 0.0
+#ns.hardwire_Y_gamma=0.43883357714919285 0.0 
+ns.radblob2=0.0  # since species=1 for Kassemi model, put Y_inf here.
 #1.0016 milli pascals * s = 1.002 E-3 pa * s
 #18.1 micro pascals * s  = 1.81E-5 pa * s  kg m/s^2 / m^2 = kg/(m s^2)=
 #1000/100 g/(cm s^2)
@@ -237,7 +250,7 @@ ns.solidheat_flag=0
 #drop=98.6 degrees F   air=70 degrees F
 #drop=27.5 degrees C   air=27.5 degrees C
 ns.tempconst=700.0 700.0 #CODY: case 2, T_inf for gas, T_gamma for liq.
-#ns.hardwire_T_gamma=294.92267 0.0
+#ns.hardwire_T_gamma=294.92267586416710 0.0
 ns.filter_velocity=0 0
 #ns.cancel_advection=1
 ns.xblob=0.0
