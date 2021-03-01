@@ -369,6 +369,7 @@ REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
+REAL_T :: pres_analytical
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
 REAL_T :: vert_lo,vert_hi
@@ -432,7 +433,7 @@ if (probtype.eq.424) then
     ! do nothing
    else if (1.eq.0) then
     call drop_analytical_solution(t,x,D_gamma,T_analytical, &
-      Y_analytical,VEL,LS_analytical)
+      Y_analytical,VEL,LS_analytical,pres_analytical)
    endif
   else if (vinletgas.ne.zero) then
    ! do nothing
@@ -504,6 +505,7 @@ REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+REAL_T :: pres_analytical
 REAL_T :: VEL(SDIM)
 
 if (nmat.eq.num_materials) then
@@ -541,7 +543,7 @@ if (probtype.eq.424) then
  if (axis_dir.eq.0) then
   if (vinletgas.eq.zero) then
    call drop_analytical_solution(t,x,D_gamma,T_analytical, &
-      Y_analytical,VEL,LS_analytical)
+      Y_analytical,VEL,LS_analytical,pres_analytical)
    do im=1,num_materials
     ibase=(im-1)*num_state_material
     STATE(ibase+2)=T_analytical
@@ -861,7 +863,7 @@ endif
 return
 end subroutine DROP_IN_SHEAR_nucleation
 
-subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL,LS_VAP)
+subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL,LS_VAP,PRES)
 use probcommon_module
 IMPLICIT NONE
 
@@ -871,8 +873,10 @@ REAL_T, intent(out) :: D_gamma
 REAL_T, intent(out) :: T
 REAL_T, intent(out) :: Y
 REAL_T, intent(out) :: LS_VAP
+REAL_T, intent(out) :: PRES
 REAL_T, intent(out) :: VEL(SDIM)
 REAL_T :: rr,mdot,vel_r
+REAL_T :: VELCOEFF
 
 if (SDIM.eq.2) then
  rr=sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
@@ -919,6 +923,12 @@ else
  stop
 endif
 mdot=Pi*D_gamma*den_G*D_G*Sh*B_M
+if (mdot.gt.zero) then
+ ! do nothing
+else
+ print *,"expecting mdot>0"
+ stop
+endif
 
 LS_VAP=rr-half*D_gamma
 
@@ -928,8 +938,17 @@ if (LS_VAP.le.zero) then
  VEL(SDIM)=zero
  Y=Y_Gamma
  T=T_Gamma
+ PRES=zero
 else if (LS_VAP.ge.zero) then
- vel_r = mdot/(4.0*Pi*rr*rr*den_G)
+ VELCOEFF = mdot/(4.0d0*Pi*den_G)
+ vel_r = VELCOEFF/(rr*rr)
+  ! for pressure:
+  ! div( u^2 ) = -p_r
+  ! u=M/r^2  u^2=M^2/r^4  div u^2=(1/r^2) (M^2/r^2)_r=
+  ! -2/r^5  *  M^2
+  ! p=-int(-2/r^5  *  M^2)=int(2/r^5  *  M^2)=C-(1/2) M^2/r^4
+ PRES=half*(VELCOEFF**2)*(one/(radblob**4)-one/(rr**4))
+
  VEL(1)=vel_r*(x(1)-xblob)/rr
  VEL(2)=vel_r*(x(2)-yblob)/rr
  if (SDIM.eq.3) then
@@ -977,7 +996,11 @@ INTEGER_T :: im
 INTEGER_T :: ibase
 REAL_T T_exact,Y_exact,LS_VAP_exact
 REAL_T VEL_exact(SDIM)
+REAL_T PRES_exact
 REAL_T :: D_gamma
+INTEGER_T :: ok_to_overwrite_vel
+
+ok_to_overwrite_vel=1
 
 nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
@@ -1020,22 +1043,22 @@ if ((num_materials.eq.2).and. &
 
    if (rr.ge.probhix-xblob-r_exact) then
     call drop_analytical_solution(tcrit,xcrit,D_gamma,T_exact,Y_exact, &
-     VEL_exact,LS_VAP_exact)
+     VEL_exact,LS_VAP_exact,PRES_exact)
 
     if (cell_flag.eq.0) then ! MAC GRID X
-     if (1.eq.0) then
+     if (ok_to_overwrite_vel.eq.1) then
       assimilate_out%macx(D_DECL(i,j,k))=VEL_exact(1)
      endif
     else if (cell_flag.eq.1) then ! MAC GRID Y
-     if (1.eq.0) then
+     if (ok_to_overwrite_vel.eq.1) then
       assimilate_out%macy(D_DECL(i,j,k))=VEL_exact(2)
      endif
     else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
-     if (1.eq.0) then
+     if (ok_to_overwrite_vel.eq.1) then
       assimilate_out%macz(D_DECL(i,j,k))=VEL_exact(SDIM)
      endif
     else if (cell_flag.eq.-1) then
-     if (1.eq.0) then
+     if (ok_to_overwrite_vel.eq.1) then
       do dir=1,SDIM
        assimilate_out%state(D_DECL(i,j,k),dir)=VEL_exact(dir)
       enddo
@@ -1091,6 +1114,7 @@ INTEGER_T :: i,j,k,dir
 REAL_T :: xlocal(SDIM)
 REAL_T :: D_gamma,T_analytical,Y_analytical,LS_VAP_analytical
 REAL_T :: vel_analytical(SDIM)
+REAL_T :: pres_analytical
 REAL_T :: vel_compute(SDIM)
 REAL_T :: LS_compute
 REAL_T :: TEMPERATURE_compute
@@ -1114,7 +1138,7 @@ if (nsum.gt.0) then
     enddo
     call drop_analytical_solution(GRID_DATA_IN%time, &
      xlocal,D_gamma,T_analytical,Y_analytical, &
-     vel_analytical,LS_VAP_analytical)
+     vel_analytical,LS_VAP_analytical,pres_analytical)
     LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),2)
     im_crit=2
     tcomp=(im_crit-1)*num_state_material+2
