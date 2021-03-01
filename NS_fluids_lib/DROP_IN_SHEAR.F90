@@ -943,11 +943,12 @@ else if (LS_VAP.ge.zero) then
  VELCOEFF = mdot/(4.0d0*Pi*den_G)
  vel_r = VELCOEFF/(rr*rr)
   ! for pressure:
-  ! div( u^2 ) = -p_r
+  ! div( u^2 ) = -p_r/den_G
   ! u=M/r^2  u^2=M^2/r^4  div u^2=(1/r^2) (M^2/r^2)_r=
   ! -2/r^5  *  M^2
-  ! p=-int(-2/r^5  *  M^2)=int(2/r^5  *  M^2)=C-(1/2) M^2/r^4
- PRES=half*(VELCOEFF**2)*(one/(radblob**4)-one/(rr**4))
+  ! p=-int(-2/r^5  *  M^2)*den_G=int(2/r^5  *  M^2)*den_G= 
+  ! den_G(C-(1/2) M^2/r^4)
+ PRES=half*den_G*(VELCOEFF**2)*(one/(radblob**4)-one/(rr**4))
 
  VEL(1)=vel_r*(x(1)-xblob)/rr
  VEL(2)=vel_r*(x(2)-yblob)/rr
