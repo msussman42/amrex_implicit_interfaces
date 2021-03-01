@@ -142,6 +142,7 @@ ns.tension=0.5
 ns.vof_height_function=1
 # 1E7 erg=1j  1 ERG/g = 1E-7 J/1E-3kg=1E-4 J/kg
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
+ns.stiffCV= 2.0e+7  7142857.1428571437  # erg/(g K) CODY ~ C_pL, C_pG
 #12 then reverse 21 
 #heat of vaporation is 2260 kJ/kg=2260E+3 J/kg=2.26E+10 erg/g
 # 1 J/kg = 1e7 erg/1e3 g = 1e4 erg/g
