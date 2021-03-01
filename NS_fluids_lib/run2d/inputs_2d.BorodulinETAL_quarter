@@ -132,7 +132,7 @@ ns.conservative_tension_force=0
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
-ns.tension=1.0e-4  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
+ns.tension=1.0e-6  # 72.8 cgs (cap wave speed for:1.0e-4 is 0.45)
 ns.vof_height_function=1
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 ns.stiffCV= 4.1855e+7 7142857.1428571437
@@ -143,7 +143,7 @@ ns.latent_heat = 2.1e+10 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
-ns.distribute_from_target = 1 0 # 2 * num_interfaces components
+ns.distribute_from_target = 0 0 # 2 * num_interfaces components
 ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
 ns.constant_density_all_time=1 1 # expansion 1..nmat
 #ns.constant_density_all_time=1 0 # sealed 1..nmat
