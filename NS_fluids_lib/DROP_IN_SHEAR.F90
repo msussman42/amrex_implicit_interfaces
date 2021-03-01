@@ -470,6 +470,7 @@ end subroutine DROP_IN_SHEAR_VEL
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
 subroutine DROP_IN_SHEAR_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
@@ -477,6 +478,9 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+REAL_T :: pres_analytical
+REAL_T :: VEL(SDIM)
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -484,7 +488,28 @@ else
  print *,"nmat invalid"
  stop
 endif
-PRES=zero
+
+if (probtype.eq.424) then
+
+ PRES=zero
+
+ if (axis_dir.eq.0) then
+  if (vinletgas.eq.zero) then
+   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
+      Y_analytical,VEL,LS_analytical,pres_analytical)
+   PRES=pres_analytical
+  endif
+ else if (axis_dir.eq.1) then
+  ! do nothing
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
 
 return 
 end subroutine DROP_IN_SHEAR_PRES
@@ -520,6 +545,7 @@ else
  print *,"nstate_mat invalid"
  stop
 endif
+
 if (probtype.eq.424) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
@@ -1001,7 +1027,7 @@ REAL_T PRES_exact
 REAL_T :: D_gamma
 INTEGER_T :: ok_to_overwrite_vel
 
-ok_to_overwrite_vel=1
+ok_to_overwrite_vel=0
 
 nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
