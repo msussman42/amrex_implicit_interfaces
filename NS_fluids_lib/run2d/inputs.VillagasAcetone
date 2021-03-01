@@ -40,7 +40,7 @@ geometry.is_periodic=0 0
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #
 # initial radius is 50 microns=50E-6 m=50E-4 cm=0.5E-2 cm=0.005cm
-geometry.prob_hi=0.01 0.01  # cm   
+geometry.prob_hi=0.04 0.04  # cm   
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.num_materials_vel=1
@@ -89,7 +89,7 @@ amr.plotfile_on_restart=1
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
 amr.n_cell=32 32 # convergence 32 x 32 coarsest
-amr.max_level = 0
+amr.max_level = 2
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 ns.radius_cutoff=0 0 0 0 
@@ -138,7 +138,7 @@ ns.conservative_tension_force=0
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
 #ns.tension=5.0  # 0.005 MKS in Villagas et al
-ns.tension=0.1  
+ns.tension=0.5
 ns.vof_height_function=1
 # 1E7 erg=1j  1 ERG/g = 1E-7 J/1E-3kg=1E-4 J/kg
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
@@ -213,8 +213,8 @@ ns.speciesviscconst=0.52 0.52 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #ns.speciesconst=0.0121 0.0121  #initial vapor mass fraction in atmosphere
 #if ns.Tanasawa_or_Schrage_or_Kassemi=3,
-#ns.speciesconst=1.0 1.0  # Kassemi
-ns.speciesconst=0.0 0.0  #initial vapor mass fraction in atmosphere
+ns.speciesconst=1.0 1.0  # Kassemi
+#ns.speciesconst=0.0 0.0  #initial vapor mass fraction in atmosphere
 #ns.hardwire_Y_gamma=0.43883357714919285 0.0 
 ns.radblob2=0.0  # since species=1 for Kassemi model, put Y_inf here.
 #1.0016 milli pascals * s = 1.002 E-3 pa * s
