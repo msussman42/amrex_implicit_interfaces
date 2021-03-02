@@ -3743,9 +3743,56 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
   slab_step=ns_time_order-1;
 
+  // declared in: MacProj.cpp
+  // MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
   // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
   // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
+
+  if (visual_divergence_plot_int>0) {
+   int ratio=(nsteps+1)/visual_divergence_plot_int;
+   ratio=ratio*visual_divergence_plot_int;
+   if (ratio==nsteps+1) {
+
+    // declared in: MacProj.cpp
+    getStateDIV_ALL(MACDIV_MF,1);
+    if (localMF[MACDIV_MF]->nComp()!=num_materials_vel)
+     amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
+
+    int caller_id=1;
+     //MACDIV<stuff>.plt (visit can open binary tecplot files)
+    writeSanityCheckData(
+      "MACDIV",
+      "MACDIV_MF: actual div u",
+      caller_id,
+      localMF[MACDIV_MF]->nComp(), 
+      MACDIV_MF,
+      -1,  // State_Type==-1 
+      -1); // data_dir==-1 (cell centered)
+
+    caller_id=2;
+    //DIV_Type<stuff>.plt (visit can open binary tecplot files)
+    writeSanityCheckData(
+      "DIV_Type",
+      "DIV_Type: -dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol",
+           caller_id,
+           localMF[BURNING_VELOCITY_MF]->nComp(), 
+           BURNING_VELOCITY_MF,
+           -1,  // State_Type==-1 
+           -1); // data_dir==-1 (cell centered)
+
+ delete_array(MACDIV_MF);
+	 }
+	} else if (very_last_sweep==0) {
+	 // do nothing
+	} else
+	 amrex::Error("very_last_sweep invalid");
+
+       } else if (visual_divergence_plot_int==0) {
+        // do nothing
+       } else
+        amrex::Error("visual_divergence_plot_int invalid");
+
 
   debug_memory();
 
