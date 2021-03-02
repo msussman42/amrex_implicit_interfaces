@@ -9918,10 +9918,11 @@ void NavierStokes::multiphase_project(int project_option) {
    // S_new 
    //  State_Type if project_option==0 
    //  DIV_Type if project_option==11
+   //   DIV_Type=-dt*(pnew-padv)/(rho c^2 dt^2) + mdot * dt/vol
    //   if (project_option==11) then
-   //    if (incomp): csnd(2)=0, DIFFSUIONRHS=(1/dt)( DIV_Type )
+   //    if (incomp): csnd(2)=0, DIFFSUIONRHS=(1/dt)( DIV_Type ) * vol
    //    if (comp): csnd(2)=DIV_TYPE
-   FIX ME 
+   // 
    //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
    ns_level.init_advective_pressure(project_option); 
   } else if (project_option==12) {

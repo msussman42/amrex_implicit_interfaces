@@ -9978,8 +9978,9 @@ void NavierStokes::init_pressure_error_indicator() {
 //    Equation of state to be used depends on vofPC
 // 3. in incompressible regions, p=0
 //
+// div_hold=(pnew-pold)/(rho c^2 dt) + dt mdot/vol
 // if project_option==11
-// 1. div_hold/dt is put in localMF[DIFFUSIONRHS_MF]
+// 1. div_hold*vol/dt is put in localMF[DIFFUSIONRHS_MF] in incomp parts
 // 2. div_hold/(csound_hold*dt) is put in the 2nd component of cell_sound where
 //    there are compressible materials.
 //
@@ -10000,6 +10001,9 @@ void NavierStokes::init_advective_pressure(int project_option) {
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
+
+ resize_metrics(1);
+ debug_ngrow(VOLUME_MF,0,700);
 
  debug_ngrow(FACE_VAR_MF,0,660);
 
@@ -10074,6 +10078,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
   int dc=1; // copy 1st component of DIV_TYPE contents 
             // into 2nd component of 
             // localMF[CELL_SOUND_MF]
+            // DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
   MultiFab::Copy(*localMF[CELL_SOUND_MF],S_new,sc,dc,1,0);
  } else
   amrex::Error("project_option invalid29");
@@ -10101,6 +10106,8 @@ void NavierStokes::init_advective_pressure(int project_option) {
   const Real* xlo = grid_loc[gridno].lo();
 
   FArrayBox& denfab=(*denmf)[mfi];
+
+  FArrayBox& volumefab=(*localMF[VOLUME_MF])[mfi];
 
    // tessellating volume fractions.
   FArrayBox& voffab=(*localMF[CELL_VOF_MF])[mfi];
@@ -10132,6 +10139,8 @@ void NavierStokes::init_advective_pressure(int project_option) {
    &dt_slab,
    maskcov.dataPtr(),
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+   volumefab.dataPtr(),
+   ARLIM(volumefab.loVect()),ARLIM(volumefab.hiVect()),
    lsnewfab.dataPtr(),
    ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
    csoundfab.dataPtr(),

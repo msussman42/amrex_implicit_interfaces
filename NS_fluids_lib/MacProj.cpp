@@ -2412,7 +2412,6 @@ void NavierStokes::ADVECT_DIV_ALL() {
 
 // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
 // if incompressible: DIV_new=MDOT_MF dt/vol
-FIX ME
 void NavierStokes::ADVECT_DIV() {
  
  bool use_tiling=ns_tiling;
@@ -2420,6 +2419,9 @@ void NavierStokes::ADVECT_DIV() {
  int nmat=num_materials;
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");
+
+ resize_metrics(1);
+ debug_ngrow(VOLUME_MF,0,700);
 
  debug_ngrow(FACE_VAR_MF,0,660);
 
@@ -2462,6 +2464,8 @@ void NavierStokes::ADVECT_DIV() {
 
   const Real* xlo = grid_loc[gridno].lo();
 
+  FArrayBox& volumefab=(*localMF[VOLUME_MF])[mfi];
+
   // coeff_avg,padvect_avg,coeff1,padvect1, ... ,coeffn,padvectn 
   FArrayBox& csoundfab=(*localMF[CELL_SOUND_MF])[mfi];
   FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
@@ -2475,6 +2479,8 @@ void NavierStokes::ADVECT_DIV() {
   FORT_UPDATE_DIV(
    xlo,dx,
    &dt_slab,
+   volumefab.dataPtr(),
+   ARLIM(volumefab.loVect()),ARLIM(volumefab.hiVect()),
    csoundfab.dataPtr(),
    ARLIM(csoundfab.loVect()),ARLIM(csoundfab.hiVect()),
    mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
