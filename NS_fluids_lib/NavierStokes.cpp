@@ -17786,6 +17786,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
 
+  // declared in: MacProj.cpp
  getStateDIV_ALL(MACDIV_MF,1);
  if (localMF[MACDIV_MF]->nComp()!=num_materials_vel)
   amrex::Error("localMF[MACDIV_MF]->nComp() invalid");

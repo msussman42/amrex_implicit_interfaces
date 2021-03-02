@@ -2386,8 +2386,8 @@ void NavierStokes::update_SEM_forces(int project_option,
 
 } // subroutine update_SEM_forces
 
-// if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
-// if incompressible: DIV_new=MDOT_MF dt
+// if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
+// if incompressible: DIV_new=MDOT_MF dt/vol
 // called from NavierStokes::multiphase_project if project_option==11
 // and called from NavierStokes::do_the_advance if advance_status==1.
 void NavierStokes::ADVECT_DIV_ALL() {
@@ -2410,8 +2410,9 @@ void NavierStokes::ADVECT_DIV_ALL() {
 } // subroutine ADVECT_DIV_ALL
 
 
-// if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
-// if incompressible: DIV_new=MDOT_MF dt
+// if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
+// if incompressible: DIV_new=MDOT_MF dt/vol
+FIX ME
 void NavierStokes::ADVECT_DIV() {
  
  bool use_tiling=ns_tiling;

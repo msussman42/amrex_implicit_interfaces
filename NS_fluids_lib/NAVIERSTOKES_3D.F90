@@ -12748,6 +12748,7 @@ END SUBROUTINE SIMP
           div_hold(1)=zero
          else if (project_option.eq.11) then !FSI_material_exists 2nd project
            ! coeff_avg,p_avg
+           FIX ME multiply by volume ?
           div_hold(1)=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
                                               ! of DIV_TYPE)
            ! FORT_ADVECTIVE_PRESSURE called from 
@@ -13020,6 +13021,8 @@ END SUBROUTINE SIMP
               csnd(D_DECL(i,j,k),2)=zero ! padvect
               mdot(D_DECL(i,j,k),1)=div_hold(1)/dt ! localMF[DIFFUSIONRHS_MF]
              else if (csound_hold.ne.zero) then
+              ! "div" = (pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
+              FIX ME
               ! (1/(rho c^2 dt^2))p=div/dt
               ! csound_hold p = div/dt
               ! p=div/(dt csound_hold)

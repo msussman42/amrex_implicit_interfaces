@@ -246,7 +246,7 @@ stop
 
       enddo ! im=1..num_materials_vel 
 
-       ! multigrid pressure
+       ! multigrid pressure  "PMG"
       do im=1,num_materials_vel
 
        write(matstr,'(I2)') im
@@ -270,6 +270,7 @@ stop
        call dumpstring(Varname)
       enddo ! im=1..num_materials_vel 
 
+       ! EOS pressure: "PEOS"
       do im=1,num_materials_vel
 
        write(matstr,'(I2)') im
@@ -294,6 +295,8 @@ stop
        call dumpstring(Varname)
       enddo ! im=1..num_materials_vel 
 
+       ! Divergence derived from the velocity: "DIV"
+       ! see MacProj.cpp: NavierStokes::getStateDIV_ALL
       do im=1,num_materials_vel
 
        write(matstr,'(I2)') im
@@ -316,6 +319,9 @@ stop
        call dumpstring(Varname)
       enddo ! im=1..num_materials_vel 
 
+       ! expected divergence: "DIVDT"
+       ! see NavierStokes.cpp: NavierStokes::getStateDIV_DATA
+       ! "DIV_Type"
       do im=1,num_materials_vel
 
        write(matstr,'(I2)') im
