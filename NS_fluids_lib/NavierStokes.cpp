@@ -416,6 +416,7 @@ int  NavierStokes::visual_revolve=0;
 int  NavierStokes::visual_option=-2; // -2 zonal tecplot,-1 plot files (visit)
 int  NavierStokes::visual_phase_change_plot_int=0; 
 int  NavierStokes::visual_buoyancy_plot_int=0; 
+int  NavierStokes::visual_divergence_plot_int=0; 
 
 int NavierStokes::visual_compare=0; 
 Vector<int> NavierStokes::visual_ncell;
@@ -2616,6 +2617,7 @@ NavierStokes::read_params ()
     pp.query("visual_option",visual_option); //-2 tecplot, -1 visit files
     pp.query("visual_phase_change_plot_int",visual_phase_change_plot_int);
     pp.query("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
+    pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
 
     if ((visual_tessellate_vfrac!=0)&&
         (visual_tessellate_vfrac!=1)&&
@@ -4997,6 +4999,8 @@ NavierStokes::read_params ()
 	     visual_phase_change_plot_int << '\n';
      std::cout << "visual_buoyancy_plot_int " << 
 	     visual_buoyancy_plot_int << '\n';
+     std::cout << "visual_divergence_plot_int " << 
+	     visual_divergence_plot_int << '\n';
 
      std::cout << "visual_compare " << visual_compare << '\n';
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {

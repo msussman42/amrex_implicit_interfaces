@@ -2308,6 +2308,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   }
  }
 
+ int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+
  SDC_outer_sweeps=0;
  slab_step=0;
  SDC_setup_step();
@@ -2390,7 +2392,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          (advance_status==1));
         divu_outer_sweeps++) {
 
-    int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
     very_last_sweep=0;
 
     if ((SDC_outer_sweeps+1==SDC_outer_sweeps_end)&&
@@ -3771,28 +3772,24 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       -1); // data_dir==-1 (cell centered)
 
     caller_id=2;
+    MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
     //DIV_Type<stuff>.plt (visit can open binary tecplot files)
     writeSanityCheckData(
       "DIV_Type",
       "DIV_Type: -dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol",
-           caller_id,
-           localMF[BURNING_VELOCITY_MF]->nComp(), 
-           BURNING_VELOCITY_MF,
-           -1,  // State_Type==-1 
-           -1); // data_dir==-1 (cell centered)
+      caller_id,
+      DIV_new.nComp(), 
+      -1,
+      DIV_Type,  // State_Type==-1 
+      -1); // data_dir==-1 (cell centered)
 
- delete_array(MACDIV_MF);
-	 }
-	} else if (very_last_sweep==0) {
-	 // do nothing
-	} else
-	 amrex::Error("very_last_sweep invalid");
+    delete_array(MACDIV_MF);
+   }
 
-       } else if (visual_divergence_plot_int==0) {
-        // do nothing
-       } else
-        amrex::Error("visual_divergence_plot_int invalid");
-
+  } else if (visual_divergence_plot_int==0) {
+   // do nothing
+  } else
+   amrex::Error("visual_divergence_plot_int invalid");
 
   debug_memory();
 
