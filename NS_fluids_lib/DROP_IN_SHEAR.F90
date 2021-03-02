@@ -686,6 +686,7 @@ REAL_T, intent(inout) :: PRES
 REAL_T, intent(in) :: PRES_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
+REAL_T :: rr
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -695,7 +696,14 @@ else
 endif
 
  call DROP_IN_SHEAR_PRES(xghost,t,LS,PRES,nmat)
-
+ rr=xghost(1)**2+xghost(2)**2
+ if (SDIM.eq.3) then
+  rr=rr+xghost(SDIM)**2
+ endif
+ rr=sqrt(rr)
+ if (1.eq.0) then
+  print *,"x,y,r,t,pres ",xghost(1),xghost(2),rr,t,PRES
+ endif
 
 return
 end subroutine DROP_IN_SHEAR_PRES_BC
