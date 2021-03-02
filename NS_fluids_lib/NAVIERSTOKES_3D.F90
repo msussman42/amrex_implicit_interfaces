@@ -12531,6 +12531,7 @@ END SUBROUTINE SIMP
         xlo,dx, &
         dt, &
         maskcov,DIMS(maskcov), &
+        vol,DIMS(vol), &
         lsnew,DIMS(lsnew), &
         csnd,DIMS(csnd), &
         cvof,DIMS(cvof), & ! tessellating
@@ -12566,12 +12567,14 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: dt
 
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
       INTEGER_T, intent(in) :: DIMDEC(csnd)
       INTEGER_T, intent(in) :: DIMDEC(cvof)
       INTEGER_T, intent(in) :: DIMDEC(den)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in) :: vol(DIMV(vol))
       REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
       REAL_T, intent(inout) :: csnd(DIMV(csnd),2) 
       REAL_T, intent(in) :: cvof(DIMV(cvof),nmat) 
@@ -12601,6 +12604,7 @@ END SUBROUTINE SIMP
       INTEGER_T local_mask
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
+      REAL_T local_volume
 
       if (bfact.ge.1) then
        ! do nothing
@@ -12665,6 +12669,7 @@ END SUBROUTINE SIMP
       endif
 
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,44)
+      call checkbound(fablo,fabhi,DIMS(vol),0,-1,44)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,44)
       call checkbound(fablo,fabhi,DIMS(csnd),0,-1,44)
       call checkbound(fablo,fabhi,DIMS(cvof),0,-1,44)
@@ -12680,6 +12685,14 @@ END SUBROUTINE SIMP
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
+       local_volume=vol(D_DECL(i,j,k))
+       if (local_volume.gt.zero) then
+        ! do nothing
+       else
+        print *,"local_volume must be positive"
+        stop
+       endif
 
        rmaskcov=maskcov(D_DECL(i,j,k))
        local_mask=NINT(rmaskcov)
@@ -12748,9 +12761,9 @@ END SUBROUTINE SIMP
           div_hold(1)=zero
          else if (project_option.eq.11) then !FSI_material_exists 2nd project
            ! coeff_avg,p_avg
-           FIX ME multiply by volume ?
+           ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
           div_hold(1)=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
-                                              ! of DIV_TYPE)
+                                              ! of DIV_Type)
            ! FORT_ADVECTIVE_PRESSURE called from 
            !   NavierStokes::init_advective_pressure
            ! init_advective_pressure called from
@@ -12973,8 +12986,9 @@ END SUBROUTINE SIMP
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
            if (project_option.eq.11) then ! FSI_material_exists (last project)
+            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
             ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
-            mdot(D_DECL(i,j,k),1)=div_hold(1)/dt
+            mdot(D_DECL(i,j,k),1)=local_volume*div_hold(1)/dt
            else if (project_option.eq.0) then
             ! do nothing
            else
@@ -13019,13 +13033,15 @@ END SUBROUTINE SIMP
 
              if (csound_hold.eq.zero) then ! incomp
               csnd(D_DECL(i,j,k),2)=zero ! padvect
-              mdot(D_DECL(i,j,k),1)=div_hold(1)/dt ! localMF[DIFFUSIONRHS_MF]
+               ! localMF[DIFFUSIONRHS_MF]
+               ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+              mdot(D_DECL(i,j,k),1)=local_volume*div_hold(1)/dt 
              else if (csound_hold.ne.zero) then
-              ! "div" = (pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
-              FIX ME
+              ! "div" = -(pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
               ! (1/(rho c^2 dt^2))p=div/dt
               ! csound_hold p = div/dt
               ! p=div/(dt csound_hold)
+              ! p = p * vol in MacProj.cpp
               csnd(D_DECL(i,j,k),2)=div_hold(1)/(csound_hold*dt)
              else
               print *,"csound_hold invalid"
@@ -13045,7 +13061,9 @@ END SUBROUTINE SIMP
             csnd(D_DECL(i,j,k),1)=zero ! coeff
             csnd(D_DECL(i,j,k),2)=zero ! padvect
             if (project_option.eq.11) then !FSI_material_exists last project
-             mdot(D_DECL(i,j,k),1)=div_hold(1)/dt ! localMF[DIFFUSIONRHS_MF]
+              ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+              ! localMF[DIFFUSIONRHS_MF]
+             mdot(D_DECL(i,j,k),1)=div_hold(1)*local_volume/dt 
             else if (project_option.eq.0) then
              ! do nothing
             else
@@ -13086,10 +13104,11 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_ADVECTIVE_PRESSURE
 
-
+       ! called from NavierStokes::ADVECT_DIV which is declared in MacProj.cpp
       subroutine FORT_UPDATE_DIV( &
         xlo,dx, &
         dt, &
+        vol,DIMS(vol), &
         csound,DIMS(csound), &
         mdot,DIMS(mdot), &
         pnew,DIMS(pnew), &
@@ -13104,26 +13123,30 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
 
-      INTEGER_T nmat
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T dt
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
 
-      INTEGER_T DIMDEC(csound)
-      INTEGER_T DIMDEC(mdot)
-      INTEGER_T DIMDEC(pnew)
-      INTEGER_T DIMDEC(divnew)
-      REAL_T csound(DIMV(csound),2) 
-      REAL_T mdot(DIMV(mdot)) 
-      REAL_T pnew(DIMV(pnew),num_materials_vel) 
-      REAL_T divnew(DIMV(divnew),num_materials_vel) 
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(csound)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(pnew)
+      INTEGER_T, intent(in) :: DIMDEC(divnew)
+      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, intent(in) :: csound(DIMV(csound),2) 
+      REAL_T, intent(in) :: mdot(DIMV(mdot)) 
+      REAL_T, intent(in) :: pnew(DIMV(pnew),num_materials_vel) 
+      REAL_T, intent(out) :: divnew(DIMV(divnew),num_materials_vel) 
+
       INTEGER_T i,j,k
       REAL_T coeff_hold,compress_term,mdot_term
       INTEGER_T sound_comp
+      REAL_T local_volume
 
       if (bfact.lt.1) then
        print *,"bfact invalid165"
@@ -13138,6 +13161,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
+      call checkbound(fablo,fabhi,DIMS(vol),0,-1,44)
       call checkbound(fablo,fabhi,DIMS(csound),0,-1,44)
       call checkbound(fablo,fabhi,DIMS(mdot),0,-1,44)
       call checkbound(fablo,fabhi,DIMS(pnew),1,-1,44)
@@ -13154,13 +13178,21 @@ END SUBROUTINE SIMP
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
+       local_volume=vol(D_DECL(i,j,k))
+       if (local_volume.gt.zero) then
+        ! do nothing
+       else
+        print *,"local_volume must be positive"
+        stop
+       endif
+
        sound_comp=1
        coeff_hold=csound(D_DECL(i,j,k),sound_comp) ! 1/(rho c^2 dt^2)
 
-       if (coeff_hold.gt.zero) then
+       if (coeff_hold.gt.zero) then ! compressible
         compress_term=-dt*(pnew(D_DECL(i,j,k),1)- &
           csound(D_DECL(i,j,k),sound_comp+1))*coeff_hold
-       else if (coeff_hold.eq.zero) then
+       else if (coeff_hold.eq.zero) then ! incompressible
         compress_term=zero
        else
         print *,"coeff_hold invalid"
@@ -13169,7 +13201,7 @@ END SUBROUTINE SIMP
 
        mdot_term=mdot(D_DECL(i,j,k))
 
-       divnew(D_DECL(i,j,k),1)=compress_term+mdot_term*dt
+       divnew(D_DECL(i,j,k),1)=compress_term+mdot_term*dt/local_volume
          
       enddo
       enddo
