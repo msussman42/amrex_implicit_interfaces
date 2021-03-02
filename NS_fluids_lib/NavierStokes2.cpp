@@ -10298,6 +10298,7 @@ void NavierStokes::scale_variables(int scale_flag) {
  int scomp_pres=num_materials_vel*AMREX_SPACEDIM;
  S_new.mult(pres_factor,scomp_pres,nsolveMM,0);
 
+  // DIV_new contains -dt (pnew-padv)/(rho c^2 dt^2) + MDOT_MF dt/vol
  DIV_new.mult(vel_factor,0,nsolveMM,0);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {

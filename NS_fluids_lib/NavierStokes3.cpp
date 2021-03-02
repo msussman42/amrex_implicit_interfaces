@@ -3317,8 +3317,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          multiphase_project(rigid_project_option);
 
           // MDOT term not included, instead 
-          // If compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
-          // If incompressible: DIV_new=MDOT_MF dt
+          // If compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+
+	  //                          MDOT_MF dt/vol
+          // If incompressible: DIV_new=MDOT_MF dt/vol
           // If one of the adjoining cells of a face are in the 
           // "flexible solid," then the face coefficient = 0. 
           // See: FORT_BUILDFACEWT, FACE_VAR_MF
@@ -3742,8 +3743,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
   slab_step=ns_time_order-1;
 
-  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
-  // if incompressible: DIV_new=MDOT_MF dt
+  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
+  // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
 
   debug_memory();
@@ -8267,11 +8268,13 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
   int scomp=0;
+   // MDOT_MF already premultiplied by the cell volume
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolveMM,0);
  } else if (project_option==1) { // initial project
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
   int scomp=0;
+   // MDOT_MF already premultiplied by the cell volume
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
   zero_independent_variable(project_option,nsolve);
  } else if (project_option==2) { // thermal conduction
@@ -9360,8 +9363,8 @@ void NavierStokes::multiphase_project(int project_option) {
       DIV_new,0,0,1,1);
   } // ilev=level ... finest_level
   // in: MacProj.cpp
-  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt
-  // if incompressible: DIV_new=MDOT_MF dt
+  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
+  // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
  } // project_option==11
 
@@ -9915,6 +9918,11 @@ void NavierStokes::multiphase_project(int project_option) {
    // S_new 
    //  State_Type if project_option==0 
    //  DIV_Type if project_option==11
+   //   if (project_option==11) then
+   //    if (incomp): csnd(2)=0, DIFFSUIONRHS=(1/dt)( DIV_Type )
+   //    if (comp): csnd(2)=DIV_TYPE
+   FIX ME 
+   //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
    ns_level.init_advective_pressure(project_option); 
   } else if (project_option==12) {
    // do nothing (pressure extrapolation)
