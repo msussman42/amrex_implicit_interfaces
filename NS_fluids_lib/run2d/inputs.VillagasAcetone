@@ -80,7 +80,7 @@ cg.verbose = 0 # 1=check initial residual  2=check all the residuals
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
-mg.bot_atol = 1.0e-13
+mg.bot_atol = 1.0e-14
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -119,7 +119,7 @@ amr.file_name_digits=7
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-9
+mac.mac_abs_tol    = 1.0e-11
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep

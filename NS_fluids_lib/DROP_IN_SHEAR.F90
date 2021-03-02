@@ -696,6 +696,7 @@ else
 endif
 
  call DROP_IN_SHEAR_PRES(xghost,t,LS,PRES,nmat)
+
  rr=xghost(1)**2+xghost(2)**2
  if (SDIM.eq.3) then
   rr=rr+xghost(SDIM)**2
