@@ -13617,7 +13617,7 @@ stop
       endif
       if ((divu_outer_sweeps.lt.0).or. &
           (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
-       print *,"divu_outer_sweeps invalid"
+       print *,"divu_outer_sweeps invalid FORT_VELMAC_OVERRIDE"
        stop
       endif
   
@@ -24079,7 +24079,7 @@ stop
           (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
        ! do nothing
       else
-       print *,"divu_outer_sweeps invalid"
+       print *,"divu_outer_sweeps invalid FORT_FACE_GRADIENTS"
        stop
       endif
        ! in: FORT_FACE_GRADIENTS

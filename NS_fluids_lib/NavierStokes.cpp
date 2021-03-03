@@ -11075,7 +11075,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
  else if (divu_outer_sweeps>0)
   vel_time_slab=cur_time_slab;
  else
-  amrex::Error("divu_outer_sweeps invalid");
+  amrex::Error("divu_outer_sweeps invalid prepare_displacement");
 
  int mac_grow_expect=1;
  if (face_flag==0) {
@@ -15098,7 +15098,7 @@ NavierStokes::split_scalar_advection() {
  else if (divu_outer_sweeps>0)
   vel_time_slab=cur_time_slab;
  else
-  amrex::Error("divu_outer_sweeps invalid");
+  amrex::Error("divu_outer_sweeps invalid split_scalar_advection");
 
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);

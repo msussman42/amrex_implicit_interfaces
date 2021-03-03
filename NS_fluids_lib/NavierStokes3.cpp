@@ -2058,7 +2058,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
     else if (divu_outer_sweeps>0)
      vel_time_slab=cur_time_slab;
     else
-     amrex::Error("divu_outer_sweeps invalid");
+     amrex::Error("divu_outer_sweeps invalid SEM_advectALL");
    } else
     amrex::Error("source_term invalid");
 
@@ -3701,7 +3701,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
                   (divu_outer_sweeps+1<local_num_divu_outer_sweeps)) {
          // do nothing
        } else
-        amrex::Error("divu_outer_sweeps invalid");
+        amrex::Error("divu_outer_sweeps invalid do_the_advance");
     
       } else if (slab_step==ns_time_order) {
 
@@ -3751,6 +3751,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   ADVECT_DIV_ALL();
 
   if (visual_divergence_plot_int>0) {
+
+   SDC_outer_sweeps=ns_time_order-1;
+   divu_outer_sweeps=num_divu_outer_sweeps-1;
+
    int ratio=(nsteps+1)/visual_divergence_plot_int;
    ratio=ratio*visual_divergence_plot_int;
    if (ratio==nsteps+1) {
@@ -9725,7 +9729,7 @@ void NavierStokes::multiphase_project(int project_option) {
   } else if (divu_outer_sweeps+1<num_divu_outer_sweeps) {
    // do nothing
   } else
-   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
+   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid multiphase prj");
 
  }  // project_option==0 
 

@@ -107,7 +107,7 @@ amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
 amr.plot_int        = 1000 # was 100  (plot_int=1 for testing)
-ns.visual_divergence_plot_int=100
+#ns.visual_divergence_plot_int=40
 #ns.visual_phase_change_plot_int = 1000
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
@@ -160,10 +160,11 @@ ns.constant_density_all_time=1 1 # expansion
 #ns.constant_density_all_time=1 0 # sealed
 ns.constant_volume_mdot=0 0 # expansion
 #ns.constant_volume_mdot=-1 0 # sealed
-#evaporation: freezing_model=6 Palmore and Desjardins 
-#             freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
+#evaporation: 
+#  freezing_model=6 Palmore and Desjardins 
+#  freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 ns.freezing_model=6 0
-ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 # 3 0=Kassemi 0 0=Palmore and Desjardins
+ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 # 3 0=Kassemi 0 0=Palmore and Desjardins
 ns.mass_fraction_id=1 0 
 ns.saturation_temp = 329.0 0.0  # CODY ~ T_gamma = 373.15 K
 ns.saturation_temp_min = 273.0 0.0  
@@ -216,8 +217,8 @@ ns.speciesviscconst=0.52 0.52 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s
 # https://www.ready.noaa.gov/READYmoistcal.php 
 #ns.speciesconst=0.0121 0.0121  #initial vapor mass fraction in atmosphere
 #if ns.Tanasawa_or_Schrage_or_Kassemi=3,
-ns.speciesconst=1.0 1.0  # Kassemi
-#ns.speciesconst=0.0 0.0  #initial vapor mass fraction in atmosphere
+#ns.speciesconst=1.0 1.0  # Kassemi
+ns.speciesconst=0.0 0.0  #initial vapor mass fraction in atmosphere Villagas
 #ns.hardwire_Y_gamma=0.43883357714919285 0.0 
 ns.radblob2=0.0  # since species=1 for Kassemi model, put Y_inf here.
 #1.0016 milli pascals * s = 1.002 E-3 pa * s

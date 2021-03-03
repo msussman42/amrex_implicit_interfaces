@@ -7636,7 +7636,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
  else if (divu_outer_sweeps>0)
   vel_time_slab=cur_time_slab;
  else
-  amrex::Error("divu_outer_sweeps invalid");
+  amrex::Error("divu_outer_sweeps invalid move_particles");
 
  if ((im_PLS>=0)&&(im_PLS<nmat)) {
   // do nothing
