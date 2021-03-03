@@ -3,20 +3,22 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 0
+      integer, PARAMETER :: probtype = 1
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
        ! evap_model==2 => same as evap_model==0, except that initial
        ! volume fraction is zero.
-      integer, PARAMETER :: evap_model=0
+      integer, PARAMETER :: evap_model=1
 
       integer, PARAMETER :: nsteps=1000
         ! for convergence study: Borodulin test:
         ! check R_gamma at t=500.0,
         ! num_intervals=32,64,128,256,512,1024 (check the 
         ! error between consecutive grid resolutions) |R_h - R_2h|  
-      integer, PARAMETER :: num_intervals=256
+      integer, PARAMETER :: num_intervals=512
+       ! was 8.0 for Cody's results.
+      real*8, PARAMETER :: gas_domain_size_factor=8.0d0
 
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
@@ -139,7 +141,7 @@
 
 
       subroutine drop_analytical_solution(time,x,D_gamma,T,Y,VEL, &
-       VEL_I,LS_VAP)
+       VEL_I,LS_VAP,VEL_G)
       IMPLICIT NONE
 
       real*8, intent(in) :: time
@@ -150,6 +152,7 @@
       real*8, intent(out) :: LS_VAP
       real*8, intent(out) :: VEL
       real*8, intent(out) :: VEL_I
+      real*8, intent(out) :: VEL_G
       real*8 :: rr,mdot,vel_r,my_pi,expand_factor
      
       my_pi=4.0d0*atan(1.0d0)
@@ -175,6 +178,7 @@
       LS_VAP=rr-0.5d0*D_gamma
      
       VEL_I=mdot/(my_pi*D_gamma*D_gamma*den_G)
+      VEL_G=mdot/(my_pi*D_gamma*D_gamma*den_G)
       expand_factor=1.0d0/den_G-1.0d0/den_L
       VEL_I=-VEL_I/(expand_factor*den_L)
  
@@ -422,6 +426,8 @@
       real*8 :: mdotT
       real*8 :: burnvel
       real*8 :: e_grid,P_grid,X_grid
+      real*8 :: VEL_G
+      real*8 :: TINF_for_numerical
 
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
@@ -446,7 +452,7 @@
        Y_inf_global=7.1d-3  ! dimensionless
        T_gamma=300.5   ! K
        cc=0.0d0
-       TSTOP=1000.0d0  ! seconds
+       TSTOP=880.0d0  ! seconds
       else if (probtype.eq.1) then
        find_TINF_from_TGAMMA=0
        radblob = 0.005d0
@@ -467,7 +473,7 @@
        Y_inf_global=0.0d0
        T_gamma=300.5d0  ! placeholder
        cc=0.0d0
-       TSTOP=0.028d0
+       TSTOP=0.025d0
       else
        print *,"probtype invalid"
        stop
@@ -554,16 +560,42 @@
       dt=(TSTOP-TSTART)/nsteps
       print *,"START OF ANALYTICAL SOLUTION RESULTS"
       print *,"ANALYTICAL SOLUTION ASSUMES INFINITE DOMAIN"
-      print *,"TIME R_Gamma ARATIO T Y  VEL VEL_I "
-      
+      print *,"TIME R_Gamma ARATIO T Y  VEL VEL_I VEL_G"
+    
+      print *,"opening: analytical" 
+      open(unit=4,file="analytical") 
       do istep=1,nsteps
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
-         VEL,VEL_I,LS)
-       print *,cur_time," ",0.5d0*D_gamma," ", &
+         VEL,VEL_I,LS,VEL_G)
+
+       if (1.eq.0) then
+        print *,cur_time," ",0.5d0*D_gamma," ", &
+         (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
+         " ",VEL," ",VEL_I," ",VEL_G
+       endif
+
+       write(4,*) cur_time," ",0.5d0*D_gamma," ", &
         (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
-        " ",VEL," ",VEL_I
+        " ",VEL," ",VEL_I," ",VEL_G
+
        cur_time=cur_time+dt
       enddo
+      print *,"closing: analytical" 
+      close(4)
+
+      probhi_R_domain=gas_domain_size_factor*radblob+0.5d0*D_gamma
+      dx=(probhi_R_domain-0.5d0*D_gamma)/num_intervals
+
+      print *,"opening: analytical_T"
+      open(unit=16,file="analytical_T") 
+      do igrid=1,num_intervals
+       xpos=igrid*dx+0.5d0*D_gamma
+       call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
+         VEL,VEL_I,LS,VEL_G)
+       write (16,*) xpos," ",T
+      enddo
+      print *,"closing: analytical_T"
+      close(16)
 
       print *,"END OF ANALYTICAL SOLUTION RESULTS, INFINITE DOMAIN"
 
@@ -576,7 +608,7 @@
       print *,"radblob=",radblob
       print *,"gas region size: 8 * radblob "
 
-      probhi_R_domain=8.0d0*radblob+R_gamma_NEW
+      probhi_R_domain=gas_domain_size_factor*radblob+R_gamma_NEW
       dx=(probhi_R_domain-R_gamma_NEW)/num_intervals
       cur_time=0.0d0
 
@@ -600,12 +632,15 @@
       do igrid=1,num_intervals
        xpos=igrid*dx+R_gamma_new
        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
-         VEL,VEL_I,LS)
+         VEL,VEL_I,LS,VEL_G)
        TNEW(igrid)=T
        TOLD(igrid)=T
        YNEW(igrid)=Y
        YOLD(igrid)=Y
       enddo
+
+      TINF_for_numerical=T_inf_global
+      TINF_for_numerical=T_inf_global
 
       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
@@ -640,8 +675,11 @@
       print *,"probhi_R_domain=",probhi_R_domain
       print *,"reference pressure=",P_sat_global
       print *,"gamma_G=CP/CV,CP,CV ",gamma_G," ",C_pG," ",C_pG/gamma_G
-      print *,"STEP TIME ARAT TGAMMA YGAMMA "
-      print *,istep," ",cur_time," ", &
+      print *,"STEP TIME ARAT TGAMMA YGAMMA VEL_G"
+
+      print *,"opening: numerical_spherical_1D" 
+      open(unit=5,file="numerical_spherical_1D") 
+      write(5,*) istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
          TNEW(0)," ",YNEW(0)
 
@@ -692,6 +730,10 @@
        burnvel=mdotT/den_L
        R_gamma_NEW=R_gamma_OLD-dt*burnvel
 
+       if (R_gamma_NEW.le.0.0d0) then
+        R_gamma_NEW=R_gamma_OLD
+       endif
+
          ! STEP 3: interpolate old temperature from the old grid to the
          ! new grid.  For those new grid nodes which were previously in
          ! the liquid, but now in the vapor, a crossing time is
@@ -732,7 +774,7 @@
        DT_CROSSING(0)=0.0d0
        DT_CROSSING(num_intervals)=dt
        TOLD_grid(0)=T_gamma_c  ! interface temperature
-       TOLD_grid(num_intervals)=T_inf_global  ! temperature at far right
+       TOLD_grid(num_intervals)=TINF_for_numerical ! temperature at far right
        YOLD_grid(0)=Y_gamma_c  ! interface mass fraction
        YOLD_grid(num_intervals)=Y_inf_global  ! mass fraction at far RT.
 
@@ -767,7 +809,7 @@
          LDIAG(igrid)=0.0d0
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
         else if (igrid.eq.num_intervals-1) then
-         RHS(igrid)=RHS(igrid)+diffuse_plus*T_inf_global
+         RHS(igrid)=RHS(igrid)+diffuse_plus*TINF_for_numerical
          UDIAG(igrid)=0.0d0
          LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
@@ -782,7 +824,7 @@
        call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
 
        TNEW(0)=T_gamma_c
-       TNEW(num_intervals)=T_inf_global 
+       TNEW(num_intervals)=TINF_for_numerical
        do igrid=1,num_intervals-1
         TNEW(igrid)=SOLN(igrid)
        enddo
@@ -842,11 +884,23 @@
        dx=dx_new
        R_gamma_OLD=R_gamma_NEW
        cur_time=cur_time+dt
-       print *,istep," ",cur_time," ", &
+       write(5,*) istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
-         TNEW(0)," ",YNEW(0)
+         TNEW(0)," ",YNEW(0)," ",mdotT/den_G
 
       enddo ! istep=1..nsteps
+
+      print *,"closing: numerical_spherical_1D" 
+      close(5)
+
+      print *,"opening: numerical_spherical_1D_T"
+      open(unit=7,file="numerical_spherical_1D_T") 
+      do igrid=0,num_intervals
+       xpos=igrid*dx+R_gamma_new
+       write (7,*) xpos," ",TNEW(igrid)
+      enddo
+      print *,"closing: numerical_spherical_1D_T" 
+      close(7)
 
       deallocate(TNEW)
       deallocate(TOLD)

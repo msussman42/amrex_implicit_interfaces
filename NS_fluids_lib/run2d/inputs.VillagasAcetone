@@ -107,6 +107,7 @@ amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
 amr.plot_int        = 1000 # was 100  (plot_int=1 for testing)
+ns.visual_divergence_plot_int=100
 #ns.visual_phase_change_plot_int = 1000
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
@@ -137,8 +138,9 @@ ns.conservative_tension_force=0
 # should not make a difference since this coefficient is not in the
 # evaporation mdot model.
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
-#ns.tension=5.0  # 0.005 MKS in Villagas et al
-ns.tension=0.5
+#From 1D simulations, largest gas velocity is 198.0 cm/s
+#the capillary wave speed if 5.0 dynes/cm is about 360.0 cm/s
+ns.tension=5.0  # 0.005 MKS in Villagas et al
 ns.vof_height_function=1
 # 1E7 erg=1j  1 ERG/g = 1E-7 J/1E-3kg=1E-4 J/kg
 ns.stiffCP= 2.0e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
