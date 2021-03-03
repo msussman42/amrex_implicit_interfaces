@@ -3,7 +3,7 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 1
+      integer, PARAMETER :: probtype = 0
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
@@ -16,7 +16,7 @@
         ! check R_gamma at t=500.0,
         ! num_intervals=32,64,128,256,512,1024 (check the 
         ! error between consecutive grid resolutions) |R_h - R_2h|  
-      integer, PARAMETER :: num_intervals=512
+      integer, PARAMETER :: num_intervals=256
        ! was 8.0 for Cody's results.
       real*8, PARAMETER :: gas_domain_size_factor=8.0d0
 
@@ -428,6 +428,7 @@
       real*8 :: e_grid,P_grid,X_grid
       real*8 :: VEL_G
       real*8 :: TINF_for_numerical
+      real*8 :: YINF_for_numerical
 
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
@@ -583,13 +584,13 @@
       print *,"closing: analytical" 
       close(4)
 
-      probhi_R_domain=gas_domain_size_factor*radblob+0.5d0*D_gamma
+      probhi_R_domain=gas_domain_size_factor*radblob
       dx=(probhi_R_domain-0.5d0*D_gamma)/num_intervals
 
       print *,"opening: analytical_T"
       open(unit=16,file="analytical_T") 
       do igrid=1,num_intervals
-       xpos=igrid*dx+0.5d0*D_gamma
+       xpos=(igrid-1)*dx+0.5d0*D_gamma
        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
          VEL,VEL_I,LS,VEL_G)
        write (16,*) xpos," ",T
@@ -608,7 +609,7 @@
       print *,"radblob=",radblob
       print *,"gas region size: 8 * radblob "
 
-      probhi_R_domain=gas_domain_size_factor*radblob+R_gamma_NEW
+      probhi_R_domain=gas_domain_size_factor*radblob
       dx=(probhi_R_domain-R_gamma_NEW)/num_intervals
       cur_time=0.0d0
 
@@ -639,8 +640,14 @@
        YOLD(igrid)=Y
       enddo
 
-      TINF_for_numerical=T_inf_global
-      TINF_for_numerical=T_inf_global
+      call drop_analytical_solution(cur_time,probhi_R_domain, &
+         D_gamma,T,Y, &
+         VEL,VEL_I,LS,VEL_G)
+    
+!     TINF_for_numerical=T_inf_global
+!     YINF_for_numerical=Y_inf_global
+      TINF_for_numerical=T
+      YINF_for_numerical=Y
 
       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
@@ -660,7 +667,7 @@
          WA_global,WV_global)
         YOLD(igrid)=YNEW(igrid)
        enddo
-       Y_inf_global=YNEW(num_intervals)
+       YINF_for_numerical=YNEW(num_intervals)
       else
        print *,"evap_model invalid"
        stop
@@ -776,7 +783,7 @@
        TOLD_grid(0)=T_gamma_c  ! interface temperature
        TOLD_grid(num_intervals)=TINF_for_numerical ! temperature at far right
        YOLD_grid(0)=Y_gamma_c  ! interface mass fraction
-       YOLD_grid(num_intervals)=Y_inf_global  ! mass fraction at far RT.
+       YOLD_grid(num_intervals)=YINF_for_numerical ! mass fraction at far RT.
 
         ! STEP 4: backwards Euler method for advection and diffusion
         !  source terms.
@@ -856,7 +863,7 @@
          LDIAG(igrid)=0.0d0
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
         else if (igrid.eq.num_intervals-1) then
-         RHS(igrid)=RHS(igrid)+diffuse_plus*Y_inf_global
+         RHS(igrid)=RHS(igrid)+diffuse_plus*YINF_for_numerical
          UDIAG(igrid)=0.0d0
          LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
@@ -871,7 +878,7 @@
        call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
 
        YNEW(0)=Y_gamma_c
-       YNEW(num_intervals)=Y_inf_global 
+       YNEW(num_intervals)=YINF_for_numerical
        do igrid=1,num_intervals-1
         YNEW(igrid)=SOLN(igrid)
        enddo
