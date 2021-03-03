@@ -17076,14 +17076,14 @@ END SUBROUTINE Adist
        stop
       endif
       if (num_divu_outer_sweeps.lt.1) then
-       print *,"num_divu_outer_sweeps invalid"
+       print *,"num_divu_outer_sweeps invalid SEM_MAC_TO_CELL"
        stop
       endif
       if ((divu_outer_sweeps.ge.0).and. &
           (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
        ! do nothing
       else
-       print *,"divu_outer_sweeps invalid"
+       print *,"divu_outer_sweeps invalid SEM_MAC_TO_CELL"
        stop
       endif
 
