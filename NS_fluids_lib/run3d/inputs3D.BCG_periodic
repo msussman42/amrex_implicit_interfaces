@@ -35,6 +35,8 @@ amr.n_error_buf     = 2 2 2 2 2 2
 amr.grid_eff        = 0.75 
 
 ns.face_flag=1
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
 
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32

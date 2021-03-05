@@ -52,6 +52,9 @@ ns.min_velocity_for_dt = 2.0  # rmax x omega
 ns.angular_velocity=0.2583 # radians/s
 #ns.angular_velocity=2.583 # radians/s
 #ns.angular_velocity=3.161 # radians/s SMITH
+ns.face_flag=1
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
 
 geometry.is_periodic = 0 1 0 
 
