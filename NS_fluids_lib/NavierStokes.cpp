@@ -5043,7 +5043,7 @@ NavierStokes::read_params ()
      }
 
     } else if ((projection_enable_spectral==0)&&
-               (viscous_enable_spectral==0)||
+               (viscous_enable_spectral==0)&&
                (enable_spectral==0)) {
      if ((face_flag==0)||(face_flag==1)) {
       // do nothing
