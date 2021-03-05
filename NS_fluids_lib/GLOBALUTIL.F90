@@ -9371,6 +9371,7 @@ contains
       !---------------------------------------------------------------
       ! Study 4 - Pillar Penetration with pitch of 0.02 and 0.035 
       !           Pillar radius is held at 0.0125
+
       local_pi=four*atan(one)
 
        ! pitch value large yields larger radii posts

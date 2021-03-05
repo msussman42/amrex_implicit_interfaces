@@ -20,7 +20,8 @@ print *,"dimension bust"
 stop
 #endif
 
-! probtype==425 (see run2d/inputs.AHMED_ICE_RESISTANT)
+! probtype==425 (see run2d/inputs.AHMED_ICE_RESISTANT or
+! run3d/inputs.AHMED_ICE_RESISTANT3d)
 module AHMED_ICE_RESISTANT_module
 
 implicit none                   
@@ -45,13 +46,26 @@ use global_utility_module
 implicit none
 REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
 REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
+REAL_T :: yhalf,xshift
 REAL_T :: local_time
 INTEGER_T :: im
 
 if ((num_materials.eq.4).and.(probtype.eq.425)) then
  local_time=zero
  im=num_materials
- call patterned_substrates(x(1),x(2),x(SDIM),Phi,local_time,im)
+ if (SDIM.eq.2) then
+  yhalf=0.2d0
+  xshift=x(1)+0.2d0
+ else if (SDIM.eq.3) then
+  yhalf=x(2)
+  xshift=x(1)
+ else
+  print *,"dimension bust"
+  stop
+ endif
+  ! Phi<0 in the substrate, Phi>0 in the fluid
+ call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im)
+ Phi=-Phi
 else
  print *,"num_materials or probtype invalid"
  stop

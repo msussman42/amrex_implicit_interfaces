@@ -1,0 +1,192 @@
+max_step  = 200000    # maximum timestep
+#max_step  = 2    # maximum timestep
+
+stop_time = 10  
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => XYZ, 1 => RZ
+geometry.prob_lo=0.0 0.0 0.0    # XYZ
+geometry.prob_hi=0.4 0.4 0.6  # cm XYZ
+ns.slice_dir=1
+ns.xslice=0.0 0.0 0.0
+ns.num_materials_vel=1
+ns.EILE_flag=-1
+ns.truncate_thickness=2.0
+ns.face_flag=1
+ns.diffusionface_flag=1  # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+
+ns.minimum_relative_error=1.0e-22
+
+ns.gmres_precond_iter_base=4
+ns.initial_project_cycles=5   # initial jacobi iterations
+ns.initial_cg_cycles=10
+ns.solvability_projection=0 # 0 since one must allow for expansion
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0e+6
+ns.num_materials=4 # 1: liquid 2: air 3: lubricant 4: substrate  
+ns.num_species_var=0 #  no evaporation
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+ns.MOF_TURN_OFF_LS=0
+ns.MOF_DEBUG_RECON=0
+ns.continuous_mof=2 # 0=MOF 2=CMOF 
+ns.mof_error_ordering=0
+# water,air,lubricant,substrate
+ns.mof_ordering=0 2 0 1 
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0 # 1=check initial residual  2=check all the residuals
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
+
+amr.n_cell=32 32 48  # XYZ
+amr.max_level = 0 # max_level=1 for production runs
+#ns.max_level_two_materials=1
+# water, gas, ice, substrate
+# -1=> always adapt  0=> never adapt
+ns.radius_cutoff=0 0 0 0 
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+ns.ns_tiling=false
+amr.blocking_factor = 8 8 8 8   # block factor in grid generation
+amr.check_int       = 100
+#amr.check_int       = 10000  # static freezing test 10 
+amr.check_file      = chk     # root name of checkpoint file
+# blow up: ~ 84000 steps
+amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+#amr.plot_int        = 1000 # static freezing test 10
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 32
+amr.file_name_digits=7
+#amr.restart         = chk0119700
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.01 
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = -980.0   # cgs
+ns.use_lsa=0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 1=water 2=gas  3=lubricant  4=substrate 
+# 12,13,14   23,24  3,4 
+ns.conservative_tension_force=0
+ns.tension=72.8 24.8 128.6 34.0 72.8 61.2
+# contact angle for water drop on substrate: 140 degrees
+# theta=theta_{water,substrate}
+# sigma_{ws}+sigma_{aw}cos(theta) = sigma_{as}
+# sigma_{ws}-sigma_{as} = -sigma_{aw}cos(theta)=-72.8 cos(140deg)
+# sigma_{as}=72.8
+# sigma_{ws}=-72.8(cos(140))+72.8=128.6
+# theta=theta_{lubricant,substrate}
+# sigma_{lub,sub}+sigma_{lub,air}cos(theta)=sigma_{air,substrate}
+# sigma_{lub,sub}=72.8-34.0cos(70)=61.2
+ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K)
+ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
+ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
+ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.temperature_primitive_variable=1 1 1 1
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+# initial ice block on heated substrate.
+# probtype=414
+ns.axis_dir=0   
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=263  # not used
+ns.advbot=0.0  
+ns.adv_vel=155.0 # cm/s initial falling downwards speed
+ns.adv_dir=3 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.material_type=0 0 0 999
+ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # dimensional
+# 12 13 14 23 24 34  
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
+#evaporation: water vapor is solute, air is solvent units: cm^2/s
+#C_t + u dot grad C = div alpha laplacian C ?
+ns.speciesviscconst=0.0 0.282 0.0 0.0
+# 1=water 2=gas  3=oil  4=substrate 
+ns.speciesconst=0.0 0.0 0.0 0.0
+# 1=water 2=gas  3=oil  4=substrate 
+ns.viscconst=0.018 0.00017 1.0 1000.0 # dimensional
+ns.elastic_viscosity=0.0 0.0 0.0 0.0
+ns.viscoelastic_model=0 0 0 0
+ns.added_weight=1.0 1.0 1.0 1.0
+ns.elastic_time=0.0 0.0 0.0 0.0
+ns.denconst=1.0 0.001 0.95 8.96
+ns.FSI_flag=0 0 0 1 
+ns.recalesce_flag=0 0 0 0
+# solidheat_flag=0=>diffuse in solid 
+# solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
+# solidheat_flag=2=>neumann
+ns.solidheat_flag=0  
+# 1=water 2=gas  3=ice  4=substrate 
+ns.tempconst=273.0 273.0 273.0 353.0  
+ns.initial_temperature=273.0 273.0 273.0 273.0  # dimensionless
+ns.xblob=0.2  
+ns.yblob=0.2
+ns.zblob=0.18
+ns.radblob=0.06 
+ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=425
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.output_drop_distribution=1
+#ns.show_mem=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions 
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+ns.lo_bc          = 2 2 5  # XYZ
+ns.hi_bc          = 2 2 2  # XYZ
+ns.species_lo_bc  = 2 2 5  # XYZ
+ns.species_hi_bc  = 2 2 2  # XYZ
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
