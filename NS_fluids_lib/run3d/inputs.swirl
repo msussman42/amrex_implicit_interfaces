@@ -8,6 +8,9 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   =  1.0 1.0 1.0 
 geometry.is_periodic = 1 1 1
+ns.face_flag=1
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
 
 # multigrid class
 #mg.verbose = 1

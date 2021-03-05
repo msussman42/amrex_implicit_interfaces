@@ -100,6 +100,10 @@ ns.enable_spectral=1
 ns.viscous_enable_spectral=0
 ns.projection_enable_spectral=1
 
+ns.face_flag=1
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1
+
 amr.plotfile_on_restart=1
 ns.perturbation_on_restart=0
 # sin(2 pi k x/L)
