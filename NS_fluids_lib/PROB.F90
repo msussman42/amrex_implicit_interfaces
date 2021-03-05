@@ -18485,7 +18485,8 @@ END SUBROUTINE Adist
             veldest(D_DECL(ic,jc,kc),velcomp)= &
              ustar(D_DECL(ic,jc,kc),velcomp)-dp
            else if (face_flag.eq.1) then
-            ! do nothing (veldest already init when operation_flag==2)
+            ! do nothing; veldest already init when operation_flag==2:
+            ! mac-> cell velocity.
            else
             print *,"face_flag invalid"
             stop
@@ -18495,6 +18496,7 @@ END SUBROUTINE Adist
              ! gradp
             ustar(D_DECL(ic,jc,kc),velcomp)=local_div(isten+1)/RRTHETA
            else if (face_flag.eq.1) then
+             ! no spectral increment from gradp_cell if face_flag=1.
             ustar(D_DECL(ic,jc,kc),velcomp)=zero
            else
             print *,"face_flag invalid"

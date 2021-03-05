@@ -5032,6 +5032,28 @@ NavierStokes::read_params ()
      }
     }  // if IO processor
 
+    if ((projection_enable_spectral>0)||
+        (viscous_enable_spectral>0)||
+        (enable_spectral>0)) {
+
+     if (face_flag==1) {
+      // do nothing
+     } else {
+      amrex::Error("must have face_flag==1 for space-time spec elem");
+     }
+
+    } else if ((projection_enable_spectral==0)&&
+               (viscous_enable_spectral==0)||
+               (enable_spectral==0)) {
+     if ((face_flag==0)||(face_flag==1)) {
+      // do nothing
+     } else {
+      amrex::Error("face_flag invalid");
+     }
+    } else {
+     amrex::Error("enable_spectral vars invalid");
+    }
+     
     if (some_materials_compressible()==1) {
      if (num_divu_outer_sweeps<2)
       amrex::Error("num_divu_outer_sweeps>=2 for comp materials");
@@ -5048,7 +5070,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("compressible flag bust");
 
-} // subroutine read_params()
+} // end subroutine read_params()
 
 
 NavierStokes::NavierStokes ()

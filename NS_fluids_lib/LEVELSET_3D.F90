@@ -14960,7 +14960,10 @@ stop
               filter_velocity_any=0
 
               if (face_flag.eq.0) then
-               filter_velocity_any=1
+                !activates filter when operation_flag==5
+                !If velocity cell centered, then
+                ! UMAC=I_CELL^MAC ( UCELL ) for viscosity force
+               filter_velocity_any=1 
               else if (face_flag.eq.1) then
                ! do nothing
               else
