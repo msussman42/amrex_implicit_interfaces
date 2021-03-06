@@ -6794,6 +6794,7 @@ stop
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
        finest_level, &
+       constrain_normal_probe_for_evap, &
        normal_probe_size, &
        ngrow_distance, &
        nstate, &
@@ -6883,6 +6884,7 @@ stop
       INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, target, intent(in) :: level
       INTEGER_T, target, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: constrain_normal_probe_for_evap
       INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance

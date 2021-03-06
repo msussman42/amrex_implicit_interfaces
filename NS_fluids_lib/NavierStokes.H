@@ -1838,6 +1838,7 @@ protected:
     static Vector<int> constant_volume_mdot; // 1..2*nten
     static Vector<int> constant_density_all_time; // 1..nmat, def=1
     static int is_phasechange;
+    static int constrain_normal_probe_for_evap; //def=0
     static int normal_probe_size;  // should always be 1
     static int ngrow_distance;  // should always be 4
     static int ngrow_make_distance;  // should always be 3

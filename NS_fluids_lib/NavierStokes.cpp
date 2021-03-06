@@ -882,6 +882,7 @@ Vector<int> NavierStokes::constant_volume_mdot; // 1..2*nten
 Vector<int> NavierStokes::constant_density_all_time; // 1..nmat, def=1
 
 int NavierStokes::is_phasechange=0;
+int NavierStokes::constrain_normal_probe_for_evap=0;
 int NavierStokes::normal_probe_size=1;
 // 0=dirichlet at inflow
 // 1=dirichlet at inflow and outflow
@@ -4473,6 +4474,9 @@ NavierStokes::read_params ()
     } // i=0..num_species_var-1
 
 
+    pp.query("constrain_normal_probe_for_evap",
+        constrain_normal_probe_for_evap);
+
     pp.query("normal_probe_size",normal_probe_size);
     if (normal_probe_size!=1)
      amrex::Error("normal_probe_size invalid");
@@ -4588,6 +4592,8 @@ NavierStokes::read_params ()
       ngrowFSI << '\n';
      std::cout << "ngrow_expansion= " << 
       ngrow_expansion << '\n';
+     std::cout << "constrain_normal_probe_for_evap= " << 
+      constrain_normal_probe_for_evap << '\n';
      std::cout << "normal_probe_size= " << 
       normal_probe_size << '\n';
      std::cout << "prescribe_temperature_outflow= " << 
@@ -11763,6 +11769,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &stefan_flag,
      &level,
      &finest_level,
+     &constrain_normal_probe_for_evap,
      &normal_probe_size,
      &ngrow_distance,
      &nstate,
@@ -11849,6 +11856,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &stefan_flag,
      &level,
      &finest_level,
+     &constrain_normal_probe_for_evap,
      &normal_probe_size,
      &ngrow_distance,
      &nstate,
