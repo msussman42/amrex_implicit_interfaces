@@ -95,6 +95,7 @@ extern "C"
     int* stefan_flag,
     int* level,
     int* finest_level,
+    int* constrain_normal_probe_for_evap,
     int* normal_probe_size,
     int* ngrow_distance,
     int* nstate,

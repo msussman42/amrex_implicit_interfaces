@@ -39,6 +39,7 @@ stop
       type probe_parm_type
        INTEGER_T :: tid
        INTEGER_T :: use_supermesh
+       INTEGER_T :: probe_constrain
        REAL_T, pointer :: Y_TOLERANCE
        INTEGER_T, pointer :: local_freezing_model
        REAL_T, pointer :: LL
@@ -743,7 +744,7 @@ stop
        deallocate(AA)
        deallocate(AAcopy)
 
-      enddo ! nc
+      enddo ! do nc=1,nsolve
 
       return
       end subroutine center_centroid_interchange
@@ -2001,6 +2002,9 @@ stop
       return 
       end subroutine interpfab_filament_probe
 
+       ! called from: mdot_from_Y_probe
+       !              mdot_from_T_probe
+       !              RATEMASSCHANGE
       subroutine probe_interpolation( &
        PROBE_PARMS, &
        T_I,Y_I, &
@@ -2023,8 +2027,10 @@ stop
       REAL_T, intent(in) :: T_I
       REAL_T, intent(in) :: Y_I
       REAL_T, intent(out) :: T_probe(2)
+      REAL_T :: T_probe_no_constrain
       REAL_T, intent(out) :: T_probe_raw(2)
       REAL_T, intent(out) :: Y_probe(2)
+      REAL_T :: Y_probe_no_constrain
       REAL_T, intent(out) :: den_I_interp(2)
       REAL_T, intent(out) :: den_probe(2)
       REAL_T, intent(out) :: T_I_interp(2)
@@ -2234,6 +2240,40 @@ stop
         stop
        endif
 
+       call interpfabFWEIGHT( &
+        PROBE_PARMS%bfact, &
+        PROBE_PARMS%level, &
+        PROBE_PARMS%finest_level, &
+        PROBE_PARMS%dx, &
+        PROBE_PARMS%xlo, &
+        xtarget_probe, &
+        im_target_probe(iprobe), &
+        PROBE_PARMS%nmat, &
+        tcomp_probe(iprobe), &
+        PROBE_PARMS%ngrow, &
+        PROBE_PARMS%fablo, &
+        PROBE_PARMS%fabhi, &
+        PROBE_PARMS%EOS, &        ! Fortran array box
+        DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
+        PROBE_PARMS%recon, &
+        DIMS(PROBE_PARMS%recon), &
+        T_probe_no_constrain)
+
+       if (T_probe_no_constrain.lt.zero) then
+        print *,"T_probe_no_constrain went negative"
+        print *,"T_probe_no_constrain ",T_probe_no_constrain
+        stop
+       endif
+
+       if (PROBE_PARMS%probe_constrain.eq.1) then
+        ! do nothing
+       else if (PROBE_PARMS%probe_constrain.eq.0) then
+        T_probe(iprobe)=T_probe_no_constrain
+       else 
+        print *,"PROBE_PARMS%probe_constrain invalid"
+        stop
+       endif
+
        if (Ycomp_probe(iprobe).ge.1) then
 
         ! centroid -> target (cc_flag==0)
@@ -2278,6 +2318,51 @@ stop
          stop
         endif
 
+        call interpfabFWEIGHT( &
+         PROBE_PARMS%bfact, &
+         PROBE_PARMS%level, &
+         PROBE_PARMS%finest_level, &
+         PROBE_PARMS%dx, &
+         PROBE_PARMS%xlo, &
+         xtarget_probe, &
+         im_target_probe(iprobe), &
+         PROBE_PARMS%nmat, &
+         Ycomp_probe(iprobe), &
+         PROBE_PARMS%ngrow, &
+         PROBE_PARMS%fablo, &
+         PROBE_PARMS%fabhi, &
+         PROBE_PARMS%EOS, &        ! Fortran array box
+         DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
+         PROBE_PARMS%recon, &
+         DIMS(PROBE_PARMS%recon), &
+         Y_probe_no_constrain)
+
+        if ((Y_probe_no_constrain.ge.-VOFTOL).and. &
+            (Y_probe_no_constrain.le.zero)) then
+         Y_probe_no_constrain=zero
+        else if ((Y_probe_no_constrain.ge.zero).and. &
+                 (Y_probe_no_constrain.le.one)) then
+         ! do nothing
+        else if ((Y_probe_no_constrain.ge.one).and. &
+                 (Y_probe_no_constrain.le.one+VOFTOL)) then
+         Y_probe_no_constrain=one
+        else
+         print *,"Y_probe_no_constrain out of bounds probe_interpolation"
+         print *,"Y_probe_no_constrain ",Y_probe_no_constrain
+         stop
+        endif
+
+        if (PROBE_PARMS%probe_constrain.eq.1) then
+         ! do nothing
+        else if (PROBE_PARMS%probe_constrain.eq.0) then
+         Y_probe(iprobe)=Y_probe_no_constrain
+        else 
+         print *,"PROBE_PARMS%probe_constrain invalid"
+         stop
+        endif
+
+         ! cc_flag=0 centroid->target
+         ! tsat_flag=0 do not use TSAT
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
          PROBE_PARMS%level, &
@@ -6885,6 +6970,7 @@ stop
       INTEGER_T, target, intent(in) :: level
       INTEGER_T, target, intent(in) :: finest_level
       INTEGER_T, intent(in) :: constrain_normal_probe_for_evap
+      INTEGER_T :: local_probe_constrain
       INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
@@ -7253,14 +7339,6 @@ stop
        stop
       endif
 
-      if (num_materials_scalar_solve.eq.1) then ! GFM
-       normal_probe_factor=half
-      else if (num_materials_scalar_solve.eq.nmat) then ! FVM multimat
-       normal_probe_factor=half
-      else
-       print *,"num_materials_scalar_solve invalid"
-       stop
-      endif
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1251)
       call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
       call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1253)
@@ -7587,6 +7665,31 @@ stop
               stop
              endif
 
+              !Kassemi or Palmore and Desjardins
+             if (local_freezing_model.eq.6) then 
+              local_probe_constrain=constrain_normal_probe_for_evap
+              if (local_probe_constrain.eq.1) then
+               normal_probe_factor=half
+              else if (local_probe_constrain.eq.0) then
+               normal_probe_factor=one
+              else
+               print *,"local_probe_constrain invalid"
+               stop
+              endif
+             else if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
+                      (local_freezing_model.eq.5).or. & !Stefan evap/cond
+                      (local_freezing_model.eq.0).or. & ! Stefan model
+                      (local_freezing_model.eq.1).or. & ! source term
+                      (local_freezing_model.eq.2).or. & ! hydrate
+                      (local_freezing_model.eq.3).or. & ! wildfire
+                      (local_freezing_model.eq.7)) then ! cavitation
+              local_probe_constrain=1
+              normal_probe_factor=half
+             else
+              print *,"local_freezing_model invalid"
+              stop
+             endif
+
              if (LL(ireverse).ne.zero) then
             
               if (im_dest.lt.im_source) then
@@ -7650,8 +7753,7 @@ stop
 
                    nrmPROBE(dir)=nrmCP(dir)
 
-                    ! e.g.
-                    ! normal_probe_factor=1/2
+                    ! normal_probe_factor=1/2 or 1
                     ! normal_probe_size=1
                    xdst(dir)=xI(dir)- &
                     normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
@@ -7920,6 +8022,8 @@ stop
                   print *,"TI_max or TI_min invalid"
                   stop
                  endif
+
+                 PROBE_PARMS%probe_constrain=local_probe_constrain
 
                  PROBE_PARMS%dxprobe_source=>dxprobe_source
                  PROBE_PARMS%dxprobe_dest=>dxprobe_dest
