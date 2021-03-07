@@ -11,3 +11,7 @@ factor(int(r*(hzsym(r)-zbottom),r=r1..r2)/(int(r,r=r1..r2))+zbottom);
 hrsqr:=(z) -> a*(z-zi)^2 + b*(z-zi)+c;
 factor(int(hrsqr(z),z=z1..z2)/int(1,z=z1..z2));
 
+hxy:=(x,y) -> a00+a10*(x-xi)+a20*(x-xi)^2+a01*(y-yi)+a02*(y-yi)^2+a11*(x-xi)*(y-yi)+a12*(x-xi)*(y-yi)^2+a22*(x-xi)^2*(y-yi)^2+a21*(x-xi)^2*(y-yi);
+
+factor(int(int(hxy(x,y),x=x1..x2),y=y1..y2)/(int(int(1,x=x1..x2),y=y1..y2)));
+

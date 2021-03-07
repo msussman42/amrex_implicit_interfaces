@@ -530,6 +530,56 @@ stop
       return
       end subroutine h_coeffXY
 
+      subroutine h_coeffXYZ(x1,x2,y1,y2,xi,yi,coeffs)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: x1,x2,y1,y2,xi,yi
+      REAL_T, intent(out) :: coeffs(9)
+      INTEGER_T :: i,j,row
+
+      if ((x2.gt.x1).and.(y2.gt.y1)) then
+    
+       i=0
+       j=0
+       row=3*i+j+1
+       coeffs(row)=one
+       i=2
+       j=2
+       row=3*i+j+1
+       coeffs(row)= &
+         -x2*xi*y1*y2/3.0d0+ &
+         x2*xi*y1*yi+ &
+         x2*y2*xi*yi+ &
+         x1*x2*y2*y1/9.0d0- &
+         x1*x2*y1*yi/3.0d0- &
+         x1*x2*y2*yi/3.0d0- &
+         x1*xi*y1*y2/3.0d0+ &
+         x1*y1*xi*yi+ &
+         x1*y2*xi*yi+ &
+         x2*x2*y1*y2/9.0d0- &
+         x2*x2*y1*yi/3.0d0- &
+         x2*x2*y2*yi/3.0d0- &
+         x2*xi*y1*y1/3.0d0- &
+         x2*xi*y2*y2/3.0d0- &
+         x2*xi*yi*yi+ &
+         xi*xi*y1*y2/3.0d0- &
+         xi*xi*y1*yi- &
+         xi*xi*y2*yi
+
+
+  
+
+      else
+       print *,"x1,x2,y1, or y2 invalid"
+       print *,"x1,x2,y1,y2 ",x1,x2,y1,y2
+       stop
+      endif
+
+      return
+      end subroutine h_coeffXYZ
+
+
+
       subroutine hvertical_coeffRZ(r1,r2,ri,coeffs)
       IMPLICIT NONE
 
@@ -805,12 +855,22 @@ stop
       REAL_T angle_im
       REAL_T dist_to_CL
       INTEGER_T im_liquid,im_vapor
-      INTEGER_T row,interval_cnt
-      REAL_T x1,x2,xnot
-      REAL_T RHS(3)
-      REAL_T AA(3,3)
-      REAL_T coeffs(3)
-      REAL_T xx(3)
+      INTEGER_T rowx,rowy,rowxy
+      INTEGER_T interval_x,interval_y
+      REAL_T x1,x2,x1_3D,x2_3D,xnot,ynot
+
+      INTEGER_T num_coeffs
+
+      REAL_T RHS_2D(3)
+      REAL_T AA_2D(3,3)
+      REAL_T coeffs_2D(3)
+      REAL_T xx_2D(3)
+
+      REAL_T RHS_3D(9)
+      REAL_T AA_3D(9,9)
+      REAL_T coeffs_3D(9)
+      REAL_T xx_3D(9)
+
       INTEGER_T matstatus
       REAL_T dr
       REAL_T h_of_z,hprime_of_z,hdprime_of_z
@@ -1399,8 +1459,8 @@ stop
 
        htfunc_LS(iwidth,jwidth)=col_ht_LS
        htfunc_VOF(iwidth,jwidth)=col_ht_VOF
-      enddo ! jwidth
-      enddo ! iwidth
+      enddo ! jwidth=-1,1
+      enddo ! iwidth=-1,1
 
        ! dark material on the bottom
        ! phi=h(x,y)-z  z=h(x,y)   (dircrit=2)
@@ -1563,27 +1623,29 @@ stop
           stop
          endif
 
-         interval_cnt=-3
+         num_coeffs=3
 
-         do row=1,3
+         interval_x=-3
 
-          x1=xsten(interval_cnt,itan)
-          x2=xsten(interval_cnt+2,itan)
+         do rowx=1,num_coeffs
+
+          x1=xsten(interval_x,itan)
+          x2=xsten(interval_x+2,itan)
           xnot=xsten(0,itan)
-          RHS(row)=htfunc_VOF(row-2,0)
+          RHS_2D(rowx)=htfunc_VOF(rowx-2,0)
 
           if (dircrit.eq.1) then  ! horizontal column in the r direction
-           call hhorizontal_coeffRZ(x1,x2,xnot,coeffs)
-           RHS(row)=htfunc_VOF(row-2,0)**2
+           call hhorizontal_coeffRZ(x1,x2,xnot,coeffs_2D)
+           RHS_2D(rowx)=htfunc_VOF(rowx-2,0)**2
           else if (dircrit.eq.2) then  ! vertical column in the z direction
            if (xnot.gt.zero) then
             if (x1.ge.zero) then
-             call hvertical_coeffRZ(x1,x2,xnot,coeffs)
+             call hvertical_coeffRZ(x1,x2,xnot,coeffs_2D)
             else if (x1.lt.zero) then
-             RHS(row)=zero
-             coeffs(1)=-two*xnot
-             coeffs(2)=one
-             coeffs(3)=zero
+             RHS_2D(rowx)=zero
+             coeffs_2D(1)=-two*xnot
+             coeffs_2D(2)=one
+             coeffs_2D(3)=zero
             else
              print *,"x1 invalid"
              stop
@@ -1597,24 +1659,24 @@ stop
            stop
           endif
   
-          do dir2=1,3
-           AA(row,dir2)=coeffs(dir2)
+          do dir2=1,num_coeffs
+           AA_2D(rowx,dir2)=coeffs_2D(dir2)
           enddo
-          interval_cnt=interval_cnt+2
-         enddo ! row=1..3
+          interval_x=interval_x+2
+         enddo ! rowx=1..num_coeffs
 
            ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
-
-         call matrix_solve(AA,xx,RHS,matstatus,3) !matstatus=1 => ok.
+           !matstatus=1 => ok.
+         call matrix_solve(AA_2D,xx_2D,RHS_2D,matstatus,num_coeffs) 
 
          if (matstatus.eq.1) then
           if (dircrit.eq.1) then  ! horizontal column in the r direction
-           if (xx(3).gt.zero) then
+           if (xx_2D(3).gt.zero) then
             dr=xsten(1,1)-xsten(-1,1)
-            h_of_z=sqrt(xx(3))
+            h_of_z=sqrt(xx_2D(3))
             if (h_of_z.ge.half*dr) then
-             hprime_of_z=xx(2)/(two*h_of_z)
-             hdprime_of_z=(xx(1)-hprime_of_z**2)/h_of_z
+             hprime_of_z=xx_2D(2)/(two*h_of_z)
+             hdprime_of_z=(xx_2D(1)-hprime_of_z**2)/h_of_z
              g=sqrt(one+hprime_of_z**2)
              curvHT_VOF=-(one/(h_of_z*g))+hdprime_of_z/(g**3)
             else if (h_of_z.gt.zero) then
@@ -1624,12 +1686,12 @@ stop
              stop
             endif
            else
-            print *,"xx(3) invalid"
+            print *,"xx_2D(3) invalid"
             stop
            endif
           else if (dircrit.eq.2) then  ! vertial column in the z direction
-           hprime_of_r=xx(2)
-           hdprime_of_r=two*xx(1)
+           hprime_of_r=xx_2D(2)
+           hdprime_of_r=two*xx_2D(1)
            g=sqrt(one+hprime_of_r**2)
            curvHT_VOF=(hprime_of_r/(xnot*g))+hdprime_of_r/(g**3)
           else
@@ -1642,35 +1704,39 @@ stop
          endif
 
         else if (levelrz.eq.3) then
+
          print *,"VFRAC height function for levelrz==3 not ready yet"
+
         else if (levelrz.eq.0) then
 
          if (SDIM.eq.2) then
 
-          interval_cnt=-3
+          num_coeffs=3
 
-          do row=1,3
+          interval_x=-3
 
-           x1=xsten(interval_cnt,itan)
-           x2=xsten(interval_cnt+2,itan)
+          do rowx=1,num_coeffs
+
+           x1=xsten(interval_x,itan)
+           x2=xsten(interval_x+2,itan)
            xnot=xsten(0,itan)
-           RHS(row)=htfunc_VOF(row-2,0)
+           RHS_2D(rowx)=htfunc_VOF(rowx-2,0)
 
-           call h_coeffXY(x1,x2,xnot,coeffs)
+           call h_coeffXY(x1,x2,xnot,coeffs_2D)
   
-           do dir2=1,3
-            AA(row,dir2)=coeffs(dir2)
+           do dir2=1,num_coeffs
+            AA_2D(rowx,dir2)=coeffs_2D(dir2)
            enddo
-           interval_cnt=interval_cnt+2
-          enddo ! row=1..3
+           interval_x=interval_x+2
+          enddo ! rowx=1..num_coeffs
 
            ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
-
-          call matrix_solve(AA,xx,RHS,matstatus,3) !matstatus=1 => ok.
+           !matstatus=1 => ok.
+          call matrix_solve(AA_2D,xx_2D,RHS_2D,matstatus,num_coeffs) 
 
           if (matstatus.eq.1) then
-           hprime_of_r=xx(2)
-           hdprime_of_r=two*xx(1)
+           hprime_of_r=xx_2D(2)
+           hdprime_of_r=two*xx_2D(1)
            g=sqrt(one+hprime_of_r**2)
            curvHT_VOF=hdprime_of_r/(g**3)
           else if (matstatus.eq.0) then
@@ -1679,16 +1745,73 @@ stop
           endif
 
          else if (SDIM.eq.3) then
-          print *,"VFRAC height function for sdim=3 levelrz=0 not ready"
-          stop
+
+           !h(x,y)=sum_{i,j=0..2}  aij(x-x0)^i(y-y0)^j
+          num_coeffs=9
+
+          interval_x=-3
+
+          rowxy=1
+          do rowx=1,3
+
+           interval_y=-3
+
+           do rowy=1,3
+
+            x1=xsten(interval_x,itan)
+            x2=xsten(interval_x+2,itan)
+
+            x1_3D=xsten(interval_y,jtan)
+            x2_3D=xsten(interval_y+2,jtan)
+
+            xnot=xsten(0,itan)
+            ynot=xsten(0,jtan)
+            RHS_3D(rowxy)=htfunc_VOF(rowx-2,rowy-2)
+
+            call h_coeffXYZ(x1,x2,x1_3D,x2_3D,xnot,ynot,coeffs_3D)
+  
+            do dir2=1,num_coeffs
+             AA_3D(rowxy,dir2)=coeffs_3D(dir2)
+            enddo
+            interval_y=interval_y+2
+            rowxy=rowxy+1
+           enddo ! rowy=1..3
+
+           interval_x=interval_x+2
+
+          enddo ! rowx=1..3
+
+          if (rowxy.eq.num_coeffs+1) then
+           ! do nothing
+          else
+           print *,"rowxy invalid"
+           stop
+          endif
+
+           ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+           !matstatus=1 => ok.
+          call matrix_solve(AA_3D,xx_3D,RHS_3D,matstatus,num_coeffs) 
+
+          if (matstatus.eq.1) then
+           hprime_of_r=xx_2D(2)
+           hdprime_of_r=two*xx_2D(1)
+           g=sqrt(one+hprime_of_r**2)
+           curvHT_VOF=hdprime_of_r/(g**3)
+          else if (matstatus.eq.0) then
+           print *,"matstatus invalid for XY curvature coeff"
+           stop
+          endif
+
          else
           print *,"dimension bust"
           stop
          endif
+
         else
          print *,"levelrz invalid"
          stop
         endif
+
         curvHT_choice=curvHT_VOF
 
        else if (vof_height_function.eq.0) then
