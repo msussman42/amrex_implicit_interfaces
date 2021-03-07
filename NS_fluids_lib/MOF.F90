@@ -12166,6 +12166,7 @@ contains
       REAL_T LS
       REAL_T vof_top_sum,vof_bot_sum
       REAL_T dr,dz,volcell,vof_crit
+      REAL_T dx_norm,dx_tan1,dx_tan2
 
       if (csten_x.ne.2*csten+1) then
        print *,"csten_x invalid"
@@ -12413,7 +12414,9 @@ contains
            endif
 
           else if (levelrz.eq.0) then
+
            if (SDIM.eq.2) then
+
             if (dircrit.eq.1) then ! horizontal column
              dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
              dz=xsten0(1,2)-xsten0(-1,2)
@@ -12439,8 +12442,33 @@ contains
             endif
 
            else if (SDIM.eq.3) then
-            print *,"vof_height_function not ready for levelrz==0, sdim=3"
-            stop
+
+            dx_norm=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+            if (dx_norm.gt.zero) then
+             if (dircrit.eq.1) then ! horizontal column
+              dx_tan1=xsten0(1,2)-xsten0(-1,2)
+              dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+             else if (dircrit.eq.2) then ! vertical column
+              dx_tan1=xsten0(1,1)-xsten0(-1,1)
+              dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+             else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
+              dx_tan1=xsten0(1,1)-xsten0(-1,1)
+              dx_tan2=xsten0(1,2)-xsten0(-1,2)
+             else
+              print *,"dircrit invalid"
+              stop
+             endif
+             if ((dx_tan1.gt.zero).and.(dx_tan2.gt.zero)) then
+              volcell=dx_norm*dx_tan1*dx_tan2
+             else
+              print *,"dx_tan1 or dx_tan2 invalid"
+              stop
+             endif
+            else
+             print *,"dx_norm invalid"
+             stop
+            endif
+
            else
             print *,"dimension bust"
             stop
@@ -12495,7 +12523,9 @@ contains
           endif
 
          else if (levelrz.eq.0) then
+
           if (SDIM.eq.2) then
+
            if (dircrit.eq.1) then ! horizontal column
             dr=xsten0(2*lmin-1,dircrit)-current_xbottom
             dz=xsten0(1,2)-xsten0(-1,2)
@@ -12520,8 +12550,33 @@ contains
            endif
 
           else if (SDIM.eq.3) then
-           print *,"vof_height_function not ready for levelrz==0, sdim=3"
-           stop
+
+           dx_norm=xsten0(2*lmin-1,dircrit)-current_xbottom
+           if (dx_norm.ge.zero) then
+            if (dircrit.eq.1) then ! horizontal column
+             dx_tan1=xsten0(1,2)-xsten0(-1,2)
+             dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+            else if (dircrit.eq.2) then ! vertical column
+             dx_tan1=xsten0(1,1)-xsten0(-1,1)
+             dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+            else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
+             dx_tan1=xsten0(1,1)-xsten0(-1,1)
+             dx_tan2=xsten0(1,2)-xsten0(-1,2)
+            else
+             print *,"dircrit invalid"
+             stop
+            endif
+            if ((dx_tan1.gt.zero).and.(dx_tan2.gt.zero)) then
+             volcell=dx_norm*dx_tan1*dx_tan2
+            else
+             print *,"dx_tan1 or dx_tan2 invalid"
+             stop
+            endif
+           else
+            print *,"dx_norm invalid"
+            stop
+           endif
+
           else
            print *,"dimension bust"
            stop
