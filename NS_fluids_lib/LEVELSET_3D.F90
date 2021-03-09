@@ -512,18 +512,25 @@ stop
       REAL_T, intent(in) :: r1,r2,ri
       REAL_T, intent(out) :: coeffs(3)
 
-      if (r2.gt.r1) then
-    
+      if ((r2.gt.r1).and. &
+          (r2.gt.ri).and. &
+          (r1.lt.ri)) then
+   
+        ! ((r2-ri)^3/3 - (r1-ri)^3/3)/(r2-r1)=
+        ! ((r2-ri)^3/3 - (r1-ri)^3/3)/((r2-ri)-(r1-ri)) 
+        ! A^3-B^3=(A-B)*(A^2 + B^2 + AB)=A^3 + AB^2+A^2 B-BA^2-AB^2-B^3
+        ! (r1-ri)^2+(r2-ri)^2+(r1-ri)(r2-ri)
        coeffs(1)=(r1**2)/three+r1*r2/three-r1*ri+(r2**2)/three- &
                  r2*ri+(ri**2)
 
+        !A^2-B^2=(A-B)(A+B)
        coeffs(2)=half*(r1+r2)-ri
 
        coeffs(3)=one
 
       else
-       print *,"r1,or r2 invalid"
-       print *,"r1,r2 ",r1,r2
+       print *,"r1,r2, or ri invalid"
+       print *,"r1,r2,ri ",r1,r2,ri
        stop
       endif
 
@@ -536,42 +543,28 @@ stop
       REAL_T, intent(in) :: x1,x2,y1,y2,xi,yi
       REAL_T, intent(out) :: coeffs(9)
       INTEGER_T :: i,j,row
+      REAL_T :: coeffs_x(3)
+      REAL_T :: coeffs_y(3)
 
-      if ((x2.gt.x1).and.(y2.gt.y1)) then
-    
-       i=0
-       j=0
-       row=3*i+j+1
-       coeffs(row)=one
-       i=2
-       j=2
-       row=3*i+j+1
-       coeffs(row)= &
-         -x2*xi*y1*y2/3.0d0+ &
-         x2*xi*y1*yi+ &
-         x2*y2*xi*yi+ &
-         x1*x2*y2*y1/9.0d0- &
-         x1*x2*y1*yi/3.0d0- &
-         x1*x2*y2*yi/3.0d0- &
-         x1*xi*y1*y2/3.0d0+ &
-         x1*y1*xi*yi+ &
-         x1*y2*xi*yi+ &
-         x2*x2*y1*y2/9.0d0- &
-         x2*x2*y1*yi/3.0d0- &
-         x2*x2*y2*yi/3.0d0- &
-         x2*xi*y1*y1/3.0d0- &
-         x2*xi*y2*y2/3.0d0- &
-         x2*xi*yi*yi+ &
-         xi*xi*y1*y2/3.0d0- &
-         xi*xi*y1*yi- &
-         xi*xi*y2*yi
+      if ((x2.gt.x1).and.(y2.gt.y1).and. &
+          (x2.gt.xi).and.(y2.gt.yi).and. &
+          (x1.lt.xi).and.(y1.lt.yi)) then
+   
+       ! h(x,y)=sum_ij aij (x-xi)^i (y-yi)^j 
 
+       call h_coeffXY(x1,x2,xi,coeffs_x)
+       call h_coeffXY(y1,y2,yi,coeffs_y)
 
-  
+       do i=0,2
+       do j=0,2
+        row=3*i+j+1
+        coeffs(row)=coeffs_x(3-i)*coeffs_y(3-j)
+       enddo
+       enddo
 
       else
-       print *,"x1,x2,y1, or y2 invalid"
-       print *,"x1,x2,y1,y2 ",x1,x2,y1,y2
+       print *,"x1,x2,y1,y2,xi, or yi invalid"
+       print *,"x1,x2,y1,y2,xi,yi ",x1,x2,y1,y2,xi,yi
        stop
       endif
 
@@ -1746,7 +1739,8 @@ stop
 
          else if (SDIM.eq.3) then
 
-           !h(x,y)=sum_{i,j=0..2}  aij(x-x0)^i(y-y0)^j
+           !h(x,y)=sum_{i,j=0..2}  aij(x-x0)^i(y-y0)^j 
+           !in 3D, low order derivatives are first.
           num_coeffs=9
 
           interval_x=-3
@@ -1788,7 +1782,9 @@ stop
            stop
           endif
 
-           ! xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+           ! 2D: xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
+           ! 3D: h(x,y)=sum_{i,j=0..2}  aij(x-x0)^i(y-y0)^j 
+           !in 3D, low order derivatives are first.
            !matstatus=1 => ok.
           call matrix_solve(AA_3D,xx_3D,RHS_3D,matstatus,num_coeffs) 
 
