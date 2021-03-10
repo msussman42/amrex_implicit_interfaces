@@ -151,6 +151,7 @@ ns.constant_volume_mdot=0 0 # expansion 1..2 nten
 #ns.constant_volume_mdot=-1 0 # sealed
 #evap: freezing_model=6 Palmore and Desjardins 
 #      freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
+ns.constrain_normal_probe_for_evap=0
 ns.freezing_model=6 0
 ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 # 3 0=Kassemi 0 0=Palmore and Desjardins
 ns.mass_fraction_id=1 0  # 1.. 2 nten

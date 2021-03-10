@@ -2265,6 +2265,12 @@ stop
         stop
        endif
 
+       if (1.eq.0) then
+        print *,"probe_constrain,iprobe,T_probe,T_probe_new ", &
+         PROBE_PARMS%probe_constrain, &
+         iprobe,T_probe(iprobe),T_probe_no_constrain
+       endif
+
        if (PROBE_PARMS%probe_constrain.eq.1) then
         ! do nothing
        else if (PROBE_PARMS%probe_constrain.eq.0) then
@@ -9164,9 +9170,21 @@ stop
 
               if ((vel_phasechange(ireverse).ge.zero).or. &
                   (vel_phasechange(ireverse).le.zero)) then
+
+               if (1.eq.1) then
+                print *,"i,j,k,prev_time,dt,iten,ireverse,vel_phasechange ", &
+                 i,j,k,prev_time,dt,iten,ireverse,vel_phasechange(ireverse)
+               endif
+
                do dir=1,ncomp_per_burning
                 burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
                  SIGNVEL*nrmPROBE(dir)*vel_phasechange(ireverse)
+
+                if (1.eq.1) then
+                 print *,"i,j,k,prev_time,dt,iten,ireverse,dir,burn ", &
+                  i,j,k,prev_time,dt,iten,ireverse,dir, &
+                  burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)
+                endif
                enddo
               else
                print *,"vel_phasechange(ireverse) cannot be NaN"
