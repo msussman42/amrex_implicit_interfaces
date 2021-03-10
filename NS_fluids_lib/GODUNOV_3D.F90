@@ -5346,6 +5346,9 @@ stop
         dir=1
         mask_left=mask_array(D_DECL(-1,0,0))
         mask_right=mask_array(D_DECL(1,0,0))
+         ! declared in: GLOBALUTIL.F90
+         ! mask_center=1 if mask_left==1 or mask_right==1
+         ! mask_center=0 if mask_left==0 and mask_right==0
         call project_tensor(mask_center(dir),n_elastic, &
          mask_left,mask_right,xflux_local)
 
@@ -5452,7 +5455,7 @@ stop
         enddo ! veldir
 
        else if (local_mask.eq.0) then
-        ! do nothing
+        ! do nothing (velnew is not incremented)
        else
         print *,"local_mask invalid"
         stop
