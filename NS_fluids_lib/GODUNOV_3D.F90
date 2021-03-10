@@ -20004,13 +20004,20 @@ stop
 
          if (usten_accept(-1).gt.zero) then
           idonatelow=-1
-         else
+         else if (usten_accept(-1).le.zero) then
           idonatelow=0
+         else
+          print *,"usten_accept(-1) invalid"
+          stop
          endif
+
          if (usten_accept(1).lt.zero) then
           idonatehigh=1
-         else
+         else if (usten_accept(1).ge.zero) then
           idonatehigh=0
+         else
+          print *,"usten_accept(1) invalid"
+          stop
          endif
 
          usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
@@ -20018,7 +20025,26 @@ stop
          idonate=icrse
          jdonate=jcrse
          kdonate=kcrse
- 
+
+         null_velocity_flag=0
+
+         if ((usten_accept(1).eq.zero).and. &
+             (usten_accept(-1).eq.zero)) then
+          null_velocity_flag=1
+          if ((idonatelow.eq.0).and.(idonatehigh.eq.0)) then
+           ! do nothing
+          else
+           print *,"idonatelow or idonatehigh invalid"
+           stop
+          endif
+         else if ((usten_accept(1).ne.zero).or. &
+                  (usten_accept(-1).ne.zero)) then
+          ! do nothing
+         else
+          print *,"usten_accept is corrupt"
+          stop
+         endif
+
          do istencil=idonatelow,idonatehigh
  
           if (normdir.eq.0) then
@@ -20110,12 +20136,6 @@ stop
             coeff, &
             bfact,dx,map_forward,normdir)
 
-           null_velocity_flag=0
-           if ((usten_donate(1).eq.zero).and. &
-               (usten_donate(-1).eq.zero)) then
-            null_velocity_flag=1
-           endif
-               
            if (volint.gt.zero) then  
 
              ! we are inside the istencil loop.
