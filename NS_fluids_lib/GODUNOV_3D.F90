@@ -18899,6 +18899,9 @@ stop
       REAL_T xsten_depart(-1:1,SDIM)
       REAL_T usten_accept(-1:1)
       REAL_T usten_donate(-1:1)
+
+      INTEGER_T null_velocity_flag
+
       REAL_T xdepartsize,xtargetsize,xloint,xhiint
       REAL_T volint
       REAL_T coeff(2)
@@ -20107,6 +20110,12 @@ stop
             coeff, &
             bfact,dx,map_forward,normdir)
 
+           null_velocity_flag=0
+           if ((usten_donate(1).eq.zero).and. &
+               (usten_donate(-1).eq.zero)) then
+            null_velocity_flag=1
+           endif
+               
            if (volint.gt.zero) then  
 
              ! we are inside the istencil loop.
@@ -20131,17 +20140,38 @@ stop
             endif
              
             call multi_get_volume_grid_and_map( &
-              normdir,coeff, &
+              normdir, & ! normdir=0..sdim-1
+              coeff, &
               bfact,dx, &
               xsten_recon,1, &
               mofdata_grid, &
               xsten_depart,1, &
-              multi_volume_grid,multi_cen_grid, &
-              multi_volume,multi_cen, &
+              multi_volume_grid, & ! intersection of departure with grid.
+              multi_cen_grid, &
+              multi_volume, & ! intersection of target with grid.
+              multi_cen, &
               geom_xtetlist_uncapt(1,1,1,tid+1), &
               nmax, &
               nmax, &
               nmat,SDIM,caller_id)
+
+            if (null_velocity_flag.eq.1) then
+             do im=1,nmat
+              vofcomp=(im-1)*ngeom_recon+1
+              multi_volume_grid(im)=mofdata_grid(vofcomp)*volcell_recon
+              multi_volume(im)=multi_volume_grid(im)
+              do dir2=1,SDIM
+               multi_cen_grid(dir2,im)=cencell_recon(dir2)+ &
+                       mofdata_grid(vofcomp+dir2)
+               multi_cen(dir2,im)=multi_cen_grid(dir2,im)
+              enddo ! dir2=1..sdim
+             enddo !im=1..nmat
+            else if (null_velocity_flag.eq.0) then
+             ! do nothing
+            else
+             print *,"null_velocity_flag invalid"
+             stop
+            endif 
 
             do im=1,nmat
              vofcomp=(im-1)*ngeom_recon+1

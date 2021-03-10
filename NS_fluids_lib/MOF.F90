@@ -18460,6 +18460,9 @@ contains
 
        ! uncaptured_volume_fluid and uncaptured_volume_solid should be the
        ! same here.
+       ! This "if" clause takes care of the scenario when the
+       ! intersection of the departure region with the grid cell
+       ! is very small.
       if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
           (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
 
