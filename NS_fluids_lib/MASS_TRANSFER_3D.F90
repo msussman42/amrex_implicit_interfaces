@@ -9171,21 +9171,24 @@ stop
               if ((vel_phasechange(ireverse).ge.zero).or. &
                   (vel_phasechange(ireverse).le.zero)) then
 
-               if (1.eq.1) then
+               if (1.eq.0) then
                 print *,"i,j,k,prev_time,dt,iten,ireverse,vel_phasechange ", &
                  i,j,k,prev_time,dt,iten,ireverse,vel_phasechange(ireverse)
                endif
 
                do dir=1,ncomp_per_burning
+
                 burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
                  SIGNVEL*nrmPROBE(dir)*vel_phasechange(ireverse)
 
-                if (1.eq.1) then
+                if (1.eq.0) then
                  print *,"i,j,k,prev_time,dt,iten,ireverse,dir,burn ", &
                   i,j,k,prev_time,dt,iten,ireverse,dir, &
                   burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)
                 endif
-               enddo
+
+               enddo !dir=1,ncomp_per_burning (1..sdim)
+
               else
                print *,"vel_phasechange(ireverse) cannot be NaN"
                stop
