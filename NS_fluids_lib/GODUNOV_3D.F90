@@ -20176,16 +20176,21 @@ stop
               nmat,SDIM,caller_id)
 
             if (null_velocity_flag.eq.1) then
-             do im=1,nmat
-              vofcomp=(im-1)*ngeom_recon+1
-              multi_volume_grid(im)=mofdata_grid(vofcomp)*volcell_recon
-              multi_volume(im)=multi_volume_grid(im)
-              do dir2=1,SDIM
-               multi_cen_grid(dir2,im)=cencell_recon(dir2)+ &
-                       mofdata_grid(vofcomp+dir2)
-               multi_cen(dir2,im)=multi_cen_grid(dir2,im)
-              enddo ! dir2=1..sdim
-             enddo !im=1..nmat
+             if (istencil.eq.0) then
+              do im=1,nmat
+               vofcomp=(im-1)*ngeom_recon+1
+               multi_volume_grid(im)=mofdata_grid(vofcomp)*volcell_recon
+               multi_volume(im)=multi_volume_grid(im)
+               do dir2=1,SDIM
+                multi_cen_grid(dir2,im)=cencell_recon(dir2)+ &
+                    mofdata_grid(vofcomp+dir2)
+                multi_cen(dir2,im)=multi_cen_grid(dir2,im)
+               enddo ! dir2=1..sdim
+              enddo !im=1..nmat
+             else
+              print *,"istencil invalid"
+              stop
+             endif
             else if (null_velocity_flag.eq.0) then
              ! do nothing
             else
@@ -20193,6 +20198,7 @@ stop
              stop
             endif 
 
+             ! normdir=0..sdim-1
             do im=1,nmat
              vofcomp=(im-1)*ngeom_recon+1
              moment_grid_diff(im)= &
