@@ -2927,15 +2927,19 @@ stop
       subroutine mdot_from_T_probe( &
        TSAT_Y_PARMS, &
        T_gamma,Y_gamma, &
-       mdotT)
+       mdotT, &
+       TEMP_PROBE_source, &
+       TEMP_PROBE_dest)
       IMPLICIT NONE
 
       type(TSAT_MASS_FRAC_parm_type), intent(in) :: TSAT_Y_PARMS
       REAL_T, intent(in) :: T_gamma
       REAL_T, intent(in) :: Y_gamma
       REAL_T, intent(out) :: mdotT
+      REAL_T, intent(out) :: TEMP_PROBE_source
+      REAL_T, intent(out) :: TEMP_PROBE_dest
       REAL_T D_MASS
-      REAL_T T_probe(2)
+      REAL_T T_probe(2) ! source,dest
       REAL_T Y_probe(2)
       REAL_T den_I_interp(2)
       REAL_T den_probe(2)
@@ -3008,6 +3012,9 @@ stop
            endif
           enddo ! iprobe=1,2
 
+          TEMP_PROBE_source=T_probe(1)
+          TEMP_PROBE_dest=T_probe(2)
+
           if (wt(1)+wt(2).gt.zero) then
            mdotT=wt(1)*(T_probe(1)-T_gamma)+ &
                  wt(2)*(T_probe(2)-T_gamma)
@@ -3059,6 +3066,8 @@ stop
       REAL_T mdotT
       REAL_T mdotY_top,mdotY_bot,mdotY
       INTEGER_T Kassemi_flag
+      REAL_T TEMP_PROBE_source
+      REAL_T TEMP_PROBE_dest
 
       Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
       if (Kassemi_flag.eq.0) then
@@ -3087,7 +3096,9 @@ stop
       call mdot_from_T_probe( &
        TSAT_Y_PARMS, &
        T_gamma,Y_gamma, &
-       mdotT)
+       mdotT, &
+       TEMP_PROBE_source, &
+       TEMP_PROBE_dest)
 
       call mdot_from_Y_probe( &
        TSAT_Y_PARMS, &
@@ -7205,6 +7216,8 @@ stop
       INTEGER_T fully_saturated
       REAL_T mdotT_debug
       REAL_T mdotY_top_debug,mdotY_bot_debug,mdotY_debug
+      REAL_T TEMP_PROBE_source
+      REAL_T TEMP_PROBE_dest
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -8819,7 +8832,9 @@ stop
                     call mdot_from_T_probe( &
                      TSAT_Y_PARMS, &
                      TSAT_correct,Y_predict, &
-                     mdotT_debug)
+                     mdotT_debug, &
+                     TEMP_PROBE_source, &
+                     TEMP_PROBE_dest)
 
                     call mdot_from_Y_probe( &
                      TSAT_Y_PARMS, &
@@ -8911,6 +8926,11 @@ stop
                     print *,"mdotY_top_debug ",mdotY_top_debug
                     print *,"mdotY_bot_debug ",mdotY_bot_debug
                    endif
+                  endif
+                  if (1.eq.0) then
+                   print *,"TSAT:it,Tnp1,Tn,mdot,Tsrc,Tdst ", &
+                     TSAT_iter,TSAT_correct,TSAT_predict,mdotT_debug, &
+                     TEMP_PROBE_source,TEMP_PROBE_dest
                   endif
 
                   TSAT_converge=0
