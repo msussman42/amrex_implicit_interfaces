@@ -1896,7 +1896,7 @@ void fortran_parameters() {
 
  FORT_OVERRIDE(
   &ns_max_level,
-  ns_n_cell.dataPtr();
+  ns_n_cell.dataPtr(),
   ns_space_blocking_factor.dataPtr(),
   &time_blocking_factor,
   &prescribe_temperature_outflow,
