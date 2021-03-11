@@ -22,6 +22,7 @@ namespace amrex{
 
      void FORT_OVERRIDE(
        const int* max_level,
+       const int* n_cell,
        const int* bfact_space_order,
        const int* bfact_time_order,
        const int* prescribe_temperature_outflow,

@@ -22,6 +22,7 @@ stop
 
       subroutine FORT_OVERRIDE( &
         ccmax_level, &
+        ccn_cell, &
         ccbfact_space_order, &
         ccbfact_time_order, &
         ccprescribe_temperature_outflow, &
@@ -153,6 +154,7 @@ stop
       IMPLICIT NONE
       
       INTEGER_T, intent(in) :: ccmax_level
+      INTEGER_T, intent(in) :: ccn_cell(SDIM)
       INTEGER_T, intent(in) :: ccbfact_space_order(0:ccmax_level)
       INTEGER_T, intent(in) :: ccbfact_time_order
       INTEGER_T, intent(in) :: ccnum_materials
@@ -257,6 +259,7 @@ stop
       character*12 namestr1
       character*13 namestr2
       INTEGER_T i
+      INTEGER_T local_dir
       
       INTEGER_T im,iten
       INTEGER_T nten
@@ -536,7 +539,28 @@ stop
       
       global_pressure_scale=one
       global_velocity_scale=one
-      
+     
+      do local_dir=1,SDIM
+       fort_n_cell(local_dir)=ccn_cell(local_dir)
+       if ((fort_n_cell(local_dir).ge.4).and. &
+           (4*(fort_n_cell(local_dir)/4).eq. &
+            fort_n_cell(local_dir))) then
+        ! do nothing
+       else
+        print *,"fort_n_cell must be divisible by 4"
+        stop
+       endif
+      enddo
+
+      if (SDIM.eq.2) then
+       fort_n_cell(3)=fort_n_cell(SDIM)
+      else if (SDIM.eq.3) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
+  
       fort_max_level=ccmax_level
       do level=0,fort_max_level
        bfact_space_order(level)=ccbfact_space_order(level)

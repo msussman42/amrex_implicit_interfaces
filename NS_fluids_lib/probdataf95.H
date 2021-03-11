@@ -1,4 +1,5 @@
       INTEGER_T fort_max_level
+      INTEGER_T fort_n_cell(3)
       INTEGER_T bfact_space_order(0:100)
       INTEGER_T bfact_time_order
  
