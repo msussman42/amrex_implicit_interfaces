@@ -1379,6 +1379,9 @@ void fortran_parameters() {
  int time_blocking_factor=1;
  ppamr.query("time_blocking_factor",time_blocking_factor); 
 
+ Vector<int> ns_n_cell(AMREX_SPACEDIM);
+ ppamr.getarr("n_cell",ns_n_cell,0,AMREX_SPACEDIM);
+
  ParmParse pp("ns");
  pp.get("probtype",probtype);
  pp.get("axis_dir",axis_dir);
@@ -1893,6 +1896,7 @@ void fortran_parameters() {
 
  FORT_OVERRIDE(
   &ns_max_level,
+  ns_n_cell.dataPtr();
   ns_space_blocking_factor.dataPtr(),
   &time_blocking_factor,
   &prescribe_temperature_outflow,

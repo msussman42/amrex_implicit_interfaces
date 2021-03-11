@@ -33,6 +33,7 @@ REAL_T :: den_L
 REAL_T :: WV,WA,Le
 REAL_T :: D_not,B_M,Sh
 REAL_T :: T_gamma,X_gamma,Y_gamma
+REAL_T :: T_gamma_liquid
 
 contains
 
@@ -195,6 +196,8 @@ else
  print *,"B_M must be positive"
  stop
 endif
+
+
 print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,Y_gamma ", &
         T_gamma,Y_gamma
 
@@ -972,7 +975,7 @@ if (LS_VAP.le.zero) then
  VEL(2)=zero
  VEL(SDIM)=zero
  Y=Y_Gamma
- T=T_Gamma
+ T=T_Gamma_liquid
  PRES=zero
 else if (LS_VAP.ge.zero) then
  VELCOEFF = mdot/(4.0d0*Pi*den_G)
