@@ -34,6 +34,7 @@ REAL_T :: WV,WA,Le
 REAL_T :: D_not,B_M,Sh
 REAL_T :: T_gamma,X_gamma,Y_gamma
 REAL_T :: T_gamma_liquid
+REAL_T :: dr_max_level
 
 contains
 
@@ -90,7 +91,18 @@ IMPLICIT NONE
 REAL_T :: a,b,c,f_a,f_b,f_c
 REAL_T :: a_min,f_a_min
 INTEGER_T :: iter
+INTEGER_T :: ilev
 
+if (fort_n_cell(1).gt.0) then
+ dr_max_level=(probhix-problox)/fort_n_cell(1)
+ do ilev=1,fort_max_level
+  dr_max_level=0.5d0*dr_max_level
+ enddo
+else
+ print *,"fort_n_cell(1) invalid"
+ stop
+endif
+ 
 DEF_VAPOR_GAMMA =  1.666666667D0
 
 ! ergs/(mol kelvin) is the default for NavierStokes::R_Palmore_Desjardins
@@ -100,6 +112,7 @@ den_G = fort_denconst(2)
 C_pG = fort_stiffCP(2)
 k_G = fort_heatviscconst(2)
 lambda=k_G/(den_G*C_pG)
+T_gamma_liquid=fort_tempconst(1)
 T_inf = fort_tempconst(2)
 T_sat = fort_saturation_temp(1)
 L_V = fort_latent_heat(1)
@@ -197,9 +210,9 @@ else
  stop
 endif
 
-
-print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,Y_gamma ", &
-        T_gamma,Y_gamma
+print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,T_gamma_liquid,Y_gamma ", &
+        T_gamma,T_gamma_liquid,Y_gamma
+print *,"dr_max_level=",dr_max_level
 
 return
 end subroutine INIT_DROP_IN_SHEAR_MODULE
@@ -974,8 +987,8 @@ if (LS_VAP.le.zero) then
  VEL(1)=zero
  VEL(2)=zero
  VEL(SDIM)=zero
- Y=Y_Gamma
- T=T_Gamma_liquid
+ Y=Y_gamma
+ T=T_gamma_liquid
  PRES=zero
 else if (LS_VAP.ge.zero) then
  VELCOEFF = mdot/(4.0d0*Pi*den_G)
@@ -1000,7 +1013,7 @@ else if (LS_VAP.ge.zero) then
   print *,"Y invalid"
   stop
  endif
- T=T_Gamma-L_V/C_pG+(T_inf-T_Gamma+L_V/C_pG)* &
+ T=T_gamma-L_V/C_pG+(T_inf-T_gamma+L_V/C_pG)* &
          exp(-mdot*C_pG/(four*Pi*k_G*rr))
  if (T.gt.zero) then
   ! do nothing

@@ -3,7 +3,7 @@
 
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 0
+      integer, PARAMETER :: probtype = 1
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
