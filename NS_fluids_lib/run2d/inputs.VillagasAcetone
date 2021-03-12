@@ -250,9 +250,10 @@ ns.FSI_flag=0 0
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
 # 1=water 2=gas   
-#ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
 #drop=98.6 degrees F   air=70 degrees F
 #drop=27.5 degrees C   air=27.5 degrees C
+#initial temperature in the liquid is given by tempconst(1)
+#T_inf for vapor is given by tempconst(2)
 #ns.tempconst=294.922676 700.0 #PD model
 ns.tempconst=295.302596 700.0 #Kassemi model
 #ns.hardwire_T_gamma=294.92267586416710 0.0

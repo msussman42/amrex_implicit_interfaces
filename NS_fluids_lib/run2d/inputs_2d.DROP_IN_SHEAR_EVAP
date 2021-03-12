@@ -188,9 +188,9 @@ ns.FSI_flag=0 0
 ns.recalesce_flag=0 0 
 ns.solidheat_flag=0  
 # 1=water 2=gas   
-#ns.tempconst=373.15 383.15 #CODY: case 1, T_inf for gas, T_gamma for liq.
+#ns.tempconst=373.15 383.15 #CODY: case 1, T_gamma for liq., T_inf for gas.
 #drop=98.6 degrees F   air=70 degrees F
-ns.tempconst=310.0 294.0 #CODY: case 2, T_inf for gas, T_gamma for liq.
+ns.tempconst=310.0 294.0 #CODY: case 2, T_gamma for liq., T_inf for gas.
 #ns.hardwire_T_gamma=296.163 0.0
 #ns.cancel_advection=1
 ns.xblob=0.00125
