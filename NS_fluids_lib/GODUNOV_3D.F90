@@ -27021,6 +27021,7 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0,dir)
 
+       ! traverse the "dir" MAC grid.
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
@@ -27037,6 +27038,9 @@ stop
 
         ! dir=0..sdim-1 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
+
+        ! traverse all the flux face centroids associated with the
+        ! "dir" MAC grid control volume (i,j,k)
        do dir_flux=0,SDIM-1
        do side_flux=0,1
 
@@ -27045,16 +27049,20 @@ stop
         !  xstenMAC(0,1)=i * dx        xstenMAC(1,1)=(i+1)*dx
         !  xstenMAC(0,2)=(j+1/2) * dy  xstenMAC(1,2)=(j+3/2)*dy
         !  xstenMAC(0,3)=(k+1/2) * dz  xstenMAC(1,3)=(k+3/2)*dz
+        ! center of the current (dir) MAC grid control volume:
         do dircomp=1,SDIM
          xflux(dircomp)=xstenMAC(0,dircomp)
         enddo
 
         if (dir_flux.eq.dir) then
          if ((inormal.eq.domlo(dir+1)).and. &
-             (side_flux.eq.0)) then ! 1/2 size control vol
+             (side_flux.eq.0).and. &
+             (velbc(dir+1,side_flux+1,dir+1).ne.INT_DIR)) then 
+           ! 1/2 size control vol
           xflux(dir_flux+1)=xstenMAC(0,dir_flux+1)
          else if ((inormal.eq.domhi(dir+1)+1).and. &
-                  (side_flux.eq.1)) then
+                  (side_flux.eq.1).and. &
+                  (velbc(dir+1,side_flux+1,dir+1).ne.INT_DIR)) then
           xflux(dir_flux+1)=xstenMAC(0,dir_flux+1)
          else if ((inormal.ge.domlo(dir+1)).and. &
                   (inormal.le.domhi(dir+1)+1)) then
