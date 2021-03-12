@@ -153,7 +153,8 @@ ns.constant_volume_mdot=0 0 # expansion 1..2 nten
 #      freezing_model=6 ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 ns.constrain_normal_probe_for_evap=0
 ns.freezing_model=6 0
-ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 # 3 0=Kassemi 0 0=Palmore and Desjardins
+# 1..2*nten
+ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 # 3=Kassemi 0=Palmore and Desjardins
 ns.mass_fraction_id=1 0  # 1.. 2 nten
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
 ns.saturation_temp_min = 273.0 0.0  
@@ -211,7 +212,7 @@ ns.speciesconst=7.1e-3 7.1e-3  #PD: initial vapor mass fraction in atmosphere
 ns.radblob2=7.1e-3  # since species=1 for Kassemi model, put Y_inf here.
 
 #if ns.Tanasawa_or_Schrage_or_Kassemi=3,
-ns.speciesconst=1.0 1.0  # Kassemi
+#ns.speciesconst=1.0 1.0  # Kassemi
 #ns.hardwire_Y_gamma=1.9009955332402406e-2 0.0 # for LV=2.1e+10
 #1.0016 milli pascals * s = 1.002 E-3 pa * s
 #18.1 micro pascals * s  = 1.81E-5 pa * s  kg m/s^2 / m^2 = kg/(m s^2)=
@@ -245,8 +246,8 @@ ns.solidheat_flag=0
 #drop=27.5 degrees C   air=27.5 degrees C
 #initial temperature in the liquid is given by tempconst(1)
 #T_inf for vapor is given by tempconst(2)
-#ns.tempconst=289.91422134 300.5 #PD model
-ns.tempconst= 289.92348723 300.5 #Kassemi model
+ns.tempconst=289.91422134 300.5 #PD model
+#ns.tempconst= 290.02 300.5 #Kassemi model
 #ns.hardwire_T_gamma=289.91422134044990 0.0 # for LV=2.1e+10
 #ns.cancel_advection=1
 ns.xblob=0.0
