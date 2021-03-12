@@ -8860,10 +8860,10 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,iten
-      REAL_T LS(nmat)
-      REAL_T NRM(nmat*SDIM)
-      REAL_T NRM_extend(SDIM)
+      INTEGER_T, intent(in) :: nmat,iten
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(in) :: NRM(nmat*SDIM)
+      REAL_T, intent(out) :: NRM_extend(SDIM)
       INTEGER_T im,im_opp,dir
 
       if (nmat.ne.num_materials) then

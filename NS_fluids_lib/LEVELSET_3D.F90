@@ -1089,6 +1089,7 @@ stop
        stop
       endif
 
+       ! declared in GLOBALUTIL.F90
       call get_LSNRM_extend(LS_CENTER,nrmcenter,nmat,iten,nfluid)
       RR=one
       call prepare_normal(nfluid,RR,mag)
@@ -1885,10 +1886,10 @@ stop
       enddo ! dir2=1..sdim
 
       RR=one
-      call prepare_normal(nfluid_cen,RR,mag)
-      call prepare_normal(nfluid_def1,RR,mag1)
-      call prepare_normal(nfluid_def2,RR,mag2)
-      call prepare_normal(nfluid_def3,RR,mag3)
+      call prepare_normal(nfluid_cen,RR,mag) ! im or im_opp fluid
+      call prepare_normal(nfluid_def1,RR,mag1) ! im fluid
+      call prepare_normal(nfluid_def2,RR,mag2) ! im_opp fluid
+      call prepare_normal(nfluid_def3,RR,mag3) ! im3 material
 
       if ((mag1.le.zero).or. &
           (mag2.le.zero).or. &
@@ -1896,6 +1897,9 @@ stop
           (mag.le.zero)) then
        print *,"err:nfluid_def1, nfluid_def2, nfluid_def3, or nfluid_cen"
        print *,"mag1,mag2,mag3,mag=",mag1,mag2,mag3,mag
+       print *,"nfluid_def1 associated with material im=",im
+       print *,"nfluid_def2 associated with material im_opp=",im_opp
+       print *,"nfluid_def3 associated with material im3=",im3
        stop
       endif
 
@@ -4683,8 +4687,38 @@ stop
               endif ! im_curv=im_main or im_main_opp
 
                ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
-              RR=xcenter(1)
+              RR=xcenter(1) 
+               ! declared in GLOBALUTIL.F90
               call prepare_normal(nrm_mat,RR,mag)
+
+              if (mag.eq.zero) then
+               if (is_rigid(nmat,im_curv).eq.0) then
+                ! do nothing
+               else if (is_rigid(nmat,im_curv).eq.1) then
+                 ! nrm_test obtained via finite differences.
+                do dirloc=1,SDIM
+                 nrm_mat(dirloc)=nrm_test(dirloc)
+                enddo
+                 ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
+                RR=xcenter(1) 
+                 ! declared in GLOBALUTIL.F90
+                call prepare_normal(nrm_mat,RR,mag)
+                if (mag.eq.zero) then
+                 print *,"both normals for is_rigid material are null"
+                 stop
+                endif
+               else
+                print *,"is_rigid invalid"
+                stop
+               endif
+
+              else if (mag.gt.zero) then
+               ! do nothing
+              else
+               print *,"mag invalid"
+               stop
+              endif
+
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
                nrmPROBE(inormal)=nrm_mat(dirloc)
@@ -4799,7 +4833,7 @@ stop
               finest_level, &
               bfact,dx, &
               xcenter, &
-              nrmPROBE, & ! nmat x sdim components
+              nrmPROBE, & !nmat x sdim components("nrmcenter" in initheightLS)
               dircrossing, &
               sidestar, &
               signside, &

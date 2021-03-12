@@ -54,7 +54,7 @@ amr.plotfile_on_restart=1
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
 amr.n_cell=32 96  # RZ
-amr.max_level = 0 # max_level=1 for production runs
+amr.max_level = 1 # max_level=1 for production runs
 #ns.max_level_two_materials=1
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
