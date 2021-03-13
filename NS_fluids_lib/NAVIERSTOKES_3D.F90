@@ -1647,6 +1647,7 @@ END SUBROUTINE SIMP
            else if (vfrac.le.VOFTOL) then
             lnode(ii,jj,kk)=-one
            else
+             ! declared in GLOBALUTIL.F90
             call distfunc(bfact,dx,xsten,nhalf, &
              intercept,nn,xtarget,lnode(ii,jj,kk),SDIM)
            endif
