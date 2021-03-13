@@ -411,6 +411,10 @@ Real NavierStokes::ractivez=0.0;
 int  NavierStokes::probtype=0;
 int  NavierStokes::adapt_quad_depth=1;
 
+// =0 (solids embed, fluids tessellate), 
+// =1 (solids and fluids tessellate)
+// =3 (solids and fluids tessellate, if F_solid>1/2, replace with F_solid=1,
+//    if F_solid<1/2, replace with F_solid=0.
 int  NavierStokes::visual_tessellate_vfrac=0;   
 int  NavierStokes::visual_revolve=0;   
 int  NavierStokes::visual_option=-2; // -2 zonal tecplot,-1 plot files (visit)
@@ -20054,8 +20058,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  int renormalize_only=0; // init:solid TEMP,VEL,LS,extend LSfluid into solid.
  int local_truncate=0; // do not force removal of flotsam.
 
- if (post_init_flag==0) { // called from writePlotFile
-  // do nothing
+ if (post_init_flag==0) { 
+  error_update_flag=0;  // called from writePlotFile, do not update S_old
  } else if (post_init_flag==1) {
   error_update_flag=1;  // called from post_init_state, update S_old
  } else if (post_init_flag==2) {
