@@ -9,7 +9,7 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0 
 geometry.prob_hi   =  3.0 3.0 3.0 
 ns.FD_curv_interp=1
-ns.conservative_tension_force=1
+ns.conservative_tension_force=0
 
 # multigrid class
 #mg.verbose = 1
@@ -43,9 +43,11 @@ amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 512
 ns.EILE_flag=-1
 # 0=MOF 2=CMOF 4=CLSVOF/CMOF
-ns.continuous_mof=4
+ns.continuous_mof=2
+ns.vof_height_function=1
 ns.MOFITERMAX=15
-ns.fab_verbose=0 # for circle, fab_verbose=1, for plane (210), fab_verbose=0
+# fab_verbose=1 or 3 causes "curv_min" and "curv_max" to be output.
+ns.fab_verbose=1 # for circle, fab_verbose=1, for plane (210), fab_verbose=0
 #amr.restart         = chk0100
 #amr.trace   =1
 
@@ -55,8 +57,7 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 mac.mac_tol        = 1.0e-4  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-4
 
-ns.visual_option=-1  # -2,-3 zonal tecplot, -1 plot files
-
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system 0.5
 ns.init_shrink    = 1.0      # scale back initial timestep
@@ -70,7 +71,7 @@ ns.sum_interval   = 1        # timesteps between computing mass
 
 # 0=> circle  210 => line (2D) or plane (3D)
 # 200=>x cylinder axis ... 202=>z cylinder axis
-ns.axis_dir=210
+ns.axis_dir=0
 ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
@@ -91,6 +92,10 @@ ns.zblob=1.94 # 1.5 if axis_dir==0   a point on the line if axis_dir==210
 # 1.0 (radius) if axis_dir==0, dy/dx (2D) if axis_dir==210 (dz/dx 3D)
 ns.radblob=-0.402 # (-.402)
 ns.radblob2=0.211 # set to 0 if axis_dir==0, dz/dy if axis_dir==210 (3D) (.211)
+ns.xblob=1.5
+ns.yblob=1.5
+ns.zblob=1.5
+ns.radblob=1.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=36
