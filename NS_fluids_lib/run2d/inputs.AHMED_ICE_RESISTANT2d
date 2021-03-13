@@ -36,7 +36,7 @@ ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2 # 0=MOF 2=CMOF 
 ns.mof_error_ordering=0
 # water,air,lubricant,substrate
-ns.mof_ordering=0 2 0 1 
+ns.mof_ordering=0 0 0 1 
 
 # multigrid class
 mg.verbose = 0
@@ -69,7 +69,7 @@ amr.check_int       = 100
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 100 # was 100  (plot_int=1 for testing)
+amr.plot_int        = 100 # 100 for production runs
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -112,7 +112,9 @@ ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
-ns.sum_interval   = 1        # timesteps between computing mass 
+#There are over 300 oil parcels to have statistics for in 3D,
+#so recommended sum_interval>1
+ns.sum_interval   = 10      # timesteps between computing mass 
 
 # initial ice block on heated substrate.
 # probtype=414
@@ -135,7 +137,7 @@ ns.speciesviscconst=0.0 0.282 0.0 0.0
 # 1=water 2=gas  3=oil  4=substrate 
 ns.speciesconst=0.0 0.0 0.0 0.0
 # 1=water 2=gas  3=oil  4=substrate 
-ns.viscconst=0.018 0.00017 1.0 1000.0 # dimensional
+ns.viscconst=0.018 0.00017 1.0 10.0 # dimensional
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.added_weight=1.0 1.0 1.0 1.0
