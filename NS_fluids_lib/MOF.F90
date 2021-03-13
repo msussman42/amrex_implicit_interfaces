@@ -6176,7 +6176,7 @@ end subroutine volume_sanity_check
           if (sdim.eq.3) then
            xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
           endif
-         enddo ! isten
+         enddo ! isten=-1..1
 
          ! in: tets_box_planes_super
          call tets_box_planes( &
@@ -10173,7 +10173,8 @@ contains
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen, &
-         cencell_cen,sdim)
+         cencell_cen, &
+         sdim)
        else if (continuous_mof.eq.2) then
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
@@ -10182,7 +10183,8 @@ contains
         call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
-         volcell_cen,cencell_cen, &
+         volcell_cen, &
+         cencell_cen, &
          sdim)
        else
         print *,"continuous_mof invalid"
@@ -10273,7 +10275,7 @@ contains
 
          if (sdim.eq.3) then
           ksten_low=-1
-          ksten_high=-1
+          ksten_high=1
          else if (sdim.eq.2) then
           ksten_low=0
           ksten_high=0
@@ -11605,15 +11607,19 @@ contains
           (continuous_mof.eq.5)) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
         cencell_vof,sdim)
-       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_cen, &
-        cencell_cen,sdim)
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell_cen, &
+        cencell_cen, &
+        sdim)
       else if (continuous_mof.eq.2) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
          cencell_vof,sdim)
        call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
-         volcell_cen,cencell_cen, &
+         volcell_cen, &
+         cencell_cen, &
          sdim)
       else
         print *,"continuous_mof invalid"
@@ -13899,12 +13905,15 @@ contains
          if ((continuous_mof.eq.0).or. &
              (continuous_mof.eq.5)) then
 
-          call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
+          call Box_volumeFAST( &
+           bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_vof, &
            uncaptured_centroid_vof,sdim)
-          call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
+          call Box_volumeFAST( &
+           bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_cen, &
-           uncaptured_centroid_cen,sdim)
+           uncaptured_centroid_cen, &
+           sdim)
 
          else if (continuous_mof.eq.2) then
 
@@ -13915,7 +13924,8 @@ contains
           call Box_volume_super( &
            cmofsten, &
            bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen,uncaptured_centroid_cen, &
+           uncaptured_volume_cen, &
+           uncaptured_centroid_cen, &
            sdim)
 
          else
@@ -15058,7 +15068,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box, &
+        xsten0,nhalf0, &
+        nhalf_box, & ! =1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
         mofdata,mofdatavalid,nmat,sdim,1)
@@ -16399,14 +16410,16 @@ contains
       normalize_tessellate=0  ! do not override "is_rigid"
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0_plus,nhalf0,nhalf_box, &
+        xsten0_plus,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0_minus,nhalf0,nhalf_box, &
+        xsten0_minus,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
@@ -17326,7 +17339,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
        cmofsten, &
-       xsten0,nhalf0,nhalf_box, &
+       xsten0,nhalf0, &
+       nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
        mofdata,mofdatavalid,nmat,sdim,101)
@@ -18357,7 +18371,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box, &
+        xsten0,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
         mofdata,mofdatavalid,nmat,sdim,102)
@@ -19412,7 +19427,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_base( &
        cmofsten, &
-       xsten0,nhalf0,nhalf_box, &
+       xsten0,nhalf0, &
+       nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        renorm_tessellate, & !=0
        mofdata,nmat,sdim,1)
@@ -20517,7 +20533,8 @@ contains
         ! sum F_solid<=1 
        call make_vfrac_sum_ok_copy( &
          cmofsten, &
-         xsten0,nhalf0,nhalf_box, &
+         xsten0,nhalf0, &
+         nhalf_box, & !=1 (=> do not use cmofsten)
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
          mofdata,mofdatavalid,nmat,sdim,3)
@@ -20715,7 +20732,8 @@ contains
        ! sum F_solid <= 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten_recon,nhalf_recon,nhalf_box, &
+        xsten_recon,nhalf_recon, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
         mofdata,mofdatavalid,nmat,sdim,30)
@@ -21292,7 +21310,8 @@ contains
        ! sum voffluid=1 ,  sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box, &
+        xsten0,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! =0
         mofdata,mofdatavalid,nmat,sdim,300)
