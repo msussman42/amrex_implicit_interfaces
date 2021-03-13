@@ -19,7 +19,7 @@
 #define CURVWT (1.0D-3)
 
 #define DEBUG_THERMAL_COEFF 0
-#define DEBUG_CURVATURE 0
+#define DEBUG_CURVATURE 1
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -1485,8 +1485,8 @@ stop
       arclenx=two*hx*hxx+two*hy*hxy
       arcleny=two*hx*hxy+two*hy*hyy
       g=one/sqrt(arclen)
-      gx=-half*(arclen**(-1.5))*arclenx
-      gy=-half*(arclen**(-1.5))*arcleny
+      gx=-half*(arclen**(-1.5d0))*arclenx
+      gy=-half*(arclen**(-1.5d0))*arcleny
 
       if (levelrz.eq.0) then
         ! phi=h(x,y)-z  z=h(x,y)   (dircrit=2)
@@ -1742,6 +1742,7 @@ stop
 
            !h(x,y)=sum_{i,j=0..2}  aij(x-x0)^i(y-y0)^j 
            !in 3D, low order derivatives are first.
+           ! flattening: row=3*i+j+1
           num_coeffs=9
 
           interval_x=-3
@@ -1761,6 +1762,12 @@ stop
 
             xnot=xsten(0,itan)
             ynot=xsten(0,jtan)
+            if (rowxy.eq.(3*(rowx-1)+rowy)) then
+             ! do nothing
+            else
+             print *,"rowxy fails flattening sanity check"
+             stop
+            endif
             RHS_3D(rowxy)=htfunc_VOF(rowx-2,rowy-2)
 
             call h_coeffXYZ(x1,x2,x1_3D,x2_3D,xnot,ynot,coeffs_3D)
@@ -1785,17 +1792,49 @@ stop
 
            ! 2D: xx(1)*(x-x0)^2+xx(2)*(x-x0)+xx(3)
            ! 3D: h(x,y)=sum_{i,j=0..2}  aij(x-x0)^i(y-y0)^j 
+           ! flattening: row=3*i+j+1
            !in 3D, low order derivatives are first.
            !matstatus=1 => ok.
           call matrix_solve(AA_3D,xx_3D,RHS_3D,matstatus,num_coeffs) 
 
           if (matstatus.eq.1) then
-           hprime_of_r=xx_2D(2)
-           hdprime_of_r=two*xx_2D(1)
-           g=sqrt(one+hprime_of_r**2)
-           curvHT_VOF=hdprime_of_r/(g**3)
+           rowx=1
+           rowy=0
+           rowxy=3*rowy+rowx+1 
+           hx=xx_3D(rowxy)
+           rowx=0
+           rowy=1
+           rowxy=3*rowy+rowx+1 
+           hy=xx_3D(rowxy)
+           rowx=2
+           rowy=0
+           rowxy=3*rowy+rowx+1 
+           hxx=two*xx_3D(rowxy)
+           rowx=0
+           rowy=2
+           rowxy=3*rowy+rowx+1 
+           hyy=two*xx_3D(rowxy)
+           rowx=1
+           rowy=1
+           rowxy=3*rowy+rowx+1 
+           hxy=xx_3D(rowxy)
+
+           arclen=one+hx**2+hy**2
+           arclenx=two*hx*hxx+two*hy*hxy
+           arcleny=two*hx*hxy+two*hy*hyy
+           g=one/sqrt(arclen)
+           gx=-half*(arclen**(-1.5d0))*arclenx
+           gy=-half*(arclen**(-1.5d0))*arcleny
+
+           ! phi=h(x,y)-z  z=h(x,y)   (dircrit=2)
+           !arclen=1+hx^2+hy^2
+           !g(x,y)=arclen^{-1/2}  
+           !n=grad phi/|grad phi|=(hx g,hy g,-g)
+           !div n=hxx g + hx gx +hyy g + hy gy - gz
+           !gx=(-1/2)arclen^{-3/2}arclenx
+           curvHT_VOF=hxx*g+hx*gx+hyy*g+hy*gy
           else if (matstatus.eq.0) then
-           print *,"matstatus invalid for XY curvature coeff"
+           print *,"matstatus invalid for XYZ curvature coeff"
            stop
           endif
 
