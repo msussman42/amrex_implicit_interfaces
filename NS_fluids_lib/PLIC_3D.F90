@@ -936,7 +936,9 @@ stop
           multi_centroidA, &
           continuous_mof_parm, &
           cmofsten, &
-          nmat,SDIM,2)
+          nmat, &
+          SDIM, &
+          2)
 
         if (continuous_mof_parm.eq.2) then
            ! center cell centroids.
