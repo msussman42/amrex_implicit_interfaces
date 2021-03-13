@@ -19,7 +19,7 @@
 #define CURVWT (1.0D-3)
 
 #define DEBUG_THERMAL_COEFF 0
-#define DEBUG_CURVATURE 1
+#define DEBUG_CURVATURE 0
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -512,9 +512,7 @@ stop
       REAL_T, intent(in) :: r1,r2,ri
       REAL_T, intent(out) :: coeffs(3)
 
-      if ((r2.gt.r1).and. &
-          (r2.gt.ri).and. &
-          (r1.lt.ri)) then
+      if (r2.gt.r1) then
    
         ! ((r2-ri)^3/3 - (r1-ri)^3/3)/(r2-r1)=
         ! ((r2-ri)^3/3 - (r1-ri)^3/3)/((r2-ri)-(r1-ri)) 
@@ -529,7 +527,7 @@ stop
        coeffs(3)=one
 
       else
-       print *,"r1,r2, or ri invalid"
+       print *,"r1 or r2 invalid"
        print *,"r1,r2,ri ",r1,r2,ri
        stop
       endif
@@ -546,9 +544,7 @@ stop
       REAL_T :: coeffs_x(3)
       REAL_T :: coeffs_y(3)
 
-      if ((x2.gt.x1).and.(y2.gt.y1).and. &
-          (x2.gt.xi).and.(y2.gt.yi).and. &
-          (x1.lt.xi).and.(y1.lt.yi)) then
+      if ((x2.gt.x1).and.(y2.gt.y1)) then
    
        ! h(x,y)=sum_ij aij (x-xi)^i (y-yi)^j 
 
@@ -563,7 +559,7 @@ stop
        enddo
 
       else
-       print *,"x1,x2,y1,y2,xi, or yi invalid"
+       print *,"x1,x2,y1, or y2 invalid"
        print *,"x1,x2,y1,y2,xi,yi ",x1,x2,y1,y2,xi,yi
        stop
       endif

@@ -2097,6 +2097,7 @@ NavierStokes::read_params ()
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "check_nan " << check_nan << '\n';
      std::cout << "NavierStokes.verbose " << verbose << '\n';
+     std::cout << "NavierStokes.fab_verbose " << fab_verbose << '\n';
      std::cout << "slice_dir " << slice_dir << '\n';
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "i=" << i << '\n';
@@ -17545,7 +17546,7 @@ void NavierStokes::volWgtSum(
      nmat,interior_only);
   }// mfi
   ns_reconcile_d_num(104);
- } // verbose
+ } // fab_verbose=2 or 3
 
  delete error_heat_map_mf;
  delete lsmf;
