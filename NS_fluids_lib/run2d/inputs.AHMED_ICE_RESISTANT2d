@@ -175,9 +175,9 @@ ns.output_drop_distribution=1
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=3
 ns.lo_bc          = 3 5  # XYZ
-ns.hi_bc          = 3 2  # XYZ
+ns.hi_bc          = 2 2  # XYZ
 ns.species_lo_bc  = 3 5  # XYZ
-ns.species_hi_bc  = 3 2  # XYZ
+ns.species_hi_bc  = 2 2  # XYZ
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
