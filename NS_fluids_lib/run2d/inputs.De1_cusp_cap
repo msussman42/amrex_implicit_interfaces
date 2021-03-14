@@ -193,7 +193,8 @@ ns.probtype=36
 # since visc_coef==1,
 # the coefficient for the viscoelastic force is:
 # eta_P0 (1+(beta gammadot)^alpha)^((n-1)/alpha)
-# 0=FENE CL
+# 0=FENE CR
+# 0,1 => viscoelastic FENE-CR material  2=> elastic material
 ns.viscoelastic_model=0 0
 ns.elastic_time=0.0938 0.0    # relaxation time or Deborah number
 ns.elastic_viscosity=9.99000999 0.0 # c*eta_solvent or 
