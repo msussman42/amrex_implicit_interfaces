@@ -16,10 +16,17 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  6.0 60.0    # D* 4 4 20
 
+# 0=Sussman and Puckett algorithm 
+# 1=EILE (default), -1=Weymouth Yue
+# 2=always EI   3=always LE
 ns.EILE_flag=-1
-ns.continuous_mof=4  # make continuous_mof=4 for CLSVOF (faster, 
-                     # probably similar accuracy compared to continuous_mof=2)
+# 0=MOF  2=CMOF  4=hybrid CLSVOF+CMOF
+ns.continuous_mof=0
+ns.vof_height_function=1
+
 ns.MOFITERMAX=15
+ns.conservative_tension_force=0
+ns.temperature_primitive_variable=1 1 1 1 1
 ns.face_flag=1  # face_flag=0 should work fine too and is faster, but maybe
                 # not as accurate.
 ns.advection_order=1 1 1 1
@@ -28,7 +35,7 @@ ns.minimum_relative_error=1.0e-22
 #number of Jacobi method cycles elliptic solver initially does.
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3
-ns.solvability_projection=0 # 0 since must allow for expansion
+ns.solvability_projection=0 # 0 since outflow BC
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=2 # 1: liquid 2: vapor 
@@ -62,9 +69,20 @@ fabarray.mfiter_tile_size=16 16 16
 
 amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
-amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+# The proper nesting buffer of level i cells next to level i+1
+# cells is bf_lev[i]*n_proper. (2*bf_lev[i]=blocking_factor[i])
+amr.n_proper=1  # default is 1
+amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
+# viscoelastic terms are always discretized with the low order 
+# directionally split semi-Lagrangian method. This is to insure
+# positive definiteness of the configuration tensor.  
+# note: log conformation approach does not avoid the problem since
+# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1 if A close to
+# indefinite.
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
+#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
+ns.conservative_div_uu=1 # only used for SEM algorithm.
 ns.num_SDC_outer_sweeps=1
 ns.enable_spectral=0
 ns.diffusion_enable_spectral=0
@@ -72,7 +90,7 @@ ns.diffusion_enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
 amr.check_int       = 100      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 25
+amr.plot_int        = 50
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -86,6 +104,7 @@ mac.mac_abs_tol    = 1.0e-8  # tolerence for mac projections
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0   # scale back initial timestep
 ns.change_max     = 1.1 
+#KEEP THIS EQUAL TO ONE
 ns.visc_coef      = 1.0  # viscosity 1.0 or
                          # (eta_solvent/eta_total)*(1/Re(based on eta_total))
 ns.visc_abs_tol   = 1.0e-8
@@ -105,6 +124,9 @@ ns.adv_vel=0.0
 # 2D
 ns.adv_dir=2
 ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.include_viscous_heating=0
+# shock_timestep=2 2 option => never consider sound speed.
+ns.shock_timestep=2 2  
 ns.material_type=0 0 
 ns.viscconst=10.0 1.8e-4
 ns.denconst=1.0 1.2e-3
@@ -122,6 +144,43 @@ ns.radblob=1.5		# bubble/drop radius
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=36
+
+# if first material and Carreau_beta==0 for first material,
+#  probtype==2, axis_dir>0, then 
+#  "call viscosity(axis_dir,visc(i,j),shear)"
+#  VISCOSITY=visc_coef * visc(i,j)
+# otherwise:
+#  if Carreau_beta==0, then
+#   VISCOSITY=visc_coef * viscconst
+#  else if (Carreau_beta>0) then
+#   if visco-elastic then
+#    VISCOSITY=visc_coef * ( etaL0-etaP0+ 
+#     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
+#    =
+#    VISCOSITY=visc_coef * ( etaS+ 
+#     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
+#
+#   else
+#    VISCOSITY=visc_coef * (
+#      mu_inf + (etaL0-mu_inf)* 
+#      (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) )
+#
+# my "etaL0" is Mitsuhiro's eta_S(1+c_0)= viscconst
+# my "etaP0" is Mitsuhiro's c_0 eta_S   = elastic_viscosity
+# my "etaS" is Mitsuhiro's eta_S too.  = viscconst-elastic_viscosity
+# The coefficient for the viscoelastic force term is:
+#  visc_coef * 
+#  (VISCOSITY-viscconst+elastic_viscosity)/(elastic_time*(1-tr(A)/L^2))
+# =
+#  visc_coef * 
+#  (VISCOSITY-etaL0+etaP0)/(elastic_time*(1-tr(A)/L^2))
+# =
+#  visc_coef * 
+#  (VISCOSITY-etaS)/(elastic_time*(1-tr(A)/L^2))
+# =  (assume visc_coef==1)
+#  etaP0*
+#  (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) 
+#
 
 # 1 Pascal = 1 N/m^2 = 1 kg/(m s^2)=10 g/(cm s^2)
 # liquid viscosity= visc_coef * (eta_S + 

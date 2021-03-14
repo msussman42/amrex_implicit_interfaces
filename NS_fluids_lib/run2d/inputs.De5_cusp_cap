@@ -20,14 +20,15 @@ geometry.prob_hi   =  6.0 60.0    # D* 4 4 20
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-# 0=MOF  2=CMOF  3=hybrid CLSVOF+MOF  4=hybrid CLSVOF+CMOF
+# 0=MOF  2=CMOF  4=hybrid CLSVOF+CMOF
 ns.continuous_mof=0
+ns.vof_height_function=1
+
 ns.MOFITERMAX=15
 ns.conservative_tension_force=0
 ns.temperature_primitive_variable=1 1 1 1 1
 ns.face_flag=1  # face_flag=0 should work fine too and is faster, but maybe
                 # not as accurate.
-# 0=use LS  1=use VOF
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
@@ -63,24 +64,21 @@ ns.output_drop_distribution=1
 amr.n_cell    = 16 160
 
 amr.max_level = 2
-# 0=never adapt   2=if radius< 2 * dx then adapt
-# -1=always adapt
-# An interface changing phase will always be adapted
-# to the finest possible level.
-# Triple junctions will always be adapted to the finest possible level.
-ns.radius_cutoff=2 2 2 2 2 2
-ns.max_level_two_materials=2
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16 16
 
 amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# The proper nesting buffer of level i cells next to level i+1
+# cells is bf_lev[i]*n_proper. (2*bf_lev[i]=blocking_factor[i])
 amr.n_proper=1  # default is 1
-amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
 # viscoelastic terms are always discretized with the low order 
-# directionally split semi-Lagrangian method.
-# FUTURE WORK: discretize viscoelastic terms in the "spectral elements" 
-# with space-time spectral accuracy.
+# directionally split semi-Lagrangian method. This is to insure
+# positive definiteness of the configuration tensor.  
+# note: log conformation approach does not avoid the problem since
+# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1 if A close to
+# indefinite.
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
@@ -106,6 +104,7 @@ mac.mac_abs_tol    = 1.0e-8  # tolerence for mac projections
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0   # scale back initial timestep
 ns.change_max     = 1.1 
+#KEEP THIS EQUAL TO ONE
 ns.visc_coef      = 1.0  # viscosity 1.0 or
                          # (eta_solvent/eta_total)*(1/Re(based on eta_total))
 ns.visc_abs_tol   = 1.0e-8
