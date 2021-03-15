@@ -5012,7 +5012,7 @@ stop
        tilelo,tilehi, &
        fablo,fabhi,bfact,level, &
        dt,irz, &
-       im_parm, &
+       im_parm, & ! 0..nmat-1
        viscoelastic_model, &
        nmat,nden)
       use probcommon_module
@@ -5083,6 +5083,10 @@ stop
 
       REAL_T n_elastic(SDIM)
       INTEGER_T ii,jj
+      INTEGER_T iQ_minus,iQ_plus
+      INTEGER_T jQ_minus,jQ_plus
+      INTEGER_T kQ_minus,kQ_plus
+      INTEGER_T dir_outer
 
       nhalf=3
 
@@ -5220,9 +5224,9 @@ stop
         Q(D_DECL(i1,j1,k1),3,1)=Q(D_DECL(i1,j1,k1),1,3)
         Q(D_DECL(i1,j1,k1),3,2)=Q(D_DECL(i1,j1,k1),2,3)
 
-       enddo !k1
-       enddo !j1
-       enddo !i1
+       enddo !k1=klo_stencil..khi_stencil
+       enddo !j1=-1..1
+       enddo !i1=-1..1
 
        if (irz.eq.0) then
         rval=one
@@ -5254,7 +5258,8 @@ stop
        local_mask=mask_array(D_DECL(0,0,0))
 
        if (local_mask.eq.1) then
-
+ 
+         ! im_parm=0..nmat-1
         do dir=1,SDIM
          n_elastic(dir)=lsfab(D_DECL(i,j,k),nmat+im_parm*SDIM+dir)
         enddo
@@ -5276,38 +5281,62 @@ stop
         if ((viscoelastic_model.eq.0).or. &
             (viscoelastic_model.eq.1)) then
 
-         do veldir=1,SDIM
-          dir=1
-          xflux_local(1,veldir,dir)= &
-                (Q(D_DECL(1,0,0),veldir,dir)+ &
-                 Q(D_DECL(0,0,0),veldir,dir))/two
-          xflux_local(0,veldir,dir)= &
-                (Q(D_DECL(-1,0,0),veldir,dir)+ &
-                 Q(D_DECL(0,0,0),veldir,dir))/two
+         do dir_outer=1,SDIM
 
-          dir=2
-          yflux_local(1,veldir,dir)= &
-                (Q(D_DECL(0,1,0),veldir,dir)+ &
-                 Q(D_DECL(0,0,0),veldir,dir))/two
-          yflux_local(0,veldir,dir)= &
-                (Q(D_DECL(0,-1,0),veldir,dir)+ &
-                 Q(D_DECL(0,0,0),veldir,dir))/two
+          iQ_minus=0
+          jQ_minus=0
+          kQ_minus=0
 
-          if (SDIM.eq.3) then
-           dir=SDIM
-           zflux_local(1,veldir,dir)= &
-                (Q(D_DECL(0,0,1),veldir,dir)+ &
-                 Q(D_DECL(0,0,0),veldir,dir))/two
-           zflux_local(0,veldir,dir)= &
-                (Q(D_DECL(0,0,-1),veldir,dir)+ &
-                 Q(D_DECL(0,0,0),veldir,dir))/two
-          else if (SDIM.eq.2) then
-           ! do nothing
+          iQ_plus=0
+          jQ_plus=0
+          kQ_plus=0
+
+          if (dir_outer.eq.1) then
+           iQ_minus=-1
+           iQ_plus=1
+          else if (dir_outer.eq.2) then
+           jQ_minus=-1
+           jQ_plus=1
+          else if ((dir_outer.eq.3).and.(SDIM.eq.3)) then
+           kQ_minus=-1
+           kQ_plus=1
           else
-           print *,"dimension bust"
+           print *,"dir_outer invalid"
            stop
           endif
-         enddo ! veldir=1..sdim
+
+          do veldir=1,SDIM
+
+           do dir=1,SDIM
+
+            if (dir_outer.eq.1) then
+             xflux_local(1,veldir,dir)= &
+               (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+             xflux_local(0,veldir,dir)= &
+               (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+            else if (dir_outer.eq.2) then
+             yflux_local(1,veldir,dir)= &
+               (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+             yflux_local(0,veldir,dir)= &
+               (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+            else if ((dir_outer.eq.3).and.(SDIM.eq.3)) then
+             zflux_local(1,veldir,dir)= &
+               (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+             zflux_local(0,veldir,dir)= &
+               (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
+                Q(D_DECL(0,0,0),veldir,dir))/two
+            else
+             print *,"dimension bust"
+             stop
+            endif
+           enddo ! dir=1..sdim
+          enddo ! veldir=1..sdim
+         enddo ! dir_outer=1..sdim
 
         else if (viscoelastic_model.eq.2) then
 
@@ -5350,20 +5379,20 @@ stop
          ! mask_center=1 if mask_left==1 or mask_right==1
          ! mask_center=0 if mask_left==0 and mask_right==0
         call project_tensor(mask_center(dir),n_elastic, &
-         mask_left,mask_right,xflux_local)
+         mask_left,mask_right,xflux_local,dir)
 
         dir=2
         mask_left=mask_array(D_DECL(0,-1,0))
         mask_right=mask_array(D_DECL(0,1,0))
         call project_tensor(mask_center(dir),n_elastic, &
-         mask_left,mask_right,yflux_local)
+         mask_left,mask_right,yflux_local,dir)
 
         if (SDIM.eq.3) then
          dir=SDIM
          mask_left=mask_array(D_DECL(0,0,-1))
          mask_right=mask_array(D_DECL(0,0,1))
          call project_tensor(mask_center(dir),n_elastic, &
-           mask_left,mask_right,zflux_local)
+           mask_left,mask_right,zflux_local,dir)
         endif
 
         do veldir=1,SDIM
@@ -5402,6 +5431,12 @@ stop
           ! -T33/r
          veldir=1
          bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
+         if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
+          ! do nothing
+         else
+          print *,"bodyforce overflow bodyforce,rval:",bodyforce,rval
+          stop
+         endif
          force(veldir)=force(veldir)+bodyforce
         else if (irz.eq.3) then
           ! -T22/r

@@ -17661,10 +17661,12 @@ enddo
 end subroutine stress_from_strain
 
 subroutine project_tensor(mask_center,n_elastic, &
-        mask_left,mask_right,tensor_data)
+        mask_left,mask_right,tensor_data,dir)
+use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(out) :: mask_center
+INTEGER_T, intent(in) :: dir
 INTEGER_T, intent(in) :: mask_left
 INTEGER_T, intent(in) :: mask_right
 REAL_T, intent(in) :: n_elastic(SDIM)
@@ -17675,7 +17677,14 @@ INTEGER_T iprod,jprod,kprod
 REAL_T PIK,PKJ
 REAL_T PT(SDIM,SDIM)
 REAL_T PTP(SDIM,SDIM)
+REAL_T local_data
 
+if ((dir.ge.1).and.(dir.le.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
 
 if ((mask_left.eq.0).and.(mask_right.eq.0)) then
  mask_center=0
@@ -17703,7 +17712,16 @@ else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
    if (iprod.eq.kprod) then
     PIK=PIK+one
    endif
-   PT(iprod,jprod)=PT(iprod,jprod)+PIK*tensor_data(isource,kprod,jprod)
+   local_data=tensor_data(isource,kprod,jprod)
+   if ((abs(local_data).lt.OVERFLOW_CUTOFF).and. &
+       (abs(PIK).lt.OVERFLOW_CUTOFF)) then
+    ! do nothing
+   else
+    print *,"dir,isource,iprod,jprod,kprod,PT,PIK,local_data ", &
+     dir,isource,iprod,jprod,kprod,PT(iprod,jprod),PIK,local_data
+    stop
+   endif
+   PT(iprod,jprod)=PT(iprod,jprod)+PIK*local_data
   enddo ! kprod=1..sdim
  enddo ! jprod
  enddo ! iprod
@@ -17718,9 +17736,15 @@ else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
    endif
    PTP(iprod,jprod)=PTP(iprod,jprod)+PKJ*PT(iprod,kprod)
   enddo ! kprod=1..sdim
+  if (abs(PTP(iprod,jprod)).lt.OVERFLOW_CUTOFF) then
+   ! do nothing
+  else
+   print *,"iprod,jprod,PTP ",iprod,jprod,PTP(iprod,jprod)
+   stop
+  endif
   tensor_data(idest,iprod,jprod)=PTP(iprod,jprod)
- enddo ! jprod
- enddo ! iprod
+ enddo ! jprod=1..sdim
+ enddo ! iprod=1..sdim
 else
  print *,"mask_left or mask_right invalid"
  stop
