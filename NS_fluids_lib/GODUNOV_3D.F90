@@ -5077,9 +5077,9 @@ stop
       REAL_T LScen(nmat)
       REAL_T Q(D_DECL(-1:1,-1:1,-1:1),3,3)
 
-      REAL_T xflux_local(0:1,SDIM,SDIM)
-      REAL_T yflux_local(0:1,SDIM,SDIM)
-      REAL_T zflux_local(0:1,SDIM,SDIM)
+      REAL_T xflux_local(-1:1,SDIM,SDIM)
+      REAL_T yflux_local(-1:1,SDIM,SDIM)
+      REAL_T zflux_local(-1:1,SDIM,SDIM)
 
       REAL_T n_elastic(SDIM)
       INTEGER_T ii,jj
@@ -5257,6 +5257,7 @@ stop
 
        local_mask=mask_array(D_DECL(0,0,0))
 
+        ! im_parm dominates the center cell.
        if (local_mask.eq.1) then
  
          ! im_parm=0..nmat-1
@@ -5313,23 +5314,26 @@ stop
              xflux_local(1,veldir,dir)= &
                (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-             xflux_local(0,veldir,dir)= &
+             xflux_local(-1,veldir,dir)= &
                (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
+             xflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
             else if (dir_outer.eq.2) then
              yflux_local(1,veldir,dir)= &
                (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-             yflux_local(0,veldir,dir)= &
+             yflux_local(-1,veldir,dir)= &
                (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
+             yflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
             else if ((dir_outer.eq.3).and.(SDIM.eq.3)) then
              zflux_local(1,veldir,dir)= &
                (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
-             zflux_local(0,veldir,dir)= &
+             zflux_local(-1,veldir,dir)= &
                (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
                 Q(D_DECL(0,0,0),veldir,dir))/two
+             zflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
             else
              print *,"dimension bust"
              stop
@@ -5344,13 +5348,19 @@ stop
          do veldir=1,SDIM
          do dir=1,SDIM
           xflux_local(1,veldir,dir)=xflux(D_DECL(i+1,j,k),xflux_comp)
-          xflux_local(0,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
+          xflux_local(-1,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
+          xflux_local(0,veldir,dir)=half*(xflux_local(1,veldir,dir)+ &
+                  xflux_local(-1,veldir,dir))
           yflux_local(1,veldir,dir)=yflux(D_DECL(i,j+1,k),xflux_comp)
-          yflux_local(0,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
+          yflux_local(-1,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
+          yflux_local(0,veldir,dir)=half*(yflux_local(1,veldir,dir)+ &
+                  yflux_local(-1,veldir,dir))
 
           if (SDIM.eq.3) then
            zflux_local(1,veldir,dir)=zflux(D_DECL(i,j,k+1),xflux_comp)
-           zflux_local(0,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
+           zflux_local(-1,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
+           zflux_local(0,veldir,dir)=half*(zflux_local(1,veldir,dir)+ &
+                  zflux_local(-1,veldir,dir))
           else if (SDIM.eq.2) then
            ! do nothing
           else
@@ -5403,20 +5413,20 @@ stop
          force(veldir)=force(veldir)+ &
           mask_center(dir)* &
             (rplus*xflux_local(1,veldir,dir)- &
-             rminus*xflux_local(0,veldir,dir))/hx
+             rminus*xflux_local(-1,veldir,dir))/hx
 
          dir=2
          force(veldir)=force(veldir)+ &
           mask_center(dir)* &
             (yflux_local(1,veldir,dir)- &
-             yflux_local(0,veldir,dir))/hy
+             yflux_local(-1,veldir,dir))/hy
 
          if (SDIM.eq.3) then
           dir=SDIM
           force(veldir)=force(veldir)+ &
            mask_center(dir)* &
              (zflux_local(1,veldir,dir)- &
-              zflux_local(0,veldir,dir))/hz
+              zflux_local(-1,veldir,dir))/hz
          endif
 
         enddo ! veldir=1..sdim
@@ -5497,6 +5507,7 @@ stop
          endif
         enddo ! veldir
 
+        ! im_parm does not dominate the center cell.
        else if (local_mask.eq.0) then
         ! do nothing (velnew is not incremented)
        else
