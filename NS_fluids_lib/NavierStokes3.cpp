@@ -11858,7 +11858,7 @@ void NavierStokes::vel_elastic_ALL() {
         int simple_AMR_BC_flag_viscosity=1;
 	init_gradu_tensorALL(
           im,
-	  XDISPLACE_MF, // deleted at end since do_alloc==1
+	  XDISPLACE_MF, // deleted in init_gradu_tensorALL since do_alloc==1
 	  do_alloc,
 	  CELLTENSOR_MF,
 	  FACETENSOR_MF,
@@ -11911,7 +11911,7 @@ void NavierStokes::vel_elastic_ALL() {
 
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,1); 
 
    // after make_viscoelastic_force(), in
    //  NavierStokes::vel_elastic_ALL()
@@ -11923,7 +11923,7 @@ void NavierStokes::vel_elastic_ALL() {
   avgDownALL_TENSOR();
 
    // register_mark=unew
-  SET_STOKES_MARK(REGISTER_MARK_MF);
+  SET_STOKES_MARK(REGISTER_MARK_MF,101);
 
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -11943,10 +11943,10 @@ void NavierStokes::vel_elastic_ALL() {
 
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,2); 
 
     // register_mark=unew
-  SET_STOKES_MARK(REGISTER_MARK_MF);
+  SET_STOKES_MARK(REGISTER_MARK_MF,102);
 
  } else if (CTML_FSI_flagC()==0) {
   // do nothing
@@ -12138,7 +12138,7 @@ void NavierStokes::veldiffuseALL() {
  }
 
   // register_mark=unew (1 ghost)
- SET_STOKES_MARK(REGISTER_MARK_MF);
+ SET_STOKES_MARK(REGISTER_MARK_MF,103);
 
  show_norm2_id(REGISTER_MARK_MF,1);
 
@@ -12189,14 +12189,14 @@ void NavierStokes::veldiffuseALL() {
   // umacnew+=INTERP_TO_MAC(unew-register_mark)
   //    or
   //         unew^f=INTERP_TO_MAC(unew) if filter_velocity[im]==1
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+ INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,3); 
 
  show_norm2_id(DIFFUSE_REGISTER_MF,3);
 
  avgDownALL(State_Type,dencomp,nden,1);
 
   // register_mark=unew
- SET_STOKES_MARK(REGISTER_MARK_MF);
+ SET_STOKES_MARK(REGISTER_MARK_MF,104);
 
  vel_elastic_ALL();
 
@@ -12232,10 +12232,10 @@ void NavierStokes::veldiffuseALL() {
 
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+   INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,4); 
 
    // register_mark=unew
-   SET_STOKES_MARK(REGISTER_MARK_MF);
+   SET_STOKES_MARK(REGISTER_MARK_MF,105);
   } else
    amrex::Error("ns_time_order invalid");
 
@@ -12247,13 +12247,13 @@ void NavierStokes::veldiffuseALL() {
  } else 
   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
- SET_STOKES_MARK(REGISTER_MARK_MF); //register_mark=unew
+ SET_STOKES_MARK(REGISTER_MARK_MF,106); //register_mark=unew
 
  show_norm2_id(REGISTER_MARK_MF,4);
 
   //multigrid-GMRES precond. BiCGStab viscosity
  multiphase_project(vel_project_option); 
- SET_STOKES_MARK(VISCHEAT_SOURCE_MF);
+ SET_STOKES_MARK(VISCHEAT_SOURCE_MF,107);
 
   // spectral_override==1 => order derived from "enable_spectral"
  avgDownALL(State_Type,0,
@@ -12261,11 +12261,11 @@ void NavierStokes::veldiffuseALL() {
 
    // diffuse_register+=unew-register_mark
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+ INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,5); 
 
  avgDownALL(State_Type,dencomp,nden,1);
 
- SET_STOKES_MARK(REGISTER_MARK_MF); //register_mark=unew
+ SET_STOKES_MARK(REGISTER_MARK_MF,108); //register_mark=unew
 
 // ---------------- end viscosity ---------------------
 
@@ -12315,10 +12315,10 @@ void NavierStokes::veldiffuseALL() {
 
    // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF); 
+ INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,6); 
 
    // register_mark=unew
- SET_STOKES_MARK(REGISTER_MARK_MF);
+ SET_STOKES_MARK(REGISTER_MARK_MF,109);
 
  int nsolve_vel=AMREX_SPACEDIM;
  // update: unew=uadvect+du  (cell)
@@ -13141,7 +13141,8 @@ void NavierStokes::APPLY_REGISTERS(
 //REGISTER_CURRENT_MF=unew-source_mf
 //dest_mf+=(REGISTER_CURRENT_MF)
 //uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
-void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
+void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf,
+  int caller_id) {
 
  if (level!=0)
   amrex::Error("level invalid INCREMENT_REGISTERS_ALL");
@@ -13149,7 +13150,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.INCREMENT_REGISTERS(dest_mf,source_mf);
+  ns_level.INCREMENT_REGISTERS(dest_mf,source_mf,caller_id);
  }
 
  if (num_materials_vel==1) {
@@ -13177,7 +13178,8 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf) {
 
 // REGISTER_CURRENT_MF=(unew-source)
 // dest+=(REGISTER_CURRENT_MF)
-void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf) {
+void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf,
+  int caller_id) {
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -13193,7 +13195,7 @@ void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf) {
   amrex::Error("nstate invalid");
 
  new_localMF(REGISTER_CURRENT_MF,nsolveMM,1,-1);
- push_back_state_register(REGISTER_CURRENT_MF,cur_time_slab);
+ push_back_state_register(REGISTER_CURRENT_MF,cur_time_slab,caller_id);
 
  MultiFab::Subtract(
   *localMF[REGISTER_CURRENT_MF],
@@ -13206,7 +13208,8 @@ void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf) {
 } // INCREMENT_REGISTERS
 
 
-void NavierStokes::push_back_state_register(int idx_MF,Real time) {
+void NavierStokes::push_back_state_register(int idx_MF,Real time,
+  int caller_id) {
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -13245,13 +13248,15 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time) {
  if (snew_mf->nComp()!=nsolveMM)
   amrex::Error("snew_mf->nComp() invalid");
 
+ check_for_NAN(snew_mf,caller_id+1000);
+
  MultiFab::Copy(*localMF[idx_MF],*snew_mf,0,0,nsolveMM,1);
  delete snew_mf;
 
 } // subroutine push_back_state_register
 
 // stores the current velocity in localMF[idx_MF]
-void NavierStokes::SET_STOKES_MARK(int idx_MF) {
+void NavierStokes::SET_STOKES_MARK(int idx_MF,int caller_id) {
 
  if (level!=0)
   amrex::Error("level invalid SET_STOKES_MARK");
@@ -13259,7 +13264,7 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.push_back_state_register(idx_MF,cur_time_slab);  
+  ns_level.push_back_state_register(idx_MF,cur_time_slab,caller_id);  
  }
 
 }  // SET_STOKES_MARK
@@ -13281,7 +13286,7 @@ void NavierStokes::prepare_advect_vars(Real time) {
     0,nsolveMM_FACE_MAC,time);
  } // dir
   // advect_register has 1 ghost initialized.
- push_back_state_register(ADVECT_REGISTER_MF,time);
+ push_back_state_register(ADVECT_REGISTER_MF,time,201);
 
 } // end subroutine prepare_advect_vars(Real time)
 

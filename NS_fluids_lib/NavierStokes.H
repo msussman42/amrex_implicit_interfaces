@@ -1294,10 +1294,10 @@ void apply_pressure_grad(
     void VELMAC_TO_CELL(
       int use_VOF_weight);
 
-    void INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf);
-    void INCREMENT_REGISTERS(int dest_mf,int source_mf);
-    void push_back_state_register(int idx_MF,Real time);
-    void SET_STOKES_MARK(int idx_MF);
+    void INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf,int caller_id);
+    void INCREMENT_REGISTERS(int dest_mf,int source_mf,int caller_id);
+    void push_back_state_register(int idx_MF,Real time,int caller_id);
+    void SET_STOKES_MARK(int idx_MF,int caller_id);
     void APPLY_REGISTERS(
       int source_mf,
       int advect_mf,

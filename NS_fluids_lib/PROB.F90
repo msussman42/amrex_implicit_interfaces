@@ -869,7 +869,7 @@ stop
        print *,"x,y,z overflow in SEM_VISC_SANITY"
        stop
       endif
-      if (abs(flux_in).le.1.0D+20) then
+      if (abs(flux_in).le.OVERFLOW_CUTOFF) then
        ! do nothing
       else
        print *,"flux_in overflow SEM_VISC_SANITY"
