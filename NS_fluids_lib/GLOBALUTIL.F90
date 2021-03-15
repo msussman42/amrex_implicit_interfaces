@@ -17670,7 +17670,7 @@ INTEGER_T, intent(in) :: dir
 INTEGER_T, intent(in) :: mask_left
 INTEGER_T, intent(in) :: mask_right
 REAL_T, intent(in) :: n_elastic(SDIM)
-REAL_T, intent(inout) :: tensor_data(0:1,SDIM,SDIM)
+REAL_T, intent(inout) :: tensor_data(-1:1,SDIM,SDIM)
 
 INTEGER_T idest,isource
 INTEGER_T iprod,jprod,kprod
@@ -17694,8 +17694,8 @@ else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
          ((mask_left.eq.1).and.(mask_right.eq.0))) then
  mask_center=1
  if ((mask_left.eq.0).and.(mask_right.eq.1)) then
-  idest=0
-  isource=1
+  idest=-1
+  isource=0
  else if ((mask_right.eq.0).and.(mask_left.eq.1)) then
   idest=1
   isource=0
