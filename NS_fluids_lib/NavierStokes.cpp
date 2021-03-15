@@ -8943,6 +8943,9 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     }  // mfi  
 }//omp
     ns_reconcile_d_num(54);
+
+    check_for_NAN(localMF[VISCOTEN_MF],2001);
+
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
 

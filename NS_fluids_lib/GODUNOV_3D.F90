@@ -5446,6 +5446,14 @@ stop
          deninv=rhoinverse(D_DECL(i,j,k),1)
 
          if (deninv.ge.zero) then 
+          if (abs(force(veldir)).lt.OVERFLOW_CUTOFF) then
+           ! do nothing
+          else
+           print *,"viscoelastic overflow veldir,force ",veldir,force(veldir)
+           print *,"i,j,k,deninv ",i,j,k,deninv
+           stop
+          endif
+
           velnew(D_DECL(i,j,k),veldir)= &
            velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
          else
