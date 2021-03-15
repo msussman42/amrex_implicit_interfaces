@@ -25840,6 +25840,14 @@ stop
           tcompMM=nbase+nc
 
           local_flux_val=tdata(D_DECL(i,j,k),tcompMM)
+          if (abs(local_flux_val).le.OVERFLOW_CUTOFF) then
+           ! do nothing
+          else
+           print *,"tdata overflow: i,j,k,nbase,nc,tdata ", &
+            i,j,k,nbase,nc,local_flux_val
+           print *,"dt,cur_time,level ",dt,cur_time,level
+           stop
+          endif
 
            ! use_dt=0
            ! use_HO=0

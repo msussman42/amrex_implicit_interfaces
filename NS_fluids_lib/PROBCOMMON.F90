@@ -252,6 +252,8 @@ implicit none
 
       REAL_T, PARAMETER :: ICEFACECUT_EPS=1.0D-5
 
+      REAL_T, PARAMETER :: OVERFLOW_CUTOFF=1.0D+20
+
       ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
 #if (PROTOTYPE_PROBCOMMON==0)
       REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-3
