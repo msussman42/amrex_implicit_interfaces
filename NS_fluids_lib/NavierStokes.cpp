@@ -16143,6 +16143,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // declared in PROB.F90
   FORT_VFRACERROR(
     tptr, ARLIM(tlo), ARLIM(thi), 
     &tagval, &clearval, 

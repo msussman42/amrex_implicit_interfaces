@@ -35408,26 +35408,28 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T nblocks,ncoarseblocks
-      REAL_T xblocks(10),yblocks(10),zblocks(10)
-      REAL_T rxblocks(10),ryblocks(10),rzblocks(10)
-      REAL_T xcoarseblocks(10),ycoarseblocks(10),zcoarseblocks(10)
-      REAL_T rxcoarseblocks(10),rycoarseblocks(10),rzcoarseblocks(10)
+      INTEGER_T, intent(in) :: nblocks,ncoarseblocks
+      REAL_T, intent(in) :: xblocks(10),yblocks(10),zblocks(10)
+      REAL_T, intent(in) :: rxblocks(10),ryblocks(10),rzblocks(10)
+      REAL_T, intent(in) :: xcoarseblocks(10),ycoarseblocks(10),zcoarseblocks(10)
+      REAL_T, intent(in) :: rxcoarseblocks(10)
+      REAL_T, intent(in) :: rycoarseblocks(10)
+      REAL_T, intent(in) :: rzcoarseblocks(10)
 
-      INTEGER_T   DIMDEC(tag)
-      INTEGER_T   DIMDEC(vfrac)
-      INTEGER_T   nvar, set, clear
-      INTEGER_T   level
-      INTEGER_T   max_level
-      INTEGER_T   max_level_two_materials
-      INTEGER_T   tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T   fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(tag)
+      INTEGER_T, intent(in) :: DIMDEC(vfrac)
+      INTEGER_T, intent(in) :: nvar, set, clear
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: max_level
+      INTEGER_T, intent(in) :: max_level_two_materials
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T   growlo(3), growhi(3)
-      INTEGER_T   bfact
-      INTEGER_T   domlo(SDIM), domhi(SDIM)
-      REAL_T    dx(SDIM), xlo(SDIM), problo(SDIM), time
-      INTEGER_T   tag(DIMV(tag))
-      REAL_T    vfrac(DIMV(vfrac),nvar)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), problo(SDIM), time
+      INTEGER_T, intent(out) :: tag(DIMV(tag))
+      REAL_T, intent(in) :: vfrac(DIMV(vfrac),nvar)
       REAL_T    x, y, z, rflag
       INTEGER_T   i, j,k,np
       INTEGER_T   tagflag
@@ -35472,7 +35474,22 @@ end subroutine initialize2d
        y=xsten(0,2)
        z=xsten(0,SDIM)
 
-        ! comes from calc_error_indicator and EOS_error_ind
+        ! GRIDS ARE CREATED AS FOLLOWS:
+        ! 1. cells are tagged for refinement (tagflag==1) or not
+        !    tagged (tagflag==0)
+        ! 2. depending on "amr.n_error_buf", neighboring cells of tagged
+        !    cells are also tagged.
+        !    For each cell (i,j,k) that is tagged with tagflag==1, the
+        !    following cells are also tagged:
+        !    i-n_error_buf<= i* <=i+n_error_buf
+        !    j-n_error_buf<= j* <=j+n_error_buf
+        !    k-n_error_buf<= k* <=k+n_error_buf
+        ! 3. The Berger and Rigoustos clustering algorithm is invoked which
+        !    forms minimal boxes surrounding all the tagged cells, making
+        !    sure that appropriate proper nesting and blocking factor
+        !    conditions are satisfied.
+        ! NOTE: vfrac(D_DECL(i,j,k),1) is initialized ultimately 
+        !   from calc_error_indicator and EOS_error_ind
        rflag=vfrac(D_DECL(i,j,k),1)
        tagflag=0
 
