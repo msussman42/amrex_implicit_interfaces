@@ -27,8 +27,8 @@ ns.vof_height_function=1
 ns.MOFITERMAX=15
 ns.conservative_tension_force=0
 ns.temperature_primitive_variable=1 1 1 1 1
-ns.face_flag=1  # face_flag=0 should work fine too and is faster, but maybe
-                # not as accurate.
+# face_flag=1 not ready for viscoelastic problems.
+ns.face_flag=0  
 ns.advection_order=1 1 1 1
 ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
