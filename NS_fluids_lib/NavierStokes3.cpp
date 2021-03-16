@@ -11909,9 +11909,8 @@ void NavierStokes::vel_elastic_ALL() {
   avgDownALL(State_Type,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,1); 
+  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,1); 
 
    // after make_viscoelastic_force(), in
    //  NavierStokes::vel_elastic_ALL()
@@ -11941,9 +11940,8 @@ void NavierStokes::vel_elastic_ALL() {
   avgDownALL(State_Type,0,
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,2); 
+  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
 
     // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,102);
@@ -12079,8 +12077,7 @@ void NavierStokes::veldiffuseALL() {
   //              solve 
   //              (u^* - u^advect) = dt div 2\mu D/rho which is then equivalent
   //              to (1)
-  // 2. getState: ADVECT_REGISTER_MF, ADVECT_REGISTER_FACE_MF, allocate
-  //  scratch variables (including CONSERVE_FLUXES_MF)
+  // 2. allocate scratch variables (including CONSERVE_FLUXES_MF)
   //
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12185,13 +12182,10 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-  // diffuse_register+=(unew-register_mark)
-  // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  // unew^MAC+=INTERP_TO_MAC(unew-register_mark)
   //    or
-  //         unew^f=INTERP_TO_MAC(unew) if filter_velocity[im]==1
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,3); 
-
- show_norm2_id(DIFFUSE_REGISTER_MF,3);
+  // unew^MAC=INTERP_TO_MAC(unew) if filter_velocity[im]==1
+ INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,3); 
 
  avgDownALL(State_Type,dencomp,nden,1);
 
@@ -12230,9 +12224,8 @@ void NavierStokes::veldiffuseALL() {
    avgDownALL(State_Type,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,4); 
+   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,4); 
 
    // register_mark=unew
    SET_STOKES_MARK(REGISTER_MARK_MF,105);
@@ -12259,9 +12252,8 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // diffuse_register+=unew-register_mark
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,5); 
+ INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
 
  avgDownALL(State_Type,dencomp,nden,1);
 
@@ -12314,23 +12306,11 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // diffuse_register+=(unew-register_mark)
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(DIFFUSE_REGISTER_MF,REGISTER_MARK_MF,6); 
+ INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
 
    // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF,109);
-
- int nsolve_vel=AMREX_SPACEDIM;
- // update: unew=uadvect+du  (cell)
- //         unew^f=ADVECT_REGISTER_FACE_MF+INTERP_TO_MAC(DIFFUSE_REGISTER_MF)
- //   or 
- //         unew^f=INTERP_TO_MAC(unew) if filter_velocity[im]==1
- APPLY_REGISTERSALL(
-  DIFFUSE_REGISTER_MF,  //increment (du)
-  ADVECT_REGISTER_MF,
-  ADVECT_REGISTER_FACE_MF,
-  nsolve_vel);
 
   // CONSERVATIVE SURFACE TENSION (Marangoni) FORCE
   // rhonew unew+=dt F_marangoni
@@ -12687,12 +12667,7 @@ void NavierStokes::veldiffuseALL() {
   diffusion_heatingALL(VISCHEAT_SOURCE_MF,VISCHEAT_MF);
 
    // add viscous heating term to T_m  m=1...M
-   // ADVECT_REGISTER and ADVECT_REGISTER_FACE are ignored.
-  APPLY_REGISTERSALL(
-    VISCHEAT_MF, // increment
-    ADVECT_REGISTER_MF,
-    ADVECT_REGISTER_FACE_MF,
-    nsolve_thermal);
+  APPLY_VISCOUS_HEATINGALL(VISCHEAT_MF); // increment
 
      // overwrite T_m if phi_solid>0   m=1...M
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -12935,9 +12910,6 @@ void NavierStokes::exit_viscous_solver() {
 
  delete_localMF(CONSERVE_FLUXES_MF,AMREX_SPACEDIM);
 
- delete_advect_vars();
-
- delete_localMF(DIFFUSE_REGISTER_MF,1);
  delete_localMF(REGISTER_MARK_MF,1);
  delete_localMF(HOOP_FORCE_MARK_MF,1);
  delete_localMF(NEG_MOM_FORCE_MF,1);
@@ -12947,57 +12919,19 @@ void NavierStokes::exit_viscous_solver() {
 
 }
 
-// nsolve=sdim: unew=uadvect+du  (cell and face)
-// nsolve=1   : theta new_m = theta new_m + dtheta  m=1..nmat  
-//              dtheta=viscous heating term
-void NavierStokes::APPLY_REGISTERSALL(
-  int source_mf,  // increment (du)
-  int advect_mf,
-  int advect_face_mf,
-  int nsolve) {
+// theta new_m = theta new_m + dtheta  m=1..nmat  
+// dtheta=viscous heating term
+void NavierStokes::APPLY_VISCOUS_HEATINGALL(int source_mf) { // increment (du)
 
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.APPLY_REGISTERS(source_mf,advect_mf,advect_face_mf,nsolve);
+  ns_level.APPLY_VISCOUS_HEATING(source_mf);
  }  // ilev=finest_level ... level
 
- if (nsolve==AMREX_SPACEDIM) {
-   // spectral_override==1 => order derived from "enable_spectral"
-  avgDownALL(State_Type,0,num_materials_vel*AMREX_SPACEDIM,1);
+} // end subroutine APPLY_VISCOUS_HEATINGALL
 
-  // unew^f=unew^f+beta * diffuse_register^{c->f}
-  // in: APPLY_REGISTERSALL
-  int interp_option=2;
-  int project_option=3; // viscosity
-  Real beta=1.0;
-  Vector<blobclass> blobdata;
-
-  if (source_mf==DELTA_CELL_VEL_MF)
-   amrex::Error("source_mf collision with DELTA_CELL_VEL_MF");
-
-  if (num_materials_vel==1) {
-   // do nothing
-  } else
-   amrex::Error("num_materials_vel invalid");
-
-   // interp_option==2, operation_flag==5
-  increment_face_velocityALL(
-    interp_option,project_option,
-    source_mf,beta,blobdata);  
-
- } else if (nsolve==1) {
-  // do nothing
- } else
-  amrex::Error("nsolve invalid");
-
-} // end subroutine APPLY_REGISTERSALL
-
-void NavierStokes::APPLY_REGISTERS(
-  int source_mf,
-  int advect_mf,
-  int advect_face_mf,
-  int nsolve) {
+void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
  int finest_level=parent->finestLevel();
 
@@ -13008,14 +12942,9 @@ void NavierStokes::APPLY_REGISTERS(
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
 
- int num_materials_face=num_materials_vel;
- if (nsolve==AMREX_SPACEDIM) { // viscosity
-  // do nothing
- } else if (nsolve==1) { // thermal
-  num_materials_face=num_materials_scalar_solve;
- } else
-  amrex::Error("nsolve invalid in APPLY_REGISTERS");
+ int  num_materials_face=num_materials_scalar_solve;
 
+ int nsolve=1;
  int nsolveMM=nsolve*num_materials_face;
 
  if (localMF[source_mf]->nComp()!=nsolveMM)
@@ -13047,20 +12976,6 @@ void NavierStokes::APPLY_REGISTERS(
   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
-
- if (nsolve==AMREX_SPACEDIM) {
-
-  if (localMF[advect_mf]->nComp()!=nsolveMM)
-   amrex::Error("advect_register invalid ncomp");
-  if (localMF[advect_mf]->nGrow()<1)
-   amrex::Error("advect_register invalid ngrow");
-
-  save_to_macvel_state(advect_face_mf);
-
- } else if (nsolve==1) {
-  // do nothing
- } else
-  amrex::Error("nsolve invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
@@ -13102,7 +13017,6 @@ void NavierStokes::APPLY_REGISTERS(
   FArrayBox& snewfab=S_new[mfi];
   FArrayBox& lsfab=LS_new[mfi];
   FArrayBox& dufab=(*localMF[source_mf])[mfi];
-  FArrayBox& advectfab=(*localMF[advect_mf])[mfi];
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -13110,8 +13024,8 @@ void NavierStokes::APPLY_REGISTERS(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: GODUNOV_3D.F90
-   // snew=advect+du
-  FORT_VELADVANCE(
+   // snew=TNEW+du
+  FORT_HEATADVANCE(
     &level,
     &finest_level,
     &cur_time_slab,
@@ -13129,7 +13043,6 @@ void NavierStokes::APPLY_REGISTERS(
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     dufab.dataPtr(),ARLIM(dufab.loVect()),ARLIM(dufab.hiVect()),
-    advectfab.dataPtr(),ARLIM(advectfab.loVect()),ARLIM(advectfab.hiVect()),
     tilelo,tilehi, 
     fablo,fabhi,&bfact);
 
@@ -13137,21 +13050,20 @@ void NavierStokes::APPLY_REGISTERS(
 } // omp
  ns_reconcile_d_num(187);
 
-} // subroutine APPLY_REGISTERS
+} // subroutine APPLY_VISCOUS_HEATING
 
 //REGISTER_CURRENT_MF=unew-source_mf
-//dest_mf+=(REGISTER_CURRENT_MF)
 //uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
-void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf,
-  int caller_id) {
+void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
  if (level!=0)
   amrex::Error("level invalid INCREMENT_REGISTERS_ALL");
  int finest_level=parent->finestLevel();
 
+  // REGISTER_CURRENT_MF=unew-source_mf
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.INCREMENT_REGISTERS(dest_mf,source_mf,caller_id);
+  ns_level.INCREMENT_REGISTERS(source_mf,caller_id);
  }
 
  if (num_materials_vel==1) {
@@ -13178,9 +13090,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf,
 } // subroutine INCREMENT_REGISTERS_ALL
 
 // REGISTER_CURRENT_MF=(unew-source)
-// dest+=(REGISTER_CURRENT_MF)
-void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf,
-  int caller_id) {
+void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -13201,10 +13111,6 @@ void NavierStokes::INCREMENT_REGISTERS(int dest_mf,int source_mf,
  MultiFab::Subtract(
   *localMF[REGISTER_CURRENT_MF],
   *localMF[source_mf],0,0,nsolveMM,1);
-
- MultiFab::Add(
-  *localMF[dest_mf],
-  *localMF[REGISTER_CURRENT_MF],0,0,nsolveMM,1);
 
 } // INCREMENT_REGISTERS
 
@@ -13366,9 +13272,6 @@ void NavierStokes::prepare_viscous_solver() {
 
  int nsolveMM_FACE=nsolveMM;
 
- prepare_advect_vars(cur_time_slab);
-
- new_localMF(DIFFUSE_REGISTER_MF,nsolveMM,1,-1);
  new_localMF(REGISTER_MARK_MF,nsolveMM,1,-1);
  new_localMF(HOOP_FORCE_MARK_MF,nsolveMM,1,-1);
  new_localMF(NEG_MOM_FORCE_MF,nsolveMM,1,-1);
@@ -13382,7 +13285,6 @@ void NavierStokes::prepare_viscous_solver() {
   new_localMF(CONSERVE_FLUXES_MF+dir,nsolveMM_FACE,0,dir);
  } // dir
 
- setVal_localMF(DIFFUSE_REGISTER_MF,0.0,0,nsolveMM,1);
  setVal_localMF(REGISTER_MARK_MF,0.0,0,nsolveMM,1);
  setVal_localMF(VISCHEAT_SOURCE_MF,0.0,0,nsolveMM,1);
 
