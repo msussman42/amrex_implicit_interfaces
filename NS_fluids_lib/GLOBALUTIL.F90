@@ -17721,7 +17721,7 @@ else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
      dir,isource,iprod,jprod,kprod,PT(iprod,jprod),PIK,local_data
     stop
    endif
-   if (1.eq.1) then
+   if (1.eq.0) then
     local_data=zero
    endif
    PT(iprod,jprod)=PT(iprod,jprod)+PIK*local_data
