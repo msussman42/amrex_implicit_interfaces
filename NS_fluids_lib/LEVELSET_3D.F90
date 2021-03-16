@@ -1661,22 +1661,29 @@ stop
 
          if (matstatus.eq.1) then
           if (dircrit.eq.1) then  ! horizontal column in the r direction
-           if (xx_2D(3).gt.zero) then
-            dr=xsten(1,1)-xsten(-1,1)
-            h_of_z=sqrt(xx_2D(3))
-            if (h_of_z.ge.half*dr) then
-             hprime_of_z=xx_2D(2)/(two*h_of_z)
-             hdprime_of_z=(xx_2D(1)-hprime_of_z**2)/h_of_z
-             g=sqrt(one+hprime_of_z**2)
-             curvHT_VOF=-(one/(h_of_z*g))+hdprime_of_z/(g**3)
-            else if (h_of_z.gt.zero) then
+           dr=xsten(1,1)-xsten(-1,1)
+           if (dr.gt.zero) then
+            if (xx_2D(3).gt.zero) then
+             h_of_z=sqrt(xx_2D(3))
+             if (h_of_z.ge.half*dr) then
+              hprime_of_z=xx_2D(2)/(two*h_of_z)
+              hdprime_of_z=(xx_2D(1)-hprime_of_z**2)/h_of_z
+              g=sqrt(one+hprime_of_z**2)
+              curvHT_VOF=-(one/(h_of_z*g))+hdprime_of_z/(g**3)
+             else if (h_of_z.gt.zero) then
+              curvHT_VOF=curvHT_LS
+             else
+              print *,"h_of_z too small, h_of_z=",h_of_z
+              stop
+             endif
+            else if (xx_2D(3).le.zero) then
              curvHT_VOF=curvHT_LS
             else
-             print *,"h_of_z too small"
+             print *,"xx_2D(3) bust: ",xx_2D(3)
              stop
             endif
            else
-            print *,"xx_2D(3) invalid"
+            print *,"dr invalid, dr=",dr
             stop
            endif
           else if (dircrit.eq.2) then  ! vertial column in the z direction
