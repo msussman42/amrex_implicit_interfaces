@@ -11909,7 +11909,8 @@ void NavierStokes::vel_elastic_ALL() {
   avgDownALL(State_Type,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+   // umacnew+=INTERP_TO_MAC(unew-register_mark) 
+   // (filter_vel==0 and face_flag==1)
   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,1); 
 
    // after make_viscoelastic_force(), in
@@ -11941,6 +11942,7 @@ void NavierStokes::vel_elastic_ALL() {
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+   // (filter_vel==0 and face_flag==1)
   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
 
     // register_mark=unew
@@ -12184,7 +12186,7 @@ void NavierStokes::veldiffuseALL() {
 
   // unew^MAC+=INTERP_TO_MAC(unew-register_mark)
   //    or
-  // unew^MAC=INTERP_TO_MAC(unew) if filter_velocity[im]==1
+  // unew^MAC=INTERP_TO_MAC(unew) if filter_velocity[im]==1 or face_flag==0
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,3); 
 
  avgDownALL(State_Type,dencomp,nden,1);
@@ -12225,6 +12227,7 @@ void NavierStokes::veldiffuseALL() {
     num_materials_vel*(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+   // (filter_vel==0 and face_flag==1)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,4); 
 
    // register_mark=unew
@@ -12253,6 +12256,7 @@ void NavierStokes::veldiffuseALL() {
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+   // (filter_vel==0 and face_flag==1)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
 
  avgDownALL(State_Type,dencomp,nden,1);
@@ -12307,6 +12311,7 @@ void NavierStokes::veldiffuseALL() {
    num_materials_vel*(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+   // (filter_vel==0 and face_flag==1)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
 
    // register_mark=unew
@@ -13054,6 +13059,7 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
 //REGISTER_CURRENT_MF=unew-source_mf
 //uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
+// (filter_vel==0 and face_flag==1)
 void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
  if (level!=0)
@@ -13072,14 +13078,15 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
   amrex::Error("num_materials_vel invalid");
 
   // unew^f=unew^f+beta * diffuse_register^{c->f}
+  // (filter_vel==0 and face_flag==1)
   // in: INCREMENT_REGISTERS_ALL
  int interp_option=2;
  int project_option=3; // viscosity
  Real beta=1.0;
  Vector<blobclass> blobdata;
 
-  // operation_flag==5
-  // if filter_velocity[im]==1,
+  // operation_flag==5 (interp_option==2)
+  // if filter_velocity[im]==1 or face_flag==0,
   //  unew^f=INTERP_TO_MAC(unew)
  increment_face_velocityALL(
    interp_option,project_option,
@@ -13087,7 +13094,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
  delete_array(REGISTER_CURRENT_MF);
 
-} // subroutine INCREMENT_REGISTERS_ALL
+} // end subroutine INCREMENT_REGISTERS_ALL
 
 // REGISTER_CURRENT_MF=(unew-source)
 void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
