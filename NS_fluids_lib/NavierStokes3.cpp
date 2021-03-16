@@ -12198,7 +12198,7 @@ void NavierStokes::veldiffuseALL() {
   // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF,104);
 
- vel_elastic_ALL();
+ //vel_elastic_ALL();
 
 // -----------veldiffuseALL: viscosity -----------------------------
 
@@ -12269,6 +12269,7 @@ void NavierStokes::veldiffuseALL() {
 
 // ---------------- end viscosity ---------------------
 
+ vel_elastic_ALL();
 
    // back to "enable_spectral" for momentum eqn
  override_enable_spectral(save_enable_spectral);
