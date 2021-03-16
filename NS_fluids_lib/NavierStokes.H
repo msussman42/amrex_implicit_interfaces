@@ -22,7 +22,6 @@ namespace amrex{
 #define ADVECT_REGISTER_MF 5
 #define DRAG_MF 6
 
-#define DIFFUSE_REGISTER_MF 7
 #define REGISTER_MARK_MF 8
 
 #define HOLD_VELOCITY_DATA_MF 9
@@ -1294,20 +1293,12 @@ void apply_pressure_grad(
     void VELMAC_TO_CELL(
       int use_VOF_weight);
 
-    void INCREMENT_REGISTERS_ALL(int dest_mf,int source_mf,int caller_id);
-    void INCREMENT_REGISTERS(int dest_mf,int source_mf,int caller_id);
+    void INCREMENT_REGISTERS_ALL(int source_mf,int caller_id);
+    void INCREMENT_REGISTERS(int source_mf,int caller_id);
     void push_back_state_register(int idx_MF,Real time,int caller_id);
     void SET_STOKES_MARK(int idx_MF,int caller_id);
-    void APPLY_REGISTERS(
-      int source_mf,
-      int advect_mf,
-      int advect_face_mf,
-      int nsolve);
-    void APPLY_REGISTERSALL(
-      int source_mf,
-      int advect_mf,
-      int advect_face_mf,
-      int nsolve);
+    void APPLY_VISCOUS_HEATING(int source_mf);
+    void APPLY_VISCOUS_HEATINGALL(int source_mf);
 
     MultiFab* derive_EOS_pressure(Vector<int> local_material_type);
     void init_pressure_error_indicator();

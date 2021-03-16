@@ -23,7 +23,7 @@
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
-#    define FORT_VELADVANCE  veladvance
+#    define FORT_HEATADVANCE  heatadvance
 #    define FORT_VELMAC_OVERRIDE velmac_override
 #    define FORT_UPDATETENSOR updatetensor
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
@@ -70,7 +70,7 @@
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
-#    define FORT_VELADVANCE  VELADVANCE
+#    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_VELMAC_OVERRIDE VELMAC_OVERRIDE
 #    define FORT_UPDATETENSOR UPDATETENSOR
 #    define FORT_FIX_HOOP_TENSOR FIX_HOOP_TENSOR
@@ -117,7 +117,7 @@
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
-#    define FORT_VELADVANCE  veladvance
+#    define FORT_HEATADVANCE  heatadvance
 #    define FORT_VELMAC_OVERRIDE velmac_override
 #    define FORT_UPDATETENSOR updatetensor
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
@@ -163,7 +163,7 @@
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
-#    define FORT_VELADVANCE  veladvance_
+#    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_VELMAC_OVERRIDE velmac_override_
 #    define FORT_UPDATETENSOR updatetensor_
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor_
@@ -1416,7 +1416,7 @@ extern "C"
      const Real* dt,int* irz,
      int* nmat,int* nden);
 
-   void FORT_VELADVANCE(
+   void FORT_HEATADVANCE(
      int* level,
      int* finest_level,
      Real* cur_time,
@@ -1437,7 +1437,6 @@ extern "C"
      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
      Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
      Real* du,AMREX_ARLIM_P(dulo),AMREX_ARLIM_P(duhi),
-     Real* advect,AMREX_ARLIM_P(advectlo),AMREX_ARLIM_P(advecthi),
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact);

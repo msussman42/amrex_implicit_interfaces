@@ -27727,7 +27727,7 @@ stop
 
 
        ! called from: NavierStokes3.cpp
-      subroutine FORT_VELADVANCE( &
+      subroutine FORT_HEATADVANCE( &
        level, &
        finest_level, &
        cur_time, &
@@ -27745,7 +27745,6 @@ stop
        snew,DIMS(snew), &
        lsnew,DIMS(lsnew), &
        du,DIMS(du), &
-       advect,DIMS(advect), &
        tilelo,tilehi, &
        fablo,fabhi,bfact)
       use probcommon_module
@@ -27776,7 +27775,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(snew)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
       INTEGER_T, intent(in) :: DIMDEC(du)
-      INTEGER_T, intent(in) :: DIMDEC(advect)
       INTEGER_T :: i,j,k
       INTEGER_T :: dir
       INTEGER_T :: im
@@ -27789,11 +27787,8 @@ stop
       REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
       REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
       REAL_T, intent(in) :: du(DIMV(du),nsolveMM)
-      REAL_T, intent(in) :: advect(DIMV(advect),nsolveMM)
 
       REAL_T Tforce,new_temperature,TEMPERATURE
-      INTEGER_T partid,im_solid,partid_crit
-      REAL_T LStest,LScrit
       INTEGER_T num_materials_face
       REAL_T xclamped(SDIM)
       REAL_T LS_clamped
@@ -27812,7 +27807,7 @@ stop
        print *,"finest_level invalid veladvance"
        stop
       endif
-      if ((nsolve.ne.SDIM).and.(nsolve.ne.1)) then
+      if (nsolve.ne.1) then
        print *,"nsolve invalid"
        stop
       endif
@@ -27820,15 +27815,8 @@ stop
        print *,"num_materials_vel invalid"
        stop
       endif
-      num_materials_face=num_materials_vel
-      if (nsolve.eq.AMREX_SPACEDIM) then
-       ! do nothing
-      else if (nsolve.eq.1) then
-       num_materials_face=num_materials_scalar_solve
-      else
-       print *,"nsolve invalid"
-       stop
-      endif
+      num_materials_face=num_materials_scalar_solve
+
       if (nsolveMM.ne.nsolve*num_materials_face) then
        print *,"nsolveMM invalid 19448"
        stop
@@ -27844,11 +27832,11 @@ stop
       endif
 
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_VELADVANCE"
+       print *,"nparts invalid FORT_HEATADVANCE"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_VELADVANCE"
+       print *,"nparts_def invalid FORT_HEATADVANCE"
        stop
       endif
 
@@ -27858,7 +27846,6 @@ stop
       call checkbound(fablo,fabhi,DIMS(snew),1,-1,1251)
       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1251)
       call checkbound(fablo,fabhi,DIMS(du),0,-1,1251)
-      call checkbound(fablo,fabhi,DIMS(advect),1,-1,1251)
      
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
@@ -27875,135 +27862,31 @@ stop
        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
              vel_clamped,temperature_clamped)
 
-       if (nsolve.eq.SDIM) then ! viscosity
-
-        partid=0
-        im_solid=0
-        partid_crit=0
-
-        do im=1,nmat
-         if (is_prescribed(nmat,im).eq.1) then
-          LStest=lsnew(D_DECL(i,j,k),im)
-          if (LStest.ge.zero) then
-           if (im_solid.eq.0) then
-            im_solid=im
-            partid_crit=partid
-            LScrit=LStest
-           else if ((im_solid.ge.1).and. &
-                    (im_solid.le.nmat)) then
-            if (LStest.ge.LScrit) then
-             im_solid=im
-             partid_crit=partid
-             LScrit=LStest
-            endif
-           else
-            print *,"im_solid invalid 3"
-            stop
-           endif
-          else if (LStest.lt.zero) then
-           ! do nothing
-          else
-           print *,"LStest invalid"
-           stop
-          endif
-         else if (is_prescribed(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_prescribed(nmat,im) invalid"
-          stop
-         endif
-         if (is_lag_part(nmat,im).eq.1) then
-          partid=partid+1
-         else if (is_lag_part(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_lag_part invalid"
-          stop
-         endif 
-        enddo ! im=1..nmat
-
-        if (partid.ne.nparts) then
-         print *,"partid invalid"
-         stop
-        endif
-
-        if (LS_clamped.ge.zero) then
-         do dir=1,SDIM
-          snew(D_DECL(i,j,k),dir)=vel_clamped(dir)
-         enddo
-        else if (LS_clamped.lt.zero) then
-
-         if ((im_solid.ge.1).and. &
-             (im_solid.le.nmat)) then ! in the prescribed solid
-          if (im_solid_map(partid_crit+1)+1.ne.im_solid) then
-           print *,"im_solid_map(partid_crit+1)+1.ne.im_solid"
-           stop
-          endif
-          dir=1
-          velcomp=partid_crit*SDIM+dir
-          snew(D_DECL(i,j,k),dir)=half* &
-            (solxfab(D_DECL(i,j,k),velcomp)+ &
-             solxfab(D_DECL(i+1,j,k),velcomp))
-          dir=2
-          velcomp=partid_crit*SDIM+dir
-          snew(D_DECL(i,j,k),dir)=half* &
-            (solyfab(D_DECL(i,j,k),velcomp)+ &
-             solyfab(D_DECL(i,j+1,k),velcomp))
-          if (SDIM.eq.3) then
-           dir=SDIM
-           velcomp=partid_crit*SDIM+dir
-           snew(D_DECL(i,j,k),dir)=half* &
-            (solzfab(D_DECL(i,j,k),velcomp)+ &
-             solzfab(D_DECL(i,j,k+1),velcomp))
-          endif
-
-         else if (im_solid.eq.0) then ! in the fluid
-          do dir=1,SDIM
-           snew(D_DECL(i,j,k),dir)= &
-            advect(D_DECL(i,j,k),dir)+ &
-            du(D_DECL(i,j,k),dir)
-          enddo ! dir
-         else
-          print *,"im_solid invalid 4"
-          stop
-         endif
-        else
-         print *,"LS_clamped is NaN"
-         stop
-        endif
-
-       else if (nsolve.eq.1) then ! temperature
-
-        do im=1,nmat
-         ibase=num_materials_vel*(SDIM+1)+(im-1)*num_state_material
-         TEMPERATURE=snew(D_DECL(i,j,k),ibase+2)
-         if (TEMPERATURE.le.zero) then
+       do im=1,nmat
+        ibase=num_materials_vel*(SDIM+1)+(im-1)*num_state_material
+        TEMPERATURE=snew(D_DECL(i,j,k),ibase+2)
+        if (TEMPERATURE.le.zero) then
           print *,"HEATADVANCE: temperature must be positive"
           print *,"i,j,k,im ",i,j,k,im
           print *,"TEMPERATURE= ",TEMPERATURE
           stop
-         endif
-          ! viscous heating term.
-         velcomp=1
-         Tforce=du(D_DECL(i,j,k),velcomp)
-         new_temperature=TEMPERATURE+Tforce
-         if (new_temperature.le.zero) then
-          new_temperature=TEMPERATURE
-         endif
-         snew(D_DECL(i,j,k),ibase+2)=new_temperature
-        enddo ! im
+        endif
+         ! viscous heating term.
+        velcomp=1
+        Tforce=du(D_DECL(i,j,k),velcomp)
+        new_temperature=TEMPERATURE+Tforce
+        if (new_temperature.le.zero) then
+         new_temperature=TEMPERATURE
+        endif
+        snew(D_DECL(i,j,k),ibase+2)=new_temperature
+       enddo ! im = 1..nmat
 
-       else
-        print *,"nsolve invalid"
-        stop
-       endif
-   
       enddo
       enddo
       enddo
   
       return 
-      end subroutine FORT_VELADVANCE
+      end subroutine FORT_HEATADVANCE
 
       module FSI_PC_module
 
