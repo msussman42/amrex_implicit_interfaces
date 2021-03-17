@@ -388,7 +388,7 @@ ns.xblob=0.0  # center of ice block
 ns.yblob=0.0
 ns.zblob=0.45625
 ns.xblob2=0.0 # center of surface of heated substrate (xblob2,yblob2)   
-ns.yblob2=0.0 #4 X dxcoarse=4 x (1/32) =  1/8
+ns.yblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
 ns.zblob2=0.125
 
 ns.radblob2=0.0 # zero degrees incline (radians)

@@ -50,7 +50,8 @@ REAL_T substrate_height
 if (abs(zblob2-yblob2).le.1.0D-14) then
  substrate_height=zblob2  ! substrate thickness
 else
- print *,"zblob2 or yblob2 invalid"
+ print *,"zblob2 or yblob2 invalid (they should be the same)"
+ print *,"zblob2,yblob2   = ",zblob2,yblob2
  stop
 endif
 
