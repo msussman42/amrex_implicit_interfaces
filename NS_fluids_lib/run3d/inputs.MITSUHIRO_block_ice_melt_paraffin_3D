@@ -43,13 +43,14 @@ stop_time = 50
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
-#geometry.prob_lo=-1.0 -1.0 0.0    # XYZ
-#geometry.prob_hi=1.0 1.0 1.5  # cm XYZ
-geometry.prob_lo   =  0.0 0.0    # RZ
-geometry.prob_hi=2.0 1.0  # cm RZ
+#geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
+geometry.coord_sys      = 0        # 0 => XYZ, 1 => RZ
+geometry.prob_lo=-0.75 -0.75 0.0    # XYZ
+geometry.prob_hi=0.75 0.75 1.0  # cm XYZ
+#geometry.prob_lo   =  0.0 0.0    # RZ
+#geometry.prob_hi=2.0 1.0  # cm RZ
 ns.slice_dir=1
-ns.xslice=0.0 0.0
+ns.xslice=0.0 0.0 0.0
 ns.num_materials_vel=1
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
@@ -130,8 +131,8 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
-#amr.n_cell=64 64 48  # XYZ
-amr.n_cell=64 32  # RZ
+amr.n_cell=48 48 32  # XYZ
+#amr.n_cell=64 32  # RZ
 amr.max_level = 1
 ns.max_level_two_materials=1
 # water, gas, ice, substrate
@@ -172,7 +173,10 @@ ns.use_lsa=0
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
 ns.conservative_tension_force=0
-ns.tension=72.8 29.1 72.8 29.1 109.2 29.1   
+# XYZ
+ns.tension=72.8 29.1 72.8 29.1 143.1 29.1   
+# RZ
+#ns.tension=72.8 29.1 72.8 29.1 109.2 29.1   
 # ns.tension=72.8 29.1 72.8 29.1 72.8 29.1 # before
 # Mehdi recommends the following ratios:
 # 1.0 0.34 0.34 1.32 0.97 0
@@ -368,17 +372,33 @@ ns.solidheat_flag=0
 ns.tempconst=273.0 273.0 273.0 353.0  #/home/Fluid16/mohta/amrex_implicit_interfaces-master-3-2D/amrex_implicit_interfaces-master/NS_fluids_lib/run2d/melting/half_hight_raugh
 ns.initial_temperature=273.0 273.0 273.0 353.0  # dimensionless
 # dxcoarse=2/64=1/32
+# RZ
+#ns.xblob=0.0  # center of ice block 
+#ns.yblob=0.440625
+#ns.zblob=0.0
+#ns.xblob2=0.0 # center of surface of heated substrate (xblob2,yblob2)   
+#ns.yblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
+#ns.zblob2=0.125
+
+# XYZ
 ns.xblob=0.0  # center of ice block 
-ns.yblob=0.440625
-ns.zblob=0.0
+ns.yblob=0.0
+ns.zblob=0.45625
 ns.xblob2=0.0 # center of surface of heated substrate (xblob2,yblob2)   
-ns.yblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
+ns.yblob2=0.0 #4 X dxcoarse=4 x (1/32) =  1/8
 ns.zblob2=0.125
+
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of ice block that is already melted
-ns.radblob3=0.03125
-ns.radblob=0.63125 #side length of ice block
+#RZ
+#ns.radblob3=0.03125
+#ns.radblob=0.63125 #side length of ice block
+#ns.radblob4=0.3 #radius of ice block
+#XYZ
+ns.radblob3=0.0625
+ns.radblob=0.6625 #side length of ice block
 ns.radblob4=0.3 #radius of ice block
+
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=414
@@ -396,14 +416,14 @@ ns.output_drop_distribution=1
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=3
-#ns.lo_bc          = 3 3 5  # XYZ
-#ns.hi_bc          = 3 3 2  # XYZ
-#ns.species_lo_bc  = 3 3 5  # XYZ
-#ns.species_hi_bc  = 3 3 2  # XYZ
-ns.lo_bc          = 3 5  # RZ
-ns.hi_bc          = 3 2  # RZ
-ns.species_lo_bc  = 3 5  # RZ
-ns.species_hi_bc  = 3 2  # RZ
+ns.lo_bc          = 3 3 5  # XYZ
+ns.hi_bc          = 3 3 2  # XYZ
+ns.species_lo_bc  = 3 3 5  # XYZ
+ns.species_hi_bc  = 3 3 2  # XYZ
+#ns.lo_bc          = 3 5  # RZ
+#ns.hi_bc          = 3 2  # RZ
+#ns.species_lo_bc  = 3 5  # RZ
+#ns.species_hi_bc  = 3 2  # RZ
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
