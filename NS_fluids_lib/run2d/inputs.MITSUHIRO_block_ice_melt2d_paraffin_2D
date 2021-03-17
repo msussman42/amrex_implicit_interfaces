@@ -99,7 +99,7 @@ ns.projection_pressure_scale=1.0e+6
 #
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
 # EVAPORATION or NO EVAPORATION
-ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
+ns.num_species_var=1 
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
@@ -153,7 +153,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
 amr.file_name_digits=7
-#amr.restart         = chk0500000
+#amr.restart         = chk0337000
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -172,7 +172,7 @@ ns.use_lsa=0
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
 ns.conservative_tension_force=0
-ns.tension=27.6 24.4 27.6 24.4 54.0 24.4   
+ns.tension=72.8 29.1 72.8 29.1 109.2 29.1   
 # ns.tension=72.8 29.1 72.8 29.1 72.8 29.1 # before
 # Mehdi recommends the following ratios:
 # 1.0 0.34 0.34 1.32 0.97 0
@@ -199,7 +199,7 @@ ns.tension=27.6 24.4 27.6 24.4 54.0 24.4
 # specific heat of water: 4.186 J/(gm K)
 # specific heat of ice: 2.05 J/(gm K)
 # 1=water 2=gas  3=ice  4=substrate 
-ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
+ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K)
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
 #ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
@@ -217,7 +217,6 @@ ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
 # dimensionless:
 # 3.34e+2 joules/g = 3.34e+9 erg/g (ice -> water)
 # 2.26e+3 joules/g = 2.26e+10 erg/g (water -> gas)
-#
 # 12 13 14 23 24 34 21 31 41 32 42 43
 # 12=water to air (i.e. vapor is only created within the air)  31=ice to water
 #ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
@@ -229,50 +228,56 @@ ns.stiffCP= 2.1e+7  1.0e+7 2.2e+7 0.385e+7  # erg/(g K)
 #have less transients in the "solid" ice
 # distribute_from_target=0 => mdot distributed in the melt and the
 # speed is u_{solid} dot n + mdot/rho_{solid}
+
 # NO EVAPORATION:
-#ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
+ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 #EVAPORATION: (distribute mdot into the melt for melting, and into the
 # gas for evaporation)
-ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
+#ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 # unnecessary to distribute mdot evenly for liquids or solids; only gases.
 ns.distribute_mdot_evenly=0 0 0 0 0 0 0 0 0 0 0 0
 ns.constant_density_all_time=1 1 1 1 # not sealed 1..nmat
 ns.constant_volume_mdot=0 0 0 0 0 0 0 0 0 0 0 0 # not sealed 1..2 nten
 ns.override_density=0 0 0 0
+
 #1=liquid, 2=air, 3=ice, 4=substrate
 #12 13 14 23 24 34 21 31 41 32 42 43
 #ice converted to liquid  density_liquid=0.85  density_ice=0.950
 #
+
 # 12 13 14 23 24 34 21 31 41 32 42 43
 #NO EVAPORATION:
-#ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.95e+9 0.0 0.0 0.0 0.0
+ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #EVAPORATION: (tried 2.26e+10, but evap rate was quick, 3.0e+10 is a little slower rate)
-ns.latent_heat = 3.0e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+#ns.latent_heat = 3.0e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+
 #evaporation: 
 # freezing_model=0 => stefan law  V=[k grad T dot n]/L
 # 5 = mystery evaporation law
 #evaporation: freezing_model=6 Palmore and Desjardins 
 #    freezing_model=6: ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
-# EVAPORATION
+# EVAPORATION or NO EVAPORATION
 ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
+# EVAPORATION:
+#ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
 # NO EVAPORATION
-#ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
+ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 #vapor from "12" evaporation is dumped into species 1 within the air.
 #EVAPORATION:
-ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
+#ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
 #NO EVAPORATION: 
-#ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # ....
 #12 13 14 23 24 34  21 31 41 32 42 43
 # substrate temp is 280
-#EVAPORATION
-ns.saturation_temp = 373.0 0.0 0.0 0.0 0.0 0.0 0.0 316.0 0.0 0.0 0.0 0.0
-ns.saturation_temp_min = 273.0 0.0 0.0 0.0 0.0 0.0 0.0 316.0 0.0 0.0 0.0 0.0
-#NO EVAPORATION
-#ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 316.0 0.0 0.0 0.0 0.0
+#EVAPORATION:
+#ns.saturation_temp = 276.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
+#ns.saturation_temp_min = 273.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
+#NO EVAPORATION:
+ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
 # 
 ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
@@ -280,7 +285,6 @@ ns.sum_interval   = 1        # timesteps between computing mass
 
 # initial ice block on heated substrate.
 # probtype=414
-# ./NS_fluids/MITSUHIRO_MELTING.F90
 ns.axis_dir=0   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
@@ -316,7 +320,7 @@ ns.material_type=0 0 0 999
 # L2=L/10 K2=K/25   
 # KTOT approx L/(2.5 L/K + L/K)=K/3.5=0.9/3.5=0.26
 # 1=water 2=gas  3=ice  4=substrate 
-ns.heatviscconst=16000.0 2400.0 33000.0 38600000.0 # dimensional
+ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # dimensional
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 # (rho Y)_t + div(rho u Y) = div (rho D grad Y)
@@ -335,13 +339,13 @@ ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
 # ice is a very viscous fluid 
-ns.viscconst=0.04 0.00017 1000.0 1000.0 # dimensional
+ns.viscconst=0.018 0.00017 1000.0 1000.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.added_weight=1.0 1.0 1.0 1.0
 ns.elastic_time=0.0 0.0 0.0 0.0
-ns.denconst=0.850 0.001 0.950 8.96
+ns.denconst=1.0 0.001 0.934 8.96
 # 0 fluid, tessellating (default)
 # 1 prescribed rigid solid, non-tessellating (PROB.F90)
 # 2 prescribed rigid solid, non-tessellating (sci_clsvof.F90)
@@ -361,8 +365,8 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=0  
 # 1=water 2=gas  3=ice  4=substrate 
-ns.tempconst=316.0 316.0 316.0 353.0 # /home/Fluid16/mohta/amrex_implicit_interfaces-master-3-2D/amrex_implicit_interfaces-master/NS_fluids_lib/run2d/melting/half_hight_raugh
-ns.initial_temperature=316.0 316.0 316.0 353.0  # dimensionless
+ns.tempconst=273.0 273.0 273.0 353.0  #/home/Fluid16/mohta/amrex_implicit_interfaces-master-3-2D/amrex_implicit_interfaces-master/NS_fluids_lib/run2d/melting/half_hight_raugh
+ns.initial_temperature=273.0 273.0 273.0 353.0  # dimensionless
 # dxcoarse=2/64=1/32
 ns.xblob=0.0  # center of ice block 
 ns.yblob=0.440625
