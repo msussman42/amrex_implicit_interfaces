@@ -17388,9 +17388,11 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
+FIX ME
 subroutine stress_from_strain( &
- im_elastic, &
- xsten,nhalf, &
+ im_elastic, & ! =1..nmat
+ x_stress, & ! 1..sdim (x,y,z)
+ dx, &  ! representative dx values 1..sdim
  gradu, &  ! dir_x (displace),dir_space
  xdisplace, &
  ydisplace, &
@@ -17434,6 +17436,7 @@ else
  stop
 endif
 
+ ! gradient of the Displacement: GRAD X
 do dir_x=1,SDIM  ! dir_x (displace)
 do dir_space=1,SDIM
  gradu_local(dir_x,dir_space)=gradu(dir_x,dir_space)
@@ -17522,6 +17525,8 @@ endif
 scale_factor=zero
 
  ! gradu(i,j)=partial XD_{i}/partial x_j
+ ! F=grad X + I
+ ! strain_displacement=(grad X + grad X^T)/2
 do dir_x=1,SDIM 
 do dir_space=1,SDIM
  if (dir_x.eq.dir_space) then
@@ -17557,6 +17562,7 @@ if (scale_factor.lt.one) then
 endif
 scale_factor=scale_factor*scale_factor
 
+ ! F=grad X + I
  ! C=F^T F = right cauchy green tensor
  ! E=(1/2)*(C-I)  Green Lagrange strain tensor
 do dir_x=1,SDIM 
@@ -17609,6 +17615,9 @@ do dir_space=1,SDIM
  else
   Identity_comp=zero
  endif
+  ! grad X is synonomous with grad u (gradient of displacement vector)
+  ! (note: grad V=gradient of velocity vector)
+  ! F=grad X + I
   ! C=F^T F=right cauchy green tensor
   ! strain_displacement=(1/2)(grad u + (grad u)^T) = eps_ij
   ! E=(C-I)/2=( (grad u + I)^T(grad u +I) - I)/2=eps_ij +
@@ -17618,6 +17627,8 @@ do dir_space=1,SDIM
  trace_SD=trace_SD+Identity_comp*strain_displacement(dir_x,dir_space)
 enddo
 enddo 
+ ! E=(C-I)/2=(F^T F -I)/2=( (grad X^T+I)(grad X+I)-I )/2=
+ ! (1/2)(grad X +grad X^T + grad X^T * grad X)
  ! Sigma=2 mu_s E + lambda Tr(E) I
  ! structure force is div Sigma=div mu_s (Sigma/mu_s)
  ! Richter, JCP, 2013
@@ -17640,11 +17651,14 @@ do dir_space=1,SDIM
  if (bulk_modulus.gt.zero) then
 
   if (linear_elastic_model.eq.1) then
-         ! only valid for small deformations
+    ! only valid for small deformations:
+    !  strain displacement=SD= (1/2)(grad XD + grad XD^T)=( (F + F^T)/2 - I )
+    !  2 mu_S SD + lambda TRACE(SD)
    DISP_TEN(dir_x,dir_space)=( &
        two*bulk_modulus*strain_displacement(dir_x,dir_space)+ &
           lame_coefficient*trace_SD*Identity_comp)/bulk_modulus
   else if (linear_elastic_model.eq.0) then
+    ! E=(C-I)/2  C=F^T F = right cauchy green tensor
    DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
           lame_coefficient*trace_E*Identity_comp)/bulk_modulus
   else
