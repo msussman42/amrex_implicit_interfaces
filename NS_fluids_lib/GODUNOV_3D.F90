@@ -27079,6 +27079,14 @@ stop
 
       nhalf=3
   
+      call get_dxmin(dx,bfact,dxmin)
+      if (dxmin.gt.zero) then
+       eps_deriv=dxmin*(1.0D-2)
+      else
+       print *,"dxmin invalid"
+       stop
+      endif
+
        ! dir=0..sdim-1 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0,dir)
@@ -27154,8 +27162,77 @@ stop
          stop
         endif
 
-       enddo
-       enddo
+         ! (f(x+eps_deriv)-f(x))/eps_deriv
+        do dir_deriv=1,SDIM
+         do dir_pos=1,SDIM
+          xplus(dir_pos)=xflux(dir_pos)
+          xminus(dir_pos)=xflux(dir_pos)
+         enddo
+         xplus(der_deriv)=xplus(der_deriv)+eps_deriv
+         xminus(der_deriv)=xminus(der_deriv)-eps_deriv
+         call interpfab_XDISP( &
+           bfact, & ! determines positioning of Gauss Legendre nodes
+           level, &
+           finest_level, &
+           dx, &
+           xlo, &
+           xplus, &
+           im,nmat, &
+           elastic_index, &
+           XDfab,DIMS(XDfab), &
+           YDfab,DIMS(YDfab), &
+           ZDfab,DIMS(ZDfab), &
+           recon,DIMS(recon), &
+           XDplus) ! XD(xplus),YD(xplus),ZD(xplus)
+                   
+         call interpfab_XDISP( &
+           bfact, & ! determines positioning of Gauss Legendre nodes
+           level, &
+           finest_level, &
+           dx, &
+           xlo, &
+           xminus, &
+           im,nmat, &
+           elastic_index, &
+           XDfab,DIMS(XDfab), &
+           YDfab,DIMS(YDfab), &
+           ZDfab,DIMS(ZDfab), &
+           recon,DIMS(recon), &
+           XDminus) ! XD(xminus),YD(xminus),ZD(xminus)
+
+         do dir_XD=1,SDIM
+          gradXDtensor(dir_XD,dir_deriv)= &
+             (XDplus(dir_XD)-XDminus(dir_XD))/eps_deriv
+         enddo
+        enddo ! dir_deriv=1..sdim
+
+        call interpfab_XDISP( &
+          bfact, & ! determines positioning of Gauss Legendre nodes
+          level, &
+          finest_level, &
+          dx, &
+          xlo, &
+          xflux, & ! MAC grid face center
+          im,nmat, &
+          elastic_index, &
+          XDfab,DIMS(XDfab), &
+          YDfab,DIMS(YDfab), &
+          ZDfab,DIMS(ZDfab), &
+          recon,DIMS(recon), &
+          XDcenter) ! XD(xflux),YD(xflux),ZD(xflux)
+
+        call stress_from_strain( &
+         im_elastic, & =1..nmat
+         xflux, &
+         dx, &
+         gradXDtensor,
+         XDcenter(1), &
+         XDcenter(2), &
+         DISP_TEN, &  ! dir_x (displace),dir_space
+         hoop_22)
+          
+       enddo ! side_flux=0..1
+       enddo ! dir_flux=0..sdim-1
         ! divergence of fluxes goes here
 
 
