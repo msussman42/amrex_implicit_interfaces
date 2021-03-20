@@ -2478,6 +2478,7 @@ stop
       REAL_T xdisplace_local,ydisplace_local
       REAL_T hoop_22
       INTEGER_T vofcomp
+      REAL_T x_stress(SDIM)
 
       nhalf=3
 
@@ -2524,7 +2525,11 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir_space=1,SDIM
+        x_stress(dir_space)=xsten(0,dir_space)
+       enddo
 
        do dir_x=1,SDIM ! velocity (displacement) component u,v,w
        do dir_space=1,SDIM ! direction x,y,z
@@ -2589,7 +2594,8 @@ stop
         ! declared in GLOBALUTIL.F90
        call stress_from_strain( &
          im_elastic, &
-         xsten,nhalf, &
+         x_stress, &
+         dx, &
          gradu, &  ! dir_x (displace),dir_space
          xdisplace_local, &
          ydisplace_local, &
@@ -26989,7 +26995,11 @@ stop
       return 
       end subroutine FORT_CROSSTERM
 
+       ! called from NavierStokes2.cpp:
+       ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
       subroutine FORT_MAC_ELASTIC_FORCE( &
+       im_elastic, & ! 0..nmat-1
+       partid, & ! 0..num_materials_viscoelastic-1
        dir, & ! 0..sdim-1
        ncomp_visc, &
        visc_coef, &
@@ -27024,9 +27034,12 @@ stop
       use global_utility_module
       use godunov_module
       use MOF_routines_module
+      use mass_transfer_module
  
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: im_elastic !0..nmat-1
+      INTEGER_T, intent(in) :: partid !0..num_materials_viscoelastic-1
       INTEGER_T, intent(in) :: dir  ! MAC force component, dir=0..sdim-1
       INTEGER_T, intent(in) :: ncomp_visc
       REAL_T, intent(in) :: visc_coef
@@ -27075,7 +27088,30 @@ stop
       INTEGER_T nhalf
       INTEGER_T inormal
       INTEGER_T dircomp
+      INTEGER_T dir_deriv,dir_pos,dir_XD
       REAL_T xflux(SDIM)
+      REAL_T xplus(SDIM)
+      REAL_T xminus(SDIM)
+      REAL_T XDplus(SDIM)
+      REAL_T XDminus(SDIM)
+      REAL_T XDcenter(SDIM)
+      REAL_T gradXDtensor(SDIM,SDIM)
+      REAL_T DISP_TEN(SDIM,SDIM)
+      REAL_T hoop_22
+      REAL_T eps_deriv,dxmin
+      INTEGER_T im_elastic_p1
+
+      im_elastic_p1=im_elastic+1
+
+      call checkbound(fablo,fabhi,DIMS(visc),1,-1,11)
+      call checkbound(fablo,fabhi,DIMS(mask),1,-1,1277)
+      call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,1277)
+      call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1277)
+      call checkbound(fablo,fabhi,DIMS(recon),2,-1,1277)
+      call checkbound(fablo,fabhi,DIMS(XFORCE),0,dir,1277)
+      call checkbound(fablo,fabhi,DIMS(XDfab),1,0,1277)
+      call checkbound(fablo,fabhi,DIMS(YDfab),1,1,1277)
+      call checkbound(fablo,fabhi,DIMS(ZDfab),1,SDIM-1,1277)
 
       nhalf=3
   
@@ -27084,6 +27120,19 @@ stop
        eps_deriv=dxmin*(1.0D-2)
       else
        print *,"dxmin invalid"
+       stop
+      endif
+
+      if ((im_elastic.ge.0).and. &
+          (im_elastic.lt.nmat)) then
+       ! do nothing
+      else
+       print *,"im_elastic invalid"
+       stop
+      endif
+      if ((partid.ge.0).and. &
+          (partid.lt.num_materials_viscoelastic)) then
+       print *,"partid invalid"
        stop
       endif
 
@@ -27168,8 +27217,8 @@ stop
           xplus(dir_pos)=xflux(dir_pos)
           xminus(dir_pos)=xflux(dir_pos)
          enddo
-         xplus(der_deriv)=xplus(der_deriv)+eps_deriv
-         xminus(der_deriv)=xminus(der_deriv)-eps_deriv
+         xplus(dir_deriv)=xplus(dir_deriv)+eps_deriv
+         xminus(dir_deriv)=xminus(dir_deriv)-eps_deriv
          call interpfab_XDISP( &
            bfact, & ! determines positioning of Gauss Legendre nodes
            level, &
@@ -27177,8 +27226,10 @@ stop
            dx, &
            xlo, &
            xplus, &
-           im,nmat, &
-           elastic_index, &
+           im_elastic_p1, & ! 1..nmat
+           nmat, &
+           partid, & ! 0..num_materials_viscoelastic-1
+           fablo,fabhi, &
            XDfab,DIMS(XDfab), &
            YDfab,DIMS(YDfab), &
            ZDfab,DIMS(ZDfab), &
@@ -27192,8 +27243,10 @@ stop
            dx, &
            xlo, &
            xminus, &
-           im,nmat, &
-           elastic_index, &
+           im_elastic_p1, & ! 1..nmat
+           nmat, &
+           partid, & ! 0..num_materials_viscoelastic-1
+           fablo,fabhi, &
            XDfab,DIMS(XDfab), &
            YDfab,DIMS(YDfab), &
            ZDfab,DIMS(ZDfab), &
@@ -27213,19 +27266,22 @@ stop
           dx, &
           xlo, &
           xflux, & ! MAC grid face center
-          im,nmat, &
-          elastic_index, &
+          im_elastic_p1, & ! 1..nmat
+          nmat, &
+          partid, & ! 0..num_materials_viscoelastic-1
+          fablo,fabhi, &
           XDfab,DIMS(XDfab), &
           YDfab,DIMS(YDfab), &
           ZDfab,DIMS(ZDfab), &
           recon,DIMS(recon), &
           XDcenter) ! XD(xflux),YD(xflux),ZD(xflux)
 
+         ! declared in: GLOBALUTIL.F90
         call stress_from_strain( &
-         im_elastic, & =1..nmat
+         im_elastic_p1, & ! =1..nmat
          xflux, &
          dx, &
-         gradXDtensor,
+         gradXDtensor, &
          XDcenter(1), &
          XDcenter(2), &
          DISP_TEN, &  ! dir_x (displace),dir_space
@@ -27378,6 +27434,8 @@ stop
       REAL_T xdisplace_local
       REAL_T ydisplace_local
       REAL_T visc_local
+
+      REAL_T x_stress(SDIM)
 
       nhalf=1
 
@@ -27555,6 +27613,9 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+       do space_dir=1,SDIM
+        x_stress(space_dir)=xstenMAC(0,space_dir)
+       enddo
 
        if (dir.eq.1) then
         inorm=i
@@ -27771,7 +27832,8 @@ stop
         ! declared in GLOBALUTIL.F90
        call stress_from_strain( &
          im_elastic, & ! 1<=im_elastic<=nmat
-         xstenMAC,nhalf, &
+         x_stress, &
+         dx, &
          diff_flux, &
          xdisplace_local, &
          ydisplace_local, &

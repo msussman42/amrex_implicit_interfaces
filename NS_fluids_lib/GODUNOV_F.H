@@ -1297,6 +1297,8 @@ extern "C"
      int* ntensorMM);
 
    void FORT_MAC_ELASTIC_FORCE(
+     int* im_elastic, // 0..nmat-1
+     int* partid, // 0..num_materials_viscoelastic-1
      int* dir, //0..sdim-1
      int* ncomp_visc,
      Real* visc_coef, 
