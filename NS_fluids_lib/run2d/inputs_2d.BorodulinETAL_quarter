@@ -189,6 +189,9 @@ ns.reference_pressure=27481070.032667376 0.0
 ns.accommodation_coefficient=1.0 0.0
 
 # CODY k_water, k_gas
+# At 293 degrees Kelvin: 
+#   WATER 0.600e+5 
+#   AIR   0.024e+5
 ns.heatviscconst=0.6e+5 0.024e+5 #CODY:k_liquid=10^-1 W/(m*K),
 #W/(m K)=J/(s m K)=
 #10^7 erg/(s m K)=10^5 erg/(s cm K)
