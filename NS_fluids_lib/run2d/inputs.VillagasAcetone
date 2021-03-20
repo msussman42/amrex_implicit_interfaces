@@ -200,7 +200,7 @@ ns.material_type_visual=0 5
 ns.reference_pressure=2997709.0103757810 0.0 
 ns.accommodation_coefficient=1.0 0.0
 # CODY k_water, k_gas
-ns.heatviscconst=1.0e+7 0.052e+5 #CODY:k_liquid=10^-1 W/(m*K),
+ns.heatviscconst=1.61e+4 5.2e+3 #CODY:k_liquid=1.61x10^-1 W/(m*K),
 #W/(m K)=J/(s m K)=
 #10^7 erg/(s m K)=10^5 erg/(s cm K)
 #1erg=1 g cm^2/s^2
