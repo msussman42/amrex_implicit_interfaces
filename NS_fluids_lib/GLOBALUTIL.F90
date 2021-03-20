@@ -17388,7 +17388,6 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
-FIX ME
 subroutine stress_from_strain( &
  im_elastic, & ! =1..nmat
  x_stress, & ! 1..sdim (x,y,z)
@@ -17402,8 +17401,8 @@ use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im_elastic
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: x_stress(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: gradu(SDIM,SDIM)
 REAL_T, intent(in) :: xdisplace
 REAL_T, intent(in) :: ydisplace
@@ -17411,7 +17410,6 @@ REAL_T, intent(out) :: DISP_TEN(SDIM,SDIM)
 REAL_T, intent(out) :: hoop_22
 REAL_T :: gradu_local(SDIM,SDIM)
 INTEGER_T :: dir_x,dir_space,dir_inner
-REAL_T :: dx_local(SDIM)
 
 REAL_T :: hoop_12
 REAL_T strain_displacement(SDIM,SDIM)
@@ -17423,12 +17421,6 @@ REAL_T scale_factor
 REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
 INTEGER_T linear_elastic_model
 
-if (nhalf.ge.1) then
- ! do nothing
-else
- print *,"nhalf invalid"
- stop
-endif
 if ((im_elastic.ge.1).and.(im_elastic.le.num_materials)) then
  ! do nothing
 else
@@ -17444,11 +17436,10 @@ enddo
 enddo
 
 do dir_space=1,SDIM
- dx_local(dir_space)=xsten(1,dir_space)-xsten(-1,dir_space)
- if (dx_local(dir_space).gt.zero) then
+ if (dx(dir_space).gt.zero) then
   ! do nothing
  else
-  print *,"dx_local invalid"
+  print *,"dx invalid"
   stop
  endif
 enddo
@@ -17459,31 +17450,31 @@ if (SDIM.eq.2) then
  if (levelrz.eq.0) then
   ! do nothing
  else if (levelrz.eq.1) then
-  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
-  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+  if (x_stress(1).gt.VOFTOL*dx(1)) then
+   hoop_22=xdisplace/x_stress(1)  ! xdisplace/r
+  else if (abs(x_stress(1)).le.VOFTOL*dx(1)) then
    hoop_22=zero
   else 
    print *,"xsten(0,1) invalid"
    stop
   endif
  else if (levelrz.eq.3) then
-  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
-   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+  if (x_stress(1).gt.VOFTOL*dx(1)) then
+   hoop_12=-ydisplace/x_stress(1)  ! -ydisplace/r
+   hoop_22=xdisplace/x_stress(1)  ! xdisplace/r
    do dir_x=1,SDIM
-    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/x_stress(1)
    enddo
    gradu_local(1,2)=gradu_local(1,2)+hoop_12
    gradu_local(2,2)=gradu_local(2,2)+hoop_22
-  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+  else if (abs(x_stress(1)).le.VOFTOL*dx(1)) then
    hoop_12=zero
    hoop_22=zero
    do dir_x=1,SDIM
     gradu_local(dir_x,2)=zero
    enddo
   else 
-   print *,"xsten(0,1) invalid"
+   print *,"x_stress(1) invalid"
    stop
   endif
  else
@@ -17494,22 +17485,22 @@ else if (SDIM.eq.3) then
  if (levelrz.eq.0) then
   ! do nothing
  else if (levelrz.eq.3) then
-  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
-   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+  if (x_stress(1).gt.VOFTOL*dx(1)) then
+   hoop_12=-ydisplace/x_stress(1)  ! -ydisplace/r
+   hoop_22=xdisplace/x_stress(1)  ! xdisplace/r
    do dir_x=1,SDIM
-    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/x_stress(1)
    enddo
    gradu_local(1,2)=gradu_local(1,2)+hoop_12
    gradu_local(2,2)=gradu_local(2,2)+hoop_22
-  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+  else if (abs(x_stress(1)).le.VOFTOL*dx(1)) then
    hoop_12=zero
    hoop_22=zero
    do dir_x=1,SDIM
     gradu_local(dir_x,2)=zero
    enddo
   else 
-   print *,"xsten(0,1) invalid"
+   print *,"x_stress(1) invalid"
    stop
   endif
  else
@@ -17584,7 +17575,7 @@ do dir_space=1,SDIM
   ! do nothing
  else
   print *,"scale_factor = ",scale_factor
-  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"x=",x_stress(1),x_stress(2),x_stress(SDIM)
   print *,"dir_x,dir_space ",dir_x,dir_space
   print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
   print *,"C(dir_space,dir_x)=",C(dir_space,dir_x)
@@ -17596,7 +17587,7 @@ do dir_space=1,SDIM
   ! do nothing
  else
   print *,"scale_factor = ",scale_factor
-  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"x=",x_stress(1),x_stress(2),x_stress(SDIM)
   print *,"dir_x,dir_space ",dir_x,dir_space
   print *,"B(dir_x,dir_space)=",B(dir_x,dir_space)
   print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)

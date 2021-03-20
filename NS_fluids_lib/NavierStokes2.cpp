@@ -1447,40 +1447,87 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // declared in: GODUNOV_3D.F90
-   FORT_MAC_ELASTIC_FORCE(
-    &dir, // dir=0,1,..sdim-1  
-    &ncomp_visc, 
-    &visc_coef,
-    &facevisc_index,
-    &faceden_index,
-    &massface_index,
-    &vofface_index,
-    &ncphys,
-    velbc.dataPtr(),
-    &dt_slab,
-    &cur_time_slab,
-    xlo,dx,
-    viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-    maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
-    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    maskcoef.dataPtr(), // maskcoef=1 if not covered by finer level or outside
-    ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
-    levelpcfab.dataPtr(),
-    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-    XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
-    YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
-    ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
-    XFORCEfab.dataPtr(),ARLIM(XFORCEfab.loVect()),ARLIM(XFORCEfab.hiVect()), 
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &level,&finest_level,
-    &rzflag,
-    domlo,domhi,
-    &nmat,
-    &nten);
+   for (int im=0;im<nmat;im++) {
+    if ((particleLS_flag[im]==1)||
+        (particleLS_flag[im]==0)) { 
+     if (ns_is_rigid(im)==0) {
+      if ((elastic_time[im]>0.0)&&
+          (elastic_viscosity[im]>0.0)) {
+
+       if (store_elastic_data[im]==1) {
+
+        if (viscoelastic_model[im]==2) {
+
+         int partid=0;
+         while ((im_elastic_map[partid]!=im)&&
+	        (partid<im_elastic_map.size())) {
+          partid++;
+         }
+
+         if (partid<im_elastic_map.size()) {
+
+          // declared in: GODUNOV_3D.F90
+          FORT_MAC_ELASTIC_FORCE(
+           &im,
+           &partid,
+           &dir, // dir=0,1,..sdim-1  
+           &ncomp_visc, 
+           &visc_coef,
+           &facevisc_index,
+           &faceden_index,
+           &massface_index,
+           &vofface_index,
+           &ncphys,
+           velbc.dataPtr(),
+           &dt_slab,
+           &cur_time_slab,
+           xlo,dx,
+           viscfab.dataPtr(),
+  	   ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+           maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
+           ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+	   //maskcoef=1 if not covered by finer level or outside
+           maskcoef.dataPtr(), 
+           ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
+           levelpcfab.dataPtr(),
+           ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+           XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
+           YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
+           ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
+           XFORCEfab.dataPtr(),
+	   ARLIM(XFORCEfab.loVect()),ARLIM(XFORCEfab.hiVect()), 
+           reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+           tilelo,tilehi,
+           fablo,fabhi,
+           &bfact,
+           &level,&finest_level,
+           &rzflag,
+           domlo,domhi,
+           &nmat,
+           &nten);
+	 } else
+          amrex::Error("partid could not be found");
+        } else if ((viscoelastic_model[im]==1)||
+   		   (viscoelastic_model[im]==0)) {
+         // do nothing
+        } else
+         amrex::Error("viscoelastic_model[im] invalid");
+       } else
+        amrex::Error("store_elastic_data invalid");
+      } else if ((elastic_time[im]==0.0)||
+   	         (elastic_viscosity[im]==0.0)) {
+       // do nothing
+      } else
+       amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
+
+     } else if (ns_is_rigid(im)==1) {
+      // do nothing
+     } else
+      amrex::Error("ns_is_rigid invalid");
+    } else
+     amrex::Error("particleLS_flag[im] invalid");
+  } // im=0..nmat-1
+
   } // mfi
 } // omp
   ns_reconcile_d_num(132);

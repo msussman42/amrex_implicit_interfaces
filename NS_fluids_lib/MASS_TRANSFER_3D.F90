@@ -749,6 +749,58 @@ stop
       return
       end subroutine center_centroid_interchange
 
+      subroutine interpfab_XDISP( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       x, &
+       im, & ! im=1..nmat
+       nmat, &
+       partid, & ! 0..num_materials_viscoelastic-1
+       lo,hi, &
+       xdata,DIMS(xdata), &
+       ydata,DIMS(ydata), &
+       zdata,DIMS(zdata), &
+       recon,DIMS(recon), &
+       dest) ! 1..SDIM
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, intent(in) :: partid
+      INTEGER_T, intent(in) :: im,nmat
+       ! datalox,datahix,dataloy,datahiy,dataloz,datahiz
+      INTEGER_T, intent(in) :: DIMDEC(xdata)
+      INTEGER_T, intent(in) :: DIMDEC(ydata)
+      INTEGER_T, intent(in) :: DIMDEC(zdata)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+       ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
+      REAL_T, intent(in) :: xdata(DIMV(xdata),partid+1)
+      REAL_T, intent(in) :: ydata(DIMV(ydata),partid+1)
+      REAL_T, intent(in) :: zdata(DIMV(zdata),partid+1)
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(out) :: dest(SDIM)
+
+      call checkbound(lo,hi,DIMS(xdata),1,0,1221)
+      call checkbound(lo,hi,DIMS(ydata),1,1,1221)
+      call checkbound(lo,hi,DIMS(zdata),1,SDIM-1,1221)
+      call checkbound(lo,hi,DIMS(recon),2,-1,1222)
+
+
+      return 
+      end subroutine interpfab_XDISP
+
+
       subroutine interpfabFWEIGHT( &
        bfact, &
        level, &
