@@ -194,9 +194,13 @@ ns.material_type=0 0
 #gamma=1.4d0  C_pG=1.0d+7   gamma=Cp/Cv  e=Cv T
 #for material_type==5, these values are hardwired:
 #CP-CV=0.287D+7  CV=0.72D+7  GAMMA=CP/CV=1.39861
+# used by Kassemi model in order to find P(T_vapor_probe,rho_probe) 
 ns.material_type_evap=0 5 
 ns.material_type_lowmach=0 5 
 ns.material_type_visual=0 5 
+# this reference_pressure is used for the Kassemi model:
+# P_gamma=P_reference*exp( ... stuff .... )
+# FOR PD model, X_gamma=exp( ... stuff .... )
 ns.reference_pressure=2997709.0103757810 0.0 
 ns.accommodation_coefficient=1.0 0.0
 # CODY k_water, k_gas
