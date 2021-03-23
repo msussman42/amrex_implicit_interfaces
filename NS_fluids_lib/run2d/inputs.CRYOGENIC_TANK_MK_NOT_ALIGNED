@@ -23,9 +23,9 @@ ns.num_species_var  = 1
 # ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
 # PROB.F90 and declared in CRYOGENIC_TANK1.F90)
 ns.material_type = 0 0 999 
-ns.material_type_evap = 0 24 999
-ns.material_type_lowmach = 0 24 999
-ns.material_type_visual = 0 24 999
+ns.material_type_evap = 0 24 999 # needed for Kassemi model
+ns.material_type_lowmach = 0 24 999 # Tryggvason low mach number model
+ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
 #u_t + div(uu) = -grad p/rho + div tau/rho
 #if face_flag=0, then div(uu), div tau/rho are CC, grad p/rho MAC
@@ -243,6 +243,7 @@ ns.constant_density_all_time=1 0 1 # sealed 1..nmat
 #  material.
 # constant_volume_mdot=1 => redistribute -sum mdot evenly into the source
 #  material.
+#  12,13,23,21,31,32
 ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
