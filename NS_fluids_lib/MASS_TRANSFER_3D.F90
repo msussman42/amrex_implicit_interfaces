@@ -749,6 +749,12 @@ stop
       return
       end subroutine center_centroid_interchange
 
+       ! called from FORT_MAC_ELASTIC_FORCE:
+       !  derivative \approx (f(y+h)-f(y-h))/(2h)
+       !  f(y+h), f(y-h) obtained by way of bilinear interpolation of the grid
+       !  data.
+       !  This routine calculates the bilinear interpolant at a given point
+       !  "x" where "x" represents "y+h" or "y-h"
       subroutine interpfab_XDISP( &
        bfact, &
        level, &
@@ -796,6 +802,20 @@ stop
       call checkbound(lo,hi,DIMS(zdata),1,SDIM-1,1221)
       call checkbound(lo,hi,DIMS(recon),2,-1,1222)
 
+       ! dir_disp_comp==0 => xdata interpolation
+       ! dir_disp_comp==1 => ydata interpolation
+       ! dir_disp_comp==2 => zdata interpolation
+      do dir_disp_comp=0,SDIM-1
+        ! strategy:
+        !   1. determine 3x3x3 MAC grid stencil about x
+        !   2. determine the bilinear interpolation weights
+        !      (weights are only nonzero in the appropriate 2x2x2 MAC
+        !       grid stencil) 
+        ! containing_MACcell declared in GLOBALUTIL.F90
+       call containing_MACcell(bfact,dx,xlo,lo,x,dir_disp_comp,mac_cell_index)
+
+
+      enddo ! dir_disp_comp=0..sdim-1
 
       return 
       end subroutine interpfab_XDISP
@@ -890,6 +910,7 @@ stop
        stop
       endif
 
+       ! declared in GLOBALUTIL.F90
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
 
       do dir=1,SDIM
