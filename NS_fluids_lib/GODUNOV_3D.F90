@@ -27211,14 +27211,17 @@ stop
          stop
         endif
 
-         ! (f(x+eps_deriv)-f(x))/eps_deriv
-        do dir_deriv=1,SDIM
+         ! dir=0..sdim-1 is the force component
+         ! eps_deriv=1.0D-2 * dxmin
+         ! (f(x+eps_deriv)-f(x-eps_deriv))/(2 * eps_deriv)
+        do dir_deriv=1,SDIM ! d/dx, d/dy, d/dz
          do dir_pos=1,SDIM
           xplus(dir_pos)=xflux(dir_pos)
           xminus(dir_pos)=xflux(dir_pos)
          enddo
          xplus(dir_deriv)=xplus(dir_deriv)+eps_deriv
          xminus(dir_deriv)=xminus(dir_deriv)-eps_deriv
+          ! interpfab_XDISP declared in MASS_TRANSFER_3D.F90
          call interpfab_XDISP( &
            bfact, & ! determines positioning of Gauss Legendre nodes
            level, &
@@ -27226,7 +27229,7 @@ stop
            dx, &
            xlo, &
            xplus, &
-           im_elastic_p1, & ! 1..nmat
+           im_elastic_p1, &!1..nmat(prescribed as a fluid in the inputs file)
            nmat, &
            partid, & ! 0..num_materials_viscoelastic-1
            fablo,fabhi, &

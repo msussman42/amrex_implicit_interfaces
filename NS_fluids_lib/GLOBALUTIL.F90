@@ -8132,7 +8132,69 @@ contains
 
       return
       end subroutine containing_cell
-    
+   
+      Antoine Lemoine, JCP fortran,Notus
+      FIX ME
+       ! finds the MAC cell that contains "x" 
+       ! dir=0,..,sdim-1
+      subroutine containing_MACcell( &
+       bfact,dx,xlo,lo,x,dir_mac,mac_cell_index)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: dir_mac
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: lo(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(out) :: mac_cell_index(SDIM)
+
+      INTEGER_T lo_e,i1,e_index,dir_local
+      REAL_T xnodes(bfact+1)
+
+       ! NINT=nearest int
+      do dir_local=1,SDIM
+       if (bfact.eq.1) then  ! evenly spaced points
+        ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
+        cell_index(dir_local)= &
+          NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local)-half )+ &
+          lo(dir_local)
+       else if (bfact.gt.1) then
+        lo_e=lo(dir_local)/bfact
+        if (lo_e*bfact.ne.lo(dir_local)) then
+         print *,"bfact invalid37"
+         stop
+        endif
+         ! find element whose center is closest to x (i.e. find the
+         ! element that contains x)
+         ! dx_e=bfact*dx
+         ! x=(e_index-lo_e+1/2)dx_e+xlo
+        e_index= &
+          NINT( (x(dir_local)-xlo(dir_local))/(bfact*dx(dir_local))-half )+lo_e
+         ! returns the Gauss Lobatto points in element e_index
+        call element_GLnodes1D(xnodes,xlo(dir_local),e_index,lo_e, &
+         dx(dir_local),bfact)
+        if (x(dir_local).le.xnodes(1)) then
+         cell_index(dir_local)=e_index*bfact
+        else if (x(dir_local).ge.xnodes(bfact+1)) then 
+         cell_index(dir_local)=e_index*bfact+bfact-1
+        else
+         do i1=1,bfact
+          if ((x(dir_local).ge.xnodes(i1)).and. &
+              (x(dir_local).le.xnodes(i1+1))) then
+           cell_index(dir_local)=e_index*bfact+i1-1
+          endif
+         enddo
+        endif
+       else
+        print *,"bfact invalid38"
+        stop
+       endif
+      enddo ! dir_local
+
+      return
+      end subroutine containing_cell
+
 
       subroutine containing_node( &
        bfact,dx,xlo,lo,x,node_index)
