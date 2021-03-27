@@ -797,6 +797,9 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest(SDIM)
 
+      INTEGER_T dir_disp_comp  ! 0..sdim-1
+      INTEGER_T mac_cell_index(SDIM)
+
       call checkbound(lo,hi,DIMS(xdata),1,0,1221)
       call checkbound(lo,hi,DIMS(ydata),1,1,1221)
       call checkbound(lo,hi,DIMS(zdata),1,SDIM-1,1221)
