@@ -8133,10 +8133,13 @@ contains
       return
       end subroutine containing_cell
    
-      Antoine Lemoine, JCP fortran,Notus
-      FIX ME
-       ! finds the MAC cell that contains "x" 
-       ! dir=0,..,sdim-1
+      ! future work:
+      ! turn all the fortran code into an optimized library of routines
+      ! that can be called from c++ or python.
+      ! NOTE: Antoine Lemoine, JCP, Notus, has developed the fastest 
+      !  subroutines for MOF reconstruction.
+      !This routine finds the MAC cell that contains "x" 
+      ! dir=0,..,sdim-1
       subroutine containing_MACcell( &
        bfact,dx,xlo,lo,x,dir_mac,mac_cell_index)
       IMPLICIT NONE
@@ -8149,16 +8152,36 @@ contains
       REAL_T, intent(in) :: xlo(SDIM)
       INTEGER_T, intent(out) :: mac_cell_index(SDIM)
 
-      INTEGER_T lo_e,i1,e_index,dir_local
+      INTEGER_T lo_e,e_index
+      INTEGER_T i1
+      INTEGER_T i1crit
+      INTEGER_T dir_local
       REAL_T xnodes(bfact+1)
+
+      if ((dir_mac.ge.0).and.(dir_mac.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_mac invalid"
+       stop
+      endif
 
        ! NINT=nearest int
       do dir_local=1,SDIM
        if (bfact.eq.1) then  ! evenly spaced points
-        ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
-        cell_index(dir_local)= &
+        ! dir_local!=dir_mac+1: x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
+        ! dir_local==dir_mac+1: x=(i-lo)dx+xlo  i=(x-xlo)/dx+lo
+        if (dir_local.ne.dir_mac+1) then
+         mac_cell_index(dir_local)= &
           NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local)-half )+ &
           lo(dir_local)
+        else if (dir_local.eq.dir_mac+1) then
+         mac_cell_index(dir_local)= &
+          NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local) )+ &
+          lo(dir_local)
+        else
+         print *,"dir_local or dir_mac bust"
+         stop
+        endif
        else if (bfact.gt.1) then
         lo_e=lo(dir_local)/bfact
         if (lo_e*bfact.ne.lo(dir_local)) then
@@ -8174,26 +8197,48 @@ contains
          ! returns the Gauss Lobatto points in element e_index
         call element_GLnodes1D(xnodes,xlo(dir_local),e_index,lo_e, &
          dx(dir_local),bfact)
-        if (x(dir_local).le.xnodes(1)) then
-         cell_index(dir_local)=e_index*bfact
-        else if (x(dir_local).ge.xnodes(bfact+1)) then 
-         cell_index(dir_local)=e_index*bfact+bfact-1
-        else
-         do i1=1,bfact
-          if ((x(dir_local).ge.xnodes(i1)).and. &
-              (x(dir_local).le.xnodes(i1+1))) then
-           cell_index(dir_local)=e_index*bfact+i1-1
+       
+        if (dir_local.ne.dir_mac+1) then
+         if (x(dir_local).le.xnodes(1)) then
+          mac_cell_index(dir_local)=e_index*bfact
+         else if (x(dir_local).ge.xnodes(bfact+1)) then 
+          mac_cell_index(dir_local)=e_index*bfact+bfact-1
+         else
+          do i1=1,bfact
+           if ((x(dir_local).ge.xnodes(i1)).and. &
+               (x(dir_local).le.xnodes(i1+1))) then
+            mac_cell_index(dir_local)=e_index*bfact+i1-1
+           endif
+          enddo
+         endif
+        else if (dir_local.eq.dir_mac+1) then
+
+         i1crit=1
+         do i1=2,bfact+1
+          if (xnodes(i1).gt.xnodes(i1crit)) then
+           if (abs(x(dir_local)-xnodes(i1)).le. &
+               abs(x(dir_local)-xnodes(i1crit))) then
+            i1crit=i1
+           endif
+          else
+           print *,"expecting xnodes(i1).gt.xnodes(i1crit)"
+           stop
           endif
-         enddo
+         enddo ! i1=2..bfact+1
+         mac_cell_index(dir_local)=e_index*bfact+i1crit-1
+
+        else
+         print *,"dir_local or dir_mac bust"
+         stop
         endif
        else
         print *,"bfact invalid38"
         stop
        endif
-      enddo ! dir_local
+      enddo ! dir_local=1..sdim
 
       return
-      end subroutine containing_cell
+      end subroutine containing_MACcell
 
 
       subroutine containing_node( &
