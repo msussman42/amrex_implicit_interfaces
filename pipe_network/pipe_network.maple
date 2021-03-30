@@ -1,0 +1,173 @@
+restart:with(LinearAlgebra):
+
+#MATHEMATICS: MDPI
+#From "Generalization of methods for calculating steady-state 
+#  flow distribution in pipeline networks for non-conventional flow"
+# authors: Nikolay Novitsky, Egor Mikhailovsky
+# About topology (m-node with pressure), n - branches, m - nodes, c - loops
+
+n:=10: m:=9: c:=n-m+1:
+
+jn:=Vector(n,[9,2,9,9,8,7,6,5,3,2]):
+
+jk:=Vector(n,[3,5,3,8,7,6,5,4,2,1]):
+
+# Base matrix
+
+An:=Matrix(m,n): Ak:=Matrix(m,n): for i from 1 to n do An[jn[i],i]:=1: Ak[jk[i],i]:=-1: od:
+
+A:=An+Ak: AC:=SubMatrix(A, 1..m, 1..c): AT:=SubMatrix(A, 1..m, c+1..n):
+
+print("A=",A, "An=", An, "Ak=", Ak, "AT=", AT, "AC=", AC);
+
+# Element models
+
+# Type of elements
+
+types:=[1,0,1,1,1,0,0,0,0,0]:
+
+# Equations for elements
+
+fx:=(i)->if types[i]=0 then Pn[i]*abs(Pn[i])-Pk[i]*abs(Pk[i])-s[i]*x[i]*abs(x[i]); else (s[i][1]-s[i][2]^2/(4*s[i][3]))*Pn[i]*abs(Pn[i])-Pk[i]*abs(Pk[i])+s[i][3]*(x[i]+s[i][2]/(2*s[i][3])*Pn[i])*abs(x[i]+s[i][2]/(2*s[i][3])*Pn[i]); fi:
+
+model:=Vector(n,fx):
+
+# Derivative for elements
+
+dx_:=(i)->if types[i]=0 then -2*s[i]*abs(x[i]); else 2*s[i][3]*abs(x[i]+s[i][2]*Pn[i]/(2*s[i][3])); fi:
+
+dPn_:=(i)->if types[i]=0 then 2*abs(Pn[i]); else 2*abs(Pn[i])*(s[i][1]-s[i][2]^2/(4*s[i][3]))+s[i][2]*(x[i]+s[i][2]*Pn[i]/(2*s[i][3]))*sign(x[i]+s[i][2]*Pn[i]/(2*s[i][3])); fi:
+
+dPk_:=(i)->-2*abs(Pk[i]):
+
+dPn:=Vector(n,dPn_): dPk:=Vector(n,dPk_): dx:=Vector(n,dx_):
+
+# Parameter of elements
+
+s:=[[1.040975262, .4520492230, -.1660378943],0.006,[1.040975262, .4520492230, -.1660378943],[1.056105913, .4352722015, -.2396158372],[1.049124727, .3668417249, -.1867004063],0.253,4.757,0.436,1.332,0.349]:
+
+# K-matrix
+
+dxC:=Matrix(SubVector(dx, 1..c), shape=diagonal):
+
+dxT:=Matrix(SubVector(dx, c+1..n), shape=diagonal):
+
+dPnC:=Matrix(SubVector(dPn, 1..c), shape=diagonal):
+
+dPkC:=Matrix(SubVector(dPk, 1..c), shape=diagonal):
+
+dPnT:=Matrix(SubVector(dPn, c+1..n), shape=diagonal):
+
+dPkT:=Matrix(SubVector(dPk, c+1..n), shape=diagonal):
+
+AnT:=SubMatrix(An, 1..m-1, c+1..n):
+
+AkT:=SubMatrix(Ak, 1..m-1, c+1..n):
+
+AnC:=SubMatrix(An, 1..m-1, 1..c):
+
+AkC:=SubMatrix(Ak, 1..m-1, 1..c):
+
+FT:=-dPnT.Transpose(AnT)+dPkT.Transpose(AkT):
+
+FC:=-dPnC.Transpose(AnC)+dPkC.Transpose(AkC):
+
+F:=FC.MatrixInverse(FT):
+
+BT:=-Transpose(MatrixInverse(DeleteRow(AT,m)).DeleteRow(AC,m)):
+
+B:=<Matrix(c,shape=identity)|BT>:
+
+K:=dxC-F.dxT.Transpose(BT):
+
+# Calc pressure
+
+Calc_P:=proc() global Pn,Pk,An,Ak,P,model,jn,jk,c,n; local g,g1,i;
+
+P:=Vector(m): P[m]:=33.778: Pn:=Transpose(An).P; Pk:=-Transpose(Ak).P;
+
+g:=Vector(n): g1:=1:
+
+while g1<>0 do
+
+g1:=0;
+
+for i from c+1 to n do
+
+if Pn[i]<>0 and Pk[i]=0 and g[i]=0 then Pk:='Pk'; P[jk[i]]:=solve(model[i]); g[i]:=1; g1:=1; Pn:=Transpose(An).P: Pk:=-Transpose(Ak).P: fi;
+
+if Pk[i]<>0 and Pn[i]=0 and g[i]=0 then Pn:='Pn'; P[jn[i]]:=solve(model[i]); g[i]:=1; g1:=1; Pn:=Transpose(An).P: Pk:=-Transpose(Ak).P: fi;
+
+od;
+
+od:
+
+end proc:
+
+# Initial data
+
+# Loads vector
+
+Q:=Vector([-19.1, 0, 0, -14.8, -0.632, -0.32, 0, 0, 0]):
+
+Q[m]:=-add(Q[i],i=1..m-1):
+
+# Chord flowrate
+
+XC:=Vector(c,[10,20]):
+
+# Tree flowrate
+
+XT:=MatrixInverse(SubMatrix(AT,1..m-1,1..m-1)).SubVector((Q-AC.XC),1..m-1):
+
+# Full flowrate vector
+
+x:=Vector(n,[XC,XT]):
+
+Calc_P();
+
+print("Flowrate x=",convert(x,list),"Pressure P=",convert(P,list));
+
+# Solve
+
+for k from 1 do
+
+# Inaccuracy
+
+u:=B.model;
+
+maxU:=0; for r from 1 to c do if maxU<abs(u[r]) then maxU:=abs(u[r]); fi; od;
+
+# Check
+
+if maxU<=1e-2 then
+
+print("Inaccuracy=",log10(maxU));
+
+print("Solved at ",k-1," iteration");
+
+break;
+
+fi;
+
+print("Inaccuracy=",log10(maxU));
+
+print("ITERATION ",k);
+
+# Solution
+
+print("dx=",dx,"dPn=",dPn,"dPk=",dPk);
+
+du:=LinearSolve(Matrix(K),-u):
+
+print("K=",K,"u=",-u,"du=",du);
+
+# Step
+
+x:=x+Transpose(B).du:
+
+print("x=",Transpose(x));
+
+Calc_P(); print("P=",Transpose(P)); print("Pn=",Transpose(Pn)); print("Pk=",Transpose(Pk));
+
+od:
