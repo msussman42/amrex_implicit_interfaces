@@ -1,6 +1,6 @@
 restart:with(LinearAlgebra):
 
-#on hopf use maple
+#on hopf use maple: "maple pipe_network.maple"
 #
 #MATHEMATICS: MDPI
 #From "Generalization of methods for calculating steady-state 
