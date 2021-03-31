@@ -1,5 +1,7 @@
 restart:with(LinearAlgebra):
 
+#on hopf use maple
+#
 #MATHEMATICS: MDPI
 #From "Generalization of methods for calculating steady-state 
 #  flow distribution in pipeline networks for non-conventional flow"
