@@ -7105,6 +7105,13 @@ contains
       return
       end subroutine get_longdir
 
+       ! nhalf>=3
+       ! xsten_center(0,dir)  dir=1..sdim is the coordinate of the center
+       !   of the containing cell.
+       ! xsten_center(i,dir)  dir=1 is the x coordinate for the 1/2 cell
+       !  distances, if uniform, then xsten_center(i,dir)=xcenter+i*dx/2
+       ! stencil_offset(dir)= -1,0, or 1.
+       ! 
       subroutine bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
         xtarget,WT)
       IMPLICIT NONE
@@ -8139,7 +8146,7 @@ contains
       ! NOTE: Antoine Lemoine, JCP, Notus, has developed the fastest 
       !  subroutines for MOF reconstruction.
       !This routine finds the MAC cell that contains "x" 
-      ! dir=0,..,sdim-1
+      ! dir_mac=0,..,sdim-1
       subroutine containing_MACcell( &
        bfact,dx,xlo,lo,x,dir_mac,mac_cell_index)
       IMPLICIT NONE

@@ -749,7 +749,7 @@ stop
       return
       end subroutine center_centroid_interchange
 
-       ! called from FORT_MAC_ELASTIC_FORCE:
+       ! called from FORT_MAC_ELASTIC_FORCE (GODUNOV_3D.F90):
        !  derivative \approx (f(y+h)-f(y-h))/(2h)
        !  f(y+h), f(y-h) obtained by way of bilinear interpolation of the grid
        !  data.
@@ -798,7 +798,12 @@ stop
       REAL_T, intent(out) :: dest(SDIM)
 
       INTEGER_T dir_disp_comp  ! 0..sdim-1
+      INTEGER_T dir_local
       INTEGER_T mac_cell_index(SDIM)
+      INTEGER_T istenlo(3),istenhi(3)
+      INTEGER_T mac_lo(SDIM),mac_hi(SDIM)
+      REAL_T total_WT
+      INTEGER_T isten,jsten,ksten
 
       call checkbound(lo,hi,DIMS(xdata),1,0,1221)
       call checkbound(lo,hi,DIMS(ydata),1,1,1221)
@@ -817,6 +822,89 @@ stop
         ! containing_MACcell declared in GLOBALUTIL.F90
        call containing_MACcell(bfact,dx,xlo,lo,x,dir_disp_comp,mac_cell_index)
 
+       do dir_local=1,SDIM
+        mac_lo(dir_local)=lo(dir_local)
+        mac_hi(dir_local)=hi(dir_local)
+       enddo
+       mac_hi(dir_disp_comp+1)=hi(dir_disp_comp+1)+1
+
+       istenlo(3)=0
+       istenhi(3)=0
+       do dir_local=1,SDIM
+        if (mac_cell_index(dir_local)-1.lt.mac_lo(dir_local)-1) then
+         mac_cell_index(dir_local)=mac_lo(dir_local)
+        endif
+        if (mac_cell_index(dir_local)+1.gt.mac_hi(dir_local)+1) then
+         mac_cell_index(dir)=mac_hi(dir_local)
+        endif
+        istenlo(dir)=mac_cell_index(dir)-1
+        istenhi(dir)=mac_cell_index(dir)+1
+       enddo ! dir_local=1..sdim
+
+       total_WT=zero
+       dest(dir_disp_comp+1)=zero
+
+       isten=mac_cell_index(1)
+       jsten=mac_cell_index(2)
+       ksten=mac_cell_index(SDIM)
+
+       call gridstenMAC_level(xsten_center,isten,jsten,ksten,level,nhalf, &
+              dir_disp_comp+1)
+
+       do isten=istenlo(1),istenhi(1)
+       do jsten=istenlo(2),istenhi(2)
+       do ksten=istenlo(3),istenhi(3)
+
+        call gridstenMAC_level(xsten,isten,jsten,ksten,level,nhalf, &
+                dir_disp_comp+1)
+        stencil_offset(1)=isten-mac_cell_index(1)
+        stencil_offset(2)=jsten-mac_cell_index(2)
+        if (SDIM.eq.3) then
+         stencil_offset(SDIM)=ksten-mac_cell_index(SDIM)
+        endif
+        call bilinear_interp_WT(xsten_center,nhalf,stencil_offset,x,WT)
+        if ((WT.ge.zero).and.(WT.le.one)) then
+         ! do nothing
+        else
+         print *,"WT invalid"
+         stop
+        endif
+
+        if (dir_disp_comp.eq.0) then
+         local_data=xdata(D_DECL(isten,jsten,ksten),partid+1)
+        else if (dir_disp_comp.eq.1) then
+         local_data=ydata(D_DECL(isten,jsten,ksten),partid+1)
+        else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
+         local_data=zdata(D_DECL(isten,jsten,ksten),partid+1)
+        else
+         print *,"dir_disp_comp invalid"
+         stop
+        endif
+        if ((local_data.ge.-1.0D+30).and. &
+            (local_data.le.1.0D+30)) then
+
+         dest(dir_disp_comp+1)=dest(dir_disp_comp+1)+WT*local_data
+
+        else
+         print *,"local_data overflow"
+         print *,"local_data ",local_data
+         stop
+        endif
+
+        total_WT=total_WT+WT
+
+       enddo ! ksten
+       enddo ! jsten
+       enddo ! isten
+
+       if (total_WT.gt.zero) then
+
+        dest(dir_disp_comp+1)=dest(dir_disp_comp+1)/total_WT
+
+       else
+        print *,"total_WT invalid"
+        stop
+       endif
 
       enddo ! dir_disp_comp=0..sdim-1
 
