@@ -27289,10 +27289,222 @@ stop
          XDcenter(2), &
          DISP_TEN, &  ! dir_x (displace),dir_space
          hoop_22)
-          
+        
+        if (side_flux.eq.0) then
+         side_comp=-1
+        else if (side_flux.eq.1) then 
+         side_comp=1
+        else
+         print *,"side_flux invalid"
+         stop
+        endif 
+        do dir_XD=1,SDIM
+         do dir_deriv=1,SDIM
+          if (dir_flux.eq.0) then
+           xflux_local(side_comp,dir_XD,dir_deriv)=DISP_TEN(dir_XD,dir_deriv)
+          else if (dir_flux.eq.1) then
+           yflux_local(side_comp,dir_XD,dir_deriv)=DISP_TEN(dir_XD,dir_deriv)
+          else if ((dir_flux.eq.2).and.(SDIM.eq.3)) then
+           zflux_local(side_comp,dir_XD,dir_deriv)=DISP_TEN(dir_XD,dir_deriv)
+          else
+           print *,"dir_flux invalid"
+           stop
+          endif
+         enddo ! dir_deriv
+        enddo ! dir_XD
+
+        data_out%data_interp=>cell_data_interp
+
+        data_in%level=level
+        data_in%finest_level=finest_level
+        data_in%bfact=bfact ! bfact=kind of spectral element grid 
+        data_in%nmat=num_materials
+        data_in%im_PLS=0 ! no masking from LS
+        data_in%dx=>dx_local
+        data_in%xlo=>xlo_local
+        data_in%fablo=>fablo_local
+        data_in%fabhi=>fabhi_local
+        data_in%ngrowfab=2
+
+        data_in%state=>levelpc
+        data_in%LS=>levelpc  ! placeholder
+
+        data_in%ncomp=nmat*(1+SDIM)
+        data_in%scomp=1
+        data_in%xtarget=>xflux
+        data_in%interp_foot_flag=0
+        call interp_from_grid_util(data_in,data_out)
+
+        do im_LS=1,nmat*(1+SDIM)
+         LS_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
+                 cell_data_interp(im_LS)
+        enddo
+        if (cell_data_interp(im_elastic_p1).ge.zero) then
+         mask_flux_point(side_flux+1,dir_flux+1)=1
+        else (cell_data_interp(im_elastic_p1).lt.zero) then
+         mask_flux_point(side_flux+1,dir_flux+1)=0
+        else
+         print *,"cell_data_interp(im_elastic_p1) invalid"
+         stop
+        endif
        enddo ! side_flux=0..1
        enddo ! dir_flux=0..sdim-1
         ! divergence of fluxes goes here
+       do dir_XD=1,SDIM
+        do dir_deriv=1,SDIM
+         xflux_local(0,dir_XD,dir_deriv)=half*(
+           xflux_local(-1,dir_XD,dir_deriv)+ &
+           xflux_local(1,dir_XD,dir_deriv))
+         yflux_local(0,dir_XD,dir_deriv)=half*(
+           yflux_local(-1,dir_XD,dir_deriv)+ &
+           yflux_local(1,dir_XD,dir_deriv))
+         if (SDIM.eq.3) then
+          zflux_local(0,dir_XD,dir_deriv)=half*(
+           zflux_local(-1,dir_XD,dir_deriv)+ &
+           zflux_local(1,dir_XD,dir_deriv))
+         else if (SDIM.eq.2) then
+          ! do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+        enddo ! dir_deriv
+       enddo ! dir_XD
+
+        ! [n dot tau dot n] = - sigma kappa
+        ! [n dot tau dot tj] = 0
+        FIX ME
+        dir=1
+        mask_left=mask_array(D_DECL(-1,0,0))
+        mask_right=mask_array(D_DECL(1,0,0))
+         ! declared in: GLOBALUTIL.F90
+         ! mask_center=1 if mask_left==1 or mask_right==1
+         ! mask_center=0 if mask_left==0 and mask_right==0
+        call project_tensor(mask_center(dir),n_elastic, &
+         mask_left,mask_right,xflux_local,dir)
+
+        dir=2
+        mask_left=mask_array(D_DECL(0,-1,0))
+        mask_right=mask_array(D_DECL(0,1,0))
+        call project_tensor(mask_center(dir),n_elastic, &
+         mask_left,mask_right,yflux_local,dir)
+
+        if (SDIM.eq.3) then
+         dir=SDIM
+         mask_left=mask_array(D_DECL(0,0,-1))
+         mask_right=mask_array(D_DECL(0,0,1))
+         call project_tensor(mask_center(dir),n_elastic, &
+           mask_left,mask_right,zflux_local,dir)
+        endif
+
+        do veldir=1,SDIM
+
+         force(veldir)=zero
+
+         dir=1
+         force(veldir)=force(veldir)+ &
+          mask_center(dir)* &
+            (rplus*xflux_local(1,veldir,dir)- &
+             rminus*xflux_local(-1,veldir,dir))/hx
+
+         dir=2
+         force(veldir)=force(veldir)+ &
+          mask_center(dir)* &
+            (yflux_local(1,veldir,dir)- &
+             yflux_local(-1,veldir,dir))/hy
+
+         if (SDIM.eq.3) then
+          dir=SDIM
+          force(veldir)=force(veldir)+ &
+           mask_center(dir)* &
+             (zflux_local(1,veldir,dir)- &
+              zflux_local(-1,veldir,dir))/hz
+         endif
+
+        enddo ! veldir=1..sdim
+                 
+        if (irz.eq.0) then
+         ! do nothing
+        else if (irz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+          ! -T33/r
+         veldir=1
+         bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
+         if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
+          ! do nothing
+         else
+          print *,"bodyforce overflow bodyforce,rval:",bodyforce,rval
+          stop
+         endif
+         force(veldir)=force(veldir)+bodyforce
+        else if (irz.eq.3) then
+          ! -T22/r
+         veldir=1
+         bodyforce=-Q(D_DECL(0,0,0),2,2)/rval
+         force(veldir)=force(veldir)+bodyforce
+        else
+         print *,"irz invalid"
+         stop
+        endif 
+
+        if (irz.eq.0) then
+         ! do nothing
+        else if (irz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+         ! do nothing
+        else if (irz.eq.3) then ! T12/r
+         veldir=2
+         bodyforce=Q(D_DECL(0,0,0),1,2)/rval
+         force(veldir)=force(veldir)+bodyforce
+        else
+         print *,"irz invalid"
+         stop
+        endif 
+
+        if (is_prescribed(nmat,im_parm+1).eq.1) then
+         print *,"im_parm should not be an is_prescribed material"
+         stop
+        else if (is_prescribed(nmat,im_parm+1).eq.0) then
+         do veldir=1,SDIM
+          force(veldir)=force(veldir)*dt
+         enddo
+        else
+         print *,"is_prescribed invalid"
+         stop
+        endif
+
+        do veldir=1,SDIM
+         deninv=rhoinverse(D_DECL(i,j,k),1)
+
+         if (deninv.ge.zero) then 
+          if (abs(force(veldir)).lt.OVERFLOW_CUTOFF) then
+           ! do nothing
+          else
+           print *,"viscoelastic overflow veldir,force ",veldir,force(veldir)
+           print *,"i,j,k,deninv ",i,j,k,deninv
+           stop
+          endif
+
+          velnew(D_DECL(i,j,k),veldir)= &
+           velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
+         else
+          print *,"deninv invalid"
+          stop
+         endif
+        enddo ! veldir
+
+
+
+
+
+
+
 
 
       enddo
