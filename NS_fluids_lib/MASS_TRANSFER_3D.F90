@@ -801,9 +801,16 @@ stop
       INTEGER_T dir_local
       INTEGER_T mac_cell_index(SDIM)
       INTEGER_T istenlo(3),istenhi(3)
+      INTEGER_T stencil_offset(SDIM)
       INTEGER_T mac_lo(SDIM),mac_hi(SDIM)
-      REAL_T total_WT
+      REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
+      REAL_T local_data
+
+      INTEGER_T nhalf
+      REAL_T xsten_center(-3:3,SDIM)
+
+      nhalf=3
 
       call checkbound(lo,hi,DIMS(xdata),1,0,1221)
       call checkbound(lo,hi,DIMS(ydata),1,1,1221)
@@ -835,10 +842,10 @@ stop
          mac_cell_index(dir_local)=mac_lo(dir_local)
         endif
         if (mac_cell_index(dir_local)+1.gt.mac_hi(dir_local)+1) then
-         mac_cell_index(dir)=mac_hi(dir_local)
+         mac_cell_index(dir_local)=mac_hi(dir_local)
         endif
-        istenlo(dir)=mac_cell_index(dir)-1
-        istenhi(dir)=mac_cell_index(dir)+1
+        istenlo(dir_local)=mac_cell_index(dir_local)-1
+        istenhi(dir_local)=mac_cell_index(dir_local)+1
        enddo ! dir_local=1..sdim
 
        total_WT=zero
@@ -855,8 +862,6 @@ stop
        do jsten=istenlo(2),istenhi(2)
        do ksten=istenlo(3),istenhi(3)
 
-        call gridstenMAC_level(xsten,isten,jsten,ksten,level,nhalf, &
-                dir_disp_comp+1)
         stencil_offset(1)=isten-mac_cell_index(1)
         stencil_offset(2)=jsten-mac_cell_index(2)
         if (SDIM.eq.3) then

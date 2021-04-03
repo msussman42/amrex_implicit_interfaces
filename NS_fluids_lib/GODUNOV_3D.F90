@@ -2600,7 +2600,7 @@ stop
          xdisplace_local, &
          ydisplace_local, &
          DISP_TEN, &  ! dir_x (displace),dir_space
-         hoop_22)
+         hoop_22) ! output: "theta-theta" component (xdisp/r)
 
        ibase=1
        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
@@ -2618,7 +2618,7 @@ stop
         else if (levelrz.eq.1) then
           ! T33 (theta coordinate)
           ! dX/dx + dX/dx
-         TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22
+         TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22 ! 2 * (xdisp/r)
         else if (levelrz.eq.3) then
           ! T33 (z coordinate)
          TNEWfab(D_DECL(i,j,k),ibase)=zero
@@ -5444,6 +5444,9 @@ stop
           print *,"dimension bust"
           stop
          endif
+          ! in RZ,
+          ! Q(3,3) gets 2 * hoop_22 (2 * xdisp/r) in 
+          ! subroutine local_tensor_from_xdisplace
           ! -T33/r
          veldir=1
          bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
@@ -27067,7 +27070,7 @@ stop
       REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(in) :: mask(DIMV(mask))
       REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
+      REAL_T, target, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
       REAL_T, intent(in) :: XDfab(DIMV(XDfab),num_materials_viscoelastic)
       REAL_T, intent(in) :: YDfab(DIMV(YDfab),num_materials_viscoelastic)
       REAL_T, intent(in) :: ZDfab(DIMV(ZDfab),num_materials_viscoelastic)
@@ -27101,7 +27104,7 @@ stop
       REAL_T XDcenter(SDIM)
       REAL_T gradXDtensor(SDIM,SDIM)
       REAL_T DISP_TEN(SDIM,SDIM)
-      REAL_T hoop_22
+      REAL_T hoop_22 ! xdisp/r
       REAL_T eps_deriv,dxmin
       INTEGER_T im_elastic_p1
       INTEGER_T im_LS
@@ -27119,20 +27122,32 @@ stop
       REAL_T xflux_local(-1:1,SDIM,SDIM)
       REAL_T yflux_local(-1:1,SDIM,SDIM)
       REAL_T zflux_local(-1:1,SDIM,SDIM)
+      REAL_T center_flux(SDIM,SDIM)
+      REAL_T center_hoop_22
 
       REAL_T LS_at_flux_point(2,SDIM,nmat*(1+SDIM))
+      INTEGER_T mask_flux_point(2,SDIM)
       REAL_T x_at_flux_point(2,SDIM,SDIM)
       REAL_T n_elastic(SDIM)
       REAL_T hx,hy,hz,rplus,rminus,rval
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      INTEGER_T local_mask
+      INTEGER_T mask_left,mask_right
+      INTEGER_T mask_center(SDIM)
+      REAL_T force(SDIM)
+      REAL_T bodyforce
+      REAL_T deninv
       
 
       im_elastic_p1=im_elastic+1
 
       do dir_local=1,SDIM
-       dx_local(dir_local)=accum_PARM%dx(dir_local)
-       xlo_local(dir_local)=accum_PARM%xlo(dir_local)
-       fablo_local(dir_local)=accum_PARM%fablo(dir_local)
-       fabhi_local(dir_local)=accum_PARM%fabhi(dir_local)
+       dx_local(dir_local)=dx(dir_local)
+       xlo_local(dir_local)=xlo(dir_local)
+       fablo_local(dir_local)=fablo(dir_local)
+       fabhi_local(dir_local)=fabhi(dir_local)
       enddo
 
       call checkbound(fablo,fabhi,DIMS(visc),1,-1,11)
@@ -27177,6 +27192,7 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
        if (dir.eq.0) then
         inormal=i
        else if (dir.eq.1) then
@@ -27228,7 +27244,42 @@ stop
         print *,"local_mask invalid"
         stop
        endif
+        ! LS>0 if clamped
+       call SUB_clamped_LS(xflux,cur_time,LS_clamped, &
+             vel_clamped,temperature_clamped)
+       if (LS_clamped.ge.zero) then
+        local_mask=0
+       else if (LS_clamped.lt.zero) then
+        ! do nothing
+       else
+        print *,"LS_clamped invalid"
+        stop
+       endif
+       if ((rzflag.eq.1).or.(rzflag.eq.3)) then
+        if (dir.eq.0) then
+         if (abs(xflux(dir+1)).le.VOFTOL*dx(dir+1)) then
+          local_mask=0
+         else if (abs(xflux(dir+1)).ge.VOFTOL*dx(dir+1)) then
+          ! do nothing
+         else
+          print *,"xflux bust"
+          stop
+         endif
+        else if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
+         ! do nothing
+        else
+         print *,"dir invalid"
+         stop
+        endif
+       else if (rzflag.eq.0) then
+        ! do nothing
+       else
+        print *,"rzflag invalid"
+        stop
+       endif
 
+       XFORCE(D_DECL(i,j,k),partid+1)=zero
+               
         ! im_elastic_p1 dominates the center of the MAC control volume.
        if (local_mask.eq.1) then
  
@@ -27239,6 +27290,8 @@ stop
         enddo
          ! normalize_vector declared in GLOBALUTIL.F90
         call normalize_vector(n_elastic)
+
+        center_hoop_22=zero
 
          ! traverse all the flux face centroids associated with the
          ! "dir" MAC grid control volume (i,j,k)
@@ -27370,7 +27423,7 @@ stop
           XDcenter(1), &
           XDcenter(2), &
           DISP_TEN, &  ! dir_x (displace),dir_space
-          hoop_22)
+          hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
          
          if (side_flux.eq.0) then
           side_comp=-1
@@ -27432,21 +27485,32 @@ stop
           stop
          endif
          mask_flux_point(side_flux+1,dir_flux+1)=local_mask
+
+         do dir_local=1,SDIM
+          x_at_flux_point(side_flux+1,dir_flux+1,dir_local)=xflux(dir_local)
+         enddo
+
+          ! hoop_22=xdisp/r
+         center_hoop_22=center_hoop_22+hoop_22
+
         enddo ! side_flux=0..1
         enddo ! dir_flux=0..sdim-1
+
+        center_hoop_22=center_hoop_22/(2*SDIM)
+
          ! divergence of fluxes goes here
         do dir_XD=1,SDIM
          do dir_deriv=1,SDIM
           center_flux(dir_XD,dir_deriv)=zero
 
-          xflux_local(0,dir_XD,dir_deriv)=half*(
+          xflux_local(0,dir_XD,dir_deriv)=half*( &
             xflux_local(-1,dir_XD,dir_deriv)+ &
             xflux_local(1,dir_XD,dir_deriv))
           center_flux(dir_XD,dir_deriv)= &
             center_flux(dir_XD,dir_deriv)+ &
             xflux_local(0,dir_XD,dir_deriv)
 
-          yflux_local(0,dir_XD,dir_deriv)=half*(
+          yflux_local(0,dir_XD,dir_deriv)=half*( &
             yflux_local(-1,dir_XD,dir_deriv)+ &
             yflux_local(1,dir_XD,dir_deriv))
           center_flux(dir_XD,dir_deriv)= &
@@ -27454,7 +27518,7 @@ stop
             yflux_local(0,dir_XD,dir_deriv)
 
           if (SDIM.eq.3) then
-           zflux_local(0,dir_XD,dir_deriv)=half*(
+           zflux_local(0,dir_XD,dir_deriv)=half*( &
             zflux_local(-1,dir_XD,dir_deriv)+ &
             zflux_local(1,dir_XD,dir_deriv))
            center_flux(dir_XD,dir_deriv)= &
@@ -27501,16 +27565,19 @@ stop
         endif
 
         dir_local=1
-        hx=x_at_flux_point(2,dir_local)-x_at_flux_point(1,dir_local)
+        hx=x_at_flux_point(2,dir_local,dir_local)- &
+           x_at_flux_point(1,dir_local,dir_local)
         dir_local=2
-        hy=x_at_flux_point(2,dir_local)-x_at_flux_point(1,dir_local)
+        hy=x_at_flux_point(2,dir_local,dir_local)- &
+           x_at_flux_point(1,dir_local,dir_local)
         dir_local=SDIM
-        hz=x_at_flux_point(2,dir_local)-x_at_flux_point(1,dir_local)
+        hz=x_at_flux_point(2,dir_local,dir_local)- &
+           x_at_flux_point(1,dir_local,dir_local)
 
         if ((hx.gt.zero).and.(hy.gt.zero).and.(hz.gt.zero)) then
 
-         rplus=x_at_flux_point(2,1)
-         rminus=x_at_flux_point(1,1)
+         rplus=x_at_flux_point(2,1,1)
+         rminus=x_at_flux_point(1,1,1)
 
          do dir_XD=1,SDIM
 
@@ -27547,8 +27614,9 @@ stop
            stop
           endif
            ! -T33/r
+           ! center_hoop_22=xdisp/r
           dir_XD=1
-          bodyforce=-center_flux(3,3)/rval
+          bodyforce=-(two*center_hoop_22)/rval
           if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
            ! do nothing
           else
@@ -27608,7 +27676,6 @@ stop
             stop
            endif
  
-           FIX ME if solid face or clamped or r=0 for rz 
            if (dir_XD.eq.dir+1) then
             XFORCE(D_DECL(i,j,k),partid+1)= &
              force(dir_XD)*deninv
@@ -27770,7 +27837,7 @@ stop
 
       INTEGER_T project_option
       INTEGER_T im_elastic
-      REAL_T hoop_22
+      REAL_T hoop_22 ! xdisp/r
       REAL_T xdisplace_local
       REAL_T ydisplace_local
       REAL_T visc_local
@@ -28179,6 +28246,10 @@ stop
          ydisplace_local, &
          DISP_TEN, & ! velcomp,space_dir
          hoop_22) ! in RZ, DISP_TEN does not have theta,theta component.
+                  ! in RZ,
+                  ! TNEWfab(3,3) gets 2 * hoop_22 in 
+                  ! subroutine local_tensor_from_xdisplace
+                  ! hoop_22=xdisp/r
 
        xflux_comp=1
        do velcomp=1,SDIM
