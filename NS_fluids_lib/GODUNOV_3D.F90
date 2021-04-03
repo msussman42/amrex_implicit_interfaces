@@ -5263,6 +5263,15 @@ stop
 
        local_mask=mask_array(D_DECL(0,0,0))
 
+        ! We do not have to check to see if the current cell is
+        ! clamped since:
+        !  (a) interp to MAC will override the MAC velocity if
+        !      either one of the adjoining cells is clamped.
+        !  (b) The new cell velocity after project is the interpolation
+        !      of the adjoining MAC velocities if one of the adjoining
+        !      MAC faces is a clamped face.  i.e., if an adjoining
+        !      cell of a cell is clamped, then that cell gets the
+        !      average of the adjoining MAC velocities.
         ! im_parm dominates the center cell.
        if (local_mask.eq.1) then
  
