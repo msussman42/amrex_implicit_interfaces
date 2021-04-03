@@ -6040,7 +6040,7 @@ stop
        icefacecut_index, &
        curv_index, &
        pforce_index, &
-       faceden_index, &
+       faceden_index, &  ! 1/rho
        icemask_index, &
        massface_index, &
        vofface_index, &
@@ -6107,7 +6107,7 @@ stop
       INTEGER_T icefacecut_index
       INTEGER_T curv_index
       INTEGER_T pforce_index
-      INTEGER_T faceden_index
+      INTEGER_T faceden_index ! 1/rho
       INTEGER_T icemask_index
       INTEGER_T massface_index
       INTEGER_T vofface_index
@@ -27019,6 +27019,7 @@ stop
        XDfab,DIMS(XDfab), &
        YDfab,DIMS(YDfab), &
        ZDfab,DIMS(ZDfab), &
+       xfacefab,DIMS(xfacefab), &
        XFORCE,DIMS(XFORCE), &
        recon,DIMS(recon), &  
        tilelo,tilehi, &
@@ -27059,6 +27060,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(XDfab)
       INTEGER_T, intent(in) :: DIMDEC(YDfab)
       INTEGER_T, intent(in) :: DIMDEC(ZDfab)
+      INTEGER_T, intent(in) :: DIMDEC(xfacefab)
       INTEGER_T, intent(in) :: DIMDEC(XFORCE)
       INTEGER_T, intent(in) :: DIMDEC(recon)
 
@@ -27069,6 +27071,7 @@ stop
       REAL_T, intent(in) :: XDfab(DIMV(XDfab),num_materials_viscoelastic)
       REAL_T, intent(in) :: YDfab(DIMV(YDfab),num_materials_viscoelastic)
       REAL_T, intent(in) :: ZDfab(DIMV(ZDfab),num_materials_viscoelastic)
+      REAL_T, intent(in) :: xfacefab(DIMV(xfacefab),vofface_index+2*nmat)
       REAL_T, intent(out) :: XFORCE(DIMV(XFORCE),num_materials_viscoelastic)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
@@ -27118,7 +27121,9 @@ stop
       REAL_T zflux_local(-1:1,SDIM,SDIM)
 
       REAL_T LS_at_flux_point(2,SDIM,nmat*(1+SDIM))
+      REAL_T x_at_flux_point(2,SDIM,SDIM)
       REAL_T n_elastic(SDIM)
+      REAL_T hx,hy,hz,rplus,rminus,rval
       
 
       im_elastic_p1=im_elastic+1
@@ -27135,6 +27140,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,1277)
       call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1277)
       call checkbound(fablo,fabhi,DIMS(recon),2,-1,1277)
+      call checkbound(fablo,fabhi,DIMS(xfacefab),0,dir,1277)
       call checkbound(fablo,fabhi,DIMS(XFORCE),0,dir,1277)
       call checkbound(fablo,fabhi,DIMS(XDfab),1,0,1277)
       call checkbound(fablo,fabhi,DIMS(YDfab),1,1,1277)
@@ -27188,6 +27194,7 @@ stop
        do dircomp=1,SDIM
         xflux(dircomp)=xstenMAC(0,dircomp)
        enddo
+       rval=xflux(1)
 
        data_out%data_interp=>cell_data_interp
 
@@ -27210,17 +27217,6 @@ stop
        data_in%xtarget=>xflux
        data_in%interp_foot_flag=0
        call interp_from_grid_util(data_in,data_out)
-
-       call get_primary_material(cell_data_interp,nmat,local_mask)
-       if ((local_mask.eq.im_elastic_p1).and. &
-           (cell_data_interp(im_elastic_p1).gt.zero)) then
-        local_mask=1
-       else if ((local_mask.ge.1).and.(local_mask.le.nmat)) then
-        local_mask=0
-       else
-        print *,"local_mask invalid"
-        stop
-       endif
 
        call get_primary_material(cell_data_interp,nmat,local_mask)
        if ((local_mask.eq.im_elastic_p1).and. &
@@ -27441,158 +27437,193 @@ stop
          ! divergence of fluxes goes here
         do dir_XD=1,SDIM
          do dir_deriv=1,SDIM
+          center_flux(dir_XD,dir_deriv)=zero
+
           xflux_local(0,dir_XD,dir_deriv)=half*(
             xflux_local(-1,dir_XD,dir_deriv)+ &
             xflux_local(1,dir_XD,dir_deriv))
+          center_flux(dir_XD,dir_deriv)= &
+            center_flux(dir_XD,dir_deriv)+ &
+            xflux_local(0,dir_XD,dir_deriv)
+
           yflux_local(0,dir_XD,dir_deriv)=half*(
             yflux_local(-1,dir_XD,dir_deriv)+ &
             yflux_local(1,dir_XD,dir_deriv))
+          center_flux(dir_XD,dir_deriv)= &
+            center_flux(dir_XD,dir_deriv)+ &
+            yflux_local(0,dir_XD,dir_deriv)
+
           if (SDIM.eq.3) then
            zflux_local(0,dir_XD,dir_deriv)=half*(
             zflux_local(-1,dir_XD,dir_deriv)+ &
             zflux_local(1,dir_XD,dir_deriv))
+           center_flux(dir_XD,dir_deriv)= &
+            center_flux(dir_XD,dir_deriv)+ &
+            zflux_local(0,dir_XD,dir_deriv)
           else if (SDIM.eq.2) then
            ! do nothing
           else
            print *,"dimension bust"
            stop
           endif
+          center_flux(dir_XD,dir_deriv)= &
+           center_flux(dir_XD,dir_deriv)/SDIM
          enddo ! dir_deriv
         enddo ! dir_XD
 
          ! [n dot tau dot n] = - sigma kappa
          ! [n dot tau dot tj] = 0
         
-         dir=1
-         mask_left=mask_array(D_DECL(-1,0,0))
-         mask_right=mask_array(D_DECL(1,0,0))
-          ! declared in: GLOBALUTIL.F90
-          ! mask_center=1 if mask_left==1 or mask_right==1
-          ! mask_center=0 if mask_left==0 and mask_right==0
-         call project_tensor(mask_center(dir),n_elastic, &
-          mask_left,mask_right,xflux_local,dir)
+        dir_local=1
+        mask_left=mask_flux_point(1,dir_local)
+        mask_right=mask_flux_point(2,dir_local)
+         ! declared in: GLOBALUTIL.F90
+         ! mask_center=1 if mask_left==1 or mask_right==1
+         ! mask_center=0 if mask_left==0 and mask_right==0
+        call project_tensor(mask_center(dir_local),n_elastic, &
+          mask_left,mask_right,xflux_local,dir_local)
 
-         dir=2
-         mask_left=mask_array(D_DECL(0,-1,0))
-         mask_right=mask_array(D_DECL(0,1,0))
-         call project_tensor(mask_center(dir),n_elastic, &
-          mask_left,mask_right,yflux_local,dir)
+        dir_local=2
+        mask_left=mask_flux_point(1,dir_local)
+        mask_right=mask_flux_point(2,dir_local)
+         ! declared in: GLOBALUTIL.F90
+         ! mask_center=1 if mask_left==1 or mask_right==1
+         ! mask_center=0 if mask_left==0 and mask_right==0
+        call project_tensor(mask_center(dir_local),n_elastic, &
+          mask_left,mask_right,yflux_local,dir_local)
 
-         if (SDIM.eq.3) then
-          dir=SDIM
-          mask_left=mask_array(D_DECL(0,0,-1))
-          mask_right=mask_array(D_DECL(0,0,1))
-          call project_tensor(mask_center(dir),n_elastic, &
-            mask_left,mask_right,zflux_local,dir)
-         endif
+        if (SDIM.eq.3) then
+         dir_local=SDIM
+         mask_left=mask_flux_point(1,dir_local)
+         mask_right=mask_flux_point(2,dir_local)
+         call project_tensor(mask_center(dir_local),n_elastic, &
+            mask_left,mask_right,zflux_local,dir_local)
+        endif
 
-         do veldir=1,SDIM
+        dir_local=1
+        hx=x_at_flux_point(2,dir_local)-x_at_flux_point(1,dir_local)
+        dir_local=2
+        hy=x_at_flux_point(2,dir_local)-x_at_flux_point(1,dir_local)
+        dir_local=SDIM
+        hz=x_at_flux_point(2,dir_local)-x_at_flux_point(1,dir_local)
 
-          force(veldir)=zero
+        if ((hx.gt.zero).and.(hy.gt.zero).and.(hz.gt.zero)) then
 
-          dir=1
-          force(veldir)=force(veldir)+ &
-           mask_center(dir)* &
-             (rplus*xflux_local(1,veldir,dir)- &
-              rminus*xflux_local(-1,veldir,dir))/hx
+         rplus=x_at_flux_point(2,1)
+         rminus=x_at_flux_point(1,1)
 
-          dir=2
-          force(veldir)=force(veldir)+ &
-           mask_center(dir)* &
-             (yflux_local(1,veldir,dir)- &
-              yflux_local(-1,veldir,dir))/hy
+         do dir_XD=1,SDIM
+
+          force(dir_XD)=zero
+
+          dir_local=1
+          force(dir_XD)=force(dir_XD)+ &
+           mask_center(dir_local)* &
+              (rplus*xflux_local(1,dir_XD,dir_local)- &
+               rminus*xflux_local(-1,dir_XD,dir_local))/hx
+
+          dir_local=2
+          force(dir_XD)=force(dir_XD)+ &
+           mask_center(dir_local)* &
+              (yflux_local(1,dir_XD,dir_local)- &
+               yflux_local(-1,dir_XD,dir_local))/hy
 
           if (SDIM.eq.3) then
-           dir=SDIM
-           force(veldir)=force(veldir)+ &
-            mask_center(dir)* &
-              (zflux_local(1,veldir,dir)- &
-               zflux_local(-1,veldir,dir))/hz
+           dir_local=SDIM
+           force(dir_XD)=force(dir_XD)+ &
+            mask_center(dir_local)* &
+               (zflux_local(1,dir_XD,dir_local)- &
+                zflux_local(-1,dir_XD,dir_local))/hz
           endif
 
-         enddo ! veldir=1..sdim
-                  
-         if (irz.eq.0) then
-          ! do nothing
-         else if (irz.eq.1) then
+         enddo ! dir_XD=1..sdim
+                   
+         if (rzflag.eq.0) then
+           ! do nothing
+         else if (rzflag.eq.1) then
+
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
            ! -T33/r
-          veldir=1
-          bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
+          dir_XD=1
+          bodyforce=-center_flux(3,3)/rval
           if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
            ! do nothing
           else
            print *,"bodyforce overflow bodyforce,rval:",bodyforce,rval
            stop
           endif
-          force(veldir)=force(veldir)+bodyforce
-         else if (irz.eq.3) then
-           ! -T22/r
-          veldir=1
-          bodyforce=-Q(D_DECL(0,0,0),2,2)/rval
-          force(veldir)=force(veldir)+bodyforce
+          force(dir_XD)=force(dir_XD)+bodyforce
+
+         else if (rzflag.eq.3) then
+          ! -T22/r
+          dir_XD=1
+          bodyforce=-center_flux(2,2)/rval
+          force(dir_XD)=force(dir_XD)+bodyforce
          else
-          print *,"irz invalid"
+          print *,"rzflag invalid"
           stop
          endif 
 
-         if (irz.eq.0) then
+         if (rzflag.eq.0) then
           ! do nothing
-         else if (irz.eq.1) then
+         else if (rzflag.eq.1) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
           ! do nothing
-         else if (irz.eq.3) then ! T12/r
-          veldir=2
-          bodyforce=Q(D_DECL(0,0,0),1,2)/rval
-          force(veldir)=force(veldir)+bodyforce
+         else if (rzflag.eq.3) then ! T12/r
+          dir_XD=2
+          bodyforce=center_flux(1,2)/rval
+          force(dir_XD)=force(dir_XD)+bodyforce
          else
-          print *,"irz invalid"
+          print *,"rzflag invalid"
           stop
          endif 
 
-         if (is_prescribed(nmat,im_parm+1).eq.1) then
-          print *,"im_parm should not be an is_prescribed material"
+         if (is_prescribed(nmat,im_elastic_p1).eq.1) then
+          print *,"im_elastic should not be an is_prescribed material"
           stop
-         else if (is_prescribed(nmat,im_parm+1).eq.0) then
-          do veldir=1,SDIM
-           force(veldir)=force(veldir)*dt
+         else if (is_prescribed(nmat,im_elastic_p1).eq.0) then
+          do dir_XD=1,SDIM
+           force(dir_XD)=force(dir_XD)*dt
           enddo
          else
           print *,"is_prescribed invalid"
           stop
          endif
 
-         do veldir=1,SDIM
-          deninv=rhoinverse(D_DECL(i,j,k),1)
+         do dir_XD=1,SDIM
+          deninv=xfacefab(D_DECL(i,j,k),faceden_index+1)
 
           if (deninv.ge.zero) then 
-           if (abs(force(veldir)).lt.OVERFLOW_CUTOFF) then
+           if (abs(force(dir_XD)).lt.OVERFLOW_CUTOFF) then
             ! do nothing
            else
-            print *,"viscoelastic overflow veldir,force ",veldir,force(veldir)
+            print *,"elastic overflow dir_XD,force ",dir_XD,force(dir_XD)
             print *,"i,j,k,deninv ",i,j,k,deninv
             stop
            endif
+ 
+           FIX ME if solid face or clamped or r=0 for rz 
+           if (dir_XD.eq.dir+1) then
+            XFORCE(D_DECL(i,j,k),partid+1)= &
+             force(dir_XD)*deninv
+           endif
 
-           velnew(D_DECL(i,j,k),veldir)= &
-            velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
           else
            print *,"deninv invalid"
            stop
           endif
-         enddo ! veldir
+         enddo ! dir_XD = 1 ..sdim
 
-
-
-
-
-
+        else
+         print *,"hx,hy, or hz invalid"
+         stop
+        endif
 
        else if (local_mask.eq.0) then
         ! do nothing
@@ -27601,9 +27632,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo
+      enddo ! k
+      enddo ! j
+      enddo ! i
       
       return 
       end subroutine FORT_MAC_ELASTIC_FORCE

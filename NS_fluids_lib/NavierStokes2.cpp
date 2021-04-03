@@ -1416,6 +1416,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
 
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
+   FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
+
     // output
    FArrayBox& XFORCEfab=(*localMF[idx+dir])[mfi];
 
@@ -1494,6 +1496,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
            XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
            YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
            ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
+           xface.dataPtr(),
+	   ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
            XFORCEfab.dataPtr(),
 	   ARLIM(XFORCEfab.loVect()),ARLIM(XFORCEfab.hiVect()), 
            reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),

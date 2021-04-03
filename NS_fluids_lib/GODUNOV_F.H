@@ -1322,6 +1322,8 @@ extern "C"
      AMREX_ARLIM_P(YDfablo),AMREX_ARLIM_P(YDfabhi),
      Real* ZDfab,
      AMREX_ARLIM_P(ZDfablo),AMREX_ARLIM_P(ZDfabhi),
+     Real* xface,
+     AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
      Real* XFORCE,
      AMREX_ARLIM_P(XFORCElo),AMREX_ARLIM_P(XFORCEhi),
      Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
