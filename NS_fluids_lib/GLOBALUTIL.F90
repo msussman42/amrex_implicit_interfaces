@@ -17797,6 +17797,9 @@ REAL_T PIK,PKJ
 REAL_T PT(SDIM,SDIM)
 REAL_T PTP(SDIM,SDIM)
 REAL_T local_data
+REAL_T mag_n
+INTEGER_T GFM_flag
+INTEGER_T dir_local
 
 if ((dir.ge.1).and.(dir.le.SDIM)) then
  ! do nothing
@@ -17822,6 +17825,21 @@ else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
   print *,"mask_left or mask_right invalid"
   stop
  endif
+
+ GFM_flag=1
+ mag_n=zero
+ do dir_local=1,SDIM
+  mag_n=mag_n+n_elastic(dir_local)**2
+ enddo
+ if (mag_n.eq.zero) then
+  GFM_flag=0
+ else if (mag_n.gt.zero) then
+  ! do nothing
+ else
+  print *,"mag_n invalid"
+  stop
+ endif
+
   ! P=(I - n^T n)
  do iprod=1,SDIM
  do jprod=1,SDIM
@@ -17840,8 +17858,13 @@ else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
      dir,isource,iprod,jprod,kprod,PT(iprod,jprod),PIK,local_data
     stop
    endif
-   if (1.eq.0) then
+   if (GFM_flag.eq.1) then
+    ! do nothing
+   else if (GFM_flag.eq.0) then
     local_data=zero
+   else
+    print *,"GFM_flag invalid"
+    stop
    endif
    PT(iprod,jprod)=PT(iprod,jprod)+PIK*local_data
   enddo ! kprod=1..sdim

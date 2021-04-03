@@ -14913,7 +14913,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       filter_velocity.dataPtr(),
       &ignore_div_up,
       &pforce_index,
-      &faceden_index,
+      &faceden_index,  // 1/rho
       &icemask_index,
       &massface_index,
       &vofface_index,
