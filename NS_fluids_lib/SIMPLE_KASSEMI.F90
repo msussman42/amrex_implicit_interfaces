@@ -209,7 +209,7 @@ subroutine EOS_KASSEMI_MK(rho,massfrac_var, &
     print *,"imattype invalid EOS_KASSEMI_MK"
     print *,"break point and gdb: "
     print *,"(1) compile with the -g option"
-    print *,"(2) break KASSEMI_MK.F90:350"
+    print *,"(2) break SIMPLE_KASSEMI.F90:350"
     print *,"By pressing <CTRL C> during this read statement, the"
     print *,"gdb debugger will produce a stacktrace."
     print *,"type 0 then <enter> to exit the program"
@@ -227,6 +227,67 @@ subroutine EOS_KASSEMI_MK(rho,massfrac_var, &
 
  return
 end subroutine EOS_KASSEMI_MK
+
+
+subroutine dVdT_KASSEMI_MK(dVdT,massfrac_var, &
+   pressure,temperature, &
+   imattype,im,num_species_var_in)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+REAL_T, intent(in) :: pressure
+REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+REAL_T, intent(in) :: temperature
+REAL_T, intent(out) :: dVdT
+INTEGER_T :: dummy_input
+
+ if (pressure.gt.zero) then
+  ! do nothing
+ else
+  print *,"pressure invalid"
+  stop
+ endif
+ if (temperature.gt.zero) then
+  ! do nothing
+ else
+  print *,"temperature invalid"
+  stop
+ endif
+
+ if (num_species_var_in.eq.num_species_var) then
+  if (im.eq.2) then
+   if (imattype.eq.24) then
+    ! p = rho (gamma-1) e  rho=1/V
+    ! V = (gamma-1) e/p=(gamma-1)Cv T/p
+    ! dVdT=(gamma-1)Cv/p
+    dVdT=(TANK_MK_GAS_GAMMA-one) * TANK_MK_GAS_CV/pressure
+   else
+    print *,"imattype= ",imattype
+    print *,"imattype invalid dVdT_KASSEMI_MK"
+    print *,"break point and gdb: "
+    print *,"(1) compile with the -g option"
+    print *,"(2) break SIMPLE_KASSEMI.F90:350"
+    print *,"By pressing <CTRL C> during this read statement, the"
+    print *,"gdb debugger will produce a stacktrace."
+    print *,"type 0 then <enter> to exit the program"
+    read *,dummy_input
+    error stop
+   endif
+  else
+   call dVdT_material_CORE(dVdT,massfrac_var, &
+         pressure,temperature, &
+         imattype,im)
+  endif
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
+
+ return
+end subroutine dVdT_KASSEMI_MK
+
+
 
 subroutine SOUNDSQR_KASSEMI_MK(rho,massfrac_var, &
   internal_energy,soundsqr, &

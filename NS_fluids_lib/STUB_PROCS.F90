@@ -186,6 +186,31 @@ subroutine EOS_STUB(rho,massfrac_var, &
  return
 end subroutine EOS_STUB
 
+
+subroutine dVdT_STUB(dVdT,massfrac_var, &
+  pressure,temperature, &
+  imattype,im,num_species_var_in)
+ use probcommon_module
+ use global_utility_module
+ IMPLICIT NONE
+ INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+ REAL_T, intent(in) :: pressure,temperature
+ REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, intent(out) :: dVdT
+
+ if (num_species_var_in.eq.num_species_var) then
+  call dVdT_material_CORE(dVdT,massfrac_var, &
+         pressure,temperature,imattype,im)
+ else
+  print *,"num_species_var_in invalid"
+  stop
+ endif
+
+ return
+end subroutine dVdT_STUB
+
+
+
 subroutine SOUNDSQR_STUB(rho,massfrac_var, &
   internal_energy,soundsqr, &
   imattype,im,num_species_var_in)

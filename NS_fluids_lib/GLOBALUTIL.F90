@@ -15501,6 +15501,54 @@ contains
       return
       end subroutine EOS_material_CORE
 
+      subroutine dVdT_material_CORE(dVdT,massfrac_var, &
+        pressure,temperature, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: pressure,temperature
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(out) :: dVdT
+
+
+      if (pressure.gt.zero) then
+       ! do nothing
+      else
+       print *,"pressure invalid"
+       stop
+      endif
+      if (temperature.gt.zero) then
+       ! do nothing
+      else
+       print *,"temperature invalid"
+       stop
+      endif
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im invalid"
+       stop
+      endif
+      if (fort_stiffGAMMA(im).ge.one) then
+       ! do nothing
+      else
+       print *,"fort_stiffGAMMA(im) invalid"
+       stop
+      endif
+      if (fort_stiffCV(im).gt.zero) then
+       ! do nothing
+      else
+       print *,"fort_stiffCV(im) invalid"
+       stop
+      endif
+
+      dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
+
+      return
+      end subroutine dVdT_material_CORE
+
 
         ! in general for gas: e=cv T
         !                     p=(gamma-1)rho e=(gamma-1)rho cv T
