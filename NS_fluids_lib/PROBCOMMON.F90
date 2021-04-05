@@ -463,6 +463,17 @@ implicit none
       REAL_T, intent(out) :: pressure
       end subroutine TEMPLATE_EOS
 
+
+      subroutine TEMPLATE_dVdT(dVdT,massfrac_var, &
+        pressure,temperature, &
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+      REAL_T, intent(in) :: pressure,temperature
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, intent(out) :: dVdT
+      end subroutine TEMPLATE_dVdT
+
+
       subroutine TEMPLATE_SOUNDSQR(rho,massfrac_var, &
         internal_energy,soundsqr, &
         imattype,im,num_species_var_in)
@@ -639,6 +650,7 @@ implicit none
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
+      PROCEDURE(TEMPLATE_dVdT), POINTER :: SUB_dVdT
       PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR
       PROCEDURE(TEMPLATE_INTERNAL), POINTER :: SUB_INTERNAL
       PROCEDURE(TEMPLATE_TEMPERATURE), POINTER :: SUB_TEMPERATURE

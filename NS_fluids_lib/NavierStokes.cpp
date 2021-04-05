@@ -941,7 +941,7 @@ Vector<Real> NavierStokes::prerecalesce_stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::prerecalesce_stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
-Vector<Real> NavierStokes::stiffGAMMA;
+Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 
 int NavierStokes::constant_viscosity=0;
 
@@ -1649,7 +1649,7 @@ void fortran_parameters() {
   stiffPINFtemp[im]=0.0;
   stiffCPtemp[im]=4.1855e+7;
   stiffCVtemp[im]=4.1855e+7;
-  stiffGAMMAtemp[im]=0.0;
+  stiffGAMMAtemp[im]=1.4;
 
   DrhoDTtemp[im]=0.0;
   DrhoDztemp[im]=0.0;
@@ -3283,7 +3283,7 @@ NavierStokes::read_params ()
      stiffPINF[i]=0.0;
      stiffCP[i]=4.1855e+7;
      stiffCV[i]=4.1855e+7;
-     stiffGAMMA[i]=0.0;
+     stiffGAMMA[i]=1.4;
 
      tempcutoff[i]=1.0e-8;
      tempcutoffmax[i]=1.0e+99;
