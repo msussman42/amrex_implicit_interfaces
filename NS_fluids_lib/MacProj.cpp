@@ -628,7 +628,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  Real min_interior_coeff=0.0;
  if (denconst_max>0.0) {
-  if (mglib_min_coeff_factor>1.0) {
+  if (mglib_min_coeff_factor>=1.0) {
    min_interior_coeff=1.0/(denconst_max*mglib_min_coeff_factor);
   } else
    amrex::Error("mglib_min_coeff_factor invalid");

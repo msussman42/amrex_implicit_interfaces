@@ -4081,12 +4081,38 @@ ABecLaplacian::CG_solve(
        } else if (pAp<0.0) {
         restart_flag=1;
        } else {
-        std::cout << "pAp= " << pAp << endl;
-        amrex::Error("pAp invalid in bottom solver");
+        std::cout << "pAp (1)= " << pAp << endl;
+        std::cout << "level (mglib)= " << level << endl;
+        std::cout << "mglib_blocking_factor= " << 
+          mglib_blocking_factor << endl;
+        std::cout << "local_use_bicgstab= " << local_use_bicgstab << endl;
+        std::cout << "smooth_type= " << smooth_type << endl;
+        std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
+        std::cout << "local_presmooth= " << local_presmooth << endl;
+        std::cout << "local_postsmooth= " << local_postsmooth << endl;
+        std::cout << "use_PCG= " << use_PCG << endl;
+        std::cout << "rnorm= " << rnorm << endl;
+        std::cout << "rnorm_init= " << rnorm_init << endl;
+        std::cout << "nit= " << nit << endl;
+        std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
+        amrex::Error("pAp invalid in bottom solver (1) ");
        }
       } else {
-       std::cout << "pAp= " << pAp << endl;
-       amrex::Error("pAp invalid in bottom solver");
+       std::cout << "pAp (2) = " << pAp << endl;
+       std::cout << "level (mglib)= " << level << endl;
+       std::cout << "mglib_blocking_factor= " << 
+         mglib_blocking_factor << endl;
+       std::cout << "local_use_bicgstab= " << local_use_bicgstab << endl;
+       std::cout << "smooth_type= " << smooth_type << endl;
+       std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
+       std::cout << "local_presmooth= " << local_presmooth << endl;
+       std::cout << "local_postsmooth= " << local_postsmooth << endl;
+       std::cout << "use_PCG= " << use_PCG << endl;
+       std::cout << "rnorm= " << rnorm << endl;
+       std::cout << "rnorm_init= " << rnorm_init << endl;
+       std::cout << "nit= " << nit << endl;
+       std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
+       amrex::Error("pAp invalid in bottom solver (2) ");
       }
      } else if ((rho_old>=0.0)&&(rho_old<=restart_tol)) {
       restart_flag=1;
@@ -4655,7 +4681,8 @@ ABecLaplacian::MG_solve (int nsverbose,
   int usecg_at_bottom,MultiFab& pbdry,
   Vector<int> bcpres_array,
   int smooth_type,
-  int bottom_smooth_type,int presmooth,
+  int bottom_smooth_type,
+  int presmooth,
   int postsmooth) {
 
 #if (profile_solver==1)
@@ -4685,7 +4712,8 @@ ABecLaplacian::MG_solve (int nsverbose,
    *MG_pbdryhom,bcpres_array,
    usecg_at_bottom,
    smooth_type,
-   bottom_smooth_type,presmooth,postsmooth);
+   bottom_smooth_type,
+   presmooth,postsmooth);
 
 } // subroutine MG_solve
 
@@ -4694,7 +4722,8 @@ void
 ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
   Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,
   int usecg_at_bottom,
-  int smooth_type,int bottom_smooth_type,int presmooth,int postsmooth) {
+  int smooth_type,int bottom_smooth_type,
+  int presmooth,int postsmooth) {
 
  int  level=0;
 
@@ -4870,7 +4899,8 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
    int level,Real eps_abs,
    Real atol_b,int usecg_at_bottom,
    MultiFab& pbdry,Vector<int> bcpres_array,
-   int smooth_type,int bottom_smooth_type,int presmooth,
+   int smooth_type,int bottom_smooth_type,
+   int presmooth,
    int postsmooth) {
 
 #if (profile_solver==1)
@@ -4920,7 +4950,8 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
    MG_relax(*(MG_cor[level+1]),*(MG_rhs[level+1]),level+1,
     eps_abs,atol_b,usecg_at_bottom,
     *(MG_pbdrycoarser[level+1]),bcpres_array,
-    smooth_type,bottom_smooth_type,presmooth,postsmooth);
+    smooth_type,bottom_smooth_type,
+    presmooth,postsmooth);
   }
 
   MG_interpolate(solL, *(MG_cor[level+1]),level+1,level);

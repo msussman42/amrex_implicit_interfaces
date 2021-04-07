@@ -7946,8 +7946,8 @@ void NavierStokes::relaxLEVEL(
    bcpres_array,
    usecg_at_bottom,
    temp_meets_tol,
-   smooth_type,smooth_type,
-   presmooth,presmooth,
+   smooth_type,bottom_smooth_type,
+   presmooth,presmooth,  //postsmooth="presmooth"
    error0,
    A_error0,
    rAr_error0,
