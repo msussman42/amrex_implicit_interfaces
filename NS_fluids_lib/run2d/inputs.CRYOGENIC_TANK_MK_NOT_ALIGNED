@@ -89,10 +89,10 @@ geometry.is_periodic= 0 0
 # best to have dx=dy for now.
 amr.n_cell          = 16 64 
 # just 1 level:
-amr.max_level       = 1
+amr.max_level       = 2
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 2048  # 64 is optimal for MPI
+amr.max_grid_size   = 16    # 64 is optimal for MPI
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
@@ -190,7 +190,7 @@ ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
 
 # Density [kg/m^3]
 ns.denconst= 1400 5.3421449445 1190
-ns.mglib_min_coeff_factor=1000.0
+ns.mglib_min_coeff_factor=100.0
 
 ns.speciesconst= 1.0 1.0 1.0  #Kassemi
 
@@ -344,7 +344,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # 0=GSRB 1=ICRB 2=ILU 3=Jackobi
 Lp.smooth_type       = 2
-Lp.bottom_smooth_type= 2
+Lp.bottom_smooth_type= 3
 
 # ----------------------------------------------------------
 # -------- Other inputs ------------------------------------
