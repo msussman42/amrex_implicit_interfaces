@@ -644,6 +644,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolveMM) 
    amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
 
+   // if project_option==0,
+   //    project_option==1,
+   //    project_option==11,  FSI_material_exists last project
+   //    project_option==12,  extension project
   if (singular_possible==1) {
 
    if (thread_class::nthreads<1)
