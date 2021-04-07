@@ -89,14 +89,14 @@ geometry.is_periodic= 0 0
 # best to have dx=dy for now.
 amr.n_cell          = 16 64 
 # just 1 level:
-amr.max_level       = 0
+amr.max_level       = 1
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 64
+amr.max_grid_size   = 2048  # 64 is optimal for MPI
 
 # Note: (max_level+1) values needed
-amr.n_error_buf     = 4 4  # number of buffer cells in error est 
-amr.blocking_factor = 8 8  # block factor in grid generation
+amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
+amr.blocking_factor = 8 8 8 8 8 # block factor in grid generation
 
 amr.grid_eff        = 0.55  # smaller => less boxes
 
@@ -130,7 +130,7 @@ amr.slice_int=2000
 amr.plot_int        = 2000   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
-ns.sum_interval     = 1     # timesteps between computing mass 
+ns.sum_interval     = 100    # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -190,6 +190,8 @@ ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
 
 # Density [kg/m^3]
 ns.denconst= 1400 5.3421449445 1190
+ns.mglib_min_coeff_factor=1000.0
+
 ns.speciesconst= 1.0 1.0 1.0  #Kassemi
 
 # Diffusion coefficient [m^2/s]
