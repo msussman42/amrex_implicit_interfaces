@@ -1,3 +1,4 @@
+# Code written by Chris Caballero
 # -*- coding: utf-8 -*-
 import torch
 import math
