@@ -6941,8 +6941,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
     min_face_wt[tid_current].dataPtr(),
     max_face_wt[tid_current].dataPtr(),
     &singular_possible,
-    &local_solvability_projection,
-    &solvability_level_flag_arr[tid_current],
+    &local_solvability_projection, // input to the fortran
+    &solvability_level_flag_arr[tid_current], // declared inout in the fortran
     presbc.dataPtr(),
     &visc_coef,
     &constant_viscosity,

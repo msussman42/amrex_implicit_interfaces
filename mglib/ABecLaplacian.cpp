@@ -1172,6 +1172,10 @@ ABecLaplacian::ABecLaplacian (
 
  ppcg.query("abec_use_bicgstab", abec_use_bicgstab);
  ppcg.query("mglib_blocking_factor", mglib_blocking_factor);
+ if (mglib_blocking_factor>=2) {
+  // do nothing
+ } else
+  amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
  ppcg.query("maxiter", CG_def_maxiter);
  ppcg.query("v", CG_def_verbose);
