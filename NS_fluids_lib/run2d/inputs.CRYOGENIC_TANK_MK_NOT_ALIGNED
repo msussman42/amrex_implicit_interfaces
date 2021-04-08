@@ -50,7 +50,7 @@ ns.num_divu_outer_sweeps=1
 ns.FSI_flag         = 0 0 1
 
 # currently: only one tank allowed in the domain.
-solvability_projection = 1 # sealed
+ns.solvability_projection = 1 # sealed
 
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
@@ -82,12 +82,14 @@ ns.radblob4         = 0.09128125  # r_start of heater filament
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0   -0.254
 geometry.prob_hi    = 0.127  0.254
+#geometry.prob_hi    = 0.508  0.254  # square domain
 geometry.is_periodic= 0 0
 
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-amr.n_cell          = 16 64 
+amr.n_cell          = 16 64
+#amr.n_cell          = 64 64  # square domain
 # just 1 level:
 amr.max_level       = 2
 
@@ -190,7 +192,8 @@ ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
 
 # Density [kg/m^3]
 ns.denconst= 1400 5.3421449445 1190
-ns.mglib_min_coeff_factor=100.0
+ns.mglib_min_coeff_factor=1000.0
+cg.mglib_blocking_factor=2
 
 ns.speciesconst= 1.0 1.0 1.0  #Kassemi
 
@@ -344,7 +347,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # 0=GSRB 1=ICRB 2=ILU 3=Jackobi
 Lp.smooth_type       = 2
-Lp.bottom_smooth_type= 3
+Lp.bottom_smooth_type= 2
 
 # ----------------------------------------------------------
 # -------- Other inputs ------------------------------------
@@ -355,7 +358,7 @@ cg.verbose = 0
 
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 9000
+cg.maxiter = 200
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 1
