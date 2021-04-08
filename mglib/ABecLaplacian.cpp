@@ -4086,6 +4086,10 @@ ABecLaplacian::CG_solve(
         restart_flag=1;
        } else {
         std::cout << "pAp (1)= " << pAp << endl;
+        std::cout << "laplacian_solvability (all BCs masked off?)= " << 
+          laplacian_solvability << '\n';
+        std::cout << "cfd_level= " << cfd_level << '\n';
+        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
         std::cout << "level (mglib)= " << level << endl;
         std::cout << "mglib_blocking_factor= " << 
           mglib_blocking_factor << endl;
@@ -4103,6 +4107,10 @@ ABecLaplacian::CG_solve(
        }
       } else {
        std::cout << "pAp (2) = " << pAp << endl;
+       std::cout << "laplacian_solvability (all BCs masked off?)= " << 
+         laplacian_solvability << '\n';
+       std::cout << "cfd_level= " << cfd_level << '\n';
+       std::cout << "cfd_project_option= " << cfd_project_option << '\n';
        std::cout << "level (mglib)= " << level << endl;
        std::cout << "mglib_blocking_factor= " << 
          mglib_blocking_factor << endl;

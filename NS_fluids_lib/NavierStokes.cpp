@@ -3795,14 +3795,63 @@ NavierStokes::read_params ()
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
      amrex::Error("post_init_pressure_solve out of range");
 
+    int expected_solvability_projection=0;
+    if (some_materials_compressible()==1) {
+     expected_solvability_projection=0;
+    } else if (some_materials_compressible()==0) {
+     expected_solvability_projection=1;
+     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+
+      if (geometry_is_periodic[dir]==1) {
+       // do nothing
+      } else if (geometry_is_periodic[dir]==0) {
+
+       if (lo_bc[dir]==Interior) {
+        amrex::Error("cannot have Interior lo_bc if not periodic");
+       } else if (lo_bc[dir]==Symmetry) {
+        // do nothing
+       } else if (lo_bc[dir]==Inflow) {
+        // do nothing
+       } else if (lo_bc[dir]==SlipWall) {
+        // do nothing
+       } else if (lo_bc[dir]==NoSlipWall) {
+        // do nothing
+       } else if (lo_bc[dir]==Outflow) {
+        expected_solvability_projection=0;
+       } else
+        amrex::Error("lo_bc[dir] not recognized");
+
+       if (hi_bc[dir]==Interior) {
+        amrex::Error("cannot have Interior hi_bc if not periodic");
+       } else if (hi_bc[dir]==Symmetry) {
+        // do nothing
+       } else if (hi_bc[dir]==Inflow) {
+        // do nothing
+       } else if (hi_bc[dir]==SlipWall) {
+        // do nothing
+       } else if (hi_bc[dir]==NoSlipWall) {
+        // do nothing
+       } else if (hi_bc[dir]==Outflow) {
+        expected_solvability_projection=0;
+       } else
+        amrex::Error("hi_bc[dir] not recognized");
+
+      } else
+       amrex::Error("geometry_is_periodic[dir] invalid"); 
+     } // dir=0..sdim-1
+    } else {
+     amrex::Error("some_materials_compressible invalid");
+    }
+
+    solvability_projection=expected_solvability_projection;
+
     pp.query("solvability_projection",solvability_projection);
 
-    if (solvability_projection==0) {
+    if (solvability_projection==expected_solvability_projection) {
      // do nothing
-    } else if (solvability_projection==1) {
-     // do nothing
-    } else
-     amrex::Error("solvability_projection invalid");
+    } else {
+     amrex::Error("solvability_projection!=expected_solvability_projection");
+    }
 
     pp.query("use_lsa",use_lsa);
     if ((use_lsa<0)||(use_lsa>1))
