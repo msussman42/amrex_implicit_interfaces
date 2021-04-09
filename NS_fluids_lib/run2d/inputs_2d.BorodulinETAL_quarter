@@ -11,7 +11,7 @@
 #    (multicomponent droplets evaporating)
 #    cryogenic regime evaporating droplets.
 # DROP_IN_SHEAR.F90
-max_step  = 200000    # maximum timestep
+max_step  = 800000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
 stop_time = 4.0  # case 1
