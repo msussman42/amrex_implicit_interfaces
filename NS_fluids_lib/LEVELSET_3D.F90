@@ -6105,6 +6105,8 @@ stop
                level_mdot_data(ic_base_mdot+i_mdot)= &
                   level_mdot_data(ic_base_mdot+i_mdot)+ &
                   mdot(D_DECL(i,j,k),i_mdot)
+
+                ! mdot complement
                level_mdot_comp_data(ic_base_mdot+i_mdot)= &
                   level_mdot_comp_data(ic_base_mdot+i_mdot)+ &
                   mdot_comp(D_DECL(i,j,k),i_mdot)
@@ -6397,8 +6399,15 @@ stop
 
                       if (distribute_mdot_evenly(iten_shift).eq.1) then
                        mdot_avg=mdot_total/blob_cellvol_count
-                       mdot_part=mdot_avg*vol
+                        ! divu_cor must be a constant since 
+                        ! rho_cor must be a constant.
+                       mdot_part=mdot_avg*vol ! divu_cor * volume
                       else if (distribute_mdot_evenly(iten_shift).eq.2) then
+                       print *,"distribute_mdot_evenly=2 not allowed"
+                       print *,"only distribute_mdot_evenly=1 allowed since"
+                       print *,"divu correction must be consistent with the"
+                       print *,"uniform density correction requirement." 
+                       stop
                        mdot_avg=mdot_total/blob_cell_count
                        mdot_part=mdot_avg
                       else
@@ -6582,6 +6591,22 @@ stop
                      stop
                     endif
 
+                     ! F_t + s|grad F|=0
+                     ! dF=F_t dt=-s|grad F|dt=-s dt/dx
+                     ! my mdot=(den_src/den_dst-1)*dF*Vcell/dt^2=
+                     !  (den_src/den_dst-1)*(-s * area)/dt
+                     ! units of my mdot are "velocity" * area / seconds=
+                     ! "div velocity" * Length * area / seconds =
+                     ! "div velocity" * volume / seconds
+                     ! distribute mdot so that rho div u=constant 
+                     ! since rho=constant, make sure (div u)_correct=const.
+                     ! mdot_correct=divu_cor * volume/seconds
+                     ! sum mdot = sum mdot_correct
+                     ! divu_cor=sum mdot/(sum volume_i)=
+                     ! sum (divu_source_i vol_i)/(sum vol_i)
+                     ! so, we should always have:
+                     !  distribute_mdot_evenly(iten_shift).eq.1
+                     ! 
                      ! mass_new-mass_old = sum_i vel_i dt * area_i * 
                      !                     (den_dst-den_src) =
                      !                     sum_i dF*Vcell*(den_dst-den_src)=
