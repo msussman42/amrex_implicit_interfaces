@@ -1,9 +1,12 @@
       module evap_check
       IMPLICIT NONE
 
+       ! It is assume in this model that the temperature in the liquid
+       ! is spatially uniform.
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
-      integer, PARAMETER :: probtype = 1
+       ! probtype==2 => explore effect of parameters on evap in tank
+      integer, PARAMETER :: probtype = 2
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
@@ -17,6 +20,9 @@
         ! num_intervals=32,64,128,256,512,1024 (check the 
         ! error between consecutive grid resolutions) |R_h - R_2h|  
       integer, PARAMETER :: num_intervals=256
+
+      integer, PARAMETER :: schrage_probe_size=1
+
        ! was 8.0 for Cody's results.
       real*8, PARAMETER :: gas_domain_size_factor=8.0d0
 
@@ -235,9 +241,11 @@
       ! Cryogenics 89(2018) 1-15, equation (6)
       subroutine MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma, &
        Pvapor_probe, &
-       Tgamma,Tvapor_probe,MDOT)
+       Tgamma,Tvapor_probe,MDOT, &
+       verbose)
        IMPLICIT NONE
 
+      integer, intent(in) :: verbose
       real*8, intent(in) :: sigma
       real*8, intent(in) :: MolarMassFluid
       real*8, intent(in) :: R
@@ -260,6 +268,17 @@
        MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
          sqrt(MolarMassFluid/(2.0d0*my_pi*R))* &
          (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+       if (verbose.eq.1) then
+        print *,"sigma,gamma_term,probe_term ", &
+           sigma, &
+           Pgamma/sqrt(Tgamma), &
+           Pvapor_probe/sqrt(Tvapor_probe)
+       else if (verbose.eq.0) then
+        ! do nothing
+       else
+        print *,"verbose invalid"
+        stop
+       endif
       
       else
        print *,"parameter problems in MDOT_Kassemi"
@@ -270,9 +289,11 @@
       end subroutine MDOT_Kassemi
 
 
-      subroutine mdot_from_Y_probe(T_gamma,T_probe,Y_probe,dx,mdotY)
+      subroutine mdot_from_Y_probe(T_gamma,T_probe,Y_probe,dx,mdotY, &
+        verbose)
       IMPLICIT NONE
 
+      integer, intent(in) :: verbose
       real*8, intent(in) :: T_gamma,T_probe,Y_probe,dx
       real*8, intent(out) :: mdotY
       real*8 :: internal_energy
@@ -293,6 +314,16 @@
 
        call INTERNAL_material(den_G,T_probe,internal_energy)
        call EOS_material(den_G,internal_energy,Pvapor_probe)
+
+       if (verbose.eq.1) then
+        print *,"PGAMMA,P_PROBE ",Pgamma," ",Pvapor_probe
+       else if (verbose.eq.0) then
+        ! do nothing
+       else
+        print *,"verbose invalid"
+        stop
+       endif
+
        call MDOT_Kassemi( &
               accommodation_coefficient, &
               WV_global, &
@@ -301,7 +332,7 @@
               Pvapor_probe, &
               T_gamma, &
               T_probe, &
-              mdotY)
+              mdotY,verbose)
       else if ((evap_model.eq.0).or.(evap_model.eq.2)) then
        call X_from_Tgamma(local_X,T_gamma,T_sat_global, &
         L_V,R_global,WV_global)
@@ -325,15 +356,24 @@
 
       end subroutine mdot_from_T_probe
 
-      subroutine mdot_diff_func(T_gamma,T_probe,Y_probe,dx,mdot_diff)
+      subroutine mdot_diff_func(T_gamma, &
+        T_probe,Y_probe, &
+        schrage_T_probe,schrage_Y_probe, &
+        dx,mdot_diff,verbose)
       IMPLICIT NONE
 
-      real*8, intent(in) :: T_gamma,T_probe,Y_probe,dx
+      integer, intent(in) :: verbose
+      real*8, intent(in) :: T_gamma
+      real*8, intent(in) :: T_probe,Y_probe
+      real*8, intent(in) :: schrage_T_probe,schrage_Y_probe
+      real*8, intent(in) :: dx
       real*8, intent(out) :: mdot_diff
       real*8 :: mdotT,mdotY
 
       call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
-      call mdot_from_Y_probe(T_gamma,T_probe,Y_probe,dx,mdotY)
+      call mdot_from_Y_probe(T_gamma, &
+        schrage_T_probe,schrage_Y_probe,dx,mdotY, &
+        verbose)
 
       mdot_diff=mdotT-mdotY
 
@@ -376,6 +416,7 @@
       program main
       use evap_check
       IMPLICIT NONE
+      integer :: verbose
       real*8 :: f_out
       real*8 :: aa,bb,cc,fa,fb,fc
       integer :: iter
@@ -424,12 +465,14 @@
       real*8 :: mdot_diff_b
       real*8 :: mdot_diff_c
       real*8 :: mdotT
+      real*8 :: mdotY
       real*8 :: burnvel
       real*8 :: e_grid,P_grid,X_grid
       real*8 :: VEL_G
       real*8 :: TINF_for_numerical
       real*8 :: YINF_for_numerical
 
+      verbose=0
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
 !      find_TINF_from_TGAMMA=1
@@ -475,6 +518,33 @@
        T_gamma=300.5d0  ! placeholder
        cc=0.0d0
        TSTOP=0.025d0
+
+       !parameter study, tank specific problem
+      else if (probtype.eq.2) then 
+!      find_TINF_from_TGAMMA=1
+       find_TINF_from_TGAMMA=0
+       radblob = 0.05d0  ! cm
+       cur_x=2.0d0*radblob
+       den_L = 1.0d0  ! g/cm^3
+       den_G = 0.001d0 ! g/cm^3
+       C_pG = 1.0d+7  ! erg/(g K)
+       gamma_G = 1.4d0
+       accommodation_coefficient=1.0d0
+       k_G = 0.024d+5 ! erg/(cm s K)
+!      L_V = 2.26d+10  
+       L_V = 2.1d+10  ! erg/g
+!      L_V = 1.5d+10  ! erg/g
+       D_G = 0.1d0  ! cm^2/s
+       WV_global = 18.02d0  ! g/mol
+       WA_global = 28.9d0   ! g/mol
+       R_global = 8.31446261815324d+7  ! ergs/(mol K)
+       T_sat_global=373.15d0  ! K
+       T_inf_global = 300.5d0 ! K
+       Y_inf_global=7.1d-3  ! dimensionless
+       T_gamma=300.5   ! K
+       cc=0.0d0
+       TSTOP=880.0d0  ! seconds
+
       else
        print *,"probtype invalid"
        stop
@@ -700,13 +770,30 @@
         ! interface.
        T_gamma_a=100.0d0
        T_gamma_b=T_sat_global
-       call mdot_diff_func(T_gamma_a,TNEW(1),YNEW(1),dx,mdot_diff_a)
-       call mdot_diff_func(T_gamma_b,TNEW(1),YNEW(1),dx,mdot_diff_b)
+       if ((schrage_probe_size.ge.1).and.(schrage_probe_size.le.6)) then
+        call mdot_diff_func(T_gamma_a, &
+         TNEW(1),YNEW(1), &
+         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         dx,mdot_diff_a, &
+         verbose)
+        call mdot_diff_func(T_gamma_b, &
+         TNEW(1),YNEW(1), &
+         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         dx,mdot_diff_b, &
+         verbose)
+       else
+        print *,"probe_size out of range"
+        stop
+       endif
 
        if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
         do iter=1,100
          cc=0.5d0*(T_gamma_a+T_gamma_b)
-         call mdot_diff_func(cc,TNEW(1),YNEW(1),dx,mdot_diff_c)
+         call mdot_diff_func(cc, &
+          TNEW(1),YNEW(1), &
+          TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+          dx,mdot_diff_c, &
+          verbose)
          if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
           T_gamma_a=cc
          else if (mdot_diff_b*mdot_diff_c.gt.0.0d0) then
@@ -727,6 +814,26 @@
         stop
        endif
        T_gamma_c=cc
+
+       if (1.eq.0) then
+        call mdot_diff_func(cc, &
+         TNEW(1),YNEW(1), &
+         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         dx,mdot_diff_c, &
+         verbose)
+        call mdot_from_T_probe(cc,TNEW(1),dx,mdotT)
+        verbose=1
+        call mdot_from_Y_probe(cc, &
+         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         dx,mdotY,verbose)
+        verbose=0
+        print *,"accommodation_coefficient ",accommodation_coefficient
+        print *,"AFTER BISECTION, STEP=",istep, &
+          " TGAM,mdotT,mdotY,mdotDIFF ", &
+          cc,mdotT,mdotY,mdot_diff_c
+       endif
+
+
        call X_from_Tgamma(X_gamma_c,T_gamma_c,T_sat_global, &
         L_V,R_global,WV_global)
        call massfrac_from_volfrac(X_gamma_c,Y_gamma_c, &
