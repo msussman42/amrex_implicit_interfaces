@@ -529,7 +529,9 @@
        den_G = 0.001d0 ! g/cm^3
        C_pG = 1.0d+7  ! erg/(g K)
        gamma_G = 1.4d0
-       accommodation_coefficient=1.0d0
+!      accommodation_coefficient=1.0d0
+!      accommodation_coefficient=1.99d0
+       accommodation_coefficient=0.01d0
        k_G = 0.024d+5 ! erg/(cm s K)
 !      L_V = 2.26d+10  
        L_V = 2.1d+10  ! erg/g
@@ -751,6 +753,7 @@
       print *,"radblob=",radblob
       print *,"probhi_R_domain=",probhi_R_domain
       print *,"reference pressure=",P_sat_global
+      print *,"accommodation_coefficient ",accommodation_coefficient
       print *,"gamma_G=CP/CV,CP,CV ",gamma_G," ",C_pG," ",C_pG/gamma_G
       print *,"STEP TIME ARAT TGAMMA YGAMMA VEL_G"
 
