@@ -20450,6 +20450,9 @@ stop
                   multi_volume_grid(im)*donate_data 
                 enddo !istate=1..FORT_NUM_TENSOR_TYPE
 
+                 ! displacement:
+                 ! displacement must be extrapolated into neighboring
+                 ! materials after advection.
                 do istate=1,SDIM
                  statecomp_data= &
                      num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
@@ -21415,6 +21418,8 @@ stop
  
              enddo !istate=1..FORT_NUM_TENSOR_TYPE
 
+              ! displacement: (F_m X_m)_t + div(F_m u X_m)= u F_m
+              !  (X_m)_t + u dot grad X_m = u
              do istate=1,SDIM
               statecomp_data= &
                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &

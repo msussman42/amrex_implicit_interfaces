@@ -15144,11 +15144,22 @@ NavierStokes::split_scalar_advection() {
  int ngrow_mac_old=0;
 
  if (face_flag==0) {
-  // do nothing
+
+  if (MAC_grid_displacement==0) {
+   // do nothing
+  } else
+   amrex::Error("expecting MAC_grid_displacement==0");
+
  } else if (face_flag==1) {
   ngrow=3;
   ngrow_mac_old=2;
   mac_grow=2;
+
+  if (MAC_grid_displacement==1) {
+   // do nothing
+  } else
+   amrex::Error("expecting MAC_grid_displacement==1");
+
  } else
   amrex::Error("face_flag invalid 4");
 
@@ -15223,9 +15234,22 @@ NavierStokes::split_scalar_advection() {
  }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  getStateMAC_localMF(UMACOLD_MF+dir,ngrow_mac_old,dir,
+  getStateMAC_localMF(Umac_Type,
+    UMACOLD_MF+dir,ngrow_mac_old,dir,
     0,nsolveMM_FACE,advect_time_slab);
- } // dir
+
+  if (MAC_grid_displacement==1) {
+   if (face_flag==1) {
+    getStateMAC_localMF(XDmac_Type,
+       XDMACOLD_MF+dir,ngrow_mac_old,dir,
+       0,num_materials_viscoelastic,advect_time_slab);
+   } else
+    amrex::Error("expecting face_flag==1");
+  } else if (MAC_grid_displacement==0) {
+   // do nothing
+  } else
+   amrex::Error("MAC_grid_displacement invalid");
+ } // dir = 0..sdim-1
 
  if ((dir_absolute_direct_split<0)||
      (dir_absolute_direct_split>=AMREX_SPACEDIM))
@@ -16070,6 +16094,15 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("stokes_flow invalid");
 
  delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
+ if (MAC_grid_displacement==1) {
+  if (face_flag==1) {
+   delete_localMF(XDMACOLD_MF,AMREX_SPACEDIM);
+  } else
+   amrex::Error("expecting face_flag==1");
+ } else if (MAC_grid_displacement==0) {
+  // do nothing
+ } else
+  amrex::Error("MAC_grid_displacement invalid");
  
  if ((level>=0)&&(level<finest_level)) {
 
@@ -23655,30 +23688,45 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
 }  // subroutine makeStateCurv
 
-
-MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,
+//MAC_state_idx==Umac_Type or (mac velocity)
+//MAC_state_idx==XDmac_Type   (mac displacement)
+MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
+ int ngrow,int dir,
  int scomp,int ncomp,Real time) {
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
 
- int nsolve=1;
- int nsolveMM_FACE=nsolve*num_materials_vel;
- 
  if ((dir<0)||(dir>=AMREX_SPACEDIM))
   amrex::Error("dir invalid get state mac");
 
- MultiFab& S_new=get_new_data(Umac_Type+dir,slab_step+1);
- int ntotal=S_new.nComp();
- if (ntotal!=nsolveMM_FACE)
-  amrex::Error("ntotal bust");
- if (scomp+ncomp>ntotal)
-  amrex::Error("scomp invalid getStateMAC");
+  //sanity checks
+ if (MAC_state_idx==Umac_Type) {
 
- MultiFab* mf = new MultiFab(state[Umac_Type+dir].boxArray(),dmap,ncomp,
-   ngrow,MFInfo().SetTag("mf getStateMAC"),FArrayBoxFactory());
+  int nsolve=1;
+  int nsolveMM_FACE=nsolve*num_materials_vel;
+ 
+  MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
+  int ntotal=S_new.nComp();
+  if (ntotal!=nsolveMM_FACE)
+   amrex::Error("ntotal bust");
+  if (scomp+ncomp>ntotal)
+   amrex::Error("scomp invalid getStateMAC");
 
- FillPatch(*this,*mf,0,time,Umac_Type+dir,scomp,ncomp,debug_fillpatch);
+ } else if (MAC_state_idx==XDmac_Type) {
+
+  MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
+  int ntotal=S_new.nComp();
+  if (scomp+ncomp>ntotal)
+   amrex::Error("scomp invalid getStateMAC");
+
+ } else
+  amrex::Error("MAC_state_idx invalid");
+
+ MultiFab* mf = new MultiFab(state[MAC_state_idx+dir].boxArray(),dmap,ncomp,
+  ngrow,MFInfo().SetTag("mf getStateMAC"),FArrayBoxFactory());
+
+ FillPatch(*this,*mf,0,time,MAC_state_idx+dir,scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 

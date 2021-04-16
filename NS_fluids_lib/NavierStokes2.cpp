@@ -128,7 +128,8 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
 
 } //new_localMF
 
-void NavierStokes::getStateMAC_localMF(int idx_MF,int ngrow,int dir,
+void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
+  int idx_MF,int ngrow,int dir,
   int scomp,int ncomp,Real time) {
 
  if (localMF_grow[idx_MF]>=0) {
@@ -139,9 +140,10 @@ void NavierStokes::getStateMAC_localMF(int idx_MF,int ngrow,int dir,
  if (ngrow<0)
   amrex::Error("ngrow invalid");
 
- localMF[idx_MF]=getStateMAC(ngrow,dir,scomp,ncomp,time);
+   // declared in NavierStokes.cpp
+ localMF[idx_MF]=getStateMAC(MAC_state_idx,ngrow,dir,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
-}
+} // end getStateMAC_localMF
  
 void NavierStokes::getStateDen_localMF(int idx_MF,int ngrow,Real time) {
 
