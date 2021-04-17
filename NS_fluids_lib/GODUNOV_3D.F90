@@ -3808,9 +3808,12 @@ stop
        nrefine_cen, &
        vofF,DIMS(vofF), &
        cenF,DIMS(cenF), &
-       xold,DIMS(xold), &
+       x_mac_old, &
+       DIMS(x_mac_old), &
+       xd_mac_old, & !1..num_materials_viscoelastic
+       DIMS(xd_mac_old), &
        xvof,DIMS(xvof), &
-       xvel,DIMS(xvel), &  ! xvelleft,xvelright
+       xvel,DIMS(xvel), &  ! 1..num_MAC_vectors
        xvelslp,DIMS(xvelslp), &  ! xvelslope,xcen
        xlo,dx, &
        tilelo,tilehi, &
@@ -3818,6 +3821,7 @@ stop
        bfact, &
        nmat, &
        ngrow, &
+       num_MAC_vectors, &
        ngrowmac, &
        veldir)
       use probcommon_module
@@ -3827,6 +3831,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: num_MAC_vectors
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3840,15 +3845,18 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(vofF) 
       INTEGER_T, intent(in) :: DIMDEC(cenF) 
-      INTEGER_T, intent(in) :: DIMDEC(xold) 
+      INTEGER_T, intent(in) :: DIMDEC(x_mac_old) 
+      INTEGER_T, intent(in) :: DIMDEC(xd_mac_old) 
       INTEGER_T, intent(in) :: DIMDEC(xvof) 
-      INTEGER_T, intent(in) :: DIMDEC(xvel)   ! xvelleft,xvelright
-      INTEGER_T, intent(in) :: DIMDEC(xvelslp)   ! xvelslope,xcen
+      INTEGER_T, intent(in) :: DIMDEC(xvel) !1..num_MAC_vectors
+      INTEGER_T, intent(in) :: DIMDEC(xvelslp) ! xvelslope,xcen
       REAL_T, intent(in) :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, intent(in) :: cenF(DIMV(cenF),nrefine_cen)
-      REAL_T, intent(in) :: xold(DIMV(xold))
+      REAL_T, intent(in) :: x_mac_old(DIMV(x_mac_old))
+      REAL_T, intent(in) :: xd_mac_old(DIMV(xd_mac_old), &
+         num_materials_viscoelastic)
       REAL_T, intent(out) :: xvof(DIMV(xvof),nmat)
-      REAL_T, intent(out) :: xvel(DIMV(xvel)) 
+      REAL_T, intent(out) :: xvel(DIMV(xvel),num_MAC_vectors) 
       REAL_T, intent(out) :: xvelslp(DIMV(xvelslp),1+nmat) ! xvelslope,xcen
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
