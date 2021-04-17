@@ -15144,6 +15144,7 @@ NavierStokes::split_scalar_advection() {
  int ngrow_mac_old=0;
  int num_MAC_vectors=1;
  int XDmac_Type_local=Umac_Type;
+ int XDMACOLD_MF_local=UMACOLD_MF;
 
  if (face_flag==0) {
 
@@ -15248,6 +15249,7 @@ NavierStokes::split_scalar_advection() {
     getStateMAC_localMF(XDmac_Type,
        XDMACOLD_MF+dir,ngrow_mac_old,dir,
        0,num_materials_viscoelastic,advect_time_slab);
+    XDMACOLD_MF_local=XDMAC_OLD_MF;
    } else
     amrex::Error("expecting face_flag==1");
   } else if (MAC_grid_displacement==0) {
@@ -15429,11 +15431,11 @@ NavierStokes::split_scalar_advection() {
 }// omp
  ns_reconcile_d_num(87);
 
- MultiFab* xvof[AMREX_SPACEDIM];
- MultiFab* xvel[AMREX_SPACEDIM]; // xvel
- MultiFab* xvelslope[AMREX_SPACEDIM]; // xvelslope,xcen
- MultiFab* side_bucket_mom[AMREX_SPACEDIM];
- MultiFab* side_bucket_mass[AMREX_SPACEDIM];
+ MultiFab* xvof[AMREX_SPACEDIM]; // nmat components
+ MultiFab* xvel[AMREX_SPACEDIM]; // num_MAC_vectors components
+ MultiFab* xvelslope[AMREX_SPACEDIM]; // xvelslope,xcen 1+nmat components.
+ MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
+ MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
 
   // (dir-1)*2*nmat + (side-1)*nmat + im
  int nrefine_vof=2*nmat*AMREX_SPACEDIM;
@@ -15539,17 +15541,19 @@ NavierStokes::split_scalar_advection() {
    xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,nmat,
      ngrow_mac_old,MFInfo().SetTag("xvof"),FArrayBoxFactory());
 
-   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1,
+   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,
+     num_MAC_vectors,
      ngrow_mac_old,MFInfo().SetTag("xvel"),FArrayBoxFactory());
     // xvelslope,xcen
    xvelslope[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1+nmat,
      ngrow_mac_old,MFInfo().SetTag("xvelslope"),FArrayBoxFactory());
 
-    //ncomp=2 ngrow=1
-   side_bucket_mom[dir]=new MultiFab(grids,dmap,2,1,
-	MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=1
-   side_bucket_mom[dir]->setVal(0.0,0,2,1);
+    //ncomp=2*num_MAC_vectors ngrow=1
+   side_bucket_mom[dir]=new MultiFab(grids,dmap,
+      2*num_MAC_vectors,1,
+      MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
+    //scomp=0 ncomp=2*num_MAC_vectors ngrow=1
+   side_bucket_mom[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
 
     //ncomp=2 ngrow=1
    side_bucket_mass[dir]=new MultiFab(grids,dmap,2,1,
@@ -15581,9 +15585,10 @@ NavierStokes::split_scalar_advection() {
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& xmac_old=(*localMF[UMACOLD_MF+veldir-1])[mfi];
+    FArrayBox& x_mac_old=(*localMF[UMACOLD_MF+veldir-1])[mfi];
+    FArrayBox& xd_mac_old=(*localMF[XDMACOLD_MF_local+veldir-1])[mfi];
     FArrayBox& xvoffab=(*xvof[veldir-1])[mfi];
-    FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; // xvelleft,xvelright
+    FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; // 1..num_MAC_vectors
     FArrayBox& xvelslopefab=(*xvelslope[veldir-1])[mfi]; // xvelslope,xcen
     FArrayBox& vofFfab=(*vofF)[mfi];
     FArrayBox& cenFfab=(*cenF)[mfi];
@@ -15603,7 +15608,8 @@ NavierStokes::split_scalar_advection() {
      &nrefine_cen,
      vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
      cenFfab.dataPtr(),ARLIM(cenFfab.loVect()),ARLIM(cenFfab.hiVect()),
-     xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
+     x_mac_old.dataPtr(),ARLIM(x_mac_old.loVect()),ARLIM(x_mac_old.hiVect()),
+     xd_mac_old.dataPtr(),ARLIM(xd_mac_old.loVect()),ARLIM(xd_mac_old.hiVect()),
      xvoffab.dataPtr(),ARLIM(xvoffab.loVect()),ARLIM(xvoffab.hiVect()),
      xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
      xvelslopefab.dataPtr(),
@@ -15613,7 +15619,9 @@ NavierStokes::split_scalar_advection() {
      fablo,fabhi,
      &bfact,
      &nmat,&ngrow, 
-     &ngrow_mac_old,&veldir);
+     &num_MAC_vectors,
+     &ngrow_mac_old,
+     &veldir);
    }  // mfi
 }// omp
    ns_reconcile_d_num(89);

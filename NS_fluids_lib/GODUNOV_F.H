@@ -539,16 +539,25 @@ extern "C"
     int* nrefine_cen,
     Real* vofF,AMREX_ARLIM_P(vofFlo),AMREX_ARLIM_P(vofFhi),
     Real* cenF,AMREX_ARLIM_P(cenFlo),AMREX_ARLIM_P(cenFhi),
-    Real* xold,AMREX_ARLIM_P(xoldlo),AMREX_ARLIM_P(xoldhi),
+    Real* x_mac_old,
+    AMREX_ARLIM_P(x_mac_oldlo),
+    AMREX_ARLIM_P(x_mac_oldhi),
+    Real* xd_mac_old,
+    AMREX_ARLIM_P(xd_mac_oldlo),
+    AMREX_ARLIM_P(xd_mac_oldhi),
     Real* xvof,AMREX_ARLIM_P(xvoflo),AMREX_ARLIM_P(xvofhi),
-    Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi), // xvelleft,xvelright
-    Real* xvelslope,AMREX_ARLIM_P(xvelslopelo),AMREX_ARLIM_P(xvelslopehi), //xvelslope,xcen
+    Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),//1..num_MAC_vectors
+    Real* xvelslope,
+    AMREX_ARLIM_P(xvelslopelo),AMREX_ARLIM_P(xvelslopehi), //xvelslope,xcen
     const Real* xlo,const Real* dx,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
-    int* nmat,int* ngrow,
-    int* ngrowmac,int* veldir);
+    int* nmat,
+    int* ngrow,
+    int* num_MAC_vectors,
+    int* ngrowmac,
+    int* veldir);
 
 
    void FORT_BUILD_NEWMAC(
