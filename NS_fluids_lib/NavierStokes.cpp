@@ -15142,6 +15142,8 @@ NavierStokes::split_scalar_advection() {
  int ngrow=2;
  int mac_grow=1; 
  int ngrow_mac_old=0;
+ int num_MAC_vectors=1;
+ int XDmac_Type_local=Umac_Type;
 
  if (face_flag==0) {
 
@@ -15156,9 +15158,12 @@ NavierStokes::split_scalar_advection() {
   mac_grow=2;
 
   if (MAC_grid_displacement==1) {
+   num_MAC_vectors=1+num_materials_viscoelastic; 
+   XDmac_Type_local=XDmac_Type;
+  } else if (MAC_grid_displacement==0) {
    // do nothing
   } else
-   amrex::Error("expecting MAC_grid_displacement==1");
+   amrex::Error("MAC_grid_displacement invalid");
 
  } else
   amrex::Error("face_flag invalid 4");
@@ -15285,8 +15290,10 @@ NavierStokes::split_scalar_advection() {
  debug_ngrow(MASK_NBR_MF,ngrow,28); 
 
  MultiFab* umac_new[AMREX_SPACEDIM];
+ MultiFab* xdmac_new[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
+  xdmac_new[dir]=&get_new_data(XDmac_Type_local+dir,slab_step+1);
  }
 
 
@@ -15586,6 +15593,7 @@ NavierStokes::split_scalar_advection() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     // declared in GODUNOV_3D.F90
     FORT_BUILD_MACVOF( 
      &nsolveMM_FACE,
      &level,
@@ -16094,6 +16102,7 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("stokes_flow invalid");
 
  delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
+
  if (MAC_grid_displacement==1) {
   if (face_flag==1) {
    delete_localMF(XDMACOLD_MF,AMREX_SPACEDIM);
