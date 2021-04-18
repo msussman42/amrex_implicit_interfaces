@@ -18844,6 +18844,8 @@ stop
        ntensor, &
        nc_bucket, &
        nrefine_vof, &
+       num_MAC_vectors, &
+       NUM_CELL_ELASTIC, &
        verbose, &
        gridno,ngrid, &
        level, &
@@ -18860,6 +18862,8 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: num_MAC_vectors
+      INTEGER_T, intent(in) :: NUM_CELL_ELASTIC
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(inout) :: nprocessed
       INTEGER_T, intent(in) :: tid
@@ -18970,17 +18974,23 @@ stop
       REAL_T, intent(in) :: unode(DIMV(unode),SDIM+1)
        ! local variables
       REAL_T, intent(in) :: conserve(DIMV(conserve),nc_conserve)
-      REAL_T, intent(in) :: xvel(DIMV(xvel)) 
-      REAL_T, intent(in) :: yvel(DIMV(yvel))  
-      REAL_T, intent(in) :: zvel(DIMV(zvel))  
+      REAL_T, intent(in) :: xvel(DIMV(xvel), &
+         num_MAC_vectors) 
+      REAL_T, intent(in) :: yvel(DIMV(yvel), &
+         num_MAC_vectors)  
+      REAL_T, intent(in) :: zvel(DIMV(zvel), &
+         num_MAC_vectors) 
       REAL_T, intent(in) :: xvelslp(DIMV(xvelslp),1+nmat)  ! xvelslope,xcen
       REAL_T, intent(in) :: yvelslp(DIMV(yvelslp),1+nmat)  
       REAL_T, intent(in) :: zvelslp(DIMV(zvelslp),1+nmat)  
       REAL_T, intent(in) :: momslope(DIMV(momslope),nc_conserve)
 
-      REAL_T, intent(inout) :: xmomside(DIMV(xmomside),2)
-      REAL_T, intent(inout) :: ymomside(DIMV(ymomside),2)
-      REAL_T, intent(inout) :: zmomside(DIMV(zmomside),2)
+      REAL_T, intent(inout) :: xmomside(DIMV(xmomside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(inout) :: ymomside(DIMV(ymomside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(inout) :: zmomside(DIMV(zmomside), &
+        2*num_MAC_vectors)
 
       REAL_T, intent(inout) :: xmassside(DIMV(xmassside),2)
       REAL_T, intent(inout) :: ymassside(DIMV(ymassside),2)
@@ -19303,8 +19313,12 @@ stop
 
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (ntensor.ne.num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+ &
-           SDIM)) then
+       if ((ntensor.eq. &
+            num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)).or. &
+           (ntensor.eq. &
+            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
+        ! do nothing
+       else
         print *,"ntensor invalid"
         stop
        endif
@@ -19443,9 +19457,31 @@ stop
        call checkbound(fablo,fabhi,DIMS(xmassside),1,-1,1271)
        call checkbound(fablo,fabhi,DIMS(ymassside),1,-1,1271)
        call checkbound(fablo,fabhi,DIMS(zmassside),1,-1,1271)
-  
+ 
+       if ((NUM_CELL_ELASTIC.eq.2*SDIM+SDIM).and. &
+           (NUM_CELL_ELASTIC.eq.FORT_NUM_TENSOR_TYPE+SDIM).and. &
+           (ntensor.eq.num_materials_viscoelastic*NUM_CELL_ELASTIC).and. &
+           (num_MAC_vectors.eq.1)) then
+        ! do nothing
+       else if ((NUM_CELL_ELASTIC.eq.2*SDIM).and. &
+                (NUM_CELL_ELASTIC.eq.FORT_NUM_TENSOR_TYPE).and. &
+                (ntensor.eq.num_materials_viscoelastic*NUM_CELL_ELASTIC).and. &
+                (num_MAC_vectors.eq.1+num_materials_viscoelastic)) then
+        ! do nothing
+       else
+        print *,"expecting displacement at cell centers or face centers"
+        stop
+       endif
       else if (face_flag.eq.0) then
-       ! do nothing
+       if ((NUM_CELL_ELASTIC.eq.2*SDIM+SDIM).and. &
+           (NUM_CELL_ELASTIC.eq.FORT_NUM_TENSOR_TYPE+SDIM).and. &
+           (ntensor.eq.num_materials_viscoelastic*NUM_CELL_ELASTIC).and. &
+           (num_MAC_vectors.eq.1)) then
+        ! do nothing
+       else
+        print *,"expecting displacement at cell centers"
+        stop
+       endif
       else
        print *,"face_flag invalid F6"
        stop
