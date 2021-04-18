@@ -19581,7 +19581,7 @@ stop
 
       itensor_base=iden_base+nmat*num_state_material
       imof_base=itensor_base+ &
-           num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)
+           num_materials_viscoelastic*NUM_CELL_ELASTIC
       iLS_base=imof_base+nmat*ngeom_raw
       iFtarget_base=iLS_base+nmat
       iden_mom_base=iFtarget_base+nmat
@@ -20532,16 +20532,24 @@ stop
                  ! displacement:
                  ! displacement must be extrapolated into neighboring
                  ! materials after advection.
-                do istate=1,SDIM
-                 statecomp_data= &
+
+                if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
+                 do istate=1,SDIM
+                  statecomp_data= &
                      num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
                      (imap-1)*SDIM+istate
-                 donate_data= &
-                  tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
-                 veldata(itensor_base+statecomp_data)= &
-                  veldata(itensor_base+statecomp_data)+ &
-                  multi_volume_grid(im)*donate_data 
-                enddo !istate=1..sdim
+                  donate_data= &
+                   tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
+                  veldata(itensor_base+statecomp_data)= &
+                   veldata(itensor_base+statecomp_data)+ &
+                   multi_volume_grid(im)*donate_data 
+                 enddo !istate=1..sdim
+                else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
+                 ! do nothing
+                else
+                 print *,"NUM_CELL_ELASTIC invalid"
+                 stop
+                endif
 
                else 
                 print *,"imap invalid"
@@ -21476,6 +21484,7 @@ stop
                       (imap.le.num_materials_viscoelastic))
              imap=imap+1
             enddo
+
             if (imap.le.num_materials_viscoelastic) then
 
              do istate=1,FORT_NUM_TENSOR_TYPE
@@ -21499,32 +21508,40 @@ stop
 
               ! displacement: (F_m X_m)_t + div(F_m u X_m)= u F_m
               !  (X_m)_t + u dot grad X_m = u
-             do istate=1,SDIM
-              statecomp_data= &
+             if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
+              do istate=1,SDIM
+               statecomp_data= &
                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-                     (imap-1)*SDIM+istate
-              if (no_material_flag.eq.1) then
-               tennew_hold(statecomp_data)=zero
-              else if (no_material_flag.eq.0) then
-               if (volmat_depart(im).gt.zero) then
-                tennew_hold(statecomp_data)= &
-                 veldata(itensor_base+statecomp_data)/volmat_depart(im)
-                if (istate.eq.normdir+1) then
-                     ! ucell is already the local displacement
+                (imap-1)*SDIM+istate
+               if (no_material_flag.eq.1) then
+                tennew_hold(statecomp_data)=zero
+               else if (no_material_flag.eq.0) then
+                if (volmat_depart(im).gt.zero) then
                  tennew_hold(statecomp_data)= &
+                  veldata(itensor_base+statecomp_data)/volmat_depart(im)
+                 if (istate.eq.normdir+1) then
+                  ! ucell is already the local displacement
+                  tennew_hold(statecomp_data)= &
                    tennew_hold(statecomp_data)+ &
                    ucell(D_DECL(icrse,jcrse,kcrse),istate)
-                endif
+                 endif
+                else
+                 print *,"volmat_depart(im) invalid"
+                 stop
+                endif 
                else
-                print *,"volmat_depart(im) invalid"
+                print *,"no_material_flag invalid"
                 stop
-               endif 
-              else
-               print *,"no_material_flag invalid"
-               stop
-              endif
+               endif
  
-             enddo !istate=1..SDIM
+              enddo !istate=1..SDIM
+
+             else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
+              ! do nothing
+             else
+              print *,"NUM_CELL_ELASTIC invalid"
+              stop
+             endif
 
             else 
              print *,"imap invalid"
@@ -21603,13 +21620,23 @@ stop
               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
                tennew_hold(statecomp_data)
              enddo !istate=1..FORT_NUM_TENSOR_TYPE
-             do istate=1,SDIM
-              statecomp_data= &
+
+             if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
+
+              do istate=1,SDIM
+               statecomp_data= &
                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-                     (imap-1)*SDIM+istate
-              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-               tennew_hold(statecomp_data)
-             enddo !istate=1..SDIM
+                (imap-1)*SDIM+istate
+               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+                 tennew_hold(statecomp_data)
+              enddo !istate=1..SDIM
+
+             else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
+              ! do nothing
+             else
+              print *,"NUM_CELL_ELASTIC invalid"
+              stop
+             endif
 
             else 
              print *,"imap invalid"
