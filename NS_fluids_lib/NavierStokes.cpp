@@ -15560,7 +15560,7 @@ NavierStokes::split_scalar_advection() {
 	MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
     //scomp=0 ncomp=2 ngrow=1
    side_bucket_mass[dir]->setVal(0.0,0,2,1);
-  }  // dir 
+  }  // dir = 0..sdim-1
 
   for (int veldir=1;veldir<=AMREX_SPACEDIM;veldir++) {
 
@@ -15942,7 +15942,7 @@ NavierStokes::split_scalar_advection() {
    xlo,dx,
     // local variables
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
-    // xvelleft,xvelright
+    // 1..num_MAC_vectors
    xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
    yvelfab.dataPtr(),ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
    zvelfab.dataPtr(),ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
@@ -15972,6 +15972,8 @@ NavierStokes::split_scalar_advection() {
    &ntensor,
    &nc_bucket,
    &nrefine_vof,
+   &num_MAC_vectors,
+   &NUM_CELL_ELASTIC,
    &verbose,
    &gridno,&ngrid,
    &level,
