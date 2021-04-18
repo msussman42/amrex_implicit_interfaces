@@ -3864,7 +3864,7 @@ stop
       INTEGER_T icell,jcell,kcell,i,j,k,ii,jj,kk
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T im
-      REAL_T velmac
+      REAL_T velmac(num_MAC_vectors)
       REAL_T volmatCV(nmat)
       REAL_T cenmatCV(nmat)
       REAL_T volCV_fluid
@@ -3874,6 +3874,7 @@ stop
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T nsolveMM_FACE_test
+      INTEGER_T ivec
 
       nhalf=1
 
@@ -3885,6 +3886,23 @@ stop
        print *,"bfact invalid46"
        stop
       endif
+
+      if ((num_materials_viscoelastic.ge.1).and. &
+          (num_materials_viscoelastic.le.nmat)) then
+       ! do nothing
+      else
+       print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
+
+      if ((num_MAC_vectors.eq.1).or. &
+          (num_MAC_vectors.eq.1+num_materials_viscoelastic)) then
+       ! do nothing
+      else
+       print *,"num_MAC_vectors invalid"
+       stop
+      endif
+
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
        ! do nothing
       else
@@ -3920,7 +3938,8 @@ stop
        print *,"nsolveMM_FACE invalid"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(xold),ngrowmac,veldir-1,1271)
+      call checkbound(fablo,fabhi,DIMS(x_mac_old),ngrowmac,veldir-1,1271)
+      call checkbound(fablo,fabhi,DIMS(xd_mac_old),ngrowmac,veldir-1,1271)
       call checkbound(fablo,fabhi,DIMS(xvof),ngrowmac,veldir-1,1271)
       call checkbound(fablo,fabhi,DIMS(xvel),ngrowmac,veldir-1,1271)
       call checkbound(fablo,fabhi,DIMS(xvelslp),ngrowmac,veldir-1,1271)
@@ -3950,7 +3969,11 @@ stop
 
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir)
 
-       velmac=xold(D_DECL(i,j,k))
+       velmac(1)=x_mac_old(D_DECL(i,j,k))
+       do ivec=2,num_MAC_vectors
+        velmac(ivec)=xd_mac_old(D_DECL(i,j,k),ivec-1)
+       enddo
+
        if (veldir.eq.1) then
         if (levelrz.eq.0) then
          ! do nothing
@@ -3960,11 +3983,15 @@ stop
           stop
          endif
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          velmac=zero
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
          endif
         else if (levelrz.eq.3) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          velmac=zero
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
          endif
         else
          print *,"levelrz invalid build macvof"
@@ -3979,11 +4006,15 @@ stop
           stop
          endif
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          velmac=zero
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
          endif
         else if (levelrz.eq.3) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          velmac=zero
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
          endif
         else
          print *,"levelrz invalid build macvof 2"
@@ -3997,7 +4028,9 @@ stop
          stop
         else if (levelrz.eq.3) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          velmac=zero
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
          endif
         else
          print *,"levelrz invalid build macvof 3"
@@ -4088,7 +4121,9 @@ stop
         stop
        else if (volCV_fluid.ge.zero) then
 
-        xvel(D_DECL(i,j,k))=velmac
+        do ivec=1,num_MAC_vectors
+         xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
+        enddo
 
         do im=1,nmat
 
