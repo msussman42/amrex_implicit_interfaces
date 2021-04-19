@@ -2338,7 +2338,7 @@ void NavierStokes::update_SEM_forces(int project_option,
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     MultiFab* macvel=
-     getStateMAC(0,dir,0,nsolveMM_FACE,cur_time_slab); 
+     getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab); 
     MultiFab::Copy(*localMF[UMAC_MF+dir],*macvel,0,0,nsolveMM_FACE,0);
     delete macvel;
    } 
@@ -2559,7 +2559,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  velmac[dir]=getStateMAC(0,dir,0,nsolveMM_FACE,cur_time_slab);
+  velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab);
 
  const Real* dx = geom.CellSize();
 

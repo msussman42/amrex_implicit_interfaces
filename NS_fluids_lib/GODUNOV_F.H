@@ -1112,7 +1112,7 @@ extern "C"
      int* nc_bucket,
      int* nrefine_vof,
      int* num_MAC_vectors, 
-     int* NUM_CELL_ELASTIC
+     int* NUM_CELL_ELASTIC,
      int* verbose,
      const int* gridno,int* ngrid,
      int* level,

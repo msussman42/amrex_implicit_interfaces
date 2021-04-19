@@ -11191,7 +11191,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
    // mac_grow+1 for finding slopes
-  MultiFab* temp_mac_velocity=getStateMAC(mac_grow+1,normdir,
+  MultiFab* temp_mac_velocity=getStateMAC(Umac_Type,mac_grow+1,normdir,
    0,nsolveMM_FACE,vel_time_slab); 
 
    // mac_grow+1 (contingency)
@@ -15240,7 +15240,7 @@ NavierStokes::split_scalar_advection() {
     getStateMAC_localMF(XDmac_Type,
        XDMACOLD_MF+dir,ngrow_mac_old,dir,
        0,num_materials_viscoelastic,advect_time_slab);
-    XDMACOLD_MF_local=XDMAC_OLD_MF;
+    XDMACOLD_MF_local=XDMACOLD_MF;
    } else
     amrex::Error("expecting face_flag==1");
   } else if (MAC_grid_displacement==0) {
@@ -18984,7 +18984,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
   
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
  
-  MultiFab* velmac=getStateMAC(0,dir,0,nsolveMM_FACE,cur_time_slab);
+  MultiFab* velmac=getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -20010,7 +20010,7 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
    num_materials_vel*(AMREX_SPACEDIM+1),cur_time_slab);
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  velmac[dir]=getStateMAC(0,dir,0,1,cur_time_slab);
+  velmac[dir]=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
  }
  
   // mask=tag if not covered by level+1 
@@ -23742,8 +23742,15 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
 
  } else if (MAC_state_idx==XDmac_Type) {
 
+  if (MAC_grid_displacement==1) {
+   // do nothing
+  } else
+   amrex::Error("MAC_grid_displacement invalid in getStateMAC");
+
   MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
   int ntotal=S_new.nComp();
+  if (ntotal!=num_materials_viscoelastic)
+   amrex::Error("ntotal!=num_materials_viscoelastic");
   if (scomp+ncomp>ntotal)
    amrex::Error("scomp invalid getStateMAC");
 
@@ -23761,38 +23768,6 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
 
 }  // subroutine getStateMAC
 
-
-MultiFab* NavierStokes::getStateMAC_XD(int ngrow,int dir,
- int scomp,int ncomp,Real time) {
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if (MAC_grid_displacement==1) {
-  // do nothing
- } else
-  amrex::Error("MAC_grid_displacement invalid in getStateMAC_XD");
-
- if ((dir<0)||(dir>=AMREX_SPACEDIM))
-  amrex::Error("dir invalid get state mac");
-
- MultiFab& S_new=get_new_data(XDmac_Type+dir,slab_step+1);
- int ntotal=S_new.nComp();
- if (ntotal!=num_materials_viscoelastic)
-  amrex::Error("ntotal bust");
- if (scomp+ncomp>ntotal)
-  amrex::Error("scomp invalid getStateMAC_XD");
-
- MultiFab* mf = new MultiFab(state[XDmac_Type+dir].boxArray(),dmap,ncomp,
-   ngrow,MFInfo().SetTag("mf getStateMAC_XD"),FArrayBoxFactory());
-
- FillPatch(*this,*mf,0,time,XDmac_Type+dir,scomp,ncomp,debug_fillpatch);
-
- ParallelDescriptor::Barrier();
-
- return mf;
-
-}  // subroutine getStateMAC_XD
 
 void
 NavierStokes::ctml_fsi_transfer_force() {

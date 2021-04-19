@@ -1336,7 +1336,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
   // cell.
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   int ngrow=1;
-  XD_MAC[dir]=getStateMAC_XD(ngrow,dir,0,
+  XD_MAC[dir]=getStateMAC(XDmac_Type,ngrow,dir,0,
     num_materials_viscoelastic,cur_time_slab);
  }
 
@@ -2314,7 +2314,8 @@ void NavierStokes::make_MAC_velocity_consistent() {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    // ngrow,dir,scomp,ncomp,time
-  MultiFab* tempmac=getStateMAC(0,dir,0,nsolveMM_FACE,cur_time_slab);
+  MultiFab* tempmac=getStateMAC(
+     Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab);
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
   MultiFab::Copy(Umac_new,*tempmac,0,0,nsolveMM_FACE,0);
   delete tempmac;
@@ -2694,7 +2695,7 @@ void NavierStokes::increment_face_velocity(
               (interp_option==3)) {//operation_flag==10
 
     int ncomp_MAC=Umac_new.nComp();
-    Umac_old=getStateMAC(0,dir,0,ncomp_MAC,cur_time_slab); 
+    Umac_old=getStateMAC(Umac_Type,0,dir,0,ncomp_MAC,cur_time_slab); 
     if (Umac_old->boxArray()==Umac_new.boxArray()) {
      // do nothing
     } else
@@ -3335,7 +3336,8 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
 
  MultiFab* face_velocity[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  face_velocity[dir]=getStateMAC(0,dir,0,nsolveMM_FACE,cur_time_slab);
+  face_velocity[dir]=getStateMAC(
+    Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab);
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -7739,7 +7741,8 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
   MultiFab* mac_velocity[AMREX_SPACEDIM];
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   mac_velocity[dir]=getStateMAC(2,dir,0,nsolveMM_FACE,vel_time_slab);
+   mac_velocity[dir]=getStateMAC(
+      Umac_Type,2,dir,0,nsolveMM_FACE,vel_time_slab);
   }
 
   if (thread_class::nthreads<1)
