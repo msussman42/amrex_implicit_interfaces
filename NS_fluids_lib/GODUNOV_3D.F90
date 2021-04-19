@@ -3824,25 +3824,47 @@ stop
 
              enddo !ivec=1,num_MAC_vectors
 
-            enddo ! iside
+            enddo ! iside: do iside=-1,1,2
 
-            if (massface_total(1).le.zero) then
+            if (massface_total(1).gt.zero) then
+             momface_total(1)=momface_total(1)/massface_total(1)
+            else
              print *,"massface_total(1) invalid"
              stop
             endif
-            momface_total(1)=momface_total(1)/massface_total(1)
-            
+           
+            do ivec=2,num_MAC_vectors
+             if (massface_total(ivec).gt.zero) then
+              momface_total(ivec)=momface_total(ivec)/massface_total(ivec)
+             else if (massface_total(ivec).eq.zero) then
+              momface_total(ivec)=zero
+             else
+              print *,"massface_total(ivec) invalid"
+              stop
+             endif
+            enddo !ivec=2,num_MAC_vectors
+             
             if (veldir.eq.1) then
              xvmac(D_DECL(i,j,k))=momface_total(1)
+             do ivec=2,num_MAC_vectors
+              xdmac(D_DECL(i,j,k),ivec-1)=momface_total(ivec)
+             enddo
             else if (veldir.eq.2) then
              yvmac(D_DECL(i,j,k))=momface_total(1)
+             do ivec=2,num_MAC_vectors
+              ydmac(D_DECL(i,j,k),ivec-1)=momface_total(ivec)
+             enddo
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
              zvmac(D_DECL(i,j,k))=momface_total(1)
+             do ivec=2,num_MAC_vectors
+              zdmac(D_DECL(i,j,k),ivec-1)=momface_total(ivec)
+             enddo
             else
              print *,"veldir invalid"
              stop
             endif
 
+              TODO: add displacement, check if clamped (for vel)
           else if ((maskleft.eq.zero).or.(maskright.eq.zero)) then
             ! do nothing
           else 
