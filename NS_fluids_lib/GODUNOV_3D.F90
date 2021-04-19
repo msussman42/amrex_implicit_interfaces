@@ -3522,19 +3522,25 @@ stop
 
 
       subroutine FORT_BUILD_NEWMAC( &
+       num_MAC_vectors, &
        nsolveMM_FACE, &
-       normdir, &
+       normdir, & ! 0..sdim-1
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
+       unode,DIMS(unode), &
        xmomside,DIMS(xmomside), &
        ymomside,DIMS(ymomside), &
        zmomside,DIMS(zmomside), &
        xmassside,DIMS(xmassside), &
        ymassside,DIMS(ymassside), &
        zmassside,DIMS(zmassside), &
-       xmac,DIMS(xmac), &
-       ymac,DIMS(ymac), &
-       zmac,DIMS(zmac), &
+       xvmac,DIMS(xvmac), &
+       yvmac,DIMS(yvmac), &
+       zvmac,DIMS(zvmac), &
+       xdmac,DIMS(xdmac), &
+       ydmac,DIMS(ydmac), &
+       zdmac,DIMS(zdmac), &
        mask,DIMS(mask), &
        xlo,dx, &
        nmat, &
@@ -3545,47 +3551,70 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T nmat
-      INTEGER_T normdir
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T veldir
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: num_MAC_vectors
+      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: nsolveMM_FACE_test
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: normdir ! 0..sdim-1
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: veldir
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
 
-      INTEGER_T DIMDEC(xmomside) 
-      INTEGER_T DIMDEC(ymomside) 
-      INTEGER_T DIMDEC(zmomside) 
+      INTEGER_T, intent(in) :: DIMDEC(unode) 
 
-      INTEGER_T DIMDEC(xmassside) 
-      INTEGER_T DIMDEC(ymassside) 
-      INTEGER_T DIMDEC(zmassside) 
+      INTEGER_T, intent(in) :: DIMDEC(xmomside) 
+      INTEGER_T, intent(in) :: DIMDEC(ymomside) 
+      INTEGER_T, intent(in) :: DIMDEC(zmomside) 
 
-      INTEGER_T DIMDEC(xmac) 
-      INTEGER_T DIMDEC(ymac) 
-      INTEGER_T DIMDEC(zmac) 
+      INTEGER_T, intent(in) :: DIMDEC(xmassside) 
+      INTEGER_T, intent(in) :: DIMDEC(ymassside) 
+      INTEGER_T, intent(in) :: DIMDEC(zmassside) 
 
-      INTEGER_T DIMDEC(mask) 
+      INTEGER_T, intent(in) :: DIMDEC(xvmac) 
+      INTEGER_T, intent(in) :: DIMDEC(yvmac) 
+      INTEGER_T, intent(in) :: DIMDEC(zvmac) 
 
-      REAL_T xmomside(DIMV(xmomside),2)
-      REAL_T ymomside(DIMV(ymomside),2)
-      REAL_T zmomside(DIMV(zmomside),2)
+      INTEGER_T, intent(in) :: DIMDEC(xdmac) 
+      INTEGER_T, intent(in) :: DIMDEC(ydmac) 
+      INTEGER_T, intent(in) :: DIMDEC(zdmac) 
 
-      REAL_T xmassside(DIMV(xmassside),2)
-      REAL_T ymassside(DIMV(ymassside),2)
-      REAL_T zmassside(DIMV(zmassside),2)
+      INTEGER_T, intent(in) :: DIMDEC(mask) 
 
-      REAL_T xmac(DIMV(xmac))
-      REAL_T ymac(DIMV(ymac))
-      REAL_T zmac(DIMV(zmac))
+      REAL_T, intent(in) :: unode(DIMV(unode))
 
-      REAL_T mask(DIMV(mask))
+      REAL_T, intent(in) :: xmomside(DIMV(xmomside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(in) :: ymomside(DIMV(xmomside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(in) :: zmomside(DIMV(xmomside), &
+        2*num_MAC_vectors)
 
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
+      REAL_T, intent(in) :: xmassside(DIMV(xmassside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(in) :: ymassside(DIMV(ymassside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(in) :: zmassside(DIMV(zmassside), &
+        2*num_MAC_vectors)
+
+      REAL_T, intent(out) :: xvmac(DIMV(xvmac))
+      REAL_T, intent(out) :: yvmac(DIMV(yvmac))
+      REAL_T, intent(out) :: zvmac(DIMV(zvmac))
+
+      REAL_T, intent(out) :: xdmac(DIMV(xdmac), &
+       num_materials_viscoelastic)
+      REAL_T, intent(out) :: ydmac(DIMV(ydmac), &
+       num_materials_viscoelastic)
+      REAL_T, intent(out) :: zdmac(DIMV(zdmac), &
+       num_materials_viscoelastic)
+
+      REAL_T, intent(in) :: mask(DIMV(mask))
+
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T iii,jjj,kkk
       INTEGER_T i,j,k
@@ -3626,12 +3655,21 @@ stop
        print *,"num_materials_vel invalid"
        stop
       endif
+      if ((num_MAC_vectors.eq.1).or. &
+          (num_MAC_vectors.eq.1+num_materials_viscoelastic)) then
+       ! do nothing
+      else
+       print *,"num_MAC_vectors invalid"
+       stop
+      endif
 
       nsolveMM_FACE_test=num_materials_vel
       if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
        print *,"nsolveMM_FACE invalid"
        stop
       endif
+
+      call checkbound(fablo,fabhi,DIMS(unode),0,normdir,1271)
 
       call checkbound(fablo,fabhi,DIMS(xmomside),1,-1,1271)
       call checkbound(fablo,fabhi,DIMS(ymomside),1,-1,1271)
@@ -3643,9 +3681,13 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,1271)
 
-      call checkbound(fablo,fabhi,DIMS(xmac),0,0,1271)
-      call checkbound(fablo,fabhi,DIMS(ymac),0,1,1271)
-      call checkbound(fablo,fabhi,DIMS(zmac),0,SDIM-1,1271)
+      call checkbound(fablo,fabhi,DIMS(xvmac),0,0,1271)
+      call checkbound(fablo,fabhi,DIMS(yvmac),0,1,1271)
+      call checkbound(fablo,fabhi,DIMS(zvmac),0,SDIM-1,1271)
+
+      call checkbound(fablo,fabhi,DIMS(xdmac),0,0,1271)
+      call checkbound(fablo,fabhi,DIMS(ydmac),0,1,1271)
+      call checkbound(fablo,fabhi,DIMS(zdmac),0,SDIM-1,1271)
 
       do veldir=1,SDIM
 
@@ -3696,7 +3738,7 @@ stop
          endif
 
          if (zapvel.eq.1) then
-          xmac(D_DECL(i,j,k))=zero
+          xvmac(D_DECL(i,j,k))=zero
          else if (zapvel.eq.0) then
           iright=i
           jright=j
@@ -3766,11 +3808,11 @@ stop
             momface_total=momface_total/massface_total
             
             if (veldir.eq.1) then
-             xmac(D_DECL(i,j,k))=momface_total
+             xvmac(D_DECL(i,j,k))=momface_total
             else if (veldir.eq.2) then
-             ymac(D_DECL(i,j,k))=momface_total
+             yvmac(D_DECL(i,j,k))=momface_total
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-             zmac(D_DECL(i,j,k))=momface_total
+             zvmac(D_DECL(i,j,k))=momface_total
             else
              print *,"veldir invalid"
              stop
@@ -13594,7 +13636,6 @@ stop
        ! (vel/RR) if R-THETA
        ! vel=vel*dt , call adjust_du if RZ, override if passive advect.
       subroutine FORT_VELMAC_OVERRIDE( &
-       isweep, &
        nsolveMM_FACE, &
        nmat, &
        tilelo,tilehi, &
@@ -13623,7 +13664,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: SDC_outer_sweeps
       INTEGER_T, intent(in) :: ns_time_order
@@ -13644,7 +13684,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ucell)
      
       REAL_T, intent(in) :: utemp(DIMV(utemp)) 
-      REAL_T, intent(inout) :: unode(DIMV(unode),SDIM+1) 
+      REAL_T, intent(inout) :: unode(DIMV(unode)) 
       REAL_T, intent(inout) :: ucell(DIMV(ucell),num_materials_vel*SDIM) 
       INTEGER_T, intent(in) :: velbc(SDIM,2)
 
@@ -13685,12 +13725,6 @@ stop
       nsolveMM_FACE_test=num_materials_vel
       if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
        print *,"nsolveMM_FACE invalid"
-       stop
-      endif
-      if ((isweep.eq.0).or.(isweep.eq.1)) then
-       ! do nothing
-      else
-       print *,"isweep invalid"
        stop
       endif
  
@@ -13776,23 +13810,13 @@ stop
        stop
       endif
 
-        !first sweep:
         ! 1. multiply velocity by dt.
         ! 2. adjust velocity if RZ.
         ! 3. override velocity if it is a passive advection problem.
         ! 4. copy into mac_velocity
         ! 5. repeat for cell_velocity
-        !second sweep:
-        ! 1. calculate mac velocity slopes.
 
-      if (isweep.eq.0) then
-       local_mac_grow=mac_grow+1
-      else if (isweep.eq.1) then
-       local_mac_grow=mac_grow
-      else
-       print *,"isweep invalid"
-       stop
-      endif
+      local_mac_grow=mac_grow+1
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,local_mac_grow,normdir) 
@@ -13906,78 +13930,18 @@ stop
         endif
       
          ! find displacements 
-        if (isweep.eq.0) then 
-         unode(D_DECL(i,j,k),1)=delta
-
-         ! find derivatives of the displacements:
-         ! the derivative of u_normdir with respect to x_dirtan
-        else if (isweep.eq.1) then
-         delta_test=unode(D_DECL(i,j,k),1)
-         if ((abs(delta-delta_test).le.VOFTOL*delta).or. &
-             (abs(delta-delta_test).le.VOFTOL)) then
-          do dirtan=1,SDIM
-           iii=0
-           jjj=0
-           kkk=0
-           if (dirtan.eq.1) then
-            iii=1
-           else if (dirtan.eq.2) then
-            jjj=1
-           else if ((dirtan.eq.3).and.(SDIM.eq.3)) then
-            kkk=1
-           else
-            print *,"dirtan invalid"
-            stop
-           endif
-           hx_plus=xstenMAC(1,dirtan)-xstenMAC(0,dirtan)
-           hx_minus=xstenMAC(0,dirtan)-xstenMAC(-1,dirtan)
-           if ((hx_plus.gt.zero).and.(hx_minus.gt.zero)) then
-            dplus=(unode(D_DECL(i+iii,j+jjj,k+kkk),1)-delta)/hx_plus
-            dminus=(delta-unode(D_DECL(i-iii,j-jjj,k-kkk),1))/hx_minus
-            if (dplus*dminus.le.zero) then
-             dminmod=zero
-            else if (abs(dplus).le.abs(dminus)) then
-             dminmod=dplus
-            else if (abs(dplus).ge.abs(dminus)) then
-             dminmod=dminus
-            else
-             print *,"dplus or dminus bust"
-             stop
-            endif
-            unode(D_DECL(i,j,k),1+dirtan)=dminmod
-           else
-            print *,"hs_plus or hx_minus invalid"
-            stop
-           endif
-
-          enddo ! dirtan=1..sdim
-         else
-          print *,"delta or delta_test invalid"
-          print *,"local_mac_grow=",local_mac_grow
-          print *,"i,j,k= ",i,j,k
-          print *,"normdir= ",normdir
-          print *,"isweep=",isweep
-          print *,"delta=",delta
-          print *,"delta_test=",delta_test
-          stop
-         endif
-        else
-         print *,"isweep invalid"
-         stop
-        endif
+        unode(D_DECL(i,j,k))=delta
 
       enddo
       enddo
       enddo  ! i,j,k
 
-      if (isweep.eq.0) then
-
-       call growntilebox(tilelo,tilehi,fablo,fabhi, &
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
          growlo,growhi,mac_grow) 
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
 
         if (normdir.eq.0) then
          idx=i
@@ -14082,16 +14046,9 @@ stop
         endif
         
         ucell(D_DECL(i,j,k),normdir+1)=delta
-       enddo
-       enddo
-       enddo  ! i,j,k
-
-      else if (isweep.eq.1) then
-       ! do nothing
-      else
-       print *,"isweep invalid"
-       stop
-      endif
+      enddo
+      enddo
+      enddo  ! i,j,k
 
       return
       end subroutine FORT_VELMAC_OVERRIDE
@@ -18816,7 +18773,7 @@ stop
        conscor,DIMS(conscor), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
-       unode,DIMS(unode), &
+       unode,DIMS(unode), & ! vel*dt
        xlo,dx, &
        conserve,DIMS(conserve), & ! local variables
        xvel,DIMS(xvel), & ! xvelleft,xvelright
@@ -18971,7 +18928,7 @@ stop
       REAL_T, intent(in) :: mask(DIMV(mask))
       ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T, intent(in) :: masknbr(DIMV(masknbr)) 
-      REAL_T, intent(in) :: unode(DIMV(unode),SDIM+1)
+      REAL_T, intent(in) :: unode(DIMV(unode))
        ! local variables
       REAL_T, intent(in) :: conserve(DIMV(conserve),nc_conserve)
       REAL_T, intent(in) :: xvel(DIMV(xvel), &
@@ -19701,7 +19658,7 @@ stop
             ! veldata(momcomp)  momcomp=(im-1)*sdim+veldir
             ! veldata(iden_mom_base+im)
 
-            usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart),1)
+            usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
             nhalf=1
             call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
               level,nhalf,normdir+1)
@@ -19718,7 +19675,7 @@ stop
              print *,"levelrz invalid add to bucket mac"
              stop
             endif
-            usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk),1)
+            usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk))
 
             if (usten_accept(-1).gt.zero) then
              idonatelow=-1
@@ -19823,7 +19780,7 @@ stop
 
               if (check_intersection.eq.1) then 
 
-               usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate),1)
+               usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
 
                nhalf=1
                call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
@@ -19842,7 +19799,7 @@ stop
                 stop
                endif
 
-               usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk),1)
+               usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
 
                if (veldir.eq.normdir+1) then
 
@@ -20263,7 +20220,7 @@ FIX ME still have to add velocity increment to displacement update
          enddo
          enddo
 
-         usten_accept(-1)=unode(D_DECL(icrse,jcrse,kcrse),1)
+         usten_accept(-1)=unode(D_DECL(icrse,jcrse,kcrse))
 
          nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
@@ -20282,7 +20239,7 @@ FIX ME still have to add velocity increment to displacement update
           stop
          endif
 
-         usten_accept(1)=unode(D_DECL(icrse+ii,jcrse+jj,kcrse+kk),1)
+         usten_accept(1)=unode(D_DECL(icrse+ii,jcrse+jj,kcrse+kk))
 
          if (usten_accept(-1).gt.zero) then
           idonatelow=-1
@@ -20377,7 +20334,7 @@ FIX ME still have to add velocity increment to displacement update
 
           if (check_intersection.eq.1) then 
 
-           usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate),1)
+           usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
 
            nhalf=1
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
@@ -20398,7 +20355,7 @@ FIX ME still have to add velocity increment to displacement update
             stop
            endif
 
-           usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk),1)
+           usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
 
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
 
@@ -20838,7 +20795,7 @@ FIX ME still have to add velocity increment to displacement update
 
            if ((iside.eq.1).or.(iside.eq.2)) then
 
-            face_displace=unode(D_DECL(ipart,jpart,kpart),1)
+            face_displace=unode(D_DECL(ipart,jpart,kpart))
             if (abs(face_displace).ge.VOFTOL*dx(normdir+1)) then
              idonate=icrse
              jdonate=jcrse
@@ -20989,7 +20946,7 @@ FIX ME still have to add velocity increment to displacement update
              ! covered (inactive) neighbor. 
             if ((iside_coarse.eq.1).or.(iside_coarse.eq.2)) then
 
-             face_displace=unode(D_DECL(ipart,jpart,kpart),1)
+             face_displace=unode(D_DECL(ipart,jpart,kpart))
              if (abs(face_displace).ge.VOFTOL*dx(normdir+1)) then
               idonate=icrse
               jdonate=jcrse

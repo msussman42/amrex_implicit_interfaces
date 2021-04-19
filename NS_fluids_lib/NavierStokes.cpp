@@ -11194,37 +11194,30 @@ NavierStokes::prepare_displacement(int mac_grow) {
   MultiFab* temp_mac_velocity=getStateMAC(mac_grow+1,normdir,
    0,nsolveMM_FACE,vel_time_slab); 
 
-   // mac_grow+1 for finding slopes
+   // mac_grow+1 (contingency)
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
-   // component 1: the velocity
-   // component(s) 2..sdim+1: derivatives
-  new_localMF(MAC_VELOCITY_MF+normdir,nsolveMM_FACE*(AMREX_SPACEDIM+1),
+   // velocity * dt
+  new_localMF(MAC_VELOCITY_MF+normdir,nsolveMM_FACE,
 		  mac_grow+1,normdir);
 
   const Real* dx = geom.CellSize();
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
-  // first sweep: 
   // 1. multiply velocity by dt.  
   // 2. adjust velocity if RZ.  
   // 3. override velocity if it is a passive advection problem.
   // 4. copy into mac_velocity
   // 5. repeat for cell_velocity
-  // second sweep:
-  // 1. calculate mac velocity slopes.
-
-  for (int isweep=0;isweep<=1;isweep++) {
-
-   if (thread_class::nthreads<1)
+  if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -11252,7 +11245,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
      // in: GODUNOV_3D.F90
     FORT_VELMAC_OVERRIDE(
-     &isweep,
      &nsolveMM_FACE,
      &nmat,
      tilelo,tilehi,
@@ -11277,12 +11269,11 @@ NavierStokes::prepare_displacement(int mac_grow) {
      &divu_outer_sweeps,
      &num_divu_outer_sweeps);
 
-   }  // mfi
+  }  // mfi
 } // omp
 
-   ns_reconcile_d_num(69);
+  ns_reconcile_d_num(69);
 
-  } // isweep=0..1
 
   delete temp_mac_velocity;
 
@@ -15292,10 +15283,10 @@ NavierStokes::split_scalar_advection() {
  debug_ngrow(MASK_NBR_MF,ngrow,28); 
 
  MultiFab* umac_new[AMREX_SPACEDIM];
- MultiFab* xdmac_new[AMREX_SPACEDIM];
+ MultiFab* xdisp_mac_new[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
-  xdmac_new[dir]=&get_new_data(XDmac_Type_local+dir,slab_step+1);
+  xdisp_mac_new[dir]=&get_new_data(XDmac_Type_local+dir,slab_step+1);
  }
 
 
@@ -15818,8 +15809,9 @@ NavierStokes::split_scalar_advection() {
    // (4) =1 interior+ngrow    =0 otherwise
   FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
+   // velocity * dt
   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
-  if (unode.nComp()!=nsolveMM_FACE*(AMREX_SPACEDIM+1))
+  if (unode.nComp()!=nsolveMM_FACE)
    amrex::Error("unode has invalid ncomp");
 
     // this is the original data
@@ -16036,29 +16028,44 @@ NavierStokes::split_scalar_advection() {
    FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
    FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
-   FArrayBox& xmac_new=(*umac_new[0])[mfi];
-   FArrayBox& ymac_new=(*umac_new[1])[mfi];
-   FArrayBox& zmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
+   FArrayBox& xvmac_new=(*umac_new[0])[mfi];
+   FArrayBox& yvmac_new=(*umac_new[1])[mfi];
+   FArrayBox& zvmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& xdmac_new=(*xdisp_mac_new[0])[mfi];
+   FArrayBox& ydmac_new=(*xdisp_mac_new[1])[mfi];
+   FArrayBox& zdmac_new=(*xdisp_mac_new[AMREX_SPACEDIM-1])[mfi];
+
+    // velocity * dt
+   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
+   if (unode.nComp()!=nsolveMM_FACE)
+    amrex::Error("unode has invalid ncomp");
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // declared in GODUNOV_3D.F90
    FORT_BUILD_NEWMAC(
+    &num_MAC_vectors,
     &nsolveMM_FACE,
     &normdir_here,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
+    unode.dataPtr(),ARLIM(unode.loVect()),ARLIM(unode.hiVect()),
     xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
     ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
     zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
     xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
     ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
     zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
-    xmac_new.dataPtr(),ARLIM(xmac_new.loVect()),ARLIM(xmac_new.hiVect()),
-    ymac_new.dataPtr(),ARLIM(ymac_new.loVect()),ARLIM(ymac_new.hiVect()),
-    zmac_new.dataPtr(),ARLIM(zmac_new.loVect()),ARLIM(zmac_new.hiVect()),
+    xvmac_new.dataPtr(),ARLIM(xvmac_new.loVect()),ARLIM(xvmac_new.hiVect()),
+    yvmac_new.dataPtr(),ARLIM(yvmac_new.loVect()),ARLIM(yvmac_new.hiVect()),
+    zvmac_new.dataPtr(),ARLIM(zvmac_new.loVect()),ARLIM(zvmac_new.hiVect()),
+    xdmac_new.dataPtr(),ARLIM(xdmac_new.loVect()),ARLIM(xdmac_new.hiVect()),
+    ydmac_new.dataPtr(),ARLIM(ydmac_new.loVect()),ARLIM(ydmac_new.hiVect()),
+    zdmac_new.dataPtr(),ARLIM(zdmac_new.loVect()),ARLIM(zdmac_new.hiVect()),
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     xlo,dx,
     &nmat,

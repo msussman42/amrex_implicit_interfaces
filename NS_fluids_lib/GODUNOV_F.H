@@ -561,20 +561,25 @@ extern "C"
 
 
    void FORT_BUILD_NEWMAC(
+    int* num_MAC_vectors,
     int* nsolveMM_FACE,
     int* normdir,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
+    Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),
     Real* xmomside,AMREX_ARLIM_P(xmomsidelo),AMREX_ARLIM_P(xmomsidehi),
     Real* ymomside,AMREX_ARLIM_P(ymomsidelo),AMREX_ARLIM_P(ymomsidehi),
     Real* zmomside,AMREX_ARLIM_P(zmomsidelo),AMREX_ARLIM_P(zmomsidehi),
     Real* xmassside,AMREX_ARLIM_P(xmasssidelo),AMREX_ARLIM_P(xmasssidehi),
     Real* ymassside,AMREX_ARLIM_P(ymasssidelo),AMREX_ARLIM_P(ymasssidehi),
     Real* zmassside,AMREX_ARLIM_P(zmasssidelo),AMREX_ARLIM_P(zmasssidehi),
-    Real* xmac,AMREX_ARLIM_P(xmaclo),AMREX_ARLIM_P(xmachi),
-    Real* ymac,AMREX_ARLIM_P(ymaclo),AMREX_ARLIM_P(ymachi),
-    Real* zmac,AMREX_ARLIM_P(zmaclo),AMREX_ARLIM_P(zmachi),
+    Real* xvmac,AMREX_ARLIM_P(xvmaclo),AMREX_ARLIM_P(xvmachi),
+    Real* yvmac,AMREX_ARLIM_P(yvmaclo),AMREX_ARLIM_P(yvmachi),
+    Real* zvmac,AMREX_ARLIM_P(zvmaclo),AMREX_ARLIM_P(zvmachi),
+    Real* xdmac,AMREX_ARLIM_P(xdmaclo),AMREX_ARLIM_P(xdmachi),
+    Real* ydmac,AMREX_ARLIM_P(ydmaclo),AMREX_ARLIM_P(ydmachi),
+    Real* zdmac,AMREX_ARLIM_P(zdmaclo),AMREX_ARLIM_P(zdmachi),
     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
     const Real* xlo,const Real* dx,
     int* nmat,
@@ -1458,7 +1463,6 @@ extern "C"
 
 
    void FORT_VELMAC_OVERRIDE(
-     int* isweep,
      int* nsolveMM_FACE,
      int* nmat,
      const int* tilelo,const int* tilehi,
