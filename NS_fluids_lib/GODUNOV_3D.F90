@@ -18992,9 +18992,12 @@ stop
       REAL_T, intent(inout) :: zmomside(DIMV(zmomside), &
         2*num_MAC_vectors)
 
-      REAL_T, intent(inout) :: xmassside(DIMV(xmassside),2)
-      REAL_T, intent(inout) :: ymassside(DIMV(ymassside),2)
-      REAL_T, intent(inout) :: zmassside(DIMV(zmassside),2)
+      REAL_T, intent(inout) :: xmassside(DIMV(xmassside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(inout) :: ymassside(DIMV(ymassside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(inout) :: zmassside(DIMV(zmassside), &
+        2*num_MAC_vectors)
     
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
       REAL_T, intent(in) :: density_floor(nmat)
@@ -19006,6 +19009,7 @@ stop
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ibucket
+      INTEGER_T ibucket_map
       REAL_T xsten_crse(-1:1,SDIM)
       INTEGER_T dir2
       INTEGER_T iside
@@ -19068,6 +19072,7 @@ stop
       INTEGER_T maskright
       INTEGER_T testmask
       REAL_T donate_data
+      REAL_T donate_data_MAC(num_MAC_vectors)
       REAL_T donate_density
       REAL_T donate_mom_density
       REAL_T donate_slope,donate_cen
@@ -19107,6 +19112,8 @@ stop
       REAL_T multi_cen_grid(SDIM,nmat)
       REAL_T newcen(SDIM,nmat)
       REAL_T veldata(nc_bucket)
+      REAL_T veldata_MAC(SDIM,num_MAC_vectors)
+      REAL_T veldata_MAC_mass(SDIM,num_MAC_vectors)
 
       REAL_T, dimension(:,:), allocatable :: compareconserve
       REAL_T, dimension(:,:), allocatable :: comparestate
@@ -19118,6 +19125,8 @@ stop
       INTEGER_T check_intersection
       INTEGER_T check_accept
       REAL_T xsten_recon(-1:1,SDIM)
+
+      INTEGER_T ivec
 
       REAL_T warning_cutoff
       INTEGER_T momcomp
@@ -19755,6 +19764,9 @@ stop
             do istate=1,nc_bucket
              veldata(istate)=zero
             enddo
+            do ivec=1,num_MAC_vectors
+             veldata_MAC(veldir,ivec)=zero
+            enddo
 
             do istencil=idonatelow,idonatehigh
 
@@ -19904,6 +19916,7 @@ stop
                   nmat,SDIM,3)
 
                 do im=1,nmat
+
                  ! density
                  dencomp_data=(im-1)*num_state_material+1
                  donate_data= &
@@ -19939,26 +19952,32 @@ stop
                   stop
                  endif
 
-                 ! xvel   : xvelleft,xvelright
-                 ! xvelslp: xvelslope,xcen 
+                 ! xvel   : xvel  1..num_MAC_vectors
+                 ! xvelslp: xvelslope,xcen   1..1+nmat
                  
                  if (veldir.eq.1) then
-                  donate_data= &
-                    xvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
+                  do ivec=1,num_MAC_vectors
+                   donate_data_MAC(veldir,ivec)= &
+                    xvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),ivec) 
+                  enddo
                   donate_cen= &
                     xvelslp(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),1+im) 
                   donate_slope= &
                     xvelslp(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),1) 
                  else if (veldir.eq.2) then
-                  donate_data= &
-                    yvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
+                  do ivec=1,num_MAC_vectors
+                   donate_data_MAC(veldir,ivec)= &
+                    yvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),ivec) 
+                  enddo
                   donate_cen= &
                     yvelslp(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),1+im) 
                   donate_slope= &
                     yvelslp(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),1) 
                  else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-                  donate_data= &
-                    zvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
+                  do ivec=1,num_MAC_vectors
+                   donate_data_MAC(veldir,ivec)= &
+                    zvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),ivec) 
+                  enddo
                   donate_cen= &
                     zvelslp(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),1+im) 
                   donate_slope= &
@@ -19969,16 +19988,64 @@ stop
                  endif
                  moment_grid_diff_face= &
                   multi_cen_grid(normdir+1,im)-donate_cen 
-                 mom2(veldir)=multi_volume_grid(im)*massdepart_mom* &
-                  (donate_data+donate_slope*moment_grid_diff_face)
 
                  massdepart_mom=massdepart_mom*multi_volume_grid(im)
+
+                 mom2(veldir)=massdepart_mom* &
+                  (donate_data_MAC(veldir,1)+ &
+                   donate_slope*moment_grid_diff_face)
 
                  veldata(iden_mom_base+im)= &
                   veldata(iden_mom_base+im)+massdepart_mom
 
                  momcomp=(im-1)*SDIM+veldir
                  veldata(momcomp)=veldata(momcomp)+mom2(veldir) 
+
+                 veldata_MAC_mass(veldir,1)= &
+                  veldata_MAC_mass(veldir,1)+massdepart_mom
+
+                 veldata_MAC(veldir,1)= &
+                  veldata_MAC(veldir,1)+mom2(veldir)
+
+                 if ((num_materials_viscoelastic.ge.1).and. &
+                     (num_materials_viscoelastic.le.nmat)) then
+
+                  if (fort_store_elastic_data(im).eq.1) then
+                   imap=1
+                   do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+                             (imap.le.num_materials_viscoelastic))
+                    imap=imap+1
+                   enddo
+                   if (imap.le.num_materials_viscoelastic) then
+                    if (num_MAC_vectors.eq.1) then
+                     ! do nothing
+                    else if (num_MAC_vectors.eq. &
+                             1+num_materials_viscoelastic) then
+                     veldata_MAC_mass(veldir,1+imap)= &
+                      veldata_MAC_mass(veldir,1+imap)+massdepart_mom
+                     veldata_MAC(veldir,1+imap)= &
+                      veldata_MAC(veldir,1+imap)+ &
+                      donate_data_MAC(veldir,1+imap)*massdepart_mom
+                    else
+                     print *,"num_MAC_vectors invalid"
+                     stop
+                    endif
+                   else 
+                    print *,"imap invalid"
+                    stop
+                   endif
+                  else if (fort_store_elastic_data(im).eq.0) then
+                   ! do nothing
+                  else
+                   print *,"fort_store_elastic_data(im) invalid"
+                   stop
+                  endif
+
+                 else
+                  print *,"num_materials_viscoelastic invalid"
+                  stop
+                 endif
+
                 enddo ! im=1,..,nmat 
 
                endif ! volint>0
@@ -20011,6 +20078,69 @@ stop
              momcomp=(im-1)*SDIM+veldir
 
              if (is_prescribed(nmat,im).eq.0) then
+
+              if ((num_materials_viscoelastic.ge.1).and. &
+                  (num_materials_viscoelastic.le.nmat)) then
+
+               if (fort_store_elastic_data(im).eq.1) then
+                imap=1
+                do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+                          (imap.le.num_materials_viscoelastic))
+                 imap=imap+1
+                enddo
+
+                if (imap.le.num_materials_viscoelastic) then
+                 if (num_MAC_vectors.eq.1) then
+                  ! do nothing
+                 else if (num_MAC_vectors.eq. &
+                          1+num_materials_viscoelastic) then
+
+                  ibucket_map=ibucket+2*imap
+                  if (veldir.eq.1) then
+                   xmomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
+                    xmomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
+                    veldata_MAC(veldir,1+imap)
+                   xmassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
+                    xmassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
+                    veldata_MAC_mass(veldir,1+imap)
+                  else if (veldir.eq.2) then
+                   ymomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
+                    ymomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
+                    veldata_MAC(veldir,1+imap)
+                   ymassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
+                    ymassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
+                    veldata_MAC_mass(veldir,1+imap)
+                  else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+                   zmomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
+                    zmomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
+                    veldata_MAC(veldir,1+imap)
+                   zmassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
+                    zmassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
+                    veldata_MAC_mass(veldir,1+imap)
+                  else
+                   print *,"veldir invalid"
+                   stop
+                  endif
+
+                 else
+                  print *,"num_MAC_vectors invalid"
+                  stop
+                 endif
+                else 
+                 print *,"imap invalid"
+                 stop
+                endif
+               else if (fort_store_elastic_data(im).eq.0) then
+                ! do nothing
+               else
+                print *,"fort_store_elastic_data(im) invalid"
+                stop
+               endif
+
+              else
+               print *,"num_materials_viscoelastic invalid"
+               stop
+              endif
           
               if (veldir.eq.1) then
                xmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
@@ -20058,8 +20188,9 @@ stop
         enddo
         enddo
         enddo  ! icrse,jcrse,kcrse -> growntileboxMAC(0 ghost)
-
-       enddo ! veldir
+FIX ME still have to add velocity increment to displacement update 
+(to do in the next routine)
+       enddo ! veldir=1..sdim
 
       else if (face_flag.eq.0) then
        ! do nothing

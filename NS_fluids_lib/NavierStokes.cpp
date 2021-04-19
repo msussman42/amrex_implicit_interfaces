@@ -15435,7 +15435,7 @@ NavierStokes::split_scalar_advection() {
  MultiFab* xvel[AMREX_SPACEDIM]; // num_MAC_vectors components
  MultiFab* xvelslope[AMREX_SPACEDIM]; // xvelslope,xcen 1+nmat components.
  MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
- MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
+ MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
 
   // (dir-1)*2*nmat + (side-1)*nmat + im
  int nrefine_vof=2*nmat*AMREX_SPACEDIM;
@@ -15555,11 +15555,11 @@ NavierStokes::split_scalar_advection() {
     //scomp=0 ncomp=2*num_MAC_vectors ngrow=1
    side_bucket_mom[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
 
-    //ncomp=2 ngrow=1
-   side_bucket_mass[dir]=new MultiFab(grids,dmap,2,1,
+    //ncomp=2*num_MAC_vectors ngrow=1
+   side_bucket_mass[dir]=new MultiFab(grids,dmap,2*num_MAC_vectors,1,
 	MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=1
-   side_bucket_mass[dir]->setVal(0.0,0,2,1);
+    //scomp=0 ncomp=2*num_MAC_vectors ngrow=1
+   side_bucket_mass[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
   }  // dir = 0..sdim-1
 
   for (int veldir=1;veldir<=AMREX_SPACEDIM;veldir++) {
