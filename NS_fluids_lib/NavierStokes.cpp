@@ -16068,6 +16068,7 @@ NavierStokes::split_scalar_advection() {
     zdmac_new.dataPtr(),ARLIM(zdmac_new.loVect()),ARLIM(zdmac_new.hiVect()),
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     xlo,dx,
+    &cur_time_slab,
     &nmat,
     &level,
     &finest_level);

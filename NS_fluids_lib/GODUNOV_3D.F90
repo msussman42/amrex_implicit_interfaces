@@ -3543,6 +3543,7 @@ stop
        zdmac,DIMS(zdmac), &
        mask,DIMS(mask), &
        xlo,dx, &
+       cur_time, &
        nmat, &
        level, &
        finest_level)
@@ -3614,6 +3615,7 @@ stop
 
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: cur_time
 
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T iii,jjj,kkk
@@ -3631,6 +3633,13 @@ stop
       REAL_T massface_total(num_MAC_vectors)
       REAL_T massquarter,momquarter
       REAL_T xsten(-1:1,SDIM)
+
+      REAL_T xclamped(SDIM)
+      REAL_T LS_clamped
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+
+      INTEGER_T dir_local
       INTEGER_T nhalf
 
       nhalf=1
@@ -3716,6 +3725,9 @@ stop
         do k=igridlo(3),igridhi(3)
 
          call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir)
+         do dir_local=1,SDIM
+          xclamped(dir_local)=xsten(0,dir_local)
+         enddo
 
          zapvel=0
          if (levelrz.eq.0) then
@@ -3828,6 +3840,18 @@ stop
 
             if (massface_total(1).gt.zero) then
              momface_total(1)=momface_total(1)/massface_total(1)
+             ! LS>0 if clamped
+             call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+                vel_clamped,temperature_clamped)
+             if (LS_clamped.ge.zero) then
+              momface_total(1)=vel_clamped(veldir)
+             else if (LS_clamped.lt.zero) then
+              ! do nothing
+             else
+              print *,"LS_clamped is NaN"
+              stop
+             endif
+
             else
              print *,"massface_total(1) invalid"
              stop
@@ -3836,6 +3860,10 @@ stop
             do ivec=2,num_MAC_vectors
              if (massface_total(ivec).gt.zero) then
               momface_total(ivec)=momface_total(ivec)/massface_total(ivec)
+              if (veldir.eq.normdir+1) then
+               momface_total(ivec)=momface_total(ivec)+ &
+                   unode(D_DECL(i,j,k))
+              endif
              else if (massface_total(ivec).eq.zero) then
               momface_total(ivec)=zero
              else
@@ -3864,7 +3892,6 @@ stop
              stop
             endif
 
-              TODO: add displacement, check if clamped (for vel)
           else if ((maskleft.eq.zero).or.(maskright.eq.zero)) then
             ! do nothing
           else 
@@ -20192,8 +20219,7 @@ stop
         enddo
         enddo
         enddo  ! icrse,jcrse,kcrse -> growntileboxMAC(0 ghost)
-FIX ME still have to add velocity increment to displacement update 
-(to do in the next routine)
+
        enddo ! veldir=1..sdim
 
       else if (face_flag.eq.0) then

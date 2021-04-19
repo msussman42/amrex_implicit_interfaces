@@ -582,6 +582,7 @@ extern "C"
     Real* zdmac,AMREX_ARLIM_P(zdmaclo),AMREX_ARLIM_P(zdmachi),
     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
     const Real* xlo,const Real* dx,
+    Real* cur_time,
     int* nmat,
     int* level,
     int* finest_level);
