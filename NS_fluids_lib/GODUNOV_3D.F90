@@ -3623,10 +3623,12 @@ stop
       INTEGER_T ibucket
       INTEGER_T ileft,jleft,kleft
       INTEGER_T iright,jright,kright
+      INTEGER_T ivec
       INTEGER_T zapvel
       REAL_T maskleft
       REAL_T maskright
-      REAL_T momface_total,massface_total
+      REAL_T momface_total(num_MAC_vectors)
+      REAL_T massface_total(num_MAC_vectors)
       REAL_T massquarter,momquarter
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -3738,7 +3740,22 @@ stop
          endif
 
          if (zapvel.eq.1) then
-          xvmac(D_DECL(i,j,k))=zero
+          if (veldir.eq.1) then
+           xvmac(D_DECL(i,j,k))=zero
+           if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
+            do ivec=1,num_materials_viscoelastic
+             xdmac(D_DECL(i,j,k),ivec)=zero
+            enddo
+           else if (num_MAC_vectors.eq.1) then
+            ! do nothing
+           else
+            print *,"num_MAC_vectors invalid"
+            stop
+           endif
+          else
+           print *,"veldir invalid"
+           stop
+          endif
          else if (zapvel.eq.0) then
           iright=i
           jright=j
@@ -3753,8 +3770,10 @@ stop
 
           if ((maskleft.eq.one).and.(maskright.eq.one)) then
 
-            momface_total=zero
-            massface_total=zero
+            do ivec=1,num_MAC_vectors
+             momface_total(ivec)=zero
+             massface_total(ivec)=zero
+            enddo
 
              ! iside=-1 (left of face)
              ! iside=1  (right of face)
@@ -3778,41 +3797,47 @@ stop
               stop
              endif
 
-             if (veldir.eq.1) then
-              massquarter=xmassside(D_DECL(icell,jcell,kcell),ibucket)
-              momquarter=xmomside(D_DECL(icell,jcell,kcell),ibucket)
-             else if (veldir.eq.2) then
-              massquarter=ymassside(D_DECL(icell,jcell,kcell),ibucket)
-              momquarter=ymomside(D_DECL(icell,jcell,kcell),ibucket)
-             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-              massquarter=zmassside(D_DECL(icell,jcell,kcell),ibucket)
-              momquarter=zmomside(D_DECL(icell,jcell,kcell),ibucket)
-             else
-              print *,"veldir invalid"
-              stop
-             endif
-             if (massquarter.lt.zero) then
-              print *,"massquarter cannot be negative"
-              stop
-             endif
+             do ivec=1,num_MAC_vectors
 
-             massface_total=massface_total+massquarter
-             momface_total=momface_total+momquarter
+              ibucket_map=ibucket+2*(ivec-1)
+           
+              if (veldir.eq.1) then
+               massquarter=xmassside(D_DECL(icell,jcell,kcell),ibucket_map)
+               momquarter=xmomside(D_DECL(icell,jcell,kcell),ibucket_map)
+              else if (veldir.eq.2) then
+               massquarter=ymassside(D_DECL(icell,jcell,kcell),ibucket_map)
+               momquarter=ymomside(D_DECL(icell,jcell,kcell),ibucket_map)
+              else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+               massquarter=zmassside(D_DECL(icell,jcell,kcell),ibucket_map)
+               momquarter=zmomside(D_DECL(icell,jcell,kcell),ibucket_map)
+              else
+               print *,"veldir invalid"
+               stop
+              endif
+              if (massquarter.lt.zero) then
+               print *,"massquarter cannot be negative"
+               stop
+              endif
+
+              massface_total(ivec)=massface_total(ivec)+massquarter
+              momface_total(ivec)=momface_total(ivec)+momquarter
+
+             enddo !ivec=1,num_MAC_vectors
 
             enddo ! iside
 
-            if (massface_total.le.zero) then
-             print *,"massface_total invalid"
+            if (massface_total(1).le.zero) then
+             print *,"massface_total(1) invalid"
              stop
             endif
-            momface_total=momface_total/massface_total
+            momface_total(1)=momface_total(1)/massface_total(1)
             
             if (veldir.eq.1) then
-             xvmac(D_DECL(i,j,k))=momface_total
+             xvmac(D_DECL(i,j,k))=momface_total(1)
             else if (veldir.eq.2) then
-             yvmac(D_DECL(i,j,k))=momface_total
+             yvmac(D_DECL(i,j,k))=momface_total(1)
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-             zvmac(D_DECL(i,j,k))=momface_total
+             zvmac(D_DECL(i,j,k))=momface_total(1)
             else
              print *,"veldir invalid"
              stop
