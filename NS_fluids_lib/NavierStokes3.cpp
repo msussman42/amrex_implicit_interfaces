@@ -2065,7 +2065,8 @@ void NavierStokes::SEM_advectALL(int source_term) {
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-     ns_level.getStateMAC_localMF(UMAC_MF+dir,0,dir,0,1,vel_time_slab);
+     ns_level.getStateMAC_localMF(
+       Umac_Type,UMAC_MF+dir,0,dir,0,1,vel_time_slab);
    } //ilev=finest_level ... level
 
    int advect_iter_max=2;
@@ -9902,7 +9903,7 @@ void NavierStokes::multiphase_project(int project_option) {
      // 4. .... (UMAC updated)
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     MultiFab* macvel=
-      ns_level.getStateMAC(0,dir,0,nsolveMM_FACE,cur_time_slab); 
+      ns_level.getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab); 
     MultiFab::Copy(
       *ns_level.localMF[MAC_TEMP_MF+dir],
       *macvel,0,0,nsolveMM_FACE,0);
@@ -13196,7 +13197,7 @@ void NavierStokes::prepare_advect_vars(Real time) {
 
  new_localMF(ADVECT_REGISTER_MF,nsolveMM,1,-1);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,0,dir,
+  getStateMAC_localMF(Umac_Type,ADVECT_REGISTER_FACE_MF+dir,0,dir,
     0,nsolveMM_FACE_MAC,time);
  } // dir
   // advect_register has 1 ghost initialized.

@@ -3548,18 +3548,19 @@ stop
        level, &
        finest_level)
       use probcommon_module
+      use probf90_module
       use global_utility_module
       use MOF_routines_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: num_MAC_vectors
       INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T, intent(in) :: nsolveMM_FACE_test
+      INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: normdir ! 0..sdim-1
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: veldir
+      INTEGER_T :: veldir
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -3623,6 +3624,7 @@ stop
       INTEGER_T iside
       INTEGER_T icell,jcell,kcell
       INTEGER_T ibucket
+      INTEGER_T ibucket_map
       INTEGER_T ileft,jleft,kleft
       INTEGER_T iright,jright,kright
       INTEGER_T ivec
@@ -13766,12 +13768,9 @@ stop
      
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
-      INTEGER_T iii,jjj,kkk
       INTEGER_T idx,side
-      INTEGER_T dirtan
-      REAL_T delta,delta_test
-      REAL_T hx,hx_plus,hx_minus
-      REAL_T dplus,dminus,dminmod
+      REAL_T delta
+      REAL_T hx
       REAL_T RR
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
@@ -19103,7 +19102,7 @@ stop
       INTEGER_T maskright
       INTEGER_T testmask
       REAL_T donate_data
-      REAL_T donate_data_MAC(num_MAC_vectors)
+      REAL_T donate_data_MAC(SDIM,num_MAC_vectors)
       REAL_T donate_density
       REAL_T donate_mom_density
       REAL_T donate_slope,donate_cen

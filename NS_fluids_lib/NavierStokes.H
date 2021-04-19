@@ -692,7 +692,8 @@ protected:
      int ncomp,int ngrow);
 
     void new_localMF(int idx_MF,int ncomp,int ngrow,int dir);
-    void getStateMAC_localMF(int idx_MF,int ngrow,int dir,
+    void getStateMAC_localMF(int MAC_state_idx,
+     int idx_MF,int ngrow,int dir,
      int scomp,int ncomp,Real time);
     void getStateDen_localMF(int idx_MF,int ngrow,Real time);
     void getStateDist_localMF(int idx_MF,int ngrow,Real time,int caller_id);
@@ -1340,8 +1341,10 @@ void apply_pressure_grad(
 
     void MAC_GRID_ELASTIC_FORCE(int idx);
 
-    MultiFab* getStateMAC(int ngrow,int dir,int scomp,int ncomp,Real time);
-    MultiFab* getStateMAC_XD(int ngrow,int dir,int scomp,int ncomp,Real time);
+    MultiFab* getStateMAC(int MAC_state_idx,
+	int ngrow,int dir,
+	int scomp,int ncomp,Real time);
+
     void getStateDIV_ALL(int idx,int ngrow);
     void getStateDIV(int idx,int ngrow);
 
