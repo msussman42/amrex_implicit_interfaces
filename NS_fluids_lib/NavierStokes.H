@@ -231,8 +231,6 @@ namespace amrex{
 
 #define TENSOR_RECON_MF 216
 
-#define CONS_COR_MF 217
-
 #define DIV_SAVE_MF 218
 
 #define NEG_MOM_FORCE_MF 219
@@ -1056,7 +1054,6 @@ protected:
      // spectral_override==0 => always low order.
     void avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
      int start_dir,int ndir,int spectral_override,int caller_id);
-    void vofflux_sum(int dir,MultiFab& S_crse,MultiFab& S_fine);
 
     void smearvariable(int scomp,
      MultiFab* mask_extrapolate,int ngrow,Real def_value);
@@ -1589,7 +1586,6 @@ protected:
     static int  SEM_upwind;
      //0=div(uS)-S div(u)    1=u dot grad S  def=0
     static int  SEM_advection_algorithm;
-    static int  VOF_reflux; // default is 0
      // continuous_mof = 0 => regular MOF
      // continuous_mof = 2 => CMOF ("continuous MOF ")
      // continuous_mof = 3 => CLSVOF except use MOF in cells with >2 materials.
@@ -2048,7 +2044,6 @@ protected:
     static Real walltemp;
     static Vector<int> advection_order;
     static Vector<int> density_advection_order;
-     // 0=Sussman and Puckett algorithm 
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 

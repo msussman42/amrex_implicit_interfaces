@@ -195,151 +195,6 @@ NavierStokes::avgDownEdge(int dir,MultiFab& S_crse,MultiFab& S_fine,
 }  // avgDownEdge
 
 
-
-void
-NavierStokes::vofflux_sum(int dir,MultiFab& S_crse,MultiFab& S_fine) {
-
- int nmat=num_materials;
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((dir<0)||(dir>=AMREX_SPACEDIM))
-  amrex::Error("dir invalid vofflux_sum");
-
- int finest_level=parent->finestLevel();
- if (level>=finest_level) 
-  amrex::Error("level invalid in vofflux_sum");
-
- int f_level=level+1;
- NavierStokes& fine_lev = getLevel(f_level);
- resize_metrics(1);
- debug_ngrow(VOLUME_MF,0,700);
- fine_lev.resize_metrics(1);
- fine_lev.debug_ngrow(VOLUME_MF,0,700);
-
- if ((*fine_lev.localMF[AREA_MF+dir]).boxArray()!=S_fine.boxArray()) {
-  const BoxArray& farray=(*fine_lev.localMF[AREA_MF+dir]).boxArray();
-  const BoxArray& sarray=S_fine.boxArray();
-  std::cout << "farray " << farray << '\n';
-  std::cout << "sarray " << sarray << '\n';
-  std::cout << "dir " << dir << '\n';
-  std::cout << "level,finest_level " << level << ' ' << finest_level <<'\n';
-
-  amrex::Error("invalid boxes in vofflux_sum fine level");
- }
- if ((*localMF[AREA_MF+dir]).boxArray()!=S_crse.boxArray())
-  amrex::Error("invalid boxes in vofflux_sum crse level");
-
- if ((S_crse.nComp()!=nmat*num_materials_vel)||
-     (S_fine.nComp()!=nmat*num_materials_vel)) {
-  std::cout << "coarse ncomp " << S_crse.nComp() << '\n';
-  std::cout << "fine ncomp " << S_fine.nComp() << '\n';
-  amrex::Error("ncomp invalid in vofflux_sum");
- }
-
- const BoxArray& fgrids=S_fine.boxArray();
- const BoxArray& fgridscen=fine_lev.grids;
- const DistributionMapping& fdmap=fine_lev.dmap;
-
- if (fgrids.size()==fgridscen.size()) {
-  // do nothing
- } else {
-  amrex::Error("expecting: fgrids.size()==fgridscen.size()");
- }
-
- BoxArray crse_S_fine_BA(fgrids.size());
- BoxArray crse_cen_fine_BA(fgridscen.size());
-
- for (int i = 0; i < fgrids.size(); ++i) {
-  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
-  Box cbox=amrex::coarsen(fgridscen[i],2);
-  crse_cen_fine_BA.set(i,cbox);
- }
-
- DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nmat*num_materials_vel,0,
-   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
-
- ParallelDescriptor::Barrier();
- int bfact=parent->Space_blockingFactor(level);
- int bfact_f=parent->Space_blockingFactor(f_level);
-
- if ((bfact!=1)||(bfact_f!=1))
-  amrex::Error("bfact invalid in vofflux_sum");
-
- const Real* dx = geom.CellSize();
- const Real* dxf = fine_lev.geom.CellSize();
- const Real* prob_lo   = geom.ProbLo();
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
-  BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
-  const Box& tilegrid = mfi.tilebox();
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-  const int i = mfi.index();
-  const Real* xlo_fine = fine_lev.grid_loc[i].lo();
-
-  const Box& cbox = crse_cen_fine_BA[i];
-  FArrayBox& crse_fab = crse_S_fine[mfi];
-
-  const Box& fbox = fgridscen[i];
-  const FArrayBox& fine_fab = S_fine[mfi];
-
-  FORT_VOFFLUX_CORRECT(
-   &finest_level,
-   prob_lo,
-   dxf,
-   &level,&f_level,
-   &bfact,&bfact_f,
-   xlo_fine,dx,
-   &dir,
-   crse_fab.dataPtr(),
-   ARLIM(crse_fab.loVect()),ARLIM(crse_fab.hiVect()),
-   fine_fab.dataPtr(),
-   ARLIM(fine_fab.loVect()),ARLIM(fine_fab.hiVect()),
-   cbox.loVect(),cbox.hiVect(),
-   fbox.loVect(),fbox.hiVect(),
-   &nmat);
- }  // mfi
-} //omp
- ns_reconcile_d_num(170);
-
- S_crse.copy(crse_S_fine,0,0,nmat*num_materials_vel);
- ParallelDescriptor::Barrier();
-
- const Box& domain = geom.Domain();
- if (geom.isPeriodic(dir)) {
-  IntVect pshift=IntVect::TheZeroVector();
-  pshift[dir]=domain.length(dir);
-  crse_S_fine.shift(pshift);
-
-  ParallelDescriptor::Barrier();
-  S_crse.copy(crse_S_fine,0,0,nmat*num_materials_vel);
-  ParallelDescriptor::Barrier();
-
-  pshift[dir]=-2*domain.length(dir);
-  crse_S_fine.shift(pshift);
-
-  S_crse.copy(crse_S_fine,0,0,nmat*num_materials_vel);
-  ParallelDescriptor::Barrier();
- }  // isPeriodic(dir)
-
-}  // vofflux_sum
-
-
 // called from updatevelALL,multiphase_project
 // interpolate from level+1 to level.
 void
@@ -431,16 +286,6 @@ void NavierStokes::nonlinear_advection() {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.new_localMF(VOF_LS_PREV_TIME_MF,2*nmat,1,-1);
-
-  if (EILE_flag==0) {
-   ns_level.new_localMF(CONS_COR_MF,nmat,1,-1);
-  } else if ((EILE_flag==-1)||
-             (EILE_flag==1)||
-             (EILE_flag==2)||
-             (EILE_flag==3)) {
-   // do nothing
-  } else
-   amrex::Error("EILE_flag invalid");
  }  // ilev=finest_level ... level
 
   // order_direct_split=base_step mod 2
@@ -475,7 +320,6 @@ void NavierStokes::nonlinear_advection() {
   int normdir_here=normdir_direct_split[dir_absolute_direct_split];
 
   if ((EILE_flag==-1)||  // Weymouth and Yue
-      (EILE_flag==0)||   // Sussman and Puckett
       (EILE_flag==2)) {  // always EI
    map_forward_direct_split[normdir_here]=0;
   } else if (EILE_flag==3) { // always LE
@@ -584,8 +428,6 @@ void NavierStokes::nonlinear_advection() {
     ns_level.split_scalar_advection();
    } // ilev
 
-   delete_array(CONSERVE_FLUXES_MF+normdir_here);
-
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
      // in: nonlinear_advection
@@ -612,16 +454,6 @@ void NavierStokes::nonlinear_advection() {
  for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.delete_localMF(VOF_LS_PREV_TIME_MF,1);
-
-   if (EILE_flag==0) {
-    ns_level.delete_localMF(CONS_COR_MF,1);
-   } else if ((EILE_flag==-1)||
-              (EILE_flag==1)||
-              (EILE_flag==2)||
-              (EILE_flag==3)) {
-    // do nothing
-   } else
-    amrex::Error("EILE_flag invalid");
 
    ns_level.delete_localMF(MAC_VELOCITY_MF,AMREX_SPACEDIM);
    ns_level.delete_localMF(CELL_VELOCITY_MF,1);

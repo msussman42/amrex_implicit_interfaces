@@ -3865,6 +3865,11 @@ stop
               if (veldir.eq.normdir+1) then
                momface_total(ivec)=momface_total(ivec)+ &
                    unode(D_DECL(i,j,k))
+              else if ((veldir.ge.1).and.(veldir.le.SDIM)) then
+               ! do nothing
+              else
+               print *,"veldir invalid"
+               stop
               endif
              else if (massface_total(ivec).eq.zero) then
               momface_total(ivec)=zero
@@ -12633,10 +12638,16 @@ stop
        stop
       endif
 
-      if ((EILE_flag.lt.-1).or.(EILE_flag.gt.3)) then
+      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
+          (EILE_flag.eq.1).or.  & ! EILE
+          (EILE_flag.eq.2).or.  & ! always EI
+          (EILE_flag.eq.3)) then  ! always LE
+       ! do nothing
+      else 
        print *,"EILE flag invalid"
        stop
       endif
+
       if (cfl.le.zero) then
        print *,"cfl invalid"
        stop
@@ -12646,8 +12657,7 @@ stop
           (EILE_flag.eq.2).or. & ! always EI
           (EILE_flag.eq.3)) then ! always LE
        weymouth_cfl=half  ! we advect half cells.
-      else if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
-               (EILE_flag.eq.0)) then  ! Sussman and Puckett 
+      else if (EILE_flag.eq.-1) then ! Weymouth and Yue
        weymouth_cfl=one/(two*SDIM)
       else
        print *,"EILE_flag invalid"
@@ -18817,7 +18827,6 @@ stop
        constant_density_all_time, &
        velbc, &
        EILE_flag, &
-       VOF_reflux, &
        dir_counter, &
        normdir, &
        tilelo,tilehi, &
@@ -18827,9 +18836,6 @@ stop
        dt, &
        time, &
        passive_veltime, &
-       vofflux, &
-       DIMS(vofflux), &  !voffluxlox,voffluxloy,voffluxloz,
-                         !voffluxhix,voffluxhiy,voffluxhiz
        LS,DIMS(LS), &  ! original data
        den, &
        DIMS(den), &
@@ -18843,7 +18849,6 @@ stop
        LSnew,DIMS(LSnew), &
        ucell,DIMS(ucell), &  ! other vars
        vofls0,DIMS(vofls0), &  
-       conscor,DIMS(conscor), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
        unode,DIMS(unode), & ! vel*dt
@@ -18913,7 +18918,6 @@ stop
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, intent(in) :: dombc(SDIM,2)
       INTEGER_T, intent(in) :: EILE_flag
-      INTEGER_T, intent(in) :: VOF_reflux
       REAL_T, intent(in) :: passive_veltime
       INTEGER_T, intent(in) :: dir_counter
       INTEGER_T, intent(in) :: normdir
@@ -18936,9 +18940,6 @@ stop
       INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       REAL_T, intent(in) :: dt,time
-       !voffluxlox,voffluxloy,voffluxloz, 
-       !voffluxhix,voffluxhiy,voffluxhiz
-      INTEGER_T, intent(in) :: DIMDEC(vofflux) 
        ! original data
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(den)
@@ -18954,7 +18955,6 @@ stop
        ! other vars
       INTEGER_T, intent(in) :: DIMDEC(ucell)
       INTEGER_T, intent(in) :: DIMDEC(vofls0)
-      INTEGER_T, intent(in) :: DIMDEC(conscor)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
       INTEGER_T, intent(in) :: DIMDEC(unode)
@@ -18975,11 +18975,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ymassside) 
       INTEGER_T, intent(in) :: DIMDEC(zmassside) 
 
-       !voffluxlox:voffluxhix,
-       !voffluxloy:voffluxhiy,
-       !voffluxloz:voffluxhiz
-      REAL_T, intent(inout) :: vofflux(DIMV(vofflux),nmat) 
-
        ! FABS
        ! original data
       REAL_T, intent(in) :: LS(DIMV(LS),nmat)
@@ -18997,7 +18992,6 @@ stop
        ! displacement
       REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
       REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
-      REAL_T, intent(inout) :: conscor(DIMV(conscor),nmat)
       REAL_T, intent(in) :: mask(DIMV(mask))
       ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T, intent(in) :: masknbr(DIMV(masknbr)) 
@@ -19043,8 +19037,6 @@ stop
       REAL_T xsten_crse(-1:1,SDIM)
       INTEGER_T dir2
       INTEGER_T iside
-      INTEGER_T iside_coarse
-      INTEGER_T index_norm
       INTEGER_T iside_part
       INTEGER_T isidedonate
       INTEGER_T iside_low,iside_high
@@ -19098,9 +19090,6 @@ stop
 
       INTEGER_T istencil
       INTEGER_T maskcell
-      INTEGER_T maskleft
-      INTEGER_T maskright
-      INTEGER_T testmask
       REAL_T donate_data
       REAL_T donate_data_MAC(SDIM,num_MAC_vectors)
       REAL_T donate_density
@@ -19164,16 +19153,10 @@ stop
 
       INTEGER_T nsolveMM_FACE_test
 
-      REAL_T flux_cor
-      REAL_T face_displace
-      REAL_T sign_face_displace
-
       REAL_T cutoff,DXMAXLS
       INTEGER_T all_incomp
       REAL_T divuterm,vol_target_local
-      INTEGER_T i1,j1,k1,k1lo,k1hi
-      REAL_T local_cor(nmat)
-      REAL_T Fmin,Fmax,Ftest
+      INTEGER_T k1lo,k1hi
 
       REAL_T massfrac_parm(num_species_var+1)
 
@@ -19373,17 +19356,16 @@ stop
        stop
       endif
 
-      if ((VOF_reflux.eq.0).or.(VOF_reflux.eq.1)) then
+      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
+          (EILE_flag.eq.1).or.  & ! EILE
+          (EILE_flag.eq.2).or.  & ! always EI
+          (EILE_flag.eq.3)) then  ! always LE
        ! do nothing
-      else
-       print *,"VOF_reflux invalid"
+      else 
+       print *,"EILE flag invalid"
        stop
       endif
 
-      if ((EILE_flag.lt.-1).or.(EILE_flag.gt.3)) then
-       print *,"EILE_flag invalid"
-       stop
-      endif
       if ((dir_counter.lt.0).or.(dir_counter.ge.SDIM)) then
        print *,"dir_counter invalid"
        stop
@@ -19430,7 +19412,7 @@ stop
 
        ! SANITY CHECKS TO MAKE SURE THAT input FABs have the expected number of
        ! ghost cells.
-      call checkbound(fablo,fabhi,DIMS(vofflux),0,normdir,136)
+
        ! original data
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,136)
       call checkbound(fablo,fabhi,DIMS(den),ngrow,-1,1231)
@@ -19446,7 +19428,6 @@ stop
        ! other vars
       call checkbound(fablo,fabhi,DIMS(ucell),ngrow-1,-1,135)
       call checkbound(fablo,fabhi,DIMS(vofls0),1,-1,135)
-      call checkbound(fablo,fabhi,DIMS(conscor),1,-1,135)
       call checkbound(fablo,fabhi,DIMS(mask),ngrow,-1,133)
       call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,134)
       call checkbound(fablo,fabhi,DIMS(unode),ngrow-1,normdir,121)
@@ -20822,381 +20803,6 @@ stop
           stop
          endif
 
-         ! -------------------------------------------
-         ! volume correction at coarse/fine interfaces
-         ! -------------------------------------------
-         if (bfact.eq.1) then
-
-          if (normdir.eq.0) then
-           index_norm=icrse
-          else if (normdir.eq.1) then
-           index_norm=jcrse
-          else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-           index_norm=kcrse
-          else
-           print *,"normdir invalid"
-           stop
-          endif
-          if (fabhi(normdir+1).eq.fablo(normdir+1)) then
-           print *,"blocking factor must be >= 2"
-           stop
-          endif
-
-          iside=0
-
-          if (level.gt.0) then
-
-           if (fablo(normdir+1).eq.index_norm) then
-            if (velbc(normdir+1,1).eq.INT_DIR) then
-             testmask=NINT(masknbr(D_DECL(icrse-ii,jcrse-jj,kcrse-kk)))
-             if (testmask.eq.0) then
-              iside=1
-              ipart=icrse
-              jpart=jcrse
-              kpart=kcrse
-             else if (testmask.eq.1) then
-              ! do nothing
-             else
-              print *,"testmask invalid"
-              stop
-             endif
-            endif
-           else if (fabhi(normdir+1).eq.index_norm) then
-            if (velbc(normdir+1,2).eq.INT_DIR) then
-             testmask=NINT(masknbr(D_DECL(icrse+ii,jcrse+jj,kcrse+kk)))
-             if (testmask.eq.0) then
-              iside=2
-              ipart=icrse+ii
-              jpart=jcrse+jj
-              kpart=kcrse+kk
-             else if (testmask.eq.1) then
-              ! do nothing
-             else
-              print *,"testmask invalid"
-              stop
-             endif
-            endif
-           else if ((index_norm.gt.fablo(normdir+1)).and. &
-                    (index_norm.lt.fabhi(normdir+1))) then
-            ! do nothing
-           else
-            print *,"index_norm invalid"
-            stop
-           endif
-
-           if ((iside.eq.1).or.(iside.eq.2)) then
-
-            face_displace=unode(D_DECL(ipart,jpart,kpart))
-            if (abs(face_displace).ge.VOFTOL*dx(normdir+1)) then
-             idonate=icrse
-             jdonate=jcrse
-             kdonate=kcrse
-             if (normdir.eq.0) then
-              if (face_displace.lt.zero) then
-               idonate=ipart
-              else if (face_displace.gt.zero) then
-               idonate=ipart-ii 
-              else 
-               print *,"face_displace invalid"
-               stop
-              endif
-             else if (normdir.eq.1) then
-              if (face_displace.lt.zero) then
-               jdonate=jpart
-              else if (face_displace.gt.zero) then
-               jdonate=jpart-jj 
-              else 
-               print *,"face_displace invalid"
-               stop
-              endif
-             else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-              if (face_displace.lt.zero) then
-               kdonate=kpart
-              else if (face_displace.gt.zero) then
-               kdonate=kpart-kk 
-              else 
-               print *,"face_displace invalid"
-               stop
-              endif
-             else
-              print *,"normdir invalid"
-              stop
-             endif
-             call CISBOX(xsten_recon,1, &
-              xlo,dx,idonate,jdonate,kdonate, &
-              bfact,level, &
-              volcell_recon,cencell_recon,SDIM)
-             call CISBOX(xsten_donate,1, &
-              xlo,dx,idonate,jdonate,kdonate, &
-              bfact,level, &
-              volcell_donate,cencell_donate,SDIM)
-
-             if (face_displace.gt.zero) then
-              xsten_donate(-1,normdir+1)= &
-                xsten_donate(1,normdir+1)-face_displace
-             else if (face_displace.lt.zero) then
-              xsten_donate(1,normdir+1)= &
-                xsten_donate(-1,normdir+1)-face_displace
-             else
-              print *,"face_displace invalid"
-              stop
-             endif
-
-             xsten_donate(0,normdir+1)= &
-              half*(xsten_donate(-1,normdir+1)+xsten_donate(1,normdir+1))
-
-             do dir2=1,nmat*ngeom_recon
-              mofdata_grid(dir2)= &
-               PLICSLP(D_DECL(idonate,jdonate,kdonate),dir2)
-             enddo
-              
-             ! find departure volume within xsten_xrecon
-             tessellate=0
-             if (nmax.lt.10) then
-              print *,"nmax bust 3"
-              stop
-             endif
-             call multi_get_volume_grid_simple( &
-              tessellate, & !=0
-              bfact,dx, &
-              xsten_recon,1, &
-              mofdata_grid, &
-              xsten_donate,1, &
-              multi_volume_grid,multi_cen_grid, &
-              geom_xtetlist_uncapt(1,1,1,tid+1), &
-              nmax, &
-              nmax, &
-              nmat,SDIM,3)
-
-             if (face_displace.gt.zero) then
-              sign_face_displace=one
-             else if (face_displace.lt.zero) then
-              sign_face_displace=-one
-             else
-              print *,"face_displace invalid"
-              stop
-             endif
- 
-             do im=1,nmat
-              vofflux(D_DECL(ipart,jpart,kpart),im)= &
-                multi_volume_grid(im)*sign_face_displace
-             enddo
-            else if (abs(face_displace).le.VOFTOL*dx(normdir+1)) then
-             ! do nothing
-            else
-             print *,"face_displace bust"
-             stop
-            endif
-           else if (iside.eq.0) then
-            ! do nothing
-           else
-            print *,"iside invalid"
-            stop
-           endif
-
-          else if (level.eq.0) then
-           ! do nothing
-          else
-           print *,"level invalid 37"
-           stop
-          endif
-
-          if (bfact_f.eq.1) then
-           iside_coarse=0
-           if ((level.ge.0).and.(level.lt.finest_level)) then
-            maskleft=NINT(mask(D_DECL(icrse-ii,jcrse-jj,kcrse-kk)))
-            maskright=NINT(mask(D_DECL(icrse+ii,jcrse+jj,kcrse+kk)))
-            if ((maskleft.eq.1).and.(maskright.eq.1)) then
-             ! do nothing
-            else if ((maskleft.eq.0).and.(maskright.eq.0)) then
-             print *,"cannot have one coarse cell separating fine grids"
-            else if ((maskleft.eq.0).and.(maskright.eq.1)) then
-             iside_coarse=1
-             if (iside.eq.1) then
-              print *,"proper nesting condition failed"
-              stop
-             endif
-             ipart=icrse
-             jpart=jcrse
-             kpart=kcrse
-            else if ((maskleft.eq.1).and.(maskright.eq.0)) then
-             iside_coarse=2
-             if (iside.eq.2) then
-              print *,"proper nesting condition failed"
-              stop
-             endif
-             ipart=icrse+ii
-             jpart=jcrse+jj
-             kpart=kcrse+kk
-            else
-             print *,"maskleft or maskright invalid"
-             stop
-            endif
-
-             ! the current active (coarse) cell has a 
-             ! covered (inactive) neighbor. 
-            if ((iside_coarse.eq.1).or.(iside_coarse.eq.2)) then
-
-             face_displace=unode(D_DECL(ipart,jpart,kpart))
-             if (abs(face_displace).ge.VOFTOL*dx(normdir+1)) then
-              idonate=icrse
-              jdonate=jcrse
-              kdonate=kcrse
-              if (normdir.eq.0) then
-               if (face_displace.lt.zero) then
-                idonate=ipart
-               else if (face_displace.gt.zero) then
-                idonate=ipart-ii 
-               else 
-                print *,"face_displace invalid"
-                stop
-               endif
-              else if (normdir.eq.1) then
-               if (face_displace.lt.zero) then
-                jdonate=jpart
-               else if (face_displace.gt.zero) then
-                jdonate=jpart-jj 
-               else 
-                print *,"face_displace invalid"
-                stop
-               endif
-              else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-               if (face_displace.lt.zero) then
-                kdonate=kpart
-               else if (face_displace.gt.zero) then
-                kdonate=kpart-kk 
-               else 
-                print *,"face_displace invalid"
-                stop
-               endif
-              else
-               print *,"normdir invalid"
-               stop
-              endif
-              call CISBOX(xsten_recon,1, &
-               xlo,dx,idonate,jdonate,kdonate, &
-               bfact,level, &
-               volcell_recon,cencell_recon,SDIM)
-              call CISBOX(xsten_donate,1, &
-               xlo,dx,idonate,jdonate,kdonate, &
-               bfact,level, &
-               volcell_donate,cencell_donate,SDIM)
-
-              if (face_displace.gt.zero) then
-               xsten_donate(-1,normdir+1)= &
-                xsten_donate(1,normdir+1)-face_displace
-              else if (face_displace.lt.zero) then
-               xsten_donate(1,normdir+1)= &
-                xsten_donate(-1,normdir+1)-face_displace
-              else
-               print *,"face_displace invalid"
-               stop
-              endif
-
-              xsten_donate(0,normdir+1)= &
-               half*(xsten_donate(-1,normdir+1)+xsten_donate(1,normdir+1))
-
-              do dir2=1,nmat*ngeom_recon
-               mofdata_grid(dir2)= &
-                PLICSLP(D_DECL(idonate,jdonate,kdonate),dir2)
-              enddo
-              
-              ! find departure volume within xsten_xrecon
-              tessellate=0
-              if (nmax.lt.10) then
-               print *,"nmax bust 3"
-               stop
-              endif
-              call multi_get_volume_grid_simple( &
-               tessellate, & !=0
-               bfact,dx, &
-               xsten_recon,1, &
-               mofdata_grid, &
-               xsten_donate,1, &
-               multi_volume_grid,multi_cen_grid, &
-               geom_xtetlist_uncapt(1,1,1,tid+1), &
-               nmax, &
-               nmax, &
-               nmat,SDIM,3)
-
-              if (face_displace.gt.zero) then
-               sign_face_displace=one
-              else if (face_displace.lt.zero) then
-               sign_face_displace=-one
-              else
-               print *,"face_displace invalid"
-               stop
-              endif
-
-             else if (abs(face_displace).le.VOFTOL*dx(normdir+1)) then
-              sign_face_displace=zero
-              do im=1,nmat
-               multi_volume_grid(im)=zero
-              enddo
-             else
-              print *,"face_displace bust"
-              stop
-             endif
-
-             do im=1,nmat
-              flux_cor= &
-               vofflux(D_DECL(ipart,jpart,kpart),im)- &
-               multi_volume_grid(im)*sign_face_displace
-              if (abs(flux_cor).ge.VOFTOL*volcell_donate) then
-
-               if (VOF_reflux.eq.1) then
-                if (iside_coarse.eq.1) then
-                 volmat_target_cor(im)=volmat_target_cor(im)+flux_cor
-                 volmat_depart_cor(im)=volmat_depart_cor(im)+flux_cor
-                else if (iside_coarse.eq.2) then
-                 volmat_target_cor(im)=volmat_target_cor(im)-flux_cor
-                 volmat_depart_cor(im)=volmat_depart_cor(im)-flux_cor
-                else
-                 print *,"iside_coarse invalid"
-                 stop
-                endif
-               else if (VOF_reflux.eq.0) then
-                ! do nothing
-               else
-                print *,"VOF_reflux invalid"
-                stop
-               endif
-
-              endif
-                
-             enddo ! im=1..nmat
-
-            else if (iside_coarse.eq.0) then
-             ! do nothing
-            else
-             print *,"iside_coarse invalid"
-             stop
-            endif
-
-           else if (level.eq.finest_level) then
-            ! do nothing
-           else
-            print *,"level invalid 38"
-            stop
-           endif
-
-          else if (bfact_f.gt.1) then
-           ! do nothing
-          else
-           print *,"bfact_f invalid"
-           stop
-          endif
-
-         else if (bfact.gt.1) then
-          ! do nothing
-         else
-          print *,"bfact invalid72"
-          stop
-         endif 
-         ! -------------------------------------------
-         ! end volume correction at coarse/fine interfaces
-         ! -------------------------------------------
-
           ! volDm/volD+(volDm/volT-volDm/volD)=volDm/volD+
           ! (volDm/volD)*(volD/volT-1) 
           ! dt div u = 1 - vol_depart/vol_target 
@@ -21265,54 +20871,6 @@ stop
            newvfrac_cor(im)=newvfrac_weymouth(im)
           enddo
           call consistent_materials(newvfrac_cor,newcen,nmat)
-         else if (EILE_flag.eq.0) then ! Sussman and Puckett
-
-          do im=1,nmat
-           local_cor(im)=conscor(D_DECL(icrse,jcrse,kcrse),im)
-           local_cor(im)=local_cor(im)+divuterm*newvfrac_cor(im)
-           conscor(D_DECL(icrse,jcrse,kcrse),im)=local_cor(im)
-          enddo
-          if (dir_counter.eq.SDIM-1) then
-           if (all_incomp.eq.1) then
-            do im=1,nmat
-             Fmin=vofls0(D_DECL(icrse,jcrse,kcrse),im)
-             Fmax=Fmin
-             do i1=-1,1
-             do j1=-1,1
-             do k1=k1lo,k1hi
-              Ftest=vofls0(D_DECL(icrse+i1,jcrse+j1,kcrse+k1),im)
-              if (Ftest.lt.Fmin) then
-               Fmin=Ftest
-              endif
-              if (Ftest.gt.Fmax) then
-               Fmax=Ftest
-              endif
-             enddo
-             enddo
-             enddo
-             Ftest=newvfrac_cor(im)-local_cor(im)
-             if (Ftest.lt.Fmin) then
-              Ftest=Fmin
-             endif
-             if (Ftest.gt.Fmax) then
-              Ftest=Fmax
-             endif
-             newvfrac_cor(im)=Ftest
-            enddo ! im=1..nmat
-            call consistent_materials(newvfrac_cor,newcen,nmat)
-           else if (all_incomp.eq.0) then
-            ! no correction
-           else
-            print *,"all_incomp invalid"
-            stop
-           endif
-          else if ((dir_counter.eq.0).or.(dir_counter.eq.SDIM-2)) then 
-           ! do nothing
-          else
-           print *,"dir_counter invalid"
-           stop
-          endif
-
          else
           print *,"EILE_flag invalid"
           stop

@@ -33,7 +33,7 @@ geometry.is_periodic = 0 0 0 # 0 0 = RZ  0 0 0 = XYZ
 ns.projection_pressure_scale=1.0e+8
 ns.MOFITERMAX=15
 ns.continuous_mof=0
-# EILE_flag=0 Sussman and Puckett  EILE_flag=-1 Weymouth and Yue
+# EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE
 ns.EILE_flag=1
 # even though truncate_volume_fractions==1, the algorithm in the present
