@@ -25,6 +25,7 @@ ns.partial_cmof_stencil_at_walls=1
 ns.MOFITERMAX=15
 ns.conservative_tension_force=0
 ns.face_flag=1
+ns.vof_height_function=1
 ns.FD_curv_interp=1
 
 # 0MGPCG 1PCG 2 MINV=I
