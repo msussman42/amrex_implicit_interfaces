@@ -15144,6 +15144,11 @@ NavierStokes::split_scalar_advection() {
   } else
    amrex::Error("expecting MAC_grid_displacement==0");
 
+  if (NUM_CELL_ELASTIC==NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC invalid");
+
  } else if (face_flag==1) {
   ngrow=3;
   ngrow_mac_old=2;
@@ -15152,8 +15157,16 @@ NavierStokes::split_scalar_advection() {
   if (MAC_grid_displacement==1) {
    num_MAC_vectors=1+num_materials_viscoelastic; 
    XDmac_Type_local=XDmac_Type;
+   XDMACOLD_MF_local=XDMACOLD_MF;
+   if (NUM_CELL_ELASTIC==NUM_TENSOR_TYPE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
   } else if (MAC_grid_displacement==0) {
-   // do nothing
+   if (NUM_CELL_ELASTIC==NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
   } else
    amrex::Error("MAC_grid_displacement invalid");
 
@@ -15237,10 +15250,9 @@ NavierStokes::split_scalar_advection() {
 
   if (MAC_grid_displacement==1) {
    if (face_flag==1) {
-    getStateMAC_localMF(XDmac_Type,
-       XDMACOLD_MF+dir,ngrow_mac_old,dir,
+    getStateMAC_localMF(XDmac_Type_local,
+       XDMACOLD_MF_local+dir,ngrow_mac_old,dir,
        0,num_materials_viscoelastic,advect_time_slab);
-    XDMACOLD_MF_local=XDMACOLD_MF;
    } else
     amrex::Error("expecting face_flag==1");
   } else if (MAC_grid_displacement==0) {
@@ -15288,7 +15300,6 @@ NavierStokes::split_scalar_advection() {
   umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
   xdisp_mac_new[dir]=&get_new_data(XDmac_Type_local+dir,slab_step+1);
  }
-
 
  int ngrid=grids.size();
 
@@ -15547,8 +15558,9 @@ NavierStokes::split_scalar_advection() {
    side_bucket_mom[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
 
     //ncomp=2*num_MAC_vectors ngrow=1
-   side_bucket_mass[dir]=new MultiFab(grids,dmap,2*num_MAC_vectors,1,
-	MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
+   side_bucket_mass[dir]=new MultiFab(grids,dmap,
+      2*num_MAC_vectors,1,
+      MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
     //scomp=0 ncomp=2*num_MAC_vectors ngrow=1
    side_bucket_mass[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
   }  // dir = 0..sdim-1
@@ -15609,7 +15621,8 @@ NavierStokes::split_scalar_advection() {
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
-     &nmat,&ngrow, 
+     &nmat,
+     &ngrow, 
      &num_MAC_vectors,
      &ngrow_mac_old,
      &veldir);
@@ -16123,7 +16136,7 @@ NavierStokes::split_scalar_advection() {
 
  if (MAC_grid_displacement==1) {
   if (face_flag==1) {
-   delete_localMF(XDMACOLD_MF,AMREX_SPACEDIM);
+   delete_localMF(XDMACOLD_MF_local,AMREX_SPACEDIM);
   } else
    amrex::Error("expecting face_flag==1");
  } else if (MAC_grid_displacement==0) {
@@ -23727,14 +23740,15 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
  if ((dir<0)||(dir>=AMREX_SPACEDIM))
   amrex::Error("dir invalid get state mac");
 
+ MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
+ int ntotal=S_new.nComp();
+
   //sanity checks
  if (MAC_state_idx==Umac_Type) {
 
   int nsolve=1;
   int nsolveMM_FACE=nsolve*num_materials_vel;
  
-  MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
-  int ntotal=S_new.nComp();
   if (ntotal!=nsolveMM_FACE)
    amrex::Error("ntotal bust");
   if (scomp+ncomp>ntotal)
@@ -23747,8 +23761,6 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
   } else
    amrex::Error("MAC_grid_displacement invalid in getStateMAC");
 
-  MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
-  int ntotal=S_new.nComp();
   if (ntotal!=num_materials_viscoelastic)
    amrex::Error("ntotal!=num_materials_viscoelastic");
   if (scomp+ncomp>ntotal)
