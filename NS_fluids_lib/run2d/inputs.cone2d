@@ -41,7 +41,7 @@ Lp.v = 0
 # continuous_mof=4 CLSVOF + CMOF hybrid
 ns.continuous_mof=0
 ns.MOFITERMAX=15
-# EILE_flag=0 Sussman and Puckett  EILE_flag=-1 Weymouth and Yue
+# EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE
 ns.EILE_flag=1
 ns.ns_tiling=false

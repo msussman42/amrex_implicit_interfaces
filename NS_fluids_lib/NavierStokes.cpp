@@ -280,7 +280,6 @@ certain basic benchmark tests give the expected results. (e.g. drag
 on an interface, growth rate of perturbations, pressure drop)
 */
 
-int  NavierStokes::VOF_reflux=0;
 int  NavierStokes::continuous_mof=2;
 // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
 int  NavierStokes::force_cmof_at_triple_junctions=1;
@@ -659,7 +658,6 @@ Vector<int> NavierStokes::advection_order; // def=1
 // def=advection_order
 Vector<int> NavierStokes::density_advection_order; 
 
-// 0=Sussman and Puckett algorithm 
 // 1=EILE (default), -1=Weymouth Yue
 // 2=always EI   3=always LE
 int NavierStokes::EILE_flag=1;
@@ -2466,8 +2464,6 @@ NavierStokes::read_params ()
     pp.query("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
     pp.query("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
 
-    pp.query("VOF_reflux",VOF_reflux);
-
     pp.query("init_shrink",init_shrink);
     pp.query("dt_max",dt_max);
 
@@ -2571,9 +2567,6 @@ NavierStokes::read_params ()
        force_cmof_at_triple_junctions << '\n';
      std::cout << "partial_cmof_stencil_at_walls " << 
 	    partial_cmof_stencil_at_walls << '\n';
-
-
-     std::cout << "VOF_reflux " << VOF_reflux << '\n';
     }
 
     pp.query("FD_curv_interp",FD_curv_interp);
@@ -2954,8 +2947,7 @@ NavierStokes::read_params ()
 
     pp.query("EILE_flag",EILE_flag);
 
-    if ((EILE_flag==0)|| // Sussman and Puckett
-        (EILE_flag==1)|| // EILE
+    if ((EILE_flag==1)|| // EILE
         (EILE_flag==2)|| // EI
         (EILE_flag==3)|| // LE
         (EILE_flag==-1)) { // Weymouth and Yue
@@ -15229,20 +15221,6 @@ NavierStokes::split_scalar_advection() {
   num_materials_vel*(AMREX_SPACEDIM+1),
   advect_time_slab); 
 
-   // in: split_scalar_advection
- new_localMF(CONSERVE_FLUXES_MF+normdir_here,nmat,0,normdir_here);
- setVal_localMF(CONSERVE_FLUXES_MF+normdir_here,0.0,0,nmat,0);
-
-  // average down volume fraction fluxes 
- if (level<finest_level) {
-  if ((bfact==1)&&(bfact_f==1)) {
-   NavierStokes& ns_fine=getLevel(level+1);
-   vofflux_sum(normdir_here,
-     *localMF[CONSERVE_FLUXES_MF+normdir_here],
-     *ns_fine.localMF[CONSERVE_FLUXES_MF+normdir_here]);
-  }
- }
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   getStateMAC_localMF(Umac_Type,
     UMACOLD_MF+dir,ngrow_mac_old,dir,
@@ -15754,35 +15732,11 @@ NavierStokes::split_scalar_advection() {
 
  int ntensor=Tensor_new.nComp();
 
- MultiFab* cons_cor;
- if (EILE_flag==0) {  // Sussman and Puckett
-  cons_cor=localMF[CONS_COR_MF];
- } else if ((EILE_flag==-1)||  // Weymouth and Yue
-            (EILE_flag==1)||   // EI-LE
-            (EILE_flag==2)||   // always EI
-            (EILE_flag==3)) {  // always LE
-  cons_cor=localMF[DEN_RECON_MF];
- } else
-  amrex::Error("EILE_flag invalid");
-
  if (dir_absolute_direct_split==0) {
+
    // initialize the error indicator to be 0.0
   S_new.setVal(0.0,ncomp_state-1,1,1);
 
-  if (EILE_flag==0) {
-   if (cons_cor->nComp()!=nmat)
-    amrex::Error("cons_cor->nComp()!=nmat");
-   if (cons_cor->nGrow()!=1)
-    amrex::Error("cons_cor->nGrow()!=1");
-   cons_cor->setVal(0.0,0,nmat,1);
-  } else if ((EILE_flag==-1)||
-             (EILE_flag==1)||
-             (EILE_flag==2)||
-             (EILE_flag==3)) {
-   // do nothing
-  } else
-   amrex::Error("EILE_flag invalid");
-    
  } else if ((dir_absolute_direct_split==1)||
             (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
   // do nothing
@@ -15838,7 +15792,6 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
 
   FArrayBox& vofls0fab=(*localMF[VOF_LS_PREV_TIME_MF])[mfi];
-  FArrayBox& corfab=(*cons_cor)[mfi];
 
   int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);
   int mofcomp=dencomp+nmat*num_state_material;
@@ -15873,8 +15826,6 @@ NavierStokes::split_scalar_advection() {
 
   FArrayBox& ucellfab=(*localMF[CELL_VELOCITY_MF])[mfi];
 
-  FArrayBox& vofflux=(*localMF[CONSERVE_FLUXES_MF+normdir_here])[mfi];
-
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
   int tid_current=ns_thread();
@@ -15903,7 +15854,6 @@ NavierStokes::split_scalar_advection() {
    constant_density_all_time.dataPtr(),
    velbc.dataPtr(),
    &EILE_flag,
-   &VOF_reflux,
    &dir_absolute_direct_split,
    &normdir_here,
    tilelo,tilehi,
@@ -15913,8 +15863,6 @@ NavierStokes::split_scalar_advection() {
    &dt_slab, // VFRAC_SPLIT
    &prev_time_slab,
    &prescribed_vel_time_slab,
-   vofflux.dataPtr(),
-   ARLIM(vofflux.loVect()),ARLIM(vofflux.hiVect()),
      // this is the original data
    LSfab.dataPtr(),
    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
@@ -15939,7 +15887,6 @@ NavierStokes::split_scalar_advection() {
     // other vars.
    ucellfab.dataPtr(),ARLIM(ucellfab.loVect()),ARLIM(ucellfab.hiVect()),
    vofls0fab.dataPtr(),ARLIM(vofls0fab.loVect()),ARLIM(vofls0fab.hiVect()),
-   corfab.dataPtr(),ARLIM(corfab.loVect()),ARLIM(corfab.hiVect()),
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    masknbrfab.dataPtr(),
    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),

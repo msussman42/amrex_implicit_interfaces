@@ -1053,7 +1053,6 @@ extern "C"
      int* constant_density_all_time,
      int* velbc,
      int* EILE_flag,
-     int* VOF_reflux,
      int* dir_counter,
      int* normdir,
      const int* tilelo,const int* tilehi,
@@ -1063,7 +1062,6 @@ extern "C"
      Real* dt,
      Real* time,
      Real* passive_veltime,
-     Real* vofflux,AMREX_ARLIM_P(voffluxlo),AMREX_ARLIM_P(voffluxhi),
       // original data
      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
@@ -1079,7 +1077,6 @@ extern "C"
       // other vars.
      Real* ucell,AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
      Real* vofls0,AMREX_ARLIM_P(vofls0lo),AMREX_ARLIM_P(vofls0hi),
-     Real* conscor,AMREX_ARLIM_P(conscorlo),AMREX_ARLIM_P(conscorhi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),

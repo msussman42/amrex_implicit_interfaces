@@ -13,7 +13,6 @@
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAKNODE zalesaknode
 #    define FORT_EDGEAVGDOWN edgeavgdown
-#    define FORT_VOFFLUX_CORRECT vofflux_correct
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
 #    define FORT_ADDGRAVITY  addgravity
 #    define FORT_INITPOTENTIAL initpotential
@@ -89,7 +88,6 @@
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAKNODE zalesaknode
 #    define FORT_EDGEAVGDOWN edgeavgdown
-#    define FORT_VOFFLUX_CORRECT vofflux_correct
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
 #    define FORT_ADDGRAVITY  addgravity
 #    define FORT_INITPOTENTIAL initpotential
@@ -126,7 +124,6 @@
 #    define FORT_COFLOW coflow_
 #    define FORT_ZALESAKNODE zalesaknode_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
-#    define FORT_VOFFLUX_CORRECT vofflux_correct_
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor_
 #    define FORT_INITPOTENTIAL initpotential_
 #    define FORT_ADDGRAVITY  addgravity_
@@ -403,21 +400,6 @@ extern "C" {
        int* ncomp);
     
 
-    void FORT_VOFFLUX_CORRECT(
-       int* finest_level,
-       const Real* problo,
-       const Real* dxf,
-       int* level_c,int* level_f,
-       int* bfact_c,int* bfact_f,
-       const Real* xlo_fine,const Real* dx,
-       const int* dir,
-       Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
-       const Real* fine,AMREX_ARLIM_P(flo),AMREX_ARLIM_P(fhi),
-       const int* loc, const int* hic, 
-       const int* lof,const int* hif,
-       int* nmat);
-
- 
     void FORT_AVGDOWN(
       int* enable_spectral,
       int* finest_level,
