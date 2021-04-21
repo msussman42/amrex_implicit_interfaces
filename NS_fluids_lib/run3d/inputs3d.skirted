@@ -64,11 +64,11 @@ amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.95   # what constitutes an efficient grid
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 ns.conservative_div_uu=1
-ns.enable_spectral=1
+ns.enable_spectral=0  # set this to 1 for space time spectral element
 ns.viscous_enable_spectral=0
 amr.n_proper=1  # default is 1
-amr.space_blocking_factor = 4 2 2
-amr.time_blocking_factor=2
+amr.space_blocking_factor = 1 1 1  # set this to "4 2 2" for space time SEM
+amr.time_blocking_factor=1 # set this to  "2" for space time SEM
 amr.blocking_factor = 8 8 4
 
 amr.check_int       = 100     # number of timesteps between checkpoints
@@ -103,6 +103,7 @@ ns.use_lsa=0
 # 0.0025=sigma/(rho U^2 L)  U^2=50/(1 x L x 0.0025)
 # U=sqrt(50/(1 x L x 0.0025))=62.06
 ns.tension        = 50.0
+ns.vof_height_function=1
 ns.min_velocity_for_dt=10.0
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 
@@ -116,7 +117,7 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.yblob9=0.0  # vertical velocity at xlo  1.0
-ns.yblob10=-0.0  # vertical velocity at xhi -1.0
+ns.yblob10=0.0  # vertical velocity at xhi -1.0
 ns.adv_dir=3
 ns.solvability_projection=0
 # 1 Watt=10^7 ERG/S
