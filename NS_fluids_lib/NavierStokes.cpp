@@ -1029,6 +1029,8 @@ Vector<int> NavierStokes::FSI_refine_factor;
 // default: 3
 Vector<int> NavierStokes::FSI_bounding_box_ngrow; 
 
+Vector<int> NavierStokes::ns_max_grid_size; 
+
 int NavierStokes::CTML_FSI_numsolids = 0;
 int NavierStokes::CTML_force_model = 0; // 0=Lag force 1=Lag stress
 int NavierStokes::CTML_FSI_init = 0;
@@ -2195,7 +2197,6 @@ NavierStokes::read_params ()
      1;                                        // blob_mass
 
     int ns_max_level;
-    Vector<int> ns_max_grid_size;
     int the_max_grid_size=0;
     int cnt_max_grid_size;
 

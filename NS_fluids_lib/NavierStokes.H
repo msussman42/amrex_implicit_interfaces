@@ -1613,6 +1613,8 @@ protected:
      // given lagrangian element.
     static Vector<int> FSI_bounding_box_ngrow;
 
+    static Vector<int> ns_max_grid_size;
+
     //
     // Internal parameters for options.
     //
