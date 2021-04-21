@@ -17,6 +17,10 @@ public:
     int cfd_project_option;
     bool cfd_tiling;
 
+      // we use cfd_max_grid_size[0] in order to determine dmap
+      // on the coarser mg levels.
+    Vector<int> cfd_max_grid_size;
+
     int laplacian_solvability; // 0=> do not project, 1=> project RHS
 
     ABecLaplacian (
