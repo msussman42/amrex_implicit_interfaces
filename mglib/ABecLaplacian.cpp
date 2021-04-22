@@ -672,7 +672,7 @@ ABecLaplacian::makeCoefficients (
  } else
   amrex::Error("avg invalid");
 
- crse.copy(crse_fine,0,0,ncomp_expect);
+ crse.copy(crse_fine,0,0,nComp_expect);
  ParallelDescriptor::Barrier();
 
  if ((avg==0)||(avg==1)) {
@@ -5141,8 +5141,10 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
     // declared in MG_3D.F90	  
    FORT_AVERAGE(
-    coarse_fab.dataPtr(veldir),clo,chi,
-    fine_fab.dataPtr(veldir),flo,fhi,
+    coarse_fab.dataPtr(veldir),
+    ARLIM(clo),ARLIM(chi),
+    fine_fab.dataPtr(veldir),
+    ARLIM(flo),ARLIM(fhi),
     ovlo,ovhi,
     &iaverage,
     &bfact_coarse,&bfact_fine,&bfact_top);
@@ -5154,7 +5156,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(11);
 
- c.copy(crse_S_fine,0,0,nc);
+ c.copy(crse_S_fine,0,0,nsolve_bicgstab);
  ParallelDescriptor::Barrier();
 
 #if (profile_solver==1)
