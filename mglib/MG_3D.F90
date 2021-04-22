@@ -15,11 +15,9 @@
 !-----------------------------------------------------------------------
       subroutine FORT_AVERAGE ( &
            c,  &
-           DIMS(c) &
-           , &
+           DIMS(c), &
            f,  &
-           DIMS(f) &
-           , &
+           DIMS(f), &
            lo, hi, &
            iaverage, &
            bfact_coarse, &
