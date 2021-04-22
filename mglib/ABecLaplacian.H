@@ -202,7 +202,7 @@ protected:
       MultiFab& inisol,MultiFab& pbdry,Vector<int> bcpres_array,
       int level);
 
-    int MG_numLevels (const BoxArray& grids) const;
+    int MG_numLevels (const Box& local_box) const;
     virtual Real MG_errorEstimate (int level,
         MultiFab& pbdry,Vector<int> bcpres_array);
     void MG_average (MultiFab& c,MultiFab& f,int clevel,int flevel);

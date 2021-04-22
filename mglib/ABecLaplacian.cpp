@@ -635,7 +635,7 @@ ABecLaplacian::makeCoefficients (
      fine[mfi].dataPtr(),
      ARLIM(fine[mfi].loVect()),
      ARLIM(fine[mfi].hiVect()),
-     fablo,fabhi,
+     fablo,fabhi,  // cell centered interior box
      &avg,
      &nGrow,
      &bfact_coarse,&bfact_fine,&bfact_top);
@@ -649,7 +649,7 @@ ABecLaplacian::makeCoefficients (
      fine[mfi].dataPtr(), 
      ARLIM(fine[mfi].loVect()),
      ARLIM(fine[mfi].hiVect()),
-     fablo,fabhi,
+     fablo,fabhi, // cell centered interior box
      &cdir,&avg,
      &bfact_coarse,&bfact_fine,&bfact_top);
   } else
@@ -965,7 +965,8 @@ ABecLaplacian::ABecLaplacian (
   MG_numlevels_var=1;
   CG_numlevels_var=1;
  } else if (CG_use_mg_precond_at_top==1) {
-  MG_numlevels_var = MG_numLevels(grids);
+  Box local_domain=geom.Domain();
+  MG_numlevels_var = MG_numLevels(local_domain);
   if (MG_numlevels_var==1) {
    CG_numlevels_var=1;
   } else if (MG_numlevels_var>=2) {
@@ -1070,14 +1071,33 @@ ABecLaplacian::ABecLaplacian (
 
   } else if (level>0) {
 
-   gbox[level] = gbox[level-1];
-   gbox[level].coarsen(2);
-   if (gbox[level].size()!=gbox[level-1].size())
-    amrex::Error("gbox[level].size()!=gbox[level-1].size()");
-
-   dmap_array[level] = dmap_array[level-1];
-
    geomarray[level].define(amrex::coarsen(geomarray[level-1].Domain(),2));
+
+   BoxArray one_cgrid(geomarray[level].Domain());
+
+   if (cfd_max_grid_size.size()>=1) {
+    int local_max_grid_size=cfd_max_grid_size[0];
+    if (local_max_grid_size==0) {
+     gbox[level]=one_cgrid;
+    } else if (local_max_grid_size>=16) {
+     gbox[level]=one_cgrid;
+     gbox[level].maxSize(local_max_grid_size);
+    } else
+     amrex::Error("local_max_grid_size=0 or >=16 required");
+   } else
+    amrex::Error("cfd_max_grid_size.size() invalid");
+
+   int refine_points=4;
+   if (AMREX_SPACEDIM==3)
+    refine_points=8;
+
+   if (refine_points*gbox[level].d_numPts()!=gbox[level-1].d_numPts())
+    amrex::Error("refine_points*gbox[lv].d_numPts()!=gbox[lv-1].d_numPts()");
+
+   DistributionMapping local_dm(gbox[level]);
+
+   dmap_array[level] = local_dm;
+
    bfact_array[level] = bfact_array[level-1];
 
    // mask=0 at fine/fine interfaces
@@ -1266,18 +1286,17 @@ ABecLaplacian::ABecLaplacian (
   std::cout << "MultiGrid: " << MG_numlevels_var
     << " multigrid levels created for this solve" << '\n';
   std::cout << "Grids: " << '\n';
-  BoxArray tmp = LPboxArray(0);
+
+  const Geometry& local_geom=getGeom(0);
+  Box tmp = local_geom.Domain();
   for (int i = 0; i < MG_numlevels_var; ++i) {
    if (i > 0)
     tmp.coarsen(2);
-   std::cout << " Level: " << i << '\n';
-   for (int k = 0; k < tmp.size(); k++) {
-    const Box& b = tmp[k];
-    std::cout << "  [" << k << "]: " << b << "   ";
-    for (int j = 0; j < AMREX_SPACEDIM; j++)
-     std::cout << b.length(j) << ' ';
-    std::cout << '\n';
-   }
+   std::cout << " Level (domain): " << i << '\n';
+   std::cout << tmp << "   ";
+   for (int j = 0; j < AMREX_SPACEDIM; j++)
+    std::cout << tmp.length(j) << ' ';
+   std::cout << '\n';
   }
  }
 
@@ -4861,34 +4880,29 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
 }  // subroutine MG_solve_
 
 int
-ABecLaplacian::MG_numLevels (const BoxArray& grids) const
+ABecLaplacian::MG_numLevels (const Box& local_box) const
 {
  int MG_numLevelsMAX=1024;
 
- int ng = grids.size();
  int lv = MG_numLevelsMAX;
 
- for (int i = 0; i < ng; ++i) {
-  int llv = 0;
-  Box tmp = grids[i];
-  for (;;) {
-   tmp.coarsen(2);
-   int block_check=1;
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
-    int len=tmp.length(dir);
-    if ((len/mglib_blocking_factor)*mglib_blocking_factor!=len)
-     block_check=0;
-   } // dir=0..sdim-1
-   if (block_check==0)
-    break;
-   llv++;
-  }
-  //
-  // Set number of levels so that every box can be refined to there.
-  //
-  if (lv >= llv)
-      lv = llv;
- } // i=0..ng-1
+ int llv = 0;
+ Box tmp = local_box;
+ for (;;) {
+  tmp.coarsen(2);
+  int block_check=1;
+  for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   int len=tmp.length(dir);
+   if ((len/mglib_blocking_factor)*mglib_blocking_factor!=len)
+    block_check=0;
+  } // dir=0..sdim-1
+  if (block_check==0)
+   break;
+  llv++;
+ }
+
+ if (lv >= llv)
+  lv = llv;
 
  return lv+1; // Including coarsest.
 
@@ -5119,7 +5133,9 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
   const Box& tilegrid=mfi.tilebox();
 
   int nc = c.nComp();
-  if (nc!=nsolve_bicgstab) {
+  if ((nc!=nsolve_bicgstab)||
+      (nc!=f.nComp())||
+      (nc!=crse_S_fine.nComp())) {
    std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
     nsolve_bicgstab << '\n';
    amrex::Error("nc invalid in average");
@@ -5239,7 +5255,9 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
   const Box& tilegrid=mfi.tilebox();
   const Box& cbox = crse_S_fine_BA[gridno];
   int nc = f.nComp();
-  if (nc!=nsolve_bicgstab) {
+  if ((nc!=nsolve_bicgstab)||
+      (nc!=c.nComp())||
+      (nc!=crse_S_fine.nComp())) {
    std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
     nsolve_bicgstab << '\n';
    amrex::Error("nc invalid in interpolate");
