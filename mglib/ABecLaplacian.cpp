@@ -934,6 +934,7 @@ ABecLaplacian::buildMatrix() {
 } // end subroutine buildMatrix
 
 ABecLaplacian::ABecLaplacian (
+ const Vector<int>& ns_max_grid_size,
  const BoxArray& grids,
  const Geometry& geom,
  const DistributionMapping& dmap,
@@ -987,6 +988,10 @@ ABecLaplacian::ABecLaplacian (
  cfd_level=cfd_level_in;
  cfd_project_option=cfd_project_option_in;
  cfd_tiling=ns_tiling_in;
+
+ cfd_max_grid_size.resize(ns_max_grid_size.size());
+ for (int ilev=0;ilev<ns_max_grid_size.size();ilev++)
+  cfd_max_grid_size[ilev]=ns_max_grid_size[ilev];
 
  CG_maxiter = CG_def_maxiter;
  CG_verbose = CG_def_verbose;
