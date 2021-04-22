@@ -403,7 +403,7 @@ ABecLaplacian::LPnorm(MultiFab &in, int level) const
 // avg=2  this is the ones_mf variable
 void
 ABecLaplacian::makeCoefficients (
-	MultiFab& crs,
+	MultiFab& crse,
         const MultiFab& fine,
         int             level,
         int             avg)
@@ -476,13 +476,49 @@ ABecLaplacian::makeCoefficients (
  } else
   amrex::Error("nComp_expect!=fine.nComp()");
 
- BoxArray d(gbox[level]);
+ const BoxArray& fgrids=LPboxArray(flevel); //gbox[flevel]
+ const BoxArray& cgrids=LPboxArray(clevel); //gbox[clevel]
+
+ BoxArray crse_cen_fine_BA(fgrids.size());
+ for (int i = 0; i < fgrids.size(); ++i) {
+  crse_cen_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
+ }
+ BoxArray crse_fine_BA(crse_cen_fine_BA);
+
  if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
-  d.surroundingNodes(cdir);
+  crse_fine_BA.surroundingNodes(cdir);
  } else if (cdir==-1) {
   // do nothing
  } else
   amrex::Error("cdir invalid");
+
+ BoxArray crse_BA(cgrids);
+ if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
+  crse_BA.surroundingNodes(cdir);
+ } else if (cdir==-1) {
+  // do nothing
+ } else
+  amrex::Error("cdir invalid");
+
+ BoxArray fine_BA(fgrids);
+ if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
+  fine_BA.surroundingNodes(cdir);
+ } else if (cdir==-1) {
+  // do nothing
+ } else
+  amrex::Error("cdir invalid");
+
+ if (crse.boxArray()==crse_BA) {
+  // do nothing
+ } else
+  amrex::Error("crse.boxArray() invalid");
+
+ if (fine.boxArray()==fine_BA) {
+  // do nothing
+ } else
+  amrex::Error("fine.boxArray() invalid");
+
+ const DistributionMapping& fdmap=dmapLevel(flevel);
 
    //
    // Only single-component solves supported (verified) by this class.
@@ -507,29 +543,35 @@ ABecLaplacian::makeCoefficients (
  } else
   amrex::Error("ngrow invalid in makecoeff");
 
- if (crs.boxArray()==d) {
+ if (crse.nComp()==nComp_expect) {
   // do nothing
  } else
-  amrex::Error("crs.boxArray() invalid");
+  amrex::Error("crse.nComp() invalid");
 
- if (crs.nComp()==nComp_expect) {
+ if (crse.nGrow()==nGrow) {
   // do nothing
  } else
-  amrex::Error("crs.nComp() invalid");
-
- if (crs.nGrow()==nGrow) {
-  // do nothing
- } else
-  amrex::Error("crs.nGrow() invalid");
+  amrex::Error("crse.nGrow() invalid");
 
  if ((avg==0)||(avg==1)) {
-  crs.setVal(0.0,0,nComp_expect,nGrow); 
+  crse.setVal(0.0,0,nComp_expect,nGrow); 
  } else if (avg==2) { // ones_mf variable
-  crs.setVal(1.0,0,nComp_expect,nGrow); 
+  crse.setVal(1.0,0,nComp_expect,nGrow); 
  } else
   amrex::Error("avg invalid");
 
- const BoxArray& grids = gbox[level]; // coarse grids
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_fine(crse_fine_BA,crse_dmap,
+  crse.nComp(),crse.nGrow(),
+  MFInfo().SetTag("crse_fine"),FArrayBoxFactory());
+
+ if ((avg==0)||(avg==1)) {
+  crse_fine.setVal(0.0,0,nComp_expect,nGrow); 
+ } else if (avg==2) { // ones_mf variable
+  crse_fine.setVal(1.0,0,nComp_expect,nGrow); 
+ } else
+  amrex::Error("avg invalid");
+
 
 #if (profile_solver==1)
  bprof.stop();
@@ -537,13 +579,13 @@ ABecLaplacian::makeCoefficients (
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(crs.boxArray().d_numPts());
+ thread_class::init_d_numPts(crse_fine.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(crs,false); mfi.isValid();++mfi) {
+ for (MFIter mfi(crse_fine,false); mfi.isValid();++mfi) {
 
 #if (profile_solver==1)
   std::string subname="AVERAGE_CC_or_EC";
@@ -566,7 +608,7 @@ ABecLaplacian::makeCoefficients (
 #endif
 
   const Box& tilegrid=mfi.tilebox();
-  const Box& fabgrid=grids[mfi.index()];
+  const Box& fabgrid=crse_cen_fine_BA[mfi.index()];
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
  
@@ -582,12 +624,14 @@ ABecLaplacian::makeCoefficients (
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   if (cdir==-1) {
+    // declared in LO_3D.F90
+    // only interior values are updated (no ghosts updated)
    FORT_AVERAGECC(
      &nsolve_bicgstab,
      &nComp_expect,
-     crs[mfi].dataPtr(), 
-     ARLIM(crs[mfi].loVect()),
-     ARLIM(crs[mfi].hiVect()),
+     crse_fine[mfi].dataPtr(), 
+     ARLIM(crse_fine[mfi].loVect()),
+     ARLIM(crse_fine[mfi].hiVect()),
      fine[mfi].dataPtr(),
      ARLIM(fine[mfi].loVect()),
      ARLIM(fine[mfi].hiVect()),
@@ -596,11 +640,12 @@ ABecLaplacian::makeCoefficients (
      &nGrow,
      &bfact_coarse,&bfact_fine,&bfact_top);
   } else if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
+    // declared in LO_3D.F90
    FORT_AVERAGEEC(
      &nComp_expect,
-     crs[mfi].dataPtr(), 
-     ARLIM(crs[mfi].loVect()),
-     ARLIM(crs[mfi].hiVect()),
+     crse_fine[mfi].dataPtr(), 
+     ARLIM(crse_fine[mfi].loVect()),
+     ARLIM(crse_fine[mfi].hiVect()),
      fine[mfi].dataPtr(), 
      ARLIM(fine[mfi].loVect()),
      ARLIM(fine[mfi].hiVect()),
@@ -623,7 +668,17 @@ ABecLaplacian::makeCoefficients (
  if ((avg==0)||(avg==1)) {
   // do nothing
  } else if (avg==2) { // ones_mf variable
-  crs.FillBoundary(geomarray[level].periodicity());
+  crse_fine.FillBoundary(geomarray[level].periodicity());
+ } else
+  amrex::Error("avg invalid");
+
+ crse.copy(crse_fine,0,0,ncomp_expect);
+ ParallelDescriptor::Barrier();
+
+ if ((avg==0)||(avg==1)) {
+  // do nothing
+ } else if (avg==2) { // ones_mf variable
+  crse.FillBoundary(geomarray[level].periodicity());
  } else
   amrex::Error("avg invalid");
 
@@ -5003,24 +5058,65 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  if (flevel<0)
   amrex::Error("flevel invalid"); 
 
+ const BoxArray& fgrids=LPboxArray(flevel);
+ const BoxArray& cgrids=LPboxArray(clevel);
+
+ const DistributionMapping& fdmap=dmapLevel(flevel);
+
+ if (cgrids==c.boxArray()) {
+  // do nothing
+ } else
+  amrex::Error("cgrids <> c.boxArray()");
+
+ if (fgrids==f.boxArray()) {
+  // do nothing
+ } else
+  amrex::Error("fgrids <> f.boxArray()");
+
+ BoxArray crse_S_fine_BA(fgrids.size());
+ for (int i = 0; i < fgrids.size(); ++i) {
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
+ }
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,
+  nsolve_bicgstab,0,
+  MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
+
+ ParallelDescriptor::Barrier();
+
  int bfact_coarse=get_bfact_array(clevel);
  int bfact_fine=get_bfact_array(flevel);
  int bfact_top=get_bfact_array(0);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(c.boxArray().d_numPts());
+ thread_class::init_d_numPts(f.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(c,false); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(f,false); mfi.isValid(); ++mfi) {
 
-  BL_ASSERT(c.boxArray().get(mfi.index()) == mfi.validbox());
+  const int gridno=mfi.index();
+
+  BL_ASSERT(f.boxArray().get(gridno) == mfi.validbox());
+
+  const Box& ovgrid=crse_S_fine_BA[gridno];
+  const int* ovlo=ovgrid.loVect();
+  const int* ovhi=ovgrid.hiVect();
+
+  FArrayBox& fine_fab=f[gridno];
+  const Box& fgrid=fine_fab.box();
+  const int* flo=fgrid.loVect();
+  const int* fhi=fgrid.hiVect();
+
+  FArrayBox& coarse_fab=crse_S_fine[gridno];
+  const Box& cgrid = coarse_fab.box();
+  const int* clo=cgrid.loVect();
+  const int* chi=cgrid.hiVect();
 
   const Box& tilegrid=mfi.tilebox();
-  const Box& bx = mfi.validbox();
 
   int nc = c.nComp();
   if (nc!=nsolve_bicgstab) {
@@ -5043,12 +5139,12 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
    // divide by 4 in 2D and 8 in 3D
   int iaverage=1;
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+    // declared in MG_3D.F90	  
    FORT_AVERAGE(
-    c[mfi].dataPtr(veldir),
-    ARLIM(c[mfi].loVect()), ARLIM(c[mfi].hiVect()),
-    f[mfi].dataPtr(veldir),
-    ARLIM(f[mfi].loVect()), ARLIM(f[mfi].hiVect()),
-    bx.loVect(), bx.hiVect(),&iaverage,
+    coarse_fab.dataPtr(veldir),clo,chi,
+    fine_fab.dataPtr(veldir),flo,fhi,
+    ovlo,ovhi,
+    &iaverage,
     &bfact_coarse,&bfact_fine,&bfact_top);
   }  // veldir
  } // mfi
@@ -5057,6 +5153,9 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(11);
+
+ c.copy(crse_S_fine,0,0,nc);
+ ParallelDescriptor::Barrier();
 
 #if (profile_solver==1)
  bprof.stop();
@@ -5088,6 +5187,31 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
  if (flevel<0)
   amrex::Error("flevel invalid"); 
 
+ const BoxArray& fgrids=LPboxArray(flevel);
+ const BoxArray& cgrids=LPboxArray(clevel);
+
+ const DistributionMapping& fdmap=dmapLevel(flevel);
+
+ if (cgrids==c.boxArray()) {
+  // do nothing
+ } else
+  amrex::Error("cgrids <> c.boxArray()");
+
+ if (fgrids==f.boxArray()) {
+  // do nothing
+ } else
+  amrex::Error("fgrids <> f.boxArray()");
+
+ BoxArray crse_S_fine_BA(fgrids.size());
+ for (int i = 0; i < fgrids.size(); ++i) {
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
+ }
+
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolve_bicgstab,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
+ crse_S_fine.copy(c,0,0,nsolve_bicgstab);
+
  int bfact_coarse=get_bfact_array(clevel);
  int bfact_fine=get_bfact_array(flevel);
  int bfact_top=get_bfact_array(0);
@@ -5106,16 +5230,21 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 {
  for (MFIter mfi(f,false); mfi.isValid(); ++mfi) {
 
-  BL_ASSERT(f.boxArray().get(mfi.index()) == mfi.validbox());
+  const int gridno=mfi.index();
+
+  BL_ASSERT(f.boxArray().get(gridno) == mfi.validbox());
 
   const Box& tilegrid=mfi.tilebox();
-  const Box& bx = c.boxArray()[mfi.index()];
+  const Box& cbox = crse_S_fine_BA[gridno];
   int nc = f.nComp();
   if (nc!=nsolve_bicgstab) {
    std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
     nsolve_bicgstab << '\n';
    amrex::Error("nc invalid in interpolate");
   }
+
+  FArrayBox& crse_fab = crse_S_fine[mfi];
+  FArrayBox& fine_fab = f[mfi];
 
   int tid_current=0;
 #ifdef _OPENMP
@@ -5129,14 +5258,14 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
-    // in: MG_3D.F90
+    // declared in: MG_3D.F90
    FORT_INTERP(
      &bfact_coarse,&bfact_fine,&bfact_top,
-     f[mfi].dataPtr(veldir),
-     ARLIM(f[mfi].loVect()), ARLIM(f[mfi].hiVect()),
-     c[mfi].dataPtr(veldir),
-     ARLIM(c[mfi].loVect()), ARLIM(c[mfi].hiVect()),
-     bx.loVect(), bx.hiVect());
+     fine_fab.dataPtr(veldir),
+     ARLIM(fine_fab.loVect()), ARLIM(fine_fab.hiVect()),
+     crse_fab.dataPtr(veldir),
+     ARLIM(crse_fab.loVect()), ARLIM(crse_fab.hiVect()),
+     cbox.loVect(), cbox.hiVect());
   } // veldir
 
  } // mfi

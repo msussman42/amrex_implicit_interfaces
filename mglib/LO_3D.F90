@@ -634,7 +634,7 @@
       REAL_T, intent(out) :: c(DIMV(c),ncomp_expect)
 !
       INTEGER_T i,j,k,veldir
-      REAL_T denom
+      REAL_T one_over_denom
       INTEGER_T sum_mask,max_sum
 !
       if (bfact_coarse.ge.1) then
@@ -661,7 +661,8 @@
        print *,"nsolve invalid"
        stop
       endif
-      if ((avg.eq.0).or.(avg.eq.1)) then
+      if ((avg.eq.0).or. &  ! one_over_denom=1
+          (avg.eq.1)) then  ! one_over_denom=1/2^dim
        if (nsolve.eq.ncomp_expect) then
         ! do nothing
        else
@@ -674,7 +675,7 @@
         print *,"ngrow.ne.0"
         stop
        endif
-      else if (avg.eq.2) then
+      else if (avg.eq.2) then ! ones_mf
        if (ncomp_expect.eq.1) then
         ! do nothing
        else
@@ -693,22 +694,22 @@
       endif
 
       call checkbound(lo,hi, &
-      DIMS(c), &
-      ngrow,-1,301)
+       DIMS(c), &
+       ngrow,-1,301)
 
       if (avg.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
-        denom=0.125d0
+        one_over_denom=0.125d0
        else if (AMREX_SPACEDIM.eq.2) then
-        denom=0.25d0
+        one_over_denom=0.25d0
        else
         print *,"dimension bust"
         stop
        endif
       else if (avg.eq.0) then
-       denom=one
+       one_over_denom=one
       else if (avg.eq.2) then
-       denom=one
+       one_over_denom=one
       else
        print *,"avg invalid"
        stop
@@ -722,7 +723,7 @@
        do veldir=1,ncomp_expect
 
         if (AMREX_SPACEDIM.eq.3) then
-         c(D_DECL(i,j,k),veldir) =  denom*( &
+         c(D_DECL(i,j,k),veldir) =  one_over_denom*( &
           + f(D_DECL(2*i+1,2*j+1,2*k),veldir) &
           + f(D_DECL(2*i,2*j+1,2*k),veldir) &
           + f(D_DECL(2*i+1,2*j,2*k),veldir) &
@@ -732,7 +733,7 @@
           + f(D_DECL(2*i+1,2*j,2*k+1),veldir) &
           + f(D_DECL(2*i,2*j,2*k+1),veldir) )
         else if (AMREX_SPACEDIM.eq.2) then
-         c(D_DECL(i,j,k),veldir) =  denom*( &
+         c(D_DECL(i,j,k),veldir) =  one_over_denom*( &
           + f(D_DECL(2*i+1,2*j+1,2*k),veldir) &
           + f(D_DECL(2*i,2*j+1,2*k),veldir) &
           + f(D_DECL(2*i+1,2*j,2*k),veldir) &
@@ -741,7 +742,7 @@
          print *,"dimension bust"
          stop
         endif
-        if (avg.eq.2) then
+        if (avg.eq.2) then ! ones_mf
          sum_mask=NINT(c(D_DECL(i,j,k),veldir))
          if (AMREX_SPACEDIM.eq.3) then
           max_sum=8
