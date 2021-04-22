@@ -511,8 +511,8 @@
        stop
       endif
       call checkbound(lo,hi, &
-      DIMS(c) &
-      ,0,cdir,201)
+       DIMS(c), &
+       0,cdir,201)
 
       if (avg.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
