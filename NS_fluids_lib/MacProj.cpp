@@ -218,6 +218,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   amrex::Error("create_hierarchy, use_mg_precond, or level invalid");
 
  mac_op=new ABecLaplacian(
+  ns_max_grid_size,
   gridparm,
   geomparm,
   dmapparm,
@@ -227,10 +228,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   nsolveMM,
   ns_tiling,
   local_use_mg_precond);
-
- mac_op->cfd_max_grid_size.resize(ns_max_grid_size.size());
- for (int ilev=0;ilev<ns_max_grid_size.size();ilev++)
-  mac_op->cfd_max_grid_size[ilev]=ns_max_grid_size[ilev];
 
  mac_op->laplacian_solvability=solvability_level_flag;
 

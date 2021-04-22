@@ -24,6 +24,7 @@ public:
     int laplacian_solvability; // 0=> do not project, 1=> project RHS
 
     ABecLaplacian (
+     const Vector<int>& ns_max_grid_size,
      const BoxArray& grids,
      const Geometry& geom,
      const DistributionMapping& dmap,
