@@ -11674,22 +11674,24 @@ void NavierStokes::vel_elastic_ALL() {
 
       if (store_elastic_data[im]==1) {
 
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-        allocate_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
+       if (MAC_grid_displacement==0) {
+
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+         allocate_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
           dir,XDISP_FLUX_MF+dir);
-        setVal_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
+         setVal_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
           0.0,XDISP_FLUX_MF+dir);
-       }
+        }
 
-       if (viscoelastic_model[im]==2) {
+        if (viscoelastic_model[im]==2) {
 
-	int push_enable_spectral=enable_spectral;
-	int elastic_enable_spectral=0;
-	override_enable_spectral(elastic_enable_spectral);
+ 	 int push_enable_spectral=enable_spectral;
+	 int elastic_enable_spectral=0;
+	 override_enable_spectral(elastic_enable_spectral);
 
-	int do_alloc=1;
-        int simple_AMR_BC_flag_viscosity=1;
-	init_gradu_tensorALL(
+	 int do_alloc=1;
+         int simple_AMR_BC_flag_viscosity=1;
+	 init_gradu_tensorALL(
           im,
 	  XDISPLACE_MF, // deleted in init_gradu_tensorALL since do_alloc==1
 	  do_alloc,
@@ -11698,28 +11700,34 @@ void NavierStokes::vel_elastic_ALL() {
 	  XDISP_FLUX_MF, // elastic_idx
           simple_AMR_BC_flag_viscosity);
 
-	override_enable_spectral(push_enable_spectral);
-        delete_array(CELLTENSOR_MF);
-        delete_array(FACETENSOR_MF);
+	 override_enable_spectral(push_enable_spectral);
+         delete_array(CELLTENSOR_MF);
+         delete_array(FACETENSOR_MF);
 
-       } else if ((viscoelastic_model[im]==1)||
-  		  (viscoelastic_model[im]==0)) {
-        // do nothing
-       } else
+        } else if ((viscoelastic_model[im]==1)||
+   		   (viscoelastic_model[im]==0)) {
+         // do nothing
+        } else
         amrex::Error("viscoelastic_model[im] invalid");
 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        // note: tensor_advection_updateALL is called before veldiffuseALL.
-        // initializes VISCOTEN_MF
-        ns_level.make_viscoelastic_tensor(im);
-        ns_level.make_viscoelastic_force(im);
-       }
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         // note: tensor_advection_updateALL is called before veldiffuseALL.
+         // initializes VISCOTEN_MF
+         ns_level.make_viscoelastic_tensor(im);
+         ns_level.make_viscoelastic_force(im);
+        }
 
-       delete_array(VISCOTEN_MF);
+        delete_array(VISCOTEN_MF);
 
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        delete_array(XDISP_FLUX_MF+dir);
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+         delete_array(XDISP_FLUX_MF+dir);
+
+       } else if (MAC_grid_displacement==1) {
+
+
+       } else
+        amrex::Error("MAC_grid_displacement invalid");
 
       } else
        amrex::Error("store_elastic_data invalid");
@@ -11738,22 +11746,32 @@ void NavierStokes::vel_elastic_ALL() {
     amrex::Error("particleLS_flag[im] invalid");
   } // im=0..nmat-1
    
+  if (MAC_grid_displacement==0) {
+
    // spectral_override==1 => order derived from "enable_spectral"
-  avgDownALL(State_Type,0,
+   avgDownALL(State_Type,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1);
 
-   // umacnew+=INTERP_TO_MAC(unew-register_mark) 
-   // (filter_vel==0 and face_flag==1)
-  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,1); 
+   // if filter_vel==0 and face_flag==1, then
+   //  umacnew+=INTERP_TO_MAC(unew^CELL-register_mark^CELL) 
+   // else if filter_vel==1 or face_flag==0, then
+   //  umacnew=Interp_from_cell_to_MAC(unew^CELL)
+   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,1); 
 
    // after make_viscoelastic_force(), in
    //  NavierStokes::vel_elastic_ALL()
    // uses SLOPE_RECON_MF
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
-  }
-  avgDownALL_TENSOR();
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
+   }
+   avgDownALL_TENSOR();
+
+  } else if (MAC_grid_displacement==1) {
+
+
+  } else
+   amrex::Error("MAC_grid_displacement invalid");
 
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);
