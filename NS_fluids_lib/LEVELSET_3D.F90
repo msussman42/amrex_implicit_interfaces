@@ -213,10 +213,12 @@ stop
          shortest_dist_to_fluid=-one
          im_fluid_critical=0
 
+          ! stencil radius is 1.
          do i2=LSstenlo(1),LSstenhi(1)
          do j2=LSstenlo(2),LSstenhi(2)
          do k2=LSstenlo(3),LSstenhi(3)
 
+           ! local_index is the containing cell for xCP
           isten=local_index(1)+i2
           jsten=local_index(2)+j2
           ksten=local_index(SDIM)+k2
@@ -18152,17 +18154,28 @@ stop
               cell_index)
 
              ! im1_substencil or im2_substencil is initialized
-             ! for the fluid material in which LS_XCP_stencil>=0.0 and
+             ! for the fluid material in which 
+             ! LS_FLUID_XCP_stencil>=0.0 and
              ! |XCP_stencil-xSOLID_BULK| is a minimum.
+             ! (restricted to the radius=1 stencil about cell_index)
+
+             !find primary fluid closest to xSOLID_BULK and 
+             !within the radius 1 stencil about cell_index
+             !LS_solid(<found stencil closest>)<0
+             !LS_FLUID(<found stencil closest>)>0
             call interp_fluid_LS( &
              ZEYU_DAT, &
              cell_CP_parm, &
              xCP, &
              xSOLID_BULK, &
-             cell_index, &
+             cell_index, & ! containing cell for xCP
              LS_virtual_new, & 
              im_solid_max, &
-             im_fluid_critical) !primary fluid material closest to xSOLID_BULK
+             im_fluid_critical) !primary fluid closest to xSOLID_BULK and 
+                                !within the radius 1 stencil about cell_index
+                                !LS_solid(<found stencil>)<0
+                                !LS_FLUID(<found stencil>)>0
+
 
             if ((i1.eq.0).and. &
                 (j1.eq.0).and. &
@@ -18234,8 +18247,12 @@ stop
 
            if (im1_substencil.eq.0) then
 
-            if (abs(LS_solid_new(im_solid_max)).le.dxmaxLS) then
-             print *,"all materials disappeared in FORT_RENORMALIZE_PRESCRIBE"
+            if (abs(LS_solid_new(im_solid_max)).le.VOFTOL*dxmaxLS) then
+             print *,"all materials disappeared in FORT_RENORMALIZE_PRESCRIBE?"
+             print *,"abs(LS_solid_new(im_solid_max)) very small, ", &
+              abs(LS_solid_new(im_solid_max))
+             print *,"but yet no negative values for "
+             print *,"LS_solid_new(im_solid_max) were found nearby."
              print *,"level,finest_level ",level,finest_level
              cell_CP_parm%i=i
              cell_CP_parm%j=j
@@ -18272,7 +18289,7 @@ stop
              enddo
 
              stop
-            else if (abs(LS_solid_new(im_solid_max)).ge.dxmaxLS) then
+            else if (abs(LS_solid_new(im_solid_max)).ge.VOFTOL*dxmaxLS) then
              ! do nothing
             else
              print *,"LS_solid_new(im_solid_max) invalid"
