@@ -1696,7 +1696,9 @@ stop
            stop
           endif
          else if (matstatus.eq.0) then
-          print *,"matstatus invalid for RZ curvature coeff"
+          curvHT_VOF=curvHT_LS
+         else
+          print *,"matstatus corrupt for RZ curvature coeff"
           stop
          endif
 
@@ -1737,7 +1739,9 @@ stop
            g=sqrt(one+hprime_of_r**2)
            curvHT_VOF=hdprime_of_r/(g**3)
           else if (matstatus.eq.0) then
-           print *,"matstatus invalid for XY curvature coeff"
+           curvHT_VOF=curvHT_LS
+          else
+           print *,"matstatus corrupt for XY curvature coeff"
            stop
           endif
 
@@ -1837,7 +1841,9 @@ stop
            !gx=(-1/2)arclen^{-3/2}arclenx
            curvHT_VOF=hxx*g+hx*gx+hyy*g+hy*gy
           else if (matstatus.eq.0) then
-           print *,"matstatus invalid for XYZ curvature coeff"
+           curvHT_VOF=curvHT_LS
+          else
+           print *,"matstatus corrupt for XYZ curvature coeff"
            stop
           endif
 

@@ -7,7 +7,7 @@
 # International Journal of Heat and Mass Transfer. 2017 Mar 31;106:708-19.
 #
 # April 10, 2018: in order to have behavior more consistent
-#  with inputs.Earch_grav_Water_Dhir_2001,
+#  with inputs.Earth_grav_Water_Dhir_2001,
 #  length units are multiplied by 10 which means
 #  lenght units in GLOBALDIST are multiplied by 100 in order to convert to
 #  the appropriate units. 
@@ -22,8 +22,11 @@ ns.microlayer_angle=0.785 0.0 0.0  # 45 degrees
 ns.microlayer_size=1.0e-9  0.0 0.0    # dimensional
 #ns.microlayer_size=0.0  0.0 0.0    
 ns.macrolayer_size=2.0e-4 0.0 0.0    #dimensional 2 x 6E-3/64=2.0E-4
-ns.EILE_flag=-1
+ns.EILE_flag=-1 # weymouth and Yue
+# 0=MOF  2=CMOF
 ns.continuous_mof=2
+ns.face_flag=1  # staggered (velocity on MAC grid)
+ns.vof_height_function=1  #vof height function better than LS height function
 ns.MOFITERMAX=15
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.advection_order=1 1 1 1
@@ -60,21 +63,21 @@ ns.ns_tiling=false
 fabarray.mfiter_tile_size=4 4
 #amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
-amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
+amr.blocking_factor = 8 8 4 4 4 4 4    # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.enable_spectral=0
 ns.viscous_enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
-amr.check_int       = 400    # number of timesteps between checkpoints
+amr.check_int       = 100    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file
-amr.plot_int        = 400
+amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 32
 #amr.restart         = ch64k1000
 #amr.trace   =1
 
@@ -96,11 +99,12 @@ ns.use_lsa=0
 ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
 ns.DrhoDz = 0.0 0.0 0.0
 # override_density=1 => rho=rho(T,z)
+# (override_density=2 is Boussinesq approx)
 # "default_hydrostatic_pressure_density" called if override_density=1.
 # since DrhoDz=0.0,
 # gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
 # rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
-ns.override_density=2 0 0
+ns.override_density=1 0 0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # sigma_{SL}=sigma_{LV}
 # sigma_{SV}=(1+cos(theta)) sigma_{LV}
