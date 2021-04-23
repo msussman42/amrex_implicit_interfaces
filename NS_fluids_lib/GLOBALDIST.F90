@@ -42,7 +42,7 @@ contains
 !  MATERIAL NUMBER
 !  1:liquid   2: vapor   3: solid 
 
-!  COORDIANTE TYPE
+!  COORDINATE TYPE
 !  1 3D cartisian
 !  2 R-Z   
 
