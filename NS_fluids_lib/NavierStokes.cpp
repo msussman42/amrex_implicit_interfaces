@@ -11524,6 +11524,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
          }
          
          xnucleate[dir]=problo[dir]+save_random*(probhi[dir]-problo[dir]);
+          ! (int nc=0;nc<n_sites;nc++)
 	 if (pos_sites_random_flag==0) {
 
           xnucleate[dir]=pos_sites[nc*4+dir];

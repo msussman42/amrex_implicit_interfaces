@@ -153,7 +153,7 @@ amr.plot_int        = 500
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 64
-#amr.restart         = ch64k1000
+#amr.restart         = chk20000
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -250,7 +250,13 @@ ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # NavierStokes::level_phase_change_rate
 # FORT_RATEMASSCHANGE in MASS_TRANSFER_3D.F90
 #ns.nucleation_period=0.07	#Every 90ms?
-ns.nucleation_period=0.260
+ns.nucleation_period=0.05
+#ns.nucleation_period=0.260
+# default is 1.
+# pos_sites_random_flag=0 => use pos_sites
+# pos_sites_random_flag=1 => if RZ, then r=0.0, use pos_sites for z
+#                            if XYZ, then x,y are random, use pos_sites
+#                             for z.
 ns.pos_sites_random_flag=0
 ns.nucleation_init_time=0.0  #have bubbles nucleated at t=0
 
@@ -333,7 +339,8 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0  # 4 materials
 #ns.viscconst= 1.1187e-8 4.8197e-10 1.1187e-8  # dimensionless
 # OCT 2018 (4 materials)
 # was 279E-6 for the liquid and solid.
-ns.viscconst=279E-3 12.02e-6 12.02e-6 279E-3
+#ns.viscconst=279E-3 12.02e-6 12.02e-6 279E-3
+ns.viscconst=279E-5 12.02e-6 12.02e-6 279E-5
 # NOV 2018 (3 materials)
 #ns.viscconst=279E-6 12.02e-6 279E-6
 
@@ -443,7 +450,8 @@ ns.xblob=0.0
 # center=0.6944+1.97=2.6644e-4
 # 2.6644e-4/l_0
 #ns.yblob= 0.106278             # dimensionless
-ns.yblob=2.366e-4  
+#ns.yblob=2.366e-4  
+ns.yblob=3.169e-4  
 ns.zblob=0.0
 #ns.radblob=0.25e-3  # radius of nucleated seed.
 #ns.radblob=0.09972   # dimensionless
@@ -473,7 +481,8 @@ ns.n_sites=1
 #ns.pos_sites=0.0 0.106278 0.0 0.09972       # dimensionless
 # pos_sites=x1 y1 z1 r1 x2 y2 z2 r2 ....
 # in new version: it could be that r is not used.
-ns.pos_sites=0.0 2.366e-4 0.0 0.125e-3 
+#ns.pos_sites=0.0 2.366e-4 0.0 0.125e-3 
+ns.pos_sites=0.0 3.169e-4 0.0 0.25e-3 
 
 # x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
 ns.xblob2=0.0 
