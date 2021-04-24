@@ -81,6 +81,8 @@ REAL_T            :: plg3(3,SDIM),plg4(3,SDIM)
 REAL_T            :: x1temp(SDIM)
 REAL_T            :: x2temp(SDIM)
 REAL_T            :: x3temp(SDIM)
+REAL_T            :: ztest
+
 INTEGER_T dir
 
 INTEGER_T,parameter :: debugflag = 0
@@ -666,18 +668,27 @@ if(coord_type .eq. 1)then   !  3D cartisian
    dist2 = 0.25d0 - radius3d
    dist  = -1.0d0*min(abs(dist),abs(dist1),abs(dist2))
   endif
- elseif(x(SDIM) .ge. 0.0d0)then
-  bb = (lcinter - 0.3d0)/0.15d0*radius + 0.3d0 - x(SDIM)
-  radius3d = sqrt(x(1)**2.0d0 + x(2)**2.0d0 + (x(SDIM)-0.3d0)**2.0d0) 
+ elseif((x(SDIM) .ge. 0.0d0).or.(1.eq.1)) then
+  ztest=x(SDIM)
+  if (ztest.lt.0.0d0) then
+   ztest=0.0d0
+  else if (ztest.ge.0.0d0) then
+   ! do nothing
+  else
+   print *,"ztest corrupt"
+   stop
+  endif
+  bb = (lcinter - 0.3d0)/0.15d0*radius + 0.3d0 - ztest
+  radius3d = sqrt(x(1)**2.0d0 + x(2)**2.0d0 + (ztest-0.3d0)**2.0d0) 
   if(radius .lt. 0.15d0)then
    dist = 0.25d0 - radius3d
    if(bb .lt. 0.0)then
-    dist1 = sqrt((radius-0.15d0)**2.0d0 + (x(SDIM) - lcinter)**2.0d0)
+    dist1 = sqrt((radius-0.15d0)**2.0d0 + (ztest - lcinter)**2.0d0)
     dist = min(abs(dist),abs(dist1))
    endif
   else
    dist1 = 0.25d0 - radius3d
-   dist2 = x(SDIM) - 0.6d0
+   dist2 = ztest - 0.6d0
    if(dist1 .ge. 0.0d0)then
     dist = dist1
    else

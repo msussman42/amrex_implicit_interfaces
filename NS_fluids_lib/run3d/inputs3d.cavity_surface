@@ -130,7 +130,7 @@ ns.temperature_primitive_variable=1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 
-# cavity type 1-5
+# cavity type 1-6
 ns.axis_dir=1
 ns.xblob3=0.0  # unused
 # see subroutine outside_temperature in PROB.F90
