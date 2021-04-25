@@ -76,9 +76,9 @@ ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 #amr.n_cell    = 32 64 # 1.25x2.5  
 #amr.n_cell    = 64 128 # 1.25x2.5  
 #amr.n_cell=256 256  # finest test for static freezing test 10
-amr.n_cell=64 64 # coarsest test for static freezing test 10 (max_level=1?)
-amr.max_level = 1
-ns.max_level_two_materials=1
+#amr.n_cell=64 64 # coarsest test for static freezing test 10 ?
+amr.n_cell=128 128 # medium resolution
+amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 ns.radius_cutoff=-1 0 0 0 
