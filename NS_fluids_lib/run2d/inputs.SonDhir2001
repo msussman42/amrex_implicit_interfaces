@@ -113,7 +113,12 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-11
+Lp.bottom_bottom_tol_factor=0.0001
+Lp.smooth_type=0 # GSRB
+Lp.bottom_smooth_type=2 # ILU
+mg.presmooth=2
+mg.postsmooth=2
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -137,7 +142,7 @@ ns.radius_cutoff=0 0 0 0
 
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
-amr.n_error_buf     = 2 2 2 2 2 2 2  # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 8 8 8 8 8 8 8    # block factor in grid generation
@@ -152,14 +157,14 @@ amr.check_file      = chk    # root name of checkpoint file
 amr.plot_int        = 500
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
+amr.max_grid_size   = 128 64
 #amr.restart         = chk20000
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-9
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 0.5      # scale back initial timestep
@@ -167,7 +172,7 @@ ns.change_max     = 1.1    # scale back initial timestep
 # viscous force term: rho u_t = visc_coef * div ( 2 mu D)
 # mu corresponds to "viscconst"
 ns.visc_coef      = 1.0    
-ns.visc_abs_tol   = 1.0e-10
+mac.visc_abs_tol   = 1.0e-9
 
 #ns.gravity        = -1.0     # nondimensional 
 #  G = -9.8 m/s^2  G0 = G/l_0*t_0^2 = -9.8/0.002507*(0.0159942)^2
