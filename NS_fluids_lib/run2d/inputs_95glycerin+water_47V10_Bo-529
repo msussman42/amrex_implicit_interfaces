@@ -1,0 +1,183 @@
+# PROBTYPE = 201 STRATIFIED FLUIDS
+max_step  =  99999999    # maximum timestep
+stop_time = 200
+
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  8.4 16.8   # MKS
+ns.EILE_flag=-1
+# OCT 2018  continuous_mof=2 CMOF everywhere 
+#           continuous_mof=4 CLSVOF in 2 material cells, CMOF in >2 mat cells
+ns.continuous_mof=2 
+ns.MOFITERMAX=10
+ns.temperatureface_flag=0   # 0=use LS  1=use VOF
+ns.advection_order=1 1 1 1
+ns.slope_limiter_option=1  # 0=no limiter 1=minmod
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+# JULY 2020
+# solvability_projection==0 if a BC is outflow, or compressible material.
+# solvability_projection==1 if all BC are wall and all mat. incomp.
+ns.solvability_projection=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2MG
+ns.projection_pressure_scale=1.0 
+# NOV 2018 (3 materials)
+ns.num_materials=3 # 1: lower stratified fluid 2: vapor 3: upper stratified
+                   # fluid.
+ns.num_species_var=0
+ns.configuration_tensor_var=0
+ns.post_init_pressure_solve=1
+ns.output_drop_distribution=1
+ns.face_flag=1
+ns.num_divu_outer_sweeps = 1
+# NOV 2019
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+godunov.printMinMax=0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
+ns.visual_tessellate_vfrac=1
+ns.visual_ncell=64 256
+
+amr.n_cell    = 256 512
+amr.max_level = 1
+# liquid (material 1, lower stratified fluid), 
+# vapor  (material 2, bubble or drop), 
+# gas    (material 3, upper stratified fluid) => 3 materials
+ns.max_level_two_materials=0
+# 0=never adapt   1=if radius< 1 * dx then adapt
+# -1=always adapt
+# An interface changing phase will always be adapted
+# to the finest possible level.
+# Triple junctions will always be adapted to the finest possible level.
+ns.radius_cutoff=0 -1 0 0
+
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=16 16
+#amr.max_level =  0
+amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.num_SDC_outer_sweeps=1
+ns.enable_spectral=0
+ns.diffusion_enable_spectral=0
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 500    # number of timesteps between checkpoints
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 500  # 500 for production runs
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 128 128
+#amr.restart         = chk00500
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+# viscous force term: rho u_t = visc_coef * div ( 2 mu D)
+# mu corresponds to "viscconst"
+ns.visc_coef      = 1.0  
+mac.visc_abs_tol   = 1.0e-10
+# NOV 2018 (3 or 4 materials)
+#JULY 2020, gravity_dir==2 is the default in 2D.
+#ns.gravity_dir = 2  # 1,2, or 3  (2 in 2D is default)
+ns.gravity        = -980.0 #  dimensional  MKS
+ns.use_lsa=0
+#ns.override_density=2 0 0 0
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=sigma_{LV}
+# sigma_{SV}=(1+cos(theta)) sigma_{LV}
+# theta=80 sigma_{SV}/sigma_{LV}=1.17  
+# theta=140 sigma_{SV}/sigma{LV}=0.23
+# theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
+# 12 13 14 23 24 34 (LV LG SL VG VS GS)
+# N/m
+# NOV 2018 (3 materials)
+ns.tension=45.2 27.8 20.2
+
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
+# NOV 2018 (3 or 4 materials)
+ns.pressure_error_cutoff=0.0 0.0 0.0
+# NOV 2018 (3 materials)
+ns.material_type=0 0 0
+# thermal conductivity: Watts/(meter Kelvin)
+# NOV 2018 (3 materials)
+ns.heatviscconst=0.0 0.0 0.0 0.0
+# liquid-vapor, liquid-solid, vapor-solid
+# 0.0 means do not use.
+#JULY 17 
+# OCT 2018 (4 materials)
+# 12 13 14 23 24 34 (LV LG SL VG VS GS)
+# NOV 2018 (3 materials)
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0
+# dynamic viscosity Pa * s = N s / m^2
+# NOV 2018 (3 materials)
+ns.viscconst=550.1e-2 1.822e-4 9.6e-2
+# density: kg/m^3
+# NOV 2018 (3 materials)
+ns.denconst=1.244 0.001205 0.932
+
+# NOV 2018 (3 materials)
+ns.tempconst=293.0 293.0 293.0
+
+ns.xblob=0.0  
+ns.yblob=1.4  
+ns.zblob=1.4
+# yblob2 and zblob2 should be the same in RZ.
+ns.yblob2=7.0
+ns.zblob2=7.0
+ns.radblob=0.7
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=201
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+#ns.lo_bc          = 3 3  # this option if heat source
+ns.lo_bc          = 3 5
+ns.hi_bc          = 5 5
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

@@ -396,6 +396,7 @@ REAL_T :: initial_time
     if (FSI_flag(im).eq.1) then
      call GENERAL_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
      LS(im)=-LS(im)   ! now LS>0 in solid
+     distsolid=LS(im)
     endif
    enddo
 
@@ -417,7 +418,8 @@ REAL_T :: initial_time
 
    else if (axis_dir.eq.5) then
 
-     ! in: materialdistbatch (initial angle=static angle)
+     ! "drop_slope_dist" declared in GLOBALUTIL.F90
+     ! in: GENERAL_PHASE_CHANGE_LS (initial angle=static angle)
      ! maxtall==two*radblob => no ice in this call.
     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
       two*radblob,dist_ice,dist_liquid)
@@ -662,6 +664,18 @@ REAL_T :: initial_time
      LS(3)=distsolid
     endif
 
+    if ((LS(1).lt.zero).and. &
+        (LS(2).lt.zero).and. &
+        (LS(3).lt.zero)) then
+     print *,"fluids should tessellate"
+     print *,"probtype,axis_dir ",probtype,axis_dir
+     print *,"x,y,z ",x(1),x(2),x(SDIM)
+     print *,"LS(1) ",LS(1)
+     print *,"LS(2) ",LS(2)
+     print *,"LS(3) ",LS(3)
+     print *,"LS(4) ",LS(4)
+     stop
+    endif
    else if ((axis_dir.eq.6).or. &  ! incompressible boiling
             (axis_dir.eq.7)) then  ! compressible boiling
     ! do nothing (inputs.boiling) (boiling sites)
