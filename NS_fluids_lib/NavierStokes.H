@@ -1640,10 +1640,14 @@ protected:
 
     static int gmres_precond_iter_base; // default=4
     static int include_viscous_heating; // default=0
-    static int smooth_type; // Lp.smooth_type def=2 ILU
+     //smooth_type: 0=GSRB 1=ICRB 2=ILU  3=Jacobi
+    static int smooth_type; // Lp.smooth_type def=0 GSRB
     static int bottom_smooth_type; // Lp.bottom_smooth_type def=2 ILU
+    static int global_presmooth; // default=2
+    static int global_postsmooth; // default=2
     static int use_mg_precond_in_mglib; //def=1 Lp.use_mg_precon_in_mglib
-    static Real bottom_bottom_tol_factor;//def=0.1 Lp.bottom_bottom_tol_factor
+     //def=0.001 Lp.bottom_bottom_tol_factor
+    static Real bottom_bottom_tol_factor;
 
     static Vector<int>  FSI_touch_flag;
     static int         elements_generated;

@@ -1000,10 +1000,12 @@ int  NavierStokes::debug_dot_product=0;
 
 int NavierStokes::gmres_precond_iter_base=4; 
 
-int NavierStokes::smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU  3=Jacobi
+int NavierStokes::smooth_type = 0; // 0=GSRB 1=ICRB 2=ILU  3=Jacobi
 int NavierStokes::bottom_smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU 3=Jacobi
+int NavierStokes::global_presmooth = 2;
+int NavierStokes::global_postsmooth = 2;
 int NavierStokes::use_mg_precond_in_mglib=1;
-Real NavierStokes::bottom_bottom_tol_factor=0.01;
+Real NavierStokes::bottom_bottom_tol_factor=0.001;
 
 // 0=> u=u_solid if phi_solid>=0
 // 1=> u=u_solid_ghost if phi_solid>=0
@@ -2197,7 +2199,6 @@ NavierStokes::read_params ()
      1;                                        // blob_mass
 
     int ns_max_level;
-    int the_max_grid_size=0;
     int cnt_max_grid_size;
 
     ParmParse ppamr("amr");
@@ -2208,18 +2209,28 @@ NavierStokes::read_params ()
      ns_n_error_buf[ilev]=1;
     ppamr.queryarr("n_error_buf",ns_n_error_buf,0,ns_max_level);
 
+    ns_max_grid_size.resize(ns_max_level+1);
+    for (int ilev=0;ilev<=ns_max_level;ilev++) {
+     if (AMREX_SPACEDIM==2) {
+      ns_max_grid_size[ilev]=128;
+     } else if (AMREX_SPACEDIM==3) {
+      ns_max_grid_size[ilev]=32;
+     } else
+      amrex::Error("AMREX_SPACEDIM invalid");
+    } //ilev=0..max_level
+
     cnt_max_grid_size=ppamr.countval("max_grid_size");
   
     if (cnt_max_grid_size==0) {
-     ns_max_grid_size.resize(1);
-     ns_max_grid_size[0]=0;
-    } else if (cnt_max_grid_size==1) {
-     ppamr.get("max_grid_size",the_max_grid_size);
-     ns_max_grid_size.resize(1);
-     ns_max_grid_size[0]=the_max_grid_size;
-    } else if (cnt_max_grid_size>1) {
-     ns_max_grid_size.resize(cnt_max_grid_size);
-     ppamr.getarr("max_grid_size",ns_max_grid_size,0,cnt_max_grid_size);
+     // do nothing
+    } else if (cnt_max_grid_size>0) {
+     Vector<int> mgs;
+     ppamr.getarr("max_grid_size",mgs);
+     int last_mgs = mgs.back();
+     mgs.resize(ns_max_level+1,last_mgs);
+     for (int ilev=0;ilev<=ns_max_level;ilev++) {
+      ns_max_grid_size[ilev]=mgs[ilev];
+     }
     } else
      amrex::Error("cnt_max_grid_size invalid");
 
@@ -2898,18 +2909,25 @@ NavierStokes::read_params ()
 
     pp.query("gmres_precond_iter_base",gmres_precond_iter_base);
 
+     //smooth_type: 0=GSRB 1=ICRB 2=ILU  3=Jacobi
     ParmParse pplp("Lp");
     pplp.query("smooth_type",smooth_type);
     pplp.query("bottom_smooth_type",bottom_smooth_type);
-    if (smooth_type!=2)
-     amrex::Warning("WARNING: ILU smoother is best");
     pplp.query("use_mg_precond_in_mglib",use_mg_precond_in_mglib);
 
     pplp.query("bottom_bottom_tol_factor",bottom_bottom_tol_factor);
 
+    ParmParse ppmg("mg");
+    ppmg.query("presmooth",global_presmooth);
+    ppmg.query("postsmooth",global_postsmooth);
+    if (global_presmooth!=global_postsmooth)
+     amrex::Error("global_presmooth!=global_postsmooth");
+
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "smooth_type " << smooth_type << '\n';
      std::cout << "bottom_smooth_type " << bottom_smooth_type << '\n';
+     std::cout << "global_presmooth " << global_presmooth << '\n';
+     std::cout << "global_postsmooth " << global_postsmooth << '\n';
      std::cout << "use_mg_precond_in_mglib " <<use_mg_precond_in_mglib<<'\n';
 
      std::cout << "bottom_bottom_tol_factor " <<

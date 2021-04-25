@@ -112,7 +112,7 @@ Amr::Old_maxGridSize(int lev) const
   if (max_grid_size[lev][dir]==local_max_grid_size) {
    // do nothing
   } else
-   amrex::Error("expecting uniform max_grid_size");
+   amrex::Error("expecting uniform dir=0,1,2 max_grid_size");
  }
  return local_max_grid_size;
 }

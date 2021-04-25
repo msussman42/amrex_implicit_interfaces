@@ -7779,7 +7779,8 @@ void NavierStokes::relaxLEVEL(
    bcpres_array,
    usecg_at_bottom,
    temp_meets_tol,
-   smooth_type,bottom_smooth_type,
+   smooth_type,
+   bottom_smooth_type,
    presmooth,presmooth,  //postsmooth="presmooth"
    error0,
    A_error0,
@@ -10316,16 +10317,8 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("meets_tol invalid");
 
-     ParmParse ppmg("mg");
-     int presmooth=2;
-     int postsmooth=2;
-     ppmg.query("presmooth",presmooth);
-     ppmg.query("postsmooth",postsmooth);
-     if (presmooth!=postsmooth)
-      amrex::Error("presmooth!=postsmooth");
-
-     int local_presmooth=presmooth;
-     int local_postsmooth=postsmooth;
+     int local_presmooth=global_presmooth;
+     int local_postsmooth=global_postsmooth;
      Real rho0=1.0;
      Real rho1=1.0;
      Real alpha=1.0;

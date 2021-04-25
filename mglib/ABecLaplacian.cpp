@@ -1082,13 +1082,11 @@ ABecLaplacian::ABecLaplacian (
 
    if (cfd_max_grid_size.size()>=1) {
     int local_max_grid_size=cfd_max_grid_size[0];
-    if (local_max_grid_size==0) {
-     gbox[level]=one_cgrid;
-    } else if (local_max_grid_size>=16) {
+    if (local_max_grid_size>=16) {
      gbox[level]=one_cgrid;
      gbox[level].maxSize(local_max_grid_size);
     } else
-     amrex::Error("local_max_grid_size=0 or >=16 required");
+     amrex::Error("local_max_grid_size>=16 required");
    } else
     amrex::Error("cfd_max_grid_size.size() invalid");
 
