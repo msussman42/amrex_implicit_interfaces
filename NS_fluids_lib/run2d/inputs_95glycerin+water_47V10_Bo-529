@@ -82,7 +82,7 @@ amr.check_file      = chk    # root name of checkpoint file
 amr.plot_int        = 500  # 500 for production runs
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 128 128
+amr.max_grid_size   = 256 64
 #amr.restart         = chk00500
 #amr.trace   =1
 
