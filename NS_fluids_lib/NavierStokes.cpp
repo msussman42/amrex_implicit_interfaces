@@ -682,6 +682,7 @@ int NavierStokes::ngrow_make_distance=3;
 // blob_cell_count
 // blob_cellvol_count
 // blob_mass
+// blob_pressure
 int NavierStokes::num_elements_blobclass=0;
 
 int NavierStokes::ngrowFSI=3;
@@ -2182,6 +2183,7 @@ NavierStokes::read_params ()
     // blob_cell_count
     // blob_cellvol_count
     // blob_mass
+    // blob_pressure
     num_elements_blobclass=
      3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)+  // blob_matrix * 3
      3*(2*AMREX_SPACEDIM)+                     // blob_RHS * 3
@@ -2196,7 +2198,8 @@ NavierStokes::read_params ()
      nmat*nmat+                                // blob_triple_perim
      1+                                        // blob_cell_count
      1+                                        // blob_cellvol_count
-     1;                                        // blob_mass
+     1+                                        // blob_mass
+     1;                                        // blob_pressure
 
     int ns_max_level;
     int cnt_max_grid_size;

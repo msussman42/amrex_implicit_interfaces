@@ -4939,7 +4939,8 @@ NavierStokes::ColorSum(
  if (sweep_num==0) {
   getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,20);
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
-  getState_localMF(VEL_COLORSUM_MF,1,0,AMREX_SPACEDIM,cur_time_slab);
+   // velocity + pressure
+  getState_localMF(VEL_COLORSUM_MF,1,0,AMREX_SPACEDIM+1,cur_time_slab);
 
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF,do_face_decomp);
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
@@ -4954,8 +4955,8 @@ NavierStokes::ColorSum(
 
  if (localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*nmat)
   amrex::Error("localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*nmat");
- if (localMF[VEL_COLORSUM_MF]->nComp()!=AMREX_SPACEDIM)
-  amrex::Error("localMF[VEL_COLORSUM_MF]->nComp()!=AMREX_SPACEDIM");
+ if (localMF[VEL_COLORSUM_MF]->nComp()!=AMREX_SPACEDIM+1)
+  amrex::Error("localMF[VEL_COLORSUM_MF]->nComp()!=AMREX_SPACEDIM+1");
  if (localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat)
   amrex::Error("localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat");
 
@@ -5121,7 +5122,10 @@ NavierStokes::ColorSum(
    &ncomp_mdot,
    levelbc.dataPtr(),
    velbc.dataPtr(),
-   &nface,&nface_dst,&ncellfrac);
+   material_type_lowmach.dataPtr(),
+   &nface,
+   &nface_dst,
+   &ncellfrac);
  } // mfi
 } // omp
  ns_reconcile_d_num(182);
@@ -5290,6 +5294,8 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
  counter++;
  blobdata[i].blob_mass=blob_array[counter];
  counter++;
+ blobdata[i].blob_pressure=blob_array[counter];
+ counter++;
 
 } // end subroutine copy_to_blobdata
 
@@ -5359,6 +5365,9 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
 
    dest_blobdata[i].blob_mass=
      source_blobdata[i].blob_mass;
+
+   dest_blobdata[i].blob_pressure=
+     source_blobdata[i].blob_pressure;
   } // i=0..num_colors-1
 
  } else
@@ -5384,6 +5393,7 @@ void NavierStokes::sum_blobdata(int i,
   blobdata[i].blob_cell_count+=level_blobdata[i].blob_cell_count;
   blobdata[i].blob_cellvol_count+=level_blobdata[i].blob_cellvol_count;
   blobdata[i].blob_mass+=level_blobdata[i].blob_mass;
+  blobdata[i].blob_pressure+=level_blobdata[i].blob_pressure;
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    blobdata[i].blob_center_integral[dir]+=
@@ -5486,6 +5496,8 @@ void NavierStokes::copy_from_blobdata(int i,int& counter,
  counter++;
  blob_array[counter]=blobdata[i].blob_mass;
  counter++;
+ blob_array[counter]=blobdata[i].blob_pressure;
+ counter++;
 
 }  // end subroutine copy_from_blobdata
 
@@ -5513,6 +5525,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
  blobdata[i].blob_cell_count=0.0;
  blobdata[i].blob_cellvol_count=0.0;
  blobdata[i].blob_mass=0.0;
+ blobdata[i].blob_pressure=0.0;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   blobdata[i].blob_center_integral[dir]=0.0;
   blobdata[i].blob_center_actual[dir]=0.0;
@@ -5779,7 +5792,8 @@ NavierStokes::ColorSumALL(
      for (int i=0;i<color_count;i++) {
       // blob_volume, blob_center_integral, blob_perim, blob_perim_mat,
       // blob_triple_perim, 
-      // blob_cell_count,blob_cellvol_count, blob_mass
+      // blob_cell_count,blob_cellvol_count, blob_mass,
+      // blob_pressure
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
 
       int j=0;

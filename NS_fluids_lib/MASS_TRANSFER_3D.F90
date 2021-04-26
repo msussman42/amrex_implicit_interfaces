@@ -7579,6 +7579,7 @@ stop
       !blob_cell_count
       !blob_cellvol_count
       !blob_mass
+      !blob_pressure
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ &
@@ -7588,12 +7589,13 @@ stop
           1+ & ! perim 
           nmat+ & ! perim_mat
           nmat*nmat+ & ! blob_triple_perim 
-          1+1+1) then
+          1+1+1+1) then
        print *,"num_elements_blobclass invalid rate mass change:", &
          num_elements_blobclass
        print *,"blob_cell_count readded Febrary 11, 2020"
        print *,"blob_cellvol_count added December 6, 2020"
        print *,"blob_mass added January 23, 2021"
+       print *,"blob_pressure added April 26, 2021"
        stop
       endif
 
@@ -8644,6 +8646,7 @@ stop
                      ! blob_cell_count
                      ! blob_cellvol_count
                      ! blob_mass
+                     ! blob_pressure
 
                       ! ic+1 is blob_triple_perim index
                      ic=(icolor-1)*num_elements_blobclass+ &

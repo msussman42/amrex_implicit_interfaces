@@ -178,7 +178,10 @@ namespace amrex{
        int* ncomp_mdot,
        int* levelbc,
        int* velbc,
-       int* nface,int* nface_dst,int* ncellfrac);
+       int* material_type_lowmach,
+       int* nface,
+       int* nface_dst,
+       int* ncellfrac);
 
     void FORT_LEVELRECOLOR(
      Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),

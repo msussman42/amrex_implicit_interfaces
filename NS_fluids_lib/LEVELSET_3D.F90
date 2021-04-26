@@ -5136,7 +5136,10 @@ stop
        ncomp_mdot, &
        levelbc, &
        velbc, &
-       nface,nface_dst,ncellfrac)
+       material_type_lowmach, &
+       nface, &
+       nface_dst, &
+       ncellfrac)
       use probcommon_module
       use global_utility_module
       use geometry_intersect_module
@@ -5163,6 +5166,7 @@ stop
       INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: ncomp_mdot_alloc
       INTEGER_T, intent(in) :: ncomp_mdot
+      INTEGER_T, intent(in) :: material_type_lowmach(nmat)
       INTEGER_T, intent(in) :: distribute_mdot_evenly(2*nten)
       INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
       REAL_T, intent(in) :: latent_heat(2*nten)
@@ -5215,7 +5219,7 @@ stop
       REAL_T, intent(inout) :: mdot_comp(DIMV(mdot_comp),ncomp_mdot)
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM)
+      REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM+1)
       REAL_T, intent(in) :: DEN(DIMV(DEN),nmat*num_state_material)
       REAL_T, intent(in) :: VOF(DIMV(VOF),nmat*ngeom_recon)
       REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
@@ -5248,7 +5252,12 @@ stop
       REAL_T local_dist(nmat,nmat)
       REAL_T vfrac
       REAL_T vol
-      REAL_T mass,den_mat
+      REAL_T mass
+      REAL_T den_mat
+      REAL_T TEMP_mat
+      REAL_T internal_energy
+      REAL_T massfrac_parm(num_species_var)
+      REAL_T pressure_local
       REAL_T xsten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
       INTEGER_T nhalf
@@ -5259,6 +5268,7 @@ stop
       INTEGER_T im1,im2
       INTEGER_T ml,mr
       INTEGER_T local_mask
+      INTEGER_T ispec
       REAL_T frac_pair(nmat,nmat)
       REAL_T dist_pair(nmat,nmat)
       REAL_T areaface
@@ -5286,6 +5296,7 @@ stop
       REAL_T blob_cellvol_count
       REAL_T blob_mass
       REAL_T blob_volume
+      REAL_T blob_pressure
       REAL_T mdot_total
       REAL_T mdot_avg
       REAL_T mdot_part
@@ -5422,6 +5433,7 @@ stop
       !blob_cell_count
       !blob_cellvol_count
       !blob_mass
+      !blob_pressure
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
@@ -5433,11 +5445,13 @@ stop
           nmat*nmat+ & ! blob_triple_perim
           1+ &    ! blob_cell_count
           1+ &    ! blob_cellvol_count
-          1) then ! blob_mass
+          1+ &    ! blob_mass
+          1) then ! blob_pressure
        print *,"num_elements_blobclass invalid"
        print *,"blob_cell_count readded February, 2021"
        print *,"blob_cellvol_count added December 6, 2020"
        print *,"blob_mass added January 23, 2021"
+       print *,"blob_pressure added April 26, 2021"
        stop
       endif
       if (arraysize.ne.num_elements_blobclass*num_colors) then
@@ -6089,12 +6103,12 @@ stop
             enddo ! im2=1..nmat
             enddo ! im1=1..nmat
 
-            if (ic.eq.opposite_color(im)*num_elements_blobclass-2) then
+            if (ic.eq.opposite_color(im)*num_elements_blobclass-3) then
              ! do nothing
             else
-             print *,"ic invalid, blob_cell_count 3rd to last?"
-             print *,"ic invalid, blob_cellvol_count 2nd to last?"
-             print *,"ic invalid, blob_mass is last?"
+             print *,"ic invalid for blob_cell_count"
+             print *,"blob_cell_count,blob_cellvol_count,"
+             print *,"blob_mass,blob_pressure,"
              print *,"ic=",ic
              print *,"im=",im
              print *,"opposite_color(im)=",opposite_color(im)
@@ -6102,11 +6116,73 @@ stop
              stop
             endif
 
-             ! blob_cell_count
-             ! blob_cellvol_count
+             ! blob_cell_count  (ic)
+             ! blob_cellvol_count (ic+1)
+             ! blob_mass (ic+2)
+             ! blob_pressure (ic+3)
             if (vfrac.ge.half) then
              level_blobdata(ic)=level_blobdata(ic)+one !blob_cell_count
              level_blobdata(ic+1)=level_blobdata(ic+1)+vol !blob_cellvol_count
+
+             pressure_local=VEL(D_DECL(i,j,k),SDIM+1)
+             if (is_rigid(nmat,im).eq.0) then
+              if (material_type_lowmach(im).eq.0) then
+               ! do nothing
+              else if ((material_type_lowmach(im).gt.0).and. &
+                       (material_type_lowmach(im).le.MAX_NUM_EOS)) then
+               dencomp=(im-1)*num_state_material+1
+               
+               if (constant_density_all_time(im).eq.1) then
+                den_mat=fort_denconst(im)
+               else if (constant_density_all_time(im).eq.0) then
+                den_mat=DEN(D_DECL(i,j,k),dencomp)
+               else
+                print *,"constant_density_all_time(im) invalid"
+                stop
+               endif
+               if (den_mat.gt.zero) then
+                ! do nothing
+               else
+                print *,"den_mat has gone nonpos"
+                stop
+               endif
+               TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
+               if (TEMP_mat.gt.zero) then
+                ! do nothing
+               else
+                print *,"TEMP_mat has gone nonpos"
+                stop
+               endif
+               call init_massfrac_parm(den_mat,massfrac_parm,im)
+               do ispec=1,num_species_var
+                massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+               enddo
+               call INTERNAL_material(den_mat,massfrac_parm,TEMP_mat, &
+                internal_energy,material_type_lowmach(im),im)
+               if (internal_energy.gt.zero) then
+                ! do nothing
+               else
+                print *,"internal_energy has gone nonpos"
+                stop
+               endif
+               call EOS_material(den_mat,massfrac_parm, &
+                internal_energy, &
+                pressure_local, &
+                material_type_lowmach(im),im)
+              else
+               print *,"material_type_lowmach(im) invalid"
+               stop
+              endif
+             else if (is_rigid(nmat,im).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid(nmat,im) invalid"
+              stop
+             endif
+
+             level_blobdata(ic+3)=level_blobdata(ic+3)+ &
+                vol*pressure_local !blob_pressure
+
              if (ncomp_mdot.eq.2*nten) then
               ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
@@ -6132,7 +6208,11 @@ stop
              stop
             endif
 
-            ic=ic+2
+            ! blob_cell_count  (ic)
+            ! blob_cellvol_count (ic+1)
+            ! blob_mass (ic+2)
+            ! blob_pressure (ic+3)
+            ic=ic+3
 
             if (ic.eq.opposite_color(im)*num_elements_blobclass) then
              ! do nothing
@@ -6182,6 +6262,7 @@ stop
              print *,"blob_cell_count readded Feb 8, 2021"
              print *,"blob_cellvol_count added December 6, 2020"
              print *,"blob_mass added January 23, 2021"
+             print *,"blob_pressure added April 26, 2021"
              stop
             endif
 
@@ -6319,6 +6400,7 @@ stop
               ic=ic+1  ! blob_cell_count readded Feb 11, 2020
               ic=ic+1  ! blob_cellvol_count added December 6, 2020
               ic=ic+1  ! blob_mass added January 23, 2021
+              ic=ic+1  ! blob_pressure added April 26, 2021
   
               if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
                print *,"ic invalid in getcolorsum 2"
@@ -6329,6 +6411,7 @@ stop
                print *,"blob_cell_count readded Feb 11, 2020"
                print *,"blob_cellvol_count added December 6, 2020"
                print *,"blob_mass added January 23, 2021"
+               print *,"blob_pressure added April 26, 2021"
                stop
               endif
 
@@ -6515,12 +6598,13 @@ stop
                    print *,"complement_flag ",complement_flag
                   endif
  
-                  ic=opposite_color(im)*num_elements_blobclass-2
+                  ic=opposite_color(im)*num_elements_blobclass-3
 
                   blob_cell_count=cum_blobdata(ic)
                   blob_cellvol_count=cum_blobdata(ic+1)
                   blob_mass=cum_blobdata(ic+2)
-                  ic=ic+2
+                  blob_pressure=cum_blobdata(ic+3)
+                  ic=ic+3
 
                   if (ic_base.eq. &
                       (opposite_color(im)-1)*num_elements_blobclass) then
@@ -14226,13 +14310,15 @@ stop
       !blob_cell_count
       !blob_cellvol_count
       !blob_mass
+      !blob_pressure
       if (num_elements_blobclass.ne. &
           3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
           2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
           3+1+ & ! blob_mass_for_velocity, blob_volume
           2*SDIM+ & ! blob_center_integral,blob_center_actual
           1+nmat+nmat*nmat+ & ! blob_perim, blob_perim_mat, blob_triple_perim
-          1+1+1) then !blob_cell_count,blob_cellvol_count,blob_mass
+          1+1+1+1) then !blob_cell_count,blob_cellvol_count,blob_mass,
+                        ! blob_pressure
        print *,"num_elements_blobclass invalid"
        stop
       endif
