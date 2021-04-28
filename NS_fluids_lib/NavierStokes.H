@@ -279,7 +279,11 @@ namespace amrex{
 #define donorflag_complement_MF (JUMP_STRENGTH_COMPLEMENT_MF+1)
 #define CURRENT_CELL_VEL_MF (donorflag_complement_MF+1)
 #define XDMACOLD_MF (CURRENT_CELL_VEL_MF+1)
-#define NEXT_MF (XDMACOLD_MF+3)
+
+#define T_advect_MF (XDMACOLD_MF+3)
+#define DTDt_MF (T_advect_MF+1)
+
+#define NEXT_MF (DTDt_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
@@ -630,6 +634,9 @@ public:
     void prepare_viscous_solver();
 
     void alloc_gradp_over_rho(int alloc_flag);
+
+    void alloc_DTDtALL(int alloc_flag);
+    void alloc_DTDt(int alloc_flag);
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();

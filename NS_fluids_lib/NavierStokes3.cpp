@@ -13126,6 +13126,72 @@ void NavierStokes::alloc_gradp_over_rho(int alloc_flag) {
 
 } // end subroutine alloc_gradp_over_rho
 
+void NavierStokes::alloc_DTDtALL(int alloc_flag) {
+
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
+
+ int finest_level=parent->finestLevel();
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.alloc_DTDt(alloc_flag);
+ }
+
+} // end subroutine alloc_DTDtALL
+
+void NavierStokes::alloc_DTDt(int alloc_flag) {
+
+ int nmat=num_materials;
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int project_option_thermal=2; // temperature project_option
+ Vector<int> scomp;  
+ Vector<int> ncomp;  
+ int state_index;
+ int ncomp_check;
+ int ngrow=0;
+
+  // DTdt_MF=T_new - T_advect_MF
+
+ get_mm_scomp_solver(
+   nmat,
+   project_option_thermal,
+   state_index,
+   scomp,
+   ncomp,
+   ncomp_check);
+
+  // called after phase change, and before thermal diffusion.
+ if (alloc_flag==1) {
+
+  getState_localMF_list(
+   T_advect_MF,ngrow,
+   state_index,
+   scomp,
+   ncomp);
+
+  // delete DTDt_MF and T_advect_MF after mdot appended with
+  // V_T rho DTDt - average(V_T rho DTDt) 
+ } else if (alloc_flag==0) {
+
+  delete_localMF(T_advect_MF,1);
+  delete_localMF(DTDt_MF,1);
+
+ } else if (alloc_flag==2) {  // DTDt=T_new - T_advect
+
+  getState_localMF_list(
+   DTDt_MF,ngrow,
+   state_index,
+   scomp,
+   ncomp);
+
+  MultiFab::Subtract(*localMF[DTDt_MF],*localMF[T_advect_MF],0,0,nmat,ngrow);
+ } else
+  amrex::Error("alloc_flag invalid in alloc_DTDt");
+
+} // end subroutine alloc_DTDt
+
 
 void NavierStokes::prepare_viscous_solver() {
 
