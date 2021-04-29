@@ -1042,6 +1042,30 @@ protected:
      Vector< Vector<Real> >& mdot_comp_data_redistribute
      );
 
+
+
+    void LowMachDIVU(
+     int sweep_num,
+     MultiFab* typemf,
+     MultiFab* color,
+     MultiFab* mdot,
+     Vector<blobclass> cum_blobdata,
+     Vector< Vector<Real> >& level_mdot_data,
+     Vector< Vector<Real> > cum_mdot_data
+     );
+
+    void LowMachDIVUALL(
+     int coarsest_level,
+     int& color_count,
+     int idx_type,
+     int idx_color,
+     int idx_mdot,  
+     Vector<int>& type_flag, 
+     Vector<blobclass> blobdata,
+     Vector< Vector<Real> >& mdot_data
+     );
+
+
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag);
     void TypeALL(
