@@ -6813,7 +6813,7 @@ stop
        DIMS(mdot), &
        LS,DIMS(LS), &
        DEN,DIMS(DEN), &
-       DTDt,DIMS(DTDt), &
+       DTDt,DIMS(DTDt), & ! T_after_diffusion-T_after_advection
        VOF,DIMS(VOF), &
        typefab,DIMS(typefab), &
        color,DIMS(color), &
@@ -6833,6 +6833,8 @@ stop
        material_type_lowmach)
       use probcommon_module
       use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -6849,8 +6851,6 @@ stop
       INTEGER_T, intent(in) :: material_type_lowmach(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
 
-      INTEGER_T :: i,j,k
- 
       INTEGER_T, intent(in) :: rzflag
       INTEGER_T, intent(in) :: num_colors
       INTEGER_T, intent(in) :: arraysize
@@ -6867,18 +6867,20 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(typefab)
       INTEGER_T, intent(in) :: DIMDEC(color)
       INTEGER_T, intent(in) :: DIMDEC(mask)
-      REAL_T, intent(inout) ::level_blobdata(arraysize)
+      REAL_T, intent(in) ::level_blobdata(arraysize)
       REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
 
       REAL_T, intent(inout) :: mdot(DIMV(mdot))
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: DEN(DIMV(DEN),nmat*num_state_material)
-      REAL_T, intent(in) :: DTDt(DIMV(DTDt),nmat)
+      REAL_T, intent(in) :: DTDt(DIMV(DTDt),nmat) ! T_after_diffusion-T_adv
       REAL_T, intent(in) :: VOF(DIMV(VOF),nmat*ngeom_recon)
       REAL_T, intent(in) :: color(DIMV(color))
       REAL_T, intent(in) :: mask(DIMV(mask))
 
+      INTEGER_T :: i,j,k
+      INTEGER_T :: dir
       INTEGER_T vofcomp
       INTEGER_T dencomp
       INTEGER_T base_type
@@ -6891,6 +6893,8 @@ stop
       REAL_T internal_energy
       REAL_T massfrac_parm(num_species_var)
       REAL_T pressure_local
+      REAL_T pressure_sum
+      REAL_T dVdT
       REAL_T xsten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
       INTEGER_T nhalf
@@ -6899,19 +6903,13 @@ stop
       INTEGER_T local_mask
       INTEGER_T ispec
       REAL_T LScen(nmat)
-      REAL_T RR,dperim
       INTEGER_T im_primary
-      REAL_T DXMAXLS,cutoff
       REAL_T blob_cellvol_count
-      REAL_T mdot_total
-      REAL_T mdot_avg
-      REAL_T mdot_part
-      REAL_T updated_density
-      REAL_T original_density
+      REAL_T mdot_local
+      REAL_T mdot_sum_denom
+      REAL_T mdot_sum_numerator
       REAL_T mofdata(nmat*ngeom_recon)
-      INTEGER_T caller_id
       INTEGER_T nten_test
-      INTEGER_T iten,iten_shift
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -6955,7 +6953,8 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(DEN),1,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(DEN),0,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(DTDt),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(VOF),1,-1,6616)
       call checkbound(fablo,fabhi,DIMS(color),1,-1,6626)
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,6627)
@@ -7019,7 +7018,9 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
        local_mask=NINT(mask(D_DECL(i,j,k)))
+
        if (local_mask.eq.1) then
 
         icolor=NINT(color(D_DECL(i,j,k)))
@@ -7062,6 +7063,16 @@ stop
 
            if (im_primary.eq.base_type) then
 
+            if (sweep_num.eq.0) then
+             level_mdot_data(2*(icolor-1)+1)= &
+               level_mdot_data(2*(icolor-1)+1)+vol
+            else if (sweep_num.eq.1) then
+             ! do nothing
+            else
+             print *,"sweep_num invalid"
+             stop
+            endif
+
             dencomp=(im_primary-1)*num_state_material+1
             if (constant_density_all_time(im_primary).eq.1) then
              den_mat=fort_denconst(im_primary)
@@ -7087,10 +7098,10 @@ stop
             enddo ! dir=1..sdim
 
             ic=icolor*num_elements_blobclass
-            pressure_local=level_blobdata(ic)
+            pressure_sum=level_blobdata(ic) ! sum pres * vol
             blob_cellvol_count=level_blobdata(ic-2)
             if (blob_cellvol_count.gt.zero) then
-             pressure_local=pressure_local/blob_cellvol_count
+             pressure_sum=pressure_sum/blob_cellvol_count
  
              if (material_type_lowmach(im_primary).eq.0) then
               ! do nothing
@@ -7119,625 +7130,79 @@ stop
               endif
               call EOS_material(den_mat,massfrac_parm, &
                internal_energy, &
-               pressure_not_avg, &
+               pressure_local, &
                material_type_lowmach(im_primary),im_primary)
+
+              call dVdT_material(dVdT,massfrac_parm, &
+                pressure_sum,TEMP_mat, &
+                material_type_lowmach(im_primary),im_primary)
+
+               !F_t + s|grad F|=0
+               ! dF=F_t dt=-s|grad F|dt=-s dt/dx
+               ! my mdot=(den_src/den_dst-1)*dF*Vcell/dt^2=
+               !  (den_src/den_dst-1)*(-s * area)/dt
+               ! units of my mdot are "velocity" * area / seconds=
+               ! "div velocity" * Length * area / seconds =
+               ! "div velocity" * volume / seconds
+               !
+              mdot_local=dVdT*den_mat* &
+                  DTDt(D_DECL(i,j,k),im_primary)*vol/(dt*dt)
+
+              if (sweep_num.eq.0) then
+               mdot(D_DECL(i,j,k))=mdot_local
+               level_mdot_data(2*(icolor-1)+2)= &
+                 level_mdot_data(2*(icolor-1)+2)+mdot_local
+              else if (sweep_num.eq.1) then
+               ! do nothing
+              else
+               print *,"sweep_num invalid"
+               stop
+              endif
+
              else
               print *,"material_type_lowmach(im_primary) invalid"
               stop
              endif
-             else if (is_rigid(nmat,im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_rigid(nmat,im) invalid"
-              stop
-             endif
-
-             level_blobdata(ic+3)=level_blobdata(ic+3)+ &
-                vol*pressure_local !blob_pressure
-
-             if (ncomp_mdot.eq.2*nten) then
-              ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
-              do i_mdot=1,ncomp_mdot
-               level_mdot_data(ic_base_mdot+i_mdot)= &
-                  level_mdot_data(ic_base_mdot+i_mdot)+ &
-                  mdot(D_DECL(i,j,k),i_mdot)
-
-                ! mdot complement
-               level_mdot_comp_data(ic_base_mdot+i_mdot)= &
-                  level_mdot_comp_data(ic_base_mdot+i_mdot)+ &
-                  mdot_comp(D_DECL(i,j,k),i_mdot)
-              enddo
-             else if (ncomp_mdot.eq.0) then
-              ! do nothing
-             else
-              print *,"ncomp_mdot invalid"
-              stop
-             endif
-            else if (vfrac.lt.half) then
-             ! do nothing
             else
-             print *,"vfrac bust"
+             print *,"blob_cellvol_count invalid"
              stop
             endif
-
-            ! blob_cell_count  (ic)
-            ! blob_cellvol_count (ic+1)
-            ! blob_mass (ic+2)
-            ! blob_pressure (ic+3)
-            ic=ic+3
-
-            if (ic.eq.opposite_color(im)*num_elements_blobclass) then
-             ! do nothing
-            else
-             print *,"ic invalid, blob_mass is last?"
-             print *,"ic=",ic
-             print *,"im=",im
-             print *,"opposite_color(im)=",opposite_color(im)
-             print *,"num_elements_blobclass=",num_elements_blobclass
-             stop
-            endif
-
-             ! blob_mass
-            dencomp=(im-1)*num_state_material+1
-            if (constant_density_all_time(im).eq.1) then
-             den_mat=fort_denconst(im)
-            else if (constant_density_all_time(im).eq.0) then
-             den_mat=DEN(D_DECL(i,j,k),dencomp)
-            else
-             print *,"constant_density_all_time(im) invalid"
-             stop
-            endif
-            if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
-             if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
-              level_blobdata(ic)=level_blobdata(ic)+vol*vfrac*den_mat
-             else
-              print *,"den_mat overflow"
-              print *,"den_mat= ",den_mat
-              print *,"fort_density_ceiling(im)=",fort_density_ceiling(im)
-              stop
-             endif
-            else
-             print *,"den_mat underflow"
-             stop
-            endif
-
-            ic=ic+1
-
-            if (ic.eq.opposite_color(im)*num_elements_blobclass+1) then
-             ! do nothing
-            else
-             print *,"ic invalid in getcolorsum"
-             print *,"ic=",ic
-             print *,"im=",im
-             print *,"opposite_color(im)=",opposite_color(im)
-             print *,"num_elements_blobclass=",num_elements_blobclass
-             print *,"blob_cell_count readded Feb 8, 2021"
-             print *,"blob_cellvol_count added December 6, 2020"
-             print *,"blob_mass added January 23, 2021"
-             print *,"blob_pressure added April 26, 2021"
-             stop
-            endif
-
-             ! perimeter (cell faces)
-            do dir=1,SDIM
-             ii=0
-             jj=0
-             kk=0
-             if (dir.eq.1) then
-              ii=1
-             else if (dir.eq.2) then
-              jj=1
-             else if ((dir.eq.3).and.(SDIM.eq.3)) then
-              kk=1
-             else
-              print *,"dir invalid getcolorsum"
-              stop
-             endif
-
-             do side=1,2
-              iface=i
-              jface=j
-              kface=k
-              if (side.eq.1) then
-               ! do nothing
-              else if (side.eq.2) then
-               iface=i+ii
-               jface=j+jj
-               kface=k+kk
-              else
-               print *,"side invalid"
-               stop
-              endif
-              if (dir.eq.1) then
-               areaface=areax(D_DECL(iface,jface,kface))
-               face_index=0
-               do ml = 1, nmat
-               do mr = 1, nmat
-                !(ml,mr,2) 
-                face_index=face_index+1
-                frac_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
-                face_index=face_index+1
-                dist_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
-               enddo ! mr
-               enddo ! ml
-               if (face_index.ne.nface_dst) then
-                print *,"face_index invalid"
-                stop
-               endif
-              else if (dir.eq.2) then
-               areaface=areay(D_DECL(iface,jface,kface))
-               face_index=0
-               do ml = 1, nmat
-               do mr = 1, nmat
-                !(ml,mr,2) 
-                face_index=face_index+1
-                frac_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
-                face_index=face_index+1
-                dist_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
-               enddo ! mr
-               enddo ! ml
-               if (face_index.ne.nface_dst) then
-                print *,"face_index invalid"
-                stop
-               endif
-              else if ((dir.eq.3).and.(SDIM.eq.3)) then
-               areaface=areaz(D_DECL(iface,jface,kface))
-               face_index=0
-               do ml = 1, nmat
-               do mr = 1, nmat
-                !(ml,mr,2) 
-                face_index=face_index+1
-                frac_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
-                face_index=face_index+1
-                dist_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
-               enddo ! mr
-               enddo ! ml
-               if (face_index.ne.nface_dst) then
-                print *,"face_index invalid"
-                stop
-               endif
-              else 
-               print *,"dir invalid getcolorsum"
-               stop
-              endif
-
-               ! F,CEN_INTEGRATE,CEN_ACTUAL,AREA,AREA(im_opp)
-              ic=(opposite_color(im)-1)*num_elements_blobclass+ &
-               3*(2*SDIM)*(2*SDIM)+ & ! blob_matrix
-               3*(2*SDIM)+ & ! blob_RHS
-               3*(2*SDIM)+ & ! blob_velocity
-               2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-               3+ & ! blob_mass_for_velocity
-               1+ & ! blob_volume
-               2*SDIM+ & ! blob_center_integral,blob_center_actual
-               1 ! blob_perim  
-
-               ! ic component is blob_perim
-              do im_opp=1,nmat
-               if (im_opp.ne.im) then
-                if (side.eq.1) then
-                 ml=im_opp
-                 mr=im
-                else if (side.eq.2) then
-                 mr=im_opp
-                 ml=im
-                else
-                 print *,"side invalid"
-                 stop
-                endif
-                 ! overall perimeter
-                level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
-               endif
-              enddo !im_opp=1..nmat
-
-               ! perimeter decomposed (nmat components)
-              ic=ic+1
-              do im_opp=1,nmat
-               if (im_opp.ne.im) then
-                if (side.eq.1) then
-                 ml=im_opp
-                 mr=im
-                else if (side.eq.2) then
-                 mr=im_opp
-                 ml=im
-                else
-                 print *,"side invalid"
-                 stop
-                endif
-                level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
-               endif
-               ic=ic+1
-              enddo ! im_opp=1..nmat
-              ic=ic+nmat*nmat ! blob_triple_perim
-              ic=ic+1  ! blob_cell_count readded Feb 11, 2020
-              ic=ic+1  ! blob_cellvol_count added December 6, 2020
-              ic=ic+1  ! blob_mass added January 23, 2021
-              ic=ic+1  ! blob_pressure added April 26, 2021
-  
-              if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
-               print *,"ic invalid in getcolorsum 2"
-               print *,"ic=",ic
-               print *,"im=",im
-               print *,"opposite_color(im)=",opposite_color(im)
-               print *,"num_elements_blobclass=",num_elements_blobclass
-               print *,"blob_cell_count readded Feb 11, 2020"
-               print *,"blob_cellvol_count added December 6, 2020"
-               print *,"blob_mass added January 23, 2021"
-               print *,"blob_pressure added April 26, 2021"
-               stop
-              endif
-
-             enddo ! side
-            enddo ! dir
-
-           else if (operation_flag.eq.1) then
 
             if (sweep_num.eq.0) then
-
-              ! blob_volume
-             vofcomp=(im-1)*ngeom_recon+1
-             vfrac=mofdata(vofcomp)
-
-             if (1.eq.0) then
-              print *,"i,j,k,im,vfrac (before if) ",i,j,k,im,vfrac
-             endif
-
-             do im_alt=1,nmat
-              if (im_alt.ne.im) then
-               do ireverse=0,1
-                if (im_alt.lt.im) then
-                 im_mdot=im_alt
-                 im_opp_mdot=im
-                else if (im_alt.gt.im) then
-                 im_mdot=im
-                 im_opp_mdot=im_alt
-                else
-                 print *,"im_alt bust"
-                 stop
-                endif
-                call get_iten(im_mdot,im_opp_mdot,iten,nmat)
-                iten_shift=ireverse*nten+iten
-                if (latent_heat(iten_shift).eq.zero) then
-                 ! do nothing
-                else if (latent_heat(iten_shift).ne.zero) then
-                 if (ireverse.eq.0) then
-                  im_source=im_mdot
-                  im_dest=im_opp_mdot
-                 else if (ireverse.eq.1) then
-                  im_source=im_opp_mdot
-                  im_dest=im_mdot
-                 else
-                  print *,"ireverse bust"
-                  stop
-                 endif
-
-                 if (distribute_mdot_evenly(iten_shift).eq.0) then
-                  ! do nothing
-                 else if ((distribute_mdot_evenly(iten_shift).eq.1).or. &
-                          (distribute_mdot_evenly(iten_shift).eq.2)) then
-
-                  if (vfrac.ge.half) then
-
-                   if (distribute_from_target(iten_shift).eq.0) then
-                    im_evenly=im_dest
-                   else if (distribute_from_target(iten_shift).eq.1) then
-                    im_evenly=im_source
-                   else
-                    print *,"distribute_from_target(iten_shift) invalid"
-                    stop
-                   endif
-              
-                    ! sum alpha V_i = mdot_total
-                    ! alpha=mdot_total/(sum V_i) 
-                   if (im.eq.im_evenly) then 
-                    ic=opposite_color(im)*num_elements_blobclass-2
-                    blob_cell_count=cum_blobdata(ic)
-                    blob_cellvol_count=cum_blobdata(ic+1)
-                    if ((blob_cellvol_count.gt.zero).and. &
-                        (blob_cell_count.gt.zero)) then
-
-                     if (ncomp_mdot.eq.2*nten) then
-                      ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
-                      mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
-
-                      if (distribute_mdot_evenly(iten_shift).eq.1) then
-                       mdot_avg=mdot_total/blob_cellvol_count
-                        ! divu_cor must be a constant since 
-                        ! rho_cor must be a constant.
-                       mdot_part=mdot_avg*vol ! divu_cor * volume
-                      else if (distribute_mdot_evenly(iten_shift).eq.2) then
-                       print *,"distribute_mdot_evenly=2 not allowed"
-                       print *,"only distribute_mdot_evenly=1 allowed since"
-                       print *,"divu correction must be consistent with the"
-                       print *,"uniform density correction requirement." 
-                       stop
-                       mdot_avg=mdot_total/blob_cell_count
-                       mdot_part=mdot_avg
-                      else
-                       print *,"distribute_mdot_evenly(iten_shift) invalid"
-                       stop
-                      endif
-
-                      level_mdot_data_redistribute(ic_base_mdot+iten_shift)= &
-                       level_mdot_data_redistribute(ic_base_mdot+iten_shift)+ &
-                       mdot_part
-                 
-                      if (fort_material_type(im).eq.0) then
-                       mdot(D_DECL(i,j,k),iten_shift)=mdot_part
-                      else if ((fort_material_type(im).gt.0).and. &
-                               (fort_material_type(im).le.MAX_NUM_EOS)) then
-                       print *,"phase change only for incompressible materials"
-                       stop
-                      else 
-                       print *,"fort_material_type(im) invalid"
-                       stop
-                      endif
-                     else
-                      print *,"ncomp_mdot invalid"
-                      stop
-                     endif
-
-                    else
-                     print *,"blob_cell_count or blob_cellvol_count invalid"
-                     stop
-                    endif
-                   else if (im.ne.im_evenly) then
                     ! do nothing
-                   else
-                    print *,"im or im_evenly bust"
-                    stop
-                   endif
-
-                  else if (vfrac.lt.half) then
-                   ! do nothing
-                  else
-                   print *,"vfrac invalid"
-                   stop
-                  endif
-
-                 else
-                  print *,"distribute_mdot_evenly(iten_shift) invalid"
-                  stop
-                 endif
-
-                 if (constant_volume_mdot(iten_shift).eq.0) then
-                  im_negate=0
-                  complement_flag=0 
-                 else if (constant_volume_mdot(iten_shift).eq.1) then
-                  ! distribute -sum mdot to the source:
-                  im_negate=im_source
-                  if (distribute_from_target(iten_shift).eq.0) then
-                   complement_flag=1 
-                  else if (distribute_from_target(iten_shift).eq.1) then
-                   complement_flag=0 
-                  else
-                   print *,"distribute_from_target(iten_shift) invalid"
-                   stop
-                  endif
-                 else if (constant_volume_mdot(iten_shift).eq.-1) then
-                  ! distribute -sum mdot to the dest:
-                  im_negate=im_dest
-                  if (distribute_from_target(iten_shift).eq.0) then
-                   complement_flag=0 
-                  else if (distribute_from_target(iten_shift).eq.1) then
-                   complement_flag=1 
-                  else
-                   print *,"distribute_from_target(iten_shift) invalid"
-                   stop
-                  endif
-                 else
-                  print *,"constant_volume_mdot(iten_shift) invalid"
-                  stop
-                 endif
-
-                 if (im_negate.eq.0) then
-                  ! do nothing
-                 else if (im_negate.eq.im) then
-                  if (constant_density_all_time(im).eq.1) then
-                   print *,"constant_density_all_time(im) invalid"
-                   stop
-                  else if (constant_density_all_time(im).eq.0) then
-                   ! do nothing
-                  else
-                   print *,"constant_density_all_time(im) invalid"
-                   stop
-                  endif
-
-                  if (1.eq.0) then
-                   print *,"i,j,k,im,im_negate,vfrac ",i,j,k,im,im_negate,vfrac
-                   print *,"iten_shift,im_mdot,im_opp_mdot ", &
-                    iten_shift,im_mdot,im_opp_mdot
-                   print *,"complement_flag ",complement_flag
-                  endif
- 
-                  ic=opposite_color(im)*num_elements_blobclass-3
-
-                  blob_cell_count=cum_blobdata(ic)
-                  blob_cellvol_count=cum_blobdata(ic+1)
-                  blob_mass=cum_blobdata(ic+2)
-                  blob_pressure=cum_blobdata(ic+3)
-                  ic=ic+3
-
-                  if (ic_base.eq. &
-                      (opposite_color(im)-1)*num_elements_blobclass) then
-                   ! do nothing
-                  else
-                   print *,"ic_base invalid"
-                   stop
-                  endif
-                  if (ic.eq.opposite_color(im)*num_elements_blobclass) then
-                   ! do nothing
-                  else
-                   print *,"ic invalid"
-                   stop
-                  endif
-
-                  ic= &
-                   ic_base+ &
-                   3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                   2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-                   3+ & ! blob_mass_for_velocity
-                   1    ! blob_volume
-
-                  blob_volume=cum_blobdata(ic)
-
-                  if ((blob_cell_count.gt.zero).and. &
-                      (blob_cellvol_count.gt.zero).and. &
-                      (blob_mass.gt.zero).and. &
-                      (blob_volume.gt.zero)) then
-
-                   if (ncomp_mdot.eq.2*nten) then
-                    ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
-
-                    original_density=blob_mass/blob_volume
-                    if (original_density.gt.zero) then
-                     ! do nothing
-                    else
-                     print *,"original_density invalid"
-                     stop
-                    endif
-
-                    if (complement_flag.eq.0) then
-                     mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
-                     density_factor=one
-                    else if (complement_flag.eq.1) then
-                     if (distribute_from_target(iten_shift).eq.0) then
-                      density_factor=fort_denconst(im_dest)/original_density
-                     else if (distribute_from_target(iten_shift).eq.1) then
-                      density_factor=fort_denconst(im_source)/original_density
-                     else
-                      print *,"distribute_from_target(iten_shift) invalid"
-                      stop
-                     endif
-                     mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
-                     if (1.eq.0) then
-                      print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
-                       i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
-                      print *,"i,j,k,cellvol_count ",i,j,k,blob_cellvol_count
-                     endif
-                    else
-                     print *,"complement_flag invalid"
-                     stop
-                    endif
-                    mdot_avg=mdot_total/blob_cellvol_count
-
-                    if (vfrac.ge.half) then
-                     level_mdot_data_redistribute(ic_base_mdot+iten_shift)= &
-                      level_mdot_data_redistribute(ic_base_mdot+iten_shift)+ &
-                      mdot_avg*vol
-
-                     mdot(D_DECL(i,j,k),iten_shift)= &
-                       mdot(D_DECL(i,j,k),iten_shift)-mdot_avg*vol
-                    else if (vfrac.lt.half) then
-                     ! do nothing
-                    else
-                     print *,"vfrac invalid"
-                     stop
-                    endif
-
-                     ! F_t + s|grad F|=0
-                     ! dF=F_t dt=-s|grad F|dt=-s dt/dx
-                     ! my mdot=(den_src/den_dst-1)*dF*Vcell/dt^2=
-                     !  (den_src/den_dst-1)*(-s * area)/dt
-                     ! units of my mdot are "velocity" * area / seconds=
-                     ! "div velocity" * Length * area / seconds =
-                     ! "div velocity" * volume / seconds
-                     ! distribute mdot so that rho div u=constant 
-                     ! since rho=constant, make sure (div u)_correct=const.
-                     ! mdot_correct=divu_cor * volume/seconds
-                     ! sum mdot = sum mdot_correct
-                     ! divu_cor=sum mdot/(sum volume_i)=
-                     ! sum (divu_source_i vol_i)/(sum vol_i)
-                     ! so, we should always have:
-                     !  distribute_mdot_evenly(iten_shift).eq.1
-                     ! 
-                     ! mass_new-mass_old = sum_i vel_i dt * area_i * 
-                     !                     (den_dst-den_src) =
-                     !                     sum_i dF*Vcell*(den_dst-den_src)=
-                     !                     DM
-                     ! if distribute_from_target==0,
-                     !  mdot=(den_src/den_dst-1)*dF*Vcell/dt^2
-                     !  sum_i mdot_i=sum (den_src-den_dst)*dF*Vcell/
-                     !                   (den_dst*dt^2)=-DM/(den_dst*dt^2)
-                     !  rho_update-=DM/V_update
-                     !  rho_update+=sum_i mdot_i*den_dst * dt^2/V_update
-                     ! if distribute_from_target==1,
-                     !  mdot=(1-den_dst/den_src)*dF*Vcell/dt^2
-                     !  sum_i mdot_i=sum (den_src-den_dst)*dF*Vcell/
-                     !                   (den_src*dt^2)=-DM/(den_src*dt^2)
-                     !  rho_update-=DM/V_update
-                     !  rho_update+=sum_i mdot_i*den_src * dt^2/V_update
-
-                    if (original_density.gt.zero) then
-                     updated_density=original_density* &
-                         (one+dt*dt*density_factor*mdot_total/blob_volume)
-                     dencomp=(SDIM+1)*num_materials_vel+ &
-                         (im-1)*num_state_material+1
-                     if (updated_density.gt.zero) then
-                      snew(D_DECL(i,j,k),dencomp)=updated_density
-                     else
-                      print *,"updated_density invalid"
-                      stop
-                     endif
-                    else
-                     print *,"original_density invalid"
-                     stop
-                    endif
-                   else
-                    print *,"ncomp_mdot invalid"
-                    stop
-                   endif
-
-                  else
-                   print *,"blob_cell_count,or ..."
-                   print *,"blob_cellvol_count,or ..."
-                   print *,"blob_mass,or ... "
-                   print *,"blob_volume bad"
-                   stop
-                  endif
-                 else if (im.ne.im_negate) then
-                  ! do nothing
-                 else
-                  print *,"im or im_negate bust"
-                  stop
-                 endif
-
-                else
-                 print *,"latent_heat(iten_shift) invalid"
-                 stop
-                endif
-               enddo ! ireverse=0...1
-              else if (im_alt.eq.im) then
-               ! do nothing
-              else
-               print *,"im_alt or im bust"
-               stop
-              endif
-             enddo ! im_alt=1..nmat
-
+            else if (sweep_num.eq.1) then
+             mdot_sum_denom=level_mdot_data(2*(icolor-1)+1)
+             if (mdot_sum_denom.gt.zero) then
+              mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
+              mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))- &
+                mdot_sum_numerator*vol/mdot_sum_denom
+             else
+              print *,"mdot_sum_denom invalid"
+              stop
+             endif
             else
              print *,"sweep_num invalid"
              stop
             endif
-
            else
-            print *,"operation_flag invalid"
+            print *,"(im_primary<>base_type)"
             stop
            endif
-
-          else if (opposite_color(im).eq.0) then
-           ! do nothing
           else
-           print *,"opposite_color invalid"
+           print *,"vfrac out of range"
            stop
           endif
-
-         enddo ! im=1..nmat
-
+         else if (is_rigid(nmat,im_primary).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im_primary) invalid"
+          stop
+         endif
         else
-         print *,"base_type invalid"
+         print *,"vfrac out of range (2)"
          stop
         endif
+
        else if (local_mask.eq.0) then
         ! do nothing
        else
