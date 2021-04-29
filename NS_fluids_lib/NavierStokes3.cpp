@@ -13144,7 +13144,6 @@ void NavierStokes::alloc_DTDtALL(int alloc_flag) {
 void NavierStokes::alloc_DTDt(int alloc_flag) {
 
  int nmat=num_materials;
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int project_option_thermal=2; // temperature project_option
  Vector<int> scomp;  
  Vector<int> ncomp;  

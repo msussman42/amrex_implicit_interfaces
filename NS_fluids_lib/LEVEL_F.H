@@ -19,6 +19,7 @@
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
 #    define FORT_GETCOLORSUM getcolorsum
+#    define FORT_GET_LOWMACH_DIVU get_lowmach_divu
 #    define FORT_LEVELRECOLOR levelrecolor
 #    define FORT_COLORFILL colorfill
 #    define FORT_GRIDRECOLOR gridrecolor
@@ -46,6 +47,7 @@
 #    define FORT_INITRECALESCE INITRECALESCE
 #    define FORT_GETTYPEFAB GETTYPEFAB
 #    define FORT_GETCOLORSUM GETCOLORSUM
+#    define FORT_GET_LOWMACH_DIVU GET_LOWMACH_DIVU
 #    define FORT_LEVELRECOLOR LEVELRECOLOR
 #    define FORT_COLORFILL COLORFILL
 #    define FORT_GRIDRECOLOR GRIDRECOLOR
@@ -71,6 +73,7 @@
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
 #    define FORT_GETCOLORSUM getcolorsum
+#    define FORT_GET_LOWMACH_DIVU get_lowmach_divu
 #    define FORT_LEVELRECOLOR levelrecolor
 #    define FORT_COLORFILL colorfill
 #    define FORT_GRIDRECOLOR gridrecolor
@@ -95,6 +98,7 @@
 #    define FORT_INITRECALESCE initrecalesce_
 #    define FORT_GETTYPEFAB gettypefab_
 #    define FORT_GETCOLORSUM getcolorsum_
+#    define FORT_GET_LOWMACH_DIVU get_lowmach_divu_
 #    define FORT_LEVELRECOLOR levelrecolor_
 #    define FORT_COLORFILL colorfill_
 #    define FORT_GRIDRECOLOR gridrecolor_
@@ -182,6 +186,40 @@ namespace amrex{
        int* nface,
        int* nface_dst,
        int* ncellfrac);
+
+
+     void FORT_GET_LOWMACH_DIVU(
+       int* tid_current,
+       int* sweep_num,
+       int* constant_density_all_time,
+       Real* dt,
+       const Real* dx,
+       const Real* xlo,
+       int* nmat,
+       int* nten,
+       Real* mdot, // mdot initialized to 0
+       AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+       Real* DEN,AMREX_ARLIM_P(DENlo),AMREX_ARLIM_P(DENhi),
+       Real* DTDt,AMREX_ARLIM_P(DTDtlo),AMREX_ARLIM_P(DTDthi),
+       Real* VOF,AMREX_ARLIM_P(VOFlo),AMREX_ARLIM_P(VOFhi),
+       Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi),
+       Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),
+       Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+       const int* tilelo, const int* tilehi,
+       const int* fablo, const int* fabhi, 
+       int* bfact,
+       int* level,
+       int* finest_level,
+       int* rzflag,
+       int* num_colors,
+       Real* level_blobarray,
+       Real* level_mdot_array,
+       int* arraysize,
+       int* mdot_arraysize,
+       int* num_elements_blobclass,
+       int* material_type_lowmach);
+
 
     void FORT_LEVELRECOLOR(
      Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),

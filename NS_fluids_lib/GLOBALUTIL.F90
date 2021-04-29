@@ -15547,7 +15547,17 @@ contains
        stop
       endif
 
-      dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
+      if ((imattype.ge.1).and. &
+          (imattype.le.23)) then
+       dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
+      else if (imattype.eq.0) then
+       dVdT=zero
+      else if (imattype.eq.999) then
+       dVdT=zero
+      else
+       print *,"imattype invalid in dVdT_material_CORE"
+       stop
+      endif
 
       return
       end subroutine dVdT_material_CORE
@@ -16640,6 +16650,75 @@ pressure=pressure/global_pressure_scale
 
 return
 end subroutine EOS_material
+
+
+subroutine dVdT_material(dVdT,massfrac_parm, &
+  pressure_in,temperature, &
+  imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: pressure_in,temperature
+REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+REAL_T, intent(out) :: dVdT
+REAL_T :: pressure
+INTEGER_T :: ispec
+
+if (pressure_in.gt.zero) then
+ ! do nothing
+else
+ print *,"pressure_in invalid"
+ stop
+endif
+if (temperature.gt.zero) then
+ ! do nothing
+else
+ print *,"temperature invalid"
+ stop
+endif
+if ((im.ge.1).and.(im.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im invalid"
+ stop
+endif
+if (fort_stiffGAMMA(im).ge.one) then
+ ! do nothing
+else
+ print *,"fort_stiffGAMMA(im) invalid"
+ stop
+endif
+if (fort_stiffCV(im).gt.zero) then
+ ! do nothing
+else
+ print *,"fort_stiffCV(im) invalid"
+ stop
+endif
+
+do ispec=1,num_species_var
+ if (massfrac_parm(ispec).ge.zero) then
+  ! do nothing
+ else
+  print *,"massfrac_parm invalid"
+  stop
+ endif
+enddo ! ispec
+
+pressure=pressure_in*global_pressure_scale
+
+if (is_in_probtype_list().eq.1) then
+ call SUB_dVdT(dVdT,massfrac_parm, &
+   pressure,temperature, &
+   imattype,im,num_species_var)
+else 
+ call dVdT_material_CORE(dVdT,massfrac_parm, &
+         pressure,temperature, &
+         imattype,im)
+endif
+
+return
+end subroutine dVdT_material
 
 
   ! returns De/DT / scale 
