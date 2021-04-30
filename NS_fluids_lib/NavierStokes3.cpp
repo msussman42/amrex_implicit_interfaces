@@ -12189,7 +12189,11 @@ void NavierStokes::vel_elastic_ALL() {
    if (face_flag==1) {
      // average down the MAC velocity, set the boundary conditions.
     make_MAC_velocity_consistentALL();
-call VELMAC_TO_CELL
+    int use_VOF_weight=1;
+    VELMAC_TO_CELLALL(use_VOF_weight);
+   } else 
+    amrex::Error("expecting face_flag==1 if MAC_grid_displacement==1");
+
   } else
    amrex::Error("MAC_grid_displacement invalid");
 

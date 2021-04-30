@@ -17969,13 +17969,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   output_MAC_vel=1;
 
  if (output_MAC_vel==1) {
+   // save a copy of the State_Type cell velocity since it will be
+   // overwritten by the mass weighted MAC velocity interpolant.
   getStateALL(1,cur_time_slab,0,
     num_materials_vel*AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
-  for (int ilev=finest_level;ilev>=0;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int use_VOF_weight=1;
-   ns_level.VELMAC_TO_CELL(use_VOF_weight);
-  }
+
+  int use_VOF_weight=1;
+  VELMAC_TO_CELLALL(use_VOF_weight);
  }
 
  int tecplot_finest_level=finest_level;

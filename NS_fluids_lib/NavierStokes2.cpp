@@ -2299,6 +2299,11 @@ void NavierStokes::make_MAC_velocity_consistentALL() {
 
  int finest_level=parent->finestLevel();
 
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==0 in make_MAC_velocity_consistentALL");
+
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.make_MAC_velocity_consistent();
@@ -3264,6 +3269,22 @@ void NavierStokes::density_TO_MAC(int project_option) {
   amrex::Error("projection_enable_spectral invalid");
 
 } // subroutine density_TO_MAC
+
+void NavierStokes::VELMAC_TO_CELLALL(int use_VOF_weight) {
+
+ int finest_level=parent->finestLevel();
+
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==0 in VELMAC_TO_CELLALL");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.VELMAC_TO_CELL(use_VOF_weight);
+ }
+
+} // end subroutine VELMAC_TO_CELLALL
 
 void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
  

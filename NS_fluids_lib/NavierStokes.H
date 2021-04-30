@@ -1322,6 +1322,8 @@ void apply_pressure_grad(
     void make_MAC_velocity_consistentALL();
     void make_MAC_velocity_consistent();
 
+    void VELMAC_TO_CELLALL(
+      int use_VOF_weight);
     void VELMAC_TO_CELL(
       int use_VOF_weight);
 
