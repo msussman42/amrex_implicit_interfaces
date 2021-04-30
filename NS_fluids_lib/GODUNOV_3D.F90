@@ -26901,7 +26901,8 @@ stop
        YDfab,DIMS(YDfab), &
        ZDfab,DIMS(ZDfab), &
        xfacefab,DIMS(xfacefab), &
-       XFORCE,DIMS(XFORCE), &
+       UMACNEW, &
+       DIMS(UMACNEW), &
        recon,DIMS(recon), &  
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -26942,18 +26943,18 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(YDfab)
       INTEGER_T, intent(in) :: DIMDEC(ZDfab)
       INTEGER_T, intent(in) :: DIMDEC(xfacefab)
-      INTEGER_T, intent(in) :: DIMDEC(XFORCE)
+      INTEGER_T, intent(in) :: DIMDEC(UMACNEW)
       INTEGER_T, intent(in) :: DIMDEC(recon)
 
       REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(in) :: mask(DIMV(mask))
       REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
       REAL_T, target, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
-      REAL_T, intent(in) :: XDfab(DIMV(XDfab),num_materials_viscoelastic)
-      REAL_T, intent(in) :: YDfab(DIMV(YDfab),num_materials_viscoelastic)
-      REAL_T, intent(in) :: ZDfab(DIMV(ZDfab),num_materials_viscoelastic)
+      REAL_T, intent(in) :: XDfab(DIMV(XDfab))
+      REAL_T, intent(in) :: YDfab(DIMV(YDfab))
+      REAL_T, intent(in) :: ZDfab(DIMV(ZDfab))
       REAL_T, intent(in) :: xfacefab(DIMV(xfacefab),vofface_index+2*nmat)
-      REAL_T, intent(out) :: XFORCE(DIMV(XFORCE),num_materials_viscoelastic)
+      REAL_T, intent(inout) :: UMACNEW(DIMV(UMACNEW))
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -27017,6 +27018,7 @@ stop
       REAL_T force(SDIM)
       REAL_T bodyforce
       REAL_T deninv
+      REAL_T XFORCE_local
       
 
       im_elastic_p1=im_elastic+1
@@ -27034,7 +27036,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1277)
       call checkbound(fablo,fabhi,DIMS(recon),2,-1,1277)
       call checkbound(fablo,fabhi,DIMS(xfacefab),0,dir,1277)
-      call checkbound(fablo,fabhi,DIMS(XFORCE),0,dir,1277)
+      call checkbound(fablo,fabhi,DIMS(UMACNEW),0,dir,1277)
       call checkbound(fablo,fabhi,DIMS(XDfab),1,0,1277)
       call checkbound(fablo,fabhi,DIMS(YDfab),1,1,1277)
       call checkbound(fablo,fabhi,DIMS(ZDfab),1,SDIM-1,1277)
@@ -27156,7 +27158,7 @@ stop
         stop
        endif
 
-       XFORCE(D_DECL(i,j,k),partid+1)=zero
+       XFORCE_local=zero
                
         ! im_elastic_p1 dominates the center of the MAC control volume.
        if (local_mask.eq.1) then
@@ -27555,8 +27557,8 @@ stop
            endif
  
            if (dir_XD.eq.dir+1) then
-            XFORCE(D_DECL(i,j,k),partid+1)= &
-             force(dir_XD)*deninv
+            XFORCE_local=force(dir_XD)*deninv
+            UMACNEW(D_DECL(i,j,k))=UMACNEW(D_DECL(i,j,k))+XFORCE_local
            endif
 
           else

@@ -12130,7 +12130,7 @@ void NavierStokes::vel_elastic_ALL() {
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
          // note: tensor_advection_updateALL is called before veldiffuseALL.
-         // initializes VISCOTEN_MF
+         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
          ns_level.make_viscoelastic_tensor(im);
          ns_level.make_viscoelastic_force(im);
         }
@@ -12142,7 +12142,15 @@ void NavierStokes::vel_elastic_ALL() {
 
        } else if (MAC_grid_displacement==1) {
 
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         // note: tensor_advection_updateALL is called before veldiffuseALL.
+         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
+         ns_level.make_viscoelastic_tensor(im);
+         ns_level.MAC_GRID_ELASTIC_FORCE(im);
+        }
 
+        delete_array(VISCOTEN_MF);
        } else
         amrex::Error("MAC_grid_displacement invalid");
 
@@ -12175,15 +12183,6 @@ void NavierStokes::vel_elastic_ALL() {
    //  umacnew=Interp_from_cell_to_MAC(unew^CELL)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,1); 
 
-   // after make_viscoelastic_force(), in
-   //  NavierStokes::vel_elastic_ALL()
-   // uses SLOPE_RECON_MF
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
-   }
-   avgDownALL_TENSOR();
-
   } else if (MAC_grid_displacement==1) {
 
    if (face_flag==1) {
@@ -12196,6 +12195,12 @@ void NavierStokes::vel_elastic_ALL() {
 
   } else
    amrex::Error("MAC_grid_displacement invalid");
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
+  }
+  avgDownALL_TENSOR();
 
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);
