@@ -791,9 +791,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(zdata)
       INTEGER_T, intent(in) :: DIMDEC(recon)
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
-      REAL_T, intent(in) :: xdata(DIMV(xdata),partid+1)
-      REAL_T, intent(in) :: ydata(DIMV(ydata),partid+1)
-      REAL_T, intent(in) :: zdata(DIMV(zdata),partid+1)
+      REAL_T, intent(in) :: xdata(DIMV(xdata))
+      REAL_T, intent(in) :: ydata(DIMV(ydata))
+      REAL_T, intent(in) :: zdata(DIMV(zdata))
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(out) :: dest(SDIM)
 
@@ -876,11 +876,11 @@ stop
         endif
 
         if (dir_disp_comp.eq.0) then
-         local_data=xdata(D_DECL(isten,jsten,ksten),partid+1)
+         local_data=xdata(D_DECL(isten,jsten,ksten))
         else if (dir_disp_comp.eq.1) then
-         local_data=ydata(D_DECL(isten,jsten,ksten),partid+1)
+         local_data=ydata(D_DECL(isten,jsten,ksten))
         else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
-         local_data=zdata(D_DECL(isten,jsten,ksten),partid+1)
+         local_data=zdata(D_DECL(isten,jsten,ksten))
         else
          print *,"dir_disp_comp invalid"
          stop

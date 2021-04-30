@@ -1317,12 +1317,12 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 } // avgDownEdge_localMF
 
 // input: XD at MAC locations, levelset function(s), normal(s)
-// output: elastic force in localMF[idx+dir]  dir=0..sdim-1
+// output: get_new_data(Umac_Type+dir,slab_step+1)  dir=0..sdim-1
 // for viscosity:
 // the ghost Tau is (I-nn)T^interior (I-nn) + nn T^exterior nn
 //   (what about derivatives normal to the face for viscosity?)
 //   (jump condition aware extrapolation?)
-void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
+void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
@@ -1330,14 +1330,42 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");
 
+ if ((im_elastic>=0)&&(im_elastic<nmat)) {
+  if ((particleLS_flag[im_elastic]==1)||
+      (particleLS_flag[im_elastic]==0)) { 
+   if (ns_is_rigid(im_elastic)==0) {
+    if ((elastic_time[im_elastic]>0.0)&&
+        (elastic_viscosity[im_elastic]>0.0)) {
+     if (store_elastic_data[im_elastic]==1) {
+      // do nothing
+     } else
+      amrex::Error("expecting store_elastic_data[im_elastic]==1");
+    } else
+     amrex::Error("expecting elastic_time>0 and elastic_viscosity>0");
+   } else
+    amrex::Error("expecting ns_is_rigid(im_elastic)==0)"); 
+  } else
+   amrex::Error("particlLS_flag[im_elastic] invalid");
+ } else
+  amrex::Error("im_elastic invalid");
+
+ int partid=0;
+ while ((im_elastic_map[partid]!=im_elastic)&&
+        (partid<im_elastic_map.size())) {
+  partid++;
+ }
+ if (partid<im_elastic_map.size()) {
+  // do nothing
+ } else
+  amrex::Error("partid invalid");
+
  MultiFab* XD_MAC[AMREX_SPACEDIM];
   // see getStateMAC
   // this routine gets the displacement on the mac grid with one ghost
   // cell.
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   int ngrow=1;
-  XD_MAC[dir]=getStateMAC(XDmac_Type,ngrow,dir,0,
-    num_materials_viscoelastic,cur_time_slab);
+  XD_MAC[dir]=getStateMAC(XDmac_Type,ngrow,dir,partid,1,cur_time_slab);
  }
 
  resize_levelsetLO(2,LEVELPC_MF);
@@ -1368,13 +1396,18 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,101); // faceden_index has the MAC density
-  debug_ngrow(idx+dir,0,101);  // make sure force var is allocated
-  if (localMF[idx+dir]->nComp()!=num_materials_viscoelastic)
-   amrex::Error("idx invalid ncomp");
-  if (localMF[AREA_MF+dir]->boxArray()!=
-      localMF[idx+dir]->boxArray())
-   amrex::Error("idx boxarray does not match");
-  setVal_localMF(idx+dir,1.0e+40,0,num_materials_viscoelastic,0);
+
+  MultiFab& UMAC_new=get_new_data(Umac_Type+dir,slab_step+1);
+  if (UMAC_new.nGrow()==0) {
+   // do nothing
+  } else
+   amrex::Error("UMAC_new invalid ngrow");
+
+  if (UMAC_new.nComp()!=num_materials_vel)
+   amrex::Error("UMAC_new.nComp()!=num_materials_vel");
+
+  if (localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray())
+   amrex::Error("localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray()");
  } // dir=0..sdim-1
 
  VOF_Recon_resize(2,SLOPE_RECON_MF);
@@ -1388,7 +1421,19 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
 
   // outer loop: each force component u_t = F_elastic/density  u,v,w
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
- 
+
+  MultiFab& UMAC_new=get_new_data(Umac_Type+dir,slab_step+1);
+  if (UMAC_new.nGrow()==0) {
+   // do nothing
+  } else
+   amrex::Error("UMAC_new invalid ngrow");
+
+  if (UMAC_new.nComp()!=num_materials_vel)
+   amrex::Error("UMAC_new.nComp()!=num_materials_vel");
+
+  if (localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray())
+   amrex::Error("localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray()");
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
@@ -1421,7 +1466,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
     // output
-   FArrayBox& XFORCEfab=(*localMF[idx+dir])[mfi];
+   FArrayBox& UMACNEWfab=UMAC_new[mfi];
 
    // mask=1.0 at interior fine bc ghost cells
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -1451,100 +1496,62 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int idx) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   for (int im=0;im<nmat;im++) {
-    if ((particleLS_flag[im]==1)||
-        (particleLS_flag[im]==0)) { 
-     if (ns_is_rigid(im)==0) {
-      if ((elastic_time[im]>0.0)&&
-          (elastic_viscosity[im]>0.0)) {
+   if (viscoelastic_model[im_elastic]==2) {
 
-       if (store_elastic_data[im]==1) {
+    // declared in: GODUNOV_3D.F90
+    FORT_MAC_ELASTIC_FORCE(
+     &im_elastic,
+     &partid,
+     &dir, // dir=0,1,..sdim-1  
+     &ncomp_visc, 
+     &visc_coef,
+     &facevisc_index,
+     &faceden_index,
+     &massface_index,
+     &vofface_index,
+     &ncphys,
+     velbc.dataPtr(),
+     &dt_slab,
+     &cur_time_slab,
+     xlo,dx,
+     viscfab.dataPtr(),
+     ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+     maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
+     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+     //maskcoef=1 if not covered by finer level or outside
+     maskcoef.dataPtr(), 
+     ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+     XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
+     YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
+     ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
+     xface.dataPtr(),
+     ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
+     UMACNEWfab.dataPtr(),
+     ARLIM(UMACNEWfab.loVect()),ARLIM(UMACNEWfab.hiVect()), 
+     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,&finest_level,
+     &rzflag,
+     domlo,domhi,
+     &nmat,
+     &nten);
 
-        if (viscoelastic_model[im]==2) {
-
-         int partid=0;
-         while ((im_elastic_map[partid]!=im)&&
-	        (partid<im_elastic_map.size())) {
-          partid++;
-         }
-
-         if (partid<im_elastic_map.size()) {
-
-          // declared in: GODUNOV_3D.F90
-          FORT_MAC_ELASTIC_FORCE(
-           &im,
-           &partid,
-           &dir, // dir=0,1,..sdim-1  
-           &ncomp_visc, 
-           &visc_coef,
-           &facevisc_index,
-           &faceden_index,
-           &massface_index,
-           &vofface_index,
-           &ncphys,
-           velbc.dataPtr(),
-           &dt_slab,
-           &cur_time_slab,
-           xlo,dx,
-           viscfab.dataPtr(),
-  	   ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-           maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
-           ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-	   //maskcoef=1 if not covered by finer level or outside
-           maskcoef.dataPtr(), 
-           ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
-           levelpcfab.dataPtr(),
-           ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-           XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
-           YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
-           ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
-           xface.dataPtr(),
-	   ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-           XFORCEfab.dataPtr(),
-	   ARLIM(XFORCEfab.loVect()),ARLIM(XFORCEfab.hiVect()), 
-           reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-           tilelo,tilehi,
-           fablo,fabhi,
-           &bfact,
-           &level,&finest_level,
-           &rzflag,
-           domlo,domhi,
-           &nmat,
-           &nten);
-	 } else
-          amrex::Error("partid could not be found");
-        } else if ((viscoelastic_model[im]==1)||
-   		   (viscoelastic_model[im]==0)) {
-         // do nothing
-        } else
-         amrex::Error("viscoelastic_model[im] invalid");
-       } else
-        amrex::Error("store_elastic_data invalid");
-      } else if ((elastic_time[im]==0.0)||
-   	         (elastic_viscosity[im]==0.0)) {
-       // do nothing
-      } else
-       amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
-
-     } else if (ns_is_rigid(im)==1) {
-      // do nothing
-     } else
-      amrex::Error("ns_is_rigid invalid");
-    } else
-     amrex::Error("particleLS_flag[im] invalid");
-  } // im=0..nmat-1
+   } else if ((viscoelastic_model[im_elastic]==1)||
+              (viscoelastic_model[im_elastic]==0)) {
+    // do nothing
+   } else
+    amrex::Error("viscoelastic_model[im_elastic] invalid");
 
   } // mfi
 } // omp
   ns_reconcile_d_num(132);
  } // dir = 0..sdim-1
 
-  // spectral_override==1 => order derived from "enable_spectral"
-  // spectral_override==0 => always low order.
- int caller_id=55;
- int spectral_override=0;
- avgDownEdge_localMF(idx,0,num_materials_viscoelastic,0,
-   AMREX_SPACEDIM,spectral_override,caller_id);
+ make_MAC_velocity_consistent();
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   delete XD_MAC[dir];
@@ -2320,7 +2327,7 @@ void NavierStokes::make_MAC_velocity_consistent() {
  int spectral_override=1;
 
  if (level<finest_level)
-  avgDownMacState(spectral_override);
+  avgDownMacState(spectral_override); // avgDown all the MAC components.
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");
