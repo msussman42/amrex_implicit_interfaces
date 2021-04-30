@@ -12099,9 +12099,14 @@ stop
       subroutine FORT_EXTRAPTENSOR( &
        level, &
        finest_level, &
+       MAC_grid_displacement, &
+       isweep, &
+       dir_extrap, &
        ncomp_extrap, &
-       nmat,im, & 
+       nmat, &
+       im, & 
        ngrow_extrap, &
+       LS,DIMS(LS), &
        vof,DIMS(vof), &
        dx,xlo, &
        tnew,DIMS(tnew), &
@@ -12115,12 +12120,16 @@ stop
 
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: MAC_grid_displacement
+      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, intent(in) :: dir_extrap
       INTEGER_T, intent(in) :: ncomp_extrap
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im
       INTEGER_T, intent(in) :: ngrow_extrap
       INTEGER_T i,j,k
       INTEGER_T dir
+      INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(tnew)
       INTEGER_T, intent(in) :: DIMDEC(told)
@@ -12130,6 +12139,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(out) :: tnew(DIMV(tnew),ncomp_extrap)
       REAL_T, intent(in) :: told(DIMV(told),ncomp_extrap)
@@ -12137,8 +12147,9 @@ stop
       INTEGER_T ii,jj
       INTEGER_T i1,j1,k1
       INTEGER_T klostencil,khistencil
-      INTEGER_T vofcomp
-      REAL_T vfrac,vfracstencil
+      REAL_T LSleft(nmat)
+      REAL_T LSright(nmat)
+      REAL_T vfracstencil
       REAL_T weight
       REAL_T total_weight
       REAL_T Qsum(3,3)
@@ -12152,7 +12163,7 @@ stop
       nhalf=1
 
       if ((ncomp_extrap.eq.FORT_NUM_TENSOR_TYPE).or. &
-          (ncomp_extrap.eq.SDIM)) then
+          (ncomp_extrap.eq.1)) then
        ! do nothing
       else
        print *,"ncomp_extrap invalid"
@@ -12179,7 +12190,8 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vof),ngrow_extrap,-1,9)
+      call checkbound(fablo,fabhi,DIMS(LS),ngrow_extrap+1,-1,9)
+      call checkbound(fablo,fabhi,DIMS(vof),ngrow_extrap+1,-1,9)
       call checkbound(fablo,fabhi,DIMS(tnew),0,-1,62)
       call checkbound(fablo,fabhi,DIMS(told),ngrow_extrap,-1,63)
 
@@ -12194,88 +12206,196 @@ stop
        stop
       endif
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      if (isweep.eq.0) then
+       CELLFLAG=1
+      else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then
+       if (dir_extrap.eq.isweep-1) then
+        if (MAC_grid_displacement.eq.0) then
+         CELLFLAG=1
+        else if (MAC_grid_displacement.eq.1) then
+         CELLFLAG=0
+        else
+         print *,"MAC_grid_displacement invalid"
+         stop
+        endif
+       else
+        print *,"dir_extrap invalid"
+        stop
+       endif
+      else
+       print *,"isweep invalid"
+       stop
+      endif
+
+      if (CELLFLAG.eq.1) then
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+       ii=0
+       jj=0
+       kk=0
+      else if (CELLFLAG.eq.0) then
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
+               dir_extrap)
+       ii=0
+       jj=0
+       kk=0
+       if (dir_extrap.eq.0) then
+        ii=1
+       else if (dir_extrap.eq.1) then
+        jj=1
+       else if ((dir_extrap.eq.2).and.(SDIM.eq.3)) then
+        kk=1
+       else
+        print *,"dir_extrap invalid"
+        stop
+       endif
+
+      else
+       print *,"CELLFLAG invalid"
+       stop
+      endif
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       vofcomp=im*ngeom_recon+1
-       vfrac=vof(D_DECL(i,j,k),vofcomp)
-       if ((vfrac.le.half).and.(vfrac.ge.-VOFTOL)) then
+       if (CELLFLAG.eq.1) then
+        ileft=i
+        jleft=j
+        kleft=k
+        iright=i
+        jright=j
+        kright=k
+       else if (CELLFLAG.eq.0) then
+        ileft=i-ii
+        jleft=j-jj
+        kleft=k-kk
+        iright=i
+        jright=j
+        kright=k
+       else
+        print *,"CELLFLAG invalid"
+        stop
+       endif
 
-        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do im_local=1,nmat
+        LSleft(im_local)=LS(D_DECL(ileft,jleft,kleft),im_local)
+        LSright(im_local)=LS(D_DECL(iright,jright,kright),im_local)
+       enddo
+       call get_primary_material(LSleft,nmat,im_primaryL)
+       call get_primary_material(LSright,nmat,im_primaryR)
+
+       if ((im_primaryL.ne.im+1).and. &
+           (im_primaryR.ne.im+1)) then
+
+        if (CELLFLAG.eq.1) then
+         call gridsten_level(xsten,i,j,k,level,nhalf)
+        else if (CELLFLAG.eq.0) then
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir_extrap+1)
+        else
+         print *,"CELLFLAG invalid"
+         stop
+        endif
 
         total_weight=zero
-        do ii=1,3
-        do jj=1,3
-         Qsum(ii,jj)=zero
-        enddo
-        enddo
+        if (isweep.eq.0) then
+         do ii=1,3
+         do jj=1,3
+          Qsum(ii,jj)=zero
+         enddo
+         enddo
+        else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then
+         XDsum=zero 
+        else
+         print *,"isweep invalid"
+         stop
+        endif
 
         do i1=-ngrow_extrap,ngrow_extrap
         do j1=-ngrow_extrap,ngrow_extrap
         do k1=klostencil,khistencil
 
-         call gridsten_level(xsten_stencil,i+i1,j+j1,k+k1,level,nhalf)
-
-         do ii=1,3
-         do jj=1,3
-          Q(ii,jj)=zero
-          index_ptr(ii,jj)=0
-         enddo
-         enddo
-         if (ncomp_extrap.eq.FORT_NUM_TENSOR_TYPE) then
-          index_ptr(1,1)=1
-          index_ptr(1,2)=2
-          index_ptr(2,2)=3
-          index_ptr(3,3)=4
-          if (SDIM.eq.2) then
-           index_ptr(1,3)=0
-           index_ptr(2,3)=0
-          else if (SDIM.eq.3) then
-           index_ptr(1,3)=5
-           index_ptr(2,3)=6
-          else
-           print *,"dimension bust"
-           stop
-          endif
-          index_ptr(2,1)=index_ptr(1,2)
-          index_ptr(3,1)=index_ptr(1,3)
-          index_ptr(3,2)=index_ptr(2,3)
-         else if (ncomp_extrap.eq.SDIM) then
-          index_ptr(1,1)=1
-          index_ptr(1,2)=2
-          if (SDIM.eq.2) then
-           index_ptr(1,3)=0
-          else if (SDIM.eq.3) then
-           index_ptr(1,3)=3
-          else
-           print *,"dimension bust"
-           stop
-          endif
+         if (CELLFLAG.eq.1) then
+          call gridsten_level(xsten_stencil,i+i1,j+j1,k+k1,level,nhalf)
+          ileft=i+i1
+          jleft=j+j1
+          kleft=k+k1
+          iright=i+i1
+          jright=j+j1
+          kright=k+k1
+         else if (CELLFLAG.eq.0) then
+          call gridstenMAC_level(xsten_stencil,i+i1,j+j1,k+k1, &
+                  level,nhalf,dir_extrap+1)
+          ileft=i+i1-ii
+          jleft=j+j1-jj
+          kleft=k+k1-kk
+          iright=i+i1
+          jright=j+j1
+          kright=k+k1
          else
-          print *,"ncomp_extrap invalid"
+          print *,"CELLFLAG invalid"
           stop
          endif
-         do ii=1,3
-         do jj=1,3
-          if (index_ptr(ii,jj).eq.0) then
-           ! do nothing
-          else if ((index_ptr(ii,jj).ge.1).and. &
-                   (index_ptr(ii,jj).le.ncomp_extrap)) then
-           Q(ii,jj)=told(D_DECL(i+i1,j+j1,k+k1),index_ptr(ii,jj))
+
+         if (isweep.eq.0) then
+          do ii=1,3
+          do jj=1,3
+           Q(ii,jj)=zero
+           index_ptr(ii,jj)=0
+          enddo
+          enddo
+          if (ncomp_extrap.eq.FORT_NUM_TENSOR_TYPE) then
+           index_ptr(1,1)=1
+           index_ptr(1,2)=2
+           index_ptr(2,2)=3
+           index_ptr(3,3)=4
+           if (SDIM.eq.2) then
+            index_ptr(1,3)=0
+            index_ptr(2,3)=0
+           else if (SDIM.eq.3) then
+            index_ptr(1,3)=5
+            index_ptr(2,3)=6
+           else
+            print *,"dimension bust"
+            stop
+           endif
+           index_ptr(2,1)=index_ptr(1,2)
+           index_ptr(3,1)=index_ptr(1,3)
+           index_ptr(3,2)=index_ptr(2,3)
           else
-           print *,"index_ptr(ii,jj) invalid"
+           print *,"ncomp_extrap invalid"
            stop
           endif
-         enddo
-         enddo
+          do ii=1,3
+          do jj=1,3
+           if (index_ptr(ii,jj).eq.0) then
+            ! do nothing
+           else if ((index_ptr(ii,jj).ge.1).and. &
+                    (index_ptr(ii,jj).le.ncomp_extrap)) then
+            Q(ii,jj)=told(D_DECL(i+i1,j+j1,k+k1),index_ptr(ii,jj))
+           else
+            print *,"index_ptr(ii,jj) invalid"
+            stop
+           endif
+          enddo
+          enddo
+         else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then
+          XD=told(D_DECL(i+i1,j+j1,k+k1),1)
+         else
+          print *,"isweep invalid"
+          stop
+         endif
 
-         vfracstencil=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
-         if (vfracstencil.le.half) then
-          weight=zero
-         else if (vfracstencil.gt.half) then
+         do im_local=1,nmat
+          LSleft(im_local)=LS(D_DECL(ileft,jleft,kleft),im_local)
+          LSright(im_local)=LS(D_DECL(iright,jright,kright),im_local)
+         enddo
+         call get_primary_material(LSleft,nmat,im_primaryL)
+         call get_primary_material(LSright,nmat,im_primaryR)
+         if ((im_primaryL.ne.im+1).and. &
+             (im_primaryR.ne.im+1)) then
+          weight=zero  
+         else if ((im_primaryL.eq.im+1).or. &
+                  (im_primaryR.eq.im+1)) then
           dist=zero
           do dir=1,SDIM
            dist=dist+(xsten(0,dir)-xsten_stencil(0,dir))**2
@@ -12288,53 +12408,78 @@ stop
            stop
           endif 
          else
-          print *,"vfracstencil invalid"
+          print *,"im_primaryL or im_primaryR invalid"
           stop
          endif
 
-         do ii=1,3
-         do jj=1,3
-          Qsum(ii,jj)=Qsum(ii,jj)+weight*Q(ii,jj)
-         enddo
-         enddo
+         if (isweep.eq.0) then
+          do ii=1,3
+          do jj=1,3
+           Qsum(ii,jj)=Qsum(ii,jj)+weight*Q(ii,jj)
+          enddo
+          enddo
+         else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then
+          XDsum=XDsum+weight*XD
+         else
+          print *,"isweep invalid"
+          stop
+         endif
          total_weight=total_weight+weight
         enddo
         enddo
         enddo  ! i1,j1,k1
 
-        do ii=1,3
-        do jj=1,3
+        if (isweep.eq.0) then
+         do ii=1,3
+         do jj=1,3
+          if (total_weight.gt.zero) then
+           Q(ii,jj)=Qsum(ii,jj)/total_weight
+          else if (total_weight.eq.zero) then
+           Q(ii,jj)=zero
+          else
+           print *,"total_weight invalid"
+           stop
+          endif
+         enddo 
+         enddo
+
+         do ii=1,3
+         do jj=1,3
+          if (index_ptr(ii,jj).eq.0) then
+           ! do nothing
+          else if ((index_ptr(ii,jj).ge.1).and. &
+                   (index_ptr(ii,jj).le.ncomp_extrap)) then
+           tnew(D_DECL(i,j,k),index_ptr(ii,jj))=Q(ii,jj)
+          else
+           print *,"index_ptr(ii,jj) invalid"
+           stop
+          endif
+         enddo
+         enddo
+        else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then
          if (total_weight.gt.zero) then
-          Q(ii,jj)=Qsum(ii,jj)/total_weight
+          XD=XDsum/total_weight
          else if (total_weight.eq.zero) then
-          Q(ii,jj)=zero
+          XD=zero
          else
           print *,"total_weight invalid"
           stop
          endif
-        enddo 
-        enddo
-
-        do ii=1,3
-        do jj=1,3
-         if (index_ptr(ii,jj).eq.0) then
-          ! do nothing
-         else if ((index_ptr(ii,jj).ge.1).and. &
-                  (index_ptr(ii,jj).le.ncomp_extrap)) then
-          tnew(D_DECL(i,j,k),index_ptr(ii,jj))=Q(ii,jj)
-         else
-          print *,"index_ptr(ii,jj) invalid"
-          stop
-         endif
-        enddo
-        enddo
-       else if ((vfrac.ge.half).and.(vfrac.le.one+VOFTOL)) then
+         tnew(D_DECL(i,j,k),1)=XD
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+       else if ((im_primaryL.eq.im+1).or. &
+                (im_primaryR.eq.im+1)) then
         ! do nothing
        else
-        print *,"vfrac invalid"
+        print *,"im_primaryL or im_primaryR invalid"
         stop
        endif
-
+       TODO: DO NOT MODIFY VARIABLES IN CLAMPED REGIONS. 
+       TODO: DO PROPER AVERAGE DOWN AFTER EXTRAPOLATION (avgDownTENSOR TAKES
+       into ACCOUNT MAC VS CELL choice)
       enddo
       enddo
       enddo

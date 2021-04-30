@@ -10804,10 +10804,13 @@ void NavierStokes::tensor_extrapolate() {
 
  int ngrow_extrap=2;
 
- VOF_Recon_resize(ngrow_extrap,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_extrap,13);
+ VOF_Recon_resize(ngrow_extrap+1,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_extrap+1,13);
 
- MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+ resize_levelsetLO(ngrow_extrap+1,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,ngrow_extrap+1,5);
+ if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
  const Real* dx = geom.CellSize();
 
@@ -10824,34 +10827,62 @@ void NavierStokes::tensor_extrapolate() {
 
     if (partid<im_elastic_map.size()) {
 
-     for (int isweep=0;isweep<2;isweep++) {
+     for (int isweep=0;isweep<1+AMREX_SPACEDIM;isweep++) {
 
       int scomp_tensor=0;
       int ncomp_extrap=0;
+      int state_idx=Tensor_Type;
+      int dir_extrap=0;
+
       if (isweep==0) {
+       dir_extrap=0;
        scomp_tensor=partid*NUM_TENSOR_TYPE;
        ncomp_extrap=NUM_TENSOR_TYPE;
-      } else if (isweep==1) {
-       scomp_tensor=num_materials_viscoelastic*NUM_TENSOR_TYPE+
-	       partid*AMREX_SPACEDIM;
-       ncomp_extrap=AMREX_SPACEDIM;
+       state_idx=Tensor_Type;
+      } else if ((isweep>=1)&&(isweep<1+AMREX_SPACEDIM)) {
+       dir_extrap=isweep-1;
+       if (MAC_grid_displacement==0) {
+        state_idx=Tensor_Type;
+        scomp_tensor=num_materials_viscoelastic*NUM_TENSOR_TYPE+
+	    partid*AMREX_SPACEDIM+dir_extrap;
+       } else if (MAC_grid_displacement==1) {
+        state_idx=XDmac_Type;
+        scomp_tensor=partid;
+       } else
+        amrex::Error("MAC_grid_displacement invalid");
+
+       ncomp_extrap=1;
       } else
        amrex::Error("isweep invalid");
 
-      MultiFab* tensor_source_mf= getStateTensor(ngrow_extrap,scomp_tensor,
-       ncomp_extrap,cur_time_slab);
+      MultiFab* tensor_source_mf=nullptr;
+      MultiFab* tensor_new_mf=nullptr;
+
+      if (state_idx==Tensor_Type) {
+       tensor_source_mf= getStateTensor(ngrow_extrap,scomp_tensor,
+          ncomp_extrap,cur_time_slab);
+       tensor_new_mf=&get_new_data(state_idx,slab_step+1);
+      } else if (state_idx==XDmac_Type) {
+       tensor_source_mf= getStateMAC(state_idx,
+	  ngrow_extrap,dir_extrap,
+	  scomp_tensor,ncomp_extrap,cur_time_slab);
+       tensor_new_mf=&get_new_data(state_idx+dir_extrap,slab_step+1);
+      } else
+       amrex::Error("state_idx invalid");
    
+      MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
       //use_tiling==false 
       //for future: have a separate FAB for each thread?
       if (thread_class::nthreads<1)
        amrex::Error("thread_class::nthreads invalid");
-      thread_class::init_d_numPts(tensor_source_mf->boxArray().d_numPts());
+      thread_class::init_d_numPts(S_new.boxArray().d_numPts());
  
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-      for (MFIter mfi(*tensor_source_mf,false); mfi.isValid(); ++mfi) {
+      for (MFIter mfi(S_new,false); mfi.isValid(); ++mfi) {
 
        BL_ASSERT(grids[mfi.index()] == mfi.validbox());
        const int gridno = mfi.index();
@@ -10865,8 +10896,10 @@ void NavierStokes::tensor_extrapolate() {
 
        const Real* xlo = grid_loc[gridno].lo();
   
+       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
        FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-       FArrayBox& tensor_new_fab=Tensor_new[mfi];
+
+       FArrayBox& tensor_new_fab=(*tensor_new_mf)[mfi];
        FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
 
        int tid_current=ns_thread();
@@ -10874,13 +10907,18 @@ void NavierStokes::tensor_extrapolate() {
         amrex::Error("tid_current invalid");
        thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+        // declared in: GODUNOV_3D.F90
        FORT_EXTRAPTENSOR(
         &level,
         &finest_level,
+	&MAC_grid_displacement,
+	&isweep,
+	&dir_extrap,
         &ncomp_extrap,
         &nmat,
         &im,
         &ngrow_extrap,
+        lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
         voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
         dx,xlo,
         tensor_new_fab.dataPtr(scomp_tensor),
@@ -10896,7 +10934,7 @@ void NavierStokes::tensor_extrapolate() {
 
       delete tensor_source_mf;
 
-     } // isweep=0..1
+     } // isweep=0..AMREX_SPACEDIM
 
     } else
      amrex::Error("partid could not be found: tensor_extrapolate");
