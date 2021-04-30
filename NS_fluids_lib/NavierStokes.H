@@ -1319,6 +1319,7 @@ void apply_pressure_grad(
       Real beta,
       Vector<blobclass> blobdata);
 
+    void make_MAC_velocity_consistentALL();
     void make_MAC_velocity_consistent();
 
     void VELMAC_TO_CELL(
