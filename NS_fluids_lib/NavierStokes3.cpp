@@ -926,11 +926,8 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    // take care of AMR grid change.
 
-    // MAC velocity
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.make_MAC_velocity_consistent();
-   } 
+   make_MAC_velocity_consistentALL();
+  
     // velocity and pressure
    avgDownALL(State_Type,0,
     num_materials_vel*(AMREX_SPACEDIM+1),1);
@@ -12189,7 +12186,10 @@ void NavierStokes::vel_elastic_ALL() {
 
   } else if (MAC_grid_displacement==1) {
 
-
+   if (face_flag==1) {
+     // average down the MAC velocity, set the boundary conditions.
+    make_MAC_velocity_consistentALL();
+call VELMAC_TO_CELL
   } else
    amrex::Error("MAC_grid_displacement invalid");
 

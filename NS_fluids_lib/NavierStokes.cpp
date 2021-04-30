@@ -16116,7 +16116,7 @@ NavierStokes::split_scalar_advection() {
  
  if ((level>=0)&&(level<finest_level)) {
 
-  int spectral_override=1;
+  int spectral_override=1; // order derived from "enable_spectral"
 
   if (face_flag==1) {
    avgDownMacState(spectral_override);

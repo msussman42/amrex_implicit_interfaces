@@ -2295,11 +2295,23 @@ void NavierStokes::get_inverse_iten_cpp(int& im1,int& im2,int iten,int nmat) {
 
 }  // get_inverse_iten_cpp
 
+void NavierStokes::make_MAC_velocity_consistentALL() {
+
+ int finest_level=parent->finestLevel();
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.make_MAC_velocity_consistent();
+ } 
+
+} // end subroutine make_MAC_velocity_consistentALL()
+
 void NavierStokes::make_MAC_velocity_consistent() {
 
  int finest_level = parent->finestLevel();
 
  // spectral_override==0 => always do low order average down.
+ // spectral_override==1 => order derived from "enable_spectral"
  int spectral_override=1;
 
  if (level<finest_level)
@@ -2353,10 +2365,7 @@ void NavierStokes::increment_face_velocityALL(
  getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF);
  getStateALL(1,cur_time_slab,0,AMREX_SPACEDIM,CURRENT_CELL_VEL_MF);
 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.make_MAC_velocity_consistent();
- } // ilev=finest_level ... level
+ make_MAC_velocity_consistentALL();
 
   // interp_option=4 
   //  unew^{f} = 
