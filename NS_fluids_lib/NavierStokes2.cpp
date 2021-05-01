@@ -2326,8 +2326,9 @@ void NavierStokes::make_MAC_velocity_consistent() {
  // spectral_override==1 => order derived from "enable_spectral"
  int spectral_override=1;
 
+  // avgDown all the MAC components.
  if (level<finest_level)
-  avgDownMacState(spectral_override); // avgDown all the MAC components.
+  avgDownMacState(Umac_Type,spectral_override); 
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel!=1");

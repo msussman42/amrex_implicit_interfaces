@@ -210,7 +210,7 @@ NavierStokes::avgDownMac() {
 }  // avgDownMac
 
 // spectral_override==0 => always do low order average down.
-void NavierStokes::avgDownMacState(int spectral_override) {
+void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
 
  int finest_level = parent->finestLevel();
 
@@ -225,10 +225,28 @@ void NavierStokes::avgDownMacState(int spectral_override) {
  NavierStokes& fine_lev = getLevel(level+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  MultiFab& S_crse = get_new_data(Umac_Type+dir,slab_step+1);
-  MultiFab& S_fine = fine_lev.get_new_data(Umac_Type+dir,slab_step+1);
+  MultiFab& S_crse = get_new_data(MAC_state_idx+dir,slab_step+1);
+  MultiFab& S_fine = fine_lev.get_new_data(MAC_state_idx+dir,slab_step+1);
   int scomp=0;
-  int ncomp_edge=nsolveMM_FACE; 
+  int ncomp_edge=S_crse.nComp(); 
+ 
+  if (MAC_state_idx==Umac_Type) {
+   if (ncomp_edge==nsolveMM_FACE) {
+    // do nothing
+   } else
+    amrex::Error("ncomp_edge invalid in avgDownMacState");
+  } else if (MAC_state_idx==XDmac_Type) {
+   if (ncomp_edge==num_materials_viscoelastic) {
+    // do nothing
+   } else
+    amrex::Error("ncomp_edge invalid in avgDownMacState");
+   if (spectral_override==0) {
+    // do nothing
+   } else
+    amrex::Error("spectral_override invalid");
+  } else
+   amrex::Error("MAC_state_idx invalid");
+   
 
   if ((S_crse.nComp()!=ncomp_edge)||
       (S_fine.nComp()!=ncomp_edge))
@@ -411,7 +429,7 @@ void NavierStokes::nonlinear_advection() {
 	(num_materials_viscoelastic<=nmat)) {
      for (int ilev=finest_level;ilev>=level;ilev--) {
       NavierStokes& ns_level=getLevel(ilev);
-      ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
+      ns_level.tensor_extrapolate(); //declared in: NavierStokes.cpp
      }
     } else
      amrex::Error("num_materials_viscoelastic invalid");
@@ -656,12 +674,12 @@ void NavierStokes::tensor_advection_updateALL() {
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
-   // uses SLOPE_RECON_MF
+   // SLOPE_RECON_MF is a parameter but not used.
    // prior to tensor_advection_update(), in
    //  NavierStokes::tensor_advection_updateALL() 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
+   ns_level.tensor_extrapolate(); //declared in: NavierStokes.cpp
   }
   avgDownALL_TENSOR();
 
@@ -12066,8 +12084,21 @@ void NavierStokes::avgDownALL_TENSOR() {
  int nmat=num_materials;
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
+   // spectral_override==1 => order derived from "enable_spectral"
+   // spectral_override==0 => always low order.
   avgDownALL(Tensor_Type,0,
     num_materials_viscoelastic*NUM_CELL_ELASTIC,0);
+
+  if (MAC_grid_displacement==0) {
+   // do nothing
+  } else if (MAC_grid_displacement==1) {
+   if (face_flag==1) {
+    avgDownMacState(XDmac_Type,0);
+   } else 
+    amrex::Error("expecting face_flag==1 if MAC_grid_displacement==1");
+  } else
+   amrex::Error("MAC_grid_displacement invalid");
+
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
