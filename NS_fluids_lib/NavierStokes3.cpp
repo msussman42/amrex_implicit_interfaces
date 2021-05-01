@@ -254,7 +254,7 @@ void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
 
   int caller_id=1;
   avgDownEdge(dir,S_crse,S_fine,scomp,ncomp_edge,spectral_override,caller_id);
- }  // looping dir
+ }  // dir=0..sdim-1
 
 }  // subroutine avgDownMacState
 

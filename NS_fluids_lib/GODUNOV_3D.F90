@@ -12116,6 +12116,8 @@ stop
        fablo,fabhi,bfact)
       use probcommon_module
       use global_utility_module
+      use MOF_routines_module
+      use probf90_module
       IMPLICIT NONE
 
 
@@ -12409,11 +12411,11 @@ stop
           enddo
           call get_primary_material(LSleft,nmat,im_primaryL)
           call get_primary_material(LSright,nmat,im_primaryR)
-          if ((im_primaryL.ne.im+1).and. &
-              (im_primaryR.ne.im+1)) then
+          if ((im_primaryL.ne.im_elastic+1).and. &
+              (im_primaryR.ne.im_elastic+1)) then
            weight=zero  
-          else if ((im_primaryL.eq.im+1).or. &
-                   (im_primaryR.eq.im+1)) then
+          else if ((im_primaryL.eq.im_elastic+1).or. &
+                   (im_primaryR.eq.im_elastic+1)) then
            dist=zero
            do dir=1,SDIM
             dist=dist+(xsten(0,dir)-xsten_stencil(0,dir))**2
@@ -12489,8 +12491,8 @@ stop
           print *,"isweep invalid"
           stop
          endif
-        else if ((im_primaryL.eq.im+1).or. &
-                 (im_primaryR.eq.im+1)) then
+        else if ((im_primaryL.eq.im_elastic+1).or. &
+                 (im_primaryR.eq.im_elastic+1)) then
          ! do nothing
         else
          print *,"im_primaryL or im_primaryR invalid"
