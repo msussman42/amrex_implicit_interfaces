@@ -676,6 +676,7 @@ extern "C"
    void FORT_EXTRAPTENSOR(
     int* level,
     int* finest_level,
+    Real* cur_time,
     int* MAC_grid_displacement,
     int* isweep,
     int* dir_extrap,

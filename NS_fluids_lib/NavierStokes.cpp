@@ -10807,10 +10807,11 @@ void NavierStokes::tensor_extrapolate() {
  VOF_Recon_resize(ngrow_extrap+1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,ngrow_extrap+1,13);
 
- resize_levelsetLO(ngrow_extrap+1,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,ngrow_extrap+1,5);
- if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ int caller_id=500;
+ MultiFab* LS_mf=getStateDist(ngrow_extrap+1,cur_time_slab,caller_id);
+
+ if (LS_mf->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_mf->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
  const Real* dx = geom.CellSize();
 
@@ -10896,7 +10897,7 @@ void NavierStokes::tensor_extrapolate() {
 
        const Real* xlo = grid_loc[gridno].lo();
   
-       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+       FArrayBox& lsfab=(*LS_mf)[mfi];
        FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
        FArrayBox& tensor_new_fab=(*tensor_new_mf)[mfi];
@@ -10911,6 +10912,7 @@ void NavierStokes::tensor_extrapolate() {
        FORT_EXTRAPTENSOR(
         &level,
         &finest_level,
+        &cur_time_slab,
 	&MAC_grid_displacement,
 	&isweep,
 	&dir_extrap,
@@ -10950,7 +10952,9 @@ void NavierStokes::tensor_extrapolate() {
    // do nothing
   } else
    amrex::Error("ns_is_rigid bust");
- } // im
+ } // im=0..nmat-1
+
+ delete LS_mf;
 
 }   // subroutine tensor_extrapolate
 
@@ -16157,7 +16161,7 @@ NavierStokes::split_scalar_advection() {
   int spectral_override=1; // order derived from "enable_spectral"
 
   if (face_flag==1) {
-   avgDownMacState(spectral_override);
+   avgDownMacState(Umac_Type,spectral_override);
   } else if (face_flag==0) {
    // do nothing
   } else
