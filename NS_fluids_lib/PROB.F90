@@ -31049,6 +31049,12 @@ end subroutine initialize2d
         stop
        endif
 
+       if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+        ! do nothing
+       else
+        print *,"FORT_NUM_TENSOR_TYPE invalid"
+        stop
+       endif
 
        if (ncomp.ne.1) then
         print *,"ncomp invalid16"
@@ -31195,6 +31201,12 @@ end subroutine initialize2d
         stop
        endif
 
+       if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+        ! do nothing
+       else
+        print *,"FORT_NUM_TENSOR_TYPE invalid"
+        stop
+       endif
 
        if (ncomp.ne.1) then
         print *,"ncomp invalid16"
@@ -31609,6 +31621,13 @@ end subroutine initialize2d
        INTEGER_T check_scomp,check_ncomp,max_ncomp,xd_scomp,xd_ncomp
        
        nhalf=3
+
+       if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+        ! do nothing
+       else
+        print *,"FORT_NUM_TENSOR_TYPE invalid"
+        stop
+       endif
 
        max_ncomp=num_materials_viscoelastic* &
         (FORT_NUM_TENSOR_TYPE+SDIM)

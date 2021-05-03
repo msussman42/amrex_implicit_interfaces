@@ -6478,7 +6478,11 @@ stop
                     ! sum alpha V_i = mdot_total
                     ! alpha=mdot_total/(sum V_i) 
                    if (im.eq.im_evenly) then 
-                    ic=opposite_color(im)*num_elements_blobclass-2
+                    !opposite_color(im)*num_elements_blobclass-3=blob_cellcount
+                    !opposite_color(im)*num_elements_blobclass-2=blob_cellvol
+                    !opposite_color(im)*num_elements_blobclass-1=blob_mass
+                    !opposite_color(im)*num_elements_blobclass=blob_pressure
+                    ic=opposite_color(im)*num_elements_blobclass-3
                     blob_cell_count=cum_blobdata(ic)
                     blob_cellvol_count=cum_blobdata(ic+1)
                     if ((blob_cellvol_count.gt.zero).and. &
