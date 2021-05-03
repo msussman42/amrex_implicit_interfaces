@@ -22168,8 +22168,9 @@ MultiFab* NavierStokes::getStateTensor (
      // do nothing
     } else
      amrex::Error("scomp_bias became corrupted");
-   } else if ((ncomp==AMREX_SPACEDIM)&&
-              (scomp_bias%AMREX_SPACEDIM==0)&&
+   } else if (((ncomp==1)||
+               (ncomp==AMREX_SPACEDIM))&&
+              (scomp_bias<AMREX_SPACEDIM*nparts)&&
   	      (scomp_bias>=0)) {
     int partid=scomp_bias/AMREX_SPACEDIM;
     if ((partid<0)||(partid>=nparts))
@@ -22179,8 +22180,14 @@ MultiFab* NavierStokes::getStateTensor (
     int partid=scomp/NUM_TENSOR_TYPE;
     if ((partid<0)||(partid>=nparts))
      amrex::Error("partid invalid");
-   } else
+   } else {
+    std::cout << "ncomp= " << ncomp << " scomp_bias=" <<
+      scomp_bias << " scomp=" << scomp << 
+      " num_materials_viscoelastic= " << num_materials_viscoelastic << 
+      " NUM_TENSOR_TYPE= " << NUM_TENSOR_TYPE << 
+      " NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
     amrex::Error("ncomp or scomp invalid");
+   }
 
    MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
    int ntotal=Tensor_new.nComp();
