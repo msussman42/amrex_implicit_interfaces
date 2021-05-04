@@ -5798,7 +5798,9 @@ stop
         enddo ! im=1..nmat
 
         mass=mass*vol
-        if ((mass.le.zero).or.(mass.gt.1.0D+20)) then
+        if ((mass.gt.zero).and.(mass.le.1.0D+20)) then
+         ! do nothing
+        else
          print *,"mass: floating point bust"
          stop
         endif
@@ -6237,7 +6239,11 @@ stop
             endif
             if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
              if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
-              level_blobdata(ic)=level_blobdata(ic)+vol*vfrac*den_mat
+              ! blob_cell_count  (ic-3)
+              ! blob_cellvol_count (ic-2)
+              ! blob_mass (ic-1)
+              ! blob_pressure (ic)
+              level_blobdata(ic-1)=level_blobdata(ic-1)+vol*vfrac*den_mat
              else
               print *,"den_mat overflow"
               print *,"den_mat= ",den_mat
@@ -6745,6 +6751,13 @@ stop
                    print *,"blob_cellvol_count,or ..."
                    print *,"blob_mass,or ... "
                    print *,"blob_volume bad"
+                   print *,"blob_cell_count=",blob_cell_count
+                   print *,"blob_cellvol_count=",blob_cellvol_count
+                   print *,"blob_mass=",blob_mass
+                   print *,"blob_volume=",blob_volume
+                   print *,"im=",im
+                   print *,"opposite_color(im)= (1..ncolors) ", &
+                           opposite_color(im)
                    stop
                   endif
                  else if (im.ne.im_negate) then
