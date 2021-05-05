@@ -8871,6 +8871,7 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
 
 void NavierStokes::make_viscoelastic_tensor(int im) {
 
+ int finest_level=parent->finestLevel();
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
@@ -8911,6 +8912,9 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
+
+ VOF_Recon_resize(2,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,2,3);
 
  if ((im<0)||(im>=nmat))
   amrex::Error("im invalid52");
@@ -8993,6 +8997,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
      int ncomp_visc=viscfab.nComp();
 
+     FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+
      FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
      FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
      FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
@@ -9006,10 +9012,14 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
      FORT_MAKETENSOR(
+      &partid,
+      &level,
+      &finest_level,
       &MAC_grid_displacement,
       &ncomp_visc,
       &im,  // 0..nmat-1
       xlo,dx,
+      voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),

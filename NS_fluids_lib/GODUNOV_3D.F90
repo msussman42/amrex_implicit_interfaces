@@ -10927,10 +10927,14 @@ stop
       end subroutine FORT_SDC_TIME_QUAD_FACE
 
       subroutine FORT_MAKETENSOR( &
+       partid, & ! 0..num_materials_viscoelastic-1
+       level, &
+       finest_level, &
        MAC_grid_displacement, &
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
+       recon,DIMS(recon), &  
        xdfab,DIMS(xdfab), &
        ydfab,DIMS(ydfab), &
        zdfab,DIMS(zdfab), &
@@ -10947,12 +10951,16 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: partid !0..num_materials_viscoelastic-1
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: ncomp_visc
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(xdfab)
       INTEGER_T, intent(in) :: DIMDEC(ydfab)
       INTEGER_T, intent(in) :: DIMDEC(zdfab)
@@ -10963,6 +10971,7 @@ stop
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
+      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(in) :: xdfab(DIMV(xdfab))
       REAL_T, intent(in) :: ydfab(DIMV(ydfab))
       REAL_T, intent(in) :: zdfab(DIMV(zdfab))
@@ -10980,9 +10989,28 @@ stop
        ! if use_A==0 then force is div(mu H Q)/rho
        ! if use_A==1 then force is div(mu H A)/rho
       INTEGER_T use_A  
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
 
+      nhalf=3
+
+      if ((partid.ge.0).and. &
+          (partid.lt.num_materials_viscoelastic)) then
+       ! do nothing
+      else
+       print *,"partid invalid"
+       stop
+      endif
       if (bfact.lt.1) then
        print *,"bfact too small"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid MAKETENSOR"
+       stop
+      endif
+      if (finest_level.ne.fort_finest_level) then
+       print *,"finest_level invalid MAKETENSOR"
        stop
       endif
 
@@ -11029,6 +11057,7 @@ stop
        print *,"MAC_grid_displacement invalid"
        stop
       endif
+      call checkbound(fablo,fabhi,DIMS(recon),2,-1,1277)
 
       call checkbound(fablo,fabhi,DIMS(visc),ngrow,-1,11)
       call checkbound(fablo,fabhi,DIMS(tensor),ngrow,-1,8)
@@ -11038,6 +11067,8 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do ii=1,3
        do jj=1,3
@@ -11055,6 +11086,59 @@ stop
        Q(2,1)=Q(1,2)
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
+
+       if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
+           (viscoelastic_model.eq.1)) then ! (visc-etaS)
+        ! do nothing
+       else if (viscoelastic_model.eq.2) then ! elastic model
+        if (MAC_grid_displacement.eq.0) then
+         ! do nothing
+        else if (MAC_grid_displacement.eq.1) then
+         do dir_flux=0,SDIM-1
+         do side_flux=0,1
+          do dir_local=1,SDIM
+           xflux(dir_local)=xsten(0,dir_local)
+          enddo
+          if (side_flux.eq.0) then
+           xflux(dir_flux+1)=xsten(-1,dir_flux+1)
+          else if (side_flux.eq.1) then
+           xflux(dir_flux+1)=xsten(1,dir_flux+1)
+          else
+           print *,"side_flux invalid"
+           stop
+          endif
+
+
+           ! interpfab_XDISP declared in MASS_TRANSFER_3D.F90
+          call interpfab_XDISP( &
+            bfact, & ! determines positioning of Gauss Legendre nodes
+            level, &
+            finest_level, &
+            dx, &
+            xlo, &
+            xplus, &
+            im_elastic_p1, &!1..nmat(prescribed as a fluid in the inputs file)
+            nmat, &
+            partid, & ! 0..num_materials_viscoelastic-1
+            fablo,fabhi, &
+            XDfab,DIMS(XDfab), &
+            YDfab,DIMS(YDfab), &
+            ZDfab,DIMS(ZDfab), &
+            recon,DIMS(recon), &
+            XDplus) ! XD(xplus),YD(xplus),ZD(xplus)
+                    
+
+
+         enddo ! side_flux=0,1
+         enddo ! dir_flux=0..sdim-1
+        else
+         print *,"MAC_grid_displacement invalid"
+         stop
+        endif
+       else
+        print *,"viscoelastic_model invalid"
+        stop
+       endif
 
        if (use_A.eq.0) then
         ! do nothing
@@ -27255,6 +27339,8 @@ stop
       endif
       if ((partid.ge.0).and. &
           (partid.lt.num_materials_viscoelastic)) then
+       ! do nothing
+      else
        print *,"partid invalid"
        stop
       endif
