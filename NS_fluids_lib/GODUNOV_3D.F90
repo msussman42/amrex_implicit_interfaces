@@ -10992,6 +10992,7 @@ stop
       REAL_T xflux(SDIM)
       REAL_T XDside(SDIM)
       REAL_T XDside_stencil(0:1,0:SDIM-1,SDIM)
+      REAL_T xflux_stencil(0:1,0:SDIM-1,SDIM)
        ! if use_A==0 then force is div(mu H Q)/rho
        ! if use_A==1 then force is div(mu H A)/rho
       INTEGER_T use_A  
@@ -11138,6 +11139,7 @@ stop
           do dir_local=1,SDIM
            XDside_stencil(side_flux,dir_flux,dir_local)= &
              XDside(dir_local) 
+           xflux_stencil(side_flux,dir_flux,dir_local)=xflux(dir_local)
           enddo
                     
          enddo ! side_flux=0,1
