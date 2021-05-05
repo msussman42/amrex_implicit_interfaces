@@ -3158,52 +3158,78 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        alloc_flag=2;
        alloc_DTDtALL(alloc_flag);
 
-       Vector<blobclass> local_blobdata;
-       Vector< Vector<Real> > local_mdot_data;
-       Vector< Vector<Real> > local_mdot_comp_data;
-       Vector< Vector<Real> > local_mdot_data_redistribute;
-       Vector< Vector<Real> > local_mdot_comp_data_redistribute;
-       Vector<int> local_type_flag;
+       int is_any_lowmach=0;
 
-       int local_color_count=0;
-       int local_coarsest_level=0;
-       int idx_mdot=-1;
-       int local_tessellate=3;
-       int operation_flag=0; // allocate TYPE_MF,COLOR_MF
+       for (int im_low=0;im_low<num_materials;im_low++) {
+        if (ns_is_rigid(im_low)==1) {
+         // do nothing
+        } else if (ns_is_rigid(im_low)==0) {
+         if ((material_type[im_low]==0)&&
+             (material_type_lowmach[im_low]>0)&&
+             (material_type_lowmach[im_low]<999)) {
+          is_any_lowmach=1;
+         } else if (((material_type[im_low]>0)&&
+                     (material_type[im_low]<999))||
+                    (material_type_lowmach[im_low]==0)) {
+          // do nothing
+         } amrex::Error("material_type or material_type_lowmach invalid");
+        } else
+         amrex::Error("ns_is_rigid invalid");
+       }  //im_low=0..nmat-1
 
-        // for each blob, find sum_{F>=1/2} pressure * vol and
+       if (is_any_lowmach==1) {
+
+        Vector<blobclass> local_blobdata;
+        Vector< Vector<Real> > local_mdot_data;
+        Vector< Vector<Real> > local_mdot_comp_data;
+        Vector< Vector<Real> > local_mdot_data_redistribute;
+        Vector< Vector<Real> > local_mdot_comp_data_redistribute;
+        Vector<int> local_type_flag;
+
+        int local_color_count=0;
+        int local_coarsest_level=0;
+        int idx_mdot=-1;
+        int local_tessellate=3;
+        int operation_flag=0; // allocate TYPE_MF,COLOR_MF
+
+         // for each blob, find sum_{F>=1/2} pressure * vol and
 	// sum_{F>=1/2} vol.
-       ColorSumALL(
-        operation_flag, // =0
-        local_tessellate, //=3
-        local_coarsest_level,
-        local_color_count,
-        TYPE_MF,COLOR_MF,
-        idx_mdot,
-        idx_mdot,
-        local_type_flag,
-        local_blobdata,
-        local_mdot_data,
-        local_mdot_comp_data,
-        local_mdot_data_redistribute,
-        local_mdot_comp_data_redistribute 
-       );
-       ParallelDescriptor::Barrier();
+        ColorSumALL(
+         operation_flag, // =0
+         local_tessellate, //=3
+         local_coarsest_level,
+         local_color_count,
+         TYPE_MF,COLOR_MF,
+         idx_mdot,
+         idx_mdot,
+         local_type_flag,
+         local_blobdata,
+         local_mdot_data,
+         local_mdot_comp_data,
+         local_mdot_data_redistribute,
+         local_mdot_comp_data_redistribute 
+        );
+        ParallelDescriptor::Barrier();
 
-       if (color_count!=blobdata.size())
-        amrex::Error("color_count!=blobdata.size()");
+        if (color_count!=blobdata.size())
+         amrex::Error("color_count!=blobdata.size()");
 
-        // increment MDOF_MF
-       LowMachDIVUALL(
-        local_coarsest_level,
-        local_color_count,
-        TYPE_MF,
-        COLOR_MF,
-        local_type_flag, 
-        local_blobdata);
+         // increment MDOF_MF
+        LowMachDIVUALL(
+         local_coarsest_level,
+         local_color_count,
+         TYPE_MF,
+         COLOR_MF,
+         local_type_flag, 
+         local_blobdata);
 
-       delete_array(TYPE_MF);
-       delete_array(COLOR_MF);
+        delete_array(TYPE_MF);
+        delete_array(COLOR_MF);
+
+       } else if (is_any_lowmach==0) {
+        // do nothing
+       } else
+        amrex::Error("is_any_lowmach invalid");
 
         // delete T_advect_MF, DTDt_MF
        alloc_flag=0;

@@ -7194,6 +7194,10 @@ stop
 
                   mdot_global(D_DECL(i,j,k))=mdot_global(D_DECL(i,j,k))+ &
                     mdot_local(D_DECL(i,j,k))
+                 else if (mdot_sum_denom.eq.zero) then
+                  print *,"since F=1 for this cell, we must have "
+                  print *,"mdot_sum_denom>0"
+                  stop
                  else if ((mdot_sum_denom.eq.zero).and. &
                           (mdot_sum_numerator.eq.zero)) then
                   ! do nothing
@@ -7215,7 +7219,9 @@ stop
                stop
               endif
              else if (blob_cellvol_count.eq.zero) then
-              ! do nothing
+              print *,"since vfrac=1 for this cell, one must have"
+              print *,"blob_cellvol_count>0"
+              stop
              else
               print *,"blob_cellvol_count invalid"
               stop
