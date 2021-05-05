@@ -10927,9 +10927,13 @@ stop
       end subroutine FORT_SDC_TIME_QUAD_FACE
 
       subroutine FORT_MAKETENSOR( &
+       MAC_grid_displacement, &
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
+       xdfab,DIMS(xdfab), &
+       ydfab,DIMS(ydfab), &
+       zdfab,DIMS(zdfab), &
        visc,DIMS(visc), &
        tensor,DIMS(tensor), &
        tilelo,tilehi, &
@@ -10943,11 +10947,15 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: ncomp_visc
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: DIMDEC(xdfab)
+      INTEGER_T, intent(in) :: DIMDEC(ydfab)
+      INTEGER_T, intent(in) :: DIMDEC(zdfab)
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(tensor)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
@@ -10955,6 +10963,9 @@ stop
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
+      REAL_T, intent(in) :: xdfab(DIMV(xdfab))
+      REAL_T, intent(in) :: ydfab(DIMV(ydfab))
+      REAL_T, intent(in) :: zdfab(DIMV(zdfab))
       REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(inout) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
 
@@ -11003,6 +11014,19 @@ stop
       endif
       if (ncomp_visc.ne.3*nmat) then
        print *,"ncomp_visc invalid"
+       stop
+      endif
+
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound(fablo,fabhi,DIMS(xdfab),2,-1,11)
+       call checkbound(fablo,fabhi,DIMS(ydfab),2,-1,11)
+       call checkbound(fablo,fabhi,DIMS(zdfab),2,-1,11)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound(fablo,fabhi,DIMS(xdfab),1,0,11)
+       call checkbound(fablo,fabhi,DIMS(ydfab),1,1,11)
+       call checkbound(fablo,fabhi,DIMS(zdfab),1,SDIM-1,11)
+      else
+       print *,"MAC_grid_displacement invalid"
        stop
       endif
 
