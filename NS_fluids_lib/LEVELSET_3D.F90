@@ -7219,7 +7219,7 @@ stop
                stop
               endif
              else if (blob_cellvol_count.eq.zero) then
-              print *,"since vfrac=1 for this cell, one must have"
+              print *,"since vfrac=1>1/2 for this cell, one must have"
               print *,"blob_cellvol_count>0"
               stop
              else
@@ -7227,7 +7227,7 @@ stop
               stop
              endif
             else
-             print *,"(im_primary<>base_type)"
+             print *,"(im_primary<>base_type) even though the cell is full"
              stop
             endif
            else

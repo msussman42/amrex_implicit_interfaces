@@ -5768,6 +5768,18 @@ NavierStokes::LowMachDIVUALL(
 
  } // sweep_num=0..1
 
+ if (1==0) {
+  int caller_id=500;
+  writeSanityCheckData(
+   "MDOT_LOCAL",
+   "in: NavierStokes::LowMachDIVUALL", 
+   caller_id,
+   localMF[MDOT_LOCAL_MF]->nComp(),
+   MDOT_LOCAL_MF, 
+   -1, //State_Type==-1
+   -1); // data_dir==-1 (cell centered)
+ }
+
  delete_array(MDOT_LOCAL_MF);
 
 } // end subroutine LowMachDIVUALL
