@@ -9088,6 +9088,7 @@ void NavierStokes::allocate_array(int ngrow,int ncomp,int dir,
 
     for (int i=finest_level;i>=level;i--) {
      NavierStokes& ns_level=getLevel(i);
+      // initializes localMF[idx_localMF] to 0.0
      ns_level.new_localMF(idx_localMF,ncomp,ngrow,dir); 
     } // i
 
