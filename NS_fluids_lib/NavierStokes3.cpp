@@ -5440,7 +5440,11 @@ NavierStokes::LowMachDIVU(
  if (mdot_local->nGrow()>=0) {
   // do nothing
  } else
-  amrex::Error("mdot->nGrow() invalid");
+  amrex::Error("mdot_local->nGrow() invalid");
+ if (mdot_global->nGrow()>=0) {
+  // do nothing
+ } else
+  amrex::Error("mdot_global->nGrow() invalid");
 
   // mask=tag if not covered by level+1 and at fine/fine ghost cell.
  int ngrowmask=1;
