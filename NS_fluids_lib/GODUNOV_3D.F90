@@ -10949,6 +10949,7 @@ stop
        irz,ngrow,nmat)
       use probcommon_module
       use global_utility_module
+      use mass_transfer_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: partid !0..num_materials_viscoelastic-1
@@ -10986,6 +10987,11 @@ stop
       INTEGER_T ii,jj
       REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
+      INTEGER_T dir_flux,side_flux,dir_local
+      INTEGER_T im_elastic_p1
+      REAL_T xflux(SDIM)
+      REAL_T XDside(SDIM)
+      REAL_T XDside_stencil(0:1,0:SDIM-1,SDIM)
        ! if use_A==0 then force is div(mu H Q)/rho
        ! if use_A==1 then force is div(mu H A)/rho
       INTEGER_T use_A  
@@ -11040,6 +11046,9 @@ stop
        print *,"im_parm invalid26"
        stop
       endif
+
+      im_elastic_p1=im_parm+1
+
       if (ncomp_visc.ne.3*nmat) then
        print *,"ncomp_visc invalid"
        stop
@@ -11108,7 +11117,6 @@ stop
            stop
           endif
 
-
            ! interpfab_XDISP declared in MASS_TRANSFER_3D.F90
           call interpfab_XDISP( &
             bfact, & ! determines positioning of Gauss Legendre nodes
@@ -11116,19 +11124,22 @@ stop
             finest_level, &
             dx, &
             xlo, &
-            xplus, &
+            xflux, &
             im_elastic_p1, &!1..nmat(prescribed as a fluid in the inputs file)
             nmat, &
             partid, & ! 0..num_materials_viscoelastic-1
             fablo,fabhi, &
-            XDfab,DIMS(XDfab), &
-            YDfab,DIMS(YDfab), &
-            ZDfab,DIMS(ZDfab), &
+            xdfab,DIMS(xdfab), &
+            ydfab,DIMS(ydfab), &
+            zdfab,DIMS(zdfab), &
             recon,DIMS(recon), &
-            XDplus) ! XD(xplus),YD(xplus),ZD(xplus)
+            XDside) ! XD(xflux),YD(xflux),ZD(xflux): XDside(SDIM)
+
+          do dir_local=1,SDIM
+           XDside_stencil(side_flux,dir_flux,dir_local)= &
+             XDside(dir_local) 
+          enddo
                     
-
-
          enddo ! side_flux=0,1
          enddo ! dir_flux=0..sdim-1
         else
