@@ -589,9 +589,13 @@ extern "C"
 
  
    void FORT_MAKETENSOR(
+    int* MAC_grid_displacement,
     int* ncomp_visc,
     int* im,
     const Real* xlo,const Real* dx,
+    Real* xdfab,AMREX_ARLIM_P(xdfablo),AMREX_ARLIM_P(xdfabhi),
+    Real* ydfab,AMREX_ARLIM_P(ydfablo),AMREX_ARLIM_P(ydfabhi),
+    Real* zdfab,AMREX_ARLIM_P(zdfablo),AMREX_ARLIM_P(zdfabhi),
     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
     Real* tensor,AMREX_ARLIM_P(tlo),AMREX_ARLIM_P(thi),
     const int* tilelo,const int* tilehi,
