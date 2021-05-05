@@ -6826,8 +6826,10 @@ stop
        xlo, &
        nmat, &
        nten, &
-       mdot, & ! mdot initialized to 0
-       DIMS(mdot), &
+       mdot_local, & ! mdot_local initialized to 0
+       DIMS(mdot_local), &
+       mdot_global, & ! mdot_global incremented
+       DIMS(mdot_global), &
        LS,DIMS(LS), &
        DEN,DIMS(DEN), &
        DTDt,DIMS(DTDt), & ! T_after_diffusion-T_after_advection
@@ -6876,7 +6878,8 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(mdot_local)
+      INTEGER_T, intent(in) :: DIMDEC(mdot_global)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
       INTEGER_T, intent(in) :: DIMDEC(DTDt)
@@ -6887,7 +6890,8 @@ stop
       REAL_T, intent(in) ::level_blobdata(arraysize)
       REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
 
-      REAL_T, intent(inout) :: mdot(DIMV(mdot))
+      REAL_T, intent(inout) :: mdot_local(DIMV(mdot_local))
+      REAL_T, intent(inout) :: mdot_global(DIMV(mdot_global))
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: DEN(DIMV(DEN),nmat*num_state_material)
@@ -6922,7 +6926,7 @@ stop
       REAL_T LScen(nmat)
       INTEGER_T im_primary
       REAL_T blob_cellvol_count
-      REAL_T mdot_local
+      REAL_T mdot_local_scalar
       REAL_T mdot_sum_denom
       REAL_T mdot_sum_numerator
       REAL_T mofdata(nmat*ngeom_recon)
@@ -6968,7 +6972,8 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(mdot_local),0,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(mdot_global),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(DEN),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(DTDt),0,-1,6615)
@@ -7011,9 +7016,9 @@ stop
        stop
       endif
       
-        ! need sum mdot=0
-        ! let mdot=mdotold - alpha V
-        ! sum mdot= sum mdotold -alpha sum V=0
+        ! need sum mdot_local=0
+        ! let mdot_local=mdotold - alpha V
+        ! sum mdot_local= sum mdotold -alpha sum V=0
         ! alpha=sum mdotold/sum V
         ! sum is over FULL cells. 
       if (mdot_arraysize.eq.2*num_colors) then
@@ -7156,19 +7161,21 @@ stop
 
                !F_t + s|grad F|=0
                ! dF=F_t dt=-s|grad F|dt=-s dt/dx
-               ! my mdot=(den_src/den_dst-1)*dF*Vcell/dt^2=
+               ! my mdot=(den_src/den_dst-1)*dF*Volume_cell/dt^2=
                !  (den_src/den_dst-1)*(-s * area)/dt
                ! units of my mdot are "velocity" * area / seconds=
                ! "div velocity" * Length * area / seconds =
-               ! "div velocity" * volume / seconds
+               ! "div velocity" * volume / seconds = (1/s)(cm^3)/s=cm^3/s^2
                !
-              mdot_local=dVdT*den_mat* &
+               ! units of mdot_local_scalar: (1/density)(1/Kelvin)(density)
+               !   (Kelvin)*cm^3/s^2=cm^3/s^2
+              mdot_local_scalar=dVdT*den_mat* &
                   DTDt(D_DECL(i,j,k),im_primary)*vol/(dt*dt)
 
               if (sweep_num.eq.0) then
-               mdot(D_DECL(i,j,k))=mdot_local
+               mdot_local(D_DECL(i,j,k))=mdot_local_scalar
                level_mdot_data(2*(icolor-1)+2)= &
-                 level_mdot_data(2*(icolor-1)+2)+mdot_local
+                 level_mdot_data(2*(icolor-1)+2)+mdot_local_scalar
               else if (sweep_num.eq.1) then
                ! do nothing
               else
@@ -7191,7 +7198,8 @@ stop
              mdot_sum_denom=level_mdot_data(2*(icolor-1)+1)
              if (mdot_sum_denom.gt.zero) then
               mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
-              mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))- &
+              mdot_global(D_DECL(i,j,k))=mdot_global(D_DECL(i,j,k))+ &
+                mdot_local(D_DECL(i,j,k))- &
                 mdot_sum_numerator*vol/mdot_sum_denom
              else
               print *,"mdot_sum_denom invalid"

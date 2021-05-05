@@ -3101,7 +3101,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.combine_state_variable(
          project_option_combine,
          combine_idx,combine_flag,hflag,update_flux);
-       } // ilev 
+       } // ilev = finest_level ... level
+
+        // T_advect_MF=new temperature
+       int alloc_flag=1;
+       alloc_DTDtALL(alloc_flag);
 
        // 4. Backwards Euler building block: VISCOSITY, thermal diffusion,
        //    species diffusion, conservative surface tension force.
@@ -3149,6 +3153,61 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int basestep_debug=nStep();
         parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
        }
+
+        // DTDt_MF=T_new - T_advect_MF
+       alloc_flag=2;
+       alloc_DTDtALL(alloc_flag);
+
+       Vector<blobclass> local_blobdata;
+       Vector< Vector<Real> > local_mdot_data;
+       Vector< Vector<Real> > local_mdot_comp_data;
+       Vector< Vector<Real> > local_mdot_data_redistribute;
+       Vector< Vector<Real> > local_mdot_comp_data_redistribute;
+       Vector<int> local_type_flag;
+
+       int local_color_count=0;
+       int local_coarsest_level=0;
+       int idx_mdot=-1;
+       int local_tessellate=3;
+       int operation_flag=0; // allocate TYPE_MF,COLOR_MF
+
+        // for each blob, find sum_{F>=1/2} pressure * vol and
+	// sum_{F>=1/2} vol.
+       ColorSumALL(
+        operation_flag, // =0
+        local_tessellate, //=3
+        local_coarsest_level,
+        local_color_count,
+        TYPE_MF,COLOR_MF,
+        idx_mdot,
+        idx_mdot,
+        local_type_flag,
+        local_blobdata,
+        local_mdot_data,
+        local_mdot_comp_data,
+        local_mdot_data_redistribute,
+        local_mdot_comp_data_redistribute 
+       );
+       ParallelDescriptor::Barrier();
+
+       if (color_count!=blobdata.size())
+        amrex::Error("color_count!=blobdata.size()");
+
+        // increment MDOF_MF
+       LowMachDIVUALL(
+        local_coarsest_level,
+        local_color_count,
+        TYPE_MF,
+        COLOR_MF,
+        local_type_flag, 
+        local_blobdata);
+
+       delete_array(TYPE_MF);
+       delete_array(COLOR_MF);
+
+        // delete T_advect_MF, DTDt_MF
+       alloc_flag=0;
+       alloc_DTDtALL(alloc_flag);
 
        double intermediate_time = ParallelDescriptor::second();
 
@@ -3252,8 +3311,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        int alloc_flag=5; // subtract unew from dt_gradp_over_rho
-        ns_level.alloc_gradp_over_rho(alloc_flag);
+        int local_alloc_flag=5; // subtract unew from dt_gradp_over_rho
+        ns_level.alloc_gradp_over_rho(local_alloc_flag);
        }
 
       } else
@@ -5247,14 +5306,13 @@ NavierStokes::ColorSum(
 
 
 
-
-
 void
 NavierStokes::LowMachDIVU(
  int sweep_num,
  MultiFab* typemf,
  MultiFab* color,
- MultiFab* mdot, 
+ MultiFab* mdot_local, 
+ MultiFab* mdot_global, 
  Vector<blobclass> cum_blobdata,
  Vector< Vector<Real> >& level_mdot_data,
  Vector< Vector<Real> > cum_mdot_data
@@ -5291,11 +5349,16 @@ NavierStokes::LowMachDIVU(
  if (num_colors!=level_mdot_data.size())
   amrex::Error("num_colors!=level_mdot_data.size()");
 
- int ncomp_mdot_test=mdot->nComp();
+ int ncomp_mdot_test=mdot_local->nComp();
  if (ncomp_mdot_test==1) {
   // do nothing
  } else
   amrex::Error("ncomp_mdot_test invalid");
+
+ if (mdot_global->nComp()==1) {
+  // do nothing
+ } else
+  amrex::Error("mdot_global->nComp() invalid");
 
  for (int i=0;i<num_colors;i++) {
   for (int j=0;j<2;j++) {
@@ -5374,7 +5437,7 @@ NavierStokes::LowMachDIVU(
   amrex::Error("typemf->nGrow()!=1");
  if (color->nGrow()!=1)
   amrex::Error("color->nGrow()!=1");
- if (mdot->nGrow()>=0) {
+ if (mdot_local->nGrow()>=0) {
   // do nothing
  } else
   amrex::Error("mdot->nGrow() invalid");
@@ -5408,7 +5471,8 @@ NavierStokes::LowMachDIVU(
 
   const Real* xlo = grid_loc[gridno].lo();
 
-  FArrayBox& mdotfab=(*mdot)[mfi];
+  FArrayBox& mdot_local_fab=(*mdot_local)[mfi];
+  FArrayBox& mdot_global_fab=(*mdot_global)[mfi];
 
   FArrayBox& typefab=(*typemf)[mfi];
   FArrayBox& lsfab=(*localMF[LS_COLORSUM_MF])[mfi];
@@ -5433,9 +5497,12 @@ NavierStokes::LowMachDIVU(
    dx,xlo,
    &nmat,
    &nten,
-   mdotfab.dataPtr(),
-   ARLIM(mdotfab.loVect()),
-   ARLIM(mdotfab.hiVect()),
+   mdot_local_fab.dataPtr(),
+   ARLIM(mdot_local_fab.loVect()),
+   ARLIM(mdot_local_fab.hiVect()),
+   mdot_global_fab.dataPtr(),
+   ARLIM(mdot_global_fab.loVect()),
+   ARLIM(mdot_global_fab.hiVect()),
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    DTDtfab.dataPtr(),ARLIM(DTDtfab.loVect()),ARLIM(DTDtfab.hiVect()),
@@ -5505,9 +5572,7 @@ if (sweep_num==0) {
 } else
  amrex::Error("sweep_num invalid");
 
-}  // subroutine LowMachDIVU
-
-
+}  // end subroutine LowMachDIVU
 
 void
 NavierStokes::LowMachDIVUALL(
@@ -5515,11 +5580,8 @@ NavierStokes::LowMachDIVUALL(
  int& color_count,
  int idx_type,
  int idx_color,
- int idx_mdot,  
  Vector<int>& type_flag, 
- Vector<blobclass> blobdata,
- Vector< Vector<Real> >& mdot_data
- ) {
+ Vector<blobclass> blobdata) {
 
  int finest_level=parent->finestLevel();
 
@@ -5527,7 +5589,7 @@ NavierStokes::LowMachDIVUALL(
   amrex::Error("coarsest_level invalid");
 
  if (level!=0)
-  amrex::Error("level=0 in ColorSumALL");
+  amrex::Error("level=0 in LowMachDIVUALL");
 
  Real problo_array[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
@@ -5551,20 +5613,39 @@ NavierStokes::LowMachDIVUALL(
  if (color_count==0)
   amrex::Error("num_colors=0 in ColorSumALL");
 
- if (idx_mdot>=0) {
-  int ncomp_mdot=localMF[idx_mdot]->nComp();
+   // initializes MDOT_LOCAL_MF to 0.0
+ allocate_array(0,1,-1,MDOT_LOCAL_MF); 
+
+ if (MDOT_LOCAL_MF>=0) {
+  int ncomp_mdot=localMF[MDOT_LOCAL_MF]->nComp();
   if (ncomp_mdot==1) {
    // do nothing
   } else
    amrex::Error("ncomp_mdot invalid");
-  int ngrow_mdot=localMF[idx_mdot]->nGrow();
+  int ngrow_mdot=localMF[MDOT_LOCAL_MF]->nGrow();
   if (ngrow_mdot>=0) {
    // do nothing
   } else
    amrex::Error("ngrow_mdot invalid");
 
  } else
-  amrex::Error("idx_mdot invalid");
+  amrex::Error("MDOT_LOCAL_MF invalid");
+
+
+ if (MDOT_MF>=0) {
+  if (localMF[MDOT_MF]->nComp()==1) {
+   // do nothing
+  } else
+   amrex::Error("localMF[MDOT_MF]->nComp() invalid");
+  if (localMF[MDOT_MF]->nGrow()>=0) {
+   // do nothing
+  } else
+   amrex::Error("localMF[MDOT_MF]->nGrow() invalid");
+
+ } else
+  amrex::Error("MDOT_MF invalid");
+
+ Vector< Vector<Real> > mdot_data;
 
  mdot_data.resize(color_count);
  for (int i=0;i<color_count;i++) {
@@ -5574,13 +5655,13 @@ NavierStokes::LowMachDIVUALL(
    mdot_data[i][j]=0.0;
   }
 
-  if (idx_mdot>=0) {
+  if (MDOT_LOCAL_MF>=0) {
    if (j==2) {
      // do nothing
    } else
     amrex::Error("expecting j==2");
   } else
-   amrex::Error("idx_mdot invalid");
+   amrex::Error("MDOT_LOCAL_MF invalid");
 
  }  // i=0..color_count-1
 
@@ -5596,13 +5677,13 @@ NavierStokes::LowMachDIVUALL(
    level_mdot_data[i][j]=0.0;
   }
 
-  if (idx_mdot>=0) {
+  if (MDOT_LOCAL_MF>=0) {
    if (j==2) {
     // do nothing
    } else
     amrex::Error("expecting j==2");
   } else
-   amrex::Error("idx_mdot invalid");
+   amrex::Error("MDOT_LOCAL_MF invalid");
 
  } // i=0..color_count-1
 
@@ -5614,13 +5695,15 @@ NavierStokes::LowMachDIVUALL(
 
    NavierStokes& ns_level = getLevel(ilev);
 
-   MultiFab* mdot=ns_level.localMF[idx_mdot];
+   MultiFab* mdot_local=ns_level.localMF[MDOT_LOCAL_MF];
+   MultiFab* mdot_global=ns_level.localMF[MDOT_MF];
 
    ns_level.LowMachDIVU(
     sweep_num,
     ns_level.localMF[idx_type],
     ns_level.localMF[idx_color],
-    mdot,
+    mdot_local,
+    mdot_global,
     blobdata,
     level_mdot_data,
     mdot_data
@@ -5634,13 +5717,13 @@ NavierStokes::LowMachDIVUALL(
      for (j=0;j<2;j++) {
       mdot_data[i][j]+=level_mdot_data[i][j];
      }
-     if (idx_mdot>=0) {
+     if (MDOT_LOCAL_MF>=0) {
       if (j==2) {
        // do nothing
       } else
        amrex::Error("expecting j==2");
      } else
-      amrex::Error("idx_mdot invalid");
+      amrex::Error("MDOT_LOCAL_MF invalid");
 
     }  // i=0..color_count-1
 
@@ -5655,7 +5738,9 @@ NavierStokes::LowMachDIVUALL(
 
  } // sweep_num=0..1
 
-} // subroutine LowMachDIVUALL
+ delete_array(MDOT_LOCAL_MF);
+
+} // end subroutine LowMachDIVUALL
 
 
 void NavierStokes::copy_to_blobdata(int i,int& counter,
