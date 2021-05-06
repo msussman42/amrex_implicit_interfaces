@@ -11079,6 +11079,9 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir_flux=1,SDIM
+        xcenter(dir_flux)=xsten(0,dir_flux)
+       enddo
 
        do ii=1,3
        do jj=1,3
@@ -11136,14 +11139,53 @@ stop
             recon,DIMS(recon), &
             XDside) ! XD(xflux),YD(xflux),ZD(xflux): XDside(SDIM)
 
-          do dir_local=1,SDIM
-           XDside_stencil(side_flux,dir_flux,dir_local)= &
-             XDside(dir_local) 
-           xflux_stencil(side_flux,dir_flux,dir_local)=xflux(dir_local)
+          do dir_XD=1,SDIM
+           XDside_stencil(side_flux,dir_flux,dir_XD)= &
+             XDside(dir_XD) 
           enddo
+          do dir_local=1,SDIM
+           xflux_stencil(side_flux,dir_flux,dir_local)=xflux(dir_local)
+          enddo ! dir_local=1..sdim
                     
          enddo ! side_flux=0,1
          enddo ! dir_flux=0..sdim-1
+
+         do dir_XD=1,SDIM
+          XDcenter(dir_XD)=zero
+         enddo
+         do dir_flux=0,SDIM-1
+          delta_flux=xflux_stencil(1,dir_flux,dir_flux+1)- &
+                     xflux_stencil(0,dir_flux,dir_flux+1)
+          if (delta_flux.gt.zero) then
+           do dir_XD=1,SDIM
+            gradXDtensor(dir_XD,dir_flux+1)= &
+             (XDside_stencil(1,dir_flux,dir_XD)- &
+              XDside_stencil(0,dir_flux,dir_XD))/delta_flux
+            avgXDtensor(dir_XD,dir_flux+1)= &
+             half*(XDside_stencil(1,dir_flux,dir_XD)+ &
+                   XDside_stencil(0,dir_flux,dir_XD)) 
+            XDcenter(dir_XD)=XDcenter(dir_XD)+avgXDtensor(dir_XD,dir_flux+1)
+           enddo ! dir_XD=1..sdim
+          else
+           print *,"delta_flux invalid"
+           stop
+          endif
+         enddo ! dir_flux=0..sdim-1
+         do dir_XD=1,SDIM
+          XDcenter(dir_XD)=XDcenter(dir_XD)/SDIM
+         enddo
+
+          ! declared in: GLOBALUTIL.F90
+         call stress_from_strain( &
+          im_elastic_p1, & ! =1..nmat
+          xcenter, &
+          dx, &
+          gradXDtensor, &
+          XDcenter(1), &
+          XDcenter(2), &
+          DISP_TEN, &  ! dir_x (displace),dir_space
+          hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
+
         else
          print *,"MAC_grid_displacement invalid"
          stop
