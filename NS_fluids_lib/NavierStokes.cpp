@@ -8871,6 +8871,7 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
 
 void NavierStokes::make_viscoelastic_tensor(int im) {
 
+ int finest_level=parent->finestLevel();
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
@@ -8912,6 +8913,9 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
+ VOF_Recon_resize(2,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,2,3);
+
  if ((im<0)||(im>=nmat))
   amrex::Error("im invalid52");
 
@@ -8939,6 +8943,18 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      //
     getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,NUM_TENSOR_TYPE,
      cur_time_slab);
+
+    MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     if (MAC_grid_displacement==0) {
+      int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+ 
+       partid*AMREX_SPACEDIM+dir;
+      XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
+     } else if (MAC_grid_displacement==1) {
+      XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,1,dir,partid,1,cur_time_slab);
+     } else
+      amrex::Error("MAC_grid_displacement invalid");
+    } // dir=0..sdim-1
 
     int rzflag=0;
     if (geom.IsRZ())
@@ -8981,6 +8997,12 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
      int ncomp_visc=viscfab.nComp();
 
+     FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+     FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
+     FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
+     FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
+
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
       amrex::Error("tid_current invalid");
@@ -8990,9 +9012,17 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
      FORT_MAKETENSOR(
+      &partid,
+      &level,
+      &finest_level,
+      &MAC_grid_displacement,
       &ncomp_visc,
       &im,  // 0..nmat-1
       xlo,dx,
+      voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+      xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+      ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+      zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
       tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
       tilelo,tilehi,
@@ -9008,6 +9038,10 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     ns_reconcile_d_num(54);
 
     check_for_NAN(localMF[VISCOTEN_MF],2001);
+
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     delete XDISP_LOCAL[dir];
+    }
 
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
@@ -22162,6 +22196,21 @@ MultiFab* NavierStokes::getStateTensor (
    int scomp_bias=scomp-nparts*NUM_TENSOR_TYPE;
    int ntotal_test=nparts*NUM_CELL_ELASTIC;
 
+   if (MAC_grid_displacement==0) {
+    if (NUM_CELL_ELASTIC==NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC invalid");
+   } else if (MAC_grid_displacement==1) {
+    if (NUM_CELL_ELASTIC==NUM_TENSOR_TYPE) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC invalid");
+    if (scomp_bias>=0)
+     amrex::Error("scomp_bias invalid");
+   } else
+    amrex::Error("MAC_grid_displacement invalid");
+
    if ((ncomp==ntotal_test)&&
        (scomp==0)) {
     if (scomp_bias==-nparts*NUM_TENSOR_TYPE) {
@@ -23749,6 +23798,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
 //MAC_state_idx==Umac_Type or (mac velocity)
 //MAC_state_idx==XDmac_Type   (mac displacement)
+//dir=0..sdim-1
 MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
  int ngrow,int dir,
  int scomp,int ncomp,Real time) {

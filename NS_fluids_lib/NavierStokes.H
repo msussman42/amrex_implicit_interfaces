@@ -88,6 +88,8 @@ namespace amrex{
 #define STENCIL_MF 62
 #define ORIGDIST_MF 63
 
+#define MDOT_LOCAL_MF 64
+
 #define HYDROSTATIC_PRESDEN_MF 65
 #define MDOT_MF 66
 #define VISCHEAT_MF 67
@@ -1048,7 +1050,8 @@ protected:
      int sweep_num,
      MultiFab* typemf,
      MultiFab* color,
-     MultiFab* mdot,
+     MultiFab* mdot_local,
+     MultiFab* mdot_global,
      Vector<blobclass> cum_blobdata,
      Vector< Vector<Real> >& level_mdot_data,
      Vector< Vector<Real> > cum_mdot_data
@@ -1059,11 +1062,8 @@ protected:
      int& color_count,
      int idx_type,
      int idx_color,
-     int idx_mdot,  
      Vector<int>& type_flag, 
-     Vector<blobclass> blobdata,
-     Vector< Vector<Real> >& mdot_data
-     );
+     Vector<blobclass> blobdata);
 
 
     void Type_level(

@@ -44,7 +44,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"MitsuhiroOhta: Multimaterial SUPERMESH/SPECTRAL, 05/04/21, 14:15pm on proc " << 
+	"MitsuhiroOhta: Multimaterial SUPERMESH/SPECTRAL, 05/06/21, 12:15pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

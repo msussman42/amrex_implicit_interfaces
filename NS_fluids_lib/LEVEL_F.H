@@ -197,8 +197,10 @@ namespace amrex{
        const Real* xlo,
        int* nmat,
        int* nten,
-       Real* mdot, // mdot initialized to 0
-       AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+       Real* mdot_local, // mdot_local initialized to 0
+       AMREX_ARLIM_P(mdot_locallo),AMREX_ARLIM_P(mdot_localhi),
+       Real* mdot_global, // mdot_global incremented 
+       AMREX_ARLIM_P(mdot_globallo),AMREX_ARLIM_P(mdot_globalhi),
        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
        Real* DEN,AMREX_ARLIM_P(DENlo),AMREX_ARLIM_P(DENhi),
        Real* DTDt,AMREX_ARLIM_P(DTDtlo),AMREX_ARLIM_P(DTDthi),

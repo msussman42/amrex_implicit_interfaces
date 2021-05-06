@@ -6826,8 +6826,10 @@ stop
        xlo, &
        nmat, &
        nten, &
-       mdot, & ! mdot initialized to 0
-       DIMS(mdot), &
+       mdot_local, & ! mdot_local initialized to 0
+       DIMS(mdot_local), &
+       mdot_global, & ! mdot_global incremented
+       DIMS(mdot_global), &
        LS,DIMS(LS), &
        DEN,DIMS(DEN), &
        DTDt,DIMS(DTDt), & ! T_after_diffusion-T_after_advection
@@ -6876,7 +6878,8 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(mdot_local)
+      INTEGER_T, intent(in) :: DIMDEC(mdot_global)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
       INTEGER_T, intent(in) :: DIMDEC(DTDt)
@@ -6887,7 +6890,8 @@ stop
       REAL_T, intent(in) ::level_blobdata(arraysize)
       REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
 
-      REAL_T, intent(inout) :: mdot(DIMV(mdot))
+      REAL_T, intent(inout) :: mdot_local(DIMV(mdot_local))
+      REAL_T, intent(inout) :: mdot_global(DIMV(mdot_global))
       REAL_T, intent(in) :: typefab(DIMV(typefab))
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: DEN(DIMV(DEN),nmat*num_state_material)
@@ -6922,7 +6926,7 @@ stop
       REAL_T LScen(nmat)
       INTEGER_T im_primary
       REAL_T blob_cellvol_count
-      REAL_T mdot_local
+      REAL_T mdot_local_scalar
       REAL_T mdot_sum_denom
       REAL_T mdot_sum_numerator
       REAL_T mofdata(nmat*ngeom_recon)
@@ -6968,7 +6972,8 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(mdot_local),0,-1,6615)
+      call checkbound(fablo,fabhi,DIMS(mdot_global),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
       call checkbound(fablo,fabhi,DIMS(DEN),0,-1,6615)
       call checkbound(fablo,fabhi,DIMS(DTDt),0,-1,6615)
@@ -7011,9 +7016,9 @@ stop
        stop
       endif
       
-        ! need sum mdot=0
-        ! let mdot=mdotold - alpha V
-        ! sum mdot= sum mdotold -alpha sum V=0
+        ! need sum mdot_local=0
+        ! let mdot_local=mdotold - alpha V
+        ! sum mdot_local= sum mdotold -alpha sum V=0
         ! alpha=sum mdotold/sum V
         ! sum is over FULL cells. 
       if (mdot_arraysize.eq.2*num_colors) then
@@ -7072,141 +7077,168 @@ stop
   
         if (vfrac.ge.VOFTOL) then
          if (is_rigid(nmat,im_primary).eq.0) then
-          if ((vfrac.ge.VOFTOL).and. &
-              (vfrac.le.one-VOFTOL)) then
-           ! do nothing
-          else if ((vfrac.ge.one-VOFTOL).and. &
-                   (vfrac.le.one+VOFTOL)) then
 
-           if (im_primary.eq.base_type) then
+           ! anelastic approximation only appropriate for "incompressible"
+           ! model.
+          if (fort_material_type(im_primary).eq.0) then
+          
+           if ((vfrac.ge.VOFTOL).and. &
+               (vfrac.le.one-VOFTOL)) then
+            ! do nothing
+           else if ((vfrac.ge.one-VOFTOL).and. &
+                    (vfrac.le.one+VOFTOL)) then
 
-            if (sweep_num.eq.0) then
-             level_mdot_data(2*(icolor-1)+1)= &
+            if (im_primary.eq.base_type) then
+
+             if (sweep_num.eq.0) then
+              level_mdot_data(2*(icolor-1)+1)= &
                level_mdot_data(2*(icolor-1)+1)+vol
-            else if (sweep_num.eq.1) then
-             ! do nothing
-            else
-             print *,"sweep_num invalid"
-             stop
-            endif
-
-            dencomp=(im_primary-1)*num_state_material+1
-            if (constant_density_all_time(im_primary).eq.1) then
-             den_mat=fort_denconst(im_primary)
-            else if (constant_density_all_time(im_primary).eq.0) then
-             den_mat=DEN(D_DECL(i,j,k),dencomp)
-            else
-             print *,"constant_density_all_time(im_primary) invalid"
-             stop
-            endif
-            if (den_mat.gt.zero) then
-             ! do nothing
-            else
-             print *,"den_mat out of range"
-             stop
-            endif
-
-            do dir=1,SDIM
-             dx_sten(dir)=xsten(1,dir)-xsten(-1,dir)
-             if (dx_sten(dir).le.zero) then
-              print *,"dx_sten invalid"
+             else if (sweep_num.eq.1) then
+              ! do nothing
+             else
+              print *,"sweep_num invalid"
               stop
              endif
-            enddo ! dir=1..sdim
 
-            ic=icolor*num_elements_blobclass
-            pressure_sum=level_blobdata(ic) ! sum pres * vol
-            blob_cellvol_count=level_blobdata(ic-2)
-            if (blob_cellvol_count.gt.zero) then
-             pressure_sum=pressure_sum/blob_cellvol_count
- 
-             if (material_type_lowmach(im_primary).eq.0) then
+             dencomp=(im_primary-1)*num_state_material+1
+             if (constant_density_all_time(im_primary).eq.1) then
+              den_mat=fort_denconst(im_primary)
+             else if (constant_density_all_time(im_primary).eq.0) then
+              den_mat=DEN(D_DECL(i,j,k),dencomp)
+             else
+              print *,"constant_density_all_time(im_primary) invalid"
+              stop
+             endif
+             if (den_mat.gt.zero) then
               ! do nothing
-             else if ((material_type_lowmach(im_primary).gt.0).and. &
-                      (material_type_lowmach(im_primary).le.MAX_NUM_EOS)) then
+             else
+              print *,"den_mat out of range"
+              stop
+             endif
 
-              TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
-              if (TEMP_mat.gt.zero) then
-               ! do nothing
-              else
-               print *,"TEMP_mat has gone nonpos"
+             do dir=1,SDIM
+              dx_sten(dir)=xsten(1,dir)-xsten(-1,dir)
+              if (dx_sten(dir).le.zero) then
+               print *,"dx_sten invalid"
                stop
               endif
-              call init_massfrac_parm(den_mat,massfrac_parm,im_primary)
-              do ispec=1,num_species_var
-               massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
-              enddo
-              call INTERNAL_material(den_mat,massfrac_parm,TEMP_mat, &
-               internal_energy, &
-               material_type_lowmach(im_primary),im_primary)
-              if (internal_energy.gt.zero) then
-               ! do nothing
-              else
-               print *,"internal_energy has gone nonpos"
-               stop
-              endif
-              call EOS_material(den_mat,massfrac_parm, &
-               internal_energy, &
-               pressure_local, &
-               material_type_lowmach(im_primary),im_primary)
+             enddo ! dir=1..sdim
 
-              call dVdT_material(dVdT,massfrac_parm, &
-                pressure_sum,TEMP_mat, &
-                material_type_lowmach(im_primary),im_primary)
+             ic=icolor*num_elements_blobclass
+             pressure_sum=level_blobdata(ic) ! sum pres * vol
+             blob_cellvol_count=level_blobdata(ic-2)
+             if (blob_cellvol_count.gt.zero) then
 
-               !F_t + s|grad F|=0
-               ! dF=F_t dt=-s|grad F|dt=-s dt/dx
-               ! my mdot=(den_src/den_dst-1)*dF*Vcell/dt^2=
-               !  (den_src/den_dst-1)*(-s * area)/dt
-               ! units of my mdot are "velocity" * area / seconds=
-               ! "div velocity" * Length * area / seconds =
-               ! "div velocity" * volume / seconds
-               !
-              mdot_local=dVdT*den_mat* &
+              if (pressure_sum.gt.zero) then
+               pressure_sum=pressure_sum/blob_cellvol_count
+ 
+               if (material_type_lowmach(im_primary).eq.0) then
+                ! do nothing
+               else if ((material_type_lowmach(im_primary).gt.0).and. &
+                        (material_type_lowmach(im_primary).le.MAX_NUM_EOS)) then
+
+                TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
+                if (TEMP_mat.gt.zero) then
+                 ! do nothing
+                else
+                 print *,"TEMP_mat has gone nonpos"
+                 stop
+                endif
+                call init_massfrac_parm(den_mat,massfrac_parm,im_primary)
+                do ispec=1,num_species_var
+                 massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+                enddo
+                call INTERNAL_material(den_mat,massfrac_parm,TEMP_mat, &
+                 internal_energy, &
+                 material_type_lowmach(im_primary),im_primary)
+                if (internal_energy.gt.zero) then
+                 ! do nothing
+                else
+                 print *,"internal_energy has gone nonpos"
+                 stop
+                endif
+                call EOS_material(den_mat,massfrac_parm, &
+                 internal_energy, &
+                 pressure_local, &
+                 material_type_lowmach(im_primary),im_primary)
+
+                call dVdT_material(dVdT,massfrac_parm, &
+                 pressure_sum,TEMP_mat, &
+                 material_type_lowmach(im_primary),im_primary)
+
+                !F_t + s|grad F|=0
+                ! dF=F_t dt=-s|grad F|dt=-s dt/dx
+                ! my mdot=(den_src/den_dst-1)*dF*Volume_cell/dt^2=
+                !  (den_src/den_dst-1)*(-s * area)/dt
+                ! units of my mdot are "velocity" * area / seconds=
+                ! "div velocity" * Length * area / seconds =
+                ! "div velocity" * volume / seconds = (1/s)(cm^3)/s=cm^3/s^2
+                !
+                ! units of mdot_local_scalar: (1/density)(1/Kelvin)(density)
+                !   (Kelvin)*cm^3/s^2=cm^3/s^2
+                mdot_local_scalar=dVdT*den_mat* &
                   DTDt(D_DECL(i,j,k),im_primary)*vol/(dt*dt)
 
-              if (sweep_num.eq.0) then
-               mdot(D_DECL(i,j,k))=mdot_local
-               level_mdot_data(2*(icolor-1)+2)= &
-                 level_mdot_data(2*(icolor-1)+2)+mdot_local
-              else if (sweep_num.eq.1) then
-               ! do nothing
+                if (sweep_num.eq.0) then
+                 mdot_local(D_DECL(i,j,k))=mdot_local_scalar
+                 level_mdot_data(2*(icolor-1)+2)= &
+                  level_mdot_data(2*(icolor-1)+2)+mdot_local_scalar
+                else if (sweep_num.eq.1) then
+                 mdot_sum_denom=level_mdot_data(2*(icolor-1)+1)
+                 mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
+                 if (mdot_sum_denom.gt.zero) then
+                  mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
+                  mdot_local(D_DECL(i,j,k))= &
+                   mdot_local(D_DECL(i,j,k))- &
+                   mdot_sum_numerator*vol/mdot_sum_denom
+
+                  mdot_global(D_DECL(i,j,k))=mdot_global(D_DECL(i,j,k))+ &
+                    mdot_local(D_DECL(i,j,k))
+                 else if (mdot_sum_denom.eq.zero) then
+                  print *,"since F=1 for this cell, we must have "
+                  print *,"mdot_sum_denom>0"
+                  stop
+                 else if ((mdot_sum_denom.eq.zero).and. &
+                          (mdot_sum_numerator.eq.zero)) then
+                  ! do nothing
+                 else
+                  print *,"mdot_sum_denom or mdot_sum_numerator invalid"
+                  stop
+                 endif
+                else
+                 print *,"sweep_num invalid"
+                 stop
+                endif
+
+               else
+                print *,"material_type_lowmach(im_primary) invalid"
+                stop
+               endif
               else
-               print *,"sweep_num invalid"
+               print *,"pressure_sum invalid"
                stop
               endif
-
+             else if (blob_cellvol_count.eq.zero) then
+              print *,"since vfrac=1>1/2 for this cell, one must have"
+              print *,"blob_cellvol_count>0"
+              stop
              else
-              print *,"material_type_lowmach(im_primary) invalid"
+              print *,"blob_cellvol_count invalid"
               stop
              endif
             else
-             print *,"blob_cellvol_count invalid"
-             stop
-            endif
-
-            if (sweep_num.eq.0) then
-                    ! do nothing
-            else if (sweep_num.eq.1) then
-             mdot_sum_denom=level_mdot_data(2*(icolor-1)+1)
-             if (mdot_sum_denom.gt.zero) then
-              mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
-              mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))- &
-                mdot_sum_numerator*vol/mdot_sum_denom
-             else
-              print *,"mdot_sum_denom invalid"
-              stop
-             endif
-            else
-             print *,"sweep_num invalid"
+             print *,"(im_primary<>base_type) even though the cell is full"
              stop
             endif
            else
-            print *,"(im_primary<>base_type)"
+            print *,"vfrac out of range"
             stop
            endif
+          else if ((fort_material_type(im_primary).gt.0).and. &
+                   (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
+           ! do nothing
           else
-           print *,"vfrac out of range"
+           print *,"fort_material_type(im_primary) invalid"
            stop
           endif
          else if (is_rigid(nmat,im_primary).eq.1) then
