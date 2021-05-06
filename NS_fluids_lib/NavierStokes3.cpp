@@ -3172,7 +3172,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
                      (material_type[im_low]<999))||
                     (material_type_lowmach[im_low]==0)) {
           // do nothing
-         } amrex::Error("material_type or material_type_lowmach invalid");
+         } else
+          amrex::Error("material_type or material_type_lowmach invalid");
         } else
          amrex::Error("ns_is_rigid invalid");
        }  //im_low=0..nmat-1
@@ -4941,8 +4942,11 @@ NavierStokes::ColorSum(
 
  if (counter!=blob_array_size)
   amrex::Error("counter invalid");
- if (mdot_counter!=mdot_array_size)
-  amrex::Error("mdot_counter invalid");
+ if (mdot_counter!=mdot_array_size) {
+  std::cout << "mdot_counter=" << mdot_counter << '\n';
+  std::cout << "mdot_array_size=" << mdot_array_size << '\n';
+  amrex::Error("mdot_counter invalid in ColorSum1");
+ }
 
  Vector< Vector<Real> > level_blob_array;
  Vector< Vector<int> > level_blob_type_array;
@@ -5011,8 +5015,11 @@ NavierStokes::ColorSum(
    } // i=0..num_colors
    if (counter!=blob_array_size)
     amrex::Error("counter invalid");
-   if (mdot_counter!=mdot_array_size)
-    amrex::Error("mdot_counter invalid");
+   if (mdot_counter!=mdot_array_size) {
+    std::cout << "mdot_counter=" << mdot_counter << '\n';
+    std::cout << "mdot_array_size=" << mdot_array_size << '\n';
+    amrex::Error("mdot_counter invalid in ColorSum2");
+   }
 
   } else
    amrex::Error("operation_flag invalid");
@@ -5291,8 +5298,11 @@ NavierStokes::ColorSum(
 
   if (counter!=blob_array_size)
    amrex::Error("counter invalid");
-  if (mdot_counter!=mdot_array_size)
-   amrex::Error("mdot_counter invalid");
+  if (mdot_counter!=mdot_array_size) {
+   std::cout << "mdot_counter=" << mdot_counter << '\n';
+   std::cout << "mdot_array_size=" << mdot_array_size << '\n';
+   amrex::Error("mdot_counter invalid in ColorSum3");
+  }
 
  } else if (operation_flag==1) {
 
@@ -5311,8 +5321,11 @@ NavierStokes::ColorSum(
     mdot_counter++;
    }
   }
-  if (mdot_counter!=mdot_array_size)
-   amrex::Error("mdot_counter invalid");
+  if (mdot_counter!=mdot_array_size) {
+   std::cout << "mdot_counter=" << mdot_counter << '\n';
+   std::cout << "mdot_array_size=" << mdot_array_size << '\n';
+   amrex::Error("mdot_counter invalid in ColorSum4");
+  }
 
  } else
   amrex::Error("operation_flag invalid");
@@ -5415,8 +5428,12 @@ NavierStokes::LowMachDIVU(
 
  if (counter!=blob_array_size)
   amrex::Error("counter invalid");
- if (mdot_counter!=2)
-  amrex::Error("mdot_counter invalid");
+
+ if (mdot_counter!=mdot_array_size) {
+  std::cout << "mdot_counter=" << mdot_counter << '\n';
+  std::cout << "mdot_array_size=" << mdot_array_size << '\n';
+  amrex::Error("mdot_counter invalid in LowMachDIVU 1");
+ }
 
  Vector< Vector<Real> > level_mdot_array;
  level_mdot_array.resize(thread_class::nthreads);
@@ -5589,8 +5606,11 @@ for (int i=0;i<num_colors;i++) {
  }
 }  // i=0..num_colors-1
 
-if (mdot_counter!=mdot_array_size)
- amrex::Error("mdot_counter invalid");
+if (mdot_counter!=mdot_array_size) {
+ std::cout << "mdot_counter=" << mdot_counter << '\n';
+ std::cout << "mdot_array_size=" << mdot_array_size << '\n';
+ amrex::Error("mdot_counter invalid in LowMachDIVU 2");
+}
 
 delete mask;
 
