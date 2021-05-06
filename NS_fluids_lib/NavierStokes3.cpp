@@ -12287,7 +12287,7 @@ void NavierStokes::vel_elastic_ALL() {
 	 int do_alloc=1;
          int simple_AMR_BC_flag_viscosity=1;
 	 init_gradu_tensorALL(
-          im,
+          im, // 0<=im<=nmat-1  (signifies displacement input)
 	  XDISPLACE_MF, // deleted in init_gradu_tensorALL since do_alloc==1
 	  do_alloc,
 	  CELLTENSOR_MF,

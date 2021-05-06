@@ -2614,6 +2614,7 @@ stop
         TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
        else if (SDIM.eq.2) then
         if (levelrz.eq.0) then
+          ! T33 (theta coordinate)
          TNEWfab(D_DECL(i,j,k),ibase)=zero
         else if (levelrz.eq.1) then
           ! T33 (theta coordinate)
@@ -5525,6 +5526,10 @@ stop
 
         else if (viscoelastic_model.eq.2) then
 
+          ! xflux,yflux,zflux come from "FORT_CROSSTERM_ELASTIC" in which
+          ! "stress_from_strain" is applied to the displacement gradient
+          ! matrix, then the resulting stress is multiplied by
+          ! "elastic_viscosity * visc_coef" (see DERVISC)
          xflux_comp=1
          do veldir=1,SDIM
          do dir=1,SDIM
@@ -5623,6 +5628,8 @@ stop
           ! Q(3,3) gets 2 * hoop_22 (2 * xdisp/r) in 
           ! subroutine local_tensor_from_xdisplace
           ! -T33/r
+          ! local_tensor_from_xdisplace called from FORT_UPDATETENSOR
+          ! In FORT_MAKETENSOR, Q is multiplied by the elastic bulk modulus.
          veldir=1
          bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
          if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
@@ -10987,12 +10994,19 @@ stop
       INTEGER_T ii,jj
       REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
-      INTEGER_T dir_flux,side_flux,dir_local
+      INTEGER_T dir_flux,side_flux,dir_local,dir_XD
       INTEGER_T im_elastic_p1
+      REAL_T xcenter(SDIM)
+      REAL_T XDcenter(SDIM)
+      REAL_T delta_flux
       REAL_T xflux(SDIM)
       REAL_T XDside(SDIM)
       REAL_T XDside_stencil(0:1,0:SDIM-1,SDIM)
       REAL_T xflux_stencil(0:1,0:SDIM-1,SDIM)
+      REAL_T gradXDtensor(SDIM,SDIM) ! dir_xdisp,dir_space
+      REAL_T avgXDtensor(SDIM,SDIM)
+      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
+      REAL_T hoop_22
        ! if use_A==0 then force is div(mu H Q)/rho
        ! if use_A==1 then force is div(mu H A)/rho
       INTEGER_T use_A  
@@ -11079,8 +11093,8 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
-       do dir_flux=1,SDIM
-        xcenter(dir_flux)=xsten(0,dir_flux)
+       do dir_local=1,SDIM
+        xcenter(dir_local)=xsten(0,dir_local)
        enddo
 
        do ii=1,3
@@ -11186,6 +11200,45 @@ stop
           DISP_TEN, &  ! dir_x (displace),dir_space
           hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
 
+         do ii=1,3
+         do jj=1,3
+          Q(ii,jj)=zero
+         enddo
+         enddo
+
+         Q(1,1)=DISP_TEN(1,1)
+         Q(1,2)=DISP_TEN(1,2)
+         Q(2,2)=DISP_TEN(2,2)
+         if (SDIM.eq.3) then
+          Q(3,3)=DISP_TEN(SDIM,SDIM)
+         else if (SDIM.eq.2) then
+          if (levelrz.eq.0) then
+           ! T33 (theta coordinate)
+           Q(3,3)=zero
+          else if (levelrz.eq.1) then
+           ! T33 (theta coordinate)
+           ! dX/dx + dX/dx
+           Q(3,3)=two*hoop_22 ! 2 * (xdisp/r)
+          else if (levelrz.eq.3) then
+           ! T33 (z coordinate)
+           Q(3,3)=zero
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+         else
+          print *,"dimension bust"
+          stop
+         endif
+                    
+         if (SDIM.eq.3) then 
+          Q(1,SDIM)=DISP_TEN(1,SDIM)
+          Q(2,SDIM)=DISP_TEN(2,SDIM)
+         endif
+         Q(2,1)=Q(1,2)
+         Q(3,1)=Q(1,3)
+         Q(3,2)=Q(2,3)
+
         else
          print *,"MAC_grid_displacement invalid"
          stop
@@ -11210,7 +11263,7 @@ stop
         !   visc(nmat+im_parm+1)=(eta/lambda_mod)*visc_coef
         ! For a purely elastic model, it is assumed that the Deborah number
         ! is \infty.
-        ! For a purely viscous model, it is assume that the Deborah number is
+        ! For a purely viscous model, it is assumed that the Deborah number is
         ! zero.
         ! viscoelastic_model==2: 
         !   visc(nmat+im_parm+1)=eta*visc_coef
@@ -11734,6 +11787,7 @@ stop
 
        LS_or_VOF_flag=1 ! =1 => use VOF for upwinding near interfaces
        im_elastic=im_critical+1
+        ! elastic bulk modulus not included.
        call local_tensor_from_xdisplace( &
         LS_or_VOF_flag, &
         im_elastic, &
