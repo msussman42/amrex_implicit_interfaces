@@ -8433,56 +8433,6 @@ contains
       return
       end function is_ice
 
-      function is_elastic_material(nmat,im)
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T :: is_elastic_material
-      INTEGER_T, intent(in) :: nmat,im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_elastic_material"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid16"
-       stop
-      endif
-      is_elastic_material=0
-
-      if (is_rigid(nmat,im).eq.0) then
-       if ((fort_elastic_time(im).gt.zero).and. &
-           (fort_elastic_viscosity(im).gt.zero)) then
-        if (fort_viscoelastic_model(im).eq.2) then
-         is_elastic_material=1
-        else if ((fort_viscoelastic_model(im).eq.1).or. &
-                 (fort_viscoelastic_model(im).eq.0)) then
-         ! do nothing
-        else
-         print *,"viscoelastic_model(im) invalid"
-         stop
-        endif
-       else if ((fort_elastic_time(im).eq.zero).or. &
-                (fort_elastic_viscosity(im).eq.zero)) then
-        ! do nothing
-       else
-        print *,"fort_elastic_time(im) or fort_elastic_viscosity(im) invalid"
-        stop
-       endif
-      else if (is_rigid(nmat,im).eq.1) then
-       ! do nothing
-      else
-       print *,"is_rigid invalid"
-       stop
-      endif
-
-      return
-      end function is_elastic_material
-
-
       function is_FSI_rigid(nmat,im)
       use probcommon_module
 

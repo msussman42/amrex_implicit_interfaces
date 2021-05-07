@@ -725,7 +725,8 @@ void NavierStokes::tensor_advection_updateALL() {
         NavierStokes& ns_finest=getLevel(finest_level);
         ns_finest.accumulate_PC_info(im);
        } else if ((viscoelastic_model[im]==1)||
-  		  (viscoelastic_model[im]==0)) {
+  		  (viscoelastic_model[im]==0)||
+		  (viscoelastic_model[im]==3)) {
         // do nothing
        } else
         amrex::Error("viscoelastic_model[im] invalid");
@@ -12300,7 +12301,8 @@ void NavierStokes::vel_elastic_ALL() {
          delete_array(FACETENSOR_MF);
 
         } else if ((viscoelastic_model[im]==1)||
-   		   (viscoelastic_model[im]==0)) {
+   		   (viscoelastic_model[im]==0)||
+		   (viscoelastic_model[im]==3)) { // incremental
          // do nothing
         } else
         amrex::Error("viscoelastic_model[im] invalid");
@@ -13159,7 +13161,8 @@ void NavierStokes::veldiffuseALL() {
        NavierStokes& ns_finest=getLevel(finest_level);
        ns_finest.assimilate_vel_from_particles(im_assimilate);
       } else if ((viscoelastic_model[im_assimilate]==1)||
- 	         (viscoelastic_model[im_assimilate]==0)) {
+ 	         (viscoelastic_model[im_assimilate]==0)||
+		 (viscoelastic_model[im_assimilate]==3)) { //incremental
        // do nothing
       } else
        amrex::Error("viscoelastic_model[im_assimilate] invalid");

@@ -603,6 +603,7 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 0,1 => viscoelastic FENE-CR material (do not divide by lambda in
 //  viscoelastic source term if viscoelastic_model==1.
 // 2=> elastic material
+// 3=> incremental elastic material
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
 // temperature_primitive_variable defaults to 0 (conservative) for
@@ -3379,6 +3380,11 @@ NavierStokes::read_params ()
        // do nothing
       } else
        amrex::Error("expecting radius_cutoff==-1 for elastic material");
+     } else if (viscoelastic_model[i]==3) {
+      if (radius_cutoff[i]==-1) {
+       // do nothing
+      } else
+       amrex::Error("expecting radius_cutoff==-1 for elastic material");
      } else
       amrex::Error("viscoelastic_model invalid");
     } // i=0..nmat-1
@@ -4045,6 +4051,11 @@ NavierStokes::read_params ()
         // do nothing
        } else
         amrex::Error("elastic time inconsistent with model");
+      } else if (viscoelastic_model[i]==3) { // incremental elastic model
+       if (elastic_time[i]>=1.0e+8) {
+        // do nothing
+       } else
+        amrex::Error("elastic time inconsistent with model");
       } else if ((viscoelastic_model[i]==1)||
    	         (viscoelastic_model[i]==0)) {
        // do nothing
@@ -4078,7 +4089,7 @@ NavierStokes::read_params ()
      } else
       amrex::Error("viscosity state model invalid");
 
-     if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=2)) {
+     if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=3)) {
       // do nothing
      } else
       amrex::Error("viscoelastic_model invalid");
@@ -5650,6 +5661,8 @@ int NavierStokes::elastic_material_exists() {
      local_flag=1;
     } else if ((viscoelastic_model[im]==1)||
     	       (viscoelastic_model[im]==0)) {
+     // do nothing
+    } else if (viscoelastic_model[im]==3) { // incremental model
      // do nothing
     } else
      amrex::Error("viscoelastic_model[im] invalid");
@@ -9011,6 +9024,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        // in: GODUNOV_3D.F90
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
+       // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
      FORT_MAKETENSOR(
       &partid,
       &level,
@@ -9313,7 +9327,8 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
  if ((viscoelastic_model[im]==0)||
      (viscoelastic_model[im]==1)||
-     (viscoelastic_model[im]==2)) {
+     (viscoelastic_model[im]==2)||
+     (viscoelastic_model[im]==3)) {
   // do nothing
  } else
   amrex::Error("viscoelastic_model[im] invalid");
@@ -10639,6 +10654,7 @@ void NavierStokes::tensor_advection_update() {
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+      // declared in: DERIVE_3D.F90
       // 0<=im<=nmat-1
       FORT_GETSHEAR(
        &im,
@@ -10706,6 +10722,7 @@ void NavierStokes::tensor_advection_update() {
         // in: GODUNOV_3D.F90
 	// last step in this routine: (Q^n+1-Q^n)/dt = -Q^n+1/lambda
 	// if viscoelastic_model==2, then modtime=elastic_time
+	// if viscoelastic_model==3, then modtime=elastic_time (incremental)
       FORT_UPDATETENSOR(
        &level,
        &finest_level,
