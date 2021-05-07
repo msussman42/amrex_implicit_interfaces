@@ -5462,7 +5462,8 @@ stop
         endif
 
         if ((viscoelastic_model.eq.0).or. &
-            (viscoelastic_model.eq.1)) then
+            (viscoelastic_model.eq.1).or. &
+            (viscoelastic_model.eq.3)) then !incremental
 
          do dir_outer=1,SDIM
 
@@ -5524,7 +5525,7 @@ stop
           enddo ! veldir=1..sdim
          enddo ! dir_outer=1..sdim
 
-        else if (viscoelastic_model.eq.2) then
+        else if (viscoelastic_model.eq.2) then ! displacement gradient
 
           ! xflux,yflux,zflux come from "FORT_CROSSTERM_ELASTIC" in which
           ! "stress_from_strain" is applied to the displacement gradient
@@ -11042,6 +11043,8 @@ stop
        use_A=0
       else if (viscoelastic_model.eq.2) then ! elastic model
        use_A=0
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       use_A=0
       else
        print *,"viscoelastic_model invalid"
        stop
@@ -11116,6 +11119,8 @@ stop
 
        if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
            (viscoelastic_model.eq.1)) then ! (visc-etaS)
+        ! do nothing
+       else if (viscoelastic_model.eq.3) then ! incremental model
         ! do nothing
        else if (viscoelastic_model.eq.2) then ! elastic model
         if (MAC_grid_displacement.eq.0) then
@@ -11265,7 +11270,9 @@ stop
         ! is \infty.
         ! For a purely viscous model, it is assumed that the Deborah number is
         ! zero.
-        ! viscoelastic_model==2: 
+        ! viscoelastic_model==2:  (displacement gradient model)
+        !   visc(nmat+im_parm+1)=eta*visc_coef
+        ! viscoelastic_model==3:  (incremental model)
         !   visc(nmat+im_parm+1)=eta*visc_coef
        do ii=1,3
        do jj=1,3
@@ -11716,7 +11723,10 @@ stop
       REAL_T rsign 
       REAL_T visctensor(3,3)
       REAL_T gradu(3,3)
+      REAL_T gradV(3,3)
+      REAL_T gradVT(3,3)
       REAL_T Q(3,3)
+      REAL_T W(3,3)  ! W=(1/2)(grad V - (grad V)^T)
       REAL_T Aadvect(3,3)
       REAL_T Smult(3,3)
       REAL_T SA(3,3)
@@ -11811,6 +11821,8 @@ stop
       else if ((viscoelastic_model.eq.0).or. &
                (viscoelastic_model.eq.1)) then
        ! do nothing
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       ! do nothing
       else
        print *,"viscoelastic_model invalid"
        stop
@@ -11829,15 +11841,20 @@ stop
        n=2
        do ii=1,3
        do jj=1,3
+         ! (1/2) (grad U + (grad U)^T)
         visctensor(ii,jj)=tendata(D_DECL(i,j,k),n)
         n=n+1
        enddo 
        enddo 
        do ii=1,3
        do jj=1,3
+        gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(veldir,dir)
+        gradVT(jj,ii)=tendata(D_DECL(i,j,k),n) !(dir,veldir)
         if (transposegradu.eq.0) then
+          !gradu(veldir,dir)
          gradu(ii,jj)=tendata(D_DECL(i,j,k),n)
         else if (transposegradu.eq.1) then
+          !gradu(dir,veldir)
          gradu(jj,ii)=tendata(D_DECL(i,j,k),n)
         else
          print *,"transposegradu invalid"
@@ -11847,7 +11864,12 @@ stop
         n=n+1
        enddo 
        enddo 
-        
+       do ii=1,3
+       do jj=1,3
+        W(ii,jj)=half*(gradV(ii,jj)-gradVT(ii,jj))
+       enddo 
+       enddo 
+       FIX ME
        do ii=1,3
        do jj=1,3
          Q(ii,jj)=zero
@@ -11868,6 +11890,7 @@ stop
 
         ! viscoelastic_model==0 => modtime<=elastic_time
         ! viscoelastic_model==2 => modtime==elastic_time
+        ! viscoelastic_model==3 => modtime==elastic_time
        modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
        vofcomp=im_critical*ngeom_recon+1
        vfrac=vof(D_DECL(i,j,k),vofcomp)
@@ -11906,12 +11929,13 @@ stop
          Q(3,2)=Q(2,3)
 
         else if ((viscoelastic_model.eq.0).or. &
-                 (viscoelastic_model.eq.1)) then
+                 (viscoelastic_model.eq.1).or. &
+                 (viscoelastic_model.eq.3)) then
 
          do ii=1,3 
           do jj=1,3 
            Aadvect(ii,jj)=Q(ii,jj)
-           Smult(ii,jj)=dt*gradu(ii,jj)
+           Smult(ii,jj)=dt*gradu(ii,jj) !cfl cond: |u|dt<dx and dt|gradu|<1
 
            if (Smult(ii,jj).le.-one+VOFTOL) then
             Smult(ii,jj)=-one+VOFTOL
@@ -11919,7 +11943,7 @@ stop
             Smult(ii,jj)=one-VOFTOL
            endif
     
-          enddo ! jj
+          enddo ! jj=1,3
           Aadvect(ii,ii)=Aadvect(ii,ii)+one
           if (Aadvect(ii,ii).lt.zero) then
            Aadvect(ii,ii)=zero
@@ -12105,7 +12129,8 @@ stop
           Q(ii,ii)=Q(ii,ii)-one
          enddo
 
-         ! note: for viscoelastic_model==2,
+         ! note: for viscoelastic_model==2 or
+         !           viscoelastic_model==3,
          !  modtime=lambda=elastic_time >> 1
          !
          ! Q^n+1=lambda Q^n/(lambda+dt)

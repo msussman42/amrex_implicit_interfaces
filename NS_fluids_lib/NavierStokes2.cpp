@@ -1541,7 +1541,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      &nten);
 
    } else if ((viscoelastic_model[im_elastic]==1)||
-              (viscoelastic_model[im_elastic]==0)) {
+              (viscoelastic_model[im_elastic]==0)||
+	      (viscoelastic_model[im_elastic]==3)) { //incremental
     // do nothing
    } else
     amrex::Error("viscoelastic_model[im_elastic] invalid");

@@ -287,30 +287,30 @@ stop
 
       IMPLICIT NONE
 
-
-      INTEGER_T im,level,ntensor
-      INTEGER_T nmat
-      REAL_T time
-      REAL_T dx(SDIM)
-      REAL_T xlo(SDIM)
+      INTEGER_T, intent(in) :: im,level,ntensor
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
-      INTEGER_T i,j,k,n,dir,veldir,iproject,ngrow,onlyscalar
+      INTEGER_T i,j,k,n,dir,veldir
+      INTEGER_T, intent(in) :: iproject,ngrow,onlyscalar
       INTEGER_T i1,j1
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T bc(SDIM,2,SDIM)
-      INTEGER_T DIMDEC(cellten)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(tensordata)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(cellten)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(tensordata)
   
-      REAL_T cellten(DIMV(cellten),ntensor)
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T vel(DIMV(vel),SDIM)
-      REAL_T tensordata(DIMV(tensordata),20)
+      REAL_T, intent(in) :: cellten(DIMV(cellten),ntensor)
+      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in) :: tensordata(DIMV(tensordata),20)
       REAL_T visctensor(3,3),gradu(3,3)
       REAL_T shear
       REAL_T a,b,c
@@ -379,6 +379,8 @@ stop
        enddo
        enddo
 
+        !cellten:
+        !u_x,v_x,w_x,u_y,v_y,w_y,u_z,v_z,w_z
        do dir=1,SDIM
         if (dir.eq.1) then
          nbase=ux-1
@@ -477,7 +479,7 @@ stop
         enddo
         do i1=1,3
         do j1=1,3
-         tensordata(D_DECL(i,j,k),n)=gradu(i1,j1)
+         tensordata(D_DECL(i,j,k),n)=gradu(i1,j1) !gradu(veldir,dir)
          n=n+1
         enddo
         enddo
@@ -641,7 +643,7 @@ stop
       endif
 
       if ((viscoelastic_model.ge.0).and. &
-          (viscoelastic_model.le.2)) then
+          (viscoelastic_model.le.3)) then
        ! do nothing
       else
        print *,"viscoelastic_model invalid"
@@ -733,7 +735,8 @@ stop
         if ((viscoelastic_model.eq.0).or. &
             (Viscoelastic_model.eq.1)) then
          ! do nothing
-        else if (viscoelastic_model.eq.2) then
+        else if ((viscoelastic_model.eq.2).or. & !displacement gradient
+                 (viscoelastic_model.eq.3)) then !incremental
          bulk_modulus=elastic_viscosity
          if (bulk_modulus.gt.zero) then
           if (visc_coef.gt.zero) then
@@ -915,7 +918,8 @@ stop
             polymer_factor,modtime)
 
            ! modtime=elastic_time >> 1
-          else if (viscoelastic_model.eq.2) then
+          else if ((viscoelastic_model.eq.2).or. & !displacement gradient
+                   (viscoelastic_model.eq.3)) then !incremental
            modtime=elastic_time
           else
            print *,"viscoelastic_model invalid"
@@ -937,7 +941,9 @@ stop
            else if (viscoelastic_model.eq.1) then
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)
-           else if (viscoelastic_model.eq.2) then
+           else if (viscoelastic_model.eq.2) then !displacement gradient
+            viscoelastic_coeff=elastic_viscosity
+           else if (viscoelastic_model.eq.3) then !incremental
             viscoelastic_coeff=elastic_viscosity
            else
             print *,"viscoelastic_model invalid"
@@ -1116,7 +1122,7 @@ stop
        stop
       endif  
       if ((viscoelastic_model(im+1).ge.0).and. &
-          (viscoelastic_model(im+1).le.2)) then
+          (viscoelastic_model(im+1).le.3)) then
        ! do nothing
       else
        print *,"viscoelastic_model(im+1) invalid"
