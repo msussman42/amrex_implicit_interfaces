@@ -310,7 +310,7 @@ stop
       REAL_T, intent(in) :: cellten(DIMV(cellten),ntensor)
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in) :: tensordata(DIMV(tensordata),20)
+      REAL_T, intent(out) :: tensordata(DIMV(tensordata),20)
       REAL_T visctensor(3,3),gradu(3,3)
       REAL_T shear
       REAL_T a,b,c

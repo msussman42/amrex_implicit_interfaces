@@ -11954,6 +11954,11 @@ stop
             Smult(ii,jj)=-one+VOFTOL
            else if (Smult(ii,jj).ge.one-VOFTOL) then
             Smult(ii,jj)=one-VOFTOL
+           else if (abs(Smult(ii,jj)).le.one) then
+            ! do nothing
+           else
+            print *,"Smult(ii,jj) became corrupt"
+            stop
            endif
     
           enddo ! jj=1,3
@@ -11962,7 +11967,8 @@ stop
          enddo  ! ii=1,3
 
          if ((viscoelastic_model.eq.0).or. &
-             (viscoelastic_model.eq.1) then
+             (viscoelastic_model.eq.1)) then
+
           do ii=1,3 
            if (Aadvect(ii,ii).lt.zero) then
             Aadvect(ii,ii)=zero
@@ -12014,7 +12020,7 @@ stop
          endif
 
          if ((viscoelastic_model.eq.0).or. &
-             (viscoelastic_model.eq.1) then
+             (viscoelastic_model.eq.1)) then
           ! do nothing
          else if (viscoelastic_model.eq.3) then
           do ii=1,3
@@ -12071,7 +12077,7 @@ stop
               print *,"rr invalid"
               stop
              endif
-             uu=gradu(3,3)*rr
+             uu=gradu_FENECR(3,3)*rr
              growthrate=two*uu*dt/rr
              if (uu.gt.zero) then
               Q(ii,jj)=(one+growthrate)*Aadvect(ii,jj)
@@ -12083,14 +12089,23 @@ stop
               print *,"uu bust"
               stop
              endif
-             if (Q(ii,jj).gt.zero) then
+              ! Q=S A S^T at this stage
+             if ((viscoelastic_model.eq.0).or. &
+                 (viscoelastic_model.eq.1)) then
+              if (Q(ii,jj).gt.zero) then
+               ! do nothing
+              else if (Q(ii,jj).le.zero) then
+               print *,"Q(ii,jj)<=0"
+               print *,"viscoelastic_model=",viscoelastic_model
+               stop
+              else
+               print *,"Q(ii,jj) bust"
+               stop
+              endif
+             else if (viscoelastic_model.eq.3) then
               ! do nothing
-             else if (Q(ii,jj).le.zero) then
-              print *,"Q(ii,jj)<=0"
-              print *,"viscoelastic_model=",viscoelastic_model
-              stop
              else
-              print *,"Q(ii,jj) bust"
+              print *,"viscoelastic_model invalid"
               stop
              endif
             else if (levelrz.eq.3) then
@@ -12114,7 +12129,7 @@ stop
          enddo  ! ii=1..3
 
          if ((viscoelastic_model.eq.0).or. &
-             (viscoelastic_model.eq.1) then
+             (viscoelastic_model.eq.1)) then
           do ii=1,3
            if (Q(ii,ii).lt.zero) then
             Q(ii,ii)=zero
@@ -12201,15 +12216,14 @@ stop
          do ii=1,3
           traceA=traceA+Q(ii,ii)+one
          enddo
-         if ((viscoelastic_model.eq.0).or.
-             (viscoelastic_model.eq.1) then
+         if ((viscoelastic_model.eq.0).or. &
+             (viscoelastic_model.eq.1)) then
           if (traceA.lt.zero) then
            print *,"traceA cannot be negative!"
            print *,"viscoelastic_model=",viscoelastic_model
            stop
           endif
-         else if ((viscoelastic_model.eq.2).or.
-                  (viscoelastic_model.eq.3) then
+         else if (viscoelastic_model.eq.3) then
           !check nothing
          else
           print *,"viscoelastic_model invalid"
