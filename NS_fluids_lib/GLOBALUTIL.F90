@@ -10866,7 +10866,7 @@ contains
       INTEGER_T dir
  
       if (n_sites.lt.1) then
-       print *,"n_sites invalid"
+       print *,"n_sites invalid (GLOBALUTIL.F90), n_sites=",n_sites
        stop
       endif
  
