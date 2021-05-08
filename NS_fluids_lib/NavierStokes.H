@@ -2054,22 +2054,28 @@ protected:
     static Vector<Real> elastic_time; // viscoelastic parameter
 
      // 0,1 => viscoelastic FENE-CR material  
+     //     updating Q:
+     //       (i) CISL advection Q^advect=Q^n(x-V dt)
+     //       (ii) A^advect=Q^advect+I
+     //       (iii) X1=I+dt gradu
+     //       (iv)  Q^{n+1}=X1 A^adv X1^T -I=
+     //           Q^advect+dt (2D) + dt gradu Q + dt Q gradu^T+O(dt^2)
+     //       (v) Q^n+1=lambda Q^n+1/(lambda+dt)
+     //   
      // 2=> elastic material  Q=bulk_modulus*(grad X + grad X^{T}) (linear ex.)
      // 3=> incremental elastic model 
      //   (a) cell centered formulation
      //   (b) face centered formulation
-     //   DS/DT=2 mu (D0-Dp) - (SW-WS)
+     //   DS/DT=2 (D0-Dp) - (SW-WS)
      //     mu=Lame coefficient (bulk modulus?)
      //     D0=D-tr(D)Id/DIM 
      //       =D if incompressible
-     //     W=(1/2)(grad V - grav V^T)    W^T=-W
+     //     W=(1/2)(grad V - grad V^T)    W^T=-W
      //     updating S:
      //       (i) CISL advection S^advect=S^n(x-V dt)
-     //       (ii) given W,
-     //            S^{n+1}=(I+W dt)S^advect(I+W^T dt)=
-     //                    S^advect +dt W S^adv+S^adv W^T dt+O(dt^2) \approx
-     //                    S^advect+dt (W S^adv + S^adv W^T)=
-     //                    S^advect+dt (W S - S W)
+     //       (ii) A^advect=S^advect+I+dt 2D
+     //       (iii) X2=I+dt W
+     //       (iv) S^{n+1}=X2 A^advect X2^T-I
      //
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
