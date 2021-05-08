@@ -5462,7 +5462,8 @@ stop
         endif
 
         if ((viscoelastic_model.eq.0).or. &
-            (viscoelastic_model.eq.1)) then
+            (viscoelastic_model.eq.1).or. &
+            (viscoelastic_model.eq.3)) then !incremental
 
          do dir_outer=1,SDIM
 
@@ -5524,7 +5525,7 @@ stop
           enddo ! veldir=1..sdim
          enddo ! dir_outer=1..sdim
 
-        else if (viscoelastic_model.eq.2) then
+        else if (viscoelastic_model.eq.2) then ! displacement gradient
 
           ! xflux,yflux,zflux come from "FORT_CROSSTERM_ELASTIC" in which
           ! "stress_from_strain" is applied to the displacement gradient
@@ -11042,6 +11043,8 @@ stop
        use_A=0
       else if (viscoelastic_model.eq.2) then ! elastic model
        use_A=0
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       use_A=0
       else
        print *,"viscoelastic_model invalid"
        stop
@@ -11116,6 +11119,8 @@ stop
 
        if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
            (viscoelastic_model.eq.1)) then ! (visc-etaS)
+        ! do nothing
+       else if (viscoelastic_model.eq.3) then ! incremental model
         ! do nothing
        else if (viscoelastic_model.eq.2) then ! elastic model
         if (MAC_grid_displacement.eq.0) then
@@ -11265,7 +11270,9 @@ stop
         ! is \infty.
         ! For a purely viscous model, it is assumed that the Deborah number is
         ! zero.
-        ! viscoelastic_model==2: 
+        ! viscoelastic_model==2:  (displacement gradient model)
+        !   visc(nmat+im_parm+1)=eta*visc_coef
+        ! viscoelastic_model==3:  (incremental model)
         !   visc(nmat+im_parm+1)=eta*visc_coef
        do ii=1,3
        do jj=1,3
@@ -11660,7 +11667,7 @@ stop
        ncomp_visc, & 
        vof,DIMS(vof), &
        visc,DIMS(visc), &
-       tendata,DIMS(tendata), &
+       tendata,DIMS(tendata), & ! tendata: FORT_GETSHEAR,iproject=onlyscalar=0
        dx,xlo, &
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
@@ -11698,6 +11705,9 @@ stop
 
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
+       ! 1: sqrt(2 * D : D)
+       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
       REAL_T, intent(in) :: tendata(DIMV(tendata),20)
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(out) :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
@@ -11715,8 +11725,10 @@ stop
       INTEGER_T iii,jjj
       REAL_T rsign 
       REAL_T visctensor(3,3)
-      REAL_T gradu(3,3)
+      REAL_T gradu_FENECR(3,3)
+      REAL_T gradV(3,3)
       REAL_T Q(3,3)
+      REAL_T W_Jaumann(3,3)  ! W=(1/2)(grad V - (grad V)^T)
       REAL_T Aadvect(3,3)
       REAL_T Smult(3,3)
       REAL_T SA(3,3)
@@ -11811,6 +11823,8 @@ stop
       else if ((viscoelastic_model.eq.0).or. &
                (viscoelastic_model.eq.1)) then
        ! do nothing
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       ! do nothing
       else
        print *,"viscoelastic_model invalid"
        stop
@@ -11824,21 +11838,28 @@ stop
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        ! tendata has: |grad U|, D, grad U
+       ! tendata has: |D|, D, grad U
+       ! 1: sqrt(2 * D : D)
+       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
        shear=tendata(D_DECL(i,j,k),1)
        n=2
        do ii=1,3
        do jj=1,3
+         ! (1/2) (grad U + (grad U)^T)
         visctensor(ii,jj)=tendata(D_DECL(i,j,k),n)
         n=n+1
        enddo 
        enddo 
        do ii=1,3
        do jj=1,3
+        gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(veldir,dir)
         if (transposegradu.eq.0) then
-         gradu(ii,jj)=tendata(D_DECL(i,j,k),n)
+          !gradu(veldir,dir)
+         gradu_FENECR(ii,jj)=tendata(D_DECL(i,j,k),n)
         else if (transposegradu.eq.1) then
-         gradu(jj,ii)=tendata(D_DECL(i,j,k),n)
+          !gradu(dir,veldir)
+         gradu_FENECR(jj,ii)=tendata(D_DECL(i,j,k),n)
         else
          print *,"transposegradu invalid"
          stop
@@ -11847,7 +11868,12 @@ stop
         n=n+1
        enddo 
        enddo 
-        
+       do ii=1,3
+       do jj=1,3
+        W_Jaumann(ii,jj)=half*(gradV(ii,jj)-gradV(jj,ii))
+       enddo 
+       enddo 
+       
        do ii=1,3
        do jj=1,3
          Q(ii,jj)=zero
@@ -11868,6 +11894,7 @@ stop
 
         ! viscoelastic_model==0 => modtime<=elastic_time
         ! viscoelastic_model==2 => modtime==elastic_time
+        ! viscoelastic_model==3 => modtime==elastic_time
        modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
        vofcomp=im_critical*ngeom_recon+1
        vfrac=vof(D_DECL(i,j,k),vofcomp)
@@ -11906,62 +11933,104 @@ stop
          Q(3,2)=Q(2,3)
 
         else if ((viscoelastic_model.eq.0).or. &
-                 (viscoelastic_model.eq.1)) then
+                 (viscoelastic_model.eq.1).or. &
+                 (viscoelastic_model.eq.3)) then
 
          do ii=1,3 
           do jj=1,3 
            Aadvect(ii,jj)=Q(ii,jj)
-           Smult(ii,jj)=dt*gradu(ii,jj)
+            !cfl cond: |u|dt<dx and dt|gradu|<1
+           if ((viscoelastic_model.eq.0).or. &
+               (viscoelastic_model.eq.1)) then
+            Smult(ii,jj)=dt*gradu_FENECR(ii,jj) 
+           else if (viscoelastic_model.eq.3) then
+            Smult(ii,jj)=dt*W_Jaumann(ii,jj) 
+           else
+            print *,"viscoelastic_model invalid"
+            stop
+           endif
 
            if (Smult(ii,jj).le.-one+VOFTOL) then
             Smult(ii,jj)=-one+VOFTOL
            else if (Smult(ii,jj).ge.one-VOFTOL) then
             Smult(ii,jj)=one-VOFTOL
+           else if (abs(Smult(ii,jj)).le.one) then
+            ! do nothing
+           else
+            print *,"Smult(ii,jj) became corrupt"
+            stop
            endif
     
-          enddo ! jj
-          Aadvect(ii,ii)=Aadvect(ii,ii)+one
-          if (Aadvect(ii,ii).lt.zero) then
-           Aadvect(ii,ii)=zero
-           print *,"WARNING Q^advect+I no longer positive definite"
-           print *,"viscoelastic_model=",viscoelastic_model
-          endif
+          enddo ! jj=1,3
           Smult(ii,ii)=Smult(ii,ii)+one
-         enddo  ! ii
+          Aadvect(ii,ii)=Aadvect(ii,ii)+one
+         enddo  ! ii=1,3
 
-         if (SDIM.eq.3) then
+         if ((viscoelastic_model.eq.0).or. &
+             (viscoelastic_model.eq.1)) then
 
-          rsign=Aadvect(1,3)
-          if (Aadvect(1,3)**2.gt.Aadvect(1,1)*Aadvect(3,3)) then
-           Aadvect(1,3)=sqrt(Aadvect(1,1)*Aadvect(3,3))
-           if (rsign.lt.zero) then
-            Aadvect(1,3)=-Aadvect(1,3)
+          do ii=1,3 
+           if (Aadvect(ii,ii).lt.zero) then
+            Aadvect(ii,ii)=zero
+            print *,"WARNING Q^advect+I no longer positive definite"
+            print *,"viscoelastic_model=",viscoelastic_model
            endif
-           Aadvect(3,1)=Aadvect(1,3)
-          endif
-          rsign=Aadvect(2,3)
-          if (Aadvect(2,3)**2.gt.Aadvect(2,2)*Aadvect(3,3)) then
-           Aadvect(2,3)=sqrt(Aadvect(2,2)*Aadvect(3,3))
-           if (rsign.lt.zero) then
-            Aadvect(2,3)=-Aadvect(2,3)
+          enddo  ! ii=1,3
+
+          if (SDIM.eq.3) then
+
+           rsign=Aadvect(1,3)
+           if (Aadvect(1,3)**2.gt.Aadvect(1,1)*Aadvect(3,3)) then
+            Aadvect(1,3)=sqrt(Aadvect(1,1)*Aadvect(3,3))
+            if (rsign.lt.zero) then
+             Aadvect(1,3)=-Aadvect(1,3)
+            endif
+            Aadvect(3,1)=Aadvect(1,3)
            endif
-           Aadvect(3,2)=Aadvect(2,3)
+           rsign=Aadvect(2,3)
+           if (Aadvect(2,3)**2.gt.Aadvect(2,2)*Aadvect(3,3)) then
+            Aadvect(2,3)=sqrt(Aadvect(2,2)*Aadvect(3,3))
+            if (rsign.lt.zero) then
+             Aadvect(2,3)=-Aadvect(2,3)
+            endif
+            Aadvect(3,2)=Aadvect(2,3)
+           endif
+
+          else if (SDIM.eq.2) then
+           ! do nothing
+          else
+           print *,"dimension bust"
+           stop
           endif
 
-         else if (SDIM.eq.2) then
+          rsign=Aadvect(1,2)
+          if (Aadvect(1,2)**2.gt.Aadvect(1,1)*Aadvect(2,2)) then
+           Aadvect(1,2)=sqrt(Aadvect(1,1)*Aadvect(2,2))
+           if (rsign.lt.zero) then
+            Aadvect(1,2)=-Aadvect(1,2)
+           endif
+           Aadvect(2,1)=Aadvect(1,2)
+          endif
+ 
+         else if (viscoelastic_model.eq.3) then
           ! do nothing
          else
-          print *,"dimension bust"
+          print *,"viscoelastic_model invalid"
           stop
          endif
 
-         rsign=Aadvect(1,2)
-         if (Aadvect(1,2)**2.gt.Aadvect(1,1)*Aadvect(2,2)) then
-          Aadvect(1,2)=sqrt(Aadvect(1,1)*Aadvect(2,2))
-          if (rsign.lt.zero) then
-           Aadvect(1,2)=-Aadvect(1,2)
-          endif
-          Aadvect(2,1)=Aadvect(1,2)
+         if ((viscoelastic_model.eq.0).or. &
+             (viscoelastic_model.eq.1)) then
+          ! do nothing
+         else if (viscoelastic_model.eq.3) then
+          do ii=1,3
+          do jj=1,3
+           Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensor(ii,jj) 
+          enddo
+          enddo
+         else
+          print *,"viscoelastic_model invalid"
+          stop
          endif
 
          do ii=1,3
@@ -11972,7 +12041,7 @@ stop
           enddo
          enddo
          enddo
-         
+        
          do ii=1,3
          do jj=1,3
           SAS(ii,jj)=zero
@@ -11983,43 +12052,46 @@ stop
          enddo
 
          do ii=1,3
-          do jj=1,3
-           Q(ii,jj)=SAS(ii,jj)
+         do jj=1,3
+          Q(ii,jj)=SAS(ii,jj)
 
-           if ((ii.eq.3).and.(jj.eq.3)) then
+          if ((ii.eq.3).and.(jj.eq.3)) then
 
-            if (SDIM.eq.3) then
+           if (SDIM.eq.3) then
+            ! do nothing
+           else if (SDIM.eq.2) then
+            if (levelrz.eq.0) then
              ! do nothing
-            else if (SDIM.eq.2) then
-             if (levelrz.eq.0) then
-              ! do nothing
-             else if (levelrz.eq.1) then
-              ! GETSHEAR put u/r in gradu(3,3)
-              ! for hoop stress term: 
-              ! dA/dt=2 u A/r
-              ! if u<0:
-              ! A^n+1 - A^n = dt 2uA^{n+1}/r
-              ! (1-dt 2u/r)A^n+1=A^n
-              ! A^n+1=A^n/(1-dt 2u/r)
-              ! if u>0:
-              ! A^n+1=(1+2u dt/r)A^n
-              rr=xsten(0,1)
-              if (rr.le.zero) then
-               print *,"rr invalid"
-               stop
-              endif
-              uu=gradu(3,3)*rr
-              growthrate=two*uu*dt/rr
-              if (uu.gt.zero) then
-               Q(ii,jj)=(one+growthrate)*Aadvect(ii,jj)
-              else if (uu.lt.zero) then   
-               Q(ii,jj)=Aadvect(ii,jj)/(one-growthrate)
-              else if (uu.eq.zero) then
-               Q(ii,jj)=Aadvect(ii,jj)
-              else
-               print *,"uu bust"
-               stop
-              endif
+            else if (levelrz.eq.1) then
+             ! GETSHEAR put u/r in gradu(3,3)
+             ! for hoop stress term: 
+             ! dA/dt=2 u A/r
+             ! if u<0:
+             ! A^n+1 - A^n = dt 2uA^{n+1}/r
+             ! (1-dt 2u/r)A^n+1=A^n
+             ! A^n+1=A^n/(1-dt 2u/r)
+             ! if u>0:
+             ! A^n+1=(1+2u dt/r)A^n
+             rr=xsten(0,1)
+             if (rr.le.zero) then
+              print *,"rr invalid"
+              stop
+             endif
+             uu=gradu_FENECR(3,3)*rr
+             growthrate=two*uu*dt/rr
+             if (uu.gt.zero) then
+              Q(ii,jj)=(one+growthrate)*Aadvect(ii,jj)
+             else if (uu.lt.zero) then   
+              Q(ii,jj)=Aadvect(ii,jj)/(one-growthrate)
+             else if (uu.eq.zero) then
+              Q(ii,jj)=Aadvect(ii,jj)
+             else
+              print *,"uu bust"
+              stop
+             endif
+              ! Q=S A S^T at this stage
+             if ((viscoelastic_model.eq.0).or. &
+                 (viscoelastic_model.eq.1)) then
               if (Q(ii,jj).gt.zero) then
                ! do nothing
               else if (Q(ii,jj).le.zero) then
@@ -12030,82 +12102,104 @@ stop
                print *,"Q(ii,jj) bust"
                stop
               endif
-             else if (levelrz.eq.3) then
+             else if (viscoelastic_model.eq.3) then
               ! do nothing
              else
-              print *,"levelrz invalid"
+              print *,"viscoelastic_model invalid"
               stop
-             endif 
+             endif
+            else if (levelrz.eq.3) then
+             ! do nothing
             else
-             print *,"dimension bust"
+             print *,"levelrz invalid"
              stop
-            endif
-           else if ((ii.ne.3).or.(jj.ne.3)) then
+            endif 
+           else
+            print *,"dimension bust"
+            stop
+           endif
+          else if ((ii.ne.3).or.(jj.ne.3)) then
+           ! do nothing
+          else
+           print *,"ii or jj invalid"
+           stop
+          endif
+
+         enddo  ! jj=1..3
+         enddo  ! ii=1..3
+
+         if ((viscoelastic_model.eq.0).or. &
+             (viscoelastic_model.eq.1)) then
+          do ii=1,3
+           if (Q(ii,ii).lt.zero) then
+            Q(ii,ii)=zero
+            print *,"WARNING Q+I no longer positive definite"
+            print *,"viscoelastic_model=",viscoelastic_model
+            do iii=1,3
+            do jjj=1,3
+             print *,"iii,jjj,Q,Aadvect,Smult ",iii,jjj,Q(iii,jjj), &
+              Aadvect(iii,jjj),Smult(iii,jjj)
+            enddo
+            enddo
+            print *,"i,j,k,lo,hi ",i,j,k, &
+             growlo(1),growlo(2),growlo(SDIM), &
+             growhi(1),growhi(2),growhi(SDIM)
+           else if (Q(ii,ii).ge.zero) then
             ! do nothing
            else
-            print *,"ii or jj invalid"
+            print *,"Q invalid"
             stop
            endif
 
-          enddo  ! jj=1..3
+          enddo ! ii=1..3
 
-          if (Q(ii,ii).lt.zero) then
-           Q(ii,ii)=zero
-           print *,"WARNING Q+I no longer positive definite"
-           print *,"viscoelastic_model=",viscoelastic_model
-           do iii=1,3
-           do jjj=1,3
-            print *,"iii,jjj,Q,Aadvect,Smult ",iii,jjj,Q(iii,jjj), &
-              Aadvect(iii,jjj),Smult(iii,jjj)
-           enddo
-           enddo
-           print *,"i,j,k,lo,hi ",i,j,k, &
-            growlo(1),growlo(2),growlo(SDIM), &
-            growhi(1),growhi(2),growhi(SDIM)
-          endif
+          if (SDIM.eq.3) then
 
-         enddo ! ii=1..3
-
-         if (SDIM.eq.3) then
-
-          rsign=Q(1,3)
-          if (Q(1,3)**2.gt.Q(1,1)*Q(3,3)) then
-           Q(1,3)=sqrt(Q(1,1)*Q(3,3))
-           if (rsign.lt.zero) then
-            Q(1,3)=-Q(1,3)
+           rsign=Q(1,3)
+           if (Q(1,3)**2.gt.Q(1,1)*Q(3,3)) then
+            Q(1,3)=sqrt(Q(1,1)*Q(3,3))
+            if (rsign.lt.zero) then
+             Q(1,3)=-Q(1,3)
+            endif
+            Q(3,1)=Q(1,3)
            endif
-           Q(3,1)=Q(1,3)
-          endif
-          rsign=Q(2,3)
-          if (Q(2,3)**2.gt.Q(2,2)*Q(3,3)) then
-           Q(2,3)=sqrt(Q(2,2)*Q(3,3))
-           if (rsign.lt.zero) then
-            Q(2,3)=-Q(2,3)
+           rsign=Q(2,3)
+           if (Q(2,3)**2.gt.Q(2,2)*Q(3,3)) then
+            Q(2,3)=sqrt(Q(2,2)*Q(3,3))
+            if (rsign.lt.zero) then
+             Q(2,3)=-Q(2,3)
+            endif
+            Q(3,2)=Q(2,3)
            endif
-           Q(3,2)=Q(2,3)
+
+          else if (SDIM.eq.2) then
+           ! do nothing
+          else
+           print *,"dimension bust"
+           stop
           endif
 
-         else if (SDIM.eq.2) then
+          rsign=Q(1,2)
+          if (Q(1,2)**2.gt.Q(1,1)*Q(2,2)) then
+           Q(1,2)=sqrt(Q(1,1)*Q(2,2))
+           if (rsign.lt.zero) then
+            Q(1,2)=-Q(1,2)
+           endif
+           Q(2,1)=Q(1,2)
+          endif
+         else if (viscoelastic_model.eq.3) then
           ! do nothing
          else
-          print *,"dimension bust"
+          print *,"viscoelastic_model"
           stop
-         endif
-
-         rsign=Q(1,2)
-         if (Q(1,2)**2.gt.Q(1,1)*Q(2,2)) then
-          Q(1,2)=sqrt(Q(1,1)*Q(2,2))
-          if (rsign.lt.zero) then
-           Q(1,2)=-Q(1,2)
-          endif
-          Q(2,1)=Q(1,2)
-         endif
-  
+         endif 
+ 
          do ii=1,3
           Q(ii,ii)=Q(ii,ii)-one
          enddo
 
-         ! note: for viscoelastic_model==2,
+         ! note: for viscoelastic_model==2 or
+         !           viscoelastic_model==3,
          !  modtime=lambda=elastic_time >> 1
          !
          ! Q^n+1=lambda Q^n/(lambda+dt)
@@ -12122,9 +12216,17 @@ stop
          do ii=1,3
           traceA=traceA+Q(ii,ii)+one
          enddo
-         if (traceA.lt.zero) then
-          print *,"traceA cannot be negative!"
-          print *,"viscoelastic_model=",viscoelastic_model
+         if ((viscoelastic_model.eq.0).or. &
+             (viscoelastic_model.eq.1)) then
+          if (traceA.lt.zero) then
+           print *,"traceA cannot be negative!"
+           print *,"viscoelastic_model=",viscoelastic_model
+           stop
+          endif
+         else if (viscoelastic_model.eq.3) then
+          !check nothing
+         else
+          print *,"viscoelastic_model invalid"
           stop
          endif
 

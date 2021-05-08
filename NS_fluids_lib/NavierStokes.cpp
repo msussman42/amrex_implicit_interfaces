@@ -603,6 +603,7 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 0,1 => viscoelastic FENE-CR material (do not divide by lambda in
 //  viscoelastic source term if viscoelastic_model==1.
 // 2=> elastic material
+// 3=> incremental elastic material
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
 // temperature_primitive_variable defaults to 0 (conservative) for
@@ -1898,8 +1899,10 @@ void fortran_parameters() {
   pp.getarr("pos_sites",temp_pos_sites,0,4*n_sites);
  } else if (n_sites==0) {
   // do nothing
- } else
-  amrex::Error("n_sites invalid");
+ } else {
+  std::cout << "n_sites= " << n_sites << '\n';
+  amrex::Error("n_sites invalid(1)");
+ }
 
  FORT_OVERRIDE(
   &ns_max_level,
@@ -2610,8 +2613,10 @@ NavierStokes::read_params ()
      pp.getarr("pos_sites",pos_sites,0,4*n_sites);
     } else if (n_sites==0) {
      // do nothing
-    } else
-     amrex::Error("n_sites invalid");
+    } else {
+     std::cout << "n_sites= " << n_sites << '\n';
+     amrex::Error("n_sites invalid(2)");
+    }
    
     pp.query("pos_sites_random_flag",pos_sites_random_flag);
 
@@ -3379,6 +3384,11 @@ NavierStokes::read_params ()
        // do nothing
       } else
        amrex::Error("expecting radius_cutoff==-1 for elastic material");
+     } else if (viscoelastic_model[i]==3) {
+      if (radius_cutoff[i]==-1) {
+       // do nothing
+      } else
+       amrex::Error("expecting radius_cutoff==-1 for elastic material");
      } else
       amrex::Error("viscoelastic_model invalid");
     } // i=0..nmat-1
@@ -4045,6 +4055,11 @@ NavierStokes::read_params ()
         // do nothing
        } else
         amrex::Error("elastic time inconsistent with model");
+      } else if (viscoelastic_model[i]==3) { // incremental elastic model
+       if (elastic_time[i]>=1.0e+8) {
+        // do nothing
+       } else
+        amrex::Error("elastic time inconsistent with model");
       } else if ((viscoelastic_model[i]==1)||
    	         (viscoelastic_model[i]==0)) {
        // do nothing
@@ -4078,7 +4093,7 @@ NavierStokes::read_params ()
      } else
       amrex::Error("viscosity state model invalid");
 
-     if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=2)) {
+     if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=3)) {
       // do nothing
      } else
       amrex::Error("viscoelastic_model invalid");
@@ -5650,6 +5665,8 @@ int NavierStokes::elastic_material_exists() {
      local_flag=1;
     } else if ((viscoelastic_model[im]==1)||
     	       (viscoelastic_model[im]==0)) {
+     // do nothing
+    } else if (viscoelastic_model[im]==3) { // incremental model
      // do nothing
     } else
      amrex::Error("viscoelastic_model[im] invalid");
@@ -9011,6 +9028,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        // in: GODUNOV_3D.F90
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
+       // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
      FORT_MAKETENSOR(
       &partid,
       &level,
@@ -9313,7 +9331,8 @@ void NavierStokes::make_viscoelastic_force(int im) {
 
  if ((viscoelastic_model[im]==0)||
      (viscoelastic_model[im]==1)||
-     (viscoelastic_model[im]==2)) {
+     (viscoelastic_model[im]==2)||
+     (viscoelastic_model[im]==3)) {
   // do nothing
  } else
   amrex::Error("viscoelastic_model[im] invalid");
@@ -10639,6 +10658,7 @@ void NavierStokes::tensor_advection_update() {
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+      // declared in: DERIVE_3D.F90
       // 0<=im<=nmat-1
       FORT_GETSHEAR(
        &im,
@@ -10706,6 +10726,7 @@ void NavierStokes::tensor_advection_update() {
         // in: GODUNOV_3D.F90
 	// last step in this routine: (Q^n+1-Q^n)/dt = -Q^n+1/lambda
 	// if viscoelastic_model==2, then modtime=elastic_time
+	// if viscoelastic_model==3, then modtime=elastic_time (incremental)
       FORT_UPDATETENSOR(
        &level,
        &finest_level,
@@ -11668,8 +11689,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("first_time_nucleate or prev_time_slab invalid");
   } else 
    amrex::Error("nucleation_period invalid");
- } else
-  amrex::Error("n_sites invalid");
+ } else {
+  std::cout << "n_sites= " << n_sites << '\n';
+  amrex::Error("n_sites invalid(3)");
+ }
 
  int nucleate_pos_size=nucleate_pos.size();
 
@@ -15305,6 +15328,21 @@ NavierStokes::split_scalar_advection() {
 
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
+
+  // in the gas regions:
+  //  MASS_cell = volume_cell * density_cell = MASS_liquid + MASS_ambient 
+  //  density_cell=density_liquid + density_ambient
+  //  Y=density_liquid/density_cell
+  // Clausius Clapyron: P_gamma=P_ref * exp(-L M/R * (1/T_Gamma - 1/T_Sat)
+  // EOS: P_gamma=PEOS_liq(rho_liq,T_liq)=PEOS_vap(rho_vap,T_vap)
+  // If there is a mixture, then
+  //  X=exp(-L M/R *(1/T_gamma-1/T_sat))
+  // If there is no mixture, then ???
+  //  Y=mass_cell/(volume_cell * density_liquid)=density_vapor/density_liquid
+  //  Y=X=exp(-L M/R *(1/T_gamma-1/T_sat))
+  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
+
+  // getStateMOM_DEN declared in: NavierStokes.cpp
  getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
