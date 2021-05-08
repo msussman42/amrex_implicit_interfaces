@@ -434,7 +434,9 @@ stop
         gradu(1,1)=a
         gradu(2,2)=b
         gradu(3,3)=c
-       else if (iproject.ne.0) then
+       else if (iproject.eq.0) then
+        ! do nothing
+       else 
         print *,"iproject invalid"
         stop
        endif
