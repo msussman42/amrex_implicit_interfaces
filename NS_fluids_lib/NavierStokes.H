@@ -2057,8 +2057,8 @@ protected:
      //     updating Q:
      //       (i) CISL advection Q^advect=Q^n(x-V dt)
      //       (ii) A^advect=Q^advect+I
-     //       (iii) X1=I+dt gradu
-     //       (iv)  Q^{n+1}=X1 A^adv X1^T -I=
+     //       (iii) X=I+dt gradu
+     //       (iv)  Q^{n+1}=X A^adv X^T -I=
      //           Q^advect+dt (2D) + dt gradu Q + dt Q gradu^T+O(dt^2)
      //       (v) Q^n+1=lambda Q^n+1/(lambda+dt)
      //   
@@ -2074,8 +2074,9 @@ protected:
      //     updating S:
      //       (i) CISL advection S^advect=S^n(x-V dt)
      //       (ii) A^advect=S^advect+I+dt 2D
-     //       (iii) X2=I+dt W
-     //       (iv) S^{n+1}=X2 A^advect X2^T-I
+     //       (iii) X=I+dt W
+     //       (iv) S^{n+1}=X A^advect X^T-I=
+     //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
      //
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
