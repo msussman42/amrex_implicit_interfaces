@@ -254,7 +254,7 @@ stop
       
       INTEGER_T, intent(in) :: ccn_sites
       REAL_T, intent(in) :: ccnucleation_init_time
-      REAL_T, intent(in) :: ccpos_sites(400)
+      REAL_T, intent(in) :: ccpos_sites(5000)
       
       character*12 namestr1
       character*13 namestr2
@@ -646,8 +646,9 @@ stop
        stop
       endif
       
-      if ((n_sites.lt.0).or.(4*n_sites.gt.400)) then
-       print *,"n_sites invalid"
+      if ((n_sites.lt.0).or.(4*n_sites.gt.5000)) then
+       print *,"n_sites invalid(PROB_CPP_PARMS.F90), n_sites=",n_sites
+       print *,"pos_sites allocated 1..5000"
        stop
       endif
       do i=1,4*n_sites

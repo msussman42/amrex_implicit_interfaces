@@ -124,5 +124,5 @@
       INTEGER_T fort_finest_level
       INTEGER_T n_sites
       REAL_T nucleation_init_time
-      REAL_T pos_sites(400)
+      REAL_T pos_sites(5000)
 

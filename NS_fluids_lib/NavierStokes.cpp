@@ -1899,8 +1899,10 @@ void fortran_parameters() {
   pp.getarr("pos_sites",temp_pos_sites,0,4*n_sites);
  } else if (n_sites==0) {
   // do nothing
- } else
-  amrex::Error("n_sites invalid");
+ } else {
+  std::cout << "n_sites= " << n_sites << '\n';
+  amrex::Error("n_sites invalid(1)");
+ }
 
  FORT_OVERRIDE(
   &ns_max_level,
@@ -2611,8 +2613,10 @@ NavierStokes::read_params ()
      pp.getarr("pos_sites",pos_sites,0,4*n_sites);
     } else if (n_sites==0) {
      // do nothing
-    } else
-     amrex::Error("n_sites invalid");
+    } else {
+     std::cout << "n_sites= " << n_sites << '\n';
+     amrex::Error("n_sites invalid(2)");
+    }
    
     pp.query("pos_sites_random_flag",pos_sites_random_flag);
 
@@ -11685,8 +11689,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("first_time_nucleate or prev_time_slab invalid");
   } else 
    amrex::Error("nucleation_period invalid");
- } else
-  amrex::Error("n_sites invalid");
+ } else {
+  std::cout << "n_sites= " << n_sites << '\n';
+  amrex::Error("n_sites invalid(3)");
+ }
 
  int nucleate_pos_size=nucleate_pos.size();
 
