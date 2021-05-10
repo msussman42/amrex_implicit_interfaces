@@ -106,6 +106,7 @@ USE_OMP = FALSE
 EBASE = amr
 
 AMREX_PARTICLES = TRUE
+BL_NO_FORT = FALSE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
