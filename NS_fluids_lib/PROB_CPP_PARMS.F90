@@ -121,8 +121,8 @@ stop
         ccinvert_gravity, &
         ccstop_time, &
         ioproc)
+      use probcommon_module
       use LegendreNodes
-      use probf90_module
       use global_utility_module
       use geometry_intersect_module
       use hydrateReactor_module
