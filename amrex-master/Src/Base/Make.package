@@ -192,7 +192,12 @@ C$(AMREX_BASE)_headers += AMReX_BaseUmap.H
 #
 # Fortran interface routines.
 #
+
 ifneq ($(BL_NO_FORT),TRUE)
+
+  # SUSSMAN
+  F90$(AMREX_BASE)_sources += AMReX_fort_mod.F90
+
   ifeq ($(findstring FALSE,$(USE_CUDA)$(USE_GPU_PRAGMA)$(GPU_PRAGMA_NO_HOST_VERSION)),FALSE)
 # SUSSMAN
 #    F90$(AMREX_BASE)_sources += AMReX_FILCC_${DIM}D.F90
@@ -202,12 +207,17 @@ ifneq ($(BL_NO_FORT),TRUE)
   F90$(AMREX_BASE)_sources += AMReX_BLutil_F.F90
   F90$(AMREX_BASE)_sources += AMReX_BLProfiler_F.F90
 
-  f90$(AMREX_BASE)_sources +=  AMReX_constants_mod.f90
+# SUSSMAN (copy AMReX_constants_mod.f90 to AMReX_constants_mod.F90)
+#  f90$(AMREX_BASE)_sources +=  AMReX_constants_mod.f90
+  F90$(AMREX_BASE)_sources +=  AMReX_constants_mod.F90
 
   F90$(AMREX_BASE)_sources += AMReX_filcc_mod.F90
 
   F90$(AMREX_BASE)_sources += AMReX_omp_mod.F90 AMReX_acc_mod.F90
-  F90$(AMREX_BASE)_sources += AMReX_fort_mod.F90 AMReX_error_mod.F90
+
+# SUSSMAN (AMReX_constants_mod.f90 used to be on this line)
+  F90$(AMREX_BASE)_sources += AMReX_error_mod.F90
+
   F90$(AMREX_BASE)_sources += AMReX_parmparse_mod.F90 AMReX_string_mod.F90
 
   F90$(AMREX_BASE)_sources += AMReX_bc_types_mod.F90

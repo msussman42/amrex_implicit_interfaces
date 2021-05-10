@@ -162,7 +162,7 @@
 
       else if (SDIM.eq.3) then
 
-       do dir=1,3
+       do dir=1,SDIM
         problo3D(dir)=problo(dir)
         probhi3D(dir)=probhi(dir)
        enddo
