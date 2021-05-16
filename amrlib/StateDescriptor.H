@@ -20,6 +20,7 @@ class Interpolater;
 extern "C"
 {
     typedef void (*BndryFuncDefaultSUSSMAN)(
+      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(lo), AMREX_ARLIM_P(hi),
       const int* dom_lo, const int* dom_hi,
@@ -71,6 +72,7 @@ public:
         //
         // FILL or GROUP FILL
         virtual void operator () (
+           int* grid_type,
            int* level,
            Real* data, const int* lo, const int* hi,
            const int* dom_lo, const int* dom_hi,
@@ -82,6 +84,7 @@ public:
         //
         // FILL or GROUP FILL
         virtual void operator () (
+          int* grid_type,
           int* level,
           Real* data, const int* lo, const int* hi,
           const int* dom_lo, const int* dom_hi,
