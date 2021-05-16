@@ -548,6 +548,13 @@ NavierStokes::variableSetUp ()
        0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     set_x_vel_bc(bc,phys_bc);
 
+     // if new parameters added to the FILL routine, then
+     // the following files must be modified:
+     //  1. PROB_F.H
+     //  2. PROB_3D.F90
+     //  3. StateDescriptor.H  (BndryFuncDefaultSUSSMAN, 
+     //      virtual void operator())
+     //  4. StateDescriptor.cpp (operator(), m_func(...))
     std::string u_mac_str="umac"; 
     desc_lst.setComponent(Umac_Type,0,u_mac_str,bc,FORT_UMACFILL,
       &umac_interp);
