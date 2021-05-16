@@ -26967,6 +26967,7 @@ end subroutine initialize2d
 
 
       subroutine FORT_VELFILL ( &
+       grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
@@ -26977,12 +26978,14 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T scomp,ncomp,bfact,level
-      INTEGER_T DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      REAL_T  dx(SDIM), xlo(SDIM), time
-      REAL_T  u(DIMV(u))
-      INTEGER_T bc(SDIM,2)
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
       INTEGER_T fablo(SDIM)
@@ -27113,6 +27116,7 @@ end subroutine initialize2d
        ! gets all components of the velocity at once. 
        ! (for just a single material)
       subroutine FORT_GROUP_VELFILL ( &
+       grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
@@ -27123,12 +27127,14 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T scomp,ncomp,bfact,level
-      INTEGER_T DIMDEC(u)
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      REAL_T  dx(SDIM), xlo(SDIM), time
-      REAL_T  u(DIMV(u),ncomp)
-      INTEGER_T bc(SDIM,2,ncomp)
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
+
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
       INTEGER_T fablo(SDIM)
@@ -27257,6 +27263,7 @@ end subroutine initialize2d
 
 
       subroutine FORT_SOLVFILL ( &
+       grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
@@ -27267,12 +27274,14 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T scomp,ncomp,bfact,level
-      INTEGER_T DIMDEC(u)
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      REAL_T  dx(SDIM), xlo(SDIM), time
-      REAL_T  u(DIMV(u))
-      INTEGER_T bc(SDIM,2)
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
       INTEGER_T fablo(SDIM)
@@ -27419,6 +27428,7 @@ end subroutine initialize2d
        ! gets all components of the velocity at once. 
        ! (for just a single material)
       subroutine FORT_GROUP_SOLVFILL ( &
+       grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
@@ -27429,12 +27439,14 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T scomp,ncomp,bfact,level
-      INTEGER_T DIMDEC(u)
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      REAL_T  dx(SDIM), xlo(SDIM), time
-      REAL_T  u(DIMV(u),ncomp)
-      INTEGER_T bc(SDIM,2,ncomp)
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
+
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
       INTEGER_T fablo(SDIM)
@@ -27615,42 +27627,43 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      REAL_T time
-      INTEGER_T nsolveMM_FACE
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T nsolveMM_FACE_test
-      INTEGER_T nsolve
-      INTEGER_T nsolveMM
-      INTEGER_T dir,dir2
-      INTEGER_T nmat
-      INTEGER_T nten
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nsolveMM
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T dir2
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
       INTEGER_T nten_test
-      INTEGER_T solidheat_flag
-      INTEGER_T project_option
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T DIMDEC(area)
-      INTEGER_T DIMDEC(xflux)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: solidheat_flag
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(area)
+      INTEGER_T, intent(in) :: DIMDEC(xflux)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T growloMAC(3),growhiMAC(3)
       INTEGER_T growlo_strip(3),growhi_strip(3)
-      INTEGER_T bfact
-      INTEGER_T domlo(SDIM),domhi(SDIM)
-      REAL_T  dx(SDIM)
-      REAL_T  xlo(SDIM)
-      REAL_T  dt
-      REAL_T  LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T  area(DIMV(area))
-      REAL_T  xflux(DIMV(xflux),nsolveMM_FACE)
-      INTEGER_T velbc(SDIM,2,num_materials_vel*SDIM)
-      INTEGER_T tempbc(SDIM,2)
-      INTEGER_T temp_dombc(SDIM,2)
-      REAL_T macrolayer_size(nmat)
-      INTEGER_T microlayer_substrate(nmat)
-      REAL_T microlayer_temperature_substrate(nmat)
-      REAL_T latent_heat(2*nten)
-      INTEGER_T freezing_model(2*nten)
-      REAL_T saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, intent(in) :: area(DIMV(area))
+      REAL_T, intent(inout) :: xflux(DIMV(xflux),nsolveMM_FACE)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: tempbc(SDIM,2)
+      INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
+      REAL_T, intent(in) :: macrolayer_size(nmat)
+      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
+      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
 
       INTEGER_T i,j,k,ii,jj,kk
       INTEGER_T side
