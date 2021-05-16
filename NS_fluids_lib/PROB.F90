@@ -28048,1744 +28048,139 @@ end subroutine initialize2d
       end subroutine VISCFLUXFILL
 
 
-       subroutine FORT_UMACFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nsolveMM_FACE
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 3"
-        stop
-       endif
-
-       nsolveMM_FACE=num_materials_vel
-       if (num_materials_vel.eq.1) then
-        ! do nothing
-       else if (num_materials_vel.eq.nmat) then
-        nsolveMM_FACE=nsolveMM_FACE*2
-       else
-        print *,"num_materials_vel invalid"
-        stop
-       endif
-
-       if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
-        print *,"scomp invalid umacfill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid13"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=1
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         if (MARCO.eq.1) then
-          print *,"Marco Arienti's code needs to be migrated"
-          stop
-         endif
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call velbc_override(time,dir2,side,velcomp, &
-           u(D_DECL(i,j,k)), &
-           xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_UMACFILL
-
-
-       subroutine FORT_VMACFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nsolveMM_FACE
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 4"
-        stop
-       endif
-
-       nsolveMM_FACE=num_materials_vel
-       if (num_materials_vel.eq.1) then
-        ! do nothing
-       else if (num_materials_vel.eq.nmat) then
-        nsolveMM_FACE=nsolveMM_FACE*2
-       else
-        print *,"num_materials_vel invalid"
-        stop
-       endif
-
-       if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
-        print *,"scomp invalid vmacfill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid vmacfill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=2
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         if (MARCO.eq.1) then
-          print *,"Marco Arienti's code needs to be migrated"
-          stop
-         endif
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call velbc_override(time,dir2,side,velcomp, &
-           u(D_DECL(i,j,k)), &
-           xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_VMACFILL
-
-
-#if (AMREX_SPACEDIM==3)
-       subroutine FORT_WMACFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nsolveMM_FACE
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (SDIM.ne.3) then
-        print *,"dimension bust"
-        stop
-       endif
-       if (AMREX_SPACEDIM.ne.3) then
-        print *,"dimension bust"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 5"
-        stop
-       endif
-
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-
-       nsolveMM_FACE=num_materials_vel
-       if (num_materials_vel.eq.1) then
-        ! do nothing
-       else if (num_materials_vel.eq.nmat) then
-        nsolveMM_FACE=nsolveMM_FACE*2
-       else
-        print *,"num_materials_vel invalid"
-        stop
-       endif
-
-       if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
-        print *,"scomp invalid wmacfill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid wmacfill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=AMREX_SPACEDIM
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         if (MARCO.eq.1) then
-          print *,"Marco Arienti's code needs to be migrated"
-          stop
-         endif
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call velbc_override(time,dir2,side,velcomp, &
-           u(D_DECL(i,j,k)), &
-           xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_WMACFILL
-#endif
-
-
-       subroutine FORT_XDMACFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 3"
-        stop
-       endif
-
-       if ((scomp.lt.0).or. &
-           (scomp+ncomp.gt.num_materials_viscoelastic)) then
-        print *,"scomp invalid xdmacfill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid13 xdmacfill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=1
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          u(D_DECL(i,j,k))=zero ! displacement is 0 on EXT_DIR walls.
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_XDMACFILL
-
-
-       subroutine FORT_YDMACFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 4"
-        stop
-       endif
-
-       if ((scomp.lt.0).or. &
-           (scomp+ncomp.gt.num_materials_viscoelastic)) then
-        print *,"scomp invalid ydmacfill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid ydmacfill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=2
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          u(D_DECL(i,j,k))=zero ! displacement is 0 on EXT_DIR walls.
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_YDMACFILL
-
-
-#if (AMREX_SPACEDIM==3)
-       subroutine FORT_ZDMACFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (SDIM.ne.3) then
-        print *,"dimension bust"
-        stop
-       endif
-       if (AMREX_SPACEDIM.ne.3) then
-        print *,"dimension bust"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 5"
-        stop
-       endif
-
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-
-       if ((scomp.lt.0).or. &
-           (scomp+ncomp.gt.num_materials_viscoelastic)) then
-        print *,"scomp invalid zdmacfill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid zdmacfill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=AMREX_SPACEDIM
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          u(D_DECL(i,j,k))=zero ! displacement is 0 on EXT_DIR walls.
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_ZDMACFILL
-#endif
-
-
-
-       subroutine FORT_X_EXTRAPFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 3"
-        stop
-       endif
-
-       if ((scomp.lt.0).or. &
-           (scomp+ncomp.gt.num_materials_viscoelastic)) then
-        print *,"scomp invalid x_extrap_fill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid13 x_extrap_fill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=1
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call extrapBC(time,dir2,side, &
-           u(D_DECL(i,j,k)), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-           xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_X_EXTRAPFILL
-
-
-       subroutine FORT_Y_EXTRAPFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 4"
-        stop
-       endif
-
-       if ((scomp.lt.0).or. &
-           (scomp+ncomp.gt.num_materials_viscoelastic)) then
-        print *,"scomp invalid y_extrap_fill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid y_extrap_fill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=2
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call extrapBC(time,dir2,side, &
-           u(D_DECL(i,j,k)), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-           xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_Y_EXTRAPFILL
-
-
-#if (AMREX_SPACEDIM==3)
-       subroutine FORT_Z_EXTRAPFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T velcomp,veldir,nmat
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (SDIM.ne.3) then
-        print *,"dimension bust"
-        stop
-       endif
-       if (AMREX_SPACEDIM.ne.3) then
-        print *,"dimension bust"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 5"
-        stop
-       endif
-
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       nmat=num_materials
-
-       if ((scomp.lt.0).or. &
-           (scomp+ncomp.gt.num_materials_viscoelastic)) then
-        print *,"scomp invalid z_extrap_fill"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid z_extrap_fill"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       velcomp=AMREX_SPACEDIM
-       veldir=velcomp-1
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (dir2.ne.velcomp) then
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        else
-         if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
-          print *,"domhi not divisible by bfact"
-          stop
-         endif
-        endif
-       enddo  ! dir2
-
-       call efilcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-        DIMS(u), &
-        domlo,domhi,bc,veldir)
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-
-         if (dir2.eq.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).le.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).ge.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop 
-          endif
-
-         else if (dir2.ne.velcomp) then
-
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-         else
-          print *,"dir2 bust"
-          stop
-         endif
-
-        endif  ! EXT_DIR ?
-    
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call extrapBC(time,dir2,side, &
-           u(D_DECL(i,j,k)), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-           xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif 
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_Z_EXTRAPFILL
-#endif
-
-       subroutine FORT_MOFFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-
-       print *,"this routine should never be called"
+      subroutine FORT_UMACFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nsolveMM_FACE
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
        stop
-
-       return
-       end subroutine FORT_MOFFILL
-
-
-       subroutine FORT_EXTMOFFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-       use MOF_routines_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-
-       print *,"this routine should never be called"
+      endif
+      nmat=num_materials
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 3"
        stop
+      endif
 
-       return
-       end subroutine FORT_EXTMOFFILL
+      nsolveMM_FACE=num_materials_vel
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else if (num_materials_vel.eq.nmat) then
+       nsolveMM_FACE=nsolveMM_FACE*2
+      else
+       print *,"num_materials_vel invalid"
+       stop
+      endif
 
-       subroutine FORT_GROUP_MOFFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
+      if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
+       print *,"scomp invalid umacfill"
+       stop
+      endif
 
-       use probf90_module
-       use global_utility_module
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid13"
+       stop
+      endif
 
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u),ncomp)
-       INTEGER_T bc(SDIM,2,ncomp)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T im,nmat
-       REAL_T uwall(num_materials*ngeom_raw)
-       REAL_T uboundary(num_materials*ngeom_raw)
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 6"
-        stop
-       endif
-       if (num_state_base.ne.2) then
-        print *,"num_state_base invalid"
-        stop
-       endif
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
 #if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=ARG_L3(u)
 #endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
 #if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=ARG_H3(u)
 #endif
-       nmat=num_materials
+      velcomp=1
+      veldir=velcomp-1
 
-       if (nmat*ngeom_raw.ne.ncomp) then
-        print *,"ncomp invalid mof group fill"
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
         stop
        endif
-       if (scomp.ne.num_materials_vel*(SDIM+1)+ &
-           nmat*num_state_material) then
-        print *,"scomp invalid mof group fill"
-        stop
-       endif
-
-       do im=1,nmat*ngeom_raw
-        call filcc(bfact, &
-         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
-         DIMS(u), &
-         domlo,domhi,bc(1,1,im))
-       enddo
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
+       if (dir2.ne.velcomp) then
         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
          print *,"domhi+1 not divisible by bfact"
          stop
         endif
-       enddo  ! dir2
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
 
-       do dir2=1,SDIM
-       do side=1,2
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
 
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side,1).eq.EXT_DIR) then
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
          if (side.eq.1) then
           if (fablo(dir2).lt.domlo(dir2)) then
            ext_dir_flag=1
@@ -29802,166 +28197,2136 @@ end subroutine initialize2d
           print *,"side invalid"
           stop
          endif
+
+        else
+         print *,"dir2 bust"
+         stop
         endif
 
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        if (MARCO.eq.1) then
+         print *,"Marco Arienti's code needs to be migrated"
+         stop
+        endif
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
 
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
 
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
 
-          do im=1,nmat*ngeom_raw
-           uwall(im)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
-          enddo
-          call groupmofBC(time,dir2,side, &
-           uboundary, &
-           uwall, &
-           xsten,nhalf,dx,bfact,nmat)
-          do im=1,nmat*ngeom_raw
-           u(D_DECL(i,j,k),im)=uboundary(im)
-          enddo
-         enddo
-         enddo
-         enddo
-        endif            
-       enddo ! side
-       enddo ! dir2
+         call velbc_override(time,dir2,side,velcomp, &
+          u(D_DECL(i,j,k)), &
+          xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
 
-       return
-       end subroutine FORT_GROUP_MOFFILL
-
-
-       subroutine FORT_GROUP_EXTMOFFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-       use geometry_intersect_module
-       use MOF_routines_module
-
-       IMPLICIT NONE
+      return
+      end subroutine FORT_UMACFILL
 
 
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u),ncomp)
-       INTEGER_T bc(SDIM,2,ncomp)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T isub
-       INTEGER_T ibasesrc
-       INTEGER_T ibasedst
-       INTEGER_T use_ls_data,mof_verbose
-       INTEGER_T continuous_mof
-       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
-       REAL_T multi_centroidA(num_materials,SDIM)
-       REAL_T mofdata(num_materials*ngeom_recon)
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T im,nmat
-       REAL_T uwall(num_materials*ngeom_raw)
-       REAL_T uboundary(num_materials*ngeom_raw)
-       INTEGER_T vofcomp
-       REAL_T voffluid_wall,vofsolid_wall
-       REAL_T voffluid_bound,vofsolid_bound
-       REAL_T voftest_wall,voftest_bound
+      subroutine FORT_VMACFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
 
-       INTEGER_T tessellate
+      use probf90_module
+      use global_utility_module
 
-       INTEGER_T nhalf
-       INTEGER_T nhalf_box
+      IMPLICIT NONE
 
-       REAL_T xsten(-3:3,SDIM)
-       INTEGER_T tid,nmax
-#ifdef _OPENMP
-       INTEGER_T omp_get_thread_num
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nsolveMM_FACE
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 4"
+       stop
+      endif
+
+      nsolveMM_FACE=num_materials_vel
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else if (num_materials_vel.eq.nmat) then
+       nsolveMM_FACE=nsolveMM_FACE*2
+      else
+       print *,"num_materials_vel invalid"
+       stop
+      endif
+
+      if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
+       print *,"scomp invalid vmacfill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid vmacfill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=2
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        if (MARCO.eq.1) then
+         print *,"Marco Arienti's code needs to be migrated"
+         stop
+        endif
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call velbc_override(time,dir2,side,velcomp, &
+          u(D_DECL(i,j,k)), &
+          xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_VMACFILL
+
+
+#if (AMREX_SPACEDIM==3)
+      subroutine FORT_WMACFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nsolveMM_FACE
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (SDIM.ne.3) then
+       print *,"dimension bust"
+       stop
+      endif
+      if (AMREX_SPACEDIM.ne.3) then
+       print *,"dimension bust"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 5"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+
+      nsolveMM_FACE=num_materials_vel
+      if (num_materials_vel.eq.1) then
+       ! do nothing
+      else if (num_materials_vel.eq.nmat) then
+       nsolveMM_FACE=nsolveMM_FACE*2
+      else
+       print *,"num_materials_vel invalid"
+       stop
+      endif
+
+      if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
+       print *,"scomp invalid wmacfill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid wmacfill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=AMREX_SPACEDIM
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        if (MARCO.eq.1) then
+         print *,"Marco Arienti's code needs to be migrated"
+         stop
+        endif
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call velbc_override(time,dir2,side,velcomp, &
+          u(D_DECL(i,j,k)), &
+          xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_WMACFILL
 #endif
 
-       nmax=POLYGON_LIST_MAX ! in: FORT_GROUP_EXTMOFFILL
 
-       tid=0       
-#ifdef _OPENMP
-       tid=omp_get_thread_num()
+      subroutine FORT_XDMACFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 3"
+       stop
+      endif
+
+      if ((scomp.lt.0).or. &
+          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+       print *,"scomp invalid xdmacfill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid13 xdmacfill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
 #endif
-       if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-        print *,"tid invalid"
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=1
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         u(D_DECL(i,j,k))=zero ! displacement is 0 on EXT_DIR walls.
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_XDMACFILL
+
+
+      subroutine FORT_YDMACFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 4"
+       stop
+      endif
+
+      if ((scomp.lt.0).or. &
+          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+       print *,"scomp invalid ydmacfill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid ydmacfill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=2
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         u(D_DECL(i,j,k))=zero ! displacement is 0 on EXT_DIR walls.
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_YDMACFILL
+
+
+#if (AMREX_SPACEDIM==3)
+      subroutine FORT_ZDMACFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (SDIM.ne.3) then
+       print *,"dimension bust"
+       stop
+      endif
+      if (AMREX_SPACEDIM.ne.3) then
+       print *,"dimension bust"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 5"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+
+      if ((scomp.lt.0).or. &
+          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+       print *,"scomp invalid zdmacfill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid zdmacfill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=AMREX_SPACEDIM
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         u(D_DECL(i,j,k))=zero ! displacement is 0 on EXT_DIR walls.
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_ZDMACFILL
+#endif
+
+
+
+      subroutine FORT_X_EXTRAPFILL ( &
+       grid_type, &
+       level, &
+       u,DIMS(u), &
+       domlo,domhi,dx, &
+       xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 3"
+       stop
+      endif
+
+      if ((scomp.lt.0).or. &
+          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+       print *,"scomp invalid x_extrap_fill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid13 x_extrap_fill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=1
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call extrapBC(time,dir2,side, &
+          u(D_DECL(i,j,k)), &
+          u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+          xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_X_EXTRAPFILL
+
+
+      subroutine FORT_Y_EXTRAPFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 4"
+       stop
+      endif
+
+      if ((scomp.lt.0).or. &
+          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+       print *,"scomp invalid y_extrap_fill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid y_extrap_fill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=2
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call extrapBC(time,dir2,side, &
+          u(D_DECL(i,j,k)), &
+          u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+          xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_Y_EXTRAPFILL
+
+
+#if (AMREX_SPACEDIM==3)
+      subroutine FORT_Z_EXTRAPFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (SDIM.ne.3) then
+       print *,"dimension bust"
+       stop
+      endif
+      if (AMREX_SPACEDIM.ne.3) then
+       print *,"dimension bust"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 5"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      nmat=num_materials
+
+      if ((scomp.lt.0).or. &
+          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+       print *,"scomp invalid z_extrap_fill"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid z_extrap_fill"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      velcomp=AMREX_SPACEDIM
+      veldir=velcomp-1
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (dir2.ne.velcomp) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       endif
+      enddo  ! dir2
+
+      call efilcc(bfact, &
+       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
+       DIMS(u), &
+       domlo,domhi,bc,veldir)
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        if (dir2.eq.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
+         endif
+
+        else if (dir2.ne.velcomp) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else
+         print *,"dir2 bust"
+         stop
+        endif
+
+       endif  ! EXT_DIR ?
+    
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call extrapBC(time,dir2,side, &
+          u(D_DECL(i,j,k)), &
+          u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+          xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif 
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_Z_EXTRAPFILL
+#endif
+
+      subroutine FORT_MOFFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      print *,"this routine should never be called"
+      stop
+
+      return
+      end subroutine FORT_MOFFILL
+
+
+      subroutine FORT_EXTMOFFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      print *,"this routine should never be called"
+      stop
+
+      return
+      end subroutine FORT_EXTMOFFILL
+
+      subroutine FORT_GROUP_MOFFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T im,nmat
+      REAL_T uwall(num_materials*ngeom_raw)
+      REAL_T uboundary(num_materials*ngeom_raw)
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 6"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      nmat=num_materials
+
+      if (nmat*ngeom_raw.ne.ncomp) then
+       print *,"ncomp invalid mof group fill"
+       stop
+      endif
+      if (scomp.ne.num_materials_vel*(SDIM+1)+ &
+          nmat*num_state_material) then
+       print *,"scomp invalid mof group fill"
+       stop
+      endif
+
+      do im=1,nmat*ngeom_raw
+       call filcc(bfact, &
+        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
+        DIMS(u), &
+        domlo,domhi,bc(1,1,im))
+      enddo
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side,1).eq.EXT_DIR) then
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
+         endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
+        endif
+       endif
+
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         do im=1,nmat*ngeom_raw
+          uwall(im)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
+         enddo
+         call groupmofBC(time,dir2,side, &
+          uboundary, &
+          uwall, &
+          xsten,nhalf,dx,bfact,nmat)
+         do im=1,nmat*ngeom_raw
+          u(D_DECL(i,j,k),im)=uboundary(im)
+         enddo
+        enddo
+        enddo
+        enddo
+       endif            
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_GROUP_MOFFILL
+
+
+      subroutine FORT_GROUP_EXTMOFFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T isub
+      INTEGER_T ibasesrc
+      INTEGER_T ibasedst
+      INTEGER_T use_ls_data,mof_verbose
+      INTEGER_T continuous_mof
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
+      REAL_T multi_centroidA(num_materials,SDIM)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T im,nmat
+      REAL_T uwall(num_materials*ngeom_raw)
+      REAL_T uboundary(num_materials*ngeom_raw)
+      INTEGER_T vofcomp
+      REAL_T voffluid_wall,vofsolid_wall
+      REAL_T voffluid_bound,vofsolid_bound
+      REAL_T voftest_wall,voftest_bound
+
+      INTEGER_T tessellate
+
+      INTEGER_T nhalf
+      INTEGER_T nhalf_box
+
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T tid,nmax
+#ifdef _OPENMP
+      INTEGER_T omp_get_thread_num
+#endif
+
+      nmax=POLYGON_LIST_MAX ! in: FORT_GROUP_EXTMOFFILL
+
+      tid=0       
+#ifdef _OPENMP
+      tid=omp_get_thread_num()
+#endif
+      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+       print *,"tid invalid"
+       stop
+      endif 
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 7"
+       stop
+      endif
+
+      tessellate=0
+
+      nhalf=3
+      nhalf_box=1
+
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+      nmat=num_materials
+
+      if (nmat*ngeom_recon.ne.ncomp) then
+       print *,"ncomp invalid mof extended group fill"
+       stop
+      endif
+      if (scomp.ne.1+SDIM) then
+       print *,"scomp invalid in mof extended group fill"
+       stop
+      endif
+
+      do im=1,nmat*ngeom_recon
+       call filcc(bfact, &
+        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
+        DIMS(u), &
+        domlo,domhi,bc(1,1,im))
+      enddo
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side,1).eq.EXT_DIR) then
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
+         endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
+        endif
+       endif
+
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         do im=1,nmat
+          ibasesrc=(im-1)*ngeom_recon
+          ibasedst=(im-1)*ngeom_raw
+          do isub=1,ngeom_raw
+           uwall(ibasedst+isub)= &
+             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),ibasesrc+isub)
+          enddo 
+         enddo ! im
+
+         call groupmofBC(time,dir2,side, &
+          uboundary, &
+          uwall, &
+          xsten,nhalf,dx,bfact,nmat)
+
+         voffluid_wall=zero
+         vofsolid_wall=zero
+         voffluid_bound=zero
+         vofsolid_bound=zero
+         do im=1,nmat
+          vofcomp=(im-1)*ngeom_raw+1
+          voftest_wall=uwall(vofcomp)
+          voftest_bound=uboundary(vofcomp)
+          if (is_rigid(nmat,im).eq.0) then
+           voffluid_wall=voffluid_wall+voftest_wall
+           voffluid_bound=voffluid_bound+voftest_bound
+          else if (is_rigid(nmat,im).eq.1) then
+           vofsolid_wall=vofsolid_wall+voftest_wall
+           vofsolid_bound=vofsolid_bound+voftest_bound
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
+
+         if ((voffluid_wall.le.zero).or.(voffluid_bound.le.zero)) then
+          print *,"fluid disappeared in GROUP_EXTMOFFILL"
+          print *,"i,j,k ",i,j,k
+          print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
+          print *,"voffluid_wall,vofsolid_wall ",voffluid_wall,vofsolid_wall
+          print *,"voffluid_bound,vofsolid_bound ",voffluid_bound, &
+            vofsolid_bound
+          stop
+         else if ((voffluid_wall.le.two).and.(voffluid_bound.le.two)) then
+          ! do nothing
+         else
+          print *,"voffluid_wall or voffluid_bound invalid"
+          stop
+         endif
+
+         use_ls_data=0
+         mof_verbose=0
+         continuous_mof=0
+
+         do im=1,nmat
+
+          ibasesrc=(im-1)*ngeom_raw+1
+          ibasedst=(im-1)*ngeom_recon+1
+          do dir3=0,SDIM
+           mofdata(ibasedst+dir3)=uboundary(ibasesrc+dir3)
+          enddo
+
+           ! order=0
+          mofdata(ibasedst+SDIM+1)=zero
+
+         enddo  ! im
+
+         call make_vfrac_sum_ok_base( &
+           cmofsten, &
+           xsten,nhalf,nhalf_box, &
+           bfact,dx, &
+           tessellate, &  ! =0
+           mofdata,nmat,SDIM,204)
+
+         call multimaterial_MOF( &
+          bfact,dx,xsten,nhalf, &
+          mof_verbose, &
+          use_ls_data, &
+          LS_stencil, &
+          geom_xtetlist(1,1,1,tid+1), &
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          mofdata, &
+          multi_centroidA, &
+          continuous_mof, &
+          cmofsten, &
+          nmat,SDIM,4)
+
+         do dir3=1,nmat*ngeom_recon
+          u(D_DECL(i,j,k),dir3)=mofdata(dir3)
+         enddo
+
+        enddo
+        enddo
+        enddo
+       endif            
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_GROUP_EXTMOFFILL
+
+      subroutine FORT_LS_HO_FILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use global_utility_module
+      use probf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      print *,"LS_HO_FILL should never be called"
+      print *,"GROUP_LS_HO_FILL should be called instead"
+      stop
+
+      return
+      end subroutine FORT_LS_HO_FILL
+
+
+      subroutine FORT_GROUP_LS_HO_FILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM) 
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T nmat
+      INTEGER_T imls
+      
+      REAL_T uwall(ncomp)
+      REAL_T uboundary(ncomp)
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T ncomp_ho,icomp
+
+      nhalf=3
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 10"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+
+      nmat=num_materials
+
+      ncomp_ho=(SDIM+1)*nmat
+
+      if (ncomp_ho.ne.ncomp) then
+       print *,"ncomp invalid group ls ho fill"
+       stop
+      endif
+      if ((scomp.ne.SDIM*nmat).and. &  ! called from ghost fill
+          (scomp.ne.0)) then           ! called from main fill
+       print *,"scomp invalid group ls ho fill"
+       print *,"scomp= ",scomp
+       stop
+      endif
+      if ((ls_homflag.ne.0).and.(ls_homflag.ne.1)) then
+       print *,"ls_homflag invalid"
+       stop
+      endif
+
+      do imls=1,ncomp_ho
+       call filcc(bfact, &
+        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),imls), &
+        DIMS(u), &
+        domlo,domhi, &
+        bc(1,1,imls))
+      enddo
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
+
+      do dir2=1,SDIM
+      do side=1,2
+
+        ! 1..nmat  level set functions
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+
+       ext_dir_flag=0
+       if (bc(dir2,side,1).eq.EXT_DIR) then
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
+         endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
+        endif
+       endif
+
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+         do imls=1,nmat
+          uwall(imls)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),imls)
+         enddo
+         call grouplsBC(time,dir2,side, &
+          uboundary, &
+          uwall, &
+          xsten,nhalf,dx,bfact,nmat)
+         do imls=1,nmat
+          u(D_DECL(i,j,k),imls)=uboundary(imls)
+         enddo
+        enddo
+        enddo
+        enddo
+       else if (ext_dir_flag.eq.0) then
+        ! do nothing
+       else
+        print *,"ext_dir_flag invalid"
         stop
        endif 
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 7"
-        stop
-       endif
 
-       tessellate=0
-
-       nhalf=3
-       nhalf_box=1
-
-       if (num_state_base.ne.2) then
-        print *,"num_state_base invalid"
-        stop
-       endif
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-       nmat=num_materials
-
-       if (nmat*ngeom_recon.ne.ncomp) then
-        print *,"ncomp invalid mof extended group fill"
-        stop
-       endif
-       if (scomp.ne.1+SDIM) then
-        print *,"scomp invalid in mof extended group fill"
-        stop
-       endif
-
-       do im=1,nmat*ngeom_recon
-        call filcc(bfact, &
-         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
-         DIMS(u), &
-         domlo,domhi,bc(1,1,im))
-       enddo
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-         print *,"domhi+1 not divisible by bfact"
-         stop
-        endif
-       enddo  ! dir2
-
-       do dir2=1,SDIM
-       do side=1,2
+        ! nmat+1 ... ncomp_ho: levelset normals
+       do icomp=nmat+1,ncomp_ho
 
         borderlo(3)=0
         borderhi(3)=0
@@ -29970,272 +30335,7 @@ end subroutine initialize2d
          borderhi(dir3)=fabhi(dir3)
         enddo
         ext_dir_flag=0
-        if (bc(dir2,side,1).eq.EXT_DIR) then
-         if (side.eq.1) then
-          if (fablo(dir2).lt.domlo(dir2)) then
-           ext_dir_flag=1
-           borderhi(dir2)=domlo(dir2)-1
-           inside_index=domlo(dir2)
-          endif
-         else if (side.eq.2) then
-          if (fabhi(dir2).gt.domhi(dir2)) then
-           ext_dir_flag=1
-           borderlo(dir2)=domhi(dir2)+1
-           inside_index=domhi(dir2)
-          endif
-         else
-          print *,"side invalid"
-          stop
-         endif
-        endif
-
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          do im=1,nmat
-           ibasesrc=(im-1)*ngeom_recon
-           ibasedst=(im-1)*ngeom_raw
-           do isub=1,ngeom_raw
-            uwall(ibasedst+isub)= &
-              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),ibasesrc+isub)
-           enddo 
-          enddo ! im
-
-          call groupmofBC(time,dir2,side, &
-           uboundary, &
-           uwall, &
-           xsten,nhalf,dx,bfact,nmat)
-
-          voffluid_wall=zero
-          vofsolid_wall=zero
-          voffluid_bound=zero
-          vofsolid_bound=zero
-          do im=1,nmat
-           vofcomp=(im-1)*ngeom_raw+1
-           voftest_wall=uwall(vofcomp)
-           voftest_bound=uboundary(vofcomp)
-           if (is_rigid(nmat,im).eq.0) then
-            voffluid_wall=voffluid_wall+voftest_wall
-            voffluid_bound=voffluid_bound+voftest_bound
-           else if (is_rigid(nmat,im).eq.1) then
-            vofsolid_wall=vofsolid_wall+voftest_wall
-            vofsolid_bound=vofsolid_bound+voftest_bound
-           else
-            print *,"is_rigid invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-
-          if ((voffluid_wall.le.zero).or.(voffluid_bound.le.zero)) then
-           print *,"fluid disappeared in GROUP_EXTMOFFILL"
-           print *,"i,j,k ",i,j,k
-           print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
-           print *,"voffluid_wall,vofsolid_wall ",voffluid_wall,vofsolid_wall
-           print *,"voffluid_bound,vofsolid_bound ",voffluid_bound, &
-             vofsolid_bound
-           stop
-          else if ((voffluid_wall.le.two).and.(voffluid_bound.le.two)) then
-           ! do nothing
-          else
-           print *,"voffluid_wall or voffluid_bound invalid"
-           stop
-          endif
-
-          use_ls_data=0
-          mof_verbose=0
-          continuous_mof=0
-
-          do im=1,nmat
-
-           ibasesrc=(im-1)*ngeom_raw+1
-           ibasedst=(im-1)*ngeom_recon+1
-           do dir3=0,SDIM
-            mofdata(ibasedst+dir3)=uboundary(ibasesrc+dir3)
-           enddo
-
-            ! order=0
-           mofdata(ibasedst+SDIM+1)=zero
-
-          enddo  ! im
-
-          call make_vfrac_sum_ok_base( &
-            cmofsten, &
-            xsten,nhalf,nhalf_box, &
-            bfact,dx, &
-            tessellate, &  ! =0
-            mofdata,nmat,SDIM,204)
-
-          call multimaterial_MOF( &
-           bfact,dx,xsten,nhalf, &
-           mof_verbose, &
-           use_ls_data, &
-           LS_stencil, &
-           geom_xtetlist(1,1,1,tid+1), &
-           geom_xtetlist(1,1,1,tid+1), &
-           nmax, &
-           nmax, &
-           mofdata, &
-           multi_centroidA, &
-           continuous_mof, &
-           cmofsten, &
-           nmat,SDIM,4)
-
-          do dir3=1,nmat*ngeom_recon
-           u(D_DECL(i,j,k),dir3)=mofdata(dir3)
-          enddo
-
-         enddo
-         enddo
-         enddo
-        endif            
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_GROUP_EXTMOFFILL
-
-       subroutine FORT_LS_HO_FILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use global_utility_module
-       use probf90_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-
-       print *,"LS_HO_FILL should never be called"
-       print *,"GROUP_LS_HO_FILL should be called instead"
-       stop
-
-       return
-       end subroutine FORT_LS_HO_FILL
-
-
-       subroutine FORT_GROUP_LS_HO_FILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u),ncomp)
-       INTEGER_T bc(SDIM,2,ncomp)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM) 
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T nmat
-       INTEGER_T imls
-      
-       REAL_T uwall(ncomp)
-       REAL_T uboundary(ncomp)
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-       INTEGER_T ncomp_ho,icomp
-
-       nhalf=3
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 10"
-        stop
-       endif
-
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-
-       nmat=num_materials
-
-       ncomp_ho=(SDIM+1)*nmat
-
-       if (ncomp_ho.ne.ncomp) then
-        print *,"ncomp invalid group ls ho fill"
-        stop
-       endif
-       if ((scomp.ne.SDIM*nmat).and. &  ! called from ghost fill
-           (scomp.ne.0)) then           ! called from main fill
-        print *,"scomp invalid group ls ho fill"
-        print *,"scomp= ",scomp
-        stop
-       endif
-       if ((ls_homflag.ne.0).and.(ls_homflag.ne.1)) then
-        print *,"ls_homflag invalid"
-        stop
-       endif
-
-       do imls=1,ncomp_ho
-        call filcc(bfact, &
-         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),imls), &
-         DIMS(u), &
-         domlo,domhi, &
-         bc(1,1,imls))
-       enddo
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-         print *,"domhi+1 not divisible by bfact"
-         stop
-        endif
-       enddo  ! dir2
-
-       do dir2=1,SDIM
-       do side=1,2
-
-         ! 1..nmat  level set functions
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-
-        ext_dir_flag=0
-        if (bc(dir2,side,1).eq.EXT_DIR) then
+        if (bc(dir2,side,icomp).eq.EXT_DIR) then
          if (side.eq.1) then
           if (fablo(dir2).lt.domlo(dir2)) then
            ext_dir_flag=1
@@ -30264,16 +30364,11 @@ end subroutine initialize2d
           IWALL(2)=j
           IWALL(3)=k
           IWALL(dir2)=inside_index
-          do imls=1,nmat
-           uwall(imls)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),imls)
-          enddo
-          call grouplsBC(time,dir2,side, &
-           uboundary, &
-           uwall, &
-           xsten,nhalf,dx,bfact,nmat)
-          do imls=1,nmat
-           u(D_DECL(i,j,k),imls)=uboundary(imls)
-          enddo
+
+          call extrapBC(time,dir2,side, &
+            u(D_DECL(i,j,k),icomp), &
+            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
+            xsten,nhalf,dx,bfact)
          enddo
          enddo
          enddo
@@ -30284,582 +30379,696 @@ end subroutine initialize2d
          stop
         endif 
 
-         ! nmat+1 ... ncomp_ho: levelset normals
-        do icomp=nmat+1,ncomp_ho
+       enddo ! icomp=nmat+1 ... ncomp_ho
 
-         borderlo(3)=0
-         borderhi(3)=0
-         do dir3=1,SDIM
-          borderlo(dir3)=fablo(dir3)
-          borderhi(dir3)=fabhi(dir3)
-         enddo
-         ext_dir_flag=0
-         if (bc(dir2,side,icomp).eq.EXT_DIR) then
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-         endif
+      enddo ! side
+      enddo ! dir2
 
-         if (ext_dir_flag.eq.1) then
-          do i=borderlo(1),borderhi(1)
-          do j=borderlo(2),borderhi(2)
-          do k=borderlo(3),borderhi(3)
-
-           call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-           IWALL(1)=i
-           IWALL(2)=j
-           IWALL(3)=k
-           IWALL(dir2)=inside_index
-
-           call extrapBC(time,dir2,side, &
-             u(D_DECL(i,j,k),icomp), &
-             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
-             xsten,nhalf,dx,bfact)
-          enddo
-          enddo
-          enddo
-         else if (ext_dir_flag.eq.0) then
-          ! do nothing
-         else
-          print *,"ext_dir_flag invalid"
-          stop
-         endif 
-
-        enddo ! icomp=nmat+1 ... ncomp_ho
-
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_GROUP_LS_HO_FILL
+      return
+      end subroutine FORT_GROUP_LS_HO_FILL
 
 
-        ! this is for the "errorind" variable.
-       subroutine FORT_SCALARFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
+       ! this is for the "errorind" variable.
+      subroutine FORT_SCALARFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
 
-       use probf90_module
-       use global_utility_module
+      use probf90_module
+      use global_utility_module
 
-       IMPLICIT NONE
+      IMPLICIT NONE
 
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T nc
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
 
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 11"
-        stop
-       endif
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T nc
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
 
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid in scalar fill"
-        stop
-       endif
-        ! "errorind" variable.
-       nc=num_materials_vel*(SDIM+1)+ &
-        num_materials*(num_state_material+ngeom_raw)
-       if (scomp.ne.nc) then
-        print *,"scomp invalid in scalar fill"
-        stop
-       endif
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 11"
+       stop
+      endif
 
-       call filcc(bfact, &
-        u,DIMS(u), &
-        domlo,domhi,bc)
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid in scalar fill"
+       stop
+      endif
+       ! "errorind" variable.
+      nc=num_materials_vel*(SDIM+1)+ &
+       num_materials*(num_state_material+ngeom_raw)
+      if (scomp.ne.nc) then
+       print *,"scomp invalid in scalar fill"
+       stop
+      endif
 
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
+      call filcc(bfact, &
+       u,DIMS(u), &
+       domlo,domhi,bc)
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
 #if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=ARG_L3(u)
 #endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
 #if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=ARG_H3(u)
 #endif
 
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-         print *,"domhi+1 not divisible by bfact"
-         stop
-        endif
-       enddo  ! dir2
-
-       do dir2=1,SDIM
-       do side=1,2
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-         if (side.eq.1) then
-          if (fablo(dir2).lt.domlo(dir2)) then
-           ext_dir_flag=1
-           borderhi(dir2)=domlo(dir2)-1
-           inside_index=domlo(dir2)
-          endif
-         else if (side.eq.2) then
-          if (fabhi(dir2).gt.domhi(dir2)) then
-           ext_dir_flag=1
-           borderlo(dir2)=domhi(dir2)+1
-           inside_index=domhi(dir2)
-          endif
-         else
-          print *,"side invalid"
-          stop
-         endif
-        endif
-
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call scalarBC(time,dir2,side, &
-            u(D_DECL(i,j,k)), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-            xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif            
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_SCALARFILL
-
-
-
-       subroutine FORT_GROUP_EXTRAPFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u),ncomp)
-       INTEGER_T bc(SDIM,2,ncomp)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T icomp
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-       INTEGER_T extrecon_scomp
-       INTEGER_T mask_scomp
-       INTEGER_T burnvel_scomp
-       INTEGER_T tsat_scomp
-       INTEGER_T nmat
-       INTEGER_T nten
-       INTEGER_T ncomp_per
-       INTEGER_T ncomp_per_burning
-       INTEGER_T ncomp_per_tsat
-
-       nmat=num_materials
-       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
-
-       ncomp_per_burning=SDIM
-       ncomp_per_tsat=2  ! interface temperature, mass fraction
-
-        ! extrap, velx, vely, velz
-       extrecon_scomp=SDIM+1
-        ! extrap, velx, vely, velz, mof recon
-       mask_scomp=extrecon_scomp+nmat*ngeom_recon
-       burnvel_scomp=mask_scomp+1
-       tsat_scomp=burnvel_scomp+nten*(ncomp_per_burning+1)
-
-       nhalf=3
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 12"
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
         stop
        endif
-
-        ! c++ index
-       if (scomp.eq.burnvel_scomp) then
-        ncomp_per=ncomp_per_burning
-       else if (scomp.eq.tsat_scomp) then
-        ncomp_per=ncomp_per_tsat ! interface temperature, mass fraction
-       else
-        print *,"scomp invalid group extrapfill"
-        print *,"scomp, ncomp, bfact, time ",scomp,ncomp,bfact,time
-        print *,"nmat,extrecon_scomp,mask_scomp,burnvel_scomp ", &
-         nmat,extrecon_scomp,mask_scomp,burnvel_scomp
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
         stop
        endif
+      enddo  ! dir2
 
-       if (ncomp.eq.nten*(1+ncomp_per)) then
-        ! do nothing
-       else
-        print *,"ncomp invalid14"
-        stop
-       endif
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
+      do dir2=1,SDIM
+      do side=1,2
 
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
-
-       do icomp=1,(ncomp_per+1)*nten
-        call filcc(bfact, &
-         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
-         DIMS(u), &
-         domlo,domhi,bc(1,1,icomp))
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
        enddo
-
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-         print *,"domhi+1 not divisible by bfact"
-         stop
-        endif
-       enddo  ! dir2
-
-       do dir2=1,SDIM
-       do side=1,2
-
-       do icomp=1,(ncomp_per+1)*nten
-
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side,icomp).eq.EXT_DIR) then
-
-         print *,"exterior dirichlet BC not allowed"
-         stop
-
-         if (side.eq.1) then
-          if (fablo(dir2).lt.domlo(dir2)) then
-           ext_dir_flag=1
-           borderhi(dir2)=domlo(dir2)-1
-           inside_index=domlo(dir2)
-          endif
-         else if (side.eq.2) then
-          if (fabhi(dir2).gt.domhi(dir2)) then
-           ext_dir_flag=1
-           borderlo(dir2)=domhi(dir2)+1
-           inside_index=domhi(dir2)
-          endif
-         else
-          print *,"side invalid"
-          stop
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
          endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
         endif
-
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-           ! low order extrap
-          call extrapBC(time,dir2,side, &
-            u(D_DECL(i,j,k),icomp), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
-            xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif            
-       enddo ! icomp=1,(ncomp_per+1)*nten
-
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_GROUP_EXTRAPFILL
-
-       subroutine FORT_EXTRAPFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 13"
-        stop
        endif
 
-       if (ncomp.lt.1) then
-        print *,"ncomp invalid in extrap fill"
-        stop
-       endif
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
 
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call scalarBC(time,dir2,side, &
+           u(D_DECL(i,j,k)), &
+           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+           xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif            
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_SCALARFILL
+
+
+
+      subroutine FORT_GROUP_EXTRAPFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T icomp
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T extrecon_scomp
+      INTEGER_T mask_scomp
+      INTEGER_T burnvel_scomp
+      INTEGER_T tsat_scomp
+      INTEGER_T nmat
+      INTEGER_T nten
+      INTEGER_T ncomp_per
+      INTEGER_T ncomp_per_burning
+      INTEGER_T ncomp_per_tsat
+
+      nmat=num_materials
+      nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+
+      ncomp_per_burning=SDIM
+      ncomp_per_tsat=2  ! interface temperature, mass fraction
+
+       ! extrap, velx, vely, velz
+      extrecon_scomp=SDIM+1
+       ! extrap, velx, vely, velz, mof recon
+      mask_scomp=extrecon_scomp+nmat*ngeom_recon
+      burnvel_scomp=mask_scomp+1
+      tsat_scomp=burnvel_scomp+nten*(ncomp_per_burning+1)
+
+      nhalf=3
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 12"
+       stop
+      endif
+
+       ! c++ index
+      if (scomp.eq.burnvel_scomp) then
+       ncomp_per=ncomp_per_burning
+      else if (scomp.eq.tsat_scomp) then
+       ncomp_per=ncomp_per_tsat ! interface temperature, mass fraction
+      else
+       print *,"scomp invalid group extrapfill"
+       print *,"scomp, ncomp, bfact, time ",scomp,ncomp,bfact,time
+       print *,"nmat,extrecon_scomp,mask_scomp,burnvel_scomp ", &
+        nmat,extrecon_scomp,mask_scomp,burnvel_scomp
+       stop
+      endif
+
+      if (ncomp.eq.nten*(1+ncomp_per)) then
+       ! do nothing
+      else
+       print *,"ncomp invalid14"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+
+      do icomp=1,(ncomp_per+1)*nten
        call filcc(bfact, &
-        u,DIMS(u), &
-        domlo,domhi,bc)
+        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
+        DIMS(u), &
+        domlo,domhi,bc(1,1,icomp))
+      enddo
 
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
-#endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
-#endif
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
 
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-         print *,"domhi+1 not divisible by bfact"
-         stop
-        endif
-       enddo  ! dir2
+      do dir2=1,SDIM
+      do side=1,2
 
-       do dir2=1,SDIM
-       do side=1,2
+      do icomp=1,(ncomp_per+1)*nten
 
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side,icomp).eq.EXT_DIR) then
 
-         print *,"exterior dirichlet BC not allowed"
-         stop
+        print *,"exterior dirichlet BC not allowed"
+        stop
 
-         if (side.eq.1) then
-          if (fablo(dir2).lt.domlo(dir2)) then
-           ext_dir_flag=1
-           borderhi(dir2)=domlo(dir2)-1
-           inside_index=domlo(dir2)
-          endif
-         else if (side.eq.2) then
-          if (fabhi(dir2).gt.domhi(dir2)) then
-           ext_dir_flag=1
-           borderlo(dir2)=domhi(dir2)+1
-           inside_index=domhi(dir2)
-          endif
-         else
-          print *,"side invalid"
-          stop
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
          endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
         endif
-
-        if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-          call extrapBC(time,dir2,side, &
-            u(D_DECL(i,j,k)), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-            xsten,nhalf,dx,bfact)
-         enddo
-         enddo
-         enddo
-        endif            
-       enddo ! side
-       enddo ! dir2
-
-       return
-       end subroutine FORT_EXTRAPFILL
-
-
-       subroutine FORT_STATEFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
-       INTEGER_T, intent(in) :: DIMDEC(u)
-       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
-       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-       REAL_T, intent(inout) :: u(DIMV(u))
-       INTEGER_T, intent(in) :: bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T im,istate
-       INTEGER_T icomplo,icomphi
-       INTEGER_T scomp_spec,num_state_material_test
-       INTEGER_T dencomp
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 14"
-        stop
        endif
 
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid15"
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+          ! low order extrap
+         call extrapBC(time,dir2,side, &
+           u(D_DECL(i,j,k),icomp), &
+           u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
+           xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif            
+      enddo ! icomp=1,(ncomp_per+1)*nten
+
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_GROUP_EXTRAPFILL
+
+      subroutine FORT_EXTRAPFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 13"
+       stop
+      endif
+
+      if (ncomp.lt.1) then
+       print *,"ncomp invalid in extrap fill"
+       stop
+      endif
+
+      call filcc(bfact, &
+       u,DIMS(u), &
+       domlo,domhi,bc)
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
         stop
        endif
-        ! c++ index
-       icomplo=num_materials_vel*(SDIM+1)
-       icomphi=icomplo+num_materials*num_state_material
-       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
-        print *,"scomp out of range in state fill"
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
         stop
        endif
-       im=(scomp-icomplo)/num_state_material+1
-       if ((im.lt.1).or.(im.gt.num_materials)) then
-        print *,"im out of range"
+      enddo  ! dir2
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+
+        print *,"exterior dirichlet BC not allowed"
         stop
+
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
+         endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
+        endif
        endif
-        ! c++ convention
-       dencomp=icomplo+(im-1)*num_state_material
+
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         call extrapBC(time,dir2,side, &
+           u(D_DECL(i,j,k)), &
+           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+           xsten,nhalf,dx,bfact)
+        enddo
+        enddo
+        enddo
+       endif            
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_EXTRAPFILL
+
+
+      subroutine FORT_STATEFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T im,istate
+      INTEGER_T icomplo,icomphi
+      INTEGER_T scomp_spec,num_state_material_test
+      INTEGER_T dencomp
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 14"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid15"
+       stop
+      endif
+       ! c++ index
+      icomplo=num_materials_vel*(SDIM+1)
+      icomphi=icomplo+num_materials*num_state_material
+      if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
+       print *,"scomp out of range in state fill"
+       stop
+      endif
+      im=(scomp-icomplo)/num_state_material+1
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im out of range"
+       stop
+      endif
+       ! c++ convention
+      dencomp=icomplo+(im-1)*num_state_material
   
+       ! fortran convention
+      istate=scomp-dencomp+1
+      if ((istate.lt.1).or.(istate.gt.num_state_material)) then
+       print *,"istate invalid"
+       stop
+      endif
+
         ! fortran convention
-       istate=scomp-dencomp+1
-       if ((istate.lt.1).or.(istate.gt.num_state_material)) then
-        print *,"istate invalid"
-        stop
-       endif
+      scomp_spec=num_state_base+1
+      num_state_material_test=scomp_spec+num_species_var-1
 
-         ! fortran convention
-       scomp_spec=num_state_base+1
-       num_state_material_test=scomp_spec+num_species_var-1
-
-       if (num_state_base.ne.2) then
-        print *,"num_state_base invalid"
-        stop
-       endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
    
-       if (num_state_material_test.ne.num_state_material) then
-        print *,"num_state_material invalid"
+      if (num_state_material_test.ne.num_state_material) then
+       print *,"num_state_material invalid"
+       stop
+      endif
+
+      call filcc(bfact, &
+       u,DIMS(u), &
+       domlo,domhi,bc)
+
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=ARG_L3(u)
+#endif
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=ARG_H3(u)
+#endif
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
         stop
        endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
+         endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
+        endif
+       endif
+
+       if (ext_dir_flag.eq.1) then
+        do i=borderlo(1),borderhi(1)
+        do j=borderlo(2),borderhi(2)
+        do k=borderlo(3),borderhi(3)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         if ((istate.ge.1).and. &
+             (istate.le.num_state_material)) then
+          call denBC(time,dir2,side, &
+           u(D_DECL(i,j,k)), &
+           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+           xsten,nhalf,dx,bfact,istate,im)
+         else
+          print *,"istate not supported"
+          stop
+         endif
+        enddo
+        enddo
+        enddo
+       endif            
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine FORT_STATEFILL
+
+
+      subroutine FORT_TENSORFILL ( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact)
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
+      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
+      REAL_T, intent(inout) :: u(DIMV(u))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T fablo(SDIM)
+      INTEGER_T fabhi(SDIM)
+      INTEGER_T borderlo(3)
+      INTEGER_T borderhi(3)
+      INTEGER_T IWALL(3)
+      INTEGER_T im,ipart
+      INTEGER_T icomplo,icomphi
+      INTEGER_T nhalf
+      REAL_T xsten(-3:3,SDIM)
+
+      nhalf=3
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in fill 14"
+       stop
+      endif
+
+      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       stop
+      endif
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid16"
+       stop
+      endif
+       ! c++ index
+      icomplo=0
+      icomphi=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
+      if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
+       print *,"scomp out of range in tensor fill"
+       stop
+      endif
+
+      ipart=(scomp-icomplo)/FORT_NUM_TENSOR_TYPE+1
+      if ((ipart.lt.1).or. &
+          (ipart.gt.num_materials_viscoelastic)) then
+       print *,"ipart out of range"
+       stop
+      endif
+      im=fort_im_elastic_map(ipart)+1
+      if ((im.ge.1).and.(im.le.num_materials)) then
 
        call filcc(bfact, &
         u,DIMS(u), &
@@ -30927,177 +31136,23 @@ end subroutine initialize2d
           IWALL(3)=k
           IWALL(dir2)=inside_index
 
-          if ((istate.ge.1).and. &
-              (istate.le.num_state_material)) then
-           call denBC(time,dir2,side, &
-            u(D_DECL(i,j,k)), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-            xsten,nhalf,dx,bfact,istate,im)
-          else
-           print *,"istate not supported"
-           stop
-          endif
+          call tensorBC(time,dir2,side, &
+           u(D_DECL(i,j,k)), &
+           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+           xsten,nhalf,dx,bfact,ipart,im)
          enddo
          enddo
          enddo
         endif            
        enddo ! side
        enddo ! dir2
+      else
+       print *,"im invalid in TENSORFILL"
+       stop
+      endif
 
-       return
-       end subroutine FORT_STATEFILL
-
-
-       subroutine FORT_TENSORFILL ( &
-        level, &
-        u,DIMS(u), &
-        domlo,domhi,dx, &
-        xlo,time,bc,scomp,ncomp,bfact)
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T scomp,ncomp,bfact,level
-       INTEGER_T DIMDEC(u)
-       INTEGER_T domlo(SDIM),domhi(SDIM)
-       REAL_T  dx(SDIM), xlo(SDIM), time
-       REAL_T  u(DIMV(u))
-       INTEGER_T bc(SDIM,2)
-       INTEGER_T i,j,k
-       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-       INTEGER_T fablo(SDIM)
-       INTEGER_T fabhi(SDIM)
-       INTEGER_T borderlo(3)
-       INTEGER_T borderhi(3)
-       INTEGER_T IWALL(3)
-       INTEGER_T im,ipart
-       INTEGER_T icomplo,icomphi
-       INTEGER_T nhalf
-       REAL_T xsten(-3:3,SDIM)
-
-       nhalf=3
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-        print *,"level invalid in fill 14"
-        stop
-       endif
-
-       if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
-        ! do nothing
-       else
-        print *,"FORT_NUM_TENSOR_TYPE invalid"
-        stop
-       endif
-
-       if (ncomp.ne.1) then
-        print *,"ncomp invalid16"
-        stop
-       endif
-        ! c++ index
-       icomplo=0
-       icomphi=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
-       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
-        print *,"scomp out of range in tensor fill"
-        stop
-       endif
-
-       ipart=(scomp-icomplo)/FORT_NUM_TENSOR_TYPE+1
-       if ((ipart.lt.1).or. &
-           (ipart.gt.num_materials_viscoelastic)) then
-        print *,"ipart out of range"
-        stop
-       endif
-       im=fort_im_elastic_map(ipart)+1
-       if ((im.ge.1).and.(im.le.num_materials)) then
-
-        call filcc(bfact, &
-         u,DIMS(u), &
-         domlo,domhi,bc)
-
-        fablo(1)=ARG_L1(u)
-        fablo(2)=ARG_L2(u)
-#if (AMREX_SPACEDIM==3)
-        fablo(SDIM)=ARG_L3(u)
-#endif
-        fabhi(1)=ARG_H1(u)
-        fabhi(2)=ARG_H2(u)
-#if (AMREX_SPACEDIM==3)
-        fabhi(SDIM)=ARG_H3(u)
-#endif
-
-        do dir2=1,SDIM
-         if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-          print *,"domlo not divisible by bfact"
-          stop
-         endif
-         if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-          print *,"domhi+1 not divisible by bfact"
-          stop
-         endif
-        enddo  ! dir2
-
-        do dir2=1,SDIM
-        do side=1,2
-
-         borderlo(3)=0
-         borderhi(3)=0
-         do dir3=1,SDIM
-          borderlo(dir3)=fablo(dir3)
-          borderhi(dir3)=fabhi(dir3)
-         enddo
-         ext_dir_flag=0
-         if (bc(dir2,side).eq.EXT_DIR) then
-          if (side.eq.1) then
-           if (fablo(dir2).lt.domlo(dir2)) then
-            ext_dir_flag=1
-            borderhi(dir2)=domlo(dir2)-1
-            inside_index=domlo(dir2)
-           endif
-          else if (side.eq.2) then
-           if (fabhi(dir2).gt.domhi(dir2)) then
-            ext_dir_flag=1
-            borderlo(dir2)=domhi(dir2)+1
-            inside_index=domhi(dir2)
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-         endif
-
-         if (ext_dir_flag.eq.1) then
-          do i=borderlo(1),borderhi(1)
-          do j=borderlo(2),borderhi(2)
-          do k=borderlo(3),borderhi(3)
-
-           call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-           IWALL(1)=i
-           IWALL(2)=j
-           IWALL(3)=k
-           IWALL(dir2)=inside_index
-
-           call tensorBC(time,dir2,side, &
-            u(D_DECL(i,j,k)), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-            xsten,nhalf,dx,bfact,ipart,im)
-          enddo
-          enddo
-          enddo
-         endif            
-        enddo ! side
-        enddo ! dir2
-       else
-        print *,"im invalid in TENSORFILL"
-        stop
-       endif
-
-       return
-       end subroutine FORT_TENSORFILL
+      return
+      end subroutine FORT_TENSORFILL
 
 
        subroutine FORT_XDISPLACEFILL ( &
