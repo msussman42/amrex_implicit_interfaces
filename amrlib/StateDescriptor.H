@@ -239,7 +239,7 @@ private:
     int                ncomp;    // Number of components
     int                ngrow;    // Grow factor
     Interpolater*      mapper;   // Default interpolator
-    int                m_ncomp_PC; // store in checkpoint file?
+    int                m_ncomp_PC; // used by "get_ncomp_PC()"
     Vector<std::string> names;    // Printable names of components
     Vector<BCRec>       bc;       // Array of bndry types for entire level
      //!< Array of pointers to bndry fill functions
