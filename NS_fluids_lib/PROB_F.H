@@ -324,7 +324,6 @@ namespace amrex{
       // x=grd_lo+(i-datalo+1/2)dx=problo+dx*(i-domlo+1/2)
 
      void FORT_STATEFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -333,7 +332,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_TENSORFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -342,7 +340,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_XDISPLACEFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -351,7 +348,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_PRESSUREFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -360,7 +356,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact); 
 
      void FORT_GROUP_STATEFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -369,7 +364,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_TENSORFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -378,7 +372,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_SCALARFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -387,7 +380,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_EXTRAPFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -396,7 +388,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_EXTRAPFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -405,7 +396,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_LS_HO_FILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -414,7 +404,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_LS_HO_FILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -423,7 +412,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_MOFFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -432,7 +420,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_EXTMOFFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -441,7 +428,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_MOFFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -450,7 +436,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_EXTMOFFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -459,7 +444,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_VELFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -468,7 +452,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_VELFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -478,7 +461,6 @@ namespace amrex{
 
 
      void FORT_SOLVFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -487,7 +469,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_GROUP_SOLVFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -528,7 +509,6 @@ namespace amrex{
       Real* time);
 
      void FORT_UMACFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -538,7 +518,6 @@ namespace amrex{
 
 
      void FORT_VMACFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -547,7 +526,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_WMACFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -557,7 +535,6 @@ namespace amrex{
 
 
      void FORT_XDMACFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -567,7 +544,6 @@ namespace amrex{
 
 
      void FORT_YDMACFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -576,7 +552,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_ZDMACFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -586,7 +561,6 @@ namespace amrex{
 
 
      void FORT_X_EXTRAPFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -596,7 +570,6 @@ namespace amrex{
 
 
      void FORT_Y_EXTRAPFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,
@@ -605,7 +578,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_Z_EXTRAPFILL (
-      int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
       const int* dom_lo, const int* dom_hi,

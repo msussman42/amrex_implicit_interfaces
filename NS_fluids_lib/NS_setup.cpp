@@ -448,9 +448,6 @@ void
 NavierStokes::variableSetUp ()
 {
 
-     // AmrLevel.H, protected:
-     // static DescriptorList desc_lst
-     // static DescriptorList desc_lstGHOST
     BL_ASSERT(desc_lst.size() == 0);
     BL_ASSERT(desc_lstGHOST.size() == 0);
 
@@ -540,7 +537,6 @@ NavierStokes::variableSetUp ()
 
     umac_interp.interp_enable_spectral=enable_spectral;
 
-     // AmrLevel.H, protected: static DescriptorList desc_lst
      // ngrow=0
     desc_lst.addDescriptor(Umac_Type,IndexType::TheUMACType(),
        0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
