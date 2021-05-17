@@ -18,14 +18,8 @@
 #    define FORT_OVERRIDEPBC overridepbc
 #    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
-#    define FORT_VMACFILL    vmacfill
-#    define FORT_WMACFILL    wmacfill
 #    define FORT_XDMACFILL   xdmacfill
-#    define FORT_YDMACFILL   ydmacfill
-#    define FORT_ZDMACFILL   zdmacfill
 #    define FORT_X_EXTRAPFILL x_extrapfill
-#    define FORT_Y_EXTRAPFILL y_extrapfill
-#    define FORT_Z_EXTRAPFILL z_extrapfill
 #    define FORT_VELFILL     velfill
 #    define FORT_GROUP_VELFILL group_velfill
 #    define FORT_SOLVFILL    solvfill
@@ -64,14 +58,8 @@
 #    define FORT_OVERRIDEPBC OVERRIDEPBC
 #    define FORT_VISCFLUXFILL VISCFLUXFILL
 #    define FORT_UMACFILL    UMACFILL
-#    define FORT_VMACFILL    VMACFILL
-#    define FORT_WMACFILL    WMACFILL
 #    define FORT_XDMACFILL   XDMACFILL
-#    define FORT_YDMACFILL   YDMACFILL
-#    define FORT_ZDMACFILL   ZDMACFILL
 #    define FORT_X_EXTRAPFILL X_EXTRAPFILL
-#    define FORT_Y_EXTRAPFILL Y_EXTRAPFILL
-#    define FORT_Z_EXTRAPFILL Z_EXTRAPFILL
 #    define FORT_VELFILL     VELFILL
 #    define FORT_GROUP_VELFILL GROUP_VELFILL
 #    define FORT_SOLVFILL    SOLVFILL
@@ -109,14 +97,8 @@
 #    define FORT_OVERRIDEPBC overridepbc
 #    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
-#    define FORT_VMACFILL    vmacfill
-#    define FORT_WMACFILL    wmacfill
 #    define FORT_XDMACFILL   xdmacfill
-#    define FORT_YDMACFILL   ydmacfill
-#    define FORT_ZDMACFILL   zdmacfill
 #    define FORT_X_EXTRAPFILL x_extrapfill
-#    define FORT_Y_EXTRAPFILL y_extrapfill
-#    define FORT_Z_EXTRAPFILL z_extrapfill
 #    define FORT_VELFILL     velfill
 #    define FORT_GROUP_VELFILL group_velfill
 #    define FORT_SOLVFILL    solvfill
@@ -153,14 +135,8 @@
 #    define FORT_OVERRIDEPBC overridepbc_
 #    define FORT_VISCFLUXFILL viscfluxfill_
 #    define FORT_UMACFILL    umacfill_
-#    define FORT_VMACFILL    vmacfill_
-#    define FORT_WMACFILL    wmacfill_
 #    define FORT_XDMACFILL   xdmacfill_
-#    define FORT_YDMACFILL   ydmacfill_
-#    define FORT_ZDMACFILL   zdmacfill_
 #    define FORT_X_EXTRAPFILL x_extrapfill_
-#    define FORT_Y_EXTRAPFILL y_extrapfill_
-#    define FORT_Z_EXTRAPFILL z_extrapfill_
 #    define FORT_VELFILL     velfill_
 #    define FORT_GROUP_VELFILL group_velfill_
 #    define FORT_SOLVFILL    solvfill_
@@ -536,26 +512,6 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-
-     void FORT_VMACFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-     void FORT_WMACFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-
      void FORT_XDMACFILL (
       int* grid_type,
       int* level,
@@ -565,46 +521,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-
-     void FORT_YDMACFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-     void FORT_ZDMACFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-
      void FORT_X_EXTRAPFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-
-     void FORT_Y_EXTRAPFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-     void FORT_Z_EXTRAPFILL (
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),

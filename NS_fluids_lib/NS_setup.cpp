@@ -572,7 +572,7 @@ NavierStokes::variableSetUp ()
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
-    desc_lst.setComponent(Vmac_Type,0,v_mac_str,bc,FORT_VMACFILL,
+    desc_lst.setComponent(Vmac_Type,0,v_mac_str,bc,FORT_UMACFILL,
       &vmac_interp);
 
 // Wmac_Type  -------------------------------------------
@@ -590,7 +590,7 @@ NavierStokes::variableSetUp ()
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
-    desc_lst.setComponent(Wmac_Type,0,w_mac_str,bc,FORT_WMACFILL,
+    desc_lst.setComponent(Wmac_Type,0,w_mac_str,bc,FORT_UMACFILL,
        &wmac_interp);
 #endif
 
@@ -933,7 +933,7 @@ NavierStokes::variableSetUp ()
 
       extrap_str="yd_extrap"; 
       desc_lstGHOST.setComponent(YDmac_Type,dcomp_displace,
-        extrap_str,x_extrap_bc,FORT_Y_EXTRAPFILL,&yd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&yd_mac_lo_interp);
 
 #if (AMREX_SPACEDIM == 3)
        // ngrow=0
@@ -944,7 +944,7 @@ NavierStokes::variableSetUp ()
 
       extrap_str="zd_extrap"; 
       desc_lstGHOST.setComponent(ZDmac_Type,dcomp_displace,
-        extrap_str,x_extrap_bc,FORT_Z_EXTRAPFILL,&zd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&zd_mac_lo_interp);
 #endif
 
       for (int partid=0;partid<num_materials_viscoelastic;partid++) {
@@ -969,7 +969,7 @@ NavierStokes::variableSetUp ()
        BCRec yd_mac_bcs;
        set_y_vel_bc(yd_mac_bcs,phys_bc);
        desc_lst.setComponent(YDmac_Type,partid,yd_mac_name,yd_mac_bcs,
-         FORT_YDMACFILL,&yd_mac_interp);
+         FORT_XDMACFILL,&yd_mac_interp);
 
 #if (AMREX_SPACEDIM == 3)
        std::string zd_mac_name="ZDMAC";
@@ -977,7 +977,7 @@ NavierStokes::variableSetUp ()
        BCRec zd_mac_bcs;
        set_z_vel_bc(zd_mac_bcs,phys_bc);
        desc_lst.setComponent(ZDmac_Type,partid,zd_mac_name,zd_mac_bcs,
-         FORT_ZDMACFILL,&zd_mac_interp);
+         FORT_XDMACFILL,&zd_mac_interp);
 #endif
       } // partid = 0..num_materials_viscoelastic-1
 
