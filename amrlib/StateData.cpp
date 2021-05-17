@@ -623,6 +623,53 @@ StateData::setTimeLevel (Real time,Real& dt)
 } // subroutine setTimeLevel
 
 void
+StateData::get_grid_type(IndexType local_typ,int& grid_type) {
+
+ grid_type=-1;
+
+ if (local_typ.cellCentered()) {
+  grid_type=-1;
+ } else if (local_typ==IndexType::TheXUMACType()) {
+  grid_type=-1;
+  amrex::Error("expecting TheXUMACType==cellCentered");
+ } else if (local_typ==IndexType::TheYVMACType()) {
+  grid_type=-1;
+  amrex::Error("expecting TheYVMACType==cellCentered");
+ } else if ((local_typ==IndexType::TheZWMACType())&&
+            (AMREX_SPACEDIM==3)) {
+  grid_type=-1;
+  amrex::Error("expecting TheZWMACType==cellCentered");
+ } else if (local_typ==IndexType::TheUMACType()) {
+  grid_type=0;
+ } else if (local_typ==IndexType::TheVMACType()) {
+  grid_type=1;
+ } else if ((local_typ==IndexType::TheWMACType())&&
+            (AMREX_SPACEDIM==3)) {
+  grid_type=2;
+ } else if (local_typ==IndexType::TheYUMACType()) {
+  grid_type=3;
+ } else if (local_typ==IndexType::TheXVMACType()) {
+  grid_type=3;
+  amrex::Error("expecting TheXVMACType==TheYUMACType");
+ } else if ((local_typ==IndexType::TheZUMACType())&&
+            (AMREX_SPACEDIM==3)) {
+  grid_type=4;
+ } else if ((local_typ==IndexType::TheXWMACType())&&
+            (AMREX_SPACEDIM==3)) {
+  grid_type=4;
+  amrex::Error("expecting TheZUMACType==TheXWMACType");
+ } else if ((local_typ==IndexType::TheZVMACType())&&
+            (AMREX_SPACEDIM==3)) {
+  grid_type=5;
+ } else if ((local_typ==IndexType::TheYWMACType())&&
+            (AMREX_SPACEDIM==3)) {
+  grid_type=5;
+  amrex::Error("expecting TheZVMACType==TheYWMACType");
+ } else
+  amrex::Error("grid_type not supported");
+} // end subroutine StateData::get_grid_type()
+
+void
 StateData::FillBoundary (
  int level,
  FArrayBox& dest,
@@ -634,7 +681,16 @@ StateData::FillBoundary (
  int ncomp,
  int bfact)
 {
-    BL_ASSERT(dest.box().ixType() == desc->getType());
+
+    IndexType local_typ(desc->getType());
+
+    if (dest.box().ixType()==local_typ) {
+     // do nothing
+    } else
+     amrex::Error("(desc) dest.box().ixType()!=local_typ");
+
+    int grid_type=-1;
+    get_grid_type(local_typ,grid_type);
 
     if (domain.contains(dest.box())) return;
 
@@ -699,7 +755,9 @@ StateData::FillBoundary (
                 // Use the "group" boundary fill routine.
                 //
                 desc->bndryFill(sc)(
-                  &level,dat,dlo,dhi,plo,phi,dx,xlo,
+                  &grid_type,
+                  &level,
+                  dat,dlo,dhi,plo,phi,dx,xlo,
                   &time,bcrs.dataPtr(),&sc,&groupsize,&bfact,true);
 
                 i += groupsize;
@@ -711,7 +769,9 @@ StateData::FillBoundary (
 
                 amrex::setBC(bx,domain,desc->getBC(sc),bcr);
                 desc->bndryFill(sc)( 
-                  &level,dat,dlo,dhi,plo,phi,dx,xlo,
+                  &grid_type,
+                  &level,
+                  dat,dlo,dhi,plo,phi,dx,xlo,
                   &time,bcr.vect(),&sc,&single_ncomp,&bfact);
                 i++;
             }
@@ -723,15 +783,14 @@ StateData::FillBoundary (
 
             amrex::setBC(bx,domain,desc->getBC(sc),bcr);
             desc->bndryFill(sc)(
-              &level,dat,dlo,dhi,plo,phi,dx,xlo,
+              &grid_type,
+              &level,
+              dat,dlo,dhi,plo,phi,dx,xlo,
               &time,bcr.vect(),&sc,&single_ncomp,&bfact);
             i++;
         }
     }
 } //  StateData::FillBoundary 
-
-
-
 
 void
 StateData::FillBoundaryGHOST (
@@ -745,7 +804,15 @@ StateData::FillBoundaryGHOST (
  int ncomp,
  int bfact)
 {
-    BL_ASSERT(dest.box().ixType() == descGHOST->getType());
+    IndexType local_typ(descGHOST->getType());
+
+    if (dest.box().ixType()==local_typ) {
+     // do nothing
+    } else
+     amrex::Error("(descGHOST) dest.box().ixType()!=local_typ");
+
+    int grid_type=-1;
+    get_grid_type(local_typ,grid_type);
 
     if (domain.contains(dest.box())) return;
 
@@ -810,7 +877,9 @@ StateData::FillBoundaryGHOST (
                 // Use the "group" boundary fill routine.
                 //
                 descGHOST->bndryFill(sc)(
-                  &level,dat,dlo,dhi,plo,phi,dx,xlo,
+                  &grid_type,
+                  &level,
+                  dat,dlo,dhi,plo,phi,dx,xlo,
                   &time,bcrs.dataPtr(),&sc,&groupsize,&bfact,true);
 
                 i += groupsize;
@@ -822,7 +891,9 @@ StateData::FillBoundaryGHOST (
 
                 amrex::setBC(bx,domain,descGHOST->getBC(sc),bcr);
                 descGHOST->bndryFill(sc)(
-                  &level,dat,dlo,dhi,plo,phi,dx,xlo,
+                  &grid_type,
+                  &level,
+                  dat,dlo,dhi,plo,phi,dx,xlo,
                   &time,bcr.vect(),&sc,&single_ncomp,&bfact);
                 i++;
             }
@@ -834,7 +905,9 @@ StateData::FillBoundaryGHOST (
 
             amrex::setBC(bx,domain,descGHOST->getBC(sc),bcr);
             descGHOST->bndryFill(sc)(
-              &level,dat,dlo,dhi,plo,phi,dx,xlo,
+              &grid_type,
+              &level,
+              dat,dlo,dhi,plo,phi,dx,xlo,
               &time,bcr.vect(),&sc,&single_ncomp,&bfact);
             i++;
         }

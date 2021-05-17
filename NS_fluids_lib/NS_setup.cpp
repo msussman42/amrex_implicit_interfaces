@@ -555,6 +555,7 @@ NavierStokes::variableSetUp ()
      //  3. StateDescriptor.H  (BndryFuncDefaultSUSSMAN, 
      //      virtual void operator())
      //  4. StateDescriptor.cpp (operator(), m_func(...))
+     //  5. StateData.cpp (calls to bndryFill)
     std::string u_mac_str="umac"; 
     desc_lst.setComponent(Umac_Type,0,u_mac_str,bc,FORT_UMACFILL,
       &umac_interp);

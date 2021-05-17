@@ -12033,9 +12033,53 @@ END SUBROUTINE Adist
       return
       end subroutine mask_velocity
 
-      subroutine normal_FILL
+      subroutine normal_FILL(time,x,dir,side,normal,iten,nten)
+      use global_utility_module
+      IMPLICIT NONE
 
-   
+      INTEGER_T dir,side,iten,nten
+      REAL_T time
+      REAL_T normal(SDIM)
+      REAL_T x(SDIM)
+      INTEGER_T nmat
+      REAL_T RR,mag
+
+      nmat=num_materials
+      if (nten.ne.((nmat-1)*(nmat-1)+nmat-1)/2) then
+       print *,"nten invalid"
+       stop
+      endif
+      if ((iten.lt.1).or.(iten.gt.nten)) then
+       print *,"iten invalid"
+       stop
+      endif
+      if ((dir.lt.0).or.(dir.gt.SDIM-1)) then
+       print *,"dir invalid"
+       stop
+      endif
+      if ((side.ne.1).and.(side.ne.2)) then
+       print *,"side invalid"
+       stop
+      endif
+      if ((probtype.eq.36).and.(axis_dir.eq.210)) then
+       if (SDIM.eq.2) then
+        normal(1)=radblob
+        normal(2)=one
+       else if (SDIM.eq.3) then
+        normal(1)=radblob
+        normal(2)=radblob2
+        normal(SDIM)=one
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       RR=x(1)
+       call prepare_normal(normal,RR,mag)
+      endif
+
+      return
+      end subroutine normal_FILL
+
       subroutine mofBC(time,dir,side,VOF,VOFwall, &
        xsten,nhalf,dx,bfact,im)
       IMPLICIT NONE

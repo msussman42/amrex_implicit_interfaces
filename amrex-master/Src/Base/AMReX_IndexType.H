@@ -137,7 +137,32 @@ public:
                                        IndexType::CELL,
                                        IndexType::CELL));
     }
+
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheXUMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                       IndexType::CELL,
+                                       IndexType::CELL));
+    }
  
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheYUMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::NODE,
+                                       IndexType::NODE,
+                                       IndexType::CELL));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheZUMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::NODE,
+                                       IndexType::CELL,
+                                       IndexType::NODE));
+    }
+
     //SUSSMAN
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     static constexpr IndexType TheVMACType () noexcept {
@@ -145,13 +170,61 @@ public:
                                       IndexType::NODE,
                                       IndexType::CELL));
     }
- 
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheXVMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::NODE,
+                                      IndexType::NODE,
+                                      IndexType::CELL));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheYVMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::CELL,
+                                      IndexType::CELL));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheZVMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::NODE,
+                                      IndexType::NODE));
+    }
+
     //SUSSMAN
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     static constexpr IndexType TheWMACType () noexcept {
         return IndexType(AMREX_D_DECL(IndexType::CELL,
                                       IndexType::CELL,
                                       IndexType::NODE));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheXWMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::NODE,
+                                      IndexType::CELL,
+                                      IndexType::NODE));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheYWMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::NODE,
+                                      IndexType::NODE));
+    }
+
+    //SUSSMAN
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    static constexpr IndexType TheZWMACType () noexcept {
+        return IndexType(AMREX_D_DECL(IndexType::CELL,
+                                      IndexType::CELL,
+                                      IndexType::CELL));
     }
 
 private:
