@@ -28720,6 +28720,12 @@ end subroutine initialize2d
        print *,"bfact invalid200"
        stop
       endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
@@ -28892,6 +28898,12 @@ end subroutine initialize2d
       endif 
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 7"
+       stop
+      endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
        stop
       endif
 
@@ -29160,6 +29172,12 @@ end subroutine initialize2d
        print *,"level invalid in fill 10"
        stop
       endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
@@ -29380,6 +29398,12 @@ end subroutine initialize2d
        print *,"level invalid in fill 11"
        stop
       endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
 
       if (ncomp.ne.1) then
        print *,"ncomp invalid in scalar fill"
@@ -29515,6 +29539,12 @@ end subroutine initialize2d
       INTEGER_T ncomp_per_burning
       INTEGER_T ncomp_per_tsat
 
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
       nmat=num_materials
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
@@ -29694,6 +29724,12 @@ end subroutine initialize2d
        print *,"ncomp invalid in extrap fill"
        stop
       endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
 
       call filcc(bfact, &
        u,DIMS(u), &
@@ -29821,6 +29857,12 @@ end subroutine initialize2d
       endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 14"
+       stop
+      endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
        stop
       endif
 
@@ -29999,6 +30041,12 @@ end subroutine initialize2d
        print *,"FORT_NUM_TENSOR_TYPE invalid"
        stop
       endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
 
       if (ncomp.ne.1) then
        print *,"ncomp invalid16"
@@ -30141,6 +30189,12 @@ end subroutine initialize2d
       nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
+       stop
+      endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
        stop
       endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -30292,6 +30346,12 @@ end subroutine initialize2d
       REAL_T xsten(-3:3,SDIM)
 
       nhalf=3
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
       if (ncomp.ne.1) then
        print *,"ncomp invalid17"
        stop
@@ -30443,6 +30503,12 @@ end subroutine initialize2d
        print *,"bfact invalid200"
        stop
       endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
 
         ! fortran convention
       scomp_spec=num_state_base+1
@@ -30582,6 +30648,12 @@ end subroutine initialize2d
        ! do nothing
       else
        print *,"FORT_NUM_TENSOR_TYPE invalid"
+       stop
+      endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid"
        stop
       endif
 
