@@ -157,6 +157,7 @@ void FillPatchTwoLevels (
  Vector<int> scompBC_map,
  int levelc,int levelf,
  int bfactc,int bfactf,
+ int grid_type,
  int debug_fillpatch) {
 
  BL_PROFILE("FillPatchTwoLevels");
@@ -240,7 +241,7 @@ void FillPatchTwoLevels (
  if (do_the_interp==1) {
 
   const InterpolaterBoxCoarsener& coarsener = 
-    mapper->BoxCoarsener(bfactc,bfactf);
+    mapper->BoxCoarsener(bfactc,bfactf,grid_type);
         
   Box fdomain = fgeom.Domain();
   fdomain.convert(mf_target.boxArray().ixType());
@@ -347,7 +348,9 @@ void FillPatchTwoLevels (
   	       cgeom,
   	       fgeom,
   	       bcr,
-               levelc,levelf,bfactc,bfactf);
+               levelc,levelf,
+               bfactc,bfactf,
+               grid_type);
    } // mfi
 } // omp
    thread_class::sync_tile_d_numPts();

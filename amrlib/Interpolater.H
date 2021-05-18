@@ -21,7 +21,7 @@ class Interpolater
 {
 public:
  virtual ~Interpolater ();
- virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf)=0;
+ virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)=0;
  virtual void interp (
    Real time,
    const FArrayBox& crse,
@@ -34,9 +34,11 @@ public:
    const Geometry&  fine_geom,
    Vector<BCRec>&    bcr,
    int levelc,int levelf,
-   int bfactc,int bfactf) = 0;
+   int bfactc,int bfactf,
+   int grid_type) = 0;
 
- virtual InterpolaterBoxCoarsener BoxCoarsener (int bfactc,int bfactf);
+ virtual InterpolaterBoxCoarsener BoxCoarsener (int bfactc,int bfactf,
+   int grid_type);
 
 };
 
@@ -46,7 +48,7 @@ class PCInterp
 {
 public:
     virtual ~PCInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -59,7 +61,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -72,7 +75,7 @@ public:
     int LSHOInterp_LO;  //0=>use normals  1=>do not use normals
 
     virtual ~LSHOInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -85,7 +88,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -102,7 +106,7 @@ public:
     int interp_enable_spectral;
 
     virtual ~SEMInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -115,7 +119,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -125,7 +130,7 @@ class maskSEMInterp
 {
 public:
     virtual ~maskSEMInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -138,7 +143,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -148,7 +154,7 @@ class PCInterpNull
 {
 public:
     virtual ~PCInterpNull ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -161,7 +167,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -176,7 +183,7 @@ public:
     int multiMOFInterp_ngeom_recon;
 
     virtual ~multiMOFInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -189,7 +196,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -203,7 +211,7 @@ public:
     int multiMOFInterp_ngeom_recon;
 
     virtual ~multiEXTMOFInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -216,7 +224,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 class BurnVelInterp
@@ -229,7 +238,7 @@ public:
     int burnvel_ncomp_per;
 
     virtual ~BurnVelInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -242,7 +251,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 
@@ -259,7 +269,7 @@ public:
     int interp_enable_spectral;
 
     virtual ~UMACInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
@@ -272,65 +282,8 @@ public:
      const Geometry&  fine_geom,
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
-     int bfactc,int bfactf);
-};
-
-class VMACInterp
-    :
-    public Interpolater
-{
-public:
-
-      // 0 - low order
-      // 1 - space/time spectral
-      // 2 - space spectral only
-      // 3 - time spectral only
-    int interp_enable_spectral;
-
-    virtual ~VMACInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
-    virtual void interp (
-     Real time,
-     const FArrayBox& crse,
-     int              crse_comp,
-     FArrayBox&       fine,
-     int              fine_comp,
-     int              ncomp,
-     const Box&       fine_region,
-     const Geometry&  crse_geom,
-     const Geometry&  fine_geom,
-     Vector<BCRec>&    bcr,
-     int levelc,int levelf,
-     int bfactc,int bfactf);
-};
-
-class WMACInterp
-    :
-    public Interpolater
-{
-public:
-
-      // 0 - low order
-      // 1 - space/time spectral
-      // 2 - space spectral only
-      // 3 - time spectral only
-    int interp_enable_spectral;
-
-    virtual ~WMACInterp ();      
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf);
-    virtual void interp (
-     Real time,
-     const FArrayBox& crse,
-     int              crse_comp,
-     FArrayBox&       fine,
-     int              fine_comp,
-     int              ncomp,
-     const Box&       fine_region,
-     const Geometry&  crse_geom,
-     const Geometry&  fine_geom,
-     Vector<BCRec>&    bcr,
-     int levelc,int levelf,
-     int bfactc,int bfactf);
+     int bfactc,int bfactf,
+     int grid_type);
 };
 
 //
@@ -348,27 +301,23 @@ extern multiEXTMOFInterp         multi_extmof_interp;
 extern BurnVelInterp             burnvel_interp;
 extern BurnVelInterp             tsat_interp;
 extern UMACInterp                umac_interp;
-extern VMACInterp                vmac_interp;
-extern WMACInterp                wmac_interp;
 extern UMACInterp                xd_mac_interp;
-extern VMACInterp                yd_mac_interp;
-extern WMACInterp                zd_mac_interp;
 extern UMACInterp                xd_mac_lo_interp;
-extern VMACInterp                yd_mac_lo_interp;
-extern WMACInterp                zd_mac_lo_interp;
 extern maskSEMInterp             mask_sem_interp;
 
 class InterpolaterBoxCoarsener
     : public BoxConverter
 {
 public:
-    InterpolaterBoxCoarsener (Interpolater* mapper_,int bfactc_,int bfactf_);
+    InterpolaterBoxCoarsener (Interpolater* mapper_,
+      int bfactc_,int bfactf_,int grid_type_);
     virtual Box doit (const Box& fine) const;
     virtual BoxConverter* clone () const;
 private:
     Interpolater* mapper;
     int bfactf;
     int bfactc;
+    int grid_type;
 };
 
 } // namespace amrex

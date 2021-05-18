@@ -299,6 +299,10 @@ AmrLevel::FillPatch (AmrLevel & old,
 
  int                     DComp   = dcomp;
  const StateDescriptor&  desc    = old.desc_lst[index];
+ IndexType desc_typ(desc.getType());
+ int desc_grid_type=-1;
+ StateData::get_grid_type(desc_typ,desc_grid_type);
+
  int bfact_fine=parent->Space_blockingFactor(level);
 
  desc.check_inRange(scompBC_map,ncomp);
@@ -401,6 +405,7 @@ AmrLevel::FillPatch (AmrLevel & old,
     local_scompBC_map,
     level-1,level,
     bfact_coarse,bfact_fine,
+    desc_grid_type,
     debug_fillpatch);  
      
   } else 
@@ -500,7 +505,7 @@ AmrLevel::FillCoarsePatchGHOST (
   for (int j = 0, N_CBA = crseBA.size(); j < N_CBA; ++j) {
    BL_ASSERT(mf_BA[j].ixType() == descGHOST.getType());
    const Box& bx = mf_BA[j];
-   crseBA.set(j,mapper->CoarseBox(bx,bfact_coarse,bfact_fine));
+   crseBA.set(j,mapper->CoarseBox(bx,bfact_coarse,bfact_fine,desc_grid_type));
   }
 
    // ghost cells do not have to be initialized.
@@ -585,7 +590,8 @@ AmrLevel::FillCoarsePatchGHOST (
 		  geom,
 		  bcr, // not used.
                   level-1,level,
-		  bfact_coarse,bfact_fine);
+		  bfact_coarse,bfact_fine,
+                  desc_grid_type);
   }  // mfi
 } // omp
   thread_class::sync_tile_d_numPts();
@@ -648,6 +654,10 @@ AmrLevel::InterpBordersGHOST (
  
  int                     DComp   = scomp;
  const StateDescriptor&  descGHOST = desc_lstGHOST[index];
+ IndexType desc_typ(descGHOST.getType());
+ int desc_grid_type=-1;
+ StateData::get_grid_type(desc_typ,desc_grid_type);
+
  int bfact_fine=parent->Space_blockingFactor(level);
 
  descGHOST.check_inRange(scompBC_map, ncomp);
@@ -717,6 +727,7 @@ AmrLevel::InterpBordersGHOST (
     local_scompBC_map,
     level-1,level,
     bfact_coarse,bfact_fine,
+    desc_grid_type,
     debug_fillpatch);  
      
   } else 
@@ -780,6 +791,10 @@ AmrLevel::InterpBorders (
  
  int                     DComp   = scomp;
  const StateDescriptor&  desc    = desc_lst[index];
+ IndexType desc_typ(desc.getType());
+ int desc_grid_type=-1;
+ StateData::get_grid_type(desc_typ,desc_grid_type);
+
  int bfact_fine=parent->Space_blockingFactor(level);
 
  desc.check_inRange(scompBC_map, ncomp);
@@ -850,6 +865,7 @@ AmrLevel::InterpBorders (
     local_scompBC_map,
     level-1,level,
     bfact_coarse,bfact_fine,
+    desc_grid_type,
     debug_fillpatch);  
      
   } else 
@@ -904,6 +920,10 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
  int                     DComp   = dcomp;
  const StateDescriptor&  desc    = desc_lst[index];
+ IndexType desc_typ(desc.getType());
+ int desc_grid_type=-1;
+ StateData::get_grid_type(desc_typ,desc_grid_type);
+
  const Box&              pdomain = state[index].getDomain();
  const BoxArray&         mf_BA   = mf.boxArray();
  DistributionMapping dm=mf.DistributionMap();
@@ -925,7 +945,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   for (int j = 0, N = crseBA.size(); j < N; ++j) {
    BL_ASSERT(mf_BA[j].ixType() == desc.getType());
    const Box& bx = mf_BA[j];
-   crseBA.set(j,mapper->CoarseBox(bx,bfact_coarse,bfact_fine));
+   crseBA.set(j,mapper->CoarseBox(bx,bfact_coarse,bfact_fine,desc_grid_type));
   }
 
     // ngrow=0
@@ -1002,7 +1022,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 		  geom,
 		  bcr,
                   level-1,level,
-		  bfact_coarse,bfact_fine);
+		  bfact_coarse,bfact_fine,
+                  desc_grid_type);
   }  // mfi
 } // omp
   thread_class::sync_tile_d_numPts();
