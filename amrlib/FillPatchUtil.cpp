@@ -240,6 +240,10 @@ void FillPatchTwoLevels (
 
  if (do_the_interp==1) {
 
+//*mapper is derived from class Interpolater.
+//Inside of Interpolater:
+// virtual InterpolaterBoxCoarsener BoxCoarsener (int bfactc,int bfactf,
+//   int grid_type);
   const InterpolaterBoxCoarsener& coarsener = 
     mapper->BoxCoarsener(bfactc,bfactf,grid_type);
         
@@ -256,10 +260,11 @@ void FillPatchTwoLevels (
     // find coarsen( mf_target intersect complement(fmf) within fdomain_g ).
     // the valid region of fpc encompass the mf_target grow regions, but the
     // boxes of fpc are disjoint.
+    // "TheFPinfo" is declared in "AMReX_FabArrayBase.H"
   const FabArrayBase::FPinfo& fpc = 
    FabArrayBase::TheFPinfo(fmf, mf_target, 
       ngrow_vec, 
-      coarsener,
+      coarsener,//type InterpolatorBoxCoarsener, derived from BoxConverter
       fgeom,
       cgeom,
       index_space);

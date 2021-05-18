@@ -305,14 +305,20 @@ extern UMACInterp                xd_mac_interp;
 extern UMACInterp                xd_mac_lo_interp;
 extern maskSEMInterp             mask_sem_interp;
 
+//class BoxConverter is declared in: AMReX_Box.H
+// the members of BoxConverter are: "doit", "clone", and "~BoxConverter"
 class InterpolaterBoxCoarsener
     : public BoxConverter
 {
 public:
+	// constructor
     InterpolaterBoxCoarsener (Interpolater* mapper_,
       int bfactc_,int bfactf_,int grid_type_);
+
     virtual Box doit (const Box& fine) const;
+
     virtual BoxConverter* clone () const;
+
 private:
     Interpolater* mapper;
     int bfactf;

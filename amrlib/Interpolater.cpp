@@ -47,6 +47,7 @@ GetBCArray (const Vector<BCRec>& bcr)
     return bc;
 }
 
+// constructor
 InterpolaterBoxCoarsener::InterpolaterBoxCoarsener(
  Interpolater* mapper_,int bfactc_,int bfactf_,int grid_type_) {
 
@@ -78,7 +79,7 @@ Interpolater::BoxCoarsener (int bfactc,int bfactf,int grid_type)
 Box
 InterpolaterBoxCoarsener::doit (const Box& fine) const
 {
-    return mapper->CoarseBox(fine, bfactc,bfactf,grid_type);
+    return mapper->CoarseBox(fine,bfactc,bfactf,grid_type);
 }
 
 BoxConverter*
