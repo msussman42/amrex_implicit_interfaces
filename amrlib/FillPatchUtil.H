@@ -36,6 +36,7 @@ namespace amrex
       Vector<int> scompBC_map,
       int levelc,int levelf,
       int bfactc,int bfactf, 
+      int grid_type,
       int debug_fillpatch);
 
 } // namespace amrex
