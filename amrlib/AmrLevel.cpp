@@ -459,6 +459,10 @@ AmrLevel::FillCoarsePatchGHOST (
 
  int                     DComp   = scomp;
  const StateDescriptor&  descGHOST = desc_lstGHOST[index];
+ IndexType desc_typ(descGHOST.getType());
+ int desc_grid_type=-1;
+ StateData::get_grid_type(desc_typ,desc_grid_type);
+
  int bfact_fine=parent->Space_blockingFactor(level);
  int bfact_coarse=parent->Space_blockingFactor(level-1);
 

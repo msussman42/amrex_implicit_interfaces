@@ -93,7 +93,7 @@ public:
     // dt will be modified if t_new>0 and t_new-dt<0
     void setTimeLevel (Real t_new,Real& dt);
 
-    void get_grid_type(IndexType local_typ,int& grid_type);
+    static void get_grid_type(IndexType local_typ,int& grid_type);
 
     //
     // Set physical bndry values
