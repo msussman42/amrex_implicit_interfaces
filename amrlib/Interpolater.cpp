@@ -23,14 +23,8 @@ multiEXTMOFInterp         multi_extmof_interp;
 BurnVelInterp             burnvel_interp;
 BurnVelInterp             tsat_interp;
 UMACInterp                umac_interp;
-VMACInterp                vmac_interp;
-WMACInterp                wmac_interp;
 UMACInterp                xd_mac_interp;
-VMACInterp                yd_mac_interp;
-WMACInterp                zd_mac_interp;
 UMACInterp                xd_mac_lo_interp;
-VMACInterp                yd_mac_lo_interp;
-WMACInterp                zd_mac_lo_interp;
 maskSEMInterp             mask_sem_interp;
 
 
@@ -54,30 +48,43 @@ GetBCArray (const Vector<BCRec>& bcr)
 }
 
 InterpolaterBoxCoarsener::InterpolaterBoxCoarsener(
- Interpolater* mapper_,int bfactc_,int bfactf_) {
+ Interpolater* mapper_,int bfactc_,int bfactf_,int grid_type_) {
+
+ if ((grid_type_==-1)||
+     ((grid_type_>=0)&&(grid_type_<=5))) {
+  // do nothing
+ } else
+  amrex::Error("grid_type_ invalid");
 
  mapper=mapper_;
  bfactc=bfactc_;
  bfactf=bfactf_;
+ grid_type=grid_type_;
 
 }
 
 InterpolaterBoxCoarsener
-Interpolater::BoxCoarsener (int bfactc,int bfactf)
+Interpolater::BoxCoarsener (int bfactc,int bfactf,int grid_type)
 {
-    return InterpolaterBoxCoarsener(this, bfactc,bfactf);
+ if ((grid_type==-1)||
+     ((grid_type>=0)&&(grid_type<=5))) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
+
+ return InterpolaterBoxCoarsener(this, bfactc,bfactf,grid_type);
 }
 
 Box
 InterpolaterBoxCoarsener::doit (const Box& fine) const
 {
-    return mapper->CoarseBox(fine, bfactc,bfactf);
+    return mapper->CoarseBox(fine, bfactc,bfactf,grid_type);
 }
 
 BoxConverter*
 InterpolaterBoxCoarsener::clone () const
 {
-    return new InterpolaterBoxCoarsener(mapper, bfactc,bfactf);
+    return new InterpolaterBoxCoarsener(mapper,bfactc,bfactf,grid_type);
 }
 
 
@@ -87,12 +94,16 @@ Interpolater::~Interpolater () {}
 multiMOFInterp::~multiMOFInterp () {}
 
 Box
-multiMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+multiMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse = amrex::coarsen(fine,2);
  
@@ -120,7 +131,8 @@ multiMOFInterp::interp (Real time,
   const Geometry&   fine_geom,
   Vector<BCRec>&     bcr,
   int levelc,int levelf,
-  int bfactc,int bfactf)
+  int bfactc,int bfactf,
+  int grid_type)
 {
     //
     // Set up to call FORTRAN.
