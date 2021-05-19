@@ -242,55 +242,62 @@ multiEXTMOFInterp::interp (Real time,
   const Geometry&   fine_geom,
   Vector<BCRec>&     bcr,
   int levelc,int levelf,
-  int bfactc,int bfactf)
+  int bfactc,int bfactf,
+  int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo = crse.box().loVect();
-    const int* chi = crse.box().hiVect();
-    const int* flo = fine.loVect();
-    const int* fhi = fine.hiVect();
-    const int* lo  = fine_region.loVect();
-    const int* hi  = fine_region.hiVect();
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
-    const Real* prob_lo=fine_geom.ProbLo();
-    const Real* dxf = fine_geom.CellSize();
-    const Real* dxc = crse_geom.CellSize();
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo = crse.box().loVect();
+ const int* chi = crse.box().hiVect();
+ const int* flo = fine.loVect();
+ const int* fhi = fine.hiVect();
+ const int* lo  = fine_region.loVect();
+ const int* hi  = fine_region.hiVect();
 
-    int nmat=multiMOFInterp_nmat;
-    int ngeom_raw=multiMOFInterp_ngeom_raw;
-    int ngeom_recon=multiMOFInterp_ngeom_recon;
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
 
-    if (ngeom_raw!=AMREX_SPACEDIM+1)
-     amrex::Error("ngeom_raw invalid");
-    if (ngeom_recon!=2*AMREX_SPACEDIM+3)
-     amrex::Error("ngeom_recon invalid");
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
 
-    if (nmat<1)
-     amrex::Error("nmat invalid in multi ext mof interp");
+ int nmat=multiMOFInterp_nmat;
+ int ngeom_raw=multiMOFInterp_ngeom_raw;
+ int ngeom_recon=multiMOFInterp_ngeom_recon;
 
-    if (ncomp!=nmat*ngeom_recon) {
-     std::cout << "ncomp " << ncomp << '\n';
-     amrex::Error("must interpolate all multiEXTMOF data at once");
-    }
-    // in NavierStokes::VOF_Recon
-    // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
-    // 2. reconstruct interior cells only.
-    // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
-    FORT_MULTIEXTMOFINTERP(
-     &time,
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-     lo,hi,
-     prob_lo,
-     dxf,dxc,&nmat,
-     &ngeom_recon,&ngeom_raw,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ if (ngeom_raw!=AMREX_SPACEDIM+1)
+  amrex::Error("ngeom_raw invalid");
+ if (ngeom_recon!=2*AMREX_SPACEDIM+3)
+  amrex::Error("ngeom_recon invalid");
+
+ if (nmat<1)
+  amrex::Error("nmat invalid in multi ext mof interp");
+
+ if (ncomp!=nmat*ngeom_recon) {
+  std::cout << "ncomp " << ncomp << '\n';
+  amrex::Error("must interpolate all multiEXTMOF data at once");
+ }
+ // in NavierStokes::VOF_Recon
+ // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
+ // 2. reconstruct interior cells only.
+ // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
+ FORT_MULTIEXTMOFINTERP(
+  &time,
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  lo,hi,
+  prob_lo,
+  dxf,dxc,&nmat,
+  &ngeom_recon,&ngeom_raw,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 
 }
 
@@ -337,74 +344,81 @@ BurnVelInterp::interp (Real time,
   const Geometry&   fine_geom,
   Vector<BCRec>&     bcr,
   int levelc,int levelf,
-  int bfactc,int bfactf)
+  int bfactc,int bfactf,
+  int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo = crse.box().loVect();
-    const int* chi = crse.box().hiVect();
-    const int* flo = fine.loVect();
-    const int* fhi = fine.hiVect();
-    const int* lo  = fine_region.loVect();
-    const int* hi  = fine_region.hiVect();
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
-    if ((crse_comp>=0)&&(fine_comp>=0)) {
-     // do nothing
-    } else
-     amrex::Error("crse_comp or fine_comp invalid");
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo = crse.box().loVect();
+ const int* chi = crse.box().hiVect();
+ const int* flo = fine.loVect();
+ const int* fhi = fine.hiVect();
+ const int* lo  = fine_region.loVect();
+ const int* hi  = fine_region.hiVect();
 
-    const Real* prob_lo=fine_geom.ProbLo();
-    const Real* dxf = fine_geom.CellSize();
-    const Real* dxc = crse_geom.CellSize();
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
 
-    int nmat=burnvel_nmat;
-    int nten=burnvel_nten;
-    int ncomp_check=nten+nten*burnvel_ncomp_per;
+ if ((crse_comp>=0)&&(fine_comp>=0)) {
+  // do nothing
+ } else
+  amrex::Error("crse_comp or fine_comp invalid");
 
-    int velflag=0;
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
 
-    if (burnvel_ncomp_per==2) { // interface temperature, mass fraction
-     velflag=0;
-    } else if (burnvel_ncomp_per==AMREX_SPACEDIM) {
-     velflag=1;
-    } else
-     amrex::Error("burnvel_ncomp_per invalid");
+ int nmat=burnvel_nmat;
+ int nten=burnvel_nten;
+ int ncomp_check=nten+nten*burnvel_ncomp_per;
 
-    if ((crse.nComp()>=ncomp_check+crse_comp)&&
-        (fine.nComp()>=ncomp_check+fine_comp)) {
-     // do nothing
-    } else
-     amrex::Error("crse.nComp() or fine.nComp() invalid");
+ int velflag=0;
 
-    if (nten!=((nmat-1)*(nmat-1)+nmat-1)/2) 
-     amrex::Error("nten invalid");
+ if (burnvel_ncomp_per==2) { // interface temperature, mass fraction
+  velflag=0;
+ } else if (burnvel_ncomp_per==AMREX_SPACEDIM) {
+  velflag=1;
+ } else
+  amrex::Error("burnvel_ncomp_per invalid");
 
-    if (nmat<1)
-     amrex::Error("nmat invalid in burnvel interp");
+ if ((crse.nComp()>=ncomp_check+crse_comp)&&
+     (fine.nComp()>=ncomp_check+fine_comp)) {
+  // do nothing
+ } else
+  amrex::Error("crse.nComp() or fine.nComp() invalid");
 
-    if (ncomp!=ncomp_check) {
-     std::cout << "ncomp " << ncomp << '\n';
-     amrex::Error("must interpolate all burnvel data at once");
-    }
-     // first nmat components are the status.
-     // next sdim * nmat components are the burning velocities.
-    FORT_EXT_BURNVEL_INTERP(
-     &velflag,
-     &time,
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-     lo,hi,
-     prob_lo,
-     dxf,dxc,
-     &nmat,
-     &nten,
-     &ncomp,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ if (nten!=((nmat-1)*(nmat-1)+nmat-1)/2) 
+  amrex::Error("nten invalid");
+
+ if (nmat<1)
+  amrex::Error("nmat invalid in burnvel interp");
+
+ if (ncomp!=ncomp_check) {
+  std::cout << "ncomp " << ncomp << '\n';
+  amrex::Error("must interpolate all burnvel data at once");
+ }
+  // first nmat components are the status.
+  // next sdim * nmat components are the burning velocities.
+ FORT_EXT_BURNVEL_INTERP(
+  &velflag,
+  &time,
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  lo,hi,
+  prob_lo,
+  dxf,dxc,
+  &nmat,
+  &nten,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 
 } // end subroutine BurnVelInterp::interp
 
@@ -453,30 +467,37 @@ PCInterp::interp (
  const Geometry&  fine_geom,
  Vector<BCRec>&     bcr,
  int levelc,int levelf,
- int bfactc,int bfactf)
+ int bfactc,int bfactf,
+ int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo  = crse.box().loVect();
-    const int* chi  = crse.box().hiVect();
-    const int* flo  = fine.loVect();
-    const int* fhi  = fine.hiVect();
-    const int* fblo = fine_region.loVect();
-    const int* fbhi = fine_region.hiVect();
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
-    int zapflag=0;
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
-    FORT_PCINTERP (
-     &zapflag,
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-     fblo,fbhi,
-     &ncomp,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo  = crse.box().loVect();
+ const int* chi  = crse.box().hiVect();
+ const int* flo  = fine.loVect();
+ const int* fhi  = fine.hiVect();
+ const int* fblo = fine_region.loVect();
+ const int* fbhi = fine_region.hiVect();
+
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
+ int zapflag=0;
+
+ FORT_PCINTERP (
+  &zapflag,
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  fblo,fbhi,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 }
 
 
@@ -522,49 +543,56 @@ LSHOInterp::interp (
  const Geometry&  fine_geom,
  Vector<BCRec>&     bcr,
  int levelc,int levelf,
- int bfactc,int bfactf)
+ int bfactc,int bfactf,
+ int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo  = crse.box().loVect();
-    const int* chi  = crse.box().hiVect();
-    const int* flo  = fine.loVect();
-    const int* fhi  = fine.hiVect();
-    const int* fblo = fine_region.loVect();
-    const int* fbhi = fine_region.hiVect();
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
-    const Real* prob_lo=fine_geom.ProbLo();
-    const Real* dxf = fine_geom.CellSize();
-    const Real* dxc = crse_geom.CellSize();
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo  = crse.box().loVect();
+ const int* chi  = crse.box().hiVect();
+ const int* flo  = fine.loVect();
+ const int* fhi  = fine.hiVect();
+ const int* fblo = fine_region.loVect();
+ const int* fbhi = fine_region.hiVect();
 
-    int nmat=LSHOInterp_nmat;
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
 
-    if ((LSHOInterp_LO!=0)&&(LSHOInterp_LO!=1))
-     amrex::Error("LSHOInterp_LO invalid");
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
 
-    if (nmat<1)
-     amrex::Error("nmat invalid in ls ho interp");
-    if (ncomp!=(AMREX_SPACEDIM+1)*nmat) {
-     std::cout << "ncomp " << ncomp << '\n';
-     amrex::Error("must interpolate all ls ho data at once");
-    }
+ int nmat=LSHOInterp_nmat;
 
-    FORT_LSHOINTERP (
-     &LSHOInterp_LO,
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     clo,chi,
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-     fblo,fbhi,
-     prob_lo,
-     dxf,dxc,
-     &nmat,
-     &ncomp,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ if ((LSHOInterp_LO!=0)&&(LSHOInterp_LO!=1))
+  amrex::Error("LSHOInterp_LO invalid");
+
+ if (nmat<1)
+  amrex::Error("nmat invalid in ls ho interp");
+ if (ncomp!=(AMREX_SPACEDIM+1)*nmat) {
+  std::cout << "ncomp " << ncomp << '\n';
+  amrex::Error("must interpolate all ls ho data at once");
+ }
+
+ FORT_LSHOINTERP (
+  &LSHOInterp_LO,
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  clo,chi,
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  fblo,fbhi,
+  prob_lo,
+  dxf,dxc,
+  &nmat,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 
 } //subroutine LSHOInterp::interp
 
@@ -612,37 +640,44 @@ SEMInterp::interp (
  const Geometry&  fine_geom,
  Vector<BCRec>&     bcr,
  int levelc,int levelf,
- int bfactc,int bfactf)
+ int bfactc,int bfactf,
+ int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo  = crse.box().loVect();
-    const int* chi  = crse.box().hiVect();
-    const int* flo  = fine.loVect();
-    const int* fhi  = fine.hiVect();
-    const int* fblo = fine_region.loVect();
-    const int* fbhi = fine_region.hiVect();
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
-    const Real* dxf = fine_geom.CellSize();
-    const Real* dxc = crse_geom.CellSize();
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo  = crse.box().loVect();
+ const int* chi  = crse.box().hiVect();
+ const int* flo  = fine.loVect();
+ const int* fhi  = fine.hiVect();
+ const int* fblo = fine_region.loVect();
+ const int* fbhi = fine_region.hiVect();
 
-      // enable_spectral:
-      // 0 - low order
-      // 1 - space/time spectral
-      // 2 - space spectral only
-      // 3 - time spectral only
-    FORT_SEMINTERP (
-     &interp_enable_spectral,
-     dxc,dxf, 
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),fblo,fbhi,
-     &ncomp,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
+
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
+
+   // enable_spectral:
+   // 0 - low order
+   // 1 - space/time spectral
+   // 2 - space spectral only
+   // 3 - time spectral only
+ FORT_SEMINTERP (
+  &interp_enable_spectral,
+  dxc,dxf, 
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),fblo,fbhi,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 }
 
 maskSEMInterp::~maskSEMInterp () {}
@@ -688,31 +723,38 @@ maskSEMInterp::interp (
  const Geometry&  fine_geom,
  Vector<BCRec>&     bcr,
  int levelc,int levelf,
- int bfactc,int bfactf)
+ int bfactc,int bfactf,
+ int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo  = crse.box().loVect();
-    const int* chi  = crse.box().hiVect();
-    const int* flo  = fine.loVect();
-    const int* fhi  = fine.hiVect();
-    const int* fblo = fine_region.loVect();
-    const int* fbhi = fine_region.hiVect();
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
+
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo  = crse.box().loVect();
+ const int* chi  = crse.box().hiVect();
+ const int* flo  = fine.loVect();
+ const int* fhi  = fine.hiVect();
+ const int* fblo = fine_region.loVect();
+ const int* fbhi = fine_region.hiVect();
 
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
 
-    FORT_MASKINTERPPC (
-     cdat,
-     AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     fdat,
-     AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-     fblo,fbhi,
-     &ncomp,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ FORT_MASKINTERPPC (
+  cdat,
+  AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  fdat,
+  AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  fblo,fbhi,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 }
 
 
@@ -760,30 +802,37 @@ PCInterpNull::interp (
  const Geometry&  fine_geom,
  Vector<BCRec>&     bcr,
  int levelc,int levelf,
- int bfactc,int bfactf)
+ int bfactc,int bfactf,
+ int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo  = crse.box().loVect();
-    const int* chi  = crse.box().hiVect();
-    const int* flo  = fine.loVect();
-    const int* fhi  = fine.hiVect();
-    const int* fblo = fine_region.loVect();
-    const int* fbhi = fine_region.hiVect();
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
+
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo  = crse.box().loVect();
+ const int* chi  = crse.box().hiVect();
+ const int* flo  = fine.loVect();
+ const int* fhi  = fine.hiVect();
+ const int* fblo = fine_region.loVect();
+ const int* fbhi = fine_region.hiVect();
 
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
 
-    int zapflag=1;
-    FORT_PCINTERP (
-     &zapflag,
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),fblo,fbhi,
-     &ncomp,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ int zapflag=1;
+ FORT_PCINTERP (
+  &zapflag,
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),fblo,fbhi,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
 }
 
 UMACInterp::~UMACInterp() {}
