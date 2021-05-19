@@ -562,36 +562,33 @@ NavierStokes::variableSetUp ()
 
 // Vmac_Type  -------------------------------------------
 
-    vmac_interp.interp_enable_spectral=enable_spectral;
-
      // ngrow=0
     desc_lst.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,nsolveMM_FACE,&vmac_interp,null_ncomp_particles);
+      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,nsolveMM_FACE,&vmac_interp,null_ncomp_particles);
+      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
     desc_lst.setComponent(Vmac_Type,0,v_mac_str,bc,FORT_UMACFILL,
-      &vmac_interp);
+      &umac_interp);
 
 // Wmac_Type  -------------------------------------------
 
     set_z_vel_bc(bc,phys_bc); // prevent warnings.
 
 #if (AMREX_SPACEDIM == 3)
-    wmac_interp.interp_enable_spectral=enable_spectral;
 
       // ngrow=0
     desc_lst.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,nsolveMM_FACE,&wmac_interp,null_ncomp_particles);
+      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,nsolveMM_FACE,&wmac_interp,null_ncomp_particles);
+      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
     desc_lst.setComponent(Wmac_Type,0,w_mac_str,bc,FORT_UMACFILL,
-       &wmac_interp);
+       &umac_interp);
 #endif
 
     sem_interp_DEFAULT.interp_enable_spectral=enable_spectral;
@@ -902,13 +899,7 @@ NavierStokes::variableSetUp ()
       int displacement_enable_spectral=0;
 
       xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
-      yd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
       xd_mac_lo_interp.interp_enable_spectral=0;
-      yd_mac_lo_interp.interp_enable_spectral=0;
-#if (AMREX_SPACEDIM == 3)
-      zd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
-      zd_mac_lo_interp.interp_enable_spectral=0;
-#endif
 
       int ncghost_MAC_displace=1;
 
@@ -927,24 +918,24 @@ NavierStokes::variableSetUp ()
 
        // ngrow=0
       desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-       0,num_materials_viscoelastic,&yd_mac_interp,null_ncomp_particles);
+       0,num_materials_viscoelastic,&xd_mac_interp,null_ncomp_particles);
       desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-       0,ncghost_MAC_displace,&yd_mac_lo_interp,null_ncomp_particles);
+       0,ncghost_MAC_displace,&xd_mac_lo_interp,null_ncomp_particles);
 
       extrap_str="yd_extrap"; 
       desc_lstGHOST.setComponent(YDmac_Type,dcomp_displace,
-        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&yd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
 
 #if (AMREX_SPACEDIM == 3)
        // ngrow=0
       desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-       0,num_materials_viscoelastic,&zd_mac_interp,null_ncomp_particles);
+       0,num_materials_viscoelastic,&xd_mac_interp,null_ncomp_particles);
       desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-       0,ncghost_MAC_displace,&zd_mac_lo_interp,null_ncomp_particles);
+       0,ncghost_MAC_displace,&xd_mac_lo_interp,null_ncomp_particles);
 
       extrap_str="zd_extrap"; 
       desc_lstGHOST.setComponent(ZDmac_Type,dcomp_displace,
-        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,&zd_mac_lo_interp);
+        extrap_str,x_extrap_bc,FORT_X_EXTRAPFILL,xzd_mac_lo_interp);
 #endif
 
       for (int partid=0;partid<num_materials_viscoelastic;partid++) {
@@ -969,7 +960,7 @@ NavierStokes::variableSetUp ()
        BCRec yd_mac_bcs;
        set_y_vel_bc(yd_mac_bcs,phys_bc);
        desc_lst.setComponent(YDmac_Type,partid,yd_mac_name,yd_mac_bcs,
-         FORT_XDMACFILL,&yd_mac_interp);
+         FORT_XDMACFILL,&xd_mac_interp);
 
 #if (AMREX_SPACEDIM == 3)
        std::string zd_mac_name="ZDMAC";
@@ -977,7 +968,7 @@ NavierStokes::variableSetUp ()
        BCRec zd_mac_bcs;
        set_z_vel_bc(zd_mac_bcs,phys_bc);
        desc_lst.setComponent(ZDmac_Type,partid,zd_mac_name,zd_mac_bcs,
-         FORT_XDMACFILL,&zd_mac_interp);
+         FORT_XDMACFILL,&xd_mac_interp);
 #endif
       } // partid = 0..num_materials_viscoelastic-1
 

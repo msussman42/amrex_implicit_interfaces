@@ -183,7 +183,8 @@ public:
     int multiMOFInterp_ngeom_recon;
 
     virtual ~multiMOFInterp ();
-    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,grid_type);
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,
+       int grid_type);
     virtual void interp (
      Real time,
      const FArrayBox& crse,
