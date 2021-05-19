@@ -101,6 +101,7 @@ multiMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
  if (grid_type==-1) {
   // do nothing
  } else
@@ -135,60 +136,66 @@ multiMOFInterp::interp (Real time,
   int bfactc,int bfactf,
   int grid_type)
 {
-    //
-    // Set up to call FORTRAN.
-    //
-    const int* clo = crse.box().loVect();
-    const int* chi = crse.box().hiVect();
-    const int* flo = fine.loVect();
-    const int* fhi = fine.hiVect();
-    const int* lo  = fine_region.loVect();
-    const int* hi  = fine_region.hiVect();
 
-    const Real* cdat  = crse.dataPtr(crse_comp);
-    Real*       fdat  = fine.dataPtr(fine_comp);
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
-    const Real* prob_lo=fine_geom.ProbLo();
-    const Real* dxf = fine_geom.CellSize();
-    const Real* dxc = crse_geom.CellSize();
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo = crse.box().loVect();
+ const int* chi = crse.box().hiVect();
+ const int* flo = fine.loVect();
+ const int* fhi = fine.hiVect();
+ const int* lo  = fine_region.loVect();
+ const int* hi  = fine_region.hiVect();
 
-    int nmat=multiMOFInterp_nmat;
-    int ngeom_raw=multiMOFInterp_ngeom_raw;
-    int ngeom_recon=multiMOFInterp_ngeom_recon;
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
 
-    if (ngeom_raw!=AMREX_SPACEDIM+1)
-     amrex::Error("ngeom_raw invalid");
-    if (ngeom_recon!=2*AMREX_SPACEDIM+3)
-     amrex::Error("ngeom_recon invalid");
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
 
-    if (nmat<1)
-     amrex::Error("nmat invalid in multi mof interp");
+ int nmat=multiMOFInterp_nmat;
+ int ngeom_raw=multiMOFInterp_ngeom_raw;
+ int ngeom_recon=multiMOFInterp_ngeom_recon;
 
-    if (ncomp!=nmat*ngeom_raw) {
-     std::cout << "ncomp " << ncomp << '\n';
-     amrex::Error("must interpolate all multiMOF data at once");
-    }
+ if (ngeom_raw!=AMREX_SPACEDIM+1)
+  amrex::Error("ngeom_raw invalid");
+ if (ngeom_recon!=2*AMREX_SPACEDIM+3)
+  amrex::Error("ngeom_recon invalid");
 
-    Box reconbox(crse.box());
-    FArrayBox* reconfab=new FArrayBox(reconbox,nmat*ngeom_recon);
+ if (nmat<1)
+  amrex::Error("nmat invalid in multi mof interp");
 
-     // 2 loops:
-     // 1. MOF reconstruction on coarse level
-     // 2. interpolate from coarse to fine (traverse fine grid)
-    FORT_MULTIMOFINTERP(
-     &time,
-     cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-     clo,chi,
-     fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-     lo,hi,
-     reconfab->dataPtr(),
-     AMREX_ARLIM(reconfab->loVect()),AMREX_ARLIM(reconfab->hiVect()),
-     prob_lo,dxf,dxc,&nmat,
-     &ngeom_recon,&ngeom_raw,
-     &levelc,&levelf,
-     &bfactc,&bfactf);
+ if (ncomp!=nmat*ngeom_raw) {
+  std::cout << "ncomp " << ncomp << '\n';
+  amrex::Error("must interpolate all multiMOF data at once");
+ }
 
-    delete reconfab;
+ Box reconbox(crse.box());
+ FArrayBox* reconfab=new FArrayBox(reconbox,nmat*ngeom_recon);
+
+  // 2 loops:
+  // 1. MOF reconstruction on coarse level
+  // 2. interpolate from coarse to fine (traverse fine grid)
+ FORT_MULTIMOFINTERP(
+  &time,
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  clo,chi,
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  lo,hi,
+  reconfab->dataPtr(),
+  AMREX_ARLIM(reconfab->loVect()),AMREX_ARLIM(reconfab->hiVect()),
+  prob_lo,dxf,dxc,&nmat,
+  &ngeom_recon,&ngeom_raw,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
+
+ delete reconfab;
 }
 
 
@@ -196,12 +203,18 @@ multiMOFInterp::interp (Real time,
 multiEXTMOFInterp::~multiEXTMOFInterp () {}
 
 Box
-multiEXTMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+multiEXTMOFInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,
+		int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse = amrex::coarsen(fine,2);
  
@@ -286,12 +299,17 @@ multiEXTMOFInterp::interp (Real time,
 BurnVelInterp::~BurnVelInterp () {}
 
 Box
-BurnVelInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+BurnVelInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse = amrex::coarsen(fine,2);
  
@@ -396,12 +414,17 @@ BurnVelInterp::interp (Real time,
 PCInterp::~PCInterp () {}
 
 Box
-PCInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+PCInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse = amrex::coarsen(fine,2);
 
@@ -460,12 +483,17 @@ PCInterp::interp (
 LSHOInterp::~LSHOInterp () {}
 
 Box
-LSHOInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+LSHOInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse = amrex::coarsen(fine,2);
 
@@ -545,12 +573,17 @@ LSHOInterp::interp (
 SEMInterp::~SEMInterp () {}
 
 Box
-SEMInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+SEMInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse = amrex::coarsen(fine,2);
 
@@ -615,12 +648,17 @@ SEMInterp::interp (
 maskSEMInterp::~maskSEMInterp () {}
 
 Box
-maskSEMInterp::CoarseBox (const Box& fine,int bfactc,int bfactf)
+maskSEMInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
   // the smallest coarse box whose refinement contains "fine"
  Box crse = amrex::coarsen(fine,2);
@@ -683,12 +721,17 @@ maskSEMInterp::interp (
 PCInterpNull::~PCInterpNull () {}
 
 Box
-PCInterpNull::CoarseBox (const Box& fine,int bfactc,int bfactf)
+PCInterpNull::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
 
  Box crse=amrex::coarsen(fine,2);
 
@@ -747,7 +790,7 @@ UMACInterp::~UMACInterp() {}
 
 
 Box
-UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
+UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf,int grid_type)
 {
 
  if ((bfactc<1)||(bfactf<1))
@@ -759,8 +802,27 @@ UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
   amrex::Error("error in CoarseBox");
 
  Box crse = amrex::coarsen(fine,2);
- if (crse.ixType()!=IndexType::TheUMACType())
-  amrex::Error("error in CoarseBox: crse");
+
+ if (grid_type==0) {
+  if ((fine.ixType()==IndexType::TheUMACType())&&
+      (crse.ixType()==IndexType::TheUMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+ } else if (grid_type==1) {
+  if ((fine.ixType()==IndexType::TheVMACType())&&
+      (crse.ixType()==IndexType::TheVMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+ } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+  if ((fine.ixType()==IndexType::TheWMACType())&&
+      (crse.ixType()==IndexType::TheWMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+ } else
+  amrex::Error("grid_type invalid");
 
  if (bfactc>1) {
   Box e_crse = amrex::coarsen(crse,bfactc);
@@ -785,8 +847,10 @@ UMACInterp::interp(
  const Geometry& fine_geom,
  Vector<BCRec>&     bcr,
  int levelc,int levelf,
- int bfactc,int bfactf)
+ int bfactc,int bfactf,
+ int grid_type)
 {
+
  if ((ncomp<1)||(ncomp>9999))
   amrex::Error("invalid ncomp umac interp");
 
@@ -796,122 +860,40 @@ UMACInterp::interp(
 
  IndexType typ(fine_region.ixType());
 
- if (typ!=IndexType::TheUMACType())
-  amrex::Error("fine_region has incorrect type");
-
- if (fine.box().ixType()!=typ)
-  amrex::Error("fine box invalid");
- if (crse.box().ixType()!=typ)
-  amrex::Error("crse box invalid");
-
  Box fine_bx = fine_region & fine.box();
 
- Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf));
- if (crse_bx.ixType()!=typ)
-  amrex::Error("crse_bx invalid");
+ Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf,grid_type));
 
- const Real* prob_lo=fine_geom.ProbLo();
- const Real* dxf = fine_geom.CellSize();
- const Real* dxc = crse_geom.CellSize();
-
- int dir=0;
-
-  // enable_spectral:
-  // 0 - low order
-  // 1 - space/time spectral
-  // 2 - space spectral only
-  // 3 - time spectral only
- FORT_EDGEINTERP(
-   &interp_enable_spectral,
-   &dir,
-   crse.dataPtr(crse_comp),
-   AMREX_ARLIM(crse.loVect()),AMREX_ARLIM(crse.hiVect()),
-   crse_bx.loVect(),crse_bx.hiVect(),
-   fine.dataPtr(fine_comp),
-   AMREX_ARLIM(fine.loVect()),AMREX_ARLIM(fine.hiVect()),
-   fine_bx.loVect(),fine_bx.hiVect(),
-   prob_lo,dxf,dxc,
-   &ncomp,
-   &levelc,&levelf,
-   &bfactc,&bfactf);
-}
-
-
-
-
-VMACInterp::~VMACInterp() {}
-
-
-Box
-VMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
-{
-
-
- if ((bfactc<1)||(bfactf<1))
-  amrex::Error("bfactc or bfactf invalid");
- if (bfactf>bfactc)
-  amrex::Error("cannot have bfactf>bfactc");
-
- if (fine.ixType()!=IndexType::TheVMACType())
-  amrex::Error("error in VMAC CoarseBox");
-
- Box crse = amrex::coarsen(fine,2);
- if (crse.ixType()!=IndexType::TheVMACType())
-  amrex::Error("error in VMAC CoarseBox: crse");
-
- if (bfactc>1) {
-  Box e_crse = amrex::coarsen(crse,bfactc);
-  e_crse.refine(bfactc);
-  crse=e_crse;
- } else if (bfactc==1) {
-  // do nothing
+ if (grid_type==0) {
+  if ((typ==IndexType::TheUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+ } else if (grid_type==1) {
+  if ((typ==IndexType::TheVMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+ } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheWMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
  } else
-  amrex::Error("bfactc invalid");
-
- return crse;
-
-}
-
-void
-VMACInterp::interp(
- Real time,
- const FArrayBox& crse, int crse_comp,
- FArrayBox& fine, int fine_comp,
- int ncomp,
- const Box& fine_region, 
- const Geometry& crse_geom,
- const Geometry& fine_geom,
- Vector<BCRec>&     bcr,
- int levelc,int levelf,
- int bfactc,int bfactf)
-{
- if ((ncomp<1)||(ncomp>9999))
-  amrex::Error("invalid ncomp vmac interp");
-
- BL_ASSERT(bcr.size() >= ncomp);
-
- Vector<int> bcfine = GetBCArray(bcr);
-
- IndexType typ(fine_region.ixType());
-
- if (typ!=IndexType::TheVMACType())
-  amrex::Error("fine_region has incorrect type");
-
- if (fine.box().ixType()!=typ)
-  amrex::Error("fine box invalid");
- if (crse.box().ixType()!=typ)
-  amrex::Error("crse box invalid");
-
- Box fine_bx = fine_region & fine.box();
- Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf));
- if (crse_bx.ixType()!=typ)
-  amrex::Error("crse_bx invalid");
+  amrex::Error("grid_type invalid");
 
  const Real* prob_lo=fine_geom.ProbLo();
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
-
- int dir=1;
 
   // enable_spectral:
   // 0 - low order
@@ -920,101 +902,7 @@ VMACInterp::interp(
   // 3 - time spectral only
  FORT_EDGEINTERP(
    &interp_enable_spectral,
-   &dir,
-   crse.dataPtr(crse_comp),
-   AMREX_ARLIM(crse.loVect()),AMREX_ARLIM(crse.hiVect()),
-   crse_bx.loVect(),crse_bx.hiVect(),
-   fine.dataPtr(fine_comp),
-   AMREX_ARLIM(fine.loVect()),AMREX_ARLIM(fine.hiVect()),
-   fine_bx.loVect(),fine_bx.hiVect(),
-   prob_lo,dxf,dxc,
-   &ncomp,
-   &levelc,&levelf,
-   &bfactc,&bfactf);
-}
-
-
-WMACInterp::~WMACInterp() {}
-
-
-Box
-WMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf)
-{
-
- if ((bfactc<1)||(bfactf<1))
-  amrex::Error("bfactc or bfactf invalid");
- if (bfactf>bfactc)
-  amrex::Error("cannot have bfactf>bfactc");
-
- if (fine.ixType()!=IndexType::TheWMACType())
-  amrex::Error("error in WMAC CoarseBox");
-
- Box crse = amrex::coarsen(fine,2);
- if (crse.ixType()!=IndexType::TheWMACType())
-  amrex::Error("error in WMAC CoarseBox: crse");
-
- if (bfactc>1) {
-  Box e_crse = amrex::coarsen(crse,bfactc);
-  e_crse.refine(bfactc);
-  crse=e_crse;
- } else if (bfactc==1) {
-  // do nothing
- } else
-  amrex::Error("bfactc invalid");
-
- return crse;
-
-}
-
-void
-WMACInterp::interp(
- Real time,
- const FArrayBox& crse, int crse_comp,
- FArrayBox& fine, int fine_comp,
- int ncomp,
- const Box& fine_region,
- const Geometry& crse_geom,
- const Geometry& fine_geom,
- Vector<BCRec>&     bcr,
- int levelc,int levelf,
- int bfactc,int bfactf)
-{
- if ((ncomp<1)||(ncomp>9999))
-  amrex::Error("invalid ncomp wmac interp");
-
- BL_ASSERT(bcr.size() >= ncomp);
-
- Vector<int> bcfine = GetBCArray(bcr);
-
- IndexType typ(fine_region.ixType());
-
- if (typ!=IndexType::TheWMACType())
-  amrex::Error("fine_region has incorrect type");
-
- if (fine.box().ixType()!=typ)
-  amrex::Error("fine box invalid");
- if (crse.box().ixType()!=typ)
-  amrex::Error("crse box invalid");
-
- Box fine_bx = fine_region & fine.box();
- Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf));
- if (crse_bx.ixType()!=typ)
-  amrex::Error("crse_bx invalid");
-
- const Real* prob_lo=fine_geom.ProbLo();
- const Real* dxf = fine_geom.CellSize();
- const Real* dxc = crse_geom.CellSize();
-
- int dir=2;
-
-  // enable_spectral:
-  // 0 - low order
-  // 1 - space/time spectral
-  // 2 - space spectral only
-  // 3 - time spectral only
- FORT_EDGEINTERP(
-   &interp_enable_spectral,
-   &dir,
+   &grid_type,
    crse.dataPtr(crse_comp),
    AMREX_ARLIM(crse.loVect()),AMREX_ARLIM(crse.hiVect()),
    crse_bx.loVect(),crse_bx.hiVect(),
