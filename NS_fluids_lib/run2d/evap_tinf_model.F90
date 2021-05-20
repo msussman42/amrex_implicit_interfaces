@@ -15,9 +15,11 @@
        ! evap_model==3 => Kassemi model EXCEPT that a provisional
        !  temperature field is derived from the original temperature
        !  field by way of running the heat equation for a length of time
-       !  t=(L/(2 * arc_erf(0.8))^2  arc_erf(0.8)=0.906 derived from:
-       !  u(t,x)=(1+erf(x/(2 sqrt(t))))  let x=L 
-       !  solve u(t,L)=0.9
+       !  t=(L/(2 * arc_erf(0.8)))^2  arc_erf(0.8)=0.906 derived from:
+       !  u(t,x)=(1+erf(x/(2 sqrt(t))))/2  let x=L 
+       !  solve u(t,L)=0.9  => .8=erf(x/(2 sqrt(t))) =>
+       !  x/(2 sqrt(t))=arc_erf(.8)=.906
+       !  sqrt(t)=L/(2 * .906)  t=(L/(2 * .906))^2
        !  mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
        ! evap_model==4 => Tayguy's recommendation with the same
        !  exception as for evap_model==3.
@@ -32,6 +34,8 @@
       integer, PARAMETER :: num_intervals=256
 
       integer, PARAMETER :: schrage_probe_size=1
+       ! L=schrage_heat_diffusion_factor * radblob
+      real*8, PARAMETER :: schrage_heat_diffusion_factor=0.1d0
 
        ! was 8.0 for Cody's results.
       real*8, PARAMETER :: gas_domain_size_factor=8.0d0
@@ -343,7 +347,8 @@
               T_gamma, &
               T_probe, &
               mdotY,verbose)
-      else if ((evap_model.eq.0).or.(evap_model.eq.2)) then
+      else if ((evap_model.eq.0).or. & !Villegas or Palmore and Desjardins
+               (evap_model.eq.2)) then !same as 0 except X_init=0
        call X_from_Tgamma(local_X,T_gamma,T_sat_global, &
         L_V,R_global,WV_global)
        call massfrac_from_volfrac(local_X,local_Y,WA_global,WV_global)
@@ -466,6 +471,13 @@
       real*8, allocatable :: LDIAG(:)
       real*8, allocatable :: UDIAG(:)
       real*8, allocatable :: SOLN(:)
+
+      real*8, allocatable :: RHSsmear(:)
+      real*8, allocatable :: DIAGsmear(:)
+      real*8, allocatable :: LDIAGsmear(:)
+      real*8, allocatable :: UDIAGsmear(:)
+      real*8, allocatable :: SOLNsmear(:)
+
       real*8 :: T_gamma_a
       real*8 :: T_gamma_b
       real*8 :: T_gamma_c
@@ -481,6 +493,10 @@
       real*8 :: VEL_G
       real*8 :: TINF_for_numerical
       real*8 :: YINF_for_numerical
+
+      real*8 TNEW_probe
+      real*8 time_smear
+      real*8 Lsmear
 
       verbose=0
 
@@ -708,6 +724,12 @@
       allocate(UDIAG(1:num_intervals))
       allocate(SOLN(1:num_intervals))
 
+      allocate(RHSsmear(1:num_intervals+1))
+      allocate(DIAGsmear(1:num_intervals+1))
+      allocate(LDIAGsmear(1:num_intervals+1))
+      allocate(UDIAGsmear(1:num_intervals+1))
+      allocate(SOLNsmear(1:num_intervals+1))
+
       TNEW(0)=T_gamma
       TOLD(0)=T_gamma
       YNEW(0)=Y_gamma
@@ -775,7 +797,45 @@
 
       do istep=1,nsteps
 
-        ! STEP 1: given T_probe=T(1) Y_probe=Y(1)
+        ! STEP 1a: find SOLNsmear:
+       Lsmear=radblob*schrage_heat_diffusion_factor
+       time_smear=(Lsmear/(2.0d0*0.906d0))**2.0d0
+      
+       do igrid=0,num_intervals
+        xpos_new=igrid*dx_new+R_gamma_NEW
+        xpos_mh=xpos_new-0.5d0*dx_new
+        xpos_ph=xpos_new+0.5d0*dx_new
+
+        RHSsmear(igrid+1)=(dx_new**2)* &
+          (xpos_new**2)*TNEW(igrid)/time_smear
+        DIAGsmear(igrid+1)=(dx_new**2)* &
+          (xpos_new**2)/time_smear
+        LDIAGsmear(igrid+1)=0.0d0
+        UDIAGsmear(igrid+1)=0.0d0
+        diffuse_plus=(xpos_ph**2)
+        diffuse_minus=(xpos_mh**2)
+        if (igrid.eq.0) then
+         diffuse_minus=0.0d0
+        else if ((igrid.ge.1).and.(igrid.lt.num_intervals)) then
+         ! do nothing
+        else if (igrid.eq.num_intervals) then
+         diffuse_plus=0.0d0
+        else
+         print *,"igrid invalid"
+         stop
+        endif
+        DIAGsmear(igrid+1)=DIAGsmear(igrid+1)+diffuse_plus
+        DIAGsmear(igrid+1)=DIAGsmear(igrid+1)+diffuse_minus
+        UDIAGsmear(igrid+1)=UDIAGsmear(igrid+1)-diffuse_plus
+        LDIAGsmear(igrid+1)=LDIAGsmear(igrid+1)-diffuse_minus
+
+       enddo !igrid=0,num_intervals
+
+       call tridiag_solve(LDIAGsmear,UDIAGsmear,DIAGsmear, &
+         num_intervals+1,RHSsmear,SOLNsmear)
+
+
+        ! STEP 1b: given T_probe=T(1) Y_probe=Y(1)
         !  \partial T/\partial r|r=R_GAMMA \approx (T_probe-T_Gamma)/dx
         !  \partial Y/\partial r|r=R_GAMMA \approx (Y_probe-Y_Gamma)/dx
         !  assumed that T=constant in the liquid (in the drop)
@@ -784,14 +844,27 @@
        T_gamma_a=100.0d0
        T_gamma_b=T_sat_global
        if ((schrage_probe_size.ge.1).and.(schrage_probe_size.le.6)) then
+        if ((evap_model.eq.0).or. &
+            (evap_model.eq.1).or. &
+            (evap_model.eq.2)) then
+         TNEW_probe=TNEW(schrage_probe_size)
+        else if (evap_model.eq.3) then
+         TNEW_probe=SOLNsmear(1)
+        else if (evap_model.eq.4) then
+         TNEW_probe=SOLNsmear(1)
+        else
+         print *,"evap_model invalid"
+         stop
+        endif
+
         call mdot_diff_func(T_gamma_a, &
          TNEW(1),YNEW(1), &
-         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         TNEW_probe,YNEW(schrage_probe_size), &
          dx,mdot_diff_a, &
          verbose)
         call mdot_diff_func(T_gamma_b, &
          TNEW(1),YNEW(1), &
-         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         TNEW_probe,YNEW(schrage_probe_size), &
          dx,mdot_diff_b, &
          verbose)
        else
@@ -804,7 +877,7 @@
          cc=0.5d0*(T_gamma_a+T_gamma_b)
          call mdot_diff_func(cc, &
           TNEW(1),YNEW(1), &
-          TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+          TNEW_probe,YNEW(schrage_probe_size), &
           dx,mdot_diff_c, &
           verbose)
          if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
@@ -831,13 +904,13 @@
        if (1.eq.0) then
         call mdot_diff_func(cc, &
          TNEW(1),YNEW(1), &
-         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         TNEW_probe,YNEW(schrage_probe_size), &
          dx,mdot_diff_c, &
          verbose)
         call mdot_from_T_probe(cc,TNEW(1),dx,mdotT)
         verbose=1
         call mdot_from_Y_probe(cc, &
-         TNEW(schrage_probe_size),YNEW(schrage_probe_size), &
+         TNEW_probe,YNEW(schrage_probe_size), &
          dx,mdotY,verbose)
         verbose=0
         print *,"accommodation_coefficient ",accommodation_coefficient
@@ -1041,6 +1114,12 @@
       deallocate(LDIAG)
       deallocate(UDIAG)
       deallocate(SOLN)
+
+      deallocate(RHSsmear)
+      deallocate(DIAGsmear)
+      deallocate(LDIAGsmear)
+      deallocate(UDIAGsmear)
+      deallocate(SOLNsmear)
 
       return
       end
