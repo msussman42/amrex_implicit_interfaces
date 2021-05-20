@@ -4520,7 +4520,9 @@ void NavierStokes::apply_pressure_grad(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))) { //species
+  num_materials_face=num_materials_scalar_solve;
+ } else if (project_option==200) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid26");
@@ -4892,7 +4894,8 @@ void NavierStokes::apply_pressure_grad(
             (project_option==12)|| //pressure extrapolation
             (project_option==2)||  //thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
 
   int num_colors=0;
   Vector<Real> blob_array;

@@ -7035,7 +7035,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid30");
@@ -7146,7 +7147,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
        // species
      } else if ((project_option>=100)&&
-                (project_option<100+num_species_var)) { 
+                (project_option<100+num_species_var)) { //species
+
+      singular_possible=0; // diagonally dominant everywhere.
+      solvability_level_flag=0;
+
+     } else if (project_option==200) { //smoothing
 
       singular_possible=0; // diagonally dominant everywhere.
       solvability_level_flag=0;
@@ -7202,7 +7208,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
             (project_option==1)||
             (project_option==11)|| //FSI_material_exists: last project
             (project_option==12)|| //pressure extrapolation
-            (project_option==3)) {
+            (project_option==3)||
+	    (project_option==200)) { //smoothing
   // do nothing
  } else
   amrex::Error("project_option invalid31");
@@ -7428,7 +7435,8 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid32");
@@ -7588,7 +7596,8 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  if ((project_option==2)||  // thermal diffusion
      (project_option==3)||  // viscosity
      ((project_option>=100)&&
-      (project_option<100+num_species_var))) {
+      (project_option<100+num_species_var))||//species
+     (project_option==200)) {//smoothing
   
    // if S^initial <> S^*, then put something else into
    // ``initial_guess.''   
@@ -7654,7 +7663,8 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid34");
@@ -7792,7 +7802,8 @@ void NavierStokes::correct_velocity(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid35");
@@ -7848,7 +7859,8 @@ void NavierStokes::correct_velocity(
      (project_option==2)||
      (project_option==3)||  //viscosity
      ((project_option>=100)&&
-      (project_option<100+num_species_var))) {
+      (project_option<100+num_species_var))|| //species
+     (project_option==200)) {//smoothing
   // do nothing
  } else
   amrex::Error("project option invalid");
@@ -7976,7 +7988,8 @@ void NavierStokes::residual_correction_form(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid36");
@@ -7993,7 +8006,9 @@ void NavierStokes::residual_correction_form(
      (project_option==12)|| // pressure extension
      (project_option==2)||
      (project_option==3)||  // viscosity
-     ((project_option>=100)&&(project_option<100+num_species_var))) {
+     ((project_option>=100)&&
+      (project_option<100+num_species_var))||//species
+     (project_option==200)) {//smoothing
 
    // -dt grad p face_weight  
    // SEM BC if projection_enable_spectral==1,2
@@ -8055,7 +8070,8 @@ void NavierStokes::mg_cycleALL(int presmooth,
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid37");
@@ -8139,7 +8155,8 @@ void NavierStokes::relaxLEVEL(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid38");
@@ -8483,7 +8500,8 @@ void NavierStokes::jacobi_cycles(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid39");
@@ -8647,7 +8665,8 @@ void NavierStokes::updatevelALL(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid40");
@@ -8708,7 +8727,8 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||
+	    (project_option==200) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid41");
@@ -8761,7 +8781,13 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   zero_independent_vel(project_option,UMAC_MF,nsolve);
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
 
- } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+ } else if ((project_option>=100)&&
+	    (project_option<100+num_species_var)) {//species
+
+  zero_independent_vel(project_option,UMAC_MF,nsolve);
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+
+ } else if (project_option==200) {//smoothing
 
   zero_independent_vel(project_option,UMAC_MF,nsolve);
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
@@ -8810,7 +8836,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))|| //species
+	    (project_option==200)) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid44");
@@ -9645,7 +9672,8 @@ void NavierStokes::multiphase_preconditioner(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid42");
@@ -9766,7 +9794,13 @@ void NavierStokes::set_local_tolerances(int project_option) {
   save_atol_b=0.01*save_mac_abs_tol; 
   pp.query("visc_bot_atol",save_atol_b);
   save_min_rel_error=diffusion_minimum_relative_error;
- } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+ } else if ((project_option>=100)&&
+	    (project_option<100+num_species_var)) {//species
+  save_mac_abs_tol=visc_abs_tol;
+  save_atol_b=0.01*save_mac_abs_tol; 
+  pp.query("visc_bot_atol",save_atol_b);
+  save_min_rel_error=diffusion_minimum_relative_error;
+ } else if (project_option==200) { //smoothing
   save_mac_abs_tol=visc_abs_tol;
   save_atol_b=0.01*save_mac_abs_tol; 
   pp.query("visc_bot_atol",save_atol_b);
@@ -9783,6 +9817,7 @@ void NavierStokes::set_local_tolerances(int project_option) {
 // project_option=11 FSI_material_exists (last project)
 // project_option=12 extend pressure into cells where all coefficients==0.0
 // project_option=100,..,100+num_species_var-1  species vars.
+// project_option=200 smoothing
 // 
 // if project_option=0,
 // RHS= -(1/dt)(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)+
@@ -9869,7 +9904,9 @@ void NavierStokes::multiphase_project(int project_option) {
  } else if (project_option==3) { // viscosity
   // do nothing
  } else if ((project_option>=100)&&
-	    (project_option<100+num_species_var)) { 
+	    (project_option<100+num_species_var)) { //species
+  // do nothing
+ } else if (project_option==200) { //smoothing
   // do nothing
  } else
   amrex::Error("project_option invalid43");
@@ -9888,7 +9925,8 @@ void NavierStokes::multiphase_project(int project_option) {
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid44");
@@ -9924,7 +9962,10 @@ void NavierStokes::multiphase_project(int project_option) {
   nsolve=AMREX_SPACEDIM;
   local_solvability_projection=0;
  } else if ((project_option>=100)&&
-            (project_option<100+num_species_var)) {
+            (project_option<100+num_species_var)) {//species
+  singular_possible=0; // diagonally dominant everywhere.
+  local_solvability_projection=0;
+ } else if (project_option==200) { //smoothing
   singular_possible=0; // diagonally dominant everywhere.
   local_solvability_projection=0;
  } else
@@ -10188,7 +10229,8 @@ void NavierStokes::multiphase_project(int project_option) {
  } else if ((project_option==2)|| // thermal conduction
 	    (project_option==3)|| // viscosity
 	    ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   // do nothing
  } else
   amrex::Error("project_option invalid46");
@@ -10371,7 +10413,8 @@ void NavierStokes::multiphase_project(int project_option) {
             (project_option==2)||  // thermal solve
 	    (project_option==3)||  // viscous solve
             ((project_option>=100)&&
-	     (project_option<100+num_species_var))) {
+	     (project_option<100+num_species_var))||//species
+	    (project_option==200)) {//smoothing
   // do nothing
  } else {
   amrex::Error("project_option invalid48");
@@ -10409,6 +10452,8 @@ void NavierStokes::multiphase_project(int project_option) {
   } else if ((project_option>=100)&&
 	     (project_option<100+num_species_var)) {
    // do nothing (species diffusion)
+  } else if (project_option==200) { //smoothing
+   // do nothing (smoothing)
   } else
    amrex::Error("project_option invalid 49");
 
@@ -10491,7 +10536,8 @@ void NavierStokes::multiphase_project(int project_option) {
 	    (project_option==3)||  // viscosity
 	    (project_option==2)||  // thermal diffusion
 	    ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))||// species
+	    (project_option==200)) {//smoothing
   homflag_residual_correction_form=0; 
  } else
   amrex::Error("project_option invalid");
@@ -10707,11 +10753,13 @@ void NavierStokes::multiphase_project(int project_option) {
         (project_option==11)||  //FSI_material_exists (last project)
         (project_option==12)) { // pressure extrap
       // do nothing
-    } else if (project_option==2) {
+    } else if (project_option==2) {//thermal diffusion
      jacobi_cycles_count=initial_thermal_cycles;
     } else if ((project_option>=100)&&
-               (project_option<100+num_species_var)) {
+               (project_option<100+num_species_var)) { //species
      jacobi_cycles_count=initial_thermal_cycles;
+    } else if (project_option==200) { //smoothing
+     jacobi_cycles_count=initial_viscosity_cycles;
     } else if (project_option==3) { //viscosity
      jacobi_cycles_count=initial_viscosity_cycles;
     } else
@@ -10978,7 +11026,8 @@ void NavierStokes::multiphase_project(int project_option) {
           (project_option==12)|| // pressure extrapolation
           (project_option==2)||  // thermal diffusion
           ((project_option>=100)&&
-           (project_option<100+num_species_var))) {
+           (project_option<100+num_species_var))||//species
+	  (project_option==200)) {//smoothing
 
        if (always_use_bicgstab==1) {
         BICGSTAB_ACTIVE=1;
@@ -11954,7 +12003,10 @@ void NavierStokes::multiphase_project(int project_option) {
   homflag_dual_time=0;
  } else if (project_option==3) { // viscosity
   homflag_dual_time=0;
- } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+ } else if ((project_option>=100)&&
+	    (project_option<100+num_species_var)) {//species
+  homflag_dual_time=0;
+ } else if (project_option==200) { //smoothing
   homflag_dual_time=0;
  } else
   amrex::Error("project_option invalid 53");
@@ -12101,7 +12153,10 @@ void NavierStokes::multiphase_project(int project_option) {
   // do nothing
  } else if (project_option==3) {   // viscosity
   // do nothing
- } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+ } else if ((project_option>=100)&&
+            (project_option<100+num_species_var)) {//species
+  // do nothing
+ } else if (project_option==200) {//smoothing
   // do nothing
  } else 
   amrex::Error("project_option invalid multiphase project 19");
