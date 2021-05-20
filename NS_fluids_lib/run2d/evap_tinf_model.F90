@@ -11,7 +11,17 @@
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
        ! evap_model==2 => same as evap_model==0, except that initial
-       ! volume fraction is zero.
+       !  volume fraction is zero.
+       ! evap_model==3 => Kassemi model EXCEPT that a provisional
+       !  temperature field is derived from the original temperature
+       !  field by way of running the heat equation for a length of time
+       !  t=(L/(2 * arc_erf(0.8))^2  arc_erf(0.8)=0.906 derived from:
+       !  u(t,x)=(1+erf(x/(2 sqrt(t))))  let x=L 
+       !  solve u(t,L)=0.9
+       !  mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
+       ! evap_model==4 => Tayguy's recommendation with the same
+       !  exception as for evap_model==3.
+       !  T_i=arc_PCC( pv(T_v_smeared) )
       integer, PARAMETER :: evap_model=1
 
       integer, PARAMETER :: nsteps=1000
