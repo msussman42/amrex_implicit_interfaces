@@ -5336,6 +5336,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
    ns_level.avgDownEdge_localMF(FACE_VAR_MF,facespecies_index,
       num_species_var,0,AMREX_SPACEDIM,0,11);
   }
+
+   // spectral_override==0
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,smoothing_index,1,0,AMREX_SPACEDIM,
+   0,12);
+
  }  // ilev=finest_level ... level
 
  if (1==0) {
@@ -5345,6 +5350,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
     // faceden_index,facecut_index,
     // icefacecut_index=4,icemask_index,facevisc_index,
     // faceheat_index,facevel_index,facespecies_index,
+    // smoothing_index,
     // massface_index,vofface_index
    writeSanityCheckData(
     "FACE_VAR",
@@ -5843,6 +5849,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     &faceheat_index,
     &facevel_index,
     &facespecies_index,
+    &smoothing_index,
     &massface_index,
     &vofface_index,
     &ncphys,

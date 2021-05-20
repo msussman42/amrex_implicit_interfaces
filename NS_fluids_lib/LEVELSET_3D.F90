@@ -8029,6 +8029,7 @@ stop
        faceheat_index, &
        facevel_index, &
        facespecies_index, &
+       smoothing_index, &
        massface_index, &
        vofface_index, &
        ncphys, &
@@ -8123,6 +8124,7 @@ stop
       INTEGER_T, intent(in) :: faceheat_index
       INTEGER_T, intent(in) :: facevel_index
       INTEGER_T, intent(in) :: facespecies_index
+      INTEGER_T, intent(in) :: smoothing_index
       INTEGER_T, intent(in) :: massface_index
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys
@@ -8443,7 +8445,8 @@ stop
           (faceheat_index.ne.7).or. &
           (facevel_index.ne.8).or. &
           (facespecies_index.ne.9).or. &
-          (massface_index.ne.facespecies_index+num_species_var).or. &
+          (smoothing_index.ne.facespecies_index+num_species_var).or. &
+          (massface_index.ne.smoothing_index+1).or. &
           (vofface_index.ne.massface_index+2*nmat)) then
        print *,"face_index bust 4"
        stop
@@ -17406,9 +17409,10 @@ stop
         do k=growlo(3),growhi(3)
   
           ! projection: dedge is 1/rho  (faceden_index) 
-          ! viscosity: dedge is facevisc_index   ( mu )
-          ! temperature: dedge is faceheat_index ( k )
-          ! species: dedge is facespecies_index  ( rho D )
+          ! viscosity: dedge is facevisc_index  ( mu )
+          ! temperature: dedge is faceheat_index( k )
+          ! species: dedge is facespecies_index ( rho D )
+          ! smoothing: dedge is smoothing_index ( =1 in bulk, =0 interface(s) )
 
           if (dir.eq.0) then
            inorm=i

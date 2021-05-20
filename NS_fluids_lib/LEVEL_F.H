@@ -560,6 +560,7 @@ namespace amrex{
        int* faceheat_index,
        int* facevel_index,
        int* facespecies_index,
+       int* smoothing_index,
        int* massface_index,
        int* vofface_index,
        int* ncphys,
