@@ -7236,6 +7236,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } else if ((project_option>=100)&&
             (project_option<100+num_species_var)) { // rho D
   local_face_index=facespecies_index+project_option-100;
+ } else if (project_option==200) {
+  local_face_index=smoothing_index;
  } else
   amrex::Error("project_option invalid allocate_FACE_WEIGHT");
 
@@ -10101,6 +10103,7 @@ void NavierStokes::multiphase_project(int project_option) {
       // faceden_index,facecut_index,
       // icefacecut_index=4,icemask_index,facevisc_index,
       // faceheat_index,facevel_index,facespecies_index,
+      // smoothing_index,
       // massface_index,vofface_index
       writeSanityCheckData(
        "FACE_VAR",

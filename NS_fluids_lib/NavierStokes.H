@@ -2233,6 +2233,7 @@ protected:
     static int faceheat_index;
     static int facevel_index;
     static int facespecies_index;
+    static int smoothing_index;
     static int massface_index;
     static int vofface_index;
     static int ncphys;

@@ -1080,9 +1080,10 @@ int NavierStokes::facevisc_index=6;
 int NavierStokes::faceheat_index=7;
 int NavierStokes::facevel_index=8;
 int NavierStokes::facespecies_index=9;
-int NavierStokes::massface_index=10;
-int NavierStokes::vofface_index=11;
-int NavierStokes::ncphys=12;
+int NavierStokes::smoothing_index=10;
+int NavierStokes::massface_index=11;
+int NavierStokes::vofface_index=12;
+int NavierStokes::ncphys=13;
 
 void extra_circle_parameters(
  Real& xblob2,Real& yblob2,Real& zblob2,Real& radblob2,
@@ -2988,7 +2989,8 @@ NavierStokes::read_params ()
     if ((num_species_var<0)||(num_species_var>999))
      amrex::Error("num species var invalid");
 
-    massface_index=facespecies_index+num_species_var;
+    smoothing_index=facespecies_index+num_species_var;
+    massface_index=smoothing_index+1;
     vofface_index=massface_index+2*num_materials;
     ncphys=vofface_index+2*num_materials;
 
