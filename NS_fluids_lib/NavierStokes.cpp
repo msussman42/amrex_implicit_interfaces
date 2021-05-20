@@ -5282,6 +5282,9 @@ NavierStokes::get_mm_scomp_solver(
             (project_option<100+num_species_var)) { // species
   nsolve=1;
   nlist=num_materials_combine;
+ } else if (project_option==200) { //smoothing (all bc are insulating)
+  nsolve=1;
+  nlist=num_materials_combine;
  } else if (project_option==3) { // viscosity
   nsolve=AMREX_SPACEDIM;
   nlist=1;
@@ -5343,6 +5346,17 @@ NavierStokes::get_mm_scomp_solver(
   }
   state_index=State_Type;
 
+ } else if (project_option==200) { // smoothing of temperature
+
+  // all BCs must be insulating
+  // u,v,w,p,den1,T1,...
+  for (int im=0;im<nlist;im++) {
+   scomp[im]=num_materials_vel*(AMREX_SPACEDIM+1)+
+     im*num_state_material+1;
+   ncomp[im]=1;
+  }
+  state_index=State_Type;
+
  } else
   amrex::Error("project_option invalid get_mm_scomp_solver");
 
@@ -5377,8 +5391,9 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+            ((project_option>=100)&& // species
+             (project_option<100+num_species_var))||
+	    (project_option==200)) { // smooth temperature
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid2");
@@ -5429,8 +5444,9 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+            ((project_option>=100)&& // species
+             (project_option<100+num_species_var))||
+	    (project_option==200)) { // smooth temperature
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid3");
@@ -9942,12 +9958,13 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 
  } else if ((project_option==2)|| // thermal conduction
             ((project_option>=100)&&
-             (project_option<=100+num_species_var-1))||
+             (project_option<=100+num_species_var-1))|| //species
+	    (project_option==200)|| //smoothing
 	    (project_option==3)|| // viscosity
 	    (project_option==4)) { // -momentum force at t^n+1
 	 // do nothing
  } else {
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid in make_SEM_delta_force");
  } 
 
 }   // subroutine make_SEM_delta_force
@@ -13895,8 +13912,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     } else
      amrex::Error("latent_heat[im] invalid");
    } // im=0..2 nten-1
-  } else if ((project_option>=100)&&
-	     (project_option<100+num_species_var)) {
+  } else if ((project_option>=100)&&  
+	     (project_option<100+num_species_var)) { //mass fraction
    face_comp_index=facespecies_index+project_option-100;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
@@ -16881,7 +16898,13 @@ void NavierStokes::project_right_hand_side(
    // do nothing
   } else
    amrex::Error("singular_possible invalid");
- } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+ } else if ((project_option>=100)&&
+	    (project_option<100+num_species_var)) { //species
+  if (singular_possible==0) {
+   // do nothing
+  } else
+   amrex::Error("singular_possible invalid");
+ } else if (project_option==200) { //smoothing
   if (singular_possible==0) {
    // do nothing
   } else
@@ -17015,7 +17038,13 @@ void NavierStokes::init_checkerboardALL(
    // do nothing
   } else
    amrex::Error("singular_possible invalid");
- } else if ((project_option>=100)&&(project_option<100+num_species_var)) {
+ } else if ((project_option>=100)&&
+            (project_option<100+num_species_var)) {//species
+  if (singular_possible==0) {
+   // do nothing
+  } else
+   amrex::Error("singular_possible invalid");
+ } else if (project_option==200) {//smoothing
   if (singular_possible==0) {
    // do nothing
   } else
@@ -17157,7 +17186,9 @@ NavierStokes::dotSum(int project_option,
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))) {//species
+  num_materials_face=num_materials_scalar_solve;
+ } else if (project_option==200) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid2");
@@ -17296,7 +17327,9 @@ void NavierStokes::levelCombine(
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))) {//species
+  num_materials_face=num_materials_scalar_solve;
+ } else if (project_option==200) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid2");
@@ -23375,7 +23408,9 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
    amrex::Error("num_materials_face invalid");
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
+             (project_option<100+num_species_var))) {//species
+  num_materials_face=num_materials_scalar_solve;
+ } else if (project_option==200) {//smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid9");
