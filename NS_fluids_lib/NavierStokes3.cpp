@@ -8728,7 +8728,7 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } else if ((project_option==2)||  // thermal diffusion
             ((project_option>=100)&&
              (project_option<100+num_species_var))||
-	    (project_option==200) { //smoothing
+	    (project_option==200)) { //smoothing
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid41");

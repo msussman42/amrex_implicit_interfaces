@@ -130,6 +130,10 @@ contains
  ! material 2 is gas
  ! material 3 is solid
 
+ ! MK = Validation of two-phase CFD models for propellant tank 
+ !    self-pressurization: Crossing fluid types, scales, and gravity levels 
+ !  Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
+
  subroutine CRYOGENIC_TANK_MK_LS(x,t,LS,nmat)
   use probcommon_module
   IMPLICIT NONE
@@ -146,10 +150,13 @@ contains
    stop
   endif
 
+   ! material 1= liquid  (e.g. Freon 113)
+   ! material 2= vapor  
+   ! material 3= tank geometry (e.g. acrylic)
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
    ! liquid
    if (TANK_MK_INTERFACE_RADIUS.eq.zero) then
-    LS(1)=TANK_MK_INTERFACE_LOCATION-x(2)
+    LS(1)=TANK_MK_INTERFACE_LOCATION-x(SDIM)
    else if (TANK_MK_INTERFACE_RADIUS.gt.zero) then
     if (SDIM.eq.2) then
      LS(1)=sqrt((x(1)-TANK_MK_BUBBLE_X)**2+&
@@ -224,9 +231,9 @@ contains
 
 REAL_T function SOLID_TOP_HALF_DIST(P)
  ! Returns the signed distance function to the
- ! cylinderical tank with spherical ends.
- ! The tank is symmetrical to x_2=0;
- ! The axis of cylinder is along dim=2 direction
+ ! cylindrical tank with spherical ends.
+ ! The tank is symmetrical to x(SDIM)=0;
+ ! The axis of cylinder is along dim=SDIM direction
  ! Inside the tank < 0
  ! Outside the tank > 0
  implicit none
@@ -240,12 +247,14 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
  elseif (SDIM.eq.3) then
   R=abs(sqrt(P(1)**2+P(SDIM)**2))
   Z=abs(P(2))
-  else
+ else
   print *,"Dimension bust at DIST_FINITE_CYLINDER"
   stop
  endif
 
- if (TANK_MK_END_RADIUS.eq.0.0d0) then
+  ! R=Z=0 is the dead center of the tank; computation domain goes from
+  ! -ZTOTAL/2, ... ,ZTOTAL/2
+ if (TANK_MK_END_RADIUS.eq.0.0d0) then ! rectangular tank
 
   if (Z.le.TANK_MK_HEIGHT/2.0) then
    if (R.ge.TANK_MK_RADIUS) then

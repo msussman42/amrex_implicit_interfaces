@@ -847,9 +847,6 @@ UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf,int grid_type)
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
 
- if (fine.ixType()!=IndexType::TheUMACType())
-  amrex::Error("error in CoarseBox");
-
  Box crse = amrex::coarsen(fine,2);
 
  if (grid_type==0) {
