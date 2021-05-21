@@ -1,0 +1,21 @@
+on hopf use maple:
+https://www.maths.unsw.edu.au/sites/default/files/maplenotes.pdf
+
+Digits := 50;
+u:=(105.0/169.0)*(sech((1.0/(2.0*(13.0^0.5)))*(x-(36.0/169.0)*t)))^4.0;
+ut:=diff(u,t);
+ux:=diff(u,x);
+uxxx:=diff(u,[x$3]);
+uxxxxx:=diff(u,[x$5]);
+uux:=u*ux;
+f:=ut+uxxx-uxxxxx+uux;
+x:=11.4;
+t:=23.5;
+f;
+x:='x';
+t:='t';
+quit;
+
+(x=1.2, t=1.5 gives identically 0)
+
+
