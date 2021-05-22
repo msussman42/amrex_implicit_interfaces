@@ -5247,19 +5247,20 @@ int NavierStokes::ns_is_lag_part(int im) {
 
 } // subroutine ns_is_lag_part
 
-int NavierStokes::project_option_is_valid() {
+int NavierStokes::project_option_is_valid(int project_option) {
 
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
   return 1;
- } else if (project_option_momeqn()==0) {
-  return 0;
+ } else if (project_option_momeqn(project_option)==0) {
+  return 1;
  } else {
   amrex::Error("project_option not valid");
+  return 0;
  }
 
-} // end function project_option_is_valid()
+} // end function project_option_is_valid(project_option)
 
-int NavierStokes::project_option_momeqn() {
+int NavierStokes::project_option_momeqn(int project_option) {
 
  if ((project_option==0)||  // regular project
      (project_option==1)||  // initial project
@@ -5272,13 +5273,15 @@ int NavierStokes::project_option_momeqn() {
              (project_option<100+num_species_var))||
 	    (project_option==200)) { // smooth temperature
   return 0;
- } else
+ } else {
   amrex::Error("project_option invalid");
+  return 0;
+ }
 
-}  // static function project_option_momeqn()
+}  // static function project_option_momeqn(project_option)
 
 
-int NavierStokes::project_option_singular_possible() {
+int NavierStokes::project_option_singular_possible(int project_option) {
 
  if ((project_option==0)|| // regular project
      (project_option==1)|| // initial project
@@ -5291,13 +5294,36 @@ int NavierStokes::project_option_singular_possible() {
 	     (project_option<100+num_species_var))|| //species
             (project_option==200)) { //smoothing
   return 0;
- } else
+ } else {
   amrex::Error("project_option invalid");
+  return 0;
+ }
 
-} // end function project_option_singular_possible()
+} // end function project_option_singular_possible(project_option)
 
 
-int NavierStokes::project_option_pressure() {
+int NavierStokes::project_option_olddata_needed(int project_option) {
+
+ if ((project_option==0)|| // regular project
+     (project_option==1)|| // initial project
+     (project_option==11)||  // FSI_material_exists (last project)
+     (project_option==12)) { // pressure extension
+  return 0;
+ } else if ((project_option==2)|| // thermal diffusion
+   	    (project_option==3)|| // viscosity
+            ((project_option>=100)&&
+	     (project_option<100+num_species_var))|| //species
+            (project_option==200)) { //smoothing
+  return 1;
+ } else {
+  amrex::Error("project_option invalid");
+  return 0;
+ }
+
+} // end function project_option_olddata_needed()
+
+
+int NavierStokes::project_option_pressure(int project_option) {
 
  if ((project_option==0)||
      (project_option==1)||
@@ -5310,10 +5336,12 @@ int NavierStokes::project_option_pressure() {
              (project_option<100+num_species_var))|| // species
             (project_option==200)) { // smoothing of temperature
   return 0;
- } else
+ } else {
   amrex::Error("project_option invalid");
+  return 0;
+ }
 
-}  // static function project_option_pressure()
+}  // static function project_option_pressure(project_option)
 
 // getState_list needs scomp,ncomp
 void
@@ -5372,7 +5400,7 @@ NavierStokes::get_mm_scomp_solver(
 
  int nsolveMM=nsolve*num_materials_combine;
 
- if (project_option_pressure()==1) {
+ if (project_option_pressure(project_option)==1) {
  
   scomp[0]=num_materials_vel*AMREX_SPACEDIM;
   ncomp[0]=nsolveMM; 
@@ -5448,17 +5476,17 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
 
  int num_materials_face=num_materials_vel;
 
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
 
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
 
- } else if (project_option_momeqn()==0) {
+ } else if (project_option_momeqn(project_option)==0) {
 
   num_materials_face=num_materials_scalar_solve;
 
  } else
-  amrex::Error("project_option_momeqn() invalid");
+  amrex::Error("project_option_momeqn(project_option) invalid");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -5498,10 +5526,10 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
 
  int num_materials_face=num_materials_vel;
 
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
- } else if (project_option_momeqn()==0) {
+ } else if (project_option_momeqn(project_option)==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid3");
@@ -16885,7 +16913,7 @@ void NavierStokes::project_right_hand_side(
 
  change_flag=0;
 
- if (project_option_singular_possible()==1) {
+ if (project_option_singular_possible(project_option)==1) {
 
   int finest_level=parent->finestLevel();
   if (finest_level>=0) {
@@ -16940,7 +16968,7 @@ void NavierStokes::project_right_hand_side(
   } else
    amrex::Error("finest_level invalid");
 
- } else if (project_option_singular_possible()==0) {
+ } else if (project_option_singular_possible(project_option)==0) {
 
   if (singular_possible==0) {
    // do nothing
@@ -17022,7 +17050,7 @@ void NavierStokes::init_checkerboardALL(
   int index_MF,int project_option,
   int nsolve,int nsolveMM) {
 
- if (project_option_singular_possible()==1) {
+ if (project_option_singular_possible(project_option)==1) {
 
   int finest_level=parent->finestLevel();
   if (finest_level>=0) {
@@ -17063,7 +17091,7 @@ void NavierStokes::init_checkerboardALL(
   } else
    amrex::Error("finest_level invalid");
 
- } else if (project_option_singular_possible()==0) {
+ } else if (project_option_singular_possible(project_option)==0) {
 
   if (singular_possible==0) {
    // do nothing
@@ -17197,13 +17225,13 @@ NavierStokes::dotSum(int project_option,
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
- } else if (project_option_momeqn()==0) {
+ } else if (project_option_momeqn(project_option)==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  amrex::Error("project_option_momeqn() invalid2");
+  amrex::Error("project_option_momeqn(project_option) invalid2");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -17330,13 +17358,13 @@ void NavierStokes::levelCombine(
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
- } else if (project_option_momeqn()==0) {
+ } else if (project_option_momeqn(project_option)==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  amrex::Error("project_option_momeqn() invalid2");
+  amrex::Error("project_option_momeqn(project_option) invalid2");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -23403,10 +23431,10 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
   amrex::Error("makeDotMask: forgot to delete");
 
  int num_materials_face=num_materials_vel;
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
- } else if (project_option_momeqn()==0) {
+ } else if (project_option_momeqn(project_option)==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option invalid9");

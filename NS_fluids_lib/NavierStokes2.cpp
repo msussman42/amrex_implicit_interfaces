@@ -4511,13 +4511,13 @@ void NavierStokes::apply_pressure_grad(
  int nmat=num_materials;
 
  int num_materials_face=num_materials_vel;
- if (project_option_momeqn()==1) {
+ if (project_option_momeqn(project_option)==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
- } else if (project_option_momeqn()==0) {
+ } else if (project_option_momeqn(project_option)==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  amrex::Error("project_option_momeqn() invalid26");
+  amrex::Error("project_option_momeqn(project_option) invalid26");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -4880,7 +4880,7 @@ void NavierStokes::apply_pressure_grad(
    amrex::Error("check_nan invalid");
   }
 
- } else if (project_option_is_valid()==1) {
+ } else if (project_option_is_valid(project_option)==1) {
 
   int num_colors=0;
   Vector<Real> blob_array;
