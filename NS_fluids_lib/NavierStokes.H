@@ -433,6 +433,12 @@ public:
     // Init grid data at problem start-up.
     //
     virtual void initData ();
+
+    static int project_option_singular_possible();
+    static int project_option_pressure();
+    static int project_option_momeqn();
+    static int project_option_is_valid();
+
     //
     // Set time levels of state data.
     //

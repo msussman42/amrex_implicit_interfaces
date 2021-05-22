@@ -4511,21 +4511,13 @@ void NavierStokes::apply_pressure_grad(
  int nmat=num_materials;
 
  int num_materials_face=num_materials_vel;
- if ((project_option==0)||
-     (project_option==1)||
-     (project_option==11)|| //FSI_material_exists last project
-     (project_option==12)|| //pressure extrapolation
-     (project_option==3)) {  // viscosity
+ if (project_option_momeqn()==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
- } else if ((project_option==2)||  // thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) { //species
-  num_materials_face=num_materials_scalar_solve;
- } else if (project_option==200) {//smoothing
+ } else if (project_option_momeqn()==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  amrex::Error("project_option invalid26");
+  amrex::Error("project_option_momeqn() invalid26");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
@@ -4888,14 +4880,7 @@ void NavierStokes::apply_pressure_grad(
    amrex::Error("check_nan invalid");
   }
 
- } else if ((project_option==0)||
-            (project_option==1)||
-            (project_option==11)|| //FSI_material_exists last project
-            (project_option==12)|| //pressure extrapolation
-            (project_option==2)||  //thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))||//species
-	    (project_option==200)) {//smoothing
+ } else if (project_option_is_valid()==1) {
 
   int num_colors=0;
   Vector<Real> blob_array;
