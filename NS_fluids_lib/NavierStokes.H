@@ -437,6 +437,8 @@ public:
     static int project_option_olddata_needed(int project_option);
     static int project_option_singular_possible(int project_option);
     static int project_option_pressure(int project_option);
+    static int project_option_needs_scaling(int project_option);
+    static int project_option_projection(int project_option);
     static int project_option_momeqn(int project_option);
     static int project_option_is_valid(int project_option);
 

@@ -5343,6 +5343,49 @@ int NavierStokes::project_option_pressure(int project_option) {
 
 }  // static function project_option_pressure(project_option)
 
+int NavierStokes::project_option_needs_scaling(int project_option) {
+
+ if ((project_option==0)||   // regular project
+     (project_option==11)||  // FSI_material_exists last project
+     (project_option==12)) { // pressure extrapolation
+  return 1;
+ } else if ((project_option==1)|| // initial project
+	    (project_option==2)|| // temperature
+	    (project_option==3)|| // viscosity
+            ((project_option>=100)&&
+             (project_option<100+num_species_var))|| // species
+            (project_option==200)) { // smoothing of temperature
+  return 0;
+ } else {
+  amrex::Error("project_option invalid");
+  return 0;
+ }
+
+}  // static function project_option_needs_scaling(project_option)
+
+
+int NavierStokes::project_option_projection(int project_option) {
+
+ if ((project_option==0)||   // regular project
+     (project_option==11)||  // FSI_material_exists last project
+     (project_option==1)) {  // initial_project
+  return 1;
+ } else if ((project_option==12)|| // pressure extrapolation
+	    (project_option==2)|| // temperature
+	    (project_option==3)|| // viscosity
+            ((project_option>=100)&&
+             (project_option<100+num_species_var))|| // species
+            (project_option==200)) { // smoothing of temperature
+  return 0;
+ } else {
+  amrex::Error("project_option invalid");
+  return 0;
+ }
+
+}  // static function project_option_projection(project_option)
+
+
+
 // getState_list needs scomp,ncomp
 void
 NavierStokes::get_mm_scomp_solver(
