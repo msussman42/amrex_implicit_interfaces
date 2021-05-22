@@ -434,10 +434,11 @@ public:
     //
     virtual void initData ();
 
-    static int project_option_singular_possible();
-    static int project_option_pressure();
-    static int project_option_momeqn();
-    static int project_option_is_valid();
+    static int project_option_olddata_needed(int project_option);
+    static int project_option_singular_possible(int project_option);
+    static int project_option_pressure(int project_option);
+    static int project_option_momeqn(int project_option);
+    static int project_option_is_valid(int project_option);
 
     //
     // Set time levels of state data.
