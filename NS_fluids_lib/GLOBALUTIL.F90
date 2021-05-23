@@ -10663,7 +10663,8 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,nmat,ibase,stage
+      INTEGER_T, intent(in) :: im
+      INTEGER_T :: nmat,ibase,stage
 
       nmat=num_materials
       if ((im.lt.1).or.(im.gt.nmat)) then
@@ -18050,6 +18051,178 @@ else
 endif
 
 end subroutine project_tensor
+
+
+INTEGER_T function project_option_is_validF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+if (project_option_momeqnF(project_option).eq.1) then
+ project_option_is_validF=1
+else if (project_option_momeqnF(project_option).eq.0) then
+ project_option_is_validF=1
+else
+ print *,"project_option not valid"
+ stop
+ project_option_is_validF=0
+endif
+
+end function project_option_is_validF
+
+INTEGER_T function project_option_momeqnF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.1).or. & ! initial project
+     (project_option.eq.11).or.& ! FSI_material_exists (last project)
+     (project_option.eq.12).or.& ! pressure extrapolation
+     (project_option.eq.3)) then ! viscosity
+  project_option_momeqnF=1
+ else if ((project_option.eq.2).or. & ! thermal diffusion
+          ((project_option.ge.100).and. & ! species
+           (project_option.lt.100+num_species_var)).or. &
+          (project_option.eq.200)) then ! smooth temperature
+  project_option_momeqnF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_momeqnF=0
+ endif
+
+end function project_option_momeqnF
+
+
+INTEGER_T function project_option_singular_possibleF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.1).or. & ! initial project
+     (project_option.eq.11).or. & !FSI_material_exists (last project)
+     (project_option.eq.12)) then ! pressure extension
+  project_option_singular_possibleF=1
+ else if ((project_option.eq.2).or. & ! thermal diffusion
+          (project_option.eq.3).or. & ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & !species
+          (project_option.eq.200)) then !smoothing
+  project_option_singular_possibleF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_singular_possibleF=0
+ endif
+
+end function project_option_singular_possibleF
+
+INTEGER_T function project_option_olddata_neededF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.1).or. & ! initial project
+     (project_option.eq.11).or. & ! FSI_material_exists (last project)
+     (project_option.eq.12)) then ! pressure extension
+  project_option_olddata_neededF=0
+ else if ((project_option.eq.2).or. & ! thermal diffusion
+          (project_option.eq.3).or. & ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & !species
+          (project_option.eq.200)) then !smoothing
+  project_option_olddata_neededF=1
+ else 
+  print *,"project_option invalid"
+  stop
+  project_option_olddata_neededF=0
+ endif
+
+end function project_option_olddata_neededF
+
+INTEGER_T function project_option_pressureF(project_option)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. &
+     (project_option.eq.1).or. &
+     (project_option.eq.12)) then ! pressure extrapolation
+  project_option_pressureF=1
+ else if ((project_option.eq.11).or. & ! FSI_material_exists (last project)
+          (project_option.eq.2).or. &  ! temperature
+          (project_option.eq.3).or. &  ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & ! species
+          (project_option.eq.200)) then ! smoothing of temperature
+  project_option_pressureF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_pressureF=0
+ endif 
+
+end function project_option_pressureF
+
+
+INTEGER_T function project_option_needs_scalingF(project_option)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.11).or. & !FSI_material_exists last project
+     (project_option.eq.12)) then ! pressure extrapolation
+  project_option_needs_scalingF=1
+ else if ((project_option.eq.1).or. & ! initial project
+          (project_option.eq.2).or. &  ! temperature
+          (project_option.eq.3).or. &  ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & ! species
+          (project_option.eq.200)) then ! smoothing of temperature
+  project_option_needs_scalingF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_needs_scalingF=0
+ endif 
+
+end function project_option_needs_scalingF
+
+
+INTEGER_T function project_option_projectionF(project_option)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.11).or. & !FSI_material_exists last project
+     (project_option.eq.1)) then ! initial_project
+  project_option_projectionF=1
+ else if ((project_option.eq.12).or. & ! pressure extrapolation
+          (project_option.eq.2).or. &  ! temperature
+          (project_option.eq.3).or. &  ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & ! species
+          (project_option.eq.200)) then ! smoothing of temperature
+  project_option_projectionF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_projectionF=0
+ endif 
+
+end function project_option_projectionF
 
 end module global_utility_module
 
