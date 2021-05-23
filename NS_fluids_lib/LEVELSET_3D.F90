@@ -8215,6 +8215,9 @@ stop
        ! mask_boundary<>0 means the face coefficient (1/rho) should be
        ! equal to 0.0
       INTEGER_T mask_boundary
+       ! mask_boundary_insulating is derived on the assumption that
+       ! all grid boundaries are either periodic, INT_DIR, or insulating.
+      INTEGER_T mask_boundary_insulating
       INTEGER_T icell,jcell,kcell
       INTEGER_T iside
 
@@ -8988,6 +8991,9 @@ stop
           ! mask_boundary<>0 means the face coefficient (1/rho) should be
           ! equal to 0.0
          mask_boundary=0
+          ! mask_boundary_insulating is the same as mask_boundary except that
+          ! all grid boundaries are either periodic, insulating, or INT_DIR.
+         mask_boundary_insulating=0
 
          noslip_wall=0
          coarse_fine_face=0
@@ -9003,11 +9009,14 @@ stop
            coarse_fine_face=1
           endif
 
-          if ((presbclo.eq.INT_DIR).or.(presbclo.eq.EXT_DIR)) then
+          if (presbclo.eq.INT_DIR) then
            ! do nothing
+          else if (presbclo.eq.EXT_DIR) then
+           mask_boundary_insulating=1
           else if ((presbclo.eq.REFLECT_EVEN).or. &
                    (presbclo.eq.FOEXTRAP)) then
            mask_boundary=1
+           mask_boundary_insulating=1
           else
            print *,"presbclo invalid"
            stop
@@ -9041,13 +9050,16 @@ stop
            coarse_fine_face=1
           endif
 
-          if ((presbchi.eq.INT_DIR).or.(presbchi.eq.EXT_DIR)) then
+          if (presbchi.eq.INT_DIR) then
            ! do nothing
+          else if (presbchi.eq.EXT_DIR) then
+           mask_boundary_insulating=2
           else if ((presbchi.eq.REFLECT_EVEN).or. &
                    (presbchi.eq.FOEXTRAP)) then
            mask_boundary=2
+           mask_boundary_insulating=2
           else
-           print *,"presbclo invalid"
+           print *,"presbchi invalid"
            stop
           endif
 
@@ -9098,7 +9110,9 @@ stop
           gradh=zero
           gradh_tension=zero
          else if (is_solid_face.eq.0) then
+
           call fluid_interface(LSminus,LSplus,gradh,im_main_opp,im_main,nmat)
+
           call get_dxmaxLS(dx,bfact,DXMAXLS)
 
           if (covered_face.eq.2) then
@@ -9216,6 +9230,8 @@ stop
           stop
          endif
 
+         smoothing_local=one
+
           ! both adjoining cells are solid cells.
          if (solid_present_flag.eq.1) then
 
@@ -9236,8 +9252,6 @@ stop
              half*(fort_speciesviscconst((imspec-1)*nmat+implus_majority)+ &
                    fort_speciesviscconst((imspec-1)*nmat+imminus_majority))
           enddo
-
-          smoothing_local=one
 
           if (is_clamped_face.ge.1) then
            ! diffuse temperature and species in the clamped solid
@@ -9269,6 +9283,8 @@ stop
          else if ((solid_present_flag.eq.2).or. &
                   (solid_present_flag.eq.3)) then
          
+          smoothing_local=zero
+
           facevisc_local=wtR*localvisc_plus(implus_majority)+ &
                          wtL*localvisc_minus(imminus_majority)
           faceheat_local=wtR*get_user_heatviscconst(implus_majority)+ &
@@ -9281,7 +9297,6 @@ stop
 
           if (is_clamped_face.ge.1) then
            ! do nothing special for temperature or mass fraction
-           smoothing_local=zero
           else if (is_clamped_face.eq.0) then
 
            iten_micro=0
@@ -9359,8 +9374,6 @@ stop
             ! prescribed interface coefficient.
            if (implus_majority.ne.imminus_majority) then
 
-            smoothing_local=zero
-
             call get_iten(imminus_majority,implus_majority,iten,nmat)
 
             if (heatvisc_interface(iten).eq.zero) then
@@ -9414,6 +9427,8 @@ stop
            enddo
 
           else if (gradh.ne.zero) then
+
+           smoothing_local=zero
 
            if ((im_main.gt.nmat).or.(im_main_opp.gt.nmat)) then
             print *,"im_main or im_main_opp bust 3"
@@ -10074,6 +10089,17 @@ stop
           local_face(facespecies_index+imspec)= &
             density_for_mass_fraction_diffusion*facespecies_local(imspec)
          enddo
+
+         if (mask_boundary_insulating.eq.0) then
+          ! do nothing
+         else if ((mask_boundary_insulating.eq.1).or. &
+                  (mask_boundary_insulating.eq.2)) then
+          smoothing_local=zero
+         else
+          print *,"mask_boundary_insulating invalid"
+          stop
+         endif
+
          local_face(smoothing_index+1)=smoothing_local
 
 
