@@ -1060,6 +1060,7 @@ stop
 
       subroutine SEM_VISC_SANITY_CC(caller_id,dt,CC,MSKDV,MSKRES,MDOT, &
         VOLTERM,project_option,xsten,nhalf,velcomp)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id
@@ -1095,14 +1096,7 @@ stop
        print *,"velcomp invalid SEM_VISC_SANITY_CC:",velcomp
        stop
       endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.11).or. & ! FSI_material_exists, last_project
-          (project_option.eq.12).or. & ! pressure extrapolation
-          (project_option.eq.3).or. &  ! viscosity
-          (project_option.eq.2).or. &
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var))) then
+      if (project_option_is_validF(project_option).eq.1) then
          ! do nothing
       else
        print *,"project_option invalid in SEM_VISC_SANITY_CC"
@@ -1181,47 +1175,6 @@ stop
 
       return
       end subroutine SEM_VISC_SANITY_CC
-
-
-      subroutine get_flux_factor(operator_id,im1,im2,coef)
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T operator_id,im1,im2,imspec,nmat
-      REAL_T coef,k1,k2
-
-      nmat=num_materials
-
-      if (operator_id.eq.1) then
-       print *,"stokes flow not ready yet"
-       stop
-      else if (operator_id.eq.0) then
-       k1=get_user_heatviscconst(im1)
-       k2=get_user_heatviscconst(im2)
-      else if ((operator_id.ge.100).and. &
-               (operator_id.lt.100+num_species_var)) then
-       imspec=operator_id-100+1
-       k1=fort_speciesviscconst((imspec-1)*nmat+im1)
-       k2=fort_speciesviscconst((imspec-1)*nmat+im2)
-      else
-       print *,"operator_id invalid"
-       stop
-      endif
-      if ((k1.lt.zero).or.(k2.lt.zero)) then
-       print *,"coefficient invalid"
-       stop
-      else if ((k1.eq.zero).or.(k2.eq.zero)) then
-       coef=zero
-       print *,"zero diffusivity not allowed!"
-       print *,"make the diffusivity a very small number"
-       print *,"no object is a perfect conductor"
-       stop
-      else
-       coef=two*k1*k2/(k1+k2)
-      endif
-
-      return
-      end subroutine get_flux_factor
 
 
        ! called from init_icemask (GODUNOV_3D.F90) and
@@ -13613,7 +13566,7 @@ END SUBROUTINE Adist
        visc_coef, &
        nsolve,nsolveMM,im_vel,dir,veldir,project_option, &
        constant_viscosity,side,local_presbc,local_wt)
-              
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id
@@ -13625,7 +13578,9 @@ END SUBROUTINE Adist
       REAL_T, intent(out) :: dd_group
       REAL_T, intent(in) :: visc_coef
       INTEGER_T, intent(in) :: nsolve,nsolveMM,im_vel,dir,veldir,project_option
-      INTEGER_T, intent(in) :: constant_viscosity,side,local_presbc
+      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: side
+      INTEGER_T, intent(in) :: local_presbc
       REAL_T, intent(out) :: local_wt(nsolve)
       INTEGER_T :: at_RZ_boundary
 
@@ -13642,7 +13597,7 @@ END SUBROUTINE Adist
           (veldir.le.nsolve).and. &
           (dir.ge.0).and. &
           (dir.lt.SDIM).and. &
-          (project_option.ge.0).and. &
+          (project_option_is_validF(project_option).eq.1).and. &
           (constant_viscosity.ge.0).and. &
           (side.ge.0).and. &
           (level.ge.0).and. &
@@ -13686,9 +13641,7 @@ END SUBROUTINE Adist
        cc_group=cc
        dd_group=dd
 
-       if ((project_option.eq.0).or. &  !regular project
-           (project_option.eq.1).or. &  !initial project
-           (project_option.eq.11)) then !FSI_material_exists final project
+       if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.0) then !regular pressure projection
          cc_group=cc
@@ -13797,7 +13750,7 @@ END SUBROUTINE Adist
         endif
 
        else if ((project_option.eq.2).or. & ! temperature
-                ((project_option.ge.100).and. &
+                ((project_option.ge.100).and. & ! species
                  (project_option.lt.100+num_species_var))) then
         if ((nsolveMM.ne.num_materials_scalar_solve).or.(nsolve.ne.1)) then
          print *,"nsolveMM or nsolve invalid"
@@ -13833,6 +13786,43 @@ END SUBROUTINE Adist
          print *,"project_option=",project_option
          stop
         endif
+       else if (project_option.eq.200) then ! smoothing 
+        if ((nsolveMM.ne.num_materials_scalar_solve).or.(nsolve.ne.1)) then
+         print *,"nsolveMM or nsolve invalid"
+         stop
+        endif
+        cc_group=one
+
+        if ((dd_group.ge.zero).and. &
+            (cc_group.eq.one)) then
+         local_wt(veldir)=dd_group*cc_group
+         if (side.eq.0) then
+          ! do nothing
+         else if ((side.eq.1).or.(side.eq.2)) then
+          if (local_presbc.eq.INT_DIR) then
+           ! do nothing
+          else if (local_presbc.eq.EXT_DIR) then
+           local_wt(veldir)=zero
+          else if (local_presbc.eq.REFLECT_EVEN) then
+           local_wt(veldir)=zero
+          else if (local_presbc.eq.FOEXTRAP) then
+           local_wt(veldir)=zero
+          else
+           print *,"local_presbc invalid"
+           stop
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+        else
+         print *,"dd_group or cc_group invalid3"
+         print *,"dd_group= ",dd_group
+         print *,"cc_group= ",cc_group
+         print *,"project_option=",project_option
+         stop
+        endif
+
        else if (project_option.eq.3) then ! viscosity
         if ((nsolveMM.ne.SDIM).or.(nsolve.ne.SDIM)) then
          print *,"nsolveMM or nsolve invalid"
@@ -17104,9 +17094,7 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.0) then ! RHS for solver
 
-       if ((project_option.eq.0).or. &
-           (project_option.eq.1).or. &
-           (project_option.eq.11)) then !FSI_material_exists last project
+       if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid2"
          stop
@@ -17128,6 +17116,11 @@ END SUBROUTINE Adist
                 (project_option.lt.100+num_species_var)) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid5"
+         stop
+        endif
+       else if (project_option.eq.200) then ! smoothing
+        if (ncomp.ne.1) then
+         print *,"ncomp invalid4"
          stop
         endif
        else
@@ -26577,15 +26570,12 @@ end subroutine initialize2d
 
        subroutine FORT_OVERRIDEPBC(homflag,project_option)
        use probcommon_module
+       use global_utility_module
        IMPLICIT NONE
 
        INTEGER_T homflag,project_option
 
-
-       if ((project_option.eq.0).or. &
-           (project_option.eq.1).or. &
-           (project_option.eq.11).or. & !FSI_material_exists last project
-           (project_option.eq.12)) then  ! pressure extension
+       if (project_option_singular_possibleF(project_option).eq.1) then
         if (homflag.eq.0) then
          pres_homflag=0
         else if (homflag.eq.1) then
@@ -26604,6 +26594,15 @@ end subroutine initialize2d
          stop
         endif
        else if (project_option.eq.2) then  ! temperature
+        if (homflag.eq.0) then
+         temp_homflag=0
+        else if (homflag.eq.1) then
+         temp_homflag=1
+        else
+         print *,"homflag invalid in override pbc 3"
+         stop
+        endif
+       else if (project_option.eq.200) then  ! smoothing, but used temp. var
         if (homflag.eq.0) then
          temp_homflag=0
         else if (homflag.eq.1) then

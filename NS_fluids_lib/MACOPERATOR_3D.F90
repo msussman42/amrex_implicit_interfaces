@@ -254,9 +254,7 @@ stop
          stop
         endif
 
-        if ((project_option.eq.0).or. & ! regular project
-            (project_option.eq.1).or. & ! initial project
-            (project_option.eq.11)) then ! FSI_material_exists last project
+        if (project_option_projectionF(project_option).eq.1) then
 
          if (num_materials_vel.ne.1) then
           print *,"num_materials_vel invalid"
@@ -378,6 +376,25 @@ stop
            endif
           endif
          endif
+
+        else if (project_option.eq.200) then  ! smoothing
+
+         if (dt.gt.zero) then
+          ! do nothing
+         else
+          print *,"dt invalid"
+          stop
+         endif
+         if (num_materials_face.ne.num_materials_scalar_solve) then
+          print *,"num_materials_face invalid"
+          stop
+         endif
+
+         do im_vel=1,num_materials_scalar_solve
+
+          local_cterm(im_vel)=one/dt ! den cv / dt
+
+         enddo ! im_vel=1,num_materials_scalar_solve
 
         else if (project_option.eq.3) then ! viscosity
 
