@@ -818,6 +818,7 @@ stop
       subroutine SEM_VISC_SANITY(caller_id,dt,xsten,nhalf, &
          flux_in,dir,velcomp,use_dt,use_HO,project_option,bfact, &
          enable_spectral,constant_viscosity)
+      use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id
@@ -945,15 +946,8 @@ stop
        stop
       endif
 
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.11).or. & ! last project
-          (project_option.eq.12).or. & ! pressure extrapolation
-          (project_option.eq.3).or. &  ! viscosity
-          (project_option.eq.2).or. &
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var))) then
-         ! do nothing
+      if (project_option_is_validF(project_option).eq.1) then
+       ! do nothing
       else
        print *,"project_option invalid in SEM_VISC_SANITY"
        stop
