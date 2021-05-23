@@ -8258,7 +8258,9 @@ stop
       REAL_T wallVOF_face
       INTEGER_T imattype
       INTEGER_T dencomp,tempcomp
-      REAL_T facevisc_local,faceheat_local
+      REAL_T facevisc_local
+      REAL_T faceheat_local
+      REAL_T smoothing_local
       REAL_T facespecies_local(num_species_var+1)
       REAL_T theta,visc1,visc2,heat1,heat2
       REAL_T spec1(num_species_var+1)
@@ -9115,6 +9117,7 @@ stop
 
          facevisc_local=zero
          faceheat_local=zero
+         smoothing_local=zero
          do imspec=1,num_species_var
           facespecies_local(imspec)=zero
          enddo
@@ -9234,6 +9237,8 @@ stop
                    fort_speciesviscconst((imspec-1)*nmat+imminus_majority))
           enddo
 
+          smoothing_local=one
+
           if (is_clamped_face.ge.1) then
            ! diffuse temperature and species in the clamped solid
           else if (is_clamped_face.eq.0) then
@@ -9276,6 +9281,7 @@ stop
 
           if (is_clamped_face.ge.1) then
            ! do nothing special for temperature or mass fraction
+           smoothing_local=zero
           else if (is_clamped_face.eq.0) then
 
            iten_micro=0
@@ -9352,6 +9358,9 @@ stop
             ! check if face coefficient needs to be replaced
             ! prescribed interface coefficient.
            if (implus_majority.ne.imminus_majority) then
+
+            smoothing_local=zero
+
             call get_iten(imminus_majority,implus_majority,iten,nmat)
 
             if (heatvisc_interface(iten).eq.zero) then
@@ -9378,7 +9387,12 @@ stop
              print *,"heatvisc_interface invalid"
              stop
             endif
-           endif ! implus <> imminus
+           else if (implus_majority.eq.imminus_majority) then
+            ! do nothing
+           else
+            print *,"implus_majority or imminus_majority bust"
+            stop
+           endif 
 
           else
            print *,"is_clamped_face invalid"
@@ -10060,6 +10074,7 @@ stop
           local_face(facespecies_index+imspec)= &
             density_for_mass_fraction_diffusion*facespecies_local(imspec)
          enddo
+         local_face(smoothing_index+1)=smoothing_local
 
 
           ! mask_boundary=1 at left neumann boundary
