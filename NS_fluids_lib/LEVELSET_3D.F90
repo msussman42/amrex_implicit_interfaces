@@ -12176,14 +12176,7 @@ stop
        stop
       endif
 
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.11).or. & ! FSI_material_exists last project
-          (project_option.eq.12).or. & ! pressure extension
-          (project_option.eq.2).or. &
-          (project_option.ge.3).or. &
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var))) then
+      if (project_option_is_validF(project_option).eq.1) then
        ! do nothing
       else
        print *,"project_option invalid"
@@ -12363,10 +12356,7 @@ stop
            stop
           endif
 
-          if ((project_option.eq.0).or. &
-              (project_option.eq.1).or. &
-              (project_option.eq.11).or. & ! FSI_material_exists last project
-              (project_option.eq.12)) then ! pressure extension
+          if (project_option_singular_possibleF(project_option).eq.1) then
 
            if (MDOT.eq.zero) then
             ! check nothing
@@ -12408,10 +12398,7 @@ stop
             print *,"local_solvability_projection invalid"
             stop
            endif
-          else if ((project_option.eq.2).or. & ! thermal diffusion
-                   (project_option.eq.3).or. & ! viscosity
-                   ((project_option.ge.100).and. &
-                    (project_option.lt.100+num_species_var))) then
+          else if (project_option_singular_possibleF(project_option).eq.0) then
            ! do nothing
           else
            print *,"project_option invalid"
@@ -15068,10 +15055,7 @@ stop
         print *,"num_materials_face invalid"
         stop
        endif
-       if ((project_option.eq.0).or. &
-           (project_option.eq.1).or. &
-           (project_option.eq.3).or. & 
-           (project_option.eq.11)) then !FSI_material_exists last project
+       if (project_option_momeqnF(project_option).eq.1) then
         ! do nothing
        else
         print *,"project_option invalid"
@@ -15104,14 +15088,7 @@ stop
        stop
       endif
 
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.11).or. & !FSI_material_exists last project
-          (project_option.eq.12).or. & !pressure extrapolation
-          (project_option.eq.2).or. &  ! thermal diffusion
-          (project_option.ge.3).or. &  ! viscosity
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var))) then
+      if (project_option_is_validF(project_option).eq.1) then
        ! do nothing
       else
        print *,"project_option invalid"
@@ -16776,14 +16753,7 @@ stop
          else if (operation_flag.eq.0) then 
         
            ! xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi] 
-          if ((project_option.eq.0).or. &
-              (project_option.eq.1).or. &
-              (project_option.eq.11).or. & !FSI_material_exists last project
-              (project_option.eq.12).or. & !pressure extrapolation
-              (project_option.eq.2).or. &  ! thermal diffusion
-              (project_option.ge.3).or. &  ! viscosity
-              ((project_option.ge.100).and. &
-               (project_option.lt.100+num_species_var))) then
+          if (project_option_is_validF(project_option).eq.1) then
            cutedge=xcut(D_DECL(i,j,k),1)  ! e.g. A/rho
           else
            print *,"project_option invalid"
@@ -17486,9 +17456,7 @@ stop
            stop
           endif
 
-          if ((project_option.eq.0).or. &  !regular project
-              (project_option.eq.1).or. &  !initial project
-              (project_option.eq.11)) then !FSI_material_exists final project
+          if (project_option_projectionF(project_option).eq.1) then
 
            if (singular_possible.eq.1) then
 
@@ -17540,6 +17508,13 @@ stop
             stop
            endif
           else if (project_option.eq.2) then ! temperature
+           if (singular_possible.eq.0) then
+            solvability_level_flag=0
+           else
+            print *,"singular_possible invalid"
+            stop
+           endif
+          else if (project_option.eq.200) then ! smoothing
            if (singular_possible.eq.0) then
             solvability_level_flag=0
            else

@@ -1104,13 +1104,13 @@ stop
        stop
       endif
 
-      if (project_option.eq.2) then
+      if (project_option.eq.2) then ! thermal diffusion
        if (LS1.ge.zero) then ! center cell owned by im_source
         heatcoeff=get_user_heatviscconst(im_source)
        else  ! center cell owned by im_dest
         heatcoeff=get_user_heatviscconst(im_dest)
        endif
-      else if ((project_option.ge.100).and. &
+      else if ((project_option.ge.100).and. & ! species diffusion
                (project_option.lt.100+num_species_var)) then
        ispec=project_option-100
        if (LS1.ge.zero) then ! center cell owned by im_source
@@ -15199,9 +15199,9 @@ stop
        stop
       endif
 
-      if (project_option.eq.2) then
+      if (project_option.eq.2) then ! thermal diffusion
        T_or_Y_min_sanity=zero
-      else if ((project_option.ge.100).and. &
+      else if ((project_option.ge.100).and. & ! species diffusion
                (project_option.le.100+num_species_var-1)) then
        T_or_Y_min_sanity=zero
       else

@@ -11887,15 +11887,7 @@ END SUBROUTINE SIMP
        print *,"ncphys invalid"
        stop
       endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1).or. &
-          (project_option.eq.11).or. & !FSI_material_exists last project
-          (project_option.eq.12).or. & !pressure extrap
-          (project_option.eq.2).or. & ! thermal diffusion
-          (project_option.eq.3)) then ! viscosity
-       ! do nothing
-      else if ((project_option.ge.100).and. &
-               (project_option.lt.100+num_species_var)) then
+      if (project_option_is_validF(project_option).eq.1) then
        ! do nothing
       else
        print *,"project_option invalid fluid solid cor"
@@ -11986,10 +11978,7 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         if ((project_option.eq.0).or. &
-             (project_option.eq.1).or. &
-             (project_option.eq.11).or. & !FSI_material_exists, last project
-             (project_option.eq.12)) then !pressure extrap.
+         if (project_option_singular_possibleF(project_option).eq.1) then
           if ((nsolve.eq.1).and.(nsolveMM.eq.1).and.(velcomp.eq.0)) then
            veldir=1
            im_vel=1
@@ -11999,8 +11988,9 @@ END SUBROUTINE SIMP
            stop
           endif
          else if ((project_option.eq.2).or. & ! thermal diffusion
-                  ((project_option.ge.100).and. &
-                   (project_option.lt.100+num_species_var))) then
+                  ((project_option.ge.100).and. & ! species
+                   (project_option.lt.100+num_species_var)).or. &
+                  (project_option.eq.200)) then ! smoothing
           if ((nsolve.eq.1).and. &
               ((nsolveMM.eq.1).or.(nsolveMM.eq.nmat)).and. &
               (velcomp.ge.0).and. &
@@ -12516,7 +12506,7 @@ END SUBROUTINE SIMP
 !    Equation of state to be used depends on cvof (tessellating vfracs)
 ! 3. pressure=0.0 in incompressible regions
 !
-! if project_option==10, 11, mdot=0.0 (on input) (mdot corresponds
+! if project_option==11, mdot=0.0 (on input) (mdot corresponds
 ! to localMF[DIFFUSIONRHS_MF])
 !
 ! velocity scale: V
