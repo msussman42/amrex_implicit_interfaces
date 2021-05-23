@@ -9548,7 +9548,7 @@ void NavierStokes::multiphase_preconditioner(
  } else if (project_option_momeqn(project_option)==0) {
   num_materials_face=num_materials_scalar_solve;
  } else
-  amrex::Error("project_option invalid42");
+  amrex::Error("project_option_momeqn invalid42");
 
  if (num_materials_vel!=1)
   amrex::Error("num_materials_vel invalid");
