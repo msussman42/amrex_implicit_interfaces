@@ -7,6 +7,26 @@
 #   self-pressurization: Crossing fluid types, scales, and gravity levels 
 #   Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
 #   (2018) Cryogenics Journal.
+#   Space Shuttle Experiment 1991 (STS-43)
+#     transparent acrylic tank walls.
+#     83 percent Freon-113
+#     Heater A:top of dome opposite the nozzle.
+#     Header B:at the center of the tank near the wall.
+#     Ra_L = 2.7E+6  Ra_V=2.23E+7
+#     Bo=0.014
+#     gravity points awaw from Heater B.
+#     Heater B heat flux=0.0
+#     Heater A (top heater) heat flux=1 kW/m^2
+#     initial uniform state: T0=296K  P0=41.164kPa
+#     0<time<120 seconds
+#     A video of
+#     only the first 120 s of the test is available and seems to indicate that
+#     initially the ullage bubble was slightly below the top heater near the
+#     side of the tank opposite to heater B;
+#     just prior to the start of the jet mixing interval that 
+#     immediately followed the self-pressurization shows that
+#     the ullage is now centrally located in the top of the enclosure
+#
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
