@@ -285,7 +285,9 @@ namespace amrex{
 #define T_advect_MF (XDMACOLD_MF+3)
 #define DTDt_MF (T_advect_MF+1)
 
-#define NEXT_MF (DTDt_MF+1)
+#define TEMPERATURE_SAVE_MF (DTDt_MF+1)
+
+#define NEXT_MF (TEMPERATURE_SAVE_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
