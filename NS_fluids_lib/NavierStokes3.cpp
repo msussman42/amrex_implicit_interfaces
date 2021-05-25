@@ -9704,6 +9704,8 @@ void NavierStokes::multiphase_project(int project_option) {
  if (level!=0)
   amrex::Error("level invalid multiphase_project");
 
+ int nmat=num_materials;
+
  std::fflush(NULL);
 
 #if (profile_solver==1)
@@ -9744,11 +9746,7 @@ void NavierStokes::multiphase_project(int project_option) {
   // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
   // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
- } // project_option==11
-
-
-  // pressure extension
- if (project_option==12) {
+ } else if (project_option==12) { // pressure extension
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -9758,7 +9756,30 @@ void NavierStokes::multiphase_project(int project_option) {
       *ns_level.localMF[PRESSURE_SAVE_MF],
       P_new,pcomp,0,1,1);
   } // ilev=level ... finest_level
- } // project_option==12
+ } else if (project_option==200) { // smoothing
+  int project_option_thermal=2;
+  get_mm_scomp_solver(
+    nmat,
+    project_option_thermal,
+    state_index_thermal,
+    scomp_thermal,
+    ncomp_thermal,
+    ncomp_check_thermal);
+
+
+          // data at time = cur_time_slab
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         ns_level.getState_localMF_list(
+          BOUSSINESQ_TEMP_MF,1,
+          state_index,
+          scomp,
+          ncomp);
+        } // ilev
+ } else if (project_option_is_valid(project_option)==1) {
+  // do not save anything
+ } else
+  amrex::Error("project_option invalid");
 
  int save_enable_spectral=enable_spectral;
 
@@ -9779,7 +9800,6 @@ void NavierStokes::multiphase_project(int project_option) {
   amrex::Error("project_option invalid43");
 
  int energyflag=0;
- int nmat=num_materials;
  int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
 
  int num_materials_face=num_materials_vel;

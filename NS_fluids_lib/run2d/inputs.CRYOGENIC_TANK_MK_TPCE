@@ -6,6 +6,7 @@
 #   Validation of two-phase CFD models for propellant tank 
 #   self-pressurization: Crossing fluid types, scales, and gravity levels 
 #   Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
+#   (2018) Cryogenics Journal.
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
