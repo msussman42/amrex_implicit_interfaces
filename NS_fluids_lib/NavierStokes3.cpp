@@ -2329,14 +2329,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       amrex::Error("ncomp_check invalid");
 
       // data at time = cur_time_slab
-     for (int ilev=finest_level;ilev>=level;ilev--) {
-      NavierStokes& ns_level=getLevel(ilev);
-      ns_level.getState_localMF_list(
+     getState_localMF_listALL(
        REGISTER_MARK_MF,1,
        state_index,
        scomp,
        ncomp);
-     } // ilev=finest_level ... level
 
      update_SEM_forcesALL(project_option_placeholder,REGISTER_MARK_MF,
        update_placeholder,update_placeholder);
@@ -3485,15 +3482,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int save_enable_spectral=enable_spectral;
         override_enable_spectral(projection_enable_spectral);
 
-          // data at time = cur_time_slab
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.getState_localMF_list(
+         // data at time = cur_time_slab
+        getState_localMF_listALL(
           PRESPC2_MF,1,
           state_index,
           scomp,
           ncomp);
-        } // ilev
+
          // HOfab=grad p,  div(up)
          // calls: UPDATESEMFORCE in GODUNOV_3D.F90
         update_SEM_forcesALL(project_option_op,PRESPC2_MF,
@@ -3525,14 +3520,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          amrex::Error("ncomp_check invalid");
 
           // data at time = cur_time_slab
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.getState_localMF_list(
+        getState_localMF_listALL(
           REGISTER_MARK_MF,1,
           state_index,
           scomp,
           ncomp);
-        } // ilev=finest_level ... level
 
          // -div(k grad T)-THERMAL_FORCE_MF
         update_stableF=0;
@@ -3555,14 +3547,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          amrex::Error("ncomp_check invalid");
 
           // data at time = cur_time_slab
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.getState_localMF_list(
+        getState_localMF_listALL(
           BOUSSINESQ_TEMP_MF,1,
           state_index,
           scomp,
           ncomp);
-        } // ilev
 
         allocate_array(1,nsolveMM,-1,THERMAL_FORCE_MF);
         int update_state=0;
@@ -9778,14 +9767,13 @@ void NavierStokes::multiphase_project(int project_option) {
       P_new,pcomp,0,1,1);
   } // ilev=level ... finest_level
  } else if (project_option==200) { // smoothing
-  int project_option_thermal=2;
   Vector<int> scomp_thermal;
   Vector<int> ncomp_thermal;
   int state_index_thermal;  
   int ncomp_check_thermal;
   get_mm_scomp_solver(
     nmat,
-    project_option_thermal,
+    project_option,
     state_index_thermal,
     scomp_thermal,
     ncomp_thermal,
@@ -9793,16 +9781,12 @@ void NavierStokes::multiphase_project(int project_option) {
   if (ncomp_check_thermal!=nmat)
    amrex::Error("ncomp_check_thermal invalid");
 
-
-          // data at time = cur_time_slab
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.getState_localMF_list(
-          BOUSSINESQ_TEMP_MF,1,
-          state_index,
-          scomp,
-          ncomp);
-        } // ilev
+   // data at time = cur_time_slab
+  getState_localMF_listALL(
+    TEMPERATURE_SAVE_MF,1,
+    state_index,
+    scomp,
+    ncomp);
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
  } else
@@ -10418,11 +10402,13 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // STATE_FOR_RESID is an input to 
    //  NavierStokes::residual_correction_form
+   
+  // ngrow=1
+ getState_localMF_listALL(STATE_FOR_RESID_MF,1,
+   state_index,scomp,ncomp);
+
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-     // ngrow=1
-  ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
-   state_index,scomp,ncomp);
   if (ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM)
    amrex::Error("ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM");
 
@@ -10461,11 +10447,8 @@ void NavierStokes::multiphase_project(int project_option) {
      state_index,scomp,ncomp);
   } // ilev=finest_level ... level
   delete_array(STATE_FOR_RESID_MF);
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.getState_localMF_list(STATE_FOR_RESID_MF,1,
+  getState_localMF_listALL(STATE_FOR_RESID_MF,1,
     state_index,scomp,ncomp);
-  } // ilev=finest_level ... level
  } else
   amrex::Error("change_flag invalid");
 
@@ -11893,14 +11876,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option_projection(project_option)==1) {
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.getState_localMF_list(
+  getState_localMF_listALL(
     PRESPC2_MF,1,
     state_index,
     scomp,
     ncomp);
-  }
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -12497,15 +12477,12 @@ void NavierStokes::veldiffuseALL() {
    amrex::Error("override_density invalid");  
  } // im=0..nmat-1
 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
    //ngrow=1
-  ns_level.getState_localMF_list(
+ getState_localMF_listALL(
    BOUSSINESQ_TEMP_MF,1,
    state_index,
    scomp,
    ncomp);
- }
 
   // register_mark=unew (1 ghost)
  SET_STOKES_MARK(REGISTER_MARK_MF,103);
@@ -12778,18 +12755,16 @@ void NavierStokes::veldiffuseALL() {
   if (ncomp_check!=nsolveMM_thermal)
    amrex::Error("ncomp_check invalid");
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
     //localMF[PRESPC2_MF] will hold the latest temperature from the implicit
     //backwards Euler system.
     //ngrow=1
-   ns_level.getState_localMF_list(
+  getState_localMF_listALL(
     PRESPC2_MF,  
     1,
     state_index,
     scomp,
     ncomp);
-  }
+  
   int update_spectralF=0;
   int update_stableF=1;
    // LOfab=-div(k grad T)-THERMAL_FORCE_MF
@@ -12902,18 +12877,16 @@ void NavierStokes::veldiffuseALL() {
    if (ncomp_check!=nsolveMM_thermal)
     amrex::Error("ncomp_check invalid");
 
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
      //localMF[PRESPC2_MF] will hold the latest species from the implicit
      //backwards Euler system.
      //ngrow=1
-    ns_level.getState_localMF_list(
+   getState_localMF_listALL(
      PRESPC2_MF,  
      1,
      state_index,
      scomp,
      ncomp);
-   }
+   
    int update_spectralF=0;
    int update_stableF=1;
     // LOfab=-div(rho D grad Y)

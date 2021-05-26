@@ -733,6 +733,12 @@ protected:
      Vector<int> scomp,
      Vector<int> ncomp);
 
+    void getState_localMF_listALL(
+     int idx_MF,int ngrow,
+     int state_index,
+     Vector<int> scomp,
+     Vector<int> ncomp);
+
     void putState_localMF_list(
      int idx_MF,
      int state_index,
