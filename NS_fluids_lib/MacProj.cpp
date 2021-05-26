@@ -2228,9 +2228,10 @@ void NavierStokes::update_SEM_forces(int project_option,
      (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
      (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
-  if (localMF_grow[MACDIV_MF]>=0)
-   amrex::Error("local div data not previously deleted");
-  new_localMF(MACDIV_MF,nsolveMM,0,-1);
+  if (localMF_grow[MACDIV_MF]==-1) {
+   new_localMF(MACDIV_MF,nsolveMM,0,-1);
+  } else
+   amrex::Error("localMF_grow[MACDIV_MF] invalid");
 
   int homflag=0;
 
@@ -2494,9 +2495,10 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  } else
   amrex::Error("SDC_outer_sweeps invalid");
 
- if (localMF_grow[idx]>=0)
+ if (localMF_grow[idx]==-1) {
+  new_localMF(idx,num_materials_vel,ngrow,-1);
+ } else
   amrex::Error("local div data not previously deleted");
- new_localMF(idx,num_materials_vel,ngrow,-1);
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;

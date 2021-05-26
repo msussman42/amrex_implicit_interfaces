@@ -23367,7 +23367,9 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  if ((tessellate!=0)&&(tessellate!=1)&&(tessellate!=3))
   amrex::Error("tessellate invalid61");
 
- if (localMF_grow[idx]>=0)
+ if (localMF_grow[idx]==-1) {
+  // do nothing
+ } else
   amrex::Error("makeFaceTest: forgot to delete");
 
  new_localMF(idx,nmat*AMREX_SPACEDIM,ngrow,-1);
@@ -23462,7 +23464,9 @@ NavierStokes::makeDotMask(int nsolve,int project_option) {
 
  int finest_level=parent->finestLevel();
 
- if (localMF_grow[DOTMASK_MF]>=0)
+ if (localMF_grow[DOTMASK_MF]==-1) {
+  // do nothing
+ } else
   amrex::Error("makeDotMask: forgot to delete");
 
  int num_materials_face=num_materials_vel;

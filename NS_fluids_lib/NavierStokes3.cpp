@@ -598,21 +598,27 @@ void NavierStokes::allocate_SDC() {
      (enable_spectral==2)) {  // spectral in space only
 
    // I-scheme,thermal conduction, viscosity, div(up),gp, -force
-  if (localMF_grow[stableF_MF]!=-1)
-   amrex::Error("stableF_MF already allocated");
-  new_localMF(stableF_MF,nstate_SDC*ns_time_order,0,-1);
+  if (localMF_grow[stableF_MF]==-1) {
+   new_localMF(stableF_MF,nstate_SDC*ns_time_order,0,-1);
+  } else
+   amrex::Error("localMF_grow[stableF_MF] invalid");
+
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    new_localMF(stableF_GP_MF+dir,ns_time_order,0,dir);
 
-  if (localMF_grow[spectralF_MF]!=-1)
-   amrex::Error("spectralF already allocated");
-  new_localMF(spectralF_MF,nstate_SDC*(ns_time_order+1),0,-1);
+  if (localMF_grow[spectralF_MF]==-1) {
+   new_localMF(spectralF_MF,nstate_SDC*(ns_time_order+1),0,-1);
+  } else
+   amrex::Error("localMF_grow[spectralF_MF] invalid");
+
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    new_localMF(spectralF_GP_MF+dir,(ns_time_order+1),0,dir);
 
-  if (localMF_grow[delta_MF]!=-1)
-   amrex::Error("delta already allocated");
-  new_localMF(delta_MF,nstate_SDC*ns_time_order,0,-1);
+  if (localMF_grow[delta_MF]==-1) {
+   new_localMF(delta_MF,nstate_SDC*ns_time_order,0,-1);
+  } else
+   amrex::Error("localMF_grow[delta_MF] invalid");
+
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    new_localMF(delta_GP_MF+dir,ns_time_order,0,dir);
 
@@ -640,18 +646,27 @@ void NavierStokes::deallocate_SDC() {
      (enable_spectral==1)||   // spectral in space and time
      (enable_spectral==2)) {  // spectral in space only
 
-  if (localMF_grow[spectralF_MF]!=0)
-   amrex::Error("spectralF never allocated");
+  if (localMF_grow[spectralF_MF]==0) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[spectralF_MF] invalid");
+
   delete_localMF(spectralF_MF,1);
   delete_localMF(spectralF_GP_MF,AMREX_SPACEDIM);
 
-  if (localMF_grow[stableF_MF]!=0)
-   amrex::Error("stableF never allocated");
+  if (localMF_grow[stableF_MF]==0) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[stableF_MF] invalid");
+
   delete_localMF(stableF_MF,1);
   delete_localMF(stableF_GP_MF,AMREX_SPACEDIM);
 
-  if (localMF_grow[delta_MF]!=0)
-   amrex::Error("delta never allocated");
+  if (localMF_grow[delta_MF]==0) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[delta_MF] invalid");
+
   delete_localMF(delta_MF,1);
   delete_localMF(delta_GP_MF,AMREX_SPACEDIM);
 
@@ -763,7 +778,9 @@ void NavierStokes::tensor_advection_updateALL() {
 
 void NavierStokes::resize_maskfiner(int ngrow,int mask_id) {
 
- if (localMF_grow[mask_id]<0)
+ if (localMF_grow[mask_id]>=0) {
+  // do nothing
+ } else
   amrex::Error("localMF_grow[mask_id]<0");
 
  if (localMF[mask_id]->nGrow()!=ngrow) {
@@ -777,7 +794,9 @@ void NavierStokes::resize_maskfiner(int ngrow,int mask_id) {
 
 void NavierStokes::resize_mask_nbr(int ngrow) {
 
- if (localMF_grow[MASK_NBR_MF]<0) {
+ if (localMF_grow[MASK_NBR_MF]>=0) {
+  // do nothing
+ } else {
   amrex::Error("localMF_grow[MASK_NBR_MF]<0");
  }
 
@@ -790,7 +809,9 @@ void NavierStokes::resize_mask_nbr(int ngrow) {
 
 void NavierStokes::resize_metrics(int ngrow) {
 
- if (localMF_grow[VOLUME_MF]<0)
+ if (localMF_grow[VOLUME_MF]>=0) {
+  // do nothing
+ } else
   amrex::Error("localMF_grow[VOLUME_MF]<0");
 
  if (localMF[VOLUME_MF]->nGrow()!=ngrow) {
