@@ -100,13 +100,15 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
   std::cout << "in new_localMF level= " << level << '\n';
  }
 
- if (localMF_grow[idx_MF]>=0) {
+ if (localMF_grow[idx_MF]==-1) { 
+  // do nothing
+ } else {
   std::cout << "in new_localMF idx_MF= " << idx_MF << '\n';
   std::cout << "in new_localMF ncomp= " << ncomp << '\n';
   std::cout << "in new_localMF ngrow= " << ngrow << '\n';
   std::cout << "in new_localMF dir= " << dir << '\n';
   std::cout << "in new_localMF level= " << level << '\n';
-  amrex::Error("forgot to delete the localMF before new");
+  amrex::Error("localMF_grow invalid");
  }
  if (ngrow<0)
   amrex::Error("ngrow invalid");
@@ -145,10 +147,12 @@ void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
   int idx_MF,int ngrow,int dir,
   int scomp,int ncomp,Real time) {
 
- if (localMF_grow[idx_MF]>=0) {
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else {
   std::cout << "idx_MF= " << idx_MF << " ngrow = " << ngrow << 
    " dir= " << dir << " time= " << time << '\n';
-  amrex::Error("forgot to delete the localMF before getstateMAC");
+  amrex::Error("localMF_grow invalid getstateMAC_localMF");
  }
  if (ngrow<0)
   amrex::Error("ngrow invalid");
@@ -160,8 +164,11 @@ void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
  
 void NavierStokes::getStateDen_localMF(int idx_MF,int ngrow,Real time) {
 
- if (localMF_grow[idx_MF]>=0)
-  amrex::Error("forgot to delete the localMF before getstateden");
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else 
+  amrex::Error("localMF_grow invalid getStateDen_localMF");
+
  if (ngrow<0)
   amrex::Error("ngrow invalid");
 
@@ -176,9 +183,11 @@ void NavierStokes::getStateDist_localMF(int idx_MF,int ngrow,
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
 
- if (localMF_grow[idx_MF]>=0) {
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else {
   std::cout << "idx_MF,time " << idx_MF << ' ' << time << '\n';
-  amrex::Error("forgot to delete the localMF before getstatedist ");
+  amrex::Error("localMF_grow invalid getStateDist_localMF ");
  }
 
  localMF[idx_MF]=getStateDist(ngrow,time,caller_id);
@@ -193,8 +202,10 @@ void NavierStokes::getState_localMF_list(
 
  if ((ngrow!=0)&&(ngrow!=1))
   amrex::Error("ngrow invalid");
- if (localMF_grow[idx_MF]>=0)
-  amrex::Error("forgot to delete the localMF before getstate");
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow invalid getState_localMF_list");
 
  if (state_index==State_Type) {
   localMF[idx_MF]=getState_list(ngrow,scomp,ncomp,cur_time_slab);
@@ -237,8 +248,11 @@ void NavierStokes::putState_localMF_list(
 void NavierStokes::getState_localMF(int idx_MF,int ngrow,
   int scomp,int ncomp,Real time) {
 
- if (localMF_grow[idx_MF]>=0)
-  amrex::Error("forgot to delete the localMF before getstate");
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow invalid getState_localMF");
+
  if (ngrow<0)
   amrex::Error("ngrow invalid");
 
@@ -251,8 +265,11 @@ void NavierStokes::getState_localMF(int idx_MF,int ngrow,
 void NavierStokes::getStateTensor_localMF(int idx_MF,int ngrow,
   int scomp,int ncomp,Real time) {
 
- if (localMF_grow[idx_MF]>=0)
-  amrex::Error("forgot to delete the localMF before getstateTensor");
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow invalid getStateTensor_localMF");
+
  if (ngrow<0)
   amrex::Error("ngrow invalid");
 
@@ -294,7 +311,9 @@ void NavierStokes::getStateVISC_ALL(int idx,int ngrow) {
 void NavierStokes::delete_localMF(int idx_MF,int ncomp) {
 
  for (int scomp=idx_MF;scomp<idx_MF+ncomp;scomp++) {
-  if (localMF_grow[scomp]<0) {
+  if (localMF_grow[scomp]>=0) {
+   // do nothing
+  } else {
    std::cout << "level= " << level << '\n';
    std::cout << "idx_MF= " << idx_MF << '\n';
    amrex::Error("forgot to allocate the localMF variable before delete");
@@ -5442,8 +5461,7 @@ void NavierStokes::allocate_levelsetLO(int ngrow,int idx) {
  int Interp_LO=1;
  override_LS_HO(Interp_LO);  // do not use normals for coarse/fine interp.
 
- if (localMF_grow[idx]>=0) 
-  delete_localMF(idx,1);
+ delete_localMF_if_exist(idx,1);
  getStateDist_localMF(idx,ngrow,cur_time_slab,17);
  if (localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
@@ -7096,10 +7114,9 @@ void NavierStokes::metrics_data(int ngrow) {
 
  const Real* dx = geom.CellSize();
 
- if (localMF_grow[VOLUME_MF]>=0) {
-  delete_localMF(VOLUME_MF,1);
-  delete_localMF(AREA_MF,AMREX_SPACEDIM);
- } 
+ delete_localMF_if_exist(VOLUME_MF,1);
+ delete_localMF_if_exist(AREA_MF,AMREX_SPACEDIM);
+
  if (ngrow<0)
   amrex::Error("ngrow too small");
 
@@ -9390,13 +9407,10 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
 
- if (localMF_grow[dest_mf]>=0) {
-  delete_localMF(dest_mf,1);
- }
+ delete_localMF_if_exist(dest_mf,1);
  new_localMF(dest_mf,nmat*ngeom_recon,ngrow,-1);  // sets values to 0.0
 
- if (localMF_grow[VOF_RECON_MF]>=0) 
-  delete_localMF(VOF_RECON_MF,1);
+ delete_localMF_if_exist(VOF_RECON_MF,1);
  getState_localMF(VOF_RECON_MF,1,scomp_mofvars,nmat*ngeom_raw,time);
  for (int im=0;im<nmat;im++) {
   int ibase_raw=im*ngeom_raw;
@@ -10456,8 +10470,7 @@ void NavierStokes::scale_variables(int scale_flag) {
 // visc_coef.  
 void NavierStokes::getStateVISC(int idx,int ngrow) {
 
- if (localMF_grow[idx]>=0)
-  delete_localMF(idx,1);
+ delete_localMF_if_exist(idx,1);
 
  if ((ngrow==0)||(ngrow==1)) {
   // do nothing
