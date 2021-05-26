@@ -5191,10 +5191,12 @@ NavierStokes::~NavierStokes ()
     Geometry_cleanup();
 
     for (int i=0;i<MAX_NUM_LOCAL_MF;i++)
-     if (localMF_grow[i]>=0) {
+     if (localMF_grow[i]==-1) {
+      // do nothing
+     } else {
       std::cout << "i= " << i << " localMF_grow= " <<
        localMF_grow[i] << '\n';
-      amrex::Error("forgot to delete localMF variables");
+      amrex::Error("localMF_grow invalid");
      }
 
 }
@@ -6722,8 +6724,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
   if (ngrowFSI!=3)
    amrex::Error("ngrowFSI invalid");
 
-  if (localMF_grow[FSI_MF]>=0)
-   delete_localMF(FSI_MF,1);
+  delete_localMF_if_exist(FSI_MF,1);
 
   new_localMF(FSI_MF,nFSI,ngrowFSI,-1);
 
@@ -8863,9 +8864,7 @@ void NavierStokes::allocate_mdot() {
 
  int nsolve=1;
 
- if (localMF_grow[MDOT_MF]>=0) {
-  delete_localMF(MDOT_MF,1);
- } 
+ delete_localMF_if_exist(MDOT_MF,1);
 
   // MDOT has nsolve components.
  new_localMF(MDOT_MF,nsolve,0,-1);
@@ -11167,8 +11166,7 @@ void NavierStokes::tensor_extrapolate() {
 void 
 NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
- if (localMF_grow[idx]>=0)
-  delete_localMF(idx,1);
+ delete_localMF_if_exist(idx,1);
 
  bool use_tiling=ns_tiling;
 
@@ -11390,9 +11388,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
  if ((ngrow<1)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
 
- if (localMF_grow[MASK_NBR_MF]>=0) {
-  delete_localMF(MASK_NBR_MF,1);
- }
+ delete_localMF_if_exist(MASK_NBR_MF,1);
 
    // mask_nbr:
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
@@ -19065,10 +19061,12 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
  if (dt_min<dt_max) 
   dt_min=dt_max;
 
- if (localMF_grow[FSI_GHOST_MAC_MF]<0) {
-
+ if (localMF_grow[FSI_GHOST_MAC_MF]==-1) {
   init_FSI_GHOST_MAC_MF_ALL(1);
-
+ } else if (localMF_grow[FSI_GHOST_MAC_MF]>=0) {
+  // do nothing
+ } else {
+  amrex::Error("localMF_grow[FSI_GHOST_MAC_MF] invalid");
  }
 
  for (int ilev=finest_level;ilev>=0;ilev--) {
@@ -19656,8 +19654,7 @@ NavierStokes::post_init (Real stop_time)
    // in post_init: delete FSI_MF used by initData
   for (int ilev = 0; ilev <= finest_level; ilev++) {
    NavierStokes& ns_level = getLevel(ilev);
-   if (ns_level.localMF_grow[FSI_MF]>=0)
-    ns_level.delete_localMF(FSI_MF,1);
+   ns_level.delete_localMF_if_exist(FSI_MF,1);
   }
 
   Real strt_time = state[State_Type].slabTime(ns_time_order);
@@ -23144,9 +23141,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
   amrex::Error("level invalid ProcessFaceFrac");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  if (localMF_grow[idxdst+dir]>=0) {
-   delete_localMF(idxdst+dir,1);
-  }
+  delete_localMF_if_exist(idxdst+dir,1);
   new_localMF(idxdst+dir,nface_dst,ngrow_dest,dir);
   localMF[idxdst+dir]->setVal(0.0);
  }
@@ -23275,10 +23270,7 @@ NavierStokes::makeFaceFrac(
 
  int finest_level=parent->finestLevel();
 
- if (localMF_grow[idx]>=0) {
-  delete_localMF(idx,1);
- }
-
+ delete_localMF_if_exist(idx,1);
  new_localMF(idx,nface+nface_decomp,ngrow,-1);
  localMF[idx]->setVal(0.0);
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
@@ -23571,10 +23563,7 @@ NavierStokes::makeCellFrac(
  int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM); 
  int finest_level=parent->finestLevel();
 
- if (localMF_grow[idx]>=0) {
-  delete_localMF(idx,1);
- }
-
+ delete_localMF_if_exist(idx,1);
  new_localMF(idx,ncellfrac,ngrow,-1);
  localMF[idx]->setVal(0.0);
 
@@ -23722,9 +23711,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  } else
   amrex::Error("nhistory invalid");
 
- if (localMF_grow[DIST_CURV_MF]>=0) {
-  delete_localMF(DIST_CURV_MF,1);
- }
+ delete_localMF_if_exist(DIST_CURV_MF,1);
  new_localMF(DIST_CURV_MF,num_curv,1,-1);
  localMF[DIST_CURV_MF]->setVal(0.0);
 

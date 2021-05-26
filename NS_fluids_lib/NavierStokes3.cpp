@@ -9758,6 +9758,10 @@ void NavierStokes::multiphase_project(int project_option) {
   } // ilev=level ... finest_level
  } else if (project_option==200) { // smoothing
   int project_option_thermal=2;
+  Vector<int> scomp_thermal;
+  Vector<int> ncomp_thermal;
+  int state_index_thermal;  
+  int ncomp_check_thermal;
   get_mm_scomp_solver(
     nmat,
     project_option_thermal,
@@ -9765,6 +9769,8 @@ void NavierStokes::multiphase_project(int project_option) {
     scomp_thermal,
     ncomp_thermal,
     ncomp_check_thermal);
+  if (ncomp_check_thermal!=nmat)
+   amrex::Error("ncomp_check_thermal invalid");
 
 
           // data at time = cur_time_slab
