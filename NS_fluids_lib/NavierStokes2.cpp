@@ -128,6 +128,19 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
 
 } //new_localMF
 
+void NavierStokes::new_localMF_if_not_exist(int idx_MF,int ncomp,
+ int ngrow,int dir) {
+
+ if (localMF_grow(idx_MF)==-1) {
+  new_localMF(idx_MF,ncomp,ngrow,dir);
+ } else if (localMF_grow(idx_MF)>=0) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow(idx_MF) invalid");
+
+} //new_localMF_if_not_exist
+
+
 void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
   int idx_MF,int ngrow,int dir,
   int scomp,int ncomp,Real time) {
@@ -253,9 +266,7 @@ void NavierStokes::getStateTensor_localMF(int idx_MF,int ngrow,
 void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
   Real tag,int clearbdry) {
 
- if (localMF_grow[idx_MF]>=0) {
-  delete_localMF(idx_MF,1);
- }
+ delete_localMF_if_exist(idx_MF,1);
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
 
@@ -295,7 +306,19 @@ void NavierStokes::delete_localMF(int idx_MF,int ncomp) {
  ParallelDescriptor::Barrier();
 
 } // subroutine delete_localMF
- 
+
+void NavierStokes::delete_localMF_if_exist(int idx_MF,int ncomp) {
+
+ if (localMF_grow[idx_MF]>=0) {
+  delete_localMF(idx_MF,ncomp);
+ } else if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow[idx_MF] invalid");
+
+} // subroutine delete_localMF_if_exist
+
+
 // In the valid region: 
 //   mask=tag if not covered by level+1.
 // if clear_phys_boundary=0 then
@@ -5370,32 +5393,26 @@ void NavierStokes::allocate_physics_vars() {
  int nmat=num_materials;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  if (localMF_grow[FACE_VAR_MF+dir]<0)
-   new_localMF(FACE_VAR_MF+dir,ncphys,0,dir);
+  new_localMF_if_not_exist(FACE_VAR_MF+dir,ncphys,0,dir);
  }
 
   // ncomp,ngrow,dir
- if (localMF_grow[SWEPT_CROSSING_MF]<0) {
+ if (localMF_grow[SWEPT_CROSSING_MF]==-1) {
   new_localMF(SWEPT_CROSSING_MF,nmat,0,-1); 
   setVal_localMF(SWEPT_CROSSING_MF,1.0,0,nmat,0); //val,scomp,ncomp,ngrow
- }
+ } else if (localMF_grow[SWEPT_CROSSING_MF]>=0) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow[SWEPT_CROSSING_MF] invalid");
 
- if (localMF_grow[CELL_DEDT_MF]<0)
-  new_localMF(CELL_DEDT_MF,nmat+1,1,-1); // ncomp,ngrow,dir
-
- if (localMF_grow[CELL_DEN_MF]<0)
-  new_localMF(CELL_DEN_MF,nmat+1,1,-1); // ncomp,ngrow,dir
-
- // coeff_avg,padvect_avg 
- if (localMF_grow[CELL_SOUND_MF]<0)
-  new_localMF(CELL_SOUND_MF,2,0,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_DEDT_MF,nmat+1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_DEN_MF,nmat+1,1,-1); // ncomp,ngrow,dir
+  // coeff_avg,padvect_avg 
+ new_localMF_if_not_exist(CELL_SOUND_MF,2,0,-1); // ncomp,ngrow,dir
 
   // tessellating volume fractions.
- if (localMF_grow[CELL_VOF_MF]<0)
-  new_localMF(CELL_VOF_MF,nmat,1,-1); // ncomp,ngrow,dir
-
- if (localMF_grow[CELL_VISC_MF]<0)
-  new_localMF(CELL_VISC_MF,nmat+1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_VOF_MF,nmat,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_VISC_MF,nmat+1,1,-1); // ncomp,ngrow,dir
 
 } // allocate_physics_vars
 

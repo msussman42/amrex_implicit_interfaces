@@ -711,6 +711,7 @@ protected:
      int ncomp,int ngrow);
 
     void new_localMF(int idx_MF,int ncomp,int ngrow,int dir);
+    void new_localMF_if_not_exist(int idx_MF,int ncomp,int ngrow,int dir);
     void getStateMAC_localMF(int MAC_state_idx,
      int idx_MF,int ngrow,int dir,
      int scomp,int ncomp,Real time);
@@ -752,6 +753,7 @@ protected:
     void getStateVISC_ALL(int idx,int ngrow);
 
     void delete_localMF(int idx_MF,int ncomp); 
+    void delete_localMF_if_exist(int idx_MF,int ncomp); 
 
     void MaxAdvectSpeedALL(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
 		    Real& vel_max_cap_wave);
