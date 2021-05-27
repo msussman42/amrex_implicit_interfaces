@@ -3377,6 +3377,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int hflag=0;
         int combine_idx=-1;  // update state variables
         int update_flux=0;
+        int interface_cond_avail=0;
         ns_level.combine_state_variable(
          project_option_combine,
          combine_idx,

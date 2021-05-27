@@ -133,12 +133,12 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
 void NavierStokes::new_localMF_if_not_exist(int idx_MF,int ncomp,
  int ngrow,int dir) {
 
- if (localMF_grow(idx_MF)==-1) {
+ if (localMF_grow[idx_MF]==-1) {
   new_localMF(idx_MF,ncomp,ngrow,dir);
- } else if (localMF_grow(idx_MF)>=0) {
+ } else if (localMF_grow[idx_MF]>=0) {
   // do nothing
  } else
-  amrex::Error("localMF_grow(idx_MF) invalid");
+  amrex::Error("localMF_grow[idx_MF] invalid");
 
 } //new_localMF_if_not_exist
 
