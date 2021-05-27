@@ -2795,7 +2795,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF,1);
        }
 
-       FIX ME SMOOTH TEMP HERE
+        // initialize TEMPERATURE_SMOOTH_MF
+       int smooth_project_option=200;
+       multiphase_project(smooth_project_option);
 
         // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
        for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -2805,7 +2807,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           nucleation_flag);
        }
 
-       delete_array(TEMPERATURE_SMOOTH_MF);
        delete_array(TYPE_MF);
        delete_array(COLOR_MF);
 
@@ -2893,6 +2894,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // 2.unsplit advection of materials changing phase
        // 3.update volume fractions, jump strength, temperature
        level_phase_change_convertALL();
+
+       delete_array(TEMPERATURE_SMOOTH_MF);
 
        delete_array(LS_NRM_FD_MF);
        delete_array(BURNING_VELOCITY_MF);
@@ -10522,11 +10525,8 @@ void NavierStokes::multiphase_project(int project_option) {
  if (change_flag==0) {
     // do nothing
  } else if (change_flag==1) {
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.putState_localMF_list(STATE_FOR_RESID_MF,
-     state_index,scomp,ncomp);
-  } // ilev=finest_level ... level
+  putState_localMF_listALL(STATE_FOR_RESID_MF,
+    state_index,scomp,ncomp);
   delete_array(STATE_FOR_RESID_MF);
   getState_localMF_listALL(STATE_FOR_RESID_MF,1,
     state_index,scomp,ncomp);
@@ -11909,11 +11909,8 @@ void NavierStokes::multiphase_project(int project_option) {
  deallocate_maccoefALL(project_option);
 
     // copy OUTER_ITER_PRESSURE to s_new
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.putState_localMF_list(OUTER_ITER_PRESSURE_MF,state_index,
+ putState_localMF_listALL(OUTER_ITER_PRESSURE_MF,state_index,
    scomp,ncomp);
- }  // ilev=finest_level ... level
 
  for (int ilist=0;ilist<scomp.size();ilist++) 
   avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
@@ -12191,7 +12188,11 @@ void NavierStokes::multiphase_project(int project_option) {
     scomp_thermal,
     ncomp_thermal);
 
-  FIX ME restore state here and delete the temp var
+  putState_localMF_listALL(TEMPERATURE_SAVE_MF,
+     state_index_thermal,scomp_thermal,ncomp_thermal);
+
+  delete_array(TEMPERATURE_SAVE_MF);
+
  } else if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else {

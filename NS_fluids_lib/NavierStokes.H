@@ -746,6 +746,12 @@ protected:
      Vector<int> scomp,
      Vector<int> ncomp);
 
+    void putState_localMF_listALL(
+     int idx_MF,
+     int state_index,
+     Vector<int> scomp,
+     Vector<int> ncomp);
+
     void getBCArray_list(Vector<int>& listbc,int state_index,
      int gridno,Vector<int> scomp,Vector<int> ncomp);
 
