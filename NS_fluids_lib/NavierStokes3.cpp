@@ -2795,6 +2795,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF,1);
        }
 
+       FIX ME SMOOTH TEMP HERE
+
         // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         int nucleation_flag=0;
@@ -2803,6 +2805,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           nucleation_flag);
        }
 
+       delete_array(TEMPERATURE_SMOOTH_MF);
        delete_array(TYPE_MF);
        delete_array(COLOR_MF);
 
@@ -9813,6 +9816,13 @@ void NavierStokes::multiphase_project(int project_option) {
       P_new,pcomp,0,1,1);
   } // ilev=level ... finest_level
  } else if (project_option==200) { // smoothing
+
+  if ((localMF_grow[TEMPERATURE_SAVE_MF]==-1)&&
+      (localMF_grow[TEMPERATURE_SMOOTH_MF]==-1)) {
+   // do nothing
+  } else
+   amrex::Error("TEMPERATURE_SAVE_MF or TEMPERATURE_SMOOTH_MF not deleted");
+
   Vector<int> scomp_thermal;
   Vector<int> ncomp_thermal;
   int state_index_thermal;  
@@ -9843,9 +9853,6 @@ void NavierStokes::multiphase_project(int project_option) {
   int hflag_combine=0;
   int interface_cond_avail=0;
  
-FIX ME check that TEMPERATURE_SAVE_MF and TEMPERATURE_SMOOTH_MF are not
-allocated prior to these calls
- 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.combine_state_variable(
@@ -9855,7 +9862,12 @@ allocated prior to these calls
     hflag_combine,
     update_flux,
     interface_cond_avail); 
-  }
+  } // ilev=finest_level ... level
+
+  for (int ilist=0;ilist<scomp_thermal.size();ilist++) 
+   avgDownALL(state_index_thermal,scomp_thermal[ilist],
+	ncomp_thermal[ilist],1);
+
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
  } else
@@ -12125,6 +12137,65 @@ allocated prior to these calls
       0,0,1,1);
   } // ilev=level ... finest_level
   delete_array(DIV_SAVE_MF);
+ } else if (project_option==200) {  // temperature smoothing
+
+  if ((localMF_grow[TEMPERATURE_SAVE_MF]>=0)&&
+      (localMF_grow[TEMPERATURE_SMOOTH_MF]==-1)) {
+   // do nothing
+  } else
+   amrex::Error("TEMPERATURE_SAVE_MF or TEMPERATURE_SMOOTH_MF invalid");
+
+  Vector<int> scomp_thermal;
+  Vector<int> ncomp_thermal;
+  int state_index_thermal;  
+  int ncomp_check_thermal;
+  get_mm_scomp_solver(
+    nmat,
+    project_option,
+    state_index_thermal,
+    scomp_thermal,
+    ncomp_thermal,
+    ncomp_check_thermal);
+  if (ncomp_check_thermal!=nmat)
+   amrex::Error("ncomp_check_thermal invalid");
+
+  int project_option_combine=2; 
+  int combine_flag=1;  // GFM -> FVM  
+   // combine_idx==-1 => update S_new  
+   // combine_idx>=0  => update localMF[combine_idx]
+  int combine_idx=-1; 
+  int update_flux=0;
+  int hflag_combine=0;
+  int interface_cond_avail=0;
+ 
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.combine_state_variable(
+    project_option_combine,
+    combine_idx,
+    combine_flag,
+    hflag_combine,
+    update_flux,
+    interface_cond_avail); 
+  } // ilev=finest_level ... level
+
+  for (int ilist=0;ilist<scomp_thermal.size();ilist++) 
+   avgDownALL(state_index_thermal,scomp_thermal[ilist],
+	ncomp_thermal[ilist],1);
+
+   // data at time = cur_time_slab
+  getState_localMF_listALL(
+    TEMPERATURE_SMOOTH_MF,
+    normal_probe_size+3,
+    state_index_thermal,
+    scomp_thermal,
+    ncomp_thermal);
+
+  FIX ME restore state here and delete the temp var
+ } else if (project_option_is_valid(project_option)==1) {
+  // do nothing
+ } else {
+  amrex::Error("project_option invalid");
  }
 
 #if (profile_solver==1)

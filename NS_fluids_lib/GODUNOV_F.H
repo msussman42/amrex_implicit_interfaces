@@ -1174,6 +1174,7 @@ extern "C"
      int* project_option,
      int* combine_idx,
      int* combine_flag,
+     int* interface_cond_avail,
      int* nstate_main,
      int* ncomp_cell,
      int* scomp,
