@@ -272,6 +272,34 @@ void NavierStokes::putState_localMF_list(
 } // subroutine putState_localMF_list
 
 
+// copy localMF[idx_MF] to s_new
+void NavierStokes::putState_localMF_listALL(
+  int idx_MF,
+  int state_index,
+  Vector<int> scomp,
+  Vector<int> ncomp) {
+
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==0");
+
+ if (localMF_grow[idx_MF]>=0) {
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.putState_localMF_list(
+    idx_MF,state_index,scomp,ncomp);
+  } // ilev=finest_level ... level
+
+ } else
+  amrex::Error("localMF_grow[idx_MF] invalid");
+
+} // subroutine putState_localMF_listALL
+
+
+
 void NavierStokes::getState_localMF(int idx_MF,int ngrow,
   int scomp,int ncomp,Real time) {
 
