@@ -822,8 +822,12 @@ protected:
                 int scomp,int dcomp,int ncomp);
 
     void combine_state_variable(
-     int project_option,int idx,
-     int combine_flag,int hflag,int update_flux);
+     int project_option,
+     int idx,
+     int combine_flag,
+     int hflag,
+     int update_flux,
+     int interface_cond_avail);
 
     void viscous_boundary_fluxes(
      int project_option,

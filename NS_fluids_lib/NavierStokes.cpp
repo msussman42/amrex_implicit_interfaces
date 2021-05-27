@@ -16698,14 +16698,24 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
+ int interface_cond_avail=0;
+
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
  project_option_combine=0; // mac velocity
  update_flux=1;
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
 
   // p(rho,T) in compressible parts
   // projection pressure in incompressible parts.
@@ -16924,14 +16934,24 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  hflag=0;
  combine_idx=-1; 
  update_flux=0;
+
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
+
  project_option_combine=0; // mac velocity
  update_flux=1;
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
  
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -17591,14 +17611,25 @@ void NavierStokes::volWgtSum(
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
+ int interface_cond_avail=0;
+
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
+
  project_option_combine=0; // mac velocity
  update_flux=1;
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
 
  resize_maskfiner(2,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,2,53);
@@ -17788,12 +17819,20 @@ void NavierStokes::volWgtSum(
  update_flux=0;
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
  project_option_combine=0; // mac velocity
  update_flux=1;
  combine_state_variable(
   project_option_combine,
-  combine_idx,combine_flag,hflag,update_flux);
+  combine_idx,
+  combine_flag,
+  hflag,
+  update_flux,
+  interface_cond_avail);
 
  result[filler_comp]=0.0;
 
@@ -21238,6 +21277,7 @@ NavierStokes::post_init_state () {
  int hflag=0;
  int combine_idx=-1;
  int update_flux=0;
+ int interface_cond_avail=0;
 
  int nmat=num_materials;
 
@@ -21309,20 +21349,28 @@ NavierStokes::post_init_state () {
   NavierStokes& ns_level=getLevel(ilev);
 
   project_option_combine=2;  // temperature in post_init_state
-  combine_flag=2;  
+  combine_flag=2; //combine if vfrac<VOFTOL 
   hflag=0;
   combine_idx=-1;
   update_flux=0;
 
   ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux); 
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail); 
 
   for (int ns=0;ns<num_species_var;ns++) {
    project_option_combine=100+ns; // species in post_init_state
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux); 
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail); 
   }
 
  } // ilev=finest_level ... level
@@ -21402,12 +21450,20 @@ NavierStokes::post_init_state () {
    update_flux=0;
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux);
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux, 
+    interface_cond_avail);
    project_option_combine=0; // mac velocity
    update_flux=1;
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux);
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail);
 
    ns_level.make_MAC_velocity_consistent();
   }
@@ -21425,12 +21481,20 @@ NavierStokes::post_init_state () {
    update_flux=0;
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux);
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail);
    project_option_combine=0; // mac velocity
    update_flux=1;
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux);
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail);
 
    ns_level.make_MAC_velocity_consistent();
   }

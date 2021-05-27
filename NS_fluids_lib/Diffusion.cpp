@@ -741,7 +741,11 @@ void NavierStokes::viscous_boundary_fluxes(
 // combine_flag==2 (combine if vfrac<VOFTOL)
 void NavierStokes::combine_state_variable(
  int project_option,
- int combine_idx,int combine_flag,int hflag,int update_flux) {
+ int combine_idx,
+ int combine_flag,
+ int hflag,
+ int update_flux,
+ int interface_cond_avail) {
 
  bool use_tiling=ns_tiling;
 
@@ -894,15 +898,21 @@ void NavierStokes::combine_state_variable(
   resize_levelsetLO(2,LEVELPC_MF);
   LEVEL_COMBINE=localMF[LEVELPC_MF];
 
-  if (is_phasechange==1) {
-   STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
-   debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,830);
-   if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
-    amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
-  } else if (is_phasechange==0) {
+  if (interface_cond_avail==1) {
+   if (is_phasechange==1) {
+    STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
+    debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,830);
+    if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+     amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
+   } else if (is_phasechange==0) {
+    STATE_INTERFACE=&LS_new;  // placeholder
+   } else
+    amrex::Error("is_phasechange invalid");
+  } else if (interface_cond_avail==0) {
    STATE_INTERFACE=&LS_new;  // placeholder
   } else
-   amrex::Error("is_phasechange invalid");
+   amrex::Error("interface_cond_avail invalid");
+
 
   debug_ngrow(LEVELPC_MF,2,830);
 
@@ -1265,6 +1275,8 @@ void NavierStokes::combine_state_variable(
     xlo,dx,
     &cur_time_slab);
 
+FIX ME add interface_cond_avail
+
   }  // mfi
 } // omp
   ns_reconcile_d_num(30);
@@ -1286,13 +1298,15 @@ void NavierStokes::combine_state_variable(
   } else
    amrex::Error("combine_flag invalid");
 
-  if ((combine_idx==-1)&&(hflag==0)) {
+  if ((combine_idx==-1)&&
+      (hflag==0)) {
 
     // if level<finest_level, then average down from level+1.
    int spectral_override=1;
    avgDown_list(state_index,scomp,ncomp,spectral_override); 
 
-  } else if ((combine_idx==0)||(hflag==1)) {
+  } else if ((combine_idx==0)||
+             (hflag==1)) {
 
    // do nothing
 

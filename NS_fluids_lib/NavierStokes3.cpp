@@ -2658,14 +2658,24 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // combine_idx>=0  => update localMF[combine_idx]
        int combine_idx=-1;  
        int update_flux=0;
+       int interface_cond_avail=0;
+
        ns_level.combine_state_variable(
         project_option_combine,
-        combine_idx,combine_flag,hflag,update_flux); 
+        combine_idx,
+        combine_flag,
+        hflag,
+        update_flux,
+        interface_cond_avail); 
        for (int ns=0;ns<num_species_var;ns++) {
         project_option_combine=100+ns; // species in do_the_advance
         ns_level.combine_state_variable(
          project_option_combine,
-         combine_idx,combine_flag,hflag,update_flux); 
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux,
+         interface_cond_avail); 
        }
 
       } // ilev=finest_level ... level
@@ -3021,24 +3031,42 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // combine_idx>=0  => update localMF[combine_idx]
        int combine_idx=-1;  
        int update_flux=0;
+       int interface_cond_avail=0;
+
        ns_level.combine_state_variable(
         project_option_combine,
-        combine_idx,combine_flag,hflag,update_flux); 
+        combine_idx,
+        combine_flag,
+        hflag,
+        update_flux,
+        interface_cond_avail); 
        for (int ns=0;ns<num_species_var;ns++) {
         project_option_combine=100+ns;
         ns_level.combine_state_variable(
          project_option_combine,
-         combine_idx,combine_flag,hflag,update_flux); 
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux,
+         interface_cond_avail); 
        }
        project_option_combine=3;  // velocity
        ns_level.combine_state_variable(
         project_option_combine,
-        combine_idx,combine_flag,hflag,update_flux);
+        combine_idx,
+        combine_flag,
+        hflag,
+        update_flux,
+        interface_cond_avail);
        project_option_combine=0; // mac velocity
        update_flux=1;
        ns_level.combine_state_variable(
         project_option_combine,
-        combine_idx,combine_flag,hflag,update_flux);
+        combine_idx,
+        combine_flag,
+        hflag,
+        update_flux,
+        interface_cond_avail);
       } // ilev = finest_level ... level
 
       if (verbose>0) {
@@ -3111,15 +3139,25 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int hflag=0; // inhomogeneous option
         int combine_idx=-1;  // update state variables
         int update_flux=0;
-	  // in: Diffusion.cpp
+        int interface_cond_avail=0;
+
+	  // declared in: Diffusion.cpp
         ns_level.combine_state_variable(
          project_option_combine,
-         combine_idx,combine_flag,hflag,update_flux);
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux, 
+         interface_cond_avail);
         project_option_combine=0; // mac velocity
         update_flux=1;
         ns_level.combine_state_variable(
          project_option_combine,
-         combine_idx,combine_flag,hflag,update_flux);
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux,
+         interface_cond_avail);
        } // ilev = finest_level ... level
 
         // T_advect_MF=new temperature
@@ -3329,18 +3367,26 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         int project_option_combine=3;  // velocity in do_the_advance
-        int combine_flag=2;
+        int combine_flag=2; // combine if vfrac<VOFTOL
         int hflag=0;
         int combine_idx=-1;  // update state variables
         int update_flux=0;
         ns_level.combine_state_variable(
          project_option_combine,
-         combine_idx,combine_flag,hflag,update_flux);
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux,
+         interface_cond_avail);
         project_option_combine=0; // mac velocity
         update_flux=1;
         ns_level.combine_state_variable(
          project_option_combine, 
-	 combine_idx,combine_flag,hflag,update_flux);
+	 combine_idx,
+         combine_flag,
+         hflag,
+         update_flux,
+         interface_cond_avail);
        } // ilev 
        debug_memory();
 
@@ -9784,9 +9830,32 @@ void NavierStokes::multiphase_project(int project_option) {
    // data at time = cur_time_slab
   getState_localMF_listALL(
     TEMPERATURE_SAVE_MF,1,
-    state_index,
-    scomp,
-    ncomp);
+    state_index_thermal,
+    scomp_thermal,
+    ncomp_thermal);
+
+  int project_option_combine=2; 
+  int combine_flag=0;  // FVM -> GFM 
+   // combine_idx==-1 => update S_new  
+   // combine_idx>=0  => update localMF[combine_idx]
+  int combine_idx=-1; 
+  int update_flux=0;
+  int hflag_combine=0;
+  int interface_cond_avail=0;
+ 
+FIX ME check that TEMPERATURE_SAVE_MF and TEMPERATURE_SMOOTH_MF are not
+allocated prior to these calls
+ 
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.combine_state_variable(
+    project_option_combine,
+    combine_idx,
+    combine_flag,
+    hflag_combine,
+    update_flux,
+    interface_cond_avail); 
+  }
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
  } else
@@ -9806,7 +9875,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	    (project_option<100+num_species_var)) { //species
   // do nothing
  } else if (project_option==200) { //smoothing
-  // do nothing
+  override_enable_spectral(0); // always low order
  } else
   amrex::Error("project_option invalid43");
 
@@ -11914,20 +11983,30 @@ void NavierStokes::multiphase_project(int project_option) {
    if (project_option==0) {
 
     int project_option_combine=2;  // temperature in multiphase_project
-    int combine_flag=2;
+    int combine_flag=2; //combine if vfrac<VOFTOL
     int hflag=0;
      // combine_idx==-1 => update S_new  
      // combine_idx>=0  => update localMF[combine_idx]
     int combine_idx=-1;  
     int update_flux=0;
+    int interface_cond_avail=0;
+
     ns_level.combine_state_variable(
      project_option_combine,
-     combine_idx,combine_flag,hflag,update_flux); 
+     combine_idx,
+     combine_flag,
+     hflag,
+     update_flux,
+     interface_cond_avail); 
     for (int ns=0;ns<num_species_var;ns++) {
      project_option_combine=100+ns; // species
      ns_level.combine_state_variable(
       project_option_combine,
-      combine_idx,combine_flag,hflag,update_flux); 
+      combine_idx,
+      combine_flag,
+      hflag,
+      update_flux,
+      interface_cond_avail); 
     }
 
       // velocity and pressure
@@ -12385,6 +12464,7 @@ void NavierStokes::veldiffuseALL() {
    // combine_idx>=0  => update localMF[combine_idx]
   int combine_idx=-1; 
   int update_flux=0;
+  int interface_cond_avail=1;
   
   if (convert_temperature==1) {
    combine_flag=0; // FVM -> GFM
@@ -12396,7 +12476,11 @@ void NavierStokes::veldiffuseALL() {
    // MEHDI VAHAB: COMBINE TEMPERATURES HERE IF NOT SUPERMESH APPROACH
   ns_level.combine_state_variable(
    project_option_combine,
-   combine_idx,combine_flag,hflag,update_flux); 
+   combine_idx,
+   combine_flag,
+   hflag,
+   update_flux,
+   interface_cond_avail); 
 
   for (int ns=0;ns<num_species_var;ns++) {
    project_option_combine=100+ns; // species
@@ -12410,7 +12494,11 @@ void NavierStokes::veldiffuseALL() {
 
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux); 
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail); 
   }
  }  // ilev=finest_level ... level
 
@@ -12929,6 +13017,7 @@ void NavierStokes::veldiffuseALL() {
   int combine_flag=1;  // GFM -> FVM
   int combine_idx=-1;  // update state variables
   int update_flux=0;
+  int interface_cond_avail=1;
 
   if (convert_temperature==1) {
    combine_flag=1; // GFM -> FVM
@@ -12939,7 +13028,11 @@ void NavierStokes::veldiffuseALL() {
 
   ns_level.combine_state_variable(
    project_option_combine,
-   combine_idx,combine_flag,hflag,update_flux); 
+   combine_idx,
+   combine_flag,
+   hflag,
+   update_flux,
+   interface_cond_avail); 
 
   for (int ns=0;ns<num_species_var;ns++) {
    project_option_combine=100+ns; // species
@@ -12953,7 +13046,11 @@ void NavierStokes::veldiffuseALL() {
 
    ns_level.combine_state_variable(
     project_option_combine,
-    combine_idx,combine_flag,hflag,update_flux); 
+    combine_idx,
+    combine_flag,
+    hflag,
+    update_flux,
+    interface_cond_avail); 
   }
  } // ilev=level ... finest_level
 
