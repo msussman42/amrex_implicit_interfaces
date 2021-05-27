@@ -1240,6 +1240,7 @@ void NavierStokes::combine_state_variable(
     &project_option,
     &combine_idx,
     &combine_flag,
+    &interface_cond_avail,
     &nstate,
     &ncomp_cell,
     scomp.dataPtr(),
@@ -1274,8 +1275,6 @@ void NavierStokes::combine_state_variable(
     listbc.dataPtr(),
     xlo,dx,
     &cur_time_slab);
-
-FIX ME add interface_cond_avail
 
   }  // mfi
 } // omp
