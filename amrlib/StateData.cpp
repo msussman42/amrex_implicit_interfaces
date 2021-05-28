@@ -627,33 +627,44 @@ StateData::get_grid_type(IndexType local_typ,int& grid_type) {
 
  grid_type=-1;
 
+  // CELL - CELL - CELL
  if (local_typ.cellCentered()) {
   grid_type=-1;
+  // CELL - CELL - CELL
  } else if (local_typ==IndexType::TheXUMACType()) {
   grid_type=-1;
   amrex::Error("expecting TheXUMACType==cellCentered");
+  // CELL - CELL - CELL
  } else if (local_typ==IndexType::TheYVMACType()) {
   grid_type=-1;
   amrex::Error("expecting TheYVMACType==cellCentered");
+  // CELL - CELL - CELL
  } else if ((local_typ==IndexType::TheZWMACType())&&
             (AMREX_SPACEDIM==3)) {
   grid_type=-1;
   amrex::Error("expecting TheZWMACType==cellCentered");
+  // NODE - CELL - CELL
  } else if (local_typ==IndexType::TheUMACType()) {
   grid_type=0;
+  // CELL - NODE - CELL
  } else if (local_typ==IndexType::TheVMACType()) {
   grid_type=1;
+  // CELL - CELL - NODE 
  } else if ((local_typ==IndexType::TheWMACType())&&
             (AMREX_SPACEDIM==3)) {
   grid_type=2;
+  // NODE - NODE - CELL
  } else if (local_typ==IndexType::TheYUMACType()) {
   grid_type=3;
+  // NODE - NODE - CELL
  } else if (local_typ==IndexType::TheXVMACType()) {
   grid_type=3;
   amrex::Error("expecting TheXVMACType==TheYUMACType");
+  // NODE - CELL - NODE 
  } else if ((local_typ==IndexType::TheZUMACType())&&
             (AMREX_SPACEDIM==3)) {
   grid_type=4;
+  // NODE - CELL - NODE 
  } else if ((local_typ==IndexType::TheXWMACType())&&
             (AMREX_SPACEDIM==3)) {
   grid_type=4;
@@ -661,6 +672,7 @@ StateData::get_grid_type(IndexType local_typ,int& grid_type) {
  } else if ((local_typ==IndexType::TheZVMACType())&&
             (AMREX_SPACEDIM==3)) {
   grid_type=5;
+  // CELL - NODE - NODE 
  } else if ((local_typ==IndexType::TheYWMACType())&&
             (AMREX_SPACEDIM==3)) {
   grid_type=5;

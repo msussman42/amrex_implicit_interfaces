@@ -62,7 +62,7 @@ public:
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf,
-     int grid_type);
+     int grid_type); // -1,0,1,2,3,4,5
 };
 
 
@@ -120,7 +120,7 @@ public:
      Vector<BCRec>&    bcr,
      int levelc,int levelf,
      int bfactc,int bfactf,
-     int grid_type);
+     int grid_type); // -1,0,1,2,3,4,5
 };
 
 
