@@ -1752,6 +1752,10 @@ protected:
     static int DIV_Type;
     static int Solid_State_Type;
     static int Tensor_Type;
+    static int TensorXU_Type;
+    static int TensorYU_Type;
+    static int TensorZU_Type;
+    static int TensorZV_Type;
     static int XDmac_Type;
     static int YDmac_Type;
     static int ZDmac_Type;
