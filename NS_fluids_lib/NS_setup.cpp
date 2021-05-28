@@ -32,6 +32,18 @@ static int tang_vel_bc[] =
 static int tang_vel_extrap_bc[] =
 { INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
 
+// Components are  Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall.
+static int grad_dot_n_norm_vel_bc[] =
+{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
+static int grad_dot_t_norm_vel_bc[] =
+{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_ODD, FOEXTRAP, FOEXTRAP };
+
+static int grad_dot_n_tang_vel_bc[] =
+{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_ODD, FOEXTRAP, FOEXTRAP };
+static int grad_dot_t_tang_vel_bc[] =
+{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
+
+
 // Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall.
 static int scalar_bc[] =
 { INT_DIR, EXT_DIR, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
@@ -75,6 +87,88 @@ set_tensor_bc (BCRec&       bc,
 {
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
+   
+     // if s=REFLECT EVEN => grad s dot n=REFLECT ODD
+     //                      grad s dot t=REFLECT EVEN
+     // if s=FOEXTRAP     => grad s dot n=FOEXTRAP
+     //                      grad s dot t=FOEXTRAP
+     // if s=REFLECT ODD  => grad s dot n=REFLECT EVEN
+     //                      grad s dot t=REFLECT_ODD
+     // if s=EXT_DIR => grad s dot n=FOEXTRAP
+     //                 grad s dot t=FOEXTRAP
+     // inflow:     u dot n=EXT_DIR,     u dot t=EXT_DIR
+     // outflow:    u dot n=FOEXTRAP,    u dot t=FOEXTRAP
+     // symmetry:   u dot n=REFLECT_ODD, u dot t=REFLECT_EVEN
+     // SlipWall:   u dot n=EXT_DIR,     u dot t=FOEXTRAP
+     // NoSlipWall: u dot n=EXT_DIR,     u dot t=EXT_DIR
+     //
+     // grad dot n:
+     // inflow:     u dot n=EXT_DIR      -> FOEXTRAP
+     // outflow:    u dot n=FOEXTRAP,    -> FOEXTRAP
+     // symmetry:   u dot n=REFLECT_ODD, -> REFLECT_EVEN
+     // SlipWall:   u dot n=EXT_DIR,     -> FOEXTRAP
+     // NoSlipWall: u dot n=EXT_DIR,     -> FOEXTRAP
+     // grad dot t:
+     // inflow:     u dot n=EXT_DIR      -> FOEXTRAP
+     // outflow:    u dot n=FOEXTRAP,    -> FOEXTRAP
+     // symmetry:   u dot n=REFLECT_ODD, -> REFLECT_ODD
+     // SlipWall:   u dot n=EXT_DIR,     -> FOEXTRAP
+     // NoSlipWall: u dot n=EXT_DIR,     -> FOEXTRAP
+
+     //
+     // grad dot n:
+     // inflow:     u dot t=EXT_DIR      -> FOEXTRAP
+     // outflow:    u dot t=FOEXTRAP,    -> FOEXTRAP
+     // symmetry:   u dot t=REFLECT_EVEN -> REFLECT_ODD
+     // SlipWall:   u dot t=FOEXTRAP,    -> FOEXTRAP
+     // NoSlipWall: u dot t=EXT_DIR,     -> FOEXTRAP
+     // grad dot t:
+     // inflow:     u dot t=EXT_DIR      -> FOEXTRAP
+     // outflow:    u dot t=FOEXTRAP,    -> FOEXTRAP
+     // symmetry:   u dot t=REFLECT_EVEN -> REFLECT_EVEN
+     // SlipWall:   u dot t=FOEXTRAP,    -> FOEXTRAP
+     // NoSlipWall: u dot t=EXT_DIR,     -> FOEXTRAP
+
+FIX ME (extrapolation next)
+
+    if ((dir1>=0)&&(dir1<AMREX_SPACEDIM)) {
+     // do nothing
+    } else
+     amrex::Error("dir1 invalid");
+    if ((dir2>=0)&&(dir2<AMREX_SPACEDIM)) {
+     // do nothing
+    } else
+     amrex::Error("dir2 invalid");
+
+    for (int dir3=0;dir3<AMREX_SPACEDIM;dir3++) {
+
+     if ((dir1==dir3)&&(dir2!=dir3)) {
+      bc.setLo(dir3,grad_dot_t_norm_vel_bc[lo_bc[dir3]]);
+      bc.setHi(dir3,grad_dot_t_norm_vel_bc[hi_bc[dir3]]);
+     } else if ((dir1!=dir3)&&(dir2==dir3)) {
+      bc.setLo(dir3,grad_dot_n_tang_vel_bc[lo_bc[dir3]]);
+      bc.setHi(dir3,grad_dot_n_tang_vel_bc[hi_bc[dir3]]);
+     } else if ((dir1!=dir3)&&(dir2!=dir3)) {
+      bc.setLo(dir3,grad_dot_t_tang_vel_bc[lo_bc[dir3]]);
+      bc.setHi(dir3,grad_dot_t_tang_vel_bc[hi_bc[dir3]]);
+     } else if ((dir1==dir3)&&(dir2==dir3)) {
+      bc.setLo(dir3,grad_dot_n_norm_vel_bc[lo_bc[dir3]]);
+      bc.setHi(dir3,grad_dot_n_norm_vel_bc[hi_bc[dir3]]);
+     } else
+      amrex::Error("dir1,dir2,dir3 bust");
+
+    } // dir3=0..sdim-1
+
+} // subroutine set_tensor_bc
+
+
+static
+void
+set_extrap_tensor_bc (BCRec&       bc,
+               const BCRec& phys_bc,int dir1,int dir2)
+{
+    const int* lo_bc = phys_bc.lo();
+    const int* hi_bc = phys_bc.hi();
     
     if (dir1==dir2) {
      bc.setLo(0,extrap_tensor_bc[lo_bc[0]]);
@@ -111,7 +205,8 @@ set_tensor_bc (BCRec&       bc,
     } else
      amrex::Error("dir1 or dir2 invalid");
 
-} // subroutine set_tensor_bc
+} // subroutine set_extrap_tensor_bc
+
 
 
 static
@@ -734,19 +829,20 @@ NavierStokes::variableSetUp ()
       &pc_interp,
       null_ncomp_particles);
 
-     int ncghost_elastic=1;
+      // 11,12,22,33,13,23,XD,YD,ZD
+     int ncghost_elastic=2*AMREX_SPACEDIM+AMREX_SPACEDIM;
 
       // null_ncomp_particles==0 => particle container not associated
       // to "Tensor_Type"  (only to "State_Type")
+      // ngrow=1
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
-     int dcomp=0;
-     set_extrap_bc(bc,phys_bc);
-     std::string extrap_str_tensor="extrap_tensor"; 
-      // low order extrapolation
-     desc_lstGHOST.setComponent(Tensor_Type,dcomp,
-      extrap_str_tensor,bc,FORT_EXTRAPFILL,&pc_interp);
+     set_extrap_tensor_bc(bc,phys_bc,0,0);
+     std::string extrap_str_11tensor="extrap_11tensor"; 
+      // low order extrapolation, dcomp=0
+     desc_lstGHOST.setComponent(Tensor_Type,0,
+      extrap_str_11tensor,bc,FORT_EXTRAPFILL,&pc_interp);
 
      if (dcomp!=ncghost_elastic-1)
       amrex::Error("dcomp invalid");
@@ -974,6 +1070,17 @@ NavierStokes::variableSetUp ()
 
      } else
       amrex::Error("MAC_grid_displacement invalid");
+
+      //ngrow=1
+      //ncomp=1
+     desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
+      1,1,&tensor_pc_interp,null_ncomp_particles);
+     set_extrap_bc(bc,phys_bc);
+     std::string extrap_str_XUtensor="extrap_XUtensor"; 
+      // low order extrapolation; dcomp=0
+     desc_lstGHOST.setComponent(TensorXU_Type,0,
+      extrap_str_XUtensor,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
 
     } else
      amrex::Error("num_materials_viscoelastic invalid");
