@@ -532,6 +532,10 @@ int  NavierStokes::XDmac_Type=AMREX_SPACEDIM+5;
 int  NavierStokes::YDmac_Type=AMREX_SPACEDIM+6;
 int  NavierStokes::ZDmac_Type=AMREX_SPACEDIM+4+AMREX_SPACEDIM;
 int  NavierStokes::NUM_STATE_TYPE=AMREX_SPACEDIM+5+AMREX_SPACEDIM;
+int  NavierStokes::TensorXU_Type=NUM_STATE_TYPE;
+int  NavierStokes::TensorYU_Type=TensorXU_Type+1;
+int  NavierStokes::TensorZU_Type=TensorYU_Type+1;
+int  NavierStokes::TensorZV_Type=TensorZU_Type+1;
 
 // 0=velocity stored at cells  
 // 1=velocity stored at faces
@@ -2900,6 +2904,11 @@ NavierStokes::read_params ()
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
+    TensorXU_Type=NUM_STATE_TYPE;
+    TensorYU_Type=TensorXU_Type+1;
+    TensorZU_Type=TensorYU_Type+1;
+    TensorZV_Type=TensorZU_Type+1;
+
     for (int i=0;i<nmat;i++) {
      if (material_type[i]==0) {
       if (ns_is_rigid(i)!=0)
@@ -4707,6 +4716,10 @@ NavierStokes::read_params ()
       im_solid_map.size() << '\n';
      std::cout << "Solid_State_Type= " << Solid_State_Type << '\n';
      std::cout << "Tensor_Type= " << Tensor_Type << '\n';
+     std::cout << "TensorXU_Type= " << TensorXU_Type << '\n';
+     std::cout << "TensorYU_Type= " << TensorYU_Type << '\n';
+     std::cout << "TensorZU_Type= " << TensorZU_Type << '\n';
+     std::cout << "TensorZV_Type= " << TensorZV_Type << '\n';
      std::cout << "MAC_grid_displacement= " << MAC_grid_displacement << '\n';
      std::cout << "NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
      std::cout << "XDmac_Type= " << XDmac_Type << '\n';

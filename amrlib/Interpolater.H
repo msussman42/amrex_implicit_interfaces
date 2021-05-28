@@ -304,17 +304,9 @@ extern BurnVelInterp             tsat_interp;
 extern UMACInterp                umac_interp;
 extern UMACInterp                xd_mac_interp;
 extern UMACInterp                xd_mac_lo_interp;
+extern UMACInterp                tensor_lo_interp;
 extern maskSEMInterp             mask_sem_interp;
 
-//For migrating to supermesh, declare the following base classes which
-//will be derived from:
-//1. inner product class
-//2. A dot x class (can get specific matrix coefficients?)
-//3. null space project class
-//4. preconditioning class 
-//5. grid class? (mac grid, node, cell center,..)
-//6. solver class? (covers CG, MG, ILU, GSRB, etc...)
-// ....
 //class BoxConverter is declared in: AMReX_Box.H
 // the members of BoxConverter are: "doit", "clone", and "~BoxConverter"
 class InterpolaterBoxCoarsener
