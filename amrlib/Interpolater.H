@@ -304,7 +304,7 @@ extern BurnVelInterp             tsat_interp;
 extern UMACInterp                umac_interp;
 extern UMACInterp                xd_mac_interp;
 extern UMACInterp                xd_mac_lo_interp;
-extern UMACInterp                tensor_lo_interp;
+extern PCInterp                  tensor_pc_interp;
 extern maskSEMInterp             mask_sem_interp;
 
 //class BoxConverter is declared in: AMReX_Box.H
