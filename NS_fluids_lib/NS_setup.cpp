@@ -219,10 +219,10 @@ set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
   const int* lo_bc = phys_bc.lo();
   const int* hi_bc = phys_bc.hi();
     
-  bc.setLo(0,zero_tensor_bc[lo_bc[0]]);
-  bc.setHi(0,extrap_tensor_bc[hi_bc[0]]);
-  bc.setLo(1,extrap_tensor_bc[lo_bc[1]]);
-  bc.setHi(1,extrap_tensor_bc[hi_bc[1]]);
+  bc.setLo(0,grad_dot_t_norm_vel_bc[lo_bc[0]]);
+  bc.setHi(0,grad_dot_t_norm_vel_bc[hi_bc[0]]);
+  bc.setLo(1,grad_dot_t_tang_vel_bc[lo_bc[1]]);
+  bc.setHi(1,grad_dot_t_tang_vel_bc[hi_bc[1]]);
 
  } else
   amrex::Error("bl_spacedim invalid");

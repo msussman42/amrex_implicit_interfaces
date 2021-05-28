@@ -47,6 +47,17 @@ GetBCArray (const Vector<BCRec>& bcr)
     return bc;
 }
 
+// CELL - CELL - CELL  (grid_type=-1)
+//    x_i = (i+1/2)*dx y_j=(j+1/2)*dy z_k=(k+1/2)*dz
+//   xflux: NODE - CELL - CELL ("umac grid")  (grid_type=0)
+//   yflux: CELL - NODE - CELL ("vmac grid")  (grid_type=1)
+//   zflux: CELL - CELL - NODE ("wmac grid")  (grid_type=2)
+// NODE - CELL - CELL (grid_type 0)
+//   xflux: CELL - CELL - CELL (grid_type -1)
+//   yflux: NODE - NODE - CELL (grid_type= 3)
+//   zflux: NODE - CELL - NODE (grid_type= 4)
+// CELL - NODE - CELL (grid_type 1)
+//   zflux: CELL - NODE - NODE (grid_type= 5)
 // constructor
 InterpolaterBoxCoarsener::InterpolaterBoxCoarsener(
  Interpolater* mapper_,int bfactc_,int bfactf_,int grid_type_) {
@@ -435,12 +446,62 @@ PCInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
  if (bfactf>bfactc)
   amrex::Error("cannot have bfactf>bfactc");
 
+ Box crse = amrex::coarsen(fine,2);
+
+  // CELL - CELL - CELL
  if (grid_type==-1) {
-  // do nothing
+  if ((fine.ixType()==IndexType::TheCellType())&&
+      (crse.ixType()==IndexType::TheCellType)) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+
+  // NODE - CELL - CELL
+ } else if (grid_type==0) {
+  if ((fine.ixType()==IndexType::TheUMACType())&&
+      (crse.ixType()==IndexType::TheUMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+
+   // CELL - NODE - CELL
+ } else if (grid_type==1) {
+  if ((fine.ixType()==IndexType::TheVMACType())&&
+      (crse.ixType()==IndexType::TheVMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+
+   // CELL - CELL - NODE
+ } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+  if ((fine.ixType()==IndexType::TheWMACType())&&
+      (crse.ixType()==IndexType::TheWMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+   // NODE - NODE - CELL 
+ } else if (grid_type==3) {
+  if ((fine.ixType()==IndexType::TheYUMACType())&&
+      (crse.ixType()==IndexType::TheYUMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+   // NODE - CELL - NODE 
+ } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+  if ((fine.ixType()==IndexType::TheZUMACType())&&
+      (crse.ixType()==IndexType::TheZUMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
+   // CELL - NODE - NODE
+ } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+  if ((fine.ixType()==IndexType::TheZVMACType())&&
+      (crse.ixType()==IndexType::TheZVMACType())) {
+   // do nothing
+  } else
+   amrex::Error("fine or crse box has wrong grid_type");
  } else
   amrex::Error("grid_type invalid");
-
- Box crse = amrex::coarsen(fine,2);
 
  if (bfactc>1) {
   Box e_crse = amrex::coarsen(crse,bfactc);
@@ -471,10 +532,86 @@ PCInterp::interp (
  int grid_type)
 {
 
+ if ((ncomp<1)||(ncomp>9999))
+  amrex::Error("invalid ncomp PCInterp::interp");
+
+ BL_ASSERT(bcr.size() >= ncomp);
+
+ IndexType typ(fine_region.ixType());
+
+ Box fine_bx = fine_region & fine.box();
+
+ Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf,grid_type));
+
+  // CELL - CELL - CELL
  if (grid_type==-1) {
-  // do nothing
+  if ((typ==IndexType::TheCellType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+  // NODE - CELL - CELL
+ } else if (grid_type==0) {
+  if ((typ==IndexType::TheUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // CELL - NODE - CELL
+ } else if (grid_type==1) {
+  if ((typ==IndexType::TheVMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // CELL - CELL - NODE
+ } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheWMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // NODE - NODE - CELL 
+ } else if (grid_type==3) {
+  if ((typ==IndexType::TheYUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // NODE - CELL - NODE 
+ } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheZUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // CELL - NODE - NODE
+ } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheZVMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
  } else
   amrex::Error("grid_type invalid");
+
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
 
  //
  // Set up to call FORTRAN.
@@ -490,11 +627,16 @@ PCInterp::interp (
  Real*       fdat  = fine.dataPtr(fine_comp);
  int zapflag=0;
 
+   FIX ME
  FORT_PCINTERP (
+  &grid_type,
   &zapflag,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  crse_bx.loVect(),crse_bx.hiVect(),
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  fine_bx.loVect(),fine_bx.hiVect(),
   fblo,fbhi,
+  prob_lo,dxf,dxc,
   &ncomp,
   &levelc,&levelf,
   &bfactc,&bfactf);
@@ -885,8 +1027,10 @@ UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf,int grid_type)
 void
 UMACInterp::interp(
  Real time,
- const FArrayBox& crse, int crse_comp,
- FArrayBox& fine, int fine_comp,
+ const FArrayBox& crse, 
+ int crse_comp,
+ FArrayBox& fine, 
+ int fine_comp,
  int ncomp,
  const Box& fine_region, 
  const Geometry& crse_geom,
@@ -901,8 +1045,6 @@ UMACInterp::interp(
   amrex::Error("invalid ncomp umac interp");
 
  BL_ASSERT(bcr.size() >= ncomp);
-
- Vector<int> bcfine = GetBCArray(bcr);
 
  IndexType typ(fine_region.ixType());
 
