@@ -627,7 +627,6 @@ PCInterp::interp (
  Real*       fdat  = fine.dataPtr(fine_comp);
  int zapflag=0;
 
-   FIX ME
  FORT_PCINTERP (
   &grid_type,
   &zapflag,
@@ -948,10 +947,86 @@ PCInterpNull::interp (
  int grid_type)
 {
 
+ if ((ncomp<1)||(ncomp>9999))
+  amrex::Error("invalid ncomp PCInterpNull::interp");
+
+ BL_ASSERT(bcr.size() >= ncomp);
+
+ IndexType typ(fine_region.ixType());
+
+ Box fine_bx = fine_region & fine.box();
+
+ Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf,grid_type));
+
+  // CELL - CELL - CELL
  if (grid_type==-1) {
-  // do nothing
+  if ((typ==IndexType::TheCellType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+  // NODE - CELL - CELL
+ } else if (grid_type==0) {
+  if ((typ==IndexType::TheUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // CELL - NODE - CELL
+ } else if (grid_type==1) {
+  if ((typ==IndexType::TheVMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // CELL - CELL - NODE
+ } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheWMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // NODE - NODE - CELL 
+ } else if (grid_type==3) {
+  if ((typ==IndexType::TheYUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // NODE - CELL - NODE 
+ } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheZUMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
+   // CELL - NODE - NODE
+ } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+  if ((typ==IndexType::TheZVMACType())&&
+      (fine.box().ixType()==typ)&&
+      (crse.box().ixType()==typ)&&
+      (crse_bx.ixType()==typ)) {
+   // do nothing
+  } else
+   amrex::Error("typ invalid");
  } else
   amrex::Error("grid_type invalid");
+
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
 
  //
  // Set up to call FORTRAN.
@@ -963,15 +1038,18 @@ PCInterpNull::interp (
  const int* fblo = fine_region.loVect();
  const int* fbhi = fine_region.hiVect();
 
-
  const Real* cdat  = crse.dataPtr(crse_comp);
  Real*       fdat  = fine.dataPtr(fine_comp);
 
  int zapflag=1;
  FORT_PCINTERP (
+  &grid_type,
   &zapflag,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),fblo,fbhi,
+  crse_bx.loVect(),crse_bx.hiVect(),
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  fblo,fbhi,
+  prob_lo,dxf,dxc,
   &ncomp,
   &levelc,&levelf,
   &bfactc,&bfactf);

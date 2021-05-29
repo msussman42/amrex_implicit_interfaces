@@ -1390,12 +1390,16 @@ stop
       end subroutine FORT_EXT_BURNVEL_INTERP
 
 
-
       subroutine FORT_PCINTERP ( &
+       grid_type, &
        zapflag, &
        crse,DIMS(crse), &
+       crse_bx_lo, &
+       crse_bx_hi, &
        fine,DIMS(fine), &
        fblo,fbhi, &
+       problo, &
+       dxf,dxc, &
        nvar, &
        levelc,levelf, &
        bfact_coarse,bfact_fine)
@@ -1405,8 +1409,12 @@ stop
 
       implicit none
 
+      INTEGER_T, intent(in) :: grid_type
       INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine,zapflag
+      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
+      INTEGER_T, intent(in) :: zapflag
+      INTEGER_T, intent(in) :: crse_bx_lo(SDIM)
+      INTEGER_T, intent(in) :: crse_bx_hi(SDIM)
       INTEGER_T dir
       INTEGER_T, intent(in) :: DIMDEC(crse)
       INTEGER_T, intent(in) :: DIMDEC(fine)
@@ -1414,6 +1422,9 @@ stop
       INTEGER_T, intent(in) :: nvar
       REAL_T, intent(in) :: crse(DIMV(crse), nvar)
       REAL_T, intent(out) :: fine(DIMV(fine), nvar)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: dxc(SDIM)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T growlo(3),growhi(3)
 
@@ -1442,6 +1453,10 @@ stop
       endif
       if (levelf.gt.fort_finest_level) then
        print *,"levelf invalid"
+       stop
+      endif
+      if ((nvar.lt.1).or.(nvar.gt.9999)) then
+       print *,"nvar invalid in pcinterp"
        stop
       endif
 

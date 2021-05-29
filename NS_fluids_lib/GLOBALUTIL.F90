@@ -5663,17 +5663,49 @@ contains
       return
       end subroutine coarse_subelement_stencil
 
+      subroutine grid_type_to_box_type(grid_type,box_type)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(out) :: box_type(SDIM)
+      INTEGER_T dir
+
+      do dir=1,SDIM
+       box_type(dir)=0  ! default to CELL
+      enddo
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else if ((grid_type.ge.0).and. &
+               (grid_type.lt.SDIM)) then
+       box_type(grid_type+1)=1  ! NODE
+      else if (grid_type.eq.3) then
+       box_type(1)=1 ! NODE
+       box_type(2)=1 ! NODE
+      else if ((grid_type.eq.4).and.(SDIM.eq.3)) then
+       box_type(1)=1 ! NODE
+       box_type(SDIM)=1 ! NODE
+      else if ((grid_type.eq.5).and.(SDIM.eq.3)) then
+       box_type(2)=1 ! NODE
+       box_type(SDIM)=1 ! NODE
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
+     
+      return 
+      end subroutine grid_type_to_box_type
 
       subroutine coarse_subelement_stencilMAC( &
        ifine,jfine,kfine,stenlo,stenhi,bfact_c,bfact_f,dir)
       IMPLICIT NONE
 
-      INTEGER_T dir
-      INTEGER_T ifine,jfine,kfine
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: ifine,jfine,kfine
       INTEGER_T fine_index(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T bfact_c,bfact_f
+      INTEGER_T, intent(out) :: stenlo(3),stenhi(3)
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
       INTEGER_T dir2,denom
+      INTEGER_T :: box_type(SDIM)
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -5684,11 +5716,7 @@ contains
        print *,"bfact_c invalid"
        stop
       endif
-      if ((dir.lt.0).or.(dir.ge.SDIM)) then
-       print *,"dir invalid coarse subelement stencil mac"
-       print *,"dir=",dir
-       stop
-      endif
+      call grid_type_to_box_type(dir,box_type)
 
       stenlo(3)=0
       stenhi(3)=0
@@ -5701,16 +5729,21 @@ contains
        if (bfact_c.eq.1) then
         stenlo(dir2)=DIV_FLOOR(fine_index(dir2),2)
         stenhi(dir2)=stenlo(dir2)
-        if (dir2.eq.dir+1) then
+        if (box_type(dir2).eq.1) then ! NODE
          if (2*(fine_index(dir2)/2).ne.fine_index(dir2)) then
           stenhi(dir2)=stenhi(dir2)+1
          endif
+        else if (box_type(dir2).eq.0) then ! CELL
+         ! do nothing
+        else
+         print *,"box_type invalid"
+         stop
         endif
        else if (bfact_c.gt.1) then
         stenlo(dir2)=DIV_FLOOR(fine_index(dir2),2*bfact_c)
         stenlo(dir2)=stenlo(dir2)*bfact_c
         stenhi(dir2)=stenlo(dir2)+bfact_c-1
-        if (dir2.eq.dir+1) then
+        if (box_type(dir2).eq.1) then ! NODE
          denom=2*bfact_c
          if (denom*(fine_index(dir2)/denom).eq.fine_index(dir2)) then
           stenlo(dir2)=fine_index(dir2)/2
@@ -5718,6 +5751,11 @@ contains
          else
           stenhi(dir2)=stenhi(dir2)+1
          endif
+        else if (box_type(dir2).eq.0) then ! CELL
+         ! do nothing
+        else
+         print *,"box_type invalid"
+         stop
         endif
        else
         print *,"bfact_c invalid"
