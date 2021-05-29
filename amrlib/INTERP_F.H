@@ -66,10 +66,15 @@ extern "C"
       Real* slablow,Real* slabhigh);
 
     void FORT_PCINTERP (
+     int* grid_type,
      int* zapflag,
      const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+     const int* crse_bx_lo, 
+     const int* crse_bx_hi,
      Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
      const int* fblo, const int* fbhi,
+     const Real* prob_lo,
+     const Real* dxf, const Real* dxc,
      const int* nvar, 
      int* levelc,int* levelf,
      int* bfactc,int* bfactf);
@@ -165,7 +170,8 @@ extern "C"
       Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
       const int* fblo, const int* fbhi,
       const Real* prob_lo,
-      const Real* dxf, const Real* dxc,int* ncomp,
+      const Real* dxf, const Real* dxc,
+      const int* ncomp,
       int* levelc,int* levelf,
       int* bfactc,int* bfactf);
 }
