@@ -647,7 +647,7 @@ stop
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir+1)
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
         RR=one
         if (levelrz.eq.0) then
          ! do nothing

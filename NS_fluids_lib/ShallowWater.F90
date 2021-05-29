@@ -811,7 +811,7 @@ stop
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir+1)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
         call gridsten_level(xsten_left,i-ii,j-jj,k-kk,level,nhalf)
         call gridsten_level(xsten_right,i,j,k,level,nhalf)
 
@@ -1036,7 +1036,7 @@ stop
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir+1)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
         call gridsten_level(xsten_left,i-ii,j-jj,k-kk,level,nhalf)
         call gridsten_level(xsten_right,i,j,k,level,nhalf)
         call CISBOX(xsten_left,nhalf, &

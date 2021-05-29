@@ -1568,7 +1568,7 @@ stop
 
       REAL_T fine_value(nvar)
       REAL_T voltotal,volall
-      INTEGER_T gridtype
+      INTEGER_T grid_type
 
       REAL_T xsten(-1:1,SDIM)
       REAL_T xstenND(-1:1,SDIM)
@@ -1610,7 +1610,7 @@ stop
        stop
       endif
 
-      gridtype=0  ! ggg  (Gauss in all directions)
+      grid_type=-1  ! ggg  (Gauss in all directions)
 
       do dir=1,SDIM
        chi_loc(dir)=bfact_coarse-1
@@ -1682,7 +1682,7 @@ stop
         enddo
 
         call SEM_INTERP_ELEMENT( &
-         nvar,bfact_coarse,gridtype, &
+         nvar,bfact_coarse,grid_type, &
          chi_loc,dxc,xfine,fcoarse,fine_value,caller_id)
 
         voltotal=one
@@ -1970,6 +1970,7 @@ stop
       REAL_T, intent(in) :: dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3),stenlen(3)
+      INTEGER_T :: box_type(SDIM)
 
       REAL_T wt(SDIM)
 
@@ -1981,7 +1982,6 @@ stop
 
       REAL_T fine_value(nvar)
       REAL_T voltotal,volall
-      INTEGER_T gridtype
 
       REAL_T xsten(-1:1,SDIM)
       REAL_T xstenND(-1:1,SDIM)
@@ -2029,12 +2029,11 @@ stop
        stop
       endif
 
-      gridtype=dir_edge+1
+      call grid_type_to_box_type(dir_edge,box_type)
 
       do dir2=1,SDIM
-       chi_loc(dir2)=bfact_coarse-1
+       chi_loc(dir2)=bfact_coarse-1+box_type(dir2)
       enddo
-      chi_loc(gridtype)=bfact_coarse
 
       allocate(fcoarse(D_DECL(0:chi_loc(1),0:chi_loc(2),0:chi_loc(3)),nvar))
 
@@ -2043,9 +2042,14 @@ stop
        chi(dir2)=chiMAC(dir2)
        flo(dir2)=floMAC(dir2)
        fhi(dir2)=fhiMAC(dir2)
-       if (dir2.eq.dir_edge+1) then
+       if (box_type(dir2).eq.1) then
         chi(dir2)=chi(dir2)-1 
         fhi(dir2)=fhi(dir2)-1 
+       else if (box_type(dir2).eq.0) then
+        ! do nothing
+       else
+        print *,"box_type invalid"
+        stop
        endif
       enddo ! dir2
       
@@ -2059,21 +2063,24 @@ stop
          bfact_coarse,bfact_fine,dir_edge)
        do dir2=1,SDIM
         stenlen(dir2)=stenhi(dir2)-stenlo(dir2)+1
-        if (dir2.ne.gridtype) then
+        if (box_type(dir2).eq.0) then
          if (stenlen(dir2).ne.bfact_coarse) then
           print *,"stenlen invalid"
           stop
          endif
-        else
+        else if (box_type(dir2).eq.1) then
          if ((stenlen(dir2).ne.bfact_coarse+1).and. &
              (stenlen(dir2).ne.1)) then
           print *,"stenlen invalid"
           stop
          endif
+        else
+         print *,"box_type invalid"
+         stop
         endif
-       enddo ! dir2
+       enddo ! dir2=1..sdim
 
-       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,gridtype)
+       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,dir_edge)
        ic=stenlo(1)
        jc=stenlo(2)
        kc=stenlo(SDIM)
@@ -2085,7 +2092,7 @@ stop
          print *,"xfine out of bounds"
          stop
         endif
-       enddo ! dir2
+       enddo ! dir2=1..sdim
 
        do_spectral_interp=1
 
@@ -2138,7 +2145,7 @@ stop
         enddo
 
         call SEM_INTERP_ELEMENT( &
-         nvar,bfact_coarse,gridtype, &
+         nvar,bfact_coarse,dir_edge, &
          chi_loc,dxc,xfine,fcoarse,fine_value,caller_id)
 
         voltotal=one
@@ -2151,31 +2158,40 @@ stop
         voltotal=zero
 
         do ic=stenlo(1),stenhi(1)
-         if (dir_edge.eq.0) then
+         if (box_type(1).eq.1) then
           call intersect_weightMAC_interp(ic,ifine, &
            bfact_coarse,bfact_fine,wt(1))
-         else
+         else if (box_type(1).eq.0) then
           call intersect_weight_interp(ic,ifine, &
            bfact_coarse,bfact_fine,wt(1))
+         else
+          print *,"box_type(1) invalid"
+          stop
          endif
          if (wt(1).gt.zero) then
           do jc=stenlo(2),stenhi(2)
-           if (dir_edge.eq.1) then
+           if (box_type(2).eq.1) then
             call intersect_weightMAC_interp(jc,jfine, &
              bfact_coarse,bfact_fine,wt(2))
-           else
+           else if (box_type(2).eq.0) then
             call intersect_weight_interp(jc,jfine, &
              bfact_coarse,bfact_fine,wt(2))
+           else
+            print *,"box_type(2) invalid"
+            stop
            endif
            if (wt(2).gt.zero) then
             do kc=stenlo(3),stenhi(3)
              if (SDIM.eq.3) then
-              if (dir_edge.eq.2) then
+              if (box_type(SDIM).eq.1) then
                call intersect_weightMAC_interp(kc,kfine, &
                 bfact_coarse,bfact_fine,wt(SDIM))
-              else
+              else if (box_type(SDIM).eq.0) then
                call intersect_weight_interp(kc,kfine, &
                 bfact_coarse,bfact_fine,wt(SDIM))
+              else
+               print *,"box_type(SDIM) invalid"
+               stop
               endif
              endif
              if (wt(SDIM).gt.zero) then

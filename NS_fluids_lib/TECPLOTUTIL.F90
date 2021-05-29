@@ -265,7 +265,7 @@ stop
        if (dir.eq.-1) then
         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
        else if ((dir.ge.0).and.(dir.lt.SDIM)) then
-        call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir+1)
+        call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
        else
         print *,"dir invalid tecplotfab 2"
         stop
