@@ -1394,10 +1394,10 @@ stop
        grid_type, &
        zapflag, &
        crse,DIMS(crse), &
-       crse_bx_lo, &
+       crse_bx_lo, & ! crse_bx=CoarseBox(fine_bx)
        crse_bx_hi, &
        fine,DIMS(fine), &
-       fblo,fbhi, &
+       fblo,fbhi, & ! fine_bx=fine_region & fine.box()
        problo, &
        dxf,dxc, &
        nvar, &
@@ -1409,16 +1409,17 @@ stop
 
       implicit none
 
-      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: grid_type  ! -1..5
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       INTEGER_T, intent(in) :: zapflag
       INTEGER_T, intent(in) :: crse_bx_lo(SDIM)
       INTEGER_T, intent(in) :: crse_bx_hi(SDIM)
-      INTEGER_T dir
+      INTEGER_T clo(SDIM),chi(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(crse)
       INTEGER_T, intent(in) :: DIMDEC(fine)
       INTEGER_T, intent(in) :: fblo(SDIM), fbhi(SDIM)
+      INTEGER_T flo(SDIM),fhi(SDIM)
       INTEGER_T, intent(in) :: nvar
       REAL_T, intent(in) :: crse(DIMV(crse), nvar)
       REAL_T, intent(out) :: fine(DIMV(fine), nvar)
@@ -1426,14 +1427,35 @@ stop
       REAL_T, intent(in) :: dxf(SDIM)
       REAL_T, intent(in) :: dxc(SDIM)
       INTEGER_T stenlo(3),stenhi(3)
+      INTEGER_T stenlen(3)
       INTEGER_T growlo(3),growhi(3)
+      INTEGER_T :: box_type(SDIM)
 
-      INTEGER_T ifine,jfine,kfine,ic,jc,kc,n
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T ilocal,jlocal,klocal
+      INTEGER_T ic,jc,kc
+      INTEGER_T dir2
+      INTEGER_T n
 
       REAL_T wt(SDIM)
 
       REAL_T voltotal,volall
       REAL_T fine_value(nvar)
+
+      REAL_T xsten(-1:1,SDIM)
+      REAL_T xstenND(-1:1,SDIM)
+      REAL_T xfine(SDIM)
+      INTEGER_T nhalf
+      REAL_T INTERP_TOL
+      INTEGER_T chi_loc(SDIM)
+      INTEGER_T khi
+      INTEGER_T caller_id
+
+      caller_id=1
+
+      nhalf=1
+
+      INTERP_TOL=1.0E-4
 
       if (bfact_coarse.lt.1) then
        print *,"bfact_coarse invalid"
@@ -1460,39 +1482,123 @@ stop
        stop
       endif
 
-      call growntilebox(fblo,fbhi,fblo,fbhi,growlo,growhi,0) 
+      if ((grid_type.lt.-1).or.(grid_type.gt.5)) then
+       print *,"grid_type invalid pcinterp"
+       stop
+      endif
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       chi_loc(dir2)=bfact_coarse-1+box_type(dir2)
+      enddo
+
+      do dir2=1,SDIM
+       clo(dir2)=crse_bx_lo(dir2)
+       chi(dir2)=crse_bx_hi(dir2)
+       flo(dir2)=fblo(dir2)
+       fhi(dir2)=fbhi(dir2)
+       if (box_type(dir2).eq.1) then
+        chi(dir2)=chi(dir2)-1 
+        fhi(dir2)=fhi(dir2)-1 
+       else if (box_type(dir2).eq.0) then
+        ! do nothing
+       else
+        print *,"box_type invalid"
+        stop
+       endif
+      enddo ! dir2
+      
+      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type) 
 
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
 
+       call coarse_subelement_stencilMAC(ifine,jfine,kfine,stenlo,stenhi, &
+         bfact_coarse,bfact_fine,grid_type)
+       do dir2=1,SDIM
+        stenlen(dir2)=stenhi(dir2)-stenlo(dir2)+1
+        if (box_type(dir2).eq.0) then
+         if (stenlen(dir2).ne.bfact_coarse) then
+          print *,"stenlen invalid"
+          stop
+         endif
+        else if (box_type(dir2).eq.1) then
+         if ((stenlen(dir2).ne.bfact_coarse+1).and. &
+             (stenlen(dir2).ne.1)) then
+          print *,"stenlen invalid"
+          stop
+         endif
+        else
+         print *,"box_type invalid"
+         stop
+        endif
+       enddo ! dir2=1..sdim
+
+       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,grid_type)
+       ic=stenlo(1)
+       jc=stenlo(2)
+       kc=stenlo(SDIM)
+       call gridstenND_level(xstenND,ic,jc,kc,levelc,nhalf)
+       do dir2=1,SDIM
+        xfine(dir2)=xsten(0,dir2)-xstenND(0,dir2)
+        if ((xfine(dir2).lt.-INTERP_TOL*dxc(dir2)).or. &
+            (xfine(dir2).gt.(INTERP_TOL+bfact_coarse)*dxc(dir2))) then
+         print *,"xfine out of bounds"
+         stop
+        endif
+       enddo ! dir2=1..sdim
+
        do n=1,nvar
         fine_value(n)=zero
        enddo
        voltotal=zero
-       call coarse_subelement_stencil(ifine,jfine,kfine,stenlo,stenhi, &
-        bfact_coarse,bfact_fine)
+
        do ic=stenlo(1),stenhi(1)
-        call intersect_weight_interp(ic,ifine, &
-         bfact_coarse,bfact_fine,wt(1))
+        if (box_type(1).eq.1) then
+         call intersect_weightMAC_interp(ic,ifine, &
+           bfact_coarse,bfact_fine,wt(1))
+        else if (box_type(1).eq.0) then
+         call intersect_weight_interp(ic,ifine, &
+           bfact_coarse,bfact_fine,wt(1))
+        else
+         print *,"box_type(1) invalid"
+         stop
+        endif
         if (wt(1).gt.zero) then
          do jc=stenlo(2),stenhi(2)
-          call intersect_weight_interp(jc,jfine, &
-           bfact_coarse,bfact_fine,wt(2))
+          if (box_type(2).eq.1) then
+           call intersect_weightMAC_interp(jc,jfine, &
+            bfact_coarse,bfact_fine,wt(2))
+          else if (box_type(2).eq.0) then
+           call intersect_weight_interp(jc,jfine, &
+            bfact_coarse,bfact_fine,wt(2))
+          else
+           print *,"box_type(2) invalid"
+           stop
+          endif
           if (wt(2).gt.zero) then
            do kc=stenlo(3),stenhi(3)
             if (SDIM.eq.3) then
-             call intersect_weight_interp(kc,kfine, &
-              bfact_coarse,bfact_fine,wt(SDIM))
+             if (box_type(SDIM).eq.1) then
+              call intersect_weightMAC_interp(kc,kfine, &
+               bfact_coarse,bfact_fine,wt(SDIM))
+             else if (box_type(SDIM).eq.0) then
+              call intersect_weight_interp(kc,kfine, &
+               bfact_coarse,bfact_fine,wt(SDIM))
+             else
+              print *,"box_type(SDIM) invalid"
+              stop
+             endif
             endif
             if (wt(SDIM).gt.zero) then
              volall=wt(1)
-             do dir=2,SDIM
-              volall=volall*wt(dir)
+             do dir2=2,SDIM
+              volall=volall*wt(dir2)
              enddo
              do n=1,nvar
               if (zapflag.eq.0) then
-               fine_value(n)=fine_value(n)+volall*crse(D_DECL(ic,jc,kc),n)
+               fine_value(n)=fine_value(n)+volall*cdata(D_DECL(ic,jc,kc),n)
               else if (zapflag.eq.1) then
                ! do nothing
               else
@@ -1511,7 +1617,7 @@ stop
        if (voltotal.gt.zero) then
         do n=1,nvar
          fine_value(n)=fine_value(n)/voltotal
-         fine(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
+         finedata(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
         enddo
        else
         print *,"voltotal invalid" 
@@ -1937,9 +2043,11 @@ stop
       subroutine FORT_EDGEINTERP( &
        enable_spectral, &
        dir_edge, &
-       cdata,DIMS(d), &
+       cdata, &
+       DIMS(cdata), &
        cloMAC,chiMAC, &
-       finedata,DIMS(fd), &
+       finedata, &
+       DIMS(fdata), &
        floMAC,fhiMAC, &
        problo, &
        dxf,dxc, &
@@ -1956,20 +2064,21 @@ stop
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       INTEGER_T, intent(in) :: nvar
-      INTEGER_T, intent(in) :: dir_edge
-      INTEGER_T, intent(in) :: DIMDEC(d)
-      INTEGER_T, intent(in) :: DIMDEC(fd)
+      INTEGER_T, intent(in) :: dir_edge ! -1..5
+      INTEGER_T, intent(in) :: DIMDEC(cdata)
+      INTEGER_T, intent(in) :: DIMDEC(fdata)
       INTEGER_T, intent(in) :: cloMAC(SDIM),chiMAC(SDIM)
       INTEGER_T clo(SDIM),chi(SDIM)
       INTEGER_T, intent(in) :: floMAC(SDIM),fhiMAC(SDIM)
       INTEGER_T flo(SDIM),fhi(SDIM)
-      REAL_T, intent(in) :: cdata(DIMV(d),nvar)
-      REAL_T, intent(out) :: finedata(DIMV(fd),nvar)
+      REAL_T, intent(in) :: cdata(DIMV(cdata),nvar)
+      REAL_T, intent(out) :: finedata(DIMV(fdata),nvar)
       REAL_T, intent(in) :: problo(SDIM)
       REAL_T, intent(in) :: dxf(SDIM)
       REAL_T, intent(in) :: dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3),stenlen(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      INTEGER_T stenlen(3)
       INTEGER_T :: box_type(SDIM)
 
       REAL_T wt(SDIM)
