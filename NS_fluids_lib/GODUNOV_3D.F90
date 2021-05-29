@@ -3727,7 +3727,8 @@ stop
         do j=igridlo(2),igridhi(2)
         do k=igridlo(3),igridhi(3)
 
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir)
+          ! veldir=1..sdim
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
          do dir_local=1,SDIM
           xclamped(dir_local)=xsten(0,dir_local)
          enddo
@@ -4091,7 +4092,8 @@ stop
       do j=igridlo(2),igridhi(2)
       do k=igridlo(3),igridhi(3)
 
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir)
+        ! veldir=1..sdim
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
 
        velmac(1)=x_mac_old(D_DECL(i,j,k))
        do ivec=2,num_MAC_vectors
@@ -4927,7 +4929,7 @@ stop
 
        nhalf=1
        if ((slopedir.ge.0).and.(slopedir.le.SDIM-1)) then
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,slopedir+1)
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,slopedir)
        else
         print *,"slopedir invalid"
         stop
@@ -6737,7 +6739,7 @@ stop
           maskright=NINT(maskcov(D_DECL(i,j,k)))
           if ((maskleft.eq.1).and.(maskright.eq.1)) then
 
-           call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir+1)
+           call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir)
            hx=xstenMAC(1,veldir+1)-xstenMAC(-1,veldir+1)
 
            sidebc=0  ! non zero if EXT_DIR BC
@@ -12608,7 +12610,8 @@ stop
         iright=i
         jright=j
         kright=k
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir_extrap+1)
+         ! dir_extrap=0..sdim-1
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir_extrap)
        else
         print *,"CELLFLAG invalid"
         stop
@@ -12661,8 +12664,9 @@ stop
            jright=j+j1
            kright=k+k1
           else if (CELLFLAG.eq.0) then
+            ! dir_extrap=0..sdim-1
            call gridstenMAC_level(xsten_stencil,i+i1,j+j1,k+k1, &
-                   level,nhalf,dir_extrap+1)
+                   level,nhalf,dir_extrap)
            ileft=i+i1-ii
            jleft=j+j1-jj
            kleft=k+k1-kk
@@ -13367,7 +13371,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal+1)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal)
        hx=xstenMAC(1,dirnormal+1)-xstenMAC(-1,dirnormal+1)
 
        RR=one
@@ -14409,7 +14413,7 @@ stop
          stop
         endif
 
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir+1)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
         hx=xstenMAC(1,normdir+1)-xstenMAC(-1,normdir+1)
         if (hx.gt.zero) then
          ! do nothing
@@ -17205,7 +17209,8 @@ stop
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag+1)
+          !cell_flag=0..sdim
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag)
 
          assimilate_parm%xsten=>xsten
          if (is_in_probtype_list().eq.1) then
@@ -17855,7 +17860,7 @@ stop
         if ((local_mask_right.eq.1).or. &
             (local_mask_left.eq.1)) then
          
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
          do dir2=1,SDIM
           xmac(dir2)=xstenMAC(0,dir2)
          enddo 
@@ -20141,7 +20146,7 @@ stop
 
          nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
-           level,nhalf,veldir)
+           level,nhalf,veldir-1)
 
          check_accept=1
 
@@ -20211,8 +20216,9 @@ stop
 
             usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
             nhalf=1
+             ! normdir=0..sdim-1
             call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
-              level,nhalf,normdir+1)
+              level,nhalf,normdir)
 
             if (levelrz.eq.0) then
              ! do nothing
@@ -20335,7 +20341,7 @@ stop
 
                nhalf=1
                call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
-                level,nhalf,normdir+1)
+                level,nhalf,normdir)
 
                if (levelrz.eq.0) then
                 ! do nothing
@@ -20776,7 +20782,7 @@ stop
 
          nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
-           level,nhalf,normdir+1)
+           level,nhalf,normdir)
 
          if (levelrz.eq.0) then
           ! do nothing
@@ -20890,7 +20896,7 @@ stop
 
            nhalf=1
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
-             level,nhalf,normdir+1)
+             level,nhalf,normdir)
 
            if (levelrz.eq.0) then
             ! do nothing
@@ -23634,7 +23640,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
        do dir_local=1,SDIM
         xclamped_face(dir_local)=xstenMAC(0,dir_local)
        enddo
@@ -24684,7 +24690,8 @@ stop
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
-          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+          !dir=1..sdim
+          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
           im1=i-ii
           jm1=j-jj
@@ -26098,7 +26105,7 @@ stop
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
          if (dir.eq.1) then
           inorm=i
@@ -26589,7 +26596,7 @@ stop
 
                  call gridstenMAC(xstenMAC,xlo, &
                   ic,jc,kc, &
-                  fablo,bfact,dx,nhalf,dir)
+                  fablo,bfact,dx,nhalf,dir-1)
 
                  RRface(isten)=xstenMAC(0,1)
 
@@ -26708,7 +26715,7 @@ stop
                kc=indexmid(SDIM)
 
                call gridstenMAC_level(xstenMAC, &
-                ic,jc,kc,level,nhalf,dir)
+                ic,jc,kc,level,nhalf,dir-1)
 
                if (isten.eq.bfact) then ! right side of element
 
@@ -26902,7 +26909,7 @@ stop
         do k=growlo(3),growhi(3)
 
          call gridstenMAC_level(xstenMAC, &
-           i,j,k,level,nhalf,dir)
+           i,j,k,level,nhalf,dir-1)
 
          im1=i-ii
          jm1=j-jj
@@ -27215,7 +27222,7 @@ stop
               kflux=index_flux(SDIM)
 
               call gridstenMAC_level(xstenMAC, &
-               iflux,jflux,kflux,level,nhalf,dir)
+               iflux,jflux,kflux,level,nhalf,dir-1)
 
               test_maskSEM=NINT(maskSEM(D_DECL(i_out,j_out,k_out)))
               maskcov=NINT(maskcoef(D_DECL(i_out,j_out,k_out)))
@@ -27596,7 +27603,7 @@ stop
        endif
 
         ! dir=0..sdim-1 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
 
        do dircomp=1,SDIM
         xflux(dircomp)=xstenMAC(0,dircomp)
@@ -28410,7 +28417,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
        do space_dir=1,SDIM
         x_stress(space_dir)=xstenMAC(0,space_dir)
        enddo
@@ -29353,7 +29360,8 @@ stop
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac)
+         !dirmac=1..sdim
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac-1)
 
         A_matrix=matrixfab(D_DECL(i,j,k),1)+ &
                  matrixfab(D_DECL(i-ii,j-jj,k-kk),1) ! sum w(xp)

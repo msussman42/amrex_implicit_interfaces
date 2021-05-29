@@ -8717,7 +8717,8 @@ stop
          local_face(pforce_index+1)=zero
          local_face(facevel_index+1)=zero
 
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir+1)
+          ! veldir=0..sdim-1
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir)
 
          wtL=(xstenMAC(0,veldir+1)-xstenMAC(-1,veldir+1))
          wtR=(xstenMAC(1,veldir+1)-xstenMAC(0,veldir+1))
@@ -15218,7 +15219,8 @@ stop
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir+1)
+          ! dir=0..sdim-1
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
 
          is_clamped_face=-1
 
@@ -21953,10 +21955,11 @@ stop
          endif
         enddo ! dir_inner=1..sdim
 
+         ! dir=1..sdim
         call gridstenMAC_level(xstenMAC_lo, &
-         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir)
+         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
         call gridstenMAC_level(xstenMAC_hi, &
-         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir)
+         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
 
         do dir_inner=1,SDIM
          dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)

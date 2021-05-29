@@ -4278,11 +4278,11 @@ contains
 
       end subroutine gridsten
 
-        ! 1<=normdir<=sdim
-      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,normdir)
+        ! -1<=grid_type<=5
+      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type)
       IMPLICIT NONE 
 
-      INTEGER_T, intent(in) :: nhalf,normdir
+      INTEGER_T, intent(in) :: nhalf,grid_type
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -4290,13 +4290,14 @@ contains
       INTEGER_T, intent(in) :: i,j,k,bfact
       INTEGER_T dir,icrit
       REAL_T, dimension(:), allocatable :: xsub
+      INTEGER_T :: box_type(SDIM)
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
 
       if (bfact.lt.1) then
        print *,"bfact invalid23"
-       stop
-      endif
-      if ((normdir.lt.1).or.(normdir.gt.SDIM)) then
-       print *,"normdir invalid"
        stop
       endif
 
@@ -4311,18 +4312,22 @@ contains
        else
         print *,"dir invalid gridsten mac"
         stop
-       endif
-       if (dir.eq.normdir) then
+       endif 
+        ! NODE
+       if (box_type(dir).eq.1) then
         call gridsten1DMAC(xsub,xlo,icrit,fablo,bfact,dx,dir,nhalf)
-       else
+       else if (box_type(dir).eq.0) then ! CELL
         call gridsten1D(xsub,xlo,icrit,fablo,bfact,dx,dir,nhalf)
+       else
+        print *,"box_type(dir) invalid"
+        stop
        endif
        do icrit=-nhalf,nhalf
         x(icrit,dir)=xsub(icrit)
        enddo
 
        deallocate(xsub)
-      enddo ! dir
+      enddo ! dir=1..sdim
 
       end subroutine gridstenMAC
 
@@ -5290,30 +5295,32 @@ contains
 
 
 
-       ! 1<=normdir<=sdim
-      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,normdir)
+       ! -1<=grid_type<=5
+      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,grid_type)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf,normdir
+      INTEGER_T, intent(in) :: nhalf,grid_type
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T isten,dir,ii,jj,kk
+      INTEGER_T box_type(SDIM)
 
+      call grid_type_to_box_type(grid_type,box_type)
       ii=0
       jj=0
       kk=0
-      if (normdir.eq.1) then
-       ii=1
-      else if (normdir.eq.2) then
-       jj=1
-      else if ((normdir.eq.3).and.(SDIM.eq.3)) then
-       kk=1
+      ii=box_type(1)
+      jj=box_type(2)
+      if (SDIM.eq.3) then
+       kk=box_type(SDIM)
+      else if (SDIM.eq.2) then
+       ! do nothing
       else
-       print *,"normdir invalid"
+       print *,"dimension bust"
        stop
       endif
- 
+
       if (nhalf.lt.0) then
        print *,"nhalf invalid"
        stop
@@ -5349,7 +5356,7 @@ contains
         dir=SDIM
         x(isten,dir)=grid_cache(level,2*k-kk+isten,dir)
        endif
-      enddo
+      enddo ! isten=-nhalf,nhalf
        
       return
       end subroutine gridstenMAC_level
@@ -5663,6 +5670,8 @@ contains
       return
       end subroutine coarse_subelement_stencil
 
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
       subroutine grid_type_to_box_type(grid_type,box_type)
       IMPLICIT NONE
 
@@ -6224,20 +6233,21 @@ contains
        ! xfine is relative to the lower left hand corner of the
        ! grid element.
       subroutine SEM_INTERP_ELEMENT( &
-       nvar,bfact,gridtype, &
+       nvar,bfact,grid_type, &
        stenhi,dx,xfine,fcoarse,fxfine,caller_id)
       use LagrangeInterpolationPolynomial
       use LegendreNodes
 
       IMPLICIT NONE
-      INTEGER_T nvar
-      INTEGER_T bfact
-      INTEGER_T gridtype ! 0:ggg; 1:lgg; 2:glg; 3:ggl
-      INTEGER_T stenhi(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T xfine(SDIM)
-      REAL_T fcoarse(D_DECL(0:stenhi(1),0:stenhi(2),0:stenhi(3)),nvar)
-      REAL_T fxfine(nvar)
+      INTEGER_T, intent(in) :: nvar
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: grid_type ! -1:ggg; 0:lgg; 1:glg; 2:ggl
+      INTEGER_T, intent(in) :: stenhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xfine(SDIM)
+      REAL_T, intent(in) ::  &
+        fcoarse(D_DECL(0:stenhi(1),0:stenhi(2),0:stenhi(3)),nvar)
+      REAL_T, intent(out) :: fxfine(nvar)
  
       INTEGER_T i1
       INTEGER_T i,j,k
@@ -6256,23 +6266,19 @@ contains
       REAL_T wtsum
       REAL_T local_data
       INTEGER_T caller_id
+      INTEGER_T :: box_type(SDIM)
 
       INTERP_TOL=1.0E-10
+
+      call grid_type_to_box_type(grid_type,box_type)
 
       ii=0
       jj=0
       kk=0
-      if (gridtype.eq.0) then
-       ! do nothing
-      else if (gridtype.eq.1) then
-       ii=1
-      else if (gridtype.eq.2) then
-       jj=1
-      else if ((gridtype.eq.3).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"gridtype invalid"
-       stop
+      ii=box_type(1)
+      jj=box_type(2)
+      if (SDIM.eq.3) then
+       kk=box_type(SDIM)
       endif
 
       if (nvar.le.0) then
@@ -6290,22 +6296,20 @@ contains
        stop
       endif 
 
-      if ((gridtype.lt.0).or.(gridtype.gt.SDIM)) then
-       print *,"gridtype invalid"
-       stop
-      endif 
-
       do dir=1,SDIM
-       if (dir.eq.gridtype) then
+       if (box_type(dir).eq.1) then
         if (stenhi(dir).ne.bfact) then
          print *,"stenhi invalid"
          stop
         endif
-       else
+       else if (box_type(dir).eq.0) then
         if (stenhi(dir).ne.bfact-1) then
          print *,"stenhi invalid"
          stop
         endif
+       else
+        print *,"box_type invalid"
+        stop
        endif
        if (abs(dx(dir)).le.1.0E+20) then
         ! do nothing
@@ -6368,32 +6372,35 @@ contains
       deallocate(bwG)
       deallocate(ypoints)
 
-      if (gridtype.eq.0) then
-       ! do nothing
-      else if ((gridtype.ge.1).and.(gridtype.le.SDIM)) then
+      do dir=1,SDIM
+       if (box_type(dir).eq.0) then
+        ! do nothing
+       else if (box_type(dir).eq.1) then
  
-       allocate(ypointsGL(0:bfact))
-       allocate(bwGL(0:bfact))
-       allocate(tempGL(0:bfact))
+        allocate(ypointsGL(0:bfact))
+        allocate(bwGL(0:bfact))
+        allocate(tempGL(0:bfact))
 
-       do i=0,bfact
-        ypointsGL(i)=(yGL(i)+one)*bfact*dx(gridtype)/two
-       enddo
-       call BarycentricWeights(bfact,ypointsGL,bwGL)
-       call LagrangeInterpolatingPolynomial(bfact, &
-         xfine(gridtype),ypointsGL,bwGL,tempGL)
-       do i=0,bfact
-        lg(i,gridtype)=tempGL(i)
-       enddo
+        do i=0,bfact
+         ypointsGL(i)=(yGL(i)+one)*bfact*dx(dir)/two
+        enddo
+        call BarycentricWeights(bfact,ypointsGL,bwGL)
+        call LagrangeInterpolatingPolynomial(bfact, &
+         xfine(dir),ypointsGL,bwGL,tempGL)
+        do i=0,bfact
+         lg(i,dir)=tempGL(i)
+        enddo
 
-       deallocate(tempGL)
-       deallocate(bwGL)
-       deallocate(ypointsGL)
+        deallocate(tempGL)
+        deallocate(bwGL)
+        deallocate(ypointsGL)
 
-      else
-       print *,"gridtype invalid"
-       stop
-      endif
+       else
+        print *,"box_type(dir) invalid"
+        stop
+       endif
+
+      enddo ! dir=1..sdim
 
       if (SDIM.eq.2) then
        khi=0
@@ -6441,7 +6448,7 @@ contains
        print *,"wtsum=",wtsum
        print *,"nvar=",nvar
        print *,"bfact=",bfact
-       print *,"gridtype=",gridtype
+       print *,"grid_type=",grid_type
        do dir=1,SDIM
         print *,"dir,xfine(dir),dx(dir)*bfact ",dir, &
          xfine(dir),dx(dir)*bfact

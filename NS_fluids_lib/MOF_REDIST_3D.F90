@@ -3987,7 +3987,7 @@ stop
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
          at_RZ_face=0
          if (levelrz.eq.0) then
@@ -4304,7 +4304,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalfMAC,dir+1)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalfMAC,dir)
 
        if (dir.eq.0) then
         inormal=i

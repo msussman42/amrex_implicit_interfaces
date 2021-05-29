@@ -3358,7 +3358,7 @@ END SUBROUTINE SIMP
       INTEGER_T ncomp_SEM  ! visual_ncomp-SDIM
        ! SDIM+3+num_species_var+1
       INTEGER_T VORT_comp_SEM 
-      INTEGER_T gridtype
+      INTEGER_T grid_type
       INTEGER_T SEMhi(SDIM)
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: SEMloc
       REAL_T INTERP_TOL
@@ -3951,7 +3951,7 @@ END SUBROUTINE SIMP
           do n=1,ncomp_SEM
            SEM_value(n)=zero
           enddo
-          gridtype=0  ! ggg  (Gauss in all directions)
+          grid_type=-1  ! ggg  (Gauss in all directions)
           do dir2=1,SDIM
            SEMhi(dir2)=bfact-1
           enddo
@@ -4021,7 +4021,7 @@ END SUBROUTINE SIMP
           enddo ! iSEM
 
           call SEM_INTERP_ELEMENT( &
-           ncomp_SEM,bfact,gridtype, &
+           ncomp_SEM,bfact,grid_type, &
            SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
           deallocate(SEMloc)
@@ -4671,7 +4671,7 @@ END SUBROUTINE SIMP
           do n=1,ncomp_SEM
            SEM_value(n)=zero
           enddo
-          gridtype=0  ! ggg  (Gauss in all directions)
+          grid_type=-1  ! ggg  (Gauss in all directions)
           do dir2=1,SDIM
            SEMhi(dir2)=bfact-1
           enddo
@@ -4716,7 +4716,7 @@ END SUBROUTINE SIMP
 
           caller_id=4
           call SEM_INTERP_ELEMENT( &
-           ncomp_SEM,bfact,gridtype, &
+           ncomp_SEM,bfact,grid_type, &
            SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
           deallocate(SEMloc)
@@ -5654,7 +5654,7 @@ END SUBROUTINE SIMP
       INTEGER_T ilocal,jlocal,klocal
       INTEGER_T n
       INTEGER_T dir2
-      INTEGER_T gridtype
+      INTEGER_T grid_type
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
@@ -5719,7 +5719,7 @@ END SUBROUTINE SIMP
       call checkbound(lof,hif,DIMS(fine),0,-1,411)
       call checkbound(lof,hif,DIMS(mask),1,-1,411)
 
-      gridtype=0  ! ggg  (Gauss in all directions)
+      grid_type=-1  ! ggg  (Gauss in all directions)
 
       do dir2=1,SDIM
        flochi(dir2)=bfact_f-1
@@ -5893,7 +5893,7 @@ END SUBROUTINE SIMP
         enddo
 
         call SEM_INTERP_ELEMENT( &
-         ncomp,bfact_f,gridtype, &
+         ncomp,bfact_f,grid_type, &
          flochi,dxf,xcoarse,ffine,crse_value,caller_id)
 
         voltotal=one
@@ -6030,7 +6030,7 @@ END SUBROUTINE SIMP
       INTEGER_T n
       INTEGER_T dir2
       INTEGER_T side
-      INTEGER_T gridtype
+      INTEGER_T grid_type
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
@@ -6192,7 +6192,7 @@ END SUBROUTINE SIMP
       call checkbound(lof,hif,DIMS(den_fine),1,-1,411)
       call checkbound(lof,hif,DIMS(vel_fine),1,-1,411)
 
-      gridtype=0  ! ggg  (Gauss in all directions)
+      grid_type=-1  ! ggg  (Gauss in all directions)
 
       do dir2=1,SDIM
        flochi(dir2)=bfact_f-1
@@ -6571,7 +6571,7 @@ END SUBROUTINE SIMP
           enddo ! ifine
 
           call SEM_INTERP_ELEMENT( &
-           ncomp_flux,bfact_f,gridtype, &
+           ncomp_flux,bfact_f,grid_type, &
            flochi,dxf,xcoarse,ffine,crse_value,caller_id)
 
           voltotal=one
@@ -6827,7 +6827,7 @@ END SUBROUTINE SIMP
       INTEGER_T n
       INTEGER_T dir2
       INTEGER_T side
-      INTEGER_T gridtype
+      INTEGER_T grid_type
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
@@ -6990,7 +6990,7 @@ END SUBROUTINE SIMP
       call checkbound(loc,hic,DIMS(cmasksem),1,-1,411)
       call checkbound(loc,hic,DIMS(coarseLS),1,-1,411)
 
-      gridtype=0  ! ggg  (Gauss in all directions)
+      grid_type=-1  ! ggg  (Gauss in all directions)
 
       do dir2=1,SDIM
        clochi(dir2)=bfact_c-1
@@ -7372,7 +7372,7 @@ END SUBROUTINE SIMP
             enddo ! icoarse
 
             call SEM_INTERP_ELEMENT( &
-             ncomp_flux,bfact_c,gridtype, &
+             ncomp_flux,bfact_c,grid_type, &
              clochi,dxc,xfine,ccrse,fine_value,caller_id)
 
             voltotal=one
@@ -7629,7 +7629,7 @@ END SUBROUTINE SIMP
       INTEGER_T n
       INTEGER_T dir2
       INTEGER_T side
-      INTEGER_T gridtype
+      INTEGER_T grid_type
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
@@ -7705,7 +7705,7 @@ END SUBROUTINE SIMP
       call checkbound(fablo,fabhi,DIMS(masksem),1,-1,411)
       call checkbound(loc,hic,DIMS(cmasksem),1,-1,411)
 
-      gridtype=0  ! ggg  (Gauss in all directions)
+      grid_type=-1  ! ggg  (Gauss in all directions)
 
       do dir2=1,SDIM
        clochi(dir2)=bfact_c-1
@@ -7988,7 +7988,7 @@ END SUBROUTINE SIMP
             enddo ! icoarse
 
             call SEM_INTERP_ELEMENT( &
-             ncomp_flux,bfact_c,gridtype, &
+             ncomp_flux,bfact_c,grid_type, &
              clochi,dxc,xfine,ccrse,fine_value,caller_id)
 
             voltotal=one
@@ -10474,7 +10474,7 @@ END SUBROUTINE SIMP
             im=1
 
             do iside=0,1
-             dirMAC=2
+             dirMAC=1 ! y direction
              call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf,dirMAC)
 
              xcen=xstenMAC(0,dir) ! diry=0  dir=diry+1=1
@@ -10500,7 +10500,7 @@ END SUBROUTINE SIMP
 
               ! coordinate along streamwise direction starts at 0
               ! dirx=sdim-1
-              ! dirMAC=2
+              ! dirMAC=1
               ! r=h(z)
              ZZgrid=xstenMAC(0,dirx+1)-problo(dirx+1)
              dz_external=(probhi(dirx+1)-problo(dirx+1))/NN
@@ -10560,7 +10560,7 @@ END SUBROUTINE SIMP
              vofcomp=(im-1)*ngeom_recon+1
 
              do iside=0,1
-              dirMAC=1
+              dirMAC=0 ! x direction
               call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf,dirMAC)
 
                ! diry=sdim-1  dir=sdim  z=h(x)
@@ -11555,7 +11555,7 @@ END SUBROUTINE SIMP
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir+1)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
 
        vol_total=zero
        mass_total=zero
@@ -13247,7 +13247,6 @@ END SUBROUTINE SIMP
       INTEGER_T stenlo(3), stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
       INTEGER_T edge_dir
-      INTEGER_T gridtype
       INTEGER_T dir2
       REAL_T, intent(out) :: crse(DIMV(c),ncomp)
       REAL_T, intent(in) :: fine(DIMV(f),ncomp)
@@ -13330,26 +13329,24 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      gridtype=edge_dir+1
-
       ii=0
       jj=0
       kk=0
-      if (gridtype.eq.1) then
+      if (edge_dir.eq.0) then
        ii=1
-      else if (gridtype.eq.2) then
+      else if (edge_dir.eq.1) then
        jj=1
-      else if ((gridtype.eq.3).and.(SDIM.eq.3)) then
+      else if ((edge_dir.eq.2).and.(SDIM.eq.3)) then
        kk=1
       else
-       print *,"gridtype invalid"
+       print *,"edge_dir invalid"
        stop
       endif
 
       do dir2=1,SDIM
        flochi(dir2)=bfact_f-1
       enddo
-      flochi(gridtype)=bfact_f
+      flochi(edge_dir+1)=bfact_f
 
       if (SDIM.eq.2) then
        khi=0
@@ -13372,7 +13369,7 @@ END SUBROUTINE SIMP
       do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,gridtype)
+       call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,edge_dir)
 
         ! find stencil for surrounding fine level spectral element.
        stenlo(3)=0
@@ -13384,22 +13381,22 @@ END SUBROUTINE SIMP
         stenlo(dir2)=bfact_f*finelo_index
         stenhi(dir2)=stenlo(dir2)+bfact_f-1
        enddo ! dir
-       stenhi(gridtype)=stenhi(gridtype)+1
+       stenhi(edge_dir+1)=stenhi(edge_dir+1)+1
 
         ! check if coarse face is on a coarse element boundary.
-       if (gridtype.eq.1) then
+       if (edge_dir.eq.0) then
         inorm=ic
-       else if (gridtype.eq.2) then
+       else if (edge_dir.eq.1) then
         inorm=jc
-       else if ((gridtype.eq.3).and.(SDIM.eq.3)) then
+       else if ((edge_dir.eq.2).and.(SDIM.eq.3)) then
         inorm=kc
        else
-        print *,"gridtype invalid"
+        print *,"edge_dir invalid"
         stop
        endif
        if ((inorm/bfact_c)*bfact_c.eq.inorm) then
-        stenlo(gridtype)=2*inorm
-        stenhi(gridtype)=stenlo(gridtype)
+        stenlo(edge_dir+1)=2*inorm
+        stenhi(edge_dir+1)=stenlo(edge_dir+1)
        endif
 
        mstenlo(3)=0
@@ -13494,7 +13491,7 @@ END SUBROUTINE SIMP
         enddo
 
         call SEM_INTERP_ELEMENT( &
-         ncomp,bfact_f,gridtype, &
+         ncomp,bfact_f,edge_dir, &
          flochi,dxf,xcoarse,ffine,crse_value,caller_id)
 
         voltotal=one
