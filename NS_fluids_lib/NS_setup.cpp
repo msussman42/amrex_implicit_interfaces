@@ -72,14 +72,6 @@ static int press_bc[] =
 static int extrap_bc[] =
 { INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
 
-static int extrap_tensor_bc[] =
-{ INT_DIR, EXT_DIR, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
-
-static int zero_tensor_bc[] =
-{ INT_DIR, EXT_DIR, FOEXTRAP, REFLECT_ODD, EXT_DIR, EXT_DIR };
-
-
-
 static
 void
 set_tensor_bc (BCRec&       bc,
@@ -158,53 +150,6 @@ set_tensor_bc (BCRec&       bc,
     } // dir3=0..sdim-1
 
 } // subroutine set_tensor_bc
-
-
-FIX ME
-static
-void
-set_extrap_tensor_bc (BCRec&       bc,
-               const BCRec& phys_bc,int dir1,int dir2)
-{
-    const int* lo_bc = phys_bc.lo();
-    const int* hi_bc = phys_bc.hi();
-    
-    if (dir1==dir2) {
-     bc.setLo(0,extrap_tensor_bc[lo_bc[0]]);
-     bc.setHi(0,extrap_tensor_bc[hi_bc[0]]);
-     bc.setLo(1,extrap_tensor_bc[lo_bc[1]]);
-     bc.setHi(1,extrap_tensor_bc[hi_bc[1]]);
-#if (AMREX_SPACEDIM == 3)
-     bc.setLo(2,extrap_tensor_bc[lo_bc[2]]);
-     bc.setHi(2,extrap_tensor_bc[hi_bc[2]]);
-#endif
-    } else if ((dir1==0)&&(dir2==1)) {
-     bc.setLo(0,zero_tensor_bc[lo_bc[0]]);
-     bc.setHi(0,zero_tensor_bc[hi_bc[0]]);
-     bc.setLo(1,zero_tensor_bc[lo_bc[1]]);
-     bc.setHi(1,zero_tensor_bc[hi_bc[1]]);
-#if (AMREX_SPACEDIM == 3)
-     bc.setLo(2,extrap_tensor_bc[lo_bc[2]]);
-     bc.setHi(2,extrap_tensor_bc[hi_bc[2]]);
-#endif
-    } else if ((dir1==0)&&(dir2==2)) {
-     bc.setLo(0,zero_tensor_bc[lo_bc[0]]);
-     bc.setHi(0,zero_tensor_bc[hi_bc[0]]);
-     bc.setLo(1,extrap_tensor_bc[lo_bc[1]]);
-     bc.setHi(1,extrap_tensor_bc[hi_bc[1]]);
-     bc.setLo(2,zero_tensor_bc[lo_bc[2]]);
-     bc.setHi(2,zero_tensor_bc[hi_bc[2]]);
-    } else if ((dir1==1)&&(dir2==2)) {
-     bc.setLo(0,extrap_tensor_bc[lo_bc[0]]);
-     bc.setHi(0,extrap_tensor_bc[hi_bc[0]]);
-     bc.setLo(1,zero_tensor_bc[lo_bc[1]]);
-     bc.setHi(1,zero_tensor_bc[hi_bc[1]]);
-     bc.setLo(2,zero_tensor_bc[lo_bc[2]]);
-     bc.setHi(2,zero_tensor_bc[hi_bc[2]]);
-    } else
-     amrex::Error("dir1 or dir2 invalid");
-
-} // subroutine set_extrap_tensor_bc
 
 
 // in RZ: the hoop term is 2 u/r
@@ -839,14 +784,99 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
-     set_extrap_tensor_bc(bc,phys_bc,0,0);
-     std::string extrap_str_11tensor="extrap_11tensor"; 
-      // low order extrapolation, dcomp=0
-     desc_lstGHOST.setComponent(Tensor_Type,0,
-      extrap_str_11tensor,bc,FORT_EXTRAPFILL,&pc_interp);
+     int ibase_tensor=0;
 
-     if (dcomp!=ncghost_elastic-1)
-      amrex::Error("dcomp invalid");
+     set_tensor_bc(bc,phys_bc,0,0);
+     std::string T11_strE="T11extrap"; 
+      // low order extrapolation
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+     ibase_tensor++;
+     
+     set_tensor_bc(bc,phys_bc,0,1);
+     std::string T12_strE="T12extrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+     ibase_tensor++;
+     
+     set_tensor_bc(bc,phys_bc,1,1);
+     std::string T22_strE="T22extrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+     ibase_tensor++;
+    
+     if (AMREX_SPACEDIM==2) {
+      if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+       set_hoop_bc(bc,phys_bc);
+      } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+	   // placeholder: Q33 should always be 0
+       set_hoop_bc(bc,phys_bc);
+      } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+	   // placeholder: Q33 should always be 0
+       set_hoop_bc(bc,phys_bc);
+      } else
+       amrex::Error("(CoordSys::CoordType) coord invalid");
+     } else if (AMREX_SPACEDIM==3) {
+      if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+       set_tensor_bc(bc,phys_bc,2,2);
+      } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+       set_tensor_bc(bc,phys_bc,2,2);
+      } else
+       amrex::Error("(CoordSys::CoordType) coord invalid");
+     } else
+      amrex::Error("sdim invalid");
+ 
+     std::string T33_strE="T33extrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+#if (AMREX_SPACEDIM == 3)
+     ibase_tensor++;
+
+     set_tensor_bc(bc,phys_bc,0,2);
+     std::string T13_strE="T13extrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+     
+     ibase_tensor++;
+     
+     set_tensor_bc(bc,phys_bc,1,2);
+     std::string T23_strE="T23extrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+#endif
+
+     ibase_tensor++;
+
+     set_x_vel_extrap_bc(bc,phys_bc);
+     std::string xdisplace_strE="XDISPLACEextrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      xdisplace_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+     ibase_tensor++;
+
+     set_y_vel_extrap_bc(bc,phys_bc);
+     std::string ydisplace_strE="YDISPLACEextrap"; 
+     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+      ydisplace_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+#if (AMREX_SPACEDIM == 3)
+     if (AMREX_SPACEDIM==3) {
+      ibase_tensor++;
+
+      set_z_vel_extrap_bc(bc,phys_bc);
+      std::string zdisplace_strE="ZDISPLACEextrap"; 
+      desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
+       zdisplace_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+     }
+#endif
+
+     if (ibase_tensor!=ncghost_elastic-1)
+      amrex::Error("ibase_tensor invalid");
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
@@ -865,7 +895,7 @@ NavierStokes::variableSetUp ()
       Vector<BCRec> MOFvelocity_bcs_tensor;
       MOFvelocity_bcs_tensor.resize(NUM_TENSOR_TYPE);
 
-      int ibase_tensor=0;
+      ibase_tensor=0;
 
        // analogous to u_x
        // reflect at symmetric BC x-faces
@@ -1083,6 +1113,8 @@ NavierStokes::variableSetUp ()
      } else
       amrex::Error("MAC_grid_displacement invalid");
 
+
+FIX ME use set_extrap_tensor_bc etc...
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),

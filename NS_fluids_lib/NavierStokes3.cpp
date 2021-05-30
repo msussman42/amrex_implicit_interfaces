@@ -704,6 +704,7 @@ void NavierStokes::tensor_advection_updateALL() {
    //    interpolation in the case that e.g. lsleft(im_primary)>=0
    //    but lsright(im_primary)<0.
    //    (im_primary is the main material in the cell, lspoint(im_primary)>=0)
+   // init_gradu_tensorALL declared in NavierStokes2.cpp
   int do_alloc=1;
   int simple_AMR_BC_flag_viscosity=1;
   int im_tensor=-1;
