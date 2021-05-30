@@ -484,6 +484,84 @@ NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
 
 }  // subroutine override_LS_HO
 
+void
+NavierStokes::set_tensor_extrap_components(std::string postfix,int indx) {
+
+ BCRec bc;
+
+FIX ME generalize EXTRAPFILL for grid_type
+
+ int ibase_tensor=0;
+
+ set_tensor_bc(bc,phys_bc,0,0);
+ std::string T11_strE="T11extrap"+postfix; 
+  // low order extrapolation
+ desc_lstGHOST.setComponent(indx,ibase_tensor,
+   T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+ ibase_tensor++;
+     
+ set_tensor_bc(bc,phys_bc,0,1);
+ std::string T12_strE="T12extrap"+postfix; 
+ desc_lstGHOST.setComponent(indx,ibase_tensor,
+   T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+ ibase_tensor++;
+     
+ set_tensor_bc(bc,phys_bc,1,1);
+ std::string T22_strE="T22extrap"+postfix; 
+ desc_lstGHOST.setComponent(indx,ibase_tensor,
+   T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+ ibase_tensor++;
+    
+ if (AMREX_SPACEDIM==2) {
+  if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+   set_hoop_bc(bc,phys_bc);
+  } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+   // placeholder: Q33 should always be 0
+   set_hoop_bc(bc,phys_bc);
+  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+   // placeholder: Q33 should always be 0
+   set_hoop_bc(bc,phys_bc);
+  } else
+   amrex::Error("(CoordSys::CoordType) coord invalid");
+ } else if (AMREX_SPACEDIM==3) {
+  if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+   set_tensor_bc(bc,phys_bc,2,2);
+  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+   set_tensor_bc(bc,phys_bc,2,2);
+  } else
+   amrex::Error("(CoordSys::CoordType) coord invalid");
+  } else
+   amrex::Error("sdim invalid");
+ 
+  std::string T33_strE="T33extrap"+postfix; 
+  desc_lstGHOST.setComponent(indx,ibase_tensor,
+    T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+#if (AMREX_SPACEDIM == 3)
+  ibase_tensor++;
+
+  set_tensor_bc(bc,phys_bc,0,2);
+  std::string T13_strE="T13extrap"+postfix; 
+  desc_lstGHOST.setComponent(indx,ibase_tensor,
+    T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+     
+  ibase_tensor++;
+     
+  set_tensor_bc(bc,phys_bc,1,2);
+  std::string T23_strE="T23extrap"+postfix; 
+  desc_lstGHOST.setComponent(indx,ibase_tensor,
+    T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+#endif
+
+  if (ibase_tensor==2*AMREX_SPACEDIM-1) {
+   // do nothing
+  } else
+   amrex::Error("ibase_tensor invalid");
+
+} // end subroutine set_tensor_extrap_components
 
 void
 NavierStokes::variableSetUp ()
@@ -784,73 +862,10 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
-     int ibase_tensor=0;
+     std::string postfix_str="CC";
+     set_tensor_extrap_components(postfix_str,Tensor_Type);
 
-     set_tensor_bc(bc,phys_bc,0,0);
-     std::string T11_strE="T11extrap"; 
-      // low order extrapolation
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
-
-     ibase_tensor++;
-     
-     set_tensor_bc(bc,phys_bc,0,1);
-     std::string T12_strE="T12extrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
-
-     ibase_tensor++;
-     
-     set_tensor_bc(bc,phys_bc,1,1);
-     std::string T22_strE="T22extrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
-
-     ibase_tensor++;
-    
-     if (AMREX_SPACEDIM==2) {
-      if ((CoordSys::CoordType) coord == CoordSys::RZ) {
-       set_hoop_bc(bc,phys_bc);
-      } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
-	   // placeholder: Q33 should always be 0
-       set_hoop_bc(bc,phys_bc);
-      } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
-	   // placeholder: Q33 should always be 0
-       set_hoop_bc(bc,phys_bc);
-      } else
-       amrex::Error("(CoordSys::CoordType) coord invalid");
-     } else if (AMREX_SPACEDIM==3) {
-      if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
-       set_tensor_bc(bc,phys_bc,2,2);
-      } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
-       set_tensor_bc(bc,phys_bc,2,2);
-      } else
-       amrex::Error("(CoordSys::CoordType) coord invalid");
-     } else
-      amrex::Error("sdim invalid");
- 
-     std::string T33_strE="T33extrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
-
-#if (AMREX_SPACEDIM == 3)
-     ibase_tensor++;
-
-     set_tensor_bc(bc,phys_bc,0,2);
-     std::string T13_strE="T13extrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
-     
-     ibase_tensor++;
-     
-     set_tensor_bc(bc,phys_bc,1,2);
-     std::string T23_strE="T23extrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
-
-#endif
-
-     ibase_tensor++;
+     int ibase_tensor=2*AMREX_SPACEDIM;
 
      set_x_vel_extrap_bc(bc,phys_bc);
      std::string xdisplace_strE="XDISPLACEextrap"; 
@@ -1117,18 +1132,37 @@ NavierStokes::variableSetUp ()
      } else
       amrex::Error("MAC_grid_displacement invalid");
 
-
-FIX ME use set_extrap_tensor_bc etc...
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
       1,1,&tensor_pc_interp,null_ncomp_particles);
-     set_extrap_bc(bc,phys_bc);
-     std::string extrap_str_XUtensor="extrap_XUtensor"; 
-      // low order extrapolation; dcomp=0
-     desc_lstGHOST.setComponent(TensorXU_Type,0,
-      extrap_str_XUtensor,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 
+     std::string postfix_str="XU";
+     set_tensor_extrap_components(postfix_str,TensorXU_Type);
+
+      //ngrow=1
+      //ncomp=1
+     desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
+      1,1,&tensor_pc_interp,null_ncomp_particles);
+
+     std::string postfix_str="YU";
+     set_tensor_extrap_components(postfix_str,TensorYU_Type);
+
+      //ngrow=1
+      //ncomp=1
+     desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
+      1,1,&tensor_pc_interp,null_ncomp_particles);
+
+     std::string postfix_str="ZU";
+     set_tensor_extrap_components(postfix_str,TensorZU_Type);
+
+      //ngrow=1
+      //ncomp=1
+     desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
+      1,1,&tensor_pc_interp,null_ncomp_particles);
+
+     std::string postfix_str="ZV";
+     set_tensor_extrap_components(postfix_str,TensorZV_Type);
 
     } else
      amrex::Error("num_materials_viscoelastic invalid");
