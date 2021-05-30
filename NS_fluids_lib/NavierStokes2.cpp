@@ -3828,11 +3828,16 @@ void NavierStokes::init_gradu_tensorALL(
    // desc_lstGHOST.setComponent(Tensor_Type, ...
    // "set_extrap_bc"
    // FORT_EXTRAPFILL
+FIX ME use proper components if extrapolating tensor components vs
+displacement components
+
   scompBC_map.resize(1);
   scompBC_map[0]=0;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  if (im_tensor==-1) {
+  if (im_tensor==-1) { //input is velocity
    PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
+
+   // input is displacement
   } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
    PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
   } else
