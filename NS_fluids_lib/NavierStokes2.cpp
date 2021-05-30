@@ -3807,6 +3807,7 @@ void NavierStokes::init_gradu_tensorALL(
   if (ns_level.localMF[idx_vel]->nComp()<nsolveMM)
    amrex::Error("ns_level.localMF[idx_vel]->nComp() invalid");
 
+//ux,vx,wx,uy,vy,wy,uz,vz,wz
   int homflag=0;
   ns_level.init_gradu_tensor(
     im_tensor,
@@ -3822,20 +3823,43 @@ void NavierStokes::init_gradu_tensorALL(
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
  int ntensorMM=ntensor*num_materials_vel;
 
+//ux,vx,wx,uy,vy,wy,uz,vz,wz
+ int irow=0;
+ int icol=0;
  for (int i=0;i<ntensorMM;i++) {
   Vector<int> scompBC_map;
-   // desc_lstGHOST.setComponent(State_Type, ...
    // desc_lstGHOST.setComponent(Tensor_Type, ...
-   // "set_extrap_bc"
+   // "set_tensor_bc", tensor_pc_interp 
    // FORT_EXTRAPFILL
-FIX ME use proper components if extrapolating tensor components vs
-displacement components
+   // (i.e. the coarse/fine BC and physical BC will be low order)
+
+  int scomp_extrap=0;
+  if ((irow==0)&&(icol==0)) { //11
+   scomp_extrap=0;
+  } else if ((irow==1)&&(icol==0)) { //12
+   scomp_extrap=1;
+  } else if ((irow==2)&&(icol==0)&&(AMREX_SPACEDIM==3)) { //13
+   scomp_extrap=4;
+  } else if ((irow==0)&&(icol==1)) { //21
+   scomp_extrap=1;
+  } else if ((irow==1)&&(icol==1)) { //22
+   scomp_extrap=2;
+  } else if ((irow==2)&&(icol==1)&&(AMREX_SPACEDIM==3)) { //23
+   scomp_extrap=5;
+  } else if ((irow==0)&&(icol==2)&&(AMREX_SPACEDIM==3)) { //31
+   scomp_extrap=4;
+  } else if ((irow==1)&&(icol==2)&&(AMREX_SPACEDIM==3)) { //32
+   scomp_extrap=5;
+  } else if ((irow==2)&&(icol==2)&&(AMREX_SPACEDIM==3)) { //33
+   scomp_extrap=3;
+  } else
+   amrex::Error("irow or icol invalid");
 
   scompBC_map.resize(1);
-  scompBC_map[0]=0;
+  scompBC_map[0]=scomp_extrap;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
   if (im_tensor==-1) { //input is velocity
-   PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
+   PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
 
    // input is displacement
   } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
@@ -3843,7 +3867,18 @@ displacement components
   } else
    amrex::Error("im_tensor invalid");
 
+   // 00,10,20,01,11,21,02,12,22
+  icol++;
+  if (icol>=AMREX_SPACEDIM) {
+   irow++;
+   icol=0;
+  }
  } // i=0..ntensorMM-1
+
+ if ((irow==AMREX_SPACEDIM)&&(icol==0)) {
+  // do nothing
+ } else
+  amrex::Error("irow or icol invalid");
 
  if (do_alloc==1) {
   delete_array(idx_vel);

@@ -817,6 +817,9 @@ protected:
         int scomp,int ncomp,int enable_spectral_in);
     static void override_LS_HO(int Interp_LO); //0=use normals 1=PC
 
+    static void set_tensor_extrap_components(
+      std::string postfix,int indx);
+
     void sum_integrated_quantities (int post_init_flag);
 
     void CopyNewToOldALL();
@@ -841,7 +844,7 @@ protected:
      MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
      int nsolve);
 
-    void tensor_extrapolate();
+    void tensor_extrapolate(); // declared in NavierStokes.cpp
     void tensor_advection_update();
     void tensor_advection_updateALL();
 
