@@ -5628,9 +5628,13 @@ stop
           stop
          endif
           ! in RZ,
-          ! Q(3,3) gets 2 * hoop_22 (2 * xdisp/r) in 
-          ! subroutine local_tensor_from_xdisplace
-          ! -T33/r
+          !  Q(3,3) gets 2 * hoop_22 (2 * xdisp/r) in 
+          !  subroutine local_tensor_from_xdisplace
+          !  -T33/r
+          ! in XY,
+          !  Q(3,3)=0.0
+          ! in R-Theta,
+          !  Q(3,3)=0.0
           ! local_tensor_from_xdisplace called from FORT_UPDATETENSOR
           ! In FORT_MAKETENSOR, Q is multiplied by the elastic bulk modulus.
          veldir=1

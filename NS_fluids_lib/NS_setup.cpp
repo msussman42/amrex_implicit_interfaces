@@ -129,8 +129,6 @@ set_tensor_bc (BCRec&       bc,
      // SlipWall:   u dot t=FOEXTRAP,    -> FOEXTRAP
      // NoSlipWall: u dot t=EXT_DIR,     -> FOEXTRAP
 
-FIX ME (extrapolation next)
-
     if ((dir1>=0)&&(dir1<AMREX_SPACEDIM)) {
      // do nothing
     } else
@@ -209,7 +207,8 @@ set_extrap_tensor_bc (BCRec&       bc,
 } // subroutine set_extrap_tensor_bc
 
 
-
+// in RZ: the hoop term is 2 u/r
+//  as r->0, u/r ->u_r u_r has REFLECT_EVEN BC
 static
 void
 set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
@@ -218,10 +217,11 @@ set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
 
   const int* lo_bc = phys_bc.lo();
   const int* hi_bc = phys_bc.hi();
-    
-  bc.setLo(0,grad_dot_t_norm_vel_bc[lo_bc[0]]);
-  bc.setHi(0,grad_dot_t_norm_vel_bc[hi_bc[0]]);
-  bc.setLo(1,grad_dot_t_tang_vel_bc[lo_bc[1]]);
+    //dir1="theta"  dir2="theta"  dir3="r" 
+  bc.setLo(0,grad_dot_t_tang_vel_bc[lo_bc[0]]); //REFLECT_EVEN if symmetric
+  bc.setHi(0,grad_dot_t_tang_vel_bc[hi_bc[0]]);
+    //dir1="theta"  dir2="theta"  dir3="z" 
+  bc.setLo(1,grad_dot_t_tang_vel_bc[lo_bc[1]]); //REFLECT_EVEN if symmetric
   bc.setHi(1,grad_dot_t_tang_vel_bc[hi_bc[1]]);
 
  } else
@@ -897,15 +897,26 @@ NavierStokes::variableSetUp ()
       T33_str+=im_string; 
       MOFvelocity_names_tensor[ibase_tensor]=T33_str;
 
-      if ((AMREX_SPACEDIM==2)&& 
-          ((CoordSys::CoordType) coord == CoordSys::RZ)) {
-       set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-      } else if ((AMREX_SPACEDIM==3)||
-                 ((CoordSys::CoordType) coord == CoordSys::cartesian)||
-                 ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL)) {
-       set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
+      if (AMREX_SPACEDIM==2) {
+       if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
+       } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+	   // placeholder: Q33 should always be 0
+        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
+       } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+	   // placeholder: Q33 should always be 0
+        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
+       } else
+        amrex::Error("(CoordSys::CoordType) coord invalid");
+      } else if (AMREX_SPACEDIM==3) {
+       if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
+       } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
+       } else
+        amrex::Error("(CoordSys::CoordType) coord invalid");
       } else
-       amrex::Error("coord or sdim invalid");
+       amrex::Error("sdim invalid");
 
 #if (AMREX_SPACEDIM == 3)
       ibase_tensor++;
