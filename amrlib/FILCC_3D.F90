@@ -446,8 +446,30 @@ stop
       return 
       end subroutine local_grid_type_to_box_type
 
+      subroutine check_arr_idx(i,j,k,fablo,fabhi)
+      IMPLICIT NONE
 
-
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: fablo(3),fabhi(3)
+      INTEGER_T :: ii(3)
+      INTEGER_T :: dir
+     
+      ii(1)=i 
+      ii(2)=j 
+      ii(3)=k
+      do dir=1,SDIM
+       if ((ii(dir).ge.fablo(dir)).and. &
+           (ii(dir).le.fabhi(dir))) then
+        ! do nothing
+       else
+        print *,"bust:dir,ii,fablo,fabhi ",dir,ii(dir),fablo(dir),fabhi(dir)
+        stop
+       endif
+      enddo ! dir=1..sdim
+        
+      return
+      end subroutine check_arr_idx
+ 
 ! domlo,domhi are dimensions for face quantity (not cell) 
       subroutine efilcc(bfact, &
        q,DIMS(q), &
@@ -477,7 +499,9 @@ stop
       INTEGER_T :: imult(3)
       INTEGER_T :: idist(3)
 
-      INTEGER_T    i, j, k
+      INTEGER_T :: i,j,k
+      INTEGER_T :: isrc,jsrc,ksrc
+      INTEGER_T :: idx_norm
 
 
       call local_grid_type_to_box_type(grid_type,box_type);
@@ -550,7 +574,6 @@ stop
           imult(dir_side)=0
           idist(dir_side)=0
 
-CHECK HERE, SANITY (i,j,k),(isrc,jsrc,ksrc)
           if (sidelo(dir_side).le.sidehi(dir_side)) then
            if (side_inc(dir_side).eq.1) then
             side_first(dir_side)=sidelo(dir_side)
@@ -589,59 +612,96 @@ CHECK HERE, SANITY (i,j,k),(isrc,jsrc,ksrc)
               (bc(local_dir,side).eq.EXT_DIR).or. &
               (bc(local_dir,side).eq.HOEXTRAP)) then
            if (idx_norm.ne.side_first(local_dir)) then
-            isrc=i+imult(1)
-            jsrc=j+imult(2)
-            ksrc=k+imult(3)
-            q(D_DECL(i,j,k)) = q(D_DECL(isrc,jsrc,ksrc))
+            if (idist(local_dir).gt.0) then
+             isrc=i+imult(1)
+             jsrc=j+imult(2)
+             ksrc=k+imult(3)
+             call check_arr_idx(i,j,k,fablo_declare,fabhi_declare)
+             call check_arr_idx(isrc,jsrc,ksrc,fablo_declare,fabhi_declare)
+             q(D_DECL(i,j,k)) = q(D_DECL(isrc,jsrc,ksrc))
+            else 
+             print *,"idist(local_dir) invalid"
+             stop
+            endif
            else if (idx_norm.eq.side_first(local_dir)) then
-            ! do nothing
+            if (idist(local_dir).eq.0) then
+             ! do nothing
+            else 
+             print *,"idist(local_dir) invalid"
+             stop
+            endif
            else
             print *,"idx_norm invalid"
             stop
            endif 
           elseif (bc(local_dir,side).eq.REFLECT_EVEN) then
            if (idx_norm.ne.side_first(local_dir)) then
-            if (box_type(local_dir).eq.1) then !NODE
-             isrc=i+2*idist(1)*imult(1)
-             jsrc=j+2*idist(2)*imult(2)
-             ksrc=k+2*idist(3)*imult(3)
-            else if (box_type(local_dir).eq.0) then !CELL
-             isrc=i+(2*idist(1)-1)*imult(1)
-             jsrc=j+(2*idist(2)-1)*imult(2)
-             ksrc=k+(2*idist(3)-1)*imult(3)
-            else
-             print *,"box_type(local_dir) invalid"
+            if (idist(local_dir).gt.0) then
+             if (box_type(local_dir).eq.1) then !NODE
+              isrc=i+2*idist(1)*imult(1)
+              jsrc=j+2*idist(2)*imult(2)
+              ksrc=k+2*idist(3)*imult(3)
+             else if (box_type(local_dir).eq.0) then !CELL
+              isrc=i+(2*idist(1)-1)*imult(1)
+              jsrc=j+(2*idist(2)-1)*imult(2)
+              ksrc=k+(2*idist(3)-1)*imult(3)
+             else
+              print *,"box_type(local_dir) invalid"
+              stop
+             endif
+             call check_arr_idx(i,j,k,fablo_declare,fabhi_declare)
+             call check_arr_idx(isrc,jsrc,ksrc,fablo_declare,fabhi_declare)
+             q(D_DECL(i,j,k)) = q(D_DECL(isrc,jsrc,ksrc))
+            else 
+             print *,"idist(local_dir) invalid"
              stop
             endif
-            q(D_DECL(i,j,k)) = q(D_DECL(isrc,jsrc,ksrc))
            else if (idx_norm.eq.side_first(local_dir)) then
-            ! do nothing
+            if (idist(local_dir).eq.0) then
+             ! do nothing
+            else 
+             print *,"idist(local_dir) invalid"
+             stop
+            endif
            else
             print *,"idx_norm invalid"
             stop
            endif 
           elseif (bc(local_dir,side).eq.REFLECT_ODD) then
            if (idx_norm.ne.side_first(local_dir)) then
-            if (box_type(local_dir).eq.1) then !NODE
-             isrc=i+2*idist(1)*imult(1)
-             jsrc=j+2*idist(2)*imult(2)
-             ksrc=k+2*idist(3)*imult(3)
-            else if (box_type(local_dir).eq.0) then !CELL
-             isrc=i+(2*idist(1)-1)*imult(1)
-             jsrc=j+(2*idist(2)-1)*imult(2)
-             ksrc=k+(2*idist(3)-1)*imult(3)
-            else
-             print *,"box_type(local_dir) invalid"
+            if (idist(local_dir).gt.0) then
+             if (box_type(local_dir).eq.1) then !NODE
+              isrc=i+2*idist(1)*imult(1)
+              jsrc=j+2*idist(2)*imult(2)
+              ksrc=k+2*idist(3)*imult(3)
+             else if (box_type(local_dir).eq.0) then !CELL
+              isrc=i+(2*idist(1)-1)*imult(1)
+              jsrc=j+(2*idist(2)-1)*imult(2)
+              ksrc=k+(2*idist(3)-1)*imult(3)
+             else
+              print *,"box_type(local_dir) invalid"
+              stop
+             endif
+             call check_arr_idx(i,j,k,fablo_declare,fabhi_declare)
+             call check_arr_idx(isrc,jsrc,ksrc,fablo_declare,fabhi_declare)
+             q(D_DECL(i,j,k)) = -q(D_DECL(isrc,jsrc,ksrc))
+            else 
+             print *,"idist(local_dir) invalid"
              stop
             endif
-            q(D_DECL(i,j,k)) = -q(D_DECL(isrc,jsrc,ksrc))
            else if (idx_norm.eq.side_first(local_dir)) then
-            if (box_type(local_dir).eq.1) then !NODE
-             q(D_DECL(i,j,k))=zero
-            else if (box_type(local_dir).eq.0) then !CELL
-             ! do nothing
-            else
-             print *,"box_type(local_dir) invalid"
+            if (idist(local_dir).eq.0) then
+             if (box_type(local_dir).eq.1) then !NODE
+              call check_arr_idx(i,j,k,fablo_declare,fabhi_declare)
+              q(D_DECL(i,j,k))=zero
+             else if (box_type(local_dir).eq.0) then !CELL
+              ! do nothing
+             else
+              print *,"box_type(local_dir) invalid"
+              stop
+             endif
+            else 
+             print *,"idist(local_dir) invalid"
              stop
             endif
            else
