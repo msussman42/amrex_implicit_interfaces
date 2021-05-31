@@ -2820,16 +2820,21 @@ contains
       return
       end subroutine derive_dist
 
+       ! grid_type=-1..5
       subroutine checkbound(lo,hi, &
        DIMS(data), &
-       ngrow,dir,id)
+       ngrow,grid_type,id)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
       INTEGER_T, intent(in) ::  DIMDEC(data)
-      INTEGER_T, intent(in) ::  ngrow,dir,id
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
 
-      INTEGER_T ii(SDIM)
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
 
       INTEGER_T    hidata(SDIM)
       INTEGER_T    lodata(SDIM)
@@ -2847,20 +2852,15 @@ contains
       do dir2=1,SDIM
        if (lodata(dir2).gt.hidata(dir2)) then
         print *,"swapped bounds in checkbound id=",id
-        print *,"dir=",dir
+        print *,"grid_type=",grid_type
         print *,"dir2=",dir2
         stop
        endif
-       ii(dir2)=0
+       box_type(dir2)=0
       enddo
-      if ((dir.ge.0).and.(dir.lt.SDIM)) then
-       ii(dir+1)=1
-      else if (dir.eq.-1) then
-       ! do nothing
-      else
-       print *,"dir invalid checkbound"
-       stop
-      endif
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
 
       do dir2=1,SDIM
        if (lo(dir2).lt.0) then
@@ -2869,7 +2869,7 @@ contains
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
         print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
-        print *,"dir=",dir
+        print *,"grid_type=",grid_type
         stop
        endif
       enddo
@@ -2890,21 +2890,21 @@ contains
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
          print *,"dataxhi ",hidata(dir2)
-         print *,"dir=",dir
+         print *,"grid_type=",grid_type
          print *,"dir2=",dir2
          stop
         endif
-        if (hidata(dir2).lt.hi(dir2)+ngrow+ii(dir2)) then
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
          print *,"hi mismatch id=",id
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
-         print *,"ii(dir2) ",ii(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
-         print *,"dir=",dir
+         print *,"grid_type=",grid_type
          print *,"dir2=",dir2
          stop
         endif
 
-      enddo ! dir2
+      enddo ! dir2=1..SDIM
 
       return
       end subroutine checkbound

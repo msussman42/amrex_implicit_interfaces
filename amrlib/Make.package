@@ -16,7 +16,7 @@ CEXE_headers += AMReX_AmrParGDB.H AMReX_AmrParticles.H
 
 FEXE_headers += INTERP_F.H
 
-F90EXE_sources += FILCC_$(DIM)D.F90 INTERP_3D.F90 \
+F90EXE_sources += FILCC_3D.F90 INTERP_3D.F90 \
                              ARRAYLIM_$(DIM)D.F90
 
 VPATH_LOCATIONS += $(MOF_HOME)/amrlib
