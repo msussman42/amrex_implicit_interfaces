@@ -321,10 +321,10 @@ stop
 
 #if (AMREX_SPACEDIM==3)
       if (ndwn .gt. 0) then
-       klo = domlo(3)
+       klo = domlo(SDIM)
 
-       if ((bc(3,1).eq.FOEXTRAP).or. &
-           (bc(3,1).eq.EXT_DIR)) then
+       if ((bc(SDIM,1).eq.FOEXTRAP).or. &
+           (bc(SDIM,1).eq.EXT_DIR)) then
         do k = 1, ndwn
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -332,7 +332,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,1) .eq. HOEXTRAP) then
+       else if (bc(SDIM,1) .eq. HOEXTRAP) then
         do k = 1, ndwn
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -340,7 +340,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,1) .eq. REFLECT_EVEN) then
+       else if (bc(SDIM,1) .eq. REFLECT_EVEN) then
         do k = 1, ndwn
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -348,7 +348,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,1) .eq. REFLECT_ODD) then
+       else if (bc(SDIM,1) .eq. REFLECT_ODD) then
         do k = 1, ndwn
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -356,7 +356,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,1).eq.INT_DIR) then
+       else if (bc(SDIM,1).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -365,10 +365,10 @@ stop
       end if
 
       if (nup .gt. 0) then
-       khi = domhi(3)
+       khi = domhi(SDIM)
 
-       if ((bc(3,2).eq.FOEXTRAP).or. &
-           (bc(3,2).eq.EXT_DIR)) then
+       if ((bc(SDIM,2).eq.FOEXTRAP).or. &
+           (bc(SDIM,2).eq.EXT_DIR)) then
         do k = 1, nup
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -376,7 +376,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,2) .eq. HOEXTRAP) then
+       else if (bc(SDIM,2) .eq. HOEXTRAP) then
         do k = 1, nup
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -384,7 +384,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,2) .eq. REFLECT_EVEN) then
+       else if (bc(SDIM,2) .eq. REFLECT_EVEN) then
         do k = 1, nup
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -392,7 +392,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,2) .eq. REFLECT_ODD) then
+       else if (bc(SDIM,2) .eq. REFLECT_ODD) then
         do k = 1, nup
         do j = ARG_L2(q),ARG_H2(q)
         do i = ARG_L1(q),ARG_H1(q)
@@ -400,7 +400,7 @@ stop
         end do
         end do
         end do
-       else if (bc(3,2).eq.INT_DIR) then
+       else if (bc(SDIM,2).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -412,16 +412,60 @@ stop
       end subroutine local_filcc
 
 
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      subroutine local_grid_type_to_box_type(grid_type,box_type)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(out) :: box_type(SDIM)
+      INTEGER_T dir
+
+      do dir=1,SDIM
+       box_type(dir)=0  ! default to CELL
+      enddo
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else if ((grid_type.ge.0).and. &
+               (grid_type.lt.SDIM)) then
+       box_type(grid_type+1)=1  ! NODE
+      else if (grid_type.eq.3) then
+       box_type(1)=1 ! NODE
+       box_type(2)=1 ! NODE
+      else if ((grid_type.eq.4).and.(SDIM.eq.3)) then
+       box_type(1)=1 ! NODE
+       box_type(SDIM)=1 ! NODE
+      else if ((grid_type.eq.5).and.(SDIM.eq.3)) then
+       box_type(2)=1 ! NODE
+       box_type(SDIM)=1 ! NODE
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
+     
+      return 
+      end subroutine local_grid_type_to_box_type
+
+
+
 ! domlo,domhi are dimensions for face quantity (not cell) 
       subroutine efilcc(bfact, &
        q,DIMS(q), &
-       domlo,domhi,bc,dir)
+       domlo,domhi,bc,grid_type)
       IMPLICIT NONE
 
-      INTEGER_T    DIMDEC(q)
-      INTEGER_T    domlo(SDIM), domhi(SDIM)
-      INTEGER_T    bc(SDIM,2),dir,bfact
-      REAL_T     q(DIMV(q))
+      INTEGER_T, intent(in) :: DIMDEC(q)
+      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
+      REAL_T, intent(inout) :: q(DIMV(q))
+      INTEGER_T, intent(in) :: bc(SDIM,2)
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: bfact
+
+      INTEGER_T :: box_type(SDIM)
+      INTEGER_T :: ntofill(3,2)
+      INTEGER_T :: fablo_declare(3)
+      INTEGER_T :: fabhi_declare(3)
 
       INTEGER_T    nlft, nrgt, nbot, ntop, nup, ndwn
       INTEGER_T    ilo, ihi, jlo, jhi, klo, khi
@@ -429,28 +473,45 @@ stop
       INTEGER_T    i, j, k
 
 
-      if ((dir.lt.0).or.(dir.gt.2)) then
-       print *,"dir out of range in EFILCC"
-       stop
-      endif
+      call local_grid_type_to_box_type(grid_type,box_type);
+
       if (bfact.lt.1) then
-       print *,"bfact invalid711"
+       print *,"bfact invalid in EFILCC"
        stop
       endif
 
-      is = max(ARG_L1(q),domlo(1))
-      ie = min(ARG_H1(q),domhi(1))
-      js = max(ARG_L2(q),domlo(2))
-      je = min(ARG_H2(q),domhi(2))
-      ks = max(ARG_L3(q),domlo(3))
-      ke = min(ARG_H3(q),domhi(3))
+      fablo_declare(1)=ARG_L1(q)
+      fablo_declare(2)=ARG_L2(q)
+      fablo_declare(3)=0
+#if (AMREX_SPACEDIM==3)
+      fablo_declare(3)=ARG_L3(q)
+#endif
+      fabhi_declare(1)=ARG_H1(q)
+      fabhi_declare(2)=ARG_H2(q)
+      fabhi_declare(3)=0
+#if (AMREX_SPACEDIM==3)
+      fabhi_declare(3)=ARG_H3(q)
+#endif
+     
+      int_lo(3)=0
+      int_hi(3)=0
+      do local_dir=1,SDIM
+       int_lo(local_dir)=max(fablo_declare(local_dir),domlo(local_dir))
+       int_hi(local_dir)=min(fabhi_declare(local_dir),domhi(local_dir))
+      enddo
 
-      nlft = max(0,domlo(1)-ARG_L1(q))
-      nrgt = max(0,ARG_H1(q)-domhi(1))
-      nbot = max(0,domlo(2)-ARG_L2(q))
-      ntop = max(0,ARG_H2(q)-domhi(2))
-      ndwn = max(0,domlo(3)-ARG_L3(q))
-      nup  = max(0,ARG_H3(q)-domhi(3))
+      ntofill(3,1)=0
+      ntofill(3,2)=0
+      do local_dir=1,SDIM
+       side=1
+       ntofill(local_dir,side)= &
+         max(0,domlo(local_dir)-fablo_declare(local_dir))
+       side=2
+       ntofill(local_dir,side)= &
+         max(0,fabhi_declare(local_dir)-domhi(local_dir))
+      enddo
+ 
+      do local_dir=1,SDIM
 
 !     ::::: first fill sides
       if (nlft .ge. 0) then
