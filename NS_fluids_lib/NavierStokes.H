@@ -818,7 +818,7 @@ protected:
     static void override_LS_HO(int Interp_LO); //0=use normals 1=PC
 
     static void set_tensor_extrap_components(
-      std::string postfix,int indx);
+      int coord,std::string postfix,int indx);
 
     void sum_integrated_quantities (int post_init_flag);
 

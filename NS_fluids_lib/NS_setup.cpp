@@ -485,11 +485,10 @@ NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
 }  // subroutine override_LS_HO
 
 void
-NavierStokes::set_tensor_extrap_components(std::string postfix,int indx) {
+NavierStokes::set_tensor_extrap_components(
+  int coord,std::string postfix,int indx) {
 
  BCRec bc;
-
-FIX ME generalize EXTRAPFILL for grid_type
 
  int ibase_tensor=0;
 
@@ -863,7 +862,7 @@ NavierStokes::variableSetUp ()
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
      std::string postfix_str="CC";
-     set_tensor_extrap_components(postfix_str,Tensor_Type);
+     set_tensor_extrap_components(coord,postfix_str,Tensor_Type);
 
      int ibase_tensor=2*AMREX_SPACEDIM;
 
@@ -1137,32 +1136,32 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
       1,1,&tensor_pc_interp,null_ncomp_particles);
 
-     std::string postfix_str="XU";
-     set_tensor_extrap_components(postfix_str,TensorXU_Type);
+     postfix_str="XU";
+     set_tensor_extrap_components(coord,postfix_str,TensorXU_Type);
 
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
       1,1,&tensor_pc_interp,null_ncomp_particles);
 
-     std::string postfix_str="YU";
-     set_tensor_extrap_components(postfix_str,TensorYU_Type);
+     postfix_str="YU";
+     set_tensor_extrap_components(coord,postfix_str,TensorYU_Type);
 
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
       1,1,&tensor_pc_interp,null_ncomp_particles);
 
-     std::string postfix_str="ZU";
-     set_tensor_extrap_components(postfix_str,TensorZU_Type);
+     postfix_str="ZU";
+     set_tensor_extrap_components(coord,postfix_str,TensorZU_Type);
 
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
       1,1,&tensor_pc_interp,null_ncomp_particles);
 
-     std::string postfix_str="ZV";
-     set_tensor_extrap_components(postfix_str,TensorZV_Type);
+     postfix_str="ZV";
+     set_tensor_extrap_components(coord,postfix_str,TensorZV_Type);
 
     } else
      amrex::Error("num_materials_viscoelastic invalid");

@@ -44,16 +44,17 @@ StateDescriptor::BndryFunc::operator () (
  Real* data,const int* lo,const int* hi,
  const int* dom_lo, const int* dom_hi,
  const Real* dx, const Real* grd_lo,
- const Real* time, const int* bc,
- const int* scomp,int* ncomp,int* bfact) const
+ const Real* time, const int* bc_local,
+ const int* scomp,int* ncomp_local,int* bfact) const
 {
     BL_ASSERT(m_func != 0);
 
     m_func(
       grid_type,
       level,
-      data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc,
-      scomp,ncomp,bfact);
+      data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,
+      bc_local,
+      scomp,ncomp_local,bfact);
 }
 
 // GROUP FILL
@@ -64,16 +65,17 @@ StateDescriptor::BndryFunc::operator () (
  Real* data,const int* lo,const int* hi,
  const int* dom_lo, const int* dom_hi,
  const Real* dx, const Real* grd_lo,
- const Real* time, const int* bc, 
- const int* scomp,int* ncomp,int* bfact,bool) const
+ const Real* time, const int* bc_local, 
+ const int* scomp,int* ncomp_local,int* bfact,bool) const
 {
     BL_ASSERT(m_gfunc != 0);
 
     m_gfunc(
       grid_type,
       level,
-      data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,bc,
-      scomp,ncomp,bfact);
+      data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,
+      bc_local,
+      scomp,ncomp_local,bfact);
 }
 
 // this function cannot throw an exception.

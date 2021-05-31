@@ -28,25 +28,6 @@ UMACInterp                xd_mac_lo_interp;
 maskSEMInterp             mask_sem_interp;
 
 
-static
-Vector<int>
-GetBCArray (const Vector<BCRec>& bcr)
-{
-    Vector<int> bc(2*AMREX_SPACEDIM*bcr.size());
-
-    for (int n = 0; n < bcr.size(); n++)
-    {
-        const int* b_rec = bcr[n].vect();
-
-        for (int m = 0; m < 2*AMREX_SPACEDIM; m++)
-        {
-            bc[2*AMREX_SPACEDIM*n + m] = b_rec[m];
-        }
-    }
-
-    return bc;
-}
-
 // CELL - CELL - CELL  (grid_type=-1)
 //    x_i = (i+1/2)*dx y_j=(j+1/2)*dy z_k=(k+1/2)*dz
 //   xflux: NODE - CELL - CELL ("umac grid")  (grid_type=0)
@@ -451,7 +432,7 @@ PCInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
   // CELL - CELL - CELL
  if (grid_type==-1) {
   if ((fine.ixType()==IndexType::TheCellType())&&
-      (crse.ixType()==IndexType::TheCellType)) {
+      (crse.ixType()==IndexType::TheCellType())) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
@@ -620,13 +601,14 @@ PCInterp::interp (
  const int* chi  = crse.box().hiVect();
  const int* flo  = fine.loVect();
  const int* fhi  = fine.hiVect();
- const int* fblo = fine_region.loVect();
- const int* fbhi = fine_region.hiVect();
+// const int* fblo = fine_region.loVect();
+// const int* fbhi = fine_region.hiVect();
 
  const Real* cdat  = crse.dataPtr(crse_comp);
  Real*       fdat  = fine.dataPtr(fine_comp);
  int zapflag=0;
 
+   //fine_bx = fine_region & fine.box();
  FORT_PCINTERP (
   &grid_type,
   &zapflag,
@@ -634,7 +616,6 @@ PCInterp::interp (
   crse_bx.loVect(),crse_bx.hiVect(),
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
   fine_bx.loVect(),fine_bx.hiVect(),
-  fblo,fbhi,
   prob_lo,dxf,dxc,
   &ncomp,
   &levelc,&levelf,
@@ -1035,12 +1016,13 @@ PCInterpNull::interp (
  const int* chi  = crse.box().hiVect();
  const int* flo  = fine.loVect();
  const int* fhi  = fine.hiVect();
- const int* fblo = fine_region.loVect();
- const int* fbhi = fine_region.hiVect();
+// const int* fblo = fine_region.loVect();
+// const int* fbhi = fine_region.hiVect();
 
  const Real* cdat  = crse.dataPtr(crse_comp);
  Real*       fdat  = fine.dataPtr(fine_comp);
 
+   //fine_bx = fine_region & fine.box();
  int zapflag=1;
  FORT_PCINTERP (
   &grid_type,
@@ -1048,7 +1030,7 @@ PCInterpNull::interp (
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   crse_bx.loVect(),crse_bx.hiVect(),
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-  fblo,fbhi,
+  fine_bx.loVect(),fine_bx.hiVect(),
   prob_lo,dxf,dxc,
   &ncomp,
   &levelc,&levelf,

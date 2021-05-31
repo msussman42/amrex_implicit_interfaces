@@ -28176,7 +28176,7 @@ end subroutine initialize2d
       call efilcc(bfact, &
        u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
        DIMS(u), &
-       domlo,domhi,bc,veldir)
+       domlo,domhi,bc,veldir) ! veldir=grid_type
 
       do dir2=1,SDIM
       do side=1,2
@@ -29708,6 +29708,7 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
+      INTEGER_T box_type(SDIM)
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
 
@@ -29725,16 +29726,37 @@ end subroutine initialize2d
        print *,"ncomp invalid in extrap fill"
        stop
       endif
-      if (grid_type.eq.-1) then
-       ! do nothing
-      else
-       print *,"grid_type invalid"
-       stop
-      endif
 
-      call local_filcc(bfact, &
-       u,DIMS(u), &
-       domlo,domhi,bc)
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (box_type(dir2).eq.0) then
+        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+         print *,"domhi+1 not divisible by bfact"
+         stop
+        endif
+       else if (box_type(dir2).eq.1) then
+        if ((domhi(dir2)/bfact)*bfact.ne.domhi(dir2)) then
+         print *,"domhi not divisible by bfact"
+         stop
+        endif
+       else
+        print *,"box_type(dir2) invalid"
+        stop
+       endif
+      enddo  ! dir2=1..sdim
+
+      call efilcc(bfact, &
+       u, &
+       DIMS(u), &
+       domlo,domhi,bc, &
+       grid_type)
 
       fablo(1)=ARG_L1(u)
       fablo(2)=ARG_L2(u)
@@ -29746,17 +29768,6 @@ end subroutine initialize2d
 #if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=ARG_H3(u)
 #endif
-
-      do dir2=1,SDIM
-       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-        print *,"domlo not divisible by bfact"
-        stop
-       endif
-       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-        print *,"domhi+1 not divisible by bfact"
-        stop
-       endif
-      enddo  ! dir2
 
       do dir2=1,SDIM
       do side=1,2
@@ -29773,30 +29784,58 @@ end subroutine initialize2d
         print *,"exterior dirichlet BC not allowed"
         stop
 
-        if (side.eq.1) then
-         if (fablo(dir2).lt.domlo(dir2)) then
-          ext_dir_flag=1
-          borderhi(dir2)=domlo(dir2)-1
-          inside_index=domlo(dir2)
+        if (box_type(dir2).eq.1) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).le.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).ge.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop 
          endif
-        else if (side.eq.2) then
-         if (fabhi(dir2).gt.domhi(dir2)) then
-          ext_dir_flag=1
-          borderlo(dir2)=domhi(dir2)+1
-          inside_index=domhi(dir2)
+
+        else if (box_type(dir2).eq.0) then
+
+         if (side.eq.1) then
+          if (fablo(dir2).lt.domlo(dir2)) then
+           ext_dir_flag=1
+           borderhi(dir2)=domlo(dir2)-1
+           inside_index=domlo(dir2)
+          endif
+         else if (side.eq.2) then
+          if (fabhi(dir2).gt.domhi(dir2)) then
+           ext_dir_flag=1
+           borderlo(dir2)=domhi(dir2)+1
+           inside_index=domhi(dir2)
+          endif
+         else
+          print *,"side invalid"
+          stop
          endif
+
         else
-         print *,"side invalid"
+         print *,"dir2 bust"
          stop
         endif
-       endif
 
+       endif  ! EXT_DIR ?
+    
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
         do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+ 
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type)
 
-         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
          IWALL(2)=j
          IWALL(3)=k
@@ -29806,10 +29845,11 @@ end subroutine initialize2d
            u(D_DECL(i,j,k)), &
            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
            xsten,nhalf,dx,bfact)
+
         enddo
         enddo
         enddo
-       endif            
+       endif 
       enddo ! side
       enddo ! dir2
 
