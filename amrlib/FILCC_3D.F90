@@ -198,179 +198,214 @@ stop
       end if
 
       if (nbot .gt. 0) then
-         jlo = domlo(2)
+       jlo = domlo(2)
          
-         if ((bc(2,1).eq.FOEXTRAP).or. &
-             (bc(2,1).eq.EXT_DIR)) then
-	    do j = 1, nbot
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jlo-j,k) = q(i,jlo,k)
-                  end do
-               end do
-	    end do
-         else if (bc(2,1) .eq. HOEXTRAP) then
-            do j = 1, nbot
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jlo-j,k) = two*q(i,jlo-j+1,k)-q(i,jlo-j+2,k)
-                  end do
-               end do
-            end do
-	 else if (bc(2,1) .eq. REFLECT_EVEN) then
-	    do j = 1, nbot 
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jlo-j,k) = q(i,jlo+j-1,k)
-                  end do
-               end do
-	    end do
-	 else if (bc(2,1) .eq. REFLECT_ODD) then
-	    do j = 1, nbot
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jlo-j,k) = -q(i,jlo+j-1,k)
-                  end do
-               end do
-	    end do
-         else if (bc(2,1).eq.INT_DIR) then
-          ! do nothing
-         else
-          print *,"bc invalid"
-          stop
-	 end if
+       if ((bc(2,1).eq.FOEXTRAP).or. &
+           (bc(2,1).eq.EXT_DIR)) then
+        do j = 1, nbot
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jlo-j,k)) = q(D_DECL(i,jlo,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,1) .eq. HOEXTRAP) then
+        do j = 1, nbot
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jlo-j,k)) = &
+             two*q(D_DECL(i,jlo-j+1,k))-q(D_DECL(i,jlo-j+2,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,1) .eq. REFLECT_EVEN) then
+        do j = 1, nbot 
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jlo-j,k)) = q(D_DECL(i,jlo+j-1,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,1) .eq. REFLECT_ODD) then
+        do j = 1, nbot
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jlo-j,k)) = -q(D_DECL(i,jlo+j-1,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,1).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
       end if
 
       if (ntop .gt. 0) then
-         jhi = domhi(2)
+       jhi = domhi(2)
 
-         if ((bc(2,2).eq.FOEXTRAP).or. &
-             (bc(2,2).eq.EXT_DIR)) then
-	    do j = 1, ntop
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jhi+j,k) = q(i,jhi,k)
-                  end do
-               end do
-	    end do
-         else if (bc(2,2) .eq. HOEXTRAP) then
-            do j = 1, ntop
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jhi+j,k) = two*q(i,jhi+j-1,k)-q(i,jhi+j-2,k)
-                  end do
-               end do
-            end do
-	 else if (bc(2,2) .eq. REFLECT_EVEN) then
-	    do j = 1, ntop
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jhi+j,k) = q(i,jhi-j+1,k)
-                  end do
-               end do
-	    end do
-	 else if (bc(2,2) .eq. REFLECT_ODD) then
-	    do j = 1, ntop
-               do k = ARG_L3(q),ARG_H3(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,jhi+j,k) = -q(i,jhi-j+1,k)
-                  end do
-               end do
-	    end do
-         else if (bc(2,2).eq.INT_DIR) then
-          ! do nothing
-         else
-          print *,"bc invalid"
-          stop
-	 end if
+       if ((bc(2,2).eq.FOEXTRAP).or. &
+           (bc(2,2).eq.EXT_DIR)) then
+        do j = 1, ntop
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jhi+j,k)) = q(D_DECL(i,jhi,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,2) .eq. HOEXTRAP) then
+        do j = 1, ntop
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jhi+j,k)) = &
+             two*q(D_DECL(i,jhi+j-1,k))-q(D_DECL(i,jhi+j-2,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,2) .eq. REFLECT_EVEN) then
+        do j = 1, ntop
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jhi+j,k)) = q(D_DECL(i,jhi-j+1,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,2) .eq. REFLECT_ODD) then
+        do j = 1, ntop
+#if (AMREX_SPACEDIM==3)
+         do k = ARG_L3(q),ARG_H3(q)
+#endif
+          do i = ARG_L1(q),ARG_H1(q)
+           q(D_DECL(i,jhi+j,k)) = -q(D_DECL(i,jhi-j+1,k))
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,2).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
       end if
 
+#if (AMREX_SPACEDIM==3)
       if (ndwn .gt. 0) then
-         klo = domlo(3)
+       klo = domlo(3)
 
-         if ((bc(3,1).eq.FOEXTRAP).or. &
-             (bc(3,1).eq.EXT_DIR)) then
-	    do k = 1, ndwn
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,klo-k) = q(i,j,klo)
-                  end do
-               end do
-	    end do
-         else if (bc(3,1) .eq. HOEXTRAP) then
-            do k = 1, ndwn
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,klo-k) = two*q(i,j,klo-k+1)-q(i,j,klo-k+2)
-                  end do
-               end do
-            end do
-	 else if (bc(3,1) .eq. REFLECT_EVEN) then
-	    do k = 1, ndwn
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,klo-k) = q(i,j,klo+k-1)
-                  end do
-               end do
-	    end do
-	 else if (bc(3,1) .eq. REFLECT_ODD) then
-	    do k = 1, ndwn
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,klo-k) = -q(i,j,klo+k-1)
-                  end do
-               end do
-	    end do
-         else if (bc(3,1).eq.INT_DIR) then
-          ! do nothing
-         else
-          print *,"bc invalid"
-          stop
-	 end if
+       if ((bc(3,1).eq.FOEXTRAP).or. &
+           (bc(3,1).eq.EXT_DIR)) then
+        do k = 1, ndwn
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,klo-k) = q(i,j,klo)
+        end do
+        end do
+        end do
+       else if (bc(3,1) .eq. HOEXTRAP) then
+        do k = 1, ndwn
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,klo-k) = two*q(i,j,klo-k+1)-q(i,j,klo-k+2)
+        end do
+        end do
+        end do
+       else if (bc(3,1) .eq. REFLECT_EVEN) then
+        do k = 1, ndwn
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,klo-k) = q(i,j,klo+k-1)
+        end do
+        end do
+        end do
+       else if (bc(3,1) .eq. REFLECT_ODD) then
+        do k = 1, ndwn
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,klo-k) = -q(i,j,klo+k-1)
+        end do
+        end do
+        end do
+       else if (bc(3,1).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
       end if
 
       if (nup .gt. 0) then
-         khi = domhi(3)
+       khi = domhi(3)
 
-         if ((bc(3,2).eq.FOEXTRAP).or. &
-             (bc(3,2).eq.EXT_DIR)) then
-	    do k = 1, nup
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,khi+k) = q(i,j,khi)
-                  end do
-               end do
-	    end do
-         else if (bc(3,2) .eq. HOEXTRAP) then
-            do k = 1, nup
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,khi+k) = two*q(i,j,khi+k-1)-q(i,j,khi+k-2)
-                  end do
-               end do
-            end do
-	 else if (bc(3,2) .eq. REFLECT_EVEN) then
-	    do k = 1, nup
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,khi+k) = q(i,j,khi-k+1)
-                  end do
-               end do
-	    end do
-	 else if (bc(3,2) .eq. REFLECT_ODD) then
-	    do k = 1, nup
-               do j = ARG_L2(q),ARG_H2(q)
-                  do i = ARG_L1(q),ARG_H1(q)
-                     q(i,j,khi+k) = -q(i,j,khi-k+1)
-                  end do
-               end do
-	    end do
-         else if (bc(3,2).eq.INT_DIR) then
-          ! do nothing
-         else
-          print *,"bc invalid"
-          stop
-	 end if
+       if ((bc(3,2).eq.FOEXTRAP).or. &
+           (bc(3,2).eq.EXT_DIR)) then
+        do k = 1, nup
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,khi+k) = q(i,j,khi)
+        end do
+        end do
+        end do
+       else if (bc(3,2) .eq. HOEXTRAP) then
+        do k = 1, nup
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,khi+k) = two*q(i,j,khi+k-1)-q(i,j,khi+k-2)
+        end do
+        end do
+        end do
+       else if (bc(3,2) .eq. REFLECT_EVEN) then
+        do k = 1, nup
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,khi+k) = q(i,j,khi-k+1)
+        end do
+        end do
+        end do
+       else if (bc(3,2) .eq. REFLECT_ODD) then
+        do k = 1, nup
+        do j = ARG_L2(q),ARG_H2(q)
+        do i = ARG_L1(q),ARG_H1(q)
+         q(i,j,khi+k) = -q(i,j,khi-k+1)
+        end do
+        end do
+        end do
+       else if (bc(3,2).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
       end if
 
       end subroutine local_filcc
