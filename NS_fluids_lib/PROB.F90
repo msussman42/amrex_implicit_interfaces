@@ -27031,7 +27031,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call filcc(bfact, &
+      call local_filcc(bfact, &
        u,DIMS(u), &
        domlo,domhi,bc)
 
@@ -27200,7 +27200,7 @@ end subroutine initialize2d
       enddo  ! dir2
 
       do velcomp=1,SDIM
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),velcomp), &
         DIMS(u), &
         domlo,domhi, &
@@ -27355,7 +27355,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call filcc(bfact, &
+      call local_filcc(bfact, &
        u,DIMS(u), &
        domlo,domhi,bc)
 
@@ -27543,7 +27543,7 @@ end subroutine initialize2d
       enddo  ! dir2
 
       do velcomp=1,SDIM
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),velcomp), &
         DIMS(u), &
         domlo,domhi, &
@@ -28751,7 +28751,7 @@ end subroutine initialize2d
       endif
 
       do im=1,nmat*ngeom_raw
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
         DIMS(u), &
         domlo,domhi,bc(1,1,im))
@@ -28944,7 +28944,7 @@ end subroutine initialize2d
       endif
 
       do im=1,nmat*ngeom_recon
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
         DIMS(u), &
         domlo,domhi,bc(1,1,im))
@@ -29216,7 +29216,7 @@ end subroutine initialize2d
       endif
 
       do imls=1,ncomp_ho
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),imls), &
         DIMS(u), &
         domlo,domhi, &
@@ -29418,7 +29418,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call filcc(bfact, &
+      call local_filcc(bfact, &
        u,DIMS(u), &
        domlo,domhi,bc)
 
@@ -29601,7 +29601,7 @@ end subroutine initialize2d
 #endif
 
       do icomp=1,(ncomp_per+1)*nten
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
         DIMS(u), &
         domlo,domhi,bc(1,1,icomp))
@@ -29732,7 +29732,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call filcc(bfact, &
+      call local_filcc(bfact, &
        u,DIMS(u), &
        domlo,domhi,bc)
 
@@ -29907,7 +29907,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call filcc(bfact, &
+      call local_filcc(bfact, &
        u,DIMS(u), &
        domlo,domhi,bc)
 
@@ -30070,7 +30070,7 @@ end subroutine initialize2d
       im=fort_im_elastic_map(ipart)+1
       if ((im.ge.1).and.(im.le.num_materials)) then
 
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u,DIMS(u), &
         domlo,domhi,bc)
 
@@ -30232,7 +30232,7 @@ end subroutine initialize2d
 
        dir_xdisplace=scomp-(ipart-1)*SDIM-icomplo+1
 
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u,DIMS(u), &
         domlo,domhi,bc)
 
@@ -30370,7 +30370,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call filcc(bfact, &
+      call local_filcc(bfact, &
        u,DIMS(u), &
        domlo,domhi,bc)
 
@@ -30533,7 +30533,7 @@ end subroutine initialize2d
 #endif
 
       do icomp=1,num_state_material*num_materials
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
         DIMS(u), &
         domlo,domhi,bc(1,1,icomp))
@@ -30724,7 +30724,7 @@ end subroutine initialize2d
 #endif
 
       do icomp_total=scomp+1,scomp+ncomp
-       call filcc(bfact, &
+       call local_filcc(bfact, &
         u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp_total-scomp), &
         DIMS(u), &
         domlo,domhi,bc(1,1,icomp_total-scomp))
