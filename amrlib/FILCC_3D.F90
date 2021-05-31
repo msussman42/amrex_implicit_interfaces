@@ -466,10 +466,17 @@ stop
       INTEGER_T :: ntofill(3,2)
       INTEGER_T :: fablo_declare(3)
       INTEGER_T :: fabhi_declare(3)
+      INTEGER_T :: int_lo(3)
+      INTEGER_T :: int_hi(3)
+      INTEGER_T :: local_dir
+      INTEGER_T :: dir_side
+      INTEGER_T :: side
+      INTEGER_T :: sidelo(3),sidehi(3),side_inc(3)
+      INTEGER_T :: side_first(3)
+      INTEGER_T :: side_last(3)
+      INTEGER_T :: imult(3)
+      INTEGER_T :: idist(3)
 
-      INTEGER_T    nlft, nrgt, nbot, ntop, nup, ndwn
-      INTEGER_T    ilo, ihi, jlo, jhi, klo, khi
-      INTEGER_T    is,  ie,  js,  je,  ks,  ke
       INTEGER_T    i, j, k
 
 
@@ -509,287 +516,155 @@ stop
        side=2
        ntofill(local_dir,side)= &
          max(0,fabhi_declare(local_dir)-domhi(local_dir))
-      enddo
+      enddo ! local_dir=1..sdim
  
       do local_dir=1,SDIM
 
-!     ::::: first fill sides
-      if (nlft .ge. 0) then
-         ilo = domlo(1)
+       do side=1,2
 
-         if ((bc(1,1).eq.FOEXTRAP).or. &
-             (bc(1,1).eq.EXT_DIR).or. &
-             (bc(1,1).eq.HOEXTRAP)) then
-	    do i = 1, nlft
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do j = ARG_L2(q),ARG_H2(q)
-	       q(ilo-i,j,k) = q(ilo,j,k)
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(1,1) .eq. REFLECT_EVEN) then
-	    do i = 1, nlft
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do j = ARG_L2(q),ARG_H2(q)
-             if (dir.eq.0) then
-	       q(ilo-i,j,k) = q(ilo+i,j,k)
-             else
-	       q(ilo-i,j,k) = q(ilo+i-1,j,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(1,1) .eq. REFLECT_ODD) then
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do j = ARG_L2(q),ARG_H2(q)
-              if (dir.eq.0) then
-               q(ilo,j,k)=zero
-              endif
-	    do i = 1, nlft
-             if (dir.eq.0) then
-	       q(ilo-i,j,k) = -q(ilo+i,j,k)
-             else
-	       q(ilo-i,j,k) = -q(ilo+i-1,j,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-         else if (bc(1,1).ne.INT_DIR) then
-          print *,"bc invalid"
+        if (ntofill(local_dir,side).ge.0) then
+
+         sidelo(3)=0
+         sidehi(3)=0
+         side_inc(3)=1
+         do dir_side=1,SDIM
+          sidelo(dir_side)=fablo_declare(dir_side)
+          sidehi(dir_side)=fabhi_declare(dir_side)
+          side_inc(dir_side)=1
+         enddo
+
+         if (side.eq.1) then
+          sidelo(local_dir)=domlo(local_dir)-ntofill(local_dir,side)
+          sidehi(local_dir)=domlo(local_dir)
+          side_inc(local_dir)=-1
+         else if (side.eq.2) then
+          sidehi(local_dir)=domhi(local_dir)+ntofill(local_dir,side)
+          sidelo(local_dir)=domhi(local_dir)
+          side_inc(local_dir)=1
+         else
+          print *,"side invalid"
           stop
-	 endif
-      endif
+         endif
+          
+         do dir_side=1,3
+          imult(dir_side)=0
+          idist(dir_side)=0
 
-      if (nrgt .ge. 0) then
-         ihi = domhi(1)
+CHECK HERE, SANITY (i,j,k),(isrc,jsrc,ksrc)
+          if (sidelo(dir_side).le.sidehi(dir_side)) then
+           if (side_inc(dir_side).eq.1) then
+            side_first(dir_side)=sidelo(dir_side)
+            side_last(dir_side)=sidehi(dir_side)
+           else if (side_inc(dir_side).eq.-1) then
+            side_first(dir_side)=sidehi(dir_side)
+            side_last(dir_side)=sidelo(dir_side)
+           else
+            print *,"side_inc invalid"
+            stop
+           endif
+          else
+           print *,"sidelo or sidehi invalid"
+           stop
+          endif
+         enddo ! dir_side=1..3
+           
+         imult(local_dir)=-side_inc(local_dir)  
 
-         if ((bc(1,2).eq.FOEXTRAP).or. &
-             (bc(1,2).eq.EXT_DIR).or. &
-             (bc(1,2).eq.HOEXTRAP)) then
-	    do i = 1, nrgt
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do j = ARG_L2(q),ARG_H2(q)
-	       q(ihi+i,j,k) = q(ihi,j,k)
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(1,2) .eq. REFLECT_EVEN) then
-	    do i = 1, nrgt
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do j = ARG_L2(q),ARG_H2(q)
-             if (dir.eq.0) then
-	       q(ihi+i,j,k) = q(ihi-i,j,k)
-             else
-	       q(ihi+i,j,k) = q(ihi-i+1,j,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(1,2) .eq. REFLECT_ODD) then
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do j = ARG_L2(q),ARG_H2(q)
-              if (dir.eq.0) then
-               q(ihi,j,k)=zero
-              endif
-	    do i = 1, nrgt
-             if (dir.eq.0) then
-	       q(ihi+i,j,k) = -q(ihi-i,j,k)
-             else
-	       q(ihi+i,j,k) = -q(ihi-i+1,j,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-         else if (bc(1,2).ne.INT_DIR) then
-          print *,"bc invalid"
-          stop
-	 endif
-      endif
+         do i=side_first(1),side_last(1),side_inc(1) 
+         do j=side_first(2),side_last(2),side_inc(2) 
+         do k=side_first(3),side_last(3),side_inc(3) 
+          if (local_dir.eq.1) then
+           idx_norm=i
+          else if (local_dir.eq.2) then
+           idx_norm=j
+          else if ((local_dir.eq.SDIM).and.(SDIM.eq.3)) then
+           idx_norm=k
+          else
+           print *,"local_dir invalid"
+           stop
+          endif
+          idist(local_dir)=abs(idx_norm-side_first(local_dir))
 
-      if (nbot .ge. 0) then
-         jlo = domlo(2)
-	
-         if ((bc(2,1).eq.FOEXTRAP).or. &
-             (bc(2,1).eq.EXT_DIR).or. &
-             (bc(2,1).eq.HOEXTRAP)) then
-	    do j = 1, nbot
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-	       q(i,jlo-j,k) = q(i,jlo,k)
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(2,1) .eq. REFLECT_EVEN) then
-	    do j = 1, nbot 
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-             if (dir.eq.1) then
-	       q(i,jlo-j,k) = q(i,jlo+j,k)
-             else
-	       q(i,jlo-j,k) = q(i,jlo+j-1,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(2,1) .eq. REFLECT_ODD) then
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-              if (dir.eq.1) then
-               q(i,jlo,k)=zero
-              endif
-	    do j = 1, nbot
-             if (dir.eq.1) then
-	       q(i,jlo-j,k) = -q(i,jlo+j,k)
-             else
-	       q(i,jlo-j,k) = -q(i,jlo+j-1,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-         else if (bc(2,1).ne.INT_DIR) then
-          print *,"bc invalid"
-          stop
-	 endif
-      endif
+          if ((bc(local_dir,side).eq.FOEXTRAP).or. &
+              (bc(local_dir,side).eq.EXT_DIR).or. &
+              (bc(local_dir,side).eq.HOEXTRAP)) then
+           if (idx_norm.ne.side_first(local_dir)) then
+            isrc=i+imult(1)
+            jsrc=j+imult(2)
+            ksrc=k+imult(3)
+            q(D_DECL(i,j,k)) = q(D_DECL(isrc,jsrc,ksrc))
+           else if (idx_norm.eq.side_first(local_dir)) then
+            ! do nothing
+           else
+            print *,"idx_norm invalid"
+            stop
+           endif 
+          elseif (bc(local_dir,side).eq.REFLECT_EVEN) then
+           if (idx_norm.ne.side_first(local_dir)) then
+            if (box_type(local_dir).eq.1) then !NODE
+             isrc=i+2*idist(1)*imult(1)
+             jsrc=j+2*idist(2)*imult(2)
+             ksrc=k+2*idist(3)*imult(3)
+            else if (box_type(local_dir).eq.0) then !CELL
+             isrc=i+(2*idist(1)-1)*imult(1)
+             jsrc=j+(2*idist(2)-1)*imult(2)
+             ksrc=k+(2*idist(3)-1)*imult(3)
+            else
+             print *,"box_type(local_dir) invalid"
+             stop
+            endif
+            q(D_DECL(i,j,k)) = q(D_DECL(isrc,jsrc,ksrc))
+           else if (idx_norm.eq.side_first(local_dir)) then
+            ! do nothing
+           else
+            print *,"idx_norm invalid"
+            stop
+           endif 
+          elseif (bc(local_dir,side).eq.REFLECT_ODD) then
+           if (idx_norm.ne.side_first(local_dir)) then
+            if (box_type(local_dir).eq.1) then !NODE
+             isrc=i+2*idist(1)*imult(1)
+             jsrc=j+2*idist(2)*imult(2)
+             ksrc=k+2*idist(3)*imult(3)
+            else if (box_type(local_dir).eq.0) then !CELL
+             isrc=i+(2*idist(1)-1)*imult(1)
+             jsrc=j+(2*idist(2)-1)*imult(2)
+             ksrc=k+(2*idist(3)-1)*imult(3)
+            else
+             print *,"box_type(local_dir) invalid"
+             stop
+            endif
+            q(D_DECL(i,j,k)) = -q(D_DECL(isrc,jsrc,ksrc))
+           else if (idx_norm.eq.side_first(local_dir)) then
+            if (box_type(local_dir).eq.1) then !NODE
+             q(D_DECL(i,j,k))=zero
+            else if (box_type(local_dir).eq.0) then !CELL
+             ! do nothing
+            else
+             print *,"box_type(local_dir) invalid"
+             stop
+            endif
+           else
+            print *,"idx_norm invalid"
+            stop
+           endif 
+          else if (bc(local_dir,side).eq.INT_DIR) then
+           ! do nothing
+          else
+           print *,"bc invalid"
+           stop
+          endif
+         enddo ! k
+         enddo ! j
+         enddo ! i
+        else 
+         print *,"expecting ntofill>=0"
+         stop
+        endif
 
-      if (ntop .ge. 0) then
-         jhi = domhi(2)
-
-         if ((bc(2,2).eq.FOEXTRAP).or. &
-             (bc(2,2).eq.EXT_DIR).or. &
-             (bc(2,2).eq.HOEXTRAP)) then
-	    do j = 1, ntop
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-	       q(i,jhi+j,k) = q(i,jhi,k)
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(2,2) .eq. REFLECT_EVEN) then
-	    do j = 1, ntop
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-             if (dir.eq.1) then
-	       q(i,jhi+j,k) = q(i,jhi-j,k)
-             else
-	       q(i,jhi+j,k) = q(i,jhi-j+1,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(2,2) .eq. REFLECT_ODD) then
-	    do k = ARG_L3(q),ARG_H3(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-              if (dir.eq.1) then
-               q(i,jhi,k)=zero
-              endif
-	    do j = 1, ntop
-             if (dir.eq.1) then
-	       q(i,jhi+j,k) = -q(i,jhi-j,k)
-             else
-	       q(i,jhi+j,k) = -q(i,jhi-j+1,k)
-             endif
-	    enddo
-	    enddo
-	    enddo
-         else if (bc(2,2).ne.INT_DIR) then
-          print *,"bc invalid"
-          stop
-	 endif
-      endif
-
-      if (ndwn .ge. 0) then
-         klo = domlo(3)
-
-         if ((bc(3,1).eq.FOEXTRAP).or. &
-             (bc(3,1).eq.EXT_DIR).or. &
-             (bc(3,1).eq.HOEXTRAP)) then
-	    do k = 1, ndwn
-	    do j = ARG_L2(q),ARG_H2(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-	       q(i,j,klo-k) = q(i,j,klo)
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(3,1) .eq. REFLECT_EVEN) then
-	    do k = 1, ndwn
-	    do j = ARG_L2(q),ARG_H2(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-             if (dir.eq.2) then
-	       q(i,j,klo-k) = q(i,j,klo+k)
-             else
-	       q(i,j,klo-k) = q(i,j,klo+k-1)
-             endif
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(3,1) .eq. REFLECT_ODD) then
-	    do j = ARG_L2(q),ARG_H2(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-              if (dir.eq.2) then
-               q(i,j,klo)=zero
-              endif
-	    do k = 1, ndwn
-             if (dir.eq.2) then
-	       q(i,j,klo-k) = -q(i,j,klo+k)
-             else
-	       q(i,j,klo-k) = -q(i,j,klo+k-1)
-             endif
-	    enddo
-	    enddo
-	    enddo
-         else if (bc(3,1).ne.INT_DIR) then
-          print *,"bc invalid"
-          stop
-	 endif
-      endif
-
-      if (nup .ge. 0) then
-         khi = domhi(3)
-
-         if ((bc(3,2).eq.FOEXTRAP).or. &
-             (bc(3,2).eq.EXT_DIR).or. &
-             (bc(3,2).eq.HOEXTRAP)) then
-	    do k = 1, nup
-	    do j = ARG_L2(q),ARG_H2(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-	       q(i,j,khi+k) = q(i,j,khi)
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(3,2) .eq. REFLECT_EVEN) then
-	    do j = ARG_L2(q),ARG_H2(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-	    do k = 1, nup
-             if (dir.eq.2) then
-	       q(i,j,khi+k) = q(i,j,khi-k)
-             else
-	       q(i,j,khi+k) = q(i,j,khi-k+1)
-             endif
-	    enddo
-	    enddo
-	    enddo
-	 elseif (bc(3,2) .eq. REFLECT_ODD) then
-	    do j = ARG_L2(q),ARG_H2(q)
-	    do i = ARG_L1(q),ARG_H1(q)
-              if (dir.eq.2) then
-               q(i,j,khi)=zero
-              endif
-	    do k = 1, nup
-             if (dir.eq.2) then
-	       q(i,j,khi+k) = -q(i,j,khi-k)
-             else
-	       q(i,j,khi+k) = -q(i,j,khi-k+1)
-             endif
-	    enddo
-	    enddo
-	    enddo
-         else if (bc(3,2).ne.INT_DIR) then
-          print *,"bc invalid"
-          stop
-	 endif
-      endif
-
+       enddo ! side=1,2
+ 
+      enddo ! local_dir=1,SDIM
 
       return
       end subroutine efilcc
