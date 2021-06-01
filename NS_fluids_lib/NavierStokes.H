@@ -288,7 +288,9 @@ namespace amrex{
 #define TEMPERATURE_SAVE_MF (DTDt_MF+1)
 #define TEMPERATURE_SMOOTH_MF (TEMPERATURE_SAVE_MF+1)
 
-#define NEXT_MF (TEMPERATURE_SMOOTH_MF+1)
+#define ONES_GROW_MF (TEMPERATURE_SMOOTH_MF+1)
+
+#define NEXT_MF (ONES_GROW_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
@@ -1022,9 +1024,12 @@ protected:
     void assign_colors(
      int& fully_covered,
      int idx_color,int idx_type,
-     Vector<int>& colormax,Vector<int> type_flag);
+     Vector<int>& colormax,Vector<int> type_flag,
+     int zero_diag_flag);
+
     void avgDownColor(int idx_color,int idx_type);
-    MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type);
+    MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type,
+		    int zero_diag_flag);
 
     void sync_colors(
      int idx_color,int idx_type,
@@ -1032,7 +1037,8 @@ protected:
      Vector<int>& colormax,
      int max_colors_grid,
      MultiFab* maskmf,
-     int check_corners);
+     int check_corners,
+     int zero_diag_flag);
 
     void color_variable(
      int& coarsest_level,

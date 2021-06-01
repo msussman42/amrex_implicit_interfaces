@@ -284,7 +284,8 @@ namespace amrex{
      const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
      const Real* typef,AMREX_ARLIM_P(typef_lo),AMREX_ARLIM_P(typef_hi),
      const Real* maskf,AMREX_ARLIM_P(maskf_lo),AMREX_ARLIM_P(maskf_hi),
-     const int* clo,const int* chi,const int* flo,const int* fhi);
+     const int* clo,const int* chi,const int* flo,const int* fhi,
+     int* zero_diag_flag);
     
 
     void FORT_NEUMANNEXTRAP(

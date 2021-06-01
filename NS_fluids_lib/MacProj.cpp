@@ -51,6 +51,7 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.allocate_maccoef(project_option,nsolve,create_hierarchy);
  }
+FIX ME SET ONES_GROW_MF BC, find coloring
 
  if (project_option_singular_possible(project_option)==1) {
 
@@ -248,6 +249,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  debug_ngrow(ONES_MF,0,202);
  if (localMF[ONES_MF]->nComp()!=num_materials_face)
   amrex::Error("localMF[ONES_MF]->nComp() invalid");
+ debug_ngrow(ONES_GROW_MF,1,202);
+ if (localMF[ONES_GROW_MF]->nComp()!=num_materials_face)
+  amrex::Error("localMF[ONES_GROW_MF]->nComp() invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,202);
@@ -622,6 +626,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 } // omp
  ns_reconcile_d_num(35);
 
+FIX ME copy to ONES_GROW_MF
 
  Real min_interior_coeff=0.0;
  if (denconst_max>0.0) {
@@ -2106,8 +2111,11 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.new_localMF(DIFFUSIONRHS_MF,nsolveMM,0,-1);
    ns_level.setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
 
+    // in: NavierStokes::update_SEM_forcesALL
    ns_level.new_localMF(ONES_MF,num_materials_face,0,-1);
+   ns_level.new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
    ns_level.setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
+   ns_level.setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
    ns_level.ones_sum_global=0.0;
 
    ns_level.makeDotMask(nsolve,project_option);
@@ -2147,6 +2155,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.delete_localMF(OFF_DIAG_CHECK_MF,1);
    ns_level.delete_localMF(DOTMASK_MF,1);
    ns_level.delete_localMF(ONES_MF,1);
+   ns_level.delete_localMF(ONES_GROW_MF,1);
    ns_level.delete_localMF(DIFFUSIONRHS_MF,1);
   } // ilev=finest_level ... level
 

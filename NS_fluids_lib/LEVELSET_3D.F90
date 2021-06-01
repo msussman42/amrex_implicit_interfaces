@@ -7930,32 +7930,35 @@ stop
         fine,DIMS(fine), &
         typef,DIMS(typef), &
         maskf,DIMS(maskf), &
-        clo,chi,flo,fhi)
+        clo,chi,flo,fhi,
+        zero_diag_flag)
       use global_utility_module
       use probf90_module
       IMPLICIT NONE
 
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      INTEGER_T bfact_f,bfact
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T  flo(SDIM),fhi(SDIM)
-      INTEGER_T  clo(SDIM),chi(SDIM)
+      INTEGER_T, intent(in) :: zero_diag_flag
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      INTEGER_T, intent(in) :: bfact_f,bfact
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
+      INTEGER_T, intent(in) :: clo(SDIM),chi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      INTEGER_T  DIMDEC(crse)
-      INTEGER_T  DIMDEC(fine)
-      INTEGER_T  DIMDEC(typef)
-      INTEGER_T  DIMDEC(maskf)
-      REAL_T crse(DIMV(crse),6)
-      REAL_T fine(DIMV(fine))
-      REAL_T typef(DIMV(typef))
-      REAL_T maskf(DIMV(maskf))
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: DIMDEC(typef)
+      INTEGER_T, intent(in) :: DIMDEC(maskf)
+      REAL_T, intent(out) :: crse(DIMV(crse),6)
+      REAL_T, intent(in) :: fine(DIMV(fine))
+      REAL_T, intent(in) :: typef(DIMV(typef))
+      REAL_T, intent(in) :: maskf(DIMV(maskf))
       INTEGER_T i, j, k, ic, jc, kc,n
       INTEGER_T fine_type,fine_color
       INTEGER_T icrse,jcrse,alreadyhit,crse_color,crse_type
       INTEGER_T nmat
+      INTEGER_T ncomp_type
       REAL_T masktest
       REAL_T wt(SDIM)
 
@@ -7975,6 +7978,15 @@ stop
       endif
 
       nmat=num_materials
+      ncomp_type=nmat
+      if (zero_diag_flag.eq.1) then
+       ncomp_type=2
+      else if (zero_diag_flag.eq.0) then
+       ncomp_type=nmat
+      else
+       print *,"zero_diag_flag invalid"
+       stop
+      endif
 
       call checkbound(clo,chi,DIMS(crse),0,-1,410)
       call checkbound(flo,fhi,DIMS(fine),0,-1,410)
@@ -8013,10 +8025,10 @@ stop
                print *,"fine_color invalid"
                stop
               endif
-              if ((fine_type.le.0).or.(fine_type.gt.nmat)) then
+              if ((fine_type.le.0).or.(fine_type.gt.ncomp_type)) then
                print *,"fine_type invalid"
                stop
-              else
+              else if ((fine_type.ge.1).and.(fine_type.le.ncomp_type)) then
                alreadyhit=0
                do jcrse=1,icrse
                 crse_color=NINT(crse(D_DECL(ic,jc,kc),2*jcrse-1))
@@ -8036,7 +8048,10 @@ stop
                  crse(D_DECL(ic,jc,kc),2*icrse)=fine_type
                 endif
                endif
-              endif ! nmat>=fine_type>=1
+              else
+               print *,"fine_type bust"
+               stop
+              endif 
 
              else if (masktest.ne.zero) then
               print *,"masktest invalid"
