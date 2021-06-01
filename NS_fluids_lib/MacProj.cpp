@@ -596,6 +596,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
+     // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
     ones_fab.dataPtr(),ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
     maskcov.dataPtr(),ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     alpha.dataPtr(),

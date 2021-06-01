@@ -1038,7 +1038,8 @@ protected:
      int& coarsest_level,
      int idx_color,int idx_type,
      int* color_count,
-     Vector<int> type_flag);
+     Vector<int> type_flag,
+     int zero_diag_flag);
 
     void ColorSum(
      int operation_flag, // =0 or 1
@@ -1100,10 +1101,12 @@ protected:
 
 
     void Type_level(
-     MultiFab* typemf,Vector<int>& type_flag);
+     MultiFab* typemf,Vector<int>& type_flag,
+     int zero_diag_flag);
     void TypeALL(
      int idx_type,
-     Vector<int>& type_flag);
+     Vector<int>& type_flag,
+     int zero_diag_flag);
 
     virtual void post_init_state ();
 

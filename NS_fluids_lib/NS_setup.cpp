@@ -2180,6 +2180,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   int idx_mdot=-1;
   int operation_flag=0;
 
+   // declared in NavierStokes3.cpp
   ColorSumALL(
     operation_flag, // =0
     tessellate, // =1
