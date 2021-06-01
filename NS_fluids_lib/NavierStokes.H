@@ -1103,6 +1103,7 @@ protected:
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag,
      int zero_diag_flag);
+
     void TypeALL(
      int idx_type,
      Vector<int>& type_flag,

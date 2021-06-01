@@ -6886,13 +6886,22 @@ NavierStokes::ColorSumALL(
 
 void
 NavierStokes::Type_level(
-  MultiFab* typemf,Vector<int>& type_flag) {
+  MultiFab* typemf,Vector<int>& type_flag,
+  int zero_diag_flag) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
+ int ncomp_type=nmat;
+ if (zero_diag_flag==1) {
+  ncomp_type=2;
+ } else if (zero_diag_flag==0) {
+  ncomp_type=nmat;
+ } else
+  amrex::Error("zero_diag_flag invalid");
+
  int typedim=type_flag.size();
- if (typedim!=nmat)
+ if (typedim!=ncomp_type)
   amrex::Error("typedim invalid");
 
  Vector< Vector<int> > local_type_flag;
@@ -6906,9 +6915,22 @@ NavierStokes::Type_level(
  if (level>finest_level)
   amrex::Error("level invalid Type_level");
 
- MultiFab* LS=getStateDist(1,cur_time_slab,21);
- if (LS->nComp()!=nmat*(1+AMREX_SPACEDIM))
-  amrex::Error("LS->nComp() invalid");
+ MultiFab* Type_Source_MF=nullptr;
+ int ncomp_source=0;
+
+ if (zero_diag_flag==0) {
+  Type_Source_MF=getStateDist(1,cur_time_slab,21);
+  ncomp_source=Type_Source_MF->nComp();
+  if (Type_Source_MF->nComp()!=nmat*(1+AMREX_SPACEDIM))
+   amrex::Error("Type_Source_MF->nComp() invalid");
+ } else if (zero_diag_flag==1) {
+  Type_Source_MF=localMF[ONES_GROW_MF];
+  ncomp_source=Type_Source_MF->nComp();
+  if (Type_Source_MF->nComp()!=1)
+   amrex::Error("Type_Source_MF->nComp() invalid");
+ } else
+  amrex::Error("zero_diag_flag invalid");
+
  if (typemf->nGrow()!=1)
   amrex::Error("typemf->nGrow()!=1");
 
@@ -6935,7 +6957,7 @@ NavierStokes::Type_level(
   int bfact=parent->Space_blockingFactor(level);
   const Real* xlo = grid_loc[gridno].lo();
 
-  FArrayBox& LSfab=(*LS)[mfi];
+  FArrayBox& source_fab=(*Type_Source_MF)[mfi];
   FArrayBox& typefab=(*typemf)[mfi];
 
   int tid_current=ns_thread();
@@ -6944,23 +6966,27 @@ NavierStokes::Type_level(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // updates one ghost cell.
-   // in: LEVELSET_3D.F90
+   // declared in: LEVELSET_3D.F90
    //  for each cell,
    //   if is_rigid(nmat,im)==1 and LS>=0 then type=im
   FORT_GETTYPEFAB(
-   LSfab.dataPtr(),ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
+   source_fab.dataPtr(),
+   ARLIM(source_fab.loVect()),ARLIM(source_fab.hiVect()),
    typefab.dataPtr(),ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
    xlo,dx,
    tilelo,tilehi,
    fablo,fabhi,&bfact,
    local_type_flag[tid_current].dataPtr(),
-   &nmat);
+   &nmat,
+   &ncomp_type,
+   &ncomp_source,
+   &zero_diag_flag);
  } // mfi
 } // omp
  ns_reconcile_d_num(183);
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int im=0;im<nmat;im++) { 
+  for (int im=0;im<ncomp_type;im++) { 
    if (local_type_flag[tid][im]>local_type_flag[0][im])
     local_type_flag[0][im]=local_type_flag[tid][im];
   } // im
@@ -6968,12 +6994,18 @@ NavierStokes::Type_level(
 
  ParallelDescriptor::Barrier();
 
- for (int im=0;im<nmat;im++) {
+ for (int im=0;im<ncomp_type;im++) {
   ParallelDescriptor::ReduceIntMax(local_type_flag[0][im]);
   type_flag[im]=local_type_flag[0][im];
  }
 
- delete LS;
+ if (zero_diag_flag==0) {
+  delete Type_Source_MF;
+ } else if (zero_diag_flag==1) {
+  // do nothing
+ } else
+  amrex::Error("zero_diag_flag invalid");
+ 
 }  // subroutine Type_level
 
 
@@ -6989,7 +7021,7 @@ void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
  } else if (zero_diag_flag==0) {
   ncomp_type=nmat;
  } else
-  amrex::Error("ncomp_type invalid");
+  amrex::Error("zero_diag_flag invalid");
 
  type_flag.resize(ncomp_type);
  for (int im=0;im<ncomp_type;im++) {
