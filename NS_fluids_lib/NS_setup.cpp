@@ -1091,7 +1091,7 @@ NavierStokes::variableSetUp ()
       extrap_str="zd_extrap"; 
         //dcomp=0
       desc_lstGHOST.setComponent(ZDmac_Type,0,
-        extrap_str,bc,FORT_X_EXTRAPFILL,xd_mac_lo_interp);
+        extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
 #endif
 
       for (int partid=0;partid<num_materials_viscoelastic;partid++) {

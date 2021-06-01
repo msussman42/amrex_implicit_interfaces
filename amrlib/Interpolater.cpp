@@ -25,6 +25,7 @@ BurnVelInterp             tsat_interp;
 UMACInterp                umac_interp;
 UMACInterp                xd_mac_interp;
 UMACInterp                xd_mac_lo_interp;
+PCInterp                  tensor_pc_interp;
 maskSEMInterp             mask_sem_interp;
 
 
