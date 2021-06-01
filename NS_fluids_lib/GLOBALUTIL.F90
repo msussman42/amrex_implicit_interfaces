@@ -5332,7 +5332,7 @@ contains
       if ((2*i-ii-nhalf.lt.cache_index_low).or. &
           (2*i-ii+nhalf.gt.cache_index_high)) then
        print *,"i out of range gridstenMAC_level"
-       print *,"i,nhalf,level,normdir ",i,nhalf,level,normdir
+       print *,"i,nhalf,level,grid_type ",i,nhalf,level,grid_type
        stop
       endif
       if ((2*j-jj-nhalf.lt.cache_index_low).or. &

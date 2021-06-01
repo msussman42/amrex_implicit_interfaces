@@ -1393,10 +1393,12 @@ stop
       subroutine FORT_PCINTERP ( &
        grid_type, &
        zapflag, &
-       crse,DIMS(crse), &
+       crse_data, &
+       DIMS(crse_data), &
        crse_bx_lo, & ! crse_bx=CoarseBox(fine_bx)
        crse_bx_hi, &
-       fine,DIMS(fine), &
+       fine_data, &
+       DIMS(fine_data), &
        fblo,fbhi, & ! fine_bx=fine_region & fine.box()
        problo, &
        dxf,dxc, &
@@ -1416,13 +1418,13 @@ stop
       INTEGER_T, intent(in) :: crse_bx_lo(SDIM)
       INTEGER_T, intent(in) :: crse_bx_hi(SDIM)
       INTEGER_T clo(SDIM),chi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: DIMDEC(crse_data)
+      INTEGER_T, intent(in) :: DIMDEC(fine_data)
       INTEGER_T, intent(in) :: fblo(SDIM), fbhi(SDIM)
       INTEGER_T flo(SDIM),fhi(SDIM)
       INTEGER_T, intent(in) :: nvar
-      REAL_T, intent(in) :: crse(DIMV(crse), nvar)
-      REAL_T, intent(out) :: fine(DIMV(fine), nvar)
+      REAL_T, intent(in) :: crse_data(DIMV(crse_data),nvar)
+      REAL_T, intent(out) :: fine_data(DIMV(fine_data),nvar)
       REAL_T, intent(in) :: problo(SDIM)
       REAL_T, intent(in) :: dxf(SDIM)
       REAL_T, intent(in) :: dxc(SDIM)
@@ -1432,7 +1434,6 @@ stop
       INTEGER_T :: box_type(SDIM)
 
       INTEGER_T ifine,jfine,kfine
-      INTEGER_T ilocal,jlocal,klocal
       INTEGER_T ic,jc,kc
       INTEGER_T dir2
       INTEGER_T n
@@ -1448,7 +1449,6 @@ stop
       INTEGER_T nhalf
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
-      INTEGER_T khi
       INTEGER_T caller_id
 
       caller_id=1
@@ -1598,7 +1598,8 @@ stop
              enddo
              do n=1,nvar
               if (zapflag.eq.0) then
-               fine_value(n)=fine_value(n)+volall*cdata(D_DECL(ic,jc,kc),n)
+               fine_value(n)=fine_value(n)+ &
+                 volall*crse_data(D_DECL(ic,jc,kc),n)
               else if (zapflag.eq.1) then
                ! do nothing
               else
@@ -1617,7 +1618,7 @@ stop
        if (voltotal.gt.zero) then
         do n=1,nvar
          fine_value(n)=fine_value(n)/voltotal
-         finedata(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
+         fine_data(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
         enddo
        else
         print *,"voltotal invalid" 

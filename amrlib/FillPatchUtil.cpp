@@ -182,8 +182,6 @@ void FillPatchTwoLevels (
  EB2::IndexSpace const* index_space=nullptr;   
 #endif
 
- IntVect ratio_vec(D_DECL(2,2,2));
-
  int ngrow = mf_target.nGrow();
  const IntVect& ngrow_vec=mf_target.nGrowVect();	   
  

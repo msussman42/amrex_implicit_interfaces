@@ -25,8 +25,8 @@ extern "C"
       Real* data, AMREX_ARLIM_P(lo), AMREX_ARLIM_P(hi),
       const int* dom_lo, const int* dom_hi,
       const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
+      const Real* time, const int* bc_local,
+      const int* scomp,int* ncomp_local,int* bfact);
 }
 
 //
@@ -77,8 +77,8 @@ public:
            Real* data, const int* lo, const int* hi,
            const int* dom_lo, const int* dom_hi,
            const Real* dx, const Real* grd_lo,
-           const Real* time, const int* bc,
-           const int* scomp,int* ncomp,int* bfact) const;
+           const Real* time, const int* bc_local,
+           const int* scomp,int* ncomp_local,int* bfact) const;
         //
         // Fill boundary cells using "group" function.
         //
@@ -89,8 +89,8 @@ public:
           Real* data, const int* lo, const int* hi,
           const int* dom_lo, const int* dom_hi,
           const Real* dx, const Real* grd_lo,
-          const Real* time, const int* bc,
-          const int* scomp,int* ncomp,int* bfact,
+          const Real* time, const int* bc_local,
+          const int* scomp,int* ncomp_local,int* bfact,
           bool) const;
     private:
 
