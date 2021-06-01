@@ -4992,12 +4992,18 @@ stop
       end subroutine FORT_CURVSTRIP
 
       subroutine FORT_GETTYPEFAB( &
-       LS,DIMS(LS), &
-       typefab,DIMS(typefab), &
+       source_fab, &
+       DIMS(source_fab), &
+       typefab, &
+       DIMS(typefab), &
        xlo,dx, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
-       type_flag,nmat)
+       type_flag, &
+       nmat, &
+       ncomp_type, &
+       ncomp_source, &
+       zero_diag_flag)
       use probf90_module
       use global_utility_module
  
@@ -5007,17 +5013,20 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(out) :: type_flag(nmat)
+      INTEGER_T, intent(in) :: ncomp_type
+      INTEGER_T, intent(in) :: ncomp_source
+      INTEGER_T, intent(in) :: zero_diag_flag
+      INTEGER_T, intent(out) :: type_flag(ncomp_type)
 
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
-      INTEGER_T, intent(in) ::  DIMDEC(LS)
+      INTEGER_T, intent(in) ::  DIMDEC(source_fab)
       INTEGER_T, intent(in) ::  DIMDEC(typefab)
 
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat)
+      REAL_T, intent(in) :: source_fab(DIMV(source_fab),ncomp_source)
       REAL_T, intent(out) :: typefab(DIMV(typefab))
       INTEGER_T i,j,k,im,base_type
 
@@ -5030,9 +5039,39 @@ stop
        print *,"bfact invalid91"
        stop
       endif
+      if (zero_diag_flag.eq.0) then
+       if (ncomp_source.eq.nmat*(1+SDIM)) then
+        ! do nothing
+       else
+        print *,"ncomp_source invalid"
+        stop
+       endif
+       if (ncomp_type.eq.nmat) then
+        ! do nothing
+       else
+        print *,"ncomp_type invalid"
+        stop
+       endif
+      else if (zero_diag_flag.eq.1) then
+       if (ncomp_source.eq.1) then
+        ! do nothing
+       else
+        print *,"ncomp_source invalid"
+        stop
+       endif
+       if (ncomp_type.eq.2) then
+        ! do nothing
+       else
+        print *,"ncomp_type invalid"
+        stop
+       endif
+      else
+       print *,"zero_diag_flag invalid"
+       stop
+      endif
 
       call checkbound(fablo,fabhi, &
-       DIMS(LS), &
+       DIMS(source_fab), &
        1,-1,4001)
       call checkbound(fablo,fabhi, &
        DIMS(typefab), &
@@ -5042,34 +5081,56 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-       base_type=1
-       do im=2,nmat
-        if (LS(D_DECL(i,j,k),im).gt. &
-            LS(D_DECL(i,j,k),base_type)) then
-         base_type=im
-        endif
-       enddo
 
-       do im=1,nmat
-        if (is_rigid(nmat,im).eq.1) then
-         if (LS(D_DECL(i,j,k),im).ge.zero) then
+       if (zero_diag_flag.eq.0) then
+
+        base_type=1
+        do im=2,nmat
+         if (source_fab(D_DECL(i,j,k),im).gt. &
+             source_fab(D_DECL(i,j,k),base_type)) then
           base_type=im
          endif
-        else if (is_rigid(nmat,im).eq.0) then
-         ! do nothing
+        enddo
+
+        do im=1,nmat
+         if (is_rigid(nmat,im).eq.1) then
+          if (source_fab(D_DECL(i,j,k),im).ge.zero) then
+           base_type=im
+          endif
+         else if (is_rigid(nmat,im).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+
+        typefab(D_DECL(i,j,k))=base_type
+        if ((base_type.gt.nmat).or.(base_type.lt.1)) then
+         print *,"base_type invalid"
+         stop
         else
-         print *,"is_rigid invalid"
+         type_flag(base_type)=1
+        endif
+
+       else if (zero_diag_flag.eq.1) then
+
+        if (source_fab(D_DECL(i,j,k),1).eq.zero) then
+         base_type=1
+        else if (source_fab(D_DECL(i,j,k),1).eq.one)
+         base_type=2
+        else
+         print *,"source_fab(D_DECL(i,j,k),1) invalid"
          stop
         endif
-       enddo ! im=1..nmat
-
-       typefab(D_DECL(i,j,k))=base_type
-       if ((base_type.gt.nmat).or.(base_type.lt.1)) then
-        print *,"base_type invalid"
-        stop
-       else
+        typefab(D_DECL(i,j,k))=base_type
         type_flag(base_type)=1
+
+       else
+        print *,"zero_diag_flag invalid"
+        stop
        endif
+
       enddo
       enddo
       enddo
