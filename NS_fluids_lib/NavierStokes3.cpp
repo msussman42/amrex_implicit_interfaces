@@ -3945,7 +3945,8 @@ void NavierStokes::correct_colors(
 void NavierStokes::assign_colors(
  int& fully_covered,
  int idx_color,int idx_type,
- Vector<int>& colormax,Vector<int> type_flag) {
+ Vector<int>& colormax,Vector<int> type_flag,
+ int zero_diag_flag) {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -3955,9 +3956,17 @@ void NavierStokes::assign_colors(
 
  int nmat=num_materials;
 
+ int ncomp_type=nmat;
+ if (zero_diag_flag==1) {
+  ncomp_type=2;
+ } else if (zero_diag_flag==0) {
+  ncomp_type=nmat;
+ } else
+  amrex::Error("zero_diag_flag invalid");
+
  int ipass_max=2;  
  int typedim=type_flag.size();
- if (typedim!=nmat)
+ if (typedim!=ncomp_type)
   amrex::Error("typedim invalid");
 
  colormax[level]=0;
@@ -4094,7 +4103,8 @@ void NavierStokes::assign_colors(
     color_per_grid_array[0],
     colormax,
     max_colors_grid_array[0],
-    maskmf,check_corners);
+    maskmf,check_corners,
+    zero_diag_flag);
   } else
    amrex::Error("max_colors_grid_array[0] invalid");
  } else
@@ -4202,7 +4212,8 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
 
 // maskfinemf corresponds to level+1
 // components are: color1,type1,color2,type2,color3,type3
-MultiFab* NavierStokes::CopyFineToCoarseColor(int idx_color,int idx_type) {
+MultiFab* NavierStokes::CopyFineToCoarseColor(
+  int idx_color,int idx_type,int zero_diag_flag) {
 
  int finest_level=parent->finestLevel();
 
@@ -4306,7 +4317,8 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(int idx_color,int idx_type) {
     typef.dataPtr(),ARLIM(typef.loVect()),ARLIM(typef.hiVect()),
     maskfinefab.dataPtr(),
     ARLIM(maskfinefab.loVect()),ARLIM(maskfinefab.hiVect()),
-    ovlo,ovhi,lofine,hifine);
+    ovlo,ovhi,lofine,hifine,
+    &zero_diag_flag);
  } // mfi
 } // omp
  ns_reconcile_d_num(178);
@@ -4327,7 +4339,8 @@ void NavierStokes::sync_colors(
  Vector<int>& colormax,
  int max_colors_grid,
  MultiFab* maskmf,
- int check_corners) {
+ int check_corners,
+ int zero_diag_flag) {
 
  int finest_level=parent->finestLevel();
 
@@ -4660,7 +4673,8 @@ void NavierStokes::sync_colors(
     // 1 ghost cell is initialized
     // components are: color1,type1,color2,type2,color3,type3
     // only copies where maskfine=1
-   MultiFab* fine_coarse_color=CopyFineToCoarseColor(idx_color,idx_type);
+   MultiFab* fine_coarse_color=
+     CopyFineToCoarseColor(idx_color,idx_type,zero_diag_flag);
    fine_coarse_color->FillBoundary(geom.periodicity());
 
    int max_colors_level=colormax[level+1];
@@ -4802,7 +4816,9 @@ void NavierStokes::sync_colors(
 void NavierStokes::color_variable(
  int& coarsest_level,
  int idx_color,int idx_type,
- int* color_count,Vector<int> type_flag) {
+ int* color_count,
+ Vector<int> type_flag,
+ int zero_diag_flag) {
 
 int ilev;
 
@@ -4821,7 +4837,8 @@ int ilev;
   NavierStokes& ns_level=getLevel(ilev);
   
   ns_level.assign_colors(fully_covered,
-   idx_color,idx_type,colormax,type_flag); 
+   idx_color,idx_type,colormax,type_flag,
+   zero_diag_flag); 
   if (fully_covered==0) {
    // do nothing
   } else if (fully_covered==1) {
@@ -7064,6 +7081,7 @@ void NavierStokes::remove_project_variables() {
 
  delete_localMF(POLDHOLD_MF,1);
  delete_localMF(ONES_MF,1);
+ delete_localMF(ONES_GROW_MF,1);
  delete_localMF(DOTMASK_MF,1);
  delete_localMF(OUTER_ITER_PRESSURE_MF,1);
 }
@@ -7531,7 +7549,9 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  MultiFab& S_new=get_new_data(state_index,slab_step+1);
 
  new_localMF(ONES_MF,num_materials_face,0,-1);
+ new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
  setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
+ setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
  ones_sum_global=0.0;
 
   // allocates and initializes DOTMASK_MF (will be used for
@@ -10455,7 +10475,7 @@ void NavierStokes::multiphase_project(int project_option) {
   ns_level.allocate_pressure_work_vars(nsolve,project_option);
 
    // updates the following variables:
-   // ONES_MF, DOTMASK_MF, 
+   // ONES_MF, ONES_GROW_MF, DOTMASK_MF, 
    // POLDHOLD_MF=S^adv - S^init, 
    // OUTER_ITER_PRESSURE_MF=S^init,
    // snew=S^init
@@ -10543,13 +10563,14 @@ void NavierStokes::multiphase_project(int project_option) {
   ns_level.debug_ngrow(LEVELPC_MF,2,870);
  } // ilev=finest_level ... level
 
-    // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
+    // initializes diagsing,mask_div_residual,mask_residual,
+    // ONES_MF,ONES_GROW_MF
     // ones_sum_global
     //
     //  i.e.
     //  
     // calls:FORT_SCALARCOEFF,FORT_MULT_FACEWT,FORT_DIVIDEDX,FORT_NSGENERATE
-    // initializes arrays holding the diagonal and ONES_MF.
+    // initializes arrays holding the diagonal, ONES_MF, ONES_GROW_MF.
  int create_hierarchy=0;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
@@ -10644,8 +10665,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int min_bicgstab_outer_iter=0;
 
-     // initializes diagsing,mask_div_residual,mask_residual,ONES_MF,
-     //  ones_sum_global
+     // initializes diagsing,mask_div_residual,mask_residual,
+     // ONES_MF,ONES_GROW_MF,
+     // ones_sum_global
  create_hierarchy=1;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
