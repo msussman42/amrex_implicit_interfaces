@@ -1097,7 +1097,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(masksolv)
+      INTEGER_T, intent(in) :: DIMDEC(masksolv) ! ONES_MF in c++
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(alpha)
       INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
@@ -1123,6 +1123,7 @@ stop
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
+       ! ONES_MF in c++
       REAL_T, intent(out) :: masksolv(DIMV(masksolv),num_materials_face)
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, intent(in) :: alpha(DIMV(alpha),nsolveMM)
@@ -1218,6 +1219,7 @@ stop
       call checkbound(fablo,fabhi,DIMS(xface),0,0,244)
       call checkbound(fablo,fabhi,DIMS(yface),0,1,244)
       call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,244)
+       ! ONES_MF in c++
       call checkbound(fablo,fabhi,DIMS(masksolv),0,-1,140)
       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,140)
       call checkbound(fablo,fabhi,DIMS(alpha),0,-1,140)

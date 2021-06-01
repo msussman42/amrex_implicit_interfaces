@@ -6977,13 +6977,22 @@ NavierStokes::Type_level(
 }  // subroutine Type_level
 
 
-void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag) {
+void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
+		int zero_diag_flag) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
- type_flag.resize(nmat);
- for (int im=0;im<nmat;im++) {
+ int ncomp_type=nmat;
+ if (zero_diag_flag==1) {
+  ncomp_type=2;
+ } else if (zero_diag_flag==0) {
+  ncomp_type=nmat;
+ } else
+  amrex::Error("ncomp_type invalid");
+
+ type_flag.resize(ncomp_type);
+ for (int im=0;im<ncomp_type;im++) {
   type_flag[im]=0;
  }
  allocate_array(1,1,-1,idx_type);
@@ -6993,15 +7002,15 @@ void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag) {
   // updates one ghost cell.
  for (int k = 0; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
-  ns_level.Type_level(ns_level.localMF[idx_type],type_flag);
+  ns_level.Type_level(ns_level.localMF[idx_type],type_flag,zero_diag_flag);
  }
  int color_counter=0;
- for (int im=0;im<nmat;im++) {
+ for (int im=0;im<ncomp_type;im++) {
   color_counter+=type_flag[im];
  }
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {
-   for (int im=0;im<nmat;im++) 
+   for (int im=0;im<ncomp_type;im++) 
     std::cout << "TypeALL im,type " << im << ' ' <<
      type_flag[im] << ' ' << '\n';
    std::cout << "TypeALL color_counter= " << color_counter << '\n'; 
