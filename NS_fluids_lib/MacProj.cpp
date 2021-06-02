@@ -59,8 +59,11 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 
   // ngrow=1 scomp=0 ncomp=1 
  PCINTERP_fill_bordersALL(ONES_GROW_MF,1,0,1,State_Type,scompBC_map);
+FIX ME
+ Vector<int> type_flag;
+ int zero_diag_flag=1;
+ TypeALL(
 
- //FIX ME
  if (project_option_singular_possible(project_option)==1) {
 
   if (nsolve!=1)

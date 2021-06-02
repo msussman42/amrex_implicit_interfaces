@@ -290,7 +290,10 @@ namespace amrex{
 
 #define ONES_GROW_MF (TEMPERATURE_SMOOTH_MF+1)
 
-#define NEXT_MF (ONES_GROW_MF+1)
+#define TYPE_ONES_MF (ONES_GROW_MF+1)
+#define COLOR_ONES_MF (TYPE_ONES_MF+1)
+
+#define NEXT_MF (COLOR_ONES_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
