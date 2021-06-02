@@ -59,10 +59,12 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 
   // ngrow=1 scomp=0 ncomp=1 
  PCINTERP_fill_bordersALL(ONES_GROW_MF,1,0,1,State_Type,scompBC_map);
-FIX ME
- Vector<int> type_flag;
+
  int zero_diag_flag=1;
- TypeALL(
+ TypeALL(TYPE_ONES_MF,type_ONES_flag,zero_diag_flag);
+ color_variable(coarsest_ONES_level,COLOR_ONES_MF,TYPE_ONES_MF,
+   &color_ONES_count, 
+   type_ONES_flag,zero_diag_flag);
 
  if (project_option_singular_possible(project_option)==1) {
 
@@ -2171,6 +2173,8 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.delete_localMF(DOTMASK_MF,1);
    ns_level.delete_localMF(ONES_MF,1);
    ns_level.delete_localMF(ONES_GROW_MF,1);
+   ns_level.delete_localMF(TYPE_ONES_MF,1);
+   ns_level.delete_localMF(COLOR_ONES_MF,1);
    ns_level.delete_localMF(DIFFUSIONRHS_MF,1);
   } // ilev=finest_level ... level
 
