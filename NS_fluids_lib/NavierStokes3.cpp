@@ -7084,6 +7084,8 @@ void NavierStokes::remove_project_variables() {
  delete_localMF(POLDHOLD_MF,1);
  delete_localMF(ONES_MF,1);
  delete_localMF(ONES_GROW_MF,1);
+ delete_localMF(TYPE_ONES_MF,1);
+ delete_localMF(COLOR_ONES_MF,1);
  delete_localMF(DOTMASK_MF,1);
  delete_localMF(OUTER_ITER_PRESSURE_MF,1);
 }

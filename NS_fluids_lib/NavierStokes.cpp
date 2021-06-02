@@ -435,6 +435,10 @@ Vector<int> NavierStokes::median_lev0_cycles_all_solver_calls;
 Vector<int> NavierStokes::lev0_cycles_list;
 Vector<int> NavierStokes::number_solver_calls;
 
+Vector<int> NavierStokes::type_ONES_flag;
+int NavierStokes::color_ONES_count;
+int NavierStokes::coarsest_ONES_level;
+
 Vector< Vector<Real> > NavierStokes::min_face_wt;
 Vector< Vector<Real> > NavierStokes::max_face_wt;
 
