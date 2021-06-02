@@ -51,8 +51,16 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.allocate_maccoef(project_option,nsolve,create_hierarchy);
  }
-FIX ME SET ONES_GROW_MF BC, find coloring
 
+  // FORT_EXTRAPFILL, pc_interp
+ Vector<int> scompBC_map;
+ scompBC_map.resize(1);
+ scompBC_map[0]=0;
+
+  // ngrow=1 scomp=0 ncomp=1 
+ PCINTERP_fill_bordersALL(ONES_GROW_MF,1,0,1,State_Type,scompBC_map);
+
+ FIX ME
  if (project_option_singular_possible(project_option)==1) {
 
   if (nsolve!=1)
@@ -246,6 +254,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  debug_ngrow(VOLUME_MF,1,200);
  debug_ngrow(FACE_VAR_MF,0,201);
 
+  // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
  debug_ngrow(ONES_MF,0,202);
  if (localMF[ONES_MF]->nComp()!=num_materials_face)
   amrex::Error("localMF[ONES_MF]->nComp() invalid");
@@ -542,6 +551,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   const int* fablo=fabgrid.loVect();
   const int* fabhi=fabgrid.hiVect();
 
+   // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
   FArrayBox& ones_fab=(*localMF[ONES_MF])[mfi];
 
   // mask=tag if not covered by level+1 or outside the domain.
@@ -626,7 +636,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 } // omp
  ns_reconcile_d_num(35);
 
-FIX ME copy to ONES_GROW_MF
+  // dest,soucre,scomp,dcomp,ncomp,ngrow
+ Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
 
  Real min_interior_coeff=0.0;
  if (denconst_max>0.0) {
@@ -2112,6 +2123,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
 
     // in: NavierStokes::update_SEM_forcesALL
+    // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
    ns_level.new_localMF(ONES_MF,num_materials_face,0,-1);
    ns_level.new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
    ns_level.setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
