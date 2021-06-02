@@ -5117,7 +5117,7 @@ stop
 
         if (source_fab(D_DECL(i,j,k),1).eq.zero) then
          base_type=1
-        else if (source_fab(D_DECL(i,j,k),1).eq.one)
+        else if (source_fab(D_DECL(i,j,k),1).eq.one) then
          base_type=2
         else
          print *,"source_fab(D_DECL(i,j,k),1) invalid"
@@ -7930,7 +7930,7 @@ stop
         fine,DIMS(fine), &
         typef,DIMS(typef), &
         maskf,DIMS(maskf), &
-        clo,chi,flo,fhi,
+        clo,chi,flo,fhi, &
         zero_diag_flag)
       use global_utility_module
       use probf90_module
