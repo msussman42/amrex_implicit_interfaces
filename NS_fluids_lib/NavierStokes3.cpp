@@ -6233,12 +6233,13 @@ NavierStokes::ColorSumALL(
   // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
   // updates one ghost cell of TYPE_MF
   // fluid(s) and solid(s) tessellate the domain.
-  TypeALL(idx_type,type_flag);
+  int zero_diag_flag=0;
+  TypeALL(idx_type,type_flag,zero_diag_flag);
 
   // color_count=number of colors
   // ngrow=1, FORT_EXTRAPFILL, pc_interp for COLOR_MF
   color_variable(coarsest_level,
-   idx_color,idx_type,&color_count,type_flag);
+   idx_color,idx_type,&color_count,type_flag,zero_diag_flag);
 
  } else if (operation_flag==1) {
 
@@ -7025,7 +7026,8 @@ NavierStokes::Type_level(
  
 }  // subroutine Type_level
 
-
+// zero_diag_flag=0 => color by material
+// zero_diag_flag=1 => color by masked cells
 void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
 		int zero_diag_flag) {
 
@@ -7548,6 +7550,8 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  
  MultiFab& S_new=get_new_data(state_index,slab_step+1);
 
+  // in: allocate_project_variables
+  // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
  new_localMF(ONES_MF,num_materials_face,0,-1);
  new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
  setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
@@ -10474,11 +10478,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
   ns_level.allocate_pressure_work_vars(nsolve,project_option);
 
-   // updates the following variables:
-   // ONES_MF, ONES_GROW_MF, DOTMASK_MF, 
-   // POLDHOLD_MF=S^adv - S^init, 
-   // OUTER_ITER_PRESSURE_MF=S^init,
-   // snew=S^init
+   // 1. allocates and initializes ONES_MF, ONES_GROW_MF
+   // 2. allocates and constructs DOTMASK_MF
+   // 3. allocates, and sets POLDHOLD_MF=S^adv - S^init, 
+   // 4. allocates, and sets OUTER_ITER_PRESSURE_MF=S^init,
+   // 5. snew=S^init
    //
   ns_level.allocate_project_variables(nsolve,project_option);
  }  // ilev=finest_level ... level
