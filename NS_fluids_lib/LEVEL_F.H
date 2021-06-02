@@ -115,13 +115,18 @@ namespace amrex{
   extern "C" {
 
     void FORT_GETTYPEFAB(
-     const Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+     const Real* source_fab,
+     AMREX_ARLIM_P(source_fablo),AMREX_ARLIM_P(source_fabhi),
      const Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi),
      const Real* xlo,
      const Real* dx,
      const int* tilelo, const int* tilehi,
      const int* fablo, const int* fabhi,int* bfact,
-     int* type_flag,int* nmat);
+     int* type_flag,
+     int* nmat,
+     int* ncomp_type,
+     int* ncomp_source,
+     int* zero_diag_flag);
 
      void FORT_GETCOLORSUM(
        int* tid_current,
