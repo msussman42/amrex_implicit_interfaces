@@ -1883,7 +1883,7 @@ stop
 
                !facedir=1..sdim
               call gridstenMAC(xsten_face,xlo,i,j,k,fablo,bfact, &
-                dx,nhalf,facedir-1)
+                dx,nhalf,facedir-1,91)
 
               ! im_primary is a fluid at cell (icell,jcell,kcell)
               do dir_visc=1,SDIM

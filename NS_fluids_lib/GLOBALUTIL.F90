@@ -5863,31 +5863,37 @@ contains
       end subroutine fine_subelement_stencilMAC
 
 
-       ! 0<=dir<sdim
+       ! -1<=grid_type<=5
       subroutine growntileboxMAC( &
-       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,dir,caller_id)
+       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,grid_type,caller_id)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: grid_type
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(out) :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: ng
       INTEGER_T dir2
+      INTEGER_T :: box_type(SDIM)
 
       growlo(3)=0
       growhi(3)=0
 
-      if ((dir.ge.0).and.(dir.lt.SDIM)) then
+      if ((grid_type.ge.-1).and.(grid_type.le.5)) then
        ! do nothing
       else
-       print *,"dir invalid growntilebox mac"
+       print *,"grid_type invalid growntilebox mac"
        print *,"ng=",ng
-       print *,"dir=",dir
+       print *,"grid_type=",grid_type
        print *,"caller_id=",caller_id
        stop
       endif 
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
       do dir2=1,SDIM
        growlo(dir2)=tilelo(dir2)
        if (tilelo(dir2).eq.fablo(dir2)) then
@@ -5909,11 +5915,22 @@ contains
         print *,"tile box incorrect"
         stop
        endif
-      enddo ! dir2
-      if (tilehi(dir+1).eq.fabhi(dir+1)) then
-       growhi(dir+1)=growhi(dir+1)+1
-      endif
-      
+      enddo ! dir2=1..sdim
+
+      do dir2=1,SDIM
+        ! NODE
+       if (box_type(dir2).eq.1) then
+        if (tilehi(dir2).eq.fabhi(dir2)) then
+         growhi(dir2)=growhi(dir2)+1
+        endif
+       else if (box_type(dir2).eq.0) then ! CELL
+        ! do nothing
+       else
+        print *,"box_type(dir2) invalid"
+        stop
+       endif
+      enddo !dir2=1..sdim
+
       return
       end subroutine growntileboxMAC
 
