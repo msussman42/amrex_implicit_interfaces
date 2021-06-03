@@ -8764,7 +8764,7 @@ stop
         endif
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         igridlo,igridhi,0,veldir) 
+         igridlo,igridhi,0,veldir,16) 
 
           ! first init xface,yface,zface (vofface_index+1,...)
           ! then follow with the rest...
@@ -8794,7 +8794,7 @@ stop
          local_face(facevel_index+1)=zero
 
           ! veldir=0..sdim-1
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir,21)
 
          wtL=(xstenMAC(0,veldir+1)-xstenMAC(-1,veldir+1))
          wtR=(xstenMAC(1,veldir+1)-xstenMAC(0,veldir+1))
@@ -15290,13 +15290,13 @@ stop
 
        if (spectral_loop.eq.0) then
 
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,17)
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
           ! dir=0..sdim-1
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,22)
 
          is_clamped_face=-1
 
@@ -17491,7 +17491,7 @@ stop
          stop
         endif 
   
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,18)
 
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
@@ -22033,9 +22033,9 @@ stop
 
          ! dir=1..sdim
         call gridstenMAC_level(xstenMAC_lo, &
-         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
+         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1,23)
         call gridstenMAC_level(xstenMAC_hi, &
-         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
+         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1,24)
 
         do dir_inner=1,SDIM
          dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)

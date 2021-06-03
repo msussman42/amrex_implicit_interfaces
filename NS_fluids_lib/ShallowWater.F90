@@ -806,12 +806,13 @@ stop
       endif 
 
       if (init_fluxes.eq.1) then
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,normdir)
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
+               normdir,2)
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,1)
         call gridsten_level(xsten_left,i-ii,j-jj,k-kk,level,nhalf)
         call gridsten_level(xsten_right,i,j,k,level,nhalf)
 
@@ -1031,12 +1032,13 @@ stop
 
       else if (init_fluxes.eq.2) then
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,normdir)
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
+               normdir,3)
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,2)
         call gridsten_level(xsten_left,i-ii,j-jj,k-kk,level,nhalf)
         call gridsten_level(xsten_right,i,j,k,level,nhalf)
         call CISBOX(xsten_left,nhalf, &

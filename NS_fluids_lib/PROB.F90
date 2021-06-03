@@ -14803,7 +14803,7 @@ END SUBROUTINE Adist
            ! dir=1..sdim
           call gridstenMAC(xsten_face,xlo, &
            iface_out,jface_out,kface_out, &
-           fablo,bfact,dx,nhalf,dir-1)
+           fablo,bfact,dx,nhalf,dir-1,3)
 
            ! fine-fine boundary or element properly contained in grid.
           if (nbr_outside_domain_flag(side).eq.0) then
@@ -15815,7 +15815,7 @@ END SUBROUTINE Adist
            ! dir=1..sdim
           call gridstenMAC(xsten,xlo, &
            ic,jc,kc, &
-           fablo,bfact,dx,nhalf,dir-1)
+           fablo,bfact,dx,nhalf,dir-1,4)
 
           RRface(isten)=xsten(0,1)
 
@@ -17761,7 +17761,7 @@ END SUBROUTINE Adist
            ! dir_main=1..sdim
           call gridstenMAC(xstenMAC,xlo, &
            ic,jc,kc, &
-           fablo,bfact,dx,nhalf,dir_main-1)
+           fablo,bfact,dx,nhalf,dir_main-1,5)
 
           if (levelrz.eq.0) then
            ! do nothing
@@ -27753,7 +27753,7 @@ end subroutine initialize2d
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growloMAC,growhiMAC,0,dir) 
+          growloMAC,growhiMAC,0,dir,4) 
 
       if (project_option.eq.3) then ! viscosity
        if (nsolve.ne.AMREX_SPACEDIM) then
@@ -27890,7 +27890,7 @@ end subroutine initialize2d
           do j=growloMAC(2),growhiMAC(2)
           do k=growloMAC(3),growhiMAC(3)
            ! dir=0..sdim-1
-           call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
+           call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,6)
 
            LSleft=LS(D_DECL(i-ii,j-jj,k-kk),im)
            LSright=LS(D_DECL(i,j,k),im)
@@ -28012,7 +28012,7 @@ end subroutine initialize2d
         do k=growlo_strip(3),growhi_strip(3) 
 
          ! dir=0..sdim-1
-         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,7)
 
          ! cooling disk (top wall side==2)
          ! in order to cool from the top, q=-k grad T>0
@@ -28245,7 +28245,7 @@ end subroutine initialize2d
         do k=borderlo(3),borderhi(3)
  
           ! velcomp=1..sdim
-         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1)
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1,8)
 
          IWALL(1)=i
          IWALL(2)=j
@@ -28424,7 +28424,7 @@ end subroutine initialize2d
         do k=borderlo(3),borderhi(3)
 
            ! velcomp=1..sdim
-         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1)
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1,9)
 
          IWALL(1)=i
          IWALL(2)=j
@@ -28600,7 +28600,7 @@ end subroutine initialize2d
         do k=borderlo(3),borderhi(3)
 
           ! velcomp=1..sdim
-         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1)
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1,10)
 
          IWALL(1)=i
          IWALL(2)=j
@@ -29834,7 +29834,7 @@ end subroutine initialize2d
         do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
  
-         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type)
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type,11)
 
          IWALL(1)=i
          IWALL(2)=j
@@ -32933,13 +32933,13 @@ end subroutine initialize2d
       enddo
       enddo ! i,j,k
 
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,5) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
         ! dir=0..sdim-1
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,12)
 
        sinprod=one
        do dir2=1,SDIM
@@ -34752,11 +34752,11 @@ end subroutine initialize2d
       enddo
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,0,dir) 
+         growlo,growhi,0,dir,6) 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-       call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
+       call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,13)
        do dirloc=1,SDIM
         xsten_cell(dirloc)=xsten(0,dirloc)
        enddo
