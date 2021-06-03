@@ -4279,10 +4279,13 @@ contains
       end subroutine gridsten
 
         ! -1<=grid_type<=5
-      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type)
+      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type, &
+                      caller_id)
       IMPLICIT NONE 
 
-      INTEGER_T, intent(in) :: nhalf,grid_type
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: grid_type
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -4291,6 +4294,14 @@ contains
       INTEGER_T dir,icrit
       REAL_T, dimension(:), allocatable :: xsub
       INTEGER_T :: box_type(SDIM)
+
+      if ((grid_type.ge.-1).and.(grid_type.le.5)) then
+       ! do nothing
+      else
+       print *,"grid_type invalid gridstenMAC: grid_type,caller_id", &
+          grid_type,caller_id
+       stop
+      endif
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -5296,15 +5307,25 @@ contains
 
 
        ! -1<=grid_type<=5
-      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,grid_type)
+      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,grid_type,caller_id)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf,grid_type
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: grid_type
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T isten,dir,ii,jj,kk
       INTEGER_T box_type(SDIM)
+
+      if ((grid_type.ge.-1).and.(grid_type.le.5)) then
+       ! do nothing
+      else
+       print *,"grid_type invalid gridstenMAC_level: grid_type,caller_id", &
+          grid_type,caller_id
+       stop
+      endif
 
       call grid_type_to_box_type(grid_type,box_type)
       ii=0
@@ -5844,9 +5865,10 @@ contains
 
        ! 0<=dir<sdim
       subroutine growntileboxMAC( &
-       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,dir)
+       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,dir,caller_id)
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: dir
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -5861,6 +5883,9 @@ contains
        ! do nothing
       else
        print *,"dir invalid growntilebox mac"
+       print *,"ng=",ng
+       print *,"dir=",dir
+       print *,"caller_id=",caller_id
        stop
       endif 
       do dir2=1,SDIM
@@ -7995,7 +8020,7 @@ contains
           growlotest,growhitest,ngrow)
         else if ((dir.ge.0).and.(dir.lt.SDIM)) then
          call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlotest,growhitest,ngrow,dir)
+          growlotest,growhitest,ngrow,dir,1)
         else
          print *,"dir invalid aggressive worker 2"
          stop

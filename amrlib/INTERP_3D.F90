@@ -1508,7 +1508,7 @@ stop
        endif
       enddo ! dir2
       
-      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type) 
+      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type,60) 
 
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
@@ -1535,7 +1535,8 @@ stop
         endif
        enddo ! dir2=1..sdim
 
-       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,grid_type)
+       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf, &
+               grid_type,60)
        ic=stenlo(1)
        jc=stenlo(2)
        kc=stenlo(SDIM)
@@ -2163,7 +2164,7 @@ stop
        endif
       enddo ! dir2
       
-      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,dir_edge) 
+      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,dir_edge,61) 
 
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
@@ -2190,7 +2191,8 @@ stop
         endif
        enddo ! dir2=1..sdim
 
-       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,dir_edge)
+       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf, &
+               dir_edge,61)
        ic=stenlo(1)
        jc=stenlo(2)
        kc=stenlo(SDIM)

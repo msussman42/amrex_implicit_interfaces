@@ -3981,13 +3981,13 @@ stop
         endif
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,ngrow-1,dir-1) 
+         growlo,growhi,ngrow-1,dir-1,11) 
 
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1,18)
 
          at_RZ_face=0
          if (levelrz.eq.0) then
@@ -4298,13 +4298,13 @@ stop
       endif
  
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,ngrow_dest,dir) 
+        growlo,growhi,ngrow_dest,dir,12) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalfMAC,dir)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalfMAC,dir,19)
 
        if (dir.eq.0) then
         inormal=i

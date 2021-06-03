@@ -643,11 +643,12 @@ stop
        endif
        call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
+               0,dir,13) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,20)
         RR=one
         if (levelrz.eq.0) then
          ! do nothing
@@ -767,7 +768,7 @@ stop
        endif
        call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,14) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
@@ -889,7 +890,7 @@ stop
        call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
        call checkbound(fablo,fabhi,DIMS(facewt),0,dir,33)
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,15) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)

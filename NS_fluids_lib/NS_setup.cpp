@@ -490,6 +490,11 @@ NavierStokes::set_tensor_extrap_components(
 
  BCRec bc;
 
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("NUM_TENSOR_TYPE invalid");
+
  int ibase_tensor=0;
 
  set_tensor_bc(bc,phys_bc,0,0);
@@ -555,7 +560,7 @@ NavierStokes::set_tensor_extrap_components(
     T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 #endif
 
-  if (ibase_tensor==2*AMREX_SPACEDIM-1) {
+  if (ibase_tensor==NUM_TENSOR_TYPE-1) {
    // do nothing
   } else
    amrex::Error("ibase_tensor invalid");
@@ -846,6 +851,11 @@ NavierStokes::variableSetUp ()
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
 
+     if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+      // do nothing
+     } else
+      amrex::Error("NUM_TENSOR_TYPE invalid");
+
 	// XDISPLACE appended if MAC_grid_displacement==0
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,num_materials_viscoelastic*NUM_CELL_ELASTIC,
@@ -853,7 +863,7 @@ NavierStokes::variableSetUp ()
       null_ncomp_particles);
 
       // 11,12,22,33,13,23,XD,YD,ZD
-     int ncghost_elastic=2*AMREX_SPACEDIM+AMREX_SPACEDIM;
+     int ncghost_elastic=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
 
       // null_ncomp_particles==0 => particle container not associated
       // to "Tensor_Type"  (only to "State_Type")
@@ -864,7 +874,7 @@ NavierStokes::variableSetUp ()
      std::string postfix_str="CC";
      set_tensor_extrap_components(coord,postfix_str,Tensor_Type);
 
-     int ibase_tensor=2*AMREX_SPACEDIM;
+     int ibase_tensor=NUM_TENSOR_TYPE;
 
      set_x_vel_extrap_bc(bc,phys_bc);
      std::string xdisplace_strE="XDISPLACEextrap"; 
@@ -1134,7 +1144,7 @@ NavierStokes::variableSetUp ()
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-      1,1,&tensor_pc_interp,null_ncomp_particles);
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
      postfix_str="XU";
      set_tensor_extrap_components(coord,postfix_str,TensorXU_Type);
@@ -1142,7 +1152,7 @@ NavierStokes::variableSetUp ()
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
-      1,1,&tensor_pc_interp,null_ncomp_particles);
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
      postfix_str="YU";
      set_tensor_extrap_components(coord,postfix_str,TensorYU_Type);
@@ -1150,7 +1160,7 @@ NavierStokes::variableSetUp ()
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
-      1,1,&tensor_pc_interp,null_ncomp_particles);
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
      postfix_str="ZU";
      set_tensor_extrap_components(coord,postfix_str,TensorZU_Type);
@@ -1158,7 +1168,7 @@ NavierStokes::variableSetUp ()
       //ngrow=1
       //ncomp=1
      desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
-      1,1,&tensor_pc_interp,null_ncomp_particles);
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
      postfix_str="ZV";
      set_tensor_extrap_components(coord,postfix_str,TensorZV_Type);

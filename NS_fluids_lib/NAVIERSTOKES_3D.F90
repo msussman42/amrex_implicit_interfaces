@@ -10475,7 +10475,8 @@ END SUBROUTINE SIMP
 
             do iside=0,1
              dirMAC=1 ! y direction
-             call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf,dirMAC)
+             call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
+                     dirMAC,14)
 
              xcen=xstenMAC(0,dir) ! diry=0  dir=diry+1=1
 
@@ -10561,7 +10562,8 @@ END SUBROUTINE SIMP
 
              do iside=0,1
               dirMAC=0 ! x direction
-              call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf,dirMAC)
+              call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
+                      dirMAC,15)
 
                ! diry=sdim-1  dir=sdim  z=h(x)
               xcen=xstenMAC(0,dir)
@@ -11549,13 +11551,13 @@ END SUBROUTINE SIMP
       call checkbound(fablo,fabhi,DIMS(cellgrav),0,-1,42)
       call checkbound(fablo,fabhi,DIMS(facegrav),0,dir,42)
 
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,7)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,16)
 
        vol_total=zero
        mass_total=zero
@@ -11931,7 +11933,7 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,8)
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
@@ -13363,13 +13365,13 @@ END SUBROUTINE SIMP
       call checkbound(lof,hif,DIMS(f),0,edge_dir,1301)
       call checkbound(lof,hif,DIMS(mask),1,-1,1301)
 
-      call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,edge_dir)
+      call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,edge_dir,9)
 
       do ic=growlo(1),growhi(1)
       do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,edge_dir)
+       call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,edge_dir,17)
 
         ! find stencil for surrounding fine level spectral element.
        stenlo(3)=0
@@ -13671,7 +13673,8 @@ END SUBROUTINE SIMP
       enddo
      
       do dir=0,SDIM-1
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow,dir)
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow, &
+               dir,10)
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)

@@ -856,7 +856,7 @@ stop
        ksten=mac_cell_index(SDIM)
 
        call gridstenMAC_level(xsten_center,isten,jsten,ksten,level,nhalf, &
-              dir_disp_comp)
+              dir_disp_comp,81)
 
        do isten=istenlo(1),istenhi(1)
        do jsten=istenlo(2),istenhi(2)
