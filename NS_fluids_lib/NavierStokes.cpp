@@ -438,6 +438,8 @@ Vector<int> NavierStokes::number_solver_calls;
 Vector<int> NavierStokes::type_ONES_flag;
 int NavierStokes::color_ONES_count;
 int NavierStokes::coarsest_ONES_level;
+Vector<int> NavierStokes::singular_patch_flag;
+Vector<Real> NavierStokes::ones_sum_global;
 
 Vector< Vector<Real> > NavierStokes::min_face_wt;
 Vector< Vector<Real> > NavierStokes::max_face_wt;
@@ -17220,31 +17222,41 @@ void NavierStokes::zap_resid_where_singular(int index_MF) {
 
 }  // subroutine zap_resid_where_singular
 
-void NavierStokes::dot_productALL_ones_size(int project_option,Real& result) {
+void NavierStokes::dot_productALL_ones_size(int project_option) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
   amrex::Error("level=0 in dot_productALL_ones");
+ if (coarsest_ONES_level>finest_level)
+  amrex::Error("coarsest_ONES_level invalid");
 
- Real tempsum=0.0;
- Real total_sum=0.0;
- int nsolve=1;
+ if (color_ONES_count>0) {
+  // do nothing
+ } else
+  amrex::Error("color_ONES_count invalid");
 
- for (int k = 0; k <= finest_level; k++) {
-  NavierStokes& ns_level = getLevel(k);
-  ns_level.dotSum(
-   project_option,
-   ns_level.localMF[ONES_MF], 
-   ns_level.localMF[ONES_MF], tempsum, nsolve);
-
-  total_sum+=tempsum;
+ Vector<Real> temp_sum;
+ Vector<int> temp_flag;
+ for (int icolor=0;icolor<color_ONES_count;icolor++) {
+  singular_patch_flag[icolor]=0;
+  ones_sum_global[icolor]=0.0;
  }
 
- result=total_sum;
+ for (int k = coarsest_ONES_level; k <= finest_level; k++) {
+  NavierStokes& ns_level = getLevel(k);
+  ns_level.dotSumONES(
+   project_option,
+   temp_sum,temp_flag);
+
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
+   singular_patch_flag[icolor]=
+     std::max(singular_patch_flag[icolor],
+	      temp_flag[icolor]);
+   ones_sum_global[icolor]+=temp_sum[icolor];
+  }
+ } // for (int k = coarsest_ONES_level; k <= finest_level; k++)
 
 } // subroutine dot_productALL_ones_size
-
-
 
 
 void NavierStokes::mf_combine_ones(
@@ -17398,7 +17410,176 @@ NavierStokes::dotSum(int project_option,
  ParallelDescriptor::ReduceRealSum(sum[0]);
 
  result=sum[0];
-}
+} // end subroutine dotSum
+
+
+void
+NavierStokes::dotSumONES(int project_option,
+  Vector<Real>& result_sum,
+  Vector<int>& result_flag) {
+ 
+ bool use_tiling=ns_tiling;
+
+ if (num_materials_vel!=1)
+  amrex::Error("num_materials_vel invalid");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+  debug_ngrow(FACE_VAR_MF+dir,0,2); // faceden_index has MAC density
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,0,51);
+ debug_ngrow(DOTMASK_MF,0,51);
+ int local_nface=localMF[DOTMASK_MF]->nComp();
+ if (local_nface==1) {
+  // do nothing
+ } else
+  amrex::Error("local_nface invalid");
+
+ debug_ngrow(ONES_MF,0,51);
+ debug_ngrow(ONES_GROW_MF,0,51);
+ debug_ngrow(TYPE_ONES_MF,0,51); //=1 if diagonal=0.0; =2 if diagonal>0.0
+ debug_ngrow(COLOR_ONES_MF,0,51);
+
+ if (type_ONES_flag.size()==2) {
+  // do nothing
+ } else
+  amrex::Error("type_ONES_flag.size() invalid");
+
+ debug_ngrow(ALPHACOEF_MF,0,51);
+ int nsolve_test=localMF[ALPHACOEF_MF]->nComp();
+ int nsolve_expect=1;
+ if (project_option==3) { // viscosity
+  nsolve_expect=AMREX_SPACEDIM;
+ } else if (project_option_is_valid(project_option)==1) {
+  nsolve_expect=1;
+ } else
+  amrex::Error("project_option invalid");
+
+ if (nsolve_expect==nsolve_test) {
+  // do nothing
+ } else
+  amrex::Error("nsolve_test invalid");
+
+ Vector< Vector<Real> > local_sum;
+ Vector< Vector<int> > local_flag;
+
+  // for each given color, singular_patch_flag=
+  //   0 if color is masked off 
+  //   1 if color is not masked off, no compressible/internal dirichlet 
+  //     regions, and not touching a Dirichlet condition wall.
+  //   2 if color is not masked off, a compressible/internal dirichlet
+  //     region exists or color is touching a Dirichlet condition wall.
+ local_sum.resize(thread_class::nthreads);
+ local_flag.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  local_sum[tid].resize(color_ONES_count);
+  local_flag[tid].resize(color_ONES_count);
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
+   local_sum[tid][icolor]=0.0;
+   local_flag[tid][icolor]=0;
+  }
+ } // tid=0..nthreads-1
+
+ int finest_level=parent->finestLevel();
+ if (level>finest_level)
+  amrex::Error("level too big");
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[ONES_MF]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel 
+#endif
+{
+ for (MFIter mfi(*localMF[ONES_MF],use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  FArrayBox& ones_fab = (*localMF[ONES_MF])[mfi];
+  FArrayBox& type_fab = (*localMF[TYPE_ONES_MF])[mfi];
+  FArrayBox& color_fab = (*localMF[COLOR_ONES_MF])[mfi];
+  FArrayBox& alpha_fab = (*localMF[ALPHACOEF_MF])[mfi];
+  FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
+
+  Vector<int> presbc=getBCArray(State_Type,gridno,
+   num_materials_vel*AMREX_SPACEDIM,1);
+
+  Vector<Real> fab_sum;
+  fab_sum.resize(color_ONES_count);
+  Vector<int> fab_flag;
+  fab_flag.resize(color_ONES_count);
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
+   fab_sum[icolor]=0.0;
+   fab_flag[icolor]=0;
+  }
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  FIX ME
+
+   // in: NAVIERSTOKES_3D.F90
+  FORT_SUMDOT_ONES(
+   fab_sum.dataPtr(),
+   fab_flag.dataPtr(),
+   ones_fab.dataPtr(),
+   ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
+   type_fab.dataPtr(),
+   ARLIM(type_fab.loVect()),ARLIM(type_fab.hiVect()),
+   color_fab.dataPtr(),
+   ARLIM(color_fab.loVect()),ARLIM(color_fab.hiVect()),
+   alpha_fab.dataPtr(),
+   ARLIM(alpha_fab.loVect()),ARLIM(alpha_fab.hiVect()),
+   mfab.dataPtr(),
+   ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
+   tilelo,tilehi,
+   fablo,fabhi,&bfact,
+   &level,
+   &gridno,
+   &nsolve_expect, 
+   presbc.dataPtr(),
+   type_ONES_flag.dataPtr());
+
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
+   local_sum[tid_current][icolor] += fab_sum[icolor];
+   local_flag[tid_current][icolor]=std::max(
+     local_flag[tid_current][icolor],
+     fab_flag[icolor]);
+  } // icolor=0;icolor<color_ONES_count
+ } // mfi1
+} // omp
+ ns_reconcile_d_num(101);
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
+   local_sum[0][icolor]+=local_sum[tid][icolor];
+   local_flag[0][icolor]=std::max(
+     local_flag[0][icolor],
+     local_flag[tid][icolor]);
+  } // icolor=0;icolor<color_ONES_count
+ }
+ for (int icolor=0;icolor<color_ONES_count;icolor++) {
+  ParallelDescriptor::ReduceRealSum(local_sum[0][icolor]);
+  ParallelDescriptor::ReduceIntMax(local_flag[0][icolor]);
+ }
+
+ for (int icolor=0;icolor<color_ONES_count;icolor++) {
+  result_sum[icolor]=local_sum[0][icolor];
+  result_flag[icolor]=local_flag[0][icolor];
+ }
+
+} // end subroutine dotSumONES
+
 
 
 void NavierStokes::mf_combine(
