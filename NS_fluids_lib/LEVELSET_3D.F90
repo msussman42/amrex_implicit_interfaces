@@ -5115,9 +5115,9 @@ stop
 
        else if (zero_diag_flag.eq.1) then
 
-        if (source_fab(D_DECL(i,j,k),1).eq.zero) then
+        if (source_fab(D_DECL(i,j,k),1).eq.zero) then !diagonal=0
          base_type=1
-        else if (source_fab(D_DECL(i,j,k),1).eq.one) then
+        else if (source_fab(D_DECL(i,j,k),1).eq.one) then !diagonal>0
          base_type=2
         else
          print *,"source_fab(D_DECL(i,j,k),1) invalid"

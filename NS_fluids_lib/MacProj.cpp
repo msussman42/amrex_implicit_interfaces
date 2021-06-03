@@ -66,10 +66,14 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
    &color_ONES_count, 
    type_ONES_flag,zero_diag_flag);
 
- if (project_option_singular_possible(project_option)==1) {
-
-  if (nsolve!=1)
-   amrex::Error("nsolve invalid34");
+ ones_sum_global.resize(color_ONES_count);
+  // for each given color, singular_patch_flag=
+  //   0 if color is masked off 
+  //   1 if color is not masked off, no compressible/internal dirichlet 
+  //     regions, and not touching a Dirichlet condition wall.
+  //   2 if color is not masked off, a compressible/internal dirichlet
+  //     region exists or color is touching a Dirichlet condition wall.
+ singular_patch_flag.resize(color_ONES_count);
 
    // rhsnew=rhs-alpha H
    // 0 =sum rhs - alpha sum H
@@ -78,7 +82,12 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
    // if v in the null space of A,
    // we want rhs dot v =0
    // one_sum_global = v dot v
-  dot_productALL_ones_size(project_option,ones_sum_global);
+ dot_productALL_ones_size(project_option);
+
+ if (project_option_singular_possible(project_option)==1) {
+
+  if (nsolve!=1)
+   amrex::Error("nsolve invalid34");
 
  } else if (project_option_singular_possible(project_option)==0) {
 

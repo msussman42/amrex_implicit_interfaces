@@ -512,13 +512,18 @@ public:
 
     void zap_resid_where_singular(int index_MF);
 
+    void dotSumONES(int project_option,
+      Vector<Real>& result_sum,
+      Vector<int>& result_flag);
+
     void dotSum(int project_option,
       MultiFab* mf1, MultiFab* mf2, Real& result,int nsolve);
     void dot_productALL(int project_option,int index1_MF,int index2_MF,
      Real& result,int nsolve);
 
-    void dot_productALL_ones(int project_option,int index_MF,Real& result);
-    void dot_productALL_ones_size(int project_option,Real& result);
+    void dot_productALL_ones(int project_option,int index_MF,
+		    Vector<Real>& result);
+    void dot_productALL_ones_size(int project_option);
 
     void project_right_hand_side(int index_MF,int project_option,
 		    int& change_flag);
@@ -1616,7 +1621,15 @@ protected:
     Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
-    Real ones_sum_global;
+     // value_color = sum_{i in omega_color} 1
+    static Vector<Real> ones_sum_global;
+     // for each given color, singular_patch_flag=
+     //   0 if color is masked off 
+     //   1 if color is not masked off, no compressible/internal dirichlet 
+     //     regions, and not touching a Dirichlet condition wall.
+     //   2 if color is not masked off, a compressible/internal dirichlet
+     //     region exists or color is touching a Dirichlet condition wall.
+    static Vector<int> singular_patch_flag;
 
     int save_mg_precond;
 
