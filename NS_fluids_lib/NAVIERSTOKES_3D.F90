@@ -11125,7 +11125,7 @@ END SUBROUTINE SIMP
        REAL_T, intent(in) :: ones_fab(DIMV(ones_fab))
        REAL_T, intent(in) :: type_fab(DIMV(type_fab))
        REAL_T, intent(in) :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab))
+       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab),nsolve)
        REAL_T, intent(in) :: mask_fab(DIMV(mask_fab))
        INTEGER_T, intent(in) :: presbc(SDIM,2)
        INTEGER_T, intent(in) :: type_flag(2)
@@ -11139,124 +11139,170 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
+       if (project_option.eq.3) then
+        if (nsolve.eq.SDIM) then
+         ! do nothing
+        else
+         print *,"nsolve invalid"
+         stop
+        endif
+       else if (project_option_is_validF(project_option).eq.1) then
+        if (nsolve.eq.1) then
+         ! do nothing
+        else
+         print *,"nsolve invalid"
+         stop
+        endif
+       else
+        print *,"project_option invalid"
         stop
        endif
-       if ((num_materials_face.ne.1).and. &
-           (num_materials_face.ne.num_materials)) then
-        print *,"num_materials_face invalid"
+       if (color_count.ge.1) then
+        ! do nothing
+       else
+        print *,"color_count invalid"
         stop
        endif
 
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
+       call checkbound(fablo,fabhi,DIMS(ones_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(type_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(color_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(alpha_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(mask_fab),0,-1,414) 
 
-       call checkbound(fablo,fabhi,DIMS(dotmask),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(mask),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(rho),0,-1,415) 
-       call checkbound(fablo,fabhi,DIMS(rho2),0,-1,416) 
- 
-       mass1=zero
+       do icolor=1,color_count
+        fab_sum(icolor)=zero
+        fab_flag(icolor)=0
+       enddo 
 
-       imax=0
-       jmax=0
-       kmax=0
-       dotmax=zero
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do nc=1,nsolveMM
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
 
-        if (num_materials_face.eq.1) then
-         nc_mask=1
-        else if (num_materials_face.eq.num_materials) then
-         nc_mask=nc
-        else
-         print *,"num_materials_face invalid"
-         stop
-        endif
+        local_mask=NINT(mask(D_DECL(i,j,k)))
 
-        if ((nc_mask.ge.1).and.(nc_mask.le.num_materials_face)) then
+        if (local_mask.eq.1) then
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-
-          local_mask=NINT(mask(D_DECL(i,j,k)))
-          local_dotmask=NINT(dotmask(D_DECL(i,j,k),nc_mask))
-
-          if (num_materials_face.eq.1) then
-           if (local_dotmask.eq.1) then
+         local_color=NINT(color_fab(D_DECL(i,j,k)))
+         if ((local_color.ge.1).and.(local_color.le.color_count)) then
+          fab_sum(local_color)=fab_sum(local_color)+1
+          local_type=NINT(type_fab(D_DECL(i,j,k)))
+          local_ones=NINT(ones_fab(D_DECL(i,j,k)))
+           ! completely masked off cell
+          if ((local_ones.eq.0).and.(local_type.eq.1)) then
+           if (type_flag(local_type).eq.1) then
             ! do nothing
            else
-            print *,"local_dotmask invalid"
+            print *,"type_flag invalid"
             stop
            endif
-          else if (num_materials_face.eq.num_materials) then
-           if ((local_dotmask.eq.1).or.(local_dotmask.eq.0)) then
+          else if ((local_ones.eq.1).and.(local_type.eq.2)) then
+           if (fab_flag(local_color).lt.1) then
+            fab_flag(local_color)=1
+           endf
+           if (type_flag(local_type).eq.1) then
             ! do nothing
            else
-            print *,"local_dotmask invalid"
+            print *,"type_flag invalid"
             stop
            endif
-          else
-           print *,"num_materials_face invalid"
-           stop
-          endif
-
-          if (local_dotmask.eq.1) then
-
-           if (local_mask.eq.1) then
-
-            dm=rho(D_DECL(i,j,k),nc)*rho2(D_DECL(i,j,k),nc)
-
-            if (debug_dot_product.eq.1) then
-             if (abs(dm).gt.dotmax) then
-              dotmax=abs(dm)
-              imax=i
-              jmax=j
-              kmax=k
-             endif
-            else if (debug_dot_product.ne.0) then
-             print *,"debug dot prod invalid"
+           plus_flag=0
+           zero_flag=0
+           do nc=1,nsolve
+            local_alpha=alpha_fab(D_DECL(i,j,k),nc)
+            if (local_alpha.eq.zero) then
+             zero_flag=1
+            else if (local_alpha.gt.zero) then
+             plus_flag=1
+            else
+             print *,"local_alpha invalid"
+             stop
+            endif 
+           enddo !nc=1..nsolve
+           if ((plus_flag.eq.1).and.(zero_flag.eq.0)) then
+            fab_flag(local_color)=2
+           else if ((plus_flag.eq.0).and.(zero_flag.eq.1)) then
+            ! do nothing
+           else
+            print *,"plus_flag or zero_flag invalid"
+            stop
+           endif
+           do dir_local=1,SDIM
+            if (dir_local.eq.1) then
+             icrit=i
+            else if (dir_local.eq.2) then
+             icrit=j
+            else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
+             icrit=k
+            else
+             print *,"dir_local invalid"
              stop
             endif
-
-            mass1=mass1+dm
-           else if (local_mask.eq.0) then
-            ! do nothing
-           else 
-            print *,"mask invalid"
-            stop
-           endif
-
-          else if (local_dotmask.eq.0) then
-           ! do nothing
+            side=0
+            if ((icrit.gt.fablo(dir_local)).and. &
+                (icrit.lt.fabhi(dir_local))) then
+             ! do nothing
+            else if (icrit.eq.fablo(dir_local)) then
+             side=1
+            else if (icrit.eq.fabhi(dir_local)) then
+             side=2
+            else
+             print *,"icrit invalid"
+             stop
+            endif
+            if (side.eq.0) then
+             ! do nothing
+            else if ((side.eq.1).or.(side.eq.2)) then
+             local_bc=presbc(dir_local,side)
+             if (project_option.eq.12) then ! pressure extrapolation
+              ! do nothing (all bcs are Neumann)
+             else if &
+               (project_option_singular_possibleF(project_option).eq.1) then
+              if (local_bc.eq.INT_DIR) then
+               ! do nothing
+              else if (local_bc.eq.FOEXTRAP) then
+               ! do nothing
+              else if (local_bc.eq.REFLECT_EVEN) then
+               ! do nothing
+              else if (local_bc.eq.EXT_DIR) then
+               fab_flag(local_color)=2
+              else
+               print *,"local_bc invalid"
+               stop
+              endif
+             else if &
+               (project_option_singular_possibleF(project_option).eq.0) then
+              ! do nothing
+             else
+              print *,"project_option invalid"
+              stop
+             endif
+            else
+             print *,"side invalid"
+             stop
+            endif
+           enddo !dir_local=1..sdim
           else
-           print *,"local_dotmask invalid"
+           print *,"local_ones or local_type invalid"
            stop
           endif
+         else
+          print *,"local_color invalid"
+          stop
+         endif
 
-         enddo ! k
-         enddo ! j
-         enddo ! i
-
-        else
-         print *,"nc_mask invalid"
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else 
+         print *,"mask invalid"
          stop
         endif
 
-       enddo ! nc=1..nsolveMM
-
-       if (debug_dot_product.eq.1) then
-        print *,"debug dot: level,grid,i,j,k,max ",levelno,gridno, &
-         imax,jmax,kmax,dotmax
-       else if (debug_dot_product.ne.0) then
-        print *,"debug dot prod invalid"
-        stop
-       endif
+       enddo ! k
+       enddo ! j
+       enddo ! i
 
        return
        end subroutine FORT_SUMDOT_ONES
