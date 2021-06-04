@@ -29,6 +29,7 @@
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_SUMMASS     summass
 #    define FORT_SUMDOT      sumdot
+#    define FORT_SUMDOT_ONES sumdot_ones
 #    define FORT_DIAGINV     diaginv
 #    define FORT_FABCOM      fabcom
 #    define FORT_ISOGRID     isogrid
@@ -67,6 +68,7 @@
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
 #    define FORT_SUMMASS     SUMMASS
 #    define FORT_SUMDOT      SUMDOT
+#    define FORT_SUMDOT_ONES SUMDOT_ONES
 #    define FORT_DIAGINV     DIAGINV
 #    define FORT_FABCOM      FABCOM
 #    define FORT_ISOGRID     ISOGRID
@@ -104,6 +106,7 @@
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_SUMMASS     summass
 #    define FORT_SUMDOT      sumdot
+#    define FORT_SUMDOT_ONES sumdot_ones
 #    define FORT_DIAGINV     diaginv
 #    define FORT_FABCOM      fabcom
 #    define FORT_ISOGRID     isogrid
@@ -140,6 +143,7 @@
 #    define FORT_AVGDOWN_CURV avgdown_curv_
 #    define FORT_SUMMASS     summass_
 #    define FORT_SUMDOT      sumdot_
+#    define FORT_SUMDOT_ONES sumdot_ones_
 #    define FORT_DIAGINV     diaginv_
 #    define FORT_FABCOM      fabcom_
 #    define FORT_ISOGRID     isogrid_
@@ -677,6 +681,30 @@ extern "C" {
       int* nsolve,
       int* nsolveMM,
       int* num_materials_face);
+
+    void FORT_SUMDOT_ONES(
+      Real* fab_sum,
+      int* fab_flag,
+      const Real* ones_fab,
+      AMREX_ARLIM_P(ones_fablo),AMREX_ARLIM_P(ones_fabhi),
+      const Real* type_fab,
+      AMREX_ARLIM_P(type_fablo),AMREX_ARLIM_P(type_fabhi),
+      const Real* color_fab,
+      AMREX_ARLIM_P(color_fablo),AMREX_ARLIM_P(color_fabhi),
+      const Real* alpha_fab,
+      AMREX_ARLIM_P(alpha_fablo),AMREX_ARLIM_P(alpha_fabhi),
+      const Real* mask_fab,
+      AMREX_ARLIM_P(mask_fablo),AMREX_ARLIM_P(mask_fabhi),
+      const int* tilelo,const int* tilehi,
+      const int* fablo,const int* fabhi,
+      int* bfact,
+      int* levelno,const int* gridno,
+      int* nsolve,
+      int* presbc,
+      int* type_flag,
+      int* color_count, 
+      int* project_option);
+
 
     void FORT_FABCOM(
      const Real* fabx,AMREX_ARLIM_P(fabx_lo),AMREX_ARLIM_P(fabx_hi),

@@ -10921,26 +10921,27 @@ END SUBROUTINE SIMP
  
        IMPLICIT NONE
 
-       INTEGER_T levelno,gridno
-       INTEGER_T nsolve
-       INTEGER_T nsolveMM
-       INTEGER_T num_materials_face
-       INTEGER_T debug_dot_product
+       INTEGER_T, intent(in) :: levelno,gridno
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: nsolveMM
+       INTEGER_T, intent(in) :: num_materials_face
+       INTEGER_T, intent(in) :: debug_dot_product
        INTEGER_T imax,jmax,kmax
        REAL_T dotmax
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
-       INTEGER_T DIMDEC(rho)
-       INTEGER_T DIMDEC(rho2)
-       INTEGER_T DIMDEC(dotmask)
-       INTEGER_T DIMDEC(mask)
-       REAL_T  mass1,dm
-       REAL_T  rho(DIMV(rho),nsolveMM)
-       REAL_T  rho2(DIMV(rho2),nsolveMM)
-       REAL_T  dotmask(DIMV(dotmask),num_materials_face)
-       REAL_T  mask(DIMV(mask))
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: DIMDEC(rho)
+       INTEGER_T, intent(in) :: DIMDEC(rho2)
+       INTEGER_T, intent(in) :: DIMDEC(dotmask)
+       INTEGER_T, intent(in) :: DIMDEC(mask)
+       REAL_T, intent(out) :: mass1
+       REAL_T, intent(in) :: rho(DIMV(rho),nsolveMM)
+       REAL_T, intent(in) :: rho2(DIMV(rho2),nsolveMM)
+       REAL_T, intent(in) :: dotmask(DIMV(dotmask),num_materials_face)
+       REAL_T, intent(in) :: mask(DIMV(mask))
+       REAL_T :: dm
        INTEGER_T local_mask
        INTEGER_T local_dotmask
        INTEGER_T nc_mask
@@ -11077,6 +11078,190 @@ END SUBROUTINE SIMP
 
        return
        end subroutine FORT_SUMDOT
+
+
+       subroutine FORT_SUMDOT_ONES( &
+        fab_sum,  &
+        fab_flag,  &
+        ones_fab, &
+        DIMS(ones_fab), &
+        type_fab, &
+        DIMS(type_fab), &
+        color_fab, &
+        DIMS(color_fab), &
+        alpha_fab, &
+        DIMS(alpha_fab), &
+        mask_fab, &
+        DIMS(mask_fab), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        levelno,gridno, &
+        nsolve, &
+        presbc, &
+        type_flag, &
+        color_count, &
+        project_option)
+    
+       use global_utility_module
+       use probf90_module
+ 
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: project_option
+       INTEGER_T, intent(in) :: color_count
+       REAL_T, intent(inout) :: fab_sum(color_count)
+       INTEGER_T, intent(inout) :: fab_flag(color_count)
+       INTEGER_T, intent(in) :: levelno,gridno
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: DIMDEC(ones_fab)
+       INTEGER_T, intent(in) :: DIMDEC(type_fab)
+       INTEGER_T, intent(in) :: DIMDEC(color_fab)
+       INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
+       INTEGER_T, intent(in) :: DIMDEC(mask_fab)
+       REAL_T, intent(in) :: ones_fab(DIMV(ones_fab))
+       REAL_T, intent(in) :: type_fab(DIMV(type_fab))
+       REAL_T, intent(in) :: color_fab(DIMV(color_fab))
+       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab))
+       REAL_T, intent(in) :: mask_fab(DIMV(mask_fab))
+       INTEGER_T, intent(in) :: presbc(SDIM,2)
+       INTEGER_T, intent(in) :: type_flag(2)
+
+
+       if ((levelno.lt.0).or.(gridno.lt.0)) then
+        print *,"level or grid invalid"
+        stop
+       endif
+       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
+        print *,"nsolve invalid"
+        stop
+       endif
+       if (num_materials_vel.ne.1) then
+        print *,"num_materials_vel invalid"
+        stop
+       endif
+       if ((num_materials_face.ne.1).and. &
+           (num_materials_face.ne.num_materials)) then
+        print *,"num_materials_face invalid"
+        stop
+       endif
+
+       if (nsolveMM.ne.nsolve*num_materials_face) then
+        print *,"nsolveMM invalid"
+        stop
+       endif
+
+       call checkbound(fablo,fabhi,DIMS(dotmask),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(mask),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(rho),0,-1,415) 
+       call checkbound(fablo,fabhi,DIMS(rho2),0,-1,416) 
+ 
+       mass1=zero
+
+       imax=0
+       jmax=0
+       kmax=0
+       dotmax=zero
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       do nc=1,nsolveMM
+
+        if (num_materials_face.eq.1) then
+         nc_mask=1
+        else if (num_materials_face.eq.num_materials) then
+         nc_mask=nc
+        else
+         print *,"num_materials_face invalid"
+         stop
+        endif
+
+        if ((nc_mask.ge.1).and.(nc_mask.le.num_materials_face)) then
+
+         do i=growlo(1),growhi(1)
+         do j=growlo(2),growhi(2)
+         do k=growlo(3),growhi(3)
+
+          local_mask=NINT(mask(D_DECL(i,j,k)))
+          local_dotmask=NINT(dotmask(D_DECL(i,j,k),nc_mask))
+
+          if (num_materials_face.eq.1) then
+           if (local_dotmask.eq.1) then
+            ! do nothing
+           else
+            print *,"local_dotmask invalid"
+            stop
+           endif
+          else if (num_materials_face.eq.num_materials) then
+           if ((local_dotmask.eq.1).or.(local_dotmask.eq.0)) then
+            ! do nothing
+           else
+            print *,"local_dotmask invalid"
+            stop
+           endif
+          else
+           print *,"num_materials_face invalid"
+           stop
+          endif
+
+          if (local_dotmask.eq.1) then
+
+           if (local_mask.eq.1) then
+
+            dm=rho(D_DECL(i,j,k),nc)*rho2(D_DECL(i,j,k),nc)
+
+            if (debug_dot_product.eq.1) then
+             if (abs(dm).gt.dotmax) then
+              dotmax=abs(dm)
+              imax=i
+              jmax=j
+              kmax=k
+             endif
+            else if (debug_dot_product.ne.0) then
+             print *,"debug dot prod invalid"
+             stop
+            endif
+
+            mass1=mass1+dm
+           else if (local_mask.eq.0) then
+            ! do nothing
+           else 
+            print *,"mask invalid"
+            stop
+           endif
+
+          else if (local_dotmask.eq.0) then
+           ! do nothing
+          else
+           print *,"local_dotmask invalid"
+           stop
+          endif
+
+         enddo ! k
+         enddo ! j
+         enddo ! i
+
+        else
+         print *,"nc_mask invalid"
+         stop
+        endif
+
+       enddo ! nc=1..nsolveMM
+
+       if (debug_dot_product.eq.1) then
+        print *,"debug dot: level,grid,i,j,k,max ",levelno,gridno, &
+         imax,jmax,kmax,dotmax
+       else if (debug_dot_product.ne.0) then
+        print *,"debug dot prod invalid"
+        stop
+       endif
+
+       return
+       end subroutine FORT_SUMDOT_ONES
+
+
 
 ! coriolis force:
 ! R''_space=R''_earth + 2 (omega cross v)+omega cross (omega cross R)+
