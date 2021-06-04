@@ -100,7 +100,9 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.xblob=50.0
 ns.yblob=75.0
 ns.zblob=0.0
-ns.radblob=15.0
+#Pilliod and Puckett: 5 cells in the notch,
+#Pilliod and Puckett: 25 cells length of notch
+ns.radblob=15.0 #Pilliod and Puckett 2004: 15 cells in the radius
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=28
