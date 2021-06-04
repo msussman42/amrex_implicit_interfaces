@@ -7558,7 +7558,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
  setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
  setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
- ones_sum_global=0.0;
 
   // allocates and initializes DOTMASK_MF (will be used for
   // next generation heat equation solver)

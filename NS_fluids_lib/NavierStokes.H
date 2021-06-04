@@ -512,9 +512,13 @@ public:
 
     void zap_resid_where_singular(int index_MF);
 
-    void dotSumONES(int project_option,
+    void dotSumONES_size(int project_option,
       Vector<Real>& result_sum,
       Vector<int>& result_flag);
+
+    void dotSumONES(int project_option,
+      int index_MF,
+      Vector<Real>& result_sum);
 
     void dotSum(int project_option,
       MultiFab* mf1, MultiFab* mf2, Real& result,int nsolve);

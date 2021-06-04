@@ -91,7 +91,14 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 
  } else if (project_option_singular_possible(project_option)==0) {
 
-  ones_sum_global=0.0;
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
+   if (singular_patch_flag[icolor]==0) {
+    // do nothing
+   } else if (singular_patch_flag[icolor]==2) {
+    // do nothing
+   } else 
+    amrex::Error("invalid singular_patch_flag[icolor]");
+  } // icolor=0..color_ONES_count-1
 
  } else
   amrex::Error("project_option invalid50");
@@ -2142,7 +2149,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
    ns_level.setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
    ns_level.setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
-   ns_level.ones_sum_global=0.0;
 
    ns_level.makeDotMask(nsolve,project_option);
    ns_level.allocate_FACE_WEIGHT(nsolve,project_option);
