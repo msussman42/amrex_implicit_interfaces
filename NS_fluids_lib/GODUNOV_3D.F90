@@ -12422,6 +12422,7 @@ stop
 
         ! called from: NavierStokes::tensor_extrapolate() in NavierStokes.cpp
       subroutine FORT_EXTRAPTENSOR( &
+       normal_probe_size, &
        level, &
        finest_level, &
        cur_time, &
@@ -12446,6 +12447,7 @@ stop
       IMPLICIT NONE
 
 
+      INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: cur_time
@@ -12491,11 +12493,13 @@ stop
       INTEGER_T index_ptr(3,3)
       REAL_T dist
 
-      INTEGER_T CELLFLAG
       REAL_T xclamped(SDIM)
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+
+      INTEGER_T local_grid_type
+      INTEGER_T box_type(SDIM)
 
       REAL_T xsten(-1:1,SDIM)
       REAL_T xsten_stencil(-1:1,SDIM)
@@ -12526,13 +12530,20 @@ stop
        print *,"im_elastic invalid29"
        stop
       endif
-      if (ngrow_extrap.ne.2) then
+      if (normal_probe_size.eq.1) then
+       ! do nothing
+      else
+       print *,"normal_probe size invalid"
+       stop
+      endif
+
+      if (ngrow_extrap.ne.normal_probe_size+3) then
        print *,"ngrow_extrap invalid"
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(LS),ngrow_extrap+1,-1,9)
-      call checkbound(fablo,fabhi,DIMS(vof),ngrow_extrap+1,-1,9)
+      call checkbound(fablo,fabhi,DIMS(LS),ngrow_extrap,-1,9)
+      call checkbound(fablo,fabhi,DIMS(vof),ngrow_extrap,-1,9)
       call checkbound(fablo,fabhi,DIMS(tnew),0,-1,62)
       call checkbound(fablo,fabhi,DIMS(told),ngrow_extrap,-1,63)
 
@@ -12547,14 +12558,14 @@ stop
        stop
       endif
 
-      if (isweep.eq.0) then
-       CELLFLAG=1
-      else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then
+      if (isweep.eq.0) then ! extrapolate tensor
+       local_grid_type=dir_extrap
+      else if ((isweep.ge.1).and.(isweep.le.1+SDIM)) then !extrap vector
        if (dir_extrap.eq.isweep-1) then
         if (MAC_grid_displacement.eq.0) then
-         CELLFLAG=1
+         local_grid_type=-1
         else if (MAC_grid_displacement.eq.1) then
-         CELLFLAG=0
+         local_grid_type=dir_extrap
         else
          print *,"MAC_grid_displacement invalid"
          stop
@@ -12568,58 +12579,30 @@ stop
        stop
       endif
 
-      if (CELLFLAG.eq.1) then
-       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       ii=0
-       jj=0
-       kk=0
-      else if (CELLFLAG.eq.0) then
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
-               dir_extrap,26)
-       ii=0
-       jj=0
-       kk=0
-       if (dir_extrap.eq.0) then
-        ii=1
-       else if (dir_extrap.eq.1) then
-        jj=1
-       else if ((dir_extrap.eq.2).and.(SDIM.eq.3)) then
-        kk=1
-       else
-        print *,"dir_extrap invalid"
-        stop
-       endif
+      call grid_type_to_box_type(local_grid_type,box_type)
 
-      else
-       print *,"CELLFLAG invalid"
-       stop
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
+        local_grid_type,26)
+
+      ii=box_type(1)  !0=CELL 1=NODE
+      jj=box_type(2)
+      kk=0
+      if (SDIM.eq.3) then
+       kk=box_type(SDIM)
       endif
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       if (CELLFLAG.eq.1) then
-        ileft=i
-        jleft=j
-        kleft=k
-        iright=i
-        jright=j
-        kright=k
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-       else if (CELLFLAG.eq.0) then
-        ileft=i-ii
-        jleft=j-jj
-        kleft=k-kk
-        iright=i
-        jright=j
-        kright=k
+       ileft=i-ii
+       jleft=j-jj
+       kleft=k-kk
+       iright=i
+       jright=j
+       kright=k
          ! dir_extrap=0..sdim-1
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir_extrap,29)
-       else
-        print *,"CELLFLAG invalid"
-        stop
-       endif
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,local_grid_type,29)
 
        do dir=1,SDIM
         xclamped(dir)=xsten(0,dir)
@@ -12629,6 +12612,11 @@ stop
        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
            vel_clamped,temperature_clamped)
 
+        FIX ME
+        1. find probe position
+        2. interpolate data at probe and make that the extrapolated data.
+           (note: if probe is outside of the target data, then do not alter
+            the current data)
        do im_local=1,nmat
         LSleft(im_local)=LS(D_DECL(ileft,jleft,kleft),im_local)
         LSright(im_local)=LS(D_DECL(iright,jright,kright),im_local)
