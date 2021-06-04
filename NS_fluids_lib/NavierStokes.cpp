@@ -17527,8 +17527,6 @@ NavierStokes::dotSumONES(int project_option,
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FIX ME
-
    // in: NAVIERSTOKES_3D.F90
   FORT_SUMDOT_ONES(
    fab_sum.dataPtr(),
@@ -17549,7 +17547,9 @@ NavierStokes::dotSumONES(int project_option,
    &gridno,
    &nsolve_expect, 
    presbc.dataPtr(),
-   type_ONES_flag.dataPtr());
+   type_ONES_flag.dataPtr(),
+   &color_ONES_count,
+   &project_option);
 
   for (int icolor=0;icolor<color_ONES_count;icolor++) {
    local_sum[tid_current][icolor] += fab_sum[icolor];
