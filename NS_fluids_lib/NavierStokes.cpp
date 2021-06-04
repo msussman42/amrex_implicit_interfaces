@@ -11004,12 +11004,29 @@ void NavierStokes::tensor_advection_update() {
 // extrapolate where the volume fraction is less than 1/2.  
 // note: the gradients used to update the tensor are only valid in cells
 // where LS(im_viscoelastic)>=0.
-// called from nonlinear_advection, tensor_advection_updateALL, veldiffuseALL
-void NavierStokes::tensor_extrapolate() {
+// called from:
+//  nonlinear_advection
+//   X_t + u dot grad X = u  (displacement)
+//   Q_t + u dot grad Q = 0  (viscoelastic or incremental approach)
+//  tensor_advection_updateALL
+//   Q_t + grad u dot Q + Q dot grad u^T
+//  veldiffuseALL
+//   (for example) Q=mu (grad X + grad X^T)
+//  if provisional_MF==-1 then use state data. 
+//  if provisional_MF>=0 then use provisional tensor data.
+//  -1<=grid_type<=5
+void NavierStokes::tensor_extrapolate(
+  int provisional_MF,
+  int grid_type) {
 
  int finest_level=parent->finestLevel();
 
  int nmat=num_materials;
+
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("NUM_TENSOR_TYPE invalid");
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -11020,13 +11037,14 @@ void NavierStokes::tensor_extrapolate() {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int ngrow_extrap=2;
+ int ngrow_extrap=normal_probe_size+3;
 
- VOF_Recon_resize(ngrow_extrap+1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_extrap+1,13);
+  // normal_probe_size=1
+ VOF_Recon_resize(ngrow_extrap,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,normal_probe_size+3,13);
 
  int caller_id=500;
- MultiFab* LS_mf=getStateDist(ngrow_extrap+1,cur_time_slab,caller_id);
+ MultiFab* LS_mf=getStateDist(ngrow_extrap,cur_time_slab,caller_id);
 
  if (LS_mf->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("LS_mf->nComp()!=nmat*(AMREX_SPACEDIM+1)");
@@ -11053,11 +11071,19 @@ void NavierStokes::tensor_extrapolate() {
       int state_idx=Tensor_Type;
       int dir_extrap=0;
 
-      if (isweep==0) {
-       dir_extrap=0;
-       scomp_tensor=partid*NUM_TENSOR_TYPE;
+      if (isweep==0) { // extrapolate tensor instead of displacement
+       if (provisional_MF==-1) {
+        dir_extrap=-1; // cell centered grid
+        scomp_tensor=partid*NUM_TENSOR_TYPE;
+        state_idx=Tensor_Type;
+       } else if (provisional_MF>=0) {
+        dir_extrap=grid_type; // -1<=grid_type<=5
+	scomp_tensor=0;
+	state_idx=-1;
+       } else 
+        amrex::Error("provisional_MF invalid");
+
        ncomp_extrap=NUM_TENSOR_TYPE;
-       state_idx=Tensor_Type;
       } else if ((isweep>=1)&&(isweep<1+AMREX_SPACEDIM)) {
        dir_extrap=isweep-1;
        if (MAC_grid_displacement==0) {
@@ -11077,9 +11103,13 @@ void NavierStokes::tensor_extrapolate() {
       MultiFab* tensor_source_mf=nullptr;
       MultiFab* tensor_new_mf=nullptr;
 
-      if (state_idx==Tensor_Type) {
-       tensor_source_mf= getStateTensor(ngrow_extrap,scomp_tensor,
-          ncomp_extrap,cur_time_slab);
+      if (state_idx==-1) {
+       tensor_source_mf=localMF[provisional_MF];
+       tensor_new_mf=localMF[provisional_MF];
+      } else if (state_idx==Tensor_Type) {
+       tensor_source_mf= getStateTensor(
+         ngrow_extrap,scomp_tensor,
+         ncomp_extrap,cur_time_slab);
        tensor_new_mf=&get_new_data(state_idx,slab_step+1);
       } else if (state_idx==XDmac_Type) {
        tensor_source_mf= getStateMAC(state_idx,
@@ -11128,6 +11158,7 @@ void NavierStokes::tensor_extrapolate() {
 
         // declared in: GODUNOV_3D.F90
        FORT_EXTRAPTENSOR(
+	&normal_probe_size,
         &level,
         &finest_level,
         &cur_time_slab,
@@ -11152,7 +11183,13 @@ void NavierStokes::tensor_extrapolate() {
 } //omp
       ns_reconcile_d_num(67);
 
-      delete tensor_source_mf;
+      if (state_idx==-1) {
+	      // do nothing
+      } else if ((state_idx==Tensor_Type)||
+		 (state_idx==XDmac_Type)) {
+       delete tensor_source_mf;
+      } else
+       amrex::Error("state_idx invalid");
 
      } // isweep=0..AMREX_SPACEDIM
 
@@ -11902,6 +11939,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
   debug_ngrow(MDOT_MF,0,355);
 
+   // normal_probe_size=1
   VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
 
   int ngrow_dest=ngrow_distance-1;
