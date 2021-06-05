@@ -17077,15 +17077,15 @@ void NavierStokes::project_right_hand_side(
     } else
      amrex::Error("singular_patch_flag[icolor] invalid");
 
-   } // icolor=0..color_ONES_count-1
+    if (verbose>0) {
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "project_right_hand_side, coef=" << coef[icolor] << '\n';
+      std::cout << "project_right_hand_side, denom=" << 
+         ones_sum_global[icolor] << '\n';
+     } 
+    } // verbose>0
 
-   if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "project_right_hand_side, coef=" << coef << '\n';
-     std::cout << "project_right_hand_side, denom=" << 
-         ones_sum_global << '\n';
-    } 
-   } // verbose>0
+   } // icolor=0..color_ONES_count-1
 
    mf_combine_ones(project_option,index_MF,coef);
    zap_resid_where_singular(index_MF);
