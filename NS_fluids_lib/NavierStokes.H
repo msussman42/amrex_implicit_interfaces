@@ -994,7 +994,9 @@ protected:
     Real Beta,
     int index_z_MF,int nsolve);
 
-  void mf_combine_ones(int project_option,int index_MF,Real& Beta);
+  void mf_combine_ones(int project_option,int index_MF,Vector<Real> Beta);
+  void mf_combine_ones_level(int project_option,int index_MF,
+		  Vector<Real> Beta);
 
   void levelCombine(
    int project_option,
