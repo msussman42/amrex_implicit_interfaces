@@ -119,7 +119,6 @@ ns.v = 1
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 4 4 4
 ns.hi_bc          = 4 4 4
-ns.solvability=1  
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

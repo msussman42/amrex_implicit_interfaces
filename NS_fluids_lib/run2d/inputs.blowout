@@ -16,7 +16,6 @@ geometry.prob_hi   =   2.54 162.56 # L=64*2.54 test
 #geometry.prob_hi   =   2.54 325.12 # L=128*2.54=325.12
 geometry.is_periodic = 0  0          # MS 0  1 if periodic, 0  0 if not
 
-ns.solvability_projection=0 # default 0, but make 1 if no outflow bc.
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get

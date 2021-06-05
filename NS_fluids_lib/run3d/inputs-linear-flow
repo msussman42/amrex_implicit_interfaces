@@ -85,7 +85,6 @@ ns.xblob10=1.0 # set xblob10>0 in order to init linear flow at t=0
 ns.yblob9=-2.0  # vertical velocity at xlo  1.0
 ns.yblob10=-0.0  # vertical velocity at xhi -1.0
 ns.adv_dir=3
-ns.solvability_projection=0  # outflow at bottom of domain
 ns.heatviscconst=0.0 0.0 0.0 
 ns.viscconst=1.0 3.6E-5 0.0 
 ns.denconst=1.0 1.2E-3 1.0 

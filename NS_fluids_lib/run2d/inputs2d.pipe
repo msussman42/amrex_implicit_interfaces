@@ -141,7 +141,6 @@ ns.v = 1
 # ----------------  PROBLEM DEPENDENT INPUTS
 # use default cvapor, cwater
 # if none of the walls are outflow then:
-ns.solvability=1
 ns.lo_bc          = 5 0  # MS 3 1 if inflow, 3 0 if periodic 
 ns.hi_bc          = 5 0  # MS 5 2 if outflow, 5 0 if periodic 
 ns.livepressureoverride=1

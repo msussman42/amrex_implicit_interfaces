@@ -133,7 +133,6 @@ ns.advbot=75.0
 ns.adv_vel=0.0
 ns.adv_dir=3 # 2 RZ 3 XYZ
 ns.fluid_stable_factor=0.0
-ns.solvability_projection=0
 ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.viscconst=1.4E-2 4.58E-2  1.822E-4
 ns.denconst=1.04 0.92 0.001205 

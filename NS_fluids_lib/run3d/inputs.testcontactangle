@@ -34,7 +34,6 @@ Lp.v = 1
 ns.num_materials=3
 ns.num_species_var=0
 
-ns.solvability_projection=1
 ns.projection_pressure_scale=10000.0
 ns.advection_order=1 1 1 # flow away from droplet not important
 

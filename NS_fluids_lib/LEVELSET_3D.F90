@@ -11449,7 +11449,6 @@ stop
        level, &
        finest_level, &
        face_flag, &
-       local_solvability_projection, &
        project_option, &
        enable_spectral, &
        fluxvel_index, &
@@ -11550,7 +11549,6 @@ stop
       INTEGER_T, intent(in) :: homflag
       INTEGER_T, intent(in) :: use_VOF_weight
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: local_solvability_projection
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: fluxvel_index
       INTEGER_T, intent(in) :: fluxden_index
@@ -11828,11 +11826,6 @@ stop
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten.ne.nten_test) then
        print *,"nten invalid mac_to_cell nten nten_test ",nten,nten_test
-       stop
-      endif
-      if ((local_solvability_projection.ne.0).and. &
-          (local_solvability_projection.ne.1)) then
-       print *,"local_solvability_projection invalid"
        stop
       endif
 
@@ -12451,28 +12444,10 @@ stop
             print *,"MDOT bust"
             stop
            endif
-           if (local_solvability_projection.eq.1) then
-            if (CC.eq.zero) then
-             ! do nothing
-            else
-             print *,"CC invalid"
-             stop
-            endif
-            if (CC_DUAL.eq.zero) then
-             ! do nothing
-            else
-             print *,"CC_DUAL invalid"
-             stop
-            endif
-           else if (local_solvability_projection.eq.0) then
-            if ((CC.ge.zero).and.(CC_DUAL.ge.zero)) then
-             ! do nothing
-            else
-             print *,"CC or CC_DUAL invalid"
-             stop
-            endif
+           if ((CC.ge.zero).and.(CC_DUAL.ge.zero)) then
+            ! do nothing
            else
-            print *,"local_solvability_projection invalid"
+            print *,"CC or CC_DUAL invalid"
             stop
            endif
           else if (project_option_singular_possibleF(project_option).eq.0) then
@@ -14454,7 +14429,6 @@ stop
        ncphys, &  ! nflux for advection
        override_density, &
        constant_density_all_time, &
-       solvability_projection, &
        presbc_in, &  ! denbc for advection
        velbc_in, &
        slab_step, &
@@ -14561,7 +14535,6 @@ stop
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
       INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
-      INTEGER_T, intent(in) :: solvability_projection
       REAL_T, intent(in) :: dt,time,beta,visc_coef
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(semflux)
@@ -14860,11 +14833,6 @@ stop
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten.ne.nten_test) then
        print *,"nten invalid edge grad nten nten_test ",nten,nten_test
-       stop
-      endif
-      if ((solvability_projection.ne.0).and. &
-          (solvability_projection.ne.1)) then
-       print *,"solvability_projection invalid"
        stop
       endif
 
@@ -16691,15 +16659,6 @@ stop
            partid_solid, &
            partid_prescribed) 
 
-          if (solvability_projection.eq.1) then
-           ! do nothing
-          else if (solvability_projection.eq.0) then
-           ! do nothing
-          else
-           print *,"solvability_projection invalid"
-           stop
-          endif
- 
            ! at_wall==1 if FOEXTRAP or REFLECT_EVEN BC for pressure.
            ! gradh represents (H_{i}-H_{i-1})
           if (at_wall.eq.1) then
@@ -17274,9 +17233,6 @@ stop
        fablo,fabhi,bfact, &
        min_face_wt, & ! static variable
        max_face_wt, & ! static variable
-       singular_possible, &
-       solvability_projection, &
-       solvability_level_flag, &
        presbc_arr, &
        visc_coef, &
        constant_viscosity, &
@@ -17342,9 +17298,6 @@ stop
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
       REAL_T, intent(in) :: mask(DIMV(mask))
-      INTEGER_T, intent(in) :: singular_possible
-      INTEGER_T, intent(in) :: solvability_projection
-      INTEGER_T, intent(inout) :: solvability_level_flag
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2,nsolveMM)
   
       INTEGER_T i,j,k
@@ -17392,21 +17345,6 @@ stop
        stop
       endif
 
-      if ((singular_possible.ne.0).and. &
-          (singular_possible.ne.1)) then
-       print *,"singular_possible invalid"
-       stop
-      endif
-      if ((solvability_projection.ne.0).and. &
-          (solvability_projection.ne.1)) then
-       print *,"solvability projection invalid"
-       stop
-      endif
-      if ((solvability_level_flag.ne.0).and. &
-          (solvability_level_flag.ne.1)) then
-       print *,"solvability level flag invalid"
-       stop
-      endif
       if ((constant_viscosity.ne.0).and. &
           (constant_viscosity.ne.1)) then
        print *,"constant_viscosity invalid"
@@ -17535,85 +17473,18 @@ stop
           endif
 
           if (project_option_projectionF(project_option).eq.1) then
-
-           if (singular_possible.eq.1) then
-
-            if (solvability_projection.eq.0) then
-             solvability_level_flag=0
-            else if (solvability_projection.eq.1) then
-             if (side.eq.0) then
-              ! do nothing
-             else if ((side.eq.1).or.(side.eq.2)) then
-              local_presbc=presbc_arr(dir+1,side,1)
-              if (local_presbc.eq.INT_DIR) then
-               if (local_mask.eq.zero) then 
-                solvability_level_flag=0  ! coarse/fine BC
-               else if (local_mask.eq.one) then
-                ! do nothing (periodic BC)
-               else
-                print *,"local_mask invalid"
-                stop
-               endif
-              else if (local_presbc.eq.EXT_DIR) then
-               print *,"cannot have outflow bc with solvability constraint"
-               stop
-              else if ((local_presbc.eq.REFLECT_EVEN).or. &
-                       (local_presbc.eq.FOEXTRAP)) then
-               ! do nothing
-              else
-               print *,"local_presbc invalid"
-               stop
-              endif
-             else
-              print *,"side invalid"
-              stop
-             endif
-            else
-             print *,"solvability projection invalid"
-             stop
-            endif
-
-           else
-            print *,"singular_possible invalid"
-            stop
-           endif
-
+           !do nothing
           else if (project_option.eq.12) then ! pressure extrapolation
-           if (singular_possible.eq.1) then
-            solvability_level_flag=0
-           else
-            print *,"singular_possible invalid"
-            stop
-           endif
+           !do nothing
           else if (project_option.eq.2) then ! temperature
-           if (singular_possible.eq.0) then
-            solvability_level_flag=0
-           else
-            print *,"singular_possible invalid"
-            stop
-           endif
+           !do nothing
           else if (project_option.eq.200) then ! smoothing
-           if (singular_possible.eq.0) then
-            solvability_level_flag=0
-           else
-            print *,"singular_possible invalid"
-            stop
-           endif
+           !do nothing
           else if ((project_option.ge.100).and. &
                    (project_option.lt.100+num_species_var)) then 
-           if (singular_possible.eq.0) then
-            solvability_level_flag=0
-           else
-            print *,"singular_possible invalid"
-            stop
-           endif
+           !do nothing
           else if (project_option.eq.3) then ! viscosity
-           if (singular_possible.eq.0) then
-            solvability_level_flag=0
-           else
-            print *,"singular_possible invalid"
-            stop
-           endif
+           !do nothing
           else
            print *,"project_option invalid"
            stop

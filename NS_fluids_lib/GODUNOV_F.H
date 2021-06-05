@@ -324,7 +324,6 @@ extern "C"
     Real* dt,
     Real* cur_time,
     Real* visc_coef,
-    int* solvability_projection,
     const int* presbc,
     const int* velbc,
     const int* vofbc,

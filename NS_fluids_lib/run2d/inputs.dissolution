@@ -15,7 +15,6 @@ ns.slope_limiter_option=0  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=10
 ns.initial_cg_cycles=10
-ns.solvability_projection=1 # 1=TRAINING RUN 0=outflow condition
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=2

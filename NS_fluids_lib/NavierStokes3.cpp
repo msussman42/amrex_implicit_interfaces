@@ -7215,8 +7215,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- solvability_level_flag=1;
-
  int bcsize=AMREX_SPACEDIM*2*nsolveMM*grids.size();
  bcpres_array.resize(bcsize);
  for (int gridno=0;gridno<grids.size();gridno++) {
@@ -7239,28 +7237,14 @@ void NavierStokes::allocate_FACE_WEIGHT(
      if (project_option_singular_possible(project_option)==1) {
 
       if (project_option==12) { // pressure extrapolation
-       singular_possible=1; // non-solid regions can have coefficients all zero.
-       solvability_level_flag=0;
+       // do nothing
       } else if (project_option_singular_possible(project_option)==1) {
-
-       singular_possible=1; // solid regions can have coefficients all zero.
-
-       if (local_solvability_projection==0) {
-        solvability_level_flag=0;
-       } else if (local_solvability_projection==1) {
-        if (pbc==EXT_DIR)
-         amrex::Error("cannot have outflow if solvability=1");
-       } else
-        amrex::Error("local_solvability_projection invalid");
-
+       // do nothing
       } else
        amrex::Error("project_option became corrupt");
 
      } else if (project_option_singular_possible(project_option)==0) {
-
-      singular_possible=0; // diagonally dominant everywhere.
-      solvability_level_flag=0;
-
+      // do nothing
      } else
       amrex::Error("project_option_singular_possible bad allocate_FACE_WEIGHT");
 
@@ -7367,12 +7351,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
   debug_ngrow(mm_areafrac_index+dir,0,111);
  debug_ngrow(mm_cell_areafrac_index,0,133);
 
- Vector<int> solvability_level_flag_arr;
- solvability_level_flag_arr.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  solvability_level_flag_arr[tid]=solvability_level_flag;
- }
-
  for (int facewt_iter=0;facewt_iter<=1;facewt_iter++) {
 
   if (thread_class::nthreads<1)
@@ -7417,8 +7395,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];  // mask=1 at fine-fine bc
    const Real* xlo = grid_loc[gridno].lo();
 
-// want face_frac=0 if presbc<> interior or exterior dirichlet.
-// solvability_level_flag=0 if coarse/fine interface found.
    Vector<int> presbc;
    getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
    if (presbc.size()==2*AMREX_SPACEDIM*nsolveMM) {
@@ -7469,9 +7445,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     fablo,fabhi,&bfact,
     min_face_wt[tid_current].dataPtr(),
     max_face_wt[tid_current].dataPtr(),
-    &singular_possible,
-    &local_solvability_projection, // input to the fortran
-    &solvability_level_flag_arr[tid_current], // declared inout in the fortran
     presbc.dataPtr(),
     &visc_coef,
     &constant_viscosity,
@@ -7485,21 +7458,17 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
 
-  if (solvability_level_flag_arr[tid]<solvability_level_flag_arr[0])
-   solvability_level_flag_arr[0]=solvability_level_flag_arr[tid];
-
   for (int iwt=0;iwt<4;iwt++) {
    if (min_face_wt[tid][iwt]<min_face_wt[0][iwt])
     min_face_wt[0][iwt]=min_face_wt[tid][iwt];
    if (max_face_wt[tid][iwt]>max_face_wt[0][iwt])
     max_face_wt[0][iwt]=max_face_wt[tid][iwt];
   }
+
  } // tid
 
- solvability_level_flag=solvability_level_flag_arr[0];
  ParallelDescriptor::Barrier();
 
- ParallelDescriptor::ReduceIntMin(solvability_level_flag);
 
  for (int iwt=0;iwt<4;iwt++) {
   ParallelDescriptor::ReduceRealMin(min_face_wt[0][iwt]);
@@ -8555,12 +8524,7 @@ void NavierStokes::jacobi_cycles(
 
  for (int vcycle_jacobi=0;vcycle_jacobi<temp_ncycles;vcycle_jacobi++) {
 
-    // if local_solvability_projection, then this
-    // routine modifies RESID so that it sums to zero.
-    // RESID=project( mac_rhs-(alpha*phi+div (-grad p)/dt) )
-    // if singular_possible, then this routine zeros out the
-    // residual where the matrix diagonal (prior to dual
-    // time stepping modification) is 0.
+   // null space filtered out of residual in this routine.
   residALL(project_option,idx_mac_rhs_crse,
     RESID_MF,idx_mac_phi_crse,nsolve);
 
@@ -8640,12 +8604,7 @@ void NavierStokes::jacobi_cycles(
 
  if (ncycles>0) {
 
-    // if local_solvability_projection, then this
-    // routine modifies RESID so that it sums to zero.
-    // RESID=project( mac_rhs-(alpha*phi+div (-grad p)/dt) )
-    // if singular_possible, then this routine zeros out the
-    // residual where the matrix diagonal (prior to dual time stepping
-    // modification) is 0.
+   // null space filtered out.
   residALL(project_option,idx_mac_rhs_crse,
     RESID_MF,idx_mac_phi_crse,nsolve);
 
@@ -8926,691 +8885,155 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     //  no need to code, since a Gaussian elimination solver is already
     //  available.
 
-   if (breakdown_free_flag==0) {
 
-    for (int i=1;i<m;i++) {
-     // variables initialized to 0.0
-     allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+i);
-    }
-    for (int i=0;i<m;i++) {
-     // variables initialized to 0.0
-     allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+i);
-    }
+   for (int i=1;i<m;i++) {
+    // variables initialized to 0.0
+    allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+i);
+   }
+   for (int i=0;i<m;i++) {
+    // variables initialized to 0.0
+    allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+i);
+   }
 
-    for (int j=0;j<m_small;j++) {
+   for (int j=0;j<m_small;j++) {
 
-     if (verbose>0) {
-      if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "GMRES project_option= " << project_option <<
-	      " nsolveMM= " << nsolveMM <<
-	      " loop j= " << j << " m= " << m << '\n';
-      }
-     }  // verbose>0
+    if (verbose>0) {
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "GMRES project_option= " << project_option <<
+             " nsolveMM= " << nsolveMM <<
+             " loop j= " << j << " m= " << m << '\n';
+     }
+    }  // verbose>0
 
-      // Z=M^{-1}Vj
-      // Z=project(Z)
-      // Vj is a normalized vector
-     multiphase_preconditioner(
-      project_option,project_timings,
-      presmooth,postsmooth,
+     // Z=M^{-1}Vj
+     // Z=project(Z)
+     // Vj is a normalized vector
+    multiphase_preconditioner(
+     project_option,project_timings,
+     presmooth,postsmooth,
+     GMRES_BUFFER0_Z_MF+j,
+     GMRES_BUFFER0_V_MF+j,nsolve);
+
+     // W=A Z
+     // 1. (begin)calls project_right_hand_side(Z)
+     // 2. (end)  calls project_right_hand_side(W)
+    applyALL(project_option,
       GMRES_BUFFER0_Z_MF+j,
-      GMRES_BUFFER0_V_MF+j,nsolve);
+      GMRES_BUFFER_W_MF,nsolve);
 
-      // W=A Z
-      // 1. (begin)calls project_right_hand_side(Z)
-      // 2. (end)  calls project_right_hand_side(W)
-     applyALL(project_option,
-       GMRES_BUFFER0_Z_MF+j,
-       GMRES_BUFFER_W_MF,nsolve);
-
-     for (int i=0;i<=j;i++) {
-      dot_productALL(project_option,
-       GMRES_BUFFER_W_MF,
-       GMRES_BUFFER0_V_MF+i,HH[i][j],nsolve);
-      aa=-HH[i][j];
-       // W=W+aa Vi
-      mf_combine(project_option,
-       GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-      project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
-     } // i=0..j
-
+    for (int i=0;i<=j;i++) {
      dot_productALL(project_option,
-       GMRES_BUFFER_W_MF,
-       GMRES_BUFFER_W_MF,HH[j+1][j],nsolve);
+      GMRES_BUFFER_W_MF,
+      GMRES_BUFFER0_V_MF+i,HH[i][j],nsolve);
+     aa=-HH[i][j];
+      // W=W+aa Vi
+     mf_combine(project_option,
+      GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
+     project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
+    } // i=0..j
 
-     if (HH[j+1][j]>=0.0) {
-      HH[j+1][j]=sqrt(HH[j+1][j]);
+    dot_productALL(project_option,
+      GMRES_BUFFER_W_MF,
+      GMRES_BUFFER_W_MF,HH[j+1][j],nsolve);
+
+    if (HH[j+1][j]>=0.0) {
+     HH[j+1][j]=sqrt(HH[j+1][j]);
+    } else
+     amrex::Error("HH[j+1][j] invalid");
+
+    if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
+
+     status=1;
+
+     if ((j>=0)&&(j<m_small)) {
+      caller_id=11;
+      GMRES_MIN_CPP(HH,beta,yy,
+       m,j+1,
+       caller_id,project_option,
+       level,status);
      } else
-      amrex::Error("HH[j+1][j] invalid");
+      amrex::Error("j invalid");
 
-     if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
+     if (status==1) {
 
-      status=1;
-
-      if ((j>=0)&&(j<m_small)) {
-       caller_id=11;
-       GMRES_MIN_CPP(HH,beta,yy,
-	m,j+1,
-	caller_id,project_option,
-        level,status);
+      if ((j>=0)&&(j<m-1)) {
+       aa=1.0/HH[j+1][j];
+        // V=V+aa W
+       mf_combine(project_option,
+        GMRES_BUFFER0_V_MF+j+1,
+        GMRES_BUFFER_W_MF,aa,
+        GMRES_BUFFER0_V_MF+j+1,nsolve); 
+       project_right_hand_side(GMRES_BUFFER0_V_MF+j+1,
+       	       project_option,change_flag);
+      } else if (j==m-1) {
+       // do nothing
       } else
        amrex::Error("j invalid");
 
-      if (status==1) {
+     } else if (status==0) {
 
-       if ((j>=0)&&(j<m-1)) {
-        aa=1.0/HH[j+1][j];
-         // V=V+aa W
-        mf_combine(project_option,
-         GMRES_BUFFER0_V_MF+j+1,
-         GMRES_BUFFER_W_MF,aa,
-         GMRES_BUFFER0_V_MF+j+1,nsolve); 
-        project_right_hand_side(GMRES_BUFFER0_V_MF+j+1,
-		       project_option,change_flag);
-       } else if (j==m-1) {
-        // do nothing
-       } else
-        amrex::Error("j invalid");
+      m_small=j;
 
-      } else if (status==0) {
-
-       m_small=j;
-
-      } else
-       amrex::Error("status invalid");
-
-     } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
-      m_small=j; // valid indexes of HH: i1=0..j  i2=0..j-1
      } else
-      amrex::Error("HH[j+1][j] invalid");
+      amrex::Error("status invalid");
 
-    } // j=0..m_small-1
+    } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
+     m_small=j; // valid indexes of HH: i1=0..j  i2=0..j-1
+    } else
+     amrex::Error("HH[j+1][j] invalid");
+
+   } // j=0..m_small-1
   
-    status=1;
+   status=1;
 
-    if ((m_small>=1)&&
-        (m_small<=m)) {
+   if ((m_small>=1)&&
+       (m_small<=m)) {
 
-     caller_id=1;
-     GMRES_MIN_CPP(HH,beta,yy,
-	m,m_small,
-	caller_id,project_option,
-        level,status);
-
-     if (status==1) {
-      // do nothing
-     } else
-      amrex::Error("expecting status==1 here");
-
-    } else if (m_small==0) {
-
-      // Z=M^{-1}R
-      // first calls: zeroALL(1,nsolveMM,idx_Z) 
-      // Z=project(Z)
-     multiphase_preconditioner(
-      project_option,project_timings,
-      presmooth,postsmooth,
-      idx_Z,idx_R,nsolve);
-
-    } else {
-     std::cout << "m_small= " << m_small << '\n';
-     amrex::Error("NavierStokes3.cpp m_small invalid");
-    }
+    caller_id=1;
+    GMRES_MIN_CPP(HH,beta,yy,
+       m,m_small,
+       caller_id,project_option,
+       level,status);
 
     if (status==1) {
-     zeroALL(1,nsolveMM,idx_Z);
-     for (int j=0;j<m_small;j++) {
-      aa=yy[j];
-       // Z=Z+aa Zj
-      mf_combine(project_option,
-       idx_Z,
-       GMRES_BUFFER0_Z_MF+j,aa,
-       idx_Z,nsolve); 
-     }
+     // do nothing
     } else
-     amrex::Error("status invalid");
+     amrex::Error("expecting status==1 here");
 
-    for (int i=1;i<m;i++) {
-     delete_array(GMRES_BUFFER0_V_MF+i); 
+   } else if (m_small==0) {
+
+     // Z=M^{-1}R
+     // first calls: zeroALL(1,nsolveMM,idx_Z) 
+     // Z=project(Z)
+    multiphase_preconditioner(
+     project_option,project_timings,
+     presmooth,postsmooth,
+     idx_Z,idx_R,nsolve);
+
+   } else {
+    std::cout << "m_small= " << m_small << '\n';
+    amrex::Error("NavierStokes3.cpp m_small invalid");
+   }
+
+   if (status==1) {
+    zeroALL(1,nsolveMM,idx_Z);
+    for (int j=0;j<m_small;j++) {
+     aa=yy[j];
+      // Z=Z+aa Zj
+     mf_combine(project_option,
+      idx_Z,
+      GMRES_BUFFER0_Z_MF+j,aa,
+      idx_Z,nsolve); 
     }
-    for (int i=0;i<m;i++) {
-     delete_array(GMRES_BUFFER0_Z_MF+i); 
-    }
-
-   } else if (breakdown_free_flag==1) {
-
-    Real breakdown_tol=KRYLOV_NORM_CUTOFF;
-
-     // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
-    Real** GG=new Real*[m+1];
-    for (int i=0;i<m+1;i++) { 
-     GG[i]=new Real[m];
-     for (int j=0;j<m;j++) 
-      GG[i][j]=0.0;
-    }
-
-    Real** HHGG=new Real*[2*m+2];
-    for (int i=0;i<2*m+2;i++) { 
-     HHGG[i]=new Real[2*m+1];
-     for (int j=0;j<2*m+1;j++) 
-      HHGG[i][j]=0.0;
-    }
-
-    int convergence_flag=0;
-    int p_local=-1;
-    int p_local_allocated=0;
-    int p_local_init_allocated=p_local_allocated;
-
-    int j_local=0;
-
-    if (debug_BF_GMRES==1) {
-     std::cout << "BF_GMRES: project_option= " << project_option
-	    << "gmres_precond_iter= " << gmres_precond_iter << '\n';
-     std::cout << "BF_GMRES: beta= " << beta << '\n';
-    }
-
-    Vector<Real> error_historyGMRES;
-    error_historyGMRES.resize(m);
-
-    int use_previous_iterate=0;
-
-    for (j_local=0;((j_local<m_small)&&(convergence_flag==0));j_local++) {
-
-     use_previous_iterate=0;
-
-     // variables initialized to 0.0
-     allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+j_local);
-      // Zj=M^{-1}Vj
-      // Z=project(Z)
-     multiphase_preconditioner(
-      project_option,project_timings,
-      presmooth,postsmooth,
-      GMRES_BUFFER0_Z_MF+j_local,
-      GMRES_BUFFER0_V_MF+j_local,nsolve);
-
-      // W=A Z
-      // 1. (begin)calls project_right_hand_side(Z)
-      // 2. (end)  calls project_right_hand_side(W)
-     applyALL(project_option,
-       GMRES_BUFFER0_Z_MF+j_local,
-       GMRES_BUFFER_W_MF,nsolve);
-
-      // H_j is a j+2 x j+1 matrix  j=0..m-1
-     for (int i=0;i<=j_local;i++) {
-       // H_ij=W dot Vi
-      dot_productALL(project_option,
-       GMRES_BUFFER_W_MF,
-       GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
-     } // i=0..j_local
-
-      // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
-     for (int i=0;i<=p_local;i++) {
-       // G_ij=W dot Ui
-      dot_productALL(project_option,
-       GMRES_BUFFER_W_MF,
-       GMRES_BUFFER0_U_MF+i,GG[i][j_local],nsolve);
-     } // i=0..p_local
-
-     for (int i=0;i<=j_local;i++) {
-      aa=-HH[i][j_local];
-       // W=W+aa Vi
-      mf_combine(project_option,
-       GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-      project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
-     }
-     for (int i=0;i<=p_local;i++) {
-      aa=-GG[i][j_local];
-       // W=W+aa Ui
-      mf_combine(project_option,
-       GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-      project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
-     }
-
-      // H_j is a j+2 x j+1 matrix  j=0..m-1
-     dot_productALL(project_option,
-       GMRES_BUFFER_W_MF,
-       GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
-
-     if (HH[j_local+1][j_local]>=0.0) {
-      HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
-     } else
-      amrex::Error("HH[j_local+1][j_local] invalid");
-
-     double local_tol=breakdown_tol;
-     if (p_local>=0) {
-      local_tol/=pow(10.0,2*p_local);
-     } else if (p_local==-1) {
-      // do nothing
-     } else
-      amrex::Error("p_local invalid");
-
-     int condition_number_blowup=0;
-     double zeyu_condnum=1.0;
-
-     if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
-
-       // Real** HH   i=0..m  j=0..m-1
-       // active region: i=0..j_local+1  j=0..j_local
-      if (disable_additional_basis==0) {
-       zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
-      } else if (disable_additional_basis==1) {
-       zeyu_condnum=0.0;
-      } else
-       amrex::Error("disable_additional_basis invalid");
-
-      if (zeyu_condnum>1.0/local_tol) { 
-       condition_number_blowup=1;  
-      } else if (zeyu_condnum<=1.0/local_tol) {
-       condition_number_blowup=0;  
-      } else
-       amrex::Error("zeyu_condnum NaN");
-
-     } else if ((HH[j_local+1][j_local]>=0.0)&&
-		(HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
-      condition_number_blowup=2;  
-      use_previous_iterate=1;
-     } else
-      amrex::Error("HH[j_local+1][j_local] invalid");
-
-     if (debug_BF_GMRES==1) {
-      std::cout << "BFGMRES: j_local="<< j_local << '\n';
-      std::cout << "BFGMRES: zeyu_condnum="<< zeyu_condnum << '\n';
-      std::cout << "BFGMRES: condition_number_blowup="<< 
-	     condition_number_blowup << '\n';
-
-      std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-      std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-     }
-
-     if (condition_number_blowup==1) {
-
-      p_local++;
-
-       // variables initialized to 0.0  dir=-1
-      if (p_local>=p_local_allocated) {
-       allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_U_MF+p_local);
-       p_local_allocated++;
-      }
-
-       // ngrow,ncomp,idx_dest,idx_source
-      copyALL(0,nsolveMM,GMRES_BUFFER0_U_MF+p_local,
-	      GMRES_BUFFER0_V_MF+j_local);
-
-      if (j_local==0) {
-	// do nothing
-        // G_j-1 is a p(j-1)+1 x j matrix  j=0..m-1
-        // H_j-1 is a j+1 x j matrix  j=0..m-1
-      } else if ((j_local>=1)&&(j_local<m)) {
-       for (int i=0;i<j_local;i++) {
-        GG[p_local][i]=HH[j_local][i];
-	HH[j_local][i]=0.0;
-       }
-      } else
-       amrex::Error("j_local invalid");
-
-      int max_vhat_sweeps=4;
-      int vhat_counter=0;
-      for (vhat_counter=0;((vhat_counter<max_vhat_sweeps)&&
-			   (condition_number_blowup==1));vhat_counter++) {
-
-       setVal_array(0,nsolveMM,1.0,GMRES_BUFFER0_V_MF+j_local);
-       init_checkerboardALL(GMRES_BUFFER0_V_MF+j_local,
-		     project_option,nsolve,nsolveMM);
-       project_right_hand_side(GMRES_BUFFER0_V_MF+j_local,
-		     project_option,change_flag);
-        // v_i dot v_j = 0 i=0..j-1
-	// u_p dot v_j = 0
-	// for i=0..j-1
-	//  v_j = v_j - (vj,vi)vi/(vi,vi)
-
-       double vj_dot_vi=0.0;
-       double vi_dot_vi=0.0;
-       for (int i=0;i<=j_local;i++) {
-        int idx_vi;
-        if ((i>=0)&&(i<j_local)) {
-         idx_vi=GMRES_BUFFER0_V_MF+i;
-        } else if (i==j_local) {
-         idx_vi=GMRES_BUFFER0_U_MF+p_local;
-        } else
-         amrex::Error("i invalid");
-
-	 // SANITY CHECK
-        dot_productALL(project_option,
-         GMRES_BUFFER0_V_MF+j_local,
-         GMRES_BUFFER0_V_MF+j_local,vi_dot_vi,nsolve);
-
-        if (vi_dot_vi>0.0) {
-	 // do nothing
-	} else {	
-         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
-	 std::cout << "i= " << i << endl;
-         std::cout << "vhat_counter,j_local,p_local,m " <<
-          vhat_counter << ' ' << ' ' << j_local << ' ' <<
-          p_local << ' ' << m << endl;
-         std::cout << "beta= " << beta << endl;
-         for (int eh=0;eh<j_local;eh++) {
-          std::cout << "eh,error_historyGMRES[eh] " << eh << ' ' <<
-           error_historyGMRES[eh] << endl;
-         }
-         std::cout << "nsolve= " << nsolve << endl;
-         std::cout << "project_option= " << project_option << '\n';
-
-         amrex::Error("vi_dot_vi==0.0 (mid loop (main) sanity check)");
-	}
-
-        dot_productALL(project_option,
-         idx_vi,
-         GMRES_BUFFER0_V_MF+j_local,vj_dot_vi,nsolve);
-        dot_productALL(project_option,
-         idx_vi,
-         idx_vi,vi_dot_vi,nsolve);
-	if (vi_dot_vi>0.0) {
-         aa=-vj_dot_vi/vi_dot_vi;
-          // vj=vj+aa vi
-         mf_combine(project_option,
-           GMRES_BUFFER0_V_MF+j_local,idx_vi,aa,
-	   GMRES_BUFFER0_V_MF+j_local,nsolve); 
-         project_right_hand_side(GMRES_BUFFER0_V_MF+j_local,
-			 project_option,change_flag);
-	} else
- 	 amrex::Error("vi_dot_vi==0.0");
-       } // i=0..j_local
-       dot_productALL(project_option,
-        GMRES_BUFFER0_V_MF+j_local,
-        GMRES_BUFFER0_V_MF+j_local,vi_dot_vi,nsolve);
-       if (vi_dot_vi>0.0) {
-        aa=1.0/vi_dot_vi;
-        mult_array(0,nsolveMM,aa,GMRES_BUFFER0_V_MF+j_local);
-        project_right_hand_side(GMRES_BUFFER0_V_MF+j_local, 
-			project_option,change_flag);
-       } else
-        amrex::Error("vi_dot_vi==0.0 (renormalization)");
-
-        // Zj=M^{-1}Vj
-        // Z=project(Z)
-       multiphase_preconditioner(
-         project_option,project_timings,
-         presmooth,postsmooth,
-         GMRES_BUFFER0_Z_MF+j_local,
-         GMRES_BUFFER0_V_MF+j_local,nsolve);
-
-         // W=A Z
-         // 1. (begin)calls project_right_hand_side(Z)
-         // 2. (end)  calls project_right_hand_side(W)
-       applyALL(project_option,
-         GMRES_BUFFER0_Z_MF+j_local,
-         GMRES_BUFFER_W_MF,nsolve);
-
-        // H_j is a j+2 x j+1 matrix  j=0..m-1
-       for (int i=0;i<=j_local;i++) {
-        // H_ij=W dot Vi
-        dot_productALL(project_option,
-          GMRES_BUFFER_W_MF,
-          GMRES_BUFFER0_V_MF+i,HH[i][j_local],nsolve);
-       } // i=0..j_local
-
-        // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
-       for (int i=0;i<=p_local;i++) {
-        // G_ij=W dot Ui
-        dot_productALL(project_option,
-         GMRES_BUFFER_W_MF,
-         GMRES_BUFFER0_U_MF+i,GG[i][j_local],nsolve);
-       } // i=0..p_local
-
-       for (int i=0;i<=j_local;i++) {
-        aa=-HH[i][j_local];
-         // W=W+aa Vi
-        mf_combine(project_option,
-         GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-        project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
-       }
-       for (int i=0;i<=p_local;i++) {
-        aa=-GG[i][j_local];
-         // W=W+aa Ui
-        mf_combine(project_option,
-         GMRES_BUFFER_W_MF,GMRES_BUFFER0_U_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-        project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
-       }
-
-        // H_j is a j+2 x j+1 matrix  j=0..m-1
-       dot_productALL(project_option,
-         GMRES_BUFFER_W_MF,
-         GMRES_BUFFER_W_MF,HH[j_local+1][j_local],nsolve);
-
-       condition_number_blowup=0;
-       zeyu_condnum=1.0;
-
-       if (HH[j_local+1][j_local]>=0.0) {
-        HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
-       } else
-        amrex::Error("HH[j_local+1][j_local] invalid");
-
-       if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
-         // Real** HH   i=0..m  j=0..m-1
-         // active region: i=0..j_local+1  j=0..j_local
-         
-        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
-        if (zeyu_condnum>1.0/local_tol) { 
-         condition_number_blowup=1;  
-        } else if (zeyu_condnum<=1.0/local_tol) {
-         condition_number_blowup=0;  
-        } else
-         amrex::Error("zeyu_condnum NaN");
-
-       } else if ((HH[j_local+1][j_local]>=0.0)&&
-  		  (HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
-        condition_number_blowup=2;  
-        use_previous_iterate=1;
-	p_local--;
-       } else
-        amrex::Error("HH[j_local+1][j_local] invalid");
-
-       if (debug_BF_GMRES==1) {
-        std::cout << "BFGMRES: j_local="<< j_local << '\n';
-        std::cout << "BFGMRES: p_local="<< p_local << '\n';
-        std::cout << "BFGMRES: vhat_counter="<< vhat_counter << '\n';
-        std::cout << "BFGMRES: zeyu_condnum="<< zeyu_condnum << '\n';
-        std::cout << "BFGMRES: condition_number_blowup="<< 
-	     condition_number_blowup << '\n';
-
-        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-       }
-
-      } // vhat_counter=0..max_vhat_sweeps-1 or condition_number_blowup==0
-
-      if (vhat_counter==max_vhat_sweeps) {
-
-       use_previous_iterate=1;
-
-      } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
-       if (condition_number_blowup==0) {
-        // do nothing
-       } else if (condition_number_blowup==2) {
-        use_previous_iterate=1;
-       } else
-        amrex::Error("condition_number_blowup invalid");
-      } else
-       amrex::Error("vhat_counter invalid");
-
-     } else if (condition_number_blowup==0) {
-      // do nothing
-     } else if (condition_number_blowup==2) {
-      use_previous_iterate=1;
-     } else
-      amrex::Error("condition_number_blowup invalid");
-
-     if (use_previous_iterate==0) {
-
-       // H_j is a j+2 x j+1 matrix j=0..m-1
-       // G_j is a p(j)+1 x j+1 matrix j=0..m-1
-      for (int i1=0;i1<=j_local+1;i1++) {
-       for (int i2=0;i2<=j_local;i2++) {
-        HHGG[i1][i2]=HH[i1][i2];
-       }
-      }
-      for (int i1=0;i1<=p_local;i1++) {
-       for (int i2=0;i2<=j_local;i2++) {
-        HHGG[i1+j_local+2][i2]=GG[i1][i2];
-       }
-      }
-      status=1;
-      zeroALL(1,nsolveMM,idx_Z);
-
-      // sub box dimensions: p_local+j_local+3  x j_local+1
-      // j_local=0..m-1
-      LeastSquaresQR(HHGG,yy,beta_e1,2*m+2,2*m+1,
-         	     p_local+j_local+3,j_local+1);
-      if (status==1) {
-       for (int i2=0;i2<=j_local;i2++) {
-        aa=yy[i2];
-         // Z=Z+aa Z_{i2}
-        mf_combine(project_option,
-         idx_Z,
-         GMRES_BUFFER0_Z_MF+i2,aa,
-         idx_Z,nsolve); 
-        project_right_hand_side(idx_Z,project_option,change_flag);
-       }
-      } else
-       amrex::Error("status invalid");
-
-      if (disable_additional_basis==0) {
-
-       // residALL calls applyALL which calls 
-       // project_right_hand_side(idx_Z).
-       // At end end of residALL, 
-       // project_right_hand_side(W) is called.
-       residALL(project_option,
-        idx_R, // rhs
-        GMRES_BUFFER_W_MF, // resid
-        idx_Z, // source
-        nsolve);
-
-       Real beta_compare=0.0;
-       dot_productALL(project_option,
-	GMRES_BUFFER_W_MF, 
-	GMRES_BUFFER_W_MF,beta_compare,nsolve);
-       if (beta_compare>=0.0) {
-        beta_compare=sqrt(beta_compare);
-        if (beta_compare<=GMRES_tol*beta) {
-         convergence_flag=1;
-        } else if (beta_compare>GMRES_tol*beta) {
-         convergence_flag=0;
-        } else
-         amrex::Error("beta_compare invalid");
-       } else
-        amrex::Error("beta_compare invalid");
-
-       if (debug_BF_GMRES==1) {
-        std::cout << "BFGMRES: beta_compare=" <<
-         beta_compare << " beta=" << beta << '\n';
-       }
-
-       error_historyGMRES[j_local]=beta_compare;
-
-       if (j_local==0) {
-        if (beta_compare>beta) {
-         convergence_flag=1;
-        } else if (beta_compare<=beta) {
-         // do nothing
-        } else
-         amrex::Error("beta_compare or beta invalid");
-       } else if (j_local>0) {
-        if (beta_compare>error_historyGMRES[j_local-1]) {
-         convergence_flag=1;
-        } else if (beta_compare<=error_historyGMRES[j_local-1]) {
-         // do nothing
-        } else
-         amrex::Error("beta_compare or error_historyGMRES[j_local-1] invalid");
-       } else
-        amrex::Error("j_local invalid");
-
-      } else if (disable_additional_basis==1) {
-
-       convergence_flag=0;
-
-      } else
-       amrex::Error("disable_additional_basis invalid");
-
-      if (convergence_flag==0) {
-
-       if (HH[j_local+1][j_local]>0.0) {
-        if ((j_local>=0)&&(j_local<m-1)) {
-
-         // variables initialized to 0.0
-         allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+j_local+1);
-
-         aa=1.0/HH[j_local+1][j_local];
-          // V=V+aa W
-         mf_combine(project_option,
-          GMRES_BUFFER0_V_MF+j_local+1,
-          GMRES_BUFFER_W_MF,aa,
-          GMRES_BUFFER0_V_MF+j_local+1,nsolve); 
-         project_right_hand_side(GMRES_BUFFER0_V_MF+j_local+1,
-		       project_option,change_flag);
-        } else if (j_local==m-1) {
-         // do nothing
-        } else
-         amrex::Error("j_local invalid");
-       } else if (HH[j_local+1][j_local]==0.0) {
-        amrex::Error("HH[j_local+1][j_local] should not be 0");
-       } else {
-        amrex::Error("HH[j_local+1][j_local] invalid");
-       }
-
-      } else if (convergence_flag==1) {
-       // do nothing
-      } else
-       amrex::Error("convergence_flag invalid");
-
-     } else if (use_previous_iterate==1) {
-      convergence_flag=1;
-      if (j_local==0) {
-
-        // Z=M^{-1}R
-        // Z=project(Z)
-       multiphase_preconditioner(
-        project_option,project_timings,
-        presmooth,postsmooth,
-        idx_Z,idx_R,nsolve);
-      }
-     } else
-      amrex::Error("use_previous_iterate invalid");
-
-    } // j_local=0..m-1 (and convergence_flag==0)
-
-    if (debug_BF_GMRES==1) {
-     for (int i=0;i<j_local;i++) {
-      std::cout << "main: i,error_historyGMRES[i] " << i << ' ' <<
-	     error_historyGMRES[i] << endl;
-     } 
-    }
-
-    for (int i=0;i<j_local;i++) {
-     delete_array(GMRES_BUFFER0_Z_MF+i); 
-    }
-      // GMRES_BUFFER0_V_MF+0 deleted after if statement below. 
-    for (int i=1;i<j_local;i++) {
-     delete_array(GMRES_BUFFER0_V_MF+i); 
-    }
-    for (int i=p_local_init_allocated;i<p_local_allocated;i++) {
-     delete_array(GMRES_BUFFER0_U_MF+i); 
-    }
-
-    for (int i=0;i<m+1;i++) 
-     delete [] GG[i];
-    delete [] GG;
-
-    for (int i=0;i<2*m+2;i++) 
-     delete [] HHGG[i];
-    delete [] HHGG;
-
    } else
-    amrex::Error("breakdown_free_flag invalid");
+    amrex::Error("status invalid");
+
+   for (int i=1;i<m;i++) {
+    delete_array(GMRES_BUFFER0_V_MF+i); 
+   }
+   for (int i=0;i<m;i++) {
+    delete_array(GMRES_BUFFER0_Z_MF+i); 
+   }
 
    delete [] yy;
    delete [] beta_e1;
@@ -9982,33 +9405,24 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option_projection(project_option)==1) {
 
-  singular_possible=1; // all zero coefficients possible in solid regions.
-  local_solvability_projection=solvability_projection;
   if (project_option==1) { // initial project
    // do nothing
   } else if ((project_option==0)||   //regular project
              (project_option==11)) { //FSI_material_exists last project
-   if (some_materials_compressible())
-    local_solvability_projection=0;
+   // do nothing
   } else
    amrex::Error("project_option invalid 45"); 
  } else if (project_option==12) { // pressure extension
-  singular_possible=1; //all zero coefficients possible in non-solid regions.
-  local_solvability_projection=0;
+  // do nothing
  } else if (project_option==2) { // thermal conduction
-  singular_possible=0; // diagonally dominant everywhere.
-  local_solvability_projection=0;
+  // do nothing
  } else if (project_option==3) { // viscosity
-  singular_possible=0; // diagonally dominant everywhere.
   nsolve=AMREX_SPACEDIM;
-  local_solvability_projection=0;
  } else if ((project_option>=100)&&
             (project_option<100+num_species_var)) {//species
-  singular_possible=0; // diagonally dominant everywhere.
-  local_solvability_projection=0;
+  // do nothing
  } else if (project_option==200) { //smoothing
-  singular_possible=0; // diagonally dominant everywhere.
-  local_solvability_projection=0;
+  // do nothing
  } else
   amrex::Error("project_option invalid multiphase_project");
 
@@ -10862,11 +10276,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
        // MAC_PHI_CRSE=0.0 (from above)
        // CGRESID=MAC_RHS_CRSE-( alpha*phi-div grad phi )
-       // if local_solvability_projection, then this
-       // routine modifies CGRESID so that it sums to zero.
-       // if singular_possible, then this routine zeros out the
-       // residual where the matrix diagonal (prior to dual time stepping
-       // modification) is 0.
+       // null space is filtered out.
      residALL(project_option,MAC_RHS_CRSE_MF,
       CGRESID_MF,MAC_PHI_CRSE_MF,nsolve);
 
@@ -11793,11 +11203,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
      // OUTER_RESID=OUTER_RHS-
      //          ( alpha * phi + (alpha+da) * phi - div grad phi )
-     // if local_solvability_projection, then this
-     // routine modifies OUTER_RESID so that it sums to zero.
-     // if singular_possible, then this routine zeros out the
-     // residual where the matrix diagonal (prior to dual time stepping
-     // modification) is 0.
+     // null space is filtered
     residALL(project_option,OUTER_MAC_RHS_CRSE_MF,
       OUTER_RESID_MF,OUTER_MAC_PHI_CRSE_MF,nsolve);
     outer_error=0.0;
@@ -11873,13 +11279,8 @@ void NavierStokes::multiphase_project(int project_option) {
      // iterative techniques in matrix algebra) in this case since:
      // RHSPROJ( div(U - dt grad P) ) <> 
      // RHSPROJ( RHSPROJ(div U)- dt div grad P ) 
-    if (local_solvability_projection==1) {
-     if (bicgstab_num_outer_iterSOLVER>1)
-      outer_iter_done=1;
-    } else if (local_solvability_projection==0) {
-     // do nothing
-    } else
-     amrex::Error("local solvability_projection invalid");
+    if (bicgstab_num_outer_iterSOLVER>1)
+     outer_iter_done=1;
 
     if (bicgstab_num_outer_iterSOLVER<min_bicgstab_outer_iter)
      outer_iter_done=0;

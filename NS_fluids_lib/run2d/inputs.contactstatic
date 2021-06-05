@@ -140,7 +140,6 @@ ns.v = 1
 ns.lo_bc          = 3 5  # 4 5 TWO (0 5 o.t.)
 ns.hi_bc          = 2 2  # 3 5 TWO (0 5 o.t.)
 ns.projection_order=1
-ns.solvability=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

@@ -2091,124 +2091,6 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
 
 } // subroutine LP_dot
 
-
-void ABecLaplacian::init_checkerboard(MultiFab& v_in,
-                           int level_in) {
-
-#define profile_checkerboard 0
-
-#if (profile_checkerboard==1)
- std::string subname="ABecLaplacian::init_checkerboard";
- std::stringstream popt_string_stream(std::stringstream::in |
-  std::stringstream::out);
- popt_string_stream << cfd_project_option;
- std::string profname=subname+popt_string_stream.str();
- profname=profname+"_";
- std::stringstream lev_string_stream(std::stringstream::in |
-  std::stringstream::out);
- lev_string_stream << level_in;
- profname=profname+lev_string_stream.str();
-
- BLProfiler bprof(profname);
- bprof.stop();
-#endif
-
- if (laplacian_solvability==0) { // system is nonsingular.
-
-  // do nothing
-  
- } else if (laplacian_solvability==1) { // system is singular
-
-  bool use_tiling=cfd_tiling;
-
-  if (level_in>=MG_numlevels_var)
-   amrex::Error("level_in invalid in init_checkerboard");
-
-  if (level_in>=gbox.size()) {
-    std::cout << "level_in= " << level_in << '\n';
-    std::cout << "gboxsize= " << gbox.size() << '\n';
-    std::cout << "num levels = " << MG_numlevels_var << '\n';
-    amrex::Error("level exceeds gbox size");
-  }
-
-  if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-
-  const BoxArray& gboxlev = gbox[level_in];
-  int ncomp = v_in.nComp();
-  if (ncomp!=nsolve_bicgstab)
-    amrex::Error("ncomp invalid v_in");
-
-  if (v_in.boxArray()==gboxlev) {
-    // do nothing
-  } else
-    amrex::Error("v_in.boxArray()!=gboxlev");
-
-  int bfact=bfact_array[level_in];
-  int bfact_top=bfact_array[0];
-
-  thread_class::init_d_numPts(v_in.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel 
-#endif
-{
-  for (MFIter mfi(v_in,use_tiling); mfi.isValid(); ++mfi) {
-
-    if (mfi.validbox()==gboxlev[mfi.index()]) {
-     // do nothing
-    } else
-     amrex::Error("mfi.validbox()!=gboxlev[mfi.index()] init_checkerboard");
-
-    const int gridno = mfi.index();
-     // MFIter::tilebox () is declared in AMReX_MFIter.cpp
-     // MFIter::Initialize (), which is in AMReX_MFIter.cpp,
-     // calls getTileArray which is in AMReX_FabArrayBase.cpp
-    const Box& tilegrid=mfi.tilebox();
-    const Box& fabgrid=gboxlev[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-
-    int tid_current=0;
-#ifdef _OPENMP
-    tid_current = omp_get_thread_num();
-#endif
-    if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
-     // do nothing
-    } else
-     amrex::Error("tid_current invalid");
-
-    FArrayBox& vfab=v_in[mfi];
-
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     // in: MG_3D.F90
-    FORT_CHECKERBOARD_RB(
-     &ncomp,
-     vfab.dataPtr(),ARLIM(vfab.loVect()),ARLIM(vfab.hiVect()),
-     tilelo,tilehi,
-     fablo,fabhi, 
-     &bfact,&bfact_top);
-
-  } // MFIter
-} // omp
-
-  thread_class::sync_tile_d_numPts();
-
-  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(1);
-
- } else
-  amrex::Error("laplacian_solvability invalid");
-
-#undef profile_checkerboard
-
-} // subroutine init_checkerboard
-
-
-
 // onesCoefficients:
 // =1 
 void
@@ -2749,812 +2631,171 @@ ABecLaplacian::pcg_GMRES_solve(
 
    int m_small=m;
 
-   if (breakdown_free_flag==0) {
+   for (int j=1;j<m;j++) {
+    if (j>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+     GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+      nsolve_bicgstab,nghostRHS,
+      MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
+     GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
+      nsolve_bicgstab,nghostSOLN,
+      MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
+    }
 
-    for (int j=1;j<m;j++) {
-     if (j>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
-      GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-       nsolve_bicgstab,nghostRHS,
-       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
-      GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-       nsolve_bicgstab,nghostSOLN,
-       MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
-     }
+    GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+    GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+   } // j=1..m 
 
-     GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-     GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-    } // j=1..m 
+   for (int j=0;j<m_small;j++) {
 
-    for (int j=0;j<m_small;j++) {
+    GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
 
-     GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+     // Zj=M^{-1}Vj
+     // Z=project_null_space(Z)
+     // Vj is a normalized vector
+    pcg_solve(
+     GMRES_Z_MF[j][coarsefine],
+     GMRES_V_MF[j][coarsefine],
+     eps_abs,bot_atol,
+     pbdryhom_in,
+     bcpres_array,
+     usecg_at_bottom,
+     smooth_type,bottom_smooth_type,
+     presmooth,postsmooth,
+     use_PCG,
+     level,2);
 
-      // Zj=M^{-1}Vj
-      // Z=project_null_space(Z)
-      // Vj is a normalized vector
-     pcg_solve(
-      GMRES_Z_MF[j][coarsefine],
-      GMRES_V_MF[j][coarsefine],
-      eps_abs,bot_atol,
-      pbdryhom_in,
-      bcpres_array,
-      usecg_at_bottom,
-      smooth_type,bottom_smooth_type,
-      presmooth,postsmooth,
-      use_PCG,
-      level,2);
+    // w=A Z
+    apply(*GMRES_W_MF[coarsefine],
+         *GMRES_Z_MF[j][coarsefine],
+         level,*pbdryhom_in,bcpres_array);
+    project_null_space(*GMRES_W_MF[coarsefine],level);
 
-     // w=A Z
-     apply(*GMRES_W_MF[coarsefine],
-          *GMRES_Z_MF[j][coarsefine],
-          level,*pbdryhom_in,bcpres_array);
-     project_null_space(*GMRES_W_MF[coarsefine],level);
-
-     for (int i=0;i<=j;i++) {
-      LP_dot(*GMRES_W_MF[coarsefine],
-             *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
-
-      aa=-HH[i][j];
-       // W=W+aa Vi
-      CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                 (*GMRES_W_MF[coarsefine]),
-                 (*GMRES_V_MF[i][coarsefine]),level);
-      project_null_space(*GMRES_W_MF[coarsefine],level);
-     } // i=0..j
-
+    for (int i=0;i<=j;i++) {
      LP_dot(*GMRES_W_MF[coarsefine],
-            *GMRES_W_MF[coarsefine],level,HH[j+1][j]);
+            *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
 
-     if (HH[j+1][j]>=0.0) {
-      HH[j+1][j]=sqrt(HH[j+1][j]);
+     aa=-HH[i][j];
+      // W=W+aa Vi
+     CG_advance((*GMRES_W_MF[coarsefine]),aa,
+                (*GMRES_W_MF[coarsefine]),
+                (*GMRES_V_MF[i][coarsefine]),level);
+     project_null_space(*GMRES_W_MF[coarsefine],level);
+    } // i=0..j
+
+    LP_dot(*GMRES_W_MF[coarsefine],
+           *GMRES_W_MF[coarsefine],level,HH[j+1][j]);
+
+    if (HH[j+1][j]>=0.0) {
+     HH[j+1][j]=sqrt(HH[j+1][j]);
+    } else
+     amrex::Error("HH[j+1][j] invalid");
+     
+    if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
+
+     status=1;
+
+     if ((j>=0)&&(j<m_small)) {
+      caller_id=33;
+      GMRES_MIN_CPP(HH,beta,yy,
+       m,j+1,
+       caller_id,cfd_project_option,
+       level,status);
      } else
-      amrex::Error("HH[j+1][j] invalid");
-      
-     if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
+      amrex::Error("j invalid");
 
-      status=1;
-
-      if ((j>=0)&&(j<m_small)) {
-       caller_id=33;
-       GMRES_MIN_CPP(HH,beta,yy,
-	m,j+1,
-	caller_id,cfd_project_option,
-        level,status);
+     if (status==1) {
+ 
+      if ((j>=0)&&(j<m-1)) {
+       aa=1.0/HH[j+1][j];
+        // V=V+aa W
+       CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
+                  (*GMRES_V_MF[j+1][coarsefine]),
+                  (*GMRES_W_MF[coarsefine]),level);
+       project_null_space(*GMRES_V_MF[j+1][coarsefine],level);
+      } else if (j==m-1) {
+       // do nothing
       } else
        amrex::Error("j invalid");
 
-      if (status==1) {
- 
-       if ((j>=0)&&(j<m-1)) {
-        aa=1.0/HH[j+1][j];
-         // V=V+aa W
-        CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
-                   (*GMRES_V_MF[j+1][coarsefine]),
-                   (*GMRES_W_MF[coarsefine]),level);
-        project_null_space(*GMRES_V_MF[j+1][coarsefine],level);
-       } else if (j==m-1) {
-        // do nothing
-       } else
-        amrex::Error("j invalid");
+     } else if (status==0) {
 
-      } else if (status==0) {
-
-       m_small=j;
-
-       if (1==0) {
-        std::cout << "j= " << j << " HH[j][j]= " <<
-          HH[j][j] << endl;
-        std::cout << "j= " << j << " HH[j+1][j]= " <<
-          HH[j+1][j] << endl;
-	std::cout << "j= " << j << " beta= " << beta << endl;
-       }
-
-      } else
-       amrex::Error("status invalid");
-
-     } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
       m_small=j;
-     } else {
-      std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
-      amrex::Error("HH[j+1][j] invalid");
-     }
 
-    } // j=0..m_small-1
- 
-    status=1;
+      if (1==0) {
+       std::cout << "j= " << j << " HH[j][j]= " <<
+         HH[j][j] << endl;
+       std::cout << "j= " << j << " HH[j+1][j]= " <<
+         HH[j+1][j] << endl;
+       std::cout << "j= " << j << " beta= " << beta << endl;
+      }
 
-    if ((m_small>=1)&&
-        (m_small<=m)) {
-
-     caller_id=3;
-     GMRES_MIN_CPP(HH,beta,yy,
-       m,m_small,
-       caller_id,cfd_project_option,
-       level,status);
-
-     if (status==1) {
-      // do nothing
      } else
-      amrex::Error("expecting status==1 here");
+      amrex::Error("status invalid");
 
-    } else if (m_small==0) {
-
-     // Z=M^{-1}R
-     // Z=project_null_space(Z)
-     // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
-     pcg_solve(
-      z_in,r_in,
-      eps_abs,bot_atol,
-      pbdryhom_in,
-      bcpres_array,
-      usecg_at_bottom,
-      smooth_type,bottom_smooth_type,
-      presmooth,postsmooth,
-      use_PCG,
-      level,3);
-
+    } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
+     m_small=j;
     } else {
-     std::cout << "m_small= " << m_small << '\n';
-     amrex::Error("CGSolver.cpp m_small invalid");
+     std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
+     amrex::Error("HH[j+1][j] invalid");
     }
+
+   } // j=0..m_small-1
  
+   status=1;
+
+   if ((m_small>=1)&&
+       (m_small<=m)) {
+
+    caller_id=3;
+    GMRES_MIN_CPP(HH,beta,yy,
+      m,m_small,
+      caller_id,cfd_project_option,
+      level,status);
+
     if (status==1) {
-     z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-     for (int j=0;j<m_small;j++) {
-      aa=yy[j];
-       // Z=Z+aa Zj
-      CG_advance((*z_in),aa,(*z_in),
-                 (*GMRES_Z_MF[j][coarsefine]),level);
-      project_null_space((*z_in),level);
-     }
+     // do nothing
     } else
-     amrex::Error("status invalid");
-
-    for (int j=gmres_precond_iter_base_mg*nsolve_bicgstab;j<m;j++) {
-     delete GMRES_V_MF[j][coarsefine];
-     delete GMRES_Z_MF[j][coarsefine];
-     GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
-     GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
-    }
-
-   } else if (breakdown_free_flag==1) {
-
-    Real breakdown_tol=KRYLOV_NORM_CUTOFF;
-
-     // G_j is a p(j)+1 x j+1 matrix   j=0..m-1
-    Real** GG=new Real*[m+1];
-    for (int i=0;i<m+1;i++) { 
-     GG[i]=new Real[m];
-     for (int j=0;j<m;j++) 
-      GG[i][j]=0.0;
-    }
-
-    Real** HHGG=new Real*[2*m+2];
-    for (int i=0;i<2*m+2;i++) { 
-     HHGG[i]=new Real[2*m+1];
-     for (int j=0;j<2*m+1;j++) 
-      HHGG[i][j]=0.0;
-    }
-
-    int convergence_flag=0;
-    int p_local=-1;
-    int p_local_allocated=gmres_precond_iter_base_mg*nsolve_bicgstab;
-    int p_local_init_allocated=p_local_allocated;
-
-    int j_local=0;
-
-    if (debug_BF_GMRES==1) {
-     std::cout << "BF_GMRES mglib: level= " << level 
-	    << "gmres_precond_iter= " << gmres_precond_iter << '\n';
-     std::cout << "BF_GMRES mglib: beta= " << beta << '\n';
-    }
-
-    Vector<Real> error_history;
-    error_history.resize(m);
-
-    int use_previous_iterate=0;
-
-    for (j_local=0;((j_local<m_small)&&(convergence_flag==0));j_local++) {
-
-     use_previous_iterate=0;
-
-     if (j_local>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
-      GMRES_Z_MF[j_local][coarsefine]=
-        new MultiFab(gbox[level],dmap_array[level],
-                     nsolve_bicgstab,nghostSOLN,
-                     MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
-     }
-     GMRES_Z_MF[j_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-
-     GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-
-      // Zj=M^{-1}Vj
-      // z=project_null_space(z)
-     pcg_solve(
-      GMRES_Z_MF[j_local][coarsefine],
-      GMRES_V_MF[j_local][coarsefine],
-      eps_abs,bot_atol,
-      pbdryhom_in,
-      bcpres_array,
-      usecg_at_bottom,
-      smooth_type,bottom_smooth_type,
-      presmooth,postsmooth,
-      use_PCG,
-      level,4);
-
-     // w=A Z
-     apply(*GMRES_W_MF[coarsefine],
-          *GMRES_Z_MF[j_local][coarsefine],
-          level,*pbdryhom_in,bcpres_array);
-     project_null_space(*GMRES_W_MF[coarsefine],level);
-
-      // H_j     is a j+2 x j+1 matrix  j=0..m-1
-      // H_{j-1} is a j+1 x j   matrix  j=0..m-1
-      // This step is equivalent to:
-      // H_j=[ H_{j-1}    h_{j}  
-      //         0        h_{j+1,j}  ]
-      // h_{j} is a j+1 x 1 vector.
-     for (int i=0;i<=j_local;i++) {
-       // H_ij=W dot Vi
-      LP_dot(*GMRES_W_MF[coarsefine],
-	     *GMRES_V_MF[i][coarsefine],level,HH[i][j_local]);
-     } // i=0..j_local
-
-      // p_local=p(j-1)
-      // G_j      is a p(j)+1   x j+1 matrix  j=0..m-1
-      // G_{j-1}  is a p(j-1)+1 x j   matrix  j=0..m-1
-      // G'_j     is a p(j-1)+1 x j+1 matrix  j=0..m-1
-      // This step is equivalent to:
-      // G'_j= [ G_{j-1} g_{j} ]
-      // g_{j} is a p(j-1)+1 x 1 vector
-     for (int i=0;i<=p_local;i++) {
-       // G_ij=W dot Ui
-      LP_dot(*GMRES_W_MF[coarsefine],
-	     *GMRES_U_MF[i][coarsefine],level,GG[i][j_local]);
-     } // i=0..p_local
-
-     for (int i=0;i<=j_local;i++) {
-      aa=-HH[i][j_local];
-       // W=W+aa Vi
-      CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                 (*GMRES_W_MF[coarsefine]),
-                 (*GMRES_V_MF[i][coarsefine]),level);
-      project_null_space(*GMRES_W_MF[coarsefine],level);
-     }
-     for (int i=0;i<=p_local;i++) {
-      aa=-GG[i][j_local];
-       // W=W+aa Ui
-      CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                 (*GMRES_W_MF[coarsefine]),
-                 (*GMRES_U_MF[i][coarsefine]),level);
-      project_null_space(*GMRES_W_MF[coarsefine],level);
-     }
-
-      // H_j is a j+2 x j+1 matrix  j=0..m-1
-     LP_dot(*GMRES_W_MF[coarsefine],
-            *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
-
-     if (HH[j_local+1][j_local]>=0.0) {
-      HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
-     } else
-      amrex::Error("HH[j_local+1][j_local] invalid");
-
-     double local_tol=breakdown_tol;
-     if (p_local>=0) {
-      local_tol/=pow(10.0,2*p_local);
-     } else if (p_local==-1) {
-      // do nothing
-     } else
-      amrex::Error("p_local invalid");
-
-       // NOTE: if h_{j+1,j}==0 this means that ||w||=0,
-       //  which means that the new candidate v_{j+1} will
-       //  be a linear combination of v_{0},...,v_{j}.
-       //  Also, if h_{j+1,j}=0, this means that the last
-       //  row of H_j will be all zeroes which implies that the
-       //  last column of H_{j}^T will be all zeros.  
-       //  But, h_{j+1,j}=0, does not imply that 
-       //  condnum(H_{j})=infinity.  Theoretically, ||w||<>0
-       //  if h_j not the zero vector?
-
-     int condition_number_blowup=0;
-     double zeyu_condnum=1.0;
-
-     if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
-
-      if (CG_verbose>2) {
-       std::cout << "calling CondNum level=" << level << '\n';
-       std::cout << "calling CondNum j_local=" << j_local << '\n';
-       std::cout << "calling CondNum m=" << m << '\n';
-      }
-
-       // Real** HH   i=0..m  j=0..m-1
-       // active region: i=0..j_local+1  j=0..j_local
-      if (disable_additional_basis==0) {
-       zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
-      } else if (disable_additional_basis==1) {
-       zeyu_condnum=0.0;
-      } else
-       amrex::Error("disable_additional_basis invalid");
-
-      if (CG_verbose>2) {
-       std::cout << "after CondNum level=" << level << '\n';
-       std::cout << "after CondNum zeyu_condnum=" << zeyu_condnum << '\n';
-      }
-      if (zeyu_condnum>1.0/local_tol) { 
-       condition_number_blowup=1;  
-      } else if (zeyu_condnum<=1.0/local_tol) {
-       condition_number_blowup=0;  
-      } else
-       amrex::Error("zeyu_condnum NaN");
-
-     } else if ((HH[j_local+1][j_local]>=0.0)&&
-		(HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
-      condition_number_blowup=2;  
-      use_previous_iterate=1;
-     } else
-      amrex::Error("HH[j_local+1][j_local] invalid");
-
-     if (debug_BF_GMRES==1) {
-      std::cout << "BFGMRES mglib: j_local="<< j_local << '\n';
-      std::cout << "BFGMRES mglib: zeyu_condnum="<< zeyu_condnum << '\n';
-      std::cout << "BFGMRES mglib: condition_number_blowup="<< 
-	     condition_number_blowup << '\n';
-
-      std::cout << "BFGMRES mglib: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-      std::cout << "BFGMRES mglib: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-     }
-
-     if (condition_number_blowup==1) {
-
-      p_local++;
-
-       // variables initialized to 0.0  
-      if (p_local>=p_local_allocated) {
-       GMRES_U_MF[p_local][coarsefine]=
-	 new MultiFab(gbox[level],dmap_array[level],
-                      nsolve_bicgstab,nghostRHS,
-                      MFInfo().SetTag("GMRES_U_MF"),FArrayBoxFactory()); 
-       p_local_allocated++;
-      }
-
-      GMRES_U_MF[p_local][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-    
-      MultiFab::Copy(*GMRES_U_MF[p_local][coarsefine],
-		     *GMRES_V_MF[j_local][coarsefine],0,0,
-		     nsolve_bicgstab,nghostRHS);
-
-      if (j_local==0) {
-	// do nothing if j_local==0
-
-        // In the paper by Reichel and Ye:
-	//  H_k     is a k+1 x k matrix  k=1..m	      
-	//  H_{k-1} is a k x k-1 matrix  k=1..m	      
-	// In this code:
-        // G_{j-1} is a p(j-1)+1 x j   matrix  j=0..m-1
-        // G'_j    is a p(j-1)+1 x j+1 matrix  j=0..m-1
-        // H_{j}   is a j+2 x j+1      matrix  j=0..m-1
-        // H_{j-1} is a j+1 x j        matrix  j=0..m-1
-	// G_j     is a p(j)+1 x j+1   matrix  j=0..m-1
-	// G_j= [                          G'_j
-	//        last (j+1)th row of H_{j-1}        0  ]
-      } else if ((j_local>=1)&&(j_local<m)) {
-       for (int i=0;i<j_local;i++) {
-        GG[p_local][i]=HH[j_local][i];
-	HH[j_local][i]=0.0;
-       }
-      } else
-       amrex::Error("j_local invalid");
-
-      int max_vhat_sweeps=4;
-      int vhat_counter=0;
-      for (vhat_counter=0;((vhat_counter<max_vhat_sweeps)&&
-			   (condition_number_blowup==1));vhat_counter++) {
-
-       GMRES_V_MF[j_local][coarsefine]->setVal(1.0,0,nsolve_bicgstab,nghostRHS);
-       init_checkerboard((*GMRES_V_MF[j_local][coarsefine]),level);
-       project_null_space((*GMRES_V_MF[j_local][coarsefine]),level);
-        // v_i dot v_j = 0 i=0..j-1
-	// u_p dot v_j = 0
-	// for i=0..j-1
-	//  v_j = v_j - (vj,vi)vi/(vi,vi)
-
-       double vj_dot_vi=0.0;
-       double vi_dot_vi=0.0;
-       for (int i=0;i<=j_local;i++) {
-	MultiFab* vi_MF;
-        if ((i>=0)&&(i<j_local)) {
-         vi_MF=GMRES_V_MF[i][coarsefine];
-        } else if (i==j_local) {
-         vi_MF=GMRES_U_MF[p_local][coarsefine];
-        } else
-         amrex::Error("i invalid");
-
-	 // SANITY CHECK
-        LP_dot((*GMRES_V_MF[j_local][coarsefine]),
-               (*GMRES_V_MF[j_local][coarsefine]),
-    	       level,vi_dot_vi);
-	
-        if (vi_dot_vi>0.0) {
-	 // do nothing
-	} else {	
-         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
-	 std::cout << "i= " << i << endl;
-         std::cout << "vhat_counter,j_local,p_local,m " <<
-          vhat_counter << ' ' << ' ' << j_local << ' ' <<
-          p_local << ' ' << m << endl;
-         std::cout << "beta= " << beta << endl;
-         for (int eh=0;eh<j_local;eh++) {
-          std::cout << "eh,error_history[eh] " << eh << ' ' <<
-           error_history[eh] << endl;
-         }
-         std::cout << "level= " << level << endl;
-         std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
-         std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-         std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
-         std::cout << "gbox[level]= " << gbox[level] << '\n';
-
-         amrex::Error("vi_dot_vi==0.0 (mid loop sanity check)");
-	}
-
-        LP_dot(*vi_MF,
-               *GMRES_V_MF[j_local][coarsefine],
-	       level,vj_dot_vi);
-        LP_dot(*vi_MF,
-               *vi_MF,
-	       level,vi_dot_vi);
-	if (vi_dot_vi>0.0) {
-         aa=-vj_dot_vi/vi_dot_vi;
-          // vj=vj+aa vi
-         CG_advance((*GMRES_V_MF[j_local][coarsefine]),aa,
-                    (*GMRES_V_MF[j_local][coarsefine]),
-                    *vi_MF,level);
-         project_null_space(*GMRES_V_MF[j_local][coarsefine],level);
-	} else {
-         std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
-         std::cout << "vhat_counter,i,j_local,p_local,m " <<
-           vhat_counter << ' ' << i << ' ' << j_local << ' ' <<
-           p_local << ' ' << m << endl;
-         std::cout << "beta= " << beta << endl;
-         for (int eh=0;eh<j_local;eh++) {
-          std::cout << "eh,error_history[eh] " << eh << ' ' <<
-           error_history[eh] << endl;
-         }
-         std::cout << "level= " << level << endl;
-         std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
-         std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-         std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
-         std::cout << "gbox[level]= " << gbox[level] << '\n';
- 	 amrex::Error("vi_dot_vi==0.0");
-        }
-       } // i=0..j_local
-       LP_dot((*GMRES_V_MF[j_local][coarsefine]),
-              (*GMRES_V_MF[j_local][coarsefine]),
-	      level,vi_dot_vi);
-       if (vi_dot_vi>0.0) {
-        aa=1.0/vi_dot_vi;
-	GMRES_V_MF[j_local][coarsefine]->mult(aa,0,nsolve_bicgstab,nghostRHS);
-        project_null_space(*GMRES_V_MF[j_local][coarsefine],level);
-       } else {
-
-        std::cout << "vi_dot_vi= " << vi_dot_vi << endl;
-        std::cout << "vhat_counter,j_local,p_local,m " <<
-          vhat_counter << ' ' << ' ' << j_local << ' ' <<
-          p_local << ' ' << m << endl;
-        std::cout << "beta= " << beta << endl;
-        for (int eh=0;eh<j_local;eh++) {
-         std::cout << "eh,error_history[eh] " << eh << ' ' <<
-          error_history[eh] << endl;
-        }
-        std::cout << "level= " << level << endl;
-        std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << endl;
-        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-        std::cout << "gbox[level].size()= " << gbox[level].size() << '\n';
-        std::cout << "gbox[level]= " << gbox[level] << '\n';
-
-        amrex::Error("vi_dot_vi==0.0 (renormalization)");
-       }
-
-        // Zj=M^{-1}Vj
-        // z=project_null_space(z)
-       pcg_solve(
-        GMRES_Z_MF[j_local][coarsefine],
-        GMRES_V_MF[j_local][coarsefine],
-        eps_abs,bot_atol,
-        pbdryhom_in,
-        bcpres_array,
-        usecg_at_bottom,
-        smooth_type,bottom_smooth_type,
-        presmooth,postsmooth,
-        use_PCG,
-        level,5);
-
-       // w=A Z
-       apply(*GMRES_W_MF[coarsefine],
-            *GMRES_Z_MF[j_local][coarsefine],
-            level,*pbdryhom_in,bcpres_array);
-       project_null_space(*GMRES_W_MF[coarsefine],level);
-
-        // H_j is a j+2 x j+1 matrix  j=0..m-1
-	// last column of H_j is replaced by h_j
-	//  (except the (j+2th,j+1th) component)
-       for (int i=0;i<=j_local;i++) {
-        // H_ij=W dot Vi
-        LP_dot(*GMRES_W_MF[coarsefine],
-  	       *GMRES_V_MF[i][coarsefine],level,HH[i][j_local]);
-       } // i=0..j_local
-
-        // G_j is a p(j)+1 x j+1 matrix  j=0..m-1
-        // g_j is a p(j)+1 x 1   vector  j=0..m-1
-       for (int i=0;i<=p_local;i++) {
-        // G_ij=W dot Ui
-	// last column of G_j is replaced by g_j
-        LP_dot(*GMRES_W_MF[coarsefine],
-  	       *GMRES_U_MF[i][coarsefine],level,GG[i][j_local]);
-       } // i=0..p_local
-
-       for (int i=0;i<=j_local;i++) {
-        aa=-HH[i][j_local];
-         // W=W+aa Vi
-        CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                   (*GMRES_W_MF[coarsefine]),
-                   (*GMRES_V_MF[i][coarsefine]),level);
-       }
-       for (int i=0;i<=p_local;i++) {
-        aa=-GG[i][j_local];
-         // W=W+aa Ui
-        CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                   (*GMRES_W_MF[coarsefine]),
-                   (*GMRES_U_MF[i][coarsefine]),level);
-        project_null_space(*GMRES_W_MF[coarsefine],level);
-       }
-
-        // H_j is a j+2 x j+1 matrix  j=0..m-1
-       LP_dot(*GMRES_W_MF[coarsefine],
-              *GMRES_W_MF[coarsefine],level,HH[j_local+1][j_local]);
-
-       condition_number_blowup=0;
-       zeyu_condnum=1.0;
-
-       if (HH[j_local+1][j_local]>=0.0) {
-        HH[j_local+1][j_local]=sqrt(HH[j_local+1][j_local]);
-       } else
-        amrex::Error("HH[j_local+1][j_local] invalid");
-
-       if (HH[j_local+1][j_local]>KRYLOV_NORM_CUTOFF) {
-         // Real** HH   i=0..m  j=0..m-1
-         // active region: i=0..j_local+1  j=0..j_local
-         
-        zeyu_condnum=CondNum(HH,m+1,m,j_local+2,j_local+1,local_tol);
-        if (zeyu_condnum>1.0/local_tol) { 
-         condition_number_blowup=1;  
-        } else if (zeyu_condnum<=1.0/local_tol) {
-         condition_number_blowup=0;  
-        } else
-         amrex::Error("zeyu_condnum NaN");
-
-       } else if ((HH[j_local+1][j_local]>=0.0)&&
-  		  (HH[j_local+1][j_local]<=KRYLOV_NORM_CUTOFF)) {
-        condition_number_blowup=2;  
-        use_previous_iterate=1;
-	p_local--;
-       } else
-        amrex::Error("HH[j_local+1][j_local] invalid");
-
-       if (debug_BF_GMRES==1) {
-        std::cout << "BFGMRES: j_local="<< j_local << '\n';
-        std::cout << "BFGMRES: p_local="<< p_local << '\n';
-        std::cout << "BFGMRES: vhat_counter="<< vhat_counter << '\n';
-        std::cout << "BFGMRES: zeyu_condnum="<< zeyu_condnum << '\n';
-        std::cout << "BFGMRES: condition_number_blowup="<< 
-	     condition_number_blowup << '\n';
-
-        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-        std::cout << "BFGMRES: HH[j_local+1][j_local]=" <<
-	      HH[j_local+1][j_local] << '\n';
-       }
-
-      } // vhat_counter=0..max_vhat_sweeps-1 or condition_number_blowup==0
-
-      if (vhat_counter==max_vhat_sweeps) {
-
-       use_previous_iterate=1;
-
-      } else if ((vhat_counter>0)&&(vhat_counter<max_vhat_sweeps)) {
-       if (condition_number_blowup==0) {
-        // do nothing
-       } else if (condition_number_blowup==2) {
-        use_previous_iterate=1;
-       } else
-        amrex::Error("condition_number_blowup invalid");
-      } else
-       amrex::Error("vhat_counter invalid");
-
-     } else if (condition_number_blowup==0) {
-      // do nothing
-     } else if (condition_number_blowup==2) {
-      use_previous_iterate=1;
-     } else
-      amrex::Error("condition_number_blowup invalid");
-
-     if (use_previous_iterate==0) {
-
-       // H_j is a j+2 x j+1 matrix j=0..m-1
-       // G_j is a p(j)+1 x j+1 matrix j=0..m-1
-      for (int i1=0;i1<=j_local+1;i1++) {
-       for (int i2=0;i2<=j_local;i2++) {
-        HHGG[i1][i2]=HH[i1][i2];
-       }
-      }
-      for (int i1=0;i1<=p_local;i1++) {
-       for (int i2=0;i2<=j_local;i2++) {
-        HHGG[i1+j_local+2][i2]=GG[i1][i2];
-       }
-      }
-      status=1;
-      z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-
-       // sub box dimensions: p_local+j_local+3  x j_local+1
-       // j_local=0..m-1
-      LeastSquaresQR(HHGG,yy,beta_e1,2*m+2,2*m+1,
-		    p_local+j_local+3,j_local+1);
-      if (status==1) {
-       for (int i2=0;i2<=j_local;i2++) {
-        aa=yy[i2];
-         // Z=Z+aa Z_{i2}
-        CG_advance((*z_in),aa,(*z_in),
-                   (*GMRES_Z_MF[i2][coarsefine]),level);
-        project_null_space((*z_in),level);
-       }
-      } else
-       amrex::Error("status invalid");
-
-      if (disable_additional_basis==0) {
-
-       project_null_space(*z_in,level);
-       // resid,rhs,soln
-       residual((*GMRES_W_MF[coarsefine]),  // resid
-                (*r_in),  // rhs
-                (*z_in),  // soln
-                level,
-  	        (*pbdryhom_in),bcpres_array);
-       project_null_space((*GMRES_W_MF[coarsefine]),level);
-
-       Real beta_compare=0.0;
-       LP_dot(*GMRES_W_MF[coarsefine],
-              *GMRES_W_MF[coarsefine],level,beta_compare);
-       if (beta_compare>=0.0) {
-        beta_compare=sqrt(beta_compare);
-        if (beta_compare<=GMRES_tol*beta) {
-         convergence_flag=1;
-        } else if (beta_compare>GMRES_tol*beta) {
-         convergence_flag=0;
-        } else
-         amrex::Error("beta_compare invalid");
-       } else
-        amrex::Error("beta_compare invalid");
-
-       if (debug_BF_GMRES==1) {
-        std::cout << "BFGMRES mglib: beta_compare=" <<
-         beta_compare << " beta=" << beta << '\n';
-       }
-
-       error_history[j_local]=beta_compare;
-
-       if (j_local==0) {
-        if (beta_compare>beta) {
-         convergence_flag=1;
-        } else if (beta_compare<=beta) {
-         // do nothing
-        } else
-         amrex::Error("beta_compare or beta invalid");
-       } else if (j_local>0) {
-        if (beta_compare>error_history[j_local-1]) {
-         convergence_flag=1;
-        } else if (beta_compare<=error_history[j_local-1]) {
-         // do nothing
-        } else
-         amrex::Error("beta_compare or error_history[j_local-1] invalid");
-       } else
-        amrex::Error("j_local invalid");
-
-      } else if (disable_additional_basis==1) {
-
-       convergence_flag=0;
-
-      } else
-       amrex::Error("disable_additional_basis invalid");
-
-      if (convergence_flag==0) {
-
-       if (HH[j_local+1][j_local]>0.0) {
-        if ((j_local>=0)&&(j_local<m-1)) {
-
-         if (j_local+1>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
-          GMRES_V_MF[j_local+1][coarsefine]=
-           new MultiFab(gbox[level],dmap_array[level],
-                        nsolve_bicgstab,nghostRHS,
-                        MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
-         }
-         GMRES_V_MF[j_local+1][coarsefine]->
-           setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-
-         aa=1.0/HH[j_local+1][j_local];
-          // V=V+aa W
-         CG_advance((*GMRES_V_MF[j_local+1][coarsefine]),aa,
-                    (*GMRES_V_MF[j_local+1][coarsefine]),
-                    (*GMRES_W_MF[coarsefine]),level);
-         project_null_space(*GMRES_V_MF[j_local+1][coarsefine],level);
-        } else if (j_local==m-1) {
-         // do nothing
-        } else
-         amrex::Error("j_local invalid");
-       } else if (HH[j_local+1][j_local]==0.0) {
-        amrex::Error("HH[j_local+1][j_local] should not be 0");
-       } else {
-        amrex::Error("HH[j_local+1][j_local] invalid");
-       }
-
-      } else if (convergence_flag==1) {
-       // do nothing
-      } else
-       amrex::Error("convergence_flag invalid");
-
-     } else if (use_previous_iterate==1) {
-      convergence_flag=1;
-      if (j_local==0) {
+     amrex::Error("expecting status==1 here");
+
+   } else if (m_small==0) {
+
+    // Z=M^{-1}R
+    // Z=project_null_space(Z)
+    // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
+    pcg_solve(
+     z_in,r_in,
+     eps_abs,bot_atol,
+     pbdryhom_in,
+     bcpres_array,
+     usecg_at_bottom,
+     smooth_type,bottom_smooth_type,
+     presmooth,postsmooth,
+     use_PCG,
+     level,3);
+
+   } else {
+    std::cout << "m_small= " << m_small << '\n';
+    amrex::Error("CGSolver.cpp m_small invalid");
+   }
  
-       // Z=M^{-1}R
-       // z=project_null_space(z)
-       pcg_solve(
-        z_in,r_in,
-        eps_abs,bot_atol,
-        pbdryhom_in,
-        bcpres_array,
-        usecg_at_bottom,
-        smooth_type,bottom_smooth_type,
-        presmooth,postsmooth,
-        use_PCG,
-        level,6);
-      } 
-     } else
-      amrex::Error("use_previous_iterate invalid");
-
-    } // j_local=0..m_small-1 (and convergence_flag==0)
-
-    if (debug_BF_GMRES==1) {
-     for (int i=0;i<j_local;i++) {
-      std::cout << "mglib: i,error_history[i] " << i << ' ' <<
-	     error_history[i] << endl;
-     } 
+   if (status==1) {
+    z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+    for (int j=0;j<m_small;j++) {
+     aa=yy[j];
+      // Z=Z+aa Zj
+     CG_advance((*z_in),aa,(*z_in),
+                (*GMRES_Z_MF[j][coarsefine]),level);
+     project_null_space((*z_in),level);
     }
-
-    for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<j_local;i++) {
-     delete GMRES_Z_MF[i][coarsefine];
-     GMRES_Z_MF[i][coarsefine]=(MultiFab*)0;
-    }
-    for (int i=gmres_precond_iter_base_mg*nsolve_bicgstab;i<j_local;i++) {
-     delete GMRES_V_MF[i][coarsefine];
-     GMRES_V_MF[i][coarsefine]=(MultiFab*)0;
-    }
-    for (int i=p_local_init_allocated;i<p_local_allocated;i++) {
-     delete GMRES_U_MF[i][coarsefine];
-     GMRES_U_MF[i][coarsefine]=(MultiFab*)0;
-    }
-
-    for (int i=0;i<m+1;i++) 
-     delete [] GG[i];
-    delete [] GG;
-
-    for (int i=0;i<2*m+2;i++) 
-     delete [] HHGG[i];
-    delete [] HHGG;
-
    } else
-    amrex::Error("breakdown_free_flag invalid");
+    amrex::Error("status invalid");
+
+   for (int j=gmres_precond_iter_base_mg*nsolve_bicgstab;j<m;j++) {
+    delete GMRES_V_MF[j][coarsefine];
+    delete GMRES_Z_MF[j][coarsefine];
+    GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
+    GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
+   }
 
    delete [] yy;
    delete [] beta_e1;

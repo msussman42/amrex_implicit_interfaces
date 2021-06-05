@@ -16,7 +16,6 @@ geometry.prob_hi   =  1.0 4.0  # MO changed dimensions slightly
 geometry.is_periodic=0 0
 ns.redist_on_init=1
 ns.implicit_surface_tension=0
-ns.solvability=1
 ns.cwater=1.0E+8
 ns.cvapor=1.0E+8
 

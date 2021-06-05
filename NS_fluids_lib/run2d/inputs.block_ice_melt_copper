@@ -43,7 +43,6 @@ ns.minimum_relative_error=1.0e-22
 ns.gmres_precond_iter_base=4
 ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
-ns.solvability_projection=0 # 0 since one must allow for expansion
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 # changes to inputs file for evaporation and condensation:

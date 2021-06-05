@@ -133,7 +133,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2
-ns.solvability_projection=0  # outflow at bottom of domain
 ns.heatviscconst=0.0 0.0 0.0 
 ns.viscconst=1.0 0.000182 1.0
 ns.denconst=1.0 0.001205 1.0

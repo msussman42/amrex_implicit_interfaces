@@ -709,9 +709,6 @@ Real NavierStokes::real_number_of_cells=0.0;
 Real NavierStokes::mglib_min_coeff_factor=1000.0; 
 
 int NavierStokes::hydrate_flag=0; 
-int NavierStokes::singular_possible=0; 
-int NavierStokes::solvability_projection=0; 
-int NavierStokes::local_solvability_projection=0; 
 int NavierStokes::post_init_pressure_solve=1; 
 
 int NavierStokes::conservative_tension_force=0;
@@ -835,7 +832,6 @@ Vector<Real> NavierStokes::reaction_rate;
 //   ->  mL  m_ambient 0.0
 //   species_molar_mass
 //   ->  m_vapor
-//   solvability_projection=0
 //   material_type
 //   0 ?? 999
 //   temperature_primitive_variable
@@ -3836,63 +3832,45 @@ NavierStokes::read_params ()
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
      amrex::Error("post_init_pressure_solve out of range");
 
-    int expected_solvability_projection=0;
-    if (some_materials_compressible()==1) {
-     expected_solvability_projection=0;
-    } else if (some_materials_compressible()==0) {
-     expected_solvability_projection=1;
-     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
 
-      if (geometry_is_periodic[dir]==1) {
+     if (geometry_is_periodic[dir]==1) {
+      // do nothing
+     } else if (geometry_is_periodic[dir]==0) {
+
+      if (lo_bc[dir]==Interior) {
+       amrex::Error("cannot have Interior lo_bc if not periodic");
+      } else if (lo_bc[dir]==Symmetry) {
        // do nothing
-      } else if (geometry_is_periodic[dir]==0) {
-
-       if (lo_bc[dir]==Interior) {
-        amrex::Error("cannot have Interior lo_bc if not periodic");
-       } else if (lo_bc[dir]==Symmetry) {
-        // do nothing
-       } else if (lo_bc[dir]==Inflow) {
-        // do nothing
-       } else if (lo_bc[dir]==SlipWall) {
-        // do nothing
-       } else if (lo_bc[dir]==NoSlipWall) {
-        // do nothing
-       } else if (lo_bc[dir]==Outflow) {
-        expected_solvability_projection=0;
-       } else
-        amrex::Error("lo_bc[dir] not recognized");
-
-       if (hi_bc[dir]==Interior) {
-        amrex::Error("cannot have Interior hi_bc if not periodic");
-       } else if (hi_bc[dir]==Symmetry) {
-        // do nothing
-       } else if (hi_bc[dir]==Inflow) {
-        // do nothing
-       } else if (hi_bc[dir]==SlipWall) {
-        // do nothing
-       } else if (hi_bc[dir]==NoSlipWall) {
-        // do nothing
-       } else if (hi_bc[dir]==Outflow) {
-        expected_solvability_projection=0;
-       } else
-        amrex::Error("hi_bc[dir] not recognized");
-
+      } else if (lo_bc[dir]==Inflow) {
+       // do nothing
+      } else if (lo_bc[dir]==SlipWall) {
+       // do nothing
+      } else if (lo_bc[dir]==NoSlipWall) {
+       // do nothing
+      } else if (lo_bc[dir]==Outflow) {
+       // do nothing
       } else
-       amrex::Error("geometry_is_periodic[dir] invalid"); 
-     } // dir=0..sdim-1
-    } else {
-     amrex::Error("some_materials_compressible invalid");
-    }
+       amrex::Error("lo_bc[dir] not recognized");
 
-    solvability_projection=expected_solvability_projection;
+      if (hi_bc[dir]==Interior) {
+       amrex::Error("cannot have Interior hi_bc if not periodic");
+      } else if (hi_bc[dir]==Symmetry) {
+       // do nothing
+      } else if (hi_bc[dir]==Inflow) {
+       // do nothing
+      } else if (hi_bc[dir]==SlipWall) {
+       // do nothing
+      } else if (hi_bc[dir]==NoSlipWall) {
+       // do nothing
+      } else if (hi_bc[dir]==Outflow) {
+       // do nothing
+      } else
+       amrex::Error("hi_bc[dir] not recognized");
 
-    pp.query("solvability_projection",solvability_projection);
-
-    if (solvability_projection==expected_solvability_projection) {
-     // do nothing
-    } else {
-     amrex::Error("solvability_projection!=expected_solvability_projection");
-    }
+     } else
+      amrex::Error("geometry_is_periodic[dir] invalid"); 
+    } // dir=0..sdim-1
 
     pp.query("use_lsa",use_lsa);
     if ((use_lsa<0)||(use_lsa>1))
@@ -5050,8 +5028,6 @@ NavierStokes::read_params ()
 
      std::cout << "post_init_pressure_solve " << 
        post_init_pressure_solve << '\n';
-
-     std::cout << "solvability_projection " << solvability_projection << '\n';
 
      std::cout << "curv_stencil_height " << curv_stencil_height << '\n';
 
@@ -9866,7 +9842,6 @@ void NavierStokes::make_marangoni_force(int isweep) {
    &dt_slab,
    &cur_time_slab,
    &visc_coef,
-   &solvability_projection,  // not used
    presbc.dataPtr(),
    velbc.dataPtr(),
    vofbc.dataPtr(),
@@ -12935,7 +12910,6 @@ NavierStokes::level_phase_change_convert(
     &tid_current,
     &im_outer,
     &im_opp_outer,
-    &solvability_projection, // if solvability_projection==1 => net growth=0
     &ngrow_expansion,
     &level,&finest_level,
     &normal_probe_size,
@@ -15062,7 +15036,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nfluxSEM, // ncphys (nflux for advection)
       override_density.dataPtr(),
       constant_density_all_time.dataPtr(),
-      &solvability_projection,
       denbc.dataPtr(),  // presbc
       velbc.dataPtr(),  
       &slab_step,
@@ -15251,7 +15224,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &level, 
       &finest_level,
       &face_flag,
-      &solvability_projection,
       &project_option_visc,
       &local_enable_spectral,
       &fluxvel_index,
@@ -17027,265 +16999,112 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 void NavierStokes::project_right_hand_side(
   int index_MF,int project_option,int& change_flag) {
 
+ int finest_level=parent->finestLevel();
+ if ((level==0)&&(finest_level>=level)) {
+  // do nothing
+ } else
+  amrex::Error("level or finest_level invalid");
+
  change_flag=0;
 
  if (project_option_singular_possible(project_option)==1) {
 
-  int finest_level=parent->finestLevel();
-  if (finest_level>=0) {
+  int at_least_one_active=0;
+  for (int icolor=0;icolor<color_ONES_count;icolor++) {
 
-   if (level==0) {
-
-    int at_least_one_active=0;
-    for (int icolor=0;icolor<color_ONES_count;icolor++) {
-     if (singular_patch_flag[icolor]==0) {
-      // do nothing
-     } else if (singular_patch_flag[icolor]==1) {
-      if (ones_sum_global[icolor]>=1.0) {
-       at_least_one_active=1;
-      }
-     } else if (singular_patch_flag[icolor]==2) {
-      if (ones_sum_global[icolor]>=1.0) {
-       at_least_one_active=1;
-      }
-     } else
-      amrex::Error("singular_patch_flag invalid");
-    } // icolor=0..color_ONES_count-1
-
-    if (at_least_one_active==1) {
-
-     if (local_solvability_projection==0) {
-
-      int at_least_one_singular=0;
-      for (int icolor=0;icolor<color_ONES_count;icolor++) {
-       if (singular_patch_flag[icolor]==0) {
-        // do nothing
-       } else if (singular_patch_flag[icolor]==1) {
-        at_least_one_singular=1;
-	amrex::Error("local_solvability_projection/singular_patch_flag bad");
-       } else if (singular_patch_flag[icolor]==2) {
-        // do nothing
-       } else
-        amrex::Error("singular_patch_flag[icolor] invalid");
-      } // icolor=0..color_ONES_count-1
-
-      if (singular_possible==1) {
-       zap_resid_where_singular(index_MF); // multiply by ONES_MF
-       change_flag=1;
-      } else if (singular_possible==0) {
-       // do nothing
-      } else
-       amrex::Error("singular_possible invalid"); 
-
-     } else if (local_solvability_projection==1) {
-
-      if (singular_possible==1) {
-       // rhsnew=rhs H-alpha H
-       // 0 =sum rhs H-alpha sum H
-       // alpha=sum rhs H / sum H
-       zap_resid_where_singular(index_MF); // multiply by ONES_MF
-       Vector<Real> coef;
-       coef.resize(color_ONES_count);
-       dot_productALL_ones(project_option,index_MF,coef);
-
-       for (int icolor=0;icolor<color_ONES_count;icolor++) {
-        if (singular_patch_flag[icolor]==0) {
-
-         if (ones_sum_global[icolor]>=1.0) {
-          // do nothing
-	 } else
-	  amrex::Error("ones_sum_global[icolor] invalid");
-
-        } else if (singular_patch_flag[icolor]==1) {
-
-         if (ones_sum_global[icolor]>=1.0) {
-
-          if (verbose>0) {
-           if (ParallelDescriptor::IOProcessor()) {
-            std::cout << "prj_rhs, icolor=" << icolor << '\n';
-            std::cout << "prj_rhs, coef=" << coef[icolor] << '\n';
-            std::cout << "prj_rhs, ones_sum_global=" << 
-		   ones_sum_global[icolor] << '\n';
-           } 
-          } // verbose>0
-
-	  coef[icolor]=-coef[icolor]/ones_sum_global[icolor];
-	 } else
-	  amrex::Error("ones_sum_global[icolor] invalid");
-
-        } else if (singular_patch_flag[icolor]==2) {
-
-         if (ones_sum_global[icolor]>=1.0) {
-          // do nothing
-	 } else
-	  amrex::Error("ones_sum_global[icolor] invalid");
-
-        } else
-         amrex::Error("singular_patch_flag[icolor] invalid");
-       } // icolor=0..color_ONES_count-1
-
-       if (verbose>0) {
-        if (ParallelDescriptor::IOProcessor()) {
-         std::cout << "project_right_hand_side, coef=" << coef << '\n';
-         std::cout << "project_right_hand_side, denom=" << 
-            ones_sum_global << '\n';
-        } 
-       } // verbose>0
-
-       mf_combine_ones(project_option,index_MF,coef);
-       zap_resid_where_singular(index_MF);
-       change_flag=1;
-      } else
-       amrex::Error("singular_possible invalid"); 
-
-     } else
-      amrex::Error("local_solvability_projection invalid");
-
-    } else {
-     std::cout << "index_MF = " << index_MF << '\n';
-     std::cout << "project_option = " << project_option << '\n';
-     std::cout << "at_least_one_active = " << at_least_one_active << '\n';
-     amrex::Error("at_least_one_active invalid");
-    }
+   if (ones_sum_global[icolor]>=1.0) {
+    // do nothing
    } else
-    amrex::Error("level invalid");
-  } else
-   amrex::Error("finest_level invalid");
+    amrex::Error("ones_sum_global[icolor] invalid");
+
+   if (singular_patch_flag[icolor]==0) {
+    // do nothing
+   } else if (singular_patch_flag[icolor]==1) {
+    at_least_one_active=1;
+   } else if (singular_patch_flag[icolor]==2) {
+    at_least_one_active=1;
+   } else
+    amrex::Error("singular_patch_flag invalid");
+
+  } // icolor=0..color_ONES_count-1
+
+  if (at_least_one_active==1) {
+
+   change_flag=1;
+   zap_resid_where_singular(index_MF); // multiply by ONES_MF
+
+    // rhsnew=rhs H-alpha H
+    // 0 =sum rhs H-alpha sum H
+    // alpha=sum rhs H / sum H
+   Vector<Real> coef;
+   coef.resize(color_ONES_count);
+   dot_productALL_ones(project_option,index_MF,coef);
+
+   for (int icolor=0;icolor<color_ONES_count;icolor++) {
+
+    if (singular_patch_flag[icolor]==0) {
+
+     if (ones_sum_global[icolor]>=1.0) {
+      // do nothing
+     } else
+      amrex::Error("ones_sum_global[icolor] invalid");
+
+    } else if (singular_patch_flag[icolor]==1) {
+
+     if (ones_sum_global[icolor]>=1.0) {
+
+      if (verbose>0) {
+       if (ParallelDescriptor::IOProcessor()) {
+        std::cout << "prj_rhs, icolor=" << icolor << '\n';
+        std::cout << "prj_rhs, coef=" << coef[icolor] << '\n';
+        std::cout << "prj_rhs, ones_sum_global=" << 
+         ones_sum_global[icolor] << '\n';
+       } 
+      } // verbose>0
+
+      coef[icolor]=-coef[icolor]/ones_sum_global[icolor];
+
+     } else
+      amrex::Error("ones_sum_global[icolor] invalid");
+
+    } else if (singular_patch_flag[icolor]==2) {
+
+     if (ones_sum_global[icolor]>=1.0) {
+      // do nothing
+     } else
+      amrex::Error("ones_sum_global[icolor] invalid");
+
+    } else
+     amrex::Error("singular_patch_flag[icolor] invalid");
+
+   } // icolor=0..color_ONES_count-1
+
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "project_right_hand_side, coef=" << coef << '\n';
+     std::cout << "project_right_hand_side, denom=" << 
+         ones_sum_global << '\n';
+    } 
+   } // verbose>0
+
+   mf_combine_ones(project_option,index_MF,coef);
+   zap_resid_where_singular(index_MF);
+
+  } else {
+   std::cout << "index_MF = " << index_MF << '\n';
+   std::cout << "project_option = " << project_option << '\n';
+   std::cout << "at_least_one_active = " << at_least_one_active << '\n';
+   amrex::Error("at_least_one_active invalid");
+  }
 
  } else if (project_option_singular_possible(project_option)==0) {
 
-  if (singular_possible==0) {
-   // do nothing
-  } else
-   amrex::Error("singular_possible invalid");
+  // do nothing
 
  } else
   amrex::Error("project_option_singular_possible inv project_right_hand_side");
 
 } // subroutine project_right_hand_side
-
-void NavierStokes::init_checkerboardLEV(
-  int index_MF,int project_option,
-  int nsolve,int nsolveMM) {
-
- bool use_tiling=ns_tiling;
-
- if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
-
- debug_ngrow(index_MF,0,51);
-
- if (localMF[index_MF]->nGrow()==0) {
-  // do nothing
- } else
-  amrex::Error("localMF[index_MF]->nGrow() invalid");
- if (localMF[index_MF]->nComp()==nsolveMM) {
-  // do nothing
- } else
-  amrex::Error("localMF[index_MF]->nComp() invalid");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- int finest_level=parent->finestLevel();
- if (level>finest_level)
-  amrex::Error("level too big");
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[index_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel 
-#endif
-{
- for (MFIter mfi(*localMF[index_MF],use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-  int bfact=parent->Space_blockingFactor(level);
-
-  FArrayBox& fab = (*localMF[index_MF])[mfi];
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // in: MG_3D.F90
-  FORT_CHECKERBOARD_RB(&nsolveMM,
-    fab.dataPtr(),ARLIM(fab.loVect()), ARLIM(fab.hiVect()),
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,&bfact);
- } // mfi
-} // omp
- ns_reconcile_d_num(101);
-
-} // init_checkerboardLEV
-
-void NavierStokes::init_checkerboardALL(
-  int index_MF,int project_option,
-  int nsolve,int nsolveMM) {
-
- if (project_option_singular_possible(project_option)==1) {
-
-  int finest_level=parent->finestLevel();
-  if (finest_level>=0) {
-
-   if (level==0) {
-
-    if (ones_sum_global>=1.0) {
-
-     if (local_solvability_projection==0) { // system is nonsingular.
-      if (singular_possible==1) {  // some regions might be masked off
-       // do nothing
-      } else if (singular_possible==0) {
-       // do nothing
-      } else
-       amrex::Error("singular_possible invalid"); 
-     } else if (local_solvability_projection==1) { // system is singular
-
-      if (singular_possible==1) { // some parts of domain might be masked off.
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-	ns_level.init_checkerboardLEV(index_MF,project_option,
-			nsolve,nsolveMM);
-       }
-      } else
-       amrex::Error("singular_possible invalid"); 
-
-     } else
-      amrex::Error("local_solvability_projection invalid");
-
-    } else {
-     std::cout << "index_MF = " << index_MF << '\n';
-     std::cout << "project_option = " << project_option << '\n';
-     std::cout << "ones_sum_global = " << ones_sum_global << '\n';
-     amrex::Error("ones_sum_global invalid");
-    }
-   } else
-    amrex::Error("level invalid");
-  } else
-   amrex::Error("finest_level invalid");
-
- } else if (project_option_singular_possible(project_option)==0) {
-
-  if (singular_possible==0) {
-   // do nothing
-  } else
-   amrex::Error("singular_possible invalid");
- } else
-  amrex::Error("project_option_singular_possible invalid");
-
-} // subroutine init_checkerboardALL
-
 
 void NavierStokes::dot_productALL_ones(int project_option,
   int index_MF,Vector<Real>& coef) {

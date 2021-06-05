@@ -43,7 +43,6 @@ Lp.bottom_smooth_type=2
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10
 ns.initial_cg_cycles=10 
-ns.solvability_projection=0
 
 ns.num_materials=2
 ns.num_species_var=0

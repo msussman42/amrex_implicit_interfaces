@@ -127,7 +127,6 @@ ns.advbot=0.0
 ns.adv_vel=-14.0
 # M.OHTA adv_dir=2 RZ adv_dir=3 XYZ
 ns.adv_dir=2
-ns.solvability_projection=0  # outflow at bottom of domain
 ns.heatviscconst=0.0 0.0  
 ns.viscconst=10.0 1.8164E-2  
 ns.denconst=1.0 1.20717E-3 

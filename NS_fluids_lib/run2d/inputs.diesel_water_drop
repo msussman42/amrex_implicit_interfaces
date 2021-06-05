@@ -109,7 +109,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1
-ns.solvability_projection=1
 ns.heatviscconst=0.0 0.0 0.0 0.0
 # Re=56.3, 123.3, 171.6, 213.2, 267.9, 305.5, 355.1
 # physical values: diesel 0.032 water 0.01

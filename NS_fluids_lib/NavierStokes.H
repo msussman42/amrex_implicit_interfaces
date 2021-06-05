@@ -531,10 +531,6 @@ public:
 
     void project_right_hand_side(int index_MF,int project_option,
 		    int& change_flag);
-    void init_checkerboardALL(int index_MF,int project_option,
-		    int nsolve,int nsolveMM);
-    void init_checkerboardLEV(int index_MF,int project_option,
-		    int nsolve,int nsolveMM);
 
     void init_boundary();
     void init_boundary_list(Vector<int> scomp,Vector<int> ncomp);
@@ -1639,7 +1635,6 @@ protected:
 
     int save_mg_precond;
 
-    int solvability_level_flag;
     Vector<int> bcpres_array;
     Vector<Real> xarray;
     int icnt_xarray;
@@ -1975,9 +1970,6 @@ protected:
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
 
-    static int  singular_possible;
-    static int  local_solvability_projection;
-    static int  solvability_projection; // def=0
     static int  post_init_pressure_solve;
     static Real denfact;
     static Real velfact;

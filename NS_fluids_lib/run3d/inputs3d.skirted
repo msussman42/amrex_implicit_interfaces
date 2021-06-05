@@ -119,7 +119,6 @@ ns.adv_vel=0.0
 ns.yblob9=0.0  # vertical velocity at xlo  1.0
 ns.yblob10=0.0  # vertical velocity at xhi -1.0
 ns.adv_dir=3
-ns.solvability_projection=0
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
 # 1 ERG= 1 (gram cm^2/s^2)

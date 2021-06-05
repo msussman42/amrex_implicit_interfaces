@@ -16,7 +16,6 @@ geometry.prob_hi   =  0.0048 0.0048 0.0072  # units of cm
 geometry.is_periodic = 0 0 0
 
 # MARCO: this option is important since symmetric BCs on all walls.
-ns.solvability_projection=1
 # MARCO: ns.v=1 outputs residual which guides choice of 
 #      projection_pressure_scale (scale chosen so that initial residual O(1))
 ns.projection_pressure_scale=1000.0

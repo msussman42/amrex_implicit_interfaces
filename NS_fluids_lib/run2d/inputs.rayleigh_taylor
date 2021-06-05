@@ -45,7 +45,6 @@ ns.initial_project_cycles=3
 # do 1 MGPCG cycles, then restart the MGPCG iteration
 # and do as many cycles as necessary in order to achieve convergence.
 ns.initial_cg_cycles=1
-ns.solvability_projection=1  # 1=INCOMP 0=COMPRESSIBLE
 ns.projection_pressure_scale=1.0e+6
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 32 128 

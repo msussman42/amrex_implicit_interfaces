@@ -107,8 +107,6 @@ ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # FOR INDEFINITE MATRICES:
-# solvability_projection=1 if all walls symmetric.
-# solvability_projection=0 if some walls outflow.
 # if all walls are "symmetry": we force sum p_{ij} = 0 
 # (null space vector as extra row) and we force
 # sum rhs_{ij}=0 (null space vector as extra column)
@@ -116,7 +114,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # for convergence criteria too,  R^{T} A R < C * tolerance , along
 # with the standard check: R^{T} R < tolerance
 #  R=residual 
-ns.solvability_projection=0
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

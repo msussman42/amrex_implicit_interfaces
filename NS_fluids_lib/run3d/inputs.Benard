@@ -98,7 +98,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1  # 1,.., sdim
-ns.solvability_projection=1  # 1=INCOMP 0=COMP
 # a=(2 omega sin(phi) v  -2 omega sin(phi) u  0)=(f v  -f u  0)
 # 2 omega sin(phi)=f
 # angular_velocity=f/2=1E-4/2=0.5E-4=5E-5

@@ -68,7 +68,6 @@ ns.MOFITERMAX=15
 ns.EILE_flag=1
 ns.ns_tiling=false
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-ns.solvability_projection=0
 
 ns.projection_pressure_scale=1.0e+6 # since outflow_pressure=1.0e+6
 ns.minimum_relative_error=1.0e-24

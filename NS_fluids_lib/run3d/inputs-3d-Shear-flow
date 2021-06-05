@@ -16,7 +16,6 @@ ns.MOFITERMAX=15
 
 ns.tempconst=293.0 293.0 # default values for incomp flows
 ns.pressure_error_cutoff=0.0 0.0  # used only for compressible flows
-ns.solvability_projection=1 # 1 if all bc wall or periodic
 # M.OHTA first order is best for efficiency and accuracy
 ns.num_materials=2
 ns.num_species_var=0

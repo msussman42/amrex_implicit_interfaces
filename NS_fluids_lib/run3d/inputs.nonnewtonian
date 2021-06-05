@@ -131,7 +131,6 @@ ns.v = 1
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 2 2 2
 ns.hi_bc          = 2 2 2
-ns.solvability=0  # set to 1 if none of the walls are outflow
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
