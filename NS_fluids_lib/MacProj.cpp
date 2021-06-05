@@ -244,19 +244,41 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  } else
   amrex::Error("coarsest_ONES_level invalid");
 
-FIX ME
-singular_possible
-solvability
-ones_sum_global
+ mac_op->laplacian_solvability=0; // nonsingular matrix
+
  if (level>coarsest_ONES_level) {
-  mac_op->laplacian_solvability=0;
- } else if (level<=coarsest_ONES_level) {
- mac_op->laplacian_solvability=solvability_level_flag;
+  mac_op->laplacian_solvability=0; // nonsingular matrix
+ } else if ((level>=0)&&(level<=coarsest_ONES_level)) {
+  int all_singular_patches=1;
+  if (color_ONES_count>0) {
+   for (int icolor=0;icolor<color_ONES_count;icolor++) {
+    if (singular_patch_flag[icolor]==0) {
+     // do nothing
+    } else if (singular_patch_flag[icolor]==1) {
+     // do nothing
+    } else if (singular_patch_flag[icolor]==2) {
+     all_singular_patches=0;
+    } else 
+     amrex::Error("invalid singular_patch_flag[icolor]");
+   } // icolor=0;icolor<color_ONES_count;icolor++
+   if (all_singular_patches==0) {
+    mac_op->laplacian_solvability=0; //nonsingular matrix
+   } else if (all_singular_patches==1) {
+    if (project_option_singular_possible(project_option)==1) {
+     mac_op->laplacian_solvability=1; //singular matrix
+    } else
+     amrex::Error("all_singular_patches invalid");
+   } else
+    amrex::Error("all_singular_patches invalid");
+  } else
+   amrex::Error("color_ONES_count invalid");
+ } else
+  amrex::Error("level invalid");
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "allocate_maccoef level= " << level << 
-     " solvability_level_flag= " << solvability_level_flag << '\n';
+     " all_singular_patches= " << all_singular_patches << '\n';
   }
  }
 
