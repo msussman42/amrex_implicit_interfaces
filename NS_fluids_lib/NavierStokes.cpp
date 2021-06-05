@@ -17132,7 +17132,6 @@ void NavierStokes::project_right_hand_side(
         } 
        } // verbose>0
 
-       FIX ME
        mf_combine_ones(project_option,index_MF,coef);
        zap_resid_where_singular(index_MF);
        change_flag=1;
@@ -17322,7 +17321,7 @@ void NavierStokes::dot_productALL_ones(int project_option,
 
 } // subroutine dot_productALL_ones
 
-
+// index_MF = index_MF + coef
 void NavierStokes::mf_combine_ones(int project_option,
   int index_MF,Vector<Real> coef) {
 
@@ -17950,21 +17949,15 @@ NavierStokes::mf_combine_ones_level(int project_option,
   Vector<int> presbc=getBCArray(State_Type,gridno,
    num_materials_vel*AMREX_SPACEDIM,1);
 
-  Vector<int> fab_flag;
-  fab_flag.resize(color_ONES_count);
-  for (int icolor=0;icolor<color_ONES_count;icolor++) {
-   fab_flag[icolor]=singular_patch_flag[icolor];
-  }
-
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_COMBINE_ONES(
+  FORT_FABCOM_ONES(
    beta.dataPtr(),
-   fab_flag.dataPtr(),
+   singular_patch_flag.dataPtr(),
    data_fab.dataPtr(),
    ARLIM(data_fab.loVect()),ARLIM(data_fab.hiVect()),
    ones_fab.dataPtr(),

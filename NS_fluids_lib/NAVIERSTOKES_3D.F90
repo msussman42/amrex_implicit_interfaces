@@ -11571,6 +11571,278 @@ END SUBROUTINE SIMP
        return
        end subroutine FORT_SUMDOT_ONES
 
+       FIX ME  auto init solvabiliy cond
+       subroutine FORT_FABCOM_ONES( &
+        beta,  &
+        singular_patch_flag,  &
+        data_fab, &
+        DIMS(data_fab), &
+        ones_fab, &
+        DIMS(ones_fab), &
+        type_fab, &
+        DIMS(type_fab), &
+        color_fab, &
+        DIMS(color_fab), &
+        alpha_fab, &
+        DIMS(alpha_fab), &
+        mask_fab, &
+        DIMS(mask_fab), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        levelno,gridno, &
+        nsolve, &
+        presbc, &
+        type_flag, &
+        color_count, &
+        project_option)
+    
+       use global_utility_module
+       use probf90_module
+ 
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: project_option
+       INTEGER_T, intent(in) :: color_count
+       REAL_T, intent(in) :: beta(color_count)
+       INTEGER_T, intent(in) :: singular_patch_flag(color_count)
+       INTEGER_T, intent(in) :: levelno,gridno
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: DIMDEC(data_fab)
+       INTEGER_T, intent(in) :: DIMDEC(ones_fab)
+       INTEGER_T, intent(in) :: DIMDEC(type_fab)
+       INTEGER_T, intent(in) :: DIMDEC(color_fab)
+       INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
+       INTEGER_T, intent(in) :: DIMDEC(mask_fab)
+       REAL_T, intent(inout) :: data_fab(DIMV(data_fab))
+       REAL_T, intent(in) :: ones_fab(DIMV(ones_fab))
+       REAL_T, intent(in) :: type_fab(DIMV(type_fab))
+       REAL_T, intent(in) :: color_fab(DIMV(color_fab))
+       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, intent(in) :: mask_fab(DIMV(mask_fab))
+       INTEGER_T, intent(in) :: presbc(SDIM,2)
+       INTEGER_T, intent(in) :: type_flag(2)
+
+       INTEGER_T icolor,nc
+       INTEGER_T i,j,k
+       INTEGER_T local_mask,local_color,local_type
+       INTEGER_T plus_flag,zero_flag
+       REAL_T local_alpha
+       INTEGER_T dir_local
+       INTEGER_T icrit
+       INTEGER_T side
+       INTEGER_T local_bc
+
+       if ((levelno.lt.0).or.(gridno.lt.0)) then
+        print *,"level or grid invalid"
+        stop
+       endif
+       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
+        print *,"nsolve invalid"
+        stop
+       endif
+       if (project_option.eq.3) then
+        if (nsolve.eq.SDIM) then
+         ! do nothing
+        else
+         print *,"nsolve invalid"
+         stop
+        endif
+       else if (project_option_is_validF(project_option).eq.1) then
+        if (nsolve.eq.1) then
+         ! do nothing
+        else
+         print *,"nsolve invalid"
+         stop
+        endif
+       else
+        print *,"project_option invalid"
+        stop
+       endif
+       if (color_count.ge.1) then
+        ! do nothing
+       else
+        print *,"color_count invalid"
+        stop
+       endif
+
+       call checkbound(fablo,fabhi,DIMS(data_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(ones_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(type_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(color_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(alpha_fab),0,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(mask_fab),0,-1,414) 
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+        local_mask=NINT(mask(D_DECL(i,j,k)))
+
+        if (local_mask.eq.1) then
+
+         local_color=NINT(color_fab(D_DECL(i,j,k)))
+
+         if ((local_color.ge.1).and.(local_color.le.color_count)) then
+
+          if (project_option_singular_possibleF(project_option).eq.1) then
+
+           if (singular_patch_flag(local_color).eq.0) then
+            ! do nothing
+           else if (singular_patch_flag(local_color).eq.1) then
+            data_fab(D_DECL(i,j,k))= &
+              data_fab(D_DECL(i,j,k))+beta(local_color)
+           else if (singular_patch_flag(local_color).eq.2) then
+            ! do nothing
+           else
+            print *,"singular_patch_flag invalid";
+            stop
+           endif
+
+          else if (project_option_singular_possibleF(project_option).eq.0) then
+           ! do nothing
+          else
+           print *,"project_option_singular_possible invalid";
+           stop
+          endif
+
+          local_type=NINT(type_fab(D_DECL(i,j,k)))
+          local_ones=NINT(ones_fab(D_DECL(i,j,k)))
+           ! completely masked off cell
+          if ((local_ones.eq.0).and.(local_type.eq.1)) then
+           if (type_flag(local_type).eq.1) then
+            ! do nothing (type exists)
+           else
+            print *,"type_flag invalid"
+            stop
+           endif
+          else if ((local_ones.eq.1).and.(local_type.eq.2)) then
+           if (singular_patch_flag(local_color).ge.1) then
+            ! do nothing
+           else
+            print *,"singular_patch_flag invalid"
+            stop
+           endif
+           if (type_flag(local_type).eq.1) then
+            ! do nothing (type exists)
+           else
+            print *,"type_flag invalid"
+            stop
+           endif
+           plus_flag=0
+           zero_flag=0
+           do nc=1,nsolve
+            local_alpha=alpha_fab(D_DECL(i,j,k),nc)
+            if (local_alpha.eq.zero) then
+             zero_flag=1
+            else if (local_alpha.gt.zero) then
+             plus_flag=1
+            else
+             print *,"local_alpha invalid"
+             stop
+            endif 
+           enddo !nc=1..nsolve
+           if ((plus_flag.eq.1).and.(zero_flag.eq.0)) then
+            if (singular_patch_flag(local_color).ge.2) then
+             ! do nothing
+            else
+             print *,"singular_patch_flag invalid"
+             stop
+            endif
+           else if ((plus_flag.eq.0).and.(zero_flag.eq.1)) then
+            ! do nothing
+           else
+            print *,"plus_flag or zero_flag invalid"
+            stop
+           endif
+           do dir_local=1,SDIM
+            if (dir_local.eq.1) then
+             icrit=i
+            else if (dir_local.eq.2) then
+             icrit=j
+            else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
+             icrit=k
+            else
+             print *,"dir_local invalid"
+             stop
+            endif
+            side=0
+            if ((icrit.gt.fablo(dir_local)).and. &
+                (icrit.lt.fabhi(dir_local))) then
+             ! do nothing
+            else if (icrit.eq.fablo(dir_local)) then
+             side=1
+            else if (icrit.eq.fabhi(dir_local)) then
+             side=2
+            else
+             print *,"icrit invalid"
+             stop
+            endif
+            if (side.eq.0) then
+             ! do nothing
+            else if ((side.eq.1).or.(side.eq.2)) then
+             local_bc=presbc(dir_local,side)
+             if (project_option.eq.12) then ! pressure extrapolation
+              ! do nothing (all bcs are Neumann)
+             else if &
+               (project_option_singular_possibleF(project_option).eq.1) then
+              if (local_bc.eq.INT_DIR) then
+               ! do nothing
+              else if (local_bc.eq.FOEXTRAP) then
+               ! do nothing
+              else if (local_bc.eq.REFLECT_EVEN) then
+               ! do nothing
+              else if (local_bc.eq.EXT_DIR) then
+               if (singular_patch_flag(local_color).ge.2) then
+                ! do nothing
+               else
+                print *,"fab_flag invalid"
+                stop
+               endif
+              else
+               print *,"local_bc invalid"
+               stop
+              endif
+             else if &
+               (project_option_singular_possibleF(project_option).eq.0) then
+              ! do nothing
+             else
+              print *,"project_option invalid"
+              stop
+             endif
+            else
+             print *,"side invalid"
+             stop
+            endif
+           enddo !dir_local=1..sdim
+          else
+           print *,"local_ones or local_type invalid"
+           stop
+          endif
+         else
+          print *,"local_color invalid"
+          stop
+         endif
+
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else 
+         print *,"mask invalid"
+         stop
+        endif
+
+       enddo ! k
+       enddo ! j
+       enddo ! i
+
+       return
+       end subroutine FORT_FABCOM_ONES
+
 ! coriolis force:
 ! R''_space=R''_earth + 2 (omega cross v)+omega cross (omega cross R)+
 ! w' cross R.
