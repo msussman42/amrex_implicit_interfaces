@@ -114,7 +114,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1
-ns.solvability_projection=1
 ns.heatviscconst=0.0 0.0 0.0 0.0
 # Re=467.5, 603.5, 934.9
 # 1/Re=0.002, 0.0017, 0.0011

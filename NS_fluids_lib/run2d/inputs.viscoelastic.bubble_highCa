@@ -132,7 +132,6 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 # M.OHTA adv_dir=2 RZ adv_dir=3 XYZ
 ns.adv_dir=2
-ns.solvability_projection=1  # 0 if outflow at bottom of domain
 ns.heatviscconst=0.0 0.0
 ns.viscconst=0.7 0.007 # 1 kg/(m s) = 10 g/(cm s)
 ns.denconst=1.0 0.001

@@ -11571,7 +11571,6 @@ END SUBROUTINE SIMP
        return
        end subroutine FORT_SUMDOT_ONES
 
-       FIX ME  auto init solvabiliy cond
        subroutine FORT_FABCOM_ONES( &
         beta,  &
         singular_patch_flag,  &
@@ -11589,7 +11588,8 @@ END SUBROUTINE SIMP
         DIMS(mask_fab), &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
-        levelno,gridno, &
+        levelno, &
+        gridno, &
         nsolve, &
         presbc, &
         type_flag, &
@@ -11693,7 +11693,7 @@ END SUBROUTINE SIMP
           if (project_option_singular_possibleF(project_option).eq.1) then
 
            if (singular_patch_flag(local_color).eq.0) then
-            ! do nothing
+            ! do nothing (masked off region)
            else if (singular_patch_flag(local_color).eq.1) then
             data_fab(D_DECL(i,j,k))= &
               data_fab(D_DECL(i,j,k))+beta(local_color)
@@ -11722,7 +11722,8 @@ END SUBROUTINE SIMP
             stop
            endif
           else if ((local_ones.eq.1).and.(local_type.eq.2)) then
-           if (singular_patch_flag(local_color).ge.1) then
+           if ((singular_patch_flag(local_color).eq.1).or. &
+               (singular_patch_flag(local_color).eq.2)) then
             ! do nothing
            else
             print *,"singular_patch_flag invalid"
@@ -11748,7 +11749,7 @@ END SUBROUTINE SIMP
             endif 
            enddo !nc=1..nsolve
            if ((plus_flag.eq.1).and.(zero_flag.eq.0)) then
-            if (singular_patch_flag(local_color).ge.2) then
+            if (singular_patch_flag(local_color).eq.2) then
              ! do nothing
             else
              print *,"singular_patch_flag invalid"
@@ -11798,10 +11799,10 @@ END SUBROUTINE SIMP
               else if (local_bc.eq.REFLECT_EVEN) then
                ! do nothing
               else if (local_bc.eq.EXT_DIR) then
-               if (singular_patch_flag(local_color).ge.2) then
+               if (singular_patch_flag(local_color).eq.2) then
                 ! do nothing
                else
-                print *,"fab_flag invalid"
+                print *,"singular_patch_flag invalid"
                 stop
                endif
               else
@@ -11824,6 +11825,7 @@ END SUBROUTINE SIMP
            print *,"local_ones or local_type invalid"
            stop
           endif
+
          else
           print *,"local_color invalid"
           stop

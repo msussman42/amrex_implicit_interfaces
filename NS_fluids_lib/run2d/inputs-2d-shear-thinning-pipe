@@ -14,7 +14,6 @@ geometry.prob_lo   =   0.0 0.0
 geometry.prob_hi   =   40.64 325.12 # L=128*2.54=325.12
 geometry.is_periodic = 0  0  # MS 0  1 if periodic, 0  0 if not
 
-ns.solvability_projection=0 # default 0, but make 1 if no outflow bc.
 # SOLVER ROBUSTNESS: this value should be small.
 ns.minimum_relative_error=1.0e-18
 # SOLVER ROBUSTNESS: 10 is conservative value for these two parameters.

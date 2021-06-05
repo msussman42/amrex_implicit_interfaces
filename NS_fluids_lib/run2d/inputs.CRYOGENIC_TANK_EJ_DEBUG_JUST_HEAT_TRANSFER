@@ -36,7 +36,6 @@ ns.material_type_lowmach = 0 24 999
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
 
-ns.solvability_projection = 1  # sealed container
 
 # temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = 0  (energy advection)

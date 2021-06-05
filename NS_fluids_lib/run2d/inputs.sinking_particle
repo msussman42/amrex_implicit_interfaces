@@ -108,7 +108,6 @@ ns.post_init_pressure_solve=1 # 1=INCOMP 0=COMPRESSIBLE
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=10
-ns.solvability_projection=1  # 1=INCOMP 0=COMPRESSIBLE
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 32 64
 amr.max_level = 1

@@ -3663,7 +3663,6 @@ stop
        tid, &
        im_outer, &     ! im_outer and im_opp_outer define an interface
        im_opp_outer, & ! between im_outer and im_opp_outer.
-       solvability_projection, &
        ngrow_expansion, &
        level,finest_level, &
        normal_probe_size, &
@@ -3718,7 +3717,6 @@ stop
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: im_outer
       INTEGER_T, intent(in) :: im_opp_outer
-      INTEGER_T, intent(in) :: solvability_projection
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: ngrow_expansion
@@ -3998,11 +3996,6 @@ stop
 
       ncomp_per_tsat=2
 
-      if ((solvability_projection.ne.0).and. &
-          (solvability_projection.ne.1)) then
-       print *,"solvability_projection invalid"
-       stop
-      endif
       if (ngeom_raw.ne.SDIM+1) then
        print *,"ngeom_raw invalid"
        stop

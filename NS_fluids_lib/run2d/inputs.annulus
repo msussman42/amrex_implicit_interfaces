@@ -21,7 +21,6 @@ ns.temperature_conservative_advection=0
 ns.temperature_advection_order=1
 ns.vrotation=3.91
 ns.pseudo_transient_steps=1
-ns.solvability=1
 ns.cwater=1.0e+20
 ns.cvapor=1.0e+20
 

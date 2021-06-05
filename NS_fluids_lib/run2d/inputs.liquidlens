@@ -129,7 +129,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1 # adv_dir=1 (x direction)
-ns.solvability_projection=1
 ns.heatviscconst=0.0 0.0 0.0 0.0
 #ns.constant_viscosity=0  # gas lens
 ns.constant_viscosity=1  # liquid lens

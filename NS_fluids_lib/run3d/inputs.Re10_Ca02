@@ -94,7 +94,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=3
-ns.solvability_projection=1
 ns.material_type=0 0 
 
 ns.pressure_error_cutoff=0.0 0.0

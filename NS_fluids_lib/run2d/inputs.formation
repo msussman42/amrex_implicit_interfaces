@@ -98,7 +98,6 @@ ns.advbot=0.0  # inflow velocity prescribed in PROB_2D.F90 (inflow_bc)
 
 ns.adv_vel=0.0
 ns.adv_dir=2
-ns.solvability_projection=0  # outflow at top of domain
 
 # these are shear thinning parameters
 # viscconst*(1+(beta*gamma_dot)**alpha)**((n-1)/alpha)

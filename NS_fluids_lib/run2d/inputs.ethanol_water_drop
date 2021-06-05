@@ -102,7 +102,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1
-ns.solvability_projection=1
 ns.heatviscconst=0.0 0.0 0.0 0.0
 # Re=315.7, 438.1
 # physical values: ethanol 0.012 water 0.01

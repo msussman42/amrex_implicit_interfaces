@@ -93,7 +93,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2
-ns.solvability_projection=0  # outflow at top of domain
 # these are shear thinning parameters
 # viscconst*(1+(beta*gamma_dot)**alpha)**((n-1)/alpha)
 # material 1 is the ambient material, so make

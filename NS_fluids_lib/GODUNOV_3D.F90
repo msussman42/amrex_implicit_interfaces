@@ -6273,7 +6273,6 @@ stop
        dt, &
        cur_time, &
        visc_coef, &
-       solvability_projection, &
        presbc_in, &  
        velbc, &
        vofbc, &
@@ -6304,7 +6303,6 @@ stop
       INTEGER_T massface_index
       INTEGER_T vofface_index
       INTEGER_T ncphys
-      INTEGER_T solvability_projection
       REAL_T xlo(SDIM),dx(SDIM)
       INTEGER_T DIMDEC(xface)
       INTEGER_T DIMDEC(yface)
@@ -6614,11 +6612,6 @@ stop
       endif
       if (ncphys.ne.vofface_index+2*nmat) then
        print *,"ncphys invalid"
-       stop
-      endif
-      if ((solvability_projection.ne.0).and. &
-          (solvability_projection.ne.1)) then
-       print *,"solvability_projection invalid"
        stop
       endif
 
@@ -6987,15 +6980,6 @@ stop
                ! do nothing
               else
                print *,"side_flag invalid"
-               stop
-              endif
-
-              if (solvability_projection.eq.1) then
-               ! do nothing
-              else if (solvability_projection.eq.0) then
-               ! do nothing
-              else
-               print *,"solvability_projection invalid"
                stop
               endif
 

@@ -31,7 +31,6 @@ ns.projection_pressure_scale=1.0e+6
 #ns.show_mem=1
 ns.MOFITERMAX=15
 ns.truncate_thickness=2.0 # default ok, now that solids are immersed.
-ns.solvability_projection=1
 
 amr.n_cell    = 16 64
 amr.max_level =  1  # =1 for production runs.

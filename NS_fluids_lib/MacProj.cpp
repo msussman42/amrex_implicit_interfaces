@@ -117,36 +117,20 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
-  if (singular_possible==1) {
-   // do nothing
-  } else
-   amrex::Error("singular_possible invalid");
 
  } else if (project_option==12) {  // extension project
 
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
-  if (singular_possible==1) {
-   // do nothing
-  } else
-   amrex::Error("singular_possible invalid");
 
  } else if (project_option==3) {  // viscosity
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
-  if (singular_possible==0) {
-   // do nothing
-  } else
-   amrex::Error("singular_possible invalid");
  } else if ((project_option==2)||     // thermal diffusion
             ((project_option>=100)&&  // species
              (project_option<100+num_species_var))||
             (project_option==200)) {  // smooth temperature
   num_materials_face=num_materials_scalar_solve;
-  if (singular_possible==0) {
-   // do nothing
-  } else
-   amrex::Error("singular_possible invalid");
  } else
   amrex::Error("project_option invalid60");
 
@@ -254,6 +238,19 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   ns_tiling,
   local_use_mg_precond);
 
+ if ((coarsest_ONES_level>=0)&&
+     (coarsest_ONES_level<=finest_level)) {
+  // do nothing
+ } else
+  amrex::Error("coarsest_ONES_level invalid");
+
+FIX ME
+singular_possible
+solvability
+ones_sum_global
+ if (level>coarsest_ONES_level) {
+  mac_op->laplacian_solvability=0;
+ } else if (level<=coarsest_ONES_level) {
  mac_op->laplacian_solvability=solvability_level_flag;
 
  if (verbose>0) {
@@ -682,7 +679,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    //    project_option==1,
    //    project_option==11,  FSI_material_exists last project
    //    project_option==12,  extension project
-  if (singular_possible==1) {
+  if (project_option_singular_possible(project_option)==1) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -728,10 +725,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  } // omp
    ns_reconcile_d_num(33);
 
-  } else if (singular_possible==0) {
+  } else if (project_option_singular_possible(project_option)==0) {
    // do nothing 
   } else
-   amrex::Error("singular_possible invalid");
+   amrex::Error("project_option_singular_possible invalid");
 
   int ncomp_edge=-1;
   int scomp_bx=0;
@@ -1959,7 +1956,6 @@ void NavierStokes::apply_div(
    &level, 
    &finest_level,
    &face_flag,
-   &local_solvability_projection,
    &project_option,
    &local_enable_spectral,
    &fluxvel_index,
@@ -2673,7 +2669,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &level, 
     &finest_level,
     &face_flag,
-    &solvability_projection,
     &project_option,
     &local_enable_spectral,
     &fluxvel_index,

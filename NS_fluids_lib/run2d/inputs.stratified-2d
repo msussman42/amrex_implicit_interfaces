@@ -101,7 +101,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2 # 2 RZ 3 XYZ
-ns.solvability_projection=0
 ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.viscconst=1.002E-2 1.822E-4 9.6E-2  
 ns.denconst=0.997 0.001205 0.932 

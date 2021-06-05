@@ -2,7 +2,6 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  1      # maximum timestep
 stop_time = 0.1 # 100 ms=0.1 s
-ns.solvability_projection=0
 
 # liquid,air,solid
 ns.num_materials=3

@@ -25,7 +25,6 @@ geometry.prob_lo   =  0.0 0.0
 # set xblob9 appropriately
 geometry.prob_hi   =  10.0 12.566370614 #frequence=0.5,wavelength=2Pi/0.5
 geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
-ns.solvability_projection=1
 
 ns.num_materials=2
 ns.num_species_var=0
