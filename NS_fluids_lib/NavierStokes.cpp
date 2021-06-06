@@ -301,14 +301,13 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 
 Vector<int> NavierStokes::filter_velocity; //def=0
 
-// default=1   nmat components.
-Vector<int> NavierStokes::particle_nsubdivide; 
-Vector<int> NavierStokes::particle_max_per_nsubdivide; 
-Vector<int> NavierStokes::particle_min_per_nsubdivide; 
-Vector<int> NavierStokes::particleLS_flag; 
+// default=1   
+int NavierStokes::particle_nsubdivide=1; 
+int NavierStokes::particle_max_per_nsubdivide=3; 
+int NavierStokes::particle_min_per_nsubdivide=1; 
+int NavierStokes::particles_flag=0; 
 
 //=0.0 particles have no effect
-Vector<Real> NavierStokes::particles_weight_LS; 
 Vector<Real> NavierStokes::particles_weight_XD; 
 Vector<Real> NavierStokes::particles_weight_VEL; 
 
@@ -317,9 +316,7 @@ Vector<Real> NavierStokes::particle_volume;
 Vector<Real> NavierStokes::particle_relaxation_time_to_fluid;
  // d u_fluid /dt = -(1/relaxation_time)*(u_fluid - u_part)
 Vector<Real> NavierStokes::fluid_relaxation_time_to_particle;
-Vector<int> NavierStokes::particle_interaction_ngrow;
-
-int NavierStokes::NS_ncomp_particles=0;
+int NavierStokes::particle_interaction_ngrow=1;
 
 Real NavierStokes::truncate_thickness=2.0;  
 Real NavierStokes::init_shrink  = 1.0;
@@ -1563,7 +1560,7 @@ void fortran_parameters() {
  Vector<int> linear_elastic_model_temp;
  Vector<Real> shear_modulus_temp;
  Vector<int> store_elastic_data_temp;
- Vector<int> particleLS_flag_temp;
+ int particles_flag_temp=0;
 
  elastic_viscosity_temp.resize(nmat);
  elastic_time_temp.resize(nmat);
@@ -1573,7 +1570,6 @@ void fortran_parameters() {
  linear_elastic_model_temp.resize(nmat);
  shear_modulus_temp.resize(nmat);
  store_elastic_data_temp.resize(nmat);
- particleLS_flag_temp.resize(nmat);
  for (int im=0;im<nmat;im++) {
 
   elastic_viscosity_temp[im]=0.0;
@@ -1584,7 +1580,6 @@ void fortran_parameters() {
   linear_elastic_model_temp[im]=0;
   shear_modulus_temp[im]=0.0;
   store_elastic_data_temp[im]=0;
-  particleLS_flag_temp[im]=0;
  }
  pp.queryarr("elastic_viscosity",elastic_viscosity_temp,0,nmat);
  pp.queryarr("elastic_time",elastic_time_temp,0,nmat);
@@ -1593,7 +1588,7 @@ void fortran_parameters() {
  pp.queryarr("lame_coefficient",lame_coefficient_temp,0,nmat);
  pp.queryarr("linear_elastic_model",linear_elastic_model_temp,0,nmat);
  pp.queryarr("shear_modulus",shear_modulus_temp,0,nmat);
- pp.queryarr("particleLS_flag",particleLS_flag_temp,0,nmat);
+ pp.query("particles_flag",particles_flag_temp);
 
  for (int im=0;im<nmat;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
@@ -1602,13 +1597,6 @@ void fortran_parameters() {
    // do nothing
   } else
    amrex::Error("elastic_viscosity_temp invalid");
-  if (particleLS_flag_temp[im]==1) {
-   store_elastic_data_temp[im]=1;
-  } else if (particleLS_flag_temp[im]==0) {
-   // do nothing
-  } else
-   amrex::Error("particleLS_flag_temp invalid");
- 
  } // im=0..nmat-1 
 
  num_materials_viscoelastic_temp=0;
@@ -2777,15 +2765,12 @@ NavierStokes::read_params ()
     shear_modulus.resize(nmat);
     damping_coefficient.resize(nmat);
     store_elastic_data.resize(nmat);
-    particleLS_flag.resize(nmat);
-    particles_weight_LS.resize(nmat);
     particles_weight_XD.resize(nmat);
     particles_weight_VEL.resize(nmat);
 
     particle_volume.resize(nmat);
     particle_relaxation_time_to_fluid.resize(nmat);
     fluid_relaxation_time_to_particle.resize(nmat);
-    particle_interaction_ngrow.resize(nmat);
 
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
@@ -2795,15 +2780,12 @@ NavierStokes::read_params ()
      shear_modulus[im]=0.0;
      damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
-     particleLS_flag[im]=0;
-     particles_weight_LS[im]=0.0;
      particles_weight_XD[im]=0.0;
      particles_weight_VEL[im]=0.0;
 
      particle_volume[im]=1.0;
      particle_relaxation_time_to_fluid[im]=0.0;
      fluid_relaxation_time_to_particle[im]=1.0e+20;
-     particle_interaction_ngrow[im]=1;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
     pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
@@ -2811,8 +2793,7 @@ NavierStokes::read_params ()
     pp.queryarr("lame_coefficient",lame_coefficient,0,nmat);
     pp.queryarr("linear_elastic_model",linear_elastic_model,0,nmat);
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
-    pp.queryarr("particleLS_flag",particleLS_flag,0,nmat);
-    pp.queryarr("particles_weight_LS",particles_weight_LS,0,nmat);
+    pp.query("particles_flag",particles_flag);
     pp.queryarr("particles_weight_XD",particles_weight_XD,0,nmat);
     pp.queryarr("particles_weight_VEL",particles_weight_VEL,0,nmat);
 
@@ -2821,8 +2802,7 @@ NavierStokes::read_params ()
        particle_relaxation_time_to_fluid,0,nmat);
     pp.queryarr("fluid_relaxation_time_to_particle",
        fluid_relaxation_time_to_particle,0,nmat);
-    pp.queryarr("particle_interaction_ngrow",
-       particle_interaction_ngrow,0,nmat);
+    pp.query("particle_interaction_ngrow",particle_interaction_ngrow);
 
     for (int im=0;im<nmat;im++) {
      if (elastic_viscosity[im]>0.0) {
@@ -2831,13 +2811,6 @@ NavierStokes::read_params ()
       // do nothing
      } else
       amrex::Error("elastic_viscosity invalid");
-     if (particleLS_flag[im]==1) {
-      store_elastic_data[im]=1;
-     } else if (particleLS_flag[im]==0) {
-      // do nothing
-     } else
-      amrex::Error("particleLS_flag invalid");
- 
     } // im=0..nmat-1 
 
     num_materials_viscoelastic=0;
@@ -4380,15 +4353,7 @@ NavierStokes::read_params ()
 
     filter_velocity.resize(nmat);
 
-    particle_nsubdivide.resize(nmat);
-    particle_max_per_nsubdivide.resize(nmat);
-    particle_min_per_nsubdivide.resize(nmat);
-
     for (int i=0;i<nmat;i++) {
-
-     particle_nsubdivide[i]=1;
-     particle_max_per_nsubdivide[i]=3;
-     particle_min_per_nsubdivide[i]=1;
 
      filter_velocity[i]=0;
 
@@ -4409,37 +4374,32 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }  // i=0..nmat-1
 
-    pp.queryarr("particle_nsubdivide",particle_nsubdivide,0,nmat);
-    pp.queryarr("particle_max_per_nsubdivide",
-	    particle_max_per_nsubdivide,0,nmat);
-    pp.queryarr("particle_min_per_nsubdivide",
-	    particle_min_per_nsubdivide,0,nmat);
-
-    NS_ncomp_particles=0;
-    for (int i=0;i<nmat;i++) {
-     if (particleLS_flag[i]==1)
-      NS_ncomp_particles++;  // levelset == 0.0 for interface particles
-    } // i=0..nmat-1
+    pp.query("particle_nsubdivide",particle_nsubdivide);
+    pp.query("particle_max_per_nsubdivide",
+	    particle_max_per_nsubdivide);
+    pp.query("particle_min_per_nsubdivide",
+	    particle_min_per_nsubdivide);
 
     pp.queryarr("filter_velocity",filter_velocity,0,nmat);
+
+    if ((particle_nsubdivide<1)||
+        (particle_nsubdivide>6))
+     amrex::Error("particle_nsubdivide invalid");
+    if ((particle_max_per_nsubdivide<2)||
+        (particle_max_per_nsubdivide>100))
+     amrex::Error("particle_max_per_nsubdivide invalid");
+    if ((particle_min_per_nsubdivide<0)||
+        (particle_min_per_nsubdivide>100))
+     amrex::Error("particle_min_per_nsubdivide invalid");
+    if ((particles_flag<0)||
+        (particles_flag>1))
+     amrex::Error("particles_flag invalid");
 
     pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,nmat);
     for (int i=0;i<nmat;i++) {
      if ((truncate_volume_fractions[i]<0)||
          (truncate_volume_fractions[i]>1))
       amrex::Error("truncate_volume_fractions invalid");
-     if ((particle_nsubdivide[i]<1)||
-         (particle_nsubdivide[i]>6))
-      amrex::Error("particle_nsubdivide invalid");
-     if ((particle_max_per_nsubdivide[i]<2)||
-         (particle_max_per_nsubdivide[i]>100))
-      amrex::Error("particle_max_per_nsubdivide invalid");
-     if ((particle_min_per_nsubdivide[i]<0)||
-         (particle_min_per_nsubdivide[i]>100))
-      amrex::Error("particle_min_per_nsubdivide invalid");
-     if ((particleLS_flag[i]<0)||
-         (particleLS_flag[i]>1))
-      amrex::Error("particleLS_flag invalid");
     }
 
     pp.query("truncate_thickness",truncate_thickness);
@@ -4720,6 +4680,15 @@ NavierStokes::read_params ()
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
 
+     std::cout << "particle_nsubdivide = " << particle_nsubdivide << '\n';
+     std::cout << "particle_max_per_nsubdivide= " <<
+        particle_max_per_nsubdivide << '\n';
+     std::cout << "particle_min_per_nsubdivide= " << 
+        particle_min_per_nsubdivide << '\n';
+     std::cout << "particles_flag = " << particles_flag << '\n';
+     std::cout << "particle_interaction_ngrow=" << 
+      particle_interaction_ngrow << '\n';
+
      for (int i=0;i<nmat;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
@@ -4730,17 +4699,6 @@ NavierStokes::read_params ()
       std::cout << "filter_velocity i= " << i << ' ' <<
         filter_velocity[i] << '\n';
 
-      std::cout << "particle_nsubdivide i= " << i << ' ' <<
-        particle_nsubdivide[i] << '\n';
-      std::cout << "particle_max_per_nsubdivide i= " << i << ' ' <<
-        particle_max_per_nsubdivide[i] << '\n';
-      std::cout << "particle_min_per_nsubdivide i= " << i << ' ' <<
-        particle_min_per_nsubdivide[i] << '\n';
-      std::cout << "particleLS_flag i= " << i << ' ' <<
-        particleLS_flag[i] << '\n';
-
-      std::cout << "particles_weight_LS i= " << i << ' ' <<
-        particles_weight_LS[i] << '\n';
       std::cout << "particles_weight_XD i= " << i << ' ' <<
         particles_weight_XD[i] << '\n';
       std::cout << "particles_weight_VEL i= " << i << ' ' <<
@@ -4752,10 +4710,6 @@ NavierStokes::read_params ()
         particle_relaxation_time_to_fluid[i] << '\n';
       std::cout << "fluid_relaxation_time_to_particle i= " << i << ' ' <<
         fluid_relaxation_time_to_particle[i] << '\n';
-      std::cout << "particle_interaction_ngrow i= " << i << ' ' <<
-        particle_interaction_ngrow[i] << '\n';
-
-      std::cout << "NS_ncomp_particles= " << NS_ncomp_particles << '\n';
 
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';
@@ -8636,7 +8590,7 @@ NavierStokes::init(
  if (level==0) {
    // old particle data will be deleted, so that the data
    // must be saved here.
-  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+  for (int ipart=0;ipart<particles_flag;ipart++) {
    int lev_min=0;
    int lev_max=-1;
    int nGrow_Redistribute=0;
@@ -8656,7 +8610,7 @@ NavierStokes::init(
    bool local_copy_flag=false; 
    new_PC.copyParticles(old_PC,local_copy_flag);
 
-  } // ipart=0..NS_ncomp_particles-1
+  } // ipart=0..particles_flag-1
  } else if ((level>=1)&&(level<=max_level)) {
   // do nothing
  } else
@@ -18405,17 +18359,17 @@ void NavierStokes::writeInterfaceReconstruction() {
     &plotint);
   } // im=1..nmat
 
-  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+  for (int ipart=0;ipart<particles_flag;ipart++) {
     // in: NAVIERSTOKES_3D.F90
    fort_combine_particles(grids_per_level.dataPtr(),
     &finest_level,
     &nsteps,
     &ipart,
-    &NS_ncomp_particles,
+    &particles_flag,
     &arrdim,
     &cur_time_slab,
     &plotint);
-  } // ipart=0..NS_ncomp_particles-1
+  } // ipart=0..particles_flag-1
 
  }
  ParallelDescriptor::Barrier();
@@ -19912,7 +19866,7 @@ void NavierStokes::post_regrid (int lbase,
   } else
    amrex::Error("initialInit_flag invalid");
 
-  for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+  for (int ipart=0;ipart<particles_flag;ipart++) {
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
       ns_level0.get_new_dataPC(State_Type,ns_time_order,ipart);
    int lev_min=0;
@@ -19921,7 +19875,7 @@ void NavierStokes::post_regrid (int lbase,
    int local_Redistribute=0;
    current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
-  } // ipart=0..NS_ncomp_particles-1
+  } // ipart=0..particles_flag-1
     
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
@@ -20905,30 +20859,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  const Real* dx = geom.CellSize();
-
- int ipart=0;
- if (particleLS_flag[im_elastic]==1) {
-  for (int im_local=0;im_local<im_elastic;im_local++) {
-   if (particleLS_flag[im_local]==1) {
-    ipart++; 
-   } else if (particleLS_flag[im_local]==0) {
-    // do nothing
-   } else
-    amrex::Error("particleLS_flag invalid");
-  } // im_local=0..im_elastic-1
-
-  if (NS_ncomp_particles>=ipart+1) {
-   // do nothing
-  } else
-   amrex::Error("NS_ncomp_particles invalid");
- } else if (particleLS_flag[im_elastic]==0) {
-  // do nothing
- } else
-  amrex::Error("particleLS_flag[im_elastic] invalid");
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
@@ -20980,7 +20912,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  int ncomp_tensor=NUM_TENSOR_TYPE;
 
- if (particleLS_flag[im_elastic]==0) {
+ if (particles_flag==0) {
 
   getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
@@ -21038,11 +20970,11 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
   delete_localMF(VISCOTEN_MF,1);
 
- } else if (particleLS_flag[im_elastic]==1) {
+ } else if (particles_flag==1) {
 
   // All the particles should live on level==0.
-  // particle levelset==0.0 for interface particles.
 
+  int ipart=0;
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
@@ -21159,7 +21091,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  } else {
 
-  amrex::Error("particleLS_flag[im_elastic] invalid");
+  amrex::Error("particles_flag invalid");
 
  }
 
@@ -21202,24 +21134,12 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
  const Real* dx = geom.CellSize();
 
  int ipart=0;
- if (particleLS_flag[im_particle_couple]==1) {
-  for (int im_local=0;im_local<im_particle_couple;im_local++) {
-   if (particleLS_flag[im_local]==1) {
-    ipart++; 
-   } else if (particleLS_flag[im_local]==0) {
-    // do nothing
-   } else
-    amrex::Error("particleLS_flag invalid");
-  } // im_local=0..im_particle_couple-1
-
-  if (NS_ncomp_particles>=ipart+1) {
-   // do nothing
-  } else
-   amrex::Error("NS_ncomp_particles invalid");
- } else if (particleLS_flag[im_particle_couple]==0) {
-  amrex::Error("particleLS_flag[im_particle_couple] cannot be 0");
+ if (particles_flag==1) {
+  // do nothing
+ } else if (particles_flag==0) {
+  amrex::Error("particles_flag cannot be 0");
  } else
-  amrex::Error("particleLS_flag[im_particle_couple] invalid");
+  amrex::Error("particles_flag invalid");
 
  MultiFab& State_new=get_new_data(State_Type,slab_step+1);
 
@@ -21372,7 +21292,8 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
 
 } // end subroutine assimilate_vel_from_particles
 
-
+FIX ME STARTING HERE (just one particle container,num_materials_vel delete,
+ just one displacement)
 
 
 // initialize particles and copy to all "slab locations"
