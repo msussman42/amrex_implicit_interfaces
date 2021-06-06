@@ -1657,21 +1657,17 @@ protected:
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
      // =0 do not hybridize with particles (default)
-     // =1 hybridize with particles on the interface and interior
-     // particleLS_flag[im]   im=0...num_materials-1
-    static Vector<int> particleLS_flag;  
-    static Vector<Real> particles_weight_LS;  //=0.0 particles have no effect  
+     // =1 hybridize with particles
+    static int particles_flag;  
     static Vector<Real> particles_weight_XD;  //=0.0 particles have no effect  
     static Vector<Real> particles_weight_VEL; //=0.0 particles have no effect  
-    static Vector<int> particle_nsubdivide;  
-    static Vector<int> particle_max_per_nsubdivide;  
-    static Vector<int> particle_min_per_nsubdivide;  
+    static int particle_nsubdivide;  
+    static int particle_max_per_nsubdivide;  
+    static int particle_min_per_nsubdivide;  
     static Vector<Real> particle_volume;
     static Vector<Real> particle_relaxation_time_to_fluid;
     static Vector<Real> fluid_relaxation_time_to_particle;
-    static Vector<int> particle_interaction_ngrow;
-
-    static int NS_ncomp_particles;
+    static int particle_interaction_ngrow;
 
     static Real truncate_thickness;  // default is 2.0
 
