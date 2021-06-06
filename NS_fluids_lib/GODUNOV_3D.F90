@@ -21702,6 +21702,7 @@ stop
               statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
               if (no_material_flag.eq.1) then
                tennew_hold(statecomp_data)=zero
+               FIX ME Q terms and displacement do not have to be advected conservatively
               else if (no_material_flag.eq.0) then
                if (volmat_depart(im).gt.zero) then
                 tennew_hold(statecomp_data)= &
