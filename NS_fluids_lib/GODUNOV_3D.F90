@@ -3830,8 +3830,10 @@ stop
                print *,"veldir invalid"
                stop
               endif
-              if (massquarter.lt.zero) then
-               print *,"massquarter cannot be negative"
+              if (massquarter.ge.zero) then
+               ! do nothing
+              else
+               print *,"massquarter cannot be negative, ivec=",ivec
                stop
               endif
 
@@ -3842,7 +3844,9 @@ stop
 
             enddo ! iside: do iside=-1,1,2
 
+             ! mac velocity
             if (massface_total(1).gt.zero) then
+
              momface_total(1)=momface_total(1)/massface_total(1)
              ! LS>0 if clamped
              call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
@@ -20407,6 +20411,26 @@ stop
                   nmax, &
                   nmat,SDIM,3)
 
+                 ! we are inside the istencil + isidedonate loops.
+                LS_voltotal_depart=zero
+                do im=1,nmat
+                 if (is_rigid(nmat,im).eq.0) then 
+                  LS_voltotal_depart=LS_voltotal_depart+ &
+                   multi_volume_grid(im)
+                 else if (is_rigid(nmat,im).eq.1) then
+                  ! do nothing
+                 else
+                  print *,"is_rigid invalid"
+                  stop
+                 endif
+                enddo !im=1..nmat
+
+                if (LS_voltotal_depart.le.zero) then
+                 print *,"LS_voltotal_depart bust "
+                 print *,"LS_voltotal_depart ",LS_voltotal_depart
+                 stop
+                endif
+
                 do im=1,nmat
 
                  ! density
@@ -20516,10 +20540,10 @@ stop
                     else if (num_MAC_vectors.eq. &
                              1+num_materials_viscoelastic) then
                      veldata_MAC_mass(veldir,1+imap)= &
-                      veldata_MAC_mass(veldir,1+imap)+massdepart_mom
+                      veldata_MAC_mass(veldir,1+imap)+LS_voltotal_depart
                      veldata_MAC(veldir,1+imap)= &
                       veldata_MAC(veldir,1+imap)+ &
-                      donate_data_MAC(veldir,1+imap)*massdepart_mom
+                      donate_data_MAC(veldir,1+imap)*LS_voltotal_depart
                     else
                      print *,"num_MAC_vectors invalid"
                      stop
@@ -20551,9 +20575,9 @@ stop
                stop
               endif
 
-             enddo  ! isidedonate
+             enddo  ! isidedonate=iside_low,iside_high,2
 
-            enddo  ! istencil
+            enddo  ! istencil=idonatelow,idonatehigh
 
             do im=1,nmat
 
@@ -21146,17 +21170,17 @@ stop
 
                 do istate=1,FORT_NUM_TENSOR_TYPE
                  statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
+                 ! configuration tensor is stored at the cell centers, not the
+                 ! corresponding material centroid.
                  donate_data= &
                   tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
                  veldata(itensor_base+statecomp_data)= &
                   veldata(itensor_base+statecomp_data)+ &
-                  multi_volume_grid(im)*donate_data 
+                  LS_voltotal_depart*donate_data 
                 enddo !istate=1..FORT_NUM_TENSOR_TYPE
 
-                 ! displacement:
-                 ! displacement must be extrapolated into neighboring
-                 ! materials after advection.
-
+                 ! displacement is stored at the element centers, not the
+                 ! corresponding material centroids.
                 if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
                  if (num_MAC_vectors.eq.1) then
                   do istate=1,SDIM
@@ -21167,7 +21191,7 @@ stop
                     tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
                    veldata(itensor_base+statecomp_data)= &
                     veldata(itensor_base+statecomp_data)+ &
-                    multi_volume_grid(im)*donate_data 
+                    LS_voltotal_depart*donate_data 
                   enddo !istate=1..sdim
                  else
                   print *,"num_MAC_vectors invalid"
@@ -21202,6 +21226,8 @@ stop
              endif
 
              ! level set function for im material.
+             ! level set function is stored at the cell centers, not the
+             ! corresponding material centroid.
              donate_data=LS(D_DECL(idonate,jdonate,kdonate),im) 
              veldata(iLS_base+im)=veldata(iLS_base+im)+ &
               LS_voltotal_depart*donate_data
@@ -21441,8 +21467,96 @@ stop
          ! voltotal_depart=sum_{fluid mat} volmat_depart(im)
          ! iLS_base=nmat*sdim+nmat*num_state_material+nmat*ngeom_raw
          do im=1,nmat
-          newLS(im)=veldata(iLS_base+im)/voltotal_depart
-         enddo  ! im
+          if (voltotal_depart.gt.zero) then
+           newLS(im)=veldata(iLS_base+im)/voltotal_depart
+          else
+           print *,"voltotal_depart invalid"
+           stop
+          endif 
+         enddo  ! im=1..nmat (updating levelset vars)
+
+         do im=1,nmat
+
+          if ((num_materials_viscoelastic.ge.1).and. &
+              (num_materials_viscoelastic.le.nmat)) then
+
+           if (fort_store_elastic_data(im).eq.1) then
+            imap=1
+            do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+                      (imap.le.num_materials_viscoelastic))
+             imap=imap+1
+            enddo
+
+            if (imap.le.num_materials_viscoelastic) then
+
+             do istate=1,FORT_NUM_TENSOR_TYPE
+              statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
+              if (voltotal_depart.gt.zero) then
+               tennew_hold(statecomp_data)= &
+                 veldata(itensor_base+statecomp_data)/voltotal_depart
+              else
+               print *,"voltotal_depart invalid"
+               stop
+              endif 
+ 
+             enddo !istate=1..FORT_NUM_TENSOR_TYPE
+
+              ! displacement: (F_m X_m)_t + div(F_m u X_m)= u F_m
+              !  (X_m)_t + u dot grad X_m = u
+             if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
+              if (num_MAC_vectors.eq.1) then
+               do istate=1,SDIM
+                statecomp_data= &
+                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+                 (imap-1)*SDIM+istate
+                if (voltotal_depart.gt.zero) then
+                 tennew_hold(statecomp_data)= &
+                  veldata(itensor_base+statecomp_data)/voltotal_depart
+                else
+                 print *,"voltotal_depart invalid"
+                 stop
+                endif 
+                if (istate.eq.normdir+1) then
+                 ! ucell is already the local displacement
+                 tennew_hold(statecomp_data)= &
+                  tennew_hold(statecomp_data)+ &
+                  ucell(D_DECL(icrse,jcrse,kcrse),istate)
+                endif
+               enddo !istate=1..SDIM
+              else
+               print *,"num_MAC_vectors invalid"
+               stop
+              endif
+
+             else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
+              if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
+               ! do nothing
+              else
+               print *,"num_MAC_vectors invalid"
+               stop
+              endif
+             else
+              print *,"NUM_CELL_ELASTIC invalid"
+              stop
+             endif
+
+            else 
+             print *,"imap invalid"
+             stop
+            endif
+           else if (fort_store_elastic_data(im).eq.0) then
+            ! do nothing
+           else
+            print *,"fort_store_elastic_data(im) invalid"
+            stop
+           endif
+
+          else
+           print *,"num_materials_viscoelastic invalid"
+           stop
+          endif
+ 
+         enddo ! im=1..nmat (updating viscoelastic vars)
 
          ! velocity=mom/mass
          ! fluid materials tessellate the domain.
@@ -21685,101 +21799,6 @@ stop
            endif
 
           enddo ! do while (istate.le.num_state_material)
-
-          if ((num_materials_viscoelastic.ge.1).and. &
-              (num_materials_viscoelastic.le.nmat)) then
-
-           if (fort_store_elastic_data(im).eq.1) then
-            imap=1
-            do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
-                      (imap.le.num_materials_viscoelastic))
-             imap=imap+1
-            enddo
-
-            if (imap.le.num_materials_viscoelastic) then
-
-             do istate=1,FORT_NUM_TENSOR_TYPE
-              statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
-              if (no_material_flag.eq.1) then
-               tennew_hold(statecomp_data)=zero
-               FIX ME Q terms and displacement do not have to be advected conservatively
-              else if (no_material_flag.eq.0) then
-               if (volmat_depart(im).gt.zero) then
-                tennew_hold(statecomp_data)= &
-                 veldata(itensor_base+statecomp_data)/volmat_depart(im)
-               else
-                print *,"volmat_depart(im) invalid"
-                stop
-               endif 
-              else
-               print *,"no_material_flag invalid"
-               stop
-              endif
- 
-             enddo !istate=1..FORT_NUM_TENSOR_TYPE
-
-              ! displacement: (F_m X_m)_t + div(F_m u X_m)= u F_m
-              !  (X_m)_t + u dot grad X_m = u
-             if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
-              if (num_MAC_vectors.eq.1) then
-               do istate=1,SDIM
-                statecomp_data= &
-                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-                 (imap-1)*SDIM+istate
-                if (no_material_flag.eq.1) then
-                 tennew_hold(statecomp_data)=zero
-                else if (no_material_flag.eq.0) then
-                 if (volmat_depart(im).gt.zero) then
-                  tennew_hold(statecomp_data)= &
-                   veldata(itensor_base+statecomp_data)/volmat_depart(im)
-                  if (istate.eq.normdir+1) then
-                   ! ucell is already the local displacement
-                   tennew_hold(statecomp_data)= &
-                    tennew_hold(statecomp_data)+ &
-                    ucell(D_DECL(icrse,jcrse,kcrse),istate)
-                  endif
-                 else
-                  print *,"volmat_depart(im) invalid"
-                  stop
-                 endif 
-                else
-                 print *,"no_material_flag invalid"
-                 stop
-                endif
- 
-               enddo !istate=1..SDIM
-              else
-               print *,"num_MAC_vectors invalid"
-               stop
-              endif
-
-             else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
-              if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
-               ! do nothing
-              else
-               print *,"num_MAC_vectors invalid"
-               stop
-              endif
-             else
-              print *,"NUM_CELL_ELASTIC invalid"
-              stop
-             endif
-
-            else 
-             print *,"imap invalid"
-             stop
-            endif
-           else if (fort_store_elastic_data(im).eq.0) then
-            ! do nothing
-           else
-            print *,"fort_store_elastic_data(im) invalid"
-            stop
-           endif
-
-          else
-           print *,"num_materials_viscoelastic invalid"
-           stop
-          endif
 
          enddo  ! im=1..nmat
 
