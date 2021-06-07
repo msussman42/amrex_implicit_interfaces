@@ -19624,7 +19624,6 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
-        INTEGER_T :: im_PLS_cpp
         INTEGER_T :: nsubdivide
         INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
@@ -19635,7 +19634,6 @@ stop
        end type accum_parm_type_count
 
        type grid_parm_type
-        INTEGER_T :: im_PLS
         INTEGER_T, pointer :: fablo(:)
         INTEGER_T, pointer :: fabhi(:)
         INTEGER_T, pointer :: tilelo(:)
@@ -19659,6 +19657,7 @@ stop
 
       contains
 
+              FIX ME
       subroutine traverse_particlesLS( &
        accum_PARM, &
        matrixfab, &
@@ -19729,7 +19728,7 @@ stop
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=num_materials
-      data_in%im_PLS=0
+      data_in%im_PLS=0 ! not weighted
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
@@ -21179,7 +21178,6 @@ stop
        ! called from NavierStokes.cpp:
        !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
-        particles_weight_LS, &
         particles_weight_XD, &
         particles_weight_VEL, &
         tid, &
@@ -21189,11 +21187,10 @@ stop
         particle_nsubdivide, &
         particle_max_per_nsubdivide, &
         particle_min_per_nsubdivide, &
-        particleLS_flag, &
-        im_PLS_cpp, &
         nmat, &
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
+        fablo,fabhi, &
+        bfact, &
         level, &
         finest_level, &
         cur_time_slab, &
@@ -21228,17 +21225,15 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_PLS_cpp
 
-      REAL_T, intent(in) :: particles_weight_LS(nmat)
       REAL_T, intent(in) :: particles_weight_XD(nmat)
       REAL_T, intent(in) :: particles_weight_VEL(nmat)
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: particle_nsubdivide(nmat)
-      INTEGER_T, intent(in) :: particle_max_per_nsubdivide(nmat)
-      INTEGER_T, intent(in) :: particle_min_per_nsubdivide(nmat)
-      INTEGER_T, intent(in) :: particleLS_flag(nmat)
+      INTEGER_T, intent(in) :: particle_nsubdivide
+      INTEGER_T, intent(in) :: particle_max_per_nsubdivide
+      INTEGER_T, intent(in) :: particle_min_per_nsubdivide
       REAL_T, intent(in)    :: cur_time_slab
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
@@ -21263,8 +21258,7 @@ stop
               DIMV(cell_particle_count), &
               2) 
       REAL_T, intent(in), target :: xdisplacefab(DIMV(xdisplacefab),SDIM) 
-      REAL_T, intent(in), target :: velfab(DIMV(velfab), &
-              num_materials_vel*(SDIM+1)) 
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
       type(accum_parm_type_count) :: accum_PARM
@@ -21312,10 +21306,10 @@ stop
       REAL_T temp_time
       REAL_T temp_LS
 
-      if (particle_nsubdivide(im_PLS_cpp+1).ge.1) then
-       dist_sub_cutoff=dx(1)/particle_nsubdivide(im_PLS_cpp+1)
+      if (particle_nsubdivide.ge.1) then
+       dist_sub_cutoff=dx(1)/particle_nsubdivide
       else
-       print *,"particle_nsubdivide(im_PLS_cpp+1) invalid"
+       print *,"particle_nsubdivide invalid"
        stop
       endif
 
@@ -22112,10 +22106,9 @@ stop
       end subroutine check_cfl_BC
 
 
-
+FIX ME
       subroutine fort_move_particle_container( &
         tid, &
-        im_PLS_cpp, &
         single_particle_size, &
         particle_volume, &
         particle_relaxation_time_to_fluid, &
@@ -22155,16 +22148,16 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: single_particle_size
-      REAL_T, intent(in) :: particle_volume
-      REAL_T, intent(in) :: particle_relaxation_time_to_fluid
+      REAL_T, intent(in) :: particle_volume(nmat)
+      REAL_T, intent(in) :: particle_relaxation_time_to_fluid(nmat)
       INTEGER_T, intent(in) :: particle_interaction_ngrow
       INTEGER_T, intent(in) :: level,finest_level
 
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: vel_time_slab
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_PLS_cpp
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
@@ -22265,13 +22258,6 @@ stop
       probhi_arr(2)=probhiy
       probhi_arr(3)=probhiz
 
-      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
-       ! do nothing
-      else
-       print *,"im_PLS_cpp invalid"
-       stop
-      endif
-
       grid_PARM%im_PLS=im_PLS_cpp+1
 
       grid_PARM%fablo=>fablo
@@ -22321,7 +22307,6 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
 
-      accum_PARM%im_PLS_cpp=im_PLS_cpp
       accum_PARM%nsubdivide=1
 
       cell_particle_count_ptr=>cell_particle_count

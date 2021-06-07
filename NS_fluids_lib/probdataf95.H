@@ -105,7 +105,6 @@
       INTEGER_T ngeom_raw
       INTEGER_T ngeom_recon
       INTEGER_T num_materials
-      INTEGER_T num_materials_vel
       INTEGER_T num_materials_scalar_solve
       INTEGER_T probtype, adv_dir, axis_dir
       INTEGER_T levelrz

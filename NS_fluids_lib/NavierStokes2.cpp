@@ -7816,7 +7816,7 @@ void NavierStokes::PLS_correct(Real time,int im_PLS,int ipart_id) {
 }  // end subroutine PLS_correct()
 
 
-void NavierStokes::move_particles(int im_PLS,int ipart_id) {
+void NavierStokes::move_particles() {
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -7837,9 +7837,6 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
  int nmat=num_materials;
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
- int nsolveMM_FACE=num_materials_vel;
 
  if (divu_outer_sweeps==0)
   vel_time_slab=prev_time_slab;
@@ -7847,11 +7844,6 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
   vel_time_slab=cur_time_slab;
  else
   amrex::Error("divu_outer_sweeps invalid move_particles");
-
- if ((im_PLS>=0)&&(im_PLS<nmat)) {
-  // do nothing
- } else
-  amrex::Error("im_PLS invalid");
 
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -7861,7 +7853,7 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
  refinement_ratio.resize(ns_ba.size());
  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
   refinement_ratio[ilev]=2;
- int nnbr=particle_interaction_ngrow[im_PLS];
+ int nnbr=particle_interaction_ngrow;
  if (nnbr>=1) {
   // do nothing
  } else
@@ -7869,18 +7861,17 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
  bool local_copy_flag=true; 
 
- if (NS_ncomp_particles>0) {
+ if (particles_flag==1) {
 
   int append_flag=1;
-  init_particle_container(im_PLS,ipart_id,append_flag);
+  init_particle_container(append_flag);
 
   const Real* dx = geom.CellSize();
   const Box& domain = geom.Domain();
   const int* domlo = domain.loVect();
   const int* domhi = domain.hiVect();
 
-  int scomp_mofvars=
-	num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
+  int scomp_mofvars=AMREX_SPACEDIM+1+nmat*num_state_material;
   Vector<int> dombc(2*AMREX_SPACEDIM);
   const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
   const int* b_rec=descbc.vect();
@@ -7896,14 +7887,14 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
   MultiFab* mac_velocity[AMREX_SPACEDIM];
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   mac_velocity[dir]=getStateMAC(
-      Umac_Type,2,dir,0,nsolveMM_FACE,vel_time_slab);
+   mac_velocity[dir]=getStateMAC(Umac_Type,2,dir,0,1,vel_time_slab);
   }
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
 
+  int ipart_id=0;
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart_id);
 
@@ -7973,25 +7964,23 @@ void NavierStokes::move_particles(int im_PLS,int ipart_id) {
 
    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
 
-   int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
+   int dcomp=AMREX_SPACEDIM+1;
    Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
       nmat*num_state_material);
-   Vector<int> velbc=
-     getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
+FIX ME
      // in: LEVELSET_3D.F90
    fort_move_particle_container( 
      &tid_current,
-     &im_PLS,
      &single_particle_size,
-     &particle_volume[im_PLS],
-     &particle_relaxation_time_to_fluid[im_PLS],
-     &particle_interaction_ngrow[im_PLS],
+     particle_volume.dataPtr(),
+     particle_relaxation_time_to_fluid.dataPtr(),
+     &particle_interaction_ngrow,
      &nmat,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
