@@ -20869,15 +20869,18 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  if (ns_is_rigid(im_elastic)==0) {
   if (store_elastic_data[im_elastic]==1) {
-   elastic_partid=0;
-   while ((im_elastic_map[elastic_partid]!=im_elastic)&&
-          (elastic_partid<im_elastic_map.size())) {
-    elastic_partid++;
-   }
-   if (elastic_partid<im_elastic_map.size()) {
-    scomp_tensor=elastic_partid*NUM_TENSOR_TYPE;
+   if (viscoelastic_model[im_elastic]==2) {
+    elastic_partid=0;
+    while ((im_elastic_map[elastic_partid]!=im_elastic)&&
+           (elastic_partid<im_elastic_map.size())) {
+     elastic_partid++;
+    }
+    if (elastic_partid<im_elastic_map.size()) {
+     scomp_tensor=elastic_partid*NUM_TENSOR_TYPE;
+    } else
+     amrex::Error("elastic_partid too large");
    } else
-    amrex::Error("elastic_partid too large");
+    amrex::Error("iscoelastic_model[im_elastic] invalid");
   } else
    amrex::Error("store_elastic_data invalid");
  } else
@@ -21303,7 +21306,7 @@ FIX ME STARTING HERE (just one particle container,num_materials_vel delete,
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
 // This routine called for level=finest_level 
 void
-NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
+NavierStokes::init_particle_container(int append_flag) {
 
  NavierStokes& ns_level0=getLevel(0);
 
@@ -21315,11 +21318,6 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
   // do nothing
  } else
   amrex::Error("max_level invalid");
-
- if (num_materials_vel==1) {
-  // do nothing
- } else
-  amrex::Error("num_materials_vel invalid");
 
  if (slab_step==ns_time_order-1) {
   // do nothing
@@ -21342,62 +21340,40 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
  int scomp_x_displace=0;
  int elastic_partid=0;
 
- if (NS_ncomp_particles>0) {
+ if (particles_flag==1) {
 
-  if ((im_PLS>=0)&&(im_PLS<nmat)) {
-   // do nothing
-  } else
-   amrex::Error("im_PLS invalid");
+  int ipart=0;
 
-  if (particleLS_flag[im_PLS]==1) {
+  scomp_x_displace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
 
-   if (ns_is_rigid(im_PLS)==0) {
-    if (store_elastic_data[im_PLS]==1) {
-     elastic_partid=0;
-     while ((im_elastic_map[elastic_partid]!=im_PLS)&&
-            (elastic_partid<im_elastic_map.size())) {
-      elastic_partid++;
-     }
-     if (elastic_partid<im_elastic_map.size()) {
-      scomp_x_displace=num_materials_viscoelastic*NUM_TENSOR_TYPE+
-	      elastic_partid*AMREX_SPACEDIM;
-     } else
-      amrex::Error("elastic_partid too large");
-    } else
-     amrex::Error("store_elastic_data invalid");
-   } else
-    amrex::Error("ns_is_rigid invalid");
+  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
+  if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
+   amrex::Error("LSmf invalid ncomp");
+  if (LSmf->nGrow()!=1)
+   amrex::Error("LSmf->nGrow()!=1");
 
-   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
-   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
-    amrex::Error("LSmf invalid ncomp");
-   if (LSmf->nGrow()!=1)
-    amrex::Error("LSmf->nGrow()!=1");
+  MultiFab* init_velocity_mf=getState(1,0,AMREX_SPACEDIM+1,cur_time_slab);
 
-   MultiFab* init_velocity_mf=getState(1,0,
-     num_materials_vel*(AMREX_SPACEDIM+1),cur_time_slab);
+   // All the particles should live on level==0.
+   // particle levelset==0.0 for interface particles.
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
-    // All the particles should live on level==0.
-    // particle levelset==0.0 for interface particles.
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+   // ngrow=1
+   // scomp=scomp_x_displace
+   // ncomp=sdim
+  MultiFab* x_displace_mf=getStateTensor(1,
+    scomp_x_displace,AMREX_SPACEDIM,cur_time_slab);
 
-    // ngrow=1
-    // scomp=scomp_x_displace
-    // ncomp=sdim
-   MultiFab* x_displace_mf=getStateTensor(1,
-      scomp_x_displace,
-      AMREX_SPACEDIM,cur_time_slab);
-
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -21464,19 +21440,17 @@ NavierStokes::init_particle_container(int im_PLS,int ipart,int append_flag) {
      //                 "         "   =4 => 64 pieces in 2D.
      // 2. for each small sub-box, add a particles at the sub-box center
      //    and add a particle "x-phi grad phi/|grad phi|"
+     FIX ME
      fort_init_particle_container( 
-       particles_weight_LS.dataPtr(),
        particles_weight_XD.dataPtr(),
        particles_weight_VEL.dataPtr(),
        &tid_current,
        &single_particle_size,
        &isweep,
        &append_flag,
-       particle_nsubdivide.dataPtr(),
-       particle_max_per_nsubdivide.dataPtr(),
-       particle_min_per_nsubdivide.dataPtr(),
-       particleLS_flag.dataPtr(),
-       &im_PLS,
+       &particle_nsubdivide,
+       &particle_max_per_nsubdivide,
+       &particle_min_per_nsubdivide,
        &nmat,
        tilelo,tilehi,
        fablo,fabhi,&bfact,

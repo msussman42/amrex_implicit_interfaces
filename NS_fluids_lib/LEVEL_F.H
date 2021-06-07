@@ -834,7 +834,6 @@ namespace amrex{
 
 
      void fort_init_particle_container(
-        Real* particles_weight_LS,
         Real* particles_weight_XD,
         Real* particles_weight_VEL,
         int* tid,
@@ -844,8 +843,6 @@ namespace amrex{
         int* particle_nsubdivide,
         int* particle_max_per_nsubdivide,
         int* particle_min_per_nsubdivide,
-        int* particleLS_flag,
-        int* imPLS,
         int* nmat,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
@@ -877,7 +874,6 @@ namespace amrex{
 
      void fort_move_particle_container(
         int* tid,
-        int* imPLS,
         int* single_particle_size,
         Real* particle_volume,
         Real* particle_relaxation_time_to_fluid,
