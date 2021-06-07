@@ -7383,8 +7383,7 @@ contains
       INTEGER_T stencil_offset(SDIM)
       INTEGER_T istenlo(3)
       INTEGER_T istenhi(3)
-      REAL_T WT,total_WT,WT_LS
-      REAL_T LS_local
+      REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
       INTEGER_T im
       REAL_T, allocatable, dimension(:) :: local_data
@@ -7504,27 +7503,6 @@ contains
         print *,"WT invalid"
         stop
        endif
-       WT_LS=one
-       if (data_in%im_PLS.eq.0) then
-        ! do nothing
-       else if ((data_in%im_PLS.ge.1).and. &
-                (data_in%im_PLS.le.data_in%nmat)) then
-        LS_local=data_in%LS(D_DECL(isten,jsten,ksten), &
-                data_in%im_PLS)
-        if (LS_local.ge.zero) then
-         ! do nothing
-        else if (LS_local.lt.zero) then
-         WT_LS=1.0D-3
-        else
-         print *,"LS_local invalid"
-         stop
-        endif
-       else
-        print *,"data_in%im_PLS invalid"
-        stop
-       endif
-
-       WT=WT*WT_LS
 
        do im=1,data_in%ncomp
         local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &

@@ -307,15 +307,15 @@ int NavierStokes::particle_max_per_nsubdivide=3;
 int NavierStokes::particle_min_per_nsubdivide=1; 
 int NavierStokes::particles_flag=0; 
 
+// TODO: store this information for each particle.
 //=0.0 particles have no effect
-Vector<Real> NavierStokes::particles_weight_XD; 
-Vector<Real> NavierStokes::particles_weight_VEL; 
-
-Vector<Real> NavierStokes::particle_volume;
+Real NavierStokes::particles_weight_XD=0.0; 
+Real NavierStokes::particles_weight_VEL=0.0; 
+Real NavierStokes::particle_volume=1.0;
  // d u_part /dt = -(1/relaxation_time)*(u_part - u_fluid)
-Vector<Real> NavierStokes::particle_relaxation_time_to_fluid;
+Real NavierStokes::particle_relaxation_time_to_fluid=0.0;
  // d u_fluid /dt = -(1/relaxation_time)*(u_fluid - u_part)
-Vector<Real> NavierStokes::fluid_relaxation_time_to_particle;
+Real NavierStokes::fluid_relaxation_time_to_particle=1.0e+20;
 int NavierStokes::particle_interaction_ngrow=1;
 
 Real NavierStokes::truncate_thickness=2.0;  
@@ -2765,12 +2765,6 @@ NavierStokes::read_params ()
     shear_modulus.resize(nmat);
     damping_coefficient.resize(nmat);
     store_elastic_data.resize(nmat);
-    particles_weight_XD.resize(nmat);
-    particles_weight_VEL.resize(nmat);
-
-    particle_volume.resize(nmat);
-    particle_relaxation_time_to_fluid.resize(nmat);
-    fluid_relaxation_time_to_particle.resize(nmat);
 
     for (int im=0;im<nmat;im++) {
      elastic_viscosity[im]=0.0;
@@ -2780,12 +2774,6 @@ NavierStokes::read_params ()
      shear_modulus[im]=0.0;
      damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
-     particles_weight_XD[im]=0.0;
-     particles_weight_VEL[im]=0.0;
-
-     particle_volume[im]=1.0;
-     particle_relaxation_time_to_fluid[im]=0.0;
-     fluid_relaxation_time_to_particle[im]=1.0e+20;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
     pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
@@ -2794,14 +2782,14 @@ NavierStokes::read_params ()
     pp.queryarr("linear_elastic_model",linear_elastic_model,0,nmat);
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
     pp.query("particles_flag",particles_flag);
-    pp.queryarr("particles_weight_XD",particles_weight_XD,0,nmat);
-    pp.queryarr("particles_weight_VEL",particles_weight_VEL,0,nmat);
+    pp.query("particles_weight_XD",particles_weight_XD);
+    pp.query("particles_weight_VEL",particles_weight_VEL);
 
-    pp.queryarr("particle_volume",particle_volume,0,nmat);
-    pp.queryarr("particle_relaxation_time_to_fluid",
-       particle_relaxation_time_to_fluid,0,nmat);
-    pp.queryarr("fluid_relaxation_time_to_particle",
-       fluid_relaxation_time_to_particle,0,nmat);
+    pp.query("particle_volume",particle_volume);
+    pp.query("particle_relaxation_time_to_fluid",
+       particle_relaxation_time_to_fluid);
+    pp.query("fluid_relaxation_time_to_particle",
+       fluid_relaxation_time_to_particle);
     pp.query("particle_interaction_ngrow",particle_interaction_ngrow);
 
     for (int im=0;im<nmat;im++) {
@@ -4689,6 +4677,14 @@ NavierStokes::read_params ()
      std::cout << "particle_interaction_ngrow=" << 
       particle_interaction_ngrow << '\n';
 
+     std::cout << "particles_weight_XD = " << particles_weight_XD << '\n';
+     std::cout << "particles_weight_VEL= " << particles_weight_VEL << '\n';
+     std::cout << "particle_volume=" << particle_volume << '\n';
+     std::cout << "particle_relaxation_time_to_fluid=" <<
+       particle_relaxation_time_to_fluid << '\n';
+     std::cout << "fluid_relaxation_time_to_particle=" << 
+       fluid_relaxation_time_to_particle << '\n';
+
      for (int i=0;i<nmat;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
@@ -4698,18 +4694,6 @@ NavierStokes::read_params ()
 
       std::cout << "filter_velocity i= " << i << ' ' <<
         filter_velocity[i] << '\n';
-
-      std::cout << "particles_weight_XD i= " << i << ' ' <<
-        particles_weight_XD[i] << '\n';
-      std::cout << "particles_weight_VEL i= " << i << ' ' <<
-        particles_weight_VEL[i] << '\n';
-
-      std::cout << "particle_volume i= " << i << ' ' <<
-        particle_volume[i] << '\n';
-      std::cout << "particle_relaxation_time_to_fluid i= " << i << ' ' <<
-        particle_relaxation_time_to_fluid[i] << '\n';
-      std::cout << "fluid_relaxation_time_to_particle i= " << i << ' ' <<
-        fluid_relaxation_time_to_particle[i] << '\n';
 
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';
@@ -21052,7 +21036,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
     fort_assimilate_tensor_from_particles( 
-     particles_weight_XD.dataPtr(),
+     &particles_weight_XD,
      &im_elastic, // 0..nmat-1
      &isweep,
      &tid_current,
@@ -21104,7 +21088,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
 
 void 
-NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
+NavierStokes::assimilate_vel_from_particles() {
 
  NavierStokes& ns_level0=getLevel(0);
 
@@ -21124,15 +21108,8 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
 
- if ((im_particle_couple>=0)&&(im_particle_couple<nmat)) {
-  // do nothing
- } else
-  amrex::Error("im_particle_couple invalid");
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -21184,8 +21161,7 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
   // 2 ghost cells in order to interpolate the velocity
   // to the particle positions.   1 ghost cell layer of 
   // neighbor particles.
- MultiFab* velocity_mf=getState(2,0,
-   num_materials_vel*AMREX_SPACEDIM,cur_time_slab);
+ MultiFab* velocity_mf=getState(2,0,AMREX_SPACEDIM,cur_time_slab);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -21250,9 +21226,8 @@ NavierStokes::assimilate_vel_from_particles(int im_particle_couple) {
 
   // in: GODUNOV_3D.F90
   fort_assimilate_VEL_from_particles( 
-   &fluid_relaxation_time_to_particle[im_particle_couple],
+   &fluid_relaxation_time_to_particle,
    &dt_slab,
-   &im_particle_couple, // 0..nmat-1
    &tid_current,
    tilelo,tilehi,
    fablo,fabhi,
@@ -21337,14 +21312,11 @@ NavierStokes::init_particle_container(int append_flag) {
 
  const Real* dx = geom.CellSize();
 
- int scomp_x_displace=0;
- int elastic_partid=0;
-
  if (particles_flag==1) {
 
   int ipart=0;
 
-  scomp_x_displace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+  int scomp_x_displace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
 
   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
@@ -21438,12 +21410,10 @@ NavierStokes::init_particle_container(int append_flag) {
      // 1. subdivide each cell with "particle_nsubdivide" divisions.
      //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
      //                 "         "   =4 => 64 pieces in 2D.
-     // 2. for each small sub-box, add a particles at the sub-box center
-     //    and add a particle "x-phi grad phi/|grad phi|"
-     FIX ME
+     // 2. for each small sub-box, add a particle at the sub-box center.
      fort_init_particle_container( 
-       particles_weight_XD.dataPtr(),
-       particles_weight_VEL.dataPtr(),
+       &particles_weight_XD,
+       &particles_weight_VEL,
        &tid_current,
        &single_particle_size,
        &isweep,
@@ -21567,7 +21537,8 @@ NavierStokes::init_particle_container(int append_flag) {
 
 }  // end subroutine init_particle_container()
 
- 
+FIX ME
+
 // should be cur_time=0 and prev_time=-1
 // called from post_init
 void

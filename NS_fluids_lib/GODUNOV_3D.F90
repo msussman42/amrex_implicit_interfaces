@@ -27615,7 +27615,6 @@ stop
        data_in%finest_level=finest_level
        data_in%bfact=bfact ! bfact=kind of spectral element grid 
        data_in%nmat=num_materials
-       data_in%im_PLS=0 ! no masking from LS
        data_in%dx=>dx_local
        data_in%xlo=>xlo_local
        data_in%fablo=>fablo_local
@@ -27851,7 +27850,6 @@ stop
          data_in%finest_level=finest_level
          data_in%bfact=bfact ! bfact=kind of spectral element grid 
          data_in%nmat=num_materials
-         data_in%im_PLS=0 ! no masking from LS
          data_in%dx=>dx_local
          data_in%xlo=>xlo_local
          data_in%fablo=>fablo_local
@@ -28895,7 +28893,7 @@ stop
         num_materials*(1+SDIM))
       REAL_T, target, intent(in) :: VEL_fab( &
         DIMV(VEL_fab), &
-        num_materials_vel*SDIM)
+        SDIM)
       REAL_T, intent(inout) :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
@@ -28947,15 +28945,6 @@ stop
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=accum_PARM%nmat
-      data_in%im_PLS=accum_PARM%im_PLS ! weight depends on LS
-
-      if ((data_in%im_PLS.ge.1).and. &
-          (data_in%im_PLS.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"data_in%im_PLS invalid"
-       stop
-      endif
 
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
@@ -28964,7 +28953,7 @@ stop
       data_in%ngrowfab=2
 
       data_in%state=>VEL_fab
-      data_in%LS=>LS
+      data_in%LS=>LS  ! not used
 
       data_in%ncomp=SDIM
       data_in%scomp=1
@@ -29440,7 +29429,6 @@ stop
       REAL_T xsten(-3:3,SDIM)
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
-      REAL_T local_dist
       INTEGER_T npart_local
 
       REAL_T, target :: cell_data_interp(SDIM)
@@ -29469,15 +29457,6 @@ stop
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=accum_PARM%nmat
-      data_in%im_PLS=accum_PARM%im_PLS
-
-      if ((data_in%im_PLS.ge.1).and. &
-          (data_in%im_PLS.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"data_in%im_PLS invalid"
-       stop
-      endif
 
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
@@ -29486,7 +29465,7 @@ stop
       data_in%ngrowfab=2
 
       data_in%state=>XDISP_fab
-      data_in%LS=>LS
+      data_in%LS=>LS ! not used
 
       data_in%ncomp=SDIM
       data_in%scomp=1
@@ -29516,7 +29495,6 @@ stop
          xpartfoot(dir)=accum_PARM%particles(interior_ID)%extra_state(dir)
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
         enddo
-        local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
         data_in%xtarget=>xpart
         data_in%interp_foot_flag=0
@@ -29549,14 +29527,6 @@ stop
          enddo
          tmp=sqrt(tmp)
          w_p=(1.0d0/(eps+tmp))
-         if (local_dist.lt.zero) then
-          w_p=w_p/1.0D+3
-         else if (local_dist.ge.zero) then
-          ! do nothing
-         else
-          print *,"local_dist invalid"
-          stop
-         endif
 
          if (w_p.gt.zero) then
           matrixfab(D_DECL(i,j,k),1)= &
