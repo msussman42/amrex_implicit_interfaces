@@ -1363,7 +1363,7 @@ NavierStokes::variableSetUp ()
 // newdata FABS have ncomp=desc->nComp() components.
 //
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,nc,&pc_interp,NS_ncomp_particles);
+     1,nc,&pc_interp,particles_flag);
 
     int ncomp_per_burning=AMREX_SPACEDIM;
     int ncomp_per_tsat=2; // interface temperature and mass fraction

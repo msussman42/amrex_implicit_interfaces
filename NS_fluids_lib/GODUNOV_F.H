@@ -1541,7 +1541,6 @@ extern "C"
    void fort_assimilate_VEL_from_particles(
      Real* fluid_relaxation_time_to_particle,
      Real* dt_slab,
-     int* im_PLS_cpp,
      int* tid,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,

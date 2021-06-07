@@ -1428,8 +1428,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
   amrex::Error("num_materials_vel!=1");
 
  if ((im_elastic>=0)&&(im_elastic<nmat)) {
-  if ((particleLS_flag[im_elastic]==1)||
-      (particleLS_flag[im_elastic]==0)) { 
+  if ((particles_flag==1)||
+      (particles_flag==0)) { 
    if (ns_is_rigid(im_elastic)==0) {
     if ((elastic_time[im_elastic]>0.0)&&
         (elastic_viscosity[im_elastic]>0.0)) {
@@ -1442,7 +1442,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    } else
     amrex::Error("expecting ns_is_rigid(im_elastic)==0)"); 
   } else
-   amrex::Error("particlLS_flag[im_elastic] invalid");
+   amrex::Error("particls_flag invalid");
  } else
   amrex::Error("im_elastic invalid");
 
@@ -8002,7 +8002,9 @@ void NavierStokes::output_triangles() {
     &level,&gridno,&nmat);
 
    if (level==finest_level) {
-    for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+
+    for (int ipart=0;ipart<particles_flag;ipart++) {
+
      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
       ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 

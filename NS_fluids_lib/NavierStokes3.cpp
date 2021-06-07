@@ -380,28 +380,18 @@ void NavierStokes::nonlinear_advection() {
   amrex::Error("face_flag invalid");
 
  NavierStokes& ns_finest=getLevel(finest_level);
- int ipart_id=0;
- for (int im=0;im<nmat;im++) {
-  if (particleLS_flag[im]==1) {
+ if (particles_flag==1) {
 
    // 1. void addParticles (const ParticleContainerType& other, 
    //     bool local=false);  (local==true => do not redistribute at end?)
-   // 2. Copy Eulerian level set to Lagrangian particles.
-   // 3. advect the particles using RK
-   // (note: interface particles distinguished by levelset==0.0)
+   // 2. advect the particles using RK
    // in: NavierStokes2.cpp
-   ns_finest.move_particles(im,ipart_id);
-   ipart_id++;
-  } else if (particleLS_flag[im]==0) {
-   // do nothing
-  } else
-   amrex::Error("particleLS_flag[im] invalid");
- } //im=0..nmat-1
+  ns_finest.move_particles();
 
- if (ipart_id==NS_ncomp_particles) {
-  // do nothing
+ } else if (particles_flag==0) {
+   // do nothing
  } else
-  amrex::Error("ipart_id invalid");
+  amrex::Error("particles_flag invalid");
 
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
@@ -728,8 +718,8 @@ void NavierStokes::tensor_advection_updateALL() {
   delete_array(FACETENSOR_MF);
 
   for (int im=0;im<nmat;im++) {
-   if ((particleLS_flag[im]==1)||
-       (particleLS_flag[im]==0)) { 
+   if ((particles_flag==1)||
+       (particles_flag==0)) { 
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>=0.0)&&
          (elastic_viscosity[im]>=0.0)) {
@@ -757,7 +747,7 @@ void NavierStokes::tensor_advection_updateALL() {
     } else
      amrex::Error("ns_is_rigid(im) invalid");
    } else
-    amrex::Error("particleLS_flag[im] invalid");
+    amrex::Error("particles_flag invalid");
 
   } // im=0..nmat-1
 
@@ -992,7 +982,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
-   for (int ipart=0;ipart<NS_ncomp_particles;ipart++) {
+   for (int ipart=0;ipart<particles_flag;ipart++) {
     int lev_min=0;
     int lev_max=-1;
     int nGrow_Redistribute=0;
@@ -11775,8 +11765,8 @@ void NavierStokes::vel_elastic_ALL() {
      (num_materials_viscoelastic<=nmat)) {
 
   for (int im=0;im<nmat;im++) {
-   if ((particleLS_flag[im]==1)||
-       (particleLS_flag[im]==0)) { 
+   if ((particles_flag==1)||
+       (particles_flag==0)) { 
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
@@ -11861,7 +11851,7 @@ void NavierStokes::vel_elastic_ALL() {
     } else
      amrex::Error("ns_is_rigid invalid");
    } else
-    amrex::Error("particleLS_flag[im] invalid");
+    amrex::Error("particles_flag invalid");
   } // im=0..nmat-1
    
   if (MAC_grid_displacement==0) {
@@ -12672,38 +12662,15 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("include_viscous_heating invalid");
 
- for (int im_assimilate=0;im_assimilate<nmat;im_assimilate++) {
-  if (particleLS_flag[im_assimilate]==1) {
-   if (ns_is_rigid(im_assimilate)==0) {
-    if ((elastic_time[im_assimilate]>=0.0)&&
-        (elastic_viscosity[im_assimilate]>=0.0)) {
-     if (store_elastic_data[im_assimilate]==1) {
-      if (viscoelastic_model[im_assimilate]==2) {
-       // particles only appear on the finest level.
-       // The flexible substrate is wholly contained on
-       // the finest level.
-       NavierStokes& ns_finest=getLevel(finest_level);
-       ns_finest.assimilate_vel_from_particles(im_assimilate);
-      } else if ((viscoelastic_model[im_assimilate]==1)||
- 	         (viscoelastic_model[im_assimilate]==0)||
-		 (viscoelastic_model[im_assimilate]==3)) { //incremental
-       // do nothing
-      } else
-       amrex::Error("viscoelastic_model[im_assimilate] invalid");
-     } else if (store_elastic_data[im_assimilate]==0) {
-      // do nothing
-     } else
-      amrex::Error("store_elastic_data invalid");
-    } else
-     amrex::Error("elastic_time or elastic_viscosity invalid");
-   } else if (ns_is_rigid(im_assimilate)==1) {
-    // do nothing
-   } else
-    amrex::Error("ns_is_rigid(im_assimilate) invalid");
-  } else if (particleLS_flag[im_assimilate]==0) {
-	  // do nothing
-  } else
-   amrex::Error("particleLS_flag[im_assimilate] invalid");
+ if (particles_flag==1) {
+  // The flexible substrate is wholly contained on
+  // the finest level.
+  NavierStokes& ns_finest=getLevel(finest_level);
+  ns_finest.assimilate_vel_from_particles();
+ } else if (particles_flag==0) {
+  // do nothing
+ } else
+  amrex::Error("particles_flag invalid");
 
  } // im_assimilate=0..nmat-1
 
@@ -12712,8 +12679,7 @@ void NavierStokes::veldiffuseALL() {
   ns_level.assimilate_state_data();
  }
 
- avgDownALL(State_Type,0,
-   num_materials_vel*(AMREX_SPACEDIM+1),1);
+ avgDownALL(State_Type,0,AMREX_SPACEDIM+1,1);
  avgDownALL(State_Type,dencomp,nden,1);
 
   // 1. add dt_gradp_over_rho:  u^* <-- u^* + dt grad p/rho
