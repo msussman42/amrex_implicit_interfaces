@@ -6113,7 +6113,6 @@ stop
               data_in%finest_level=finest_level
               data_in%bfact=bfact
               data_in%nmat=nmat
-              data_in%im_PLS=0 !0=> do not weight using LS
               data_in%dx=>dx
               data_in%xlo=>xlo
               data_in%fablo=>fablo

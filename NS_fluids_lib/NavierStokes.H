@@ -623,7 +623,7 @@ public:
     virtual void post_init (Real stop_time);
     void prepare_post_process(int post_init_flag);
 
-    void init_particle_container(int imPLS,int ipart,int append_flag);
+    void init_particle_container(int append_flag);
     void accumulate_PC_info(int im);
     void assimilate_vel_from_particles(int im_particle_couple);
 
@@ -1161,8 +1161,7 @@ protected:
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
       int local_truncate);
     void prescribe_solid_geometry(Real time,int renormalize_only);
-    void PLS_correct(Real time,int im_PLS,int ipart_id);
-    void move_particles(int im_PLS,int ipart_id);
+    void move_particles();
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1659,14 +1658,14 @@ protected:
      // =0 do not hybridize with particles (default)
      // =1 hybridize with particles
     static int particles_flag;  
-    static Vector<Real> particles_weight_XD;  //=0.0 particles have no effect  
-    static Vector<Real> particles_weight_VEL; //=0.0 particles have no effect  
+    static Real particles_weight_XD;  //=0.0 particles have no effect  
+    static Real particles_weight_VEL; //=0.0 particles have no effect  
     static int particle_nsubdivide;  
     static int particle_max_per_nsubdivide;  
     static int particle_min_per_nsubdivide;  
-    static Vector<Real> particle_volume;
-    static Vector<Real> particle_relaxation_time_to_fluid;
-    static Vector<Real> fluid_relaxation_time_to_particle;
+    static Real particle_volume;
+    static Real particle_relaxation_time_to_fluid;
+    static Real fluid_relaxation_time_to_particle;
     static int particle_interaction_ngrow;
 
     static Real truncate_thickness;  // default is 2.0

@@ -19657,587 +19657,6 @@ stop
 
       contains
 
-              FIX ME
-      subroutine traverse_particlesLS( &
-       accum_PARM, &
-       matrixfab, &
-       DIMS(matrixfab), &
-       ngrow_distance, &
-       LS, &
-       DIMS(LS), &
-       ncomp_accumulate)
-
-      use probcommon_module
-      use global_utility_module
-
-      INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, intent(in) :: ngrow_distance
-      type(accum_parm_type_LS), intent(in) :: accum_PARM
-      INTEGER_T, intent(in) :: DIMDEC(LS) 
-      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      REAL_T, intent(inout) :: matrixfab( &
-        DIMV(matrixfab), &
-        ncomp_accumulate)
-      REAL_T, target, intent(in) :: LS( &
-        DIMV(LS), &
-        num_materials*(1+SDIM))
-
-      INTEGER_T :: nhalf
-      REAL_T :: eps
-      INTEGER_T :: interior_ID
-      INTEGER_T :: dir
-      REAL_T, target :: xpart(SDIM)
-      INTEGER_T cell_index(SDIM)
-      INTEGER_T interior_ok
-      INTEGER_T i,j,k
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T tmp,w_p
-      REAL_T LSpart
-      REAL_T xc(SDIM)
-      INTEGER_T npart_local
-
-      REAL_T, target :: cell_data_interp(1)
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-
-      type(interp_from_grid_parm_type) :: data_in
-      type(interp_from_grid_out_parm_type) :: data_out
-
-      if (ngrow_distance.eq.4) then
-       ! do nothing
-      else
-       print *,"ngrow_distance invalid"
-       stop
-      endif
-
-      do dir=1,SDIM
-       dx_local(dir)=accum_PARM%dx(dir)
-       xlo_local(dir)=accum_PARM%xlo(dir)
-       fablo_local(dir)=accum_PARM%fablo(dir)
-       fabhi_local(dir)=accum_PARM%fabhi(dir)
-      enddo
-
-      call checkbound(fablo_local,fabhi_local,DIMS(LS),ngrow_distance,-1,1271)
-      call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),0,-1,1271)
-
-      data_out%data_interp=>cell_data_interp
-
-      data_in%level=accum_PARM%level
-      data_in%finest_level=accum_PARM%finest_level
-      data_in%bfact=accum_PARM%bfact
-      data_in%nmat=num_materials
-      data_in%im_PLS=0 ! not weighted
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
-      data_in%ngrowfab=1
-
-      data_in%state=>LS
-      data_in%LS=>LS
-
-      data_in%ncomp=1
-      data_in%scomp=accum_PARM%im_PLS_cpp+1
-
-      nhalf=3
-
-      eps=accum_PARM%dx(1)/10.0d0
-      if (eps.gt.zero) then
-       ! do nothing
-      else
-       print *,"eps invalid"
-       stop
-      endif
-
-      if (accum_PARM%Npart.ge.0) then
-       npart_local=accum_PARM%Npart
-      else
-       print *,"accum_PARM%Npart invalid"
-       stop
-      endif
-
-      do interior_ID=1,npart_local
-
-       if (accum_PARM%Npart.ge.0) then
-        do dir=1,SDIM
-         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-        enddo
-        LSpart=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
-
-        if ((LSpart.ge.zero).or.(LSpart.le.zero)) then
-         ! do nothing
-        else
-         print *,"LSpart invalid"
-         stop
-        endif 
-
-        data_in%xtarget=>xpart
-        data_in%interp_foot_flag=0
-        call interp_from_grid_util(data_in,data_out)
-
-        call containing_cell(accum_PARM%bfact, &
-         accum_PARM%dx, &
-         accum_PARM%xlo, &
-         accum_PARM%fablo, &
-         xpart, &
-         cell_index)
-
-        interior_ok=1
-        do dir=1,SDIM
-         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
-             (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
-          interior_ok=0
-         endif
-        enddo
-
-        if (interior_ok.eq.1) then
-         i=cell_index(1)
-         j=cell_index(2)
-         k=cell_index(SDIM)
-         call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-         tmp=0.0d0
-         do dir=1,SDIM
-          xc(dir)=xsten(0,dir)
-          tmp=tmp+(xpart(dir)-xc(dir))**2
-         enddo
-         tmp=sqrt(tmp)
-         w_p=(1.0d0/(eps+tmp))
-
-         if (w_p.gt.zero) then
-          matrixfab(D_DECL(i,j,k),1)= &
-           matrixfab(D_DECL(i,j,k),1)+w_p
-          matrixfab(D_DECL(i,j,k),2)= &
-           matrixfab(D_DECL(i,j,k),2)+ &
-            w_p*(data_out%data_interp(1)-LSpart)
-         else
-          print *,"w_p invalid"
-          stop
-         endif
-        else if (interior_ok.eq.0) then
-         ! do nothing
-        else
-         print *,"interior_ok invalid"
-         stop
-        endif
-
-       else
-        print *,"accum_PARM%Npart invalid"
-        stop
-       endif
-
-      enddo ! do interior_ID=1,accum_PARM%Npart
-
-      return
-      end subroutine traverse_particlesLS
-
-
-
-
-       ! called from NavierStokes::PLS_correct (NavierStokes2.cpp)
-      subroutine fort_assimilate_lvlset_from_particles( &
-        particles_weight_LS, &
-        tid, &  ! thread id
-        im_PLS_cpp, &
-        isweep, &
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        solid_time, &
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        vofnew,DIMS(vofnew), &
-        LS,DIMS(LS), & ! getStateDist(time)
-        mofdata,DIMS(mofdata), &
-        den,DIMS(den), &
-        vel,DIMS(vel), &
-        velnew,DIMS(velnew), &
-        dennew,DIMS(dennew), &
-        lsnew,DIMS(lsnew), &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        time, &
-        nmat, &
-        ngrow_distance, &
-        particles, & ! a list of particles in the elastic structure
-        nbr_particles, &  ! list of nbr particles in the elastic structure
-        Np,Nn, & !  Np = number of particles, Nn=number nbr part.
-        matrix_points, & ! least squares in 3D: 4x4 matrix, symmetric part=10
-        RHS_points, &    ! least squares in 3D: 4
-        ncomp_accumulate, & ! (matrix_points + RHS_points)
-        matrixfab, &     ! accumulation FAB
-        DIMS(matrixfab)) &
-      bind(c,name='fort_assimilate_lvlset_from_particles')
-
-      use global_utility_module
-      use global_distance_module
-      use probf90_module
-      use geometry_intersect_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: im_PLS_cpp
-      INTEGER_T, intent(in) :: isweep
-      INTEGER_T, intent(in) :: ngrow_distance
-
-      INTEGER_T, intent(in) :: level,finest_level
-      REAL_T, intent(in) :: solid_time
-
-      REAL_T, intent(in), target :: xlo(SDIM)
-      REAL_T, intent(in), target :: dx(SDIM)
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: bfact
-
-      REAL_T, intent(in) :: particles_weight_LS(nmat)
-
-      INTEGER_T, intent(in) :: DIMDEC(vofnew)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(mofdata)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(velnew)
-      INTEGER_T, intent(in) :: DIMDEC(dennew)
-      INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      REAL_T, intent(inout) ::  vofnew(DIMV(vofnew),nmat*ngeom_raw)
-      REAL_T, intent(in) ::  vel(DIMV(vel), &
-       num_materials_vel*(SDIM+1))
-      REAL_T, intent(out) ::  velnew(DIMV(velnew), &
-       num_materials_vel*(SDIM+1))
-      REAL_T, intent(in), target ::  LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) ::  mofdata(DIMV(mofdata),nmat*ngeom_raw)
-      REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
-      REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
-      REAL_T, intent(inout) ::  lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
-
-      INTEGER_T, intent(in) :: matrix_points
-      INTEGER_T, intent(in) :: RHS_points
-      INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, value, intent(in) :: Np,Nn ! pass by value
-      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      REAL_T, intent(inout) :: matrixfab( &
-        DIMV(matrixfab), &
-        ncomp_accumulate)
-      type(particle_t), intent(in), target :: particles(Np)
-      type(particle_t), intent(in), target :: nbr_particles(Nn)
-
-      type(accum_parm_type_LS) :: accum_PARM
-
-      INTEGER_T gridlo(3)
-      INTEGER_T gridhi(3)
-      INTEGER_T i,j,k
-      INTEGER_T ii,jj,kk
-      INTEGER_T dir
-      INTEGER_T im
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      REAL_T A_matrix, B_matrix, LS_local, lambda
-      REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T LSfacearea
-      REAL_T LScentroid(SDIM)
-      REAL_T LSareacentroid(SDIM)
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      INTEGER_T istenlo(3),istenhi(3)
-      INTEGER_T vofcomp,vofcomp_local
-      REAL_T F_old
-      REAL_T F_sum_complement
-      REAL_T F_sum_complement_new
-      REAL_T local_wt
-      REAL_T F_local
-      REAL_T X_local(SDIM)
-      REAL_T X_old(SDIM)
-
-      nhalf=3
-
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
-      if (ngrow_distance.eq.4) then
-       ! do nothing
-      else
-       print *,"ngrow_distance invalid"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(dennew),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(velnew),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(vel),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(mofdata),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(LS),ngrow_distance,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,1271)
-
-      if (matrix_points.eq.1) then
-       ! do nothing
-      else
-       print *,"matrix_points invalid"
-       stop
-      endif
-      if (RHS_points.eq.1) then
-       ! do nothing
-      else
-       print *,"RHS_points invalid"
-       stop
-      endif
-
-      if (ncomp_accumulate.eq.(matrix_points+RHS_points)) then
-       ! do nothing
-      else
-       print *,"ncomp_accumulate invalid"
-       stop
-      endif
-      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
-       ! do nothing
-      else
-       print *,"im_PLS_cpp invalid"
-       stop
-      endif
-
-      accum_PARM%fablo=>fablo 
-      accum_PARM%fabhi=>fabhi
-      accum_PARM%tilelo=>tilelo 
-      accum_PARM%tilehi=>tilehi
-      accum_PARM%bfact=bfact
-      accum_PARM%level=level
-      accum_PARM%finest_level=finest_level
-      accum_PARM%matrix_points=matrix_points
-      accum_PARM%RHS_points=RHS_points
-      accum_PARM%ncomp_accumulate=ncomp_accumulate
-      accum_PARM%dx=>dx
-      accum_PARM%xlo=>xlo
-
-      accum_PARM%im_PLS_cpp=im_PLS_cpp
-
-      call copy_dimdec( &
-        DIMS(accum_PARM%LS), &
-        DIMS(LS))
-      accum_PARM%LS=>LS  ! accum_PARM%LS is pointer, LS is target
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,gridlo,gridhi,0) 
-
-      istenlo(3)=0
-      istenhi(3)=0
-      do dir=1,SDIM
-       istenlo(dir)=-1
-       istenhi(dir)=1
-      enddo
-
-      if (isweep.eq.0) then
-
-       accum_PARM%particles=>particles
-       accum_PARM%Npart=Np
-
-       call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ngrow_distance, &
-         LS, &
-         DIMS(LS), &
-         ncomp_accumulate)
-
-       accum_PARM%particles=>nbr_particles
-       accum_PARM%Npart=Nn
-
-       call traverse_particlesLS(accum_PARM, &
-         matrixfab, &
-         DIMS(matrixfab), &
-         ngrow_distance, &
-         LS, &
-         DIMS(LS), &
-         ncomp_accumulate)
-
-       do i=gridlo(1),gridhi(1)
-       do j=gridlo(2),gridhi(2)
-       do k=gridlo(3),gridhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
-        B_matrix=matrixfab(D_DECL(i,j,k),2) ! sum w*(LS_cell(xp)-LS_cell_p)
-        LS_local=LS(D_DECL(i,j,k),im_PLS_cpp+1)
-
-        if (A_matrix.eq.zero) then
-         lsnew(D_DECL(i,j,k),im_PLS_cpp+1)=LS_local
-        else if (A_matrix.gt.zero) then
-         local_wt=particles_weight_LS(im_PLS_cpp+1)
-         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-           ! lambda=sum (interp(LS)-LS_p)w_p/sum w_p
-          lambda=B_matrix/A_matrix
-          lsnew(D_DECL(i,j,k),im_PLS_cpp+1)= &
-            LS_local-local_wt*lambda
-         else
-          print *,"local_wt invalid"
-          stop
-         endif
-        else
-         print *,"A_matrix invalid"
-         stop
-        endif
-
-       enddo
-       enddo
-       enddo
-
-      else if (isweep.eq.1) then
-
-       do i=gridlo(1),gridhi(1)
-       do j=gridlo(2),gridhi(2)
-       do k=gridlo(3),gridhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-
-        do ii=istenlo(1),istenhi(1)
-        do jj=istenlo(2),istenhi(2)
-        do kk=istenlo(3),istenhi(3)
-         LS_local=LS(D_DECL(i+ii,j+jj,k+kk),im_PLS_cpp+1)
-         LS_temp(D_DECL(ii,jj,kk))=LS_local
-        enddo
-        enddo
-        enddo
-
-        call getvolume(bfact,dx,xsten,nhalf, &
-         LS_temp,F_local,LSfacearea, &
-         LScentroid,LSareacentroid,VOFTOL,SDIM)
-
-        call CISBOX(xsten,nhalf, &
-         xlo,dx,i,j,k, &
-         bfact,level, &
-         volcell,cencell,SDIM)   
-        if (is_rigid(nmat,im_PLS_cpp+1).eq.0) then
-
-         vofcomp=im_PLS_cpp*ngeom_raw+1
-         F_old=vofnew(D_DECL(i,j,k),vofcomp)
-         do dir=1,SDIM
-          X_old(dir)=vofnew(D_DECL(i,j,k),vofcomp+dir)
-          X_local(dir)=LScentroid(dir)-cencell(dir)
-         enddo
-
-         if ((F_old.ge.-VOFTOL).and.(F_old.le.one+VOFTOL)) then
-
-          local_wt=particles_weight_LS(im_PLS_cpp+1)
-          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-           F_local=F_old-local_wt*(F_old-F_local)
-           do dir=1,SDIM
-            X_local(dir)=X_old(dir)-local_wt*(X_old(dir)-X_local(dir))
-           enddo
-          else
-           print *,"local_wt invalid"
-           stop
-          endif
- 
-          F_sum_complement=zero
-          do im=1,nmat
-           if (im.ne.im_PLS_cpp+1) then
-            if (is_rigid(nmat,im).eq.0) then
-             vofcomp_local=(im-1)*ngeom_raw+1
-             F_sum_complement= &
-              F_sum_complement+vofnew(D_DECL(i,j,k),vofcomp_local)
-            else if (is_rigid(nmat,im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid(nmat,im) invalid"
-             stop
-            endif
-           endif
-          enddo !im=1..nmat
-
-          if (F_local.ge.F_old) then 
-           if (F_sum_complement.gt.zero) then
-
-            F_sum_complement_new=F_sum_complement+F_old-F_local
-
-            vofnew(D_DECL(i,j,k),vofcomp)=F_local
-            do dir=1,SDIM
-             vofnew(D_DECL(i,j,k),vofcomp+dir)=X_local(dir)
-            enddo
-          
-            do im=1,nmat
-             if (im.ne.im_PLS_cpp+1) then
-              if (is_rigid(nmat,im).eq.0) then
-               vofcomp_local=(im-1)*ngeom_raw+1
-               vofnew(D_DECL(i,j,k),vofcomp_local)= &
-                F_sum_complement_new* &
-                 vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
-              else if (is_rigid(nmat,im).eq.1) then
-               ! do nothing
-              else
-               print *,"is_rigid(nmat,im) invalid"
-               stop
-              endif
-             endif
-            enddo !im=1..nmat
-           else if (F_sum_complement.eq.zero) then
-            ! do nothing
-           else
-            print *,"F_sum_complement invalid"
-            stop
-           endif
-          else if (F_local.le.F_old) then
-           ! sum_complement_new=sum_complement_old+F_old-F_local
-           ! if F_old=1 and F_local=0 then new sum complement=0+1-0=1
-           if ((F_sum_complement.eq.zero).or. &
-               (F_old.ge.one-VOFTOL)) then
-            ! do nothing since we do not know 
-            ! which material replaces im_PLS_cpp
-           else if ((F_sum_complement.gt.zero).and. &
-                    (F_old.le.one-VOFTOL)) then
-            F_sum_complement_new=F_sum_complement+F_old-F_local
-           
-            vofnew(D_DECL(i,j,k),vofcomp)=F_local
-            do dir=1,SDIM
-             vofnew(D_DECL(i,j,k),vofcomp+dir)=X_local(dir)
-            enddo
-           
-            do im=1,nmat
-             if (im.ne.im_PLS_cpp+1) then
-              if (is_rigid(nmat,im).eq.0) then
-               vofcomp_local=(im-1)*ngeom_raw+1
-               vofnew(D_DECL(i,j,k),vofcomp_local)= &
-                F_sum_complement_new* &
-                vofnew(D_DECL(i,j,k),vofcomp_local)/F_sum_complement 
-              else if (is_rigid(nmat,im).eq.1) then
-               ! do nothing
-              else
-               print *,"is_rigid(nmat,im) invalid"
-               stop
-              endif
-             endif
-            enddo !im=1..nmat
-           else
-            print *,"F_sum_complement or F_old invalid"
-            stop
-           endif
-          else
-           print *,"F_old or F_local invalid"
-           stop
-          endif
-         else
-          print *,"F_old invalid"
-          stop
-         endif
-        else
-         print *,"expecting is_rigid(nmat,im_PLS_cpp+1)==0"
-         stop
-        endif
-
-       enddo
-       enddo
-       enddo
-
-      else 
-       print *,"isweep invalid"
-       stop
-      endif
-
-      end subroutine fort_assimilate_lvlset_from_particles
-
       subroutine count_particles( &
        LS_local, &
        DIMS(LS_local), &
@@ -20780,10 +20199,9 @@ stop
 
       end subroutine project_to_cell
 
-
+FIX ME
       subroutine interp_eul_lag_dist( &
          nmat, &
-         particles_weight_LS, &
          particles_weight_XD, &
          particles_weight_VEL, &
          velfab, &
@@ -20808,9 +20226,8 @@ stop
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: particles_weight_LS(nmat)
-      REAL_T, intent(in) :: particles_weight_XD(nmat)
-      REAL_T, intent(in) :: particles_weight_VEL(nmat)
+      REAL_T, intent(in) :: particles_weight_XD
+      REAL_T, intent(in) :: particles_weight_VEL
       INTEGER_T, intent(in) :: i,j,k
       REAL_T, target, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: Np
@@ -20863,13 +20280,6 @@ stop
        ! do nothing
       else
        print *,"nmat invalid"
-       stop
-      endif
-
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -21223,10 +20633,9 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
 
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: im_PLS_cpp
 
-      REAL_T, intent(in) :: particles_weight_XD(nmat)
-      REAL_T, intent(in) :: particles_weight_VEL(nmat)
+      REAL_T, intent(in) :: particles_weight_XD
+      REAL_T, intent(in) :: particles_weight_VEL
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -21293,7 +20702,7 @@ stop
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
       REAL_T, allocatable, dimension(:) :: sort_data_time
-      REAL_T, allocatable, dimension(:) :: sort_data_LS
+      REAL_T, allocatable, dimension(:) :: sort_data_radius
       INTEGER_T sub_iter
       INTEGER_T cell_iter
       INTEGER_T isub_test
@@ -21345,8 +20754,7 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
 
-      accum_PARM%im_PLS_cpp=im_PLS_cpp
-      accum_PARM%nsubdivide=particle_nsubdivide(im_PLS_cpp+1)
+      accum_PARM%nsubdivide=particle_nsubdivide
 
       call copy_dimdec( &
         DIMS(accum_PARM%LS), &
@@ -21365,7 +20773,6 @@ stop
 
       accum_PARM%particles=>particles
       accum_PARM%Npart=Np
-
 
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
@@ -21405,7 +20812,7 @@ stop
       subhi(3)=0
       do dir=1,SDIM
        sublo(dir)=0
-       subhi(dir)=particle_nsubdivide(im_PLS_cpp+1)-1
+       subhi(dir)=particle_nsubdivide-1
       enddo
       allocate(sub_counter(sublo(1):subhi(1), &
               sublo(2):subhi(2), &
@@ -21482,8 +20889,8 @@ stop
            ! check if particles need to be deleted
          if (local_count.ge.1) then
 
-          if (local_count.gt.particle_max_per_nsubdivide(im_PLS_CPP+1)) then
-           allocate(sort_data_LS(local_count))
+          if (local_count.gt.particle_max_per_nsubdivide) then
+           allocate(sort_data_radius(local_count))
            allocate(sort_data_time(local_count))
            allocate(sort_data_id(local_count))
            sub_iter=0
@@ -21500,7 +20907,7 @@ stop
               sort_data_id(sub_iter)=current_link                     
               sort_data_time(sub_iter)= &
                  particles(current_link)%extra_state(2*SDIM+4) 
-              sort_data_LS(sub_iter)= &
+              sort_data_radius(sub_iter)= &
                  particles(current_link)%extra_state(SDIM+1) 
              else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
               ! do nothing
@@ -21528,30 +20935,21 @@ stop
                temp_time=sort_data_time(ibubble)
                sort_data_time(ibubble)=sort_data_time(ibubble+1)
                sort_data_time(ibubble+1)=temp_time
-               temp_LS=sort_data_LS(ibubble)
-               sort_data_LS(ibubble)=sort_data_LS(ibubble+1)
-               sort_data_LS(ibubble+1)=temp_LS
+               temp_radius=sort_data_radius(ibubble)
+               sort_data_radius(ibubble)=sort_data_radius(ibubble+1)
+               sort_data_radius(ibubble+1)=temp_radius
                bubble_change=1
               endif
              enddo ! ibubble=1..local_count-bubble_iter-1
              bubble_iter=bubble_iter+1
             enddo ! bubble_change==1 and bubble_iter<local_count
-            do bubble_iter=particle_max_per_nsubdivide(im_PLS_CPP+1)+1, &
-                           local_count
+            do bubble_iter=particle_max_per_nsubdivide+1,local_count
               ! never delete particles that were present from the
               ! very beginning of the simulation.
              if (sort_data_time(bubble_iter).eq.zero) then
               ! do nothing
              else if (sort_data_time(bubble_iter).gt.zero) then
-               ! never delete interface particles.
-              if (sort_data_LS(bubble_iter).eq.zero) then
-               ! do nothing
-              else if (sort_data_LS(bubble_iter).ne.zero) then
-               particle_delete_flag(sort_data_id(bubble_iter))=1
-              else
-               print *,"sort_data_LS invalid"
-               stop
-              endif
+              particle_delete_flag(sort_data_id(bubble_iter))=1
              else
               print *,"sort_data_time(bubble_iter) invalid"
               stop
@@ -21562,11 +20960,10 @@ stop
             stop
            endif    
            deallocate(sort_data_time)
-           deallocate(sort_data_LS)
+           deallocate(sort_data_radius)
            deallocate(sort_data_id)
           else if ((local_count.ge.1).and. &
-                   (local_count.le. &
-                    particle_max_per_nsubdivide(im_PLS_CPP+1))) then
+                   (local_count.le.particle_max_per_nsubdivide)) then
            ! do nothing
           else
            print *,"local_count bust"
@@ -21575,8 +20972,7 @@ stop
 
            ! insufficient particles in the subbox or adding the
            ! particles for the very first time.
-         else if ((local_count.lt. &
-                   particle_min_per_nsubdivide(im_PLS_CPP+1)).or. &
+         else if ((local_count.lt.particle_min_per_nsubdivide).or. &
                   (append_flag.eq.0)) then 
 
           call sub_box_cell_center( &
@@ -21588,7 +20984,6 @@ stop
             ! add bulk particles
           call interp_eul_lag_dist( &
             nmat, &
-            particles_weight_LS, &
             particles_weight_XD, &
             particles_weight_VEL, &
             velfab, &
@@ -21790,7 +21185,6 @@ stop
       INTEGER_T ii,jj,kk
       INTEGER_T ileft,jleft,kleft
       INTEGER_T iright,jright,kright
-      REAL_T LS_left,LS_right
       INTEGER_T imac,jmac,kmac
       INTEGER_T isten,jsten,ksten
       INTEGER_T dir,dir_inner
@@ -21923,16 +21317,7 @@ stop
          iright=imac
          jright=jmac
          kright=kmac
-         LS_left=grid_PARM%lsfab(D_DECL(ileft,jleft,kleft),grid_PARM%im_PLS)
-         LS_right=grid_PARM%lsfab(D_DECL(iright,jright,kright),grid_PARM%im_PLS)
-         if ((LS_left.ge.zero).and.(LS_right.ge.zero)) then
-          local_mass=one
-         else if ((LS_left.lt.zero).or.(LS_right.lt.zero)) then
-          local_mass=1.0D-3
-         else
-          print *,"loca_mass invalid"
-          stop
-         endif
+         local_mass=one
 
          isten=imac-imaclo(1)+1
          jsten=jmac-imaclo(2)+1
@@ -22105,8 +21490,7 @@ stop
 
       end subroutine check_cfl_BC
 
-
-FIX ME
+       ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
         tid, &
         single_particle_size, &
@@ -22151,8 +21535,8 @@ FIX ME
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: single_particle_size
-      REAL_T, intent(in) :: particle_volume(nmat)
-      REAL_T, intent(in) :: particle_relaxation_time_to_fluid(nmat)
+      REAL_T, intent(in) :: particle_volume
+      REAL_T, intent(in) :: particle_relaxation_time_to_fluid
       INTEGER_T, intent(in) :: particle_interaction_ngrow
       INTEGER_T, intent(in) :: level,finest_level
 
@@ -22257,8 +21641,6 @@ FIX ME
       probhi_arr(1)=probhix
       probhi_arr(2)=probhiy
       probhi_arr(3)=probhiz
-
-      grid_PARM%im_PLS=im_PLS_cpp+1
 
       grid_PARM%fablo=>fablo
       grid_PARM%fabhi=>fabhi

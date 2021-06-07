@@ -82,17 +82,17 @@ amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
 ns.particles_flag=1
-ns.particles_weight_XD=0 0 0.0 # 0.0=>particles have no weight   0<=wt<=1
+ns.particles_weight_XD=0.0 # 0.0=>particles have no weight   0<=wt<=1
 # particles_weight_VEL used for initializing particle velocity
 # from existing fluid and particle velocity.
-ns.particles_weight_VEL=0 0 1.0 # 0.0=>particles have no weight   0<=wt<=1
+ns.particles_weight_VEL=0.0 # 0.0=>particles have no weight   0<=wt<=1
 ns.particle_nsubdivide=1
 ns.particle_min_per_nsubdivide=0
 ns.particle_max_per_nsubdivide=100
 
-ns.particle_volume=1.0 1.0 1.0
-ns.particle_relaxation_time_to_fluid=0.0 0.0 0.0
-ns.fluid_relaxation_time_to_particle=1.0e+20 1.0e+20 1.0e+20
+ns.particle_volume=1.0
+ns.particle_relaxation_time_to_fluid=0.0
+ns.fluid_relaxation_time_to_particle=1.0e+20
 ns.particle_interaction_ngrow=1
 
 ns.radius_cutoff=0 0 -1
