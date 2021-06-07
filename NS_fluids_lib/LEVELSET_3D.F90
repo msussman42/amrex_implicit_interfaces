@@ -19579,37 +19579,11 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-           ! xfoot,dist,vel,den,T,insert time
+           ! xfoot,rad,vel,den,T,insert time
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
        end type particle_t
-
-        ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
-        ! call copy_dimdec( &
-        !  DIMS(PROBE_PARMS%LS), &
-        !  DIMS(LS))
-        ! PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
-       type accum_parm_type_LS
-        INTEGER_T, pointer :: fablo(:)
-        INTEGER_T, pointer :: fabhi(:)
-        INTEGER_T, pointer :: tilelo(:)
-        INTEGER_T, pointer :: tilehi(:)
-        INTEGER_T :: bfact
-        INTEGER_T :: level
-        INTEGER_T :: finest_level
-        INTEGER_T :: matrix_points
-        INTEGER_T :: RHS_points
-        INTEGER_T :: ncomp_accumulate
-        REAL_T, pointer :: dx(:)
-        REAL_T, pointer :: xlo(:)
-        INTEGER_T :: Npart
-        type(particle_t), pointer, dimension(:) :: particles
-        INTEGER_T :: im_PLS_cpp
-        INTEGER_T :: DIMDEC(LS)
-        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-       end type accum_parm_type_LS
-
 
        type accum_parm_type_count
         INTEGER_T, pointer :: fablo(:)
@@ -19673,7 +19647,7 @@ stop
       INTEGER_T, intent(inout), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
-      type(particle_t), intent(inout) :: particles(Np)
+      type(particle_t), intent(in) :: particles(Np)
        ! child link 1, parent link 1,
        ! child link 2, parent link 2, ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
@@ -19688,16 +19662,12 @@ stop
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
-      REAL_T LSpart,LSpart_trial
       INTEGER_T :: local_ngrow
       INTEGER_T :: ok_to_add_link
       INTEGER_T :: previous_link
       INTEGER_T :: ibase
       INTEGER_T :: ibase_new
       INTEGER_T :: i_parent,j_parent,k_parent
-      type(interp_from_grid_parm_type) :: data_in 
-      type(interp_from_grid_out_parm_type) :: data_out
-      REAL_T, target, dimension(1) :: data_interp_local
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -19712,22 +19682,6 @@ stop
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
-
-      data_out%data_interp=>data_interp_local
-      data_in%scomp=accum_PARM%im_PLS_cpp+1
-      data_in%ncomp=1
-      data_in%level=accum_PARM%level
-      data_in%finest_level=accum_PARM%finest_level
-      data_in%bfact=accum_PARM%bfact
-      data_in%nmat=num_materials
-      data_in%im_PLS=0 ! no weighting
-      data_in%ngrowfab=local_ngrow
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
-      data_in%state=>LS_local
-      data_in%LS=>LS_local
 
       call checkbound(fablo_local,fabhi_local,DIMS(LS_local), &
          local_ngrow,-1,2872)
@@ -19752,7 +19706,6 @@ stop
         endif
        enddo
        if (interior_ok.eq.1) then
-        LSpart=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
 
         i=cell_index(1)
         j=cell_index(2)
@@ -19822,57 +19775,6 @@ stop
          stop
         endif
 
-        if (1.eq.0) then
-          ! this is least squares interpolation
-         call interpfab( &
-          accum_PARM%bfact, &
-          accum_PARM%level, &
-          accum_PARM%finest_level, &
-          accum_PARM%dx, &
-          accum_PARM%xlo, &
-          xpart, &
-          accum_PARM%im_PLS_cpp+1, &
-          local_ngrow, &
-          accum_PARM%fablo, &
-          accum_PARM%fabhi, &
-          accum_PARM%LS, &
-          DIMS(accum_PARM%LS), &
-          LSpart_trial)
-        else if (1.eq.1) then
-         data_in%xtarget=>xpart
-         data_in%interp_foot_flag=0
-          ! bilinear interpolation
-         call interp_from_grid_util(data_in,data_out)
-         LSpart_trial=data_out%data_interp(1)
-        else
-         print *,"must select a form of interpolation"
-         stop
-        endif
-
-        if (LSpart.eq.zero) then
-         LSpart_trial=zero
-        else if (LSpart.ne.zero) then
-         if (LSpart_trial*LSpart.le.zero) then
-          LSpart_trial=half*(LSpart_trial+LSpart)
-          if (LSpart_trial*LSpart.le.zero) then
-           LSpart_trial=half*LSpart
-          else if (LSpart_trial*LSpart.gt.zero) then
-           ! do nothing
-          else
-           print *,"LSpart_trial or LSpart invalid"
-           stop
-          endif
-         else if (LSpart_trial*LSpart.gt.zero) then
-          ! do nothing
-         else
-          print *,"LSpart_trial or LSpart invalid"
-          stop
-         endif
-         particles(interior_ID)%extra_state(SDIM+1)=LSpart_trial
-        else
-         print *,"LSpart invalid"
-         stop
-        endif
        else if (interior_ok.eq.0) then
         ! do nothing
        else
@@ -20565,7 +20467,6 @@ stop
       INTEGER_T ibubble
       INTEGER_T temp_id
       REAL_T temp_time
-      REAL_T temp_LS
 
       call checkbound(fablo,fabhi,DIMS(velfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
@@ -20622,9 +20523,7 @@ stop
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
         cell_particle_count_ptr=>cell_particle_count
-         ! particles is INTENT(inout) for this routine since the
-         ! levelset value is overwritten with the
-         ! bilinear interpolant of the Eulerian data.
+
         call count_particles( &
          lsfab, &
          DIMS(lsfab), &

@@ -28911,7 +28911,6 @@ stop
       REAL_T xsten(-3:3,SDIM)
       REAL_T tmp,w_p
       REAL_T xc(SDIM)
-      REAL_T local_dist
       INTEGER_T npart_local
 
       REAL_T, target :: cell_data_interp(SDIM)
@@ -28983,8 +28982,7 @@ stop
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
          velpart(dir)= &
           accum_PARM%particles(interior_ID)%extra_state(SDIM+1+dir)
-        enddo
-        local_dist=accum_PARM%particles(interior_ID)%extra_state(SDIM+1)
+        enddo ! dir=1..sdim
 
         data_in%xtarget=>xpart
         data_in%interp_foot_flag=0
@@ -29017,14 +29015,6 @@ stop
          enddo
          tmp=sqrt(tmp)
          w_p=(1.0d0/(eps+tmp))
-         if (local_dist.lt.zero) then
-          w_p=w_p/1.0D+3
-         else if (local_dist.ge.zero) then
-          ! do nothing
-         else
-          print *,"local_dist invalid"
-          stop
-         endif
 
          if (w_p.gt.zero) then
           matrixfab(D_DECL(i,j,k),1)= &
@@ -29238,7 +29228,7 @@ stop
          stop
         endif
        enddo
-      enddo 
+      enddo ! interior_ID=1,Np_no_nbr
 
       accum_PARM%particles=>particles_no_nbr
       accum_PARM%Npart=Np_no_nbr
@@ -29265,7 +29255,6 @@ stop
         vel_fab, &
         DIMS(vel_fab), &
         ncomp_accumulate)
-
 
       if (dt.gt.zero) then
        if (fluid_relaxation_time_to_particle.eq.zero) then
@@ -29588,7 +29577,7 @@ stop
       INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: particles_weight_XD(nmat)
+      REAL_T, intent(in) :: particles_weight_XD
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
@@ -29705,7 +29694,6 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
       accum_PARM%nmat=nmat
-      accum_PARM%im_PLS=im_PLS_cpp+1
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
