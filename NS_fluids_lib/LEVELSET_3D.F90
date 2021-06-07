@@ -20132,74 +20132,6 @@ stop
       end subroutine sub_box_cell_center
 
 
-      subroutine project_to_cell( &
-         accum_PARM, &
-         i,j,k, &
-         x_cell, &
-         x_I, &
-         mod_flag)
-      use global_utility_module
-
-      IMPLICIT NONE
-
-      type(accum_parm_type_count), intent(in) :: accum_PARM
-      REAL_T, intent(in) :: x_cell(SDIM)
-      REAL_T, intent(inout) :: x_I(SDIM)
-      INTEGER_T, intent(out) :: mod_flag
-      INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T :: nhalf
-      INTEGER_T :: dir
-      INTEGER_T :: dir_inner
-      REAL_T :: factor
-      REAL_T :: xsten(-3:3,SDIM)
-
-      nhalf=3
-      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-
-      mod_flag=0
-
-       ! x_cell is starting point
-      do dir=1,SDIM
-       if ((x_cell(dir).ge.xsten(-1,dir)).and. &
-           (x_cell(dir).le.xsten(1,dir))) then
-     
-        if (x_I(dir).lt.xsten(-1,dir)) then
-         factor=(x_cell(dir)-xsten(-1,dir))/(x_cell(dir)-x_I(dir))
-         if (factor.lt.one) then
-          do dir_inner=1,SDIM
-           x_I(dir_inner)=x_cell(dir_inner)+ &
-            factor*(x_I(dir_inner)-x_cell(dir_inner)) 
-          enddo
-          mod_flag=1
-         else
-          print *,"factor invalid"
-          stop
-         endif
-        endif
-
-        if (x_I(dir).gt.xsten(1,dir)) then
-         factor=(x_cell(dir)-xsten(1,dir))/(x_cell(dir)-x_I(dir))
-         if (factor.lt.one) then
-          do dir_inner=1,SDIM
-           x_I(dir_inner)=x_cell(dir_inner)+ &
-            factor*(x_I(dir_inner)-x_cell(dir_inner)) 
-          enddo
-          mod_flag=1
-         else
-          print *,"factor invalid"
-          stop
-         endif
-        endif
-       else
-        print *,"x_cell invalid"
-        stop
-       endif
-
-      enddo ! dir=1..sdim
-
-      end subroutine project_to_cell
-
-FIX ME
       subroutine interp_eul_lag_dist( &
          nmat, &
          particles_weight_XD, &
@@ -20215,8 +20147,6 @@ FIX ME
          xtarget, &  ! where to add the new particle
          particle_link_data, &
          Np, &
-         dist_interp, &
-         grad_dist_interp, &
          x_foot_interp, &  ! x_foot_interp=xtarget if append_flag==0
          vel_interp)
       use probcommon_module
@@ -20232,8 +20162,6 @@ FIX ME
       REAL_T, target, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: Np
       INTEGER_T, intent(in) :: particle_link_data(Np*(1+SDIM))
-      REAL_T, intent(out) :: dist_interp
-      REAL_T, intent(out) :: grad_dist_interp(SDIM)
       REAL_T, intent(out) :: x_foot_interp(SDIM)
       REAL_T, intent(out) :: vel_interp(SDIM)
       REAL_T :: x_foot_interp_local(SDIM)
@@ -20250,23 +20178,20 @@ FIX ME
       INTEGER_T :: nhalf
       INTEGER_T :: dir
       REAL_T :: xsten(-3:3,SDIM)
-      REAL_T A_LS,b_LS
       REAL_T A_X,b_X(SDIM),b_VEL(SDIM)
       INTEGER_T :: current_link
       REAL_T, target :: xpart(SDIM)
       REAL_T :: xfoot(SDIM)
       REAL_T :: velpart(SDIM)
       REAL_T :: vel_interp_local(SDIM)
-      REAL_T :: LS
       INTEGER_T :: ibase
 
       REAL_T tmp,eps
-      REAL_T w_p,wt_LS
+      REAL_T w_p
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out
       REAL_T, target, dimension(num_materials*(SDIM+1)) :: data_interp_local
-      REAL_T :: local_LS_interp(num_materials*(SDIM+1))
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -20306,7 +20231,6 @@ FIX ME
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=num_materials
-      data_in%im_PLS=0 ! placeholder
       data_in%ngrowfab=1
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
@@ -20321,7 +20245,6 @@ FIX ME
        !  sum_P w_p
       A_LS=zero
       A_X=zero
-      b_LS=zero
       do dir=1,SDIM
        b_X(dir)=zero
        b_VEL(dir)=zero
@@ -20341,15 +20264,13 @@ FIX ME
         velpart(dir)= &
             accum_PARM%particles(current_link)%extra_state(SDIM+1+dir)
        enddo 
-       LS=accum_PARM%particles(current_link)%extra_state(SDIM+1)
 
        data_in%xtarget=>xpart
        data_in%interp_foot_flag=1
        data_in%scomp=1
        data_in%ncomp=SDIM
-       data_in%im_PLS=accum_PARM%im_PLS_cpp+1
        data_in%state=>xdisplacefab  
-       data_in%LS=>lsfab  
+       data_in%LS=>lsfab   ! not used
 
        if (accum_PARM%append_flag.eq.0) then
         do dir=1,SDIM
@@ -20376,46 +20297,17 @@ FIX ME
 
        w_p=1.0d0/(eps+tmp)
  
-       if (LS.ge.zero) then
-        wt_LS=one
-       else if (LS.lt.zero) then
-        wt_LS=1.0D-3
-       else
-        print *,"LS invalid"
-        stop
-       endif
-
-       A_X=A_X+w_p*wt_LS
+       A_X=A_X+w_p
        do dir=1,SDIM
-        b_X(dir)=b_X(dir)+w_p*wt_LS*(x_foot_interp_local(dir)-xfoot(dir))
+        b_X(dir)=b_X(dir)+w_p*(x_foot_interp_local(dir)-xfoot(dir))
        enddo
-
-       data_in%xtarget=>xpart
-       data_in%interp_foot_flag=0
-       data_in%scomp=1
-       data_in%ncomp=num_materials*(1+SDIM)
-       data_in%im_PLS=0
-       data_in%state=>lsfab  
-       data_in%LS=>lsfab  
-
-        ! if im_PLS==0 then bilinear weights are not modified
-        ! if 1<=im_PLS<=nmat, then bilinear weights are multiplied by
-        ! 1D-3 if LS<0.
-       call interp_from_grid_util(data_in,data_out)
-       do dir=1,num_materials*(1+SDIM)
-        local_LS_interp(dir)=data_out%data_interp(dir)
-       enddo
-
-       A_LS=A_LS+w_p
-       b_LS=b_LS+w_p*(local_LS_interp(accum_PARM%im_PLS_cpp+1)-LS)
 
        data_in%xtarget=>xpart
        data_in%interp_foot_flag=0
        data_in%scomp=1
        data_in%ncomp=SDIM
-       data_in%im_PLS=accum_PARM%im_PLS_cpp+1
        data_in%state=>velfab  
-       data_in%LS=>lsfab  
+       data_in%LS=>lsfab   ! not used
 
         ! bilinear interpolation
        call interp_from_grid_util(data_in,data_out)
@@ -20433,7 +20325,7 @@ FIX ME
         stop
        endif
        do dir=1,SDIM
-        b_VEL(dir)=b_VEL(dir)+w_p*wt_LS*(vel_interp_local(dir)-velpart(dir))
+        b_VEL(dir)=b_VEL(dir)+w_p*(vel_interp_local(dir)-velpart(dir))
        enddo
 
        ibase=(current_link-1)*(1+SDIM)
@@ -20459,9 +20351,8 @@ FIX ME
       data_in%interp_foot_flag=1
       data_in%scomp=1
       data_in%ncomp=SDIM
-      data_in%im_PLS=accum_PARM%im_PLS_cpp+1
       data_in%state=>xdisplacefab  
-      data_in%LS=>lsfab  
+      data_in%LS=>lsfab   ! not used
 
       if (accum_PARM%append_flag.eq.0) then
        do dir=1,SDIM
@@ -20506,44 +20397,9 @@ FIX ME
       data_in%xtarget=>xtarget
       data_in%interp_foot_flag=0
       data_in%scomp=1
-      data_in%ncomp=num_materials*(1+SDIM)
-      data_in%im_PLS=0
-      data_in%state=>lsfab  
-      data_in%LS=>lsfab  
-
-      call interp_from_grid_util(data_in,data_out)
-      do dir=1,num_materials*(1+SDIM)
-       local_LS_interp(dir)=data_out%data_interp(dir)
-      enddo
-      call normalize_LS_normals(num_materials,local_LS_interp)
-      do dir=1,SDIM
-       grad_dist_interp(dir)= &
-        local_LS_interp(num_materials+accum_PARM%im_PLS_cpp*SDIM+dir)
-      enddo
-
-      dist_interp=local_LS_interp(accum_PARM%im_PLS_cpp+1)
-      if (A_LS.gt.zero) then
-       local_wt=particles_weight_LS(accum_PARM%im_PLS_cpp+1)
-       if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-        dist_interp=dist_interp-local_wt*b_LS/A_LS
-       else
-        print *,"local_wt invalid"
-        stop
-       endif
-      else if (A_LS.eq.zero) then
-       ! do nothing
-      else
-       print *,"A_LS invalid"
-       stop
-      endif
-
-      data_in%xtarget=>xtarget
-      data_in%interp_foot_flag=0
-      data_in%scomp=1
       data_in%ncomp=SDIM
-      data_in%im_PLS=accum_PARM%im_PLS_cpp+1
       data_in%state=>velfab  
-      data_in%LS=>lsfab  
+      data_in%LS=>lsfab   ! not used
 
        ! bilinear interpolation
       call interp_from_grid_util(data_in,data_out)
@@ -20582,7 +20438,7 @@ FIX ME
        stop
       endif
 
-
+      return
       end subroutine interp_eul_lag_dist
 
        ! called from NavierStokes.cpp:
@@ -20690,11 +20546,7 @@ FIX ME
       INTEGER_T mod_flag
       INTEGER_T sub_found
       INTEGER_T Np_append_test
-      REAL_T dist_sub
-      REAL_T dist_sub_I
-      REAL_T :: grad_dist_sub(SDIM)
       REAL_T :: x_foot_sub(SDIM)
-      REAL_T dist_sub_cutoff
       REAL_T :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
       REAL_T :: xsub_I(SDIM)
@@ -20714,13 +20566,6 @@ FIX ME
       INTEGER_T temp_id
       REAL_T temp_time
       REAL_T temp_LS
-
-      if (particle_nsubdivide.ge.1) then
-       dist_sub_cutoff=dx(1)/particle_nsubdivide
-      else
-       print *,"particle_nsubdivide invalid"
-       stop
-      endif
 
       call checkbound(fablo,fabhi,DIMS(velfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
@@ -20997,124 +20842,30 @@ FIX ME
             xsub, &
             particle_link_data, &
             Np, &
-            dist_sub, &
-            grad_dist_sub, & ! this output is used to find closest point.
             x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
             vel_sub)
 
-          if (dist_sub.ge.zero) then  ! only add particles in the material
+          Np_append_test=Np_append_test+1
 
-           Np_append_test=Np_append_test+1
-
-           if (isweep.eq.0) then
-            ! do nothing
-           else if (isweep.eq.1) then
-            ibase=(Np_append_test-1)*single_particle_size
-            do dir=1,SDIM
-             new_particles(ibase+dir)=xsub(dir)
-             new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
-             new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
-            enddo
-            new_particles(ibase+2*SDIM+1)=dist_sub
-            new_particles(ibase+3*SDIM+2)=one  ! stub for density
-            new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
-            new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
-           else
-            print *,"isweep invalid"
-            stop
-           endif
-           if (abs(dist_sub).le.dist_sub_cutoff) then
-            do dir=1,SDIM
-             xsub_I(dir)=xsub(dir)-dist_sub*grad_dist_sub(dir)
-            enddo 
-
-            call project_to_cell( &
-             accum_PARM, &
-             i,j,k, &
-             xsub, &
-             xsub_I, &
-             mod_flag) !if mod_flag==1 then level set is not set to "0"
-
-            if (1.eq.0) then
-             print *,"i,j,k,xI,yI,zI ",i,j,k,xsub_I(1), &
-                  xsub_I(2),xsub_I(SDIM)
-             print *,"im_PLS_cpp,dist_sub,phix,phiy,phiz ", &
-               im_PLS_cpp,dist_sub,grad_dist_sub(1), &
-               grad_dist_sub(2),grad_dist_sub(SDIM)
-
-            endif
-
-            ! add interface particles
-            call interp_eul_lag_dist( &
-             nmat, &
-             particles_weight_LS, &
-             particles_weight_XD, &
-             particles_weight_VEL, &
-             velfab, &
-             DIMS(velfab), &
-             lsfab, &
-             DIMS(lsfab), &
-             xdisplacefab, &
-             DIMS(xdisplacefab), &
-             accum_PARM, &
-             i,j,k, &
-             xsub_I, &
-             particle_link_data, &
-             Np, &
-             dist_sub, &
-             grad_dist_sub, &  ! this output is discarded.
-             x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
-             vel_sub)
-
-            if (mod_flag.eq.0) then !xCP did not have to be projected.
-             dist_sub_I=zero
-            else if (mod_flag.eq.1) then ! xCP had to be projected.
-             dist_sub_I=dist_sub
-            else
-             print *,"mod_flag invalid"
-             stop
-            endif
-
-            if (dist_sub_I.ge.zero) then
-             Np_append_test=Np_append_test+1
-
-             if (isweep.eq.0) then
-              ! do nothing
-             else if (isweep.eq.1) then
-              ibase=(Np_append_test-1)*single_particle_size
-              do dir=1,SDIM
-               new_particles(ibase+dir)=xsub_I(dir)
-               new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
-               new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
-              enddo
-              new_particles(ibase+3*SDIM+2)=one  ! stub for density
-              new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
-              new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
-              new_particles(ibase+2*SDIM+1)=dist_sub_I
-             else
-              print *,"isweep invalid"
-              stop
-             endif
-            else if (dist_sub_I.lt.zero) then
-             ! do nothing
-            else
-             print *,"dist_sub_I invalid"
-             stop
-            endif
-           else if (abs(dist_sub).gt.dist_sub_cutoff) then
-            ! do not try to add an interface particle
-           else
-            print *,"dist_sub is corrupt"
-            stop
-           endif
-          else if (dist_sub.lt.zero) then
+          if (isweep.eq.0) then
            ! do nothing
+          else if (isweep.eq.1) then
+           ibase=(Np_append_test-1)*single_particle_size
+           do dir=1,SDIM
+            new_particles(ibase+dir)=xsub(dir)
+            new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+            new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
+           enddo
+           new_particles(ibase+2*SDIM+1)=one  ! stub for radius
+           new_particles(ibase+3*SDIM+2)=one  ! stub for density
+           new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
+           new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
           else
-           print *,"dist_sub invalid"
+           print *,"isweep invalid"
            stop
           endif
-         else if ((local_count.ge. &
-                   particle_min_per_nsubdivide(im_PLS_CPP+1)).and. &
+
+         else if ((local_count.ge.particle_min_per_nsubdivide).and. &
                   (append_flag.eq.1)) then
           ! do nothing
          else
@@ -21161,6 +20912,7 @@ FIX ME
       endif
 
       deallocate(sub_counter)
+
       return
       end subroutine fort_init_particle_container
 

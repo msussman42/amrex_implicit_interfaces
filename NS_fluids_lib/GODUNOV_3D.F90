@@ -28865,7 +28865,6 @@ stop
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
         INTEGER_T :: nmat
-        INTEGER_T :: im_PLS
        end type accum_parm_type
 
       contains
@@ -29061,7 +29060,6 @@ stop
       subroutine fort_assimilate_VEL_from_particles( &
         fluid_relaxation_time_to_particle, &
         dt, &
-        im_PLS_cpp, & ! 0..nmat-1
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
@@ -29100,7 +29098,6 @@ stop
       use godunov_module
       implicit none
 
-      INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: fluid_relaxation_time_to_particle
@@ -29131,7 +29128,7 @@ stop
         nmat*(1+SDIM))
       REAL_T, intent(inout) :: SNEWfab( & 
         DIMV(SNEWfab), &
-        num_materials_vel*SDIM)
+        SDIM)
       REAL_T, intent(inout) :: UMACNEW( & 
         DIMV(UMACNEW))
       REAL_T, intent(inout) :: VMACNEW( & 
@@ -29140,7 +29137,7 @@ stop
         DIMV(WMACNEW))
       REAL_T, intent(in) :: vel_fab( &
         DIMV(vel_fab), &
-        num_materials_vel*SDIM)
+        SDIM)
 
       type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
       type(particle_t), intent(in) :: particles_nbr(Np_nbr)
@@ -29170,19 +29167,6 @@ stop
        ! do nothing
       else
        print *,"nmat invalid"
-       stop
-      endif
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-
-      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
-       ! do nothing
-      else
-       print *,"im_PLS_cpp invalid"
        stop
       endif
 
@@ -29232,7 +29216,6 @@ stop
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
       accum_PARM%nmat=nmat
-      accum_PARM%im_PLS=im_PLS_cpp+1
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 

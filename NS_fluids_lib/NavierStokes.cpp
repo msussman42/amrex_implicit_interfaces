@@ -20894,8 +20894,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  } else 
   amrex::Error("VISCOTEN_MF should not be allocated");
 
- int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE+
-	elastic_partid*AMREX_SPACEDIM;
+ int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
 
  int ncomp_tensor=NUM_TENSOR_TYPE;
 
@@ -21516,28 +21515,20 @@ NavierStokes::init_particle_container(int append_flag) {
     } else
      amrex::Error("i_mirror <> Np_mirror_AoS");
 
-    if (ipart<NS_ncomp_particles) {
-     // do nothing
-    } else
-     amrex::Error("ipart invalid");
-
-   } // mfi
+  } // mfi
 } // omp
-   ns_reconcile_d_num(81);
+  ns_reconcile_d_num(81);
 
-   delete init_velocity_mf;
-   delete x_displace_mf;
-   delete LSmf;
-
-  } else
-   amrex::Error("particleLS_flag[im_PLS] invalid");
+  delete init_velocity_mf;
+  delete x_displace_mf;
+  delete LSmf;
 
  } else
-  amrex::Error("NS_ncomp_particles invalid");
+  amrex::Error("particles_flag invalid");
+
 
 }  // end subroutine init_particle_container()
 
-FIX ME
 
 // should be cur_time=0 and prev_time=-1
 // called from post_init
@@ -21588,50 +21579,33 @@ NavierStokes::post_init_state () {
  int post_init_flag=1; // in: post_init_state
  prepare_post_process(post_init_flag);
 
- if (NS_ncomp_particles>0) {
+ if (particles_flag==1) {
 
   int ipart=0;
-  for (int im=0;im<nmat;im++) {
 
-   if (particleLS_flag[im]==1) {
+  if (debug_PC==1) {
+   std::cout << "PC: slab_step, ns_time_order, ipart " <<
+    slab_step << ' ' << ns_time_order << ' ' << ipart << '\n';
+  }
 
-    if (debug_PC==1) {
-     std::cout << "PC: slab_step, ns_time_order, im, ipart " <<
-      slab_step << ' ' << ns_time_order << ' ' << im << ' ' << ipart << '\n';
-    }
-
-    NavierStokes& ns_level0=getLevel(0);
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+  NavierStokes& ns_level0=getLevel(0);
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+   ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
     
-    int append_flag=0;
-    ns_finest.init_particle_container(im,ipart,append_flag);
+  int append_flag=0;
+  ns_finest.init_particle_container(append_flag);
 
-    int lev_min=0;
-    int lev_max=-1;
-    int nGrow_Redistribute=0;
-    int local_Redistribute=0;
-    localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
+  int lev_min=0;
+  int lev_max=-1;
+  int nGrow_Redistribute=0;
+  int local_Redistribute=0;
+  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+   local_Redistribute);
 
-    ipart++;
-   } else if (particleLS_flag[im]==0) {
-    // do nothing
-   } else
-    amrex::Error("particleLS_flag[im] invalid");
-
-  } // im=0..nmat-1
-
-  if (ipart==NS_ncomp_particles) {
-   // do nothing
-  } else
-   amrex::Error("ipart invalid");
- 
- } else if (NS_ncomp_particles==0) {
+ } else if (particles_flag==0) {
   // do nothing
  } else
-  amrex::Error("NS_ncomp_particles invalid");
-
+  amrex::Error("particles_flag invalid");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
