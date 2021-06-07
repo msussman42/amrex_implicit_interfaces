@@ -20933,6 +20933,8 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // declared in GODUNOV_3D.F90.
+    //   calls local_tensor_from_xdisplace
    fort_assimilate_tensor_from_xdisplace( 
      &im_elastic, // 0..nmat-1
      &tid_current,
@@ -21270,7 +21272,7 @@ NavierStokes::assimilate_vel_from_particles() {
 } // end subroutine assimilate_vel_from_particles
 
 FIX ME STARTING HERE (just one particle container,num_materials_vel delete,
- just one displacement)
+ just one displacement, do not extrapolate the displacement vector)
 
 
 // initialize particles and copy to all "slab locations"
