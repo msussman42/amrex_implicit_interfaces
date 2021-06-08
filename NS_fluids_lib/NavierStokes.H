@@ -2083,7 +2083,9 @@ protected:
     static int num_materials_viscoelastic;
 
     static int MAC_grid_displacement;
-    static int NUM_CELL_ELASTIC;
+     //num_material_elastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM if 
+     // MAC_grid_displacement==0.
+    static int NUM_CELL_ELASTIC; 
 
      // den,denA,E,T,P,species,configuration tensor
     static int num_state_material;
