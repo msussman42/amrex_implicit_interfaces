@@ -8233,9 +8233,6 @@ void NavierStokes::output_zones(
  int nmat=num_materials;
  int nden=nmat*num_state_material;
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -8337,7 +8334,7 @@ void NavierStokes::output_zones(
     MFInfo().SetTag("maskSEM_minus"),FArrayBoxFactory());
 
    MultiFab* velmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-    num_materials_vel*(AMREX_SPACEDIM+1),1,
+    (AMREX_SPACEDIM+1),1,
     MFInfo().SetTag("velmfminus"),FArrayBoxFactory());
 
    MultiFab* vofmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
@@ -8345,15 +8342,15 @@ void NavierStokes::output_zones(
      MFInfo().SetTag("vofminus"),FArrayBoxFactory());
 
    MultiFab* presmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     num_materials_vel,1,
+     1,1,
      MFInfo().SetTag("presmfminus"),FArrayBoxFactory());
 
    MultiFab* divmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     num_materials_vel,1,
+     1,1,
      MFInfo().SetTag("divmfminus"),FArrayBoxFactory());
 
    MultiFab* div_data_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     num_materials_vel,1,
+     1,1,
      MFInfo().SetTag("div_data_minus"),FArrayBoxFactory());
 
    MultiFab* denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
@@ -8366,7 +8363,7 @@ void NavierStokes::output_zones(
 
    MultiFab* viscoelasticmfminus=
     new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     num_materials_viscoelastic*NUM_CELL_ELASTIC,1,
+     NUM_CELL_ELASTIC,1,
      MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
 
    int elastic_ncomp=viscoelasticmfminus->nComp();
@@ -8397,7 +8394,7 @@ void NavierStokes::output_zones(
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
    velmfminus->ParallelCopy(*velmf,0,0,
-    num_materials_vel*(AMREX_SPACEDIM+1),1,1,geom.periodicity());
+    (AMREX_SPACEDIM+1),1,1,geom.periodicity());
 
    check_for_NAN(velmf,1);
    check_for_NAN(velmfminus,11);
@@ -8409,21 +8406,21 @@ void NavierStokes::output_zones(
    check_for_NAN(vofmfminus,12);
 
    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   presmfminus->ParallelCopy(*presmf,0,0,num_materials_vel,
+   presmfminus->ParallelCopy(*presmf,0,0,1,
 		   1,1,geom.periodicity()); 
 
    check_for_NAN(presmf,3);
    check_for_NAN(presmfminus,13);
 
    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   divmfminus->ParallelCopy(*divmf,0,0,num_materials_vel,
+   divmfminus->ParallelCopy(*divmf,0,0,1,
 		   1,1,geom.periodicity()); 
 
    check_for_NAN(divmf,4);
    check_for_NAN(divmfminus,14);
 
    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   div_data_minus->ParallelCopy(*div_data,0,0,num_materials_vel,
+   div_data_minus->ParallelCopy(*div_data,0,0,1,
 		   1,1,geom.periodicity()); 
 
    check_for_NAN(div_data,5);
@@ -8444,7 +8441,7 @@ void NavierStokes::output_zones(
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
-     num_materials_viscoelastic*NUM_CELL_ELASTIC,
+     NUM_CELL_ELASTIC,
      1,1,geom.periodicity()); 
    check_for_NAN(viscoelasticmf,6);
    check_for_NAN(viscoelasticmfminus,16);

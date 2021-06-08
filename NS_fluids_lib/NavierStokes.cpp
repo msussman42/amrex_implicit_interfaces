@@ -15938,17 +15938,17 @@ NavierStokes::split_scalar_advection() {
 
  for (int im=0;im<nmat;im++) {
   if (ns_is_rigid(im)==0) {
-   scomp_init=num_materials_vel*(AMREX_SPACEDIM+1)+im*num_state_material;
+   scomp_init=(AMREX_SPACEDIM+1)+im*num_state_material;
    ncomp_init=num_state_material;
    S_new.setVal(0.0,scomp_init,ncomp_init,1);
-   scomp_init=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+
+   scomp_init=(AMREX_SPACEDIM+1)+nmat*num_state_material+
      im*ngeom_raw;
    ncomp_init=ngeom_raw;
    S_new.setVal(0.0,scomp_init,ncomp_init,1);
    LS_new.setVal(0.0,im,1,1);
   } else if (ns_is_rigid(im)==1) {
    if (solidheat_flag==0) {  // thermal diffuse in solid (default)
-    scomp_init=num_materials_vel*(AMREX_SPACEDIM+1)+im*num_state_material+1;
+    scomp_init=(AMREX_SPACEDIM+1)+im*num_state_material+1;
     ncomp_init=1;
     S_new.setVal(0.0,scomp_init,ncomp_init,1);
    } else if (solidheat_flag==2) { // Neumann
@@ -16216,11 +16216,11 @@ NavierStokes::split_scalar_advection() {
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
 
-   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
+   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];//1..2*num_MAC_vectors
    FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
    FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
 
-   FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];
+   FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];//1..2*num_MAC_vectors
    FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
    FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
@@ -16244,7 +16244,7 @@ NavierStokes::split_scalar_advection() {
 
     // declared in GODUNOV_3D.F90
    FORT_BUILD_NEWMAC(
-    &num_MAC_vectors, //=1 or 2
+    &num_MAC_vectors, //num_MAC_vectors=1 or 2
     &normdir_here,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -16340,8 +16340,8 @@ NavierStokes::split_scalar_advection() {
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
      // velocity and pressure
-  avgDown(State_Type,0,num_materials_vel*(AMREX_SPACEDIM+1),1);
-  int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
+  avgDown(State_Type,0,(AMREX_SPACEDIM+1),1);
+  int scomp_den=(AMREX_SPACEDIM+1);
   avgDown(State_Type,scomp_den,num_state_material*nmat,1);
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=nmat)) {
@@ -18882,7 +18882,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    NavierStokes& ns_level=getLevel(ilev);
    MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
    MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
-     0,0,num_materials_vel*AMREX_SPACEDIM,1);
+     0,0,AMREX_SPACEDIM,1);
    ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
   }  // ilev
  }

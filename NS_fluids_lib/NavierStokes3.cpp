@@ -217,11 +217,6 @@ void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
  if (level>=finest_level) 
   amrex::Error("level invalid avgDownMacState");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- int nsolveMM_FACE=num_materials_vel;
-
  NavierStokes& fine_lev = getLevel(level+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -231,12 +226,12 @@ void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
   int ncomp_edge=S_crse.nComp(); 
  
   if (MAC_state_idx==Umac_Type) {
-   if (ncomp_edge==nsolveMM_FACE) {
+   if (ncomp_edge==1) {
     // do nothing
    } else
     amrex::Error("ncomp_edge invalid in avgDownMacState");
   } else if (MAC_state_idx==XDmac_Type) {
-   if (ncomp_edge==num_materials_viscoelastic) {
+   if (ncomp_edge==1) {
     // do nothing
    } else
     amrex::Error("ncomp_edge invalid in avgDownMacState");

@@ -3542,9 +3542,9 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors ! =1 or 2
+      INTEGER_T, intent(in) :: num_MAC_vectors !num_MAC_vectors=1 or 2
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: normdir ! 0..sdim-1
+      INTEGER_T, intent(in) :: normdir !normdir=0..sdim-1
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T :: veldir
@@ -3918,7 +3918,7 @@ stop
        bfact, &
        nmat, &
        ngrow, &
-       num_MAC_vectors, & !=1 or 2
+       num_MAC_vectors, & ! num_MAC_vectors=1 or 2
        ngrowmac, &
        veldir)
       use probcommon_module
@@ -3928,7 +3928,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors !=1 or 2.
+      INTEGER_T, intent(in) :: num_MAC_vectors !num_MAC_vectors=1 or 2.
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: normdir
@@ -4009,10 +4009,6 @@ stop
       endif
       if ((veldir.lt.1).or.(veldir.gt.SDIM)) then
        print *,"veldir invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if ((ngrowmac.lt.0).or.(ngrowmac.ge.ngrow)) then
@@ -4790,8 +4786,8 @@ stop
       INTEGER_T DIMDEC(sldst)
       REAL_T masknbr(DIMV(masknbr))
       REAL_T vfrac(DIMV(vfrac),nmat)
-      REAL_T slsrc(DIMV(slsrc))
-      REAL_T sldst(DIMV(sldst)) !sldst(1)=mac velocity, slpdst(2)=xdmac
+      REAL_T slsrc(DIMV(slsrc)) !slsrc(1)=xvel  slsrc(2)=xdisp
+      REAL_T sldst(DIMV(sldst)) !sldst(1)=xvelslope,slpdst(2..nmat+1)=xcen
 
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T i,j,k
@@ -19260,17 +19256,17 @@ stop
        unode,DIMS(unode), & ! vel*dt
        xlo,dx, &
        conserve,DIMS(conserve), & ! local variables
-       xvel,DIMS(xvel), & ! xvelleft,xvelright
+       xvel,DIMS(xvel), & ! 1..num_MAC_vectors
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
        xvelslp,DIMS(xvelslp), & ! xvelslope,xcen
        yvelslp,DIMS(yvelslp), &
        zvelslp,DIMS(zvelslp), &
        momslope,DIMS(momslope), &
-       xmomside,DIMS(xmomside), &
+       xmomside,DIMS(xmomside), & ! 1..2*num_MAC_vectors
        ymomside,DIMS(ymomside), &
        zmomside,DIMS(zmomside), &
-       xmassside,DIMS(xmassside), &
+       xmassside,DIMS(xmassside), & ! 1..2*num_MAC_vectors
        ymassside,DIMS(ymassside), &
        zmassside,DIMS(zmassside), &
        ngrow, &
@@ -20442,9 +20438,11 @@ stop
                  momcomp=(im-1)*SDIM+veldir
                  veldata(momcomp)=veldata(momcomp)+mom2(veldir) 
 
+                  ! this gets incremented for im=1..nmat
                  veldata_MAC_mass(veldir,1)= &
                   veldata_MAC_mass(veldir,1)+massdepart_mom
 
+                  ! this gets incremented for im=1..nmat
                  veldata_MAC(veldir,1)= &
                   veldata_MAC(veldir,1)+mom2(veldir)
 
@@ -20462,6 +20460,7 @@ stop
                     if (num_MAC_vectors.eq.1) then
                      ! do nothing
                     else if (num_MAC_vectors.eq.2) then
+                      ! only increment displacement ONCE.
                      if (imap.eq.1) then
                       veldata_MAC_mass(veldir,2)= &
                        veldata_MAC_mass(veldir,2)+LS_voltotal_depart
@@ -20546,6 +20545,8 @@ stop
                 if ((imap.ge.2).and. & 
                     (imap.le.num_materials_viscoelastic)) then
                  ! do nothing
+
+                 ! increment just ONCE. (since using veldata_MAC)
                 else if (imap.eq.1) then
                  if (num_MAC_vectors.eq.1) then
                   ! do nothing
@@ -20596,7 +20597,8 @@ stop
                print *,"num_materials_viscoelastic invalid"
                stop
               endif
-          
+         
+               ! increment for each material:im=1..nmat (since using veldata)
               if (veldir.eq.1) then
                xmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
                 xmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &

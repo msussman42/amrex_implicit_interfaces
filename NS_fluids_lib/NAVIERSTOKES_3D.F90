@@ -3251,12 +3251,11 @@ END SUBROUTINE SIMP
           ! x,u,p,den,T,Y1..Yn,mag vort,LS
       REAL_T, intent(out) :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: vel(DIMV(vel), &
-        num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM+1)
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_vel)
-      REAL_T, intent(in) :: div(DIMV(div),num_materials_vel)
-      REAL_T, intent(in) :: divdat(DIMV(divdat),num_materials_vel)
+      REAL_T, intent(in) :: pres(DIMV(pres))
+      REAL_T, intent(in) :: div(DIMV(div))
+      REAL_T, intent(in) :: divdat(DIMV(divdat))
       REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)
       REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
       REAL_T, intent(in) :: elastic(DIMV(elastic),elastic_ncomp)
@@ -3265,17 +3264,17 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
-      REAL_T machnd(num_materials_vel)
-      REAL_T machcell(num_materials_vel)
-      REAL_T velnd(num_materials_vel*(SDIM+1))
+      REAL_T machnd
+      REAL_T machcell
+      REAL_T velnd(SDIM+1)
       REAL_T velmat(SDIM)
       REAL_T velmatT(SDIM)
-      REAL_T velcell(num_materials_vel*(SDIM+1))
+      REAL_T velcell(SDIM+1)
       REAL_T vofnd(nmat)
       REAL_T vofcell(nmat)
-      REAL_T presnd(num_materials_vel)
-      REAL_T divnd(num_materials_vel)
-      REAL_T divdatnd(num_materials_vel)
+      REAL_T presnd
+      REAL_T divnd
+      REAL_T divdatnd
       REAL_T dennd(num_state_material*nmat)
       REAL_T mom_dennd(nmat)
       REAL_T elasticnd(elastic_ncomp)
@@ -3368,6 +3367,7 @@ END SUBROUTINE SIMP
       INTEGER_T current_index
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
+      INTEGER_T MAC_grid_displacement
 
       caller_id=3
 
@@ -3382,10 +3382,6 @@ END SUBROUTINE SIMP
        print *,"tid invalid"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid 39"
        stop
@@ -3398,11 +3394,19 @@ END SUBROUTINE SIMP
        print *,"nparts_def invalid FORT_CELLGRID"
        stop
       endif
-      if (elastic_ncomp.ne. &
-          num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)) then
-       print *,"elastic_ncomp invalid 1"
+      if (elastic_ncomp.eq. &
+          num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+       MAC_grid_displacement=0
+      else if (elastic_ncomp.eq. &
+               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
+       MAC_grid_displacement=1
+       print *,"FIX ME"
+       stop
+      else
+       print *,"elastic_ncomp invalid"
        stop
       endif
+
  
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
         ! (value of material with LS>0)
