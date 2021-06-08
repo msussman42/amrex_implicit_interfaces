@@ -95,11 +95,6 @@ stop
       INTEGER_T nparts,nparts_def
       INTEGER_T im
 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-
       if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
        print *,"plot_sdim invalid"
        stop
@@ -134,13 +129,13 @@ stop
       endif
 
       nwrite= &
-       plot_sdim+num_materials_vel*plot_sdim+ & ! xpos,vel
-       5*num_materials_vel+ & !pmg,peos,div,divdat,mach
+       plot_sdim+plot_sdim+ & ! xpos,vel
+       5+ & !pmg,peos,div,divdat,mach
        nmat+nmat+ & ! vfrac,ls
        nmat*plot_sdim+ & ! ls slope
        nmat*num_state_material+ & ! den 
        nmat+ & ! mom_den
-       num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)+ &
+       num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
        nmat+ & ! visc
        5*nmat  ! trace vars and vorticity
 
@@ -161,10 +156,6 @@ stop
 
       if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
        print *,"plot_sdim invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -206,169 +197,156 @@ stop
        call dumpstring(Varname)
       endif
 
-      do im=1,num_materials_vel
-
-       write(matstr,'(I2)') im
-       do i=1,2
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-
-       ih=1
-       Varname='U'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-
-       ih=1
-       Varname='V'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-
-       if (plot_sdim.eq.3) then
-        ih=1
-        Varname='W'
-        ih=ih+1
-        do i=1,2
-         Varname(ih:ih)=matstr(i:i)
-         ih=ih+1
-        enddo
-        call dumpstring(Varname)
+      im=1
+      write(matstr,'(I2)') im
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
        endif
+      enddo
 
-      enddo ! im=1..num_materials_vel 
+      ih=1
+      Varname='U'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
+       ih=ih+1
+      enddo
+      call dumpstring(Varname)
+
+      ih=1
+      Varname='V'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
+       ih=ih+1
+      enddo
+      call dumpstring(Varname)
+
+      if (plot_sdim.eq.3) then
+       ih=1
+       Varname='W'
+       ih=ih+1
+       do i=1,2
+        Varname(ih:ih)=matstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+      endif
 
        ! multigrid pressure  "PMG"
-      do im=1,num_materials_vel
+      im=1
+      write(matstr,'(I2)') im
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
 
-       write(matstr,'(I2)') im
-       do i=1,2
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-
-       ih=1
-       Varname='P'
+      ih=1
+      Varname='P'
+      ih=ih+1
+      Varname(ih:ih)='M'
+      ih=ih+1
+      Varname(ih:ih)='G'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
        ih=ih+1
-       Varname(ih:ih)='M'
-       ih=ih+1
-       Varname(ih:ih)='G'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-      enddo ! im=1..num_materials_vel 
+      enddo
+      call dumpstring(Varname)
 
        ! EOS pressure: "PEOS"
-      do im=1,num_materials_vel
-
-       write(matstr,'(I2)') im
-       do i=1,2
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-       ih=1
-       Varname='P'
+      im=1
+      write(matstr,'(I2)') im
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
+      ih=1
+      Varname='P'
+      ih=ih+1
+      Varname(ih:ih)='E'
+      ih=ih+1
+      Varname(ih:ih)='O'
+      ih=ih+1
+      Varname(ih:ih)='S'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
        ih=ih+1
-       Varname(ih:ih)='E'
-       ih=ih+1
-       Varname(ih:ih)='O'
-       ih=ih+1
-       Varname(ih:ih)='S'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-      enddo ! im=1..num_materials_vel 
+      enddo
+      call dumpstring(Varname)
 
        ! Divergence derived from the velocity: "DIV"
        ! see MacProj.cpp: NavierStokes::getStateDIV_ALL
-      do im=1,num_materials_vel
-
-       write(matstr,'(I2)') im
-       do i=1,2
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-       ih=1
-       Varname='D'
+      im=1
+      write(matstr,'(I2)') im
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
+      ih=1
+      Varname='D'
+      ih=ih+1
+      Varname(ih:ih)='I'
+      ih=ih+1
+      Varname(ih:ih)='V'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
        ih=ih+1
-       Varname(ih:ih)='I'
-       ih=ih+1
-       Varname(ih:ih)='V'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-      enddo ! im=1..num_materials_vel 
+      enddo
+      call dumpstring(Varname)
 
        ! expected divergence: "DIVDT"
        ! see NavierStokes.cpp: NavierStokes::getStateDIV_DATA
        ! "DIV_Type"
-      do im=1,num_materials_vel
+      im=1
+      write(matstr,'(I2)') im
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
+      ih=1
+      Varname='D'
+      ih=ih+1
+      Varname(ih:ih)='I'
+      ih=ih+1
+      Varname(ih:ih)='V'
+      ih=ih+1
+      Varname(ih:ih)='D'
+      ih=ih+1
+      Varname(ih:ih)='T'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
+       ih=ih+1
+      enddo
+      call dumpstring(Varname)
 
-       write(matstr,'(I2)') im
-       do i=1,2
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-       ih=1
-       Varname='D'
+      im=1
+      write(matstr,'(I2)') im
+      do i=1,2
+       if (matstr(i:i).eq.' ') then
+        matstr(i:i)='0'
+       endif
+      enddo
+      ih=1
+      Varname='M'
+      ih=ih+1
+      Varname(ih:ih)='C'
+      ih=ih+1
+      Varname(ih:ih)='H'
+      ih=ih+1
+      do i=1,2
+       Varname(ih:ih)=matstr(i:i)
        ih=ih+1
-       Varname(ih:ih)='I'
-       ih=ih+1
-       Varname(ih:ih)='V'
-       ih=ih+1
-       Varname(ih:ih)='D'
-       ih=ih+1
-       Varname(ih:ih)='T'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-      enddo ! im=1..num_materials_vel 
-
-      do im=1,num_materials_vel
-
-       write(matstr,'(I2)') im
-       do i=1,2
-        if (matstr(i:i).eq.' ') then
-         matstr(i:i)='0'
-        endif
-       enddo
-       ih=1
-       Varname='M'
-       ih=ih+1
-       Varname(ih:ih)='C'
-       ih=ih+1
-       Varname(ih:ih)='H'
-       ih=ih+1
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
-       call dumpstring(Varname)
-      enddo ! im=1..num_materials_vel 
+      enddo
+      call dumpstring(Varname)
 
        !VFRACS 
       do im=1,nmat
@@ -720,10 +698,10 @@ stop
  
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: vel(num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: vel(SDIM+1)
       REAL_T, intent(in) :: den(nmat*num_state_material)
       REAL_T, intent(in) :: vof(nmat)
-      REAL_T, intent(out) :: mach(num_materials_vel)
+      REAL_T, intent(out) :: mach
       INTEGER_T dir
       REAL_T UMACH_local
       REAL_T test_vel
@@ -737,10 +715,6 @@ stop
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -810,7 +784,7 @@ stop
        print *,"is_rigid invalid"
        stop
       endif
-      mach(1)=UMACH_local/USOUND_local
+      mach=UMACH_local/USOUND_local
 
       return
       end subroutine get_mach_number 
@@ -14146,10 +14120,6 @@ END SUBROUTINE Adist
        print *,"ncomp_xgp invalid"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
  
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -14274,7 +14244,7 @@ END SUBROUTINE Adist
         print *,"scomp invalid"
         stop
        endif
-       if (ncomp_source.ne.num_materials_vel*SDIM) then
+       if (ncomp_source.ne.SDIM) then
         print *,"ncomp_source invalid"
         stop
        endif
@@ -14820,10 +14790,6 @@ END SUBROUTINE Adist
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
-             if (num_materials_vel.ne.1) then
-              print *,"num_materials_vel invalid"
-              stop
-             endif
              if (num_materials_face.ne.1) then
               print *,"num_materials_face invalid"
               stop
@@ -14855,11 +14821,6 @@ END SUBROUTINE Adist
             endif
 
            else if (operation_flag.eq.6) then ! tensor derivatives
-
-            if (num_materials_vel.ne.1) then
-             print *,"num_materials_vel invalid"
-             stop
-            endif
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
              velcomp=nc
@@ -15052,11 +15013,6 @@ END SUBROUTINE Adist
               if (udotn_boundary.lt.zero) then
                local_bctype(side)=1 ! dirichlet
                denlocal=den(D_DECL(i_out,j_out,k_out),ibase+1)
-
-               if (num_materials_vel.ne.1) then
-                print *,"num_materials_vel invalid"
-                stop
-               endif
 
                velcomp=nc
                if ((conservative_div_uu.eq.0).or. &
@@ -15326,10 +15282,6 @@ END SUBROUTINE Adist
              templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              if (num_materials_vel.ne.1) then
-               print *,"num_materials_vel invalid"
-               stop
-              endif
               if (num_materials_face.ne.1) then
                print *,"num_materials_face invalid"
                stop
@@ -15357,10 +15309,6 @@ END SUBROUTINE Adist
              templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              if (num_materials_vel.ne.1) then
-               print *,"num_materials_vel invalid"
-               stop
-              endif
               if (num_materials_face.ne.1) then
                print *,"num_materials_face invalid"
                stop
@@ -15411,11 +15359,6 @@ END SUBROUTINE Adist
             endif
 
            else if (operation_flag.eq.6) then ! tensor derivatives
-
-            if (num_materials_vel.ne.1) then
-             print *,"num_materials_vel invalid"
-             stop
-            endif
 
             local_AMR_BC_flag=simple_AMR_BC_flag
 
@@ -15682,11 +15625,6 @@ END SUBROUTINE Adist
 
            if ((nc.ge.1).and.(nc.le.SDIM)) then
 
-            if (num_materials_vel.ne.1) then
-             print *,"num_materials_vel.ne.1"
-             stop
-            endif
-
             velcomp=nc
             local_data(isten+1)=vel(D_DECL(ic,jc,kc),velcomp)
            else
@@ -15770,10 +15708,6 @@ END SUBROUTINE Adist
             ! u dot grad u = div(umac u)-u div umac
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
 
-            if (num_materials_vel.ne.1) then
-             print *,"num_materials_vel invalid"
-             stop
-            endif
             velcomp=nc
 
             if ((conservative_div_uu.eq.0).or. &
@@ -15817,13 +15751,7 @@ END SUBROUTINE Adist
 
           RRface(isten)=xsten(0,1)
 
-          if (num_materials_vel.eq.1) then
-           velcomp=1
-          else
-           print *,"num_materials_vel invalid"
-           stop
-          endif
-
+          velcomp=1
           local_vel(isten)=xvel(D_DECL(ic,jc,kc),velcomp)
          enddo ! isten=0..bfact
 
@@ -16879,7 +16807,7 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: pold(DIMV(pold),ncomp*num_materials_face)
       REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
       REAL_T, intent(inout) :: dendest(DIMV(dendest),ncomp_dendest)
-      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM*num_materials_vel)
+      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM)
       REAL_T, intent(inout) :: veldest(DIMV(veldest),ncomp_veldest)
       REAL_T, intent(inout) :: divdest(DIMV(divdest),ncomp*num_materials_face)
       REAL_T local_data(bfact+1)
@@ -16948,11 +16876,6 @@ END SUBROUTINE Adist
       if ((level.lt.0).or. &
           (level.gt.finest_level)) then
        print *,"level or finest_level invalid"
-       stop
-      endif
-
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -17214,13 +17137,13 @@ END SUBROUTINE Adist
         stop
        endif
 
-       if (ncomp_veldest.eq.num_materials_vel) then
+       if (ncomp_veldest.eq.1) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.eq.num_materials_vel) then
+       if (ncomp_dendest.eq.1) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
@@ -17279,7 +17202,7 @@ END SUBROUTINE Adist
        endif
 
        if (ncomp_veldest.ge. &
-           num_materials_vel*SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*nmat) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -17311,7 +17234,7 @@ END SUBROUTINE Adist
        nsolveMM_FACE_test=ncomp*num_materials_face
 
        if (ncomp_veldest.ge. &
-           num_materials_vel*SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*nmat) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -17445,7 +17368,7 @@ END SUBROUTINE Adist
        endif 
 
        if (ncomp_veldest.ge. &
-           num_materials_vel*SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*nmat) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -23547,7 +23470,7 @@ end subroutine RatePhaseChange
         1,-1,1301)
       nmat=nucleate_in%nmat
 
-      nstate_test=num_materials_vel*(SDIM+1)+ &
+      nstate_test=(SDIM+1)+ &
               nmat*(num_state_material+ngeom_raw)+1
       if (nucleate_in%nstate.eq.nstate_test) then
        ! do nothing
@@ -23566,7 +23489,7 @@ end subroutine RatePhaseChange
        ! F>VOFTOL_REDIST
       VOFTOL_NUCLEATE=VOFTOL_REDIST*two
 
-      denbase=num_materials_vel*(SDIM+1)
+      denbase=(SDIM+1)
       mofbase=denbase+nmat*num_state_material
       im_dest=nucleate_in%im_dest
       im_source=nucleate_in%im_source
@@ -24690,7 +24613,7 @@ end subroutine RatePhaseChange
       REAL_T, intent(inout) :: vel
       INTEGER_T, intent(in) :: dir
       INTEGER_T dirloc
-      INTEGER_T, intent(in) :: presbc_array(SDIM,2,num_materials_vel)
+      INTEGER_T, intent(in) :: presbc_array(SDIM,2)
       REAL_T, intent(in) :: outflow_velocity_buffer_size(2*SDIM)
       REAL_T local_buffer(2*SDIM)
       REAL_T buf,dist
@@ -26985,7 +26908,6 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T velcomp
-      INTEGER_T im_vel
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
 
@@ -27010,18 +26932,14 @@ end subroutine initialize2d
        stop
       endif
 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
+      if ((scomp.ge.0).and.(scomp.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"scomp invalid"
        stop
       endif
- 
-      im_vel=scomp/SDIM
-      velcomp=scomp-im_vel*SDIM+1
+      velcomp=scomp+1
 
-      if ((im_vel.lt.0).or.(im_vel.ge.num_materials_vel)) then
-       print *,"scomp out of range in vel fill"
-       stop
-      endif
       if ((velcomp.lt.1).or.(velcomp.gt.SDIM)) then
        print *,"velcomp invalid"
        stop
@@ -27140,7 +27058,6 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T velcomp
-      INTEGER_T im_vel
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
 
@@ -27149,16 +27066,13 @@ end subroutine initialize2d
        print *,"bfact invalid200"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
+      if ((scomp.ge.0).and.(scomp.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"scomp invalid"
        stop
       endif
-      im_vel=scomp/SDIM
-      if ((im_vel.lt.0).or.(im_vel.ge.num_materials_vel).or. &
-          (im_vel*SDIM.ne.scomp)) then
-       print *,"scomp invalid in group velfill"
-       stop
-      endif
+
       if (ncomp.ne.SDIM) then
        print *,"ncomp invalid10"
        stop
@@ -27305,10 +27219,6 @@ end subroutine initialize2d
       endif
       if (ncomp.ne.1) then
        print *,"ncomp invalid11"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if (grid_type.eq.-1) then
@@ -27473,10 +27383,6 @@ end subroutine initialize2d
       nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if (grid_type.eq.-1) then
@@ -27671,7 +27577,7 @@ end subroutine initialize2d
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, intent(in) :: area(DIMV(area))
       REAL_T, intent(inout) :: xflux(DIMV(xflux),nsolveMM_FACE)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: tempbc(SDIM,2)
       INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
       REAL_T, intent(in) :: macrolayer_size(nmat)
@@ -27720,10 +27626,6 @@ end subroutine initialize2d
       if (nten_test.ne.nten) then
        print *,"nten invalid viscfluxfill nten nten test", &
         nten,nten_test
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -28095,7 +27997,6 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T velcomp,veldir,nmat
-      INTEGER_T nsolveMM_FACE
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
 
@@ -28110,19 +28011,7 @@ end subroutine initialize2d
        stop
       endif
 
-      nsolveMM_FACE=num_materials_vel
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else if (num_materials_vel.eq.nmat) then
-       nsolveMM_FACE=nsolveMM_FACE*2
-       print *,"only num_materials_vel==1 supported currently"
-       stop
-      else
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-
-      if ((scomp.lt.0).or.(scomp+ncomp.gt.nsolveMM_FACE)) then
+      if ((scomp.lt.0).or.(scomp+ncomp.gt.1)) then
        print *,"scomp invalid umacfill"
        stop
       endif
@@ -28740,7 +28629,7 @@ end subroutine initialize2d
        print *,"ncomp invalid mof group fill"
        stop
       endif
-      if (scomp.ne.num_materials_vel*(SDIM+1)+ &
+      if (scomp.ne.(SDIM+1)+ &
           nmat*num_state_material) then
        print *,"scomp invalid mof group fill"
        stop
@@ -29407,7 +29296,7 @@ end subroutine initialize2d
        stop
       endif
        ! "errorind" variable.
-      nc=num_materials_vel*(SDIM+1)+ &
+      nc=(SDIM+1)+ &
        num_materials*(num_state_material+ngeom_raw)
       if (scomp.ne.nc) then
        print *,"scomp invalid in scalar fill"
@@ -29908,7 +29797,7 @@ end subroutine initialize2d
        stop
       endif
        ! c++ index
-      icomplo=num_materials_vel*(SDIM+1)
+      icomplo=(SDIM+1)
       icomphi=icomplo+num_materials*num_state_material
       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
        print *,"scomp out of range in state fill"
@@ -30393,7 +30282,7 @@ end subroutine initialize2d
        print *,"ncomp invalid17"
        stop
       endif
-      if ((scomp.ne.num_materials_vel*SDIM).and.(scomp.ne.0)) then 
+      if ((scomp.ne.SDIM).and.(scomp.ne.0)) then 
        print *,"scomp invalid pressure fill"
        stop
       endif
@@ -30520,7 +30409,7 @@ end subroutine initialize2d
       nhalf=3
 
        ! c++ index
-      if (scomp.ne.num_materials_vel*(SDIM+1)) then
+      if (scomp.ne.(SDIM+1)) then
        print *,"scomp invalid group statefill"
        stop
       endif
@@ -30992,7 +30881,7 @@ end subroutine initialize2d
           nten,nten_test
         stop
        endif
-       nc_expect=num_materials_vel*(SDIM+1)+ &
+       nc_expect=(SDIM+1)+ &
         nmat*num_state_material+nmat*ngeom_raw+1
        if (nc.ne.nc_expect) then
         print *,"fort: nc invalid"
@@ -31502,11 +31391,6 @@ end subroutine initialize2d
         stop
        endif
 
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
-        stop
-       endif
-
        if ((time.ge.zero).and.(time.le.1.0D+20)) then
         ! do nothing
        else if (time.ge.1.0D+20) then
@@ -31537,9 +31421,9 @@ end subroutine initialize2d
        endif
        max_levelstack=adapt_quad_depth
 
-       ipresbase=num_materials_vel*SDIM
+       ipresbase=SDIM
        impres=1
-       idenbase=num_materials_vel*(SDIM+1)
+       idenbase=(SDIM+1)
        imofbase=idenbase+nmat*num_state_material
        ierr=imofbase+nmat*ngeom_raw+1
        if (nc.ne.ierr) then
@@ -31609,9 +31493,7 @@ end subroutine initialize2d
 
         call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,SDIM)
 
-        do im=1,num_materials_vel
-         scalc(ipresbase+im)=zero
-        enddo
+        scalc(ipresbase+1)=zero
 
         if (is_in_probtype_list().eq.1) then
 
@@ -32783,7 +32665,7 @@ end subroutine initialize2d
       INTEGER_T bfact
       REAL_T Snew(DIMV(Snew),nstate)
       REAL_T LSnew(DIMV(LSnew),nmat)
-      REAL_T MAC(DIMV(MAC),num_materials_vel)
+      REAL_T MAC(DIMV(MAC))
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T i,j,k,ii,jj,kk,dir2,im,velcomp,tcomp
@@ -32805,7 +32687,7 @@ end subroutine initialize2d
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.num_materials_vel*(SDIM+1)+ &
+      if (nstate.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate invalid"
        stop
@@ -32858,11 +32740,6 @@ end subroutine initialize2d
        print *,"perturbation_eps_vel invalid"
        stop
       endif 
-      if ((num_materials_vel.ne.1).and. &
-          (num_materials_vel.ne.nmat)) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -32893,15 +32770,15 @@ end subroutine initialize2d
 
          do im=1,nmat
          
-          if (im.le.num_materials_vel) then
-           velcomp=(im-1)*SDIM+dir+1
+          if (im.eq.1) then
+           velcomp=dir+1
            Snew(D_DECL(i,j,k),velcomp)= &
             Snew(D_DECL(i,j,k),velcomp)+ &
             perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
           endif
 
           if (dir.eq.0) then
-           tcomp=(SDIM+1)*num_materials_vel+ &
+           tcomp=(SDIM+1)+ &
             (im-1)*num_state_material+2
            Snew(D_DECL(i,j,k),tcomp)= &
             Snew(D_DECL(i,j,k),tcomp)+ &
@@ -32913,7 +32790,7 @@ end subroutine initialize2d
            stop
           endif
      
-         enddo ! im 
+         enddo ! im=1..nmat 
 
         else
          print *,"levelrz invalid probtype==82"
@@ -32957,13 +32834,9 @@ end subroutine initialize2d
 
         if ((levelrz.eq.0).or.(levelrz.eq.3)) then
 
-         do im=1,num_materials_vel
-         
-          MAC(D_DECL(i,j,k),im)=MAC(D_DECL(i,j,k),im)+ &
+         MAC(D_DECL(i,j,k))=MAC(D_DECL(i,j,k))+ &
            perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
 
-         enddo ! im
- 
         else
          print *,"levelrz invalid probtype==82"
          stop
@@ -34641,7 +34514,6 @@ end subroutine initialize2d
       end subroutine FORT_VFRACERROR
 
       subroutine FORT_FORCEVELOCITY( &
-        nsolveMM_FACE, &
         problo,probhi, &
         vel,DIMS(vel), &
         velmac,DIMS(velmac), &
@@ -34658,8 +34530,6 @@ end subroutine initialize2d
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -34671,9 +34541,9 @@ end subroutine initialize2d
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
-      REAL_T, intent(inout) :: vel(DIMV(vel),SDIM*num_materials_vel)
-      REAL_T, intent(inout) :: velmac(DIMV(velmac),nsolveMM_FACE)
-      INTEGER_T, intent(in) :: presbc_array(SDIM,2,num_materials_vel)
+      REAL_T, intent(inout) :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(inout) :: velmac(DIMV(velmac))
+      INTEGER_T, intent(in) :: presbc_array(SDIM,2)
       REAL_T, intent(in) :: outflow_velocity_buffer_size(2*SDIM)
       REAL_T vel_in
 
@@ -34698,17 +34568,6 @@ end subroutine initialize2d
        stop
       endif
  
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-
-      nsolveMM_FACE_test=num_materials_vel
-      if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
-
       ii=0
       jj=0
       kk=0
@@ -34756,16 +34615,14 @@ end subroutine initialize2d
        do dirloc=1,SDIM
         xsten_cell(dirloc)=xsten(0,dirloc)
        enddo
-       do velcomp=1,nsolveMM_FACE
-        vel_in=velmac(D_DECL(i,j,k),velcomp)*global_velocity_scale
-        call vel_freestream( &
+       vel_in=velmac(D_DECL(i,j,k))*global_velocity_scale
+       call vel_freestream( &
          xsten_cell, &
          dir,vel_in,time, &
          presbc_array, &
          outflow_velocity_buffer_size, &
          problo,probhi)
-        velmac(D_DECL(i,j,k),velcomp)=vel_in/global_velocity_scale
-       enddo ! velcomp
+       velmac(D_DECL(i,j,k))=vel_in/global_velocity_scale
       enddo
       enddo
       enddo

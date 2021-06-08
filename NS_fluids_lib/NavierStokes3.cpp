@@ -402,24 +402,11 @@ void NavierStokes::nonlinear_advection() {
     advect_time_slab=prev_time_slab;
    } else if ((dir_absolute_direct_split>0)&&
               (dir_absolute_direct_split<AMREX_SPACEDIM)) {
+
     advect_time_slab=cur_time_slab;
     update_flag=0;  // do not update the error. 
     VOF_Recon_ALL(1,advect_time_slab,update_flag,
      init_vof_ls_prev_time,SLOPE_RECON_MF);
-
-     // uses SLOPE_RECON_MF
-     // prior to split_scalar_advection, in 
-     //  NavierStokes::nonlinear_advection()
-    if ((num_materials_viscoelastic>=1)&&
-	(num_materials_viscoelastic<=nmat)) {
-     for (int ilev=finest_level;ilev>=level;ilev--) {
-      NavierStokes& ns_level=getLevel(ilev);
-      ns_level.tensor_extrapolate(); //declared in: NavierStokes.cpp
-     }
-    } else
-     amrex::Error("num_materials_viscoelastic invalid");
-
-    avgDownALL_TENSOR();
 
    } else
     amrex::Error("dir_absolute_direct_split invalid");
@@ -443,10 +430,12 @@ void NavierStokes::nonlinear_advection() {
 
      // velocity and pressure
      // spectral_override==1 => order derived from "enable_spectral"
-    avgDownALL(State_Type,0,num_materials_vel*(AMREX_SPACEDIM+1),1);
+    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
      // "state" (all materials)
     int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
     avgDownALL(State_Type,scomp_den,num_state_material*nmat,1);
+    avgDownALL_TENSOR();
+
    } else if (dir_absolute_direct_split==AMREX_SPACEDIM-1) {
      // do nothing
    } else
@@ -544,9 +533,7 @@ void NavierStokes::nonlinear_advection() {
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
    local_truncate);
 
- avgDownALL(State_Type,0,
-  num_materials_vel*(AMREX_SPACEDIM+1),1);
-
+ avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
  if (1==0) {
     // S_new is level 0 data
@@ -677,11 +664,10 @@ void NavierStokes::tensor_advection_updateALL() {
    // SLOPE_RECON_MF is a parameter but not used.
    // prior to tensor_advection_update(), in
    //  NavierStokes::tensor_advection_updateALL() 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate(); //declared in: NavierStokes.cpp
-  }
-  avgDownALL_TENSOR();
+  int provisional_MF=-1;
+  int im_tensor=-1;
+  int grid_type=-1;
+  tensor_extrapolateALL(im_tensor,provisional_MF,grid_type);
 
    // init_gradu_tensorALL fills CELLTENSOR_MF using these steps:
    // 1. find all velocity derivatives at faces.
@@ -748,14 +734,13 @@ void NavierStokes::tensor_advection_updateALL() {
 
   avgDownALL_TENSOR();
 
-   // uses SLOPE_RECON_MF
+   // SLOPE_RECON_MF is a parameter but not used.
    // after tensor_advection_update(), in
    //  NavierStokes::tensor_advection_updateALL() 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
-  }
-  avgDownALL_TENSOR();
+  provisional_MF=-1;
+  im_tensor=-1;
+  grid_type=-1;
+  tensor_extrapolateALL(im_tensor,provisional_MF,grid_type);
 
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -7792,7 +7777,6 @@ void NavierStokes::overwrite_outflow() {
 
      // in: PROB.F90
     FORT_FORCEVELOCITY(
-      &nsolveMM_FACE,
       prob_lo,prob_hi,
       vel.dataPtr(),ARLIM(vel.loVect()),ARLIM(vel.hiVect()),
       velmac.dataPtr(),ARLIM(velmac.loVect()),ARLIM(velmac.hiVect()),
@@ -11732,8 +11716,7 @@ void NavierStokes::avgDownALL_TENSOR() {
      (num_materials_viscoelastic<=nmat)) {
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
-  avgDownALL(Tensor_Type,0,
-    num_materials_viscoelastic*NUM_CELL_ELASTIC,0);
+  avgDownALL(Tensor_Type,0,NUM_CELL_ELASTIC,0);
 
   if (MAC_grid_displacement==0) {
    // do nothing
@@ -11852,8 +11835,7 @@ void NavierStokes::vel_elastic_ALL() {
   if (MAC_grid_displacement==0) {
 
    // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,0,
-    num_materials_vel*(AMREX_SPACEDIM+1),1);
+   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // if filter_vel==0 and face_flag==1, then
    //  umacnew+=INTERP_TO_MAC(unew^CELL-register_mark^CELL) 
@@ -11874,11 +11856,10 @@ void NavierStokes::vel_elastic_ALL() {
   } else
    amrex::Error("MAC_grid_displacement invalid");
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_extrapolate(); // in: NavierStokes.cpp
-  }
-  avgDownALL_TENSOR();
+  provisional_MF=-1;
+  im_tensor=-1;
+  grid_type=-1;
+  tensor_extrapolateALL(im_tensor,provisional_MF,grid_type);
 
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);

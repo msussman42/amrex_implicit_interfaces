@@ -854,7 +854,10 @@ protected:
      MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
      int nsolve);
 
-    void tensor_extrapolate(); // declared in NavierStokes.cpp
+     // declared in NavierStokes.cpp
+    void tensor_extrapolateALL(int im_tensor,int provisional_MF,int grid_type); 
+    void tensor_extrapolate(int im_tensor,int provisional_MF,int grid_type); 
+
     void tensor_advection_update();
     void tensor_advection_updateALL();
 

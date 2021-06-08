@@ -283,7 +283,6 @@ namespace amrex{
       Real* rxcoarseblocks,Real* rycoarseblocks,Real* rzcoarseblocks);
 
      void FORT_FORCEVELOCITY(
-      int* nsolveMM_FACE,
       const Real* prob_lo,const Real* prob_hi,
       Real* vel, AMREX_ARLIM_P(vel_lo), AMREX_ARLIM_P(vel_hi),
       Real* velmac, AMREX_ARLIM_P(velmac_lo), AMREX_ARLIM_P(velmac_hi),

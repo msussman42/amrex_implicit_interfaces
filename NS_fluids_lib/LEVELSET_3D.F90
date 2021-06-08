@@ -5446,14 +5446,8 @@ stop
        print *,"level invalid get color sum"
        stop
       endif
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
-      nstate_test=num_materials_vel*(SDIM+1)+ &
+      nstate_test=(SDIM+1)+ &
         nmat*(num_state_material+ngeom_raw)+1
       if (nstate.ne.nstate_test) then
        print *,"nstate invalid in LEVELSET_3D.F90 "
@@ -6790,7 +6784,7 @@ stop
                     if (original_density.gt.zero) then
                      updated_density=original_density* &
                          (one+dt*dt*density_factor*mdot_total/blob_volume)
-                     dencomp=(SDIM+1)*num_materials_vel+ &
+                     dencomp=(SDIM+1)+ &
                          (im-1)*num_state_material+1
                      if (updated_density.gt.zero) then
                       snew(D_DECL(i,j,k),dencomp)=updated_density
@@ -7024,12 +7018,6 @@ stop
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid get lowmach divu"
-       stop
-      endif
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -8228,7 +8216,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
       INTEGER_T, intent(in) :: DIMDEC(xface)
@@ -11566,7 +11554,7 @@ stop
       INTEGER_T, intent(in) :: massface_index
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys
-      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM*num_materials_vel)
+      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: presbc_in(SDIM,2,num_materials_face)
       REAL_T, intent(in) :: cur_time,dt
       REAL_T, intent(in) :: xlo(SDIM)
@@ -11637,7 +11625,7 @@ stop
       REAL_T, intent(inout) :: cterm(DIMV(cterm),nsolve*num_materials_face)
       REAL_T, intent(in) :: pold(DIMV(pold),nsolve*num_materials_face)
       REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
-      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM*num_materials_vel) 
+      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM) 
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),nsolve*num_materials_face)
       REAL_T, intent(in) :: maskdivres(DIMV(maskdivres))
@@ -11743,10 +11731,6 @@ stop
       nhalf=3
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
@@ -11902,7 +11886,7 @@ stop
       if (operation_flag.eq.2) then 
 
        if (ncomp_veldest.ge. &
-           num_materials_vel*SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*nmat) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -11941,7 +11925,7 @@ stop
       else if (operation_flag.eq.3) then 
  
        if (ncomp_veldest.ge. &
-           num_materials_vel*SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*nmat) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -12016,13 +12000,13 @@ stop
 
       else if (operation_flag.eq.1) then ! divergence
 
-       if (ncomp_veldest.eq.num_materials_vel) then
+       if (ncomp_veldest.eq.1) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.eq.num_materials_vel) then
+       if (ncomp_dendest.eq.1) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
@@ -12101,7 +12085,7 @@ stop
       else if (operation_flag.eq.6) then ! advection
 
        if (ncomp_veldest.ge. &
-           num_materials_vel*SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*nmat) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -14196,10 +14180,6 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((level.gt.finest_level).or.(level.lt.0)) then
        print *,"level invalid INC_TEMP"
        stop
@@ -14262,7 +14242,7 @@ stop
        endif
       enddo
 
-      if (ncomp_state.ne.(SDIM+1)*num_materials_vel+ &
+      if (ncomp_state.ne.(SDIM+1)+ &
           nmat*num_state_material+nmat*ngeom_raw+1) then
        print *,"ncomp_state invalid"
        stop
@@ -14283,7 +14263,7 @@ stop
          if (temperature_primitive_variable(im).eq.1) then
           ! do nothing
          else if (temperature_primitive_variable(im).eq.0) then
-          vofcomp=(SDIM+1)*num_materials_vel+nmat*num_state_material+ &
+          vofcomp=(SDIM+1)+nmat*num_state_material+ &
             (im-1)*ngeom_raw+1
           vof=state(D_DECL(i,j,k),vofcomp)
           if ((vof.ge.-VOFTOL).and.(vof.le.one+VOFTOL)) then
@@ -14295,7 +14275,7 @@ stop
             do dir=1,SDIM
              KE=KE+half*(state(D_DECL(i,j,k),dir)**2)
             enddo
-            dencomp=(SDIM+1)*num_materials_vel+ &
+            dencomp=(SDIM+1)+ &
              (im-1)*num_state_material+1
             rho=state(D_DECL(i,j,k),dencomp)
             TEMPERATURE=state(D_DECL(i,j,k),dencomp+1)
@@ -14560,7 +14540,7 @@ stop
 
        ! denbc for advect
       INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material) 
-      INTEGER_T, intent(in) :: velbc_in(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
@@ -17808,10 +17788,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(dennew)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
       REAL_T, intent(inout) ::  vofnew(DIMV(vofnew),nmat*ngeom_raw)
-      REAL_T, intent(in) ::  vel(DIMV(vel), &
-       num_materials_vel*(SDIM+1))
-      REAL_T, intent(out) ::  velnew(DIMV(velnew), &
-       num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) ::  vel(DIMV(vel),SDIM+1)
+      REAL_T, intent(out) ::  velnew(DIMV(velnew),SDIM+1)
       REAL_T, intent(in), target ::  &
               LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) ::  state_mof(DIMV(state_mof),nmat*ngeom_raw)
@@ -17997,10 +17975,6 @@ stop
 
       if (nmat.ne.num_materials) then
        print *,"nmat bust"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 

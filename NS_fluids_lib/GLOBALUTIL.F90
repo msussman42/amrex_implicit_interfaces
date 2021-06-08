@@ -3897,10 +3897,6 @@ contains
        print *,"nmat bust"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
       voftotal=zero
 

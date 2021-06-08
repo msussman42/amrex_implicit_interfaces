@@ -10917,27 +10917,82 @@ void NavierStokes::tensor_advection_update() {
 
 }   // subroutine tensor_advection_update
 
-// extrapolate where the volume fraction is less than 1/2.  
+// extrapolate the tensor(s) from bulk regions outward.  The closest
+// point map is used.
 // note: the gradients used to update the tensor are only valid in cells
 // where LS(im_viscoelastic)>=0.
 // called from:
-//  nonlinear_advection
-//   X_t + u dot grad X = u  (displacement)
-//   Q_t + u dot grad Q = 0  (viscoelastic or incremental approach)
-//  tensor_advection_updateALL
+//  tensor_advection_updateALL (before and after)
 //   Q_t + grad u dot Q + Q dot grad u^T
-//  veldiffuseALL
+//  vel_elastic_ALL
 //   (for example) Q=mu (grad X + grad X^T)
 //  if provisional_MF==-1 then use state data. 
 //  if provisional_MF>=0 then use provisional tensor data.
 //  -1<=grid_type<=5
+void NavierStokes::tensor_extrapolateALL(
+  int im_tensor, //im_tensor=-1,0..nmat-1
+  int provisional_MF,
+  int grid_type) {
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
+
+ if (provisional_MF==-1) {
+  if (im_tensor==-1) {
+   // do nothing
+  } else
+   amrex::Error("im_tensor invalid");
+ } else if (provisional_MF>=0) {
+  if ((im_tensor>=0)&&(im_tensor<nmat)) {
+   // do nothing
+  } else
+   amrex::Error("im_tensor invalid");
+ } else
+  amrex::Error("provisional_MF invalid");
+
+ if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.tensor_extrapolate(im_tensor,provisional_MF,grid_type); 
+  }
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if (provisional_MF==-1) {
+  avgDownALL_TENSOR();
+ } else if (provisional_MF>=0) {
+  avgDownALL_TENSOR_local(provisional_MF,grid_type);
+ } else {
+  amrex::Error("provisional_MF invalid");
+ }
+
+} // end subroutine tensor_extrapolateALL
+
 void NavierStokes::tensor_extrapolate(
+  int im_tensor, //im_tensor=-1,0..nmat-1
   int provisional_MF,
   int grid_type) {
 
  int finest_level=parent->finestLevel();
 
  int nmat=num_materials;
+
+ if (provisional_MF==-1) {
+  if (im_tensor==-1) {
+   // do nothing
+  } else
+   amrex::Error("im_tensor invalid");
+ } else if (provisional_MF>=0) {
+  if ((im_tensor>=0)&&(im_tensor<nmat)) {
+   // do nothing
+  } else
+   amrex::Error("im_tensor invalid");
+ } else
+  amrex::Error("provisional_MF invalid");
 
  if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
   // do nothing
@@ -10967,7 +11022,17 @@ void NavierStokes::tensor_extrapolate(
 
  const Real* dx = geom.CellSize();
 
- for (int im=0;im<nmat;im++) {
+ int im_tensor_start=0;
+ int im_tensor_end=nmat-1;
+ if (im_tensor==-1) {
+  // do nothing
+ } else if ((im_tensor>=0)&&(im_tensor<nmat)) {
+  im_tensor_start=im_tensor;
+  im_tensor_end=im_tensor;
+ } else
+  amrex::Error("im_tensor invalid");
+
+ for (int im=im_tensor_start;im<=im_tensor_end;im++) {
 
   if (ns_is_rigid(im)==0) {
 
@@ -10978,108 +11043,83 @@ void NavierStokes::tensor_extrapolate(
      partid++;
     }
 
-    if (partid<im_elastic_map.size()) {
+    if ((partid>=0)&&(partid<im_elastic_map.size())) {
 
-     for (int isweep=0;isweep<1+AMREX_SPACEDIM;isweep++) {
+     int scomp_tensor=0;
+     int ncomp_extrap=0;
+     int state_idx=Tensor_Type;
+     int dir_extrap=0;
 
-      int scomp_tensor=0;
-      int ncomp_extrap=0;
-      int state_idx=Tensor_Type;
-      int dir_extrap=0;
+     if (provisional_MF==-1) {
+      dir_extrap=-1; // cell centered grid
+      scomp_tensor=partid*NUM_TENSOR_TYPE;
+      state_idx=Tensor_Type;
+     } else if (provisional_MF>=0) {
+      dir_extrap=grid_type; // -1<=grid_type<=5
+      scomp_tensor=0;
+      state_idx=-1;
+     } else 
+      amrex::Error("provisional_MF invalid");
 
-      if (isweep==0) { // extrapolate tensor instead of displacement
-       if (provisional_MF==-1) {
-        dir_extrap=-1; // cell centered grid
-        scomp_tensor=partid*NUM_TENSOR_TYPE;
-        state_idx=Tensor_Type;
-       } else if (provisional_MF>=0) {
-        dir_extrap=grid_type; // -1<=grid_type<=5
-	scomp_tensor=0;
-	state_idx=-1;
-       } else 
-        amrex::Error("provisional_MF invalid");
+     ncomp_extrap=NUM_TENSOR_TYPE;
 
-       ncomp_extrap=NUM_TENSOR_TYPE;
-      } else if ((isweep>=1)&&(isweep<1+AMREX_SPACEDIM)) {
-       dir_extrap=isweep-1;
-       if (MAC_grid_displacement==0) {
-        state_idx=Tensor_Type;
-        scomp_tensor=num_materials_viscoelastic*NUM_TENSOR_TYPE+
-	    partid*AMREX_SPACEDIM+dir_extrap;
-       } else if (MAC_grid_displacement==1) {
-        state_idx=XDmac_Type;
-        scomp_tensor=partid;
-       } else
-        amrex::Error("MAC_grid_displacement invalid");
+     MultiFab* tensor_source_mf=nullptr;
+     MultiFab* tensor_new_mf=nullptr;
 
-       ncomp_extrap=1;
-      } else
-       amrex::Error("isweep invalid");
-
-      MultiFab* tensor_source_mf=nullptr;
-      MultiFab* tensor_new_mf=nullptr;
-
-      if (state_idx==-1) {
-       tensor_source_mf=localMF[provisional_MF];
-       tensor_new_mf=localMF[provisional_MF];
-      } else if (state_idx==Tensor_Type) {
-       tensor_source_mf= getStateTensor(
+     if (state_idx==-1) {
+      tensor_source_mf=localMF[provisional_MF];
+      tensor_new_mf=localMF[provisional_MF];
+     } else if (state_idx==Tensor_Type) {
+      tensor_source_mf=getStateTensor(
          ngrow_extrap,scomp_tensor,
          ncomp_extrap,cur_time_slab);
-       tensor_new_mf=&get_new_data(state_idx,slab_step+1);
-      } else if (state_idx==XDmac_Type) {
-       tensor_source_mf= getStateMAC(state_idx,
-	  ngrow_extrap,dir_extrap,
-	  scomp_tensor,ncomp_extrap,cur_time_slab);
-       tensor_new_mf=&get_new_data(state_idx+dir_extrap,slab_step+1);
-      } else
-       amrex::Error("state_idx invalid");
+      tensor_new_mf=&get_new_data(state_idx,slab_step+1);
+     } else 
+      amrex::Error("state_idx invalid");
    
-      MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+     MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
       //use_tiling==false 
       //for future: have a separate FAB for each thread?
-      if (thread_class::nthreads<1)
-       amrex::Error("thread_class::nthreads invalid");
-      thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+     if (thread_class::nthreads<1)
+      amrex::Error("thread_class::nthreads invalid");
+     thread_class::init_d_numPts(S_new.boxArray().d_numPts());
  
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-      for (MFIter mfi(S_new,false); mfi.isValid(); ++mfi) {
+     for (MFIter mfi(S_new,false); mfi.isValid(); ++mfi) {
 
-       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-       const int gridno = mfi.index();
-       const Box& tilegrid = mfi.tilebox();
-       const Box& fabgrid = grids[gridno];
-       const int* tilelo=tilegrid.loVect();
-       const int* tilehi=tilegrid.hiVect();
-       const int* fablo=fabgrid.loVect();
-       const int* fabhi=fabgrid.hiVect();
-       int bfact=parent->Space_blockingFactor(level);
+      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+      const int gridno = mfi.index();
+      const Box& tilegrid = mfi.tilebox();
+      const Box& fabgrid = grids[gridno];
+      const int* tilelo=tilegrid.loVect();
+      const int* tilehi=tilegrid.hiVect();
+      const int* fablo=fabgrid.loVect();
+      const int* fabhi=fabgrid.hiVect();
+      int bfact=parent->Space_blockingFactor(level);
 
-       const Real* xlo = grid_loc[gridno].lo();
+      const Real* xlo = grid_loc[gridno].lo();
   
-       FArrayBox& lsfab=(*LS_mf)[mfi];
-       FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+      FArrayBox& lsfab=(*LS_mf)[mfi];
+      FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-       FArrayBox& tensor_new_fab=(*tensor_new_mf)[mfi];
-       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
+      FArrayBox& tensor_new_fab=(*tensor_new_mf)[mfi];
+      FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
 
-       int tid_current=ns_thread();
-       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-        amrex::Error("tid_current invalid");
-       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+      int tid_current=ns_thread();
+      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+       amrex::Error("tid_current invalid");
+      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-        // declared in: GODUNOV_3D.F90
-       FORT_EXTRAPTENSOR(
+       // declared in: GODUNOV_3D.F90
+      FORT_EXTRAPTENSOR(
 	&normal_probe_size,
         &level,
         &finest_level,
         &cur_time_slab,
-	&MAC_grid_displacement,
-	&isweep,
 	&dir_extrap,
         &ncomp_extrap,
         &nmat,
@@ -11095,19 +11135,16 @@ void NavierStokes::tensor_extrapolate(
         ARLIM(tensor_source_mf_fab.hiVect()),
         tilelo,tilehi,
         fablo,fabhi,&bfact);
-      }  // mfi
+     }  // mfi
 } //omp
-      ns_reconcile_d_num(67);
+     ns_reconcile_d_num(67);
 
-      if (state_idx==-1) {
-	      // do nothing
-      } else if ((state_idx==Tensor_Type)||
-		 (state_idx==XDmac_Type)) {
-       delete tensor_source_mf;
-      } else
-       amrex::Error("state_idx invalid");
-
-     } // isweep=0..AMREX_SPACEDIM
+     if (state_idx==-1) {
+      // do nothing
+     } else if (state_idx==Tensor_Type) {
+      delete tensor_source_mf;
+     } else
+      amrex::Error("state_idx invalid");
 
     } else
      amrex::Error("partid could not be found: tensor_extrapolate");
@@ -11123,11 +11160,11 @@ void NavierStokes::tensor_extrapolate(
    // do nothing
   } else
    amrex::Error("ns_is_rigid bust");
- } // im=0..nmat-1
+ } // im=im_tensor_start;im<=im_tensor_end
 
  delete LS_mf;
 
-}   // subroutine tensor_extrapolate
+}   // end subroutine tensor_extrapolate
 
 
 // non-conservative correction to density.
