@@ -3,6 +3,9 @@
 // =nfluxSEM+1+num_species_var+AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM
 // nfluxSEM (c++ and fortran)
 // =AMREX_SPACEDIM+num_state_material
+//
+//NUM_CELL_ELASTIC, MAC_grid_displacement,num_materials_viscoelastic,
+//NUM_TENSOR_TYPE,XDmac_Type,NUM_TENSOR_TYPE+SDIM,num_MAC_vectors
 //#include <winstd.H>
 
 #include <algorithm>
@@ -15380,10 +15383,11 @@ NavierStokes::split_scalar_advection() {
   mac_grow=2;
 
   if (MAC_grid_displacement==1) {
-   num_MAC_vectors=1+num_materials_viscoelastic; 
+   num_MAC_vectors=2; 
    XDmac_Type_local=XDmac_Type;
    XDMACOLD_MF_local=XDMACOLD_MF;
-   if (NUM_CELL_ELASTIC==num_materials_viscoelastic*NUM_TENSOR_TYPE) {
+   if (NUM_CELL_ELASTIC==
+       num_materials_viscoelastic*NUM_TENSOR_TYPE) {
     // do nothing
    } else
     amrex::Error("NUM_CELL_ELASTIC invalid");
@@ -15849,7 +15853,7 @@ NavierStokes::split_scalar_advection() {
      &bfact,
      &nmat,
      &ngrow, 
-     &num_MAC_vectors,
+     &num_MAC_vectors, //=1 or 2
      &ngrow_mac_old,
      &veldir);
    }  // mfi
@@ -16255,7 +16259,7 @@ NavierStokes::split_scalar_advection() {
 
     // declared in GODUNOV_3D.F90
    FORT_BUILD_NEWMAC(
-    &num_MAC_vectors,
+    &num_MAC_vectors, //=1 or 2
     &nsolveMM_FACE,
     &normdir_here,
     tilelo,tilehi,
@@ -22743,7 +22747,6 @@ MultiFab* NavierStokes::getStateTensor (
 
 } // end subroutine getStateTensor
 
-FIX ME
 MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
 
  if (verbose>0)

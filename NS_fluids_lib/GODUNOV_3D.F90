@@ -3523,7 +3523,7 @@ stop
 
 
       subroutine FORT_BUILD_NEWMAC( &
-       num_MAC_vectors, &
+       num_MAC_vectors, & !=1 or 2
        nsolveMM_FACE, &
        normdir, & ! 0..sdim-1
        tilelo,tilehi, &
@@ -3554,9 +3554,8 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors
+      INTEGER_T, intent(in) :: num_MAC_vectors ! =1 or 2
       INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: normdir ! 0..sdim-1
       INTEGER_T, intent(in) :: level
@@ -3606,12 +3605,9 @@ stop
       REAL_T, intent(out) :: yvmac(DIMV(yvmac))
       REAL_T, intent(out) :: zvmac(DIMV(zvmac))
 
-      REAL_T, intent(out) :: xdmac(DIMV(xdmac), &
-       num_materials_viscoelastic)
-      REAL_T, intent(out) :: ydmac(DIMV(ydmac), &
-       num_materials_viscoelastic)
-      REAL_T, intent(out) :: zdmac(DIMV(zdmac), &
-       num_materials_viscoelastic)
+      REAL_T, intent(out) :: xdmac(DIMV(xdmac))
+      REAL_T, intent(out) :: ydmac(DIMV(ydmac))
+      REAL_T, intent(out) :: zdmac(DIMV(zdmac))
 
       REAL_T, intent(in) :: mask(DIMV(mask))
 
@@ -3665,20 +3661,15 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((num_MAC_vectors.eq.1).or. &
-          (num_MAC_vectors.eq.1+num_materials_viscoelastic)) then
+          (num_MAC_vectors.eq.2)) then
        ! do nothing
       else
        print *,"num_MAC_vectors invalid"
        stop
       endif
 
-      nsolveMM_FACE_test=num_materials_vel
-      if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
+      if (nsolveMM_FACE.ne.1) then
        print *,"nsolveMM_FACE invalid"
        stop
       endif
@@ -3758,10 +3749,8 @@ stop
          if (zapvel.eq.1) then
           if (veldir.eq.1) then
            xvmac(D_DECL(i,j,k))=zero
-           if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
-            do ivec=1,num_materials_viscoelastic
-             xdmac(D_DECL(i,j,k),ivec)=zero
-            enddo
+           if (num_MAC_vectors.eq.2) then
+            xdmac(D_DECL(i,j,k))=zero
            else if (num_MAC_vectors.eq.1) then
             ! do nothing
            else
@@ -3864,42 +3853,40 @@ stop
              print *,"massface_total(1) invalid"
              stop
             endif
-           
-            do ivec=2,num_MAC_vectors
-             if (massface_total(ivec).gt.zero) then
-              momface_total(ivec)=momface_total(ivec)/massface_total(ivec)
+          
+            if (num_MAC_vectors.eq.1) then
+             ! do nothing
+            else if (num_MAC_vectors.eq.2) then 
+             if (massface_total(2).gt.zero) then
+              momface_total(2)=momface_total(2)/massface_total(2)
               if (veldir.eq.normdir+1) then
-               momface_total(ivec)=momface_total(ivec)+ &
-                   unode(D_DECL(i,j,k))
+               momface_total(2)=momface_total(2)+unode(D_DECL(i,j,k))
               else if ((veldir.ge.1).and.(veldir.le.SDIM)) then
                ! do nothing
               else
                print *,"veldir invalid"
                stop
               endif
-             else if (massface_total(ivec).eq.zero) then
-              momface_total(ivec)=zero
+             else if (massface_total(2).eq.zero) then
+              momface_total(2)=zero
              else
-              print *,"massface_total(ivec) invalid"
+              print *,"massface_total(2) invalid"
               stop
              endif
-            enddo !ivec=2,num_MAC_vectors
+            else 
+             print *,"num_MAC_vectors invalid"
+             stop
+            endif
              
             if (veldir.eq.1) then
              xvmac(D_DECL(i,j,k))=momface_total(1)
-             do ivec=2,num_MAC_vectors
-              xdmac(D_DECL(i,j,k),ivec-1)=momface_total(ivec)
-             enddo
+             xdmac(D_DECL(i,j,k))=momface_total(2)
             else if (veldir.eq.2) then
              yvmac(D_DECL(i,j,k))=momface_total(1)
-             do ivec=2,num_MAC_vectors
-              ydmac(D_DECL(i,j,k),ivec-1)=momface_total(ivec)
-             enddo
+             ydmac(D_DECL(i,j,k))=momface_total(2)
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
              zvmac(D_DECL(i,j,k))=momface_total(1)
-             do ivec=2,num_MAC_vectors
-              zdmac(D_DECL(i,j,k),ivec-1)=momface_total(ivec)
-             enddo
+             zdmac(D_DECL(i,j,k))=momface_total(2)
             else
              print *,"veldir invalid"
              stop
@@ -3939,7 +3926,7 @@ stop
        cenF,DIMS(cenF), &
        x_mac_old, &
        DIMS(x_mac_old), &
-       xd_mac_old, & !1..num_materials_viscoelastic
+       xd_mac_old, & 
        DIMS(xd_mac_old), &
        xvof,DIMS(xvof), &
        xvel,DIMS(xvel), &  ! 1..num_MAC_vectors
@@ -3950,7 +3937,7 @@ stop
        bfact, &
        nmat, &
        ngrow, &
-       num_MAC_vectors, &
+       num_MAC_vectors, & !=1 or 2
        ngrowmac, &
        veldir)
       use probcommon_module
@@ -3960,7 +3947,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors
+      INTEGER_T, intent(in) :: num_MAC_vectors !=1 or 2.
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -3982,8 +3969,7 @@ stop
       REAL_T, intent(in) :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, intent(in) :: cenF(DIMV(cenF),nrefine_cen)
       REAL_T, intent(in) :: x_mac_old(DIMV(x_mac_old))
-      REAL_T, intent(in) :: xd_mac_old(DIMV(xd_mac_old), &
-         num_materials_viscoelastic)
+      REAL_T, intent(in) :: xd_mac_old(DIMV(xd_mac_old))
       REAL_T, intent(out) :: xvof(DIMV(xvof),nmat)
       REAL_T, intent(out) :: xvel(DIMV(xvel),num_MAC_vectors) 
       REAL_T, intent(out) :: xvelslp(DIMV(xvelslp),1+nmat) ! xvelslope,xcen
@@ -4002,7 +3988,6 @@ stop
       INTEGER_T irefine,irefinecen,iside
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T ivec
 
       nhalf=1
@@ -4025,7 +4010,7 @@ stop
       endif
 
       if ((num_MAC_vectors.eq.1).or. &
-          (num_MAC_vectors.eq.1+num_materials_viscoelastic)) then
+          (num_MAC_vectors.eq.2)) then
        ! do nothing
       else
        print *,"num_MAC_vectors invalid"
@@ -4062,8 +4047,7 @@ stop
        print *,"nrefine_cen invalid in build_macvof"
        stop
       endif
-      nsolveMM_FACE_test=num_materials_vel
-      if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
+      if (nsolveMM_FACE.ne.1) then
        print *,"nsolveMM_FACE invalid"
        stop
       endif
@@ -4100,9 +4084,7 @@ stop
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1,26)
 
        velmac(1)=x_mac_old(D_DECL(i,j,k))
-       do ivec=2,num_MAC_vectors
-        velmac(ivec)=xd_mac_old(D_DECL(i,j,k),ivec-1)
-       enddo
+       velmac(2)=xd_mac_old(D_DECL(i,j,k))
 
        if (veldir.eq.1) then
         if (levelrz.eq.0) then
@@ -19279,7 +19261,6 @@ stop
       return
       end subroutine FORT_AGGRESSIVE
 
-
          ! "coarray fortran"  (MPI functionality built in)
          ! masknbr=1.0 in the interior
          !        =1.0 fine-fine ghost cells
@@ -19356,7 +19337,7 @@ stop
        ntensor, &
        nc_bucket, &
        nrefine_vof, &
-       num_MAC_vectors, &
+       num_MAC_vectors, & !=1 or 2 (VFRAC_SPLIT)
        NUM_CELL_ELASTIC, &
        verbose, &
        gridno,ngrid, &
@@ -19374,7 +19355,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors
+      INTEGER_T, intent(in) :: num_MAC_vectors !=1 or 2
       INTEGER_T, intent(in) :: NUM_CELL_ELASTIC
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(inout) :: nprocessed
@@ -19813,7 +19794,7 @@ stop
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
        if ((ntensor.eq. &
-            num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)).or. &
+            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM).or. &
            (ntensor.eq. &
             num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
         ! do nothing
@@ -19821,8 +19802,7 @@ stop
         print *,"ntensor invalid"
         stop
        endif
-       if (ntensor.eq. &
-           num_materials_viscoelastic*NUM_CELL_ELASTIC) then
+       if (ntensor.eq.NUM_CELL_ELASTIC) then
         ! do nothing
        else
         print *,"ntensor invalid"
@@ -19962,24 +19942,33 @@ stop
        call checkbound(fablo,fabhi,DIMS(ymassside),1,-1,1271)
        call checkbound(fablo,fabhi,DIMS(zmassside),1,-1,1271)
  
-       if ((NUM_CELL_ELASTIC.eq.2*SDIM+SDIM).and. &
-           (NUM_CELL_ELASTIC.eq.FORT_NUM_TENSOR_TYPE+SDIM).and. &
-           (ntensor.eq.num_materials_viscoelastic*NUM_CELL_ELASTIC).and. &
+       if ((NUM_CELL_ELASTIC.eq. &
+            2*SDIM*num_materials_viscoelastic+SDIM).and. &
+           (NUM_CELL_ELASTIC.eq. &
+            FORT_NUM_TENSOR_TYPE* &
+            num_materials_viscoelastic+SDIM).and. &
+           (ntensor.eq.NUM_CELL_ELASTIC).and. &
            (num_MAC_vectors.eq.1)) then
         ! do nothing
-       else if ((NUM_CELL_ELASTIC.eq.2*SDIM).and. &
-                (NUM_CELL_ELASTIC.eq.FORT_NUM_TENSOR_TYPE).and. &
-                (ntensor.eq.num_materials_viscoelastic*NUM_CELL_ELASTIC).and. &
-                (num_MAC_vectors.eq.1+num_materials_viscoelastic)) then
+       else if ((NUM_CELL_ELASTIC.eq. &
+                 2*SDIM*num_materials_viscoelastic).and. &
+                (NUM_CELL_ELASTIC.eq. &
+                 FORT_NUM_TENSOR_TYPE* &
+                 num_materials_viscoelastic).and. &
+                (ntensor.eq.NUM_CELL_ELASTIC).and. &
+                (num_MAC_vectors.eq.2)) then
         ! do nothing
        else
         print *,"expecting displacement at cell centers or face centers"
         stop
        endif
       else if (face_flag.eq.0) then
-       if ((NUM_CELL_ELASTIC.eq.2*SDIM+SDIM).and. &
-           (NUM_CELL_ELASTIC.eq.FORT_NUM_TENSOR_TYPE+SDIM).and. &
-           (ntensor.eq.num_materials_viscoelastic*NUM_CELL_ELASTIC).and. &
+       if ((NUM_CELL_ELASTIC.eq. &
+            2*SDIM*num_materials_viscoelastic+SDIM).and. &
+           (NUM_CELL_ELASTIC.eq. &
+            FORT_NUM_TENSOR_TYPE* &
+            num_materials_viscoelastic+SDIM).and. &
+           (ntensor.eq.NUM_CELL_ELASTIC).and. &
            (num_MAC_vectors.eq.1)) then
         ! do nothing
        else
@@ -20084,8 +20073,7 @@ stop
       cutoff=DXMAXLS
 
       itensor_base=iden_base+nmat*num_state_material
-      imof_base=itensor_base+ &
-           num_materials_viscoelastic*NUM_CELL_ELASTIC
+      imof_base=itensor_base+NUM_CELL_ELASTIC
       iLS_base=imof_base+nmat*ngeom_raw
       iFtarget_base=iLS_base+nmat
       iden_mom_base=iFtarget_base+nmat
@@ -20418,7 +20406,7 @@ stop
                   LS_voltotal_depart=LS_voltotal_depart+ &
                    multi_volume_grid(im)
                  else if (is_rigid(nmat,im).eq.1) then
-                  ! do nothing
+                  ! do nothing (fluids tessellate)
                  else
                   print *,"is_rigid invalid"
                   stop
@@ -20431,6 +20419,7 @@ stop
                  stop
                 endif
 
+                 ! initialize momentum for each material.
                 do im=1,nmat
 
                  ! density
@@ -20534,16 +20523,24 @@ stop
                              (imap.le.num_materials_viscoelastic))
                     imap=imap+1
                    enddo
-                   if (imap.le.num_materials_viscoelastic) then
+                   if ((imap.ge.1).and. &
+                       (imap.le.num_materials_viscoelastic) then
                     if (num_MAC_vectors.eq.1) then
                      ! do nothing
-                    else if (num_MAC_vectors.eq. &
-                             1+num_materials_viscoelastic) then
-                     veldata_MAC_mass(veldir,1+imap)= &
-                      veldata_MAC_mass(veldir,1+imap)+LS_voltotal_depart
-                     veldata_MAC(veldir,1+imap)= &
-                      veldata_MAC(veldir,1+imap)+ &
-                      donate_data_MAC(veldir,1+imap)*LS_voltotal_depart
+                    else if (num_MAC_vectors.eq.2) then
+                     if (imap.eq.1) then
+                      veldata_MAC_mass(veldir,2)= &
+                       veldata_MAC_mass(veldir,2)+LS_voltotal_depart
+                      veldata_MAC(veldir,2)= &
+                       veldata_MAC(veldir,2)+ &
+                       donate_data_MAC(veldir,2)*LS_voltotal_depart
+                     else if ((imap.ge.2).and. &
+                              (imap.le.num_materials_viscoelastic)) then
+                      ! do nothing
+                     else
+                      print *,"imap invalid"
+                      stop
+                     endif
                     else
                      print *,"num_MAC_vectors invalid"
                      stop
@@ -20566,7 +20563,12 @@ stop
 
                 enddo ! im=1,..,nmat 
 
-               endif ! volint>0
+               else if (volint.eq.zero) then
+                ! do nothing
+               else
+                print *,"volint bust"
+                stop
+               endif 
 
               else if (check_intersection.eq.0) then
                ! do nothing
@@ -20607,34 +20609,35 @@ stop
                  imap=imap+1
                 enddo
 
-                if (imap.le.num_materials_viscoelastic) then
+                if ((imap.ge.2).and. & 
+                    (imap.le.num_materials_viscoelastic)) then
+                 ! do nothing
+                else if (imap.eq.1) then
                  if (num_MAC_vectors.eq.1) then
                   ! do nothing
-                 else if (num_MAC_vectors.eq. &
-                          1+num_materials_viscoelastic) then
-
-                  ibucket_map=ibucket+2*imap
+                 else if (num_MAC_vectors.eq.2) then
+                  ibucket_map=ibucket+2
                   if (veldir.eq.1) then
                    xmomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
                     xmomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-                    veldata_MAC(veldir,1+imap)
+                    veldata_MAC(veldir,2)
                    xmassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
                     xmassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-                    veldata_MAC_mass(veldir,1+imap)
+                    veldata_MAC_mass(veldir,2)
                   else if (veldir.eq.2) then
                    ymomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
                     ymomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-                    veldata_MAC(veldir,1+imap)
+                    veldata_MAC(veldir,2)
                    ymassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
                     ymassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-                    veldata_MAC_mass(veldir,1+imap)
+                    veldata_MAC_mass(veldir,2)
                   else if ((veldir.eq.3).and.(SDIM.eq.3)) then
                    zmomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
                     zmomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-                    veldata_MAC(veldir,1+imap)
+                    veldata_MAC(veldir,2)
                    zmassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
                     zmassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-                    veldata_MAC_mass(veldir,1+imap)
+                    veldata_MAC_mass(veldir,2)
                   else
                    print *,"veldir invalid"
                    stop
@@ -21179,36 +21182,6 @@ stop
                   LS_voltotal_depart*donate_data 
                 enddo !istate=1..FORT_NUM_TENSOR_TYPE
 
-                 ! displacement is stored at the element centers, not the
-                 ! corresponding material centroids.
-                if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
-                 if (num_MAC_vectors.eq.1) then
-                  do istate=1,SDIM
-                   statecomp_data= &
-                     num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-                     (imap-1)*SDIM+istate
-                   donate_data= &
-                    tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
-                   veldata(itensor_base+statecomp_data)= &
-                    veldata(itensor_base+statecomp_data)+ &
-                    LS_voltotal_depart*donate_data 
-                  enddo !istate=1..sdim
-                 else
-                  print *,"num_MAC_vectors invalid"
-                  stop
-                 endif
-                else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
-                 if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
-                  ! do nothing
-                 else
-                  print *,"num_MAC_vectors invalid"
-                  stop
-                 endif
-                else
-                 print *,"NUM_CELL_ELASTIC invalid"
-                 stop
-                endif
-
                else 
                 print *,"imap invalid"
                 stop
@@ -21260,6 +21233,37 @@ stop
              enddo ! veldir=1..sdim
     
             enddo ! im=1,..,nmat (state variables, geometry, velocity)
+
+             ! displacement is stored at the element centers, not the
+             ! corresponding material centroids.
+            if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic+SDIM.eq. &
+                NUM_CELL_ELASTIC) then
+             if (num_MAC_vectors.eq.1) then
+              do istate=1,SDIM
+               statecomp_data= &
+                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+               donate_data= &
+                tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
+               veldata(itensor_base+statecomp_data)= &
+                veldata(itensor_base+statecomp_data)+ &
+                LS_voltotal_depart*donate_data 
+              enddo !istate=1..sdim
+             else
+              print *,"num_MAC_vectors invalid"
+              stop
+             endif
+            else if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic.eq. &
+                     NUM_CELL_ELASTIC) then
+             if (num_MAC_vectors.eq.2) then
+              ! do nothing
+             else
+              print *,"num_MAC_vectors invalid"
+              stop
+             endif
+            else
+             print *,"NUM_CELL_ELASTIC invalid"
+             stop
+            endif
 
            endif ! volint>0
 
@@ -21501,45 +21505,6 @@ stop
  
              enddo !istate=1..FORT_NUM_TENSOR_TYPE
 
-              ! displacement: (F_m X_m)_t + div(F_m u X_m)= u F_m
-              !  (X_m)_t + u dot grad X_m = u
-             if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
-              if (num_MAC_vectors.eq.1) then
-               do istate=1,SDIM
-                statecomp_data= &
-                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-                 (imap-1)*SDIM+istate
-                if (voltotal_depart.gt.zero) then
-                 tennew_hold(statecomp_data)= &
-                  veldata(itensor_base+statecomp_data)/voltotal_depart
-                else
-                 print *,"voltotal_depart invalid"
-                 stop
-                endif 
-                if (istate.eq.normdir+1) then
-                 ! ucell is already the local displacement
-                 tennew_hold(statecomp_data)= &
-                  tennew_hold(statecomp_data)+ &
-                  ucell(D_DECL(icrse,jcrse,kcrse),istate)
-                endif
-               enddo !istate=1..SDIM
-              else
-               print *,"num_MAC_vectors invalid"
-               stop
-              endif
-
-             else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
-              if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
-               ! do nothing
-              else
-               print *,"num_MAC_vectors invalid"
-               stop
-              endif
-             else
-              print *,"NUM_CELL_ELASTIC invalid"
-              stop
-             endif
-
             else 
              print *,"imap invalid"
              stop
@@ -21557,6 +21522,46 @@ stop
           endif
  
          enddo ! im=1..nmat (updating viscoelastic vars)
+
+          ! displacement: (F_m X_m)_t + div(F_m u X_m)= u F_m
+          !  (X_m)_t + u dot grad X_m = u
+         if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic+SDIM.eq. &
+             NUM_CELL_ELASTIC) then
+          if (num_MAC_vectors.eq.1) then
+           do istate=1,SDIM
+            statecomp_data= &
+             num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+            if (voltotal_depart.gt.zero) then
+             tennew_hold(statecomp_data)= &
+              veldata(itensor_base+statecomp_data)/voltotal_depart
+            else
+             print *,"voltotal_depart invalid"
+             stop
+            endif 
+            if (istate.eq.normdir+1) then
+             ! ucell is already the local displacement
+             tennew_hold(statecomp_data)= &
+              tennew_hold(statecomp_data)+ &
+              ucell(D_DECL(icrse,jcrse,kcrse),istate)
+            endif
+           enddo !istate=1..SDIM
+          else
+           print *,"num_MAC_vectors invalid"
+           stop
+          endif
+
+         else if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic.eq. &
+                  NUM_CELL_ELASTIC) then
+          if (num_MAC_vectors.eq.2) then
+           ! do nothing
+          else
+           print *,"num_MAC_vectors invalid"
+           stop
+          endif
+         else
+          print *,"NUM_CELL_ELASTIC invalid"
+          stop
+         endif
 
          ! velocity=mom/mass
          ! fluid materials tessellate the domain.
@@ -21856,39 +21861,12 @@ stop
              imap=imap+1
             enddo
             if (imap.le.num_materials_viscoelastic) then
+
              do istate=1,FORT_NUM_TENSOR_TYPE
               statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
                tennew_hold(statecomp_data)
              enddo !istate=1..FORT_NUM_TENSOR_TYPE
-
-             if (FORT_NUM_TENSOR_TYPE+SDIM.eq.NUM_CELL_ELASTIC) then
-              if (num_MAC_vectors.eq.1) then
-
-               do istate=1,SDIM
-                statecomp_data= &
-                 num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
-                 (imap-1)*SDIM+istate
-                tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-                 tennew_hold(statecomp_data)
-               enddo !istate=1..SDIM
-
-              else
-               print *,"num_MAC_vectors invalid"
-               stop
-              endif
-
-             else if (FORT_NUM_TENSOR_TYPE.eq.NUM_CELL_ELASTIC) then
-              if (num_MAC_vectors.eq.1+num_materials_viscoelastic) then
-               ! do nothing
-              else
-               print *,"num_MAC_vectors invalid"
-               stop
-              endif
-             else
-              print *,"NUM_CELL_ELASTIC invalid"
-              stop
-             endif
 
             else 
              print *,"imap invalid"
@@ -21907,6 +21885,38 @@ stop
           endif
 
          enddo ! im=1..nmat
+
+         if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic+SDIM.eq. &
+             NUM_CELL_ELASTIC) then
+
+          if (num_MAC_vectors.eq.1) then
+
+           do istate=1,SDIM
+            statecomp_data= &
+             num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+istate
+            tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+             tennew_hold(statecomp_data)
+           enddo !istate=1..SDIM
+
+          else
+           print *,"num_MAC_vectors invalid"
+           stop
+          endif
+
+         else if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic.eq. &
+                  NUM_CELL_ELASTIC) then
+
+          if (num_MAC_vectors.eq.2) then
+           ! do nothing
+          else
+           print *,"num_MAC_vectors invalid"
+           stop
+          endif
+
+         else
+          print *,"NUM_CELL_ELASTIC invalid"
+          stop
+         endif
 
          do im=1,nmat
           if (is_rigid(nmat,im).eq.0) then
