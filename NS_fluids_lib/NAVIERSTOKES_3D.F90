@@ -871,20 +871,18 @@ stop
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
 
-         do im=1,num_materials_vel
-          ivel2d=(im-1)*SDIM
-          ivel3d=(im-1)*plot_sdim
-          ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
-          uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
-          ux=ur*cos(theta)
-          uy=ur*sin(theta)
-          zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
-          zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
-          zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
-         enddo ! im
+         ivel2d=0
+         ivel3d=0
+         ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
+         uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
+         ux=ur*cos(theta)
+         uy=ur*sin(theta)
+         zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
+         zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
+         zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
 
-         index3d=index3d+plot_sdim*num_materials_vel
-         index2d=index2d+SDIM*num_materials_vel
+         index3d=index3d+plot_sdim
+         index2d=index2d+SDIM
 
          do partid=0,nparts_def-1
           ivel2d=partid*SDIM
@@ -902,7 +900,7 @@ stop
          index2d=index2d+SDIM*nparts_def
 
           ! pressure,presder,div,divdat,mach,vof
-         do ivar_gb=1,5*num_materials_vel+nmat
+         do ivar_gb=1,5+nmat
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
@@ -3367,7 +3365,6 @@ END SUBROUTINE SIMP
       INTEGER_T current_index
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
-      INTEGER_T MAC_grid_displacement
 
       caller_id=3
 
@@ -3396,11 +3393,9 @@ END SUBROUTINE SIMP
       endif
       if (elastic_ncomp.eq. &
           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
-       MAC_grid_displacement=0
       else if (elastic_ncomp.eq. &
                num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
-       MAC_grid_displacement=1
-       print *,"FIX ME"
+       print *,"FIX ME; append the interp of MAC to CELL displacement"
        stop
       else
        print *,"elastic_ncomp invalid"
@@ -3630,7 +3625,7 @@ END SUBROUTINE SIMP
         sumweight=zero
         sumweightLS=zero
 
-        do dir=1,num_materials_vel*(SDIM+1)
+        do dir=1,(SDIM+1)
          velnd(dir)=zero
         enddo
         do dir=1,num_state_material*nmat
@@ -3642,12 +3637,10 @@ END SUBROUTINE SIMP
         do dir=1,elastic_ncomp
          elasticnd(dir)=zero
         enddo
-        do dir=1,num_materials_vel
-         presnd(dir)=zero
-         divnd(dir)=zero
-         divdatnd(dir)=zero
-         machnd(dir)=zero
-        enddo
+        presnd=zero
+        divnd=zero
+        divdatnd=zero
+        machnd=zero
         do dir=1,nmat
          vofnd(dir)=zero
          viscnd(dir)=zero
@@ -3749,10 +3742,10 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         do dir=1,num_materials_vel*(SDIM+1)
+         do dir=1,(SDIM+1)
           velcell(dir)=vel(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
-         do dir=1,num_materials_vel*(SDIM+1)
+         do dir=1,(SDIM+1)
           velnd(dir)=velnd(dir)+localwt*velcell(dir)
          enddo
          do dir=1,num_state_material*nmat
@@ -3781,14 +3774,10 @@ END SUBROUTINE SIMP
           elasticnd(dir)=elasticnd(dir)+localwt*elasticcell(dir)
          enddo
 
-         do dir=1,num_materials_vel
-          presnd(dir)=presnd(dir)+ &
-           localwt*pres(D_DECL(i-i1,j-j1,k-k1),dir)
-          divnd(dir)=divnd(dir)+ &
-           localwt*div(D_DECL(i-i1,j-j1,k-k1),dir)
-          divdatnd(dir)=divdatnd(dir)+ &
-           localwt*divdat(D_DECL(i-i1,j-j1,k-k1),dir)
-         enddo
+         presnd=presnd+localwt*pres(D_DECL(i-i1,j-j1,k-k1))
+         divnd=divnd+localwt*div(D_DECL(i-i1,j-j1,k-k1))
+         divdatnd=divdatnd+localwt*divdat(D_DECL(i-i1,j-j1,k-k1))
+
          do dir=1,nmat
           vofcomp=(dir-1)*ngeom_recon+1
           vofcell(dir)=reconfab(D_DECL(i-i1,j-j1,k-k1),vofcomp)
@@ -3821,9 +3810,7 @@ END SUBROUTINE SIMP
          call get_mach_number(visual_tessellate_vfrac, &
            velcell,dencell,vofcell,machcell,nmat)
 
-         do dir=1,num_materials_vel
-          machnd(dir)=machnd(dir)+localwt*machcell(dir)
-         enddo
+         machnd=machnd+localwt*machcell
 
          sumweight=sumweight+localwt
          sumweightLS=sumweightLS+localwtLS
@@ -3840,7 +3827,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        do dir=1,num_materials_vel*(SDIM+1)
+        do dir=1,(SDIM+1)
          velnd(dir)=velnd(dir)/sumweight
         enddo
         do dir=1,5*nmat
@@ -3858,12 +3845,10 @@ END SUBROUTINE SIMP
          elasticnd(dir)=elasticnd(dir)/sumweight
         enddo
 
-        do dir=1,num_materials_vel
-         presnd(dir)=presnd(dir)/sumweight
-         divnd(dir)=divnd(dir)/sumweight
-         divdatnd(dir)=divdatnd(dir)/sumweight
-         machnd(dir)=machnd(dir)/sumweight
-        enddo
+        presnd=presnd/sumweight
+        divnd=divnd/sumweight
+        divdatnd=divdatnd/sumweight
+        machnd=machnd/sumweight
 
         do dir=1,nmat
          vofnd(dir)=vofnd(dir)/sumweight
@@ -4119,31 +4104,21 @@ END SUBROUTINE SIMP
         scomp=scomp+SDIM
   
           ! this is pressure from the projection.
-        do iw=1,num_materials_vel
-         writend(scomp+iw)=velnd(num_materials_vel*SDIM+iw)
-        enddo
-        scomp=scomp+num_materials_vel
+        writend(scomp+1)=velnd(SDIM+1)
+        scomp=scomp+1
 
           ! this is EOS pressure
-        do iw=1,num_materials_vel
-         writend(scomp+iw)=presnd(iw)
-        enddo
-        scomp=scomp+num_materials_vel
+        writend(scomp+1)=presnd
+        scomp=scomp+1
 
-        do iw=1,num_materials_vel
-         writend(scomp+iw)=divnd(iw)
-        enddo
-        scomp=scomp+num_materials_vel
+        writend(scomp+1)=divnd
+        scomp=scomp+1
 
-        do iw=1,num_materials_vel
-         writend(scomp+iw)=divdatnd(iw)
-        enddo
-        scomp=scomp+num_materials_vel
+        writend(scomp+1)=divdatnd
+        scomp=scomp+1
 
-        do iw=1,num_materials_vel
-         writend(scomp+iw)=machnd(iw)
-        enddo
-        scomp=scomp+num_materials_vel
+        writend(scomp+1)=machnd
+        scomp=scomp+1
 
         do iw=1,nmat
          writend(scomp+iw)=vofnd(iw)
@@ -4261,18 +4236,18 @@ END SUBROUTINE SIMP
           ! primary material w.r.t. both fluids and solids.
          call get_primary_material(lsdistnd,nmat,im_crit)
 
-         do dir=1,num_materials_vel*(SDIM+1)
+         do dir=1,(SDIM+1)
           velnd(dir)=vel(D_DECL(i,j,k),dir)
          enddo
 
-         dir=num_materials_vel*SDIM+1
+         dir=SDIM+1
          plotfab(D_DECL(i,j,k),2*SDIM+1)=velnd(dir) ! pressure from solver
 
-         presnd(1)=pres(D_DECL(i,j,k),1)
-         divnd(1)=div(D_DECL(i,j,k),1)
+         presnd=pres(D_DECL(i,j,k))
+         divnd=div(D_DECL(i,j,k))
 
-         plotfab(D_DECL(i,j,k),2*SDIM+2)=presnd(1)
-         plotfab(D_DECL(i,j,k),2*SDIM+3)=divnd(1)
+         plotfab(D_DECL(i,j,k),2*SDIM+2)=presnd
+         plotfab(D_DECL(i,j,k),2*SDIM+3)=divnd
 
          do dir=1,num_state_material*nmat
           dennd(dir)=den(D_DECL(i,j,k),dir)
@@ -9688,7 +9663,7 @@ END SUBROUTINE SIMP
        REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
        REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
        ! includes pressure 
-       REAL_T, intent(in), target :: vel(DIMV(vel),num_materials_vel*(SDIM+1)) 
+       REAL_T, intent(in), target :: vel(DIMV(vel),(SDIM+1)) 
        REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k
@@ -9793,10 +9768,6 @@ END SUBROUTINE SIMP
        endif
        if (nmat.ne.num_materials) then
         print *,"nmat invalid"
-        stop
-       endif
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
         stop
        endif
        if (ngeom_recon.ne.2*SDIM+3) then
@@ -10730,10 +10701,6 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
-        stop
-       endif
        if ((num_materials_face.ne.1).and. &
            (num_materials_face.ne.num_materials)) then
         print *,"num_materials_face invalid"
@@ -10959,10 +10926,6 @@ END SUBROUTINE SIMP
        endif
        if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
         print *,"nsolve invalid"
-        stop
-       endif
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
         stop
        endif
        if ((num_materials_face.ne.1).and. &
@@ -11903,7 +11866,7 @@ END SUBROUTINE SIMP
        ! pressure bc at exterior walls
       INTEGER_T, intent(in) :: dombcpres(SDIM,2) 
        ! presbc at int or ext.
-      INTEGER_T, intent(in) :: presbc_arr(SDIM,2,num_materials_vel) 
+      INTEGER_T, intent(in) :: presbc_arr(SDIM,2) 
 
        !HYDROSTATIC_PRESSURE,HYDROSTATIC_DENSITY
       REAL_T, intent(inout) :: presden(DIMV(presden),2) 
@@ -12245,7 +12208,7 @@ END SUBROUTINE SIMP
        stop
       endif
  
-      if (nstate.ne.num_materials_vel*(SDIM+1)+ &
+      if (nstate.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate invalid"
        stop
@@ -12924,7 +12887,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(den)
-      REAL_T, intent(inout) :: pres(DIMV(pres),num_materials_vel)
+      REAL_T, intent(inout) :: pres(DIMV(pres))
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
       REAL_T, intent(in) :: den(DIMV(den),nden) ! den,temp,Y
@@ -12958,10 +12921,6 @@ END SUBROUTINE SIMP
       endif
       if (nden.ne.nmat*num_state_material) then
        print *,"nden invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       call checkbound(fablo,fabhi,DIMS(recon),1,-1,44)
@@ -13106,8 +13065,8 @@ END SUBROUTINE SIMP
       REAL_T errnew(DIMV(errnew))
       REAL_T den(DIMV(den),nmat*num_state_material)
       REAL_T slrecon(DIMV(slrecon),nmat*ngeom_recon)
-      REAL_T vort(DIMV(vort),num_materials_vel)
-      REAL_T pres(DIMV(pres),num_materials_vel)
+      REAL_T vort(DIMV(vort))
+      REAL_T pres(DIMV(pres))
       INTEGER_T i,j,k,im
       REAL_T vfrac(nmat)
       REAL_T pres_array(D_DECL(3,3,3))
@@ -13130,10 +13089,6 @@ END SUBROUTINE SIMP
       endif
       if (bfact.lt.1) then
        print *,"bfact invalid163"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -13325,7 +13280,7 @@ END SUBROUTINE SIMP
       REAL_T, intent(inout) :: csnd(DIMV(csnd),2) 
       REAL_T, intent(in) :: cvof(DIMV(cvof),nmat) 
       REAL_T, intent(in) :: den(DIMV(den),nden) ! den,temp
-      REAL_T, intent(inout) :: mdot(DIMV(mdot),num_materials_vel) 
+      REAL_T, intent(inout) :: mdot(DIMV(mdot)) 
 
       INTEGER_T i,j,k
       INTEGER_T im,imcrit,im_weight
@@ -13342,7 +13297,7 @@ END SUBROUTINE SIMP
       REAL_T vfrac_fluid_sum
       INTEGER_T infinite_weight
       INTEGER_T local_infinite_weight
-      REAL_T div_hold(num_materials_vel)
+      REAL_T div_hold
       REAL_T csound_hold
       REAL_T DXMAXLS
       REAL_T cutoff
@@ -13362,12 +13317,6 @@ END SUBROUTINE SIMP
        ! do nothing
       else
        print *,"nmat invalid advective pressure"
-       stop
-      endif
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
        stop
       endif
       if (num_state_base.eq.2) then
@@ -13886,8 +13835,8 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: vol(DIMV(vol))
       REAL_T, intent(in) :: csound(DIMV(csound),2) 
       REAL_T, intent(in) :: mdot(DIMV(mdot)) 
-      REAL_T, intent(in) :: pnew(DIMV(pnew),num_materials_vel) 
-      REAL_T, intent(out) :: divnew(DIMV(divnew),num_materials_vel) 
+      REAL_T, intent(in) :: pnew(DIMV(pnew)) 
+      REAL_T, intent(out) :: divnew(DIMV(divnew)) 
 
       INTEGER_T i,j,k
       REAL_T coeff_hold,compress_term,mdot_term
@@ -13914,11 +13863,6 @@ END SUBROUTINE SIMP
       call checkbound(fablo,fabhi,DIMS(divnew),1,-1,44)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)

@@ -7361,8 +7361,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
- int dencomp=num_materials_vel*(AMREX_SPACEDIM+1);
+ int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
+ int dencomp=(AMREX_SPACEDIM+1);
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -7374,9 +7374,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
   // renormalize_only==0:
   //   correct F_m according to prescribed solid interface.
   //   project so that sum F_m_fluid=1 
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  // nparts x (velocity + LS + temperature + flag)
  int nparts=im_solid_map.size();
@@ -7422,8 +7419,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
     num_LS_extrap[tid]=0;
    }
 
-   MultiFab* veldata=getState(1,0,
-     num_materials_vel*(AMREX_SPACEDIM+1),time); 
+   MultiFab* veldata=getState(1,0,(AMREX_SPACEDIM+1),time); 
    MultiFab* mofdata=getState(1,scomp_mofvars,nmat*ngeom_raw,time);
    MultiFab* dendata=getStateDen(1,time);
    MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
@@ -7435,7 +7431,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
    }
 
-   if (veldata->nComp()!=num_materials_vel*(AMREX_SPACEDIM+1))
+   if (veldata->nComp()!=(AMREX_SPACEDIM+1))
     amrex::Error("veldata incorrect ncomp");
    if (dendata->nComp()!=nmat*num_state_material)
     amrex::Error("dendata incorrect ncomp");
@@ -8361,12 +8357,17 @@ void NavierStokes::output_zones(
      nmat,1,
      MFInfo().SetTag("mom_denmfminus"),FArrayBoxFactory());
 
+   int elastic_ncomp=viscoelasticmf->nComp();
+   if (elastic_ncomp==
+       num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("elastic_ncomp invalid");
+
    MultiFab* viscoelasticmfminus=
     new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     NUM_CELL_ELASTIC,1,
+     elastic_ncomp,1,
      MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
-
-   int elastic_ncomp=viscoelasticmfminus->nComp();
 
    MultiFab* lsdistmfminus=
     new MultiFab(cgrids_minusBA,cgrids_minus_map,
@@ -8441,7 +8442,7 @@ void NavierStokes::output_zones(
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
-     NUM_CELL_ELASTIC,
+     elastic_ncomp,
      1,1,geom.periodicity()); 
    check_for_NAN(viscoelasticmf,6);
    check_for_NAN(viscoelasticmfminus,16);
