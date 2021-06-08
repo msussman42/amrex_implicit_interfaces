@@ -15323,9 +15323,6 @@ NavierStokes::split_scalar_advection() {
  if (level<finest_level)
   bfact_f=parent->Space_blockingFactor(level+1);
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -15402,7 +15399,7 @@ NavierStokes::split_scalar_advection() {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
- if (ncomp_state!=num_materials_vel*(AMREX_SPACEDIM+1)+
+ if (ncomp_state!=(AMREX_SPACEDIM+1)+
      nmat*(num_state_material+ngeom_raw)+1)
   amrex::Error("ncomp_state invalid");
 
@@ -15415,7 +15412,7 @@ NavierStokes::split_scalar_advection() {
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
- int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material;
+ int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
  Vector<int> dombc(2*AMREX_SPACEDIM);
  const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
  const int* b_rec=descbc.vect();
@@ -15459,7 +15456,7 @@ NavierStokes::split_scalar_advection() {
 
    // the pressure from before will be copied to the new pressure.
  getState_localMF(VELADVECT_MF,ngrow,0,
-  num_materials_vel*(AMREX_SPACEDIM+1),
+  (AMREX_SPACEDIM+1),
   advect_time_slab); 
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -15626,6 +15623,7 @@ NavierStokes::split_scalar_advection() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // declared in GODUNOV_3D.F90
   FORT_BUILD_SLOPES( 
    masknbrfab.dataPtr(),
    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
@@ -15881,6 +15879,7 @@ NavierStokes::split_scalar_advection() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+      //declared in GODUNOV_3D.F90
     FORT_BUILD_SLOPES_FACE( 
      masknbrfab.dataPtr(),
      ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),

@@ -3338,10 +3338,6 @@ stop
        print *,"normdir invalid"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
        stop
@@ -4795,7 +4791,7 @@ stop
       REAL_T masknbr(DIMV(masknbr))
       REAL_T vfrac(DIMV(vfrac),nmat)
       REAL_T slsrc(DIMV(slsrc))
-      REAL_T sldst(DIMV(sldst))
+      REAL_T sldst(DIMV(sldst)) !sldst(1)=mac velocity, slpdst(2)=xdmac
 
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T i,j,k
