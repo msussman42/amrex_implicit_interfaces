@@ -3816,12 +3816,11 @@ void NavierStokes::init_gradu_tensorALL(
 
    // grad U.
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
- int ntensorMM=ntensor*num_materials_vel;
 
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
  int irow=0;
  int icol=0;
- for (int i=0;i<ntensorMM;i++) {
+ for (int i=0;i<ntensor;i++) {
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(Tensor_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
@@ -3868,7 +3867,7 @@ void NavierStokes::init_gradu_tensorALL(
    irow++;
    icol=0;
   }
- } // i=0..ntensorMM-1
+ } // i=0..ntensor-1
 
  if ((irow==AMREX_SPACEDIM)&&(icol==0)) {
   // do nothing
@@ -3943,18 +3942,11 @@ void NavierStokes::doit_gradu_tensor(
 
  int nmat=num_materials;
 
- int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  debug_ngrow(idx_vel,1,845);
- if (localMF[idx_vel]->nComp()!=nsolveMM)
+ if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_vel] ncomp invalid");
 
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
- int ntensorMM=ntensor*num_materials_vel;
 
  debug_ngrow(LSTENSOR_MF,1,845);
  debug_ngrow(MASKSOLIDTENSOR_MF,1,845);
@@ -4070,8 +4062,7 @@ void NavierStokes::doit_gradu_tensor(
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     AMREX_SPACEDIM*num_materials_vel);
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
     FArrayBox& velfab=(*localMF[idx_vel])[mfi];
 
@@ -4168,7 +4159,6 @@ void NavierStokes::doit_gradu_tensor(
      im_solid_map_ptr,
      &homflag,
      &ntensor,
-     &ntensorMM,
      &SEM_upwind,
      &SEM_advection_algorithm,
      &simple_AMR_BC_flag_viscosity);
@@ -4374,9 +4364,6 @@ void NavierStokes::init_gradu_tensor(
  } else
   amrex::Error("im_tensor invalid");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel!=1");
-
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -4397,16 +4384,15 @@ void NavierStokes::init_gradu_tensor(
   amrex::Error("tensor scratch variables not previously deleted");
 
  debug_ngrow(idx_vel,1,845);
- if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM*num_materials_vel)
+ if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_vel]->nComp() invalid in init_gradu_tensor");
 
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
- int ntensorMM=ntensor*num_materials_vel;
 
  int nmasksolid=AMREX_SPACEDIM;
 
- new_localMF(idx_face,ntensorMM,1,-1);
- new_localMF(idx_cell,ntensorMM,1,-1);
+ new_localMF(idx_face,ntensor,1,-1);
+ new_localMF(idx_cell,ntensor,1,-1);
 
   // x,y,z 
  new_localMF(MASKSOLIDTENSOR_MF,nmasksolid,1,-1);
@@ -4456,13 +4442,6 @@ void NavierStokes::init_gradu_tensor(
  } else if (im_tensor>=0) {
 
   bool use_tiling=ns_tiling;
-  int nsolve=AMREX_SPACEDIM;
-  int nsolveMM=nsolve*num_materials_vel;
-  int nsolveMM_FACE=nsolveMM;
-  if (num_materials_vel==1) {
-   // do nothing
-  } else 
-   amrex::Error("num_materials_vel invalid");
 
   int rzflag=0;
   if (geom.IsRZ())
@@ -4525,8 +4504,7 @@ void NavierStokes::init_gradu_tensor(
  
     const Real* xlo = grid_loc[gridno].lo();
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     num_materials_vel*AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
     FArrayBox& velfab=(*localMF[idx_vel])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -4559,7 +4537,6 @@ void NavierStokes::init_gradu_tensor(
     FORT_CROSSTERM_ELASTIC(
      &ncomp_visc,
      &im_tensor, // 0..nmat-1
-     &nsolveMM_FACE,
      &dir,
      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
      maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
@@ -4596,8 +4573,7 @@ void NavierStokes::init_gradu_tensor(
      &visc_coef,
      &nmat,
      &nden,
-     &ntensor,
-     &ntensorMM);
+     &ntensor);
    } // mfi
 } // omp
    ns_reconcile_d_num(142);
@@ -4642,7 +4618,7 @@ void NavierStokes::apply_pressure_grad(
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
+ int num_materials_face=1;
  if (project_option_momeqn(project_option)==1) {
   if (num_materials_face!=1)
    amrex::Error("num_materials_face invalid");
@@ -4650,9 +4626,6 @@ void NavierStokes::apply_pressure_grad(
   num_materials_face=num_materials_scalar_solve;
  } else
   amrex::Error("project_option_momeqn(project_option) invalid26");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_face!=1)&&
      (num_materials_face!=nmat))
@@ -4836,7 +4809,6 @@ void NavierStokes::apply_pressure_grad(
   int nden=nmat*num_state_material;
 
   int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
-  int ntensorMM=ntensor*num_materials_vel;
 
   allocate_flux_register(operation_flag);
   if (localMF[SEM_FLUXREG_MF]->nComp()!=ntensor)
@@ -4877,8 +4849,7 @@ void NavierStokes::apply_pressure_grad(
  
     const Real* xlo = grid_loc[gridno].lo();
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     num_materials_vel*AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
     FArrayBox& velfab=(*localMF[pboth_mf])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -4957,7 +4928,6 @@ void NavierStokes::apply_pressure_grad(
      &nmat,
      &nden,
      &ntensor,
-     &ntensorMM,
      &constant_viscosity,
      &homflag);
    } // mfi
@@ -5141,8 +5111,7 @@ void NavierStokes::apply_pressure_grad(
     getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
     if (presbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
      amrex::Error("presbc.size() invalid");
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     num_materials_vel*AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
   
     Real beta=0.0;
 
@@ -5315,9 +5284,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  int nhistory=nten*2;
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  int finest_level = parent->finestLevel();
 
@@ -5654,7 +5620,7 @@ void NavierStokes::make_physics_vars(int project_option) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int scomp_pres=num_materials_vel*AMREX_SPACEDIM;
+ int scomp_pres=AMREX_SPACEDIM;
 
   // in: make_physics_vars
  allocate_physics_vars();
@@ -5885,10 +5851,8 @@ void NavierStokes::make_physics_vars(int project_option) {
    const Real* xlo = grid_loc[gridno].lo();
 
 // face_frac=0 if presbc<> interior or exterior dirichlet.
-   Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,
-    num_materials_vel);
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,
-    num_materials_vel*AMREX_SPACEDIM);
+   Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,1);
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
    // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
@@ -6107,7 +6071,7 @@ void NavierStokes::solid_temperature() {
  int nmat=num_materials;
 
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
  if (S_new.nComp()!=nstate) 
   amrex::Error("S_new.nComp()!=nstate");
@@ -6138,7 +6102,7 @@ void NavierStokes::solid_temperature() {
   } else if ((solidheat_flag==1)||  // dirichlet at solid/fluid
              (solidheat_flag==2)) { // neumann at solid/fluid
 
-   int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
+   int dcomp=(AMREX_SPACEDIM+1);
    int nden=nmat*num_state_material;
 
    if (thread_class::nthreads<1)
@@ -6225,15 +6189,9 @@ void NavierStokes::increment_potential_force() {
 
  int nmat=num_materials;
 
- int nsolveMM=num_materials_vel;
- int nsolveMM_FACE=nsolveMM;
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=S_new.nComp();
- if (nstate!=num_materials_vel*(AMREX_SPACEDIM+1)+
+ if (nstate!=(AMREX_SPACEDIM+1)+
      nmat*(num_state_material+ngeom_raw)+1)
   amrex::Error("nstate invalid");
  if (num_state_base!=2)
@@ -6316,14 +6274,14 @@ void NavierStokes::increment_potential_force() {
      &gravity_dir,
      &angular_velocity,
      denconst_gravity.dataPtr(),
-     &nsolveMM_FACE,
      &level,
      &finest_level,
      &facecut_index,
      &icefacecut_index,
      &vofface_index,
      &ncphys,
-     &nmat,&nstate,
+     &nmat,
+     &nstate,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,&dir,
@@ -8151,12 +8109,11 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id) {
   amrex::Error("level invalid check_for_NAN_TENSOR");
 
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
- int ntensorMM=ntensor*num_materials_vel;
 
  int ncomp=mf->nComp();
  int ngrow=mf->nGrow();
 
- if (ncomp!=ntensorMM)
+ if (ncomp!=ntensor)
   amrex::Error("ncomp invalid");
  if (ngrow!=1)
   amrex::Error("ngrow invalid");
@@ -9780,13 +9737,12 @@ void NavierStokes::init_pressure_error_indicator() {
 
  int nmat=num_materials;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
- int ntensorMM=ntensor*num_materials_vel;
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
 
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
+ if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
@@ -9848,7 +9804,7 @@ void NavierStokes::init_pressure_error_indicator() {
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
 
-   if (cellten.nComp()!=ntensorMM)
+   if (cellten.nComp()!=ntensor)
     amrex::Error("cellten invalid ncomp");
 
    int tencomp=im*ntensor;
@@ -10352,17 +10308,13 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
  int nmat=num_materials;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
- int ntensorMM=ntensor*num_materials_vel;
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
   // init_gradu_tensorALL is called in NavierStokes::make_physics_varsALL
   // prior to this routine being called.
   // Also, init_gradu_tensorALL is called in NavierStokes::writeTECPLOT_File
   // prior to this routine being called.
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
+ if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  VOF_Recon_resize(2,SLOPE_RECON_MF);
@@ -10503,7 +10455,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
      FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
      FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-     if (cellten.nComp()!=ntensorMM)
+     if (cellten.nComp()!=ntensor)
       amrex::Error("cellten invalid ncomp");
 
      Vector<int> velbc=getBCArray(State_Type,gridno,0,
@@ -10664,7 +10616,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
     FArrayBox& viscfab=(*localMF[idx])[mfi];
 
     FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-    if (cellten.nComp()!=ntensorMM)
+    if (cellten.nComp()!=ntensor)
      amrex::Error("cellten invalid ncomp");
 
     FArrayBox& velfab=(*vel)[mfi];
@@ -10757,9 +10709,6 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
  
  bool use_tiling=ns_tiling;
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  if (ngrow!=1)
   amrex::Error("ngrow invalid getState_tracemag");
 
@@ -10769,7 +10718,6 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
- int ntensorMM=ntensor*num_materials_vel;
 
  if (localMF_grow[idx]>=0)
   amrex::Error("local magtrace not previously deleted");
@@ -10783,7 +10731,7 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
+ if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  MultiFab* den_data=getStateDen(ngrow,cur_time_slab);
@@ -10853,7 +10801,7 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
    FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-   if (cellten.nComp()!=ntensorMM)
+   if (cellten.nComp()!=ntensor)
     amrex::Error("cellten invalid ncomp");
 
    FArrayBox& destfab=(*localMF[idx])[mfi];
@@ -10920,7 +10868,7 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
    FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-   if (cellten.nComp()!=ntensorMM)
+   if (cellten.nComp()!=ntensor)
     amrex::Error("cellten invalid ncomp");
 
    FArrayBox& destfab=(*localMF[idx])[mfi];

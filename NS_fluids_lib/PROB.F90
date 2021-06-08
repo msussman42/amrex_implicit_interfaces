@@ -14087,7 +14087,6 @@ END SUBROUTINE Adist
       INTEGER_T prescomp
       INTEGER_T nbase
       INTEGER_T ntensor
-      INTEGER_T ntensorMM
       INTEGER_T nsolveMM_FACE_test
       INTEGER_T local_incomp
       INTEGER_T testbc
@@ -14204,7 +14203,6 @@ END SUBROUTINE Adist
       endif
 
       ntensor=SDIM*SDIM
-      ntensorMM=ntensor*num_materials_vel
 
       if ((level.lt.0).or. &
           (level.gt.finest_level)) then
@@ -14237,7 +14235,7 @@ END SUBROUTINE Adist
 
       if (operation_flag.eq.6) then ! tensor
 
-       if (ncomp_xgp.ne.ntensorMM) then
+       if (ncomp_xgp.ne.ntensor) then
         print *,"ncomp_xgp invalid1"
         stop
        endif
@@ -16924,7 +16922,6 @@ END SUBROUTINE Adist
       INTEGER_T velcomp
       INTEGER_T nbase
       INTEGER_T ntensor
-      INTEGER_T ntensorMM
       INTEGER_T nsolveMM_FACE_test
       REAL_T xflux_R
       INTEGER_T local_incomp
@@ -16965,7 +16962,6 @@ END SUBROUTINE Adist
       endif
 
       ntensor=SDIM*SDIM
-      ntensorMM=ntensor*num_materials_vel
 
       if (bfact.lt.1) then
        print *,"bfact invalid200 mac to cell"
@@ -17051,7 +17047,7 @@ END SUBROUTINE Adist
 
       if (operation_flag.eq.5) then ! grad U: MAC -> CELL
 
-       nsolveMM_FACE_test=ntensorMM
+       nsolveMM_FACE_test=ntensor
 
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
@@ -17083,11 +17079,11 @@ END SUBROUTINE Adist
         print *,"ncomp invalid1"
         stop
        endif
-       if ((ncomp_xvel.eq.ntensorMM).and. &
-           (ncomp_veldest.eq.ntensorMM).and. &
-           (ncomp_dendest.eq.ntensorMM).and. &
-           (ncomp_denold.eq.ntensorMM).and. &
-           (ncomp_cterm.eq.ntensorMM)) then
+       if ((ncomp_xvel.eq.ntensor).and. &
+           (ncomp_veldest.eq.ntensor).and. &
+           (ncomp_dendest.eq.ntensor).and. &
+           (ncomp_denold.eq.ntensor).and. &
+           (ncomp_cterm.eq.ntensor)) then
         ! do nothing
        else
         print *,"nc_xvel,nc_veldest,nc_dendest,nc_denold or nc_cterm invalid"

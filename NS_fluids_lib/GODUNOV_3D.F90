@@ -706,7 +706,6 @@ stop
         ! levelpc(im).
       subroutine slopecrossterm( &
         ntensor, &
-        ntensorMM, &
         nmat,  & 
         massfrac, &
         total_mass, &
@@ -726,7 +725,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: ntensorMM
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(faceLS)
@@ -735,7 +733,7 @@ stop
 
       REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
       REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
       REAL_T, intent(in) :: massfrac(nmat)
       REAL_T, intent(in) :: total_mass
@@ -778,11 +776,6 @@ stop
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
        stop
       endif
 
@@ -3523,8 +3516,7 @@ stop
 
 
       subroutine FORT_BUILD_NEWMAC( &
-       num_MAC_vectors, & !=1 or 2
-       nsolveMM_FACE, &
+       num_MAC_vectors, & ! num_MAC_vectors=1 or 2
        normdir, & ! 0..sdim-1
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -3555,7 +3547,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: num_MAC_vectors ! =1 or 2
-      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: normdir ! 0..sdim-1
       INTEGER_T, intent(in) :: level
@@ -3666,11 +3657,6 @@ stop
        ! do nothing
       else
        print *,"num_MAC_vectors invalid"
-       stop
-      endif
-
-      if (nsolveMM_FACE.ne.1) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
 
@@ -3916,7 +3902,6 @@ stop
       ! called from split_scalar_advection after 
       !  BUILD_SEMIREFINEVOF(tessellate==0)
       subroutine FORT_BUILD_MACVOF( &
-       nsolveMM_FACE, &
        level, &
        finest_level, &
        normdir, &
@@ -3948,7 +3933,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: num_MAC_vectors !=1 or 2.
-      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: normdir
@@ -4045,10 +4029,6 @@ stop
       endif
       if (nrefine_cen.ne.2*nmat*SDIM*SDIM) then
        print *,"nrefine_cen invalid in build_macvof"
-       stop
-      endif
-      if (nsolveMM_FACE.ne.1) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
       call checkbound(fablo,fabhi,DIMS(x_mac_old),ngrowmac,veldir-1,1271)
@@ -5715,7 +5695,6 @@ stop
        vofface_index, &
        ncphys, &
        ntensor, &
-       ntensorMM, &
        nstate, &
        xlo,dx,  &
        xface,DIMS(xface), &
@@ -5746,7 +5725,6 @@ stop
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nden,nstate,level
       INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: ntensorMM
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
@@ -5767,7 +5745,7 @@ stop
       REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
       REAL_T, intent(inout) :: vischeat(DIMV(vischeat),num_materials_vel)
       REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
-      REAL_T, intent(in) :: gradu(DIMV(gradu),ntensorMM)
+      REAL_T, intent(in) :: gradu(DIMV(gradu),ntensor)
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: irz
       INTEGER_T :: i,j,k
@@ -5834,10 +5812,6 @@ stop
       endif
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
        stop
       endif
 
@@ -5979,7 +5953,6 @@ stop
          ! rhoinverse is 1/den
       subroutine FORT_VISCTENSORHEAT( &
        ntensor, &
-       ntensorMM, &
        nsolve, &
        nsolveMM, &
        nsolveMM_FACE, &
@@ -6004,7 +5977,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T ntensor
-      INTEGER_T ntensorMM
       INTEGER_T nsolve
       INTEGER_T nsolveMM
       INTEGER_T nsolveMM_FACE
@@ -6030,7 +6002,7 @@ stop
       REAL_T xstress(DIMV(xstress),nsolveMM_FACE)
       REAL_T ystress(DIMV(ystress),nsolveMM_FACE)
       REAL_T zstress(DIMV(zstress),nsolveMM_FACE)
-      REAL_T gradu(DIMV(gradu),ntensorMM)
+      REAL_T gradu(DIMV(gradu),ntensor)
       REAL_T dt
       INTEGER_T irz
       INTEGER_T veldir,dir
@@ -6063,10 +6035,6 @@ stop
       endif
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
        stop
       endif
       nsolveMM_FACE_test=nsolveMM
@@ -14179,10 +14147,10 @@ stop
        ! (vel/RR) if R-THETA
        ! vel=vel*dt , call adjust_du if RZ, override if passive advect.
       subroutine FORT_VELMAC_OVERRIDE( &
-       nsolveMM_FACE, &
        nmat, &
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
        velbc, &
        dt,time, &
        passive_veltime, &
@@ -14207,7 +14175,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: SDC_outer_sweeps
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
@@ -14228,7 +14195,7 @@ stop
      
       REAL_T, intent(in) :: utemp(DIMV(utemp)) 
       REAL_T, intent(inout) :: unode(DIMV(unode)) 
-      REAL_T, intent(inout) :: ucell(DIMV(ucell),num_materials_vel*SDIM) 
+      REAL_T, intent(inout) :: ucell(DIMV(ucell),SDIM) 
       INTEGER_T, intent(in) :: velbc(SDIM,2)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -14242,7 +14209,6 @@ stop
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T localbc
       INTEGER_T local_mac_grow
 
@@ -14256,15 +14222,6 @@ stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-      nsolveMM_FACE_test=num_materials_vel
-      if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
  
@@ -15118,7 +15075,7 @@ stop
        stop
       endif
       if (nstate.ne. &
-          num_materials_vel*(SDIM+1)+ &
+          (SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate invalid"
        stop
@@ -15929,11 +15886,11 @@ stop
 
              do im_adjust=1,nmat
               if (project_option.eq.2) then
-               tcomp=num_materials_vel*(SDIM+1)+ &
+               tcomp=(SDIM+1)+ &
                 (im_adjust-1)*num_state_material+2
               else if ((project_option.ge.100).and. &
                        (project_option.le.100+num_species_var-1)) then
-               tcomp=num_materials_vel*(SDIM+1)+ &
+               tcomp=(SDIM+1)+ &
                 (im_adjust-1)*num_state_material+3+project_option-100
               else
                print *,"project_option invalid"
@@ -16089,10 +16046,6 @@ stop
        print *,"num_state_base must be 2"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -16103,7 +16056,7 @@ stop
        stop
       endif
       if (nstate.ne. &
-          num_materials_vel*(SDIM+1)+ &
+          (SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate invalid"
        stop
@@ -16240,9 +16193,9 @@ stop
            heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
 
            if (num_materials_scalar_solve.eq.1) then
-            tcomp=num_materials_vel*(SDIM+1)+2
+            tcomp=(SDIM+1)+2
            else if (num_materials_scalar_solve.eq.nmat) then
-            tcomp=num_materials_vel*(SDIM+1)+ &
+            tcomp=(SDIM+1)+ &
              (im-1)*num_state_material+2  ! +1 den,+2 T
            else
             print *,"num_materials_scalar_solve invalid"
@@ -16898,7 +16851,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nstate_test=num_materials_vel*(SDIM+1)+ &
+      nstate_test=(SDIM+1)+ &
         nmat*(num_state_material+ngeom_raw)+1
       if (nstate.ne.nstate_test) then
        print *,"nstate invalid in GODUNOV_3D.F90 "
@@ -19166,7 +19119,7 @@ stop
       REAL_T, dimension(:,:), allocatable :: comparestate
 
       nmat=num_materials
-      if (nc.ne.num_materials_vel*(SDIM+1)+ &
+      if (nc.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nc invalid in sod sanity"
        stop
@@ -19267,7 +19220,6 @@ stop
          !        =0.0 coarse-fine ghost cells and outside the domain.
          ! mask=tag if not covered by level+1 or outside the domain.
       subroutine FORT_VFRAC_SPLIT( &
-       nsolveMM_FACE, &
        nprocessed, &
        tid, &
        added_weight, &
@@ -19357,7 +19309,6 @@ stop
 
       INTEGER_T, intent(in) :: num_MAC_vectors !=1 or 2
       INTEGER_T, intent(in) :: NUM_CELL_ELASTIC
-      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(inout) :: nprocessed
       INTEGER_T, intent(in) :: tid
 
@@ -19439,7 +19390,7 @@ stop
       REAL_T, intent(in) :: den(DIMV(den),den_recon_ncomp)
       REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
       REAL_T, intent(in) :: tensor(DIMV(tensor),ntensor)
-      REAL_T, intent(in) :: velfab(DIMV(velfab),num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM+1)
        ! slope data
       REAL_T, intent(in) :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
        ! new data
@@ -19448,7 +19399,7 @@ stop
       REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat)
        ! other vars
        ! displacement
-      REAL_T, intent(in) :: ucell(DIMV(ucell),num_materials_vel*SDIM)
+      REAL_T, intent(in) :: ucell(DIMV(ucell),SDIM)
       REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
       REAL_T, intent(in) :: mask(DIMV(mask))
       ! =1 int. =1 fine-fine in domain =0 o.t.
@@ -19609,8 +19560,6 @@ stop
       INTEGER_T momcomp
       REAL_T u_minimum,u_maximum
 
-      INTEGER_T nsolveMM_FACE_test
-
       REAL_T cutoff,DXMAXLS
       INTEGER_T all_incomp
       REAL_T divuterm,vol_target_local
@@ -19690,17 +19639,6 @@ stop
        stop
       endif
 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-
-      nsolveMM_FACE_test=num_materials_vel
-      if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
-
       if ((ngrow.ne.2).and.(ngrow.ne.3)) then
        print *,"ngrow invalid"
        stop
@@ -19712,7 +19650,7 @@ stop
        stop
       endif
  
-      if (ncomp_state.ne.num_materials_vel*(SDIM+1)+ &
+      if (ncomp_state.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"ncomp_state invalid"
        stop
@@ -19894,7 +19832,7 @@ stop
         stop
       endif
 
-      if (dencomp.ne.num_materials_vel*(SDIM+1)) then
+      if (dencomp.ne.SDIM+1) then
        print *,"dencomp invalid"
        stop
       endif
@@ -21381,7 +21319,7 @@ stop
          endif
    
          ! pressure
-         statecomp_data=num_materials_vel*SDIM+1
+         statecomp_data=SDIM+1
          snew_hold(statecomp_data)= &
            velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)
 
@@ -21757,7 +21695,7 @@ stop
                 do ispecies=1,num_species_var
                  speccomp_data=(im-1)*num_state_material+num_state_base+ &
                     ispecies
-                  !dencomp=num_materials_vel * (SDIM+1)
+                  !dencomp=(SDIM+1)
                  massfrac_parm(ispecies)= &
                     snew_hold(dencomp+speccomp_data)
                  if (massfrac_parm(ispecies).ge.zero) then
@@ -21808,8 +21746,6 @@ stop
          enddo  ! im=1..nmat
 
 
-          ! velocity and pressure
-          ! TODO: if num_materials_vel>1, add Super_Mesh_State_Type
          do istate=1,(SDIM+1)
           snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
          enddo
@@ -22087,7 +22023,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(newcell)
       INTEGER_T, intent(in) :: DIMDEC(state)
 
-      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: listbc(SDIM,2,nsolveMM)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
@@ -22230,8 +22166,8 @@ stop
       endif
       if (nsolveMM.ne.nsolve*num_materials_combine) then
        print *,"nsolveMM invalid 15488 nsolveMM=",nsolveMM
-       print *,"nsolve, num_materials_vel, project_option ", &
-        nsolve,num_materials_vel,project_option
+       print *,"nsolve, project_option ", &
+        nsolve,project_option
        print *,"nmat=",nmat
        print *,"num_materials_combine=",num_materials_combine
        stop
@@ -22270,14 +22206,8 @@ stop
        print *,"nsolve invalid"
        stop
       endif
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
-      if (nstate_main.ne.num_materials_vel*(SDIM+1)+ &
+      if (nstate_main.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate_main invalid"
        stop
@@ -22303,11 +22233,6 @@ stop
        stop
       endif
 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-
       if (combine_idx.eq.-1) then
 
        if (project_option.eq.0) then
@@ -22323,7 +22248,7 @@ stop
           print *,"ncomp invalid37"
           stop
          endif
-         if (scomp(im).ne.num_materials_vel*(SDIM+1)+ &
+         if (scomp(im).ne.(SDIM+1)+ &
              (im-1)*num_state_material+1) then
           print *,"scomp invalid"
           stop
@@ -22334,7 +22259,7 @@ stop
          print *,"scomp invalid"
          stop
         endif
-        if (ncomp(1).ne.num_materials_vel*SDIM) then
+        if (ncomp(1).ne.SDIM) then
          print *,"ncomp invalid38"
          stop
         endif
@@ -22353,7 +22278,7 @@ stop
           print *,"ncomp invalid39"
           stop
          endif
-         if (scomp(im).ne.num_materials_vel*(SDIM+1)+ &
+         if (scomp(im).ne.(SDIM+1)+ &
              (im-1)*num_state_material+2+project_option-100) then
           print *,"scomp invalid"
           stop
@@ -22460,7 +22385,7 @@ stop
          endif
          cell_vfrac(im)=local_volume
 
-         dencomp=num_materials_vel*(SDIM+1)+ &
+         dencomp=(SDIM+1)+ &
              (im-1)*num_state_material+1
          test_density=state(D_DECL(i,j,k),dencomp)
          if (test_density.le.zero) then
@@ -22666,10 +22591,6 @@ stop
            print *,"nscomp invalid"
            stop
           endif
-          if (num_materials_vel.ne.1) then
-           print *,"num_materials_vel invalid"
-           stop
-          endif
 
           do cellcomp=1,SDIM
            if (hflag.eq.0) then
@@ -22830,7 +22751,7 @@ stop
              ! check for Tgamma or Ygamma boundary condition.
 
             do im_crit=1,nmat
-             dencomp=num_materials_vel*(SDIM+1)+ &
+             dencomp=(SDIM+1)+ &
               (im_crit-1)*num_state_material+1
              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
              if (Tcenter(im_crit).ge.zero) then
@@ -23451,7 +23372,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM*num_materials_vel)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
 
       INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(mac)
@@ -23549,10 +23470,6 @@ stop
       endif
       if (nsolveMM.ne.nsolve*num_materials_combine) then
        print *,"nsolveMM invalid 16509"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -24256,7 +24173,6 @@ stop
        im_solid_map, &
        homflag, &
        ntensor, &
-       ntensorMM, &
        SEM_upwind, &
        SEM_advection_algorithm, &
        simple_AMR_BC_flag_viscosity)
@@ -24273,7 +24189,6 @@ stop
       INTEGER_T, intent(in) :: elastic_partid
       INTEGER_T, intent(in) :: im_elastic_map(num_materials_viscoelastic)
       INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: ntensorMM
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
@@ -24318,7 +24233,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(recon)
  
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM*num_materials_vel)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
  
@@ -24336,9 +24251,9 @@ stop
       REAL_T, intent(in) :: mask3(DIMV(mask3))
       REAL_T, intent(inout) :: faceLS(DIMV(faceLS),SDIM)
       REAL_T, intent(out) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(inout) :: tdata(DIMV(tdata),ntensorMM)
-      REAL_T, intent(out) :: c_tdata(DIMV(c_tdata),ntensorMM)
-      REAL_T, intent(in) :: vel(DIMV(vel),num_materials_vel*SDIM)
+      REAL_T, intent(inout) :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(out) :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(in) :: solidx(DIMV(solidx),nparts_def*SDIM)
       REAL_T, intent(in) :: solidy(DIMV(solidy),nparts_def*SDIM)
       REAL_T, intent(in) :: solidz(DIMV(solidz),nparts_def*SDIM)
@@ -24630,14 +24545,6 @@ stop
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -25444,7 +25351,7 @@ stop
 
               ncomp_source=num_materials_vel*SDIM
               ncomp_dest=SDIM
-              ncomp_xgp=ntensorMM
+              ncomp_xgp=ntensor
               ncomp_xp=SDIM ! number of amrsync components
               scomp_bc=1
               operation_flag=6  ! evaluate tensor values
@@ -25489,7 +25396,7 @@ stop
                update_right_flux, &
                ncomp_dest, &
                ncomp_source, &
-               ncomp_xgp, &     ! =ntensorMM
+               ncomp_xgp, &     ! =ntensor
                ncomp_dest, &    ! ncphys
                spectral_loop, &
                ncfluxreg, &
@@ -25566,8 +25473,6 @@ stop
               jelem=j
               kelem=k
 
-              nsolveMM_FACE_test=ntensorMM
-
               ! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
               dcomp=nbase+1
 
@@ -25575,11 +25480,11 @@ stop
 
               scomp_bc=1
               ncomp_dest=SDIM ! ncomp
-              ncomp_xvel=ntensorMM
-              ncomp_denold=ntensorMM
-              ncomp_veldest=ntensorMM
-              ncomp_dendest=ntensorMM
-              ncomp_cterm=ntensorMM
+              ncomp_xvel=ntensor
+              ncomp_denold=ntensor
+              ncomp_veldest=ntensor
+              ncomp_dendest=ntensor
+              ncomp_cterm=ntensor
               operation_flag=5  ! interpolate grad u from MAC to CELL
               project_option_vel=3
               energyflag=0
@@ -25758,7 +25663,6 @@ stop
        nmat, &
        nden, &
        ntensor, &
-       ntensorMM, &
        constant_viscosity, &
        homflag)
       use probcommon_module
@@ -25771,7 +25675,6 @@ stop
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: ntensorMM
       INTEGER_T, intent(in) :: tileloop
       INTEGER_T, intent(in) :: spectral_loop
       INTEGER_T, intent(in) :: ncfluxreg
@@ -25821,8 +25724,8 @@ stop
 
       REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
       REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
-      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensorMM)
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensor)
 
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_vel)
@@ -25946,14 +25849,6 @@ stop
       endif
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if (ncfluxreg.ne.ntensor) then
@@ -26252,7 +26147,6 @@ stop
            ! a cell pair is outside the grid.
            call slopecrossterm( &
              ntensor, &
-             ntensorMM, &
              nmat,  &
              massfrac, &
              total_mass, &
@@ -28145,8 +28039,7 @@ stop
        visc_coef, &
        nmat, &
        nden, &
-       ntensor, &
-       ntensorMM)
+       ntensor)
       use probcommon_module
       use global_utility_module
       use godunov_module
@@ -28159,7 +28052,6 @@ stop
       INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: ntensorMM
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: facevisc_index
       INTEGER_T, intent(in) :: massface_index
@@ -28196,12 +28088,12 @@ stop
 
       REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
       REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
-      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensorMM)
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensor)
 
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_vel)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
-      REAL_T, intent(out) :: xflux(DIMV(xflux),ntensorMM)
+      REAL_T, intent(out) :: xflux(DIMV(xflux),ntensor)
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
 
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
@@ -28270,14 +28162,6 @@ stop
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
       if (dt.gt.zero) then
@@ -28569,7 +28453,6 @@ stop
           ! a cell pair is outside the grid.
           call slopecrossterm( &
            ntensor, &
-           ntensorMM, &
            nmat,  &
            massfrac, &
            total_mass, &

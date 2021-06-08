@@ -29,7 +29,7 @@ module probcommon_module_types
        INTEGER_T :: nhalf
        INTEGER_T :: nmat
        INTEGER_T :: bfact
-       INTEGER_T :: ntensorMM
+       INTEGER_T :: ntensor
        INTEGER_T :: den_ncomp
        INTEGER_T, pointer :: tilelo(:)
        INTEGER_T, pointer :: tilehi(:)
