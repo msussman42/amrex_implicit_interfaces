@@ -593,7 +593,6 @@ extern "C" {
       int* gravity_dir,
       Real* angular_velocity,
       Real* denconst_gravity,
-      int* nsolveMM_FACE,
       int* level,
       int* finest_level,
       int* facecut_index,
@@ -671,7 +670,7 @@ extern "C" {
      int* NN,Real* ZZ,Real* FF,
      int* dirx,int* diry,int* cut_flag,
      int* nmat,
-     int* ntensorMM,
+     int* ntensor,
      int* den_Ncomp,
      int* isweep);
 

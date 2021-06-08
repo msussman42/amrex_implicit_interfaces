@@ -253,7 +253,6 @@ extern "C"
     int* vofface_index,
     int* ncphys,
     int* ntensor,
-    int* ntensorMM,
     int* nstate,
     const Real* xlo,const Real* dx,
     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
@@ -530,7 +529,6 @@ extern "C"
 
 
    void FORT_BUILD_MACVOF(
-    int* nsolveMM_FACE,
     int* level,
     int* finest_level,
     int* normdir,
@@ -561,8 +559,7 @@ extern "C"
 
    void FORT_BUILD_NEWMAC(
     int* num_MAC_vectors,
-    int* nsolveMM_FACE,
-    int* normdir,
+    int* normdir, // 0..sdim-1
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -1047,7 +1044,6 @@ extern "C"
 
 
    void FORT_VFRAC_SPLIT(
-     int* nsolveMM_FACE,
      int* nprocessed,
      int* tid,
      Real* added_weight,
@@ -1281,7 +1277,6 @@ extern "C"
      int* nmat,
      int* nden,
      int* ntensor,
-     int* ntensorMM,
      int* constant_viscosity,
      int* homflag);
 
@@ -1320,8 +1315,7 @@ extern "C"
      Real* visc_coef, 
      int* nmat,
      int* nden,
-     int* ntensor,
-     int* ntensorMM);
+     int* ntensor);
 
    void FORT_MAC_ELASTIC_FORCE(
      int* im_elastic, // 0..nmat-1
@@ -1418,7 +1412,6 @@ extern "C"
      int* im_solid_map,
      int* homflag,
      int* ntensor,
-     int* ntensorMM,
      int* SEM_upwind,
      int* SEM_advection_algorithm,
      int* simple_AMR_BC_flag_viscosity);
@@ -1426,7 +1419,6 @@ extern "C"
 
    void FORT_VISCTENSORHEAT(
      int* ntensor,
-     int* ntensorMM,
      int* nsolve,
      int* nsolveMM,
      int* nsolveMM_FACE,
@@ -1474,7 +1466,6 @@ extern "C"
 
 
    void FORT_VELMAC_OVERRIDE(
-     int* nsolveMM_FACE,
      int* nmat,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,

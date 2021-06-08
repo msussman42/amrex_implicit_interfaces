@@ -176,10 +176,8 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  }
 
  int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
 
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
- int ntensorMM=ntensor*num_materials_vel;
 
  debug_ngrow(FACE_VAR_MF,0,810);
 
@@ -196,7 +194,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("localMF[idx_force]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,6);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensorMM)
+ if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  debug_ngrow(CELL_DEN_MF,1,811);
@@ -299,7 +297,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &nparts,
    &nparts_def,
    im_solid_map_ptr,
-   &ntensorMM,
+   &ntensor,
    &nsolveMM);
  } // mfi
 } // omp
@@ -1332,7 +1330,6 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  int nmat=num_materials;
  int nden=nmat*num_state_material;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
- int ntensorMM=ntensor*num_materials_vel;
 
  int nsolve=AMREX_SPACEDIM;
  int nsolveMM=nsolve*num_materials_vel;
@@ -1427,7 +1424,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
    amrex::Error("DeDTinversefab.nComp() invalid");
 
   FArrayBox& gradufab=(*localMF[CELLTENSOR_MF])[mfi];
-  if (gradufab.nComp()!=ntensorMM)
+  if (gradufab.nComp()!=ntensor)
    amrex::Error("gradufab.nComp() invalid");
 
   FArrayBox& heatfab=(*localMF[idx_heat])[mfi];
@@ -1446,7 +1443,6 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
   FORT_VISCTENSORHEAT(
    &ntensor,
-   &ntensorMM,
    &nsolve,
    &nsolveMM,
    &nsolveMM_FACE,

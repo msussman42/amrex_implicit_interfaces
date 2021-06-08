@@ -9630,7 +9630,7 @@ END SUBROUTINE SIMP
         NN,ZZ,FF, &
         dirx,diry,cut_flag, &
         nmat, &
-        ntensorMM,  &
+        ntensor,  &
         den_ncomp, &
         isweep)
 
@@ -9651,7 +9651,7 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: resultsize
        INTEGER_T, intent(in) :: den_ncomp
        INTEGER_T, intent(in) :: nmat
-       INTEGER_T, intent(in) :: ntensorMM
+       INTEGER_T, intent(in) :: ntensor
        INTEGER_T, intent(in) :: isweep
        INTEGER_T, intent(in) :: NN,dirx,diry,cut_flag
        REAL_T, intent(out) :: ZZ(0:NN)
@@ -9676,7 +9676,7 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: sumdata_type(resultsize)
        INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
        REAL_T, intent(in) ::  time
-       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensorMM)  
+       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)  
        REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
        REAL_T, intent(in) ::  maskSEM(DIMV(maskSEM))
        REAL_T, intent(in) ::  mask(DIMV(mask))
@@ -9803,8 +9803,8 @@ END SUBROUTINE SIMP
         print *,"den_ncomp invalid"
         stop
        endif
-       if (ntensorMM.ne.SDIM*SDIM*num_materials_vel) then
-        print *,"ntensorMM invalid"
+       if (ntensor.ne.SDIM*SDIM) then
+        print *,"ntensor invalid"
         stop
        endif
        if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
@@ -9921,7 +9921,7 @@ END SUBROUTINE SIMP
        GRID_DATA_PARM%nhalf=nhalf
        GRID_DATA_PARM%nmat=nmat
        GRID_DATA_PARM%bfact=bfact
-       GRID_DATA_PARM%ntensorMM=ntensorMM
+       GRID_DATA_PARM%ntensor=ntensor
        GRID_DATA_PARM%den_ncomp=den_ncomp
        GRID_DATA_PARM%tilelo=>tilelo
        GRID_DATA_PARM%tilehi=>tilehi
@@ -12145,7 +12145,6 @@ END SUBROUTINE SIMP
        gravity_dir_parm, &
        angular_velocity, &
        denconst_gravity, &
-       nsolveMM_FACE, &
        level, &
        finest_level, &
        facecut_index, &
@@ -12177,8 +12176,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: gravity_dir_parm
       REAL_T, intent(in) :: gravity_normalized  
       REAL_T, intent(in) :: angular_velocity
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: facecut_index
@@ -12206,7 +12203,7 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
       REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
-      REAL_T, intent(inout) :: macnew(DIMV(macnew),nsolveMM_FACE)
+      REAL_T, intent(inout) :: macnew(DIMV(macnew))
       REAL_T, intent(in) :: cellgrav(DIMV(cellgrav),SDIM)
       REAL_T, intent(in) :: facegrav(DIMV(facegrav))
  
@@ -12214,17 +12211,16 @@ END SUBROUTINE SIMP
       INTEGER_T ii,jj,kk
       INTEGER_T iside
 
-      INTEGER_T im
       INTEGER_T velcomp
       REAL_T grav_component
       REAL_T local_cut
-      REAL_T local_macnewL
-      REAL_T local_macnewR
+      REAL_T local_macnew
 
       REAL_T vol_total,mass_total,volside,denface_gravity
       REAL_T gravity_increment
 
       INTEGER_T dir_local
+      INTEGER_T im
 
       REAL_T xclamped(SDIM)
       REAL_T LS_clamped
@@ -12268,15 +12264,6 @@ END SUBROUTINE SIMP
       endif
       if (ncphys.ne.vofface_index+2*nmat) then
        print *,"ncphys invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
-      nsolveMM_FACE_test=num_materials_vel
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
       if ((gravity_dir_parm.lt.1).or.(gravity_dir_parm.gt.SDIM)) then
@@ -12363,8 +12350,6 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       im=1
-
         ! 1. surface tension 
         ! 2. gravity if gravity_potential_form==1
        gravity_increment= &
@@ -12382,9 +12367,7 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       local_macnewL=macnew(D_DECL(i,j,k),im)+gravity_increment
-
-       local_macnewR=local_macnewL
+       local_macnew=macnew(D_DECL(i,j,k))+gravity_increment
 
        if (levelrz.eq.0) then
         ! do nothing
@@ -12395,8 +12378,7 @@ END SUBROUTINE SIMP
         endif
         if ((dir.eq.0).and. &
             (xsten(0,1).le.VOFTOL*dx(1))) then
-         local_macnewL=zero
-         local_macnewR=zero
+         local_macnew=zero
         endif
        else if (levelrz.eq.3) then
         ! do nothing
@@ -12405,7 +12387,7 @@ END SUBROUTINE SIMP
         stop 
        endif
 
-       macnew(D_DECL(i,j,k),im)=local_macnewL
+       macnew(D_DECL(i,j,k))=local_macnew
 
       enddo
       enddo

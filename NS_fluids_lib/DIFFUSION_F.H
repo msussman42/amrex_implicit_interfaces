@@ -67,7 +67,7 @@ extern "C"
       int* nparts,
       int* nparts_def,
       int* im_solid_map,
-      int* ntensorMM,
+      int* ntensor,
       int* nsolveMM);
 
 

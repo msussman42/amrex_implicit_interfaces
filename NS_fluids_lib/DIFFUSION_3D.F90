@@ -135,7 +135,7 @@ stop
          nparts, &
          nparts_def, &
          im_solid_map, &
-         ntensorMM, &
+         ntensor, &
          nsolveMM)
 
        use probf90_module
@@ -151,7 +151,7 @@ stop
        INTEGER_T, intent(in) :: nparts
        INTEGER_T, intent(in) :: nparts_def
        INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-       INTEGER_T, intent(in) :: ntensorMM
+       INTEGER_T, intent(in) :: ntensor
        INTEGER_T, intent(in) :: nsolveMM
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: finest_level
@@ -180,7 +180,7 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(mu)
 
        REAL_T, intent(out) ::  force(DIMV(force),nsolveMM)
-       REAL_T, intent(in) ::  tensor(DIMV(tensor),ntensorMM)
+       REAL_T, intent(in) ::  tensor(DIMV(tensor),ntensor)
        REAL_T, intent(in) ::  thermal(DIMV(thermal),num_materials_scalar_solve)
        REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
        REAL_T, intent(in) ::  solxfab(DIMV(solxfab),nparts_def*SDIM)
@@ -228,15 +228,7 @@ stop
        endif
 
        nsolve=SDIM
-       if (nsolveMM.ne.nsolve*num_materials_vel) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
        ntensor=SDIM*SDIM
-       if (ntensorMM.ne.ntensor*num_materials_vel) then
-        print *,"ntensorMM invalid"
-        stop
-       endif
        if ((constant_viscosity.ne.0).and. &
            (constant_viscosity.ne.1)) then
         print *,"constant_viscosity invalid"
