@@ -387,8 +387,7 @@ extern "C"
 
    void FORT_UPDATESEMFORCE_FACE(
     int* project_option,
-    int* num_materials_face,
-    int* nsolveMM_FACE,
+    int* nsolve,
     int* ns_time_order,
     int* dir,
     int* slab_step,
