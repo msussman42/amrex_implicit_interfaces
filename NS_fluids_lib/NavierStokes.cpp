@@ -6,7 +6,7 @@
 //
 //NUM_CELL_ELASTIC, MAC_grid_displacement,num_materials_viscoelastic,
 //NUM_TENSOR_TYPE,XDmac_Type,NUM_TENSOR_TYPE+SDIM,num_MAC_vectors,
-//nsolveMM_FACE,ntensorMM
+//nsolveMM_FACE,ntensorMM,num_materials_face
 //#include <winstd.H>
 
 #include <algorithm>
@@ -5458,39 +5458,21 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid36");
 
- int num_materials_face=num_materials_vel;
-
  if (project_option_momeqn(project_option)==1) {
 
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
-
+  // do nothing
+  
  } else if (project_option_momeqn(project_option)==0) {
 
-  num_materials_face=num_materials_scalar_solve;
+  // do nothing
 
  } else
   amrex::Error("project_option_momeqn(project_option) invalid");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
-
- int nsolveMM_FACE=nsolve*num_materials_face;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) { 
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  if (localMF[idx+dir]->nComp()!=nsolveMM_FACE)
+  if (localMF[idx+dir]->nComp()!=nsolve)
    amrex::Error("localMF[idx+dir] has invalid ncomp");
-  setVal_localMF(idx+dir,0.0,0,nsolveMM_FACE,0);
+  setVal_localMF(idx+dir,0.0,0,nsolve,0);
  } // dir
 
 } // subroutine zero_independent_vel
@@ -5508,24 +5490,12 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
-
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  // do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  // do nothing
  } else
   amrex::Error("project_option invalid3");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
-
- int nsolveMM=nsolve*num_materials_face;
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -5535,16 +5505,17 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
  Vector<int> ncomp;
  int ncomp_check;
  int state_index;
+  //num_materials_combine=1
  get_mm_scomp_solver(
-   num_materials_face,
+   1,
    project_option,
    state_index,
    scomp,
    ncomp,
    ncomp_check);
 
- if (ncomp_check!=nsolveMM)
-  amrex::Error("nsolveMM invalid 2732");
+ if (ncomp_check!=nsolve)
+  amrex::Error("nsolve invalid 2732");
 
  MultiFab& S_new = get_new_data(state_index,slab_step+1);
  for (int icomp=0;icomp<scomp.size();icomp++) 
@@ -10276,31 +10247,16 @@ void NavierStokes::update_SEM_delta_force(
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid37");
 
- int num_materials_face=num_materials_vel;
-
  if (project_option==0) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option==2) { // thermal diffusion
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else if (project_option==3) { // viscosity
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option==4) { // -momentum force
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else
   amrex::Error("project_option invalid5");
-
- int nsolveMM=nsolve*num_materials_face;
-
- int nsolveMM_FACE=nsolve*num_materials_face;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) {
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
 
  if (update_stable==1) {
   if ((slab_step<0)||(slab_step>=ns_time_order))
@@ -10322,27 +10278,25 @@ void NavierStokes::update_SEM_delta_force(
   idx_hoop=idx_div;
   if (nsolve!=1)
    amrex::Error("nsolve invalid");
-  if (localMF[idx_gp]->nComp()!=nsolveMM*AMREX_SPACEDIM)
+  if (localMF[idx_gp]->nComp()!=AMREX_SPACEDIM)
    amrex::Error("localMF[idx_gp]->nComp() invalid");
-  if (localMF[idx_div]->nComp()!=nsolveMM)
+  if (localMF[idx_div]->nComp()!=1)
    amrex::Error("localMF[idx_div]->nComp() invalid");
  } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
   idx_hoop=THERMAL_FORCE_MF;
   if (nsolve!=1)
    amrex::Error("nsolve invalid");
-  if (localMF[idx_div]->nComp()!=nsolveMM) {
+  if (localMF[idx_div]->nComp()!=1) {
    std::cout << "project_option = " << project_option << '\n';
    std::cout << "idx_div = " << idx_div << '\n';
-   std::cout << "nsolveMM = " << nsolveMM << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
      localMF[idx_div]->nComp() << '\n';
    amrex::Error("localMF[idx_div]->nComp() invalid");
   }
-  if (localMF[idx_hoop]->nComp()!=nsolveMM) {
+  if (localMF[idx_hoop]->nComp()!=nsolve) {
    std::cout << "project_option = " << project_option << '\n';
    std::cout << "idx_hoop = " << idx_hoop << '\n';
-   std::cout << "nsolveMM = " << nsolveMM << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " << 
      localMF[idx_hoop]->nComp() << '\n';
@@ -10352,19 +10306,17 @@ void NavierStokes::update_SEM_delta_force(
   idx_hoop=HOOP_FORCE_MARK_MF;
   if (nsolve!=AMREX_SPACEDIM)
    amrex::Error("nsolve invalid");
-  if (localMF[idx_div]->nComp()!=nsolveMM) {
+  if (localMF[idx_div]->nComp()!=nsolve) {
    std::cout << "project_option = " << project_option << '\n';
    std::cout << "idx_div = " << idx_div << '\n';
-   std::cout << "nsolveMM = " << nsolveMM << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
      localMF[idx_div]->nComp() << '\n';
    amrex::Error("localMF[idx_div]->nComp() invalid");
   }
-  if (localMF[idx_hoop]->nComp()!=nsolveMM) {
+  if (localMF[idx_hoop]->nComp()!=nsolve) {
    std::cout << "project_option = " << project_option << '\n';
    std::cout << "idx_hoop = " << idx_hoop << '\n';
-   std::cout << "nsolveMM = " << nsolveMM << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
      localMF[idx_hoop]->nComp() << '\n';
@@ -10376,7 +10328,7 @@ void NavierStokes::update_SEM_delta_force(
    amrex::Error("expecting idx_div==idx_gp");
   if (nsolve!=AMREX_SPACEDIM)
    amrex::Error("nsolve invalid");
-  if (localMF[idx_hoop]->nComp()!=nsolveMM)
+  if (localMF[idx_hoop]->nComp()!=nsolve)
    amrex::Error("localMF[idx_hoop]->nComp() invalid");
  } else
   amrex::Error("project_option invalid6");
@@ -10393,7 +10345,7 @@ void NavierStokes::update_SEM_delta_force(
    debug_ngrow(idx_gpmac+dir,0,3);
 
    if (project_option==0) {
-    if (localMF[idx_gpmac]->nComp()!=nsolveMM_FACE)
+    if (localMF[idx_gpmac]->nComp()!=nsolve)
      amrex::Error("localMF[idx_gpmac]->nComp() invalid");
    } else if ((project_option==2)||
               (project_option==3)) {
@@ -10419,7 +10371,7 @@ void NavierStokes::update_SEM_delta_force(
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
@@ -10568,10 +10520,10 @@ void NavierStokes::update_SEM_delta_force(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     //declared in: GODUNOV_3D.F90
     FORT_UPDATESEMFORCE_FACE(
      &project_option,
-     &num_materials_face,
-     &nsolveMM_FACE,
+     &nsolve,
      &ns_time_order,
      &dir,
      &slab_step,
@@ -10616,9 +10568,6 @@ void NavierStokes::tensor_advection_update() {
 
  int ngrow_zero=0;
  int nmat=num_materials;
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -10680,8 +10629,8 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
 
-     int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE+
-	     partid*AMREX_SPACEDIM;
+     int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+
      MultiFab* xdisplace_mf=getStateTensor(1,scomp_xdisplace,AMREX_SPACEDIM,
        cur_time_slab);
 
@@ -10978,7 +10927,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
  } else
   amrex::Error("invert_gravity invalid");
 
- int scomp_pres=num_materials_vel*AMREX_SPACEDIM;
+ int scomp_pres=AMREX_SPACEDIM;
 
  for (int im=0;im<nmat;im++) {
 
@@ -11338,13 +11287,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  int ncomp_per_tsat=2;
  int nburning=nten*(ncomp_per_burning+1);
  int ntsat=nten*(ncomp_per_tsat+1);
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  int n_normal=(nmat+nten)*(AMREX_SPACEDIM+1);
 
@@ -11397,7 +11344,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   amrex::Error("nucleation_flag invalid");
 
  MultiFab* presmf=
-  getState(normal_probe_size+3,num_materials_vel*AMREX_SPACEDIM,
+  getState(normal_probe_size+3,AMREX_SPACEDIM,
            1,cur_time_slab);
 
  MultiFab* pres_eos_mf=derive_EOS_pressure(material_type_evap);
@@ -12270,7 +12217,7 @@ NavierStokes::level_phase_change_convertALL() {
        // spectral_override==0 => always low order.
       ns_level.avgDown(LS_Type,0,nmat,0);
       ns_level.MOFavgDown();
-      int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
+      int scomp_den=(AMREX_SPACEDIM+1);
       ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
      } // ilev=finest_level ... level
 
@@ -12289,8 +12236,7 @@ NavierStokes::level_phase_change_convertALL() {
        scompBC_map.resize(1);
        debug_ngrow(DEN_RECON_MF,1,30);
        int dstcomp=(im_current-1)*num_state_material;
-       int srccomp=(im_current-1)*num_state_material+
-	  num_materials_vel*(AMREX_SPACEDIM+1);
+       int srccomp=(im_current-1)*num_state_material+(AMREX_SPACEDIM+1);
        // density
        // spectral_override==0 => always low order
        avgDown_localMF_ALL(DEN_RECON_MF,dstcomp,1,1);
@@ -12395,10 +12341,9 @@ NavierStokes::level_phase_change_convert(
  int ntsat=nten*(ncomp_per_tsat+1);
 
  int nden=nmat*num_state_material;
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
- int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
+ int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
 
  // mask=1 if not covered or if outside the domain.
  // NavierStokes::maskfiner_localMF
@@ -12499,8 +12444,7 @@ NavierStokes::level_phase_change_convert(
     const int* fabhi=fabgrid.hiVect();
 
     const Real* xlo = grid_loc[gridno].lo();
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     num_materials_vel*AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
@@ -12715,8 +12659,7 @@ NavierStokes::level_phase_change_convert(
    MultiFab::Copy(*localMF[HOLD_LS_DATA_MF],LS_new,
 		  im_current-1,im_current-1,1,0);
    int dstcomp=(im_current-1)*num_state_material;
-   int srccomp=(im_current-1)*num_state_material+
-	  num_materials_vel*(AMREX_SPACEDIM+1);
+   int srccomp=(im_current-1)*num_state_material+(AMREX_SPACEDIM+1);
    // density
    MultiFab::Copy(*localMF[DEN_RECON_MF],S_new,
 		  srccomp,dstcomp,1,0);
@@ -13093,8 +13036,7 @@ NavierStokes::level_phase_change_redistribute(
 
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int scomp_mofvars=num_materials_vel*(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
+ int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
 
  debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,355);
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
@@ -13724,16 +13666,12 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  } else
   amrex::Error("adjust_temperature invalid");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
 
  int nsolve=1;
- int nsolveMM=nsolve*num_materials_scalar_solve;
 
  int ncomp_per_tsat=2;
  int ntsat=nten*(ncomp_per_tsat+1);
@@ -13836,13 +13774,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  int mm_areafrac_index=FACE_VAR_MF;
  int mm_cell_areafrac_index=SLOPE_RECON_MF;
- if (num_materials_scalar_solve==nmat) {
-  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
-  mm_cell_areafrac_index=CELLFRAC_MM_MF;
- } else if (num_materials_scalar_solve==1) {
-  // do nothing
- } else
-  amrex::Error("num_materials_scalar_solve invalid");
+//  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
+//  mm_cell_areafrac_index=CELLFRAC_MM_MF;
 
  // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
  int nfacefrac=nmat*nmat*2;
@@ -13920,16 +13853,16 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
    if ((adjust_temperature==0)||
        (adjust_temperature==1)) {
-    if (coefffab.nComp()!=nsolveMM) {
+    if (coefffab.nComp()!=nsolve) {
      std::cout << "coefffab.nComp()= " << coefffab.nComp() << '\n';
-     std::cout << "nsolveMM= " << nsolveMM << '\n';
+     std::cout << "nsolve= " << nsolve << '\n';
      std::cout << "adjust_temperature= " << adjust_temperature << '\n';
      amrex::Error("coefffab.nComp() invalid");
     }
    } else if (adjust_temperature==-1) {
     if (coefffab.nComp()<1) {
      std::cout << "coefffab.nComp()= " << coefffab.nComp() << '\n';
-     std::cout << "nsolveMM= " << nsolveMM << '\n';
+     std::cout << "nsolve= " << nsolve << '\n';
      std::cout << "adjust_temperature= " << adjust_temperature << '\n';
      amrex::Error("coefffab.nComp() invalid");
     }

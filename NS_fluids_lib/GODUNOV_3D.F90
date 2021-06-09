@@ -10203,8 +10203,7 @@ stop
        ! to zero in NavierStokes::init_delta_SDC()
       subroutine FORT_UPDATESEMFORCE_FACE( &
        project_option, &
-       num_materials_face, &
-       nsolveMM_FACE, &
+       nsolve, &
        ns_time_order, &
        dir, &
        slab_step, &
@@ -10223,40 +10222,42 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T project_option
-      INTEGER_T num_materials_face
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T ns_time_order
-      INTEGER_T dir
-      INTEGER_T slab_step
-      INTEGER_T update_spectral
-      INTEGER_T update_stable
-      INTEGER_T nmat
-      INTEGER_T level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T DIMDEC(gpfab)
-      INTEGER_T DIMDEC(HOfab)
-      INTEGER_T DIMDEC(LOfab)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T gpfab(DIMV(gpfab),nsolveMM_FACE)
-      REAL_T HOfab(DIMV(HOfab))
-      REAL_T LOfab(DIMV(LOfab))
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T dt
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: ns_time_order
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: update_spectral
+      INTEGER_T, intent(in) :: update_stable
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(gpfab)
+      INTEGER_T, intent(in) :: DIMDEC(HOfab)
+      INTEGER_T, intent(in) :: DIMDEC(LOfab)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: gpfab(DIMV(gpfab),nsolveMM_FACE)
+      REAL_T, intent(out) :: HOfab(DIMV(HOfab))
+      REAL_T, intent(out) :: LOfab(DIMV(LOfab))
+      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in) :: dt
       INTEGER_T maskleft,maskright
+      INTEGER_T :: i,j,k
       INTEGER_T ii,jj,kk
       INTEGER_T im_crit
       INTEGER_T gpcomp
-      INTEGER_T nsolveMM_FACE_test
-      INTEGER_T nsolve
 
       if (project_option.eq.0) then
-       nsolve=1
+       if (nsolve.eq.1) then
+        ! do nothing
+       else
+        print *,"nsolve invalid"
+        stop
+       endif
       else if (project_option.eq.2) then ! thermal diffusion
        print *,"thermal diffusion force is only cell centered"
        stop
@@ -10268,17 +10269,6 @@ stop
        stop
       endif
 
-      if (num_materials_face.ne.1) then
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      nsolveMM_FACE_test=nsolve
-
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
- 
       if ((ns_time_order.ge.2).and.(ns_time_order.le.32)) then
        ! do nothing
       else
@@ -10358,12 +10348,7 @@ stop
 
        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
 
-        if (num_materials_face.eq.1) then
-         gpcomp=1
-        else
-         print *,"num_materials_face invalid"
-         stop
-        endif
+        gpcomp=1
 
         if (update_spectral.eq.1) then
          if ((slab_step.lt.-1).or.(slab_step.ge.bfact_time_order)) then
