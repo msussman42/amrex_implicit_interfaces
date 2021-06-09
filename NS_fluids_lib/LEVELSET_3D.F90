@@ -16934,12 +16934,9 @@ stop
       ! mask=1 at fine-fine boundaries
       subroutine FORT_BUILDFACEWT( &
        facewt_iter, &
-       num_materials_face, &
        level, &
        finest_level, &
        nsolve, &
-       nsolveMM, &
-       nsolveMM_FACE, &
        nfacefrac, &
        ncellfrac, &
        local_face_index, &
@@ -16980,13 +16977,9 @@ stop
 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: facewt_iter
-      INTEGER_T, intent(in) :: num_materials_face
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nfacefrac
       INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: local_face_index
@@ -17018,7 +17011,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(zface)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(inout) :: offdiagcheck(DIMV(offdiagcheck),nsolveMM) 
+      REAL_T, intent(inout) :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: cenden(DIMV(cenden),nmat+1) 
       REAL_T, intent(in) :: cenvisc(DIMV(cenvisc),nmat+1) 
@@ -17026,14 +17019,14 @@ stop
       REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
       REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
       REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
-      REAL_T, intent(out) :: xfwt(DIMV(xfwt),nsolveMM_FACE)
-      REAL_T, intent(out) :: yfwt(DIMV(yfwt),nsolveMM_FACE)
-      REAL_T, intent(out) :: zfwt(DIMV(zfwt),nsolveMM_FACE)
+      REAL_T, intent(out) :: xfwt(DIMV(xfwt),nsolve)
+      REAL_T, intent(out) :: yfwt(DIMV(yfwt),nsolve)
+      REAL_T, intent(out) :: zfwt(DIMV(zfwt),nsolve)
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
       REAL_T, intent(in) :: mask(DIMV(mask))
-      INTEGER_T, intent(in) :: presbc_arr(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: presbc_arr(SDIM,2,nsolve)
   
       INTEGER_T i,j,k
       INTEGER_T iface,jface,kface
@@ -17051,6 +17044,7 @@ stop
       REAL_T local_wt(nsolve)
       REAL_T local_fwt
       INTEGER_T local_presbc
+FIX ME im_vel remove
       INTEGER_T im_vel
       REAL_T local_mask
       INTEGER_T caller_id
@@ -17085,11 +17079,6 @@ stop
        print *,"constant_viscosity invalid"
        stop
       endif
-      if ((num_materials_face.ne.1).and. &
-          (num_materials_face.ne.nmat)) then
-       print *,"num_materials_face invalid"
-       stop
-      endif
 
       if (visc_coef.ge.zero) then
        ! do nothing
@@ -17101,23 +17090,6 @@ stop
        print *,"nsolve invalid8"
        stop
       endif 
-      if (nsolveMM.ne.nsolve*num_materials_face) then
-       print *,"nsolveMM invalid 13441"
-       stop
-      endif
-      nsolveMM_FACE_test=nsolveMM
-      if (num_materials_face.eq.1) then
-       ! do nothing
-      else if (num_materials_face.eq.nmat) then
-       nsolveMM_FACE_test=2*nsolveMM_FACE_test
-      else
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
        ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
       if (nfacefrac.ne.nmat*nmat*2) then
        print *,"nfacefrac invalid"
@@ -17225,17 +17197,9 @@ stop
            stop
           endif
 
-          do im_vel=1,num_materials_face
-           do veldir=1,nsolve
+          do veldir=1,nsolve
 
-            if (nsolve.eq.1) then
-             velcomp=im_vel
-            else if (nsolve.eq.SDIM) then
-             velcomp=veldir
-            else
-             print *,"nsolve invalid"
-             stop
-            endif
+            velcomp=veldir
 
             if (side.eq.0) then
              ! do nothing
@@ -17279,7 +17243,7 @@ stop
              cc,cc_ice,cc_group, &
              dd,dd_group, &
              visc_coef, &
-             nsolve,nsolveMM,im_vel,dir,veldir,project_option, &
+             nsolve,im_vel,dir,veldir,project_option, &
              constant_viscosity,side,local_presbc,local_wt)
 
             if (dd_group.lt.min_face_wt(1)) then

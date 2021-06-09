@@ -2277,18 +2277,18 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      Vector<int> ncomp;  
      int ncomp_check;
      int state_index;
+      //num_materials_combine=1
      get_mm_scomp_solver(
-       num_materials_vel,
+       1,
        project_option_placeholder,
        state_index,
        scomp,
        ncomp,
        ncomp_check);
      int nsolve=AMREX_SPACEDIM;
-     int nsolveMM=nsolve*num_materials_vel;
      if (state_index!=State_Type)
       amrex::Error("state_index invalid");
-     if (ncomp_check!=nsolveMM)
+     if (ncomp_check!=nsolve)
       amrex::Error("ncomp_check invalid");
 
       // data at time = cur_time_slab
@@ -3479,8 +3479,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int state_index;
         int project_option_op=0;
 
+	 //num_materials_combine=1
         get_mm_scomp_solver(
-         num_materials_vel,
+         1,
          project_option_op,
          state_index,
          scomp,
@@ -3488,11 +3489,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          ncomp_check);
 
         int nsolve=1;
-        int nsolveMM=nsolve*num_materials_vel;
 
         if (state_index!=State_Type)
          amrex::Error("state_index invalid");
-        if (ncomp_check!=nsolveMM)
+        if (ncomp_check!=nsolve)
          amrex::Error("ncomp_check invalid");
 
         int save_enable_spectral=enable_spectral;
@@ -3519,8 +3519,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          // velocity here to be used later.
         project_option_op=3; // viscosity project_option
 
+	 //num_materials_combine=1
         get_mm_scomp_solver(
-         num_materials_vel,
+         1,
          project_option_op,
          state_index,
          scomp,
@@ -3528,11 +3529,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          ncomp_check);
 
         nsolve=AMREX_SPACEDIM;
-        nsolveMM=nsolve*num_materials_vel;
 
         if (state_index!=State_Type)
          amrex::Error("state_index invalid");
-        if (ncomp_check!=nsolveMM)
+        if (ncomp_check!=nsolve)
          amrex::Error("ncomp_check invalid");
 
           // data at time = cur_time_slab
@@ -3546,8 +3546,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         update_stableF=0;
         project_option_op=2; // temperature project_option
 
+	 //num_materials_combine=1
         get_mm_scomp_solver(
-         num_materials_scalar_solve,
+         1,
          project_option_op,
          state_index,
          scomp,
@@ -3555,11 +3556,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          ncomp_check);
 
         nsolve=1;
-        nsolveMM=nsolve*num_materials_scalar_solve;
 
         if (state_index!=State_Type)
          amrex::Error("state_index invalid");
-        if (ncomp_check!=nsolveMM)
+        if (ncomp_check!=nsolve)
          amrex::Error("ncomp_check invalid");
 
           // data at time = cur_time_slab
@@ -3613,8 +3613,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         update_stableF=0;
         project_option_op=3;  // viscosity project option
 
+	 //num_materials_combine=1
         get_mm_scomp_solver(
-         num_materials_vel,
+         1,
          project_option_op,
          state_index,
          scomp,
@@ -3622,11 +3623,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          ncomp_check);
 
         nsolve=AMREX_SPACEDIM;
-        nsolveMM=nsolve*num_materials_vel;
 
         if (state_index!=State_Type)
          amrex::Error("state_index invalid");
-        if (ncomp_check!=nsolveMM)
+        if (ncomp_check!=nsolve)
          amrex::Error("ncomp_check invalid");
 
         allocate_array(1,nsolveMM,-1,HOOP_FORCE_MARK_MF);
@@ -7113,31 +7113,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
-
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option_momeqn(project_option) invalid30");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
-
- int nsolveMM=nsolve*num_materials_face;
- int nsolveMM_FACE=nsolveMM;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) {
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -7146,15 +7127,16 @@ void NavierStokes::allocate_FACE_WEIGHT(
  int state_index;
  int ncomp_check;
 
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_face,
+  1,
   project_option,
   state_index,
   scomp,
   ncomp,
   ncomp_check);
 
- if (ncomp_check!=nsolveMM)
+ if (ncomp_check!=nsolve)
   amrex::Error("ncomp_check alid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -7176,7 +7158,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- int bcsize=AMREX_SPACEDIM*2*nsolveMM*grids.size();
+ int bcsize=AMREX_SPACEDIM*2*nsolve*grids.size();
  bcpres_array.resize(bcsize);
  for (int gridno=0;gridno<grids.size();gridno++) {
 
@@ -7184,12 +7166,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
    // components ordered at  1,1  2,1  3,1  1,2  2,2  3,2
   Vector<int> presbc;
   getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
-  if (presbc.size()!=AMREX_SPACEDIM*2*nsolveMM)
+  if (presbc.size()!=AMREX_SPACEDIM*2*nsolve)
    amrex::Error("presbc.size() invalid");
 
-  int ibase=AMREX_SPACEDIM*2*nsolveMM*gridno;
+  int ibase=AMREX_SPACEDIM*2*nsolve*gridno;
   int j=0;
-  for (int nn=0;nn<nsolveMM;nn++) {
+  for (int nn=0;nn<nsolve;nn++) {
    for (int side=0;side<=1;side++) {
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      int pbc=presbc[j];
@@ -7268,9 +7250,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
  const Real* dx = geom.CellSize();
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  new_localMF(FACE_WEIGHT_MF+dir,nsolveMM_FACE,0,dir);
+  new_localMF(FACE_WEIGHT_MF+dir,nsolve,0,dir);
  } // dir
- new_localMF(OFF_DIAG_CHECK_MF,nsolveMM,0,-1);
+ new_localMF(OFF_DIAG_CHECK_MF,nsolve,0,-1);
 
  int local_face_index=faceden_index;  // 1/rho
  if (project_option_projection(project_option)==1) {
@@ -7290,17 +7272,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } else
   amrex::Error("project_option invalid allocate_FACE_WEIGHT");
 
- setVal_localMF(OFF_DIAG_CHECK_MF,0.0,0,nsolveMM,0);
+ setVal_localMF(OFF_DIAG_CHECK_MF,0.0,0,nsolve,0);
 
  int mm_areafrac_index=FACE_VAR_MF;
  int mm_cell_areafrac_index=SLOPE_RECON_MF;
- if (num_materials_face==nmat) {
-  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
-  mm_cell_areafrac_index=CELLFRAC_MM_MF;
- } else if (num_materials_face==1) {
-  // do nothing
- } else
-  amrex::Error("num_materials_face invalid");
+//  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
+//  mm_cell_areafrac_index=CELLFRAC_MM_MF;
 
  // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
  int nfacefrac=nmat*nmat*2; 
@@ -7358,7 +7335,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
    Vector<int> presbc;
    getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
-   if (presbc.size()==2*AMREX_SPACEDIM*nsolveMM) {
+   if (presbc.size()==2*AMREX_SPACEDIM*nsolve) {
     // do nothing
    } else
     amrex::Error("presbc.size() invalid");
@@ -7371,12 +7348,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
    // BUILDFACEWT is defined in LEVELSET_3D.F90
    FORT_BUILDFACEWT(
     &facewt_iter,
-    &num_materials_face,
     &level,
     &finest_level,
     &nsolve,
-    &nsolveMM,
-    &nsolveMM_FACE,
     &nfacefrac,
     &ncellfrac,
     &local_face_index,
@@ -12031,8 +12005,9 @@ void NavierStokes::veldiffuseALL() {
  int ncomp_check;
  int state_index;
 
+   //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_scalar_solve,
+  1,
   project_option_temperature,
   state_index,
   scomp,
@@ -12040,8 +12015,7 @@ void NavierStokes::veldiffuseALL() {
   ncomp_check);
 
  int nsolve_thermal=1;
- int nsolveMM_thermal=nsolve_thermal*num_materials_scalar_solve;
- if (ncomp_check!=nsolveMM_thermal)
+ if (ncomp_check!=nsolve_thermal)
   amrex::Error("ncomp_check invalid");
 
  for (int im=0;im<nmat;im++) {
@@ -12050,12 +12024,7 @@ void NavierStokes::veldiffuseALL() {
   } else if (override_density[im]==1) { // rho=rho(T,Y,z)
    // check nothing
   } else if (override_density[im]==2) { // P_hydro=P_hydro(rho(T,Y,Z))
-    // convert_temperature==0 if all thermal diffusivities are zero.
-    // P_hydro is expecting a reasonable temperature defined for each
-    //  separate material?
-   if ((convert_temperature==0)&&
-       (num_materials_scalar_solve==1))
-    amrex::Error("convert_temperature invalid");
+   // check nothing
   } else
    amrex::Error("override_density invalid");  
  } // im=0..nmat-1
@@ -12327,15 +12296,16 @@ void NavierStokes::veldiffuseALL() {
      (ns_time_order<=32)&&
      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
 
+   //num_materials_combine=1
   get_mm_scomp_solver(
-   num_materials_scalar_solve,
+   1,
    project_option_temperature,
    state_index,
    scomp,
    ncomp,
    ncomp_check);
 
-  if (ncomp_check!=nsolveMM_thermal)
+  if (ncomp_check!=nsolve_thermal)
    amrex::Error("ncomp_check invalid");
 
     //localMF[PRESPC2_MF] will hold the latest temperature from the implicit
@@ -12449,15 +12419,16 @@ void NavierStokes::veldiffuseALL() {
       (ns_time_order<=32)&&
       (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
 
+    //num_materials_combine=1
    get_mm_scomp_solver(
-    num_materials_scalar_solve,
+    1,
     project_option_species,
     state_index,
     scomp,
     ncomp,
     ncomp_check);
 
-   if (ncomp_check!=nsolveMM_thermal)
+   if (ncomp_check!=nsolve_thermal)
     amrex::Error("ncomp_check invalid");
 
      //localMF[PRESPC2_MF] will hold the latest species from the implicit
@@ -13038,25 +13009,22 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
 void NavierStokes::push_back_state_register(int idx_MF,Real time,
   int caller_id) {
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  int project_option_visc=3;
  int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
 
  int state_index;
  Vector<int> scomp;
  Vector<int> ncomp;
  int ncomp_check;
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_vel,
+  1,
   project_option_visc,
   state_index,
   scomp,
   ncomp,
   ncomp_check);
- if (ncomp_check!=nsolveMM)
+ if (ncomp_check!=nsolve)
   amrex::Error("nsolveMM invalid 6613");
 
  if (state_index!=State_Type)
@@ -13064,7 +13032,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time,
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
- if (localMF[idx_MF]->nComp()!=nsolveMM)
+ if (localMF[idx_MF]->nComp()!=nsolve)
   amrex::Error("cell_register invalid ncomp");
  if (localMF[idx_MF]->nGrow()<1)
   amrex::Error("cell_register invalid ngrow");
@@ -13072,12 +13040,12 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time,
  MultiFab* snew_mf;
  snew_mf=getState_list(1,scomp,ncomp,time);
 
- if (snew_mf->nComp()!=nsolveMM)
+ if (snew_mf->nComp()!=nsolve)
   amrex::Error("snew_mf->nComp() invalid");
 
  check_for_NAN(snew_mf,caller_id+1000);
 
- MultiFab::Copy(*localMF[idx_MF],*snew_mf,0,0,nsolveMM,1);
+ MultiFab::Copy(*localMF[idx_MF],*snew_mf,0,0,nsolve,1);
  delete snew_mf;
 
 } // subroutine push_back_state_register
@@ -13250,30 +13218,24 @@ void NavierStokes::alloc_DTDt(int alloc_flag) {
 void NavierStokes::prepare_viscous_solver() {
 
  int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
+ new_localMF(REGISTER_MARK_MF,nsolve,1,-1);
+ new_localMF(HOOP_FORCE_MARK_MF,nsolve,1,-1);
+ new_localMF(NEG_MOM_FORCE_MF,nsolve,1,-1);
+ new_localMF(THERMAL_FORCE_MF,1,1,-1);
+ new_localMF(VISCHEAT_SOURCE_MF,nsolve,1,-1);
 
- int nsolveMM_FACE=nsolveMM;
-
- new_localMF(REGISTER_MARK_MF,nsolveMM,1,-1);
- new_localMF(HOOP_FORCE_MARK_MF,nsolveMM,1,-1);
- new_localMF(NEG_MOM_FORCE_MF,nsolveMM,1,-1);
- new_localMF(THERMAL_FORCE_MF,num_materials_scalar_solve,1,-1);
- new_localMF(VISCHEAT_SOURCE_MF,nsolveMM,1,-1);
-
- new_localMF(VISCHEAT_MF,num_materials_scalar_solve,0,-1);
+ new_localMF(VISCHEAT_MF,1,0,-1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    // store stress fluxes (-pI+2 mu D) 
-  new_localMF(CONSERVE_FLUXES_MF+dir,nsolveMM_FACE,0,dir);
+  new_localMF(CONSERVE_FLUXES_MF+dir,nsolve,0,dir);
  } // dir
 
- setVal_localMF(REGISTER_MARK_MF,0.0,0,nsolveMM,1);
- setVal_localMF(VISCHEAT_SOURCE_MF,0.0,0,nsolveMM,1);
+ setVal_localMF(REGISTER_MARK_MF,0.0,0,nsolve,1);
+ setVal_localMF(VISCHEAT_SOURCE_MF,0.0,0,nsolve,1);
 
- localMF[VISCHEAT_MF]->setVal(0.0,0,num_materials_scalar_solve,0);
+ localMF[VISCHEAT_MF]->setVal(0.0,0,1,0);
 
  resize_metrics(1);
  resize_maskfiner(1,MASKCOEF_MF);
