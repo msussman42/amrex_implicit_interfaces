@@ -672,12 +672,9 @@ namespace amrex{
 
       void FORT_BUILDFACEWT(
         int* facewt_iter,
-        int* num_materials_face,
         int* level,
         int* finest_level,
         int* nsolve,
-        int* nsolveMM,
-        int* nsolveMM_FACE,
         int* nfacefrac,
         int* ncellfrac,
         int* local_face_index,

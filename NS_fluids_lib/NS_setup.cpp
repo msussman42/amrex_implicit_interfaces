@@ -386,15 +386,6 @@ set_pressure_bc (BCRec&       bc,
 void
 NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
-  // TODO: if num_materials_vel==nmat, then
-  //  have Super_Pres_Type, Super_Umac_Type,
-  //  Super_Vmac_Type, Super_Wmac_Type, and
-  //  Super_DIV_Type to hold
-  //  the velocity, pressure, and divergence defined on the 
-  //  supermesh.
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  int nmat=num_materials;
  int scomp_states=AMREX_SPACEDIM+1;
  int ncomp_vel_pres=AMREX_SPACEDIM+1;
@@ -610,14 +601,6 @@ NavierStokes::variableSetUp ()
      amrex::Error("nmat invalid in ns setup variable setup");
     }
 
-  // TODO: if num_materials_vel==nmat, then
-  //  have Super_Pres_Type, Super_Umac_Type,
-  //  Super_Vmac_Type, Super_Wmac_Type, and
-  //  Super_DIV_Type to hold
-  //  the velocity, pressure, and divergence defined on the 
-  //  supermesh.
-  // velocity, pressure, state x nmat, ngeom_raw x nmat, error ind
-
     int nc=(AMREX_SPACEDIM+1)+
      nmat*(ngeom_raw+num_state_material)+1;
 
@@ -649,26 +632,15 @@ NavierStokes::variableSetUp ()
     }
 
 // Umac_Type  -------------------------------------------
-  // TODO: if num_materials_vel==nmat, then
-  //  have Super_Pres_Type, Super_Umac_Type,
-  //  Super_Vmac_Type, Super_Wmac_Type, and
-  //  Super_DIV_Type to hold
-  //  the velocity, pressure, and divergence defined on the 
-  //  supermesh.
-
-    if (num_materials_vel!=1)
-     amrex::Error("num_materials_vel invalid");
-
-    int nsolveMM_FACE=1;
 
     umac_interp.interp_enable_spectral=enable_spectral;
 
      // AmrLevel.H, protected: static DescriptorList desc_lst
      // ngrow=0
     desc_lst.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
+       0,1,&umac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
+       0,1,&umac_interp,null_ncomp_particles);
     set_x_vel_bc(bc,phys_bc);
 
      // if new parameters added to the FILL routine, then
@@ -687,9 +659,9 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles);
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
@@ -704,9 +676,9 @@ NavierStokes::variableSetUp ()
 
       // ngrow=0
     desc_lst.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles);
     desc_lstGHOST.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,nsolveMM_FACE,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles);
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
@@ -1627,8 +1599,6 @@ NavierStokes::variableSetUp ()
     // another constructor:
     // BndryFunc (BndryFuncDefaultSUSSMAN inFunc,BndryFuncDefaultSUSSMAN gFunc);
 
-    if (num_materials_vel!=1)
-     amrex::Error("num_materials_vel invalid");
 
     Vector<std::string> MOFvelocity_names;
     MOFvelocity_names.resize(AMREX_SPACEDIM);
@@ -1664,15 +1634,6 @@ NavierStokes::variableSetUp ()
       MOFvelocity_bcs,MOFvelocity_fill_class,&sem_interp_DEFAULT);
 
      // pressure
-    if (num_materials_vel!=1)
-     amrex::Error("num_materials_vel!=1");
-
-  // TODO: if num_materials_vel==nmat, then
-  //  have Super_State_Type, Super_Umac_Type,
-  //  Super_Vmac_Type, Super_Wmac_Type, and
-  //  Super_DIV_Type to hold
-  //  the velocity, pressure, and divergence defined on the 
-  //  supermesh.
     set_pressure_bc(bc,phys_bc_pres);
     std::string pres_str="pressure"; 
     desc_lst.setComponent(State_Type,AMREX_SPACEDIM,

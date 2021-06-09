@@ -9940,9 +9940,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
 
  bool use_tiling=ns_tiling;
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,700);
 
@@ -9977,7 +9974,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
  const Real* dx = geom.CellSize();
 
  int nsolve=1;
- int nsolveMM=nsolve*num_materials_vel;
 
  Vector<int> scomp;
  Vector<int> ncomp;
@@ -9990,12 +9986,12 @@ void NavierStokes::init_advective_pressure(int project_option) {
   state_index,
   scomp,ncomp,ncomp_check);
 
- if (ncomp_check!=nsolveMM)
+ if (ncomp_check!=nsolve)
   amrex::Error("ncomp_check invalid");
 
  if (scomp.size()!=1)
   amrex::Error("scomp.size() invalid");
- if (ncomp[0]!=num_materials_vel)
+ if (ncomp[0]!=1)
   amrex::Error("ncomp[0] invalid");
   
  if (project_option==0) {
@@ -10060,7 +10056,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
   if (lsnewfab.nComp()!=nmat*(AMREX_SPACEDIM+1))
    amrex::Error("lsnewfab.nComp()!=nmat*(AMREX_SPACEDIM+1)");
  
-  if (mdotfab.nComp()!=num_materials_vel)
+  if (mdotfab.nComp()!=1)
    amrex::Error("mdotfab.nComp() invalid");
   if (csoundfab.nComp()!=2)
    amrex::Error("csoundfab.nComp() invalid");

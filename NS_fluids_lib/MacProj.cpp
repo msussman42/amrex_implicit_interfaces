@@ -2708,27 +2708,16 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option invalid77");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
-
- int nsolveMM=nsolve*num_materials_face;
-
  if (mac_phi_crse->nGrow()!=1)
   amrex::Error("mac_phi_crse has invalid ngrow");
- if (mac_phi_crse->nComp()!=nsolveMM)
+ if (mac_phi_crse->nComp()!=nsolve)
   amrex::Error("mac_phi_crse has invalid ncomp");
 
  if (num_state_base!=2)
@@ -2739,18 +2728,19 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
  int state_index;
  int ncomp_check;
 
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_face,
+  1,
   project_option,
   state_index,
   scomp,
   ncomp,
   ncomp_check);
  
- if (ncomp_check!=nsolveMM)
+ if (ncomp_check!=nsolve)
   amrex::Error("ncomp_check invalid");
 
- MultiFab::Subtract(*localMF[POLDHOLD_MF],*mac_phi_crse,0,0,nsolveMM,0);
+ MultiFab::Subtract(*localMF[POLDHOLD_MF],*mac_phi_crse,0,0,nsolve,0);
 
   // in: NavierStokes3.cpp
   // UMAC=UMAC+GRADPEDGE
@@ -2765,7 +2755,7 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
    scomp[ilist],ncomp[ilist],1);
   scomp_ilist+=ncomp[ilist];
  }
- if (scomp_ilist!=nsolveMM)
+ if (scomp_ilist!=nsolve)
   amrex::Error("scomp_ilist invalid");
  
 } // subroutine mac_update

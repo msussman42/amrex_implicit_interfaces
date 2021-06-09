@@ -12664,7 +12664,7 @@ END SUBROUTINE SIMP
            AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
            local_visc_coef, &
-           nsolve,nsolveMM,im_vel,dir,veldir,project_option, &
+           nsolve,im_vel,dir,veldir,project_option, &
            local_constant_viscosity,side,bccrit,local_wt)
 
          if (local_wt(veldir).ge.zero) then
