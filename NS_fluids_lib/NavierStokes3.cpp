@@ -661,14 +661,6 @@ void NavierStokes::tensor_advection_updateALL() {
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
-   // SLOPE_RECON_MF is a parameter but not used.
-   // prior to tensor_advection_update(), in
-   //  NavierStokes::tensor_advection_updateALL() 
-  int provisional_MF=-1;
-  int im_tensor=-1;
-  int grid_type=-1;
-  tensor_extrapolateALL(im_tensor,provisional_MF,grid_type);
-
    // init_gradu_tensorALL fills CELLTENSOR_MF using these steps:
    // 1. find all velocity derivatives at faces.
    // 2. interpolate derivatives from faces to cells using 1-sided
