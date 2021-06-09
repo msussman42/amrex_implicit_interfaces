@@ -1140,7 +1140,6 @@ extern "C"
      int* im_solid_map,
      int* nten,
      int* nsolve,
-     int* nsolveMM,
      int* project_option,
      int* combine_idx,
      int* combine_flag,
@@ -1179,7 +1178,6 @@ extern "C"
 
    void FORT_COMBINEVELFACE(
      int* tid,
-     int* num_materials_combine,
      int* hflag,
      int* facecut_index,
      int* icefacecut_index,
@@ -1191,12 +1189,7 @@ extern "C"
      int* nparts_def,
      int* im_solid_map,
      int* nten,
-     int* nsolve,
-     int* nsolveMM,
-     int* nsolveMM_FACE,
-     int* project_option,
      int* combine_idx,
-     int* combine_flag,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,

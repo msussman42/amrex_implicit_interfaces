@@ -51,10 +51,7 @@ extern "C"
 
 
     void FORT_REGULARIZE_BX(
-     int* num_materials_face,
      int* nsolve,
-     int* nsolveMM,
-     int* nsolveMM_FACE,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
      Real* min_interior_coeff,
      const int* domlo, const int* domhi,
@@ -66,12 +63,9 @@ extern "C"
      int* dir);
 
    void FORT_INIT_MASK_SING (
-     int* num_materials_face,
      int* level,
      int* finest_level,
      int* nsolve,
-     int* nsolveMM,
-     int* nsolveMM_FACE,
      int* nfacefrac,
      int* ncellfrac,
      int* nmat,
@@ -105,12 +99,9 @@ extern "C"
      int* bc);
 
    void FORT_NSGENERATE (
-     int* num_materials_face,
      int* level,
      int* finest_level,
      int* nsolve,
-     int* nsolveMM,
-     int* nsolveMM_FACE,
      int* nmat,
      int* project_option,
      int* ncphys,
@@ -126,9 +117,7 @@ extern "C"
      int* bfact);
 
     void FORT_DIVIDEDX(
-     int* num_materials_face,
      int* nsolve,
-     int* nsolveMM,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
      const int* tilelo, const int* tilehi,
      const int* fablo, const int* fabhi,
@@ -139,10 +128,7 @@ extern "C"
 
 
     void FORT_MULT_FACEWT(
-     int* num_materials_face,
      int* nsolve,
-     int* nsolveMM,
-     int* nsolveMM_FACE,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
      Real* facewt,AMREX_ARLIM_P(facewtlo),AMREX_ARLIM_P(facewthi),
      const int* tilelo, const int* tilehi,
@@ -161,9 +147,7 @@ extern "C"
         Real* fdiag,AMREX_ARLIM_P(fdiag_lo),AMREX_ARLIM_P(fdiag_hi));
 
     void FORT_SCALARCOEFF(
-       int* num_materials_face,
        int* nsolve,
-       int* nsolveMM,
        int* nmat,
        const Real* xlo,
        const Real* dx,

@@ -7048,7 +7048,6 @@ void NavierStokes::remove_project_variables() {
  delete_localMF(ONES_GROW_MF,1);
  delete_localMF(TYPE_ONES_MF,1);
  delete_localMF(COLOR_ONES_MF,1);
- delete_localMF(DOTMASK_MF,1);
  delete_localMF(OUTER_ITER_PRESSURE_MF,1);
 }
 
@@ -7489,10 +7488,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
  setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
  setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
-
-  // allocates and initializes DOTMASK_MF (will be used for
-  // next generation heat equation solver)
- makeDotMask(nsolve,project_option);
 
  new_localMF(POLDHOLD_MF,nsolveMM,0,-1);
  setVal_localMF(POLDHOLD_MF,0.0,0,nsolveMM,0);
@@ -9855,10 +9850,9 @@ void NavierStokes::multiphase_project(int project_option) {
   ns_level.allocate_pressure_work_vars(nsolve,project_option);
 
    // 1. allocates and initializes ONES_MF, ONES_GROW_MF
-   // 2. allocates and constructs DOTMASK_MF
-   // 3. allocates, and sets POLDHOLD_MF=S^adv - S^init, 
-   // 4. allocates, and sets OUTER_ITER_PRESSURE_MF=S^init,
-   // 5. snew=S^init
+   // 2. allocates, and sets POLDHOLD_MF=S^adv - S^init, 
+   // 3. allocates, and sets OUTER_ITER_PRESSURE_MF=S^init,
+   // 4. snew=S^init
    //
   ns_level.allocate_project_variables(nsolve,project_option);
  }  // ilev=finest_level ... level

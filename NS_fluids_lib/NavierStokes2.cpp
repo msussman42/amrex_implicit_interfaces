@@ -1688,10 +1688,6 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  int nmat=num_materials;
  int nsolve=1;
- int nsolveMM=nsolve*num_materials_vel;
- int nsolveMM_FACE=nsolveMM;
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -1714,7 +1710,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,101);
   debug_ngrow(PEDGE_MF+dir,0,101);
-  if (localMF[PEDGE_MF+dir]->nComp()!=2+nsolveMM_FACE)
+  if (localMF[PEDGE_MF+dir]->nComp()!=2+nsolve)
    amrex::Error("pedge_mf invalid ncomp");
   if (localMF[AREA_MF+dir]->boxArray()!=
       localMF[PEDGE_MF+dir]->boxArray())
@@ -1781,7 +1777,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  MultiFab* presmf=localMF[idx_pres];
- if (presmf->nComp()!=nsolveMM)
+ if (presmf->nComp()!=nsolve)
   amrex::Error("presmf->nComp() invalid");
 
   // old cell velocity before application of pressure gradient.
@@ -1798,8 +1794,8 @@ void NavierStokes::apply_cell_pressure_gradient(
  MultiFab* divup;
  if ((energyflag==0)|| //do not update the energy
      (energyflag==1)) {//update the energy
-  ustar=getState(1,0,num_materials_vel*AMREX_SPACEDIM,cur_time_slab);
-  divup=new MultiFab(grids,dmap,nsolveMM,0,
+  ustar=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
+  divup=new MultiFab(grids,dmap,nsolve,0,
    MFInfo().SetTag("divup"),FArrayBoxFactory());
 
   //Spectral deferred correction:
@@ -1807,9 +1803,9 @@ void NavierStokes::apply_cell_pressure_gradient(
  } else if (energyflag==2) { 
   debug_ngrow(idx_gpcell,0,101);
   debug_ngrow(idx_divup,0,101);
-  if (localMF[idx_gpcell]->nComp()!=AMREX_SPACEDIM*num_materials_vel)
+  if (localMF[idx_gpcell]->nComp()!=AMREX_SPACEDIM)
    amrex::Error("idx_gpcell has invalid ncomp");
-  if (localMF[idx_divup]->nComp()!=nsolveMM)
+  if (localMF[idx_divup]->nComp()!=nsolve)
    amrex::Error("idx_divup has invalid ncomp");
 
   ustar=localMF[idx_gpcell];
@@ -1821,16 +1817,17 @@ void NavierStokes::apply_cell_pressure_gradient(
  Vector<int> ncomp;
  int ncomp_check;
  int state_index;
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_vel,
+  1,
   project_option,
   state_index,
   scomp,ncomp,ncomp_check);
 
- if (ncomp_check!=nsolveMM)
+ if (ncomp_check!=nsolve)
   amrex::Error("invalid ncomp");
 
- int scomp_den=num_materials_vel*(AMREX_SPACEDIM+1);
+ int scomp_den=(AMREX_SPACEDIM+1);
  int nden=nmat*num_state_material;
 
  int nvof=nmat*ngeom_raw;
@@ -1930,10 +1927,9 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    Vector<int> presbc;
    getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
-   if (presbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
+   if (presbc.size()!=nsolve*AMREX_SPACEDIM*2)
     amrex::Error("presbc.size() invalid");
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,
-    num_materials_vel*AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
    Real beta=0.0;
 
@@ -1951,7 +1947,7 @@ void NavierStokes::apply_cell_pressure_gradient(
    int local_enable_spectral=enable_spectral;
    int num_materials_face=num_materials_vel;
    int simple_AMR_BC_flag=0;
-   int ncomp_xp=2+nsolveMM_FACE;
+   int ncomp_xp=2+nsolve;
    int ncomp_xgp=1;
    int ncomp_mgoni=presfab.nComp();
 
@@ -1967,8 +1963,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &ncomp_xp, 
     &ncomp_xgp, 
     &simple_AMR_BC_flag,
-    &nsolveMM_FACE,
-    &num_materials_face,
+    &nsolve,
     &tileloop,
     &dir,
     &operation_flag_interp_pres, //1
@@ -4998,8 +4993,9 @@ void NavierStokes::apply_pressure_grad(
   Vector<int> ncomp;
   int ncomp_check;
   int state_index;
+   //num_materials_combine=1
   get_mm_scomp_solver(
-   num_materials_face,
+   1,
    project_option,
    state_index,
    scomp,ncomp,ncomp_check);
@@ -9987,8 +9983,9 @@ void NavierStokes::init_advective_pressure(int project_option) {
  Vector<int> ncomp;
  int ncomp_check;
  int state_index;
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_vel,
+  1,
   project_option,
   state_index,
   scomp,ncomp,ncomp_check);

@@ -4,7 +4,6 @@
 #ifdef BL_LANG_FORT
 #    define FORT_CURVSTRIP curvstrip
 #    define FORT_L1_DISTANCE l1_distance
-#    define FORT_DOTMASK_BUILD dotmask_build
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
@@ -31,7 +30,6 @@
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_CURVSTRIP CURVSTRIP
 #    define FORT_L1_DISTANCE L1_DISTANCE
-#    define FORT_DOTMASK_BUILD DOTMASK_BUILD
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
@@ -58,7 +56,6 @@
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_CURVSTRIP curvstrip
 #    define FORT_L1_DISTANCE l1_distance
-#    define FORT_DOTMASK_BUILD dotmask_build
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
@@ -83,7 +80,6 @@
 #  else
 #    define FORT_CURVSTRIP curvstrip_
 #    define FORT_L1_DISTANCE l1_distance_
-#    define FORT_DOTMASK_BUILD dotmask_build_
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
@@ -358,8 +354,7 @@ namespace amrex{
         int* ncomp_xp,
         int* ncomp_xgp,
         int* simple_AMR_BC_flag,
-        int* nsolveMM_FACE,
-        int* num_materials_face,
+        int* nsolve,
         int* tileloop,
         int* dir,
         int* operation_flag,
@@ -730,20 +725,6 @@ namespace amrex{
        int* ngrowLS,
        int* nmat);
 
-
-     void FORT_DOTMASK_BUILD(
-       int* num_materials_face,
-       int* level,
-       int* finest_level,
-       Real* dotmask,AMREX_ARLIM_P(dotmasklo),AMREX_ARLIM_P(dotmaskhi),
-       Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
-       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       const Real* xlo,const Real* dx,
-       Real* time,
-       int* nmat);
 
      void FORT_CELLFACEINIT(
        int* tid,

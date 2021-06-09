@@ -678,16 +678,13 @@ extern "C" {
     void FORT_SUMDOT(Real* mass1,
       const Real* dat1,AMREX_ARLIM_P(dat1_lo),AMREX_ARLIM_P(dat1_hi),
       const Real* dat2,AMREX_ARLIM_P(dat2_lo),AMREX_ARLIM_P(dat2_hi),
-      const Real* dotmask,AMREX_ARLIM_P(dotmasklo),AMREX_ARLIM_P(dotmaskhi),
       const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,
       int* debug_dot_product,
       int* levelno,const int* gridno,
-      int* nsolve,
-      int* nsolveMM,
-      int* num_materials_face);
+      int* nsolve);
 
     void FORT_SUMDOT_ONES_SIZE(
       Real* fab_sum,
@@ -768,15 +765,12 @@ extern "C" {
     void FORT_FABCOM(
      const Real* fabx,AMREX_ARLIM_P(fabx_lo),AMREX_ARLIM_P(fabx_hi),
      const Real* faby,AMREX_ARLIM_P(faby_lo),AMREX_ARLIM_P(faby_hi),
-     const Real* dotmask,AMREX_ARLIM_P(dotmasklo),AMREX_ARLIM_P(dotmaskhi),
      const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* fabz,AMREX_ARLIM_P(fabz_lo),AMREX_ARLIM_P(fabz_hi),
      const Real* beta,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,int* bfact,
-     int* nsolve,
-     int* nsolveMM,
-     int* num_materials_face);
+     int* nsolve);
 
     void FORT_DIAGINV(
       const Real* diagfab, 

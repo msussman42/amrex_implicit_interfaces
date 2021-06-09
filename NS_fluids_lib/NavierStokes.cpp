@@ -5346,13 +5346,13 @@ NavierStokes::get_mm_scomp_solver(
      (project_option==1)) {  // initial project
   nsolve=1;
   nlist=1;
-  if (num_materials_combine!=num_materials_vel)
+  if (num_materials_combine!=1)
    amrex::Error("num_materials_combine invalid");
  } else if ((project_option==11)||  // FSI_material_exists (last project)
 	    (project_option==12)) { // pressure extension
   nsolve=1;
   nlist=1;
-  if (num_materials_combine!=num_materials_vel)
+  if (num_materials_combine!=1)
    amrex::Error("num_materials_combine invalid");
  } else if (project_option==2) { // temperature
   nsolve=1;
@@ -5367,13 +5367,10 @@ NavierStokes::get_mm_scomp_solver(
  } else if (project_option==3) { // viscosity
   nsolve=AMREX_SPACEDIM;
   nlist=1;
-  if (num_materials_combine!=num_materials_vel)
+  if (num_materials_combine!=1)
    amrex::Error("num_materials_combine invalid");
  } else
   amrex::Error("project_option invalid1");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  if ((num_materials_combine!=1)&&
      (num_materials_combine!=nmat)) 
@@ -5386,13 +5383,12 @@ NavierStokes::get_mm_scomp_solver(
 
  if (project_option_pressure(project_option)==1) {
  
-  scomp[0]=num_materials_vel*AMREX_SPACEDIM;
+  scomp[0]=AMREX_SPACEDIM;
   ncomp[0]=nsolveMM; 
   state_index=State_Type;
 
  } else if (project_option==11) { // FSI_material_exists (last project);
 	                          // divu pressure is independent var.
-
   scomp[0]=0;
   ncomp[0]=nsolveMM; 
   state_index=DIV_Type;
@@ -5401,8 +5397,7 @@ NavierStokes::get_mm_scomp_solver(
 
   // u,v,w,p,den1,T1,...
   for (int im=0;im<nlist;im++) {
-   scomp[im]=num_materials_vel*(AMREX_SPACEDIM+1)+
-     im*num_state_material+1;
+   scomp[im]=(AMREX_SPACEDIM+1)+im*num_state_material+1;
    ncomp[im]=1;
   }
   state_index=State_Type;
@@ -5417,7 +5412,7 @@ NavierStokes::get_mm_scomp_solver(
             (project_option<100+num_species_var)) { // species
 
   for (int im=0;im<nlist;im++) {
-   scomp[im]=num_materials_vel*(AMREX_SPACEDIM+1)+
+   scomp[im]=(AMREX_SPACEDIM+1)+
      im*num_state_material+num_state_base+project_option-100;
    ncomp[im]=1;
   }
@@ -5428,8 +5423,7 @@ NavierStokes::get_mm_scomp_solver(
   // all BCs must be insulating
   // u,v,w,p,den1,T1,...
   for (int im=0;im<nlist;im++) {
-   scomp[im]=num_materials_vel*(AMREX_SPACEDIM+1)+
-     im*num_state_material+1;
+   scomp[im]=(AMREX_SPACEDIM+1)+im*num_state_material+1;
    ncomp[im]=1;
   }
   state_index=State_Type;
@@ -16891,42 +16885,27 @@ NavierStokes::dotSum(int project_option,
  
  bool use_tiling=ns_tiling;
 
- int num_materials_face=num_materials_vel;
-
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option_momeqn(project_option) invalid2");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=num_materials))
-  amrex::Error("num_materials_face invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,0,51);
- debug_ngrow(DOTMASK_MF,0,51);
- if (localMF[DOTMASK_MF]->nComp()!=num_materials_face)
-  amrex::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
 
- int nsolveMM=nsolve*num_materials_face;
-
- if (mf1->nComp()!=nsolveMM) {
-  std::cout << "mf1_ncomp nsolveMM " << mf1->nComp() << ' ' << nsolveMM << '\n';
+ if (mf1->nComp()!=nsolve) {
+  std::cout << "mf1_ncomp nsolve " << mf1->nComp() << ' ' << nsolve << '\n';
   amrex::Error("dotSum: mf1 invalid ncomp");
  }
- if (mf2->nComp()!=nsolveMM)
+ if (mf2->nComp()!=nsolve)
   amrex::Error("mf2 invalid ncomp");
 
  Vector<Real> sum;
@@ -16964,7 +16943,6 @@ NavierStokes::dotSum(int project_option,
 
   Real tsum=0.0;
   FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
-  FArrayBox& dotfab=(*localMF[DOTMASK_MF])[mfi];
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -16974,15 +16952,12 @@ NavierStokes::dotSum(int project_option,
   FORT_SUMDOT(&tsum,
     fab.dataPtr(),ARLIM(fab.loVect()), ARLIM(fab.hiVect()),
     fab2.dataPtr(),ARLIM(fab2.loVect()), ARLIM(fab2.hiVect()),
-    dotfab.dataPtr(),ARLIM(dotfab.loVect()),ARLIM(dotfab.hiVect()),
     mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     &debug_dot_product,
     &level,&gridno,
-    &nsolve, 
-    &nsolveMM, 
-    &num_materials_face);
+    &nsolve);
   sum[tid_current] += tsum;
  } // mfi1
 } // omp
@@ -17011,12 +16986,6 @@ NavierStokes::dotSumONES_size(int project_option,
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,0,51);
- debug_ngrow(DOTMASK_MF,0,51);
- int local_nface=localMF[DOTMASK_MF]->nComp();
- if (local_nface==1) {
-  // do nothing
- } else
-  amrex::Error("local_nface invalid");
 
  debug_ngrow(ONES_MF,0,51);
  debug_ngrow(ONES_GROW_MF,0,51);
@@ -17180,12 +17149,6 @@ NavierStokes::dotSumONES(int project_option,
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(index_MF,0,51);
  debug_ngrow(MASKCOEF_MF,0,51);
- debug_ngrow(DOTMASK_MF,0,51);
- int local_nface=localMF[DOTMASK_MF]->nComp();
- if (local_nface==1) {
-  // do nothing
- } else
-  amrex::Error("local_nface invalid");
 
  debug_ngrow(ONES_MF,0,51);
  debug_ngrow(ONES_GROW_MF,0,51);
@@ -17340,12 +17303,6 @@ NavierStokes::mf_combine_ones_level(int project_option,
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(index_MF,0,51);
  debug_ngrow(MASKCOEF_MF,0,51);
- debug_ngrow(DOTMASK_MF,0,51);
- int local_nface=localMF[DOTMASK_MF]->nComp();
- if (local_nface==1) {
-  // do nothing
- } else
-  amrex::Error("local_nface invalid");
 
  debug_ngrow(ONES_MF,0,51);
  debug_ngrow(ONES_GROW_MF,0,51);
@@ -17479,25 +17436,15 @@ void NavierStokes::levelCombine(
  
  bool use_tiling=ns_tiling;
 
- int num_materials_face=num_materials_vel;
-
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option_momeqn(project_option) invalid2");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=num_materials))
-  amrex::Error("num_materials_face invalid");
 
  int finest_level=parent->finestLevel();
  if (level > finest_level)
@@ -17508,17 +17455,12 @@ void NavierStokes::levelCombine(
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,0,51);
- debug_ngrow(DOTMASK_MF,0,51);
- if (localMF[DOTMASK_MF]->nComp()!=num_materials_face)
-  amrex::Error("localMF[DOTMASK_MF]->nComp()!=num_materials_face");
 
- int nsolveMM=nsolve*num_materials_face;
-
- if (mfx->nComp()!= nsolveMM)
+ if (mfx->nComp()!= nsolve)
   amrex::Error("mfx invalid ncomp");
- if (mfy->nComp()!= nsolveMM)
+ if (mfy->nComp()!= nsolve)
   amrex::Error("mfy invalid ncomp");
- if (mfz->nComp()!= nsolveMM)
+ if (mfz->nComp()!= nsolve)
   amrex::Error("mfz invalid ncomp");
 
  if (thread_class::nthreads<1)
@@ -17542,7 +17484,6 @@ void NavierStokes::levelCombine(
   FArrayBox& fabx = (*mfx)[mfi];
   FArrayBox& faby = (*mfy)[mfi];
   FArrayBox& mfab = (*localMF[MASKCOEF_MF])[mfi];
-  FArrayBox& dotfab=(*localMF[DOTMASK_MF])[mfi];
   FArrayBox& fabz = (*mfz)[mfi];
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -17554,15 +17495,12 @@ void NavierStokes::levelCombine(
   FORT_FABCOM(
    fabx.dataPtr(),ARLIM(fabx.loVect()),ARLIM(fabx.hiVect()),
    faby.dataPtr(),ARLIM(faby.loVect()),ARLIM(faby.hiVect()),
-   dotfab.dataPtr(),ARLIM(dotfab.loVect()),ARLIM(dotfab.hiVect()),
    mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
    fabz.dataPtr(),ARLIM(fabz.loVect()),ARLIM(fabz.hiVect()),
    &beta,
    tilelo,tilehi,
    fablo,fabhi,&bfact,
-   &nsolve,
-   &nsolveMM,
-   &num_materials_face);
+   &nsolve);
  } // mfi
 } // omp
  ns_reconcile_d_num(102);
@@ -23485,103 +23423,6 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  ns_reconcile_d_num(120);
 
 } // subroutine makeFaceTest
-
-
-void
-NavierStokes::makeDotMask(int nsolve,int project_option) {
- 
- bool use_tiling=ns_tiling;
-
- int nmat=num_materials;
-
- int finest_level=parent->finestLevel();
-
- if (localMF_grow[DOTMASK_MF]==-1) {
-  // do nothing
- } else
-  amrex::Error("makeDotMask: forgot to delete");
-
- int num_materials_face=num_materials_vel;
- if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
- } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
- } else
-  amrex::Error("project_option invalid9");
-
- new_localMF(DOTMASK_MF,num_materials_face,0,-1);
- setVal_localMF(DOTMASK_MF,1.0,0,num_materials_face,0);
-
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,90);
- resize_mask_nbr(1);
- debug_ngrow(MASK_NBR_MF,1,90);
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,90);
-
- const Real* dx = geom.CellSize();
-
- if (num_materials_face==nmat) {
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[DOTMASK_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[DOTMASK_MF],use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-
-     // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
-   FArrayBox& dotmaskfab=(*localMF[DOTMASK_MF])[mfi];
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     // in: LEVELSET_3D.F90
-   FORT_DOTMASK_BUILD( 
-    &num_materials_face,
-    &level,
-    &finest_level,
-    dotmaskfab.dataPtr(),
-    ARLIM(dotmaskfab.loVect()),ARLIM(dotmaskfab.hiVect()),
-    maskfab.dataPtr(),
-    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    voffab.dataPtr(),
-    ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    xlo,dx,
-    &cur_time_slab,
-    &nmat);
-  } // mfi
-} // omp
-  ns_reconcile_d_num(121);
-
- } else if (num_materials_face==1) {
-  // do nothing
- } else
-  amrex::Error("num_materials_face invalid");
-
-} // subroutine makeDotMask
 
 
 // WARNING: makeCellFrac allocates, but does not delete.

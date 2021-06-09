@@ -13883,8 +13883,10 @@ END SUBROUTINE Adist
 ! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC
 ! operation_flag=5  unew^MAC=unew^MAC+beta diffuse_ref^CELL->MAC
 ! operation_flag=6  evaluate tensor values.
+!   (called from FACE_GRADIENTS)
 ! operation_flag=7  advection.
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
+!   (SEM_CELL_TO_MAC not called with operation_flag==8)
 ! operation_flag=9  den CELL->MAC
 ! operation_flag=10 unew^MAC=unew^CELL,MAC -> MAC
 ! operation_flag=11 unew^MAC=unew^CELL DIFF,MAC -> MAC
@@ -13892,8 +13894,6 @@ END SUBROUTINE Adist
        conservative_div_uu, &
        ncomp_xp, &  ! number of amrsync components if op=0,3,5,6,7,9,10,11
        simple_AMR_BC_flag_in, &
-       nsolveMM_FACE, &
-       num_materials_face, &
        level, &
        finest_level, &
        nmat, &
@@ -13946,11 +13946,9 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: simple_AMR_BC_flag_in
       INTEGER_T :: simple_AMR_BC_flag
       INTEGER_T :: local_AMR_BC_flag
-      INTEGER_T, intent(in) :: num_materials_face
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nsolveMM_FACE
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: beta,visc_coef
@@ -13977,7 +13975,7 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material)
-      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM*num_materials_face)
+      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: DIMDEC(semflux)
       INTEGER_T, intent(in) :: DIMDEC(maskCF)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
@@ -13994,8 +13992,8 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: maskCF(DIMV(maskCF)) ! 1=fine-fine  0=coarse-fine
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_face)
-      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_face)
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in) :: pres(DIMV(pres))
       REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) 
        !xgp is usually a dest variable except that it holds umac_old if 
@@ -14003,7 +14001,7 @@ END SUBROUTINE Adist
       REAL_T, intent(inout) :: xgp(DIMV(xgp),ncomp_xgp) 
       REAL_T, intent(inout) :: xcut(DIMV(xcut)) 
       REAL_T, intent(inout) :: xp(DIMV(xp),ncomp_xp) 
-      REAL_T, intent(inout) :: xvel(DIMV(xvel),nsolveMM_FACE) 
+      REAL_T, intent(inout) :: xvel(DIMV(xvel)) 
 
       INTEGER_T local_bctype(2)
       INTEGER_T local_bctype_den(2)
@@ -14058,10 +14056,8 @@ END SUBROUTINE Adist
       INTEGER_T test_maskSEM
       REAL_T shared_xcut
       INTEGER_T velcomp
-      INTEGER_T prescomp
       INTEGER_T nbase
       INTEGER_T ntensor
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T local_incomp
       INTEGER_T testbc
       REAL_T problo(SDIM),probhi(SDIM),problen(SDIM)
@@ -14156,19 +14152,6 @@ END SUBROUTINE Adist
       if ((update_right_flux.ne.0).and. &
           (update_right_flux.ne.1)) then
        print *,"update_right_flux invalid"
-       stop
-      endif
-      nsolveMM_FACE_test=num_materials_face
-      if (num_materials_face.eq.1) then
-       ! do nothing
-      else if (num_materials_face.eq.nmat) then
-       nsolveMM_FACE_test=nsolveMM_FACE_test*2
-      else
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
 
@@ -14283,7 +14266,7 @@ END SUBROUTINE Adist
            (dcomp.ne.1).or. &
            (ncomp_dest.ne.ncphys).or. &
            (ncphys.ne.SDIM+num_state_base).or. &
-           (ncomp_source.ne.SDIM*num_materials_face).or. &
+           (ncomp_source.ne.SDIM).or. &
            (scomp_bc.ne.1)) then
         print *,"parameters invalid for op=7"
         stop
@@ -14297,7 +14280,7 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.0) then ! grad p
 
-       if (ncomp_xgp.ne.nsolveMM_FACE) then
+       if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid3"
         stop
        endif
@@ -14306,27 +14289,12 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (num_materials_face.eq.1) then
-        if ((scomp.ne.1).or.(dcomp.ne.1)) then
-         print *,"parameters invalid for op=0"
-         stop
-        endif
-        if (update_right_flux.ne.0) then
-         print *,"update_right_flux invalid"
-         stop
-        endif
-       else if (num_materials_face.eq.nmat) then
-        if (update_right_flux.ne.1) then
-         print *,"update_right_flux invalid"
-         stop
-        endif
-        if ((scomp.ne.cen_maskSEM).or. &
-            (dcomp.ne.cen_maskSEM)) then
-         print *,"parameters invalid for op=0"
-         stop
-        endif
-       else
-        print *,"num_materials_face invalid"
+       if ((scomp.ne.1).or.(dcomp.ne.1)) then
+        print *,"parameters invalid for op=0"
+        stop
+       endif
+       if (update_right_flux.ne.0) then
+        print *,"update_right_flux invalid"
         stop
        endif
        if ((ncomp_dest.ne.1).or. &
@@ -14350,10 +14318,6 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
        if (update_right_flux.ne.0) then
         print *,"update_right_flux invalid"
         stop
@@ -14371,7 +14335,7 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.2) then ! potential cell->mac, grad ppot
 
-       if (ncomp_xgp.ne.nsolveMM_FACE) then
+       if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid5"
         stop
        endif
@@ -14403,7 +14367,7 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.9) then ! den CELL->MAC
 
-       if (ncomp_xgp.ne.nsolveMM_FACE) then
+       if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid6"
         stop
        endif
@@ -14432,16 +14396,12 @@ END SUBROUTINE Adist
                (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
                (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
 
-       if (ncomp_xgp.ne.nsolveMM_FACE) then
+       if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid7"
         stop
        endif
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
-        stop
-       endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
         stop
        endif
 
@@ -14790,10 +14750,6 @@ END SUBROUTINE Adist
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
-             if (num_materials_face.ne.1) then
-              print *,"num_materials_face invalid"
-              stop
-             endif
              velcomp=nc
              ! u_{i+1/2}S_{i+1/2}-u_{i-1/2}S_{i-1/2}=
              ! (S_{i+1/2}+S_{i-1/2})(u_{i+1/2}-u_{i-1/2})/2 +
@@ -14832,9 +14788,8 @@ END SUBROUTINE Adist
 
            else if (operation_flag.eq.0) then ! MAC pressure gradient
             if (nc.eq.1) then
-             if ((scomp.eq.1).or.(scomp.eq.cen_maskSEM)) then
-              prescomp=scomp
-              local_data_side(side)=pres(D_DECL(ic,jc,kc),prescomp)
+             if (scomp.eq.1) then
+              local_data_side(side)=pres(D_DECL(ic,jc,kc))
              else
               print *,"scomp invalid"
               stop
@@ -14846,8 +14801,7 @@ END SUBROUTINE Adist
            else if (operation_flag.eq.1) then ! MAC pressure 
             if (nc.eq.1) then
              if (scomp.eq.1) then
-              prescomp=scomp
-              local_data_side(side)=pres(D_DECL(ic,jc,kc),prescomp)
+              local_data_side(side)=pres(D_DECL(ic,jc,kc))
              else
               print *,"scomp invalid"
               stop
@@ -14859,7 +14813,7 @@ END SUBROUTINE Adist
            else if (operation_flag.eq.2) then ! MAC potential grad, ppot^MAC
             if (nc.eq.1) then
              if (scomp.eq.1) then
-              local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
+              local_data_side(side)=pres(D_DECL(ic,jc,kc))
               local_data_side_den(side)=den(D_DECL(ic,jc,kc),1)
               if ((abs(local_data_side(side)).lt.1.0D+20).and. &
                   (local_data_side_den(side).gt.zero).and. &
@@ -14947,11 +14901,6 @@ END SUBROUTINE Adist
              local_bcval(side)=zero
             else if (velbc_in(dir,side,nc).eq.EXT_DIR) then
              local_bctype(side)=1 ! dirichlet
-
-             if (num_materials_face.ne.1) then
-              print *,"num_materials_face invalid"
-              stop
-             endif
 
              velcomp=nc
              local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),velcomp)
@@ -15150,8 +15099,7 @@ END SUBROUTINE Adist
              local_bcval(side)=zero
             else if (presbc_in(dir,side,1).eq.EXT_DIR) then
              local_bctype(side)=1 ! dirichlet
-             prescomp=scomp
-             local_bcval(side)=pres(D_DECL(i_out,j_out,k_out),prescomp)
+             local_bcval(side)=pres(D_DECL(i_out,j_out,k_out))
             else
              print *,"presbc_in is corrupt"
              stop
@@ -15282,10 +15230,6 @@ END SUBROUTINE Adist
              templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              if (num_materials_face.ne.1) then
-               print *,"num_materials_face invalid"
-               stop
-              endif
               velcomp=nc
               if ((conservative_div_uu.eq.0).or. &
                   (conservative_div_uu.eq.1)) then
@@ -15309,10 +15253,6 @@ END SUBROUTINE Adist
              templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              if (num_materials_face.ne.1) then
-               print *,"num_materials_face invalid"
-               stop
-              endif
               velcomp=nc
               local_data_side(side)= &
                vel(D_DECL(ic,jc,kc),velcomp) ! NONCONSERVATIVE
@@ -15419,9 +15359,8 @@ END SUBROUTINE Adist
              endif
             else if (simple_AMR_BC_flag.eq.1) then
              if (nc.eq.1) then
-              if ((scomp.eq.1).or.(scomp.eq.cen_maskSEM)) then
-               prescomp=scomp
-               local_data_side(side)=pres(D_DECL(ic,jc,kc),prescomp)
+              if (scomp.eq.1) then
+               local_data_side(side)=pres(D_DECL(ic,jc,kc))
               else
                print *,"scomp invalid"
                stop
@@ -15459,8 +15398,7 @@ END SUBROUTINE Adist
             else if (simple_AMR_BC_flag.eq.1) then
              if (nc.eq.1) then
               if (scomp.eq.1) then
-               prescomp=scomp
-               local_data_side(side)=pres(D_DECL(ic,jc,kc),prescomp)
+               local_data_side(side)=pres(D_DECL(ic,jc,kc))
               else
                print *,"scomp invalid"
                stop
@@ -15487,8 +15425,7 @@ END SUBROUTINE Adist
 
              if (nc.eq.1) then
               if (scomp.eq.1) then
-               prescomp=scomp
-               local_data_side(side)=pres(D_DECL(ic,jc,kc),prescomp)
+               local_data_side(side)=pres(D_DECL(ic,jc,kc))
                local_data_side_den(side)=den(D_DECL(ic,jc,kc),1)
               else
                print *,"scomp invalid"
@@ -15652,8 +15589,7 @@ END SUBROUTINE Adist
           else if (operation_flag.eq.0) then ! pressure grad on MAC
 
            if (nc.eq.1) then
-            prescomp=scomp
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc),prescomp)
+            local_data(isten+1)=pres(D_DECL(ic,jc,kc))
            else
             print *,"nc invalid"
             stop
@@ -15662,8 +15598,7 @@ END SUBROUTINE Adist
           else if (operation_flag.eq.1) then ! interp pressure to MAC
 
            if (nc.eq.1) then
-            prescomp=scomp
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc),prescomp)
+            local_data(isten+1)=pres(D_DECL(ic,jc,kc))
            else
             print *,"nc invalid"
             stop
@@ -15672,7 +15607,7 @@ END SUBROUTINE Adist
           else if (operation_flag.eq.2) then !potential grad/den and value
 
            if (nc.eq.1) then
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
+            local_data(isten+1)=pres(D_DECL(ic,jc,kc))
             local_data_den(isten+1)=den(D_DECL(ic,jc,kc),1)
            else
             print *,"nc invalid"
@@ -16691,8 +16626,6 @@ END SUBROUTINE Adist
        ncomp_veldest, &
        ncomp_dendest, &
        conservative_div_uu, &
-       nsolveMM_FACE, &
-       num_materials_face, &
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
@@ -16746,8 +16679,6 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: ncomp_veldest
       INTEGER_T, intent(in) :: ncomp_dendest
       INTEGER_T, intent(in) :: conservative_div_uu
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T, intent(in) :: num_materials_face
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
@@ -16771,8 +16702,6 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: dir_main
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: scomp
-      INTEGER_T :: scompMM_L
-      INTEGER_T :: scompMM_R
       INTEGER_T, intent(in) :: scomp_bc
       INTEGER_T, intent(in) :: dcomp
       INTEGER_T, intent(in) :: ncomp
@@ -16799,17 +16728,17 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: DIMDEC(divdest)
       REAL_T, intent(in) :: vol(DIMV(vol))
       REAL_T, intent(in) :: xface(DIMV(xface),ncomp)  ! flux data for I-scheme
-      REAL_T, intent(in) :: xp(DIMV(xp),2+nsolveMM_FACE)
+      REAL_T, intent(in) :: xp(DIMV(xp),2+1)
       REAL_T, intent(in) :: xvel(DIMV(xvel),ncomp_xvel)
       REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
       REAL_T, intent(inout) :: cterm(DIMV(cterm),ncomp_cterm)
-      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),ncomp*num_materials_face)
-      REAL_T, intent(in) :: pold(DIMV(pold),ncomp*num_materials_face)
+      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),ncomp)
+      REAL_T, intent(in) :: pold(DIMV(pold),ncomp)
       REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
       REAL_T, intent(inout) :: dendest(DIMV(dendest),ncomp_dendest)
       REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM)
       REAL_T, intent(inout) :: veldest(DIMV(veldest),ncomp_veldest)
-      REAL_T, intent(inout) :: divdest(DIMV(divdest),ncomp*num_materials_face)
+      REAL_T, intent(inout) :: divdest(DIMV(divdest),ncomp)
       REAL_T local_data(bfact+1)
       REAL_T local_vel_data(bfact+1)
       REAL_T local_vel_data_div(bfact+1)
@@ -16850,7 +16779,6 @@ END SUBROUTINE Adist
       INTEGER_T velcomp
       INTEGER_T nbase
       INTEGER_T ntensor
-      INTEGER_T nsolveMM_FACE_test
       REAL_T xflux_R
       INTEGER_T local_incomp
       REAL_T local_div_val
@@ -16970,8 +16898,6 @@ END SUBROUTINE Adist
 
       if (operation_flag.eq.5) then ! grad U: MAC -> CELL
 
-       nsolveMM_FACE_test=ntensor
-
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
         stop
@@ -17070,7 +16996,7 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncomp_xvel.ne.nsolveMM_FACE) then
+       if (ncomp_xvel.ne.1) then
         print *,"ncomp_xvel invalid"
         stop
        endif
@@ -17086,34 +17012,20 @@ END SUBROUTINE Adist
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncomp_denold.eq.ncomp*num_materials_face) then
+       if (ncomp_denold.eq.ncomp) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
         stop
        endif
 
-       if (ncomp_cterm.ne.ncomp*num_materials_face) then
+       if (ncomp_cterm.ne.ncomp) then
         print *,"ncomp_cterm invalid"
-        stop
-       endif
-
-       nsolveMM_FACE_test=ncomp*num_materials_face
-       if (num_materials_face.eq.1) then
-        ! do nothing
-       else if (num_materials_face.eq.nmat) then
-        nsolveMM_FACE_test=nsolveMM_FACE_test*2
-       else
-        print *,"num_materials_face invalid"
         stop
        endif
 
       else if (operation_flag.eq.1) then ! divergence
 
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
         stop
@@ -17132,7 +17044,7 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncomp_xvel.ne.nsolveMM_FACE) then
+       if (ncomp_xvel.ne.1) then
         print *,"ncomp_xvel invalid"
         stop
        endif
@@ -17160,14 +17072,8 @@ END SUBROUTINE Adist
         stop
        endif
 
-       nsolveMM_FACE_test=ncomp*num_materials_face
-
       else if (operation_flag.eq.2) then !MAC->CELL in solver or VELMAC_TO_CELL
 
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
         stop
@@ -17196,7 +17102,7 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncomp_xvel.ne.nsolveMM_FACE) then
+       if (ncomp_xvel.ne.1) then
         print *,"ncomp_xvel invalid"
         stop
        endif
@@ -17214,7 +17120,7 @@ END SUBROUTINE Adist
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if ((ncomp_denold.eq.ncomp*num_materials_face).or. &
+       if ((ncomp_denold.eq.ncomp).or. &
            (ncomp_denold.eq.1)) then
         ! do nothing
        else
@@ -17227,11 +17133,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-       nsolveMM_FACE_test=ncomp*num_materials_face
-
       else if (operation_flag.eq.3) then ! (grad p)^CELL, div(u)p
-
-       nsolveMM_FACE_test=ncomp*num_materials_face
 
        if (ncomp_veldest.ge. &
            SDIM+num_state_material*nmat) then
@@ -17246,7 +17148,7 @@ END SUBROUTINE Adist
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncomp_denold.eq.nsolveMM_FACE_test) then
+       if (ncomp_denold.eq.1) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
@@ -17282,16 +17184,12 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncomp_xvel.ne.nsolveMM_FACE) then
+       if (ncomp_xvel.ne.1) then
         print *,"ncomp_xvel invalid"
         stop
        endif
        if (ncomp_cterm.ne.1) then
         print *,"ncomp_cterm invalid"
-        stop
-       endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
         stop
        endif
 
@@ -17343,7 +17241,7 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncomp_xvel.ne.nsolveMM_FACE) then
+       if (ncomp_xvel.ne.1) then
         print *,"ncomp_xvel invalid"
         stop
        endif
@@ -17351,12 +17249,6 @@ END SUBROUTINE Adist
         print *,"ncomp_cterm invalid"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-
-       nsolveMM_FACE_test=num_materials_face
 
       else if (operation_flag.eq.6) then ! advection
 
@@ -17413,7 +17305,7 @@ END SUBROUTINE Adist
         print *,"scomp, dcomp, or scomp_bc invalid"
         stop
        endif
-       if (ncomp_xvel.ne.nsolveMM_FACE) then
+       if (ncomp_xvel.ne.1) then
         print *,"ncomp_xvel invalid"
         stop
        endif
@@ -17421,20 +17313,9 @@ END SUBROUTINE Adist
         print *,"ncomp_cterm invalid"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-
-       nsolveMM_FACE_test=num_materials_face
 
       else
        print *,"operation_flag invalid26"
-       stop
-      endif
-
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
 
@@ -17580,29 +17461,8 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.0) then ! RHS
 
-          if (num_materials_face.eq.1) then
-           scompMM_L=nc
-           scompMM_R=scompMM_L
-          else if (num_materials_face.eq.nmat) then
-           if (ncomp.eq.SDIM) then
-            scompMM_L=(maskSEM-1)*SDIM+nc
-           else if (ncomp.eq.1) then
-            scompMM_L=maskSEM
-           else
-            print *,"ncomp invalid8"
-            stop
-           endif
-           if (nsolveMM_FACE/2.ne.num_materials_face*ncomp) then
-            print *,"nsolveMM_FACE invalid"
-            stop
-           endif
-           scompMM_R=scompMM_L+nsolveMM_FACE/2
-          else
-           print *,"num_materials_face invalid"
-           stop
-          endif
-          local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scompMM_L)
-          xflux_R=xvel(D_DECL(ic,jc,kc),scompMM_R)
+          local_data(isten+1)=xvel(D_DECL(ic,jc,kc),nc)
+          xflux_R=xvel(D_DECL(ic,jc,kc),nc)
           if (abs(xflux_R-local_data(isten+1)).gt. &
               VOFTOL*abs(xflux_R)) then
            print *,"xflux_R invalid"
@@ -17611,10 +17471,8 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.1) then ! divergence
 
-          scompMM_L=1
-          scompMM_R=scompMM_L
-          local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scompMM_L)
-          xflux_R=xvel(D_DECL(ic,jc,kc),scompMM_R)
+          local_data(isten+1)=xvel(D_DECL(ic,jc,kc),1)
+          xflux_R=xvel(D_DECL(ic,jc,kc),1)
           if (abs(xflux_R-local_data(isten+1)).gt. &
               VOFTOL*abs(xflux_R)) then
            print *,"xflux_R invalid"
@@ -17623,10 +17481,8 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
 
-          scompMM_L=1
-          scompMM_R=scompMM_L
-          local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scompMM_L)
-          xflux_R=xvel(D_DECL(ic,jc,kc),scompMM_R)
+          local_data(isten+1)=xvel(D_DECL(ic,jc,kc),1)
+          xflux_R=xvel(D_DECL(ic,jc,kc),1)
           if (abs(xflux_R-local_data(isten+1)).gt. &
               VOFTOL*abs(xflux_R)) then
            print *,"xflux_R invalid"
@@ -17636,10 +17492,8 @@ END SUBROUTINE Adist
          else if (operation_flag.eq.3) then ! (grad p)_CELL, div(u)p
 
            ! grad p
-          scompMM_L=1
-          scompMM_R=scompMM_L
-          local_data(isten+1)=xp(D_DECL(ic,jc,kc),2+scompMM_L)
-          xflux_R=xp(D_DECL(ic,jc,kc),2+scompMM_R)
+          local_data(isten+1)=xp(D_DECL(ic,jc,kc),2+1)
+          xflux_R=xp(D_DECL(ic,jc,kc),2+1)
           if (abs(xflux_R-local_data(isten+1)).gt. &
               VOFTOL*abs(xflux_R)) then
            print *,"xflux_R invalid"
@@ -17648,14 +17502,14 @@ END SUBROUTINE Adist
 
            ! p div u
           if (1.eq.0) then
-           local_data_up(isten+1)=xp(D_DECL(ic,jc,kc),2+scompMM_L)* &
-            xvel(D_DECL(ic,jc,kc),scompMM_L)
-           xflux_R=xp(D_DECL(ic,jc,kc),2+scompMM_R)* &
-            xvel(D_DECL(ic,jc,kc),scompMM_R)
+           local_data_up(isten+1)=xp(D_DECL(ic,jc,kc),2+1)* &
+            xvel(D_DECL(ic,jc,kc),1)
+           xflux_R=xp(D_DECL(ic,jc,kc),2+1)* &
+            xvel(D_DECL(ic,jc,kc),1)
           else
            local_data_up(isten+1)= &
-            xvel(D_DECL(ic,jc,kc),scompMM_L)
-           xflux_R=xvel(D_DECL(ic,jc,kc),scompMM_R)
+            xvel(D_DECL(ic,jc,kc),1)
+           xflux_R=xvel(D_DECL(ic,jc,kc),1)
           endif
 
           if (abs(xflux_R-local_data_up(isten+1)).gt. &
@@ -18104,14 +17958,8 @@ END SUBROUTINE Adist
 
           if (maskcoef(D_DECL(ic,jc,kc)).eq.one) then ! not covered
 
-           if (num_materials_face.eq.1) then
-            velcomp=nc
-           else if (num_materials_face.eq.nmat) then
-            velcomp=(maskSEM-1)*ncomp+nc
-           else
-            print *,"num_materials_face invalid"
-            stop
-           endif
+           velcomp=nc
+
            if (dir_main.eq.1) then
             divdest(D_DECL(ic,jc,kc),velcomp)= &
              local_div(isten+1)/RR

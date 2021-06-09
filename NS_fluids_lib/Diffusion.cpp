@@ -755,29 +755,10 @@ void NavierStokes::combine_state_variable(
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
             nmat*(num_state_material+ngeom_raw)+1;
  if (S_new.nComp()!=nstate)
   amrex::Error("(S_new.nComp()!=nstate)");
-
- int num_materials_face=num_materials_vel;
- if ((project_option==0)||
-     (project_option==3)) {  // viscosity
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
- } else if ((project_option==2)||  // thermal diffusion
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) {
-  num_materials_face=num_materials_scalar_solve;
- } else
-  amrex::Error("project_option invalid80");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
 
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  if (num_state_base!=2)
@@ -816,15 +797,6 @@ void NavierStokes::combine_state_variable(
  } else
   amrex::Error("project_option invalid81");
 
- int nsolveMM=nsolve*num_materials_combine;
- int nsolveMM_FACE=nsolve*num_materials_face;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) {
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
-
  Vector<int> scomp;
  Vector<int> ncomp;
  int state_index;
@@ -840,20 +812,16 @@ void NavierStokes::combine_state_variable(
  if (state_index!=State_Type)
   amrex::Error("state_index invalid");
 
- if (ncomp_check!=nsolveMM) {
+ if (ncomp_check!=nsolve*num_materials_combine) {
   std::cout << "nsolve= " << nsolve << '\n';
-  std::cout << "num_materials_vel= " << num_materials_vel << '\n';
-  std::cout << "num_materials_face= " << num_materials_face << '\n';
   std::cout << "num_materials_combine= " << num_materials_combine << '\n';
-  std::cout << "nsolveMM= " << nsolveMM << '\n';
-  std::cout << "nsolveMM_FACE= " << nsolveMM_FACE << '\n';
   std::cout << "ncomp_check= " << ncomp_check << '\n';
   std::cout << "project_option= " << project_option << '\n';
   std::cout << "scomp.size " << scomp.size() << '\n';
   std::cout << "ncomp.size " << ncomp.size() << '\n';
   std::cout << "scomp[0] " << scomp[0] << '\n';
   std::cout << "ncomp[0] " << ncomp[0] << '\n';
-  amrex::Error("nsolveMM invalid 313");
+  amrex::Error("nsolve invalid 313");
  }
 
  int nparts=im_solid_map.size();
@@ -1010,7 +978,7 @@ void NavierStokes::combine_state_variable(
     } else
      amrex::Error("combine_idx invalid");
 
-    if (face_mf->nComp()!=nsolveMM_FACE)
+    if (face_mf->nComp()!=1)
      amrex::Error("face_mf->nComp() invalid");
 
     if (thread_class::nthreads<1)
@@ -1040,8 +1008,7 @@ void NavierStokes::combine_state_variable(
      FArrayBox& macfab=(*face_mf)[mfi];
      FArrayBox& lsfab=(*LEVEL_COMBINE)[mfi];
      FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,
-       num_materials_vel*AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
      int tid_current=ns_thread();
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -1049,7 +1016,6 @@ void NavierStokes::combine_state_variable(
       // in: GODUNOV_3D.F90
      FORT_COMBINEVELFACE(
       &tid_current,
-      &num_materials_combine,
       &hflag,
       &facecut_index,
       &icefacecut_index,
@@ -1061,12 +1027,7 @@ void NavierStokes::combine_state_variable(
       &nparts_def,
       im_solid_map_ptr,
       &nten,
-      &nsolve,
-      &nsolveMM,
-      &nsolveMM_FACE,
-      &project_option,
       &combine_idx,
-      &combine_flag,
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,
@@ -1103,7 +1064,7 @@ void NavierStokes::combine_state_variable(
     amrex::Error("cell_mf->nComp() invalid");
   } else if (combine_idx>=0) {
    cell_mf=localMF[combine_idx];
-   if (cell_mf->nComp()!=nsolveMM)
+   if (cell_mf->nComp()!=nsolve*num_materials_combine)
     amrex::Error("cell_mf->nComp() invalid");
   } else
    amrex::Error("combine_idx invalid");
@@ -1205,11 +1166,10 @@ void NavierStokes::combine_state_variable(
    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,
-     num_materials_vel*AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
    Vector<int> listbc;
    getBCArray_list(listbc,state_index,gridno,scomp,ncomp);
-   if (listbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
+   if (listbc.size()!=nsolve*num_materials_combine*AMREX_SPACEDIM*2)
     amrex::Error("listbc.size() invalid");
 
    int scomp_size=scomp.size();
@@ -1234,7 +1194,6 @@ void NavierStokes::combine_state_variable(
     im_solid_map_ptr,
     &nten,
     &nsolve,
-    &nsolveMM,
     &project_option,
     &combine_idx,
     &combine_flag,

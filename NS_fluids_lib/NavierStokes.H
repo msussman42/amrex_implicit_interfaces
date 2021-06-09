@@ -159,8 +159,6 @@ namespace amrex{
 #define DINVERSE_MF 139
 #define TENSOR_RHS_MF 140
 
-#define DOTMASK_MF 141
-
 #define HOOP_FORCE_MARK_MF 142
 #define BOUSSINESQ_TEMP_MF 143
 
@@ -1433,8 +1431,6 @@ void apply_pressure_grad(
 
     void ADVECT_DIV_ALL();
     void ADVECT_DIV();
-
-    void makeDotMask(int nsolve,int project_option);
 
     void makeCellFrac(int tessellate,int ngrow,int idx);
     void makeFaceFrac(int tessellate,int ngrow,int idx,int do_face_decomp);

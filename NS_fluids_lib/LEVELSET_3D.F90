@@ -2941,124 +2941,6 @@ stop
       end subroutine FORT_L1_DISTANCE
 
 
-      subroutine FORT_DOTMASK_BUILD( &
-       num_materials_face, &
-       level, &
-       finest_level, &
-       dotmask,DIMS(dotmask), &
-       maskfab,DIMS(maskfab), &
-       vofrecon,DIMS(vofrecon), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       xlo,dx, &
-       time, &
-       nmat)
-
-      use global_utility_module
-      use probcommon_module
-      use levelset_module
-
-      IMPLICIT NONE
-
-      INTEGER_T num_materials_face
-      INTEGER_T level,finest_level
-      INTEGER_T nmat
-      INTEGER_T DIMDEC(dotmask)
-      INTEGER_T DIMDEC(maskfab)
-      INTEGER_T DIMDEC(vofrecon)
-
-      REAL_T dotmask(DIMV(dotmask),num_materials_face)
-      REAL_T maskfab(DIMV(maskfab))
-      REAL_T vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
-
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-      REAL_T time
-
-      INTEGER_T i,j,k
-      INTEGER_T im
-      INTEGER_T imaskcov
-      INTEGER_T vofcomp
-      REAL_T voftest
- 
-      if (bfact.lt.1) then
-       print *,"bfact invalid88"
-       stop
-      endif
-
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid in dotmask_build"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(dotmask),0,-1,2890)
-      call checkbound(fablo,fabhi,DIMS(maskfab),1,-1,2891)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),1,-1,2892)
-      
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid dotmask_build"
-       print *,"ngeom_recon=",ngeom_recon
-       stop
-      endif
-      if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid dotmask_build"
-       print *,"ngeom_raw=",ngeom_raw
-       stop
-      endif
-
-      if (num_materials_face.ne.nmat) then
-       print *,"num_materials_face invalid"
-       stop
-      endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       ! imaskcov=tag if not covered by level+1 or outside the domain.
-       imaskcov=NINT(maskfab(D_DECL(i,j,k)))
-
-       if (imaskcov.eq.1) then
-       
-        do im=1,nmat
-         vofcomp=(im-1)*ngeom_recon+1
-         voftest=vofrecon(D_DECL(i,j,k),vofcomp)
-         if (voftest.le.VOFTOL) then
-          dotmask(D_DECL(i,j,k),im)=zero
-         else
-          dotmask(D_DECL(i,j,k),im)=one
-         endif
-        enddo ! im
-
-       else if (imaskcov.eq.0) then
-
-        do im=1,nmat
-         dotmask(D_DECL(i,j,k),im)=zero
-        enddo
-
-       else
-        print *,"imaskcov invalid"
-        stop
-       endif
-
-      enddo ! k
-      enddo ! j
-      enddo ! i
-
-      return
-      end subroutine FORT_DOTMASK_BUILD
-
        ! for finding areas internal to a cell, perturb each internal 
        ! interface, find areas and volumes, then check for the difference 
        ! in volumes divided by eps times the area.
@@ -11419,8 +11301,6 @@ stop
        ! in the face_gradients routine, operation_flag=5 (interp grad U^T)
        ! operation_flag=6 (advection)
       subroutine FORT_MAC_TO_CELL( &
-       nsolveMM_FACE, &
-       num_materials_face, &
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
@@ -11512,8 +11392,6 @@ stop
       INTEGER_T, intent(in) :: ncomp_denold
       INTEGER_T, intent(in) :: ncomp_veldest
       INTEGER_T, intent(in) :: ncomp_dendest
-      INTEGER_T, intent(in) :: num_materials_face
-      INTEGER_T, intent(in) :: nsolveMM_FACE
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
@@ -11595,13 +11473,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskdivres)
       INTEGER_T, intent(in) :: DIMDEC(maskres)
 
-      REAL_T, intent(in) ::  xp(DIMV(xp),2+nsolveMM_FACE)
-      REAL_T, intent(in) ::  yp(DIMV(yp),2+nsolveMM_FACE)
-      REAL_T, intent(in) ::  zp(DIMV(zp),2+nsolveMM_FACE)
+      REAL_T, intent(in) ::  xp(DIMV(xp),2+nsolve)
+      REAL_T, intent(in) ::  yp(DIMV(yp),2+nsolve)
+      REAL_T, intent(in) ::  zp(DIMV(zp),2+nsolve)
 
-      REAL_T, intent(in) ::  xvel(DIMV(xvel),nsolveMM_FACE)
-      REAL_T, intent(in) ::  yvel(DIMV(yvel),nsolveMM_FACE)
-      REAL_T, intent(in) ::  zvel(DIMV(zvel),nsolveMM_FACE)
+      REAL_T, intent(in) ::  xvel(DIMV(xvel),nsolve)
+      REAL_T, intent(in) ::  yvel(DIMV(yvel),nsolve)
+      REAL_T, intent(in) ::  zvel(DIMV(zvel),nsolve)
 
       REAL_T, intent(in) ::  xface(DIMV(xface),ncphys)
       REAL_T, intent(in) ::  yface(DIMV(yface),ncphys)
@@ -11612,7 +11490,7 @@ stop
       REAL_T, intent(in) ::  az(DIMV(az))
 
       REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(inout) :: rhs(DIMV(rhs),nsolve*num_materials_face)
+      REAL_T, intent(inout) :: rhs(DIMV(rhs),nsolve)
       REAL_T, intent(inout) :: veldest(DIMV(veldest),ncomp_veldest)
       REAL_T, intent(inout) :: dendest(DIMV(dendest),ncomp_dendest)
       REAL_T, intent(in) :: mask(DIMV(mask))
@@ -11622,12 +11500,12 @@ stop
       REAL_T, intent(in) :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, intent(in) :: solyfab(DIMV(solyfab),SDIM*nparts_def)
       REAL_T, intent(in) :: solzfab(DIMV(solzfab),SDIM*nparts_def)
-      REAL_T, intent(inout) :: cterm(DIMV(cterm),nsolve*num_materials_face)
-      REAL_T, intent(in) :: pold(DIMV(pold),nsolve*num_materials_face)
+      REAL_T, intent(inout) :: cterm(DIMV(cterm),nsolve)
+      REAL_T, intent(in) :: pold(DIMV(pold),nsolve)
       REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
       REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM) 
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),nsolve*num_materials_face)
+      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),nsolve)
       REAL_T, intent(in) :: maskdivres(DIMV(maskdivres))
       REAL_T, intent(in) :: maskres(DIMV(maskres))
 
@@ -11645,8 +11523,6 @@ stop
       INTEGER_T i,j,k
       INTEGER_T dir,dir2,side
       INTEGER_T veldir
-      INTEGER_T veldir_left
-      INTEGER_T veldir_right
       INTEGER_T im
       INTEGER_T vofcomp
       INTEGER_T sidecomp,ibase
@@ -11708,7 +11584,6 @@ stop
       INTEGER_T im_vel_left
       INTEGER_T im_vel_right
       INTEGER_T velcomp
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T partid
       INTEGER_T partid_ghost
       INTEGER_T nparts_temp,im_solid
@@ -11906,14 +11781,8 @@ stop
         print *,"nsolve invalid 2"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolve*num_materials_face
 
-       if ((ncomp_denold.eq.nsolve*num_materials_face).or. &
-           (ncomp_denold.eq.1)) then
+       if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
@@ -11945,13 +11814,8 @@ stop
         print *,"nsolve invalid 2"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolve*num_materials_face
 
-       if (ncomp_denold.eq.nsolveMM_FACE_test) then
+       if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
@@ -11981,17 +11845,8 @@ stop
         print *,"nsolve invalid 2"
         stop
        endif
-       nsolveMM_FACE_test=nsolve*num_materials_face
-       if (num_materials_face.eq.1) then
-        ! do nothing
-       else if (num_materials_face.eq.nmat) then
-        nsolveMM_FACE_test=nsolveMM_FACE_test*2
-       else
-        print *,"num_materials_face invalid"
-        stop
-       endif
 
-       if (ncomp_denold.eq.nsolve*num_materials_face) then
+       if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
@@ -12016,13 +11871,6 @@ stop
         ! do nothing
        else
         print *,"ncphys invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolve*num_materials_face
-       if (num_materials_face.eq.1) then
-        ! do nothing
-       else
-        print *,"num_materials_face invalid"
         stop
        endif
        if (nsolve.eq.1) then
@@ -12062,13 +11910,6 @@ stop
         print *,"nsolve invalid"
         stop
        endif
-       if (num_materials_face.eq.1) then
-        ! do nothing
-       else
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=num_materials_face
 
        if (ncomp_denold.eq.1) then
         ! do nothing
@@ -12103,11 +11944,6 @@ stop
         print *,"nsolve or ncphys invalid"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=num_materials_face
 
        if (ncomp_denold.eq.nmat*num_state_material) then
         ! do nothing
@@ -12118,11 +11954,6 @@ stop
 
       else
        print *,"operation_flag invalid6"
-       stop
-      endif
-
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
 
@@ -12387,7 +12218,7 @@ stop
 
         if (maskcoef(D_DECL(i,j,k)).eq.one) then ! not covered
 
-         do veldir=1,nsolve*num_materials_face
+         do veldir=1,nsolve
     
           CC=cterm(D_DECL(i,j,k),veldir)
           CC_DUAL=veldest(D_DECL(i,j,k),veldir)
@@ -12480,34 +12311,19 @@ stop
            divu=zero
           else if (MSKDV.gt.zero) then
 
-           if (num_materials_face.eq.1) then
-            veldir_left=veldir
-            veldir_right=veldir
-           else if (num_materials_face.eq.nmat) then  
-            if (nsolveMM_FACE/2.ne.nsolve*num_materials_face) then
-             print *,"nsolveMM_FACE invalid"
-             stop
-            endif
-            veldir_left=veldir
-            veldir_right=veldir+nsolveMM_FACE/2
-           else
-            print *,"num_materials_face invalid"
-            stop
-           endif
-
             ! if project_option==0,
             !  div (1/rho) grad p = div ustar/dt
             ! 
             ! AXR,AXL,AYR,AYL,AZR,AZL are face areas.
            divu= &
-            AXR*xvel(D_DECL(i+1,j,k),veldir_left)-  &
-            AXL*xvel(D_DECL(i,j,k),veldir_right)+ &
-            AYR*yvel(D_DECL(i,j+1,k),veldir_left)-  &
-            AYL*yvel(D_DECL(i,j,k),veldir_right)
+            AXR*xvel(D_DECL(i+1,j,k),veldir)-  &
+            AXL*xvel(D_DECL(i,j,k),veldir)+ &
+            AYR*yvel(D_DECL(i,j+1,k),veldir)-  &
+            AYL*yvel(D_DECL(i,j,k),veldir)
            if (SDIM.eq.3) then
             divu=divu+ &
-             AZR*zvel(D_DECL(i,j,k+1),veldir_left)-  &
-             AZL*zvel(D_DECL(i,j,k),veldir_right)
+             AZR*zvel(D_DECL(i,j,k+1),veldir)-  &
+             AZL*zvel(D_DECL(i,j,k),veldir)
            endif
           else
            print *,"maskdivres invalid" 
@@ -12546,15 +12362,11 @@ stop
            print *,"homflag=",homflag
            print *,"energyflag=",energyflag
            print *,"nsolve=",nsolve
-           print *,"veldir_left,veldir_right ",veldir_left,veldir_right
-           print *,"xvel(D_DECL(i+1,j,k),veldir_left) ", &
-                   xvel(D_DECL(i+1,j,k),veldir_left)
-           print *,"xvel(D_DECL(i,j,k),veldir_right) ", &
-                   xvel(D_DECL(i,j,k),veldir_right)
-           print *,"yvel(D_DECL(i,j+1,k),veldir_left) ", &
-                   yvel(D_DECL(i,j+1,k),veldir_left)
-           print *,"yvel(D_DECL(i,j,k),veldir_right) ", &
-                   yvel(D_DECL(i,j,k),veldir_right)
+           print *,"veldir ",veldir
+           print *,"xvel(D_DECL(i+1,j,k),veldir) ", &
+                   xvel(D_DECL(i+1,j,k),veldir)
+           print *,"yvel(D_DECL(i,j+1,k),veldir) ", &
+                   yvel(D_DECL(i,j+1,k),veldir)
            stop
           endif
 
@@ -12608,7 +12420,7 @@ stop
            stop
           endif 
 
-         enddo ! veldir=1..nsolve*num_materials_face
+         enddo ! veldir=1..nsolve
 
         else if (maskcoef(D_DECL(i,j,k)).eq.zero) then
          ! do nothing (covered)
@@ -13854,14 +13666,14 @@ stop
               scomp_bc=dir+1
               dcomp=1
               ncomp=nsolve
-              ncomp_xvel=nsolveMM_FACE
-              ncomp_cterm=nsolve*num_materials_face
+              ncomp_xvel=nsolve
+              ncomp_cterm=nsolve
              else if (operation_flag.eq.1) then ! divergence
               scomp=1
               scomp_bc=dir+1
               dcomp=1
               ncomp=1
-              ncomp_xvel=nsolveMM_FACE
+              ncomp_xvel=nsolve
               ncomp_cterm=1
              ! MAC->CELL in solver or VELMAC_to_CELL
              else if (operation_flag.eq.2) then 
@@ -13869,28 +13681,28 @@ stop
               scomp_bc=dir+1
               dcomp=dir+1
               ncomp=1
-              ncomp_xvel=nsolveMM_FACE
+              ncomp_xvel=nsolve
               ncomp_cterm=1
              else if (operation_flag.eq.3) then ! (grad p)^CELL, div(up)
               scomp=1
               scomp_bc=dir+1
               dcomp=dir+1
               ncomp=1
-              ncomp_xvel=nsolveMM_FACE
+              ncomp_xvel=nsolve
               ncomp_cterm=1
              else if (operation_flag.eq.4) then ! (grad pot)^CELL
               scomp=1
               scomp_bc=dir+1
               dcomp=dir+1
               ncomp=1
-              ncomp_xvel=nsolveMM_FACE
+              ncomp_xvel=nsolve
               ncomp_cterm=1
              else if (operation_flag.eq.6) then ! advection
               scomp=1
               scomp_bc=1
               dcomp=1
               ncomp=ncphys
-              ncomp_xvel=nsolveMM_FACE
+              ncomp_xvel=nsolve
               ncomp_cterm=SDIM+num_state_base
              else
               print *,"operation_flag invalid9"
@@ -13904,8 +13716,6 @@ stop
                ncomp_veldest, &
                ncomp_dendest, &
                conservative_div_uu, &
-               nsolveMM_FACE, &
-               num_materials_face, &
                ns_time_order, &
                divu_outer_sweeps, &
                num_divu_outer_sweeps, &
@@ -13956,8 +13766,6 @@ stop
                ncomp_veldest, &
                ncomp_dendest, &
                conservative_div_uu, &
-               nsolveMM_FACE, &
-               num_materials_face, &
                ns_time_order, &
                divu_outer_sweeps, &
                num_divu_outer_sweeps, &
@@ -14008,8 +13816,6 @@ stop
                ncomp_veldest, &
                ncomp_dendest, &
                conservative_div_uu, &
-               nsolveMM_FACE, &
-               num_materials_face, &
                ns_time_order, &
                divu_outer_sweeps, &
                num_divu_outer_sweeps, &
@@ -14379,8 +14185,7 @@ stop
        ncomp_xp, &  !local_MF[AMRSYNC_PRES_MF]->nComp() if operation_flag==0
        ncomp_xgp, &
        simple_AMR_BC_flag, &
-       nsolveMM_FACE, &
-       num_materials_face, &
+       nsolve, &
        tileloop, &
        dir, &
        operation_flag, & 
@@ -14469,8 +14274,7 @@ stop
       INTEGER_T, intent(in) :: ncomp_xp
       INTEGER_T, intent(in) :: ncomp_xgp
       INTEGER_T, intent(in) :: simple_AMR_BC_flag
-      INTEGER_T, intent(in) :: num_materials_face
-      INTEGER_T, intent(in) :: nsolveMM_FACE
+      INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: tileloop
       INTEGER_T, intent(in) :: spectral_loop
       INTEGER_T, intent(in) :: ncfluxreg
@@ -14584,10 +14388,10 @@ stop
         ! 2nd and 3rd components: surface tension edge pressures
       REAL_T, intent(inout) :: xp(DIMV(xp),ncomp_xp)
        ! xvel is destination for: density CELL->MAC (xvel=1/rho)
-      REAL_T, intent(inout) :: xvel(DIMV(xvel),nsolveMM_FACE)
-      REAL_T, intent(in) :: vel(DIMV(vel),num_materials_face*SDIM)
+      REAL_T, intent(inout) :: xvel(DIMV(xvel))
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
        ! holds U_old if operation_flag==11
-      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_face)
+      REAL_T, intent(in) :: pres(DIMV(pres))
        ! den is the source for: density CELL->MAC
       REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(in) :: mgoni(DIMV(mgoni),ncomp_mgoni)
@@ -14595,17 +14399,16 @@ stop
       REAL_T, intent(in) :: colorfab(DIMV(colorfab))
   
       INTEGER_T i,j,k,ii,jj,kk
-      REAL_T pplus(num_materials_face)
-      REAL_T pminus(num_materials_face)
-      REAL_T pgrad(nsolveMM_FACE)
+      REAL_T pplus
+      REAL_T pminus
+      REAL_T pgrad
       REAL_T pgrad_gravity
       REAL_T pgrad_tension
       REAL_T gradh
       REAL_T dplus,dminus
-       ! operation_flag==1: (1)use_face_pres,(2) grid flag, 2+im_vel,
-       !   im_vel=1..nsolveMM_FACE
+       ! operation_flag==1: (1)use_face_pres,(2) grid flag, 2+1
        ! operation_flag==2: (1)potential, (2-3) surface tension
-      REAL_T plocal(2+nsolveMM_FACE)
+      REAL_T plocal(2+nsolve)
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
       INTEGER_T dir,dir2,side
@@ -14615,9 +14418,9 @@ stop
       REAL_T xmac(SDIM)
       INTEGER_T nhalf,nten_test
       REAL_T DXMAXLS
-      REAL_T local_vel(nsolveMM_FACE)
-      REAL_T local_vel_old(nsolveMM_FACE)
-      REAL_T uedge(nsolveMM_FACE)
+      REAL_T local_vel
+      REAL_T local_vel_old
+      REAL_T uedge
       REAL_T uedge_rigid
       REAL_T local_face(ncphys)
       INTEGER_T idx
@@ -14672,7 +14475,6 @@ stop
       REAL_T denlocal,templocal
       INTEGER_T imattype
       INTEGER_T im_vel
-      INTEGER_T nsolveMM_FACE_test
       REAL_T test_velocity_FACE
       INTEGER_T ok_to_HO_interp
       INTEGER_T im_solid
@@ -14735,20 +14537,6 @@ stop
        ! do nothing
       else
        print *,"simple_AMR_BC_flag invalid"
-       stop
-      endif
-
-      nsolveMM_FACE_test=num_materials_face
-      if (num_materials_face.eq.1) then
-       ! do nothing
-      else if (num_materials_face.eq.nmat) then
-       nsolveMM_FACE_test=2*nsolveMM_FACE_test
-      else
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
 
@@ -14936,7 +14724,7 @@ stop
         print *,"ncomp_mgoni invalid"
         stop
        endif
-       if (ncomp_xp.ne.2+nsolveMM_FACE) then
+       if (ncomp_xp.ne.2+nsolve) then
         print *,"ncomp_xp invalid(4) ",ncomp_xp
         stop
        endif
@@ -15294,9 +15082,7 @@ stop
           enddo
            ! newly projected face velocity might be overwritten
            ! with the solid velocity.
-          do im_vel=1,nsolveMM_FACE
-           local_vel(im_vel)=xvel(D_DECL(i,j,k),im_vel)
-          enddo
+          local_vel=xvel(D_DECL(i,j,k))
 
          else if (operation_flag.eq.2) then !(grd ppot)_MAC,ppot^CELL->MAC,ten.
 
@@ -15320,20 +15106,18 @@ stop
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
           enddo
-          do im_vel=1,nsolveMM_FACE
-           local_vel(im_vel)=xvel(D_DECL(i,j,k),im_vel)
-           if ((operation_flag.eq.5).or. &
-               (operation_flag.eq.11)) then
-            local_vel_old(im_vel)=xgp(D_DECL(i,j,k),im_vel)
-           else if ((operation_flag.eq.3).or. &
-                    (operation_flag.eq.4).or. &
-                    (operation_flag.eq.10)) then
-            local_vel_old(im_vel)=zero
-           else
-            print *,"operation_flag invalid13"
-            stop
-           endif
-          enddo ! im_vel=1,nsolveMM_FACE
+          local_vel=xvel(D_DECL(i,j,k))
+          if ((operation_flag.eq.5).or. &
+              (operation_flag.eq.11)) then
+           local_vel_old=xgp(D_DECL(i,j,k))
+          else if ((operation_flag.eq.3).or. &
+                   (operation_flag.eq.4).or. &
+                   (operation_flag.eq.10)) then
+           local_vel_old=zero
+          else
+           print *,"operation_flag invalid13"
+           stop
+          endif
 
          else if (operation_flag.eq.0) then ! (grad p)_MAC
 
@@ -15341,17 +15125,8 @@ stop
 
          else if (operation_flag.eq.7) then ! advection
 
-          if (nsolveMM_FACE.eq.1) then
+          local_vel=xvel(D_DECL(i,j,k))
 
-           im_vel=1
-           local_vel(im_vel)=xvel(D_DECL(i,j,k),im_vel)
-
-          else
-           print *,"nsolveMM_FACE invalid"
-           stop
-          endif
-
-      
          else if (operation_flag.eq.6) then
 
           print *,"fort_face_gradients calls sem_cell_to_mac with op=6"
@@ -16391,7 +16166,7 @@ stop
           enddo  ! side=1,2
 
            ! 1=use_face_pres  2=coarse fine flag 2=face pressure
-          do im=1,2+nsolveMM_FACE
+          do im=1,2+nsolve
            plocal(im)=zero
           enddo
 
@@ -16777,36 +16552,21 @@ stop
            stop
           endif
 
-          do im_vel=1,nsolveMM_FACE
- 
-           if (num_materials_face.eq.1) then
-            im=im_vel
-           else if (num_materials_face.eq.nmat) then
-            im=im_vel
-            if (im_vel.gt.nmat) then
-             im=im_vel-nmat
-            endif
-           else
-            print *,"num_materials_face invalid"
-            stop
-           endif
-           pplus(im)=pres(D_DECL(i,j,k),im)
-           pminus(im)=pres(D_DECL(im1,jm1,km1),im)
+          pplus=pres(D_DECL(i,j,k))
+          pminus=pres(D_DECL(im1,jm1,km1))
 
             ! regular solver or SDC viscosity or thermal flux.
-           if (energyflag.eq.0) then  
-            pgrad(im_vel)=-dt*cutedge*(pplus(im)-pminus(im))/hx
+          if (energyflag.eq.0) then  
+           pgrad=-dt*cutedge*(pplus-pminus)/hx
 
-            ! for SDC pressure gradient
-           else if (energyflag.eq.2) then  
-            pgrad(im_vel)=(pplus(im)-pminus(im))/hx
+           ! for SDC pressure gradient
+          else if (energyflag.eq.2) then  
+           pgrad=(pplus-pminus)/hx
 
-           else
-            print *,"energyflag invalid"
-            stop
-           endif
-
-          enddo ! im_vel=1..nsolveMM_FACE
+          else
+           print *,"energyflag invalid"
+           stop
+          endif
 
          else
           print *,"operation_flag invalid17"
@@ -16839,26 +16599,23 @@ stop
   
          else if (operation_flag.eq.0) then ! (grad p)_MAC
 
-          do im_vel=1,nsolveMM_FACE
-           xgp(D_DECL(i,j,k),im_vel)=pgrad(im_vel)
-          enddo
+          xgp(D_DECL(i,j,k))=pgrad
 
          else if (operation_flag.eq.2) then ! potential grad+surface tension
        
           pgrad_gravity=pgrad_gravity+pgrad_tension
 
-          xgp(D_DECL(i,j,k),1)=pgrad_gravity
+          xgp(D_DECL(i,j,k))=pgrad_gravity
           do im=1,3
            xp(D_DECL(i,j,k),im)=plocal(im)
           enddo
 
          else if (operation_flag.eq.1) then !p^CELL->MAC
 
-          do im=1,2+nsolveMM_FACE
+          do im=1,2+nsolve
            xp(D_DECL(i,j,k),im)=plocal(im)
           enddo
-          im_vel=1
-          xvel(D_DECL(i,j,k),im_vel)=local_vel(im_vel)
+          xvel(D_DECL(i,j,k))=local_vel
 
          else
           print *,"operation_flag invalid18"
@@ -17063,8 +16820,6 @@ stop
                 conservative_div_uu, &
                 ncomp_xp, &
                 simple_AMR_BC_flag, &
-                nsolveMM_FACE, &
-                num_materials_face, &
                 level, &
                 finest_level, &
                 nmat, &

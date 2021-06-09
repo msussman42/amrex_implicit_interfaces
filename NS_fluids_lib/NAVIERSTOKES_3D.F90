@@ -10651,16 +10651,12 @@ END SUBROUTINE SIMP
        subroutine FORT_FABCOM( &
         fabx,DIMS(fabx), &
         faby, DIMS(faby), &
-        dotmask, &
-        DIMS(dotmask), &
         mask, DIMS(mask), &
         fabz, DIMS(fabz), &
         beta, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
-        nsolve, &
-        nsolveMM, &
-        num_materials_face)
+        nsolve)
 
        use global_utility_module
        use probcommon_module
@@ -10668,8 +10664,6 @@ END SUBROUTINE SIMP
        IMPLICIT NONE
 
        INTEGER_T nsolve
-       INTEGER_T nsolveMM
-       INTEGER_T num_materials_face
        INTEGER_T tilelo(SDIM),tilehi(SDIM)
        INTEGER_T fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
@@ -10678,18 +10672,14 @@ END SUBROUTINE SIMP
        INTEGER_T DIMDEC(fabx)
        INTEGER_T DIMDEC(faby)
        INTEGER_T DIMDEC(fabz)
-       INTEGER_T DIMDEC(dotmask)
        INTEGER_T DIMDEC(mask)
        REAL_T  beta
-       REAL_T  fabx(DIMV(fabx),nsolveMM)
-       REAL_T  faby(DIMV(faby),nsolveMM)
-       REAL_T  fabz(DIMV(fabz),nsolveMM)
-       REAL_T  dotmask(DIMV(dotmask),num_materials_face)
+       REAL_T  fabx(DIMV(fabx),nsolve)
+       REAL_T  faby(DIMV(faby),nsolve)
+       REAL_T  fabz(DIMV(fabz),nsolve)
        REAL_T  mask(DIMV(mask))
 
        INTEGER_T local_mask
-       INTEGER_T local_dotmask
-       INTEGER_T nc_mask
 
        INTEGER_T i,j,k
 
@@ -10701,80 +10691,30 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if ((num_materials_face.ne.1).and. &
-           (num_materials_face.ne.num_materials)) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
 
-       call checkbound(fablo,fabhi,DIMS(dotmask),0,-1,414) 
        call checkbound(fablo,fabhi,DIMS(mask),0,-1,414) 
        call checkbound(fablo,fabhi,DIMS(fabx),0,-1,415) 
        call checkbound(fablo,fabhi,DIMS(faby),0,-1,416) 
        call checkbound(fablo,fabhi,DIMS(fabz),0,-1,417) 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do nc=1,nsolveMM
-
-        if (num_materials_face.eq.1) then
-         nc_mask=1
-        else if (num_materials_face.eq.num_materials) then
-         nc_mask=nc
-        else
-         print *,"num_materials_face invalid"
-         stop
-        endif
-
-        if ((nc_mask.ge.1).and.(nc_mask.le.num_materials_face)) then
+       do nc=1,nsolve
 
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
           local_mask=NINT(mask(D_DECL(i,j,k)))
-          local_dotmask=NINT(dotmask(D_DECL(i,j,k),nc_mask))
 
-          if (num_materials_face.eq.1) then
-           if (local_dotmask.eq.1) then
-            ! do nothing
-           else
-            print *,"local_dotmask invalid"
-            stop
-           endif
-          else if (num_materials_face.eq.num_materials) then
-           if ((local_dotmask.eq.1).or.(local_dotmask.eq.0)) then
-            ! do nothing
-           else
-            print *,"local_dotmask invalid"
-            stop
-           endif
-          else
-           print *,"num_materials_face invalid"
-           stop
-          endif
-
-          if (local_dotmask.eq.1) then
-
-           if (local_mask.eq.1) then
+          if (local_mask.eq.1) then
 
             fabz(D_DECL(i,j,k),nc) = fabx(D_DECL(i,j,k),nc) +  &
              beta*faby(D_DECL(i,j,k),nc)
 
-           else if (local_mask.eq.0) then
-            ! do nothing
-           else
-            print *,"mask invalid"
-            stop
-           endif
-
-          else if (local_dotmask.eq.0) then
+          else if (local_mask.eq.0) then
            ! do nothing
           else
-           print *,"local_dotmask invalid"
+           print *,"mask invalid"
            stop
           endif
 
@@ -10876,16 +10816,12 @@ END SUBROUTINE SIMP
        subroutine FORT_SUMDOT(mass1,  &
         rho,DIMS(rho), &
         rho2,DIMS(rho2), &
-        dotmask, &
-        DIMS(dotmask), &
         mask,DIMS(mask), &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         debug_dot_product, &
         levelno,gridno, &
-        nsolve, &
-        nsolveMM, &
-        num_materials_face)
+        nsolve)
     
        use global_utility_module
        use probf90_module
@@ -10894,8 +10830,6 @@ END SUBROUTINE SIMP
 
        INTEGER_T, intent(in) :: levelno,gridno
        INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: nsolveMM
-       INTEGER_T, intent(in) :: num_materials_face
        INTEGER_T, intent(in) :: debug_dot_product
        INTEGER_T imax,jmax,kmax
        REAL_T dotmax
@@ -10905,17 +10839,13 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: bfact
        INTEGER_T, intent(in) :: DIMDEC(rho)
        INTEGER_T, intent(in) :: DIMDEC(rho2)
-       INTEGER_T, intent(in) :: DIMDEC(dotmask)
        INTEGER_T, intent(in) :: DIMDEC(mask)
        REAL_T, intent(out) :: mass1
-       REAL_T, intent(in) :: rho(DIMV(rho),nsolveMM)
-       REAL_T, intent(in) :: rho2(DIMV(rho2),nsolveMM)
-       REAL_T, intent(in) :: dotmask(DIMV(dotmask),num_materials_face)
+       REAL_T, intent(in) :: rho(DIMV(rho),nsolve)
+       REAL_T, intent(in) :: rho2(DIMV(rho2),nsolve)
        REAL_T, intent(in) :: mask(DIMV(mask))
        REAL_T :: dm
        INTEGER_T local_mask
-       INTEGER_T local_dotmask
-       INTEGER_T nc_mask
 
        INTEGER_T i,j,k,nc
 
@@ -10928,18 +10858,6 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if ((num_materials_face.ne.1).and. &
-           (num_materials_face.ne.num_materials)) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
-
-       call checkbound(fablo,fabhi,DIMS(dotmask),0,-1,414) 
        call checkbound(fablo,fabhi,DIMS(mask),0,-1,414) 
        call checkbound(fablo,fabhi,DIMS(rho),0,-1,415) 
        call checkbound(fablo,fabhi,DIMS(rho2),0,-1,416) 
@@ -10952,48 +10870,15 @@ END SUBROUTINE SIMP
        dotmax=zero
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do nc=1,nsolveMM
-
-        if (num_materials_face.eq.1) then
-         nc_mask=1
-        else if (num_materials_face.eq.num_materials) then
-         nc_mask=nc
-        else
-         print *,"num_materials_face invalid"
-         stop
-        endif
-
-        if ((nc_mask.ge.1).and.(nc_mask.le.num_materials_face)) then
+       do nc=1,nsolve
 
          do i=growlo(1),growhi(1)
          do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
 
           local_mask=NINT(mask(D_DECL(i,j,k)))
-          local_dotmask=NINT(dotmask(D_DECL(i,j,k),nc_mask))
 
-          if (num_materials_face.eq.1) then
-           if (local_dotmask.eq.1) then
-            ! do nothing
-           else
-            print *,"local_dotmask invalid"
-            stop
-           endif
-          else if (num_materials_face.eq.num_materials) then
-           if ((local_dotmask.eq.1).or.(local_dotmask.eq.0)) then
-            ! do nothing
-           else
-            print *,"local_dotmask invalid"
-            stop
-           endif
-          else
-           print *,"num_materials_face invalid"
-           stop
-          endif
-
-          if (local_dotmask.eq.1) then
-
-           if (local_mask.eq.1) then
+          if (local_mask.eq.1) then
 
             dm=rho(D_DECL(i,j,k),nc)*rho2(D_DECL(i,j,k),nc)
 
@@ -11010,17 +10895,10 @@ END SUBROUTINE SIMP
             endif
 
             mass1=mass1+dm
-           else if (local_mask.eq.0) then
+          else if (local_mask.eq.0) then
             ! do nothing
-           else 
-            print *,"mask invalid"
-            stop
-           endif
-
-          else if (local_dotmask.eq.0) then
-           ! do nothing
-          else
-           print *,"local_dotmask invalid"
+          else 
+           print *,"mask invalid"
            stop
           endif
 
