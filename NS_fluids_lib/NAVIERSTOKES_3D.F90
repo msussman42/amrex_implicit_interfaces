@@ -12363,8 +12363,6 @@ END SUBROUTINE SIMP
        finest_level, &
        velcomp, &
        nsolve, &
-       nsolveMM, &
-       nsolveMM_face, &
        facecut_index, &
        icefacecut_index, &
        ncphys, &
@@ -12397,8 +12395,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: velcomp
       INTEGER_T :: veldir
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
-      INTEGER_T, intent(in) :: nsolveMM_face
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: ncphys
@@ -12423,7 +12419,7 @@ END SUBROUTINE SIMP
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T :: dir
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nsolve)
 
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
@@ -12453,7 +12449,7 @@ END SUBROUTINE SIMP
       REAL_T local_dd,local_visc_coef,cc_group,local_dd_group
       INTEGER_T local_constant_viscosity
       INTEGER_T icrit,side,bccrit
-      INTEGER_T im_vel,bc_comp
+      INTEGER_T bc_comp
       REAL_T local_wt(nsolve)
       INTEGER_T caller_id
       REAL_T maskleft,maskright
@@ -12575,12 +12571,11 @@ END SUBROUTINE SIMP
          endif
 
          if (project_option_singular_possibleF(project_option).eq.1) then
-          if ((nsolve.eq.1).and.(nsolveMM.eq.1).and.(velcomp.eq.0)) then
+          if ((nsolve.eq.1).and.(velcomp.eq.0)) then
            veldir=1
-           im_vel=1
            bc_comp=1
           else
-           print *,"nsolve,nsolveMM, or velcomp invalid"
+           print *,"nsolve, or velcomp invalid"
            stop
           endif
          else if ((project_option.eq.2).or. & ! thermal diffusion
@@ -12588,40 +12583,21 @@ END SUBROUTINE SIMP
                    (project_option.lt.100+num_species_var)).or. &
                   (project_option.eq.200)) then ! smoothing
           if ((nsolve.eq.1).and. &
-              ((nsolveMM.eq.1).or.(nsolveMM.eq.nmat)).and. &
-              (velcomp.ge.0).and. &
-              (velcomp.lt.nsolveMM_face)) then
+              (velcomp.eq.0)) then
            veldir=1
-           if (nsolveMM.eq.1) then
-            im_vel=1
-           else if (nsolveMM.eq.nmat) then
-            if (velcomp.lt.nmat) then
-             im_vel=velcomp+1
-            else if ((velcomp.ge.nmat).and.(velcomp.lt.nsolveMM_face)) then
-             im_vel=velcomp-nmat+1
-            else
-             print *,"velcomp invalid"
-             stop
-            endif
-           else
-            print *,"nsolveMM invalid"
-            stop
-           endif
-           bc_comp=im_vel
+           bc_comp=1
           else
-           print *,"nsolve,nsolveMM, or velcomp invalid"
+           print *,"nsolve,or velcomp invalid"
            stop
           endif
          else if (project_option.eq.3) then ! viscosity
           if ((nsolve.eq.SDIM).and. &
-              (nsolveMM.eq.SDIM).and. &
               (velcomp.ge.0).and. &
               (velcomp.lt.SDIM)) then
            veldir=velcomp+1
-           im_vel=1
            bc_comp=veldir
           else
-           print *,"nsolve,nsolveMM, or velcomp invalid"
+           print *,"nsolve,or velcomp invalid"
            stop
           endif
          else
@@ -12664,7 +12640,7 @@ END SUBROUTINE SIMP
            AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
            local_visc_coef, &
-           nsolve,im_vel,dir,veldir,project_option, &
+           nsolve,dir,veldir,project_option, &
            local_constant_viscosity,side,bccrit,local_wt)
 
          if (local_wt(veldir).ge.zero) then

@@ -13538,7 +13538,7 @@ END SUBROUTINE Adist
        cc,cc_ice,cc_group, &
        dd,dd_group, &
        visc_coef, &
-       nsolve,im_vel,dir,veldir,project_option, &
+       nsolve,dir,veldir,project_option, &
        constant_viscosity,side,local_presbc,local_wt)
       use global_utility_module
       IMPLICIT NONE
@@ -13551,7 +13551,7 @@ END SUBROUTINE Adist
       REAL_T :: ddfactor
       REAL_T, intent(out) :: dd_group
       REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: nsolve,im_vel,dir,veldir,project_option
+      INTEGER_T, intent(in) :: nsolve,dir,veldir,project_option
       INTEGER_T, intent(in) :: constant_viscosity
       INTEGER_T, intent(in) :: side
       INTEGER_T, intent(in) :: local_presbc
@@ -13565,7 +13565,6 @@ END SUBROUTINE Adist
           (dd.ge.zero).and. &
           (visc_coef.ge.zero).and. &
           (nsolve.ge.1).and. &
-          (im_vel.ge.1).and. &
           (veldir.ge.1).and. &
           (veldir.le.nsolve).and. &
           (dir.ge.0).and. &
@@ -13628,7 +13627,7 @@ END SUBROUTINE Adist
         endif
 
         if (nsolve.ne.1) then
-         print *,"nsolve invalid"
+         print *,"nsolve invalid for projection"
          stop
         endif
 
@@ -13673,8 +13672,9 @@ END SUBROUTINE Adist
         endif
 
        else if (project_option.eq.12) then ! pressure extrapolation
+
         if (nsolve.ne.1) then
-         print *,"nsolve invalid"
+         print *,"nsolve invalid for pressure extrapolation"
          stop
         endif
         cc_group=cc*cc_ice
@@ -13725,8 +13725,9 @@ END SUBROUTINE Adist
        else if ((project_option.eq.2).or. & ! temperature
                 ((project_option.ge.100).and. & ! species
                  (project_option.lt.100+num_species_var))) then
+
         if (nsolve.ne.1) then
-         print *,"nsolve invalid"
+         print *,"nsolve invalid for temperature/species"
          stop
         endif
         cc_group=one  ! rely on solid coefficient at solid
@@ -13761,7 +13762,7 @@ END SUBROUTINE Adist
         endif
        else if (project_option.eq.200) then ! smoothing 
         if (nsolve.ne.1) then
-         print *,"nsolve invalid"
+         print *,"nsolve invalid for smoothing"
          stop
         endif
         cc_group=one
@@ -13798,7 +13799,7 @@ END SUBROUTINE Adist
 
        else if (project_option.eq.3) then ! viscosity
         if (nsolve.ne.SDIM) then
-         print *,"nsolve invalid"
+         print *,"nsolve invalid for viscosity"
          stop
         endif
         dd_group=dd*visc_coef
@@ -13859,7 +13860,6 @@ END SUBROUTINE Adist
        print *,"dd=",dd
        print *,"visc_coef=",visc_coef
        print *,"nsolve=",nsolve
-       print *,"im_vel=",im_vel
        print *,"veldir=",veldir
        print *,"dir=",dir
        print *,"side=",side

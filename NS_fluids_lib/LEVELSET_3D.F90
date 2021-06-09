@@ -17038,14 +17038,10 @@ stop
       INTEGER_T side
       INTEGER_T dir
       INTEGER_T veldir
-      INTEGER_T velcompL
-      INTEGER_T velcompR
       INTEGER_T velcomp
       REAL_T local_wt(nsolve)
       REAL_T local_fwt
       INTEGER_T local_presbc
-FIX ME im_vel remove
-      INTEGER_T im_vel
       REAL_T local_mask
       INTEGER_T caller_id
 
@@ -17243,7 +17239,7 @@ FIX ME im_vel remove
              cc,cc_ice,cc_group, &
              dd,dd_group, &
              visc_coef, &
-             nsolve,im_vel,dir,veldir,project_option, &
+             nsolve,dir,veldir,project_option, &
              constant_viscosity,side,local_presbc,local_wt)
 
             if (dd_group.lt.min_face_wt(1)) then
@@ -17273,25 +17269,6 @@ FIX ME im_vel remove
              max_face_wt(4)=local_wt(veldir)
             endif
 
-            if (num_materials_face.eq.1) then
-             velcompL=veldir
-             velcompR=veldir
-            else if (num_materials_face.eq.nmat) then
-             if (nsolve.eq.1) then
-              velcompL=im_vel
-              velcompR=velcompL+nsolveMM_FACE/2 
-             else if (nsolve.eq.SDIM) then
-              print *,"nsolve invalid nsolve=",nsolve
-              stop
-             else
-              print *,"nsolve invalid nsolve=",nsolve
-              stop
-             endif
-            else
-             print *,"num_materials_face invalid"
-             stop
-            endif
-
             if (DEBUG_THERMAL_COEFF.eq.1) then
              if ((j.eq.32).or.(j.eq.96)) then
               if (i.ge.25) then
@@ -17303,21 +17280,19 @@ FIX ME im_vel remove
             endif
 
             if (dir.eq.0) then
-             xfwt(D_DECL(i,j,k),velcompL)=local_wt(veldir)
-             xfwt(D_DECL(i,j,k),velcompR)=local_wt(veldir)
+             xfwt(D_DECL(i,j,k),velcomp)=local_wt(veldir)
+             xfwt(D_DECL(i,j,k),velcomp)=local_wt(veldir)
             else if (dir.eq.1) then
-             yfwt(D_DECL(i,j,k),velcompL)=local_wt(veldir)
-             yfwt(D_DECL(i,j,k),velcompR)=local_wt(veldir)
+             yfwt(D_DECL(i,j,k),velcomp)=local_wt(veldir)
+             yfwt(D_DECL(i,j,k),velcomp)=local_wt(veldir)
             else if ((dir.eq.2).and.(SDIM.eq.3)) then
-             zfwt(D_DECL(i,j,k),velcompL)=local_wt(veldir)
-             zfwt(D_DECL(i,j,k),velcompR)=local_wt(veldir)
+             zfwt(D_DECL(i,j,k),velcomp)=local_wt(veldir)
+             zfwt(D_DECL(i,j,k),velcomp)=local_wt(veldir)
             else
              print *,"dir invalid buildfacewt 2"
              stop
             endif
-           enddo ! veldir=1..nsolve
-
-          enddo ! im_vel=1..num_materials_face
+          enddo ! veldir=1..nsolve
 
         enddo ! k
         enddo ! j
@@ -17331,27 +17306,9 @@ FIX ME im_vel remove
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        do im_vel=1,num_materials_face
-         do veldir=1,nsolve
+        do veldir=1,nsolve
 
-          if (num_materials_face.eq.1) then
-           velcompL=veldir
-           velcompR=veldir
-          else if (num_materials_face.eq.nmat) then
-           if (nsolve.eq.1) then
-            velcompL=im_vel
-            velcompR=velcompL+nsolveMM_FACE/2 
-           else if (nsolve.eq.SDIM) then
-            print *,"nsolve invalid"
-            stop
-           else
-            print *,"nsolve invalid"
-            stop
-           endif
-          else
-           print *,"num_materials_face invalid"
-           stop
-          endif
+          velcomp=veldir
 
           do dir=1,SDIM
            ii=0
@@ -17380,14 +17337,6 @@ FIX ME im_vel remove
              print *,"side invalid"
              stop
             endif
-            if (side.eq.1) then
-             velcomp=velcompR
-            else if (side.eq.2) then
-             velcomp=velcompL
-            else
-             print *,"side invalid"
-             stop
-            endif
             if (dir.eq.1) then
              local_fwt=xfwt(D_DECL(iface,jface,kface),velcomp)
             else if (dir.eq.2) then
@@ -17398,20 +17347,11 @@ FIX ME im_vel remove
              print *,"dir invalid"
              stop
             endif
-            if (nsolve.eq.1) then
-             velcomp=im_vel
-            else if (nsolve.eq.SDIM) then
-             velcomp=veldir
-            else
-             print *,"nsolve invalid"
-             stop
-            endif
             offdiagcheck(D_DECL(i,j,k),velcomp)= &
                offdiagcheck(D_DECL(i,j,k),velcomp)+local_fwt
            enddo ! side=1..2
           enddo ! dir=1..sdim
-         enddo ! veldir=1,nsolve
-        enddo ! im_vel=1..num_materials_face
+        enddo ! veldir=1,nsolve
 
        enddo
        enddo

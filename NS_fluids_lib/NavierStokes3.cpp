@@ -7770,53 +7770,36 @@ void NavierStokes::correct_velocity(
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option invalid35");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
-
- int nsolveMM=nsolve*num_materials_face;
- int nsolveMM_FACE=nsolveMM;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) {
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
 
  Vector<int> scomp;
  Vector<int> ncomp;
  int state_index;
  int ncomp_check;
 
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_face,
+  1,
   project_option,
   state_index,
   scomp,
   ncomp,
   ncomp_check);
 
- if (ncomp_check!=nsolveMM)
+ if (ncomp_check!=nsolve)
   amrex::Error("ncomp_check invalid");
 
  bool use_tiling=ns_tiling;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  if ((localMF[macdest+dir]->nComp()!=nsolveMM_FACE)||
-      (localMF[macsrc+dir]->nComp()!=nsolveMM_FACE)||
-      (localMF[gp+dir]->nComp()!=nsolveMM_FACE))
+  if ((localMF[macdest+dir]->nComp()!=nsolve)||
+      (localMF[macsrc+dir]->nComp()!=nsolve)||
+      (localMF[gp+dir]->nComp()!=nsolve))
    amrex::Error("invalid ncomp");
  }
 
@@ -7882,7 +7865,7 @@ void NavierStokes::correct_velocity(
 
   Vector<int> presbc;
   getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
-  if (presbc.size()!=nsolveMM*AMREX_SPACEDIM*2)
+  if (presbc.size()!=nsolve*AMREX_SPACEDIM*2)
    amrex::Error("presbc.size() invalid");
 
   int tid_current=ns_thread();
@@ -7890,7 +7873,7 @@ void NavierStokes::correct_velocity(
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  for (int velcomp=0;velcomp<nsolveMM_FACE;velcomp++) {
+  for (int velcomp=0;velcomp<nsolve;velcomp++) {
 
     // in: NAVIERSTOKES_3D.F90
    FORT_FLUIDSOLIDCOR(
@@ -7898,8 +7881,6 @@ void NavierStokes::correct_velocity(
     &finest_level,
     &velcomp,
     &nsolve,
-    &nsolveMM,
-    &nsolveMM_FACE,
     &facecut_index,
     &icefacecut_index,
     &ncphys,
@@ -7923,7 +7904,7 @@ void NavierStokes::correct_velocity(
     xlo,dx,
     &cur_time_slab,
     &nmat);
-  } // velcomp=0..nsolveMM_FACE
+  } // velcomp=0..nsolve-1
  } // mfi
 } // omp
  ns_reconcile_d_num(186);
