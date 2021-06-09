@@ -27,7 +27,6 @@
 #    define FORT_VELMAC_OVERRIDE velmac_override
 #    define FORT_UPDATETENSOR updatetensor
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
-#    define FORT_EXTRAPTENSOR extraptensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_MAKETENSOR maketensor
@@ -74,7 +73,6 @@
 #    define FORT_VELMAC_OVERRIDE VELMAC_OVERRIDE
 #    define FORT_UPDATETENSOR UPDATETENSOR
 #    define FORT_FIX_HOOP_TENSOR FIX_HOOP_TENSOR
-#    define FORT_EXTRAPTENSOR EXTRAPTENSOR
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
 #    define FORT_MAKETENSOR MAKETENSOR
@@ -121,7 +119,6 @@
 #    define FORT_VELMAC_OVERRIDE velmac_override
 #    define FORT_UPDATETENSOR updatetensor
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
-#    define FORT_EXTRAPTENSOR extraptensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_MAKETENSOR maketensor
@@ -167,7 +164,6 @@
 #    define FORT_VELMAC_OVERRIDE velmac_override_
 #    define FORT_UPDATETENSOR updatetensor_
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor_
-#    define FORT_EXTRAPTENSOR extraptensor_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
 #    define FORT_MAKETENSOR maketensor_
@@ -677,26 +673,6 @@ extern "C"
     int* irz);
 
 
-   void FORT_EXTRAPTENSOR(
-    int* level,
-    int* finest_level,
-    Real* cur_time,
-    int* MAC_grid_displacement,
-    int* isweep,
-    int* dir_extrap,
-    int* ncomp_extrap,
-    int* nmat,
-    int* im,
-    int* ngrow_extrap,
-    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
-    Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
-    const Real* dx,const Real* xlo,
-    Real* tensor_new,AMREX_ARLIM_P(tnewlo),AMREX_ARLIM_P(tnewhi),
-    Real* tensor_old,AMREX_ARLIM_P(toldlo),AMREX_ARLIM_P(toldhi),
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,int* bfact);
-
- 
    void FORT_ESTDT(
       int* nsolveMM_FACE,
       int* enable_spectral,
