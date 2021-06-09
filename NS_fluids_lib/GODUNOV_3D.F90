@@ -21511,7 +21511,6 @@ stop
        im_solid_map, &
        nten, &
        nsolve, &
-       nsolveMM, &
        project_option, &
        combine_idx, &
        combine_flag, &
@@ -21566,7 +21565,6 @@ stop
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: hydrate_flag
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: combine_idx
       INTEGER_T, intent(in) :: combine_flag
@@ -21597,7 +21595,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(state)
 
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: listbc(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: listbc(SDIM,2, &
+             nsolve*num_materials_combine)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
       REAL_T :: dxmaxLS
@@ -21613,7 +21612,8 @@ stop
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(inout) :: cellfab(DIMV(cellfab),ncomp_cell)
-      REAL_T, intent(out) :: newcell(DIMV(newcell),nsolveMM)
+      REAL_T, intent(out) :: newcell(DIMV(newcell), &
+              nsolve*num_materials_combine)
       REAL_T, intent(in) :: state(DIMV(state),nstate_main) !Snew
 
       REAL_T DATA_FLOOR
@@ -21735,14 +21735,6 @@ stop
       endif 
       if (combine_idx.lt.-1) then
        print *,"combine_idx invalid"
-       stop
-      endif
-      if (nsolveMM.ne.nsolve*num_materials_combine) then
-       print *,"nsolveMM invalid 15488 nsolveMM=",nsolveMM
-       print *,"nsolve, project_option ", &
-        nsolve,project_option
-       print *,"nmat=",nmat
-       print *,"num_materials_combine=",num_materials_combine
        stop
       endif
       if (bfact.lt.1) then
@@ -22877,7 +22869,6 @@ stop
        ! combine_flag==2 (only overwrite if F=0)
       subroutine FORT_COMBINEVELFACE( &
        tid, &
-       num_materials_combine, &
        hflag, &
        facecut_index, &
        icefacecut_index, &
@@ -22889,12 +22880,7 @@ stop
        nparts_def, &
        im_solid_map, &
        nten, &
-       nsolve, &
-       nsolveMM, &
-       nsolveMM_FACE, &
-       project_option, &
        combine_idx, &
-       combine_flag, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -22917,7 +22903,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: num_materials_combine
       INTEGER_T, intent(in) :: hflag
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
@@ -22930,13 +22915,7 @@ stop
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T :: nsolveMM_FACE_test
-      INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: combine_idx
-      INTEGER_T, intent(in) :: combine_flag
 
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -22958,7 +22937,7 @@ stop
       REAL_T, intent(in) :: cur_time
 
       REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(inout) :: mac(DIMV(mac),nsolveMM_FACE)
+      REAL_T, intent(inout) :: mac(DIMV(mac))
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
@@ -22976,7 +22955,6 @@ stop
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T is_solid_face
-      INTEGER_T facecomp
       REAL_T vsol
       REAL_T velmaterial
       INTEGER_T iboundary
@@ -23039,30 +23017,6 @@ stop
       endif 
       if (combine_idx.lt.-1) then
        print *,"combine_idx invalid"
-       stop
-      endif
-      if (nsolveMM.ne.nsolve*num_materials_combine) then
-       print *,"nsolveMM invalid 16509"
-       stop
-      endif
-
-      nsolveMM_FACE_test=nsolveMM
-      if (num_materials_combine.eq.1) then
-       ! do nothing
-      else if (num_materials_combine.eq.nmat) then
-       nsolveMM_FACE_test=nsolveMM_FACE_test*2
-      else
-       print *,"num_materials_combine invalid"
-       stop
-      endif
-
-      if (nsolveMM_FACE.ne.nsolveMM_FACE_test) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
-
-      if (combine_flag.ne.2) then
-       print *,"combine_flag should be 2 => overwrite w/ghost when F=0"
        stop
       endif
 
@@ -23507,170 +23461,78 @@ stop
         stop
        endif
 
-       if (project_option.eq.0) then ! Umac_new or grad p/rho
-
-        if (nsolve.ne.1) then
-         print *,"nsolve invalid"
-         stop
-        endif
-
-          ! LS>0 if clamped
-        call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-            vel_clamped_minus,temperature_clamped_minus)
-        call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-            vel_clamped_plus,temperature_clamped_plus)
-        if ((LS_clamped_minus.ge.zero).or. &
-            (LS_clamped_plus.ge.zero)) then
-         is_clamped_face=1
-         do dir_local=1,SDIM
-          if (LS_clamped_minus.lt.zero) then
-           vel_clamped_face(dir_local)=vel_clamped_plus(dir_local)
-           is_clamped_face=2
-          else if (LS_clamped_plus.lt.zero) then
-           vel_clamped_face(dir_local)=vel_clamped_minus(dir_local)
-           is_clamped_face=3
-          else
-           vel_clamped_face(dir_local)=half*(vel_clamped_plus(dir_local)+ &
-             vel_clamped_minus(dir_local))
-          endif
-         enddo ! dir_local=1..sdim
-        else if ((LS_clamped_minus.lt.zero).and. &
-                 (LS_clamped_plus.lt.zero)) then
-         is_clamped_face=0
-        else
-         print *,"LS_clamped plus or minus is NaN"
-         stop
-        endif
-
-        if ((is_clamped_face.eq.1).or. &
-            (is_clamped_face.eq.2).or. &
-            (is_clamped_face.eq.3)) then
-         if (is_solid_face.eq.0) then
-          is_solid_face=2
-          if (hflag.eq.1) then
-           vsol=zero
-          else if (hflag.eq.0) then
-           vsol=vel_clamped_face(dir+1)
-          else
-           print *,"hflag invalid"
-           stop
-          endif
-         else if ((is_solid_face.ge.1).and. &
-                  (is_solid_face.le.5)) then
-          ! do nothing
+         ! LS>0 if clamped
+       call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+           vel_clamped_minus,temperature_clamped_minus)
+       call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+           vel_clamped_plus,temperature_clamped_plus)
+       if ((LS_clamped_minus.ge.zero).or. &
+           (LS_clamped_plus.ge.zero)) then
+        is_clamped_face=1
+        do dir_local=1,SDIM
+         if (LS_clamped_minus.lt.zero) then
+          vel_clamped_face(dir_local)=vel_clamped_plus(dir_local)
+          is_clamped_face=2
+         else if (LS_clamped_plus.lt.zero) then
+          vel_clamped_face(dir_local)=vel_clamped_minus(dir_local)
+          is_clamped_face=3
          else
-          print *,"is_solid_face invalid"
-          stop
+          vel_clamped_face(dir_local)=half*(vel_clamped_plus(dir_local)+ &
+            vel_clamped_minus(dir_local))
          endif
-        else if (is_clamped_face.eq.0) then
-         ! do nothing
-        else
-         print *,"is_clamped_face invalid"
-         stop
-        endif
-
-        facecomp=1
-        if (is_solid_face.eq.1) then ! RZ face
-         ucombine=vsol
-        else if (is_solid_face.eq.4) then ! REFLECT_ODD
-         ucombine=vsol
-        else if (is_solid_face.eq.5) then ! EXT_DIR
-         ucombine=vsol
-        else if ((is_solid_face.eq.2).or. &
-                 (is_solid_face.eq.3)) then
-         ucombine=vsol
-        else if (is_solid_face.eq.0) then
-         ucombine=mac(D_DECL(i,j,k),facecomp)
-        else
-         print *,"is_solid_face invalid 1 ",is_solid_face
-         stop
-        endif
-        mac(D_DECL(i,j,k),facecomp)=ucombine
-
-       else if ((project_option.eq.2).or. &      ! temperature
-                ((project_option.ge.100).and. &  ! species
-                 (project_option.lt.100+num_species_var))) then
-
-        if (combine_idx.lt.0) then
-         print *,"combine_idx invalid"
-         stop
-        endif
-
-        if (num_materials_combine.ne.nmat) then
-         print *,"num_materials_combine invalid"
-         stop
-        endif
-        if (num_materials_scalar_solve.ne.nmat) then
-         print *,"num_materials_scalar_solve invalid"
-         stop
-        endif
-
-        if (nsolve.ne.1) then
-         print *,"nsolve invalid"
-         stop
-        endif
-
-        if (at_RZ_face.eq.1) then
-
-         ucombine=zero
-
-        else if (at_RZ_face.eq.0) then
-
-         velsum=zero
-         weight_sum=zero
-
-         do side=1,2
-
-          do im=1,nmat
-           if (side.eq.1) then
-            facecomp=im
-            velmaterial=mac(D_DECL(i,j,k),facecomp)
-           else if (side.eq.2) then
-            facecomp=im+nsolveMM_FACE/2
-            velmaterial=mac(D_DECL(i,j,k),facecomp)
-           else
-            print *,"side invalid"
-            stop
-           endif
-           velsum=velsum+face_mfrac(side,im)*velmaterial
-           weight_sum=weight_sum+face_mfrac(side,im)
-          enddo ! im=1,nmat
-
-         enddo ! side=1,2
-
-         if (weight_sum.le.zero) then
-          print *,"weight_sum invalid 3"
-          stop
-         endif
-
-         ucombine=velsum/weight_sum
-  
-        else
-         print *,"at_RZ_face invalid"
-         stop
-        endif
-
-        do im=1,nmat
-         if ((abs(face_vfrac_cell(im)).le.VOFTOL).or. &
-             (at_RZ_face.eq.1)) then
-          facecomp=im
-          mac(D_DECL(i,j,k),facecomp)=ucombine
-          facecomp=im+nsolveMM_FACE/2
-          mac(D_DECL(i,j,k),facecomp)=ucombine
-         else if ((face_vfrac_cell(im).ge.VOFTOL).and. &
-                  (at_RZ_face.eq.0)) then
-          ! do nothing
-         else
-          print *,"face_vfrac_cell, is_solid_face, or at_RZ_face invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-
+        enddo ! dir_local=1..sdim
+       else if ((LS_clamped_minus.lt.zero).and. &
+                (LS_clamped_plus.lt.zero)) then
+        is_clamped_face=0
        else
-        print *,"project_option invalid"
+        print *,"LS_clamped plus or minus is NaN"
         stop
        endif
-           
+
+       if ((is_clamped_face.eq.1).or. &
+           (is_clamped_face.eq.2).or. &
+           (is_clamped_face.eq.3)) then
+        if (is_solid_face.eq.0) then
+         is_solid_face=2
+         if (hflag.eq.1) then
+          vsol=zero
+         else if (hflag.eq.0) then
+          vsol=vel_clamped_face(dir+1)
+         else
+          print *,"hflag invalid"
+          stop
+         endif
+        else if ((is_solid_face.ge.1).and. &
+                 (is_solid_face.le.5)) then
+         ! do nothing
+        else
+         print *,"is_solid_face invalid"
+         stop
+        endif
+       else if (is_clamped_face.eq.0) then
+        ! do nothing
+       else
+        print *,"is_clamped_face invalid"
+        stop
+       endif
+
+       if (is_solid_face.eq.1) then ! RZ face
+        ucombine=vsol
+       else if (is_solid_face.eq.4) then ! REFLECT_ODD
+        ucombine=vsol
+       else if (is_solid_face.eq.5) then ! EXT_DIR
+        ucombine=vsol
+       else if ((is_solid_face.eq.2).or. &
+                (is_solid_face.eq.3)) then
+        ucombine=vsol
+       else if (is_solid_face.eq.0) then
+        ucombine=mac(D_DECL(i,j,k))
+       else
+        print *,"is_solid_face invalid 1 ",is_solid_face
+        stop
+       endif
+       mac(D_DECL(i,j,k))=ucombine
+
       enddo
       enddo
       enddo
@@ -23893,7 +23755,6 @@ stop
       INTEGER_T update_right_flux
       INTEGER_T ncomp_xgp
       INTEGER_T ncomp_xp
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T left_rigid,right_rigid
       INTEGER_T partidL,partidR
       INTEGER_T conservative_div_uu
@@ -24920,9 +24781,7 @@ stop
 
               dcomp=nbase+1
 
-              nsolveMM_FACE_test=num_materials_vel
-
-              ncomp_source=num_materials_vel*SDIM
+              ncomp_source=SDIM
               ncomp_dest=SDIM
               ncomp_xgp=ntensor
               ncomp_xp=SDIM ! number of amrsync components
@@ -24941,8 +24800,6 @@ stop
                conservative_div_uu, &
                ncomp_xp, &  ! number of amrsync components
                simple_AMR_BC_flag_viscosity, &
-               nsolveMM_FACE_test, &
-               num_materials_vel, &
                level, &
                finest_level, &
                nmat, &
@@ -25070,8 +24927,6 @@ stop
                ncomp_veldest, &
                ncomp_dendest, &
                conservative_div_uu, &
-               nsolveMM_FACE_test, &
-               num_materials_vel, &
                ns_time_order, &
                divu_outer_sweeps, &
                num_divu_outer_sweeps, &

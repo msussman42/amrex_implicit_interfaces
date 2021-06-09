@@ -26,9 +26,7 @@ stop
 
 
        subroutine FORT_SCALARCOEFF( &
-         num_materials_face, &
          nsolve, &
-         nsolveMM, &
          nmat, &
          xlo,dx, &
          offdiagcheck, &
@@ -56,9 +54,7 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, intent(in) :: num_materials_face
        INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: nsolveMM
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: finest_level
        INTEGER_T, intent(in) :: nmat
@@ -84,8 +80,8 @@ stop
 
        REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
        REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
-       REAL_T, intent(in) ::  offdiagcheck(DIMV(offdiagcheck),nsolveMM)
-       REAL_T, intent(out) ::  cterm(DIMV(cterm),nsolveMM)
+       REAL_T, intent(in) ::  offdiagcheck(DIMV(offdiagcheck),nsolve)
+       REAL_T, intent(out) ::  cterm(DIMV(cterm),nsolve)
        REAL_T, intent(in) ::  c2(DIMV(c2),2)
        REAL_T, intent(in) ::  DeDT(DIMV(DeDT),nmat+1)
        REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
@@ -101,7 +97,7 @@ stop
        REAL_T den_inverse,dedt_inverse
        REAL_T xsten(-1:1,SDIM)
        INTEGER_T nhalf
-       REAL_T local_cterm(nsolveMM)
+       REAL_T local_cterm(nsolve)
        INTEGER_T im_vel,im
        INTEGER_T velcomp
        REAL_T LSTEST
@@ -144,16 +140,8 @@ stop
         print *,"nsolve invalid20"
         stop
        endif
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid 124"
-        stop
-       endif
        if ((level.lt.0).or.(level.gt.finest_level)) then
         print *,"level invalid scalar coeff"
-        stop
-       endif
-       if ((num_materials_face.ne.1).and.(num_materials_face.ne.nmat)) then
-        print *,"num_materials_face invalid"
         stop
        endif
 
@@ -256,16 +244,7 @@ stop
 
         if (project_option_projectionF(project_option).eq.1) then
 
-         if (num_materials_vel.ne.1) then
-          print *,"num_materials_vel invalid"
-          stop
-         endif
-         if (num_materials_face.ne.1) then
-          print *,"num_materials_face invalid"
-          stop
-         endif
-
-         if (nsolveMM.ne.num_materials_face) then
+         if (nsolve.ne.1) then
           print *,"nsolveMM invalid 150"
           stop
          endif
@@ -275,16 +254,7 @@ stop
 
         else if (project_option.eq.12) then ! pressure extension
 
-         if (num_materials_vel.ne.1) then
-          print *,"num_materials_vel invalid"
-          stop
-         endif
-         if (num_materials_face.ne.1) then
-          print *,"num_materials_face invalid"
-          stop
-         endif
-
-         if (nsolveMM.ne.num_materials_face) then
+         if (nsolve.ne.1) then
           print *,"nsolveMM invalid 150"
           stop
          endif
@@ -336,37 +306,36 @@ stop
           stop
          endif
 
-         do im_vel=1,num_materials_scalar_solve
+         im_vel=1
 
-          local_cterm(im_vel)=one/(dt*dedt_inverse) ! den cv / dt
+         local_cterm(im_vel)=one/(dt*dedt_inverse) ! den cv / dt
 
-          if (is_clamped_cell.eq.1) then
-           ! do nothing
-          else if (is_clamped_cell.eq.0) then
+         if (is_clamped_cell.eq.1) then
+          ! do nothing
+         else if (is_clamped_cell.eq.0) then
 
-            ! solidheat_flag==0 diffuse in solid
-            ! solidheat_flag==1 dirichlet bc at solid-fluid
-            ! solidheat_flag==2 insulating bc at solid-fluid
-           if (solidheat_flag.eq.0) then
-            ! do nothing 
-           else if (solidheat_flag.eq.2) then ! face coeff==0.0 at solid/fluid
-            ! do nothing 
-           else if (solidheat_flag.eq.1) then
-            ! T=Tsolid in solid so coeff>>1
-            ! rigid_mask>>1 if solid material occupies cell. (rigid_mask==1
-            ! otherwise)
-            local_cterm(im_vel)=local_cterm(im_vel)*rigid_mask 
-           else
-            print *,"solidheat_flag invalid"
-            stop
-           endif
-
+           ! solidheat_flag==0 diffuse in solid
+           ! solidheat_flag==1 dirichlet bc at solid-fluid
+           ! solidheat_flag==2 insulating bc at solid-fluid
+          if (solidheat_flag.eq.0) then
+           ! do nothing 
+          else if (solidheat_flag.eq.2) then ! face coeff==0.0 at solid/fluid
+           ! do nothing 
+          else if (solidheat_flag.eq.1) then
+           ! T=Tsolid in solid so coeff>>1
+           ! rigid_mask>>1 if solid material occupies cell. (rigid_mask==1
+           ! otherwise)
+           local_cterm(im_vel)=local_cterm(im_vel)*rigid_mask 
           else
-           print *,"is_clamped_cell invalid"
+           print *,"solidheat_flag invalid"
            stop
           endif
 
-         enddo ! im_vel=1,num_materials_scalar_solve
+         else
+          print *,"is_clamped_cell invalid"
+          stop
+         endif
+
 
          if (DEBUG_THERMAL_WEIGHT.eq.1) then
           if ((j.eq.32).or.(j.eq.96)) then
@@ -385,33 +354,15 @@ stop
           print *,"dt invalid"
           stop
          endif
-         if (num_materials_face.ne.num_materials_scalar_solve) then
-          print *,"num_materials_face invalid"
-          stop
-         endif
 
-         do im_vel=1,num_materials_scalar_solve
+         im_vel=1
 
-          local_cterm(im_vel)=one/dt ! den cv / dt
-
-         enddo ! im_vel=1,num_materials_scalar_solve
+         local_cterm(im_vel)=one/dt ! den cv / dt
 
         else if (project_option.eq.3) then ! viscosity
 
          if (nsolve.ne.SDIM) then
           print *,"nsolve invalid21"
-          stop
-         endif
-         if (num_materials_vel.eq.1) then
-          ! do nothing
-         else
-          print *,"num_materials_vel invalid"
-          stop
-         endif
-         if (num_materials_face.eq.1) then
-          ! do nothing
-         else
-          print *,"num_materials_face invalid"
           stop
          endif
 
@@ -477,20 +428,15 @@ stop
           print *,"den_inverse invalid"
           stop
          endif
-         if (num_materials_face.ne.num_materials_scalar_solve) then
-          print *,"num_materials_face invalid"
-          stop
-         endif
           ! diffuse mass fraction
-         do im_vel=1,num_materials_scalar_solve
-          local_cterm(im_vel)=one/(den_inverse*dt) ! den/dt
-         enddo
+         im_vel=1
+         local_cterm(im_vel)=one/(den_inverse*dt) ! den/dt
         else
          print *,"project_option invalid scalar coeff"
          stop
         endif 
 
-        do veldir=1,nsolveMM
+        do veldir=1,nsolve
          local_diag=offdiagcheck(D_DECL(i,j,k),veldir)
          if (local_diag.ge.zero) then
           cterm(D_DECL(i,j,k),veldir)=local_cterm(veldir)
@@ -581,9 +527,7 @@ stop
        end subroutine FORT_RESTORE_PRES
 
        subroutine FORT_DIVIDEDX ( &
-         num_materials_face, &
          nsolve, &
-         nsolveMM, &
          bx,DIMS(bx), &
          tilelo,tilehi, &
          fablo,fabhi, &
@@ -593,9 +537,7 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, intent(in) :: num_materials_face
        INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: nsolveMM
        INTEGER_T, intent(in) :: dir,level
        INTEGER_T, intent(in) :: DIMDEC(bx)
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -624,19 +566,6 @@ stop
 
        nmat=num_materials
 
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel.ne.1"
-        stop
-       endif
-       if ((num_materials_face.ne.1).and. &
-           (num_materials_face.ne.nmat)) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid 595"
-        stop
-       endif
        if ((dir.lt.0).or.(dir.ge.SDIM)) then
         print *,"dir invalid dividedx"
         stop
@@ -671,7 +600,7 @@ stop
          print *,"hx invalid"
          stop
         endif
-        do n=1,nsolveMM
+        do n=1,nsolve
          bx(D_DECL(i,j,k),n)=bx(D_DECL(i,j,k),n)/hx
         enddo
 
@@ -684,10 +613,7 @@ stop
 
 
        subroutine FORT_REGULARIZE_BX ( &
-         num_materials_face, &
          nsolve, &
-         nsolveMM, &
-         nsolveMM_FACE, &
          bx,DIMS(bx), &
          min_interior_coeff, &
          domlo,domhi, &
@@ -701,11 +627,7 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, intent(in) :: num_materials_face
        INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: nsolveMM
-       INTEGER_T, intent(in) :: nsolveMM_FACE
-       INTEGER_T :: nsolveMM_FACE_test
        INTEGER_T, intent(in) :: dir
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: DIMDEC(bx)
@@ -715,7 +637,7 @@ stop
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: bfact
        REAL_T, intent(in) :: min_interior_coeff
-       REAL_T, intent(inout) :: bx(DIMV(bx),nsolveMM)
+       REAL_T, intent(inout) :: bx(DIMV(bx),nsolve)
        REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
@@ -736,29 +658,8 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel.ne.1"
-        stop
-       endif
        if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
         print *,"nsolve invalid23"
-        stop
-       endif
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid 690"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolveMM
-       if (num_materials_face.eq.1) then
-        ! do nothing
-       else if (num_materials_face.eq.nmat) then
-        nsolveMM_FACE_test=nsolveMM_FACE_test*2
-       else
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-        print *,"nsolveMM_FACE invalid"
         stop
        endif
 
@@ -784,7 +685,7 @@ stop
          stop
         endif
 
-        do n=1,nsolveMM
+        do n=1,nsolve
          local_bx=bx(D_DECL(i,j,k),n)
          if (local_bx.eq.zero) then
           if ((inorm.gt.domlo(dir+1)).and. &
@@ -803,7 +704,7 @@ stop
           print *,"local_bx invalid"
           stop
          endif
-        enddo ! n=1,nsolveMM
+        enddo ! n=1,nsolve
 
        enddo
        enddo
@@ -814,10 +715,7 @@ stop
 
 
        subroutine FORT_MULT_FACEWT ( &
-         num_materials_face, &
          nsolve, &
-         nsolveMM, &
-         nsolveMM_FACE, &
          bx,DIMS(bx), &
          facewt,DIMS(facewt), &
          tilelo,tilehi, &
@@ -830,11 +728,7 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, intent(in) :: num_materials_face
        INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: nsolveMM
-       INTEGER_T, intent(in) :: nsolveMM_FACE
-       INTEGER_T :: nsolveMM_FACE_test
        INTEGER_T, intent(in) :: dir
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: DIMDEC(bx)
@@ -843,13 +737,12 @@ stop
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: bfact
-       REAL_T, intent(out) :: bx(DIMV(bx),nsolveMM)
-       REAL_T, intent(in) :: facewt(DIMV(facewt),nsolveMM_FACE)
+       REAL_T, intent(out) :: bx(DIMV(bx),nsolve)
+       REAL_T, intent(in) :: facewt(DIMV(facewt),nsolve)
        REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
        INTEGER_T nmat
-       INTEGER_T faceL,faceR
 
        nmat=num_materials
 
@@ -857,29 +750,8 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel.ne.1"
-        stop
-       endif
        if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
         print *,"nsolve invalid23"
-        stop
-       endif
-       if (nsolveMM.ne.nsolve*num_materials_face) then
-        print *,"nsolveMM invalid 690"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolveMM
-       if (num_materials_face.eq.1) then
-        ! do nothing
-       else if (num_materials_face.eq.nmat) then
-        nsolveMM_FACE_test=nsolveMM_FACE_test*2
-       else
-        print *,"num_materials_face invalid"
-        stop
-       endif
-       if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-        print *,"nsolveMM_FACE invalid"
         stop
        endif
 
@@ -895,19 +767,8 @@ stop
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
         
-        do n=1,nsolveMM
-         if (num_materials_face.eq.1) then
-          faceL=n
-          faceR=n
-         else if (num_materials_face.eq.nmat) then
-          faceL=n
-          faceR=n+nsolveMM_FACE/2
-         else
-          print *,"num_materials_face invalid"
-          stop
-         endif 
-         bx(D_DECL(i,j,k),n)=half*bx(D_DECL(i,j,k),n)* &
-          (facewt(D_DECL(i,j,k),faceL)+facewt(D_DECL(i,j,k),faceR))
+        do n=1,nsolve
+         bx(D_DECL(i,j,k),n)=bx(D_DECL(i,j,k),n)*facewt(D_DECL(i,j,k),n)
         enddo ! n=1,nsolveMM
 
        enddo
@@ -1038,12 +899,9 @@ stop
 ! bx,by,bz are equal to bxcoefnoarea; bxcoefnoarea is not averaged down at this
 ! point.
       subroutine FORT_INIT_MASK_SING( &
-       num_materials_face, &
        level, &
        finest_level, &
        nsolve, &
-       nsolveMM, &
-       nsolveMM_FACE, &
        nfacefrac, &
        ncellfrac, &
        nmat, &
@@ -1079,13 +937,9 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_materials_face
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T             :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nfacefrac
       INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: nmat
@@ -1115,7 +969,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T             :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bc(SDIM,2,nsolveMM)
+      INTEGER_T, intent(in) :: bc(SDIM,2,nsolve)
 
       REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
       REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
@@ -1125,21 +979,21 @@ stop
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
        ! ONES_MF in c++
-      REAL_T, intent(out) :: masksolv(DIMV(masksolv),num_materials_face)
+      REAL_T, intent(out) :: masksolv(DIMV(masksolv))
       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolveMM)
-      REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck),nsolveMM)
+      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolve)
+      REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck),nsolve)
       REAL_T, intent(out) :: maskdivres(DIMV(maskdivres))
       REAL_T, intent(out) :: maskres(DIMV(maskres))
-      REAL_T, intent(in) :: mdot(DIMV(mdot),nsolveMM)
+      REAL_T, intent(in) :: mdot(DIMV(mdot),nsolve)
        ! coeff * areafrac * areaface / (dxfrac*dx)
-      REAL_T, intent(in) :: bx(DIMV(bx),nsolveMM) 
-      REAL_T, intent(in) :: by(DIMV(by),nsolveMM)
-      REAL_T, intent(in) :: bz(DIMV(bz),nsolveMM)
+      REAL_T, intent(in) :: bx(DIMV(bx),nsolve) 
+      REAL_T, intent(in) :: by(DIMV(by),nsolve)
+      REAL_T, intent(in) :: bz(DIMV(bz),nsolve)
        ! coeff * areafrac / dxfrac
-      REAL_T, intent(in) :: fwtx(DIMV(fwtx),nsolveMM_FACE)  
-      REAL_T, intent(in) :: fwty(DIMV(fwty),nsolveMM_FACE)
-      REAL_T, intent(in) :: fwtz(DIMV(fwtz),nsolveMM_FACE)
+      REAL_T, intent(in) :: fwtx(DIMV(fwtx),nsolve)  
+      REAL_T, intent(in) :: fwty(DIMV(fwty),nsolve)
+      REAL_T, intent(in) :: fwtz(DIMV(fwtz),nsolve)
 
       INTEGER_T i,j,k
       INTEGER_T inormal
@@ -1148,8 +1002,6 @@ stop
       INTEGER_T icell,jcell,kcell
       INTEGER_T dir,side
       INTEGER_T veldir
-      INTEGER_T im
-      INTEGER_T faceL,faceR
       REAL_T bface
       REAL_T facewtsum,offdiagsum
       REAL_T local_diag
@@ -1165,34 +1017,8 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if ((num_materials_face.ne.1).and. &
-          (num_materials_face.ne.nmat)) then
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
        print *,"nsolve invalid24"
-       stop
-      endif
-      if (nsolveMM.ne.nsolve*num_materials_face) then
-       print *,"nsolveMM invalid 972"
-       stop
-      endif
-      nsolveMM_FACE_test=nsolveMM
-      if (num_materials_face.eq.1) then
-       ! do nothing
-      else if (num_materials_face.eq.nmat) then
-       nsolveMM_FACE_test=nsolveMM_FACE_test*2
-      else
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
        ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
@@ -1247,36 +1073,13 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       do veldir=1,nsolveMM
+       do veldir=1,nsolve
 
-        if (num_materials_face.eq.1) then
-         if (nsolveMM.eq.nsolve) then
-          faceL=veldir
-          faceR=veldir
-          im=1
-         else
-          print *,"nsolveMM invalid"
-          stop
-         endif
-        else if (num_materials_face.eq.nmat) then
-         if ((nsolve.eq.1).and.(nsolveMM.eq.nmat)) then
-          faceL=veldir
-          faceR=faceL+nsolveMM_FACE/2
-          im=veldir
-         else
-          print *,"nsolve or nsolveMM invalid"
-          stop
-         endif
-        else
-         print *,"num_materials_face invalid"
-         stop
-        endif
-
-        facewtsum=fwtx(D_DECL(i,j,k),faceR)+fwtx(D_DECL(i+1,j,k),faceL)+ &
-                  fwty(D_DECL(i,j,k),faceR)+fwty(D_DECL(i,j+1,k),faceL)
+        facewtsum=fwtx(D_DECL(i,j,k),veldir)+fwtx(D_DECL(i+1,j,k),veldir)+ &
+                  fwty(D_DECL(i,j,k),veldir)+fwty(D_DECL(i,j+1,k),veldir)
         if (SDIM.eq.3) then
          facewtsum=facewtsum+ &
-          fwtz(D_DECL(i,j,k),faceR)+fwtz(D_DECL(i,j,k+1),faceL)
+          fwtz(D_DECL(i,j,k),veldir)+fwtz(D_DECL(i,j,k+1),veldir)
         endif
 
         if (maskcov(D_DECL(i,j,k)).eq.zero) then ! covered by finer cell
@@ -1290,9 +1093,9 @@ stop
 
          local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
          if (local_diag.gt.zero) then
-          masksolv(D_DECL(i,j,k),im)=one
+          masksolv(D_DECL(i,j,k))=one
          else if (local_diag.eq.zero) then
-          masksolv(D_DECL(i,j,k),im)=zero
+          masksolv(D_DECL(i,j,k))=zero
          else
           print *,"local_diag invalid"
           stop
@@ -1360,9 +1163,9 @@ stop
 
          local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
          if (local_diag.gt.zero) then
-          masksolv(D_DECL(i,j,k),im)=one
+          masksolv(D_DECL(i,j,k))=one
          else if (local_diag.eq.zero) then
-          masksolv(D_DECL(i,j,k),im)=zero
+          masksolv(D_DECL(i,j,k))=zero
          else
           print *,"local_diag invalid"
           stop
@@ -1464,12 +1267,9 @@ stop
 ! fwtx,fwty,fwtz are not averaged down.
 ! bx,by,bz are equal to bx_noarea * area/dx and bx_noarea is averaged down.
       subroutine FORT_NSGENERATE( &
-       num_materials_face, &
        level, &
        finest_level, &
        nsolve, &
-       nsolveMM, &
-       nsolveMM_FACE, &
        nmat, &
        project_option, &
        ncphys, &
@@ -1486,13 +1286,9 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_materials_face
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T             :: nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: ncphys
@@ -1506,12 +1302,12 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T             :: growlo(3), growhi(3)
 
-      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolveMM)
-      REAL_T, intent(out) :: diag_reg(DIMV(diag_reg),nsolveMM)
+      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolve)
+      REAL_T, intent(out) :: diag_reg(DIMV(diag_reg),nsolve)
       ! coeff * areafrac * areaface / (dxfrac*dx)  (if coeff>0.0)
-      REAL_T, intent(in) :: bx(DIMV(bx),nsolveMM) 
-      REAL_T, intent(in) :: by(DIMV(by),nsolveMM)
-      REAL_T, intent(in) :: bz(DIMV(bz),nsolveMM)
+      REAL_T, intent(in) :: bx(DIMV(bx),nsolve) 
+      REAL_T, intent(in) :: by(DIMV(by),nsolve)
+      REAL_T, intent(in) :: bz(DIMV(bz),nsolve)
 
       INTEGER_T i,j,k
       INTEGER_T veldir
@@ -1527,34 +1323,8 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if ((num_materials_face.ne.1).and. &
-          (num_materials_face.ne.nmat)) then
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
        print *,"nsolve invalid24"
-       stop
-      endif
-      if (nsolveMM.ne.nsolve*num_materials_face) then
-       print *,"nsolveMM invalid 972"
-       stop
-      endif
-      nsolveMM_FACE_test=nsolveMM
-      if (num_materials_face.eq.1) then
-       ! do nothing
-      else if (num_materials_face.eq.nmat) then
-       nsolveMM_FACE_test=nsolveMM_FACE_test*2
-      else
-       print *,"num_materials_face invalid"
-       stop
-      endif
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
        stop
       endif
 
@@ -1579,7 +1349,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       do veldir=1,nsolveMM
+       do veldir=1,nsolve
 
         offdiagsum=bx(D_DECL(i,j,k),veldir)+bx(D_DECL(i+1,j,k),veldir)+ &
                    by(D_DECL(i,j,k),veldir)+by(D_DECL(i,j+1,k),veldir)
