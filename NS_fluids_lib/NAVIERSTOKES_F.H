@@ -618,8 +618,6 @@ extern "C" {
       int* finest_level,
       int* velcomp,
       int* nsolve,
-      int* nsolveMM,
-      int* nsolveMM_face,
       int* facecut_index,
       int* icefacecut_index,
       int* ncphys,
