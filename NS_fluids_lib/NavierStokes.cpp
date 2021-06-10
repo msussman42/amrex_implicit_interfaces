@@ -10684,7 +10684,6 @@ void NavierStokes::tensor_advection_update() {
       // declared in: DERIVE_3D.F90
       // 0<=im<=nmat-1
       FORT_GETSHEAR(
-       &im,
        &ntensor,
        cellten.dataPtr(),
        ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),

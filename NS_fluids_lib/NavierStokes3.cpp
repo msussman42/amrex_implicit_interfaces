@@ -3547,7 +3547,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           scomp,
           ncomp);
 
-        allocate_array(1,nsolveMM,-1,THERMAL_FORCE_MF);
+        allocate_array(1,nsolve,-1,THERMAL_FORCE_MF);
         int update_state=0;
         thermal_transform_forceALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          THERMAL_FORCE_MF,update_state);
@@ -3606,7 +3606,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (ncomp_check!=nsolve)
          amrex::Error("ncomp_check invalid");
 
-        allocate_array(1,nsolveMM,-1,HOOP_FORCE_MARK_MF);
+        allocate_array(1,nsolve,-1,HOOP_FORCE_MARK_MF);
          // update_state==1:
          //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
          // update_state==0:
@@ -7408,28 +7408,28 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  Vector<int> scomp;
  Vector<int> ncomp;
  int ncomp_check;
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_face,
+  1,
   project_option,
   state_index,
   scomp,
   ncomp,
   ncomp_check);
- int nsolveMM=nsolve*num_materials_face;
- if (ncomp_check!=nsolveMM)
-  amrex::Error("nsolveMM invalid 3919");
+ if (ncomp_check!=nsolve)
+  amrex::Error("nsolve or ncomp_check invalid 3919");
  
  MultiFab& S_new=get_new_data(state_index,slab_step+1);
 
   // in: allocate_project_variables
   // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
- new_localMF(ONES_MF,num_materials_face,0,-1);
- new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
- setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
- setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
+ new_localMF(ONES_MF,1,0,-1);
+ new_localMF(ONES_GROW_MF,1,1,-1);
+ setVal_localMF(ONES_MF,1.0,0,1,0);
+ setVal_localMF(ONES_GROW_MF,1.0,0,1,1);
 
- new_localMF(POLDHOLD_MF,nsolveMM,0,-1);
- setVal_localMF(POLDHOLD_MF,0.0,0,nsolveMM,0);
+ new_localMF(POLDHOLD_MF,nsolve,0,-1);
+ setVal_localMF(POLDHOLD_MF,0.0,0,nsolve,0);
 
   // S_new and outer_iter_pressure will both hold S^*
   // at the very beginning.
@@ -7445,7 +7445,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   //  POLDHOLD = S^* - S^init
 
    // this holds S^*
- new_localMF(OUTER_ITER_PRESSURE_MF,nsolveMM,0,-1);
+ new_localMF(OUTER_ITER_PRESSURE_MF,nsolve,0,-1);
 
  int adjust_temperature=1; 
  int GFM_flag=0;
@@ -7549,7 +7549,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
   // ``OUTER_ITER_PRESSURE'' = S_new = S^*
  MultiFab::Copy(*localMF[OUTER_ITER_PRESSURE_MF],
-		*current_contents_mf,0,0,nsolveMM,0);
+		*current_contents_mf,0,0,nsolve,0);
 
  if (project_option_olddata_needed(project_option)==1) { 
   
@@ -7560,14 +7560,14 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   MultiFab* initial_guess;
   initial_guess=localMF[OUTER_ITER_PRESSURE_MF]; 
   
-  MultiFab* dp=new MultiFab(grids,dmap,nsolveMM,0,
+  MultiFab* dp=new MultiFab(grids,dmap,nsolve,0,
    MFInfo().SetTag("dp"),FArrayBoxFactory());
 
-  MultiFab::Copy(*dp,*initial_guess,0,0,nsolveMM,0);
+  MultiFab::Copy(*dp,*initial_guess,0,0,nsolve,0);
    // dp=initial_guess - S^*   (S_new=S^*)
-  MultiFab::Subtract(*dp,*current_contents_mf,0,0,nsolveMM,0);
+  MultiFab::Subtract(*dp,*current_contents_mf,0,0,nsolve,0);
    // snew+=(initial_guess - S^*)=initial_guess  (S_new=S^* beforehand)
-  MultiFab::Add(*current_contents_mf,*dp,0,0,nsolveMM,0);
+  MultiFab::Add(*current_contents_mf,*dp,0,0,nsolve,0);
 
   int scomp_temp=0;
   for (int ilist=0;ilist<scomp.size();ilist++) {
@@ -7575,7 +7575,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 		  scomp_temp,scomp[ilist],ncomp[ilist],0);
    scomp_temp+=ncomp[ilist];
   }
-  if (scomp_temp!=nsolveMM)
+  if (scomp_temp!=nsolve)
    amrex::Error("scomp_temp invalid");
 
    // dp=S^init-S^*   dS=S-S^init
@@ -7583,9 +7583,9 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
    // alpha dS - div beta grad dS = -alpha dp + div beta grad S^init 
    //                             = alpha POLDHOLD + div beta grad S^init
    // OUTER_ITER_PRESSURE=S^* + (S^init - S^*)=S^init
-  MultiFab::Add(*localMF[OUTER_ITER_PRESSURE_MF],*dp,0,0,nsolveMM,0);
+  MultiFab::Add(*localMF[OUTER_ITER_PRESSURE_MF],*dp,0,0,nsolve,0);
    // POLDHOLD=0 - (S^init-S^*) = S^* - S^init
-  MultiFab::Subtract(*localMF[POLDHOLD_MF],*dp,0,0,nsolveMM,0);
+  MultiFab::Subtract(*localMF[POLDHOLD_MF],*dp,0,0,nsolve,0);
    // later on, (1) UMAC_MF-=beta grad S^init,  (S_new=S^init)
    //           (2) S_new=0.0
   delete dp;
@@ -7645,7 +7645,7 @@ void NavierStokes::overwrite_outflow() {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   if (Umac_new.nComp()!=nsolveMM_FACE)
+   if (Umac_new.nComp()!=1)
     amrex::Error("Umac_new.nComp() invalid");
 
    if (thread_class::nthreads<1)
@@ -8117,7 +8117,7 @@ void NavierStokes::relaxLEVEL(
   MultiFab* residmf_coarse=
    new MultiFab(ns_coarse.grids,ns_coarse.dmap,nsolve,0,
 	MFInfo().SetTag("residmf_coarse"),FArrayBoxFactory());
-  residmf_coarse->setVal(0.0,0,nsolveMM,0);
+  residmf_coarse->setVal(0.0,0,nsolve,0);
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    ns_coarse.setVal_localMF(UMACSTAR_MF+dir,0.0,0,nsolve,0);
@@ -8497,19 +8497,15 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   setVal_localMF(MAC_TEMP_MF+dir,0.0,0,nsolve,0);
  } // dir
 
- new_localMF(DIFFUSIONRHS_MF,nsolveMM,0,-1);
+ new_localMF(DIFFUSIONRHS_MF,nsolve,0,-1);
  if ((project_option==11)|| //FSI_material_exists last project
      (project_option==12)) {//pressure extension
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
  } else if (project_option==0)  { // regular project
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
-  Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolveMM,0);
+  Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
  } else if (project_option==1) { // initial project
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
@@ -8517,23 +8513,23 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } else if (project_option==2) { // thermal conduction
 
   zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
 
  } else if (project_option==3) { // viscosity
 
   zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
 
  } else if ((project_option>=100)&&
 	    (project_option<100+num_species_var)) {//species
 
   zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
 
  } else if (project_option==200) {//smoothing
 
   zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
 
  } else
   amrex::Error("project_option invalid prepare_UMAC_for_solver");
@@ -8584,14 +8580,14 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  if (gmres_precond_iter==0) {
    // Z=M^{-1}R
    // Z=project(Z)
-   // first calls: zeroALL(1,nsolveMM,idx_Z) 
+   // first calls: zeroALL(1,nsolve,idx_Z) 
   multiphase_preconditioner(
    project_option,project_timings,
    presmooth,postsmooth,
    idx_Z,idx_R,nsolve);
  } else if ((gmres_precond_iter>0)&&
-            (gmres_precond_iter*nsolveMM<=MAX_GMRES_BUFFER)) {
-  int m=gmres_precond_iter*nsolveMM;
+            (gmres_precond_iter*nsolve<=MAX_GMRES_BUFFER)) {
+  int m=gmres_precond_iter*nsolve;
 
   Real GMRES_tol=KRYLOV_NORM_CUTOFF;
   Real beta=0.0;
@@ -8650,11 +8646,11 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
    for (int i=1;i<m;i++) {
     // variables initialized to 0.0
-    allocate_array(0,nsolveMM,-1,GMRES_BUFFER0_V_MF+i);
+    allocate_array(0,nsolve,-1,GMRES_BUFFER0_V_MF+i);
    }
    for (int i=0;i<m;i++) {
     // variables initialized to 0.0
-    allocate_array(1,nsolveMM,-1,GMRES_BUFFER0_Z_MF+i);
+    allocate_array(1,nsolve,-1,GMRES_BUFFER0_Z_MF+i);
    }
 
    for (int j=0;j<m_small;j++) {
@@ -8662,7 +8658,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
     if (verbose>0) {
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "GMRES project_option= " << project_option <<
-             " nsolveMM= " << nsolveMM <<
+             " nsolve= " << nsolve <<
              " loop j= " << j << " m= " << m << '\n';
      }
     }  // verbose>0
@@ -8765,7 +8761,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    } else if (m_small==0) {
 
      // Z=M^{-1}R
-     // first calls: zeroALL(1,nsolveMM,idx_Z) 
+     // first calls: zeroALL(1,nsolve,idx_Z) 
      // Z=project(Z)
     multiphase_preconditioner(
      project_option,project_timings,
@@ -8778,7 +8774,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    }
 
    if (status==1) {
-    zeroALL(1,nsolveMM,idx_Z);
+    zeroALL(1,nsolve,idx_Z);
     for (int j=0;j<m_small;j++) {
      aa=yy[j];
       // Z=Z+aa Zj
@@ -9172,24 +9168,16 @@ void NavierStokes::multiphase_project(int project_option) {
  Vector<int> ncomp;
  int state_index;  
  int ncomp_check;
+  //num_materials_combine=1
  get_mm_scomp_solver(
-  num_materials_face,
+  1,
   project_option,
   state_index,
   scomp,
   ncomp,
   ncomp_check);
- int nsolveMM=nsolve*num_materials_face;
- if (ncomp_check!=nsolveMM)
-  amrex::Error("nsolveMM invalid 4904");
-
- int nsolveMM_FACE=nsolveMM;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) {
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
+ if (ncomp_check!=nsolve)
+  amrex::Error("nsolve or ncomp_check invalid 4904");
 
   // localMF[UMAC_MF] = 0.0
  allocate_MAC_velocityALL(nsolve,UMAC_MF);
@@ -9549,13 +9537,13 @@ void NavierStokes::multiphase_project(int project_option) {
      // 4. .... (UMAC updated)
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     MultiFab* macvel=
-      ns_level.getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab); 
+      ns_level.getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab); 
     MultiFab::Copy(
       *ns_level.localMF[MAC_TEMP_MF+dir],
-      *macvel,0,0,nsolveMM_FACE,0);
+      *macvel,0,0,nsolve,0);
     MultiFab::Copy(
       *ns_level.localMF[UMAC_MF+dir],
-      *macvel,0,0,nsolveMM_FACE,0);
+      *macvel,0,0,nsolve,0);
 
     if (1==0) {
      int gridno=0;
@@ -9566,7 +9554,7 @@ void NavierStokes::multiphase_project(int project_option) {
      int interior_only=1;
      FArrayBox& macfab=(*macvel)[0];
      int scomp_debug=0;
-     int ncomp_debug=nsolveMM_FACE;
+     int ncomp_debug=nsolve;
      std::cout << "WARNING: this velocity is scaled\n";
      tecplot_debug(macfab,xlo,fablo,fabhi,coarse_dx,dir,0,
 	     scomp_debug,ncomp_debug,interior_only);
@@ -9709,8 +9697,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  if (ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM)
-   amrex::Error("ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolveMM");
+  if (ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolve)
+   amrex::Error("ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolve");
 
   ns_level.resize_levelsetLO(2,LEVELPC_MF);
   ns_level.debug_ngrow(LEVELPC_MF,2,870);
@@ -9764,7 +9752,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
     // mac_temp store the velocity that comes from residual_correction_form
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
+   ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolve,0);
   }
 
  }  // ilev=finest_level ... level
@@ -9871,7 +9859,7 @@ void NavierStokes::multiphase_project(int project_option) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      if (ilev<finest_level) {
-      ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0); 
+      ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolve,0); 
       ns_level.averageRhs(MAC_RHS_CRSE_MF,nsolve,project_option);
       ns_level.avgDownMac();  // works on UMAC_MF
      }
@@ -9989,15 +9977,15 @@ void NavierStokes::multiphase_project(int project_option) {
      bprof.start();
 #endif
 
-     allocate_array(0,nsolveMM,-1,CGRESID_MF);
-     allocate_array(1,nsolveMM,-1,P_SOLN_MF);
-     allocate_array(0,nsolveMM,-1,bicg_V1_MF);
+     allocate_array(0,nsolve,-1,CGRESID_MF);
+     allocate_array(1,nsolve,-1,P_SOLN_MF);
+     allocate_array(0,nsolve,-1,bicg_V1_MF);
 
      for (int ilev=finest_level;ilev>=level;ilev--) {
       NavierStokes& ns_level=getLevel(ilev);
       if (ilev<finest_level) {
             // get rid of uninit.
-       ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0);
+       ns_level.setVal_localMF(MAC_RHS_CRSE_MF,0.0,0,nsolve,0);
        ns_level.averageRhs(MAC_RHS_CRSE_MF,nsolve,project_option);
        ns_level.avgDownMac(); // works on UMAC_MF
       }
@@ -10022,7 +10010,7 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("local_error_n invalid");
 
-     copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+     copyALL(0,nsolve,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
        // V1=A P_SOLN
        // 1. (begin)calls project_right_hand_side(P)
        // 2. (end)  calls project_right_hand_side(V1)
@@ -10132,22 +10120,22 @@ void NavierStokes::multiphase_project(int project_option) {
      Real dnorm=0.0;
 
        // variables initialized to 0.0
-     allocate_array(1,nsolveMM,-1,Z_MF);
-     allocate_array(0,nsolveMM,-1,P_MF);
-     allocate_array(0,nsolveMM,-1,bicg_R0hat_MF);
-     allocate_array(1,nsolveMM,-1,bicg_U0_MF);
-     allocate_array(0,nsolveMM,-1,bicg_V0_MF);
-     allocate_array(0,nsolveMM,-1,bicg_P1_MF);
-     allocate_array(0,nsolveMM,-1,bicg_R1_MF);
-     allocate_array(1,nsolveMM,-1,bicg_Y_MF);
-     allocate_array(1,nsolveMM,-1,bicg_Hvec_MF);
-     allocate_array(0,nsolveMM,-1,bicg_S_MF);
-     allocate_array(0,nsolveMM,-1,bicg_T_MF);
+     allocate_array(1,nsolve,-1,Z_MF);
+     allocate_array(0,nsolve,-1,P_MF);
+     allocate_array(0,nsolve,-1,bicg_R0hat_MF);
+     allocate_array(1,nsolve,-1,bicg_U0_MF);
+     allocate_array(0,nsolve,-1,bicg_V0_MF);
+     allocate_array(0,nsolve,-1,bicg_P1_MF);
+     allocate_array(0,nsolve,-1,bicg_R1_MF);
+     allocate_array(1,nsolve,-1,bicg_Y_MF);
+     allocate_array(1,nsolve,-1,bicg_Hvec_MF);
+     allocate_array(0,nsolve,-1,bicg_S_MF);
+     allocate_array(0,nsolve,-1,bicg_T_MF);
 
 
-     copyALL(0,nsolveMM,bicg_R0hat_MF,CGRESID_MF);  // R0hat=CGRESID(R0)
+     copyALL(0,nsolve,bicg_R0hat_MF,CGRESID_MF);  // R0hat=CGRESID(R0)
       // MAC_PHI_CRSE(U1)=0.0
-     zeroALL(1,nsolveMM,bicg_U0_MF);
+     zeroALL(1,nsolve,bicg_U0_MF);
 
      error_history.resize(vcycle_max+1);
      for (int ehist=0;ehist<error_history.size();ehist++) {
@@ -10200,7 +10188,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
       adjust_tolerance(error_n,error0_max,project_option);
 
-      copyALL(0,nsolveMM,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+      copyALL(0,nsolve,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
        // V1=A P_SOLN
        // 1. (begin)calls project_right_hand_side(P)
        // 2. (end)  calls project_right_hand_side(V1)
@@ -10280,7 +10268,7 @@ void NavierStokes::multiphase_project(int project_option) {
           change_flag=0;
           project_right_hand_side(P_MF,project_option,change_flag);
 
-          copyALL(0,nsolveMM,P_SOLN_MF,P_MF); //P_SOLN=P
+          copyALL(0,nsolve,P_SOLN_MF,P_MF); //P_SOLN=P
           // V1=A P_SOLN
           // 1. (begin)calls project_right_hand_side(P)
           // 2. (end)  calls project_right_hand_side(V1)
@@ -10299,7 +10287,7 @@ void NavierStokes::multiphase_project(int project_option) {
            project_right_hand_side(MAC_PHI_CRSE_MF,
              project_option,change_flag);
             // U0=MAC_PHI_CRSE(U1)
-           copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
+           copyALL(1,nsolve,bicg_U0_MF,MAC_PHI_CRSE_MF);
 
            // CGRESID=RHS-A mac_phi_crse(U1)
            // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
@@ -10468,7 +10456,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  change_flag=0;
           project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
           // mac_phi_crse(U1)=Hvec
-          copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
+          copyALL(1,nsolve,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
 
 	  change_flag=0;
           project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
@@ -10608,11 +10596,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
           w0=w1;
           // CGRESID(R0)=R1
-          copyALL(0,nsolveMM,CGRESID_MF,bicg_R1_MF);
-          copyALL(0,nsolveMM,P_MF,bicg_P1_MF);
-          copyALL(0,nsolveMM,bicg_V0_MF,bicg_V1_MF);
+          copyALL(0,nsolve,CGRESID_MF,bicg_R1_MF);
+          copyALL(0,nsolve,P_MF,bicg_P1_MF);
+          copyALL(0,nsolve,bicg_V0_MF,bicg_V1_MF);
           // U0=MAC_PHI_CRSE(U1)
-          copyALL(1,nsolveMM,bicg_U0_MF,MAC_PHI_CRSE_MF);
+          copyALL(1,nsolve,bicg_U0_MF,MAC_PHI_CRSE_MF);
 
 #if (profile_solver==1)
           bprof.stop();
@@ -10672,9 +10660,9 @@ void NavierStokes::multiphase_project(int project_option) {
         residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
           bicg_U0_MF,nsolve);
         // R0hat=CGRESID(R0)
-        copyALL(0,nsolveMM,bicg_R0hat_MF,CGRESID_MF);
+        copyALL(0,nsolve,bicg_R0hat_MF,CGRESID_MF);
         // MAC_PHI_CRSE(U1)=U0
-        copyALL(1,nsolveMM,MAC_PHI_CRSE_MF,bicg_U0_MF);
+        copyALL(1,nsolve,MAC_PHI_CRSE_MF,bicg_U0_MF);
         rho0=1.0;
         rho1=1.0;
         alpha=1.0;
@@ -10686,8 +10674,8 @@ void NavierStokes::multiphase_project(int project_option) {
 	} else
          amrex::Error("dnorm invalid Nav3");
 
-        zeroALL(0,nsolveMM,bicg_V0_MF);
-        zeroALL(0,nsolveMM,P_MF);
+        zeroALL(0,nsolve,bicg_V0_MF);
+        zeroALL(0,nsolve,P_MF);
 
 #if (profile_solver==1)
         bprof.stop();
@@ -10880,7 +10868,7 @@ void NavierStokes::multiphase_project(int project_option) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-      ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolveMM_FACE,0);
+      ns_level.Copy_localMF(MAC_TEMP_MF+dir,UMAC_MF+dir,0,0,nsolve,0);
 
      MultiFab* snew_mf=nullptr;
      if (state_index==State_Type) {
@@ -10888,7 +10876,7 @@ void NavierStokes::multiphase_project(int project_option) {
      } else if (state_index==DIV_Type) {
       if (scomp.size()!=1)
        amrex::Error("scomp.size() invalid");
-      if (ncomp[0]!=num_materials_face)
+      if (ncomp[0]!=1)
        amrex::Error("ncomp[0] invalid");
       snew_mf=ns_level.getStateDIV_DATA(1,scomp[0],ncomp[0],cur_time_slab);
      } else {
@@ -10896,11 +10884,11 @@ void NavierStokes::multiphase_project(int project_option) {
       amrex::Error("state_index invalid");
      }
 
-     if (snew_mf->nComp()!=nsolveMM)
+     if (snew_mf->nComp()!=nsolve)
       amrex::Error("snew_mf->nComp() invalid");
 
      MultiFab::Add(
-      *ns_level.localMF[OUTER_ITER_PRESSURE_MF],*snew_mf,0,0,nsolveMM,0);
+      *ns_level.localMF[OUTER_ITER_PRESSURE_MF],*snew_mf,0,0,nsolve,0);
 
      delete snew_mf;
 
@@ -10914,17 +10902,17 @@ void NavierStokes::multiphase_project(int project_option) {
     delete_array(PRESPC_MF);
 
        // variables initialized to 0.0
-    allocate_array(1,nsolveMM,-1,OUTER_MAC_PHI_CRSE_MF);
-    allocate_array(0,nsolveMM,-1,OUTER_RESID_MF);
-    allocate_array(0,nsolveMM,-1,OUTER_MAC_RHS_CRSE_MF);
+    allocate_array(1,nsolve,-1,OUTER_MAC_PHI_CRSE_MF);
+    allocate_array(0,nsolve,-1,OUTER_RESID_MF);
+    allocate_array(0,nsolve,-1,OUTER_MAC_RHS_CRSE_MF);
 
-    allocate_array(1,nsolveMM,-1,P_SOLN_MF);
-    allocate_array(0,nsolveMM,-1,bicg_V1_MF);
+    allocate_array(1,nsolve,-1,P_SOLN_MF);
+    allocate_array(0,nsolve,-1,bicg_V1_MF);
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      if (ilev<finest_level) {
-      ns_level.setVal_localMF(OUTER_MAC_RHS_CRSE_MF,0.0,0,nsolveMM,0); 
+      ns_level.setVal_localMF(OUTER_MAC_RHS_CRSE_MF,0.0,0,nsolve,0); 
       ns_level.averageRhs(OUTER_MAC_RHS_CRSE_MF,nsolve,project_option);
       ns_level.avgDownMac(); // works on UMAC_MF
      }
@@ -10950,7 +10938,7 @@ void NavierStokes::multiphase_project(int project_option) {
     } else
      amrex::Error("outer_error invalid");
 
-    copyALL(0,nsolveMM,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
+    copyALL(0,nsolve,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
        // V1=A P_SOLN
        // 1. (begin)calls project_right_hand_side(P)
        // 2. (end)  calls project_right_hand_side(V1)
@@ -12769,12 +12757,12 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
              nmat*(num_state_material+ngeom_raw)+1)
   amrex::Error("nstate invalid");
 
- new_localMF(REGISTER_CURRENT_MF,nsolveMM,1,-1);
+ new_localMF(REGISTER_CURRENT_MF,nsolve,1,-1);
  push_back_state_register(REGISTER_CURRENT_MF,cur_time_slab,caller_id);
 
  MultiFab::Subtract(
   *localMF[REGISTER_CURRENT_MF],
-  *localMF[source_mf],0,0,nsolveMM,1);
+  *localMF[source_mf],0,0,nsolve,1);
 
 } // INCREMENT_REGISTERS
 

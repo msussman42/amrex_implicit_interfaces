@@ -54,7 +54,6 @@ namespace amrex{
 extern "C" {
 
      void FORT_GETSHEAR(
-       int* im,
        int* ntensor,
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
        Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),

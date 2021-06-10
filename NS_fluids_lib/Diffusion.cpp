@@ -146,8 +146,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  const Real* dx = geom.CellSize();
 
  int nmat=num_materials;
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
@@ -182,15 +180,15 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  debug_ngrow(FACE_VAR_MF,0,810);
 
  debug_ngrow(idx_vel,1,812);
- if (localMF[idx_vel]->nComp()!=nsolveMM)
+ if (localMF[idx_vel]->nComp()!=nsolve)
   amrex::Error("localMF[idx_vel]->nComp() invalid");
 
  debug_ngrow(idx_thermal,1,812);
- if (localMF[idx_thermal]->nComp()!=num_materials_vel)
+ if (localMF[idx_thermal]->nComp()!=1)
   amrex::Error("localMF[idx_thermal]->nComp() invalid");
 
  debug_ngrow(idx_force,1,812);
- if (localMF[idx_force]->nComp()!=nsolveMM)
+ if (localMF[idx_force]->nComp()!=nsolve)
   amrex::Error("localMF[idx_force]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,6);
@@ -298,7 +296,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &nparts_def,
    im_solid_map_ptr,
    &ntensor,
-   &nsolveMM);
+   &nsolve);
  } // mfi
 } // omp
  ns_reconcile_d_num(25);
@@ -330,16 +328,12 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
 
  int nmat=num_materials;
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
 
  debug_ngrow(FACE_VAR_MF,0,810);
 
  debug_ngrow(idx_neg_mom_force,1,812);
- if (localMF[idx_neg_mom_force]->nComp()!=nsolveMM) {
+ if (localMF[idx_neg_mom_force]->nComp()!=nsolve) {
   std::cout << "localMF[idx_neg_mom_force]->nComp()= " <<
    localMF[idx_neg_mom_force]->nComp() << '\n';
   amrex::Error("localMF[idx_neg_mom_force]->nComp() invalid");
@@ -421,7 +415,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
    &prev_time_slab,
    &cur_time_slab,
    &nmat,
-   &nsolveMM);
+   &nsolve);
  } // mfi
 } // omp
  ns_reconcile_d_num(26);
@@ -468,20 +462,19 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
  int nmat=num_materials;
 
  int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
 
  debug_ngrow(FACE_VAR_MF,0,810);
 
  debug_ngrow(idx_vel,1,812);
- if (localMF[idx_vel]->nComp()!=nsolveMM)
+ if (localMF[idx_vel]->nComp()!=nsolve)
   amrex::Error("localMF[idx_vel]->nComp() invalid");
 
  debug_ngrow(idx_thermal,1,812);
- if (localMF[idx_thermal]->nComp()!=num_materials_vel)
+ if (localMF[idx_thermal]->nComp()!=1)
   amrex::Error("localMF[idx_thermal]->nComp() invalid");
 
  debug_ngrow(idx_force,1,812);
- if (localMF[idx_force]->nComp()!=num_materials_vel)
+ if (localMF[idx_force]->nComp()!=1)
   amrex::Error("localMF[idx_force]->nComp() invalid");
 
  debug_ngrow(CELL_DEN_MF,1,811);
@@ -527,7 +520,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
   FArrayBox& thermalfab=(*localMF[idx_thermal])[mfi];
   FArrayBox& forcefab=(*localMF[idx_force])[mfi];
 
-  int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+
+  int nstate=(AMREX_SPACEDIM+1)+nmat*num_state_material+
    nmat*ngeom_raw+1;
   if (snewfab.nComp()!=nstate)
    amrex::Error("nstate invalid");
@@ -543,6 +536,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //declared in DIFFUSION_3D.F90
   FORT_THERMAL_OFFSET_FORCE(
    &override_density[0], 
    forcefab.dataPtr(),
@@ -565,7 +559,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
    &rzflag,
    &nmat,
    &nstate,
-   &nsolveMM);
+   &nsolve);
  } // mfi
 } // omp
  ns_reconcile_d_num(27);
@@ -660,8 +654,7 @@ void NavierStokes::viscous_boundary_fluxes(
     FArrayBox& areafab=(*localMF[AREA_MF+dir])[mfi];
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,
-      num_materials_vel*AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
     Vector<int> tempbc=getBCArray(State_Type,gridno,tcomp,1);
 
     int tid_current=0;
