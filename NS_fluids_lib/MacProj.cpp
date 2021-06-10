@@ -1967,23 +1967,14 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==4)||   // NEG_MOM_FORCE
      (project_option==3)) {  // viscosity
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option==2) {  // thermal diffusion
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option invalid67");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
 
  int nsolve=1;
  if (project_option==0) { // grad p, div(u p)
@@ -1996,8 +1987,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   nsolve=AMREX_SPACEDIM;
  } else
   amrex::Error("project_option invalid68"); 
-
- int nsolveMM=nsolve*num_materials_face;
 
  if ((project_option==0)||   // grad p, div(u p)
      (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
@@ -2021,15 +2010,15 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    
-   ns_level.new_localMF(DIFFUSIONRHS_MF,nsolveMM,0,-1);
-   ns_level.setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolveMM,0);
+   ns_level.new_localMF(DIFFUSIONRHS_MF,nsolve,0,-1);
+   ns_level.setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
 
     // in: NavierStokes::update_SEM_forcesALL
     // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
-   ns_level.new_localMF(ONES_MF,num_materials_face,0,-1);
-   ns_level.new_localMF(ONES_GROW_MF,num_materials_face,1,-1);
-   ns_level.setVal_localMF(ONES_MF,1.0,0,num_materials_face,0);
-   ns_level.setVal_localMF(ONES_GROW_MF,1.0,0,num_materials_face,1);
+   ns_level.new_localMF(ONES_MF,1,0,-1);
+   ns_level.new_localMF(ONES_GROW_MF,1,1,-1);
+   ns_level.setVal_localMF(ONES_MF,1.0,0,1,0);
+   ns_level.setVal_localMF(ONES_GROW_MF,1.0,0,1,1);
 
    ns_level.allocate_FACE_WEIGHT(nsolve,project_option);
    ns_level.allocate_pressure_work_vars(nsolve,project_option);
@@ -2039,7 +2028,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
    // automatically initializes GP_DEST_CELL=0.0
-  allocate_array(0,AMREX_SPACEDIM*num_materials_face,-1,GP_DEST_CELL_MF);
+  allocate_array(0,AMREX_SPACEDIM,-1,GP_DEST_CELL_MF);
 
  } else if (project_option==4) { // NEG_MOM_FORCE_MF
   // do nothing
@@ -2101,23 +2090,14 @@ void NavierStokes::update_SEM_forces(int project_option,
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
  if ((project_option==0)||
      (project_option==4)||   // -momforce
      (project_option==3)) {  // viscosity
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option==2) { // thermal diffusion
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option invalid71");
-
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
 
  int local_idx_gp=GP_DEST_CELL_MF;
  int local_idx_gpmac=GP_DEST_FACE_MF;
@@ -2138,21 +2118,12 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("project_option invalid72"); 
 
- int nsolveMM=nsolve*num_materials_face;
- int nsolveMM_FACE=nsolveMM;
- if (num_materials_face==1) {
-  // do nothing
- } else if (num_materials_face==nmat) {
-  nsolveMM_FACE*=2;
- } else
-  amrex::Error("num_materials_face invalid");
-
  if ((project_option==0)||   // grad p, div(u p)
      (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
      (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
   if (localMF_grow[MACDIV_MF]==-1) {
-   new_localMF(MACDIV_MF,nsolveMM,0,-1);
+   new_localMF(MACDIV_MF,nsolve,0,-1);
   } else
    amrex::Error("localMF_grow[MACDIV_MF] invalid");
 
@@ -2213,8 +2184,8 @@ void NavierStokes::update_SEM_forces(int project_option,
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     MultiFab* macvel=
-     getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab); 
-    MultiFab::Copy(*localMF[UMAC_MF+dir],*macvel,0,0,nsolveMM_FACE,0);
+     getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab); 
+    MultiFab::Copy(*localMF[UMAC_MF+dir],*macvel,0,0,nsolve,0);
     delete macvel;
    } 
    // grad p: GP_DEST_CELL_MF
