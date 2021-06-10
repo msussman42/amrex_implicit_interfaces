@@ -10110,7 +10110,6 @@ stop
        ! to zero in NavierStokes::init_delta_SDC()
       subroutine FORT_UPDATESEMFORCE_FACE( &
        project_option, &
-       nsolve, &
        ns_time_order, &
        dir, &
        slab_step, &
@@ -10130,7 +10129,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: dir
       INTEGER_T, intent(in) :: slab_step
@@ -10147,7 +10145,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: gpfab(DIMV(gpfab),nsolveMM_FACE)
+      REAL_T, intent(in) :: gpfab(DIMV(gpfab))
       REAL_T, intent(out) :: HOfab(DIMV(HOfab))
       REAL_T, intent(out) :: LOfab(DIMV(LOfab))
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
@@ -10156,15 +10154,9 @@ stop
       INTEGER_T :: i,j,k
       INTEGER_T ii,jj,kk
       INTEGER_T im_crit
-      INTEGER_T gpcomp
 
       if (project_option.eq.0) then
-       if (nsolve.eq.1) then
-        ! do nothing
-       else
-        print *,"nsolve invalid"
-        stop
-       endif
+       ! do nothing
       else if (project_option.eq.2) then ! thermal diffusion
        print *,"thermal diffusion force is only cell centered"
        stop
@@ -10255,14 +10247,12 @@ stop
 
        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
 
-        gpcomp=1
-
         if (update_spectral.eq.1) then
          if ((slab_step.lt.-1).or.(slab_step.ge.bfact_time_order)) then
           print *,"slab_step invalid"
           stop
          endif 
-         HOfab(D_DECL(i,j,k))=gpfab(D_DECL(i,j,k),gpcomp)
+         HOfab(D_DECL(i,j,k))=gpfab(D_DECL(i,j,k))
         else if (update_spectral.eq.0) then
          ! do nothing
         else
@@ -10276,7 +10266,7 @@ stop
           stop
          endif
 
-         LOfab(D_DECL(i,j,k))=gpfab(D_DECL(i,j,k),gpcomp)
+         LOfab(D_DECL(i,j,k))=gpfab(D_DECL(i,j,k))
         else if (update_stable.eq.0) then
          ! do nothing
         else
@@ -12454,10 +12444,6 @@ FIX ME
        print *,"enable_spectral invalid estdt"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
       if ((terminal_velocity_dt.eq.0).or. &
           (terminal_velocity_dt.eq.1)) then
@@ -14422,7 +14408,7 @@ FIX ME
       ! 1/den (i.e. den actually stores 1/den)
       REAL_T, intent(in) :: den(DIMV(den),nmat+1)  
        ! alphanovolume or outer_iter_pressure
-      REAL_T, intent(out) :: coeff(DIMV(coeff),num_materials_scalar_solve)  
+      REAL_T, intent(out) :: coeff(DIMV(coeff))  
       REAL_T, intent(in) :: vol(DIMV(vol))
        ! thermal conductivity
       REAL_T, intent(out) :: heatx(DIMV(heatx))
@@ -14861,13 +14847,10 @@ FIX ME
                  stop
                 endif
 
+                im_source_substrate=im_source
+                im_dest_substrate=im_dest
 
-                if (num_materials_scalar_solve.eq.1) then
-
-                 im_source_substrate=im_source
-                 im_dest_substrate=im_dest
-
-                 if (local_freezing_model.eq.0) then ! stefan
+                if (local_freezing_model.eq.0) then ! stefan
 
                   ! Tgamma BC at thin filament interface.
                   if (solidheat_flag.eq.0) then ! diffuse in solid
@@ -14893,19 +14876,19 @@ FIX ME
                    stop
                   endif
 
-                 else if (local_freezing_model.eq.5) then ! stefan evap/diff
+                else if (local_freezing_model.eq.5) then ! stefan evap/diff
                   ! do nothing
-                 else if (local_freezing_model.eq.6) then !Palmore/Desjardins
+                else if (local_freezing_model.eq.6) then !Palmore/Desjardins
                   ! do nothing
-                 else
+                else
                   print *,"local_freezing_model invalid 15"
                   stop
-                 endif
+                endif
 
-                 if ((im_source.eq.im_primary).or. &
-                     (im_source_substrate.eq.im_primary).or. &
-                     (im_dest.eq.im_primary).or. &
-                     (im_dest_substrate.eq.im_primary)) then
+                if ((im_source.eq.im_primary).or. &
+                    (im_source_substrate.eq.im_primary).or. &
+                    (im_dest.eq.im_primary).or. &
+                    (im_dest_substrate.eq.im_primary)) then
 
                   im_crit=im_primary
 
@@ -14996,23 +14979,15 @@ FIX ME
                    stop
                   endif
 
-                 else if ((im_source.ne.im_primary).and. &
-                          (im_source_substrate.ne.im_primary).and. &
-                          (im_dest.ne.im_primary).and. &
-                          (im_dest_substrate.ne.im_primary)) then
+                else if ((im_source.ne.im_primary).and. &
+                         (im_source_substrate.ne.im_primary).and. &
+                         (im_dest.ne.im_primary).and. &
+                         (im_dest_substrate.ne.im_primary)) then
                   ! do nothing
-                 else
-                  print *,"LS_center invalid"
-                  stop
-                 endif
-
-                else if (num_materials_scalar_solve.eq.nmat) then
-                 print *,"FIX ME: im_dest_crit, im_source_crit using FVM"
-                 stop
                 else
-                 print *,"num_materials_scalar_solve invalid"
+                 print *,"LS_center invalid"
                  stop
-                endif 
+                endif
 
                else if ((local_freezing_model.eq.1).or. &
                         (local_freezing_model.eq.2).or. &
@@ -15126,9 +15101,7 @@ FIX ME
          endif
 
 
-         if (num_materials_scalar_solve.eq.1) then
-
-          do dir=1,SDIM
+         do dir=1,SDIM
            ii=0
            jj=0
            kk=0
@@ -15314,12 +15287,12 @@ FIX ME
             endif
 
            enddo ! side=-1,1,2
-          enddo ! dir=1..sdim
+         enddo ! dir=1..sdim
        
-          if (adjust_temperature.eq.-1) then ! modify heatxyz
+         if (adjust_temperature.eq.-1) then ! modify heatxyz
            ! do nothing
-          else if ((adjust_temperature.eq.0).or. & ! modify coeff
-                   (adjust_temperature.eq.1)) then ! modify Snew and coeff
+         else if ((adjust_temperature.eq.0).or. & ! modify coeff
+                  (adjust_temperature.eq.1)) then ! modify Snew and coeff
  
            if (delta_coeff.gt.zero) then
 
@@ -15361,11 +15334,11 @@ FIX ME
               Snew(D_DECL(i,j,k),tcomp)=T_adjust
              enddo  ! im_adjust=1..nmat
 
-             coeff(D_DECL(i,j,k),1)=T_adjust
+             coeff(D_DECL(i,j,k))=T_adjust
 
             else if (adjust_temperature.eq.0) then
 
-             coeff(D_DECL(i,j,k),1)=original_coeff+delta_coeff
+             coeff(D_DECL(i,j,k))=original_coeff+delta_coeff
 
             else
              print *,"adjust_temperature invalid"
@@ -15379,21 +15352,11 @@ FIX ME
             stop
            endif
 
-          else
+         else
            print *,"adjust_temperature invalid"
            stop
-          endif
-
-         else if (num_materials_scalar_solve.eq.nmat) then
-
-          print *,"FIX ME: MM stefan solver not ready yet"
-          stop
-  
-         else
-          print *,"num_materials_scalar_solve invalid"
-          stop
          endif
-  
+
         else 
          print *,"im_dest_crit invalid"
          stop
@@ -15489,6 +15452,8 @@ FIX ME
       INTEGER_T iface,jface,kface
       INTEGER_T icell,jcell,kcell
       INTEGER_T im
+      INTEGER_T im_primary
+      INTEGER_T im_primary_cell
       INTEGER_T nten_test
       REAL_T over_den,over_cv,local_vol
       REAL_T aface,hface
@@ -15575,9 +15540,9 @@ FIX ME
         do im=1,nmat
          ls_cell_or_face(im)=LS(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(ls_cell_or_face,nmat,im)
+        call get_primary_material(ls_cell_or_face,nmat,im_primary)
 
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid(nmat,im_primary).eq.1) then
 
          ii=0
          jj=0
@@ -15616,9 +15581,9 @@ FIX ME
          do im=1,nmat
           ls_cell_or_face(im)=LS(D_DECL(icell,jcell,kcell),im)
          enddo
-         call get_primary_material(ls_cell_or_face,nmat,im)
+         call get_primary_material(ls_cell_or_face,nmat,im_primary_cell)
 
-         if (is_rigid(nmat,im).eq.0) then
+         if (is_rigid(nmat,im_primary_cell).eq.0) then
 
            ! in: subroutine FORT_HEATSOURCE_FACE
           if (heat_dir.eq.1) then
@@ -15640,44 +15605,33 @@ FIX ME
            stop
           endif
 
-          do im=1,num_materials_scalar_solve
+          over_den=den(D_DECL(i,j,k),1)
+          over_cv=DeDT(D_DECL(i,j,k),1)  ! 1/(rho cv)
+          local_vol=vol(D_DECL(i,j,k))
 
-           over_den=den(D_DECL(i,j,k),1)
-           over_cv=DeDT(D_DECL(i,j,k),1)  ! 1/(rho cv)
-           local_vol=vol(D_DECL(i,j,k))
-
-           if ((over_den.le.zero).or.(over_cv.le.zero).or. &
+          if ((over_den.le.zero).or.(over_cv.le.zero).or. &
                (local_vol.le.zero)) then
             print *,"over_den, over_cv, or local_vol invalid"
             stop
-           endif
+          endif
 
-           heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
+          heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
 
-           if (num_materials_scalar_solve.eq.1) then
-            tcomp=(SDIM+1)+2
-           else if (num_materials_scalar_solve.eq.nmat) then
-            tcomp=(SDIM+1)+ &
-             (im-1)*num_state_material+2  ! +1 den,+2 T
-           else
-            print *,"num_materials_scalar_solve invalid"
-            stop
-           endif
+          tcomp=(SDIM+1)+2
 
-           Snew(D_DECL(i,j,k),tcomp)= &
-            Snew(D_DECL(i,j,k),tcomp)+heat_source_term
-          enddo ! im=1..num_materials_scalar_solve
+          Snew(D_DECL(i,j,k),tcomp)= &
+           Snew(D_DECL(i,j,k),tcomp)+heat_source_term
 
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid(nmat,im_primary_cell).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_rigid(nmat,im_primary_cell) invalid"
           stop
          endif 
-        else if (is_rigid(nmat,im).eq.0) then
+        else if (is_rigid(nmat,im_primary).eq.0) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(nmat,im_primary) invalid"
          stop
         endif 
        else if (heat_flux.eq.zero) then
@@ -27933,7 +27887,6 @@ FIX ME
       REAL_T, intent(in) :: du(DIMV(du),nsolve)
 
       REAL_T Tforce,new_temperature,TEMPERATURE
-      INTEGER_T num_materials_face
       REAL_T xclamped(SDIM)
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
@@ -27960,7 +27913,7 @@ FIX ME
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.num_materials_vel*(SDIM+1)+ &
+      if (nstate.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate invalid"
        stop
@@ -27998,7 +27951,7 @@ FIX ME
              vel_clamped,temperature_clamped)
 
        do im=1,nmat
-        ibase=num_materials_vel*(SDIM+1)+(im-1)*num_state_material
+        ibase=(SDIM+1)+(im-1)*num_state_material
         TEMPERATURE=snew(D_DECL(i,j,k),ibase+2)
         if (TEMPERATURE.le.zero) then
           print *,"HEATADVANCE: temperature must be positive"

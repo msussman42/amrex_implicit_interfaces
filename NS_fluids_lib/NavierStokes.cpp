@@ -5355,16 +5355,22 @@ NavierStokes::get_mm_scomp_solver(
  int nsolveMM=nsolve*num_materials_combine;
 
  if (project_option_pressure(project_option)==1) {
- 
-  scomp[0]=AMREX_SPACEDIM;
-  ncomp[0]=nsolveMM; 
-  state_index=State_Type;
+
+  if (num_materials_combine==1) { 
+   scomp[0]=AMREX_SPACEDIM;
+   ncomp[0]=nsolveMM; 
+   state_index=State_Type;
+  } else
+   amrex::Error("num_materials_combine invalid");
 
  } else if (project_option==11) { // FSI_material_exists (last project);
 	                          // divu pressure is independent var.
-  scomp[0]=0;
-  ncomp[0]=nsolveMM; 
-  state_index=DIV_Type;
+  if (num_materials_combine==1) { 
+   scomp[0]=0;
+   ncomp[0]=nsolveMM; 
+   state_index=DIV_Type;
+  } else
+   amrex::Error("num_materials_combine invalid");
 
  } else if (project_option==2) { // temperature
 
@@ -5377,9 +5383,12 @@ NavierStokes::get_mm_scomp_solver(
 
  } else if (project_option==3) { // viscosity
 
-  scomp[0]=0;
-  ncomp[0]=nsolveMM; 
-  state_index=State_Type;
+  if (num_materials_combine==1) { 
+   scomp[0]=0;
+   ncomp[0]=nsolveMM; 
+   state_index=State_Type;
+  } else
+   amrex::Error("num_materials_combine invalid");
 
  } else if ((project_option>=100)&&
             (project_option<100+num_species_var)) { // species
@@ -5420,8 +5429,6 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
  if ((level<0)||(level>finest_level))
   amrex::Error("level corrupt");
 
- int nmat=num_materials;
-
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid36");
 
@@ -5454,8 +5461,6 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
  if ((nsolve!=1)&&
      (nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid36");
-
- int nmat=num_materials;
 
  if (project_option_momeqn(project_option)==1) {
   // do nothing
@@ -8102,14 +8107,11 @@ NavierStokes::initData () {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   MultiFab& Smac_new = get_new_data(Umac_Type+dir,slab_step+1);
 
-  int nsolve=1;
-
   if (Smac_new.nComp()!=1) {
    std::cout << "nmat = " << nmat << '\n';
-   std::cout << "nsolve = " << nsolve << '\n';
    amrex::Error("Smac_new.nComp() invalid in initData");
   }
-  Smac_new.setVal(0.0,0,nsolveMM_FACE,0);
+  Smac_new.setVal(0.0,0,1,0);
  }  // dir=0..sdim-1
 
  int iter=0; // =>  FSI_touch_flag[tid]=0
@@ -10386,6 +10388,11 @@ void NavierStokes::update_SEM_delta_force(
 
  if (project_option==0) {
 
+  if (nsolve==1) {
+   // do nothing
+  } else 
+   amrex::Error("nsolve invalid");
+
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
    if (thread_class::nthreads<1)
@@ -10445,7 +10452,6 @@ void NavierStokes::update_SEM_delta_force(
      //declared in: GODUNOV_3D.F90
     FORT_UPDATESEMFORCE_FACE(
      &project_option,
-     &nsolve,
      &ns_time_order,
      &dir,
      &slab_step,
@@ -14526,7 +14532,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
      int energyflag=0;
      int local_enable_spectral=enable_spectral;
-     int num_materials_face=1;
      int simple_AMR_BC_flag=0;
      int ncomp_xp=nfluxSEM;
      int ncomp_xgp=nfluxSEM;

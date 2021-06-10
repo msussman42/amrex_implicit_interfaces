@@ -433,8 +433,6 @@ namespace amrex{
         int* SEM_advection_algorithm);
 
       void FORT_MAC_TO_CELL(
-        int* nsolveMM_FACE,
-        int* num_materials_face,
         int* ns_time_order,
         int* divu_outer_sweeps,
         int* num_divu_outer_sweeps,

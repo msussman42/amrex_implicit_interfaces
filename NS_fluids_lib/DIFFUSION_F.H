@@ -68,7 +68,7 @@ extern "C"
       int* nparts_def,
       int* im_solid_map,
       int* ntensor,
-      int* nsolveMM);
+      int* nsolve);
 
 
     void FORT_COMPUTE_NEG_MOM_FORCE (
@@ -86,7 +86,7 @@ extern "C"
       Real* prev_time,
       Real* cur_time,
       int* nmat,
-      int* nsolveMM);
+      int* nsolve);
 
 
 
@@ -111,7 +111,7 @@ extern "C"
       int* rzflag,
       int* nmat,
       int* nstate,
-      int* nsolveMM);
+      int* nsolve);
 
 }
 
