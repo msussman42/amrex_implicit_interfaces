@@ -6,7 +6,8 @@
 //
 //NUM_CELL_ELASTIC, MAC_grid_displacement,num_materials_viscoelastic,
 //NUM_TENSOR_TYPE,XDmac_Type,NUM_TENSOR_TYPE+SDIM,num_MAC_vectors,
-//nsolveMM_FACE,ntensorMM,num_materials_face
+//nsolveMM_FACE,ntensorMM,num_materials_face,num_materials_vel,
+//num_materials_scalar_solve
 //#include <winstd.H>
 
 #include <algorithm>
@@ -19269,7 +19270,6 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 
     // in: GODUNOV_3D.F90
    FORT_ESTDT(
-    &nsolveMM_FACE,
     &local_enable_spectral,
     parent->AMR_min_phase_change_rate.dataPtr(),
     parent->AMR_max_phase_change_rate.dataPtr(),

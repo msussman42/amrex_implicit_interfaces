@@ -181,12 +181,8 @@ stop
        print *,"normdir invalid"
        stop
       endif 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
-      nstate_test=num_materials_vel*(SDIM+1)+nmat*num_state_material+ &
+      nstate_test=(SDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
       nflux_test=nstate_test+nmat*(SDIM+1)
 
@@ -198,9 +194,9 @@ stop
        print *,"nstate invalid"
        stop
       endif 
-      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
-      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=(AMREX_SPACEDIM+1)
+      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       total_mass=zero
@@ -304,12 +300,8 @@ stop
       REAL_T energy(nmat)
       REAL_T total_kinetic_energy
     
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
 
-      nstate_test=num_materials_vel*(SDIM+1)+nmat*num_state_material+ &
+      nstate_test=(SDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
       nflux_test=nstate_test+nmat*(SDIM+1)
 
@@ -326,9 +318,9 @@ stop
        stop
       endif
  
-      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
-      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=(AMREX_SPACEDIM+1)
+      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       total_mass=zero
@@ -446,16 +438,12 @@ stop
       REAL_T total_kinetic_energy
       REAL_T total_energy
     
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
        print *,"normdir invalid"
        stop
       endif
 
-      nstate_test=num_materials_vel*(SDIM+1)+nmat*num_state_material+ &
+      nstate_test=(SDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
       nflux_test=nstate_test+nmat*(SDIM+1)
 
@@ -472,9 +460,9 @@ stop
        flux(dir)=zero
       enddo
 
-      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
-      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=(AMREX_SPACEDIM+1)
+      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       call convert_to_conserve(state,conserve,total_mass, &
@@ -567,7 +555,7 @@ stop
       INTEGER_T n
 
     
-      nstate_test=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
+      nstate_test=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
       nflux_test=nstate_test+nmat*(SDIM+1)
       if (nflux.ne.nflux_test) then
@@ -609,7 +597,6 @@ stop
  
       subroutine FORT_FEED_FORWARD_ADVECT( &
        init_fluxes, &
-       nsolveMM_FACE, &
        normdir, & ! 0..sdim-1
        nflux_feed_forward, & 
        nstate, &
@@ -650,8 +637,6 @@ stop
       INTEGER_T level
       INTEGER_T finest_level
       INTEGER_T init_fluxes
-      INTEGER_T nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T normdir
       INTEGER_T nflux_feed_forward
       INTEGER_T nflux_test
@@ -694,7 +679,7 @@ stop
       REAL_T sold(DIMV(sold),nstate)
       REAL_T lsnew(DIMV(lsnew),(SDIM+1)*nmat)
       REAL_T lsold(DIMV(lsold),(SDIM+1)*nmat)
-      REAL_T xmacnew(DIMV(xmacnew),num_materials_vel)
+      REAL_T xmacnew(DIMV(xmacnew))
 
       INTEGER_T i,j,k,ii,jj,kk,veldir
       INTEGER_T nhalf
@@ -728,16 +713,6 @@ stop
        stop
       endif
 
-      nsolveMM_FACE_test=num_materials_vel
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel.ne.1"
-       stop
-      endif
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
-
       if (bfact.lt.1) then
        print *,"bfact too small"
        stop
@@ -752,7 +727,7 @@ stop
        stop
       endif
 
-      nstate_test=num_materials_vel*(SDIM+1)+nmat*num_state_material+ &
+      nstate_test=(SDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
       nflux_test=nstate_test+nmat*(SDIM+1)
       if (nstate.ne.nstate_test) then
@@ -786,9 +761,9 @@ stop
       call checkbound(fablo,fabhi,DIMS(lsold),1,-1,234)
       call checkbound(fablo,fabhi,DIMS(xmacnew),0,normdir,264)
 
-      igeom=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=num_materials_vel*(AMREX_SPACEDIM+1)
-      ils=num_materials_vel*(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
+      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
+      ithermal=(AMREX_SPACEDIM+1)
+      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
        nmat*ngeom_raw+1
 
       ii=0

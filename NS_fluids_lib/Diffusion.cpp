@@ -1266,16 +1266,11 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  int nmat=num_materials;
  int nden=nmat*num_state_material;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
  int nsolve=AMREX_SPACEDIM;
- int nsolveMM=nsolve*num_materials_vel;
- int nsolveMM_FACE=nsolveMM;
 
  debug_ngrow(FACE_VAR_MF,0,2);
  VOF_Recon_resize(1,SLOPE_RECON_MF);
@@ -1288,17 +1283,17 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,845);
 
- if (localMF[source_idx]->nComp()!=nsolveMM)
+ if (localMF[source_idx]->nComp()!=nsolve)
   amrex::Error("localMF[source_idx]->nComp() invalid");
 
- if (localMF[idx_heat]->nComp()!=num_materials_scalar_solve)
-  amrex::Error("localMF[idx_heat]->nComp()!=num_materials_scalar_solve");
+ if (localMF[idx_heat]->nComp()!=1)
+  amrex::Error("localMF[idx_heat]->nComp()!=1");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
-  if (localMF[CONSERVE_FLUXES_MF+dir]->nComp()!=nsolveMM_FACE)
+  if (localMF[CONSERVE_FLUXES_MF+dir]->nComp()!=nsolve)
    amrex::Error("localMF[CONSERVE_FLUXES_MF+dir]->nComp() invalid");
-  setVal_localMF(CONSERVE_FLUXES_MF+dir,0.0,0,nsolveMM_FACE,0);
+  setVal_localMF(CONSERVE_FLUXES_MF+dir,0.0,0,nsolve,0);
  }
  int homflag=0;
  int energyflag=0;
@@ -1319,7 +1314,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- int nstate=num_materials_vel*(AMREX_SPACEDIM+1)+
+ int nstate=(AMREX_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
@@ -1383,11 +1378,10 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //declared in: GODUNOV_3D.F90
   FORT_VISCTENSORHEAT(
    &ntensor,
    &nsolve,
-   &nsolveMM,
-   &nsolveMM_FACE,
    &nstate,
    xlo,dx,
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),

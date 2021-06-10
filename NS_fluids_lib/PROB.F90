@@ -13884,7 +13884,6 @@ END SUBROUTINE Adist
        scomp, &
        scomp_bc, &
        dcomp, &
-       update_right_flux, &
        ncomp_dest, &
        ncomp_source, &
        ncomp_xgp, &
@@ -13929,7 +13928,6 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: bfact,bfact_c,bfact_f
       INTEGER_T, intent(in) :: scomp,scomp_bc
       INTEGER_T, intent(in) :: dcomp
-      INTEGER_T, intent(in) :: update_right_flux
       INTEGER_T, intent(in) :: ncomp_dest
       INTEGER_T, intent(in) :: ncomp_source
       INTEGER_T, intent(in) :: ncomp_xgp
@@ -14115,12 +14113,6 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((update_right_flux.ne.0).and. &
-          (update_right_flux.ne.1)) then
-       print *,"update_right_flux invalid"
-       stop
-      endif
-
       ntensor=SDIM*SDIM
 
       if ((level.lt.0).or. &
@@ -14160,10 +14152,6 @@ END SUBROUTINE Adist
        endif
        if (ncomp_xp.ne.SDIM) then
         print *,"ncomp_xp invalid (it is supposed to be sdim)",ncomp_xp
-        stop
-       endif
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
         stop
        endif
        if (energyflag.ne.0) then
@@ -14220,10 +14208,6 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
-        stop
-       endif
        if (ncfluxreg.ne.SDIM*(SDIM+num_state_base)) then
         print *,"ncfluxreg invalid operation_flag.eq.7"
         stop
@@ -14259,10 +14243,6 @@ END SUBROUTINE Adist
         print *,"parameters invalid for op=0"
         stop
        endif
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
-        stop
-       endif
        if ((ncomp_dest.ne.1).or. &
            (ncomp_source.ne.1).or. &
            (scomp_bc.ne.1)) then
@@ -14282,10 +14262,6 @@ END SUBROUTINE Adist
        endif
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
-        stop
-       endif
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
         stop
        endif
        if ((scomp.ne.1).or. &
@@ -14314,10 +14290,6 @@ END SUBROUTINE Adist
         stop
        endif
 
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
-        stop
-       endif
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
         stop
@@ -14339,10 +14311,6 @@ END SUBROUTINE Adist
        endif
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
-        stop
-       endif
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
         stop
        endif
        if ((scomp.ne.(cen_maskSEM-1)*num_state_material+1).or. &
@@ -14371,10 +14339,6 @@ END SUBROUTINE Adist
         stop
        endif
 
-       if (update_right_flux.ne.0) then
-        print *,"update_right_flux invalid"
-        stop
-       endif
        if ((scomp.ne.dir).or. &
            (dcomp.ne.1)) then
         print *,"parameters invalid for op=3,10,11,5"
@@ -16147,10 +16111,6 @@ END SUBROUTINE Adist
 
             if (shared_face.eq.0) then
              xgp(D_DECL(ic,jc,kc),dcomp)=shared_face_value
-             if (update_right_flux.eq.1) then
-              xgp(D_DECL(ic,jc,kc),dcomp+nmat)= &
-                xgp(D_DECL(ic,jc,kc),dcomp)
-             endif
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16175,10 +16135,6 @@ END SUBROUTINE Adist
               xgp(D_DECL(ic,jc,kc),dcomp)=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+nc))
-              if (update_right_flux.eq.1) then
-               xgp(D_DECL(ic,jc,kc),dcomp+nmat)= &
-                xgp(D_DECL(ic,jc,kc),dcomp)
-              endif
              else if (side.eq.0) then
               ! do nothing
              else
@@ -16298,14 +16254,9 @@ END SUBROUTINE Adist
            else if (spectral_loop.eq.1) then
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              if (update_right_flux.eq.0) then
                xp(D_DECL(ic,jc,kc),dcomp)=half*( &
                 semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)+ &
                 semflux(D_DECL(i_out,j_out,k_out),fluxbase+nc))
-              else
-               print *,"update_right_flux invalid"
-               stop
-              endif
              else if (side.eq.0) then
               ! do nothing
              else

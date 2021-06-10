@@ -181,7 +181,7 @@ stop
 
        REAL_T, intent(out) ::  force(DIMV(force),nsolveMM)
        REAL_T, intent(in) ::  tensor(DIMV(tensor),ntensor)
-       REAL_T, intent(in) ::  thermal(DIMV(thermal),num_materials_scalar_solve)
+       REAL_T, intent(in) ::  thermal(DIMV(thermal))
        REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
        REAL_T, intent(in) ::  solxfab(DIMV(solxfab),nparts_def*SDIM)
        REAL_T, intent(in) ::  solyfab(DIMV(solyfab),nparts_def*SDIM)
@@ -216,16 +216,6 @@ stop
        REAL_T LStest,LScrit
 
        nhalf=3
-
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
-        stop
-       endif
-       if ((num_materials_scalar_solve.ne.1).and. &
-           (num_materials_scalar_solve.ne.nmat)) then
-        print *,"num_materials_scalar_solve invalid"
-        stop
-       endif
 
        nsolve=SDIM
        ntensor=SDIM*SDIM
@@ -423,14 +413,7 @@ stop
            DTEMP=zero
           else if ((FWATER.ge.half).and.(FWATER.le.one+VOFTOL)) then
 
-           if (num_materials_scalar_solve.eq.1) then
-            liquid_temp=thermal(D_DECL(i,j,k),1)
-           else if (num_materials_scalar_solve.eq.nmat) then
-            liquid_temp=thermal(D_DECL(i,j,k),im)
-           else
-            print *,"num_materials_scalar_solve invalid"
-            stop
-           endif
+           liquid_temp=thermal(D_DECL(i,j,k),1)
 
            if (liquid_temp.le.zero) then
             print *,"liquid_temp cannot be <= 0 (1)"
@@ -692,21 +675,7 @@ stop
 
        nhalf=3
 
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
-        stop
-       endif
-       if ((num_materials_scalar_solve.ne.1).and. &
-           (num_materials_scalar_solve.ne.nmat)) then
-        print *,"num_materials_scalar_solve invalid"
-        stop
-       endif
-
        nsolve=SDIM
-       if (nsolveMM.ne.nsolve*num_materials_vel) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
        if ((update_state.ne.0).and. &
            (update_state.ne.1)) then
         print *,"update_state invalid"
@@ -848,10 +817,10 @@ stop
        INTEGER_T DIMDEC(den)
        INTEGER_T DIMDEC(DEDT)
 
-       REAL_T  force(DIMV(force),num_materials_scalar_solve)
-       REAL_T  thermal(DIMV(thermal),num_materials_scalar_solve)
+       REAL_T  force(DIMV(force))
+       REAL_T  thermal(DIMV(thermal))
        REAL_T  recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T  uold(DIMV(uold),nsolveMM)
+       REAL_T  uold(DIMV(uold),nsolve)
        REAL_T  snew(DIMV(snew),nstate)
        REAL_T  den(DIMV(den),nmat+1)
        REAL_T  DEDT(DIMV(DEDT),nmat+1)
@@ -860,12 +829,11 @@ stop
        REAL_T  dx(SDIM)
 
        INTEGER_T i,j,k,dir
-       REAL_T temp_n(num_materials_scalar_solve)
-       REAL_T temp_np1(num_materials_scalar_solve)
+       REAL_T temp_n
+       REAL_T temp_np1
        REAL_T DTEMP 
        REAL_T inverseden,over_rhocv
        INTEGER_T nhalf
-       INTEGER_T im_temp
        INTEGER_T im_alt
        REAL_T temp_offset
        REAL_T gtemp_offset(SDIM)
@@ -874,20 +842,11 @@ stop
 
        nhalf=3
 
-       if (num_materials_vel.ne.1) then
-        print *,"num_materials_vel invalid"
+       if (nsolve.ne.SDIM) then
+        print *,"nsolve invalid"
         stop
        endif
-       if ((num_materials_scalar_solve.ne.1).and. &
-           (num_materials_scalar_solve.ne.nmat)) then
-        print *,"num_materials_scalar_solve invalid"
-        stop
-       endif
-       if (nsolveMM.ne.SDIM*num_materials_vel) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
-       if (nstate.ne.num_materials_vel*(SDIM+1)+nmat*num_state_material+ &
+       if (nstate.ne.(SDIM+1)+nmat*num_state_material+ &
            nmat*ngeom_raw+1) then
         print *,"nstate invalid"
         stop
@@ -945,35 +904,23 @@ stop
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do im_temp=1,num_materials_scalar_solve
-         temp_n(im_temp)=thermal(D_DECL(i,j,k),im_temp)
-         temp_np1(im_temp)=thermal(D_DECL(i,j,k),im_temp)
-        enddo ! im_temp
+        temp_n=thermal(D_DECL(i,j,k))
+        temp_np1=thermal(D_DECL(i,j,k))
 
-        do im_temp=1,num_materials_scalar_solve
+        inverseden=den(D_DECL(i,j,k),1)
+        over_rhocv=DEDT(D_DECL(i,j,k),1)
 
-         if (num_materials_scalar_solve.eq.1) then
-          inverseden=den(D_DECL(i,j,k),1)
-          over_rhocv=DEDT(D_DECL(i,j,k),1)
-         else if (num_materials_scalar_solve.eq.nmat) then
-          inverseden=den(D_DECL(i,j,k),im_temp+1)
-          over_rhocv=DEDT(D_DECL(i,j,k),im_temp+1)
-         else
-          print *,"num_materials_scalar_solve invalid"
-          stop
-         endif
-
-         if (inverseden.le.zero) then
+        if (inverseden.le.zero) then
           print *,"inverseden invalid"
           stop
-         endif
-         if (over_rhocv.le.zero) then
+        endif
+        if (over_rhocv.le.zero) then
           print *,"over_rhocv invalid"
           stop
-         endif
+        endif
 
-         if ((override_density.eq.0).or. & ! Drho/DT=-divu rho
-             (override_density.eq.1)) then ! rho=rho(T,Y,z)
+        if ((override_density.eq.0).or. & ! Drho/DT=-divu rho
+            (override_density.eq.1)) then ! rho=rho(T,Y,z)
 
           DTEMP=zero
           dotprod=zero
@@ -982,7 +929,7 @@ stop
            ! Boussinesq approximation.
            ! if gtemp_offset <> 0 then an extra term is added to 
            ! the temperature equation which comes from advection.
-         else if (override_density.eq.2) then 
+        else if (override_density.eq.2) then 
           call thermal_offset(xsten,nhalf,temp_offset,gtemp_offset)
 
           dotprod=zero
@@ -992,53 +939,43 @@ stop
           enddo ! dir
 
           DTEMP=-dt*dotprod*over_rhocv
-         else
+        else
           print *,"override_density invalid"
           stop
-         endif
+        endif
 
-         ! thermal force=-div(k grad T)-THERMAL_FORCE_MF
-         temp_np1(im_temp)=temp_np1(im_temp)+DTEMP 
-         force(D_DECL(i,j,k),im_temp)=-dotprod
+        ! thermal force=-div(k grad T)-THERMAL_FORCE_MF
+        temp_np1=temp_np1+DTEMP 
+        force(D_DECL(i,j,k))=-dotprod
 
-         if (update_state.eq.0) then
+        if (update_state.eq.0) then
           ! do nothing
-         else if (update_state.eq.1) then
+        else if (update_state.eq.1) then
 
           if (DTEMP.ne.zero) then
 
-           tempcomp=num_materials_vel*(SDIM+1)+ &
-            (im_temp-1)*num_state_material+2
-           snew(D_DECL(i,j,k),tempcomp)=temp_np1(im_temp)
+           tempcomp=(SDIM+1)+2
+           snew(D_DECL(i,j,k),tempcomp)=temp_np1
 
-           if (num_materials_scalar_solve.eq.1) then
-            do im_alt=2,nmat
-             tempcomp=num_materials_vel*(SDIM+1)+ &
+           do im_alt=2,nmat
+             tempcomp=(SDIM+1)+ &
               (im_alt-1)*num_state_material+2
-             snew(D_DECL(i,j,k),tempcomp)=temp_np1(im_temp)
-            enddo
-           else if (num_materials_scalar_solve.eq.nmat) then
-            ! do nothing
-           else
-            print *,"num_materials_scalar_solve invalid"
-            stop
-           endif
+             snew(D_DECL(i,j,k),tempcomp)=temp_np1
+           enddo
  
-          else if (DTEMP.eq.zero) then
+         else if (DTEMP.eq.zero) then
     
            ! do nothing
  
-          else
-           print *,"DTEMP invalid"
-           stop
-          endif
-
          else
-          print *,"update_state invalid"
+          print *,"DTEMP invalid"
           stop
          endif
 
-        enddo ! im_temp= 1..num_materials_scalar_solve
+        else
+         print *,"update_state invalid"
+         stop
+        endif
 
        enddo
        enddo

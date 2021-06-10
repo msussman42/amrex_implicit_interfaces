@@ -673,7 +673,6 @@ extern "C"
 
 
    void FORT_ESTDT(
-      int* nsolveMM_FACE,
       int* enable_spectral,
       Real* AMR_min_phase_change_rate,
       Real* AMR_max_phase_change_rate,
@@ -1388,8 +1387,6 @@ extern "C"
    void FORT_VISCTENSORHEAT(
      int* ntensor,
      int* nsolve,
-     int* nsolveMM,
-     int* nsolveMM_FACE,
      int* nstate,
      const Real* xlo,const Real* dx,
      Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),

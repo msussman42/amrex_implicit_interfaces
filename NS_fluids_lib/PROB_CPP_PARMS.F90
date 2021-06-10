@@ -70,8 +70,6 @@ stop
         ccngeom_raw, &
         ccngeom_recon, &
         ccnum_materials, &
-        ccnum_materials_vel, &
-        ccnum_materials_scalar_solve, &
         ccmaterial_type, &
         ccnten, &
         ccdrhodt, &
@@ -204,8 +202,6 @@ stop
       INTEGER_T, intent(in) :: ccnum_state_base
       INTEGER_T, intent(in) :: ccngeom_raw
       INTEGER_T, intent(in) :: ccngeom_recon
-      INTEGER_T, intent(in) :: ccnum_materials_vel
-      INTEGER_T, intent(in) :: ccnum_materials_scalar_solve
       
       INTEGER_T, intent(in) :: ccmaterial_type(ccnum_materials)
       REAL_T, intent(in) :: ccdrhodt(ccnum_materials)
@@ -814,8 +810,6 @@ stop
       endif
       
       num_materials_viscoelastic=ccnum_materials_viscoelastic
-      num_materials_vel=ccnum_materials_vel
-      num_materials_scalar_solve=ccnum_materials_scalar_solve
       
       num_state_base=ccnum_state_base
       if (num_state_base.ne.2) then
@@ -835,10 +829,7 @@ stop
           (num_materials_viscoelastic.gt.num_materials).or. &
           (num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS).or. &
-          (num_materials.gt.100).or. &
-          (num_materials_vel.ne.1).or. &
-          ((num_materials_scalar_solve.ne.1).and. &
-           (num_materials_scalar_solve.ne.num_materials)) ) then
+          (num_materials.gt.100)) then
        print *,"material parameters illegal"
        stop
       endif
@@ -867,8 +858,6 @@ stop
        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS,num_materials ", &
         num_species_var,num_materials_viscoelastic, &
         MAX_NUM_MATERIALS,num_materials
-       print *,"num_materials_vel ",num_materials_vel
-       print *,"num_materials_scalar_solve ",num_materials_scalar_solve
        print *,"MAX_NUM_EOS ",MAX_NUM_EOS
        print *,"ngeom_raw ",ngeom_raw
        print *,"ngeom_recon ",ngeom_recon

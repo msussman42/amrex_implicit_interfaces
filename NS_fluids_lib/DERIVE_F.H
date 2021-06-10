@@ -137,7 +137,6 @@ extern "C" {
       Real* time,
       Real* visc_coef,
       int* ntensor,
-      int* ntensorMM,
       int* nmat,
       int* nparts,
       int* nparts_def,
