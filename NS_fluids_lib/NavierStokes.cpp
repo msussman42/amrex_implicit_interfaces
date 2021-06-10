@@ -23818,13 +23818,8 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
   //sanity checks
  if (MAC_state_idx==Umac_Type) {
 
-  int nsolve=1;
-  int nsolveMM_FACE=1;
- 
-  if (ntotal!=nsolveMM_FACE)
-   amrex::Error("ntotal bust");
-  if (scomp+ncomp>ntotal)
-   amrex::Error("scomp invalid getStateMAC");
+  if ((ntotal!=1)||(ncomp!=1)||(scomp!=0))
+   amrex::Error("ntotal, ncomp, or scomp bust getStateMAC");
 
  } else if (MAC_state_idx==XDmac_Type) {
 
@@ -23833,10 +23828,8 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
   } else
    amrex::Error("MAC_grid_displacement invalid in getStateMAC");
 
-  if (ntotal!=1)
-   amrex::Error("ntotal!=1");
-  if (scomp+ncomp>ntotal)
-   amrex::Error("scomp invalid getStateMAC");
+  if ((ntotal!=1)||(ncomp!=1)||(scomp!=0))
+   amrex::Error("ntotal, ncomp, or scomp bust getStateMAC");
 
  } else
   amrex::Error("MAC_state_idx invalid");

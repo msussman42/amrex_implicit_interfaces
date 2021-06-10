@@ -12801,7 +12801,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time,
   ncomp,
   ncomp_check);
  if (ncomp_check!=nsolve)
-  amrex::Error("nsolveMM invalid 6613");
+  amrex::Error("nsolve invalid 6613");
 
  if (state_index!=State_Type)
   amrex::Error("state_index invalid");
@@ -12845,10 +12845,9 @@ void NavierStokes::prepare_advect_vars(Real time) {
  if (time<0.0)
   amrex::Error("time invalid");
 
- int nsolve=AMREX_SPACEDIM;
-FIX ME nsolve MAC distinct
- new_localMF(ADVECT_REGISTER_MF,nsolve,1,-1);
+ new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ngrow=0, scomp=0, ncomp=1
   getStateMAC_localMF(Umac_Type,ADVECT_REGISTER_FACE_MF+dir,0,dir,
     0,1,time);
  } // dir
