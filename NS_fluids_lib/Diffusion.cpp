@@ -582,13 +582,8 @@ void NavierStokes::viscous_boundary_fluxes(
   
   bool use_tiling=ns_tiling;
 
-  if (num_materials_vel!=1)
-   amrex::Error("num_materials_vel invalid");
-
   int nmat=num_materials;
   int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-  int nsolveMM=nsolve;
-  int nsolveMM_FACE=nsolveMM;
 
   if (project_option==3) { // viscosity
    if (nsolve!=AMREX_SPACEDIM)
@@ -596,16 +591,6 @@ void NavierStokes::viscous_boundary_fluxes(
   } else if (project_option==2) { // thermal diffusion
    if (nsolve!=1)
     amrex::Error("nsolve invalid");
-  
-   nsolveMM*=num_materials_scalar_solve; 
-   nsolveMM_FACE*=num_materials_scalar_solve; 
-
-   if (num_materials_scalar_solve==1) {
-    // do nothing
-   } else if (num_materials_scalar_solve==nmat) { 
-    nsolveMM_FACE*=2;
-   } else
-    amrex::Error("num_materials_scalar_solve invalid");
   } else
    amrex::Error("project_option not supported");
 
@@ -626,7 +611,7 @@ void NavierStokes::viscous_boundary_fluxes(
   resize_metrics(1);
  
    // den,T
-  int dcomp=num_materials_vel*(AMREX_SPACEDIM+1);
+  int dcomp=(AMREX_SPACEDIM+1);
   int tcomp=dcomp+1;
 
   Vector<int> temp_dombc(2*AMREX_SPACEDIM);
@@ -647,7 +632,7 @@ void NavierStokes::viscous_boundary_fluxes(
    else
     amrex::Error("dir invalid viscous boundary fluxes");
 
-   if (fluxdir->nComp()!=nsolveMM_FACE)
+   if (fluxdir->nComp()!=nsolve)
     amrex::Error("conserve_fluxes invalid ncomp");
 
    if (thread_class::nthreads<1)
@@ -700,9 +685,7 @@ void NavierStokes::viscous_boundary_fluxes(
      latent_heat.dataPtr(),
      freezing_model.dataPtr(),
      saturation_temp.dataPtr(),
-     &nsolveMM_FACE,
      &nsolve,
-     &nsolveMM,
      &dir,
      xlo,dx,
      velbc.dataPtr(), 

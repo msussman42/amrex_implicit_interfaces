@@ -568,47 +568,15 @@ stop
        endif
       enddo ! partid=1..num_materials_viscoelastic 
 
-      do partid=1,num_materials_viscoelastic
-       im=fort_im_elastic_map(partid)+1
-       if ((im.ge.1).and.(im.le.nmat)) then
-        write(matstr,'(I2)') im
-        do i=1,2
-         if (matstr(i:i).eq.' ') then
-          matstr(i:i)='0'
-         endif
-        enddo
-        ih=1
-        Varname='XDISPLACE'
-        ih=ih+9
-        do i=1,2
-         Varname(ih:ih)=matstr(i:i)
-         ih=ih+1
-        enddo
-        call dumpstring(Varname)
-        ih=1
-        Varname='YDISPLACE'
-        ih=ih+9
-        do i=1,2
-         Varname(ih:ih)=matstr(i:i)
-         ih=ih+1
-        enddo
-        call dumpstring(Varname)
+      Varname='XDISPLACE'
+      call dumpstring(Varname)
+      Varname='YDISPLACE'
+      call dumpstring(Varname)
 
-        if (SDIM.eq.3) then
-         ih=1
-         Varname='ZDISPLACE'
-         ih=ih+9
-         do i=1,2
-          Varname(ih:ih)=matstr(i:i)
-          ih=ih+1
-         enddo
-         call dumpstring(Varname)
-        endif
-       else
-        print *,"im invalid60"
-        stop
-       endif
-      enddo ! partid=1..num_materials_viscoelastic 
+      if (SDIM.eq.3) then
+       Varname='ZDISPLACE'
+       call dumpstring(Varname)
+      endif
 
        ! viscosity
       do im=1,nmat
@@ -20505,22 +20473,24 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((istate.ge.1).and.(istate.le.num_state_base)) then
+      if ((istate.ge.1).and. &
+          (istate.le.num_state_base)) then
        species_flag=0
-       if (istate.eq.1) then
+       if (istate.eq.1) then ! density
         try_merge=0
-       else if (istate.eq.2) then
+       else if (istate.eq.2) then ! temperature
         try_merge=1
        else
         print *,"istate invalid"
         stop
        endif
-       if ((temp_homflag.eq.1).and.(istate.eq.2)) then
+       if ((temp_homflag.eq.1).and. &
+           (istate.eq.2)) then
         local_homflag=1
        else
         local_homflag=0
        endif
-      else if ((istate.gt.num_state_base).and. &
+      else if ((istate.gt.num_state_base).and. & ! species
                (istate.le.num_state_material)) then
        species_flag=1
        try_merge=1
@@ -20537,7 +20507,7 @@ END SUBROUTINE Adist
         ! homogeneous BC for temperature solver
       if ((temp_homflag.eq.1).and. &
           (species_flag.eq.0).and. &
-          (istate.eq.2).and. &
+          (istate.eq.2).and. &  ! temperature
           (local_homflag.eq.1)) then
 
        ADV=zero
@@ -21298,15 +21268,8 @@ END SUBROUTINE Adist
         stop
        endif
 
-       if (try_merge.eq.1) then
-        if (num_materials_scalar_solve.eq.num_materials) then
-         ! do nothing
-        else if (num_materials_scalar_solve.eq.1) then
-         ADV=ADV_merge
-        else
-         print *,"num_materials_scalar_solve invalid"
-         stop
-        endif
+       if (try_merge.eq.1) then ! temperature or species
+        ADV=ADV_merge
        else if (try_merge.eq.0) then
         ! do nothing
        else
@@ -27369,9 +27332,7 @@ end subroutine initialize2d
        latent_heat, &
        freezing_model, &
        saturation_temp, &
-       nsolveMM_FACE, &
        nsolve, &
-       nsolveMM, &
        dir, &
        xlo,dx, &
        velbc, &
@@ -27396,10 +27357,7 @@ end subroutine initialize2d
       IMPLICIT NONE
 
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nsolveMM_FACE
-      INTEGER_T nsolveMM_FACE_test
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nsolveMM
       INTEGER_T, intent(in) :: dir
       INTEGER_T dir2
       INTEGER_T, intent(in) :: nmat
@@ -27422,7 +27380,7 @@ end subroutine initialize2d
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, intent(in) :: area(DIMV(area))
-      REAL_T, intent(inout) :: xflux(DIMV(xflux),nsolveMM_FACE)
+      REAL_T, intent(inout) :: xflux(DIMV(xflux),nsolve)
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: tempbc(SDIM,2)
       INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
@@ -27504,27 +27462,9 @@ end subroutine initialize2d
         print *,"nsolve invalid"
         stop
        endif
-       if (nsolveMM.ne.nsolve) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolveMM
       else if (project_option.eq.2) then !thermal conduction
        if (nsolve.ne.1) then
         print *,"nsolve invalid"
-        stop
-       endif
-       if (nsolveMM.ne.nsolve*num_materials_scalar_solve) then
-        print *,"nsolveMM invalid"
-        stop
-       endif
-       nsolveMM_FACE_test=nsolveMM
-       if (num_materials_scalar_solve.eq.1) then
-        ! do nothing
-       else if (num_materials_scalar_solve.eq.nmat) then
-        nsolveMM_FACE_test=nsolveMM_FACE_test*2
-       else
-        print *,"num_materials_scalar_solve invalid"
         stop
        endif
       else
@@ -27532,11 +27472,6 @@ end subroutine initialize2d
        stop
       endif
       
-      if (nsolveMM_FACE_test.ne.nsolveMM_FACE) then
-       print *,"nsolveMM_FACE invalid"
-       stop
-      endif
-
       if (project_option.eq.3) then ! viscosity
        ! do nothing
       else if (project_option.eq.2) then ! thermal conduction
@@ -27676,17 +27611,7 @@ end subroutine initialize2d
              stop
             endif
 
-            if (num_materials_scalar_solve.eq.1) then
-             xflux(D_DECL(i,j,k),1)=xflux_local
-            else if (num_materials_scalar_solve.eq.nmat) then
-             do im_vel=1,num_materials_scalar_solve
-              xflux(D_DECL(i,j,k),im_vel)=xflux_local
-              xflux(D_DECL(i,j,k),im_vel+nsolveMM_FACE/2)=xflux_local
-             enddo ! im_vel
-            else
-             print *,"num_materials_scalar_solve invalid"
-             stop
-            endif
+            xflux(D_DECL(i,j,k),1)=xflux_local
  
            else if (LSleft*LSright.ge.zero) then
             ! do nothing
@@ -27786,17 +27711,7 @@ end subroutine initialize2d
            xflux_local=zero
           endif
 
-          if (num_materials_scalar_solve.eq.1) then
-           xflux(D_DECL(i,j,k),1)=xflux_local
-          else if (num_materials_scalar_solve.eq.nmat) then
-           do im_vel=1,num_materials_scalar_solve
-            xflux(D_DECL(i,j,k),im_vel)=xflux_local
-            xflux(D_DECL(i,j,k),im_vel+nsolveMM_FACE/2)=xflux_local
-           enddo ! im_vel
-          else 
-           print *,"num_materials_scalar_solve invalid"
-           stop
-          endif
+          xflux(D_DECL(i,j,k),1)=xflux_local
 
          endif ! cooling disk
 
@@ -28040,7 +27955,7 @@ end subroutine initialize2d
       endif
 
       if ((scomp.lt.0).or. &
-          (scomp+ncomp.gt.num_materials_viscoelastic)) then
+          (scomp+ncomp.gt.1)) then
        print *,"scomp invalid xdmacfill"
        stop
       endif
@@ -28216,8 +28131,9 @@ end subroutine initialize2d
       endif
 
       if ((scomp.lt.0).or. &
-          (scomp+ncomp.gt.num_materials_viscoelastic)) then
-       print *,"scomp invalid x_extrap_fill"
+          (scomp+ncomp.gt.1)) then
+       print *,"scomp or ncomp invalid x_extrap_fill"
+       print *,"scomp,ncomp=",scomp," ",ncomp
        stop
       endif
 
@@ -29987,78 +29903,78 @@ end subroutine initialize2d
       endif
        ! c++ index
       icomplo=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
-      icomphi=num_materials_viscoelastic*(FORT_NUM_TENSOR_TYPE+SDIM)
+      icomphi=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
        print *,"scomp out of range in xdisplace fill"
        stop
       endif
       ipart=(scomp-icomplo)/SDIM+1
-      if ((ipart.lt.1).or. &
-          (ipart.gt.num_materials_viscoelastic)) then
+      if (ipart.eq.1) then
+       ! do nothing
+      else
        print *,"ipart out of range"
        stop
       endif
-      im=fort_im_elastic_map(ipart)+1
-      if ((im.ge.1).and.(im.le.num_materials)) then
 
-       dir_xdisplace=scomp-(ipart-1)*SDIM-icomplo+1
+       ! 1<=dir_xdisplace<=sdim
+      dir_xdisplace=scomp-(ipart-1)*SDIM-icomplo+1
 
-       call local_filcc(bfact, &
+      call local_filcc(bfact, &
         u,DIMS(u), &
         domlo,domhi,bc)
 
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
+      fablo(1)=ARG_L1(u)
+      fablo(2)=ARG_L2(u)
 #if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=ARG_L3(u)
 #endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
+      fabhi(1)=ARG_H1(u)
+      fabhi(2)=ARG_H2(u)
 #if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=ARG_H3(u)
 #endif
 
-       do dir2=1,SDIM
-        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-         print *,"domlo not divisible by bfact"
-         stop
-        endif
-        if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-         print *,"domhi+1 not divisible by bfact"
-         stop
-        endif
-       enddo  ! dir2
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
 
-       do dir2=1,SDIM
-       do side=1,2
+      do dir2=1,SDIM
+      do side=1,2
 
-        borderlo(3)=0
-        borderhi(3)=0
-        do dir3=1,SDIM
-         borderlo(dir3)=fablo(dir3)
-         borderhi(dir3)=fabhi(dir3)
-        enddo
-        ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
-         if (side.eq.1) then
-          if (fablo(dir2).lt.domlo(dir2)) then
-           ext_dir_flag=1
-           borderhi(dir2)=domlo(dir2)-1
-           inside_index=domlo(dir2)
-          endif
-         else if (side.eq.2) then
-          if (fabhi(dir2).gt.domhi(dir2)) then
-           ext_dir_flag=1
-           borderlo(dir2)=domhi(dir2)+1
-           inside_index=domhi(dir2)
-          endif
-         else
-          print *,"side invalid"
-          stop
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+       if (bc(dir2,side).eq.EXT_DIR) then
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
          endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
         endif
+       endif
 
-        if (ext_dir_flag.eq.1) then
+       if (ext_dir_flag.eq.1) then
          do i=borderlo(1),borderhi(1)
          do j=borderlo(2),borderhi(2)
          do k=borderlo(3),borderhi(3)
@@ -30076,13 +29992,9 @@ end subroutine initialize2d
          enddo
          enddo
          enddo
-        endif            
-       enddo ! side
-       enddo ! dir2
-      else
-       print *,"im out of range in XDISPLACEFILL"
-       stop
-      endif
+       endif            
+      enddo ! side
+      enddo ! dir2
 
       return
       end subroutine FORT_XDISPLACEFILL
@@ -30429,11 +30341,10 @@ end subroutine initialize2d
        stop
       endif
 
-      max_ncomp=num_materials_viscoelastic* &
-       (FORT_NUM_TENSOR_TYPE+SDIM)
+      max_ncomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
 
       xd_scomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
-      xd_ncomp=num_materials_viscoelastic*SDIM
+      xd_ncomp=SDIM
 
       check_scomp=0
       check_ncomp=0
@@ -30591,7 +30502,7 @@ end subroutine initialize2d
        if ((ncomp.eq.max_ncomp).or. &
            (ncomp.eq.xd_ncomp)) then
 
-        do ipart=1,num_materials_viscoelastic
+        ipart=1
         do istate=1,SDIM
 
          icomp_xd=icomp_xd+1

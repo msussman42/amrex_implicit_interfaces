@@ -179,6 +179,7 @@ implicit none
 ! fort_n_cell added March 11.
 ! pos_sites has 5000 components, May 8.
 ! num_materials_vel deleted, June 7.
+! num_materials_scalar_solve deleted, June 9.
 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
