@@ -2070,7 +2070,6 @@ protected:
 
     static int num_species_var; 
     static int num_materials;
-    static int num_materials_scalar_solve;
     static int use_supermesh; //def=0
     static int ncomp_sum_int_user; //def=0
 

@@ -82,8 +82,6 @@ namespace amrex{
        int* ngeom_raw,
        int* ngeom_recon,
        int* num_materials,
-       int* num_materials_vel,
-       int* num_materials_scalar_solve,
        int* material_type,
        int* nten,
        Real* drhodt,
