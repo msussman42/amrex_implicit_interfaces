@@ -136,7 +136,7 @@ stop
          nparts_def, &
          im_solid_map, &
          ntensor, &
-         nsolveMM)
+         nsolve)
 
        use probf90_module
        use global_utility_module 
@@ -152,7 +152,7 @@ stop
        INTEGER_T, intent(in) :: nparts_def
        INTEGER_T, intent(in) :: im_solid_map(nparts_def)
        INTEGER_T, intent(in) :: ntensor
-       INTEGER_T, intent(in) :: nsolveMM
+       INTEGER_T, intent(in) :: nsolve
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: finest_level
        INTEGER_T, intent(in) :: rzflag
@@ -179,15 +179,15 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(den)
        INTEGER_T, intent(in) :: DIMDEC(mu)
 
-       REAL_T, intent(out) ::  force(DIMV(force),nsolveMM)
+       REAL_T, intent(out) ::  force(DIMV(force),nsolve)
        REAL_T, intent(in) ::  tensor(DIMV(tensor),ntensor)
        REAL_T, intent(in) ::  thermal(DIMV(thermal))
        REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
        REAL_T, intent(in) ::  solxfab(DIMV(solxfab),nparts_def*SDIM)
        REAL_T, intent(in) ::  solyfab(DIMV(solyfab),nparts_def*SDIM)
        REAL_T, intent(in) ::  solzfab(DIMV(solzfab),nparts_def*SDIM)
-       REAL_T, intent(in) ::  uold(DIMV(uold),nsolveMM)
-       REAL_T, intent(out) ::  unew(DIMV(unew),nsolveMM)
+       REAL_T, intent(in) ::  uold(DIMV(uold),nsolve)
+       REAL_T, intent(out) ::  unew(DIMV(unew),nsolve)
        REAL_T, intent(in) ::  lsnew(DIMV(lsnew),nmat*(SDIM+1))
        REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
        REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
@@ -197,8 +197,8 @@ stop
 
        INTEGER_T i,j,k,dir
        INTEGER_T im
-       REAL_T un(nsolveMM)
-       REAL_T unp1(nsolveMM)
+       REAL_T un(nsolve)
+       REAL_T unp1(nsolve)
        REAL_T RCEN
        REAL_T inverseden
        REAL_T mu_cell
@@ -636,7 +636,7 @@ stop
          prev_time, &
          cur_time, &
          nmat, &
-         nsolveMM)
+         nsolve)
 
        use probf90_module
        use global_utility_module 
@@ -644,7 +644,7 @@ stop
        IMPLICIT NONE
 
        INTEGER_T nmat
-       INTEGER_T nsolveMM
+       INTEGER_T nsolve
        INTEGER_T level
        INTEGER_T finest_level
        INTEGER_T update_state
@@ -659,8 +659,8 @@ stop
        INTEGER_T DIMDEC(unew)
        INTEGER_T DIMDEC(den)
 
-       REAL_T  force(DIMV(force),nsolveMM)
-       REAL_T  unew(DIMV(unew),nsolveMM)
+       REAL_T  force(DIMV(force),nsolve)
+       REAL_T  unew(DIMV(unew),nsolve)
        REAL_T  den(DIMV(den),nmat+1)
        REAL_T  xlo(SDIM)
        REAL_T  xsten(-3:3,SDIM)
@@ -787,46 +787,46 @@ stop
          rzflag, &
          nmat, &
          nstate, &
-         nsolveMM)
+         nsolve)
 
        use probf90_module
        use global_utility_module 
 
        IMPLICIT NONE
 
-       INTEGER_T override_density
+       INTEGER_T, intent(in) :: override_density
  
-       INTEGER_T nmat
-       INTEGER_T nstate
-       INTEGER_T nsolveMM
-       INTEGER_T level
-       INTEGER_T finest_level
-       INTEGER_T rzflag
-       INTEGER_T update_state
-       REAL_T dt
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: nstate
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: finest_level
+       INTEGER_T, intent(in) :: rzflag
+       INTEGER_T, intent(in) :: update_state
+       REAL_T, intent(in) :: dt
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
+       INTEGER_T, intent(in) :: bfact
     
-       INTEGER_T DIMDEC(force)
-       INTEGER_T DIMDEC(thermal)
-       INTEGER_T DIMDEC(recon)
-       INTEGER_T DIMDEC(uold)
-       INTEGER_T DIMDEC(snew)
-       INTEGER_T DIMDEC(den)
-       INTEGER_T DIMDEC(DEDT)
+       INTEGER_T, intent(in) :: DIMDEC(force)
+       INTEGER_T, intent(in) :: DIMDEC(thermal)
+       INTEGER_T, intent(in) :: DIMDEC(recon)
+       INTEGER_T, intent(in) :: DIMDEC(uold)
+       INTEGER_T, intent(in) :: DIMDEC(snew)
+       INTEGER_T, intent(in) :: DIMDEC(den)
+       INTEGER_T, intent(in) :: DIMDEC(DEDT)
 
-       REAL_T  force(DIMV(force))
-       REAL_T  thermal(DIMV(thermal))
-       REAL_T  recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T  uold(DIMV(uold),nsolve)
-       REAL_T  snew(DIMV(snew),nstate)
-       REAL_T  den(DIMV(den),nmat+1)
-       REAL_T  DEDT(DIMV(DEDT),nmat+1)
-       REAL_T  xlo(SDIM)
-       REAL_T  xsten(-3:3,SDIM)
-       REAL_T  dx(SDIM)
+       REAL_T, intent(in) :: force(DIMV(force))
+       REAL_T, intent(in) :: thermal(DIMV(thermal))
+       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+       REAL_T, intent(in) :: uold(DIMV(uold),nsolve)
+       REAL_T, intent(out) :: snew(DIMV(snew),nstate)
+       REAL_T, intent(in) :: den(DIMV(den),nmat+1)
+       REAL_T, intent(in) :: DEDT(DIMV(DEDT),nmat+1)
+       REAL_T, intent(in) :: xlo(SDIM)
+       REAL_T, intent(in) :: xsten(-3:3,SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
 
        INTEGER_T i,j,k,dir
        REAL_T temp_n

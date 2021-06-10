@@ -265,7 +265,6 @@ stop
       end subroutine DERTURBVISC
 
       subroutine FORT_GETSHEAR( &
-       im, &
        ntensor, &
        cellten,DIMS(cellten), &
        vof,DIMS(vof), &
@@ -287,7 +286,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im,level,ntensor
+      INTEGER_T, intent(in) :: level,ntensor
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM)
@@ -334,10 +333,6 @@ stop
       endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
-       stop
-      endif
-      if ((im.lt.0).or.(im.ge.num_materials)) then
-       print *,"im invalid2"
        stop
       endif
 

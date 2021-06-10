@@ -455,7 +455,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // dest,source,scomp,dcomp,ncomp,ngrow
   Mult_localMF(ALPHACOEF_MF,VOLUME_MF,0,veldir,1,0);
- } // veldir=0,..,nsolveMM-1
+ } // veldir=0,..,nsolve-1
 
  mac_op->aCoefficients(*localMF[ALPHACOEF_MF]);
 
@@ -664,7 +664,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
       localMF[BXCOEFNOAREA_MF+dir]->boxArray())
    amrex::Error("BXCOEFNOAREA boxarrays do not match");
 
-  if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolveMM) 
+  if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolve) 
    amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
 
    // if project_option==0,
@@ -974,9 +974,9 @@ NavierStokes::AllinterpScalarMAC(
  }
 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolveMM,0,
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolve,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
- crse_S_fine.copy(pcoarse,0,0,nsolveMM);
+ crse_S_fine.copy(pcoarse,0,0,nsolve);
 
  MultiFab crse_diagsing_fine(crse_S_fine_BA,crse_dmap,1,0,
    MFInfo().SetTag("crse_diagsing_fine"),FArrayBoxFactory());
@@ -1265,7 +1265,7 @@ void NavierStokes::DiagInverse(
   FArrayBox& xoldfab = (*xnew)[mfi];
 
   FArrayBox& diagfab = (*localMF[DIAG_REGULARIZE_MF])[mfi];
-  if (diagfab.nComp()!=nsolveMM)
+  if (diagfab.nComp()!=nsolve)
    amrex::Error("diagfab.nComp() invalid");
 
   int tid_current=ns_thread();
@@ -1520,7 +1520,7 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
   ncomp,
   ncomp_check);
  if (ncomp_check!=nsolve)
-  amrex::Error("nsolveMM invalid 976");
+  amrex::Error("nsolve invalid 976");
 
   // up the V-cycle
  if ((homflag==0)&&(level>0)) {
@@ -2145,7 +2145,7 @@ void NavierStokes::update_SEM_forces(int project_option,
     idx_source,
     project_option,nsolve);
 
-   if (localMF[UMAC_MF]->nComp()!=nsolveMM_FACE)
+   if (localMF[UMAC_MF]->nComp()!=nsolve)
     amrex::Error("localMF[UMAC_MF]->nComp() invalid");
 
    int ncomp_edge=-1;
@@ -2245,16 +2245,13 @@ void NavierStokes::ADVECT_DIV_ALL() {
  if (level!=0)
   amrex::Error("level invalid ADVECT_DIV_ALL");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel!=1");
-
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.ADVECT_DIV();
    // spectral_override==0 => always low order.
   int spectral_override=1;
-  ns_level.avgDown(DIV_Type,0,num_materials_vel,spectral_override);
+  ns_level.avgDown(DIV_Type,0,1,spectral_override);
  }
 
 } // subroutine ADVECT_DIV_ALL
@@ -2267,8 +2264,6 @@ void NavierStokes::ADVECT_DIV() {
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel!=1");
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,700);
@@ -2290,7 +2285,7 @@ void NavierStokes::ADVECT_DIV() {
 
  MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int pcomp=num_materials_vel*AMREX_SPACEDIM;
+ int pcomp=AMREX_SPACEDIM;
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -2380,9 +2375,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 
  bool use_tiling=ns_tiling;
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -2390,7 +2382,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
   amrex::Error("SDC_outer_sweeps invalid");
 
  if (localMF_grow[idx]==-1) {
-  new_localMF(idx,num_materials_vel,ngrow,-1);
+  new_localMF(idx,1,ngrow,-1);
  } else
   amrex::Error("local div data not previously deleted");
 
@@ -2399,14 +2391,13 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  int nsolve=1;
- int nsolveMM_FACE=nsolve*num_materials_vel;
 
  int fluxvel_index=0;
  int fluxden_index=AMREX_SPACEDIM;
 
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolveMM_FACE,cur_time_slab);
+  velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab);
 
  const Real* dx = geom.CellSize();
 
@@ -2481,8 +2472,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,
-    num_materials_vel*AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
 // RHS=(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/vol_ij
 //
@@ -2493,7 +2483,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    int project_option=0;
    int homflag=0; // default
    int local_enable_spectral=enable_spectral;
-   int num_materials_face=num_materials_vel;
    int use_VOF_weight=0;
 
    int ncomp_denold=vol.nComp();
@@ -2505,8 +2494,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 
     // in: NavierStokes::getStateDIV
    FORT_MAC_TO_CELL(
-    &nsolveMM_FACE,
-    &num_materials_face,
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
@@ -2626,29 +2613,19 @@ void NavierStokes::mac_project_rhs(int project_option,
 
  int nmat=num_materials;
 
- int num_materials_face=num_materials_vel;
  if (project_option_momeqn(project_option)==1) {
-  if (num_materials_face!=1)
-   amrex::Error("num_materials_face invalid");
+  //do nothing
  } else if (project_option_momeqn(project_option)==0) {
-  num_materials_face=num_materials_scalar_solve;
+  //do nothing
  } else
   amrex::Error("project_option_momeqn invalid76");
 
- if (num_materials_vel!=1)
-  amrex::Error("num_materials_vel invalid");
-
- if ((num_materials_face!=1)&&
-     (num_materials_face!=nmat))
-  amrex::Error("num_materials_face invalid");
-
- int nsolveMM=nsolve*num_materials_face;
- if (localMF[idx_mac_phi_crse]->nComp()!=nsolveMM)
+ if (localMF[idx_mac_phi_crse]->nComp()!=nsolve)
   amrex::Error("localMF[idx_mac_phi_crse]->nComp()  invalid");
- if (localMF[idx_mac_rhs_crse]->nComp()!=nsolveMM)
+ if (localMF[idx_mac_rhs_crse]->nComp()!=nsolve)
   amrex::Error("localMF[idx_mac_rhs_crse]->nComp()  invalid");
 
- localMF[idx_mac_phi_crse]->setVal(0.0,0,nsolveMM,1);
+ localMF[idx_mac_phi_crse]->setVal(0.0,0,nsolve,1);
  localMF[idx_mac_phi_crse]->setBndry(0.0);
 
    // residual correction form,
