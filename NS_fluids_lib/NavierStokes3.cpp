@@ -7043,11 +7043,8 @@ void NavierStokes::allocate_MAC_velocityALL(int nsolve,int idx) {
   NavierStokes& ns_level=getLevel(ilev);
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-
-FIX ME  always 1?
    ns_level.new_localMF(idx+dir,nsolve,0,dir);
    ns_level.setVal_localMF(idx+dir,0.0,0,nsolve,0);
-
   }
  } // ilev
 
@@ -12859,18 +12856,17 @@ void NavierStokes::prepare_advect_vars(Real time) {
 // FUTURE: do the same treatment for advection:
 //  variable: dt div (-pI + tau)/rho = unp1-u^advect = dt_non_advect_force
 void NavierStokes::alloc_gradp_over_rho(int alloc_flag) {
-FIX ME nsolve MAC=1
+
  int nsolve=AMREX_SPACEDIM;
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  if (alloc_flag==1) {
-  new_localMF(dt_gradp_over_rho_cell_MF,nsolveMM,1,-1);
-  setVal_localMF(dt_gradp_over_rho_cell_MF,0.0,0,nsolveMM,1);
+  new_localMF(dt_gradp_over_rho_cell_MF,nsolve,1,-1);
+  setVal_localMF(dt_gradp_over_rho_cell_MF,0.0,0,nsolve,1);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   new_localMF(dt_gradp_over_rho_face_MF+dir,nsolveMM_FACE_MAC,0,dir);
-   setVal_localMF(dt_gradp_over_rho_face_MF+dir,0.0,0,
-     nsolveMM_FACE_MAC,0);
+   new_localMF(dt_gradp_over_rho_face_MF+dir,1,0,dir);
+   setVal_localMF(dt_gradp_over_rho_face_MF+dir,0.0,0,1,0);
   }
  } else if (alloc_flag==0) {
   delete_localMF(dt_gradp_over_rho_cell_MF,1);
@@ -12879,37 +12875,33 @@ FIX ME nsolve MAC=1
   }
  } else if (alloc_flag==2) {  // save velocity at end of veldiffuseALL
   init_boundary();
-  MultiFab::Copy(*localMF[dt_gradp_over_rho_cell_MF],S_new,0,0,nsolveMM,1);
+  MultiFab::Copy(*localMF[dt_gradp_over_rho_cell_MF],S_new,0,0,nsolve,1);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Copy(*localMF[dt_gradp_over_rho_face_MF+dir],Umac_new,0,0,
-     nsolveMM_FACE_MAC,0);
+   MultiFab::Copy(*localMF[dt_gradp_over_rho_face_MF+dir],Umac_new,0,0,1,0);
   }
  } else if (alloc_flag==3) { //subtract dt grad p/rho at begin of veldiffuseALL
-  MultiFab::Subtract(S_new,*localMF[dt_gradp_over_rho_cell_MF],0,0,nsolveMM,0);
+  MultiFab::Subtract(S_new,*localMF[dt_gradp_over_rho_cell_MF],0,0,nsolve,0);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Subtract(Umac_new,*localMF[dt_gradp_over_rho_face_MF+dir],0,0,
-     nsolveMM_FACE_MAC,0);
+   MultiFab::Subtract(Umac_new,*localMF[dt_gradp_over_rho_face_MF+dir],0,0,1,0);
   }
   init_boundary();
  } else if (alloc_flag==4) { //add dt grad p/rho at end of veldiffuseALL
                              //(but before saving the velocity)
-  MultiFab::Add(S_new,*localMF[dt_gradp_over_rho_cell_MF],0,0,nsolveMM,0);
+  MultiFab::Add(S_new,*localMF[dt_gradp_over_rho_cell_MF],0,0,nsolve,0);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Add(Umac_new,*localMF[dt_gradp_over_rho_face_MF+dir],0,0,
-     nsolveMM_FACE_MAC,0);
+   MultiFab::Add(Umac_new,*localMF[dt_gradp_over_rho_face_MF+dir],0,0,1,0);
   }
   init_boundary();
  } else if (alloc_flag==5) { //subtract unew from dt_gradp_over_rho at 
                              //end of pressure projection.
   init_boundary();
-  MultiFab::Subtract(*localMF[dt_gradp_over_rho_cell_MF],S_new,0,0,nsolveMM,1);
+  MultiFab::Subtract(*localMF[dt_gradp_over_rho_cell_MF],S_new,0,0,nsolve,1);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Subtract(*localMF[dt_gradp_over_rho_face_MF+dir],Umac_new,0,0,
-     nsolveMM_FACE_MAC,0);
+   MultiFab::Subtract(*localMF[dt_gradp_over_rho_face_MF+dir],Umac_new,0,0,1,0);
   }
  } else
   amrex::Error("alloc_flag invalid in alloc_gradp_over_rho");

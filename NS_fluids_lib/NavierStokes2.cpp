@@ -2302,11 +2302,6 @@ void NavierStokes::apply_cell_pressure_gradient(
 
 void NavierStokes::save_to_macvel_state(int idx_umac) {
 
- if (num_materials_vel==1) {
-  // do nothing
- } else
-  amrex::Error("num_materials_vel invalid");
-
  int nsolve=1;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(idx_umac+dir,0,111);

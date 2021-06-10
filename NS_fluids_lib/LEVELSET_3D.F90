@@ -14182,7 +14182,7 @@ stop
 
       subroutine FORT_CELL_TO_MAC( &
        ncomp_mgoni, &
-       ncomp_xp, &  !local_MF[AMRSYNC_PRES_MF]->nComp() if operation_flag==0
+       ncomp_xp, & !local_MF[AMRSYNC_PRES_MF]->nComp() if operation_flag==0
        ncomp_xgp, &
        simple_AMR_BC_flag, &
        nsolve, &
@@ -15899,9 +15899,8 @@ stop
           ! contents.
          else if (operation_flag.eq.1) then ! p^CELL->MAC
 
-          im_vel=1
-          pplus(im_vel)=pres(D_DECL(i,j,k),im_vel)
-          pminus(im_vel)=pres(D_DECL(im1,jm1,km1),im_vel)
+          pplus=pres(D_DECL(i,j,k))
+          pminus=pres(D_DECL(im1,jm1,km1))
 
            ! mask=1 if not covered
            ! mask=0 if covered
@@ -16219,21 +16218,18 @@ stop
             print *,"denface must be positive"
             stop
            endif
-           im=im_vel
             ! face pressure
-           plocal(2+im_vel)= &
-            (den_local(1)*pplus(im)+den_local(2)*pminus(im))/denface
+           plocal(2+1)= &
+            (den_local(1)*pplus+den_local(2)*pminus)/denface
           else if (at_reflect_wall.eq.1) then ! left wall
 
-           im=im_vel
             ! face pressure
-           plocal(2+im_vel)=pplus(im)
+           plocal(2+1)=pplus
 
           else if (at_reflect_wall.eq.2) then ! right wall
 
-           im=im_vel
             ! face pressure
-           plocal(2+im_vel)=pminus(im)
+           plocal(2+1)=pminus
 
           else
            print *,"at reflect wall invalid"
@@ -16243,7 +16239,7 @@ stop
           plocal(2)=at_coarse_fine_wallF+at_coarse_fine_wallC*10
 
           if (face_velocity_override.eq.1) then
-           local_vel(im_vel)=solid_velocity
+           local_vel=solid_velocity
           else if (face_velocity_override.eq.0) then
            if (at_wall.eq.0) then
             ! do nothing
@@ -16259,8 +16255,8 @@ stop
          else if (operation_flag.eq.2) then !(grd pot)_MAC,pot^CELL->MAC,ten.
 
            ! hydrostatic pressure
-          pplus(1)=pres(D_DECL(i,j,k),1)
-          pminus(1)=pres(D_DECL(im1,jm1,km1),1)
+          pplus=pres(D_DECL(i,j,k))
+          pminus=pres(D_DECL(im1,jm1,km1))
 
            ! hydrostatic density
           dplus=den(D_DECL(i,j,k),1)
@@ -16508,20 +16504,20 @@ stop
 
            ! plocal(1) is the hydrostatic pressure on the MAC grid.        
           if (at_reflect_wall.eq.0) then
-           plocal(1)=(pplus(1)*dminus+pminus(1)*dplus)/(two*cutedge)
+           plocal(1)=(pplus*dminus+pminus*dplus)/(two*cutedge)
           else if (at_reflect_wall.eq.1) then ! left wall
              ! limit as dminus->infinity
-           plocal(1)=pplus(1)
+           plocal(1)=pplus
           else if (at_reflect_wall.eq.2) then ! right wall
              ! limit as dplus->infinity
-           plocal(1)=pminus(1)
+           plocal(1)=pminus
           else
            print *,"at reflect wall invalid"
            stop
           endif
 
            ! hydrostatic pressure gradient on the MAC grid
-          pgrad_gravity=(pplus(1)-pminus(1))/(hx*cutedge)
+          pgrad_gravity=(pplus-pminus)/(hx*cutedge)
 
           ! -dt k (grad p)_MAC (energyflag=0)
           ! (grad p)_MAC (energyflag=2)
