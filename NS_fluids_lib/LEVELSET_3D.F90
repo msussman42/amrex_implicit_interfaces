@@ -11433,7 +11433,7 @@ stop
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2,num_materials_face)
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2)
       REAL_T, intent(in) :: cur_time,dt
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -11548,7 +11548,7 @@ stop
       REAL_T local_POLD_DUAL
 
       REAL_T DIAG_REGULARIZE
-      REAL_T uface(2,num_materials_face)
+      REAL_T uface(2)
       REAL_T ufacesolid(2)
       REAL_T aface(2)
       REAL_T pfacegrav(2)
@@ -14464,7 +14464,6 @@ stop
       REAL_T hx
       INTEGER_T scomp,scomp_bc,dcomp
       INTEGER_T ncomp_dest,ncomp_source
-      INTEGER_T update_right_flux
       INTEGER_T nc ! in: cell_to_mac
       INTEGER_T ibase,idonate,jdonate,kdonate
       INTEGER_T stripstat
@@ -14693,10 +14692,6 @@ stop
         print *,"ncphys invalid"
         stop
        endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
 
       else if (operation_flag.eq.0) then
 
@@ -14838,10 +14833,6 @@ stop
       endif
 
       if (operation_flag.eq.1) then ! p^CELL->MAC
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
-        stop
-       endif
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
         stop
@@ -14862,10 +14853,6 @@ stop
                (operation_flag.eq.11)) then !unew^{CELL diff,MAC} -> MAC
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
-        stop
-       endif
-       if (num_materials_face.ne.1) then
-        print *,"num_materials_face invalid"
         stop
        endif
        if (project_option_momeqnF(project_option).eq.1) then
@@ -15403,10 +15390,6 @@ stop
            print *,"levelrz invalid tfrmac"
            stop
           endif 
-          if (num_materials_face.ne.1) then
-           print *,"num_materials_face invalid"
-           stop
-          endif
 
           uedge(im_vel)=zero
 
@@ -16738,20 +16721,9 @@ stop
               do jelem=elemlo(2),elemhi(2)
               do kelem=elemlo(3),elemhi(3)
 
-               update_right_flux=0
-
                if (operation_flag.eq.0) then  ! pressure gradient
-                if (num_materials_face.eq.1) then
-                 scomp=1
-                 dcomp=1
-                else if (num_materials_face.eq.nmat) then
-                 scomp=local_maskSEM
-                 dcomp=local_maskSEM
-                 update_right_flux=1
-                else
-                 print *,"num_materials_face invalid"
-                 stop
-                endif
+                scomp=1
+                dcomp=1
                 ncomp_dest=1
                 ncomp_source=1
                 scomp_bc=1
@@ -16809,7 +16781,7 @@ stop
                 scomp=1
                 dcomp=1
                 ncomp_dest=ncphys
-                ncomp_source=SDIM*num_materials_face
+                ncomp_source=SDIM
                 scomp_bc=1
                else
                 print *,"operation_flag invalid20"
@@ -16836,14 +16808,14 @@ stop
                 ielem,jelem,kelem, &
                 tilelo,tilehi, &
                 fablo,fabhi, &
-                xlo,dx,dir+1, &
+                xlo,dx, &
+                dir+1, &
                 bfact,bfact_c,bfact_f, &
                 presbc_in, &
                 velbc_in, &
                 scomp, &
                 scomp_bc, &
                 dcomp, &
-                update_right_flux, &
                 ncomp_dest, &
                 ncomp_source, &
                 ncomp_xgp, &

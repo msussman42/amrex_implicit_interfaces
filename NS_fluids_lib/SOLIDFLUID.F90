@@ -406,10 +406,6 @@
       endif
       nmat=num_materials
 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
        print *,"nparts invalid FORT_HEADERMSG"
        stop

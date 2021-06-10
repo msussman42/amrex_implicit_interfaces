@@ -3424,7 +3424,7 @@ stop
       REAL_T, intent(out) ::  unode(DIMV(unode),2*nten*SDIM) 
       REAL_T, intent(in) ::  ucell(DIMV(ucell),nburning) 
       REAL_T, intent(in) :: oldLS(DIMV(oldLS),nmat*(1+SDIM))
-      INTEGER_T, intent(in) :: velbc(SDIM,2,num_materials_vel*SDIM)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
@@ -4093,7 +4093,7 @@ stop
        print *,"num_state_material=",num_state_material
        stop
       endif
-      if (nstate.ne.num_materials_vel*(SDIM+1)+ &
+      if (nstate.ne.(SDIM+1)+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate invalid"
        stop
@@ -4941,9 +4941,9 @@ stop
 
            enddo  ! u_imaterial=1..nmat
 
-           vcompsrc_snew=num_materials_vel*(SDIM+1)+ &
+           vcompsrc_snew=(SDIM+1)+ &
             nmat*num_state_material+(im_source-1)*ngeom_raw+1
-           vcompdst_snew=num_materials_vel*(SDIM+1)+ &
+           vcompdst_snew=(SDIM+1)+ &
             nmat*num_state_material+(im_dest-1)*ngeom_raw+1
 
            do u_imaterial=1,nmat
@@ -5699,7 +5699,7 @@ stop
               print *,"mass_frac_id invalid"
               stop
              endif
-             base_index=num_materials_vel*(SDIM+1)
+             base_index=(SDIM+1)
 
              if (iprobe.eq.1) then ! source
               delta_mass_local(iprobe)=-density_old(iprobe)*dF
@@ -5908,7 +5908,7 @@ stop
               stop
              endif
 
-             base_index=num_materials_vel*(SDIM+1)
+             base_index=(SDIM+1)
              dencomp_probe=(im_probe-1)*num_state_material+1
              tcomp_probe=dencomp_probe+1
 
@@ -6348,7 +6348,7 @@ stop
               if (dF.gt.zero) then
                energy_source=-LL*dF
                do im_weight=1,nmat
-                tcomp_wt=num_materials_vel*(SDIM+1)+ &
+                tcomp_wt=(SDIM+1)+ &
                  (im_weight-1)*num_state_material+2
                 snew(D_DECL(i,j,k),tcomp_wt)= &
                  snew(D_DECL(i,j,k),tcomp_wt)+energy_source/cvtotal
@@ -6384,7 +6384,7 @@ stop
                call Methane_usage(dF,dt, &
                 fort_speciesviscconst(im_dest),amount_used)
 
-               ccomp=num_materials_vel*(SDIM+1)+ &
+               ccomp=(SDIM+1)+ &
                 (im_dest-1)*num_state_material+3
                methaneC_old=snew(D_DECL(i,j,k),ccomp)*oldvfrac(im_dest)
                if (methaneC_old.ge.amount_used) then
@@ -6400,7 +6400,7 @@ stop
                snew(D_DECL(i,j,k),ccomp)=methaneC_new
       
                do im_weight=1,nmat
-                tcomp_wt=num_materials_vel*(SDIM+1)+ &
+                tcomp_wt=(SDIM+1)+ &
                  (im_weight-1)*num_state_material+2
                 snew(D_DECL(i,j,k),tcomp_wt)= &
                  snew(D_DECL(i,j,k),tcomp_wt)+energy_source/cvtotal
@@ -6429,7 +6429,7 @@ stop
               if (dF.gt.zero) then
                energy_source=-LL*dF
                do im_weight=1,nmat
-                tcomp_wt=num_materials_vel*(SDIM+1)+ &
+                tcomp_wt=(SDIM+1)+ &
                  (im_weight-1)*num_state_material+2
                 snew(D_DECL(i,j,k),tcomp_wt)= &
                  snew(D_DECL(i,j,k),tcomp_wt)+energy_source/cvtotal
@@ -6460,14 +6460,14 @@ stop
                print *,"iprobe invalid"
                stop
               endif
-              base_index=num_materials_vel*(SDIM+1)
+              base_index=(SDIM+1)
               snew(D_DECL(i,j,k), &
                   base_index+nmat*num_state_material+ &
                   (im_probe-1)*ngeom_raw+1)=newvfrac(im_probe)
 
              enddo ! iprobe=1,2
 
-             base_index=num_materials_vel*(SDIM+1)+ &
+             base_index=(SDIM+1)+ &
               nmat*num_state_material
 
              do u_im=1,nmat*ngeom_recon
@@ -6593,7 +6593,7 @@ stop
                  stop
                 endif
                        
-                speccomp_mod=num_materials_vel*(SDIM+1)+ &
+                speccomp_mod=(SDIM+1)+ &
                  (im_condensed-1)*num_state_material+num_state_base+ &
                  mass_frac_id
           
@@ -6637,7 +6637,7 @@ stop
                   print *,"iprobe invalid"
                   stop
                  endif
-                 speccomp_mod=num_materials_vel*(SDIM+1)+ &
+                 speccomp_mod=(SDIM+1)+ &
                   (im_probe-1)*num_state_material+num_state_base+ &
                   mass_frac_id
                  mass_frac_limit=snew(D_DECL(i,j,k),speccomp_mod)
@@ -7518,7 +7518,7 @@ stop
        stop
       endif
       
-      if (nstate.eq.num_materials_vel*(SDIM+1)+nmat* &
+      if (nstate.eq.(SDIM+1)+nmat* &
           (num_state_material+ngeom_raw)+1) then
        ! do nothing
       else 

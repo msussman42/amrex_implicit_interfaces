@@ -1328,7 +1328,6 @@ stop
        time, &
        visc_coef, &
        ntensor, &
-       ntensorMM, &
        nmat, &
        nparts, &
        nparts_def, &
@@ -1348,7 +1347,6 @@ stop
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
 
       INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: ntensorMM
 
       INTEGER_T, intent(in) :: facevisc_index
       INTEGER_T, intent(in) :: faceheat_index
@@ -1393,7 +1391,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(drag)
 
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensorMM)
+      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
       REAL_T, intent(in) :: viscoten(DIMV(viscoten),ntenvisco)
       REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(in) :: mask(DIMV(mask))
@@ -1413,8 +1411,8 @@ stop
       REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
       REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
 
-      REAL_T, intent(in) :: pres(DIMV(pres),num_materials_vel)
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM*num_materials_vel)
+      REAL_T, intent(in) :: pres(DIMV(pres))
+      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(inout) :: drag(DIMV(drag),4*SDIM+1)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
@@ -1545,10 +1543,6 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if (rzflag.eq.0) then
        ! do nothing
       else if (rzflag.eq.1) then
@@ -1565,10 +1559,6 @@ stop
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
-       stop
-      endif
-      if (ntensorMM.ne.ntensor*num_materials_vel) then
-       print *,"ntensorMM invalid"
        stop
       endif
 
@@ -2221,7 +2211,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      ncomp_state_test=num_materials_vel*(SDIM+1)+ &
+      ncomp_state_test=(SDIM+1)+ &
        nmat*(num_state_material+ngeom_raw)+1
       if (ncomp_state.ne.ncomp_state_test) then
        print *,"ncomp_state invalid"
@@ -2303,9 +2293,9 @@ stop
              ! make dist_substrate>0 outside the substrate
            dist_substrate=-dist_substrate
 
-           vofcomp=(SDIM+1)*num_materials_vel+ &
+           vofcomp=(SDIM+1)+ &
              nmat*num_state_material+(im-1)*ngeom_raw+1
-           dencomp=(SDIM+1)*num_materials_vel+ &
+           dencomp=(SDIM+1)+ &
              (im-1)*num_state_material+1
            temperature=snew(D_DECL(i,j,k),dencomp+1) 
            vfrac=snew(D_DECL(i,j,k),vofcomp)
@@ -2397,9 +2387,9 @@ stop
             ! make dist_substrate>0 outside the substrate
            dist_substrate=-dist_substrate
 
-           vofcomp=(SDIM+1)*num_materials_vel+ &
+           vofcomp=(SDIM+1)+ &
              nmat*num_state_material+(im-1)*ngeom_raw+1
-           dencomp=(SDIM+1)*num_materials_vel+ &
+           dencomp=(SDIM+1)+ &
              (im-1)*num_state_material+1
            temperature=snew(D_DECL(i,j,k),dencomp+1) 
            vfrac=snew(D_DECL(i,j,k),vofcomp)
@@ -2487,7 +2477,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      ncomp_state_test=num_materials_vel*(SDIM+1)+ &
+      ncomp_state_test=(SDIM+1)+ &
        nmat*(num_state_material+ngeom_raw)+1
       if (ncomp_state.ne.ncomp_state_test) then
        print *,"ncomp_state invalid"
@@ -2527,12 +2517,12 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
        
-       vofcomp=(SDIM+1)*num_materials_vel+ &
+       vofcomp=(SDIM+1)+ &
           nmat*num_state_material+im_source*ngeom_raw+1
        vfrac=snew(D_DECL(i,j,k),vofcomp)
        if (vfrac.ge.half) then
         do im=1,nmat
-         dencomp=(SDIM+1)*num_materials_vel+ &
+         dencomp=(SDIM+1)+ &
            (im-1)*num_state_material+1
          snew(D_DECL(i,j,k),dencomp+1)=TSAT
         enddo
@@ -2577,7 +2567,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(velz)
 
       REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: vel(DIMV(vel),num_materials_vel*(SDIM+1))
+      REAL_T, intent(in) :: vel(DIMV(vel),(SDIM+1))
       REAL_T, intent(in) :: velx(DIMV(velx))
       REAL_T, intent(in) :: vely(DIMV(vely))
       REAL_T, intent(in) :: velz(DIMV(velz))
@@ -2590,12 +2580,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact too small"
-       stop
-      endif
-      if (num_materials_vel.eq.1) then
-       ! do nothing
-      else
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -2612,17 +2596,14 @@ stop
     
        if (mask(D_DECL(i,j,k)).eq.one) then
 
-        ibase=num_materials_vel*SDIM
-        do im=1,num_materials_vel
-         if (vel(D_DECL(i,j,k),ibase+im).gt.maxpres) then
-          maxpres=vel(D_DECL(i,j,k),ibase+im)
-         endif
-         if (vel(D_DECL(i,j,k),ibase+im).lt.minpres) then
-          minpres=vel(D_DECL(i,j,k),ibase+im)
-         endif
-        enddo
-        do im=1,num_materials_vel
-         ibase=(im-1)*SDIM
+        ibase=SDIM
+        if (vel(D_DECL(i,j,k),ibase+1).gt.maxpres) then
+          maxpres=vel(D_DECL(i,j,k),ibase+1)
+        endif
+        if (vel(D_DECL(i,j,k),ibase+1).lt.minpres) then
+          minpres=vel(D_DECL(i,j,k),ibase+1)
+        endif
+         ibase=0
          magvel=zero
          magvel_mac=zero
          magvel_collide=zero

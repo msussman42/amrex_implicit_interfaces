@@ -301,10 +301,6 @@ stop
           print *,"dedt_inverse invalid"
           stop
          endif
-         if (num_materials_face.ne.num_materials_scalar_solve) then
-          print *,"num_materials_face invalid"
-          stop
-         endif
 
          im_vel=1
 
