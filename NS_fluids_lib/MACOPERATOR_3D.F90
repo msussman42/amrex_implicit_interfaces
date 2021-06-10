@@ -98,7 +98,7 @@ stop
        REAL_T xsten(-1:1,SDIM)
        INTEGER_T nhalf
        REAL_T local_cterm(nsolve)
-       INTEGER_T im_vel,im
+       INTEGER_T im
        INTEGER_T velcomp
        REAL_T LSTEST
        REAL_T local_diag
@@ -249,8 +249,7 @@ stop
           stop
          endif
 
-         im_vel=1
-         local_cterm(im_vel)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
+         local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
 
         else if (project_option.eq.12) then ! pressure extension
 
@@ -259,8 +258,7 @@ stop
           stop
          endif
 
-         im_vel=1
-         local_diag=offdiagcheck(D_DECL(i,j,k),im_vel)
+         local_diag=offdiagcheck(D_DECL(i,j,k),1)
 
           !if facecut_index>0 then facecut_extend=0
           !if facecut_index=0 then facecut_extend=1
@@ -275,13 +273,13 @@ stop
           !cell.
          if ((local_diag.ge.zero).and. &
              (local_diag.le.two*SDIM-one)) then
-          local_cterm(im_vel)=1.0D+6
+          local_cterm(1)=1.0D+6
 
           !all adjoining faces have an adjoining solid cell.
           !e.g. fluid cell completely surrounded by solid
           !cells or a solid cell with any kind of neighbor.
          else if (local_diag.eq.two*SDIM) then 
-          local_cterm(im_vel)=zero
+          local_cterm(1)=zero
          else
           print *,"local_diag invalid"
           stop
@@ -302,9 +300,7 @@ stop
           stop
          endif
 
-         im_vel=1
-
-         local_cterm(im_vel)=one/(dt*dedt_inverse) ! den cv / dt
+         local_cterm(1)=one/(dt*dedt_inverse) ! den cv / dt
 
          if (is_clamped_cell.eq.1) then
           ! do nothing
@@ -321,7 +317,7 @@ stop
            ! T=Tsolid in solid so coeff>>1
            ! rigid_mask>>1 if solid material occupies cell. (rigid_mask==1
            ! otherwise)
-           local_cterm(im_vel)=local_cterm(im_vel)*rigid_mask 
+           local_cterm(1)=local_cterm(1)*rigid_mask 
           else
            print *,"solidheat_flag invalid"
            stop
@@ -351,9 +347,7 @@ stop
           stop
          endif
 
-         im_vel=1
-
-         local_cterm(im_vel)=one/dt ! den cv / dt
+         local_cterm(1)=one/dt ! den cv / dt
 
         else if (project_option.eq.3) then ! viscosity
 
@@ -425,8 +419,7 @@ stop
           stop
          endif
           ! diffuse mass fraction
-         im_vel=1
-         local_cterm(im_vel)=one/(den_inverse*dt) ! den/dt
+         local_cterm(1)=one/(den_inverse*dt) ! den/dt
         else
          print *,"project_option invalid scalar coeff"
          stop

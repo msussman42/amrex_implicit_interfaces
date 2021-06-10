@@ -1206,7 +1206,7 @@ extern "C"
      Real* cur_time);
 
    void FORT_CROSSTERM(
-     int* nsolveMM_FACE,
+     int* nsolve,
      int* tileloop,
      int* dir,
      int* operation_flag, // 8
@@ -1251,7 +1251,6 @@ extern "C"
    void FORT_CROSSTERM_ELASTIC(
      int* ncomp_visc,
      int* im_elastic, //0..nmat-1
-     int* nsolveMM_FACE,
      int* dir, //1..sdim
      Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
@@ -1413,7 +1412,6 @@ extern "C"
      int* nparts_def,
      int* im_solid_map,
      int* nsolve,
-     int* nsolveMM,
      int* nstate,
      const Real* xlo,const Real* dx,
      Real* solxfab,

@@ -27351,7 +27351,6 @@ end subroutine initialize2d
       REAL_T nn
       REAL_T tempflux
       REAL_T xflux_local
-      INTEGER_T im_vel
       INTEGER_T im,im1,im2,ireverse
       INTEGER_T im_solid_tempflux
       REAL_T LL,TSAT,TSUPER,thermal_layer

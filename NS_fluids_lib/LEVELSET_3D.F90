@@ -11580,9 +11580,6 @@ stop
       INTEGER_T ncomp_cterm
       REAL_T vfrac(nmat)
       REAL_T LStest(nmat)
-      INTEGER_T im_vel
-      INTEGER_T im_vel_left
-      INTEGER_T im_vel_right
       INTEGER_T velcomp
       INTEGER_T partid
       INTEGER_T partid_ghost
@@ -12193,22 +12190,18 @@ stop
 
        if (operation_flag.eq.1) then ! DIV
 
-        im_vel=1
-        im_vel_left=im_vel
-        im_vel_right=im_vel
-
         divu= &
-         AXR*xvel(D_DECL(i+1,j,k),im_vel_left)-  &
-         AXL*xvel(D_DECL(i,j,k),im_vel_right)+ &
-         AYR*yvel(D_DECL(i,j+1,k),im_vel_left)-  &
-         AYL*yvel(D_DECL(i,j,k),im_vel_right)
+         AXR*xvel(D_DECL(i+1,j,k),1)-  &
+         AXL*xvel(D_DECL(i,j,k),1)+ &
+         AYR*yvel(D_DECL(i,j+1,k),1)-  &
+         AYL*yvel(D_DECL(i,j,k),1)
         if (SDIM.eq.3) then
          divu=divu+ &
-          AZR*zvel(D_DECL(i,j,k+1),im_vel_left)-  &
-          AZL*zvel(D_DECL(i,j,k),im_vel_right)
+          AZR*zvel(D_DECL(i,j,k+1),1)-  &
+          AZL*zvel(D_DECL(i,j,k),1)
         endif
         divu=divu/VOLTERM
-        rhs(D_DECL(i,j,k),im_vel)=divu
+        rhs(D_DECL(i,j,k),1)=divu
 
        else if (operation_flag.eq.0) then ! RHS
 
@@ -12563,7 +12556,6 @@ stop
           stop
          endif
  
-         im_vel=1
          velcomp=dir+1
 
          cell_velocity_override=0
@@ -12593,10 +12585,8 @@ stop
            stop
           endif
  
-          im_vel=1 
-
           if (dir.eq.0) then
-           uface(side,im_vel)=xvel(D_DECL(iface,jface,kface),im_vel)
+           uface(side)=xvel(D_DECL(iface,jface,kface),1)
            ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            if (SDIM.eq.2) then
@@ -12605,7 +12595,7 @@ stop
             else if (levelrz.eq.1) then
              if (iface.eq.0) then
               if (xsten(-1,1).lt.zero) then
-               uface(side,im_vel)=zero
+               uface(side)=zero
                ufacesolid(side)=zero
               endif
              else if (iface.gt.0) then
@@ -12637,11 +12627,11 @@ stop
             stop
            endif
           else if (dir.eq.1) then
-           uface(side,im_vel)=yvel(D_DECL(iface,jface,kface),im_vel)
+           uface(side)=yvel(D_DECL(iface,jface,kface),1)
            ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           uface(side,im_vel)=zvel(D_DECL(iface,jface,kface),im_vel)
+           uface(side)=zvel(D_DECL(iface,jface,kface))
            ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
           else
@@ -12697,8 +12687,8 @@ stop
             (mass_side(1)*ufacesolid(1)+ &
              mass_side(2)*ufacesolid(2))/masscell
           else if (cell_velocity_override.eq.0) then
-           fluid_velocity=(mass_side(1)*uface(1,im_vel)+ &
-                           mass_side(2)*uface(2,im_vel))/masscell
+           fluid_velocity=(mass_side(1)*uface(1)+ &
+                           mass_side(2)*uface(2))/masscell
            veldest(D_DECL(i,j,k),velcomp)=fluid_velocity
           else
            print *,"cell_velocity_override invalid"
@@ -12841,13 +12831,11 @@ stop
          endif
         enddo ! im=1..nmat
      
-
-        im_vel=1
         Eforce_conservative=zero
         Eforce_primitive=zero
         RHO_force=zero
 
-        cell_pressure=pold(D_DECL(i,j,k),im_vel)
+        cell_pressure=pold(D_DECL(i,j,k),1)
         if (cell_pressure.lt.zero) then
          cell_pressure=zero
         endif
@@ -12906,14 +12894,12 @@ stop
            stop
           endif
 
-          im_vel=1 
-
           if (dir.eq.0) then
            aface(side)=ax(D_DECL(iface,jface,kface))
            do im=1,ncphys
             ASIDE(side,im)=xface(D_DECL(iface,jface,kface),im)
            enddo
-           uface(side,im_vel)=xvel(D_DECL(iface,jface,kface),im_vel)
+           uface(side)=xvel(D_DECL(iface,jface,kface),1)
            pres_face(side)=xp(D_DECL(iface,jface,kface),3)
            use_face_pres(side)=NINT(xp(D_DECL(iface,jface,kface),1))
            coarse_fine_face(side)=xp(D_DECL(iface,jface,kface),2)
@@ -12922,7 +12908,7 @@ stop
            do im=1,ncphys
             ASIDE(side,im)=yface(D_DECL(iface,jface,kface),im)
            enddo
-           uface(side,im_vel)=yvel(D_DECL(iface,jface,kface),im_vel)
+           uface(side)=yvel(D_DECL(iface,jface,kface),1)
            pres_face(side)=yp(D_DECL(iface,jface,kface),3)
            use_face_pres(side)=NINT(yp(D_DECL(iface,jface,kface),1))
            coarse_fine_face(side)=yp(D_DECL(iface,jface,kface),2)
@@ -12931,7 +12917,7 @@ stop
            do im=1,ncphys
             ASIDE(side,im)=zface(D_DECL(iface,jface,kface),im)
            enddo
-           uface(side,im_vel)=zvel(D_DECL(iface,jface,kface),im_vel)
+           uface(side)=zvel(D_DECL(iface,jface,kface),1)
            pres_face(side)=zp(D_DECL(iface,jface,kface),3)
            use_face_pres(side)=NINT(zp(D_DECL(iface,jface,kface),1))
            coarse_fine_face(side)=zp(D_DECL(iface,jface,kface),2)
@@ -13077,21 +13063,20 @@ stop
          if (energyflag.eq.0) then
           ! do nothing
          else if (energyflag.eq.1) then
-          im_vel=1
 
           if (all_incomp.eq.0) then
 
            RHO_force=RHO_force- &
-            dt*(aface(2)*uface(2,im_vel)- &
-                aface(1)*uface(1,im_vel))/VOLTERM
+            dt*(aface(2)*uface(2)- &
+                aface(1)*uface(1))/VOLTERM
 
            Eforce_primitive=Eforce_primitive- &
-            dt*(aface(2)*uface(2,im_vel)- &
-                aface(1)*uface(1,im_vel))*cell_pressure/ &
+            dt*(aface(2)*uface(2)- &
+                aface(1)*uface(1))*cell_pressure/ &
                (dencell*VOLTERM)
            Eforce_conservative=Eforce_conservative- &
-            dt*(aface(2)*uface(2,im_vel)*pres_face(2)- &
-                aface(1)*uface(1,im_vel)*pres_face(1))/ &
+            dt*(aface(2)*uface(2)*pres_face(2)- &
+                aface(1)*uface(1)*pres_face(1))/ &
                (dencell*VOLTERM)
 
           else if (all_incomp.eq.1) then
@@ -13101,19 +13086,18 @@ stop
            stop
           endif
          else if (energyflag.eq.2) then
-          im_vel=1
           if (all_incomp.eq.0) then
 
            RHO_force=RHO_force+ &
-            (aface(2)*uface(2,im_vel)- &
-             aface(1)*uface(1,im_vel))/VOLTERM
+            (aface(2)*uface(2)- &
+             aface(1)*uface(1))/VOLTERM
 
            Eforce_primitive=Eforce_primitive+ &
-            (aface(2)*uface(2,im_vel)- &
-             aface(1)*uface(1,im_vel))*cell_pressure/VOLTERM
+            (aface(2)*uface(2)- &
+             aface(1)*uface(1))*cell_pressure/VOLTERM
            Eforce_conservative=Eforce_conservative+ &
-            (aface(2)*uface(2,im_vel)*pres_face(2)- &
-             aface(1)*uface(1,im_vel)*pres_face(1))/VOLTERM
+            (aface(2)*uface(2)*pres_face(2)- &
+             aface(1)*uface(1)*pres_face(1))/VOLTERM
 
           else if (all_incomp.eq.1) then
            ! do nothing
@@ -13140,7 +13124,6 @@ stop
              (use_face_pres_cen.eq.1)) then 
 
           if (energyflag.eq.2) then  ! space-time, set grad p^cell = 0
-           im_vel=1
            velcomp=dir+1
            ! this holds grad p^CELL when energyflag==2
            ustar(D_DECL(i,j,k),velcomp)=zero
@@ -13154,7 +13137,6 @@ stop
           if ((energyflag.eq.0).or. &
               (energyflag.eq.1)) then
 
-           im_vel=1
            velcomp=dir+1
 
            dp=dt*GP_CEN_OVER_RHO_HOLD(velcomp)
@@ -13172,7 +13154,6 @@ stop
            ! this is for space-time
           else if (energyflag.eq.2) then
 
-           im_vel=1
            velcomp=dir+1
            ustar(D_DECL(i,j,k),velcomp)=GP_CEN_HOLD(velcomp)
 
@@ -13196,29 +13177,26 @@ stop
 
         enddo ! dir=0..sdim-1
 
-        im_vel=1
-        rhs(D_DECL(i,j,k),im_vel)=zero
+        rhs(D_DECL(i,j,k),1)=zero
 
          ! update the total energy in partial cells (regular project)
         if (project_option.eq.0) then
 
-         im_vel=1
- 
          if ((use_face_pres_cen.eq.0).or. &
              (use_face_pres_cen.eq.2)) then
 
           RHO_force=zero
           Eforce_conservative=zero
           Eforce_primitive=zero
-          rhs(D_DECL(i,j,k),im_vel)=zero
+          rhs(D_DECL(i,j,k),1)=zero
 
          else if ((use_face_pres_cen.eq.1).or. &
                   (use_face_pres_cen.eq.3)) then          
 
           if (local_primitive.eq.0) then
-           rhs(D_DECL(i,j,k),im_vel)=Eforce_conservative
+           rhs(D_DECL(i,j,k),1)=Eforce_conservative
           else if (local_primitive.eq.1) then
-           rhs(D_DECL(i,j,k),im_vel)=Eforce_primitive
+           rhs(D_DECL(i,j,k),1)=Eforce_primitive
           else
            print *,"local_primitve invalid"
            stop
@@ -14473,7 +14451,6 @@ stop
       REAL_T AFACE_ICE
       REAL_T denlocal,templocal
       INTEGER_T imattype
-      INTEGER_T im_vel
       REAL_T test_velocity_FACE
       INTEGER_T ok_to_HO_interp
       INTEGER_T im_solid
@@ -15200,11 +15177,6 @@ stop
           ! to a low order element.
          if (operation_flag.eq.7) then 
 
-          if (im_vel.ne.1) then
-           print *,"im_vel invalid"
-           stop
-          endif
-
           do nc=1,ncphys
            local_face(nc)=zero
           enddo
@@ -15276,7 +15248,7 @@ stop
 
           else if (at_RZ_face.eq.0) then
 
-           test_velocity_FACE=local_vel(im_vel)
+           test_velocity_FACE=local_vel
 
            if (test_velocity_FACE.ge.zero) then
             idonate=im1
@@ -15366,7 +15338,6 @@ stop
                   (operation_flag.eq.10).or. & !u^MAC=u^{CELL,MAC}->MAC
                   (operation_flag.eq.11)) then !u^MAC=u^{CELL DIFF,MAC}->MAC
 
-          im_vel=1
           face_velocity_override=0
 
           at_RZ_face=0
@@ -15391,11 +15362,11 @@ stop
            stop
           endif 
 
-          uedge(im_vel)=zero
+          uedge=zero
 
           if (at_RZ_face.eq.1) then
            face_velocity_override=1
-           uedge(im_vel)=zero
+           uedge=zero
           else if (at_RZ_face.eq.0) then
 
            fluid_volface=zero
@@ -15512,11 +15483,11 @@ stop
                stop
               endif
               velcomp=partid_prescribed*SDIM+dir+1 
-              uedge(im_vel)=solfab(D_DECL(i,j,k),velcomp)
-              DEBUG_PRESCRIBED_VEL_TOT=DEBUG_PRESCRIBED_VEL_TOT+uedge(im_vel)
+              uedge=solfab(D_DECL(i,j,k),velcomp)
+              DEBUG_PRESCRIBED_VEL_TOT=DEBUG_PRESCRIBED_VEL_TOT+uedge
               DEBUG_PRESCRIBED_VEL_DEN=DEBUG_PRESCRIBED_VEL_DEN+one
              else if (im_prescribed_valid.eq.0) then
-              uedge(im_vel)=zero
+              uedge=zero
              else
               print *,"im_prescribed_valid invalid"
               stop
@@ -15695,14 +15666,14 @@ stop
               if (mass_sum.gt.zero) then
 
                if (filter_velocity_any.eq.0) then
-                uedge(im_vel)=velsum_primary/mass_sum
+                uedge=velsum_primary/mass_sum
                else if (filter_velocity_any.eq.1) then
                 if ((operation_flag.eq.3).or. &
                     (operation_flag.eq.4).or. &
                     (operation_flag.eq.11)) then
-                 uedge(im_vel)=velsum_primary/mass_sum
+                 uedge=velsum_primary/mass_sum
                 else if (operation_flag.eq.5) then
-                 uedge(im_vel)=velsum_secondary/mass_sum
+                 uedge=velsum_secondary/mass_sum
                 else
                  print *,"operation_flag invalid"
                  stop
@@ -15783,8 +15754,8 @@ stop
                      xmac,blob_array, &
                      blob_array_size,num_colors,num_elements_blobclass) 
 
-                    uedge(im_vel)=test_current_icemask*uedge(im_vel)+ &
-                            (one-test_current_icemask)*uedge_rigid
+                    uedge=test_current_icemask*uedge+ &
+                          (one-test_current_icemask)*uedge_rigid
 
                    else if (colorface.eq.0) then
                     ! do nothing
@@ -15855,11 +15826,11 @@ stop
             if ((side.eq.1).or.(side.eq.2)) then
              if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
               face_velocity_override=1
-              uedge(im_vel)=zero
+              uedge=zero
              else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
               face_velocity_override=1
               call velbc_override(time,dir+1,side,dir+1, &
-               uedge(im_vel), &
+               uedge, &
                xstenMAC,nhalf,dx,bfact)
              endif
             else
@@ -15873,7 +15844,7 @@ stop
              if ((is_clamped_face.eq.1).or. &
                  (is_clamped_face.eq.2).or. &
                  (is_clamped_face.eq.3)) then
-              uedge(im_vel)=vel_clamped(dir+1)
+              uedge=vel_clamped(dir+1)
               face_velocity_override=1
              else if (is_clamped_face.eq.0) then
               ! do nothing
@@ -16573,8 +16544,7 @@ stop
                   (operation_flag.eq.10).or. & ! u^CELL,MAC -> MAC
                   (operation_flag.eq.11)) then ! u^CELL DIFF,MAC -> MAC
 
-          im_vel=1
-          xvel(D_DECL(i,j,k),im_vel)=uedge(im_vel)
+          xvel(D_DECL(i,j,k)=uedge
   
          else if (operation_flag.eq.0) then ! (grad p)_MAC
 

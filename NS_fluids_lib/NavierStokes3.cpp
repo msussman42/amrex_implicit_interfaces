@@ -9506,7 +9506,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // then the velocity in the ice
    // is overwritten with a projected rigid body velocity:
    //  a) call get_rigid_velocity
-   //  b) uedge(im_vel)=test_current_icefacecut*uedge(im_vel)+ &
+   //  b) uedge=test_current_icefacecut*uedge+ &
    //       (one-test_current_icefacecut)*uedge_rigid
    //
    // In LEVELSET_3D.F90, FORT_CELL_TO_MAC,
