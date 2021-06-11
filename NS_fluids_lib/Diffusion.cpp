@@ -1127,8 +1127,11 @@ void NavierStokes::combine_state_variable(
    if ((combine_flag==0)||
        (combine_flag==1)) {
     if (is_phasechange==1) {
-     if (Tsatfab.nComp()!=ntsat)
-      amrex::Error("Tsatfab.nComp()!=ntsat");
+     if (Tsatfab.nComp()!=ntsat) {
+      std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
+        " ntsat=" << ntsat << '\n';
+      amrex::Error("Tsatfab.nComp()!=ntsat 1");
+     }
     } else if (is_phasechange==0) {
      // do nothing
     } else

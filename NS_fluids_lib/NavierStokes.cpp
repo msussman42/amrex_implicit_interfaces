@@ -11681,8 +11681,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      //  component 3=Y_gamma
      //  repeats ....
     FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
-    if (Tsatfab.nComp()!=ntsat)
-     amrex::Error("Tsatfab.nComp()!=ntsat");
+    if (Tsatfab.nComp()!=ntsat) {
+     std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
+       " ntsat=" << ntsat << '\n';
+     amrex::Error("Tsatfab.nComp()!=ntsat 2");
+    }
 
     FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
     FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
@@ -12484,8 +12487,11 @@ NavierStokes::level_phase_change_convert(
    FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
 
    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
-   if (Tsatfab.nComp()!=ntsat)
-    amrex::Error("Tsatfab.nComp()!=ntsat");
+   if (Tsatfab.nComp()!=ntsat) {
+    std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
+      " ntsat=" << ntsat << '\n';
+    amrex::Error("Tsatfab.nComp()!=ntsat 3");
+   }
 
    int bfact=parent->Space_blockingFactor(level);
 
@@ -13808,8 +13814,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];
 
    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
-   if (Tsatfab.nComp()!=ntsat)
-    amrex::Error("Tsatfab.nComp()!=ntsat");
+   if (Tsatfab.nComp()!=ntsat) {
+    std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
+      " ntsat=" << ntsat << '\n';
+    amrex::Error("Tsatfab.nComp()!=ntsat 4");
+   }
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
