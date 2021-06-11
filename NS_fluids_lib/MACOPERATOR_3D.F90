@@ -1238,7 +1238,7 @@ stop
          stop
         endif
 
-       enddo ! veldir=1..nsolveMM
+       enddo ! veldir=1..nsolve
           
       enddo
       enddo
