@@ -40,7 +40,6 @@ ns.continuous_mof=0
 ns.conservative_tension_force=0
 ns.MOF_TURN_OFF_LS=0
 ns.num_materials=2
-ns.num_materials_vel=1
 ns.num_species_var=0
 
 # EILE_flag=-1 Weymouth and Yue

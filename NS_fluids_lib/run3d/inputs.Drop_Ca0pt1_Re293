@@ -31,7 +31,6 @@ mg.rtol_b = -0.01
 ns.continuous_mof=2
 ns.clsmof_weight=0.1 0.1  # CLSMOF II if clsmof_weight>0 and elvira_flag=0
 ns.num_materials=2
-ns.num_materials_vel=1
 # JAN18 .
 ns.denface_flag=1  # 0=F_face derived from LS  1=F_face derived from recon.
 ns.velocity_extension_method=1 # 0=use cell vel  1=use face vel for cell extrap

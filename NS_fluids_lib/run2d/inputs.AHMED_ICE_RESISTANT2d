@@ -10,7 +10,6 @@ geometry.prob_lo=0.0 0.0    # RZ
 geometry.prob_hi=0.2 0.6  # cm RZ
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
-ns.num_materials_vel=1
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 ns.face_flag=1

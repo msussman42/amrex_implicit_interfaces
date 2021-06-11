@@ -16588,14 +16588,17 @@ void NavierStokes::project_right_hand_side(
 
     //patch contains prescribed solid.
    if (singular_patch_flag[icolor]==0) {
+
     at_least_one_zap=1;
 
      //patch contains no compressible or dirichlet cells.
    } else if (singular_patch_flag[icolor]==1) {
+
     at_least_one_active=1;
 
      //patch contains a compressible or dirichlet cell.
    } else if (singular_patch_flag[icolor]==2) {
+
     at_least_one_active=1;
 
    } else
@@ -16612,6 +16615,7 @@ void NavierStokes::project_right_hand_side(
    amrex::Error("at_least_one_zap invalid");
 
   if (at_least_one_active==1) {
+
    change_flag=1;
 
     // rhsnew=rhs H-alpha H
@@ -16706,14 +16710,18 @@ void NavierStokes::dot_productALL_ones(int project_option,
 
  if (color_ONES_count>0) {
   // do nothing
- } else
-  amrex::Error("color_ONES_count invalid");
+ } else {
+  std::cout << "color_ONES_count=" << color_ONES_count << '\n';
+  amrex::Error("color_ONES_count invalid 2");
+ }
 
  for (int icolor=0;icolor<color_ONES_count;icolor++) {
   coef[icolor]=0.0;
  }
 
  Vector<Real> temp_sum;
+
+ temp_sum.resize(color_ONES_count);
 
  for (int k = coarsest_ONES_level; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
@@ -16741,8 +16749,10 @@ void NavierStokes::mf_combine_ones(int project_option,
 
  if (color_ONES_count>0) {
   // do nothing
- } else
-  amrex::Error("color_ONES_count invalid");
+ } else {
+  std::cout << "color_ONES_count=" << color_ONES_count << '\n';
+  amrex::Error("color_ONES_count invalid 3");
+ }
 
  for (int k = coarsest_ONES_level; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
@@ -16785,11 +16795,16 @@ void NavierStokes::dot_productALL_ones_size(int project_option) {
 
  if (color_ONES_count>0) {
   // do nothing
- } else
-  amrex::Error("color_ONES_count invalid");
+ } else {
+  std::cout << "color_ONES_count=" << color_ONES_count << '\n';
+  amrex::Error("color_ONES_count invalid 4");
+ }
 
  Vector<Real> temp_sum;
  Vector<int> temp_flag;
+ temp_sum.resize(color_ONES_count);
+ temp_flag.resize(color_ONES_count);
+
  for (int icolor=0;icolor<color_ONES_count;icolor++) {
   singular_patch_flag[icolor]=0;
   ones_sum_global[icolor]=0.0;
@@ -16931,8 +16946,14 @@ void
 NavierStokes::dotSumONES_size(int project_option,
   Vector<Real>& result_sum,
   Vector<int>& result_flag) {
- 
+
  bool use_tiling=ns_tiling;
+
+ if ((result_sum.size()==color_ONES_count)&&
+     (result_flag.size()==color_ONES_count)) {
+  // do nothing
+ } else
+  amrex::Error("result_sum or result_flag have invalid size");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2); // faceden_index has MAC density
@@ -17091,6 +17112,11 @@ NavierStokes::dotSumONES(int project_option,
   Vector<Real>& result_sum) {
  
  bool use_tiling=ns_tiling;
+
+ if (result_sum.size()==color_ONES_count) {
+  // do nothing
+ } else
+  amrex::Error("result_sum has invalid size");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2); // faceden_index has MAC density

@@ -35,7 +35,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 ns.projection_pressure_scale=1.0e+6  # default is 1.0
 #JAN8
 #JAN8
-ns.num_materials_vel=3
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 
 # multigrid class

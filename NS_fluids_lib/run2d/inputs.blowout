@@ -27,10 +27,7 @@ ns.MOFITERMAX=15
 # face_flag=0,2 (conservative momentum transport on colocated grid)
 # face_flag=1   (conservative momentum transport on staggared grid)
 #JAN18
-# num_materials_vel=1 original algorithm from Jemison, Sussman, Arienti (2014)
-# num_materials_vel=3 combination of ideas from Jemison, Sussman, Arienti 
 # (2014) and Sussman, Smith, Hussaini, Ohta, Zhi-Wei (2007)
-ns.num_materials_vel=3
 #JAN18
 
 # 0=GSRB 1=ICRB 2=ILU

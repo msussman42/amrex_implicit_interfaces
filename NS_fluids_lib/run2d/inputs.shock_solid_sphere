@@ -49,7 +49,6 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.num_materials=3
-ns.num_materials_vel=1
 ns.num_species_var=0
 
 ns.post_init_pressure_solve=0

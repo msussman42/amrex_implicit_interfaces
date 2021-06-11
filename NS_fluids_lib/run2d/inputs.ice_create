@@ -23,7 +23,6 @@ geometry.prob_lo   =  0.0 0.0
 # initial contact radius is 0.2 mm
 # dimensionless contact radius 1.0
 geometry.prob_hi   =  1.25 2.5  # r=0.2 r^* 
-ns.num_materials_vel=1
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 ns.advection_order=1 1 1 1

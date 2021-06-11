@@ -12,7 +12,6 @@ geometry.prob_hi   =  0.25 0.25 0.25
 geometry.is_periodic=0 0 0
 ns.MOFITERMAX=15
 ns.temperature_primitive_variable=1 1 1 1 1
-ns.num_materials_vel=1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

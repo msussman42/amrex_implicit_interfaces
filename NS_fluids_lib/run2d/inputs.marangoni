@@ -56,7 +56,6 @@ ns.freezing_model=4 4
 ns.temperature_primitive_variable=1 1 1 1 1
 # 0=use LS  1=use VOF
 ns.temperatureface_flag=1
-ns.num_materials_vel=1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
