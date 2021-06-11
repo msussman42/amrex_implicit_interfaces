@@ -241,6 +241,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      // do nothing
     } else if (singular_patch_flag[icolor]==1) {
      // do nothing
+     
+     //compressible cell or Dirichlet cell.
     } else if (singular_patch_flag[icolor]==2) {
      all_singular_patches=0;
     } else 
