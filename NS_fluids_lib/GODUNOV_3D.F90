@@ -5914,7 +5914,7 @@ stop
 
         Tforce=IEforce*dt*one_over_DeDT
     
-        vischeat(D_DECL(i,j,k),1)=vischeat(D_DECL(i,j,k),1)+Tforce
+        vischeat(D_DECL(i,j,k))=vischeat(D_DECL(i,j,k))+Tforce
 
        else
         print *,"local_mask invalid"
@@ -6118,8 +6118,8 @@ stop
         stop
        endif
        Tforce=-IEforce*dt*one_over_DeDT
-       vischeat(D_DECL(i,j,k),1)= &
-        vischeat(D_DECL(i,j,k),1)+Tforce
+       vischeat(D_DECL(i,j,k))= &
+        vischeat(D_DECL(i,j,k))+Tforce
 
       enddo
       enddo
@@ -9676,7 +9676,6 @@ stop
       REAL_T, intent(in) :: dt
       INTEGER_T maskleft,maskright
       INTEGER_T nmat
-      INTEGER_T im
 
       nmat=num_materials
 
@@ -10955,7 +10954,6 @@ stop
            stop
           endif
 
-FIX ME
            ! interpfab_XDISP declared in MASS_TRANSFER_3D.F90
           call interpfab_XDISP( &
             bfact, & ! determines positioning of Gauss Legendre nodes
@@ -12816,8 +12814,8 @@ FIX ME
        if ((ifaceR.le.growhi(1)).and. &
            (jfaceR.le.growhi(2)).and. &
            (kfaceR.le.growhi(3))) then
-        uleft=velmac(D_DECL(i,j,k),1)
-        uright=velmac(D_DECL(ifaceR,jfaceR,kfaceR),1)
+        uleft=velmac(D_DECL(i,j,k))
+        uright=velmac(D_DECL(ifaceR,jfaceR,kfaceR))
         if (uleft*uright.le.zero) then
          uu=max(uu,abs(uleft-uright))
          uu_estdt=max(uu_estdt,abs(uleft-uright))
@@ -12869,7 +12867,7 @@ FIX ME
         uu_estdt=max(uu_estdt,abs(solidfab(D_DECL(i,j,k),velcomp)))
        enddo ! partid=0..nparts-1
 
-       uulocal=abs(velmac(D_DECL(i,j,k),1))
+       uulocal=abs(velmac(D_DECL(i,j,k)))
        if (levelrz.eq.0) then
         ! do nothing
        else if ((levelrz.eq.1).or. &
@@ -19881,7 +19879,7 @@ FIX ME
                     imap=imap+1
                    enddo
                    if ((imap.ge.1).and. &
-                       (imap.le.num_materials_viscoelastic) then
+                       (imap.le.num_materials_viscoelastic)) then
                     if (num_MAC_vectors.eq.1) then
                      ! do nothing
                     else if (num_MAC_vectors.eq.2) then
@@ -22002,8 +22000,8 @@ FIX ME
            print *,"scomp invalid"
            stop
           endif
-          if (ncomp(1).ne.nsolveMM) then
-           print *,"nscomp invalid"
+          if (ncomp(1).ne.nsolve) then
+           print *,"ncomp(1) invalid"
            stop
           endif
 
@@ -22806,20 +22804,17 @@ FIX ME
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T is_solid_face
       REAL_T vsol
-      REAL_T velmaterial
       INTEGER_T iboundary
       INTEGER_T at_RZ_face
 
       REAL_T face_vfrac_cell(nmat)
       REAL_T face_vfrac(2,nmat)
       REAL_T face_mfrac(2,nmat)
-      REAL_T weight_sum
       REAL_T fluid_vfrac_face
       REAL_T total_vol_face
       REAL_T total_vol_face_cell
       REAL_T local_volume
       REAL_T local_mass
-      REAL_T velsum
       INTEGER_T vofcomp
       INTEGER_T velcomp
       REAL_T mofdata(nmat*ngeom_recon)
@@ -25005,7 +25000,7 @@ FIX ME
       REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
       REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
-FIX ME
+
       REAL_T, intent(out) :: xflux(DIMV(xflux),nsolve)  ! u
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
 
@@ -25111,6 +25106,13 @@ FIX ME
        ! do nothing
       else
        print *,"bfact invalid79"
+       stop
+      endif
+
+      if (nsolve.eq.SDIM) then
+       ! do nothing
+      else
+       print *,"nsolve invalid in CROSSTERM"
        stop
       endif
 
@@ -28902,7 +28904,7 @@ FIX ME
          else if (A_matrix.gt.zero) then
            ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
           lambda=B_matrix/A_matrix
-          local_wt=particles_weight_XD(im_PLS_cpp+1)
+          local_wt=particles_weight_XD
           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
            XDNEWFAB(D_DECL(i,j,k),dir)= &
             XDISP_local-local_wt*lambda

@@ -4031,7 +4031,7 @@ END SUBROUTINE SIMP
             stop
            endif
           enddo ! dir=1..sdim
-          presnd(1)=SEM_value(SDIM+1)
+          presnd=SEM_value(SDIM+1)
           if (visual_ncomp-SDIM.ne.SDIM+3+num_state_material+1+nmat) then
            print *,"incorrect visual_ncomp"
            stop
@@ -10663,23 +10663,23 @@ END SUBROUTINE SIMP
 
        IMPLICIT NONE
 
-       INTEGER_T nsolve
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
-       INTEGER_T nc
-       INTEGER_T DIMDEC(fabx)
-       INTEGER_T DIMDEC(faby)
-       INTEGER_T DIMDEC(fabz)
-       INTEGER_T DIMDEC(mask)
-       REAL_T  beta
-       REAL_T  fabx(DIMV(fabx),nsolve)
-       REAL_T  faby(DIMV(faby),nsolve)
-       REAL_T  fabz(DIMV(fabz),nsolve)
-       REAL_T  mask(DIMV(mask))
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: DIMDEC(fabx)
+       INTEGER_T, intent(in) :: DIMDEC(faby)
+       INTEGER_T, intent(in) :: DIMDEC(fabz)
+       INTEGER_T, intent(in) :: DIMDEC(mask)
+       REAL_T, intent(in) :: beta
+       REAL_T, intent(in) :: fabx(DIMV(fabx),nsolve)
+       REAL_T, intent(in) :: faby(DIMV(faby),nsolve)
+       REAL_T, intent(out) :: fabz(DIMV(fabz),nsolve)
+       REAL_T, intent(in) :: mask(DIMV(mask))
 
        INTEGER_T local_mask
+       INTEGER_T :: nc
 
        INTEGER_T i,j,k
 
@@ -10722,12 +10722,7 @@ END SUBROUTINE SIMP
          enddo !j
          enddo !i
 
-        else
-         print *,"nc_mask invalid"
-         stop
-        endif
-
-       enddo !nc=1..nsolveMM
+       enddo !nc=1..nsolve
 
        return
        end subroutine FORT_FABCOM
@@ -10906,12 +10901,7 @@ END SUBROUTINE SIMP
          enddo ! j
          enddo ! i
 
-        else
-         print *,"nc_mask invalid"
-         stop
-        endif
-
-       enddo ! nc=1..nsolveMM
+       enddo ! nc=1..nsolve
 
        if (debug_dot_product.eq.1) then
         print *,"debug dot: level,grid,i,j,k,max ",levelno,gridno, &
@@ -10977,7 +10967,7 @@ END SUBROUTINE SIMP
 
        INTEGER_T icolor,nc
        INTEGER_T i,j,k
-       INTEGER_T local_mask,local_color,local_type
+       INTEGER_T local_mask,local_color,local_type,local_ones
        INTEGER_T plus_flag,zero_flag
        REAL_T local_alpha
        INTEGER_T dir_local
@@ -11035,7 +11025,7 @@ END SUBROUTINE SIMP
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        local_mask=NINT(mask(D_DECL(i,j,k)))
+        local_mask=NINT(mask_fab(D_DECL(i,j,k)))
 
         if (local_mask.eq.1) then
 
@@ -11218,7 +11208,7 @@ END SUBROUTINE SIMP
 
        INTEGER_T icolor,nc
        INTEGER_T i,j,k
-       INTEGER_T local_mask,local_color,local_type
+       INTEGER_T local_mask,local_color,local_type,local_ones
        INTEGER_T plus_flag,zero_flag
        REAL_T local_alpha
        INTEGER_T dir_local
@@ -11276,7 +11266,7 @@ END SUBROUTINE SIMP
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        local_mask=NINT(mask(D_DECL(i,j,k)))
+        local_mask=NINT(mask_fab(D_DECL(i,j,k)))
 
         if (local_mask.eq.1) then
 
@@ -11473,7 +11463,7 @@ END SUBROUTINE SIMP
 
        INTEGER_T icolor,nc
        INTEGER_T i,j,k
-       INTEGER_T local_mask,local_color,local_type
+       INTEGER_T local_mask,local_color,local_type,local_ones
        INTEGER_T plus_flag,zero_flag
        REAL_T local_alpha
        INTEGER_T dir_local
@@ -11527,7 +11517,7 @@ END SUBROUTINE SIMP
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
-        local_mask=NINT(mask(D_DECL(i,j,k)))
+        local_mask=NINT(mask_fab(D_DECL(i,j,k)))
 
         if (local_mask.eq.1) then
 
@@ -11862,7 +11852,7 @@ END SUBROUTINE SIMP
          ! dombcpres=get_desc_lst()[State_Type].getBC(pcomp)
         bctypepres=dombcpres(dir,side)  
          ! presbc_arr=getBCArray(State_Type,gridno,pcomp,1)
-        local_bctype=presbc_arr(dir,side,1) 
+        local_bctype=presbc_arr(dir,side) 
 
         exteriorbc=0
 
@@ -12844,7 +12834,7 @@ END SUBROUTINE SIMP
          ! p(energy*scale)/scale
          call EOS_material(rho,massfrac_parm, &
           internal_energy, &
-          pres(D_DECL(i,j,k),1), &
+          pres(D_DECL(i,j,k)), &
           local_material_type(im_primary),im_primary)
         else if (local_material_type(im_primary).eq.0) then
          ! do nothing
@@ -12928,9 +12918,7 @@ END SUBROUTINE SIMP
       INTEGER_T i2,j2,k2,vofcomp
       INTEGER_T kstencil_lo,kstencil_hi
       INTEGER_T tcomp
-      INTEGER_T pcomp
       REAL_T local_vort
-      INTEGER_T im_vort
       INTEGER_T local_mask
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -13003,9 +12991,6 @@ END SUBROUTINE SIMP
 
           tcomp=(im-1)*num_state_material+2
 
-          pcomp=1
-          im_vort=1
-
           if (vorterr(im).lt.zero) then
            print *,"vorterr cannot be negative"
            stop
@@ -13015,7 +13000,7 @@ END SUBROUTINE SIMP
           do j2=-1,1
           do k2=kstencil_lo,kstencil_hi
            pres_array(D_DECL(i2+2,j2+2,k2+2))= &
-             pres(D_DECL(i+i2,j+j2,k+k2),pcomp)
+             pres(D_DECL(i+i2,j+j2,k+k2))
            temp_array(D_DECL(i2+2,j2+2,k2+2))= &
              den(D_DECL(i+i2,j+j2,k+k2),tcomp)
           enddo
@@ -13024,7 +13009,7 @@ END SUBROUTINE SIMP
 
            ! vort is initialized in FORT_GETSHEAR when onlyscalar.eq.2
            ! vort is the vorticity magnitude (L2 norm)
-          local_vort=vort(D_DECL(i,j,k),im_vort)
+          local_vort=vort(D_DECL(i,j,k))
 
             ! error(p*scale)
             ! errnew=max(errnew,VOFTOL)
@@ -13307,11 +13292,11 @@ END SUBROUTINE SIMP
             (project_option.eq.11)) then !FSI_material_exists last project
 
          if (project_option.eq.0) then
-          div_hold(1)=zero
+          div_hold=zero
          else if (project_option.eq.11) then !FSI_material_exists 2nd project
            ! coeff_avg,p_avg
            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-          div_hold(1)=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
+          div_hold=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
                                               ! of DIV_Type)
            ! FORT_ADVECTIVE_PRESSURE called from 
            !   NavierStokes::init_advective_pressure
@@ -13319,13 +13304,13 @@ END SUBROUTINE SIMP
            !   NavierStokes::multiphase_project
            ! mdot passed from localMF[DIFFUSIONRHS_MF]
            ! project_option==11 => FSI_material_exists (2nd project)
-          if (mdot(D_DECL(i,j,k),1).eq.zero) then
+          if (mdot(D_DECL(i,j,k)).eq.zero) then
            ! do nothing
           else
-           print *,"mdot(D_DECL(i,j,k),1).ne.zero in advective_pressure"
-           print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k),1)
+           print *,"mdot(D_DECL(i,j,k)).ne.zero in advective_pressure"
+           print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k))
            print *,"level,finest_level ",level,finest_level
-           print *,"div_hold(1) ",div_hold(1)
+           print *,"div_hold ",div_hold
            print *,"project_option ",project_option
            print *,"dt=",dt
            print *,"nmat,nden,bfact ",nmat,nden,bfact
@@ -13537,7 +13522,7 @@ END SUBROUTINE SIMP
            if (project_option.eq.11) then ! FSI_material_exists (last project)
             ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
             ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
-            mdot(D_DECL(i,j,k),1)=local_volume*div_hold(1)/dt
+            mdot(D_DECL(i,j,k))=local_volume*div_hold/dt
            else if (project_option.eq.0) then
             ! do nothing
            else
@@ -13584,14 +13569,14 @@ END SUBROUTINE SIMP
               csnd(D_DECL(i,j,k),2)=zero ! padvect
                ! localMF[DIFFUSIONRHS_MF]
                ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-              mdot(D_DECL(i,j,k),1)=local_volume*div_hold(1)/dt 
+              mdot(D_DECL(i,j,k))=local_volume*div_hold/dt 
              else if (csound_hold.ne.zero) then
               ! "div" = -(pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
               ! (1/(rho c^2 dt^2))p=div/dt
               ! csound_hold p = div/dt
               ! p=div/(dt csound_hold)
               ! p = p * vol in MacProj.cpp
-              csnd(D_DECL(i,j,k),2)=div_hold(1)/(csound_hold*dt)
+              csnd(D_DECL(i,j,k),2)=div_hold/(csound_hold*dt)
              else
               print *,"csound_hold invalid"
               stop
@@ -13612,7 +13597,7 @@ END SUBROUTINE SIMP
             if (project_option.eq.11) then !FSI_material_exists last project
               ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
               ! localMF[DIFFUSIONRHS_MF]
-             mdot(D_DECL(i,j,k),1)=div_hold(1)*local_volume/dt 
+             mdot(D_DECL(i,j,k))=div_hold*local_volume/dt 
             else if (project_option.eq.0) then
              ! do nothing
             else
@@ -13734,7 +13719,7 @@ END SUBROUTINE SIMP
        coeff_hold=csound(D_DECL(i,j,k),sound_comp) ! 1/(rho c^2 dt^2)
 
        if (coeff_hold.gt.zero) then ! compressible
-        compress_term=-dt*(pnew(D_DECL(i,j,k),1)- &
+        compress_term=-dt*(pnew(D_DECL(i,j,k))- &
           csound(D_DECL(i,j,k),sound_comp+1))*coeff_hold
        else if (coeff_hold.eq.zero) then ! incompressible
         compress_term=zero
@@ -13745,7 +13730,7 @@ END SUBROUTINE SIMP
 
        mdot_term=mdot(D_DECL(i,j,k))
 
-       divnew(D_DECL(i,j,k),1)=compress_term+mdot_term*dt/local_volume
+       divnew(D_DECL(i,j,k))=compress_term+mdot_term*dt/local_volume
          
       enddo
       enddo
