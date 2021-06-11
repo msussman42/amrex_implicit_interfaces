@@ -71,7 +71,6 @@ ns.continuous_mof=0
 ns.face_flag=1
 ns.conservative_tension_force=0
 ns.temperature_primitive_variable=1 1 1 1 1
-ns.num_materials_vel=1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

@@ -60,49 +60,6 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
   // ngrow=1 scomp=0 ncomp=1 
  PCINTERP_fill_bordersALL(ONES_GROW_MF,1,0,1,State_Type,scompBC_map);
 
- int zero_diag_flag=1;
- TypeALL(TYPE_ONES_MF,type_ONES_flag,zero_diag_flag);
- color_variable(coarsest_ONES_level,COLOR_ONES_MF,TYPE_ONES_MF,
-   &color_ONES_count, 
-   type_ONES_flag,zero_diag_flag);
-
- ones_sum_global.resize(color_ONES_count);
-  // for each given color, singular_patch_flag=
-  //   0 if color is masked off 
-  //   1 if color is not masked off, no compressible/internal dirichlet 
-  //     regions, and not touching a Dirichlet condition wall.
-  //   2 if color is not masked off, a compressible/internal dirichlet
-  //     region exists or color is touching a Dirichlet condition wall.
- singular_patch_flag.resize(color_ONES_count);
-
-   // rhsnew=rhs-alpha H
-   // 0 =sum rhs - alpha sum H
-   // alpha=sum rhs/sum H
-   // in otherwords:
-   // if v in the null space of A,
-   // we want rhs dot v =0
-   // one_sum_global = v dot v
- dot_productALL_ones_size(project_option);
-
- if (project_option_singular_possible(project_option)==1) {
-
-  if (nsolve!=1)
-   amrex::Error("nsolve invalid34");
-
- } else if (project_option_singular_possible(project_option)==0) {
-
-  for (int icolor=0;icolor<color_ONES_count;icolor++) {
-   if (singular_patch_flag[icolor]==0) {
-    // do nothing
-   } else if (singular_patch_flag[icolor]==2) {
-    // do nothing
-   } else 
-    amrex::Error("invalid singular_patch_flag[icolor]");
-  } // icolor=0..color_ONES_count-1
-
- } else
-  amrex::Error("project_option invalid50");
-
 } // end subroutine allocate_maccoefALL
 
 void
@@ -221,53 +178,64 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   ns_tiling,
   local_use_mg_precond);
 
- if ((coarsest_ONES_level>=0)&&
-     (coarsest_ONES_level<=finest_level)) {
-  // do nothing
- } else
-  amrex::Error("coarsest_ONES_level invalid");
-
  mac_op->laplacian_solvability=0; // nonsingular matrix
 
- int all_singular_patches=1;
+ if (create_hierarchy==0) {
+  // do nothing
+ } else if (create_hierarchy==1) {
 
- if (level>coarsest_ONES_level) {
-  mac_op->laplacian_solvability=0; // nonsingular matrix
-  all_singular_patches=0;
- } else if ((level>=0)&&(level<=coarsest_ONES_level)) {
-  if (color_ONES_count>0) {
-   for (int icolor=0;icolor<color_ONES_count;icolor++) {
-    if (singular_patch_flag[icolor]==0) {
-     // do nothing
-    } else if (singular_patch_flag[icolor]==1) {
-     // do nothing
+  if ((coarsest_ONES_level>=0)&&
+      (coarsest_ONES_level<=finest_level)) {
+   // do nothing
+  } else
+   amrex::Error("coarsest_ONES_level invalid");
+
+  int all_singular_patches=1;
+
+  if (level>coarsest_ONES_level) {
+   mac_op->laplacian_solvability=0; // nonsingular matrix
+   all_singular_patches=0;
+  } else if ((level>=0)&&(level<=coarsest_ONES_level)) {
+   if (color_ONES_count>0) {
+    for (int icolor=0;icolor<color_ONES_count;icolor++) {
+     if (singular_patch_flag[icolor]==0) {
+      // do nothing
+     } else if (singular_patch_flag[icolor]==1) {
+      // do nothing
      
-     //compressible cell or Dirichlet cell.
-    } else if (singular_patch_flag[icolor]==2) {
-     all_singular_patches=0;
-    } else 
-     amrex::Error("invalid singular_patch_flag[icolor]");
-   } // icolor=0;icolor<color_ONES_count;icolor++
-   if (all_singular_patches==0) {
-    mac_op->laplacian_solvability=0; //nonsingular matrix
-   } else if (all_singular_patches==1) {
-    if (project_option_singular_possible(project_option)==1) {
-     mac_op->laplacian_solvability=1; //singular matrix
+      //compressible cell or Dirichlet cell.
+     } else if (singular_patch_flag[icolor]==2) {
+      all_singular_patches=0;
+     } else 
+      amrex::Error("invalid singular_patch_flag[icolor]");
+    } // icolor=0;icolor<color_ONES_count;icolor++
+    if (all_singular_patches==0) {
+     mac_op->laplacian_solvability=0; //nonsingular matrix
+    } else if (all_singular_patches==1) {
+     if (project_option_singular_possible(project_option)==1) {
+      mac_op->laplacian_solvability=1; //singular matrix
+     } else
+      amrex::Error("all_singular_patches invalid");
     } else
      amrex::Error("all_singular_patches invalid");
-   } else
-    amrex::Error("all_singular_patches invalid");
+   } else {
+    std::cout << "level=" << level << '\n';
+    std::cout << "coarsest_ONES_level=" << coarsest_ONES_level << '\n';
+    std::cout << "color_ONES_count=" << color_ONES_count << '\n';
+    amrex::Error("color_ONES_count invalid 1");
+   }
   } else
-   amrex::Error("color_ONES_count invalid");
- } else
-  amrex::Error("level invalid");
+   amrex::Error("level invalid");
 
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "allocate_maccoef level= " << level << 
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "allocate_maccoef level= " << level << 
      " all_singular_patches= " << all_singular_patches << '\n';
-  }
- }
+   }
+  } //verbose>0
+
+ } else
+  amrex::Error("create_hierarchy invalid");
 
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))

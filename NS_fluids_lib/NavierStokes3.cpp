@@ -7865,6 +7865,7 @@ void NavierStokes::residual_correction_form(
    // SEM BC if projection_enable_spectral==1,2
   int simple_AMR_BC_flag=0;
   int simple_AMR_BC_flag_viscosity=0;
+   // apply_pressure_grad declared in NavierStokes2.cpp
   apply_pressure_grad(
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
@@ -9678,7 +9679,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
     // initializes diagsing,mask_div_residual,mask_residual,
     // ONES_MF,ONES_GROW_MF
-    // ones_sum_global
     //
     //  i.e.
     //  
@@ -9686,6 +9686,54 @@ void NavierStokes::multiphase_project(int project_option) {
     // initializes arrays holding the diagonal, ONES_MF, ONES_GROW_MF.
  int create_hierarchy=0;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+
+ if (create_hierarchy==0) {
+
+  int zero_diag_flag=1;
+  TypeALL(TYPE_ONES_MF,type_ONES_flag,zero_diag_flag);
+  color_variable(coarsest_ONES_level,COLOR_ONES_MF,TYPE_ONES_MF,
+   &color_ONES_count, 
+   type_ONES_flag,zero_diag_flag);
+
+  ones_sum_global.resize(color_ONES_count);
+  // for each given color, singular_patch_flag=
+  //   0 if color is masked off 
+  //   1 if color is not masked off, no compressible/internal dirichlet 
+  //     regions, and not touching a Dirichlet condition wall.
+  //   2 if color is not masked off, a compressible/internal dirichlet
+  //     region exists or color is touching a Dirichlet condition wall.
+  singular_patch_flag.resize(color_ONES_count);
+
+   // rhsnew=rhs-alpha H
+   // 0 =sum rhs - alpha sum H
+   // alpha=sum rhs/sum H
+   // in otherwords:
+   // if v in the null space of A,
+   // we want rhs dot v =0
+   // one_sum_global = v dot v
+  dot_productALL_ones_size(project_option);
+
+  if (project_option_singular_possible(project_option)==1) {
+
+   if (nsolve!=1)
+    amrex::Error("nsolve invalid34");
+
+  } else if (project_option_singular_possible(project_option)==0) {
+
+   for (int icolor=0;icolor<color_ONES_count;icolor++) {
+    if (singular_patch_flag[icolor]==0) {
+     // do nothing
+    } else if (singular_patch_flag[icolor]==2) {
+     // do nothing
+    } else 
+     amrex::Error("invalid singular_patch_flag[icolor]");
+   } // icolor=0..color_ONES_count-1
+
+  } else
+   amrex::Error("project_option invalid50");
+
+ } else
+  amrex::Error("create_hierarchy invalid");
 
  int change_flag=0;
 
@@ -9713,7 +9761,8 @@ void NavierStokes::multiphase_project(int project_option) {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
-     // UMAC_MF-=beta grad STATE_FOR_RESID
+   // residual_correction_form declared in NavierStokes3.cpp
+   // UMAC_MF-=beta grad STATE_FOR_RESID
   ns_level.residual_correction_form(
    homflag_residual_correction_form,
    energyflag,
@@ -9778,9 +9827,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int min_bicgstab_outer_iter=0;
 
-     // initializes diagsing,mask_div_residual,mask_residual,
-     // ONES_MF,ONES_GROW_MF,
-     // ones_sum_global
+  // initializes diagsing,mask_div_residual,mask_residual,
+  // ONES_MF,ONES_GROW_MF
  create_hierarchy=1;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 

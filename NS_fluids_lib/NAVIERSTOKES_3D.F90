@@ -11224,6 +11224,8 @@ END SUBROUTINE SIMP
         stop
        endif
        if (project_option.eq.3) then
+        print *,"FORT_SUMDOT_ONES should not be called for viscosity"
+        stop
         if (nsolve.eq.SDIM) then
          ! do nothing
         else
@@ -11310,7 +11312,7 @@ END SUBROUTINE SIMP
             endif 
            enddo !nc=1..nsolve
            if ((plus_flag.eq.1).and.(zero_flag.eq.0)) then
-            if (fab_flag(local_color).ge.2) then
+            if (fab_flag(local_color).eq.2) then
              ! do nothing
             else
              print *,"fab_flag invalid"
@@ -11360,7 +11362,7 @@ END SUBROUTINE SIMP
               else if (local_bc.eq.REFLECT_EVEN) then
                ! do nothing
               else if (local_bc.eq.EXT_DIR) then
-               if (fab_flag(local_color).ge.2) then
+               if (fab_flag(local_color).eq.2) then
                 ! do nothing
                else
                 print *,"fab_flag invalid"
