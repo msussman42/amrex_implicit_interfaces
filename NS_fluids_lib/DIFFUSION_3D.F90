@@ -205,8 +205,6 @@ stop
        INTEGER_T vofcomp
        INTEGER_T nhalf
        REAL_T DTEMP,FWATER,liquid_temp
-       INTEGER_T nsolve
-       INTEGER_T ntensor
        REAL_T vt_over_r,ut_over_r
        REAL_T param1,param2,hoop_force_coef
        INTEGER_T ut_comp
@@ -217,8 +215,20 @@ stop
 
        nhalf=3
 
-       nsolve=SDIM
-       ntensor=SDIM*SDIM
+       if (nsolve.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"nsolve invalid"
+        stop
+       endif
+
+       if (ntensor.eq.SDIM*SDIM) then
+        ! do nothing
+       else
+        print *,"ntensor invalid"
+        stop
+       endif
+
        if ((constant_viscosity.ne.0).and. &
            (constant_viscosity.ne.1)) then
         print *,"constant_viscosity invalid"
@@ -413,7 +423,7 @@ stop
            DTEMP=zero
           else if ((FWATER.ge.half).and.(FWATER.le.one+VOFTOL)) then
 
-           liquid_temp=thermal(D_DECL(i,j,k),1)
+           liquid_temp=thermal(D_DECL(i,j,k))
 
            if (liquid_temp.le.zero) then
             print *,"liquid_temp cannot be <= 0 (1)"
@@ -643,39 +653,44 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T nmat
-       INTEGER_T nsolve
-       INTEGER_T level
-       INTEGER_T finest_level
-       INTEGER_T update_state
-       REAL_T dt
-       REAL_T prev_time,cur_time
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: nsolve
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: finest_level
+       INTEGER_T, intent(in) :: update_state
+       REAL_T, intent(in) :: dt
+       REAL_T, intent(in) :: prev_time,cur_time
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
     
-       INTEGER_T DIMDEC(force)
-       INTEGER_T DIMDEC(unew)
-       INTEGER_T DIMDEC(den)
+       INTEGER_T, intent(in) :: DIMDEC(force)
+       INTEGER_T, intent(in) :: DIMDEC(unew)
+       INTEGER_T, intent(in) :: DIMDEC(den)
 
-       REAL_T  force(DIMV(force),nsolve)
-       REAL_T  unew(DIMV(unew),nsolve)
-       REAL_T  den(DIMV(den),nmat+1)
-       REAL_T  xlo(SDIM)
-       REAL_T  xsten(-3:3,SDIM)
-       REAL_T  dx(SDIM)
+       REAL_T, intent(out) ::  force(DIMV(force),nsolve)
+       REAL_T, intent(inout) ::  unew(DIMV(unew),nsolve)
+       REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
+       REAL_T, intent(in) ::  xlo(SDIM)
+       REAL_T, intent(in) ::  dx(SDIM)
+       REAL_T ::  xsten(-3:3,SDIM)
 
        INTEGER_T i,j,k,dir
        REAL_T inverseden
        INTEGER_T nhalf
-       INTEGER_T nsolve
        REAL_T local_neg_force(SDIM)
        REAL_T xlocal(SDIM)
 
        nhalf=3
 
-       nsolve=SDIM
+       if (nsolve.eq.SDIM) then
+        ! do nothing
+       else
+        print *,"nsolve invalid"
+        stop
+       endif
+
        if ((update_state.ne.0).and. &
            (update_state.ne.1)) then
         print *,"update_state invalid"
@@ -817,7 +832,7 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(den)
        INTEGER_T, intent(in) :: DIMDEC(DEDT)
 
-       REAL_T, intent(in) :: force(DIMV(force))
+       REAL_T, intent(inout) :: force(DIMV(force))
        REAL_T, intent(in) :: thermal(DIMV(thermal))
        REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
        REAL_T, intent(in) :: uold(DIMV(uold),nsolve)
@@ -825,8 +840,8 @@ stop
        REAL_T, intent(in) :: den(DIMV(den),nmat+1)
        REAL_T, intent(in) :: DEDT(DIMV(DEDT),nmat+1)
        REAL_T, intent(in) :: xlo(SDIM)
-       REAL_T, intent(in) :: xsten(-3:3,SDIM)
        REAL_T, intent(in) :: dx(SDIM)
+       REAL_T :: xsten(-3:3,SDIM)
 
        INTEGER_T i,j,k,dir
        REAL_T temp_n
@@ -842,7 +857,9 @@ stop
 
        nhalf=3
 
-       if (nsolve.ne.SDIM) then
+       if (nsolve.eq.SDIM) then
+        ! do nothing
+       else
         print *,"nsolve invalid"
         stop
        endif

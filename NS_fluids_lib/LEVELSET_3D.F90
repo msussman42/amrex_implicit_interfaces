@@ -12631,7 +12631,7 @@ stop
            ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           uface(side)=zvel(D_DECL(iface,jface,kface))
+           uface(side)=zvel(D_DECL(iface,jface,kface),1)
            ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
           else
@@ -15073,7 +15073,7 @@ stop
           local_vel=xvel(D_DECL(i,j,k))
           if ((operation_flag.eq.5).or. &
               (operation_flag.eq.11)) then
-           local_vel_old=xgp(D_DECL(i,j,k))
+           local_vel_old=xgp(D_DECL(i,j,k),1)
           else if ((operation_flag.eq.3).or. &
                    (operation_flag.eq.4).or. &
                    (operation_flag.eq.10)) then
@@ -16544,17 +16544,17 @@ stop
                   (operation_flag.eq.10).or. & ! u^CELL,MAC -> MAC
                   (operation_flag.eq.11)) then ! u^CELL DIFF,MAC -> MAC
 
-          xvel(D_DECL(i,j,k)=uedge
+          xvel(D_DECL(i,j,k))=uedge
   
          else if (operation_flag.eq.0) then ! (grad p)_MAC
 
-          xgp(D_DECL(i,j,k))=pgrad
+          xgp(D_DECL(i,j,k),1)=pgrad
 
          else if (operation_flag.eq.2) then ! potential grad+surface tension
        
           pgrad_gravity=pgrad_gravity+pgrad_tension
 
-          xgp(D_DECL(i,j,k))=pgrad_gravity
+          xgp(D_DECL(i,j,k),1)=pgrad_gravity
           do im=1,3
            xp(D_DECL(i,j,k),im)=plocal(im)
           enddo
@@ -19716,7 +19716,6 @@ stop
        ! lambda=
        !  sum_p w_p(interp_data(xp)-particle_data_p)/
        !  sum_P w_p
-      A_LS=zero
       A_X=zero
       do dir=1,SDIM
        b_X(dir)=zero
@@ -19845,7 +19844,7 @@ stop
        enddo
 
        if (A_X.gt.zero) then
-        local_wt=particles_weight_XD(accum_PARM%im_PLS_cpp+1)
+        local_wt=particles_weight_XD
         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
          do dir=1,SDIM
           x_foot_interp(dir)=x_foot_interp(dir)- &
@@ -19890,7 +19889,7 @@ stop
       else if (accum_PARM%append_flag.eq.1) then
 
        if (A_X.gt.zero) then
-        local_wt=particles_weight_VEL(accum_PARM%im_PLS_cpp+1)
+        local_wt=particles_weight_VEL
         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
          do dir=1,SDIM
           vel_interp(dir)=vel_interp(dir)-local_wt*b_VEL(dir)/A_X
@@ -20016,13 +20015,11 @@ stop
       INTEGER_T cell_count_hold
       INTEGER_T current_link
       INTEGER_T local_count
-      INTEGER_T mod_flag
       INTEGER_T sub_found
       INTEGER_T Np_append_test
       REAL_T :: x_foot_sub(SDIM)
       REAL_T :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
-      REAL_T :: xsub_I(SDIM)
       REAL_T :: vel_sub(SDIM)
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
@@ -20038,6 +20035,7 @@ stop
       INTEGER_T ibubble
       INTEGER_T temp_id
       REAL_T temp_time
+      REAL_T temp_radius
 
       call checkbound(fablo,fabhi,DIMS(velfab),1,-1,2872)
       call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
@@ -20764,7 +20762,6 @@ stop
 
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: vel_time_slab
-      INTEGER_T, intent(in) :: im_PLS_cpp
 
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)

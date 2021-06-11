@@ -428,7 +428,6 @@ stop
 
       INTEGER_T nwrite3d,nwrite2d,index3d,index2d
 
-      INTEGER_T im
       INTEGER_T partid
 
       character*3 levstr
@@ -11461,7 +11460,7 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: presbc(SDIM,2)
        INTEGER_T, intent(in) :: type_flag(2)
 
-       INTEGER_T icolor,nc
+       INTEGER_T nc
        INTEGER_T i,j,k
        INTEGER_T local_mask,local_color,local_type,local_ones
        INTEGER_T plus_flag,zero_flag

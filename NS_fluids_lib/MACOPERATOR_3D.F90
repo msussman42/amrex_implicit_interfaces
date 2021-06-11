@@ -533,7 +533,7 @@ stop
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: bfact
-       REAL_T, intent(inout) :: bx(DIMV(bx),nsolveMM)
+       REAL_T, intent(inout) :: bx(DIMV(bx),nsolve)
        REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
@@ -1196,12 +1196,12 @@ stop
           print *,"i,j,k ",i,j,k
           print *,"facewtsum= ",facewtsum
           print *,"offdiagsum= ",offdiagsum
-          print *,"fwtx Left ",fwtx(D_DECL(i,j,k),faceR)
-          print *,"fwtx Right ",fwtx(D_DECL(i+1,j,k),faceL)
-          print *,"fwty front ",fwty(D_DECL(i,j,k),faceR)
-          print *,"fwty back ",fwty(D_DECL(i,j+1,k),faceL)
-          print *,"fwtz bottom ",fwtz(D_DECL(i,j,k),faceR)
-          print *,"fwtz top ",fwtz(D_DECL(i,j,k+1),faceL)
+          print *,"fwtx Left ",fwtx(D_DECL(i,j,k),veldir)
+          print *,"fwtx Right ",fwtx(D_DECL(i+1,j,k),veldir)
+          print *,"fwty front ",fwty(D_DECL(i,j,k),veldir)
+          print *,"fwty back ",fwty(D_DECL(i,j+1,k),veldir)
+          print *,"fwtz bottom ",fwtz(D_DECL(i,j,k),veldir)
+          print *,"fwtz top ",fwtz(D_DECL(i,j,k+1),veldir)
           stop
          endif
 
