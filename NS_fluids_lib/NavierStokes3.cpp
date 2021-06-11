@@ -726,14 +726,6 @@ void NavierStokes::tensor_advection_updateALL() {
 
   avgDownALL_TENSOR();
 
-   // SLOPE_RECON_MF is a parameter but not used.
-   // after tensor_advection_update(), in
-   //  NavierStokes::tensor_advection_updateALL() 
-  provisional_MF=-1;
-  im_tensor=-1;
-  grid_type=-1;
-  tensor_extrapolateALL(im_tensor,provisional_MF,grid_type);
-
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -7036,8 +7028,6 @@ void NavierStokes::allocate_MAC_velocityALL(int nsolve,int idx) {
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
- int nmat=num_materials;
-
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -7602,8 +7592,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
 void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   // do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -7859,8 +7847,6 @@ void NavierStokes::residual_correction_form(
   int energyflag,
   int project_option,int nsolve) {
 
- int nmat=num_materials;
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -7921,8 +7907,6 @@ void NavierStokes::mg_cycleALL(int presmooth,
  } else
   amrex::Error("level invalid mg_cycleALL");
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -7980,8 +7964,6 @@ void NavierStokes::relaxLEVEL(
 
  BLProfiler bprof(profname);
 #endif
-
- int nmat=num_materials;
 
  if (project_option_momeqn(project_option)==1) {
   // do nothing
@@ -8301,8 +8283,6 @@ void NavierStokes::jacobi_cycles(
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid33");
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -8438,8 +8418,6 @@ void NavierStokes::updatevelALL(
 
  int finest_level=parent->finestLevel();
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -8477,7 +8455,6 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 
- int nmat=num_materials;
  int finest_level=parent->finestLevel();
 
  if ((level>=0)&&(level<=finest_level)) {
@@ -8572,8 +8549,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  } else
   amrex::Error("project_option invalid44");
 
- int nmat=num_materials; 
-
  int change_flag=0;
  project_right_hand_side(idx_R,project_option,change_flag);
 
@@ -8589,7 +8564,6 @@ void NavierStokes::multiphase_GMRES_preconditioner(
             (gmres_precond_iter*nsolve<=MAX_GMRES_BUFFER)) {
   int m=gmres_precond_iter*nsolve;
 
-  Real GMRES_tol=KRYLOV_NORM_CUTOFF;
   Real beta=0.0;
   dot_productALL(project_option,idx_R,idx_R,beta,nsolve);
 
@@ -8850,8 +8824,6 @@ void NavierStokes::multiphase_preconditioner(
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
  
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -11608,11 +11580,6 @@ void NavierStokes::vel_elastic_ALL() {
   } else
    amrex::Error("MAC_grid_displacement invalid");
 
-  provisional_MF=-1;
-  im_tensor=-1;
-  grid_type=-1;
-  tensor_extrapolateALL(im_tensor,provisional_MF,grid_type);
-
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);
 
@@ -12378,8 +12345,6 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("particles_flag invalid");
 
- } // im_assimilate=0..nmat-1
-
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.assimilate_state_data();
@@ -13008,8 +12973,6 @@ int NavierStokes::is_zalesak() {
 void NavierStokes::zalesakVEL() {
  
  bool use_tiling=ns_tiling;
-
- int nmat=num_materials;
 
  const Real* dx = geom.CellSize();
 

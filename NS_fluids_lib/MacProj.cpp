@@ -229,10 +229,12 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  mac_op->laplacian_solvability=0; // nonsingular matrix
 
+ int all_singular_patches=1;
+
  if (level>coarsest_ONES_level) {
   mac_op->laplacian_solvability=0; // nonsingular matrix
+  all_singular_patches=0;
  } else if ((level>=0)&&(level<=coarsest_ONES_level)) {
-  int all_singular_patches=1;
   if (color_ONES_count>0) {
    for (int icolor=0;icolor<color_ONES_count;icolor++) {
     if (singular_patch_flag[icolor]==0) {
@@ -473,7 +475,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   new_localMF(BXCOEF_MF+dir,nsolve,0,dir);
   localMF[BXCOEFNOAREA_MF+dir]->setVal(1.0,0,nsolve,0);
 
-  if (localMF[FACE_WEIGHT_MF+dir]->nComp()!=nsolve_FACE) 
+  if (localMF[FACE_WEIGHT_MF+dir]->nComp()!=nsolve) 
    amrex::Error("localMF[FACE_WEIGHT_MF+dir]->nComp() invalid");
   if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolve) 
    amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
@@ -935,8 +937,6 @@ NavierStokes::AllinterpScalarMAC(
   MultiFab* cdiagsing,MultiFab* fdiagsing,
   int nsolve,int project_option) {
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
 
   // do nothing
@@ -1135,8 +1135,6 @@ NavierStokes::Allaverage(
 void
 NavierStokes::averageRhs(int idx_MF,int nsolve,int project_option) {
 
-  int nmat=num_materials;
-
   if (project_option_momeqn(project_option)==1) {
    //do nothing
   } else if (project_option_momeqn(project_option)==0) {
@@ -1222,8 +1220,6 @@ void NavierStokes::DiagInverse(
  int finest_level=parent->finestLevel();
  if (level > finest_level)
   amrex::Error("level too big");
-
- int nmat=num_materials;
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -1391,8 +1387,6 @@ void NavierStokes::applyALL(
 // JacobiALL is called from jacobi_cycles
 void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -1473,8 +1467,6 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
 //homflag==0 => going up the V-cycle
 void NavierStokes::applyBC_MGLEVEL(int idx_phi,
  MultiFab* pbdry,int homflag,int nsolve,int project_option) {
-
- int nmat=num_materials;
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -1965,7 +1957,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  dt_slab=1.0;
 
  int finest_level=parent->finestLevel();
- int nmat=num_materials;
 
  if ((project_option==0)||
      (project_option==4)||   // NEG_MOM_FORCE
@@ -2087,8 +2078,6 @@ void NavierStokes::update_SEM_forces(int project_option,
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
-
- int nmat=num_materials;
 
  if ((project_option==0)||
      (project_option==4)||   // -momforce
@@ -2611,8 +2600,6 @@ void NavierStokes::mac_project_rhs(int project_option,
  if (level>finest_level)
   amrex::Error("level invalid mac_project_rhs");
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -2653,8 +2640,6 @@ void NavierStokes::mac_project_rhs(int project_option,
 // POLDHOLD-=mac_phi_crse
 void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
   int nsolve) {
-
- int nmat=num_materials;
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing

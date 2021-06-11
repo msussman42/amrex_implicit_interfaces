@@ -2596,7 +2596,6 @@ ABecLaplacian::pcg_GMRES_solve(
 
   int m=nsolve_bicgstab*gmres_precond_iter;
 
-  Real GMRES_tol=KRYLOV_NORM_CUTOFF;
   Real beta=0.0;
   LP_dot(*r_in,*r_in,level,beta);
 
