@@ -63,6 +63,7 @@ if ((num_materials.eq.4).and.(probtype.eq.425)) then
   print *,"dimension bust"
   stop
  endif
+  ! patterned_substrates is declared in GLOBALUTIL.F90.
   ! Phi<0 in the substrate, Phi>0 in the fluid
  call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im)
  Phi=-Phi
