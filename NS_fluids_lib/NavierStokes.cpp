@@ -16569,28 +16569,50 @@ void NavierStokes::project_right_hand_side(
  if (project_option_singular_possible(project_option)==1) {
 
   int at_least_one_active=0;
+  int at_least_one_zap=0;
+
   for (int icolor=0;icolor<color_ONES_count;icolor++) {
 
    if (ones_sum_global[icolor]>=1.0) {
-    // do nothing
+
+    if (verbose>0) {
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "prj_rhs,icolor="<<icolor<<" ones_sum_global="<<
+       ones_sum_global[icolor]<<" singular_patch_flag="<<
+       singular_patch_flag[icolor]<<'\n';
+     }
+    } //verbose>0
+
    } else
     amrex::Error("ones_sum_global[icolor] invalid");
 
+    //patch contains prescribed solid.
    if (singular_patch_flag[icolor]==0) {
-    // do nothing
+    at_least_one_zap=1;
+
+     //patch contains no compressible or dirichlet cells.
    } else if (singular_patch_flag[icolor]==1) {
     at_least_one_active=1;
+
+     //patch contains a compressible or dirichlet cell.
    } else if (singular_patch_flag[icolor]==2) {
     at_least_one_active=1;
+
    } else
     amrex::Error("singular_patch_flag invalid");
 
   } // icolor=0..color_ONES_count-1
 
-  if (at_least_one_active==1) {
-
+  if (at_least_one_zap==1) {
    change_flag=1;
    zap_resid_where_singular(index_MF); // multiply by ONES_MF
+  } else if (at_least_one_zap==0) {
+   // do nothing
+  } else
+   amrex::Error("at_least_one_zap invalid");
+
+  if (at_least_one_active==1) {
+   change_flag=1;
 
     // rhsnew=rhs H-alpha H
     // 0 =sum rhs H-alpha sum H
@@ -16601,6 +16623,7 @@ void NavierStokes::project_right_hand_side(
 
    for (int icolor=0;icolor<color_ONES_count;icolor++) {
 
+     //patch is in a prescribed solid region.    
     if (singular_patch_flag[icolor]==0) {
 
      if (ones_sum_global[icolor]>=1.0) {
@@ -16608,6 +16631,7 @@ void NavierStokes::project_right_hand_side(
      } else
       amrex::Error("ones_sum_global[icolor] invalid");
 
+     //patch contains no compressible or dirichlet cells.
     } else if (singular_patch_flag[icolor]==1) {
 
      if (ones_sum_global[icolor]>=1.0) {
@@ -16626,12 +16650,18 @@ void NavierStokes::project_right_hand_side(
      } else
       amrex::Error("ones_sum_global[icolor] invalid");
 
+     //patch contains a compressible or dirichlet cell.
     } else if (singular_patch_flag[icolor]==2) {
 
      if (ones_sum_global[icolor]>=1.0) {
       // do nothing
      } else
       amrex::Error("ones_sum_global[icolor] invalid");
+
+     if (coef[icolor]==0.0) {
+      // do nothing
+     } else
+      amrex::Error("coef[icolor] invalid");
 
     } else
      amrex::Error("singular_patch_flag[icolor] invalid");
@@ -16733,8 +16763,14 @@ void NavierStokes::zap_resid_where_singular(int index_MF) {
 
  for (int k = 0; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
-  MultiFab::Multiply(*ns_level.localMF[index_MF],
-	*ns_level.localMF[ONES_MF],0,0,1,0);
+  MultiFab* dest=ns_level.localMF[index_MF];
+  int nsolve=dest->nComp();
+  if (nsolve==1) {
+   //do nothing
+  } else
+   amrex::Error("nsolve invalid in zap_resid_where_singular");
+
+  MultiFab::Multiply(*dest,*ns_level.localMF[ONES_MF],0,0,1,0);
  }  // k=0..finest_level
 
 }  // subroutine zap_resid_where_singular

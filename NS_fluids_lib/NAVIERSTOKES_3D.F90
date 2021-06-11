@@ -11526,11 +11526,16 @@ END SUBROUTINE SIMP
 
           if (project_option_singular_possibleF(project_option).eq.1) then
 
+            ! prescribed solid in patch.
            if (singular_patch_flag(local_color).eq.0) then
             ! do nothing (masked off region)
+
+            !no comp or dirichlet bc in patch region.
            else if (singular_patch_flag(local_color).eq.1) then
             data_fab(D_DECL(i,j,k))= &
               data_fab(D_DECL(i,j,k))+beta(local_color)
+
+            !comp or dirichlet bc in patch region.
            else if (singular_patch_flag(local_color).eq.2) then
             ! do nothing
            else
