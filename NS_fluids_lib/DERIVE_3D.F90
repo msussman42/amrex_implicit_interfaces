@@ -1778,7 +1778,7 @@ stop
            icell,jcell,kcell,fablo,bfact,dx,nhalf)
 
           volume=vol(D_DECL(icell,jcell,kcell))
-          presmag=pres(D_DECL(icell,jcell,kcell),1)
+          presmag=pres(D_DECL(icell,jcell,kcell))
 
            ! returns: im_solid_crit=max_{is_rigid(im)==1} ls_sort(im)
           call combine_solid_LS(ls_sort,nmat,solid_dist_primary,im_solid_crit)
@@ -2568,7 +2568,7 @@ stop
       REAL_T, intent(in) :: velz(DIMV(velz))
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
-      INTEGER_T dir,im,ibase
+      INTEGER_T dir
       REAL_T magvel,magvel_mac,magvel_collide
       REAL_T vello,velhi,vellohi
       INTEGER_T i,j,k
@@ -2591,49 +2591,46 @@ stop
     
        if (mask(D_DECL(i,j,k)).eq.one) then
 
-        ibase=SDIM
-        if (vel(D_DECL(i,j,k),ibase+1).gt.maxpres) then
-          maxpres=vel(D_DECL(i,j,k),ibase+1)
+        if (vel(D_DECL(i,j,k),SDIM+1).gt.maxpres) then
+          maxpres=vel(D_DECL(i,j,k),SDIM+1)
         endif
-        if (vel(D_DECL(i,j,k),ibase+1).lt.minpres) then
-          minpres=vel(D_DECL(i,j,k),ibase+1)
+        if (vel(D_DECL(i,j,k),SDIM+1).lt.minpres) then
+          minpres=vel(D_DECL(i,j,k),SDIM+1)
         endif
-         ibase=0
-         magvel=zero
-         magvel_mac=zero
-         magvel_collide=zero
-         do dir=1,SDIM
-          magvel=magvel+vel(D_DECL(i,j,k),ibase+dir)**2
-          if (dir.eq.1) then
-           vello=velx(D_DECL(i,j,k))
-           velhi=velx(D_DECL(i+1,j,k))
-          else if (dir.eq.2) then
-           vello=vely(D_DECL(i,j,k))
-           velhi=vely(D_DECL(i,j+1,k))
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           vello=velz(D_DECL(i,j,k))
-           velhi=velz(D_DECL(i,j,k+1))
-          else
-           print *,"dir invalid"
-           stop
-          endif
-          magvel_collide=magvel_collide+(velhi-vello)**2
-          vellohi=max(abs(vello),abs(velhi))
-          magvel_mac=magvel_mac+vellohi**2
-         enddo
-         magvel=sqrt(magvel)
-         magvel_mac=sqrt(magvel_mac)
-         magvel_collide=sqrt(magvel_collide)
-         if (magvel.gt.maxvel) then
-          maxvel=magvel
+        magvel=zero
+        magvel_mac=zero
+        magvel_collide=zero
+        do dir=1,SDIM
+         magvel=magvel+vel(D_DECL(i,j,k),dir)**2
+         if (dir.eq.1) then
+          vello=velx(D_DECL(i,j,k))
+          velhi=velx(D_DECL(i+1,j,k))
+         else if (dir.eq.2) then
+          vello=vely(D_DECL(i,j,k))
+          velhi=vely(D_DECL(i,j+1,k))
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          vello=velz(D_DECL(i,j,k))
+          velhi=velz(D_DECL(i,j,k+1))
+         else
+          print *,"dir invalid"
+          stop
          endif
-         if (magvel_mac.gt.maxvel) then
-          maxvel=magvel_mac
-         endif
-         if (magvel_collide.gt.maxvel_collide) then
-          maxvel_collide=magvel_collide
-         endif
-        enddo ! im
+         magvel_collide=magvel_collide+(velhi-vello)**2
+         vellohi=max(abs(vello),abs(velhi))
+         magvel_mac=magvel_mac+vellohi**2
+        enddo ! dir=1..sdim
+        magvel=sqrt(magvel)
+        magvel_mac=sqrt(magvel_mac)
+        magvel_collide=sqrt(magvel_collide)
+        if (magvel.gt.maxvel) then
+         maxvel=magvel
+        endif
+        if (magvel_mac.gt.maxvel) then
+         maxvel=magvel_mac
+        endif
+        if (magvel_collide.gt.maxvel_collide) then
+         maxvel_collide=magvel_collide
+        endif
        else if (mask(D_DECL(i,j,k)).ne.zero) then
         print *,"mask invalid"
         stop 
