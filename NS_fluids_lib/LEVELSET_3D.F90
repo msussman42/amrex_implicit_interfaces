@@ -15059,7 +15059,7 @@ stop
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
           enddo
-          local_vel(1)=xvel(D_DECL(i,j,k),1) ! low order 1/rho
+          local_vel=xvel(D_DECL(i,j,k)) ! low order 1/rho
 
          else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
                   (operation_flag.eq.4).or. & !unew^MAC=uSOLID^MAC / uFLUID^MAC
@@ -15327,7 +15327,7 @@ stop
 
          else if (operation_flag.eq.9) then ! density: CELL->MAC (1/rho)
 
-          if (local_vel(1).le.zero) then
+          if (local_vel.le.zero) then
            print *,"low order 1/rho invalid"
            stop
           endif
@@ -15583,8 +15583,8 @@ stop
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.4) then ! mac -> MAC
                  velcomp=1
-                 primary_velmaterial=local_vel(1)
-                 secondary_velmaterial=local_vel(1)
+                 primary_velmaterial=local_vel
+                 secondary_velmaterial=local_vel
 
                  !interp_option==2
                  !primary_vel_data=idx_velcell;  // increment
@@ -15593,7 +15593,7 @@ stop
                  velcomp=dir+1
                   ! local_vel=xvel
                   ! local_vel_old=xgp (a copy of xvel)
-                 velmaterialMAC=local_vel_old(1)
+                 velmaterialMAC=local_vel_old
                  primary_velmaterial= &
                        velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
@@ -15622,15 +15622,15 @@ stop
                  if ((all_incomp.eq.1).or. &
                      (interp_vel_increment_from_cell.eq.0)) then
                   velcomp=1
-                  primary_velmaterial=local_vel(1) ! UMAC^{ADVECT}
-                  secondary_velmaterial=local_vel(1) ! UMAC^{ADVECT}
+                  primary_velmaterial=local_vel ! UMAC^{ADVECT}
+                  secondary_velmaterial=local_vel ! UMAC^{ADVECT}
                  else if ((all_incomp.eq.0).and. &
                           (interp_vel_increment_from_cell.eq.1)) then
                       ! UMAC^{ADVECT}=UMAC^n + 
                       !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
                   velcomp=dir+1
                   primary_velmaterial= &
-                     local_vel_old(1)+vel(D_DECL(ic,jc,kc),velcomp)
+                     local_vel_old+vel(D_DECL(ic,jc,kc),velcomp)
                   secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
                  else
                   print *,"all_incomp or "

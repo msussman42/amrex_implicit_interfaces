@@ -2654,7 +2654,7 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
 
- int nsolve=AMREX_SPACEDIM;
+ int nsolve=1;
 
  bool use_tiling=ns_tiling;
 
@@ -2885,7 +2885,6 @@ void NavierStokes::increment_face_velocity(
        &ncomp_xp,
        &ncomp_xgp,
        &simple_AMR_BC_flag,
-FIX ME CORRECT nsolve for faces?
        &nsolve,
        &tileloop,
        &dir,
@@ -2962,7 +2961,8 @@ FIX ME CORRECT nsolve for faces?
        fablo,fabhi,
        &bfact,&bfact_c,&bfact_f, 
        &level,&finest_level,
-       &rzflag,domlo,domhi, 
+       &rzflag,
+       domlo,domhi, 
        &nmat,
        &nparts,
        &nparts_def,
@@ -3201,6 +3201,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
        int ncomp_xp=1;
        int ncomp_xgp=1;
        int ncomp_mgoni=cellvelfab.nComp();
+       int nsolve=1;
 
        int tid_current=ns_thread();
        if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -3213,7 +3214,6 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &ncomp_xp,
         &ncomp_xgp,
         &simple_AMR_BC_flag,
-FIX ME CORRECT?
         &nsolve,
         &tileloop,
         &dir,
@@ -3420,9 +3420,10 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
  MultiFab* face_velocity[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   face_velocity[dir]=getStateMAC(
     Umac_Type,0,dir,0,nsolve,cur_time_slab);
+ }
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -3430,7 +3431,7 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
 
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
   int ncmac=Umac_new.nComp();
-FIX ME
+
   if (ncmac!=nsolve) {
    std::cout << "nmat = " << nmat << '\n';
    std::cout << "ncmac = " << ncmac << '\n';
@@ -3583,7 +3584,7 @@ FIX ME
    volfab.dataPtr(),
    ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()), // denold
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), //ustar
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()), 
+   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//recon
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//mdot
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//maskdivres
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//maskres
@@ -4637,8 +4638,6 @@ void NavierStokes::apply_pressure_grad(
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   debug_ngrow(FACE_VAR_MF+dir,0,122);
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
 //  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
 //  mm_cell_areafrac_index=CELLFRAC_MM_MF;
 
@@ -8860,7 +8859,6 @@ void NavierStokes::allocate_independent_var(int nsolve,int idx) {
   amrex::Error("nsolve invalid36");
 
  int finest_level = parent->finestLevel();
- int nmat=num_materials;
 
  if (level!=0)
   amrex::Error("level!=0 in allocate_independent_var");
@@ -8878,7 +8876,6 @@ void NavierStokes::allocate_rhs_var(int nsolve,int idx) {
   amrex::Error("nsolve invalid36");
 
  int finest_level = parent->finestLevel();
- int nmat=num_materials;
 
  if (level!=0)
   amrex::Error("level!=0 in allocate_rhs_var");
@@ -9704,9 +9701,10 @@ void NavierStokes::init_pressure_error_indicator() {
     voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
     dx,xlo,
-    vortfab.dataPtr(im),
+    vortfab.dataPtr(),
     ARLIM(vortfab.loVect()),ARLIM(vortfab.hiVect()),
-    &iproject,&onlyscalar,
+    &iproject,
+    &onlyscalar,
     &cur_time_slab,
     tilelo,tilehi,
     fablo,fabhi,
@@ -10337,7 +10335,6 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
       // is invariant to coordinate transformations.
       // if levelrz==1, gradu(3,3)=u/|r|
      FORT_GETSHEAR(
-      &im,
       &ntensor,
       cellten.dataPtr(),
       ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
@@ -10680,7 +10677,6 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
    int iproject=0;
    int onlyscalar=1;  // mag(trace gradu)
    FORT_GETSHEAR(
-    &im,
     &ntensor,
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),

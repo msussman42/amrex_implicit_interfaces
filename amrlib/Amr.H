@@ -167,7 +167,8 @@ protected:
     //
     void bldFineLevels (Real start_time);
 
-    virtual void ErrorEst (int lev, TagBoxArray& tags, Real time, int ngrow);
+    virtual void ErrorEst (int lev, TagBoxArray& tags, Real time, int ngrow)
+     override;
 
     virtual BoxArray GetAreaNotToTag (int lev) override;
     virtual void ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_lev) override;

@@ -10122,7 +10122,8 @@ stop
        LOfab,DIMS(LOfab), &
        maskSEM,DIMS(maskSEM), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact,level, &
+       fablo,fabhi,bfact, &
+       level, &
        dt)
       use probcommon_module
       use global_utility_module
@@ -28189,7 +28190,7 @@ FIX ME
       end subroutine traverse_particlesVEL
 
        ! called from NavierStokes.cpp:
-       ! NavierStokes::assimilate_vel_from_particles(int im_particle_couple)
+       ! NavierStokes::assimilate_vel_from_particles()
       subroutine fort_assimilate_VEL_from_particles( &
         fluid_relaxation_time_to_particle, &
         dt, &

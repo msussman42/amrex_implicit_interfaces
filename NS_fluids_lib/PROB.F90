@@ -14019,7 +14019,6 @@ END SUBROUTINE Adist
       REAL_T denlocal,templocal,DeDT
       INTEGER_T test_maskSEM
       REAL_T shared_xcut
-      INTEGER_T velcomp
       INTEGER_T nbase
       INTEGER_T ntensor
       INTEGER_T local_incomp
@@ -14680,7 +14679,6 @@ END SUBROUTINE Adist
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
-             velcomp=nc
              ! u_{i+1/2}S_{i+1/2}-u_{i-1/2}S_{i-1/2}=
              ! (S_{i+1/2}+S_{i-1/2})(u_{i+1/2}-u_{i-1/2})/2 +
              ! (u_{i+1/2}+u_{i-1/2})(S_{i+1/2}-S_{i-1/2})/2
@@ -14688,7 +14686,7 @@ END SUBROUTINE Adist
              if ((conservative_div_uu.eq.0).or. &
                  (conservative_div_uu.eq.1)) then
               local_data_side(side)= &
-               vel(D_DECL(ic,jc,kc),velcomp) ! NONCONSERVATIVE
+               vel(D_DECL(ic,jc,kc),nc) ! NONCONSERVATIVE
              else
               print *,"conservative_div_uu invalid"
               stop
@@ -14709,8 +14707,7 @@ END SUBROUTINE Adist
            else if (operation_flag.eq.6) then ! tensor derivatives
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
-             velcomp=nc
-             local_data_side(side)=vel(D_DECL(ic,jc,kc),velcomp)
+             local_data_side(side)=vel(D_DECL(ic,jc,kc),nc)
             else
              print *,"nc invalid"
              stop
@@ -14832,8 +14829,7 @@ END SUBROUTINE Adist
             else if (velbc_in(dir,side,nc).eq.EXT_DIR) then
              local_bctype(side)=1 ! dirichlet
 
-             velcomp=nc
-             local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),velcomp)
+             local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),nc)
             else
              print *,"velbc_in is corrupt"
              stop
@@ -14855,8 +14851,7 @@ END SUBROUTINE Adist
              local_bcval(side)=zero
             else if (velbc_in(dir,side,scomp_bc).eq.EXT_DIR) then
              local_bctype(side)=1 ! dirichlet
-             velcomp=scomp
-             local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),velcomp)
+             local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),scomp)
             else
              print *,"velbc_in is corrupt"
              stop
@@ -14893,11 +14888,10 @@ END SUBROUTINE Adist
                local_bctype(side)=1 ! dirichlet
                denlocal=den(D_DECL(i_out,j_out,k_out),ibase+1)
 
-               velcomp=nc
                if ((conservative_div_uu.eq.0).or. &
                    (conservative_div_uu.eq.1)) then
                 local_bcval(side)= &
-                 vel(D_DECL(i_out,j_out,k_out),velcomp) !NONCONSERVATIVE
+                 vel(D_DECL(i_out,j_out,k_out),nc) !NONCONSERVATIVE
                else
                 print *,"conservative_div_uu invalid"
                 stop
@@ -15160,11 +15154,10 @@ END SUBROUTINE Adist
              templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              velcomp=nc
               if ((conservative_div_uu.eq.0).or. &
                   (conservative_div_uu.eq.1)) then
                local_data_side(side)= &
-                xp(D_DECL(iface_out,jface_out,kface_out),velcomp)
+                xp(D_DECL(iface_out,jface_out,kface_out),nc)
               else
                print *,"conservative_div_uu invalid"
                stop
@@ -15183,9 +15176,8 @@ END SUBROUTINE Adist
              templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              velcomp=nc
               local_data_side(side)= &
-               vel(D_DECL(ic,jc,kc),velcomp) ! NONCONSERVATIVE
+               vel(D_DECL(ic,jc,kc),nc) ! NONCONSERVATIVE
              else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
               local_data_side(side)=denlocal
              else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
@@ -15251,17 +15243,15 @@ END SUBROUTINE Adist
             if (local_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              velcomp=nc
               local_data_side(side)= &
-               xp(D_DECL(iface_out,jface_out,kface_out),velcomp)
+               xp(D_DECL(iface_out,jface_out,kface_out),nc)
              else
               print *,"nc invalid"
               stop
              endif
             else if (local_AMR_BC_flag.eq.1) then
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              velcomp=nc
-              local_data_side(side)=vel(D_DECL(ic,jc,kc),velcomp)
+              local_data_side(side)=vel(D_DECL(ic,jc,kc),nc)
              else
               print *,"nc invalid"
               stop
@@ -15491,9 +15481,7 @@ END SUBROUTINE Adist
           if (operation_flag.eq.6) then ! face grad U
 
            if ((nc.ge.1).and.(nc.le.SDIM)) then
-
-            velcomp=nc
-            local_data(isten+1)=vel(D_DECL(ic,jc,kc),velcomp)
+            local_data(isten+1)=vel(D_DECL(ic,jc,kc),nc)
            else
             print *,"nc invalid"
             stop
@@ -15573,12 +15561,10 @@ END SUBROUTINE Adist
             ! u dot grad u = div(umac u)-u div umac
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
 
-            velcomp=nc
-
             if ((conservative_div_uu.eq.0).or. &
                 (conservative_div_uu.eq.1)) then
              local_data(isten+1)= &
-              vel(D_DECL(ic,jc,kc),velcomp) !NONCONSERVATIVE
+              vel(D_DECL(ic,jc,kc),nc) !NONCONSERVATIVE
             else
              print *,"conservative_div_uu invalid"
              stop
@@ -15616,8 +15602,7 @@ END SUBROUTINE Adist
 
           RRface(isten)=xsten(0,1)
 
-          velcomp=1
-          local_vel(isten)=xvel(D_DECL(ic,jc,kc),velcomp)
+          local_vel(isten)=xvel(D_DECL(ic,jc,kc))
          enddo ! isten=0..bfact
 
          if (spectral_loop.eq.0) then
@@ -16171,7 +16156,7 @@ END SUBROUTINE Adist
 
             if (shared_face.eq.0) then
 
-             xvel(D_DECL(ic,jc,kc),dcomp)=one/local_interp(isten+1)
+             xvel(D_DECL(ic,jc,kc))=one/local_interp(isten+1)
 
             else if (shared_face.eq.1) then
              ! do nothing
@@ -16202,7 +16187,7 @@ END SUBROUTINE Adist
                stop
               endif
 
-              xvel(D_DECL(ic,jc,kc),dcomp)=one/local_interp(isten+1)
+              xvel(D_DECL(ic,jc,kc))=one/local_interp(isten+1)
              else if (side.eq.0) then
               ! do nothing
              else
@@ -16358,7 +16343,7 @@ END SUBROUTINE Adist
            if (spectral_loop.eq.0) then
 
             if (shared_face.eq.0) then
-             xvel(D_DECL(ic,jc,kc),dcomp)=local_interp(isten+1)
+             xvel(D_DECL(ic,jc,kc))=local_interp(isten+1)
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16379,7 +16364,7 @@ END SUBROUTINE Adist
 
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              xvel(D_DECL(ic,jc,kc),dcomp)=half*( &
+              xvel(D_DECL(ic,jc,kc))=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
              else if (side.eq.0) then
@@ -16412,7 +16397,7 @@ END SUBROUTINE Adist
               local_interp(isten+1)
 
             if (shared_face.eq.0) then
-             xvel(D_DECL(ic,jc,kc),dcomp)=shared_face_value
+             xvel(D_DECL(ic,jc,kc))=shared_face_value
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16433,7 +16418,7 @@ END SUBROUTINE Adist
 
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              xvel(D_DECL(ic,jc,kc),dcomp)=half*( &
+              xvel(D_DECL(ic,jc,kc))=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
              else if (side.eq.0) then
@@ -16465,7 +16450,7 @@ END SUBROUTINE Adist
               beta*local_interp(isten+1)
 
             if (shared_face.eq.0) then
-             xvel(D_DECL(ic,jc,kc),dcomp)=shared_face_value
+             xvel(D_DECL(ic,jc,kc))=shared_face_value
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16484,7 +16469,7 @@ END SUBROUTINE Adist
            else if (spectral_loop.eq.1) then
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              xvel(D_DECL(ic,jc,kc),dcomp)=half*( &
+              xvel(D_DECL(ic,jc,kc))=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
              else if (side.eq.0) then
@@ -16693,7 +16678,6 @@ END SUBROUTINE Adist
       REAL_T den_new,den_old,vel_old,mom_new,T_old,T_new
       REAL_T vel_new(SDIM)
       REAL_T VOLTERM
-      INTEGER_T velcomp
       INTEGER_T nbase
       INTEGER_T ntensor
       REAL_T xflux_R
@@ -17771,8 +17755,7 @@ END SUBROUTINE Adist
              endif
 
              do nc2=1,SDIM
-              velcomp=nc2
-              vel_old=ustar(D_DECL(ic,jc,kc),velcomp) 
+              vel_old=ustar(D_DECL(ic,jc,kc),nc2) 
               mom_new=vel_old-dt*divflux(nc2)
 
                ! SDC correction term: momentum
@@ -17835,8 +17818,7 @@ END SUBROUTINE Adist
              endif
 
              do nc2=1,SDIM
-              velcomp=nc2
-              veldest(D_DECL(ic,jc,kc),velcomp)=vel_new(nc2)
+              veldest(D_DECL(ic,jc,kc),nc2)=vel_new(nc2)
              enddo ! nc2
              dendest(D_DECL(ic,jc,kc),ibase+2)=T_new
 
@@ -17875,15 +17857,13 @@ END SUBROUTINE Adist
 
           if (maskcoef(D_DECL(ic,jc,kc)).eq.one) then ! not covered
 
-           velcomp=nc
-
            if (dir_main.eq.1) then
-            divdest(D_DECL(ic,jc,kc),velcomp)= &
+            divdest(D_DECL(ic,jc,kc),nc)= &
              local_div(isten+1)/RR
            else if ((dir_main.ge.2).and. &
                     (dir_main.le.SDIM)) then
-            divdest(D_DECL(ic,jc,kc),velcomp)= &
-             divdest(D_DECL(ic,jc,kc),velcomp)+ &
+            divdest(D_DECL(ic,jc,kc),nc)= &
+             divdest(D_DECL(ic,jc,kc),nc)+ &
              local_div(isten+1)/RRTHETA
            else
             print *,"dir_main invalid mac to cell 6"
@@ -17898,9 +17878,9 @@ END SUBROUTINE Adist
              print *,"VOLTERM invalid"
              stop
             endif
-            divu=divdest(D_DECL(ic,jc,kc),velcomp)*VOLTERM
-            CC=cterm(D_DECL(ic,jc,kc),velcomp) ! already x VOLTERM
-            CC_DUAL=veldest(D_DECL(ic,jc,kc),velcomp) ! already x VOLTERM
+            divu=divdest(D_DECL(ic,jc,kc),nc)*VOLTERM
+            CC=cterm(D_DECL(ic,jc,kc),nc) ! already x VOLTERM
+            CC_DUAL=veldest(D_DECL(ic,jc,kc),nc) ! already x VOLTERM
             if (CC_DUAL.eq.CC) then
              ! do nothing
             else
@@ -17908,7 +17888,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-            MDOT=mdotcell(D_DECL(ic,jc,kc),velcomp)
+            MDOT=mdotcell(D_DECL(ic,jc,kc),nc)
 
             if (CC.ge.zero) then
              ! do nothing
@@ -17939,15 +17919,15 @@ END SUBROUTINE Adist
              ! constant_viscosity=1
             local_div_val=divu/VOLTERM
             call SEM_VISC_SANITY(10,dt,xsten,nhalf,local_div_val, &
-              -1,velcomp,1,1,project_option,bfact,1,1)
+              -1,nc,1,1,project_option,bfact,1,1)
 
              ! MSKDV=1.0d0
              ! MSKRES=1.0d0
             call SEM_VISC_SANITY_CC(2,dt,CC,1.0d0,1.0d0,MDOT, &
-              VOLTERM,project_option,xsten,nhalf,velcomp)
+              VOLTERM,project_option,xsten,nhalf,nc)
 
-            local_POLD=pold(D_DECL(ic,jc,kc),velcomp)
-            local_POLD_DUAL=dendest(D_DECL(ic,jc,kc),velcomp)
+            local_POLD=pold(D_DECL(ic,jc,kc),nc)
+            local_POLD_DUAL=dendest(D_DECL(ic,jc,kc),nc)
 
             if (homflag.eq.0) then
              if (local_POLD.eq.local_POLD_DUAL) then
@@ -18022,7 +18002,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-            divdest(D_DECL(ic,jc,kc),velcomp)=RHS
+            divdest(D_DECL(ic,jc,kc),nc)=RHS
            else if ((dir_main.ge.1).and.(dir_main.lt.SDIM)) then
             ! do nothing
            else
@@ -18039,14 +18019,13 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.1) then ! div
 
-          velcomp=1
           if (dir_main.eq.1) then
-           divdest(D_DECL(ic,jc,kc),velcomp)= &
+           divdest(D_DECL(ic,jc,kc),1)= &
             local_div(isten+1)/RR
           else if ((dir_main.eq.2).or. &
                    (dir_main.eq.SDIM)) then
-           divdest(D_DECL(ic,jc,kc),velcomp)= &
-            divdest(D_DECL(ic,jc,kc),velcomp)+ &
+           divdest(D_DECL(ic,jc,kc),1)= &
+            divdest(D_DECL(ic,jc,kc),1)+ &
             local_div(isten+1)/RRTHETA
           else
            print *,"dir_main invalid sem mac to cell 9"
@@ -18055,8 +18034,7 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
            ! local_data (the MAC data) is multiplied by RR above.
-          velcomp=dir_main
-          veldest(D_DECL(ic,jc,kc),velcomp)= &
+          veldest(D_DECL(ic,jc,kc),dir_main)= &
            local_cell(isten+1)/RR
 
          else if (operation_flag.eq.3) then ! (grad p)_CELL, p div(u)
@@ -18075,13 +18053,11 @@ END SUBROUTINE Adist
            stop
           endif
 
-          velcomp=dir_main
-
           if ((energyflag.eq.0).or. &
               (energyflag.eq.1)) then
            if (face_flag.eq.0) then
-            veldest(D_DECL(ic,jc,kc),velcomp)= &
-             ustar(D_DECL(ic,jc,kc),velcomp)-dp
+            veldest(D_DECL(ic,jc,kc),dir_main)= &
+             ustar(D_DECL(ic,jc,kc),dir_main)-dp
            else if (face_flag.eq.1) then
             ! do nothing; veldest already init when operation_flag==2:
             ! mac-> cell velocity.
@@ -18092,10 +18068,10 @@ END SUBROUTINE Adist
           else if (energyflag.eq.2) then
            if (face_flag.eq.0) then
              ! gradp
-            ustar(D_DECL(ic,jc,kc),velcomp)=local_div(isten+1)/RRTHETA
+            ustar(D_DECL(ic,jc,kc),dir_main)=local_div(isten+1)/RRTHETA
            else if (face_flag.eq.1) then
              ! no spectral increment from gradp_cell if face_flag=1.
-            ustar(D_DECL(ic,jc,kc),velcomp)=zero
+            ustar(D_DECL(ic,jc,kc),dir_main)=zero
            else
             print *,"face_flag invalid"
             stop
@@ -18105,15 +18081,13 @@ END SUBROUTINE Adist
            stop
           endif
 
-          velcomp=1
-
            ! p (div u) 
           if (dir_main.eq.1) then
-           divdest(D_DECL(ic,jc,kc),velcomp)= &
+           divdest(D_DECL(ic,jc,kc),1)= &
             prescell*local_div_up(isten+1)/RR
           else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
-           divdest(D_DECL(ic,jc,kc),velcomp)= &
-            divdest(D_DECL(ic,jc,kc),velcomp)+ &
+           divdest(D_DECL(ic,jc,kc),1)= &
+            divdest(D_DECL(ic,jc,kc),1)+ &
             prescell*local_div_up(isten+1)/RRTHETA
           else
            print *,"dir_main invalid sem mac to cell 11"
@@ -18137,7 +18111,7 @@ END SUBROUTINE Adist
                endif
                ! ibase+1 = den
                ! ibase+2 = T
-               Eforce=-dt*divdest(D_DECL(ic,jc,kc),velcomp)/dencell
+               Eforce=-dt*divdest(D_DECL(ic,jc,kc),1)/dencell
 
                call init_massfrac_parm(dencell,massfrac_parm,maskSEM)
                do ispec=1,num_species_var
@@ -18162,7 +18136,7 @@ END SUBROUTINE Adist
 
               else if (local_incomp.eq.1) then
 
-               divdest(D_DECL(ic,jc,kc),velcomp)=zero
+               divdest(D_DECL(ic,jc,kc),1)=zero
 
               else
                print *,"local_incomp invalid"
@@ -18174,7 +18148,7 @@ END SUBROUTINE Adist
               if (local_incomp.eq.0) then
                ! do nothing
               else if (local_incomp.eq.1) then
-               divdest(D_DECL(ic,jc,kc),velcomp)=zero
+               divdest(D_DECL(ic,jc,kc),1)=zero
               else
                print *,"local_incomp invalid"
                stop
@@ -24486,7 +24460,7 @@ end subroutine RatePhaseChange
         else if ((local_buffer(ibuf).gt.zero).and. &
                  (local_buffer(ibuf).le.problen(dirbc)*(one+VOFTOL))) then
       
-         if (presbc_array(dirbc,side,1).eq.EXT_DIR) then
+         if (presbc_array(dirbc,side).eq.EXT_DIR) then
           if (side.eq.1) then
            dist=(x(dirbc)-problo(dirbc))
            if (dist.lt.-VOFTOL*problen(dirbc)) then
@@ -24550,14 +24524,14 @@ end subroutine RatePhaseChange
            print *,"side invalid"
            stop
           endif
-         else if ((presbc_array(dirbc,side,1).eq.INT_DIR).or. &
-                  (presbc_array(dirbc,side,1).eq.REFLECT_EVEN).or. &
-                  (presbc_array(dirbc,side,1).eq.FOEXTRAP)) then
+         else if ((presbc_array(dirbc,side).eq.INT_DIR).or. &
+                  (presbc_array(dirbc,side).eq.REFLECT_EVEN).or. &
+                  (presbc_array(dirbc,side).eq.FOEXTRAP)) then
           ! do nothing
          else
           print *,"presbc_array invalid"
           print *,"probtype,dirbc,side,presbc_array ",probtype,dirbc,side, &
-            presbc_array(dirbc,side,1)
+            presbc_array(dirbc,side)
           stop
          endif
         else 
@@ -29822,7 +29796,7 @@ end subroutine initialize2d
       INTEGER_T icomplo,icomphi
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
-      INTEGER_T dir_xdisplace,im,ipart
+      INTEGER_T dir_xdisplace,ipart
 
       nhalf=3
       if (bfact.lt.1) then
@@ -30519,8 +30493,7 @@ end subroutine initialize2d
           stop
          endif
 
-        enddo ! istate
-        enddo ! ipart
+        enddo ! istate=1..sdim
 
        else if (ncomp.eq.xd_scomp) then
         ! do nothing
