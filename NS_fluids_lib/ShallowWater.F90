@@ -1061,7 +1061,7 @@ stop
                     vol_right*conserve_Right(normdir+1))/ &
                    (vol_left*total_mass_left+ &
                     vol_right*total_mass_right)
-        xmacnew(D_DECL(i,j,k),1)=normal_vel
+        xmacnew(D_DECL(i,j,k))=normal_vel
    
        enddo
        enddo
