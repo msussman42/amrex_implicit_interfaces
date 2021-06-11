@@ -3834,20 +3834,22 @@ stop
             if (num_MAC_vectors.eq.1) then
              ! do nothing
             else if (num_MAC_vectors.eq.2) then 
-             if (massface_total(2).gt.zero) then
-              momface_total(2)=momface_total(2)/massface_total(2)
+             if (massface_total(num_MAC_vectors).gt.zero) then
+              momface_total(num_MAC_vectors)= &
+                momface_total(num_MAC_vectors)/massface_total(num_MAC_vectors)
               if (veldir.eq.normdir+1) then
-               momface_total(2)=momface_total(2)+unode(D_DECL(i,j,k))
+               momface_total(num_MAC_vectors)= &
+                momface_total(num_MAC_vectors)+unode(D_DECL(i,j,k))
               else if ((veldir.ge.1).and.(veldir.le.SDIM)) then
                ! do nothing
               else
                print *,"veldir invalid"
                stop
               endif
-             else if (massface_total(2).eq.zero) then
-              momface_total(2)=zero
+             else if (massface_total(num_MAC_vectors).eq.zero) then
+              momface_total(num_MAC_vectors)=zero
              else
-              print *,"massface_total(2) invalid"
+              print *,"massface_total(num_MAC_vectors) invalid"
               stop
              endif
             else 
@@ -3857,13 +3859,40 @@ stop
              
             if (veldir.eq.1) then
              xvmac(D_DECL(i,j,k))=momface_total(1)
-             xdmac(D_DECL(i,j,k))=momface_total(2)
+
+             if (num_MAC_vectors.eq.1) then
+              ! do nothing
+             else if (num_MAC_vectors.eq.2) then 
+              xdmac(D_DECL(i,j,k))=momface_total(num_MAC_vectors)
+             else
+              print *,"num_MAC_vectors invalid"
+              stop
+             endif
+
             else if (veldir.eq.2) then
              yvmac(D_DECL(i,j,k))=momface_total(1)
-             ydmac(D_DECL(i,j,k))=momface_total(2)
+
+             if (num_MAC_vectors.eq.1) then
+              ! do nothing
+             else if (num_MAC_vectors.eq.2) then 
+              ydmac(D_DECL(i,j,k))=momface_total(num_MAC_vectors)
+             else
+              print *,"num_MAC_vectors invalid"
+              stop
+             endif
+
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
              zvmac(D_DECL(i,j,k))=momface_total(1)
-             zdmac(D_DECL(i,j,k))=momface_total(2)
+
+             if (num_MAC_vectors.eq.1) then
+              ! do nothing
+             else if (num_MAC_vectors.eq.2) then 
+              zdmac(D_DECL(i,j,k))=momface_total(num_MAC_vectors)
+             else
+              print *,"num_MAC_vectors invalid"
+              stop
+             endif
+
             else
              print *,"veldir invalid"
              stop
@@ -4051,7 +4080,14 @@ stop
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1,26)
 
        velmac(1)=x_mac_old(D_DECL(i,j,k))
-       velmac(2)=xd_mac_old(D_DECL(i,j,k))
+       if (num_MAC_vectors.eq.2) then
+        velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
+       else if (num_MAC_vectors.eq.1) then
+        ! do nothing
+       else
+        print *,"num_MAC_vectors invalid"
+        stop
+       endif
 
        if (veldir.eq.1) then
         if (levelrz.eq.0) then
