@@ -21222,6 +21222,7 @@ NavierStokes::post_init_state () {
   hflag=0;
   combine_idx=-1;
   update_flux=0;
+  interface_cond_avail=0;
 
   ns_level.combine_state_variable(
     project_option_combine,
@@ -21317,6 +21318,7 @@ NavierStokes::post_init_state () {
    hflag=0;
    combine_idx=-1;
    update_flux=0;
+   interface_cond_avail=0;
    ns_level.combine_state_variable(
     project_option_combine,
     combine_idx,
@@ -21348,6 +21350,7 @@ NavierStokes::post_init_state () {
    hflag=0;
    combine_idx=-1;
    update_flux=0;
+   interface_cond_avail=0;
    ns_level.combine_state_variable(
     project_option_combine,
     combine_idx,
@@ -21393,7 +21396,7 @@ NavierStokes::post_init_state () {
 
  CopyNewToOldALL();
 
-}  // subroutine post_init_state
+}  // end subroutine post_init_state
 
 void
 NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
