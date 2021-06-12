@@ -200,8 +200,11 @@ void NavierStokes::getState_localMF_list(
   Vector<int> scomp,
   Vector<int> ncomp) {
 
- if ((ngrow!=0)&&(ngrow!=1))
-  amrex::Error("ngrow invalid");
+ if ((ngrow>=0)&&(ngrow<=8)) {
+  // do nothing
+ } else
+  amrex::Error("ngrow invalid in getState_localMF_list");
+
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
  } else
@@ -226,8 +229,14 @@ void NavierStokes::getState_localMF_listALL(
   Vector<int> scomp,
   Vector<int> ncomp) {
 
- if ((ngrow!=0)&&(ngrow!=1))
-  amrex::Error("ngrow invalid");
+ if ((ngrow>=0)&&(ngrow<=8)) {
+  // do nothing
+ } else {
+  std::cout << "idx_MF=" << idx_MF << " ngrow= " << ngrow <<
+   " state_index= " << state_index << " scomp.size()=" <<
+   scomp.size() << '\n';
+  amrex::Error("ngrow invalid getState_localMF_listALL");
+ }
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
  } else
