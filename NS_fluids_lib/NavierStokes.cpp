@@ -965,6 +965,7 @@ Real NavierStokes::viscconst_min=0.0;
 Vector<Real> NavierStokes::viscconst_eddy;
 Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
 Vector<Real> NavierStokes::prerecalesce_heatviscconst;
+Real NavierStokes::smoothing_length_scale=0.0;
 Vector<Real> NavierStokes::heatviscconst;
 Real NavierStokes::heatviscconst_max=0.0;
 Real NavierStokes::heatviscconst_min=0.0;
@@ -3353,6 +3354,8 @@ NavierStokes::read_params ()
      les_model[i]=0;
     pp.queryarr("les_model",les_model,0,nmat);
 
+    pp.query("smoothing_length_scale",smoothing_length_scale);
+
     heatviscconst.resize(nmat);
     heatviscconst_interface.resize(nten);
     pp.getarr("heatviscconst",heatviscconst,0,nmat);
@@ -4568,6 +4571,8 @@ NavierStokes::read_params ()
       std::cout << "i,temperature_source_rad=" << i << ' ' <<
          temperature_source_rad[i] << '\n';
      }
+     std::cout << "smoothing_length_scale "  << 
+        smoothing_length_scale << '\n';
  
      for (int i=0;i<nten;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
@@ -16671,7 +16676,7 @@ void NavierStokes::project_right_hand_side(
      } else
       amrex::Error("ones_sum_global[icolor] invalid");
 
-     if (coef[icolor]>=0.0) {
+     if ((coef[icolor]>=0.0)||(coef[icolor]<=0.0)) {
       coef[icolor]=0.0;
      } else {
       for (int icolor2=0;icolor2<color_ONES_count;icolor2++) {
