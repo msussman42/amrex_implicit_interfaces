@@ -16671,10 +16671,18 @@ void NavierStokes::project_right_hand_side(
      } else
       amrex::Error("ones_sum_global[icolor] invalid");
 
-     if (coef[icolor]==0.0) {
-      // do nothing
-     } else
+     if (coef[icolor]>=0.0) {
+      coef[icolor]=0.0;
+     } else {
+      for (int icolor2=0;icolor2<color_ONES_count;icolor2++) {
+       std::cout << "icolor2=" << icolor2 << " ones_sum_global[icolor2]=" <<
+        ones_sum_global[icolor2] << " singular_patch_flag[icolor2]=" <<
+        singular_patch_flag[icolor2] << '\n';
+      }
+      std::cout << "icolor= " << icolor << " coef[icolor]="
+       << coef[icolor] << '\n';
       amrex::Error("coef[icolor] invalid");
+     }
 
     } else
      amrex::Error("singular_patch_flag[icolor] invalid");
@@ -16689,6 +16697,7 @@ void NavierStokes::project_right_hand_side(
 
    } // icolor=0..color_ONES_count-1
 
+    //if singular_patch_flag(icolor)==2, then index_MF is not incremented.
    mf_combine_ones(project_option,index_MF,coef);
    zap_resid_where_singular(index_MF);
 
@@ -22122,6 +22131,11 @@ void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
 MultiFab* NavierStokes::getState_list(
  int ngrow,Vector<int> scomp,Vector<int> ncomp,
  Real time) {
+
+ if ((ngrow>=0)&&(ngrow<=8)) {
+  // do nothing
+ } else
+  amrex::Error("ngrow out of range in getState_list");
 
  int ncomp_list=0;
  for (int ilist=0;ilist<scomp.size();ilist++)
