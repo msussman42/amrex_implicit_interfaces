@@ -21702,7 +21702,7 @@ stop
           print *,"scomp invalid"
           stop
          endif
-        enddo ! im
+        enddo ! im=1..nmat
        else if (project_option.eq.3) then  ! viscosity
         if (scomp(1).ne.0) then
          print *,"scomp invalid"
@@ -21732,7 +21732,7 @@ stop
           print *,"scomp invalid"
           stop
          endif
-        enddo ! im
+        enddo ! im=1..nmat
        else
         print *,"project_option invalid"
         stop
