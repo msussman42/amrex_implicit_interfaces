@@ -782,7 +782,7 @@ void NavierStokes::combine_state_variable(
   num_materials_combine=nmat;
  } else if (project_option==3) { // viscosity
   nsolve=AMREX_SPACEDIM;
-  if (combine_flag!=2)
+  if (combine_flag!=2)  //combine if vfrac<VOFTOL
    amrex::Error("combine_flag invalid");
   num_materials_combine=1;
  } else if ((project_option>=100)&&
@@ -1145,16 +1145,19 @@ void NavierStokes::combine_state_variable(
 
    if ((combine_flag==0)||
        (combine_flag==1)) {
-    if (is_phasechange==1) {
-     if (Tsatfab.nComp()!=ntsat) {
+    if ((is_phasechange==1)&&(interface_cond_avail==1)) {
+     if (Tsatfab.nComp()==ntsat) {
+      //do nothing
+     } else {
       std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
         " ntsat=" << ntsat << '\n';
       amrex::Error("Tsatfab.nComp()!=ntsat 1");
      }
-    } else if (is_phasechange==0) {
+    } else if ((is_phasechange==0)||
+               (interface_cond_avail==0)) {
      // do nothing
     } else
-     amrex::Error("is_phasechange invalid");
+     amrex::Error("is_phasechange or interface_cond_avail invalid");
    } else if (combine_flag==2) {
     // do nothing
    } else
