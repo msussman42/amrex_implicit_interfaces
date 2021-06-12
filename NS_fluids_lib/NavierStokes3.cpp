@@ -11699,7 +11699,7 @@ void NavierStokes::veldiffuseALL() {
     // do nothing
    } else
     amrex::Error("speciesviscconst invalid");
- } // im 
+ } // im=0..nmat*num_species_var-1 
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {

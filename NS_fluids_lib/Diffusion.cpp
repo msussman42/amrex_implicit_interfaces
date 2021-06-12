@@ -713,6 +713,8 @@ void NavierStokes::viscous_boundary_fluxes(
 // combine_flag==0 (FVM -> GFM) (T[im]=T_interp im=1..nmat)
 // combine_flag==1 (GFM -> FVM)
 // combine_flag==2 (combine if vfrac<VOFTOL)
+// interface_cond_avail==1 if interface temperature and mass fraction are
+//   available.
 void NavierStokes::combine_state_variable(
  int project_option,
  int combine_idx,
@@ -726,6 +728,23 @@ void NavierStokes::combine_state_variable(
  int finest_level=parent->finestLevel();
 
  int nmat=num_materials;
+
+ if ((project_option==0)||  // mac velocity
+     (project_option==3)) { // cell velocity
+  if (interface_cond_avail==0) {
+   // do nothing
+  } else
+   amrex::Error("interface_cond_avail invalid");
+ } else if ((project_option==2)||   // temperature
+            ((project_option>=100)&&
+             (project_option<100+num_species_var))) { // mass fraction
+  if ((interface_cond_avail==0)||
+      (interface_cond_avail==1)) {
+   // do nothing
+  } else
+   amrex::Error("interface_cond_avail invalid");
+ } else
+  amrex::Error("project_option invalid in combine_state_variable");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
