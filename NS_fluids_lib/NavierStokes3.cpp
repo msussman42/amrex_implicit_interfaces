@@ -7231,21 +7231,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  setVal_localMF(OFF_DIAG_CHECK_MF,0.0,0,nsolve,0);
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
-//  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
-//  mm_cell_areafrac_index=CELLFRAC_MM_MF;
-
- // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
- int nfacefrac=nmat*nmat*2; 
- // im_inside,im_outside,3+sdim -->
- //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,133);
-
  for (int facewt_iter=0;facewt_iter<=1;facewt_iter++) {
 
   if (thread_class::nthreads<1)
@@ -7282,11 +7267,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
    FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
    FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
 
-   FArrayBox& xfacemm=(*localMF[mm_areafrac_index])[mfi];  
-   FArrayBox& yfacemm=(*localMF[mm_areafrac_index+1])[mfi];  
-   FArrayBox& zfacemm=(*localMF[mm_areafrac_index+AMREX_SPACEDIM-1])[mfi];  
-   FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];  
-
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];  // mask=1 at fine-fine bc
    const Real* xlo = grid_loc[gridno].lo();
 
@@ -7308,8 +7288,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     &level,
     &finest_level,
     &nsolve,
-    &nfacefrac,
-    &ncellfrac,
     &local_face_index,
     &facecut_index,
     &icefacecut_index,
@@ -7321,11 +7299,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     slopefab.dataPtr(),ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
     cenden.dataPtr(),ARLIM(cenden.loVect()),ARLIM(cenden.hiVect()),
     cenvisc.dataPtr(),ARLIM(cenvisc.loVect()),ARLIM(cenvisc.hiVect()),
-    cellfracmm.dataPtr(),
-    ARLIM(cellfracmm.loVect()),ARLIM(cellfracmm.hiVect()),
-    xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-    yfacemm.dataPtr(),ARLIM(yfacemm.loVect()),ARLIM(yfacemm.hiVect()),
-    zfacemm.dataPtr(),ARLIM(zfacemm.loVect()),ARLIM(zfacemm.hiVect()),
     xfwt.dataPtr(),ARLIM(xfwt.loVect()),ARLIM(xfwt.hiVect()),
     yfwt.dataPtr(),ARLIM(yfwt.loVect()),ARLIM(yfwt.hiVect()),
     zfwt.dataPtr(),ARLIM(zfwt.loVect()),ARLIM(zfwt.hiVect()),

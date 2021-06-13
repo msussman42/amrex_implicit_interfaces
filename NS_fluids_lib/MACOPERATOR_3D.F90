@@ -891,15 +891,9 @@ stop
        level, &
        finest_level, &
        nsolve, &
-       nfacefrac, &
-       ncellfrac, &
        nmat, &
        project_option, &
        ncphys, &
-       cellmm,DIMS(cellmm), &
-       xfacemm,DIMS(xfacemm), &
-       yfacemm,DIMS(yfacemm), &
-       zfacemm,DIMS(zfacemm), &
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
@@ -929,15 +923,9 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nfacefrac
-      INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: ncphys
-      INTEGER_T, intent(in) :: DIMDEC(cellmm)
-      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(yfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(zfacemm)
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
@@ -960,10 +948,6 @@ stop
       INTEGER_T             :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bc(SDIM,2,nsolve)
 
-      REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
-      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
-      REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
-      REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
       REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
       REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
       REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
@@ -1010,27 +994,11 @@ stop
        print *,"nsolve invalid24"
        stop
       endif
-       ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
-      if (nfacefrac.ne.nmat*nmat*2) then
-       print *,"nfacefrac invalid"
-       stop
-      endif
-       !im_inside,im_outside,3+sdim -->
-       !area, dist_to_line, dist, line normal.
-      if (ncellfrac.ne.nmat*nmat*(3+SDIM)) then
-       print *,"ncellfrac invalid"
-       stop
-      endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid nsgenerate"
        stop
       endif
-
-      call checkbound(fablo,fabhi,DIMS(cellmm),0,-1,234)
-      call checkbound(fablo,fabhi,DIMS(xfacemm),0,0,264)
-      call checkbound(fablo,fabhi,DIMS(yfacemm),0,1,264)
-      call checkbound(fablo,fabhi,DIMS(zfacemm),0,SDIM-1,264)
 
       call checkbound(fablo,fabhi,DIMS(xface),0,0,244)
       call checkbound(fablo,fabhi,DIMS(yface),0,1,244)
