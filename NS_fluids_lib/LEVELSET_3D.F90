@@ -8214,6 +8214,7 @@ stop
       REAL_T facevisc_local
       REAL_T faceheat_local
       REAL_T smoothing_local
+      REAL_T smoothing_time
       REAL_T facespecies_local(num_species_var+1)
       REAL_T theta,visc1,visc2,heat1,heat2
       REAL_T spec1(num_species_var+1)
@@ -8788,6 +8789,27 @@ stop
           stop
          endif
 
+
+
+         ! A provisional
+         ! temperature field is derived from the original temperature
+         ! field by way of running the heat equation for a length of time
+         ! t=(L/(2 * arc_erf(0.2)))^2  arc_erf(0.2)=0.1791 derived from:
+         ! u_t = u_xx u(x,0)=1 x<0  =0 x>0
+         ! u(t,x)=(1-erf(x/(2 sqrt(t))))/2  let x=L 
+         ! solve u(t,L)=0.4  => .2=erf(x/(2 sqrt(t))) =>
+         ! x/(2 sqrt(t))=arc_erf(.2)=0.1791
+         ! matlab: erfinv(0.2)
+         ! sqrt(t)=L/(2 * .1791)  t=(L/(2 * .1791))^2
+         ! Kassemi model:
+         ! mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
+         if (smoothing_length_scale.ge.zero) then
+          smoothing_time=(smoothing_length_scale/(two*0.1791d0))**2
+         else
+          print *,"smoothing_length_scale invalid"
+          stop
+         endif
+
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
                 vel_clamped_minus,temperature_clamped_minus)
@@ -9190,7 +9212,21 @@ stop
           stop
          endif
 
-         smoothing_local=one
+          ! dt * smoothing_local = smoothing_time
+         if (dt.eq.zero) then
+          smoothing_local=one
+         else if (dt.gt.zero) then
+          if (smoothing_time.ge.zero) then
+           smoothing_local=smoothing_time/dt
+          else
+           print *,"smoothing_time became corrupt; smoothing_time=", &
+             smoothing_time
+           stop
+          endif
+         else
+          print *,"dt became corrupt; dt=",dt
+          stop
+         endif
 
           ! both adjoining cells are solid cells.
          if (solid_present_flag.eq.1) then
