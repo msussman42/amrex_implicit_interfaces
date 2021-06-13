@@ -7959,6 +7959,7 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
+       smoothing_length_scale, &
        den_interface, &
        visc_interface, &
        heatvisc_interface, &
@@ -8147,6 +8148,7 @@ stop
       REAL_T, intent(in) :: modvisc(DIMV(modvisc),nmat)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
+      REAL_T, intent(in) :: smoothing_length_scale
       REAL_T, intent(in) :: den_interface(nten)
       REAL_T, intent(in) :: visc_interface(nten)
       REAL_T, intent(in) :: heatvisc_interface(nten)

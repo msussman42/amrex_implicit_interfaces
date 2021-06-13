@@ -13830,7 +13830,14 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
+    // FUTURE: 
+    // 1. if an interface changing phase exists, but the raw distance
+    // function does not change sign, then assume the interface is an
+    // idealized point source at the center of the cell and force
+    // T=TSAT there.
+    // 2. The nucleation routine only seeds a tiny volume fraction in
+    // "fluid" cells.
+    // FORT_STEFANSOLVER declared in: GODUNOV_3D.F90
    FORT_STEFANSOLVER( 
     &project_option, //2=thermal diffusion  or 100 ... 100+num_species_var-1
     &solidheat_flag, //0=diffuse in solid 1=dirichlet 2=Neumann
