@@ -1759,19 +1759,6 @@ void NavierStokes::apply_cell_pressure_gradient(
  int fluxvel_index=0;
  int fluxden_index=AMREX_SPACEDIM;
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
- 
-  // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
- int nfacefrac=nmat*nmat*2; 
-  // im_inside,im_outside,3+sdim -->
-  //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,119);
-
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
@@ -1909,9 +1896,6 @@ void NavierStokes::apply_cell_pressure_gradient(
    FArrayBox& xvel=(*localMF[idx_umac+dir])[mfi];
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
-   FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir])[mfi];  
-   FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
-
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
    FArrayBox& xp=(*localMF[PEDGE_MF+dir])[mfi];
@@ -2028,8 +2012,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-    xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-    xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),//holds AMRSYNC_PEDGE
     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), 
@@ -2056,8 +2038,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &num_elements_blobclass,
     &num_colors,
     &nten,
-    &nfacefrac,
-    &ncellfrac,
     &project_option,
     &SEM_upwind,
     &SEM_advection_algorithm);
@@ -2685,21 +2665,8 @@ void NavierStokes::increment_face_velocity(
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
-
  int fluxvel_index=0;
  int fluxden_index=AMREX_SPACEDIM;
-
-  //(ml,mr,2) frac_pair(ml,mr),dist_pair(ml,mr)
- int nfacefrac=nmat*nmat*2;
-  // im_inside,im_outside,3+sdim -->
-  //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,121);
 
  const Real* dx = geom.CellSize();
 
@@ -2832,8 +2799,6 @@ void NavierStokes::increment_face_velocity(
     
       FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];  
 
-      FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir])[mfi];  
-      FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
       FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
       FArrayBox& xvel=Umac_new[mfi];
@@ -2948,8 +2913,6 @@ void NavierStokes::increment_face_velocity(
        ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
        xface.dataPtr(),
        ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-       xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-       xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
        reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
        xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //holds Umac_old
        xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xp(holds AMRSYNC)
@@ -2982,8 +2945,6 @@ void NavierStokes::increment_face_velocity(
        &num_elements_blobclass,
        &num_colors,
        &nten,
-       &nfacefrac,
-       &ncellfrac,
        &project_option,
        &SEM_upwind,
        &SEM_advection_algorithm);
@@ -3077,21 +3038,8 @@ void NavierStokes::density_TO_MAC(int project_option) {
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
-
  int fluxvel_index=0;
  int fluxden_index=AMREX_SPACEDIM;
-
-  //(ml,mr,2) frac_pair(ml,mr),dist_pair(ml,mr)
- int nfacefrac=nmat*nmat*2;
-  // im_inside,im_outside,3+sdim -->
-  //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,125);
 
  const Real* dx = geom.CellSize();
 
@@ -3168,8 +3116,6 @@ void NavierStokes::density_TO_MAC(int project_option) {
        FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];  
        FArrayBox& xp=(*localMF[AMRSYNC_VEL_MF+dir])[mfi];  
 
-       FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir])[mfi];  
-       FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
        FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
        FArrayBox& xvel=(*localMF[FACE_VAR_MF+dir])[mfi];  
@@ -3274,8 +3220,6 @@ void NavierStokes::density_TO_MAC(int project_option) {
         sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
         xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
         xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-        xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-        xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
         reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
         xvel.dataPtr(faceden_index),
         ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), //xgp
@@ -3310,8 +3254,6 @@ void NavierStokes::density_TO_MAC(int project_option) {
         &num_elements_blobclass,
         &num_colors,
         &nten,
-        &nfacefrac,
-        &ncellfrac,
         &project_option,
         &SEM_upwind,
         &SEM_advection_algorithm);
@@ -4647,9 +4589,6 @@ void NavierStokes::apply_pressure_grad(
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   debug_ngrow(FACE_VAR_MF+dir,0,122);
 
-//  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
-//  mm_cell_areafrac_index=CELLFRAC_MM_MF;
-
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
@@ -4944,17 +4883,6 @@ void NavierStokes::apply_pressure_grad(
 
   resize_levelsetLO(2,LEVELPC_MF);
 
-  int mm_areafrac_index_gradp=FACE_VAR_MF;
-  int mm_cell_areafrac_index_gradp=SLOPE_RECON_MF;
-//   mm_areafrac_index_gradp=FACEFRAC_SOLVE_MM_MF;
-//   mm_cell_areafrac_index_gradp=CELLFRAC_MM_MF;
-
-  //(ml,mr,2) frac_pair(ml,mr),dist_pair(ml,mr)
-  int nfacefrac_gradp=nmat*nmat*2;
-  // im_inside,im_outside,3+sdim -->
-  //   area, dist_to_line, dist, line normal.
-  int ncellfrac_gradp=nmat*nmat*(3+AMREX_SPACEDIM);
-
   int fluxvel_index=0;
   int fluxden_index=AMREX_SPACEDIM;
 
@@ -5024,8 +4952,6 @@ void NavierStokes::apply_pressure_grad(
     FArrayBox& xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi]; // A/rho
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
-    FArrayBox& xfacemm=(*localMF[mm_areafrac_index_gradp+dir])[mfi];  
-    FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index_gradp])[mfi];  
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
@@ -5118,8 +5044,6 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
      xcut.dataPtr(),ARLIM(xcut.loVect()),ARLIM(xcut.hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-     xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),
      xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //holds AMRSYNC_PRES
@@ -5151,8 +5075,6 @@ void NavierStokes::apply_pressure_grad(
      &num_elements_blobclass,
      &num_colors,
      &nten,
-     &nfacefrac_gradp,
-     &ncellfrac_gradp,
      &project_option,
      &SEM_upwind,
      &SEM_advection_algorithm);
@@ -5869,7 +5791,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     override_density.dataPtr(),
     constant_density_all_time.dataPtr(),
     &cur_time_slab,
-    &dt_slab, //calling INIT_PHYSICS_VARS
+    &dt_slab, //calling FORT_INIT_PHYSICS_VARS
     &project_option,
     problo,probhi,
     &visc_coef,
@@ -6526,21 +6448,8 @@ void NavierStokes::process_potential_force_face() {
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(SLOPE_RECON_MF,1,130);
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
- 
-  //(ml,mr,2) frac_pair(ml,mr),dist_pair(ml,mr)
- int nfacefrac=nmat*nmat*2;
-  // im_inside,im_outside,3+sdim -->
-  //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(AMREX_SPACEDIM+3);
-
  int fluxvel_index=0;
  int fluxden_index=AMREX_SPACEDIM;
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,131);
 
  int pcomp=AMREX_SPACEDIM;
 
@@ -6617,9 +6526,6 @@ void NavierStokes::process_potential_force_face() {
 
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
  
-   FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir])[mfi];  
-   FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
-
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -6726,8 +6632,6 @@ void NavierStokes::process_potential_force_face() {
     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-    xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-    xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), 
     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), 
@@ -6760,8 +6664,6 @@ void NavierStokes::process_potential_force_face() {
     &num_elements_blobclass,
     &num_colors,
     &nten,
-    &nfacefrac,
-    &ncellfrac,
     &local_project_option,
     &SEM_upwind,
     &SEM_advection_algorithm);

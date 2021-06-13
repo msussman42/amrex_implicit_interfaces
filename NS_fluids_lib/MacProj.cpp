@@ -499,21 +499,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  localMF[MASK_DIV_RESIDUAL_MF]->setVal(0.0,0,1,0);
  localMF[MASK_RESIDUAL_MF]->setVal(0.0,0,1,0);
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
-//  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
-//  mm_cell_areafrac_index=CELLFRAC_MM_MF;
-
- // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
- int nfacefrac=nmat*nmat*2; 
- // im_inside,im_outside,3+sdim -->
- //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,140);
-
  debug_ngrow(DIFFUSIONRHS_MF,0,141);
 
  if (thread_class::nthreads<1)
@@ -560,11 +545,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
 
-  FArrayBox& xfacemm=(*localMF[mm_areafrac_index])[mfi];  
-  FArrayBox& yfacemm=(*localMF[mm_areafrac_index+1])[mfi];  
-  FArrayBox& zfacemm=(*localMF[mm_areafrac_index+AMREX_SPACEDIM-1])[mfi];  
-  FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];  
-
   Vector<int> bc;
   getBCArray_list(bc,state_index,gridno,scomp,ncomp);
   if (bc.size()!=nsolve*AMREX_SPACEDIM*2)
@@ -579,16 +559,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &level,
     &finest_level,
     &nsolve,
-    &nfacefrac,
-    &ncellfrac,
     &nmat,
     &project_option,
     &ncphys,
-    cellfracmm.dataPtr(),
-    ARLIM(cellfracmm.loVect()),ARLIM(cellfracmm.hiVect()),
-    xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-    yfacemm.dataPtr(),ARLIM(yfacemm.loVect()),ARLIM(yfacemm.hiVect()),
-    zfacemm.dataPtr(),ARLIM(zfacemm.loVect()),ARLIM(zfacemm.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),

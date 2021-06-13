@@ -14346,16 +14346,10 @@ stop
        bfact, &
        level, &
        finest_level, &
-       nfacefrac, &
-       ncellfrac, &
        xlo,dx, &
        dt, &
        STATEFAB,DIMS(STATEFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
-       cellmm,DIMS(cellmm), &
-       xfacemm,DIMS(xfacemm), &
-       yfacemm,DIMS(yfacemm), &
-       zfacemm,DIMS(zfacemm), &
        swept,DIMS(swept), &
        LS,DIMS(LS),  &
        T_fab,DIMS(T_fab),  &
@@ -14394,8 +14388,6 @@ stop
       INTEGER_T, intent(in) :: adjust_temperature
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nfacefrac
-      INTEGER_T, intent(in) :: ncellfrac
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -14409,10 +14401,6 @@ stop
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: DIMDEC(STATEFAB)
       INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
-      INTEGER_T, intent(in) :: DIMDEC(cellmm)
-      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(yfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(zfacemm)
       INTEGER_T, intent(in) :: DIMDEC(swept)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(T_fab)
@@ -14430,10 +14418,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areaz)
       REAL_T, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
       REAL_T, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
-      REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
-      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
-      REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
-      REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
       REAL_T, intent(in) :: swept(DIMV(swept),nmat)
       REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, intent(in) :: T_fab(DIMV(T_fab),nmat)
@@ -14594,18 +14578,6 @@ stop
        endif
       enddo ! im=1..nmat
 
-       ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
-      if (nfacefrac.ne.nmat*nmat*2) then
-       print *,"nfacefrac invalid"
-       stop
-      endif
-       !im_inside,im_outside,3+sdim -->
-       !area, dist_to_line, dist, line normal.
-      if (ncellfrac.ne.nmat*nmat*(3+SDIM)) then
-       print *,"ncellfrac invalid"
-       stop
-      endif
-
       if (project_option.eq.2) then ! thermal diffusion
        T_or_Y_min_sanity=zero
       else if ((project_option.ge.100).and. & ! species diffusion
@@ -14629,10 +14601,6 @@ stop
 
       call checkbound(fablo,fabhi,DIMS(STATEFAB),1,-1,234)
       call checkbound(fablo,fabhi,DIMS(TgammaFAB),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(cellmm),0,-1,234)
-      call checkbound(fablo,fabhi,DIMS(xfacemm),0,0,264)
-      call checkbound(fablo,fabhi,DIMS(yfacemm),0,1,264)
-      call checkbound(fablo,fabhi,DIMS(zfacemm),0,SDIM-1,264)
 
       call checkbound(fablo,fabhi,DIMS(swept),0,-1,234)
 

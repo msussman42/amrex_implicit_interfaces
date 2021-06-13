@@ -14221,8 +14221,6 @@ stop
        solfab,DIMS(solfab), &
        xcut,DIMS(xcut), &   ! coeff*areafrac
        xface,DIMS(xface), &  ! xflux for advection
-       xfacemm,DIMS(xfacemm), &  
-       xcellmm,DIMS(xcellmm), &  
        recon,DIMS(recon), &  
        xgp,DIMS(xgp), & ! holds Umac_old if operation_flag==5 or 11
        xp,DIMS(xp), & ! holds AMRSYNC_PRES if operation_flag==0
@@ -14250,8 +14248,6 @@ stop
        num_elements_blobclass, &
        num_colors, &
        nten, &
-       nfacefrac, &
-       ncellfrac, &
        project_option, &
        SEM_upwind, &
        SEM_advection_algorithm)
@@ -14281,8 +14277,6 @@ stop
         
       REAL_T, intent(in) :: added_weight(nmat)
       INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: nfacefrac
-      INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: face_flag 
       INTEGER_T, intent(in) :: interp_vel_increment_from_cell
@@ -14318,8 +14312,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskSEM)
       INTEGER_T, intent(in) :: DIMDEC(xcut)
       INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(xcellmm)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(xgp)
       INTEGER_T, intent(in) :: DIMDEC(xp)
@@ -14365,8 +14357,6 @@ stop
       REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
       REAL_T, intent(inout) :: xcut(DIMV(xcut),1)
       REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) ! xflux for advection
-      REAL_T, intent(inout) :: xfacemm(DIMV(xfacemm),nfacefrac)
-      REAL_T, intent(inout) :: xcellmm(DIMV(xfacemm),ncellfrac)
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
        !holds Umac_old if operation_flag==5 or 11
       REAL_T, intent(inout) :: xgp(DIMV(xgp),ncomp_xgp) 
@@ -14574,17 +14564,6 @@ stop
       endif
       if (ncfluxreg.lt.SDIM) then
        print *,"ncfluxreg invalid12 ",ncfluxreg
-       stop
-      endif
-       ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
-      if (nfacefrac.ne.nmat*nmat*2) then
-       print *,"nfacefrac invalid"
-       stop
-      endif
-       !im_inside,im_outside,3+sdim -->
-       !area, dist_to_line, dist, line normal.
-      if (ncellfrac.ne.nmat*nmat*(3+SDIM)) then
-       print *,"ncellfrac invalid"
        stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -14941,7 +14920,6 @@ stop
       if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
        call checkbound(fablo,fabhi,DIMS(xcut),0,dir,231)
        call checkbound(fablo,fabhi,DIMS(xface),0,dir,263)
-       call checkbound(fablo,fabhi,DIMS(xfacemm),0,dir,264)
        call checkbound(fablo,fabhi,DIMS(xgp),0,dir,2330)
        call checkbound(fablo,fabhi,DIMS(xp),0,dir,2331)
        call checkbound(fablo,fabhi,DIMS(xvel),0,dir,2332)
@@ -14955,7 +14933,6 @@ stop
         call checkbound(fablo,fabhi,DIMS(typefab),1,-1,6625)
         call checkbound(fablo,fabhi,DIMS(colorfab),1,-1,6626)
         call checkbound(fablo,fabhi,DIMS(levelPC),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(xcellmm),0,-1,234)
         call checkbound(fablo,fabhi,DIMS(recon),0,-1,234)
         call checkbound(fablo,fabhi,DIMS(mask),1,-1,234)
         call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,234)
@@ -16888,8 +16865,6 @@ stop
        level, &
        finest_level, &
        nsolve, &
-       nfacefrac, &
-       ncellfrac, &
        local_face_index, &
        facecut_index, &
        icefacecut_index, &
@@ -16901,10 +16876,6 @@ stop
        recon,DIMS(recon), &
        cenden,DIMS(cenden), &
        cenvisc,DIMS(cenvisc), &
-       cellmm,DIMS(cellmm), &
-       xfacemm,DIMS(xfacemm), &
-       yfacemm,DIMS(yfacemm), &
-       zfacemm,DIMS(zfacemm), &
        xfwt,DIMS(xfwt), &
        yfwt,DIMS(yfwt), &
        zfwt,DIMS(zfwt), &
@@ -16931,8 +16902,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: nfacefrac
-      INTEGER_T, intent(in) :: ncellfrac
       INTEGER_T, intent(in) :: local_face_index
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
@@ -16950,10 +16919,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(cenden)
       INTEGER_T, intent(in) :: DIMDEC(cenvisc)
-      INTEGER_T, intent(in) :: DIMDEC(cellmm)
-      INTEGER_T, intent(in) :: DIMDEC(xfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(yfacemm)
-      INTEGER_T, intent(in) :: DIMDEC(zfacemm)
       INTEGER_T, intent(in) :: DIMDEC(xfwt)
       INTEGER_T, intent(in) :: DIMDEC(yfwt)
       INTEGER_T, intent(in) :: DIMDEC(zfwt)
@@ -16966,10 +16931,6 @@ stop
       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, intent(in) :: cenden(DIMV(cenden),nmat+1) 
       REAL_T, intent(in) :: cenvisc(DIMV(cenvisc),nmat+1) 
-      REAL_T, intent(in) :: cellmm(DIMV(cellmm),ncellfrac) 
-      REAL_T, intent(in) :: xfacemm(DIMV(xfacemm),nfacefrac) 
-      REAL_T, intent(in) :: yfacemm(DIMV(yfacemm),nfacefrac) 
-      REAL_T, intent(in) :: zfacemm(DIMV(zfacemm),nfacefrac) 
       REAL_T, intent(out) :: xfwt(DIMV(xfwt),nsolve)
       REAL_T, intent(out) :: yfwt(DIMV(yfwt),nsolve)
       REAL_T, intent(out) :: zfwt(DIMV(zfwt),nsolve)
@@ -17037,26 +16998,11 @@ stop
        print *,"nsolve invalid8"
        stop
       endif 
-       ! (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)
-      if (nfacefrac.ne.nmat*nmat*2) then
-       print *,"nfacefrac invalid"
-       stop
-      endif
-       !im_inside,im_outside,3+sdim -->
-       !area, dist_to_line, dist, line normal.
-      if (ncellfrac.ne.nmat*nmat*(3+SDIM)) then
-       print *,"ncellfrac invalid"
-       stop
-      endif
 
       call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,241)
       call checkbound(fablo,fabhi,DIMS(recon),1,-1,241)
       call checkbound(fablo,fabhi,DIMS(cenden),1,-1,241)
       call checkbound(fablo,fabhi,DIMS(cenvisc),1,-1,241)
-      call checkbound(fablo,fabhi,DIMS(cellmm),0,-1,234)
-      call checkbound(fablo,fabhi,DIMS(xfacemm),0,0,264)
-      call checkbound(fablo,fabhi,DIMS(yfacemm),0,1,264)
-      call checkbound(fablo,fabhi,DIMS(zfacemm),0,SDIM-1,264)
       call checkbound(fablo,fabhi,DIMS(xfwt),0,0,242)
       call checkbound(fablo,fabhi,DIMS(yfwt),0,1,242)
       call checkbound(fablo,fabhi,DIMS(zfwt),0,SDIM-1,242)

@@ -510,6 +510,7 @@ int  NavierStokes::num_species_var=0;
 //  iden_base,scomp_mofvars,nstate=,scomp_den,pressure_comp,dcomp,
 //  pcomp,tcomp,scomp,scomp_pres,get_mm_scomp_solver,dencomp,scomp_tensor,
 //  im_pres,velcomp,prescomp,flagcomp
+// nfacefrac,ncellfrac,mm_,cellmm,facemm
 int  NavierStokes::num_materials=0;
 
 int  NavierStokes::use_supermesh=0;
@@ -13707,21 +13708,6 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if (S_new.nComp()!=nstate)
   amrex::Error("S_new invalid ncomp");
 
- int mm_areafrac_index=FACE_VAR_MF;
- int mm_cell_areafrac_index=SLOPE_RECON_MF;
-//  mm_areafrac_index=FACEFRAC_SOLVE_MM_MF;
-//  mm_cell_areafrac_index=CELLFRAC_MM_MF;
-
- // (ml,mr,2) frac_pair(ml,mr), dist_pair(ml,mr)  
- int nfacefrac=nmat*nmat*2;
- // im_inside,im_outside,3+sdim -->
- //   area, dist_to_line, dist, line normal.
- int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(mm_areafrac_index+dir,0,111);
- debug_ngrow(mm_cell_areafrac_index,0,113);
-
  int num_materials_combine=nmat;
  int state_index;
  Vector<int> scomp;
@@ -13813,11 +13799,6 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
    FArrayBox& sweptfab = (*localMF[SWEPT_CROSSING_MF])[mfi];
 
-   FArrayBox& xfacemm=(*localMF[mm_areafrac_index])[mfi];
-   FArrayBox& yfacemm=(*localMF[mm_areafrac_index+1])[mfi];
-   FArrayBox& zfacemm=(*localMF[mm_areafrac_index+AMREX_SPACEDIM-1])[mfi];
-   FArrayBox& cellfracmm=(*localMF[mm_cell_areafrac_index])[mfi];
-
    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
    if (Tsatfab.nComp()!=ntsat) {
     std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
@@ -13858,19 +13839,12 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     fablo,fabhi,&bfact,
     &level,
     &finest_level,
-    &nfacefrac,
-    &ncellfrac,
     xlo,dx,
     &dt_slab,
     statefab.dataPtr(),
     ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
     Tsatfab.dataPtr(),
     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
-    cellfracmm.dataPtr(),
-    ARLIM(cellfracmm.loVect()),ARLIM(cellfracmm.hiVect()),
-    xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-    yfacemm.dataPtr(),ARLIM(yfacemm.loVect()),ARLIM(yfacemm.hiVect()),
-    zfacemm.dataPtr(),ARLIM(zfacemm.loVect()),ARLIM(zfacemm.hiVect()),
     sweptfab.dataPtr(),ARLIM(sweptfab.loVect()),ARLIM(sweptfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     T_fab.dataPtr(),
@@ -14431,18 +14405,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
    if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM*nfluxSEM)
     amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid8");
 
-   int mm_areafrac_index=CONSERVE_FLUXES_MF;
-   int mm_cell_areafrac_index=SLOPE_RECON_MF;
-    //(ml,mr,2) frac_pair(ml,mr),dist_pair(ml,mr)
-   int nfacefrac=nmat*nmat*2; 
-    // im_inside,im_outside,3+sdim -->
-    //   area, dist_to_line, dist, line normal.
-   int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM);
-
-   for (int dirloc=0;dirloc<AMREX_SPACEDIM;dirloc++)
-    debug_ngrow(mm_areafrac_index+dirloc,0,111);
-   debug_ngrow(mm_cell_areafrac_index,0,114);
-
 // flux variables: average down in the tangential direction 
 // to the box face, copy in
 // the normal direction.  Since the blocking factor is >=2, it is
@@ -14522,9 +14484,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& xface=(*localMF[CONSERVE_FLUXES_MF+dir])[mfi];  
      FArrayBox& xp=(*localMF[AMRSYNC_PRES_MF+dir])[mfi];  
      FArrayBox& xgp=(*localMF[COARSE_FINE_FLUX_MF+dir])[mfi];  
-
-     FArrayBox& xfacemm=(*localMF[mm_areafrac_index+dir])[mfi];  
-     FArrayBox& xcellmm=(*localMF[mm_cell_areafrac_index])[mfi];  
 
      FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
@@ -14652,8 +14611,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
       xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
       xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), // xflux
-      xfacemm.dataPtr(),ARLIM(xfacemm.loVect()),ARLIM(xfacemm.hiVect()),
-      xcellmm.dataPtr(),ARLIM(xcellmm.loVect()),ARLIM(xcellmm.hiVect()),
       reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
       xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),//holds COARSE_FINE
       xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),//holds AMRSYNC_PRES
@@ -14685,8 +14642,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &num_elements_blobclass,
       &num_colors,
       &nten,
-      &nfacefrac,
-      &ncellfrac,
       &project_option_visc,
       &SEM_upwind,
       &SEM_advection_algorithm);

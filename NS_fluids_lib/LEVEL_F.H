@@ -398,8 +398,6 @@ namespace amrex{
         Real* sol,AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
         Real* xcut,AMREX_ARLIM_P(xcutlo),AMREX_ARLIM_P(xcuthi), 
         Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi), 
-        Real* xfacemm,AMREX_ARLIM_P(xfacemmlo),AMREX_ARLIM_P(xfacemmhi), 
-        Real* xcellmm,AMREX_ARLIM_P(xcellmmlo),AMREX_ARLIM_P(xcellmmhi), 
         Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
         Real* xgp,AMREX_ARLIM_P(xgplo),AMREX_ARLIM_P(xgphi), 
         Real* xp,AMREX_ARLIM_P(xplo),AMREX_ARLIM_P(xphi), 
@@ -426,8 +424,6 @@ namespace amrex{
         int* num_elements_blobclass,
         int* num_colors,
         int* nten,
-        int* nfacefrac,
-        int* ncellfrac,
         int* project_option,
         int* SEM_upwind,
         int* SEM_advection_algorithm);
@@ -492,8 +488,10 @@ namespace amrex{
         Real* rhs,AMREX_ARLIM_P(rhslo),AMREX_ARLIM_P(rhshi), 
         Real* veldest,AMREX_ARLIM_P(veldestlo),AMREX_ARLIM_P(veldesthi), 
         Real* dendest,AMREX_ARLIM_P(dendestlo),AMREX_ARLIM_P(dendesthi), 
-        Real* maskfine,AMREX_ARLIM_P(maskfinelo),AMREX_ARLIM_P(maskfinehi),//1=fine/fine
-        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),//1=not covered
+        Real* maskfine,
+        AMREX_ARLIM_P(maskfinelo),AMREX_ARLIM_P(maskfinehi),//1=fine/fine
+        Real* maskcov,
+        AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),//1=not covered
         Real* maskSEM,AMREX_ARLIM_P(maskSEMlo),AMREX_ARLIM_P(maskSEMhi),
         Real* levelPC,AMREX_ARLIM_P(levelPClo),AMREX_ARLIM_P(levelPChi),
         Real* solxfab,
@@ -531,8 +529,10 @@ namespace amrex{
         int* ncomp_state,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
-        Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
-        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi)); //1=not covered
+        Real* state,
+        AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
+        Real* maskcov,
+        AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi)); //1=not covered
 
       void FORT_INIT_PHYSICS_VARS(
        int* tid,
@@ -675,8 +675,6 @@ namespace amrex{
         int* level,
         int* finest_level,
         int* nsolve,
-        int* nfacefrac,
-        int* ncellfrac,
         int* local_face_index,
         int* facecut_index,
         int* icefacecut_index,
@@ -688,10 +686,6 @@ namespace amrex{
         Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
         Real* cenden,AMREX_ARLIM_P(cendenlo),AMREX_ARLIM_P(cendenhi), 
         Real* cenvisc,AMREX_ARLIM_P(cenvisclo),AMREX_ARLIM_P(cenvischi), 
-        Real* cellmm,AMREX_ARLIM_P(cellmmlo),AMREX_ARLIM_P(cellmmhi), 
-        Real* xfacemm,AMREX_ARLIM_P(xfacemmlo),AMREX_ARLIM_P(xfacemmhi), 
-        Real* yfacemm,AMREX_ARLIM_P(yfacemmlo),AMREX_ARLIM_P(yfacemmhi), 
-        Real* zfacemm,AMREX_ARLIM_P(zfacemmlo),AMREX_ARLIM_P(zfacemmhi), 
         Real* xfwt,AMREX_ARLIM_P(xfwtlo),AMREX_ARLIM_P(xfwthi), 
         Real* yfwt,AMREX_ARLIM_P(yfwtlo),AMREX_ARLIM_P(yfwthi), 
         Real* zfwt,AMREX_ARLIM_P(zfwtlo),AMREX_ARLIM_P(zfwthi), 
