@@ -15,11 +15,13 @@
        ! evap_model==3 => Kassemi model EXCEPT that a provisional
        !  temperature field is derived from the original temperature
        !  field by way of running the heat equation for a length of time
-       !  t=(L/(2 * arc_erf(0.8)))^2  arc_erf(0.8)=0.906 derived from:
-       !  u(t,x)=(1+erf(x/(2 sqrt(t))))/2  let x=L 
-       !  solve u(t,L)=0.9  => .8=erf(x/(2 sqrt(t))) =>
-       !  x/(2 sqrt(t))=arc_erf(.8)=.906
-       !  sqrt(t)=L/(2 * .906)  t=(L/(2 * .906))^2
+       !  t=(L/(2 * arc_erf(0.2)))^2  arc_erf(0.2)=0.1791 derived from:
+       !  u_t = u_xx u(x,0)=1 x<0  =0 x>0
+       !  u(t,x)=(1-erf(x/(2 sqrt(t))))/2  let x=L 
+       !  solve u(t,L)=0.4  => .2=erf(x/(2 sqrt(t))) =>
+       !  x/(2 sqrt(t))=arc_erf(.2)=0.1791
+       !  matlab: erfinv(0.2)
+       !  sqrt(t)=L/(2 * .1791)  t=(L/(2 * .1791))^2
        !  mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
        ! evap_model==4 => Tayguy's recommendation with the same
        !  exception as for evap_model==3.
@@ -799,7 +801,7 @@
 
         ! STEP 1a: find SOLNsmear:
        Lsmear=radblob*schrage_heat_diffusion_factor
-       time_smear=(Lsmear/(2.0d0*0.906d0))**2.0d0
+       time_smear=(Lsmear/(2.0d0*0.1791d0))**2.0d0
       
        do igrid=0,num_intervals
         xpos_new=igrid*dx_new+R_gamma_NEW
