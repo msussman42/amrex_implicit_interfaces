@@ -7993,6 +7993,7 @@ stop
        override_density, &
        constant_density_all_time, &
        time, &
+       dt, &
        project_option, &
        problo,probhi, &
        visc_coef, &
@@ -8083,6 +8084,7 @@ stop
 
       INTEGER_T, intent(in) :: num_curv
       REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: project_option
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
       REAL_T, intent(in) :: visc_coef
@@ -8778,6 +8780,14 @@ stop
           stop
          endif
 
+         if ((time.ge.zero).and.(dt.ge.zero)) then
+          ! do nothing
+         else
+          print *,"FORT_INIT_PHYSICS_VARS:"
+          print *,"time or dt invalid: time,dt ",time,dt
+          stop
+         endif
+
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
                 vel_clamped_minus,temperature_clamped_minus)
@@ -8893,6 +8903,7 @@ stop
             print *,"ncphys=",ncphys
             print *,"solidheat_flag=",solidheat_flag
             print *,"time=",time
+            print *,"dt=",dt
             print *,"project_option=",project_option
             print *,"nten=",nten
             print *,"nmat=",nmat

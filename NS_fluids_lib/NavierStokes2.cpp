@@ -5869,6 +5869,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     override_density.dataPtr(),
     constant_density_all_time.dataPtr(),
     &cur_time_slab,
+    &dt_slab, //calling INIT_PHYSICS_VARS
     &project_option,
     problo,probhi,
     &visc_coef,
@@ -6973,7 +6974,7 @@ void NavierStokes::process_potential_force_cell() {
    presbc.dataPtr(), 
    &cur_time_slab, 
    &slab_step,
-   &dt_slab,
+   &dt_slab, //calling FORT_MAC_TO_CELL
    xlo,dx,
    tilelo,tilehi,
    fablo,fabhi,
