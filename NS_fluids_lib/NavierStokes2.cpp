@@ -3700,7 +3700,7 @@ void NavierStokes::init_gradu_tensorALL(
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
   int homflag=0;
   ns_level.init_gradu_tensor(
-    im_tensor,
+    im_tensor, // im_tensor=-1 => velocity   0<=im_tensor<=nmat-1 => xdisp
     homflag,
     idx_vel,
     idx_cell,
@@ -3815,7 +3815,7 @@ void NavierStokes::doit_gradu_tensor(
    } else
     amrex::Error("elastic_partid invalid");
   } else
-   amrex::Error("enable_spectral invalid");
+   amrex::Error("expecting enable_spectral==0 for gradient of xdisp");
  } else
   amrex::Error("im_tensor invalid");
 
@@ -4334,7 +4334,7 @@ void NavierStokes::init_gradu_tensor(
 
   // do nothing
 
- } else if (im_tensor>=0) {
+ } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
 
   bool use_tiling=ns_tiling;
 
@@ -4427,7 +4427,7 @@ void NavierStokes::init_gradu_tensor(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
+    // declared in: GODUNOV_3D.F90
     //  visc_coef * viscface * (grad X + grad X^T)
     FORT_CROSSTERM_ELASTIC(
      &ncomp_visc,
