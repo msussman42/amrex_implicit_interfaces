@@ -23701,7 +23701,7 @@ stop
             stop
            endif
           else
-           print *,"enable_spectral invalid"
+           print *,"expecting enable_spectral==0 for finding disp gradients"
            stop
           endif
          else
@@ -27743,7 +27743,7 @@ stop
         enddo ! velcomp=1..sdim
 
        else if (constant_viscosity_override.eq.1) then
-        ! do nothing
+        ! coupling terms not included at walls.
        else
         print *,"constant_viscosity_override invalid"
         stop
