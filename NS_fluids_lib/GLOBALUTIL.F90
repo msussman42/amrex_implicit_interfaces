@@ -17995,123 +17995,48 @@ enddo
 
 end subroutine stress_from_strain
 
-subroutine project_tensor(mask_center,n_elastic, &
-        mask_left,mask_right,tensor_data,dir)
+subroutine tensor_Heaviside( &
+    dxmin, &
+    im_parm, & ! 0..nmat-1
+    mask1,mask2, &
+    LS1,LS2, &
+    HVAL)
 use probcommon_module
+use MOF_routines_module
 IMPLICIT NONE
 
-INTEGER_T, intent(out) :: mask_center
-INTEGER_T, intent(in) :: dir
-INTEGER_T, intent(in) :: mask_left
-INTEGER_T, intent(in) :: mask_right
-REAL_T, intent(in) :: n_elastic(SDIM)
-REAL_T, intent(inout) :: tensor_data(-1:1,SDIM,SDIM)
+REAL_T, intent(in) :: dxmin
+INTEGER_T, intent(in) :: im_parm
+REAL_T, intent(out) :: HVAL
+INTEGER_T, intent(in) :: mask1,mask2
+REAL_T, intent(in) :: LS1(num_materials)
+REAL_T, intent(in) :: LS2(num_materials)
 
-INTEGER_T idest,isource
-INTEGER_T iprod,jprod,kprod
-REAL_T PIK,PKJ
-REAL_T PT(SDIM,SDIM)
-REAL_T PTP(SDIM,SDIM)
-REAL_T local_data
-REAL_T mag_n
-INTEGER_T GFM_flag
-INTEGER_T dir_local
-
-if ((dir.ge.1).and.(dir.le.SDIM)) then
+if ((im_parm.ge.0).and.(im_parm.lt.num_materials)) then
  ! do nothing
 else
- print *,"dir invalid"
+ print *,"im_parm invalid"
  stop
 endif
 
-if ((mask_left.eq.0).and.(mask_right.eq.0)) then
- mask_center=0
-else if ((mask_left.eq.1).and.(mask_right.eq.1)) then
- mask_center=1
-else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
-         ((mask_left.eq.1).and.(mask_right.eq.0))) then
- mask_center=1
- if ((mask_left.eq.0).and.(mask_right.eq.1)) then
-  idest=-1
-  isource=0
- else if ((mask_right.eq.0).and.(mask_left.eq.1)) then
-  idest=1
-  isource=0
+if ((mask1.eq.0).or.(mask2.eq.0)) then
+ HVAL=zero
+else if ((mask1.eq.1).and.(mask2.eq.1)) then
+ call get_primary_material(LS1,num_materials,im1)
+ call get_primary_material(LS2,num_materials,im2)
+ if ((im1.eq.im_parm+1).and.(im2.eq.im_parm+1)) then
+  LS_avg=half*(LS1(im_parm+1)+LS2(im_parm+1))-dxmin
+  HVAL=hs(LS_avg,dxmin)
  else
-  print *,"mask_left or mask_right invalid"
+  print *,"im1 or im2 invalid"
   stop
  endif
-
- GFM_flag=1
- mag_n=zero
- do dir_local=1,SDIM
-  mag_n=mag_n+n_elastic(dir_local)**2
- enddo
- if (mag_n.eq.zero) then
-  GFM_flag=0
- else if (mag_n.gt.zero) then
-  ! do nothing
- else
-  print *,"mag_n invalid"
-  stop
- endif
-
-  ! P=(I - n^T n)
- do iprod=1,SDIM
- do jprod=1,SDIM
-  PT(iprod,jprod)=zero
-  do kprod=1,SDIM
-   PIK=-n_elastic(iprod)*n_elastic(kprod)  
-   if (iprod.eq.kprod) then
-    PIK=PIK+one
-   endif
-   local_data=tensor_data(isource,kprod,jprod)
-   if ((abs(local_data).lt.OVERFLOW_CUTOFF).and. &
-       (abs(PIK).lt.OVERFLOW_CUTOFF)) then
-    ! do nothing
-   else
-    print *,"dir,isource,iprod,jprod,kprod,PT,PIK,local_data ", &
-     dir,isource,iprod,jprod,kprod,PT(iprod,jprod),PIK,local_data
-    stop
-   endif
-   if (GFM_flag.eq.1) then
-    ! do nothing
-   else if (GFM_flag.eq.0) then
-    local_data=zero
-   else
-    print *,"GFM_flag invalid"
-    stop
-   endif
-   PT(iprod,jprod)=PT(iprod,jprod)+PIK*local_data
-  enddo ! kprod=1..sdim
- enddo ! jprod
- enddo ! iprod
-
- do iprod=1,SDIM
- do jprod=1,SDIM
-  PTP(iprod,jprod)=zero
-  do kprod=1,SDIM
-   PKJ=-n_elastic(kprod)*n_elastic(jprod)  
-   if (jprod.eq.kprod) then
-    PKJ=PKJ+one
-   endif
-   PTP(iprod,jprod)=PTP(iprod,jprod)+PKJ*PT(iprod,kprod)
-  enddo ! kprod=1..sdim
-  if (abs(PTP(iprod,jprod)).lt.OVERFLOW_CUTOFF) then
-   ! do nothing
-  else
-   print *,"iprod,jprod,PTP ",iprod,jprod,PTP(iprod,jprod)
-   stop
-  endif
-  tensor_data(idest,iprod,jprod)=PTP(iprod,jprod)
- enddo ! jprod=1..sdim
- enddo ! iprod=1..sdim
 else
- print *,"mask_left or mask_right invalid"
+ print *,"mask1 or mask2 invalid"
  stop
 endif
 
-end subroutine project_tensor
+end subroutine tensor_Heaviside
 
 
 INTEGER_T function project_option_is_validF(project_option) 
