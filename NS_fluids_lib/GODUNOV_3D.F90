@@ -5227,9 +5227,9 @@ stop
       INTEGER_T dir
       REAL_T rplus,rminus,rval,RRX,RRY
       INTEGER_T mask_left,mask_right
-      INTEGER_T mask_center(SDIM)
       INTEGER_T local_mask
       INTEGER_T mask_array(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T LS_array(D_DECL(-1:1,-1:1,-1:1),nmat)
       INTEGER_T i1,j1,k1
       REAL_T hx,hy,hz
       REAL_T force(SDIM)
@@ -5239,6 +5239,8 @@ stop
       INTEGER_T nhalf
       INTEGER_T imlocal
       REAL_T LScen(nmat)
+      REAL_T LS_left(nmat)
+      REAL_T LS_right(nmat)
       REAL_T Q(D_DECL(-1:1,-1:1,-1:1),3,3)
 
       REAL_T xflux_local(-1:1,SDIM,SDIM)
@@ -5251,6 +5253,9 @@ stop
       INTEGER_T jQ_minus,jQ_plus
       INTEGER_T kQ_minus,kQ_plus
       INTEGER_T dir_outer
+      REAL_T Htensor_cen
+      REAL_T Htensor(SDIM,2)
+      REAL_T dxmin
 
       nhalf=3
 
@@ -5294,6 +5299,8 @@ stop
        print *,"nden invalid"
        stop
       endif
+
+      call get_dxmin(dx,bfact,dxmin)
 
       call checkbound(fablo,fabhi,DIMS(xface),0,0,263)
       call checkbound(fablo,fabhi,DIMS(yface),0,1,263)
@@ -5354,6 +5361,7 @@ stop
        do k1=klo_stencil,khi_stencil
         do imlocal=1,nmat
          LScen(imlocal)=lsfab(D_DECL(i+i1,j+j1,k+k1),imlocal)
+         LS_array(D_DECL(i1,j1,k1),imlocal)=LScen(imlocal)
         enddo
         call get_primary_material(LScen,nmat,local_mask)
         if ((local_mask.eq.im_parm+1).and. &
@@ -5416,6 +5424,9 @@ stop
        endif
 
        local_mask=mask_array(D_DECL(0,0,0))
+       do imlocal=1,nmat
+        LScen(imlocal)=LS_array(D_DECL(0,0,0),imlocal)
+       enddo
 
         ! We do not have to check to see if the current cell is
         ! clamped since:
@@ -5427,276 +5438,314 @@ stop
         !      cell of a cell is clamped, then that cell gets the
         !      average of the adjoining MAC velocities.
         ! im_parm dominates the center cell.
-       if (local_mask.eq.1) then
  
-         ! im_parm=0..nmat-1
-        do dir=1,SDIM
-         n_elastic(dir)=lsfab(D_DECL(i,j,k),nmat+im_parm*SDIM+dir)
-        enddo
-        call normalize_vector(n_elastic)
+        ! im_parm=0..nmat-1
+       do dir=1,SDIM
+        n_elastic(dir)=lsfab(D_DECL(i,j,k),nmat+im_parm*SDIM+dir)
+       enddo
+       call normalize_vector(n_elastic)
 
-        hx=(xsten(1,1)-xsten(-1,1))*RRX
-        hy=(xsten(1,2)-xsten(-1,2))*RRY
-        hz=xsten(1,SDIM)-xsten(-1,SDIM)
+       hx=(xsten(1,1)-xsten(-1,1))*RRX
+       hy=(xsten(1,2)-xsten(-1,2))*RRY
+       hz=xsten(1,SDIM)-xsten(-1,SDIM)
 
-        if ((hx.gt.zero).and. &
-            (hy.gt.zero).and. &
-            (hz.gt.zero)) then
-         ! do nothing
+       if ((hx.gt.zero).and. &
+           (hy.gt.zero).and. &
+           (hz.gt.zero)) then
+        ! do nothing
+       else
+        print *,"hx,hy, or hz invalid"
+        stop
+       endif
+
+       do dir_outer=1,SDIM
+
+        iQ_minus=0
+        jQ_minus=0
+        kQ_minus=0
+
+        iQ_plus=0
+        jQ_plus=0
+        kQ_plus=0
+
+        if (dir_outer.eq.1) then
+         iQ_minus=-1
+         iQ_plus=1
+        else if (dir_outer.eq.2) then
+         jQ_minus=-1
+         jQ_plus=1
+        else if ((dir_outer.eq.3).and.(SDIM.eq.3)) then
+         kQ_minus=-1
+         kQ_plus=1
         else
-         print *,"hx,hy, or hz invalid"
+         print *,"dir_outer invalid"
          stop
         endif
 
-        if ((viscoelastic_model.eq.0).or. &
-            (viscoelastic_model.eq.1).or. &
-            (viscoelastic_model.eq.3)) then !incremental
+        do veldir=1,SDIM
 
-         do dir_outer=1,SDIM
-
-          iQ_minus=0
-          jQ_minus=0
-          kQ_minus=0
-
-          iQ_plus=0
-          jQ_plus=0
-          kQ_plus=0
+         do dir=1,SDIM
 
           if (dir_outer.eq.1) then
-           iQ_minus=-1
-           iQ_plus=1
+           xflux_local(1,veldir,dir)= &
+             (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
+              Q(D_DECL(0,0,0),veldir,dir))/two
+           xflux_local(-1,veldir,dir)= &
+             (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
+              Q(D_DECL(0,0,0),veldir,dir))/two
+           xflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
           else if (dir_outer.eq.2) then
-           jQ_minus=-1
-           jQ_plus=1
+           yflux_local(1,veldir,dir)= &
+             (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
+              Q(D_DECL(0,0,0),veldir,dir))/two
+           yflux_local(-1,veldir,dir)= &
+             (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
+              Q(D_DECL(0,0,0),veldir,dir))/two
+           yflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
           else if ((dir_outer.eq.3).and.(SDIM.eq.3)) then
-           kQ_minus=-1
-           kQ_plus=1
+           zflux_local(1,veldir,dir)= &
+             (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
+              Q(D_DECL(0,0,0),veldir,dir))/two
+           zflux_local(-1,veldir,dir)= &
+             (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
+              Q(D_DECL(0,0,0),veldir,dir))/two
+           zflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
           else
-           print *,"dir_outer invalid"
+           print *,"dimension bust"
            stop
           endif
+         enddo ! dir=1..sdim
+        enddo ! veldir=1..sdim
+       enddo ! dir_outer=1..sdim
 
-          do veldir=1,SDIM
+       if ((viscoelastic_model.eq.0).or. &
+           (viscoelastic_model.eq.1).or. &
+           (viscoelastic_model.eq.3)) then !incremental
 
-           do dir=1,SDIM
+        ! do nothing
 
-            if (dir_outer.eq.1) then
-             xflux_local(1,veldir,dir)= &
-               (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-             xflux_local(-1,veldir,dir)= &
-               (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-             xflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
-            else if (dir_outer.eq.2) then
-             yflux_local(1,veldir,dir)= &
-               (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-             yflux_local(-1,veldir,dir)= &
-               (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-             yflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
-            else if ((dir_outer.eq.3).and.(SDIM.eq.3)) then
-             zflux_local(1,veldir,dir)= &
-               (Q(D_DECL(iQ_plus,jQ_plus,kQ_plus),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-             zflux_local(-1,veldir,dir)= &
-               (Q(D_DECL(iQ_minus,jQ_minus,kQ_minus),veldir,dir)+ &
-                Q(D_DECL(0,0,0),veldir,dir))/two
-             zflux_local(0,veldir,dir)=Q(D_DECL(0,0,0),veldir,dir)
-            else
-             print *,"dimension bust"
-             stop
-            endif
-           enddo ! dir=1..sdim
-          enddo ! veldir=1..sdim
-         enddo ! dir_outer=1..sdim
-
-        else if (viscoelastic_model.eq.2) then ! displacement gradient
+       else if (viscoelastic_model.eq.2) then ! displacement gradient
 
           ! xflux,yflux,zflux come from "FORT_CROSSTERM_ELASTIC" in which
           ! "stress_from_strain" is applied to the displacement gradient
           ! matrix, then the resulting stress is multiplied by
           ! "elastic_viscosity * visc_coef" (see DERVISC)
-         xflux_comp=1
-         do veldir=1,SDIM
-         do dir=1,SDIM
-          xflux_local(1,veldir,dir)=xflux(D_DECL(i+1,j,k),xflux_comp)
-          xflux_local(-1,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
-          xflux_local(0,veldir,dir)=half*(xflux_local(1,veldir,dir)+ &
-                  xflux_local(-1,veldir,dir))
-          yflux_local(1,veldir,dir)=yflux(D_DECL(i,j+1,k),xflux_comp)
-          yflux_local(-1,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
-          yflux_local(0,veldir,dir)=half*(yflux_local(1,veldir,dir)+ &
-                  yflux_local(-1,veldir,dir))
+        xflux_comp=1
+        do veldir=1,SDIM
+        do dir=1,SDIM
+         xflux_local(1,veldir,dir)=xflux(D_DECL(i+1,j,k),xflux_comp)
+         xflux_local(-1,veldir,dir)=xflux(D_DECL(i,j,k),xflux_comp)
+         xflux_local(0,veldir,dir)=half*(xflux_local(1,veldir,dir)+ &
+                 xflux_local(-1,veldir,dir))
+         yflux_local(1,veldir,dir)=yflux(D_DECL(i,j+1,k),xflux_comp)
+         yflux_local(-1,veldir,dir)=yflux(D_DECL(i,j,k),xflux_comp)
+         yflux_local(0,veldir,dir)=half*(yflux_local(1,veldir,dir)+ &
+                 yflux_local(-1,veldir,dir))
 
-          if (SDIM.eq.3) then
-           zflux_local(1,veldir,dir)=zflux(D_DECL(i,j,k+1),xflux_comp)
-           zflux_local(-1,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
-           zflux_local(0,veldir,dir)=half*(zflux_local(1,veldir,dir)+ &
-                  zflux_local(-1,veldir,dir))
-          else if (SDIM.eq.2) then
-           ! do nothing
-          else
-           print *,"dimension bust"
-           stop
-          endif
-          xflux_comp=xflux_comp+1
-         enddo ! dir=1..sdim
-         enddo ! veldir=1..sdim
-         if (xflux_comp-1.eq.SDIM*SDIM) then
+         if (SDIM.eq.3) then
+          zflux_local(1,veldir,dir)=zflux(D_DECL(i,j,k+1),xflux_comp)
+          zflux_local(-1,veldir,dir)=zflux(D_DECL(i,j,k),xflux_comp)
+          zflux_local(0,veldir,dir)=half*(zflux_local(1,veldir,dir)+ &
+                 zflux_local(-1,veldir,dir))
+         else if (SDIM.eq.2) then
           ! do nothing
          else
-          print *,"xflux_comp invalid"
+          print *,"dimension bust"
           stop
          endif
-
+         xflux_comp=xflux_comp+1
+        enddo ! dir=1..sdim
+        enddo ! veldir=1..sdim
+        if (xflux_comp-1.eq.SDIM*SDIM) then
+         ! do nothing
         else
-         print *,"viscoelastic_model invalid"
+         print *,"xflux_comp invalid"
          stop
         endif
 
+       else
+        print *,"viscoelastic_model invalid"
+        stop
+       endif
+
+       call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,local_mask, &
+         LScen,LScen,
+         Htensor_cen)
+
+       dir=1
+       mask_left=mask_array(D_DECL(-1,0,0))
+       mask_right=mask_array(D_DECL(1,0,0))
+       do imlocal=1,nmat
+        LS_left(im_local)=LS_array(D_DECL(-1,0,0),imlocal)
+        LS_right(im_local)=LS_array(D_DECL(1,0,0),imlocal)
+       enddo
+        ! declared in: GLOBALUTIL.F90
+       call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,mask_left, &
+         LScen,LS_left,
+         Htensor(dir,1))
+       call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,mask_right, &
+         LScen,LS_right,
+         Htensor(dir,2))
+
+       dir=2
+       mask_left=mask_array(D_DECL(0,-1,0))
+       mask_right=mask_array(D_DECL(0,1,0))
+       do imlocal=1,nmat
+        LS_left(im_local)=LS_array(D_DECL(0,-1,0),imlocal)
+        LS_right(im_local)=LS_array(D_DECL(0,1,0),imlocal)
+       enddo
+        ! declared in: GLOBALUTIL.F90
+       call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,mask_left, &
+         LScen,LS_left,
+         Htensor(dir,1))
+       call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,mask_right, &
+         LScen,LS_right,
+         Htensor(dir,2))
+
+       if (SDIM.eq.3) then
+        dir=SDIM
+        mask_left=mask_array(D_DECL(0,0,-1))
+        mask_right=mask_array(D_DECL(0,0,1))
+        do imlocal=1,nmat
+         LS_left(im_local)=LS_array(D_DECL(0,0,-1),imlocal)
+         LS_right(im_local)=LS_array(D_DECL(0,0,1),imlocal)
+        enddo
+        call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,mask_left, &
+         LScen,LS_left,
+         Htensor(dir,1))
+        call tensor_Heaviside( &
+         dxmin, &
+         im_parm, & ! 0..nmat-1
+         local_mask,mask_right, &
+         LScen,LS_right,
+         Htensor(dir,2))
+       endif
+
+       do veldir=1,SDIM
+
+        force(veldir)=zero
+
         dir=1
-        mask_left=mask_array(D_DECL(-1,0,0))
-        mask_right=mask_array(D_DECL(1,0,0))
-         ! declared in: GLOBALUTIL.F90
-         ! mask_center=1 if mask_left==1 or mask_right==1
-         ! mask_center=0 if mask_left==0 and mask_right==0
-        call project_tensor(mask_center(dir),n_elastic, &
-         mask_left,mask_right,xflux_local,dir)
+        force(veldir)=force(veldir)+ &
+           (Htensor(dir,2)*rplus*xflux_local(1,veldir,dir)- &
+            Htensor(dir,1)*rminus*xflux_local(-1,veldir,dir))/hx
 
         dir=2
-        mask_left=mask_array(D_DECL(0,-1,0))
-        mask_right=mask_array(D_DECL(0,1,0))
-        call project_tensor(mask_center(dir),n_elastic, &
-         mask_left,mask_right,yflux_local,dir)
+        force(veldir)=force(veldir)+ &
+           (Htensor(dir,2)*yflux_local(1,veldir,dir)- &
+            Htensor(dir,1)*yflux_local(-1,veldir,dir))/hy
 
         if (SDIM.eq.3) then
          dir=SDIM
-         mask_left=mask_array(D_DECL(0,0,-1))
-         mask_right=mask_array(D_DECL(0,0,1))
-         call project_tensor(mask_center(dir),n_elastic, &
-           mask_left,mask_right,zflux_local,dir)
+         force(veldir)=force(veldir)+ &
+            (Htensor(dir,2)*zflux_local(1,veldir,dir)- &
+             Htensor(dir,1)*zflux_local(-1,veldir,dir))/hz
         endif
 
-        do veldir=1,SDIM
-
-         force(veldir)=zero
-
-         dir=1
-         force(veldir)=force(veldir)+ &
-          mask_center(dir)* &
-            (rplus*xflux_local(1,veldir,dir)- &
-             rminus*xflux_local(-1,veldir,dir))/hx
-
-         dir=2
-         force(veldir)=force(veldir)+ &
-          mask_center(dir)* &
-            (yflux_local(1,veldir,dir)- &
-             yflux_local(-1,veldir,dir))/hy
-
-         if (SDIM.eq.3) then
-          dir=SDIM
-          force(veldir)=force(veldir)+ &
-           mask_center(dir)* &
-             (zflux_local(1,veldir,dir)- &
-              zflux_local(-1,veldir,dir))/hz
-         endif
-
-        enddo ! veldir=1..sdim
-                 
-        if (irz.eq.0) then
-         ! do nothing
-        else if (irz.eq.1) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-          ! in RZ,
-          !  Q(3,3) gets 2 * hoop_22 (2 * xdisp/r) in 
-          !  subroutine local_tensor_from_xdisplace
-          !  -T33/r
-          ! in XY,
-          !  Q(3,3)=0.0
-          ! in R-Theta,
-          !  Q(3,3)=0.0
-          ! local_tensor_from_xdisplace called from FORT_UPDATETENSOR
-          ! In FORT_MAKETENSOR, Q is multiplied by the elastic bulk modulus.
-         veldir=1
-         bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
-         if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
-          ! do nothing
-         else
-          print *,"bodyforce overflow bodyforce,rval:",bodyforce,rval
-          stop
-         endif
-         force(veldir)=force(veldir)+bodyforce
-        else if (irz.eq.3) then
-          ! -T22/r
-         veldir=1
-         bodyforce=-Q(D_DECL(0,0,0),2,2)/rval
-         force(veldir)=force(veldir)+bodyforce
-        else
-         print *,"irz invalid"
-         stop
-        endif 
-
-        if (irz.eq.0) then
-         ! do nothing
-        else if (irz.eq.1) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-         ! do nothing
-        else if (irz.eq.3) then ! T12/r
-         veldir=2
-         bodyforce=Q(D_DECL(0,0,0),1,2)/rval
-         force(veldir)=force(veldir)+bodyforce
-        else
-         print *,"irz invalid"
-         stop
-        endif 
-
-        if (is_prescribed(nmat,im_parm+1).eq.1) then
-         print *,"im_parm should not be an is_prescribed material"
-         stop
-        else if (is_prescribed(nmat,im_parm+1).eq.0) then
-         do veldir=1,SDIM
-          force(veldir)=force(veldir)*dt
-         enddo
-        else
-         print *,"is_prescribed invalid"
+       enddo ! veldir=1..sdim
+                
+       if (irz.eq.0) then
+        ! do nothing
+       else if (irz.eq.1) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
          stop
         endif
-
-        do veldir=1,SDIM
-         deninv=rhoinverse(D_DECL(i,j,k),1)
-
-         if (deninv.ge.zero) then 
-          if (abs(force(veldir)).lt.OVERFLOW_CUTOFF) then
-           ! do nothing
-          else
-           print *,"viscoelastic overflow veldir,force ",veldir,force(veldir)
-           print *,"i,j,k,deninv ",i,j,k,deninv
-           stop
-          endif
-
-          velnew(D_DECL(i,j,k),veldir)= &
-           velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
-         else
-          print *,"deninv invalid"
-          stop
-         endif
-        enddo ! veldir
-
-        ! im_parm does not dominate the center cell.
-       else if (local_mask.eq.0) then
-        ! do nothing (velnew is not incremented)
+         ! in RZ,
+         !  Q(3,3) gets 2 * hoop_22 (2 * xdisp/r) in 
+         !  subroutine local_tensor_from_xdisplace
+         !  -T33/r
+         ! in XY,
+         !  Q(3,3)=0.0
+         ! in R-Theta,
+         !  Q(3,3)=0.0
+         ! local_tensor_from_xdisplace called from FORT_UPDATETENSOR
+         ! In FORT_MAKETENSOR, Q is multiplied by the elastic bulk modulus.
+        veldir=1
+        bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
+        if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
+         ! do nothing
+        else
+         print *,"bodyforce overflow bodyforce,rval:",bodyforce,rval
+         stop
+        endif
+        force(veldir)=force(veldir)+Htensor_cen*bodyforce
+       else if (irz.eq.3) then
+         ! -T22/r
+        veldir=1
+        bodyforce=-Q(D_DECL(0,0,0),2,2)/rval
+        force(veldir)=force(veldir)+Htensor_cen*bodyforce
        else
-        print *,"local_mask invalid"
+        print *,"irz invalid"
+        stop
+       endif 
+
+       if (irz.eq.0) then
+        ! do nothing
+       else if (irz.eq.1) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+        ! do nothing
+       else if (irz.eq.3) then ! T12/r
+        veldir=2
+        bodyforce=Q(D_DECL(0,0,0),1,2)/rval
+        force(veldir)=force(veldir)+Htensor_cen*bodyforce
+       else
+        print *,"irz invalid"
+        stop
+       endif 
+
+       if (is_prescribed(nmat,im_parm+1).eq.1) then
+        print *,"im_parm should not be an is_prescribed material"
+        stop
+       else if (is_prescribed(nmat,im_parm+1).eq.0) then
+        do veldir=1,SDIM
+         force(veldir)=force(veldir)*dt
+        enddo
+       else
+        print *,"is_prescribed invalid"
         stop
        endif
+
+       do veldir=1,SDIM
+        deninv=rhoinverse(D_DECL(i,j,k),1)
+
+        if (deninv.ge.zero) then 
+         if (abs(force(veldir)).lt.OVERFLOW_CUTOFF) then
+          ! do nothing
+         else
+          print *,"viscoelastic overflow veldir,force ",veldir,force(veldir)
+          print *,"i,j,k,deninv ",i,j,k,deninv
+          stop
+         endif
+
+         velnew(D_DECL(i,j,k),veldir)= &
+          velnew(D_DECL(i,j,k),veldir)+force(veldir)*deninv
+        else
+         print *,"deninv invalid"
+         stop
+        endif
+       enddo ! veldir=1..sdim
 
       enddo
       enddo
