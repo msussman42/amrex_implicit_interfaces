@@ -9430,7 +9430,9 @@ void NavierStokes::make_viscoelastic_force(int im) {
      ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,&bfact,&level,
-     &dt_slab,&rzflag,
+     &dt_slab,
+     &cur_time_slab,
+     &rzflag,
      &im,
      &viscoelastic_model[im],
      &nmat,&nden);
