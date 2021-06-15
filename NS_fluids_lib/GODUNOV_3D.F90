@@ -26721,6 +26721,7 @@ stop
       INTEGER_T dircomp
       INTEGER_T dir_deriv,dir_pos,dir_XD
       REAL_T, target :: xflux(SDIM)
+      REAL_T, target :: x_MAC_control_volume(SDIM)
       REAL_T xplus(SDIM)
       REAL_T xminus(SDIM)
       REAL_T XDplus(SDIM)
@@ -26734,6 +26735,7 @@ stop
       INTEGER_T im_LS
 
       INTEGER_T dir_local
+      REAL_T :: LS_control_volume(nmat)
       REAL_T, target :: cell_data_interp(nmat*(1+SDIM))
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -26835,9 +26837,9 @@ stop
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,57)
 
        do dircomp=1,SDIM
-        xflux(dircomp)=xstenMAC(0,dircomp)
+        x_MAC_control_volume(dircomp)=xstenMAC(0,dircomp)
        enddo
-       rval=xflux(1)
+       rval=x_MAC_control_volume(1)
 
        data_out%data_interp=>cell_data_interp
 
@@ -26856,11 +26858,16 @@ stop
 
        data_in%ncomp=nmat*(1+SDIM)
        data_in%scomp=1
-       data_in%xtarget=>xflux
+       data_in%xtarget=>x_MAC_control_volume
        data_in%interp_foot_flag=0
        call interp_from_grid_util(data_in,data_out)
 
-       call get_primary_material(cell_data_interp,nmat,local_mask)
+       do im_LS=1,nmat
+        LS_control_volume(im_LS)=cell_data_interp(im_LS)
+       enddo
+
+       call get_primary_material(LS_control_volume,nmat,local_mask)
+
        if ((local_mask.eq.im_elastic_p1).and. &
            (cell_data_interp(im_elastic_p1).gt.zero)) then
         local_mask=1
@@ -26871,7 +26878,7 @@ stop
         stop
        endif
         ! LS>0 if clamped
-       call SUB_clamped_LS(xflux,cur_time,LS_clamped, &
+       call SUB_clamped_LS(x_MAC_control_volume,cur_time,LS_clamped, &
              vel_clamped,temperature_clamped)
        if (LS_clamped.ge.zero) then
         local_mask=0
@@ -26883,12 +26890,12 @@ stop
        endif
        if ((rzflag.eq.1).or.(rzflag.eq.3)) then
         if (dir.eq.0) then
-         if (abs(xflux(dir+1)).le.VOFTOL*dx(dir+1)) then
+         if (abs(x_MAC_control_volume(dir+1)).le.VOFTOL*dx(dir+1)) then
           local_mask=0
-         else if (abs(xflux(dir+1)).ge.VOFTOL*dx(dir+1)) then
+         else if (abs(x_MAC_control_volume(dir+1)).ge.VOFTOL*dx(dir+1)) then
           ! do nothing
          else
-          print *,"xflux bust"
+          print *,"x_MAC_control_volume bust"
           stop
          endif
         else if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
@@ -26905,7 +26912,9 @@ stop
        endif
 
        XFORCE_local=zero
-               
+           
+       mask_control_volume=local_mask
+
         ! im_elastic_p1 dominates the center of the MAC control volume.
        if (local_mask.eq.1) then
  
@@ -26932,6 +26941,8 @@ stop
          ! center of the current (dir) MAC grid control volume:
          do dircomp=1,SDIM
           xflux(dircomp)=xstenMAC(0,dircomp)
+          xflux_plus_probe(dircomp)=xflux(dircomp)
+          xflux_minus_probe(dircomp)=xflux(dircomp)
          enddo
 
          if (dir_flux.eq.dir) then
@@ -26940,16 +26951,24 @@ stop
               (velbc(dir+1,side_flux+1,dir+1).ne.INT_DIR)) then 
             ! 1/2 size control vol
            xflux(dir_flux+1)=xstenMAC(0,dir_flux+1)
+           xflux_plus_probe(dir_flux+1)=xstenMAC(1,dir_flux+1)
+           xflux_minus_probe(dir_flux+1)=xstenMAC(-1,dir_flux+1)
           else if ((inormal.eq.domhi(dir+1)+1).and. &
                    (side_flux.eq.1).and. &
                    (velbc(dir+1,side_flux+1,dir+1).ne.INT_DIR)) then
            xflux(dir_flux+1)=xstenMAC(0,dir_flux+1)
+           xflux_plus_probe(dir_flux+1)=xstenMAC(1,dir_flux+1)
+           xflux_minus_probe(dir_flux+1)=xstenMAC(-1,dir_flux+1)
           else if ((inormal.ge.domlo(dir+1)).and. &
                    (inormal.le.domhi(dir+1)+1)) then
            if (side_flux.eq.0) then
             xflux(dir_flux+1)=xstenMAC(-1,dir_flux+1)
+            xflux_plus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
+            xflux_minus_probe(dir_flux+1)=xstenMAC(-2,dir_flux+1)
            else if (side_flux.eq.1) then
             xflux(dir_flux+1)=xstenMAC(1,dir_flux+1)
+            xflux_plus_probe(dir_flux+1)=xstenMAC(2,dir_flux+1)
+            xflux_minus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
            else
             print *,"side_flux invalid"
             stop
@@ -26961,8 +26980,12 @@ stop
          else if (dir_flux.ne.dir) then
           if (side_flux.eq.0) then
            xflux(dir_flux+1)=xstenMAC(-1,dir_flux+1)
+           xflux_plus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
+           xflux_minus_probe(dir_flux+1)=xstenMAC(-2,dir_flux+1)
           else if (side_flux.eq.1) then
            xflux(dir_flux+1)=xstenMAC(1,dir_flux+1)
+           xflux_plus_probe(dir_flux+1)=xstenMAC(2,dir_flux+1)
+           xflux_minus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
           else
            print *,"side_flux invalid"
            stop
@@ -27115,6 +27138,46 @@ stop
           x_at_flux_point(side_flux+1,dir_flux+1,dir_local)=xflux(dir_local)
          enddo
 
+         data_in%xtarget=>xflux_plus_probe
+         call interp_from_grid_util(data_in,data_out)
+
+         do im_LS=1,nmat*(1+SDIM)
+          LS_plus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
+                  cell_data_interp(im_LS)
+         enddo
+         call get_primary_material(cell_data_interp,nmat,local_mask)
+         if ((local_mask.eq.im_elastic_p1).and. &
+             (cell_data_interp(im_elastic_p1).gt.zero)) then
+          local_mask=1
+         else if ((local_mask.ge.1).and.(local_mask.le.nmat)) then
+          local_mask=0
+         else
+          print *,"local_mask invalid"
+          stop
+         endif
+         mask_plus_flux_point(side_flux+1,dir_flux+1)=local_mask
+
+         data_in%xtarget=>xflux_minus_probe
+         call interp_from_grid_util(data_in,data_out)
+
+         do im_LS=1,nmat*(1+SDIM)
+          LS_minus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
+                  cell_data_interp(im_LS)
+         enddo
+         call get_primary_material(cell_data_interp,nmat,local_mask)
+         if ((local_mask.eq.im_elastic_p1).and. &
+             (cell_data_interp(im_elastic_p1).gt.zero)) then
+          local_mask=1
+         else if ((local_mask.ge.1).and.(local_mask.le.nmat)) then
+          local_mask=0
+         else
+          print *,"local_mask invalid"
+          stop
+         endif
+         mask_minus_flux_point(side_flux+1,dir_flux+1)=local_mask
+
+
+
           ! hoop_22=xdisp/r
          center_hoop_22=center_hoop_22+hoop_22
 
@@ -27162,15 +27225,31 @@ stop
 
          ! [n dot tau dot n] = - sigma kappa
          ! [n dot tau dot tj] = 0
-        
+      
+        call tensor_Heaviside( &
+          dxmin, &
+          im_elastic, & ! 0..nmat-1
+          mask_control_volume,mask_control_volume, &
+          LS_control_volume,LS_control_volume, &
+          Htensor_cen)
+
         dir_local=1
-        mask_left=mask_flux_point(1,dir_local)
-        mask_right=mask_flux_point(2,dir_local)
+        mask_left=mask_minus_flux_point(1,dir_local)
+        mask_right=mask_plus_flux_point(1,dir_local)
          ! declared in: GLOBALUTIL.F90
          ! mask_center=1 if mask_left==1 or mask_right==1
          ! mask_center=0 if mask_left==0 and mask_right==0
         call project_tensor(mask_center(dir_local),n_elastic, &
           mask_left,mask_right,xflux_local,dir_local)
+        call tensor_Heaviside( &
+               dxmin, &
+               im_elastic, & ! 0..nmat-1
+               mask_left,mask_right, &
+               LS_left,LS_right, &
+               Htensor(dir_local,1))
+
+
+
 
         dir_local=2
         mask_left=mask_flux_point(1,dir_local)
