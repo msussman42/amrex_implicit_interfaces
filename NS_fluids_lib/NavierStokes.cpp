@@ -842,7 +842,12 @@ Vector<Real> NavierStokes::reaction_rate;
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
+//0=Palmore and Desjardins (Villegas, Tanguy, Desjardins) 
 //1=Tanasawa  2=Schrage 3=Kassemi
+//4=Kassemi except use the smoothed temperature probe in the
+//  Vapor.
+// 5=Stefan model in which T_interface=f(P_smooth)
+
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 //ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
@@ -11238,12 +11243,26 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("dx[dir] must be positive");
  } // dir=0..sdim-1
 
-
   // in: level_phase_change_rate()
  getStateDen_localMF(DEN_RECON_MF,normal_probe_size+3,cur_time_slab);
 
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
+
+ int local_temperature_smooth_mf=DEN_RECON_MF;
+ if (nucleation_flag==1) {
+  // do nothing
+ } else if (nucleation_flag==0) {
+  local_temperature_smooth_mf=TEMPERATURE_SMOOTH_MF;
+ } else
+  amrex::Error("nucleation_flag invalid");
+
+ debug_ngrow(local_temperature_smooth_mf,normal_probe_size+3,28); 
+
+ if (localMF[local_temperature_smooth_mf]->nComp()>=nmat) {
+  // do nothing
+ } else
+  amrex::Error("localMF[local_temperature_smooth_mf]->nComp() invalid");
 
  Vector<Real> blob_array;
  int blob_arraysize=num_elements_blobclass;
@@ -11657,6 +11676,9 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
+
+   FArrayBox& smoothfab=(*localMF[local_temperature_smooth_mf])[mfi];
+
    FArrayBox& presfab=(*presmf)[mfi]; 
    FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
@@ -11738,6 +11760,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
+     &smoothing_length_scale,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
@@ -11778,6 +11801,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
      Tsatfab.dataPtr(),
      ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
+     smoothfab.dataPtr(),
+     ARLIM(smoothfab.loVect()),ARLIM(smoothfab.hiVect()),
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -11825,6 +11850,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
+     &smoothing_length_scale,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
@@ -11865,6 +11891,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      lsnewfab.dataPtr(), //Tsatfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     smoothfab.dataPtr(),
+     ARLIM(smoothfab.loVect()),ARLIM(smoothfab.hiVect()),
      lsnewfab.dataPtr(), //lsfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      lsnewfab.dataPtr(),
