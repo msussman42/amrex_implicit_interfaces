@@ -17995,6 +17995,102 @@ enddo
 
 end subroutine stress_from_strain
 
+subroutine get_primary_material(LS,nmat,im_primary)
+use probcommon_module
+
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, intent(out) :: im_primary
+INTEGER_T im,imtest
+INTEGER_T tessellate
+INTEGER_T is_rigid_local(nmat)
+
+tessellate=0
+
+do im=1,nmat
+ is_rigid_local(im)=is_rigid(nmat,im)
+ if (tessellate.eq.2) then
+  is_rigid_local(im)=0
+  print *,"expecting tessellate==0"
+  stop
+ else if (tessellate.eq.0) then
+  ! do nothing
+ else if (tessellate.eq.1) then
+  print *,"expecting tessellate==0"
+  stop
+ else if (tessellate.eq.3) then
+  print *,"expecting tessellate==0"
+  stop
+ else
+  print *,"tessellate invalid38"
+  stop
+ endif
+enddo ! im=1..nmat
+
+if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
+ print *,"nmat invalid get_primary_material"
+ print *,"nmat= ",nmat
+ stop
+endif
+
+im_primary=0
+do im=1,nmat
+ if (is_rigid_local(im).eq.1) then
+  if (LS(im).ge.zero) then
+   if (im_primary.ne.0) then
+    print *,"cannot have two rigid materials in same place"
+    do imtest=1,nmat
+     print *,"imtest,LS(imtest) ",imtest,LS(imtest)
+    enddo
+    stop
+   endif
+   im_primary=im
+  else if (LS(im).le.zero) then
+   ! do nothing
+  else
+   print *,"LS bust"
+   stop
+  endif
+ else if (is_rigid_local(im).eq.0) then
+  ! do nothing
+ else
+  print *,"is_rigid invalid"
+  stop
+ endif
+enddo !im=1..nmat
+
+if (im_primary.eq.0) then
+
+ do im=1,nmat
+   if (im_primary.eq.0) then
+    im_primary=im
+   else if ((im_primary.ge.1).and.(im_primary.lt.im)) then
+    if (LS(im).gt.LS(im_primary)) then
+     im_primary=im
+    else if (LS(im).le.LS(im_primary)) then
+     ! do nothing
+    else
+     print *,"LS bust"
+     stop
+    endif
+   else
+    print *,"im_primary invalid"
+    stop
+   endif
+ enddo !im=1..nmat
+
+else if (is_rigid_local(im_primary).eq.1) then
+ ! do nothing
+else
+ print *,"is_rigid or im_primary invalid"
+ stop
+endif
+
+end subroutine get_primary_material
+
+
 subroutine tensor_Heaviside( &
     dxmin, &
     im_parm, & ! 0..nmat-1
@@ -18002,15 +18098,16 @@ subroutine tensor_Heaviside( &
     LS1,LS2, &
     HVAL)
 use probcommon_module
-use MOF_routines_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: dxmin
-INTEGER_T, intent(in) :: im_parm
+INTEGER_T, intent(in) :: im_parm ! 0..nmat-1
 REAL_T, intent(out) :: HVAL
 INTEGER_T, intent(in) :: mask1,mask2
 REAL_T, intent(in) :: LS1(num_materials)
 REAL_T, intent(in) :: LS2(num_materials)
+INTEGER_T im1,im2
+REAL_T LS_avg
 
 if ((im_parm.ge.0).and.(im_parm.lt.num_materials)) then
  ! do nothing

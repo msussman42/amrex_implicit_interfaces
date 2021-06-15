@@ -5959,8 +5959,6 @@ END SUBROUTINE SIMP
        lof,hif) 
 
       use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
       use probcommon_module
       use navierstokesf90_module
 
@@ -6750,8 +6748,6 @@ END SUBROUTINE SIMP
        loc,hic) 
 
       use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
       use probcommon_module
       use navierstokesf90_module
 
@@ -12716,8 +12712,8 @@ END SUBROUTINE SIMP
         nden)
 
       use global_utility_module
-      use MOF_routines_module
       use probf90_module
+      use MOF_routines_module
 
       IMPLICIT NONE
 

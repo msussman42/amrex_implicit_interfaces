@@ -5184,6 +5184,7 @@ stop
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
+      use probf90_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: massface_index
@@ -5243,6 +5244,7 @@ stop
       REAL_T x_control_volume(SDIM)
       INTEGER_T nhalf
       INTEGER_T imlocal
+      REAL_T LS_local(nmat)
       REAL_T LS_control_volume(nmat)
       REAL_T LS_left(nmat)
       REAL_T LS_right(nmat)
@@ -5450,6 +5452,7 @@ stop
 
        mask_control_volume=mask_array(D_DECL(0,0,0))
 
+        ! SUB_clamped_LS is declared in PROB.F90
         ! LS>0 if clamped
        call SUB_clamped_LS(x_control_volume,cur_time,LS_clamped, &
              vel_clamped,temperature_clamped)
@@ -5592,49 +5595,49 @@ stop
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_control_volume, &
-          LS_control_volume,LS_control_volume,
+          LS_control_volume,LS_control_volume, &
           Htensor_cen)
 
         dir=1
         mask_left=mask_array(D_DECL(-1,0,0))
         mask_right=mask_array(D_DECL(1,0,0))
         do imlocal=1,nmat
-         LS_left(im_local)=LS_array(D_DECL(-1,0,0),imlocal)
-         LS_right(im_local)=LS_array(D_DECL(1,0,0),imlocal)
+         LS_left(imlocal)=LS_array(D_DECL(-1,0,0),imlocal)
+         LS_right(imlocal)=LS_array(D_DECL(1,0,0),imlocal)
         enddo
          ! declared in: GLOBALUTIL.F90
         call tensor_Heaviside( &
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_left, &
-          LS_control_volume,LS_left,
+          LS_control_volume,LS_left, &
           Htensor(dir,1))
         call tensor_Heaviside( &
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_right, &
-          LS_control_volume,LS_right,
+          LS_control_volume,LS_right, &
           Htensor(dir,2))
 
         dir=2
         mask_left=mask_array(D_DECL(0,-1,0))
         mask_right=mask_array(D_DECL(0,1,0))
         do imlocal=1,nmat
-         LS_left(im_local)=LS_array(D_DECL(0,-1,0),imlocal)
-         LS_right(im_local)=LS_array(D_DECL(0,1,0),imlocal)
+         LS_left(imlocal)=LS_array(D_DECL(0,-1,0),imlocal)
+         LS_right(imlocal)=LS_array(D_DECL(0,1,0),imlocal)
         enddo
          ! declared in: GLOBALUTIL.F90
         call tensor_Heaviside( &
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_left, &
-          LS_control_volume,LS_left,
+          LS_control_volume,LS_left, &
           Htensor(dir,1))
         call tensor_Heaviside( &
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_right, &
-          LS_control_volume,LS_right,
+          LS_control_volume,LS_right, &
           Htensor(dir,2))
 
         if (SDIM.eq.3) then
@@ -5642,20 +5645,20 @@ stop
          mask_left=mask_array(D_DECL(0,0,-1))
          mask_right=mask_array(D_DECL(0,0,1))
          do imlocal=1,nmat
-          LS_left(im_local)=LS_array(D_DECL(0,0,-1),imlocal)
-          LS_right(im_local)=LS_array(D_DECL(0,0,1),imlocal)
+          LS_left(imlocal)=LS_array(D_DECL(0,0,-1),imlocal)
+          LS_right(imlocal)=LS_array(D_DECL(0,0,1),imlocal)
          enddo
          call tensor_Heaviside( &
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_left, &
-          LS_control_volume,LS_left,
+          LS_control_volume,LS_left, &
           Htensor(dir,1))
          call tensor_Heaviside( &
           dxmin, &
           im_parm, & ! 0..nmat-1
           mask_control_volume,mask_right, &
-          LS_control_volume,LS_right,
+          LS_control_volume,LS_right, &
           Htensor(dir,2))
         endif
 
@@ -5810,7 +5813,6 @@ stop
        nmat,nden)
       use probcommon_module
       use global_utility_module
-      use MOF_routines_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: massface_index
@@ -15484,7 +15486,6 @@ stop
 
       use probf90_module
       use global_utility_module
-      use MOF_routines_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level
@@ -17445,8 +17446,6 @@ stop
       recon,DIMS(recon))
       use probf90_module
       use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -26748,6 +26747,8 @@ stop
       INTEGER_T dircomp
       INTEGER_T dir_deriv,dir_pos,dir_XD
       REAL_T, target :: xflux(SDIM)
+      REAL_T, target :: xflux_plus_probe(SDIM)
+      REAL_T, target :: xflux_minus_probe(SDIM)
       REAL_T, target :: x_MAC_control_volume(SDIM)
       REAL_T xplus(SDIM)
       REAL_T xminus(SDIM)
@@ -26766,7 +26767,6 @@ stop
       REAL_T :: LS_control_volume(nmat)
       REAL_T :: LS_right(nmat)
       REAL_T :: LS_left(nmat)
-      REAL_T :: LS_local(nmat)
       REAL_T, target :: cell_data_interp(nmat*(1+SDIM))
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -26794,6 +26794,7 @@ stop
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       INTEGER_T local_mask
+      INTEGER_T mask_control_volume
       INTEGER_T mask_left,mask_right
       REAL_T force(SDIM)
       REAL_T bodyforce
@@ -27260,20 +27261,22 @@ stop
         do dir_local=1,SDIM
         do side_local=1,2
 
-        mask_left=mask_minus_flux_point(side_local,dir_local)
-        mask_right=mask_plus_flux_point(side_local,dir_local)
-        do im_LS=1,nmat
-         LS_left(im_LS)=LS_minus_at_flux_point(side_local,dir_local,im_LS)
-         LS_right(im_LS)=LS_plus_at_flux_point(side_local,dir_local,im_LS)
-        enddo
+         mask_left=mask_minus_flux_point(side_local,dir_local)
+         mask_right=mask_plus_flux_point(side_local,dir_local)
+         do im_LS=1,nmat
+          LS_left(im_LS)=LS_minus_at_flux_point(side_local,dir_local,im_LS)
+          LS_right(im_LS)=LS_plus_at_flux_point(side_local,dir_local,im_LS)
+         enddo
 
-         ! declared in: GLOBALUTIL.F90
-        call tensor_Heaviside( &
-         dxmin, &
-         im_elastic, & ! 0..nmat-1
-         mask_left,mask_right, &
-         LS_left,LS_right, &
-         Htensor(dir_local,side_local))
+          ! declared in: GLOBALUTIL.F90
+         call tensor_Heaviside( &
+          dxmin, &
+          im_elastic, & ! 0..nmat-1
+          mask_left,mask_right, &
+          LS_left,LS_right, &
+          Htensor(dir_local,side_local))
+        enddo ! side_local=1,2
+        enddo ! dir_local=1,SDIM
 
         dir_local=1
         hx=x_at_flux_point(2,dir_local,dir_local)- &

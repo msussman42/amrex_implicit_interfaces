@@ -3399,8 +3399,6 @@ stop
        level,finest_level)
       use probcommon_module
       use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
       use mass_transfer_module
 
       IMPLICIT NONE
@@ -6720,7 +6718,6 @@ stop
         LS,DIMS(LS))  ! old level set function before phase change
       use probcommon_module
       use global_utility_module
-      use MOF_routines_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: velflag

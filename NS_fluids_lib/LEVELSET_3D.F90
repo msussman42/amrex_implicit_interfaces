@@ -160,8 +160,6 @@ stop
         use global_utility_module
         use global_distance_module
         use probf90_module
-        use geometry_intersect_module
-        use MOF_routines_module
         use ZEYU_LS_extrapolation, only : level_set_extrapolation
         IMPLICIT NONE
         type(cell_CP_parm_type), intent(in) :: cell_CP_parm
@@ -2792,7 +2790,6 @@ stop
 
       use global_utility_module
       use probcommon_module
-      use MOF_routines_module
       use levelset_module
 
       IMPLICIT NONE

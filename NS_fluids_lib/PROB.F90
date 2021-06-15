@@ -6301,7 +6301,6 @@ END SUBROUTINE Adist
       subroutine fluid_interface(LSleft,LSright, &
         gradh,im_opp,im,nmat)
       use global_utility_module
-      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -6587,7 +6586,6 @@ END SUBROUTINE Adist
         gradh,im_opp,im,nmat,nten)
 
       use global_utility_module
-      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -6716,7 +6714,6 @@ END SUBROUTINE Adist
         radius_cutoff, &
         err,time)
 
-      use MOF_routines_module
       use global_utility_module
 
       IMPLICIT NONE
