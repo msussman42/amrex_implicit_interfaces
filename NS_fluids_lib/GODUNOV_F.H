@@ -238,8 +238,9 @@ extern "C"
     const int* fablo,const int* fabhi,int* bfact,
     int* level,
     Real* dt,
+    Real* cur_time,
     int* irz,
-    int* im,
+    int* im, // =0..nmat-1
     int* viscoelastic_model,
     int* nmat,
     int* nden);
