@@ -1912,7 +1912,11 @@ protected:
      // 1-2 1-3 1-4 2-3 2-4 3-4
      // 2-1 3-1 4-1 3-2 4-2 4-3
     static Vector<int> freezing_model;
+     // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
+     // 4=Kassemi except use the smoothed temperature probe in the
+     //   Vapor.
+     // 5=Stefan model in which T_interface=f(P_smooth)
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
      // index: 1..2*nten
      // value: 1..num_species_var

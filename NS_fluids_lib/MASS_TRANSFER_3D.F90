@@ -7087,6 +7087,7 @@ stop
        macrolayer_size, &
        max_contact_line_size, &
        R_Palmore_Desjardins, &
+       smoothing_length_scale, &
        latent_heat, &
        use_exact_temperature, &
        reaction_rate, &
@@ -7122,6 +7123,7 @@ stop
        maskcov,DIMS(maskcov), &
        burnvel,DIMS(burnvel), &
        Tsatfab,DIMS(Tsatfab), &
+       smoothfab,DIMS(smoothfab), &
        LS,DIMS(LS),  &
        LSnew,DIMS(LSnew), & 
        Snew,DIMS(Snew), & 
@@ -7179,6 +7181,7 @@ stop
       REAL_T, intent(in) :: macrolayer_size(nmat)
       REAL_T, intent(in) :: max_contact_line_size(nmat)
       REAL_T, intent(in) :: R_Palmore_Desjardins
+      REAL_T, intent(in) :: smoothing_length_scale
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: use_exact_temperature(2*nten)
       REAL_T, intent(in) :: reaction_rate(2*nten)
@@ -7219,6 +7222,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(burnvel)
       INTEGER_T, intent(in) :: DIMDEC(Tsatfab)
+      INTEGER_T, intent(in) :: DIMDEC(smoothfab)
       INTEGER_T, intent(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       INTEGER_T, intent(in) :: DIMDEC(Snew)
@@ -7238,6 +7242,7 @@ stop
       REAL_T, intent(out) :: burnvel(DIMV(burnvel),nburning)
         ! TSAT : first nten components are the status.
       REAL_T, intent(out) :: Tsatfab(DIMV(Tsatfab),ntsat)
+      REAL_T, intent(in) :: smoothfab(DIMV(smoothfab),nmat)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
@@ -7397,6 +7402,13 @@ stop
        stop
       endif
 
+      if (smoothing_length_scale.ge.zero) then
+       ! do nothing
+      else
+       print *,"smoothing_length_scale invalid"
+       stop
+      endif
+
       Y_TOLERANCE=0.01D0
 
       if ((stefan_flag.eq.0).or.(stefan_flag.eq.1)) then
@@ -7543,6 +7555,10 @@ stop
        call checkbound(fablo,fabhi, &
         DIMS(Tsatfab), &
         ngrow_make_distance,-1,1250)
+
+       call checkbound(fablo,fabhi, &
+        DIMS(smoothfab), &
+        ngrow_distance,-1,1250)
 
        call checkbound(fablo,fabhi, &
         DIMS(curvfab), &
