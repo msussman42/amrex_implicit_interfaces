@@ -40,6 +40,7 @@ stop
        INTEGER_T :: tid
        INTEGER_T :: use_supermesh
        INTEGER_T :: probe_constrain
+       REAL_T :: smoothing_length_scale
        REAL_T, pointer :: Y_TOLERANCE
        INTEGER_T, pointer :: local_freezing_model
        REAL_T, pointer :: LL
@@ -74,6 +75,8 @@ stop
        INTEGER_T, pointer :: fabhi(:)
        INTEGER_T :: DIMDEC(EOS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       INTEGER_T :: DIMDEC(smoothfab)
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: smoothfab
        INTEGER_T :: DIMDEC(recon)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: recon
        INTEGER_T :: DIMDEC(LS)
@@ -2184,6 +2187,7 @@ stop
        pres_I_interp, &
        vfrac_I, &  ! solids and fluids tessellate
        T_probe_raw, &
+       T_probe_raw_smooth, &
        dxprobe_target, &
        interp_valid_flag, &
        at_interface)
@@ -2198,6 +2202,7 @@ stop
       REAL_T, intent(out) :: T_probe(2)
       REAL_T :: T_probe_no_constrain
       REAL_T, intent(out) :: T_probe_raw(2)
+      REAL_T, intent(out) :: T_probe_raw_smooth(2)
       REAL_T, intent(out) :: Y_probe(2)
       REAL_T :: Y_probe_no_constrain
       REAL_T, intent(out) :: den_I_interp(2)
@@ -2779,6 +2784,32 @@ stop
         PROBE_PARMS%recon, &
         DIMS(PROBE_PARMS%recon), &
         T_probe_raw(iprobe))
+
+       if (PROBE_PARMS%smoothing_length_scale.eq.zero) then
+        T_probe_raw_smooth(iprobe)=T_probe_raw(iprobe)
+       else if (PROBE_PARMS%smoothing_length_scale.gt.zero) then 
+        call interpfabFWEIGHT( &
+         PROBE_PARMS%bfact, &
+         PROBE_PARMS%level, &
+         PROBE_PARMS%finest_level, &
+         PROBE_PARMS%dx, &
+         PROBE_PARMS%xlo, &
+         xtarget_probe, &
+         im_target_probe(iprobe), &
+         PROBE_PARMS%nmat, &
+         im_target_probe(iprobe), &
+         PROBE_PARMS%ngrow, &
+         PROBE_PARMS%fablo, &
+         PROBE_PARMS%fabhi, &
+         PROBE_PARMS%smoothfab, &
+         DIMS(PROBE_PARMS%smoothfab), &
+         PROBE_PARMS%recon, &
+         DIMS(PROBE_PARMS%recon), &
+         T_probe_raw_smooth(iprobe))
+       else 
+        print *,"PROBE_PARMS%smoothing_length_scale invalid"
+        stop
+       endif
 
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
@@ -7242,7 +7273,7 @@ stop
       REAL_T, intent(out) :: burnvel(DIMV(burnvel),nburning)
         ! TSAT : first nten components are the status.
       REAL_T, intent(out) :: Tsatfab(DIMV(Tsatfab),ntsat)
-      REAL_T, intent(in) :: smoothfab(DIMV(smoothfab),nmat)
+      REAL_T, target, intent(in) :: smoothfab(DIMV(smoothfab),nmat)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
@@ -7291,6 +7322,7 @@ stop
       REAL_T LShere(nmat)
       REAL_T T_probe(2) ! iprobe=1 source; iprobe=2 dest.
       REAL_T T_probe_raw(2) ! iprobe=1 source; iprobe=2 dest.
+      REAL_T T_probe_raw_smooth(2) ! iprobe=1 source; iprobe=2 dest.
       REAL_T Y_probe(2)
       REAL_T den_I_interp(2)
       REAL_T den_probe(2)
@@ -7426,8 +7458,15 @@ stop
        stop
       endif
 
-      if ((nucleation_flag.eq.0).or.(nucleation_flag.eq.1)) then
+      if (nucleation_flag.eq.0) then
        ! do nothing
+      else if (nucleation_flag.eq.1) then
+       if (smoothing_length_scale.eq.zero) then
+        ! do nothing
+       else
+        print *,"expecting smoothing_length_scale==0"
+        stop
+       endif
       else
        print *,"nucleation_flag invalid"
        stop
@@ -7703,10 +7742,13 @@ stop
       create_in%cur_time=cur_time
       create_in%dt=dt
 
-        ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
+        ! copy_dimdec(dest,source), declared in: GLOBALUTIL.F90
       call copy_dimdec( &
         DIMS(PROBE_PARMS%EOS), &
         DIMS(EOS))
+      call copy_dimdec( &
+        DIMS(PROBE_PARMS%smoothfab), &
+        DIMS(smoothfab))
       call copy_dimdec( &
         DIMS(PROBE_PARMS%recon), &
         DIMS(recon))
@@ -7720,10 +7762,13 @@ stop
       PROBE_PARMS%tid=tid
       PROBE_PARMS%use_supermesh=use_supermesh
 
+      PROBE_PARMS%smoothing_length_scale=smoothing_length_scale
+
       PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
 
       PROBE_PARMS%debugrate=>debugrate
       PROBE_PARMS%EOS=>EOS 
+      PROBE_PARMS%smoothfab=>smoothfab 
       PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
       PROBE_PARMS%recon=>recon
       PROBE_PARMS%pres=>pres
@@ -8317,13 +8362,15 @@ stop
                   PROBE_PARMS, &
                   local_Tsat(ireverse), &
                   Y_predict, &
-                  T_probe,Y_probe, &
+                  T_probe, & !iprobe=1 source; iprobe=2 dest
+                  Y_probe, &
                   den_I_interp, &
                   den_probe, &
                   T_I_interp,Y_I_interp, &
                   pres_I_interp, &
                   vfrac_I, &
-                  T_probe_raw, &
+                  T_probe_raw, & !T_probe(1)=T_src_probe T_probe(2)=T_dst_probe
+                  T_probe_raw_smooth, & 
                   dxprobe_target, &
                   interp_valid_flag_initial, &
                   at_interface)

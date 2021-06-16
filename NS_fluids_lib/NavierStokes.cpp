@@ -11250,10 +11250,12 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
  int local_temperature_smooth_mf=DEN_RECON_MF;
+ Real local_smoothing_length_scale=0.0;
  if (nucleation_flag==1) {
   // do nothing
  } else if (nucleation_flag==0) {
   local_temperature_smooth_mf=TEMPERATURE_SMOOTH_MF;
+  local_smoothing_length_scale=smoothing_length_scale;
  } else
   amrex::Error("nucleation_flag invalid");
 
@@ -11760,7 +11762,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
-     &smoothing_length_scale,
+     &local_smoothing_length_scale,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
@@ -11850,7 +11852,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
-     &smoothing_length_scale,
+     &local_smoothing_length_scale,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
