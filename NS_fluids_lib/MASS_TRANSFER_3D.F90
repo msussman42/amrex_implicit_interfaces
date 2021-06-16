@@ -8421,6 +8421,7 @@ stop
                    pres_I_interp, &
                    vfrac_I, &
                    T_probe_raw, &
+                   T_probe_raw_smooth, & 
                    dxprobe_target, &
                    interp_valid_flag, &
                    at_interface)
@@ -8435,7 +8436,9 @@ stop
 
                    if (at_interface.eq.1) then
                     if (hardwire_flag(ireverse).eq.0) then
-                     if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
+                     if ((local_Tanasawa_or_Schrage_or_Kassemi.eq.3).or. &
+                         (local_Tanasawa_or_Schrage_or_Kassemi.eq.4).or. & 
+                         (local_Tanasawa_or_Schrage_or_Kassemi.eq.5)) then
                       fully_saturated=2
                       Y_predict=one
                       X_predict=one
