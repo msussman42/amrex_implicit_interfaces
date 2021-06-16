@@ -23514,7 +23514,7 @@ end subroutine RatePhaseChange
        molar_mass, &
        species_molar_mass, &
        local_freezing_model, &
-         ! 1=Tanasawa  2=Schrage 3=Kassemi
+         ! 1=Tanasawa  2=Schrage 3=Kassemi 4="T_gamma=f(P_vapor_smooth)"
        local_Tanasawa_or_Schrage_or_Kassemi, & 
        distribute_from_target, &
        vel, &
@@ -23555,7 +23555,7 @@ end subroutine RatePhaseChange
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
       INTEGER_T, intent(in) :: local_freezing_model
-!1=Tanasawa 2=Schrage 3=Kassemi
+!1=Tanasawa 2=Schrage 3=Kassemi 4="T_gamma=f(Pressure_vapor_smooth)"
       INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage_or_Kassemi
        ! MEHDI EVAPORATION
       INTEGER_T, intent(in) :: ispec ! 0 if no species  1..num_species_var

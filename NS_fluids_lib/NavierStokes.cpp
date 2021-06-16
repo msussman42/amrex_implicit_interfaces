@@ -842,13 +842,12 @@ Vector<Real> NavierStokes::reaction_rate;
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
+
 //0=Palmore and Desjardins (Villegas, Tanguy, Desjardins) 
 //1=Tanasawa  2=Schrage 3=Kassemi
-//4=Kassemi except use the smoothed temperature probe in the
-//  Vapor.
-// 5=Stefan model in which T_interface=f(P_smooth)
-
+//4=Stefan model in which T_interface=f(Pressure_smooth)
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
+
 //ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)

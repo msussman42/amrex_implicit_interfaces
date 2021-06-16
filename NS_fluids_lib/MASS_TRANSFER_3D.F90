@@ -2785,6 +2785,12 @@ stop
         DIMS(PROBE_PARMS%recon), &
         T_probe_raw(iprobe))
 
+       if (T_probe_raw(iprobe).lt.zero) then
+        print *,"T_probe_raw went negative"
+        print *,"T_probe_raw ",T_probe_raw(iprobe)
+        stop
+       endif
+
        if (PROBE_PARMS%smoothing_length_scale.eq.zero) then
         T_probe_raw_smooth(iprobe)=T_probe_raw(iprobe)
        else if (PROBE_PARMS%smoothing_length_scale.gt.zero) then 
@@ -2806,6 +2812,13 @@ stop
          PROBE_PARMS%recon, &
          DIMS(PROBE_PARMS%recon), &
          T_probe_raw_smooth(iprobe))
+
+        if (T_probe_raw_smooth(iprobe).lt.zero) then
+         print *,"T_probe_raw_smooth went negative"
+         print *,"T_probe_raw_smooth ",T_probe_raw_smooth(iprobe)
+         stop
+        endif
+
        else 
         print *,"PROBE_PARMS%smoothing_length_scale invalid"
         stop
@@ -2962,6 +2975,7 @@ stop
       REAL_T pres_I_interp(2)
       REAL_T vfrac_I(2)
       REAL_T T_probe_raw(2)
+      REAL_T T_probe_raw_smooth(2)
       REAL_T dxprobe_target(2)
       INTEGER_T interp_valid_flag(2)
       INTEGER_T at_interface
@@ -2971,7 +2985,10 @@ stop
       REAL_T YI_min
       INTEGER_T Kassemi_flag
       REAL_T Pgamma
-      REAL_T density_probe,Tvapor_probe,internal_energy,Pvapor_probe
+      REAL_T density_probe
+      REAL_T Tvapor_probe
+      REAL_T Tvapor_probe_smooth
+      REAL_T internal_energy,Pvapor_probe
       INTEGER_T im_probe
       INTEGER_T imattype
       REAL_T massfrac_parm(num_species_var+1)
@@ -2996,6 +3013,7 @@ stop
         pres_I_interp, &
         vfrac_I, &
         T_probe_raw, &
+        T_probe_raw_smooth, &
         dxprobe_target, &
         interp_valid_flag, &
         at_interface)
@@ -3019,7 +3037,7 @@ stop
 
          Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
 
-         if (Kassemi_flag.eq.0) then
+         if (Kassemi_flag.eq.0) then ! Palmore/Desjardins
 
           D_MASS=TSAT_Y_PARMS%D_MASS
           den_G=TSAT_Y_PARMS%den_G
@@ -3055,7 +3073,7 @@ stop
            stop
           endif
 
-         else if (Kassemi_flag.eq.3) then
+         else if (Kassemi_flag.eq.3) then ! Kassemi model
 
           call Pgamma_Clausius_Clapyron( &
            Pgamma, &
@@ -3068,10 +3086,11 @@ stop
 
           density_probe=den_I_interp(iprobe_vapor)
           Tvapor_probe=T_probe(iprobe_vapor)
+          Tvapor_probe_smooth=T_probe_raw_smooth(iprobe_vapor)
 
-          if (LL.gt.zero) then 
+          if (LL.gt.zero) then  ! evaporation (destination=vapor)
            im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_dest
-          else if (LL.lt.zero) then
+          else if (LL.lt.zero) then ! condensation (source=vapor)
            im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_source
           else
            print *,"LL invalid"
@@ -3085,7 +3104,7 @@ stop
 
           imattype=TSAT_Y_PARMS%material_type_evap(im_probe)
           call INTERNAL_material(density_probe,massfrac_parm, &
-            Tvapor_probe,internal_energy,imattype,im_probe)
+            Tvapor_probe_smooth,internal_energy,imattype,im_probe)
           call EOS_material(density_probe,massfrac_parm,internal_energy, &
             Pvapor_probe,imattype,im_probe)
 
@@ -3096,13 +3115,13 @@ stop
              Pgamma, &
              Pvapor_probe, &
              T_gamma, &
-             Tvapor_probe, &
+             Tvapor_probe_smooth, &
              mdotY)
           mdotY_top=mdotY
           mdotY_bot=one
 
          else
-          print *,"Kassemi_flag invalid"
+          print *,"Kassemi_flag invalid in mdot_from_Y_probe"
           stop
          endif
 
@@ -3148,6 +3167,7 @@ stop
       REAL_T pres_I_interp(2)
       REAL_T vfrac_I(2)
       REAL_T T_probe_raw(2)
+      REAL_T T_probe_raw_smooth(2)
       REAL_T dxprobe_target(2)
       INTEGER_T interp_valid_flag(2)
       INTEGER_T at_interface
@@ -3181,6 +3201,7 @@ stop
          pres_I_interp, &
          vfrac_I, &
          T_probe_raw, &
+         T_probe_raw_smooth, &
          dxprobe_target, &
          interp_valid_flag, &
          at_interface)
@@ -7365,6 +7386,7 @@ stop
       REAL_T newphi_substrate
       INTEGER_T, target :: dencomp_source,dencomp_dest
       INTEGER_T ispec
+      INTEGER_T local_ispec
       REAL_T vapor_den
       REAL_T source_perim_factor,dest_perim_factor
       REAL_T contact_line_perim
@@ -7401,7 +7423,9 @@ stop
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
       type(nucleation_parm_type_input) :: create_in
       type(nucleation_parm_type_inout) :: create_inout
-      INTEGER_T iprobe,im_probe,microlayer_substrate_probe
+      INTEGER_T iprobe
+      INTEGER_T im_probe
+      INTEGER_T microlayer_substrate_probe
       REAL_T x_gamma_a,x_gamma_b,x_gamma_c
       REAL_T Y_gamma_a,Y_gamma_b,Y_gamma_c
       REAL_T T_gamma_a,T_gamma_b,T_gamma_c
@@ -7413,6 +7437,10 @@ stop
       REAL_T mdotY_top_debug,mdotY_bot_debug,mdotY_debug
       REAL_T TEMP_PROBE_source
       REAL_T TEMP_PROBE_dest
+
+      REAL_T massfrac_parm(num_species_var+1)
+      REAL_T Pvapor_probe
+      REAL_T internal_energy
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -8408,6 +8436,27 @@ stop
 
                  do while (TSAT_converge.eq.0) 
 
+                  TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
+                        local_Tanasawa_or_Schrage_or_Kassemi
+                  TSAT_Y_PARMS%accommodation_coefficient= &
+                        accommodation_coefficient(iten+ireverse*nten) 
+
+                  TSAT_Y_PARMS%reference_pressure= &
+                        reference_pressure(iten+ireverse*nten) 
+                  if (TSAT_Y_PARMS%reference_pressure.gt.zero) then
+                   ! do nothing
+                  else
+                   print *,"expecting TSAT_Y_PARMS%reference_pressure>0"
+                   stop
+                  endif
+
+                  TSAT_Y_PARMS%universal_gas_constant_R= &
+                        R_Palmore_Desjardins
+                  TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
+                  TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
+                  TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
+                  TSAT_Y_PARMS%material_type_evap=>material_type_evap
+
                   !iprobe=1 source
                   !iprobe=2 dest
                   call probe_interpolation( &
@@ -8436,16 +8485,72 @@ stop
 
                    if (at_interface.eq.1) then
                     if (hardwire_flag(ireverse).eq.0) then
+                      ! 3=Kassemi model
+                      ! 4=Stefan model with "T_gamma=f(Pressure_smooth)"
                      if ((local_Tanasawa_or_Schrage_or_Kassemi.eq.3).or. &
-                         (local_Tanasawa_or_Schrage_or_Kassemi.eq.4).or. & 
-                         (local_Tanasawa_or_Schrage_or_Kassemi.eq.5)) then
+                         (local_Tanasawa_or_Schrage_or_Kassemi.eq.4)) then
                       fully_saturated=2
                       Y_predict=one
                       X_predict=one
-                      T_gamma_a=TSAT_predict
-                      T_gamma_b=TSAT_predict
                       Y_gamma_a=Y_predict
                       Y_gamma_b=Y_predict
+
+                      if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
+                       ! do nothing
+                      else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.4) then
+                       fully_saturated=3
+                       if (PROBE_PARMS%LL.gt.zero) then  ! evaporation 
+                        im_probe=im_dest
+                       else if (PROBE_PARMS%LL.lt.zero) then ! condensation 
+                        im_probe=im_source
+                       else
+                        print *,"LL invalid"
+                        stop
+                       endif
+
+                       call init_massfrac_parm( &
+                          den_I_interp(iprobe_vapor), &
+                          massfrac_parm,im_probe)
+                       do local_ispec=1,num_species_var
+                        massfrac_parm(local_ispec)=Y_predict
+                       enddo
+                       call INTERNAL_material( &
+                         den_I_interp(iprobe_vapor), &
+                         massfrac_parm, &
+                         T_probe_raw_smooth(iprobe_vapor), &
+                         internal_energy, &
+                         material_type_evap(im_probe), &
+                         im_probe)
+                       call EOS_material( &
+                         den_I_interp(iprobe_vapor), &
+                         massfrac_parm, &
+                         internal_energy, &
+                         Pvapor_probe, &
+                         material_type_evap(im_probe), &
+                         im_probe)
+                       X_predict=Pvapor_probe/TSAT_Y_PARMS%reference_pressure
+                       if (X_predict.gt.one) then
+                        TSAT_predict=local_Tsat(ireverse)
+                       else if ((X_predict.gt.zero).and. &
+                                (X_predict.le.one)) then 
+                        call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                          local_Tsat(ireverse), &
+                          X_predict, &
+                          PROBE_PARMS%LL, &
+                          R_Palmore_Desjardins, &
+                          molar_mass_vapor,TI_min,TI_max)
+                       else
+                        print *,"X_predict invalid"
+                        stop
+                       endif
+                       X_predict=one 
+                      else
+                       print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
+                       stop
+                      endif
+
+                      T_gamma_a=TSAT_predict
+                      T_gamma_b=TSAT_predict
                      else if ((Y_probe(iprobe_vapor).ge.one-Y_TOLERANCE).and. &
                               (Y_probe(iprobe_vapor).le.one).and. &
                               (Y_predict.eq.one)) then
@@ -8471,9 +8576,11 @@ stop
                       stop
                      endif
 
-                     if (fully_saturated.eq.1) then
+                     if (fully_saturated.eq.1) then ! Tgamma=Tboil
                       ! do nothing
-                     else if (fully_saturated.eq.2) then
+                     else if (fully_saturated.eq.3) then ! Tgamma<Tboil
+                      ! do nothing (T_gamma_[ab] defined as "TSAT_predict")
+                     else if (fully_saturated.eq.2) then ! Kassemi
                       if (LL(ireverse).gt.zero) then ! evaporation
                        T_gamma_a=TI_min
                        X_gamma_a=one
@@ -8865,25 +8972,13 @@ stop
                      ! type(TSAT_MASS_FRAC_parm_type)
                     Y_interface_min=zero
                     TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
-                    TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
-                           local_Tanasawa_or_Schrage_or_Kassemi
-                    TSAT_Y_PARMS%accommodation_coefficient= &
-                          accommodation_coefficient(iten+ireverse*nten) 
-                    TSAT_Y_PARMS%reference_pressure= &
-                          reference_pressure(iten+ireverse*nten) 
                     TSAT_Y_PARMS%YI_min=Y_interface_min
                     TSAT_Y_PARMS%TI_min=TI_min
                     TSAT_Y_PARMS%TI_max=TI_max
-                    TSAT_Y_PARMS%universal_gas_constant_R= &
-                            R_Palmore_Desjardins
-                    TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
-                    TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
                     TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
                     TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
                     TSAT_Y_PARMS%thermal_k=>thermal_k
-                    TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
-                    TSAT_Y_PARMS%material_type_evap=>material_type_evap
 
                     if (hardwire_flag(ireverse).eq.0) then
 
@@ -8942,30 +9037,42 @@ stop
                       TSAT_correct=T_gamma_c
                       Y_predict=Y_gamma_c
 
-                       ! Palmore and Desjardins
+                       ! Palmore and Desjardins, or
+                       ! Kassemi, or,
+                       ! Tgamma=f(P_vapor_smooth)
                      else if ((molar_mass_ambient.gt.zero).and. &
                               (molar_mass_vapor.gt.zero).and. &
                               (R_Palmore_Desjardins.gt.zero).and. &
                               (TSAT_Y_PARMS%den_G.gt.zero).and. &
                               ((fully_saturated.eq.0).or. &
-                               (fully_saturated.eq.1))) then
+                               (fully_saturated.eq.1).or. &
+                               (fully_saturated.eq.3))) then
 
-                      if (fully_saturated.eq.1) then
+                       ! Palmore and Desjardins, Y=X=1
+                      if (fully_saturated.eq.1) then 
                        Y_interface_min=one
                        Y_predict=one
                        TSAT_correct=local_Tsat(ireverse)
 
-                      else if ((Y_probe(iprobe_vapor).ge. &
+                       ! Tgamma=f(P_vapor_smooth)
+                      else if (fully_saturated.eq.3) then
+                       T_gamma_c=half*(T_gamma_a+T_gamma_b)
+                       X_gamma_c=one
+                       Y_gamma_c=one
+                      else if ((fully_saturated.eq.0).and. &
+                               (Y_probe(iprobe_vapor).ge. &
                                 one-Y_TOLERANCE).and. &
                                (Y_probe(iprobe_vapor).le.one)) then
                        Y_interface_min=one
                        Y_predict=one
                        TSAT_correct=local_Tsat(ireverse)
-                      else if (TSAT_Y_PARMS%D_MASS.eq.zero) then
+                      else if ((fully_saturated.eq.0).and. &
+                               (TSAT_Y_PARMS%D_MASS.eq.zero)) then
                        Y_interface_min=one
                        Y_predict=one
                        TSAT_correct=local_Tsat(ireverse)
-                      else if ((Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
+                      else if ((fully_saturated.eq.0).and. &
+                               (Y_probe(iprobe_vapor).le.one-Y_TOLERANCE).and. &
                                (Y_probe(iprobe_vapor).ge.zero).and. &
                                (TSAT_Y_PARMS%D_MASS.gt.zero)) then
 
@@ -9034,7 +9141,7 @@ stop
                        endif
 
                       else
-                       print *,"Y_probe invalid"
+                       print *,"fully_saturated or Y_probe invalid"
                        stop
                       endif
 
