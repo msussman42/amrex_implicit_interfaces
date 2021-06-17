@@ -683,6 +683,8 @@ protected:
     void SDC_setup();
 
     void debug_ngrow(int idxMF,int ngrow,int counter);
+    void debug_ixType(int idxMF,int grid_type,int counter);
+    void debug_ixType_raw(MultiFab* mf,int grid_type,int counter);
 
     void avgDown_tag_localMF(int idxMF);
     void level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine);

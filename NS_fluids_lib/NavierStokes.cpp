@@ -5592,6 +5592,86 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
 
 } // subroutine debug_ngrow
 
+
+
+void NavierStokes::debug_ixType(int idxMF,int grid_type,int counter) {
+
+ if ((idxMF<0)||(idxMF>=MAX_NUM_LOCAL_MF))
+  amrex::Error("idxMF invalid");
+
+ if (1==0) {
+  std::cout << "full check of localMF integrity \n";
+
+  for (int i=0;i<MAX_NUM_LOCAL_MF;i++) {
+   if (localMF_grow[i]>=0) {
+    MultiFab* mf_temp=localMF[i];
+    if (! mf_temp->ok()) {
+     amrex::Error("! mf_temp->ok()");
+    }
+   } else if (localMF_grow[i]==-1) {
+    if (localMF[i]==0) {
+     // do nothing
+    } else {
+     std::cout << "level = " << level << '\n';
+     std::cout << "i = " << i << '\n';
+     amrex::Error("localMF[i] invalid");
+    }
+   } else {
+    amrex::Error("localMF_grow[i] invalid");
+   }
+  } // i=0 ... MAX_NUM_LOCAL_MF-1   
+ } // full check of localMF integrity
+
+ MultiFab* mf=localMF[idxMF];
+
+ if (! mf->ok()) {
+  std::cout << "counter= " << counter << '\n';
+  std::cout << "idxMF= " << idxMF << '\n';
+  amrex::Error("mf not ok");
+ } else if (mf->ok()) {
+  debug_ixType_raw(mf,grid_type,counter);
+ } else
+  amrex::Error("mf->ok corrupt");
+
+} // subroutine debug_ixType
+
+
+void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
+
+ if (! mf->ok()) {
+  std::cout << "counter= " << counter << '\n';
+  amrex::Error("mf not ok");
+ } else if (mf->ok()) {
+  IndexType compare_typ;
+  if (grid_type==-1) {
+   compare_typ=IndexType::TheCellType();
+  } else if (grid_type==0) {
+   compare_typ=IndexType::TheUMACType();
+  } else if (grid_type==1) {
+   compare_typ=IndexType::TheVMACType();
+  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+   compare_typ=IndexType::TheWMACType();
+  } else if (grid_type==3) {
+   compare_typ=IndexType::TheYUMACType();
+  } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+   compare_typ=IndexType::TheZUMACType();
+  } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+   compare_typ=IndexType::TheZVMACType();
+  } else
+   amrex::Error("grid_type invalid");
+
+  if (mf->boxArray().ixType()==compare_typ) {
+   // do nothing
+  } else
+   amrex::Error("mf->boxArray().ixType()!=compare_typ");
+
+ } else
+  amrex::Error("mf->ok corrupt");
+
+} // subroutine debug_ixType_raw
+
+
+
 int NavierStokes::some_materials_compressible() {
 
  int comp_flag=0;
@@ -11518,11 +11598,13 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[FD_NRM_ND_MF]->nComp()!=n_normal");
   if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance+1)
    amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
-
+  debug_ixType(FD_NORM_ND_MF,-1,FD_NORM_ND_MF);
+  
   if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten))
    amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten)");
   if (localMF[FD_CURV_CELL_MF]->nGrow()!=ngrow_make_distance)
    amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
+  debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);
 
   debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
   debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
