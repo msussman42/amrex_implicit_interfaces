@@ -89,14 +89,14 @@ void NavierStokes::minus_localMF(int idx_dest,int idx_source,
 
 }  // minus_LocalMF
 
-
-void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
+//grid_type==-2 is NODE
+void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
  if (1==0) {
   std::cout << "in new_localMF idx_MF= " << idx_MF << '\n';
   std::cout << "in new_localMF ncomp= " << ncomp << '\n';
   std::cout << "in new_localMF ngrow= " << ngrow << '\n';
-  std::cout << "in new_localMF dir= " << dir << '\n';
+  std::cout << "in new_localMF grid_type= " << grid_type << '\n';
   std::cout << "in new_localMF level= " << level << '\n';
  }
 
@@ -106,7 +106,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
   std::cout << "in new_localMF idx_MF= " << idx_MF << '\n';
   std::cout << "in new_localMF ncomp= " << ncomp << '\n';
   std::cout << "in new_localMF ngrow= " << ngrow << '\n';
-  std::cout << "in new_localMF dir= " << dir << '\n';
+  std::cout << "in new_localMF grid_type= " << grid_type << '\n';
   std::cout << "in new_localMF level= " << level << '\n';
   amrex::Error("localMF_grow invalid");
  }
@@ -130,11 +130,12 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int dir) {
 
 } //new_localMF
 
+//grid_type==-2 => NODE
 void NavierStokes::new_localMF_if_not_exist(int idx_MF,int ncomp,
- int ngrow,int dir) {
+ int ngrow,int grid_type) {
 
  if (localMF_grow[idx_MF]==-1) {
-  new_localMF(idx_MF,ncomp,ngrow,dir);
+  new_localMF(idx_MF,ncomp,ngrow,grid_type);
  } else if (localMF_grow[idx_MF]>=0) {
   // do nothing
  } else
@@ -8720,25 +8721,7 @@ void NavierStokes::zeroALL(int ngrow,int ncomp,int idx_localMF) {
  }
 } // end subroutine zeroALL
 
-void NavierStokes::allocate_array(int idx_localMF_new,int idx_localMF_old) {
-
- int finest_level = parent->finestLevel();
- if (level!=0)
-  amrex::Error("level!=0 in allocate_array");
-
- if (finest_level<0)
-  amrex::Error("finest invalid");
- int ngrow=localMF[idx_localMF_old]->nGrow();
- int ncomp=localMF[idx_localMF_old]->nComp();
-
- if (ncomp!=1)
-  amrex::Error("ncomp invalid, allocate_array");
- int dir=-1;
- allocate_array(ngrow,ncomp,dir,idx_localMF_new);
- copyALL(ngrow,ncomp,idx_localMF_new,idx_localMF_old);
-}  // end subroutine allocate_array
-
-void NavierStokes::allocate_array(int ngrow,int ncomp,int dir,
+void NavierStokes::allocate_array(int ngrow,int ncomp,int grid_type,
   int idx_localMF) {
 
  int finest_level = parent->finestLevel();
@@ -8747,16 +8730,16 @@ void NavierStokes::allocate_array(int ngrow,int ncomp,int dir,
 
   if (level==0) {
 
-   if ((dir>=-1)&&(dir<=AMREX_SPACEDIM)) { //cell,x,y,z,node
+   if ((grid_type>=-2)&&(grid_type<=5)) { //node,cell,x,y,z,...
 
     for (int i=finest_level;i>=level;i--) {
      NavierStokes& ns_level=getLevel(i);
       // initializes localMF[idx_localMF] to 0.0
-     ns_level.new_localMF(idx_localMF,ncomp,ngrow,dir); 
+     ns_level.new_localMF(idx_localMF,ncomp,ngrow,grid_type); 
     } // i
 
    } else
-    amrex::Error("dir invalid");
+    amrex::Error("grid_type invalid");
 
   } else
    amrex::Error("level invalid");
