@@ -13795,7 +13795,6 @@ END SUBROUTINE SIMP
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
-      INTEGER_T ii,jj,kk
       INTEGER_T ilocal,jlocal,klocal
       INTEGER_T inorm
       INTEGER_T n
@@ -13819,6 +13818,7 @@ END SUBROUTINE SIMP
       INTEGER_T nmat
       INTEGER_T local_enable_spectral
       INTEGER_T caller_id
+      INTEGER_T box_type(SDIM)
 
       caller_id=8
       nhalf=1
@@ -13863,31 +13863,16 @@ END SUBROUTINE SIMP
        print *,"level_c or level_f invalid"
        stop
       endif
-
-      if ((edge_dir.lt.0).or. &
-          (edge_dir.ge.SDIM)) then
-       print *,"edge_dir out of range in edge average down"
+      if ((grid_type.lt.-1).or.(grid_type.gt.5)) then
+       print *,"grid_type invalid edge average down"
        stop
       endif
 
-      ii=0
-      jj=0
-      kk=0
-      if (edge_dir.eq.0) then
-       ii=1
-      else if (edge_dir.eq.1) then
-       jj=1
-      else if ((edge_dir.eq.2).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"edge_dir invalid"
-       stop
-      endif
+      call grid_type_to_box_type(grid_type,box_type)
 
       do dir2=1,SDIM
-       flochi(dir2)=bfact_f-1
+       flochi(dir2)=bfact_f-1+box_type(dir2)
       enddo
-      flochi(edge_dir+1)=bfact_f
 
       if (SDIM.eq.2) then
        khi=0
@@ -13900,17 +13885,17 @@ END SUBROUTINE SIMP
 
       allocate(ffine(D_DECL(0:flochi(1),0:flochi(2),0:flochi(3)),ncomp))
 
-      call checkbound(loc,hic,DIMS(c),0,edge_dir,1301)
-      call checkbound(lof,hif,DIMS(f),0,edge_dir,1301)
+      call checkbound(loc,hic,DIMS(c),0,grid_type,1301)
+      call checkbound(lof,hif,DIMS(f),0,grid_type,1301)
       call checkbound(lof,hif,DIMS(mask),1,-1,1301)
 
-      call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,edge_dir,9)
+      call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,grid_type,9)
 
       do ic=growlo(1),growhi(1)
       do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,edge_dir,17)
+       call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,grid_type,17)
 
         ! find stencil for surrounding fine level spectral element.
        stenlo(3)=0
@@ -13920,25 +13905,33 @@ END SUBROUTINE SIMP
         xcoarse(dir2)=xsten(0,dir2)
         finelo_index=NINT( (xcoarse(dir2)-problo(dir2))/dxelem_f-half )
         stenlo(dir2)=bfact_f*finelo_index
-        stenhi(dir2)=stenlo(dir2)+bfact_f-1
+        stenhi(dir2)=stenlo(dir2)+bfact_f-1+box_type(dir2)
        enddo ! dir
-       stenhi(edge_dir+1)=stenhi(edge_dir+1)+1
 
         ! check if coarse face is on a coarse element boundary.
-       if (edge_dir.eq.0) then
-        inorm=ic
-       else if (edge_dir.eq.1) then
-        inorm=jc
-       else if ((edge_dir.eq.2).and.(SDIM.eq.3)) then
-        inorm=kc
-       else
-        print *,"edge_dir invalid"
-        stop
-       endif
-       if ((inorm/bfact_c)*bfact_c.eq.inorm) then
-        stenlo(edge_dir+1)=2*inorm
-        stenhi(edge_dir+1)=stenlo(edge_dir+1)
-       endif
+       do dir2=1,SDIM
+        if (box_type(dir2).eq.1) then
+         if (dir2.eq.1) then
+          inorm=ic
+         else if (dir2.eq.2) then
+          inorm=jc
+         else if ((dir2.eq.SDIM).and.(SDIM.eq.3)) then
+          inorm=kc
+         else
+          print *,"dir2 invalid"
+          stop
+         endif
+         if ((inorm/bfact_c)*bfact_c.eq.inorm) then
+          stenlo(dir2)=2*inorm
+          stenhi(dir2)=stenlo(dir2)
+         endif
+        else if (box_type(dir2).eq.0) then
+         ! do nothing
+        else
+         print *,"box_type(dir2) invalid"
+         stop
+        endif
+       enddo ! dir2=1..sdim
 
        mstenlo(3)=0
        mstenhi(3)=0
@@ -13978,7 +13971,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-       enddo ! dir2
+       enddo ! dir2=1..sdim
 
        ifine=mstenlo(1) 
        jfine=mstenlo(2) 
@@ -14017,6 +14010,13 @@ END SUBROUTINE SIMP
            (testmask.le.nmat).and. &
            (spectral_override.eq.1)) then
 
+        if ((grid_type.ge.0).and.(grid_type.lt.SDIM)) then
+         ! do nothing
+        else
+         print *,"grid_type must be 0,1,or sdim for SEM"
+         stop
+        endif
+
         do ifine=stenlo(1),stenhi(1)
         do jfine=stenlo(2),stenhi(2)
         do kfine=stenlo(3),stenhi(3)
@@ -14032,7 +14032,7 @@ END SUBROUTINE SIMP
         enddo
 
         call SEM_INTERP_ELEMENT( &
-         ncomp,bfact_f,edge_dir, &
+         ncomp,bfact_f,grid_type, &
          flochi,dxf,xcoarse,ffine,crse_value,caller_id)
 
         voltotal=one
@@ -14044,28 +14044,37 @@ END SUBROUTINE SIMP
                 (spectral_override.eq.0)) then
 
         call fine_subelement_stencilMAC(ic,jc,kc,stenlo,stenhi, &
-         bfact_c,bfact_f,edge_dir+1)
+         bfact_c,bfact_f,grid_type)
 
         do ifine=stenlo(1),stenhi(1)
-         if (edge_dir.eq.0) then
+         if (box_type(1).eq.1) then
           call intersect_weightMAC_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-         else
+         else if (box_type(1).eq.0) then
           call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+         else 
+          print *,"box_type(1) invalid"
+          stop
          endif
          if (wt(1).gt.zero) then
           do jfine=stenlo(2),stenhi(2)
-           if (edge_dir.eq.1) then
+           if (box_type(2).eq.1) then
             call intersect_weightMAC_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-           else
+           else if (box_type(2).eq.0) then
             call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+           else 
+            print *,"box_type(2) invalid"
+            stop
            endif
            if (wt(2).gt.zero) then
             do kfine=stenlo(3),stenhi(3)
              if (SDIM.eq.3) then
-              if (edge_dir.eq.2) then
+              if (box_type(SDIM).eq.1) then
                call intersect_weightMAC_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-              else
+              else if (box_type(SDIM).eq.0) then
                call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+              else 
+               print *,"box_type(SDIM) invalid"
+               stop
               endif
              endif
              if (wt(SDIM).gt.zero) then
@@ -14122,7 +14131,7 @@ END SUBROUTINE SIMP
           stop
          endif
          if ((xsten(0,1).le.VOFTOL*dx(1)).and. &
-             (edge_dir.eq.0)) then
+             (box_type(1).eq.1)) then
           crse(D_DECL(ic,jc,kc),n) = zero
          endif
         else
