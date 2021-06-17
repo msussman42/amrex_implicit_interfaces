@@ -403,7 +403,7 @@ extern "C" {
        int* level_c,int* level_f,
        int* bfact_c,int* bfact_f,
        const Real* xlo_fine,const Real* dx,
-       const int* dir,
+       const int* grid_type,
        Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
        const Real* fine,AMREX_ARLIM_P(flo),AMREX_ARLIM_P(fhi),
        const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),

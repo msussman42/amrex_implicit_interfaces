@@ -13753,7 +13753,7 @@ END SUBROUTINE SIMP
        level_c,level_f, &
        bfact_c,bfact_f, &
        xlo_fine,dx, &
-       edge_dir, &
+       grid_type, &
        crse,DIMS(c), &
        fine,DIMS(f), &
        mask,DIMS(mask), &
@@ -13787,7 +13787,7 @@ END SUBROUTINE SIMP
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T stenlo(3), stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
-      INTEGER_T edge_dir
+      INTEGER_T, intent(in) :: grid_type
       INTEGER_T dir2
       REAL_T, intent(out) :: crse(DIMV(c),ncomp)
       REAL_T, intent(in) :: fine(DIMV(f),ncomp)

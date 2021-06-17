@@ -39,16 +39,19 @@ extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
 
 // if ncomp_input==-1, then ncomp=S_crse.ncomp()
 // spectral_override==0 => always do low order average down.
+// grid_type=-1,..,5
 void
-NavierStokes::avgDownEdge(int dir,MultiFab& S_crse,MultiFab& S_fine,
+NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  int scomp,int ncomp_input,int spectral_override,int caller_id) {
 
  if (1==0) {
   std::cout << "avgDownEdge caller_id= " << caller_id << '\n';
  }
 
- if ((dir<0)||(dir>=AMREX_SPACEDIM))
-  amrex::Error("dir invalid avgdown edge");
+ if ((grid_type>=-1)&&(grid_type<=5)) {
+  // do nothing
+ } else 
+  amrex::Error("grid_type invalid in avgdown edge");
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level) 
