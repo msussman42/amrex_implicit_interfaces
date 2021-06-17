@@ -685,6 +685,7 @@ protected:
     void debug_ngrow(int idxMF,int ngrow,int counter);
     void debug_ixType(int idxMF,int grid_type,int counter);
     void debug_ixType_raw(MultiFab* mf,int grid_type,int counter);
+    void debug_boxArray(MultiFab* mf,int grid_type,int counter);
 
     void avgDown_tag_localMF(int idxMF);
     void level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine);
@@ -729,8 +730,9 @@ protected:
     void minus_localMF(int idx_dest,int idx_source,
      int ncomp,int ngrow);
 
-      // grid_type==-2 is NODE
+      // grid_type=-1 ... 5
     void new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type);
+      // grid_type=-1 ... 5
     void new_localMF_if_not_exist(int idx_MF,int ncomp,int ngrow,
 		    int grid_type);
     void getStateMAC_localMF(int MAC_state_idx,
@@ -1358,6 +1360,8 @@ void apply_pressure_grad(
     static int is_zalesak();
 
     void zalesakVEL();
+
+    static void grid_type_to_box_type_cpp(int grid_type,int* box_type);
 
     static void get_iten_cpp(int im1,int im2,int& iten,int nmat);
      // iten>=1  im1,im2>=1

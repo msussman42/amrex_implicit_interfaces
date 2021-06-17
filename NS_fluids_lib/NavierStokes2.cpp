@@ -89,7 +89,7 @@ void NavierStokes::minus_localMF(int idx_dest,int idx_source,
 
 }  // minus_LocalMF
 
-//grid_type==-2 is NODE
+//grid_type=-1 ... 5
 void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
  if (1==0) {
@@ -114,23 +114,31 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
   amrex::Error("ngrow invalid");
 
  BoxArray edge_boxes(grids);
- if (dir==-1) {
+ if (grid_type==-1) {
   // do nothing
- } else if ((dir>=0)&&(dir<AMREX_SPACEDIM)) {
-  edge_boxes.surroundingNodes(dir);
- } else if (dir==AMREX_SPACEDIM) {
-  edge_boxes.convert(IndexType::TheNodeType()); 
+ } else if ((grid_type>=0)&&(grid_type<AMREX_SPACEDIM)) {
+  edge_boxes.surroundingNodes(grid_type);
+ } else if (grid_type==3) {
+  edge_boxes.surroundingNodes(0);
+  edge_boxes.surroundingNodes(1);
+ } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+  edge_boxes.surroundingNodes(0);
+  edge_boxes.surroundingNodes(AMREX_SPACEDIM-1);
+ } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+  edge_boxes.surroundingNodes(1);
+  edge_boxes.surroundingNodes(AMREX_SPACEDIM-1);
  } else
-  amrex::Error("dir invalid new_localMF");
+  amrex::Error("grid_type invalid new_localMF");
 
  localMF[idx_MF]=new MultiFab(edge_boxes,dmap,ncomp,ngrow,
 	MFInfo().SetTag("localMF[idx_MF]"),FArrayBoxFactory());
  localMF[idx_MF]->setVal(0.0,0,ncomp,ngrow);
  localMF_grow[idx_MF]=ngrow;
+ debug_ixType(idx_MF,grid_type,idx_MF);
 
 } //new_localMF
 
-//grid_type==-2 => NODE
+//grid_type=-1 ... 5
 void NavierStokes::new_localMF_if_not_exist(int idx_MF,int ncomp,
  int ngrow,int grid_type) {
 
@@ -2301,6 +2309,30 @@ void NavierStokes::save_to_macvel_state(int idx_umac) {
  }  // dir=0..sdim-1
 
 } // save_to_macvel_state
+
+void NavierStokes::grid_type_to_box_type_cpp(int grid_type,
+		int* box_type) {
+
+ for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
+  box_type[local_dir]=0;
+ }
+ if (grid_type==-1) {
+  // do nothing
+ } else if ((grid_type>=0)&&(grid_type<AMREX_SPACEDIM)) {
+  box_type[grid_type]=1;
+ } else if (grid_type==3) {
+  box_type[0]=1;
+  box_type[1]=1;
+ } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+  box_type[0]=1;
+  box_type[AMREX_SPACEDIM-1]=1;
+ } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+  box_type[1]=1;
+  box_type[AMREX_SPACEDIM-1]=1;
+ } else
+  amrex::Error("grid_type invalid grid_type_to_box_type_cpp");
+
+} // end subroutine grid_type_to_box_type_cpp
 
 void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
 
@@ -8510,6 +8542,8 @@ void NavierStokes::Sanity_output_zones(
 
    ParallelDescriptor::Barrier();
 
+   debug_ixType_raw(datamf,data_dir,data_id);
+
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
    datamfminus->ParallelCopy(*datamf,0,0,
@@ -8730,7 +8764,7 @@ void NavierStokes::allocate_array(int ngrow,int ncomp,int grid_type,
 
   if (level==0) {
 
-   if ((grid_type>=-2)&&(grid_type<=5)) { //node,cell,x,y,z,...
+   if ((grid_type>=-1)&&(grid_type<=5)) { //node,cell,x,y,z,...
 
     for (int i=finest_level;i>=level;i--) {
      NavierStokes& ns_level=getLevel(i);

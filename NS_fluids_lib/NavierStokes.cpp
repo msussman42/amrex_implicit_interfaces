@@ -5672,6 +5672,51 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
 
 
 
+void NavierStokes::debug_boxArray(MultiFab* mf,int grid_type,int counter) {
+
+ if (! mf->ok()) {
+  std::cout << "counter= " << counter << '\n';
+  amrex::Error("mf not ok");
+ } else if (mf->ok()) {
+  IndexType compare_typ;
+  if (grid_type==-1) {
+   compare_typ=IndexType::TheCellType();
+  } else if (grid_type==0) {
+   compare_typ=IndexType::TheUMACType();
+  } else if (grid_type==1) {
+   compare_typ=IndexType::TheVMACType();
+  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
+   compare_typ=IndexType::TheWMACType();
+  } else if (grid_type==3) {
+   compare_typ=IndexType::TheYUMACType();
+  } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
+   compare_typ=IndexType::TheZUMACType();
+  } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
+   compare_typ=IndexType::TheZVMACType();
+  } else
+   amrex::Error("grid_type invalid");
+
+  if (mf->boxArray().ixType()==compare_typ) {
+   // do nothing
+  } else
+   amrex::Error("mf->boxArray().ixType()!=compare_typ");
+
+   // this is the copy constructor:
+   // BoxArray (const BoxArray& rhs);
+  BoxArray grids_convert(grids);
+  grids_convert.convert(compare_typ);
+  if (mf->boxArray()==grids_convert) {
+   // do nothing
+  } else
+   amrex::Error("mf->boxArray()!=grids_convert");
+
+ } else
+  amrex::Error("mf->ok corrupt");
+
+} // subroutine debug_boxArray
+
+
+
 int NavierStokes::some_materials_compressible() {
 
  int comp_flag=0;
@@ -11327,6 +11372,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
+ debug_ixType(DEN_RECON_MF,-1,DEN_RECON_MF);
 
  int local_temperature_smooth_mf=DEN_RECON_MF;
  Real local_smoothing_length_scale=0.0;
@@ -11339,6 +11385,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   amrex::Error("nucleation_flag invalid");
 
  debug_ngrow(local_temperature_smooth_mf,normal_probe_size+3,28); 
+ debug_ixType(local_temperature_smooth_mf,-1,local_temperature_smooth_mf);
 
  if (localMF[local_temperature_smooth_mf]->nComp()>=nmat) {
   // do nothing
@@ -11368,6 +11415,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
   if (localMF[TYPE_MF]->nGrow()!=1)
    amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
+  debug_ixType(COLOR_MF,-1,COLOR_MF);
+  debug_ixType(TYPE_MF,-1,TYPE_MF);
 
  } else if (nucleation_flag==1) {
   if (color_count!=1)
@@ -11378,13 +11427,16 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  MultiFab* presmf=
   getState(normal_probe_size+3,AMREX_SPACEDIM,
            1,cur_time_slab);
+ debug_ixType_raw(presmf,-1,0);
 
  MultiFab* pres_eos_mf=derive_EOS_pressure(material_type_evap);
  if (pres_eos_mf->nGrow()!=1)
   amrex::Error("pres_eos_mf->nGrow()!=1");
+ debug_ixType_raw(pres_eos_mf,-1,0);
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,28); 
+ debug_ixType(MASKCOEF_MF,-1,MASKCOEF_MF);
 
  if ((prev_time_slab<0.0)||
      (cur_time_slab<=0.0)||
@@ -11588,17 +11640,19 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
   if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
    amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
+  debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
 
   if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
    amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
   if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
    amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
+  debug_ixType(SATURATION_TEMP_MF,-1,SATURATION_TEMP_MF);
 
   if (localMF[FD_NRM_ND_MF]->nComp()!=n_normal)
    amrex::Error("localMF[FD_NRM_ND_MF]->nComp()!=n_normal");
   if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance+1)
    amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
-  debug_ixType(FD_NORM_ND_MF,-1,FD_NORM_ND_MF);
+  debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
   
   if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten))
    amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(nmat+nten)");
@@ -11610,15 +11664,19 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
   if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
    amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+  debug_ixType(HOLD_LS_DATA_MF,-1,HOLD_LS_DATA_MF);
 
   debug_ngrow(LS_NRM_FD_MF,1,30);
   if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*AMREX_SPACEDIM) 
    amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
+  debug_ixType(LS_NRM_FD_MF,-1,LS_NRM_FD_MF);
 
   debug_ngrow(MDOT_MF,0,355);
+  debug_ixType(MDOT_MF,-1,MDOT_MF);
 
    // normal_probe_size=1
   VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
+  debug_ixType(SLOPE_RECON_MF,-1,SLOPE_RECON_MF);
 
   int ngrow_dest=ngrow_distance-1;
 
@@ -12411,9 +12469,11 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("localMF[nodevel_MF]->nGrow()  invalid");
  if (localMF[nodevel_MF]->nComp()!=2*nten*AMREX_SPACEDIM)
   amrex::Error("localMF[nodevel_MF]->nComp()  invalid");
+ debug_ixType(nodevel_MF,-1,nodevel_MF);
 
  if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
   amrex::Error("burning vel invalid ncomp");
+ debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
 
   // in: level_phase_change_convert
   // DEN_RECON_MF is initialized prior to the call

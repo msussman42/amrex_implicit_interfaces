@@ -2044,7 +2044,7 @@ stop
       ! 3 - time spectral only
       subroutine FORT_EDGEINTERP( &
        enable_spectral, &
-       dir_edge, &
+       grid_type, & ! -1...5
        cdata, &
        DIMS(cdata), &
        cloMAC,chiMAC, &
@@ -2066,7 +2066,7 @@ stop
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       INTEGER_T, intent(in) :: nvar
-      INTEGER_T, intent(in) :: dir_edge ! -1..5
+      INTEGER_T, intent(in) :: grid_type ! -1..5
       INTEGER_T, intent(in) :: DIMDEC(cdata)
       INTEGER_T, intent(in) :: DIMDEC(fdata)
       INTEGER_T, intent(in) :: cloMAC(SDIM),chiMAC(SDIM)
@@ -2135,12 +2135,12 @@ stop
        stop
       endif
 
-      if ((dir_edge.lt.0).or.(dir_edge.ge.SDIM)) then
-       print *,"dir_edge invalid edgeinterp"
+      if ((grid_type.lt.0).or.(grid_type.ge.SDIM)) then
+       print *,"grid_type invalid edgeinterp"
        stop
       endif
 
-      call grid_type_to_box_type(dir_edge,box_type)
+      call grid_type_to_box_type(grid_type,box_type)
 
       do dir2=1,SDIM
        chi_loc(dir2)=bfact_coarse-1+box_type(dir2)
@@ -2164,14 +2164,14 @@ stop
        endif
       enddo ! dir2
       
-      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,dir_edge,61) 
+      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type,61) 
 
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
 
        call coarse_subelement_stencilMAC(ifine,jfine,kfine,stenlo,stenhi, &
-         bfact_coarse,bfact_fine,dir_edge)
+         bfact_coarse,bfact_fine,grid_type)
        do dir2=1,SDIM
         stenlen(dir2)=stenhi(dir2)-stenlo(dir2)+1
         if (box_type(dir2).eq.0) then
@@ -2192,7 +2192,7 @@ stop
        enddo ! dir2=1..sdim
 
        call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf, &
-               dir_edge,61)
+               grid_type,61)
        ic=stenlo(1)
        jc=stenlo(2)
        kc=stenlo(SDIM)
@@ -2257,7 +2257,7 @@ stop
         enddo
 
         call SEM_INTERP_ELEMENT( &
-         nvar,bfact_coarse,dir_edge, &
+         nvar,bfact_coarse,grid_type, &
          chi_loc,dxc,xfine,fcoarse,fine_value,caller_id)
 
         voltotal=one

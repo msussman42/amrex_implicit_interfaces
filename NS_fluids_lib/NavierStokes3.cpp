@@ -61,21 +61,16 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  NavierStokes& fine_lev = getLevel(f_level);
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,700);
+ debug_ixType(VOLUME_MF,-1,VOLUME_MF);
  fine_lev.resize_metrics(1);
  fine_lev.debug_ngrow(VOLUME_MF,0,700);
+ fine_lev.debug_ixType(VOLUME_MF,-1,VOLUME_MF);
 
- if (fine_lev.localMF[AREA_MF+dir]->boxArray()!=S_fine.boxArray()) {
-  const BoxArray& farray=(*fine_lev.localMF[AREA_MF+dir]).boxArray();
-  const BoxArray& sarray=S_fine.boxArray();
-  std::cout << "farray " << farray << '\n';
-  std::cout << "sarray " << sarray << '\n';
-  std::cout << "dir " << dir << '\n';
-  std::cout << "level,finest_level " << level << ' ' << finest_level <<'\n';
+ debug_ixType_raw(&S_fine,grid_type,caller_id);
+ debug_ixType_raw(&S_crse,grid_type,caller_id);
 
-  amrex::Error("invalid boxes in avgDownEdge fine level");
- }
- if ((*localMF[AREA_MF+dir]).boxArray()!=S_crse.boxArray())
-  amrex::Error("invalid boxes in avgDownEdge crse level");
+ fine_lev.debug_boxArray(&S_fine,grid_type,caller_id);
+ debug_boxArray(&S_crse,grid_type,caller_id);
 
  int ncomp=S_crse.nComp();
  if ((S_crse.nComp()!=ncomp)||(S_fine.nComp()!=ncomp)) {
@@ -115,6 +110,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine_MAC(crse_S_fine_BA_MAC,crse_dmap,ncomp,0,
    MFInfo().SetTag("crse_S_fine_MAC"),FArrayBoxFactory());
+ debug_ixType_raw(&crse_S_fine_MAC,grid_type,caller_id);
 
  ParallelDescriptor::Barrier();
 
@@ -152,6 +148,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
 
   FArrayBox& maskfab=(*fine_lev.localMF[MASKSEM_MF])[mfi];
 
+   // declared in: NAVIERSTOKES_3D.F90
   FORT_EDGEAVGDOWN(
    &enable_spectral,
    &finest_level,
@@ -161,7 +158,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
    &level,&f_level,
    &bfact,&bfact_f,
    xlo_fine,dx,
-   &dir,
+   &grid_type,
    crse_fab.dataPtr(),
    ARLIM(crse_fab.loVect()),ARLIM(crse_fab.hiVect()),
    fine_fab.dataPtr(scomp),
@@ -179,21 +176,36 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  ParallelDescriptor::Barrier();
 
  const Box& domain = geom.Domain();
- if (geom.isPeriodic(dir)) {
-  IntVect pshift=IntVect::TheZeroVector();
-  pshift[dir]=domain.length(dir);
-  crse_S_fine_MAC.shift(pshift);
 
-  ParallelDescriptor::Barrier();
-  S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
-  ParallelDescriptor::Barrier();
+ int box_type[AMREX_SPACEDIM]; 
+ grid_type_to_box_type_cpp(grid_type,box_type);
 
-  pshift[dir]=-2*domain.length(dir);
-  crse_S_fine_MAC.shift(pshift);
+ for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
+  if (box_type[local_dir]==0) {
+   // do nothing
+  } else if (box_type[local_dir]==1) {
+   if (geom.isPeriodic(local_dir)) {
+    IntVect pshift=IntVect::TheZeroVector();
+    pshift[local_dir]=domain.length(local_dir);
+    crse_S_fine_MAC.shift(pshift);
 
-  S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
-  ParallelDescriptor::Barrier();
- }  // isPeriodic(dir)
+    ParallelDescriptor::Barrier();
+    S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
+    ParallelDescriptor::Barrier();
+
+    pshift[local_dir]=-2*domain.length(local_dir);
+    crse_S_fine_MAC.shift(pshift);
+
+    S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
+    ParallelDescriptor::Barrier();
+   } else if (!geom.isPeriodic(local_dir)) {
+    // do nothing
+   } else {
+    amrex::Error("geom.isPeriodic(local_dir) bust");
+   } 
+  } else
+   amrex::Error("box_type bust");
+ } // local_dir=0 ... sdim-1
 
 }  // avgDownEdge
 
@@ -2708,9 +2720,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,30);
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
+       debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
        debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,31);
        debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance+1,31);
+       debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
        debug_ngrow(FD_CURV_CELL_MF,ngrow_make_distance,31);
+       debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);
 
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         debug_ngrow(AREA_MF+dir,1,355);
