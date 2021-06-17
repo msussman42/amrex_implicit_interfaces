@@ -5493,7 +5493,7 @@ END SUBROUTINE SIMP
       end subroutine FORT_COMBINEZONES
 
 
-      subroutine FORT_ZALESAKNODE( &
+      subroutine FORT_ZALESAK_CELL( &
         xlo,dx, &
         u,domlo,domhi, &
         tilelo,tilehi, &
@@ -5565,7 +5565,7 @@ END SUBROUTINE SIMP
          call zalesakww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
         endif
        else
-        print *,"invalid probtype for ZALESAK"
+        print *,"invalid probtype for ZALESAK_CELL"
        endif
 
        do dir=1,SDIM
@@ -5577,7 +5577,7 @@ END SUBROUTINE SIMP
       enddo
 
       return 
-      end subroutine FORT_ZALESAKNODE
+      end subroutine FORT_ZALESAK_CELL
 
        ! spectral_override==0 => always do low order
       subroutine FORT_AVGDOWN( &

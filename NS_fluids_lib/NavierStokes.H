@@ -106,7 +106,6 @@ namespace amrex{
 #define DIFFUSIONRHS_MF 78
 #define LEVELPC_MF 79
 #define VOF_LS_PREV_TIME_MF 80
-#define NODE_VELOCITY_MF 81
 
 #define MAC_VELOCITY_MF 82
 
@@ -728,8 +727,10 @@ protected:
     void minus_localMF(int idx_dest,int idx_source,
      int ncomp,int ngrow);
 
-    void new_localMF(int idx_MF,int ncomp,int ngrow,int dir);
-    void new_localMF_if_not_exist(int idx_MF,int ncomp,int ngrow,int dir);
+      // grid_type==-2 is NODE
+    void new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type);
+    void new_localMF_if_not_exist(int idx_MF,int ncomp,int ngrow,
+		    int grid_type);
     void getStateMAC_localMF(int MAC_state_idx,
      int idx_MF,int ngrow,int dir,
      int scomp,int ncomp,Real time);
@@ -1453,9 +1454,8 @@ void apply_pressure_grad(
     void make_marangoni_force(int isweep);
 
     void delete_array(int idx_localMF);
-    void allocate_array(
-      int idx_localMF_new,int idx_localMF_old);
-    void allocate_array(int ngrow,int ncomp,int dir,
+
+    void allocate_array(int ngrow,int ncomp,int grid_type,
       int idx_localMF);
 
     void allocate_independent_var(int nsolve,int idx);

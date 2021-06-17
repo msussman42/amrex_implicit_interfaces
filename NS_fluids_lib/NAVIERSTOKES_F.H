@@ -11,7 +11,7 @@
 #    define FORT_ADVECTIVE_PRESSURE advective_pressure
 #    define FORT_UPDATE_DIV update_div
 #    define FORT_COFLOW coflow
-#    define FORT_ZALESAKNODE zalesaknode
+#    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
 #    define FORT_ADDGRAVITY  addgravity
@@ -51,7 +51,7 @@
 #    define FORT_ADVECTIVE_PRESSURE ADVECTIVE_PRESSURE
 #    define FORT_UPDATE_DIV UPDATE_DIV
 #    define FORT_COFLOW COFLOW
-#    define FORT_ZALESAKNODE ZALESAKNODE
+#    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
 #    define FORT_VOFFLUX_CORRECT VOFFLUX_CORRECT
 #    define FORT_FLUIDSOLIDCOR    FLUIDSOLIDCOR
@@ -92,7 +92,7 @@
 #    define FORT_ADVECTIVE_PRESSURE advective_pressure
 #    define FORT_UPDATE_DIV update_div
 #    define FORT_COFLOW coflow
-#    define FORT_ZALESAKNODE zalesaknode
+#    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
 #    define FORT_ADDGRAVITY  addgravity
@@ -131,7 +131,7 @@
 #    define FORT_ADVECTIVE_PRESSURE advective_pressure_
 #    define FORT_UPDATE_DIV update_div_
 #    define FORT_COFLOW coflow_
-#    define FORT_ZALESAKNODE zalesaknode_
+#    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor_
 #    define FORT_INITPOTENTIAL initpotential_
@@ -355,7 +355,7 @@ extern "C" {
      const int* vislo,const int* vishi,
      int* visual_ncomp);
  
-    void FORT_ZALESAKNODE(
+    void FORT_ZALESAK_CELL(
        const Real* xlo,const Real* dx,
        Real* u,const int* domlo,const int* domhi,
        const int* tilelo,const int* tilehi,
