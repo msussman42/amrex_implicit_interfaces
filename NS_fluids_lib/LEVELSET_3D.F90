@@ -11346,6 +11346,7 @@ stop
        ! operation_flag=4 (gravity and surface tension force at cell)
        ! in the face_gradients routine, operation_flag=5 (interp grad U^T)
        ! operation_flag=6 (advection)
+       ! operation_flag=7 (mac -> cell displacement in MAC_TO_CELL)
       subroutine FORT_MAC_TO_CELL( &
        ns_time_order, &
        divu_outer_sweeps, &
@@ -11802,15 +11803,14 @@ stop
    
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
       if (operation_flag.eq.2) then 
-
-       if (ncomp_veldest.ge. &
-           SDIM+num_state_material*nmat) then
+              FIX ME for DISPLACEMENT DO NOT FORGET TO INIT THE GHOST CELL 
+       if (ncomp_veldest.ge.SDIM) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.ge.num_state_material*nmat) then
+       if (ncomp_dendest.ge.1) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
