@@ -3333,6 +3333,26 @@ void NavierStokes::VELMAC_TO_CELLALL(
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
  }
+ if (dest_idx==-1) {
+  // do nothing
+ } else if (dest_idx>=0) {
+  Vector<int> scompBC_map;
+  scompBC_map.resize(AMREX_SPACEDIM);
+
+  if (vel_or_disp==0) { // velocity
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+    scompBC_map[dir]=dir;
+   GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
+     AMREX_SPACEDIM,State_Type,scompBC_map);
+  } else if (vel_or_disp==1) { // displacement
+	  FIX ME  for displacement should it be FOEXTRAP everywhere?
+		  regardless of GHOST or NOT?
+   PCINTERP_fill_bordersALL(dest_idx,localMF[dest_idx]->nGrow(),0,
+     AMREX_SPACEDIM,Tensor_Type,scompBC_map);
+  } else
+   amrex::Error("vel_or_disp invalid");
+ } else
+  amrex::Error("dest_idx invalid");
 
 } // end subroutine VELMAC_TO_CELLALL
 

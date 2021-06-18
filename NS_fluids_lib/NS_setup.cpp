@@ -1006,6 +1006,7 @@ NavierStokes::variableSetUp ()
        }
 #endif
 
+        // sets the EXT_DIR values to 0.0
        StateDescriptor::BndryFunc 
         MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
          FORT_GROUP_TENSORFILL);
