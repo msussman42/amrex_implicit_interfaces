@@ -1,0 +1,2 @@
+scl enable devtoolset-8 bash
+module load mpi/openmpi-4-gcc8
