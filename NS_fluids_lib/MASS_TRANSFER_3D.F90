@@ -8447,6 +8447,8 @@ stop
                    ! do nothing
                   else
                    print *,"expecting TSAT_Y_PARMS%reference_pressure>0"
+                   print *,"TSAT_Y_PARMS%reference_pressure=", &
+                     TSAT_Y_PARMS%reference_pressure
                    stop
                   endif
 

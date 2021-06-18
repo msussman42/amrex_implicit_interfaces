@@ -734,6 +734,7 @@ Vector<Real> NavierStokes::cap_wave_speed;
 Vector<Real> NavierStokes::hardwire_Y_gamma;
 Vector<Real> NavierStokes::hardwire_T_gamma;
 // "p_boil" in Dodd and Ferrante
+// default: 1.0e+6
 Vector<Real> NavierStokes::reference_pressure;
 Vector<Real> NavierStokes::accommodation_coefficient;
 Vector<Real> NavierStokes::saturation_temp;
@@ -3146,8 +3147,8 @@ NavierStokes::read_params ()
      hardwire_T_gamma[i+nten]=0.0;
      accommodation_coefficient[i]=0.0;
      accommodation_coefficient[i+nten]=0.0;
-     reference_pressure[i]=0.0;
-     reference_pressure[i+nten]=0.0;
+     reference_pressure[i]=1.0e+6;
+     reference_pressure[i+nten]=1.0e+6;
      saturation_temp[i]=0.0;
      saturation_temp[i+nten]=0.0;
      saturation_temp_curv[i]=0.0;
