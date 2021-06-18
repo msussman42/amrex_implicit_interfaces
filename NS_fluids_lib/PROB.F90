@@ -28175,6 +28175,7 @@ end subroutine initialize2d
          IWALL(3)=k
          IWALL(dir2)=inside_index
 
+          ! sets all the physical BCs to the interior value.
          call extrapBC(time,dir2,side, &
           u(D_DECL(i,j,k)), &
           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
@@ -29744,6 +29745,7 @@ end subroutine initialize2d
           IWALL(3)=k
           IWALL(dir2)=inside_index
 
+           ! sets all the EXT_DIR bcs to 0.0
           call tensorBC(time,dir2,side, &
            u(D_DECL(i,j,k)), &
            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
@@ -29906,6 +29908,7 @@ end subroutine initialize2d
           IWALL(3)=k
           IWALL(dir2)=inside_index
 
+           ! sets all the physical BCs to 0.0
           call xdisplaceBC(time,dir2,side, &
            u(D_DECL(i,j,k)), &
            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
@@ -30392,6 +30395,7 @@ end subroutine initialize2d
             IWALL(3)=k
             IWALL(dir2)=inside_index
 
+              ! sets all the physical BCs to 0.0
             call tensorBC(time,dir2,side, &
              u(D_DECL(i,j,k),icomp_tensor), &
              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_tensor), &
