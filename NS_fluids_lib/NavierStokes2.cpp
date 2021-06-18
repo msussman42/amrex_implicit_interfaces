@@ -3313,7 +3313,14 @@ void NavierStokes::density_TO_MAC(int project_option) {
 
 } // subroutine density_TO_MAC
 
-void NavierStokes::VELMAC_TO_CELLALL(int use_VOF_weight) {
+// vel_or_disp=0 => interpolate mac velocity
+// vel_or_disp=1 => interpolate mac displacement
+// dest_idx==-1 => destination is the state data.
+// dest_idx>=0  => destination is localMF[dest_idx]
+void NavierStokes::VELMAC_TO_CELLALL(
+  int use_VOF_weight,
+  int vel_or_disp,
+  int dest_idx) {
 
  int finest_level=parent->finestLevel();
 
@@ -3324,12 +3331,19 @@ void NavierStokes::VELMAC_TO_CELLALL(int use_VOF_weight) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.VELMAC_TO_CELL(use_VOF_weight);
+  ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
  }
 
 } // end subroutine VELMAC_TO_CELLALL
 
-void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
+// vel_or_disp=0 => interpolate mac velocity
+// vel_or_disp=1 => interpolate mac displacement
+// dest_idx==-1 => destination is the state data.
+// dest_idx>=0  => destination is localMF[dest_idx]
+void NavierStokes::VELMAC_TO_CELL(
+  int use_VOF_weight,
+  int vel_or_disp,
+  int dest_idx) {
  
  bool use_tiling=ns_tiling;
 
@@ -3403,17 +3417,54 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
+ int operation_flag=2;
+ int local_enable_spectral=enable_spectral;
+
  MultiFab* face_velocity[AMREX_SPACEDIM];
+ MultiFab* dest_velocity;
+
+ int MAC_state_idx=Umac_Type;
+ if (vel_or_disp==0) {
+  // do nothing
+ } else if (vel_or_disp==1) {
+  MAC_state_idx=XDmac_Type;
+  operation_flag=7;
+  local_enable_spectral=0;
+ } else 
+  amrex::Error("vel_or_disp invalid");
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   face_velocity[dir]=getStateMAC(
-    Umac_Type,0,dir,0,nsolve,cur_time_slab);
+    MAC_state_idx,0,dir,0,nsolve,cur_time_slab);
  }
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ if (dest_idx==-1) {
+  if (vel_or_disp==0) {
+   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+   dest_velocity=&S_new;
+  } else if (vel_or_disp==1) {
+   amrex::Error("no state cell centered disp available");
+  } else
+   amrex::Error("vel_or_disp invalid");
+ } else if (dest_idx>=0) {
+  dest_velocity=localMF[dest_idx];
+ } else
+  amrex::Error("dest_idx invalid");
+
+ if (dest_velocity->nComp()>=AMREX_SPACEDIM) {
+  // do nothing
+ } else 
+  amrex::Error("dest_velocity->nComp() invalid");
+
+ if (dest_velocity->nGrow()>=1) {
+  // do nothing
+ } else 
+  amrex::Error("dest_velocity->nGrow() invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,129);
 
-  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+  MultiFab& Umac_new=get_new_data(MAC_state_idx+dir,slab_step+1);
   int ncmac=Umac_new.nComp();
 
   if (ncmac!=nsolve) {
@@ -3454,7 +3505,8 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];  
   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
-  FArrayBox& veldest=S_new[mfi];
+
+  FArrayBox& veldest=(*dest_velocity)[mfi];
   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
@@ -3471,11 +3523,9 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
 
   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
-  int operation_flag=2;
   int energyflag=0;
   int project_option=0;
   int homflag=0; // default
-  int local_enable_spectral=enable_spectral;
 
   int ncomp_denold=volfab.nComp();
   int ncomp_veldest=veldest.nComp();
@@ -3486,12 +3536,13 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in VELMAC_TO_CELL
+   // we are in VELMAC_TO_CELL
+   // FORT_MAC_TO_CELL is declared in LEVELSET_3D.F90
   FORT_MAC_TO_CELL(
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
-   &operation_flag, // operation_flag=2 (mac_vel -> cell_vel)
+   &operation_flag, // operation_flag=2 (mac_vel -> cell_vel) or 7 (disp)
    &energyflag,
    temperature_primitive_variable.dataPtr(),
    constant_density_all_time.dataPtr(),
@@ -3505,7 +3556,7 @@ void NavierStokes::VELMAC_TO_CELL(int use_VOF_weight) {
    &finest_level,
    &face_flag,
    &project_option,
-   &local_enable_spectral,
+   &local_enable_spectral, //0 if interp displacement to CELLS.
    &fluxvel_index,
    &fluxden_index,
    &facevel_index,

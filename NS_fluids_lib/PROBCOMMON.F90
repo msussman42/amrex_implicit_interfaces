@@ -125,6 +125,26 @@ module probcommon_module_types
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macz
       end type assimilate_out_parm_type
 
+       ! used by deriv_from_grid_util
+      type deriv_from_grid_parm_type
+      INTEGER_T :: scomp
+      INTEGER_T :: ncomp
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: index_flux(SDIM)  !flux point where derivative needed.
+      INTEGER_T :: dir_deriv !dir_deriv=1..sdim
+      INTEGER_T :: box_type_flux(SDIM) !0=CELL 1=NODE
+      INTEGER_T :: box_type_data(SDIM)
+      INTEGER_T :: grid_type_flux  ! -1..5
+      INTEGER_T :: grid_type_data  ! -1..5
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      INTEGER_T :: ngrowfab 
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: disp_data
+      end type deriv_from_grid_parm_type
+
+       ! used by interp_from_grid_util
       type interp_from_grid_parm_type
       INTEGER_T :: scomp
       INTEGER_T :: ncomp

@@ -26647,6 +26647,20 @@ stop
       return 
       end subroutine FORT_CROSSTERM
 
+       ! The continuum model for FSI:
+       !  du/dt + u dot grad u = -grad p/rho + div(H tau_elastic)/rho
+       !  H=1 in the elastic solid
+       !  H=0 in the fluid
+       !  In Sussman, Smereka, Osher, 1994, let H be approximated as
+       !  H(LS)=H_epsilon(LS)  i.e.
+       !  if LS>epsilon => H_epsilon=1
+       !  if LS<-epsilon => H_epsilon=0
+       !  Biased Heaviside function:
+       !  Yokoi, K., Onishi, R., Deng, X.-L., & Sussman, M. (2016). 
+       !   Density-Scaled Balanced Continuum Surface Force Model with 
+       !   a Level Set Based Curvature Interpolation Technique.
+       !   International Journal of Computational Methods, 13(4).
+       !   H approximated as H_epsilon(LS-epsilon)
        ! called from NavierStokes2.cpp:
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
       subroutine FORT_MAC_ELASTIC_FORCE( &

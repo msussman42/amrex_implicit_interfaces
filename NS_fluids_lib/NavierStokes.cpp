@@ -18362,6 +18362,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   int use_VOF_weight=1;
   VELMAC_TO_CELLALL(use_VOF_weight);
+ } else if (output_MAC_vel==0) {
+  // do nothing
+ } else {
+  amrex::Error("output_MAC_vel invalid");
  }
 
  int tecplot_finest_level=finest_level;
@@ -18469,9 +18473,25 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::cout << "level= " << ilev << " div_datanorm0+1grow= " << 
     div_data->norm0(0,1) << '\n'; 
   }
-  MultiFab* viscoelasticmf=ns_level.getStateTensor(1,0,
+  MultiFab* viscoelasticmf;
+  if (MAC_grid_displacement==0) {
+   viscoelasticmf=ns_level.getStateTensor(1,0,
      NUM_CELL_ELASTIC,
      cur_time_slab);
+  } else if (MAC_grid_displacement==1) {
+   MultiFab* just_tensors=ns_level.getStateTensor(1,0,
+     NUM_CELL_ELASTIC,
+     cur_time_slab);
+   viscoelasticmf = new MultiFab(state[Tensor_Type].boxArray(),dmap,
+    NUM_CELL_ELASTIC+AMREX_SPACEDIM,
+    1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
+     // dst,src,scomp,dcomp,ncomp,ngrow
+   MultiFab::Copy(*viscoelasticmf,*just_tensors,0,0,
+      NUM_CELL_ELASTIC,1); 
+
+   delete just_tensors;
+  } else
+   amrex::Error("MAC_grid_displacement invalid");
 
   ns_level.output_zones(
    visual_fab_output,

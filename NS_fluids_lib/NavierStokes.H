@@ -1388,9 +1388,14 @@ void apply_pressure_grad(
     void make_MAC_velocity_consistent();
 
     void VELMAC_TO_CELLALL(
-      int use_VOF_weight);
+      int use_VOF_weight,
+      int vel_or_disp,
+      int dest_idx);
+
     void VELMAC_TO_CELL(
-      int use_VOF_weight);
+      int use_VOF_weight,
+      int vel_or_disp,
+      int dest_idx);
 
     void INCREMENT_REGISTERS_ALL(int source_mf,int caller_id);
     void INCREMENT_REGISTERS(int source_mf,int caller_id);

@@ -7372,6 +7372,133 @@ contains
       return
       end subroutine bilinear_interp_WT 
 
+
+      subroutine deriv_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+ 
+      type(deriv_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+   
+      do dir_local=1,SDIM 
+       ilocal(dir_local)=data_in%index_flux(dir_local)
+      enddo
+    
+      nhalf=3 
+      caller_id=10
+      call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_flux,caller_id)
+
+      do dir_local=1,SDIM 
+       if (data_in%box_type_flux(dir_local).eq. &
+           data_in%box_type_data(dir_local)) then
+        if (dir_local.eq.data_in%dir_deriv) then
+         ilo(dir_local)=ilocal(dir_local)-1
+         ihi(dir_local)=ilocal(dir_local)+1
+        else if (dir_local.ne.data_in%dir_deriv) then
+         ilo(dir_local)=ilocal(dir_local)
+         ihi(dir_local)=ilocal(dir_local)
+        else
+         print *,"dir_local bust"
+         stop
+        endif
+       else if ((data_in%box_type_flux(dir_local).eq.0).and. &
+                (data_in%box_type_data(dir_local).eq.1)) then
+        ilo(dir_local)=ilocal(dir_local)
+        ihi(dir_local)=ilocal(dir_local)+1
+       else if ((data_in%box_type_flux(dir_local).eq.1).and. &
+                (data_in%box_type_data(dir_local).eq.0)) then
+        ilo(dir_local)=ilocal(dir_local)-1
+        ihi(dir_local)=ilocal(dir_local)
+       else
+        print *,"box_type corruption"
+        stop
+       endif
+       istep(dir_local)=ihi(dir_local)-ilo(dir_local)
+       if (istep(dir_local).eq.0) then
+        istep(dir_local)=1
+       else if (istep(dir_local).eq.2) then
+        ! do nothing
+       else if (istep(dir_local).eq.1) then
+        ! do nothing
+       else
+        print *,"istep invalid"
+        stop
+       endif
+
+       xhi(dir_local)= &
+           xflux_sten(2*(ihi(dir_local)-ilocal(dir_local)),dir_local)
+       xlo(dir_local)= &
+           xflux_sten(2*(ilo(dir_local)-ilocal(dir_local)),dir_local)
+       dx(dir_local)=xhi(dir_local)-xlo(dir_local)
+      enddo ! dir_local=1..sdim
+
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir=1,SDIM
+       if (data_in%dx(dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo 
+      if (data_in%ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+      if (data_in%scomp.ge.1) then
+       ! do nothing
+      else
+       print *,"scomp invalid"
+       stop
+      endif
+
+      allocate(local_data(data_in%ncomp))
+
+      if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+       kstep=1
+      else if (SDIM.eq.3) then
+       klosten=ilo(SDIM)
+       khisten=ihi(SDIM)
+       kstep=istep(SDIM)
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+
+      do nc=1,data_in%ncomp
+       local_data(nc)=zero
+
+       do isten=ilo(1),ihi(1),istep(1)
+       do jsten=ilo(2),ihi(2),istep(2)
+       do ksten=klosten,khisten,kstep
+        wt_top=one
+        wt_bot=one
+FIX ME
+
+
+      deallocate(local_data)
+
+      return
+      end subroutine deriv_from_grid_util
+
       subroutine interp_from_grid_util(data_in,data_out)
       use probcommon_module
       IMPLICIT NONE
