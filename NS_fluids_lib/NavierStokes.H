@@ -1848,6 +1848,7 @@ protected:
     static Vector<Real> hardwire_T_gamma; 
     static Vector<Real> saturation_temp; 
      // "p_boil" in Dodd and Ferrante
+     // default: 1.0e+6
     static Vector<Real> reference_pressure; 
     static Vector<Real> accommodation_coefficient; 
     static Vector<Real> saturation_temp_curv; 
