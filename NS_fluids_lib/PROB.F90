@@ -21206,6 +21206,7 @@ END SUBROUTINE Adist
       return
       end subroutine denBC
 
+           ! sets all the EXT_DIR bcs to 0.0
       subroutine tensorBC(time,dir,side,ADV,ADVwall, &
         xsten,nhalf,dx,bfact,ipart,im)
       IMPLICIT NONE
@@ -30475,6 +30476,7 @@ end subroutine initialize2d
             IWALL(3)=k
             IWALL(dir2)=inside_index
 
+             ! sets all the EXT_DIR bcs to 0.0
             call tensorBC(time,dir2,side, &
              u(D_DECL(i,j,k),icomp_total), &
              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_total), &
