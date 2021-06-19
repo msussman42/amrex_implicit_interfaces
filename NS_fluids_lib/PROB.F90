@@ -19465,7 +19465,7 @@ END SUBROUTINE Adist
       return
       end subroutine scalarBC
 
-
+       ! sets all the physical BCs to the interior value.
       subroutine extrapBC(time,dir,side,ADV,ADVwall, &
        xsten,nhalf,dx,bfact)
       IMPLICIT NONE
@@ -27987,6 +27987,10 @@ end subroutine initialize2d
        endif  ! EXT_DIR ?
     
        if (ext_dir_flag.eq.1) then
+
+        print *,"expecting all BCs to be reflect even or odd"
+        stop
+
         do i=borderlo(1),borderhi(1)
         do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
@@ -28164,6 +28168,10 @@ end subroutine initialize2d
        endif  ! EXT_DIR ?
     
        if (ext_dir_flag.eq.1) then
+
+        print *,"expecting all BCs to be reflect even or odd"
+        stop
+
         do i=borderlo(1),borderhi(1)
         do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
@@ -29411,6 +29419,7 @@ end subroutine initialize2d
          IWALL(3)=k
          IWALL(dir2)=inside_index
 
+          ! sets all the physical BCs to the interior value.
          call extrapBC(time,dir2,side, &
            u(D_DECL(i,j,k)), &
            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
@@ -29736,6 +29745,10 @@ end subroutine initialize2d
         endif
 
         if (ext_dir_flag.eq.1) then
+
+         print *,"expecting all BCs to be reflect even or odd"
+         stop
+
          do i=borderlo(1),borderhi(1)
          do j=borderlo(2),borderhi(2)
          do k=borderlo(3),borderhi(3)
@@ -29899,6 +29912,10 @@ end subroutine initialize2d
        endif
 
        if (ext_dir_flag.eq.1) then
+
+         print *,"expecting all BCs to be reflect even or odd"
+         stop
+
          do i=borderlo(1),borderhi(1)
          do j=borderlo(2),borderhi(2)
          do k=borderlo(3),borderhi(3)
@@ -30386,6 +30403,10 @@ end subroutine initialize2d
           endif
 
           if (ext_dir_flag.eq.1) then
+
+           print *,"expecting all BCs to be reflect even or odd"
+           stop
+
            do i=borderlo(1),borderhi(1)
            do j=borderlo(2),borderhi(2)
            do k=borderlo(3),borderhi(3)
@@ -30466,6 +30487,10 @@ end subroutine initialize2d
           endif
 
           if (ext_dir_flag.eq.1) then
+
+           print *,"expecting all BCs to be reflect even or odd"
+           stop
+
            do i=borderlo(1),borderhi(1)
            do j=borderlo(2),borderhi(2)
            do k=borderlo(3),borderhi(3)
