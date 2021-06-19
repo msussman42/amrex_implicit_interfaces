@@ -488,14 +488,16 @@ NavierStokes::set_tensor_extrap_components(
 
  int ibase_tensor=0;
 
+  // no EXT_DIR BCs
  set_tensor_bc(bc,phys_bc,0,0);
  std::string T11_strE="T11extrap"+postfix; 
-  // low order extrapolation
+  // low order extrapolation (if EXT_DIR BCs were present)
  desc_lstGHOST.setComponent(indx,ibase_tensor,
    T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 
  ibase_tensor++;
      
+  // no EXT_DIR BCs
  set_tensor_bc(bc,phys_bc,0,1);
  std::string T12_strE="T12extrap"+postfix; 
  desc_lstGHOST.setComponent(indx,ibase_tensor,
@@ -503,6 +505,7 @@ NavierStokes::set_tensor_extrap_components(
 
  ibase_tensor++;
      
+  // no EXT_DIR BCs
  set_tensor_bc(bc,phys_bc,1,1);
  std::string T22_strE="T22extrap"+postfix; 
  desc_lstGHOST.setComponent(indx,ibase_tensor,
@@ -512,19 +515,24 @@ NavierStokes::set_tensor_extrap_components(
     
  if (AMREX_SPACEDIM==2) {
   if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+    // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
   } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
    // placeholder: Q33 should always be 0
+   // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
   } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
    // placeholder: Q33 should always be 0
+   // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
   } else
    amrex::Error("(CoordSys::CoordType) coord invalid");
  } else if (AMREX_SPACEDIM==3) {
   if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+   // no EXT_DIR BCs
    set_tensor_bc(bc,phys_bc,2,2);
   } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+   // no EXT_DIR BCs
    set_tensor_bc(bc,phys_bc,2,2);
   } else
    amrex::Error("(CoordSys::CoordType) coord invalid");
@@ -538,6 +546,7 @@ NavierStokes::set_tensor_extrap_components(
 #if (AMREX_SPACEDIM == 3)
   ibase_tensor++;
 
+   // no EXT_DIR BCs
   set_tensor_bc(bc,phys_bc,0,2);
   std::string T13_strE="T13extrap"+postfix; 
   desc_lstGHOST.setComponent(indx,ibase_tensor,
@@ -545,6 +554,7 @@ NavierStokes::set_tensor_extrap_components(
      
   ibase_tensor++;
      
+   // no EXT_DIR BCs
   set_tensor_bc(bc,phys_bc,1,2);
   std::string T23_strE="T23extrap"+postfix; 
   desc_lstGHOST.setComponent(indx,ibase_tensor,
@@ -848,6 +858,7 @@ NavierStokes::variableSetUp ()
 
      int ibase_tensor=NUM_TENSOR_TYPE;
 
+      // same as x_vel_bc except that EXT_DIR => FOEXTRAP
      set_x_vel_extrap_bc(bc,phys_bc);
      std::string xdisplace_strE="XDISPLACEextrap"; 
      desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
@@ -855,6 +866,7 @@ NavierStokes::variableSetUp ()
 
      ibase_tensor++;
 
+      // same as y_vel_bc except that EXT_DIR => FOEXTRAP
      set_y_vel_extrap_bc(bc,phys_bc);
      std::string ydisplace_strE="YDISPLACEextrap"; 
      desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
@@ -864,6 +876,7 @@ NavierStokes::variableSetUp ()
      if (AMREX_SPACEDIM==3) {
       ibase_tensor++;
 
+      // same as z_vel_bc except that EXT_DIR => FOEXTRAP
       set_z_vel_extrap_bc(bc,phys_bc);
       std::string zdisplace_strE="ZDISPLACEextrap"; 
       desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
@@ -990,19 +1003,22 @@ NavierStokes::variableSetUp ()
        int dir_local=0;
        std::string xdisplace_str="XDISPLACE";
        MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
-       set_x_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+        // same as x_vel_bc except that EXT_DIR => FOEXTRAP
+       set_x_vel_extrap_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
 
        dir_local++;
        std::string ydisplace_str="YDISPLACE";
        MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
-       set_y_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+        // same as y_vel_bc except that EXT_DIR => FOEXTRAP
+       set_y_vel_extrap_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
 
 #if (AMREX_SPACEDIM == 3)
        if (AMREX_SPACEDIM==3) {
         dir_local++;
         std::string zdisplace_str="ZDISPLACE";
         MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
-        set_z_vel_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
+        // same as z_vel_bc except that EXT_DIR => FOEXTRAP
+        set_z_vel_extrap_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
        }
 #endif
 
@@ -1038,6 +1054,7 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
        0,1,&xd_mac_lo_interp,null_ncomp_particles);
 
+       // same as x_vel_bc except that EXT_DIR => FOEXTRAP
       set_x_vel_extrap_bc(bc,phys_bc);
       std::string extrap_str="xd_extrap"; 
         //dcomp=0
@@ -1051,6 +1068,7 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
        0,1,&xd_mac_lo_interp,null_ncomp_particles);
 
+       // same as y_vel_bc except that EXT_DIR => FOEXTRAP
       set_y_vel_extrap_bc(bc,phys_bc);
       extrap_str="yd_extrap"; 
         //dcomp=0
@@ -1065,6 +1083,7 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
        0,1,&xd_mac_lo_interp,null_ncomp_particles);
 
+       // same as z_vel_bc except that EXT_DIR => FOEXTRAP
       set_z_vel_extrap_bc(bc,phys_bc);
       extrap_str="zd_extrap"; 
         //dcomp=0
@@ -1074,20 +1093,23 @@ NavierStokes::variableSetUp ()
 
       std::string xd_mac_name="XDMAC";
       BCRec xd_mac_bcs;
-      set_x_vel_bc(xd_mac_bcs,phys_bc);
+       // same as x_vel_bc except that EXT_DIR => FOEXTRAP
+      set_x_vel_extrap_bc(xd_mac_bcs,phys_bc);
       desc_lst.setComponent(XDmac_Type,0,xd_mac_name,xd_mac_bcs,
          FORT_XDMACFILL,&xd_mac_interp);
 
       std::string yd_mac_name="YDMAC";
       BCRec yd_mac_bcs;
-      set_y_vel_bc(yd_mac_bcs,phys_bc);
+       // same as y_vel_bc except that EXT_DIR => FOEXTRAP
+      set_y_vel_extrap_bc(yd_mac_bcs,phys_bc);
       desc_lst.setComponent(YDmac_Type,0,yd_mac_name,yd_mac_bcs,
          FORT_XDMACFILL,&xd_mac_interp);
 
 #if (AMREX_SPACEDIM == 3)
       std::string zd_mac_name="ZDMAC";
       BCRec zd_mac_bcs;
-      set_z_vel_bc(zd_mac_bcs,phys_bc);
+       // same as z_vel_bc except that EXT_DIR => FOEXTRAP
+      set_z_vel_extrap_bc(zd_mac_bcs,phys_bc);
       desc_lst.setComponent(ZDmac_Type,0,zd_mac_name,zd_mac_bcs,
          FORT_XDMACFILL,&xd_mac_interp);
 #endif
