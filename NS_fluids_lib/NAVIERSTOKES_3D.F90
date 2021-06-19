@@ -3392,10 +3392,7 @@ END SUBROUTINE SIMP
       endif
       if (elastic_ncomp.eq. &
           num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
-      else if (elastic_ncomp.eq. &
-               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
-       print *,"FIX ME; append the interp of MAC to CELL displacement"
-       stop
+       ! do nothing
       else
        print *,"elastic_ncomp invalid"
        stop

@@ -7379,7 +7379,34 @@ contains
  
       type(deriv_from_grid_parm_type), intent(in) :: data_in 
       type(interp_from_grid_out_parm_type), intent(out) :: data_out
-   
+
+      INTEGER_T ilocal(SDIM)
+      INTEGER_T caller_id
+      INTEGER_T dir_local
+      INTEGER_T ilo(SDIM)
+      INTEGER_T ihi(SDIM)
+      INTEGER_T istep(SDIM)
+      INTEGER_T klosten,khisten,kstep
+      INTEGER_T nc
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T ii(3)
+      REAL_T SGN_FACT
+      REAL_T wt_top,wt_bot
+      REAL_T xflux_sten(-3:3,SDIM)
+      REAL_T xhi_sten(-3:3,SDIM)
+      REAL_T xlo_sten(-3:3,SDIM)
+      REAL_T dx_sten(SDIM)
+      INTEGER_T nhalf
+  
+#define dir_FD data_in%dir_deriv
+
+      if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+ 
       do dir_local=1,SDIM 
        ilocal(dir_local)=data_in%index_flux(dir_local)
       enddo
@@ -7392,22 +7419,22 @@ contains
       do dir_local=1,SDIM 
        if (data_in%box_type_flux(dir_local).eq. &
            data_in%box_type_data(dir_local)) then
-        if (dir_local.eq.data_in%dir_deriv) then
+        if (dir_local.eq.dir_FD) then
          ilo(dir_local)=ilocal(dir_local)-1
          ihi(dir_local)=ilocal(dir_local)+1
-        else if (dir_local.ne.data_in%dir_deriv) then
+        else if (dir_local.ne.dir_FD) then
          ilo(dir_local)=ilocal(dir_local)
          ihi(dir_local)=ilocal(dir_local)
         else
          print *,"dir_local bust"
          stop
         endif
-       else if ((data_in%box_type_flux(dir_local).eq.0).and. &
-                (data_in%box_type_data(dir_local).eq.1)) then
+       else if ((data_in%box_type_flux(dir_local).eq.0).and. & !CELL
+                (data_in%box_type_data(dir_local).eq.1)) then  !NODE
         ilo(dir_local)=ilocal(dir_local)
         ihi(dir_local)=ilocal(dir_local)+1
-       else if ((data_in%box_type_flux(dir_local).eq.1).and. &
-                (data_in%box_type_data(dir_local).eq.0)) then
+       else if ((data_in%box_type_flux(dir_local).eq.1).and. & !NODE
+                (data_in%box_type_data(dir_local).eq.0)) then  !CELL
         ilo(dir_local)=ilocal(dir_local)-1
         ihi(dir_local)=ilocal(dir_local)
        else
@@ -7426,11 +7453,11 @@ contains
         stop
        endif
 
-       xhi(dir_local)= &
-           xflux_sten(2*(ihi(dir_local)-ilocal(dir_local)),dir_local)
-       xlo(dir_local)= &
-           xflux_sten(2*(ilo(dir_local)-ilocal(dir_local)),dir_local)
-       dx(dir_local)=xhi(dir_local)-xlo(dir_local)
+       call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+       call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+       dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
       enddo ! dir_local=1..sdim
 
       if ((data_in%level.ge.0).and. &
@@ -7441,20 +7468,20 @@ contains
        print *,"level, finest_level or bfact invalid"
        stop
       endif
-      do dir=1,SDIM
-       if (data_in%dx(dir).gt.zero) then
+      do dir_local=1,SDIM
+       if (data_in%dx(dir_local).gt.zero) then
         ! do nothing
        else
         print *,"data_in%dx invalid"
         stop
        endif
-       if (data_in%fablo(dir).ge.0) then
+       if (data_in%fablo(dir_local).ge.0) then
         ! do nothing
        else
         print *,"data_in%fablo invalid"
         stop
        endif
-      enddo 
+      enddo  ! dir_local=1..sdim
       if (data_in%ncomp.ge.1) then
        ! do nothing
       else
@@ -7467,8 +7494,6 @@ contains
        print *,"scomp invalid"
        stop
       endif
-
-      allocate(local_data(data_in%ncomp))
 
       if (SDIM.eq.2) then
        klosten=0
@@ -7484,17 +7509,70 @@ contains
       endif
 
       do nc=1,data_in%ncomp
-       local_data(nc)=zero
+
+       data_out%data_interp(nc)=zero
 
        do isten=ilo(1),ihi(1),istep(1)
        do jsten=ilo(2),ihi(2),istep(2)
        do ksten=klosten,khisten,kstep
+        ii(1)=isten
+        ii(2)=jsten
+        ii(3)=ksten
+
+        if (ii(dir_FD).eq.ilo(dir_FD)) then
+         SGN_FACT=-one
+        else if (ii(dir_FD).eq.ihi(dir_FD)) then
+         SGN_FACT=one
+        else
+         print *,"ii(dir_FD) invalid"
+         stop
+        endif
+
         wt_top=one
         wt_bot=one
-FIX ME
+        
+        do dir_local=1,SDIM
+         if (dir_local.eq.dir_FD) then
+          wt_top=wt_top*SGN_FACT
+          wt_bot=wt_bot*dx_sten(dir_local)
+          if (ihi(dir_local).gt.ilo(dir_local)) then
+           ! do nothing
+          else
+           print *,"ihi or ilo bust"
+           stop
+          endif
+         else if (ihi(dir_local).eq.ilo(dir_local)) then
+          ! do nothing
+         else if (ihi(dir_local).gt.ilo(dir_local)) then
+          if (ii(dir_local).eq.ihi(dir_local)) then
+           wt_top=wt_top*(xflux_sten(0,dir_local)-xlo_sten(0,dir_local))  
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else if (ii(dir_local).eq.ilo(dir_local)) then
+           wt_top=wt_top*(xhi_sten(0,dir_local)-xflux_sten(0,dir_local))  
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else
+           print *,"ii(dir_local) invalid"
+           stop
+          endif
+         else
+          print *,"ihi or ilo invalid"
+          stop
+         endif
+        enddo ! dir_local=1..sdim
 
+        if ((wt_bot.gt.zero).and.(wt_top.gt.zero)) then 
+         data_out%data_interp(nc)=data_out%data_interp(nc)+wt_top* &
+           data_in%disp_data(D_DECL(isten,jsten,ksten),nc)/wt_bot
+        else
+         print *,"wt_bot or wt_top invalid"
+         stop
+        endif
+       enddo !ksten
+       enddo !jsten
+       enddo !isten
+      enddo ! nc=1 .. data_in%ncomp
 
-      deallocate(local_data)
+#undef dir_FD
 
       return
       end subroutine deriv_from_grid_util

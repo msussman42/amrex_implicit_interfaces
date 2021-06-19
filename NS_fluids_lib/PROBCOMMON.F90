@@ -138,6 +138,8 @@ module probcommon_module_types
       INTEGER_T :: box_type_data(SDIM)
       INTEGER_T :: grid_type_flux  ! -1..5
       INTEGER_T :: grid_type_data  ! -1..5
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
       INTEGER_T :: ngrowfab 
