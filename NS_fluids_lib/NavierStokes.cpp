@@ -18491,7 +18491,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::cout << "level= " << ilev << " div_datanorm0+1grow= " << 
     div_data->norm0(0,1) << '\n'; 
   }
-  MultiFab* viscoelasticmf;
+  MultiFab* viscoelasticmf=nullptr;
   if (MAC_grid_displacement==0) {
    if (NUM_CELL_ELASTIC==
        num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {

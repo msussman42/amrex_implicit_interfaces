@@ -6491,7 +6491,7 @@ stop
                stop
               endif
              else if (local_freezing_model.eq.7) then ! Cavitation
-              print *,"FIX ME"
+              print *,"FIX ME: cavitation case not considered here"
               stop
              else
               print *,"local_freezing_model invalid in convertmaterial(2)"

@@ -3450,7 +3450,7 @@ void NavierStokes::VELMAC_TO_CELL(
  int local_enable_spectral=enable_spectral;
 
  MultiFab* face_velocity[AMREX_SPACEDIM];
- MultiFab* dest_velocity;
+ MultiFab* dest_velocity=nullptr;
 
  if (vel_or_disp==0) { //velocity
   MAC_state_idx=Umac_Type;

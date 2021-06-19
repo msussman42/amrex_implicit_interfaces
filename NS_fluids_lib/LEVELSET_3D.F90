@@ -11802,8 +11802,8 @@ stop
       endif
    
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
-      if (operation_flag.eq.2) then 
-              FIX ME for DISPLACEMENT DO NOT FORGET TO INIT THE GHOST CELL 
+      if ((operation_flag.eq.2).or. & ! velocity
+          (operation_flag.eq.7)) then ! displacement
        if (ncomp_veldest.ge.SDIM) then
         ! do nothing
        else
@@ -12037,9 +12037,12 @@ stop
        endif
 
        ! umac->ucell in solver or VELMAC_TO_CELL
-      else if (operation_flag.eq.2) then 
+      else if ((operation_flag.eq.2).or. & ! velocity
+               (operation_flag.eq.7)) then ! displacement
 
-       if (homflag.ne.0) then
+       if (homflag.eq.0) then
+        ! do nothing
+       else
         print *,"homflag invalid"
         stop
        endif
@@ -12469,11 +12472,20 @@ stop
         endif
 
        ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
-       else if (operation_flag.eq.2) then
+       else if ((operation_flag.eq.2).or. & ! velocity
+                (operation_flag.eq.7)) then ! displacement
 
          ! LS>0 if clamped
-        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+        if (operation_flag.eq.2) then ! velocity
+         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped)
+        else if (operation_flag.eq.7) then ! displacement
+         LS_clamped=-9999.0
+        else
+         print *,"operation_flag invalid"
+         stop
+        endif
+     
 
         do dir=0,SDIM-1 
          ii=0
@@ -12633,8 +12645,15 @@ stop
  
           if (dir.eq.0) then
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
-           ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
+           if (operation_flag.eq.2) then ! velocity
+            ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
+           else if (operation_flag.eq.7) then ! displacement
+            ufacesolid(side)=uface(side)
+           else
+            print *,"operation_flag invalid"
+            stop
+           endif
            if (SDIM.eq.2) then
             if (levelrz.eq.0) then
              ! do nothing
@@ -12674,12 +12693,26 @@ stop
            endif
           else if (dir.eq.1) then
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
-           ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
+           if (operation_flag.eq.2) then ! velocity
+            ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
+           else if (operation_flag.eq.7) then ! displacement
+            ufacesolid(side)=uface(side)
+           else
+            print *,"operation_flag invalid"
+            stop
+           endif
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
-           ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
+           if (operation_flag.eq.2) then ! velocity
+            ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
+           else if (operation_flag.eq.7) then ! displacement
+            ufacesolid(side)=uface(side)
+           else
+            print *,"operation_flag invalid"
+            stop
+           endif
           else
            print *,"dir invalid mac to cell 3"
            stop
@@ -13700,13 +13733,16 @@ stop
               ncomp_xvel=nsolve
               ncomp_cterm=1
              ! MAC->CELL in solver or VELMAC_to_CELL
-             else if (operation_flag.eq.2) then 
+             else if (operation_flag.eq.2) then  ! velocity
               scomp=1
               scomp_bc=dir+1
               dcomp=dir+1
               ncomp=1
               ncomp_xvel=nsolve
               ncomp_cterm=1
+             else if (operation_flag.eq.7) then  ! displacement
+              print *,"spectral element discretization not allowed for disp"
+              stop 
              else if (operation_flag.eq.3) then ! (grad p)^CELL, div(up)
               scomp=1
               scomp_bc=dir+1
