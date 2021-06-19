@@ -3345,8 +3345,15 @@ void NavierStokes::VELMAC_TO_CELLALL(
    GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
      AMREX_SPACEDIM,State_Type,scompBC_map);
   } else if (vel_or_disp==1) { // displacement
-	  FIX ME  for displacement should it be FOEXTRAP everywhere?
-		  regardless of GHOST or NOT?
+
+   if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("NUM_TENSOR_TYPE invalid");
+
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+    scompBC_map[dir]=NUM_TENSOR_TYPE+dir;
+
    PCINTERP_fill_bordersALL(dest_idx,localMF[dest_idx]->nGrow(),0,
      AMREX_SPACEDIM,Tensor_Type,scompBC_map);
   } else
@@ -3438,15 +3445,17 @@ void NavierStokes::VELMAC_TO_CELL(
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
  int operation_flag=2;
+ int MAC_state_idx=Umac_Type;
+
  int local_enable_spectral=enable_spectral;
 
  MultiFab* face_velocity[AMREX_SPACEDIM];
  MultiFab* dest_velocity;
 
- int MAC_state_idx=Umac_Type;
- if (vel_or_disp==0) {
-  // do nothing
- } else if (vel_or_disp==1) {
+ if (vel_or_disp==0) { //velocity
+  MAC_state_idx=Umac_Type;
+  operation_flag=2;
+ } else if (vel_or_disp==1) { //displacement
   MAC_state_idx=XDmac_Type;
   operation_flag=7;
   local_enable_spectral=0;

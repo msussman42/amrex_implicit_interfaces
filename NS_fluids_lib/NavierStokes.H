@@ -299,7 +299,9 @@ namespace amrex{
 #define MAC_ELASTIC_FLUX_XZ_MF (MAC_ELASTIC_FLUX_XY_MF+1)
 #define MAC_ELASTIC_FLUX_YZ_MF (MAC_ELASTIC_FLUX_XZ_MF+1)
 
-#define NEXT_MF (MAC_ELASTIC_FLUX_YZ_MF+1)
+#define VISUAL_XDISP_MAC_CELL_MF (MAC_ELASTIC_FLUX_YZ_MF+1)
+
+#define NEXT_MF (VISUAL_XDISP_MAC_CELL_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
@@ -1389,12 +1391,12 @@ void apply_pressure_grad(
 
     void VELMAC_TO_CELLALL(
       int use_VOF_weight,
-      int vel_or_disp,
+      int vel_or_disp, // =0 velocity; =1 displacement
       int dest_idx);
 
     void VELMAC_TO_CELL(
       int use_VOF_weight,
-      int vel_or_disp,
+      int vel_or_disp, // =0 velocity; =1 displacement
       int dest_idx);
 
     void INCREMENT_REGISTERS_ALL(int source_mf,int caller_id);
