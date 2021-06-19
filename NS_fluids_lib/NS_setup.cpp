@@ -853,6 +853,7 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
+      // setComponent: 0..NUM_TENSOR_TYPE-1
      std::string postfix_str="CC";
      set_tensor_extrap_components(coord,postfix_str,Tensor_Type);
 

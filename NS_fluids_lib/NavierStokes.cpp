@@ -18351,8 +18351,12 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  }
  
  int output_MAC_vel=0;
- if (face_flag==1)
+ if (face_flag==1) {
   output_MAC_vel=1;
+ } else if (face_flag==0) {
+  // do nothing
+ } else
+  amrex::Error("face_flag invalid");
 
  if (output_MAC_vel==1) {
    // save a copy of the State_Type cell velocity since it will be
@@ -18361,7 +18365,12 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
 
   int use_VOF_weight=1;
-  VELMAC_TO_CELLALL(use_VOF_weight);
+  int vel_or_disp=0;  // velocity
+  int dest_idx=-1; // we put the interpolant in State_Type so that the
+                   // command MultiFab* velmf=ns_level.getState( ... 
+                   // gets the interpolated data.  We have to restore
+                   // HOLD_VELOCITY_DATA_MF at the end.
+  VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
  } else if (output_MAC_vel==0) {
   // do nothing
  } else {
@@ -18451,13 +18460,22 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("visual_compare invalid");
 
+ if (MAC_grid_displacement==0) {
+  // do nothing
+ } else if (MAC_grid_displacement==1) {
+  int use_VOF_weight=1;
+  int vel_or_disp=1;  // displacement
+  int dest_idx=VISUAL_XDISP_MAC_CELL_MF;
+  VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
+ } else
+  amrex::Error("MAC_grid_displacement invalid");
+
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
   ns_level.debug_ngrow(MACDIV_MF,1,250);
 
-  MultiFab* velmf=ns_level.getState(1,0,
-    (AMREX_SPACEDIM+1),cur_time_slab);
+  MultiFab* velmf=ns_level.getState(1,0,AMREX_SPACEDIM+1,cur_time_slab);
   MultiFab* presmf=ns_level.derive_EOS_pressure(material_type_visual); 
   if (presmf->nComp()!=1)
    amrex::Error("presmf has invalid ncomp");
@@ -18475,19 +18493,33 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   }
   MultiFab* viscoelasticmf;
   if (MAC_grid_displacement==0) {
-   viscoelasticmf=ns_level.getStateTensor(1,0,
-     NUM_CELL_ELASTIC,
-     cur_time_slab);
+   if (NUM_CELL_ELASTIC==
+       num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
+
+   viscoelasticmf=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
   } else if (MAC_grid_displacement==1) {
-   MultiFab* just_tensors=ns_level.getStateTensor(1,0,
-     NUM_CELL_ELASTIC,
-     cur_time_slab);
-   viscoelasticmf = new MultiFab(state[Tensor_Type].boxArray(),dmap,
+   if (NUM_CELL_ELASTIC==
+       num_materials_viscoelastic*NUM_TENSOR_TYPE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
+
+   MultiFab* just_tensors=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,
+      cur_time_slab);
+   viscoelasticmf = new MultiFab(
+    ns_level.state[Tensor_Type].boxArray(),
+    ns_level.dmap,
     NUM_CELL_ELASTIC+AMREX_SPACEDIM,
     1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
      // dst,src,scomp,dcomp,ncomp,ngrow
-   MultiFab::Copy(*viscoelasticmf,*just_tensors,0,0,
-      NUM_CELL_ELASTIC,1); 
+   MultiFab::Copy(*viscoelasticmf,*just_tensors,0,0,NUM_CELL_ELASTIC,1); 
+     // dst,src,scomp,dcomp,ncomp,ngrow
+   MultiFab::Copy(*viscoelasticmf,
+    *ns_level.localMF[VISUAL_XDISP_MAC_CELL_MF],0,
+    NUM_CELL_ELASTIC,AMREX_SPACEDIM,1); 
 
    delete just_tensors;
   } else
@@ -18687,7 +18719,17 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      0,0,AMREX_SPACEDIM,1);
    ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
   }  // ilev
- }
+ } else if (output_MAC_vel==0) {
+  // do nothing
+ } else
+  amrex::Error("output_MAC_vel invalid");
+
+ if (MAC_grid_displacement==0) {
+  // do nothing
+ } else if (MAC_grid_displacement==1) {
+  delete_array(VISUAL_XDISP_MAC_CELL_MF);
+ } else
+  amrex::Error("MAC_grid_displacement invalid");
 
  delete_array(MACDIV_MF);
  delete_array(MAGTRACE_MF); 

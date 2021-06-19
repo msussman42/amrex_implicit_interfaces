@@ -2974,7 +2974,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         Real beta=1.0;
         ns_level.increment_KE(beta); 
 	int use_VOF_weight=1;
-        ns_level.VELMAC_TO_CELL(use_VOF_weight);
+        int vel_or_disp=0; //interpolate MAC velocity
+        int dest_idx=-1;   //update State
+        ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
         beta=-1.0;
         ns_level.increment_KE(beta);
        }
@@ -11612,7 +11614,9 @@ void NavierStokes::vel_elastic_ALL() {
      // average down the MAC velocity, set the boundary conditions.
     make_MAC_velocity_consistentALL();
     int use_VOF_weight=1;
-    VELMAC_TO_CELLALL(use_VOF_weight);
+    int vel_or_disp=0; //interpolate MAC velocity
+    int dest_idx=-1;   //update State
+    VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
    } else 
     amrex::Error("expecting face_flag==1 if MAC_grid_displacement==1");
 
