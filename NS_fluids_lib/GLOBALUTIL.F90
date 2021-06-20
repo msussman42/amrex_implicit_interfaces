@@ -7380,7 +7380,6 @@ contains
       type(deriv_from_grid_parm_type), intent(in) :: data_in 
       type(interp_from_grid_out_parm_type), intent(out) :: data_out
 
-      INTEGER_T ilocal(SDIM)
       INTEGER_T caller_id
       INTEGER_T dir_local
       INTEGER_T ilo(SDIM)
@@ -7399,6 +7398,7 @@ contains
       INTEGER_T nhalf
   
 #define dir_FD data_in%dir_deriv
+#define ilocal data_in%index_flux
 
       if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
        ! do nothing
@@ -7407,10 +7407,6 @@ contains
        stop
       endif
  
-      do dir_local=1,SDIM 
-       ilocal(dir_local)=data_in%index_flux(dir_local)
-      enddo
-    
       nhalf=3 
       caller_id=10
       call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
@@ -7572,6 +7568,7 @@ contains
        enddo !isten
       enddo ! nc=1 .. data_in%ncomp
 
+#undef ilocal
 #undef dir_FD
 
       return
