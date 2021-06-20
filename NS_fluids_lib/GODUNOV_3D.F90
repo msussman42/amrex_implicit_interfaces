@@ -18880,50 +18880,50 @@ stop
 
        ! FABS
        ! original data
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat)
-      REAL_T, intent(in) :: den(DIMV(den),den_recon_ncomp)
-      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
-      REAL_T, intent(in) :: tensor(DIMV(tensor),ntensor)
-      REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM+1)
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat)
+      REAL_T, intent(in), target :: den(DIMV(den),den_recon_ncomp)
+      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),ntensor)
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1)
        ! slope data
-      REAL_T, intent(in) :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
+      REAL_T, intent(in), target :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
        ! new data
-      REAL_T, intent(inout) :: snew(DIMV(snew),ncomp_state)
-      REAL_T, intent(inout) :: tennew(DIMV(tennew),ntensor)
-      REAL_T, intent(inout) :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(inout), target :: snew(DIMV(snew),ncomp_state)
+      REAL_T, intent(inout), target :: tennew(DIMV(tennew),ntensor)
+      REAL_T, intent(inout), target :: LSnew(DIMV(LSnew),nmat)
        ! other vars
        ! displacement
-      REAL_T, intent(in) :: ucell(DIMV(ucell),SDIM)
-      REAL_T, intent(in) :: vofls0(DIMV(vofls0),2*nmat)
-      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: ucell(DIMV(ucell),SDIM)
+      REAL_T, intent(in), target :: vofls0(DIMV(vofls0),2*nmat)
+      REAL_T, intent(in), target :: mask(DIMV(mask))
       ! =1 int. =1 fine-fine in domain =0 o.t.
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr)) 
-      REAL_T, intent(in) :: unode(DIMV(unode))
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr)) 
+      REAL_T, intent(in), target :: unode(DIMV(unode))
        ! local variables
-      REAL_T, intent(in) :: conserve(DIMV(conserve),nc_conserve)
-      REAL_T, intent(in) :: xvel(DIMV(xvel), &
+      REAL_T, intent(in), target :: conserve(DIMV(conserve),nc_conserve)
+      REAL_T, intent(in), target :: xvel(DIMV(xvel), &
          num_MAC_vectors) 
-      REAL_T, intent(in) :: yvel(DIMV(yvel), &
+      REAL_T, intent(in), target :: yvel(DIMV(yvel), &
          num_MAC_vectors)  
-      REAL_T, intent(in) :: zvel(DIMV(zvel), &
+      REAL_T, intent(in), target :: zvel(DIMV(zvel), &
          num_MAC_vectors) 
-      REAL_T, intent(in) :: xvelslp(DIMV(xvelslp),1+nmat)  ! xvelslope,xcen
-      REAL_T, intent(in) :: yvelslp(DIMV(yvelslp),1+nmat)  
-      REAL_T, intent(in) :: zvelslp(DIMV(zvelslp),1+nmat)  
-      REAL_T, intent(in) :: momslope(DIMV(momslope),nc_conserve)
+      REAL_T, intent(in), target :: xvelslp(DIMV(xvelslp),1+nmat)  ! xvelslope,xcen
+      REAL_T, intent(in), target :: yvelslp(DIMV(yvelslp),1+nmat)  
+      REAL_T, intent(in), target :: zvelslp(DIMV(zvelslp),1+nmat)  
+      REAL_T, intent(in), target :: momslope(DIMV(momslope),nc_conserve)
 
-      REAL_T, intent(inout) :: xmomside(DIMV(xmomside), &
+      REAL_T, intent(inout), target :: xmomside(DIMV(xmomside), &
         2*num_MAC_vectors)
-      REAL_T, intent(inout) :: ymomside(DIMV(ymomside), &
+      REAL_T, intent(inout), target :: ymomside(DIMV(ymomside), &
         2*num_MAC_vectors)
-      REAL_T, intent(inout) :: zmomside(DIMV(zmomside), &
+      REAL_T, intent(inout), target :: zmomside(DIMV(zmomside), &
         2*num_MAC_vectors)
 
-      REAL_T, intent(inout) :: xmassside(DIMV(xmassside), &
+      REAL_T, intent(inout), target :: xmassside(DIMV(xmassside), &
         2*num_MAC_vectors)
-      REAL_T, intent(inout) :: ymassside(DIMV(ymassside), &
+      REAL_T, intent(inout), target :: ymassside(DIMV(ymassside), &
         2*num_MAC_vectors)
-      REAL_T, intent(inout) :: zmassside(DIMV(zmassside), &
+      REAL_T, intent(inout), target :: zmassside(DIMV(zmassside), &
         2*num_MAC_vectors)
     
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
@@ -19303,23 +19303,23 @@ stop
        ! ghost cells.
 
        ! original data
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,136)
-      call checkbound(fablo,fabhi,DIMS(den),ngrow,-1,1231)
-      call checkbound(fablo,fabhi,DIMS(mom_den),ngrow,-1,1231)
-      call checkbound(fablo,fabhi,DIMS(tensor),1,-1,1231)
-      call checkbound(fablo,fabhi,DIMS(velfab),ngrow,-1,125)
+      call checkbound_array(fablo,fabhi,LS,1,-1,136)
+      call checkbound_array(fablo,fabhi,den,ngrow,-1,1231)
+      call checkbound_array(fablo,fabhi,mom_den,ngrow,-1,1231)
+      call checkbound_array(fablo,fabhi,tensor,1,-1,1231)
+      call checkbound_array(fablo,fabhi,velfab,ngrow,-1,125)
        ! slope data
-      call checkbound(fablo,fabhi,DIMS(PLICSLP),ngrow,-1,132)
+      call checkbound_array(fablo,fabhi,PLICSLP,ngrow,-1,132)
        ! new data
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,130)
-      call checkbound(fablo,fabhi,DIMS(tennew),1,-1,130)
-      call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,138)
+      call checkbound_array(fablo,fabhi,snew,1,-1,130)
+      call checkbound_array(fablo,fabhi,tennew,1,-1,130)
+      call checkbound_array(fablo,fabhi,LSnew,1,-1,138)
        ! other vars
-      call checkbound(fablo,fabhi,DIMS(ucell),ngrow-1,-1,135)
-      call checkbound(fablo,fabhi,DIMS(vofls0),1,-1,135)
-      call checkbound(fablo,fabhi,DIMS(mask),ngrow,-1,133)
-      call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,134)
-      call checkbound(fablo,fabhi,DIMS(unode),ngrow-1,normdir,121)
+      call checkbound_array(fablo,fabhi,ucell,ngrow-1,-1,135)
+      call checkbound_array(fablo,fabhi,vofls0,1,-1,135)
+      call checkbound_array1(fablo,fabhi,mask,ngrow,-1,133)
+      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,134)
+      call checkbound_array1(fablo,fabhi,unode,ngrow-1,normdir,121)
 
       if (dt.le.zero) then
         print *,"dt invalid"
@@ -19358,21 +19358,21 @@ stop
 
       if (face_flag.eq.1) then
 
-       call checkbound(fablo,fabhi,DIMS(xvel),ngrow_mac_old,0,1243)
-       call checkbound(fablo,fabhi,DIMS(yvel),ngrow_mac_old,1,125)
-       call checkbound(fablo,fabhi,DIMS(zvel),ngrow_mac_old,SDIM-1,126)
+       call checkbound_array(fablo,fabhi,xvel,ngrow_mac_old,0,1243)
+       call checkbound_array(fablo,fabhi,yvel,ngrow_mac_old,1,125)
+       call checkbound_array(fablo,fabhi,zvel,ngrow_mac_old,SDIM-1,126)
 
-       call checkbound(fablo,fabhi,DIMS(xvelslp),ngrow_mac_old,0,1243)
-       call checkbound(fablo,fabhi,DIMS(yvelslp),ngrow_mac_old,1,125)
-       call checkbound(fablo,fabhi,DIMS(zvelslp),ngrow_mac_old,SDIM-1,126)
+       call checkbound_array(fablo,fabhi,xvelslp,ngrow_mac_old,0,1243)
+       call checkbound_array(fablo,fabhi,yvelslp,ngrow_mac_old,1,125)
+       call checkbound_array(fablo,fabhi,zvelslp,ngrow_mac_old,SDIM-1,126)
 
-       call checkbound(fablo,fabhi,DIMS(xmomside),1,-1,1271)
-       call checkbound(fablo,fabhi,DIMS(ymomside),1,-1,1271)
-       call checkbound(fablo,fabhi,DIMS(zmomside),1,-1,1271)
+       call checkbound_array(fablo,fabhi,xmomside,1,-1,1271)
+       call checkbound_array(fablo,fabhi,ymomside,1,-1,1271)
+       call checkbound_array(fablo,fabhi,zmomside,1,-1,1271)
 
-       call checkbound(fablo,fabhi,DIMS(xmassside),1,-1,1271)
-       call checkbound(fablo,fabhi,DIMS(ymassside),1,-1,1271)
-       call checkbound(fablo,fabhi,DIMS(zmassside),1,-1,1271)
+       call checkbound_array(fablo,fabhi,xmassside,1,-1,1271)
+       call checkbound_array(fablo,fabhi,ymassside,1,-1,1271)
+       call checkbound_array(fablo,fabhi,zmassside,1,-1,1271)
  
        if ((NUM_CELL_ELASTIC.eq. &
             2*SDIM*num_materials_viscoelastic+SDIM).and. &
@@ -19421,8 +19421,8 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(momslope),1,-1,1238)
-      call checkbound(fablo,fabhi,DIMS(conserve),ngrow,-1,1238)
+      call checkbound_array(fablo,fabhi,momslope,1,-1,1238)
+      call checkbound_array(fablo,fabhi,conserve,ngrow,-1,1238)
      
       if (DO_SANITY_CHECK.eq.1) then
        print *,"SANITY CHECK AFTER CONSERVE dir_counter= ",dir_counter
