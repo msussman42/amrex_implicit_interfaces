@@ -11520,41 +11520,41 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskdivres)
       INTEGER_T, intent(in) :: DIMDEC(maskres)
 
-      REAL_T, intent(in) ::  xp(DIMV(xp),2+nsolve)
-      REAL_T, intent(in) ::  yp(DIMV(yp),2+nsolve)
-      REAL_T, intent(in) ::  zp(DIMV(zp),2+nsolve)
+      REAL_T, intent(in), target ::  xp(DIMV(xp),2+nsolve)
+      REAL_T, intent(in), target ::  yp(DIMV(yp),2+nsolve)
+      REAL_T, intent(in), target ::  zp(DIMV(zp),2+nsolve)
 
-      REAL_T, intent(in) ::  xvel(DIMV(xvel),nsolve)
-      REAL_T, intent(in) ::  yvel(DIMV(yvel),nsolve)
-      REAL_T, intent(in) ::  zvel(DIMV(zvel),nsolve)
+      REAL_T, intent(in), target ::  xvel(DIMV(xvel),nsolve)
+      REAL_T, intent(in), target ::  yvel(DIMV(yvel),nsolve)
+      REAL_T, intent(in), target ::  zvel(DIMV(zvel),nsolve)
 
-      REAL_T, intent(in) ::  xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) ::  yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) ::  zface(DIMV(zface),ncphys)
+      REAL_T, intent(in), target ::  xface(DIMV(xface),ncphys)
+      REAL_T, intent(in), target ::  yface(DIMV(yface),ncphys)
+      REAL_T, intent(in), target ::  zface(DIMV(zface),ncphys)
 
-      REAL_T, intent(in) ::  ax(DIMV(ax))
-      REAL_T, intent(in) ::  ay(DIMV(ay))
-      REAL_T, intent(in) ::  az(DIMV(az))
+      REAL_T, intent(in), target ::  ax(DIMV(ax))
+      REAL_T, intent(in), target ::  ay(DIMV(ay))
+      REAL_T, intent(in), target ::  az(DIMV(az))
 
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(inout) :: rhs(DIMV(rhs),nsolve)
-      REAL_T, intent(inout) :: veldest(DIMV(veldest),ncomp_veldest)
-      REAL_T, intent(inout) :: dendest(DIMV(dendest),ncomp_dendest)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
-      REAL_T, intent(in) :: solxfab(DIMV(solxfab),SDIM*nparts_def)
-      REAL_T, intent(in) :: solyfab(DIMV(solyfab),SDIM*nparts_def)
-      REAL_T, intent(in) :: solzfab(DIMV(solzfab),SDIM*nparts_def)
-      REAL_T, intent(inout) :: cterm(DIMV(cterm),nsolve)
-      REAL_T, intent(in) :: pold(DIMV(pold),nsolve)
-      REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
-      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM) 
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),nsolve)
-      REAL_T, intent(in) :: maskdivres(DIMV(maskdivres))
-      REAL_T, intent(in) :: maskres(DIMV(maskres))
+      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, intent(inout), target :: rhs(DIMV(rhs),nsolve)
+      REAL_T, intent(inout), target :: veldest(DIMV(veldest),ncomp_veldest)
+      REAL_T, intent(inout), target :: dendest(DIMV(dendest),ncomp_dendest)
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
+      REAL_T, intent(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
+      REAL_T, intent(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
+      REAL_T, intent(in), target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      REAL_T, intent(inout), target :: cterm(DIMV(cterm),nsolve)
+      REAL_T, intent(in), target :: pold(DIMV(pold),nsolve)
+      REAL_T, intent(in), target :: denold(DIMV(denold),ncomp_denold)
+      REAL_T, intent(inout), target :: ustar(DIMV(ustar),SDIM) 
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: mdotcell(DIMV(mdotcell),nsolve)
+      REAL_T, intent(in), target :: maskdivres(DIMV(maskdivres))
+      REAL_T, intent(in), target :: maskres(DIMV(maskres))
 
       REAL_T DXMAXLS,cutoff
       INTEGER_T all_incomp
@@ -12120,47 +12120,43 @@ stop
        endif
       enddo
 
-      call checkbound(fablo,fabhi,DIMS(xp),0,0,33)
-      call checkbound(fablo,fabhi,DIMS(yp),0,1,33)
-      call checkbound(fablo,fabhi,DIMS(zp),0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xp,0,0,33)
+      call checkbound_array(fablo,fabhi,yp,0,1,33)
+      call checkbound_array(fablo,fabhi,zp,0,SDIM-1,33)
 
-      call checkbound(fablo,fabhi,DIMS(xvel),0,0,33)
-      call checkbound(fablo,fabhi,DIMS(yvel),0,1,33)
-      call checkbound(fablo,fabhi,DIMS(zvel),0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xvel,0,0,33)
+      call checkbound_array(fablo,fabhi,yvel,0,1,33)
+      call checkbound_array(fablo,fabhi,zvel,0,SDIM-1,33)
 
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,33)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,33)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xface,0,0,33)
+      call checkbound_array(fablo,fabhi,yface,0,1,33)
+      call checkbound_array(fablo,fabhi,zface,0,SDIM-1,33)
 
-      call checkbound(fablo,fabhi,DIMS(ax),0,0,33)
-      call checkbound(fablo,fabhi,DIMS(ay),0,1,33)
-      call checkbound(fablo,fabhi,DIMS(az),0,SDIM-1,33)
+      call checkbound_array1(fablo,fabhi,ax,0,0,33)
+      call checkbound_array1(fablo,fabhi,ay,0,1,33)
+      call checkbound_array1(fablo,fabhi,az,0,SDIM-1,33)
 
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(rhs),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(veldest),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(dendest),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,133)
-      call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,134)
-      call checkbound(fablo,fabhi,DIMS(levelPC),1,-1,135)
+      call checkbound_array1(fablo,fabhi,vol,0,-1,33)
+      call checkbound_array(fablo,fabhi,rhs,0,-1,33)
+      call checkbound_array(fablo,fabhi,veldest,0,-1,33)
+      call checkbound_array(fablo,fabhi,dendest,0,-1,33)
+      call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
+      call checkbound_array1(fablo,fabhi,mask,1,-1,133)
+      call checkbound_array1(fablo,fabhi,maskcoef,1,-1,134)
+      call checkbound_array(fablo,fabhi,levelPC,1,-1,135)
 
-      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,136)
-      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,136)
-      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,136)
+      call checkbound_array(fablo,fabhi,solxfab,0,0,136)
+      call checkbound_array(fablo,fabhi,solyfab,0,1,136)
+      call checkbound_array(fablo,fabhi,solzfab,0,SDIM-1,136)
 
-      call checkbound(fablo,fabhi,DIMS(cterm),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(pold),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(denold),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(ustar),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(recon),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(mdotcell),0,-1,33)
-      call checkbound(fablo,fabhi, &
-       DIMS(maskdivres), &
-       0,-1,137)
-      call checkbound(fablo,fabhi, &
-       DIMS(maskres), &
-       0,-1,138)
+      call checkbound_array(fablo,fabhi,cterm,0,-1,33)
+      call checkbound_array(fablo,fabhi,pold,0,-1,33)
+      call checkbound_array(fablo,fabhi,denold,0,-1,33)
+      call checkbound_array(fablo,fabhi,ustar,0,-1,33)
+      call checkbound_array(fablo,fabhi,recon,0,-1,33)
+      call checkbound_array(fablo,fabhi,mdotcell,0,-1,33)
+      call checkbound_array1(fablo,fabhi,maskdivres,0,-1,137)
+      call checkbound_array1(fablo,fabhi,maskres,0,-1,138)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
@@ -14407,12 +14403,12 @@ stop
       INTEGER_T, intent(in) :: SEM_upwind
       INTEGER_T, intent(in) :: SEM_advection_algorithm
 
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
 
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
-      REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
        ! DIMV is a macro: 
        ! DIMV(dat)=datxlo:datxhi,datylo:datyhi,datzlo,datzhi
        ! Sussman thinks that if semflux is declared within a structure
@@ -14423,12 +14419,13 @@ stop
        ! Within the fortran subroutine, if an array variable is declared
        ! with no bounds, or perhaps declared as a one dimensional array,
        ! one can use the "Bounds Remapping" feature of Fortran 2003.
-      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
-      REAL_T, intent(inout) :: xcut(DIMV(xcut),1)
-      REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) ! xflux for advection
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(inout), target :: xcut(DIMV(xcut),1)
+       ! xflux for advection
+      REAL_T, intent(inout), target :: xface(DIMV(xface),ncphys) 
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
        !holds Umac_old if operation_flag==5 or 11
-      REAL_T, intent(inout) :: xgp(DIMV(xgp),ncomp_xgp) 
+      REAL_T, intent(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
 
         ! for regular edge pressure operation:
         ! 1st component reserved for cell velocity override indicator.
@@ -14436,17 +14433,17 @@ stop
         ! for gravity/surface tension:
         ! 1st component: gravity edge pressure
         ! 2nd and 3rd components: surface tension edge pressures
-      REAL_T, intent(inout) :: xp(DIMV(xp),ncomp_xp)
+      REAL_T, intent(inout), target :: xp(DIMV(xp),ncomp_xp)
        ! xvel is destination for: density CELL->MAC (xvel=1/rho)
-      REAL_T, intent(inout) :: xvel(DIMV(xvel))
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(inout), target :: xvel(DIMV(xvel))
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
        ! holds U_old if operation_flag==11
-      REAL_T, intent(in) :: pres(DIMV(pres))
+      REAL_T, intent(in), target :: pres(DIMV(pres))
        ! den is the source for: density CELL->MAC
-      REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
-      REAL_T, intent(in) :: mgoni(DIMV(mgoni),ncomp_mgoni)
-      REAL_T, intent(in) :: typefab(DIMV(typefab))
-      REAL_T, intent(in) :: colorfab(DIMV(colorfab))
+      REAL_T, intent(in), target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, intent(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
+      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, intent(in), target :: colorfab(DIMV(colorfab))
   
       INTEGER_T i,j,k,ii,jj,kk
       REAL_T pplus
@@ -14987,25 +14984,25 @@ stop
       endif
 
       if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
-       call checkbound(fablo,fabhi,DIMS(xcut),0,dir,231)
-       call checkbound(fablo,fabhi,DIMS(xface),0,dir,263)
-       call checkbound(fablo,fabhi,DIMS(xgp),0,dir,2330)
-       call checkbound(fablo,fabhi,DIMS(xp),0,dir,2331)
-       call checkbound(fablo,fabhi,DIMS(xvel),0,dir,2332)
+       call checkbound_array(fablo,fabhi,xcut,0,dir,231)
+       call checkbound_array(fablo,fabhi,xface,0,dir,263)
+       call checkbound_array(fablo,fabhi,xgp,0,dir,2330)
+       call checkbound_array(fablo,fabhi,xp,0,dir,2331)
+       call checkbound_array1(fablo,fabhi,xvel,0,dir,2332)
        if (dir.eq.0) then
-        call checkbound(fablo,fabhi,DIMS(semflux),1,-1,231)
-        call checkbound(fablo,fabhi,DIMS(vel),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(pres),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(den),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(solfab),0,dir,234)
-        call checkbound(fablo,fabhi,DIMS(mgoni),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(typefab),1,-1,6625)
-        call checkbound(fablo,fabhi,DIMS(colorfab),1,-1,6626)
-        call checkbound(fablo,fabhi,DIMS(levelPC),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(recon),0,-1,234)
-        call checkbound(fablo,fabhi,DIMS(mask),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+        call checkbound_array(fablo,fabhi,semflux,1,-1,231)
+        call checkbound_array(fablo,fabhi,vel,1,-1,234)
+        call checkbound_array1(fablo,fabhi,pres,1,-1,234)
+        call checkbound_array(fablo,fabhi,den,1,-1,234)
+        call checkbound_array(fablo,fabhi,solfab,0,dir,234)
+        call checkbound_array(fablo,fabhi,mgoni,1,-1,234)
+        call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
+        call checkbound_array1(fablo,fabhi,colorfab,1,-1,6626)
+        call checkbound_array(fablo,fabhi,levelPC,1,-1,234)
+        call checkbound_array(fablo,fabhi,recon,0,-1,234)
+        call checkbound_array1(fablo,fabhi,mask,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskcoef,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
        endif
       endif
 
