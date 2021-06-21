@@ -14422,12 +14422,16 @@ stop
        ! with no bounds, or perhaps declared as a one dimensional array,
        ! one can use the "Bounds Remapping" feature of Fortran 2003.
       REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: xcut(DIMV(xcut),1)
+      REAL_T, pointer :: xcut_ptr(D_DECL(:,:,:),:)
        ! xflux for advection
       REAL_T, intent(inout), target :: xface(DIMV(xface),ncphys) 
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
        !holds Umac_old if operation_flag==5 or 11
       REAL_T, intent(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
+      REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:),:)
 
         ! for regular edge pressure operation:
         ! 1st component reserved for cell velocity override indicator.
@@ -14436,11 +14440,13 @@ stop
         ! 1st component: gravity edge pressure
         ! 2nd and 3rd components: surface tension edge pressures
       REAL_T, intent(inout), target :: xp(DIMV(xp),ncomp_xp)
+      REAL_T, pointer :: xp_ptr(D_DECL(:,:,:),:)
        ! xvel is destination for: density CELL->MAC (xvel=1/rho)
-      REAL_T, intent(inout), target :: xvel(DIMV(xvel))
+      REAL_T, intent(inout), target :: xvel(DIMV(xvel),1)
+      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
        ! holds U_old if operation_flag==11
-      REAL_T, intent(in), target :: pres(DIMV(pres))
+      REAL_T, intent(in), target :: pres(DIMV(pres),1)
        ! den is the source for: density CELL->MAC
       REAL_T, intent(in), target :: den(DIMV(den),nmat*num_state_material)
       REAL_T, intent(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
@@ -14564,6 +14570,15 @@ stop
       DEBUG_PRESCRIBED_VEL_DEN=zero
 
       nhalf=3
+
+      semflux_ptr=>semflux
+      xcut_ptr=>xcut
+      xface_ptr=>xface
+      xgp_ptr=>xgp
+      xp_ptr=>xp
+      xvel_ptr=>xvel
+
+
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -14986,15 +15001,15 @@ stop
       endif
 
       if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
-       call checkbound_array(fablo,fabhi,xcut,0,dir,231)
-       call checkbound_array(fablo,fabhi,xface,0,dir,263)
-       call checkbound_array(fablo,fabhi,xgp,0,dir,2330)
-       call checkbound_array(fablo,fabhi,xp,0,dir,2331)
-       call checkbound_array1(fablo,fabhi,xvel,0,dir,2332)
+       call checkbound_array(fablo,fabhi,xcut_ptr,0,dir,231)
+       call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
+       call checkbound_array(fablo,fabhi,xgp_ptr,0,dir,2330)
+       call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
+       call checkbound_array(fablo,fabhi,xvel_ptr,0,dir,2332)
        if (dir.eq.0) then
-        call checkbound_array(fablo,fabhi,semflux,1,-1,231)
+        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
         call checkbound_array(fablo,fabhi,vel,1,-1,234)
-        call checkbound_array1(fablo,fabhi,pres,1,-1,234)
+        call checkbound_array(fablo,fabhi,pres,1,-1,234)
         call checkbound_array(fablo,fabhi,den,1,-1,234)
         call checkbound_array(fablo,fabhi,solfab,0,dir,234)
         call checkbound_array(fablo,fabhi,mgoni,1,-1,234)
@@ -15104,7 +15119,7 @@ stop
           enddo
            ! newly projected face velocity might be overwritten
            ! with the solid velocity.
-          local_vel=xvel(D_DECL(i,j,k))
+          local_vel=xvel(D_DECL(i,j,k),1)
 
          else if (operation_flag.eq.2) then !(grd ppot)_MAC,ppot^CELL->MAC,ten.
 
@@ -15117,7 +15132,7 @@ stop
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
           enddo
-          local_vel=xvel(D_DECL(i,j,k)) ! low order 1/rho
+          local_vel=xvel(D_DECL(i,j,k),1) ! low order 1/rho
 
          else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
                   (operation_flag.eq.4).or. & !unew^MAC=uSOLID^MAC / uFLUID^MAC
@@ -15128,7 +15143,7 @@ stop
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
           enddo
-          local_vel=xvel(D_DECL(i,j,k))
+          local_vel=xvel(D_DECL(i,j,k),1)
           if ((operation_flag.eq.5).or. &
               (operation_flag.eq.11)) then
            local_vel_old=xgp(D_DECL(i,j,k),1)
@@ -15147,7 +15162,7 @@ stop
 
          else if (operation_flag.eq.7) then ! advection
 
-          local_vel=xvel(D_DECL(i,j,k))
+          local_vel=xvel(D_DECL(i,j,k),1)
 
          else if (operation_flag.eq.6) then
 
@@ -15928,8 +15943,8 @@ stop
           ! contents.
          else if (operation_flag.eq.1) then ! p^CELL->MAC
 
-          pplus=pres(D_DECL(i,j,k))
-          pminus=pres(D_DECL(im1,jm1,km1))
+          pplus=pres(D_DECL(i,j,k),1)
+          pminus=pres(D_DECL(im1,jm1,km1),1)
 
            ! mask=1 if not covered
            ! mask=0 if covered
@@ -16284,8 +16299,8 @@ stop
          else if (operation_flag.eq.2) then !(grd pot)_MAC,pot^CELL->MAC,ten.
 
            ! hydrostatic pressure
-          pplus=pres(D_DECL(i,j,k))
-          pminus=pres(D_DECL(im1,jm1,km1))
+          pplus=pres(D_DECL(i,j,k),1)
+          pminus=pres(D_DECL(im1,jm1,km1),1)
 
            ! hydrostatic density
           dplus=den(D_DECL(i,j,k),1)
@@ -16560,8 +16575,8 @@ stop
            stop
           endif
 
-          pplus=pres(D_DECL(i,j,k))
-          pminus=pres(D_DECL(im1,jm1,km1))
+          pplus=pres(D_DECL(i,j,k),1)
+          pminus=pres(D_DECL(im1,jm1,km1),1)
 
             ! regular solver or SDC viscosity or thermal flux.
           if (energyflag.eq.0) then  
@@ -16602,7 +16617,7 @@ stop
                   (operation_flag.eq.10).or. & ! u^CELL,MAC -> MAC
                   (operation_flag.eq.11)) then ! u^CELL DIFF,MAC -> MAC
 
-          xvel(D_DECL(i,j,k))=uedge
+          xvel(D_DECL(i,j,k),1)=uedge
   
          else if (operation_flag.eq.0) then ! (grad p)_MAC
 
@@ -16622,7 +16637,7 @@ stop
           do im=1,2+nsolve
            xp(D_DECL(i,j,k),im)=plocal(im)
           enddo
-          xvel(D_DECL(i,j,k))=local_vel
+          xvel(D_DECL(i,j,k),1)=local_vel
 
          else
           print *,"operation_flag invalid18"
@@ -16846,17 +16861,17 @@ stop
                 ncphys, &
                 spectral_loop, &
                 ncfluxreg, &
-                semflux, &
+                semflux_ptr, &
                 mask, & !mask=1.0 at interior fine bc ghost cells
                 maskcoef, & ! 1=not cov. or outside domain  
                 vel, &
                 pres, &
                 den, &
-                xface, &
-                xgp, & ! holds Umac_old if operation_flag==5 or 11.
-                xcut, &   ! coeff*areafrac
-                xp, &
-                xvel, &
+                xface_ptr, &
+                xgp_ptr, & ! holds Umac_old if operation_flag==5 or 11.
+                xcut_ptr, &   ! coeff*areafrac
+                xp_ptr, &
+                xvel_ptr, &
                 maskSEM)
 
               enddo 
