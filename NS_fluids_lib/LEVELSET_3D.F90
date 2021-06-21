@@ -10643,7 +10643,7 @@ stop
       end subroutine FORT_INIT_PHYSICS_VARS
 
 
-      subroutine FORT_BUILD_SEMIREFINEVOF( &
+      subroutine fort_build_semirefinevof( &
        tid, &
        tessellate, &
        ngrow_refine, &
@@ -10669,7 +10669,9 @@ stop
        fablo,fabhi, &
        bfact, &
        nmat, &
-       level,finest_level)
+       level,finest_level) &
+      bind(c,name='fort_build_semirefinevof')
+
       use global_utility_module
       use probf90_module
       use geometry_intersect_module
@@ -10703,12 +10705,16 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vofF)
       INTEGER_T, intent(in) :: DIMDEC(cenF)
       INTEGER_T, intent(in) :: DIMDEC(massF)
-      REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat) 
-      REAL_T, intent(out) :: vofF(DIMV(vofF),nrefine_vof)
-      REAL_T, intent(out) :: cenF(DIMV(cenF),nrefine_cen)
-      REAL_T, intent(out) :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, intent(in), target :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, intent(in), target :: denstate(DIMV(denstate), &
+              nmat*num_state_material) 
+      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
+      REAL_T, intent(out), target :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenF(DIMV(cenF),nrefine_cen)
+      REAL_T, pointer :: cenF_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
@@ -10747,6 +10753,9 @@ stop
       REAL_T xsten_donate(-1:1,SDIM)
       REAL_T mu
 
+      vofF_ptr=>vofF
+      cenF_ptr=>cenF
+      massF_ptr=>massF
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -10806,16 +10815,12 @@ stop
 
       nmax=POLYGON_LIST_MAX ! in: BUILD_SEMIREFINEVOF
 
-      call checkbound(fablo,fabhi,DIMS(slope),ngrow_refine,-1,219)
-      call checkbound(fablo,fabhi, &
-       DIMS(denstate), &
-       ngrow_refine,-1,223)
-      call checkbound(fablo,fabhi, &
-       DIMS(mom_den), &
-       ngrow_refine,-1,223)
-      call checkbound(fablo,fabhi,DIMS(vofF),ngrow_refine,-1,227)
-      call checkbound(fablo,fabhi,DIMS(cenF),ngrow_refine,-1,227)
-      call checkbound(fablo,fabhi,DIMS(massF),ngrow_refine,-1,227)
+      call checkbound_array(fablo,fabhi,slope,ngrow_refine,-1,219)
+      call checkbound_array(fablo,fabhi,denstate,ngrow_refine,-1,223)
+      call checkbound_array(fablo,fabhi,mom_den,ngrow_refine,-1,223)
+      call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1,227)
+      call checkbound_array(fablo,fabhi,cenF_ptr,ngrow_refine,-1,227)
+      call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1,227)
 
       do im=1,nmat
 
@@ -10851,7 +10856,7 @@ stop
        if (fort_energyconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"energy must be positive in FORT_BUILD_SEMIREFINEVOF"
+        print *,"energy must be positive in fort_build_semirefinevof"
         print *,"im= ",im
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
@@ -11122,7 +11127,7 @@ stop
       enddo ! veldir
 
       return
-      end subroutine FORT_BUILD_SEMIREFINEVOF
+      end subroutine fort_build_semirefinevof
 
       subroutine FORT_BUILD_MODVISC( &
        ngrow_visc, &
@@ -11347,7 +11352,7 @@ stop
        ! in the face_gradients routine, operation_flag=5 (interp grad U^T)
        ! operation_flag=6 (advection)
        ! operation_flag=7 (mac -> cell displacement in MAC_TO_CELL)
-      subroutine FORT_MAC_TO_CELL( &
+      subroutine fort_mac_to_cell( &
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
@@ -11374,7 +11379,7 @@ stop
        curv_index, &
        conservative_tension_force, &
        conservative_div_uu, &
-       filter_velocity, & ! in: FORT_MAC_TO_CELL
+       filter_velocity, & ! in: fort_mac_to_cell
        ignore_div_up, &
        pforce_index, &
        faceden_index, &
@@ -11429,7 +11434,9 @@ stop
        ncomp_denold, &
        ncomp_veldest, &
        ncomp_dendest, &
-       SEM_advection_algorithm)
+       SEM_advection_algorithm) &
+       bind(c,name='fort_mac_to_cell')
+
        use probf90_module
        use global_utility_module
        use MOF_routines_module
@@ -11536,21 +11543,26 @@ stop
       REAL_T, intent(in), target ::  ay(DIMV(ay))
       REAL_T, intent(in), target ::  az(DIMV(az))
 
-      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, intent(in), target :: vol(DIMV(vol),1)
       REAL_T, intent(inout), target :: rhs(DIMV(rhs),nsolve)
+      REAL_T, pointer :: rhs_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: veldest(DIMV(veldest),ncomp_veldest)
+      REAL_T, pointer :: veldest_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: dendest(DIMV(dendest),ncomp_dendest)
+      REAL_T, pointer :: dendest_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mask(DIMV(mask))
-      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef),1)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
       REAL_T, intent(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, intent(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
       REAL_T, intent(in), target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
       REAL_T, intent(inout), target :: cterm(DIMV(cterm),nsolve)
+      REAL_T, pointer :: cterm_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: pold(DIMV(pold),nsolve)
       REAL_T, intent(in), target :: denold(DIMV(denold),ncomp_denold)
       REAL_T, intent(inout), target :: ustar(DIMV(ustar),SDIM) 
+      REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(in), target :: mdotcell(DIMV(mdotcell),nsolve)
       REAL_T, intent(in), target :: maskdivres(DIMV(maskdivres))
@@ -11648,6 +11660,13 @@ stop
       REAL_T, dimension(:,:), allocatable :: comparestate
 
       nhalf=3
+
+      rhs_ptr=>rhs
+      veldest_ptr=>veldest
+      dendest_ptr=>dendest
+      cterm_ptr=>cterm
+      ustar_ptr=>ustar
+
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -11676,7 +11695,7 @@ stop
       endif
       if ((divu_outer_sweeps.lt.0).or. &
           (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
-       print *,"divu_outer_sweeps invalid FORT_MAC_TO_CELL"
+       print *,"divu_outer_sweeps invalid fort_mac_to_cell"
        stop
       endif
 
@@ -12136,23 +12155,23 @@ stop
       call checkbound_array1(fablo,fabhi,ay,0,1,33)
       call checkbound_array1(fablo,fabhi,az,0,SDIM-1,33)
 
-      call checkbound_array1(fablo,fabhi,vol,0,-1,33)
-      call checkbound_array(fablo,fabhi,rhs,0,-1,33)
-      call checkbound_array(fablo,fabhi,veldest,0,-1,33)
-      call checkbound_array(fablo,fabhi,dendest,0,-1,33)
+      call checkbound_array(fablo,fabhi,vol,0,-1,33)
+      call checkbound_array(fablo,fabhi,rhs_ptr,0,-1,33)
+      call checkbound_array(fablo,fabhi,veldest_ptr,0,-1,33)
+      call checkbound_array(fablo,fabhi,dendest_ptr,0,-1,33)
       call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
       call checkbound_array1(fablo,fabhi,mask,1,-1,133)
-      call checkbound_array1(fablo,fabhi,maskcoef,1,-1,134)
+      call checkbound_array(fablo,fabhi,maskcoef,1,-1,134)
       call checkbound_array(fablo,fabhi,levelPC,1,-1,135)
 
       call checkbound_array(fablo,fabhi,solxfab,0,0,136)
       call checkbound_array(fablo,fabhi,solyfab,0,1,136)
       call checkbound_array(fablo,fabhi,solzfab,0,SDIM-1,136)
 
-      call checkbound_array(fablo,fabhi,cterm,0,-1,33)
+      call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,pold,0,-1,33)
       call checkbound_array(fablo,fabhi,denold,0,-1,33)
-      call checkbound_array(fablo,fabhi,ustar,0,-1,33)
+      call checkbound_array(fablo,fabhi,ustar_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,recon,0,-1,33)
       call checkbound_array(fablo,fabhi,mdotcell,0,-1,33)
       call checkbound_array1(fablo,fabhi,maskdivres,0,-1,137)
@@ -12196,7 +12215,7 @@ stop
        AYR=ay(D_DECL(i,j+1,k))
        AZL=az(D_DECL(i,j,k))
        AZR=az(D_DECL(i,j,k+1))
-       VOLTERM=vol(D_DECL(i,j,k))
+       VOLTERM=vol(D_DECL(i,j,k),1)
        if (VOLTERM.gt.zero) then
         ! do nothing
        else
@@ -12254,7 +12273,7 @@ stop
         !    cterm * p^adv 
         ! cterm=vol/(rho c^2 dt*dt)
 
-        if (maskcoef(D_DECL(i,j,k)).eq.one) then ! not covered
+        if (maskcoef(D_DECL(i,j,k),1).eq.one) then ! not covered
 
          do veldir=1,nsolve
     
@@ -12460,7 +12479,7 @@ stop
 
          enddo ! veldir=1..nsolve
 
-        else if (maskcoef(D_DECL(i,j,k)).eq.zero) then
+        else if (maskcoef(D_DECL(i,j,k),1).eq.zero) then
          ! do nothing (covered)
         else 
          print *,"mask invalid"
@@ -12788,7 +12807,7 @@ stop
         ! use_face_pres.eq.3 ! div(up) and gp ok
         ! note: use_face_pres<=1 at faces if face_flag=1
         ! note: use_face_pres<=3 at faces if face_flag=0
-        ! in: FORT_MAC_TO_CELL
+        ! in: fort_mac_to_cell
        else if (operation_flag.eq.3) then ! (grad p)_CELL, div(up)
 
          ! LS>0 if clamped
@@ -12873,7 +12892,7 @@ stop
          else if (abs(vfrac(im)).le.VOFTOL) then
           ! do nothing
          else
-          print *,"vfrac(im) invalid (1) FORT_MAC_TO_CELL op_flag==3"
+          print *,"vfrac(im) invalid (1) fort_mac_to_cell op_flag==3"
           stop
          endif 
         enddo ! im=1..nmat
@@ -12901,7 +12920,7 @@ stop
          else if (abs(vfrac(im)).le.VOFTOL) then
           ! do nothing
          else
-          print *,"vfrac(im) invalid (2) FORT_MAC_TO_CELL op_flag==3"
+          print *,"vfrac(im) invalid (2) fort_mac_to_cell op_flag==3"
           stop
          endif
         enddo ! im=1..nmat
@@ -13684,7 +13703,7 @@ stop
        stop
       endif
 
-       ! in: FORT_MAC_TO_CELL
+       ! in: fort_mac_to_cell
       if ((enable_spectral.eq.1).or. &  ! SEM space and time
           (enable_spectral.eq.2).or. &  ! SEM space
           (high_order_time_advection.eq.1)) then
@@ -13801,19 +13820,19 @@ stop
                ncomp, &
                ncomp_xvel, &
                ncomp_cterm, &
-               vol,DIMS(vol), &
-               xface,DIMS(xface), &
-               xp,DIMS(xp), &
-               xvel,DIMS(xvel), &
-               maskcoef,DIMS(maskcoef), & ! 1=not covered, 0=covered
-               cterm,DIMS(cterm), &
-               mdotcell,DIMS(mdotcell), &
-               pold,DIMS(pold), &
-               denold,DIMS(denold), &
-               ustar,DIMS(ustar), &
-               veldest,DIMS(veldest), &
-               dendest,DIMS(dendest), &
-               rhs,DIMS(rhs) )  ! divdest
+               vol, &
+               xface, &
+               xp, &
+               xvel, &
+               maskcoef, & ! 1=not covered, 0=covered
+               cterm_ptr, &
+               mdotcell, &
+               pold, &
+               denold, &
+               ustar_ptr, &
+               veldest_ptr, &
+               dendest_ptr, &
+               rhs_ptr)  ! divdest
 
              else if (dir.eq.1) then
 
@@ -13851,19 +13870,19 @@ stop
                ncomp, &
                ncomp_xvel, &
                ncomp_cterm, &
-               vol,DIMS(vol), &
-               yface,DIMS(yface), &
-               yp,DIMS(yp), &
-               yvel,DIMS(yvel), &
-               maskcoef,DIMS(maskcoef), & ! 1=not covered, 0=covered
-               cterm,DIMS(cterm), &
-               mdotcell,DIMS(mdotcell), &
-               pold,DIMS(pold), &
-               denold,DIMS(denold), &
-               ustar,DIMS(ustar), &
-               veldest,DIMS(veldest), &
-               dendest,DIMS(dendest), &
-               rhs,DIMS(rhs) )  ! divdest
+               vol, &
+               yface, &
+               yp, &
+               yvel, &
+               maskcoef, & ! 1=not covered, 0=covered
+               cterm_ptr, &
+               mdotcell, &
+               pold, &
+               denold, &
+               ustar_ptr, &
+               veldest_ptr, &
+               dendest_ptr, &
+               rhs_ptr)  ! divdest
 
              else if ((dir.eq.2).and.(SDIM.eq.3)) then
 
@@ -13901,19 +13920,19 @@ stop
                ncomp, &
                ncomp_xvel, &
                ncomp_cterm, &
-               vol,DIMS(vol), &
-               zface,DIMS(zface), &
-               zp,DIMS(zp), &
-               zvel,DIMS(zvel), &
-               maskcoef,DIMS(maskcoef), & ! 1=not covered, 0=covered
-               cterm,DIMS(cterm), &
-               mdotcell,DIMS(mdotcell), &
-               pold,DIMS(pold), &
-               denold,DIMS(denold), &
-               ustar,DIMS(ustar), &
-               veldest,DIMS(veldest), &
-               dendest,DIMS(dendest), &
-               rhs,DIMS(rhs) ) ! divdest
+               vol, &
+               zface, &
+               zp, &
+               zvel, &
+               maskcoef, & ! 1=not covered, 0=covered
+               cterm_ptr, &
+               mdotcell, &
+               pold, &
+               denold, &
+               ustar_ptr, &
+               veldest_ptr, &
+               dendest_ptr, &
+               rhs_ptr) ! divdest
 
              else
               print *,"dir invalid mac_to_cell2 "
@@ -13996,7 +14015,7 @@ stop
       endif  ! do_sanity_check=true
  
       return
-      end subroutine FORT_MAC_TO_CELL
+      end subroutine fort_mac_to_cell
 
 !if temperature_primitive_var==0,
 ! add beta * (1/cv) * (u dot u/2) to temp

@@ -16555,19 +16555,19 @@ END SUBROUTINE Adist
        ncomp, &
        ncomp_xvel, &
        ncomp_cterm, &
-       vol,DIMS(vol), & 
-       xface,DIMS(xface), & 
-       xp,DIMS(xp), & 
-       xvel,DIMS(xvel), & 
-       maskcoef,DIMS(maskcoef), & 
-       cterm,DIMS(cterm), & 
-       mdotcell,DIMS(mdotcell), &  ! holds velocity if operation_flag==6
-       pold,DIMS(pold), & 
-       denold,DIMS(denold), & 
-       ustar,DIMS(ustar), & 
-       veldest,DIMS(veldest), &
-       dendest,DIMS(dendest), &
-       divdest,DIMS(divdest) )
+       vol, & 
+       xface, & 
+       xp, & 
+       xvel, & 
+       maskcoef, & 
+       cterm, & 
+       mdotcell, &  ! holds velocity if operation_flag==6
+       pold, & 
+       denold, & 
+       ustar, & 
+       veldest, &
+       dendest, &
+       divdest)
       use global_utility_module
 
       IMPLICIT NONE
@@ -16610,32 +16610,20 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: presbc_in(SDIM,2)
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(xp)
-      INTEGER_T, intent(in) :: DIMDEC(xvel)
-      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
-      INTEGER_T, intent(in) :: DIMDEC(cterm)
-      INTEGER_T, intent(in) :: DIMDEC(mdotcell)
-      INTEGER_T, intent(in) :: DIMDEC(pold)
-      INTEGER_T, intent(in) :: DIMDEC(denold)
-      INTEGER_T, intent(in) :: DIMDEC(dendest)
-      INTEGER_T, intent(in) :: DIMDEC(ustar)
-      INTEGER_T, intent(in) :: DIMDEC(veldest)
-      INTEGER_T, intent(in) :: DIMDEC(divdest)
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: xface(DIMV(xface),ncomp)  ! flux data for I-scheme
-      REAL_T, intent(in) :: xp(DIMV(xp),2+1)
-      REAL_T, intent(in) :: xvel(DIMV(xvel),ncomp_xvel)
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
-      REAL_T, intent(inout) :: cterm(DIMV(cterm),ncomp_cterm)
-      REAL_T, intent(in) :: mdotcell(DIMV(mdotcell),ncomp)
-      REAL_T, intent(in) :: pold(DIMV(pold),ncomp)
-      REAL_T, intent(in) :: denold(DIMV(denold),ncomp_denold)
-      REAL_T, intent(inout) :: dendest(DIMV(dendest),ncomp_dendest)
-      REAL_T, intent(inout) :: ustar(DIMV(ustar),SDIM)
-      REAL_T, intent(inout) :: veldest(DIMV(veldest),ncomp_veldest)
-      REAL_T, intent(inout) :: divdest(DIMV(divdest),ncomp)
+      REAL_T, intent(in), pointer :: vol(D_DECL(:,:,:),:)
+       ! flux data for I-scheme
+      REAL_T, intent(in), pointer :: xface(D_DECL(:,:,:),:)  
+      REAL_T, intent(in), pointer :: xp(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xvel(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: maskcoef(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: cterm(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: mdotcell(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: pold(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: denold(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: dendest(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: ustar(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: veldest(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: divdest(D_DECL(:,:,:),:)
       REAL_T local_data(bfact+1)
       REAL_T local_vel_data(bfact+1)
       REAL_T local_vel_data_div(bfact+1)
@@ -17850,7 +17838,7 @@ END SUBROUTINE Adist
 
          else if (operation_flag.eq.0) then ! RHS
 
-          if (maskcoef(D_DECL(ic,jc,kc)).eq.one) then ! not covered
+          if (maskcoef(D_DECL(ic,jc,kc),1).eq.one) then ! not covered
 
            if (dir_main.eq.1) then
             divdest(D_DECL(ic,jc,kc),nc)= &
@@ -17866,7 +17854,7 @@ END SUBROUTINE Adist
            endif
 
            if (dir_main.eq.SDIM) then
-            VOLTERM=vol(D_DECL(ic,jc,kc))
+            VOLTERM=vol(D_DECL(ic,jc,kc),1)
             if (VOLTERM.gt.zero) then
              ! do nothing
             else
@@ -18005,7 +17993,7 @@ END SUBROUTINE Adist
             stop
            endif 
 
-          else if (maskcoef(D_DECL(ic,jc,kc)).eq.zero) then
+          else if (maskcoef(D_DECL(ic,jc,kc),1).eq.zero) then
            ! do nothing (covered)
           else 
            print *,"maskcoef invalid"

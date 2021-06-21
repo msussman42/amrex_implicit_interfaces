@@ -11060,7 +11060,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
      // in: GODUNOV_3D.F90
      // if override_density[im]==1, then rho_im=rho(T,Y,z) 
     int fort_im=im+1;
-    FORT_DERIVE_MOM_DEN(
+    fort_derive_mom_den(
      &fort_im,
      &ngrow,
      constant_density_all_time.dataPtr(),
@@ -11260,7 +11260,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // in: GODUNOV_3D.F90
-    FORT_VELMAC_OVERRIDE(
+    fort_velmac_override(
      &nmat,
      tilelo,tilehi,
      fablo,fabhi,
@@ -14926,7 +14926,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // called from: NavierStokes::SEM_scalar_advection
-     FORT_MAC_TO_CELL(
+     fort_mac_to_cell(
       &ns_time_order,
       &divu_outer_sweeps,
       &num_divu_outer_sweeps,
@@ -15351,7 +15351,7 @@ NavierStokes::split_scalar_advection() {
     // mass_total=V_total * den_total
     // so, Y_vapor=F_vapor * V_total * den_vapor/(V_total * den_total)=
     //     F_vapor * den_vapor/den_total 
-  FORT_BUILD_CONSERVE( 
+  fort_build_conserve( 
    &iden_base,
    override_density.dataPtr(),
    constant_density_all_time.dataPtr(),
@@ -15408,7 +15408,7 @@ NavierStokes::split_scalar_advection() {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // declared in GODUNOV_3D.F90
-  FORT_BUILD_SLOPES( 
+  fort_build_slopes( 
    masknbrfab.dataPtr(),
    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
@@ -15507,7 +15507,7 @@ NavierStokes::split_scalar_advection() {
 
     // in: LEVELSET_3D.F90
     // centroid in absolute coordinates.
-   FORT_BUILD_SEMIREFINEVOF(
+   fort_build_semirefinevof(
     &tid_current,
     &tessellate,  // =0
     &ngrow,
@@ -15602,7 +15602,7 @@ NavierStokes::split_scalar_advection() {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // declared in GODUNOV_3D.F90
-    FORT_BUILD_MACVOF( 
+    fort_build_macvof( 
      &level,
      &finest_level,
      &normdir_here,
@@ -15664,7 +15664,7 @@ NavierStokes::split_scalar_advection() {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       //declared in GODUNOV_3D.F90
-    FORT_BUILD_SLOPES_FACE( 
+    fort_build_slopes_face( 
      masknbrfab.dataPtr(),
      ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
       // "vfrac"
@@ -15856,7 +15856,7 @@ NavierStokes::split_scalar_advection() {
 
    // solid distance function and solid moments are not modified.
    // solid temperature is modified only if solidheat_flag==0.
-  FORT_VFRAC_SPLIT(
+  fort_vfrac_split(
    &nprocessed[tid_current],
    &tid_current,
    added_weight.dataPtr(),
@@ -16027,7 +16027,7 @@ NavierStokes::split_scalar_advection() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // declared in GODUNOV_3D.F90
-   FORT_BUILD_NEWMAC(
+   fort_build_newmac(
     &num_MAC_vectors, //num_MAC_vectors=1 or 2
     &normdir_here,
     tilelo,tilehi,

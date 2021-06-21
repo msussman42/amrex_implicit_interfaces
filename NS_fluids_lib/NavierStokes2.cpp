@@ -2174,7 +2174,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     int ncomp_veldest=Snewfab.nComp();
     int ncomp_dendest=Snewfab.nComp()-scomp_den;
 
-    FORT_MAC_TO_CELL(
+    fort_mac_to_cell(
      &ns_time_order,
      &divu_outer_sweeps,
      &num_divu_outer_sweeps,
@@ -3566,8 +3566,8 @@ void NavierStokes::VELMAC_TO_CELL(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // we are in VELMAC_TO_CELL
-   // FORT_MAC_TO_CELL is declared in LEVELSET_3D.F90
-  FORT_MAC_TO_CELL(
+   // fort_mac_to_cell is declared in LEVELSET_3D.F90
+  fort_mac_to_cell(
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
@@ -5671,7 +5671,7 @@ void NavierStokes::make_physics_vars(int project_option) {
 
     // in: LEVELSET_3D.F90
     // centroid in absolute coordinates.
-  FORT_BUILD_SEMIREFINEVOF(
+  fort_build_semirefinevof(
    &tid_current,
    &tessellate,  // =3
    &ngrow_refine,
@@ -6950,7 +6950,7 @@ void NavierStokes::process_potential_force_cell() {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // process_potential_force_cell 
-  FORT_MAC_TO_CELL(
+  fort_mac_to_cell(
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
@@ -6989,7 +6989,7 @@ void NavierStokes::process_potential_force_cell() {
    presbc.dataPtr(), 
    &cur_time_slab, 
    &slab_step,
-   &dt_slab, //calling FORT_MAC_TO_CELL
+   &dt_slab, //calling fort_mac_to_cell
    xlo,dx,
    tilelo,tilehi,
    fablo,fabhi,

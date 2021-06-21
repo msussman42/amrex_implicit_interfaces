@@ -4,7 +4,6 @@
 #ifdef BL_LANG_FORT
 #    define FORT_SOD_SANITY   sod_sanity
 #    define FORT_AGGRESSIVE   aggressive
-#    define FORT_DERIVE_MOM_DEN derive_mom_den
 #    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
@@ -14,7 +13,6 @@
 #    define FORT_TAGEXPANSION tagexpansion
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
-#    define FORT_VFRAC_SPLIT  vfrac_split
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
@@ -23,7 +21,6 @@
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_VELMAC_OVERRIDE velmac_override
 #    define FORT_UPDATETENSOR updatetensor
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
@@ -40,16 +37,10 @@
 #    define FORT_SDC_TIME_QUAD sdc_time_quad
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
-#    define FORT_BUILD_SLOPES build_slopes
-#    define FORT_BUILD_SLOPES_FACE build_slopes_face
-#    define FORT_BUILD_CONSERVE build_conserve
-#    define FORT_BUILD_MACVOF build_macvof
-#    define FORT_BUILD_NEWMAC build_newmac
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_SOD_SANITY   SOD_SANITY
 #    define FORT_AGGRESSIVE   AGGRESSIVE
-#    define FORT_DERIVE_MOM_DEN       DERIVE_MOM_DEN
 #    define FORT_STEFANSOLVER STEFANSOLVER
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
@@ -59,7 +50,6 @@
 #    define FORT_TAGEXPANSION TAGEXPANSION
 #    define FORT_DISTRIBUTEEXPANSION DISTRIBUTEEXPANSION
 #    define FORT_CLEAREXPANSION CLEAREXPANSION
-#    define FORT_VFRAC_SPLIT  VFRAC_SPLIT
 #    define FORT_ESTDT        ESTDT
 #    define FORT_CROSSTERM    CROSSTERM
 #    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
@@ -68,7 +58,6 @@
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
 #    define FORT_HEATADVANCE  HEATADVANCE
-#    define FORT_VELMAC_OVERRIDE VELMAC_OVERRIDE
 #    define FORT_UPDATETENSOR UPDATETENSOR
 #    define FORT_FIX_HOOP_TENSOR FIX_HOOP_TENSOR
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
@@ -85,16 +74,10 @@
 #    define FORT_SDC_TIME_QUAD SDC_TIME_QUAD
 #    define FORT_SDC_TIME_QUAD_FACE SDC_TIME_QUAD_FACE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
-#    define FORT_BUILD_SLOPES BUILD_SLOPES
-#    define FORT_BUILD_SLOPES_FACE BUILD_SLOPES_FACE
-#    define FORT_BUILD_CONSERVE BUILD_CONSERVE
-#    define FORT_BUILD_MACVOF BUILD_MACVOF
-#    define FORT_BUILD_NEWMAC BUILD_NEWMAC
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_SOD_SANITY   sod_sanity
 #    define FORT_AGGRESSIVE   aggressive
-#    define FORT_DERIVE_MOM_DEN derive_mom_den
 #    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
@@ -104,7 +87,6 @@
 #    define FORT_TAGEXPANSION tagexpansion
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
-#    define FORT_VFRAC_SPLIT  vfrac_split
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
@@ -113,7 +95,6 @@
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_VELMAC_OVERRIDE velmac_override
 #    define FORT_UPDATETENSOR updatetensor
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
@@ -130,15 +111,9 @@
 #    define FORT_SDC_TIME_QUAD sdc_time_quad
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
-#    define FORT_BUILD_SLOPES build_slopes
-#    define FORT_BUILD_SLOPES_FACE build_slopes_face
-#    define FORT_BUILD_CONSERVE build_conserve
-#    define FORT_BUILD_MACVOF build_macvof
-#    define FORT_BUILD_NEWMAC build_newmac
 #  else
 #    define FORT_SOD_SANITY   sod_sanity_
 #    define FORT_AGGRESSIVE   aggressive_
-#    define FORT_DERIVE_MOM_DEN derive_mom_den_
 #    define FORT_STEFANSOLVER stefansolver_
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
@@ -148,7 +123,6 @@
 #    define FORT_TAGEXPANSION tagexpansion_
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion_
 #    define FORT_CLEAREXPANSION clearexpansion_
-#    define FORT_VFRAC_SPLIT  vfrac_split_
 #    define FORT_ESTDT        estdt_
 #    define FORT_CROSSTERM    crossterm_
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
@@ -157,7 +131,6 @@
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
 #    define FORT_HEATADVANCE  heatadvance_
-#    define FORT_VELMAC_OVERRIDE velmac_override_
 #    define FORT_UPDATETENSOR updatetensor_
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor_
 #    define FORT_BUILD_MOMENT build_moment_
@@ -174,11 +147,6 @@
 #    define FORT_SDC_TIME_QUAD sdc_time_quad_
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face_
 #    define FORT_BUILD_MASKSEM build_masksem_
-#    define FORT_BUILD_SLOPES build_slopes_
-#    define FORT_BUILD_SLOPES_FACE build_slopes_face_
-#    define FORT_BUILD_CONSERVE build_conserve_
-#    define FORT_BUILD_MACVOF build_macvof_
-#    define FORT_BUILD_NEWMAC build_newmac_
 #  endif
 #  endif
 
@@ -461,7 +429,7 @@ extern "C"
     int* bfact_fine,
     int* nmat);
 
-   void FORT_BUILD_SLOPES(
+   void fort_build_slopes(
     Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
     Real* data,AMREX_ARLIM_P(datalo),AMREX_ARLIM_P(datahi),
@@ -481,7 +449,7 @@ extern "C"
     int* slope_limiter_option);
 
 
-   void FORT_BUILD_SLOPES_FACE(
+   void fort_build_slopes_face(
     Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
     Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
     Real* data,AMREX_ARLIM_P(datalo),AMREX_ARLIM_P(datahi),
@@ -500,7 +468,7 @@ extern "C"
     int* slope_limiter_type);
 
 
-   void FORT_BUILD_CONSERVE(
+   void fort_build_conserve(
     int* iden_base,
     int* override_density,
     int* constant_density_all_time,
@@ -518,8 +486,7 @@ extern "C"
     int* nc_conserve,
     int* nc_den);
 
-
-   void FORT_BUILD_MACVOF(
+   void fort_build_macvof(
     int* level,
     int* finest_level,
     int* normdir,
@@ -548,7 +515,7 @@ extern "C"
     int* veldir);
 
 
-   void FORT_BUILD_NEWMAC(
+   void fort_build_newmac(
     int* num_MAC_vectors,
     int* normdir, // 0..sdim-1
     const int* tilelo,const int* tilehi,
@@ -1007,7 +974,7 @@ extern "C"
     AMREX_ARLIM_P(jump_comp_hi) );
 
 
-   void FORT_VFRAC_SPLIT(
+   void fort_vfrac_split(
      int* nprocessed,
      int* tid,
      Real* added_weight,
@@ -1089,7 +1056,7 @@ extern "C"
      int* dombc,
      const int* domlo,const int* domhi);
 
-   void FORT_DERIVE_MOM_DEN(
+   void fort_derive_mom_den(
      int* im_parm,
      int* ngrow,
      int* constant_density_all_time, // 1..nmat
@@ -1418,7 +1385,7 @@ extern "C"
      int* bfact);
 
 
-   void FORT_VELMAC_OVERRIDE(
+   void fort_velmac_override(
      int* nmat,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,

@@ -8,9 +8,7 @@
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars
-#    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
@@ -33,9 +31,7 @@
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
 #    define FORT_INIT_PHYSICS_VARS INIT_PHYSICS_VARS
-#    define FORT_BUILD_SEMIREFINEVOF BUILD_SEMIREFINEVOF
 #    define FORT_BUILD_MODVISC BUILD_MODVISC
-#    define FORT_MAC_TO_CELL MAC_TO_CELL
 #    define FORT_INC_TEMP INC_TEMP
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
 #    define FORT_PURGEFLOTSAM PURGEFLOTSAM
@@ -58,9 +54,7 @@
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars
-#    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
@@ -81,9 +75,7 @@
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars_
-#    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof_
 #    define FORT_BUILD_MODVISC build_modvisc_
-#    define FORT_MAC_TO_CELL mac_to_cell_
 #    define FORT_INC_TEMP inc_temp_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
 #    define FORT_PURGEFLOTSAM purgeflotsam_
@@ -424,7 +416,7 @@ namespace amrex{
         int* SEM_upwind,
         int* SEM_advection_algorithm);
 
-      void FORT_MAC_TO_CELL(
+      void fort_mac_to_cell(
         int* ns_time_order,
         int* divu_outer_sweeps,
         int* num_divu_outer_sweeps,
@@ -619,7 +611,7 @@ namespace amrex{
        int* finest_level);
 
 
-      void FORT_BUILD_SEMIREFINEVOF(
+      void fort_build_semirefinevof(
         int* tid,
         int* tessellate,
         int* ngrow_refine,
