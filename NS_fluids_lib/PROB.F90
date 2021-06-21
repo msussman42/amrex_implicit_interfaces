@@ -13940,21 +13940,27 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material)
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
-      REAL_T, pointer :: semflux(D_DECL(:,:,:),:)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
+      REAL_T, intent(in), pointer :: semflux(D_DECL(:,:,:),:)
       ! 1=fine-fine  0=coarse-fine
       REAL_T, intent(in), pointer :: maskCF(D_DECL(:,:,:)) 
       REAL_T, intent(in), pointer :: maskcov(D_DECL(:,:,:))
       REAL_T, intent(in), pointer :: maskSEM(D_DECL(:,:,:))
       REAL_T, intent(in), pointer :: vel(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer :: pres(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: pres(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: den(D_DECL(:,:,:),:)
-      REAL_T, pointer :: xface(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xface(D_DECL(:,:,:),:)
+       ! intent(in) means the pointer cannot be reassigned.
+       ! The data itself inherits the intent attribute from the
+       ! target.
        !xgp is usually a dest variable except that it holds umac_old if 
        !op==11 or op 5
-      REAL_T, pointer :: xgp(D_DECL(:,:,:),:)
-      REAL_T, pointer :: xcut(D_DECL(:,:,:))
-      REAL_T, pointer :: xp(D_DECL(:,:,:),:)
-      REAL_T, pointer :: xvel(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: xgp(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xcut(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xp(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xvel(D_DECL(:,:,:),:)
 
       INTEGER_T local_bctype(2)
       INTEGER_T local_bctype_den(2)
@@ -14705,7 +14711,7 @@ END SUBROUTINE Adist
            else if (operation_flag.eq.0) then ! MAC pressure gradient
             if (nc.eq.1) then
              if (scomp.eq.1) then
-              local_data_side(side)=pres(D_DECL(ic,jc,kc))
+              local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
              else
               print *,"scomp invalid"
               stop
@@ -14717,7 +14723,7 @@ END SUBROUTINE Adist
            else if (operation_flag.eq.1) then ! MAC pressure 
             if (nc.eq.1) then
              if (scomp.eq.1) then
-              local_data_side(side)=pres(D_DECL(ic,jc,kc))
+              local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
              else
               print *,"scomp invalid"
               stop
@@ -14729,7 +14735,7 @@ END SUBROUTINE Adist
            else if (operation_flag.eq.2) then ! MAC potential grad, ppot^MAC
             if (nc.eq.1) then
              if (scomp.eq.1) then
-              local_data_side(side)=pres(D_DECL(ic,jc,kc))
+              local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
               local_data_side_den(side)=den(D_DECL(ic,jc,kc),1)
               if ((abs(local_data_side(side)).lt.1.0D+20).and. &
                   (local_data_side_den(side).gt.zero).and. &
@@ -15012,7 +15018,7 @@ END SUBROUTINE Adist
              local_bcval(side)=zero
             else if (presbc_in(dir,side,1).eq.EXT_DIR) then
              local_bctype(side)=1 ! dirichlet
-             local_bcval(side)=pres(D_DECL(i_out,j_out,k_out))
+             local_bcval(side)=pres(D_DECL(i_out,j_out,k_out),1)
             else
              print *,"presbc_in is corrupt"
              stop
@@ -15269,7 +15275,7 @@ END SUBROUTINE Adist
             else if (simple_AMR_BC_flag.eq.1) then
              if (nc.eq.1) then
               if (scomp.eq.1) then
-               local_data_side(side)=pres(D_DECL(ic,jc,kc))
+               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
               else
                print *,"scomp invalid"
                stop
@@ -15307,7 +15313,7 @@ END SUBROUTINE Adist
             else if (simple_AMR_BC_flag.eq.1) then
              if (nc.eq.1) then
               if (scomp.eq.1) then
-               local_data_side(side)=pres(D_DECL(ic,jc,kc))
+               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
               else
                print *,"scomp invalid"
                stop
@@ -15334,7 +15340,7 @@ END SUBROUTINE Adist
 
              if (nc.eq.1) then
               if (scomp.eq.1) then
-               local_data_side(side)=pres(D_DECL(ic,jc,kc))
+               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
                local_data_side_den(side)=den(D_DECL(ic,jc,kc),1)
               else
                print *,"scomp invalid"
@@ -15496,7 +15502,7 @@ END SUBROUTINE Adist
           else if (operation_flag.eq.0) then ! pressure grad on MAC
 
            if (nc.eq.1) then
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc))
+            local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
            else
             print *,"nc invalid"
             stop
@@ -15505,7 +15511,7 @@ END SUBROUTINE Adist
           else if (operation_flag.eq.1) then ! interp pressure to MAC
 
            if (nc.eq.1) then
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc))
+            local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
            else
             print *,"nc invalid"
             stop
@@ -15514,7 +15520,7 @@ END SUBROUTINE Adist
           else if (operation_flag.eq.2) then !potential grad/den and value
 
            if (nc.eq.1) then
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc))
+            local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
             local_data_den(isten+1)=den(D_DECL(ic,jc,kc),1)
            else
             print *,"nc invalid"
@@ -15591,7 +15597,7 @@ END SUBROUTINE Adist
 
           RRface(isten)=xsten(0,1)
 
-          local_vel(isten)=xvel(D_DECL(ic,jc,kc))
+          local_vel(isten)=xvel(D_DECL(ic,jc,kc),1)
          enddo ! isten=0..bfact
 
          if (spectral_loop.eq.0) then
@@ -16034,7 +16040,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-           shared_xcut=xcut(D_DECL(ic,jc,kc))
+           shared_xcut=xcut(D_DECL(ic,jc,kc),1)
 
            if (side.eq.0) then
             ! do nothing
@@ -16145,7 +16151,7 @@ END SUBROUTINE Adist
 
             if (shared_face.eq.0) then
 
-             xvel(D_DECL(ic,jc,kc))=one/local_interp(isten+1)
+             xvel(D_DECL(ic,jc,kc),1)=one/local_interp(isten+1)
 
             else if (shared_face.eq.1) then
              ! do nothing
@@ -16176,7 +16182,7 @@ END SUBROUTINE Adist
                stop
               endif
 
-              xvel(D_DECL(ic,jc,kc))=one/local_interp(isten+1)
+              xvel(D_DECL(ic,jc,kc),1)=one/local_interp(isten+1)
              else if (side.eq.0) then
               ! do nothing
              else
@@ -16332,7 +16338,7 @@ END SUBROUTINE Adist
            if (spectral_loop.eq.0) then
 
             if (shared_face.eq.0) then
-             xvel(D_DECL(ic,jc,kc))=local_interp(isten+1)
+             xvel(D_DECL(ic,jc,kc),1)=local_interp(isten+1)
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16353,7 +16359,7 @@ END SUBROUTINE Adist
 
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              xvel(D_DECL(ic,jc,kc))=half*( &
+              xvel(D_DECL(ic,jc,kc),1)=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
              else if (side.eq.0) then
@@ -16386,7 +16392,7 @@ END SUBROUTINE Adist
               local_interp(isten+1)
 
             if (shared_face.eq.0) then
-             xvel(D_DECL(ic,jc,kc))=shared_face_value
+             xvel(D_DECL(ic,jc,kc),1)=shared_face_value
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16407,7 +16413,7 @@ END SUBROUTINE Adist
 
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              xvel(D_DECL(ic,jc,kc))=half*( &
+              xvel(D_DECL(ic,jc,kc),1)=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
              else if (side.eq.0) then
@@ -16439,7 +16445,7 @@ END SUBROUTINE Adist
               beta*local_interp(isten+1)
 
             if (shared_face.eq.0) then
-             xvel(D_DECL(ic,jc,kc))=shared_face_value
+             xvel(D_DECL(ic,jc,kc),1)=shared_face_value
             else if (shared_face.eq.1) then
              ! do nothing
             else
@@ -16458,7 +16464,7 @@ END SUBROUTINE Adist
            else if (spectral_loop.eq.1) then
             if (mask_out.eq.1) then
              if ((side.eq.1).or.(side.eq.2)) then
-              xvel(D_DECL(ic,jc,kc))=half*( &
+              xvel(D_DECL(ic,jc,kc),1)=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
              else if (side.eq.0) then

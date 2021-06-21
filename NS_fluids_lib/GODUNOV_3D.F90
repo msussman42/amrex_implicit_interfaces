@@ -23600,10 +23600,13 @@ stop
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
  
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
-      REAL_T, target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
+
        ! intent(inout) instead of intent(in) since
        ! this parameter doubles as "xp" in SEM_CELL_TO_MAC
       REAL_T, intent(inout), target :: amrsync(DIMV(amrsync),SDIM)
+      REAL_T, pointer :: amrsync_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
        ! mask0=tag if not covered by level+1 or outside the domain.
@@ -23612,9 +23615,13 @@ stop
        ! mask3=1-tag at other exterior boundaries.
       REAL_T, intent(in), target :: mask3(DIMV(mask3))
       REAL_T, intent(inout), target :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, pointer :: faceLS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: mdata(DIMV(mdata),SDIM)
+      REAL_T, pointer :: mdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, pointer :: tdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, pointer :: c_tdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
       REAL_T, intent(in), target :: solidx(DIMV(solidx),nparts_def*SDIM)
       REAL_T, intent(in), target :: solidy(DIMV(solidy),nparts_def*SDIM)
@@ -23704,6 +23711,13 @@ stop
 
       nhalf=1
       nhalfcell=3
+
+      semflux_ptr=>semflux
+      amrsync_ptr=>amrsync
+      faceLS_ptr=>faceLS
+      mdata_ptr=>mdata
+      tdata_ptr=>tdata
+      c_tdata_ptr=>c_tdata
 
       if ((dir.lt.1).or.(dir.gt.SDIM)) then
        print *,"dir invalid face gradients"
@@ -23908,17 +23922,17 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,amrsync,0,dir-1,231)
+      call checkbound_array(fablo,fabhi,amrsync_ptr,0,dir-1,231)
 
       if ((dir.eq.1).and.(tileloop.eq.0)) then
 
-       call checkbound_array(fablo,fabhi,semflux,1,-1,231)
-       call checkbound_array(fablo,fabhi,faceLS,1,-1,1263)
+       call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+       call checkbound_array(fablo,fabhi,faceLS_ptr,1,-1,1263)
        call checkbound_array1(fablo,fabhi,mask0,1,-1,1264)
        call checkbound_array1(fablo,fabhi,mask3,1,-1,1264)
-       call checkbound_array(fablo,fabhi,mdata,1,-1,1264)
-       call checkbound_array(fablo,fabhi,tdata,1,-1,1265)
-       call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
+       call checkbound_array(fablo,fabhi,mdata_ptr,1,-1,1264)
+       call checkbound_array(fablo,fabhi,tdata_ptr,1,-1,1265)
+       call checkbound_array(fablo,fabhi,c_tdata_ptr,1,-1,1265)
        call checkbound_array(fablo,fabhi,vel,1,-1,1266)
        call checkbound_array(fablo,fabhi,solidx,0,0,1267)
        call checkbound_array(fablo,fabhi,solidy,0,1,1267)
@@ -24756,17 +24770,17 @@ stop
                ncomp_dest, &    ! ncphys
                spectral_loop, &
                ncfluxreg, &
-               semflux, &
+               semflux_ptr, &
                mask3, &
                mask0, & !mask0=1 if not cov. by finer or outside.
                vel, &
                vel, &  ! pres
                vel, &  ! den
-               tdata, &  !xface
-               tdata, &  !xgp (destination)
-               tdata, &  !xcut
-               amrsync, & !xp
-               tdata, &  !xvel
+               tdata_ptr, &  !xface
+               tdata_ptr, &  !xgp (destination)
+               tdata_ptr, &  !xcut
+               amrsync_ptr, & !xp
+               tdata_ptr, &  !xvel
                maskSEM)
 
             else if (stripstat.eq.0) then

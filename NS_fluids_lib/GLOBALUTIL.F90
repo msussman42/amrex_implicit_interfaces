@@ -2918,6 +2918,9 @@ contains
       IMPLICIT NONE
 
       INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
       REAL_T, intent(in), pointer :: data_array(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) ::  ngrow
       INTEGER_T, intent(in) ::  grid_type
@@ -3002,6 +3005,9 @@ contains
       IMPLICIT NONE
 
       INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
       REAL_T, intent(in), pointer :: data_array1(D_DECL(:,:,:))
       INTEGER_T, intent(in) ::  ngrow
       INTEGER_T, intent(in) ::  grid_type
