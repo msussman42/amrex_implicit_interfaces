@@ -13646,7 +13646,7 @@ stop
       enddo
 
        ! for advection:
-       !  1. low order fluxes are calculated in FORT_CELL_TO_MAC
+       !  1. low order fluxes are calculated in fort_cell_to_mac
        !     and high order fluxes are calculated in SEM_CELL_TO_MAC
        !  2. divergence term and SDC correction term are both
        !     calculated in SEM_MAC_TO_CELL (PROB.F90) regardless of the
@@ -14236,7 +14236,7 @@ stop
 !        compressible regions.
 !   (iii) usolid in solid regions
 
-      subroutine FORT_CELL_TO_MAC( &
+      subroutine fort_cell_to_mac( &
        ncomp_mgoni, &
        ncomp_xp, & !local_MF[AMRSYNC_PRES_MF]->nComp() if operation_flag==0
        ncomp_xgp, &
@@ -14250,7 +14250,7 @@ stop
        visc_coef, &
        face_flag, & 
        interp_vel_increment_from_cell, &
-       filter_velocity, &  ! in: FORT_CELL_TO_MAC
+       filter_velocity, &  ! in: fort_cell_to_mac
        temperature_primitive_variable, &
        enable_spectral, &
        fluxvel_index, &  
@@ -14315,7 +14315,9 @@ stop
        nten, &
        project_option, &
        SEM_upwind, &
-       SEM_advection_algorithm)
+       SEM_advection_algorithm) &
+      bind(c,name='fort_cell_to_mac')
+
       use global_utility_module
       use MOF_routines_module
       use probf90_module
@@ -14571,11 +14573,11 @@ stop
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_CELL_TO_MAC"
+       print *,"nparts invalid fort_cell_to_mac"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_CELL_TO_MAC"
+       print *,"nparts_def invalid fort_cell_to_mac"
        stop
       endif
       if ((simple_AMR_BC_flag.eq.0).or.(simple_AMR_BC_flag.eq.1)) then
@@ -14701,7 +14703,7 @@ stop
           (operation_flag.le.11)) then
        ! do nothing
       else
-       print *,"operation_flag invalid in FORT_CELL_TO_MAC 10"
+       print *,"operation_flag invalid in fort_cell_to_mac 10"
        stop
       endif
 
@@ -16085,7 +16087,7 @@ stop
           else if (local_face(icemask_index+1).eq.one) then
            ! do nothing
           else
-           print *,"icemask invalid in FORT_CELL_TO_MAC"
+           print *,"icemask invalid in fort_cell_to_mac"
            print *,"This is the p^CELL->MAC operation"
            print *,"operation_flag (=1) = ",operation_flag
            print *,"icemask_index= ",icemask_index
@@ -16138,7 +16140,7 @@ stop
             stop
            endif
           else
-           print *,"project_option invalid FORT_CELL_TO_MAC 4"
+           print *,"project_option invalid fort_cell_to_mac 4"
            stop
           endif
 
@@ -16467,7 +16469,7 @@ stop
             call get_scaled_tension(user_tension(iten),tension_scaled)
             call get_scaled_pforce(pforce_scaled)
 
-             ! in: FORT_CELL_TO_MAC, operation_flag=2,
+             ! in: fort_cell_to_mac, operation_flag=2,
              !     surface tension on MAC grid ...
             if (conservative_tension_force.eq.0) then
              local_tension_force=tension_scaled*local_face(curv_index+1)
@@ -16917,7 +16919,7 @@ stop
       endif
 
       return
-      end subroutine FORT_CELL_TO_MAC
+      end subroutine fort_cell_to_mac
 
 
       ! called from: NavierStokes::allocate_FACE_WEIGHT (NavierStokes3.cpp)

@@ -18907,7 +18907,8 @@ stop
          num_MAC_vectors)  
       REAL_T, intent(in), target :: zvel(DIMV(zvel), &
          num_MAC_vectors) 
-      REAL_T, intent(in), target :: xvelslp(DIMV(xvelslp),1+nmat)  ! xvelslope,xcen
+       ! xvelslope,xcen
+      REAL_T, intent(in), target :: xvelslp(DIMV(xvelslp),1+nmat)  
       REAL_T, intent(in), target :: yvelslp(DIMV(yvelslp),1+nmat)  
       REAL_T, intent(in), target :: zvelslp(DIMV(zvelslp),1+nmat)  
       REAL_T, intent(in), target :: momslope(DIMV(momslope),nc_conserve)
@@ -23485,7 +23486,7 @@ stop
        !   itensor_iter==1 => cell grad u  
        !   (only called when spectral_loop==0)
        !     
-      subroutine FORT_FACE_GRADIENTS( &
+      subroutine fort_face_gradients( &
        im_tensor, &
        elastic_partid, &
        im_elastic_map, &
@@ -23534,7 +23535,9 @@ stop
        ntensor, &
        SEM_upwind, &
        SEM_advection_algorithm, &
-       simple_AMR_BC_flag_viscosity)
+       simple_AMR_BC_flag_viscosity) &
+      bind(c,name='fort_face_gradients')
+
       use probcommon_module
       use global_utility_module
       use probf90_module
@@ -23597,27 +23600,27 @@ stop
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
  
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
-      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
        ! intent(inout) instead of intent(in) since
        ! this parameter doubles as "xp" in SEM_CELL_TO_MAC
-      REAL_T, intent(inout) :: amrsync(DIMV(amrsync),SDIM)
+      REAL_T, intent(inout), target :: amrsync(DIMV(amrsync),SDIM)
 
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
        ! mask0=tag if not covered by level+1 or outside the domain.
-      REAL_T, intent(in) :: mask0(DIMV(mask0))
+      REAL_T, intent(in), target :: mask0(DIMV(mask0))
        ! mask3=tag at exterior fine/fine border.
        ! mask3=1-tag at other exterior boundaries.
-      REAL_T, intent(in) :: mask3(DIMV(mask3))
-      REAL_T, intent(inout) :: faceLS(DIMV(faceLS),SDIM)
-      REAL_T, intent(out) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(inout) :: tdata(DIMV(tdata),ntensor)
-      REAL_T, intent(out) :: c_tdata(DIMV(c_tdata),ntensor)
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in) :: solidx(DIMV(solidx),nparts_def*SDIM)
-      REAL_T, intent(in) :: solidy(DIMV(solidy),nparts_def*SDIM)
-      REAL_T, intent(in) :: solidz(DIMV(solidz),nparts_def*SDIM)
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: mask3(DIMV(mask3))
+      REAL_T, intent(inout), target :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(out), target :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(inout), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(out), target :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: solidx(DIMV(solidx),nparts_def*SDIM)
+      REAL_T, intent(in), target :: solidy(DIMV(solidy),nparts_def*SDIM)
+      REAL_T, intent(in), target :: solidz(DIMV(solidz),nparts_def*SDIM)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
   
       INTEGER_T i,j,k
       INTEGER_T dir2
@@ -23863,7 +23866,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-       ! in: FORT_FACE_GRADIENTS
+       ! in: fort_face_gradients
       if ((ns_time_order.ge.1).and.(ns_time_order.le.32)) then
        ! do nothing
       else
@@ -23874,15 +23877,15 @@ stop
           (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
        ! do nothing
       else
-       print *,"divu_outer_sweeps invalid FORT_FACE_GRADIENTS"
+       print *,"divu_outer_sweeps invalid fort_face_gradients"
        stop
       endif
-       ! in: FORT_FACE_GRADIENTS
+       ! in: fort_face_gradients
       if ((SDC_outer_sweeps.ge.0).and. &
           (SDC_outer_sweeps.lt.ns_time_order)) then
        ! do nothing
       else
-       print *,"SDC_outer_sweeps invalid in FORT_FACE_GRADIENTS"
+       print *,"SDC_outer_sweeps invalid in fort_face_gradients"
        stop
       endif
 
@@ -23905,24 +23908,24 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(amrsync),0,dir-1,231)
+      call checkbound_array(fablo,fabhi,amrsync,0,dir-1,231)
 
       if ((dir.eq.1).and.(tileloop.eq.0)) then
 
-       call checkbound(fablo,fabhi,DIMS(semflux),1,-1,231)
-       call checkbound(fablo,fabhi,DIMS(faceLS),1,-1,1263)
-       call checkbound(fablo,fabhi,DIMS(mask0),1,-1,1264)
-       call checkbound(fablo,fabhi,DIMS(mask3),1,-1,1264)
-       call checkbound(fablo,fabhi,DIMS(mdata),1,-1,1264)
-       call checkbound(fablo,fabhi,DIMS(tdata),1,-1,1265)
-       call checkbound(fablo,fabhi,DIMS(c_tdata),1,-1,1265)
-       call checkbound(fablo,fabhi,DIMS(vel),1,-1,1266)
-       call checkbound(fablo,fabhi,DIMS(solidx),0,0,1267)
-       call checkbound(fablo,fabhi,DIMS(solidy),0,1,1267)
-       call checkbound(fablo,fabhi,DIMS(solidz),0,SDIM-1,1267)
-       call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1368)
-       call checkbound(fablo,fabhi,DIMS(recon),2,-1,1368)
-       call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+       call checkbound_array(fablo,fabhi,semflux,1,-1,231)
+       call checkbound_array(fablo,fabhi,faceLS,1,-1,1263)
+       call checkbound_array1(fablo,fabhi,mask0,1,-1,1264)
+       call checkbound_array1(fablo,fabhi,mask3,1,-1,1264)
+       call checkbound_array(fablo,fabhi,mdata,1,-1,1264)
+       call checkbound_array(fablo,fabhi,tdata,1,-1,1265)
+       call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
+       call checkbound_array(fablo,fabhi,vel,1,-1,1266)
+       call checkbound_array(fablo,fabhi,solidx,0,0,1267)
+       call checkbound_array(fablo,fabhi,solidy,0,1,1267)
+       call checkbound_array(fablo,fabhi,solidz,0,SDIM-1,1267)
+       call checkbound_array(fablo,fabhi,levelpc,2,-1,1368)
+       call checkbound_array(fablo,fabhi,recon,2,-1,1368)
+       call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
 
       endif
 
@@ -24031,7 +24034,7 @@ stop
                     (k.le.fabhi(dirtan))) then
             ! do nothing
            else
-            print *,"k invalid FORT_FACE_GRADIENTS"
+            print *,"k invalid fort_face_gradients"
             stop
            endif
           endif
@@ -24715,7 +24718,7 @@ stop
               def_dt=one
               conservative_div_uu=0
 
-               ! in: FORT_FACE_GRADIENTS
+               ! in: fort_face_gradients
                ! the boundary conditions for "vel" are already set in the
                ! ghost cell.  e.g. homogeneous versus inhomogeneous.
               call SEM_CELL_TO_MAC( &
@@ -24940,7 +24943,7 @@ stop
       endif
 
       return 
-      end subroutine FORT_FACE_GRADIENTS
+      end subroutine fort_face_gradients
 
 ! Prior to calling this routine:
 !  a) init_gradu_tensor(...,LOCAL_CELLTENSOR_MF,LOCAL_FACETENSOR_MF)
@@ -24948,7 +24951,7 @@ stop
 !     ii) doit_gradu_tensor  spectral_loop==1  itensor_iter==0
 !     ii) doit_gradu_tensor  spectral_loop==0  itensor_iter==1
 !     in doit_gradu_tensor:
-!         FORT_FACE_GRADIENTS, tileloop==0 (low order), tileloop==1 (SEM)
+!         fort_face_gradients, tileloop==0 (low order), tileloop==1 (SEM)
 !  b) spectral_loop=0,1
 !     dir=1..sdim
 !     tileloop=0...3
