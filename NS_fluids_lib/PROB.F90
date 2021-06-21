@@ -13875,7 +13875,8 @@ END SUBROUTINE Adist
        i,j,k, &
        tilelo,tilehi, &
        fablo,fabhi, &
-       xlo,dx, &
+       xlo, &
+       dx, &
        dir, &
        bfact,bfact_c,bfact_f, &
        presbc_in, &
@@ -13889,18 +13890,18 @@ END SUBROUTINE Adist
        ncphys, &
        spectral_loop, &
        ncfluxreg, &
-       semflux,DIMS(semflux), &
-       maskCF,DIMS(maskCF), & !maskCF=1.0 at interior fine bc ghost cells
-       maskcov,DIMS(maskcov), & ! 1=not cov. or outside domain  
-       vel,DIMS(vel), & 
-       pres,DIMS(pres), & 
-       den,DIMS(den), & 
-       xface,DIMS(xface), & 
-       xgp,DIMS(xgp), &  ! holds Umac_old if operation_flag==5 or 11.
-       xcut,DIMS(xcut), & 
-       xp,DIMS(xp), &  ! holds amrsync if op==0,3,5,6,7,9,10,11
-       xvel,DIMS(xvel), & 
-       maskSEM,DIMS(maskSEM) )
+       semflux, &
+       maskCF, & !maskCF=1.0 at interior fine bc ghost cells
+       maskcov, & ! 1=not cov. or outside domain  
+       vel, & 
+       pres, & 
+       den, & 
+       xface, & 
+       xgp, &  ! holds Umac_old if operation_flag==5 or 11.
+       xcut, & 
+       xp, &  ! holds amrsync if op==0,3,5,6,7,9,10,11
+       xvel, & 
+       maskSEM )
       use global_utility_module
 
       IMPLICIT NONE
@@ -13939,32 +13940,21 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material)
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(semflux)
-      INTEGER_T, intent(in) :: DIMDEC(maskCF)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(pres)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(xcut)
-      INTEGER_T, intent(in) :: DIMDEC(xgp)
-      INTEGER_T, intent(in) :: DIMDEC(xp)
-      INTEGER_T, intent(in) :: DIMDEC(xvel)
-      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
-      REAL_T, intent(in) :: maskCF(DIMV(maskCF)) ! 1=fine-fine  0=coarse-fine
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in) :: pres(DIMV(pres))
-      REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
-      REAL_T, intent(inout) :: xface(DIMV(xface),ncphys) 
+      REAL_T, pointer :: semflux(D_DECL(:,:,:),:)
+      ! 1=fine-fine  0=coarse-fine
+      REAL_T, intent(in), pointer :: maskCF(D_DECL(:,:,:)) 
+      REAL_T, intent(in), pointer :: maskcov(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: maskSEM(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: vel(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: pres(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: den(D_DECL(:,:,:),:)
+      REAL_T, pointer :: xface(D_DECL(:,:,:),:)
        !xgp is usually a dest variable except that it holds umac_old if 
        !op==11 or op 5
-      REAL_T, intent(inout) :: xgp(DIMV(xgp),ncomp_xgp) 
-      REAL_T, intent(inout) :: xcut(DIMV(xcut)) 
-      REAL_T, intent(inout) :: xp(DIMV(xp),ncomp_xp) 
-      REAL_T, intent(inout) :: xvel(DIMV(xvel)) 
+      REAL_T, pointer :: xgp(D_DECL(:,:,:),:)
+      REAL_T, pointer :: xcut(D_DECL(:,:,:))
+      REAL_T, pointer :: xp(D_DECL(:,:,:),:)
+      REAL_T, pointer :: xvel(D_DECL(:,:,:))
 
       INTEGER_T local_bctype(2)
       INTEGER_T local_bctype_den(2)

@@ -23600,7 +23600,7 @@ stop
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
  
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
-      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, target :: semflux(DIMV(semflux),ncfluxreg)
        ! intent(inout) instead of intent(in) since
        ! this parameter doubles as "xp" in SEM_CELL_TO_MAC
       REAL_T, intent(inout), target :: amrsync(DIMV(amrsync),SDIM)
@@ -24742,7 +24742,8 @@ stop
                tilelo,tilehi, &
                fablo,fabhi, &
                xlo, &
-               dx,dir, &
+               dx, &
+               dir, &
                bfact,bfact_c,bfact_f, &
                velbc, &  ! presbc
                velbc, &
@@ -24755,18 +24756,18 @@ stop
                ncomp_dest, &    ! ncphys
                spectral_loop, &
                ncfluxreg, &
-               semflux,DIMS(semflux), &
-               mask3,DIMS(mask3), &
-               mask0,DIMS(mask0), & !mask0=1 if not cov. by finer or outside.
-               vel,DIMS(vel), &
-               vel,DIMS(vel), &  ! pres
-               vel,DIMS(vel), &  ! den
-               tdata,DIMS(tdata), &  !xface
-               tdata,DIMS(tdata), &  !xgp (destination)
-               tdata,DIMS(tdata), &  !xcut
-               amrsync,DIMS(amrsync), & !xp
-               tdata,DIMS(tdata), &  !xvel
-               maskSEM,DIMS(maskSEM))
+               semflux, &
+               mask3, &
+               mask0, & !mask0=1 if not cov. by finer or outside.
+               vel, &
+               vel, &  ! pres
+               vel, &  ! den
+               tdata, &  !xface
+               tdata, &  !xgp (destination)
+               tdata, &  !xcut
+               amrsync, & !xp
+               tdata, &  !xvel
+               maskSEM)
 
             else if (stripstat.eq.0) then
              ! do nothing

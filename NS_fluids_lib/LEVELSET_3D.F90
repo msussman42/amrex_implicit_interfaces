@@ -16846,18 +16846,18 @@ stop
                 ncphys, &
                 spectral_loop, &
                 ncfluxreg, &
-                semflux,DIMS(semflux), &
-                mask,DIMS(mask), & !mask=1.0 at interior fine bc ghost cells
-                maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  
-                vel,DIMS(vel), &
-                pres,DIMS(pres), &
-                den,DIMS(den), &
-                xface,DIMS(xface), &
-                xgp,DIMS(xgp), & ! holds Umac_old if operation_flag==5 or 11.
-                xcut,DIMS(xcut), &   ! coeff*areafrac
-                xp,DIMS(xp), &
-                xvel,DIMS(xvel), &
-                maskSEM,DIMS(maskSEM))
+                semflux, &
+                mask, & !mask=1.0 at interior fine bc ghost cells
+                maskcoef, & ! 1=not cov. or outside domain  
+                vel, &
+                pres, &
+                den, &
+                xface, &
+                xgp, & ! holds Umac_old if operation_flag==5 or 11.
+                xcut, &   ! coeff*areafrac
+                xp, &
+                xvel, &
+                maskSEM)
 
               enddo 
               enddo 
