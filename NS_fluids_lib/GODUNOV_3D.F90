@@ -3259,7 +3259,7 @@ stop
       end subroutine FORT_BUILD_MASKSEM
 
 
-      subroutine FORT_BUILD_CONSERVE( &
+      subroutine fort_build_conserve( &
        iden_base, &
        override_density, &
        constant_density_all_time, &
@@ -3275,7 +3275,9 @@ stop
        nmat,ngrow, &
        normdir, &
        nc_conserve, &
-       nc_den)
+       nc_den) &
+      bind(c,name='fort_build_conserve')
+
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -3295,10 +3297,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(den) 
       INTEGER_T, intent(in) :: DIMDEC(mom_den) 
       INTEGER_T, intent(in) :: DIMDEC(vel) 
-      REAL_T, intent(out) :: conserve(DIMV(conserve),nc_conserve)
-      REAL_T, intent(in) :: den(DIMV(den),nc_den)
-      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
-      REAL_T, intent(in) :: vel(DIMV(den),SDIM)
+      REAL_T, intent(out), target :: conserve(DIMV(conserve), &
+              nc_conserve)
+      REAL_T, pointer :: conserve_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: den(DIMV(den),nc_den)
+      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
+      REAL_T, intent(in), target :: vel(DIMV(den),SDIM)
 
       INTEGER_T i,j,k,im
       INTEGER_T istate,ispecies
@@ -3310,6 +3314,8 @@ stop
       REAL_T mom_dencore(nmat)
       REAL_T KE,vel1D,local_temperature,local_internal
       REAL_T :: massfrac_parm(num_species_var+1)
+
+      conserve_ptr=>conserve
 
       if (nc_den.ne.num_state_material*nmat) then
        print *,"nc_den invalid"
@@ -3362,10 +3368,10 @@ stop
        endif
       enddo ! im=1..nmat
 
-      call checkbound(fablo,fabhi,DIMS(conserve),ngrow,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(den),ngrow,-1,1272)
-      call checkbound(fablo,fabhi,DIMS(mom_den),ngrow,-1,1272)
-      call checkbound(fablo,fabhi,DIMS(vel),ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1,1271)
+      call checkbound_array(fablo,fabhi,den,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,mom_den,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,vel,ngrow,-1,1272)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrow)
@@ -3433,7 +3439,7 @@ stop
 
        do im=1,nmat
 
-         ! in: FORT_BUILD_CONSERVE
+         ! in: fort_build_conserve
         istate=1
         do while (istate.le.num_state_material)
 
@@ -3502,11 +3508,11 @@ stop
       enddo ! i,j,k (cell center "conserved" variables) 
 
       return
-      end subroutine FORT_BUILD_CONSERVE
+      end subroutine fort_build_conserve
 
 
 
-      subroutine FORT_BUILD_NEWMAC( &
+      subroutine fort_build_newmac( &
        num_MAC_vectors, & ! num_MAC_vectors=1 or 2
        normdir, & ! 0..sdim-1
        tilelo,tilehi, &
@@ -3530,7 +3536,9 @@ stop
        cur_time, &
        nmat, &
        level, &
-       finest_level)
+       finest_level) &
+      bind(c,name='fort_build_newmac')
+
       use probcommon_module
       use probf90_module
       use global_utility_module
@@ -3567,31 +3575,37 @@ stop
 
       INTEGER_T, intent(in) :: DIMDEC(mask) 
 
-      REAL_T, intent(in) :: unode(DIMV(unode))
+      REAL_T, intent(in), target :: unode(DIMV(unode))
 
-      REAL_T, intent(in) :: xmomside(DIMV(xmomside), &
+      REAL_T, intent(in), target :: xmomside(DIMV(xmomside), &
         2*num_MAC_vectors)
-      REAL_T, intent(in) :: ymomside(DIMV(xmomside), &
+      REAL_T, intent(in), target :: ymomside(DIMV(xmomside), &
         2*num_MAC_vectors)
-      REAL_T, intent(in) :: zmomside(DIMV(xmomside), &
-        2*num_MAC_vectors)
-
-      REAL_T, intent(in) :: xmassside(DIMV(xmassside), &
-        2*num_MAC_vectors)
-      REAL_T, intent(in) :: ymassside(DIMV(ymassside), &
-        2*num_MAC_vectors)
-      REAL_T, intent(in) :: zmassside(DIMV(zmassside), &
+      REAL_T, intent(in), target :: zmomside(DIMV(xmomside), &
         2*num_MAC_vectors)
 
-      REAL_T, intent(out) :: xvmac(DIMV(xvmac))
-      REAL_T, intent(out) :: yvmac(DIMV(yvmac))
-      REAL_T, intent(out) :: zvmac(DIMV(zvmac))
+      REAL_T, intent(in), target :: xmassside(DIMV(xmassside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: ymassside(DIMV(ymassside), &
+        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: zmassside(DIMV(zmassside), &
+        2*num_MAC_vectors)
 
-      REAL_T, intent(out) :: xdmac(DIMV(xdmac))
-      REAL_T, intent(out) :: ydmac(DIMV(ydmac))
-      REAL_T, intent(out) :: zdmac(DIMV(zdmac))
+      REAL_T, intent(out), target :: xvmac(DIMV(xvmac))
+      REAL_T, pointer :: xvmac_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: yvmac(DIMV(yvmac))
+      REAL_T, pointer :: yvmac_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: zvmac(DIMV(zvmac))
+      REAL_T, pointer :: zvmac_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(out), target :: xdmac(DIMV(xdmac))
+      REAL_T, pointer :: xdmac_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: ydmac(DIMV(ydmac))
+      REAL_T, pointer :: ydmac_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: zdmac(DIMV(zdmac))
+      REAL_T, pointer :: zdmac_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: mask(DIMV(mask))
 
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -3625,6 +3639,14 @@ stop
 
       nhalf=1
 
+      xvmac_ptr=>xvmac
+      yvmac_ptr=>yvmac
+      zvmac_ptr=>zvmac
+
+      xdmac_ptr=>xdmac
+      ydmac_ptr=>ydmac
+      zdmac_ptr=>zdmac
+
       if (bfact.lt.1) then
        print *,"bfact invalid45"
        stop
@@ -3651,25 +3673,25 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(unode),0,normdir,1271)
+      call checkbound_array1(fablo,fabhi,unode,0,normdir,1271)
 
-      call checkbound(fablo,fabhi,DIMS(xmomside),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(ymomside),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(zmomside),1,-1,1271)
+      call checkbound_array(fablo,fabhi,xmomside,1,-1,1271)
+      call checkbound_array(fablo,fabhi,ymomside,1,-1,1271)
+      call checkbound_array(fablo,fabhi,zmomside,1,-1,1271)
 
-      call checkbound(fablo,fabhi,DIMS(xmassside),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(ymassside),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(zmassside),1,-1,1271)
+      call checkbound_array(fablo,fabhi,xmassside,1,-1,1271)
+      call checkbound_array(fablo,fabhi,ymassside,1,-1,1271)
+      call checkbound_array(fablo,fabhi,zmassside,1,-1,1271)
 
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,1271)
+      call checkbound_array1(fablo,fabhi,mask,1,-1,1271)
 
-      call checkbound(fablo,fabhi,DIMS(xvmac),0,0,1271)
-      call checkbound(fablo,fabhi,DIMS(yvmac),0,1,1271)
-      call checkbound(fablo,fabhi,DIMS(zvmac),0,SDIM-1,1271)
+      call checkbound_array1(fablo,fabhi,xvmac_ptr,0,0,1271)
+      call checkbound_array1(fablo,fabhi,yvmac_ptr,0,1,1271)
+      call checkbound_array1(fablo,fabhi,zvmac_ptr,0,SDIM-1,1271)
 
-      call checkbound(fablo,fabhi,DIMS(xdmac),0,0,1271)
-      call checkbound(fablo,fabhi,DIMS(ydmac),0,1,1271)
-      call checkbound(fablo,fabhi,DIMS(zdmac),0,SDIM-1,1271)
+      call checkbound_array1(fablo,fabhi,xdmac_ptr,0,0,1271)
+      call checkbound_array1(fablo,fabhi,ydmac_ptr,0,1,1271)
+      call checkbound_array1(fablo,fabhi,zdmac_ptr,0,SDIM-1,1271)
 
       do veldir=1,SDIM
 
@@ -3917,11 +3939,11 @@ stop
       enddo ! veldir=1..sdim
 
       return
-      end subroutine FORT_BUILD_NEWMAC
+      end subroutine fort_build_newmac
 
       ! called from split_scalar_advection after 
       !  BUILD_SEMIREFINEVOF(tessellate==0)
-      subroutine FORT_BUILD_MACVOF( &
+      subroutine fort_build_macvof( &
        level, &
        finest_level, &
        normdir, &
@@ -3944,7 +3966,9 @@ stop
        ngrow, &
        num_MAC_vectors, & ! num_MAC_vectors=1 or 2
        ngrowmac, &
-       veldir)
+       veldir) &
+      bind(c,name='fort_build_macvof')
+
       use probcommon_module
       use godunov_module
       use global_utility_module
@@ -3970,13 +3994,17 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(xvof) 
       INTEGER_T, intent(in) :: DIMDEC(xvel) !1..num_MAC_vectors
       INTEGER_T, intent(in) :: DIMDEC(xvelslp) ! xvelslope,xcen
-      REAL_T, intent(in) :: vofF(DIMV(vofF),nrefine_vof)
-      REAL_T, intent(in) :: cenF(DIMV(cenF),nrefine_cen)
-      REAL_T, intent(in) :: x_mac_old(DIMV(x_mac_old))
-      REAL_T, intent(in) :: xd_mac_old(DIMV(xd_mac_old))
-      REAL_T, intent(out) :: xvof(DIMV(xvof),nmat)
-      REAL_T, intent(out) :: xvel(DIMV(xvel),num_MAC_vectors) 
-      REAL_T, intent(out) :: xvelslp(DIMV(xvelslp),1+nmat) ! xvelslope,xcen
+      REAL_T, intent(in), target :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, intent(in), target :: cenF(DIMV(cenF),nrefine_cen)
+      REAL_T, intent(in), target :: x_mac_old(DIMV(x_mac_old))
+      REAL_T, intent(in), target :: xd_mac_old(DIMV(xd_mac_old))
+      REAL_T, intent(out), target :: xvof(DIMV(xvof),nmat)
+      REAL_T, pointer :: xvof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: xvel(DIMV(xvel),num_MAC_vectors) 
+      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
+       ! xvelslope,xcen
+      REAL_T, intent(out), target :: xvelslp(DIMV(xvelslp),1+nmat) 
+      REAL_T, pointer :: xvelslp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
 
@@ -3995,6 +4023,10 @@ stop
       INTEGER_T ivec
 
       nhalf=1
+
+      xvof_ptr=>xvof
+      xvel_ptr=>xvel
+      xvelslp_ptr=>xvelslp
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid build macvof"
@@ -4047,13 +4079,13 @@ stop
        print *,"nrefine_cen invalid in build_macvof"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(x_mac_old),ngrowmac,veldir-1,1271)
-      call checkbound(fablo,fabhi,DIMS(xd_mac_old),ngrowmac,veldir-1,1271)
-      call checkbound(fablo,fabhi,DIMS(xvof),ngrowmac,veldir-1,1271)
-      call checkbound(fablo,fabhi,DIMS(xvel),ngrowmac,veldir-1,1271)
-      call checkbound(fablo,fabhi,DIMS(xvelslp),ngrowmac,veldir-1,1271)
-      call checkbound(fablo,fabhi,DIMS(vofF),ngrow,-1,1272)
-      call checkbound(fablo,fabhi,DIMS(cenF),ngrow,-1,1272)
+      call checkbound_array1(fablo,fabhi,x_mac_old,ngrowmac,veldir-1,1271)
+      call checkbound_array1(fablo,fabhi,xd_mac_old,ngrowmac,veldir-1,1271)
+      call checkbound_array(fablo,fabhi,xvof_ptr,ngrowmac,veldir-1,1271)
+      call checkbound_array(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1,1271)
+      call checkbound_array(fablo,fabhi,xvelslp_ptr,ngrowmac,veldir-1,1271)
+      call checkbound_array(fablo,fabhi,vofF,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,cenF,ngrow,-1,1272)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrowmac,veldir-1,20)
@@ -4284,7 +4316,7 @@ stop
       enddo ! i,j,k (face center "conserved" variables) 
 
       return
-      end subroutine FORT_BUILD_MACVOF
+      end subroutine fort_build_macvof
 
 
       ! masknbr:
@@ -4292,7 +4324,7 @@ stop
       ! (2) =1 interior  =0 otherwise
       ! (3) =1 interior+ngrow-1  =0 otherwise
       ! (4) =1 interior+ngrow    =0 otherwise
-      subroutine FORT_BUILD_SLOPES( &
+      subroutine fort_build_slopes( &
        masknbr,DIMS(masknbr), &
        recon,DIMS(recon), &
        slsrc,DIMS(slsrc), &
@@ -4309,33 +4341,36 @@ stop
        ngrow,  &
        advection_order, &
        density_advection_order, &
-       slope_limiter_option) 
+       slope_limiter_option) &
+      bind(c,name='fort_build_slopes')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T nc_conserve
-      INTEGER_T nmat
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T normdir,ngrow
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T velbc(SDIM,2)
-      REAL_T dx(SDIM)
-      REAL_T xlo(SDIM)
-      INTEGER_T advection_order(nmat)
-      INTEGER_T density_advection_order(nmat)
-      INTEGER_T slope_limiter_option
-      INTEGER_T DIMDEC(masknbr) 
-      INTEGER_T DIMDEC(recon) 
-      INTEGER_T DIMDEC(slsrc)
-      INTEGER_T DIMDEC(sldst)
-      REAL_T masknbr(DIMV(masknbr))
-      REAL_T recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T slsrc(DIMV(slsrc),nc_conserve)
-      REAL_T sldst(DIMV(sldst),nc_conserve)
+      INTEGER_T, intent(in) :: nc_conserve
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: normdir,ngrow
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: velbc(SDIM,2)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(in) :: advection_order(nmat)
+      INTEGER_T, intent(in) :: density_advection_order(nmat)
+      INTEGER_T, intent(in) :: slope_limiter_option
+      INTEGER_T, intent(in) :: DIMDEC(masknbr) 
+      INTEGER_T, intent(in) :: DIMDEC(recon) 
+      INTEGER_T, intent(in) :: DIMDEC(slsrc)
+      INTEGER_T, intent(in) :: DIMDEC(sldst)
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: slsrc(DIMV(slsrc),nc_conserve)
+      REAL_T, intent(out), target :: sldst(DIMV(sldst),nc_conserve)
+      REAL_T, pointer :: sldst_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T i,j,k
@@ -4369,10 +4404,12 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,1247)
-      call checkbound(fablo,fabhi,DIMS(slsrc),ngrow,-1,1248)
-      call checkbound(fablo,fabhi,DIMS(sldst),1,-1,1249)
-      call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
+      sldst_ptr=>sldst
+
+      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,1247)
+      call checkbound_array(fablo,fabhi,slsrc,ngrow,-1,1248)
+      call checkbound_array(fablo,fabhi,sldst_ptr,1,-1,1249)
+      call checkbound_array(fablo,fabhi,recon,ngrow,-1,1251)
 
       if (nc_conserve.ne.SDIM+nmat*num_state_material) then
        print *,"nc_conserve invalid"
@@ -4771,11 +4808,11 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_BUILD_SLOPES
+      end subroutine fort_build_slopes
 
 
 
-      subroutine FORT_BUILD_SLOPES_FACE( &
+      subroutine fort_build_slopes_face( &
        masknbr,DIMS(masknbr), &
        vfrac,DIMS(vfrac), &
        slsrc,DIMS(slsrc), &
@@ -4791,34 +4828,39 @@ stop
        slopedir, &
        ngrow,  &
        advection_order, &
-       slope_limiter_option) 
+       slope_limiter_option) &
+      bind(c,name='fort_build_slopes_face')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
 
-      INTEGER_T nmat
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T normdir
-      INTEGER_T slopedir
-      INTEGER_T ngrow
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T velbc(SDIM,2)
-      REAL_T dx(SDIM)
-      REAL_T xlo(SDIM)
-      INTEGER_T advection_order(nmat)
-      INTEGER_T slope_limiter_option
-      INTEGER_T DIMDEC(masknbr) 
-      INTEGER_T DIMDEC(vfrac) 
-      INTEGER_T DIMDEC(slsrc)
-      INTEGER_T DIMDEC(sldst)
-      REAL_T masknbr(DIMV(masknbr))
-      REAL_T vfrac(DIMV(vfrac),nmat)
-      REAL_T slsrc(DIMV(slsrc)) !slsrc(1)=xvel  slsrc(2)=xdisp
-      REAL_T sldst(DIMV(sldst)) !sldst(1)=xvelslope,slpdst(2..nmat+1)=xcen
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: slopedir
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: velbc(SDIM,2)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(in) :: advection_order(nmat)
+      INTEGER_T, intent(in) :: slope_limiter_option
+      INTEGER_T, intent(in) :: DIMDEC(masknbr) 
+      INTEGER_T, intent(in) :: DIMDEC(vfrac) 
+      INTEGER_T, intent(in) :: DIMDEC(slsrc)
+      INTEGER_T, intent(in) :: DIMDEC(sldst)
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
+      REAL_T, intent(in), target :: vfrac(DIMV(vfrac),nmat)
+       !slsrc(1)=xvel  slsrc(2)=xdisp
+      REAL_T, intent(in), target :: slsrc(DIMV(slsrc)) 
+       !sldst(1)=xvelslope,slpdst(2..nmat+1)=xcen
+      REAL_T, intent(out), target :: sldst(DIMV(sldst)) 
+      REAL_T, pointer :: sldst_ptr(D_DECL(:,:,:))
 
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T i,j,k
@@ -4849,10 +4891,12 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,1247)
-      call checkbound(fablo,fabhi,DIMS(slsrc),ngrow,slopedir,1248)
-      call checkbound(fablo,fabhi,DIMS(sldst),ngrow-1,slopedir,1249)
-      call checkbound(fablo,fabhi,DIMS(vfrac),ngrow,slopedir,1251)
+      sldst_ptr=>sldst
+
+      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,1247)
+      call checkbound_array1(fablo,fabhi,slsrc,ngrow,slopedir,1248)
+      call checkbound_array1(fablo,fabhi,sldst_ptr,ngrow-1,slopedir,1249)
+      call checkbound_array(fablo,fabhi,vfrac,ngrow,slopedir,1251)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -5149,7 +5193,7 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_BUILD_SLOPES_FACE
+      end subroutine fort_build_slopes_face
 
 
 
@@ -13707,7 +13751,7 @@ stop
 
        ! (vel/RR) if R-THETA
        ! vel=vel*dt , call adjust_du if RZ, override if passive advect.
-      subroutine FORT_VELMAC_OVERRIDE( &
+      subroutine fort_velmac_override( &
        nmat, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -13729,7 +13773,9 @@ stop
        SDC_outer_sweeps, &
        ns_time_order, &
        divu_outer_sweeps, &
-       num_divu_outer_sweeps)
+       num_divu_outer_sweeps) &
+      bind(c,name='fort_velmac_override')
+
       use godunov_module
       use probf90_module
       use global_utility_module
@@ -13754,9 +13800,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(unode)
       INTEGER_T, intent(in) :: DIMDEC(ucell)
      
-      REAL_T, intent(in) :: utemp(DIMV(utemp)) 
-      REAL_T, intent(inout) :: unode(DIMV(unode)) 
-      REAL_T, intent(inout) :: ucell(DIMV(ucell),SDIM) 
+      REAL_T, intent(in), target :: utemp(DIMV(utemp)) 
+      REAL_T, intent(inout), target :: unode(DIMV(unode)) 
+      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: ucell(DIMV(ucell),SDIM) 
+      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: velbc(SDIM,2)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -13774,6 +13822,8 @@ stop
       INTEGER_T local_mac_grow
 
       nhalf=3
+      unode_ptr=>unode
+      ucell_ptr=>ucell
 
       if (bfact.ge.1) then
        ! do nothing
@@ -13827,7 +13877,7 @@ stop
       endif
       if ((divu_outer_sweeps.lt.0).or. &
           (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
-       print *,"divu_outer_sweeps invalid FORT_VELMAC_OVERRIDE"
+       print *,"divu_outer_sweeps invalid fort_velmac_override"
        stop
       endif
   
@@ -13845,9 +13895,9 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(utemp),mac_grow+1,normdir,12)
-      call checkbound(fablo,fabhi,DIMS(unode),mac_grow+1,normdir,12)
-      call checkbound(fablo,fabhi,DIMS(ucell),mac_grow,-1,12)
+      call checkbound_array1(fablo,fabhi,utemp,mac_grow+1,normdir,12)
+      call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow+1,normdir,12)
+      call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1,12)
 
       if (dt.le.zero) then
         print *,"dt invalid"
@@ -14109,14 +14159,14 @@ stop
       enddo  ! i,j,k
 
       return
-      end subroutine FORT_VELMAC_OVERRIDE
+      end subroutine fort_velmac_override
 
 
        ! mask=1 if cell not covered.
        ! masknbr=1 fine-fine border cells and interior cells.
        ! masknbr=0 coarse-fine cells and cells outside domain.
        ! called from getStateMOM_DEN
-      subroutine FORT_DERIVE_MOM_DEN( &
+      subroutine fort_derive_mom_den( &
        im_parm, &
        ngrow, &
        constant_density_all_time, & ! 1..nmat
@@ -14137,7 +14187,9 @@ stop
        DrhoDT, &
        override_density, &
        nmat, &
-       level,finest_level)
+       level,finest_level) &
+      bind(c,name='fort_derive_mom_den')
+
       use probf90_module
       use global_utility_module
 
@@ -14162,12 +14214,14 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
      
-      REAL_T, intent(in) ::  mask(DIMV(mask)) 
-      REAL_T, intent(in) ::  masknbr(DIMV(masknbr)) 
-      REAL_T, intent(in) ::  vol(DIMV(vol)) 
-      REAL_T, intent(in) :: eosdata(DIMV(eosdata),num_state_material*nmat)
-      REAL_T, intent(out) :: momden(DIMV(momden),nmat)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: mask(DIMV(mask)) 
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr)) 
+      REAL_T, intent(in), target :: vol(DIMV(vol)) 
+      REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
+               num_state_material*nmat)
+      REAL_T, intent(out), target :: momden(DIMV(momden),nmat)
+      REAL_T, pointer :: momden_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
 
@@ -14191,6 +14245,8 @@ stop
       REAL_T local_vfrac
 
       nhalf=3
+
+      momden_ptr=>momden
 
       if (bfact.lt.1) then
        print *,"bfact invalid66"
@@ -14233,12 +14289,12 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vol),ngrow,-1,12)
-      call checkbound(fablo,fabhi,DIMS(eosdata),ngrow,-1,12)
-      call checkbound(fablo,fabhi,DIMS(momden),ngrow,-1,12)
-      call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,12)
-      call checkbound(fablo,fabhi,DIMS(mask),ngrow,-1,12)
-      call checkbound(fablo,fabhi,DIMS(masknbr),ngrow,-1,12)
+      call checkbound_array1(fablo,fabhi,vol,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,eosdata,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,momden_ptr,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,recon,ngrow,-1,12)
+      call checkbound_array1(fablo,fabhi,mask,ngrow,-1,12)
+      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,12)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -18713,7 +18769,7 @@ stop
          !        =1.0 fine-fine ghost cells
          !        =0.0 coarse-fine ghost cells and outside the domain.
          ! mask=tag if not covered by level+1 or outside the domain.
-      subroutine FORT_VFRAC_SPLIT( &
+      subroutine fort_vfrac_split( &
        nprocessed, &
        tid, &
        added_weight, &
@@ -18790,7 +18846,9 @@ stop
        level, &
        finest_level, &
        dombc, &
-       domlo,domhi)
+       domlo,domhi) &
+      bind(c,name='fort_vfrac_split')
+
       use probf90_module
       use global_utility_module
       use geometry_intersect_module
@@ -18889,8 +18947,11 @@ stop
       REAL_T, intent(in), target :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
        ! new data
       REAL_T, intent(inout), target :: snew(DIMV(snew),ncomp_state)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: tennew(DIMV(tennew),ntensor)
+      REAL_T, pointer :: tennew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
        ! displacement
       REAL_T, intent(in), target :: ucell(DIMV(ucell),SDIM)
@@ -18915,17 +18976,23 @@ stop
 
       REAL_T, intent(inout), target :: xmomside(DIMV(xmomside), &
         2*num_MAC_vectors)
+      REAL_T, pointer :: xmomside_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: ymomside(DIMV(ymomside), &
         2*num_MAC_vectors)
+      REAL_T, pointer :: ymomside_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: zmomside(DIMV(zmomside), &
         2*num_MAC_vectors)
+      REAL_T, pointer :: zmomside_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(inout), target :: xmassside(DIMV(xmassside), &
         2*num_MAC_vectors)
+      REAL_T, pointer :: xmassside_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: ymassside(DIMV(ymassside), &
         2*num_MAC_vectors)
+      REAL_T, pointer :: ymassside_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: zmassside(DIMV(zmassside), &
         2*num_MAC_vectors)
+      REAL_T, pointer :: zmassside_ptr(D_DECL(:,:,:),:)
     
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
       REAL_T, intent(in) :: density_floor(nmat)
@@ -19066,6 +19133,17 @@ stop
     
 ! VFRAC_SPLIT code starts here
 
+      snew_ptr=>snew
+      tennew_ptr=>tennew
+      LSnew_ptr=>LSnew
+
+      xmomside_ptr=>xmomside
+      ymomside_ptr=>ymomside
+      zmomside_ptr=>zmomside
+
+      xmassside_ptr=>xmassside
+      ymassside_ptr=>ymassside
+      zmassside_ptr=>zmassside
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -19312,9 +19390,9 @@ stop
        ! slope data
       call checkbound_array(fablo,fabhi,PLICSLP,ngrow,-1,132)
        ! new data
-      call checkbound_array(fablo,fabhi,snew,1,-1,130)
-      call checkbound_array(fablo,fabhi,tennew,1,-1,130)
-      call checkbound_array(fablo,fabhi,LSnew,1,-1,138)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,130)
+      call checkbound_array(fablo,fabhi,tennew_ptr,1,-1,130)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,138)
        ! other vars
       call checkbound_array(fablo,fabhi,ucell,ngrow-1,-1,135)
       call checkbound_array(fablo,fabhi,vofls0,1,-1,135)
@@ -19367,13 +19445,13 @@ stop
        call checkbound_array(fablo,fabhi,yvelslp,ngrow_mac_old,1,125)
        call checkbound_array(fablo,fabhi,zvelslp,ngrow_mac_old,SDIM-1,126)
 
-       call checkbound_array(fablo,fabhi,xmomside,1,-1,1271)
-       call checkbound_array(fablo,fabhi,ymomside,1,-1,1271)
-       call checkbound_array(fablo,fabhi,zmomside,1,-1,1271)
+       call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1,1271)
+       call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1,1271)
+       call checkbound_array(fablo,fabhi,zmomside_ptr,1,-1,1271)
 
-       call checkbound_array(fablo,fabhi,xmassside,1,-1,1271)
-       call checkbound_array(fablo,fabhi,ymassside,1,-1,1271)
-       call checkbound_array(fablo,fabhi,zmassside,1,-1,1271)
+       call checkbound_array(fablo,fabhi,xmassside_ptr,1,-1,1271)
+       call checkbound_array(fablo,fabhi,ymassside_ptr,1,-1,1271)
+       call checkbound_array(fablo,fabhi,zmassside_ptr,1,-1,1271)
  
        if ((NUM_CELL_ELASTIC.eq. &
             2*SDIM*num_materials_viscoelastic+SDIM).and. &
@@ -20482,7 +20560,7 @@ stop
             do im=1,nmat
              ! density
              dencomp_data=(im-1)*num_state_material+1
-              ! conserve is initialized in FORT_BUILD_CONSERVE.
+              ! conserve is initialized in fort_build_conserve.
               ! donate_density is equal to the density that is stored in the
               ! old state variable.
              donate_density= &
@@ -20564,7 +20642,7 @@ stop
              do while (istate.le.num_state_material)
               statecomp_data=(im-1)*num_state_material+istate
 
-               ! conserve initialized in FORT_BUILD_CONSERVE.
+               ! conserve initialized in fort_build_conserve.
                ! Temperature and species variables are multiplied by 
                ! dencore(im) in BUILD_CONSERVE.  (dencore(im) is the
                ! value of density stored in the state variable)
@@ -21078,7 +21156,7 @@ stop
 
           endif
 
-           ! in: FORT_VFRAC_SPLIT
+           ! in: fort_vfrac_split
           dencomp_data=(im-1)*num_state_material+1
 
           istate=1
@@ -21415,7 +21493,7 @@ stop
       endif
 
       return
-      end subroutine FORT_VFRAC_SPLIT
+      end subroutine fort_vfrac_split
 
 
       ! combine_flag==0 (FVM -> GFM)
@@ -24897,19 +24975,19 @@ stop
                ncomp_dest, & ! ncomp
                ncomp_xvel, &
                ncomp_cterm, &
-               tdata,DIMS(tdata), & ! vol
-               tdata,DIMS(tdata), & ! xface
-               tdata,DIMS(tdata), & ! xp
-               tdata,DIMS(tdata), & ! xvel
-               tdata,DIMS(tdata), & ! maskcoef
-               tdata,DIMS(tdata), & ! cterm
-               tdata,DIMS(tdata), & ! mdotcell
-               tdata,DIMS(tdata), & ! pold
-               tdata,DIMS(tdata), & ! denold
-               tdata,DIMS(tdata), & ! ustar
-               c_tdata,DIMS(c_tdata), & ! veldest
-               c_tdata,DIMS(c_tdata), & ! dendest
-               c_tdata,DIMS(c_tdata)) !divdest
+               tdata, & ! vol
+               tdata, & ! xface
+               tdata, & ! xp
+               tdata, & ! xvel
+               tdata, & ! maskcoef
+               tdata, & ! cterm
+               tdata, & ! mdotcell
+               tdata, & ! pold
+               tdata, & ! denold
+               tdata, & ! ustar
+               c_tdata, & ! veldest
+               c_tdata, & ! dendest
+               c_tdata) !divdest
 
             else if (stripstat.eq.0) then
              ! do nothing

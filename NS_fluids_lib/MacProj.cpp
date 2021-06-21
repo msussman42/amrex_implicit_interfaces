@@ -1777,8 +1777,8 @@ void NavierStokes::apply_div(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NavierStokes::apply_div
-   // FORT_MAC_TO_CELL declared in: LEVELSET_3D.F90
-  FORT_MAC_TO_CELL(
+   // fort_mac_to_cell declared in: LEVELSET_3D.F90
+  fort_mac_to_cell(
    &ns_time_order, 
    &divu_outer_sweeps, 
    &num_divu_outer_sweeps, 
@@ -2425,7 +2425,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: NavierStokes::getStateDIV
-   FORT_MAC_TO_CELL(
+   fort_mac_to_cell(
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
