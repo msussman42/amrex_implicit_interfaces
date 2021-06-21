@@ -9475,7 +9475,7 @@ void NavierStokes::multiphase_project(int project_option) {
    //  b) uedge=test_current_icefacecut*uedge+ &
    //       (one-test_current_icefacecut)*uedge_rigid
    //
-   // In LEVELSET_3D.F90, FORT_CELL_TO_MAC,
+   // In LEVELSET_3D.F90, fort_cell_to_mac,
    // operation_flag=3,4,5,10,11, num_colors.gt.0, if either
    // left cell or right cell has ice (FSI_flag==3,6)
    // or is FSI_rigid (FSI_flag==5) then velocity is

@@ -10,7 +10,6 @@
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars
 #    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_CELL_TO_MAC cell_to_mac
 #    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -36,7 +35,6 @@
 #    define FORT_INIT_PHYSICS_VARS INIT_PHYSICS_VARS
 #    define FORT_BUILD_SEMIREFINEVOF BUILD_SEMIREFINEVOF
 #    define FORT_BUILD_MODVISC BUILD_MODVISC
-#    define FORT_CELL_TO_MAC CELL_TO_MAC
 #    define FORT_MAC_TO_CELL MAC_TO_CELL
 #    define FORT_INC_TEMP INC_TEMP
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
@@ -62,7 +60,6 @@
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars
 #    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_CELL_TO_MAC cell_to_mac
 #    define FORT_MAC_TO_CELL mac_to_cell
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -86,7 +83,6 @@
 #    define FORT_INIT_PHYSICS_VARS init_physics_vars_
 #    define FORT_BUILD_SEMIREFINEVOF build_semirefinevof_
 #    define FORT_BUILD_MODVISC build_modvisc_
-#    define FORT_CELL_TO_MAC cell_to_mac_
 #    define FORT_MAC_TO_CELL mac_to_cell_
 #    define FORT_INC_TEMP inc_temp_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
@@ -349,7 +345,7 @@ namespace amrex{
        Real* recalesce_state_old,
        int* recalesce_num_state,int* nmat);
 
-      void FORT_CELL_TO_MAC(
+      void fort_cell_to_mac(
         int* ncomp_mgoni,
         int* ncomp_xp,
         int* ncomp_xgp,

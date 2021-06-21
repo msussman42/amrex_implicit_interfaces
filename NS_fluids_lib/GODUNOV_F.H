@@ -19,7 +19,6 @@
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
 #    define FORT_MAC_ELASTIC_FORCE mac_elastic_force
-#    define FORT_FACE_GRADIENTS face_gradients
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -65,7 +64,6 @@
 #    define FORT_CROSSTERM    CROSSTERM
 #    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
 #    define FORT_MAC_ELASTIC_FORCE MAC_ELASTIC_FORCE
-#    define FORT_FACE_GRADIENTS FACE_GRADIENTS
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
@@ -111,7 +109,6 @@
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
 #    define FORT_MAC_ELASTIC_FORCE mac_elastic_force
-#    define FORT_FACE_GRADIENTS face_gradients
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -156,7 +153,6 @@
 #    define FORT_CROSSTERM    crossterm_
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
 #    define FORT_MAC_ELASTIC_FORCE mac_elastic_force_
-#    define FORT_FACE_GRADIENTS face_gradients_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
@@ -1319,7 +1315,7 @@ extern "C"
      int* nten);
 
 
-   void FORT_FACE_GRADIENTS(
+   void fort_face_gradients(
      int* im_tensor,
      int* elastic_partid,
      int* im_elastic_map,

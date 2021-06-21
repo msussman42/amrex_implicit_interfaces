@@ -14727,9 +14727,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      //
      // in: SEM_scalar_advection
      // advect: rho u, rho, temperature (non conservatively)
-     // FORT_CELL_TO_MAC in LEVELSET_3D.F90
+     // fort_cell_to_mac in LEVELSET_3D.F90
      int nsolve=1; //unused here
-     FORT_CELL_TO_MAC(
+     fort_cell_to_mac(
       &ncomp_mgoni,
       &ncomp_xp,
       &ncomp_xgp,

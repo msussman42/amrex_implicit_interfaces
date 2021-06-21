@@ -1956,7 +1956,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    // in apply_cell_pressure_gradient: p^CELL -> p^MAC 
    // AMR transfer data is in the 3rd component of xp.
-   FORT_CELL_TO_MAC(
+   fort_cell_to_mac(
     &ncomp_mgoni, 
     &ncomp_xp, 
     &ncomp_xgp, 
@@ -2887,7 +2887,7 @@ void NavierStokes::increment_face_velocity(
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // in increment_face_velocity
-      FORT_CELL_TO_MAC(
+      fort_cell_to_mac(
        &ncomp_mgoni,
        &ncomp_xp,
        &ncomp_xgp,
@@ -3197,7 +3197,7 @@ void NavierStokes::density_TO_MAC(int project_option) {
        thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
         // in density_TO_MAC
-       FORT_CELL_TO_MAC(
+       fort_cell_to_mac(
         &ncomp_mgoni,
         &ncomp_xp,
         &ncomp_xgp,
@@ -4105,8 +4105,8 @@ void NavierStokes::doit_gradu_tensor(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // FORT_FACE_GRADIENTS is declared in GODUNOV_3D.F90
-    FORT_FACE_GRADIENTS(
+    // fort_face_gradients is declared in GODUNOV_3D.F90
+    fort_face_gradients(
      &im_tensor,
      &elastic_partid,
      im_elastic_map.dataPtr(),
@@ -5101,7 +5101,7 @@ void NavierStokes::apply_pressure_grad(
 
     // -grad p * FACE_WEIGHT * dt
     // in: apply_pressure_grad
-    FORT_CELL_TO_MAC(
+    fort_cell_to_mac(
      &ncomp_mgoni,
      &ncomp_xp,
      &ncomp_xgp,
@@ -6689,7 +6689,7 @@ void NavierStokes::process_potential_force_face() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // process_potential_force_face 
-   FORT_CELL_TO_MAC( 
+   fort_cell_to_mac( 
     &ncomp_mgoni,
     &ncomp_xp,
     &ncomp_xgp,
