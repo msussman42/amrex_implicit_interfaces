@@ -9091,7 +9091,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
       XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
      } else if (MAC_grid_displacement==1) {
         //ngrow,dir,scomp,ncomp
-      XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
+      XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
      } else
       amrex::Error("MAC_grid_displacement invalid");
     } // dir=0..sdim-1

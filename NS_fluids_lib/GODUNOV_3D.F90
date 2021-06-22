@@ -10921,7 +10921,8 @@ stop
        visc,DIMS(visc), &
        tensor,DIMS(tensor), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
        elastic_viscosity,etaS, &
        elastic_time, &
        viscoelastic_model, &
@@ -10955,9 +10956,9 @@ stop
       INTEGER_T, intent(in) :: bfact
 
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(in), target :: xdfab(DIMV(xdfab))
-      REAL_T, intent(in), target :: ydfab(DIMV(ydfab))
-      REAL_T, intent(in), target :: zdfab(DIMV(zdfab))
+      REAL_T, intent(in), target :: xdfab(DIMV(xdfab),1)
+      REAL_T, intent(in), target :: ydfab(DIMV(ydfab),1)
+      REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(inout), target :: tensor(DIMV(tensor), &
               FORT_NUM_TENSOR_TYPE)
@@ -10971,17 +10972,24 @@ stop
       INTEGER_T ii,jj
       REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
-      INTEGER_T dir_flux,side_flux,dir_local,dir_XD
+      INTEGER_T dir_flux
+      INTEGER_T dir_local
+      INTEGER_T dir_XD
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
       REAL_T XDcenter(SDIM)
-      REAL_T delta_flux
-      REAL_T xflux(SDIM)
-      REAL_T XDside(SDIM)
-      REAL_T XDside_stencil(0:1,0:SDIM-1,SDIM)
-      REAL_T xflux_stencil(0:1,0:SDIM-1,SDIM)
       REAL_T gradXDtensor(SDIM,SDIM) ! dir_xdisp,dir_space
-      REAL_T avgXDtensor(SDIM,SDIM)
+
+      type(deriv_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
+
+      REAL_T, target :: cell_data_deriv(1)
+
       REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
       REAL_T hoop_22
        ! if use_A==0 then force is div(mu H Q)/rho
@@ -11051,13 +11059,13 @@ stop
       endif
 
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdfab,2,-1,11)
-       call checkbound_array1(fablo,fabhi,ydfab,2,-1,11)
-       call checkbound_array1(fablo,fabhi,zdfab,2,-1,11)
+       call checkbound_array(fablo,fabhi,xdfab,2,-1,11)
+       call checkbound_array(fablo,fabhi,ydfab,2,-1,11)
+       call checkbound_array(fablo,fabhi,zdfab,2,-1,11)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdfab,1,0,11)
-       call checkbound_array1(fablo,fabhi,ydfab,1,1,11)
-       call checkbound_array1(fablo,fabhi,zdfab,1,SDIM-1,11)
+       call checkbound_array(fablo,fabhi,xdfab,2,0,11)
+       call checkbound_array(fablo,fabhi,ydfab,2,1,11)
+       call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
       else
        print *,"MAC_grid_displacement invalid"
        stop
@@ -11066,6 +11074,13 @@ stop
 
       call checkbound_array(fablo,fabhi,visc,ngrow,-1,11)
       call checkbound_array(fablo,fabhi,tensor,ngrow,-1,8)
+
+      do dir_local=1,SDIM
+       dx_local(dir_local)=dx(dir_local)
+       xlo_local(dir_local)=xlo(dir_local)
+       fablo_local(dir_local)=fablo(dir_local)
+       fabhi_local(dir_local)=fabhi(dir_local)
+      enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -11104,73 +11119,66 @@ stop
         if (MAC_grid_displacement.eq.0) then
          ! do nothing
         else if (MAC_grid_displacement.eq.1) then
-         do dir_flux=0,SDIM-1
-         do side_flux=0,1
+
+         data_out%data_interp=>cell_data_deriv
+
+          !type(deriv_from_grid_parm_type) :: data_in
+         data_in%level=level
+         data_in%finest_level=finest_level
+         data_in%bfact=bfact ! bfact=kind of spectral element grid 
+         data_in%dx=>dx_local
+         data_in%xlo=>xlo_local
+         data_in%fablo=>fablo_local
+         data_in%fabhi=>fabhi_local
+         data_in%ngrowfab=2
+
+         data_in%ncomp=1
+         data_in%scomp=1
+
+         data_in%index_flux(1)=i
+         data_in%index_flux(2)=j
+         if (SDIM.eq.3) then
+          data_in%index_flux(SDIM)=k
+         else if (SDIM.eq.2) then
+          !do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+         data_in%grid_type_flux=-1
+         do dir_local=1,SDIM
+          data_in%box_type_flux(dir_local)=0;
+         enddo
+
+         do dir_XD=1,SDIM
+
+          data_in%grid_type_data=dir_XD-1
           do dir_local=1,SDIM
-           xflux(dir_local)=xsten(0,dir_local)
+           data_in%box_type_data(dir_local)=0;
           enddo
-          if (side_flux.eq.0) then
-           xflux(dir_flux+1)=xsten(-1,dir_flux+1)
-          else if (side_flux.eq.1) then
-           xflux(dir_flux+1)=xsten(1,dir_flux+1)
+          data_in%box_type_data(dir_XD)=1
+
+          if (dir_XD.eq.1) then
+           data_in%disp_data=>xdfab
+          else if (dir_XD.eq.2) then
+           data_in%disp_data=>ydfab
+          else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
+           data_in%disp_data=>zdfab
           else
-           print *,"side_flux invalid"
+           print *,"dir_XD invalid"
            stop
           endif
 
-           ! interpfab_XDISP declared in MASS_TRANSFER_3D.F90
-          call interpfab_XDISP( &
-            bfact, & ! determines positioning of Gauss Legendre nodes
-            level, &
-            finest_level, &
-            dx, &
-            xlo, &
-            xflux, &
-            im_elastic_p1, &!1..nmat(prescribed as a fluid in the inputs file)
-            nmat, &
-            partid, & ! 0..num_materials_viscoelastic-1
-            fablo,fabhi, &
-            xdfab,DIMS(xdfab), &
-            ydfab,DIMS(ydfab), &
-            zdfab,DIMS(zdfab), &
-            recon,DIMS(recon), &
-            XDside) ! XD(xflux),YD(xflux),ZD(xflux): XDside(SDIM)
-
-          do dir_XD=1,SDIM
-           XDside_stencil(side_flux,dir_flux,dir_XD)= &
-             XDside(dir_XD) 
+          do dir_flux=0,SDIM-1
+           data_in%dir_deriv=dir_flux+1
+           call deriv_from_grid_util(data_in,data_out)
+           gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
           enddo
-          do dir_local=1,SDIM
-           xflux_stencil(side_flux,dir_flux,dir_local)=xflux(dir_local)
-          enddo ! dir_local=1..sdim
-                    
-         enddo ! side_flux=0,1
-         enddo ! dir_flux=0..sdim-1
+          data_in%dir_deriv=-1
+          call deriv_from_grid_util(data_in,data_out)
+          XDcenter(dir_XD)=cell_data_deriv(1)
 
-         do dir_XD=1,SDIM
-          XDcenter(dir_XD)=zero
-         enddo
-         do dir_flux=0,SDIM-1
-          delta_flux=xflux_stencil(1,dir_flux,dir_flux+1)- &
-                     xflux_stencil(0,dir_flux,dir_flux+1)
-          if (delta_flux.gt.zero) then
-           do dir_XD=1,SDIM
-            gradXDtensor(dir_XD,dir_flux+1)= &
-             (XDside_stencil(1,dir_flux,dir_XD)- &
-              XDside_stencil(0,dir_flux,dir_XD))/delta_flux
-            avgXDtensor(dir_XD,dir_flux+1)= &
-             half*(XDside_stencil(1,dir_flux,dir_XD)+ &
-                   XDside_stencil(0,dir_flux,dir_XD)) 
-            XDcenter(dir_XD)=XDcenter(dir_XD)+avgXDtensor(dir_XD,dir_flux+1)
-           enddo ! dir_XD=1..sdim
-          else
-           print *,"delta_flux invalid"
-           stop
-          endif
-         enddo ! dir_flux=0..sdim-1
-         do dir_XD=1,SDIM
-          XDcenter(dir_XD)=XDcenter(dir_XD)/SDIM
-         enddo
+         enddo ! dir_XD=1..sdim
 
           ! declared in: GLOBALUTIL.F90
          call stress_from_strain( &
