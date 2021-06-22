@@ -25,7 +25,6 @@
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_MAKETENSOR maketensor
 #    define FORT_TENSORFORCE tensorforce
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
@@ -62,7 +61,6 @@
 #    define FORT_FIX_HOOP_TENSOR FIX_HOOP_TENSOR
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
-#    define FORT_MAKETENSOR MAKETENSOR
 #    define FORT_TENSORFORCE TENSORFORCE
 #    define FORT_TENSORHEAT TENSORHEAT
 #    define FORT_MARANGONIFORCE MARANGONIFORCE
@@ -99,7 +97,6 @@
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_MAKETENSOR maketensor
 #    define FORT_TENSORFORCE tensorforce
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_MARANGONIFORCE marangoniforce
@@ -135,7 +132,6 @@
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
-#    define FORT_MAKETENSOR maketensor_
 #    define FORT_TENSORFORCE tensorforce_
 #    define FORT_TENSORHEAT tensorheat_
 #    define FORT_MARANGONIFORCE marangoniforce_
@@ -542,7 +538,7 @@ extern "C"
     int* finest_level);
 
  
-   void FORT_MAKETENSOR(
+   void fort_maketensor(
     int* partid,
     int* level,
     int* finest_level,

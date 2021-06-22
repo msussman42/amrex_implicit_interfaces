@@ -5745,7 +5745,7 @@ stop
           ! in R-Theta,
           !  Q(3,3)=0.0
           ! local_tensor_from_xdisplace called from FORT_UPDATETENSOR
-          ! In FORT_MAKETENSOR, Q is multiplied by the elastic bulk modulus.
+          ! In fort_maketensor, Q is multiplied by the elastic bulk modulus.
          veldir=1
          bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
          if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
@@ -10906,7 +10906,7 @@ stop
       return
       end subroutine FORT_SDC_TIME_QUAD_FACE
 
-      subroutine FORT_MAKETENSOR( &
+      subroutine fort_maketensor( &
        partid, & ! 0..num_materials_viscoelastic-1
        level, &
        finest_level, &
@@ -10926,7 +10926,9 @@ stop
        elastic_time, &
        viscoelastic_model, &
        polymer_factor, &
-       irz,ngrow,nmat)
+       irz,ngrow,nmat) &
+      bind(c,name='fort_maketensor')
+
       use probcommon_module
       use global_utility_module
       use mass_transfer_module
@@ -11265,7 +11267,7 @@ stop
       enddo
 
       return
-      end subroutine MAKETENSOR
+      end subroutine fort_maketensor
 
       subroutine FORT_COPY_VEL_ON_SIGN( &
        im_part, &
