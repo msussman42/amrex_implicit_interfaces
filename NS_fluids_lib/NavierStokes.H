@@ -299,9 +299,14 @@ namespace amrex{
 #define MAC_ELASTIC_FLUX_XZ_MF (MAC_ELASTIC_FLUX_XY_MF+1)
 #define MAC_ELASTIC_FLUX_YZ_MF (MAC_ELASTIC_FLUX_XZ_MF+1)
 
+// holds the cell centered interpolant of the MAC XDISP.
 #define VISUAL_XDISP_MAC_CELL_MF (MAC_ELASTIC_FLUX_YZ_MF+1)
 
-#define NEXT_MF (VISUAL_XDISP_MAC_CELL_MF+1)
+#define XDISP_CELL_MF (VISUAL_XDISP_MAC_CELL_MF+1)
+
+#define XDISP_MAC_MF (XDISP_CELL_MF+1)
+
+#define NEXT_MF (XDISP_MAC_MF+3)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
@@ -935,6 +940,7 @@ protected:
      int simple_AMR_BC_flag_viscosity);
 
     void make_viscoelastic_tensor(int im);
+    void make_viscoelastic_tensorMAC(int im);
     void make_viscoelastic_force(int im);
     void make_viscoelastic_heating(int im,int idx);
 

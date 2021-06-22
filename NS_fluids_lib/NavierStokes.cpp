@@ -20723,7 +20723,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  if (particles_flag==0) {
 
-  getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
+  getStateTensor_localMF(XDISP_CELL_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
    cur_time_slab);
 
   if (thread_class::nthreads<1)
@@ -20746,9 +20746,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
-
+FIX ME do for face based and cell based.
    FArrayBox& TNEWfab=Tensor_new[mfi];
-   FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+   FArrayBox& XDISP_fab=(*localMF[XDISP_CELL_MF])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
  
    int tid_current=ns_thread();
@@ -20779,7 +20779,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 } // omp
   ns_reconcile_d_num(81);
 
-  delete_localMF(VISCOTEN_MF,1);
+  delete_localMF(XDISP_CELL_MF,1);
 
  } else if (particles_flag==1) {
 
