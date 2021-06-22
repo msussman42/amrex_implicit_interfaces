@@ -11573,10 +11573,30 @@ void NavierStokes::vel_elastic_ALL() {
          // note: tensor_advection_updateALL is called before veldiffuseALL.
          // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
          ns_level.make_viscoelastic_tensor(im);
+         ns_level.debug_ngrow(VISCOTEN_MF,1,5);
+         if (ns_level.localMF[VISCOTEN_MF]->nComp()!=NUM_TENSOR_TYPE)
+          amrex::Error("ns_level.localMF[VISCOTEN_MF] invalid");
+	}
+FIX ME - reduce ngrow to 0 and set the BC, avgdown, etc also for cell center
+
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         ns_level.make_viscoelastic_tensorMAC(im);
+	}
+
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
          ns_level.MAC_GRID_ELASTIC_FORCE(im);
         }
 
         delete_array(VISCOTEN_MF);
+        delete_array(MAC_ELASTIC_FLUX_CC_MF);
+        delete_array(MAC_ELASTIC_FLUX_X_MF);
+        delete_array(MAC_ELASTIC_FLUX_Y_MF);
+        delete_array(MAC_ELASTIC_FLUX_Z_MF);
+        delete_array(MAC_ELASTIC_FLUX_XY_MF);
+        delete_array(MAC_ELASTIC_FLUX_XZ_MF);
+        delete_array(MAC_ELASTIC_FLUX_YZ_MF);
        } else
         amrex::Error("MAC_grid_displacement invalid");
 
