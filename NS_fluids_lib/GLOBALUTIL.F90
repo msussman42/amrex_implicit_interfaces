@@ -7548,11 +7548,12 @@ contains
       return
       end subroutine bilinear_interp_WT 
 
-
+       ! data_in%dir_deriv=1..sdim (derivative)
+       ! data_in%dir_deriv=-1 (interp)
       subroutine deriv_from_grid_util(data_in,data_out)
       use probcommon_module
       IMPLICIT NONE
- 
+
       type(deriv_from_grid_parm_type), intent(in) :: data_in 
       type(interp_from_grid_out_parm_type), intent(out) :: data_out
 
@@ -7577,7 +7578,9 @@ contains
 #define ilocal data_in%index_flux
 
       if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
-       ! do nothing
+       ! do nothing (derivative operation)
+      else if (dir_FD.eq.-1) then
+       ! do nothing (interpolation operation)
       else
        print *,"dir_FD invalid"
        stop
@@ -7691,12 +7694,19 @@ contains
         ii(2)=jsten
         ii(3)=ksten
 
-        if (ii(dir_FD).eq.ilo(dir_FD)) then
-         SGN_FACT=-one
-        else if (ii(dir_FD).eq.ihi(dir_FD)) then
+        if (dir_FD.eq.-1) then
          SGN_FACT=one
-        else
-         print *,"ii(dir_FD) invalid"
+        else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+         if (ii(dir_FD).eq.ilo(dir_FD)) then
+          SGN_FACT=-one
+         else if (ii(dir_FD).eq.ihi(dir_FD)) then
+          SGN_FACT=one
+         else
+          print *,"ii(dir_FD) invalid"
+          stop
+         endif
+        else 
+         print *,"dir_FD invalid"
          stop
         endif
 

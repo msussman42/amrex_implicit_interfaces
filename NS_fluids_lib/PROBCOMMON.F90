@@ -135,7 +135,7 @@ module probcommon_module_types
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
       INTEGER_T :: index_flux(SDIM)  !flux point where derivative needed.
-      INTEGER_T :: dir_deriv !dir_deriv=1..sdim
+      INTEGER_T :: dir_deriv !dir_deriv=1..sdim or dir_deriv=-1
       INTEGER_T :: box_type_flux(SDIM) !0=CELL 1=NODE
       INTEGER_T :: box_type_data(SDIM)
       INTEGER_T :: grid_type_flux  ! -1..5
