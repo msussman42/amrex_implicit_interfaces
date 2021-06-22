@@ -10954,12 +10954,14 @@ stop
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: xdfab(DIMV(xdfab))
-      REAL_T, intent(in) :: ydfab(DIMV(ydfab))
-      REAL_T, intent(in) :: zdfab(DIMV(zdfab))
-      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
-      REAL_T, intent(inout) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: xdfab(DIMV(xdfab))
+      REAL_T, intent(in), target :: ydfab(DIMV(ydfab))
+      REAL_T, intent(in), target :: zdfab(DIMV(zdfab))
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(inout), target :: tensor(DIMV(tensor), &
+              FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in) :: elastic_viscosity,etaS
       REAL_T, intent(in) :: elastic_time,polymer_factor
@@ -10989,6 +10991,8 @@ stop
       INTEGER_T nhalf
 
       nhalf=3
+
+      tensor_ptr=>tensor
 
       if ((partid.ge.0).and. &
           (partid.lt.num_materials_viscoelastic)) then
@@ -11047,21 +11051,21 @@ stop
       endif
 
       if (MAC_grid_displacement.eq.0) then
-       call checkbound(fablo,fabhi,DIMS(xdfab),2,-1,11)
-       call checkbound(fablo,fabhi,DIMS(ydfab),2,-1,11)
-       call checkbound(fablo,fabhi,DIMS(zdfab),2,-1,11)
+       call checkbound_array1(fablo,fabhi,xdfab,2,-1,11)
+       call checkbound_array1(fablo,fabhi,ydfab,2,-1,11)
+       call checkbound_array1(fablo,fabhi,zdfab,2,-1,11)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound(fablo,fabhi,DIMS(xdfab),1,0,11)
-       call checkbound(fablo,fabhi,DIMS(ydfab),1,1,11)
-       call checkbound(fablo,fabhi,DIMS(zdfab),1,SDIM-1,11)
+       call checkbound_array1(fablo,fabhi,xdfab,1,0,11)
+       call checkbound_array1(fablo,fabhi,ydfab,1,1,11)
+       call checkbound_array1(fablo,fabhi,zdfab,1,SDIM-1,11)
       else
        print *,"MAC_grid_displacement invalid"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(recon),2,-1,1277)
+      call checkbound_array(fablo,fabhi,recon,2,-1,1277)
 
-      call checkbound(fablo,fabhi,DIMS(visc),ngrow,-1,11)
-      call checkbound(fablo,fabhi,DIMS(tensor),ngrow,-1,8)
+      call checkbound_array(fablo,fabhi,visc,ngrow,-1,11)
+      call checkbound_array(fablo,fabhi,tensor,ngrow,-1,8)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
