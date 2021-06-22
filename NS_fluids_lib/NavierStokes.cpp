@@ -9132,7 +9132,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      FArrayBox& tenfab=(*localMF[VISCOTEN_MF])[mfi];
      // 1. maketensor: TQ_{m}=alpha_{m} Q_{m}
      // 2. tensor force: F= div (H_{m} TQ_{m})
-     //    H=H(F-1/2) or H=H(phi)
+     //    H=H(phi_biased)
 
      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
      int ncomp_visc=viscfab.nComp();
@@ -9152,7 +9152,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
        // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
-     FORT_MAKETENSOR(
+     fort_maketensor(
       &partid,
       &level,
       &finest_level,

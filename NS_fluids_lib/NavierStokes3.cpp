@@ -11551,7 +11551,7 @@ void NavierStokes::vel_elastic_ALL() {
 		   (viscoelastic_model[im]==3)) { // incremental
          // do nothing
         } else
-        amrex::Error("viscoelastic_model[im] invalid");
+         amrex::Error("viscoelastic_model[im] invalid");
 
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
@@ -11615,7 +11615,7 @@ void NavierStokes::vel_elastic_ALL() {
     make_MAC_velocity_consistentALL();
     int use_VOF_weight=1;
     int vel_or_disp=0; //interpolate MAC velocity
-    int dest_idx=-1;   //update State
+    int dest_idx=-1;   //update State_Type
     VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
    } else 
     amrex::Error("expecting face_flag==1 if MAC_grid_displacement==1");
