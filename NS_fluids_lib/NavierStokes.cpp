@@ -20711,8 +20711,6 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   refinement_ratio[ilev]=2;
  int nnbr=1;
 
- bool local_copy_flag=true; 
-
  if (localMF_grow[VISCOTEN_MF]==-1) {
   // do nothing
  } else 
@@ -20749,13 +20747,13 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
+  thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -20812,7 +20810,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  } else if (particles_flag==1) {
 
-  // All the particles should live on level==0.
+  bool local_copy_flag=true; 
 
   int ipart=0;
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
@@ -20843,13 +20841,13 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(accumulate_mf->boxArray().d_numPts());
+   thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*accumulate_mf,use_tiling); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
      // std::cout << tilegrid << '\n';
@@ -20884,7 +20882,10 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 	localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
     int Nn=neighbors_local.size();
 
-    FArrayBox& matrixfab=(*accumulate_mf)[mfi];
+    Box tilebox_grow=grow(tilegrid,nnbr);
+    FArrayBox matrixfab(tilebox_grow,ncomp_accumulate);
+    matrixfab.setVal(0.0);
+
     FArrayBox& TNEWfab=Tensor_new[mfi];
 
     FArrayBox& xdnewfab=(*XDISP_new[0])[mfi];
@@ -20915,7 +20916,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
+    // declared in: GODUNOV_3D.F90
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
     fort_assimilate_tensor_from_particles( 
@@ -20992,9 +20993,6 @@ NavierStokes::assimilate_vel_from_particles() {
  } else
   amrex::Error("expecting level==finest_level");
 
-  // 2 ghost cells in order to interpolate the velocity
-  // to the particle positions (levelset needed for the weights).   
-  // 1 ghost cell layer of neighbor particles.
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
@@ -21005,7 +21003,6 @@ NavierStokes::assimilate_vel_from_particles() {
 
  const Real* dx = geom.CellSize();
 
- int ipart=0;
  if (particles_flag==1) {
   // do nothing
  } else if (particles_flag==0) {
@@ -21035,9 +21032,7 @@ NavierStokes::assimilate_vel_from_particles() {
 
  bool local_copy_flag=true; 
 
-  // All the particles should live on level==0.
-  // particle levelset==0.0 for interface particles.
-
+ int ipart=0;
  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
@@ -21116,7 +21111,7 @@ NavierStokes::assimilate_vel_from_particles() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  // in: GODUNOV_3D.F90
+  // declared in: GODUNOV_3D.F90
   fort_assimilate_VEL_from_particles( 
    &fluid_relaxation_time_to_particle,
    &dt_slab,
