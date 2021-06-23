@@ -1490,6 +1490,7 @@ extern "C"
 
    void fort_assimilate_tensor_from_xdisplace(
      int* im_PLS_cpp,
+     int* MAC_grid_displacement,
      int* tid,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
@@ -1505,9 +1506,15 @@ extern "C"
      Real* TNEWfab,
      AMREX_ARLIM_P(TNEWfablo),
      AMREX_ARLIM_P(TNEWfabhi),
-     Real* XDISP_fab,
-     AMREX_ARLIM_P(XDISP_fablo),
-     AMREX_ARLIM_P(XDISP_fabhi));
+     Real* xdfab,
+     AMREX_ARLIM_P(xdfablo),
+     AMREX_ARLIM_P(xdfabhi),
+     Real* ydfab,
+     AMREX_ARLIM_P(ydfablo),
+     AMREX_ARLIM_P(ydfabhi),
+     Real* zdfab,
+     AMREX_ARLIM_P(zdfablo),
+     AMREX_ARLIM_P(zdfabhi));
 
 }
 

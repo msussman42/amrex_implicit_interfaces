@@ -20760,7 +20760,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
    FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
    FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
-   FArrayBox& zdfab=(*XDISP_LOCAL[2])[mfi];
+   FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
 
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
  
@@ -20773,6 +20773,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     //   calls local_tensor_from_xdisplace
    fort_assimilate_tensor_from_xdisplace( 
      &im_elastic, // 0..nmat-1
+     &MAC_grid_displacement,
      &tid_current,
      tilelo,tilehi,
      fablo,fabhi,
@@ -20786,8 +20787,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     XDISP_fab.dataPtr(),
-     ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()));
+     xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+     ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+     zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()));
   } // mfi
 } // omp
   ns_reconcile_d_num(81);
