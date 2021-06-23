@@ -20721,6 +20721,18 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  int ncomp_tensor=NUM_TENSOR_TYPE;
 
  MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
+ MultiFab* XDISP_new[AMREX_SPACEDIM];
+
+ if (MAC_grid_displacement==0) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   XDISP_new[dir]=&Tensor_new;
+  }
+ } else if (MAC_grid_displacement==1) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
+  }
+ } else
+  amrex::Error("MAC_grid_displacement invalid");
 
  if (particles_flag==0) {
 
@@ -20818,6 +20830,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
   for (int isweep=0;isweep<=1;isweep++) {
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
     if (MAC_grid_displacement==0) {
      int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
      XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
@@ -20873,9 +20886,30 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
     FArrayBox& matrixfab=(*accumulate_mf)[mfi];
     FArrayBox& TNEWfab=Tensor_new[mfi];
-    FArrayBox& XDISP_fab=(*localMF[XDISP_CELL_MF])[mfi];
+
+    FArrayBox& xdnewfab=(*XDISP_new[0])[mfi];
+    FArrayBox& ydnewfab=(*XDISP_new[1])[mfi];
+    FArrayBox& zdnewfab=(*XDISP_new[AMREX_SPACEDIM-1])[mfi];
+
+    FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
+    FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
+    FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
+
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
- 
+
+    int scomp_xd,scomp_yd,scomp_zd;
+
+    if (MAC_grid_displacement==0) {
+     scomp_xd=NUM_TENSOR_TYPE*num_materials_viscoelastic;
+     scomp_yd=scomp_xd+1;
+     scomp_zd=scomp_yd+1;
+    } else if (MAC_grid_displacement==1) {
+     scomp_xd=0;
+     scomp_yd=0;
+     scomp_zd=0;
+    } else
+     amrex::Error("MAC_grid_displacement invalid");
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -20885,6 +20919,7 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
     fort_assimilate_tensor_from_particles( 
+     &MAC_grid_displacement,
      &particles_weight_XD,
      &im_elastic, // 0..nmat-1
      &isweep,
@@ -20910,10 +20945,15 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     TNEWfab.dataPtr(scomp_xdisplace),
-     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     XDISP_fab.dataPtr(),
-     ARLIM(XDISP_fab.loVect()),ARLIM(XDISP_fab.hiVect()),
+     xdnewfab.dataPtr(scomp_xd),
+     ARLIM(xdnewfab.loVect()),ARLIM(xdnewfab.hiVect()),
+     ydnewfab.dataPtr(scomp_yd),
+     ARLIM(ydnewfab.loVect()),ARLIM(ydnewfab.hiVect()),
+     zdnewfab.dataPtr(scomp_zd),
+     ARLIM(zdnewfab.loVect()),ARLIM(zdnewfab.hiVect()),
+     xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+     ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+     zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
      matrixfab.dataPtr(),
      ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
    } // mfi
