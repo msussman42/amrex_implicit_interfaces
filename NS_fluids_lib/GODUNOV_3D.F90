@@ -2369,27 +2369,6 @@ stop
  
       end subroutine getGhostVel
 
-        ! FUTURE: Storing both the displacement and tensor at the
-        !  cell centers (colocated) results in a large stencil for 
-        !  the elastic force.  THIS MUST BE CHANGED:
-        !    a) store displacement at cell centers.
-        !    b) store tensor on the MAC grid
-        !    c) store force at cell centers
-        !    
-        ! CURRENT STENCIL WIDTH: 5x5x5 stencil
-        ! FUTURE STENCIL WIDTH: 3x3x3 stencil
-        !
-        ! u_t + u dot grad u = -grad p/density + div tau
-        ! div u = 0
-        ! phi_t + u dot grad phi=0   
-        ! phi(t,x) > 0 in the deformable solid
-        ! phi(t,x) < 0 in the fluid
-        ! density=density_fluid * (1-H(phi)) + 
-        !         density_solid * H(phi)
-        ! H(phi)=1  if phi>0
-        !       =0  if phi<0
-        ! tau=tau_fluid * (1-H) + tau_solid * H
-        ! tau_fluid=2 * mu (grad u + (grad u)^T)/2  mu=dynamic viscosity
         ! tau_solid=
         ! F=deformation gradient=I + grad XD 
         ! note: Michael Lai and David Rubin "intro to continuum mech"
@@ -2398,8 +2377,8 @@ stop
         ! B=F F^T left Cauchy Green Tensor
         ! I1=tr(C),I2=(1/2)Tr(C)^2−tr(C^2),and I3=det(C)
       subroutine local_tensor_from_xdisplace( &
-        LS_or_VOF_flag, & ! =0 => LS   =1 => VOF
         im_elastic, & ! 1..nmat
+        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -2408,21 +2387,17 @@ stop
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
         ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
-        LS, &
-        DIMS(LS), &
-        VOF, &
-        DIMS(VOF), &
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab)) 
+        xdfab, &      
+        ydfab, &      
+        zdfab)
 
       use global_utility_module
       use probcommon_module
       implicit none
 
-      INTEGER_T, intent(in) :: LS_or_VOF_flag ! =0 LS   =1 VOF
       INTEGER_T, intent(in) :: im_elastic ! 1..nmat
+      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
@@ -2432,41 +2407,33 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(LS) 
-      INTEGER_T, intent(in) :: DIMDEC(VOF) 
-      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
-      REAL_T, intent(in) :: LS( &  
-        DIMV(LS), &
-        nmat*(1+SDIM))
-      REAL_T, intent(in) :: VOF( &  
-        DIMV(VOF), &
-        nmat*ngeom_recon)
-      REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
-        DIMV(TNEWfab), &
-        ncomp_tensor)
-      REAL_T, intent(in) :: XDISP_fab( &
-        DIMV(XDISP_fab), &
-        SDIM)
+       ! pointers are always intent(in)
+       ! the intent attribute of the actual data is inherited
+       ! from the target.
+      REAL_T, intent(in), pointer :: TNEWfab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xdfab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: ydfab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: zdfab(D_DECL(:,:,:),:)
+
+      type(deriv_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+      REAL_T, target :: cell_data_deriv(1)
 
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
-      INTEGER_T ibase
-      INTEGER_T dir_x,dir_space
-      INTEGER_T iii,jjj,kkk
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
-      REAL_T dxminus,dxplus
-      REAL_T grad_cen,grad_plus,grad_minus
-      REAL_T LS_plus,LS_minus
       REAL_T gradu(SDIM,SDIM)  ! dir_x (displace), dir_space
       REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
-      REAL_T xdisplace_local,ydisplace_local
+      REAL_T xdisplace_local(SDIM)
       REAL_T hoop_22
-      INTEGER_T vofcomp
       REAL_T x_stress(SDIM)
+      INTEGER_T dir_local
+      INTEGER_T dir_XD
+      INTEGER_T dir_flux
+      INTEGER_T ibase
 
       nhalf=3
 
@@ -2492,10 +2459,19 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(VOF),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDISP_fab),1,-1,1271)
+      call checkbound_array(fablo,fabhi,TNEWfab,1,-1,1271)
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound_array(fablo,fabhi,xdfab,1,-1,1271)
+       call checkbound_array(fablo,fabhi,ydfab,1,-1,1271)
+       call checkbound_array(fablo,fabhi,zdfab,1,-1,1271)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound_array(fablo,fabhi,xdfab,1,0,1271)
+       call checkbound_array(fablo,fabhi,ydfab,1,1,1271)
+       call checkbound_array(fablo,fabhi,zdfab,1,SDIM-1,1271)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -2515,69 +2491,77 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
-       do dir_space=1,SDIM
-        x_stress(dir_space)=xsten(0,dir_space)
+       do dir_local=1,SDIM
+        x_stress(dir_local)=xsten(0,dir_local)
        enddo
 
-       do dir_x=1,SDIM ! velocity (displacement) component u,v,w
-       do dir_space=1,SDIM ! direction x,y,z
+       data_out%data_interp=>cell_data_deriv
 
-        iii=0
-        jjj=0
-        kkk=0
-        if (dir_space.eq.1) then
-         iii=1
-        else if (dir_space.eq.2) then
-         jjj=1
-        else if ((dir_space.eq.3).and.(SDIM.eq.3)) then
-         kkk=1
+        !type(deriv_from_grid_parm_type) :: data_in
+       data_in%level=level
+       data_in%finest_level=finest_level
+       data_in%bfact=bfact ! bfact=kind of spectral element grid 
+       data_in%dx=>dx
+       data_in%xlo=>xlo
+       data_in%fablo=>fablo
+       data_in%fabhi=>fabhi
+       data_in%ngrowfab=1
+
+       data_in%ncomp=1
+       data_in%scomp=1
+
+       data_in%index_flux(1)=i
+       data_in%index_flux(2)=j
+       if (SDIM.eq.3) then
+        data_in%index_flux(SDIM)=k
+       else if (SDIM.eq.2) then
+        !do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       data_in%grid_type_flux=-1
+       do dir_local=1,SDIM
+        data_in%box_type_flux(dir_local)=0;
+       enddo
+
+       do dir_XD=1,SDIM
+
+        do dir_local=1,SDIM
+         data_in%box_type_data(dir_local)=0;
+        enddo
+
+        if (MAC_grid_displacement.eq.0) then
+         data_in%grid_type_data=-1
+        else if (MAC_grid_displacement.eq.1) then
+         data_in%grid_type_data=dir_XD-1
+         data_in%box_type_data(dir_XD)=1
         else
-         print *,"dir_space invalid"
-         stop
-        endif 
-        dxplus=xsten(2,dir_space)-xsten(0,dir_space)
-        dxminus=xsten(0,dir_space)-xsten(-2,dir_space)
-        if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
-         grad_plus=(XDISP_fab(D_DECL(i+iii,j+jjj,k+kkk),dir_x)- &
-                    XDISP_fab(D_DECL(i,j,k),dir_x))/dxplus
-         grad_minus=(XDISP_fab(D_DECL(i,j,k),dir_x)- &
-                     XDISP_fab(D_DECL(i-iii,j-jjj,k-kkk),dir_x))/dxminus
-
-         if (LS_or_VOF_flag.eq.0) then
-          LS_plus=LS(D_DECL(i+iii,j+jjj,k+kkk),im_elastic)
-          LS_minus=LS(D_DECL(i-iii,j-jjj,k-kkk),im_elastic)
-         else if (LS_or_VOF_flag.eq.1) then
-          vofcomp=(im_elastic-1)*ngeom_recon+1
-          LS_plus=VOF(D_DECL(i+iii,j+jjj,k+kkk),vofcomp)-half
-          LS_minus=VOF(D_DECL(i-iii,j-jjj,k-kkk),vofcomp)-half
-         else
-          print *,"LS_or_VOF_flag invalid"
-          stop
-         endif
-
-         if ((LS_plus.ge.zero).and.(LS_minus.ge.zero)) then
-          grad_cen=half*(grad_plus+grad_minus)
-         else if ((LS_plus.lt.zero).and.(LS_minus.lt.zero)) then
-          grad_cen=half*(grad_plus+grad_minus)
-         else if ((LS_plus.ge.zero).and.(LS_minus.lt.zero)) then
-          grad_cen=grad_plus
-         else if ((LS_plus.lt.zero).and.(LS_minus.ge.zero)) then
-          grad_cen=grad_minus
-         else
-          print *,"LS_plus or LS_minus invalid"
-          stop
-         endif
-
-         gradu(dir_x,dir_space)=grad_cen  ! dir_x (displace), dir_space
-        else
-         print *,"dxplus or dxminus invalid"
+         print *,"MAC_grid_displacement invalid"
          stop
         endif
-       enddo ! dir_space
-       enddo ! dir_x (displace)
 
-       xdisplace_local=XDISP_fab(D_DECL(i,j,k),1)
-       ydisplace_local=XDISP_fab(D_DECL(i,j,k),2)
+        if (dir_XD.eq.1) then
+         data_in%disp_data=>xdfab
+        else if (dir_XD.eq.2) then
+         data_in%disp_data=>ydfab
+        else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
+         data_in%disp_data=>zdfab
+        else
+         print *,"dir_XD invalid"
+         stop
+        endif
+
+        do dir_flux=0,SDIM-1
+         data_in%dir_deriv=dir_flux+1
+         call deriv_from_grid_util(data_in,data_out)
+         gradu(dir_XD,dir_flux+1)=cell_data_deriv(1)
+        enddo
+        data_in%dir_deriv=-1
+        call deriv_from_grid_util(data_in,data_out)
+        xdisplace_local(dir_XD)=cell_data_deriv(1)
+
+       enddo ! dir_XD=1..sdim
 
         ! declared in GLOBALUTIL.F90
        call stress_from_strain( &
@@ -2585,8 +2569,8 @@ stop
          x_stress, &
          dx, &
          gradu, &  ! dir_x (displace),dir_space
-         xdisplace_local, &
-         ydisplace_local, &
+         xdisplace_local(1), &
+         xdisplace_local(2), &
          DISP_TEN, &  ! dir_x (displace),dir_space
          hoop_22) ! output: "theta-theta" component (xdisp/r)
 
@@ -29295,7 +29279,6 @@ stop
         DIMV(zdfab), &
         1)
 
-      INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
 
       TNEWfab_ptr=>TNEWfab
@@ -29338,7 +29321,6 @@ stop
        stop
       endif
 
-      LS_or_VOF_flag=0  ! use LS for upwinding at interfaces
       im_elastic=im_PLS_cpp+1
        ! e.g. (grad XD + (grad XD)^{T})/2
        ! XD=X(x0,t) - x0  => displacement
@@ -29354,8 +29336,8 @@ stop
        ! results in a method that is unconditionally unstable.
        ! in: GODUNOV_3D.F90
       call local_tensor_from_xdisplace( &
-        LS_or_VOF_flag, &
         im_elastic, &
+        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -29364,14 +29346,10 @@ stop
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
         ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
-        LS, &
-        DIMS(LS), &
-        LS, &  ! VOF placeholder
-        DIMS(LS), & ! VOF placeholder
-        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab)) 
+        TNEWfab_ptr, &   ! FAB that holds elastic tensor, Q, when complete
+        xdfab, &      
+        ydfab, &      
+        zdfab)
 
       end subroutine fort_assimilate_tensor_from_xdisplace
 
