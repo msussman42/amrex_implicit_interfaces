@@ -6,7 +6,7 @@
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
        ! probtype==2 => explore effect of parameters on evap in tank
-      integer, PARAMETER :: probtype = 2
+      integer, PARAMETER :: probtype = 0
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
@@ -58,7 +58,7 @@
       real*8 :: R_global
       real*8 :: T_sat_global
       real*8 :: e_sat_global
-      real*8 :: P_sat_global
+      real*8 :: P_sat_global  ! reference pressure
       real*8 :: Pgamma_init_global
       real*8 :: X_gamma_init_global
       real*8 :: e_gamma_global
@@ -318,10 +318,14 @@
       real*8 :: local_X
       real*8 :: local_Y
 
-      if (evap_model.eq.1) then
+       ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
+       ! evap_model==3 => Kassemi model  P_ref=P_gamma/X_gamma T_probe
+       !  represents an averaged quantity.
+      if ((evap_model.eq.1).or. &
+          (evap_model.eq.3)) then
        call Pgamma_Clausius_Clapyron( &
         Pgamma, &
-        P_sat_global, &
+        P_sat_global, & ! reference pressure
         T_gamma, &
         T_sat_global, &
         L_V, &
@@ -355,6 +359,8 @@
         L_V,R_global,WV_global)
        call massfrac_from_volfrac(local_X,local_Y,WA_global,WV_global)
        mdotY=den_G*D_G*(local_Y-Y_probe)/((1.0d0-local_Y)*dx)
+      else if (evap_model.eq.4) then
+       mdotY=0.0d0  ! stub
       else
        print *,"evap_model invalid"
        stop
@@ -386,13 +392,46 @@
       real*8, intent(in) :: dx
       real*8, intent(out) :: mdot_diff
       real*8 :: mdotT,mdotY
+      real*8 :: internal_energy,Pvapor_probe,X_probe
+      real*8 :: T_gamma_exact
+      real*8 :: Tgamma_min,Tgamma_max
 
-      call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
-      call mdot_from_Y_probe(T_gamma, &
+      if ((evap_model.eq.0).or. &
+          (evap_model.eq.1).or. &
+          (evap_model.eq.2).or. &
+          (evap_model.eq.3)) then
+       call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
+       call mdot_from_Y_probe(T_gamma, &
         schrage_T_probe,schrage_Y_probe,dx,mdotY, &
         verbose)
 
-      mdot_diff=mdotT-mdotY
+       mdot_diff=mdotT-mdotY
+      else if (evap_model.eq.4) then
+       call INTERNAL_material(den_G,T_probe,internal_energy)
+       call EOS_material(den_G,internal_energy,Pvapor_probe)
+       if (P_sat_global.gt.0.0d0) then
+        X_probe=Pvapor_probe/P_sat_global
+       else
+        print *,"P_sat_global invalid"
+        stop
+       endif
+       if (X_probe.ge.1.0d0) then
+        T_gamma_exact=T_sat_global
+       else if ((X_probe.gt.0.0d0).and.(X_probe.lt.1.0d0)) then
+        Tgamma_min=1.0D-10
+        Tgamma_max=T_sat_global
+        call Tgamma_from_TSAT_and_X(T_gamma_exact, &
+           T_sat_global,X_probe,L_V,R_global, &
+           WV_global,Tgamma_min,Tgamma_max)
+       else
+        print *,"X_probe invalid"
+        stop
+       endif
+       mdot_diff=T_gamma-T_gamma_exact
+      else
+       print *,"evap_model invalid"
+       stop
+      endif
 
       end subroutine mdot_diff_func
 
@@ -763,6 +802,8 @@
        ! do nothing
       else if (evap_model.eq.1) then ! Kassemi model
        ! do nothing
+      else if (evap_model.eq.3) then ! Kassemi model using Tsmear
+       ! do nothing
       else if (evap_model.eq.2) then ! same as Villegas, except X=P/P_ref
        do igrid=0,num_intervals
         call INTERNAL_material(den_G,TNEW(igrid),e_grid)
@@ -774,6 +815,8 @@
         YOLD(igrid)=YNEW(igrid)
        enddo
        YINF_for_numerical=YNEW(num_intervals)
+      else if (evap_model.eq.4) then ! T_gamma=f(T_probe_smear)
+       ! set P_sat_global here to override the reference pressure
       else
        print *,"evap_model invalid"
        stop
