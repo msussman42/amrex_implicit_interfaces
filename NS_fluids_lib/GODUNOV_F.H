@@ -16,7 +16,6 @@
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
-#    define FORT_MAC_ELASTIC_FORCE mac_elastic_force
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -52,7 +51,6 @@
 #    define FORT_ESTDT        ESTDT
 #    define FORT_CROSSTERM    CROSSTERM
 #    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
-#    define FORT_MAC_ELASTIC_FORCE MAC_ELASTIC_FORCE
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
@@ -88,7 +86,6 @@
 #    define FORT_ESTDT        estdt
 #    define FORT_CROSSTERM    crossterm
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic
-#    define FORT_MAC_ELASTIC_FORCE mac_elastic_force
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -123,7 +120,6 @@
 #    define FORT_ESTDT        estdt_
 #    define FORT_CROSSTERM    crossterm_
 #    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
-#    define FORT_MAC_ELASTIC_FORCE mac_elastic_force_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
@@ -1236,7 +1232,7 @@ extern "C"
      int* nden,
      int* ntensor);
 
-   void FORT_MAC_ELASTIC_FORCE(
+   void fort_mac_elastic_force(
      int* im_elastic, // 0..nmat-1
      int* partid, // 0..num_materials_viscoelastic-1
      int* dir, //0..sdim-1
@@ -1266,7 +1262,6 @@ extern "C"
      AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
      Real* UMACNEW,
      AMREX_ARLIM_P(UMACNEWlo),AMREX_ARLIM_P(UMACNEWhi),
-     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
      const int* tilelo,const int* tilehi, 
      const int* fablo,const int* fabhi, 
      int* bfact,

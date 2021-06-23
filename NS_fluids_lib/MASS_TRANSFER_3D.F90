@@ -765,14 +765,10 @@ stop
        dx, &
        xlo, &
        x, &
-       im, & ! im=1..nmat
-       nmat, &
-       partid, & ! 0..num_materials_viscoelastic-1
        lo,hi, &
-       xdata,DIMS(xdata), &
-       ydata,DIMS(ydata), &
-       zdata,DIMS(zdata), &
-       recon,DIMS(recon), &
+       xdata, &
+       ydata, &
+       zdata, &
        dest) ! 1..SDIM
       use global_utility_module
       use geometry_intersect_module
@@ -786,18 +782,13 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: x(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: partid
-      INTEGER_T, intent(in) :: im,nmat
-       ! datalox,datahix,dataloy,datahiy,dataloz,datahiz
-      INTEGER_T, intent(in) :: DIMDEC(xdata)
-      INTEGER_T, intent(in) :: DIMDEC(ydata)
-      INTEGER_T, intent(in) :: DIMDEC(zdata)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
+       ! pointers are always intent(in).
+       ! the intent attribute of the data itself is inherited from the
+       ! target.
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
-      REAL_T, intent(in) :: xdata(DIMV(xdata))
-      REAL_T, intent(in) :: ydata(DIMV(ydata))
-      REAL_T, intent(in) :: zdata(DIMV(zdata))
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), pointer :: xdata(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: ydata(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: zdata(D_DECL(:,:,:))
       REAL_T, intent(out) :: dest(SDIM)
 
       INTEGER_T dir_disp_comp  ! 0..sdim-1
@@ -809,16 +800,18 @@ stop
       REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
       REAL_T local_data
+      INTEGER_T ngrow
 
       INTEGER_T nhalf
       REAL_T xsten_center(-3:3,SDIM)
 
       nhalf=3
 
-      call checkbound(lo,hi,DIMS(xdata),1,0,1221)
-      call checkbound(lo,hi,DIMS(ydata),1,1,1221)
-      call checkbound(lo,hi,DIMS(zdata),1,SDIM-1,1221)
-      call checkbound(lo,hi,DIMS(recon),2,-1,1222)
+      ngrow=2
+
+      call checkbound_array1(lo,hi,xdata,ngrow,0,1221)
+      call checkbound_array1(lo,hi,ydata,ngrow,1,1221)
+      call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,1221)
 
        ! dir_disp_comp==0 => xdata interpolation
        ! dir_disp_comp==1 => ydata interpolation
@@ -841,11 +834,11 @@ stop
        istenlo(3)=0
        istenhi(3)=0
        do dir_local=1,SDIM
-        if (mac_cell_index(dir_local)-1.lt.mac_lo(dir_local)-1) then
-         mac_cell_index(dir_local)=mac_lo(dir_local)
+        if (mac_cell_index(dir_local)-1.lt.mac_lo(dir_local)-ngrow) then
+         mac_cell_index(dir_local)=mac_lo(dir_local)-ngrow+1
         endif
-        if (mac_cell_index(dir_local)+1.gt.mac_hi(dir_local)+1) then
-         mac_cell_index(dir_local)=mac_hi(dir_local)
+        if (mac_cell_index(dir_local)+1.gt.mac_hi(dir_local)+ngrow) then
+         mac_cell_index(dir_local)=mac_hi(dir_local)+ngrow-1
         endif
         istenlo(dir_local)=mac_cell_index(dir_local)-1
         istenhi(dir_local)=mac_cell_index(dir_local)+1

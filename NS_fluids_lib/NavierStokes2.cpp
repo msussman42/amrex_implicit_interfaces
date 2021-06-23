@@ -1476,7 +1476,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
   // this routine gets the displacement on the mac grid with one ghost
   // cell.
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  int ngrow=1;
+  int ngrow=2;
    // scomp=0  ncomp=1
   XD_MAC[dir]=getStateMAC(XDmac_Type,ngrow,dir,0,1,cur_time_slab);
  }
@@ -1574,8 +1574,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    FArrayBox& YDfab=(*XD_MAC[1])[mfi];
    FArrayBox& ZDfab=(*XD_MAC[AMREX_SPACEDIM-1])[mfi];
 
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
     // output
@@ -1611,7 +1609,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    if (viscoelastic_model[im_elastic]==2) {
 
     // declared in: GODUNOV_3D.F90
-    FORT_MAC_ELASTIC_FORCE(
+    fort_mac_elastic_force(
      &im_elastic,
      &partid,
      &dir, // dir=0,1,..sdim-1  
@@ -1642,7 +1640,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
      UMACNEWfab.dataPtr(),
      ARLIM(UMACNEWfab.loVect()),ARLIM(UMACNEWfab.hiVect()), 
-     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,

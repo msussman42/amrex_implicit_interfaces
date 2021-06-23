@@ -26757,7 +26757,7 @@ stop
        !   H approximated as H_epsilon(LS-epsilon)
        ! called from NavierStokes2.cpp:
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
-      subroutine FORT_MAC_ELASTIC_FORCE( &
+      subroutine fort_mac_elastic_force( &
        im_elastic, & ! 0..nmat-1
        partid, & ! 0..num_materials_viscoelastic-1
        dir, & ! 0..sdim-1
@@ -26782,7 +26782,6 @@ stop
        xfacefab,DIMS(xfacefab), &
        UMACNEW, &
        DIMS(UMACNEW), &
-       recon,DIMS(recon), &  
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -26791,7 +26790,9 @@ stop
        rzflag, &
        domlo,domhi, &
        nmat, &
-       nten)
+       nten) &
+      bind(c,name='fort_mac_elastic_force')
+
       use probcommon_module
       use global_utility_module
       use godunov_module
@@ -26823,18 +26824,18 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ZDfab)
       INTEGER_T, intent(in) :: DIMDEC(xfacefab)
       INTEGER_T, intent(in) :: DIMDEC(UMACNEW)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
 
-      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
       REAL_T, target, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
-      REAL_T, intent(in) :: XDfab(DIMV(XDfab))
-      REAL_T, intent(in) :: YDfab(DIMV(YDfab))
-      REAL_T, intent(in) :: ZDfab(DIMV(ZDfab))
-      REAL_T, intent(in) :: xfacefab(DIMV(xfacefab),vofface_index+2*nmat)
-      REAL_T, intent(inout) :: UMACNEW(DIMV(UMACNEW))
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: XDfab(DIMV(XDfab))
+      REAL_T, intent(in), target :: YDfab(DIMV(YDfab))
+      REAL_T, intent(in), target :: ZDfab(DIMV(ZDfab))
+      REAL_T, intent(in), target :: xfacefab(DIMV(xfacefab), &
+              vofface_index+2*nmat)
+      REAL_T, intent(inout), target :: UMACNEW(DIMV(UMACNEW))
+      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -26911,6 +26912,8 @@ stop
       REAL_T Htensor_cen
       REAL_T Htensor(SDIM,2)
 
+      UMACNEW_ptr=>UMACNEW
+
       im_elastic_p1=im_elastic+1
 
       do dir_local=1,SDIM
@@ -26920,16 +26923,15 @@ stop
        fabhi_local(dir_local)=fabhi(dir_local)
       enddo
 
-      call checkbound(fablo,fabhi,DIMS(visc),1,-1,11)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,1277)
-      call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,1277)
-      call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1277)
-      call checkbound(fablo,fabhi,DIMS(recon),2,-1,1277)
-      call checkbound(fablo,fabhi,DIMS(xfacefab),0,dir,1277)
-      call checkbound(fablo,fabhi,DIMS(UMACNEW),0,dir,1277)
-      call checkbound(fablo,fabhi,DIMS(XDfab),1,0,1277)
-      call checkbound(fablo,fabhi,DIMS(YDfab),1,1,1277)
-      call checkbound(fablo,fabhi,DIMS(ZDfab),1,SDIM-1,1277)
+      call checkbound_array(fablo,fabhi,visc,1,-1,11)
+      call checkbound_array1(fablo,fabhi,mask,1,-1,1277)
+      call checkbound_array1(fablo,fabhi,maskcoef,1,-1,1277)
+      call checkbound_array(fablo,fabhi,levelpc,2,-1,1277)
+      call checkbound_array(fablo,fabhi,xfacefab,0,dir,1277)
+      call checkbound_array1(fablo,fabhi,UMACNEW,0,dir,1277)
+      call checkbound_array1(fablo,fabhi,XDfab,2,0,1277)
+      call checkbound_array1(fablo,fabhi,YDfab,2,1,1277)
+      call checkbound_array1(fablo,fabhi,ZDfab,2,SDIM-1,1277)
 
       nhalf=3
   
@@ -27148,14 +27150,10 @@ stop
             dx, &
             xlo, &
             xplus, &
-            im_elastic_p1, &!1..nmat(prescribed as a fluid in the inputs file)
-            nmat, &
-            partid, & ! 0..num_materials_viscoelastic-1
             fablo,fabhi, &
-            XDfab,DIMS(XDfab), &
-            YDfab,DIMS(YDfab), &
-            ZDfab,DIMS(ZDfab), &
-            recon,DIMS(recon), &
+            XDfab, &
+            YDfab, &
+            ZDfab, &
             XDplus) ! XD(xplus),YD(xplus),ZD(xplus)
                     
           call interpfab_XDISP( &
@@ -27165,14 +27163,10 @@ stop
             dx, &
             xlo, &
             xminus, &
-            im_elastic_p1, & ! 1..nmat
-            nmat, &
-            partid, & ! 0..num_materials_viscoelastic-1
             fablo,fabhi, &
-            XDfab,DIMS(XDfab), &
-            YDfab,DIMS(YDfab), &
-            ZDfab,DIMS(ZDfab), &
-            recon,DIMS(recon), &
+            XDfab, &
+            YDfab, &
+            ZDfab, &
             XDminus) ! XD(xminus),YD(xminus),ZD(xminus)
 
           do dir_XD=1,SDIM
@@ -27188,14 +27182,10 @@ stop
            dx, &
            xlo, &
            xflux, & ! MAC grid face center
-           im_elastic_p1, & ! 1..nmat
-           nmat, &
-           partid, & ! 0..num_materials_viscoelastic-1
            fablo,fabhi, &
-           XDfab,DIMS(XDfab), &
-           YDfab,DIMS(YDfab), &
-           ZDfab,DIMS(ZDfab), &
-           recon,DIMS(recon), &
+           XDfab, &
+           YDfab, &
+           ZDfab, &
            XDcenter) ! XD(xflux),YD(xflux),ZD(xflux)
 
           ! declared in: GLOBALUTIL.F90
@@ -28265,11 +28255,7 @@ stop
       subroutine traverse_particlesVEL( &
        accum_PARM, &
        matrixfab, &
-       DIMS(matrixfab), &
-       LS, &
-       DIMS(LS), &
        VEL_fab, &
-       DIMS(VEL_fab), &
        ncomp_accumulate)
 
       use probcommon_module
@@ -28277,18 +28263,10 @@ stop
 
       INTEGER_T, intent(in) :: ncomp_accumulate
       type(accum_parm_type), intent(in) :: accum_PARM
-      INTEGER_T, intent(in) :: DIMDEC(LS) 
-      INTEGER_T, intent(in) :: DIMDEC(VEL_fab) 
-      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      REAL_T, target, intent(in) :: LS( &
-        DIMV(LS), &
-        num_materials*(1+SDIM))
-      REAL_T, target, intent(in) :: VEL_fab( &
-        DIMV(VEL_fab), &
-        SDIM)
-      REAL_T, intent(inout) :: matrixfab( &
-        DIMV(matrixfab), &
-        ncomp_accumulate)
+       ! pointers are always intent(in).
+       ! the actual data intent attribute is inherited from the target.
+      REAL_T, pointer, intent(in) :: VEL_fab(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: matrixfab(D_DECL(:,:,:),:)
 
       INTEGER_T :: nhalf
       REAL_T :: eps
@@ -28326,9 +28304,8 @@ stop
        tilehi_local(dir)=accum_PARM%tilehi(dir)
       enddo
 
-      call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
-      call checkbound(tilelo_local,tilehi_local,DIMS(matrixfab),1,-1,1271)
-      call checkbound(fablo_local,fabhi_local,DIMS(VEL_fab),2,-1,1271)
+      call checkbound_array(tilelo_local,tilehi_local,matrixfab,1,-1,1271)
+      call checkbound_array(fablo_local,fabhi_local,VEL_fab,2,-1,1271)
 
       data_out%data_interp=>cell_data_interp
 
@@ -28342,12 +28319,11 @@ stop
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
       data_in%ngrowfab=2
-
-      data_in%state=>VEL_fab
-      data_in%LS=>LS  ! not used
-
+      data_in%LS=>VEL_fab  ! not used
       data_in%ncomp=SDIM
       data_in%scomp=1
+
+      data_in%state=>VEL_fab
 
       nhalf=3
 
@@ -28503,22 +28479,28 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(VMACNEW) 
       INTEGER_T, intent(in) :: DIMDEC(WMACNEW) 
       INTEGER_T, intent(in) :: DIMDEC(vel_fab) 
-      REAL_T, intent(inout) :: matrixfab( &
+      REAL_T, intent(inout), target :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
-      REAL_T, intent(in) :: LS( &  
+      REAL_T, pointer :: matrixfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: LS( &  
         DIMV(LS), &
         nmat*(1+SDIM))
-      REAL_T, intent(inout) :: SNEWfab( & 
+      REAL_T, intent(inout), target :: SNEWfab( & 
         DIMV(SNEWfab), &
         SDIM)
-      REAL_T, intent(inout) :: UMACNEW( & 
+      REAL_T, pointer :: SNEWfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: UMACNEW( & 
         DIMV(UMACNEW))
-      REAL_T, intent(inout) :: VMACNEW( & 
+      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: VMACNEW( & 
         DIMV(VMACNEW))
-      REAL_T, intent(inout) :: WMACNEW( & 
+      REAL_T, pointer :: VMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: WMACNEW( & 
         DIMV(WMACNEW))
-      REAL_T, intent(in) :: vel_fab( &
+      REAL_T, pointer :: WMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vel_fab( &
         DIMV(vel_fab), &
         SDIM)
 
@@ -28545,6 +28527,12 @@ stop
       INTEGER_T ii,jj,kk
 
       nhalf=3
+
+      matrixfab_ptr=>matrixfab
+      SNEWfab_ptr=>SNEWfab
+      UMACNEW_ptr=>UMACNEW
+      VMACNEW_ptr=>VMACNEW
+      WMACNEW_ptr=>WMACNEW
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -28578,13 +28566,13 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
-      call checkbound(tilelo,tilehi,DIMS(matrixfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(SNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(UMACNEW),0,0,1271)
-      call checkbound(fablo,fabhi,DIMS(VMACNEW),0,1,1271)
-      call checkbound(fablo,fabhi,DIMS(WMACNEW),0,SDIM-1,1271)
-      call checkbound(fablo,fabhi,DIMS(vel_fab),2,-1,1271)
+      call checkbound_array(fablo,fabhi,LS,2,-1,1271)
+      call checkbound_array(tilelo,tilehi,matrixfab,1,-1,1271)
+      call checkbound_array(fablo,fabhi,SNEWfab,1,-1,1271)
+      call checkbound_array(fablo,fabhi,UMACNEW,0,0,1271)
+      call checkbound_array(fablo,fabhi,VMACNEW,0,1,1271)
+      call checkbound_array(fablo,fabhi,WMACNEW,0,SDIM-1,1271)
+      call checkbound_array(fablo,fabhi,vel_fab,2,-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -28629,11 +28617,7 @@ stop
       call traverse_particlesVEL( &
         accum_PARM, &
         matrixfab, &
-        DIMS(matrixfab), &
-        LS, &
-        DIMS(LS), &
         vel_fab, &
-        DIMS(vel_fab), &
         ncomp_accumulate)
 
       accum_PARM%particles=>particles_only_nbr
@@ -28754,32 +28738,28 @@ stop
 
 
       subroutine traverse_particles( &
+       MAC_grid_displacement, &
        accum_PARM, &
        matrixfab, &
-       DIMS(matrixfab), &
-       LS, &
-       DIMS(LS), &
-       XDISP_fab, &
-       DIMS(XDISP_fab), &
+       xdfab, &
+       ydfab, &
+       zdfab, &
        ncomp_accumulate)
 
       use probcommon_module
       use global_utility_module
+      use mass_transfer_module
+
+      INTEGER_T, intent(in) :: MAC_grid_displacement
 
       INTEGER_T, intent(in) :: ncomp_accumulate
       type(accum_parm_type), intent(in) :: accum_PARM
-      INTEGER_T, intent(in) :: DIMDEC(LS) 
-      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
-      INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      REAL_T, target, intent(in) :: LS( &
-        DIMV(LS), &
-        num_materials*(1+SDIM))
-      REAL_T, target, intent(in) :: XDISP_fab( &
-        DIMV(XDISP_fab), &
-        SDIM)
-      REAL_T, intent(inout) :: matrixfab( &
-        DIMV(matrixfab), &
-        ncomp_accumulate)
+       ! pointers are always intent(in).
+       ! the actual data intent attribute is inherited from the target.
+      REAL_T, pointer, intent(in) :: xdfab(D_DECL(:,:,:))
+      REAL_T, pointer, intent(in) :: ydfab(D_DECL(:,:,:))
+      REAL_T, pointer, intent(in) :: zdfab(D_DECL(:,:,:))
+      REAL_T, pointer, intent(in) :: matrixfab(D_DECL(:,:,:),:)
 
       INTEGER_T :: nhalf
       REAL_T :: eps
@@ -28796,11 +28776,15 @@ stop
       REAL_T xc(SDIM)
       INTEGER_T npart_local
 
-      REAL_T, target :: cell_data_interp(SDIM)
+      REAL_T :: eulerian_xdisp(SDIM)
+
+      REAL_T, target :: cell_data_interp(1)
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
+      INTEGER_T, target :: tilelo_local(SDIM)
+      INTEGER_T, target :: tilehi_local(SDIM)
 
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
@@ -28810,11 +28794,23 @@ stop
        xlo_local(dir)=accum_PARM%xlo(dir)
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
+       tilelo_local(dir)=accum_PARM%tilelo(dir)
+       tilehi_local(dir)=accum_PARM%tilehi(dir)
       enddo
 
-      call checkbound(fablo_local,fabhi_local,DIMS(LS),2,-1,1271)
-      call checkbound(fablo_local,fabhi_local,DIMS(matrixfab),0,-1,1271)
-      call checkbound(fablo_local,fabhi_local,DIMS(XDISP_fab),2,-1,1271)
+      call checkbound_array(tilelo_local,tilehi_local,matrixfab,1,-1,1271)
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound_array1(fablo_local,fabhi_local,xdfab,2,-1,1271)
+       call checkbound_array1(fablo_local,fabhi_local,ydfab,2,-1,1271)
+       call checkbound_array1(fablo_local,fabhi_local,zdfab,2,-1,1271)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound_array1(fablo_local,fabhi_local,xdfab,2,0,1271)
+       call checkbound_array1(fablo_local,fabhi_local,ydfab,2,1,1271)
+       call checkbound_array1(fablo_local,fabhi_local,zdfab,2,SDIM-1,1271)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
 
       data_out%data_interp=>cell_data_interp
 
@@ -28828,11 +28824,8 @@ stop
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
       data_in%ngrowfab=2
-
-      data_in%state=>XDISP_fab
-      data_in%LS=>LS ! not used
-
-      data_in%ncomp=SDIM
+      data_in%LS=>xdfab ! not used
+      data_in%ncomp=1
       data_in%scomp=1
 
       nhalf=3
@@ -28863,7 +28856,40 @@ stop
 
         data_in%xtarget=>xpart
         data_in%interp_foot_flag=0
-        call interp_from_grid_util(data_in,data_out)
+
+        if (MAC_grid_displacement.eq.0) then
+         do dir=1,SDIM
+          if (dir.eq.1) then
+           data_in%state=>xdfab
+          else if (dir.eq.2) then
+           data_in%state=>ydfab
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           data_in%state=>zdfab
+          else
+           print *,"dir invalid"
+           stop
+          endif
+          call interp_from_grid_util(data_in,data_out)
+          eulerian_xdisp(dir)=data_out%data_interp(1)
+         enddo ! dir=1..sdim
+        else if (MAC_grid_displacement.eq.1) then
+         call interpfab_XDISP( &
+          accum_PARM%bfact, &
+          accum_PARM%level, &
+          accum_PARM%finest_level, &
+          dx_local, &
+          xlo_local, &
+          xpart, &
+          fablo_local, &
+          fabhi_local, &
+          xdfab, &
+          ydfab, &
+          zdfab, &
+          eulerian_xdisp)
+        else
+         print *,"MAC_grid_displacement invalid"
+         stop
+        endif
 
         call containing_cell(accum_PARM%bfact, &
           accum_PARM%dx, &
@@ -28874,8 +28900,8 @@ stop
 
         interior_ok=1
         do dir=1,SDIM
-         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
-             (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-1).or. &
+             (cell_index(dir).gt.accum_PARM%tilehi(dir)+1)) then
           interior_ok=0
          endif
         enddo
@@ -28899,7 +28925,7 @@ stop
           do dir=1,SDIM
            matrixfab(D_DECL(i,j,k),1+dir)= &
             matrixfab(D_DECL(i,j,k),1+dir)+ &
-            w_p*(data_out%data_interp(dir)-xdisp(dir))
+            w_p*(eulerian_xdisp(dir)-xdisp(dir))
           enddo
          else
           print *,"w_p invalid"
@@ -28976,6 +29002,7 @@ stop
       use godunov_module
       implicit none
 
+      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
@@ -28996,23 +29023,39 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(XDNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
-      REAL_T, intent(inout) :: matrixfab( &
+      INTEGER_T, intent(in) :: DIMDEC(xdNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(ydNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(zdNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(xdfab) 
+      INTEGER_T, intent(in) :: DIMDEC(ydfab) 
+      INTEGER_T, intent(in) :: DIMDEC(zdfab) 
+      REAL_T, intent(inout), target :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
-      REAL_T, intent(in) :: LS( &  
+      REAL_T, pointer :: matrixfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: LS( &  
         DIMV(LS), &
         nmat*(1+SDIM))
-      REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
+      REAL_T, intent(inout), target :: TNEWfab( &!Q assim. from particles/cells
         DIMV(TNEWfab), &
         ncomp_tensor)
-      REAL_T, intent(inout) :: XDNEWfab( &  
-        DIMV(XDNEWfab), &
-        SDIM)
-      REAL_T, intent(in) :: XDISP_fab( &
-        DIMV(XDISP_fab), &
-        SDIM)
+      REAL_T, pointer :: TNEWfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: xdNEWfab( &  
+        DIMV(xdNEWfab))
+      REAL_T, pointer :: xdNEWfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: ydNEWfab( &  
+        DIMV(ydNEWfab))
+      REAL_T, pointer :: ydNEWfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: zdNEWfab( &  
+        DIMV(zdNEWfab))
+      REAL_T, pointer :: zdNEWfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: xdfab( &
+        DIMV(xdfab))
+      REAL_T, intent(in), target :: ydfab( &
+        DIMV(ydfab))
+      REAL_T, intent(in), target :: zdfab( &
+        DIMV(zdfab))
       type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
       type(particle_t), intent(in) :: particles_nbr(Np_nbr)
       type(particle_t), intent(in), target :: particles_only_nbr(Nn)
@@ -29029,13 +29072,18 @@ stop
       REAL_T A_matrix,B_matrix
       REAL_T lambda
       REAL_T XDISP_local
-      INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
       REAL_T local_wt
       INTEGER_T interior_ID
       REAL_T xpart1,xpart2
 
       nhalf=3
+
+      matrixfab_ptr=>matrixfab
+      TNEWfab_ptr=>TNEWfab
+      xdNEWfab_ptr=>xdNEWfab
+      ydNEWfab_ptr=>ydNEWfab
+      zdNEWfab_ptr=>zdNEWfab
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -29077,11 +29125,27 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(matrixfab),0,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
+      call checkbound_array(fablo,fabhi,LS,2,-1,1271)
+      call checkbound_array(tilelo,tilehi,matrixfab,1,-1,1271)
+      call checkbound_array(fablo,fabhi,TNEWfab,1,-1,1271)
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound_array1(fablo,fabhi,xdNEWfab,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydNEWfab,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdNEWfab,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydfab,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab,2,-1,1271)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound_array1(fablo,fabhi,xdNEWfab,0,0,1271)
+       call checkbound_array1(fablo,fabhi,ydNEWfab,0,1,1271)
+       call checkbound_array1(fablo,fabhi,zdNEWfab,0,SDIM-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab,2,0,1271)
+       call checkbound_array1(fablo,fabhi,ydfab,2,1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab,2,SDIM-1,1271)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -29105,6 +29169,7 @@ stop
        print *,"Np_no_nbr+Nn.ne.Np_nbr"
        stop
       endif
+
        ! sanity check
       do interior_ID=1,Np_no_nbr
        do dir=1,SDIM
@@ -29117,7 +29182,7 @@ stop
          stop
         endif
        enddo
-      enddo 
+      enddo ! interior_ID=1,Np_no_nbr
 
       if (isweep.eq.0) then
 
@@ -29125,26 +29190,24 @@ stop
        accum_PARM%Npart=Np_no_nbr
 
        call traverse_particles( &
+         MAC_grid_displacement, &
          accum_PARM, &
          matrixfab, &
-         DIMS(matrixfab), &
-         LS, &
-         DIMS(LS), &
-         XDISP_fab, &
-         DIMS(XDISP_fab), &
+         xdfab, &
+         ydfab, &
+         zdfab, &
          ncomp_accumulate)
 
        accum_PARM%particles=>particles_only_nbr
        accum_PARM%Npart=Nn
 
        call traverse_particles( &
+         MAC_grid_displacement, &
          accum_PARM, &
          matrixfab, &
-         DIMS(matrixfab), &
-         LS, &
-         DIMS(LS), &
-         XDISP_fab, &
-         DIMS(XDISP_fab), &
+         xdfab, &
+         ydfab, &
+         zdfab, &
          ncomp_accumulate)
 
        do i=growlo(1),growhi(1)
