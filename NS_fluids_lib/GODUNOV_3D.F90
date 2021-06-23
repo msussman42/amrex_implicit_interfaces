@@ -29232,6 +29232,7 @@ stop
        !  NavierStokes::accumulate_PC_info(int im_elastic)
       subroutine fort_assimilate_tensor_from_xdisplace( &
         im_PLS_cpp, & ! 0..nmat-1
+        MAC_grid_displacement, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
@@ -29245,8 +29246,12 @@ stop
         DIMS(LS), &
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
         DIMS(TNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab)) &
+        xdfab, &      
+        DIMS(xdfab),
+        ydfab, &      
+        DIMS(ydfab),
+        zdfab, &      
+        DIMS(zdfab)) &
       bind(c,name='fort_assimilate_tensor_from_xdisplace')
 
       use global_utility_module
@@ -29255,6 +29260,7 @@ stop
       implicit none
 
       INTEGER_T, intent(in) :: im_PLS_cpp
+      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: tid
@@ -29267,19 +29273,32 @@ stop
       REAL_T, intent(in), target :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(XDISP_fab) 
-      REAL_T, intent(in) :: LS( &  
+      INTEGER_T, intent(in) :: DIMDEC(xdfab) 
+      INTEGER_T, intent(in) :: DIMDEC(ydfab) 
+      INTEGER_T, intent(in) :: DIMDEC(zdfab) 
+      REAL_T, intent(in), target :: LS( &  
         DIMV(LS), &
         nmat*(1+SDIM))
-      REAL_T, intent(inout) :: TNEWfab( &  ! Q assimilated from particles/cells
+       ! Q assimilated from particles/cells
+      REAL_T, intent(inout), target :: TNEWfab( &  
         DIMV(TNEWfab), &
         ncomp_tensor)
-      REAL_T, intent(in) :: XDISP_fab( &
-        DIMV(XDISP_fab), &
-        SDIM)
+      REAL_T, pointer :: TNEWfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: xdfab( &
+        DIMV(xdfab), &
+        1)
+      REAL_T, intent(in), target :: ydfab( &
+        DIMV(ydfab), &
+        1)
+      REAL_T, intent(in), target :: zdfab( &
+        DIMV(zdfab), &
+        1)
 
       INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
+
+      TNEWfab_ptr=>TNEWfab
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -29303,9 +29322,21 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(LS),2,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(TNEWfab),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(XDISP_fab),2,-1,1271)
+      call checkbound_array(fablo,fabhi,LS,2,-1,1271)
+      call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
+
+      if (MAC_grid_displacemnt.eq.0) then
+       call checkbound_array(fablo,fabhi,xdfab,2,-1,1271)
+       call checkbound_array(fablo,fabhi,ydfab,2,-1,1271)
+       call checkbound_array(fablo,fabhi,zdfab,2,-1,1271)
+      else if (MAC_grid_displacemnt.eq.1) then
+       call checkbound_array(fablo,fabhi,xdfab,2,0,1271)
+       call checkbound_array(fablo,fabhi,ydfab,2,1,1271)
+       call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,1271)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
 
       LS_or_VOF_flag=0  ! use LS for upwinding at interfaces
       im_elastic=im_PLS_cpp+1
