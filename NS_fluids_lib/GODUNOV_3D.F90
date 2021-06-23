@@ -11766,7 +11766,7 @@ stop
       endif
 
       if (viscoelastic_model.eq.2) then ! elastic material
-
+FIX ME
        LS_or_VOF_flag=1 ! =1 => use VOF for upwinding near interfaces
        im_elastic=im_critical+1
         ! elastic bulk modulus not included.
@@ -29071,7 +29071,6 @@ stop
 
       REAL_T A_matrix,B_matrix
       REAL_T lambda
-      REAL_T XDISP_local
       INTEGER_T im_elastic
       REAL_T local_wt
       INTEGER_T interior_ID
@@ -29210,35 +29209,109 @@ stop
          zdfab, &
          ncomp_accumulate)
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
-        do dir=1,SDIM
-         B_matrix=matrixfab(D_DECL(i,j,k),1+dir) ! sum w*(X_cell(xp)-X_cell_p)
-         XDISP_local=XDISP_fab(D_DECL(i,j,k),dir)
-         if (A_matrix.eq.zero) then
-          XDNEWFAB(D_DECL(i,j,k),dir)=XDISP_local
-         else if (A_matrix.gt.zero) then
+       if (MAC_grid_displacement.eq.0) then
+        do i=growlo(1),growhi(1)
+        do j=growlo(2),growhi(2)
+        do k=growlo(3),growhi(3)
+         call gridsten_level(xsten,i,j,k,level,nhalf)
+         A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
+         do dir=1,SDIM
+          B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(X_cell(xp)-X_cell_p)
+          if (A_matrix.eq.zero) then
+           lambda=zero
+          else if (A_matrix.gt.zero) then
            ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
-          lambda=B_matrix/A_matrix
-          local_wt=particles_weight_XD
-          if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-           XDNEWFAB(D_DECL(i,j,k),dir)= &
-            XDISP_local-local_wt*lambda
+           lambda=B_matrix/A_matrix
+           local_wt=particles_weight_XD
+           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+            ! do nothing
+           else
+            print *,"local_wt invalid"
+            stop
+           endif
           else
-           print *,"local_wt invalid"
+           print *,"A_matrix invalid"
            stop
           endif
+
+          if (dir.eq.1) then
+           xdNEWfab(D_DECL(i,j,k))=xdfab(D_DECL(i,j,k))-local_wt*lambda
+          else if (dir.eq.2) then
+           ydNEWfab(D_DECL(i,j,k))=ydfab(D_DECL(i,j,k))-local_wt*lambda
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           zdNEWfab(D_DECL(i,j,k))=zdfab(D_DECL(i,j,k))-local_wt*lambda
+          else
+           print *,"dir invalid"
+           stop
+          endif
+         enddo ! dir=1..SDIM
+        enddo
+        enddo
+        enddo
+
+       else if (MAC_grid_displacement.eq.1) then
+
+        do dirmac=1,SDIM
+         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+          growlo,growhi,0,dirmac-1,38)
+
+         ii=0
+         jj=0
+         kk=0
+         if (dirmac.eq.1) then
+          ii=1
+         else if (dirmac.eq.2) then
+          jj=1
+         else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
+          kk=1
          else
-          print *,"A_matrix invalid"
+          print *,"dirmac invalid"
           stop
          endif
-        enddo ! dir=1..SDIM
-       enddo
-       enddo
-       enddo
+
+         do i=growlo(1),growhi(1)
+         do j=growlo(2),growhi(2)
+         do k=growlo(3),growhi(3)
+          !dirmac=1..sdim
+          call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac-1,59)
+
+          A_matrix=matrixfab(D_DECL(i,j,k),1)+ &
+                 matrixfab(D_DECL(i-ii,j-jj,k-kk),1) ! sum w(xp)
+          B_matrix=matrixfab(D_DECL(i,j,k),1+dirmac)+ &
+            matrixfab(D_DECL(i-ii,j-jj,k-kk),1+dirmac) !sum w*(vel(xp)-vel_p)
+          if (A_matrix.eq.zero) then
+           lambda=zero
+          else if (A_matrix.gt.zero) then
+           local_wt=particles_weight_XD
+            ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
+           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+            lambda=local_wt*B_matrix/A_matrix
+           else
+            print *,"local_wt invalid"
+            stop
+           endif
+          else
+           print *,"A_matrix invalid"
+           stop
+          endif
+          if (dirmac.eq.1) then
+           xdNEWfab(D_DECL(i,j,k))=xdfab(D_DECL(i,j,k))-lambda
+          else if (dirmac.eq.2) then
+           ydNEWfab(D_DECL(i,j,k))=ydfab(D_DECL(i,j,k))-lambda
+          else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
+           zdNEWfab(D_DECL(i,j,k))=zdfab(D_DECL(i,j,k))-lambda
+          else
+           print *,"dirmac invalid"
+           stop
+          endif
+         enddo
+         enddo
+         enddo
+        enddo ! dirmac=1..sdim
+       else
+        print *,"MAC_grid_displacement invalid"
+        stop
+       endif
 
       else if (isweep.eq.1) then
 
@@ -29254,11 +29327,10 @@ stop
 !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
 
 
-       LS_or_VOF_flag=0 ! =0 => use LS for upwinding near interfaces
        im_elastic=im_PLS_cpp+1
        call local_tensor_from_xdisplace( &
-        LS_or_VOF_flag, &
         im_elastic, &
+        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -29267,14 +29339,10 @@ stop
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
         ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
-        LS, &
-        DIMS(LS), &
-        LS, &  ! VOF placeholder
-        DIMS(LS), & ! VOF placeholder
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab)) 
+        xdfab, &      
+        ydfab, &      
+        zdfab)
 
       else 
        print *,"isweep invalid"
