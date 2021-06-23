@@ -302,11 +302,7 @@ namespace amrex{
 // holds the cell centered interpolant of the MAC XDISP.
 #define VISUAL_XDISP_MAC_CELL_MF (MAC_ELASTIC_FLUX_YZ_MF+1)
 
-#define XDISP_CELL_MF (VISUAL_XDISP_MAC_CELL_MF+1)
-
-#define XDISP_MAC_MF (XDISP_CELL_MF+1)
-
-#define NEXT_MF (XDISP_MAC_MF+3)
+#define NEXT_MF (VISUAL_XDISP_MAC_CELL_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 

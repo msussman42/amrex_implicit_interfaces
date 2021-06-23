@@ -9085,6 +9085,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      cur_time_slab);
 
     MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
+
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      if (MAC_grid_displacement==0) {
       int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
@@ -20715,16 +20716,24 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  if (localMF_grow[VISCOTEN_MF]==-1) {
   // do nothing
  } else 
-  amrex::Error("VISCOTEN_MF should not be allocated");
-
- int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+  amrex::Error("VISCOTEN_MF should not be allocated during particle assim");
 
  int ncomp_tensor=NUM_TENSOR_TYPE;
 
+ MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
+
  if (particles_flag==0) {
 
-  getStateTensor_localMF(XDISP_CELL_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
-   cur_time_slab);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   if (MAC_grid_displacement==0) {
+    int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
+    XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
+   } else if (MAC_grid_displacement==1) {
+     //ngrow,dir,scomp,ncomp
+    XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
+   } else
+    amrex::Error("MAC_grid_displacement invalid");
+  } // dir=0..sdim-1
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -20746,9 +20755,13 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
-FIX ME do for face based and cell based.
+
    FArrayBox& TNEWfab=Tensor_new[mfi];
-   FArrayBox& XDISP_fab=(*localMF[XDISP_CELL_MF])[mfi];
+
+   FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
+   FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
+   FArrayBox& zdfab=(*XDISP_LOCAL[2])[mfi];
+
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
  
    int tid_current=ns_thread();
@@ -20779,7 +20792,9 @@ FIX ME do for face based and cell based.
 } // omp
   ns_reconcile_d_num(81);
 
-  delete_localMF(XDISP_CELL_MF,1);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete XDISP_LOCAL[dir];
+  }
 
  } else if (particles_flag==1) {
 
@@ -20800,8 +20815,16 @@ FIX ME do for face based and cell based.
 
   for (int isweep=0;isweep<=1;isweep++) {
 
-   getStateTensor_localMF(VISCOTEN_MF,2,scomp_xdisplace,AMREX_SPACEDIM,
-    cur_time_slab);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    if (MAC_grid_displacement==0) {
+     int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
+     XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
+    } else if (MAC_grid_displacement==1) {
+      //ngrow,dir,scomp,ncomp
+     XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
+    } else
+     amrex::Error("MAC_grid_displacement invalid");
+   } // dir=0..sdim-1
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -20848,7 +20871,7 @@ FIX ME do for face based and cell based.
 
     FArrayBox& matrixfab=(*accumulate_mf)[mfi];
     FArrayBox& TNEWfab=Tensor_new[mfi];
-    FArrayBox& XDISP_fab=(*localMF[VISCOTEN_MF])[mfi];
+    FArrayBox& XDISP_fab=(*localMF[XDISP_CELL_MF])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
  
     int tid_current=ns_thread();
@@ -20895,7 +20918,10 @@ FIX ME do for face based and cell based.
 } // omp
    ns_reconcile_d_num(81);
 
-   delete_localMF(VISCOTEN_MF,1);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    delete XDISP_LOCAL[dir];
+   }
+
   } // isweep=0,1
 
   localPC_nbr.clearNeighbors();
