@@ -28929,6 +28929,7 @@ stop
        ! 2. isweep==1: calculates the elastic stress tensor from 
        !    u=X(t,x0)-x0
       subroutine fort_assimilate_tensor_from_particles( &
+        MAC_grid_displacement, &
         particles_weight_XD, &
         im_PLS_cpp, & ! 0..nmat-1
         isweep, &
@@ -28954,10 +28955,18 @@ stop
         DIMS(LS), &
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
         DIMS(TNEWfab), &
-        XDNEWfab, &       
-        DIMS(XDNEWfab), &
-        XDISP_fab, &      
-        DIMS(XDISP_fab), &
+        xdNEWfab, &       
+        DIMS(xdNEWfab), &
+        ydNEWfab, &       
+        DIMS(ydNEWfab), &
+        zdNEWfab, &       
+        DIMS(zdNEWfab), &
+        xdfab, &      
+        DIMS(xdfab), &
+        ydfab, &      
+        DIMS(ydfab), &
+        zdfab, &      
+        DIMS(zdfab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
       bind(c,name='fort_assimilate_tensor_from_particles')
