@@ -5182,7 +5182,7 @@ stop
 
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
-      subroutine FORT_TENSORFORCE( &
+      subroutine fort_tensorforce( &
        massface_index, &
        vofface_index, &
        ncphys, &
@@ -5206,7 +5206,9 @@ stop
        irz, &
        im_parm, & ! 0..nmat-1
        viscoelastic_model, &
-       nmat,nden)
+       nmat,nden) &
+      bind(c,name='fort_tensorforce')
+
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
@@ -5237,16 +5239,19 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: xflux(DIMV(xflux),SDIM*SDIM)
-      REAL_T, intent(in) :: yflux(DIMV(yflux),SDIM*SDIM)
-      REAL_T, intent(in) :: zflux(DIMV(zflux),SDIM*SDIM)
-      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
-      REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
-      REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in), target :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in), target :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in), target :: xflux(DIMV(xflux),SDIM*SDIM)
+      REAL_T, intent(in), target :: yflux(DIMV(yflux),SDIM*SDIM)
+      REAL_T, intent(in), target :: zflux(DIMV(zflux),SDIM*SDIM)
+      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: rhoinverse(DIMV(rhoinverse),nmat+1)
+
+      REAL_T, intent(inout), target :: velnew(DIMV(velnew),SDIM)
+      REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: cur_time
       INTEGER_T, intent(in) :: irz
@@ -5295,6 +5300,8 @@ stop
       REAL_T dxmin
 
       nhalf=3
+
+      velnew_ptr=>velnew
 
       if (bfact.lt.1) then
        print *,"bfact invalid49"
@@ -5346,20 +5353,18 @@ stop
 
       call get_dxmin(dx,bfact,dxmin)
 
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,263)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,263)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,263)
+      call checkbound_array(fablo,fabhi,xface,0,0,263)
+      call checkbound_array(fablo,fabhi,yface,0,1,263)
+      call checkbound_array(fablo,fabhi,zface,0,SDIM-1,263)
 
-      call checkbound(fablo,fabhi,DIMS(xflux),0,0,263)
-      call checkbound(fablo,fabhi,DIMS(yflux),0,1,263)
-      call checkbound(fablo,fabhi,DIMS(zflux),0,SDIM-1,263)
+      call checkbound_array(fablo,fabhi,xflux,0,0,263)
+      call checkbound_array(fablo,fabhi,yflux,0,1,263)
+      call checkbound_array(fablo,fabhi,zflux,0,SDIM-1,263)
 
-      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,7)
-      call checkbound(fablo,fabhi, &
-       DIMS(rhoinverse), &
-       1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(velnew),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(tensor),1,-1,7)
+      call checkbound_array(fablo,fabhi,lsfab,1,-1,7)
+      call checkbound_array(fablo,fabhi,rhoinverse,1,-1,7)
+      call checkbound_array(fablo,fabhi,velnew_ptr,1,-1,7)
+      call checkbound_array(fablo,fabhi,tensor,1,-1,7)
 
       if (SDIM.eq.3) then
        klo_stencil=-1
@@ -5808,7 +5813,7 @@ stop
       enddo ! i,j,k
  
       return
-      end subroutine FORT_TENSORFORCE
+      end subroutine fort_tensorforce
 
 
 

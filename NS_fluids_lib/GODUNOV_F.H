@@ -22,7 +22,6 @@
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_TENSORFORCE tensorforce
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
 #    define FORT_MARANGONIFORCE marangoniforce
@@ -55,7 +54,6 @@
 #    define FORT_FIX_HOOP_TENSOR FIX_HOOP_TENSOR
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
-#    define FORT_TENSORFORCE TENSORFORCE
 #    define FORT_TENSORHEAT TENSORHEAT
 #    define FORT_MARANGONIFORCE MARANGONIFORCE
 #    define FORT_HEATSOURCE HEATSOURCE
@@ -88,7 +86,6 @@
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_TENSORFORCE tensorforce
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_MARANGONIFORCE marangoniforce
 #    define FORT_HEATSOURCE heatsource
@@ -120,7 +117,6 @@
 #    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
-#    define FORT_TENSORFORCE tensorforce_
 #    define FORT_TENSORHEAT tensorheat_
 #    define FORT_MARANGONIFORCE marangoniforce_
 #    define FORT_HEATSOURCE heatsource_
@@ -164,7 +160,7 @@ extern "C"
     int* ngrid,int* level,int* finest_level,
     Real* mf,AMREX_ARLIM_P(mflo),AMREX_ARLIM_P(mfhi));
 
-   void FORT_TENSORFORCE(
+   void fort_tensorforce(
     int* massface_index,
     int* vofface_index,
     int* ncphys,
