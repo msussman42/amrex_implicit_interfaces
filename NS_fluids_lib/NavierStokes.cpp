@@ -9459,6 +9459,11 @@ void NavierStokes::make_viscoelastic_force(int im) {
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
+ if (MAC_grid_displacement==0) {
+  // do nothing
+ } else
+  amrex::Error("expecting MAC_grid_displacement==0");
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
   // do nothing
@@ -9593,8 +9598,8 @@ void NavierStokes::make_viscoelastic_force(int im) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // in: GODUNOV_3D.F90
-    FORT_TENSORFORCE(
+     // declared in: GODUNOV_3D.F90
+    fort_tensorforce(
      &massface_index,
      &vofface_index,
      &ncphys,
@@ -12880,7 +12885,8 @@ NavierStokes::phase_change_redistributeALL() {
  mdot_sum2_complement.resize(thread_class::nthreads);
 
  allocate_array(ngrow_expansion,2*nten,-1,JUMP_STRENGTH_COMPLEMENT_MF); 
- copyALL(ngrow_expansion,2*nten,JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
+ copyALL(ngrow_expansion,2*nten,0,0,
+   JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
 
  for (int im=1;im<=nmat;im++) {
   for (int im_opp=im+1;im_opp<=nmat;im_opp++) {

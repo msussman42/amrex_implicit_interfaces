@@ -10023,7 +10023,7 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("local_error_n invalid");
 
-     copyALL(0,nsolve,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+     copyALL(0,nsolve,0,0,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
        // V1=A P_SOLN
        // 1. (begin)calls project_right_hand_side(P)
        // 2. (end)  calls project_right_hand_side(V1)
@@ -10146,7 +10146,7 @@ void NavierStokes::multiphase_project(int project_option) {
      allocate_array(0,nsolve,-1,bicg_T_MF);
 
 
-     copyALL(0,nsolve,bicg_R0hat_MF,CGRESID_MF);  // R0hat=CGRESID(R0)
+     copyALL(0,nsolve,0,0,bicg_R0hat_MF,CGRESID_MF);  // R0hat=CGRESID(R0)
       // MAC_PHI_CRSE(U1)=0.0
      zeroALL(1,nsolve,bicg_U0_MF);
 
@@ -10201,7 +10201,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
       adjust_tolerance(error_n,error0_max,project_option);
 
-      copyALL(0,nsolve,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
+      copyALL(0,nsolve,0,0,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
        // V1=A P_SOLN
        // 1. (begin)calls project_right_hand_side(P)
        // 2. (end)  calls project_right_hand_side(V1)
@@ -10281,7 +10281,7 @@ void NavierStokes::multiphase_project(int project_option) {
           change_flag=0;
           project_right_hand_side(P_MF,project_option,change_flag);
 
-          copyALL(0,nsolve,P_SOLN_MF,P_MF); //P_SOLN=P
+          copyALL(0,nsolve,0,0,P_SOLN_MF,P_MF); //P_SOLN=P
           // V1=A P_SOLN
           // 1. (begin)calls project_right_hand_side(P)
           // 2. (end)  calls project_right_hand_side(V1)
@@ -10300,7 +10300,7 @@ void NavierStokes::multiphase_project(int project_option) {
            project_right_hand_side(MAC_PHI_CRSE_MF,
              project_option,change_flag);
             // U0=MAC_PHI_CRSE(U1)
-           copyALL(1,nsolve,bicg_U0_MF,MAC_PHI_CRSE_MF);
+           copyALL(1,nsolve,0,0,bicg_U0_MF,MAC_PHI_CRSE_MF);
 
            // CGRESID=RHS-A mac_phi_crse(U1)
            // 1. (start) calls project_right_hand_side(MAC_PHI_CRSE_MF)
@@ -10469,7 +10469,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  change_flag=0;
           project_right_hand_side(bicg_Hvec_MF,project_option,change_flag);
           // mac_phi_crse(U1)=Hvec
-          copyALL(1,nsolve,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
+          copyALL(1,nsolve,0,0,MAC_PHI_CRSE_MF,bicg_Hvec_MF);
 
 	  change_flag=0;
           project_right_hand_side(MAC_PHI_CRSE_MF,project_option,change_flag);
@@ -10609,11 +10609,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
           w0=w1;
           // CGRESID(R0)=R1
-          copyALL(0,nsolve,CGRESID_MF,bicg_R1_MF);
-          copyALL(0,nsolve,P_MF,bicg_P1_MF);
-          copyALL(0,nsolve,bicg_V0_MF,bicg_V1_MF);
+          copyALL(0,nsolve,0,0,CGRESID_MF,bicg_R1_MF);
+          copyALL(0,nsolve,0,0,P_MF,bicg_P1_MF);
+          copyALL(0,nsolve,0,0,bicg_V0_MF,bicg_V1_MF);
           // U0=MAC_PHI_CRSE(U1)
-          copyALL(1,nsolve,bicg_U0_MF,MAC_PHI_CRSE_MF);
+          copyALL(1,nsolve,0,0,bicg_U0_MF,MAC_PHI_CRSE_MF);
 
 #if (profile_solver==1)
           bprof.stop();
@@ -10673,9 +10673,9 @@ void NavierStokes::multiphase_project(int project_option) {
         residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
           bicg_U0_MF,nsolve);
         // R0hat=CGRESID(R0)
-        copyALL(0,nsolve,bicg_R0hat_MF,CGRESID_MF);
+        copyALL(0,nsolve,0,0,bicg_R0hat_MF,CGRESID_MF);
         // MAC_PHI_CRSE(U1)=U0
-        copyALL(1,nsolve,MAC_PHI_CRSE_MF,bicg_U0_MF);
+        copyALL(1,nsolve,0,0,MAC_PHI_CRSE_MF,bicg_U0_MF);
         rho0=1.0;
         rho1=1.0;
         alpha=1.0;
@@ -10951,7 +10951,7 @@ void NavierStokes::multiphase_project(int project_option) {
     } else
      amrex::Error("outer_error invalid");
 
-    copyALL(0,nsolve,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
+    copyALL(0,nsolve,0,0,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
        // V1=A P_SOLN
        // 1. (begin)calls project_right_hand_side(P)
        // 2. (end)  calls project_right_hand_side(V1)
