@@ -228,6 +228,8 @@ namespace amrex{
 
 #define DIST_TOUCH_MF 214
 
+#define VISCOTEN_ALL_MAT_MF 215
+
 #define TENSOR_RECON_MF 216
 
 #define DIV_SAVE_MF 218
@@ -936,6 +938,8 @@ protected:
      int simple_AMR_BC_flag_viscosity);
 
     void make_viscoelastic_tensor(int im);
+    void make_viscoelastic_tensorALL(int im);
+
     void make_viscoelastic_tensorMAC(int im);
     void make_viscoelastic_force(int im);
     void make_viscoelastic_heating(int im,int idx);
@@ -1158,6 +1162,8 @@ protected:
     void smearvariable(int scomp,
      MultiFab* mask_extrapolate,int ngrow,Real def_value);
 
+     // spectral_override==1 => order derived from "enable_spectral"
+     // spectral_override==0 => always low order.
     void avgDown_localMF_ALL(int idxMF,int scomp,int ncomp,
       int spectral_override); 
 
@@ -1482,7 +1488,8 @@ void apply_pressure_grad(
       int scomp,int ncomp,int ngrow);
     void mult_array(int ngrow,int ncomp,Real dataval,
       int idx_localMF);
-    void copyALL(int ngrow,int ncomp,int idx_dest,int idx_source);
+    void copyALL(int ngrow,int ncomp,
+      int scomp,int dcomp,int idx_dest,int idx_source);
     void minusALL(int ngrow,int ncomp,int idx_dest,int idx_source);
 
     void negateALL(int idx_localMF);

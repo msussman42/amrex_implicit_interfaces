@@ -10896,7 +10896,6 @@ stop
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
-       recon,DIMS(recon), &  
        xdfab,DIMS(xdfab), &
        ydfab,DIMS(ydfab), &
        zdfab,DIMS(zdfab), &
@@ -10905,11 +10904,12 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       elastic_viscosity,etaS, &
+       elastic_viscosity, &
+       etaS, &
        elastic_time, &
        viscoelastic_model, &
        polymer_factor, &
-       irz,ngrow,nmat) &
+       irz,nmat) &
       bind(c,name='fort_maketensor')
 
       use probcommon_module
@@ -10925,8 +10925,6 @@ stop
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(xdfab)
       INTEGER_T, intent(in) :: DIMDEC(ydfab)
       INTEGER_T, intent(in) :: DIMDEC(zdfab)
@@ -10937,7 +10935,6 @@ stop
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(in), target :: xdfab(DIMV(xdfab),1)
       REAL_T, intent(in), target :: ydfab(DIMV(ydfab),1)
       REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
@@ -11018,10 +11015,6 @@ stop
        stop
       endif
 
-      if (ngrow.ne.1) then
-       print *,"ngrow invalid"
-       stop
-      endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -11052,10 +11045,9 @@ stop
        print *,"MAC_grid_displacement invalid"
        stop
       endif
-      call checkbound_array(fablo,fabhi,recon,2,-1,1277)
 
-      call checkbound_array(fablo,fabhi,visc,ngrow,-1,11)
-      call checkbound_array(fablo,fabhi,tensor,ngrow,-1,8)
+      call checkbound_array(fablo,fabhi,visc,1,-1,11)
+      call checkbound_array(fablo,fabhi,tensor,1,-1,8)
 
       do dir_local=1,SDIM
        dx_local(dir_local)=dx(dir_local)
@@ -11064,7 +11056,7 @@ stop
        fabhi_local(dir_local)=fabhi(dir_local)
       enddo
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -11098,41 +11090,48 @@ stop
        else if (viscoelastic_model.eq.3) then ! incremental model
         ! do nothing
        else if (viscoelastic_model.eq.2) then ! elastic model
-        if (MAC_grid_displacement.eq.0) then
-         ! do nothing
-        else if (MAC_grid_displacement.eq.1) then
 
-         data_out%data_interp=>cell_data_deriv
+        data_out%data_interp=>cell_data_deriv
 
-          !type(deriv_from_grid_parm_type) :: data_in
-         data_in%level=level
-         data_in%finest_level=finest_level
-         data_in%bfact=bfact ! bfact=kind of spectral element grid 
-         data_in%dx=>dx_local
-         data_in%xlo=>xlo_local
-         data_in%fablo=>fablo_local
-         data_in%fabhi=>fabhi_local
-         data_in%ngrowfab=2
+         !type(deriv_from_grid_parm_type) :: data_in
+        data_in%level=level
+        data_in%finest_level=finest_level
+        data_in%bfact=bfact ! bfact=kind of spectral element grid 
+        data_in%dx=>dx_local
+        data_in%xlo=>xlo_local
+        data_in%fablo=>fablo_local
+        data_in%fabhi=>fabhi_local
+        data_in%ngrowfab=2
 
-         data_in%ncomp=1
-         data_in%scomp=1
+        data_in%ncomp=1
+        data_in%scomp=1
 
-         data_in%index_flux(1)=i
-         data_in%index_flux(2)=j
-         if (SDIM.eq.3) then
-          data_in%index_flux(SDIM)=k
-         else if (SDIM.eq.2) then
-          !do nothing
-         else
-          print *,"dimension bust"
-          stop
-         endif
-         data_in%grid_type_flux=-1
-         do dir_local=1,SDIM
-          data_in%box_type_flux(dir_local)=0;
-         enddo
+        data_in%index_flux(1)=i
+        data_in%index_flux(2)=j
+        if (SDIM.eq.3) then
+         data_in%index_flux(SDIM)=k
+        else if (SDIM.eq.2) then
+         !do nothing
+        else
+         print *,"dimension bust"
+         stop
+        endif
 
-         do dir_XD=1,SDIM
+        data_in%grid_type_flux=-1
+        do dir_local=1,SDIM
+         data_in%box_type_flux(dir_local)=0;
+        enddo
+
+        do dir_XD=1,SDIM
+
+         if (MAC_grid_displacement.eq.0) then
+
+          data_in%grid_type_data=-1
+          do dir_local=1,SDIM
+           data_in%box_type_data(dir_local)=0;
+          enddo
+
+         else if (MAC_grid_displacement.eq.1) then
 
           data_in%grid_type_data=dir_XD-1
           do dir_local=1,SDIM
@@ -11140,30 +11139,35 @@ stop
           enddo
           data_in%box_type_data(dir_XD)=1
 
-          if (dir_XD.eq.1) then
-           data_in%disp_data=>xdfab
-          else if (dir_XD.eq.2) then
-           data_in%disp_data=>ydfab
-          else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
-           data_in%disp_data=>zdfab
-          else
-           print *,"dir_XD invalid"
-           stop
-          endif
+         else
+          print *,"MAC_grid_displacement invalid"
+          stop
+         endif
 
-          do dir_flux=0,SDIM-1
-           data_in%dir_deriv=dir_flux+1
-           call deriv_from_grid_util(data_in,data_out)
-           gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
-          enddo
-          data_in%dir_deriv=-1
+         if (dir_XD.eq.1) then
+          data_in%disp_data=>xdfab
+         else if (dir_XD.eq.2) then
+          data_in%disp_data=>ydfab
+         else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
+          data_in%disp_data=>zdfab
+         else
+          print *,"dir_XD invalid"
+          stop
+         endif
+
+         do dir_flux=0,SDIM-1
+          data_in%dir_deriv=dir_flux+1
           call deriv_from_grid_util(data_in,data_out)
+           gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
+         enddo
+         data_in%dir_deriv=-1
+         call deriv_from_grid_util(data_in,data_out)
           XDcenter(dir_XD)=cell_data_deriv(1)
 
-         enddo ! dir_XD=1..sdim
+        enddo ! dir_XD=1..sdim
 
-          ! declared in: GLOBALUTIL.F90
-         call stress_from_strain( &
+         ! declared in: GLOBALUTIL.F90
+        call stress_from_strain( &
           im_elastic_p1, & ! =1..nmat
           xcenter, &
           dx, &
@@ -11173,49 +11177,45 @@ stop
           DISP_TEN, &  ! dir_x (displace),dir_space
           hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
 
-         do ii=1,3
-         do jj=1,3
-          Q(ii,jj)=zero
-         enddo
-         enddo
+        do ii=1,3
+        do jj=1,3
+         Q(ii,jj)=zero
+        enddo
+        enddo
 
-         Q(1,1)=DISP_TEN(1,1)
-         Q(1,2)=DISP_TEN(1,2)
-         Q(2,2)=DISP_TEN(2,2)
-         if (SDIM.eq.3) then
-          Q(3,3)=DISP_TEN(SDIM,SDIM)
-         else if (SDIM.eq.2) then
-          if (levelrz.eq.0) then
-           ! T33 (theta coordinate)
-           Q(3,3)=zero
-          else if (levelrz.eq.1) then
-           ! T33 (theta coordinate)
-           ! dX/dx + dX/dx
-           Q(3,3)=two*hoop_22 ! 2 * (xdisp/r)
-          else if (levelrz.eq.3) then
-           ! T33 (z coordinate)
-           Q(3,3)=zero
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
+        Q(1,1)=DISP_TEN(1,1)
+        Q(1,2)=DISP_TEN(1,2)
+        Q(2,2)=DISP_TEN(2,2)
+        if (SDIM.eq.3) then
+         Q(3,3)=DISP_TEN(SDIM,SDIM)
+        else if (SDIM.eq.2) then
+         if (levelrz.eq.0) then
+          ! T33 (theta coordinate)
+          Q(3,3)=zero
+         else if (levelrz.eq.1) then
+          ! T33 (theta coordinate)
+          ! dX/dx + dX/dx
+          Q(3,3)=two*hoop_22 ! 2 * (xdisp/r)
+         else if (levelrz.eq.3) then
+          ! T33 (z coordinate)
+          Q(3,3)=zero
          else
-          print *,"dimension bust"
+          print *,"levelrz invalid"
           stop
          endif
-                    
-         if (SDIM.eq.3) then 
-          Q(1,SDIM)=DISP_TEN(1,SDIM)
-          Q(2,SDIM)=DISP_TEN(2,SDIM)
-         endif
-         Q(2,1)=Q(1,2)
-         Q(3,1)=Q(1,3)
-         Q(3,2)=Q(2,3)
-
         else
-         print *,"MAC_grid_displacement invalid"
+         print *,"dimension bust"
          stop
         endif
+                   
+        if (SDIM.eq.3) then 
+         Q(1,SDIM)=DISP_TEN(1,SDIM)
+         Q(2,SDIM)=DISP_TEN(2,SDIM)
+        endif
+        Q(2,1)=Q(1,2)
+        Q(3,1)=Q(1,3)
+        Q(3,2)=Q(2,3)
+
        else
         print *,"viscoelastic_model invalid"
         stop
