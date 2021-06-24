@@ -11574,10 +11574,25 @@ void NavierStokes::vel_elastic_ALL() {
          // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
         make_viscoelastic_tensorALL(im);
 
+	 //MAC_ELASTIC_FLUX_CC_MF, etc. are initialized in
+	 //NavierStokes::make_viscoelastic_tensorMAC
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
          ns_level.make_viscoelastic_tensorMAC(im);
 	}
+         // spectral_override==0 => always low order.
+	avgDown_localMF_ALL(MAC_ELASTIC_FLUX_CC_MF,0,NUM_TENSOR_TYPE,0);
+	avgDown_localMF_ALL(MAC_ELASTIC_FLUX_XY_MF,0,NUM_TENSOR_TYPE,0);
+	if (AMREX_SPACEDIM==2) {
+	 // do nothing
+	} else if (AMREX_SPACEDIM==3) {
+	 avgDown_localMF_ALL(MAC_ELASTIC_FLUX_XZ_MF,0,NUM_TENSOR_TYPE,0);
+	 avgDown_localMF_ALL(MAC_ELASTIC_FLUX_YZ_MF,0,NUM_TENSOR_TYPE,0);
+	} else
+	 amrex::Error("dimension bust");
+
+	FIX ME fill borders here
+
 
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
@@ -11585,13 +11600,18 @@ void NavierStokes::vel_elastic_ALL() {
         }
 
         delete_array(VISCOTEN_MF);
+
         delete_array(MAC_ELASTIC_FLUX_CC_MF);
-        delete_array(MAC_ELASTIC_FLUX_X_MF);
-        delete_array(MAC_ELASTIC_FLUX_Y_MF);
-        delete_array(MAC_ELASTIC_FLUX_Z_MF);
         delete_array(MAC_ELASTIC_FLUX_XY_MF);
-        delete_array(MAC_ELASTIC_FLUX_XZ_MF);
-        delete_array(MAC_ELASTIC_FLUX_YZ_MF);
+
+	if (AMREX_SPACEDIM==2) {
+	 // do nothing
+	} else if (AMREX_SPACEDIM==3) {
+         delete_array(MAC_ELASTIC_FLUX_XZ_MF);
+         delete_array(MAC_ELASTIC_FLUX_YZ_MF);
+	} else
+	 amrex::Error("dimension bust");
+
        } else
         amrex::Error("MAC_grid_displacement invalid");
 
