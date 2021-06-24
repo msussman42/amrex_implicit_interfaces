@@ -11554,12 +11554,12 @@ void NavierStokes::vel_elastic_ALL() {
         } else
          amrex::Error("viscoelastic_model[im] invalid");
 
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
          // note: tensor_advection_updateALL is called before veldiffuseALL.
          // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
-	 FIX ME need to fill boundaries and average down low order
-         ns_level.make_viscoelastic_tensor(im);
+        make_viscoelastic_tensorALL(im);
+
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
          ns_level.make_viscoelastic_force(im);
         }
 
@@ -11570,16 +11570,9 @@ void NavierStokes::vel_elastic_ALL() {
 
        } else if (MAC_grid_displacement==1) {
 
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
          // note: tensor_advection_updateALL is called before veldiffuseALL.
          // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
-         ns_level.make_viscoelastic_tensor(im);
-         ns_level.debug_ngrow(VISCOTEN_MF,1,5);
-         if (ns_level.localMF[VISCOTEN_MF]->nComp()!=NUM_TENSOR_TYPE)
-          amrex::Error("ns_level.localMF[VISCOTEN_MF] invalid");
-	}
-FIX ME - reduce ngrow to 0 and set the BC, avgdown, etc also for cell center
+        make_viscoelastic_tensorALL(im);
 
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
@@ -12350,10 +12343,10 @@ void NavierStokes::veldiffuseALL() {
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
+      // initializes VISCOTEN_MF
+      make_viscoelastic_tensorALL(im);
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
-        // initializes VISCOTEN_MF
-       ns_level.make_viscoelastic_tensor(im);
         // VISCHEAT_MF is initialized to zero.
         // VISCHEAT_MF is incremented with heating terms due to viscosity
         // and viscoelastic heating.

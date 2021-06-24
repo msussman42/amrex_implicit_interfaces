@@ -8937,7 +8937,8 @@ void NavierStokes::mult_array(int ngrow,int ncomp,Real dataval,
  }
 }  // end subroutine mult_array
 
-void NavierStokes::copyALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
+void NavierStokes::copyALL(int ngrow,int ncomp,
+	int scomp,int dcomp,int idx_dest,int idx_source) {
 
  int finest_level = parent->finestLevel();
  if (level!=0)
@@ -8945,7 +8946,7 @@ void NavierStokes::copyALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
 
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
-  ns_level.Copy_localMF(idx_dest,idx_source,0,0,ncomp,ngrow);
+  ns_level.Copy_localMF(idx_dest,idx_source,scomp,dcomp,ncomp,ngrow);
  }
 } // end subroutine copyALL
 
