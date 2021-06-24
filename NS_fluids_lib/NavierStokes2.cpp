@@ -4539,7 +4539,7 @@ void NavierStokes::init_gradu_tensor(
 
     // declared in: GODUNOV_3D.F90
     //  visc_coef * viscface * (grad X + grad X^T)
-    FORT_CROSSTERM_ELASTIC(
+    fort_crossterm_elastic(
      &ncomp_visc,
      &im_tensor, // 0..nmat-1
      &dir,
@@ -4861,7 +4861,7 @@ void NavierStokes::apply_pressure_grad(
 
     // in: GODUNOV_3D.F90
     // -dt * visc_coef * viscface * (grad U + grad U^T)
-    FORT_CROSSTERM(
+    fort_crossterm(
      &nsolve,
      &tileloop,
      &dir,

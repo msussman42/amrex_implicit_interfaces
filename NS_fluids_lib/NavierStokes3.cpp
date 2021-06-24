@@ -11533,6 +11533,7 @@ void NavierStokes::vel_elastic_ALL() {
 
 	 int do_alloc=1;
          int simple_AMR_BC_flag_viscosity=1;
+	  // calls fort_face_gradients and fort_crossterm_elastic
 	 init_gradu_tensorALL(
           im, // 0<=im<=nmat-1  (signifies displacement input)
 	  XDISPLACE_MF, // deleted in init_gradu_tensorALL since do_alloc==1
@@ -11557,6 +11558,7 @@ void NavierStokes::vel_elastic_ALL() {
          NavierStokes& ns_level=getLevel(ilev);
          // note: tensor_advection_updateALL is called before veldiffuseALL.
          // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
+	 FIX ME need to fill boundaries and average down low order
          ns_level.make_viscoelastic_tensor(im);
          ns_level.make_viscoelastic_force(im);
         }

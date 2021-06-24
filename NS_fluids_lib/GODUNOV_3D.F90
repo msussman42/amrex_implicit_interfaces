@@ -709,10 +709,10 @@ stop
         nmat,  & 
         massfrac, &
         total_mass, &
-        levelpc,DIMS(levelpc), &
-        faceLS,DIMS(faceLS), & ! =0 if imL<>imR or coarse/fine bc or ext. bc
-        mdata,DIMS(mdata), &
-        tdata,DIMS(tdata), &
+        levelpc, &
+        faceLS, & ! =0 if imL<>imR or coarse/fine bc or ext. bc
+        mdata, &
+        tdata, &
         ii,jj,kk, &
         i,j,k,dir, &
         dirtan, &
@@ -726,15 +726,13 @@ stop
 
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: DIMDEC(levelpc)
-      INTEGER_T, intent(in) :: DIMDEC(faceLS)
-      INTEGER_T, intent(in) :: DIMDEC(mdata)
-      INTEGER_T, intent(in) :: DIMDEC(tdata)
 
-      REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
-      REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
+       ! pointers are always intent(in) but the data itself inherits
+       ! its intent property from the target.
+      REAL_T, intent(in), pointer :: faceLS(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: mdata(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: tdata(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: levelpc(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: massfrac(nmat)
       REAL_T, intent(in) :: total_mass
 
@@ -5577,7 +5575,7 @@ stop
 
         else if (viscoelastic_model.eq.2) then ! displacement gradient
 
-           ! xflux,yflux,zflux come from "FORT_CROSSTERM_ELASTIC" in which
+           ! xflux,yflux,zflux come from "fort_crossterm_elastic" in which
            ! "stress_from_strain" is applied to the displacement gradient
            ! matrix, then the resulting stress is multiplied by
            ! "elastic_viscosity * visc_coef" (see DERVISC)
@@ -25046,9 +25044,9 @@ FIX ME
 !  b) spectral_loop=0,1
 !     dir=1..sdim
 !     tileloop=0...3
-!       FORT_CROSSTERM
+!       fort_crossterm
 !
-! in CROSSTERM:
+! in fort_crossterm:
 !  if tileloop==0  spectral_loop==0 
 !   low order fluxes (slopecrossterm)
 !  if tileloop==0  spectral_loop==1
@@ -25069,7 +25067,7 @@ FIX ME
 ! radial velocity is negated if r<0
 ! -dt * visc_coef * viscface * (grad U + grad U^T)
 ! fluxes found on "dir" faces
-      subroutine FORT_CROSSTERM( &
+      subroutine fort_crossterm( &
        nsolve, &
        tileloop, &
        dir, &  ! dir=1..sdim
@@ -25161,23 +25159,26 @@ FIX ME
       REAL_T, intent(in) :: dt 
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
-      REAL_T, intent(inout) :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
-      REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
-      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, intent(in), target :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(in), target :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(in), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),ntensor)
 
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
 
-      REAL_T, intent(out) :: xflux(DIMV(xflux),nsolve)  ! u
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(out), target :: xflux(DIMV(xflux),nsolve)  ! u
+      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: xface(DIMV(xface),ncphys)
+
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
 
       REAL_T, intent(in) :: visc_coef
 
@@ -25272,6 +25273,9 @@ FIX ME
       INTEGER_T project_option
 
       nhalf=1
+
+      semflux_ptr=>semflux
+      xflux_ptr=>xflux
 
       project_option=3
 
@@ -25385,20 +25389,20 @@ FIX ME
 
       if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
        if (dir.eq.1) then
-        call checkbound(fablo,fabhi,DIMS(faceLS),1,-1,1277)
-        call checkbound(fablo,fabhi,DIMS(mdata),1,-1,1278)
-        call checkbound(fablo,fabhi,DIMS(tdata),1,-1,1279)
-        call checkbound(fablo,fabhi,DIMS(c_tdata),1,-1,1265)
-        call checkbound(fablo,fabhi,DIMS(vel),1,-1,1281)
-        call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1284)
-        call checkbound(fablo,fabhi,DIMS(recon),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
-        call checkbound(fablo,fabhi,DIMS(semflux),1,-1,231)
-        call checkbound(fablo,fabhi,DIMS(mask),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,234)
+        call checkbound_array(fablo,fabhi,faceLS,1,-1,1277)
+        call checkbound_array(fablo,fabhi,mdata,1,-1,1278)
+        call checkbound_array(fablo,fabhi,tdata,1,-1,1279)
+        call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
+        call checkbound_array(fablo,fabhi,vel,1,-1,1281)
+        call checkbound_array(fablo,fabhi,levelpc,2,-1,1284)
+        call checkbound_array(fablo,fabhi,recon,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
+        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+        call checkbound_array1(fablo,fabhi,mask,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskcoef,1,-1,234)
        endif
-       call checkbound(fablo,fabhi,DIMS(xflux),0,dir-1,1285)
-       call checkbound(fablo,fabhi,DIMS(xface),0,dir-1,1288)
+       call checkbound_array(fablo,fabhi,xflux_ptr,0,dir-1,1285)
+       call checkbound_array(fablo,fabhi,xface,0,dir-1,1288)
       endif
 
         ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
@@ -25596,10 +25600,10 @@ FIX ME
              nmat,  &
              massfrac, &
              total_mass, &
-             levelpc,DIMS(levelpc), &
-             faceLS,DIMS(faceLS), &
-             mdata,DIMS(mdata), &
-             tdata,DIMS(tdata), &
+             levelpc,levelpc, &
+             faceLS,faceLS, &
+             mdata,mdata, &
+             tdata,tdata, &
              ii,jj,kk, &
              i,j,k,dir, &
              dirtan(nc), &
@@ -26739,7 +26743,7 @@ FIX ME
       endif
 
       return 
-      end subroutine FORT_CROSSTERM
+      end subroutine fort_crossterm
 
        ! The continuum model for FSI:
        !  du/dt + u dot grad u = -grad p/rho + div(H tau_elastic)/rho
@@ -27516,7 +27520,7 @@ FIX ME
       end subroutine FORT_MAC_ELASTIC_FORCE
 
 
-      subroutine FORT_CROSSTERM_ELASTIC( &
+      subroutine fort_crossterm_elastic( &
        ncomp_visc, &
        im_tensor, & ! 0..nmat-1
        dir, &  ! dir=1..sdim
@@ -27548,7 +27552,9 @@ FIX ME
        visc_coef, &
        nmat, &
        nden, &
-       ntensor)
+       ntensor) &
+      bind(c,name='fort_crossterm_elastic')
+
       use probcommon_module
       use global_utility_module
       use godunov_module
@@ -27589,21 +27595,24 @@ FIX ME
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
 
-      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
 
-      REAL_T, intent(in) :: faceLS(DIMV(faceLS),SDIM)
-      REAL_T, intent(in) :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
-      REAL_T, intent(in) :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, intent(in), target :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(in), target :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(in), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),ntensor)
 
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat)
-      REAL_T, intent(out) :: xflux(DIMV(xflux),ntensor)
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
 
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(out), target :: xflux(DIMV(xflux),ntensor)
+      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: xface(DIMV(xface),ncphys)
+
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
 
       REAL_T, intent(in) :: visc_coef
 
@@ -27649,6 +27658,8 @@ FIX ME
       REAL_T x_stress(SDIM)
 
       nhalf=1
+
+      xflux_ptr=>xflux
 
       project_option=3
 
@@ -27736,19 +27747,19 @@ FIX ME
       endif
 
       if (dir.eq.1) then
-        call checkbound(fablo,fabhi,DIMS(visc),1,-1,11)
-        call checkbound(fablo,fabhi,DIMS(faceLS),1,-1,1277)
-        call checkbound(fablo,fabhi,DIMS(mdata),1,-1,1278)
-        call checkbound(fablo,fabhi,DIMS(tdata),1,-1,1279)
-        call checkbound(fablo,fabhi,DIMS(c_tdata),1,-1,1265)
-        call checkbound(fablo,fabhi,DIMS(vel),1,-1,1281)
-        call checkbound(fablo,fabhi,DIMS(levelpc),2,-1,1284)
-        call checkbound(fablo,fabhi,DIMS(recon),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(mask),1,-1,234)
-        call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,234)
+        call checkbound_array(fablo,fabhi,visc,1,-1,11)
+        call checkbound_array(fablo,fabhi,faceLS,1,-1,1277)
+        call checkbound_array(fablo,fabhi,mdata,1,-1,1278)
+        call checkbound_array(fablo,fabhi,tdata,1,-1,1279)
+        call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
+        call checkbound_array(fablo,fabhi,vel,1,-1,1281)
+        call checkbound_array(fablo,fabhi,levelpc,2,-1,1284)
+        call checkbound_array(fablo,fabhi,recon,1,-1,234)
+        call checkbound_array1(fablo,fabhi,mask,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskcoef,1,-1,234)
       endif
-      call checkbound(fablo,fabhi,DIMS(xflux),0,dir-1,1285)
-      call checkbound(fablo,fabhi,DIMS(xface),0,dir-1,1288)
+      call checkbound_array(fablo,fabhi,xflux_ptr,0,dir-1,1285)
+      call checkbound_array(fablo,fabhi,xface,0,dir-1,1288)
 
         ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
         ! order: ux,vx,wx,uy,vy,wy,uz,vz,wz
@@ -27958,10 +27969,10 @@ FIX ME
            nmat,  &
            massfrac, &
            total_mass, &
-           levelpc,DIMS(levelpc), &
-           faceLS,DIMS(faceLS), &
-           mdata,DIMS(mdata), &
-           tdata,DIMS(tdata), &
+           levelpc, &
+           faceLS, &
+           mdata, &
+           tdata, &
            ii,jj,kk, &
            i,j,k,dir, &
            dirtan(nc), &
@@ -28061,7 +28072,7 @@ FIX ME
       enddo  ! i,j,k faces
 
       return 
-      end subroutine FORT_CROSSTERM_ELASTIC
+      end subroutine fort_crossterm_elastic
 
 
 

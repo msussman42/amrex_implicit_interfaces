@@ -14,8 +14,6 @@
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
 #    define FORT_ESTDT        estdt
-#    define FORT_CROSSTERM    crossterm
-#    define FORT_CROSSTERM_ELASTIC crossterm_elastic
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -49,8 +47,6 @@
 #    define FORT_DISTRIBUTEEXPANSION DISTRIBUTEEXPANSION
 #    define FORT_CLEAREXPANSION CLEAREXPANSION
 #    define FORT_ESTDT        ESTDT
-#    define FORT_CROSSTERM    CROSSTERM
-#    define FORT_CROSSTERM_ELASTIC CROSSTERM_ELASTIC
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
@@ -84,8 +80,6 @@
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
 #    define FORT_ESTDT        estdt
-#    define FORT_CROSSTERM    crossterm
-#    define FORT_CROSSTERM_ELASTIC crossterm_elastic
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -118,8 +112,6 @@
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion_
 #    define FORT_CLEAREXPANSION clearexpansion_
 #    define FORT_ESTDT        estdt_
-#    define FORT_CROSSTERM    crossterm_
-#    define FORT_CROSSTERM_ELASTIC crossterm_elastic_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
@@ -1154,7 +1146,7 @@ extern "C"
      int* dir,
      Real* cur_time);
 
-   void FORT_CROSSTERM(
+   void fort_crossterm(
      int* nsolve,
      int* tileloop,
      int* dir,
@@ -1197,7 +1189,7 @@ extern "C"
      int* homflag);
 
 
-   void FORT_CROSSTERM_ELASTIC(
+   void fort_crossterm_elastic(
      int* ncomp_visc,
      int* im_elastic, //0..nmat-1
      int* dir, //1..sdim
