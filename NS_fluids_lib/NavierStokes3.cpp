@@ -11581,30 +11581,36 @@ void NavierStokes::vel_elastic_ALL() {
 	 //(b) find grad X  + grad X^T directly from the 
 	 //    displacement vars, and put in the CC,XY,XZ,YZ
 	 //    variables.
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.make_viscoelastic_tensorMAC(im);
-	}
-         // spectral_override==0 => always low order.
-	avgDown_localMF_ALL(MAC_ELASTIC_FLUX_CC_MF,0,NUM_TENSOR_TYPE,0);
-	avgDown_localMF_ALL(MAC_ELASTIC_FLUX_XY_MF,0,NUM_TENSOR_TYPE,0);
+	int interp_Q_to_flux=1;
+	if (viscoelastic_model[im]==2) {
+         interp_Q_to_flux=0;  // 1 is a possible option here
+        } else if ((viscoelastic_model[im]==1)||
+   		   (viscoelastic_model[im]==0)||
+		   (viscoelastic_model[im]==3)) { // incremental
+	 interp_Q_to_flux=1;
+        } else
+         amrex::Error("viscoelastic_model[im] invalid");
+
+	int flux_grid_type=-1;
+        ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+	     MAC_ELASTIC_FLUX_CC_MF,flux_grid_type);
+	flux_grid_type=3;
+        ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+	     MAC_ELASTIC_FLUX_XY_MF,flux_grid_type);
+
 	if (AMREX_SPACEDIM==2) {
 	 // do nothing
 	} else if (AMREX_SPACEDIM==3) {
-	 avgDown_localMF_ALL(MAC_ELASTIC_FLUX_XZ_MF,0,NUM_TENSOR_TYPE,0);
-	 avgDown_localMF_ALL(MAC_ELASTIC_FLUX_YZ_MF,0,NUM_TENSOR_TYPE,0);
+	 flux_grid_type=4;
+         ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+	     MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type);
+	 flux_grid_type=5;
+         ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+	     MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type);
 	} else
 	 amrex::Error("dimension bust");
 
-        for (int scomp_extrap=0;scomp_extrap<NUM_TENSOR_TYPE;
-	     scomp_extrap++) {
 
-         Vector<int> scompBC_map;
-          // desc_lstGHOST.setComponent(TensorXU_Type, ...
-          // "set_tensor_bc", tensor_pc_interp 
-          // FORT_EXTRAPFILL
-          // (i.e. the coarse/fine BC and physical BC will be low order)
-         scompBC_map.resize(1);
          scompBC_map[0]=scomp_extrap;
           // idx,ngrow,scomp,ncomp,index,scompBC_map
          PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_CC_MF,1,scomp_extrap,1,

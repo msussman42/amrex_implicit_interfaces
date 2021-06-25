@@ -936,7 +936,11 @@ protected:
     void make_viscoelastic_tensor(int im);
     void make_viscoelastic_tensorALL(int im);
 
-    void make_viscoelastic_tensorMAC(int im);
+    void make_viscoelastic_tensorMAC(int im,int interp_Q_to_flux,
+		    int flux_mf,int flux_grid_type);
+    void make_viscoelastic_tensorMACALL(int im,int interp_Q_to_flux,
+		    int flux_mf,int flux_grid_type);
+
     void make_viscoelastic_force(int im);
     void make_viscoelastic_heating(int im,int idx);
 
