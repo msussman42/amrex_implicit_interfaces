@@ -5327,8 +5327,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  override_enable_spectral(save_enable_spectral);
 
- int ngrow_visc=1;
- getStateVISC_ALL(CELL_VISC_MATERIAL_MF,ngrow_visc);
+  //ngrow=1
+ getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -10556,7 +10556,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 //    \dot{gamma} o.t.
 // 5. Last component is the vorticity magnitude.
 
-void NavierStokes::getState_tracemag_ALL(int idx,int ngrow) {
+void NavierStokes::getState_tracemag_ALL(int idx) {
 
  if (level!=0)
   amrex::Error("level invalid getState_tracemag_ALL");
@@ -10564,7 +10564,7 @@ void NavierStokes::getState_tracemag_ALL(int idx,int ngrow) {
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getState_tracemag(idx,ngrow);
+  ns_level.getState_tracemag(idx);
   int scomp=0;
   int ncomp=ns_level.localMF[idx]->nComp();
   ns_level.avgDown_localMF(idx,scomp,ncomp,0);
@@ -10572,13 +10572,10 @@ void NavierStokes::getState_tracemag_ALL(int idx,int ngrow) {
 
 } // getState_tracemag_ALL 
 
-void NavierStokes::getState_tracemag(int idx,int ngrow) { 
+void NavierStokes::getState_tracemag(int idx) { 
 
  
  bool use_tiling=ns_tiling;
-
- if (ngrow!=1)
-  amrex::Error("ngrow invalid getState_tracemag");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -10591,10 +10588,11 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
   amrex::Error("local magtrace not previously deleted");
 
  int ntrace=5*nmat;
- new_localMF(idx,ntrace,ngrow,-1);
+  //ngrow=1
+ new_localMF(idx,ntrace,1,-1);
 
- VOF_Recon_resize(ngrow+1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow+1,680);
+ VOF_Recon_resize(2,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,2,680);
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
@@ -10602,10 +10600,12 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
- MultiFab* den_data=getStateDen(ngrow,cur_time_slab);
- MultiFab* vel_data=getState(ngrow+1,0,AMREX_SPACEDIM,cur_time_slab);
+  //ngrow=1
+ MultiFab* den_data=getStateDen(1,cur_time_slab);
+  //ngrow=2
+ MultiFab* vel_data=getState(2,0,AMREX_SPACEDIM,cur_time_slab);
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,9);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
  if (ncomp_visc!=3*nmat)
   amrex::Error("visc_data invalid ncomp");
@@ -10626,7 +10626,8 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
     }
     if (partid<im_elastic_map.size()) {
      int scomp_tensor=partid*NUM_TENSOR_TYPE;
-     tensor=getStateTensor(ngrow,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
+      //ngrow=1
+     tensor=getStateTensor(1,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
      allocate_tensor=1;
     } else
      amrex::Error("partid could not be found: getState_tracemag");
@@ -10684,6 +10685,7 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
 
    int iproject=0;
    int onlyscalar=1;  // mag(trace gradu)
+   int ngrow_getshear=1;
    FORT_GETSHEAR(
     &ntensor,
     cellten.dataPtr(),
@@ -10702,7 +10704,8 @@ void NavierStokes::getState_tracemag(int idx,int ngrow) {
     &bfact,
     &level,
     bc.dataPtr(),
-    &ngrow,&nmat);
+    &ngrow_getshear,
+    &nmat);
 
   } //mfi
 } // omp

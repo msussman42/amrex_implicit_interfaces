@@ -1186,8 +1186,8 @@ protected:
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
-    void getState_tracemag_ALL(int idx,int ngrow);
-    void getState_tracemag(int idx,int ngrow);
+    void getState_tracemag_ALL(int idx);
+    void getState_tracemag(int idx);
 
     void output_triangles();
 

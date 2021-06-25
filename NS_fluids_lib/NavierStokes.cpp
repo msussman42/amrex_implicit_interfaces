@@ -9062,6 +9062,10 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } else 
   amrex::Error("flux_mf has incorrect nComp");
 
+ int Q_grid_type=-1;
+ debug_boxArray(localMF[VISCOTEN_MF],Q_grid_type,VISCOTEN_MF)
+ debug_boxArray(localMF[flux_mf],flux_grid_type,flux_mf)
+
   // spectral_override==0 => always low order.
  avgDown_localMF_ALL(flux_mf,0,NUM_TENSOR_TYPE,0);
 
@@ -9081,6 +9085,206 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  override_enable_spectral(push_enable_spectral);
 
 } // end subroutine make_viscoelastic_tensorMACALL
+
+
+void NavierStokes::make_viscoelastic_tensorMAC(int im,
+  int interp_Q_to_flux,int flux_mf,int flux_grid_type,int fill_state_idx) {
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+ bool use_tiling=ns_tiling;
+
+ if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ if (localMF_grow[VISCOTEN_MF]==1) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF should be allocated");
+
+ if (localMF_grow[flux_mf]==-1) {
+  // do nothing
+ } else 
+  amrex::Error("flux_mf should not be allocated");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  debug_ngrow(FACE_VAR_MF+dir,0,2);
+ }
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ // 1. viscosity coefficient - 1..nmat
+ // 2. viscoelastic coefficient - 1..nmat
+ // 3. relaxation time - 1..nmat
+ // the viscous and viscoelastic forces should both be multiplied by
+ // visc_coef.  
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat) {
+  std::cout << "ncomp= " <<
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
+  amrex::Error("cell_visc_material ncomp invalid(1)");
+ }
+ if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1)
+  amrex::Error("cell_visc_material ngrow invalid");
+
+ int nstate=(AMREX_SPACEDIM+1)+
+   nmat*(num_state_material+ngeom_raw)+1;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+ VOF_Recon_resize(1,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,1,3);
+
+ if ((im<0)||(im>=nmat))
+  amrex::Error("im invalid52");
+
+ if (ns_is_rigid(im)==0) {
+
+  if (store_elastic_data[im]==1) {
+
+   int partid=0;
+   while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+    partid++;
+   }
+
+   if (partid<im_elastic_map.size()) {
+
+    int scomp_tensor=partid*NUM_TENSOR_TYPE;
+
+    if (NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
+     amrex::Error("NUM_TENSOR_TYPE invalid");
+
+     // VISCOTEN_MF will be used by NavierStokes::make_viscoelastic_heating
+     //  or
+     // VISCOTEN_MF will be used by NavierStokes::GetDrag
+     //  or
+     // VISCOTEN_MF will be used by NavierStokes::make_viscoelastic_force
+     //
+    getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,NUM_TENSOR_TYPE,
+     cur_time_slab);
+
+    MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
+
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     if (MAC_grid_displacement==0) {
+      int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
+      XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
+     } else if (MAC_grid_displacement==1) {
+        //ngrow,dir,scomp,ncomp
+      XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
+     } else
+      amrex::Error("MAC_grid_displacement invalid");
+    } // dir=0..sdim-1
+
+    int rzflag=0;
+    if (geom.IsRZ())
+     rzflag=1;
+    else if (geom.IsCartesian())
+     rzflag=0;
+    else if (geom.IsCYLINDRICAL())
+     rzflag=3;
+    else
+     amrex::Error("CoordSys bust 2");
+
+    const Real* dx = geom.CellSize();
+
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(localMF[VISCOTEN_MF]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+    for (MFIter mfi(*localMF[VISCOTEN_MF],use_tiling); mfi.isValid(); ++mfi) {
+     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+     const int gridno = mfi.index();
+     const Box& tilegrid = mfi.tilebox();
+     const Box& fabgrid = grids[gridno];
+     const int* tilelo=tilegrid.loVect();
+     const int* tilehi=tilegrid.hiVect();
+     const int* fablo=fabgrid.loVect();
+     const int* fabhi=fabgrid.hiVect();
+     int bfact=parent->Space_blockingFactor(level);
+
+     const Real* xlo = grid_loc[gridno].lo();
+
+     FArrayBox& tenfab=(*localMF[VISCOTEN_MF])[mfi];
+     // 1. maketensor: TQ_{m}=alpha_{m} Q_{m}
+     // 2. tensor force: F= div (H_{m} TQ_{m})
+     //    H=H(phi_biased)
+
+     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+     int ncomp_visc=viscfab.nComp();
+
+     FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
+     FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
+     FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
+
+     int tid_current=ns_thread();
+     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+      amrex::Error("tid_current invalid");
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+       // in: GODUNOV_3D.F90
+       // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
+       // viscoelastic_model==2 => (eta)*visc_coef*Q
+       // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
+     fort_maketensor(
+      &partid,
+      &level,
+      &finest_level,
+      &MAC_grid_displacement,
+      &ncomp_visc,
+      &im,  // 0..nmat-1
+      xlo,dx,
+      xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+      ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+      zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
+      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+      tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      &elastic_viscosity[im],
+      &etaS[im],
+      &elastic_time[im],
+      &viscoelastic_model[im],
+      &polymer_factor[im],
+      &rzflag,&nmat);
+    }  // mfi  
+}//omp
+    ns_reconcile_d_num(54);
+
+    check_for_NAN(localMF[VISCOTEN_MF],2001);
+
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     delete XDISP_LOCAL[dir];
+    }
+
+   } else
+    amrex::Error("partid could not be found: make_viscoelastic_tensor");
+
+  } else if (store_elastic_data[im]==0) {
+
+   if (viscoelastic_model[im]!=0)
+    amrex::Error("viscoelastic_model[im]!=0");
+
+  } else
+   amrex::Error("elastic_time/elastic_viscosity invalid");
+
+
+ } else if (ns_is_rigid(im)==1) {
+  // do nothing
+ } else
+  amrex::Error("ns_is_rigid invalid");
+
+}  // subroutine make_viscoelastic_tensorMAC
 
 
 void NavierStokes::make_viscoelastic_tensorALL(int im) {
@@ -9161,7 +9365,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
  }
- debug_ngrow(CELL_VISC_MATERIAL_MF,0,3);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -9175,7 +9379,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
    localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
   amrex::Error("cell_visc_material ncomp invalid(1)");
  }
- if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<0)
+ if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1)
   amrex::Error("cell_visc_material ngrow invalid");
 
  int nstate=(AMREX_SPACEDIM+1)+
@@ -9364,7 +9568,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,3);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
@@ -9384,7 +9588,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
   amrex::Error("cell_visc_material ncomp invalid(2)");
  }
- if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow) {
+ if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1) {
   std::cout << "ngrow= " <<
    localMF[CELL_VISC_MATERIAL_MF]->nGrow() << " nmat= " << nmat << '\n';
   amrex::Error("cell_visc_material ngrow invalid(2)");
@@ -9547,8 +9751,6 @@ void NavierStokes::make_viscoelastic_force(int im) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int ngrow=1;
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
   debug_ngrow(XDISP_FLUX_MF+dir,0,2);
@@ -9559,7 +9761,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
    amrex::Error("localMF[XDISP_FLUX_MF+dir].nComp()!=AMREX_SPACEDIM^{2}");
  }
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,ngrow,3);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  int nden=nmat*num_state_material;
 
@@ -9570,7 +9772,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
    localMF[CELL_VISC_MATERIAL_MF]->nComp() << " nmat= " << nmat << '\n';
   amrex::Error("cell_visc_material ncomp invalid(4)");
  }
- if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<ngrow)
+ if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1)
   amrex::Error("cell_visc_material ngrow invalid");
 
  int nstate=(AMREX_SPACEDIM+1)+
@@ -9719,7 +9921,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
  } else
   amrex::Error("ns_is_rigid invalid");
 
-}   // subroutine make_viscoelastic_force
+}   // end subroutine make_viscoelastic_force
 
 void NavierStokes::make_marangoni_force(int isweep) {
 
@@ -18468,7 +18670,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    // calls GETSHEAR and DERMAGTRACE
  int ntrace=5*nmat;
- getState_tracemag_ALL(MAGTRACE_MF,1);
+ getState_tracemag_ALL(MAGTRACE_MF); //ngrow==1
  if (localMF[MAGTRACE_MF]->nComp()!=ntrace)
   amrex::Error("localMF[MAGTRACE_MF]->nComp() invalid");
 
