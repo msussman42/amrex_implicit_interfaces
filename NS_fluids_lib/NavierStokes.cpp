@@ -9011,7 +9011,7 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
 
 
 void NavierStokes::make_viscoelastic_tensorMACALL(int im,
-	int interp_Q_to_flux,int flux_mf,int flux_grid_type) {
+  int interp_Q_to_flux,int flux_mf,int flux_grid_type,int fill_state_idx) {
 
  int finest_level=parent->finestLevel();
 
@@ -9037,7 +9037,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.make_viscoelastic_tensorMAC(im,interp_Q_to_flux,
-     flux_mf,flux_grid_type);
+     flux_mf,flux_grid_type,fill_state_idx);
  }
  if (localMF_grow[VISCOTEN_MF]==1) {
   // do nothing
@@ -9074,8 +9074,8 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   scompBC_map.resize(1);
   scompBC_map[0]=scomp_extrap;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  PCINTERP_fill_bordersALL(VISCOTEN_MF,1,scomp_extrap,1,
-	Tensor_Type,scompBC_map);
+  PCINTERP_fill_bordersALL(flux_mf,1,scomp_extrap,1,
+	fill_state_idx,scompBC_map);
  } // scomp_extrap=0..NUM_TENSOR_TYPE-1
 
  override_enable_spectral(push_enable_spectral);

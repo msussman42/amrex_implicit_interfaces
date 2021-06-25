@@ -11593,43 +11593,22 @@ void NavierStokes::vel_elastic_ALL() {
 
 	int flux_grid_type=-1;
         ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_CC_MF,flux_grid_type);
+	     MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
 	flux_grid_type=3;
         ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_XY_MF,flux_grid_type);
+	     MAC_ELASTIC_FLUX_XY_MF,flux_grid_type,TensorYU_Type);
 
 	if (AMREX_SPACEDIM==2) {
 	 // do nothing
 	} else if (AMREX_SPACEDIM==3) {
 	 flux_grid_type=4;
          ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type);
+	     MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type,TensorZU_Type);
 	 flux_grid_type=5;
          ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type);
+	     MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type,TensorZV_Type);
 	} else
 	 amrex::Error("dimension bust");
-
-
-         scompBC_map[0]=scomp_extrap;
-          // idx,ngrow,scomp,ncomp,index,scompBC_map
-         PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_CC_MF,1,scomp_extrap,1,
-	  TensorXU_Type,scompBC_map);
-         PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_XY_MF,1,scomp_extrap,1,
-	  TensorYU_Type,scompBC_map);
-
-	 if (AMREX_SPACEDIM==2) {
-	  // do nothing
-	 } else if (AMREX_SPACEDIM==3) {
-          PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_XZ_MF,1,scomp_extrap,1,
-	   TensorZU_Type,scompBC_map);
-          PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_YZ_MF,1,scomp_extrap,1,
-	   TensorZV_Type,scompBC_map);
-	 } else
-	  amrex::Error("dimension bust");
-
-        } // scomp_extrap=0..NUM_TENSOR_TYPE-1
-
 
          // find divergence of the CC,XY,XZ,YZ variables.
         for (int ilev=finest_level;ilev>=level;ilev--) {
