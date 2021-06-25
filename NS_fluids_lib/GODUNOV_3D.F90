@@ -11631,6 +11631,7 @@ stop
         enddo
         data_in%ncomp=1
         data_in%scomp=nmat+im_parm+1
+        data_in%ngrowfab=1
         call deriv_from_grid_util(data_in,data_out)
         if (cell_data_deriv(1).ge.zero) then
          ! do nothing
@@ -11661,6 +11662,7 @@ stop
          enddo
          data_in%ncomp=1
          data_in%scomp=itensor
+         data_in%ngrowfab=1
          call deriv_from_grid_util(data_in,data_out)
          tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
         enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
@@ -27190,14 +27192,24 @@ FIX ME
        dt, &
        cur_time, &
        xlo,dx, &
+       grid_type_CC, &
+       MACFLUX_CC, &
+       DIMS(MACFLUX_CC), &
+       grid_type_XY, &
+       MACFLUX_XY, &
+       DIMS(MACFLUX_XY), &
+       grid_type_XZ, &
+       MACFLUX_XZ, &
+       DIMS(MACFLUX_XZ), &
+       grid_type_YZ, &
+       MACFLUX_YZ, &
+       DIMS(MACFLUX_YZ), &
        visc,DIMS(visc), &
        mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
        maskcoef,DIMS(maskcoef), & ! 1=not cov by level+1 or outside.
        levelpc,DIMS(levelpc), &
-       XDfab,DIMS(XDfab), &
-       YDfab,DIMS(YDfab), &
-       ZDfab,DIMS(ZDfab), &
-       xfacefab,DIMS(xfacefab), &
+       xfacefab, &
+       DIMS(xfacefab), &
        UMACNEW, &
        DIMS(UMACNEW), &
        tilelo,tilehi, &
@@ -27233,23 +27245,37 @@ FIX ME
       REAL_T, intent(in) :: dt 
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      INTEGER_T, intent(in) :: grid_type_CC
+      INTEGER_T, intent(in) :: DIMDEC(MACFLUX_CC)
+      INTEGER_T, intent(in) :: grid_type_XY
+      INTEGER_T, intent(in) :: DIMDEC(MACFLUX_XY)
+      INTEGER_T, intent(in) :: grid_type_XZ
+      INTEGER_T, intent(in) :: DIMDEC(MACFLUX_XZ)
+      INTEGER_T, intent(in) :: grid_type_YZ
+      INTEGER_T, intent(in) :: DIMDEC(MACFLUX_YZ)
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(maskcoef)
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
-      INTEGER_T, intent(in) :: DIMDEC(XDfab)
-      INTEGER_T, intent(in) :: DIMDEC(YDfab)
-      INTEGER_T, intent(in) :: DIMDEC(ZDfab)
       INTEGER_T, intent(in) :: DIMDEC(xfacefab)
       INTEGER_T, intent(in) :: DIMDEC(UMACNEW)
 
+      REAL_T, intent(in), target :: MACFLUX_CC( &
+             DIMV(MACFLUX_CC), &
+             FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: MACFLUX_XY( &
+             DIMV(MACFLUX_XY), &
+             FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: MACFLUX_XZ( &
+             DIMV(MACFLUX_XZ), &
+             FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: MACFLUX_YZ( &
+             DIMV(MACFLUX_YZ), &
+             FORT_NUM_TENSOR_TYPE)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(in), target :: mask(DIMV(mask))
       REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
       REAL_T, target, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
-      REAL_T, intent(in), target :: XDfab(DIMV(XDfab))
-      REAL_T, intent(in), target :: YDfab(DIMV(YDfab))
-      REAL_T, intent(in), target :: ZDfab(DIMV(ZDfab))
       REAL_T, intent(in), target :: xfacefab(DIMV(xfacefab), &
               vofface_index+2*nmat)
       REAL_T, intent(inout), target :: UMACNEW(DIMV(UMACNEW))
@@ -27300,7 +27326,7 @@ FIX ME
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
 
-      type(interp_from_grid_parm_type) :: data_in
+      type(deriv_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
 
       REAL_T xflux_local(-1:1,SDIM,SDIM)
@@ -27340,6 +27366,17 @@ FIX ME
        fablo_local(dir_local)=fablo(dir_local)
        fabhi_local(dir_local)=fabhi(dir_local)
       enddo
+      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,MACFLUX_CC,1,grid_type_CC,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_XY,1,grid_type_XY,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_XZ,1,grid_type_XZ,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_YZ,1,grid_type_YZ,11)
 
       call checkbound_array(fablo,fabhi,visc,1,-1,11)
       call checkbound_array1(fablo,fabhi,mask,1,-1,1277)
@@ -27347,9 +27384,6 @@ FIX ME
       call checkbound_array(fablo,fabhi,levelpc,2,-1,1277)
       call checkbound_array(fablo,fabhi,xfacefab,0,dir,1277)
       call checkbound_array1(fablo,fabhi,UMACNEW,0,dir,1277)
-      call checkbound_array1(fablo,fabhi,XDfab,2,0,1277)
-      call checkbound_array1(fablo,fabhi,YDfab,2,1,1277)
-      call checkbound_array1(fablo,fabhi,ZDfab,2,SDIM-1,1277)
 
       nhalf=3
   
@@ -27398,6 +27432,7 @@ FIX ME
 
         ! dir=0..sdim-1 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,57)
+       call grid_type_to_box_type(dir,box_type_MAC_CV)
 
        do dircomp=1,SDIM
         x_MAC_control_volume(dircomp)=xstenMAC(0,dircomp)
@@ -27406,24 +27441,43 @@ FIX ME
 
        data_out%data_interp=>cell_data_interp
 
+        !type(deriv_from_grid_parm_type) :: data_in
        data_in%level=level
        data_in%finest_level=finest_level
        data_in%bfact=bfact ! bfact=kind of spectral element grid 
-       data_in%nmat=num_materials
        data_in%dx=>dx_local
        data_in%xlo=>xlo_local
        data_in%fablo=>fablo_local
        data_in%fabhi=>fabhi_local
        data_in%ngrowfab=2
 
-       data_in%state=>levelpc
-       data_in%LS=>levelpc  ! placeholder
-
        data_in%ncomp=nmat*(1+SDIM)
        data_in%scomp=1
-       data_in%xtarget=>x_MAC_control_volume
-       data_in%interp_foot_flag=0
-       call interp_from_grid_util(data_in,data_out)
+
+       data_in%index_flux(1)=i
+       data_in%index_flux(2)=j
+       if (SDIM.eq.3) then
+        data_in%index_flux(SDIM)=k
+       else if (SDIM.eq.2) then
+        !do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       data_in%grid_type_flux=dir ! dir=0..sdim-1
+       do dir_local=1,SDIM
+        data_in%box_type_flux(dir_local)=0
+       enddo
+       data_in%box_type_flux(dir+1)=1
+
+       do dir_local=1,SDIM
+        data_in%box_type_data(dir_local)=0
+       enddo
+       data_in%grid_type_data=-1
+       data_in%disp_data=>levelpc
+       data_in%dir_deriv=-1
+
+       call deriv_from_grid_util(data_in,data_out)
 
        do im_LS=1,nmat
         LS_control_volume(im_LS)=cell_data_interp(im_LS)
@@ -27488,135 +27542,92 @@ FIX ME
         do dir_flux=0,SDIM-1
         do side_flux=0,1
 
-         ! for a uniform grid (i.e. not spectral element grid),
-         ! if  dir=0
-         !  xstenMAC(0,1)=i * dx        xstenMAC(1,1)=(i+1)*dx
-         !  xstenMAC(0,2)=(j+1/2) * dy  xstenMAC(1,2)=(j+3/2)*dy
-         !  xstenMAC(0,3)=(k+1/2) * dz  xstenMAC(1,3)=(k+3/2)*dz
-         ! center of the current (dir) MAC grid control volume:
-         do dircomp=1,SDIM
-          xflux(dircomp)=xstenMAC(0,dircomp)
-          xflux_plus_probe(dircomp)=xflux(dircomp)
-          xflux_minus_probe(dircomp)=xflux(dircomp)
+         iflux_array(1)=i
+         iflux_array(2)=j
+         if (SDIM.eq.3) then
+          iflux_array(SDIM)=k
+         endif
+
+         do dir_local=1,SDIM
+          box_type_flux(dir_local)=0
          enddo
+         box_type_flux(dir+1)=1
 
          if (dir_flux.eq.dir) then
-          if ((inormal.eq.domlo(dir+1)).and. &
-              (side_flux.eq.0).and. &
-              (velbc(dir+1,side_flux+1,dir+1).ne.INT_DIR)) then 
-            ! 1/2 size control vol
-           xflux(dir_flux+1)=xstenMAC(0,dir_flux+1)
-           xflux_plus_probe(dir_flux+1)=xstenMAC(1,dir_flux+1)
-           xflux_minus_probe(dir_flux+1)=xstenMAC(-1,dir_flux+1)
-          else if ((inormal.eq.domhi(dir+1)+1).and. &
-                   (side_flux.eq.1).and. &
-                   (velbc(dir+1,side_flux+1,dir+1).ne.INT_DIR)) then
-           xflux(dir_flux+1)=xstenMAC(0,dir_flux+1)
-           xflux_plus_probe(dir_flux+1)=xstenMAC(1,dir_flux+1)
-           xflux_minus_probe(dir_flux+1)=xstenMAC(-1,dir_flux+1)
-          else if ((inormal.ge.domlo(dir+1)).and. &
-                   (inormal.le.domhi(dir+1)+1)) then
-           if (side_flux.eq.0) then
-            xflux(dir_flux+1)=xstenMAC(-1,dir_flux+1)
-            xflux_plus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
-            xflux_minus_probe(dir_flux+1)=xstenMAC(-2,dir_flux+1)
-           else if (side_flux.eq.1) then
-            xflux(dir_flux+1)=xstenMAC(1,dir_flux+1)
-            xflux_plus_probe(dir_flux+1)=xstenMAC(2,dir_flux+1)
-            xflux_minus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
-           else
-            print *,"side_flux invalid"
-            stop
-           endif
-          else
-           print *,"inormal invalid"
-           stop
-          endif
-         else if (dir_flux.ne.dir) then
-          if (side_flux.eq.0) then
-           xflux(dir_flux+1)=xstenMAC(-1,dir_flux+1)
-           xflux_plus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
-           xflux_minus_probe(dir_flux+1)=xstenMAC(-2,dir_flux+1)
-          else if (side_flux.eq.1) then
-           xflux(dir_flux+1)=xstenMAC(1,dir_flux+1)
-           xflux_plus_probe(dir_flux+1)=xstenMAC(2,dir_flux+1)
-           xflux_minus_probe(dir_flux+1)=xstenMAC(0,dir_flux+1)
+          box_type_flux(dir+1)=0
+          if (side_flux.eq.1) then
+           ! do nothing
+          else if (side_flux.eq.0) then
+           iflux_array(dir_flux+1)=iflux_array(dir_flux+1)-1
           else
            print *,"side_flux invalid"
            stop
           endif
          else
-          print *,"dir_flux or dir invalid"
+          box_type_flux(dir_flux+1)=1
+          if (side_flux.eq.0) then
+           ! do nothing
+          else if (side_flux.eq.1) then
+           iflux_array(dir_flux+1)=iflux_array(dir_flux+1)+1
+          else
+           print *,"side_flux invalid"
+           stop
+          endif
+         endif
+         iflux=iflux_array(1)
+         jflux=iflux_array(2)
+         if (SDIM.eq.3) then
+          kflux=iflux_array(SDIM)
+         else
+          kflux=0
+         endif
+
+         call box_type_to_grid_type(grid_type_flux,box_type_flux)
+       
+         do itensor=1,FORT_NUM_TENSOR_TYPE
+          if (grid_type_flux.eq.-1) then
+           grid_type_sanity=grid_type_CC
+           local_compress_data(itensor)= &
+             MACFLUX_CC(D_DECL(iflux,jflux,kflux),itensor) 
+          else if (grid_type_flux.eq.3) then
+           grid_type_sanity=grid_type_XY
+           local_compress_data(itensor)= &
+             MACFLUX_XY(D_DECL(iflux,jflux,kflux),itensor) 
+          else if ((grid_type_flux.eq.4).and.(SDIM.eq.3)) then
+           grid_type_sanity=grid_type_XZ
+           local_compress_data(itensor)= &
+             MACFLUX_XZ(D_DECL(iflux,jflux,kflux),itensor) 
+          else if ((grid_type_flux.eq.5).and.(SDIM.eq.3)) then
+           grid_type_sanity=grid_type_YZ
+           local_compress_data(itensor)= &
+             MACFLUX_YZ(D_DECL(iflux,jflux,kflux),itensor) 
+          else
+           print *,"grid_type_flux invalid"
+           stop
+          endif
+         enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
+
+         if (grid_type_flux.eq.grid_type_sanity) then
+          ! do nothing
+         else
+          print *,"grid_type_sanity failed"
           stop
          endif
 
-          ! dir=0..sdim-1 is the force component
-          ! eps_deriv=1.0D-2 * dxmin
-          ! (f(x+eps_deriv)-f(x-eps_deriv))/(2 * eps_deriv)
-         do dir_deriv=1,SDIM ! d/dx, d/dy, d/dz
-          do dir_pos=1,SDIM
-           xplus(dir_pos)=xflux(dir_pos)
-           xminus(dir_pos)=xflux(dir_pos)
-          enddo
-          xplus(dir_deriv)=xplus(dir_deriv)+eps_deriv
-          xminus(dir_deriv)=xminus(dir_deriv)-eps_deriv
-           ! interpfab_XDISP declared in MASS_TRANSFER_3D.F90
-          call interpfab_XDISP( &
-            bfact, & ! determines positioning of Gauss Legendre nodes
-            level, &
-            finest_level, &
-            dx, &
-            xlo, &
-            xplus, &
-            fablo,fabhi, &
-            XDfab, &
-            YDfab, &
-            ZDfab, &
-            XDplus) ! XD(xplus),YD(xplus),ZD(xplus)
-                    
-          call interpfab_XDISP( &
-            bfact, & ! determines positioning of Gauss Legendre nodes
-            level, &
-            finest_level, &
-            dx, &
-            xlo, &
-            xminus, &
-            fablo,fabhi, &
-            XDfab, &
-            YDfab, &
-            ZDfab, &
-            XDminus) ! XD(xminus),YD(xminus),ZD(xminus)
+         DISP_TEN(1,1)=local_compress_data(1)
+         DISP_TEN(1,2)=local_compress_data(2)
+         DISP_TEN(2,2)=local_compress_data(3)
+         DISP_TEN(3,3)=local_compress_data(4)
+         DISP_TEN(1,3)=zero
+         DISP_TEN(2,3)=zero
+#if (AMREX_SPACEDIM==3)
+         DISP_TEN(1,3)=local_compress_data(5)
+         DISP_TEN(2,3)=local_compress_data(6)
+#endif
+         DISP_TEN(2,1)=DISP_TEN(1,2)
+         DISP_TEN(3,1)=DISP_TEN(1,3)
+         DISP_TEN(3,2)=DISP_TEN(2,3)
 
-          do dir_XD=1,SDIM
-           gradXDtensor(dir_XD,dir_deriv)= &
-              (XDplus(dir_XD)-XDminus(dir_XD))/eps_deriv
-          enddo
-         enddo ! dir_deriv=1..sdim
-
-         call interpfab_XDISP( &
-           bfact, & ! determines positioning of Gauss Legendre nodes
-           level, &
-           finest_level, &
-           dx, &
-           xlo, &
-           xflux, & ! MAC grid face center
-           fablo,fabhi, &
-           XDfab, &
-           YDfab, &
-           ZDfab, &
-           XDcenter) ! XD(xflux),YD(xflux),ZD(xflux)
-
-          ! declared in: GLOBALUTIL.F90
-         call stress_from_strain( &
-          im_elastic_p1, & ! =1..nmat
-          xflux, &
-          dx, &
-          gradXDtensor, &
-          XDcenter(1), &
-          XDcenter(2), &
-          DISP_TEN, &  ! dir_x (displace),dir_space
-          hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
-         
          if (side_flux.eq.0) then
           side_comp=-1
          else if (side_flux.eq.1) then 
@@ -27642,24 +27653,33 @@ FIX ME
 
          data_out%data_interp=>cell_data_interp
 
-         data_in%level=level
-         data_in%finest_level=finest_level
-         data_in%bfact=bfact ! bfact=kind of spectral element grid 
-         data_in%nmat=num_materials
-         data_in%dx=>dx_local
-         data_in%xlo=>xlo_local
-         data_in%fablo=>fablo_local
-         data_in%fabhi=>fabhi_local
-         data_in%ngrowfab=2
-
-         data_in%state=>levelpc
-         data_in%LS=>levelpc  ! placeholder
-
+          !type(deriv_from_grid_parm_type) :: data_in
          data_in%ncomp=nmat*(1+SDIM)
          data_in%scomp=1
-         data_in%xtarget=>xflux
-         data_in%interp_foot_flag=0
-         call interp_from_grid_util(data_in,data_out)
+
+         data_in%index_flux(1)=iflux
+         data_in%index_flux(2)=jflux
+         if (SDIM.eq.3) then
+          data_in%index_flux(SDIM)=kflux
+         else if (SDIM.eq.2) then
+          !do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+         data_in%grid_type_flux=grid_type_flux
+         do dir_local=1,SDIM
+          data_in%box_type_flux(dir_local)=box_type_flux(dir_local)
+         enddo
+
+         do dir_local=1,SDIM
+          data_in%box_type_data(dir_local)=0
+         enddo
+         data_in%grid_type_data=-1
+         data_in%disp_data=>levelpc
+         data_in%dir_deriv=-1
+
+         call deriv_from_grid_util(data_in,data_out)
 
          do im_LS=1,nmat*(1+SDIM)
           LS_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
@@ -27677,12 +27697,78 @@ FIX ME
          endif
          mask_flux_point(side_flux+1,dir_flux+1)=local_mask
 
+          ! dir=0..sdim-1 
+         call gridstenMAC_level(xsten_flux,iflux,jflux,kflux, &
+                 level,nhalf,grid_type_flux,57)
+
          do dir_local=1,SDIM
           x_at_flux_point(side_flux+1,dir_flux+1,dir_local)=xflux(dir_local)
          enddo
 
-         data_in%xtarget=>xflux_plus_probe
-         call interp_from_grid_util(data_in,data_out)
+         iadj_array(1)=iflux
+         iadj_array(2)=jflux
+         if (SDIM.eq.3) then
+          iadj_array(SDIM)=kflux
+         endif
+         do dir_local=1,SDIM
+          box_type_adj(dir_local)=box_type_flux(dir_local)
+         enddo
+
+         FIX ME add grid_type=6 (all NODES in XYZ)
+         grid_type_to_box_type  box_type_to_grid_type
+
+         if (box_type_adj(dir_flux+1).eq.1) then
+          box_type_adj(dir_flux+1)=0
+         else if (box_type_adj(dir_flux+1).eq.0) then
+          box_type_adj(dir_flux+1)=1
+          iadj_array(dir_flux+1)=iadj_array(dir_flux+1)+1
+         else
+          print *,"box_type_adj invalid"
+          stop
+         endif
+
+         iadj=iadj_array(1)
+         jadj=iadj_array(2)
+         if (SDIM.eq.3) then
+          kadj=iadj_array(SDIM)
+         else
+          kadj=0
+         endif
+
+         call box_type_to_grid_type(grid_type_adj,box_type_adj)
+
+         data_out%data_interp=>cell_data_interp
+
+          !type(deriv_from_grid_parm_type) :: data_in
+         data_in%ncomp=nmat*(1+SDIM)
+         data_in%scomp=1
+
+         data_in%index_flux(1)=iadj
+         data_in%index_flux(2)=jadj
+         if (SDIM.eq.3) then
+          data_in%index_flux(SDIM)=kadj
+         else if (SDIM.eq.2) then
+          !do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+         
+         data_in%grid_type_flux=grid_type_adj
+         do dir_local=1,SDIM
+          data_in%box_type_flux(dir_local)=box_type_adj(dir_local)
+         enddo
+
+         do dir_local=1,SDIM
+          data_in%box_type_data(dir_local)=0
+         enddo
+         data_in%grid_type_data=-1
+         data_in%disp_data=>levelpc
+         data_in%dir_deriv=-1
+
+         FIX ME deriv_from_grid_util XYZ
+
+         call deriv_from_grid_util(data_in,data_out)
 
          do im_LS=1,nmat*(1+SDIM)
           LS_plus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
@@ -27700,8 +27786,8 @@ FIX ME
          endif
          mask_plus_flux_point(side_flux+1,dir_flux+1)=local_mask
 
-         data_in%xtarget=>xflux_minus_probe
-         call interp_from_grid_util(data_in,data_out)
+         data_in%index_flux(dir_flux+1)=data_in%index_flux(dir_flux+1)-1
+         call deriv_from_grid_util(data_in,data_out)
 
          do im_LS=1,nmat*(1+SDIM)
           LS_minus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
@@ -27719,6 +27805,7 @@ FIX ME
          endif
          mask_minus_flux_point(side_flux+1,dir_flux+1)=local_mask
 
+         FIX ME
           ! hoop_22=xdisp/r
          center_hoop_22=center_hoop_22+hoop_22
 
