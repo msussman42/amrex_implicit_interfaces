@@ -9034,6 +9034,9 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } else 
   amrex::Error("flux_mf should not be allocated");
 
+  //ngrow=1  localMF[flux_mf] initialized to 0.0.
+ allocate_array(1,NUM_TENSOR_TYPE,flux_grid_type,flux_mf);
+
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.make_viscoelastic_tensorMAC(im,interp_Q_to_flux,
@@ -9094,6 +9097,20 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
+ IndexType local_typ(get_desc_lstGHOST()[fill_state_idx].getType());
+ int flux_box_type[AMREX_SPACEDIM];
+ grid_type_to_box_type_cpp(flux_grid_type,flux_box_type);
+ for (int dir_local=0;dir_local<AMREX_SPACEDIM;dir_local++) {
+  if ((flux_box_type[dir_local]==0)&&
+      (local_typ.cellCentered(dir_local)==true)) {
+   // do nothing
+  } else if ((flux_box_type[dir_local]==1)&&
+             (local_typ.nodeCentered(dir_local)==true)) {
+   // do nothing
+  } else
+   amrex::Error("flux_box_type and local_typ are inconsistent");
+ } // dir_local=0..sdim-1
+
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
@@ -9106,11 +9123,19 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF should be allocated");
+ if (localMF[VISCOTEN_MF]->nComp()==NUM_TENSOR_TYPE) {
+  // do nothing
+ } else
+  amrex::Error("VISCOTEN_MF invalid nComp");
 
- if (localMF_grow[flux_mf]==-1) {
+ if (localMF_grow[flux_mf]==1) {
   // do nothing
  } else 
-  amrex::Error("flux_mf should not be allocated");
+  amrex::Error("flux_mf should be allocated");
+ if (localMF[flux_mf]->nComp()==NUM_TENSOR_TYPE) {
+  // do nothing
+ } else
+  amrex::Error("flux_mf invalid nComp");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -9159,22 +9184,10 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
     if (NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
      amrex::Error("NUM_TENSOR_TYPE invalid");
 
-     // VISCOTEN_MF will be used by NavierStokes::make_viscoelastic_heating
-     //  or
-     // VISCOTEN_MF will be used by NavierStokes::GetDrag
-     //  or
-     // VISCOTEN_MF will be used by NavierStokes::make_viscoelastic_force
-     //
-    getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,NUM_TENSOR_TYPE,
-     cur_time_slab);
-
     MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
 
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     if (MAC_grid_displacement==0) {
-      int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
-      XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
-     } else if (MAC_grid_displacement==1) {
+     if (MAC_grid_displacement==1) {
         //ngrow,dir,scomp,ncomp
       XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
      } else
@@ -9215,6 +9228,12 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
      const Real* xlo = grid_loc[gridno].lo();
 
      FArrayBox& tenfab=(*localMF[VISCOTEN_MF])[mfi];
+     FArrayBox& tenMACfab=(*localMF[flux_mf])[mfi];
+     if (tenMACfab.box().ixType()==local_typ) {
+      // do nothing
+     } else
+      amrex::Error("tenMACfab.box().ixType()!=local_typ");
+
      // 1. maketensor: TQ_{m}=alpha_{m} Q_{m}
      // 2. tensor force: F= div (H_{m} TQ_{m})
      //    H=H(phi_biased)
@@ -9235,7 +9254,9 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
        // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
-     fort_maketensor(
+     fort_maketensorMAC(
+      &interp_Q_to_flux,
+      &flux_grid_type,
       &partid,
       &level,
       &finest_level,
@@ -9248,6 +9269,8 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
       tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+      tenMACfab.dataPtr(),
+      ARLIM(tenMACfab.loVect()),ARLIM(tenMACfab.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,
@@ -9280,7 +9303,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
 
 
  } else if (ns_is_rigid(im)==1) {
-  // do nothing
+  amrex::Error("expecting ns_is_rigid(im)==0");
  } else
   amrex::Error("ns_is_rigid invalid");
 
@@ -16757,7 +16780,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   amrex::Error("levelpc mf has incorrect ncomp");
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,46);
- debug_ngrow(CELL_VISC_MATERIAL_MF,0,47);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,47);
  debug_ngrow(CELL_VISC_MF,1,47);
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,48);

@@ -2520,13 +2520,13 @@ stop
        endif
        data_in%grid_type_flux=-1
        do dir_local=1,SDIM
-        data_in%box_type_flux(dir_local)=0;
+        data_in%box_type_flux(dir_local)=0
        enddo
 
        do dir_XD=1,SDIM
 
         do dir_local=1,SDIM
-         data_in%box_type_data(dir_local)=0;
+         data_in%box_type_data(dir_local)=0
         enddo
 
         if (MAC_grid_displacement.eq.0) then
@@ -10986,6 +10986,13 @@ stop
 
       tensor_ptr=>tensor
 
+      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       stop
+      endif
+
       if ((partid.ge.0).and. &
           (partid.lt.num_materials_viscoelastic)) then
        ! do nothing
@@ -11052,7 +11059,7 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,visc,1,-1,11)
-      call checkbound_array(fablo,fabhi,tensor,1,-1,8)
+      call checkbound_array(fablo,fabhi,tensor_ptr,1,-1,8)
 
       do dir_local=1,SDIM
        dx_local(dir_local)=dx(dir_local)
@@ -11124,7 +11131,7 @@ stop
 
         data_in%grid_type_flux=-1
         do dir_local=1,SDIM
-         data_in%box_type_flux(dir_local)=0;
+         data_in%box_type_flux(dir_local)=0
         enddo
 
         do dir_XD=1,SDIM
@@ -11133,14 +11140,14 @@ stop
 
           data_in%grid_type_data=-1
           do dir_local=1,SDIM
-           data_in%box_type_data(dir_local)=0;
+           data_in%box_type_data(dir_local)=0
           enddo
 
          else if (MAC_grid_displacement.eq.1) then
 
           data_in%grid_type_data=dir_XD-1
           do dir_local=1,SDIM
-           data_in%box_type_data(dir_local)=0;
+           data_in%box_type_data(dir_local)=0
           enddo
           data_in%box_type_data(dir_XD)=1
 
@@ -11163,11 +11170,11 @@ stop
          do dir_flux=0,SDIM-1
           data_in%dir_deriv=dir_flux+1
           call deriv_from_grid_util(data_in,data_out)
-           gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
+          gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
          enddo
          data_in%dir_deriv=-1
          call deriv_from_grid_util(data_in,data_out)
-          XDcenter(dir_XD)=cell_data_deriv(1)
+         XDcenter(dir_XD)=cell_data_deriv(1)
 
         enddo ! dir_XD=1..sdim
 
@@ -11267,6 +11274,408 @@ stop
 
       return
       end subroutine fort_maketensor
+
+      subroutine fort_maketensorMAC( &
+       interp_Q_to_flux, &
+       flux_grid_type, &
+       partid, & ! 0..num_materials_viscoelastic-1
+       level, &
+       finest_level, &
+       MAC_grid_displacement, &
+       ncomp_visc, &
+       im_parm, & ! 0..nmat-1
+       xlo,dx, &
+       xdfab,DIMS(xdfab), &
+       ydfab,DIMS(ydfab), &
+       zdfab,DIMS(zdfab), &
+       visc,DIMS(visc), &
+       tensor,DIMS(tensor), &
+       tensorMAC,DIMS(tensorMAC), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       elastic_viscosity, &
+       etaS, &
+       elastic_time, &
+       viscoelastic_model, &
+       polymer_factor, &
+       irz,nmat) &
+      bind(c,name='fort_maketensorMAC')
+
+      use probcommon_module
+      use global_utility_module
+      use mass_transfer_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: interp_Q_to_flux
+      INTEGER_T, intent(in) :: flux_grid_type
+      INTEGER_T, intent(in) :: partid !0..num_materials_viscoelastic-1
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: MAC_grid_displacement
+      INTEGER_T, intent(in) :: ncomp_visc
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(xdfab)
+      INTEGER_T, intent(in) :: DIMDEC(ydfab)
+      INTEGER_T, intent(in) :: DIMDEC(zdfab)
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: DIMDEC(tensorMAC)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+
+      REAL_T, intent(in), target :: xdfab(DIMV(xdfab),1)
+      REAL_T, intent(in), target :: ydfab(DIMV(ydfab),1)
+      REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor), &
+              FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: tensorMAC(DIMV(tensorMAC), &
+              FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tensorMAC_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in) :: elastic_viscosity,etaS
+      REAL_T, intent(in) :: elastic_time,polymer_factor
+      INTEGER_T, intent(in) :: viscoelastic_model
+      INTEGER_T, intent(in) :: irz
+
+      INTEGER_T ii,jj
+      REAL_T Q(3,3),TQ(3,3)
+      INTEGER_T i,j,k
+      INTEGER_T dir_flux
+      INTEGER_T dir_local
+      INTEGER_T dir_XD
+      INTEGER_T im_elastic_p1
+      REAL_T xcenter(SDIM)
+      REAL_T XDcenter(SDIM)
+      REAL_T gradXDtensor(SDIM,SDIM) ! dir_xdisp,dir_space
+
+      type(deriv_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+
+      REAL_T, target :: dx_local(SDIM)
+      REAL_T, target :: xlo_local(SDIM)
+      INTEGER_T, target :: fablo_local(SDIM)
+      INTEGER_T, target :: fabhi_local(SDIM)
+
+      REAL_T, target :: cell_data_deriv(1)
+
+      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
+      REAL_T hoop_22
+       ! if use_A==0 then force is div(mu H Q)/rho
+       ! if use_A==1 then force is div(mu H A)/rho
+      INTEGER_T use_A  
+      INTEGER_T itensor
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      nhalf=3
+
+      tensorMAC_ptr=>tensorMAC
+
+      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       stop
+      endif
+
+      if ((partid.ge.0).and. &
+          (partid.lt.num_materials_viscoelastic)) then
+       ! do nothing
+      else
+       print *,"partid invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid MAKETENSOR"
+       stop
+      endif
+      if (finest_level.ne.fort_finest_level) then
+       print *,"finest_level invalid MAKETENSOR"
+       stop
+      endif
+
+      if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
+          (viscoelastic_model.eq.1)) then ! (visc-etaS)
+       ! For incompressible flow, the equations using Q or A are equivalent.
+       ! For compressible flow, one should probably set: use_A=1.
+       use_A=0
+      else if (viscoelastic_model.eq.2) then ! elastic model
+       use_A=0
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       use_A=0
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((im_parm.lt.0).or. &
+          (im_parm.ge.nmat).or. &
+          (is_rigid(nmat,im_parm+1).eq.1)) then
+       print *,"im_parm invalid26"
+       stop
+      endif
+
+      im_elastic_p1=im_parm+1
+
+      if (ncomp_visc.ne.3*nmat) then
+       print *,"ncomp_visc invalid"
+       stop
+      endif
+
+      if (MAC_grid_displacement.eq.1) then
+       call checkbound_array(fablo,fabhi,xdfab,2,0,11)
+       call checkbound_array(fablo,fabhi,ydfab,2,1,11)
+       call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,visc,1,-1,11)
+      call checkbound_array(fablo,fabhi,tensor,1,-1,8)
+      call checkbound_array(fablo,fabhi,tensorMAC_ptr,1,flux_grid_type,8)
+
+      do dir_local=1,SDIM
+       dx_local(dir_local)=dx(dir_local)
+       xlo_local(dir_local)=xlo(dir_local)
+       fablo_local(dir_local)=fablo(dir_local)
+       fabhi_local(dir_local)=fabhi(dir_local)
+      enddo
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
+              flux_grid_type,28) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,flux_grid_type,28)
+       do dir_local=1,SDIM
+        xcenter(dir_local)=xsten(0,dir_local)
+       enddo
+
+       if (interp_Q_to_flux.eq.0) then
+
+        if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
+            (viscoelastic_model.eq.1)) then ! (visc-etaS)
+         print *,"expecting interp_Q_to_flux==1"
+         stop
+        else if (viscoelastic_model.eq.3) then ! incremental model
+         print *,"expecting interp_Q_to_flux==1"
+         stop
+        else if (viscoelastic_model.eq.2) then ! elastic model
+
+         data_out%data_interp=>cell_data_deriv
+
+          !type(deriv_from_grid_parm_type) :: data_in
+         data_in%level=level
+         data_in%finest_level=finest_level
+         data_in%bfact=bfact ! bfact=kind of spectral element grid 
+         data_in%dx=>dx_local
+         data_in%xlo=>xlo_local
+         data_in%fablo=>fablo_local
+         data_in%fabhi=>fabhi_local
+         data_in%ngrowfab=2
+
+         data_in%ncomp=1
+         data_in%scomp=1
+
+         data_in%index_flux(1)=i
+         data_in%index_flux(2)=j
+         if (SDIM.eq.3) then
+          data_in%index_flux(SDIM)=k
+         else if (SDIM.eq.2) then
+          !do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
+         data_in%grid_type_flux=flux_grid_type
+         do dir_local=1,SDIM
+          data_in%box_type_flux(dir_local)=0
+         enddo
+
+         do dir_XD=1,SDIM
+
+          if (MAC_grid_displacement.eq.1) then
+
+           data_in%grid_type_data=dir_XD-1
+           do dir_local=1,SDIM
+            data_in%box_type_data(dir_local)=0
+           enddo
+           data_in%box_type_data(dir_XD)=1
+
+          else
+           print *,"MAC_grid_displacement invalid"
+           stop
+          endif
+
+          if (dir_XD.eq.1) then
+           data_in%disp_data=>xdfab
+          else if (dir_XD.eq.2) then
+           data_in%disp_data=>ydfab
+          else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
+           data_in%disp_data=>zdfab
+          else
+           print *,"dir_XD invalid"
+           stop
+          endif
+
+          do dir_flux=0,SDIM-1
+           data_in%dir_deriv=dir_flux+1
+           call deriv_from_grid_util(data_in,data_out)
+           gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
+          enddo
+          data_in%dir_deriv=-1
+          call deriv_from_grid_util(data_in,data_out)
+          XDcenter(dir_XD)=cell_data_deriv(1)
+
+         enddo ! dir_XD=1..sdim
+
+          ! declared in: GLOBALUTIL.F90
+         call stress_from_strain( &
+          im_elastic_p1, & ! =1..nmat
+          xcenter, &
+          dx, &
+          gradXDtensor, &
+          XDcenter(1), &
+          XDcenter(2), &
+          DISP_TEN, &  ! dir_x (displace),dir_space
+          hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
+
+         do ii=1,3
+         do jj=1,3
+          Q(ii,jj)=zero
+         enddo
+         enddo
+
+         Q(1,1)=DISP_TEN(1,1)
+         Q(1,2)=DISP_TEN(1,2)
+         Q(2,2)=DISP_TEN(2,2)
+         if (SDIM.eq.3) then
+          Q(3,3)=DISP_TEN(SDIM,SDIM)
+         else if (SDIM.eq.2) then
+          if (levelrz.eq.0) then
+           ! T33 (theta coordinate)
+           Q(3,3)=zero
+          else if (levelrz.eq.1) then
+           ! T33 (theta coordinate)
+           ! dX/dx + dX/dx
+           Q(3,3)=two*hoop_22 ! 2 * (xdisp/r)
+          else if (levelrz.eq.3) then
+           ! T33 (z coordinate)
+           Q(3,3)=zero
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+         else
+          print *,"dimension bust"
+          stop
+         endif
+                   
+         if (SDIM.eq.3) then 
+          Q(1,SDIM)=DISP_TEN(1,SDIM)
+          Q(2,SDIM)=DISP_TEN(2,SDIM)
+         endif
+         Q(2,1)=Q(1,2)
+         Q(3,1)=Q(1,3)
+         Q(3,2)=Q(2,3)
+
+        else
+         print *,"viscoelastic_model invalid"
+         stop
+        endif
+
+        if (use_A.eq.0) then
+         ! do nothing
+        else if (use_A.eq.1) then
+         do ii=1,3
+          Q(ii,ii)=Q(ii,ii)+one
+         enddo
+        else
+         print *,"use_A invalid"
+         stop
+        endif
+
+        ! viscoelastic_model==0: 
+        !   visc(nmat+im_parm+1)=(eta/lambda_mod)*visc_coef
+        ! For a purely elastic model, it is assumed that the Deborah number
+        ! is \infty.
+        ! For a purely viscous model, it is assumed that the Deborah number is
+        ! zero.
+        ! viscoelastic_model==2:  (displacement gradient model)
+        !   visc(nmat+im_parm+1)=eta*visc_coef
+        ! viscoelastic_model==3:  (incremental model)
+        !   visc(nmat+im_parm+1)=eta*visc_coef
+        data_in%disp_data=>visc
+        data_in%dir_deriv=-1
+        data_in%grid_type_data=-1
+        do dir_local=1,SDIM
+         data_in%box_type_data(dir_local)=0
+        enddo
+        data_in%ncomp=1
+        data_in%scomp=nmat+im_parm+1
+        call deriv_from_grid_util(data_in,data_out)
+        if (cell_data_deriv(1).ge.zero) then
+         ! do nothing
+        else
+         print *,"cell_data_deriv(1) invalid"
+         stop
+        endif
+        do ii=1,3
+        do jj=1,3
+         TQ(ii,jj)=Q(ii,jj)*cell_data_deriv(1)
+        enddo
+        enddo
+        tensorMAC(D_DECL(i,j,k),1)=TQ(1,1)
+        tensorMAC(D_DECL(i,j,k),2)=TQ(1,2)
+        tensorMAC(D_DECL(i,j,k),3)=TQ(2,2)
+        tensorMAC(D_DECL(i,j,k),4)=TQ(3,3)
+#if (AMREX_SPACEDIM==3)
+        tensorMAC(D_DECL(i,j,k),5)=TQ(1,3)
+        tensorMAC(D_DECL(i,j,k),6)=TQ(2,3)
+#endif
+       else if (interp_Q_to_flux.eq.1) then
+        do itensor=1,FORT_NUM_TENSOR_TYPE
+         data_in%disp_data=>tensor
+         data_in%dir_deriv=-1
+         data_in%grid_type_data=-1
+         do dir_local=1,SDIM
+          data_in%box_type_data(dir_local)=0
+         enddo
+         data_in%ncomp=1
+         data_in%scomp=itensor
+         call deriv_from_grid_util(data_in,data_out)
+         tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
+        enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
+       else
+        print *,"interp_Q_to_flux invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_maketensorMAC
+
 
       subroutine FORT_COPY_VEL_ON_SIGN( &
        im_part, &
