@@ -1506,6 +1506,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  debug_ngrow(VOLUME_MF,1,100);
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,101); // faceden_index has the MAC density
