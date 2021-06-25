@@ -9009,6 +9009,80 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
 
 } // subroutine SOD_SANITY_CHECK
 
+
+void NavierStokes::make_viscoelastic_tensorMACALL(int im,
+	int interp_Q_to_flux,int flux_mf,int flux_grid_type) {
+
+ int finest_level=parent->finestLevel();
+
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
+
+ int push_enable_spectral=enable_spectral;
+ int elastic_enable_spectral=0;
+ override_enable_spectral(elastic_enable_spectral);
+
+ if (localMF_grow[VISCOTEN_MF]==1) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF should be allocated");
+
+ if (localMF_grow[flux_mf]==-1) {
+  // do nothing
+ } else 
+  amrex::Error("flux_mf should not be allocated");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.make_viscoelastic_tensorMAC(im,interp_Q_to_flux,
+     flux_mf,flux_grid_type);
+ }
+ if (localMF_grow[VISCOTEN_MF]==1) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF has incorrect Ngrow");
+ if (localMF_grow[flux_mf]==1) {
+  // do nothing
+ } else 
+  amrex::Error("flux_mf has incorrect Ngrow");
+
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("NUM_TENSOR_TYPE invalid");
+
+ if (localMF[VISCOTEN_MF]->nComp()==NUM_TENSOR_TYPE) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF has incorrect nComp");
+ if (localMF[flux_mf]->nComp()==NUM_TENSOR_TYPE) {
+  // do nothing
+ } else 
+  amrex::Error("flux_mf has incorrect nComp");
+
+  // spectral_override==0 => always low order.
+ avgDown_localMF_ALL(flux_mf,0,NUM_TENSOR_TYPE,0);
+
+ for (int scomp_extrap=0;scomp_extrap<NUM_TENSOR_TYPE;scomp_extrap++) {
+  Vector<int> scompBC_map;
+   // desc_lstGHOST.setComponent(Tensor_Type, ...
+   // "set_tensor_bc", tensor_pc_interp 
+   // FORT_EXTRAPFILL
+   // (i.e. the coarse/fine BC and physical BC will be low order)
+  scompBC_map.resize(1);
+  scompBC_map[0]=scomp_extrap;
+   // idx,ngrow,scomp,ncomp,index,scompBC_map
+  PCINTERP_fill_bordersALL(VISCOTEN_MF,1,scomp_extrap,1,
+	Tensor_Type,scompBC_map);
+ } // scomp_extrap=0..NUM_TENSOR_TYPE-1
+
+ override_enable_spectral(push_enable_spectral);
+
+} // end subroutine make_viscoelastic_tensorMACALL
+
+
 void NavierStokes::make_viscoelastic_tensorALL(int im) {
 
  int finest_level=parent->finestLevel();
