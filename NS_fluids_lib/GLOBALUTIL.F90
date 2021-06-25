@@ -5897,6 +5897,65 @@ contains
       return 
       end subroutine grid_type_to_box_type
 
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      subroutine box_type_to_grid_type(grid_type,box_type)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(out) :: grid_type
+      INTEGER_T, intent(in) :: box_type(SDIM)
+      INTEGER_T dir
+
+      if ((box_type(1).eq.0).and. &
+          (box_type(2).eq.0).and. &
+          (box_type(SDIM).eq.0)) then
+          grid_type=-1  ! cell centered
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.0).and. &
+               (box_type(SDIM).eq.0)) then
+       grid_type=0  !UMAC
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.1).and. &
+               (SDIM.eq.2)) then
+       grid_type=1  !VMAC
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.1).and. &
+               (box_type(SDIM).eq.0).and. &
+               (SDIM.eq.3)) then
+       grid_type=1  !VMAC
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.0).and. &
+               (box_type(SDIM).eq.1).and. &
+               (SDIM.eq.3)) then
+       grid_type=2  !WMAC
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.1).and. &
+               (box_type(SDIM).eq.0).and. &
+               (SDIM.eq.3)) then
+       grid_type=3  !XY
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.1).and. &
+               (SDIM.eq.2)) then
+       grid_type=3  !XY
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.0).and. &
+               (box_type(SDIM).eq.1).and. &
+               (SDIM.eq.3)) then
+       grid_type=4  !XZ
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.1).and. &
+               (box_type(SDIM).eq.1).and. &
+               (SDIM.eq.3)) then
+       grid_type=5  !YZ
+      else
+       print *,"box_type not recognizable"
+       stop
+      endif
+
+      return 
+      end subroutine box_type_to_grid_type
+
+
       subroutine coarse_subelement_stencilMAC( &
        ifine,jfine,kfine,stenlo,stenhi,bfact_c,bfact_f, &
        grid_type)

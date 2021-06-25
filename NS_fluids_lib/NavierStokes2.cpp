@@ -1471,16 +1471,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  } else
   amrex::Error("partid invalid");
 
- MultiFab* XD_MAC[AMREX_SPACEDIM];
-  // see getStateMAC
-  // this routine gets the displacement on the mac grid with one ghost
-  // cell.
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  int ngrow=2;
-   // scomp=0  ncomp=1
-  XD_MAC[dir]=getStateMAC(XDmac_Type,ngrow,dir,0,1,cur_time_slab);
- }
-
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,103);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
@@ -1571,9 +1561,26 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    const Real* xlo = grid_loc[gridno].lo();
 
     // fab = Fortran Array Block
-   FArrayBox& XDfab=(*XD_MAC[0])[mfi];
-   FArrayBox& YDfab=(*XD_MAC[1])[mfi];
-   FArrayBox& ZDfab=(*XD_MAC[AMREX_SPACEDIM-1])[mfi];
+
+   int grid_type_CC=-1;
+   FArrayBox& MAC_CCfab=(*localMF[MAC_ELASTIC_FLUX_CC_MF])[mfi];
+
+   int grid_type_XY=3;
+   FArrayBox& MAC_XYfab=(*localMF[MAC_ELASTIC_FLUX_XY_MF])[mfi];
+
+#if (AMREX_SPACEDIM==2)
+   int grid_type_XZ=3;
+   FArrayBox& MAC_XZfab=(*localMF[MAC_ELASTIC_FLUX_XY_MF])[mfi];
+   int grid_type_YZ=3;
+   FArrayBox& MAC_YZfab=(*localMF[MAC_ELASTIC_FLUX_XY_MF])[mfi];
+#elif (AMREX_SPACEDIM==3)
+   int grid_type_XZ=4;
+   FArrayBox& MAC_XZfab=(*localMF[MAC_ELASTIC_FLUX_XZ_MF])[mfi];
+   int grid_type_YZ=5;
+   FArrayBox& MAC_YZfab=(*localMF[MAC_ELASTIC_FLUX_YZ_MF])[mfi];
+#else
+   amrex::Error("dimension bust");
+#endif
 
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
@@ -1625,6 +1632,18 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      &dt_slab,
      &cur_time_slab,
      xlo,dx,
+     &grid_type_CC,
+     MAC_CCfab.dataPtr(),
+     ARLIM(MAC_CCfab.loVect()),ARLIM(MAC_CCfab.hiVect()),
+     &grid_type_XY,
+     MAC_XYfab.dataPtr(),
+     ARLIM(MAC_XYfab.loVect()),ARLIM(MAC_XYfab.hiVect()),
+     &grid_type_XZ,
+     MAC_XZfab.dataPtr(),
+     ARLIM(MAC_XZfab.loVect()),ARLIM(MAC_XZfab.hiVect()),
+     &grid_type_YZ,
+     MAC_YZfab.dataPtr(),
+     ARLIM(MAC_YZfab.loVect()),ARLIM(MAC_YZfab.hiVect()),
      viscfab.dataPtr(),
      ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
      maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
@@ -1634,9 +1653,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     XDfab.dataPtr(),ARLIM(XDfab.loVect()),ARLIM(XDfab.hiVect()), 
-     YDfab.dataPtr(),ARLIM(YDfab.loVect()),ARLIM(YDfab.hiVect()), 
-     ZDfab.dataPtr(),ARLIM(ZDfab.loVect()),ARLIM(ZDfab.hiVect()), 
      xface.dataPtr(),
      ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
      UMACNEWfab.dataPtr(),
@@ -1663,10 +1679,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  } // dir = 0..sdim-1
 
  make_MAC_velocity_consistent();
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete XD_MAC[dir];
- }
 
 } // end subroutine MAC_GRID_ELASTIC_FORCE
 
