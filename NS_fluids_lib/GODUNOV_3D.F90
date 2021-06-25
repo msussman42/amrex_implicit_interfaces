@@ -27714,9 +27714,6 @@ FIX ME
           box_type_adj(dir_local)=box_type_flux(dir_local)
          enddo
 
-         FIX ME add grid_type=6 (all NODES in XYZ)
-         grid_type_to_box_type  box_type_to_grid_type
-
          if (box_type_adj(dir_flux+1).eq.1) then
           box_type_adj(dir_flux+1)=0
          else if (box_type_adj(dir_flux+1).eq.0) then
@@ -27736,6 +27733,12 @@ FIX ME
          endif
 
          call box_type_to_grid_type(grid_type_adj,box_type_adj)
+         if (grid_type_adj.eq.dir) then
+          ! do nothing
+         else
+          print *,"expecting the adjoining LS to live on the same MAC grid"
+          stop
+         endif
 
          data_out%data_interp=>cell_data_interp
 
@@ -27765,8 +27768,6 @@ FIX ME
          data_in%grid_type_data=-1
          data_in%disp_data=>levelpc
          data_in%dir_deriv=-1
-
-         FIX ME deriv_from_grid_util XYZ
 
          call deriv_from_grid_util(data_in,data_out)
 
