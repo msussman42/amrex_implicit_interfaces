@@ -6,7 +6,8 @@
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
        ! probtype==2 => explore effect of parameters on evap in tank
-      integer, PARAMETER :: probtype = 0
+       !                (Earth based ZBOT experiment)
+      integer, PARAMETER :: probtype = 2
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
@@ -35,9 +36,11 @@
         ! error between consecutive grid resolutions) |R_h - R_2h|  
       integer, PARAMETER :: num_intervals=256
 
+        ! applicable for both the "Kassemi" model and the "Schrage"
+        ! model.
       integer, PARAMETER :: schrage_probe_size=1
        ! L=schrage_heat_diffusion_factor * radblob
-      real*8, PARAMETER :: schrage_heat_diffusion_factor=0.1d0
+      real*8, PARAMETER :: schrage_heat_diffusion_factor=0.0d0
 
        ! was 8.0 for Cody's results.
       real*8, PARAMETER :: gas_domain_size_factor=8.0d0
@@ -64,6 +67,8 @@
       real*8 :: e_gamma_global
       real*8 :: lambda
       real*8 :: Le
+      real*8 :: T_wall_global ! if T_wall_global>0 =>hardwire the domain
+                              ! temperature to be this.
       real*8 :: T_inf_global
       real*8 :: Y_inf_global
       real*8 :: T_gamma
@@ -560,6 +565,7 @@
        R_global = 8.31446261815324d+7  ! ergs/(mol K)
        T_sat_global=373.15d0  ! K
        T_inf_global = 300.5d0 ! K
+       T_wall_global=0.0d0  ! Kelvin (T_wall_global=0.0 => disable)
        Y_inf_global=7.1d-3  ! dimensionless
        T_gamma=300.5   ! K
        cc=0.0d0
@@ -581,6 +587,7 @@
        R_global = 8.31446261815324d+7
        T_sat_global=329.0d0
        T_inf_global = 700.0d0
+       T_wall_global=0.0d0  ! Kelvin (T_wall_global=0.0 => disable)
        Y_inf_global=0.0d0
        T_gamma=300.5d0  ! placeholder
        cc=0.0d0
@@ -607,8 +614,10 @@
        WV_global = 18.02d0  ! g/mol
        WA_global = 28.9d0   ! g/mol
        R_global = 8.31446261815324d+7  ! ergs/(mol K)
-       T_sat_global=373.15d0  ! K
-       T_inf_global = 300.5d0 ! K
+       T_sat_global=373.15d0  ! K (reference boiling temperature)
+       T_inf_global = 300.5d0 ! K (This is temperature at infinity if
+                              ! using the Stefan model)
+       T_wall_global=300.5d0  ! Kelvin
        Y_inf_global=7.1d-3  ! dimensionless
        T_gamma=300.5   ! K
        cc=0.0d0
@@ -793,6 +802,14 @@
 !     YINF_for_numerical=Y_inf_global
       TINF_for_numerical=T
       YINF_for_numerical=Y
+      if (T_wall_global.eq.0.0d0) then
+       ! do nothing
+      else if (T_wall_global.gt.0.0d0) then
+       TINF_for_numerical=T_wall_global
+      else
+       print *,"T_wall_global invalid"
+       stop
+      endif
 
       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)

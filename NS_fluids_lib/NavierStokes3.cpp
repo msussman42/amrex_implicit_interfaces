@@ -11516,6 +11516,10 @@ void NavierStokes::vel_elastic_ALL() {
 
       if (store_elastic_data[im]==1) {
 
+       int push_enable_spectral=enable_spectral;
+       int elastic_enable_spectral=0;
+       override_enable_spectral(elastic_enable_spectral);
+
        if (MAC_grid_displacement==0) {
 
         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -11526,10 +11530,6 @@ void NavierStokes::vel_elastic_ALL() {
         }
 
         if (viscoelastic_model[im]==2) {
-
- 	 int push_enable_spectral=enable_spectral;
-	 int elastic_enable_spectral=0;
-	 override_enable_spectral(elastic_enable_spectral);
 
 	 int do_alloc=1;
          int simple_AMR_BC_flag_viscosity=1;
@@ -11543,7 +11543,6 @@ void NavierStokes::vel_elastic_ALL() {
 	  XDISP_FLUX_MF, // elastic_idx
           simple_AMR_BC_flag_viscosity);
 
-	 override_enable_spectral(push_enable_spectral);
          delete_array(CELLTENSOR_MF);
          delete_array(FACETENSOR_MF);
 
@@ -11576,6 +11575,12 @@ void NavierStokes::vel_elastic_ALL() {
 
 	 //MAC_ELASTIC_FLUX_CC_MF, etc. are initialized in
 	 //NavierStokes::make_viscoelastic_tensorMAC
+	 //They each have one ghost cell.
+	 //There is a choice:
+	 //(a) interpolate Q to CC,XY,XZ,YZ locations, or
+	 //(b) find grad X  + grad X^T directly from the 
+	 //    displacement vars, and put in the CC,XY,XZ,YZ
+	 //    variables.
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
          ns_level.make_viscoelastic_tensorMAC(im);
@@ -11591,9 +11596,36 @@ void NavierStokes::vel_elastic_ALL() {
 	} else
 	 amrex::Error("dimension bust");
 
-	FIX ME fill borders here
+        for (int scomp_extrap=0;scomp_extrap<NUM_TENSOR_TYPE;
+	     scomp_extrap++) {
+
+         Vector<int> scompBC_map;
+          // desc_lstGHOST.setComponent(TensorXU_Type, ...
+          // "set_tensor_bc", tensor_pc_interp 
+          // FORT_EXTRAPFILL
+          // (i.e. the coarse/fine BC and physical BC will be low order)
+         scompBC_map.resize(1);
+         scompBC_map[0]=scomp_extrap;
+          // idx,ngrow,scomp,ncomp,index,scompBC_map
+         PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_CC_MF,1,scomp_extrap,1,
+	  TensorXU_Type,scompBC_map);
+         PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_XY_MF,1,scomp_extrap,1,
+	  TensorYU_Type,scompBC_map);
+
+	 if (AMREX_SPACEDIM==2) {
+	  // do nothing
+	 } else if (AMREX_SPACEDIM==3) {
+          PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_XZ_MF,1,scomp_extrap,1,
+	   TensorZU_Type,scompBC_map);
+          PCINTERP_fill_bordersALL(MAC_ELASTIC_FLUX_YZ_MF,1,scomp_extrap,1,
+	   TensorZV_Type,scompBC_map);
+	 } else
+	  amrex::Error("dimension bust");
+
+        } // scomp_extrap=0..NUM_TENSOR_TYPE-1
 
 
+         // find divergence of the CC,XY,XZ,YZ variables.
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
          ns_level.MAC_GRID_ELASTIC_FORCE(im);
@@ -11614,6 +11646,8 @@ void NavierStokes::vel_elastic_ALL() {
 
        } else
         amrex::Error("MAC_grid_displacement invalid");
+
+       override_enable_spectral(push_enable_spectral);
 
       } else
        amrex::Error("store_elastic_data invalid");
