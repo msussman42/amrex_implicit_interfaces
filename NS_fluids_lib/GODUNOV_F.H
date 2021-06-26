@@ -19,7 +19,6 @@
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_UPDATETENSOR updatetensor
-#    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
@@ -51,7 +50,6 @@
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_UPDATETENSOR UPDATETENSOR
-#    define FORT_FIX_HOOP_TENSOR FIX_HOOP_TENSOR
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
 #    define FORT_TENSORHEAT TENSORHEAT
@@ -83,7 +81,6 @@
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_UPDATETENSOR updatetensor
-#    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
@@ -114,7 +111,6 @@
 #    define FORT_VISCTENSORHEAT visctensorheat_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_UPDATETENSOR updatetensor_
-#    define FORT_FIX_HOOP_TENSOR fix_hoop_tensor_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
 #    define FORT_TENSORHEAT tensorheat_
@@ -627,7 +623,7 @@ extern "C"
     int* transposegradu);
 
 
-   void FORT_FIX_HOOP_TENSOR(
+   void fort_fix_hoop tensor(
     int* level,
     int* finest_level,
     int* nmat,int* im,

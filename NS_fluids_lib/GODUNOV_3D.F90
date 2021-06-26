@@ -5731,7 +5731,7 @@ stop
           !  Q(3,3)=0.0
           ! in R-Theta,
           !  Q(3,3)=0.0
-          ! local_tensor_from_xdisplace called from FORT_UPDATETENSOR
+          ! local_tensor_from_xdisplace called from fort_updatetensor
           ! In fort_maketensor, Q is multiplied by the elastic bulk modulus.
          veldir=1
          bodyforce=-Q(D_DECL(0,0,0),3,3)/rval
@@ -12043,9 +12043,10 @@ stop
 
         ! called form tensor_advecton_update() in NavierStokes.cpp
         ! vel is the advective velocity
-      subroutine FORT_UPDATETENSOR( &
+      subroutine fort_updatetensor( &
        level, &
        finest_level, &
+       MAC_grid_displacement, &
        nmat, &
        im_critical, &  ! 0<=im_critical<=nmat-1
        ncomp_visc, & 
@@ -12056,20 +12057,24 @@ stop
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
        told,DIMS(told), &
-       xdisplace,DIMS(xdisplace), &
+       xdisp,DIMS(xdisp), &
+       ydisp,DIMS(ydisp), &
+       zdisp,DIMS(zdisp), &
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
        dt, &
        elastic_time, &
        viscoelastic_model, &
-       polymer_factor,irz,bc, &
+       polymer_factor, &
+       irz, &
+       bc, &
        transposegradu)
       use probcommon_module
       use global_utility_module
       use godunov_module
       IMPLICIT NONE
-
+FIX ME
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat,im_critical
@@ -12638,9 +12643,9 @@ FIX ME
       enddo
 
       return
-      end subroutine FORT_UPDATETENSOR
+      end subroutine fort_updatetensor
 
-      subroutine FORT_FIX_HOOP_TENSOR( &
+      subroutine fort_fix_hoop_tensor( &
        level, &
        finest_level, &
        nmat,im, & 
@@ -12655,20 +12660,21 @@ FIX ME
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat,im
-      INTEGER_T i,j,k
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(tnew)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      REAL_T dx(SDIM),xlo(SDIM)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(tnew)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in),target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(inout), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tnew_ptr
 
       INTEGER_T irz
       INTEGER_T vofcomp
@@ -12679,6 +12685,8 @@ FIX ME
       REAL_T rr,rrp1
 
       nhalf=3
+
+      tnew_ptr=>tnew
 
       if (irz.ne.levelrz) then
        print *,"irz invalid"
@@ -12702,8 +12710,8 @@ FIX ME
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vof),0,-1,9)
-      call checkbound(fablo,fabhi,DIMS(tnew),0,-1,62)
+      call checkbound_array(fablo,fabhi,vof,0,-1,9)
+      call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -12795,7 +12803,7 @@ FIX ME
       endif
 
       return
-      end subroutine FORT_FIX_HOOP_TENSOR
+      end subroutine fort_fix_hoop_tensor
 
         ! u_max(1..sdim) is max vel in dir.
         ! u_max(sdim+1) is max c^2
