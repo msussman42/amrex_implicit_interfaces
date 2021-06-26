@@ -9716,7 +9716,7 @@ void NavierStokes::init_pressure_error_indicator() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_GETSHEAR(
+   fort_getshear(
     &ntensor,
     cellten.dataPtr(tencomp),ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
     voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
@@ -10355,7 +10355,7 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
       // since D is symmetric, D:D=trace(D^2) 
       // is invariant to coordinate transformations.
       // if levelrz==1, gradu(3,3)=u/|r|
-     FORT_GETSHEAR(
+     fort_getshear(
       &ntensor,
       cellten.dataPtr(),
       ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
@@ -10699,7 +10699,7 @@ void NavierStokes::getState_tracemag(int idx) {
    int iproject=0;
    int onlyscalar=1;  // mag(trace gradu)
    int ngrow_getshear=1;
-   FORT_GETSHEAR(
+   fort_getshear(
     &ntensor,
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),

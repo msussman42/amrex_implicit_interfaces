@@ -264,7 +264,7 @@ stop
       return
       end subroutine DERTURBVISC
 
-      subroutine FORT_GETSHEAR( &
+      subroutine fort_getshear( &
        ntensor, &
        cellten,DIMS(cellten), &
        vof,DIMS(vof), &
@@ -279,7 +279,8 @@ stop
        bfact, &
        level, &
        bc, &
-       ngrow,nmat)
+       ngrow,nmat) &
+      bind(c,name='fort_getshear')
 
       use global_utility_module
       use derive_module
@@ -306,10 +307,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(tensordata)
   
-      REAL_T, intent(in) :: cellten(DIMV(cellten),ntensor)
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(out) :: tensordata(DIMV(tensordata),20)
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+
+      REAL_T, intent(out), target :: tensordata(DIMV(tensordata),20)
+      REAL_T, pointer :: tensordata_ptr(D_DECL(:,:,:),:)
+
       REAL_T visctensor(3,3),gradu(3,3)
       REAL_T shear
       REAL_T a,b,c
@@ -318,6 +322,8 @@ stop
       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
 
       nhalf=1
+
+      tensordata_ptr=>tensordata
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
@@ -339,11 +345,11 @@ stop
       ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
-      call checkbound(fablo,fabhi,DIMS(cellten),ngrow,-1,64)
-      call checkbound(fablo,fabhi,DIMS(vof),ngrow+1,-1,64)
-      call checkbound(fablo,fabhi,DIMS(vel),ngrow+1,-1,64)
-      call checkbound(fablo,fabhi, &
-       DIMS(tensordata), &
+      call checkbound_array(fablo,fabhi,cellten,ngrow,-1,64)
+      call checkbound_array(fablo,fabhi,vof,ngrow+1,-1,64)
+      call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,64)
+      call checkbound_array(fablo,fabhi, &
+       tensordata_ptr, &
        ngrow,-1,65)
 
       if (levelrz.eq.0) then
@@ -490,7 +496,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_GETSHEAR
+      end subroutine fort_getshear
 
        ! called from getStateVISC
       subroutine FORT_DERVISCOSITY( &
