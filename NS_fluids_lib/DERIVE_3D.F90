@@ -267,7 +267,6 @@ stop
       subroutine fort_getshear( &
        ntensor, &
        cellten,DIMS(cellten), &
-       vof,DIMS(vof), &
        vel,DIMS(vel), &
        dx,xlo, &
        tensordata, &
@@ -303,12 +302,10 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: DIMDEC(cellten)
-      INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(tensordata)
   
       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
-      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
 
       REAL_T, intent(out), target :: tensordata(DIMV(tensordata),20)
@@ -346,7 +343,6 @@ stop
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
       call checkbound_array(fablo,fabhi,cellten,ngrow,-1,64)
-      call checkbound_array(fablo,fabhi,vof,ngrow+1,-1,64)
       call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,64)
       call checkbound_array(fablo,fabhi, &
        tensordata_ptr, &
@@ -499,7 +495,7 @@ stop
       end subroutine fort_getshear
 
        ! called from getStateVISC
-      subroutine FORT_DERVISCOSITY( &
+      subroutine fort_derviscosity( &
         level, &
         finest_level, &
         visc_coef, &
@@ -520,7 +516,6 @@ stop
         elastic_regularization, &
         etaL,etaP,etaS, &
         polymer_factor, &
-        vof,DIMS(vof), &
         visc,DIMS(visc), &
         vel,DIMS(vel), &
         eosdata,DIMS(eosdata), &
@@ -531,7 +526,8 @@ stop
         time, &
         dx,xlo, &
         bc,ngrow, &
-        ncompvisc)
+        ncompvisc) &
+      bind(c,name='fort_derviscosity')
 
       use global_utility_module
       use probf90_module
@@ -563,7 +559,6 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(eosdata)
@@ -573,12 +568,15 @@ stop
       INTEGER_T, intent(in) :: ngrow
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(out) :: visc(DIMV(visc),ncompvisc) !ncompvisc=3*nmat
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in) :: gammadot(DIMV(gammadot))
-      REAL_T, intent(in) :: eosdata(DIMV(eosdata),nmat*num_state_material)
-      REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+       !ncompvisc=3*nmat
+      REAL_T, intent(out), target :: visc(DIMV(visc),ncompvisc) 
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: gammadot(DIMV(gammadot))
+      REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
+              nmat*num_state_material)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
 
       INTEGER_T i,j,k
       REAL_T    shear,density,temperature,mu
@@ -588,6 +586,8 @@ stop
       REAL_T Q(3,3)
       REAL_T traceA,modtime,viscoelastic_coeff
       REAL_T bulk_modulus
+
+      visc_ptr=>visc
 
       if (bfact.lt.1) then
        print *,"bfact invalid3"
@@ -656,7 +656,7 @@ stop
       if (dt.gt.zero) then 
        ! do nothing
       else
-       print *,"dt invalid in FORT_DERVISCOSITY"
+       print *,"dt invalid in fort_derviscosity"
        stop
       endif
       if (polymer_factor.ge.zero) then
@@ -695,12 +695,11 @@ stop
        stop
       endif
      
-      call checkbound(fablo,fabhi,DIMS(vof),ngrow+1,-1,315)
-      call checkbound(fablo,fabhi,DIMS(visc),ngrow,-1,316)
-      call checkbound(fablo,fabhi,DIMS(gammadot),ngrow,-1,317)
-      call checkbound(fablo,fabhi,DIMS(eosdata),ngrow,-1,318)
-      call checkbound(fablo,fabhi,DIMS(tensor),ngrow,-1,319)
-      call checkbound(fablo,fabhi,DIMS(vel),ngrow,-1,320)
+      call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1,316)
+      call checkbound_array1(fablo,fabhi,gammadot,ngrow,-1,317)
+      call checkbound_array(fablo,fabhi,eosdata,ngrow,-1,318)
+      call checkbound_array(fablo,fabhi,tensor,ngrow,-1,319)
+      call checkbound_array(fablo,fabhi,vel,ngrow,-1,320)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -714,7 +713,7 @@ stop
        enddo
       else if (is_rigid(nmat,im_parm).eq.0) then
 
-       call checkbound(fablo,fabhi,DIMS(vel),ngrow+1,-1,321)
+       call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,321)
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
@@ -979,7 +978,7 @@ stop
       endif
 
       return
-      end subroutine FORT_DERVISCOSITY
+      end subroutine fort_derviscosity
 
 
 
@@ -1214,7 +1213,7 @@ stop
         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
        else
-        print *,"levelrz invalid getshear 2"
+        print *,"levelrz invalid dermagtrace 2"
         stop
        endif
 

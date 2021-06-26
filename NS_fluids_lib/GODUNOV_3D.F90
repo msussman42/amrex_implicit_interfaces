@@ -5583,7 +5583,7 @@ stop
            ! xflux,yflux,zflux come from "fort_crossterm_elastic" in which
            ! "stress_from_strain" is applied to the displacement gradient
            ! matrix, then the resulting stress is multiplied by
-           ! "elastic_viscosity * visc_coef" (see DERVISC)
+           ! "elastic_viscosity * visc_coef" (see fort_derviscosity)
          xflux_comp=1
          do veldir=1,SDIM
          do dir=1,SDIM
@@ -11506,9 +11506,7 @@ stop
          endif
 
          data_in%grid_type_flux=flux_grid_type
-         do dir_local=1,SDIM
-          data_in%box_type_flux(dir_local)=0
-         enddo
+         call grid_type_to_box_type(flux_grid_type,data_in%box_type_flux)
 
          do dir_XD=1,SDIM
 
@@ -12050,9 +12048,8 @@ stop
        nmat, &
        im_critical, &  ! 0<=im_critical<=nmat-1
        ncomp_visc, & 
-       vof,DIMS(vof), &
        visc,DIMS(visc), &
-       tendata,DIMS(tendata), & ! tendata: fort_getshear,iproject=onlyscalar=0
+       tendata,DIMS(tendata), & ! tendata:fort_getshear,iproject=onlyscalar=0
        dx,xlo, &
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
@@ -12074,34 +12071,40 @@ stop
       use global_utility_module
       use godunov_module
       IMPLICIT NONE
-FIX ME
+
+      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat,im_critical
       INTEGER_T, intent(in) :: ncomp_visc
-      INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(tendata)
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(tnew)
       INTEGER_T, intent(in) :: DIMDEC(told)
-      INTEGER_T, intent(in) :: DIMDEC(xdisplace)
+      INTEGER_T, intent(in) :: DIMDEC(xdisp)
+      INTEGER_T, intent(in) :: DIMDEC(ydisp)
+      INTEGER_T, intent(in) :: DIMDEC(zdisp)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(in) :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
        ! 1: sqrt(2 * D : D)
        ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
        ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-      REAL_T, intent(in) :: tendata(DIMV(tendata),20)
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(out) :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
-      REAL_T, intent(in) :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
-      REAL_T, intent(in) :: xdisplace(DIMV(xdisplace),SDIM)
+      REAL_T, intent(in), target :: tendata(DIMV(tendata),20)
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+
+      REAL_T, intent(out), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: xdisp(DIMV(xdisp))
+      REAL_T, intent(in), target :: ydisp(DIMV(ydisp))
+      REAL_T, intent(in), target :: zdisp(DIMV(zdisp))
 
       INTEGER_T :: i,j,k,n
       REAL_T dt,elastic_time
@@ -12124,17 +12127,17 @@ FIX ME
       REAL_T SAS(3,3)
       REAL_T shear
       REAL_T modtime,traceA
-      INTEGER_T vofcomp
       REAL_T vfrac
       REAL_T growthrate,rr,uu
 
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
-      INTEGER_T LS_or_VOF_flag
       INTEGER_T im_elastic
 
       nhalf=3
+
+      tnew_ptr=>tnew
 
       if (irz.ne.levelrz) then
        print *,"irz invalid"
@@ -12171,27 +12174,38 @@ FIX ME
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vof),1,-1,9)
-      call checkbound(fablo,fabhi,DIMS(visc),0,-1,9)
-      call checkbound(fablo,fabhi,DIMS(tendata),0,-1,9)
-      call checkbound(fablo,fabhi,DIMS(vel),1,-1,61)
-      call checkbound(fablo,fabhi,DIMS(tnew),0,-1,62)
-      call checkbound(fablo,fabhi,DIMS(told),0,-1,63)
-      call checkbound(fablo,fabhi,DIMS(xdisplace),1,-1,63)
+      call checkbound_array(fablo,fabhi,visc,0,-1,9)
+      call checkbound_array(fablo,fabhi,tendata,0,-1,9)
+      call checkbound_array(fablo,fabhi,vel,1,-1,61)
+      call checkbound_array(fablo,fabhi,tnew,0,-1,62)
+      call checkbound_array(fablo,fabhi,told,0,-1,63)
 
-      if ((transposegradu.ne.0).and.(transposegradu.ne.1)) then
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound_array1(fablo,fabhi,xdisp,1,-1,63)
+       call checkbound_array1(fablo,fabhi,ydisp,1,-1,63)
+       call checkbound_array1(fablo,fabhi,zdisp,1,-1,63)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound_array1(fablo,fabhi,xdisp,1,0,63)
+       call checkbound_array1(fablo,fabhi,ydisp,1,1,63)
+       call checkbound_array1(fablo,fabhi,zdisp,1,SDIM-1,63)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
+
+      if ((transposegradu.ne.0).and. &
+          (transposegradu.ne.1)) then
        print *,"transposegradu invalid"
        stop
       endif
 
       if (viscoelastic_model.eq.2) then ! elastic material
-FIX ME
-       LS_or_VOF_flag=1 ! =1 => use VOF for upwinding near interfaces
+
        im_elastic=im_critical+1
         ! elastic bulk modulus not included.
        call local_tensor_from_xdisplace( &
-        LS_or_VOF_flag, &
-        im_elastic, &
+        im_elastic, &  ! 1..nmat
+        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -12200,14 +12214,10 @@ FIX ME
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
         FORT_NUM_TENSOR_TYPE, & !ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
-        vof, & ! LS placeholder
-        DIMS(vof), & ! LS placeholder
-        vof, &  
-        DIMS(vof), &
         tnew, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(tnew), &
-        xdisplace, &      
-        DIMS(xdisplace)) 
+        xdisp, &      
+        ydisp, &      
+        zdisp)
 
       else if ((viscoelastic_model.eq.0).or. &
                (viscoelastic_model.eq.1)) then
@@ -12285,24 +12295,12 @@ FIX ME
         ! viscoelastic_model==2 => modtime==elastic_time
         ! viscoelastic_model==3 => modtime==elastic_time
        modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
-       vofcomp=im_critical*ngeom_recon+1
-       vfrac=vof(D_DECL(i,j,k),vofcomp)
        if (modtime.lt.zero) then
         print *,"modtime invalid"
         stop
        endif
 
-       if (abs(vfrac).le.VOFTOL) then
-
-        do ii=1,3
-        do jj=1,3
-         Q(ii,jj)=zero
-        enddo
-        enddo
-
-       else if ((vfrac.gt.zero).and.(vfrac.le.one+VOFTOL)) then
-
-        if (viscoelastic_model.eq.2) then ! elastic material
+       if (viscoelastic_model.eq.2) then ! elastic material
 
          do ii=1,3 
          do jj=1,3 
@@ -12321,9 +12319,9 @@ FIX ME
          Q(3,1)=Q(1,3)
          Q(3,2)=Q(2,3)
 
-        else if ((viscoelastic_model.eq.0).or. &
-                 (viscoelastic_model.eq.1).or. &
-                 (viscoelastic_model.eq.3)) then
+       else if ((viscoelastic_model.eq.0).or. &
+                (viscoelastic_model.eq.1).or. &
+                (viscoelastic_model.eq.3)) then
 
          do ii=1,3 
           do jj=1,3 
@@ -12619,16 +12617,11 @@ FIX ME
           stop
          endif
 
-        else 
+       else 
          print *,"viscoelastic_model invalid"
          stop
-        endif
-
-       else
-        print *,"vfrac invalid"
-        stop
        endif
- 
+
        tnew(D_DECL(i,j,k),1)=Q(1,1)
        tnew(D_DECL(i,j,k),2)=Q(1,2)
        tnew(D_DECL(i,j,k),3)=Q(2,2)
@@ -12649,7 +12642,6 @@ FIX ME
        level, &
        finest_level, &
        nmat,im, & 
-       vof,DIMS(vof), &
        dx,xlo, &
        tnew,DIMS(tnew), &
        tilelo, tilehi,  &
@@ -12664,7 +12656,6 @@ FIX ME
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat,im
       INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(tnew)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
@@ -12672,16 +12663,13 @@ FIX ME
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      REAL_T, intent(in),target :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, intent(inout), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tnew_ptr
 
       INTEGER_T irz
-      INTEGER_T vofcomp
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T Q,Qp1,Qnew
-      REAL_T vfrac,vfracp1
       REAL_T rr,rrp1
 
       nhalf=3
@@ -12710,7 +12698,6 @@ FIX ME
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,vof,0,-1,9)
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
@@ -12731,53 +12718,32 @@ FIX ME
            Q=tnew(D_DECL(i,j,k),4)
            Qp1=tnew(D_DECL(i+1,j,k),4)
             
-           vofcomp=im*ngeom_recon+1
-           vfrac=vof(D_DECL(i,j,k),vofcomp)
-           vfracp1=vof(D_DECL(i+1,j,k),vofcomp)
-
-           if ((vfrac.ge.-VOFTOL).and. &
-               (vfrac.le.one+VOFTOL).and. &
-               (vfracp1.ge.-VOFTOL).and. &
-               (vfracp1.le.one+VOFTOL)) then
-
-            if ((vfrac.lt.half).or.(vfracp1.lt.half)) then
-             Qnew=zero
-            else if ((vfrac.ge.half).and.(vfracp1.ge.half)) then
-             rr=xsten(0,1)
-             rrp1=xsten(2,1)
-             if ((rr.gt.zero).and.(rrp1.gt.rr)) then
-              ! (Qnew-0)/rr = (Qp1-Qnew)/rrp1
-              ! Qnew(1/rr+1/rrp1)=Qp1/rrp1
-              ! Qnew(rrp1/rr + 1)=Qp1
-              ! Qnew=Qp1/(rrp1/rr + 1)
-              Qnew=Qp1/(rrp1/rr+one)
-              if (abs(Qnew).gt.abs(Q)) then
-               Qnew=Q
-              endif
-             else
-              print *,"rr or rrp1 invalid"
-              stop
-             endif
-            else
-             print *,"vfrac invalid"
-             stop
+           rr=xsten(0,1)
+           rrp1=xsten(2,1)
+           if ((rr.gt.zero).and.(rrp1.gt.rr)) then
+            ! (Qnew-0)/rr = (Qp1-Qnew)/rrp1
+            ! Qnew(1/rr+1/rrp1)=Qp1/rrp1
+            ! Qnew(rrp1/rr + 1)=Qp1
+            ! Qnew=Qp1/(rrp1/rr + 1)
+            Qnew=Qp1/(rrp1/rr+one)
+            if (abs(Qnew).gt.abs(Q)) then
+             Qnew=Q
             endif
-             ! we do not want the negative reflected
-             ! ghost value of Q to be less than or equal
-             ! to -1.0, otherwise the code will complain about loss of 
-             ! the positive definite property.  (the code might still
-             ! complain, because "average down" and advection might bring
-             ! large values of Q33 to the i=0 column prior to this routine)
-            if (Qnew.ge.half) then
-             Qnew=half
-            endif
-
-            tnew(D_DECL(i,j,k),4)=Qnew
            else
-            print *,"vfrac or vfracp1 invalid"
+            print *,"rr or rrp1 invalid"
             stop
-           endif 
+           endif
+           ! we do not want the negative reflected
+           ! ghost value of Q to be less than or equal
+           ! to -1.0, otherwise the code will complain about loss of 
+           ! the positive definite property.  (the code might still
+           ! complain, because "average down" and advection might bring
+           ! large values of Q33 to the i=0 column prior to this routine)
+           if (Qnew.ge.half) then
+            Qnew=half
+           endif
 
+           tnew(D_DECL(i,j,k),4)=Qnew
           else
            print *,"fabhi invalid"
            stop
@@ -27287,7 +27253,7 @@ FIX ME
       REAL_T, intent(in), target :: xfacefab(DIMV(xfacefab), &
               vofface_index+2*nmat)
       REAL_T, intent(inout), target :: UMACNEW(DIMV(UMACNEW))
-      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:))
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -27303,11 +27269,10 @@ FIX ME
       INTEGER_T :: dir_flux,side_flux
       INTEGER_T :: side_comp
       REAL_T :: xstenMAC(-3:3,SDIM)
+      REAL_T :: xsten_flux(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T inormal
       INTEGER_T dircomp
       INTEGER_T dir_deriv,dir_pos,dir_XD
-      REAL_T, target :: xflux(SDIM)
       REAL_T, target :: xflux_plus_probe(SDIM)
       REAL_T, target :: xflux_minus_probe(SDIM)
       REAL_T, target :: x_MAC_control_volume(SDIM)
@@ -27363,6 +27328,18 @@ FIX ME
       REAL_T XFORCE_local
       REAL_T Htensor_cen
       REAL_T Htensor(SDIM,2)
+      INTEGER_T box_type_MAC_CV(SDIM)
+      INTEGER_T box_type_flux(SDIM)
+      INTEGER_T box_type_adj(SDIM)
+      INTEGER_T grid_type_flux
+      INTEGER_T grid_type_sanity
+      INTEGER_T grid_type_adj
+      INTEGER_T iflux_array(SDIM)
+      INTEGER_T iadj_array(SDIM)
+      INTEGER_T iflux,jflux,kflux
+      INTEGER_T iadj,jadj,kadj
+      INTEGER_T itensor
+      REAL_T local_compress_data(FORT_NUM_TENSOR_TYPE)
 
       UMACNEW_ptr=>UMACNEW
 
@@ -27391,7 +27368,7 @@ FIX ME
       call checkbound_array1(fablo,fabhi,maskcoef,1,-1,1277)
       call checkbound_array(fablo,fabhi,levelpc,2,-1,1277)
       call checkbound_array(fablo,fabhi,xfacefab,0,dir,1277)
-      call checkbound_array1(fablo,fabhi,UMACNEW,0,dir,1277)
+      call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,dir,1277)
 
       nhalf=3
   
@@ -27426,17 +27403,6 @@ FIX ME
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-
-       if (dir.eq.0) then
-        inormal=i
-       else if (dir.eq.1) then
-        inormal=j
-       else if ((dir.eq.2).and.(SDIM.eq.3)) then
-        inormal=k
-       else
-        print *,"dir invalid"
-        stop
-       endif
 
         ! dir=0..sdim-1 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,57)
@@ -27625,6 +27591,7 @@ FIX ME
          DISP_TEN(1,1)=local_compress_data(1)
          DISP_TEN(1,2)=local_compress_data(2)
          DISP_TEN(2,2)=local_compress_data(3)
+         ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
          DISP_TEN(3,3)=local_compress_data(4)
          DISP_TEN(1,3)=zero
          DISP_TEN(2,3)=zero
@@ -27710,7 +27677,8 @@ FIX ME
                  level,nhalf,grid_type_flux,57)
 
          do dir_local=1,SDIM
-          x_at_flux_point(side_flux+1,dir_flux+1,dir_local)=xflux(dir_local)
+          x_at_flux_point(side_flux+1,dir_flux+1,dir_local)= &
+                  xsten_flux(0,dir_local)
          enddo
 
          iadj_array(1)=iflux
@@ -27814,13 +27782,13 @@ FIX ME
          endif
          mask_minus_flux_point(side_flux+1,dir_flux+1)=local_mask
 
-         FIX ME
-          ! hoop_22=xdisp/r
-         center_hoop_22=center_hoop_22+hoop_22
+          ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
+         center_hoop_22=center_hoop_22+DISP_TEN(3,3)
 
         enddo ! side_flux=0..1
         enddo ! dir_flux=0..sdim-1
 
+         ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
         center_hoop_22=center_hoop_22/(2*SDIM)
 
          ! divergence of fluxes goes here
@@ -27937,9 +27905,9 @@ FIX ME
            stop
           endif
            ! -T33/r
-           ! center_hoop_22=xdisp/r
+           ! center_hoop_22=2 * xdisp/r
           dir_XD=1
-          bodyforce=-(two*center_hoop_22)/rval
+          bodyforce=-center_hoop_22/rval
           if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
            ! do nothing
           else
@@ -28535,7 +28503,7 @@ FIX ME
          vel(D_DECL(im1,jm1,km1),2))
 
         ! visc(D_DECL(i,j,k),nmat+im_elastic)=
-        !  elastic_viscosity * visc_coef (DERVISC)
+        !  elastic_viscosity * visc_coef (fort_derviscosity)
        visc_local=half*(visc(D_DECL(i,j,k),nmat+im_elastic)+ &
          visc(D_DECL(im1,jm1,km1),nmat+im_elastic))
 

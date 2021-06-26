@@ -9821,9 +9821,9 @@ void NavierStokes::make_viscoelastic_force(int im) {
    debug_ngrow(VISCOTEN_MF,1,5);
     // CELL_VISC_MATERIAL init in getStateVISC_ALL (NavierStokes2.cpp) which
     // calls getStateVISC which calls:
-    //  fort_getshear,FORT_DERVISCOSITY, and
+    //  fort_getshear,fort_derviscosity, and
     //  FORT_DERTURBVISC
-    //  FORT_DERVISCOSITY is in DERIVE_3D.F90
+    //  fort_derviscosity is in DERIVE_3D.F90
     //  a. 1..nmat           mu or etaS+etaP*(bterm**pterm)   "VISC_RAW"
     //  b. nmat+1..2*nmat    (i)   visc_coef*(VISC_RAW-etaS)/lambda or
     //                       (ii)  visc_coef*(VISC_RAW-etaS) or
@@ -11100,7 +11100,6 @@ void NavierStokes::tensor_advection_update() {
       if (cellten.nComp()!=ntensor)
        amrex::Error("cellten invalid ncomp");
 
-      FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
       FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
       if (viscfab.nComp()!=3*nmat)
        amrex::Error("viscfab.nComp() invalid");
@@ -11125,7 +11124,6 @@ void NavierStokes::tensor_advection_update() {
        &ntensor,
        cellten.dataPtr(),
        ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-       voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
        velfab.dataPtr(),
        ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
        dx,xlo,
@@ -11166,7 +11164,6 @@ void NavierStokes::tensor_advection_update() {
 
       const Real* xlo = grid_loc[gridno].lo();
 
-      FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
       FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tensor_new_fab=Tensor_new[mfi];
@@ -11196,7 +11193,6 @@ void NavierStokes::tensor_advection_update() {
        &nmat,
        &im,
        &ncomp_visc,
-       voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
        tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
        dx,xlo,
@@ -11248,7 +11244,6 @@ void NavierStokes::tensor_advection_update() {
 
        const Real* xlo = grid_loc[gridno].lo();
 
-       FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
        FArrayBox& tensor_new_fab=Tensor_new[mfi];
 
        int tid_current=ns_thread();
@@ -11261,7 +11256,6 @@ void NavierStokes::tensor_advection_update() {
         &level,
         &finest_level,
         &nmat,&im,
-        voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
         dx,xlo,
         tensor_new_fab.dataPtr(scomp_tensor),
         ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
