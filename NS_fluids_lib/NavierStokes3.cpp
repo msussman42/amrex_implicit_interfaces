@@ -11592,20 +11592,20 @@ void NavierStokes::vel_elastic_ALL() {
          amrex::Error("viscoelastic_model[im] invalid");
 
 	int flux_grid_type=-1;
-        ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+        make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
 	     MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
 	flux_grid_type=3;
-        ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+        make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
 	     MAC_ELASTIC_FLUX_XY_MF,flux_grid_type,TensorYU_Type);
 
 	if (AMREX_SPACEDIM==2) {
 	 // do nothing
 	} else if (AMREX_SPACEDIM==3) {
 	 flux_grid_type=4;
-         ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+         make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
 	     MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type,TensorZU_Type);
 	 flux_grid_type=5;
-         ns_level.make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+         make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
 	     MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type,TensorZV_Type);
 	} else
 	 amrex::Error("dimension bust");

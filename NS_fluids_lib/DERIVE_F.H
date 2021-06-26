@@ -10,7 +10,6 @@
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
 #    define FORT_DERTURBVISC derturbvisc
-#    define FORT_DERMAGTRACE dermagtrace
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #else
@@ -18,7 +17,6 @@
 #    define FORT_MAXPRESVEL MAXPRESVEL
 #    define FORT_GETDRAG  GETDRAG
 #    define FORT_DERTURBVISC DERTURBVISC
-#    define FORT_DERMAGTRACE DERMAGTRACE
 #    define FORT_INTEGRATE_RECALESCE INTEGRATE_RECALESCE
 #    define FORT_RESET_TEMPERATURE RESET_TEMPERATURE
 #  else
@@ -26,14 +24,12 @@
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
 #    define FORT_DERTURBVISC derturbvisc
-#    define FORT_DERMAGTRACE dermagtrace
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #  else
 #    define FORT_MAXPRESVEL maxpresvel_ 
 #    define FORT_GETDRAG  getdrag_
 #    define FORT_DERTURBVISC derturbvisc_
-#    define FORT_DERMAGTRACE dermagtrace_
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce_
 #    define FORT_RESET_TEMPERATURE reset_temperature_
 #  endif
@@ -59,13 +55,12 @@ extern "C" {
        int* bcrec,int* ngrow,
        int* nmat);
 
-     void FORT_DERMAGTRACE(
+     void fort_dermagtrace(
        int* level,
        int* finest_level,
        int* im,  // im=0..nmat-1
        int* ntensor,
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
-       Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
        Real* dest,AMREX_ARLIM_P(destlo),AMREX_ARLIM_P(desthi),
        Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
        Real* tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),

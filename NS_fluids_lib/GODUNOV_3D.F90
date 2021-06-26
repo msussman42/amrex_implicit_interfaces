@@ -2409,11 +2409,11 @@ stop
        ! the intent attribute of the actual data is inherited
        ! from the target.
       REAL_T, intent(in), pointer :: TNEWfab(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer :: xdfab(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer :: ydfab(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer :: zdfab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xdfab(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: ydfab(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: zdfab(D_DECL(:,:,:))
 
-      type(deriv_from_grid_parm_type) :: data_in
+      type(single_deriv_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
       REAL_T, target :: cell_data_deriv(1)
 
@@ -2459,13 +2459,13 @@ stop
 
       call checkbound_array(fablo,fabhi,TNEWfab,1,-1,1271)
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array(fablo,fabhi,xdfab,1,-1,1271)
-       call checkbound_array(fablo,fabhi,ydfab,1,-1,1271)
-       call checkbound_array(fablo,fabhi,zdfab,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydfab,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab,1,-1,1271)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array(fablo,fabhi,xdfab,1,0,1271)
-       call checkbound_array(fablo,fabhi,ydfab,1,1,1271)
-       call checkbound_array(fablo,fabhi,zdfab,1,SDIM-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab,1,0,1271)
+       call checkbound_array1(fablo,fabhi,ydfab,1,1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab,1,SDIM-1,1271)
       else
        print *,"MAC_grid_displacement invalid"
        stop
@@ -2504,9 +2504,6 @@ stop
        data_in%fablo=>fablo
        data_in%fabhi=>fabhi
        data_in%ngrowfab=1
-
-       data_in%ncomp=1
-       data_in%scomp=1
 
        data_in%index_flux(1)=i
        data_in%index_flux(2)=j
@@ -2552,11 +2549,11 @@ stop
 
         do dir_flux=0,SDIM-1
          data_in%dir_deriv=dir_flux+1
-         call deriv_from_grid_util(data_in,data_out)
+         call single_deriv_from_grid_util(data_in,data_out)
          gradu(dir_XD,dir_flux+1)=cell_data_deriv(1)
         enddo
         data_in%dir_deriv=-1
-        call deriv_from_grid_util(data_in,data_out)
+        call single_deriv_from_grid_util(data_in,data_out)
         xdisplace_local(dir_XD)=cell_data_deriv(1)
 
        enddo ! dir_XD=1..sdim
@@ -11334,7 +11331,7 @@ stop
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(in), target :: tensor(DIMV(tensor), &
               FORT_NUM_TENSOR_TYPE)
-      REAL_T, intent(in), target :: tensorMAC(DIMV(tensorMAC), &
+      REAL_T, intent(out), target :: tensorMAC(DIMV(tensorMAC), &
               FORT_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensorMAC_ptr(D_DECL(:,:,:),:)
 
@@ -12066,7 +12063,9 @@ stop
        polymer_factor, &
        irz, &
        bc, &
-       transposegradu)
+       transposegradu) &
+      bind(c,name='fort_updatetensor')
+
       use probcommon_module
       use global_utility_module
       use godunov_module
@@ -12127,7 +12126,6 @@ stop
       REAL_T SAS(3,3)
       REAL_T shear
       REAL_T modtime,traceA
-      REAL_T vfrac
       REAL_T growthrate,rr,uu
 
       REAL_T xsten(-3:3,SDIM)
@@ -12647,7 +12645,9 @@ stop
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
-       irz)
+       irz) &
+      bind(c,name='fort_fix_hoop_tensor')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -12655,7 +12655,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat,im
-      INTEGER_T, intent(in) :: i,j,k
       INTEGER_T, intent(in) :: DIMDEC(tnew)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
@@ -12664,8 +12663,9 @@ stop
       REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
       REAL_T, intent(inout), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: tnew_ptr
+      REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
 
+      INTEGER_T :: i,j,k
       INTEGER_T irz
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -25496,7 +25496,9 @@ stop
        nden, &
        ntensor, &
        constant_viscosity, &
-       homflag)
+       homflag) &
+      bind(c,name='fort_crossterm')
+
       use probcommon_module
       use global_utility_module
       use godunov_module
@@ -25990,10 +25992,10 @@ stop
              nmat,  &
              massfrac, &
              total_mass, &
-             levelpc,levelpc, &
-             faceLS,faceLS, &
-             mdata,mdata, &
-             tdata,tdata, &
+             levelpc, &
+             faceLS, &
+             mdata, &
+             tdata, &
              ii,jj,kk, &
              i,j,k,dir, &
              dirtan(nc), &
@@ -27272,19 +27274,10 @@ stop
       REAL_T :: xsten_flux(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T dircomp
-      INTEGER_T dir_deriv,dir_pos,dir_XD
-      REAL_T, target :: xflux_plus_probe(SDIM)
-      REAL_T, target :: xflux_minus_probe(SDIM)
+      INTEGER_T dir_deriv,dir_XD
       REAL_T, target :: x_MAC_control_volume(SDIM)
-      REAL_T xplus(SDIM)
-      REAL_T xminus(SDIM)
-      REAL_T XDplus(SDIM)
-      REAL_T XDminus(SDIM)
-      REAL_T XDcenter(SDIM)
-      REAL_T gradXDtensor(SDIM,SDIM)
-      REAL_T DISP_TEN(SDIM,SDIM)
-      REAL_T hoop_22 ! xdisp/r
-      REAL_T eps_deriv,dxmin
+      REAL_T DISP_TEN(3,3)
+      REAL_T dxmin
       INTEGER_T im_elastic_p1
       INTEGER_T im_LS
 
@@ -27374,7 +27367,7 @@ stop
   
       call get_dxmin(dx,bfact,dxmin)
       if (dxmin.gt.zero) then
-       eps_deriv=dxmin*(1.0D-2)
+       ! do nothing
       else
        print *,"dxmin invalid"
        stop
@@ -28982,13 +28975,13 @@ stop
       REAL_T, pointer :: SNEWfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: UMACNEW( & 
         DIMV(UMACNEW))
-      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: VMACNEW( & 
         DIMV(VMACNEW))
-      REAL_T, pointer :: VMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: VMACNEW_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: WMACNEW( & 
         DIMV(WMACNEW))
-      REAL_T, pointer :: WMACNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: WMACNEW_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: vel_fab( &
         DIMV(vel_fab), &
         SDIM)
@@ -29058,9 +29051,9 @@ stop
       call checkbound_array(fablo,fabhi,LS,2,-1,1271)
       call checkbound_array(tilelo,tilehi,matrixfab,1,-1,1271)
       call checkbound_array(fablo,fabhi,SNEWfab,1,-1,1271)
-      call checkbound_array(fablo,fabhi,UMACNEW,0,0,1271)
-      call checkbound_array(fablo,fabhi,VMACNEW,0,1,1271)
-      call checkbound_array(fablo,fabhi,WMACNEW,0,SDIM-1,1271)
+      call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,0,1271)
+      call checkbound_array1(fablo,fabhi,VMACNEW_ptr,0,1,1271)
+      call checkbound_array1(fablo,fabhi,WMACNEW_ptr,0,SDIM-1,1271)
       call checkbound_array(fablo,fabhi,vel_fab,2,-1,1271)
 
       accum_PARM%fablo=>fablo 
@@ -29115,11 +29108,7 @@ stop
       call traverse_particlesVEL( &
         accum_PARM, &
         matrixfab, &
-        DIMS(matrixfab), &
-        LS, &
-        DIMS(LS), &
         vel_fab, &
-        DIMS(vel_fab), &
         ncomp_accumulate)
 
       if (dt.gt.zero) then
@@ -29275,7 +29264,7 @@ stop
       INTEGER_T, target :: tilelo_local(SDIM)
       INTEGER_T, target :: tilehi_local(SDIM)
 
-      type(interp_from_grid_parm_type) :: data_in
+      type(single_interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
 
       do dir=1,SDIM
@@ -29306,16 +29295,12 @@ stop
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
-      data_in%nmat=accum_PARM%nmat
 
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
       data_in%ngrowfab=2
-      data_in%LS=>xdfab ! not used
-      data_in%ncomp=1
-      data_in%scomp=1
 
       nhalf=3
 
@@ -29348,6 +29333,7 @@ stop
 
         if (MAC_grid_displacement.eq.0) then
          do dir=1,SDIM
+          data_in%interp_dir=dir-1
           if (dir.eq.1) then
            data_in%state=>xdfab
           else if (dir.eq.2) then
@@ -29358,7 +29344,7 @@ stop
            print *,"dir invalid"
            stop
           endif
-          call interp_from_grid_util(data_in,data_out)
+          call single_interp_from_grid_util(data_in,data_out)
           eulerian_xdisp(dir)=data_out%data_interp(1)
          enddo ! dir=1..sdim
         else if (MAC_grid_displacement.eq.1) then
@@ -29554,7 +29540,9 @@ stop
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
       INTEGER_T dir
+      INTEGER_T dirmac
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -29860,9 +29848,9 @@ stop
         TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
         DIMS(TNEWfab), &
         xdfab, &      
-        DIMS(xdfab),
+        DIMS(xdfab), &
         ydfab, &      
-        DIMS(ydfab),
+        DIMS(ydfab), &
         zdfab, &      
         DIMS(zdfab)) &
       bind(c,name='fort_assimilate_tensor_from_xdisplace')
@@ -29899,14 +29887,11 @@ stop
       REAL_T, pointer :: TNEWfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: xdfab( &
-        DIMV(xdfab), &
-        1)
+        DIMV(xdfab))
       REAL_T, intent(in), target :: ydfab( &
-        DIMV(ydfab), &
-        1)
+        DIMV(ydfab))
       REAL_T, intent(in), target :: zdfab( &
-        DIMV(zdfab), &
-        1)
+        DIMV(zdfab))
 
       INTEGER_T im_elastic
 
@@ -29937,14 +29922,14 @@ stop
       call checkbound_array(fablo,fabhi,LS,2,-1,1271)
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
 
-      if (MAC_grid_displacemnt.eq.0) then
-       call checkbound_array(fablo,fabhi,xdfab,2,-1,1271)
-       call checkbound_array(fablo,fabhi,ydfab,2,-1,1271)
-       call checkbound_array(fablo,fabhi,zdfab,2,-1,1271)
-      else if (MAC_grid_displacemnt.eq.1) then
-       call checkbound_array(fablo,fabhi,xdfab,2,0,1271)
-       call checkbound_array(fablo,fabhi,ydfab,2,1,1271)
-       call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,1271)
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound_array1(fablo,fabhi,xdfab,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydfab,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab,2,-1,1271)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound_array1(fablo,fabhi,xdfab,2,0,1271)
+       call checkbound_array1(fablo,fabhi,ydfab,2,1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab,2,SDIM-1,1271)
       else
        print *,"MAC_grid_displacement invalid"
        stop

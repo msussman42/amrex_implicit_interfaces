@@ -5904,7 +5904,6 @@ contains
 
       INTEGER_T, intent(out) :: grid_type
       INTEGER_T, intent(in) :: box_type(SDIM)
-      INTEGER_T dir
 
       if ((box_type(1).eq.0).and. &
           (box_type(2).eq.0).and. &
@@ -7819,6 +7818,205 @@ contains
       return
       end subroutine deriv_from_grid_util
 
+
+       ! data_in%dir_deriv=1..sdim (derivative)
+       ! data_in%dir_deriv=-1 (interp)
+      subroutine single_deriv_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+
+      type(single_deriv_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+
+      INTEGER_T caller_id
+      INTEGER_T dir_local
+      INTEGER_T ilo(SDIM)
+      INTEGER_T ihi(SDIM)
+      INTEGER_T istep(SDIM)
+      INTEGER_T klosten,khisten,kstep
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T ii(3)
+      REAL_T SGN_FACT
+      REAL_T wt_top,wt_bot
+      REAL_T xflux_sten(-3:3,SDIM)
+      REAL_T xhi_sten(-3:3,SDIM)
+      REAL_T xlo_sten(-3:3,SDIM)
+      REAL_T dx_sten(SDIM)
+      INTEGER_T nhalf
+  
+#define dir_FD data_in%dir_deriv
+#define ilocal data_in%index_flux
+
+      if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing (derivative operation)
+      else if (dir_FD.eq.-1) then
+       ! do nothing (interpolation operation)
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+ 
+      nhalf=3 
+      caller_id=10
+      call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_flux,caller_id)
+
+      do dir_local=1,SDIM 
+       if (data_in%box_type_flux(dir_local).eq. &
+           data_in%box_type_data(dir_local)) then
+        if (dir_local.eq.dir_FD) then
+         ilo(dir_local)=ilocal(dir_local)-1
+         ihi(dir_local)=ilocal(dir_local)+1
+        else if (dir_local.ne.dir_FD) then
+         ilo(dir_local)=ilocal(dir_local)
+         ihi(dir_local)=ilocal(dir_local)
+        else
+         print *,"dir_local bust"
+         stop
+        endif
+       else if ((data_in%box_type_flux(dir_local).eq.0).and. & !CELL
+                (data_in%box_type_data(dir_local).eq.1)) then  !NODE
+        ilo(dir_local)=ilocal(dir_local)
+        ihi(dir_local)=ilocal(dir_local)+1
+       else if ((data_in%box_type_flux(dir_local).eq.1).and. & !NODE
+                (data_in%box_type_data(dir_local).eq.0)) then  !CELL
+        ilo(dir_local)=ilocal(dir_local)-1
+        ihi(dir_local)=ilocal(dir_local)
+       else
+        print *,"box_type corruption"
+        stop
+       endif
+       istep(dir_local)=ihi(dir_local)-ilo(dir_local)
+       if (istep(dir_local).eq.0) then
+        istep(dir_local)=1
+       else if (istep(dir_local).eq.2) then
+        ! do nothing
+       else if (istep(dir_local).eq.1) then
+        ! do nothing
+       else
+        print *,"istep invalid"
+        stop
+       endif
+
+       call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+       call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+       dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+      enddo ! dir_local=1..sdim
+
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir_local=1,SDIM
+       if (data_in%dx(dir_local).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir_local).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo  ! dir_local=1..sdim
+
+      if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+       kstep=1
+      else if (SDIM.eq.3) then
+       klosten=ilo(SDIM)
+       khisten=ihi(SDIM)
+       kstep=istep(SDIM)
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+
+      data_out%data_interp(1)=zero
+
+      do isten=ilo(1),ihi(1),istep(1)
+      do jsten=ilo(2),ihi(2),istep(2)
+      do ksten=klosten,khisten,kstep
+        ii(1)=isten
+        ii(2)=jsten
+        ii(3)=ksten
+
+        if (dir_FD.eq.-1) then
+         SGN_FACT=one
+        else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+         if (ii(dir_FD).eq.ilo(dir_FD)) then
+          SGN_FACT=-one
+         else if (ii(dir_FD).eq.ihi(dir_FD)) then
+          SGN_FACT=one
+         else
+          print *,"ii(dir_FD) invalid"
+          stop
+         endif
+        else 
+         print *,"dir_FD invalid"
+         stop
+        endif
+
+        wt_top=one
+        wt_bot=one
+        
+        do dir_local=1,SDIM
+         if (dir_local.eq.dir_FD) then
+          wt_top=wt_top*SGN_FACT
+          wt_bot=wt_bot*dx_sten(dir_local)
+          if (ihi(dir_local).gt.ilo(dir_local)) then
+           ! do nothing
+          else
+           print *,"ihi or ilo bust"
+           stop
+          endif
+         else if (ihi(dir_local).eq.ilo(dir_local)) then
+          ! do nothing
+         else if (ihi(dir_local).gt.ilo(dir_local)) then
+          if (ii(dir_local).eq.ihi(dir_local)) then
+           wt_top=wt_top*(xflux_sten(0,dir_local)-xlo_sten(0,dir_local))  
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else if (ii(dir_local).eq.ilo(dir_local)) then
+           wt_top=wt_top*(xhi_sten(0,dir_local)-xflux_sten(0,dir_local))  
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else
+           print *,"ii(dir_local) invalid"
+           stop
+          endif
+         else
+          print *,"ihi or ilo invalid"
+          stop
+         endif
+        enddo ! dir_local=1..sdim
+
+        if ((wt_bot.gt.zero).and.(wt_top.gt.zero)) then 
+         data_out%data_interp(1)=data_out%data_interp(1)+wt_top* &
+           data_in%disp_data(D_DECL(isten,jsten,ksten))/wt_bot
+        else
+         print *,"wt_bot or wt_top invalid"
+         stop
+        endif
+      enddo !ksten
+      enddo !jsten
+      enddo !isten
+
+#undef ilocal
+#undef dir_FD
+
+      return
+      end subroutine single_deriv_from_grid_util
+
+
+
       subroutine interp_from_grid_util(data_in,data_out)
       use probcommon_module
       IMPLICIT NONE
@@ -8001,6 +8199,159 @@ contains
 
       return
       end subroutine interp_from_grid_util
+
+
+      subroutine single_interp_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+ 
+      type(single_interp_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten_center(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T dir
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T stencil_offset(SDIM)
+      INTEGER_T istenlo(3)
+      INTEGER_T istenhi(3)
+      REAL_T WT,total_WT
+      INTEGER_T isten,jsten,ksten
+      REAL_T, allocatable, dimension(:) :: local_data
+     
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir=1,SDIM
+       if (data_in%dx(dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo 
+      if ((data_in%interp_dir.ge.0).and. &
+          (data_in%interp_dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"data_in%interp_dir invalid"
+       stop
+      endif
+      if (data_in%interp_foot_flag.eq.0) then
+       ! do nothing
+      else if (data_in%interp_foot_flag.eq.1) then
+       ! do nothing
+      else
+       print *,"interp_foot_flag invalid"
+       stop
+      endif
+       
+      allocate(local_data(1))
+
+      nhalf=3
+
+      call containing_cell( &
+        data_in%bfact, &
+        data_in%dx, &
+        data_in%xlo, &
+        data_in%fablo, &
+        data_in%xtarget, &
+        cell_index)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       if (cell_index(dir)-1.lt.data_in%fablo(dir)-data_in%ngrowfab) then
+        cell_index(dir)=data_in%fablo(dir)-data_in%ngrowfab+1
+       endif
+       if (cell_index(dir)+1.gt.data_in%fabhi(dir)+data_in%ngrowfab) then
+        cell_index(dir)=data_in%fabhi(dir)+data_in%ngrowfab-1
+       endif
+       istenlo(dir)=cell_index(dir)-1
+       istenhi(dir)=cell_index(dir)+1
+      enddo ! dir=1..sdim
+
+      total_WT=zero
+      data_out%data_interp(1)=zero
+
+      isten=cell_index(1)
+      jsten=cell_index(2)
+      ksten=cell_index(SDIM)
+
+      call gridsten_level(xsten_center,isten,jsten,ksten,data_in%level,nhalf)
+
+      do isten=istenlo(1),istenhi(1)
+      do jsten=istenlo(2),istenhi(2)
+      do ksten=istenlo(3),istenhi(3)
+
+       call gridsten_level(xsten,isten,jsten,ksten,data_in%level,nhalf)
+       stencil_offset(1)=isten-cell_index(1)
+       stencil_offset(2)=jsten-cell_index(2)
+       if (SDIM.eq.3) then
+        stencil_offset(SDIM)=ksten-cell_index(SDIM)
+       endif
+       call bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        data_in%xtarget,WT)
+       if ((WT.ge.zero).and.(WT.le.one)) then
+        ! do nothing
+       else
+        print *,"WT invalid"
+        stop
+       endif
+
+       local_data(1)=data_in%state(D_DECL(isten,jsten,ksten))
+       if ((local_data(1).ge.-1.0D+30).and. &
+           (local_data(1).le.1.0D+30)) then
+
+         if (data_in%interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (data_in%interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data(1)=xsten(0,data_in%interp_dir+1)-local_data(1)
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
+
+         data_out%data_interp(1)=data_out%data_interp(1)+WT*local_data(1)
+
+       else
+         print *,"local_data(1) overflow"
+         print *,"local_data(1) ",local_data(1)
+         stop
+       endif
+
+       total_WT=total_WT+WT
+
+      enddo ! ksten
+      enddo ! jsten
+      enddo ! isten
+
+      if (total_WT.gt.zero) then
+
+       data_out%data_interp(1)=data_out%data_interp(1)/total_WT
+
+      else
+       print *,"total_WT invalid"
+       stop
+      endif
+
+      deallocate(local_data)
+
+      return
+      end subroutine single_interp_from_grid_util
+
 
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
                       ncomp,data_interp,caller_id)

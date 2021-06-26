@@ -148,6 +148,25 @@ module probcommon_module_types
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: disp_data
       end type deriv_from_grid_parm_type
 
+       ! used by single_deriv_from_grid_util
+      type single_deriv_from_grid_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: index_flux(SDIM)  !flux point where derivative needed.
+      INTEGER_T :: dir_deriv !dir_deriv=1..sdim or dir_deriv=-1
+      INTEGER_T :: box_type_flux(SDIM) !0=CELL 1=NODE
+      INTEGER_T :: box_type_data(SDIM)
+      INTEGER_T :: grid_type_flux  ! -1..5
+      INTEGER_T :: grid_type_data  ! -1..5
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      INTEGER_T :: ngrowfab 
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: disp_data
+      end type single_deriv_from_grid_parm_type
+
        ! used by interp_from_grid_util
       type interp_from_grid_parm_type
       INTEGER_T :: scomp
@@ -166,6 +185,24 @@ module probcommon_module_types
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
       end type interp_from_grid_parm_type
+
+
+       ! used by single_interp_from_grid_util
+      type single_interp_from_grid_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
+      INTEGER_T :: interp_dir ! interp_dir=0..sdim-1
+      REAL_T, pointer :: xtarget(:)
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      INTEGER_T :: ngrowfab 
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: state 
+      end type single_interp_from_grid_parm_type
+
 
       type interp_from_grid_out_parm_type
       REAL_T, pointer :: data_interp(:)

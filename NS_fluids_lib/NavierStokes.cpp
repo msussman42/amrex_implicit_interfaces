@@ -9066,8 +9066,8 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   amrex::Error("flux_mf has incorrect nComp");
 
  int Q_grid_type=-1;
- debug_boxArray(localMF[VISCOTEN_MF],Q_grid_type,VISCOTEN_MF)
- debug_boxArray(localMF[flux_mf],flux_grid_type,flux_mf)
+ debug_boxArray(localMF[VISCOTEN_MF],Q_grid_type,VISCOTEN_MF);
+ debug_boxArray(localMF[flux_mf],flux_grid_type,flux_mf);
 
   // spectral_override==0 => always low order.
  avgDown_localMF_ALL(flux_mf,0,NUM_TENSOR_TYPE,0);
@@ -9178,8 +9178,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
    }
 
    if (partid<im_elastic_map.size()) {
-
-    int scomp_tensor=partid*NUM_TENSOR_TYPE;
 
     if (NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
      amrex::Error("NUM_TENSOR_TYPE invalid");
@@ -9577,8 +9575,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
-
- int ngrow=1;  // number of grow cells for the tensor
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -16657,6 +16653,7 @@ void
 NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
 
  int finest_level=parent->finestLevel();
+ int nmat=num_materials;
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
