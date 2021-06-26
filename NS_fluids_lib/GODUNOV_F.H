@@ -628,7 +628,7 @@ extern "C"
     int* transposegradu);
 
 
-   void fort_fix_hoop tensor(
+   void fort_fix_hoop_tensor(
     int* level,
     int* finest_level,
     int* nmat,int* im,

@@ -10575,8 +10575,8 @@ void NavierStokes::getState_tracemag_ALL(int idx) {
 
 } // getState_tracemag_ALL 
 
+//ngrow=1
 void NavierStokes::getState_tracemag(int idx) { 
-
  
  bool use_tiling=ns_tiling;
 
@@ -10733,8 +10733,6 @@ void NavierStokes::getState_tracemag(int idx) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
    if (cellten.nComp()!=ntensor)
     amrex::Error("cellten invalid ncomp");
@@ -10763,15 +10761,16 @@ void NavierStokes::getState_tracemag(int idx) {
     //    \dot{gamma} o.t.
     // 5. magnitude of vorticity
 
-   FORT_DERMAGTRACE(
+   int ngrow_magtrace=1;
+
+    //declared in: DERIVE_3D.F90
+   fort_dermagtrace(
     &level,
     &finest_level,  
-    &im,
+    &im, //im=0..nmat-1
     &ntensor,
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-    voffab.dataPtr(),
-    ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     destfab.dataPtr(idest),
     ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
     denfab.dataPtr(),
@@ -10784,7 +10783,7 @@ void NavierStokes::getState_tracemag(int idx) {
     ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &ngrow,
+    &ngrow_magtrace,
     dx,xlo,
     &cur_time_slab,
     bc.dataPtr(),

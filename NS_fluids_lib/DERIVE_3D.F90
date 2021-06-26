@@ -996,13 +996,12 @@ stop
 !    \dot{gamma} o.t.
 ! 5. magnitude of vorticity
 
-      subroutine FORT_DERMAGTRACE( &
+      subroutine fort_dermagtrace( &
        level, &
        finest_level, &
        im, &   ! im=0..nmat-1
        ntensor, &
        cellten,DIMS(cellten), &
-       vof,DIMS(vof), &
        dest,DIMS(dest), &
        den,DIMS(den), &
        tensor,DIMS(tensor), &
@@ -1025,51 +1024,53 @@ stop
        Carreau_beta, &
        elastic_time, &
        viscoelastic_model, &
-       elastic_viscosity)
+       elastic_viscosity) &
+      bind(c,name='fort_dermagtrace')
 
       use global_utility_module
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T level,finest_level
-      INTEGER_T ntensor
-      INTEGER_T ncomp_den
-      INTEGER_T ncomp_tensor
-      INTEGER_T ncomp_visc
-      INTEGER_T n_trace
-      INTEGER_T nmat
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: ncomp_den
+      INTEGER_T, intent(in) :: ncomp_tensor
+      INTEGER_T, intent(in) :: ncomp_visc
+      INTEGER_T, intent(in) :: n_trace
+      INTEGER_T, intent(in) :: nmat
 
-      REAL_T polymer_factor(nmat)
-      REAL_T etaS(nmat)
-      REAL_T etaP(nmat)
-      REAL_T Carreau_beta(nmat)
-      REAL_T elastic_time(nmat)
-      INTEGER_T viscoelastic_model(nmat)
-      REAL_T elastic_viscosity(nmat)
+      REAL_T, intent(in) :: polymer_factor(nmat)
+      REAL_T, intent(in) :: etaS(nmat)
+      REAL_T, intent(in) :: etaP(nmat)
+      REAL_T, intent(in) :: Carreau_beta(nmat)
+      REAL_T, intent(in) :: elastic_time(nmat)
+      INTEGER_T, intent(in) :: viscoelastic_model(nmat)
+      REAL_T, intent(in) :: elastic_viscosity(nmat)
 
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(dest)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(tensor)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(visc)
-      INTEGER_T DIMDEC(cellten)
-      INTEGER_T bc(SDIM,2,SDIM)
-      INTEGER_T ngrow
-      REAL_T time
-      REAL_T dx(SDIM), xlo(SDIM)
-      REAL_T cellten(DIMV(cellten),ntensor)
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T dest(DIMV(dest),5)
-      REAL_T den(DIMV(den),ncomp_den)
-      REAL_T tensor(DIMV(tensor),ncomp_tensor)
-      REAL_T vel(DIMV(vel),SDIM)
-      REAL_T visc(DIMV(visc),ncomp_visc)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(dest)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(tensor)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(cellten)
+      INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+
+      REAL_T, intent(inout), target :: dest(DIMV(dest),5)
+      REAL_T, pointer :: dest_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: den(DIMV(den),ncomp_den)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),ncomp_tensor)
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
 
       INTEGER_T im  ! im=0..nmat-1
       INTEGER_T i,j,k
@@ -1085,6 +1086,8 @@ stop
       REAL_T vort(3)
 
       nhalf=1
+
+      dest_ptr=>dest
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
@@ -1156,18 +1159,17 @@ stop
       ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
  
-      call checkbound(fablo,fabhi,DIMS(cellten),ngrow,-1,64)
-      call checkbound(fablo,fabhi,DIMS(vof),ngrow+1,-1,322)
-      call checkbound(fablo,fabhi,DIMS(dest),ngrow,-1,323)
-      call checkbound(fablo,fabhi,DIMS(den),ngrow,-1,324)
-      call checkbound(fablo,fabhi,DIMS(tensor),ngrow,-1,325)
-      call checkbound(fablo,fabhi,DIMS(vel),ngrow+1,-1,326)
-      call checkbound(fablo,fabhi,DIMS(visc),ngrow,-1,327)
+      call checkbound_array(fablo,fabhi,cellten,ngrow,-1,64)
+      call checkbound_array(fablo,fabhi,dest_ptr,ngrow,-1,323)
+      call checkbound_array(fablo,fabhi,den,ngrow,-1,324)
+      call checkbound_array(fablo,fabhi,tensor,ngrow,-1,325)
+      call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,326)
+      call checkbound_array(fablo,fabhi,visc,ngrow,-1,327)
 
       iproject=0
       onlyscalar=1  ! mag(trace gradu)
         
-       ! in: DERMAGTRACE
+       ! in: fort_dermagtrace
        ! visc=sqrt(2*(a11**2+a22**2+a33**2+2*a12**2+2*a13**2+2*a23**2))
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
    
