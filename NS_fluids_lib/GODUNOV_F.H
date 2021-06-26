@@ -18,7 +18,6 @@
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_UPDATETENSOR updatetensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
@@ -49,7 +48,6 @@
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
 #    define FORT_HEATADVANCE  HEATADVANCE
-#    define FORT_UPDATETENSOR UPDATETENSOR
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
 #    define FORT_TENSORHEAT TENSORHEAT
@@ -80,7 +78,6 @@
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_UPDATETENSOR updatetensor
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
@@ -110,7 +107,6 @@
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
 #    define FORT_HEATADVANCE  heatadvance_
-#    define FORT_UPDATETENSOR updatetensor_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
 #    define FORT_TENSORHEAT tensorheat_
@@ -598,20 +594,28 @@ extern "C"
     int* nmat,int* nstate);
 
  
-   void FORT_UPDATETENSOR(
+   void fort_updatetensor(
     int* level,
     int* finest_level,
-    int* nmat,int* im,int* ncomp_visc,
-    Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
+    int* MAC_grid_displacement,
+    int* nmat,
+    int* im,
+    int* ncomp_visc,
     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
     Real* tendata,AMREX_ARLIM_P(tendatalo),AMREX_ARLIM_P(tendatahi),
     const Real* dx,const Real* xlo,
     Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
     Real* tensor_new,AMREX_ARLIM_P(tnewlo),AMREX_ARLIM_P(tnewhi),
     Real* tensor_old,AMREX_ARLIM_P(toldlo),AMREX_ARLIM_P(toldhi),
-    Real* xdisplace,
-    AMREX_ARLIM_P(xdisplacelo),
-    AMREX_ARLIM_P(xdisplacehi),
+    Real* xdisp,
+    AMREX_ARLIM_P(xdisplo),
+    AMREX_ARLIM_P(xdisphi),
+    Real* ydisp,
+    AMREX_ARLIM_P(ydisplo),
+    AMREX_ARLIM_P(ydisphi),
+    Real* zdisp,
+    AMREX_ARLIM_P(zdisplo),
+    AMREX_ARLIM_P(zdisphi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -619,7 +623,8 @@ extern "C"
     Real* elastic_time,
     int* viscoelastic_model,
     Real* polymer_factor,
-    int* irz,const int* bcrec,
+    int* irz,
+    const int* bcrec,
     int* transposegradu);
 
 
@@ -627,7 +632,6 @@ extern "C"
     int* level,
     int* finest_level,
     int* nmat,int* im,
-    Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
     const Real* dx,const Real* xlo,
     Real* tensor_new,AMREX_ARLIM_P(tnewlo),AMREX_ARLIM_P(tnewhi),
     const int* tilelo,const int* tilehi,

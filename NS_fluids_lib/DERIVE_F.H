@@ -9,7 +9,6 @@
 #ifdef BL_LANG_FORT
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
-#    define FORT_DERVISCOSITY derviscosity
 #    define FORT_DERTURBVISC derturbvisc
 #    define FORT_DERMAGTRACE dermagtrace
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
@@ -18,7 +17,6 @@
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_MAXPRESVEL MAXPRESVEL
 #    define FORT_GETDRAG  GETDRAG
-#    define FORT_DERVISCOSITY DERVISCOSITY
 #    define FORT_DERTURBVISC DERTURBVISC
 #    define FORT_DERMAGTRACE DERMAGTRACE
 #    define FORT_INTEGRATE_RECALESCE INTEGRATE_RECALESCE
@@ -27,7 +25,6 @@
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
-#    define FORT_DERVISCOSITY derviscosity
 #    define FORT_DERTURBVISC derturbvisc
 #    define FORT_DERMAGTRACE dermagtrace
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
@@ -35,7 +32,6 @@
 #  else
 #    define FORT_MAXPRESVEL maxpresvel_ 
 #    define FORT_GETDRAG  getdrag_
-#    define FORT_DERVISCOSITY derviscosity_
 #    define FORT_DERTURBVISC derturbvisc_
 #    define FORT_DERMAGTRACE dermagtrace_
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce_
@@ -52,7 +48,6 @@ extern "C" {
      void fort_getshear(
        int* ntensor,
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
-       Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
        Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
        const Real* delta, const Real* xlo,
        Real* tensordata,AMREX_ARLIM_P(tendtlo),AMREX_ARLIM_P(tendthi),
@@ -183,7 +178,7 @@ extern "C" {
        const int* tilelo, const int* tilehi,
        const int* fablo, const int* fabhi,int* bfact);
 
-     void FORT_DERVISCOSITY(
+     void fort_derviscosity(
       int* level,
       int* finest_level,
       Real* visc_coef,
@@ -204,7 +199,6 @@ extern "C" {
       Real* elastic_regularization,
       Real* etaL,Real* etaP,Real* etaS,
       Real* polymer_factor,
-      Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
       Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
       Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
       Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),

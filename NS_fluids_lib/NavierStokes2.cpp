@@ -9697,7 +9697,6 @@ void NavierStokes::init_pressure_error_indicator() {
    const Real* xlo = grid_loc[gridno].lo();
    Vector<int> velbc=
      getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& velfab=(*velmf)[mfi];
    FArrayBox& vortfab=(*vortmf)[mfi];
 
@@ -9719,7 +9718,6 @@ void NavierStokes::init_pressure_error_indicator() {
    fort_getshear(
     &ntensor,
     cellten.dataPtr(tencomp),ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
     dx,xlo,
     vortfab.dataPtr(),
@@ -10337,8 +10335,6 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
      FArrayBox& gammadot=(*gammadot_mf)[mfi];
 
-     FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-
      FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
      if (cellten.nComp()!=ntensor)
       amrex::Error("cellten invalid ncomp");
@@ -10359,8 +10355,6 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
       &ntensor,
       cellten.dataPtr(),
       ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-      voffab.dataPtr(),
-      ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
       (*vel)[mfi].dataPtr(),
       ARLIM((*vel)[mfi].loVect()),ARLIM((*vel)[mfi].hiVect()),
       dx,xlo,
@@ -10409,8 +10403,6 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
    FArrayBox& gammadot=(*gammadot_mf)[mfi];
 
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-
    FArrayBox& viscfab=(*localMF[idx])[mfi];
 
    FArrayBox& velfab=(*vel)[mfi];
@@ -10426,8 +10418,8 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: DERIVE_3D.F90
-   FORT_DERVISCOSITY(
+    // declared in: DERIVE_3D.F90
+   fort_derviscosity(
       &level,
       &finest_level,
       &visc_coef,
@@ -10448,8 +10440,6 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
       &elastic_regularization[im],
       &etaL[im],&etaP[im],&etaS[im],
       &polymer_factor[im],
-      voffab.dataPtr(),
-      ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
       viscfab.dataPtr(),
       ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
       velfab.dataPtr(),
@@ -10679,8 +10669,6 @@ void NavierStokes::getState_tracemag(int idx) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
-
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
    if (cellten.nComp()!=ntensor)
     amrex::Error("cellten invalid ncomp");
@@ -10699,12 +10687,11 @@ void NavierStokes::getState_tracemag(int idx) {
    int iproject=0;
    int onlyscalar=1;  // mag(trace gradu)
    int ngrow_getshear=1;
+    // declared in: DERIVE_3D.F90
    fort_getshear(
     &ntensor,
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-    voffab.dataPtr(),
-    ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     velfab.dataPtr(),
     ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
     dx,xlo,
