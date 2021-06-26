@@ -11256,6 +11256,7 @@ void NavierStokes::tensor_advection_update() {
         amrex::Error("tid_current invalid");
        thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+        // declared in: GODUNOV_3D.F90
        fort_fix_hoop_tensor(
         &level,
         &finest_level,
