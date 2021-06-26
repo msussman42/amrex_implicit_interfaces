@@ -12051,7 +12051,7 @@ stop
        ncomp_visc, & 
        vof,DIMS(vof), &
        visc,DIMS(visc), &
-       tendata,DIMS(tendata), & ! tendata: FORT_GETSHEAR,iproject=onlyscalar=0
+       tendata,DIMS(tendata), & ! tendata: fort_getshear,iproject=onlyscalar=0
        dx,xlo, &
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
@@ -12447,7 +12447,7 @@ FIX ME
             if (levelrz.eq.0) then
              ! do nothing
             else if (levelrz.eq.1) then
-             ! GETSHEAR put u/r in gradu(3,3)
+             ! fort_getshear puts u/r in gradu(3,3)
              ! for hoop stress term: 
              ! dA/dt=2 u A/r
              ! if u<0:

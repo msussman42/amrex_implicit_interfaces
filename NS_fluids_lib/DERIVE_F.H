@@ -7,7 +7,6 @@
 */
 
 #ifdef BL_LANG_FORT
-#    define FORT_GETSHEAR getshear
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
 #    define FORT_DERVISCOSITY derviscosity
@@ -17,7 +16,6 @@
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_GETSHEAR GETSHEAR
 #    define FORT_MAXPRESVEL MAXPRESVEL
 #    define FORT_GETDRAG  GETDRAG
 #    define FORT_DERVISCOSITY DERVISCOSITY
@@ -27,7 +25,6 @@
 #    define FORT_RESET_TEMPERATURE RESET_TEMPERATURE
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_GETSHEAR getshear
 #    define FORT_MAXPRESVEL maxpresvel 
 #    define FORT_GETDRAG  getdrag
 #    define FORT_DERVISCOSITY derviscosity
@@ -36,7 +33,6 @@
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #  else
-#    define FORT_GETSHEAR getshear_
 #    define FORT_MAXPRESVEL maxpresvel_ 
 #    define FORT_GETDRAG  getdrag_
 #    define FORT_DERVISCOSITY derviscosity_
@@ -53,7 +49,7 @@ namespace amrex{
 
 extern "C" {
 
-     void FORT_GETSHEAR(
+     void fort_getshear(
        int* ntensor,
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
        Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),

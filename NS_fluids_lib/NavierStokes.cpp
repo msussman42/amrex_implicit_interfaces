@@ -9821,7 +9821,7 @@ void NavierStokes::make_viscoelastic_force(int im) {
    debug_ngrow(VISCOTEN_MF,1,5);
     // CELL_VISC_MATERIAL init in getStateVISC_ALL (NavierStokes2.cpp) which
     // calls getStateVISC which calls:
-    //  FORT_GETSHEAR,FORT_DERVISCOSITY, and
+    //  fort_getshear,FORT_DERVISCOSITY, and
     //  FORT_DERTURBVISC
     //  FORT_DERVISCOSITY is in DERIVE_3D.F90
     //  a. 1..nmat           mu or etaS+etaP*(bterm**pterm)   "VISC_RAW"
@@ -11054,10 +11054,18 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
 
-     int scomp_xdisplace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
+     MultiFab* xdisplace_mf[AMREX_SPACEDIM];
 
-     MultiFab* xdisplace_mf=getStateTensor(1,scomp_xdisplace,AMREX_SPACEDIM,
-       cur_time_slab);
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      if (MAC_grid_displacement==0) {
+       int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
+       xdisplace_mf[dir]=getStateTensor(1,scomp,1,cur_time_slab);
+      } else if (MAC_grid_displacement==1) {
+        //ngrow,dir,scomp,ncomp
+       xdisplace_mf[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
+      } else
+       amrex::Error("MAC_grid_displacement invalid");
+     } // dir=0..sdim-1
 
      MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
    
@@ -11113,7 +11121,7 @@ void NavierStokes::tensor_advection_update() {
 
       // declared in: DERIVE_3D.F90
       // 0<=im<=nmat-1
-      FORT_GETSHEAR(
+      fort_getshear(
        &ntensor,
        cellten.dataPtr(),
        ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
@@ -11163,7 +11171,9 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tensor_new_fab=Tensor_new[mfi];
       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
-      FArrayBox& xdisplace_mf_fab=(*xdisplace_mf)[mfi];
+      FArrayBox& xdfab=(*xdisplace_mf[0])[mfi];
+      FArrayBox& ydfab=(*xdisplace_mf[1])[mfi];
+      FArrayBox& zdfab=(*xdisplace_mf[AMREX_SPACEDIM-1])[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
       Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
@@ -11179,10 +11189,12 @@ void NavierStokes::tensor_advection_update() {
 	// last step in this routine: (Q^n+1-Q^n)/dt = -Q^n+1/lambda
 	// if viscoelastic_model==2, then modtime=elastic_time
 	// if viscoelastic_model==3, then modtime=elastic_time (incremental)
-      FORT_UPDATETENSOR(
+      fort_updatetensor(
        &level,
        &finest_level,
-       &nmat,&im,
+       &MAC_grid_displacement,
+       &nmat,
+       &im,
        &ncomp_visc,
        voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
@@ -11195,9 +11207,9 @@ void NavierStokes::tensor_advection_update() {
        tensor_source_mf_fab.dataPtr(),
        ARLIM(tensor_source_mf_fab.loVect()),
        ARLIM(tensor_source_mf_fab.hiVect()),
-       xdisplace_mf_fab.dataPtr(),
-       ARLIM(xdisplace_mf_fab.loVect()),
-       ARLIM(xdisplace_mf_fab.hiVect()),
+       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
        tilelo,tilehi,
        fablo,fabhi,
        &bfact, 
@@ -11205,7 +11217,9 @@ void NavierStokes::tensor_advection_update() {
        &elastic_time[im],
        &viscoelastic_model[im],
        &polymer_factor[im],
-       &rzflag,velbc.dataPtr(),&transposegradu);
+       &rzflag,
+       velbc.dataPtr(),
+       &transposegradu);
      }  // mfi
 } // omp
      ns_reconcile_d_num(65);
@@ -11242,7 +11256,7 @@ void NavierStokes::tensor_advection_update() {
         amrex::Error("tid_current invalid");
        thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-       FORT_FIX_HOOP_TENSOR(
+       fort_fix_hoop_tensor(
         &level,
         &finest_level,
         &nmat,&im,
@@ -11267,7 +11281,9 @@ void NavierStokes::tensor_advection_update() {
       
      delete tendata_mf;
      delete tensor_source_mf;
-     delete xdisplace_mf;
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      delete xdisplace_mf[dir];
+     }
      delete velmf;
     } else
      amrex::Error("partid could not be found: tensor_advection_update");
@@ -18691,7 +18707,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    //    \dot{gamma} o.t.
    // 5. vorticity magnitude.
 
-   // calls GETSHEAR and DERMAGTRACE
+   // calls fort_getshear and DERMAGTRACE
  int ntrace=5*nmat;
  getState_tracemag_ALL(MAGTRACE_MF); //ngrow==1
  if (localMF[MAGTRACE_MF]->nComp()!=ntrace)
