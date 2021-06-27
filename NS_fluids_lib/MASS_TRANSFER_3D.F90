@@ -749,6 +749,7 @@ stop
        !  This routine calculates the bilinear interpolant at a given point
        !  "x" 
       subroutine interpfab_XDISP( &
+       interp_foot_flag, &
        bfact, &
        level, &
        finest_level, &
@@ -765,6 +766,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: interp_foot_flag
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -794,6 +796,7 @@ stop
 
       INTEGER_T nhalf
       REAL_T xsten_center(-3:3,SDIM)
+      REAL_T xsten_offset(-3:3,SDIM)
 
       nhalf=3
 
@@ -847,6 +850,8 @@ stop
        do isten=istenlo(1),istenhi(1)
        do jsten=istenlo(2),istenhi(2)
        do ksten=istenlo(3),istenhi(3)
+        call gridstenMAC_level(xsten_offset,isten,jsten,ksten,level,nhalf, &
+              dir_disp_comp,81)
 
         stencil_offset(1)=isten-mac_cell_index(1)
         stencil_offset(2)=jsten-mac_cell_index(2)
@@ -874,8 +879,16 @@ stop
         if ((local_data.ge.-1.0D+30).and. &
             (local_data.le.1.0D+30)) then
 
+         if (interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data=xsten_offset(0,dir_disp_comp+1)-local_data
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
          dest(dir_disp_comp+1)=dest(dir_disp_comp+1)+WT*local_data
-
         else
          print *,"local_data overflow"
          print *,"local_data ",local_data

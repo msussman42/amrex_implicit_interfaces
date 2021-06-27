@@ -759,6 +759,7 @@ namespace amrex{
        int* curv_sten);
 
      void fort_init_particle_container(
+        int* MAC_grid_displacement,
         Real* particles_weight_XD,
         Real* particles_weight_VEL,
         int* tid,
@@ -789,9 +790,15 @@ namespace amrex{
         Real* velfab,
 	AMREX_ARLIM_P(velfablo),
 	AMREX_ARLIM_P(velfabhi),
-        Real* xdisplace,
-	AMREX_ARLIM_P(xdisplacelo),
-	AMREX_ARLIM_P(xdisplacehi),
+        Real* xd,
+	AMREX_ARLIM_P(xdlo),
+	AMREX_ARLIM_P(xdhi),
+        Real* yd,
+	AMREX_ARLIM_P(ydlo),
+	AMREX_ARLIM_P(ydhi),
+        Real* zd,
+	AMREX_ARLIM_P(zdlo),
+	AMREX_ARLIM_P(zdhi),
         Real* LS,
 	AMREX_ARLIM_P(LSlo),
 	AMREX_ARLIM_P(LShi));
