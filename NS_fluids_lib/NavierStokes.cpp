@@ -12212,7 +12212,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      // ntsat=nten*(ncomp_per_tsat+1)
      // e.g. for interface 12,
      //  component 1=0 if T_gamma,Y_gamma not defined
-     //             =1 if T_gamma,Y_gamma defined in RATEMASSCHANGE
+     //             =1 if T_gamma,Y_gamma defined in fort_ratemasschange
      //             =2 if T_gamma,Y_gamma defined after extrapolation
      //             =-1 or -2 for condensation case.
      //  component 2=T_gamma
@@ -12236,7 +12236,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      // lsnewfab and burnvelfab are updated.
      // lsfab is not updated.
      // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
-    FORT_RATEMASSCHANGE( 
+    fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
      &stefan_flag,
@@ -12326,7 +12326,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    } else if (nucleation_flag==1) {
 
-    FORT_RATEMASSCHANGE( 
+    fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
      &stefan_flag,

@@ -4,24 +4,20 @@
 #ifdef BL_LANG_FORT
 #    define FORT_CONVERTMATERIAL convertmaterial
 #    define FORT_NODEDISPLACE nodedisplace
-#    define FORT_RATEMASSCHANGE ratemasschange
 #    define FORT_EXTEND_BURNING_VEL extend_burning_vel
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_CONVERTMATERIAL CONVERTMATERIAL
 #    define FORT_NODEDISPLACE NODEDISPLACE
-#    define FORT_RATEMASSCHANGE RATEMASSCHANGE
 #    define FORT_EXTEND_BURNING_VEL EXTEND_BURNING_VEL
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_CONVERTMATERIAL convertmaterial
 #    define FORT_NODEDISPLACE nodedisplace
-#    define FORT_RATEMASSCHANGE ratemasschange
 #    define FORT_EXTEND_BURNING_VEL extend_burning_vel
 #  else
 #    define FORT_CONVERTMATERIAL convertmaterial_
 #    define FORT_NODEDISPLACE nodedisplace_
-#    define FORT_RATEMASSCHANGE ratemasschange_
 #    define FORT_EXTEND_BURNING_VEL extend_burning_vel_
 #  endif
 #  endif
@@ -88,7 +84,7 @@ extern "C"
      const Real* xlo,const Real* dx,
      int* level,int* finest_level);
 
-   void FORT_RATEMASSCHANGE(
+   void fort_ratemasschange(
     int* tid,
     int* nucleation_flag,
     int* stefan_flag,

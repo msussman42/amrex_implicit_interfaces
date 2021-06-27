@@ -73,15 +73,10 @@ stop
        INTEGER_T, pointer :: ngrow
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
-       INTEGER_T :: DIMDEC(EOS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       INTEGER_T :: DIMDEC(smoothfab)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: smoothfab
-       INTEGER_T :: DIMDEC(recon)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: recon
-       INTEGER_T :: DIMDEC(LS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-       INTEGER_T :: DIMDEC(pres)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
       end type probe_parm_type
 
@@ -118,7 +113,7 @@ stop
         dx,xlo, &
         ngrow_tsat, &
         fablo,fabhi, &
-        TSATFAB,DIMS(TSATFAB), &
+        TSATFAB, &
         T_I, &
         latent_comp, &
         TSAT_array, &
@@ -137,8 +132,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: ngrow_tsat
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(TSATFAB)
-      REAL_T, intent(in) :: TSATFAB(DIMV(TSATFAB),ntsat)
+      REAL_T, pointer, intent(in) :: TSATFAB(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
@@ -159,7 +153,7 @@ stop
       REAL_T, external   :: exact_temperature
 #endif
 
-      call checkbound(fablo,fabhi,DIMS(TSATFAB),ngrow_tsat,-1,122)
+      call checkbound_array(fablo,fabhi,TSATFAB,ngrow_tsat,-1,122)
       ncomp_per_tsat=2
       tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
 
@@ -199,7 +193,7 @@ stop
              tsat_comp, &
              ngrow_tsat, &
              fablo,fabhi, &
-             TSATFAB,DIMS(TSATFAB), &
+             TSATFAB, &
              T_I)
           else if (use_tsatfab.eq.0) then
            local_flag=TSAT_flag_array(latent_comp)
@@ -923,8 +917,8 @@ stop
        comp, &
        ngrow, &
        lo,hi, &
-       data,DIMS(data), &
-       recon,DIMS(recon), &
+       data, &
+       recon, &
        dest)
       use global_utility_module
       use geometry_intersect_module
@@ -940,12 +934,9 @@ stop
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
       INTEGER_T, intent(in) :: im,nmat
-       ! datalox,datahix,dataloy,datahiy,dataloz,datahiz
-      INTEGER_T, intent(in) :: DIMDEC(data)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
-      REAL_T, intent(in) :: data(DIMV(data),comp)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
 
       REAL_T :: DATA_FLOOR
@@ -975,8 +966,8 @@ stop
 
       DATA_FLOOR=zero
 
-      call checkbound(lo,hi,DIMS(data),ngrow,-1,1221)
-      call checkbound(lo,hi,DIMS(recon),ngrow,-1,1222)
+      call checkbound_array(lo,hi,data,ngrow,-1,1221)
+      call checkbound_array(lo,hi,recon,ngrow,-1,1222)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1085,7 +1076,7 @@ stop
        nmat,&
        ngrow, &
        lo,hi, &
-       recon,DIMS(recon), & ! fluids tess, solids overlay
+       recon, & ! fluids tess, solids overlay
        dest)
       use global_utility_module
       use geometry_intersect_module
@@ -1102,8 +1093,7 @@ stop
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest(nmat)
 
       INTEGER_T im
@@ -1120,7 +1110,7 @@ stop
       INTEGER_T nmax
       INTEGER_T local_tessellate
 
-      call checkbound(lo,hi,DIMS(recon),ngrow,-1,1222)
+      call checkbound_array(lo,hi,recon,ngrow,-1,1222)
 
       if (bfact.lt.1) then 
        print *,"bfact invalid113"
@@ -1242,7 +1232,6 @@ stop
        ngrow, &
        lo,hi, &
        data, &
-       DIMS(data), &
        dest)
       use global_utility_module
       IMPLICIT NONE
@@ -1257,8 +1246,7 @@ stop
       INTEGER_T, intent(in) :: hi(SDIM)
       INTEGER_T, intent(in) :: comp
       INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: DIMDEC(data)
-      REAL_T, intent(in) :: data(DIMV(data),comp)
+      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
 
       REAL_T :: DATA_FLOOR
@@ -1283,7 +1271,7 @@ stop
 
       DATA_FLOOR=zero
 
-      call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
+      call checkbound_array(lo,hi,data,ngrow,-1,122)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1380,7 +1368,7 @@ stop
        comp, &
        ngrow, &
        lo,hi, &
-       data,DIMS(data), &
+       data, &
        TSAT)
       use global_utility_module
       IMPLICIT NONE
@@ -1398,8 +1386,7 @@ stop
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
-      INTEGER_T, intent(in) :: DIMDEC(data)
-      REAL_T, intent(in) :: data(DIMV(data),ntsat)
+      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: TSAT
 
       INTEGER_T ncomp_per_tsat
@@ -1417,7 +1404,7 @@ stop
       REAL_T local_weight
       REAL_T eps
 
-      call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
+      call checkbound_array(lo,hi,data,ngrow,-1,122)
 
       ncomp_per_tsat=2
       if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
@@ -1553,7 +1540,7 @@ stop
        xtarget, &
        ngrow, &
        lo,hi, &
-       data,DIMS(data), &
+       data, &
        CURV_OUT)
       use global_utility_module
       IMPLICIT NONE
@@ -1569,10 +1556,9 @@ stop
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: DIMDEC(data)
        ! first nmat+nten components are curvatures
        ! second nmat+nten components are status (0=bad 1=good)
-      REAL_T, intent(in) :: data(DIMV(data),2*(nmat+nten))
+      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: CURV_OUT
 
       INTEGER_T k1lo,k1hi
@@ -1591,7 +1577,7 @@ stop
       REAL_T eps
       INTEGER_T nten_test
 
-      call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
+      call checkbound_array(lo,hi,data,ngrow,-1,122)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -1709,8 +1695,6 @@ stop
       end subroutine interpfab_curv
 
 
-
-
       subroutine interpfab_piecewise_constant( &
        bfact, &
        level, &
@@ -1721,7 +1705,7 @@ stop
        comp, &
        ngrow, &
        lo,hi, &
-       data,DIMS(data), &
+       data, &
        dest)
       use global_utility_module
       IMPLICIT NONE
@@ -1734,15 +1718,14 @@ stop
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp,ngrow
-      INTEGER_T, intent(in) :: DIMDEC(data)
-      REAL_T, intent(in) :: data(DIMV(data),comp)
+      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
 
       INTEGER_T dir
       INTEGER_T ic,jc,kc
       INTEGER_T cell_index(SDIM)
 
-      call checkbound(lo,hi,DIMS(data),ngrow,-1,122)
+      call checkbound_array(lo,hi,data,ngrow,-1,122)
 
       if (bfact.lt.1) then 
        print *,"bfact invalid115"
@@ -1786,9 +1769,8 @@ stop
        ngrow, &
        lo,hi, &
        tempfab, &
-       DIMS(tempfab), &
-       LS,DIMS(LS), &
-       recon,DIMS(recon), &
+       LS, &
+       recon, &
        dest, &
        debugrate)
       use global_utility_module
@@ -1807,12 +1789,9 @@ stop
       REAL_T, intent(in) :: Tsat
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: im,nmat,comp,ngrow
-      INTEGER_T, intent(in) :: DIMDEC(tempfab)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer, intent(in) :: tempfab(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: LS(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
 
       REAL_T :: DATA_FLOOR
@@ -1865,9 +1844,9 @@ stop
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(tempfab),ngrow,-1,1223)
-      call checkbound(lo,hi,DIMS(LS),ngrow,-1,1224)
-      call checkbound(lo,hi,DIMS(recon),ngrow,-1,1224)
+      call checkbound_array(lo,hi,tempfab,ngrow,-1,1223)
+      call checkbound_array(lo,hi,LS,ngrow,-1,1224)
+      call checkbound_array(lo,hi,recon,ngrow,-1,1224)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1968,9 +1947,8 @@ stop
        ngrow, &
        lo,hi, &
        tempfab, &
-       DIMS(tempfab), &
-       LS,DIMS(LS), &
-       recon,DIMS(recon), &
+       LS, &
+       recon, &
        dest, &
        dxprobe_target, &
        VOF_pos_probe_counter, &
@@ -1993,12 +1971,9 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: comp_probe
       INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: DIMDEC(tempfab)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      REAL_T, intent(in) :: tempfab(DIMV(tempfab),comp_probe)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer, intent(in) :: tempfab(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: LS(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
       REAL_T, intent(inout) :: dxprobe_target !interpfab_filament_probe
       INTEGER_T, intent(inout) :: VOF_pos_probe_counter
@@ -2052,9 +2027,9 @@ stop
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(tempfab),ngrow,-1,1223)
-      call checkbound(lo,hi,DIMS(LS),ngrow,-1,1224)
-      call checkbound(lo,hi,DIMS(recon),ngrow,-1,1224)
+      call checkbound_array(lo,hi,tempfab,ngrow,-1,1223)
+      call checkbound_array(lo,hi,LS,ngrow,-1,1224)
+      call checkbound_array(lo,hi,recon,ngrow,-1,1224)
 
         ! cell that contains xtarget
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
@@ -2272,7 +2247,6 @@ stop
        PROBE_PARMS%fablo, &
        PROBE_PARMS%fabhi, &
        PROBE_PARMS%recon, &
-       DIMS(PROBE_PARMS%recon), &
        F_tess)
 
       do iprobe=1,2 ! iprobe=1 source    iprobe=2 dest
@@ -2345,9 +2319,7 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
-         DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
          PROBE_PARMS%recon, &
-         DIMS(PROBE_PARMS%recon), &
          den_I_interp(iprobe))
 
         call interpfabFWEIGHT( &
@@ -2364,9 +2336,7 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
-         DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
          PROBE_PARMS%recon, &
-         DIMS(PROBE_PARMS%recon), &
          den_probe(iprobe))
 
        else
@@ -2393,11 +2363,8 @@ stop
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
-        DIMS(PROBE_PARMS%EOS), &
         PROBE_PARMS%LS, &
-        DIMS(PROBE_PARMS%LS), &
         PROBE_PARMS%recon, &
-        DIMS(PROBE_PARMS%recon), &
         T_probe(iprobe), &
         PROBE_PARMS%debugrate)
 
@@ -2421,9 +2388,7 @@ stop
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &        ! Fortran array box
-        DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
         PROBE_PARMS%recon, &
-        DIMS(PROBE_PARMS%recon), &
         T_probe_no_constrain)
 
        if (T_probe_no_constrain.lt.zero) then
@@ -2468,11 +2433,8 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &
-         DIMS(PROBE_PARMS%EOS), &
          PROBE_PARMS%LS, &
-         DIMS(PROBE_PARMS%LS), &
          PROBE_PARMS%recon, &
-         DIMS(PROBE_PARMS%recon), &
          Y_probe(iprobe), &
          PROBE_PARMS%debugrate)
 
@@ -2505,9 +2467,7 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
-         DIMS(PROBE_PARMS%EOS), &  ! Fortran array box
          PROBE_PARMS%recon, &
-         DIMS(PROBE_PARMS%recon), &
          Y_probe_no_constrain)
 
         if ((Y_probe_no_constrain.ge.-VOFTOL).and. &
@@ -2550,9 +2510,7 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &
-         DIMS(PROBE_PARMS%EOS), &
          PROBE_PARMS%recon, &
-         DIMS(PROBE_PARMS%recon), &
          Y_I_interp(iprobe))
        else if (Ycomp_probe(iprobe).eq.0) then
         Y_probe(iprobe)=one
@@ -2578,7 +2536,6 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%LS, &
-         DIMS(PROBE_PARMS%LS), &
          LSPROBE(imls))
        enddo ! imls=1..nmat
 
@@ -2668,11 +2625,8 @@ stop
           PROBE_PARMS%fablo, &
           PROBE_PARMS%fabhi, &
           PROBE_PARMS%EOS, &
-          DIMS(PROBE_PARMS%EOS), &
           PROBE_PARMS%LS, &
-          DIMS(PROBE_PARMS%LS), &
           PROBE_PARMS%recon, &
-          DIMS(PROBE_PARMS%recon), &
           T_probe(iprobe), &
           dxprobe_target(iprobe), &
           VOF_pos_probe_counter, &
@@ -2705,11 +2659,8 @@ stop
            PROBE_PARMS%fablo, &
            PROBE_PARMS%fabhi, &
            PROBE_PARMS%EOS, &
-           DIMS(PROBE_PARMS%EOS), &
            PROBE_PARMS%LS, &
-           DIMS(PROBE_PARMS%LS), &
            PROBE_PARMS%recon, &
-           DIMS(PROBE_PARMS%recon), &
            Y_probe(iprobe), &
            dxprobe_target(iprobe), &
            dummy_VOF_pos_probe_counter, &
@@ -2773,9 +2724,7 @@ stop
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
-        DIMS(PROBE_PARMS%EOS), &
         PROBE_PARMS%recon, &
-        DIMS(PROBE_PARMS%recon), &
         T_probe_raw(iprobe))
 
        if (T_probe_raw(iprobe).lt.zero) then
@@ -2801,9 +2750,7 @@ stop
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%smoothfab, &
-         DIMS(PROBE_PARMS%smoothfab), &
          PROBE_PARMS%recon, &
-         DIMS(PROBE_PARMS%recon), &
          T_probe_raw_smooth(iprobe))
 
         if (T_probe_raw_smooth(iprobe).lt.zero) then
@@ -2831,9 +2778,7 @@ stop
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
-        DIMS(PROBE_PARMS%EOS), &
         PROBE_PARMS%recon, &
-        DIMS(PROBE_PARMS%recon), &
         T_I_interp(iprobe))
 
        pcomp=1
@@ -2849,7 +2794,6 @@ stop
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%pres, &
-        DIMS(PROBE_PARMS%pres), &
         pres_I_interp(iprobe))
 
        ! local_freezing_model=0 (sharp interface stefan model)
@@ -7100,7 +7044,7 @@ stop
       ! Y_{n+1} = Y_{n} - g(Y_n)/( (g(Y_{n})-g(Y_{n-1}))/(Y_{n}-Y_{n-1}))
       ! Palmore and Desjardins
       ! Secant method will be implemented.
-      subroutine FORT_RATEMASSCHANGE( &
+      subroutine fort_ratemasschange( &
        tid, &
        nucleation_flag, &
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
@@ -7178,7 +7122,9 @@ stop
        recon,DIMS(recon), &
        pres,DIMS(pres), &
        pres_eos,DIMS(pres_eos), &
-       curvfab,DIMS(curvfab) )
+       curvfab,DIMS(curvfab) ) &
+      bind(c,name='fort_ratemasschange')
+
 #if (STANDALONE==0)
       use probf90_module
 #elif (STANDALONE==1)
@@ -7278,29 +7224,35 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(pres_eos)
       INTEGER_T, intent(in) :: DIMDEC(curvfab)
 
-      REAL_T, intent(in) :: typefab(DIMV(typefab))
-      REAL_T, intent(in) :: colorfab(DIMV(colorfab))
+      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, intent(in), target :: colorfab(DIMV(colorfab))
 
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov)) 
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov)) 
 
         ! destination vel: first nten components are the status.
-      REAL_T, intent(out) :: burnvel(DIMV(burnvel),nburning)
+      REAL_T, intent(out), target :: burnvel(DIMV(burnvel),nburning)
+      REAL_T, pointer :: burnvel_ptr(D_DECL(:,:,:),:)
+
         ! TSAT : first nten components are the status.
-      REAL_T, intent(out) :: Tsatfab(DIMV(Tsatfab),ntsat)
+      REAL_T, intent(out), target :: Tsatfab(DIMV(Tsatfab),ntsat)
+      REAL_T, pointer :: Tsatfab_ptr(D_DECL(:,:,:),:)
+
       REAL_T, target, intent(in) :: smoothfab(DIMV(smoothfab),nmat)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
       REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
       REAL_T, target, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
+      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(inout) :: Snew(DIMV(Snew),nstate)
-      REAL_T, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
+      REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
       REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
        ! F,X,order,SL,I x nmat
       REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
       REAL_T, target, intent(in) :: pres(DIMV(pres)) 
       REAL_T, target, intent(in) :: pres_eos(DIMV(pres_eos)) 
-      REAL_T, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
+      REAL_T, target, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
 
       INTEGER_T, target :: i,j,k
       INTEGER_T dir,dir2
@@ -7440,6 +7392,11 @@ stop
 #endif
 
       nhalf=3
+
+      burnvel_ptr=>burnvel
+      Tsatfab_ptr=>Tsatfab
+      LSnew_ptr=>LSnew
+      Snew_ptr=>Snew
 
       if (prev_time.ge.zero) then
        cur_time=prev_time+dt
@@ -7595,38 +7552,38 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1251)
-      call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1253)
-      call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1253)
-      call checkbound(fablo,fabhi,DIMS(EOS),ngrow,-1,1254)
-      call checkbound(fablo,fabhi,DIMS(pres),ngrow,-1,1255)
-      call checkbound(fablo,fabhi,DIMS(pres_eos),1,-1,1255)
+      call checkbound_array1(fablo,fabhi,maskcov,1,-1,1251)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1253)
+      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1253)
+      call checkbound_array(fablo,fabhi,EOS,ngrow,-1,1254)
+      call checkbound_array1(fablo,fabhi,pres,ngrow,-1,1255)
+      call checkbound_array1(fablo,fabhi,pres_eos,1,-1,1255)
 
 
       if (nucleation_flag.eq.0) then
 
-       call checkbound(fablo,fabhi,DIMS(typefab),1,-1,6625)
-       call checkbound(fablo,fabhi,DIMS(colorfab),1,-1,6626)
+       call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
+       call checkbound_array1(fablo,fabhi,colorfab,1,-1,6626)
 
        ! nmat x (sdim+1) components
-       call checkbound(fablo,fabhi, &
-        DIMS(burnvel), &
+       call checkbound_array(fablo,fabhi, &
+        burnvel_ptr, &
         ngrow_make_distance,-1,1250)
-       call checkbound(fablo,fabhi, &
-        DIMS(Tsatfab), &
+       call checkbound_array(fablo,fabhi, &
+        Tsatfab_ptr, &
         ngrow_make_distance,-1,1250)
 
-       call checkbound(fablo,fabhi, &
-        DIMS(smoothfab), &
+       call checkbound_array(fablo,fabhi, &
+        smoothfab, &
         ngrow_distance,-1,1250)
 
-       call checkbound(fablo,fabhi, &
-        DIMS(curvfab), &
+       call checkbound_array(fablo,fabhi, &
+        curvfab, &
         ngrow_make_distance,-1,1250)
 
-       call checkbound(fablo,fabhi,DIMS(recon),ngrow,-1,1251)
-       call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1252)
-       call checkbound(fablo,fabhi,DIMS(LS_slopes_FD),1,-1,1253)
+       call checkbound_array(fablo,fabhi,recon,ngrow,-1,1251)
+       call checkbound_array(fablo,fabhi,LS,ngrow,-1,1252)
+       call checkbound_array(fablo,fabhi,LS_slopes_FD,1,-1,1253)
 
       else if (nucleation_flag.eq.1) then
        ! do nothing
@@ -7714,22 +7671,6 @@ stop
        temp_target_probe_history(iten,2)=zero
        dxprobe_target_history(iten,2)=zero
       enddo
-        ! copy_dimdec(dest,source), in: GLOBALUTIL.F90
-      call copy_dimdec( &
-        DIMS(create_in%EOS), &
-        DIMS(EOS))
-      call copy_dimdec( &
-        DIMS(create_in%pres), &
-        DIMS(pres))
-      call copy_dimdec( &
-        DIMS(create_in%pres_eos), &
-        DIMS(pres_eos))
-      call copy_dimdec( &
-        DIMS(create_in%Snew), &
-        DIMS(Snew))
-      call copy_dimdec( &
-        DIMS(create_in%LSnew), &
-        DIMS(Snew))
       create_in%EOS=>EOS
       create_in%pres=>pres
       create_in%pres_eos=>pres_eos
@@ -7762,23 +7703,6 @@ stop
       create_in%prev_time=prev_time
       create_in%cur_time=cur_time
       create_in%dt=dt
-
-        ! copy_dimdec(dest,source), declared in: GLOBALUTIL.F90
-      call copy_dimdec( &
-        DIMS(PROBE_PARMS%EOS), &
-        DIMS(EOS))
-      call copy_dimdec( &
-        DIMS(PROBE_PARMS%smoothfab), &
-        DIMS(smoothfab))
-      call copy_dimdec( &
-        DIMS(PROBE_PARMS%recon), &
-        DIMS(recon))
-      call copy_dimdec( &
-        DIMS(PROBE_PARMS%LS), &
-        DIMS(LS))
-      call copy_dimdec( &
-        DIMS(PROBE_PARMS%pres), &
-        DIMS(pres))
 
       PROBE_PARMS%tid=tid
       PROBE_PARMS%use_supermesh=use_supermesh
@@ -8144,7 +8068,7 @@ stop
                   xI, &
                   ngrow_make_distance, &
                   fablo,fabhi, &
-                  curvfab,DIMS(curvfab), &
+                  curvfab, &
                   CURV_OUT_I)
 
                  use_tsatfab=0
@@ -8165,7 +8089,7 @@ stop
                    dx,xlo, &
                    ngrow_make_distance, & ! ngrow_tsat
                    fablo,fabhi, &
-                   Tsatfab,DIMS(Tsatfab), & ! not used since use_tsatfab==0
+                   Tsatfab, & ! not used since use_tsatfab==0
                    local_Tsat(ireverse), & !user def. interface temperature 
                    iten+ireverse*nten, &
                    saturation_temp, &
@@ -8251,7 +8175,7 @@ stop
                    imls, &
                    ngrow, &
                    fablo,fabhi, &
-                   LS,DIMS(LS), &
+                   LS, &
                    LSINT(imls))
                  enddo ! imls=1..nmat*(SDIM+1)
 
