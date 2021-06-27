@@ -19231,11 +19231,8 @@ stop
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
         INTEGER_T :: nsubdivide
-        INTEGER_T :: DIMDEC(LS)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-        INTEGER_T :: DIMDEC(xdisplace)
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: xdisplacefab
-        INTEGER_T :: DIMDEC(cell_particle_count)
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
        end type accum_parm_type_count
 
@@ -19265,7 +19262,6 @@ stop
 
       subroutine count_particles( &
        LS_local, &
-       DIMS(LS_local), &
        accum_PARM, &
        cell_particle_count, &
        particles, &
@@ -19284,9 +19280,7 @@ stop
        ! child link 2, parent link 2, ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
 
-      INTEGER_T, intent(in) :: DIMDEC(LS_local)
-      REAL_T, target, intent(in) :: &
-              LS_local(DIMV(LS_local),num_materials)
+      REAL_T, pointer, intent(in) :: LS_local(D_DECL(:,:,:),:)
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -19315,7 +19309,7 @@ stop
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      call checkbound(fablo_local,fabhi_local,DIMS(LS_local), &
+      call checkbound_array(fablo_local,fabhi_local,LS_local, &
          local_ngrow,-1,2872)
 
       do interior_ID=1,accum_PARM%Npart
@@ -19671,11 +19665,8 @@ stop
          particles_weight_XD, &
          particles_weight_VEL, &
          velfab, &
-         DIMS(velfab), &
          lsfab, &
-         DIMS(lsfab), &
          xdisplacefab, &
-         DIMS(xdisplacefab), &
          accum_PARM, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
@@ -19699,15 +19690,9 @@ stop
       REAL_T, intent(out) :: x_foot_interp(SDIM)
       REAL_T, intent(out) :: vel_interp(SDIM)
       REAL_T :: x_foot_interp_local(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(velfab)
-      INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
-      INTEGER_T, intent(in) :: DIMDEC(lsfab)
-      REAL_T, intent(in), target ::  &
-        velfab(DIMV(velfab),SDIM) 
-      REAL_T, intent(in), target ::  &
-        xdisplacefab(DIMV(xdisplacefab),SDIM) 
-      REAL_T, intent(in), target ::  &
-        lsfab(DIMV(lsfab),num_materials*(SDIM+1)) 
+      REAL_T, intent(in), pointer ::  velfab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer ::  xdisplacefab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer ::  lsfab(D_DECL(:,:,:),:)
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
@@ -19754,9 +19739,9 @@ stop
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      call checkbound(fablo_local,fabhi_local,DIMS(velfab),1,-1,2872)
-      call checkbound(fablo_local,fabhi_local,DIMS(xdisplacefab),1,-1,2872)
-      call checkbound(fablo_local,fabhi_local,DIMS(lsfab),1,-1,2872)
+      call checkbound_array(fablo_local,fabhi_local,velfab,1,-1,2872)
+      call checkbound_array(fablo_local,fabhi_local,xdisplacefab,1,-1,2872)
+      call checkbound_array(fablo_local,fabhi_local,lsfab,1,-1,2872)
 
       data_out%data_interp=>data_interp_local
       data_in%scomp=1  ! placeholder
@@ -20055,13 +20040,14 @@ stop
       INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
               2) 
+      INTEGER_T, pointer, &
+        dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
+
       REAL_T, intent(in), target :: xdisplacefab(DIMV(xdisplacefab),SDIM) 
       REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
       type(accum_parm_type_count) :: accum_PARM
-      INTEGER_T, pointer, &
-        dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
    
       INTEGER_T :: i,j,k
       INTEGER_T :: isub,jsub,ksub
@@ -20098,10 +20084,12 @@ stop
       REAL_T temp_time
       REAL_T temp_radius
 
-      call checkbound(fablo,fabhi,DIMS(velfab),1,-1,2872)
-      call checkbound(fablo,fabhi,DIMS(xdisplacefab),1,-1,2872)
-      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,2872)
-      call checkbound(tilelo,tilehi,DIMS(cell_particle_count),0,-1,2872)
+      cell_particle_count_ptr=>cell_particle_count
+
+      call checkbound_array(fablo,fabhi,velfab,1,-1,2872)
+      call checkbound_array(fablo,fabhi,xdisplacefab,1,-1,2872)
+      call checkbound_array(fablo,fabhi,lsfab,1,-1,2872)
+      call checkbound_array(tilelo,tilehi,cell_particle_count_ptr,0,-1,2872)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
        ! do nothing
@@ -20132,19 +20120,10 @@ stop
 
       accum_PARM%nsubdivide=particle_nsubdivide
 
-      call copy_dimdec( &
-        DIMS(accum_PARM%LS), &
-        DIMS(lsfab))
       accum_PARM%LS=>lsfab  ! accum_PARM%LS is pointer, LS is target
 
-      call copy_dimdec( &
-        DIMS(accum_PARM%xdisplace), &
-        DIMS(xdisplacefab))
       accum_PARM%xdisplacefab=>xdisplacefab  
 
-      call copy_dimdec( &
-        DIMS(accum_PARM%cell_particle_count), &
-        DIMS(cell_particle_count))
       accum_PARM%cell_particle_count=>cell_particle_count
 
       accum_PARM%particles=>particles
@@ -20152,11 +20131,8 @@ stop
 
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
-        cell_particle_count_ptr=>cell_particle_count
-
         call count_particles( &
          lsfab, &
-         DIMS(lsfab), &
          accum_PARM, &
          cell_particle_count_ptr, &
          particles, &  
@@ -20361,11 +20337,8 @@ stop
             particles_weight_XD, &
             particles_weight_VEL, &
             velfab, &
-            DIMS(velfab), &
             lsfab, &
-            DIMS(lsfab), &
             xdisplacefab, &
-            DIMS(xdisplacefab), &
             accum_PARM, &
             i,j,k, &
             xsub, &
@@ -20850,6 +20823,7 @@ stop
       INTEGER_T, intent(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
               2) 
+      INTEGER_T, pointer :: cell_particle_count_ptr(D_DECL(:,:,:),:)
      
       REAL_T, intent(in), target :: umac(DIMV(umac)) 
       REAL_T, intent(in), target :: vmac(DIMV(vmac)) 
@@ -20866,8 +20840,6 @@ stop
       REAL_T, target :: probhi_arr(3)
 
       type(accum_parm_type_count) :: accum_PARM
-      INTEGER_T, pointer, &
-        dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
       INTEGER_T interior_ID
       INTEGER_T dir
@@ -20893,6 +20865,8 @@ stop
       REAL_T temperature_clamped
       REAL_T wt_lagrangian
       REAL_T temp_relaxation_time
+
+      cell_particle_count_ptr=>cell_particle_count
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -20943,11 +20917,11 @@ stop
       grid_PARM%problo=>problo_arr
       grid_PARM%probhi=>probhi_arr
 
-      call checkbound(fablo,fabhi,DIMS(lsfab),2,-1,2871)
-      call checkbound(fablo,fabhi,DIMS(umac),2,0,2871)
-      call checkbound(fablo,fabhi,DIMS(vmac),2,1,2871)
-      call checkbound(fablo,fabhi,DIMS(wmac),2,SDIM-1,2871)
-      call checkbound(tilelo,tilehi,DIMS(cell_particle_count), &
+      call checkbound_array(fablo,fabhi,lsfab,2,-1,2871)
+      call checkbound_array1(fablo,fabhi,umac,2,0,2871)
+      call checkbound_array1(fablo,fabhi,vmac,2,1,2871)
+      call checkbound_array1(fablo,fabhi,wmac,2,SDIM-1,2871)
+      call checkbound_array(tilelo,tilehi,cell_particle_count_ptr, &
               particle_interaction_ngrow,-1,2872)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
@@ -20971,11 +20945,6 @@ stop
 
       accum_PARM%nsubdivide=1
 
-      cell_particle_count_ptr=>cell_particle_count
-
-      call copy_dimdec( &
-        DIMS(accum_PARM%cell_particle_count), &
-        DIMS(cell_particle_count))
       accum_PARM%cell_particle_count=>cell_particle_count
 
       accum_PARM%particles=>particles_NBR
