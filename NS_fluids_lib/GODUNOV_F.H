@@ -12,7 +12,6 @@
 #    define FORT_TAGEXPANSION tagexpansion
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
-#    define FORT_ESTDT        estdt
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -41,7 +40,6 @@
 #    define FORT_TAGEXPANSION TAGEXPANSION
 #    define FORT_DISTRIBUTEEXPANSION DISTRIBUTEEXPANSION
 #    define FORT_CLEAREXPANSION CLEAREXPANSION
-#    define FORT_ESTDT        ESTDT
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
@@ -70,7 +68,6 @@
 #    define FORT_TAGEXPANSION tagexpansion
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion
 #    define FORT_CLEAREXPANSION clearexpansion
-#    define FORT_ESTDT        estdt
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -98,7 +95,6 @@
 #    define FORT_TAGEXPANSION tagexpansion_
 #    define FORT_DISTRIBUTEEXPANSION distributeexpansion_
 #    define FORT_CLEAREXPANSION clearexpansion_
-#    define FORT_ESTDT        estdt_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
@@ -636,7 +632,7 @@ extern "C"
     int* irz);
 
 
-   void FORT_ESTDT(
+   void fort_estdt(
       int* enable_spectral,
       Real* AMR_min_phase_change_rate,
       Real* AMR_max_phase_change_rate,

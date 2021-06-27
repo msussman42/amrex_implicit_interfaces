@@ -2999,6 +2999,94 @@ contains
 
 
        ! grid_type=-1..5
+      subroutine checkbound_array_INTEGER(lo,hi, &
+       data_array, &
+       ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
+      INTEGER_T, intent(in), pointer :: data_array(D_DECL(:,:,:),:)
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
+
+      INTEGER_T    hidata(SDIM+1)
+      INTEGER_T    lodata(SDIM+1)
+      INTEGER_T    dir2
+
+      hidata=UBOUND(data_array)
+      lodata=LBOUND(data_array)
+ 
+      do dir2=1,SDIM
+       if (lodata(dir2).gt.hidata(dir2)) then
+        print *,"swapped bounds in checkbound_array id=",id
+        print *,"grid_type=",grid_type
+        print *,"dir2=",dir2
+        stop
+       endif
+       box_type(dir2)=0
+      enddo
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       if (lo(dir2).lt.0) then
+        print *,"lo invalid in checkbound_array id=",id
+        print *,"dir2,dataxlo ",dir2,lodata(dir2)
+        print *,"dir2,dataxhi ",dir2,hidata(dir2)
+        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
+        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
+        print *,"grid_type=",grid_type
+        stop
+       endif
+      enddo
+      if (ngrow.lt.0) then
+       print *,"ngrow invalid in checkbound_array"
+       stop
+      endif
+      if (id.lt.0) then
+       print *,"id invalid in checkbound_array"
+       stop
+      endif
+
+      do dir2=1,SDIM
+
+        if (lodata(dir2).gt.lo(dir2)-ngrow) then
+         print *,"checkbound_array:lo mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"dataxlo ",lodata(dir2)
+         print *,"dataxhi ",hidata(dir2)
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+         print *,"hi mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+
+      enddo ! dir2=1..SDIM
+
+      return
+      end subroutine checkbound_array_INTEGER
+
+
+
+       ! grid_type=-1..5
       subroutine checkbound_array1(lo,hi, &
        data_array1, &
        ngrow,grid_type,id)

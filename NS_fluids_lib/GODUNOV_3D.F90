@@ -12773,7 +12773,7 @@ stop
 
         ! u_max(1..sdim) is max vel in dir.
         ! u_max(sdim+1) is max c^2
-      subroutine FORT_ESTDT ( &
+      subroutine fort_estdt( &
         enable_spectral, &
         AMR_min_phase_change_rate, &
         AMR_max_phase_change_rate, &
@@ -12826,7 +12826,9 @@ stop
         shock_timestep, &
         cfl, &
         EILE_flag, &
-        level,finest_level)
+        level,finest_level) &
+      bind(c,name='fort_estdt')
+
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -12893,13 +12895,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(dist)
       INTEGER_T, intent(in) :: DIMDEC(solidfab)
       INTEGER_T, intent(in) :: DIMDEC(den)
-      REAL_T, intent(in) :: velmac(DIMV(velmac))
-      REAL_T, intent(in) :: velcell(DIMV(velcell),SDIM)
-      REAL_T, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
-       ! den,denA,E,temp
-      REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)  
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
-      REAL_T, intent(in) :: dist(DIMV(dist),nmat)
+      REAL_T, target, intent(in) :: velmac(DIMV(velmac))
+      REAL_T, target, intent(in) :: velcell(DIMV(velcell),SDIM)
+      REAL_T, target, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
+       ! den,temp,species
+      REAL_T, target, intent(in) :: den(DIMV(den),num_state_material*nmat)  
+      REAL_T, target, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
+      REAL_T, target, intent(in) :: dist(DIMV(dist),nmat)
       REAL_T, intent(in) :: min_stefan_velocity_for_dt
       REAL_T, intent(inout) :: cap_wave_speed(nten)
       REAL_T hx,hxmac
@@ -12975,16 +12977,16 @@ stop
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_ESTDT"
+       print *,"nparts invalid fort_estdt"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_ESTDT"
+       print *,"nparts_def invalid fort_estdt"
        stop
       endif
       if ((enable_spectral.lt.0).or. &
           (enable_spectral.gt.3)) then
-       print *,"enable_spectral invalid estdt"
+       print *,"enable_spectral invalid fort_estdt"
        stop
       endif
 
@@ -13228,11 +13230,11 @@ stop
       endif
 
       if ((dirnormal.lt.0).or.(dirnormal.ge.SDIM)) then
-       print *,"dirnormal invalid estdt"
+       print *,"dirnormal invalid fort_estdt"
        stop
       endif
       if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
-       print *,"adv_dir invalid ESTDT"
+       print *,"adv_dir invalid fort_estdt"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -13245,13 +13247,13 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(velmac),0,dirnormal,4)
-      call checkbound(fablo,fabhi,DIMS(velcell),1,-1,4)
-      call checkbound(fablo,fabhi,DIMS(solidfab),0,dirnormal,4)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,4)
-      call checkbound(fablo,fabhi,DIMS(vof),1,-1,4)
+      call checkbound_array1(fablo,fabhi,velmac,0,dirnormal,4)
+      call checkbound_array(fablo,fabhi,velcell,1,-1,4)
+      call checkbound_array(fablo,fabhi,solidfab,0,dirnormal,4)
+      call checkbound_array(fablo,fabhi,den,1,-1,4)
+      call checkbound_array(fablo,fabhi,vof,1,-1,4)
        ! need enough ghost cells for the calls to derive_dist.
-      call checkbound(fablo,fabhi,DIMS(dist),2,-1,4)
+      call checkbound_array(fablo,fabhi,dist,2,-1,4)
 
       if (rzflag.ne.levelrz) then
        print *,"rzflag invalid"
@@ -13774,7 +13776,7 @@ stop
          endif
         enddo ! dir2=1..sdim
        else
-        print *,"time invalid in ESTDT"
+        print *,"time invalid in fort_estdt"
         stop
        endif
 
@@ -14132,7 +14134,7 @@ stop
       endif
 
       return
-      end subroutine FORT_ESTDT
+      end subroutine fort_estdt
 
 
        ! (vel/RR) if R-THETA
@@ -14955,16 +14957,16 @@ stop
 
        ! alphanovolume or outer_iter_pressure
       REAL_T, target, intent(out) :: coeff(DIMV(coeff))  
-      REAL_T, pointer :: coeff_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: coeff_ptr(D_DECL(:,:,:))
 
       REAL_T, target, intent(in) :: vol(DIMV(vol))
        ! thermal conductivity
       REAL_T, target, intent(out) :: heatx(DIMV(heatx))
-      REAL_T, pointer :: heatx_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: heatx_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(out) :: heaty(DIMV(heaty))
-      REAL_T, pointer :: heaty_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: heaty_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(out) :: heatz(DIMV(heatz))
-      REAL_T, pointer :: heatz_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: heatz_ptr(D_DECL(:,:,:))
 
       REAL_T, target, intent(in) :: areax(DIMV(areax))
       REAL_T, target, intent(in) :: areay(DIMV(areay))
@@ -15149,7 +15151,7 @@ stop
       call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1227)
       call checkbound_array(fablo,fabhi,DeDT,1,-1,1228) ! 1/(density * cv)
       call checkbound_array(fablo,fabhi,den,1,-1,1229)  ! 1/(density)
-      call checkbound_array(fablo,fabhi,coeff_ptr,0,-1,1230)
+      call checkbound_array1(fablo,fabhi,coeff_ptr,0,-1,1230)
       call checkbound_array1(fablo,fabhi,vol,0,-1,1231)
       call checkbound_array1(fablo,fabhi,heatx_ptr,0,0,1232)
       call checkbound_array1(fablo,fabhi,heaty_ptr,0,1,1233)
