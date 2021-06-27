@@ -71,13 +71,8 @@ module probcommon_module_types
        INTEGER_T :: nstate
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
-       INTEGER_T :: DIMDEC(EOS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       INTEGER_T :: DIMDEC(LSnew)
-       INTEGER_T :: DIMDEC(Snew)
-       INTEGER_T :: DIMDEC(pres)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
-       INTEGER_T :: DIMDEC(pres_eos)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
        INTEGER_T :: custom_nucleation_model
        INTEGER_T :: do_the_nucleate
