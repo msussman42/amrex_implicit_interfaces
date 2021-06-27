@@ -19842,7 +19842,7 @@ stop
            stop
           endif
            ! bilinear interpolation
-          call single_interp_from_grid_util(data_in,data_out)
+          call single_interp_from_grid_util(single_data_in,data_out)
           x_foot_interp_local(dir)=data_out%data_interp(1)
          enddo ! dir=1..sdim
         else if (MAC_xd.eq.1) then
@@ -19954,7 +19954,7 @@ stop
           stop
          endif
           ! bilinear interpolation
-         call single_interp_from_grid_util(data_in,data_out)
+         call single_interp_from_grid_util(single_data_in,data_out)
          x_foot_interp(dir)=data_out%data_interp(1)
         enddo ! dir=1..sdim
        else if (MAC_xd.eq.1) then
