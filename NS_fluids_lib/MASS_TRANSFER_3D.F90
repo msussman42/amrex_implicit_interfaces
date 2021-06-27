@@ -746,12 +746,8 @@ stop
       return
       end subroutine center_centroid_interchange
 
-       ! called from FORT_MAC_ELASTIC_FORCE (GODUNOV_3D.F90):
-       !  derivative \approx (f(y+h)-f(y-h))/(2h)
-       !  f(y+h), f(y-h) obtained by way of bilinear interpolation of the grid
-       !  data.
        !  This routine calculates the bilinear interpolant at a given point
-       !  "x" where "x" represents "y+h" or "y-h"
+       !  "x" 
       subroutine interpfab_XDISP( &
        bfact, &
        level, &
@@ -1352,6 +1348,134 @@ stop
 
       return 
       end subroutine interpfab
+
+      subroutine single_interpfab( &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xtarget, &
+       ngrow, &
+       lo,hi, &
+       data, &
+       dest)
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM)
+      INTEGER_T, intent(in) :: hi(SDIM)
+      INTEGER_T, intent(in) :: ngrow
+      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:))
+      REAL_T, intent(out) :: dest
+
+      REAL_T :: DATA_FLOOR
+
+      REAL_T :: T_out(1)
+
+      INTEGER_T dir
+      INTEGER_T ic,jc,kc
+      INTEGER_T i1,j1,k1
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T k1lo,k1hi
+      INTEGER_T nhalf
+      INTEGER_T cell_index(SDIM)
+
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      INTEGER_T cc_flag
+      INTEGER_T tsat_flag
+      INTEGER_T nsolve
+      REAL_T Tsat
+
+      DATA_FLOOR=zero
+
+      call checkbound_array1(lo,hi,data,ngrow,-1,122)
+
+      if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
+      else if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      if (bfact.lt.1) then 
+       print *,"bfact invalid114"
+       stop
+      endif
+
+      call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
+
+      do dir=1,SDIM
+       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
+        cell_index(dir)=lo(dir)-ngrow+1
+       endif
+       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
+        cell_index(dir)=hi(dir)+ngrow-1
+       endif
+      enddo ! dir
+      ic=cell_index(1)
+      jc=cell_index(2)
+      kc=cell_index(SDIM)
+
+      nhalf=3
+      call gridsten_level(xsten,ic,jc,kc,level,nhalf)
+
+      do i1=-1,1
+      do j1=-1,1
+      do k1=k1lo,k1hi
+
+       isten=i1+ic
+       jsten=j1+jc
+       ksten=k1+kc
+
+       T_sten(D_DECL(i1,j1,k1))=data(D_DECL(isten,jsten,ksten))
+
+      enddo
+      enddo
+      enddo ! i1,j1,k1
+
+       ! in: interpfab
+      cc_flag=1  ! center -> target
+      tsat_flag=-1  ! use all cells in the stencil
+      nsolve=1
+      Tsat=293.0 !unused if tsat_flag==-1 (but set to 293.0 for sanity check)
+      call center_centroid_interchange( &
+       DATA_FLOOR, &
+       nsolve, &
+       cc_flag, &
+       tsat_flag, &
+       bfact, &
+       level, &
+       finest_level, &
+       dx,xlo, &
+       xsten,nhalf, &
+       T_sten, & 
+       XC_sten, & 
+       xtarget, & ! xI (not used)
+       xtarget, & ! xtarget
+       T_sten, &  ! VF_sten (not used)
+       T_sten, &  ! LS_Sten (not used)
+       Tsat, & ! unused if tsat_flag==-1
+       T_out)
+
+      dest=T_out(1)
+
+      return 
+      end subroutine single_interpfab
+
+
 
       subroutine interpfab_tsat( &
        i,j,k, &
@@ -2201,7 +2325,6 @@ stop
       INTEGER_T imls
       INTEGER_T dir
       INTEGER_T mtype
-      INTEGER_T pcomp
       REAL_T LSPROBE(num_materials)
       REAL_T F_tess(num_materials)
 
@@ -2781,15 +2904,13 @@ stop
         PROBE_PARMS%recon, &
         T_I_interp(iprobe))
 
-       pcomp=1
-       call interpfab( &
+       call single_interpfab( &
         PROBE_PARMS%bfact, &
         PROBE_PARMS%level, &
         PROBE_PARMS%finest_level, &
         PROBE_PARMS%dx, &
         PROBE_PARMS%xlo, &
         PROBE_PARMS%xI, &
-        pcomp, &
         PROBE_PARMS%ngrow, &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
@@ -3371,7 +3492,7 @@ stop
         ! this is for unsplit advection: for phase change.
         ! Called from NavierStokes.cpp: 
         !   NavierStokes::level_phase_change_convert
-      subroutine FORT_NODEDISPLACE( &
+      subroutine fort_nodedisplace( &
        nmat, &
        nten, &
        nburning, &
@@ -3385,7 +3506,9 @@ stop
        ucell,DIMS(ucell), &
        oldLS,DIMS(oldLS), &
        xlo,dx, &
-       level,finest_level)
+       level,finest_level) &
+      bind(c,name='fort_nodedisplace')
+
       use probcommon_module
       use global_utility_module
       use mass_transfer_module
@@ -3408,9 +3531,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ucell)
       INTEGER_T, intent(in) :: DIMDEC(oldLS)
      
-      REAL_T, intent(out) ::  unode(DIMV(unode),2*nten*SDIM) 
-      REAL_T, intent(in) ::  ucell(DIMV(ucell),nburning) 
-      REAL_T, intent(in) :: oldLS(DIMV(oldLS),nmat*(1+SDIM))
+      REAL_T, target, intent(out) ::  unode(DIMV(unode),2*nten*SDIM) 
+      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) ::  ucell(DIMV(ucell),nburning) 
+      REAL_T, target, intent(in) :: oldLS(DIMV(oldLS),nmat*(1+SDIM))
+
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -3430,6 +3556,8 @@ stop
       REAL_T LS_local(nmat)
 
       nhalf=3
+
+      unode_ptr=>unode
 
       if (bfact.lt.1) then
        print *,"bfact invalid117"
@@ -3492,10 +3620,9 @@ stop
       endif
        
 
-      call checkbound(fablo,fabhi,DIMS(unode),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(ucell),1,-1,12)
-      call checkbound(fablo,fabhi, &
-       DIMS(oldLS),normal_probe_size+3,-1,1257)
+      call checkbound_array(fablo,fabhi,unode_ptr,1,-1,12)
+      call checkbound_array(fablo,fabhi,ucell,1,-1,12)
+      call checkbound_array(fablo,fabhi,oldLS,normal_probe_size+3,-1,1257)
 
       if (dt.le.zero) then
        print *,"dt invalid"
@@ -3632,7 +3759,7 @@ stop
       enddo  ! i,j,k
 
       return
-      end subroutine FORT_NODEDISPLACE
+      end subroutine fort_nodedisplace
 
 
         ! notes on phase change:
@@ -3646,7 +3773,7 @@ stop
         !                interface that is changing phase.
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
-      subroutine FORT_CONVERTMATERIAL( &
+      subroutine fort_convertmaterial( &
        tid, &
        im_outer, &     ! im_outer and im_opp_outer define an interface
        im_opp_outer, & ! between im_outer and im_opp_outer.
@@ -3678,14 +3805,16 @@ stop
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
        LSold,DIMS(LSold), &
-         ! in FORT_RATEMASSCHANGE
+         ! in fort_ratemasschange
          ! LSnew=LSold - dt USTEFAN dot n, USTEFAN=|U|n  
          ! LSnew=LSold - dt * |U|
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon), &
        snew,DIMS(snew), &
        EOS,DIMS(EOS), &
-       swept,DIMS(swept) )
+       swept,DIMS(swept) ) &
+      bind(c,name='fort_convertmaterial')
+
 #if (STANDALONE==0)
       use probf90_module
 #elif (STANDALONE==1)
@@ -3741,17 +3870,29 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(EOS)
       INTEGER_T, intent(in) :: DIMDEC(swept)
 
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, target, intent(in) :: maskcov(DIMV(maskcov))
 
-      REAL_T, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
-      REAL_T, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
-      REAL_T, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
+      REAL_T, target, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
+
+      REAL_T, target, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, target, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
+      REAL_T, pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in), target :: LSold(DIMV(LSold),nmat*(1+SDIM))
-      REAL_T, intent(out) :: LSnew(DIMV(LSnew),nmat)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(out) :: snew(DIMV(snew),nstate)
-      REAL_T, intent(in) :: EOS(DIMV(EOS),nden)
-      REAL_T, intent(out) :: swept(DIMV(swept),nmat)
+
+      REAL_T, target, intent(out) :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+
+      REAL_T, target, intent(out) :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
+
+      REAL_T, target, intent(out) :: swept(DIMV(swept),nmat)
+      REAL_T, pointer :: swept_ptr(D_DECL(:,:,:),:)
 
       REAL_T :: denratio_factor
 
@@ -3963,6 +4104,12 @@ stop
       REAL_T fixed_centroid_sum(SDIM)
       REAL_T avail_vfrac
 
+      JUMPFAB_ptr=>JUMPFAB
+      TgammaFAB_ptr=>TgammaFAB
+      LSnew_ptr=>LSnew
+      snew_ptr=>snew
+      swept_ptr=>swept
+
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -4171,26 +4318,26 @@ stop
        enddo ! im_opp
       enddo !im
 
-      call checkbound(fablo,fabhi, &
-       DIMS(maskcov),1,-1,1256)
+      call checkbound_array1(fablo,fabhi, &
+       maskcov,1,-1,1256)
 
-      call checkbound(fablo,fabhi, &
-       DIMS(JUMPFAB),ngrow_expansion,-1,1256)
-      call checkbound(fablo,fabhi, &
-       DIMS(TgammaFAB),ngrow_expansion,-1,1256)
-      call checkbound(fablo,fabhi, &
-       DIMS(LSold),normal_probe_size+3,-1,1257)
-      call checkbound(fablo,fabhi, &
-       DIMS(LSnew),1,-1,1258)
-      call checkbound(fablo,fabhi, &
-       DIMS(recon),1,-1,1259)
-      call checkbound(fablo,fabhi, &
-       DIMS(snew),1,-1,1261)
-      call checkbound(fablo,fabhi, &
-       DIMS(EOS),1,-1,1262)
-      call checkbound(fablo,fabhi, &
-       DIMS(swept),0,-1,1263)
-      call checkbound(fablo,fabhi,DIMS(nodevel),1,-1,12)
+      call checkbound_array(fablo,fabhi, &
+       JUMPFAB_ptr,ngrow_expansion,-1,1256)
+      call checkbound_array(fablo,fabhi, &
+       TgammaFAB_ptr,ngrow_expansion,-1,1256)
+      call checkbound_array(fablo,fabhi, &
+       LSold,normal_probe_size+3,-1,1257)
+      call checkbound_array(fablo,fabhi, &
+       LSnew_ptr,1,-1,1258)
+      call checkbound_array(fablo,fabhi, &
+       recon,1,-1,1259)
+      call checkbound_array(fablo,fabhi, &
+       snew_ptr,1,-1,1261)
+      call checkbound_array(fablo,fabhi, &
+       EOS,1,-1,1262)
+      call checkbound_array(fablo,fabhi, &
+       swept_ptr,0,-1,1263)
+      call checkbound_array(fablo,fabhi,nodevel,1,-1,12)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       if (SDIM.eq.3) then
@@ -6687,11 +6834,11 @@ stop
       enddo ! i
 
       return
-      end subroutine FORT_CONVERTMATERIAL
+      end subroutine fort_convertmaterial
 
 
         ! ngrow corresponds to normal_probe_size+3
-      subroutine FORT_EXTEND_BURNING_VEL( &
+      subroutine fort_extend_burning_vel( &
         velflag, &
         level, &
         finest_level, &
@@ -6704,7 +6851,9 @@ stop
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         vel,DIMS(vel), &
-        LS,DIMS(LS))  ! old level set function before phase change
+        LS,DIMS(LS)) &  ! old level set function before phase change
+      bind(c,name='fort_extend_burning_vel')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -6726,9 +6875,12 @@ stop
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(LS)
+
       ! first nten components are the status.
-      REAL_T, intent(inout) :: vel(DIMV(vel),nburning)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, target, intent(inout) :: vel(DIMV(vel),nburning)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
 
       INTEGER_T im,im_opp
       INTEGER_T iten,ireverse,sign_local
@@ -6756,6 +6908,8 @@ stop
 
       nhalf=3
 
+      vel_ptr=>vel
+
       if (velflag.eq.1) then
        ncomp_per=SDIM
       else if (velflag.eq.0) then
@@ -6778,11 +6932,11 @@ stop
        stop
       endif
       if (ngrow.ne.4) then
-       print *,"expecting ngrow==4 in FORT_EXTEND_BURNING_VEL"
+       print *,"expecting ngrow==4 in fort_extend_burning_vel"
        stop
       endif
       if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance==3 in FORT_EXTEND_BURNING_VEL"
+       print *,"expecting ngrow_make_distance==3 in fort_extend_burning_vel"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -6809,8 +6963,8 @@ stop
 
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
-      call checkbound(fablo,fabhi,DIMS(vel),ngrow_make_distance,-1,1250)
-      call checkbound(fablo,fabhi,DIMS(LS),ngrow,-1,1250)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow_make_distance,-1,1250)
+      call checkbound_array(fablo,fabhi,LS,ngrow,-1,1250)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -7023,7 +7177,7 @@ stop
       enddo ! im=1..nmat-1
 
       return 
-      end subroutine FORT_EXTEND_BURNING_VEL
+      end subroutine fort_extend_burning_vel
 
  
       ! vof,ref centroid,order,slope,intercept  x nmat
@@ -7505,7 +7659,7 @@ stop
       endif
 
       if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance==3 in FORT_RATEMASSCHANGE"
+       print *,"expecting ngrow_make_distance==3 in fort_ratemasschange"
        stop
       endif
 
@@ -8557,7 +8711,7 @@ stop
                    else if (at_interface.eq.0) then
                     ! do nothing
                    else
-                    print *,"at_interface invalid FORT_RATEMASSCHANGE"
+                    print *,"at_interface invalid fort_ratemasschange"
                     print *,"at_interface=",at_interface
                     stop
                    endif
@@ -9114,7 +9268,7 @@ stop
                    mdotY_debug=zero
 
                   else
-                   print *,"at_interface invalid FORT_RATEMASSCHANGE (2) "
+                   print *,"at_interface invalid fort_ratemasschange (2) "
                    print *,"at_interface=",at_interface
                    stop
                   endif
@@ -9294,7 +9448,7 @@ stop
                  else if (at_interface.eq.0) then
                   ! do nothing
                  else
-                  print *,"at_interface invalid in FORT_RATEMASSCHANGE (3)"
+                  print *,"at_interface invalid in fort_ratemasschange (3)"
                   print *,"at_interface=",at_interface
                   stop
                  endif
@@ -9681,7 +9835,7 @@ stop
       enddo ! i
 
       return
-      end subroutine FORT_RATEMASSCHANGE
+      end subroutine fort_ratemasschange
 
 #if (STANDALONE==1)
       end module mass_transfer_cpp_module

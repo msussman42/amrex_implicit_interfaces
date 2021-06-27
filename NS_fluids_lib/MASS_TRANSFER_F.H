@@ -2,25 +2,8 @@
 #define _MASS_TRANSFER_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_CONVERTMATERIAL convertmaterial
-#    define FORT_NODEDISPLACE nodedisplace
-#    define FORT_EXTEND_BURNING_VEL extend_burning_vel
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_CONVERTMATERIAL CONVERTMATERIAL
-#    define FORT_NODEDISPLACE NODEDISPLACE
-#    define FORT_EXTEND_BURNING_VEL EXTEND_BURNING_VEL
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_CONVERTMATERIAL convertmaterial
-#    define FORT_NODEDISPLACE nodedisplace
-#    define FORT_EXTEND_BURNING_VEL extend_burning_vel
-#  else
-#    define FORT_CONVERTMATERIAL convertmaterial_
-#    define FORT_NODEDISPLACE nodedisplace_
-#    define FORT_EXTEND_BURNING_VEL extend_burning_vel_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -29,7 +12,7 @@ namespace amrex{
 extern "C"
 {
 
-   void FORT_CONVERTMATERIAL(
+   void fort_convertmaterial(
     int* tid,
     int* im_outer,
     int* im_opp_outer,
@@ -68,7 +51,7 @@ extern "C"
     Real* swept,AMREX_ARLIM_P(sweptlo),AMREX_ARLIM_P(swepthi)); 
 
 
-   void FORT_NODEDISPLACE(
+   void fort_nodedisplace(
      int* nmat,
      int* nten,
      int* nburning,
@@ -169,7 +152,7 @@ extern "C"
     AMREX_ARLIM_P(curvfabhi) ); 
 
 
-   void FORT_EXTEND_BURNING_VEL(
+   void fort_extend_burning_vel(
     int* velflag,
     int* level,
     int* finest_level,
