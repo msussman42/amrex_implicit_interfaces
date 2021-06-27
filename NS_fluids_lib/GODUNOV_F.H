@@ -4,7 +4,6 @@
 #ifdef BL_LANG_FORT
 #    define FORT_SOD_SANITY   sod_sanity
 #    define FORT_AGGRESSIVE   aggressive
-#    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
@@ -34,7 +33,6 @@
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_SOD_SANITY   SOD_SANITY
 #    define FORT_AGGRESSIVE   AGGRESSIVE
-#    define FORT_STEFANSOLVER STEFANSOLVER
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
@@ -64,7 +62,6 @@
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_SOD_SANITY   sod_sanity
 #    define FORT_AGGRESSIVE   aggressive
-#    define FORT_STEFANSOLVER stefansolver
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
@@ -93,7 +90,6 @@
 #  else
 #    define FORT_SOD_SANITY   sod_sanity_
 #    define FORT_AGGRESSIVE   aggressive_
-#    define FORT_STEFANSOLVER stefansolver_
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
@@ -759,7 +755,7 @@ extern "C"
     Real* ughostz,AMREX_ARLIM_P(ughostzlo),AMREX_ARLIM_P(ughostzhi) );
 
 
-   void FORT_STEFANSOLVER(
+   void fort_stefansolver(
     int* project_option,
     int* solidheat_flag,
     Real* microlayer_size,

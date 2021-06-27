@@ -12574,7 +12574,7 @@ NavierStokes::level_phase_change_rate_extend() {
     // sets the burning velocity/saturation temp flag from 0 to 2 if
     // foot of characteristic within range.
     // in: MASS_TRANSFER_3D.F90
-   FORT_EXTEND_BURNING_VEL( 
+   fort_extend_burning_vel( 
     &velflag,
     &level,
     &finest_level,
@@ -12942,7 +12942,7 @@ NavierStokes::level_phase_change_convert(
 
       // burnvelfab=BURNING_VELOCITY_MF is cell centered (interior: lo to hi)
       // nodevelfab=nodevel is at the nodes. (interior: lo to hi+1)
-    FORT_NODEDISPLACE(
+    fort_nodedisplace(
      &nmat,
      &nten,
      &nburning,
@@ -13048,7 +13048,7 @@ NavierStokes::level_phase_change_convert(
 
     // nodevelfab (=nodevel) is node based (interior: lo..hi+1)
     // in: MASS_TRANSFER_3D.F90
-   FORT_CONVERTMATERIAL( 
+   fort_convertmaterial( 
     &tid_current,
     &im_outer,
     &im_opp_outer,
@@ -14359,8 +14359,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     // T=TSAT there.
     // 2. The nucleation routine only seeds a tiny volume fraction in
     // "fluid" cells.
-    // FORT_STEFANSOLVER declared in: GODUNOV_3D.F90
-   FORT_STEFANSOLVER( 
+    // fort_stefansolver declared in: GODUNOV_3D.F90
+   fort_stefansolver( 
     &project_option, //2=thermal diffusion  or 100 ... 100+num_species_var-1
     &solidheat_flag, //0=diffuse in solid 1=dirichlet 2=Neumann
     microlayer_size.dataPtr(), 

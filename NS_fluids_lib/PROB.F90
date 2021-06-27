@@ -23173,14 +23173,10 @@ end subroutine RatePhaseChange
 
       call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%EOS,1,-1,1301)
-      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
+      call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%pres,1,-1,1301)
-      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
+      call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%pres_eos,1,-1,1301)
-      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
-        nucleate_in%LSnew,1,-1,1301)
-      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
-        nucleate_in%Snew,1,-1,1301)
       nmat=nucleate_in%nmat
 
       nstate_test=(SDIM+1)+ &

@@ -13597,10 +13597,10 @@ stop
 
             ! adjust LS1 if R-theta.
            call derive_dist(xsten,nhalf, &
-            dist,DIMS(dist),icell,jcell,kcell,im_source,LS1)
+            dist,icell,jcell,kcell,im_source,LS1)
             ! adjust LS2 if R-theta.
            call derive_dist(xsten,nhalf, &
-            dist,DIMS(dist),icell,jcell,kcell,im_dest,LS2)
+            dist,icell,jcell,kcell,im_dest,LS2)
            
            Tsrc=den(D_DECL(icell,jcell,kcell),tcompsrc)
            Tdst=den(D_DECL(icell,jcell,kcell),tcompdst)
@@ -14845,7 +14845,7 @@ stop
        ! else if project_option>=100:
        !  heatxyz correspond to rho D
        !
-      subroutine FORT_STEFANSOLVER( &
+      subroutine fort_stefansolver( &
        project_option, & ! 2=thermal diffusion or 100...100+num_species_var-1
        solidheat_flag, & ! 0=diffuse in solid 1=dirichlet 2=Neumann
        microlayer_size, & ! 1..nmat
@@ -14884,7 +14884,8 @@ stop
        heatz,DIMS(heatz), &
        areax,DIMS(areax), &
        areay,DIMS(areay), &
-       areaz,DIMS(areaz) )
+       areaz,DIMS(areaz) ) &
+      bind(c,name='fort_stefansolver')
 
       use probf90_module
       use global_utility_module
@@ -14936,26 +14937,38 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areax)
       INTEGER_T, intent(in) :: DIMDEC(areay)
       INTEGER_T, intent(in) :: DIMDEC(areaz)
-      REAL_T, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
-      REAL_T, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
-      REAL_T, intent(in) :: swept(DIMV(swept),nmat)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T, intent(in) :: T_fab(DIMV(T_fab),nmat)
-      REAL_T, intent(in) :: TorY_fab(DIMV(TorY_fab),nmat)
-      REAL_T, intent(out) :: Snew(DIMV(Snew),nstate)
-      REAL_T, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
+      REAL_T, target, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
+      REAL_T, target, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
+      REAL_T, target, intent(in) :: swept(DIMV(swept),nmat)
+      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, target, intent(in) :: T_fab(DIMV(T_fab),nmat)
+      REAL_T, target, intent(in) :: TorY_fab(DIMV(TorY_fab),nmat)
+
+      REAL_T, target, intent(out) :: Snew(DIMV(Snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      ! 1/(rho cv) (cv=DeDT)
+      REAL_T, target, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  
+
       ! 1/den (i.e. den actually stores 1/den)
-      REAL_T, intent(in) :: den(DIMV(den),nmat+1)  
+      REAL_T, target, intent(in) :: den(DIMV(den),nmat+1)  
+
        ! alphanovolume or outer_iter_pressure
-      REAL_T, intent(out) :: coeff(DIMV(coeff))  
-      REAL_T, intent(in) :: vol(DIMV(vol))
+      REAL_T, target, intent(out) :: coeff(DIMV(coeff))  
+      REAL_T, pointer :: coeff_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) :: vol(DIMV(vol))
        ! thermal conductivity
-      REAL_T, intent(out) :: heatx(DIMV(heatx))
-      REAL_T, intent(out) :: heaty(DIMV(heaty))
-      REAL_T, intent(out) :: heatz(DIMV(heatz))
-      REAL_T, intent(in) :: areax(DIMV(areax))
-      REAL_T, intent(in) :: areay(DIMV(areay))
-      REAL_T, intent(in) :: areaz(DIMV(areaz))
+      REAL_T, target, intent(out) :: heatx(DIMV(heatx))
+      REAL_T, pointer :: heatx_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(out) :: heaty(DIMV(heaty))
+      REAL_T, pointer :: heaty_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(out) :: heatz(DIMV(heatz))
+      REAL_T, pointer :: heatz_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) :: areax(DIMV(areax))
+      REAL_T, target, intent(in) :: areay(DIMV(areay))
+      REAL_T, target, intent(in) :: areaz(DIMV(areaz))
 
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
@@ -15027,6 +15040,12 @@ stop
       REAL_T T_or_Y_min_sanity
 
       nhalf=3
+
+      snew_ptr=>snew
+      coeff_ptr=>coeff
+      heatx_ptr=>heatx
+      heaty_ptr=>heaty
+      heatz_ptr=>heatz
 
       theta_cutoff=0.001
 
@@ -15119,25 +15138,25 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(STATEFAB),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(TgammaFAB),1,-1,234)
+      call checkbound_array(fablo,fabhi,STATEFAB,1,-1,234)
+      call checkbound_array(fablo,fabhi,TgammaFAB,1,-1,234)
 
-      call checkbound(fablo,fabhi,DIMS(swept),0,-1,234)
+      call checkbound_array(fablo,fabhi,swept,0,-1,234)
 
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1226)
-      call checkbound(fablo,fabhi,DIMS(T_fab),1,-1,1226)
-      call checkbound(fablo,fabhi,DIMS(TorY_fab),1,-1,1226)
-      call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1227)
-      call checkbound(fablo,fabhi,DIMS(DeDT),1,-1,1228) ! 1/(density * cv)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,1229)  ! 1/(density)
-      call checkbound(fablo,fabhi,DIMS(coeff),0,-1,1230)
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,1231)
-      call checkbound(fablo,fabhi,DIMS(heatx),0,0,1232)
-      call checkbound(fablo,fabhi,DIMS(heaty),0,1,1233)
-      call checkbound(fablo,fabhi,DIMS(heatz),0,SDIM-1,1234)
-      call checkbound(fablo,fabhi,DIMS(areax),0,0,1235)
-      call checkbound(fablo,fabhi,DIMS(areay),0,1,1236)
-      call checkbound(fablo,fabhi,DIMS(areaz),0,SDIM-1,1237)
+      call checkbound_array(fablo,fabhi,LS,1,-1,1226)
+      call checkbound_array(fablo,fabhi,T_fab,1,-1,1226)
+      call checkbound_array(fablo,fabhi,TorY_fab,1,-1,1226)
+      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1227)
+      call checkbound_array(fablo,fabhi,DeDT,1,-1,1228) ! 1/(density * cv)
+      call checkbound_array(fablo,fabhi,den,1,-1,1229)  ! 1/(density)
+      call checkbound_array(fablo,fabhi,coeff_ptr,0,-1,1230)
+      call checkbound_array1(fablo,fabhi,vol,0,-1,1231)
+      call checkbound_array1(fablo,fabhi,heatx_ptr,0,0,1232)
+      call checkbound_array1(fablo,fabhi,heaty_ptr,0,1,1233)
+      call checkbound_array1(fablo,fabhi,heatz_ptr,0,SDIM-1,1234)
+      call checkbound_array1(fablo,fabhi,areax,0,0,1235)
+      call checkbound_array1(fablo,fabhi,areay,0,1,1236)
+      call checkbound_array1(fablo,fabhi,areaz,0,SDIM-1,1237)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -15205,7 +15224,7 @@ stop
            print *,"im,T_fab ",im, &
             T_fab(D_DECL(i+i1,j+j1,k+k1),im) 
           enddo
-          print *,"TorY_test.le.zero STEFANSOLVER"
+          print *,"TorY_test.le.zero fort_stefansolver"
           stop
          endif
          if (T_STATUS(im_side_primary).eq.0) then
@@ -15238,7 +15257,7 @@ stop
            print *,"im,TorY_fab ",im, &
             TorY_fab(D_DECL(i+i1,j+j1,k+k1),im) 
           enddo
-          print *,"TorY_test.le.zero STEFANSOLVER"
+          print *,"TorY_test.le.zero fort_stefansolver"
           stop
          endif
          if (TorY_STATUS(im_side_primary).eq.0) then
@@ -15780,7 +15799,7 @@ stop
                tsat_comp, &
                ngrow_tsat, &
                fablo,fabhi, &
-               TgammaFAB,DIMS(TgammaFAB), &
+               TgammaFAB, &
                TorYgamma_BC)  ! TorYgamma_BC here is an output
 
               hx=abs(xsten(0,dir)-xsten(2*side,dir))
@@ -15803,7 +15822,7 @@ stop
             else if (at_interface.eq.0) then
              ! do nothing
             else
-             print *,"at_interface invalid in FORT_STEFANSOLVER"
+             print *,"at_interface invalid in fort_stefansolver"
              print *,"project_option=",project_option
              print *,"solidheat_flag=",solidheat_flag
              stop
@@ -15897,7 +15916,7 @@ stop
       enddo ! i=growlo(1),growhi(1)
 
       return
-      end subroutine FORT_STEFANSOLVER
+      end subroutine fort_stefansolver
 
 ! MEHDI VAHAB HEAT SOURCE
 ! T^new=T^* + dt A Q/(rho cv V) 
