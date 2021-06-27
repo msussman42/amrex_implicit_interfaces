@@ -2750,17 +2750,17 @@ contains
       subroutine derive_dist( &
        xsten,nhalf, &
        dist, &
-       DIMS(dist), &
        i,j,k,im,LS)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T i,j,k,im,nhalf,dir
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T LS
-      INTEGER_T DIMDEC(dist)
-      REAL_T dist(DIMV(dist),num_materials)
+      INTEGER_T, intent(in) :: i,j,k,im
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T :: dir
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(inout) :: LS
+      REAL_T, intent(in), pointer :: dist(D_DECL(:,:,:),:)
       REAL_T n(SDIM)
       REAL_T nsave(SDIM)
       REAL_T RR,mag
@@ -3615,40 +3615,6 @@ contains
 #endif
       return
       end subroutine set_dimdec
-
-      subroutine copy_dimdec(DIMS(dest),DIMS(source))
-      IMPLICIT NONE
-
-      INTEGER_T, intent(out) :: DIMDEC(dest)
-      INTEGER_T, intent(in) :: DIMDEC(source)
-
-      ARG_L1(dest)=ARG_L1(source)
-      ARG_L2(dest)=ARG_L2(source)
-      ARG_H1(dest)=ARG_H1(source)
-      ARG_H2(dest)=ARG_H2(source)
-
-#if (AMREX_SPACEDIM==3)
-      if (SDIM.eq.3) then
-       ARG_L3(dest)=ARG_L3(source)
-       ARG_H3(dest)=ARG_H3(source)
-      else
-       print *,"dimension bust"
-       stop
-      endif
-#elif (AMREX_SPACEDIM==2)
-      if (SDIM.eq.2) then
-       ! do nothing
-      else
-       print *,"dimension bust"
-       stop
-      endif
-#else
-      print *,"dimension bust"
-      stop
-#endif
-      return
-      end subroutine copy_dimdec
-
 
       subroutine RT_transformVEL(x,vel,velT)
       use probcommon_module
