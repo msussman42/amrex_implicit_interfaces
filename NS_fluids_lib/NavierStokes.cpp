@@ -19817,7 +19817,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: GODUNOV_3D.F90
-   FORT_ESTDT(
+   fort_estdt(
     &local_enable_spectral,
     parent->AMR_min_phase_change_rate.dataPtr(),
     parent->AMR_max_phase_change_rate.dataPtr(),

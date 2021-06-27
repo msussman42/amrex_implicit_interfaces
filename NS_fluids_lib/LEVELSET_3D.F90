@@ -20089,7 +20089,8 @@ stop
       call checkbound_array(fablo,fabhi,velfab,1,-1,2872)
       call checkbound_array(fablo,fabhi,xdisplacefab,1,-1,2872)
       call checkbound_array(fablo,fabhi,lsfab,1,-1,2872)
-      call checkbound_array(tilelo,tilehi,cell_particle_count_ptr,0,-1,2872)
+      call checkbound_array_INTEGER(tilelo,tilehi, &
+              cell_particle_count_ptr,0,-1,2872)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
        ! do nothing
@@ -20921,7 +20922,8 @@ stop
       call checkbound_array1(fablo,fabhi,umac,2,0,2871)
       call checkbound_array1(fablo,fabhi,vmac,2,1,2871)
       call checkbound_array1(fablo,fabhi,wmac,2,SDIM-1,2871)
-      call checkbound_array(tilelo,tilehi,cell_particle_count_ptr, &
+      call checkbound_array_INTEGER(tilelo,tilehi, &
+              cell_particle_count_ptr, &
               particle_interaction_ngrow,-1,2872)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
