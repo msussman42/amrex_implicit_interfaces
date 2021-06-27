@@ -29370,6 +29370,7 @@ stop
          enddo ! dir=1..sdim
         else if (MAC_grid_displacement.eq.1) then
          call interpfab_XDISP( &
+          data_in%interp_foot_flag, &
           accum_PARM%bfact, &
           accum_PARM%level, &
           accum_PARM%finest_level, &

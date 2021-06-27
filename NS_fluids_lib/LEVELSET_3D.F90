@@ -19222,6 +19222,7 @@ stop
         INTEGER_T, pointer :: fabhi(:)
         INTEGER_T, pointer :: tilelo(:)
         INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: MAC_grid_displacement
         INTEGER_T :: append_flag
         INTEGER_T :: bfact
         INTEGER_T :: level
@@ -19232,7 +19233,9 @@ stop
         type(particle_t), pointer, dimension(:) :: particles
         INTEGER_T :: nsubdivide
         REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: xdisplacefab
+        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: xd
+        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: yd
+        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: zd
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
        end type accum_parm_type_count
 
@@ -19665,8 +19668,6 @@ stop
          particles_weight_XD, &
          particles_weight_VEL, &
          velfab, &
-         lsfab, &
-         xdisplacefab, &
          accum_PARM, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
@@ -19676,6 +19677,7 @@ stop
          vel_interp)
       use probcommon_module
       use global_utility_module
+      use mass_transfer_module
 
       IMPLICIT NONE
 
@@ -19690,9 +19692,8 @@ stop
       REAL_T, intent(out) :: x_foot_interp(SDIM)
       REAL_T, intent(out) :: vel_interp(SDIM)
       REAL_T :: x_foot_interp_local(SDIM)
+
       REAL_T, intent(in), pointer ::  velfab(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer ::  xdisplacefab(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer ::  lsfab(D_DECL(:,:,:),:)
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
@@ -19709,7 +19710,9 @@ stop
       REAL_T w_p
 
       type(interp_from_grid_parm_type) :: data_in 
+      type(single_interp_from_grid_parm_type) :: single_data_in 
       type(interp_from_grid_out_parm_type) :: data_out
+
       REAL_T, target, dimension(num_materials*(SDIM+1)) :: data_interp_local
 
       REAL_T, target :: dx_local(SDIM)
@@ -19719,6 +19722,11 @@ stop
 
       INTEGER_T :: test_count,test_cell_particle_count
       REAL_T :: local_wt
+
+#define MAC_xd accum_PARM%MAC_grid_displacement
+#define xdfab accum_PARM%xd
+#define ydfab accum_PARM%yd
+#define zdfab accum_PARM%zd
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -19740,12 +19748,28 @@ stop
       enddo
 
       call checkbound_array(fablo_local,fabhi_local,velfab,1,-1,2872)
-      call checkbound_array(fablo_local,fabhi_local,xdisplacefab,1,-1,2872)
-      call checkbound_array(fablo_local,fabhi_local,lsfab,1,-1,2872)
+
+      if (MAC_xd.eq.0) then
+       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,-1,2872)
+       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,-1,2872)
+       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,-1,2872)
+      else if (MAC_xd.eq.1) then
+       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,0,2872)
+       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,1,2872)
+       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,SDIM-1,2872)
+      else
+       print *,"accum_PARM%MAC_grid_displacement invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo_local,fabhi_local, &
+              accum_PARM%LS,1,-1,2872)
 
       data_out%data_interp=>data_interp_local
+
       data_in%scomp=1  ! placeholder
       data_in%ncomp=1  ! placeholder
+      data_in%interp_foot_flag=0  ! placeholder
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
@@ -19755,8 +19779,20 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%state=>xdisplacefab  ! placeholder
-      data_in%LS=>lsfab  ! placeholder
+      data_in%state=>velfab  
+      data_in%LS=accum_PARM%LS  ! not used
+
+      single_data_in%interp_dir=0  ! placeholder
+      single_data_in%interp_foot_flag=0  ! placeholder
+      single_data_in%level=accum_PARM%level
+      single_data_in%finest_level=accum_PARM%finest_level
+      single_data_in%bfact=accum_PARM%bfact
+      single_data_in%ngrowfab=1
+      single_data_in%dx=>dx_local
+      single_data_in%xlo=>xlo_local
+      single_data_in%fablo=>fablo_local
+      single_data_in%fabhi=>fabhi_local
+      single_data_in%state=>xdfab  
 
        ! data(xtarget)=interp_data(xtarget)-lambda
        ! lambda=
@@ -19783,13 +19819,6 @@ stop
             accum_PARM%particles(current_link)%extra_state(SDIM+1+dir)
        enddo 
 
-       data_in%xtarget=>xpart
-       data_in%interp_foot_flag=1
-       data_in%scomp=1
-       data_in%ncomp=SDIM
-       data_in%state=>xdisplacefab  
-       data_in%LS=>lsfab   ! not used
-
        if (accum_PARM%append_flag.eq.0) then
         do dir=1,SDIM
          x_foot_interp_local(dir)=xpart(dir)
@@ -19797,11 +19826,45 @@ stop
         print *,"there should not be any particles if append_flag==0"
         stop
        else if (accum_PARM%append_flag.eq.1) then
-        ! bilinear interpolation
-        call interp_from_grid_util(data_in,data_out)
-        do dir=1,SDIM
-         x_foot_interp_local(dir)=data_out%data_interp(dir)
-        enddo
+        single_data_in%interp_foot_flag=1
+        if (MAC_xd.eq.0) then
+         single_data_in%xtarget=>xpart
+         do dir=1,SDIM
+          single_data_in%interp_dir=dir-1
+          if (dir.eq.1) then
+           single_data_in%state=>xdfab  
+          else if (dir.eq.2) then
+           single_data_in%state=>ydfab  
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           single_data_in%state=>zdfab  
+          else
+           print *,"dir invalid"
+           stop
+          endif
+           ! bilinear interpolation
+          call single_interp_from_grid_util(data_in,data_out)
+          x_foot_interp_local(dir)=data_out%data_interp(1)
+         enddo ! dir=1..sdim
+        else if (MAC_xd.eq.1) then
+         call interpfab_XDISP( &
+          single_data_in%interp_foot_flag, &
+          accum_PARM%bfact, &
+          accum_PARM%level, &
+          accum_PARM%finest_level, &
+          dx_local, &
+          xlo_local, &
+          xpart, &
+          fablo_local, &
+          fabhi_local, &
+          xdfab, &
+          ydfab, &
+          zdfab, &
+          x_foot_interp_local)
+        else
+         print *,"accum_PARM%MAC_grid_displacement invalid"
+         stop
+        endif
+
        else 
         print *,"accum_PARM%append_flag invalid" 
         stop
@@ -19825,7 +19888,6 @@ stop
        data_in%scomp=1
        data_in%ncomp=SDIM
        data_in%state=>velfab  
-       data_in%LS=>lsfab   ! not used
 
         ! bilinear interpolation
        call interp_from_grid_util(data_in,data_out)
@@ -19865,13 +19927,6 @@ stop
        stop
       endif
 
-      data_in%xtarget=>xtarget
-      data_in%interp_foot_flag=1
-      data_in%scomp=1
-      data_in%ncomp=SDIM
-      data_in%state=>xdisplacefab  
-      data_in%LS=>lsfab   ! not used
-
       if (accum_PARM%append_flag.eq.0) then
        do dir=1,SDIM
         x_foot_interp(dir)=xtarget(dir)
@@ -19883,11 +19938,44 @@ stop
         stop
        endif
       else if (accum_PARM%append_flag.eq.1) then
-       ! bilinear interpolation
-       call interp_from_grid_util(data_in,data_out)
-       do dir=1,SDIM
-        x_foot_interp(dir)=data_out%data_interp(dir)
-       enddo
+       single_data_in%interp_foot_flag=1
+       if (MAC_xd.eq.0) then
+        single_data_in%xtarget=>xtarget
+        do dir=1,SDIM
+         single_data_in%interp_dir=dir-1
+         if (dir.eq.1) then
+          single_data_in%state=>xdfab  
+         else if (dir.eq.2) then
+          single_data_in%state=>ydfab  
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          single_data_in%state=>zdfab  
+         else
+          print *,"dir invalid"
+          stop
+         endif
+          ! bilinear interpolation
+         call single_interp_from_grid_util(data_in,data_out)
+         x_foot_interp(dir)=data_out%data_interp(1)
+        enddo ! dir=1..sdim
+       else if (MAC_xd.eq.1) then
+        call interpfab_XDISP( &
+         single_data_in%interp_foot_flag, &
+         accum_PARM%bfact, &
+         accum_PARM%level, &
+         accum_PARM%finest_level, &
+         dx_local, &
+         xlo_local, &
+         xtarget, &
+         fablo_local, &
+         fabhi_local, &
+         xdfab, &
+         ydfab, &
+         zdfab, &
+         x_foot_interp)
+       else
+        print *,"accum_PARM%MAC_grid_displacement invalid"
+        stop
+       endif
 
        if (A_X.gt.zero) then
         local_wt=particles_weight_XD
@@ -19917,7 +20005,6 @@ stop
       data_in%scomp=1
       data_in%ncomp=SDIM
       data_in%state=>velfab  
-      data_in%LS=>lsfab   ! not used
 
        ! bilinear interpolation
       call interp_from_grid_util(data_in,data_out)
@@ -19956,12 +20043,18 @@ stop
        stop
       endif
 
+#undef xdfab
+#undef ydfab
+#undef zdfab
+#undef MAC_xd
+
       return
       end subroutine interp_eul_lag_dist
 
        ! called from NavierStokes.cpp:
        !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
+        MAC_grid_displacement, &
         particles_weight_XD, &
         particles_weight_VEL, &
         tid, &
@@ -19989,7 +20082,9 @@ stop
         cell_particle_count, &
         DIMS(cell_particle_count), &
         velfab,DIMS(velfab), &
-        xdisplacefab,DIMS(xdisplacefab), &
+        xd,DIMS(xd), &
+        yd,DIMS(yd), &
+        zd,DIMS(zd), &
         lsfab,DIMS(lsfab)) &
       bind(c,name='fort_init_particle_container')
 
@@ -20000,6 +20095,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: single_particle_size
       INTEGER_T, intent(in) :: isweep
@@ -20032,7 +20128,9 @@ stop
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
       INTEGER_T, intent(in) :: DIMDEC(velfab)
-      INTEGER_T, intent(in) :: DIMDEC(xdisplacefab)
+      INTEGER_T, intent(in) :: DIMDEC(xd)
+      INTEGER_T, intent(in) :: DIMDEC(yd)
+      INTEGER_T, intent(in) :: DIMDEC(zd)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
    
        ! first component: number of particles in the cell
@@ -20043,7 +20141,9 @@ stop
       INTEGER_T, pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
-      REAL_T, intent(in), target :: xdisplacefab(DIMV(xdisplacefab),SDIM) 
+      REAL_T, intent(in), target :: xd(DIMV(xd)) 
+      REAL_T, intent(in), target :: yd(DIMV(yd)) 
+      REAL_T, intent(in), target :: zd(DIMV(zd)) 
       REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1) 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
 
@@ -20087,7 +20187,20 @@ stop
       cell_particle_count_ptr=>cell_particle_count
 
       call checkbound_array(fablo,fabhi,velfab,1,-1,2872)
-      call checkbound_array(fablo,fabhi,xdisplacefab,1,-1,2872)
+
+      if (MAC_grid_displacement.eq.0) then
+       call checkbound_array1(fablo,fabhi,xd,1,-1,2872)
+       call checkbound_array1(fablo,fabhi,yd,1,-1,2872)
+       call checkbound_array1(fablo,fabhi,zd,1,-1,2872)
+      else if (MAC_grid_displacement.eq.1) then
+       call checkbound_array1(fablo,fabhi,xd,1,0,2872)
+       call checkbound_array1(fablo,fabhi,yd,1,1,2872)
+       call checkbound_array1(fablo,fabhi,zd,1,SDIM-1,2872)
+      else
+       print *,"MAC_grid_displacement invalid"
+       stop
+      endif
+
       call checkbound_array(fablo,fabhi,lsfab,1,-1,2872)
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1,2872)
@@ -20123,7 +20236,10 @@ stop
 
       accum_PARM%LS=>lsfab  ! accum_PARM%LS is pointer, LS is target
 
-      accum_PARM%xdisplacefab=>xdisplacefab  
+      accum_PARM%MAC_grid_displacement=MAC_grid_displacement
+      accum_PARM%xd=>xd
+      accum_PARM%yd=>yd
+      accum_PARM%yd=>yd
 
       accum_PARM%cell_particle_count=>cell_particle_count
 
@@ -20338,8 +20454,6 @@ stop
             particles_weight_XD, &
             particles_weight_VEL, &
             velfab, &
-            lsfab, &
-            xdisplacefab, &
             accum_PARM, &
             i,j,k, &
             xsub, &

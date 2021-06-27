@@ -7496,6 +7496,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
 }  // end subroutine prescribe_solid_geometry()
 
+// this routine called for level=finest_level only.
 void NavierStokes::move_particles() {
 
  bool use_tiling=ns_tiling;

@@ -21529,7 +21529,9 @@ NavierStokes::assimilate_vel_from_particles() {
 // PARTICLES THAT APPEAR ON ALL THE LEVELS.
 // ALSO: Only state[State_Type] has the particles.
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
-// This routine called for level=finest_level 
+// This routine called for level=finest_level from:
+// 1. post_init_state() and
+// 2. move_particles()
 void
 NavierStokes::init_particle_container(int append_flag) {
 
@@ -21564,8 +21566,6 @@ NavierStokes::init_particle_container(int append_flag) {
 
   int ipart=0;
 
-  int scomp_x_displace=num_materials_viscoelastic*NUM_TENSOR_TYPE;
-
   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("LSmf invalid ncomp");
@@ -21579,11 +21579,18 @@ NavierStokes::init_particle_container(int append_flag) {
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
-   // ngrow=1
-   // scomp=scomp_x_displace
-   // ncomp=sdim
-  MultiFab* x_displace_mf=getStateTensor(1,
-    scomp_x_displace,AMREX_SPACEDIM,cur_time_slab);
+  MultiFab* xdisplace_mf[AMREX_SPACEDIM];
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   if (MAC_grid_displacement==0) {
+    int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
+    xdisplace_mf[dir]=getStateTensor(1,scomp,1,cur_time_slab);
+   } else if (MAC_grid_displacement==1) {
+     //ngrow,dir,scomp,ncomp
+    xdisplace_mf[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
+   } else
+    amrex::Error("MAC_grid_displacement invalid");
+  } // dir=0..sdim-1
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -21608,7 +21615,9 @@ NavierStokes::init_particle_container(int append_flag) {
 
     FArrayBox& lsfab=(*LSmf)[mfi];
     FArrayBox& velfab=(*init_velocity_mf)[mfi];
-    FArrayBox& xdisplacefab=(*x_displace_mf)[mfi];
+    FArrayBox& xdfab=(*xdisplace_mf[0])[mfi];
+    FArrayBox& ydfab=(*xdisplace_mf[1])[mfi];
+    FArrayBox& zdfab=(*xdisplace_mf[AMREX_SPACEDIM-1])[mfi];
 
      // component 1: number of particles linked to the cell.
      // component 2: the link to the list of particles.
@@ -21660,6 +21669,7 @@ NavierStokes::init_particle_container(int append_flag) {
      //                 "         "   =4 => 64 pieces in 2D.
      // 2. for each small sub-box, add a particle at the sub-box center.
      fort_init_particle_container( 
+       &MAC_grid_displacement,
        &particles_weight_XD,
        &particles_weight_VEL,
        &tid_current,
@@ -21689,9 +21699,9 @@ NavierStokes::init_particle_container(int append_flag) {
        velfab.dataPtr(),
        ARLIM(velfab.loVect()),
        ARLIM(velfab.hiVect()),
-       xdisplacefab.dataPtr(),
-       ARLIM(xdisplacefab.loVect()),
-       ARLIM(xdisplacefab.hiVect()),
+       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
        lsfab.dataPtr(),
        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
 
@@ -21769,7 +21779,9 @@ NavierStokes::init_particle_container(int append_flag) {
   ns_reconcile_d_num(81);
 
   delete init_velocity_mf;
-  delete x_displace_mf;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete xdisplace_mf[dir];
+  }
   delete LSmf;
 
  } else
