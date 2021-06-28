@@ -1,13 +1,13 @@
       module evap_check
       IMPLICIT NONE
 
-       ! It is assume in this model that the temperature in the liquid
+       ! It is assumed in this code that the temperature in the liquid
        ! is spatially uniform.
        ! probtype==0 => Borodulin test
        ! probtype==1 => Villegas et al test
        ! probtype==2 => explore effect of parameters on evap in tank
        !                (Earth based ZBOT experiment)
-      integer, PARAMETER :: probtype = 2
+      integer, PARAMETER :: probtype = 0
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
@@ -35,10 +35,8 @@
         ! error between consecutive grid resolutions) |R_h - R_2h|  
       integer, PARAMETER :: num_intervals=256
 
-        ! applicable for both the "Kassemi" model and the "Schrage"
-        ! model.
-      integer, PARAMETER :: schrage_probe_size=1
        ! L=schrage_heat_diffusion_factor * radblob
+       ! schrage_heat_diffusion_factor only used if evap_model.eq.3
       real*8, PARAMETER :: schrage_heat_diffusion_factor=0.0d0
 
        ! was 8.0 for Cody's results.
@@ -353,14 +351,14 @@
        endif
 
        call MDOT_Kassemi( &
-              accommodation_coefficient, &
-              WV_global, &
-              R_global, &
-              Pgamma, &
-              Pvapor_probe, &
-              T_gamma, &
-              T_probe, &
-              mdotY,verbose)
+         accommodation_coefficient, &
+         WV_global, &
+         R_global, &
+         Pgamma, &
+         Pvapor_probe, &
+         T_gamma, &
+         T_probe, &
+         mdotY,verbose)
       else if ((evap_model.eq.0).or. & !Villegas or Palmore and Desjardins
                (evap_model.eq.2)) then !same as 0 except X_init=0
        call X_from_Tgamma(local_X,T_gamma,T_sat_global, &
@@ -850,7 +848,6 @@
        do igrid=0,num_intervals
         call INTERNAL_material(den_G,TNEW(igrid),e_grid)
         call EOS_material(den_G,e_grid,P_grid)
-!       X_grid=P_grid/P_sat_global
         X_grid=0.0d0
         call massfrac_from_volfrac(X_grid,YNEW(igrid), &
          WA_global,WV_global)
@@ -858,7 +855,8 @@
        enddo
        YINF_for_numerical=YNEW(num_intervals)
       else if (evap_model.eq.3) then ! T_gamma=f(T_probe_smear)
-       ! set P_sat_global here to override the reference pressure
+       ! P_sat_global should have been initialized above.
+       ! P_sat_global is the reference pressure.
       else
        print *,"evap_model invalid"
        stop
@@ -930,39 +928,34 @@
         ! interface.
        T_gamma_a=100.0d0
        T_gamma_b=T_sat_global
-       if ((schrage_probe_size.ge.1).and.(schrage_probe_size.le.6)) then
-        if ((evap_model.eq.0).or. &
-            (evap_model.eq.1).or. &
-            (evap_model.eq.2)) then
-         TNEW_probe=TNEW(schrage_probe_size)
-        else if (evap_model.eq.3) then
-         TNEW_probe=SOLNsmear(1)
-        else
-         print *,"evap_model invalid"
-         stop
-        endif
-
-        call mdot_diff_func(T_gamma_a, &
-         TNEW(1),YNEW(1), &
-         TNEW_probe,YNEW(schrage_probe_size), &
-         dx,mdot_diff_a, &
-         verbose)
-        call mdot_diff_func(T_gamma_b, &
-         TNEW(1),YNEW(1), &
-         TNEW_probe,YNEW(schrage_probe_size), &
-         dx,mdot_diff_b, &
-         verbose)
+       if ((evap_model.eq.0).or. &
+           (evap_model.eq.1).or. &
+           (evap_model.eq.2)) then
+        TNEW_probe=TNEW(1)
+       else if (evap_model.eq.3) then
+        TNEW_probe=SOLNsmear(1)
        else
-        print *,"probe_size out of range"
+        print *,"evap_model invalid"
         stop
        endif
+
+       call mdot_diff_func(T_gamma_a, &
+         TNEW(1),YNEW(1), &
+         TNEW_probe,YNEW(1), &
+         dx,mdot_diff_a, &
+         verbose)
+       call mdot_diff_func(T_gamma_b, &
+         TNEW(1),YNEW(1), &
+         TNEW_probe,YNEW(1), &
+         dx,mdot_diff_b, &
+         verbose)
 
        if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
         do iter=1,100
          cc=0.5d0*(T_gamma_a+T_gamma_b)
          call mdot_diff_func(cc, &
           TNEW(1),YNEW(1), &
-          TNEW_probe,YNEW(schrage_probe_size), &
+          TNEW_probe,YNEW(1), &
           dx,mdot_diff_c, &
           verbose)
          if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
@@ -989,13 +982,13 @@
        if (1.eq.0) then
         call mdot_diff_func(cc, &
          TNEW(1),YNEW(1), &
-         TNEW_probe,YNEW(schrage_probe_size), &
+         TNEW_probe,YNEW(1), &
          dx,mdot_diff_c, &
          verbose)
         call mdot_from_T_probe(cc,TNEW(1),dx,mdotT)
         verbose=1
         call mdot_from_Y_probe(cc, &
-         TNEW_probe,YNEW(schrage_probe_size), &
+         TNEW_probe,YNEW(1), &
          dx,mdotY,verbose)
         verbose=0
         print *,"accommodation_coefficient ",accommodation_coefficient
