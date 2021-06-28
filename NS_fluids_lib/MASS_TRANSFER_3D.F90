@@ -3186,7 +3186,7 @@ stop
              Pgamma, &
              Pvapor_probe, &
              T_gamma, &
-             Tvapor_probe_smooth, &
+             Tvapor_probe, &
              mdotY)
           mdotY_top=mdotY
           mdotY_bot=one
