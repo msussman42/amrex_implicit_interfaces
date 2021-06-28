@@ -3175,7 +3175,7 @@ stop
 
           imattype=TSAT_Y_PARMS%material_type_evap(im_probe)
           call INTERNAL_material(density_probe,massfrac_parm, &
-            Tvapor_probe_smooth,internal_energy,imattype,im_probe)
+            T_gamma,internal_energy,imattype,im_probe)
           call EOS_material(density_probe,massfrac_parm,internal_energy, &
             Pvapor_probe,imattype,im_probe)
 

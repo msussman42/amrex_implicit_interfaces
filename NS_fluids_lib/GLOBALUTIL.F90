@@ -17279,7 +17279,8 @@ if ((sigma.ge.zero).and.(sigma.lt.two).and. &
     (Tvapor_probe.gt.zero)) then
  MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
    sqrt(MolarMassFluid/(2.0d0*Pi*R))* &
-   (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+   (1.0d0/sqrt(Tgamma))* &
+   (Pgamma-Pvapor_probe)
 
 else
  print *,"parameter problems in MDOT_Kassemi"
