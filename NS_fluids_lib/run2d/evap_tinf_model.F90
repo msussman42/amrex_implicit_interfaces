@@ -291,7 +291,7 @@
           (Tgamma.gt.0.0d0).and. &
           (Tvapor_probe.gt.0.0d0)) then
        MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
-         (1.0d0/sqrt(Tgamma)* &
+         (1.0d0/sqrt(Tgamma))* &
          sqrt(MolarMassFluid/(2.0d0*my_pi*R))* &
          (Pgamma-Pvapor_probe)
        if (verbose.eq.1) then
@@ -833,8 +833,13 @@
       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
       if (Y_wall_global.eq.1.0d0) then
        ! do not alter P_sat_global
-      else 
+      else if ((Y_wall_global.lt.0.0d0).or. &
+               ((Y_wall_global.ge.0.0d0).and. &
+                (Y_wall_global.lt.1.0d0))) then 
        P_sat_global=Pgamma_init_global/X_gamma_init_global
+      else
+       print *,"Y_wall_global invalid"
+       stop
       endif
 
       if (evap_model.eq.0) then ! Villegas model
