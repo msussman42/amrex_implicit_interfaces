@@ -9211,7 +9211,7 @@ stop
 
           ! dt * smoothing_local = smoothing_time
          if (dt.eq.zero) then
-          smoothing_local=one
+          smoothing_local=zero
          else if (dt.gt.zero) then
           if (smoothing_time.ge.zero) then
            smoothing_local=smoothing_time/dt

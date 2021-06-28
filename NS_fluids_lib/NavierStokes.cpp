@@ -847,6 +847,8 @@ Vector<int> NavierStokes::freezing_model;
 //0=Palmore and Desjardins (Villegas, Tanguy, Desjardins) 
 //1=Tanasawa  2=Schrage 3=Kassemi
 //4=Stefan model in which T_interface=f(Pressure_smooth)
+//  Pressure_smooth=P(rho_gas_closest_point,T_smooth_closest)
+//see "smoothing_length_scale"
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 
 //ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
@@ -3491,6 +3493,7 @@ NavierStokes::read_params ()
       Tanasawa_or_Schrage_or_Kassemi,0,2*nten);
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
 
+    int at_least_one_tanguy_fully_saturated_model=0;
 
      // set defaults for "distribute_from_target"
     for (int iten=0;iten<nten;iten++) {
@@ -3550,6 +3553,20 @@ NavierStokes::read_params ()
           amrex::Error("den_source or den_dest invalid");
         } else
          amrex::Error("den_source or den_dest invalid");
+
+	if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==0) { //PD 
+ 	 //do nothing
+	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==1) { //Tanasawa
+	 //do nothing
+	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==2) { //Schrage
+	 //do nothing
+	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==3) { //Kassemi
+	 //do nothing
+	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==4) { //Tanguy
+         at_least_one_tanguy_fully_saturated_model=1;
+	} else
+	 amrex::Error("Tanasawa_or_Schrage_or_Kassemi[ilocal] invalid");
+
        } else if (latent_heat[iten_local]==0) {
         distribute_from_target[iten_local]=0;
        } else
@@ -3558,6 +3575,19 @@ NavierStokes::read_params ()
        amrex::Error("freezing_model invalid");
      } // ireverse
     } // iten
+
+    if (at_least_one_tanguy_fully_saturated_model==0) {
+     if (smoothing_length_scale==0.0) {
+      //do nothing
+     } else
+      amrex::Error("smoothing_length_scale should be 0.0");
+    } else if (at_least_one_tanguy_fully_saturated_model==1) {
+     if (smoothing_length_scale>=0.0) {
+      //do nothing
+     } else
+      amrex::Error("smoothing_length_scale should be >=0.0");
+    } else
+     amrex::Error("at_least_one_tanguy_fully_saturated_model invalid");
 
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
     pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*nten);
