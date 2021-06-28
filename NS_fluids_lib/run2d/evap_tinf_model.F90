@@ -13,8 +13,10 @@
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
        ! evap_model==2 => same as evap_model==0, except that initial
        !  volume fraction is zero.
-       ! evap_model==3 => Kassemi model EXCEPT that a provisional
-       !  temperature field is derived from the original temperature
+       ! evap_model==3 => Tanguy's recommended model for the fully
+       !  saturated case:
+       !  T_i=arc_PCC( pv(T_v_smeared) )
+       !  The smeared temp. field is derived from the original temperature
        !  field by way of running the heat equation for a length of time
        !  t=(L/(2 * arc_erf(0.2)))^2  arc_erf(0.2)=0.1791 derived from:
        !  u_t = u_xx u(x,0)=1 x<0  =0 x>0
@@ -24,9 +26,6 @@
        !  matlab: erfinv(0.2)
        !  sqrt(t)=L/(2 * .1791)  t=(L/(2 * .1791))^2
        !  mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
-       ! evap_model==4 => Tayguy's recommendation with the same
-       !  exception as for evap_model==3.
-       !  T_i=arc_PCC( pv(T_v_smeared) )
       integer, PARAMETER :: evap_model=1
 
       integer, PARAMETER :: nsteps=1000
@@ -69,6 +68,11 @@
       real*8 :: Le
       real*8 :: T_wall_global ! if T_wall_global>0 =>hardwire the domain
                               ! temperature to be this.
+      real*8 :: Y_wall_global ! if Y_wall_global>=0 =>hardwire the domain 
+                              ! mass fraction to be this.
+                              ! if Y_wall_global=1.0, then the Kassemi
+                              ! model will use the given prescribed 
+                              ! reference pressure.
       real*8 :: T_inf_global
       real*8 :: Y_inf_global
       real*8 :: T_gamma
@@ -287,13 +291,14 @@
           (Tgamma.gt.0.0d0).and. &
           (Tvapor_probe.gt.0.0d0)) then
        MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
+         (1.0d0/sqrt(Tgamma)* &
          sqrt(MolarMassFluid/(2.0d0*my_pi*R))* &
-         (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+         (Pgamma-Pvapor_probe)
        if (verbose.eq.1) then
         print *,"sigma,gamma_term,probe_term ", &
            sigma, &
            Pgamma/sqrt(Tgamma), &
-           Pvapor_probe/sqrt(Tvapor_probe)
+           Pvapor_probe/sqrt(Tgamma)
        else if (verbose.eq.0) then
         ! do nothing
        else
@@ -324,10 +329,8 @@
       real*8 :: local_Y
 
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
-       ! evap_model==3 => Kassemi model  P_ref=P_gamma/X_gamma T_probe
-       !  represents an averaged quantity.
-      if ((evap_model.eq.1).or. &
-          (evap_model.eq.3)) then
+       !  (if X_gamma=1, then P_ref is prescribed)
+      if (evap_model.eq.1) then
        call Pgamma_Clausius_Clapyron( &
         Pgamma, &
         P_sat_global, & ! reference pressure
@@ -337,7 +340,7 @@
         R_global, &
         WV_global)
 
-       call INTERNAL_material(den_G,T_probe,internal_energy)
+       call INTERNAL_material(den_G,T_gamma,internal_energy)
        call EOS_material(den_G,internal_energy,Pvapor_probe)
 
        if (verbose.eq.1) then
@@ -364,7 +367,7 @@
         L_V,R_global,WV_global)
        call massfrac_from_volfrac(local_X,local_Y,WA_global,WV_global)
        mdotY=den_G*D_G*(local_Y-Y_probe)/((1.0d0-local_Y)*dx)
-      else if (evap_model.eq.4) then
+      else if (evap_model.eq.3) then
        mdotY=0.0d0  ! stub
       else
        print *,"evap_model invalid"
@@ -403,15 +406,14 @@
 
       if ((evap_model.eq.0).or. &
           (evap_model.eq.1).or. &
-          (evap_model.eq.2).or. &
-          (evap_model.eq.3)) then
+          (evap_model.eq.2)) then
        call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
        call mdot_from_Y_probe(T_gamma, &
         schrage_T_probe,schrage_Y_probe,dx,mdotY, &
         verbose)
 
        mdot_diff=mdotT-mdotY
-      else if (evap_model.eq.4) then
+      else if (evap_model.eq.3) then
        call INTERNAL_material(den_G,T_probe,internal_energy)
        call EOS_material(den_G,internal_energy,Pvapor_probe)
        if (P_sat_global.gt.0.0d0) then
@@ -566,6 +568,8 @@
        T_sat_global=373.15d0  ! K
        T_inf_global = 300.5d0 ! K
        T_wall_global=0.0d0  ! Kelvin (T_wall_global=0.0 => disable)
+       Y_wall_global=-1.0d0 ! (Y_wall_global<0.0 => disable)
+       P_sat_global=1.0D+6  ! This is reference pressure if Y_wall_global=1
        Y_inf_global=7.1d-3  ! dimensionless
        T_gamma=300.5   ! K
        cc=0.0d0
@@ -588,6 +592,8 @@
        T_sat_global=329.0d0
        T_inf_global = 700.0d0
        T_wall_global=0.0d0  ! Kelvin (T_wall_global=0.0 => disable)
+       Y_wall_global=-1.0d0 ! (Y_wall_global<0.0 => disable)
+       P_sat_global=1.0D+6  ! This is reference pressure if Y_wall_global=1
        Y_inf_global=0.0d0
        T_gamma=300.5d0  ! placeholder
        cc=0.0d0
@@ -617,7 +623,9 @@
        T_sat_global=373.15d0  ! K (reference boiling temperature)
        T_inf_global = 300.5d0 ! K (This is temperature at infinity if
                               ! using the Stefan model)
-       T_wall_global=300.5d0  ! Kelvin
+       T_wall_global=300.5d0  ! Kelvin (T_wall_global=0.0 => disable)
+       Y_wall_global=1.0d0    ! (Y_wall_global<0.0 => disable)
+       P_sat_global=1.0D+6  ! This is reference pressure if Y_wall_global=1
        Y_inf_global=7.1d-3  ! dimensionless
        T_gamma=300.5   ! K
        cc=0.0d0
@@ -802,6 +810,7 @@
 !     YINF_for_numerical=Y_inf_global
       TINF_for_numerical=T
       YINF_for_numerical=Y
+
       if (T_wall_global.eq.0.0d0) then
        ! do nothing
       else if (T_wall_global.gt.0.0d0) then
@@ -811,15 +820,26 @@
        stop
       endif
 
+      if (Y_wall_global.lt.0.0d0) then
+       ! do nothing
+      else if (Y_wall_global.ge.0.0d0) then
+       YINF_for_numerical=Y_wall_global
+      else
+       print *,"X_wall_global invalid"
+       stop
+      endif
+
       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
-      P_sat_global=Pgamma_init_global/X_gamma_init_global
+      if (Y_wall_global.eq.1.0d0) then
+       ! do not alter P_sat_global
+      else 
+       P_sat_global=Pgamma_init_global/X_gamma_init_global
+      endif
 
       if (evap_model.eq.0) then ! Villegas model
        ! do nothing
       else if (evap_model.eq.1) then ! Kassemi model
-       ! do nothing
-      else if (evap_model.eq.3) then ! Kassemi model using Tsmear
        ! do nothing
       else if (evap_model.eq.2) then ! same as Villegas, except X=P/P_ref
        do igrid=0,num_intervals
@@ -832,7 +852,7 @@
         YOLD(igrid)=YNEW(igrid)
        enddo
        YINF_for_numerical=YNEW(num_intervals)
-      else if (evap_model.eq.4) then ! T_gamma=f(T_probe_smear)
+      else if (evap_model.eq.3) then ! T_gamma=f(T_probe_smear)
        ! set P_sat_global here to override the reference pressure
       else
        print *,"evap_model invalid"
@@ -911,8 +931,6 @@
             (evap_model.eq.2)) then
          TNEW_probe=TNEW(schrage_probe_size)
         else if (evap_model.eq.3) then
-         TNEW_probe=SOLNsmear(1)
-        else if (evap_model.eq.4) then
          TNEW_probe=SOLNsmear(1)
         else
          print *,"evap_model invalid"
