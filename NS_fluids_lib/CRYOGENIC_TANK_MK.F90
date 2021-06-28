@@ -24,7 +24,7 @@ stop
 module CRYOGENIC_TANK_MK_module
 
 implicit none
-!! MIDLLE OF THE TANK IS AT Z=0 
+!! MIDDLE OF THE TANK IS AT Z=0 
 ! Tank inner radius
 REAL_T :: TANK_MK_RADIUS
 ! Tank inner height (inner wall height)
