@@ -3554,18 +3554,18 @@ NavierStokes::read_params ()
         } else
          amrex::Error("den_source or den_dest invalid");
 
-	if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==0) { //PD 
+	if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==0) { //PD 
  	 //do nothing
-	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==1) { //Tanasawa
+	} else if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==1) { //Tanasawa
 	 //do nothing
-	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==2) { //Schrage
+	} else if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==2) { //Schrage
 	 //do nothing
-	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==3) { //Kassemi
+	} else if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==3) { //Kassemi
 	 //do nothing
-	} else if (Tanasawa_or_Schrage_or_Kassemi[ilocal]==4) { //Tanguy
+	} else if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==4) { //Tanguy
          at_least_one_tanguy_fully_saturated_model=1;
 	} else
-	 amrex::Error("Tanasawa_or_Schrage_or_Kassemi[ilocal] invalid");
+	 amrex::Error("Tanasawa_or_Schrage_or_Kassemi[iten_local] invalid");
 
        } else if (latent_heat[iten_local]==0) {
         distribute_from_target[iten_local]=0;
