@@ -8176,6 +8176,173 @@ contains
 #undef SANITY_CHECK
 
 
+       !  This routine calculates the bilinear interpolant at a given point
+       !  "x" 
+      subroutine interpfab_XDISP( &
+       interp_foot_flag, &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       x, &
+       lo,hi, &
+       xdata, &
+       ydata, &
+       zdata, &
+       dest) ! 1..SDIM
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: interp_foot_flag
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+       ! pointers are always intent(in).
+       ! the intent attribute of the data itself is inherited from the
+       ! target.
+       ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
+      REAL_T, intent(in), pointer :: xdata(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: ydata(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: zdata(D_DECL(:,:,:))
+      REAL_T, intent(out) :: dest(SDIM)
+
+      INTEGER_T dir_disp_comp  ! 0..sdim-1
+      INTEGER_T dir_local
+      INTEGER_T mac_cell_index(SDIM)
+      INTEGER_T istenlo(3),istenhi(3)
+      INTEGER_T stencil_offset(SDIM)
+      INTEGER_T mac_lo(SDIM),mac_hi(SDIM)
+      REAL_T WT,total_WT
+      INTEGER_T isten,jsten,ksten
+      REAL_T local_data
+      INTEGER_T ngrow
+
+      INTEGER_T nhalf
+      REAL_T xsten_center(-3:3,SDIM)
+      REAL_T xsten_offset(-3:3,SDIM)
+
+      nhalf=3
+
+      ngrow=2
+
+      call checkbound_array1(lo,hi,xdata,ngrow,0,1221)
+      call checkbound_array1(lo,hi,ydata,ngrow,1,1221)
+      call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,1221)
+
+       ! dir_disp_comp==0 => xdata interpolation
+       ! dir_disp_comp==1 => ydata interpolation
+       ! dir_disp_comp==2 => zdata interpolation
+      do dir_disp_comp=0,SDIM-1
+        ! strategy:
+        !   1. determine 3x3x3 MAC grid stencil about x
+        !   2. determine the bilinear interpolation weights
+        !      (weights are only nonzero in the appropriate 2x2x2 MAC
+        !       grid stencil) 
+        ! containing_MACcell declared in GLOBALUTIL.F90
+       call containing_MACcell(bfact,dx,xlo,lo,x,dir_disp_comp,mac_cell_index)
+
+       do dir_local=1,SDIM
+        mac_lo(dir_local)=lo(dir_local)
+        mac_hi(dir_local)=hi(dir_local)
+       enddo
+       mac_hi(dir_disp_comp+1)=hi(dir_disp_comp+1)+1
+
+       istenlo(3)=0
+       istenhi(3)=0
+       do dir_local=1,SDIM
+        if (mac_cell_index(dir_local)-1.lt.mac_lo(dir_local)-ngrow) then
+         mac_cell_index(dir_local)=mac_lo(dir_local)-ngrow+1
+        endif
+        if (mac_cell_index(dir_local)+1.gt.mac_hi(dir_local)+ngrow) then
+         mac_cell_index(dir_local)=mac_hi(dir_local)+ngrow-1
+        endif
+        istenlo(dir_local)=mac_cell_index(dir_local)-1
+        istenhi(dir_local)=mac_cell_index(dir_local)+1
+       enddo ! dir_local=1..sdim
+
+       total_WT=zero
+       dest(dir_disp_comp+1)=zero
+
+       isten=mac_cell_index(1)
+       jsten=mac_cell_index(2)
+       ksten=mac_cell_index(SDIM)
+
+       call gridstenMAC_level(xsten_center,isten,jsten,ksten,level,nhalf, &
+              dir_disp_comp,81)
+
+       do isten=istenlo(1),istenhi(1)
+       do jsten=istenlo(2),istenhi(2)
+       do ksten=istenlo(3),istenhi(3)
+        call gridstenMAC_level(xsten_offset,isten,jsten,ksten,level,nhalf, &
+              dir_disp_comp,81)
+
+        stencil_offset(1)=isten-mac_cell_index(1)
+        stencil_offset(2)=jsten-mac_cell_index(2)
+        if (SDIM.eq.3) then
+         stencil_offset(SDIM)=ksten-mac_cell_index(SDIM)
+        endif
+        call bilinear_interp_WT(xsten_center,nhalf,stencil_offset,x,WT)
+        if ((WT.ge.zero).and.(WT.le.one)) then
+         ! do nothing
+        else
+         print *,"WT invalid"
+         stop
+        endif
+
+        if (dir_disp_comp.eq.0) then
+         local_data=xdata(D_DECL(isten,jsten,ksten))
+        else if (dir_disp_comp.eq.1) then
+         local_data=ydata(D_DECL(isten,jsten,ksten))
+        else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
+         local_data=zdata(D_DECL(isten,jsten,ksten))
+        else
+         print *,"dir_disp_comp invalid"
+         stop
+        endif
+        if ((local_data.ge.-1.0D+30).and. &
+            (local_data.le.1.0D+30)) then
+
+         if (interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data=xsten_offset(0,dir_disp_comp+1)-local_data
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
+         dest(dir_disp_comp+1)=dest(dir_disp_comp+1)+WT*local_data
+        else
+         print *,"local_data overflow"
+         print *,"local_data ",local_data
+         stop
+        endif
+
+        total_WT=total_WT+WT
+
+       enddo ! ksten
+       enddo ! jsten
+       enddo ! isten
+
+       if (total_WT.gt.zero) then
+
+        dest(dir_disp_comp+1)=dest(dir_disp_comp+1)/total_WT
+
+       else
+        print *,"total_WT invalid"
+        stop
+       endif
+
+      enddo ! dir_disp_comp=0..sdim-1
+
+      return 
+      end subroutine interpfab_XDISP
+
+
       subroutine interp_from_grid_util(data_in,data_out)
       use probcommon_module
       IMPLICIT NONE
