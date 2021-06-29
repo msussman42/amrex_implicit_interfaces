@@ -7678,6 +7678,7 @@ contains
       INTEGER_T istep(SDIM)
       INTEGER_T klosten,khisten,kstep
       INTEGER_T nc
+      INTEGER_T data_comp
       INTEGER_T isten,jsten,ksten
       INTEGER_T ii(3)
       REAL_T SGN_FACT
@@ -7864,8 +7865,10 @@ contains
         enddo ! dir_local=1..sdim
 
         if ((wt_bot.gt.zero).and.(wt_top.gt.zero)) then 
+         data_comp=data_in%scomp+nc-1
          data_out%data_interp(nc)=data_out%data_interp(nc)+wt_top* &
-           data_in%disp_data(D_DECL(isten,jsten,ksten),nc)/wt_bot
+          data_in%disp_data(D_DECL(isten,jsten,ksten),data_comp)/ &
+          wt_bot
         else
          print *,"wt_bot or wt_top invalid"
          stop
@@ -7892,8 +7895,25 @@ contains
         data_in2%ngrowfab=data_in%ngrowfab
         data_in2%state=data_in%state
         data_in2%LS=data_in%state
-
+        allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
+        do nc=1,data_in%ncomp
+         if (abs(data_out%data_interp(nc)- &
+                 data_out2%data_interp(nc)).le.1.0E-12) then
+          ! do nothing
+         else
+          print *,"data_out%data_interp(nc) invalid"
+          stop
+         endif
+        enddo ! nc=1..data_in%ncomp
+        deallocate(data_out2%data_interp)
+       else if ((data_in%grid_type_flux.ge.0).and. &
+                (data_in%grid_type_flux.le.5)) then
+        ! do nothing
+       else
+        print *,"data_in%grid_type_flux invalid"
+        stop
+       endif
       else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
        ! do nothing
       else
