@@ -93,13 +93,25 @@ ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center
 # .1429+0.0857=0.2286=0.2032+0.0254=.2286
 # .1683-.1429=0.0254
 # coarsest grid: 32x64 domain 0<r<0.127  -.254<z<0.254
-ns.zblob3	    = -0.1429 # Z coordinate (vert) of heater top 
-ns.yblob3	    = -0.1683 # Z coordinate (vert) of heater bottom
+# dx_coarsest=0.508/64=0.0079375
+# Heater thickness: 0.001524m
+# Heater width: 0.0254 meters
+# For RZ, the heater width extends artificially all the way around the
+# perimeter of the cylinder.
+# tank cavity radius=0.1016
+# number of coarse cells=.1016/0.0079375=12.8
+# 12 * 0.0079375=0.09525
+# 11 * 0.0079375=0.0873125
+# (.254-.1429)/.0079375 \approx 14 cells
+# -.254 + 14 * 0.0079375 = -.142875
+# -.254 + 13 * 0.0079375 = -.1508125
+ns.zblob3	    = -0.142875 # Z coordinate (vert) of heater top 
+ns.yblob3	    = -0.1508125 # Z coordinate (vert) of heater bottom
 #n_cell=16 64
 # 0 < r < 0.127
 # 0.09525 - (1/2) 0.127/16 = 0.09128125
-ns.radblob3         = 0.09128125  # r_end of location of heater filament
-ns.radblob4         = 0.09128125  # r_start of heater filament
+ns.radblob3         = 0.09525  # r_end of location of heater filament
+ns.radblob4         = 0.0873125  # r_start of heater filament
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
@@ -188,7 +200,10 @@ ns.gravity_potential_form=1
 #   rho independent of T or Z, but the gravity force is modified.
 ns.override_density=1 1 0  # 1..num_materials
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
-ns.DrhoDT = -0.0007 -0.0034 0.0   # units: 1/degree K
+# coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
+# coefficient for heat expansion for an ideal gas: (1/T)=
+# 1/298=0.0034
+ns.DrhoDT = -0.00219 -0.0034 0.0   # units: 1/degree K
 
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
@@ -219,7 +234,7 @@ ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
                            # molar mass.
 
 # Density [kg/m^3]  HFE7000
-ns.denconst= 1400 5.3421449445 1190
+ns.denconst= 1400.0 5.3421449445 1190.0
 ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
 
@@ -238,13 +253,13 @@ ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
-ns.stiffCP=1300 2400.0          1500
+ns.stiffCP=1300 2400.0 1500.0
 # Ground based experiments used HFE7000.
 # Space-Station experiments used Perfluoro-n-Pentane (PnP, or C5F12)
 # REFPROP (Refrigerant), (RE347MCC), Methyl-Heptafluoropropyl, 
 # https://pubchem.ncbi.nlm.nih.gov/compound/2774943#section=Synonyms
 # Methyl-Perfluoropropyl, HFE7000, CV=
-ns.stiffCV=1300 2358.4276869092 1500  #CV used CRYOGENIC_TANK_MK to get CP
+ns.stiffCV=1300 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
 ns.heatviscconst=0.075 0.00375 0.189
@@ -330,7 +345,8 @@ ns.hi_bc          = 3 3
 ns.temperature_lo_bc = 3 3
 ns.temperature_hi_bc = 3 3
 
-
+# -n=use LS with smeared thermal conductivity at material boundaries.
+# n=1,2,3,... (smearing thickness is 2n * Delta x)
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0

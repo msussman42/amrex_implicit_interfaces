@@ -8153,6 +8153,36 @@ contains
         endif
         deallocate(data_out2%data_interp)
        else if ((data_in%grid_type_flux.ge.0).and. &
+                (data_in%grid_type_flux.le.SDIM-1)) then
+        allocate(data_out2%data_interp(1))
+        data_in2%interp_foot_flag=0
+
+        call interpfab_XDISP( &
+          data_in%grid_type_flux, &
+          data_in%grid_type_flux, &
+          data_in2%interp_foot_flag, &
+          data_in%bfact, &
+          data_in%level, &
+          data_in%finest_level, &
+          data_in%dx, &
+          data_in%xlo, &
+          xtarget, &
+          data_in%fablo, &
+          data_in%fabhi, &
+          data_in%disp_data, &
+          data_in%disp_data, &
+          data_in%disp_data, &
+          data_out2%data_interp)
+
+        if (abs(data_out%data_interp(1)- &
+                data_out2%data_interp(1)).le.1.0E-12) then
+         ! do nothing
+        else
+         print *,"data_out%data_interp(1) invalid"
+         stop
+        endif
+        deallocate(data_out2%data_interp)
+       else if ((data_in%grid_type_flux.ge.3).and. &
                 (data_in%grid_type_flux.le.5)) then
         ! do nothing
        else
@@ -8179,6 +8209,8 @@ contains
        !  This routine calculates the bilinear interpolant at a given point
        !  "x" 
       subroutine interpfab_XDISP( &
+       start_dir, &  ! 0<=start_dir<=sdim-1
+       end_dir, &    ! 0<=start_dir<=end_dir<=sdim-1
        interp_foot_flag, &
        bfact, &
        level, &
@@ -8193,6 +8225,8 @@ contains
        dest) ! 1..SDIM
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: start_dir
+      INTEGER_T, intent(in) :: end_dir
       INTEGER_T, intent(in) :: interp_foot_flag
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
@@ -8208,7 +8242,7 @@ contains
       REAL_T, intent(in), pointer :: xdata(D_DECL(:,:,:))
       REAL_T, intent(in), pointer :: ydata(D_DECL(:,:,:))
       REAL_T, intent(in), pointer :: zdata(D_DECL(:,:,:))
-      REAL_T, intent(out) :: dest(SDIM)
+      REAL_T, intent(out) :: dest(1:end_dir-start_dir+1)
 
       INTEGER_T dir_disp_comp  ! 0..sdim-1
       INTEGER_T dir_local
@@ -8229,14 +8263,29 @@ contains
 
       ngrow=2
 
-      call checkbound_array1(lo,hi,xdata,ngrow,0,1221)
-      call checkbound_array1(lo,hi,ydata,ngrow,1,1221)
-      call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,1221)
+      if (start_dir.le.end_dir) then
+       ! do nothing
+      else
+       print *,"start_dir or end_dir invalid"
+       stop
+      endif
 
        ! dir_disp_comp==0 => xdata interpolation
        ! dir_disp_comp==1 => ydata interpolation
        ! dir_disp_comp==2 => zdata interpolation
-      do dir_disp_comp=0,SDIM-1
+      do dir_disp_comp=start_dir,end_dir
+
+       if (dir_disp_comp.eq.0) then
+        call checkbound_array1(lo,hi,xdata,ngrow,0,1221)
+       else if (dir_disp_comp.eq.1) then
+        call checkbound_array1(lo,hi,ydata,ngrow,1,1221)
+       else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
+        call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,1221)
+       else
+        print *,"dir_disp_comp invalid"
+        stop
+       endif
+
         ! strategy:
         !   1. determine 3x3x3 MAC grid stencil about x
         !   2. determine the bilinear interpolation weights
@@ -8265,7 +8314,7 @@ contains
        enddo ! dir_local=1..sdim
 
        total_WT=zero
-       dest(dir_disp_comp+1)=zero
+       dest(dir_disp_comp-start_dir+1)=zero
 
        isten=mac_cell_index(1)
        jsten=mac_cell_index(2)
@@ -8315,7 +8364,8 @@ contains
           print *,"interp_foot_flag invalid"
           stop
          endif
-         dest(dir_disp_comp+1)=dest(dir_disp_comp+1)+WT*local_data
+         dest(dir_disp_comp-start_dir+1)= &
+               dest(dir_disp_comp-start_dir+1)+WT*local_data
         else
          print *,"local_data overflow"
          print *,"local_data ",local_data
@@ -8330,14 +8380,15 @@ contains
 
        if (total_WT.gt.zero) then
 
-        dest(dir_disp_comp+1)=dest(dir_disp_comp+1)/total_WT
+        dest(dir_disp_comp-start_dir+1)= &
+           dest(dir_disp_comp-start_dir+1)/total_WT
 
        else
         print *,"total_WT invalid"
         stop
        endif
 
-      enddo ! dir_disp_comp=0..sdim-1
+      enddo ! dir_disp_comp=start_dir ... end_dir (0<=dir_disp_comp<=sdim-1)
 
       return 
       end subroutine interpfab_XDISP

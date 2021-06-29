@@ -29283,9 +29283,14 @@ stop
       INTEGER_T, target :: fabhi_local(SDIM)
       INTEGER_T, target :: tilelo_local(SDIM)
       INTEGER_T, target :: tilehi_local(SDIM)
+      INTEGER_T :: start_dir
+      INTEGER_T :: end_dir
 
       type(single_interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
+
+      start_dir=0
+      end_dir=SDIM-1
 
       do dir=1,SDIM
        dx_local(dir)=accum_PARM%dx(dir)
@@ -29369,6 +29374,8 @@ stop
          enddo ! dir=1..sdim
         else if (MAC_grid_displacement.eq.1) then
          call interpfab_XDISP( &
+          start_dir, &
+          end_dir, &
           data_in%interp_foot_flag, &
           accum_PARM%bfact, &
           accum_PARM%level, &
