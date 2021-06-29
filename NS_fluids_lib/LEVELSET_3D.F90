@@ -19721,11 +19721,15 @@ stop
 
       INTEGER_T :: test_count,test_cell_particle_count
       REAL_T :: local_wt
+      INTEGER_T :: start_dir,end_dir
 
 #define MAC_xd accum_PARM%MAC_grid_displacement
 #define xdfab accum_PARM%xd
 #define ydfab accum_PARM%yd
 #define zdfab accum_PARM%zd
+
+      start_dir=0
+      end_dir=SDIM-1
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -19846,6 +19850,8 @@ stop
          enddo ! dir=1..sdim
         else if (MAC_xd.eq.1) then
          call interpfab_XDISP( &
+          start_dir, &
+          end_dir, &
           single_data_in%interp_foot_flag, &
           accum_PARM%bfact, &
           accum_PARM%level, &
@@ -19958,6 +19964,8 @@ stop
         enddo ! dir=1..sdim
        else if (MAC_xd.eq.1) then
         call interpfab_XDISP( &
+         start_dir, &
+         end_dir, &
          single_data_in%interp_foot_flag, &
          accum_PARM%bfact, &
          accum_PARM%level, &
