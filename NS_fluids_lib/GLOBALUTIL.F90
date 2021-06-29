@@ -7660,6 +7660,8 @@ contains
       return
       end subroutine bilinear_interp_WT 
 
+#define SANITY_CHECK 1
+
        ! data_in%dir_deriv=1..sdim (derivative)
        ! data_in%dir_deriv=-1 (interp)
       subroutine deriv_from_grid_util(data_in,data_out)
@@ -7684,8 +7686,13 @@ contains
       REAL_T xhi_sten(-3:3,SDIM)
       REAL_T xlo_sten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
+      REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
-  
+#ifdef SANITY_CHECK
+      type(interp_from_grid_parm_type), intent(in) :: data_in2 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out2
+#endif
+
 #define dir_FD data_in%dir_deriv
 #define ilocal data_in%index_flux
 
@@ -7704,6 +7711,8 @@ contains
         data_in%level,nhalf,data_in%grid_type_flux,caller_id)
 
       do dir_local=1,SDIM 
+       xtarget(dir_local)=xflux_sten(0,dir_local)
+
        if (data_in%box_type_flux(dir_local).eq. &
            data_in%box_type_data(dir_local)) then
         if (dir_local.eq.dir_FD) then
@@ -7839,10 +7848,10 @@ contains
           ! do nothing
          else if (ihi(dir_local).gt.ilo(dir_local)) then
           if (ii(dir_local).eq.ihi(dir_local)) then
-           wt_top=wt_top*(xflux_sten(0,dir_local)-xlo_sten(0,dir_local))  
+           wt_top=wt_top*(xtarget(dir_local)-xlo_sten(0,dir_local))  
            wt_bot=wt_bot*dx_sten(dir_local)
           else if (ii(dir_local).eq.ilo(dir_local)) then
-           wt_top=wt_top*(xhi_sten(0,dir_local)-xflux_sten(0,dir_local))  
+           wt_top=wt_top*(xhi_sten(0,dir_local)-xtarget(dir_local))  
            wt_bot=wt_bot*dx_sten(dir_local)
           else
            print *,"ii(dir_local) invalid"
@@ -7865,6 +7874,33 @@ contains
        enddo !jsten
        enddo !isten
       enddo ! nc=1 .. data_in%ncomp
+#ifdef SANITY_CHECK
+      if (dir_FD.eq.-1) then
+       if (data_in%grid_type_flux.eq.-1) then
+        data_in2%scomp=data_in%scomp
+        data_in2%ncomp=data_in%ncomp
+        data_in2%level=data_in%level
+        data_in2%finest_level=data_in%finest_level
+        data_in2%bfact=data_in%bfact
+        data_in2%nmat=num_materials
+        data_in2%interp_foot_flag=0
+        data_in2%xtarget=>xtarget
+        data_in2%dx=data_in%dx
+        data_in2%xlo=data_in%xlo
+        data_in2%fablo=data_in%fablo
+        data_in2%fabhi=data_in%fabhi
+        data_in2%ngrowfab=data_in%ngrowfab
+        data_in2%state=data_in%state
+        data_in2%LS=data_in%state
+
+        call interp_from_grid_util(data_in2,data_out2)
+      else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+#endif
 
 #undef ilocal
 #undef dir_FD
@@ -7872,6 +7908,7 @@ contains
       return
       end subroutine deriv_from_grid_util
 
+#undef SANITY_CHECK
 
        ! data_in%dir_deriv=1..sdim (derivative)
        ! data_in%dir_deriv=-1 (interp)
