@@ -29247,7 +29247,6 @@ stop
 
       use probcommon_module
       use global_utility_module
-      use mass_transfer_module
 
       INTEGER_T, intent(in) :: MAC_grid_displacement
 
