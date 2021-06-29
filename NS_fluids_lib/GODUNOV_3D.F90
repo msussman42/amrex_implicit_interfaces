@@ -11311,7 +11311,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: ncomp_visc
-      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: im_parm  ! 0..nmat-1
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(xdfab)
