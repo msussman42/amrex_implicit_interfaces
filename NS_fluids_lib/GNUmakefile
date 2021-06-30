@@ -161,6 +161,7 @@ include $(MOF_HOME)/mglib/Make.package
 include $(MOF_HOME)/amrlib/Make.package
 
 include $(AMREX_HOME)/Src/Base/Make.package
+include $(AMREX_HOME)/Src/F_Interfaces/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

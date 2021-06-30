@@ -2,17 +2,8 @@
 #define _PROB_CPP_PARMS_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_OVERRIDE    override
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_OVERRIDE    OVERRIDE
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_OVERRIDE    override
-#  else
-#    define FORT_OVERRIDE    override_
-#  endif
-#  endif
 
 #include "AMReX_ArrayLim.H"
 
@@ -20,7 +11,7 @@ namespace amrex{
 
   extern "C" {
 
-     void FORT_OVERRIDE(
+     void fort_override(
        const int* max_level,
        const int* n_cell,
        const int* bfact_space_order,

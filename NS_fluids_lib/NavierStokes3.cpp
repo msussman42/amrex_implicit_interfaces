@@ -3170,6 +3170,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
        }
 
+       Mass_Energy_Sources_SinksALL();
+
         // DTDt_MF=T_new - T_advect_MF
        alloc_flag=2;
        alloc_DTDtALL(alloc_flag);
@@ -11709,6 +11711,29 @@ void NavierStokes::vel_elastic_ALL() {
 
 } // end subroutine vel_elastic_ALL
 
+
+void NavierStokes::Mass_Energy_Sources_SinksALL() {
+
+ int nthreads_parm=thread_class::nthreads;
+
+ fort_init_regions_list(
+   constant_density_all_time.dataPtr(),
+   &num_materials,
+   &nthreads_parm);
+
+ for (int isweep=0;isweep<2;isweep++) {
+  
+  if (isweep==0) {
+   fort_reduce_sum_regions();
+  } else if (isweep==1) {
+   // do nothing
+  } else
+   amrex::Error("isweep invalid");		
+ }
+
+ fort_delete_regions_list();
+
+} // end subroutine Mass_Energy_Sources_SinksALL()
 
 void NavierStokes::veldiffuseALL() {
 

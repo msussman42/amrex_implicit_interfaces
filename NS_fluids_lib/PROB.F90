@@ -8149,7 +8149,7 @@ END SUBROUTINE Adist
 
        ! called from:
        !  subroutine mask_velocity
-       !  subroutine FORT_INITDATASOLID
+       !  subroutine fort_initdatasolid
       subroutine velsolid(x,y,z,vel,time,im,dx)
       use global_utility_module
       use global_distance_module
@@ -26287,7 +26287,7 @@ end subroutine initialize2d
        end subroutine FORT_SET_PERIODIC_VAR
      
 
-      subroutine FORT_INITDATASOLID( &
+      subroutine fort_initdatasolid( &
        nmat, &
        nparts, &
        nFSI_sub, &
@@ -26299,7 +26299,8 @@ end subroutine initialize2d
        fablo,fabhi, &
        bfact, &
        solid,DIMS(solid), &
-       dx,xlo,xhi)
+       dx,xlo,xhi) &
+      bind(c,name='fort_initdatasolid')
 
       use probf90_module
       use global_distance_module
@@ -26307,21 +26308,23 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T nparts
-      INTEGER_T nFSI_sub
-      INTEGER_T nFSI
-      INTEGER_T ngrowFSI
-      INTEGER_T im_solid_map(nparts)
-      REAL_T time
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T bfact
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T DIMDEC(solid)
-      REAL_T    dx(SDIM)
-      REAL_T    xlo(SDIM), xhi(SDIM)
-      REAL_T    solid(DIMV(solid),nFSI)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nFSI_sub
+      INTEGER_T, intent(in) :: nFSI
+      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: im_solid_map(nparts)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: DIMDEC(solid)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
+
+      REAL_T, intent(out), target :: solid(DIMV(solid),nFSI)
+      REAL_T, pointer :: solid_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k,dir
       REAL_T distsolid
@@ -26332,6 +26335,8 @@ end subroutine initialize2d
       INTEGER_T nhalf
       INTEGER_T partid
       INTEGER_T ibase
+
+      solid_ptr=>solid
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -26372,7 +26377,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(solid),ngrowFSI,-1,1301)
+      call checkbound_array(fablo,fabhi,solid_ptr,ngrowFSI,-1,1301)
 
       if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
        print *,"adv_dir invalid initdatasolid (10)"
@@ -26420,7 +26425,7 @@ end subroutine initialize2d
          endif
 
         else
-         print *,"is_lag_part invalid FORT_INITDATASOLID"
+         print *,"is_lag_part invalid fort_initdatasolid"
          stop
         endif
 
@@ -26431,10 +26436,10 @@ end subroutine initialize2d
       enddo
 
       return
-      end subroutine FORT_INITDATASOLID
+      end subroutine fort_initdatasolid
 
        ! called when solidheat_flag=1,2  (not =0)
-      subroutine FORT_INITSOLIDTEMP( &
+      subroutine fort_initsolidtemp( &
        nmat, &
        nden, &
        time, &
@@ -26443,26 +26448,31 @@ end subroutine initialize2d
        bfact, &
        snew,DIMS(snew), &
        lsnew,DIMS(lsnew), &
-       dx,xlo)
+       dx,xlo) &
+      bind(c,name='fort_initsolidtemp')
+
       use probf90_module
       use global_utility_module
       use global_distance_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T nden
-      REAL_T time
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(lsnew)
-      REAL_T    dx(SDIM)
-      REAL_T    xlo(SDIM)
-      REAL_T    snew(DIMV(snew),nden)
-      REAL_T    lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+
+      REAL_T, intent(inout), target :: snew(DIMV(snew),nden)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
 
       INTEGER_T i,j,k
       INTEGER_T im
@@ -26476,6 +26486,8 @@ end subroutine initialize2d
       INTEGER_T im_solid_thermal
 
       nhalf=1
+
+      snew_ptr=>snew
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -26507,8 +26519,8 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,1303)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1303)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1303)
+      call checkbound_array(fablo,fabhi,lsnew,1,-1,1303)
 
       im_solid_thermal=im_solid_primary()
 
@@ -26530,7 +26542,7 @@ end subroutine initialize2d
 
        do im=1,nmat
         if (is_rigid(nmat,im).eq.1) then
-          ! in: INITSOLIDTEMP
+          ! in: fort_initsolidtemp
          call materialdistsolid(xsten(0,1),xsten(0,2), &
            xsten(0,SDIM),disttest,time,im)
          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
@@ -26586,7 +26598,7 @@ end subroutine initialize2d
       enddo
 
       return
-      end subroutine FORT_INITSOLIDTEMP
+      end subroutine fort_initsolidtemp
 
 
       subroutine FORT_VELFILL ( &
@@ -30536,14 +30548,14 @@ end subroutine initialize2d
          dx)
        IMPLICIT NONE
 
-       INTEGER_T nmat,nten,nc
+       INTEGER_T, intent(in) :: nmat,nten,nc
        INTEGER_T nc_expect
        INTEGER_T nten_test
-       REAL_T dx(SDIM)
-       REAL_T latent_heat(2*nten)
-       INTEGER_T freezing_model(2*nten)
-       INTEGER_T distribute_from_target(2*nten)
-       REAL_T saturation_temp(2*nten)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*nten)
+       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*nten)
        REAL_T lmSt
 
        INTEGER_T ireverse,im,im_opp,iten,local_freezing_model
@@ -30753,26 +30765,28 @@ end subroutine initialize2d
 
        end module initdata_module
 
-       subroutine FORT_INITGRIDMAP( &
+       subroutine fort_initgridmap( &
         max_level, &
         bfact_space_level, & 
         bfact_grid_level, & 
         domlo,domhi, &
         dx, &
-        problo,probhi)
+        problo,probhi) &
+       bind(c,name='fort_initgridmap')
+
        use probf90_module
        use global_utility_module
 
        IMPLICIT NONE
 
-       INTEGER_T max_level
-       INTEGER_T bfact_space_level(0:max_level)
-       INTEGER_T bfact_grid_level(0:max_level)
-       INTEGER_T domlo(SDIM)
-       INTEGER_T domhi(SDIM)
-       REAL_T dx(SDIM)
-       REAL_T problo(SDIM)
-       REAL_T probhi(SDIM)
+       INTEGER_T, intent(in) :: max_level
+       INTEGER_T, intent(in) :: bfact_space_level(0:max_level)
+       INTEGER_T, intent(in) :: bfact_grid_level(0:max_level)
+       INTEGER_T, intent(in) :: domlo(SDIM)
+       INTEGER_T, intent(in) :: domhi(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: problo(SDIM)
+       REAL_T, intent(in) :: probhi(SDIM)
        REAL_T xsten(-1:1)
        INTEGER_T nhalf
        INTEGER_T bfactmax
@@ -30897,24 +30911,26 @@ end subroutine initialize2d
        grid_cache_allocated=1
 
        return
-       end subroutine FORT_INITGRIDMAP
+       end subroutine fort_initgridmap
 
-       subroutine FORT_INITDATA_ALLOC( &
+       subroutine fort_initdata_alloc( &
         nmat,nten,nc, &
         latent_heat, &
         freezing_model, &
         distribute_from_target, &
         saturation_temp, &
-        dx)
+        dx) &
+       bind(c,name='fort_initdata_alloc')
+
        use initdata_module
        IMPLICIT NONE
 
-       INTEGER_T nmat,nten,nc
-       REAL_T dx(SDIM)
-       REAL_T latent_heat(2*nten)
-       INTEGER_T freezing_model(2*nten)
-       INTEGER_T distribute_from_target(2*nten)
-       REAL_T saturation_temp(2*nten)
+       INTEGER_T, intent(in) :: nmat,nten,nc
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*nten)
+       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*nten)
 
        call init_initdata(nmat,nten,nc, &
         latent_heat, &
@@ -30924,9 +30940,9 @@ end subroutine initialize2d
         dx)
 
        return
-       end subroutine FORT_INITDATA_ALLOC
+       end subroutine fort_initdata_alloc
 
-       subroutine FORT_INITDATA( &
+       subroutine fort_initdata( &
         tid, &
         adapt_quad_depth, &
         level,max_level, &
@@ -30942,7 +30958,9 @@ end subroutine initialize2d
         radius_cutoff, &
         scal,DIMS(scal), &
         LS,DIMS(LS), &
-        dx,xlo,xhi)
+        dx,xlo,xhi) &
+       bind(c,name='fort_initdata')
+
        use MOF_routines_module
        use geometry_intersect_module
        use hydrateReactor_module
@@ -30967,27 +30985,32 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
-       INTEGER_T nmat
-       INTEGER_T radius_cutoff(nmat)
-       INTEGER_T adapt_quad_depth,tid
-       INTEGER_T tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: radius_cutoff(nmat)
+       INTEGER_T, intent(in) :: adapt_quad_depth,tid
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T bfact
-       INTEGER_T level,max_level
-       INTEGER_T nc
-       INTEGER_T nten
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: level,max_level
+       INTEGER_T, intent(in) :: nc
+       INTEGER_T, intent(in) :: nten
        INTEGER_T imls
        INTEGER_T impres
-       REAL_T latent_heat(2*nten)
-       REAL_T saturation_temp(2*nten)
-       REAL_T time
-       INTEGER_T DIMDEC(scal)
-       INTEGER_T DIMDEC(LS)
-       REAL_T scal(DIMV(scal),nc)
-       REAL_T LS(DIMV(LS),nmat*(1+SDIM))
-       REAL_T dx(SDIM)
-       REAL_T xlo(SDIM), xhi(SDIM)
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*nten)
+       REAL_T, intent(in) :: time
+       INTEGER_T, intent(in) :: DIMDEC(scal)
+       INTEGER_T, intent(in) :: DIMDEC(LS)
+
+       REAL_T, intent(inout), target :: scal(DIMV(scal),nc)
+       REAL_T, pointer :: scal_ptr(D_DECL(:,:,:),:)
+
+       REAL_T, intent(inout), target :: LS(DIMV(LS),nmat*(1+SDIM))
+       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
        INTEGER_T idenbase,imofbase
        INTEGER_T ierr
        INTEGER_T ibase
@@ -31065,6 +31088,9 @@ end subroutine initialize2d
 
        nhalf_box=1
 
+       scal_ptr=>scal
+       LS_ptr=>LS
+
        from_boundary_hydrostatic=0
 
        tessellate=0
@@ -31092,7 +31118,7 @@ end subroutine initialize2d
 
        im_solid_initdata=im_solid_primary()
 
-       nmax=POLYGON_LIST_MAX ! in: FORT_INITDATA
+       nmax=POLYGON_LIST_MAX ! in: fort_initdata
        nhalf=3
        nhalf2=1
 
@@ -31135,8 +31161,8 @@ end subroutine initialize2d
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(scal),1,-1,1304)
-       call checkbound(fablo,fabhi,DIMS(LS),1,-1,1305)
+       call checkbound_array(fablo,fabhi,scal_ptr,1,-1,1304)
+       call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1305)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -31183,7 +31209,7 @@ end subroutine initialize2d
         if (is_in_probtype_list().eq.1) then
 
          call SUB_LS(xpos,time,distbatch,num_materials)
-             ! bcflag=0 (calling from FORT_INITDATA)
+             ! bcflag=0 (calling from fort_initdata)
          call SUB_STATE(xpos,time,distbatch,local_state, &
                  bcflag,num_materials,num_state_material)
          do im=1,nmat
@@ -31505,7 +31531,7 @@ end subroutine initialize2d
           if (probtype.eq.710) then
            ! water phase
            if (im.eq.1) then
-             ! bcflag=0 (calling from FORT_INITDATA)
+             ! bcflag=0 (calling from fort_initdata)
             call outside_temperature(time,x,y,z,water_temp,im,0)
             scalc(ibase+2)=water_temp  
            endif ! im=1
@@ -31520,7 +31546,7 @@ end subroutine initialize2d
            endif
            ! substrate (initial temperature)
            if (im.eq.4) then
-            ! bcflag=0 (calling from FORT_INITDATA)
+            ! bcflag=0 (calling from fort_initdata)
             call outside_temperature(time,x,y,z,water_temp,im,0)
             scalc(ibase+2)=water_temp
            endif
@@ -31763,7 +31789,7 @@ end subroutine initialize2d
 
           endif ! probtype=92 or 93 (shock tube test problems)
 
-           ! in: FORT_INITDATA
+           ! in: fort_initdata
            ! material=1 is TAIT EOS
           if (fort_material_type(1).eq.13) then
            if (im.eq.1) then
@@ -31984,7 +32010,7 @@ end subroutine initialize2d
            scalc(ibase+2)=concentration   ! T (concentration)
           endif ! 802 (dissolution)
 
-           ! in: subroutine FORT_INITDATA
+           ! in: subroutine fort_initdata
            ! hydrates
           if (probtype.eq.199) then
            if (nmat.ne.3) then
@@ -32010,12 +32036,12 @@ end subroutine initialize2d
            scalc(ibase+2)=temp
            scalc(ibase+3)=ccnt
 
-           ! in: subroutine FORT_INITDATA
+           ! in: subroutine fort_initdata
           else if (probtype.eq.220) then
            ! do nothing, density and tempearture are set from the input file
            ! in the beginning of the loop on im. NO INIT_STATE_*** is called
 
-           ! in: subroutine FORT_INITDATA
+           ! in: subroutine fort_initdata
           else if ((probtype.eq.299).or. &
                    (probtype.eq.301)) then !melting (initial temperature field)
 
@@ -32048,7 +32074,7 @@ end subroutine initialize2d
          endif
         enddo ! im=1..nmat
 
-         ! in: FORT_INITDATA
+         ! in: fort_initdata
         call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
          0,max_levelstack,materialdist_batch,time)
         call extract_vof_cen_batch(fluiddata,vofdark,voflight, &
@@ -32307,7 +32333,7 @@ end subroutine initialize2d
        endif
 
        return
-       end subroutine FORT_INITDATA
+       end subroutine fort_initdata
 
        subroutine FORT_ADDNOISE( &
         dir, &
@@ -32539,14 +32565,73 @@ end subroutine initialize2d
       return
       end subroutine FORT_ADDNOISE
 
+      subroutine fort_init_regions_list( &
+       constant_density_all_time, &
+       num_materials_in, &
+       num_threads_in) &
+      bind(c,name='fort_init_regions_list')
 
-      subroutine FORT_INITVELOCITY( &
+      use probcommon_module
+      use geometry_intersect_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_threads_in
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+      INTEGER_T :: im
+
+      if (num_materials_in.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"num_materials_in invalid"
+       stop
+      endif
+      if (num_threads_in.eq.geom_nthreads) then
+       ! do nothing
+      else
+       print *,"num_threads_in invalid"
+       stop
+      endif
+      do im=1,num_materials
+       if ((constant_density_all_time(im).eq.0).or. &
+           (constant_density_all_time(im).eq.1)) then
+        ! do nothing
+       else
+        print *,"constant_density_all_time(im) invalid"
+        stop
+       endif
+      enddo ! im=1..num_materials
+
+      number_of_source_regions=0
+
+      call SUB_INIT_REGIONS_LIST( &
+       constant_density_all_time, &
+       num_materials_in, &
+       num_threads_in)
+
+      end subroutine fort_init_regions_list
+
+      subroutine fort_delete_regions_list() &
+      bind(c,name='fort_delete_regions_list')
+
+      use probcommon_module
+      use geometry_intersect_module
+      IMPLICIT NONE
+
+      call SUB_DELETE_REGIONS_LIST()
+
+      end subroutine fort_delete_regions_list
+
+      subroutine fort_initvelocity( &
         level,time, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         vel,DIMS(vel), &
         dx,xlo,xhi, &
-        Re,We,RGASRWATER,use_lsa)
+        Re,We,RGASRWATER,use_lsa) &
+      bind(c,name='fort_initvelocity')
+
       use probf90_module
       use global_distance_module
       use global_utility_module
@@ -32566,25 +32651,26 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-
-      INTEGER_T use_lsa
+      INTEGER_T, intent(in) :: use_lsa
       REAL_T density_ratio,viscosity_ratio
       REAL_T liquid_density,liquid_viscosity
       REAL_T dxmin,Uscale,Lscale,surface_tension_factor
       REAL_T old_speed,wave_speed
-      REAL_T Re,We,RGASRWATER
+      REAL_T, intent(out) :: Re,We,RGASRWATER
       REAL_T kterm,velperturb
       REAL_T ktermx,velperturbx
 
-      INTEGER_T    level
-      INTEGER_T    tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T    fablo(SDIM),fabhi(SDIM)
-      INTEGER_T    growlo(3),growhi(3)
-      INTEGER_T    bfact
-      INTEGER_T    DIMDEC(vel)
-      REAL_T     time, dx(SDIM)
-      REAL_T     xlo(SDIM), xhi(SDIM)
-      REAL_T     vel(DIMV(vel),SDIM)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      REAL_T, intent(in) :: time, dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
+
+      REAL_T, intent(out), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
 !     ::::: local variables
       INTEGER_T i,j,k
@@ -32616,7 +32702,9 @@ end subroutine initialize2d
       INTEGER_T velsolid_flag
  
       nhalf=3
- 
+
+      vel_ptr=>vel
+
       if (bfact.lt.1) then
        print *,"bfact too small"
        stop
@@ -32665,7 +32753,7 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vel),1,-1,1308)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
 
       nmat=num_materials
       nten=( (num_materials-1)*(num_materials-1)+ &
@@ -33098,7 +33186,7 @@ end subroutine initialize2d
          y_vel=velcell(2)
          z_vel=velcell(SDIM)
 
-         ! in: FORT_INITVELOCITY
+         ! in: fort_initvelocity
         else if (probtype.eq.220) then
          call UNIMAT_INIT_VEL(x,y,z,velcell)
          x_vel=velcell(1)
@@ -33358,7 +33446,7 @@ end subroutine initialize2d
           y_vel=zero
 !         z_vel=zero
 
-           ! in: INITVELOCITY (2D)
+           ! in: fort_initvelocity (2D)
          else if ((probtype.eq.3).or. &
                   (probtype.eq.41)) then
 
@@ -33370,7 +33458,7 @@ end subroutine initialize2d
            x_vel=velcell(1)
            y_vel=velcell(2)
 
-           ! in: INITVELOCITY (2D)
+           ! in: fort_initvelocity (2D)
           else if (axis_dir.eq.5) then
            call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
            x_vel=velcell(1)
@@ -33431,7 +33519,7 @@ end subroutine initialize2d
             y_vel = -abs(advbot)
            endif
           endif
-! swirl 2D, in: INITVELOCITY
+! swirl 2D, in: fort_initvelocity
          else if (probtype.eq.26) then
 
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
@@ -33497,7 +33585,7 @@ end subroutine initialize2d
           print *,"cavitation with outflow top is deleted"
           stop
 
-          ! in: FORT_INITVELOCITY (2D section)
+          ! in: fort_initvelocity (2D section)
          else if (probtype.eq.42) then
           ! do nothing - bubble jetting 2D
          else if (probtype.eq.46) then
@@ -33562,7 +33650,7 @@ end subroutine initialize2d
           call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
           x_vel=velcell(1)
           y_vel=velcell(2)
-! supersonic nozzle: FORT_INITVELOCITY
+! supersonic nozzle: fort_initvelocity
          else if (probtype.eq.539) then
           call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
           x_vel=velcell(1)
@@ -33648,7 +33736,7 @@ end subroutine initialize2d
           endif
 
 ! pipe setup at t=0
-! in: INITVELOCITY, 3D
+! in: fort_initvelocity, 3D
          else if (probtype.eq.41) then
           if (axis_dir.eq.5) then
            call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
@@ -33808,7 +33896,7 @@ end subroutine initialize2d
          else if (probtype.eq.37) then
           ! do nothing
 
-          ! in: FORT_INITVELOCITY (3D section)
+          ! in: fort_initvelocity (3D section)
          else if (probtype.eq.42) then
           ! do nothing: bubble jetting 3D
          else if (probtype.eq.46) then
@@ -34019,7 +34107,7 @@ end subroutine initialize2d
       deallocate(distbatch)
 
       return
-      end subroutine FORT_INITVELOCITY
+      end subroutine fort_initvelocity
 
        ! before this routine:
        ! calc_error_indicator

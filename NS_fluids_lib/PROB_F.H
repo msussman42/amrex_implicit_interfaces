@@ -6,13 +6,7 @@
 #    define FORT_SET_PERIODIC_VAR set_periodic_var
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
-#    define FORT_INITVELOCITY initvelocity
-#    define FORT_INITDATA_ALLOC initdata_alloc
-#    define FORT_INITDATA    initdata
 #    define FORT_ADDNOISE    addnoise
-#    define FORT_INITGRIDMAP initgridmap
-#    define FORT_INITDATASOLID initdatasolid
-#    define FORT_INITSOLIDTEMP initsolidtemp
 #    define FORT_VFRACERROR  vfracerror
 #    define FORT_OVERRIDELSBC overridelsbc
 #    define FORT_OVERRIDEPBC overridepbc
@@ -45,14 +39,8 @@
 #    define FORT_SET_PERIODIC_VAR SET_PERIODIC_VAR
 #    define FORT_SETFORTSCALES SETFORTSCALES
 #    define FORT_FORCEVELOCITY FORCEVELOCITY
-#    define FORT_INITVELOCITY INITVELOCITY
-#    define FORT_INITGRIDMAP INITGRIDMAP
-#    define FORT_INITDATA_ALLOC INITDATA_ALLOC
-#    define FORT_INITDATA    INITDATA
 #    define FORT_ADDNOISE    ADDNOISE
 #    define FORT_SUPERELASTICOVERRIDE SUPERELASTICOVERRIDE
-#    define FORT_INITDATASOLID INITDATASOLID
-#    define FORT_INITSOLIDTEMP INITSOLIDTEMP
 #    define FORT_VFRACERROR  VFRACERROR
 #    define FORT_OVERRIDELSBC OVERRIDELSBC
 #    define FORT_OVERRIDEPBC OVERRIDEPBC
@@ -85,13 +73,7 @@
 #    define FORT_SET_PERIODIC_VAR set_periodic_var
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
-#    define FORT_INITVELOCITY initvelocity
-#    define FORT_INITGRIDMAP initgridmap
-#    define FORT_INITDATA_ALLOC initdata_alloc
-#    define FORT_INITDATA    initdata
 #    define FORT_ADDNOISE    addnoise
-#    define FORT_INITDATASOLID initdatasolid
-#    define FORT_INITSOLIDTEMP initsolidtemp
 #    define FORT_VFRACERROR  vfracerror
 #    define FORT_OVERRIDELSBC overridelsbc
 #    define FORT_OVERRIDEPBC overridepbc
@@ -123,13 +105,7 @@
 #    define FORT_SET_PERIODIC_VAR set_periodic_var_
 #    define FORT_SETFORTSCALES setfortscales_
 #    define FORT_FORCEVELOCITY forcevelocity_
-#    define FORT_INITVELOCITY initvelocity_
-#    define FORT_INITGRIDMAP initgridmap_
-#    define FORT_INITDATA_ALLOC initdata_alloc_
-#    define FORT_INITDATA    initdata_
 #    define FORT_ADDNOISE    addnoise_
-#    define FORT_INITDATASOLID initdatasolid_
-#    define FORT_INITSOLIDTEMP initsolidtemp_
 #    define FORT_VFRACERROR  vfracerror_
 #    define FORT_OVERRIDELSBC overridelsbc_
 #    define FORT_OVERRIDEPBC overridepbc_
@@ -175,7 +151,7 @@ namespace amrex{
      void FORT_OVERRIDELSBC(int* homflag);
      void FORT_OVERRIDEPBC(int* homflag,int* project_option);
 
-     void FORT_INITVELOCITY (
+     void fort_initvelocity(
       const int* level,const Real* time,
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
@@ -184,7 +160,7 @@ namespace amrex{
       const Real* dx,const Real* xlo, const Real* xhi,
       Real* Re,Real* We,Real* RGASRWATER,int* use_lsa);
 
-     void FORT_INITDATA_ALLOC(
+     void fort_initdata_alloc(
       int* nmat,int* nten,int* nc,
       Real* latent_heat,
       int* freezing_model,
@@ -192,7 +168,7 @@ namespace amrex{
       Real* saturation_temp,
       const Real* dx);
 
-     void FORT_INITDATA (
+     void fort_initdata(
       int* tid,
       int* adapt_quad_depth,
       int* level,int* max_level,
@@ -227,7 +203,7 @@ namespace amrex{
       int* level,
       int* finest_level);
 
-     void FORT_INITGRIDMAP (
+     void fort_initgridmap(
       const int* max_level,
       int* bfact_space_level,
       int* bfact_grid_level,
@@ -235,8 +211,14 @@ namespace amrex{
       const Real* dx,
       Real* problo, Real* probhi);
 
+     void fort_init_regions_list(
+	int* constant_density_all_time,
+	int* num_materials,
+	int* nthreads);
+  
+     void fort_delete_regions_list();
 
-     void FORT_INITDATASOLID (
+     void fort_initdatasolid(
       int* nmat,
       int* nparts,
       int* nFSI_sub,
@@ -250,7 +232,7 @@ namespace amrex{
       Real* solid,AMREX_ARLIM_P(solidlo),AMREX_ARLIM_P(solidhi),
       const Real* dx,const Real* xlo, const Real* xhi);
 
-     void FORT_INITSOLIDTEMP (
+     void fort_initsolidtemp(
       int* nmat,
       int* nden,
       Real* time,

@@ -41,6 +41,7 @@ end subroutine INIT_STUB_MODULE
 
 
 subroutine STUB_CFL_HELPER(time,dir,uu,dx)
+IMPLICIT NONE
 INTEGER_T, intent(in) :: dir
 REAL_T, intent(in) :: time
 REAL_T, intent(inout) :: uu
@@ -676,6 +677,7 @@ end subroutine STUB_ASSIMILATE
 subroutine STUB_SUMINT(GRID_DATA_IN,increment_out,nsum)
 use probcommon_module_types
 use probcommon_module
+IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nsum
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
@@ -688,5 +690,88 @@ k=GRID_DATA_IN%kgrid
 
 end subroutine STUB_SUMINT
 
+
+subroutine STUB_INIT_REGIONS_LIST(constant_density_all_time, &
+      num_materials_in,num_threads_in)
+use probcommon_module
+use geometry_intersect_module
+
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: num_materials_in
+INTEGER_T, intent(in) :: num_threads_in
+INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+INTEGER_T :: im
+
+ if (num_materials_in.eq.num_materials) then
+  ! do nothing
+ else
+  print *,"num_materials_in invalid"
+  stop
+ endif
+ if (num_threads_in.eq.geom_nthreads) then
+  ! do nothing
+ else
+  print *,"num_threads_in invalid"
+  stop
+ endif
+ do im=1,num_materials
+  if ((constant_density_all_time(im).eq.0).or. &
+      (constant_density_all_time(im).eq.1)) then
+   ! do nothing
+  else
+   print *,"constant_density_all_time(im) invalid"
+   stop
+  endif
+ enddo ! im=1..num_materials
+
+ number_of_source_regions=0
+
+end subroutine STUB_INIT_REGIONS_LIST
+
+subroutine STUB_CHARFN_REGION(region_id,x,cur_time,charfn_out)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: region_id
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: cur_time
+REAL_T, intent(out) :: charfn_out
+
+ if ((region_id.eq.0).and.(number_of_source_regions.eq.0)) then
+  ! do nothing
+ else
+  print *,"STUB only called if no regions init"
+  stop
+ endif
+
+end subroutine STUB_CHARFN_REGION
+
+subroutine STUB_DELETE_REGIONS_LIST()
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T lower_bound(2)
+INTEGER_T upper_bound(2)
+
+ if (number_of_source_regions.eq.0) then
+  ! do nothing
+ else if (number_of_source_regions.gt.0) then
+  lower_bound=LBOUND(region_list)
+  upper_bound=UBOUND(region_list)
+  if ((lower_bound(1).eq.1).and. &
+      (lower_bound(2).eq.0).and. &
+      (upper_bound(1).eq.number_of_source_regions).and. &
+      (upper_bound(2).eq.number_of_threads_regions)) then
+   deallocate(region_list)
+  else
+   print *,"lower_bound or upper_bound invalid"
+   stop
+  endif
+ else
+  print *,"number_of_source_regions invalid"
+  stop
+ endif
+
+end subroutine STUB_DELETE_REGIONS_LIST
 
 end module STUB_module

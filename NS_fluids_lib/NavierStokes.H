@@ -1367,6 +1367,8 @@ void apply_pressure_grad(
 
     void veldiffuseALL();
 
+    void Mass_Energy_Sources_SinksALL();
+
     static int is_zalesak();
 
     void zalesakVEL();
