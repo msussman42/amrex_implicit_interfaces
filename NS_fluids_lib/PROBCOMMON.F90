@@ -404,6 +404,7 @@ implicit none
       INTEGER_T :: grid_cache_allocated=0
 
       INTEGER_T :: number_of_source_regions=0
+      INTEGER_T :: number_of_threads_regions=0
 
       type region_info_type
        INTEGER_T :: region_material_id
@@ -414,8 +415,9 @@ implicit none
        REAL_T :: region_volume        ! e.g. m^3
       end type region_info_type
 
-      type(region_info_type), allocatable :: region_list(:)
-
+       ! first index: 1..number_of_source_regions
+       ! second index: 0..number_of_threads_regions
+      type(region_info_type), allocatable :: region_list(:,:)
       
        ! interface particle container class
        ! refined data 
@@ -462,18 +464,21 @@ implicit none
       ABSTRACT INTERFACE
 
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
-                      num_materials_in)
+          num_materials_in,num_threads_in)
       INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_threads_in
       INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
-      end subroutine TEMPLATE_INIT_REGIONS_LIST()
+      end subroutine TEMPLATE_INIT_REGIONS_LIST
 
-      subroutine TEMPLATE_CHARFN_REGION(region_id,charfn_out)
+      subroutine TEMPLATE_CHARFN_REGION(region_id,x,cur_time,charfn_out)
       INTEGER_T, intent(in) :: region_id
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: cur_time
       REAL_T, intent(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
       subroutine TEMPLATE_DELETE_REGIONS_LIST()
-      end subroutine TEMPLATE_DELETE_REGIONS_LIST()
+      end subroutine TEMPLATE_DELETE_REGIONS_LIST
 
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
@@ -754,6 +759,10 @@ implicit none
               SUB_microcell_heat_coeff
       PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
 
+      PROCEDURE(TEMPLATE_INIT_REGIONS_LIST), POINTER :: SUB_INIT_REGIONS_LIST
+      PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION
+      PROCEDURE(TEMPLATE_DELETE_REGIONS_LIST), POINTER ::  &
+              SUB_DELETE_REGIONS_LIST
 contains
 
       subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)

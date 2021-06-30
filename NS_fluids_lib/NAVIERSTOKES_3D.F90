@@ -9574,7 +9574,7 @@ END SUBROUTINE SIMP
       end subroutine FORT_ERRORAVGDOWN
 
 
-       subroutine FORT_SUMMASS( &
+       subroutine fort_summass( &
         tid, &
         ncomp_sum_int_user, &
         adapt_quad_depth, &
@@ -9603,7 +9603,8 @@ END SUBROUTINE SIMP
         nmat, &
         ntensor,  &
         den_ncomp, &
-        isweep)
+        isweep) &
+       bind(c,name='fort_summass')
 
        use LegendreNodes
        use global_utility_module
@@ -9649,9 +9650,9 @@ END SUBROUTINE SIMP
        REAL_T, intent(in) ::  time
        REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)  
        REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
-       REAL_T, intent(in) ::  maskSEM(DIMV(maskSEM))
-       REAL_T, intent(in) ::  mask(DIMV(mask))
-       REAL_T, intent(in) ::  drag(DIMV(drag),4*SDIM+1)
+       REAL_T, intent(in), target ::  maskSEM(DIMV(maskSEM))
+       REAL_T, intent(in), target ::  mask(DIMV(mask))
+       REAL_T, intent(in), target ::  drag(DIMV(drag),4*SDIM+1)
        REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
        REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
        ! includes pressure 
@@ -9748,7 +9749,7 @@ END SUBROUTINE SIMP
        REAL_T local_user_out(ncomp_sum_int_user)
 
        nhalf=3
-       nmax=POLYGON_LIST_MAX  ! in: SUMMASS
+       nmax=POLYGON_LIST_MAX  ! in: fort_summass
 
        if ((adapt_quad_depth.lt.1).or.(adapt_quad_depth.gt.10)) then
         print *,"adapt_quad_depth invalid"
@@ -9872,14 +9873,14 @@ END SUBROUTINE SIMP
        ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
        call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
-       call checkbound(fablo,fabhi,DIMS(cellten),0,-1,411) 
-       call checkbound(fablo,fabhi,DIMS(lsfab),2,-1,411) 
-       call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,411) 
-       call checkbound(fablo,fabhi,DIMS(mask),2,-1,411) 
-       call checkbound(fablo,fabhi,DIMS(drag),0,-1,413) 
-       call checkbound(fablo,fabhi,DIMS(slopes),2,-1,413) 
-       call checkbound(fablo,fabhi,DIMS(den),1,-1,413) 
-       call checkbound(fablo,fabhi,DIMS(vel),1,-1,413) 
+       call checkbound_array(fablo,fabhi,cellten,0,-1,411) 
+       call checkbound_array(fablo,fabhi,lsfab,2,-1,411) 
+       call checkbound_array1(fablo,fabhi,maskSEM,1,-1,411) 
+       call checkbound_array1(fablo,fabhi,mask,2,-1,411) 
+       call checkbound_array(fablo,fabhi,drag,0,-1,413) 
+       call checkbound_array(fablo,fabhi,slopes,2,-1,413) 
+       call checkbound_array(fablo,fabhi,den,1,-1,413) 
+       call checkbound_array(fablo,fabhi,vel,1,-1,413) 
 
        GRID_DATA_PARM%ncomp_sum_int_user=ncomp_sum_int_user
        GRID_DATA_PARM%time=time
@@ -9979,7 +9980,7 @@ END SUBROUTINE SIMP
           101)
 
           ! tessellate==1 (internal to stackerror)
-          ! in: SUMMASS
+          ! in: fort_summass
          call stackerror( &
           geom_xtetlist(1,1,1,tid+1), &
           xsten,nhalf,dx,bfact, &
@@ -10634,9 +10635,39 @@ END SUBROUTINE SIMP
        endif
 
        return
-       end subroutine FORT_SUMMASS
+       end subroutine fort_summass
 
+       subroutine fort_reduce_sum_regions() &
+       bind(c,name='fort_reduce_sum_regions')
 
+       use probcommon_module
+       use amrex_parallel_module
+       IMPLICIT NONE
+
+       INTEGER_T ithreads,iregions
+
+       do iregions=1,number_of_source_regions
+
+        region_list(iregions,0)%region_volume=zero
+        region_list(iregions,0)%region_volume_raster=zero
+
+        do ithreads=1,number_of_threads_regions
+         region_list(iregions,0)%region_volume= &
+           region_list(iregions,0)%region_volume+ &
+           region_list(iregions,ithreads)%region_volume
+         region_list(iregions,0)%region_volume_raster= &
+           region_list(iregions,0)%region_volume_raster+ &
+           region_list(iregions,ithreads)%region_volume_raster
+        enddo ! ithreads=1,number_of_threads_regions
+
+        call amrex_parallel_reduce_sum( &
+               region_list(iregions,0)%region_volume)
+        call amrex_parallel_reduce_sum( &
+               region_list(iregions,0)%region_volume_raster)
+
+       enddo ! iregions=1,number_source_regions
+         
+       end subroutine fort_reduce_sum_regions
 
        !! FORT_FABCOM: fabz = fabx + beta * faby
        !! Added by Alan Kuhnle, 6-7-10

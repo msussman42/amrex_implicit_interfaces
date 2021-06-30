@@ -27,7 +27,6 @@
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_SUMMASS     summass
 #    define FORT_SUMDOT      sumdot
 #    define FORT_SUMDOT_ONES_SIZE sumdot_ones_size
 #    define FORT_SUMDOT_ONES sumdot_ones
@@ -68,7 +67,6 @@
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
 #    define FORT_AVGDOWN_BURNING AVGDOWN_BURNING
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
-#    define FORT_SUMMASS     SUMMASS
 #    define FORT_SUMDOT      SUMDOT
 #    define FORT_SUMDOT_ONES_SIZE SUMDOT_ONES_SIZE
 #    define FORT_SUMDOT_ONES SUMDOT_ONES
@@ -108,7 +106,6 @@
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_SUMMASS     summass
 #    define FORT_SUMDOT      sumdot
 #    define FORT_SUMDOT_ONES_SIZE sumdot_ones_size
 #    define FORT_SUMDOT_ONES sumdot_ones
@@ -147,7 +144,6 @@
 #    define FORT_AVGDOWN_TAG avgdown_tag_
 #    define FORT_AVGDOWN_BURNING avgdown_burning_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
-#    define FORT_SUMMASS     summass_
 #    define FORT_SUMDOT      sumdot_
 #    define FORT_SUMDOT_ONES_SIZE sumdot_ones_size_
 #    define FORT_SUMDOT_ONES sumdot_ones_
@@ -641,7 +637,7 @@ extern "C" {
       const Real* xlo,const Real* dx,Real* cur_time,
       int* nmat);
 
-    void FORT_SUMMASS (
+    void fort_summass(
      int* tid,
      int* ncomp_sum_int_user,
      int* adapt_quad_depth,
@@ -672,6 +668,7 @@ extern "C" {
      int* den_Ncomp,
      int* isweep);
 
+    void fort_reduce_sum_regions();
 
     void FORT_SUMDOT(Real* mass1,
       const Real* dat1,AMREX_ARLIM_P(dat1_lo),AMREX_ARLIM_P(dat1_hi),

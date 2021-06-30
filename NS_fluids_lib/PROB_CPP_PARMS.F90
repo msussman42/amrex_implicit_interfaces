@@ -22,7 +22,7 @@ stop
 
 
 
-      subroutine FORT_OVERRIDE( &
+      subroutine fort_override( &
         ccmax_level, &
         ccn_cell, &
         ccbfact_space_order, &
@@ -120,7 +120,9 @@ stop
         ccgravity_dir, &
         ccinvert_gravity, &
         ccstop_time, &
-        ioproc)
+        ioproc) &
+      bind(c,name='fort_override')
+
       use probcommon_module
       use LegendreNodes
       use global_utility_module
@@ -324,6 +326,10 @@ stop
       SUB_ASSIMILATE=>STUB_ASSIMILATE
       SUB_SUMINT=>STUB_SUMINT
       SUB_clamped_LS_no_scale=>STUB_CLAMPED_LS
+
+      SUB_INIT_REGIONS_LIST=>STUB_INIT_REGIONS_LIST
+      SUB_CHARFN_REGION=>STUB_CHARFN_REGION
+      SUB_DELETE_REGIONS_LIST=>STUB_DELETE_REGIONS_LIST
       
       if (probtype.eq.421) then
        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE

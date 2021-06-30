@@ -1901,7 +1901,7 @@ void fortran_parameters() {
   amrex::Error("n_sites invalid(1)");
  }
 
- FORT_OVERRIDE(
+ fort_override(
   &ns_max_level,
   ns_n_cell.dataPtr(),
   ns_space_blocking_factor.dataPtr(),
@@ -6847,7 +6847,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // updates FSI_MF for FSI_flag(im)==1 type materials.
-   FORT_INITDATASOLID(
+   fort_initdatasolid(
      &nmat,
      &nparts,
      &nFSI_sub,
@@ -8036,7 +8036,7 @@ void NavierStokes::post_restart() {
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
  int nc=S_new.nComp();
 
- FORT_INITDATA_ALLOC(&nmat,&nten,&nc,
+ fort_initdata_alloc(&nmat,&nten,&nc,
   latent_heat.dataPtr(),
   freezing_model.dataPtr(),
   distribute_from_target.dataPtr(),
@@ -8051,7 +8051,7 @@ void NavierStokes::post_restart() {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
    bfact_grid_level[ilev]=parent->Old_blockingFactor(ilev);
   }
-  FORT_INITGRIDMAP(
+  fort_initgridmap(
     &max_level,
     bfact_space_level.dataPtr(),
     bfact_grid_level.dataPtr(),
@@ -8161,7 +8161,7 @@ NavierStokes::initData () {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
    bfact_grid_level[ilev]=parent->Old_blockingFactor(ilev);
   }
-  FORT_INITGRIDMAP(
+  fort_initgridmap(
    &max_level,
    bfact_space_level.dataPtr(),
    bfact_grid_level.dataPtr(),
@@ -8294,7 +8294,7 @@ NavierStokes::initData () {
   // in: initData
  FSI_make_distance(upper_slab_time,dt_amr);
 
- FORT_INITDATA_ALLOC(&nmat,&nten,&nc,
+ fort_initdata_alloc(&nmat,&nten,&nc,
   latent_heat.dataPtr(),
   freezing_model.dataPtr(),
   distribute_from_target.dataPtr(),
@@ -8343,7 +8343,7 @@ NavierStokes::initData () {
    // if FSI_flag==2,4,6,7 then LS_new is used.
    // if FSI_flag==2,4,6,7 then S_new (volume fractions and centroids)
    //  is used.
-  FORT_INITDATA(
+  fort_initdata(
    &tid_current,
    &adapt_quad_depth,
    &level,&max_level,
@@ -8414,7 +8414,7 @@ NavierStokes::initData () {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_INITVELOCITY(
+  fort_initvelocity(
    &level,&upper_slab_time,
    tilelo,tilehi,
    fablo,fabhi,&bfact_space,
@@ -18264,7 +18264,7 @@ void NavierStokes::volWgtSum(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: NAVIERSTOKES_3D.F90
-   FORT_SUMMASS(
+   fort_summass(
     &tid_current,
     &ncomp_sum_int_user,
     &adapt_quad_depth,

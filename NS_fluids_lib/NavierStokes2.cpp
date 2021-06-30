@@ -6115,7 +6115,7 @@ void NavierStokes::solid_temperature() {
      // note: if FSI_flag==2, then solid temperature copied to itself since
      //  solid temp initialized in another routine.
      // (i.e. no change here)
-    FORT_INITSOLIDTEMP(
+    fort_initsolidtemp(
      &nmat,
      &nden,
      &cur_time_slab,
