@@ -403,6 +403,20 @@ implicit none
       INTEGER_T cache_index_low,cache_index_high,cache_max_level
       INTEGER_T :: grid_cache_allocated=0
 
+      INTEGER_T :: number_of_source_regions=0
+
+      type region_info_type
+       INTEGER_T :: region_material_id
+       REAL_T :: region_mass_flux   ! e.g. kg/s
+       REAL_T :: region_volume_flux ! e.g. m^3/s
+       REAL_T :: region_energy_flux ! e.g. J/s = Watts
+       REAL_T :: region_volume_raster ! e.g. m^3
+       REAL_T :: region_volume        ! e.g. m^3
+      end type region_info_type
+
+      type(region_info_type), allocatable :: region_list(:)
+
+      
        ! interface particle container class
        ! refined data 
       type elem_contain_type
@@ -446,6 +460,20 @@ implicit none
       INTEGER_T :: probtype_list_size
 
       ABSTRACT INTERFACE
+
+      subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
+                      num_materials_in)
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+      end subroutine TEMPLATE_INIT_REGIONS_LIST()
+
+      subroutine TEMPLATE_CHARFN_REGION(region_id,charfn_out)
+      INTEGER_T, intent(in) :: region_id
+      REAL_T, intent(out) :: charfn_out
+      end subroutine TEMPLATE_CHARFN_REGION
+
+      subroutine TEMPLATE_DELETE_REGIONS_LIST()
+      end subroutine TEMPLATE_DELETE_REGIONS_LIST()
 
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
