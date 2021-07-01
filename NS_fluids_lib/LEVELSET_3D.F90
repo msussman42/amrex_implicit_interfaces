@@ -5364,13 +5364,13 @@ stop
       call checkbound_array(fablo,fabhi,xface,0,0,6618)
       call checkbound_array(fablo,fabhi,yface,0,1,6619)
       call checkbound_array(fablo,fabhi,zface,0,SDIM-1,6620)
-      call checkbound_array(fablo,fabhi,areax,0,0,6621)
-      call checkbound_array(fablo,fabhi,areay,0,1,6622)
-      call checkbound_array(fablo,fabhi,areaz,0,SDIM-1,6623)
+      call checkbound_array1(fablo,fabhi,areax,0,0,6621)
+      call checkbound_array1(fablo,fabhi,areay,0,1,6622)
+      call checkbound_array1(fablo,fabhi,areaz,0,SDIM-1,6623)
       call checkbound_array(fablo,fabhi,cellfab,0,-1,6624)
-      call checkbound_array(fablo,fabhi,typefab,1,-1,6625)
-      call checkbound_array(fablo,fabhi,color,1,-1,6626)
-      call checkbound_array(fablo,fabhi,mask,1,-1,6627)
+      call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
+      call checkbound_array1(fablo,fabhi,color,1,-1,6626)
+      call checkbound_array1(fablo,fabhi,mask,1,-1,6627)
   
       !blob_matrix,blob_RHS,blob_velocity,
       !blob_integral_momentum,blob_energy,
@@ -10585,12 +10585,14 @@ stop
            print *,"massfrac_parm(ispec) invalid"
            stop
           endif
-         enddo
+         enddo ! ispec=1,num_species_var
 
           ! DeDT = cv
          call DeDT_material(den,massfrac_parm, &
            TEMPERATURE,DeDT,imattype,im)
-         if (DeDT.le.zero) then
+         if (DeDT.gt.zero) then
+          ! do nothing
+         else
           print *,"DeDT must be positive"
           stop
          endif

@@ -172,7 +172,6 @@ namespace amrex{
        int* nface_dst,
        int* ncellfrac);
 
-
      void FORT_GET_LOWMACH_DIVU(
        int* tid_current,
        int* sweep_num,

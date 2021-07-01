@@ -417,7 +417,7 @@ implicit none
 
        ! first index: 1..number_of_source_regions
        ! second index: 0..number_of_threads_regions
-      type(region_info_type), allocatable :: region_list(:,:)
+      type(region_info_type), allocatable :: regions_list(:,:)
       
        ! interface particle container class
        ! refined data 
