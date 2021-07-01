@@ -4827,10 +4827,6 @@ int ilev;
   }
 } // subroutine color_variable
 
-void 
-NavierStokes::SumRegions(int isweep) {
-
-} // end subroutine SumRegions(isweep)
 
 void
 NavierStokes::ColorSum(
@@ -5382,7 +5378,133 @@ NavierStokes::ColorSum(
 
 }  // subroutine ColorSum
 
+void
+NavierStokes::SumRegions(
+ int isweep) { // isweep=0 or 1
 
+ int finest_level=parent->finestLevel();
+ bool use_tiling=ns_tiling;
+
+ int nmat=num_materials;
+
+ if (level>finest_level)
+  amrex::Error("level invalid SumRegions");
+
+ if (MDOT_MF>=0) {
+  if (localMF[MDOT_MF]->nComp()==1) {
+   // do nothing
+  } else
+   amrex::Error("localMF[MDOT_MF]->nComp() invalid");
+  if (localMF[MDOT_MF]->nGrow()>=0) {
+   // do nothing
+  } else
+   amrex::Error("localMF[MDOT_MF]->nGrow() invalid");
+
+ } else
+  amrex::Error("MDOT_MF invalid");
+
+ resize_metrics(1);
+
+ debug_ngrow(VOLUME_MF,0,722);
+ VOF_Recon_resize(1,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,1,31);
+ if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+
+ if (isweep==0) {
+  getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
+ } else if (isweep==1) {
+  // do nothing
+ } else
+  amrex::Error("isweep invalid");
+
+ if (localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat)
+  amrex::Error("localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat");
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nstate=(AMREX_SPACEDIM+1)+
+  nmat*(num_state_material+ngeom_raw)+1;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+  // mask=tag if not covered by level+1 and at fine/fine ghost cell.
+ int ngrowmask=1;
+ Real tag=1.0;
+ int clear_phys_boundary=2;
+ MultiFab* mask=maskfiner(ngrowmask,tag,clear_phys_boundary);  
+ const Real* dx = geom.CellSize();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mask->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*mask,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  FArrayBox& snewfab=S_new[mfi];
+
+  FArrayBox& volumefab=(*localMF[VOLUME_MF])[mfi];
+  FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
+  FArrayBox& denfab=(*localMF[DEN_COLORSUM_MF])[mfi];
+  FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+  FArrayBox& maskfab=(*mask)[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   // in: NAVIERSTOKES_3D.F90
+  fort_regionsum(
+   &tid_current,
+   &isweep,  //isweep=0 or 1
+   constant_density_all_time.dataPtr(),
+   &dt_slab,
+   dx,xlo,
+   &nmat,
+   &nstate,
+   snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+   mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
+   denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+   volumefab.dataPtr(),ARLIM(volumefab.loVect()),ARLIM(volumefab.hiVect()),
+   maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+   tilelo,tilehi,
+   fablo,fabhi,
+   &bfact,
+   &level,
+   &finest_level);
+ } // mfi
+} // omp
+ ns_reconcile_d_num(182);
+
+ ParallelDescriptor::Barrier();
+
+ delete mask;
+
+ if (isweep==0) {
+  // do nothing
+ } else if (isweep==1) {
+  delete_localMF(DEN_COLORSUM_MF,1);
+ } else
+  amrex::Error("isweep invalid");
+
+}  //end subroutine SumRegions
 
 void
 NavierStokes::LowMachDIVU(
