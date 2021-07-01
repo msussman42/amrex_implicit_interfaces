@@ -10648,16 +10648,16 @@ END SUBROUTINE SIMP
 
        do iregions=1,number_of_source_regions
 
-        region_list(iregions,0)%region_volume=zero
-        region_list(iregions,0)%region_volume_raster=zero
+        regions_list(iregions,0)%region_volume=zero
+        regions_list(iregions,0)%region_volume_raster=zero
 
         do ithreads=1,number_of_threads_regions
-         region_list(iregions,0)%region_volume= &
-           region_list(iregions,0)%region_volume+ &
-           region_list(iregions,ithreads)%region_volume
-         region_list(iregions,0)%region_volume_raster= &
-           region_list(iregions,0)%region_volume_raster+ &
-           region_list(iregions,ithreads)%region_volume_raster
+         regions_list(iregions,0)%region_volume= &
+           regions_list(iregions,0)%region_volume+ &
+           regions_list(iregions,ithreads)%region_volume
+         regions_list(iregions,0)%region_volume_raster= &
+           regions_list(iregions,0)%region_volume_raster+ &
+           regions_list(iregions,ithreads)%region_volume_raster
         enddo ! ithreads=1,number_of_threads_regions
 
          ! amrex_parallel_reduce_sum is a fortran templated subroutine.
@@ -10677,17 +10677,306 @@ END SUBROUTINE SIMP
          !  each module procedure is specific to each type.
 
         call amrex_parallel_reduce_sum( &
-               region_list(iregions,0)%region_volume)
+               regions_list(iregions,0)%region_volume)
         call amrex_parallel_reduce_sum( &
-               region_list(iregions,0)%region_volume_raster)
+               regions_list(iregions,0)%region_volume_raster)
 
        enddo ! iregions=1,number_source_regions
          
        end subroutine fort_reduce_sum_regions
 
-       !! FORT_FABCOM: fabz = fabx + beta * faby
+      subroutine fort_regionsum( &
+       tid_current, &
+       isweep, &  ! isweep=0 or 1
+       constant_density_all_time, & ! 1..nmat
+       cur_time, &
+       dt, &
+       dx, &
+       xlo, &
+       nmat, &
+       nstate, &
+       snew,DIMS(snew), &
+       mdot, &
+       DIMS(mdot), &
+       DEN,DIMS(DEN), &
+       VOF,DIMS(VOF), &
+       volumefab, &
+       DIMS(volumefab), &
+       mask,DIMS(mask), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level, &
+       finest_level) &
+      bind(c,name='fort_regionsum')
+
+      use probcommon_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid_current
+      INTEGER_T, intent(in) :: isweep ! isweep=0 or 1
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T :: nstate_test
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(DEN)
+      INTEGER_T, intent(in) :: DIMDEC(VOF)
+      INTEGER_T, intent(in) :: DIMDEC(volumefab)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+
+      REAL_T, intent(inout), target :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(inout), target :: mdot(DIMV(mdot))
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: volumefab(DIMV(volumefab))
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+
+      INTEGER_T :: i,j,k
+      INTEGER_T :: im
+      INTEGER_T :: dir
+      INTEGER_T :: local_mask
+      INTEGER_T :: tessellate
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T xtarget(SDIM)
+      INTEGER_T iregions
+      INTEGER_T ispec
+      INTEGER_T vofcomp
+      REAL_T charfn
+      REAL_T vfrac
+      REAL_T vfrac_raster
+      REAL_T region_mass_flux
+      REAL_T region_volume_flux
+      REAL_T region_energy_flux
+      REAL_T region_volume
+      REAL_T region_volume_raster
+      REAL_T local_den
+      REAL_T local_temp
+      REAL_T DeDT
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T imattype
+      INTEGER_T dencomp
+      INTEGER_T nhalf
+      REAL_T mofdata(nmat*ngeom_recon)
+      INTEGER_T caller_id
+      INTEGER_T nmax
+
+      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+       print *,"tid_current invalid"
+       stop
+      endif
+
+      if (number_of_source_regions.eq.0) then
+       ! do nothing
+      else if (number_of_source_regions.gt.0) then
+       if (number_of_threads_regions.eq.geom_nthreads) then
+        ! do nothing
+       else
+        print *,"number_of_threads_regions invalid"
+        stop
+       endif
+      else
+       print *,"number_of_source_regions invalid"
+       stop
+      endif
+
+      nhalf=3
+      nmax=POLYGON_LIST_MAX ! in: fort_regionsum
+
+      snew_ptr=>snew
+      mdot_ptr=>mdot
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid92"
+       stop
+      endif
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid fort_regionsum"
+       stop
+      endif
+
+      nstate_test=(SDIM+1)+ &
+        nmat*(num_state_material+ngeom_raw)+1
+      if (nstate.ne.nstate_test) then
+       print *,"nstate invalid in NAVIERSTOKES_3D.F90 "
+       print *,"nstate=",nstate
+       print *,"nstate_test=",nstate_test
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,6615)
+      call checkbound_array(fablo,fabhi,DEN,1,-1,6615)
+      call checkbound_array(fablo,fabhi,VOF,1,-1,6616)
+      call checkbound_array1(fablo,fabhi,mask,1,-1,6627)
+      call checkbound_array1(fablo,fabhi,volumefab,1,-1,6627)
+  
+      do dir=1,SDIM
+       if (fabhi(dir)-fablo(dir).le.0) then
+        print *,"fablo,fabhi violates blocking factor"
+        stop
+       endif
+      enddo
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       local_mask=NINT(mask(D_DECL(i,j,k)))
+       if (local_mask.eq.1) then
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do im=1,nmat*ngeom_recon
+         mofdata(im)=VOF(D_DECL(i,j,k),im)
+        enddo
+
+        tessellate=1 ! tessellate output (tessellate=3 => raster output)
+        caller_id=15
+        call multi_get_volume_tessellate( &
+          tessellate, & ! tessellate=1 
+          bfact, &
+          dx, &
+          xsten,nhalf, &
+          mofdata, &
+          geom_xtetlist(1,1,1,tid_current+1), &
+          nmax, &
+          nmax, &
+          nmat, &
+          SDIM, &
+          caller_id)
+
+        do dir=1,SDIM
+         xtarget(dir)=xsten(0,dir)
+        enddo
+
+        do iregions=1,number_of_source_regions
+         im=regions_list(iregions,0)%region_material_id
+         if ((im.ge.1).and.(im.le.nmat)) then
+          vofcomp=(im-1)*ngeom_recon+1
+          vfrac=mofdata(vofcomp)
+          if ((vfrac.ge.zero).and.(vfrac.le.one)) then
+           if (vfrac.le.one-VOFTOL) then
+            vfrac_raster=zero
+           else if (vfrac.ge.one-VOFTOL) then
+            vfrac_raster=one
+           else
+            print *,"vfrac bust"
+            stop
+           endif
+           call SUB_CHARFN_REGION(iregions,xtarget,cur_time,charfn)
+           if ((charfn.eq.zero).or.(charfn.eq.one)) then
+
+            if (isweep.eq.0) then
+             regions_list(iregions,tid_current+1)%region_volume_raster= &
+              regions_list(iregions,tid_current+1)%region_volume_raster+ &
+              volumefab(D_DECL(i,j,k))*vfrac_raster*charfn
+             regions_list(iregions,tid_current+1)%region_volume= &
+              regions_list(iregions,tid_current+1)%region_volume+ &
+              volumefab(D_DECL(i,j,k))*vfrac*charfn
+            else if (isweep.eq.1) then
+             region_mass_flux=regions_list(iregions,0)%region_mass_flux
+             region_volume_flux=regions_list(iregions,0)%region_volume_flux
+             region_energy_flux=regions_list(iregions,0)%region_energy_flux
+             region_volume_raster=regions_list(iregions,0)%region_volume_raster
+             region_volume=regions_list(iregions,0)%region_volume
+             imattype=fort_material_type(im)
+             dencomp=(im-1)*num_state_material+1
+             local_den=DEN(D_DECL(i,j,k),dencomp)
+             local_temp=DEN(D_DECL(i,j,k),dencomp+1)
+
+             call init_massfrac_parm(local_den,massfrac_parm,im)
+             do ispec=1,num_species_var
+              massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+              if (massfrac_parm(ispec).ge.zero) then
+               ! do nothing
+              else
+               print *,"massfrac_parm(ispec) invalid"
+               stop
+              endif
+             enddo ! ispec=1,num_species_var
+
+              ! DeDT = cv
+             call DeDT_material(local_den,massfrac_parm, &
+               local_temp,DeDT,imattype,im)
+
+             if (DeDT.gt.zero) then
+              ! do nothing
+             else
+              print *,"DeDT must be positive"
+              stop
+             endif
+
+
+
+            else
+             print *,"isweep invalid"
+             stop
+            endif
+           else
+            print *,"charfn invalid"
+            stop
+           endif
+
+          else
+           print *,"vfrac out of range"
+           stop
+          endif
+         else
+          print *,"im invalid"
+          stop
+         endif
+        enddo !iregions=1,number_of_source_regions
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_regionsum
+
+       !! fort_fabcom: fabz = fabx + beta * faby
        !! Added by Alan Kuhnle, 6-7-10
-       subroutine FORT_FABCOM( &
+       subroutine fort_fabcom( &
         fabx,DIMS(fabx), &
         faby, DIMS(faby), &
         mask, DIMS(mask), &
@@ -10695,7 +10984,8 @@ END SUBROUTINE SIMP
         beta, &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
-        nsolve)
+        nsolve) &
+       bind(c,name='fort_fabcom')
 
        use global_utility_module
        use probcommon_module
@@ -10712,15 +11002,20 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: DIMDEC(fabz)
        INTEGER_T, intent(in) :: DIMDEC(mask)
        REAL_T, intent(in) :: beta
-       REAL_T, intent(in) :: fabx(DIMV(fabx),nsolve)
-       REAL_T, intent(in) :: faby(DIMV(faby),nsolve)
-       REAL_T, intent(out) :: fabz(DIMV(fabz),nsolve)
-       REAL_T, intent(in) :: mask(DIMV(mask))
+       REAL_T, intent(in), target :: fabx(DIMV(fabx),nsolve)
+       REAL_T, intent(in), target :: faby(DIMV(faby),nsolve)
+
+       REAL_T, intent(out), target :: fabz(DIMV(fabz),nsolve)
+       REAL_T, pointer :: fabz_ptr(D_DECL(:,:,:),:)
+
+       REAL_T, intent(in), target :: mask(DIMV(mask))
 
        INTEGER_T local_mask
        INTEGER_T :: nc
 
        INTEGER_T i,j,k
+
+       fabz_ptr=>fabz
 
        if (bfact.lt.1) then
         print *,"bfact invalid157"
@@ -10731,10 +11026,10 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(mask),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(fabx),0,-1,415) 
-       call checkbound(fablo,fabhi,DIMS(faby),0,-1,416) 
-       call checkbound(fablo,fabhi,DIMS(fabz),0,-1,417) 
+       call checkbound_array1(fablo,fabhi,mask,0,-1,414) 
+       call checkbound_array(fablo,fabhi,fabx,0,-1,415) 
+       call checkbound_array(fablo,fabhi,faby,0,-1,416) 
+       call checkbound_array(fablo,fabhi,fabz_ptr,0,-1,417) 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        do nc=1,nsolve
@@ -10764,7 +11059,7 @@ END SUBROUTINE SIMP
        enddo !nc=1..nsolve
 
        return
-       end subroutine FORT_FABCOM
+       end subroutine fort_fabcom
 
        subroutine FORT_DIAGINV( &
         diag_reg, &
@@ -10847,7 +11142,7 @@ END SUBROUTINE SIMP
        end subroutine FORT_DIAGINV
 
 
-       subroutine FORT_SUMDOT(mass1,  &
+       subroutine fort_sumdot(mass1,  &
         rho,DIMS(rho), &
         rho2,DIMS(rho2), &
         mask,DIMS(mask), &
@@ -10855,7 +11150,8 @@ END SUBROUTINE SIMP
         fablo,fabhi,bfact, &
         debug_dot_product, &
         levelno,gridno, &
-        nsolve)
+        nsolve) &
+       bind(c,name='fort_sumdot')
     
        use global_utility_module
        use probf90_module
@@ -10875,9 +11171,9 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: DIMDEC(rho2)
        INTEGER_T, intent(in) :: DIMDEC(mask)
        REAL_T, intent(out) :: mass1
-       REAL_T, intent(in) :: rho(DIMV(rho),nsolve)
-       REAL_T, intent(in) :: rho2(DIMV(rho2),nsolve)
-       REAL_T, intent(in) :: mask(DIMV(mask))
+       REAL_T, intent(in), target :: rho(DIMV(rho),nsolve)
+       REAL_T, intent(in), target :: rho2(DIMV(rho2),nsolve)
+       REAL_T, intent(in), target :: mask(DIMV(mask))
        REAL_T :: dm
        INTEGER_T local_mask
 
@@ -10892,9 +11188,9 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       call checkbound(fablo,fabhi,DIMS(mask),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(rho),0,-1,415) 
-       call checkbound(fablo,fabhi,DIMS(rho2),0,-1,416) 
+       call checkbound_array1(fablo,fabhi,mask,0,-1,414) 
+       call checkbound_array(fablo,fabhi,rho,0,-1,415) 
+       call checkbound_array(fablo,fabhi,rho2,0,-1,416) 
  
        mass1=zero
 
@@ -10951,10 +11247,10 @@ END SUBROUTINE SIMP
        endif
 
        return
-       end subroutine FORT_SUMDOT
+       end subroutine fort_sumdot
 
 
-       subroutine FORT_SUMDOT_ONES_SIZE( &
+       subroutine fort_sumdot_ones_size( &
         fab_sum,  &
         fab_flag,  &
         ones_fab, &
@@ -10974,7 +11270,8 @@ END SUBROUTINE SIMP
         presbc, &
         type_flag, &
         color_count, &
-        project_option)
+        project_option) &
+       bind(c,name='fort_sumdot_ones_size')
     
        use global_utility_module
        use probf90_module
@@ -10996,11 +11293,11 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: DIMDEC(color_fab)
        INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
        INTEGER_T, intent(in) :: DIMDEC(mask_fab)
-       REAL_T, intent(in) :: ones_fab(DIMV(ones_fab))
-       REAL_T, intent(in) :: type_fab(DIMV(type_fab))
-       REAL_T, intent(in) :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab),nsolve)
-       REAL_T, intent(in) :: mask_fab(DIMV(mask_fab))
+       REAL_T, intent(in),target :: ones_fab(DIMV(ones_fab))
+       REAL_T, intent(in), target :: type_fab(DIMV(type_fab))
+       REAL_T, intent(in), target :: color_fab(DIMV(color_fab))
+       REAL_T, intent(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, intent(in), target :: mask_fab(DIMV(mask_fab))
        INTEGER_T, intent(in) :: presbc(SDIM,2)
        INTEGER_T, intent(in) :: type_flag(2)
 
@@ -11047,11 +11344,11 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(ones_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(type_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(color_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(alpha_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(mask_fab),0,-1,414) 
+       call checkbound_array1(fablo,fabhi,ones_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,type_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,color_fab,0,-1,414) 
+       call checkbound_array(fablo,fabhi,alpha_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,mask_fab,0,-1,414) 
 
        do icolor=1,color_count
         fab_sum(icolor)=zero
@@ -11188,10 +11485,9 @@ END SUBROUTINE SIMP
        enddo ! i
 
        return
-       end subroutine FORT_SUMDOT_ONES_SIZE
+       end subroutine fort_sumdot_ones_size
 
-
-       subroutine FORT_SUMDOT_ONES( &
+       subroutine fort_sumdot_ones( &
         fab_sum,  &
         fab_flag,  &
         data_fab, &
@@ -11214,7 +11510,8 @@ END SUBROUTINE SIMP
         presbc, &
         type_flag, &
         color_count, &
-        project_option)
+        project_option) &
+       bind(c,name='fort_sumdot_ones')
     
        use global_utility_module
        use probf90_module
@@ -11237,12 +11534,12 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: DIMDEC(color_fab)
        INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
        INTEGER_T, intent(in) :: DIMDEC(mask_fab)
-       REAL_T, intent(in) :: data_fab(DIMV(data_fab))
-       REAL_T, intent(in) :: ones_fab(DIMV(ones_fab))
-       REAL_T, intent(in) :: type_fab(DIMV(type_fab))
-       REAL_T, intent(in) :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab),nsolve)
-       REAL_T, intent(in) :: mask_fab(DIMV(mask_fab))
+       REAL_T, intent(in), target :: data_fab(DIMV(data_fab))
+       REAL_T, intent(in), target :: ones_fab(DIMV(ones_fab))
+       REAL_T, intent(in), target :: type_fab(DIMV(type_fab))
+       REAL_T, intent(in), target :: color_fab(DIMV(color_fab))
+       REAL_T, intent(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, intent(in), target :: mask_fab(DIMV(mask_fab))
        INTEGER_T, intent(in) :: presbc(SDIM,2)
        INTEGER_T, intent(in) :: type_flag(2)
 
@@ -11265,7 +11562,7 @@ END SUBROUTINE SIMP
         stop
        endif
        if (project_option.eq.3) then
-        print *,"FORT_SUMDOT_ONES should not be called for viscosity"
+        print *,"fort_sumdot_ones should not be called for viscosity"
         stop
         if (nsolve.eq.SDIM) then
          ! do nothing
@@ -11291,12 +11588,12 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(data_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(ones_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(type_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(color_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(alpha_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(mask_fab),0,-1,414) 
+       call checkbound_array1(fablo,fabhi,data_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,ones_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,type_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,color_fab,0,-1,414) 
+       call checkbound_array(fablo,fabhi,alpha_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,mask_fab,0,-1,414) 
 
        do icolor=1,color_count
         fab_sum(icolor)=zero
@@ -11446,9 +11743,9 @@ END SUBROUTINE SIMP
        enddo ! i
 
        return
-       end subroutine FORT_SUMDOT_ONES
+       end subroutine fort_sumdot_ones
 
-       subroutine FORT_FABCOM_ONES( &
+       subroutine fort_fabcom_ones( &
         beta,  &
         singular_patch_flag,  &
         data_fab, &
@@ -11471,7 +11768,8 @@ END SUBROUTINE SIMP
         presbc, &
         type_flag, &
         color_count, &
-        project_option)
+        project_option) &
+       bind(c,name='fort_fabcom_ones')
     
        use global_utility_module
        use probf90_module
@@ -11494,12 +11792,15 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: DIMDEC(color_fab)
        INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
        INTEGER_T, intent(in) :: DIMDEC(mask_fab)
-       REAL_T, intent(inout) :: data_fab(DIMV(data_fab))
-       REAL_T, intent(in) :: ones_fab(DIMV(ones_fab))
-       REAL_T, intent(in) :: type_fab(DIMV(type_fab))
-       REAL_T, intent(in) :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in) :: alpha_fab(DIMV(alpha_fab),nsolve)
-       REAL_T, intent(in) :: mask_fab(DIMV(mask_fab))
+
+       REAL_T, intent(inout), target :: data_fab(DIMV(data_fab))
+       REAL_T, pointer :: data_fab_ptr(D_DECL(:,:,:))
+
+       REAL_T, intent(in), target :: ones_fab(DIMV(ones_fab))
+       REAL_T, intent(in), target :: type_fab(DIMV(type_fab))
+       REAL_T, intent(in), target :: color_fab(DIMV(color_fab))
+       REAL_T, intent(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, intent(in), target :: mask_fab(DIMV(mask_fab))
        INTEGER_T, intent(in) :: presbc(SDIM,2)
        INTEGER_T, intent(in) :: type_flag(2)
 
@@ -11512,6 +11813,8 @@ END SUBROUTINE SIMP
        INTEGER_T icrit
        INTEGER_T side
        INTEGER_T local_bc
+
+       data_fab_ptr=>data_fab
 
        if ((levelno.lt.0).or.(gridno.lt.0)) then
         print *,"level or grid invalid"
@@ -11546,12 +11849,12 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(data_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(ones_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(type_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(color_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(alpha_fab),0,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(mask_fab),0,-1,414) 
+       call checkbound_array1(fablo,fabhi,data_fab_ptr,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,ones_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,type_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,color_fab,0,-1,414) 
+       call checkbound_array(fablo,fabhi,alpha_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,mask_fab,0,-1,414) 
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -11725,7 +12028,7 @@ END SUBROUTINE SIMP
        enddo ! i
 
        return
-       end subroutine FORT_FABCOM_ONES
+       end subroutine fort_fabcom_ones
 
 ! coriolis force:
 ! R''_space=R''_earth + 2 (omega cross v)+omega cross (omega cross R)+

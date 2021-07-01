@@ -756,13 +756,13 @@ INTEGER_T upper_bound(2)
  if (number_of_source_regions.eq.0) then
   ! do nothing
  else if (number_of_source_regions.gt.0) then
-  lower_bound=LBOUND(region_list)
-  upper_bound=UBOUND(region_list)
+  lower_bound=LBOUND(regions_list)
+  upper_bound=UBOUND(regions_list)
   if ((lower_bound(1).eq.1).and. &
       (lower_bound(2).eq.0).and. &
       (upper_bound(1).eq.number_of_source_regions).and. &
       (upper_bound(2).eq.number_of_threads_regions)) then
-   deallocate(region_list)
+   deallocate(regions_list)
   else
    print *,"lower_bound or upper_bound invalid"
    stop

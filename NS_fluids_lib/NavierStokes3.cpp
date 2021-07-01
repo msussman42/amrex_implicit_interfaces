@@ -5474,8 +5474,10 @@ NavierStokes::SumRegions(
    &tid_current,
    &isweep,  //isweep=0 or 1
    constant_density_all_time.dataPtr(),
+   &cur_time_slab,
    &dt_slab,
-   dx,xlo,
+   dx,
+   xlo,
    &nmat,
    &nstate,
    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -11840,6 +11842,7 @@ void NavierStokes::vel_elastic_ALL() {
 
 void NavierStokes::Mass_Energy_Sources_SinksALL() {
 
+ int finest_level=parent->finestLevel();
  int nthreads_parm=thread_class::nthreads;
 
  fort_init_regions_list(

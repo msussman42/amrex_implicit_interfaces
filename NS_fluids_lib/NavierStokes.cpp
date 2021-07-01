@@ -17477,7 +17477,7 @@ NavierStokes::dotSum(int project_option,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_SUMDOT(&tsum,
+  fort_sumdot(&tsum,
     fab.dataPtr(),ARLIM(fab.loVect()), ARLIM(fab.hiVect()),
     fab2.dataPtr(),ARLIM(fab2.loVect()), ARLIM(fab2.hiVect()),
     mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
@@ -17610,7 +17610,7 @@ NavierStokes::dotSumONES_size(int project_option,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_SUMDOT_ONES_SIZE(
+  fort_sumdot_ones_size(
    fab_sum.dataPtr(),
    fab_flag.dataPtr(),
    ones_fab.dataPtr(),
@@ -17771,7 +17771,7 @@ NavierStokes::dotSumONES(int project_option,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_SUMDOT_ONES(
+  fort_sumdot_ones(
    fab_sum.dataPtr(),
    fab_flag.dataPtr(),
    data_fab.dataPtr(),
@@ -17903,7 +17903,7 @@ NavierStokes::mf_combine_ones_level(int project_option,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_FABCOM_ONES(
+  fort_fabcom_ones(
    beta.dataPtr(),
    singular_patch_flag.dataPtr(),
    data_fab.dataPtr(),
@@ -18019,7 +18019,7 @@ void NavierStokes::levelCombine(
 
   //fabz = fabx + beta * faby
   //in: NAVIERSTOKES_3D.F90
-  FORT_FABCOM(
+  fort_fabcom(
    fabx.dataPtr(),ARLIM(fabx.loVect()),ARLIM(fabx.hiVect()),
    faby.dataPtr(),ARLIM(faby.loVect()),ARLIM(faby.hiVect()),
    mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),

@@ -27,12 +27,7 @@
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_SUMDOT      sumdot
-#    define FORT_SUMDOT_ONES_SIZE sumdot_ones_size
-#    define FORT_SUMDOT_ONES sumdot_ones
 #    define FORT_DIAGINV     diaginv
-#    define FORT_FABCOM      fabcom
-#    define FORT_FABCOM_ONES fabcom_ones
 #    define FORT_ISOGRID     isogrid
 #    define FORT_ISOGRIDSINGLE     isogridsingle
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
@@ -67,12 +62,7 @@
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
 #    define FORT_AVGDOWN_BURNING AVGDOWN_BURNING
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
-#    define FORT_SUMDOT      SUMDOT
-#    define FORT_SUMDOT_ONES_SIZE SUMDOT_ONES_SIZE
-#    define FORT_SUMDOT_ONES SUMDOT_ONES
 #    define FORT_DIAGINV     DIAGINV
-#    define FORT_FABCOM      FABCOM
-#    define FORT_FABCOM_ONES FABCOM_ONES 
 #    define FORT_ISOGRID     ISOGRID
 #    define FORT_ISOGRIDSINGLE ISOGRIDSINGLE
 #    define FORT_COMBINETRIANGLESSINGLE COMBINETRIANGLESSINGLE
@@ -106,12 +96,7 @@
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_SUMDOT      sumdot
-#    define FORT_SUMDOT_ONES_SIZE sumdot_ones_size
-#    define FORT_SUMDOT_ONES sumdot_ones
 #    define FORT_DIAGINV     diaginv
-#    define FORT_FABCOM      fabcom
-#    define FORT_FABCOM_ONES fabcom_ones
 #    define FORT_ISOGRID     isogrid
 #    define FORT_ISOGRIDSINGLE     isogridsingle
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
@@ -144,12 +129,7 @@
 #    define FORT_AVGDOWN_TAG avgdown_tag_
 #    define FORT_AVGDOWN_BURNING avgdown_burning_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
-#    define FORT_SUMDOT      sumdot_
-#    define FORT_SUMDOT_ONES_SIZE sumdot_ones_size_
-#    define FORT_SUMDOT_ONES sumdot_ones_
 #    define FORT_DIAGINV     diaginv_
-#    define FORT_FABCOM      fabcom_
-#    define FORT_FABCOM_ONES fabcom_ones_
 #    define FORT_ISOGRID     isogrid_
 #    define FORT_ISOGRIDSINGLE     isogridsingle_
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle_
@@ -668,9 +648,33 @@ extern "C" {
      int* den_Ncomp,
      int* isweep);
 
+     void fort_regionsum(
+       int* tid_current,
+       int* isweep, //isweep=0 or 1
+       int* constant_density_all_time,
+       Real* cur_time,
+       Real* dt,
+       const Real* dx,
+       const Real* xlo,
+       int* nmat,
+       int* nstate,
+       Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+       Real* mdot,
+       AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+       Real* DEN,AMREX_ARLIM_P(DENlo),AMREX_ARLIM_P(DENhi),
+       Real* VOF,AMREX_ARLIM_P(VOFlo),AMREX_ARLIM_P(VOFhi),
+       Real* volumefab,
+       AMREX_ARLIM_P(volumefablo),AMREX_ARLIM_P(volumefabhi),
+       Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+       const int* tilelo, const int* tilehi,
+       const int* fablo, const int* fabhi, 
+       int* bfact,
+       int* level,
+       int* finest_level);
+
     void fort_reduce_sum_regions();
 
-    void FORT_SUMDOT(Real* mass1,
+    void fort_sumdot(Real* mass1,
       const Real* dat1,AMREX_ARLIM_P(dat1_lo),AMREX_ARLIM_P(dat1_hi),
       const Real* dat2,AMREX_ARLIM_P(dat2_lo),AMREX_ARLIM_P(dat2_hi),
       const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
@@ -681,7 +685,7 @@ extern "C" {
       int* levelno,const int* gridno,
       int* nsolve);
 
-    void FORT_SUMDOT_ONES_SIZE(
+    void fort_sumdot_ones_size(
       Real* fab_sum,
       int* fab_flag,
       const Real* ones_fab,
@@ -705,7 +709,7 @@ extern "C" {
       int* project_option);
 
 
-    void FORT_SUMDOT_ONES(
+    void fort_sumdot_ones(
       Real* fab_sum,
       int* fab_flag,
       const Real* data_fab,
@@ -730,8 +734,7 @@ extern "C" {
       int* color_count, 
       int* project_option);
 
-
-    void FORT_FABCOM_ONES(
+    void fort_fabcom_ones(
       Real* beta,
       int* singular_patch_flag,
       const Real* data_fab,
@@ -757,7 +760,7 @@ extern "C" {
       int* project_option);
 
 
-    void FORT_FABCOM(
+    void fort_fabcom(
      const Real* fabx,AMREX_ARLIM_P(fabx_lo),AMREX_ARLIM_P(fabx_hi),
      const Real* faby,AMREX_ARLIM_P(faby_lo),AMREX_ARLIM_P(faby_hi),
      const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),

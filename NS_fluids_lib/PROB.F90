@@ -26618,7 +26618,10 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -26633,6 +26636,7 @@ end subroutine initialize2d
       REAL_T xsten(-3:3,SDIM)
 
       nhalf=3
+
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -26666,19 +26670,20 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       call local_filcc(bfact, &
-       u,DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u) ! ulox
-      fablo(2)=ARG_L2(u) ! uloy
+      fablo(1)=LBOUND(u,1) ! ulox
+      fablo(2)=LBOUND(u,2) ! uloy
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u) ! uloz
+      fablo(SDIM)=LBOUND(u,SDIM) ! uloz
 #endif
-      fabhi(1)=ARG_H1(u) ! uhix
-      fabhi(2)=ARG_H2(u) ! uhiy
+      fabhi(1)=UBOUND(u,1) ! uhix
+      fabhi(2)=UBOUND(u,2) ! uhiy
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u) ! uhiz
+      fabhi(SDIM)=UBOUND(u,SDIM) ! uhiz
 #endif
       do dir2=1,SDIM
        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
@@ -26768,7 +26773,10 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -26783,6 +26791,7 @@ end subroutine initialize2d
       REAL_T xsten(-3:3,SDIM)
 
       nhalf=3
+
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -26809,15 +26818,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
       do dir2=1,SDIM
        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
@@ -26830,10 +26839,10 @@ end subroutine initialize2d
        endif
       enddo  ! dir2
 
+      u_ptr=>u
       do velcomp=1,SDIM
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),velcomp), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,velcomp, &
         domlo,domhi, &
         bc(1,1,velcomp))
       enddo ! velcomp
@@ -26917,7 +26926,8 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -26934,6 +26944,9 @@ end subroutine initialize2d
       INTEGER_T nparts
 
       nhalf=3
+
+      u_ptr=>u
+
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -26983,18 +26996,18 @@ end subroutine initialize2d
       endif
 
       call local_filcc(bfact, &
-       u,DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
       do dir2=1,SDIM
        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
@@ -27085,7 +27098,8 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -27144,15 +27158,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
       do dir2=1,SDIM
        if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
@@ -27165,10 +27179,10 @@ end subroutine initialize2d
        endif
       enddo  ! dir2
 
+      u_ptr=>u
       do velcomp=1,SDIM
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),velcomp), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,velcomp, &
         domlo,domhi, &
         bc(1,1,velcomp))
       enddo ! velcomp
@@ -27658,7 +27672,8 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -27673,6 +27688,9 @@ end subroutine initialize2d
       REAL_T xsten(-3:3,SDIM)
 
       nhalf=3
+
+      u_ptr=>u
+
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -27693,15 +27711,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       if ((grid_type.ge.0).and.(grid_type.lt.SDIM)) then
@@ -27731,8 +27749,7 @@ end subroutine initialize2d
       enddo  ! dir2
 
       call efilcc(bfact, &
-       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-       DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc,veldir) ! veldir=grid_type
 
       do dir2=1,SDIM
@@ -27840,7 +27857,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -27876,15 +27895,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       if ((grid_type.ge.0).and.(grid_type.lt.SDIM)) then
@@ -27913,9 +27932,9 @@ end subroutine initialize2d
        endif
       enddo  ! dir2
 
+      u_ptr=>u
       call efilcc(bfact, &
-       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-       DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc,veldir)
 
       do dir2=1,SDIM
@@ -28020,7 +28039,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -28057,15 +28078,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       if ((grid_type.ge.0).and.(grid_type.lt.SDIM)) then
@@ -28094,9 +28115,9 @@ end subroutine initialize2d
        endif
       enddo  ! dir2
 
+      u_ptr=>u
       call efilcc(bfact, &
-       u(D_DECL(fablo(1),fablo(2),fablo(SDIM))), &
-       DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc,veldir)
 
       do dir2=1,SDIM
@@ -28259,7 +28280,8 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -28295,15 +28317,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
       nmat=num_materials
 
@@ -28317,10 +28339,10 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       do im=1,nmat*ngeom_raw
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,im, &
         domlo,domhi,bc(1,1,im))
       enddo
 
@@ -28416,7 +28438,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -28489,15 +28513,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
       nmat=num_materials
 
@@ -28510,10 +28534,10 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       do im=1,nmat*ngeom_recon
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),im), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,im, &
         domlo,domhi,bc(1,1,im))
       enddo
 
@@ -28716,7 +28740,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -28747,15 +28773,15 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       if (bfact.lt.1) then
@@ -28782,10 +28808,10 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       do imls=1,ncomp_ho
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),imls), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,imls, &
         domlo,domhi, &
         bc(1,1,imls))
       enddo
@@ -28943,7 +28969,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -28985,19 +29013,20 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       call local_filcc(bfact, &
-       u,DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       do dir2=1,SDIM
@@ -29084,7 +29113,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -29156,21 +29187,21 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
+      u_ptr=>u
       do icomp=1,(ncomp_per+1)*nten
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,icomp, &
         domlo,domhi,bc(1,1,icomp))
       enddo
 
@@ -29265,7 +29296,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -29319,21 +29352,21 @@ end subroutine initialize2d
        endif
       enddo  ! dir2=1..sdim
 
+      u_ptr=>u
       call efilcc(bfact, &
-       u, &
-       DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc, &
        grid_type)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       do dir2=1,SDIM
@@ -29442,7 +29475,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -29515,19 +29550,20 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       call local_filcc(bfact, &
-       u,DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       do dir2=1,SDIM
@@ -29619,7 +29655,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -29678,19 +29716,20 @@ end subroutine initialize2d
       im=fort_im_elastic_map(ipart)+1
       if ((im.ge.1).and.(im.le.num_materials)) then
 
+       u_ptr=>u
        call local_filcc(bfact, &
-        u,DIMS(u), &
+        u_ptr, &
         domlo,domhi,bc)
 
-       fablo(1)=ARG_L1(u)
-       fablo(2)=ARG_L2(u)
+       fablo(1)=LBOUND(u,1)
+       fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-       fablo(SDIM)=ARG_L3(u)
+       fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-       fabhi(1)=ARG_H1(u)
-       fabhi(2)=ARG_H2(u)
+       fabhi(1)=UBOUND(u,1)
+       fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-       fabhi(SDIM)=ARG_H3(u)
+       fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
        do dir2=1,SDIM
@@ -29785,7 +29824,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -29845,19 +29886,20 @@ end subroutine initialize2d
        ! 1<=dir_xdisplace<=sdim
       dir_xdisplace=scomp-(ipart-1)*SDIM-icomplo+1
 
+      u_ptr=>u
       call local_filcc(bfact, &
-        u,DIMS(u), &
+        u_ptr, &
         domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       do dir2=1,SDIM
@@ -29947,7 +29989,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u))
+      REAL_T, intent(inout), target :: u(DIMV(u))
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
       INTEGER_T i,j,k
@@ -29984,19 +30028,20 @@ end subroutine initialize2d
        stop
       endif
 
+      u_ptr=>u
       call local_filcc(bfact, &
-       u,DIMS(u), &
+       u_ptr, &
        domlo,domhi,bc)
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
       do dir2=1,SDIM
@@ -30080,7 +30125,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -30135,21 +30182,21 @@ end subroutine initialize2d
       endif
       
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
+      u_ptr=>u
       do icomp=1,num_state_material*num_materials
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,icomp, &
         domlo,domhi,bc(1,1,icomp))
       enddo
 
@@ -30240,7 +30287,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout) :: u(DIMV(u),ncomp)
+      REAL_T, intent(inout), target :: u(DIMV(u),ncomp)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: bc(SDIM,2,ncomp)
 
       INTEGER_T i,j,k
@@ -30325,21 +30374,21 @@ end subroutine initialize2d
        stop
       endif
 
-      fablo(1)=ARG_L1(u)
-      fablo(2)=ARG_L2(u)
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=ARG_L3(u)
+      fablo(SDIM)=LBOUND(u,SDIM)
 #endif
-      fabhi(1)=ARG_H1(u)
-      fabhi(2)=ARG_H2(u)
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
 #if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=ARG_H3(u)
+      fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
+      u_ptr=>u
       do icomp_total=scomp+1,scomp+ncomp
-       call local_filcc(bfact, &
-        u(D_DECL(fablo(1),fablo(2),fablo(SDIM)),icomp_total-scomp), &
-        DIMS(u), &
+       call local_filcc4D(bfact, &
+        u_ptr,icomp_total-scomp, &
         domlo,domhi,bc(1,1,icomp_total-scomp))
       enddo
 
