@@ -14,7 +14,6 @@
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
-#    define FORT_GETCOLORSUM getcolorsum
 #    define FORT_GET_LOWMACH_DIVU get_lowmach_divu
 #    define FORT_LEVELRECOLOR levelrecolor
 #    define FORT_COLORFILL colorfill
@@ -38,7 +37,6 @@
 #    define FORT_INITSUPERELASTIC INITSUPERELASTIC
 #    define FORT_INITRECALESCE INITRECALESCE
 #    define FORT_GETTYPEFAB GETTYPEFAB
-#    define FORT_GETCOLORSUM GETCOLORSUM
 #    define FORT_GET_LOWMACH_DIVU GET_LOWMACH_DIVU
 #    define FORT_LEVELRECOLOR LEVELRECOLOR
 #    define FORT_COLORFILL COLORFILL
@@ -60,7 +58,6 @@
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
-#    define FORT_GETCOLORSUM getcolorsum
 #    define FORT_GET_LOWMACH_DIVU get_lowmach_divu
 #    define FORT_LEVELRECOLOR levelrecolor
 #    define FORT_COLORFILL colorfill
@@ -81,7 +78,6 @@
 #    define FORT_PURGEFLOTSAM purgeflotsam_
 #    define FORT_INITRECALESCE initrecalesce_
 #    define FORT_GETTYPEFAB gettypefab_
-#    define FORT_GETCOLORSUM getcolorsum_
 #    define FORT_GET_LOWMACH_DIVU get_lowmach_divu_
 #    define FORT_LEVELRECOLOR levelrecolor_
 #    define FORT_COLORFILL colorfill_
@@ -112,7 +108,7 @@ namespace amrex{
      int* ncomp_source,
      int* zero_diag_flag);
 
-     void FORT_GETCOLORSUM(
+     void fort_getcolorsum(
        int* tid_current,
        int* operation_flag,
        int* sweep_num,
