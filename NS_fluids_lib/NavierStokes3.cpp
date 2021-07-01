@@ -4827,6 +4827,10 @@ int ilev;
   }
 } // subroutine color_variable
 
+void 
+NavierStokes::SumRegions(int isweep) {
+
+} // end subroutine SumRegions(isweep)
 
 void
 NavierStokes::ColorSum(
@@ -5204,7 +5208,7 @@ NavierStokes::ColorSum(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: LEVELSET_3D.F90
-  FORT_GETCOLORSUM(
+  fort_getcolorsum(
    &tid_current,
    &operation_flag,
    &sweep_num,

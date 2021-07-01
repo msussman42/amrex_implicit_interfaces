@@ -5017,7 +5017,7 @@ stop
       return
       end subroutine FORT_GETTYPEFAB
 
-      subroutine FORT_GETCOLORSUM( &
+      subroutine fort_getcolorsum( &
        tid_current, &
        operation_flag, &
        sweep_num, &
@@ -5036,8 +5036,8 @@ stop
        snew,DIMS(snew), &
        mdot, &
        DIMS(mdot), &
-       mdot_comp, &
-       DIMS(mdot_comp), &
+       mdot_complement, &
+       DIMS(mdot_complement), &
        LS,DIMS(LS), &
        VEL,DIMS(VEL), &
        DEN,DIMS(DEN), &
@@ -5062,13 +5062,13 @@ stop
        num_colors, &
        cum_blobdata, &
        cum_mdot_data, &
-       cum_mdot_comp_data, &
+       cum_mdot_complement_data, &
        level_blobdata, &
        level_blobtypedata, &
        level_mdot_data, &
-       level_mdot_comp_data, &
+       level_mdot_complement_data, &
        level_mdot_data_redistribute, &
-       level_mdot_comp_data_redistribute, &
+       level_mdot_complement_data_redistribute, &
        arraysize, &
        mdot_arraysize, &
        num_elements_blobclass, &
@@ -5079,7 +5079,9 @@ stop
        material_type_lowmach, &
        nface, &
        nface_dst, &
-       ncellfrac)
+       ncellfrac) &
+      bind(c,name='fort_getcolorsum')
+
       use probcommon_module
       use global_utility_module
       use geometry_intersect_module
@@ -5128,7 +5130,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(snew)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
-      INTEGER_T, intent(in) :: DIMDEC(mdot_comp)
+      INTEGER_T, intent(in) :: DIMDEC(mdot_complement)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(VEL)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
@@ -5146,32 +5148,40 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(inout) ::level_blobdata(arraysize)
       REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
-      REAL_T, intent(inout) ::level_mdot_comp_data(mdot_arraysize)
+      REAL_T, intent(inout) ::level_mdot_complement_data(mdot_arraysize)
       REAL_T, intent(inout) ::level_mdot_data_redistribute(mdot_arraysize)
-      REAL_T, intent(inout) ::level_mdot_comp_data_redistribute(mdot_arraysize)
+      REAL_T, intent(inout) :: &
+              level_mdot_complement_data_redistribute(mdot_arraysize)
       REAL_T, intent(in) :: cum_blobdata(arraysize)
       REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
-      REAL_T, intent(in) :: cum_mdot_comp_data(mdot_arraysize)
+      REAL_T, intent(in) :: cum_mdot_complement_data(mdot_arraysize)
       INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
 
-      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
-      REAL_T, intent(inout) :: mdot(DIMV(mdot),ncomp_mdot)
-      REAL_T, intent(inout) :: mdot_comp(DIMV(mdot_comp),ncomp_mdot)
-      REAL_T, intent(in) :: typefab(DIMV(typefab))
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: VEL(DIMV(VEL),SDIM+1)
-      REAL_T, intent(in) :: DEN(DIMV(DEN),nmat*num_state_material)
-      REAL_T, intent(in) :: VOF(DIMV(VOF),nmat*ngeom_recon)
-      REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
-      REAL_T, intent(in) :: xface(DIMV(xface),nface_dst)
-      REAL_T, intent(in) :: yface(DIMV(yface),nface_dst)
-      REAL_T, intent(in) :: zface(DIMV(zface),nface_dst)
-      REAL_T, intent(in) :: areax(DIMV(areax))
-      REAL_T, intent(in) :: areay(DIMV(areay))
-      REAL_T, intent(in) :: areaz(DIMV(areaz))
-      REAL_T, intent(in) :: cellfab(DIMV(cellfab),ncellfrac)
-      REAL_T, intent(in) :: color(DIMV(color))
-      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(inout), target :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(inout), target :: mdot(DIMV(mdot),ncomp_mdot)
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(inout), target :: &
+              mdot_complement(DIMV(mdot_complement),ncomp_mdot)
+      REAL_T, pointer :: mdot_complement_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: VEL(DIMV(VEL),SDIM+1)
+      REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
+      REAL_T, intent(in), target :: xface(DIMV(xface),nface_dst)
+      REAL_T, intent(in), target :: yface(DIMV(yface),nface_dst)
+      REAL_T, intent(in), target :: zface(DIMV(zface),nface_dst)
+      REAL_T, intent(in), target :: areax(DIMV(areax))
+      REAL_T, intent(in), target :: areay(DIMV(areay))
+      REAL_T, intent(in), target :: areaz(DIMV(areaz))
+      REAL_T, intent(in), target :: cellfab(DIMV(cellfab),ncellfrac)
+      REAL_T, intent(in), target :: color(DIMV(color))
+      REAL_T, intent(in), target :: mask(DIMV(mask))
 
       INTEGER_T dir,side
       INTEGER_T dir2
@@ -5261,7 +5271,11 @@ stop
       endif
 
       nhalf=3
-      nmax=POLYGON_LIST_MAX ! in: GETCOLORSUM
+      nmax=POLYGON_LIST_MAX ! in: fort_getcolorsum
+
+      snew_ptr=>snew
+      mdot_ptr=>mdot
+      mdot_complement_ptr=>mdot_complement
 
       if (dt.gt.zero) then
        ! do nothing
@@ -5281,7 +5295,7 @@ stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
-       print *,"nten invalid GETCOLORSUM nten nten_test ",nten,nten_test
+       print *,"nten invalid fort_getcolorsum nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -5335,28 +5349,28 @@ stop
        stop
       endif
 
-       ! in: FORT_GETCOLORSUM
+       ! in: fort_getcolorsum
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=two*DXMAXLS
 
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(mdot_comp),0,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(VEL),1,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(DEN),1,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(VOF),1,-1,6616)
-      call checkbound(fablo,fabhi,DIMS(facefab),1,-1,6617)
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,6618)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,6619)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,6620)
-      call checkbound(fablo,fabhi,DIMS(areax),0,0,6621)
-      call checkbound(fablo,fabhi,DIMS(areay),0,1,6622)
-      call checkbound(fablo,fabhi,DIMS(areaz),0,SDIM-1,6623)
-      call checkbound(fablo,fabhi,DIMS(cellfab),0,-1,6624)
-      call checkbound(fablo,fabhi,DIMS(typefab),1,-1,6625)
-      call checkbound(fablo,fabhi,DIMS(color),1,-1,6626)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,6627)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
+      call checkbound_array(fablo,fabhi,mdot_ptr,0,-1,6615)
+      call checkbound_array(fablo,fabhi,mdot_complement_ptr,0,-1,6615)
+      call checkbound_array(fablo,fabhi,LS,1,-1,6615)
+      call checkbound_array(fablo,fabhi,VEL,1,-1,6615)
+      call checkbound_array(fablo,fabhi,DEN,1,-1,6615)
+      call checkbound_array(fablo,fabhi,VOF,1,-1,6616)
+      call checkbound_array(fablo,fabhi,facefab,1,-1,6617)
+      call checkbound_array(fablo,fabhi,xface,0,0,6618)
+      call checkbound_array(fablo,fabhi,yface,0,1,6619)
+      call checkbound_array(fablo,fabhi,zface,0,SDIM-1,6620)
+      call checkbound_array(fablo,fabhi,areax,0,0,6621)
+      call checkbound_array(fablo,fabhi,areay,0,1,6622)
+      call checkbound_array(fablo,fabhi,areaz,0,SDIM-1,6623)
+      call checkbound_array(fablo,fabhi,cellfab,0,-1,6624)
+      call checkbound_array(fablo,fabhi,typefab,1,-1,6625)
+      call checkbound_array(fablo,fabhi,color,1,-1,6626)
+      call checkbound_array(fablo,fabhi,mask,1,-1,6627)
   
       !blob_matrix,blob_RHS,blob_velocity,
       !blob_integral_momentum,blob_energy,
@@ -5428,7 +5442,7 @@ stop
 
         icolor=NINT(color(D_DECL(i,j,k)))
         if ((icolor.gt.num_colors).or.(icolor.le.0)) then
-         print *,"icolor invalid in GETCOLORSUM icolor=",icolor
+         print *,"icolor invalid in fort_getcolorsum icolor=",icolor
          print *,"i,j,k ",i,j,k
          stop
         endif
@@ -5470,7 +5484,7 @@ stop
           level_blobtypedata(icolor)=base_type
          else
           if (level_blobtypedata(icolor).ne.base_type) then
-           print *,"type problems in GETCOLORSUM"
+           print *,"type problems in fort_getcolorsum"
            print *,"level,finest_level ",level,finest_level
            print *,"num_colors= ",num_colors
            print *,"current blobtype ",level_blobtypedata(icolor)
@@ -5488,7 +5502,7 @@ stop
          if (sweep_num.eq.0) then
 
           if (level_blobtypedata(icolor).ne.base_type) then
-           print *,"type problems in GETCOLORSUM operation_flag==1"
+           print *,"type problems in fort_getcolorsum operation_flag==1"
            print *,"level,finest_level ",level,finest_level
            print *,"num_colors= ",num_colors
            print *,"current blobtype ",level_blobtypedata(icolor)
@@ -6127,9 +6141,9 @@ stop
                   mdot(D_DECL(i,j,k),i_mdot)
 
                 ! mdot complement
-               level_mdot_comp_data(ic_base_mdot+i_mdot)= &
-                  level_mdot_comp_data(ic_base_mdot+i_mdot)+ &
-                  mdot_comp(D_DECL(i,j,k),i_mdot)
+               level_mdot_complement_data(ic_base_mdot+i_mdot)= &
+                  level_mdot_complement_data(ic_base_mdot+i_mdot)+ &
+                  mdot_complement(D_DECL(i,j,k),i_mdot)
               enddo
              else if (ncomp_mdot.eq.0) then
               ! do nothing
@@ -6601,7 +6615,8 @@ stop
                       print *,"distribute_from_target(iten_shift) invalid"
                       stop
                      endif
-                     mdot_total=cum_mdot_comp_data(ic_base_mdot+iten_shift)
+                     mdot_total= &
+                          cum_mdot_complement_data(ic_base_mdot+iten_shift)
                      if (1.eq.0) then
                       print *,"i,j,k,cell_count,mass,volume,mdot_tot ", &
                        i,j,k,blob_cell_count,blob_mass,blob_volume,mdot_total
@@ -6749,7 +6764,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_GETCOLORSUM
+      end subroutine fort_getcolorsum
 
       subroutine FORT_GET_LOWMACH_DIVU( &
        tid_current, &
