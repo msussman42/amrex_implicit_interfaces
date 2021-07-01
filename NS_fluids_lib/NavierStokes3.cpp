@@ -11722,6 +11722,18 @@ void NavierStokes::Mass_Energy_Sources_SinksALL() {
    &nthreads_parm);
 
  for (int isweep=0;isweep<2;isweep++) {
+  if (level!=0)
+   amrex::Error("it is required that level=0 in sum_regions isweep loop");
+  if (level<=finest_level) {
+   for (int ilev = 0; ilev <= finest_level; ilev++) {
+
+    NavierStokes& ns_level = getLevel(ilev);
+    ns_level.SumRegions(isweep);
+
+   }
+
+  } else
+   amrex::Error("level<=finest_level required");
   
   if (isweep==0) {
    fort_reduce_sum_regions();

@@ -1076,6 +1076,8 @@ protected:
      Vector<int> type_flag,
      int zero_diag_flag);
 
+    void SumRegions(int isweep); //isweep = 0 or 1
+
     void ColorSum(
      int operation_flag, // =0 or 1
      int tessellate, // =1 or 3

@@ -20724,7 +20724,7 @@ NavierStokes::volWgtSumALL(
 
  int finest_level=parent->finestLevel();
  if (level!=0)
-  amrex::Error("level=0 in volWgtSumALL");
+  amrex::Error("it is required that level=0 in volWgtSumALL");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
