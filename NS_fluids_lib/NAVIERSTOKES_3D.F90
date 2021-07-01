@@ -10660,6 +10660,22 @@ END SUBROUTINE SIMP
            region_list(iregions,ithreads)%region_volume_raster
         enddo ! ithreads=1,number_of_threads_regions
 
+         ! amrex_parallel_reduce_sum is a fortran templated subroutine.
+         ! The online recommendation is that
+         ! the subroutine itself has "type, intent(inout) :: xx"
+         ! Then there is an interface block with a "module procedure"
+         ! corresponding to each allowable type.
+         ! AMReX does it in a more understandable way:
+         ! see: amrex-master/Src/F_Interfaces/Base/AMReX_parallel_mod.F90
+         !  public :: amrex_parallel_reduce_sum
+         !    interface amrex_parallel_reduce_sum
+         !     module procedure amrex_parallel_reduce_sum_is
+         !     module procedure amrex_parallel_reduce_sum_iv
+         !     module procedure amrex_parallel_reduce_sum_rs
+         !     module procedure amrex_parallel_reduce_sum_rv
+         !    end interface amrex_parallel_reduce_sum
+         !  each module procedure is specific to each type.
+
         call amrex_parallel_reduce_sum( &
                region_list(iregions,0)%region_volume)
         call amrex_parallel_reduce_sum( &
