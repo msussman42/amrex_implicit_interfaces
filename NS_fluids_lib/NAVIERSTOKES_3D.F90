@@ -10648,10 +10648,14 @@ END SUBROUTINE SIMP
 
        do iregions=1,number_of_source_regions
 
+        regions_list(iregions,0)%region_mass=zero
         regions_list(iregions,0)%region_volume=zero
         regions_list(iregions,0)%region_volume_raster=zero
 
         do ithreads=1,number_of_threads_regions
+         regions_list(iregions,0)%region_mass= &
+           regions_list(iregions,0)%region_mass+ &
+           regions_list(iregions,ithreads)%region_mass
          regions_list(iregions,0)%region_volume= &
            regions_list(iregions,0)%region_volume+ &
            regions_list(iregions,ithreads)%region_volume
@@ -10676,6 +10680,8 @@ END SUBROUTINE SIMP
          !    end interface amrex_parallel_reduce_sum
          !  each module procedure is specific to each type.
 
+        call amrex_parallel_reduce_sum( &
+               regions_list(iregions,0)%region_mass)
         call amrex_parallel_reduce_sum( &
                regions_list(iregions,0)%region_volume)
         call amrex_parallel_reduce_sum( &
@@ -10768,6 +10774,7 @@ END SUBROUTINE SIMP
       REAL_T region_mass_flux
       REAL_T region_volume_flux
       REAL_T region_energy_flux
+      REAL_T region_mass
       REAL_T region_volume
       REAL_T region_volume_raster
       REAL_T local_den
@@ -10899,10 +10906,40 @@ END SUBROUTINE SIMP
            call SUB_CHARFN_REGION(iregions,xtarget,cur_time,charfn)
            if ((charfn.eq.zero).or.(charfn.eq.one)) then
 
+            imattype=fort_material_type(im)
+            dencomp=(im-1)*num_state_material+1
+            local_den=DEN(D_DECL(i,j,k),dencomp)
+            local_temp=DEN(D_DECL(i,j,k),dencomp+1)
+
+            call init_massfrac_parm(local_den,massfrac_parm,im)
+            do ispec=1,num_species_var
+              massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+              if (massfrac_parm(ispec).ge.zero) then
+               ! do nothing
+              else
+               print *,"massfrac_parm(ispec) invalid"
+               stop
+              endif
+            enddo ! ispec=1,num_species_var
+
+              ! DeDT = cv
+            call DeDT_material(local_den,massfrac_parm, &
+               local_temp,DeDT,imattype,im)
+
+            if (DeDT.gt.zero) then
+              ! do nothing
+            else
+              print *,"DeDT must be positive"
+              stop
+            endif
+
             if (isweep.eq.0) then
              regions_list(iregions,tid_current+1)%region_volume_raster= &
               regions_list(iregions,tid_current+1)%region_volume_raster+ &
               volumefab(D_DECL(i,j,k))*vfrac_raster*charfn
+             regions_list(iregions,tid_current+1)%region_mass= &
+              regions_list(iregions,tid_current+1)%region_mass+ &
+              volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den
              regions_list(iregions,tid_current+1)%region_volume= &
               regions_list(iregions,tid_current+1)%region_volume+ &
               volumefab(D_DECL(i,j,k))*vfrac*charfn
@@ -10912,37 +10949,30 @@ END SUBROUTINE SIMP
              region_energy_flux=regions_list(iregions,0)%region_energy_flux
              region_volume_raster=regions_list(iregions,0)%region_volume_raster
              region_volume=regions_list(iregions,0)%region_volume
-             imattype=fort_material_type(im)
-             dencomp=(im-1)*num_state_material+1
-             local_den=DEN(D_DECL(i,j,k),dencomp)
-             local_temp=DEN(D_DECL(i,j,k),dencomp+1)
+             region_mass=regions_list(iregions,0)%region_mass
 
-             call init_massfrac_parm(local_den,massfrac_parm,im)
-             do ispec=1,num_species_var
-              massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
-              if (massfrac_parm(ispec).ge.zero) then
-               ! do nothing
-              else
-               print *,"massfrac_parm(ispec) invalid"
-               stop
-              endif
-             enddo ! ispec=1,num_species_var
-
-              ! DeDT = cv
-             call DeDT_material(local_den,massfrac_parm, &
-               local_temp,DeDT,imattype,im)
-
-             if (DeDT.gt.zero) then
-              ! do nothing
-             else
-              print *,"DeDT must be positive"
-              stop
-             endif
               ! volume_flux=sum_p (div u)_p xi(x_p) F_raster_p vol_p
               ! assume div u is spatially uniform:
               ! div u =volume_flux/volume_raster  (units 1/seconds)
               ! units of mdot: cm^3/second^2
              if (region_volume_flux.ne.zero) then
+              if (is_rigid(nmat,im).eq.1) then
+               print *,"disallowed: volume_flux<>0 for is_rigid material"
+               stop
+              else if (is_rigid(nmat,im).eq.0) then
+               if ((imattype.gt.0).and.(imattype.lt.999)) then
+                print *,"disallowed: volume flux<>0 for compressible material"
+               else if (imattype.eq.0) then
+                ! do nothing
+               else
+                print *,"imattype invalid"
+                stop
+               endif
+              else
+               print *,"is_rigid invalid"
+               stop
+              endif
+
               if (region_volume_raster.gt.zero) then 
                divu=region_volume_flux/region_volume_raster
                mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
@@ -10957,6 +10987,50 @@ END SUBROUTINE SIMP
               print *,"region_volume_flux invalid"
               stop
              endif
+
+             update_density_flag=0
+             if ((region_volume_flux.eq.zero).and. &
+                 (region_mass_flux.eq.zero)) then
+              ! do nothing
+             else if ((region_volume_flux.eq.zero).and. &
+                      (region_mass_flux.ne.zero)) then
+              update_density_flag=1
+             else if (region_volume_flux.ne.zero) then
+              density_flux=region_mass_flux/region_volume_flux
+              if (is_rigid(nmat,im).eq.1) then
+               ! do nothing
+              else if (is_rigid(nmat,im).eq.0) then
+               if ((imattype.gt.0).and.(imattype.lt.999)) then
+                print *,"disallowed: volume flux<>0 for compressible material"
+               else if (imattype.eq.0) then
+                if (abs(fort_denconst(im)-density_flux).le.VOFTOL) then
+                 ! do nothing
+                else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL) then
+                 update_density_flag=1
+                 if (constant_density_all_time(im).eq.0) then
+                  ! do nothing
+                 else
+                  print *,"constant_density_all_time invalid"
+                  stop
+                 endif
+                else
+                 print *,"density_flux out of range"
+                 stop
+                endif
+               else
+                print *,"imattype invalid"
+                stop
+               endif
+              else
+               print *,"is_rigid(nmat,im) invalid"
+               stop
+              endif
+             else
+              print *,"region_volume_flux invalid"
+              stop
+             endif
+             if (update_density_flag.eq.1) then
+
 
 
 
