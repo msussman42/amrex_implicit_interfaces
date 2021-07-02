@@ -17299,7 +17299,7 @@ stop
         ! if nmat=2, nten=1
         ! if nmat=3, nten=3    12 13 23
         ! if nmat=4, nten=6    12 13 14 23 24 34
-      subroutine FORT_INITJUMPTERM( &
+      subroutine fort_initjumpterm( &
        mdotplus, &
        mdotminus, &
        mdotcount, &
@@ -17320,7 +17320,9 @@ stop
        maskcov,DIMS(maskcov), &
        JUMPFAB,DIMS(JUMPFAB), &
        mdot,DIMS(mdot), &
-       LSnew,DIMS(LSnew) )
+       LSnew,DIMS(LSnew) ) &
+      bind(c,name='fort_initjumpterm')
+
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -17351,10 +17353,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
-      REAL_T, intent(inout) :: mdot(DIMV(mdot))
-      REAL_T, intent(in) :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, intent(in), target :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, intent(inout), target :: mdot(DIMV(mdot))
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: LSnew(DIMV(LSnew),nmat)
 
       INTEGER_T i,j,k
       INTEGER_T im,im_opp,ireverse,iten
@@ -17367,6 +17370,7 @@ stop
       REAL_T divu_material
       INTEGER_T local_mask
 
+      mdot_ptr=>mdot
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -17436,10 +17440,10 @@ stop
        enddo ! im_opp
       enddo ! im
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1264)
-      call checkbound(fablo,fabhi,DIMS(JUMPFAB),ngrow_expansion,-1,1268)
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,1269)
-      call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,1270)
+      call checkbound_array1(fablo,fabhi,maskcov,1,-1,1264)
+      call checkbound_array(fablo,fabhi,JUMPFAB,ngrow_expansion,-1,1268)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,1269)
+      call checkbound_array(fablo,fabhi,LSnew,1,-1,1270)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -17520,7 +17524,7 @@ stop
       enddo ! i
 
       return
-      end subroutine FORT_INITJUMPTERM
+      end subroutine fort_initjumpterm
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
@@ -17879,7 +17883,7 @@ stop
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
-      subroutine FORT_TAGEXPANSION(&
+      subroutine fort_tagexpansion(&
       latent_heat, &
       freezing_model, &
       distribute_from_target, &
@@ -17906,7 +17910,9 @@ stop
       expan,DIMS(expan), &
       expan_comp,DIMS(expan_comp), &
       LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
-      recon,DIMS(recon))
+      recon,DIMS(recon)) &
+      bind(c,name='fort_tagexpansion')
+
       use probf90_module
       use global_utility_module
 
@@ -17941,13 +17947,15 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(expan_comp)
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(out) :: tag(DIMV(tag))
-      REAL_T, intent(out) :: tag_comp(DIMV(tag_comp))
-      REAL_T, intent(in) :: expan(DIMV(expan),2*nten)
-      REAL_T, intent(in) :: expan_comp(DIMV(expan_comp),2*nten)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, intent(out), target :: tag(DIMV(tag))
+      REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: tag_comp(DIMV(tag_comp))
+      REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: expan(DIMV(expan),2*nten)
+      REAL_T, intent(in), target :: expan_comp(DIMV(expan_comp),2*nten)
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
 
       INTEGER_T local_freezing_model
       INTEGER_T vofbc(SDIM,2)
@@ -17971,6 +17979,9 @@ stop
       INTEGER_T complement_flag
 
       nhalf=3
+
+      tag_ptr=>tag
+      tag_comp_ptr=>tag_comp
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -18024,13 +18035,13 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1272)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1272)
-      call checkbound(fablo,fabhi,DIMS(recon),1,-1,1273)
-      call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,1274)
-      call checkbound(fablo,fabhi,DIMS(expan_comp),ngrow_expansion,-1,1274)
-      call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,1275)
-      call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,1275)
+      call checkbound_array1(fablo,fabhi,maskcov,1,-1,1272)
+      call checkbound_array(fablo,fabhi,LS,1,-1,1272)
+      call checkbound_array(fablo,fabhi,recon,1,-1,1273)
+      call checkbound_array(fablo,fabhi,expan,ngrow_expansion,-1,1274)
+      call checkbound_array(fablo,fabhi,expan_comp,ngrow_expansion,-1,1274)
+      call checkbound_array1(fablo,fabhi,tag_ptr,2*ngrow_expansion,-1,1275)
+      call checkbound_array1(fablo,fabhi,tag_comp_ptr,2*ngrow_expansion,-1,1275)
 
       local_freezing_model=freezing_model(indexEXP+1)
       if ((local_freezing_model.lt.0).or. &
@@ -18146,7 +18157,7 @@ stop
          else if ((im_ice.ge.1).and. &
                   (im_ice.le.nmat)) then
 
-          ! in: FORT_TAGEXPANSION
+          ! in: fort_tagexpansion
           ! ICEMASK=0 => mask off this cell.
           ! ICEMASK=1 => do nothing
           ! get_icemask declared in PROB.F90
@@ -18324,7 +18335,7 @@ stop
       enddo ! i
 
       return
-      end subroutine FORT_TAGEXPANSION
+      end subroutine fort_tagexpansion
 
 
       ! recon( nmat * ngeom_recon )
@@ -18336,12 +18347,12 @@ stop
       ! if nmat=3, nten=3    12 13 23
       ! if nmat=4, nten=6    12 13 14 23 24 34
       
-      ! This will be called before FORT_INITJUMPTERM and after
-      ! FORT_CONVERTMATERIAL
+      ! This will be called before fort_initjumpterm and after
+      ! fort_convertmaterial
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
-      subroutine FORT_DISTRIBUTEEXPANSION(&
+      subroutine fort_distributeexpansion(&
        ngrow_expansion, &
        im_source, &
        im_dest, &
@@ -18361,7 +18372,9 @@ stop
        expan, &
        DIMS(expan), &
        expan_comp, &
-       DIMS(expan_comp) )
+       DIMS(expan_comp) ) &
+       bind(c,name='fort_distributeexpansion')
+
        use probf90_module
        use global_utility_module
        use geometry_intersect_module
@@ -18387,12 +18400,14 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(tag_comp)
        INTEGER_T, intent(in) :: DIMDEC(expan)
        INTEGER_T, intent(in) :: DIMDEC(expan_comp)
-       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-       REAL_T, intent(in) :: LS(DIMV(LS),nmat)
-       REAL_T, intent(in) :: tag(DIMV(tag))
-       REAL_T, intent(in) :: tag_comp(DIMV(tag_comp))
-       REAL_T, intent(inout) :: expan(DIMV(expan),2*nten)
-       REAL_T, intent(inout) :: expan_comp(DIMV(expan_comp),2*nten)
+       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+       REAL_T, intent(in), target :: LS(DIMV(LS),nmat)
+       REAL_T, intent(in), target :: tag(DIMV(tag))
+       REAL_T, intent(in), target :: tag_comp(DIMV(tag_comp))
+       REAL_T, intent(inout), target :: expan(DIMV(expan),2*nten)
+       REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(inout), target :: expan_comp(DIMV(expan_comp),2*nten)
+       REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
        INTEGER_T i,j,k,isweep
        REAL_T DLS
@@ -18411,6 +18426,9 @@ stop
        INTEGER_T local_mask
 
        nhalf=1
+
+       expan_ptr=>expan
+       expan_comp_ptr=>expan_comp
 
          ! if normal is close to inbetween two receiving cells, then include
          ! both receiving cells in stencil for the donor.
@@ -18454,12 +18472,12 @@ stop
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1272)
-       call checkbound(fablo,fabhi,DIMS(LS),2*ngrow_expansion,-1,1272)
-       call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,122)
-       call checkbound(fablo,fabhi,DIMS(expan_comp),ngrow_expansion,-1,122)
-       call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,122)
-       call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,maskcov,1,-1,1272)
+       call checkbound_array(fablo,fabhi,LS,2*ngrow_expansion,-1,1272)
+       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1,122)
+       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,tag,2*ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,tag_comp,2*ngrow_expansion,-1,122)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -18849,13 +18867,13 @@ stop
        end do ! k
        end do ! j
        end do ! i
-      end subroutine FORT_DISTRIBUTEEXPANSION
+      end subroutine fort_distributeexpansion
 
 
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
-      subroutine FORT_CLEAREXPANSION(&
+      subroutine fort_clearexpansion(&
        ngrow_expansion, &
        mdot_sum, &
        mdot_lost, &
@@ -18878,7 +18896,9 @@ stop
        expan, &
        DIMS(expan), &
        expan_comp, &
-       DIMS(expan_comp) )
+       DIMS(expan_comp) ) &
+       bind(c,name='fort_clearexpansion')
+
        use probf90_module
        use global_utility_module
        use geometry_intersect_module
@@ -18904,11 +18924,13 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(tag_comp)
        INTEGER_T, intent(in) :: DIMDEC(expan)
        INTEGER_T, intent(in) :: DIMDEC(expan_comp)
-       REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-       REAL_T, intent(in) :: tag(DIMV(tag))
-       REAL_T, intent(in) :: tag_comp(DIMV(tag_comp))
-       REAL_T, intent(inout) :: expan(DIMV(expan),2*nten)
-       REAL_T, intent(inout) :: expan_comp(DIMV(expan_comp),2*nten)
+       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+       REAL_T, intent(in), target :: tag(DIMV(tag))
+       REAL_T, intent(in), target :: tag_comp(DIMV(tag_comp))
+       REAL_T, intent(inout), target :: expan(DIMV(expan),2*nten)
+       REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(inout), target :: expan_comp(DIMV(expan_comp),2*nten)
+       REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
        INTEGER_T i,j,k
        INTEGER_T i_n,j_n,k_n,receive_flag,nhalf
@@ -18918,6 +18940,9 @@ stop
        INTEGER_T local_mask
 
        nhalf=1
+
+       expan_ptr=>expan
+       expan_comp_ptr=>expan_comp
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -18956,11 +18981,11 @@ stop
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,122)
-       call checkbound(fablo,fabhi,DIMS(expan),ngrow_expansion,-1,122)
-       call checkbound(fablo,fabhi,DIMS(expan_comp),ngrow_expansion,-1,122)
-       call checkbound(fablo,fabhi,DIMS(tag),2*ngrow_expansion,-1,122)
-       call checkbound(fablo,fabhi,DIMS(tag_comp),2*ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,maskcov,1,-1,122)
+       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1,122)
+       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,tag,2*ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,tag_comp,2*ngrow_expansion,-1,122)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -19058,7 +19083,7 @@ stop
        enddo
        enddo ! i,j,k
 
-      end subroutine FORT_CLEAREXPANSION
+      end subroutine fort_clearexpansion
 
 
       subroutine FORT_SOD_SANITY( &

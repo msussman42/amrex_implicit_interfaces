@@ -3960,7 +3960,7 @@ stop
        stop
       endif
 
-      nmax=POLYGON_LIST_MAX ! in: CONVERTMATERIAL
+      nmax=POLYGON_LIST_MAX ! in: fort_convertmaterial
       if ((nmax.lt.100).or.(nmax.gt.2000)) then
        print *,"nmax invalid"
        stop
@@ -4065,7 +4065,7 @@ stop
        stop
       endif
       if (nden.ne.nmat*num_state_material) then
-       print *,"nden invalid in convertmaterial"
+       print *,"nden invalid in fort_convertmaterial"
        print *,"nden=",nden
        print *,"nmat=",nmat
        print *,"num_state_material=",num_state_material
@@ -4148,12 +4148,12 @@ stop
           else if (local_freezing_model.eq.7) then  ! Cavitation
            ! do nothing
           else
-           print *,"local_freezing_model invalid in convertmaterial"
+           print *,"local_freezing_model invalid in fort_convertmaterial"
            stop
           endif
 
          else
-          print *,"local_freezing_model invalid in convertmaterial"
+          print *,"local_freezing_model invalid in fort_convertmaterial"
           print *,"local_freezing_model= ",local_freezing_model
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
@@ -5918,7 +5918,7 @@ stop
 #elif (STANDALONE==1)
              thermal_k(iprobe)=fort_heatviscconst(im_probe)
 #else
-             print *,"bust compiling convertmaterial"
+             print *,"bust compiling fort_convertmaterial"
              stop
 #endif
 
@@ -6033,7 +6033,7 @@ stop
 #elif (STANDALONE==1)
               local_cv_or_cp=fort_stiffCP(im_weight)
 #else
-              print *,"bust compiling convertmaterial"
+              print *,"bust compiling fort_convertmaterial"
               stop
 #endif
               cvtotal=cvtotal+Ftemp*local_cv_or_cp
@@ -6391,10 +6391,10 @@ stop
                stop
               endif
 #elif (STANDALONE==1)
-              print *,"local_freezing_model cannot be 2 (convertmaterial)"
+              print *,"local_freezing_model cannot be 2 (fort_convertmaterial)"
               stop
 #else
-              print *,"bust compiling convertmaterial"
+              print *,"bust compiling fort_convertmaterial"
               stop
 #endif
 
@@ -6422,7 +6422,7 @@ stop
               print *,"FIX ME: cavitation case not considered here"
               stop
              else
-              print *,"local_freezing_model invalid in convertmaterial(2)"
+              print *,"local_freezing_model invalid in fort_convertmaterial(2)"
               print *,"local_freezing_model= ",local_freezing_model
               print *,"iten,ireverse,nten ",iten,ireverse,nten
               stop

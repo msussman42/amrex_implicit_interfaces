@@ -10938,7 +10938,9 @@ END SUBROUTINE SIMP
               print *,"DeDT must be positive"
               stop
              endif
-
+              ! volume_flux=sum_p (div u)_p xi(x_p) F_raster_p vol_p
+              ! assume div u is spatially uniform:
+              ! div u =volume_flux/volume_raster  (units 1/time)
 
 
             else
