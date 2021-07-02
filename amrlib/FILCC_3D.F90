@@ -18,10 +18,13 @@ print *,"dimension bust"
 stop
 #endif
 
+      module filcc_module
+      contains
 
       subroutine local_filcc(bfact, &
        q, &
        domlo,domhi,bc)
+      IMPLICIT NONE
 
       INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
@@ -397,18 +400,17 @@ stop
 
       end subroutine local_filcc
 
-
-
-
-      subroutine local_filcc4D(bfact, &
+      subroutine local_filcc4D( &
+       bfact, &
        q,scomp, &
        domlo,domhi,bc)
+      IMPLICIT NONE
 
       INTEGER_T, intent(in) :: scomp
       INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
       REAL_T, intent(in), pointer :: q(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) :: bc(SDIM,2)
+      INTEGER_T, intent(in) :: bc(SDIM,2,scomp)
 
       INTEGER_T, intent(in) :: bfact
 
@@ -446,8 +448,8 @@ stop
       if (nlft .gt. 0) then
        ilo = domlo(1)
 
-       if ((bc(1,1).eq.FOEXTRAP).or. &
-           (bc(1,1).eq.EXT_DIR)) then
+       if ((bc(1,1,scomp).eq.FOEXTRAP).or. &
+           (bc(1,1,scomp).eq.EXT_DIR)) then
         do i = 1, nlft
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -459,7 +461,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,1) .eq. HOEXTRAP) then
+       else if (bc(1,1,scomp) .eq. HOEXTRAP) then
         do i = 1, nlft
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -472,7 +474,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,1) .eq. REFLECT_EVEN) then
+       else if (bc(1,1,scomp) .eq. REFLECT_EVEN) then
         do i = 1, nlft
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -484,7 +486,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,1) .eq. REFLECT_ODD) then
+       else if (bc(1,1,scomp) .eq. REFLECT_ODD) then
         do i = 1, nlft
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -496,7 +498,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,1).eq.INT_DIR) then
+       else if (bc(1,1,scomp).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -507,8 +509,8 @@ stop
       if (nrgt .gt. 0) then
        ihi = domhi(1)
 
-       if ((bc(1,2).eq.FOEXTRAP).or. &
-           (bc(1,2).eq.EXT_DIR)) then
+       if ((bc(1,2,scomp).eq.FOEXTRAP).or. &
+           (bc(1,2,scomp).eq.EXT_DIR)) then
         do i = 1, nrgt
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -520,7 +522,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,2) .eq. HOEXTRAP) then
+       else if (bc(1,2,scomp) .eq. HOEXTRAP) then
         do i = 1, nrgt
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -533,7 +535,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,2) .eq. REFLECT_EVEN) then
+       else if (bc(1,2,scomp) .eq. REFLECT_EVEN) then
         do i = 1, nrgt
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -545,7 +547,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,2) .eq. REFLECT_ODD) then
+       else if (bc(1,2,scomp) .eq. REFLECT_ODD) then
         do i = 1, nrgt
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -557,7 +559,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(1,2).eq.INT_DIR) then
+       else if (bc(1,2,scomp).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -568,8 +570,8 @@ stop
       if (nbot .gt. 0) then
        jlo = domlo(2)
          
-       if ((bc(2,1).eq.FOEXTRAP).or. &
-           (bc(2,1).eq.EXT_DIR)) then
+       if ((bc(2,1,scomp).eq.FOEXTRAP).or. &
+           (bc(2,1,scomp).eq.EXT_DIR)) then
         do j = 1, nbot
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -581,7 +583,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,1) .eq. HOEXTRAP) then
+       else if (bc(2,1,scomp) .eq. HOEXTRAP) then
         do j = 1, nbot
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -594,7 +596,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,1) .eq. REFLECT_EVEN) then
+       else if (bc(2,1,scomp) .eq. REFLECT_EVEN) then
         do j = 1, nbot 
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -606,7 +608,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,1) .eq. REFLECT_ODD) then
+       else if (bc(2,1,scomp) .eq. REFLECT_ODD) then
         do j = 1, nbot
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -618,7 +620,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,1).eq.INT_DIR) then
+       else if (bc(2,1,scomp).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -629,8 +631,8 @@ stop
       if (ntop .gt. 0) then
        jhi = domhi(2)
 
-       if ((bc(2,2).eq.FOEXTRAP).or. &
-           (bc(2,2).eq.EXT_DIR)) then
+       if ((bc(2,2,scomp).eq.FOEXTRAP).or. &
+           (bc(2,2,scomp).eq.EXT_DIR)) then
         do j = 1, ntop
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -642,7 +644,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,2) .eq. HOEXTRAP) then
+       else if (bc(2,2,scomp) .eq. HOEXTRAP) then
         do j = 1, ntop
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -655,7 +657,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,2) .eq. REFLECT_EVEN) then
+       else if (bc(2,2,scomp) .eq. REFLECT_EVEN) then
         do j = 1, ntop
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -667,7 +669,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,2) .eq. REFLECT_ODD) then
+       else if (bc(2,2,scomp) .eq. REFLECT_ODD) then
         do j = 1, ntop
 #if (AMREX_SPACEDIM==3)
          do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
@@ -679,7 +681,7 @@ stop
          end do
 #endif
         end do
-       else if (bc(2,2).eq.INT_DIR) then
+       else if (bc(2,2,scomp).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -691,8 +693,8 @@ stop
       if (ndwn .gt. 0) then
        klo = domlo(SDIM)
 
-       if ((bc(SDIM,1).eq.FOEXTRAP).or. &
-           (bc(SDIM,1).eq.EXT_DIR)) then
+       if ((bc(SDIM,1,scomp).eq.FOEXTRAP).or. &
+           (bc(SDIM,1,scomp).eq.EXT_DIR)) then
         do k = 1, ndwn
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -700,7 +702,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,1) .eq. HOEXTRAP) then
+       else if (bc(SDIM,1,scomp) .eq. HOEXTRAP) then
         do k = 1, ndwn
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -708,7 +710,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,1) .eq. REFLECT_EVEN) then
+       else if (bc(SDIM,1,scomp) .eq. REFLECT_EVEN) then
         do k = 1, ndwn
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -716,7 +718,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,1) .eq. REFLECT_ODD) then
+       else if (bc(SDIM,1,scomp) .eq. REFLECT_ODD) then
         do k = 1, ndwn
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -724,7 +726,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,1).eq.INT_DIR) then
+       else if (bc(SDIM,1,scomp).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -735,8 +737,8 @@ stop
       if (nup .gt. 0) then
        khi = domhi(SDIM)
 
-       if ((bc(SDIM,2).eq.FOEXTRAP).or. &
-           (bc(SDIM,2).eq.EXT_DIR)) then
+       if ((bc(SDIM,2,scomp).eq.FOEXTRAP).or. &
+           (bc(SDIM,2,scomp).eq.EXT_DIR)) then
         do k = 1, nup
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -744,7 +746,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,2) .eq. HOEXTRAP) then
+       else if (bc(SDIM,2,scomp) .eq. HOEXTRAP) then
         do k = 1, nup
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -752,7 +754,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,2) .eq. REFLECT_EVEN) then
+       else if (bc(SDIM,2,scomp) .eq. REFLECT_EVEN) then
         do k = 1, nup
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -760,7 +762,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,2) .eq. REFLECT_ODD) then
+       else if (bc(SDIM,2,scomp) .eq. REFLECT_ODD) then
         do k = 1, nup
         do j = LBOUND(q,2),UBOUND(q,2)
         do i = LBOUND(q,1),UBOUND(q,1)
@@ -768,7 +770,7 @@ stop
         end do
         end do
         end do
-       else if (bc(SDIM,2).eq.INT_DIR) then
+       else if (bc(SDIM,2,scomp).eq.INT_DIR) then
         ! do nothing
        else
         print *,"bc invalid"
@@ -778,8 +780,6 @@ stop
 #endif
 
       end subroutine local_filcc4D
-
-
 
 
        ! box_type(dir)=0 => CELL
@@ -1098,3 +1098,4 @@ stop
       return
       end subroutine efilcc
 
+      end module filcc_module
