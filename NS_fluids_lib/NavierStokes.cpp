@@ -13284,10 +13284,10 @@ NavierStokes::phase_change_redistributeALL() {
      allocate_array(2*ngrow_expansion,1,-1,donorflag_complement_MF);
      setVal_array(2*ngrow_expansion,1,0.0,donorflag_complement_MF);
 
-      // isweep==0: TAGEXPANSION
-      // isweep==1: DISTRIBUTEEXPANSION
-      // isweep==2: CLEAREXPANSION
-      // isweep==3: INITJUMPTERM
+      // isweep==0: fort_tagexpansion
+      // isweep==1: fort_distributeexpansion
+      // isweep==2: fort_clearexpansion
+      // isweep==3: fort_initjumpterm
      for (int isweep_redistribute=0;isweep_redistribute<=2;
 	  isweep_redistribute++) {
 
@@ -13512,12 +13512,12 @@ NavierStokes::phase_change_redistributeALL() {
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
    indexEXP_filler,
-   isweep_combine); // ==3 (FORT_INITJUMPTERM)
+   isweep_combine); // ==3 (fort_initjumpterm)
  } // ilev=finest_level ... level
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "after FORT_INITJUMPTERM\n";
+   std::cout << "after fort_initjumpterm\n";
    std::cout << "mdotplus = " << mdotplus[0] << '\n';
    std::cout << "mdotminus = " << mdotminus[0] << '\n';
    std::cout << "mdotcount = " << mdotcount[0] << '\n';
@@ -13664,7 +13664,7 @@ NavierStokes::level_phase_change_redistribute(
     // A cell that is dominated by an is_rigid(nmat,im)=1
     // material is neither a donor or a receiver.
     // donorfab is modified.
-   FORT_TAGEXPANSION( 
+   fort_tagexpansion( 
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -13764,7 +13764,7 @@ NavierStokes::level_phase_change_redistribute(
      // isweep==1
      // declared in: GODUNOV_3D.F90
      // JUMPfab is modified.
-    FORT_DISTRIBUTEEXPANSION( 
+    fort_distributeexpansion( 
      &ngrow_expansion,
      &im_source,
      &im_dest,
@@ -13863,7 +13863,7 @@ NavierStokes::level_phase_change_redistribute(
      // isweep==2
      // declared in: GODUNOV_3D.F90
      // JUMPfab is modified.
-    FORT_CLEAREXPANSION( 
+    fort_clearexpansion( 
      &ngrow_expansion,
      &mdot_sum2_local[tid_current],
      &mdot_lost_local[tid_current],
@@ -13977,7 +13977,7 @@ NavierStokes::level_phase_change_redistribute(
     //   1+dt div V=1+dt^2 mdot/vol = 1+ dF * (den_source/den_dest-1)
     //   rho=den^dest * (1 + dF *(den_source/den_dest-1))=
     //    (1-dF)*den^dest + dF * den_source
-    FORT_INITJUMPTERM( 
+    fort_initjumpterm( 
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],
      &mdotcount_local[tid_current],

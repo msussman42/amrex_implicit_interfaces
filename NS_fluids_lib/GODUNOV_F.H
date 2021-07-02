@@ -7,11 +7,7 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_INITJUMPTERM initjumpterm
 #    define FORT_INIT_ICEMASK init_icemask
-#    define FORT_TAGEXPANSION tagexpansion
-#    define FORT_DISTRIBUTEEXPANSION distributeexpansion
-#    define FORT_CLEAREXPANSION clearexpansion
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -35,11 +31,7 @@
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
-#    define FORT_INITJUMPTERM INITJUMPTERM
 #    define FORT_INIT_ICEMASK INIT_ICEMASK
-#    define FORT_TAGEXPANSION TAGEXPANSION
-#    define FORT_DISTRIBUTEEXPANSION DISTRIBUTEEXPANSION
-#    define FORT_CLEAREXPANSION CLEAREXPANSION
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
@@ -63,11 +55,7 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_INITJUMPTERM initjumpterm
 #    define FORT_INIT_ICEMASK init_icemask
-#    define FORT_TAGEXPANSION tagexpansion
-#    define FORT_DISTRIBUTEEXPANSION distributeexpansion
-#    define FORT_CLEAREXPANSION clearexpansion
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -90,11 +78,7 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
-#    define FORT_INITJUMPTERM initjumpterm_
 #    define FORT_INIT_ICEMASK init_icemask_
-#    define FORT_TAGEXPANSION tagexpansion_
-#    define FORT_DISTRIBUTEEXPANSION distributeexpansion_
-#    define FORT_CLEAREXPANSION clearexpansion_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
@@ -841,7 +825,7 @@ extern "C"
     int* finest_level,
     Real* dt,Real* time);
 
-   void FORT_INITJUMPTERM(
+   void fort_initjumpterm(
     Real* mdotplus,
     Real* mdotminus,
     Real* mdotcount,
@@ -890,7 +874,7 @@ extern "C"
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
-   void FORT_TAGEXPANSION(
+   void fort_tagexpansion(
     Real* latent_heat,
     int* freezing_model,
     int* distribute_from_target,
@@ -923,7 +907,7 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
 
-   void FORT_DISTRIBUTEEXPANSION(
+   void fort_distributeexpansion(
     int* ngrow_expansion,
     int* im_source,
     int* im_dest,
@@ -945,7 +929,7 @@ extern "C"
     AMREX_ARLIM_P(jump_comp_lo),
     AMREX_ARLIM_P(jump_comp_hi) );
 
-   void FORT_CLEAREXPANSION(
+   void fort_clearexpansion(
     int* ngrow_expansion,
     Real* mdot_sum,
     Real* mdot_lost,
