@@ -10940,7 +10940,24 @@ END SUBROUTINE SIMP
              endif
               ! volume_flux=sum_p (div u)_p xi(x_p) F_raster_p vol_p
               ! assume div u is spatially uniform:
-              ! div u =volume_flux/volume_raster  (units 1/time)
+              ! div u =volume_flux/volume_raster  (units 1/seconds)
+              ! units of mdot: cm^3/second^2
+             if (region_volume_flux.ne.zero) then
+              if (region_volume_raster.gt.zero) then 
+               divu=region_volume_flux/region_volume_raster
+               mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
+                 divu*volumefab(D_DECL(i,j,k))*charfn*vfrac_raster/dt
+              else
+               print *,"region_volume_raster invalid"
+               stop
+              endif
+             else if (region_volume_flux.eq.zero) then
+              ! do nothing
+             else
+              print *,"region_volume_flux invalid"
+              stop
+             endif
+
 
 
             else
