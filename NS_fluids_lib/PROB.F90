@@ -26608,6 +26608,7 @@ end subroutine initialize2d
        domlo,domhi,dx, &
        xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -26763,6 +26764,7 @@ end subroutine initialize2d
        domlo,domhi,dx, &
        xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -26844,7 +26846,7 @@ end subroutine initialize2d
        call local_filcc4D(bfact, &
         u_ptr,velcomp, &
         domlo,domhi, &
-        bc(1,1,velcomp))
+        bc)
       enddo ! velcomp
 
       do velcomp=1,SDIM
@@ -26916,6 +26918,7 @@ end subroutine initialize2d
        domlo,domhi,dx, &
        xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -27088,6 +27091,7 @@ end subroutine initialize2d
        domlo,domhi,dx, &
        xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -27184,7 +27188,7 @@ end subroutine initialize2d
        call local_filcc4D(bfact, &
         u_ptr,velcomp, &
         domlo,domhi, &
-        bc(1,1,velcomp))
+        bc)
       enddo ! velcomp
 
       do velcomp=1,SDIM
@@ -27277,6 +27281,7 @@ end subroutine initialize2d
        project_option, &
        time)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -27661,6 +27666,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -27847,6 +27853,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -28029,6 +28036,7 @@ end subroutine initialize2d
        domlo,domhi,dx, &
        xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -28216,6 +28224,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -28243,6 +28252,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -28270,6 +28280,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -28343,7 +28354,7 @@ end subroutine initialize2d
       do im=1,nmat*ngeom_raw
        call local_filcc4D(bfact, &
         u_ptr,im, &
-        domlo,domhi,bc(1,1,im))
+        domlo,domhi,bc)
       enddo
 
       do dir2=1,SDIM
@@ -28426,6 +28437,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
       use geometry_intersect_module
@@ -28538,7 +28550,7 @@ end subroutine initialize2d
       do im=1,nmat*ngeom_recon
        call local_filcc4D(bfact, &
         u_ptr,im, &
-        domlo,domhi,bc(1,1,im))
+        domlo,domhi,bc)
       enddo
 
       do dir2=1,SDIM
@@ -28702,6 +28714,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use global_utility_module
       use probf90_module
 
@@ -28730,6 +28743,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -28810,10 +28824,11 @@ end subroutine initialize2d
 
       u_ptr=>u
       do imls=1,ncomp_ho
-       call local_filcc4D(bfact, &
+       call local_filcc4D( &
+        bfact, &
         u_ptr,imls, &
         domlo,domhi, &
-        bc(1,1,imls))
+        bc)
       enddo
 
       do dir2=1,SDIM
@@ -28959,6 +28974,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -29103,6 +29119,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -29202,7 +29219,7 @@ end subroutine initialize2d
       do icomp=1,(ncomp_per+1)*nten
        call local_filcc4D(bfact, &
         u_ptr,icomp, &
-        domlo,domhi,bc(1,1,icomp))
+        domlo,domhi,bc)
       enddo
 
       do dir2=1,SDIM
@@ -29286,6 +29303,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -29465,6 +29483,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -29645,6 +29664,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -29814,6 +29834,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -29979,6 +30000,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -30115,6 +30137,7 @@ end subroutine initialize2d
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -30197,7 +30220,7 @@ end subroutine initialize2d
       do icomp=1,num_state_material*num_materials
        call local_filcc4D(bfact, &
         u_ptr,icomp, &
-        domlo,domhi,bc(1,1,icomp))
+        domlo,domhi,bc)
       enddo
 
       do dir2=1,SDIM
@@ -30277,6 +30300,7 @@ end subroutine initialize2d
       xlo,time,bc, &
       scomp,ncomp,bfact)
 
+      use filcc_module
       use probf90_module
       use global_utility_module
 
@@ -30389,7 +30413,7 @@ end subroutine initialize2d
       do icomp_total=scomp+1,scomp+ncomp
        call local_filcc4D(bfact, &
         u_ptr,icomp_total-scomp, &
-        domlo,domhi,bc(1,1,icomp_total-scomp))
+        domlo,domhi,bc)
       enddo
 
       do dir2=1,SDIM

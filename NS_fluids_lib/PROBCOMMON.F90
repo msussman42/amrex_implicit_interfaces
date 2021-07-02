@@ -414,6 +414,7 @@ implicit none
        REAL_T :: region_volume_raster ! e.g. m^3
        REAL_T :: region_volume        ! e.g. m^3
        REAL_T :: region_mass          ! e.g. kg
+       REAL_T :: region_energy_per_kelvin ! e.g. J/K
       end type region_info_type
 
        ! first index: 1..number_of_source_regions
