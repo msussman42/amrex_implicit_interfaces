@@ -11,8 +11,11 @@
 #include "AMReX_CONSTANTS.H"
 #include "ABec_F.H"
 
+      module cpp_abec
 
-      subroutine FORT_GSRB( &
+      contains
+
+      subroutine fort_gsrb( &
        level, &
        mg_coarsest_level, &
        isweep, &
@@ -31,7 +34,9 @@
        rhssave,redsoln,blacksoln, &
        tilelo,tilehi, &
        fablo,fabhi,bfact,bfact_top, &
-       smooth_type)
+       smooth_type) &
+      bind(c,name='fort_gsrb')
+
       use global_utility_module
 
       IMPLICIT NONE
@@ -51,33 +56,38 @@
       INTEGER_T, intent(in) :: DIMDEC(rhs)
       INTEGER_T, intent(in) :: DIMDEC(diagfab)
 
-      REAL_T, intent(in) :: masksing(DIMV(masksing))
-      REAL_T, intent(inout) :: phi(DIMV(phi))
-      REAL_T, intent(in) :: rhs(DIMV(rhs))
-      REAL_T, intent(in) :: diagfab(DIMV(diagfab))
-      REAL_T, intent(in) :: bxleft(DIMV(diagfab))
-      REAL_T, intent(in) :: bxright(DIMV(diagfab))
-      REAL_T, intent(in) :: byleft(DIMV(diagfab))
-      REAL_T, intent(in) :: byright(DIMV(diagfab))
-      REAL_T, intent(in) :: bzleft(DIMV(diagfab))
-      REAL_T, intent(in) :: bzright(DIMV(diagfab))
-      REAL_T, intent(in) :: icbx(DIMV(diagfab))
-      REAL_T, intent(in) :: icby(DIMV(diagfab))
-      REAL_T, intent(in) :: icbz(DIMV(diagfab))
-      REAL_T, intent(in) :: icdiag(DIMV(diagfab))
-      REAL_T, intent(in) :: icdiagrb(DIMV(diagfab))
-      REAL_T, intent(in) :: mask(DIMV(diagfab))
-      REAL_T, intent(out) :: ax(DIMV(diagfab))
-      REAL_T, intent(inout) :: solnsave(DIMV(diagfab))
-      REAL_T, intent(inout) :: rhssave(DIMV(diagfab))
-      REAL_T, intent(inout) :: redsoln(DIMV(diagfab))
-      REAL_T, intent(inout) :: blacksoln(DIMV(diagfab))
+      REAL_T, intent(in), target :: masksing(DIMV(masksing))
+
+      REAL_T, intent(inout), target :: phi(DIMV(phi))
+      REAL_T, pointer :: phi_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: rhs(DIMV(rhs))
+      REAL_T, intent(in), target :: diagfab(DIMV(diagfab))
+      REAL_T, intent(in), target :: bxleft(DIMV(diagfab))
+      REAL_T, intent(in), target :: bxright(DIMV(diagfab))
+      REAL_T, intent(in), target :: byleft(DIMV(diagfab))
+      REAL_T, intent(in), target :: byright(DIMV(diagfab))
+      REAL_T, intent(in), target :: bzleft(DIMV(diagfab))
+      REAL_T, intent(in), target :: bzright(DIMV(diagfab))
+      REAL_T, intent(in), target :: icbx(DIMV(diagfab))
+      REAL_T, intent(in), target :: icby(DIMV(diagfab))
+      REAL_T, intent(in), target :: icbz(DIMV(diagfab))
+      REAL_T, intent(in), target :: icdiag(DIMV(diagfab))
+      REAL_T, intent(in), target :: icdiagrb(DIMV(diagfab))
+      REAL_T, intent(in), target :: mask(DIMV(diagfab))
+      REAL_T, intent(out), target :: ax(DIMV(diagfab))
+      REAL_T, intent(inout), target :: solnsave(DIMV(diagfab))
+      REAL_T, intent(inout), target :: rhssave(DIMV(diagfab))
+      REAL_T, intent(inout), target :: redsoln(DIMV(diagfab))
+      REAL_T, intent(inout), target :: blacksoln(DIMV(diagfab))
       INTEGER_T, intent(in) :: smooth_type
 
       INTEGER_T i,j,k
       REAL_T XX,YY
       REAL_T local_diag
       REAL_T test_mask
+
+      phi_ptr=>phi
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -94,10 +104,11 @@
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
-      call checkbound(fablo,fabhi,DIMS(phi),1,-1,18)
-      call checkbound(fablo,fabhi,DIMS(diagfab),1,-1,19)
-      call checkbound(fablo,fabhi,DIMS(rhs),0,-1,23)
+      call checkbound_array1(fablo,fabhi,masksing,1,-1,81)
+      call checkbound_array1(fablo,fabhi,phi_ptr,1,-1,18)
+      call checkbound_array1(fablo,fabhi,diagfab,1,-1,19)
+      call checkbound_array1(fablo,fabhi,rhs,0,-1,23)
+
       if (num_sweeps.le.1) then
        print *,"num_sweeps invalid"
        stop
@@ -568,9 +579,9 @@
       endif
 
       return
-      end subroutine FORT_GSRB
+      end subroutine fort_gsrb
 
-      subroutine FORT_ADOTX( &
+      subroutine fort_adotx( &
        level, &
        mg_coarsest_level, &
        masksing, &
@@ -583,7 +594,9 @@
        byleft,byright, &
        bzleft,bzright, &
        tilelo,tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi,bfact,bfact_top) &
+      bind(c,name='fort_adotx')
+
       use global_utility_module
 
       IMPLICIT NONE
@@ -601,19 +614,23 @@
       INTEGER_T, intent(in) :: DIMDEC(x)
       INTEGER_T, intent(in) :: DIMDEC(diagfab)
 
-      REAL_T, intent(in) :: masksing(DIMV(masksing))
-      REAL_T, intent(out) :: y(DIMV(y))
-      REAL_T, intent(in) :: x(DIMV(x))
-      REAL_T, intent(in) :: diagfab(DIMV(diagfab))
-      REAL_T, intent(in) :: bxleft(DIMV(diagfab))
-      REAL_T, intent(in) :: bxright(DIMV(diagfab))
-      REAL_T, intent(in) :: byleft(DIMV(diagfab))
-      REAL_T, intent(in) :: byright(DIMV(diagfab))
-      REAL_T, intent(in) :: bzleft(DIMV(diagfab))
-      REAL_T, intent(in) :: bzright(DIMV(diagfab))
+      REAL_T, intent(in), target :: masksing(DIMV(masksing))
+      REAL_T, intent(out), target :: y(DIMV(y))
+      REAL_T, pointer :: y_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: x(DIMV(x))
+      REAL_T, intent(in), target :: diagfab(DIMV(diagfab))
+      REAL_T, intent(in), target :: bxleft(DIMV(diagfab))
+      REAL_T, intent(in), target :: bxright(DIMV(diagfab))
+      REAL_T, intent(in), target :: byleft(DIMV(diagfab))
+      REAL_T, intent(in), target :: byright(DIMV(diagfab))
+      REAL_T, intent(in), target :: bzleft(DIMV(diagfab))
+      REAL_T, intent(in), target :: bzright(DIMV(diagfab))
 
       INTEGER_T i,j,k
       REAL_T test_mask
+
+      y_ptr=>y
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -630,16 +647,10 @@
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
-      call checkbound(fablo,fabhi, &
-      DIMS(y), &
-      0,-1,18)
-      call checkbound(fablo,fabhi, &
-      DIMS(diagfab), &
-      1,-1,19)
-      call checkbound(fablo,fabhi, &
-      DIMS(x), &
-      1,-1,23)
+      call checkbound_array1(fablo,fabhi,masksing,1,-1,81)
+      call checkbound_array1(fablo,fabhi,y_ptr,0,-1,18)
+      call checkbound_array1(fablo,fabhi,diagfab,1,-1,19)
+      call checkbound_array1(fablo,fabhi,x,1,-1,23)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -672,9 +683,9 @@
       enddo
 
       return
-      end subroutine FORT_ADOTX
+      end subroutine fort_adotx
 
-      subroutine FORT_DIAGSUM( &
+      subroutine fort_diagsum( &
        y, &
        DIMS(y), &
        bX, &
@@ -684,7 +695,9 @@
        bZ, &
        DIMS(bZ), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi,bfact,bfact_top) &
+      bind(c,name='fort_diagsum')
+
       use global_utility_module
 
       IMPLICIT NONE
@@ -699,14 +712,18 @@
       INTEGER_T, intent(in) :: DIMDEC(bY)
       INTEGER_T, intent(in) :: DIMDEC(bZ)
 
-      REAL_T, intent(out) ::  y(DIMV(y))
-      REAL_T, intent(in) :: bX(DIMV(bX))
-      REAL_T, intent(in) :: bY(DIMV(bY))
-      REAL_T, intent(in) :: bZ(DIMV(bZ))
+      REAL_T, intent(out), target ::  y(DIMV(y))
+      REAL_T, pointer :: y_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: bX(DIMV(bX))
+      REAL_T, intent(in), target :: bY(DIMV(bY))
+      REAL_T, intent(in), target :: bZ(DIMV(bZ))
 
       INTEGER_T i,j,k
       REAL_T bxleft,bxright,byleft,byright,bzleft,bzright
       REAL_T offdiagsum
+
+      y_ptr=>y
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -716,18 +733,10 @@
        print *,"bfact_top invalid"
        stop
       endif
-      call checkbound(fablo,fabhi, &
-      DIMS(y) &
-      ,0,-1,18)
-      call checkbound(fablo,fabhi, &
-      DIMS(bX) &
-      ,0,0,20)
-      call checkbound(fablo,fabhi, &
-      DIMS(bY) &
-      ,0,1,21)
-      call checkbound(fablo,fabhi, &
-      DIMS(bZ) &
-      ,0,AMREX_SPACEDIM-1,22)
+      call checkbound_array1(fablo,fabhi,y_ptr,0,-1,18)
+      call checkbound_array1(fablo,fabhi,bX,0,0,20)
+      call checkbound_array1(fablo,fabhi,bY,0,1,21)
+      call checkbound_array1(fablo,fabhi,bZ,0,AMREX_SPACEDIM-1,22)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -754,5 +763,6 @@
       enddo
       enddo
       enddo
-      end subroutine FORT_DIAGSUM
+      end subroutine fort_diagsum
 
+      end module cpp_abec

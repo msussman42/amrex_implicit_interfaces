@@ -185,7 +185,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_APPLYBC( 
+  fort_applybc( 
    &nsolve_bicgstab,
    inout[gridno].dataPtr(),
    ARLIM(inout[gridno].loVect()),ARLIM(inout[gridno].hiVect()),
@@ -305,7 +305,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // in: LO_3D.F90
-   FORT_RESIDL(
+   fort_residl(
     &level,
     &mg_coarsest_level,
     &nsolve_bicgstab,
@@ -626,7 +626,7 @@ ABecLaplacian::makeCoefficients (
   if (cdir==-1) {
     // declared in LO_3D.F90
     // only interior values are updated (no ghosts updated)
-   FORT_AVERAGECC(
+   fort_averagecc(
      &nsolve_bicgstab,
      &nComp_expect,
      crse_fine[mfi].dataPtr(), 
@@ -641,7 +641,7 @@ ABecLaplacian::makeCoefficients (
      &bfact_coarse,&bfact_fine,&bfact_top);
   } else if ((cdir>=0)&&(cdir<AMREX_SPACEDIM)) {
     // declared in LO_3D.F90
-   FORT_AVERAGEEC(
+   fort_averageec(
      &nComp_expect,
      crse_fine[mfi].dataPtr(), 
      ARLIM(crse_fine[mfi].loVect()),
@@ -873,7 +873,7 @@ ABecLaplacian::buildMatrix() {
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // in: LO_3D.F90
-     FORT_BUILDMAT(
+     fort_buildmat(
       &level, // level==0 is finest
       &veldir,
       &nsolve_bicgstab,
@@ -1554,7 +1554,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
     int ofs=veldir*ncwork;
 
      // in: ABec_3D.F90
-    FORT_GSRB(
+    fort_gsrb(
      &level,
      &mg_coarsest_level,
      &isweep,
@@ -1735,7 +1735,7 @@ ABecLaplacian::Fapply (MultiFab& y,
    int ofs=veldir*ncwork;
 
     // in: ABec_3D.F90
-   FORT_ADOTX(
+   fort_adotx(
     &level,
     &mg_coarsest_level,
     ones_mf[mfi].dataPtr(), 
@@ -1865,7 +1865,7 @@ ABecLaplacian::LP_update (MultiFab& sol,
    BLProfiler bprof(profname);
 #endif
 
-   FORT_CGUPDATE(
+   fort_cgupdate(
     sol[mfi].dataPtr(veldir),
     ARLIM(sol[mfi].loVect()), ARLIM(sol[mfi].hiVect()),
     &alpha,
@@ -2048,7 +2048,7 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: CG_3D.F90
-  FORT_CGXDOTY(
+  fort_cgxdoty(
    &ncomp,
    &tpw, // init to 0.0d0 in CGXDOTY
    pfab.dataPtr(),ARLIM(pfab.loVect()),ARLIM(pfab.hiVect()),
@@ -2292,7 +2292,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
 #endif
   
     // in: ABec_3D.F90
-   FORT_DIAGSUM(
+   fort_diagsum(
     y[mfi].dataPtr(veldir),
     ARLIM(y[mfi].loVect()), ARLIM(y[mfi].hiVect()),
     bX[mfi].dataPtr(veldir), 
@@ -3927,7 +3927,7 @@ void ABecLaplacian::CG_advance (
       BLProfiler bprof(profname);
 #endif
 
-      FORT_CGADVCP(
+      fort_cgadvcp(
        p[mfi].dataPtr(veldir),
        ARLIM(p[mfi].loVect()), ARLIM(p[mfi].hiVect()),
        z[mfi].dataPtr(veldir),
@@ -4399,7 +4399,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
   int iaverage=1;
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
     // declared in MG_3D.F90	  
-   FORT_AVERAGE(
+   fort_average(
     coarse_fab.dataPtr(veldir),
     ARLIM(clo),ARLIM(chi),
     fine_fab.dataPtr(veldir),
@@ -4522,7 +4522,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 
   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
     // declared in: MG_3D.F90
-   FORT_INTERP(
+   fort_interp(
      &bfact_coarse,&bfact_fine,&bfact_top,
      fine_fab.dataPtr(veldir),
      ARLIM(fine_fab.loVect()), ARLIM(fine_fab.hiVect()),

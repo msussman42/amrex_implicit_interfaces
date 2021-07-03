@@ -10,6 +10,10 @@
 #include "AMReX_ArrayLim.H"
 #include "CG_F.H"
 
+      module cpp_cg
+
+      contains
+
 !-----------------------------------------------------------------------
 !      
 !     CGUPDATE: Modify the input arrays as follows:
@@ -17,7 +21,7 @@
 !     phi = yy + a*pp
 !     
 !-----------------------------------------------------------------------
-      subroutine FORT_CGUPDATE( &
+      subroutine fort_cgupdate( &
        phi,  &
        DIMS(phi), &
        a, &
@@ -26,7 +30,9 @@
        pp,   &
        DIMS(pp), &
        tilelo, tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi,bfact,bfact_top) &
+      bind(c,name='fort_cgupdate')
+
       use global_utility_module
       IMPLICIT NONE
 
@@ -38,14 +44,18 @@
       INTEGER_T :: growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(pp)
-      REAL_T, intent(in) :: pp(DIMV(pp))
+      REAL_T, intent(in), target :: pp(DIMV(pp))
       INTEGER_T, intent(in) :: DIMDEC(phi)
-      REAL_T, intent(out) :: phi(DIMV(phi))
+      REAL_T, intent(out), target :: phi(DIMV(phi))
+      REAL_T, pointer :: phi_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: DIMDEC(yy)
-      REAL_T, intent(in) :: yy(DIMV(yy))
+      REAL_T, intent(in), target :: yy(DIMV(yy))
       REAL_T, intent(in) :: a
 
       INTEGER_T i,j,k
+
+      phi_ptr=>phi
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -56,9 +66,10 @@
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(phi),0,-1,4141)
-      call checkbound(fablo,fabhi,DIMS(pp),0,-1,42)
-      call checkbound(fablo,fabhi,DIMS(yy),0,-1,42)
+      call checkbound_array1(fablo,fabhi,phi_ptr,0,-1,4141)
+      call checkbound_array1(fablo,fabhi,pp,0,-1,42)
+      call checkbound_array1(fablo,fabhi,yy,0,-1,42)
+
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
@@ -69,7 +80,7 @@
       end do
       end do
 
-      end subroutine FORT_CGUPDATE
+      end subroutine fort_cgupdate
 !-----------------------------------------------------------------------
 !      
 !     CGADVCP: Modify the input arrays as follows:
@@ -81,7 +92,7 @@
 !     b   <=
 !     
 !-----------------------------------------------------------------------
-      subroutine FORT_CGADVCP( &
+      subroutine fort_cgadvcp( &
        pp,  &
        DIMS(pp), &
        rr,  &
@@ -90,7 +101,9 @@
        DIMS(yy), &
        b, &
        tilelo, tilehi, &
-       fablo,fabhi,bfact,bfact_top )
+       fablo,fabhi,bfact,bfact_top ) &
+      bind(c,name='fort_cgadvcp')
+
       use global_utility_module
       IMPLICIT NONE
 !
@@ -102,24 +115,22 @@
       INTEGER_T :: growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(rr)
-      REAL_T, intent(in) :: rr(DIMV(rr))
+      REAL_T, intent(in), target :: rr(DIMV(rr))
       INTEGER_T, intent(in) :: DIMDEC(pp)
-      REAL_T, intent(out) :: pp(DIMV(pp))
+      REAL_T, intent(out), target :: pp(DIMV(pp))
+      REAL_T, pointer :: pp_ptr(D_DECL(:,:,:))
+
       INTEGER_T, intent(in) :: DIMDEC(yy)
-      REAL_T, intent(in) :: yy(DIMV(yy))
+      REAL_T, intent(in), target :: yy(DIMV(yy))
       REAL_T, intent(in) :: b
 
       INTEGER_T i,j,k
-!
-      call checkbound(fablo,fabhi, &
-      DIMS(pp) &
-      ,0,-1,51)
-      call checkbound(fablo,fabhi, &
-      DIMS(rr) &
-      ,0,-1,52)
-      call checkbound(fablo,fabhi, &
-      DIMS(yy) &
-      ,0,-1,52)
+
+      pp_ptr=>pp
+
+      call checkbound_array1(fablo,fabhi,pp_ptr,0,-1,51)
+      call checkbound_array1(fablo,fabhi,rr,0,-1,52)
+      call checkbound_array1(fablo,fabhi,yy,0,-1,52)
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -139,7 +150,7 @@
       end do
       end do
 !
-      end subroutine FORT_CGADVCP
+      end subroutine fort_cgadvcp
       
 !-----------------------------------------------------------------------
 !      
@@ -152,7 +163,7 @@
 !     ww  <=
 !     
 !-----------------------------------------------------------------------
-      subroutine FORT_CGXDOTY( &
+      subroutine fort_cgxdoty( &
        ncomp, &
        pw, &
        pp,  &
@@ -161,7 +172,9 @@
        DIMS(ww), &
        tilelo, tilehi, &
        fablo,fabhi, &
-       bfact,bfact_top)
+       bfact,bfact_top) &
+      bind(c,name='fort_cgxdoty')
+
       use global_utility_module
       IMPLICIT NONE
       INTEGER_T, intent(in) :: ncomp
@@ -173,9 +186,9 @@
       INTEGER_T :: growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(ww)
-      REAL_T, intent(in) :: ww(DIMV(ww),ncomp)
+      REAL_T, intent(in), target :: ww(DIMV(ww),ncomp)
       INTEGER_T, intent(in) :: DIMDEC(pp)
-      REAL_T, intent(in) :: pp(DIMV(pp),ncomp)
+      REAL_T, intent(in), target :: pp(DIMV(pp),ncomp)
       REAL_T, intent(out) :: pw
 !
       INTEGER_T i, j, k,veldir
@@ -198,12 +211,8 @@
        print *,"ncomp invalid"
        stop
       endif
-      call checkbound(fablo,fabhi, &
-      DIMS(pp) &
-      ,0,-1,61)
-      call checkbound(fablo,fabhi, &
-      DIMS(ww) &
-      ,0,-1,62)
+      call checkbound_array(fablo,fabhi,pp,0,-1,61)
+      call checkbound_array(fablo,fabhi,ww,0,-1,62)
 
       pw = zero
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -218,4 +227,6 @@
       end do
       end do
 !
-      end subroutine FORT_CGXDOTY
+      end subroutine fort_cgxdoty
+
+      end module cpp_cg

@@ -12,8 +12,11 @@
 #include "AMReX_ArrayLim.H"
 #include "MG_F.H"
 
+      module cpp_mg
+
+      contains
 !-----------------------------------------------------------------------
-      subroutine FORT_AVERAGE ( &
+      subroutine fort_average( &
            c,  &
            DIMS(c), &
            f,  &
@@ -21,24 +24,29 @@
            lo, hi, &
            iaverage, &
            bfact_coarse, &
-           bfact_fine,bfact_top)
+           bfact_fine,bfact_top) &
+      bind(c,name='fort_average')
+
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T iaverage,bfact_coarse,bfact_fine,bfact_top
-      INTEGER_T DIMDEC(c)
-      INTEGER_T DIMDEC(f)
-      INTEGER_T lo(AMREX_SPACEDIM)
-      INTEGER_T hi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3),growhi(3)
-      REAL_T f(DIMV(f))
-      REAL_T c(DIMV(c))
+      INTEGER_T, intent(in) :: iaverage,bfact_coarse,bfact_fine,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(c)
+      INTEGER_T, intent(in) :: DIMDEC(f)
+      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      REAL_T, intent(in), target :: f(DIMV(f))
+      REAL_T, intent(inout), target :: c(DIMV(c))
+      REAL_T, pointer :: c_ptr(D_DECL(:,:,:))
 !
       INTEGER_T i, i2, i2p1
       INTEGER_T j, j2, j2p1
       INTEGER_T k, k2, k2p1
       REAL_T denom
-!
+
+      c_ptr=>c
+
       if (iaverage.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
         denom=eighth
@@ -66,9 +74,7 @@
        print *,"bfact_top invalid"
        stop
       endif
-      call checkbound(lo,hi, &
-       DIMS(c), &
-       0,-1,130)
+      call checkbound_array1(lo,hi,c_ptr,0,-1,130)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
@@ -104,30 +110,35 @@
        end do
       end do
 
-      end subroutine FORT_AVERAGE
+      end subroutine fort_average
 
 !-----------------------------------------------------------------------
-      subroutine FORT_INTERP ( &
+      subroutine fort_interp( &
        bfact,bfact_f,bfact_top, &
        f,  &
        DIMS(f), &
        c,  &
        DIMS(c), &
-       lo, hi )
+       lo, hi ) &
+      bind(c,name='fort_interp')
+
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T DIMDEC(f)
-      INTEGER_T DIMDEC(c)
-      INTEGER_T lo(AMREX_SPACEDIM)
-      INTEGER_T hi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: DIMDEC(f)
+      INTEGER_T, intent(in) :: DIMDEC(c)
+      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
       INTEGER_T growlo(3),growhi(3)
-      REAL_T f(DIMV(f))
-      REAL_T c(DIMV(c))
-      INTEGER_T bfact,bfact_f,bfact_top
+      REAL_T, intent(inout), target :: f(DIMV(f))
+      REAL_T, pointer :: f_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: c(DIMV(c))
+      INTEGER_T, intent(in) :: bfact,bfact_f,bfact_top
 !
       INTEGER_T i, i2, i2p1
       INTEGER_T j, j2, j2p1
       INTEGER_T k, k2, k2p1
+
+      f_ptr=>f
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -143,9 +154,7 @@
       endif
       
 !
-      call checkbound(lo,hi, &
-       DIMS(c), &
-       0,-1,140)
+      call checkbound_array1(lo,hi,c,0,-1,140)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
@@ -186,6 +195,6 @@
        end do
       end do
 
-      end subroutine FORT_INTERP
+      end subroutine fort_interp
 
-
+      end module cpp_mg

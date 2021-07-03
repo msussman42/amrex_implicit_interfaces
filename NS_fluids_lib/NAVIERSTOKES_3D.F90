@@ -3247,7 +3247,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
           ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      REAL_T, intent(out) :: fabout(DIMV(fabout),visual_ncomp) 
+      REAL_T, intent(out), target :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM+1)
@@ -3330,7 +3330,10 @@ END SUBROUTINE SIMP
       REAL_T psten(0:1,0:1)
       REAL_T psten1D(0:1)
       INTEGER_T DIMDEC(plt)
-      REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: plotfab
+
+      REAL_T, dimension(D_DECL(:,:,:),:), allocatable, target :: plotfab
+      REAL_T, pointer :: plotfab_ptr(D_DECL(:,:,:),:)
+
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: reconfab
       INTEGER_T debug_slice
       REAL_T denslice,tempslice,eslice,KEslice
@@ -3465,7 +3468,8 @@ END SUBROUTINE SIMP
 
       call checkbound_array1(lo,hi,maskSEM,0,-1,1264)
 
-      call checkbound_array(lo,hi,plotfab,1,-1,411)
+      plotfab_ptr=>plotfab
+      call checkbound_array(lo,hi,plotfab_ptr,1,-1,411)
       call checkbound_array1(lo,hi,pres,1,-1,411)
       call checkbound_array1(lo,hi,div,1,-1,411)
       call checkbound_array1(lo,hi,divdat,1,-1,411)

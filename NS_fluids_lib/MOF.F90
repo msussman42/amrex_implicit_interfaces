@@ -22105,26 +22105,14 @@ end module MOF_routines_module
 
 
 
-#if (STANDALONE==0)
-      subroutine FORT_INITMOF( &
+      subroutine fort_initmof( &
        order_algorithm_in, &
        nmat,MOFITERMAX_in, &
        MOF_DEBUG_RECON_in, &
        MOF_TURN_OFF_LS_in, &
        nthreads, &
-       nmax_in)
-#elif (STANDALONE==1)
-      subroutine initmof( &
-       order_algorithm_in, &
-       nmat,MOFITERMAX_in, &
-       MOF_DEBUG_RECON_in, &
-       MOF_TURN_OFF_LS_in, &
-       nthreads, &
-       nmax_in)
-#else
-      print *,"bust initmof"
-      stop
-#endif
+       nmax_in) &
+      bind(c,name='fort_initmof')
 
       use probcommon_module
       use geometry_intersect_module
@@ -22190,7 +22178,7 @@ end module MOF_routines_module
       endif
 
       return
-      end
+      end subroutine fort_initmof
 
       subroutine delete_mof()
 

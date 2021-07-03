@@ -1057,7 +1057,7 @@ NavierStokes::Allaverage(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: MG_3D.F90; a low order average down.
-  FORT_AVERAGE(
+  fort_average(
     crse_fab.dataPtr(0),
     ARLIM(crse_fab.loVect()),ARLIM(crse_fab.hiVect()),
     fine_fab.dataPtr(scomp),

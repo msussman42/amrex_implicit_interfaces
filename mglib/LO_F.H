@@ -5,33 +5,7 @@
 #include <AMReX_REAL.H>
 
 #ifdef BL_LANG_FORT
-#define FORT_AVERAGECC          averagecc
-#define FORT_AVERAGEEC          averageec
-#define FORT_APPLYBC            applybc
-#define FORT_RESIDL             resid
-#define FORT_BUILDMAT           buildmat
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#define FORT_AVERAGECC          AVERAGECC
-#define FORT_AVERAGEEC          AVERAGEEC
-#define FORT_APPLYBC            APPLYBC
-#define FORT_RESIDL             RESID
-#define FORT_BUILDMAT           BUILDMAT
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#define FORT_AVERAGECC          averagecc
-#define FORT_AVERAGEEC          averageec
-#define FORT_APPLYBC            applybc
-#define FORT_RESIDL             resid
-#define FORT_BUILDMAT           buildmat
-#  else
-#define FORT_AVERAGECC          averagecc_
-#define FORT_AVERAGEEC          averageec_
-#define FORT_APPLYBC            applybc_
-#define FORT_RESIDL             resid_
-#define FORT_BUILDMAT           buildmat_
-#endif
-#endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -40,7 +14,7 @@ namespace amrex{
 extern "C"
 {
 
-    void FORT_RESIDL (
+    void fort_residl(
      int* level,
      int* mg_coarsest_level,
      int* nsolve,
@@ -53,7 +27,7 @@ extern "C"
      const int* fablo,const int* fabhi,
      int* bfact,int* bfact_top);
 
-    void FORT_BUILDMAT (
+    void fort_buildmat(
         int* level,
         int* veldir,
         int* nsolve,
@@ -79,7 +53,7 @@ extern "C"
         const int* fablo, const int* fabhi,
         int* bfact,int* bfact_top);
 
-    void FORT_APPLYBC(
+    void fort_applybc(
         int* nsolve,
 	Real *phi, AMREX_ARLIM_P(phi_lo), AMREX_ARLIM_P(phi_hi),
 	Real *bfab, AMREX_ARLIM_P(bfablo), AMREX_ARLIM_P(bfabhi),
@@ -89,7 +63,7 @@ extern "C"
         const int *fablo, const int *fabhi,
         int* bfact,int* bfact_top);
 
-    void FORT_AVERAGECC (
+    void fort_averagecc(
         int* nsolve,
         int* ncomp_expect,
 	Real* crseX,       AMREX_ARLIM_P(crseX_lo), AMREX_ARLIM_P(crseX_hi),
@@ -98,7 +72,7 @@ extern "C"
         int* ngrow,
         int* bfact_coarse,int* bfact_fine,int* bfact_top);
 
-    void FORT_AVERAGEEC (
+    void fort_averageec(
         int* nsolve,
 	Real* crseX,       AMREX_ARLIM_P(crseX_lo), AMREX_ARLIM_P(crseX_hi),
 	const Real* fineX, AMREX_ARLIM_P(fineX_lo), AMREX_ARLIM_P(fineX_hi),

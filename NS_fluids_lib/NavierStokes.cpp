@@ -2018,7 +2018,7 @@ void fortran_parameters() {
 
  int temp_POLYGON_LIST_MAX=1000;
  
- FORT_INITMOF(
+ fort_initmof(
    mof_ordering_local.dataPtr(),
    &nmat,&MOFITERMAX,
    &MOF_DEBUG_RECON,
@@ -12107,7 +12107,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_FD_NODE_NORMAL( 
+   fort_fd_node_normal( 
     &level,
     &finest_level,
     lsfab.dataPtr(),
@@ -12159,7 +12159,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     //    growntileboxNODE(ngrow_dest)
     // the curvature fab should have ngrow_dest ghost cells.
    int height_function_flag=0;
-   FORT_NODE_TO_CELL( 
+   fort_node_to_cell( 
     &level,
     &finest_level,
     &height_function_flag,
@@ -21296,7 +21296,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
-    int scomp_xd,scomp_yd,scomp_zd;
+    int scomp_xd=0;
+    int scomp_yd=0;
+    int scomp_zd=0;
 
     if (MAC_grid_displacement==0) {
      scomp_xd=NUM_TENSOR_TYPE*num_materials_viscoelastic;
@@ -23173,7 +23175,7 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.makeStateDist(keep_all_interfaces);
  }
-  // CORRECT_UNINIT is in MOF_REDIST_3D.F90
+  // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.correct_dist_uninit();
@@ -23251,7 +23253,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // in: MOF_REDIST_3D.F90
-     FORT_FD_NORMAL( 
+     fort_fd_normal( 
       &level,
       &finest_level,
       lsfab.dataPtr(),
@@ -23400,9 +23402,9 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
 
  int do_face_decomp=0;
  int tessellate=0;
-  // FACEINIT is in: MOF_REDIST_3D.F90
+  // fort_faceinit is in: MOF_REDIST_3D.F90
  makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MF,do_face_decomp);
-  // FACEPROCESS is in: MOF_REDIST_3D.F90
+  // fort_faceprocess is in: MOF_REDIST_3D.F90
  ProcessFaceFrac(tessellate,FACEFRAC_MF,FACEFRAC_SOLVE_MM_MF,ngrow_distance);
 
  if (profile_dist==1) {
@@ -23416,7 +23418,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  if (profile_dist==1)
   before_profile = ParallelDescriptor::second();
 
-  // FACEINITTEST is in MOF_REDIST_3D.F90
+  // fort_faceinittest is in MOF_REDIST_3D.F90
   // FACETEST_MF has nmat * sdim components.
  makeFaceTest(
 	 tessellate,  // =0
@@ -23468,7 +23470,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     // 3x3 stencil for each cell in 2D
     // 3x3x3 stencil for each cell in 3D
     // fluid material id for each cell edge point is initialized.
-   FORT_STENINIT( 
+   fort_steninit( 
     &level,
     &finest_level,
     stencilfab.dataPtr(),
@@ -23574,7 +23576,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: MOF_REDIST_3D.F90
-   FORT_LEVELSTRIP( 
+   fort_levelstrip( 
     &keep_all_interfaces,
     &nprocessed[tid_current],
     minLS[tid_current].dataPtr(),
@@ -23713,7 +23715,7 @@ NavierStokes::correct_dist_uninit() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_CORRECT_UNINIT( 
+   fort_correct_uninit( 
     minLS[0].dataPtr(),
     maxLS[0].dataPtr(),
     &max_problen,
@@ -23828,7 +23830,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: MOF_REDIST_3D.F90
-   FORT_FACEPROCESS( 
+   fort_faceprocess( 
     &ngrow_source,
     &ngrow_dest,
     &tid_current,
@@ -23940,7 +23942,7 @@ NavierStokes::makeFaceFrac(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: MOF_REDIST_3D.F90
-   FORT_FACEINIT( 
+   fort_faceinit( 
     &tid_current,
     &tessellate,  // 0,1, or 3
     &nten,
@@ -24046,7 +24048,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_FACEINITTEST( 
+   fort_faceinittest( 
     &tid_current,
     &tessellate,
     &level,

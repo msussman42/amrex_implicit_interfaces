@@ -9209,7 +9209,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: PLIC_3D.F90
-   FORT_SLOPERECON(
+   fort_sloperecon(
     &tid_current,
     &gridno,
     &level,
