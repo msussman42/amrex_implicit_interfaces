@@ -7938,7 +7938,7 @@ void NavierStokes::tecplot_debug(FArrayBox& fabdata,
  const int* growlo=fabdata.loVect();
  const int* growhi=fabdata.hiVect();
  int bfact=parent->Space_blockingFactor(level);
- FORT_TECPLOTFAB(
+ fort_tecplotfab(
   &cur_time_slab,
   fabdata.dataPtr(comp),ARLIM(fabdata.loVect()),ARLIM(fabdata.hiVect()),
   growlo,growhi,
@@ -8470,7 +8470,7 @@ void NavierStokes::output_zones(
     FArrayBox& magtracefab=(*magtracemfminus)[mfi];
 
       // in: NAVIERSTOKES_3D.F90
-    FORT_CELLGRID(
+    fort_cellgrid(
      &tid_current,
      &bfact,
      visual_fab_output.dataPtr(),
@@ -8698,7 +8698,7 @@ void NavierStokes::Sanity_output_zones(
     FArrayBox& datafab=(*datamfminus)[mfi];
 
      // in: NAVIERSTOKES_3D.F90
-    FORT_CELLGRID_SANITY(
+    fort_cellgrid_sanity(
      &tid_current,
      &data_dir,
      &bfact,

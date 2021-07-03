@@ -1548,7 +1548,7 @@ void apply_pressure_grad(
 
     void create_fortran_grid_struct(Real time,Real dt);
 
-    void CPP_OVERRIDEPBC(int homflag_in,int project_option_in);
+    void cpp_overridepbc(int homflag_in,int project_option_in);
 
     static int ns_is_rigid(int im);
     static int ns_is_lag_part(int im);

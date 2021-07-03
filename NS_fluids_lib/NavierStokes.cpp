@@ -6268,7 +6268,7 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
  if ((nparts<1)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
- FORT_FILLCONTAINER(
+ fort_fillcontainer(
   &level,
   &finest_level,
   &max_level,
@@ -6783,9 +6783,10 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
 
     // in: NavierStokes::FSI_make_distance
     // 1. create lagrangian container data structure within the 
-    //    fortran part that recognizes tiles. (FILLCONTAINER in SOLIDFLUID.F90)
+    //    fortran part that recognizes tiles. 
+    //    (fort_fillcontainer in SOLIDFLUID.F90)
     // 2. fill the containers with the Lagrangian information.
-    //    (CLSVOF_FILLCONTAINER called from FILLCONTAINER)
+    //    (CLSVOF_FILLCONTAINER called from fort_fillcontainer)
     //    i.e. associate to each tile a set of Lagrangian nodes and elements
     //    that are located in or very near the tile.
    create_fortran_grid_struct(time,dt);
@@ -7376,7 +7377,7 @@ void NavierStokes::ns_header_msg_level(
     int tid=0;
     int gridno=0;
 
-    FORT_HEADERMSG(
+    fort_headermsg(
      &tid,
      &num_tiles_on_thread_proc[tid],
      &gridno,
@@ -7682,7 +7683,7 @@ void NavierStokes::ns_header_msg_level(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    FORT_HEADERMSG(
+    fort_headermsg(
      &tid_current,
      &num_tiles_on_thread_proc[tid_current],
      &gridno,
@@ -7842,7 +7843,7 @@ void NavierStokes::ns_header_msg_level(
     int tid=0;
     int gridno=0;
 
-    FORT_HEADERMSG(
+    fort_headermsg(
      &tid,
      &num_tiles_on_thread_proc[tid],
      &gridno,
@@ -7921,7 +7922,7 @@ void NavierStokes::ns_header_msg_level(
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     FORT_HEADERMSG(
+     fort_headermsg(
       &tid_current,
       &num_tiles_on_thread_proc[tid_current],
       &gridno,
@@ -19044,7 +19045,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    amrex::Error("nparts invalid");
 
   if (do_plot==1) {
-   FORT_COMBINEZONES(
+   fort_combinezones(
     &total_number_grids,
     grids_per_level_array.dataPtr(),
     levels_array.dataPtr(),
@@ -19306,7 +19307,7 @@ void NavierStokes::writeSanityCheckData(
   int num_levels=tecplot_finest_level+1;
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_COMBINEZONES_SANITY(
+  fort_combinezones_sanity(
     root_char_array,
     &n_root,
     &data_dir,
@@ -23068,22 +23069,22 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
  return mf;
 } // subroutine getStateDist
 
-void NavierStokes::CPP_OVERRIDEPBC(int homflag_in,int project_option_in) {
+void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
 
  if ((homflag_in==0)||(homflag_in==1)) {
   override_bc_to_homogeneous=homflag_in;
-  FORT_OVERRIDEPBC(&homflag_in,&project_option_in);
+  fort_overridepbc(&homflag_in,&project_option_in);
  } else
   amrex::Error("homflag_in invalid");
 
-}  // subroutine CPP_OVERRIDEPBC
+}  // subroutine cpp_overridepbc
 
 MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 		int scomp,int ncomp,Real time) {
 
  int project_option=11; //FSI_material_exists last project
  int save_bc_status=override_bc_to_homogeneous;
- CPP_OVERRIDEPBC(1,project_option);
+ cpp_overridepbc(1,project_option);
 
  MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
  int ntotal=S_new.nComp();
@@ -23097,7 +23098,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 
  ParallelDescriptor::Barrier();
 
- CPP_OVERRIDEPBC(save_bc_status,project_option);
+ cpp_overridepbc(save_bc_status,project_option);
 
  return mf;
 } // subroutine getStateDIV_DATA

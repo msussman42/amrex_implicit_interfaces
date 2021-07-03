@@ -26180,11 +26180,13 @@ end subroutine initialize2d
        return
        end subroutine FORT_SETFORTSCALES
 
-       subroutine FORT_OVERRIDELSBC(homflag)
+       subroutine fort_overridelsbc(homflag) &
+       bind(c,name='fort_overridelsbc')
+
        use probcommon_module
        IMPLICIT NONE
 
-       INTEGER_T homflag
+       INTEGER_T, intent(in) :: homflag
 
 
        if (homflag.eq.0) then
@@ -26197,14 +26199,16 @@ end subroutine initialize2d
        endif
 
        return
-       end
+       end subroutine fort_overridelsbc
 
-       subroutine FORT_OVERRIDEPBC(homflag,project_option)
+       subroutine fort_overridepbc(homflag,project_option) &
+       bind(c,name='fort_overridepbc')
+
        use probcommon_module
        use global_utility_module
        IMPLICIT NONE
 
-       INTEGER_T homflag,project_option
+       INTEGER_T, intent(in) :: homflag,project_option
 
        if (project_option_singular_possibleF(project_option).eq.1) then
         if (homflag.eq.0) then
@@ -26258,7 +26262,7 @@ end subroutine initialize2d
        endif
 
        return
-       end subroutine FORT_OVERRIDEPBC
+       end subroutine fort_overridepbc
 
        subroutine FORT_FLUSH_FORTRAN()
        IMPLICIT NONE

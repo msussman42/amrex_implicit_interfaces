@@ -2,29 +2,8 @@
 #define _TECPLOTUTIL_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_TECPLOTFAB  tecplotfab
-#    define FORT_TECPLOTFAB_SANITY  tecplotfab_sanity
-#    define FORT_CELLGRID_SANITY cellgrid_sanity
-#    define FORT_COMBINEZONES_SANITY combinezones_sanity
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_TECPLOTFAB  TECPLOTFAB
-#    define FORT_TECPLOTFAB_SANITY TECPLOTFAB_SANITY
-#    define FORT_CELLGRID_SANITY CELLGRID_SANITY
-#    define FORT_COMBINEZONES_SANITY COMBINEZONES_SANITY
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_TECPLOTFAB  tecplotfab
-#    define FORT_TECPLOTFAB_SANITY  tecplotfab_sanity
-#    define FORT_CELLGRID_SANITY cellgrid_sanity
-#    define FORT_COMBINEZONES_SANITY combinezones_sanity
-#  else
-#    define FORT_TECPLOTFAB  tecplotfab_
-#    define FORT_TECPLOTFAB_SANITY  tecplotfab_sanity_
-#    define FORT_CELLGRID_SANITY cellgrid_sanity_
-#    define FORT_COMBINEZONES_SANITY combinezones_sanity_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -32,7 +11,7 @@ namespace amrex{
 
 extern "C" {
 
-    void FORT_TECPLOTFAB(
+    void fort_tecplotfab(
      Real* time,
      Real* fabdata,AMREX_ARLIM_P(fabdatalo),AMREX_ARLIM_P(fabdatahi),
      const int* growlo,const int* growhi,
@@ -43,7 +22,7 @@ extern "C" {
      int* interior_only,int* nsteps);
 
 
-    void FORT_TECPLOTFAB_SANITY(
+    void fort_tecplotfab_sanity(
      char* root_char_array,
      int* n_root,
      int* data_dir,
@@ -65,7 +44,7 @@ extern "C" {
      int* ncomp);
 
 
-    void FORT_CELLGRID_SANITY(
+    void fort_cellgrid_sanity(
      int* tid,
      int* data_dir,
      int* bfact,
@@ -80,7 +59,7 @@ extern "C" {
      const int* gridno,
      int* rz_flag);
 
-    void FORT_COMBINEZONES_SANITY(
+    void fort_combinezones_sanity(
      char* root_char_array,
      int* n_root,
      int* data_dir,
