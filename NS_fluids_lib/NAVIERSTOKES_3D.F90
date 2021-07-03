@@ -3159,7 +3159,7 @@ END SUBROUTINE SIMP
       end subroutine FORT_IO_COMPARE
 
        ! called from: NavierStokes2.cpp
-      subroutine FORT_CELLGRID( &
+      subroutine fort_cellgrid( &
        tid, &
        bfact, &
        fabout,DIMS(fabout), &
@@ -3198,7 +3198,8 @@ END SUBROUTINE SIMP
        nstate_slice,slice_dir, &
        xslice, &
        dxfinest, &
-       do_plot,do_slice)
+       do_plot,do_slice) &
+      bind(c,name='fort_cellgrid')
 
       use global_utility_module
       use probf90_module
@@ -3247,18 +3248,19 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: gridno
           ! x,u,p,den,T,Y1..Yn,mag vort,LS
       REAL_T, intent(out) :: fabout(DIMV(fabout),visual_ncomp) 
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM+1)
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(in) :: pres(DIMV(pres))
-      REAL_T, intent(in) :: div(DIMV(div))
-      REAL_T, intent(in) :: divdat(DIMV(divdat))
-      REAL_T, intent(in) :: den(DIMV(den),num_state_material*nmat)
-      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat)
-      REAL_T, intent(in) :: elastic(DIMV(elastic),elastic_ncomp)
-      REAL_T, intent(in) :: visc(DIMV(visc),nmat)
-      REAL_T, intent(in) :: trace(DIMV(trace),5*nmat)
-      REAL_T, intent(in) :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
+      REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM+1)
+      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: pres(DIMV(pres))
+      REAL_T, intent(in), target :: div(DIMV(div))
+      REAL_T, intent(in), target :: divdat(DIMV(divdat))
+      REAL_T, intent(in), target :: den(DIMV(den),num_state_material*nmat)
+      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
+      REAL_T, intent(in), target :: elastic(DIMV(elastic),elastic_ncomp)
+      REAL_T, intent(in), target :: visc(DIMV(visc),nmat)
+      REAL_T, intent(in), target :: trace(DIMV(trace),5*nmat)
+      REAL_T, intent(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
       REAL_T machnd
@@ -3368,11 +3370,13 @@ END SUBROUTINE SIMP
       caller_id=3
 
       nhalf=3
-      nmax=POLYGON_LIST_MAX ! in: CELLGRID
+      nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
       bfact_finest=2
       INTERP_TOL=1.0E-4
 
       debug_slice=0
+
+      fabout_ptr=>fabout
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -3383,11 +3387,11 @@ END SUBROUTINE SIMP
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_CELLGRID"
+       print *,"nparts invalid fort_cellgrid"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_CELLGRID"
+       print *,"nparts_def invalid fort_cellgrid"
        stop
       endif
       if (elastic_ncomp.eq. &
@@ -3450,29 +3454,29 @@ END SUBROUTINE SIMP
       allocate(plotfab(DIMV(plt),nstate_slice))
       allocate(reconfab(DIMV(plt),nmat*ngeom_recon))
  
-      call checkbound(vislo,vishi,DIMS(fabout),0,0,411)
-      call checkbound(vislo,vishi,DIMS(fabout),0,1,411)
-      call checkbound(vislo,vishi,DIMS(fabout),0,SDIM-1,411)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,0,411)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,1,411)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,411)
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
       if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
        print *,"visual_ncomp invalid" 
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(maskSEM),0,-1,1264)
+      call checkbound_array1(lo,hi,maskSEM,0,-1,1264)
 
-      call checkbound(lo,hi,DIMS(plt),1,-1,411)
-      call checkbound(lo,hi,DIMS(pres),1,-1,411)
-      call checkbound(lo,hi,DIMS(div),1,-1,411)
-      call checkbound(lo,hi,DIMS(divdat),1,-1,411)
-      call checkbound(lo,hi,DIMS(den),1,-1,411)
-      call checkbound(lo,hi,DIMS(mom_den),1,-1,411)
-      call checkbound(lo,hi,DIMS(elastic),1,-1,411)
-      call checkbound(lo,hi,DIMS(lsdist),1,-1,411)
-      call checkbound(lo,hi,DIMS(visc),1,-1,411)
-      call checkbound(lo,hi,DIMS(trace),1,-1,411)
-      call checkbound(lo,hi,DIMS(vel),1,-1,411)
-      call checkbound(lo,hi,DIMS(vof),1,-1,411)
+      call checkbound_array(lo,hi,plotfab,1,-1,411)
+      call checkbound_array1(lo,hi,pres,1,-1,411)
+      call checkbound_array1(lo,hi,div,1,-1,411)
+      call checkbound_array1(lo,hi,divdat,1,-1,411)
+      call checkbound_array(lo,hi,den,1,-1,411)
+      call checkbound_array(lo,hi,mom_den,1,-1,411)
+      call checkbound_array(lo,hi,elastic,1,-1,411)
+      call checkbound_array(lo,hi,lsdist,1,-1,411)
+      call checkbound_array(lo,hi,visc,1,-1,411)
+      call checkbound_array(lo,hi,trace,1,-1,411)
+      call checkbound_array(lo,hi,vel,1,-1,411)
+      call checkbound_array(lo,hi,vof,1,-1,411)
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
@@ -3919,7 +3923,7 @@ END SUBROUTINE SIMP
                 (xcrit(dir2).lt.(INTERP_TOL+bfact)*dx(dir2))) then
              ! do nothing
             else
-             print *,"xcrit out of bounds CELLGRID"
+             print *,"xcrit out of bounds fort_cellgrid"
              print *,"dir2,xcrit,xsten_corner ",dir2,xcrit(dir2), &
               xsten_corner(0,dir2)
              stop
@@ -4634,7 +4638,7 @@ END SUBROUTINE SIMP
 
            if ((xcrit(dir2).lt.-INTERP_TOL*dx(dir2)).or. &
                (xcrit(dir2).gt.(INTERP_TOL+bfact)*dx(dir2))) then
-            print *,"xcrit out of bounds CELLGRID"
+            print *,"xcrit out of bounds fort_cellgrid"
             stop
            endif
 
@@ -4728,7 +4732,7 @@ END SUBROUTINE SIMP
       deallocate(reconfab)
  
       return
-      end subroutine FORT_CELLGRID
+      end subroutine fort_cellgrid
 
 
       subroutine FORT_MEMSTATUS(procnum)
@@ -4926,7 +4930,7 @@ END SUBROUTINE SIMP
       return
       end
 
-      subroutine FORT_COMBINEZONES( &
+      subroutine fort_combinezones( &
        total_number_grids, &
        grids_per_level_array, &
        levels_array, &
@@ -4944,7 +4948,8 @@ END SUBROUTINE SIMP
        nmat, &
        nparts, &
        nparts_def, &
-       im_solid_map)
+       im_solid_map) &
+      bind(c,name='fort_combinezones')
 
       use global_utility_module
       use navierstokesf90_module
@@ -5044,11 +5049,11 @@ END SUBROUTINE SIMP
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_COMBINEZONES"
+       print *,"nparts invalid fort_combinezones"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_COMBINEZONES"
+       print *,"nparts_def invalid fort_combinezones"
        stop
       endif
 
@@ -5487,7 +5492,7 @@ END SUBROUTINE SIMP
       endif
 
       return
-      end subroutine FORT_COMBINEZONES
+      end subroutine fort_combinezones
 
 
       subroutine FORT_ZALESAK_CELL( &

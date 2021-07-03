@@ -1755,7 +1755,7 @@ end subroutine CTML_init_sci_node
 
 ! called from overall_solid_init
 ! overall_solid_init is called from CLSVOF_ReadHeader
-! CLSVOF_ReadHeader is called from FORT_HEADERMSG when FSI_operation==0.
+! CLSVOF_ReadHeader is called from fort_headermsg when FSI_operation==0.
 subroutine CTML_init_sci(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 use global_utility_module
@@ -6738,7 +6738,7 @@ REAL_T :: aa,bb,cc
 return
 end subroutine sciarea
 
-! called from FORT_HEADERMSG when FSI_operation==4 and FSI_sub_operation==0
+! called from fort_headermsg when FSI_operation==4 and FSI_sub_operation==0
 ! isout==1 => verbose
 subroutine CLSVOF_clear_lag_data(ioproc,isout)
 use global_utility_module
@@ -6837,7 +6837,7 @@ return
 end subroutine CLSVOF_clear_lag_data
 
 
-! called from FORT_HEADERMSG when FSI_operation==4 and FSI_sub_operation==2
+! called from fort_headermsg when FSI_operation==4 and FSI_sub_operation==2
 ! isout==1 => verbose
 subroutine CLSVOF_sync_lag_data(ioproc,isout)
 use global_utility_module
@@ -6964,7 +6964,7 @@ end subroutine CLSVOF_sync_lag_data
 
 
 
-! called from FORT_HEADERMSG when FSI_operation==0
+! called from fort_headermsg when FSI_operation==0
 ! isout==1 => verbose
 subroutine CLSVOF_ReadHeader( &
   FSI_refine_factor, &
@@ -11475,7 +11475,7 @@ return
 end subroutine find_grid_bounding_box_node
 
 
-! called from FORT_HEADERMSG with FSI_operation=1
+! called from fort_headermsg with FSI_operation=1
 ! isout==1 => verbose
 subroutine CLSVOF_ReadNodes( &
   FSI_refine_factor, &

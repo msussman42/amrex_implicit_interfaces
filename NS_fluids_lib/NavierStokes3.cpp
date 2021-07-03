@@ -491,7 +491,7 @@ void NavierStokes::nonlinear_advection() {
    } // ilev=level..finest_level
   } // FSI_sub_operation=0,1,2
 
-   // FORT_HEADERMSG (SOLIDFLUID.F90)
+   // fort_headermsg (SOLIDFLUID.F90)
    // CLSVOF_ReadNodes (sci_clsvof.F90)
    // if FSI_flag==4, then
    //  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
@@ -9782,7 +9782,7 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("project_option invalid");
 
- CPP_OVERRIDEPBC(homflag_residual_correction_form,project_option);
+ cpp_overridepbc(homflag_residual_correction_form,project_option);
 
    // STATE_FOR_RESID is an input to 
    //  NavierStokes::residual_correction_form
@@ -9958,7 +9958,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // this must be done after allocate_maccoef (stefan_solver_init relies on
    // inhomogeneous BCs)
    // set BCs to homogeneous for the outer_iter loop.
- CPP_OVERRIDEPBC(1,project_option);
+ cpp_overridepbc(1,project_option);
 
  int total_number_vcycles=0;
 
@@ -10962,8 +10962,8 @@ void NavierStokes::multiphase_project(int project_option) {
      avgDownALL(state_index,scomp[ilist],ncomp[ilist],1);
 
       // override_bc_to_homogeneous=1
-      // call FORT_OVERRIDEBC
-    CPP_OVERRIDEPBC(1,project_option);
+      // call fort_overridebc
+    cpp_overridepbc(1,project_option);
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -11271,7 +11271,7 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("project_option invalid 53");
 
- CPP_OVERRIDEPBC(homflag_dual_time,project_option);
+ cpp_overridepbc(homflag_dual_time,project_option);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -11421,7 +11421,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   // project_option tells whether pressure (0,1), 
   // temperature (2), velocity (3,4,5), or species.
- CPP_OVERRIDEPBC(0,project_option);
+ cpp_overridepbc(0,project_option);
 
  if (project_option==12) {  // pressure extrapolation
   for (int ilev=finest_level;ilev>=level;ilev--) {

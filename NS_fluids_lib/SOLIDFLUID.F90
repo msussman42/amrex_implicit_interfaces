@@ -177,10 +177,8 @@
 
       end module solidfluid_module
 
-#if (STANDALONE==1)
       module solidfluid_cpp_module
       contains
-#endif
 
        !FSI_operation=0  initialize node locations; generate_new_triangles
        !FSI_operation=1  update node locations
@@ -190,7 +188,7 @@
        !  FSI_sub_operation.eq.0 (clear lagrangian data)
        !  FSI_sub_operation.eq.1 (actual copy)
        !  FSI_sub_operation.eq.2 (sync lag data)
-      subroutine FORT_HEADERMSG( &
+      subroutine fort_headermsg( &
         tid, &
         tilenum, &
         gridno, &
@@ -234,7 +232,9 @@
         iter, &
         current_step, &
         plot_interval, &
-        ioproc)
+        ioproc) &
+      bind(c,name='fort_headermsg')
+
       use CLSVOFCouplerIO, only : CLSVOF_ReadHeader,CLSVOF_ReadNodes, &
        CLSVOF_InitBox,CLSVOF_clear_lag_data,CLSVOF_sync_lag_data, &
        CLSVOF_Copy_To_LAG
@@ -279,10 +279,11 @@
       INTEGER_T, intent(in) :: DIMDEC(masknbr) 
       INTEGER_T, intent(in) :: DIMDEC(maskfiner) 
         ! velfab if FSI_operation==4
-      REAL_T, intent(inout) :: FSIdata(DIMV(FSIdata),nFSI) 
-      REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM)
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr),2)
-      REAL_T, intent(in) :: maskfiner(DIMV(maskfiner),4)
+      REAL_T, intent(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
+      REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM)
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),2)
+      REAL_T, intent(in), target :: maskfiner(DIMV(maskfiner),4)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -324,6 +325,8 @@
       INTEGER_T lev77
  
       nhalf=3
+
+      FSIdata_ptr=>FSIdata
 
       if (nthread_parm.ne.geom_nthreads) then
        print *,"nthread_parm invalid"
@@ -407,7 +410,7 @@
       nmat=num_materials
 
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_HEADERMSG"
+       print *,"nparts invalid fort_headermsg"
        stop
       endif
  
@@ -417,14 +420,14 @@
        stop
       endif
       if (nFSI_sub.ne.12) then 
-       print *,"nFSI_sub invalid 1 fort headermsg: ",nFSI_sub
+       print *,"nFSI_sub invalid 1 fort_headermsg: ",nFSI_sub
        stop
       endif
   
-      call checkbound(fablo,fabhi,DIMS(FSIdata),ngrowFSI,-1,2910)
-      call checkbound(fablo,fabhi,DIMS(velfab),ngrowFSI,-1,2910)
-      call checkbound(fablo,fabhi,DIMS(masknbr),ngrowFSI,-1,2910)
-      call checkbound(fablo,fabhi,DIMS(maskfiner),ngrowFSI,-1,2910)
+      call checkbound_array(fablo,fabhi,FSIdata_ptr,ngrowFSI,-1,2910)
+      call checkbound_array(fablo,fabhi,velfab,ngrowFSI,-1,2910)
+      call checkbound_array(fablo,fabhi,masknbr,ngrowFSI,-1,2910)
+      call checkbound_array(fablo,fabhi,maskfiner,ngrowFSI,-1,2910)
 
       ! update ngrowFSI grow layers of FSIdata that do not overlap
       ! with another tile.
@@ -663,7 +666,7 @@
        do partid=1,nparts
         im_part=im_solid_map(partid)+1
         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-         print *,"im_part invalid FORT_HEADERMSG"
+         print *,"im_part invalid fort_headermsg"
          stop
         endif
         if (is_lag_part(nmat,im_part).eq.1) then
@@ -958,7 +961,7 @@
         do partid=1,nparts
          im_part=im_solid_map(partid)+1
          if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-          print *,"im_part invalid FORT_HEADERMSG"
+          print *,"im_part invalid fort_headermsg"
           stop
          endif
          if (is_lag_part(nmat,im_part).eq.1) then
@@ -1056,7 +1059,7 @@
         enddo ! partid=1..nparts
 
         if (nparts.gt.nmat) then
-         print *,"nparts out of range FORT_HEADERMSG"
+         print *,"nparts out of range fort_headermsg"
          stop
         endif
 
@@ -1079,10 +1082,10 @@
  
     
       return
-      end subroutine FORT_HEADERMSG
+      end subroutine fort_headermsg
 
 
-      subroutine FORT_FILLCONTAINER( &
+      subroutine fort_fillcontainer( &
         level, &
         finest_level, &
         sci_max_level, &
@@ -1105,7 +1108,9 @@
         nparts, &
         im_solid_map, &
         problo, &
-        probhi)
+        probhi) &
+      bind(c,name='fort_fillcontainer')
+
       use CLSVOFCouplerIO, only : CLSVOF_FILLCONTAINER
       use solidfluid_module
       use global_utility_module
@@ -1175,7 +1180,7 @@
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_FILLCONTAINER"
+       print *,"nparts invalid fort_fillcontainer"
        stop
       endif
       if (time.lt.zero) then
@@ -1437,11 +1442,9 @@
       endif
 
       return
-      end subroutine FORT_FILLCONTAINER
+      end subroutine fort_fillcontainer
 
-#if (STANDALONE==1)
       end module solidfluid_cpp_module
-#endif
 
 #undef STANDALONE
 

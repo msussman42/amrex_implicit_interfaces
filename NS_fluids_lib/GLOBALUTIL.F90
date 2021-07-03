@@ -18177,7 +18177,7 @@ return
 end subroutine INTERNAL_material
 
 
- ! called from FORT_OVERRIDE 
+ ! called from fort_override 
 subroutine init_density_at_depth()
 use probcommon_module
 IMPLICIT NONE

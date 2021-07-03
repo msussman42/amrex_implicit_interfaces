@@ -1166,7 +1166,7 @@ stop
         probhiy,probhix, &
         yblob,yblob2) 
       
-       ! in: subroutine FORT_OVERRIDE
+       ! in: subroutine fort_override
       else if (probtype.eq.220) then
        if (num_materials.ne.3) then
         print *,"num_materials invalid probtype=220"
@@ -1314,4 +1314,4 @@ stop
       enddo ! im=1..num_materials
       
       return
-      end subroutine FORT_OVERRIDE
+      end subroutine fort_override

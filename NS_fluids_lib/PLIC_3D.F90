@@ -23,10 +23,8 @@ print *,"dimension bust"
 stop
 #endif
 
-#if (STANDALONE==1)
       module plic_cpp_module
       contains
-#endif
 
 ! mask=0 at coarse/fine border cells and physical boundaries.
 ! mask=1 at fine/fine and periodic border cells.
@@ -42,7 +40,7 @@ stop
       ! (2) =1 interior  =0 otherwise
       ! (3) =1 interior+ngrow-1  =0 otherwise
       ! (4) =1 interior+ngrow    =0 otherwise
-      subroutine FORT_SLOPERECON( &
+      subroutine fort_sloperecon( &
         tid, &
         gridno, &
         level, &
@@ -68,7 +66,9 @@ stop
         continuous_mof, &
         force_cmof_at_triple_junctions, &
         partial_cmof_stencil_at_walls, &
-        radius_cutoff)
+        radius_cutoff) &
+      bind(c,name='fort_sloperecon')
+
 #if (STANDALONE==0)
       use probf90_module
 #elif (STANDALONE==1)
@@ -107,11 +107,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(slopes)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
      
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4) 
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw) 
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat) 
-      REAL_T, intent(out) :: slopes(DIMV(slopes),nmat*ngeom_recon) 
-      REAL_T, intent(inout) :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4) 
+      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_raw) 
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat) 
+      REAL_T, intent(out), target :: slopes(DIMV(slopes),nmat*ngeom_recon) 
+      REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: latent_heat(2*nten)
       
       INTEGER_T i,j,k,dir
@@ -186,6 +188,9 @@ stop
 
       nhalf_box=1
 
+      slopes_ptr=>slopes
+      snew_ptr=>snew
+
       tessellate=0
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -223,7 +228,7 @@ stop
       endif 
      
       if (debugslope.eq.1) then
-       print *,"BEFORE SLOPERECON --------------------------------"
+       print *,"BEFORE fort_sloperecon --------------------------------"
        print *,"grid,level,finest ",gridno,level,finest_level
        print *,"STEP,TIME ",nsteps,time
       endif
@@ -282,11 +287,11 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(vof),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(slopes),ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,masknbr,1,-1,12)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,12)
+      call checkbound_array(fablo,fabhi,vof,1,-1,12)
+      call checkbound_array(fablo,fabhi,LS,1,-1,12)
+      call checkbound_array(fablo,fabhi,slopes_ptr,ngrow,-1,12)
 
       if (SDIM.eq.3) then
        klosten=-1
@@ -1023,7 +1028,7 @@ stop
          stop
         endif
 #elif (STANDALONE==1)
-        print *,"update_flag invalid for stand alone SLOPERECON"
+        print *,"update_flag invalid for stand alone fort_sloperecon"
         stop
 #else
         print *,"bust compiling PLIC_3D.F90"
@@ -1041,19 +1046,15 @@ stop
       enddo
 
       if (debugslope.eq.1) then
-       print *,"AFTER SLOPERECON --------------------------------"
+       print *,"AFTER fort_sloperecon --------------------------------"
        print *,"grid,level,finest ",gridno,level,finest_level
        print *,"STEP,TIME ",nsteps,time
       endif
 
       return
-      end subroutine FORT_SLOPERECON
+      end subroutine fort_sloperecon
 
-
-
-#if (STANDALONE==1)
       end module plic_cpp_module
-#endif
 
 #undef STANDALONE
 

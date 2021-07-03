@@ -2,21 +2,8 @@
 #define _SOLIDFLUID_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_HEADERMSG headermsg
-#    define FORT_FILLCONTAINER fillcontainer
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_HEADERMSG HEADERMSG
-#    define FORT_FILLCONTAINER FILLCONTAINER
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_HEADERMSG headermsg
-#    define FORT_FILLCONTAINER fillcontainer
-#  else
-#    define FORT_HEADERMSG headermsg_
-#    define FORT_FILLCONTAINER fillcontainer_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -24,7 +11,7 @@ namespace amrex{
 
   extern "C" {
 
-    void FORT_HEADERMSG(
+    void fort_headermsg(
      int* tid,
      int* tilenum,
      const int* gridno,
@@ -66,7 +53,7 @@ namespace amrex{
      int* plot_interval,
      int* ioproc);
 
-    void FORT_FILLCONTAINER(
+    void fort_fillcontainer(
      int* level,
      int* finest_level,
      const int* sci_max_level,

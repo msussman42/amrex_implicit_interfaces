@@ -31,9 +31,7 @@
 #    define FORT_ISOGRID     isogrid
 #    define FORT_ISOGRIDSINGLE     isogridsingle
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
-#    define FORT_CELLGRID    cellgrid
 #    define FORT_COMBINETRIANGLES combinetriangles
-#    define FORT_COMBINEZONES combinezones
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_MEMSTATUS memstatus
@@ -66,10 +64,8 @@
 #    define FORT_ISOGRID     ISOGRID
 #    define FORT_ISOGRIDSINGLE ISOGRIDSINGLE
 #    define FORT_COMBINETRIANGLESSINGLE COMBINETRIANGLESSINGLE
-#    define FORT_CELLGRID    CELLGRID
 #    define FORT_COMBINETRIANGLES COMBINETRIANGLES
 #    define FORT_MEMSTATUS MEMSTATUS
-#    define FORT_COMBINEZONES COMBINEZONES
 #    define FORT_OUTPUTSLICE OUTPUTSLICE
 #    define FORT_IO_COMPARE IO_COMPARE
 #    define FORT_METRICS METRICS
@@ -100,10 +96,8 @@
 #    define FORT_ISOGRID     isogrid
 #    define FORT_ISOGRIDSINGLE     isogridsingle
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
-#    define FORT_CELLGRID    cellgrid
 #    define FORT_COMBINETRIANGLES combinetriangles
 #    define FORT_MEMSTATUS memstatus
-#    define FORT_COMBINEZONES combinezones
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
@@ -133,10 +127,8 @@
 #    define FORT_ISOGRID     isogrid_
 #    define FORT_ISOGRIDSINGLE     isogridsingle_
 #    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle_
-#    define FORT_CELLGRID    cellgrid_
 #    define FORT_COMBINETRIANGLES combinetriangles_
 #    define FORT_MEMSTATUS memstatus_
-#    define FORT_COMBINEZONES combinezones_
 #    define FORT_OUTPUTSLICE outputslice_
 #    define FORT_IO_COMPARE io_compare_
 #    define FORT_METRICS metrics_
@@ -222,7 +214,7 @@ extern "C" {
      Real* time,int* js,int* je,int* NN,Real* ZZ,Real* FF,
      int* dirx,int* diry,int* cut_flag);
 
-    void FORT_CELLGRID(
+    void fort_cellgrid(
      int* tid,
      int* bfact,
      Real* fabout,AMREX_ARLIM_P(faboutlo),AMREX_ARLIM_P(fabouthi),
@@ -293,7 +285,7 @@ extern "C" {
  
     void FORT_MEMSTATUS(int* procnum);
 
-    void FORT_COMBINEZONES(
+    void fort_combinezones(
      int* total_number_grids,
      int* grids_per_level_array,
      int* levels_array,

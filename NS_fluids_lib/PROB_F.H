@@ -8,8 +8,6 @@
 #    define FORT_FORCEVELOCITY forcevelocity
 #    define FORT_ADDNOISE    addnoise
 #    define FORT_VFRACERROR  vfracerror
-#    define FORT_OVERRIDELSBC overridelsbc
-#    define FORT_OVERRIDEPBC overridepbc
 #    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
@@ -40,10 +38,7 @@
 #    define FORT_SETFORTSCALES SETFORTSCALES
 #    define FORT_FORCEVELOCITY FORCEVELOCITY
 #    define FORT_ADDNOISE    ADDNOISE
-#    define FORT_SUPERELASTICOVERRIDE SUPERELASTICOVERRIDE
 #    define FORT_VFRACERROR  VFRACERROR
-#    define FORT_OVERRIDELSBC OVERRIDELSBC
-#    define FORT_OVERRIDEPBC OVERRIDEPBC
 #    define FORT_VISCFLUXFILL VISCFLUXFILL
 #    define FORT_UMACFILL    UMACFILL
 #    define FORT_XDMACFILL   XDMACFILL
@@ -75,8 +70,6 @@
 #    define FORT_FORCEVELOCITY forcevelocity
 #    define FORT_ADDNOISE    addnoise
 #    define FORT_VFRACERROR  vfracerror
-#    define FORT_OVERRIDELSBC overridelsbc
-#    define FORT_OVERRIDEPBC overridepbc
 #    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
@@ -107,8 +100,6 @@
 #    define FORT_FORCEVELOCITY forcevelocity_
 #    define FORT_ADDNOISE    addnoise_
 #    define FORT_VFRACERROR  vfracerror_
-#    define FORT_OVERRIDELSBC overridelsbc_
-#    define FORT_OVERRIDEPBC overridepbc_
 #    define FORT_VISCFLUXFILL viscfluxfill_
 #    define FORT_UMACFILL    umacfill_
 #    define FORT_XDMACFILL   xdmacfill_
@@ -148,8 +139,8 @@ namespace amrex{
        Real* velocity_scale);
 
 
-     void FORT_OVERRIDELSBC(int* homflag);
-     void FORT_OVERRIDEPBC(int* homflag,int* project_option);
+     void fort_overridelsbc(int* homflag);
+     void fort_overridepbc(int* homflag,int* project_option);
 
      void fort_initvelocity(
       const int* level,const Real* time,

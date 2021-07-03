@@ -3,8 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
-
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -22,12 +20,10 @@ print *,"dimension bust"
 stop
 #endif
 
-#if (STANDALONE==1)
       module tecplotutil_cpp_module
       contains
-#endif
 
-      subroutine FORT_TECPLOTFAB( &
+      subroutine fort_tecplotfab( &
        time, &
        fabdata,DIMS(fabdata), &
        growlo,growhi, &
@@ -40,13 +36,13 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T dir,ncomp,interior_only,nsteps,bfact
-      INTEGER_T growlo(SDIM),growhi(SDIM) 
-      INTEGER_T fablo(SDIM),fabhi(SDIM) 
+      INTEGER_T, intent(in) :: dir,ncomp,interior_only,nsteps,bfact
+      INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM) 
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
       INTEGER_T plotlo(SDIM),plothi(SDIM) 
       INTEGER_T lo(SDIM),hi(SDIM) 
-      INTEGER_T DIMDEC(fabdata)
-      REAL_T fabdata(DIMV(fabdata),ncomp)
+      INTEGER_T, intent(in) :: DIMDEC(fabdata)
+      REAL_T, intent(in) :: fabdata(DIMV(fabdata),ncomp)
       REAL_T xlo(SDIM)
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -324,10 +320,10 @@ stop
 
       close(11)
       return
-      end subroutine FORT_TECPLOTFAB
+      end subroutine fort_tecplotfab
 
 
-      subroutine FORT_CELLGRID_SANITY( &
+      subroutine fort_cellgrid_sanity( &
        tid, &
        data_dir, & ! data_dir=-1,0..sdim
        bfact, &
@@ -340,7 +336,9 @@ stop
        level, &
        finest_level, &
        gridno, &
-       rz_flag)
+       rz_flag) &
+      bind(c,name='fort_cellgrid_sanity')
+
       use probcommon_module
       use global_utility_module
 
@@ -357,7 +355,7 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
-      REAL_T, intent(in) :: datafab(DIMV(datafab), &
+      REAL_T, intent(in), target :: datafab(DIMV(datafab), &
         ncomp)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
@@ -410,12 +408,12 @@ stop
       endif
 
       if (data_dir.eq.-1) then 
-       call checkbound(lo,hi,DIMS(datafab),0,-1,411)
+       call checkbound_array(lo,hi,datafab,0,-1,411)
       else if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-       call checkbound(lo,hi,DIMS(datafab),0,data_dir,411)
+       call checkbound_array(lo,hi,datafab,0,data_dir,411)
       else if (data_dir.eq.SDIM) then
        do dir=0,SDIM-1
-        call checkbound(lo,hi,DIMS(datafab),0,dir,411)
+        call checkbound_array(lo,hi,datafab,0,dir,411)
        enddo
       else
        print *,"data_dir invalid"
@@ -683,10 +681,10 @@ stop
       close(11)
 
       return
-      end subroutine FORT_CELLGRID_SANITY
+      end subroutine fort_cellgrid_sanity
 
 
-      subroutine FORT_COMBINEZONES_SANITY( &
+      subroutine fort_combinezones_sanity( &
        root_char_array, &
        n_root, &
        data_dir, &
@@ -706,7 +704,8 @@ stop
        time, &
        visual_option, &
        visual_revolve, &
-       ncomp)
+       ncomp) &
+      bind(c,name='fort_combinezones_sanity')
 
       use probcommon_module
       use global_utility_module
@@ -1289,9 +1288,9 @@ stop
       endif
 
       return
-      end subroutine FORT_COMBINEZONES_SANITY
+      end subroutine fort_combinezones_sanity
 
-      subroutine FORT_TECPLOTFAB_SANITY( &
+      subroutine fort_tecplotfab_sanity( &
        root_char_array, &
        n_root, &
        data_dir, &
@@ -1311,7 +1310,9 @@ stop
        visual_revolve, &
        level, &
        finest_level, &
-       ncomp)
+       ncomp) &
+      bind(c,name='fort_tecplotfab_sanity')
+
       use probcommon_module
       use global_utility_module
 
@@ -1352,7 +1353,7 @@ stop
       tid_local=0
       gridno_local=0
 
-      call FORT_CELLGRID_SANITY( &
+      call fort_cellgrid_sanity( &
        tid_local, &
        data_dir, &
        bfact, &
@@ -1378,7 +1379,7 @@ stop
        gridhi_array(dir_local)=fabhi(dir_local)
       enddo
 
-      call FORT_COMBINEZONES_SANITY( &
+      call fort_combinezones_sanity( &
        root_char_array, &
        n_root, &
        data_dir, &
@@ -1401,10 +1402,7 @@ stop
        ncomp)
 
       return
-      end subroutine FORT_TECPLOTFAB_SANITY
+      end subroutine fort_tecplotfab_sanity
 
-#if (STANDALONE==1)
       end module tecplotutil_cpp_module
-#endif
 
-#undef STANDALONE
