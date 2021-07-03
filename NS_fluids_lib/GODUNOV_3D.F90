@@ -2619,6 +2619,1719 @@ stop
       end subroutine local_tensor_from_xdisplace
 
 
+! Prior to calling this routine:
+!  a) init_gradu_tensor(...,LOCAL_CELLTENSOR_MF,LOCAL_FACETENSOR_MF)
+!     i)  doit_gradu_tensor  spectral_loop==0  itensor_iter==0
+!     ii) doit_gradu_tensor  spectral_loop==1  itensor_iter==0
+!     ii) doit_gradu_tensor  spectral_loop==0  itensor_iter==1
+!     in doit_gradu_tensor:
+!         fort_face_gradients, tileloop==0 (low order), tileloop==1 (SEM)
+!  b) spectral_loop=0,1
+!     dir=1..sdim
+!     tileloop=0...3
+!       fort_crossterm
+!
+! in fort_crossterm:
+!  if tileloop==0  spectral_loop==0 
+!   low order fluxes (slopecrossterm)
+!  if tileloop==0  spectral_loop==1
+!   do nothing 
+!  if tileloop==1  spectral_loop==0
+!   high order fluxes
+!  if tileloop==1  spectral_loop==1
+!   do nothing 
+!  if tileloop==2  spectral_loop==0
+!   xflux=visc_coef*xface(facevisc_index+1)*(xflux+divterm)
+!  if tileloop==2  spectral_loop==1
+!   do nothing 
+!  if tileloop==3  spectral_loop==0
+!   semflux=xflux
+!  if tileloop==3  spectral_loop==1
+!   xflux=(semflux_in + semflux_out)/2
+!
+! radial velocity is negated if r<0
+! -dt * visc_coef * viscface * (grad U + grad U^T)
+! fluxes found on "dir" faces
+      subroutine fort_crossterm( &
+       nsolve, &
+       tileloop, &
+       dir, &  ! dir=1..sdim
+       operation_flag, & ! 8
+       enable_spectral, &
+       spectral_loop, &
+       ncfluxreg, &
+       semflux,DIMS(semflux), & 
+       mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
+       maskcoef,DIMS(maskcoef), & ! 1=not cov by level+1 or outside.
+       faceLS,DIMS(faceLS), & 
+       mdata,DIMS(mdata), & 
+       tdata,DIMS(tdata), & 
+       c_tdata,DIMS(c_tdata), & 
+       maskSEM,DIMS(maskSEM), &
+       xlo,dx, &
+       dt, &
+       cur_time, &
+       vel,DIMS(vel), &
+       levelpc,DIMS(levelpc), &
+       xflux,DIMS(xflux), &
+       xface,DIMS(xface), &
+       recon,DIMS(recon), &  
+       facevisc_index, &
+       vofface_index, &
+       massface_index, &
+       ncphys, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level, &
+       rzflag, &
+       velbc, &
+       visc_coef, &
+       nmat, &
+       nden, &
+       ntensor, &
+       constant_viscosity, &
+       homflag) &
+      bind(c,name='fort_crossterm')
+
+      use probcommon_module
+      use global_utility_module
+      use MOF_routines_module
+ 
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: tileloop
+      INTEGER_T, intent(in) :: spectral_loop
+      INTEGER_T, intent(in) :: ncfluxreg
+      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: facevisc_index
+      INTEGER_T, intent(in) :: massface_index
+      INTEGER_T, intent(in) :: vofface_index
+      INTEGER_T, intent(in) :: ncphys
+      INTEGER_T, intent(in) :: homflag
+      INTEGER_T :: nc
+      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: nmat,nden
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
+      INTEGER_T, intent(in) :: rzflag 
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T :: indexlo(SDIM),indexhi(SDIM)
+      INTEGER_T :: sideidx(SDIM)
+      INTEGER_T :: indexmid(SDIM)
+      INTEGER_T :: index_flux(SDIM)
+      INTEGER_T :: index_edge(SDIM)
+      INTEGER_T :: index_opp(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(semflux)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(faceLS)
+      INTEGER_T, intent(in) :: DIMDEC(mdata)
+      INTEGER_T, intent(in) :: DIMDEC(tdata)
+      INTEGER_T, intent(in) :: DIMDEC(c_tdata)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(xflux)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+  
+      REAL_T, intent(in) :: dt 
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: faceLS(DIMV(faceLS),SDIM)
+      REAL_T, intent(in), target :: mdata(DIMV(mdata),SDIM)
+      REAL_T, intent(in), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),ntensor)
+
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
+
+      REAL_T, intent(out), target :: xflux(DIMV(xflux),nsolve)  ! u
+      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: xface(DIMV(xface),ncphys)
+
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+
+      REAL_T, intent(in) :: visc_coef
+
+      INTEGER_T, intent(in) :: dir
+ 
+      INTEGER_T ilo,ihi 
+      INTEGER_T jlo,jhi 
+      INTEGER_T klo,khi 
+
+      INTEGER_T i,j,k
+      INTEGER_T dir2
+      INTEGER_T ic,jc,kc
+      INTEGER_T dirtan(2)
+      INTEGER_T coupling(2)
+      INTEGER_T ii,jj,kk,im1,jm1,km1
+      REAL_T gradterm,alpha
+      INTEGER_T side
+      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
+      INTEGER_T uxMM
+      INTEGER_T vyMM
+      INTEGER_T wzMM
+
+      INTEGER_T im
+      REAL_T LSleft(nmat)
+      REAL_T LSright(nmat)
+      REAL_T divterm
+      INTEGER_T compressible_face
+      REAL_T uxterm,vyterm,wzterm
+      REAL_T visc_constant
+      REAL_T diff_flux(SDIM)
+      INTEGER_T imL,imR
+      REAL_T total_mass,DMface
+      REAL_T massfrac(nmat)
+      REAL_T massF(2*nmat)
+      REAL_T xsten(-1:1,SDIM)
+      REAL_T xstenMAC(-1:1,SDIM)
+      REAL_T xclamped_minus_sten(-1:1,SDIM)
+      REAL_T xclamped_plus_sten(-1:1,SDIM)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+
+      REAL_T LS_clamped_minus
+      REAL_T LS_clamped_plus
+      REAL_T vel_clamped_minus(SDIM)
+      REAL_T vel_clamped_plus(SDIM)
+      REAL_T vel_clamped_face(SDIM)
+      REAL_T temperature_clamped_minus
+      REAL_T temperature_clamped_plus
+      INTEGER_T is_clamped_face
+      INTEGER_T nhalf
+      INTEGER_T nbr_outside_domain_flag(2)
+      INTEGER_T nbr_covered_flag ! 0=covered 1=not covered
+      INTEGER_T isten
+
+      INTEGER_T local_bctype(2)
+      INTEGER_T local_maskSEM
+      REAL_T x_sep(2)
+      REAL_T local_bcval(2)
+      REAL_T local_interp(0:bfact)
+      REAL_T local_vel(0:bfact)
+      REAL_T RRface(0:bfact)
+      REAL_T lineflux(0:bfact,SDIM)
+      REAL_T local_data(1:bfact)
+      REAL_T local_data_side(2)
+      REAL_T local_grad(0:bfact)
+
+      INTEGER_T maskcov
+      INTEGER_T mask_out
+      INTEGER_T shared_face ! in: fort_crossterm
+      INTEGER_T test_maskSEM
+      INTEGER_T stripstat
+      INTEGER_T elemlo(3),elemhi(3)
+      INTEGER_T ielem,jelem,kelem
+      REAL_T avgflux(SDIM)
+      INTEGER_T i_in,j_in,k_in
+      INTEGER_T i_out,j_out,k_out
+      INTEGER_T iflux,jflux,kflux
+      INTEGER_T velcomp
+      INTEGER_T tcompMM
+      REAL_T xflux_temp
+      INTEGER_T constant_viscosity_override
+      INTEGER_T side_cell,side_face
+      INTEGER_T velcomp_alt
+      INTEGER_T inorm
+      INTEGER_T inorm_elem
+      INTEGER_T local_bc
+      INTEGER_T conservative_div_uu
+
+      REAL_T local_flux_val
+      REAL_T local_flux_val_in
+      REAL_T local_flux_val_out
+      INTEGER_T project_option
+
+      nhalf=1
+
+      semflux_ptr=>semflux
+      xflux_ptr=>xflux
+
+      project_option=3
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid79"
+       stop
+      endif
+
+      if (nsolve.eq.SDIM) then
+       ! do nothing
+      else
+       print *,"nsolve invalid in CROSSTERM"
+       stop
+      endif
+
+      if ((enable_spectral.lt.0).or. &
+          (enable_spectral.gt.3)) then
+       print *,"enable_spectral invalid crossterm"
+       stop
+      endif
+      if (operation_flag.ne.8) then
+       print *,"operation_flag invalid5"
+       stop
+      endif
+      if (ntensor.ne.SDIM*SDIM) then
+       print *,"ntensor invalid"
+       stop
+      endif
+      if (ncfluxreg.ne.ntensor) then
+       print *,"ncfluxreg invalid18 ",ncfluxreg
+       stop
+      endif
+      if ((spectral_loop.ne.0).and. &
+          (spectral_loop.ne.1)) then
+       print *,"spectral_loop invalid"
+       stop
+      endif
+
+      if ((homflag.eq.0).or.(homflag.eq.1)) then
+       ! do nothing
+      else
+       print *,"homflag invalid 2"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt must be positive in crossterm"
+       stop
+      endif
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time must be nonneg in crossterm"
+       stop
+      endif
+      if ((constant_viscosity.ne.0).and. &
+          (constant_viscosity.ne.1)) then
+       print *,"constant_viscosity invalid"
+       stop
+      endif
+
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
+       print *,"visc_coef invalid"
+       stop
+      endif
+
+       ! indexes start at 0
+      if ((facevisc_index.ne.6).or. &
+          (vofface_index.ne.massface_index+2*nmat)) then
+       print *,"face_index bust 8"
+       stop
+      endif
+      if (ncphys.ne.vofface_index+2*nmat) then
+       print *,"ncphys invalid"
+       stop
+      endif
+
+      do im=1,nmat
+       if (fort_denconst(im).le.zero) then
+        print *,"denconst invalid"
+        stop
+       endif
+      enddo
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (nden.ne.nmat*num_state_material) then
+       print *,"nden invalid"
+       stop
+      endif
+
+      if (rzflag.eq.0) then
+       ! do nothing
+      else if (rzflag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rzflag.eq.3) then
+       ! do nothing
+      else
+       print *,"rzflag invalid"
+       stop
+      endif
+
+      if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
+       if (dir.eq.1) then
+        call checkbound_array(fablo,fabhi,faceLS,1,-1,1277)
+        call checkbound_array(fablo,fabhi,mdata,1,-1,1278)
+        call checkbound_array(fablo,fabhi,tdata,1,-1,1279)
+        call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
+        call checkbound_array(fablo,fabhi,vel,1,-1,1281)
+        call checkbound_array(fablo,fabhi,levelpc,2,-1,1284)
+        call checkbound_array(fablo,fabhi,recon,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
+        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+        call checkbound_array1(fablo,fabhi,mask,1,-1,234)
+        call checkbound_array1(fablo,fabhi,maskcoef,1,-1,234)
+       endif
+       call checkbound_array(fablo,fabhi,xflux_ptr,0,dir-1,1285)
+       call checkbound_array(fablo,fabhi,xface,0,dir-1,1288)
+      endif
+
+        ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
+        ! order: ux,vx,wx,uy,vy,wy,uz,vz,wz
+      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
+
+      ii=0
+      jj=0
+      kk=0
+
+      if (dir.eq.1) then
+       ii=1
+       nbase=ux-1
+      else if (dir.eq.2) then
+       jj=1
+       nbase=uy-1
+      else if ((dir.eq.3).and.(SDIM.eq.3)) then
+       kk=1
+       nbase=uz-1
+      else
+       print *,"dir invalid crossterm"
+       stop
+      endif
+
+      if (dir.eq.1) then  ! fluxes on x-face
+       coupling(1)=uy
+       coupling(2)=uz
+       dirtan(1)=2
+       dirtan(2)=SDIM
+      else if (dir.eq.2) then  ! fluxes on y-face
+       coupling(1)=vx
+       coupling(2)=vz
+       dirtan(1)=1
+       dirtan(2)=SDIM
+      else if ((dir.eq.3).and.(SDIM.eq.3)) then ! fluxes on z-face
+       coupling(1)=wx
+       coupling(2)=wy
+       dirtan(1)=1
+       dirtan(2)=2
+      else
+       print *,"dir invalid crossterm 2"
+       stop
+      endif
+
+      if (tileloop.eq.0) then ! low order (grad U + grad U^T)
+
+       if (spectral_loop.eq.0) then
+
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+          growlo,growhi,0,dir-1,34)
+
+        do i=growlo(1),growhi(1)
+        do j=growlo(2),growhi(2)
+        do k=growlo(3),growhi(3)
+
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1,52)
+
+         if (dir.eq.1) then
+          inorm=i
+         else if (dir.eq.2) then
+          inorm=j
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          inorm=k
+         else
+          print *,"dir invalid"
+          stop
+         endif
+
+         constant_viscosity_override=0
+
+         side_face=0
+         if (inorm.eq.fablo(dir)) then
+          side_face=1
+         else if (inorm.eq.fabhi(dir)+1) then
+          side_face=2
+         else if ((inorm.gt.fablo(dir)).and. &
+                  (inorm.lt.fabhi(dir)+1)) then
+          ! do nothing
+         else
+          print *,"inorm invalid"
+          stop
+         endif
+
+         do velcomp_alt=1,SDIM
+          if (side_face.eq.0) then
+           ! do nothing
+          else if ((side_face.eq.1).or.(side_face.eq.2)) then
+           local_bc=velbc(dir,side_face,velcomp_alt)
+           if ((local_bc.eq.EXT_DIR).or. &
+               (local_bc.eq.REFLECT_EVEN).or. &
+               (local_bc.eq.REFLECT_ODD).or. &
+               (local_bc.eq.FOEXTRAP)) then
+            constant_viscosity_override=1
+           else if (local_bc.eq.INT_DIR) then
+            ! do nothing
+           else
+            print *,"local_bc invalid"
+            stop
+           endif
+          else
+           print *,"side_face invalid"
+           stop
+          endif
+         enddo ! velcomp_alt=1..sdim
+
+         im1=i-ii
+         jm1=j-jj
+         km1=k-kk
+
+         do im=1,2*nmat
+          massF(im)=xface(D_DECL(i,j,k),massface_index+im)
+         enddo
+         do im=1,nmat
+          massfrac(im)=zero
+         enddo
+         total_mass=zero
+         do side=1,2
+          do im=1,nmat
+           DMface=massF(2*(im-1)+side)
+           if (DMface.lt.zero) then
+            print *,"DMface bust"
+            stop
+           endif
+           total_mass=total_mass+DMface
+           massfrac(im)=massfrac(im)+DMface
+          enddo ! im
+         enddo ! side
+         if (total_mass.gt.zero) then
+          do im=1,nmat
+           massfrac(im)=massfrac(im)/total_mass
+          enddo
+         else if (total_mass.eq.zero) then
+          ! do nothing
+         else
+          print *,"total_mass invalid"
+          stop
+         endif
+
+         do velcomp=1,SDIM
+          diff_flux(velcomp)=zero
+         enddo  ! velcomp
+
+         if ((constant_viscosity.eq.0).and. &
+             (constant_viscosity_override.eq.0)) then
+
+          do nc=1,SDIM-1
+
+            ! find face stencil
+           ilo=i
+           ihi=i
+           jlo=j
+           jhi=j
+           klo=k
+           khi=k
+
+           if (dir.eq.1) then ! u component  x-face
+            ilo=i-1
+            if (nc.eq.1) then  ! du/dy
+             jhi=j+1
+            else if (nc.eq.2) then  ! du/dz
+             khi=k+1
+            else
+             print *,"nc invalid"
+             stop
+            endif
+           else if (dir.eq.2) then  ! v component y-face
+            jlo=j-1
+            if (nc.eq.1) then ! dv/dx
+             ihi=i+1
+            else if (nc.eq.2) then ! dv/dz
+             khi=k+1
+            else
+             print *,"nc invalid"
+             stop
+            endif
+           else if ((dir.eq.3).and.(SDIM.eq.3)) then ! w component z-face
+            klo=k-1
+            if (nc.eq.1) then ! dw/dx
+             ihi=i+1
+            else if (nc.eq.2) then  ! dw/dy
+             jhi=j+1
+            else
+             print *,"nc invalid"
+             stop
+            endif
+           else
+            print *,"dir invalid crossterm 3"
+            stop
+           endif
+
+           ! mdata=0 if both adjoining cells to a face are solid cells or
+           ! a cell pair is outside the grid.
+           call slopecrossterm( &
+             ntensor, &
+             nmat,  &
+             massfrac, &
+             total_mass, &
+             levelpc, &
+             faceLS, &
+             mdata, &
+             tdata, &
+             ii,jj,kk, &
+             i,j,k,dir, &
+             dirtan(nc), &
+             coupling(nc), &
+             ilo,ihi, &
+             jlo,jhi, &
+             klo,khi, &
+             diff_flux(dirtan(nc)))
+
+          enddo ! nc=1..sdim-1
+
+         else if ((constant_viscosity.eq.1).or. &
+                  (constant_viscosity_override.eq.1)) then
+          ! do nothing
+         else
+          print *,"constant_viscosity or constant_viscosity_override invalid"
+          stop
+         endif
+    
+
+! 2 u_x, v_x, w_x or
+! u_y, 2 v_y, w_y or
+! u_z, v_z, 2 w_z 
+
+         do nc=1,SDIM
+
+          if (constant_viscosity.eq.0) then
+           if (nc.eq.dir) then
+            alpha=two
+           else
+            alpha=one
+           endif
+          else if (constant_viscosity.eq.1) then
+           alpha=one
+          else
+           print *,"constant_viscosity invalid"
+           stop
+          endif
+
+           ! ux,vx, wx  or
+           ! uy,vy, wy  or
+           ! uz,vz, wz  
+          tcompMM=nbase+nc
+
+          local_flux_val=tdata(D_DECL(i,j,k),tcompMM)
+          if (abs(local_flux_val).le.OVERFLOW_CUTOFF) then
+           ! do nothing
+          else
+           print *,"tdata overflow: i,j,k,nbase,nc,tdata ", &
+            i,j,k,nbase,nc,local_flux_val
+           print *,"dt,cur_time,level ",dt,cur_time,level
+           stop
+          endif
+
+           ! use_dt=0
+           ! use_HO=0
+          call SEM_VISC_SANITY(101,dt,xstenMAC,nhalf,local_flux_val, &
+            dir,nc,0,0,project_option,bfact,enable_spectral, &
+            constant_viscosity)
+
+          gradterm=alpha*local_flux_val
+
+          if (side_face.eq.0) then
+           ! do nothing
+          else if ((side_face.eq.1).or.(side_face.eq.2)) then
+           local_bc=velbc(dir,side_face,nc)
+           if ((local_bc.eq.INT_DIR).or. &
+               (local_bc.eq.REFLECT_ODD).or. &
+               (local_bc.eq.EXT_DIR)) then
+            ! do nothing
+           else if ((local_bc.eq.REFLECT_EVEN).or. &
+                    (local_bc.eq.FOEXTRAP)) then
+            gradterm=zero
+           else
+            print *,"local_bc invalid"
+            stop
+           endif
+          else
+           print *,"side_face invalid"
+           stop
+          endif
+    
+          if (constant_viscosity.eq.0) then 
+           diff_flux(nc)=diff_flux(nc)+gradterm
+          else if (constant_viscosity.eq.1) then
+           if (diff_flux(nc).eq.zero) then
+            diff_flux(nc)=gradterm
+           else
+            print *,"diff_flux should be zero"
+            stop
+           endif
+          else
+           print *,"constant_viscosity invalid"
+           stop
+          endif
+
+         enddo  ! nc=1..sdim
+
+         do velcomp=1,SDIM
+          xflux(D_DECL(i,j,k),velcomp)=diff_flux(velcomp)
+         enddo  ! velcomp
+
+        enddo
+        enddo
+        enddo  ! i,j,k faces
+
+       else if (spectral_loop.eq.1) then
+        ! do nothing
+       else
+        print *,"spectral_loop invalid"
+        stop
+       endif
+
+      else if (tileloop.eq.1) then ! high order (grad U + grad U^T)
+
+       if (spectral_loop.eq.0) then
+
+         ! overwrite fluxes in spectral elements 
+         ! CROSSTERM -> TO_MAC  (interpolate CELL_TO_MAC)
+        if ((enable_spectral.eq.1).or. &  ! SEM space and time
+            (enable_spectral.eq.2)) then  ! SEM space
+
+         if (bfact.ge.2) then
+
+          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+          do i=growlo(1),growhi(1)
+          do j=growlo(2),growhi(2)
+          do k=growlo(3),growhi(3)
+
+           if ((dir.ge.1).and.(dir.le.SDIM)) then
+            ! do nothing
+           else
+            print *,"dir invalid crossterm 4"
+            stop
+           endif
+
+           if (dir.eq.1) then
+            inorm=i
+           else if (dir.eq.2) then
+            inorm=j
+           else if ((dir.eq.3).and.(SDIM.eq.3)) then
+            inorm=k
+           else
+            print *,"dir invalid"
+            stop
+           endif
+
+           call strip_status(i,j,k,bfact,stripstat)
+
+           if (stripstat.eq.1) then
+
+            local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
+            maskcov=NINT(maskcoef(D_DECL(i,j,k)))
+
+            if ((local_maskSEM.ge.1).and. &
+                (local_maskSEM.le.nmat).and. &
+                (maskcov.eq.1)) then
+
+              ! elemhi(dir)=elemlo(dir)
+             call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
+             do ielem=elemlo(1),elemhi(1)
+             do jelem=elemlo(2),elemhi(2)
+             do kelem=elemlo(3),elemhi(3)
+
+              if (dir.eq.1) then ! x-fluxes
+               inorm_elem=ielem
+              else if (dir.eq.2) then ! y-fluxes
+               inorm_elem=jelem
+              else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then ! z-fluxes
+               inorm_elem=kelem
+              else
+               print *,"dir invalid crossterm 5"
+               stop
+              endif
+
+              if ((inorm_elem/bfact)*bfact.ne.inorm_elem) then
+               print *,"inorm_elem invalid"
+               stop
+              endif
+              if (inorm_elem.lt.0) then
+               print *,"inorm_elem invalid"
+               stop
+              endif
+
+              do dir2=1,SDIM
+               if (fablo(dir2).lt.0) then
+                print *,"fablo invalid"
+                stop
+               endif
+              enddo ! dir2
+
+              indexlo(1)=ielem
+              indexlo(2)=jelem
+              if (SDIM.eq.3) then
+               indexlo(SDIM)=kelem
+              endif
+              do dir2=1,SDIM
+               indexhi(dir2)=indexlo(dir2)
+              enddo ! dir2
+              indexhi(dir)=indexlo(dir)+bfact-1
+
+              do isten=0,bfact
+               do velcomp=1,SDIM
+                lineflux(isten,velcomp)=zero
+               enddo
+              enddo
+
+              if (constant_viscosity.eq.0) then
+
+               do nc=1,SDIM-1
+
+                do side=1,2
+
+                 nbr_outside_domain_flag(side)=0
+
+                 do dir2=1,SDIM
+                  sideidx(dir2)=indexlo(dir2)
+                 enddo
+
+                 if (side.eq.1) then
+
+                  sideidx(dir)=indexlo(dir)-1
+
+                  do dir2=1,SDIM
+                   if (sideidx(dir2).lt.fablo(dir2)) then
+                    if (velbc(dir2,side,dir2).ne.INT_DIR) then
+                     nbr_outside_domain_flag(side)=1
+                    endif
+                   endif
+                  enddo ! dir2
+
+                  i_out=indexlo(1)-ii
+                  j_out=indexlo(2)-jj
+                  k_out=indexlo(SDIM)-kk
+
+                 else if (side.eq.2) then
+
+                  sideidx(dir)=indexhi(dir)+1
+                  do dir2=1,SDIM
+                   if (sideidx(dir2).gt.fabhi(dir2)) then
+                    if (velbc(dir2,side,dir2).ne.INT_DIR) then
+                     nbr_outside_domain_flag(side)=1
+                    endif
+                   endif
+                  enddo ! dir2
+
+                  i_out=indexhi(1)+ii
+                  j_out=indexhi(2)+jj
+                  k_out=indexhi(SDIM)+kk
+
+                 else 
+                  print *,"side invalid"
+                  stop
+                 endif
+
+                 if (nbr_outside_domain_flag(side).eq.0) then
+
+                  ic=i_out
+                  jc=j_out
+                  kc=k_out
+
+                   ! 0=covered 1=not covered
+                  nbr_covered_flag=NINT(maskcoef(D_DECL(ic,jc,kc)))
+
+                  call gridsten(xsten,xlo, &
+                   ic,jc,kc, &
+                   fablo,bfact,dx,nhalf)
+
+                  local_bctype(side)=0  ! interior
+
+                  local_bcval(side)=zero
+
+                  tcompMM=coupling(nc)
+  
+                  if (nbr_covered_flag.eq.1) then 
+                   local_data_side(side)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
+                  else if (nbr_covered_flag.eq.0) then
+                   local_data_side(side)=zero
+                   local_bctype(side)=-1 ! extrap
+                   local_bcval(side)=zero
+                  else
+                   print *,"nbr_covered_flag invalid"
+                   stop
+                  endif
+
+                 else if (nbr_outside_domain_flag(side).eq.1) then 
+
+                  call gridsten(xsten,xlo, &
+                   i_out,j_out,k_out, &
+                   fablo,bfact,dx,nhalf)
+
+                  local_data_side(side)=zero
+
+                  if (velbc(dir,side,dir).eq.INT_DIR) then
+                   print *,"velbc bust "
+                   print *,"side=",side
+                   print *,"nbr_outside_domain_flag= ", &
+                     nbr_outside_domain_flag(side)
+                   stop
+                  endif
+                  if ((velbc(dir,side,dir).eq.REFLECT_EVEN).or. &
+                      (velbc(dir,side,dir).eq.FOEXTRAP).or. &
+                      (velbc(dir,side,dir).eq.REFLECT_ODD).or. &
+                      (velbc(dir,side,dir).eq.EXT_DIR)) then
+                   local_bctype(side)=-1 ! extrap
+                   local_bcval(side)=zero
+                  else
+                   print *,"velbc is corrupt"
+                   stop
+                  endif
+                 else
+                  print *,"nbr_outside_domain_flag invalid 1"
+                  stop
+                 endif
+
+                enddo ! side=1..2
+
+                do isten=0,bfact-1
+                 do dir2=1,SDIM
+                  indexmid(dir2)=indexlo(dir2)
+                 enddo
+                 indexmid(dir)=indexlo(dir)+isten
+               
+                 ic=indexmid(1)
+                 jc=indexmid(2)
+                 kc=indexmid(SDIM)
+
+                 call gridsten(xsten,xlo, &
+                  ic,jc,kc, &
+                  fablo,bfact,dx,nhalf)
+
+                 tcompMM=coupling(nc)
+
+                 local_data(isten+1)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
+                enddo !isten=0..bfact-1
+
+                do isten=0,bfact
+                 indexmid(dir)=indexlo(dir)+isten
+                 ic=indexmid(1)
+                 jc=indexmid(2)
+                 kc=indexmid(SDIM)
+
+                 call gridstenMAC(xstenMAC,xlo, &
+                  ic,jc,kc, &
+                  fablo,bfact,dx,nhalf,dir-1,53)
+
+                 RRface(isten)=xstenMAC(0,1)
+
+                 local_vel(isten)=zero
+                enddo ! isten=0..bfact
+
+                conservative_div_uu=0
+
+                call lineGRAD( &
+                 conservative_div_uu, &
+                 levelrz, &
+                 dir, &
+                 nc, &
+                 RRface, &
+                 local_bctype, &
+                 local_bcval, &
+                 local_vel, &
+                 local_data, &
+                 local_data_side, &
+                 local_grad, &
+                 local_interp, &
+                 bfact, &
+                 dx(dir), &
+                 x_sep, &
+                 operation_flag)
+
+                do isten=0,bfact
+
+                 side_cell=0
+                 if (inorm+isten.eq.fablo(dir)) then
+                  side_cell=1
+                 else if (inorm+isten.eq.fabhi(dir)+1) then
+                  side_cell=2
+                 else if ((inorm+isten.gt.fablo(dir)).and. &
+                          (inorm+isten.lt.fabhi(dir)+1)) then
+                  ! do nothing
+                 else
+                  print *,"inorm or isten invalid"
+                  stop
+                 endif
+
+                 constant_viscosity_override=0
+                
+                 do velcomp_alt=1,SDIM
+                  if (side_cell.eq.0) then
+                   ! do nothing
+                  else if (((side_cell.eq.1).and.(isten.eq.0)).or. &
+                           ((side_cell.eq.2).and.(isten.eq.bfact))) then
+                   local_bc=velbc(dir,side_cell,velcomp_alt)
+                   if ((local_bc.eq.EXT_DIR).or. &
+                       (local_bc.eq.REFLECT_EVEN).or. &
+                       (local_bc.eq.REFLECT_ODD).or. &
+                       (local_bc.eq.FOEXTRAP)) then
+                    constant_viscosity_override=1
+                   else if (local_bc.eq.INT_DIR) then
+                    ! do nothing
+                   else
+                    print *,"local_bc invalid"
+                    stop
+                   endif
+                  else if ((isten.gt.0).and.(isten.lt.bfact)) then
+                   ! do nothing
+                  else
+                   print *,"side_cell invalid1"
+                   stop
+                  endif
+                 enddo ! velcomp_alt=1..sdim
+
+                 if (constant_viscosity_override.eq.0) then
+                  lineflux(isten,dirtan(nc))= & 
+                   lineflux(isten,dirtan(nc))+local_interp(isten)
+                 else if (constant_viscosity_override.eq.1) then
+                  ! do nothing
+                 else
+                  print *,"constant_viscosity_override invalid"
+                  stop
+                 endif
+                enddo ! isten=0..bfact
+
+               enddo ! nc=1..sdim-1
+
+              else if (constant_viscosity.eq.1) then
+               ! do nothing
+              else
+               print *,"constant_viscosity invalid"
+               stop
+              endif
+                 
+              do isten=0,bfact
+
+               side_cell=0
+               if (inorm+isten.eq.fablo(dir)) then
+                side_cell=1
+               else if (inorm+isten.eq.fabhi(dir)+1) then
+                side_cell=2
+               else if ((inorm+isten.gt.fablo(dir)).and. &
+                        (inorm+isten.lt.fabhi(dir)+1)) then
+                ! do nothing
+               else
+                print *,"inorm or isten invalid"
+                stop
+               endif
+
+               ! in: crossterm; prevent race condition when doing tiling.
+               ! shared_face==1 => two threads would compete for same
+               ! point without intervention.
+               shared_face=0 
+
+               do dir2=1,SDIM
+                indexmid(dir2)=indexlo(dir2)
+               enddo
+               indexmid(dir)=indexlo(dir)+isten
+
+               ic=indexmid(1)
+               jc=indexmid(2)
+               kc=indexmid(SDIM)
+
+               call gridstenMAC_level(xstenMAC, &
+                ic,jc,kc,level,nhalf,dir-1,54)
+
+               if (isten.eq.bfact) then ! right side of element
+
+                test_maskSEM=NINT(maskSEM(D_DECL(ic,jc,kc)))
+                maskcov=NINT(maskcoef(D_DECL(ic,jc,kc)))
+
+                if ((indexmid(dir).gt.fablo(dir)).and. &
+                    (indexmid(dir).le.fabhi(dir)).and. &
+                    (test_maskSEM.eq.local_maskSEM).and. &
+                    (maskcov.eq.1)) then
+                 shared_face=1
+                else if ((indexmid(dir).eq.fabhi(dir)+1).or. &
+                         (test_maskSEM.ne.local_maskSEM).or. &
+                         (maskcov.eq.0)) then
+                 ! do nothing
+                else
+                 print *,"indexmid,test_maskSEM, or maskcov invalid"
+                 stop
+                endif
+
+               else if ((isten.ge.0).and.(isten.lt.bfact)) then
+                ! do nothing
+               else
+                print *,"isten invalid"
+                stop
+               endif
+
+               do nc=1,SDIM
+
+                if (constant_viscosity.eq.0) then
+                 if (nc.eq.dir) then
+                  alpha=two
+                 else
+                  alpha=one
+                 endif
+                else if (constant_viscosity.eq.1) then
+                 alpha=one
+                else 
+                 print *,"constant_viscosity invalid"
+                 stop
+                endif
+
+                ! ux,vx, wx  or
+                ! uy,vy, wy  or
+                ! uz,vz, wz  
+                tcompMM=nbase+nc
+        
+                local_flux_val=tdata(D_DECL(ic,jc,kc),tcompMM)
+
+                 ! use_dt=0
+                 ! use_HO=1
+                call SEM_VISC_SANITY(1,dt,xstenMAC,nhalf,local_flux_val, &
+                  dir,nc,0,1,project_option,bfact,enable_spectral, &
+                  constant_viscosity)
+
+                gradterm=alpha*local_flux_val
+
+                if (side_cell.eq.0) then
+                 ! do nothing
+                else if (((side_cell.eq.1).and.(isten.eq.0)).or. &
+                         ((side_cell.eq.2).and.(isten.eq.bfact))) then
+                 local_bc=velbc(dir,side_cell,nc)
+                 if ((local_bc.eq.INT_DIR).or. &
+                     (local_bc.eq.REFLECT_ODD).or. &
+                     (local_bc.eq.EXT_DIR)) then
+                  ! do nothing
+                 else if ((local_bc.eq.REFLECT_EVEN).or. &
+                          (local_bc.eq.FOEXTRAP)) then
+                  gradterm=zero
+                 else
+                  print *,"local_bc invalid"
+                  stop
+                 endif
+                else if ((isten.gt.0).and.(isten.lt.bfact)) then
+                 ! do nothing
+                else
+                 print *,"side_cell invalid2"
+                 print *,"side_cell=",side_cell
+                 print *,"isten,bfact= ",isten,bfact
+                 print *,"dir=",dir
+                 print *,"nc=",nc
+                 print *,"local_bc=",local_bc
+                 print *,"int dir= ",INT_DIR
+                 print *,"ref odd= ",REFLECT_ODD
+                 print *,"ext dir= ",EXT_DIR
+                 print *,"ref evn= ",REFLECT_EVEN
+                 print *,"fo ext=",FOEXTRAP
+                 print *,"i,j,k=",i,j,k
+                 print *,"inorm=",inorm
+                 print *,"growlo=",growlo(1),growlo(2),growlo(3)
+                 print *,"growhi=",growhi(1),growhi(2),growhi(3)
+                 print *,"fablo(dir),fabhi(dir) ",fablo(dir),fabhi(dir)
+                 print *,"ielem,jelem,kelem ",ielem,jelem,kelem
+                 print *,"inorm_elem ",inorm_elem
+                 stop
+                endif
+               
+                if (constant_viscosity.eq.0) then 
+                 lineflux(isten,nc)=lineflux(isten,nc)+gradterm
+                else if (constant_viscosity.eq.1) then
+                 if (lineflux(isten,nc).eq.zero) then
+                  lineflux(isten,nc)=gradterm
+                 else
+                  print *,"lineflux should be zero"
+                  stop
+                 endif
+                else
+                 print *,"constant_viscosity invalid"
+                 stop
+                endif
+
+               enddo  ! nc=1..sdim
+            
+               ! shared_face=1 if right element edge and not the right
+               ! edge of the grid or next to a low order or covered
+               ! element.
+               if (shared_face.eq.0) then
+
+                do velcomp=1,SDIM
+                 xflux(D_DECL(ic,jc,kc),velcomp)=lineflux(isten,velcomp)
+                enddo  ! velcomp
+
+               else if (shared_face.eq.1) then
+                ! do nothing
+               else
+                print *,"shared_face invalid"
+                stop
+               endif
+
+              enddo ! isten=0..bfact
+
+             enddo
+             enddo
+             enddo !ielem,jelem,kelem
+
+            else if ((local_maskSEM.eq.0).or. &
+                     (maskcov.eq.0)) then
+             ! do nothing
+            else
+             print *,"local_maskSEM or maskcov invalid"
+             stop
+            endif 
+
+           else if (stripstat.eq.0) then
+            ! do nothing
+           else
+            print *,"stripstat invalid"
+            stop
+           endif
+
+          enddo
+          enddo
+          enddo ! i,j,k
+
+         else if (bfact.eq.1) then
+          ! do nothing
+         else
+          print *,"bfact invalid80"
+          stop
+         endif
+
+        else if ((enable_spectral.eq.0).or. &  ! No SEM
+                 (enable_spectral.eq.3)) then  ! SEM time only.
+         ! do nothing
+        else
+         print *,"enable_spectral invalid"
+         stop
+        endif
+
+       else if (spectral_loop.eq.1) then
+        ! do nothing
+       else
+        print *,"spectral_loop invalid"
+        stop
+       endif
+
+      ! (1) fluxes+=divu  (2) fluxes*=visccoef
+      else if (tileloop.eq.2) then 
+
+       if (spectral_loop.eq.0) then 
+
+          ! does not include the right face of the tile unless
+          ! tilehi==fabhi
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+         growlo,growhi,0,dir-1,35)
+
+         ! u_x+v_y+w_z on flux face
+         ! multiply by visc_constant
+        do i=growlo(1),growhi(1)
+        do j=growlo(2),growhi(2)
+        do k=growlo(3),growhi(3)
+
+          ! dir=1..sdim
+         call gridstenMAC_level(xstenMAC, &
+           i,j,k,level,nhalf,dir-1,55)
+
+         im1=i-ii
+         jm1=j-jj
+         km1=k-kk
+
+         if (dir.eq.1) then
+          inorm=i
+         else if (dir.eq.2) then
+          inorm=j
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          inorm=k
+         else
+          print *,"dir invalid"
+          stop
+         endif
+
+         side_face=0
+         if (inorm.eq.fablo(dir)) then
+          side_face=1
+         else if (inorm.eq.fabhi(dir)+1) then
+          side_face=2
+         else if ((inorm.gt.fablo(dir)).and. &
+                  (inorm.lt.fabhi(dir)+1)) then
+          ! do nothing
+         else
+          print *,"inorm invalid"
+          stop
+         endif
+
+         do im=1,nmat
+          LSleft(im)=levelpc(D_DECL(im1,jm1,km1),im)
+          LSright(im)=levelpc(D_DECL(i,j,k),im)
+         enddo
+         call get_primary_material(LSleft,nmat,imL)
+         call get_primary_material(LSright,nmat,imR)
+
+         if ((imL.lt.1).or.(imL.gt.nmat)) then
+          print *,"imL invalid"
+          stop
+         endif
+         if ((imR.lt.1).or.(imR.gt.nmat)) then
+          print *,"imR invalid"
+          stop
+         endif
+
+         call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
+         call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+         do dir2=1,SDIM
+          xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+          xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+         enddo
+
+          ! LS>0 if clamped
+         call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+              vel_clamped_minus,temperature_clamped_minus)
+         call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+              vel_clamped_plus,temperature_clamped_plus)
+         if ((LS_clamped_minus.ge.zero).or. &
+             (LS_clamped_plus.ge.zero)) then
+          is_clamped_face=1
+          do dir2=1,SDIM
+           if (LS_clamped_minus.lt.zero) then
+            vel_clamped_face(dir2)=vel_clamped_plus(dir2)
+            is_clamped_face=2
+           else if (LS_clamped_plus.lt.zero) then
+            vel_clamped_face(dir2)=vel_clamped_minus(dir2)
+            is_clamped_face=3
+           else
+            vel_clamped_face(dir2)=half*(vel_clamped_plus(dir2)+ &
+              vel_clamped_minus(dir2))
+           endif
+          enddo
+         else if ((LS_clamped_minus.lt.zero).and. &
+                  (LS_clamped_plus.lt.zero)) then
+          is_clamped_face=0
+         else
+          print *,"LS_clamped plus or minus is NaN"
+          stop
+         endif
+
+         compressible_face=1
+
+         if ((is_clamped_face.eq.1).or. &
+             (is_clamped_face.eq.2).or. &
+             (is_clamped_face.eq.3)) then
+          compressible_face=0
+         else if (is_clamped_face.eq.0) then
+
+          if ((is_rigid(nmat,imL).eq.1).or. &
+              (is_rigid(nmat,imR).eq.1)) then
+           compressible_face=0
+          else if ((is_rigid(nmat,imL).eq.0).and. &
+                   (is_rigid(nmat,imR).eq.0)) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
+         else
+          print *,"is_clamped_face invalid"
+          stop
+         endif
+
+         if ((fort_material_type(imL).eq.0).or. &
+             (fort_material_type(imR).eq.0)) then
+          compressible_face=0
+         endif
+
+         do velcomp_alt=1,SDIM
+          if (side_face.eq.0) then
+           ! do nothing
+          else if ((side_face.eq.1).or.(side_face.eq.2)) then
+           local_bc=velbc(dir,side_face,velcomp_alt)
+           if ((local_bc.eq.EXT_DIR).or. &
+               (local_bc.eq.REFLECT_EVEN).or. &
+               (local_bc.eq.REFLECT_ODD).or. &
+               (local_bc.eq.FOEXTRAP)) then
+            compressible_face=0
+           else if (local_bc.eq.INT_DIR) then
+            ! do nothing
+           else
+            print *,"local_bc invalid"
+            stop
+           endif
+          else
+           print *,"side_face invalid"
+           stop
+          endif
+         enddo ! velcomp_alt=1..sdim
+
+         uxMM=ux
+         vyMM=vy
+         wzMM=wz
+
+         wzterm=zero
+
+         if (dir.eq.1) then
+
+          uxterm=tdata(D_DECL(i,j,k),uxMM)
+          vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
+           tdata(D_DECL(i-1,j,k),vyMM)+tdata(D_DECL(i-1,j+1,k),vyMM))/four
+          if (SDIM.eq.3) then
+           wzterm= &
+            (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
+             tdata(D_DECL(i-1,j,k),wzMM)+tdata(D_DECL(i-1,j,k+1),wzMM))/four
+          endif
+
+         else if (dir.eq.2) then
+
+          uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
+           tdata(D_DECL(i,j-1,k),uxMM)+tdata(D_DECL(i+1,j-1,k),uxMM))/four
+          vyterm=tdata(D_DECL(i,j,k),vyMM)
+          if (SDIM.eq.3) then
+           wzterm= &
+            (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
+             tdata(D_DECL(i,j-1,k),wzMM)+tdata(D_DECL(i,j-1,k+1),wzMM))/four
+          endif
+
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+
+          uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
+           tdata(D_DECL(i,j,k-1),uxMM)+tdata(D_DECL(i+1,j,k-1),uxMM))/four
+          vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
+           tdata(D_DECL(i,j,k-1),vyMM)+tdata(D_DECL(i,j+1,k-1),vyMM))/four
+          wzterm=tdata(D_DECL(i,j,k),wzMM)
+
+         else
+          print *,"dir invalid crossterm 6"
+          stop
+         endif
+
+         if (compressible_face.eq.0) then
+          divterm=zero
+         else if (mdata(D_DECL(i,j,k),dir).eq.zero) then
+          divterm=zero
+         else if (compressible_face.eq.1) then
+          divterm=-(two/SDIM)*(uxterm+vyterm+wzterm)
+         else
+          print *,"compressible_face bust"
+          stop
+         endif
+
+         visc_constant=visc_coef*xface(D_DECL(i,j,k),facevisc_index+1)
+         if (visc_constant.lt.zero) then
+          print *,"visc_constant cannot be negative"
+          stop
+         endif
+         visc_constant=-dt*visc_constant
+
+         do velcomp=1,SDIM
+
+          local_flux_val=xflux(D_DECL(i,j,k),velcomp)+divterm
+
+           ! use_dt=0
+           ! use_HO=1
+          call SEM_VISC_SANITY(2,dt,xstenMAC,nhalf,local_flux_val, &
+            dir,velcomp,0,1,project_option,bfact,enable_spectral, &
+            constant_viscosity)
+
+          xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
+
+         enddo  ! velcomp
+
+        enddo
+        enddo
+        enddo  ! i,j,k add divterm to fluxes and multiply by visc_constant
+
+       else if (spectral_loop.eq.1) then
+        ! do nothing
+       else
+        print *,"spectral_loop invalid"
+        stop
+       endif
+
+       ! average "left" and "right" fluxes at faces separating
+       ! 2 spectral elements.
+      else if (tileloop.eq.3) then 
+
+       if ((enable_spectral.eq.1).or. & ! SEM space and time
+           (enable_spectral.eq.2)) then ! SEM space only
+
+        if (bfact.ge.2) then
+
+         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+         if ((dir.lt.1).or.(dir.gt.SDIM)) then
+          print *,"dir invalid crossterm"
+          stop
+         endif
+         do i=growlo(1),growhi(1)
+         do j=growlo(2),growhi(2)
+         do k=growlo(3),growhi(3)
+
+          call strip_status(i,j,k,bfact,stripstat)
+
+          if (stripstat.eq.1) then
+
+           local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
+           maskcov=NINT(maskcoef(D_DECL(i,j,k)))
+
+           if ((local_maskSEM.ge.1).and. &
+               (local_maskSEM.le.nmat).and. &
+               (maskcov.eq.1)) then
+
+            call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
+            do ielem=elemlo(1),elemhi(1)
+            do jelem=elemlo(2),elemhi(2)
+            do kelem=elemlo(3),elemhi(3)
+
+             if (dir.eq.1) then ! x-fluxes
+              inorm_elem=ielem
+             else if (dir.eq.2) then ! y-fluxes
+              inorm_elem=jelem
+             else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then ! z-fluxes
+              inorm_elem=kelem
+             else
+              print *,"dir invalid crossterm 7"
+              stop
+             endif
+
+             if ((inorm_elem/bfact)*bfact.ne.inorm_elem) then
+              print *,"inorm_elem invalid"
+              stop
+             endif
+             if (inorm_elem.lt.0) then
+              print *,"inorm_elem invalid"
+              stop
+             endif
+
+             indexlo(1)=ielem
+             indexlo(2)=jelem
+             if (SDIM.eq.3) then
+              indexlo(SDIM)=kelem
+             endif
+             do dir2=1,SDIM
+              index_edge(dir2)=indexlo(dir2)
+              index_opp(dir2)=indexlo(dir2)
+              index_flux(dir2)=indexlo(dir2)
+             enddo ! dir2
+
+             do side=1,2
+
+              ! in: crossterm  avoid race conditions when doing tiling.
+              ! shared_face==1 => two threads would compete for same
+              ! point without intervention.
+              shared_face=0 
+
+              if (side.eq.1) then
+               index_flux(dir)=indexlo(dir)
+               index_edge(dir)=indexlo(dir)
+               index_opp(dir)=index_edge(dir)-1
+              else if (side.eq.2) then
+               index_flux(dir)=indexlo(dir)+bfact
+               index_edge(dir)=indexlo(dir)+bfact-1
+               index_opp(dir)=index_edge(dir)+1
+              else
+               print *,"side invalid"
+               stop
+              endif
+
+              i_in=index_edge(1)
+              j_in=index_edge(2)
+              k_in=index_edge(SDIM)
+
+              i_out=index_opp(1)
+              j_out=index_opp(2)
+              k_out=index_opp(SDIM)
+
+              iflux=index_flux(1)
+              jflux=index_flux(2)
+              kflux=index_flux(SDIM)
+
+              call gridstenMAC_level(xstenMAC, &
+               iflux,jflux,kflux,level,nhalf,dir-1,56)
+
+              test_maskSEM=NINT(maskSEM(D_DECL(i_out,j_out,k_out)))
+              maskcov=NINT(maskcoef(D_DECL(i_out,j_out,k_out)))
+
+              if (side.eq.2) then
+
+               if ((index_edge(dir).ge.fablo(dir)).and. &
+                   (index_edge(dir).lt.fabhi(dir)).and. &
+                   (test_maskSEM.eq.local_maskSEM).and. &
+                   (maskcov.eq.1)) then
+                shared_face=1
+               else if ((index_edge(dir).eq.fabhi(dir)).or. &
+                        (test_maskSEM.ne.local_maskSEM).or. &
+                        (maskcov.eq.0)) then
+                ! do nothing
+               else
+                print *,"index_edge invalid"
+                stop
+               endif
+
+              else if (side.eq.1) then
+               ! do nothing
+              else
+               print *,"side invalid"
+               stop
+              endif
+
+               ! set mask_out=0 at coarse-fine grid border.
+               ! use the (already init) flux from the fine side only.
+              mask_out=1
+              do dir2=1,SDIM
+               if ((index_opp(dir2).lt.fablo(dir2)).or. &
+                   (index_opp(dir2).gt.fabhi(dir2))) then
+                mask_out=NINT(mask(D_DECL(i_out,j_out,k_out)))
+               endif
+              enddo
+
+               ! do not average with flux from 
+               ! an element that is covered.
+              if (maskcov.eq.1) then
+               ! do nothing
+              else if (maskcov.eq.0) then
+               mask_out=0
+              else
+               print *,"maskcov invalid"
+               stop
+              endif
+
+               ! set mask_out=0 at high/low order interface.
+               ! use the (already init) flux from the high order side only.
+              if (test_maskSEM.ne.local_maskSEM) then
+               mask_out=0
+              endif
+
+               ! shared_face=1 for faces on right side of elements and not
+               !  touching the right side of the grid, not touching
+               !  a maskSEM==0 element, and not touching a covered element.
+               ! shared_face=0 for faces on the left side of elements or for
+               !  the face touching the right side of the grid, touching
+               !  a maskSEM!=cen_maskSEM element, or touching a covered element.
+               ! no need to average fluxes at a "shared_face"
+               ! since iface=0 for following element corresponds to
+               ! iface=bfact of the previous.
+              if (shared_face.eq.1) then
+               mask_out=0
+              else if (shared_face.eq.0) then
+               ! do nothing
+              else
+               print *,"shared_face invalid"
+               stop
+              endif
+
+              if (spectral_loop.eq.0) then
+
+               do nc=1,SDIM
+                xflux_temp=xflux(D_DECL(iflux,jflux,kflux),nc)
+              
+                 ! use_dt=1
+                 ! use_HO=1
+                call SEM_VISC_SANITY(3,dt,xstenMAC,nhalf,xflux_temp, &
+                  dir,nc,1,1,project_option,bfact,enable_spectral, &
+                  constant_viscosity)
+
+                semflux(D_DECL(i_in,j_in,k_in),nbase+nc)=xflux_temp
+               enddo ! nc
+
+              else if (spectral_loop.eq.1) then
+
+               if (mask_out.eq.1) then
+
+                do nc=1,SDIM
+
+                 local_flux_val_in=semflux(D_DECL(i_in,j_in,k_in),nbase+nc)
+                 local_flux_val_out=semflux(D_DECL(i_out,j_out,k_out),nbase+nc)
+                  ! use_dt=1
+                  ! use_HO=1
+                 call SEM_VISC_SANITY(4,dt,xstenMAC,nhalf,local_flux_val_in, &
+                         dir,nc,1,1,project_option,bfact,enable_spectral, &
+                         constant_viscosity)
+                 call SEM_VISC_SANITY(5,dt,xstenMAC,nhalf,local_flux_val_out, &
+                         dir,nc,1,1,project_option,bfact,enable_spectral, &
+                         constant_viscosity)
+
+                 avgflux(nc)=half*(local_flux_val_in+local_flux_val_out)
+
+                enddo ! nc=1..sdim
+
+                do nc=1,SDIM
+                 xflux(D_DECL(iflux,jflux,kflux),nc)=avgflux(nc)
+                enddo ! nc=1..sdim
+               else if (mask_out.eq.0) then
+                ! do nothing
+               else
+                print *,"mask_out invalid"
+                stop
+               endif
+
+              else
+               print *,"spectral_loop invalid"
+               stop
+              endif
+
+             enddo ! side=1,2
+
+            enddo
+            enddo
+            enddo !elem,jelem,kelem
+
+           else if ((local_maskSEM.eq.0).or. &
+                    (maskcov.eq.0)) then
+            ! do nothing
+           else
+            print *,"loca_maskSEM_cen or maskcov invalid"
+            stop
+           endif
+          else if (stripstat.eq.0) then
+           ! do nothing
+          else
+           print *,"stripstat invalid"
+           stop
+          endif
+
+         enddo
+         enddo
+         enddo ! i,j,k
+
+        else if (bfact.eq.1) then
+         ! do nothing
+        else
+         print *,"bfact invalid81"
+         stop
+        endif
+
+       else if ((enable_spectral.eq.0).or. &
+                (enable_spectral.eq.3)) then
+        ! do nothing
+       else
+        print *,"enable_spectral invalid"
+        stop
+       endif
+
+      else 
+       print *,"tileloop invalid"
+       stop
+      endif
+
+      return 
+      end subroutine fort_crossterm
+
+
       end module godunov_module
 
 
@@ -25470,1718 +27183,6 @@ stop
       return 
       end subroutine fort_face_gradients
 
-! Prior to calling this routine:
-!  a) init_gradu_tensor(...,LOCAL_CELLTENSOR_MF,LOCAL_FACETENSOR_MF)
-!     i)  doit_gradu_tensor  spectral_loop==0  itensor_iter==0
-!     ii) doit_gradu_tensor  spectral_loop==1  itensor_iter==0
-!     ii) doit_gradu_tensor  spectral_loop==0  itensor_iter==1
-!     in doit_gradu_tensor:
-!         fort_face_gradients, tileloop==0 (low order), tileloop==1 (SEM)
-!  b) spectral_loop=0,1
-!     dir=1..sdim
-!     tileloop=0...3
-!       fort_crossterm
-!
-! in fort_crossterm:
-!  if tileloop==0  spectral_loop==0 
-!   low order fluxes (slopecrossterm)
-!  if tileloop==0  spectral_loop==1
-!   do nothing 
-!  if tileloop==1  spectral_loop==0
-!   high order fluxes
-!  if tileloop==1  spectral_loop==1
-!   do nothing 
-!  if tileloop==2  spectral_loop==0
-!   xflux=visc_coef*xface(facevisc_index+1)*(xflux+divterm)
-!  if tileloop==2  spectral_loop==1
-!   do nothing 
-!  if tileloop==3  spectral_loop==0
-!   semflux=xflux
-!  if tileloop==3  spectral_loop==1
-!   xflux=(semflux_in + semflux_out)/2
-!
-! radial velocity is negated if r<0
-! -dt * visc_coef * viscface * (grad U + grad U^T)
-! fluxes found on "dir" faces
-      subroutine fort_crossterm( &
-       nsolve, &
-       tileloop, &
-       dir, &  ! dir=1..sdim
-       operation_flag, & ! 8
-       enable_spectral, &
-       spectral_loop, &
-       ncfluxreg, &
-       semflux,DIMS(semflux), & 
-       mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
-       maskcoef,DIMS(maskcoef), & ! 1=not cov by level+1 or outside.
-       faceLS,DIMS(faceLS), & 
-       mdata,DIMS(mdata), & 
-       tdata,DIMS(tdata), & 
-       c_tdata,DIMS(c_tdata), & 
-       maskSEM,DIMS(maskSEM), &
-       xlo,dx, &
-       dt, &
-       cur_time, &
-       vel,DIMS(vel), &
-       levelpc,DIMS(levelpc), &
-       xflux,DIMS(xflux), &
-       xface,DIMS(xface), &
-       recon,DIMS(recon), &  
-       facevisc_index, &
-       vofface_index, &
-       massface_index, &
-       ncphys, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       level, &
-       rzflag, &
-       velbc, &
-       visc_coef, &
-       nmat, &
-       nden, &
-       ntensor, &
-       constant_viscosity, &
-       homflag) &
-      bind(c,name='fort_crossterm')
-
-      use probcommon_module
-      use global_utility_module
-      use godunov_module
-      use MOF_routines_module
- 
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: ntensor
-      INTEGER_T, intent(in) :: tileloop
-      INTEGER_T, intent(in) :: spectral_loop
-      INTEGER_T, intent(in) :: ncfluxreg
-      INTEGER_T, intent(in) :: operation_flag
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: facevisc_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
-      INTEGER_T, intent(in) :: homflag
-      INTEGER_T :: nc
-      INTEGER_T, intent(in) :: constant_viscosity
-      INTEGER_T, intent(in) :: nmat,nden
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
-      INTEGER_T, intent(in) :: rzflag 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T :: indexlo(SDIM),indexhi(SDIM)
-      INTEGER_T :: sideidx(SDIM)
-      INTEGER_T :: indexmid(SDIM)
-      INTEGER_T :: index_flux(SDIM)
-      INTEGER_T :: index_edge(SDIM)
-      INTEGER_T :: index_opp(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(semflux)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
-      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-      INTEGER_T, intent(in) :: DIMDEC(faceLS)
-      INTEGER_T, intent(in) :: DIMDEC(mdata)
-      INTEGER_T, intent(in) :: DIMDEC(tdata)
-      INTEGER_T, intent(in) :: DIMDEC(c_tdata)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(levelpc)
-      INTEGER_T, intent(in) :: DIMDEC(xflux)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-  
-      REAL_T, intent(in) :: dt 
-      REAL_T, intent(in) :: cur_time
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM) 
-      REAL_T, intent(in), target :: mask(DIMV(mask))
-      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
-      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
-      REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, intent(in), target :: faceLS(DIMV(faceLS),SDIM)
-      REAL_T, intent(in), target :: mdata(DIMV(mdata),SDIM)
-      REAL_T, intent(in), target :: tdata(DIMV(tdata),ntensor)
-      REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),ntensor)
-
-      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
-
-      REAL_T, intent(out), target :: xflux(DIMV(xflux),nsolve)  ! u
-      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, intent(in), target :: xface(DIMV(xface),ncphys)
-
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-
-      REAL_T, intent(in) :: visc_coef
-
-      INTEGER_T, intent(in) :: dir
- 
-      INTEGER_T ilo,ihi 
-      INTEGER_T jlo,jhi 
-      INTEGER_T klo,khi 
-
-      INTEGER_T i,j,k
-      INTEGER_T dir2
-      INTEGER_T ic,jc,kc
-      INTEGER_T dirtan(2)
-      INTEGER_T coupling(2)
-      INTEGER_T ii,jj,kk,im1,jm1,km1
-      REAL_T gradterm,alpha
-      INTEGER_T side
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
-      INTEGER_T uxMM
-      INTEGER_T vyMM
-      INTEGER_T wzMM
-
-      INTEGER_T im
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      REAL_T divterm
-      INTEGER_T compressible_face
-      REAL_T uxterm,vyterm,wzterm
-      REAL_T visc_constant
-      REAL_T diff_flux(SDIM)
-      INTEGER_T imL,imR
-      REAL_T total_mass,DMface
-      REAL_T massfrac(nmat)
-      REAL_T massF(2*nmat)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenMAC(-1:1,SDIM)
-      REAL_T xclamped_minus_sten(-1:1,SDIM)
-      REAL_T xclamped_plus_sten(-1:1,SDIM)
-      REAL_T xclamped_minus(SDIM)
-      REAL_T xclamped_plus(SDIM)
-
-      REAL_T LS_clamped_minus
-      REAL_T LS_clamped_plus
-      REAL_T vel_clamped_minus(SDIM)
-      REAL_T vel_clamped_plus(SDIM)
-      REAL_T vel_clamped_face(SDIM)
-      REAL_T temperature_clamped_minus
-      REAL_T temperature_clamped_plus
-      INTEGER_T is_clamped_face
-      INTEGER_T nhalf
-      INTEGER_T nbr_outside_domain_flag(2)
-      INTEGER_T nbr_covered_flag ! 0=covered 1=not covered
-      INTEGER_T isten
-
-      INTEGER_T local_bctype(2)
-      INTEGER_T local_maskSEM
-      REAL_T x_sep(2)
-      REAL_T local_bcval(2)
-      REAL_T local_interp(0:bfact)
-      REAL_T local_vel(0:bfact)
-      REAL_T RRface(0:bfact)
-      REAL_T lineflux(0:bfact,SDIM)
-      REAL_T local_data(1:bfact)
-      REAL_T local_data_side(2)
-      REAL_T local_grad(0:bfact)
-
-      INTEGER_T maskcov
-      INTEGER_T mask_out
-      INTEGER_T shared_face ! in: fort_crossterm
-      INTEGER_T test_maskSEM
-      INTEGER_T stripstat
-      INTEGER_T elemlo(3),elemhi(3)
-      INTEGER_T ielem,jelem,kelem
-      REAL_T avgflux(SDIM)
-      INTEGER_T i_in,j_in,k_in
-      INTEGER_T i_out,j_out,k_out
-      INTEGER_T iflux,jflux,kflux
-      INTEGER_T velcomp
-      INTEGER_T tcompMM
-      REAL_T xflux_temp
-      INTEGER_T constant_viscosity_override
-      INTEGER_T side_cell,side_face
-      INTEGER_T velcomp_alt
-      INTEGER_T inorm
-      INTEGER_T inorm_elem
-      INTEGER_T local_bc
-      INTEGER_T conservative_div_uu
-
-      REAL_T local_flux_val
-      REAL_T local_flux_val_in
-      REAL_T local_flux_val_out
-      INTEGER_T project_option
-
-      nhalf=1
-
-      semflux_ptr=>semflux
-      xflux_ptr=>xflux
-
-      project_option=3
-
-      if (bfact.ge.1) then
-       ! do nothing
-      else
-       print *,"bfact invalid79"
-       stop
-      endif
-
-      if (nsolve.eq.SDIM) then
-       ! do nothing
-      else
-       print *,"nsolve invalid in CROSSTERM"
-       stop
-      endif
-
-      if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
-       print *,"enable_spectral invalid crossterm"
-       stop
-      endif
-      if (operation_flag.ne.8) then
-       print *,"operation_flag invalid5"
-       stop
-      endif
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
-       stop
-      endif
-      if (ncfluxreg.ne.ntensor) then
-       print *,"ncfluxreg invalid18 ",ncfluxreg
-       stop
-      endif
-      if ((spectral_loop.ne.0).and. &
-          (spectral_loop.ne.1)) then
-       print *,"spectral_loop invalid"
-       stop
-      endif
-
-      if ((homflag.eq.0).or.(homflag.eq.1)) then
-       ! do nothing
-      else
-       print *,"homflag invalid 2"
-       stop
-      endif
-      if (dt.gt.zero) then
-       ! do nothing
-      else
-       print *,"dt must be positive in crossterm"
-       stop
-      endif
-      if (cur_time.ge.zero) then
-       ! do nothing
-      else
-       print *,"cur_time must be nonneg in crossterm"
-       stop
-      endif
-      if ((constant_viscosity.ne.0).and. &
-          (constant_viscosity.ne.1)) then
-       print *,"constant_viscosity invalid"
-       stop
-      endif
-
-      if (visc_coef.ge.zero) then
-       ! do nothing
-      else
-       print *,"visc_coef invalid"
-       stop
-      endif
-
-       ! indexes start at 0
-      if ((facevisc_index.ne.6).or. &
-          (vofface_index.ne.massface_index+2*nmat)) then
-       print *,"face_index bust 8"
-       stop
-      endif
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
-       stop
-      endif
-
-      do im=1,nmat
-       if (fort_denconst(im).le.zero) then
-        print *,"denconst invalid"
-        stop
-       endif
-      enddo
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nden.ne.nmat*num_state_material) then
-       print *,"nden invalid"
-       stop
-      endif
-
-      if (rzflag.eq.0) then
-       ! do nothing
-      else if (rzflag.eq.1) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
-        stop
-       endif
-      else if (rzflag.eq.3) then
-       ! do nothing
-      else
-       print *,"rzflag invalid"
-       stop
-      endif
-
-      if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
-       if (dir.eq.1) then
-        call checkbound_array(fablo,fabhi,faceLS,1,-1,1277)
-        call checkbound_array(fablo,fabhi,mdata,1,-1,1278)
-        call checkbound_array(fablo,fabhi,tdata,1,-1,1279)
-        call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
-        call checkbound_array(fablo,fabhi,vel,1,-1,1281)
-        call checkbound_array(fablo,fabhi,levelpc,2,-1,1284)
-        call checkbound_array(fablo,fabhi,recon,1,-1,234)
-        call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
-        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
-        call checkbound_array1(fablo,fabhi,mask,1,-1,234)
-        call checkbound_array1(fablo,fabhi,maskcoef,1,-1,234)
-       endif
-       call checkbound_array(fablo,fabhi,xflux_ptr,0,dir-1,1285)
-       call checkbound_array(fablo,fabhi,xface,0,dir-1,1288)
-      endif
-
-        ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
-        ! order: ux,vx,wx,uy,vy,wy,uz,vz,wz
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-
-      ii=0
-      jj=0
-      kk=0
-
-      if (dir.eq.1) then
-       ii=1
-       nbase=ux-1
-      else if (dir.eq.2) then
-       jj=1
-       nbase=uy-1
-      else if ((dir.eq.3).and.(SDIM.eq.3)) then
-       kk=1
-       nbase=uz-1
-      else
-       print *,"dir invalid crossterm"
-       stop
-      endif
-
-      if (dir.eq.1) then  ! fluxes on x-face
-       coupling(1)=uy
-       coupling(2)=uz
-       dirtan(1)=2
-       dirtan(2)=SDIM
-      else if (dir.eq.2) then  ! fluxes on y-face
-       coupling(1)=vx
-       coupling(2)=vz
-       dirtan(1)=1
-       dirtan(2)=SDIM
-      else if ((dir.eq.3).and.(SDIM.eq.3)) then ! fluxes on z-face
-       coupling(1)=wx
-       coupling(2)=wy
-       dirtan(1)=1
-       dirtan(2)=2
-      else
-       print *,"dir invalid crossterm 2"
-       stop
-      endif
-
-      if (tileloop.eq.0) then ! low order (grad U + grad U^T)
-
-       if (spectral_loop.eq.0) then
-
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlo,growhi,0,dir-1,34)
-
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
-        do k=growlo(3),growhi(3)
-
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1,52)
-
-         if (dir.eq.1) then
-          inorm=i
-         else if (dir.eq.2) then
-          inorm=j
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          inorm=k
-         else
-          print *,"dir invalid"
-          stop
-         endif
-
-         constant_viscosity_override=0
-
-         side_face=0
-         if (inorm.eq.fablo(dir)) then
-          side_face=1
-         else if (inorm.eq.fabhi(dir)+1) then
-          side_face=2
-         else if ((inorm.gt.fablo(dir)).and. &
-                  (inorm.lt.fabhi(dir)+1)) then
-          ! do nothing
-         else
-          print *,"inorm invalid"
-          stop
-         endif
-
-         do velcomp_alt=1,SDIM
-          if (side_face.eq.0) then
-           ! do nothing
-          else if ((side_face.eq.1).or.(side_face.eq.2)) then
-           local_bc=velbc(dir,side_face,velcomp_alt)
-           if ((local_bc.eq.EXT_DIR).or. &
-               (local_bc.eq.REFLECT_EVEN).or. &
-               (local_bc.eq.REFLECT_ODD).or. &
-               (local_bc.eq.FOEXTRAP)) then
-            constant_viscosity_override=1
-           else if (local_bc.eq.INT_DIR) then
-            ! do nothing
-           else
-            print *,"local_bc invalid"
-            stop
-           endif
-          else
-           print *,"side_face invalid"
-           stop
-          endif
-         enddo ! velcomp_alt=1..sdim
-
-         im1=i-ii
-         jm1=j-jj
-         km1=k-kk
-
-         do im=1,2*nmat
-          massF(im)=xface(D_DECL(i,j,k),massface_index+im)
-         enddo
-         do im=1,nmat
-          massfrac(im)=zero
-         enddo
-         total_mass=zero
-         do side=1,2
-          do im=1,nmat
-           DMface=massF(2*(im-1)+side)
-           if (DMface.lt.zero) then
-            print *,"DMface bust"
-            stop
-           endif
-           total_mass=total_mass+DMface
-           massfrac(im)=massfrac(im)+DMface
-          enddo ! im
-         enddo ! side
-         if (total_mass.gt.zero) then
-          do im=1,nmat
-           massfrac(im)=massfrac(im)/total_mass
-          enddo
-         else if (total_mass.eq.zero) then
-          ! do nothing
-         else
-          print *,"total_mass invalid"
-          stop
-         endif
-
-         do velcomp=1,SDIM
-          diff_flux(velcomp)=zero
-         enddo  ! velcomp
-
-         if ((constant_viscosity.eq.0).and. &
-             (constant_viscosity_override.eq.0)) then
-
-          do nc=1,SDIM-1
-
-            ! find face stencil
-           ilo=i
-           ihi=i
-           jlo=j
-           jhi=j
-           klo=k
-           khi=k
-
-           if (dir.eq.1) then ! u component  x-face
-            ilo=i-1
-            if (nc.eq.1) then  ! du/dy
-             jhi=j+1
-            else if (nc.eq.2) then  ! du/dz
-             khi=k+1
-            else
-             print *,"nc invalid"
-             stop
-            endif
-           else if (dir.eq.2) then  ! v component y-face
-            jlo=j-1
-            if (nc.eq.1) then ! dv/dx
-             ihi=i+1
-            else if (nc.eq.2) then ! dv/dz
-             khi=k+1
-            else
-             print *,"nc invalid"
-             stop
-            endif
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then ! w component z-face
-            klo=k-1
-            if (nc.eq.1) then ! dw/dx
-             ihi=i+1
-            else if (nc.eq.2) then  ! dw/dy
-             jhi=j+1
-            else
-             print *,"nc invalid"
-             stop
-            endif
-           else
-            print *,"dir invalid crossterm 3"
-            stop
-           endif
-
-           ! mdata=0 if both adjoining cells to a face are solid cells or
-           ! a cell pair is outside the grid.
-           call slopecrossterm( &
-             ntensor, &
-             nmat,  &
-             massfrac, &
-             total_mass, &
-             levelpc, &
-             faceLS, &
-             mdata, &
-             tdata, &
-             ii,jj,kk, &
-             i,j,k,dir, &
-             dirtan(nc), &
-             coupling(nc), &
-             ilo,ihi, &
-             jlo,jhi, &
-             klo,khi, &
-             diff_flux(dirtan(nc)))
-
-          enddo ! nc=1..sdim-1
-
-         else if ((constant_viscosity.eq.1).or. &
-                  (constant_viscosity_override.eq.1)) then
-          ! do nothing
-         else
-          print *,"constant_viscosity or constant_viscosity_override invalid"
-          stop
-         endif
-    
-
-! 2 u_x, v_x, w_x or
-! u_y, 2 v_y, w_y or
-! u_z, v_z, 2 w_z 
-
-         do nc=1,SDIM
-
-          if (constant_viscosity.eq.0) then
-           if (nc.eq.dir) then
-            alpha=two
-           else
-            alpha=one
-           endif
-          else if (constant_viscosity.eq.1) then
-           alpha=one
-          else
-           print *,"constant_viscosity invalid"
-           stop
-          endif
-
-           ! ux,vx, wx  or
-           ! uy,vy, wy  or
-           ! uz,vz, wz  
-          tcompMM=nbase+nc
-
-          local_flux_val=tdata(D_DECL(i,j,k),tcompMM)
-          if (abs(local_flux_val).le.OVERFLOW_CUTOFF) then
-           ! do nothing
-          else
-           print *,"tdata overflow: i,j,k,nbase,nc,tdata ", &
-            i,j,k,nbase,nc,local_flux_val
-           print *,"dt,cur_time,level ",dt,cur_time,level
-           stop
-          endif
-
-           ! use_dt=0
-           ! use_HO=0
-          call SEM_VISC_SANITY(101,dt,xstenMAC,nhalf,local_flux_val, &
-            dir,nc,0,0,project_option,bfact,enable_spectral, &
-            constant_viscosity)
-
-          gradterm=alpha*local_flux_val
-
-          if (side_face.eq.0) then
-           ! do nothing
-          else if ((side_face.eq.1).or.(side_face.eq.2)) then
-           local_bc=velbc(dir,side_face,nc)
-           if ((local_bc.eq.INT_DIR).or. &
-               (local_bc.eq.REFLECT_ODD).or. &
-               (local_bc.eq.EXT_DIR)) then
-            ! do nothing
-           else if ((local_bc.eq.REFLECT_EVEN).or. &
-                    (local_bc.eq.FOEXTRAP)) then
-            gradterm=zero
-           else
-            print *,"local_bc invalid"
-            stop
-           endif
-          else
-           print *,"side_face invalid"
-           stop
-          endif
-    
-          if (constant_viscosity.eq.0) then 
-           diff_flux(nc)=diff_flux(nc)+gradterm
-          else if (constant_viscosity.eq.1) then
-           if (diff_flux(nc).eq.zero) then
-            diff_flux(nc)=gradterm
-           else
-            print *,"diff_flux should be zero"
-            stop
-           endif
-          else
-           print *,"constant_viscosity invalid"
-           stop
-          endif
-
-         enddo  ! nc=1..sdim
-
-         do velcomp=1,SDIM
-          xflux(D_DECL(i,j,k),velcomp)=diff_flux(velcomp)
-         enddo  ! velcomp
-
-        enddo
-        enddo
-        enddo  ! i,j,k faces
-
-       else if (spectral_loop.eq.1) then
-        ! do nothing
-       else
-        print *,"spectral_loop invalid"
-        stop
-       endif
-
-      else if (tileloop.eq.1) then ! high order (grad U + grad U^T)
-
-       if (spectral_loop.eq.0) then
-
-         ! overwrite fluxes in spectral elements 
-         ! CROSSTERM -> TO_MAC  (interpolate CELL_TO_MAC)
-        if ((enable_spectral.eq.1).or. &  ! SEM space and time
-            (enable_spectral.eq.2)) then  ! SEM space
-
-         if (bfact.ge.2) then
-
-          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-          do i=growlo(1),growhi(1)
-          do j=growlo(2),growhi(2)
-          do k=growlo(3),growhi(3)
-
-           if ((dir.ge.1).and.(dir.le.SDIM)) then
-            ! do nothing
-           else
-            print *,"dir invalid crossterm 4"
-            stop
-           endif
-
-           if (dir.eq.1) then
-            inorm=i
-           else if (dir.eq.2) then
-            inorm=j
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then
-            inorm=k
-           else
-            print *,"dir invalid"
-            stop
-           endif
-
-           call strip_status(i,j,k,bfact,stripstat)
-
-           if (stripstat.eq.1) then
-
-            local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
-            maskcov=NINT(maskcoef(D_DECL(i,j,k)))
-
-            if ((local_maskSEM.ge.1).and. &
-                (local_maskSEM.le.nmat).and. &
-                (maskcov.eq.1)) then
-
-              ! elemhi(dir)=elemlo(dir)
-             call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
-             do ielem=elemlo(1),elemhi(1)
-             do jelem=elemlo(2),elemhi(2)
-             do kelem=elemlo(3),elemhi(3)
-
-              if (dir.eq.1) then ! x-fluxes
-               inorm_elem=ielem
-              else if (dir.eq.2) then ! y-fluxes
-               inorm_elem=jelem
-              else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then ! z-fluxes
-               inorm_elem=kelem
-              else
-               print *,"dir invalid crossterm 5"
-               stop
-              endif
-
-              if ((inorm_elem/bfact)*bfact.ne.inorm_elem) then
-               print *,"inorm_elem invalid"
-               stop
-              endif
-              if (inorm_elem.lt.0) then
-               print *,"inorm_elem invalid"
-               stop
-              endif
-
-              do dir2=1,SDIM
-               if (fablo(dir2).lt.0) then
-                print *,"fablo invalid"
-                stop
-               endif
-              enddo ! dir2
-
-              indexlo(1)=ielem
-              indexlo(2)=jelem
-              if (SDIM.eq.3) then
-               indexlo(SDIM)=kelem
-              endif
-              do dir2=1,SDIM
-               indexhi(dir2)=indexlo(dir2)
-              enddo ! dir2
-              indexhi(dir)=indexlo(dir)+bfact-1
-
-              do isten=0,bfact
-               do velcomp=1,SDIM
-                lineflux(isten,velcomp)=zero
-               enddo
-              enddo
-
-              if (constant_viscosity.eq.0) then
-
-               do nc=1,SDIM-1
-
-                do side=1,2
-
-                 nbr_outside_domain_flag(side)=0
-
-                 do dir2=1,SDIM
-                  sideidx(dir2)=indexlo(dir2)
-                 enddo
-
-                 if (side.eq.1) then
-
-                  sideidx(dir)=indexlo(dir)-1
-
-                  do dir2=1,SDIM
-                   if (sideidx(dir2).lt.fablo(dir2)) then
-                    if (velbc(dir2,side,dir2).ne.INT_DIR) then
-                     nbr_outside_domain_flag(side)=1
-                    endif
-                   endif
-                  enddo ! dir2
-
-                  i_out=indexlo(1)-ii
-                  j_out=indexlo(2)-jj
-                  k_out=indexlo(SDIM)-kk
-
-                 else if (side.eq.2) then
-
-                  sideidx(dir)=indexhi(dir)+1
-                  do dir2=1,SDIM
-                   if (sideidx(dir2).gt.fabhi(dir2)) then
-                    if (velbc(dir2,side,dir2).ne.INT_DIR) then
-                     nbr_outside_domain_flag(side)=1
-                    endif
-                   endif
-                  enddo ! dir2
-
-                  i_out=indexhi(1)+ii
-                  j_out=indexhi(2)+jj
-                  k_out=indexhi(SDIM)+kk
-
-                 else 
-                  print *,"side invalid"
-                  stop
-                 endif
-
-                 if (nbr_outside_domain_flag(side).eq.0) then
-
-                  ic=i_out
-                  jc=j_out
-                  kc=k_out
-
-                   ! 0=covered 1=not covered
-                  nbr_covered_flag=NINT(maskcoef(D_DECL(ic,jc,kc)))
-
-                  call gridsten(xsten,xlo, &
-                   ic,jc,kc, &
-                   fablo,bfact,dx,nhalf)
-
-                  local_bctype(side)=0  ! interior
-
-                  local_bcval(side)=zero
-
-                  tcompMM=coupling(nc)
-  
-                  if (nbr_covered_flag.eq.1) then 
-                   local_data_side(side)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
-                  else if (nbr_covered_flag.eq.0) then
-                   local_data_side(side)=zero
-                   local_bctype(side)=-1 ! extrap
-                   local_bcval(side)=zero
-                  else
-                   print *,"nbr_covered_flag invalid"
-                   stop
-                  endif
-
-                 else if (nbr_outside_domain_flag(side).eq.1) then 
-
-                  call gridsten(xsten,xlo, &
-                   i_out,j_out,k_out, &
-                   fablo,bfact,dx,nhalf)
-
-                  local_data_side(side)=zero
-
-                  if (velbc(dir,side,dir).eq.INT_DIR) then
-                   print *,"velbc bust "
-                   print *,"side=",side
-                   print *,"nbr_outside_domain_flag= ", &
-                     nbr_outside_domain_flag(side)
-                   stop
-                  endif
-                  if ((velbc(dir,side,dir).eq.REFLECT_EVEN).or. &
-                      (velbc(dir,side,dir).eq.FOEXTRAP).or. &
-                      (velbc(dir,side,dir).eq.REFLECT_ODD).or. &
-                      (velbc(dir,side,dir).eq.EXT_DIR)) then
-                   local_bctype(side)=-1 ! extrap
-                   local_bcval(side)=zero
-                  else
-                   print *,"velbc is corrupt"
-                   stop
-                  endif
-                 else
-                  print *,"nbr_outside_domain_flag invalid 1"
-                  stop
-                 endif
-
-                enddo ! side=1..2
-
-                do isten=0,bfact-1
-                 do dir2=1,SDIM
-                  indexmid(dir2)=indexlo(dir2)
-                 enddo
-                 indexmid(dir)=indexlo(dir)+isten
-               
-                 ic=indexmid(1)
-                 jc=indexmid(2)
-                 kc=indexmid(SDIM)
-
-                 call gridsten(xsten,xlo, &
-                  ic,jc,kc, &
-                  fablo,bfact,dx,nhalf)
-
-                 tcompMM=coupling(nc)
-
-                 local_data(isten+1)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
-                enddo !isten=0..bfact-1
-
-                do isten=0,bfact
-                 indexmid(dir)=indexlo(dir)+isten
-                 ic=indexmid(1)
-                 jc=indexmid(2)
-                 kc=indexmid(SDIM)
-
-                 call gridstenMAC(xstenMAC,xlo, &
-                  ic,jc,kc, &
-                  fablo,bfact,dx,nhalf,dir-1,53)
-
-                 RRface(isten)=xstenMAC(0,1)
-
-                 local_vel(isten)=zero
-                enddo ! isten=0..bfact
-
-                conservative_div_uu=0
-
-                call lineGRAD( &
-                 conservative_div_uu, &
-                 levelrz, &
-                 dir, &
-                 nc, &
-                 RRface, &
-                 local_bctype, &
-                 local_bcval, &
-                 local_vel, &
-                 local_data, &
-                 local_data_side, &
-                 local_grad, &
-                 local_interp, &
-                 bfact, &
-                 dx(dir), &
-                 x_sep, &
-                 operation_flag)
-
-                do isten=0,bfact
-
-                 side_cell=0
-                 if (inorm+isten.eq.fablo(dir)) then
-                  side_cell=1
-                 else if (inorm+isten.eq.fabhi(dir)+1) then
-                  side_cell=2
-                 else if ((inorm+isten.gt.fablo(dir)).and. &
-                          (inorm+isten.lt.fabhi(dir)+1)) then
-                  ! do nothing
-                 else
-                  print *,"inorm or isten invalid"
-                  stop
-                 endif
-
-                 constant_viscosity_override=0
-                
-                 do velcomp_alt=1,SDIM
-                  if (side_cell.eq.0) then
-                   ! do nothing
-                  else if (((side_cell.eq.1).and.(isten.eq.0)).or. &
-                           ((side_cell.eq.2).and.(isten.eq.bfact))) then
-                   local_bc=velbc(dir,side_cell,velcomp_alt)
-                   if ((local_bc.eq.EXT_DIR).or. &
-                       (local_bc.eq.REFLECT_EVEN).or. &
-                       (local_bc.eq.REFLECT_ODD).or. &
-                       (local_bc.eq.FOEXTRAP)) then
-                    constant_viscosity_override=1
-                   else if (local_bc.eq.INT_DIR) then
-                    ! do nothing
-                   else
-                    print *,"local_bc invalid"
-                    stop
-                   endif
-                  else if ((isten.gt.0).and.(isten.lt.bfact)) then
-                   ! do nothing
-                  else
-                   print *,"side_cell invalid1"
-                   stop
-                  endif
-                 enddo ! velcomp_alt=1..sdim
-
-                 if (constant_viscosity_override.eq.0) then
-                  lineflux(isten,dirtan(nc))= & 
-                   lineflux(isten,dirtan(nc))+local_interp(isten)
-                 else if (constant_viscosity_override.eq.1) then
-                  ! do nothing
-                 else
-                  print *,"constant_viscosity_override invalid"
-                  stop
-                 endif
-                enddo ! isten=0..bfact
-
-               enddo ! nc=1..sdim-1
-
-              else if (constant_viscosity.eq.1) then
-               ! do nothing
-              else
-               print *,"constant_viscosity invalid"
-               stop
-              endif
-                 
-              do isten=0,bfact
-
-               side_cell=0
-               if (inorm+isten.eq.fablo(dir)) then
-                side_cell=1
-               else if (inorm+isten.eq.fabhi(dir)+1) then
-                side_cell=2
-               else if ((inorm+isten.gt.fablo(dir)).and. &
-                        (inorm+isten.lt.fabhi(dir)+1)) then
-                ! do nothing
-               else
-                print *,"inorm or isten invalid"
-                stop
-               endif
-
-               ! in: crossterm; prevent race condition when doing tiling.
-               ! shared_face==1 => two threads would compete for same
-               ! point without intervention.
-               shared_face=0 
-
-               do dir2=1,SDIM
-                indexmid(dir2)=indexlo(dir2)
-               enddo
-               indexmid(dir)=indexlo(dir)+isten
-
-               ic=indexmid(1)
-               jc=indexmid(2)
-               kc=indexmid(SDIM)
-
-               call gridstenMAC_level(xstenMAC, &
-                ic,jc,kc,level,nhalf,dir-1,54)
-
-               if (isten.eq.bfact) then ! right side of element
-
-                test_maskSEM=NINT(maskSEM(D_DECL(ic,jc,kc)))
-                maskcov=NINT(maskcoef(D_DECL(ic,jc,kc)))
-
-                if ((indexmid(dir).gt.fablo(dir)).and. &
-                    (indexmid(dir).le.fabhi(dir)).and. &
-                    (test_maskSEM.eq.local_maskSEM).and. &
-                    (maskcov.eq.1)) then
-                 shared_face=1
-                else if ((indexmid(dir).eq.fabhi(dir)+1).or. &
-                         (test_maskSEM.ne.local_maskSEM).or. &
-                         (maskcov.eq.0)) then
-                 ! do nothing
-                else
-                 print *,"indexmid,test_maskSEM, or maskcov invalid"
-                 stop
-                endif
-
-               else if ((isten.ge.0).and.(isten.lt.bfact)) then
-                ! do nothing
-               else
-                print *,"isten invalid"
-                stop
-               endif
-
-               do nc=1,SDIM
-
-                if (constant_viscosity.eq.0) then
-                 if (nc.eq.dir) then
-                  alpha=two
-                 else
-                  alpha=one
-                 endif
-                else if (constant_viscosity.eq.1) then
-                 alpha=one
-                else 
-                 print *,"constant_viscosity invalid"
-                 stop
-                endif
-
-                ! ux,vx, wx  or
-                ! uy,vy, wy  or
-                ! uz,vz, wz  
-                tcompMM=nbase+nc
-        
-                local_flux_val=tdata(D_DECL(ic,jc,kc),tcompMM)
-
-                 ! use_dt=0
-                 ! use_HO=1
-                call SEM_VISC_SANITY(1,dt,xstenMAC,nhalf,local_flux_val, &
-                  dir,nc,0,1,project_option,bfact,enable_spectral, &
-                  constant_viscosity)
-
-                gradterm=alpha*local_flux_val
-
-                if (side_cell.eq.0) then
-                 ! do nothing
-                else if (((side_cell.eq.1).and.(isten.eq.0)).or. &
-                         ((side_cell.eq.2).and.(isten.eq.bfact))) then
-                 local_bc=velbc(dir,side_cell,nc)
-                 if ((local_bc.eq.INT_DIR).or. &
-                     (local_bc.eq.REFLECT_ODD).or. &
-                     (local_bc.eq.EXT_DIR)) then
-                  ! do nothing
-                 else if ((local_bc.eq.REFLECT_EVEN).or. &
-                          (local_bc.eq.FOEXTRAP)) then
-                  gradterm=zero
-                 else
-                  print *,"local_bc invalid"
-                  stop
-                 endif
-                else if ((isten.gt.0).and.(isten.lt.bfact)) then
-                 ! do nothing
-                else
-                 print *,"side_cell invalid2"
-                 print *,"side_cell=",side_cell
-                 print *,"isten,bfact= ",isten,bfact
-                 print *,"dir=",dir
-                 print *,"nc=",nc
-                 print *,"local_bc=",local_bc
-                 print *,"int dir= ",INT_DIR
-                 print *,"ref odd= ",REFLECT_ODD
-                 print *,"ext dir= ",EXT_DIR
-                 print *,"ref evn= ",REFLECT_EVEN
-                 print *,"fo ext=",FOEXTRAP
-                 print *,"i,j,k=",i,j,k
-                 print *,"inorm=",inorm
-                 print *,"growlo=",growlo(1),growlo(2),growlo(3)
-                 print *,"growhi=",growhi(1),growhi(2),growhi(3)
-                 print *,"fablo(dir),fabhi(dir) ",fablo(dir),fabhi(dir)
-                 print *,"ielem,jelem,kelem ",ielem,jelem,kelem
-                 print *,"inorm_elem ",inorm_elem
-                 stop
-                endif
-               
-                if (constant_viscosity.eq.0) then 
-                 lineflux(isten,nc)=lineflux(isten,nc)+gradterm
-                else if (constant_viscosity.eq.1) then
-                 if (lineflux(isten,nc).eq.zero) then
-                  lineflux(isten,nc)=gradterm
-                 else
-                  print *,"lineflux should be zero"
-                  stop
-                 endif
-                else
-                 print *,"constant_viscosity invalid"
-                 stop
-                endif
-
-               enddo  ! nc=1..sdim
-            
-               ! shared_face=1 if right element edge and not the right
-               ! edge of the grid or next to a low order or covered
-               ! element.
-               if (shared_face.eq.0) then
-
-                do velcomp=1,SDIM
-                 xflux(D_DECL(ic,jc,kc),velcomp)=lineflux(isten,velcomp)
-                enddo  ! velcomp
-
-               else if (shared_face.eq.1) then
-                ! do nothing
-               else
-                print *,"shared_face invalid"
-                stop
-               endif
-
-              enddo ! isten=0..bfact
-
-             enddo
-             enddo
-             enddo !ielem,jelem,kelem
-
-            else if ((local_maskSEM.eq.0).or. &
-                     (maskcov.eq.0)) then
-             ! do nothing
-            else
-             print *,"local_maskSEM or maskcov invalid"
-             stop
-            endif 
-
-           else if (stripstat.eq.0) then
-            ! do nothing
-           else
-            print *,"stripstat invalid"
-            stop
-           endif
-
-          enddo
-          enddo
-          enddo ! i,j,k
-
-         else if (bfact.eq.1) then
-          ! do nothing
-         else
-          print *,"bfact invalid80"
-          stop
-         endif
-
-        else if ((enable_spectral.eq.0).or. &  ! No SEM
-                 (enable_spectral.eq.3)) then  ! SEM time only.
-         ! do nothing
-        else
-         print *,"enable_spectral invalid"
-         stop
-        endif
-
-       else if (spectral_loop.eq.1) then
-        ! do nothing
-       else
-        print *,"spectral_loop invalid"
-        stop
-       endif
-
-      ! (1) fluxes+=divu  (2) fluxes*=visccoef
-      else if (tileloop.eq.2) then 
-
-       if (spectral_loop.eq.0) then 
-
-          ! does not include the right face of the tile unless
-          ! tilehi==fabhi
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,0,dir-1,35)
-
-         ! u_x+v_y+w_z on flux face
-         ! multiply by visc_constant
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
-        do k=growlo(3),growhi(3)
-
-          ! dir=1..sdim
-         call gridstenMAC_level(xstenMAC, &
-           i,j,k,level,nhalf,dir-1,55)
-
-         im1=i-ii
-         jm1=j-jj
-         km1=k-kk
-
-         if (dir.eq.1) then
-          inorm=i
-         else if (dir.eq.2) then
-          inorm=j
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          inorm=k
-         else
-          print *,"dir invalid"
-          stop
-         endif
-
-         side_face=0
-         if (inorm.eq.fablo(dir)) then
-          side_face=1
-         else if (inorm.eq.fabhi(dir)+1) then
-          side_face=2
-         else if ((inorm.gt.fablo(dir)).and. &
-                  (inorm.lt.fabhi(dir)+1)) then
-          ! do nothing
-         else
-          print *,"inorm invalid"
-          stop
-         endif
-
-         do im=1,nmat
-          LSleft(im)=levelpc(D_DECL(im1,jm1,km1),im)
-          LSright(im)=levelpc(D_DECL(i,j,k),im)
-         enddo
-         call get_primary_material(LSleft,nmat,imL)
-         call get_primary_material(LSright,nmat,imR)
-
-         if ((imL.lt.1).or.(imL.gt.nmat)) then
-          print *,"imL invalid"
-          stop
-         endif
-         if ((imR.lt.1).or.(imR.gt.nmat)) then
-          print *,"imR invalid"
-          stop
-         endif
-
-         call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
-         call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
-         do dir2=1,SDIM
-          xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
-          xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
-         enddo
-
-          ! LS>0 if clamped
-         call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-              vel_clamped_minus,temperature_clamped_minus)
-         call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-              vel_clamped_plus,temperature_clamped_plus)
-         if ((LS_clamped_minus.ge.zero).or. &
-             (LS_clamped_plus.ge.zero)) then
-          is_clamped_face=1
-          do dir2=1,SDIM
-           if (LS_clamped_minus.lt.zero) then
-            vel_clamped_face(dir2)=vel_clamped_plus(dir2)
-            is_clamped_face=2
-           else if (LS_clamped_plus.lt.zero) then
-            vel_clamped_face(dir2)=vel_clamped_minus(dir2)
-            is_clamped_face=3
-           else
-            vel_clamped_face(dir2)=half*(vel_clamped_plus(dir2)+ &
-              vel_clamped_minus(dir2))
-           endif
-          enddo
-         else if ((LS_clamped_minus.lt.zero).and. &
-                  (LS_clamped_plus.lt.zero)) then
-          is_clamped_face=0
-         else
-          print *,"LS_clamped plus or minus is NaN"
-          stop
-         endif
-
-         compressible_face=1
-
-         if ((is_clamped_face.eq.1).or. &
-             (is_clamped_face.eq.2).or. &
-             (is_clamped_face.eq.3)) then
-          compressible_face=0
-         else if (is_clamped_face.eq.0) then
-
-          if ((is_rigid(nmat,imL).eq.1).or. &
-              (is_rigid(nmat,imR).eq.1)) then
-           compressible_face=0
-          else if ((is_rigid(nmat,imL).eq.0).and. &
-                   (is_rigid(nmat,imR).eq.0)) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid"
-           stop
-          endif
-         else
-          print *,"is_clamped_face invalid"
-          stop
-         endif
-
-         if ((fort_material_type(imL).eq.0).or. &
-             (fort_material_type(imR).eq.0)) then
-          compressible_face=0
-         endif
-
-         do velcomp_alt=1,SDIM
-          if (side_face.eq.0) then
-           ! do nothing
-          else if ((side_face.eq.1).or.(side_face.eq.2)) then
-           local_bc=velbc(dir,side_face,velcomp_alt)
-           if ((local_bc.eq.EXT_DIR).or. &
-               (local_bc.eq.REFLECT_EVEN).or. &
-               (local_bc.eq.REFLECT_ODD).or. &
-               (local_bc.eq.FOEXTRAP)) then
-            compressible_face=0
-           else if (local_bc.eq.INT_DIR) then
-            ! do nothing
-           else
-            print *,"local_bc invalid"
-            stop
-           endif
-          else
-           print *,"side_face invalid"
-           stop
-          endif
-         enddo ! velcomp_alt=1..sdim
-
-         uxMM=ux
-         vyMM=vy
-         wzMM=wz
-
-         wzterm=zero
-
-         if (dir.eq.1) then
-
-          uxterm=tdata(D_DECL(i,j,k),uxMM)
-          vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
-           tdata(D_DECL(i-1,j,k),vyMM)+tdata(D_DECL(i-1,j+1,k),vyMM))/four
-          if (SDIM.eq.3) then
-           wzterm= &
-            (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
-             tdata(D_DECL(i-1,j,k),wzMM)+tdata(D_DECL(i-1,j,k+1),wzMM))/four
-          endif
-
-         else if (dir.eq.2) then
-
-          uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
-           tdata(D_DECL(i,j-1,k),uxMM)+tdata(D_DECL(i+1,j-1,k),uxMM))/four
-          vyterm=tdata(D_DECL(i,j,k),vyMM)
-          if (SDIM.eq.3) then
-           wzterm= &
-            (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
-             tdata(D_DECL(i,j-1,k),wzMM)+tdata(D_DECL(i,j-1,k+1),wzMM))/four
-          endif
-
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-
-          uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
-           tdata(D_DECL(i,j,k-1),uxMM)+tdata(D_DECL(i+1,j,k-1),uxMM))/four
-          vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
-           tdata(D_DECL(i,j,k-1),vyMM)+tdata(D_DECL(i,j+1,k-1),vyMM))/four
-          wzterm=tdata(D_DECL(i,j,k),wzMM)
-
-         else
-          print *,"dir invalid crossterm 6"
-          stop
-         endif
-
-         if (compressible_face.eq.0) then
-          divterm=zero
-         else if (mdata(D_DECL(i,j,k),dir).eq.zero) then
-          divterm=zero
-         else if (compressible_face.eq.1) then
-          divterm=-(two/SDIM)*(uxterm+vyterm+wzterm)
-         else
-          print *,"compressible_face bust"
-          stop
-         endif
-
-         visc_constant=visc_coef*xface(D_DECL(i,j,k),facevisc_index+1)
-         if (visc_constant.lt.zero) then
-          print *,"visc_constant cannot be negative"
-          stop
-         endif
-         visc_constant=-dt*visc_constant
-
-         do velcomp=1,SDIM
-
-          local_flux_val=xflux(D_DECL(i,j,k),velcomp)+divterm
-
-           ! use_dt=0
-           ! use_HO=1
-          call SEM_VISC_SANITY(2,dt,xstenMAC,nhalf,local_flux_val, &
-            dir,velcomp,0,1,project_option,bfact,enable_spectral, &
-            constant_viscosity)
-
-          xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
-
-         enddo  ! velcomp
-
-        enddo
-        enddo
-        enddo  ! i,j,k add divterm to fluxes and multiply by visc_constant
-
-       else if (spectral_loop.eq.1) then
-        ! do nothing
-       else
-        print *,"spectral_loop invalid"
-        stop
-       endif
-
-       ! average "left" and "right" fluxes at faces separating
-       ! 2 spectral elements.
-      else if (tileloop.eq.3) then 
-
-       if ((enable_spectral.eq.1).or. & ! SEM space and time
-           (enable_spectral.eq.2)) then ! SEM space only
-
-        if (bfact.ge.2) then
-
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-         if ((dir.lt.1).or.(dir.gt.SDIM)) then
-          print *,"dir invalid crossterm"
-          stop
-         endif
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-
-          call strip_status(i,j,k,bfact,stripstat)
-
-          if (stripstat.eq.1) then
-
-           local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
-           maskcov=NINT(maskcoef(D_DECL(i,j,k)))
-
-           if ((local_maskSEM.ge.1).and. &
-               (local_maskSEM.le.nmat).and. &
-               (maskcov.eq.1)) then
-
-            call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
-            do ielem=elemlo(1),elemhi(1)
-            do jelem=elemlo(2),elemhi(2)
-            do kelem=elemlo(3),elemhi(3)
-
-             if (dir.eq.1) then ! x-fluxes
-              inorm_elem=ielem
-             else if (dir.eq.2) then ! y-fluxes
-              inorm_elem=jelem
-             else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then ! z-fluxes
-              inorm_elem=kelem
-             else
-              print *,"dir invalid crossterm 7"
-              stop
-             endif
-
-             if ((inorm_elem/bfact)*bfact.ne.inorm_elem) then
-              print *,"inorm_elem invalid"
-              stop
-             endif
-             if (inorm_elem.lt.0) then
-              print *,"inorm_elem invalid"
-              stop
-             endif
-
-             indexlo(1)=ielem
-             indexlo(2)=jelem
-             if (SDIM.eq.3) then
-              indexlo(SDIM)=kelem
-             endif
-             do dir2=1,SDIM
-              index_edge(dir2)=indexlo(dir2)
-              index_opp(dir2)=indexlo(dir2)
-              index_flux(dir2)=indexlo(dir2)
-             enddo ! dir2
-
-             do side=1,2
-
-              ! in: crossterm  avoid race conditions when doing tiling.
-              ! shared_face==1 => two threads would compete for same
-              ! point without intervention.
-              shared_face=0 
-
-              if (side.eq.1) then
-               index_flux(dir)=indexlo(dir)
-               index_edge(dir)=indexlo(dir)
-               index_opp(dir)=index_edge(dir)-1
-              else if (side.eq.2) then
-               index_flux(dir)=indexlo(dir)+bfact
-               index_edge(dir)=indexlo(dir)+bfact-1
-               index_opp(dir)=index_edge(dir)+1
-              else
-               print *,"side invalid"
-               stop
-              endif
-
-              i_in=index_edge(1)
-              j_in=index_edge(2)
-              k_in=index_edge(SDIM)
-
-              i_out=index_opp(1)
-              j_out=index_opp(2)
-              k_out=index_opp(SDIM)
-
-              iflux=index_flux(1)
-              jflux=index_flux(2)
-              kflux=index_flux(SDIM)
-
-              call gridstenMAC_level(xstenMAC, &
-               iflux,jflux,kflux,level,nhalf,dir-1,56)
-
-              test_maskSEM=NINT(maskSEM(D_DECL(i_out,j_out,k_out)))
-              maskcov=NINT(maskcoef(D_DECL(i_out,j_out,k_out)))
-
-              if (side.eq.2) then
-
-               if ((index_edge(dir).ge.fablo(dir)).and. &
-                   (index_edge(dir).lt.fabhi(dir)).and. &
-                   (test_maskSEM.eq.local_maskSEM).and. &
-                   (maskcov.eq.1)) then
-                shared_face=1
-               else if ((index_edge(dir).eq.fabhi(dir)).or. &
-                        (test_maskSEM.ne.local_maskSEM).or. &
-                        (maskcov.eq.0)) then
-                ! do nothing
-               else
-                print *,"index_edge invalid"
-                stop
-               endif
-
-              else if (side.eq.1) then
-               ! do nothing
-              else
-               print *,"side invalid"
-               stop
-              endif
-
-               ! set mask_out=0 at coarse-fine grid border.
-               ! use the (already init) flux from the fine side only.
-              mask_out=1
-              do dir2=1,SDIM
-               if ((index_opp(dir2).lt.fablo(dir2)).or. &
-                   (index_opp(dir2).gt.fabhi(dir2))) then
-                mask_out=NINT(mask(D_DECL(i_out,j_out,k_out)))
-               endif
-              enddo
-
-               ! do not average with flux from 
-               ! an element that is covered.
-              if (maskcov.eq.1) then
-               ! do nothing
-              else if (maskcov.eq.0) then
-               mask_out=0
-              else
-               print *,"maskcov invalid"
-               stop
-              endif
-
-               ! set mask_out=0 at high/low order interface.
-               ! use the (already init) flux from the high order side only.
-              if (test_maskSEM.ne.local_maskSEM) then
-               mask_out=0
-              endif
-
-               ! shared_face=1 for faces on right side of elements and not
-               !  touching the right side of the grid, not touching
-               !  a maskSEM==0 element, and not touching a covered element.
-               ! shared_face=0 for faces on the left side of elements or for
-               !  the face touching the right side of the grid, touching
-               !  a maskSEM!=cen_maskSEM element, or touching a covered element.
-               ! no need to average fluxes at a "shared_face"
-               ! since iface=0 for following element corresponds to
-               ! iface=bfact of the previous.
-              if (shared_face.eq.1) then
-               mask_out=0
-              else if (shared_face.eq.0) then
-               ! do nothing
-              else
-               print *,"shared_face invalid"
-               stop
-              endif
-
-              if (spectral_loop.eq.0) then
-
-               do nc=1,SDIM
-                xflux_temp=xflux(D_DECL(iflux,jflux,kflux),nc)
-              
-                 ! use_dt=1
-                 ! use_HO=1
-                call SEM_VISC_SANITY(3,dt,xstenMAC,nhalf,xflux_temp, &
-                  dir,nc,1,1,project_option,bfact,enable_spectral, &
-                  constant_viscosity)
-
-                semflux(D_DECL(i_in,j_in,k_in),nbase+nc)=xflux_temp
-               enddo ! nc
-
-              else if (spectral_loop.eq.1) then
-
-               if (mask_out.eq.1) then
-
-                do nc=1,SDIM
-
-                 local_flux_val_in=semflux(D_DECL(i_in,j_in,k_in),nbase+nc)
-                 local_flux_val_out=semflux(D_DECL(i_out,j_out,k_out),nbase+nc)
-                  ! use_dt=1
-                  ! use_HO=1
-                 call SEM_VISC_SANITY(4,dt,xstenMAC,nhalf,local_flux_val_in, &
-                         dir,nc,1,1,project_option,bfact,enable_spectral, &
-                         constant_viscosity)
-                 call SEM_VISC_SANITY(5,dt,xstenMAC,nhalf,local_flux_val_out, &
-                         dir,nc,1,1,project_option,bfact,enable_spectral, &
-                         constant_viscosity)
-
-                 avgflux(nc)=half*(local_flux_val_in+local_flux_val_out)
-
-                enddo ! nc=1..sdim
-
-                do nc=1,SDIM
-                 xflux(D_DECL(iflux,jflux,kflux),nc)=avgflux(nc)
-                enddo ! nc=1..sdim
-               else if (mask_out.eq.0) then
-                ! do nothing
-               else
-                print *,"mask_out invalid"
-                stop
-               endif
-
-              else
-               print *,"spectral_loop invalid"
-               stop
-              endif
-
-             enddo ! side=1,2
-
-            enddo
-            enddo
-            enddo !elem,jelem,kelem
-
-           else if ((local_maskSEM.eq.0).or. &
-                    (maskcov.eq.0)) then
-            ! do nothing
-           else
-            print *,"loca_maskSEM_cen or maskcov invalid"
-            stop
-           endif
-          else if (stripstat.eq.0) then
-           ! do nothing
-          else
-           print *,"stripstat invalid"
-           stop
-          endif
-
-         enddo
-         enddo
-         enddo ! i,j,k
-
-        else if (bfact.eq.1) then
-         ! do nothing
-        else
-         print *,"bfact invalid81"
-         stop
-        endif
-
-       else if ((enable_spectral.eq.0).or. &
-                (enable_spectral.eq.3)) then
-        ! do nothing
-       else
-        print *,"enable_spectral invalid"
-        stop
-       endif
-
-      else 
-       print *,"tileloop invalid"
-       stop
-      endif
-
-      return 
-      end subroutine fort_crossterm
 
        ! The continuum model for FSI:
        !  du/dt + u dot grad u = -grad p/rho + div(H tau_elastic)/rho
