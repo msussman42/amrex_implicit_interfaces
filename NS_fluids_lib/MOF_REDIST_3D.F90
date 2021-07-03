@@ -237,15 +237,13 @@ stop
 
       end module mof_redist_module
 
-#if (STANDALONE==1)
       module mof_redist_cpp_module
       contains
-#endif
 
        ! prior to calling this routine, copy LS_new normal information
        ! to LS_NRM_FD.
        ! called from: NavierStokes::build_NRM_FD_MF (NavierStokes.cpp)
-      subroutine FORT_FD_NORMAL( &
+      subroutine fort_fd_normal( &
        level, &
        finest_level, &
        LS_new, &
@@ -256,7 +254,9 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       nmat)
+       nmat) &
+      bind(c,name='fort_fd_normal')
+
       use global_utility_module
       use probcommon_module
       use MOF_routines_module
@@ -267,8 +267,9 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
-      REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T, intent(out) :: LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
+      REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(out), target :: LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
+      REAL_T, pointer :: LS_NRM_FD_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -293,6 +294,8 @@ stop
 
       nhalf=3 
 
+      LS_NRM_FD_ptr=>LS_NRM_FD
+
       if (bfact.ge.1) then
        ! do nothing
       else
@@ -302,11 +305,11 @@ stop
       if ((level.le.finest_level).and.(level.ge.0)) then
        ! do nothing
       else
-       print *,"level invalid in FORT_FD_NORMAL"
+       print *,"level invalid in fort_fd_normal"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(LS_new),1,-1,2871)
-      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),0,-1,2872)
+      call checkbound_array(fablo,fabhi,LS_new,1,-1,2871)
+      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr,0,-1,2872)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -316,14 +319,14 @@ stop
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
-       print *,"ngeom_recon invalid FORT_FD_NORMAL"
+       print *,"ngeom_recon invalid fort_fd_normal"
        print *,"ngeom_recon=",ngeom_recon
        stop
       endif
       if (ngeom_raw.eq.SDIM+1) then
        ! do nothing
       else
-       print *,"ngeom_raw invalid FORT_FD_NORMAL"
+       print *,"ngeom_raw invalid fort_fd_normal"
        print *,"ngeom_raw=",ngeom_raw
        stop
       endif
@@ -338,7 +341,7 @@ stop
       else if (levelrz.eq.3) then
        ! do nothing
       else
-       print *,"levelrz invalid in FORT_FD_NORMAL"
+       print *,"levelrz invalid in fort_fd_normal"
        stop
       endif
       k1lo=0
@@ -457,9 +460,9 @@ stop
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_FD_NORMAL
+      end subroutine fort_fd_normal
 
-      subroutine FORT_FD_NODE_NORMAL( &
+      subroutine fort_fd_node_normal( &
        level, &
        finest_level, &
        LS_new, &
@@ -473,7 +476,9 @@ stop
        nmat, &
        nten, &
        n_normal, &
-       ngrow_dest)
+       ngrow_dest) &
+      bind(c,name='fort_fd_node_normal')
+
       use global_utility_module
       use probcommon_module
       use MOF_routines_module
@@ -487,8 +492,9 @@ stop
       INTEGER_T, intent(in) :: ngrow_dest
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
-      REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T, intent(out) :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
+      REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(out), target :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
+      REAL_T, pointer :: LS_NRM_FD_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -512,8 +518,9 @@ stop
       REAL_T sign_nm
       REAL_T xplus,xminus,RR
 
-
       nhalf=3 
+
+      LS_NRM_FD_ptr=>LS_NRM_FD
 
       if (bfact.ge.1) then
        ! do nothing
@@ -524,7 +531,7 @@ stop
       if ((level.le.finest_level).and.(level.ge.0)) then
        ! do nothing
       else
-       print *,"level invalid in FORT_FD_NODE_NORMAL"
+       print *,"level invalid in fort_fd_node_normal"
        stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -545,8 +552,8 @@ stop
        stop
       endif
       
-      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_dest+1,-1,2873)
-      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_dest+1,-1,2874)
+      call checkbound_array(fablo,fabhi,LS_new,ngrow_dest+1,-1,2873)
+      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr,ngrow_dest+1,-1,2874)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -556,14 +563,14 @@ stop
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
-       print *,"ngeom_recon invalid FORT_FD_NODE_NORMAL"
+       print *,"ngeom_recon invalid fort_fd_node_normal"
        print *,"ngeom_recon=",ngeom_recon
        stop
       endif
       if (ngeom_raw.eq.SDIM+1) then
        ! do nothing
       else
-       print *,"ngeom_raw invalid FORT_FD_NODE_NORMAL"
+       print *,"ngeom_raw invalid fort_fd_node_normal"
        print *,"ngeom_raw=",ngeom_raw
        stop
       endif
@@ -578,7 +585,7 @@ stop
       else if (levelrz.eq.3) then
        ! do nothing
       else
-       print *,"levelrz invalid in FORT_FD_NODE_NORMAL"
+       print *,"levelrz invalid in fort_fd_node_normal"
        stop
       endif
 
@@ -686,9 +693,9 @@ stop
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_FD_NODE_NORMAL
+      end subroutine fort_fd_node_normal
 
-      subroutine FORT_NODE_TO_CELL( &
+      subroutine fort_node_to_cell( &
        level, &
        finest_level, &
        height_function_flag, &  ! 1=> use height function 0 => use FD
@@ -707,7 +714,9 @@ stop
        nmat, &
        nten, &
        n_normal, &
-       ngrow_nrm)
+       ngrow_nrm) &
+      bind(c,name='fort_node_to_cell')
+
       use global_utility_module
       use probcommon_module
       use MOF_routines_module
@@ -725,12 +734,14 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(F_new)
       INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
-      REAL_T, intent(in) :: F_new(DIMV(F_new),nmat)
-      REAL_T, intent(in) :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T, intent(in) :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
+      REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat)
+      REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
        ! first nmat+nten components are curvature
        ! second nmat+nten components are status (0=bad 1=good)
-      REAL_T, intent(out) :: CURV_CELL(DIMV(CURV_CELL),2*(nmat+nten))
+      REAL_T, intent(out), target ::  &
+              CURV_CELL(DIMV(CURV_CELL),2*(nmat+nten))
+      REAL_T, pointer :: CURV_CELL_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -770,6 +781,8 @@ stop
 
       nhalf=3 
 
+      CURV_CELL_ptr=>CURV_CELL
+
       if (bfact.ge.1) then
        ! do nothing
       else
@@ -779,7 +792,7 @@ stop
       if ((level.le.finest_level).and.(level.ge.0)) then
        ! do nothing
       else
-       print *,"level invalid in FORT_NODE_TO_CELL"
+       print *,"level invalid in fort_node_to_cell"
        stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -800,10 +813,11 @@ stop
        stop
       endif
       
-      call checkbound(fablo,fabhi,DIMS(F_new),ngrow_nrm+1,-1,2875)
-      call checkbound(fablo,fabhi,DIMS(LS_new),ngrow_nrm+1,-1,2875)
-      call checkbound(fablo,fabhi,DIMS(LS_NRM_FD),ngrow_nrm+1,-1,2876)
-      call checkbound(fablo,fabhi,DIMS(CURV_CELL),ngrow_nrm,-1,2877)
+      call checkbound_array(fablo,fabhi,F_new,ngrow_nrm+1,-1,2875)
+      call checkbound_array(fablo,fabhi,LS_new,ngrow_nrm+1,-1,2875)
+      call checkbound_array(fablo,fabhi,LS_NRM_FD,ngrow_nrm+1,-1,2876)
+      call checkbound_array(fablo,fabhi,CURV_CELL_ptr,ngrow_nrm,-1,2877)
+
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -813,14 +827,14 @@ stop
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
-       print *,"ngeom_recon invalid FORT_NODE_TO_CELL"
+       print *,"ngeom_recon invalid fort_node_to_cell"
        print *,"ngeom_recon=",ngeom_recon
        stop
       endif
       if (ngeom_raw.eq.SDIM+1) then
        ! do nothing
       else
-       print *,"ngeom_raw invalid FORT_NODE_TO_CELL"
+       print *,"ngeom_raw invalid fort_node_to_cell"
        print *,"ngeom_raw=",ngeom_raw
        stop
       endif
@@ -835,7 +849,7 @@ stop
       else if (levelrz.eq.3) then
        ! do nothing
       else
-       print *,"levelrz invalid in FORT_NODE_TO_CELL"
+       print *,"levelrz invalid in fort_node_to_cell"
        stop
       endif
 
@@ -1123,15 +1137,12 @@ stop
       endif
 
       return
-      end subroutine FORT_NODE_TO_CELL
-
-
-
+      end subroutine fort_node_to_cell
 
         ! vofrecon=vof,ref centroid,order,slope,intercept
         ! newfab has nmat*(sdim+1) components
         !
-      subroutine FORT_LEVELSTRIP( &
+      subroutine fort_levelstrip( &
          keep_all_interfaces, &
          nprocessed, &
          minLS, &
@@ -1165,7 +1176,8 @@ stop
          nmat,nten, &
          nstar, &
          nface, &
-         nface_dst)
+         nface_dst) &
+      bind(c,name='fort_levelstrip')
 
       use global_utility_module
       use probcommon_module
@@ -1203,20 +1215,22 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(crsetouch)
       INTEGER_T, intent(in) :: DIMDEC(crsedist)
 
-      REAL_T, intent(in) :: maskfab(DIMV(maskfab),4)
-      REAL_T, intent(in) :: facepairX(DIMV(facepairX),nface_dst)
-      REAL_T, intent(in) :: facepairY(DIMV(facepairY),nface_dst)
-      REAL_T, intent(in) :: facepairZ(DIMV(facepairZ),nface_dst)
-      REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
-      REAL_T, intent(in) :: facetest(DIMV(facetest),nmat*SDIM)
-      REAL_T, intent(in) :: stenfab(DIMV(stenfab),nstar)
+      REAL_T, intent(in), target :: maskfab(DIMV(maskfab),4)
+      REAL_T, intent(in), target :: facepairX(DIMV(facepairX),nface_dst)
+      REAL_T, intent(in), target :: facepairY(DIMV(facepairY),nface_dst)
+      REAL_T, intent(in), target :: facepairZ(DIMV(facepairZ),nface_dst)
+      REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
+      REAL_T, intent(in), target :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, intent(in), target :: stenfab(DIMV(stenfab),nstar)
 
-      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: origdist(DIMV(origdist),nmat*(1+SDIM))
-      REAL_T, intent(inout) :: newfab(DIMV(newfab),nmat*(1+SDIM))
-      REAL_T, intent(inout) :: touchfab(DIMV(touchfab),nmat)
-      REAL_T, intent(in) :: crsetouch(DIMV(crsetouch),nmat)
-      REAL_T, intent(in) :: crsedist(DIMV(crsedist),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: origdist(DIMV(origdist),nmat*(1+SDIM))
+      REAL_T, intent(inout), target :: newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T, pointer :: newfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: touchfab(DIMV(touchfab),nmat)
+      REAL_T, pointer :: touchfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: crsetouch(DIMV(crsetouch),nmat)
+      REAL_T, intent(in), target :: crsedist(DIMV(crsedist),nmat*(1+SDIM))
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -1306,6 +1320,9 @@ stop
       INTEGER_T ml,mr,ifacepair
       REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
 
+      newfab_ptr=>newfab
+      touchfab_ptr=>touchfab
+
       if (1.eq.0) then    
        i_DEB_DIST=45 
        j_DEB_DIST=68
@@ -1392,19 +1409,19 @@ stop
        endif
       enddo !im=1..nmat
 
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2878)
-      call checkbound(fablo,fabhi,DIMS(facepairX),ngrow_distance,0,1871)
-      call checkbound(fablo,fabhi,DIMS(facepairY),ngrow_distance,1,1871)
-      call checkbound(fablo,fabhi,DIMS(facepairZ),ngrow_distance,SDIM-1,1871)
-      call checkbound(fablo,fabhi,DIMS(facefab),ngrow_distance,-1,1871)
-      call checkbound(fablo,fabhi,DIMS(facetest),ngrow_distance,-1,1872)
-      call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,1873)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_distance,-1,1874)
-      call checkbound(fablo,fabhi,DIMS(origdist),ngrow_distance,-1,1875)
-      call checkbound(fablo,fabhi,DIMS(newfab),1,-1,1876)
-      call checkbound(fablo,fabhi,DIMS(touchfab),0,-1,1876)
-      call checkbound(fablo,fabhi,DIMS(crsetouch),0,-1,1876)
-      call checkbound(fablo,fabhi,DIMS(crsedist),0,-1,1876)
+      call checkbound_array(fablo,fabhi,maskfab,ngrow_distance,-1,2878)
+      call checkbound_array(fablo,fabhi,facepairX,ngrow_distance,0,1871)
+      call checkbound_array(fablo,fabhi,facepairY,ngrow_distance,1,1871)
+      call checkbound_array(fablo,fabhi,facepairZ,ngrow_distance,SDIM-1,1871)
+      call checkbound_array(fablo,fabhi,facefab,ngrow_distance,-1,1871)
+      call checkbound_array(fablo,fabhi,facetest,ngrow_distance,-1,1872)
+      call checkbound_array(fablo,fabhi,stenfab,ngrow_distance,-1,1873)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow_distance,-1,1874)
+      call checkbound_array(fablo,fabhi,origdist,ngrow_distance,-1,1875)
+      call checkbound_array(fablo,fabhi,newfab_ptr,1,-1,1876)
+      call checkbound_array(fablo,fabhi,touchfab_ptr,0,-1,1876)
+      call checkbound_array(fablo,fabhi,crsetouch,0,-1,1876)
+      call checkbound_array(fablo,fabhi,crsedist,0,-1,1876)
       
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -1896,7 +1913,8 @@ stop
            endif
           enddo ! dir
 
-           ! STENINIT called with tessellate==0 prior to LEVELSTRIP.
+           ! fort_steninit called with 
+           ! tessellate==0 prior to fort_levelstrip.
            ! im_test_stencil is the material that occupies the
            ! node in question.
           call put_istar(istar,istar_array_offset)
@@ -2375,7 +2393,7 @@ stop
         enddo ! i1,j1,k1
 
        else
-        print *,"parameter bust in FORT_LEVELSTRIP"
+        print *,"parameter bust in fort_levelstrip"
         print *,"fluid_materials_in_cell_stencil=", &
           fluid_materials_in_cell_stencil
         stop
@@ -2386,10 +2404,9 @@ stop
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_LEVELSTRIP
+      end subroutine fort_levelstrip
 
-
-      subroutine FORT_CORRECT_UNINIT( &
+      subroutine fort_correct_uninit( &
          minLS, &
          maxLS, &
          max_problen, &
@@ -2402,7 +2419,8 @@ stop
          bfact, &
          xlo,dx, &
          time, &
-         nmat)
+         nmat) &
+      bind(c,name='fort_correct_uninit')
 
       use global_utility_module
       use probcommon_module
@@ -2418,8 +2436,10 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(newfab)
       INTEGER_T, intent(in) :: DIMDEC(touchfab)
 
-      REAL_T, intent(inout) :: newfab(DIMV(newfab),nmat*(1+SDIM))
-      REAL_T, intent(in) :: touchfab(DIMV(touchfab),nmat)
+      REAL_T, intent(inout), target :: newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T, pointer :: newfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: touchfab(DIMV(touchfab),nmat)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -2433,6 +2453,8 @@ stop
       INTEGER_T ctouch
       REAL_T init_dist
      
+      newfab_ptr=>newfab
+
       if (bfact.lt.1) then
        print *,"bfact invalid143"
        stop
@@ -2447,8 +2469,8 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(newfab),1,-1,2876)
-      call checkbound(fablo,fabhi,DIMS(touchfab),0,-1,2876)
+      call checkbound_array(fablo,fabhi,newfab_ptr,1,-1,2876)
+      call checkbound_array(fablo,fabhi,touchfab,0,-1,2876)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -2513,10 +2535,10 @@ stop
       enddo  ! replace uninit with minLS or maxLS
 
       return
-      end subroutine FORT_CORRECT_UNINIT
+      end subroutine fort_correct_uninit
 
 
-      subroutine FORT_STENINIT( &
+      subroutine fort_steninit( &
        level, &
        finest_level, &
        stenfab,DIMS(stenfab), &
@@ -2527,7 +2549,8 @@ stop
        rz_flag, &
        xlo,dx, &
        time,ngrow_distance, &
-       nmat,nstar)
+       nmat,nstar) &
+      bind(c,name='fort_steninit')
 
       use global_utility_module
       use probcommon_module
@@ -2544,9 +2567,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(out) :: stenfab(DIMV(stenfab),nstar)
-      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
-      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(out), target :: stenfab(DIMV(stenfab),nstar)
+      REAL_T, pointer :: stenfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
+      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -2577,7 +2602,9 @@ stop
       INTEGER_T tessellate
  
       nhalf=3      
-    
+   
+      stenfab_ptr=>stenfab
+
       tessellate=0
  
       if (bfact.lt.1) then
@@ -2604,9 +2631,9 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(stenfab),ngrow_distance,-1,2877)
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2878)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_distance,-1,2879)
+      call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1,2877)
+      call checkbound_array(fablo,fabhi,maskfab,ngrow_distance,-1,2878)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow_distance,-1,2879)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -2739,14 +2766,14 @@ stop
 
 
       return
-      end subroutine FORT_STENINIT
+      end subroutine fort_steninit
 
 
        ! for finding areas internal to a cell, perturb each internal 
        ! interface, find areas and volumes, then check for the difference 
        ! in volumes divided by eps times the area.
        ! 
-      subroutine FORT_FACEINIT( &
+      subroutine fort_faceinit( &
          tid, &
          tessellate, &  ! =0,1, or 3
          nten, &
@@ -2763,7 +2790,8 @@ stop
          ngrow, &
          nmat, &
          nface, &
-         nface_decomp)
+         nface_decomp) &
+      bind(c,name='fort_faceinit')
 
       use global_utility_module
       use probcommon_module
@@ -2787,9 +2815,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(out) :: facefab(DIMV(facefab),nface+nface_decomp)
-      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
-      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(out), target :: &
+              facefab(DIMV(facefab),nface+nface_decomp)
+      REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
+      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -2863,7 +2894,9 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       nhalf_box=1
-  
+ 
+      facefab_ptr=>facefab
+
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
        stop
@@ -2925,9 +2958,9 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(facefab),ngrow,-1,2883)
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow,-1,2884)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow,-1,2885)
+      call checkbound_array(fablo,fabhi,facefab_ptr,ngrow,-1,2883)
+      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1,2884)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1,2885)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -3152,7 +3185,7 @@ stop
            ! base case (also area fractions)
            ! multi_cen in absolute coordinate system (not relative to cell
            ! centroid)
-           ! in: FORT_FACEINIT
+           ! in: fort_faceinit
           call multi_get_volume_grid( &
             local_tessellate, &  ! 0,1, or 2
             bfact,dx,xsten,nhalf, &
@@ -3343,7 +3376,7 @@ stop
                     intercept+half*FACETOL_DVOL*dx(dir)
 
                     ! rigid material
-                    ! in: FORT_FACEINIT
+                    ! in: fort_faceinit
                    call multi_get_volume_grid_simple( &
                     local_tessellate, &  !=0,1, or 2
                     bfact,dx,xsten,nhalf, &
@@ -3550,7 +3583,7 @@ stop
                     intercept+half*FACETOL_DVOL*dx(dir)
 
                    ! fluid material
-                   ! in: FORT_FACEINIT
+                   ! in: fort_faceinit
                   call multi_get_volume_grid_simple( &
                    local_tessellate, &  ! 0,1, or 2
                    bfact,dx,xsten,nhalf, &
@@ -3821,10 +3854,10 @@ stop
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_FACEINIT
+      end subroutine fort_faceinit
 
 
-      subroutine FORT_FACEINITTEST( &
+      subroutine fort_faceinittest( &
        tid, &
        tessellate, &
        level, &
@@ -3841,7 +3874,8 @@ stop
        time, &
        ngrow, &
        nmat, &
-       nface)
+       nface) &
+      bind(c,name='fort_faceinittest')
 
       use global_utility_module
       use probcommon_module
@@ -3862,10 +3896,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(in) :: facefab(DIMV(facefab),nface)
-      REAL_T, intent(out) :: facetest(DIMV(facetest),nmat*SDIM)
-      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
-      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
+
+      REAL_T, intent(out), target :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, pointer :: facetest_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
+      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3894,7 +3931,9 @@ stop
       INTEGER_T at_RZ_face
  
       nhalf=1
- 
+
+      facetest_ptr=>facetest
+
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
        stop
@@ -3913,7 +3952,8 @@ stop
        ! (nmat,sdim,2,sdim+1)
       nface_test=nmat*SDIM*2*(1+SDIM)
       if (nface_test.ne.nface) then
-       print *,"nface invalid faceinittest nface nface_test ",nface,nface_test
+       print *,"nface bad fort_faceinittest nface nface_test ", &
+               nface,nface_test
        stop
       endif
 
@@ -3927,10 +3967,10 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(facetest),ngrow,-1,2886)
-      call checkbound(fablo,fabhi,DIMS(facefab),ngrow,-1,2887)
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow,-1,2888)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow,-1,2889)
+      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow,-1,2886)
+      call checkbound_array(fablo,fabhi,facefab,ngrow,-1,2887)
+      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1,2888)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1,2889)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -4106,16 +4146,16 @@ stop
       enddo ! dir
 
       return
-      end subroutine FORT_FACEINITTEST
+      end subroutine fort_faceinittest
 
        ! 1. NavierStokes::makeFaceFrac
-       !      -> FORT_FACEINIT
+       !      -> fort_faceinit
        ! 2. NavierStokes::ProcessFaceFrac
-       !      -> FORT_FACEPROCESS
+       !      -> fort_faceprocess
        ! called from: NavierStokes::ProcessFaceFrac (NavierStokes.cpp)
-       ! facefab is initialized in FORT_FACEINIT
+       ! facefab is initialized in fort_faceinit
        ! centroids in facefab are in an absolute coordinate system.
-      subroutine FORT_FACEPROCESS( &
+      subroutine fort_faceprocess( &
        ngrow_source, &
        ngrow_dest, &
        tid, &
@@ -4131,7 +4171,8 @@ stop
        rz_flag, &
        xlo,dx, &
        time, &
-       nmat,nface_src,nface_dst)
+       nmat,nface_src,nface_dst) &
+      bind(c,name='fort_faceprocess')
 
       use global_utility_module
       use probcommon_module
@@ -4153,9 +4194,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(out) :: dstfab(DIMV(dstfab),nface_dst)
-      REAL_T, intent(in) :: facefab(DIMV(facefab),nface_src)
-      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(out), target :: dstfab(DIMV(dstfab),nface_dst)
+      REAL_T, pointer :: dstfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: facefab(DIMV(facefab),nface_src)
+      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -4208,7 +4251,9 @@ stop
       INTEGER_T nmax
       INTEGER_T local_tessellate
       INTEGER_T caller_id
- 
+
+      dstfab_ptr=>dstfab
+
       L_face=dx(dir+1)
 
       nmax=POLYGON_LIST_MAX  ! in: FACE_PROCESS
@@ -4250,9 +4295,9 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(dstfab),ngrow_dest,dir,2880)
-      call checkbound(fablo,fabhi,DIMS(facefab),ngrow_source,-1,2881)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow_source,-1,2882)
+      call checkbound_array(fablo,fabhi,dstfab_ptr,ngrow_dest,dir,2880)
+      call checkbound_array(fablo,fabhi,facefab,ngrow_source,-1,2881)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow_source,-1,2882)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -4732,13 +4777,9 @@ stop
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_FACEPROCESS
+      end subroutine fort_faceprocess
 
-
-
-#if (STANDALONE==1)
       end module mof_redist_cpp_module
-#endif
 
 #undef STANDALONE
 

@@ -12,10 +12,11 @@
 
 
 
-!-----------------------------------------------------------------------
+      module cpp_lo
 
+      contains
 
-      subroutine FORT_BUILDMAT( &
+      subroutine fort_buildmat( &
        level, &
        veldir, &
        nsolve, &
@@ -37,7 +38,9 @@
        mask, &
        DIMS(mask), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi,bfact,bfact_top) &
+      bind(c,name='fort_buildmat')
+
       use global_utility_module
       IMPLICIT NONE
       INTEGER_T, intent(in) :: level
@@ -58,30 +61,45 @@
       INTEGER_T, intent(in) :: DIMDEC(bx)
       INTEGER_T, intent(in) :: DIMDEC(by)
       INTEGER_T, intent(in) :: DIMDEC(bz)
-      REAL_T, intent(inout) :: bx(DIMV(bx))
-      REAL_T, intent(inout) :: by(DIMV(by))
-      REAL_T, intent(inout) :: bz(DIMV(bz))
-      REAL_T, intent(inout) :: solvemask(DIMV(solvemask))
-      REAL_T, intent(inout) :: a(DIMV(a))
-      REAL_T, intent(inout) :: diagfab(DIMV(work))
-      REAL_T, intent(inout) :: bxleft(DIMV(work))
-      REAL_T, intent(inout) :: bxright(DIMV(work))
-      REAL_T, intent(inout) :: byleft(DIMV(work))
-      REAL_T, intent(inout) :: byright(DIMV(work))
-      REAL_T, intent(inout) :: bzleft(DIMV(work))
-      REAL_T, intent(inout) :: bzright(DIMV(work))
-      REAL_T, intent(inout) :: icbx(DIMV(work))
-      REAL_T, intent(inout) :: icby(DIMV(work))
-      REAL_T, intent(inout) :: icbz(DIMV(work))
-      REAL_T, intent(inout) :: icdiag(DIMV(work))
-      REAL_T, intent(out) :: icdiagrb(DIMV(work))
-      REAL_T, intent(out) :: mask(DIMV(mask))
+      REAL_T, intent(inout), target :: bx(DIMV(bx))
+      REAL_T, pointer :: bx_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: by(DIMV(by))
+      REAL_T, pointer :: by_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: bz(DIMV(bz))
+      REAL_T, pointer :: bz_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: solvemask(DIMV(solvemask))
+      REAL_T, pointer :: solvemask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: a(DIMV(a))
+      REAL_T, pointer :: a_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: diagfab(DIMV(work))
+      REAL_T, pointer :: diagfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: bxleft(DIMV(work))
+      REAL_T, intent(inout), target :: bxright(DIMV(work))
+      REAL_T, intent(inout), target :: byleft(DIMV(work))
+      REAL_T, intent(inout), target :: byright(DIMV(work))
+      REAL_T, intent(inout), target :: bzleft(DIMV(work))
+      REAL_T, intent(inout), target :: bzright(DIMV(work))
+      REAL_T, intent(inout), target :: icbx(DIMV(work))
+      REAL_T, intent(inout), target :: icby(DIMV(work))
+      REAL_T, intent(inout), target :: icbz(DIMV(work))
+      REAL_T, intent(inout), target :: icdiag(DIMV(work))
+      REAL_T, intent(out), target :: icdiagrb(DIMV(work))
+      REAL_T, intent(out), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k,ioff
       REAL_T test_mask
       REAL_T offdiagsum
       REAL_T local_diag
       REAL_T DD
+
+      bx_ptr=>bx
+      by_ptr=>by
+      bz_ptr=>bz
+      solvemask_ptr=>solvemask
+      a_ptr=>a
+      diagfab_ptr=>diagfab
+      mask_ptr=>mask
 
       if (bfact.ge.1) then
        ! do nothing
@@ -114,13 +132,13 @@
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(solvemask),1,-1,81)
-      call checkbound(fablo,fabhi,DIMS(a),0,-1,81)
-      call checkbound(fablo,fabhi,DIMS(work),1,-1,81)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,81)
-      call checkbound(fablo,fabhi,DIMS(bx),0,0,81)
-      call checkbound(fablo,fabhi,DIMS(by),0,1,81)
-      call checkbound(fablo,fabhi,DIMS(bz),0,AMREX_SPACEDIM-1,81)
+      call checkbound_array1(fablo,fabhi,solvemask_ptr,1,-1,81)
+      call checkbound_array1(fablo,fabhi,a_ptr,0,-1,81)
+      call checkbound_array1(fablo,fabhi,diagfab_ptr,1,-1,81)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,81)
+      call checkbound_array1(fablo,fabhi,bx_ptr,0,0,81)
+      call checkbound_array1(fablo,fabhi,by_ptr,0,1,81)
+      call checkbound_array1(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1,81)
 
 
       if (isweep.eq.0) then
@@ -382,10 +400,10 @@
       endif
 
       return
-      end subroutine FORT_BUILDMAT
+      end subroutine fort_buildmat
 
 
-      subroutine FORT_RESIDL ( &
+      subroutine fort_residl( &
        level, &
        mg_coarsest_level, &
        nsolve, &
@@ -395,7 +413,9 @@
        rhs,DIMS(rhs), &
        phi,DIMS(phi), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi,bfact,bfact_top) &
+      bind(c,name='fort_residl')
+
       use global_utility_module
 
       IMPLICIT NONE
@@ -411,17 +431,20 @@
       INTEGER_T :: growhi(3)
       INTEGER_T, intent(in) :: bfact,bfact_top
       INTEGER_T, intent(in) :: DIMDEC(masksing)
-      REAL_T, intent(in) :: masksing(DIMV(masksing))
+      REAL_T, intent(in), target :: masksing(DIMV(masksing))
       INTEGER_T, intent(in) :: DIMDEC(phi)
-      REAL_T, intent(in) :: phi(DIMV(phi),nsolve)
+      REAL_T, intent(in), target :: phi(DIMV(phi),nsolve)
       INTEGER_T, intent(in) :: DIMDEC(rhs)
-      REAL_T, intent(in) :: rhs(DIMV(rhs),nsolve)
+      REAL_T, intent(in), target :: rhs(DIMV(rhs),nsolve)
       INTEGER_T, intent(in) :: DIMDEC(res)
-      REAL_T, intent(out) :: res(DIMV(res),nsolve)
+      REAL_T, intent(out), target :: res(DIMV(res),nsolve)
+      REAL_T, pointer :: res_ptr(D_DECL(:,:,:),:)
 !
       INTEGER_T i,j,k,veldir
       REAL_T test_mask
-!
+
+      res_ptr=>res
+
       if (bfact.lt.1) then
        print *,"bfact invalid"
        stop
@@ -440,10 +463,10 @@
        print *,"level or mg_coarsest_level invalid"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(masksing),1,-1,81)
-      call checkbound(fablo,fabhi,DIMS(rhs),0,-1,81)
-      call checkbound(fablo,fabhi,DIMS(res),0,-1,84)
-      call checkbound(fablo,fabhi,DIMS(phi),0,-1,85)
+      call checkbound_array1(fablo,fabhi,masksing,1,-1,81)
+      call checkbound_array(fablo,fabhi,rhs,0,-1,81)
+      call checkbound_array(fablo,fabhi,res_ptr,0,-1,84)
+      call checkbound_array(fablo,fabhi,phi,0,-1,85)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -464,9 +487,9 @@
       enddo
 
       return
-      end subroutine FORT_RESIDL
+      end subroutine fort_residl
 
-      subroutine FORT_AVERAGEEC ( &
+      subroutine fort_averageec( &
        nsolve, &
        c,  &
        DIMS(c), &
@@ -474,26 +497,31 @@
        DIMS(f), &
        lo, hi, &
        cdir,avg, &
-       bfact_coarse,bfact_fine,bfact_top)
+       bfact_coarse,bfact_fine,bfact_top) &
+      bind(c,name='fort_averageec')
+
       use global_utility_module
       IMPLICIT NONE
 !
-      INTEGER_T nsolve
-      INTEGER_T bfact_coarse,bfact_fine,bfact_top
-      INTEGER_T avg
-      INTEGER_T lo(AMREX_SPACEDIM)
-      INTEGER_T hi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine,bfact_top
+      INTEGER_T, intent(in) :: avg
+      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
       INTEGER_T growlo(3)
       INTEGER_T growhi(3)
-      INTEGER_T cdir
-      INTEGER_T DIMDEC(f)
-      REAL_T f(DIMV(f),nsolve)
-      INTEGER_T DIMDEC(c)
-      REAL_T c(DIMV(c),nsolve)
+      INTEGER_T, intent(in) :: cdir
+      INTEGER_T, intent(in) :: DIMDEC(f)
+      REAL_T, intent(in), target :: f(DIMV(f),nsolve)
+      INTEGER_T, intent(in) :: DIMDEC(c)
+      REAL_T, intent(out), target :: c(DIMV(c),nsolve)
+      REAL_T, pointer :: c_ptr(D_DECL(:,:,:),:)
 !     
       INTEGER_T i,j,k,veldir
       REAL_T denom
-!     
+
+      c_ptr=>c
+
       if (bfact_coarse.lt.1) then
        print *,"bfact_coarse invalid"
        stop
@@ -510,9 +538,7 @@
        print *,"nsolve invalid"
        stop
       endif
-      call checkbound(lo,hi, &
-       DIMS(c), &
-       0,cdir,201)
+      call checkbound_array(lo,hi,c_ptr,0,cdir,201)
 
       if (avg.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
@@ -603,10 +629,10 @@
        stop
       endif
 !     
-      end subroutine FORT_AVERAGEEC
+      end subroutine fort_averageec
 !-----------------------------------------------------------------------
 
-      subroutine FORT_AVERAGECC ( &
+      subroutine fort_averagecc( &
        nsolve, &
        ncomp_expect, &
        c, &
@@ -615,7 +641,10 @@
        DIMS(f), &
        lo, hi, avg, &
        ngrow, &
-       bfact_coarse,bfact_fine,bfact_top)
+       bfact_coarse,bfact_fine,bfact_top) &
+      bind(c,name='fort_averagecc')
+
+
       use global_utility_module 
       IMPLICIT NONE
 !
@@ -630,13 +659,16 @@
       INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
       INTEGER_T :: growlo(3)
       INTEGER_T :: growhi(3)
-      REAL_T, intent(in) :: f(DIMV(f),ncomp_expect)
-      REAL_T, intent(out) :: c(DIMV(c),ncomp_expect)
+      REAL_T, intent(in), target :: f(DIMV(f),ncomp_expect)
+      REAL_T, intent(out), target :: c(DIMV(c),ncomp_expect)
+      REAL_T, pointer :: c_ptr(D_DECL(:,:,:),:)
 !
       INTEGER_T i,j,k,veldir
       REAL_T one_over_denom
       INTEGER_T sum_mask,max_sum
-!
+
+      c_ptr=>c
+      
       if (bfact_coarse.ge.1) then
        ! do nothing
       else
@@ -693,9 +725,7 @@
        stop
       endif
 
-      call checkbound(lo,hi, &
-       DIMS(c), &
-       ngrow,-1,301)
+      call checkbound_array(lo,hi,c_ptr,ngrow,-1,301)
 
       if (avg.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
@@ -774,7 +804,7 @@
       enddo
       enddo
 
-      end subroutine FORT_AVERAGECC
+      end subroutine fort_averagecc
 
 
 
@@ -782,7 +812,7 @@
 
 
         ! NO TILING 
-      subroutine FORT_APPLYBC ( &
+      subroutine fort_applybc( &
        nsolve, &
        phi,  &
        DIMS(phi), &
@@ -792,28 +822,32 @@
        DIMS(mfab), &
        bcpres, &
        tilelo,tilehi, &
-       fablo,fabhi,bfact,bfact_top)
+       fablo,fabhi,bfact,bfact_top) &
+      bind(c,name='fort_applybc')
+
       use global_utility_module
       IMPLICIT NONE
 !
 !     mask=0 => fine/fine grid interface....
 !
-      INTEGER_T nsolve
-      INTEGER_T dir,side
-      INTEGER_T tilelo(AMREX_SPACEDIM)
-      INTEGER_T tilehi(AMREX_SPACEDIM)
-      INTEGER_T fablo(AMREX_SPACEDIM)
-      INTEGER_T fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T bfact,bfact_top
-      INTEGER_T DIMDEC(phi)
-      INTEGER_T DIMDEC(bfab)
-      INTEGER_T DIMDEC(mfab)
-      INTEGER_T bcpres(AMREX_SPACEDIM,2,nsolve)
-      REAL_T phi(DIMV(phi),nsolve)
-      REAL_T bfab(DIMV(bfab),nsolve)
-      REAL_T mfab(DIMV(mfab))
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T :: dir,side
+      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
+      INTEGER_T :: growlo(3)
+      INTEGER_T :: growhi(3)
+      INTEGER_T, intent(in) :: bfact,bfact_top
+      INTEGER_T, intent(in) :: DIMDEC(phi)
+      INTEGER_T, intent(in) :: DIMDEC(bfab)
+      INTEGER_T, intent(in) :: DIMDEC(mfab)
+      INTEGER_T, intent(in) :: bcpres(AMREX_SPACEDIM,2,nsolve)
+      REAL_T, intent(inout), target :: phi(DIMV(phi),nsolve)
+      REAL_T, pointer :: phi_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: bfab(DIMV(bfab),nsolve)
+      REAL_T, intent(in), target :: mfab(DIMV(mfab))
 !
       INTEGER_T i,j,k
       INTEGER_T ib,jb,kb
@@ -821,16 +855,12 @@
       INTEGER_T ireflect,jreflect,kreflect
       INTEGER_T ii,jj,kk
       INTEGER_T bct,veldir,dir_bc
-  
-      call checkbound(fablo,fabhi, &
-       DIMS(phi), &
-       1,-1,113)
-      call checkbound(fablo,fabhi, &
-      DIMS(bfab), &
-       1,-1,113)
-      call checkbound(fablo,fabhi, &
-       DIMS(mfab), &
-       1,-1,113)
+ 
+      phi_ptr=>phi
+
+      call checkbound_array(fablo,fabhi,phi_ptr,1,-1,113)
+      call checkbound_array(fablo,fabhi,bfab,1,-1,113)
+      call checkbound_array1(fablo,fabhi,mfab,1,-1,113)
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -955,4 +985,6 @@
       enddo ! veldir
 
       return
-      end subroutine FORT_APPLYBC
+      end subroutine fort_applybc
+
+      end module cpp_lo

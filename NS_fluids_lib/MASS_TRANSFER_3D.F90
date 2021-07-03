@@ -3328,10 +3328,8 @@ stop
 
       end module mass_transfer_module
 
-#if (STANDALONE==1)
       module mass_transfer_cpp_module
       contains
-#endif
 
         ! this is for unsplit advection: for phase change.
         ! Called from NavierStokes.cpp: 
@@ -9681,9 +9679,7 @@ stop
       return
       end subroutine fort_ratemasschange
 
-#if (STANDALONE==1)
       end module mass_transfer_cpp_module
-#endif
 
 #undef STANDALONE
 

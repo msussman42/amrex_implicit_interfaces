@@ -30,7 +30,8 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       dir,ncomp,interior_only,nsteps)
+       dir,ncomp,interior_only,nsteps) &
+      bind(c,name='fort_tecplotfab')
 
       use global_utility_module
 

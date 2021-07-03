@@ -4,25 +4,7 @@
 #include <AMReX_REAL.H>
 
 #ifdef BL_LANG_FORT
-#define FORT_GSRB          gsrb
-#define FORT_ADOTX         adotx
-#define FORT_DIAGSUM       diagsum
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#define FORT_GSRB     GSRB
-#define FORT_ADOTX    ADOTX
-#define FORT_DIAGSUM  DIAGSUM
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#define FORT_GSRB     gsrb
-#define FORT_ADOTX    adotx
-#define FORT_DIAGSUM  diagsum
-#  else
-#define FORT_GSRB     gsrb_
-#define FORT_ADOTX    adotx_
-#define FORT_DIAGSUM  diagsum_
-#endif
-#endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -31,7 +13,7 @@ namespace amrex{
 extern "C"
 {
 
-    void FORT_GSRB (
+    void fort_gsrb(
      int* level,
      int* mg_coarsest_level,
      int* isweep,
@@ -64,7 +46,7 @@ extern "C"
      int* bfact,int* bfact_top,
      const int* smooth_type);
 
-    void FORT_ADOTX(
+    void fort_adotx(
      int* level,
      int* mg_coarsest_level,
      const Real* masksing , 
@@ -83,7 +65,7 @@ extern "C"
      const int *fablo, const int *fabhi,
      int* bfact,int* bfact_top);
    
-    void FORT_DIAGSUM(
+    void fort_diagsum(
         Real *y      , AMREX_ARLIM_P(y_lo), AMREX_ARLIM_P(y_hi),
         const Real* bX, AMREX_ARLIM_P(bX_lo), AMREX_ARLIM_P(bX_hi),
         const Real* bY, AMREX_ARLIM_P(bY_lo), AMREX_ARLIM_P(bY_hi),

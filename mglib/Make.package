@@ -14,13 +14,13 @@ FEXE_sources += \
 #			ABec_3D.F 
 #			CG_3D.F \
 #                       LO_3D.F \
-#                          LO_UTIL.F MG_3D.F 
+#                       MG_3D.F 
 
 F90EXE_sources +=  \
 			ABec_3D.F90 \
 			CG_3D.F90 \
 			LO_3D.F90 \
-			LO_UTIL.F90 MG_3D.F90
+			MG_3D.F90
 				
 F90EXE_headers +=  \
 			ABec_F.H \
