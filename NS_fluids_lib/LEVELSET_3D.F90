@@ -11599,7 +11599,9 @@ stop
       REAL_T, intent(in), target :: mdotcell(DIMV(mdotcell),nsolve)
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskdivres(DIMV(maskdivres))
+      REAL_T, pointer :: maskdivres_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: maskres(DIMV(maskres))
+      REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
 
       REAL_T DXMAXLS,cutoff
       INTEGER_T all_incomp
@@ -11712,6 +11714,8 @@ stop
       maskSEM_ptr=>maskSEM
       maskcoef_ptr=>maskcoef
       mask_ptr=>mask
+      maskdivres_ptr=>maskdivres
+      maskres_ptr=>maskres
       mdotcell_ptr=>mdotcell
       pold_ptr=>pold
       denold_ptr=>denold
@@ -12223,8 +12227,8 @@ stop
       call checkbound_array(fablo,fabhi,ustar_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,recon,0,-1,33)
       call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
-      call checkbound_array1(fablo,fabhi,maskdivres,0,-1,137)
-      call checkbound_array1(fablo,fabhi,maskres,0,-1,138)
+      call checkbound_array1(fablo,fabhi,maskdivres_ptr,0,-1,137)
+      call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,138)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
