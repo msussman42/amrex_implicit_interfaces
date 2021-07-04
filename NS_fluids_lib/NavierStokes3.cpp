@@ -389,14 +389,23 @@ void NavierStokes::nonlinear_advection() {
  } else
   amrex::Error("face_flag invalid");
 
- NavierStokes& ns_finest=getLevel(finest_level);
  if (particles_flag==1) {
 
-   // 1. void addParticles (const ParticleContainerType& other, 
-   //     bool local=false);  (local==true => do not redistribute at end?)
-   // 2. advect the particles using RK
-   // in: NavierStokes2.cpp
-  ns_finest.move_particles();
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.move_particles();//move_particles() declared in NavierStokes2.cpp
+  }
+  int ipart=0;
+  NavierStokes& ns_level0=getLevel(0);
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+   ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+
+  int lev_min=0;
+  int lev_max=-1;
+  int nGrow_Redistribute=0;
+   //local=1 since particles only displace 1 cell max.
+  int local_Redistribute=1; 
+  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
 
  } else if (particles_flag==0) {
    // do nothing
@@ -674,6 +683,16 @@ void NavierStokes::tensor_advection_updateALL() {
 
  int nmat=num_materials;
 
+ const Vector<Geometry>& ns_geom=parent->Geom();
+ const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+ const Vector<BoxArray>& ns_ba=parent->boxArray();
+
+ Vector<int> refinement_ratio;
+ refinement_ratio.resize(ns_ba.size());
+ for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+  refinement_ratio[ilev]=2;
+ int nnbr=1;
+
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
    // init_gradu_tensorALL fills CELLTENSOR_MF using these steps:
@@ -713,11 +732,35 @@ void NavierStokes::tensor_advection_updateALL() {
          (elastic_viscosity[im]>=0.0)) {
       if (store_elastic_data[im]==1) {
        if (viscoelastic_model[im]==2) {
-	  // particles only appear on the finest level.
-          // The flexible substrate is wholly contained on
-          // the finest level.
-        NavierStokes& ns_finest=getLevel(finest_level);
-        ns_finest.accumulate_PC_info(im);
+
+        if (particles_flag==0) {
+
+         for (int ilev=finest_level;ilev>=level;ilev--) {
+          NavierStokes& ns_level=getLevel(ilev);
+          ns_level.accumulate_PC_info_no_particles(im);
+	 }
+
+        } else if (particles_flag==1) {
+
+         NavierStokes& ns_level0=getLevel(0);
+         bool local_copy_flag=true; 
+         int ipart=0;
+         AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+           ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+         NeighborParticleContainer<N_EXTRA_REAL,0> 
+           localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+         localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
+         localPC_nbr.fillNeighbors();
+
+         for (int ilev=finest_level;ilev>=level;ilev--) {
+          NavierStokes& ns_level=getLevel(ilev);
+          ns_level.accumulate_PC_info(im,localPC_nbr);
+	 }
+         localPC_nbr.clearNeighbors();
+
+	} else
+         amrex::Error("particles_flag invalid");
+
        } else if ((viscoelastic_model[im]==1)||
   		  (viscoelastic_model[im]==0)||
 		  (viscoelastic_model[im]==3)) {

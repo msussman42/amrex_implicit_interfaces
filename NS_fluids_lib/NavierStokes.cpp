@@ -21557,12 +21557,8 @@ NavierStokes::assimilate_vel_from_particles() {
 
 } // end subroutine assimilate_vel_from_particles
 
-// initialize particles and copy to all "slab locations"
-// ONLY LEVEL==max_level STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
-// PARTICLES THAT APPEAR ON ALL THE LEVELS.
-// ALSO: Only state[State_Type] has the particles.
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
-// This routine called for level=finest_level from:
+// This routine called from:
 // 1. post_init_state() and
 // 2. move_particles()
 void
@@ -21595,6 +21591,9 @@ NavierStokes::init_particle_container(int append_flag) {
 
  const Real* dx = geom.CellSize();
 
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,28);
+
  if (particles_flag==1) {
 
   int ipart=0;
@@ -21607,8 +21606,6 @@ NavierStokes::init_particle_container(int append_flag) {
 
   MultiFab* init_velocity_mf=getState(1,0,AMREX_SPACEDIM+1,cur_time_slab);
 
-   // All the particles should live on level==0.
-   // particle levelset==0.0 for interface particles.
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
@@ -21646,6 +21643,7 @@ NavierStokes::init_particle_container(int append_flag) {
 
     const Real* xlo = grid_loc[gridno].lo();
 
+    FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& lsfab=(*LSmf)[mfi];
     FArrayBox& velfab=(*init_velocity_mf)[mfi];
     FArrayBox& xdfab=(*xdisplace_mf[0])[mfi];
@@ -21696,7 +21694,7 @@ NavierStokes::init_particle_container(int append_flag) {
 
      int new_Pdata_size=new_particle_data.size();
 
-     // in: LEVELSET_3D.F90
+     // declared in: LEVELSET_3D.F90
      // 1. subdivide each cell with "particle_nsubdivide" divisions.
      //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
      //                 "         "   =4 => 64 pieces in 2D.
@@ -21736,7 +21734,9 @@ NavierStokes::init_particle_container(int append_flag) {
        ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
        zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
        lsfab.dataPtr(),
-       ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()) );
+       ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+       mfinerfab.dataPtr(),
+       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()) );
 
      if (isweep==0) {
       new_particle_data.resize(Np_append*single_particle_size);
@@ -21858,8 +21858,6 @@ NavierStokes::post_init_state () {
 
  const int finest_level = parent->finestLevel();
 
- NavierStokes& ns_finest=getLevel(finest_level);
-
    // inside of post_init_state
 
    // metrics_data
@@ -21882,19 +21880,21 @@ NavierStokes::post_init_state () {
     slab_step << ' ' << ns_time_order << ' ' << ipart << '\n';
   }
 
+  int append_flag=0;
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.init_particle_container(append_flag);
+  }
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-    
-  int append_flag=0;
-  ns_finest.init_particle_container(append_flag);
 
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
+   //particles are being redistributed for the first time.
   int local_Redistribute=0;
-  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-   local_Redistribute);
+  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
 
  } else if (particles_flag==0) {
   // do nothing

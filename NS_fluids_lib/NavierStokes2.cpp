@@ -7496,22 +7496,21 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
 }  // end subroutine prescribe_solid_geometry()
 
-// this routine called for level=finest_level only.
 void NavierStokes::move_particles() {
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
 
- if (level==finest_level) {
+ if ((level>=0)&&(level<=finest_level)) {
   // do nothing
  } else 
-  amrex::Error("particle container on finest level only");
+  amrex::Error("level invalid");
 
- if (level==max_level) {
+ if ((level>=0)&&(level<=max_level)) {
   // do nothing
  } else 
-  amrex::Error("particle container on max level only");
+  amrex::Error("level invalid");
 
  NavierStokes& ns_level0=getLevel(0);
 
@@ -7701,12 +7700,6 @@ void NavierStokes::move_particles() {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    delete mac_velocity[dir];
   }
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-  int local_Redistribute=1;
-  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_Redistribute);
 
  } else
   amrex::Error("expecting NS_ncomp_particles>0");
