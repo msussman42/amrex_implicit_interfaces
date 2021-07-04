@@ -26404,11 +26404,14 @@ stop
       REAL_T, pointer :: amrsync_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
        ! mask0=tag if not covered by level+1 or outside the domain.
       REAL_T, intent(in), target :: mask0(DIMV(mask0))
+      REAL_T, pointer :: mask0_ptr(D_DECL(:,:,:))
        ! mask3=tag at exterior fine/fine border.
        ! mask3=1-tag at other exterior boundaries.
       REAL_T, intent(in), target :: mask3(DIMV(mask3))
+      REAL_T, pointer :: mask3_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: faceLS(DIMV(faceLS),SDIM)
       REAL_T, pointer :: faceLS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: mdata(DIMV(mdata),SDIM)
@@ -26418,6 +26421,7 @@ stop
       REAL_T, intent(out), target :: c_tdata(DIMV(c_tdata),ntensor)
       REAL_T, pointer :: c_tdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solidx(DIMV(solidx),nparts_def*SDIM)
       REAL_T, intent(in), target :: solidy(DIMV(solidy),nparts_def*SDIM)
       REAL_T, intent(in), target :: solidz(DIMV(solidz),nparts_def*SDIM)
@@ -26513,6 +26517,10 @@ stop
       mdata_ptr=>mdata
       tdata_ptr=>tdata
       c_tdata_ptr=>c_tdata
+      mask3_ptr=>mask3
+      mask0_ptr=>mask0
+      maskSEM_ptr=>maskSEM
+      vel_ptr=>vel
 
       if ((dir.lt.1).or.(dir.gt.SDIM)) then
        print *,"dir invalid face gradients"
@@ -26723,18 +26731,18 @@ stop
 
        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
        call checkbound_array(fablo,fabhi,faceLS_ptr,1,-1,1263)
-       call checkbound_array1(fablo,fabhi,mask0,1,-1,1264)
-       call checkbound_array1(fablo,fabhi,mask3,1,-1,1264)
+       call checkbound_array1(fablo,fabhi,mask0_ptr,1,-1,1264)
+       call checkbound_array1(fablo,fabhi,mask3_ptr,1,-1,1264)
        call checkbound_array(fablo,fabhi,mdata_ptr,1,-1,1264)
        call checkbound_array(fablo,fabhi,tdata_ptr,1,-1,1265)
        call checkbound_array(fablo,fabhi,c_tdata_ptr,1,-1,1265)
-       call checkbound_array(fablo,fabhi,vel,1,-1,1266)
+       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1266)
        call checkbound_array(fablo,fabhi,solidx,0,0,1267)
        call checkbound_array(fablo,fabhi,solidy,0,1,1267)
        call checkbound_array(fablo,fabhi,solidz,0,SDIM-1,1267)
        call checkbound_array(fablo,fabhi,levelpc,2,-1,1368)
        call checkbound_array(fablo,fabhi,recon,2,-1,1368)
-       call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
+       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       endif
 
@@ -27566,17 +27574,17 @@ stop
                spectral_loop, &
                ncfluxreg, &
                semflux_ptr, &
-               mask3, &
-               mask0, & !mask0=1 if not cov. by finer or outside.
-               vel, &
-               vel, &  ! pres
-               vel, &  ! den
+               mask3_ptr, &
+               mask0_ptr, & !mask0=1 if not cov. by finer or outside.
+               vel_ptr, &
+               vel_ptr, &  ! pres
+               vel_ptr, &  ! den
                tdata_ptr, &  !xface
                tdata_ptr, &  !xgp (destination)
                tdata_ptr, &  !xcut
                amrsync_ptr, & !xp
                tdata_ptr, &  !xvel
-               maskSEM)
+               maskSEM_ptr)
 
             else if (stripstat.eq.0) then
              ! do nothing
@@ -27692,19 +27700,19 @@ stop
                ncomp_dest, & ! ncomp
                ncomp_xvel, &
                ncomp_cterm, &
-               tdata, & ! vol
-               tdata, & ! xface
-               tdata, & ! xp
-               tdata, & ! xvel
-               tdata, & ! maskcoef
-               tdata, & ! cterm
-               tdata, & ! mdotcell
-               tdata, & ! pold
-               tdata, & ! denold
-               tdata, & ! ustar
-               c_tdata, & ! veldest
-               c_tdata, & ! dendest
-               c_tdata) !divdest
+               tdata_ptr, & ! vol
+               tdata_ptr, & ! xface
+               tdata_ptr, & ! xp
+               tdata_ptr, & ! xvel
+               tdata_ptr, & ! maskcoef
+               tdata_ptr, & ! cterm
+               tdata_ptr, & ! mdotcell
+               tdata_ptr, & ! pold
+               tdata_ptr, & ! denold
+               tdata_ptr, & ! ustar
+               c_tdata_ptr, & ! veldest
+               c_tdata_ptr, & ! dendest
+               c_tdata_ptr) !divdest
 
             else if (stripstat.eq.0) then
              ! do nothing
