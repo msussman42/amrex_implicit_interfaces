@@ -391,21 +391,59 @@ void NavierStokes::nonlinear_advection() {
 
  if (particles_flag==1) {
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.move_particles();//move_particles() declared in NavierStokes2.cpp
-  }
   int ipart=0;
   NavierStokes& ns_level0=getLevel(0);
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+  bool local_copy_flag=true; 
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
 
+   // first add particles if needed
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   int append_flag=1;
+   ns_level.init_particle_container(append_flag);
+  }
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
    //local=1 since particles only displace 1 cell max.
   int local_Redistribute=1; 
-  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
+  localPC_no_nbr.Redistribute(lev_min,lev_max,
+     nGrow_Redistribute,local_Redistribute);
+
+  const Vector<Geometry>& ns_geom=parent->Geom();
+  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+  const Vector<BoxArray>& ns_ba=parent->boxArray();
+
+  Vector<int> refinement_ratio;
+  refinement_ratio.resize(ns_ba.size());
+  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+   refinement_ratio[ilev]=2;
+  int nnbr=particle_interaction_ngrow;
+  if (nnbr>=1) {
+   // do nothing
+  } else
+   amrex::Error("nnbr invalid");
+
+  NeighborParticleContainer<N_EXTRA_REAL,0> 
+   localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
+  localPC_nbr.fillNeighbors();
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+    //move_particles() declared in NavierStokes2.cpp
+   ns_level.move_particles(localPC_no_nbr,localPC_nbr);
+  }
+
+  lev_min=0;
+  lev_max=-1;
+  nGrow_Redistribute=0;
+   //local=1 since particles only displace 1 cell max.
+  local_Redistribute=1; 
+  localPC_no_nbr.Redistribute(lev_min,lev_max,
+     nGrow_Redistribute,local_Redistribute);
+  localPC_nbr.clearNeighbors();
 
  } else if (particles_flag==0) {
    // do nothing
@@ -1003,8 +1041,10 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
-FIX ME
-   for (int ipart=0;ipart<particles_flag;ipart++) {
+   if (particles_flag==0) {
+    // do nothing
+   } else if (particles_flag==1) {
+    int ipart=0;
     int lev_min=0;
     int lev_max=-1;
     int nGrow_Redistribute=0;
@@ -1014,6 +1054,8 @@ FIX ME
        get_new_dataPC(State_Type,ns_time_order,ipart);
     old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
       local_Redistribute);
+   } else {
+    amrex::Error("particles_flag invalid");
    }
 
    CopyNewToOldALL();

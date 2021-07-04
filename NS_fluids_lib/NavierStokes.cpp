@@ -21460,7 +21460,7 @@ void NavierStokes::assimilate_vel_from_particles(
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
- if ((level>=0)&&(level<=finest_level) {
+ if ((level>=0)&&(level<=finest_level)) {
   // do nothing
  } else
   amrex::Error("level out of range");
@@ -21491,19 +21491,6 @@ void NavierStokes::assimilate_vel_from_particles(
  int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
  int RHS_points=1;     // sum_{xp in Omega_cell} (vel_cell(xp)-vel_cell_p)*W
  int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
-FIX ME
- int ipart=0;
- AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-
- NeighborParticleContainer<N_EXTRA_REAL,0> 
-   localPC_nbr(ns_geom,ns_dmap,ns_ba,
-   refinement_ratio,nnbr);
-  // the two PC have same hierarchy, no need to call Redistribute after the
-  // copy.
- localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
-
- localPC_nbr.fillNeighbors();
 
   // 2 ghost cells in order to interpolate the velocity
   // to the particle positions.   1 ghost cell layer of 
@@ -21612,8 +21599,6 @@ FIX ME
 
  delete velocity_mf;
 
- localPC_nbr.clearNeighbors();
-
 
 } // end subroutine assimilate_vel_from_particles
 
@@ -21640,10 +21625,10 @@ NavierStokes::init_particle_container(int append_flag) {
  } else
   amrex::Error("expecting slab_step==ns_time_order-1");
 
- if (level<=finest_level) {
+ if ((level>=0)&&(level<=finest_level)) {
   // do nothing
  } else 
-  amrex::Error("level<=finest_level failed");
+  amrex::Error("0<=level<=finest_level failed");
 
  int nmat=num_materials;
  if (num_state_base!=2)

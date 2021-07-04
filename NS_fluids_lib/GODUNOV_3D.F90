@@ -29035,6 +29035,7 @@ stop
       REAL_T, intent(in), target :: LS( &  
         DIMV(LS), &
         nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: SNEWfab( & 
         DIMV(SNEWfab), &
         SDIM)
@@ -29079,6 +29080,7 @@ stop
       nhalf=3
 
       matrixfab_ptr=>matrixfab
+      LS_ptr=>LS
       SNEWfab_ptr=>SNEWfab
       UMACNEW_ptr=>UMACNEW
       VMACNEW_ptr=>VMACNEW
@@ -29116,7 +29118,7 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,LS,2,-1,1271)
+      call checkbound_array(fablo,fabhi,LS_ptr,2,-1,1271)
       call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,1271)
       call checkbound_array(fablo,fabhi,SNEWfab_ptr,1,-1,1271)
       call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,0,1271)

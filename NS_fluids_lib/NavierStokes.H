@@ -1191,7 +1191,10 @@ protected:
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
       int local_truncate);
     void prescribe_solid_geometry(Real time,int renormalize_only);
-    void move_particles();
+
+    void move_particles(
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
+      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
