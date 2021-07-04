@@ -7238,6 +7238,7 @@ stop
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
       REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(inout) :: Snew(DIMV(Snew),nstate)
@@ -7249,6 +7250,7 @@ stop
       REAL_T, target, intent(in) :: pres(DIMV(pres)) 
       REAL_T, target, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, target, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
+      REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, target :: i,j,k
       INTEGER_T dir,dir2
@@ -7391,8 +7393,10 @@ stop
 
       burnvel_ptr=>burnvel
       Tsatfab_ptr=>Tsatfab
+      LS_ptr=>LS
       LSnew_ptr=>LSnew
       Snew_ptr=>Snew
+      curvfab_ptr=>curvfab
 
       if (prev_time.ge.zero) then
        cur_time=prev_time+dt
@@ -7574,11 +7578,11 @@ stop
         ngrow_distance,-1,1250)
 
        call checkbound_array(fablo,fabhi, &
-        curvfab, &
+        curvfab_ptr, &
         ngrow_make_distance,-1,1250)
 
        call checkbound_array(fablo,fabhi,recon,ngrow,-1,1251)
-       call checkbound_array(fablo,fabhi,LS,ngrow,-1,1252)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1252)
        call checkbound_array(fablo,fabhi,LS_slopes_FD,1,-1,1253)
 
       else if (nucleation_flag.eq.1) then
@@ -8064,7 +8068,7 @@ stop
                   xI, &
                   ngrow_make_distance, &
                   fablo,fabhi, &
-                  curvfab, &
+                  curvfab_ptr, &
                   CURV_OUT_I)
 
                  use_tsatfab=0
@@ -8085,7 +8089,7 @@ stop
                    dx,xlo, &
                    ngrow_make_distance, & ! ngrow_tsat
                    fablo,fabhi, &
-                   Tsatfab, & ! not used since use_tsatfab==0
+                   Tsatfab_ptr, & ! not used since use_tsatfab==0
                    local_Tsat(ireverse), & !user def. interface temperature 
                    iten+ireverse*nten, &
                    saturation_temp, &
@@ -8171,7 +8175,7 @@ stop
                    imls, &
                    ngrow, &
                    fablo,fabhi, &
-                   LS, &
+                   LS_ptr, &
                    LSINT(imls))
                  enddo ! imls=1..nmat*(SDIM+1)
 

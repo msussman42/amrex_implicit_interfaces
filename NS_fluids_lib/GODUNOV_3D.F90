@@ -14379,8 +14379,11 @@ stop
 
       REAL_T, intent(in), target :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
       REAL_T, intent(in), target :: xdisp(DIMV(xdisp))
+      REAL_T, pointer :: xdisp_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: ydisp(DIMV(ydisp))
+      REAL_T, pointer :: ydisp_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: zdisp(DIMV(zdisp))
+      REAL_T, pointer :: zdisp_ptr(D_DECL(:,:,:))
 
       INTEGER_T :: i,j,k,n
       REAL_T dt,elastic_time
@@ -14413,6 +14416,9 @@ stop
       nhalf=3
 
       tnew_ptr=>tnew
+      xdisp_ptr=>xdisp
+      ydisp_ptr=>ydisp
+      zdisp_ptr=>zdisp
 
       if (irz.ne.levelrz) then
        print *,"irz invalid"
@@ -14452,17 +14458,17 @@ stop
       call checkbound_array(fablo,fabhi,visc,0,-1,9)
       call checkbound_array(fablo,fabhi,tendata,0,-1,9)
       call checkbound_array(fablo,fabhi,vel,1,-1,61)
-      call checkbound_array(fablo,fabhi,tnew,0,-1,62)
+      call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
       call checkbound_array(fablo,fabhi,told,0,-1,63)
 
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdisp,1,-1,63)
-       call checkbound_array1(fablo,fabhi,ydisp,1,-1,63)
-       call checkbound_array1(fablo,fabhi,zdisp,1,-1,63)
+       call checkbound_array1(fablo,fabhi,xdisp_ptr,1,-1,63)
+       call checkbound_array1(fablo,fabhi,ydisp_ptr,1,-1,63)
+       call checkbound_array1(fablo,fabhi,zdisp_ptr,1,-1,63)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdisp,1,0,63)
-       call checkbound_array1(fablo,fabhi,ydisp,1,1,63)
-       call checkbound_array1(fablo,fabhi,zdisp,1,SDIM-1,63)
+       call checkbound_array1(fablo,fabhi,xdisp_ptr,1,0,63)
+       call checkbound_array1(fablo,fabhi,ydisp_ptr,1,1,63)
+       call checkbound_array1(fablo,fabhi,zdisp_ptr,1,SDIM-1,63)
       else
        print *,"MAC_grid_displacement invalid"
        stop
@@ -14489,10 +14495,10 @@ stop
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
         FORT_NUM_TENSOR_TYPE, & !ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
-        tnew, &       ! FAB that holds elastic tensor, Q, when complete
-        xdisp, &      
-        ydisp, &      
-        zdisp)
+        tnew_ptr, &       ! FAB that holds elastic tensor, Q, when complete
+        xdisp_ptr, &      
+        ydisp_ptr, &      
+        zdisp_ptr)
 
       else if ((viscoelastic_model.eq.0).or. &
                (viscoelastic_model.eq.1)) then
@@ -17218,6 +17224,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areaz)
       REAL_T, target, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
       REAL_T, target, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
+      REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: swept(DIMV(swept),nmat)
       REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, target, intent(in) :: T_fab(DIMV(T_fab),nmat)
@@ -17325,6 +17332,7 @@ stop
       heatx_ptr=>heatx
       heaty_ptr=>heaty
       heatz_ptr=>heatz
+      TgammaFAB_ptr=>TgammaFAB
 
       theta_cutoff=0.001
 
@@ -17418,7 +17426,7 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,STATEFAB,1,-1,234)
-      call checkbound_array(fablo,fabhi,TgammaFAB,1,-1,234)
+      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1,234)
 
       call checkbound_array(fablo,fabhi,swept,0,-1,234)
 
@@ -18078,7 +18086,7 @@ stop
                tsat_comp, &
                ngrow_tsat, &
                fablo,fabhi, &
-               TgammaFAB, &
+               TgammaFAB_ptr, &
                TorYgamma_BC)  ! TorYgamma_BC here is an output
 
               hx=abs(xsten(0,dir)-xsten(2*side,dir))
@@ -29036,9 +29044,11 @@ stop
       REAL_T, intent(inout), target :: WMACNEW( & 
         DIMV(WMACNEW))
       REAL_T, pointer :: WMACNEW_ptr(D_DECL(:,:,:))
+
       REAL_T, intent(in), target :: vel_fab( &
         DIMV(vel_fab), &
         SDIM)
+      REAL_T, pointer :: vel_fab_ptr(D_DECL(:,:,:),:)
 
       type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
       type(particle_t), intent(in) :: particles_nbr(Np_nbr)
@@ -29103,12 +29113,12 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,LS,2,-1,1271)
-      call checkbound_array(tilelo,tilehi,matrixfab,1,-1,1271)
-      call checkbound_array(fablo,fabhi,SNEWfab,1,-1,1271)
+      call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,1271)
+      call checkbound_array(fablo,fabhi,SNEWfab_ptr,1,-1,1271)
       call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,0,1271)
       call checkbound_array1(fablo,fabhi,VMACNEW_ptr,0,1,1271)
       call checkbound_array1(fablo,fabhi,WMACNEW_ptr,0,SDIM-1,1271)
-      call checkbound_array(fablo,fabhi,vel_fab,2,-1,1271)
+      call checkbound_array(fablo,fabhi,vel_fab_ptr,2,-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -29152,8 +29162,8 @@ stop
 
       call traverse_particlesVEL( &
         accum_PARM, &
-        matrixfab, &
-        vel_fab, &
+        matrixfab_ptr, &
+        vel_fab_ptr, &
         ncomp_accumulate)
 
       accum_PARM%particles=>particles_only_nbr
@@ -29161,8 +29171,8 @@ stop
 
       call traverse_particlesVEL( &
         accum_PARM, &
-        matrixfab, &
-        vel_fab, &
+        matrixfab_ptr, &
+        vel_fab_ptr, &
         ncomp_accumulate)
 
       if (dt.gt.zero) then
@@ -29588,10 +29598,13 @@ stop
       REAL_T, pointer :: zdNEWfab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: xdfab( &
         DIMV(xdfab))
+      REAL_T, pointer :: xdfab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: ydfab( &
         DIMV(ydfab))
+      REAL_T, pointer :: ydfab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: zdfab( &
         DIMV(zdfab))
+      REAL_T, pointer :: zdfab_ptr(D_DECL(:,:,:))
       type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
       type(particle_t), intent(in) :: particles_nbr(Np_nbr)
       type(particle_t), intent(in), target :: particles_only_nbr(Nn)
@@ -29621,6 +29634,9 @@ stop
       xdNEWfab_ptr=>xdNEWfab
       ydNEWfab_ptr=>ydNEWfab
       zdNEWfab_ptr=>zdNEWfab
+      xdfab_ptr=>xdfab
+      ydfab_ptr=>ydfab
+      zdfab_ptr=>zdfab
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -29663,22 +29679,22 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,LS,2,-1,1271)
-      call checkbound_array(tilelo,tilehi,matrixfab,1,-1,1271)
-      call checkbound_array(fablo,fabhi,TNEWfab,1,-1,1271)
+      call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,1271)
+      call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdNEWfab,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydNEWfab,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdNEWfab,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,xdfab,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydfab,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,xdNEWfab_ptr,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydNEWfab_ptr,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdNEWfab_ptr,1,-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,-1,1271)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdNEWfab,0,0,1271)
-       call checkbound_array1(fablo,fabhi,ydNEWfab,0,1,1271)
-       call checkbound_array1(fablo,fabhi,zdNEWfab,0,SDIM-1,1271)
-       call checkbound_array1(fablo,fabhi,xdfab,2,0,1271)
-       call checkbound_array1(fablo,fabhi,ydfab,2,1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab,2,SDIM-1,1271)
+       call checkbound_array1(fablo,fabhi,xdNEWfab_ptr,0,0,1271)
+       call checkbound_array1(fablo,fabhi,ydNEWfab_ptr,0,1,1271)
+       call checkbound_array1(fablo,fabhi,zdNEWfab_ptr,0,SDIM-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,1271)
+       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,1271)
       else
        print *,"MAC_grid_displacement invalid"
        stop
@@ -29729,10 +29745,10 @@ stop
        call traverse_particles( &
          MAC_grid_displacement, &
          accum_PARM, &
-         matrixfab, &
-         xdfab, &
-         ydfab, &
-         zdfab, &
+         matrixfab_ptr, &
+         xdfab_ptr, &
+         ydfab_ptr, &
+         zdfab_ptr, &
          ncomp_accumulate)
 
        accum_PARM%particles=>particles_only_nbr
@@ -29741,10 +29757,10 @@ stop
        call traverse_particles( &
          MAC_grid_displacement, &
          accum_PARM, &
-         matrixfab, &
-         xdfab, &
-         ydfab, &
-         zdfab, &
+         matrixfab_ptr, &
+         xdfab_ptr, &
+         ydfab_ptr, &
+         zdfab_ptr, &
          ncomp_accumulate)
 
        if (MAC_grid_displacement.eq.0) then
@@ -29877,10 +29893,10 @@ stop
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
         ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
-        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        xdfab, &      
-        ydfab, &      
-        zdfab)
+        TNEWfab_ptr, &       ! FAB that holds elastic tensor, Q, when complete
+        xdfab_ptr, &      
+        ydfab_ptr, &      
+        zdfab_ptr)
 
       else 
        print *,"isweep invalid"
@@ -29949,14 +29965,20 @@ stop
 
       REAL_T, intent(in), target :: xdfab( &
         DIMV(xdfab))
+      REAL_T, pointer :: xdfab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: ydfab( &
         DIMV(ydfab))
+      REAL_T, pointer :: ydfab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: zdfab( &
         DIMV(zdfab))
+      REAL_T, pointer :: zdfab_ptr(D_DECL(:,:,:))
 
       INTEGER_T im_elastic
 
       TNEWfab_ptr=>TNEWfab
+      xdfab_ptr=>xdfab
+      ydfab_ptr=>ydfab
+      zdfab_ptr=>zdfab
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -29984,13 +30006,13 @@ stop
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
 
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdfab,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydfab,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,-1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,-1,1271)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdfab,2,0,1271)
-       call checkbound_array1(fablo,fabhi,ydfab,2,1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab,2,SDIM-1,1271)
+       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,1271)
+       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,1271)
+       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,1271)
       else
        print *,"MAC_grid_displacement invalid"
        stop
@@ -30022,9 +30044,9 @@ stop
         ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
         TNEWfab_ptr, &   ! FAB that holds elastic tensor, Q, when complete
-        xdfab, &      
-        ydfab, &      
-        zdfab)
+        xdfab_ptr, &      
+        ydfab_ptr, &      
+        zdfab_ptr)
 
       end subroutine fort_assimilate_tensor_from_xdisplace
 
