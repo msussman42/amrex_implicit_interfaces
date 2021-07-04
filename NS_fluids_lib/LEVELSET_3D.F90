@@ -19292,7 +19292,9 @@ stop
       use mass_transfer_module
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
-      INTEGER_T, intent(inout), pointer, &
+       ! the pointer is not modified; the properties of the target
+       ! are inherited.
+      INTEGER_T, intent(in), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
       type(particle_t), intent(in) :: particles(Np)
@@ -19447,7 +19449,8 @@ stop
       INTEGER_T, intent(in) :: nnbr
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
-      INTEGER_T, intent(inout), pointer, &
+       ! the pointer is never modified, but the target will be modified.
+      INTEGER_T, intent(in), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
       type(particle_t), intent(in) :: particles(Np)
@@ -20169,7 +20172,9 @@ stop
       REAL_T, intent(in), target :: yd(DIMV(yd)) 
       REAL_T, intent(in), target :: zd(DIMV(zd)) 
       REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1) 
+      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
 
       type(accum_parm_type_count) :: accum_PARM
    
@@ -20209,8 +20214,10 @@ stop
       REAL_T temp_radius
 
       cell_particle_count_ptr=>cell_particle_count
+      lsfab_ptr=>lsfab
+      velfab_ptr=>velfab
 
-      call checkbound_array(fablo,fabhi,velfab,1,-1,2872)
+      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,2872)
 
       if (MAC_grid_displacement.eq.0) then
        call checkbound_array1(fablo,fabhi,xd,1,-1,2872)
@@ -20225,7 +20232,7 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,lsfab,1,-1,2872)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,2872)
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1,2872)
 
@@ -20273,7 +20280,7 @@ stop
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
         call count_particles( &
-         lsfab, &
+         lsfab_ptr, &
          accum_PARM, &
          cell_particle_count_ptr, &
          particles, &  
@@ -20477,7 +20484,7 @@ stop
             nmat, &
             particles_weight_XD, &
             particles_weight_VEL, &
-            velfab, &
+            velfab_ptr, &
             accum_PARM, &
             i,j,k, &
             xsub, &
