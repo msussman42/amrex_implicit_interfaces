@@ -8655,7 +8655,11 @@ NavierStokes::init(
  if (level==0) {
    // old particle data will be deleted, so that the data
    // must be saved here.
-  for (int ipart=0;ipart<particles_flag;ipart++) {
+  if (particles_flag==0) {
+   // do nothing
+  } else if (particles_flag==1) {
+
+   int ipart=0;
    int lev_min=0;
    int lev_max=-1;
    int nGrow_Redistribute=0;
@@ -8675,7 +8679,9 @@ NavierStokes::init(
    bool local_copy_flag=false; 
    new_PC.copyParticles(old_PC,local_copy_flag);
 
-  } // ipart=0..particles_flag-1
+  } else
+   amrex::Error("particles_flag invalid");
+
  } else if ((level>=1)&&(level<=max_level)) {
   // do nothing
  } else
@@ -18514,7 +18520,11 @@ void NavierStokes::writeInterfaceReconstruction() {
     &plotint);
   } // im=1..nmat
 
-  for (int ipart=0;ipart<particles_flag;ipart++) {
+  if (particles_flag==0) {
+   // do nothing
+  } else if (particles_flag==1) {
+   int ipart=0;
+
     // in: NAVIERSTOKES_3D.F90
    fort_combine_particles(grids_per_level.dataPtr(),
     &finest_level,
@@ -18524,7 +18534,8 @@ void NavierStokes::writeInterfaceReconstruction() {
     &arrdim,
     &cur_time_slab,
     &plotint);
-  } // ipart=0..particles_flag-1
+  } else
+   amrex::Error("particles_flag invalid");
 
  }
  ParallelDescriptor::Barrier();
@@ -20072,7 +20083,10 @@ void NavierStokes::post_regrid (int lbase,
   } else
    amrex::Error("initialInit_flag invalid");
 
-  for (int ipart=0;ipart<particles_flag;ipart++) {
+  if (particles_flag==0) {
+   // do nothing
+  } else if (particles_flag==1) {
+   int ipart=0;
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
       ns_level0.get_new_dataPC(State_Type,ns_time_order,ipart);
    int lev_min=0;
@@ -20081,7 +20095,8 @@ void NavierStokes::post_regrid (int lbase,
    int local_Redistribute=0;
    current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
-  } // ipart=0..particles_flag-1
+  } else
+   amrex::Error("particles_flag invalid");
     
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
@@ -21041,17 +21056,17 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 // called from: NavierStokes::tensor_advection_updateALL() (NavierStokes3.cpp)
 //   (called after calls to ns_level.tensor_advection_update)
 void 
-NavierStokes::accumulate_PC_info(int im_elastic) {
-
- NavierStokes& ns_level0=getLevel(0);
+NavierStokes::accumulate_PC_info(int im_elastic,
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
+  NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr) {
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
- if (level==finest_level) {
+ if ((level>=0)&&(level<=finest_level)) {
   // do nothing
- } else
-  amrex::Error("expecting level==finest_level");
+ } else 
+  amrex::Error("level invalid");
 
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
@@ -21095,19 +21110,6 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
  int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
  int RHS_points=1;     // sum_{xp in Omega_cell} (X_cell(xp)-X_cell_p)*W
  int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
- MultiFab* accumulate_mf=new MultiFab(grids,dmap,ncomp_accumulate,0,
-	  MFInfo().SetTag("accumulate_mf"),FArrayBoxFactory());
- accumulate_mf->setVal(0.0);
-
- const Vector<Geometry>& ns_geom=parent->Geom();
- const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
- const Vector<BoxArray>& ns_ba=parent->boxArray();
-
- Vector<int> refinement_ratio;
- refinement_ratio.resize(ns_ba.size());
- for (int ilev=0;ilev<refinement_ratio.size();ilev++)
-  refinement_ratio[ilev]=2;
- int nnbr=1;
 
  if (localMF_grow[VISCOTEN_MF]==-1) {
   // do nothing
@@ -21132,96 +21134,9 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  if (particles_flag==0) {
 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   if (MAC_grid_displacement==0) {
-    int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
-    XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
-   } else if (MAC_grid_displacement==1) {
-     //ngrow,dir,scomp,ncomp
-    XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
-   } else
-    amrex::Error("MAC_grid_displacement invalid");
-  } // dir=0..sdim-1
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   FArrayBox& TNEWfab=Tensor_new[mfi];
-
-   FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
-   FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
-   FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
-
-   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
- 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // declared in GODUNOV_3D.F90.
-    //   calls local_tensor_from_xdisplace
-   fort_assimilate_tensor_from_xdisplace( 
-     &im_elastic, // 0..nmat-1
-     &MAC_grid_displacement,
-     &tid_current,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     &level,
-     &finest_level,
-     xlo,dx,
-     &ncomp_tensor,
-     &nmat,
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     TNEWfab.dataPtr(scomp_tensor),
-     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-     ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-     zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()));
-  } // mfi
-} // omp
-  ns_reconcile_d_num(81);
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete XDISP_LOCAL[dir];
-  }
+  amrex::Error("expecting particles_flag==1");
 
  } else if (particles_flag==1) {
-
-  bool local_copy_flag=true; 
-
-  int ipart=0;
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-
-  NeighborParticleContainer<N_EXTRA_REAL,0> 
-   localPC_nbr(ns_geom,ns_dmap,ns_ba,
-   refinement_ratio,nnbr);
-  // the two PC have same hierarchy, no need to call Redistribute after the
-  // copy.
-  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
-
-  localPC_nbr.fillNeighbors();
 
   for (int isweep=0;isweep<=1;isweep++) {
 
@@ -21367,7 +21282,168 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
   } // isweep=0,1
 
-  localPC_nbr.clearNeighbors();
+ } else {
+
+  amrex::Error("particles_flag invalid");
+
+ }
+
+} // end subroutine accumulate_PC_info
+
+
+
+// called from: NavierStokes::tensor_advection_updateALL() (NavierStokes3.cpp)
+//   (called after calls to ns_level.tensor_advection_update)
+void 
+NavierStokes::accumulate_info_no_particles(int im_elastic) {
+
+ int nmat=num_materials;
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ if ((level>=0)&&(level<=finest_level)) {
+  // do nothing
+ } else 
+  amrex::Error("level invalid");
+
+ resize_levelsetLO(2,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,2,8);
+ if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
+
+ if ((im_elastic>=0)&&(im_elastic<nmat)) {
+  // do nothing
+ } else
+  amrex::Error("im_elastic invalid");
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ const Real* dx = geom.CellSize();
+
+ MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+
+ int elastic_partid=0;
+ int scomp_tensor=0;
+
+ if (ns_is_rigid(im_elastic)==0) {
+  if (store_elastic_data[im_elastic]==1) {
+   if (viscoelastic_model[im_elastic]==2) {
+    elastic_partid=0;
+    while ((im_elastic_map[elastic_partid]!=im_elastic)&&
+           (elastic_partid<im_elastic_map.size())) {
+     elastic_partid++;
+    }
+    if (elastic_partid<im_elastic_map.size()) {
+     scomp_tensor=elastic_partid*NUM_TENSOR_TYPE;
+    } else
+     amrex::Error("elastic_partid too large");
+   } else
+    amrex::Error("iscoelastic_model[im_elastic] invalid");
+  } else
+   amrex::Error("store_elastic_data invalid");
+ } else
+  amrex::Error("ns_is_rigid invalid");
+
+ if (localMF_grow[VISCOTEN_MF]==-1) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF should not be allocated in accumulate_info");
+
+ int ncomp_tensor=NUM_TENSOR_TYPE;
+
+ MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
+ MultiFab* XDISP_new[AMREX_SPACEDIM];
+
+ if (MAC_grid_displacement==0) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   XDISP_new[dir]=&Tensor_new;
+  }
+ } else if (MAC_grid_displacement==1) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
+  }
+ } else
+  amrex::Error("MAC_grid_displacement invalid");
+
+ if (particles_flag==0) {
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   if (MAC_grid_displacement==0) {
+    int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
+    XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
+   } else if (MAC_grid_displacement==1) {
+     //ngrow,dir,scomp,ncomp
+    XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
+   } else
+    amrex::Error("MAC_grid_displacement invalid");
+  } // dir=0..sdim-1
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& TNEWfab=Tensor_new[mfi];
+
+   FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
+   FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
+   FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+ 
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // declared in GODUNOV_3D.F90.
+    //   calls local_tensor_from_xdisplace
+   fort_assimilate_tensor_from_xdisplace( 
+     &im_elastic, // 0..nmat-1
+     &MAC_grid_displacement,
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,
+     &finest_level,
+     xlo,dx,
+     &ncomp_tensor,
+     &nmat,
+     levelpcfab.dataPtr(),
+     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+     TNEWfab.dataPtr(scomp_tensor),
+     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
+     xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+     ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+     zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()));
+  } // mfi
+} // omp
+  ns_reconcile_d_num(81);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete XDISP_LOCAL[dir];
+  }
+
+ } else if (particles_flag==1) {
+
+  amrex::Error("accumulate_info_no_particles should not be called here");
 
  } else {
 
@@ -21375,23 +21451,19 @@ NavierStokes::accumulate_PC_info(int im_elastic) {
 
  }
 
- delete accumulate_mf;
+} // end subroutine accumulate_info_no_particles
 
-} // end subroutine accumulate_PC_info
-
-
-void 
-NavierStokes::assimilate_vel_from_particles() {
-
- NavierStokes& ns_level0=getLevel(0);
+void NavierStokes::assimilate_vel_from_particles(
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
+   NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr) {
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
- if (level==finest_level) {
+ if ((level>=0)&&(level<=finest_level) {
   // do nothing
  } else
-  amrex::Error("expecting level==finest_level");
+  amrex::Error("level out of range");
 
  resize_levelsetLO(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
@@ -21419,19 +21491,7 @@ NavierStokes::assimilate_vel_from_particles() {
  int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
  int RHS_points=1;     // sum_{xp in Omega_cell} (vel_cell(xp)-vel_cell_p)*W
  int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
-
- const Vector<Geometry>& ns_geom=parent->Geom();
- const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
- const Vector<BoxArray>& ns_ba=parent->boxArray();
-
- Vector<int> refinement_ratio;
- refinement_ratio.resize(ns_ba.size());
- for (int ilev=0;ilev<refinement_ratio.size();ilev++)
-  refinement_ratio[ilev]=2;
- int nnbr=1;
-
- bool local_copy_flag=true; 
-
+FIX ME
  int ipart=0;
  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);

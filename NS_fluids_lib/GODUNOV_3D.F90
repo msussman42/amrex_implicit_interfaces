@@ -29587,6 +29587,7 @@ stop
       REAL_T, intent(in), target :: LS( &  
         DIMV(LS), &
         nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: TNEWfab( &!Q assim. from particles/cells
         DIMV(TNEWfab), &
         ncomp_tensor)
@@ -29641,6 +29642,7 @@ stop
       xdfab_ptr=>xdfab
       ydfab_ptr=>ydfab
       zdfab_ptr=>zdfab
+      LS_ptr=>LS
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -29682,7 +29684,7 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,LS,2,-1,1271)
+      call checkbound_array(fablo,fabhi,LS_ptr,2,-1,1271)
       call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,1271)
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
       if (MAC_grid_displacement.eq.0) then

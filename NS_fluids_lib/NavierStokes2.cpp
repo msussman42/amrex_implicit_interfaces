@@ -7884,6 +7884,7 @@ void NavierStokes::output_triangles() {
     fablo,fabhi,&bfact,
     &level,&gridno,&nmat);
 
+FIX ME
    if (level==finest_level) {
 
     for (int ipart=0;ipart<particles_flag;ipart++) {
