@@ -14929,8 +14929,8 @@ END SUBROUTINE SIMP
       write(cenfilename23,'(A15,A3,A5)') cennamestr15,levstr,gridstr
       print *,"cenfilename23 ",cenfilename23
 
-       !x,y,z is not extra; (x0,y0,z0,r,u,v,w,den,T,insert time) is extra.
-      if (N_EXTRA_REAL.eq.2*SDIM+4) then
+       !x,y,z is base; (x0,y0,z0,r,u,v,w,den,T,insert time,vort,type) is extra.
+      if (N_EXTRA_REAL.eq.3*SDIM+5) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL invalid"
@@ -15062,8 +15062,8 @@ END SUBROUTINE SIMP
         print *,"newcenfilename21 ",newcenfilename21
         open(unit=12,file=newcenfilename21)
 
-         !x,y,z is not extra; (x0,y0,z0,r,u,v,w,den,T,insert time) is extra.
-        if (N_EXTRA_REAL.eq.2*SDIM+4) then
+         !x,y,z base; (x0,y0,z0,r,u,v,w,den,T,insert time,vort,type) is extra.
+        if (N_EXTRA_REAL.eq.3*SDIM+5) then
          ! do nothing
         else
          print *,"N_EXTRA_REAL invalid"
@@ -15075,13 +15075,13 @@ END SUBROUTINE SIMP
          write(12,'(A25)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z"'
          write(12,'(A24)',ADVANCE="NO") ',"xdisp","ydisp","zdisp"'
          write(12,'(A34)',ADVANCE="NO") ',"x0","y0","z0","DIST","u","v","w"'
-         write(12,*) ',"den","T","time add" ' 
+         write(12,*) ',"den","T","time add","vortx","vorty","vortz","TYP" ' 
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
          write(12,'(A20)',ADVANCE="NO") 'VARIABLES = "X", "Y"'
          write(12,'(A16)',ADVANCE="NO") ',"xdisp","ydisp"'
          write(12,'(A25)',ADVANCE="NO") ',"x0","y0","DIST","u","v"'
-         write(12,*) ',"den","T","time add" ' 
+         write(12,*) ',"den","T","time add","vortx","vortz","TYP" ' 
         else
          print *,"dimension bust"
          stop

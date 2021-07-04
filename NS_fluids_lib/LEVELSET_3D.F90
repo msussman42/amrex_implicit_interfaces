@@ -21041,10 +21041,15 @@ stop
       INTEGER_T, pointer :: cell_particle_count_ptr(D_DECL(:,:,:),:)
      
       REAL_T, intent(in), target :: umac(DIMV(umac)) 
+      REAL_T, pointer :: umac_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: vmac(DIMV(vmac)) 
+      REAL_T, pointer :: vmac_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: wmac(DIMV(wmac)) 
+      REAL_T, pointer :: wmac_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in), target :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: denbc_in(SDIM,2)
       INTEGER_T, intent(in), target :: dombc(SDIM,2)
@@ -21082,6 +21087,10 @@ stop
       REAL_T temp_relaxation_time
 
       cell_particle_count_ptr=>cell_particle_count
+      lsfab_ptr=>lsfab
+      umac_ptr=>umac
+      vmac_ptr=>vmac
+      wmac_ptr=>wmac
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -21132,10 +21141,10 @@ stop
       grid_PARM%problo=>problo_arr
       grid_PARM%probhi=>probhi_arr
 
-      call checkbound_array(fablo,fabhi,lsfab,2,-1,2871)
-      call checkbound_array1(fablo,fabhi,umac,2,0,2871)
-      call checkbound_array1(fablo,fabhi,vmac,2,1,2871)
-      call checkbound_array1(fablo,fabhi,wmac,2,SDIM-1,2871)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,2871)
+      call checkbound_array1(fablo,fabhi,umac_ptr,2,0,2871)
+      call checkbound_array1(fablo,fabhi,vmac_ptr,2,1,2871)
+      call checkbound_array1(fablo,fabhi,wmac_ptr,2,SDIM-1,2871)
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr, &
               particle_interaction_ngrow,-1,2872)
