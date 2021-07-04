@@ -737,7 +737,7 @@ void NavierStokes::tensor_advection_updateALL() {
 
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
-          ns_level.accumulate_PC_info_no_particles(im);
+          ns_level.accumulate_info_no_particles(im);
 	 }
 
         } else if (particles_flag==1) {
@@ -754,7 +754,7 @@ void NavierStokes::tensor_advection_updateALL() {
 
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
-          ns_level.accumulate_PC_info(im,localPC_nbr);
+          ns_level.accumulate_PC_info(im,localPC_no_nbr,localPC_nbr);
 	 }
          localPC_nbr.clearNeighbors();
 
@@ -1003,6 +1003,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
+FIX ME
    for (int ipart=0;ipart<particles_flag;ipart++) {
     int lev_min=0;
     int lev_max=-1;
@@ -12642,10 +12643,33 @@ void NavierStokes::veldiffuseALL() {
   amrex::Error("include_viscous_heating invalid");
 
  if (particles_flag==1) {
-  // The flexible substrate is wholly contained on
-  // the finest level.
-  NavierStokes& ns_finest=getLevel(finest_level);
-  ns_finest.assimilate_vel_from_particles();
+
+  const Vector<Geometry>& ns_geom=parent->Geom();
+  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+  const Vector<BoxArray>& ns_ba=parent->boxArray();
+
+  Vector<int> refinement_ratio;
+  refinement_ratio.resize(ns_ba.size());
+  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+   refinement_ratio[ilev]=2;
+  int nnbr=1;
+
+  NavierStokes& ns_level0=getLevel(0);
+  bool local_copy_flag=true; 
+  int ipart=0;
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+  NeighborParticleContainer<N_EXTRA_REAL,0> 
+    localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
+  localPC_nbr.fillNeighbors();
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.assimilate_vel_from_particles(localPC_no_nbr,localPC_nbr);
+  }
+  localPC_nbr.clearNeighbors();
+
  } else if (particles_flag==0) {
   // do nothing
  } else
