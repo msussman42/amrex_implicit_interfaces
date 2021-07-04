@@ -26727,24 +26727,20 @@ stop
 
       call checkbound_array(fablo,fabhi,amrsync_ptr,0,dir-1,231)
 
-      if ((dir.eq.1).and.(tileloop.eq.0)) then
-
-       call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
-       call checkbound_array(fablo,fabhi,faceLS_ptr,1,-1,1263)
-       call checkbound_array1(fablo,fabhi,mask0_ptr,1,-1,1264)
-       call checkbound_array1(fablo,fabhi,mask3_ptr,1,-1,1264)
-       call checkbound_array(fablo,fabhi,mdata_ptr,1,-1,1264)
-       call checkbound_array(fablo,fabhi,tdata_ptr,1,-1,1265)
-       call checkbound_array(fablo,fabhi,c_tdata_ptr,1,-1,1265)
-       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1266)
-       call checkbound_array(fablo,fabhi,solidx,0,0,1267)
-       call checkbound_array(fablo,fabhi,solidy,0,1,1267)
-       call checkbound_array(fablo,fabhi,solidz,0,SDIM-1,1267)
-       call checkbound_array(fablo,fabhi,levelpc,2,-1,1368)
-       call checkbound_array(fablo,fabhi,recon,2,-1,1368)
-       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
-
-      endif
+      call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+      call checkbound_array(fablo,fabhi,faceLS_ptr,1,-1,1263)
+      call checkbound_array1(fablo,fabhi,mask0_ptr,1,-1,1264)
+      call checkbound_array1(fablo,fabhi,mask3_ptr,1,-1,1264)
+      call checkbound_array(fablo,fabhi,mdata_ptr,1,-1,1264)
+      call checkbound_array(fablo,fabhi,tdata_ptr,1,-1,1265)
+      call checkbound_array(fablo,fabhi,c_tdata_ptr,1,-1,1265)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1266)
+      call checkbound_array(fablo,fabhi,solidx,0,0,1267)
+      call checkbound_array(fablo,fabhi,solidy,0,1,1267)
+      call checkbound_array(fablo,fabhi,solidz,0,SDIM-1,1267)
+      call checkbound_array(fablo,fabhi,levelpc,2,-1,1368)
+      call checkbound_array(fablo,fabhi,recon,2,-1,1368)
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 

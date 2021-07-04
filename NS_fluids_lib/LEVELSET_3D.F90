@@ -11545,22 +11545,32 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskres)
 
       REAL_T, intent(in), target ::  xp(DIMV(xp),2+nsolve)
+      REAL_T, pointer :: xp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  yp(DIMV(yp),2+nsolve)
+      REAL_T, pointer :: yp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  zp(DIMV(zp),2+nsolve)
+      REAL_T, pointer :: zp_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target ::  xvel(DIMV(xvel),nsolve)
+      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  yvel(DIMV(yvel),nsolve)
+      REAL_T, pointer :: yvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  zvel(DIMV(zvel),nsolve)
+      REAL_T, pointer :: zvel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target ::  xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  yface(DIMV(yface),ncphys)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  zface(DIMV(zface),ncphys)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target ::  ax(DIMV(ax))
       REAL_T, intent(in), target ::  ay(DIMV(ay))
       REAL_T, intent(in), target ::  az(DIMV(az))
 
       REAL_T, intent(in), target :: vol(DIMV(vol),1)
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: rhs(DIMV(rhs),nsolve)
       REAL_T, pointer :: rhs_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: veldest(DIMV(veldest),ncomp_veldest)
@@ -11568,8 +11578,11 @@ stop
       REAL_T, intent(inout), target :: dendest(DIMV(dendest),ncomp_dendest)
       REAL_T, pointer :: dendest_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef),1)
+      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
       REAL_T, intent(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, intent(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
@@ -11577,11 +11590,14 @@ stop
       REAL_T, intent(inout), target :: cterm(DIMV(cterm),nsolve)
       REAL_T, pointer :: cterm_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: pold(DIMV(pold),nsolve)
+      REAL_T, pointer :: pold_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: denold(DIMV(denold),ncomp_denold)
+      REAL_T, pointer :: denold_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: ustar(DIMV(ustar),SDIM) 
       REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, intent(in), target :: mdotcell(DIMV(mdotcell),nsolve)
+      REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskdivres(DIMV(maskdivres))
       REAL_T, intent(in), target :: maskres(DIMV(maskres))
 
@@ -11678,11 +11694,27 @@ stop
 
       nhalf=3
 
+      vol_ptr=>vol
       rhs_ptr=>rhs
       veldest_ptr=>veldest
       dendest_ptr=>dendest
       cterm_ptr=>cterm
       ustar_ptr=>ustar
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      xp_ptr=>xp
+      yp_ptr=>yp
+      zp_ptr=>zp
+      xvel_ptr=>xvel
+      yvel_ptr=>yvel
+      zvel_ptr=>zvel
+      maskSEM_ptr=>maskSEM
+      maskcoef_ptr=>maskcoef
+      mask_ptr=>mask
+      mdotcell_ptr=>mdotcell
+      pold_ptr=>pold
+      denold_ptr=>denold
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -12156,29 +12188,29 @@ stop
        endif
       enddo
 
-      call checkbound_array(fablo,fabhi,xp,0,0,33)
-      call checkbound_array(fablo,fabhi,yp,0,1,33)
-      call checkbound_array(fablo,fabhi,zp,0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xp_ptr,0,0,33)
+      call checkbound_array(fablo,fabhi,yp_ptr,0,1,33)
+      call checkbound_array(fablo,fabhi,zp_ptr,0,SDIM-1,33)
 
-      call checkbound_array(fablo,fabhi,xvel,0,0,33)
-      call checkbound_array(fablo,fabhi,yvel,0,1,33)
-      call checkbound_array(fablo,fabhi,zvel,0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xvel_ptr,0,0,33)
+      call checkbound_array(fablo,fabhi,yvel_ptr,0,1,33)
+      call checkbound_array(fablo,fabhi,zvel_ptr,0,SDIM-1,33)
 
-      call checkbound_array(fablo,fabhi,xface,0,0,33)
-      call checkbound_array(fablo,fabhi,yface,0,1,33)
-      call checkbound_array(fablo,fabhi,zface,0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,33)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,33)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,33)
 
       call checkbound_array1(fablo,fabhi,ax,0,0,33)
       call checkbound_array1(fablo,fabhi,ay,0,1,33)
       call checkbound_array1(fablo,fabhi,az,0,SDIM-1,33)
 
-      call checkbound_array(fablo,fabhi,vol,0,-1,33)
+      call checkbound_array(fablo,fabhi,vol_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,rhs_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,veldest_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,dendest_ptr,0,-1,33)
-      call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
-      call checkbound_array1(fablo,fabhi,mask,1,-1,133)
-      call checkbound_array(fablo,fabhi,maskcoef,1,-1,134)
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,133)
+      call checkbound_array(fablo,fabhi,maskcoef_ptr,1,-1,134)
       call checkbound_array(fablo,fabhi,levelPC,1,-1,135)
 
       call checkbound_array(fablo,fabhi,solxfab,0,0,136)
@@ -12186,11 +12218,11 @@ stop
       call checkbound_array(fablo,fabhi,solzfab,0,SDIM-1,136)
 
       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,pold,0,-1,33)
-      call checkbound_array(fablo,fabhi,denold,0,-1,33)
+      call checkbound_array(fablo,fabhi,pold_ptr,0,-1,33)
+      call checkbound_array(fablo,fabhi,denold_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,ustar_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,recon,0,-1,33)
-      call checkbound_array(fablo,fabhi,mdotcell,0,-1,33)
+      call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
       call checkbound_array1(fablo,fabhi,maskdivres,0,-1,137)
       call checkbound_array1(fablo,fabhi,maskres,0,-1,138)
 
@@ -13837,15 +13869,15 @@ stop
                ncomp, &
                ncomp_xvel, &
                ncomp_cterm, &
-               vol, &
-               xface, &
-               xp, &
-               xvel, &
-               maskcoef, & ! 1=not covered, 0=covered
+               vol_ptr, &
+               xface_ptr, &
+               xp_ptr, &
+               xvel_ptr, &
+               maskcoef_ptr, & ! 1=not covered, 0=covered
                cterm_ptr, &
-               mdotcell, &
-               pold, &
-               denold, &
+               mdotcell_ptr, &
+               pold_ptr, &
+               denold_ptr, &
                ustar_ptr, &
                veldest_ptr, &
                dendest_ptr, &
@@ -13887,15 +13919,15 @@ stop
                ncomp, &
                ncomp_xvel, &
                ncomp_cterm, &
-               vol, &
-               yface, &
-               yp, &
-               yvel, &
-               maskcoef, & ! 1=not covered, 0=covered
+               vol_ptr, &
+               yface_ptr, &
+               yp_ptr, &
+               yvel_ptr, &
+               maskcoef_ptr, & ! 1=not covered, 0=covered
                cterm_ptr, &
-               mdotcell, &
-               pold, &
-               denold, &
+               mdotcell_ptr, &
+               pold_ptr, &
+               denold_ptr, &
                ustar_ptr, &
                veldest_ptr, &
                dendest_ptr, &
@@ -13937,15 +13969,15 @@ stop
                ncomp, &
                ncomp_xvel, &
                ncomp_cterm, &
-               vol, &
-               zface, &
-               zp, &
-               zvel, &
-               maskcoef, & ! 1=not covered, 0=covered
+               vol_ptr, &
+               zface_ptr, &
+               zp_ptr, &
+               zvel_ptr, &
+               maskcoef_ptr, & ! 1=not covered, 0=covered
                cterm_ptr, &
-               mdotcell, &
-               pold, &
-               denold, &
+               mdotcell_ptr, &
+               pold_ptr, &
+               denold_ptr, &
                ustar_ptr, &
                veldest_ptr, &
                dendest_ptr, &
@@ -14442,9 +14474,13 @@ stop
       INTEGER_T, intent(in) :: SEM_advection_algorithm
 
       REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+
       REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
       REAL_T, intent(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
        ! DIMV is a macro: 
@@ -14481,10 +14517,13 @@ stop
       REAL_T, intent(inout), target :: xvel(DIMV(xvel),1)
       REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
        ! holds U_old if operation_flag==11
       REAL_T, intent(in), target :: pres(DIMV(pres),1)
+      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:),:)
        ! den is the source for: density CELL->MAC
       REAL_T, intent(in), target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
       REAL_T, intent(in), target :: typefab(DIMV(typefab))
       REAL_T, intent(in), target :: colorfab(DIMV(colorfab))
@@ -14613,6 +14652,12 @@ stop
       xgp_ptr=>xgp
       xp_ptr=>xp
       xvel_ptr=>xvel
+      mask_ptr=>mask
+      maskcoef_ptr=>maskcoef
+      maskSEM_ptr=>maskSEM
+      vel_ptr=>vel
+      pres_ptr=>pres
+      den_ptr=>den
 
 
       if (nmat.ne.num_materials) then
@@ -15036,28 +15081,24 @@ stop
        stop
       endif
 
-      if ((tileloop.eq.0).and.(spectral_loop.eq.0)) then
-       call checkbound_array(fablo,fabhi,xcut_ptr,0,dir,231)
-       call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
-       call checkbound_array(fablo,fabhi,xgp_ptr,0,dir,2330)
-       call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
-       call checkbound_array(fablo,fabhi,xvel_ptr,0,dir,2332)
-       if (dir.eq.0) then
-        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
-        call checkbound_array(fablo,fabhi,vel,1,-1,234)
-        call checkbound_array(fablo,fabhi,pres,1,-1,234)
-        call checkbound_array(fablo,fabhi,den,1,-1,234)
-        call checkbound_array(fablo,fabhi,solfab,0,dir,234)
-        call checkbound_array(fablo,fabhi,mgoni,1,-1,234)
-        call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
-        call checkbound_array1(fablo,fabhi,colorfab,1,-1,6626)
-        call checkbound_array(fablo,fabhi,levelPC,1,-1,234)
-        call checkbound_array(fablo,fabhi,recon,0,-1,234)
-        call checkbound_array1(fablo,fabhi,mask,1,-1,234)
-        call checkbound_array1(fablo,fabhi,maskcoef,1,-1,234)
-        call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
-       endif
-      endif
+      call checkbound_array(fablo,fabhi,xcut_ptr,0,dir,231)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
+      call checkbound_array(fablo,fabhi,xgp_ptr,0,dir,2330)
+      call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
+      call checkbound_array(fablo,fabhi,xvel_ptr,0,dir,2332)
+      call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,pres_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,solfab,0,dir,234)
+      call checkbound_array(fablo,fabhi,mgoni,1,-1,234)
+      call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
+      call checkbound_array1(fablo,fabhi,colorfab,1,-1,6626)
+      call checkbound_array(fablo,fabhi,levelPC,1,-1,234)
+      call checkbound_array(fablo,fabhi,recon,0,-1,234)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,234)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,234)
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
@@ -16898,17 +16939,17 @@ stop
                 spectral_loop, &
                 ncfluxreg, &
                 semflux_ptr, &
-                mask, & !mask=1.0 at interior fine bc ghost cells
-                maskcoef, & ! 1=not cov. or outside domain  
-                vel, &
-                pres, &
-                den, &
+                mask_ptr, & !mask=1.0 at interior fine bc ghost cells
+                maskcoef_ptr, & ! 1=not cov. or outside domain  
+                vel_ptr, &
+                pres_ptr, &
+                den_ptr, &
                 xface_ptr, &
                 xgp_ptr, & ! holds Umac_old if operation_flag==5 or 11.
                 xcut_ptr, &   ! coeff*areafrac
                 xp_ptr, &
                 xvel_ptr, &
-                maskSEM)
+                maskSEM_ptr)
 
               enddo 
               enddo 
