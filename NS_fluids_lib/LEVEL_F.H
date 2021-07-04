@@ -796,7 +796,10 @@ namespace amrex{
 	AMREX_ARLIM_P(zdhi),
         Real* LS,
 	AMREX_ARLIM_P(LSlo),
-	AMREX_ARLIM_P(LShi));
+	AMREX_ARLIM_P(LShi),
+        Real* mfiner,
+	AMREX_ARLIM_P(mfinerlo),
+	AMREX_ARLIM_P(mfinerhi) );
 
 
      void fort_move_particle_container(

@@ -631,7 +631,11 @@ public:
     void prepare_post_process(int post_init_flag);
 
     void init_particle_container(int append_flag);
-    void accumulate_PC_info(int im);
+
+    void accumulate_PC_info_no_particles(int im);
+    void accumulate_PC_info(int im,
+	   NeighborParticleContainer<N_EXTRA_REAL,0> localPC_nbr);
+
     void assimilate_vel_from_particles();
 
     //

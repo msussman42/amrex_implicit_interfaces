@@ -20157,7 +20157,8 @@ stop
         xd,DIMS(xd), &
         yd,DIMS(yd), &
         zd,DIMS(zd), &
-        lsfab,DIMS(lsfab)) &
+        lsfab,DIMS(lsfab),
+        mfiner,DIMS(mfiner) ) &
       bind(c,name='fort_init_particle_container')
 
       use probf90_module
@@ -20204,6 +20205,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(yd)
       INTEGER_T, intent(in) :: DIMDEC(zd)
       INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
        ! second component: link to the local particle container: 1..Np 
@@ -20214,12 +20216,17 @@ stop
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
       REAL_T, intent(in), target :: xd(DIMV(xd)) 
+      REAL_T, pointer :: xd_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: yd(DIMV(yd)) 
+      REAL_T, pointer :: yd_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: zd(DIMV(zd)) 
+      REAL_T, pointer :: zd_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1) 
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: mfiner(DIMV(mfiner)) 
+      REAL_T, pointer :: mfiner_ptr(D_DECL(:,:,:))
 
       type(accum_parm_type_count) :: accum_PARM
    
@@ -20255,27 +20262,34 @@ stop
       INTEGER_T bubble_iter
       INTEGER_T ibubble
       INTEGER_T temp_id
+      INTEGER_T local_mask
       REAL_T temp_time
       REAL_T temp_radius
 
       cell_particle_count_ptr=>cell_particle_count
+      mfiner_ptr=>mfiner
       lsfab_ptr=>lsfab
       velfab_ptr=>velfab
+      xd_ptr=>xd
+      yd_ptr=>yd
+      zd_ptr=>zd
 
       call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,2872)
 
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xd,1,-1,2872)
-       call checkbound_array1(fablo,fabhi,yd,1,-1,2872)
-       call checkbound_array1(fablo,fabhi,zd,1,-1,2872)
+       call checkbound_array1(fablo,fabhi,xd_ptr,1,-1,2872)
+       call checkbound_array1(fablo,fabhi,yd_ptr,1,-1,2872)
+       call checkbound_array1(fablo,fabhi,zd_ptr,1,-1,2872)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xd,1,0,2872)
-       call checkbound_array1(fablo,fabhi,yd,1,1,2872)
-       call checkbound_array1(fablo,fabhi,zd,1,SDIM-1,2872)
+       call checkbound_array1(fablo,fabhi,xd_ptr,1,0,2872)
+       call checkbound_array1(fablo,fabhi,yd_ptr,1,1,2872)
+       call checkbound_array1(fablo,fabhi,zd_ptr,1,SDIM-1,2872)
       else
        print *,"MAC_grid_displacement invalid"
        stop
       endif
+
+      call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,2872)
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,2872)
       call checkbound_array_INTEGER(tilelo,tilehi, &
@@ -20375,214 +20389,224 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       do isub=sublo(1),subhi(1)
-       do jsub=sublo(2),subhi(2)
-       do ksub=sublo(3),subhi(3)
-        sub_counter(isub,jsub,ksub)=0
-       enddo
-       enddo
-       enddo
-       cell_count_check=0
-       cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
-
-        ! isub,jsub,ksub,link
-       allocate(sub_particle_data(cell_count_hold,SDIM+1))
-
-       current_link=cell_particle_count(D_DECL(i,j,k),2)
-       do while (current_link.ge.1)
-        do dir=1,SDIM
-         xpart(dir)=particles(current_link)%pos(dir)
-        enddo 
-        call containing_sub_box( &
-          accum_PARM, &
-          xpart, &
-          i,j,k, &
-          isub,jsub,ksub, &
-          sub_found)
-        if (sub_found.eq.1) then
-         sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
-         cell_count_check=cell_count_check+1
-         sub_particle_data(cell_count_check,1)=isub
-         sub_particle_data(cell_count_check,2)=jsub
-         if (SDIM.eq.3) then
-          sub_particle_data(cell_count_check,SDIM)=ksub
-         endif
-         sub_particle_data(cell_count_check,SDIM+1)=current_link
-        else
-         print *,"sub_box not found"
-         stop
-        endif
-        ibase=(current_link-1)*(1+SDIM)
-        current_link=particle_link_data(ibase+1)
-       enddo ! while (current_link.ge.1)
-
-       if (cell_count_check.eq.cell_count_hold) then
-
-        cell_count_check=0
+       local_mask=NINT(mfiner(D_DECL(i,j,k)))
+       if (local_mask.eq.1) then
 
         do isub=sublo(1),subhi(1)
         do jsub=sublo(2),subhi(2)
         do ksub=sublo(3),subhi(3)
-         ! increment Np_append if isweep == 0
-         ! always increment Np_append_test
-         local_count=sub_counter(isub,jsub,ksub)
+         sub_counter(isub,jsub,ksub)=0
+        enddo
+        enddo
+        enddo
+        cell_count_check=0
+        cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
 
-         cell_count_check=cell_count_check+local_count
+         ! isub,jsub,ksub,link
+        allocate(sub_particle_data(cell_count_hold,SDIM+1))
 
-           ! check if particles need to be deleted
-         if (local_count.ge.1) then
+        current_link=cell_particle_count(D_DECL(i,j,k),2)
+        do while (current_link.ge.1)
+         do dir=1,SDIM
+          xpart(dir)=particles(current_link)%pos(dir)
+         enddo 
+         call containing_sub_box( &
+           accum_PARM, &
+           xpart, &
+           i,j,k, &
+           isub,jsub,ksub, &
+           sub_found)
+         if (sub_found.eq.1) then
+          sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
+          cell_count_check=cell_count_check+1
+          sub_particle_data(cell_count_check,1)=isub
+          sub_particle_data(cell_count_check,2)=jsub
+          if (SDIM.eq.3) then
+           sub_particle_data(cell_count_check,SDIM)=ksub
+          endif
+          sub_particle_data(cell_count_check,SDIM+1)=current_link
+         else
+          print *,"sub_box not found"
+          stop
+         endif
+         ibase=(current_link-1)*(1+SDIM)
+         current_link=particle_link_data(ibase+1)
+        enddo ! while (current_link.ge.1)
 
-          if (local_count.gt.particle_max_per_nsubdivide) then
-           allocate(sort_data_radius(local_count))
-           allocate(sort_data_time(local_count))
-           allocate(sort_data_id(local_count))
-           sub_iter=0
-           do cell_iter=1,cell_count_hold
-            isub_test=sub_particle_data(cell_iter,1)
-            jsub_test=sub_particle_data(cell_iter,2)
-            ksub_test=sub_particle_data(cell_iter,SDIM)
-            current_link=sub_particle_data(cell_iter,SDIM+1)
-            if ((isub_test.eq.isub).and. &
-                (jsub_test.eq.jsub)) then
-             if ((SDIM.eq.2).or. &
-                 ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
-              sub_iter=sub_iter+1
-              sort_data_id(sub_iter)=current_link                     
-              sort_data_time(sub_iter)= &
-                 particles(current_link)%extra_state(2*SDIM+4) 
-              sort_data_radius(sub_iter)= &
-                 particles(current_link)%extra_state(SDIM+1) 
-             else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
-              ! do nothing
-             else
-              print *,"dimension or ksub bust"
-              stop
-             endif
-            endif
-           enddo ! cell_iter=1..cell_count_hold
+        if (cell_count_check.eq.cell_count_hold) then
 
-           if (sub_iter.eq.local_count) then
-            bubble_change=1
-            bubble_iter=0
-             ! sort from oldest particle to youngest.
-             ! i.e. particle with smallest "add time" is at the top of
-             ! the list.
-            do while ((bubble_change.eq.1).and. &
-                      (bubble_iter.lt.local_count))
-             do ibubble=1,local_count-bubble_iter-1
-              if (sort_data_time(ibubble).gt. &
-                  sort_data_time(ibubble+1)) then
-               temp_id=sort_data_id(ibubble)
-               sort_data_id(ibubble)=sort_data_id(ibubble+1)
-               sort_data_id(ibubble+1)=temp_id
-               temp_time=sort_data_time(ibubble)
-               sort_data_time(ibubble)=sort_data_time(ibubble+1)
-               sort_data_time(ibubble+1)=temp_time
-               temp_radius=sort_data_radius(ibubble)
-               sort_data_radius(ibubble)=sort_data_radius(ibubble+1)
-               sort_data_radius(ibubble+1)=temp_radius
-               bubble_change=1
+         cell_count_check=0
+
+         do isub=sublo(1),subhi(1)
+         do jsub=sublo(2),subhi(2)
+         do ksub=sublo(3),subhi(3)
+          ! increment Np_append if isweep == 0
+          ! always increment Np_append_test
+          local_count=sub_counter(isub,jsub,ksub)
+
+          cell_count_check=cell_count_check+local_count
+
+            ! check if particles need to be deleted
+          if (local_count.ge.1) then
+
+           if (local_count.gt.particle_max_per_nsubdivide) then
+            allocate(sort_data_radius(local_count))
+            allocate(sort_data_time(local_count))
+            allocate(sort_data_id(local_count))
+            sub_iter=0
+            do cell_iter=1,cell_count_hold
+             isub_test=sub_particle_data(cell_iter,1)
+             jsub_test=sub_particle_data(cell_iter,2)
+             ksub_test=sub_particle_data(cell_iter,SDIM)
+             current_link=sub_particle_data(cell_iter,SDIM+1)
+             if ((isub_test.eq.isub).and. &
+                 (jsub_test.eq.jsub)) then
+              if ((SDIM.eq.2).or. &
+                  ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
+               sub_iter=sub_iter+1
+               sort_data_id(sub_iter)=current_link                     
+               sort_data_time(sub_iter)= &
+                  particles(current_link)%extra_state(2*SDIM+4) 
+               sort_data_radius(sub_iter)= &
+                  particles(current_link)%extra_state(SDIM+1) 
+              else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
+               ! do nothing
+              else
+               print *,"dimension or ksub bust"
+               stop
               endif
-             enddo ! ibubble=1..local_count-bubble_iter-1
-             bubble_iter=bubble_iter+1
-            enddo ! bubble_change==1 and bubble_iter<local_count
-            do bubble_iter=particle_max_per_nsubdivide+1,local_count
-              ! never delete particles that were present from the
-              ! very beginning of the simulation.
-             if (sort_data_time(bubble_iter).eq.zero) then
-              ! do nothing
-             else if (sort_data_time(bubble_iter).gt.zero) then
-              particle_delete_flag(sort_data_id(bubble_iter))=1
-             else
-              print *,"sort_data_time(bubble_iter) invalid"
-              stop
              endif
-            enddo ! bubble_iter
+            enddo ! cell_iter=1..cell_count_hold
+
+            if (sub_iter.eq.local_count) then
+             bubble_change=1
+             bubble_iter=0
+              ! sort from oldest particle to youngest.
+              ! i.e. particle with smallest "add time" is at the top of
+              ! the list.
+             do while ((bubble_change.eq.1).and. &
+                       (bubble_iter.lt.local_count))
+              do ibubble=1,local_count-bubble_iter-1
+               if (sort_data_time(ibubble).gt. &
+                   sort_data_time(ibubble+1)) then
+                temp_id=sort_data_id(ibubble)
+                sort_data_id(ibubble)=sort_data_id(ibubble+1)
+                sort_data_id(ibubble+1)=temp_id
+                temp_time=sort_data_time(ibubble)
+                sort_data_time(ibubble)=sort_data_time(ibubble+1)
+                sort_data_time(ibubble+1)=temp_time
+                temp_radius=sort_data_radius(ibubble)
+                sort_data_radius(ibubble)=sort_data_radius(ibubble+1)
+                sort_data_radius(ibubble+1)=temp_radius
+                bubble_change=1
+               endif
+              enddo ! ibubble=1..local_count-bubble_iter-1
+              bubble_iter=bubble_iter+1
+             enddo ! bubble_change==1 and bubble_iter<local_count
+             do bubble_iter=particle_max_per_nsubdivide+1,local_count
+               ! never delete particles that were present from the
+               ! very beginning of the simulation.
+              if (sort_data_time(bubble_iter).eq.zero) then
+               ! do nothing
+              else if (sort_data_time(bubble_iter).gt.zero) then
+               particle_delete_flag(sort_data_id(bubble_iter))=1
+              else
+               print *,"sort_data_time(bubble_iter) invalid"
+               stop
+              endif
+             enddo ! bubble_iter
+            else
+             print *,"sub_iter invalid"
+             stop
+            endif    
+            deallocate(sort_data_time)
+            deallocate(sort_data_radius)
+            deallocate(sort_data_id)
+           else if ((local_count.ge.1).and. &
+                    (local_count.le.particle_max_per_nsubdivide)) then
+            ! do nothing
            else
-            print *,"sub_iter invalid"
+            print *,"local_count bust"
             stop
-           endif    
-           deallocate(sort_data_time)
-           deallocate(sort_data_radius)
-           deallocate(sort_data_id)
-          else if ((local_count.ge.1).and. &
-                   (local_count.le.particle_max_per_nsubdivide)) then
+           endif 
+
+            ! insufficient particles in the subbox or adding the
+            ! particles for the very first time.
+          else if ((local_count.lt.particle_min_per_nsubdivide).or. &
+                   (append_flag.eq.0)) then 
+
+           call sub_box_cell_center( &
+             accum_PARM, &
+             i,j,k, &
+             isub,jsub,ksub, &
+             xsub)
+
+             ! add bulk particles
+           call interp_eul_lag_dist( &
+             nmat, &
+             particles_weight_XD, &
+             particles_weight_VEL, &
+             velfab_ptr, &
+             accum_PARM, &
+             i,j,k, &
+             xsub, &
+             particle_link_data, &
+             Np, &
+             x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
+             vel_sub)
+
+           Np_append_test=Np_append_test+1
+
+           if (isweep.eq.0) then
+            ! do nothing
+           else if (isweep.eq.1) then
+            ibase=(Np_append_test-1)*single_particle_size
+            do dir=1,SDIM
+             new_particles(ibase+dir)=xsub(dir)
+             new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+             new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
+            enddo
+            new_particles(ibase+2*SDIM+1)=one  ! stub for radius
+            new_particles(ibase+3*SDIM+2)=one  ! stub for density
+            new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
+            new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
+           else
+            print *,"isweep invalid"
+            stop
+           endif
+
+          else if ((local_count.ge.particle_min_per_nsubdivide).and. &
+                   (append_flag.eq.1)) then
            ! do nothing
           else
-           print *,"local_count bust"
-           stop
-          endif 
-
-           ! insufficient particles in the subbox or adding the
-           ! particles for the very first time.
-         else if ((local_count.lt.particle_min_per_nsubdivide).or. &
-                  (append_flag.eq.0)) then 
-
-          call sub_box_cell_center( &
-            accum_PARM, &
-            i,j,k, &
-            isub,jsub,ksub, &
-            xsub)
-
-            ! add bulk particles
-          call interp_eul_lag_dist( &
-            nmat, &
-            particles_weight_XD, &
-            particles_weight_VEL, &
-            velfab_ptr, &
-            accum_PARM, &
-            i,j,k, &
-            xsub, &
-            particle_link_data, &
-            Np, &
-            x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
-            vel_sub)
-
-          Np_append_test=Np_append_test+1
-
-          if (isweep.eq.0) then
-           ! do nothing
-          else if (isweep.eq.1) then
-           ibase=(Np_append_test-1)*single_particle_size
-           do dir=1,SDIM
-            new_particles(ibase+dir)=xsub(dir)
-            new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
-            new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
-           enddo
-           new_particles(ibase+2*SDIM+1)=one  ! stub for radius
-           new_particles(ibase+3*SDIM+2)=one  ! stub for density
-           new_particles(ibase+3*SDIM+3)=zero ! stub for temperature
-           new_particles(ibase+SDIM+N_EXTRA_REAL)=cur_time_slab
-          else
-           print *,"isweep invalid"
+           print *,"local_count invalid"
            stop
           endif
 
-         else if ((local_count.ge.particle_min_per_nsubdivide).and. &
-                  (append_flag.eq.1)) then
+         enddo ! ksub
+         enddo ! jsub
+         enddo ! isub
+
+         if (cell_count_check.eq.cell_count_hold) then
           ! do nothing
          else
-          print *,"local_count invalid"
+          print *,"cell_count_check invalid"
           stop
          endif
 
-        enddo ! ksub
-        enddo ! jsub
-        enddo ! isub
-
-        if (cell_count_check.eq.cell_count_hold) then
-         ! do nothing
         else
          print *,"cell_count_check invalid"
          stop
         endif
 
+        deallocate(sub_particle_data)
+
+       else if (local_mask.eq.0) then
+        ! do nothing
        else
-        print *,"cell_count_check invalid"
+        print *,"local_mask invalid"
         stop
        endif
-
-       deallocate(sub_particle_data)
 
       enddo 
       enddo 
