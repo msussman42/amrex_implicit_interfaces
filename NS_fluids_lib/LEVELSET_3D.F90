@@ -20157,7 +20157,7 @@ stop
         xd,DIMS(xd), &
         yd,DIMS(yd), &
         zd,DIMS(zd), &
-        lsfab,DIMS(lsfab),
+        lsfab,DIMS(lsfab), &
         mfiner,DIMS(mfiner) ) &
       bind(c,name='fort_init_particle_container')
 

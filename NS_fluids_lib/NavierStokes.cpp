@@ -21058,7 +21058,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 void 
 NavierStokes::accumulate_PC_info(int im_elastic,
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-  NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr) {
+  NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
+  int nnbr) {
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
@@ -21455,7 +21456,8 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
 
 void NavierStokes::assimilate_vel_from_particles(
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-   NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr) {
+   NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
+   int nnbr) {
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
