@@ -408,13 +408,18 @@ implicit none
 
       type region_info_type
        INTEGER_T :: region_material_id
+       REAL_T :: region_dt
        REAL_T :: region_mass_flux   ! e.g. kg/s
        REAL_T :: region_volume_flux ! e.g. m^3/s
        REAL_T :: region_energy_flux ! e.g. J/s = Watts
        REAL_T :: region_volume_raster ! e.g. m^3
        REAL_T :: region_volume        ! e.g. m^3
        REAL_T :: region_mass          ! e.g. kg
+       REAL_T :: region_energy        ! e.g. J
        REAL_T :: region_energy_per_kelvin ! e.g. J/K
+       REAL_T :: region_volume_after
+       REAL_T :: region_mass_after
+       REAL_T :: region_energy_after
       end type region_info_type
 
        ! first index: 1..number_of_source_regions

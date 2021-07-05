@@ -72,26 +72,29 @@ ns.FSI_flag         = 0 0 1
 # Pressure Control - part I: experimental study",
 # Journal of Thermal Science and Engineeing Applications,
 # December 2013, vol 5, 041005-1.
-ns.xblob            = 0.1016 # Tank cavity radius NOT ALIGNED
-ns.yblob            = 0.4064 # Height of Cylindrical part NOT ALIGNED
+# Probe positions of Figure 3 are relative to the bottom of the
+# cylindrical section.
+ns.xblob            = 0.1016 # Tank cavity radius 
+ns.yblob            = 0.4064 # Height of Cylindrical part 
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
 
-ns.xblob4 	    = 0.2159 # End cap radius NOT ALIGNED
+ns.xblob4 	    = 0.2159 # End cap radius 
 
 #TANK_MK_END_CENTER=yblob4
 #top of cylindrical section: z=0.2032
 #bottom of crylindrical section: z=-0.2032
 #radius of the spherical cap is 0.2159
-#z coordinate of tank bottom: -0.2286
+#z coordinate of tank bottom: -0.2286=-0.2032-0.0254
 #z coordinate of tank top: 0.2286
 #z tank top-radius of sphere cap = 0.2286-.2159=0.0127
 ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center 
 
 # origin corresponds to middle of the tank.
 # Heater top 0.0857 from the bottom of the tank:
-# .1429+0.0857=0.2286=0.2032+0.0254=.2286
-# .1683-.1429=0.0254
+# Heater top relative to tank center is: -0.1429
+# Tank bottom relative to tank center is: -0.2286
+# -0.2286+0.0857=-0.1429
 # coarsest grid: 32x64 domain 0<r<0.127  -.254<z<0.254
 # dx_coarsest=0.508/64=0.0079375
 # Heater thickness: 0.001524m
@@ -130,10 +133,10 @@ geometry.is_periodic= 0 0
 amr.n_cell          = 16 64
 #amr.n_cell          = 64 64  # square domain
 # just 1 level:
-amr.max_level       = 2
+amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 16    # 64 is optimal for MPI
+amr.max_grid_size   = 64    # 64 is optimal for MPI
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
@@ -165,8 +168,7 @@ amr.check_int       = 2000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
 ns.slice_dir=1 # y (aka z) direction
-# 2 * 0.0635=.127
-ns.xslice=0.0635 0.127
+ns.xslice=0.0000001 0.0
 amr.slice_int=2000
 amr.plot_int        = 2000   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
@@ -201,6 +203,7 @@ ns.gravity_potential_form=1
 ns.override_density=1 1 0  # 1..num_materials
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 # coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
+# (PNP: 0.002252)
 # coefficient for heat expansion for an ideal gas: (1/T)=
 # 1/298=0.0034
 ns.DrhoDT = -0.00219 -0.0034 0.0   # units: 1/degree K
@@ -266,6 +269,7 @@ ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
 # mu_gas=1.093e-6, but make zero to avoid jump condition issue.
+# (PNP: 4.2E-4)
 ns.viscconst=4.48E-04 0.0 1.0
 
 # Initial temeparture [K]
@@ -273,7 +277,7 @@ ns.tempconst=295.41 295.41 295.41
 
 # Surface tension [N/m]
 ns.tension=0.0 0.0 0.0
-#ns.tension=2.0E-03 2.0E-03 2.0E-03
+#ns.tension=1.2E-02 1.2E-02 1.2E-02
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -321,9 +325,9 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 # The phase-change saturation temperature and pressure are calculated
 # from Clausius–Clapeyron relation. The "reference" temprature and
 # pressure are given below.
-ns.saturation_temp=307 0.0 0.0 0.0 0.0 0.0  # T_ref
+ns.saturation_temp=307.0 0.0 0.0 0.0 0.0 0.0  # T_ref
 ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
-ns.reference_pressure=101325 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=101325.0 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
 # Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
@@ -365,8 +369,7 @@ ns.temperature_primitive_variable=1 1 1
 ns.solidheat_flag   =0
 
 # Heat flux from band heater
-#ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
-ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
+ns.xblob3 = 2.0 # Watts=J/s
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------

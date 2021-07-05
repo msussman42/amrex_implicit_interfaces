@@ -750,27 +750,6 @@ end subroutine STUB_CHARFN_REGION
 subroutine STUB_DELETE_REGIONS_LIST()
 use probcommon_module
 IMPLICIT NONE
-INTEGER_T lower_bound(2)
-INTEGER_T upper_bound(2)
-
- if (number_of_source_regions.eq.0) then
-  ! do nothing
- else if (number_of_source_regions.gt.0) then
-  lower_bound=LBOUND(regions_list)
-  upper_bound=UBOUND(regions_list)
-  if ((lower_bound(1).eq.1).and. &
-      (lower_bound(2).eq.0).and. &
-      (upper_bound(1).eq.number_of_source_regions).and. &
-      (upper_bound(2).eq.number_of_threads_regions)) then
-   deallocate(regions_list)
-  else
-   print *,"lower_bound or upper_bound invalid"
-   stop
-  endif
- else
-  print *,"number_of_source_regions invalid"
-  stop
- endif
 
 end subroutine STUB_DELETE_REGIONS_LIST
 

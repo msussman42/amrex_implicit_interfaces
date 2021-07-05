@@ -11950,13 +11950,9 @@ void NavierStokes::Mass_Energy_Sources_SinksALL() {
   } else
    amrex::Error("level<=finest_level required");
   
-  if (isweep==0) {
-   fort_reduce_sum_regions();
-  } else if (isweep==1) {
-   // do nothing
-  } else
-   amrex::Error("isweep invalid");		
- }
+  fort_reduce_sum_regions(&isweep);
+
+ } //isweep=0,1
 
  fort_delete_regions_list();
 

@@ -664,7 +664,7 @@ extern "C" {
        int* level,
        int* finest_level);
 
-    void fort_reduce_sum_regions();
+    void fort_reduce_sum_regions(int* isweep);
 
     void fort_sumdot(Real* mass1,
       const Real* dat1,AMREX_ARLIM_P(dat1_lo),AMREX_ARLIM_P(dat1_hi),

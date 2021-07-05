@@ -10646,36 +10646,44 @@ END SUBROUTINE SIMP
        return
        end subroutine fort_summass
 
-       subroutine fort_reduce_sum_regions() &
+       subroutine fort_reduce_sum_regions(isweep) &
        bind(c,name='fort_reduce_sum_regions')
 
        use probcommon_module
        use amrex_parallel_module
        IMPLICIT NONE
 
+       INTEGER_T, intent(in) :: isweep
+
        INTEGER_T ithreads,iregions
 
        do iregions=1,number_of_source_regions
 
-        regions_list(iregions,0)%region_energy_per_kelvin=zero
-        regions_list(iregions,0)%region_mass=zero
-        regions_list(iregions,0)%region_volume=zero
-        regions_list(iregions,0)%region_volume_raster=zero
+        if (isweep.eq.0) then
 
-        do ithreads=1,number_of_threads_regions
-         regions_list(iregions,0)%region_energy_per_kelvin= &
+         regions_list(iregions,0)%region_energy_per_kelvin=zero
+         regions_list(iregions,0)%region_mass=zero
+         regions_list(iregions,0)%region_energy=zero
+         regions_list(iregions,0)%region_volume=zero
+         regions_list(iregions,0)%region_volume_raster=zero
+
+         do ithreads=1,number_of_threads_regions
+          regions_list(iregions,0)%region_energy_per_kelvin= &
            regions_list(iregions,0)%region_energy_per_kelvin+ &
            regions_list(iregions,ithreads)%region_energy_per_kelvin
-         regions_list(iregions,0)%region_mass= &
+          regions_list(iregions,0)%region_mass= &
            regions_list(iregions,0)%region_mass+ &
            regions_list(iregions,ithreads)%region_mass
-         regions_list(iregions,0)%region_volume= &
+          regions_list(iregions,0)%region_energy= &
+           regions_list(iregions,0)%region_energy+ &
+           regions_list(iregions,ithreads)%region_energy
+          regions_list(iregions,0)%region_volume= &
            regions_list(iregions,0)%region_volume+ &
            regions_list(iregions,ithreads)%region_volume
-         regions_list(iregions,0)%region_volume_raster= &
+          regions_list(iregions,0)%region_volume_raster= &
            regions_list(iregions,0)%region_volume_raster+ &
            regions_list(iregions,ithreads)%region_volume_raster
-        enddo ! ithreads=1,number_of_threads_regions
+         enddo ! ithreads=1,number_of_threads_regions
 
          ! amrex_parallel_reduce_sum is a fortran templated subroutine.
          ! The online recommendation is that
@@ -10693,14 +10701,46 @@ END SUBROUTINE SIMP
          !    end interface amrex_parallel_reduce_sum
          !  each module procedure is specific to each type.
 
-        call amrex_parallel_reduce_sum( &
+         call amrex_parallel_reduce_sum( &
                regions_list(iregions,0)%region_energy_per_kelvin)
-        call amrex_parallel_reduce_sum( &
+         call amrex_parallel_reduce_sum( &
                regions_list(iregions,0)%region_mass)
-        call amrex_parallel_reduce_sum( &
+         call amrex_parallel_reduce_sum( &
+               regions_list(iregions,0)%region_energy)
+         call amrex_parallel_reduce_sum( &
                regions_list(iregions,0)%region_volume)
-        call amrex_parallel_reduce_sum( &
+         call amrex_parallel_reduce_sum( &
                regions_list(iregions,0)%region_volume_raster)
+
+        else if (isweep.eq.1) then
+
+         regions_list(iregions,0)%region_mass_after=zero
+         regions_list(iregions,0)%region_energy_after=zero
+         regions_list(iregions,0)%region_volume_after=zero
+
+         do ithreads=1,number_of_threads_regions
+          regions_list(iregions,0)%region_mass_after= &
+           regions_list(iregions,0)%region_mass_after+ &
+           regions_list(iregions,ithreads)%region_mass_after
+          regions_list(iregions,0)%region_energy_after= &
+           regions_list(iregions,0)%region_energy_after+ &
+           regions_list(iregions,ithreads)%region_energy_after
+          regions_list(iregions,0)%region_volume_after= &
+           regions_list(iregions,0)%region_volume_after+ &
+           regions_list(iregions,ithreads)%region_volume_after
+         enddo ! ithreads=1,number_of_threads_regions
+
+         call amrex_parallel_reduce_sum( &
+               regions_list(iregions,0)%region_mass_after)
+         call amrex_parallel_reduce_sum( &
+               regions_list(iregions,0)%region_energy_after)
+         call amrex_parallel_reduce_sum( &
+               regions_list(iregions,0)%region_volume_after)
+
+        else
+         print *,"isweep invalid"
+         stop
+        endif
 
        enddo ! iregions=1,number_source_regions
          
@@ -10769,9 +10809,13 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: volumefab(DIMV(volumefab))
+      REAL_T, pointer :: volumefab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T :: i,j,k
       INTEGER_T :: im
@@ -10791,6 +10835,7 @@ END SUBROUTINE SIMP
       REAL_T region_energy_flux
       REAL_T region_energy_per_kelvin
       REAL_T region_mass
+      REAL_T region_energy
       REAL_T region_volume
       REAL_T region_volume_raster
       REAL_T local_den
@@ -10836,6 +10881,10 @@ END SUBROUTINE SIMP
 
       snew_ptr=>snew
       mdot_ptr=>mdot
+      DEN_ptr=>DEN
+      VOF_ptr=>VOF
+      mask_ptr=>mask
+      volumefab_ptr=>volumefab
 
       if (dt.gt.zero) then
        ! do nothing
@@ -10869,10 +10918,10 @@ END SUBROUTINE SIMP
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,6615)
-      call checkbound_array(fablo,fabhi,DEN,1,-1,6615)
-      call checkbound_array(fablo,fabhi,VOF,1,-1,6616)
-      call checkbound_array1(fablo,fabhi,mask,1,-1,6627)
-      call checkbound_array1(fablo,fabhi,volumefab,1,-1,6627)
+      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1,6615)
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,6627)
+      call checkbound_array1(fablo,fabhi,volumefab_ptr,1,-1,6627)
   
       do dir=1,SDIM
        if (fabhi(dir)-fablo(dir).le.0) then
@@ -10916,6 +10965,9 @@ END SUBROUTINE SIMP
         do iregions=1,number_of_source_regions
          im=regions_list(iregions,0)%region_material_id
          if ((im.ge.1).and.(im.le.nmat)) then
+
+          regions_list(iregions,0)%region_dt=dt
+
           vofcomp=(im-1)*ngeom_recon+1
           vfrac=mofdata(vofcomp)
           if ((vfrac.ge.zero).and.(vfrac.le.one)) then
@@ -10964,13 +11016,18 @@ END SUBROUTINE SIMP
              regions_list(iregions,tid_current+1)%region_energy_per_kelvin= &
               regions_list(iregions,tid_current+1)%region_energy_per_kelvin+ &
               volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den*DeDT
+             regions_list(iregions,tid_current+1)%region_energy= &
+              regions_list(iregions,tid_current+1)%region_energy+ &
+              volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den*DeDT*local_temp
              regions_list(iregions,tid_current+1)%region_mass= &
               regions_list(iregions,tid_current+1)%region_mass+ &
               volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den
              regions_list(iregions,tid_current+1)%region_volume= &
               regions_list(iregions,tid_current+1)%region_volume+ &
               volumefab(D_DECL(i,j,k))*vfrac*charfn
+
             else if (isweep.eq.1) then
+
              region_mass_flux=regions_list(iregions,0)%region_mass_flux
              region_volume_flux=regions_list(iregions,0)%region_volume_flux
              region_energy_flux=regions_list(iregions,0)%region_energy_flux
@@ -11033,13 +11090,14 @@ END SUBROUTINE SIMP
                stop
               endif
              else if (region_volume_flux.eq.zero) then
-              ! do nothing
+              divu=zero
              else
               print *,"region_volume_flux invalid"
               stop
              endif
 
              update_density_flag=0
+             density_flux=zero
              if ((region_volume_flux.eq.zero).and. &
                  (region_mass_flux.eq.zero)) then
               ! do nothing
@@ -11123,8 +11181,17 @@ END SUBROUTINE SIMP
               ! energy_per_kelvin=sum_p den_p cv_p charfn_p F_p vol_p (J/K)
               !       
               ! Tflux=energy_flux/(energy_per_kelvin)=(J/s)/(J/K)=Kelvin/s
+
+             temperature_new=local_temp
              if (region_energy_flux.ne.zero) then
               if (region_energy_per_kelvin.gt.zero) then
+               if (local_den.gt.zero) then
+                region_energy_per_kelvin=(density_new/local_den)* &
+                    region_energy_per_kelvin
+               else
+                print *,"local_den invalid"
+                stop
+               endif
                Tflux=region_energy_flux/region_energy_per_kelvin
                if (Tflux.ne.zero) then
                 temperature_new=local_temp+dt*Tflux
@@ -11148,6 +11215,19 @@ END SUBROUTINE SIMP
               print *,"region_energy_flux bust"
               stop
              endif
+             regions_list(iregions,tid_current+1)%region_volume_after= &
+              regions_list(iregions,tid_current+1)%region_volume_after+ &
+              volumefab(D_DECL(i,j,k))*vfrac*charfn* &
+              (volume_new/region_volume)
+             regions_list(iregions,tid_current+1)%region_mass_after= &
+              regions_list(iregions,tid_current+1)%region_mass_after+ &
+              volumefab(D_DECL(i,j,k))*vfrac*charfn*density_new* &
+              (volume_new/region_volume)
+             regions_list(iregions,tid_current+1)%region_energy_after= &
+              regions_list(iregions,tid_current+1)%region_energy_after+ &
+              volumefab(D_DECL(i,j,k))*vfrac*charfn*density_new*DeDT* &
+              temperature_new* &
+              (volume_new/region_volume)
 
             else
              print *,"isweep invalid"
