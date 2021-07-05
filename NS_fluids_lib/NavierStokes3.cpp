@@ -792,7 +792,7 @@ void NavierStokes::tensor_advection_updateALL() {
 
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
-          ns_level.accumulate_PC_info(im,localPC_no_nbr,localPC_nbr);
+          ns_level.accumulate_PC_info(im,localPC_no_nbr,localPC_nbr,nnbr);
 	 }
          localPC_nbr.clearNeighbors();
 
@@ -12708,7 +12708,7 @@ void NavierStokes::veldiffuseALL() {
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.assimilate_vel_from_particles(localPC_no_nbr,localPC_nbr);
+   ns_level.assimilate_vel_from_particles(localPC_no_nbr,localPC_nbr,nnbr);
   }
   localPC_nbr.clearNeighbors();
 

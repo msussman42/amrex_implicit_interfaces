@@ -635,11 +635,13 @@ public:
     void accumulate_info_no_particles(int im);
     void accumulate_PC_info(int im,
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr);
+      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
+      int nnbr);
 
     void assimilate_vel_from_particles(
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr);
+      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
+      int nnbr);
 
     //
     // Advance grids at this level in time.
