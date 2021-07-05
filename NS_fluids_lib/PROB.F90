@@ -32694,9 +32694,87 @@ end subroutine initialize2d
 
       use probcommon_module
       use geometry_intersect_module
+      use amrex_parallel_module
       IMPLICIT NONE
+      INTEGER_T lower_bound(2)
+      INTEGER_T upper_bound(2)
+      INTEGER_T iregions
 
       call SUB_DELETE_REGIONS_LIST()
+
+      if (number_of_source_regions.eq.0) then
+       ! do nothing
+      else if (number_of_source_regions.gt.0) then
+       lower_bound=LBOUND(regions_list)
+       upper_bound=UBOUND(regions_list)
+       if ((lower_bound(1).eq.1).and. &
+           (lower_bound(2).eq.0).and. &
+           (upper_bound(1).eq.number_of_source_regions).and. &
+           (upper_bound(2).eq.number_of_threads_regions)) then
+
+        if (amrex_parallel_ioprocessor().eqv..true.) then
+
+         do iregions=1,number_of_source_regions
+
+          if (regions_list(iregions,0)%region_dt.gt.zero) then
+           ! do nothing
+          else
+           print *,"region_dt must be positive"
+           stop
+          endif
+
+          print *,"iregions=",iregions
+          print *,"regions_list(iregions,0)%region_material_id ", &
+            regions_list(iregions,0)%region_material_id
+          print *,"regions_list(iregions,0)%region_dt ", &
+            regions_list(iregions,0)%region_dt
+          print *,"regions_list(iregions,0)%region_mass_after ", &
+            regions_list(iregions,0)%region_mass_after
+          print *,"regions_list(iregions,0)%region_volume_after ", &
+            regions_list(iregions,0)%region_volume_after
+          print *,"regions_list(iregions,0)%region_energy_after ", &
+            regions_list(iregions,0)%region_energy_after
+
+          print *,"regions_list(iregions,0)%region_mass_flux ", &
+            regions_list(iregions,0)%region_mass_flux
+          print *,"regions_list(iregions,0)%region_volume_flux ", &
+            regions_list(iregions,0)%region_volume_flux
+          print *,"regions_list(iregions,0)%region_energy_flux ", &
+            regions_list(iregions,0)%region_energy_flux
+
+          print *,"regions_list(iregions,0)%region_mass_flux measured: ", &
+            (regions_list(iregions,0)%region_mass_after- &
+             regions_list(iregions,0)%region_mass)/ &
+            regions_list(iregions,0)%region_dt
+
+          print *,"regions_list(iregions,0)%region_volume_flux measured: ", &
+            (regions_list(iregions,0)%region_volume_after- &
+             regions_list(iregions,0)%region_volume)/ &
+            regions_list(iregions,0)%region_dt
+
+          print *,"regions_list(iregions,0)%region_energy_flux measured: ", &
+            (regions_list(iregions,0)%region_energy_after- &
+             regions_list(iregions,0)%region_energy)/ &
+            regions_list(iregions,0)%region_dt
+
+         enddo ! do iregions=1,number_of_source_regions
+
+        else if (amrex_parallel_ioprocessor().eqv..false.) then
+         ! do nothing
+        else
+         print *,"amrex_parallel_ioprocessor() invalid"
+         stop
+        endif
+
+        deallocate(regions_list)
+       else
+        print *,"lower_bound or upper_bound invalid"
+        stop
+       endif
+      else
+       print *,"number_of_source_regions invalid"
+       stop
+      endif
 
       end subroutine fort_delete_regions_list
 
