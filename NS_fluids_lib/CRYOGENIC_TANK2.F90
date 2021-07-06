@@ -487,7 +487,6 @@ subroutine TEMPERATURE_CRYOGENIC_TANK2(rho,massfrac_var, &
  REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
  REAL_T, intent(out) :: temperature 
  REAL_T, intent(in) :: internal_energy
- REAL_T :: denom
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -496,7 +495,7 @@ subroutine TEMPERATURE_CRYOGENIC_TANK2(rho,massfrac_var, &
     if (TANK2_GAS_CV.gt.zero) then
      temperature=internal_energy/TANK2_GAS_CV
     else
-     print *,"denom invalid 1"
+     print *,"TANK2_GAS_CV invalid 1"
      stop
     endif
    else
