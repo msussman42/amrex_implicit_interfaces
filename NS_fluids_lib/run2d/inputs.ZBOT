@@ -14,6 +14,13 @@ stop_time=1.0e+20
 ns.probtype         = 423
 # variable accessible from plug-in:
 ns.axis_dir         = 0
+# variable for compiling diagnostic output
+# integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
+# T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
+# bottom of cylindrical section: -0.2032
+# so Z_code=-0.2032+0.2921=0.0889
+ns.ncomp_sum_int_user1=1 
+ns.ncomp_sum_int_user2=2  # pressure and temperature 
 
 # 1=liquid 2=gas(placeholder) 3=solid wall
 ns.num_materials    = 3

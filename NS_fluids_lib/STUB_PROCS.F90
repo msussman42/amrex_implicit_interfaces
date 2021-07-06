@@ -740,12 +740,10 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(out) :: charfn_out
 
- if ((region_id.eq.0).and.(number_of_source_regions.eq.0)) then
-  ! do nothing
- else
-  print *,"STUB only called if no regions init"
-  stop
- endif
+ ! 1<=region_id<=number_of_source_regions
+
+ print *,"STUB: this routine should not be called if no regions"
+ stop
 
 end subroutine STUB_CHARFN_REGION
 
