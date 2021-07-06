@@ -674,14 +674,16 @@ return
 end subroutine STUB_ASSIMILATE
 
 
-subroutine STUB_SUMINT(GRID_DATA_IN,increment_out,nsum)
+subroutine STUB_SUMINT(GRID_DATA_IN,increment_out1, &
+                increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nsum
+INTEGER_T, intent(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(out) :: increment_out(nsum)
+REAL_T, intent(inout) :: increment_out1(nsum1)
+REAL_T, intent(inout) :: increment_out2(nsum2)
 INTEGER_T :: i,j,k
 
 i=GRID_DATA_IN%igrid

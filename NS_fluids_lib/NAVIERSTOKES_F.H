@@ -611,7 +611,8 @@ extern "C" {
 
     void fort_summass(
      int* tid,
-     int* ncomp_sum_int_user,
+     int* ncomp_sum_int_user1,
+     int* ncomp_sum_int_user2,
      int* adapt_quad_depth,
      int* slice_dir,Real* xslice,
      Real* problo,Real* probhi,
