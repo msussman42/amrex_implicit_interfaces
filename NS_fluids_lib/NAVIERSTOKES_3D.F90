@@ -10178,6 +10178,7 @@ END SUBROUTINE SIMP
        
          if ((ncomp_sum_int_user1.ge.1).or. &
              (ncomp_sum_int_user2.ge.1)) then
+
           if (is_in_probtype_list().eq.1) then
 
            do im=1,ncomp_sum_int_user1
@@ -10213,12 +10214,11 @@ END SUBROUTINE SIMP
             local_user_out2,ncomp_sum_int_user1, &
             ncomp_sum_int_user2,isweep)
 
-           do im=1,ncomp_sum_int_user1
-            idest=user_comp+im
-            local_result(idest)=local_result(idest)+local_user_out1(im)
-           enddo
            if (isweep.eq.0) then
-            ! do nothing
+            do im=1,ncomp_sum_int_user1
+             idest=user_comp+im
+             local_result(idest)=local_result(idest)+local_user_out1(im)
+            enddo
            else if (isweep.eq.1) then
             do im=1,ncomp_sum_int_user2
              idest=user_comp+ncomp_sum_int_user1+im
@@ -10229,7 +10229,8 @@ END SUBROUTINE SIMP
             stop
            endif
 
-          endif
+          endif ! if (is_in_probtype_list().eq.1) then
+
          else if ((ncomp_sum_int_user1.eq.0).and. &
                   (ncomp_sum_int_user2.eq.0)) then
           ! do nothing

@@ -24,6 +24,9 @@ stop
 module CRYOGENIC_TANK_MK_module
 
 implicit none
+
+INTEGER_T, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
+
 !! MIDDLE OF THE TANK IS AT Z=0 
 ! Tank inner radius
 REAL_T :: TANK_MK_RADIUS
@@ -109,7 +112,7 @@ contains
   if(fort_material_type(2).eq.0) then
    ! incompressible
    TANK_MK_INITIAL_PRESSURE = outflow_pressure
-  elseif(fort_material_type(2).eq.24) then
+  elseif(fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
    ! compressible
    ! P = rho R_sp T = rho (gamma-1) U
    TANK_MK_INITIAL_PRESSURE = &
@@ -347,7 +350,8 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
 end function SOLID_TOP_HALF_DIST
 
 !***********************************************
-! compressible material functions for (ns.material_type = 24)
+! compressible material functions for 
+!   (ns.material_type = TANK_MK_MATERIAL_TYPE)
 ! C_spc => Specific heat capacity [J(kg K)]
 ! C_m   =>    Moalr heat capacity [J(mol K)]
 !
@@ -380,7 +384,7 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if (imattype.eq.24) then
+   if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
     ! p = rho (gamme-1) U
     pressure=rho * (TANK_MK_GAS_GAMMA-one) * internal_energy
    else
@@ -435,7 +439,7 @@ INTEGER_T :: dummy_input
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if (imattype.eq.24) then
+   if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
     ! p = rho (gamma-1) e  rho=1/V
     ! V = (gamma-1) e/p=(gamma-1)Cv T/p
     ! dVdT=(gamma-1)Cv/p
@@ -481,7 +485,7 @@ subroutine SOUNDSQR_CRYOGENIC_TANK_MK(rho,massfrac_var, &
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if (imattype.eq.24) then
+   if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
      ! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
     call EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
      internal_energy,pressure,imattype,im,num_species_var_in)
@@ -523,7 +527,8 @@ subroutine INTERNAL_CRYOGENIC_TANK_MK(rho,massfrac_var, &
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if ((imattype.eq.24).or.(imattype.eq.0)) then 
+   if ((imattype.eq.TANK_MK_MATERIAL_TYPE).or. &
+       (imattype.eq.0)) then 
     ! U_mix = C_{v,spc} T
     local_internal_energy=TANK_MK_GAS_CV*temperature
    else
@@ -558,12 +563,13 @@ subroutine TEMPERATURE_CRYOGENIC_TANK_MK(rho,massfrac_var, &
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
-   if ((imattype.eq.24).or.(imattype.eq.0)) then 
+   if ((imattype.eq.TANK_MK_MATERIAL_TYPE).or. &
+       (imattype.eq.0)) then 
     ! T = U / C_{v,spc}
     if (TANK_MK_GAS_CV.gt.zero) then
      temperature=internal_energy/TANK_MK_GAS_CV
     else
-     print *,"denom invalid 1"
+     print *,"TANK_MK_GAS_CV invalid 1"
      stop
     endif
    else
@@ -627,7 +633,7 @@ if(fort_material_type(2).eq.0) then
   print *,"simple_hyd_p invalid"
   stop
  endif
-elseif (fort_material_type(2).eq.24) then
+elseif (fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
  ! compressible gas
  ! Known pressure(P_1) at top (based on given density and temperature)
  ! P_2=P_1 * exp(g*(z_1-z_2)/(R_sp*T_0))  [g>0]
@@ -721,7 +727,7 @@ if ((num_materials.eq.3).and. &
    if(fort_material_type(2).eq.0) then
     ! incompressible
     STATE(ibase+1)=fort_denconst(im)
-   elseif(fort_material_type(2).eq.24) then
+   elseif(fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
     ! compressible
     ! rho =P/(R_sp T)
     call CRYOGENIC_TANK_MK_PRES(x,t,LS,pressure,nmat)
@@ -950,7 +956,6 @@ REAL_T, intent(out) :: heat_source
 INTEGER_T dir
 REAL_T local_dx(SDIM)
 REAL_T flux_magnitude
-REAL_T denom
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1016,7 +1021,7 @@ if ((num_materials.eq.3).and. &
  if (xpos(2).ge.TANK_MK_INTERFACE_LOCATION) then
   if(fort_material_type(2).eq.0) then
    ! incompressible
-  elseif(fort_material_type(2).eq.24) then
+  elseif(fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
     ! compressible
     ! rho =P/(R_sp T)
    rho_hydrostatic = pres_hydrostatic/&
@@ -1029,7 +1034,7 @@ if ((num_materials.eq.3).and. &
  else if (xpos(2).le.TANK_MK_INTERFACE_LOCATION) then
   if(fort_material_type(2).eq.0) then
    ! incompressible
-  elseif(fort_material_type(2).eq.24) then
+  elseif(fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
    rho_hydrostatic=fort_denconst(1)
   else
    print *,"material type invalid for pres den hydrostatic!"
@@ -1060,6 +1065,17 @@ REAL_T, intent(inout) :: increment_out1(nsum1)
 REAL_T, intent(inout) :: increment_out2(nsum2)
 
 REAL_T massfrac_parm(num_species_var+1)
+REAL_T T1_probe(SDIM)
+INTEGER_T im
+INTEGER_T dir
+INTEGER_T dencomp,local_ispec
+REAL_T den,temperature,internal_energy,pressure
+REAL_T support_r
+REAL_T dx_coarsest
+REAL_T charfn
+REAL_T volgrid
+REAL_T denom
+
 INTEGER_T :: i,j,k
 
 i=GRID_DATA_IN%igrid
@@ -1081,20 +1097,18 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   call init_massfrac_parm(den,massfrac_parm,im)
   do local_ispec=1,num_species_var
    massfrac_parm(local_ispec)= &
-           GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1+local_ispec)
+       GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1+local_ispec)
   enddo
-  mtype=24
   call INTERNAL_CRYOGENIC_TANK_MK(den,massfrac_parm, &
-    temperature,internal_energy,mtype,im,num_species_var)
+    temperature,internal_energy,TANK_MK_MATERIAL_TYPE,im,num_species_var)
   call EOS_CRYOGENIC_TANK_MK(den,massfrac_parm, &
-     internal_energy,pressure,mtype,im,num_species_var)
+     internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
   support_r=zero
   do dir=1,SDIM
-   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
-   support_r=support_r+(xlocal(dir)-T1_probe(dir))**2
+   support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
   enddo
   support_r=sqrt(support_r) 
-  dx_coarsest=0.4064d0/32.0d0
+  dx_coarsest=TANK_MK_HEIGHT/32.0d0
   if (support_r.le.dx_coarsest) then
    charfn=one
   else if (support_r.gt.dx_coarsest) then
@@ -1103,8 +1117,22 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    print *,"support_r invalid"
    stop
   endif
-
   volgrid=GRID_DATA_IN%volgrid
+  if (isweep.eq.0) then
+   increment_out1(1)=charfn*volgrid
+  else if (isweep.eq.1) then
+   denom=increment_out1(1)
+   if (denom.gt.zero) then
+    increment_out2(1)=charfn*volgrid*pressure/denom
+    increment_out2(2)=charfn*volgrid*temperature/denom
+   else
+    print *,"expecting denom>0.0"
+    stop
+   endif
+  else
+   print *,"isweep invalid"
+   stop
+  endif
  else
   print *,"nsum1 or nsum2 invalid"
   stop
@@ -1199,7 +1227,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
            (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
            (x(2).lt.TANK_MK_HEATER_LOW).or. &
            (x(2).gt.TANK_MK_HEATER_HIGH)) then
-   charfn=zero
+   charfn_out=zero
   else
    print *,"position bust"
    stop
