@@ -1123,4 +1123,80 @@ endif
 
 end subroutine CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic
 
+subroutine CRYOGENIC_TANK_MK_SUMINT(GRID_DATA_IN,increment_out1, &
+                increment_out2,nsum1,nsum2,isweep)
+use probcommon_module_types
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nsum1,nsum2,isweep
+type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
+REAL_T, intent(inout) :: increment_out1(nsum1)
+REAL_T, intent(inout) :: increment_out2(nsum2)
+INTEGER_T :: i,j,k
+
+i=GRID_DATA_IN%igrid
+j=GRID_DATA_IN%jgrid
+k=GRID_DATA_IN%kgrid
+
+end subroutine CRYOGENIC_TANK_MK_SUMINT
+
+subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST(constant_density_all_time, &
+      num_materials_in,num_threads_in)
+use probcommon_module
+use geometry_intersect_module
+
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: num_materials_in
+INTEGER_T, intent(in) :: num_threads_in
+INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+INTEGER_T :: im
+
+ if (num_materials_in.eq.num_materials) then
+  ! do nothing
+ else
+  print *,"num_materials_in invalid"
+  stop
+ endif
+ if (num_threads_in.eq.geom_nthreads) then
+  ! do nothing
+ else
+  print *,"num_threads_in invalid"
+  stop
+ endif
+ do im=1,num_materials
+  if ((constant_density_all_time(im).eq.0).or. &
+      (constant_density_all_time(im).eq.1)) then
+   ! do nothing
+  else
+   print *,"constant_density_all_time(im) invalid"
+   stop
+  endif
+ enddo ! im=1..num_materials
+
+ number_of_source_regions=0
+
+end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
+
+subroutine CRYOGENIC_TANK_MK_CHARFN_REGION(region_id,x,cur_time,charfn_out)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: region_id
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: cur_time
+REAL_T, intent(out) :: charfn_out
+
+ if ((region_id.eq.0).and.(number_of_source_regions.eq.0)) then
+  ! do nothing
+ else
+  print *,"STUB only called if no regions init"
+  stop
+ endif
+
+end subroutine CRYOGENIC_TANK_MK_CHARFN_REGION
+
+
+
 end module CRYOGENIC_TANK_MK_module

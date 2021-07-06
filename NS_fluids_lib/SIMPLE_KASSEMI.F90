@@ -1137,13 +1137,15 @@ return
 end subroutine SIMPLE_KASSEMI_HEATSOURCE
 
 ! This routine is called from FORT_SUMMASS
-subroutine SIMPLE_KASSEMI_SUMINT(GRID_DATA_IN,increment_out,nsum)
+subroutine SIMPLE_KASSEMI_SUMINT(GRID_DATA_IN,increment_out1, &
+                increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types
 use probcommon_module
 
-INTEGER_T, intent(in) :: nsum
+INTEGER_T, intent(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(out) :: increment_out(nsum)
+REAL_T, intent(inout) :: increment_out1(nsum1)
+REAL_T, intent(inout) :: increment_out2(nsum2)
 INTEGER_T :: i,j,k
 INTEGER_T :: dir
 INTEGER_T :: im_crit
@@ -1166,7 +1168,8 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.6) then
+if (nsum1.eq.6) then
+if (isweep.eq.0) then        
  do dir=1,SDIM
   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
  enddo
@@ -1207,7 +1210,7 @@ if (nsum.eq.6) then
  if ((VOF_analytical.ge.zero).and. &
      (VOF_analytical.le.one)) then
   ! symmetric difference error is measured too in FORT_SUMMASS.
-  increment_out(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
+  increment_out1(1)=GRID_DATA_IN%volgrid*abs(VOF_compute-VOF_analytical)
  else
   print *,"VOF_analytical invalid"
   stop
@@ -1215,32 +1218,32 @@ if (nsum.eq.6) then
   
  LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),1)
  if (abs(LS_analytical).lt.interface_thick_rad) then
-  increment_out(2)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
+  increment_out1(2)=GRID_DATA_IN%volgrid*abs(LS_compute-LS_analytical)/ &
     (two*interface_thick_rad)
  else
-  increment_out(2)=zero
+  increment_out1(2)=zero
  endif
- increment_out(3)=zero
- increment_out(4)=zero
- increment_out(5)=zero
- increment_out(6)=zero
+ increment_out1(3)=zero
+ increment_out1(4)=zero
+ increment_out1(5)=zero
+ increment_out1(6)=zero
  if (VOF_analytical.le.VOFTOL) then
   im_crit=2
   tcomp=(im_crit-1)*num_state_material+2
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
-  increment_out(3)=GRID_DATA_IN%volgrid* &
+  increment_out1(3)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
-  increment_out(4)=GRID_DATA_IN%volgrid* &
+  increment_out1(4)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
  else if (VOF_analytical.ge.one-VOFTOL) then
   im_crit=1
   tcomp=(im_crit-1)*num_state_material+2
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
-  increment_out(5)=GRID_DATA_IN%volgrid* &
+  increment_out1(5)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
-  increment_out(6)=GRID_DATA_IN%volgrid* &
+  increment_out1(6)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
  else if ((VOF_analytical.ge.VOFTOL).and. &
           (VOF_analytical.le.one-VOFTOL)) then
@@ -1249,9 +1252,16 @@ if (nsum.eq.6) then
   print *,"VOF_analytical invalid"
   stop
  endif
+else if (isweep.eq.1) then
+ ! do nothing
 else
- print *,"nsum invalid"
- print *,"nsum ",nsum
+ print *,"isweep invalid"
+ stop
+endif
+
+else
+ print *,"nsum1 invalid"
+ print *,"nsum1 ",nsum1
  stop
 endif
 

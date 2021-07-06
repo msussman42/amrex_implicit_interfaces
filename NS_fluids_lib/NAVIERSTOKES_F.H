@@ -639,7 +639,7 @@ extern "C" {
      int* nmat,
      int* ntensor,
      int* den_Ncomp,
-     int* isweep);
+     int* isweep); // =0 or 1
 
      void fort_regionsum(
        int* tid_current,
