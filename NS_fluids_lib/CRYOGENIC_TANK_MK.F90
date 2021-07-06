@@ -1151,7 +1151,7 @@ IMPLICIT NONE
 INTEGER_T, intent(in) :: num_materials_in
 INTEGER_T, intent(in) :: num_threads_in
 INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
-INTEGER_T :: im
+INTEGER_T :: im,iregion
 
  if (num_materials_in.eq.num_materials) then
   ! do nothing
@@ -1175,7 +1175,29 @@ INTEGER_T :: im
   endif
  enddo ! im=1..num_materials
 
- number_of_source_regions=0
+ number_of_source_regions=1
+ number_of_threads_regions=num_threads_in
+ allocate(regions_list(1:number_of_source_regions, &
+                       0:number_of_threads_regions))
+
+ do iregion=1,number_of_source_regions
+  regions_list(iregion,0)%region_material_id=0
+  regions_list(iregion,0)%region_dt=zero
+  regions_list(iregion,0)%region_mass_flux=zero
+  regions_list(iregion,0)%region_volume_flux=zero
+  regions_list(iregion,0)%region_energy_flux=zero
+  regions_list(iregion,0)%region_volume_raster=zero 
+  regions_list(iregion,0)%region_volume=zero 
+  regions_list(iregion,0)%region_mass=zero 
+  regions_list(iregion,0)%region_energy=zero 
+  regions_list(iregion,0)%region_energy_per_kelvin=zero 
+  regions_list(iregion,0)%region_volume_after=zero 
+  regions_list(iregion,0)%region_mass_after=zero 
+  regions_list(iregion,0)%region_energy_after=zero 
+ enddo ! iregion=1,number_of_source_regions
+
+ regions_list(1,0)%region_material_id=0
+ regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_FLUX ! Watts=J/s
 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
