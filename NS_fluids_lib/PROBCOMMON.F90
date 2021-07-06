@@ -23,7 +23,8 @@ stop
 module probcommon_module_types
 
       type user_defined_sum_int_type
-       INTEGER_T ncomp_sum_int_user
+       INTEGER_T ncomp_sum_int_user1
+       INTEGER_T ncomp_sum_int_user2
        REAL_T, pointer :: problo(:)      
        REAL_T, pointer :: probhi(:) 
        INTEGER_T :: igrid,jgrid,kgrid

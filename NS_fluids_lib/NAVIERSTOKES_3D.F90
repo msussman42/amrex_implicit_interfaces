@@ -9585,7 +9585,8 @@ END SUBROUTINE SIMP
 
        subroutine fort_summass( &
         tid, &
-        ncomp_sum_int_user, &
+        ncomp_sum_int_user1, &
+        ncomp_sum_int_user2, &
         adapt_quad_depth, &
         slice_dir,xslice, &
         problo,probhi, &
@@ -9623,7 +9624,8 @@ END SUBROUTINE SIMP
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: ncomp_sum_int_user
+       INTEGER_T, intent(in) :: ncomp_sum_int_user1
+       INTEGER_T, intent(in) :: ncomp_sum_int_user2
        INTEGER_T, intent(in) :: tid
        INTEGER_T, intent(in) :: adapt_quad_depth
        INTEGER_T :: max_level_adapt
@@ -9755,7 +9757,8 @@ END SUBROUTINE SIMP
        INTEGER_T local_tessellate
 
        type(user_defined_sum_int_type) :: GRID_DATA_PARM
-       REAL_T local_user_out(ncomp_sum_int_user)
+       REAL_T local_user_out1(ncomp_sum_int_user1+1)
+       REAL_T local_user_out2(ncomp_sum_int_user2+1)
 
        nhalf=3
        nmax=POLYGON_LIST_MAX  ! in: fort_summass
@@ -9831,7 +9834,8 @@ END SUBROUTINE SIMP
        energy_moment=vel_error+1
        enstrophy=energy_moment+1 ! integral of w dot w
        user_comp=enstrophy+nmat
-       species_mass_comp=user_comp+ncomp_sum_int_user
+       species_mass_comp=user_comp+ncomp_sum_int_user1+ &
+               ncomp_sum_int_user2
        total_comp=species_mass_comp+num_species_var*nmat
 
        if (resultsize.ne.total_comp) then
@@ -9891,7 +9895,8 @@ END SUBROUTINE SIMP
        call checkbound_array(fablo,fabhi,den,1,-1,413) 
        call checkbound_array(fablo,fabhi,vel,1,-1,413) 
 
-       GRID_DATA_PARM%ncomp_sum_int_user=ncomp_sum_int_user
+       GRID_DATA_PARM%ncomp_sum_int_user1=ncomp_sum_int_user1
+       GRID_DATA_PARM%ncomp_sum_int_user2=ncomp_sum_int_user2
        GRID_DATA_PARM%time=time
        GRID_DATA_PARM%problo=>problo
        GRID_DATA_PARM%probhi=>probhi
@@ -10154,19 +10159,53 @@ END SUBROUTINE SIMP
           endif
          enddo ! dir=1..3
        
-         if (ncomp_sum_int_user.ge.1) then
+         if ((ncomp_sum_int_user1.ge.1).or. &
+             (ncomp_sum_int_user2.ge.1)) then
           if (is_in_probtype_list().eq.1) then
-           call SUB_SUMINT(GRID_DATA_PARM,local_user_out, &
-            ncomp_sum_int_user) 
-           do im=1,ncomp_sum_int_user
+
+           do im=1,ncomp_sum_int_user1
             idest=user_comp+im
-            local_result(idest)=local_result(idest)+local_user_out(im)
+            if (isweep.eq.0) then
+             local_user_out1(im)=zero
+            else if (isweep.eq.1) then
+             local_user_out1(im)=resultALL(idest)
+            else
+             print *,"isweep invalid"
+             stop
+            endif
+           enddo !im=1,ncomp_sum_int_user1
+
+           do im=1,ncomp_sum_int_user2
+            idest=user_comp+ncomp_sum_int_user1+im
+            local_user_out2(im)=zero
+           enddo !im=1,ncomp_sum_int_user2
+
+           call SUB_SUMINT(GRID_DATA_PARM,local_user_out1, &
+            local_user_out2,ncomp_sum_int_user1, &
+            ncomp_sum_int_user2,isweep)
+
+           do im=1,ncomp_sum_int_user1
+            idest=user_comp+im
+            local_result(idest)=local_result(idest)+local_user_out1(im)
            enddo
+           if (isweep.eq.0) then
+            ! do nothing
+           else if (isweep.eq.1) then
+            do im=1,ncomp_sum_int_user2
+             idest=user_comp+ncomp_sum_int_user1+im
+             local_result(idest)=local_result(idest)+local_user_out2(im)
+            enddo
+           else
+            print *,"isweep invalid"
+            stop
+           endif
+
           endif
-         else if (ncomp_sum_int_user.eq.0) then
+         else if ((ncomp_sum_int_user1.eq.0).and. &
+                  (ncomp_sum_int_user2.eq.0)) then
           ! do nothing
          else
-          print *,"ncomp_sum_int_user invalid"
+          print *,"ncomp_sum_int_user1 or ncomp_sum_int_user2 invalid"
           stop
          endif
   
