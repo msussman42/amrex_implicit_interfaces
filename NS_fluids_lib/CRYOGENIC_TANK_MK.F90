@@ -921,29 +921,6 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_STATE_BC
 
-! suppose inhomogeneous flux condition: -k grad T = q
-! 1. T_t - div k grad T = 0
-! 3. T_t - (1/V) sum (A_{i} (k grad T)_i dot n_i) =0  n_i=outward facing normal
-! 4. at the right wall:
-!     (k grad T)_{right} = -q_{right}
-! 5. T_{t} - (1/V) sum_{except right} (A_{i} (k grad T)_{i} dot n_{i} =
-!      (1/V)A_{right} (-q_{right} dot n_right)
-!
-! TANK_MK_HEATER_FLUX \equiv -q dot n
-! MEHDI VAHAB HEAT SOURCE
-! T^new=T^* + dt * (tildeQ)/(rho cv)    
-! dt=seconds  rho=kg/m^3   cv=Joules/(kg K)
-! second * J/(m^3 s)  * (m^3/kg)  *  (K kg/J) = degrees Kelvin
-! tildeQ units: J/(m^3 s)
-! Q = k grad T = W/(m K) K/m = W/m^2= J/(m^2 s)
-! tildeQ=Q * area/volume
-! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
-! in FORT_HEATSOURCE:
-! T_local(im)=T_local(im)+ &
-!   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
-!      (1/V)A_{right} (-q_{right} dot n_right)  => tildeQ corresponds
-! to q * A/V
-
 subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
      im,VFRAC, &
      time, &
@@ -996,59 +973,6 @@ flux_magnitude=zero
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
  heat_source=zero
-
- if (levelrz.eq.1) then
-   if ( &
-    (abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
-    (abs(xsten(1,1)).ge.TANK_MK_HEATER_R_LOW).and.&
-    (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
-    (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
-    ! area=2 pi rf dz
-    ! vol =2 pi rc dr dz
-    ! area/vol=rf/(rc dr)
-    ! input file value in J/(s.m^2) (flux into the face)
-    ! Transforming to J/(s.m^3) (flux into the control volume)
-    flux_magnitude=TANK_MK_HEATER_FLUX
-    denom=xsten(0,1)*local_dx(1)
-    if (denom.gt.zero) then
-     flux_magnitude=flux_magnitude*xsten(1,1)/denom
-    else
-     print *,"denom invalid 3"
-     stop
-    endif
-   endif
- else if (levelrz.eq.0) then
-   if ( &
-    (abs(xsten(-1,1)).le.TANK_MK_HEATER_R).and.&
-    (abs(xsten(1,1)).ge.(-TANK_MK_HEATER_R_LOW)).and.&
-    (xsten(1,2).ge.TANK_MK_HEATER_LOW).and.&
-    (xsten(-1,2).le.TANK_MK_HEATER_HIGH)) then
-
-    flux_magnitude=TANK_MK_HEATER_FLUX/local_dx(2)
-   endif
- else
-   print *,"levelrz invalid"
-   stop
- endif
- heat_source=heat_source+flux_magnitude
-  ! if ((xsten(0,SDIM).lt.TANK_MK_HEIGHT).and. &
-  !     (xsten(2,SDIM).gt.TANK_MK_HEIGHT)) then
-  !     ! area=2 pi rc dr
-  !     ! vol =2 pi rc dr dz
-  !     ! area/vol=1/(dz)
-  !  flux_magnitude=TANK_MK_HETAER_FLUX/local_dx(SDIM)
-  !  heat_source=heat_source+flux_magnitude
-  ! endif
-
-  ! if ((xsten(0,SDIM).gt.zero).and. &
-  !     (xsten(-2,SDIM).lt.zero)) then
-  !     ! area=2 pi rc dr
-  !     ! vol =2 pi rc dr dz
-  !     ! area/vol=1/(dz)
-  !  flux_magnitude=TANK_MK_HETAER_FLUX/local_dx(SDIM)
-  !  heat_source=heat_source+flux_magnitude
-  ! endif
-
 else
  print *,"num_materials ", num_materials
  print *,"probtype ", probtype
@@ -1127,17 +1051,71 @@ subroutine CRYOGENIC_TANK_MK_SUMINT(GRID_DATA_IN,increment_out1, &
                 increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
 REAL_T, intent(inout) :: increment_out1(nsum1)
 REAL_T, intent(inout) :: increment_out2(nsum2)
+
+REAL_T massfrac_parm(num_species_var+1)
 INTEGER_T :: i,j,k
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
+if ((num_materials.eq.3).and.(probtype.eq.423)) then
+
+ if ((nsum1.eq.1).and.(nsum2.eq.2)) then
+  ! integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
+  ! T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
+  ! bottom of cylindrical section: -0.2032
+  ! so T1_probe_z=-0.2032+0.2921=0.0889
+  T1_probe(1)=zero
+  T1_probe(2)=0.0889
+  im=2 ! vapor
+  dencomp=(im-1)*num_state_material+1
+  den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
+  temperature=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1)
+  call init_massfrac_parm(den,massfrac_parm,im)
+  do local_ispec=1,num_species_var
+   massfrac_parm(local_ispec)= &
+           GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1+local_ispec)
+  enddo
+  mtype=24
+  call INTERNAL_CRYOGENIC_TANK_MK(den,massfrac_parm, &
+    temperature,internal_energy,mtype,im,num_species_var)
+  call EOS_CRYOGENIC_TANK_MK(den,massfrac_parm, &
+     internal_energy,pressure,mtype,im,num_species_var)
+  support_r=zero
+  do dir=1,SDIM
+   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
+   support_r=support_r+(xlocal(dir)-T1_probe(dir))**2
+  enddo
+  support_r=sqrt(support_r) 
+  dx_coarsest=0.4064d0/32.0d0
+  if (support_r.le.dx_coarsest) then
+   charfn=one
+  else if (support_r.gt.dx_coarsest) then
+   charfn=zero
+  else
+   print *,"support_r invalid"
+   stop
+  endif
+
+  volgrid=GRID_DATA_IN%volgrid
+ else
+  print *,"nsum1 or nsum2 invalid"
+  stop
+ endif
+
+else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
+ print *,"num_materials or probtype invalid"
+ stop
+endif
 
 end subroutine CRYOGENIC_TANK_MK_SUMINT
 
@@ -1196,7 +1174,7 @@ INTEGER_T :: im,iregion
   regions_list(iregion,0)%region_energy_after=zero 
  enddo ! iregion=1,number_of_source_regions
 
- regions_list(1,0)%region_material_id=0
+ regions_list(1,0)%region_material_id=1
  regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_FLUX ! Watts=J/s
 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
@@ -1210,15 +1188,34 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(out) :: charfn_out
 
- if ((region_id.eq.0).and.(number_of_source_regions.eq.0)) then
-  ! do nothing
+if ((num_materials.eq.3).and.(probtype.eq.423)) then
+ if (region_id.eq.1) then
+  if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
+      (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
+      (x(2).ge.TANK_MK_HEATER_LOW).and.&
+      (x(2).le.TANK_MK_HEATER_HIGH)) then
+   charfn_out=one
+  else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
+           (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
+           (x(2).lt.TANK_MK_HEATER_LOW).or. &
+           (x(2).gt.TANK_MK_HEATER_HIGH)) then
+   charfn=zero
+  else
+   print *,"position bust"
+   stop
+  endif
+
  else
-  print *,"STUB only called if no regions init"
+  print *,"region_id invalid"
   stop
  endif
+else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
+ print *,"num_materials or probtype invalid"
+ stop
+endif
 
 end subroutine CRYOGENIC_TANK_MK_CHARFN_REGION
-
-
 
 end module CRYOGENIC_TANK_MK_module

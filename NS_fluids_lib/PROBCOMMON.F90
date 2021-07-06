@@ -46,7 +46,7 @@ module probcommon_module_types
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
         ! 1..nmat*ngeom_recon
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
-        ! num_materials * num_state_type
+        ! num_materials * num_state_material
         ! density1,temperature1,species1_1,...,species_N_1
         ! density2,temperature2,species1_2,...,species_N_2
         ! density3,temperature3,species1_3,...,species_N_3

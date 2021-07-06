@@ -186,7 +186,7 @@ ns.radblob=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2002
-ns.ncomp_sum_int_user=6 # vof,level set,Tgas,Ygas,Tliq,Yliq errors
+ns.ncomp_sum_int_user1=6 # vof,level set,Tgas,Ygas,Tliq,Yliq errors
 
 #ns.mem_debug = 1
 ns.v = 1
