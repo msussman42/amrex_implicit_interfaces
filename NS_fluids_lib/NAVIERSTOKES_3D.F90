@@ -9613,7 +9613,7 @@ END SUBROUTINE SIMP
         nmat, &
         ntensor,  &
         den_ncomp, &
-        isweep) &
+        isweep) &  ! isweep=0 or 1
        bind(c,name='fort_summass')
 
        use LegendreNodes
@@ -9635,7 +9635,7 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: den_ncomp
        INTEGER_T, intent(in) :: nmat
        INTEGER_T, intent(in) :: ntensor
-       INTEGER_T, intent(in) :: isweep
+       INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
        INTEGER_T, intent(in) :: NN,dirx,diry,cut_flag
        REAL_T, intent(out) :: ZZ(0:NN)
        REAL_T, intent(out) :: FF(0:NN)
@@ -9660,14 +9660,22 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
        REAL_T, intent(in) ::  time
        REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)  
+       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
+       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in), target ::  maskSEM(DIMV(maskSEM))
+       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
        REAL_T, intent(in), target ::  mask(DIMV(mask))
+       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
        REAL_T, intent(in), target ::  drag(DIMV(drag),4*SDIM+1)
+       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
+       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
+       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
        ! includes pressure 
        REAL_T, intent(in), target :: vel(DIMV(vel),(SDIM+1)) 
+       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k
@@ -9762,6 +9770,15 @@ END SUBROUTINE SIMP
 
        nhalf=3
        nmax=POLYGON_LIST_MAX  ! in: fort_summass
+
+       cellten_ptr=>cellten
+       lsfab_ptr=>lsfab
+       maskSEM_ptr=>maskSEM
+       mask_ptr=>mask
+       drag_ptr=>drag
+       slopes_ptr=>slopes
+       den_ptr=>den
+       vel_ptr=>vel
 
        if ((adapt_quad_depth.lt.1).or.(adapt_quad_depth.gt.10)) then
         print *,"adapt_quad_depth invalid"
@@ -9886,14 +9903,14 @@ END SUBROUTINE SIMP
        ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
        call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
-       call checkbound_array(fablo,fabhi,cellten,0,-1,411) 
-       call checkbound_array(fablo,fabhi,lsfab,2,-1,411) 
-       call checkbound_array1(fablo,fabhi,maskSEM,1,-1,411) 
-       call checkbound_array1(fablo,fabhi,mask,2,-1,411) 
-       call checkbound_array(fablo,fabhi,drag,0,-1,413) 
-       call checkbound_array(fablo,fabhi,slopes,2,-1,413) 
-       call checkbound_array(fablo,fabhi,den,1,-1,413) 
-       call checkbound_array(fablo,fabhi,vel,1,-1,413) 
+       call checkbound_array(fablo,fabhi,cellten_ptr,0,-1,411) 
+       call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,411) 
+       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,411) 
+       call checkbound_array1(fablo,fabhi,mask_ptr,2,-1,411) 
+       call checkbound_array(fablo,fabhi,drag_ptr,0,-1,413) 
+       call checkbound_array(fablo,fabhi,slopes_ptr,2,-1,413) 
+       call checkbound_array(fablo,fabhi,den_ptr,1,-1,413) 
+       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,413) 
 
        GRID_DATA_PARM%ncomp_sum_int_user1=ncomp_sum_int_user1
        GRID_DATA_PARM%ncomp_sum_int_user2=ncomp_sum_int_user2
@@ -10165,6 +10182,12 @@ END SUBROUTINE SIMP
 
            do im=1,ncomp_sum_int_user1
             idest=user_comp+im
+            if (sumdata_sweep(idest).eq.0) then
+             ! do nothing
+            else
+             print *,"sumdata_sweep invalid"
+             stop
+            endif
             if (isweep.eq.0) then
              local_user_out1(im)=zero
             else if (isweep.eq.1) then
@@ -10177,6 +10200,12 @@ END SUBROUTINE SIMP
 
            do im=1,ncomp_sum_int_user2
             idest=user_comp+ncomp_sum_int_user1+im
+            if (sumdata_sweep(idest).eq.1) then
+             ! do nothing
+            else
+             print *,"sumdata_sweep invalid"
+             stop
+            endif
             local_user_out2(im)=zero
            enddo !im=1,ncomp_sum_int_user2
 
@@ -10874,7 +10903,6 @@ END SUBROUTINE SIMP
       REAL_T region_energy_flux
       REAL_T region_energy_per_kelvin
       REAL_T region_mass
-      REAL_T region_energy
       REAL_T region_volume
       REAL_T region_volume_raster
       REAL_T local_den

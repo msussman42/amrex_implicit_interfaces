@@ -514,7 +514,8 @@ int  NavierStokes::num_species_var=0;
 int  NavierStokes::num_materials=0;
 
 int  NavierStokes::use_supermesh=0;
-int  NavierStokes::ncomp_sum_int_user=0;
+int  NavierStokes::ncomp_sum_int_user1=0;
+int  NavierStokes::ncomp_sum_int_user2=0;
 
 // set using elastic_viscosity, and other criteria
 int  NavierStokes::num_materials_viscoelastic=0;
@@ -2155,11 +2156,21 @@ NavierStokes::read_params ()
         (use_supermesh!=1))
      amrex::Error("use_supermesh invalid");
 
-    pp.query("ncomp_sum_int_user",ncomp_sum_int_user);
-    if (ncomp_sum_int_user>=0) {
+    ncomp_sum_int_user1=0;
+    pp.query("ncomp_sum_int_user",ncomp_sum_int_user1);
+    if (ncomp_sum_int_user1==0) {
+     pp.query("ncomp_sum_int_user1",ncomp_sum_int_user1);
+    }
+    if (ncomp_sum_int_user1>=0) {
      // do nothing
     } else
-     amrex::Error("ncomp_sum_int_user invalid");
+     amrex::Error("ncomp_sum_int_user1 invalid");
+
+    pp.query("ncomp_sum_int_user2",ncomp_sum_int_user2);
+    if (ncomp_sum_int_user2>=0) {
+     // do nothing
+    } else
+     amrex::Error("ncomp_sum_int_user2 invalid");
 
     // blob_matrix,blob_RHS,blob_velocity,
     // blob_integral_momentum,blob_energy,
@@ -2263,8 +2274,10 @@ NavierStokes::read_params ()
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "use_supermesh " << 
        use_supermesh << '\n';
-     std::cout << "ncomp_sum_int_user " << 
-       ncomp_sum_int_user << '\n';
+     std::cout << "ncomp_sum_int_user1 " << 
+       ncomp_sum_int_user1 << '\n';
+     std::cout << "ncomp_sum_int_user2 " << 
+       ncomp_sum_int_user2 << '\n';
      std::cout << "tecplot_max_level " << 
        tecplot_max_level << '\n';
      std::cout << "max_level_two_materials " << 
@@ -18086,7 +18099,7 @@ void NavierStokes::volWgtSum(
   // vel_error (1 comp)
   // energy_moment (1 comp)
   // enstrophy (nmat comp)
-  // user defined (ncomp_sum_int_user comp)
+  // user defined (ncomp_sum_int_user1+ncomp_sum_int_user2 comp)
   // species mass (num_species_var * nmat comp)
 
  int filler_comp=0;
@@ -18119,7 +18132,7 @@ void NavierStokes::volWgtSum(
  int energy_moment=vel_error+1; 
  int enstrophy=energy_moment+1; // integral of w dot w
  int user_comp=enstrophy+nmat;
- int species_mass_comp=user_comp+ncomp_sum_int_user;
+ int species_mass_comp=user_comp+ncomp_sum_int_user1+ncomp_sum_int_user2;
  int total_comp=species_mass_comp+num_species_var*nmat; 
 
  if (total_comp!=result.size())
@@ -18273,7 +18286,8 @@ void NavierStokes::volWgtSum(
     // in: NAVIERSTOKES_3D.F90
    fort_summass(
     &tid_current,
-    &ncomp_sum_int_user,
+    &ncomp_sum_int_user1,
+    &ncomp_sum_int_user2,
     &adapt_quad_depth,
     &slice_dir,
     xslice.dataPtr(),

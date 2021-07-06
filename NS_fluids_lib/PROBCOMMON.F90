@@ -519,12 +519,14 @@ implicit none
       end subroutine TEMPLATE_CFL_HELPER
 
 
-      subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out,nsum)
+      subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out1, &
+            increment_out2,nsum1,nsum2,isweep)
       use probcommon_module_types
 
-      INTEGER_T, intent(in) :: nsum
+      INTEGER_T, intent(in) :: nsum1,nsum2,isweep
       type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-      REAL_T, intent(out) :: increment_out(nsum)
+      REAL_T, intent(inout) :: increment_out1(nsum1)
+      REAL_T, intent(inout) :: increment_out2(nsum2)
       end subroutine TEMPLATE_SUMINT
       
       subroutine TEMPLATE_LS(x,t,LS,nmat)

@@ -1568,15 +1568,17 @@ end subroutine GENERAL_PHASE_CHANGE_nucleation
 
 ! This routine is called from FORT_SUMMASS
 ! MITSUHIRO: modify this routine to get the Nusselt number
-! set ns.ncomp_sum_int_user=4
-subroutine GENERAL_PHASE_CHANGE_SUMINT(GRID_DATA_IN,increment_out,nsum)
+! set ns.ncomp_sum_int_user1=4
+subroutine GENERAL_PHASE_CHANGE_SUMINT(GRID_DATA_IN,increment_out1, &
+                increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types
 use probcommon_module
 use global_utility_module
 
-INTEGER_T, intent(in) :: nsum
+INTEGER_T, intent(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(out) :: increment_out(nsum)
+REAL_T, intent(inout) :: increment_out1(nsum1)
+REAL_T, intent(inout) :: increment_out2(nsum2)
 INTEGER_T :: i,j,k,dir,im
 REAL_T :: xlocal(SDIM)
 REAL_T :: cell_dim(SDIM)
@@ -1590,95 +1592,102 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.eq.4) then
- do dir=1,nsum
-  increment_out(dir)=zero
- enddo
- do dir=1,SDIM
-  xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
-  cell_dim(dir)=GRID_DATA_IN%xsten(1,dir)-GRID_DATA_IN%xsten(-1,dir)
-  if (cell_dim(dir).gt.zero) then
-   ! do nothing
-  else
-   print *,"cell_dim(dir) invalid"
-   stop
-  endif
- enddo
- if (num_materials.ge.3) then
+if (nsum1.eq.4) then
+ if (isweep.eq.0) then
+  do dir=1,nsum1
+   increment_out1(dir)=zero
+  enddo
+  do dir=1,SDIM
+   xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
+   cell_dim(dir)=GRID_DATA_IN%xsten(1,dir)-GRID_DATA_IN%xsten(-1,dir)
+   if (cell_dim(dir).gt.zero) then
+    ! do nothing
+   else
+    print *,"cell_dim(dir) invalid"
+    stop
+   endif
+  enddo
+  if (num_materials.ge.3) then
 
-  im_solid=im_solid_primary()
+   im_solid=im_solid_primary()
 
-  if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
+   if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
 
-   ! find the heat flux next to a horizontal hot plate
-   do im=1,num_materials
-    temperature_component=(im-1)*num_state_material+2
-    if ((im.eq.1).or.(im.eq.2)) then ! liquid or gas
-     if ((GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero).and. &
-         (GRID_DATA_IN%lsfab(D_DECL(i,j,k),im_solid).le.zero)) then
-      if (GRID_DATA_IN%lsfab(D_DECL(i,j,k-1),im_solid).gt.zero) then
-       if (SDIM.eq.3) then
-        temperature_plus= &
+    ! find the heat flux next to a horizontal hot plate
+    do im=1,num_materials
+     temperature_component=(im-1)*num_state_material+2
+     if ((im.eq.1).or.(im.eq.2)) then ! liquid or gas
+      if ((GRID_DATA_IN%lsfab(D_DECL(i,j,k),im).gt.zero).and. &
+          (GRID_DATA_IN%lsfab(D_DECL(i,j,k),im_solid).le.zero)) then
+       if (GRID_DATA_IN%lsfab(D_DECL(i,j,k-1),im_solid).gt.zero) then
+        if (SDIM.eq.3) then
+         temperature_plus= &
           GRID_DATA_IN%den(D_DECL(i,j,k+1),temperature_component)
-        temperature_minus= &
+         temperature_minus= &
           GRID_DATA_IN%den(D_DECL(i,j,k-1),temperature_component)
-         ! fort_solidheat_flag:0=diffuse in solid 1=dirichlet 2=neumann
-        zplus=GRID_DATA_IN%xsten(2,SDIM)
-        if ((fort_solidheat_flag.eq.0).or. &
-            (fort_solidheat_flag.eq.2)) then
-         zminus=GRID_DATA_IN%xsten(-2,SDIM)
-        else if (fort_solidheat_flag.eq.1) then
-         zminus=GRID_DATA_IN%xsten(-1,SDIM)
-        else
-         print *,"fort_solidheat_flag invalid"
-         stop
-        endif
+          ! fort_solidheat_flag:0=diffuse in solid 1=dirichlet 2=neumann
+         zplus=GRID_DATA_IN%xsten(2,SDIM)
+         if ((fort_solidheat_flag.eq.0).or. &
+             (fort_solidheat_flag.eq.2)) then
+          zminus=GRID_DATA_IN%xsten(-2,SDIM)
+         else if (fort_solidheat_flag.eq.1) then
+          zminus=GRID_DATA_IN%xsten(-1,SDIM)
+         else
+          print *,"fort_solidheat_flag invalid"
+          stop
+         endif
 
-        heat_flux=fort_heatviscconst(im)*(temperature_plus-temperature_minus)/ &
+         heat_flux=fort_heatviscconst(im)* &
+            (temperature_plus-temperature_minus)/ &
             (zplus-zminus)
-        area_face=cell_dim(1)*cell_dim(2)
-!       increment_out(1)=GRID_DATA_IN%volgrid*heat_flux
-        if (im.eq.1) then ! liquid
-         increment_out(1)=-area_face*heat_flux
-         increment_out(2)=area_face
-         increment_out(3)=-area_face*heat_flux
-         increment_out(4)=area_face
-        else if (im.eq.2) then
-         increment_out(3)=-area_face*heat_flux
-         increment_out(4)=area_face
-        else
-         print *,"im invalid"
-         stop
-        endif
+         area_face=cell_dim(1)*cell_dim(2)
+         if (im.eq.1) then ! liquid
+          increment_out1(1)=-area_face*heat_flux
+          increment_out1(2)=area_face
+          increment_out1(3)=-area_face*heat_flux
+          increment_out1(4)=area_face
+         else if (im.eq.2) then
+          increment_out1(3)=-area_face*heat_flux
+          increment_out1(4)=area_face
+         else
+          print *,"im invalid"
+          stop
+         endif
 ! in the "run.out" file (./amr2d ... inputs... >& run.out &
 ! ... TIME= ....  user_comp (1..ncomp_sum_int_user) 1  <total heat flux value>
 ! ... TIME= ....  user_comp (1..ncomp_sum_int_user) 2  <total area>
 ! ....
 ! in the inputs file (probtype==55), 
 ! ns.ncomp_sum_int_user=4
+        endif
        endif
       endif
+     else if ((im.ge.2).and.(im.le.num_materials)) then
+      ! do nothing
+     else
+      print *,"im bust"
+      stop
      endif
-    else if ((im.ge.2).and.(im.le.num_materials)) then
-     ! do nothing
-    else
-     print *,"im bust"
-     stop
-    endif
-   enddo ! im=1..num_materials
+    enddo ! im=1..num_materials
+   else
+    print *,"im_solid invalid GENERAL_PHASE_CHANGE_SUMINT"
+    stop
+   endif
   else
-   print *,"im_solid invalid GENERAL_PHASE_CHANGE_SUMINT"
+   print *,"num_materials invalid GENERAL_PHASE_CHANGE_SUMINT"
    stop
   endif
+ else if (isweep.eq.1) then
+  ! do nothing
  else
-  print *,"num_materials invalid GENERAL_PHASE_CHANGE_SUMINT"
+  print *,"isweep invalid"
   stop
  endif
-else if (nsum.eq.0) then
+else if (nsum1.eq.0) then
  ! do nothing
 else
- print *,"nsum invalid"
- print *,"nsum ",nsum
+ print *,"nsum1 invalid"
+ print *,"nsum1 ",nsum1
  stop
 endif
 

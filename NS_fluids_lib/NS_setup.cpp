@@ -1963,7 +1963,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   // vel_error (1 comp)
   // energy_moment (1 comp)
   // enstrophy (nmat comp)
-  // user defined (ncomp_sum_int_user comp)
+  // user defined (ncomp_sum_int_user1+ncomp_sum_int_user2 comp)
   // species mass (num_species_var * nmat comp)
 
  int filler_comp=0;
@@ -1996,7 +1996,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int energy_moment=vel_error+1; 
  int enstrophy=energy_moment+1; // integral of w dot w
  int user_comp=enstrophy+nmat;
- int species_mass_comp=user_comp+ncomp_sum_int_user;
+ int species_mass_comp=user_comp+ncomp_sum_int_user1+ncomp_sum_int_user2;
  int total_comp=species_mass_comp+num_species_var*nmat; 
 
  Vector<Real> sumdata;
@@ -2015,6 +2015,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   sumdata[isum]=0.0;
   sumdata_type[isum]=1;  // reduce real sum
   sumdata_sweep[isum]=0;  // update first sweep
+ }
+ for (int im=0;im<ncomp_sum_int_user1;im++) {
+  sumdata_sweep[user_comp+im]=0; //update 1st sweep
+ }
+ for (int im=0;im<ncomp_sum_int_user2;im++) {
+  sumdata_sweep[user_comp+ncomp_sum_int_user1+im]=1; //update 2nd sweep
  }
 
  sumdata_type[vort_error]=3;  // reduce real max (-1.0E+6)
@@ -2622,10 +2628,15 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     "material id (1..nmat) " << im+1 <<
     " ENSTROPHY " << sumdata[enstrophy+im] << '\n';
   }
-  for (int im=0;im<ncomp_sum_int_user;im++) {
+  for (int im=0;im<ncomp_sum_int_user1;im++) {
    std::cout << "TIME= "<<upper_slab_time<<
-    "user_comp (1..ncomp_sum_int_user) " << im+1 <<
-    " sum_int_user " << sumdata[user_comp+im] << '\n';
+    "user_comp1 (1..ncomp_sum_int_user1) " << im+1 <<
+    " sum_int_user1 " << sumdata[user_comp+im] << '\n';
+  }
+  for (int im=0;im<ncomp_sum_int_user2;im++) {
+   std::cout << "TIME= "<<upper_slab_time<<
+    "user_comp2 (1..ncomp_sum_int_user2) " << im+1 <<
+    " sum_int_user2 " << sumdata[user_comp+ncomp_sum_int_user1+im] << '\n';
   }
 
   std::cout << "TIME= "<<upper_slab_time<<" VORT ERR= " << 

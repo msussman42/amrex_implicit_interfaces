@@ -1153,15 +1153,17 @@ end subroutine DROP_IN_SHEAR_ASSIMILATE
 
 ! This routine is called from FORT_SUMMASS
 ! set ns.ncomp_sum_int_user=
-subroutine DROP_IN_SHEAR_SUMINT(GRID_DATA_IN,increment_out,nsum)
+subroutine DROP_IN_SHEAR_SUMINT(GRID_DATA_IN,increment_out1, &
+                increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nsum
+INTEGER_T, intent(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(out) :: increment_out(nsum)
+REAL_T, intent(inout) :: increment_out1(nsum1)
+REAL_T, intent(inout) :: increment_out2(nsum2)
 INTEGER_T :: i,j,k,dir
 REAL_T :: xlocal(SDIM)
 REAL_T :: D_gamma,T_analytical,Y_analytical,LS_VAP_analytical
@@ -1178,13 +1180,14 @@ i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
 
-if (nsum.gt.0) then
- do dir=1,nsum
-  increment_out(dir)=zero
+if (nsum1.gt.0) then
+if (isweep.eq.0) then
+ do dir=1,nsum1
+  increment_out1(dir)=zero
  enddo
  if (axis_dir.eq.0) then
   if (vinletgas.eq.zero) then
-   if (nsum.eq.3+SDIM) then
+   if (nsum1.eq.3+SDIM) then
     do dir=1,SDIM
      xlocal(dir)=GRID_DATA_IN%xsten(0,dir)
     enddo
@@ -1202,19 +1205,19 @@ if (nsum.gt.0) then
     interface_thick_rad=two*GRID_DATA_IN%dx(1)
  
     if (abs(LS_VAP_analytical).lt.interface_thick_rad) then
-     increment_out(1)= &
+     increment_out1(1)= &
        GRID_DATA_IN%volgrid*abs(LS_compute-LS_VAP_analytical)/ &
        (two*interface_thick_rad)
     else
-     increment_out(1)=zero
+     increment_out1(1)=zero
     endif
     if (LS_VAP_analytical.gt.zero) then
-     increment_out(2)=GRID_DATA_IN%volgrid* &
+     increment_out1(2)=GRID_DATA_IN%volgrid* &
         abs(TEMPERATURE_compute-T_analytical)
-     increment_out(3)=GRID_DATA_IN%volgrid* &
+     increment_out1(3)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
      do dir=1,SDIM
-      increment_out(3+dir)=GRID_DATA_IN%volgrid* &
+      increment_out1(3+dir)=GRID_DATA_IN%volgrid* &
           abs(vel_compute(dir)-vel_analytical(dir))
      enddo
     else if (LS_VAP_analytical.le.zero) then
@@ -1224,7 +1227,7 @@ if (nsum.gt.0) then
      stop
     endif
    else
-    print *,"nsum invalid"
+    print *,"nsum1 invalid"
     stop
    endif
   else 
@@ -1235,11 +1238,18 @@ if (nsum.gt.0) then
   print *,"expecting axis_dir==0"
   stop
  endif
-else if (nsum.eq.0) then
+else if (isweep.eq.1) then
+ ! do nothing
+else 
+ print *,"isweep invalid"
+ stop
+endif
+
+else if (nsum1.eq.0) then
  ! do nothing
 else
- print *,"nsum invalid"
- print *,"nsum ",nsum
+ print *,"nsum1 invalid"
+ print *,"nsum1 ",nsum1
  stop
 endif
 
