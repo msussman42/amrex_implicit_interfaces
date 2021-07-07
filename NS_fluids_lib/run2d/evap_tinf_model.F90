@@ -392,8 +392,20 @@
 
       my_pi=4.0d0*atan(1.0d0)
 
-      mdotT=(1.0d0/L_V)*(k_G*(T_probe-T_gamma)/dx+ &
+      if ((dx.gt.0.0d0).and.(dx_liquid.gt.0.0d0)) then
+       if ((L_V.gt.0.0d0).and.(k_G.gt.0.0d0).and. &
+           (T_probe.gt.0.0d0).and.(T_gamma.gt.0.0d0).and. &
+           (T_probe_liquid.gt.0.0d0)) then
+        mdotT=(1.0d0/L_V)*(k_G*(T_probe-T_gamma)/dx+ &
               k_L*(T_gamma-T_probe_liquid)/dx_liquid)
+       else
+        print *,"temperature or latent heat bust"
+        stop
+       endif
+      else
+       print *,"dx or dx_liquid invalid"
+       stop
+      endif
 
       end subroutine mdot_from_T_probe
 
@@ -531,15 +543,10 @@
       real*8, allocatable :: YOLD_grid(:)
       real*8, allocatable :: DT_CROSSING(:)
       real*8, allocatable :: RHS(:)
-      real*8, allocatable :: RHS_liquid(:)
       real*8, allocatable :: DIAG(:)
-      real*8, allocatable :: DIAG_liquid(:)
       real*8, allocatable :: LDIAG(:)
-      real*8, allocatable :: LDIAG_liquid(:)
       real*8, allocatable :: UDIAG(:)
-      real*8, allocatable :: UDIAG_liquid(:)
       real*8, allocatable :: SOLN(:)
-      real*8, allocatable :: SOLN_liquid(:)
 
       real*8, allocatable :: RHSsmear(:)
       real*8, allocatable :: DIAGsmear(:)
@@ -817,10 +824,10 @@
       cur_time=0.0d0
 
       allocate(TNEW(0:num_intervals))
-      allocate(TOLD(0:num_intervals))
-      allocate(TOLD_grid(0:num_intervals))
       allocate(TNEW_liquid(0:num_intervals))
+      allocate(TOLD(0:num_intervals))
       allocate(TOLD_liquid(0:num_intervals))
+      allocate(TOLD_grid(0:num_intervals))
       allocate(TOLD_grid_liquid(0:num_intervals))
       allocate(YNEW(0:num_intervals))
       allocate(YOLD(0:num_intervals))
@@ -832,12 +839,6 @@
       allocate(LDIAG(1:num_intervals))
       allocate(UDIAG(1:num_intervals))
       allocate(SOLN(1:num_intervals))
-
-      allocate(RHS_liquid(1:num_intervals))
-      allocate(DIAG_liquid(1:num_intervals))
-      allocate(LDIAG_liquid(1:num_intervals))
-      allocate(UDIAG_liquid(1:num_intervals))
-      allocate(SOLN_liquid(1:num_intervals))
 
       allocate(RHSsmear(1:num_intervals+1))
       allocate(DIAGsmear(1:num_intervals+1))
@@ -1082,7 +1083,26 @@
         R_gamma_NEW=R_gamma_OLD
        endif
 
-       FIX ME HERE
+       volume_G_old=(4.0d0/3.0d0)*my_pi*(probhi_R_domain**3.0d0- &
+               R_gamma_OLD**3.0d0)
+       volume_G_new=(4.0d0/3.0d0)*my_pi*(probhi_R_domain**3.0d0- &
+               R_gamma_NEW**3.0d0)
+       delta_volume=volume_G_new-volume_G_old
+       if (delta_volume.ge.0.0d0) then
+        if (sealed_flag.eq.0) then
+         ! do nothing
+        else if (sealed_flag.eq.1) then
+         den_G=(volume_G_old*den_G+delta_volume*den_L)/ &
+               (volume_G_old+delta_volume)
+        else
+         print *,"sealed_flag invalid"
+         stop
+        endif
+       else
+        print *,"delta_volume invalid"
+        stop
+       endif
+
          ! STEP 3: interpolate old temperature from the old grid to the
          ! new grid.  For those new grid nodes which were previously in
          ! the liquid, but now in the vapor, a crossing time is
@@ -1096,41 +1116,88 @@
          ! r_grid=ROLD+(RNEW-ROLD)*(tgrid-tOLD)/dt
          ! solve for tgrid which is the crossing time.
        dx_new=(probhi_R_domain-R_gamma_NEW)/num_intervals
+       dx_new_liquid=(R_gamma_NEW-problo_R_domain)/num_intervals
+
+       TOLD_grid(0)=T_gamma_c  ! interface temperature
+       YOLD_grid(0)=Y_gamma_c  ! interface mass fraction
+
+       if (sealed_flag.eq.0) then
+        TOLD_grid(num_intervals)=TINF_for_numerical ! temperature at far right
+        YOLD_grid(num_intervals)=YINF_for_numerical ! mass fraction at far RT.
+       else if (sealed_flag.eq.1) then
+        TOLD_grid(num_intervals)=TOLD(num_intervals)
+        YOLD_grid(num_intervals)=YOLD(num_intervals)
+       else
+        print *,"sealed_flag invalid"
+        stop
+       endif
+
+       TOLD_grid_liquid(num_intervals)=T_gamma_c
+       TOLD_grid_liquid(0)=TOLD_liquid(0)
+
        igrid_old=0
        xpos_old=R_gamma_OLD
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new+R_gamma_NEW
-        if (xpos_new.lt.R_gamma_OLD) then
-         TOLD_grid(igrid)=T_gamma_c
-         YOLD_grid(igrid)=Y_gamma_c
-         DT_CROSSING(igrid)=dt*(R_gamma_NEW-xpos_new)/ &
+        xpos_new_test=probhi_R_domain-(num_intervals-igrid)*dx_new
+        if (abs(xpos_new-xpos_new_test).lt.1.0D-10*dx_new) then
+         if (xpos_new.lt.R_gamma_OLD) then
+          TOLD_grid(igrid)=T_gamma_c
+          YOLD_grid(igrid)=Y_gamma_c
+          DT_CROSSING(igrid)=dt*(R_gamma_NEW-xpos_new)/ &
                                (R_gamma_NEW-R_gamma_OLD)
+         else
+          DT_CROSSING(igrid)=dt
+          do while (xpos_new.gt.xpos_old+dx)
+           igrid_old=igrid_old+1
+           xpos_old=xpos_old+dx
+          enddo
+          TOLD_grid(igrid)=TOLD(igrid_old)+ &
+           (TOLD(igrid_old+1)-TOLD(igrid_old))* &
+           (xpos_new-xpos_old)/dx
+          YOLD_grid(igrid)=YOLD(igrid_old)+ &
+           (YOLD(igrid_old+1)-YOLD(igrid_old))* &
+           (xpos_new-xpos_old)/dx
+         endif
         else
-         DT_CROSSING(igrid)=dt
-         do while (xpos_new.gt.xpos_old+dx)
-          igrid_old=igrid_old+1
-          xpos_old=xpos_old+dx
-         enddo
-         TOLD_grid(igrid)=TOLD(igrid_old)+ &
-          (TOLD(igrid_old+1)-TOLD(igrid_old))* &
-          (xpos_new-xpos_old)/dx
-         YOLD_grid(igrid)=YOLD(igrid_old)+ &
-          (YOLD(igrid_old+1)-YOLD(igrid_old))* &
-          (xpos_new-xpos_old)/dx
+         print *,"xpos_new corruption"
+         stop
+        endif
+       enddo ! igrid=1..num_intervals-1
+
+       igrid_old=0
+       xpos_old=problo_R_domain
+       do igrid=1,num_intervals-1
+        xpos_new=R_gamma_NEW-(num_intervals-igrid)*dx_new_liquid
+        xpos_new_test=igrid*dx_new_liquid+problo_R_domain
+        if (abs(xpos_new-xpos_new_test).lt.1.0D-10*dx_new_liquid) then
+         if (xpos_new.lt.R_gamma_OLD) then
+          do while (xpos_new.gt.xpos_old+dx_liquid)
+           igrid_old=igrid_old+1
+           xpos_old=xpos_old+dx_liquid
+          enddo
+          TOLD_grid_liquid(igrid)=TOLD_liquid(igrid_old)+ &
+           (TOLD_liquid(igrid_old+1)-TOLD_liquid(igrid_old))* &
+           (xpos_new-xpos_old)/dx_liquid
+         else
+          print *,"xpos_new bust"
+          stop
+         endif
+        else
+         print *,"xpos_new corruption"
+         stop
         endif
        enddo ! igrid=1..num_intervals-1
 
        DT_CROSSING(0)=0.0d0
        DT_CROSSING(num_intervals)=dt
-       TOLD_grid(0)=T_gamma_c  ! interface temperature
-       TOLD_grid(num_intervals)=TINF_for_numerical ! temperature at far right
-       YOLD_grid(0)=Y_gamma_c  ! interface mass fraction
-       YOLD_grid(num_intervals)=YINF_for_numerical ! mass fraction at far RT.
 
         ! STEP 4: backwards Euler method for advection and diffusion
         !  source terms.
         !  note: first order upwind method for the advection terms.
        alpha_G=k_G/(den_G*C_pG)
+       alpha_L=k_L/(den_L*C_pL)
+
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new+R_gamma_NEW
         xpos_mh=xpos_new-0.5d0*dx_new
@@ -1149,23 +1216,39 @@
         diffuse_plus=alpha_G*(xpos_ph**2)
         diffuse_minus=alpha_G*(xpos_mh**2)
 
-        DIAG(igrid)=DIAG(igrid)+advect_plus
-        DIAG(igrid)=DIAG(igrid)+diffuse_plus
-        DIAG(igrid)=DIAG(igrid)+diffuse_minus
-        if (igrid.eq.1) then
+        if ((igrid.gt.1).and.(igrid.lt.num_intervals-1)) then
+         DIAG(igrid)=DIAG(igrid)+advect_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+        else if (igrid.eq.1) then
+         DIAG(igrid)=DIAG(igrid)+advect_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
          RHS(igrid)=RHS(igrid)+advect_minus*T_gamma_c
          RHS(igrid)=RHS(igrid)+diffuse_minus*T_gamma_c
          LDIAG(igrid)=0.0d0
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
         else if (igrid.eq.num_intervals-1) then
-         RHS(igrid)=RHS(igrid)+diffuse_plus*TINF_for_numerical
+         DIAG(igrid)=DIAG(igrid)+advect_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
          UDIAG(igrid)=0.0d0
          LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
+         if (sealed_flag.eq.0) then
+          RHS(igrid)=RHS(igrid)+diffuse_plus*TINF_for_numerical
+          DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         else if (sealed_flag.eq.1) then
+          ! do nothing
+         else
+          print *,"sealed_flag invalid"
+          stop
+         endif
         else
-         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
-         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
-         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+         print *,"igrid invalid"
+         stop
         endif
 
        enddo !igrid=1,num_intervals-1
@@ -1173,10 +1256,18 @@
        call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
 
        TNEW(0)=T_gamma_c
-       TNEW(num_intervals)=TINF_for_numerical
        do igrid=1,num_intervals-1
         TNEW(igrid)=SOLN(igrid)
        enddo
+
+       if (sealed_flag.eq.0) then
+        TNEW(num_intervals)=TINF_for_numerical
+       else if (sealed_flag.eq.1) then
+        TNEW(num_intervals)=TNEW(num_intervals-1)
+       else
+        print *,"sealed_flag invalid"
+        stop
+       endif
 
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new+R_gamma_NEW
@@ -1196,23 +1287,39 @@
         diffuse_plus=D_G*(xpos_ph**2)
         diffuse_minus=D_G*(xpos_mh**2)
 
-        DIAG(igrid)=DIAG(igrid)+advect_plus
-        DIAG(igrid)=DIAG(igrid)+diffuse_plus
-        DIAG(igrid)=DIAG(igrid)+diffuse_minus
+        if ((igrid.gt.1).and.(igrid.lt.num_intervals-1)) then
+         DIAG(igrid)=DIAG(igrid)+advect_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
         if (igrid.eq.1) then
+         DIAG(igrid)=DIAG(igrid)+advect_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
          RHS(igrid)=RHS(igrid)+advect_minus*Y_gamma_c
          RHS(igrid)=RHS(igrid)+diffuse_minus*Y_gamma_c
          LDIAG(igrid)=0.0d0
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
         else if (igrid.eq.num_intervals-1) then
-         RHS(igrid)=RHS(igrid)+diffuse_plus*YINF_for_numerical
+         DIAG(igrid)=DIAG(igrid)+advect_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
          UDIAG(igrid)=0.0d0
          LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
+         if (sealed_flag.eq.0) then
+          RHS(igrid)=RHS(igrid)+diffuse_plus*YINF_for_numerical
+          DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         else if (sealed_flag.eq.1) then
+          ! do nothing
+         else
+          print *,"sealed_flag invalid"
+          stop
+         endif
         else
-         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
-         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
-         LDIAG(igrid)=LDIAG(igrid)-advect_minus
+         print *,"igrid invalid"
+         stop
         endif
 
        enddo !igrid=1,num_intervals-1
@@ -1220,17 +1327,78 @@
        call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
 
        YNEW(0)=Y_gamma_c
-       YNEW(num_intervals)=YINF_for_numerical
        do igrid=1,num_intervals-1
         YNEW(igrid)=SOLN(igrid)
        enddo
+
+       if (sealed_flag.eq.0) then
+        YNEW(num_intervals)=YINF_for_numerical
+       else if (sealed_flag.eq.1) then
+        YNEW(num_intervals)=YNEW(num_intervals-1)
+       else
+        print *,"sealed_flag invalid"
+        stop
+       endif
 
        do igrid=0,num_intervals
         TOLD(igrid)=TNEW(igrid)
         YOLD(igrid)=YNEW(igrid)
        enddo
 
+       do igrid=1,num_intervals-1
+        xpos_new=igrid*dx_new_liquid+problo_R_domain
+        xpos_mh=xpos_new-0.5d0*dx_new_liquid
+        xpos_ph=xpos_new+0.5d0*dx_new_liquid
+
+        RHS(igrid)=(dx_new_liquid**2)* &
+          (xpos_new**2)*TOLD_grid_liquid(igrid)/dt
+        DIAG(igrid)=(dx_new_liquid**2)* &
+          (xpos_new**2)/dt
+        LDIAG(igrid)=0.0d0
+        UDIAG(igrid)=0.0d0
+        diffuse_plus=alpha_L*(xpos_ph**2)
+        diffuse_minus=alpha_L*(xpos_mh**2)
+
+        if ((igrid.gt.1).and.(igrid.lt.num_intervals-1)) then
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+        else if (igrid.eq.1) then
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         RHS(igrid)=RHS(igrid)+ &
+           Q_liquid_system*dx_new_liquid/ &
+           (4.0d0*my_pi*C_pL*den_L)
+         LDIAG(igrid)=0.0d0
+         UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
+        else if (igrid.eq.num_intervals-1) then
+         DIAG(igrid)=DIAG(igrid)+diffuse_minus
+         DIAG(igrid)=DIAG(igrid)+diffuse_plus
+         UDIAG(igrid)=0.0d0
+         LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         RHS(igrid)=RHS(igrid)+diffuse_plus*T_gamma_c
+        else
+         print *,"igrid invalid"
+         stop
+        endif
+
+       enddo !igrid=1,num_intervals-1
+
+       call tridiag_solve(LDIAG,UDIAG,DIAG,num_intervals-1,RHS,SOLN)
+
+       TNEW_liquid(num_intervals)=T_gamma_c
+       do igrid=1,num_intervals-1
+        TNEW_liquid(igrid)=SOLN(igrid)
+       enddo
+
+       TNEW_liquid(0)=TNEW_liquid(1)
+
+       do igrid=0,num_intervals
+        TOLD_liquid(igrid)=TNEW_liquid(igrid)
+       enddo
+
        dx=dx_new
+       dx_liquid=dx_new_liquid
        R_gamma_OLD=R_gamma_NEW
        cur_time=cur_time+dt
        write(5,*) istep," ",cur_time," ", &
@@ -1245,6 +1413,10 @@
       print *,"opening: numerical_spherical_1D_T"
       open(unit=7,file="numerical_spherical_1D_T") 
       do igrid=0,num_intervals
+       xpos=igrid*dx_liquid+problo_R_domain
+       write (7,*) xpos," ",TNEW_liquid(igrid)
+      enddo
+      do igrid=0,num_intervals
        xpos=igrid*dx+R_gamma_new
        write (7,*) xpos," ",TNEW(igrid)
       enddo
@@ -1252,8 +1424,11 @@
       close(7)
 
       deallocate(TNEW)
+      deallocate(TNEW_liquid)
       deallocate(TOLD)
+      deallocate(TOLD_liquid)
       deallocate(TOLD_grid)
+      deallocate(TOLD_grid_liquid)
       deallocate(YNEW)
       deallocate(YOLD)
       deallocate(YOLD_grid)
