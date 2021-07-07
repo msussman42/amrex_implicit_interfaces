@@ -7,10 +7,11 @@
        ! probtype==1 => Villegas et al test
        ! probtype==2 => explore effect of parameters on evap in tank
        !                (Earth based ZBOT experiment)
-      integer, PARAMETER :: probtype = 0
+      integer, PARAMETER :: probtype = 2
 
        ! evap_model==0 => Villegas/Palmore,Desjardins model
        ! evap_model==1 => Kassemi model  P_ref=P_gamma/X_gamma
+       !  (if X_gamma=1, then P_ref is prescribed)
        ! evap_model==2 => same as evap_model==0, except that initial
        !  volume fraction is zero.
        ! evap_model==3 => Tanguy's recommended model for the fully
@@ -39,9 +40,8 @@
        ! schrage_heat_diffusion_factor only used if evap_model.eq.3
       real*8, PARAMETER :: schrage_heat_diffusion_factor=0.0d0
 
-       ! was 8.0 for Cody's results.
-      real*8, PARAMETER :: gas_domain_size_factor=8.0d0
-
+      integer :: sealed_flag  !sealed_flag=0 if dirichlet BC, 
+                              !sealed_flag=1 if insulating
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
       real*8 :: den_L
@@ -64,6 +64,10 @@
       real*8 :: e_gamma_global
       real*8 :: lambda
       real*8 :: Le
+      ! (k grad T dot n)_{Liquid} * (4 pi r^2)=Q_liquid_system=>
+      ! Units are  k grad T * (4 pi r^2)=
+      !   (W/(m Kelvin)) * Kelvin/meters * (meters^2)=W
+      real*8 :: Q_liquid_system
       real*8 :: T_wall_global ! if T_wall_global>0 =>hardwire the domain
                               ! temperature to be this.
       real*8 :: Y_wall_global ! if Y_wall_global>=0 =>hardwire the domain 
@@ -547,9 +551,12 @@
       verbose=0
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
+       sealed_flag=0
+       Q_liquid_system=0.0d0
 !      find_TINF_from_TGAMMA=1
        find_TINF_from_TGAMMA=0
        radblob = 0.05d0  ! cm
+       probhi_R_domain=8.0d0*radblob
        cur_x=2.0d0*radblob
        den_L = 1.0d0  ! g/cm^3
        den_G = 0.001d0 ! g/cm^3
@@ -573,8 +580,11 @@
        cc=0.0d0
        TSTOP=880.0d0  ! seconds
       else if (probtype.eq.1) then
+       sealed_flag=0
+       Q_liquid_system=0.0d0
        find_TINF_from_TGAMMA=0
        radblob = 0.005d0
+       probhi_R_domain=8.0d0*radblob
        cur_x=4.0d0*radblob
        den_L = 0.7d0
        den_G = 0.001d0
@@ -599,9 +609,17 @@
 
        !parameter study, tank specific problem
       else if (probtype.eq.2) then 
+       sealed_flag=1
 !      find_TINF_from_TGAMMA=1
        find_TINF_from_TGAMMA=0
-       radblob = 0.05d0  ! cm
+        ! height of cylindrical part: 0.4064 meters
+        ! radius: 0.1016
+       TANK_HT=0.4064
+       TANK_RAD=0.1016
+        ! make initial liquid radius large to emulate a flat interface.
+       radblob = 100.0d0  ! meters (curvature 0.01 meters)
+       Q_liquid_system=2.0d0 ! Watts
+       probhi_R_domain=8.0d0*radblob
        cur_x=2.0d0*radblob
        den_L = 1.0d0  ! g/cm^3
        den_G = 0.001d0 ! g/cm^3
@@ -738,7 +756,6 @@
       print *,"closing: analytical" 
       close(4)
 
-      probhi_R_domain=gas_domain_size_factor*radblob
       dx=(probhi_R_domain-0.5d0*D_gamma)/num_intervals
 
       print *,"opening: analytical_T"
@@ -763,7 +780,6 @@
       print *,"radblob=",radblob
       print *,"gas region size: 8 * radblob "
 
-      probhi_R_domain=gas_domain_size_factor*radblob
       dx=(probhi_R_domain-R_gamma_NEW)/num_intervals
       cur_time=0.0d0
 
