@@ -50,7 +50,9 @@
       real*8 :: gamma_G
       real*8 :: accommodation_coefficient
       real*8 :: k_G
+      real*8 :: k_L
       real*8 :: alpha_G
+      real*8 :: alpha_L
       real*8 :: L_V
       real*8 :: D_G
       real*8 :: WV_global
@@ -64,9 +66,6 @@
       real*8 :: e_gamma_global
       real*8 :: lambda
       real*8 :: Le
-      ! (k grad T dot n)_{Liquid} * (4 pi r^2)=Q_liquid_system=>
-      ! Units are  k grad T * (4 pi r^2)=
-      !   (W/(m Kelvin)) * Kelvin/meters * (meters^2)=W
       real*8 :: Q_liquid_system
       real*8 :: T_wall_global ! if T_wall_global>0 =>hardwire the domain
                               ! temperature to be this.
@@ -83,6 +82,10 @@
       real*8 :: B_M
       real*8 :: D_not
       real*8 :: Sh
+      real*8 R_gamma_NEW
+      real*8 R_gamma_OLD
+      real*8 probhi_R_domain
+      real*8 problo_R_domain
      
 
       CONTAINS
@@ -379,27 +382,35 @@
       end subroutine mdot_from_Y_probe
 
 
-      subroutine mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
+      subroutine mdot_from_T_probe(T_gamma,T_probe, &
+        T_probe_liquid,dx,dx_liquid,mdotT)
       IMPLICIT NONE
 
-      real*8, intent(in) :: T_gamma,T_probe,dx
+      real*8, intent(in) :: T_gamma,T_probe,T_probe_liquid,dx,dx_liquid
       real*8, intent(out) :: mdotT
+      real*8 :: my_pi
 
-      mdotT=k_G*(T_probe-T_gamma)/(L_V*dx)
+      my_pi=4.0d0*atan(1.0d0)
+
+      mdotT=(1.0d0/L_V)*(k_G*(T_probe-T_gamma)/dx+ &
+              k_L*(T_gamma-T_probe_liquid)/dx_liquid)
 
       end subroutine mdot_from_T_probe
 
       subroutine mdot_diff_func(T_gamma, &
-        T_probe,Y_probe, &
-        schrage_T_probe,schrage_Y_probe, &
-        dx,mdot_diff,verbose)
+        T_probe,T_probe_liquid,Y_probe, &
+        schrage_T_probe,T_probe_liquid2, &
+        schrage_Y_probe, &
+        dx,dx_liquid,mdot_diff,verbose)
       IMPLICIT NONE
 
       integer, intent(in) :: verbose
       real*8, intent(in) :: T_gamma
-      real*8, intent(in) :: T_probe,Y_probe
+      real*8, intent(in) :: T_probe,Y_probe,T_probe_liquid
       real*8, intent(in) :: schrage_T_probe,schrage_Y_probe
+      real*8, intent(in) :: T_probe_liquid2
       real*8, intent(in) :: dx
+      real*8, intent(in) :: dx_liquid
       real*8, intent(out) :: mdot_diff
       real*8 :: mdotT,mdotY
       real*8 :: internal_energy,Pvapor_probe,X_probe
@@ -409,7 +420,8 @@
       if ((evap_model.eq.0).or. &
           (evap_model.eq.1).or. &
           (evap_model.eq.2)) then
-       call mdot_from_T_probe(T_gamma,T_probe,dx,mdotT)
+       call mdot_from_T_probe(T_gamma,T_probe,T_probe_liquid, &
+         dx,dx_liquid,mdotT)
        call mdot_from_Y_probe(T_gamma, &
         schrage_T_probe,schrage_Y_probe,dx,mdotY, &
         verbose)
@@ -489,11 +501,10 @@
       real*8 cur_x,T,Y,VEL,VEL_I,LS
       real*8 D_gamma
       real*8 R_gamma
-      real*8 R_gamma_NEW
-      real*8 R_gamma_OLD
-      real*8 probhi_R_domain
       real*8 dx
       real*8 dx_new
+      real*8 dx_liquid
+      real*8 dx_new_liquid
       integer istep
       integer outer_iter,max_outer_iter
       integer igrid,igrid_old
@@ -510,17 +521,25 @@
       real*8 diffuse_minus
 
       real*8, allocatable :: TNEW(:)
+      real*8, allocatable :: TNEW_liquid(:)
       real*8, allocatable :: TOLD(:)
+      real*8, allocatable :: TOLD_liquid(:)
       real*8, allocatable :: TOLD_grid(:)
+      real*8, allocatable :: TOLD_grid_liquid(:)
       real*8, allocatable :: YNEW(:)
       real*8, allocatable :: YOLD(:)
       real*8, allocatable :: YOLD_grid(:)
       real*8, allocatable :: DT_CROSSING(:)
       real*8, allocatable :: RHS(:)
+      real*8, allocatable :: RHS_liquid(:)
       real*8, allocatable :: DIAG(:)
+      real*8, allocatable :: DIAG_liquid(:)
       real*8, allocatable :: LDIAG(:)
+      real*8, allocatable :: LDIAG_liquid(:)
       real*8, allocatable :: UDIAG(:)
+      real*8, allocatable :: UDIAG_liquid(:)
       real*8, allocatable :: SOLN(:)
+      real*8, allocatable :: SOLN_liquid(:)
 
       real*8, allocatable :: RHSsmear(:)
       real*8, allocatable :: DIAGsmear(:)
@@ -545,6 +564,7 @@
       real*8 :: YINF_for_numerical
 
       real*8 TNEW_probe
+      real*8 TNEW_probe_liquid
       real*8 time_smear
       real*8 Lsmear
       real*8 my_pi
@@ -559,6 +579,7 @@
        find_TINF_from_TGAMMA=0
        radblob = 0.05d0  ! cm
        probhi_R_domain=8.0d0*radblob
+       problo_R_domain=0.5d0*radblob
        cur_x=2.0d0*radblob
        den_L = 1.0d0  ! g/cm^3
        den_G = 0.001d0 ! g/cm^3
@@ -566,6 +587,7 @@
        gamma_G = 1.4d0
        accommodation_coefficient=1.0d0
        k_G = 0.024d+5 ! erg/(cm s K)
+       k_L = 0.0d0
 !      L_V = 2.26d+10  
        L_V = 2.1d+10  ! erg/g
        D_G = 0.1d0  ! cm^2/s
@@ -587,6 +609,7 @@
        find_TINF_from_TGAMMA=0
        radblob = 0.005d0
        probhi_R_domain=8.0d0*radblob
+       problo_R_domain=0.5d0*radblob
        cur_x=4.0d0*radblob
        den_L = 0.7d0
        den_G = 0.001d0
@@ -594,6 +617,7 @@
        gamma_G = 1.4d0
        accommodation_coefficient=1.0d0
        k_G = 0.052d+5
+       k_L = 0.0d0
        L_V = 5.18D+9
        D_G = 0.52d0
        WV_global = 58.0d0
@@ -621,11 +645,13 @@
         ! make initial liquid radius large to emulate a flat interface.
        radblob = 100.0d0  ! meters (curvature 0.01 meters)
        Q_liquid_system=2.0d0 ! Watts
+       probhi_R_domain=radblob+0.5d0*TANK_HT
+       problo_R_domain=radblob-0.5d0*TANK_HT
         ! bias for physical volume of liquid:
        Q_liquid_system=Q_liquid_system* &
-               (4.0d0/3.0d0)*my_pi*(radblob**3.0d0)/ &
-               (0.5d0*(my_pi*(TANK_RAD**2.0)*TANK_HT))
-       probhi_R_domain=radblob+0.5d0*TANK_HT
+          ((4.0d0/3.0d0)*my_pi* &
+           (radblob**3.0d0-(radblob-problo_R_domain)**3.0d0))/ &
+          (0.5d0*(my_pi*(TANK_RAD**2.0)*TANK_HT))
        cur_x=radblob+0.0889  ! T1_probe vertical position.
        den_L = 1400.0d0  ! kg/m^3
        den_G = 5.3421449445d0 ! g/cm^3
@@ -636,21 +662,22 @@
 !      accommodation_coefficient=1.99d0
 !      accommodation_coefficient=0.01d0
        k_G = 0.00375d0 ! J/(m s K)
+       k_L = 0.075d0   ! J/(m s K)
        L_V = 1.42d+5  ! J/kg
        D_G = 9.5393525975504d-7  ! m^2/s
+        ! molar mass used in Clausius Clapyron eqn.
        WV_global = 0.2d0  ! kg/mol
        WA_global = 0.2d0  ! kg/mol
        R_global = 8.31446261815324d0  ! J/(mol K)
-       T_sat_global=373.15d0  ! K (reference boiling temperature)
-       T_inf_global = 300.5d0 ! K (This is temperature at infinity if
-                              ! using the Stefan model)
-       T_wall_global=300.5d0  ! Kelvin (T_wall_global=0.0 => disable)
+       T_sat_global=307.0d0  ! K (reference boiling temperature)
+       T_inf_global = 307.0d0 ! K (not used for sealed tank)
+       T_wall_global=307.0d0  ! Kelvin (not used for sealed tank)
        Y_wall_global=1.0d0    ! (Y_wall_global<0.0 => disable)
-       P_sat_global=1.0D+6  ! This is reference pressure if Y_wall_global=1
-       Y_inf_global=7.1d-3  ! dimensionless
-       T_gamma=300.5   ! K
+       P_sat_global=1.01325D+5  ! This is reference pressure if Y_wall_global=1
+       Y_inf_global=1.0d0  ! dimensionless
+       T_gamma=295.41   ! K
        cc=0.0d0
-       TSTOP=880.0d0  ! seconds
+       TSTOP=8000.0d0  ! seconds (see Barsi and Kassemi)
 
       else
        print *,"probtype invalid"
@@ -699,7 +726,7 @@
         stop
        endif
        print *,"den_L,den_G ",den_L,den_G
-       print *,"C_pG,k_G,lambda ",C_pG,k_G,lambda
+       print *,"C_pG,k_G,k_L,lambda ",C_pG,k_G,k_L,lambda
        print *,"T_inf_global,T_sat_global,L_V ", &
         T_inf_global,T_sat_global,L_V
        print *,"cc= ",cc
@@ -746,12 +773,6 @@
        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
          VEL,VEL_I,LS,VEL_G)
 
-       if (1.eq.0) then
-        print *,cur_time," ",0.5d0*D_gamma," ", &
-         (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
-         " ",VEL," ",VEL_I," ",VEL_G
-       endif
-
        write(4,*) cur_time," ",0.5d0*D_gamma," ", &
         (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
         " ",VEL," ",VEL_I," ",VEL_G
@@ -762,6 +783,9 @@
       close(4)
 
       dx=(probhi_R_domain-0.5d0*D_gamma)/num_intervals
+      dx_liquid=(0.5d0*D_gamma-problo_R_domain)/num_intervals
+      dx_new=dx
+      dx_new_liquid=dx_liquid
 
       print *,"opening: analytical_T"
       open(unit=16,file="analytical_T") 
@@ -780,26 +804,40 @@
       R_gamma_OLD=radblob
     
       print *,"START:SPHERICALLY SYMMETRIC CODE RESULTS, FINITE DOMAIN" 
-      print *,"R_gamma<=R<=prob_R_domain"
-      print *,"prob_R_domain= 8 * radblob + R_gamma"
+      print *,"problo_R_domain<=R<=probhi_R_domain"
+      print *,"problo_R_domain= ",problo_R_domain
+      print *,"probhi_R_domain= ",probhi_R_domain
       print *,"radblob=",radblob
-      print *,"gas region size: 8 * radblob "
 
       dx=(probhi_R_domain-R_gamma_NEW)/num_intervals
+      dx_liquid=(R_gamma_new-problo_R_domain)/num_intervals
+      dx_new=dx
+      dx_new_liquid=dx_liquid
+
       cur_time=0.0d0
 
       allocate(TNEW(0:num_intervals))
       allocate(TOLD(0:num_intervals))
       allocate(TOLD_grid(0:num_intervals))
+      allocate(TNEW_liquid(0:num_intervals))
+      allocate(TOLD_liquid(0:num_intervals))
+      allocate(TOLD_grid_liquid(0:num_intervals))
       allocate(YNEW(0:num_intervals))
       allocate(YOLD(0:num_intervals))
       allocate(YOLD_grid(0:num_intervals))
       allocate(DT_CROSSING(0:num_intervals))
+
       allocate(RHS(1:num_intervals))
       allocate(DIAG(1:num_intervals))
       allocate(LDIAG(1:num_intervals))
       allocate(UDIAG(1:num_intervals))
       allocate(SOLN(1:num_intervals))
+
+      allocate(RHS_liquid(1:num_intervals))
+      allocate(DIAG_liquid(1:num_intervals))
+      allocate(LDIAG_liquid(1:num_intervals))
+      allocate(UDIAG_liquid(1:num_intervals))
+      allocate(SOLN_liquid(1:num_intervals))
 
       allocate(RHSsmear(1:num_intervals+1))
       allocate(DIAGsmear(1:num_intervals+1))
@@ -809,8 +847,15 @@
 
       TNEW(0)=T_gamma
       TOLD(0)=T_gamma
+      TNEW_liquid(num_intervals)=T_gamma
+      TOLD_liquid(num_intervals)=T_gamma
       YNEW(0)=Y_gamma
       YOLD(0)=Y_gamma
+      do igrid=0,num_intervals-1
+       TNEW_liquid(igrid)=T_gamma
+       TOLD_liquid(igrid)=T_gamma
+      enddo
+
       do igrid=1,num_intervals
        xpos=igrid*dx+R_gamma_new
        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
@@ -889,6 +934,7 @@
       print *,"nsteps=",nsteps
       print *,"num_intervals=",num_intervals
       print *,"radblob=",radblob
+      print *,"problo_R_domain=",problo_R_domain
       print *,"probhi_R_domain=",probhi_R_domain
       print *,"reference pressure=",P_sat_global
       print *,"accommodation_coefficient ",accommodation_coefficient
@@ -959,25 +1005,26 @@
         print *,"evap_model invalid"
         stop
        endif
+       TNEW_probe_liquid=TNEW_liquid(num_intervals-1)
 
        call mdot_diff_func(T_gamma_a, &
-         TNEW(1),YNEW(1), &
-         TNEW_probe,YNEW(1), &
-         dx,mdot_diff_a, &
+         TNEW(1),TNEW_probe_liquid,YNEW(1), &
+         TNEW_probe,TNEW_probe_liquid,YNEW(1), &
+         dx,dx_liquid,mdot_diff_a, &
          verbose)
        call mdot_diff_func(T_gamma_b, &
-         TNEW(1),YNEW(1), &
-         TNEW_probe,YNEW(1), &
-         dx,mdot_diff_b, &
+         TNEW(1),TNEW_probe_liquid,YNEW(1), &
+         TNEW_probe,TNEW_probe_liquid,YNEW(1), &
+         dx,dx_liquid,mdot_diff_b, &
          verbose)
 
        if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
         do iter=1,100
          cc=0.5d0*(T_gamma_a+T_gamma_b)
          call mdot_diff_func(cc, &
-          TNEW(1),YNEW(1), &
-          TNEW_probe,YNEW(1), &
-          dx,mdot_diff_c, &
+          TNEW(1),TNEW_probe_liquid,YNEW(1), &
+          TNEW_probe,TNEW_probe_liquid,YNEW(1), &
+          dx,dx_liquid,mdot_diff_c, &
           verbose)
          if (mdot_diff_a*mdot_diff_c.gt.0.0d0) then
           T_gamma_a=cc
@@ -1002,11 +1049,12 @@
 
        if (1.eq.0) then
         call mdot_diff_func(cc, &
-         TNEW(1),YNEW(1), &
-         TNEW_probe,YNEW(1), &
-         dx,mdot_diff_c, &
+         TNEW(1),TNEW_probe_liquid,YNEW(1), &
+         TNEW_probe,TNEW_probe_liquid,YNEW(1), &
+         dx,dx_liquid,mdot_diff_c, &
          verbose)
-        call mdot_from_T_probe(cc,TNEW(1),dx,mdotT)
+        call mdot_from_T_probe(cc,TNEW(1),TNEW_probe_liquid, &
+          dx,dx_liquid,mdotT)
         verbose=1
         call mdot_from_Y_probe(cc, &
          TNEW_probe,YNEW(1), &
@@ -1025,7 +1073,8 @@
         WA_global,WV_global)
 
         ! STEP 2: advance the interface burnvel=-s>0
-       call mdot_from_T_probe(T_gamma_c,TNEW(1),dx,mdotT)
+       call mdot_from_T_probe(T_gamma_c,TNEW(1),T_probe_liquid, &
+        dx,dx_liquid,mdotT)
        burnvel=mdotT/den_L
        R_gamma_NEW=R_gamma_OLD-dt*burnvel
 
@@ -1033,6 +1082,7 @@
         R_gamma_NEW=R_gamma_OLD
        endif
 
+       FIX ME HERE
          ! STEP 3: interpolate old temperature from the old grid to the
          ! new grid.  For those new grid nodes which were previously in
          ! the liquid, but now in the vapor, a crossing time is
