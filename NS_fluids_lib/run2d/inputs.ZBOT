@@ -238,7 +238,8 @@ ns.visc_coef        = 1.0
 
 # Molar mass [kg/mol]
 # Acrylic ??? (Not used)
-# HFE7000, molar_mass=0.2?
+# HFE7000, molar_mass=0.2?  Molar mass used in the Clausius Clapyron
+#                           equation.
 ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
                            # molar mass.
