@@ -547,8 +547,10 @@
       real*8 TNEW_probe
       real*8 time_smear
       real*8 Lsmear
+      real*8 my_pi
 
       verbose=0
+      my_pi=4.0d0*atan(1.0d0)
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
        sealed_flag=0
@@ -619,23 +621,26 @@
         ! make initial liquid radius large to emulate a flat interface.
        radblob = 100.0d0  ! meters (curvature 0.01 meters)
        Q_liquid_system=2.0d0 ! Watts
-       probhi_R_domain=8.0d0*radblob
-       cur_x=2.0d0*radblob
-       den_L = 1.0d0  ! g/cm^3
-       den_G = 0.001d0 ! g/cm^3
-       C_pG = 1.0d+7  ! erg/(g K)
-       gamma_G = 1.4d0
-!      accommodation_coefficient=1.0d0
+        ! bias for physical volume of liquid:
+       Q_liquid_system=Q_liquid_system* &
+               (4.0d0/3.0d0)*my_pi*(radblob**3.0d0)/ &
+               (0.5d0*(my_pi*(TANK_RAD**2.0)*TANK_HT))
+       probhi_R_domain=radblob+0.5d0*TANK_HT
+       cur_x=radblob+0.0889  ! T1_probe vertical position.
+       den_L = 1400.0d0  ! kg/m^3
+       den_G = 5.3421449445d0 ! g/cm^3
+       C_pG = 2400.0d0  ! Joule/(kg K)
+       C_vG = 2358.4276869092d0  ! Joule/(kg K)
+       gamma_G = C_pG/C_vG
+       accommodation_coefficient=1.0d0
 !      accommodation_coefficient=1.99d0
-       accommodation_coefficient=0.01d0
-       k_G = 0.024d+5 ! erg/(cm s K)
-!      L_V = 2.26d+10  
-       L_V = 2.1d+10  ! erg/g
-!      L_V = 1.5d+10  ! erg/g
-       D_G = 0.1d0  ! cm^2/s
-       WV_global = 18.02d0  ! g/mol
-       WA_global = 28.9d0   ! g/mol
-       R_global = 8.31446261815324d+7  ! ergs/(mol K)
+!      accommodation_coefficient=0.01d0
+       k_G = 0.00375d0 ! J/(m s K)
+       L_V = 1.42d+5  ! J/kg
+       D_G = 9.5393525975504d-7  ! m^2/s
+       WV_global = 0.2d0  ! kg/mol
+       WA_global = 0.2d0  ! kg/mol
+       R_global = 8.31446261815324d0  ! J/(mol K)
        T_sat_global=373.15d0  ! K (reference boiling temperature)
        T_inf_global = 300.5d0 ! K (This is temperature at infinity if
                               ! using the Stefan model)
