@@ -737,8 +737,11 @@ if ((num_materials.eq.3).and. &
     print *,"material type invalid for density setup!"
     stop
    endif ! material_type
-  else
+  else if ((im.eq.1).or.(im.eq.3)) then ! liquid or tank walls
    STATE(ibase+1)=fort_denconst(im)
+  else
+   print *,"im invalid"
+   stop
   endif
   ! temperature
   if (t.eq.zero) then
@@ -753,6 +756,43 @@ if ((num_materials.eq.3).and. &
   do n=1,num_species_var
    STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
+  if (t.eq.zero) then
+   if (im.eq.2) then
+    den=STATE(ibase+1)
+    temperature=STATE(ibase+2)
+    call init_massfrac_parm(den,massfrac_parm,im)
+    do n=1,num_species_var
+     massfrac_parm(n)=STATE(ibase+2+n)
+    enddo
+    call INTERNAL_CRYOGENIC_TANK_MK(den,massfrac_parm, &
+     temperature,internal_energy,TANK_MK_MATERIAL_TYPE,im,num_species_var)
+    call EOS_CRYOGENIC_TANK_MK(den,massfrac_parm, &
+     internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
+    if (abs(TANK_MK_R_UNIV-fort_R_Palmore_Desjardins).le. &
+            VOFTOL*TANK_MK_R_UNIV) then
+     ! do nothing
+    else
+     print *,"mismatch between TANK_MK_R_UNIV and fort_R_Palmore_Desjardins"
+     stop
+    endif
+    call Pgamma_Clausius_Clapyron(Pgamma, &
+            fort_reference_pressure(1), &
+            temperature, &
+            fort_saturation_temp(1), &
+            fort_latent_heat(1), &
+            TANK_MK_R_UNIV,fort_molar_mass(2))
+   else if ((im.eq.1).or.(im.eq.3)) then
+    ! do nothing
+   else
+    print *,"im invalid"
+    stop
+   endif
+  else if (t.gt.zero) then
+   ! do nothing
+  else
+   print *,"t invalid"
+   stop
+  endif
  enddo ! im=1..num_materials
 else
  print *,"num_materials,num_state_material, or probtype invalid"

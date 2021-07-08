@@ -108,6 +108,7 @@ stop
         ccspeciesviscconst, &
         cclatent_heat, &
         ccsaturation_temp, &
+        ccreference_pressure, &
         ccmolar_mass, &
         ccspecies_molar_mass, &
         cctension, &
@@ -244,6 +245,7 @@ stop
         ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
       REAL_T, intent(in) :: cclatent_heat(2*ccnten)
       REAL_T, intent(in) :: ccsaturation_temp(2*ccnten)
+      REAL_T, intent(in) :: ccreference_pressure(2*ccnten)
       REAL_T, intent(in) :: ccmolar_mass(ccnum_materials)
       REAL_T, intent(in) :: ccspecies_molar_mass(ccnum_species_var+1)
       REAL_T, intent(in) :: cctension(ccnten)
@@ -968,9 +970,13 @@ stop
       do iten=1,nten
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(nten+iten)=cclatent_heat(nten+iten)
+
        fort_saturation_temp(iten)=ccsaturation_temp(iten)
        fort_saturation_temp(nten+iten)=ccsaturation_temp(nten+iten)
       
+       fort_reference_pressure(iten)=ccreference_pressure(iten)
+       fort_reference_pressure(nten+iten)=ccreference_pressure(nten+iten)
+
        fort_tension(iten)=cctension(iten)
        fort_tension_slope(iten)=cctension_slope(iten)
        fort_tension_T0(iten)=cctension_T0(iten)
