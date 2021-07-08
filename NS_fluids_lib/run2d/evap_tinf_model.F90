@@ -29,12 +29,12 @@
        !  mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
       integer, PARAMETER :: evap_model=1
 
-      integer, PARAMETER :: nsteps=1000
+      integer, PARAMETER :: nsteps=2000
         ! for convergence study: Borodulin test:
         ! check R_gamma at t=500.0,
         ! num_intervals=32,64,128,256,512,1024 (check the 
         ! error between consecutive grid resolutions) |R_h - R_2h|  
-      integer, PARAMETER :: num_intervals=256
+      integer, PARAMETER :: num_intervals=512
 
        ! L=schrage_heat_diffusion_factor * radblob
        ! schrage_heat_diffusion_factor only used if evap_model.eq.3
@@ -43,6 +43,9 @@
       integer :: sealed_flag  !sealed_flag=0 if dirichlet BC, 
                               !sealed_flag=1 if insulating
       integer :: hardwire_initial_conditions
+      real*8 :: gravity ! 9.8 m/s^2
+      real*8 :: DrhoDT  ! 0.00219 1/(degrees Kelvin)
+      real*8 :: base_T_liquid
       real*8 :: T_V_initial
       real*8 :: T_L_initial
       integer :: find_TINF_from_TGAMMA
@@ -56,6 +59,7 @@
       real*8 :: accommodation_coefficient
       real*8 :: k_G
       real*8 :: k_L
+      real*8 :: k_L_effective
       real*8 :: alpha_G
       real*8 :: alpha_L
       real*8 :: L_V
@@ -405,10 +409,13 @@
        if ((L_V.gt.0.0d0).and.(k_G.gt.0.0d0).and. &
            (T_probe.gt.0.0d0).and.(T_gamma.gt.0.0d0).and. &
            (T_probe_liquid.gt.0.0d0)) then
-        mdotT=(1.0d0/L_V)*(k_G*(T_probe-T_gamma)/dx+ &
+        mdotT=(1.0d0/L_V)*(k_G*(T_probe-T_gamma)/dx- &
               k_L*(T_gamma-T_probe_liquid)/dx_liquid)
        else
         print *,"temperature or latent heat bust"
+        print *,"L_V,k_G,T_probe,T_gamma,T_probe_liquid ", &
+          L_V,k_G,T_probe,T_gamma,T_probe_liquid
+        print *,"dx,dx_liquid ",dx,dx_liquid
         stop
        endif
       else
@@ -441,11 +448,20 @@
       if ((evap_model.eq.0).or. &
           (evap_model.eq.1).or. &
           (evap_model.eq.2)) then
-       call mdot_from_T_probe(T_gamma,T_probe,T_probe_liquid, &
+       if ((T_gamma.gt.0.0d0).and.(T_probe.gt.0.0d0).and. &
+           (T_probe_liquid.gt.0.0d0).and.(dx.gt.0.0d0).and. &
+           (dx_liquid.gt.0.0d0)) then
+        call mdot_from_T_probe(T_gamma,T_probe,T_probe_liquid, &
          dx,dx_liquid,mdotT)
-       call mdot_from_Y_probe(T_gamma, &
-        schrage_T_probe,schrage_Y_probe,dx,mdotY, &
-        verbose)
+        call mdot_from_Y_probe(T_gamma, &
+         schrage_T_probe,schrage_Y_probe,dx,mdotY, &
+         verbose)
+       else
+        print *,"bust"
+        print *,"T_gamma,T_probe,T_probe_liquid,dx,dx_liquid ", &
+           T_gamma,T_probe,T_probe_liquid,dx,dx_liquid
+        stop
+       endif
 
        mdot_diff=mdotT-mdotY
       else if (evap_model.eq.3) then
@@ -543,6 +559,11 @@
       real*8 diffuse_plus
       real*8 diffuse_minus
 
+      real*8 VEL_AVG
+
+      real*8, allocatable :: VELNEW_liquid(:)
+      real*8, allocatable :: VELOLD_liquid(:)
+      real*8, allocatable :: VELOLD_grid_liquid(:)
       real*8, allocatable :: TNEW(:)
       real*8, allocatable :: TNEW_liquid(:)
       real*8, allocatable :: TOLD(:)
@@ -604,15 +625,20 @@
        radblob = 0.05d0  ! cm
        probhi_R_domain=8.0d0*radblob
        problo_R_domain=0.5d0*radblob
+       gravity=0.0d0
+       DrhoDT=0.0d0
+       base_T_liquid=293.0d0 !K
        cur_x=2.0d0*radblob
        den_L = 1.0d0  ! g/cm^3
        den_G = 0.001d0 ! g/cm^3
        C_pG = 1.0d+7  ! erg/(g K)
+       C_pL = 1.0d+7  ! erg/(g K)
        gamma_G = 1.4d0
        C_vG = C_pG/gamma_G  ! erg/(g K)
        accommodation_coefficient=1.0d0
        k_G = 0.024d+5 ! erg/(cm s K)
        k_L = 0.0d0
+       k_L_effective = k_L
 !      L_V = 2.26d+10  
        L_V = 2.1d+10  ! erg/g
        D_G = 0.1d0  ! cm^2/s
@@ -639,15 +665,20 @@
        radblob = 0.005d0
        probhi_R_domain=8.0d0*radblob
        problo_R_domain=0.5d0*radblob
+       gravity=0.0d0
+       DrhoDT=0.0d0
+       base_T_liquid=300.5d0 !K
        cur_x=4.0d0*radblob
        den_L = 0.7d0
        den_G = 0.001d0
        C_pG = 1.0d+7
+       C_pL = 1.0d+7  ! erg/(g K)
        gamma_G = 1.4d0
        C_vG = C_pG/gamma_G  ! erg/(g K)
        accommodation_coefficient=1.0d0
        k_G = 0.052d+5
        k_L = 0.0d0
+       k_L_effective = k_L
        L_V = 5.18D+9
        D_G = 0.52d0
        WV_global = 58.0d0
@@ -672,6 +703,10 @@
        sealed_flag=1
 !      find_TINF_from_TGAMMA=1
        find_TINF_from_TGAMMA=0
+       gravity=9.8d0 ! m/s^2
+!       DrhoDT=0.00219d0  ! 1/(degrees Kelvin)
+       DrhoDT=0.0d0
+       base_T_liquid=295.41d0 !K
         ! height of cylindrical part: 0.4064 meters
         ! radius: 0.1016
        TANK_HT=0.4064
@@ -682,13 +717,17 @@
        probhi_R_domain=radblob+0.5d0*TANK_HT
        problo_R_domain=radblob-0.5d0*TANK_HT
         ! bias for physical volume of liquid:
+       print *,"ZBOT 1D model, Q= (watts)",Q_liquid_system
        Q_liquid_system=Q_liquid_system* &
           ((4.0d0/3.0d0)*my_pi* &
            (radblob**3.0d0-(radblob-problo_R_domain)**3.0d0))/ &
           (0.5d0*(my_pi*(TANK_RAD**2.0)*TANK_HT))
+       print *,"ZBOT 1D model after volume correction, Q= (watts)", &
+         Q_liquid_system
        cur_x=radblob+0.0889  ! T1_probe vertical position.
        den_L = 1400.0d0  ! kg/m^3
        den_G = 5.3421449445d0 ! g/cm^3
+       C_pL = 1300.0d0  ! Joule/(kg K)
        C_pG = 2400.0d0  ! Joule/(kg K)
        C_vG = 2358.4276869092d0  ! Joule/(kg K)
        gamma_G = C_pG/C_vG
@@ -697,6 +736,7 @@
 !      accommodation_coefficient=0.01d0
        k_G = 0.00375d0 ! J/(m s K)
        k_L = 0.075d0   ! J/(m s K)
+       k_L_effective = 10.0d0*k_L
        L_V = 1.42d+5  ! J/kg
        D_G = 9.5393525975504d-7  ! m^2/s
         ! molar mass used in Clausius Clapyron eqn.
@@ -767,6 +807,7 @@
         endif
         print *,"den_L,den_G ",den_L,den_G
         print *,"C_pG,k_G,k_L,lambda ",C_pG,k_G,k_L,lambda
+        print *,"k_L_effective ",k_L_effective
         print *,"T_inf_global,T_sat_global,L_V ", &
          T_inf_global,T_sat_global,L_V
         print *,"cc= ",cc
@@ -868,6 +909,10 @@
 
       cur_time=0.0d0
 
+      allocate(VELNEW_liquid(0:num_intervals))
+      allocate(VELOLD_liquid(0:num_intervals))
+      allocate(VELOLD_grid_liquid(0:num_intervals))
+
       allocate(TNEW(0:num_intervals))
       allocate(TNEW_liquid(0:num_intervals))
       allocate(TOLD(0:num_intervals))
@@ -900,6 +945,11 @@
       do igrid=0,num_intervals-1
        TNEW_liquid(igrid)=T_gamma
        TOLD_liquid(igrid)=T_gamma
+      enddo
+      do igrid=0,num_intervals
+       VELNEW_liquid(igrid)=0.0d0
+       VELOLD_liquid(igrid)=0.0d0
+       VELOLD_grid_liquid(igrid)=0.0d0
       enddo
 
       if (hardwire_initial_conditions.eq.0) then
@@ -1020,7 +1070,7 @@
       print *,"reference pressure=",P_sat_global
       print *,"accommodation_coefficient ",accommodation_coefficient
       print *,"gamma_G=CP/CV,CP,CV ",gamma_G," ",C_pG," ",C_pG/gamma_G
-      print *,"STP TM ARAT TGAM YGAM VEL_G XPROBE TPROBE PPROBE DENG"
+      print *,"STP TM ARAT TGM YGM V_G XPROBE TPROBE PPROBE DENG VLAVG"
 
       print *,"opening: numerical_spherical_1D" 
       open(unit=5,file="numerical_spherical_1D") 
@@ -1029,11 +1079,18 @@
       call INTERNAL_material(den_G,TNEW(igrid_probe),e_grid)
       call EOS_material(den_G,e_grid,p_grid)
       mdotT=0.0d0
+
+      VEL_AVG=0.0d0
+      do igrid=0,num_intervals
+       VEL_AVG=VEL_AVG+VELNEW_liquid(igrid)
+      enddo
+      VEL_AVG=VEL_AVG/(num_intervals+1)
+
       write(5,*) istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
          TNEW(0)," ",YNEW(0)," ",mdotT/den_G," ", &
          x_probe," ",TNEW(igrid_probe)," ", &
-         p_grid," ",den_G
+         p_grid," ",den_G," ",VEL_AVG
 
       do istep=1,nsteps
 
@@ -1095,6 +1152,14 @@
        endif
        TNEW_probe_liquid=TNEW_liquid(num_intervals-1)
 
+       if (TNEW_probe_liquid.gt.0.0d0) then
+        ! do nothing
+       else
+        print *,"TNEW_probe_liquid invalid1:",TNEW_probe_liquid
+        print *,"istep=",istep
+        stop
+       endif
+
        call mdot_diff_func(T_gamma_a, &
          TNEW(1),TNEW_probe_liquid,YNEW(1), &
          TNEW_probe,TNEW_probe_liquid,YNEW(1), &
@@ -1109,6 +1174,12 @@
        if (mdot_diff_a*mdot_diff_b.lt.0.0d0) then
         do iter=1,100
          cc=0.5d0*(T_gamma_a+T_gamma_b)
+         if (TNEW_probe_liquid.gt.0.0d0) then
+          ! do nothing
+         else
+          print *,"TNEW_probe_liquid invalid3:",TNEW_probe_liquid
+          stop
+         endif
          call mdot_diff_func(cc, &
           TNEW(1),TNEW_probe_liquid,YNEW(1), &
           TNEW_probe,TNEW_probe_liquid,YNEW(1), &
@@ -1187,6 +1258,14 @@
         endif
        else
         print *,"delta_volume invalid"
+        print *,"burnvel=",burnvel
+        print *,"dt=",dt
+        print *,"T_gamma_c=",T_gamma_c
+        print *,"TNEW(1)=",TNEW(1)
+        print *,"TNEW_probe_liquid=",TNEW_probe_liquid
+        print *,"dx,dx_liquid ",dx,dx_liquid
+        print *,"L_V=",L_V
+        print *,"k_G,k_L,k_L_effective=",k_G,k_L,k_L_effective
         stop
        endif
 
@@ -1221,6 +1300,9 @@
 
        TOLD_grid_liquid(num_intervals)=T_gamma_c
        TOLD_grid_liquid(0)=TOLD_liquid(0)
+
+       VELOLD_grid_liquid(num_intervals)=0.0d0
+       VELOLD_grid_liquid(0)=0.0d0
 
        igrid_old=0
        xpos_old=R_gamma_OLD
@@ -1266,6 +1348,9 @@
           TOLD_grid_liquid(igrid)=TOLD_liquid(igrid_old)+ &
            (TOLD_liquid(igrid_old+1)-TOLD_liquid(igrid_old))* &
            (xpos_new-xpos_old)/dx_liquid
+          VELOLD_grid_liquid(igrid)=VELOLD_liquid(igrid_old)+ &
+           (VELOLD_liquid(igrid_old+1)-VELOLD_liquid(igrid_old))* &
+           (xpos_new-xpos_old)/dx_liquid
          else
           print *,"xpos_new bust"
           stop
@@ -1283,7 +1368,7 @@
         !  source terms.
         !  note: first order upwind method for the advection terms.
        alpha_G=k_G/(den_G*C_pG)
-       alpha_L=k_L/(den_L*C_pL)
+       alpha_L=k_L_effective/(den_L*C_pL)
 
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new+R_gamma_NEW
@@ -1433,10 +1518,52 @@
         YOLD(igrid)=YNEW(igrid)
        enddo
 
+       if (problo_R_domain.gt.0.0d0) then
+        ! do nothing
+       else
+        print *,"problo_R_domain invalid"
+        stop
+       endif
+
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new_liquid+problo_R_domain
         xpos_mh=xpos_new-0.5d0*dx_new_liquid
         xpos_ph=xpos_new+0.5d0*dx_new_liquid
+        if ((dx_new_liquid.gt.0.0d0).and. &
+            (xpos_new.gt.0.0d0).and. &
+            (xpos_mh.gt.0.0d0).and. &
+            (xpos_ph.gt.0.0d0)) then
+         ! do nothing
+        else
+         print *,"coord bust:",dx_new_liquid," ",xpos_new," ", &
+             xpos_mh," ",xpos_ph
+         stop
+        endif
+        if (TOLD_grid_liquid(igrid).gt.0.0d0) then
+         ! do nothing
+        else
+         print *,"TOLD_grid_liquid(igrid) invalid", &
+           TOLD_grid_liquid(igrid)
+         stop
+        endif
+        if (dt.gt.0.0d0) then
+         ! do nothing
+        else
+         print *,"dt invalid",dt
+         stop
+        endif
+        if (alpha_L.gt.0.0d0) then
+         ! do nothing
+        else
+         print *,"alpha_L invalid",alpha_L
+         stop
+        endif
+        if (C_pL.gt.0.0d0) then
+         ! do nothing
+        else
+         print *,"C_pL invalid",C_pL
+         stop
+        endif
 
         RHS(igrid)=(dx_new_liquid**2)* &
           (xpos_new**2)*TOLD_grid_liquid(igrid)/dt
@@ -1444,14 +1571,23 @@
           (xpos_new**2)/dt
         LDIAG(igrid)=0.0d0
         UDIAG(igrid)=0.0d0
+
+        vel_ph=VELNEW_liquid(igrid)
+        vel_mh=VELNEW_liquid(igrid)
+
+        advect_plus=vel_ph*(xpos_ph**2)*dx_new_liquid
+        advect_minus=vel_mh*(xpos_mh**2)*dx_new_liquid
+
         diffuse_plus=alpha_L*(xpos_ph**2)
         diffuse_minus=alpha_L*(xpos_mh**2)
 
         if ((igrid.gt.1).and.(igrid.lt.num_intervals-1)) then
+         DIAG(igrid)=DIAG(igrid)+advect_plus
          DIAG(igrid)=DIAG(igrid)+diffuse_plus
          DIAG(igrid)=DIAG(igrid)+diffuse_minus
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
          LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
+         LDIAG(igrid)=LDIAG(igrid)-advect_minus
         else if (igrid.eq.1) then
          DIAG(igrid)=DIAG(igrid)+diffuse_plus
          RHS(igrid)=RHS(igrid)+ &
@@ -1482,7 +1618,23 @@
        TNEW_liquid(0)=TNEW_liquid(1)
 
        do igrid=0,num_intervals
-        TOLD_liquid(igrid)=TNEW_liquid(igrid)
+        if (TNEW_liquid(igrid).gt.0.0d0) then
+         TOLD_liquid(igrid)=TNEW_liquid(igrid)
+        else
+         print *,"TNEW_liquid(igrid) invalid,igrid,TNEW_liquid:", &
+            igrid,TNEW_liquid(igrid)
+         stop
+        endif
+       enddo
+
+       VELNEW_liquid(0)=0.0d0
+       VELNEW_liquid(num_intervals)=0.0d0
+       do igrid=1,num_intervals-1
+        VELNEW_liquid(igrid)=VELOLD_grid_liquid(igrid)+ &
+         dt*abs(gravity)*abs(DrhoDT)*(TNEW_liquid(igrid)-BASE_T_liquid)
+       enddo
+       do igrid=0,num_intervals
+        VELOLD_liquid(igrid)=VELNEW_liquid(igrid)
        enddo
 
        dx=dx_new
@@ -1493,11 +1645,34 @@
        x_probe=R_gamma_NEW+igrid_probe*dx_new
        call INTERNAL_material(den_G,TNEW(igrid_probe),e_grid)
        call EOS_material(den_G,e_grid,p_grid)
+
+       VEL_AVG=0.0d0
+       do igrid=0,num_intervals
+        VEL_AVG=VEL_AVG+VELNEW_liquid(igrid)
+       enddo
+       VEL_AVG=VEL_AVG/(num_intervals+1)
+
        write(5,*) istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
          TNEW(0)," ",YNEW(0)," ",mdotT/den_G," ", &
          x_probe," ",TNEW(igrid_probe)," ", &
-         p_grid," ",den_G
+         p_grid," ",den_G," ",VEL_AVG
+
+
+       if (1.eq.0) then
+        print *,"opening: numerical_spherical_1D_T_DEBUG"
+        open(unit=7,file="numerical_spherical_1D_T_DEBUG") 
+        do igrid=0,num_intervals
+         xpos=igrid*dx_liquid+problo_R_domain
+         write (7,*) xpos," ",TNEW_liquid(igrid)
+        enddo
+        do igrid=0,num_intervals
+         xpos=igrid*dx+R_gamma_new
+         write (7,*) xpos," ",TNEW(igrid)
+        enddo
+        print *,"closing: numerical_spherical_1D_T_DEBUG" 
+        close(7)
+       endif
 
       enddo ! istep=1..nsteps
 
@@ -1516,6 +1691,10 @@
       enddo
       print *,"closing: numerical_spherical_1D_T" 
       close(7)
+
+      deallocate(VELNEW_liquid)
+      deallocate(VELOLD_liquid)
+      deallocate(VELOLD_grid_liquid)
 
       deallocate(TNEW)
       deallocate(TNEW_liquid)
