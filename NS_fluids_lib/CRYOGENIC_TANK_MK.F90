@@ -688,6 +688,7 @@ end subroutine CRYOGENIC_TANK_MK_PRES
 
 subroutine CRYOGENIC_TANK_MK_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
@@ -698,7 +699,8 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
-REAL_T pressure
+REAL_T den,temperature,internal_energy,pressure,Pgamma
+REAL_T massfrac_parm(num_species_var+1)
 
  ! num_state_material=2 (default)  density and temperature
  ! num_state_material>2 if scalar (species) variables added.
@@ -781,6 +783,18 @@ if ((num_materials.eq.3).and. &
             fort_saturation_temp(1), &
             fort_latent_heat(1), &
             TANK_MK_R_UNIV,fort_molar_mass(2))
+    if (abs(Pgamma-pressure).le.VOFTOL*pressure) then
+     ! do nothing
+    else
+     print *,"mismatch between Pgamma and Pgas"
+     print *,"Pgamma=",Pgamma
+     print *,"Pgas=",pressure
+     print *,"reference pressure=",fort_reference_pressure(1)
+     print *,"modify reference pressure to be: ", &
+        fort_reference_pressure(1)*pressure/Pgamma
+     stop
+    endif
+             
    else if ((im.eq.1).or.(im.eq.3)) then
     ! do nothing
    else

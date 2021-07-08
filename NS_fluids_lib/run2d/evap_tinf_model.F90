@@ -42,6 +42,9 @@
 
       integer :: sealed_flag  !sealed_flag=0 if dirichlet BC, 
                               !sealed_flag=1 if insulating
+      integer :: hardwire_initial_conditions
+      real*8 :: T_V_initial
+      real*8 :: T_L_initial
       integer :: find_TINF_from_TGAMMA
       real*8 :: radblob
       real*8 :: den_L
@@ -580,6 +583,7 @@
       my_pi=4.0d0*atan(1.0d0)
 
       if (probtype.eq.0) then ! Borodulin et al figure 8, row 3
+       hardwire_initial_conditions=0
        sealed_flag=0
        Q_liquid_system=0.0d0
 !      find_TINF_from_TGAMMA=1
@@ -603,14 +607,18 @@
        R_global = 8.31446261815324d+7  ! ergs/(mol K)
        T_sat_global=373.15d0  ! K
        T_inf_global = 300.5d0 ! K
+       T_V_initial = 293.0d0 !K not used.
+       T_L_initial = 293.0d0 !K not used.
        T_wall_global=0.0d0  ! Kelvin (T_wall_global=0.0 => disable)
        Y_wall_global=-1.0d0 ! (Y_wall_global<0.0 => disable)
        P_sat_global=1.0D+6  ! This is reference pressure if Y_wall_global=1
        Y_inf_global=7.1d-3  ! dimensionless
-       T_gamma=300.5   ! K
+       T_gamma=300.5   ! K (placeholder)
+       Y_gamma=0.0d0   ! placeholder
        cc=0.0d0
        TSTOP=880.0d0  ! seconds
       else if (probtype.eq.1) then
+       hardwire_initial_conditions=0
        sealed_flag=0
        Q_liquid_system=0.0d0
        find_TINF_from_TGAMMA=0
@@ -632,16 +640,20 @@
        R_global = 8.31446261815324d+7
        T_sat_global=329.0d0
        T_inf_global = 700.0d0
+       T_V_initial = 293.0d0 !K not used.
+       T_L_initial = 293.0d0 !K not used.
        T_wall_global=0.0d0  ! Kelvin (T_wall_global=0.0 => disable)
        Y_wall_global=-1.0d0 ! (Y_wall_global<0.0 => disable)
        P_sat_global=1.0D+6  ! This is reference pressure if Y_wall_global=1
        Y_inf_global=0.0d0
        T_gamma=300.5d0  ! placeholder
+       Y_gamma=0.0d0   ! placeholder
        cc=0.0d0
        TSTOP=0.025d0
 
        !parameter study, tank specific problem
       else if (probtype.eq.2) then 
+       hardwire_initial_conditions=1
        sealed_flag=1
 !      find_TINF_from_TGAMMA=1
        find_TINF_from_TGAMMA=0
@@ -683,6 +695,9 @@
        P_sat_global=1.01325D+5  ! This is reference pressure if Y_wall_global=1
        Y_inf_global=1.0d0  ! dimensionless
        T_gamma=295.41   ! K
+       Y_gamma=1.0d0
+       T_V_initial = 295.41d0 !K
+       T_L_initial = 295.41d0 !K
        cc=0.0d0
        TSTOP=8000.0d0  ! seconds (see Barsi and Kassemi)
 
@@ -694,118 +709,132 @@
       lambda=k_G/(den_G*C_pG)
       Le=D_G*den_G*C_pG/k_G
 
-      outer_iter=0
+      if (hardwire_initial_conditions.eq.0) then
 
-      if (find_TINF_from_TGAMMA.eq.1) then
-       max_outer_iter=100000
-      else
-       max_outer_iter=1
-      endif
-
-      do while ((cc.lt.T_gamma).and.(outer_iter.lt.max_outer_iter))
-
-       outer_iter=outer_iter+1
-       aa=100.0d0
-       bb=T_sat_global
-       call ff(aa,fa)
-       call ff(bb,fb)
-       if (fa*fb.lt.0.0d0) then
-        do iter=1,100
-         cc=0.5d0*(aa+bb)
-         call ff(cc,fc)
-         if (fa*fc.gt.0.0d0) then
-          aa=cc
-         else if (fb*fc.gt.0.0d0) then
-          bb=cc
-         else if (fa.eq.0.0d0) then
-          bb=cc
-         else if (fb.eq.0.0d0) then
-          aa=cc
-         else if (fc.eq.0.0d0) then
-          aa=cc
-         else
-          print *,"fa or fb or fc bust"
-          stop
-         endif
-        enddo ! iter=1..100
-       else
-        print *,"fa or fb bust"
-        stop
-       endif
-       print *,"den_L,den_G ",den_L,den_G
-       print *,"C_pG,k_G,k_L,lambda ",C_pG,k_G,k_L,lambda
-       print *,"T_inf_global,T_sat_global,L_V ", &
-        T_inf_global,T_sat_global,L_V
-       print *,"cc= ",cc
-       print *,"D_G,Y_inf_global ",D_G,Y_inf_global
-       print *,"WV_global,WA_global,Le ",WV_global,WA_global,Le
-       print *,"R_global ",R_global
+       outer_iter=0
 
        if (find_TINF_from_TGAMMA.eq.1) then
-        T_inf_global=T_inf_global+0.01d0
+        max_outer_iter=100000
+       else
+        max_outer_iter=1
        endif
 
-      enddo
+       do while ((cc.lt.T_gamma).and.(outer_iter.lt.max_outer_iter))
 
-      T_gamma=cc
+        outer_iter=outer_iter+1
+        aa=100.0d0
+        bb=T_sat_global
+        call ff(aa,fa)
+        call ff(bb,fb)
+        if (fa*fb.lt.0.0d0) then
+         do iter=1,100
+          cc=0.5d0*(aa+bb)
+          call ff(cc,fc)
+          if (fa*fc.gt.0.0d0) then
+           aa=cc
+          else if (fb*fc.gt.0.0d0) then
+           bb=cc
+          else if (fa.eq.0.0d0) then
+           bb=cc
+          else if (fb.eq.0.0d0) then
+           aa=cc
+          else if (fc.eq.0.0d0) then
+           aa=cc
+          else
+           print *,"fa or fb or fc bust"
+           stop
+          endif
+         enddo ! iter=1..100
+        else
+         print *,"fa or fb bust"
+         stop
+        endif
+        print *,"den_L,den_G ",den_L,den_G
+        print *,"C_pG,k_G,k_L,lambda ",C_pG,k_G,k_L,lambda
+        print *,"T_inf_global,T_sat_global,L_V ", &
+         T_inf_global,T_sat_global,L_V
+        print *,"cc= ",cc
+        print *,"D_G,Y_inf_global ",D_G,Y_inf_global
+        print *,"WV_global,WA_global,Le ",WV_global,WA_global,Le
+        print *,"R_global ",R_global
 
-      call X_from_Tgamma(X_gamma,T_gamma,T_sat_global,L_V, &
+        if (find_TINF_from_TGAMMA.eq.1) then
+         T_inf_global=T_inf_global+0.01d0
+        endif
+
+       enddo
+
+       T_gamma=cc
+
+       call X_from_Tgamma(X_gamma,T_gamma,T_sat_global,L_V, &
         R_global,WV_global)
 
-      X_gamma_init_global=X_gamma
+       X_gamma_init_global=X_gamma
 
-      call massfrac_from_volfrac(X_gamma,Y_gamma,WA_global,WV_global)
+       call massfrac_from_volfrac(X_gamma,Y_gamma,WA_global,WV_global)
 
-      B_M=(Y_gamma-Y_inf_global)/(1.0d0-Y_gamma)
-      D_not=2.0d0*radblob
-      if (B_M.gt.0.0d0) then
-       Sh=2.0d0*log(1.0d0+B_M)/B_M
+       B_M=(Y_gamma-Y_inf_global)/(1.0d0-Y_gamma)
+       D_not=2.0d0*radblob
+       if (B_M.gt.0.0d0) then
+        Sh=2.0d0*log(1.0d0+B_M)/B_M
+       else
+        print *,"B_M must be positive"
+        stop
+       endif
+       print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,Y_gamma ", &
+        T_gamma,Y_gamma
+
+       TSTART=0.0d0
+       cur_time=TSTART
+       dt=(TSTOP-TSTART)/nsteps
+
+       print *,"START OF ANALYTICAL SOLUTION RESULTS"
+       print *,"ANALYTICAL SOLUTION ASSUMES INFINITE DOMAIN"
+       print *,"TIME R_Gamma ARATIO T Y  VEL VEL_I VEL_G"
+    
+       print *,"opening: analytical" 
+       open(unit=4,file="analytical") 
+       do istep=1,nsteps
+        call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
+         VEL,VEL_I,LS,VEL_G)
+
+        write(4,*) cur_time," ",0.5d0*D_gamma," ", &
+         (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
+         " ",VEL," ",VEL_I," ",VEL_G
+
+        cur_time=cur_time+dt
+       enddo
+       print *,"closing: analytical" 
+       close(4)
+
+       dx=(probhi_R_domain-0.5d0*D_gamma)/num_intervals
+       dx_liquid=(0.5d0*D_gamma-problo_R_domain)/num_intervals
+       dx_new=dx
+       dx_new_liquid=dx_liquid
+
+       print *,"opening: analytical_T"
+       open(unit=16,file="analytical_T") 
+       do igrid=1,num_intervals
+        xpos=(igrid-1)*dx+0.5d0*D_gamma
+        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
+         VEL,VEL_I,LS,VEL_G)
+        write (16,*) xpos," ",T
+       enddo
+       print *,"closing: analytical_T"
+       close(16)
+
+       print *,"END OF ANALYTICAL SOLUTION RESULTS, INFINITE DOMAIN"
+
+      else if (hardwire_initial_conditions.eq.1) then
+       ! do nothing
       else
-       print *,"B_M must be positive"
+       print *,"hardwire_initial_conditions invalid"
        stop
       endif
-      print *,"INIT_DROP_IN_SHEAR_MODULE T_gamma,Y_gamma ", &
-        T_gamma,Y_gamma
 
       TSTART=0.0d0
       cur_time=TSTART
       dt=(TSTOP-TSTART)/nsteps
-      print *,"START OF ANALYTICAL SOLUTION RESULTS"
-      print *,"ANALYTICAL SOLUTION ASSUMES INFINITE DOMAIN"
-      print *,"TIME R_Gamma ARATIO T Y  VEL VEL_I VEL_G"
-    
-      print *,"opening: analytical" 
-      open(unit=4,file="analytical") 
-      do istep=1,nsteps
-       call drop_analytical_solution(cur_time,cur_x,D_gamma,T,Y, &
-         VEL,VEL_I,LS,VEL_G)
-
-       write(4,*) cur_time," ",0.5d0*D_gamma," ", &
-        (D_gamma/(2.0d0*radblob))**2," ",T," ",Y, &
-        " ",VEL," ",VEL_I," ",VEL_G
-
-       cur_time=cur_time+dt
-      enddo
-      print *,"closing: analytical" 
-      close(4)
-
-      dx=(probhi_R_domain-0.5d0*D_gamma)/num_intervals
-      dx_liquid=(0.5d0*D_gamma-problo_R_domain)/num_intervals
-      dx_new=dx
-      dx_new_liquid=dx_liquid
-
-      print *,"opening: analytical_T"
-      open(unit=16,file="analytical_T") 
-      do igrid=1,num_intervals
-       xpos=(igrid-1)*dx+0.5d0*D_gamma
-       call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
-         VEL,VEL_I,LS,VEL_G)
-       write (16,*) xpos," ",T
-      enddo
-      print *,"closing: analytical_T"
-      close(16)
-
-      print *,"END OF ANALYTICAL SOLUTION RESULTS, INFINITE DOMAIN"
 
       R_gamma_NEW=radblob
       R_gamma_OLD=radblob
@@ -857,75 +886,96 @@
        TOLD_liquid(igrid)=T_gamma
       enddo
 
-      do igrid=1,num_intervals
-       xpos=igrid*dx+R_gamma_new
-       call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
-         VEL,VEL_I,LS,VEL_G)
-       TNEW(igrid)=T
-       TOLD(igrid)=T
-       YNEW(igrid)=Y
-       YOLD(igrid)=Y
-      enddo
+      if (hardwire_initial_conditions.eq.0) then
 
-      call drop_analytical_solution(cur_time,probhi_R_domain, &
+       do igrid=1,num_intervals
+        xpos=igrid*dx+R_gamma_new
+        call drop_analytical_solution(cur_time,xpos,D_gamma,T,Y, &
+         VEL,VEL_I,LS,VEL_G)
+        TNEW(igrid)=T
+        TOLD(igrid)=T
+        YNEW(igrid)=Y
+        YOLD(igrid)=Y
+       enddo
+
+       call drop_analytical_solution(cur_time,probhi_R_domain, &
          D_gamma,T,Y, &
          VEL,VEL_I,LS,VEL_G)
     
-!     TINF_for_numerical=T_inf_global
-!     YINF_for_numerical=Y_inf_global
-      TINF_for_numerical=T
-      YINF_for_numerical=Y
+!      TINF_for_numerical=T_inf_global
+!      YINF_for_numerical=Y_inf_global
+       TINF_for_numerical=T
+       YINF_for_numerical=Y
 
-      if (T_wall_global.eq.0.0d0) then
-       ! do nothing
-      else if (T_wall_global.gt.0.0d0) then
-       TINF_for_numerical=T_wall_global
-      else
-       print *,"T_wall_global invalid"
-       stop
-      endif
+       if (T_wall_global.eq.0.0d0) then
+        ! do nothing
+       else if (T_wall_global.gt.0.0d0) then
+        TINF_for_numerical=T_wall_global
+       else
+        print *,"T_wall_global invalid"
+        stop
+       endif
 
-      if (Y_wall_global.lt.0.0d0) then
-       ! do nothing
-      else if (Y_wall_global.ge.0.0d0) then
-       YINF_for_numerical=Y_wall_global
-      else
-       print *,"X_wall_global invalid"
-       stop
-      endif
+       if (Y_wall_global.lt.0.0d0) then
+        ! do nothing
+       else if (Y_wall_global.ge.0.0d0) then
+        YINF_for_numerical=Y_wall_global
+       else
+        print *,"X_wall_global invalid"
+        stop
+       endif
 
-      call INTERNAL_material(den_G,T_gamma,e_gamma_global)
-      call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
-      if (Y_wall_global.eq.1.0d0) then
-       ! do not alter P_sat_global
-      else if ((Y_wall_global.lt.0.0d0).or. &
-               ((Y_wall_global.ge.0.0d0).and. &
-                (Y_wall_global.lt.1.0d0))) then 
-       P_sat_global=Pgamma_init_global/X_gamma_init_global
-      else
-       print *,"Y_wall_global invalid"
-       stop
-      endif
+       call INTERNAL_material(den_G,T_gamma,e_gamma_global)
+       call EOS_material(den_G,e_gamma_global,Pgamma_init_global)
+       if (Y_wall_global.eq.1.0d0) then
+        ! do not alter P_sat_global
+       else if ((Y_wall_global.lt.0.0d0).or. &
+                ((Y_wall_global.ge.0.0d0).and. &
+                 (Y_wall_global.lt.1.0d0))) then 
+        P_sat_global=Pgamma_init_global/X_gamma_init_global
+       else
+        print *,"Y_wall_global invalid"
+        stop
+       endif
 
-      if (evap_model.eq.0) then ! Villegas model
-       ! do nothing
-      else if (evap_model.eq.1) then ! Kassemi model
-       ! do nothing
-      else if (evap_model.eq.2) then ! same as Villegas, except X=P/P_ref
+       if (evap_model.eq.0) then ! Villegas model
+        ! do nothing
+       else if (evap_model.eq.1) then ! Kassemi model
+        ! do nothing
+       else if (evap_model.eq.2) then ! same as Villegas, except X=P/P_ref
+        do igrid=0,num_intervals
+         call INTERNAL_material(den_G,TNEW(igrid),e_grid)
+         call EOS_material(den_G,e_grid,P_grid)
+         X_grid=0.0d0
+         call massfrac_from_volfrac(X_grid,YNEW(igrid), &
+          WA_global,WV_global)
+         YOLD(igrid)=YNEW(igrid)
+        enddo
+        YINF_for_numerical=YNEW(num_intervals)
+       else if (evap_model.eq.3) then ! T_gamma=f(T_probe_smear)
+        ! P_sat_global should have been initialized above.
+        ! P_sat_global is the reference pressure.
+       else
+        print *,"evap_model invalid"
+        stop
+       endif
+
+      else if (hardwire_initial_conditions.eq.1) then
        do igrid=0,num_intervals
-        call INTERNAL_material(den_G,TNEW(igrid),e_grid)
-        call EOS_material(den_G,e_grid,P_grid)
-        X_grid=0.0d0
-        call massfrac_from_volfrac(X_grid,YNEW(igrid), &
-         WA_global,WV_global)
-        YOLD(igrid)=YNEW(igrid)
+        TNEW(igrid)=T_V_initial
+        TOLD(igrid)=T_V_initial
+        YNEW(igrid)=1.0d0
+        YOLD(igrid)=1.0d0
+        TNEW_liquid(igrid)=T_L_initial
+        TOLD_liquid(igrid)=T_L_initial
        enddo
-       YINF_for_numerical=YNEW(num_intervals)
-      else if (evap_model.eq.3) then ! T_gamma=f(T_probe_smear)
-       ! P_sat_global should have been initialized above.
-       ! P_sat_global is the reference pressure.
+       call Pgamma_Clausius_Clapyron(Pgamma,P_sat_global,T_V_initial, &
+               T_sat_global,L_V,R_global,WV_global)
+       call INTERNAL_material(den_G,T_V_initial,internal_energy)
+       call EOS_material(den_G,internal_energy,p_eos)
+       FIX ME
       else
-       print *,"evap_model invalid"
+       print *,"hardwire_initial_conditions invalid"
        stop
       endif
 
