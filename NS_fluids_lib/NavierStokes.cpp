@@ -1751,14 +1751,18 @@ void fortran_parameters() {
 
  Vector<Real> latent_heat_temp(2*nten);
  Vector<Real> saturation_temp_temp(2*nten);
+ Vector<Real> reference_pressure_temp(2*nten);
  for (int i=0;i<nten;i++) { 
   saturation_temp_temp[i]=0.0;
   saturation_temp_temp[i+nten]=0.0;
+  reference_pressure_temp[i]=1.0e+6;
+  reference_pressure_temp[i+nten]=1.0e+6;
   latent_heat_temp[i]=0.0;
   latent_heat_temp[i+nten]=0.0;
  }
  pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
  pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
+ pp.queryarr("reference_pressure_temp",reference_pressure_temp,0,2*nten);
 
  Real R_Palmore_Desjardins_temp=8.31446261815324e+7;  // ergs/(mol Kelvin)
  pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
@@ -1981,6 +1985,7 @@ void fortran_parameters() {
   speciesviscconst_temp.dataPtr(),
   latent_heat_temp.dataPtr(),
   saturation_temp_temp.dataPtr(),
+  reference_pressure_temp.dataPtr(),
   molar_mass_temp.dataPtr(),
   species_molar_mass_temp.dataPtr(),
   tensiontemp.dataPtr(),
