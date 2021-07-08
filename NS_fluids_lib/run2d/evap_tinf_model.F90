@@ -50,6 +50,8 @@
       real*8 :: den_L
       real*8 :: den_G
       real*8 :: C_pG
+      real*8 :: C_vG
+      real*8 :: C_pL
       real*8 :: gamma_G
       real*8 :: accommodation_coefficient
       real*8 :: k_G
@@ -110,9 +112,13 @@
 
       real*8, intent(in) :: den,T
       real*8, intent(out) :: e
-      real*8 :: C_vG
 
-      C_vG=C_pG/gamma_G
+      if (abs(C_pG/C_vG-gamma_G).le.1.0D-8*gamma_G) then
+       ! do nothing
+      else
+       print *,"gamma_G mismatch"
+       stop
+      endif
       e=C_vG*T
 
       return
@@ -522,8 +528,10 @@
       real*8 dx_new_liquid
       integer istep
       integer outer_iter,max_outer_iter
-      integer igrid,igrid_old
+      integer igrid,igrid_old,igrid_probe
+      real*8 x_probe
       real*8 xpos
+      real*8 xpos_new_test
       real*8 xpos_new
       real*8 xpos_old
       real*8 xpos_mh
@@ -568,7 +576,7 @@
       real*8 :: mdotT
       real*8 :: mdotY
       real*8 :: burnvel
-      real*8 :: e_grid,P_grid,X_grid
+      real*8 :: e_grid,P_grid,X_grid,Pgamma
       real*8 :: VEL_G
       real*8 :: TINF_for_numerical
       real*8 :: YINF_for_numerical
@@ -577,6 +585,11 @@
       real*8 TNEW_probe_liquid
       real*8 time_smear
       real*8 Lsmear
+      real*8 delta_volume
+      real*8 TANK_HT
+      real*8 TANK_RAD
+      real*8 volume_G_new
+      real*8 volume_G_old
       real*8 my_pi
 
       verbose=0
@@ -596,6 +609,7 @@
        den_G = 0.001d0 ! g/cm^3
        C_pG = 1.0d+7  ! erg/(g K)
        gamma_G = 1.4d0
+       C_vG = C_pG/gamma_G  ! erg/(g K)
        accommodation_coefficient=1.0d0
        k_G = 0.024d+5 ! erg/(cm s K)
        k_L = 0.0d0
@@ -630,6 +644,7 @@
        den_G = 0.001d0
        C_pG = 1.0d+7
        gamma_G = 1.4d0
+       C_vG = C_pG/gamma_G  ! erg/(g K)
        accommodation_coefficient=1.0d0
        k_G = 0.052d+5
        k_L = 0.0d0
@@ -692,7 +707,8 @@
        T_inf_global = 307.0d0 ! K (not used for sealed tank)
        T_wall_global=307.0d0  ! Kelvin (not used for sealed tank)
        Y_wall_global=1.0d0    ! (Y_wall_global<0.0 => disable)
-       P_sat_global=1.01325D+5  ! This is reference pressure if Y_wall_global=1
+!      P_sat_global=1.01325D+5  ! This is reference pressure if Y_wall_global=1
+       P_sat_global=1.0151336461747692D+5
        Y_inf_global=1.0d0  ! dimensionless
        T_gamma=295.41   ! K
        Y_gamma=1.0d0
@@ -961,6 +977,10 @@
        endif
 
       else if (hardwire_initial_conditions.eq.1) then
+
+       TINF_for_numerical=T_V_initial ! placeholder
+       YINF_for_numerical=1.0d0  ! placeholder
+
        do igrid=0,num_intervals
         TNEW(igrid)=T_V_initial
         TOLD(igrid)=T_V_initial
@@ -971,9 +991,19 @@
        enddo
        call Pgamma_Clausius_Clapyron(Pgamma,P_sat_global,T_V_initial, &
                T_sat_global,L_V,R_global,WV_global)
-       call INTERNAL_material(den_G,T_V_initial,internal_energy)
-       call EOS_material(den_G,internal_energy,p_eos)
-       FIX ME
+       call INTERNAL_material(den_G,T_V_initial,e_grid)
+       call EOS_material(den_G,e_grid,p_grid)
+       if (abs(p_grid-Pgamma).le.1.0d-8*Pgamma) then
+        ! do nothing
+       else
+        print *,"mistmatch between P_eos and P_clausius_clapyron"
+        print *,"P_eos=",p_grid
+        print *,"P_causius_clapyron=",Pgamma
+        print *,"old reference pressure: ",P_sat_global
+        print *,"set new ref pres=",P_sat_global*p_grid/Pgamma
+        stop
+       endif
+       
       else
        print *,"hardwire_initial_conditions invalid"
        stop
@@ -990,13 +1020,20 @@
       print *,"reference pressure=",P_sat_global
       print *,"accommodation_coefficient ",accommodation_coefficient
       print *,"gamma_G=CP/CV,CP,CV ",gamma_G," ",C_pG," ",C_pG/gamma_G
-      print *,"STEP TIME ARAT TGAMMA YGAMMA VEL_G"
+      print *,"STP TM ARAT TGAM YGAM VEL_G XPROBE TPROBE PPROBE DENG"
 
       print *,"opening: numerical_spherical_1D" 
       open(unit=5,file="numerical_spherical_1D") 
+      igrid_probe=NINT((cur_x-R_gamma_NEW)/dx_new)
+      x_probe=R_gamma_NEW+igrid_probe*dx_new
+      call INTERNAL_material(den_G,TNEW(igrid_probe),e_grid)
+      call EOS_material(den_G,e_grid,p_grid)
+      mdotT=0.0d0
       write(5,*) istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
-         TNEW(0)," ",YNEW(0)
+         TNEW(0)," ",YNEW(0)," ",mdotT/den_G," ", &
+         x_probe," ",TNEW(igrid_probe)," ", &
+         p_grid," ",den_G
 
       do istep=1,nsteps
 
@@ -1124,7 +1161,7 @@
         WA_global,WV_global)
 
         ! STEP 2: advance the interface burnvel=-s>0
-       call mdot_from_T_probe(T_gamma_c,TNEW(1),T_probe_liquid, &
+       call mdot_from_T_probe(T_gamma_c,TNEW(1),TNEW_probe_liquid, &
         dx,dx_liquid,mdotT)
        burnvel=mdotT/den_L
        R_gamma_NEW=R_gamma_OLD-dt*burnvel
@@ -1320,6 +1357,7 @@
        endif
 
        do igrid=1,num_intervals-1
+
         xpos_new=igrid*dx_new+R_gamma_NEW
         xpos_mh=xpos_new-0.5d0*dx_new
         xpos_ph=xpos_new+0.5d0*dx_new
@@ -1344,7 +1382,7 @@
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
          LDIAG(igrid)=LDIAG(igrid)-diffuse_minus
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
-        if (igrid.eq.1) then
+        else if (igrid.eq.1) then
          DIAG(igrid)=DIAG(igrid)+advect_plus
          DIAG(igrid)=DIAG(igrid)+diffuse_plus
          DIAG(igrid)=DIAG(igrid)+diffuse_minus
@@ -1451,9 +1489,15 @@
        dx_liquid=dx_new_liquid
        R_gamma_OLD=R_gamma_NEW
        cur_time=cur_time+dt
+       igrid_probe=NINT((cur_x-R_gamma_NEW)/dx_new)
+       x_probe=R_gamma_NEW+igrid_probe*dx_new
+       call INTERNAL_material(den_G,TNEW(igrid_probe),e_grid)
+       call EOS_material(den_G,e_grid,p_grid)
        write(5,*) istep," ",cur_time," ", &
          (R_gamma_NEW/radblob)**2," ", &
-         TNEW(0)," ",YNEW(0)," ",mdotT/den_G
+         TNEW(0)," ",YNEW(0)," ",mdotT/den_G," ", &
+         x_probe," ",TNEW(igrid_probe)," ", &
+         p_grid," ",den_G
 
       enddo ! istep=1..nsteps
 
