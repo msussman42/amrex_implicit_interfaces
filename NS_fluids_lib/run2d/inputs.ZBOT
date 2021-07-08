@@ -264,13 +264,13 @@ ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
-ns.stiffCP=1300 2400.0 1500.0
+ns.stiffCP=1300.0 2400.0 1500.0
 # Ground based experiments used HFE7000.
 # Space-Station experiments used Perfluoro-n-Pentane (PnP, or C5F12)
 # REFPROP (Refrigerant), (RE347MCC), Methyl-Heptafluoropropyl, 
 # https://pubchem.ncbi.nlm.nih.gov/compound/2774943#section=Synonyms
 # Methyl-Perfluoropropyl, HFE7000, CV=
-ns.stiffCV=1300 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
+ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
 ns.heatviscconst=0.075 0.00375 0.189
