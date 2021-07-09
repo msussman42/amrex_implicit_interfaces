@@ -521,7 +521,19 @@
       return
       end subroutine tridiag_solve
 
+      subroutine charfn(r,r_gamma,dr,charval)
+      IMPLICIT NONE
+      real*8, intent(in) :: r,r_gamma,dr
+      real*8, intent(out) :: charval
 
+      if (r.lt.r_gamma-dr) then
+       charval=1.0d0
+      else
+       charval=0.0d0
+      endif
+
+      return
+      end subroutine charfn
 
       end module evap_check
 
@@ -612,6 +624,7 @@
       real*8 volume_G_new
       real*8 volume_G_old
       real*8 my_pi
+      real*8 energy_per_velvin,dvol,charval
 
       verbose=0
       my_pi=4.0d0*atan(1.0d0)
@@ -1525,6 +1538,34 @@
         stop
        endif
 
+       energy_per_kelvin=0.0d0
+       do igrid=1,num_intervals-1
+        xpos_new=igrid*dx_new_liquid+problo_R_domain
+        xpos_mh=xpos_new-0.5d0*dx_new_liquid
+        xpos_ph=xpos_new+0.5d0*dx_new_liquid
+        dvol=(4.0d0/3.0d0)*my_pi*(xpos_ph**3.0-xpos_mh**3.0)
+        call charfn(xpos_new,R_gamma_NEW,dx_new_liquid,charval)
+        energy_per_kelvin=energy_per_kelvin+den_L*C_pL*charval*dvol
+       enddo
+       if (energy_per_kelvin.eq.0.0d0) then
+        ! do nothing
+       else if (energy_per_kelvin.gt.0.0d0) then
+
+        do igrid=1,num_intervals-1
+         xpos_new=igrid*dx_new_liquid+problo_R_domain
+         xpos_mh=xpos_new-0.5d0*dx_new_liquid
+         xpos_ph=xpos_new+0.5d0*dx_new_liquid
+         dvol=(4.0d0/3.0d0)*my_pi*(xpos_ph**3.0-xpos_mh**3.0)
+         call charfn(xpos_new,R_gamma_NEW,dx_new_liquid,charval)
+         TOLD_grid_liquid(igrid)=TOLD_grid_liquid(igrid)+ &
+           dt*(Q_liquid_system/energy_per_kelvin)*charval
+        enddo
+
+       else
+        print *,"energy_per_kelvin invalid"
+        stop
+       endif
+
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new_liquid+problo_R_domain
         xpos_mh=xpos_new-0.5d0*dx_new_liquid
@@ -1590,9 +1631,6 @@
          LDIAG(igrid)=LDIAG(igrid)-advect_minus
         else if (igrid.eq.1) then
          DIAG(igrid)=DIAG(igrid)+diffuse_plus
-         RHS(igrid)=RHS(igrid)+ &
-           Q_liquid_system*dx_new_liquid/ &
-           (4.0d0*my_pi*C_pL*den_L)
          LDIAG(igrid)=0.0d0
          UDIAG(igrid)=UDIAG(igrid)-diffuse_plus
         else if (igrid.eq.num_intervals-1) then
