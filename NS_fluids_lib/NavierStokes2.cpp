@@ -5873,7 +5873,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: LEVELSET_3D.F90
-   FORT_INIT_PHYSICS_VARS(
+   fort_init_physics_vars(
     &tid_current,
     &FD_curv_interp, 
     &local_curv_min[tid_current],
