@@ -406,7 +406,8 @@
       my_pi=4.0d0*atan(1.0d0)
 
       if ((dx.gt.0.0d0).and.(dx_liquid.gt.0.0d0)) then
-       if ((L_V.gt.0.0d0).and.(k_G.gt.0.0d0).and. &
+       if ((L_V.gt.0.0d0).and.(k_G.ge.0.0d0).and. &
+           (k_L.ge.0.0d0).and. &
            (T_probe.gt.0.0d0).and.(T_gamma.gt.0.0d0).and. &
            (T_probe_liquid.gt.0.0d0)) then
         mdotT=(1.0d0/L_V)*(k_G*(T_probe-T_gamma)/dx- &
@@ -624,7 +625,7 @@
       real*8 volume_G_new
       real*8 volume_G_old
       real*8 my_pi
-      real*8 energy_per_kelvin,dvol,charval
+      real*8 energy_per_kelvin,dvol,charval,overall_liquid_vol
 
       verbose=0
       my_pi=4.0d0*atan(1.0d0)
@@ -730,14 +731,17 @@
         ! reduce Q since transfer of internal energy to momentum
         ! is not supported in this code.  Also, transfer of energy to
         ! outer walls is not supported in this code.
-       Q_liquid_system=0.01d0
+       Q_liquid_system=1.0d0
        probhi_R_domain=radblob+0.5d0*TANK_HT
        problo_R_domain=radblob-0.5d0*TANK_HT
         ! bias for physical volume of liquid:
        print *,"ZBOT 1D model, Q= (watts)",Q_liquid_system
+       print *,"Q original ",Q_liquid_system
+       print *,"Q:my_pi,radblob,problo_R_domain,TANK_RAD,TANK_HT:", &
+         my_pi,radblob,problo_R_domain,TANK_RAD,TANK_HT 
        Q_liquid_system=Q_liquid_system* &
           ((4.0d0/3.0d0)*my_pi* &
-           (radblob**3.0d0-(radblob-problo_R_domain)**3.0d0))/ &
+           (radblob**3.0d0-problo_R_domain**3.0d0))/ &
           (0.5d0*(my_pi*(TANK_RAD**2.0)*TANK_HT))
        print *,"ZBOT 1D model after volume correction, Q= (watts)", &
          Q_liquid_system
@@ -753,7 +757,7 @@
 !      accommodation_coefficient=0.01d0
        k_G = 0.00375d0 ! J/(m s K)
        k_L = 0.075d0   ! J/(m s K)
-       k_L_effective = 10.0d0*k_L
+       k_L_effective = k_L
        L_V = 1.42d+5  ! J/kg
        D_G = 9.5393525975504d-7  ! m^2/s
         ! molar mass used in Clausius Clapyron eqn.
@@ -1251,6 +1255,9 @@
         ! STEP 2: advance the interface burnvel=-s>0
        call mdot_from_T_probe(T_gamma_c,TNEW(1),TNEW_probe_liquid, &
         dx,dx_liquid,mdotT)
+
+!       mdotT=0.0d0
+
        burnvel=mdotT/den_L
        R_gamma_NEW=R_gamma_OLD-dt*burnvel
 
@@ -1552,17 +1559,30 @@
        endif
 
        energy_per_kelvin=0.0d0
+       overall_liquid_vol=0.0d0
        do igrid=1,num_intervals-1
         xpos_new=igrid*dx_new_liquid+problo_R_domain
         xpos_mh=xpos_new-0.5d0*dx_new_liquid
         xpos_ph=xpos_new+0.5d0*dx_new_liquid
+         ! volume of each grid cell in spherical coordinates
         dvol=(4.0d0/3.0d0)*my_pi*(xpos_ph**3.0-xpos_mh**3.0)
         call charfn(xpos_new,R_gamma_NEW,dx_new_liquid,charval)
+        overall_liquid_vol=overall_liquid_vol+dvol*charval
         energy_per_kelvin=energy_per_kelvin+den_L*C_pL*charval*dvol
        enddo
+       if (1.eq.0) then
+        print *,"cur_time,dt,den_L,C_pL,vol_liq,en_per_kel ", &
+         cur_time,dt,den_L,C_pL,overall_liquid_vol,energy_per_kelvin
+       endif
+
        if (energy_per_kelvin.eq.0.0d0) then
         ! do nothing
        else if (energy_per_kelvin.gt.0.0d0) then
+
+        if (1.eq.0) then
+         print *,"dt,Q/en_per_kelvin ",dt, &
+             Q_liquid_system/energy_per_kelvin
+        endif
 
         do igrid=1,num_intervals-1
          xpos_new=igrid*dx_new_liquid+problo_R_domain
@@ -1606,7 +1626,7 @@
          print *,"dt invalid",dt
          stop
         endif
-        if (alpha_L.gt.0.0d0) then
+        if (alpha_L.ge.0.0d0) then
          ! do nothing
         else
          print *,"alpha_L invalid",alpha_L

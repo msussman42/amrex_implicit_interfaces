@@ -7964,7 +7964,7 @@ stop
 ! mask=0 at coarse-fine border cells.
 ! mask has 3 ghost cells.
 
-      subroutine FORT_INIT_PHYSICS_VARS( &
+      subroutine fort_init_physics_vars( &
        tid, &
        FD_curv_interp, &
        curv_min, &
@@ -8050,7 +8050,8 @@ stop
        im_solid_map, &
        num_curv, &
        level, &
-       finest_level)
+       finest_level) &
+      bind(c,name='fort_init_physics_vars')
       use global_utility_module
       use probf90_module
       use levelset_module

@@ -7,7 +7,6 @@
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
-#    define FORT_INIT_PHYSICS_VARS init_physics_vars
 #    define FORT_BUILD_MODVISC build_modvisc
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -29,7 +28,6 @@
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
-#    define FORT_INIT_PHYSICS_VARS INIT_PHYSICS_VARS
 #    define FORT_BUILD_MODVISC BUILD_MODVISC
 #    define FORT_INC_TEMP INC_TEMP
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
@@ -51,7 +49,6 @@
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
-#    define FORT_INIT_PHYSICS_VARS init_physics_vars
 #    define FORT_BUILD_MODVISC build_modvisc
 #    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -71,7 +68,6 @@
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
-#    define FORT_INIT_PHYSICS_VARS init_physics_vars_
 #    define FORT_BUILD_MODVISC build_modvisc_
 #    define FORT_INC_TEMP inc_temp_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
@@ -517,7 +513,7 @@ namespace amrex{
         Real* maskcov,
         AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi)); //1=not covered
 
-      void FORT_INIT_PHYSICS_VARS(
+      void fort_init_physics_vars(
        int* tid,
        int* FD_curv_interp,
        Real* curv_min,
