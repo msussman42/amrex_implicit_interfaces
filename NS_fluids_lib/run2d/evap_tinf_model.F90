@@ -624,7 +624,7 @@
       real*8 volume_G_new
       real*8 volume_G_old
       real*8 my_pi
-      real*8 energy_per_velvin,dvol,charval
+      real*8 energy_per_kelvin,dvol,charval
 
       verbose=0
       my_pi=4.0d0*atan(1.0d0)
@@ -727,6 +727,10 @@
         ! make initial liquid radius large to emulate a flat interface.
        radblob = 100.0d0  ! meters (curvature 0.01 meters)
        Q_liquid_system=2.0d0 ! Watts
+        ! reduce Q since transfer of internal energy to momentum
+        ! is not supported in this code.  Also, transfer of energy to
+        ! outer walls is not supported in this code.
+       Q_liquid_system=0.01d0
        probhi_R_domain=radblob+0.5d0*TANK_HT
        problo_R_domain=radblob-0.5d0*TANK_HT
         ! bias for physical volume of liquid:
@@ -1466,8 +1470,17 @@
           (xpos_new**2)/DT_CROSSING(igrid)
         LDIAG(igrid)=0.0d0
         UDIAG(igrid)=0.0d0
-        vel_mh=((R_gamma_NEW/xpos_mh)**2)*mdotT/den_G
-        vel_ph=((R_gamma_NEW/xpos_ph)**2)*mdotT/den_G
+        if (sealed_flag.eq.0) then
+         vel_mh=((R_gamma_NEW/xpos_mh)**2)*mdotT/den_G
+         vel_ph=((R_gamma_NEW/xpos_ph)**2)*mdotT/den_G
+        else if (sealed_flag.eq.1) then
+         vel_mh=0.0d0
+         vel_ph=0.0d0
+        else
+         print *,"sealed_flag invalid"
+         stop
+        endif
+
         advect_plus=vel_ph*(xpos_ph**2)*dx_new
         advect_minus=vel_mh*(xpos_mh**2)*dx_new
         diffuse_plus=D_G*(xpos_ph**2)
