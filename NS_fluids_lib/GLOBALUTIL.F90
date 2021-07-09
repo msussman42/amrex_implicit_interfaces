@@ -11779,6 +11779,31 @@ contains
       end subroutine VISC_dodecane
 
 
+      subroutine geom_avg(local_plus,local_minus,wt_plus,wt_minus, &
+                      coeff)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: local_plus,local_minus
+      REAL_T, intent(in) :: wt_plus,wt_minus
+      REAL_T, intent(out) :: coeff
+
+      if ((local_plus.eq.zero).and.(local_minus.eq.zero)) then
+       coeff=zero
+      else if ((local_plus.eq.zero).and.(local_minus.gt.zero)) then
+       coeff=zero
+      else if ((local_plus.gt.zero).and.(local_minus.eq.zero)) then
+       coeff=zero
+      else if ((local_plus.gt.zero).and.(local_minus.gt.zero)) then
+       coeff=local_plus*local_minus/(wt_plus*local_minus+wt_minus*local_plus)
+      else
+       print *,"local_plus or local_minus invalid"
+       stop
+      endif
+
+      return
+      end subroutine geom_avg
+
+
         ! CONTAINER ROUTINE FOR MEHDI VAHAB, MITSUHIRO OHTA, and
         ! MARCO ARIENTI
       REAL_T function get_user_viscconst(im,density,temperature)
