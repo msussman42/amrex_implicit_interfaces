@@ -8137,29 +8137,54 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vofF)
       INTEGER_T, intent(in) :: DIMDEC(massF)
       INTEGER_T, intent(in) :: DIMDEC(modvisc)
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4)
-      REAL_T, intent(out) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(out) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(out) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: curv(DIMV(curv),num_curv) 
-      REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T, intent(in) :: mom_den(DIMV(mom_den),nmat) 
-      REAL_T, intent(in) :: viscstate(DIMV(viscstate),nmat) 
-      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
-      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
-      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
-      REAL_T, intent(out) :: cenDeDT(DIMV(cenDeDT),nmat+1)
-      REAL_T, intent(out) :: cenden(DIMV(cenden),nmat+1)
-      REAL_T, intent(out) :: cenvof(DIMV(cenvof),nmat)  
-      REAL_T, intent(out) :: cenvisc(DIMV(cenvisc),nmat+1)
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat)
-      REAL_T, intent(in) :: vofC(DIMV(vofC),nmat)
-      REAL_T, intent(in) :: vofF(DIMV(vofF),nrefine_vof)
-      REAL_T, intent(in) :: massF(DIMV(massF),nrefine_vof)
-      REAL_T, intent(in) :: modvisc(DIMV(modvisc),nmat)
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4)
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: yface(DIMV(yface),ncphys)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: zface(DIMV(zface),ncphys)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: curv(DIMV(curv),num_curv) 
+      REAL_T, pointer :: curv_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, pointer :: slope_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: &
+              denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
+      REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: viscstate(DIMV(viscstate),nmat) 
+      REAL_T, pointer :: viscstate_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
+      REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
+      REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
+      REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenDeDT(DIMV(cenDeDT),nmat+1)
+      REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenden(DIMV(cenden),nmat+1)
+      REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenvof(DIMV(cenvof),nmat)  
+      REAL_T, pointer :: cenvof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenvisc(DIMV(cenvisc),nmat+1)
+      REAL_T, pointer :: cenvisc_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat)
+      REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vofC(DIMV(vofC),nmat)
+      REAL_T, pointer :: vofC_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: modvisc(DIMV(modvisc),nmat)
+      REAL_T, pointer :: modvisc_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       REAL_T, intent(in) :: smoothing_length_scale
@@ -8263,6 +8288,8 @@ stop
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
+      REAL_T local_plus
+      REAL_T local_minus
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
       REAL_T LS_clamped_minus
@@ -8305,6 +8332,30 @@ stop
 ! INIT_PHYSICS_VARS code starts here:
 
       nhalf=3
+
+      maskcov_ptr=>maskcov
+      masknbr_ptr=>masknbr
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      curv_ptr=>curv
+      slope_ptr=>slope
+      denstate_ptr=>denstate
+      mom_den_ptr=>mom_den
+      viscstate_ptr=>viscstate
+      solxfab_ptr=>solxfab
+      solyfab_ptr=>solyfab
+      solzfab_ptr=>solzfab
+      cenDeDT_ptr=>cenDeDT
+      cenden_ptr=>cenden
+      cenvof_ptr=>cenvof
+      cenvisc_ptr=>cenvisc
+      vol_ptr=>vol
+      levelPC_ptr=>levelPC
+      vofC_ptr=>vofC
+      vofF_ptr=>vofF
+      massF_ptr=>massF
+      modvisc_ptr=>modvisc
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -8426,46 +8477,34 @@ stop
 
       nmax=POLYGON_LIST_MAX ! in: INIT_PHYSICS_VARS
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,213)
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,213)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,213)
+      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1,213)
 
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,213)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,214)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,215)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,213)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,214)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,215)
 
-      call checkbound(fablo,fabhi, &
-       DIMS(cenDeDT), &
-       1,-1,216)
-      call checkbound(fablo,fabhi,DIMS(cenden),1,-1,217)
-      call checkbound(fablo,fabhi,DIMS(cenvof),1,-1,217)
-      call checkbound(fablo,fabhi, &
-       DIMS(cenvisc), &
-       1,-1,218)
+      call checkbound_array(fablo,fabhi,cenDeDT_ptr,1,-1,216)
+      call checkbound_array(fablo,fabhi,cenden_ptr,1,-1,217)
+      call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1,217)
+      call checkbound_array(fablo,fabhi,cenvisc_ptr,1,-1,218)
 
-      call checkbound(fablo,fabhi,DIMS(slope),1,-1,219)
-      call checkbound(fablo,fabhi,DIMS(curv),1,-1,221)
-      call checkbound(fablo,fabhi, &
-       DIMS(denstate), &
-       1,-1,223)
-      call checkbound(fablo,fabhi, &
-       DIMS(mom_den), &
-       1,-1,223)
-      call checkbound(fablo,fabhi, &
-       DIMS(viscstate), &
-       1,-1,224)
+      call checkbound_array(fablo,fabhi,slope_ptr,1,-1,219)
+      call checkbound_array(fablo,fabhi,curv_ptr,1,-1,221)
+      call checkbound_array(fablo,fabhi,denstate_ptr,1,-1,223)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,1,-1,223)
+      call checkbound_array(fablo,fabhi,viscstate_ptr,1,-1,224)
 
-      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,225)
-      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,225)
-      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,225)
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,225)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,225)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,225)
 
-      call checkbound(fablo,fabhi,DIMS(vol),1,-1,227)
-      call checkbound(fablo,fabhi, &
-       DIMS(levelPC), &
-       2,-1,229) 
-      call checkbound(fablo,fabhi,DIMS(vofC),1,-1,227)
-      call checkbound(fablo,fabhi,DIMS(vofF),1,-1,227)
-      call checkbound(fablo,fabhi,DIMS(massF),1,-1,227)
-      call checkbound(fablo,fabhi,DIMS(modvisc),1,-1,227)
+      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1,227)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,2,-1,229) 
+      call checkbound_array(fablo,fabhi,vofC_ptr,1,-1,227)
+      call checkbound_array(fablo,fabhi,vofF_ptr,1,-1,227)
+      call checkbound_array(fablo,fabhi,massF_ptr,1,-1,227)
+      call checkbound_array(fablo,fabhi,modvisc_ptr,1,-1,227)
 
       do im=1,nten
 
@@ -8686,7 +8725,9 @@ stop
          wtL=(xstenMAC(0,veldir+1)-xstenMAC(-1,veldir+1))
          wtR=(xstenMAC(1,veldir+1)-xstenMAC(0,veldir+1))
          wtsum=wtL+wtR
-         if ((wtL.le.zero).or.(wtR.le.zero).or.(wtsum.le.zero)) then
+         if ((wtL.gt.zero).and.(wtR.gt.zero).and.(wtsum.gt.zero)) then
+          ! do nothing
+         else
           print *,"wtL, wtR, or wtsum invalid" 
           stop
          endif
@@ -9243,23 +9284,18 @@ stop
           ! both adjoining cells are solid cells.
          if (solid_present_flag.eq.1) then
 
-          if (1.eq.0) then
-           facevisc_local= &
-            half*(localvisc_plus(implus_majority)+ &
-                  localvisc_minus(imminus_majority))
-          endif
-
           facevisc_local=zero  ! dirichlet cond for velocity at the solid.
 
-          faceheat_local= &
-           half*(get_user_heatviscconst(implus_majority)+ &
-                 get_user_heatviscconst(imminus_majority))
+          local_plus=get_user_heatviscconst(implus_majority)
+          local_minus=get_user_heatviscconst(imminus_majority)
+          call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
-           facespecies_local(imspec)= &
-             half*(fort_speciesviscconst((imspec-1)*nmat+implus_majority)+ &
-                   fort_speciesviscconst((imspec-1)*nmat+imminus_majority))
-          enddo
+           local_plus=fort_speciesviscconst((imspec-1)*nmat+implus_majority)
+           local_minus=fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+           call geom_avg(local_plus,local_minus,wtR,wtL, &
+                   facespecies_local(imspec))
+          enddo !do imspec=1,num_species_var
 
           if (is_clamped_face.ge.1) then
            ! diffuse temperature and species in the clamped solid
@@ -9293,14 +9329,19 @@ stop
          
           smoothing_local=zero
 
-          facevisc_local=wtR*localvisc_plus(implus_majority)+ &
-                         wtL*localvisc_minus(imminus_majority)
-          faceheat_local=wtR*get_user_heatviscconst(implus_majority)+ &
-                         wtL*get_user_heatviscconst(imminus_majority)
+          call geom_avg(localvisc_plus(implus_majority), &
+                  localvisc_minus(imminus_majority), &
+                  wtR,wtL,facevisc_local)
+
+          local_plus=get_user_heatviscconst(implus_majority)
+          local_minus=get_user_heatviscconst(imminus_majority)
+          call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
+
           do imspec=1,num_species_var
-           facespecies_local(imspec)= &
-            wtR*fort_speciesviscconst((imspec-1)*nmat+implus_majority)+ &
-            wtL*fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+           local_plus=fort_speciesviscconst((imspec-1)*nmat+implus_majority)
+           local_minus=fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+           call geom_avg(local_plus,local_minus,wtR,wtL, &
+                   facespecies_local(imspec))
           enddo
 
           if (is_clamped_face.ge.1) then
@@ -9424,14 +9465,19 @@ stop
 
           if (gradh.eq.zero) then
 
-           facevisc_local=wtR*localvisc_plus(implus_majority)+ &
-                          wtL*localvisc_minus(imminus_majority)
-           faceheat_local=wtR*get_user_heatviscconst(implus_majority)+ &
-                          wtL*get_user_heatviscconst(imminus_majority)
+           call geom_avg(localvisc_plus(implus_majority), &
+                  localvisc_minus(imminus_majority), &
+                  wtR,wtL,facevisc_local)
+
+           local_plus=get_user_heatviscconst(implus_majority)
+           local_minus=get_user_heatviscconst(imminus_majority)
+           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
+
            do imspec=1,num_species_var
-            facespecies_local(imspec)= &
-             wtL*fort_speciesviscconst((imspec-1)*nmat+imminus_majority)+ &
-             wtR*fort_speciesviscconst((imspec-1)*nmat+implus_majority)
+            local_plus=fort_speciesviscconst((imspec-1)*nmat+implus_majority)
+            local_minus=fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+            call geom_avg(local_plus,local_minus,wtR,wtL, &
+                   facespecies_local(imspec))
            enddo
 
           else if (gradh.ne.zero) then
