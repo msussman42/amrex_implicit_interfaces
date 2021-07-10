@@ -13,7 +13,7 @@ stop_time=1.0e+20
 # CRYOGENIC_TANK_MK.F90
 ns.probtype         = 423
 # variable accessible from plug-in:
-ns.axis_dir         = 0
+ns.axis_dir         = 1
 # variable for compiling diagnostic output
 # integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
 # T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
@@ -169,7 +169,7 @@ ns.v=0
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
-ns.gravity          = 9.8
+ns.gravity          = 0.0
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
 ns.gravity_potential_form=1
@@ -247,7 +247,7 @@ ns.stiffCP=1300.0 2400.0 1500.0
 ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
-ns.heatviscconst=0.075 0.00375 0.189
+ns.heatviscconst=0.075 0.00375 0.0
 
 # Dynamic viscosity [Pa.s]
 # mu_gas=1.093e-6, but make zero to avoid jump condition issue.
@@ -351,9 +351,11 @@ ns.temperature_primitive_variable=1 1 1
 ns.solidheat_flag   =0
 
 # Heat flux from band heater
+# if axis_dir==0,
 # this source will be distributed: 1/2 in the fluid near the wall,
 # and 1/2 in the wall.
-ns.xblob3 = 2.0 # Watts=J/s
+# if axis_dir==1, then source concentrated in the fluid.
+ns.xblob3 = 1.0 # Watts=J/s
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------

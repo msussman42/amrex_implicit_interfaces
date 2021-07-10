@@ -1066,7 +1066,14 @@ stop
         print *,"iten,tension_T0 ",iten,fort_tension_T0(iten)
         print *,"iten,tension_min ",iten,fort_tension_min(iten)
         print *,"iten,prefreeze_tension ",iten,fort_prefreeze_tension(iten)
-       enddo
+        print *,"iten,fort_saturation_temp ",iten,fort_saturation_temp(iten)
+        print *,"iten,fort_reference_pressure ",iten, &
+          fort_reference_pressure(iten)
+        print *,"iten+nten,fort_saturation_temp ",iten+nten, &
+          fort_saturation_temp(iten+nten)
+        print *,"iten+nten,fort_reference_pressure ",iten+nten, &
+          fort_reference_pressure(iten+nten)
+       enddo ! iten=1..nten
       endif
       
       FORT_MUSHY_THICK=ccMUSHY_THICK

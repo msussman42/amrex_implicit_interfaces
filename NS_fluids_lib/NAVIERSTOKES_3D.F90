@@ -10941,6 +10941,7 @@ END SUBROUTINE SIMP
       INTEGER_T nhalf
       REAL_T mofdata(nmat*ngeom_recon)
       REAL_T mofdata_L(nmat*ngeom_recon)
+      REAL_T local_cellvol
       INTEGER_T caller_id
       INTEGER_T nmax
 
@@ -11031,251 +11032,236 @@ END SUBROUTINE SIMP
        local_mask=NINT(mask(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
-        call gridsten_level(xsten,i,j,k,level,nhalf)
+        local_cellvol=volumefab(D_DECL(i,j,k))
 
-        do im=1,nmat*ngeom_recon
-         mofdata(im)=VOF(D_DECL(i,j,k),im)
-        enddo
+        if (local_cellvol.gt.zero) then
 
-        tessellate=1 ! tessellate output (tessellate=3 => raster output)
-        caller_id=15
-        call multi_get_volume_tessellate( &
-          tessellate, & ! tessellate=1 
-          bfact, &
-          dx, &
-          xsten,nhalf, &
-          mofdata, &
-          geom_xtetlist(1,1,1,tid_current+1), &
-          nmax, &
-          nmax, &
-          nmat, &
-          SDIM, &
-          caller_id)
+         call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do dir=1,SDIM
-         xtarget(dir)=xsten(0,dir)
-        enddo
+         do im=1,nmat*ngeom_recon
+          mofdata(im)=VOF(D_DECL(i,j,k),im)
+         enddo
 
-        do iregions=1,number_of_source_regions
-         im=regions_list(iregions,0)%region_material_id
-         if ((im.ge.1).and.(im.le.nmat)) then
+         tessellate=1 ! tessellate output (tessellate=3 => raster output)
+         caller_id=15
+         call multi_get_volume_tessellate( &
+           tessellate, & ! tessellate=1 
+           bfact, &
+           dx, &
+           xsten,nhalf, &
+           mofdata, &
+           geom_xtetlist(1,1,1,tid_current+1), &
+           nmax, &
+           nmax, &
+           nmat, &
+           SDIM, &
+           caller_id)
 
-          regions_list(iregions,0)%region_dt=dt
+         do dir=1,SDIM
+          xtarget(dir)=xsten(0,dir)
+         enddo
 
-          vofcomp=(im-1)*ngeom_recon+1
-          vfrac=mofdata(vofcomp)
-          if ((vfrac.ge.zero).and.(vfrac.le.one)) then
-           if (vfrac.le.one-VOFTOL) then
-            vfrac_raster=zero
-           else if (vfrac.ge.one-VOFTOL) then
-            vfrac_raster=one
-           else
-            print *,"vfrac bust"
-            stop
-           endif
-           call SUB_CHARFN_REGION(iregions,xtarget,cur_time,charfn)
-           if ((charfn.eq.zero).or.(charfn.eq.one)) then
+         do iregions=1,number_of_source_regions
+          im=regions_list(iregions,0)%region_material_id
+          if ((im.ge.1).and.(im.le.nmat)) then
 
-            imattype=fort_material_type(im)
-            dencomp=(im-1)*num_state_material+1
-            local_den=DEN(D_DECL(i,j,k),dencomp)
-            local_temp=DEN(D_DECL(i,j,k),dencomp+1)
+           regions_list(iregions,0)%region_dt=dt
 
-            call init_massfrac_parm(local_den,massfrac_parm,im)
-            do ispec=1,num_species_var
-              massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
-              if (massfrac_parm(ispec).ge.zero) then
-               ! do nothing
-              else
-               print *,"massfrac_parm(ispec) invalid"
-               stop
-              endif
-            enddo ! ispec=1,num_species_var
-
-              ! DeDT = cv  ( J/(kg Kelvin)  )
-            call DeDT_material(local_den,massfrac_parm, &
-               local_temp,DeDT,imattype,im)
-
-            if (DeDT.gt.zero) then
-              ! do nothing
+           vofcomp=(im-1)*ngeom_recon+1
+           vfrac=mofdata(vofcomp)
+           if ((vfrac.ge.zero).and.(vfrac.le.one)) then
+            if (vfrac.le.one-VOFTOL) then
+             vfrac_raster=zero
+            else if (vfrac.ge.one-VOFTOL) then
+             vfrac_raster=one
             else
-              print *,"DeDT must be positive"
-              stop
+             print *,"vfrac bust"
+             stop
             endif
+            call SUB_CHARFN_REGION(iregions,xtarget,cur_time,charfn)
+            if ((charfn.eq.zero).or.(charfn.eq.one)) then
 
-            if (isweep.eq.0) then
-             regions_list(iregions,tid_current+1)%region_volume_raster= &
-              regions_list(iregions,tid_current+1)%region_volume_raster+ &
-              volumefab(D_DECL(i,j,k))*vfrac_raster*charfn
-             regions_list(iregions,tid_current+1)%region_energy_per_kelvin= &
-              regions_list(iregions,tid_current+1)%region_energy_per_kelvin+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den*DeDT
-             regions_list(iregions,tid_current+1)%region_energy= &
-              regions_list(iregions,tid_current+1)%region_energy+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den*DeDT*local_temp
-             regions_list(iregions,tid_current+1)%region_mass= &
-              regions_list(iregions,tid_current+1)%region_mass+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn*local_den
-             regions_list(iregions,tid_current+1)%region_volume= &
-              regions_list(iregions,tid_current+1)%region_volume+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn
+             imattype=fort_material_type(im)
+             dencomp=(im-1)*num_state_material+1
+             local_den=DEN(D_DECL(i,j,k),dencomp)
+             local_temp=DEN(D_DECL(i,j,k),dencomp+1)
 
-            else if (isweep.eq.1) then
-
-             region_mass_flux=regions_list(iregions,0)%region_mass_flux
-             region_volume_flux=regions_list(iregions,0)%region_volume_flux
-             region_energy_flux=regions_list(iregions,0)%region_energy_flux
-             region_volume_raster=regions_list(iregions,0)%region_volume_raster
-             region_volume=regions_list(iregions,0)%region_volume
-             region_mass=regions_list(iregions,0)%region_mass
-             region_energy_per_kelvin= &
-                  regions_list(iregions,0)%region_energy_per_kelvin
-              ! mass_new = density_new * volume_new
-              ! mass_old+dt * mass_flux = 
-              !   density_new * (volume_old+ dt * volume_flux)
-             volume_new=region_volume+dt*region_volume_flux
-             if (volume_new.gt.zero) then
-              mass_new=region_mass+dt*region_mass_flux
-              if (mass_new.gt.zero) then
-               density_new=mass_new/volume_new
-               if (density_new.gt.zero) then
+             call init_massfrac_parm(local_den,massfrac_parm,im)
+             do ispec=1,num_species_var
+               massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+               if (massfrac_parm(ispec).ge.zero) then
                 ! do nothing
                else
-                print *,"density_new invalid"
+                print *,"massfrac_parm(ispec) invalid"
                 stop
                endif
-              else
-               print *,"mass_new invalid"
-               stop
-              endif
+             enddo ! ispec=1,num_species_var
+
+               ! DeDT = cv  ( J/(kg Kelvin)  )
+             call DeDT_material(local_den,massfrac_parm, &
+                local_temp,DeDT,imattype,im)
+
+             if (DeDT.gt.zero) then
+               ! do nothing
              else
-              print *,"volume_new invalid"
-              stop
+               print *,"DeDT must be positive"
+               stop
              endif
 
-              ! volume_flux=sum_p (div u)_p xi(x_p) F_raster_p vol_p
-              ! assume div u is spatially uniform:
-              ! div u =volume_flux/volume_raster  (units 1/seconds)
-              ! units of mdot: cm^3/second^2
-             if (region_volume_flux.ne.zero) then
-              if (is_rigid(nmat,im).eq.1) then
-               print *,"disallowed: volume_flux<>0 for is_rigid==1 material"
-               stop
-              else if (is_rigid(nmat,im).eq.0) then
-               if ((imattype.gt.0).and.(imattype.lt.999)) then
-                print *,"disallowed: volume flux<>0 for compressible material"
-               else if (imattype.eq.0) then
-                ! do nothing
+             if (isweep.eq.0) then
+              regions_list(iregions,tid_current+1)%region_volume_raster= &
+               regions_list(iregions,tid_current+1)%region_volume_raster+ &
+               local_cellvol*vfrac_raster*charfn
+              regions_list(iregions,tid_current+1)%region_energy_per_kelvin= &
+               regions_list(iregions,tid_current+1)%region_energy_per_kelvin+ &
+               local_cellvol*vfrac*charfn*local_den*DeDT
+              regions_list(iregions,tid_current+1)%region_energy= &
+               regions_list(iregions,tid_current+1)%region_energy+ &
+               local_cellvol*vfrac*charfn*local_den*DeDT*local_temp
+              regions_list(iregions,tid_current+1)%region_mass= &
+               regions_list(iregions,tid_current+1)%region_mass+ &
+               local_cellvol*vfrac*charfn*local_den
+              regions_list(iregions,tid_current+1)%region_volume= &
+               regions_list(iregions,tid_current+1)%region_volume+ &
+               local_cellvol*vfrac*charfn
+
+             else if (isweep.eq.1) then
+
+              region_mass_flux=regions_list(iregions,0)%region_mass_flux
+              region_volume_flux=regions_list(iregions,0)%region_volume_flux
+              region_energy_flux=regions_list(iregions,0)%region_energy_flux
+              region_volume_raster=regions_list(iregions,0)%region_volume_raster
+              region_volume=regions_list(iregions,0)%region_volume
+              region_mass=regions_list(iregions,0)%region_mass
+              region_energy_per_kelvin= &
+                   regions_list(iregions,0)%region_energy_per_kelvin
+               ! mass_new = density_new * volume_new
+               ! mass_old+dt * mass_flux = 
+               !   density_new * (volume_old+ dt * volume_flux)
+              volume_new=region_volume+dt*region_volume_flux
+              if (volume_new.gt.zero) then
+               mass_new=region_mass+dt*region_mass_flux
+               if (mass_new.gt.zero) then
+                density_new=mass_new/volume_new
+                if (density_new.gt.zero) then
+                 ! do nothing
+                else
+                 print *,"density_new invalid"
+                 stop
+                endif
                else
-                print *,"imattype invalid"
+                print *,"mass_new invalid"
                 stop
                endif
+              else if (volume_new.eq.zero) then
+               ! do nothing
               else
-               print *,"is_rigid invalid"
+               print *,"volume_new invalid"
+               print *,"iregions=",iregions
+               print *,"tid_current=",tid_current
+               print *,"region_volume ",region_volume
+               print *,"region_volume_flux ",region_volume_flux
+               print *,"dt ",dt
+               print *,"im ",im
                stop
               endif
 
-              if (region_volume_raster.gt.zero) then 
-               if (charfn.eq.one) then
-                divu=region_volume_flux/region_volume_raster
-                mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
-                 divu*volumefab(D_DECL(i,j,k))*charfn*vfrac_raster/dt
-                temperature_prescribe= &
-                     regions_list(iregions,0)%region_temperature_prescribe
-                if (temperature_prescribe.eq.zero) then
+               ! volume_flux=sum_p (div u)_p xi(x_p) F_raster_p vol_p
+               ! assume div u is spatially uniform:
+               ! div u =volume_flux/volume_raster  (units 1/seconds)
+               ! units of mdot: cm^3/second^2
+              if (region_volume_flux.ne.zero) then
+               if (is_rigid(nmat,im).eq.1) then
+                print *,"disallowed: volume_flux<>0 for is_rigid==1 material"
+                stop
+               else if (is_rigid(nmat,im).eq.0) then
+                if ((imattype.gt.0).and.(imattype.lt.999)) then
+                 print *,"disallowed: volume flux<>0 for compressible material"
+                else if (imattype.eq.0) then
                  ! do nothing
-                else if (temperature_prescribe.gt.zero) then
-                 if (region_volume_flux.gt.zero) then
-                  if (vfrac_raster.eq.zero) then
-                   ! do nothing
-                  else if (vfrac_raster.eq.one) then
-                   do dir=1,SDIM
-                    snew(D_DECL(i,j,k),dir)= &
-                     regions_list(iregions,0)%region_velocity_prescribe(dir)
-                   enddo
+                else
+                 print *,"imattype invalid"
+                 stop
+                endif
+               else
+                print *,"is_rigid invalid"
+                stop
+               endif
+
+               if (region_volume_raster.gt.zero) then 
+                if (charfn.eq.one) then
+                 divu=region_volume_flux/region_volume_raster
+                 mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
+                  divu*local_cellvol*charfn*vfrac_raster/dt
+                 temperature_prescribe= &
+                      regions_list(iregions,0)%region_temperature_prescribe
+                 if (temperature_prescribe.eq.zero) then
+                  ! do nothing
+                 else if (temperature_prescribe.gt.zero) then
+                  if (region_volume_flux.gt.zero) then
+                   if (vfrac_raster.eq.zero) then
+                    ! do nothing
+                   else if (vfrac_raster.eq.one) then
+                    do dir=1,SDIM
+                     snew(D_DECL(i,j,k),dir)= &
+                      regions_list(iregions,0)%region_velocity_prescribe(dir)
+                    enddo
+                   else
+                    print *,"vfrac_raster invalid"
+                    stop
+                   endif
+                   if (vfrac.eq.zero) then
+                    ! do nothing
+                   else if ((vfrac.gt.zero).and. &
+                            (vfrac.le.one+VOFTOL)) then
+                    snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_prescribe
+                   else
+                    print *,"vfrac invalid"
+                    stop
+                   endif
                   else
-                   print *,"vfrac_raster invalid"
-                   stop
-                  endif
-                  if (vfrac.eq.zero) then
-                   ! do nothing
-                  else if ((vfrac.gt.zero).and. &
-                           (vfrac.le.one+VOFTOL)) then
-                   snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_prescribe
-                  else
-                   print *,"vfrac invalid"
+                   print *,"cannot prescribe state if volume_flux<=0"
                    stop
                   endif
                  else
-                  print *,"cannot prescribe state if volume_flux<=0"
+                  print *,"temperature_prescribe invalid"
                   stop
                  endif
-                else
-                 print *,"temperature_prescribe invalid"
-                 stop
-                endif
-               else if (charfn.eq.zero) then
-                ! do nothing
-               else
-                print *,"charfn invalid"
-                stop
-               endif
-              else
-               print *,"region_volume_raster invalid"
-               stop
-              endif
-             else if (region_volume_flux.eq.zero) then
-              divu=zero
-             else
-              print *,"region_volume_flux invalid"
-              stop
-             endif
-
-             update_density_flag=0
-             density_flux=zero
-             if ((region_volume_flux.eq.zero).and. &
-                 (region_mass_flux.eq.zero)) then
-              ! do nothing
-             else if ((region_volume_flux.eq.zero).and. &
-                      (region_mass_flux.ne.zero)) then
-              update_density_flag=1
-
-              if (is_rigid(nmat,im).eq.1) then
-               print *,"mass_flux<>0 disallowed for is_rigid==1 materials"
-               stop
-              else if (is_rigid(nmat,im).eq.0) then
-               if ((imattype.gt.0).and.(imattype.lt.999)) then
-                ! do nothing
-               else if (imattype.eq.0) then
-                if (constant_density_all_time(im).eq.0) then
+                else if (charfn.eq.zero) then
                  ! do nothing
                 else
-                 print *,"constant_density_all_time invalid"
+                 print *,"charfn invalid"
                  stop
                 endif
+               else if (region_volume_raster.eq.zero) then
+                ! do nothing
                else
-                print *,"imattype invalid"
+                print *,"region_volume_raster invalid"
                 stop
                endif
+              else if (region_volume_flux.eq.zero) then
+               divu=zero
               else
-               print *,"is_rigid(nmat,im) invalid"
+               print *,"region_volume_flux invalid"
                stop
               endif
- 
-             else if (region_volume_flux.ne.zero) then
-              density_flux=region_mass_flux/region_volume_flux
-              if (is_rigid(nmat,im).eq.1) then
-               print *,"volume_flux<>0 disallowed for is_rigid==1 materials"
-               stop
-              else if (is_rigid(nmat,im).eq.0) then
-               if ((imattype.gt.0).and.(imattype.lt.999)) then
-                print *,"disallowed: volume flux<>0 for compressible material"
+
+              update_density_flag=0
+              density_flux=zero
+              if ((region_volume_flux.eq.zero).and. &
+                  (region_mass_flux.eq.zero)) then
+               ! do nothing
+              else if ((region_volume_flux.eq.zero).and. &
+                       (region_mass_flux.ne.zero)) then
+               update_density_flag=1
+
+               if (is_rigid(nmat,im).eq.1) then
+                print *,"mass_flux<>0 disallowed for is_rigid==1 materials"
                 stop
-               else if (imattype.eq.0) then
-                if (abs(fort_denconst(im)-density_flux).le.VOFTOL) then
+               else if (is_rigid(nmat,im).eq.0) then
+                if ((imattype.gt.0).and.(imattype.lt.999)) then
                  ! do nothing
-                else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL) then
-                 update_density_flag=1
+                else if (imattype.eq.0) then
                  if (constant_density_all_time(im).eq.0) then
                   ! do nothing
                  else
@@ -11283,105 +11269,153 @@ END SUBROUTINE SIMP
                   stop
                  endif
                 else
-                 print *,"density_flux out of range"
+                 print *,"imattype invalid"
                  stop
                 endif
                else
-                print *,"imattype invalid"
+                print *,"is_rigid(nmat,im) invalid"
                 stop
                endif
-              else
-               print *,"is_rigid(nmat,im) invalid"
-               stop
-              endif
-             else
-              print *,"region_volume_flux invalid"
-              stop
-             endif
-             if (update_density_flag.eq.1) then
-              snew(D_DECL(i,j,k),SDIM+1+dencomp)=density_new
-             else if (update_density_flag.eq.0) then
-              ! do nothing
-             else
-              print *,"update_density_flag invalid"
-              stop
-             endif
-              ! energy_flux dimensions: J/second=Watts
-              ! cv dimensions: J/(kg Kelvin)
-              ! rho cv T dimensions: kg/m^3   *  J/(kg Kelvin)  *  Kelvin=
-              ! J/m^3
-              ! energy_flux=sum_p den_p * cv_p * Tflux * charfn_p * F_p * Vol_p
-              !  units of RHS: kg/m^3 * J/(kg Kelvin) * (Kelvin/sec) * m^3=
-              !    J/sec
-              ! energy_per_kelvin=sum_p den_p cv_p charfn_p F_p vol_p (J/K)
-              !       
-              ! Tflux=energy_flux/(energy_per_kelvin)=(J/s)/(J/K)=Kelvin/s
-
-             temperature_new=local_temp
-             if (region_energy_flux.ne.zero) then
-              if (region_energy_per_kelvin.gt.zero) then
-               if (local_den.gt.zero) then
-                region_energy_per_kelvin=(density_new/local_den)* &
-                    region_energy_per_kelvin
-               else
-                print *,"local_den invalid"
+  
+              else if (region_volume_flux.ne.zero) then
+               density_flux=region_mass_flux/region_volume_flux
+               if (is_rigid(nmat,im).eq.1) then
+                print *,"volume_flux<>0 disallowed for is_rigid==1 materials"
                 stop
-               endif
-               Tflux=region_energy_flux/region_energy_per_kelvin
-               if (Tflux.ne.zero) then
-                temperature_new=local_temp+dt*Tflux
-                if (temperature_new.gt.zero) then
-                 snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_new
+               else if (is_rigid(nmat,im).eq.0) then
+                if ((imattype.gt.0).and.(imattype.lt.999)) then
+                 print *,"disallowed: volume flux<>0 for compressible material"
+                 stop
+                else if (imattype.eq.0) then
+                 if (abs(fort_denconst(im)-density_flux).le.VOFTOL) then
+                  ! do nothing
+                 else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL) then
+                  update_density_flag=1
+                  if (constant_density_all_time(im).eq.0) then
+                   ! do nothing
+                  else
+                   print *,"constant_density_all_time invalid"
+                   stop
+                  endif
+                 else
+                  print *,"density_flux out of range"
+                  stop
+                 endif
                 else
-                 print *,"temperature_new invalid"
+                 print *,"imattype invalid"
                  stop
                 endif
                else
-                print *,"Tflux invalid"
+                print *,"is_rigid(nmat,im) invalid"
                 stop
                endif
               else
-               print *,"region_energy_per_kelvin invalid"
+               print *,"region_volume_flux invalid"
                stop
               endif
-             else if (region_energy_flux.eq.zero) then
-              ! do nothing
+              if (update_density_flag.eq.1) then
+               snew(D_DECL(i,j,k),SDIM+1+dencomp)=density_new
+              else if (update_density_flag.eq.0) then
+               ! do nothing
+              else
+               print *,"update_density_flag invalid"
+               stop
+              endif
+               ! energy_flux dimensions: J/second=Watts
+               ! cv dimensions: J/(kg Kelvin)
+               ! rho cv T dimensions: kg/m^3   *  J/(kg Kelvin)  *  Kelvin=
+               ! J/m^3
+               ! energy_flux=sum_p den_p * cv_p * Tflux * charfn_p * F_p * Vol_p
+               !  units of RHS: kg/m^3 * J/(kg Kelvin) * (Kelvin/sec) * m^3=
+               !    J/sec
+               ! energy_per_kelvin=sum_p den_p cv_p charfn_p F_p vol_p (J/K)
+               !       
+               ! Tflux=energy_flux/(energy_per_kelvin)=(J/s)/(J/K)=Kelvin/s
+
+              temperature_new=local_temp
+              if (region_energy_flux.ne.zero) then
+               if (region_energy_per_kelvin.gt.zero) then
+                if (local_den.gt.zero) then
+                 region_energy_per_kelvin=(density_new/local_den)* &
+                     region_energy_per_kelvin
+                else
+                 print *,"local_den invalid"
+                 stop
+                endif
+                Tflux=region_energy_flux/region_energy_per_kelvin
+                if (Tflux.ne.zero) then
+                 temperature_new=local_temp+dt*Tflux
+                 if (temperature_new.gt.zero) then
+                  snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_new
+                 else
+                  print *,"temperature_new invalid"
+                  stop
+                 endif
+                else
+                 print *,"Tflux invalid"
+                 stop
+                endif
+               else
+                print *,"region_energy_per_kelvin invalid"
+                stop
+               endif
+              else if (region_energy_flux.eq.zero) then
+               ! do nothing
+              else
+               print *,"region_energy_flux bust"
+               stop
+              endif
+              if ((region_volume.gt.zero).and.(volume_new.ge.zero)) then
+
+               regions_list(iregions,tid_current+1)%region_volume_after= &
+                regions_list(iregions,tid_current+1)%region_volume_after+ &
+                local_cellvol*vfrac*charfn* &
+                (volume_new/region_volume)
+               regions_list(iregions,tid_current+1)%region_mass_after= &
+                regions_list(iregions,tid_current+1)%region_mass_after+ &
+                local_cellvol*vfrac*charfn*density_new* &
+                (volume_new/region_volume)
+               regions_list(iregions,tid_current+1)%region_energy_after= &
+                regions_list(iregions,tid_current+1)%region_energy_after+ &
+                local_cellvol*vfrac*charfn*density_new*DeDT* &
+                temperature_new* &
+                (volume_new/region_volume)
+
+              else if (region_volume.eq.zero) then
+               if (volume_new.eq.zero) then
+                ! do nothing
+               else
+                print *,"volume_new invalid"
+                stop
+               endif
+              else
+               print *,"region_volume invalid"
+               stop
+              endif
+
              else
-              print *,"region_energy_flux bust"
+              print *,"isweep invalid"
               stop
              endif
-             regions_list(iregions,tid_current+1)%region_volume_after= &
-              regions_list(iregions,tid_current+1)%region_volume_after+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn* &
-              (volume_new/region_volume)
-             regions_list(iregions,tid_current+1)%region_mass_after= &
-              regions_list(iregions,tid_current+1)%region_mass_after+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn*density_new* &
-              (volume_new/region_volume)
-             regions_list(iregions,tid_current+1)%region_energy_after= &
-              regions_list(iregions,tid_current+1)%region_energy_after+ &
-              volumefab(D_DECL(i,j,k))*vfrac*charfn*density_new*DeDT* &
-              temperature_new* &
-              (volume_new/region_volume)
-
             else
-             print *,"isweep invalid"
+             print *,"charfn invalid"
              stop
             endif
+
            else
-            print *,"charfn invalid"
+            print *,"vfrac out of range"
             stop
            endif
-
           else
-           print *,"vfrac out of range"
+           print *,"im invalid 11385:",im
            stop
           endif
-         else
-          print *,"im invalid"
-          stop
-         endif
-        enddo !iregions=1,number_of_source_regions
+         enddo !iregions=1,number_of_source_regions
+
+        else
+         print *,"local_cellvol invalid"
+         stop
+        endif
 
        else if (local_mask.eq.0) then
         ! do nothing
@@ -11552,6 +11586,8 @@ END SUBROUTINE SIMP
                  print *,"charfn invalid"
                  stop
                 endif
+               else if (region_volume_raster.eq.zero) then
+                ! do nothing
                else
                 print *,"region_volume_raster invalid"
                 stop
@@ -11573,7 +11609,7 @@ END SUBROUTINE SIMP
              stop
             endif
            else
-            print *,"im invalid"
+            print *,"im invalid 11582:",im
             stop
            endif
           enddo !iregions=1,number_of_source_regions

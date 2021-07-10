@@ -2237,7 +2237,7 @@ stop
              else if (im.eq.im_vapor) then
               cos_angle=Pi-cos(ZEYU_thet_d)
              else
-              print *,"im invalid"
+              print *,"im invalid 2240: ",im
               stop
              endif
                      
@@ -7072,7 +7072,8 @@ stop
              blob_cellvol_count=level_blobdata(ic-2)
              if (blob_cellvol_count.gt.zero) then
 
-              if (pressure_sum.gt.zero) then
+              if ((pressure_sum.ge.zero).or. &
+                  (pressure_sum.le.zero)) then
                pressure_sum=pressure_sum/blob_cellvol_count
  
                if (material_type_lowmach(im_primary).eq.0) then
@@ -7080,76 +7081,83 @@ stop
                else if ((material_type_lowmach(im_primary).gt.0).and. &
                         (material_type_lowmach(im_primary).le.MAX_NUM_EOS)) then
 
-                TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
-                if (TEMP_mat.gt.zero) then
-                 ! do nothing
-                else
-                 print *,"TEMP_mat has gone nonpos"
-                 stop
-                endif
-                call init_massfrac_parm(den_mat,massfrac_parm,im_primary)
-                do ispec=1,num_species_var
-                 massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
-                enddo
-                call INTERNAL_material(den_mat,massfrac_parm,TEMP_mat, &
-                 internal_energy, &
-                 material_type_lowmach(im_primary),im_primary)
-                if (internal_energy.gt.zero) then
-                 ! do nothing
-                else
-                 print *,"internal_energy has gone nonpos"
-                 stop
-                endif
-                call EOS_material(den_mat,massfrac_parm, &
-                 internal_energy, &
-                 pressure_local, &
-                 material_type_lowmach(im_primary),im_primary)
+                if (pressure_sum.gt.zero) then
 
-                call dVdT_material(dVdT,massfrac_parm, &
-                 pressure_sum,TEMP_mat, &
-                 material_type_lowmach(im_primary),im_primary)
-
-                !F_t + s|grad F|=0
-                ! dF=F_t dt=-s|grad F|dt=-s dt/dx
-                ! my mdot=(den_src/den_dst-1)*dF*Volume_cell/dt^2=
-                !  (den_src/den_dst-1)*(-s * area)/dt
-                ! units of my mdot are "velocity" * area / seconds=
-                ! "div velocity" * Length * area / seconds =
-                ! "div velocity" * volume / seconds = (1/s)(cm^3)/s=cm^3/s^2
-                !
-                ! units of mdot_local_scalar: (1/density)(1/Kelvin)(density)
-                !   (Kelvin)*cm^3/s^2=cm^3/s^2
-                mdot_local_scalar=dVdT*den_mat* &
-                  DTDt(D_DECL(i,j,k),im_primary)*vol/(dt*dt)
-
-                if (sweep_num.eq.0) then
-                 mdot_local(D_DECL(i,j,k))=mdot_local_scalar
-                 level_mdot_data(2*(icolor-1)+2)= &
-                  level_mdot_data(2*(icolor-1)+2)+mdot_local_scalar
-                else if (sweep_num.eq.1) then
-                 mdot_sum_denom=level_mdot_data(2*(icolor-1)+1)
-                 mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
-                 if (mdot_sum_denom.gt.zero) then
-                  mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
-                  mdot_local(D_DECL(i,j,k))= &
-                   mdot_local(D_DECL(i,j,k))- &
-                   mdot_sum_numerator*vol/mdot_sum_denom
-
-                  mdot_global(D_DECL(i,j,k))=mdot_global(D_DECL(i,j,k))+ &
-                    mdot_local(D_DECL(i,j,k))
-                 else if (mdot_sum_denom.eq.zero) then
-                  print *,"since F=1 for this cell, we must have "
-                  print *,"mdot_sum_denom>0"
-                  stop
-                 else if ((mdot_sum_denom.eq.zero).and. &
-                          (mdot_sum_numerator.eq.zero)) then
+                 TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
+                 if (TEMP_mat.gt.zero) then
                   ! do nothing
                  else
-                  print *,"mdot_sum_denom or mdot_sum_numerator invalid"
+                  print *,"TEMP_mat has gone nonpos"
                   stop
                  endif
+                 call init_massfrac_parm(den_mat,massfrac_parm,im_primary)
+                 do ispec=1,num_species_var
+                  massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+                 enddo
+                 call INTERNAL_material(den_mat,massfrac_parm,TEMP_mat, &
+                  internal_energy, &
+                  material_type_lowmach(im_primary),im_primary)
+                 if (internal_energy.gt.zero) then
+                  ! do nothing
+                 else
+                  print *,"internal_energy has gone nonpos"
+                  stop
+                 endif
+                 call EOS_material(den_mat,massfrac_parm, &
+                  internal_energy, &
+                  pressure_local, &
+                  material_type_lowmach(im_primary),im_primary)
+
+                 call dVdT_material(dVdT,massfrac_parm, &
+                  pressure_sum,TEMP_mat, &
+                  material_type_lowmach(im_primary),im_primary)
+
+                 !F_t + s|grad F|=0
+                 ! dF=F_t dt=-s|grad F|dt=-s dt/dx
+                 ! my mdot=(den_src/den_dst-1)*dF*Volume_cell/dt^2=
+                 !  (den_src/den_dst-1)*(-s * area)/dt
+                 ! units of my mdot are "velocity" * area / seconds=
+                 ! "div velocity" * Length * area / seconds =
+                 ! "div velocity" * volume / seconds = (1/s)(cm^3)/s=cm^3/s^2
+                 !
+                 ! units of mdot_local_scalar: (1/density)(1/Kelvin)(density)
+                 !   (Kelvin)*cm^3/s^2=cm^3/s^2
+                 mdot_local_scalar=dVdT*den_mat* &
+                  DTDt(D_DECL(i,j,k),im_primary)*vol/(dt*dt)
+
+                 if (sweep_num.eq.0) then
+                  mdot_local(D_DECL(i,j,k))=mdot_local_scalar
+                  level_mdot_data(2*(icolor-1)+2)= &
+                   level_mdot_data(2*(icolor-1)+2)+mdot_local_scalar
+                 else if (sweep_num.eq.1) then
+                  mdot_sum_denom=level_mdot_data(2*(icolor-1)+1)
+                  mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
+                  if (mdot_sum_denom.gt.zero) then
+                   mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
+                   mdot_local(D_DECL(i,j,k))= &
+                    mdot_local(D_DECL(i,j,k))- &
+                    mdot_sum_numerator*vol/mdot_sum_denom
+ 
+                   mdot_global(D_DECL(i,j,k))=mdot_global(D_DECL(i,j,k))+ &
+                    mdot_local(D_DECL(i,j,k))
+                  else if (mdot_sum_denom.eq.zero) then
+                   print *,"since F=1 for this cell, we must have "
+                   print *,"mdot_sum_denom>0"
+                   stop
+                  else if ((mdot_sum_denom.eq.zero).and. &
+                           (mdot_sum_numerator.eq.zero)) then
+                   ! do nothing
+                  else
+                   print *,"mdot_sum_denom or mdot_sum_numerator invalid"
+                   stop
+                  endif
+                 else
+                  print *,"sweep_num invalid"
+                  stop
+                 endif
+
                 else
-                 print *,"sweep_num invalid"
+                 print *,"pressure_sum invalid pressure_sum=",pressure_sum
                  stop
                 endif
 
@@ -7157,8 +7165,8 @@ stop
                 print *,"material_type_lowmach(im_primary) invalid"
                 stop
                endif
-              else
-               print *,"pressure_sum invalid"
+              else 
+               print *,"pressure_sum NaN, pressure_sum=",pressure_sum
                stop
               endif
              else if (blob_cellvol_count.eq.zero) then
@@ -15443,7 +15451,7 @@ stop
             nc=SDIM+2  ! temperature
             local_face(nc)=templocal  ! NONCONSERVATIVE
            else
-            print *,"im invalid"
+            print *,"im invalid 15446:",im
             stop
            endif
 
