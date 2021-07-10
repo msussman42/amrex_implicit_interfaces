@@ -82,11 +82,22 @@ contains
   TANK_MK_BUBBLE_Z         = zblob2
 
   TANK_MK_HEATER_WATTS      = xblob3
-  TANK_MK_HEATER_FLUID_FRACTION = 0.5d0
-  TANK_MK_HEATER_LOW       = -0.16
-  TANK_MK_HEATER_HIGH      = -0.14
-  TANK_MK_HEATER_R         = 0.09
-  TANK_MK_HEATER_R_LOW     = 0.08
+  if (axis_dir.eq.0) then
+   TANK_MK_HEATER_FLUID_FRACTION = 0.5d0
+   TANK_MK_HEATER_LOW       = -0.16
+   TANK_MK_HEATER_HIGH      = -0.14
+   TANK_MK_HEATER_R         = 0.09
+   TANK_MK_HEATER_R_LOW     = 0.08
+  else if (axis_dir.eq.1) then
+   TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
+   TANK_MK_HEATER_LOW       = -0.5
+   TANK_MK_HEATER_HIGH      = 0.5
+   TANK_MK_HEATER_R         = 0.5
+   TANK_MK_HEATER_R_LOW     = 0.0
+  else
+   print *,"axis_dir invalid"
+   stop
+  endif
 
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
@@ -744,7 +755,7 @@ if ((num_materials.eq.3).and. &
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or tank walls
    STATE(ibase+1)=fort_denconst(im)
   else
-   print *,"im invalid"
+   print *,"im invalid 758 ",im
    stop
   endif
   ! temperature
@@ -800,7 +811,7 @@ if ((num_materials.eq.3).and. &
    else if ((im.eq.1).or.(im.eq.3)) then
     ! do nothing
    else
-    print *,"im invalid"
+    print *,"im invalid 814 ",im
     stop
    endif
   else if (t.gt.zero) then
@@ -1265,8 +1276,9 @@ INTEGER_T :: im,iregion,dir
  regions_list(1,0)%region_material_id=1
  regions_list(1,0)%region_energy_flux= &
          TANK_MK_HEATER_FLUID_FRACTION*TANK_MK_HEATER_WATTS ! Watts=J/s
- regions_list(1,0)%region_material_id=3
- regions_list(1,0)%region_energy_flux= &
+
+ regions_list(2,0)%region_material_id=3
+ regions_list(2,0)%region_energy_flux= &
       (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_WATTS ! Watts=J/s
 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST

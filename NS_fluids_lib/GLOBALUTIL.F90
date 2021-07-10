@@ -16824,7 +16824,7 @@ contains
       if ((im.ge.1).and.(im.le.num_materials)) then
        ! do nothing
       else
-       print *,"im invalid"
+       print *,"im invalid 16827:",im
        stop
       endif
       if (fort_stiffGAMMA(im).ge.one) then
@@ -17974,7 +17974,7 @@ endif
 if ((im.ge.1).and.(im.le.num_materials)) then
  ! do nothing
 else
- print *,"im invalid"
+ print *,"im invalid 17977:",im
  stop
 endif
 if (fort_stiffGAMMA(im).ge.one) then

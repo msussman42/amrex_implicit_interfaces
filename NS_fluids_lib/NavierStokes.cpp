@@ -1762,7 +1762,7 @@ void fortran_parameters() {
  }
  pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
  pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
- pp.queryarr("reference_pressure_temp",reference_pressure_temp,0,2*nten);
+ pp.queryarr("reference_pressure",reference_pressure_temp,0,2*nten);
 
  Real R_Palmore_Desjardins_temp=8.31446261815324e+7;  // ergs/(mol Kelvin)
  pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
@@ -4539,7 +4539,7 @@ NavierStokes::read_params ()
       } else
        amrex::Error("material_type[im-1] invalid");
      } else
-      amrex::Error("im invalid");
+      amrex::Error("im invalid 4542");
     } // i=0..num_species_var-1
 
 

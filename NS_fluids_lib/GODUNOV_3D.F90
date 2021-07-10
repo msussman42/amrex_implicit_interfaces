@@ -4896,6 +4896,1386 @@ stop
       end subroutine fort_crossterm_elastic
 
 
+        ! u_max(1..sdim) is max vel in dir.
+        ! u_max(sdim+1) is max c^2
+      subroutine fort_estdt( &
+        enable_spectral, &
+        AMR_min_phase_change_rate, &
+        AMR_max_phase_change_rate, &
+        elastic_time, &
+        microlayer_substrate, &
+        microlayer_angle, &
+        microlayer_size, &
+        macrolayer_size, &
+        latent_heat, &
+        reaction_rate, &
+        freezing_model, &
+        Tanasawa_or_Schrage_or_Kassemi, &
+        distribute_from_target, &
+        saturation_temp, &
+        mass_fraction_id, &
+        molar_mass, &
+        species_molar_mass, &
+        velmac,DIMS(velmac), &
+        velcell,DIMS(velcell), &
+        solidfab,DIMS(solidfab), &
+        den,DIMS(den), &
+        vof,DIMS(vof), &
+        dist,DIMS(dist), &
+        xlo,dx, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        min_stefan_velocity_for_dt, &
+        cap_wave_speed, &
+        u_max, &
+        u_max_estdt, &
+        u_max_cap_wave, &
+        dt_min, &
+        rzflag, &
+        Uref,Lref, &
+        nten, &
+        use_lsa, &
+        denconst, &
+        denconst_gravity, &
+        visc_coef, &
+        ns_gravity, &
+        terminal_velocity_dt, &
+        dirnormal, &
+        nmat, &
+        nparts, &
+        nparts_def, &
+        im_solid_map, &
+        material_type, &
+        time, &
+        shock_timestep, &
+        cfl, &
+        EILE_flag, &
+        level,finest_level) &
+      bind(c,name='fort_estdt')
+
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+      use hydrateReactor_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_def
+      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: use_lsa
+      INTEGER_T, intent(in) :: level,finest_level
+      REAL_T, intent(in) :: cfl
+      INTEGER_T, intent(in) :: EILE_flag
+      INTEGER_T, intent(in) :: nmat,nten
+      REAL_T, intent(in) :: AMR_min_phase_change_rate(SDIM)
+      REAL_T, intent(in) :: AMR_max_phase_change_rate(SDIM)
+      REAL_T, intent(in) :: elastic_time(nmat)
+      INTEGER_T, intent(in) :: shock_timestep(nmat)
+      INTEGER_T, intent(in) :: material_type(nmat)
+      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
+      REAL_T, intent(in) :: microlayer_angle(nmat)
+      REAL_T, intent(in) :: microlayer_size(nmat)
+      REAL_T, intent(in) :: macrolayer_size(nmat)
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      REAL_T, intent(in) :: reaction_rate(2*nten)
+      REAL_T :: K_f
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
+      REAL_T, intent(in) :: molar_mass(nmat)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T u_core,u_core_estdt,uu,uu_estdt,c_core
+      REAL_T cc,cleft,cright
+      REAL_T cc_diag,cleft_diag,cright_diag
+      INTEGER_T i,j,k
+      INTEGER_T icell,jcell,kcell
+      INTEGER_T ialt,jalt,kalt
+      INTEGER_T, intent(in) :: rzflag
+      INTEGER_T, intent(in) :: dirnormal
+      INTEGER_T side,dir2
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(inout) :: u_max(SDIM+1)
+      REAL_T, intent(inout) :: u_max_estdt(SDIM+1)
+      REAL_T, intent(inout) :: u_max_cap_wave
+      REAL_T, intent(inout) :: dt_min
+      REAL_T user_tension(nten)
+      REAL_T Uref,Lref
+      REAL_T, intent(in) :: denconst(nmat)
+      REAL_T, intent(in) :: denconst_gravity(nmat)
+      REAL_T, intent(in) :: visc_coef
+      REAL_T, intent(in) :: ns_gravity
+      INTEGER_T, intent(inout) :: terminal_velocity_dt
+      INTEGER_T, intent(in) :: DIMDEC(velmac)
+      INTEGER_T, intent(in) :: DIMDEC(velcell)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(dist)
+      INTEGER_T, intent(in) :: DIMDEC(solidfab)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      REAL_T, target, intent(in) :: velmac(DIMV(velmac))
+      REAL_T, pointer :: velmac_ptr(D_DECL(:,:,:))
+      REAL_T, target, intent(in) :: velcell(DIMV(velcell),SDIM)
+      REAL_T, pointer :: velcell_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
+      REAL_T, pointer :: solidfab_ptr(D_DECL(:,:,:),:)
+       ! den,temp,species
+      REAL_T, target, intent(in) :: den(DIMV(den),num_state_material*nmat)  
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(in) :: dist(DIMV(dist),nmat)
+      REAL_T, pointer :: dist_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in) :: min_stefan_velocity_for_dt
+      REAL_T, intent(inout) :: cap_wave_speed(nten)
+      REAL_T hx,hxmac
+      REAL_T dthold
+      INTEGER_T ii,jj,kk
+      INTEGER_T im,im_primaryL,im_primaryR
+      INTEGER_T ibase
+      REAL_T xstenMAC(-3:3,SDIM)
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      REAL_T LSleft(nmat)
+      REAL_T LSright(nmat)
+      INTEGER_T im_opp
+      INTEGER_T iten
+      INTEGER_T im_source,im_dest
+      REAL_T temperature_left,temperature_right
+      REAL_T density_left,density_right
+      REAL_T internal_energy_left,internal_energy_right
+      REAL_T massfrac_parm_left(num_species_var+1)
+      REAL_T massfrac_parm_right(num_species_var+1)
+      REAL_T gradh
+      INTEGER_T nten_test
+      REAL_T weymouth_factor,weymouth_cfl
+      REAL_T dxmin,dxmax,dxmaxLS,den1,den2,visc1,visc2
+      INTEGER_T recompute_wave_speed
+      REAL_T uulocal
+      REAL_T smallestL
+      REAL_T denjump
+      REAL_T denjump_gravity
+      REAL_T denjump_terminal
+      REAL_T denjump_temp
+      REAL_T denmax
+      REAL_T denmax_gravity
+      REAL_T USTEFAN,USTEFAN_hold
+      REAL_T LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
+      REAL_T VOFsrc,VOFdst
+      REAL_T LL
+      INTEGER_T velcomp
+      INTEGER_T dcompsrc,dcompdst
+      INTEGER_T tcompsrc,tcompdst
+      INTEGER_T ireverse
+      INTEGER_T ifaceR,jfaceR,kfaceR
+      REAL_T uleft,uright
+      REAL_T C_w0,PHYDWATER,Cmethane_in_hydrate
+      INTEGER_T local_freezing_model
+      INTEGER_T local_Tanasawa_or_Schrage_or_Kassemi
+      INTEGER_T distribute_from_targ
+      INTEGER_T vofcompsrc,vofcompdst
+      REAL_T TSAT,Tsrcalt,Tdstalt
+      REAL_T uleftcell,urightcell,udiffcell,umaxcell
+      REAL_T velsum
+      REAL_T RR
+      REAL_T level_cap_wave_speed(nten)
+      REAL_T ksource,kdest,alpha,beta,dt_heat
+      INTEGER_T for_estdt
+      REAL_T xI(SDIM)
+      REAL_T mu
+      INTEGER_T partid
+      INTEGER_T ispec
+      REAL_T vapor_den
+      REAL_T elastic_wave_speed
+      REAL_T source_perim_factor
+      REAL_T dest_perim_factor
+      REAL_T v_terminal
+      REAL_T effective_velocity
+      REAL_T local_elastic_time
+      REAL_T ugrav
+
+      nhalf=3
+
+      velmac_ptr=>velmac
+      velcell_ptr=>velcell
+      solidfab_ptr=>solidfab
+      den_ptr=>den
+      vof_ptr=>vof
+      dist_ptr=>dist
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       print *,"nparts invalid fort_estdt"
+       stop
+      endif
+      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       print *,"nparts_def invalid fort_estdt"
+       stop
+      endif
+      if ((enable_spectral.lt.0).or. &
+          (enable_spectral.gt.3)) then
+       print *,"enable_spectral invalid fort_estdt"
+       stop
+      endif
+
+      if ((terminal_velocity_dt.eq.0).or. &
+          (terminal_velocity_dt.eq.1)) then
+       ! do nothing
+      else
+       print *,"terminal_velocity_dt invalid"
+       stop
+      endif
+
+      vapor_den=one
+
+      denjump=zero
+      denjump_gravity=zero
+      denmax=zero
+      denmax_gravity=zero
+
+       ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
+       ! gridtype=MAC or CELL
+       ! if cylindrical coordinates, then dx_{\theta}*=problox
+      call get_dxmin(dx,bfact,dxmin)
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin must be positive"
+       stop
+      endif
+
+      call get_dxmax(dx,bfact,dxmax)
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+
+      if (Lref.eq.zero) then
+       smallestL=dxmin
+      else if (Lref.lt.dxmin) then
+       smallestL=Lref
+      else
+       smallestL=dxmin
+      endif
+
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
+       print *,"visc_coef invalid"
+       stop
+      endif
+
+      if ((finest_level.lt.0).or. &
+          (level.lt.0).or. &
+          (level.gt.finest_level)) then
+       print *,"level or finest level invalid estdt"
+       stop
+      endif
+
+      if ((use_lsa.ne.0).and.(use_lsa.ne.1)) then
+       print *,"use_lsa invalid"
+       stop
+      endif
+
+      if (Uref.lt.zero) then
+       print *,"Uref invalid"
+       stop
+      endif
+      if (Lref.lt.zero) then
+       print *,"Lref invalid"
+       stop
+      endif
+
+      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
+          (EILE_flag.eq.1).or.  & ! EILE
+          (EILE_flag.eq.2).or.  & ! always EI
+          (EILE_flag.eq.3)) then  ! always LE
+       ! do nothing
+      else 
+       print *,"EILE flag invalid"
+       stop
+      endif
+
+      if (cfl.le.zero) then
+       print *,"cfl invalid"
+       stop
+      endif
+
+      if ((EILE_flag.eq.1).or. & ! EI-LE
+          (EILE_flag.eq.2).or. & ! always EI
+          (EILE_flag.eq.3)) then ! always LE
+       weymouth_cfl=half  ! we advect half cells.
+      else if (EILE_flag.eq.-1) then ! Weymouth and Yue
+       weymouth_cfl=one/(two*SDIM)
+      else
+       print *,"EILE_flag invalid"
+       stop
+      endif
+      weymouth_factor=max(weymouth_cfl,weymouth_cfl/cfl)
+
+      do im=1,nmat 
+
+       if ((shock_timestep(im).ne.0).and. &
+           (shock_timestep(im).ne.1).and. &
+           (shock_timestep(im).ne.2)) then
+        print *,"shock_timestep invalid"
+        stop
+       endif
+       if (denconst(im).le.zero) then
+        print *,"denconst invalid"
+        stop
+       endif
+       if (denconst_gravity(im).lt.zero) then
+        print *,"denconst_gravity invalid"
+        stop
+       endif
+       mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
+       if (mu.lt.zero) then
+        print *,"viscconst invalid"
+        stop
+       endif
+
+       if (is_rigid(nmat,im).eq.0) then
+        if (denconst(im).gt.denmax) then
+         denmax=denconst(im)
+        endif
+        if (denconst_gravity(im).gt.denmax_gravity) then
+         denmax_gravity=denconst_gravity(im)
+        endif
+       else if (is_rigid(nmat,im).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid invalid"
+        stop
+       endif
+
+      enddo  ! im=1..nmat
+
+      call get_max_denjump(denjump,nmat)
+
+      denjump_gravity=zero
+      do im=1,nmat 
+       if (is_rigid(nmat,im).eq.0) then
+        do im_opp=im+1,nmat
+         if (is_rigid(nmat,im_opp).eq.0) then
+          denjump_temp=abs(denconst_gravity(im)-denconst_gravity(im_opp))
+          if (denjump_temp.gt.denjump_gravity) then
+           denjump_gravity=denjump_temp
+          endif
+         else if (is_rigid(nmat,im_opp).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo ! im_opp
+       else if (is_rigid(nmat,im).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
+      call get_max_user_tension(fort_tension,user_tension,nmat,nten)
+
+         ! finest_level is first level tried.
+      recompute_wave_speed=0
+      if (level.eq.finest_level) then
+       recompute_wave_speed=1
+      endif
+      
+      if (recompute_wave_speed.eq.1) then
+
+       do im=1,nmat-1
+        do im_opp=im+1,nmat
+         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+          print *,"im or im_opp bust 6"
+          stop
+         endif
+         call get_iten(im,im_opp,iten,nmat)
+         if ((is_rigid(nmat,im).eq.1).or. &
+             (is_rigid(nmat,im_opp).eq.1)) then
+          cap_wave_speed(iten)=zero
+         else if (user_tension(iten).eq.zero) then
+          cap_wave_speed(iten)=zero
+         else if (user_tension(iten).gt.zero) then
+          den1=denconst(im)
+          den2=denconst(im_opp)
+          mu=get_user_viscconst(im,den1,fort_tempconst(im))
+          visc1=visc_coef*mu+1.0D-10
+          mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
+          visc2=visc_coef*mu+1.0D-10
+            ! typically smallestL=dxmin
+          call capillary_wave_speed(smallestL,den1,den2,visc1,visc2, &
+            user_tension(iten),cap_wave_speed(iten),use_lsa)
+         else
+          print *,"user_tension invalid"
+          stop
+         endif
+         level_cap_wave_speed(iten)=cap_wave_speed(iten)
+        enddo ! im_opp=im+1..nmat
+       enddo ! im=1..nmat-1
+      else if (recompute_wave_speed.eq.0) then
+       do im=1,nmat-1
+        do im_opp=im+1,nmat
+         call get_iten(im,im_opp,iten,nmat)
+         level_cap_wave_speed(iten)=zero
+        enddo
+       enddo
+      else
+       print *,"recompute wave speed invalid"
+       print *,"use_lsa=",use_lsa
+       print *,"Uref=",Uref
+       print *,"Lref=",Lref
+       print *,"nmat=",nmat
+       print *,"level=",level
+       print *,"finest_level=",finest_level
+       print *,"smallestL= ",smallestL
+       print *,"dxmin= ",dxmin
+       print *,"cfl= ",cfl
+       print *,"denconst(1)= ",denconst(1)
+       print *,"get_user_viscconst(1)= ", &
+        get_user_viscconst(1,fort_denconst(1),fort_tempconst(1))
+       print *,"visc_coef= ",visc_coef
+       print *,"user_tension(1)= ",user_tension(1)
+       print *,"EILE_flag= ",EILE_flag
+       print *,"nten=",nten
+       print *,"dirnormal=",dirnormal
+       print *,"rzflag=",rzflag
+       stop
+      endif
+
+      if (rzflag.eq.0) then
+       ! do nothing
+      else if (rzflag.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (rzflag.eq.3) then
+       ! do nothing
+      else
+       print *,"rzflag invalid"
+       stop
+      endif
+
+      if ((dirnormal.lt.0).or.(dirnormal.ge.SDIM)) then
+       print *,"dirnormal invalid fort_estdt"
+       stop
+      endif
+      if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
+       print *,"adv_dir invalid fort_estdt"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten_test.ne.nten) then
+       print *,"nten invalid estdt nten, nten_test ",nten,nten_test
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,velmac_ptr,0,dirnormal,4)
+      call checkbound_array(fablo,fabhi,velcell_ptr,1,-1,4)
+      call checkbound_array(fablo,fabhi,solidfab_ptr,0,dirnormal,4)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,4)
+      call checkbound_array(fablo,fabhi,vof_ptr,1,-1,4)
+       ! need enough ghost cells for the calls to derive_dist.
+      call checkbound_array(fablo,fabhi,dist_ptr,2,-1,4)
+
+      if (rzflag.ne.levelrz) then
+       print *,"rzflag invalid"
+       stop
+      endif
+
+      ii=0
+      jj=0
+      kk=0
+      if (dirnormal.eq.0) then
+        ii=1
+      else if (dirnormal.eq.1) then
+        jj=1
+      else if ((dirnormal.eq.2).and.(SDIM.eq.3)) then
+        kk=1
+      else
+       print *,"dirnormal invalid estdt 2"
+       stop
+      endif
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
+              0,dirnormal,27)
+
+      if (1.eq.0) then
+       print *,"dt_min before estdt loop: ",dt_min
+       print *,"weymouth_factor= ",weymouth_factor
+      endif
+
+      u_core = zero
+      u_core_estdt = zero
+      c_core = zero  ! max of c^2
+
+! if rz and dirnormal=0 and u>0, need u dt r/(r-u dt) < dx
+! u dt r < dx(r-u dt)
+! u dt dx + udt r < dx r
+! u dt (dx/r+1) < dx
+!
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal,31)
+       hx=xstenMAC(1,dirnormal+1)-xstenMAC(-1,dirnormal+1)
+
+       RR=one
+       if (levelrz.eq.0) then
+        ! do nothing
+       else if (levelrz.eq.1) then
+        ! do nothing
+       else if (levelrz.eq.3) then
+        if (dirnormal.eq.1) then ! theta direction
+         RR=xstenMAC(0,1)
+        endif
+       else
+        print *,"levelrz invalid"
+        stop
+       endif
+       if (RR.le.zero) then
+        print *,"RR invalid"
+        stop
+       endif
+ 
+       hx=hx*RR
+       hxmac=hx
+
+       if (hx.le.(one-VOFTOL)*dxmin) then
+        print *,"xstenMAC invalid estdt"
+        print *,"hx= ",hx
+        print *,"hx= ",dxmin
+        print *,"i,j,k ",i,j,k
+        print *,"dirnormal=",dirnormal
+        print *,"xright ",xstenMAC(1,dirnormal+1)
+        print *,"xleft ",xstenMAC(-1,dirnormal+1)
+        stop
+       endif
+
+       if ((enable_spectral.eq.1).or. &
+           (enable_spectral.eq.2)) then
+        if (bfact.ge.2) then
+         hx=dxmin
+        else if (bfact.eq.1) then
+         ! do nothing
+        else
+         print *,"bfact invalid63"
+         stop
+        endif
+       else if (enable_spectral.eq.0) then
+        ! do nothing
+       else if (enable_spectral.eq.3) then
+        ! do nothing
+       else
+        print *,"enable_spectral invalid"
+        stop
+       endif
+
+       uu=zero
+       uu_estdt=zero
+
+        ! first check that characteristics do not collide or that
+        ! a cell does not become a vacuum.
+       ifaceR=i+ii
+       jfaceR=j+jj
+       kfaceR=k+kk
+       if ((ifaceR.le.growhi(1)).and. &
+           (jfaceR.le.growhi(2)).and. &
+           (kfaceR.le.growhi(3))) then
+        uleft=velmac(D_DECL(i,j,k))
+        uright=velmac(D_DECL(ifaceR,jfaceR,kfaceR))
+        if (uleft*uright.le.zero) then
+         uu=max(uu,abs(uleft-uright))
+         uu_estdt=max(uu_estdt,abs(uleft-uright))
+        endif
+       endif
+      
+       uleftcell=velcell(D_DECL(i-ii,j-jj,k-kk),dirnormal+1)
+       urightcell=velcell(D_DECL(i,j,k),dirnormal+1)
+       uu=max(uu,abs(uleftcell))
+       uu=max(uu,abs(urightcell))
+       uu_estdt=max(uu_estdt,abs(uleftcell))
+       uu_estdt=max(uu_estdt,abs(urightcell))
+
+       if ((enable_spectral.eq.1).or. &
+           (enable_spectral.eq.2)) then
+        if (bfact.ge.2) then
+         velsum=zero
+         do dir2=1,SDIM
+          uleftcell=velcell(D_DECL(i-ii,j-jj,k-kk),dir2)
+          urightcell=velcell(D_DECL(i,j,k),dir2)
+          udiffcell=abs(uleftcell-urightcell)
+          umaxcell=abs(uleftcell)
+          if (abs(urightcell).gt.umaxcell) then
+           umaxcell=abs(urightcell)
+          endif
+          if (abs(udiffcell).gt.umaxcell) then
+           umaxcell=abs(udiffcell)
+          endif
+          velsum=velsum+umaxcell
+         enddo ! dir2
+         uu_estdt=max(uu_estdt,velsum)
+        else if (bfact.eq.1) then
+         ! do nothing
+        else
+         print *,"bfact invalid64"
+         stop
+        endif
+       else if ((enable_spectral.eq.0).or. &
+                (enable_spectral.eq.3)) then
+        ! do nothing
+       else
+        print *,"enable_spectral invalid"
+        stop
+       endif
+
+       do partid=0,nparts-1
+        velcomp=partid*SDIM+dirnormal+1
+        uu=max(uu,abs(solidfab(D_DECL(i,j,k),velcomp)))
+        uu_estdt=max(uu_estdt,abs(solidfab(D_DECL(i,j,k),velcomp)))
+       enddo ! partid=0..nparts-1
+
+       uulocal=abs(velmac(D_DECL(i,j,k)))
+       if (levelrz.eq.0) then
+        ! do nothing
+       else if ((levelrz.eq.1).or. &
+                (levelrz.eq.3)) then
+        if ((dirnormal.eq.0).and. &
+            (xstenMAC(0,1).gt.VOFTOL*dx(1))) then
+         if (xstenMAC(0,1).ge.hxmac) then
+          uulocal=uulocal/( one-three*hxmac/(four*xstenMAC(0,1)) )  
+         else if ((xstenMAC(0,1).gt.zero).and. &
+                  (xstenMAC(-1,1).gt.zero)) then
+          uulocal=four*uulocal
+         else
+          print *,"xstenMAC invalid estdt 2"
+          print *,"i,j,k,dirnormal ",i,j,k,dirnormal
+          print *,"hx=",hx
+          print *,"hxmac=",hxmac
+          print *,"xstenMAC(0,1)= ",xstenMAC(0,1)
+          stop
+         endif
+        endif
+       else
+        print *,"levelrz invalid estdt"
+        stop
+       endif
+       uu=max(uu,uulocal)
+       uu_estdt=max(uu_estdt,uulocal)
+
+       cleft=zero
+       cright=zero
+       cc=zero
+
+       cleft_diag=zero
+       cright_diag=zero
+       cc_diag=zero
+
+       do im=1,nmat
+        if (fort_denconst(im).gt.zero) then
+         if (fort_viscosity_state_model(im).ge.0) then
+          if (visc_coef.ge.zero) then
+           if (elastic_time(im).ge.zero) then
+            if (elastic_time(im).eq.zero) then
+             local_elastic_time=one
+            else if (elastic_time(im).ge.one) then
+             local_elastic_time=one
+            else
+             local_elastic_time=elastic_time(im)
+            endif
+
+             ! rho u_t = div beta (grad X + grad X^T)/2
+             ! kg/m^3  m/s^2  = (1/m^2) beta m
+             ! kg/(m^2 s^2) = (1/m) beta
+             ! beta = kg/(m s^2)
+             ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
+            elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
+                (local_elastic_time*fort_denconst(im))
+            if (elastic_wave_speed.gt.zero) then
+             elastic_wave_speed=sqrt(elastic_wave_speed)
+             dthold=hx/elastic_wave_speed
+             dt_min=min(dt_min,dthold)
+            else if (elastic_wave_speed.eq.zero) then
+             ! do nothing
+            else
+             print *,"elastic_wave_speed invalid"
+             stop
+            endif
+           else
+            print *,"elastic_time invalid"
+            print *,"im= ",im
+            print *,"elastic_time(im)=",elastic_time(im)
+            stop
+           endif
+          else
+           print *,"visc_coef invalid"
+           stop
+          endif
+         else
+          print *,"fort_viscosity_state_model invalid"
+          stop
+         endif
+        else
+         print *,"fort_denconst(im) invalid"
+         stop
+        endif
+       enddo ! im=1..nmat
+
+       do im=1,nmat
+        LSleft(im)=dist(D_DECL(i-ii,j-jj,k-kk),im)
+        LSright(im)=dist(D_DECL(i,j,k),im)
+       enddo
+       call get_primary_material(LSleft,nmat,im_primaryL)
+       call get_primary_material(LSright,nmat,im_primaryR)
+
+       USTEFAN=zero
+
+        ! fluid region
+       if ((is_rigid(nmat,im_primaryL).eq.0).and. &
+           (is_rigid(nmat,im_primaryR).eq.0)) then 
+
+        do ireverse=0,1
+        do im=1,nmat-1
+        do im_opp=im+1,nmat
+
+         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+          print *,"im or im_opp bust 7"
+          stop
+         endif
+         call get_iten(im,im_opp,iten,nmat)
+
+         LL=latent_heat(iten+ireverse*nten)
+         K_f=reaction_rate(iten+ireverse*nten)
+         local_freezing_model=freezing_model(iten+ireverse*nten)
+         local_Tanasawa_or_Schrage_or_Kassemi= &
+           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten)
+         distribute_from_targ=distribute_from_target(iten+ireverse*nten)
+         TSAT=saturation_temp(iten+ireverse*nten)
+
+         if ((local_freezing_model.eq.2).and.(num_species_var.ne.1)) then
+          print *,"must define species var if hydrate model"
+          stop
+         endif
+
+         if (ireverse.eq.0) then
+          im_source=im
+          im_dest=im_opp
+         else if (ireverse.eq.1) then
+          im_source=im_opp
+          im_dest=im
+         else
+          print *,"ireverse invalid"
+          stop
+         endif
+         dcompsrc=(im_source-1)*num_state_material+1
+         tcompsrc=(im_source-1)*num_state_material+2
+         vofcompsrc=(im_source-1)*ngeom_raw+1 
+         dcompdst=(im_dest-1)*num_state_material+1
+         tcompdst=(im_dest-1)*num_state_material+2
+         vofcompdst=(im_dest-1)*ngeom_raw+1 
+
+         ispec=mass_fraction_id(iten+ireverse*nten)
+         if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+          ! do nothing
+         else if (ispec.eq.0) then
+          if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
+              (local_freezing_model.eq.5).or. & ! Stefan evap model
+              (local_freezing_model.eq.2)) then ! hydrate
+           print *,"ispec invalid"
+           stop
+          endif
+         else
+          print *,"ispec invalid"
+          stop
+         endif
+
+         if ((is_rigid(nmat,im).eq.1).or. &
+             (is_rigid(nmat,im_opp).eq.1)) then
+          ! do nothing
+         else if (LL.ne.zero) then
+
+          do side=1,2
+           if (side.eq.1) then
+            icell=i-ii
+            jcell=j-jj
+            kcell=k-kk
+            ialt=i
+            jalt=j
+            kalt=k
+           else if (side.eq.2) then
+            ialt=i-ii
+            jalt=j-jj
+            kalt=k-kk
+            icell=i
+            jcell=j
+            kcell=k
+           else
+            print *,"side invalid"
+            stop
+           endif
+
+           VOFsrc=vof(D_DECL(icell,jcell,kcell),vofcompsrc)
+           VOFdst=vof(D_DECL(icell,jcell,kcell),vofcompdst)
+
+           call gridsten_level(xsten,icell,jcell,kcell,level,nhalf)
+
+            ! adjust LS1 if R-theta.
+           call derive_dist(xsten,nhalf, &
+            dist_ptr,icell,jcell,kcell,im_source,LS1)
+            ! adjust LS2 if R-theta.
+           call derive_dist(xsten,nhalf, &
+            dist_ptr,icell,jcell,kcell,im_dest,LS2)
+           
+           Tsrc=den(D_DECL(icell,jcell,kcell),tcompsrc)
+           Tdst=den(D_DECL(icell,jcell,kcell),tcompdst)
+           Tsrcalt=den(D_DECL(ialt,jalt,kalt),tcompsrc)
+           Tdstalt=den(D_DECL(ialt,jalt,kalt),tcompdst)
+           Dsrc=den(D_DECL(icell,jcell,kcell),dcompsrc)
+           Ddst=den(D_DECL(icell,jcell,kcell),dcompdst)
+
+           if (LL.gt.zero) then ! evaporation
+            vapor_den=Ddst
+           else if (LL.lt.zero) then ! condensation
+            vapor_den=Dsrc
+           else
+            print *,"LL invalid"
+            stop
+           endif
+
+           if (local_freezing_model.eq.5) then ! stefan evap model
+            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+             if (vapor_den.gt.zero) then
+              ! do nothing
+             else
+              print *,"vapor_den invalid"
+              stop
+             endif  
+            else
+             print *,"ispec invalid"
+             stop
+            endif
+           endif ! local_freezing_model==5
+
+           Csrc=zero
+           Cdst=zero
+
+            ! hydrates
+           if (local_freezing_model.eq.2) then
+            if (distribute_from_targ.ne.0) then
+             print *,"distribute_from_targ invalid"
+             stop
+            endif
+            Csrc=den(D_DECL(icell,jcell,kcell),tcompsrc+1)
+            Cdst=den(D_DECL(icell,jcell,kcell),tcompdst+1)
+           endif
+
+           if ((Dsrc.le.zero).or.(Ddst.le.zero)) then
+            print *,"density must be positive estdt "
+            print *,"im,im_opp ",im,im_opp
+            print *,"im_source,im_dest ",im_source,im_dest
+            print *,"Dsrc(source),Ddst(dest) ",Dsrc,Ddst
+            stop
+           endif
+
+           if ((abs(LS1).le.two*dxmaxLS).and. &
+               (abs(LS2).le.two*dxmaxLS)) then 
+
+            delta=dxmin
+
+            if ((LS1.ge.zero).or. &
+                (LS2.ge.zero)) then
+
+              ! coordinate of center of cell adjacent to face (i,j,k)
+             do dir2=1,SDIM
+              xI(dir2)=xsten(0,dir2)
+             enddo
+              ! either: 1-den_dst/den_src
+              !     or: 1-den_src/den_dst
+             if (fort_expansion_factor(iten+ireverse*nten).ge.one) then
+              print *,"fort_expansion_factor(iten+ireverse*nten) bad"
+              stop
+             endif
+
+             ksource=get_user_heatviscconst(im_source)
+             kdest=get_user_heatviscconst(im_dest)
+             alpha=fort_alpha(iten+ireverse*nten)
+             beta=fort_beta(iten+ireverse*nten)
+             if ((alpha.le.zero).or.(beta.le.zero)) then
+              print *,"alpha or beta are invalid"
+              stop
+             endif
+             dt_heat=one
+
+             C_w0=fort_denconst(1)  ! density of water
+             PHYDWATER=2.0D+19
+             Cmethane_in_hydrate=Cdst ! hydrate is destination material.
+       
+             for_estdt=1
+
+             source_perim_factor=one
+             dest_perim_factor=one
+
+             call get_vel_phasechange( &
+              for_estdt, &
+              xI, &
+              ispec, &
+              molar_mass, &
+              species_molar_mass, &
+              local_freezing_model, &
+              local_Tanasawa_or_Schrage_or_Kassemi, &
+              distribute_from_targ, &
+              USTEFAN_hold, &
+              Dsrc,Ddst, &
+              Dsrc,Ddst, &
+              ksource,kdest, &
+              Tsrc,Tdst, &
+              TSAT, &
+              Tsrcalt,Tdstalt, &
+              LL, &
+              source_perim_factor, &
+              dest_perim_factor, &
+              microlayer_substrate(im_source), &
+              microlayer_angle(im_source), &
+              microlayer_size(im_source), &
+              macrolayer_size(im_source), &
+              microlayer_substrate(im_dest), &
+              microlayer_angle(im_dest), &
+              microlayer_size(im_dest), &
+              macrolayer_size(im_dest), &
+              delta, &  ! dxprobe_source
+              delta, &  ! dxprobe_dest
+              im_source,im_dest, &
+              time,dt_heat, &
+              alpha, &
+              beta, &
+              fort_expansion_factor(iten+ireverse*nten), &
+              K_f, &
+              Cmethane_in_hydrate, &
+              C_w0, &
+              PHYDWATER, &
+              VOFsrc,VOFdst)
+
+             if (USTEFAN_hold.lt.zero) then
+              print *,"USTEFAN_hold.lt.zero"
+              stop
+             endif
+
+             USTEFAN=USTEFAN+USTEFAN_hold
+
+            else if ((LS1.lt.zero).and.(LS2.lt.zero)) then
+             ! do nothing
+            else
+             print *,"LS1 or LS2 invalid"
+             stop
+            endif
+
+           endif ! LS1,LS2 both close to 0
+ 
+          enddo ! side 
+         endif ! latent_heat<>0
+        enddo ! im_opp
+        enddo ! im
+        enddo ! ireverse=0,1
+
+       else if ((is_rigid(nmat,im_primaryL).eq.1).or. &
+                (is_rigid(nmat,im_primaryR).eq.1)) then
+        ! do nothing
+       else
+        print *,"im_primaryL, or im_primaryR invalid"
+        stop 
+       endif
+
+       if (time.eq.zero) then
+        ! do nothing
+       else if (time.gt.zero) then
+        USTEFAN=zero
+        do dir2=1,SDIM
+         if (USTEFAN.lt.abs(AMR_min_phase_change_rate(dir2))) then
+          USTEFAN=abs(AMR_min_phase_change_rate(dir2))
+         endif
+         if (USTEFAN.lt.abs(AMR_max_phase_change_rate(dir2))) then
+          USTEFAN=abs(AMR_max_phase_change_rate(dir2))
+         endif
+        enddo ! dir2=1..sdim
+       else
+        print *,"time invalid in fort_estdt"
+        stop
+       endif
+
+        ! factor of 4 in order to guarantee that characteristics do not
+        ! collide.
+        ! also, the factor of 4 should guarantee that a swept cell is not
+        ! full at the end of CONVERTMATERIAL.
+       if (min_stefan_velocity_for_dt.ge.zero) then
+        if (USTEFAN.lt.min_stefan_velocity_for_dt) then
+         USTEFAN=min_stefan_velocity_for_dt
+        else if (USTEFAN.ge.min_stefan_velocity_for_dt) then
+         ! do nothing
+        else
+         print *,"USTEFAN bust"
+         stop
+        endif
+       else
+        print *,"min_stefan_velocity_for_dt invalid"
+        stop
+       endif
+
+       uu=abs(uu)+two*USTEFAN
+       uu_estdt=abs(uu_estdt)+two*USTEFAN
+
+       if (is_rigid(nmat,im_primaryL).eq.0) then
+        ibase=(im_primaryL-1)*num_state_material
+        density_left= &
+          den(D_DECL(i-ii,j-jj,k-kk),ibase+1)
+
+        if (material_type(im_primaryL).gt.0) then
+
+         call init_massfrac_parm(density_left,massfrac_parm_left,im_primaryL)
+         do ispec=1,num_species_var
+          massfrac_parm_left(ispec)= &
+            den(D_DECL(i-ii,j-jj,k-kk),ibase+2+ispec)
+         enddo
+
+         temperature_left=den(D_DECL(i-ii,j-jj,k-kk),ibase+2)
+         call INTERNAL_material(density_left,massfrac_parm_left, &
+          temperature_left, &
+          internal_energy_left, &
+          material_type(im_primaryL),im_primaryL)
+         call SOUNDSQR_material(density_left,massfrac_parm_left, &
+          internal_energy_left, &
+          cleft_diag, &
+          material_type(im_primaryL),im_primaryL)
+
+         if ((shock_timestep(im_primaryL).eq.1).or. &
+             ((shock_timestep(im_primaryL).eq.0).and.(time.eq.zero))) then
+          cleft=cleft_diag
+         endif
+        else if (material_type(im_primaryL).eq.0) then
+         ! do nothing
+        else
+         print *,"material_type(im_primaryL) invalid"
+         stop
+        endif 
+       else if (is_rigid(nmat,im_primaryL).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid invalid"
+        stop
+       endif  
+
+       if (is_rigid(nmat,im_primaryR).eq.0) then
+        ibase=(im_primaryR-1)*num_state_material
+        density_right=den(D_DECL(i,j,k),ibase+1)
+
+        if (material_type(im_primaryR).gt.0) then
+
+         call init_massfrac_parm(density_right,massfrac_parm_right,im_primaryR)
+         do ispec=1,num_species_var
+          massfrac_parm_right(ispec)= &
+            den(D_DECL(i,j,k),ibase+2+ispec)
+         enddo
+
+         temperature_right=den(D_DECL(i,j,k),ibase+2)
+         call INTERNAL_material(density_right,massfrac_parm_right, &
+          temperature_right, &
+          internal_energy_right, &
+          material_type(im_primaryR),im_primaryR)
+         call SOUNDSQR_material(density_right,massfrac_parm_right, &
+          internal_energy_right, &
+          cright_diag, &
+          material_type(im_primaryR),im_primaryR)
+
+         if ((shock_timestep(im_primaryR).eq.1).or. &
+             ((shock_timestep(im_primaryR).eq.0).and.(time.eq.zero))) then
+          cright=cright_diag
+         endif
+
+         if (im_primaryR.eq.im_primaryL) then
+          if (density_left.gt.denmax) then
+           denmax=density_left
+          endif
+          if (density_right.gt.denmax) then
+           denmax=density_right
+          endif
+          denjump_temp=abs(density_left-density_right)
+          if (denjump_temp.gt.denjump) then
+           denjump=denjump_temp
+          endif
+         endif
+        else if (material_type(im_primaryR).eq.0) then
+         ! do nothing
+        else
+         print *,"material_type(im_primaryR) invalid"
+         stop
+        endif 
+       else if (is_rigid(nmat,im_primaryR).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid invalid"
+        stop
+       endif
+
+       cc_diag=max(cleft_diag,cright_diag)  ! c^2
+       cc=max(cleft,cright)  ! c^2
+
+       call check_user_defined_velbc(time,dirnormal,uu_estdt,dx)
+       call check_user_defined_velbc(time,dirnormal,uu,dx)
+
+       u_core = max(u_core,abs(uu))
+       u_core_estdt = max(u_core_estdt,abs(uu_estdt))
+       c_core = max(c_core,abs(cc_diag))  ! c^2
+
+       if (uu_estdt.lt.uu) then
+        print *,"uu_estdt invalid"
+        stop
+       endif
+       if (u_core_estdt.lt.u_core) then
+        print *,"u_core_estdt invalid"
+        stop
+       endif
+       effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)
+       if (effective_velocity.gt.zero) then
+        dt_min=min(dt_min,hx/effective_velocity)
+       else if (effective_velocity.eq.zero) then
+        ! do nothing
+       else
+        print *,"effective_velocity invalid"
+        stop
+       endif
+
+        ! fluid region
+       if ((is_rigid(nmat,im_primaryL).eq.0).and. &
+           (is_rigid(nmat,im_primaryR).eq.0)) then 
+        call fluid_interface(LSleft,LSright,gradh,im_opp,im,nmat)
+       else if ((is_rigid(nmat,im_primaryL).eq.1).or. &
+                (is_rigid(nmat,im_primaryR).eq.1)) then
+        gradh=zero
+       else
+        print *,"im_primaryL, or im_primaryR invalid"
+        stop 
+       endif
+
+       if (gradh.ne.zero) then
+
+        if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+         print *,"im or im_opp bust 8"
+         stop
+        endif
+        call get_iten(im,im_opp,iten,nmat)
+
+        if (level_cap_wave_speed(iten).lt.zero) then
+         print *,"level_cap wave speed not initialized"
+         stop
+        else if (level_cap_wave_speed(iten).eq.zero) then
+         ! do nothing
+        else
+         dthold=hx/level_cap_wave_speed(iten)
+         dt_min=min(dt_min,dthold)
+        endif
+
+       else if (gradh.eq.zero) then
+        ! do nothing
+       else
+        print *,"gradh invalid"
+        stop
+       endif 
+
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      if (abs(ns_gravity).gt.zero) then
+
+       if (denmax.gt.zero) then
+
+        if (terminal_velocity_dt.eq.0) then
+
+         if (denjump.gt.zero) then
+          if (denmax.gt.zero) then
+           denjump=denjump/denmax
+          else
+           print *,"denmax became corrupt"
+           stop
+          endif
+!   "delta rho" accounts for buoancy effects.
+!   u dt < dx  u=(ubase + g (delta rho) dt)  
+!   (ubase*dt+g (delta rho) dt^2) = dx   
+!   g (delta rho) dt^2 + ubase dt - dx =0 
+!   dt=(-ubase + sqrt(ubase^2 + 4 g (delta rho) dx))/(2 g drho) =
+!      4 g (delta rho) dx/( 2 g (delta rho) 
+!             (ubase+sqrt(ubase^2 + 4 g (delta rho) dx)))=
+!      2 dx / (ubase+sqrt(ubase^2 + 4 g (delta rho) dx))=
+!      sqrt(dx/(g (delta rho))) if ubase=0
+!      dx/ubase          if g=0
+          ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
+                  four*abs(denjump*ns_gravity)*dxmin))
+          if (ugrav.gt.zero) then
+           dthold=dxmin/ugrav 
+           dt_min=min(dt_min,dthold)
+          else
+           print *,"ugrav invalid 1"
+           print *,"uu_estdt ",uu_estdt
+           print *,"denjump ",denjump
+           print *,"ns_gravity ",ns_gravity
+           print *,"dxmin ",dxmin
+           print *,"denmax ",denmax
+           stop
+          endif
+         else if (denjump.eq.zero) then
+          ! do nothing
+         else
+          print *,"denjump cannot be negative, denjump = ",denjump
+          stop
+         endif
+
+         if (denjump_gravity.gt.zero) then
+          if (denmax_gravity.gt.zero) then
+           denjump_gravity=denjump_gravity/denmax_gravity
+           ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
+                  four*abs(denjump_gravity*ns_gravity)*dxmin))
+           if (ugrav.gt.zero) then
+            dthold=dxmin/ugrav 
+            dt_min=min(dt_min,dthold)
+           else
+            print *,"ugrav invalid 2"
+            print *,"uu_estdt ",uu_estdt
+            print *,"denjump_gravity ",denjump_gravity
+            print *,"ns_gravity ",ns_gravity
+            print *,"dxmin ",dxmin
+            print *,"denmax ",denmax
+            stop
+           endif
+          else if (denmax_gravity.eq.zero) then
+           ! do nothing
+          else
+           print *,"denmax_gravity invalid"
+           stop
+          endif
+         else if (denjump_gravity.eq.zero) then
+          ! do nothing
+         else
+          print *,"denjump_gravity cant be neg, denjump_gravity = ", &
+            denjump_gravity
+          stop
+         endif
+
+        else if (terminal_velocity_dt.eq.1) then
+
+         denjump_terminal=fort_denconst(2)-fort_denconst(1)
+         if (denjump_terminal.eq.zero) then
+          denjump_terminal=denconst_gravity(2)-denconst_gravity(1)
+          if (denjump_terminal.eq.zero) then
+           print *,"denjump_terminal invalid"
+           stop
+          else if (denjump_terminal.gt.zero) then
+           ! do nothing
+          else
+           print *,"denjump_terminal invalid"
+           stop
+          endif
+         else if (denjump_terminal.gt.zero) then
+          ! do nothing
+         else
+          print *,"denjump_terminal invalid"
+          stop
+         endif
+          
+         if (denjump_terminal.gt.zero) then
+          if (fort_viscconst(1).gt.zero) then
+           if (abs(ns_gravity).gt.zero) then
+            if (radblob.gt.zero) then
+             ! units: kg/m^3  m s/kg   m/s^2  m^2=(s/m^2) m^3/s^2=m/s
+             v_terminal=(two/nine)*(denjump_terminal)* &
+              (one/fort_viscconst(1))*abs(ns_gravity)*(radblob**2) 
+             v_terminal=two*v_terminal
+             if (v_terminal.gt.zero) then
+              dthold=dxmin/v_terminal
+              dt_min=min(dt_min,dthold)
+
+              if (1.eq.0) then
+               print *,"v_terminal= ",v_terminal
+               print *,"dthold= ",dthold
+               print *,"dt_min= ",dt_min
+               print *,"dirnormal= ",dirnormal
+               print *,"u_core= ",u_core
+               print *,"u_core_estdt= ",u_core_estdt
+               print *,"uu ",uu
+               print *,"uu_estdt ",uu_estdt
+               print *,"u_max(dirnormal+1)= ",u_max(dirnormal+1)
+               print *,"u_max_estdt(dirnormal+1)= ",u_max_estdt(dirnormal+1)
+              endif
+             else
+              print *,"v_terminal invalid"
+              stop
+             endif
+            else
+             print *,"radblob invalid"
+             stop
+            endif
+           else
+            print *,"ns_gravity invalid"
+            stop
+           endif
+          else
+           print *,"fort_viscconst(1) invalid"
+           stop
+          endif
+         else
+          print *,"denjump_terminal invalid"
+          stop
+         endif
+
+        else
+         print *,"terminal_velocity_dt invalid"
+         stop
+        endif
+
+       else
+        print *,"denmax invalid"
+        stop
+       endif
+
+      else if (abs(ns_gravity).eq.zero) then
+       ! do nothing
+      else
+       print *,"ns_gravity bust"
+       stop
+      endif 
+
+      if (u_max(dirnormal+1).lt.u_core) then
+       u_max(dirnormal+1)=u_core
+      endif
+      if (u_max_estdt(dirnormal+1).lt.u_core_estdt) then
+       u_max_estdt(dirnormal+1)=u_core_estdt
+      endif
+      if (u_max(SDIM+1).lt.c_core) then
+       u_max(SDIM+1)=c_core  ! c^2
+      endif
+      if (u_max_estdt(SDIM+1).lt.c_core) then
+       u_max_estdt(SDIM+1)=c_core  ! c^2
+      endif
+
+      return
+      end subroutine fort_estdt
+
+
+
       end module godunov_module
 
 
@@ -15054,1370 +16434,6 @@ stop
       return
       end subroutine fort_fix_hoop_tensor
 
-        ! u_max(1..sdim) is max vel in dir.
-        ! u_max(sdim+1) is max c^2
-      subroutine fort_estdt( &
-        enable_spectral, &
-        AMR_min_phase_change_rate, &
-        AMR_max_phase_change_rate, &
-        elastic_time, &
-        microlayer_substrate, &
-        microlayer_angle, &
-        microlayer_size, &
-        macrolayer_size, &
-        latent_heat, &
-        reaction_rate, &
-        freezing_model, &
-        Tanasawa_or_Schrage_or_Kassemi, &
-        distribute_from_target, &
-        saturation_temp, &
-        mass_fraction_id, &
-        molar_mass, &
-        species_molar_mass, &
-        velmac,DIMS(velmac), &
-        velcell,DIMS(velcell), &
-        solidfab,DIMS(solidfab), &
-        den,DIMS(den), &
-        vof,DIMS(vof), &
-        dist,DIMS(dist), &
-        xlo,dx, &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        min_stefan_velocity_for_dt, &
-        cap_wave_speed, &
-        u_max, &
-        u_max_estdt, &
-        u_max_cap_wave, &
-        dt_min, &
-        rzflag, &
-        Uref,Lref, &
-        nten, &
-        use_lsa, &
-        denconst, &
-        denconst_gravity, &
-        visc_coef, &
-        ns_gravity, &
-        terminal_velocity_dt, &
-        dirnormal, &
-        nmat, &
-        nparts, &
-        nparts_def, &
-        im_solid_map, &
-        material_type, &
-        time, &
-        shock_timestep, &
-        cfl, &
-        EILE_flag, &
-        level,finest_level) &
-      bind(c,name='fort_estdt')
-
-      use probf90_module
-      use global_utility_module
-      use MOF_routines_module
-      use hydrateReactor_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: use_lsa
-      INTEGER_T, intent(in) :: level,finest_level
-      REAL_T, intent(in) :: cfl
-      INTEGER_T, intent(in) :: EILE_flag
-      INTEGER_T, intent(in) :: nmat,nten
-      REAL_T, intent(in) :: AMR_min_phase_change_rate(SDIM)
-      REAL_T, intent(in) :: AMR_max_phase_change_rate(SDIM)
-      REAL_T, intent(in) :: elastic_time(nmat)
-      INTEGER_T, intent(in) :: shock_timestep(nmat)
-      INTEGER_T, intent(in) :: material_type(nmat)
-      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
-      REAL_T, intent(in) :: microlayer_angle(nmat)
-      REAL_T, intent(in) :: microlayer_size(nmat)
-      REAL_T, intent(in) :: macrolayer_size(nmat)
-      REAL_T, intent(in) :: latent_heat(2*nten)
-      REAL_T, intent(in) :: reaction_rate(2*nten)
-      REAL_T :: K_f
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-      REAL_T, intent(in) :: saturation_temp(2*nten)
-      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: molar_mass(nmat)
-      REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(in) :: time
-      REAL_T u_core,u_core_estdt,uu,uu_estdt,c_core
-      REAL_T cc,cleft,cright
-      REAL_T cc_diag,cleft_diag,cright_diag
-      INTEGER_T i,j,k
-      INTEGER_T icell,jcell,kcell
-      INTEGER_T ialt,jalt,kalt
-      INTEGER_T, intent(in) :: rzflag
-      INTEGER_T, intent(in) :: dirnormal
-      INTEGER_T side,dir2
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(inout) :: u_max(SDIM+1)
-      REAL_T, intent(inout) :: u_max_estdt(SDIM+1)
-      REAL_T, intent(inout) :: u_max_cap_wave
-      REAL_T, intent(inout) :: dt_min
-      REAL_T user_tension(nten)
-      REAL_T Uref,Lref
-      REAL_T, intent(in) :: denconst(nmat)
-      REAL_T, intent(in) :: denconst_gravity(nmat)
-      REAL_T, intent(in) :: visc_coef
-      REAL_T, intent(in) :: ns_gravity
-      INTEGER_T, intent(inout) :: terminal_velocity_dt
-      INTEGER_T, intent(in) :: DIMDEC(velmac)
-      INTEGER_T, intent(in) :: DIMDEC(velcell)
-      INTEGER_T, intent(in) :: DIMDEC(vof)
-      INTEGER_T, intent(in) :: DIMDEC(dist)
-      INTEGER_T, intent(in) :: DIMDEC(solidfab)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      REAL_T, target, intent(in) :: velmac(DIMV(velmac))
-      REAL_T, target, intent(in) :: velcell(DIMV(velcell),SDIM)
-      REAL_T, target, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
-       ! den,temp,species
-      REAL_T, target, intent(in) :: den(DIMV(den),num_state_material*nmat)  
-      REAL_T, target, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw)
-      REAL_T, target, intent(in) :: dist(DIMV(dist),nmat)
-      REAL_T, intent(in) :: min_stefan_velocity_for_dt
-      REAL_T, intent(inout) :: cap_wave_speed(nten)
-      REAL_T hx,hxmac
-      REAL_T dthold
-      INTEGER_T ii,jj,kk
-      INTEGER_T im,im_primaryL,im_primaryR
-      INTEGER_T ibase
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      INTEGER_T im_opp
-      INTEGER_T iten
-      INTEGER_T im_source,im_dest
-      REAL_T temperature_left,temperature_right
-      REAL_T density_left,density_right
-      REAL_T internal_energy_left,internal_energy_right
-      REAL_T massfrac_parm_left(num_species_var+1)
-      REAL_T massfrac_parm_right(num_species_var+1)
-      REAL_T gradh
-      INTEGER_T nten_test
-      REAL_T weymouth_factor,weymouth_cfl
-      REAL_T dxmin,dxmax,dxmaxLS,den1,den2,visc1,visc2
-      INTEGER_T recompute_wave_speed
-      REAL_T uulocal
-      REAL_T smallestL
-      REAL_T denjump
-      REAL_T denjump_gravity
-      REAL_T denjump_terminal
-      REAL_T denjump_temp
-      REAL_T denmax
-      REAL_T denmax_gravity
-      REAL_T USTEFAN,USTEFAN_hold
-      REAL_T LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
-      REAL_T VOFsrc,VOFdst
-      REAL_T LL
-      INTEGER_T velcomp
-      INTEGER_T dcompsrc,dcompdst
-      INTEGER_T tcompsrc,tcompdst
-      INTEGER_T ireverse
-      INTEGER_T ifaceR,jfaceR,kfaceR
-      REAL_T uleft,uright
-      REAL_T C_w0,PHYDWATER,Cmethane_in_hydrate
-      INTEGER_T local_freezing_model
-      INTEGER_T local_Tanasawa_or_Schrage_or_Kassemi
-      INTEGER_T distribute_from_targ
-      INTEGER_T vofcompsrc,vofcompdst
-      REAL_T TSAT,Tsrcalt,Tdstalt
-      REAL_T uleftcell,urightcell,udiffcell,umaxcell
-      REAL_T velsum
-      REAL_T RR
-      REAL_T level_cap_wave_speed(nten)
-      REAL_T ksource,kdest,alpha,beta,dt_heat
-      INTEGER_T for_estdt
-      REAL_T xI(SDIM)
-      REAL_T mu
-      INTEGER_T partid
-      INTEGER_T ispec
-      REAL_T vapor_den
-      REAL_T elastic_wave_speed
-      REAL_T source_perim_factor
-      REAL_T dest_perim_factor
-      REAL_T v_terminal
-      REAL_T effective_velocity
-      REAL_T local_elastic_time
-      REAL_T ugrav
-
-      nhalf=3
-
-      if (bfact.lt.1) then
-       print *,"bfact too small"
-       stop
-      endif
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid fort_estdt"
-       stop
-      endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid fort_estdt"
-       stop
-      endif
-      if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
-       print *,"enable_spectral invalid fort_estdt"
-       stop
-      endif
-
-      if ((terminal_velocity_dt.eq.0).or. &
-          (terminal_velocity_dt.eq.1)) then
-       ! do nothing
-      else
-       print *,"terminal_velocity_dt invalid"
-       stop
-      endif
-
-      vapor_den=one
-
-      denjump=zero
-      denjump_gravity=zero
-      denmax=zero
-      denmax_gravity=zero
-
-       ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
-       ! gridtype=MAC or CELL
-       ! if cylindrical coordinates, then dx_{\theta}*=problox
-      call get_dxmin(dx,bfact,dxmin)
-      if (dxmin.gt.zero) then
-       ! do nothing
-      else
-       print *,"dxmin must be positive"
-       stop
-      endif
-
-      call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-
-      if (Lref.eq.zero) then
-       smallestL=dxmin
-      else if (Lref.lt.dxmin) then
-       smallestL=Lref
-      else
-       smallestL=dxmin
-      endif
-
-      if (visc_coef.ge.zero) then
-       ! do nothing
-      else
-       print *,"visc_coef invalid"
-       stop
-      endif
-
-      if ((finest_level.lt.0).or. &
-          (level.lt.0).or. &
-          (level.gt.finest_level)) then
-       print *,"level or finest level invalid estdt"
-       stop
-      endif
-
-      if ((use_lsa.ne.0).and.(use_lsa.ne.1)) then
-       print *,"use_lsa invalid"
-       stop
-      endif
-
-      if (Uref.lt.zero) then
-       print *,"Uref invalid"
-       stop
-      endif
-      if (Lref.lt.zero) then
-       print *,"Lref invalid"
-       stop
-      endif
-
-      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
-          (EILE_flag.eq.1).or.  & ! EILE
-          (EILE_flag.eq.2).or.  & ! always EI
-          (EILE_flag.eq.3)) then  ! always LE
-       ! do nothing
-      else 
-       print *,"EILE flag invalid"
-       stop
-      endif
-
-      if (cfl.le.zero) then
-       print *,"cfl invalid"
-       stop
-      endif
-
-      if ((EILE_flag.eq.1).or. & ! EI-LE
-          (EILE_flag.eq.2).or. & ! always EI
-          (EILE_flag.eq.3)) then ! always LE
-       weymouth_cfl=half  ! we advect half cells.
-      else if (EILE_flag.eq.-1) then ! Weymouth and Yue
-       weymouth_cfl=one/(two*SDIM)
-      else
-       print *,"EILE_flag invalid"
-       stop
-      endif
-      weymouth_factor=max(weymouth_cfl,weymouth_cfl/cfl)
-
-      do im=1,nmat 
-
-       if ((shock_timestep(im).ne.0).and. &
-           (shock_timestep(im).ne.1).and. &
-           (shock_timestep(im).ne.2)) then
-        print *,"shock_timestep invalid"
-        stop
-       endif
-       if (denconst(im).le.zero) then
-        print *,"denconst invalid"
-        stop
-       endif
-       if (denconst_gravity(im).lt.zero) then
-        print *,"denconst_gravity invalid"
-        stop
-       endif
-       mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.lt.zero) then
-        print *,"viscconst invalid"
-        stop
-       endif
-
-       if (is_rigid(nmat,im).eq.0) then
-        if (denconst(im).gt.denmax) then
-         denmax=denconst(im)
-        endif
-        if (denconst_gravity(im).gt.denmax_gravity) then
-         denmax_gravity=denconst_gravity(im)
-        endif
-       else if (is_rigid(nmat,im).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid invalid"
-        stop
-       endif
-
-      enddo  ! im=1..nmat
-
-      call get_max_denjump(denjump,nmat)
-
-      denjump_gravity=zero
-      do im=1,nmat 
-       if (is_rigid(nmat,im).eq.0) then
-        do im_opp=im+1,nmat
-         if (is_rigid(nmat,im_opp).eq.0) then
-          denjump_temp=abs(denconst_gravity(im)-denconst_gravity(im_opp))
-          if (denjump_temp.gt.denjump_gravity) then
-           denjump_gravity=denjump_temp
-          endif
-         else if (is_rigid(nmat,im_opp).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid invalid"
-          stop
-         endif
-        enddo ! im_opp
-       else if (is_rigid(nmat,im).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
-
-      call get_max_user_tension(fort_tension,user_tension,nmat,nten)
-
-         ! finest_level is first level tried.
-      recompute_wave_speed=0
-      if (level.eq.finest_level) then
-       recompute_wave_speed=1
-      endif
-      
-      if (recompute_wave_speed.eq.1) then
-
-       do im=1,nmat-1
-        do im_opp=im+1,nmat
-         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
-          print *,"im or im_opp bust 6"
-          stop
-         endif
-         call get_iten(im,im_opp,iten,nmat)
-         if ((is_rigid(nmat,im).eq.1).or. &
-             (is_rigid(nmat,im_opp).eq.1)) then
-          cap_wave_speed(iten)=zero
-         else if (user_tension(iten).eq.zero) then
-          cap_wave_speed(iten)=zero
-         else if (user_tension(iten).gt.zero) then
-          den1=denconst(im)
-          den2=denconst(im_opp)
-          mu=get_user_viscconst(im,den1,fort_tempconst(im))
-          visc1=visc_coef*mu+1.0D-10
-          mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
-          visc2=visc_coef*mu+1.0D-10
-            ! typically smallestL=dxmin
-          call capillary_wave_speed(smallestL,den1,den2,visc1,visc2, &
-            user_tension(iten),cap_wave_speed(iten),use_lsa)
-         else
-          print *,"user_tension invalid"
-          stop
-         endif
-         level_cap_wave_speed(iten)=cap_wave_speed(iten)
-        enddo ! im_opp=im+1..nmat
-       enddo ! im=1..nmat-1
-      else if (recompute_wave_speed.eq.0) then
-       do im=1,nmat-1
-        do im_opp=im+1,nmat
-         call get_iten(im,im_opp,iten,nmat)
-         level_cap_wave_speed(iten)=zero
-        enddo
-       enddo
-      else
-       print *,"recompute wave speed invalid"
-       print *,"use_lsa=",use_lsa
-       print *,"Uref=",Uref
-       print *,"Lref=",Lref
-       print *,"nmat=",nmat
-       print *,"level=",level
-       print *,"finest_level=",finest_level
-       print *,"smallestL= ",smallestL
-       print *,"dxmin= ",dxmin
-       print *,"cfl= ",cfl
-       print *,"denconst(1)= ",denconst(1)
-       print *,"get_user_viscconst(1)= ", &
-        get_user_viscconst(1,fort_denconst(1),fort_tempconst(1))
-       print *,"visc_coef= ",visc_coef
-       print *,"user_tension(1)= ",user_tension(1)
-       print *,"EILE_flag= ",EILE_flag
-       print *,"nten=",nten
-       print *,"dirnormal=",dirnormal
-       print *,"rzflag=",rzflag
-       stop
-      endif
-
-      if (rzflag.eq.0) then
-       ! do nothing
-      else if (rzflag.eq.1) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
-        stop
-       endif
-      else if (rzflag.eq.3) then
-       ! do nothing
-      else
-       print *,"rzflag invalid"
-       stop
-      endif
-
-      if ((dirnormal.lt.0).or.(dirnormal.ge.SDIM)) then
-       print *,"dirnormal invalid fort_estdt"
-       stop
-      endif
-      if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
-       print *,"adv_dir invalid fort_estdt"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
-      if (nten_test.ne.nten) then
-       print *,"nten invalid estdt nten, nten_test ",nten,nten_test
-       stop
-      endif
-
-      call checkbound_array1(fablo,fabhi,velmac,0,dirnormal,4)
-      call checkbound_array(fablo,fabhi,velcell,1,-1,4)
-      call checkbound_array(fablo,fabhi,solidfab,0,dirnormal,4)
-      call checkbound_array(fablo,fabhi,den,1,-1,4)
-      call checkbound_array(fablo,fabhi,vof,1,-1,4)
-       ! need enough ghost cells for the calls to derive_dist.
-      call checkbound_array(fablo,fabhi,dist,2,-1,4)
-
-      if (rzflag.ne.levelrz) then
-       print *,"rzflag invalid"
-       stop
-      endif
-
-      ii=0
-      jj=0
-      kk=0
-      if (dirnormal.eq.0) then
-        ii=1
-      else if (dirnormal.eq.1) then
-        jj=1
-      else if ((dirnormal.eq.2).and.(SDIM.eq.3)) then
-        kk=1
-      else
-       print *,"dirnormal invalid estdt 2"
-       stop
-      endif
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
-              0,dirnormal,27)
-
-      if (1.eq.0) then
-       print *,"dt_min before estdt loop: ",dt_min
-       print *,"weymouth_factor= ",weymouth_factor
-      endif
-
-      u_core = zero
-      u_core_estdt = zero
-      c_core = zero  ! max of c^2
-
-! if rz and dirnormal=0 and u>0, need u dt r/(r-u dt) < dx
-! u dt r < dx(r-u dt)
-! u dt dx + udt r < dx r
-! u dt (dx/r+1) < dx
-!
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal,31)
-       hx=xstenMAC(1,dirnormal+1)-xstenMAC(-1,dirnormal+1)
-
-       RR=one
-       if (levelrz.eq.0) then
-        ! do nothing
-       else if (levelrz.eq.1) then
-        ! do nothing
-       else if (levelrz.eq.3) then
-        if (dirnormal.eq.1) then ! theta direction
-         RR=xstenMAC(0,1)
-        endif
-       else
-        print *,"levelrz invalid"
-        stop
-       endif
-       if (RR.le.zero) then
-        print *,"RR invalid"
-        stop
-       endif
- 
-       hx=hx*RR
-       hxmac=hx
-
-       if (hx.le.(one-VOFTOL)*dxmin) then
-        print *,"xstenMAC invalid estdt"
-        print *,"hx= ",hx
-        print *,"hx= ",dxmin
-        print *,"i,j,k ",i,j,k
-        print *,"dirnormal=",dirnormal
-        print *,"xright ",xstenMAC(1,dirnormal+1)
-        print *,"xleft ",xstenMAC(-1,dirnormal+1)
-        stop
-       endif
-
-       if ((enable_spectral.eq.1).or. &
-           (enable_spectral.eq.2)) then
-        if (bfact.ge.2) then
-         hx=dxmin
-        else if (bfact.eq.1) then
-         ! do nothing
-        else
-         print *,"bfact invalid63"
-         stop
-        endif
-       else if (enable_spectral.eq.0) then
-        ! do nothing
-       else if (enable_spectral.eq.3) then
-        ! do nothing
-       else
-        print *,"enable_spectral invalid"
-        stop
-       endif
-
-       uu=zero
-       uu_estdt=zero
-
-        ! first check that characteristics do not collide or that
-        ! a cell does not become a vacuum.
-       ifaceR=i+ii
-       jfaceR=j+jj
-       kfaceR=k+kk
-       if ((ifaceR.le.growhi(1)).and. &
-           (jfaceR.le.growhi(2)).and. &
-           (kfaceR.le.growhi(3))) then
-        uleft=velmac(D_DECL(i,j,k))
-        uright=velmac(D_DECL(ifaceR,jfaceR,kfaceR))
-        if (uleft*uright.le.zero) then
-         uu=max(uu,abs(uleft-uright))
-         uu_estdt=max(uu_estdt,abs(uleft-uright))
-        endif
-       endif
-      
-       uleftcell=velcell(D_DECL(i-ii,j-jj,k-kk),dirnormal+1)
-       urightcell=velcell(D_DECL(i,j,k),dirnormal+1)
-       uu=max(uu,abs(uleftcell))
-       uu=max(uu,abs(urightcell))
-       uu_estdt=max(uu_estdt,abs(uleftcell))
-       uu_estdt=max(uu_estdt,abs(urightcell))
-
-       if ((enable_spectral.eq.1).or. &
-           (enable_spectral.eq.2)) then
-        if (bfact.ge.2) then
-         velsum=zero
-         do dir2=1,SDIM
-          uleftcell=velcell(D_DECL(i-ii,j-jj,k-kk),dir2)
-          urightcell=velcell(D_DECL(i,j,k),dir2)
-          udiffcell=abs(uleftcell-urightcell)
-          umaxcell=abs(uleftcell)
-          if (abs(urightcell).gt.umaxcell) then
-           umaxcell=abs(urightcell)
-          endif
-          if (abs(udiffcell).gt.umaxcell) then
-           umaxcell=abs(udiffcell)
-          endif
-          velsum=velsum+umaxcell
-         enddo ! dir2
-         uu_estdt=max(uu_estdt,velsum)
-        else if (bfact.eq.1) then
-         ! do nothing
-        else
-         print *,"bfact invalid64"
-         stop
-        endif
-       else if ((enable_spectral.eq.0).or. &
-                (enable_spectral.eq.3)) then
-        ! do nothing
-       else
-        print *,"enable_spectral invalid"
-        stop
-       endif
-
-       do partid=0,nparts-1
-        velcomp=partid*SDIM+dirnormal+1
-        uu=max(uu,abs(solidfab(D_DECL(i,j,k),velcomp)))
-        uu_estdt=max(uu_estdt,abs(solidfab(D_DECL(i,j,k),velcomp)))
-       enddo ! partid=0..nparts-1
-
-       uulocal=abs(velmac(D_DECL(i,j,k)))
-       if (levelrz.eq.0) then
-        ! do nothing
-       else if ((levelrz.eq.1).or. &
-                (levelrz.eq.3)) then
-        if ((dirnormal.eq.0).and. &
-            (xstenMAC(0,1).gt.VOFTOL*dx(1))) then
-         if (xstenMAC(0,1).ge.hxmac) then
-          uulocal=uulocal/( one-three*hxmac/(four*xstenMAC(0,1)) )  
-         else if ((xstenMAC(0,1).gt.zero).and. &
-                  (xstenMAC(-1,1).gt.zero)) then
-          uulocal=four*uulocal
-         else
-          print *,"xstenMAC invalid estdt 2"
-          print *,"i,j,k,dirnormal ",i,j,k,dirnormal
-          print *,"hx=",hx
-          print *,"hxmac=",hxmac
-          print *,"xstenMAC(0,1)= ",xstenMAC(0,1)
-          stop
-         endif
-        endif
-       else
-        print *,"levelrz invalid estdt"
-        stop
-       endif
-       uu=max(uu,uulocal)
-       uu_estdt=max(uu_estdt,uulocal)
-
-       cleft=zero
-       cright=zero
-       cc=zero
-
-       cleft_diag=zero
-       cright_diag=zero
-       cc_diag=zero
-
-       do im=1,nmat
-        if (fort_denconst(im).gt.zero) then
-         if (fort_viscosity_state_model(im).ge.0) then
-          if (visc_coef.ge.zero) then
-           if (elastic_time(im).ge.zero) then
-            if (elastic_time(im).eq.zero) then
-             local_elastic_time=one
-            else if (elastic_time(im).ge.one) then
-             local_elastic_time=one
-            else
-             local_elastic_time=elastic_time(im)
-            endif
-
-             ! rho u_t = div beta (grad X + grad X^T)/2
-             ! kg/m^3  m/s^2  = (1/m^2) beta m
-             ! kg/(m^2 s^2) = (1/m) beta
-             ! beta = kg/(m s^2)
-             ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
-            elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
-                (local_elastic_time*fort_denconst(im))
-            if (elastic_wave_speed.gt.zero) then
-             elastic_wave_speed=sqrt(elastic_wave_speed)
-             dthold=hx/elastic_wave_speed
-             dt_min=min(dt_min,dthold)
-            else if (elastic_wave_speed.eq.zero) then
-             ! do nothing
-            else
-             print *,"elastic_wave_speed invalid"
-             stop
-            endif
-           else
-            print *,"elastic_time invalid"
-            print *,"im= ",im
-            print *,"elastic_time(im)=",elastic_time(im)
-            stop
-           endif
-          else
-           print *,"visc_coef invalid"
-           stop
-          endif
-         else
-          print *,"fort_viscosity_state_model invalid"
-          stop
-         endif
-        else
-         print *,"fort_denconst(im) invalid"
-         stop
-        endif
-       enddo ! im=1..nmat
-
-       do im=1,nmat
-        LSleft(im)=dist(D_DECL(i-ii,j-jj,k-kk),im)
-        LSright(im)=dist(D_DECL(i,j,k),im)
-       enddo
-       call get_primary_material(LSleft,nmat,im_primaryL)
-       call get_primary_material(LSright,nmat,im_primaryR)
-
-       USTEFAN=zero
-
-        ! fluid region
-       if ((is_rigid(nmat,im_primaryL).eq.0).and. &
-           (is_rigid(nmat,im_primaryR).eq.0)) then 
-
-        do ireverse=0,1
-        do im=1,nmat-1
-        do im_opp=im+1,nmat
-
-         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
-          print *,"im or im_opp bust 7"
-          stop
-         endif
-         call get_iten(im,im_opp,iten,nmat)
-
-         LL=latent_heat(iten+ireverse*nten)
-         K_f=reaction_rate(iten+ireverse*nten)
-         local_freezing_model=freezing_model(iten+ireverse*nten)
-         local_Tanasawa_or_Schrage_or_Kassemi= &
-           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten)
-         distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-         TSAT=saturation_temp(iten+ireverse*nten)
-
-         if ((local_freezing_model.eq.2).and.(num_species_var.ne.1)) then
-          print *,"must define species var if hydrate model"
-          stop
-         endif
-
-         if (ireverse.eq.0) then
-          im_source=im
-          im_dest=im_opp
-         else if (ireverse.eq.1) then
-          im_source=im_opp
-          im_dest=im
-         else
-          print *,"ireverse invalid"
-          stop
-         endif
-         dcompsrc=(im_source-1)*num_state_material+1
-         tcompsrc=(im_source-1)*num_state_material+2
-         vofcompsrc=(im_source-1)*ngeom_raw+1 
-         dcompdst=(im_dest-1)*num_state_material+1
-         tcompdst=(im_dest-1)*num_state_material+2
-         vofcompdst=(im_dest-1)*ngeom_raw+1 
-
-         ispec=mass_fraction_id(iten+ireverse*nten)
-         if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-          ! do nothing
-         else if (ispec.eq.0) then
-          if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-              (local_freezing_model.eq.5).or. & ! Stefan evap model
-              (local_freezing_model.eq.2)) then ! hydrate
-           print *,"ispec invalid"
-           stop
-          endif
-         else
-          print *,"ispec invalid"
-          stop
-         endif
-
-         if ((is_rigid(nmat,im).eq.1).or. &
-             (is_rigid(nmat,im_opp).eq.1)) then
-          ! do nothing
-         else if (LL.ne.zero) then
-
-          do side=1,2
-           if (side.eq.1) then
-            icell=i-ii
-            jcell=j-jj
-            kcell=k-kk
-            ialt=i
-            jalt=j
-            kalt=k
-           else if (side.eq.2) then
-            ialt=i-ii
-            jalt=j-jj
-            kalt=k-kk
-            icell=i
-            jcell=j
-            kcell=k
-           else
-            print *,"side invalid"
-            stop
-           endif
-
-           VOFsrc=vof(D_DECL(icell,jcell,kcell),vofcompsrc)
-           VOFdst=vof(D_DECL(icell,jcell,kcell),vofcompdst)
-
-           call gridsten_level(xsten,icell,jcell,kcell,level,nhalf)
-
-            ! adjust LS1 if R-theta.
-           call derive_dist(xsten,nhalf, &
-            dist,icell,jcell,kcell,im_source,LS1)
-            ! adjust LS2 if R-theta.
-           call derive_dist(xsten,nhalf, &
-            dist,icell,jcell,kcell,im_dest,LS2)
-           
-           Tsrc=den(D_DECL(icell,jcell,kcell),tcompsrc)
-           Tdst=den(D_DECL(icell,jcell,kcell),tcompdst)
-           Tsrcalt=den(D_DECL(ialt,jalt,kalt),tcompsrc)
-           Tdstalt=den(D_DECL(ialt,jalt,kalt),tcompdst)
-           Dsrc=den(D_DECL(icell,jcell,kcell),dcompsrc)
-           Ddst=den(D_DECL(icell,jcell,kcell),dcompdst)
-
-           if (LL.gt.zero) then ! evaporation
-            vapor_den=Ddst
-           else if (LL.lt.zero) then ! condensation
-            vapor_den=Dsrc
-           else
-            print *,"LL invalid"
-            stop
-           endif
-
-           if (local_freezing_model.eq.5) then ! stefan evap model
-            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-             if (vapor_den.gt.zero) then
-              ! do nothing
-             else
-              print *,"vapor_den invalid"
-              stop
-             endif  
-            else
-             print *,"ispec invalid"
-             stop
-            endif
-           endif ! local_freezing_model==5
-
-           Csrc=zero
-           Cdst=zero
-
-            ! hydrates
-           if (local_freezing_model.eq.2) then
-            if (distribute_from_targ.ne.0) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            Csrc=den(D_DECL(icell,jcell,kcell),tcompsrc+1)
-            Cdst=den(D_DECL(icell,jcell,kcell),tcompdst+1)
-           endif
-
-           if ((Dsrc.le.zero).or.(Ddst.le.zero)) then
-            print *,"density must be positive estdt "
-            print *,"im,im_opp ",im,im_opp
-            print *,"im_source,im_dest ",im_source,im_dest
-            print *,"Dsrc(source),Ddst(dest) ",Dsrc,Ddst
-            stop
-           endif
-
-           if ((abs(LS1).le.two*dxmaxLS).and. &
-               (abs(LS2).le.two*dxmaxLS)) then 
-
-            delta=dxmin
-
-            if ((LS1.ge.zero).or. &
-                (LS2.ge.zero)) then
-
-              ! coordinate of center of cell adjacent to face (i,j,k)
-             do dir2=1,SDIM
-              xI(dir2)=xsten(0,dir2)
-             enddo
-              ! either: 1-den_dst/den_src
-              !     or: 1-den_src/den_dst
-             if (fort_expansion_factor(iten+ireverse*nten).ge.one) then
-              print *,"fort_expansion_factor(iten+ireverse*nten) bad"
-              stop
-             endif
-
-             ksource=get_user_heatviscconst(im_source)
-             kdest=get_user_heatviscconst(im_dest)
-             alpha=fort_alpha(iten+ireverse*nten)
-             beta=fort_beta(iten+ireverse*nten)
-             if ((alpha.le.zero).or.(beta.le.zero)) then
-              print *,"alpha or beta are invalid"
-              stop
-             endif
-             dt_heat=one
-
-             C_w0=fort_denconst(1)  ! density of water
-             PHYDWATER=2.0D+19
-             Cmethane_in_hydrate=Cdst ! hydrate is destination material.
-       
-             for_estdt=1
-
-             source_perim_factor=one
-             dest_perim_factor=one
-
-             call get_vel_phasechange( &
-              for_estdt, &
-              xI, &
-              ispec, &
-              molar_mass, &
-              species_molar_mass, &
-              local_freezing_model, &
-              local_Tanasawa_or_Schrage_or_Kassemi, &
-              distribute_from_targ, &
-              USTEFAN_hold, &
-              Dsrc,Ddst, &
-              Dsrc,Ddst, &
-              ksource,kdest, &
-              Tsrc,Tdst, &
-              TSAT, &
-              Tsrcalt,Tdstalt, &
-              LL, &
-              source_perim_factor, &
-              dest_perim_factor, &
-              microlayer_substrate(im_source), &
-              microlayer_angle(im_source), &
-              microlayer_size(im_source), &
-              macrolayer_size(im_source), &
-              microlayer_substrate(im_dest), &
-              microlayer_angle(im_dest), &
-              microlayer_size(im_dest), &
-              macrolayer_size(im_dest), &
-              delta, &  ! dxprobe_source
-              delta, &  ! dxprobe_dest
-              im_source,im_dest, &
-              time,dt_heat, &
-              alpha, &
-              beta, &
-              fort_expansion_factor(iten+ireverse*nten), &
-              K_f, &
-              Cmethane_in_hydrate, &
-              C_w0, &
-              PHYDWATER, &
-              VOFsrc,VOFdst)
-
-             if (USTEFAN_hold.lt.zero) then
-              print *,"USTEFAN_hold.lt.zero"
-              stop
-             endif
-
-             USTEFAN=USTEFAN+USTEFAN_hold
-
-            else if ((LS1.lt.zero).and.(LS2.lt.zero)) then
-             ! do nothing
-            else
-             print *,"LS1 or LS2 invalid"
-             stop
-            endif
-
-           endif ! LS1,LS2 both close to 0
- 
-          enddo ! side 
-         endif ! latent_heat<>0
-        enddo ! im_opp
-        enddo ! im
-        enddo ! ireverse=0,1
-
-       else if ((is_rigid(nmat,im_primaryL).eq.1).or. &
-                (is_rigid(nmat,im_primaryR).eq.1)) then
-        ! do nothing
-       else
-        print *,"im_primaryL, or im_primaryR invalid"
-        stop 
-       endif
-
-       if (time.eq.zero) then
-        ! do nothing
-       else if (time.gt.zero) then
-        USTEFAN=zero
-        do dir2=1,SDIM
-         if (USTEFAN.lt.abs(AMR_min_phase_change_rate(dir2))) then
-          USTEFAN=abs(AMR_min_phase_change_rate(dir2))
-         endif
-         if (USTEFAN.lt.abs(AMR_max_phase_change_rate(dir2))) then
-          USTEFAN=abs(AMR_max_phase_change_rate(dir2))
-         endif
-        enddo ! dir2=1..sdim
-       else
-        print *,"time invalid in fort_estdt"
-        stop
-       endif
-
-        ! factor of 4 in order to guarantee that characteristics do not
-        ! collide.
-        ! also, the factor of 4 should guarantee that a swept cell is not
-        ! full at the end of CONVERTMATERIAL.
-       if (min_stefan_velocity_for_dt.ge.zero) then
-        if (USTEFAN.lt.min_stefan_velocity_for_dt) then
-         USTEFAN=min_stefan_velocity_for_dt
-        else if (USTEFAN.ge.min_stefan_velocity_for_dt) then
-         ! do nothing
-        else
-         print *,"USTEFAN bust"
-         stop
-        endif
-       else
-        print *,"min_stefan_velocity_for_dt invalid"
-        stop
-       endif
-
-       uu=abs(uu)+two*USTEFAN
-       uu_estdt=abs(uu_estdt)+two*USTEFAN
-
-       if (is_rigid(nmat,im_primaryL).eq.0) then
-        ibase=(im_primaryL-1)*num_state_material
-        density_left= &
-          den(D_DECL(i-ii,j-jj,k-kk),ibase+1)
-
-        if (material_type(im_primaryL).gt.0) then
-
-         call init_massfrac_parm(density_left,massfrac_parm_left,im_primaryL)
-         do ispec=1,num_species_var
-          massfrac_parm_left(ispec)= &
-            den(D_DECL(i-ii,j-jj,k-kk),ibase+2+ispec)
-         enddo
-
-         temperature_left=den(D_DECL(i-ii,j-jj,k-kk),ibase+2)
-         call INTERNAL_material(density_left,massfrac_parm_left, &
-          temperature_left, &
-          internal_energy_left, &
-          material_type(im_primaryL),im_primaryL)
-         call SOUNDSQR_material(density_left,massfrac_parm_left, &
-          internal_energy_left, &
-          cleft_diag, &
-          material_type(im_primaryL),im_primaryL)
-
-         if ((shock_timestep(im_primaryL).eq.1).or. &
-             ((shock_timestep(im_primaryL).eq.0).and.(time.eq.zero))) then
-          cleft=cleft_diag
-         endif
-        else if (material_type(im_primaryL).eq.0) then
-         ! do nothing
-        else
-         print *,"material_type(im_primaryL) invalid"
-         stop
-        endif 
-       else if (is_rigid(nmat,im_primaryL).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid invalid"
-        stop
-       endif  
-
-       if (is_rigid(nmat,im_primaryR).eq.0) then
-        ibase=(im_primaryR-1)*num_state_material
-        density_right=den(D_DECL(i,j,k),ibase+1)
-
-        if (material_type(im_primaryR).gt.0) then
-
-         call init_massfrac_parm(density_right,massfrac_parm_right,im_primaryR)
-         do ispec=1,num_species_var
-          massfrac_parm_right(ispec)= &
-            den(D_DECL(i,j,k),ibase+2+ispec)
-         enddo
-
-         temperature_right=den(D_DECL(i,j,k),ibase+2)
-         call INTERNAL_material(density_right,massfrac_parm_right, &
-          temperature_right, &
-          internal_energy_right, &
-          material_type(im_primaryR),im_primaryR)
-         call SOUNDSQR_material(density_right,massfrac_parm_right, &
-          internal_energy_right, &
-          cright_diag, &
-          material_type(im_primaryR),im_primaryR)
-
-         if ((shock_timestep(im_primaryR).eq.1).or. &
-             ((shock_timestep(im_primaryR).eq.0).and.(time.eq.zero))) then
-          cright=cright_diag
-         endif
-
-         if (im_primaryR.eq.im_primaryL) then
-          if (density_left.gt.denmax) then
-           denmax=density_left
-          endif
-          if (density_right.gt.denmax) then
-           denmax=density_right
-          endif
-          denjump_temp=abs(density_left-density_right)
-          if (denjump_temp.gt.denjump) then
-           denjump=denjump_temp
-          endif
-         endif
-        else if (material_type(im_primaryR).eq.0) then
-         ! do nothing
-        else
-         print *,"material_type(im_primaryR) invalid"
-         stop
-        endif 
-       else if (is_rigid(nmat,im_primaryR).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid invalid"
-        stop
-       endif
-
-       cc_diag=max(cleft_diag,cright_diag)  ! c^2
-       cc=max(cleft,cright)  ! c^2
-
-       call check_user_defined_velbc(time,dirnormal,uu_estdt,dx)
-       call check_user_defined_velbc(time,dirnormal,uu,dx)
-
-       u_core = max(u_core,abs(uu))
-       u_core_estdt = max(u_core_estdt,abs(uu_estdt))
-       c_core = max(c_core,abs(cc_diag))  ! c^2
-
-       if (uu_estdt.lt.uu) then
-        print *,"uu_estdt invalid"
-        stop
-       endif
-       if (u_core_estdt.lt.u_core) then
-        print *,"u_core_estdt invalid"
-        stop
-       endif
-       effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)
-       if (effective_velocity.gt.zero) then
-        dt_min=min(dt_min,hx/effective_velocity)
-       else if (effective_velocity.eq.zero) then
-        ! do nothing
-       else
-        print *,"effective_velocity invalid"
-        stop
-       endif
-
-        ! fluid region
-       if ((is_rigid(nmat,im_primaryL).eq.0).and. &
-           (is_rigid(nmat,im_primaryR).eq.0)) then 
-        call fluid_interface(LSleft,LSright,gradh,im_opp,im,nmat)
-       else if ((is_rigid(nmat,im_primaryL).eq.1).or. &
-                (is_rigid(nmat,im_primaryR).eq.1)) then
-        gradh=zero
-       else
-        print *,"im_primaryL, or im_primaryR invalid"
-        stop 
-       endif
-
-       if (gradh.ne.zero) then
-
-        if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
-         print *,"im or im_opp bust 8"
-         stop
-        endif
-        call get_iten(im,im_opp,iten,nmat)
-
-        if (level_cap_wave_speed(iten).lt.zero) then
-         print *,"level_cap wave speed not initialized"
-         stop
-        else if (level_cap_wave_speed(iten).eq.zero) then
-         ! do nothing
-        else
-         dthold=hx/level_cap_wave_speed(iten)
-         dt_min=min(dt_min,dthold)
-        endif
-
-       else if (gradh.eq.zero) then
-        ! do nothing
-       else
-        print *,"gradh invalid"
-        stop
-       endif 
-
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      if (abs(ns_gravity).gt.zero) then
-
-       if (denmax.gt.zero) then
-
-        if (terminal_velocity_dt.eq.0) then
-
-         if (denjump.gt.zero) then
-          if (denmax.gt.zero) then
-           denjump=denjump/denmax
-          else
-           print *,"denmax became corrupt"
-           stop
-          endif
-!   "delta rho" accounts for buoancy effects.
-!   u dt < dx  u=(ubase + g (delta rho) dt)  
-!   (ubase*dt+g (delta rho) dt^2) = dx   
-!   g (delta rho) dt^2 + ubase dt - dx =0 
-!   dt=(-ubase + sqrt(ubase^2 + 4 g (delta rho) dx))/(2 g drho) =
-!      4 g (delta rho) dx/( 2 g (delta rho) 
-!             (ubase+sqrt(ubase^2 + 4 g (delta rho) dx)))=
-!      2 dx / (ubase+sqrt(ubase^2 + 4 g (delta rho) dx))=
-!      sqrt(dx/(g (delta rho))) if ubase=0
-!      dx/ubase          if g=0
-          ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
-                  four*abs(denjump*ns_gravity)*dxmin))
-          if (ugrav.gt.zero) then
-           dthold=dxmin/ugrav 
-           dt_min=min(dt_min,dthold)
-          else
-           print *,"ugrav invalid 1"
-           print *,"uu_estdt ",uu_estdt
-           print *,"denjump ",denjump
-           print *,"ns_gravity ",ns_gravity
-           print *,"dxmin ",dxmin
-           print *,"denmax ",denmax
-           stop
-          endif
-         else if (denjump.eq.zero) then
-          ! do nothing
-         else
-          print *,"denjump cannot be negative, denjump = ",denjump
-          stop
-         endif
-
-         if (denjump_gravity.gt.zero) then
-          if (denmax_gravity.gt.zero) then
-           denjump_gravity=denjump_gravity/denmax_gravity
-           ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
-                  four*abs(denjump_gravity*ns_gravity)*dxmin))
-           if (ugrav.gt.zero) then
-            dthold=dxmin/ugrav 
-            dt_min=min(dt_min,dthold)
-           else
-            print *,"ugrav invalid 2"
-            print *,"uu_estdt ",uu_estdt
-            print *,"denjump_gravity ",denjump_gravity
-            print *,"ns_gravity ",ns_gravity
-            print *,"dxmin ",dxmin
-            print *,"denmax ",denmax
-            stop
-           endif
-          else if (denmax_gravity.eq.zero) then
-           ! do nothing
-          else
-           print *,"denmax_gravity invalid"
-           stop
-          endif
-         else if (denjump_gravity.eq.zero) then
-          ! do nothing
-         else
-          print *,"denjump_gravity cant be neg, denjump_gravity = ", &
-            denjump_gravity
-          stop
-         endif
-
-        else if (terminal_velocity_dt.eq.1) then
-
-         denjump_terminal=fort_denconst(2)-fort_denconst(1)
-         if (denjump_terminal.eq.zero) then
-          denjump_terminal=denconst_gravity(2)-denconst_gravity(1)
-          if (denjump_terminal.eq.zero) then
-           print *,"denjump_terminal invalid"
-           stop
-          else if (denjump_terminal.gt.zero) then
-           ! do nothing
-          else
-           print *,"denjump_terminal invalid"
-           stop
-          endif
-         else if (denjump_terminal.gt.zero) then
-          ! do nothing
-         else
-          print *,"denjump_terminal invalid"
-          stop
-         endif
-          
-         if (denjump_terminal.gt.zero) then
-          if (fort_viscconst(1).gt.zero) then
-           if (abs(ns_gravity).gt.zero) then
-            if (radblob.gt.zero) then
-             ! units: kg/m^3  m s/kg   m/s^2  m^2=(s/m^2) m^3/s^2=m/s
-             v_terminal=(two/nine)*(denjump_terminal)* &
-              (one/fort_viscconst(1))*abs(ns_gravity)*(radblob**2) 
-             v_terminal=two*v_terminal
-             if (v_terminal.gt.zero) then
-              dthold=dxmin/v_terminal
-              dt_min=min(dt_min,dthold)
-
-              if (1.eq.0) then
-               print *,"v_terminal= ",v_terminal
-               print *,"dthold= ",dthold
-               print *,"dt_min= ",dt_min
-               print *,"dirnormal= ",dirnormal
-               print *,"u_core= ",u_core
-               print *,"u_core_estdt= ",u_core_estdt
-               print *,"uu ",uu
-               print *,"uu_estdt ",uu_estdt
-               print *,"u_max(dirnormal+1)= ",u_max(dirnormal+1)
-               print *,"u_max_estdt(dirnormal+1)= ",u_max_estdt(dirnormal+1)
-              endif
-             else
-              print *,"v_terminal invalid"
-              stop
-             endif
-            else
-             print *,"radblob invalid"
-             stop
-            endif
-           else
-            print *,"ns_gravity invalid"
-            stop
-           endif
-          else
-           print *,"fort_viscconst(1) invalid"
-           stop
-          endif
-         else
-          print *,"denjump_terminal invalid"
-          stop
-         endif
-
-        else
-         print *,"terminal_velocity_dt invalid"
-         stop
-        endif
-
-       else
-        print *,"denmax invalid"
-        stop
-       endif
-
-      else if (abs(ns_gravity).eq.zero) then
-       ! do nothing
-      else
-       print *,"ns_gravity bust"
-       stop
-      endif 
-
-      if (u_max(dirnormal+1).lt.u_core) then
-       u_max(dirnormal+1)=u_core
-      endif
-      if (u_max_estdt(dirnormal+1).lt.u_core_estdt) then
-       u_max_estdt(dirnormal+1)=u_core_estdt
-      endif
-      if (u_max(SDIM+1).lt.c_core) then
-       u_max(SDIM+1)=c_core  ! c^2
-      endif
-      if (u_max_estdt(SDIM+1).lt.c_core) then
-       u_max_estdt(SDIM+1)=c_core  ! c^2
-      endif
-
-      return
-      end subroutine fort_estdt
 
 
        ! (vel/RR) if R-THETA
@@ -16472,6 +16488,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ucell)
      
       REAL_T, intent(in), target :: utemp(DIMV(utemp)) 
+      REAL_T, pointer :: utemp_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: unode(DIMV(unode)) 
       REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: ucell(DIMV(ucell),SDIM) 
@@ -16493,6 +16510,8 @@ stop
       INTEGER_T local_mac_grow
 
       nhalf=3
+
+      utemp_ptr=>utemp
       unode_ptr=>unode
       ucell_ptr=>ucell
 
@@ -16566,7 +16585,7 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,utemp,mac_grow+1,normdir,12)
+      call checkbound_array1(fablo,fabhi,utemp_ptr,mac_grow+1,normdir,12)
       call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow+1,normdir,12)
       call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1,12)
 

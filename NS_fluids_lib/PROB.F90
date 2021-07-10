@@ -32657,6 +32657,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: num_threads_in
       INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
       INTEGER_T :: im
+      INTEGER_T :: iregion
+      INTEGER_T :: ithread
+      INTEGER_T :: dir
 
       if (num_materials_in.eq.num_materials) then
        ! do nothing
@@ -32686,6 +32689,61 @@ end subroutine initialize2d
        constant_density_all_time, &
        num_materials_in, &
        num_threads_in)
+
+      if (number_of_source_regions.eq.0) then
+       ! do nothing
+      else if (number_of_source_regions.gt.0) then
+       do ithread=1,num_threads_in
+
+        do iregion=1,number_of_source_regions
+         regions_list(iregion,ithread)%region_material_id= &
+           regions_list(iregion,0)%region_material_id
+
+         regions_list(iregion,ithread)%region_dt= &
+           regions_list(iregion,0)%region_dt
+
+         regions_list(iregion,ithread)%region_mass_flux= &
+           regions_list(iregion,0)%region_mass_flux
+
+         regions_list(iregion,ithread)%region_volume_flux= &
+           regions_list(iregion,0)%region_volume_flux
+
+         regions_list(iregion,ithread)%region_temperature_prescribe= &
+           regions_list(iregion,0)%region_temperature_prescribe
+
+         do dir=1,SDIM
+          regions_list(iregion,ithread)%region_velocity_prescribe(dir)= &
+           regions_list(iregion,0)%region_velocity_prescribe(dir)
+         enddo
+
+         regions_list(iregion,ithread)%region_energy_flux= &
+           regions_list(iregion,0)%region_energy_flux
+
+         regions_list(iregion,ithread)%region_volume_raster= &
+           regions_list(iregion,0)%region_volume_raster
+
+         regions_list(iregion,ithread)%region_volume= &
+           regions_list(iregion,0)%region_volume
+         regions_list(iregion,ithread)%region_mass= &
+           regions_list(iregion,0)%region_mass
+         regions_list(iregion,ithread)%region_energy= &
+           regions_list(iregion,0)%region_energy
+         regions_list(iregion,ithread)%region_energy_per_kelvin= &
+           regions_list(iregion,0)%region_energy_per_kelvin
+         regions_list(iregion,ithread)%region_volume_after= &
+           regions_list(iregion,0)%region_volume_after
+         regions_list(iregion,ithread)%region_mass_after= &
+           regions_list(iregion,0)%region_mass_after
+         regions_list(iregion,ithread)%region_energy_after= &
+           regions_list(iregion,0)%region_energy_after
+
+        enddo ! iregion=1,number_of_source_regions
+
+       enddo ! ithread=1..num_threads_in
+      else
+       print *,"number_of_source_regions invalid"
+       stop
+      endif
 
       end subroutine fort_init_regions_list
 
