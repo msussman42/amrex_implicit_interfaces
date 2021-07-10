@@ -97,32 +97,6 @@ ns.xblob4 	    = 0.2159 # End cap radius
 #z tank top-radius of sphere cap = 0.2286-.2159=0.0127
 ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center 
 
-# origin corresponds to middle of the tank.
-# Heater top 0.0857 from the bottom of the tank:
-# Heater top relative to tank center is: -0.1429
-# Tank bottom relative to tank center is: -0.2286
-# -0.2286+0.0857=-0.1429
-# coarsest grid: 32x64 domain 0<r<0.127  -.254<z<0.254
-# dx_coarsest=0.508/64=0.0079375
-# Heater thickness: 0.001524m
-# Heater width: 0.0254 meters
-# For RZ, the heater width extends artificially all the way around the
-# perimeter of the cylinder.
-# tank cavity radius=0.1016
-# number of coarse cells=.1016/0.0079375=12.8
-# 12 * 0.0079375=0.09525
-# 11 * 0.0079375=0.0873125
-# (.254-.1429)/.0079375 \approx 14 cells
-# -.254 + 14 * 0.0079375 = -.142875
-# -.254 + 13 * 0.0079375 = -.1508125
-ns.zblob3	    = -0.142875 # Z coordinate (vert) of heater top 
-ns.yblob3	    = -0.1508125 # Z coordinate (vert) of heater bottom
-#n_cell=16 64
-# 0 < r < 0.127
-# 0.09525 - (1/2) 0.127/16 = 0.09128125
-ns.radblob3         = 0.09525  # r_end of location of heater filament
-ns.radblob4         = 0.0873125  # r_start of heater filament
-
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
@@ -377,6 +351,8 @@ ns.temperature_primitive_variable=1 1 1
 ns.solidheat_flag   =0
 
 # Heat flux from band heater
+# this source will be distributed: 1/2 in the fluid near the wall,
+# and 1/2 in the wall.
 ns.xblob3 = 2.0 # Watts=J/s
 
 # ----------------------------------------------------------
