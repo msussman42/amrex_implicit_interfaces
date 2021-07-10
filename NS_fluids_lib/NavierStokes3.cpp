@@ -5508,6 +5508,10 @@ NavierStokes::SumRegions(
   amrex::Error("localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& Umac_new=get_new_data(Umac_Type,slab_step+1);
+ MultiFab& Vmac_new=get_new_data(Umac_Type+1,slab_step+1);
+ MultiFab& Wmac_new=get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
+
  int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
@@ -5567,6 +5571,12 @@ NavierStokes::SumRegions(
    &nmat,
    &nstate,
    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+   Umac_new[mfi].dataPtr(),
+   ARLIM(Umac_new[mfi].loVect()),ARLIM(Umac_new[mfi].hiVect()),
+   Vmac_new[mfi].dataPtr(),
+   ARLIM(Vmac_new[mfi].loVect()),ARLIM(Vmac_new[mfi].hiVect()),
+   Wmac_new[mfi].dataPtr(),
+   ARLIM(Wmac_new[mfi].loVect()),ARLIM(Wmac_new[mfi].hiVect()),
    mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),

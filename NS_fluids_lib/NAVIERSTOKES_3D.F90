@@ -10826,6 +10826,9 @@ END SUBROUTINE SIMP
        nmat, &
        nstate, &
        snew,DIMS(snew), &
+       umacnew,DIMS(umacnew), &
+       vmacnew,DIMS(vmacnew), &
+       wmacnew,DIMS(wmacnew), &
        mdot, &
        DIMS(mdot), &
        DEN,DIMS(DEN), &
@@ -10865,6 +10868,9 @@ END SUBROUTINE SIMP
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(umacnew)
+      INTEGER_T, intent(in) :: DIMDEC(vmacnew)
+      INTEGER_T, intent(in) :: DIMDEC(wmacnew)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
       INTEGER_T, intent(in) :: DIMDEC(VOF)
@@ -10873,6 +10879,13 @@ END SUBROUTINE SIMP
 
       REAL_T, intent(inout), target :: snew(DIMV(snew),nstate)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(inout), target :: umacnew(DIMV(umacnew))
+      REAL_T, pointer :: umacnew_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: vmacnew(DIMV(vmacnew))
+      REAL_T, pointer :: vmacnew_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: wmacnew(DIMV(wmacnew))
+      REAL_T, pointer :: wmacnew_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(inout), target :: mdot(DIMV(mdot))
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
@@ -10889,15 +10902,18 @@ END SUBROUTINE SIMP
       INTEGER_T :: i,j,k
       INTEGER_T :: im
       INTEGER_T :: dir
-      INTEGER_T :: local_mask
+      INTEGER_T :: local_dir
+      INTEGER_T :: local_mask,local_mask_L
       INTEGER_T :: tessellate
       REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_L(-3:3,SDIM)
+      REAL_T xsten_R(-3:3,SDIM)
       REAL_T xtarget(SDIM)
       INTEGER_T iregions
       INTEGER_T ispec
       INTEGER_T vofcomp
       REAL_T charfn
-      REAL_T vfrac
+      REAL_T vfrac,vfrac_L
       REAL_T vfrac_raster
       REAL_T region_mass_flux
       REAL_T region_volume_flux
@@ -10914,14 +10930,17 @@ END SUBROUTINE SIMP
       REAL_T mass_new
       REAL_T volume_new
       REAL_T temperature_new
+      REAL_T temperature_prescribe
       REAL_T density_flux
       REAL_T divu
       INTEGER_T update_density_flag
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T imattype
       INTEGER_T dencomp
+      INTEGER_T ii,jj,kk
       INTEGER_T nhalf
       REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata_L(nmat*ngeom_recon)
       INTEGER_T caller_id
       INTEGER_T nmax
 
@@ -10948,6 +10967,9 @@ END SUBROUTINE SIMP
       nmax=POLYGON_LIST_MAX ! in: fort_regionsum
 
       snew_ptr=>snew
+      umacnew_ptr=>umacnew
+      vmacnew_ptr=>vmacnew
+      wmacnew_ptr=>wmacnew
       mdot_ptr=>mdot
       DEN_ptr=>DEN
       VOF_ptr=>VOF
@@ -10985,6 +11007,10 @@ END SUBROUTINE SIMP
       endif
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
+      call checkbound_array1(fablo,fabhi,umacnew_ptr,0,0,6615)
+      call checkbound_array1(fablo,fabhi,vmacnew_ptr,0,1,6615)
+      call checkbound_array1(fablo,fabhi,wmacnew_ptr,0,SDIM-1,6615)
+
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,6615)
       call checkbound_array(fablo,fabhi,DEN_ptr,1,-1,6615)
       call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
@@ -11150,9 +11176,50 @@ END SUBROUTINE SIMP
               endif
 
               if (region_volume_raster.gt.zero) then 
-               divu=region_volume_flux/region_volume_raster
-               mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
+               if (charfn.eq.one) then
+                divu=region_volume_flux/region_volume_raster
+                mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
                  divu*volumefab(D_DECL(i,j,k))*charfn*vfrac_raster/dt
+                temperature_prescribe= &
+                     regions_list(iregions,0)%region_temperature_prescribe
+                if (temperature_prescribe.eq.zero) then
+                 ! do nothing
+                else if (temperature_prescribe.gt.zero) then
+                 if (region_volume_flux.gt.zero) then
+                  if (vfrac_raster.eq.zero) then
+                   ! do nothing
+                  else if (vfrac_raster.eq.one) then
+                   do dir=1,SDIM
+                    snew(D_DECL(i,j,k),dir)= &
+                     regions_list(iregions,0)%region_velocity_prescribe(dir)
+                   enddo
+                  else
+                   print *,"vfrac_raster invalid"
+                   stop
+                  endif
+                  if (vfrac.eq.zero) then
+                   ! do nothing
+                  else if ((vfrac.gt.zero).and. &
+                           (vfrac.le.one+VOFTOL)) then
+                   snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_prescribe
+                  else
+                   print *,"vfrac invalid"
+                   stop
+                  endif
+                 else
+                  print *,"cannot prescribe state if volume_flux<=0"
+                  stop
+                 endif
+                else
+                 print *,"temperature_prescribe invalid"
+                 stop
+                endif
+               else if (charfn.eq.zero) then
+                ! do nothing
+               else
+                print *,"charfn invalid"
+                stop
+               endif
               else
                print *,"region_volume_raster invalid"
                stop
@@ -11326,6 +11393,208 @@ END SUBROUTINE SIMP
       enddo
       enddo
       enddo
+
+      if (isweep.eq.0) then
+              ! do nothing
+      else if (isweep.eq.1) then
+
+       do dir=1,SDIM
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid"
+         stop
+        endif
+
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir-1,7) 
+
+        do i=growlo(1),growhi(1)
+        do j=growlo(2),growhi(2)
+        do k=growlo(3),growhi(3)
+
+         local_mask=NINT(mask(D_DECL(i,j,k)))
+         local_mask_L=NINT(mask(D_DECL(i-ii,j-jj,k-kk)))
+         if ((local_mask.eq.1).or.(local_mask_L.eq.1)) then
+
+          call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir-1,7)
+          call gridsten_level(xsten_R,i,j,k,level,nhalf)
+          call gridsten_level(xsten_L,i-ii,j-jj,k-kk,level,nhalf)
+
+          do im=1,nmat*ngeom_recon
+           mofdata(im)=VOF(D_DECL(i,j,k),im)
+           mofdata_L(im)=VOF(D_DECL(i-ii,j-jj,k-kk),im)
+          enddo
+
+          tessellate=1 ! tessellate output (tessellate=3 => raster output)
+          caller_id=15
+          call multi_get_volume_tessellate( &
+           tessellate, & ! tessellate=1 
+           bfact, &
+           dx, &
+           xsten_R,nhalf, &
+           mofdata, &
+           geom_xtetlist(1,1,1,tid_current+1), &
+           nmax, &
+           nmax, &
+           nmat, &
+           SDIM, &
+           caller_id)
+
+          call multi_get_volume_tessellate( &
+           tessellate, & ! tessellate=1 
+           bfact, &
+           dx, &
+           xsten_L,nhalf, &
+           mofdata_L, &
+           geom_xtetlist(1,1,1,tid_current+1), &
+           nmax, &
+           nmax, &
+           nmat, &
+           SDIM, &
+           caller_id)
+
+          do local_dir=1,SDIM
+           xtarget(local_dir)=xsten(0,local_dir)
+          enddo
+
+          do iregions=1,number_of_source_regions
+           im=regions_list(iregions,0)%region_material_id
+           if ((im.ge.1).and.(im.le.nmat)) then
+
+            vofcomp=(im-1)*ngeom_recon+1
+            vfrac=mofdata(vofcomp)
+            vfrac_L=mofdata_L(vofcomp)
+            if ((vfrac.ge.zero).and.(vfrac.le.one).and. &
+                (vfrac_L.ge.zero).and.(vfrac_L.le.one)) then
+             if ((vfrac.le.one-VOFTOL).and. &
+                 (vfrac_L.le.one-VOFTOL)) then
+              vfrac_raster=zero
+             else if ((vfrac.ge.one-VOFTOL).or. &
+                      (vfrac_L.ge.one-VOFTOL)) then
+              vfrac_raster=one
+             else
+              print *,"vfrac bust"
+              stop
+             endif
+             call SUB_CHARFN_REGION(iregions,xtarget,cur_time,charfn)
+             if ((charfn.eq.zero).or.(charfn.eq.one)) then
+
+              imattype=fort_material_type(im)
+              dencomp=(im-1)*num_state_material+1
+
+              region_volume_flux=regions_list(iregions,0)%region_volume_flux
+              region_volume_raster=regions_list(iregions,0)%region_volume_raster
+
+              if (region_volume_flux.ne.zero) then
+               if (is_rigid(nmat,im).eq.1) then
+                print *,"disallowed: volume_flux<>0 for is_rigid==1 material"
+                stop
+               else if (is_rigid(nmat,im).eq.0) then
+                if ((imattype.gt.0).and.(imattype.lt.999)) then
+                 print *,"disallowed: volume flux<>0 for compressible material"
+                else if (imattype.eq.0) then
+                 ! do nothing
+                else
+                 print *,"imattype invalid"
+                 stop
+                endif
+               else
+                print *,"is_rigid invalid"
+                stop
+               endif
+
+               if (region_volume_raster.gt.zero) then 
+                if (charfn.eq.one) then
+                 temperature_prescribe= &
+                      regions_list(iregions,0)%region_temperature_prescribe
+                 if (temperature_prescribe.eq.zero) then
+                  ! do nothing
+                 else if (temperature_prescribe.gt.zero) then
+                  if (region_volume_flux.gt.zero) then
+                   if (vfrac_raster.eq.zero) then
+                    ! do nothing
+                   else if (vfrac_raster.eq.one) then
+                    if (dir.eq.1) then
+                     umacnew(D_DECL(i,j,k))= &
+                      regions_list(iregions,0)%region_velocity_prescribe(dir)
+                    else if (dir.eq.2) then
+                     vmacnew(D_DECL(i,j,k))= &
+                      regions_list(iregions,0)%region_velocity_prescribe(dir)
+                    else if ((dir.eq.3).and.(SDIM.eq.3)) then
+                     wmacnew(D_DECL(i,j,k))= &
+                      regions_list(iregions,0)%region_velocity_prescribe(dir)
+                    else
+                     print *,"dir invalid"
+                     stop
+                    endif
+                   else
+                    print *,"vfrac_raster invalid"
+                    stop
+                   endif
+                  else
+                   print *,"cannot prescribe state if volume_flux<=0"
+                   stop
+                  endif
+                 else
+                  print *,"temperature_prescribe invalid"
+                  stop
+                 endif
+                else if (charfn.eq.zero) then
+                 ! do nothing
+                else
+                 print *,"charfn invalid"
+                 stop
+                endif
+               else
+                print *,"region_volume_raster invalid"
+                stop
+               endif
+              else if (region_volume_flux.eq.zero) then
+               ! do nothing
+              else
+               print *,"region_volume_flux invalid"
+               stop
+              endif
+
+             else
+              print *,"charfn invalid"
+              stop
+             endif
+
+            else
+             print *,"vfrac or vfrac_L out of range"
+             stop
+            endif
+           else
+            print *,"im invalid"
+            stop
+           endif
+          enddo !iregions=1,number_of_source_regions
+
+         else if ((local_mask.eq.0).and.(local_mask_L.eq.0)) then
+          ! do nothing
+         else
+          print *,"local_mask or local_mask_L invalid"
+          stop
+         endif
+
+        enddo
+        enddo
+        enddo
+
+       enddo ! dir=1..sdim
+
+      else
+       print *,"isweep invalid"
+       stop
+      endif
 
       return
       end subroutine fort_regionsum
