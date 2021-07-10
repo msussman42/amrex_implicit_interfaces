@@ -412,6 +412,8 @@ implicit none
        REAL_T :: region_dt
        REAL_T :: region_mass_flux   ! e.g. kg/s
        REAL_T :: region_volume_flux ! e.g. m^3/s
+       REAL_T :: region_temperature_prescribe ! e.g. degrees Kelvin
+       REAL_T :: region_velocity_prescribe(SDIM) ! e.g. degrees Kelvin
        REAL_T :: region_energy_flux ! e.g. J/s = Watts
        REAL_T :: region_volume_raster ! e.g. m^3
        REAL_T :: region_volume        ! e.g. m^3
