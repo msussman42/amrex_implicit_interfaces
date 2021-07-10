@@ -81,10 +81,11 @@ contains
   TANK_MK_BUBBLE_Z         = zblob2
 
   TANK_MK_HEATER_FLUX      = xblob3
-  TANK_MK_HEATER_LOW       = yblob3
-  TANK_MK_HEATER_HIGH      = zblob3
-  TANK_MK_HEATER_R         = radblob3
-  TANK_MK_HEATER_R_LOW     = radblob4
+  TANK_MK_HEATER_FLUID_FRACTION = 0.5d0
+  TANK_MK_HEATER_LOW       = -0.16
+  TANK_MK_HEATER_HIGH      = -0.14
+  TANK_MK_HEATER_R         = 0.09
+  TANK_MK_HEATER_R_LOW     = 0.08
 
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
@@ -1235,7 +1236,7 @@ INTEGER_T :: im,iregion
   endif
  enddo ! im=1..num_materials
 
- number_of_source_regions=1
+ number_of_source_regions=2
  number_of_threads_regions=num_threads_in
  allocate(regions_list(1:number_of_source_regions, &
                        0:number_of_threads_regions))
@@ -1257,7 +1258,11 @@ INTEGER_T :: im,iregion
  enddo ! iregion=1,number_of_source_regions
 
  regions_list(1,0)%region_material_id=1
- regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_FLUX ! Watts=J/s
+ regions_list(1,0)%region_energy_flux= &
+         TANK_MK_HEATER_FLUID_FRACTION*TANK_MK_HEATER_FLUX ! Watts=J/s
+ regions_list(1,0)%region_material_id=3
+ regions_list(1,0)%region_energy_flux= &
+      (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_FLUX ! Watts=J/s
 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
