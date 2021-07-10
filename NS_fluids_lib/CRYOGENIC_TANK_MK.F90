@@ -40,7 +40,8 @@ REAL_T :: TANK_MK_END_RADIUS
 ! Tank speherical end curvature center (0,C_z)
 REAL_T :: TANK_MK_END_CENTER
 ! Heater flux
-REAL_T :: TANK_MK_HEATER_FLUX
+REAL_T :: TANK_MK_HEATER_WATTS
+REAL_T :: TANK_MK_HEATER_FLUID_FRACTION
 ! Heater location in dim=2 direction
 REAL_T :: TANK_MK_HEATER_LOW
 REAL_T :: TANK_MK_HEATER_HIGH
@@ -80,7 +81,7 @@ contains
   TANK_MK_BUBBLE_Y         = yblob2
   TANK_MK_BUBBLE_Z         = zblob2
 
-  TANK_MK_HEATER_FLUX      = xblob3
+  TANK_MK_HEATER_WATTS      = xblob3
   TANK_MK_HEATER_FLUID_FRACTION = 0.5d0
   TANK_MK_HEATER_LOW       = -0.16
   TANK_MK_HEATER_HIGH      = -0.14
@@ -1263,10 +1264,10 @@ INTEGER_T :: im,iregion,dir
 
  regions_list(1,0)%region_material_id=1
  regions_list(1,0)%region_energy_flux= &
-         TANK_MK_HEATER_FLUID_FRACTION*TANK_MK_HEATER_FLUX ! Watts=J/s
+         TANK_MK_HEATER_FLUID_FRACTION*TANK_MK_HEATER_WATTS ! Watts=J/s
  regions_list(1,0)%region_material_id=3
  regions_list(1,0)%region_energy_flux= &
-      (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_FLUX ! Watts=J/s
+      (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_WATTS ! Watts=J/s
 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
