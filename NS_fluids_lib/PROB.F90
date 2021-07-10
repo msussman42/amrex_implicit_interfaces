@@ -32699,6 +32699,7 @@ end subroutine initialize2d
       INTEGER_T lower_bound(2)
       INTEGER_T upper_bound(2)
       INTEGER_T iregions
+      INTEGER_T dir
 
       call SUB_DELETE_REGIONS_LIST()
 
@@ -32739,6 +32740,14 @@ end subroutine initialize2d
             regions_list(iregions,0)%region_mass_flux
           print *,"regions_list(iregions,0)%region_volume_flux ", &
             regions_list(iregions,0)%region_volume_flux
+
+          print *,"regions_list(iregions,0)%region_temperature_prescribe ", &
+            regions_list(iregions,0)%region_temperature_prescribe
+          do dir=1,SDIM
+           print *,"dir,region_velocity_prescribe ", &
+            dir,regions_list(iregions,0)%region_velocity_prescribe(dir)
+          enddo
+
           print *,"regions_list(iregions,0)%region_energy_flux ", &
             regions_list(iregions,0)%region_energy_flux
 

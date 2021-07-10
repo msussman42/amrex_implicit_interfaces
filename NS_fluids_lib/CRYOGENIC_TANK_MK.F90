@@ -1212,7 +1212,7 @@ IMPLICIT NONE
 INTEGER_T, intent(in) :: num_materials_in
 INTEGER_T, intent(in) :: num_threads_in
 INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
-INTEGER_T :: im,iregion
+INTEGER_T :: im,iregion,dir
 
  if (num_materials_in.eq.num_materials) then
   ! do nothing
@@ -1246,6 +1246,10 @@ INTEGER_T :: im,iregion
   regions_list(iregion,0)%region_dt=zero
   regions_list(iregion,0)%region_mass_flux=zero
   regions_list(iregion,0)%region_volume_flux=zero
+  regions_list(iregion,0)%region_temperature_prescribe=zero
+  do dir=1,SDIM
+   regions_list(iregion,0)%region_velocity_prescribe(dir)=zero
+  enddo
   regions_list(iregion,0)%region_energy_flux=zero
   regions_list(iregion,0)%region_volume_raster=zero 
   regions_list(iregion,0)%region_volume=zero 
@@ -1274,26 +1278,47 @@ INTEGER_T, intent(in) :: region_id
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(out) :: charfn_out
+REAL_T :: TANK_MK_R_WIDTH
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
- if (region_id.eq.1) then
-  if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-      (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
-      (x(2).ge.TANK_MK_HEATER_LOW).and.&
-      (x(2).le.TANK_MK_HEATER_HIGH)) then
-   charfn_out=one
-  else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
-           (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
-           (x(2).lt.TANK_MK_HEATER_LOW).or. &
-           (x(2).gt.TANK_MK_HEATER_HIGH)) then
-   charfn_out=zero
+ TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
+ if (TANK_MK_R_WIDTH.gt.0.0d0) then
+  if (region_id.eq.1) then
+   if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
+       (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
+       (x(2).ge.TANK_MK_HEATER_LOW).and.&
+       (x(2).le.TANK_MK_HEATER_HIGH)) then
+    charfn_out=one
+   else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
+            (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
+            (x(2).lt.TANK_MK_HEATER_LOW).or. &
+            (x(2).gt.TANK_MK_HEATER_HIGH)) then
+    charfn_out=zero
+   else
+    print *,"position bust"
+    stop
+   endif
+  else if (region_id.eq.2) then
+   if ((abs(x(1)).le.TANK_MK_RADIUS+TANK_MK_R_WIDTH).and.&
+       (abs(x(1)).ge.TANK_MK_RADIUS).and.&
+       (x(2).ge.TANK_MK_HEATER_LOW).and.&
+       (x(2).le.TANK_MK_HEATER_HIGH)) then
+    charfn_out=one
+   else if ((abs(x(1)).gt.TANK_MK_RADIUS+TANK_MK_R_WIDTH).or. &
+            (abs(x(1)).lt.TANK_MK_RADIUS).or. &
+            (x(2).lt.TANK_MK_HEATER_LOW).or. &
+            (x(2).gt.TANK_MK_HEATER_HIGH)) then
+    charfn_out=zero
+   else
+    print *,"position bust"
+    stop
+   endif
   else
-   print *,"position bust"
+   print *,"region_id invalid"
    stop
   endif
-
- else
-  print *,"region_id invalid"
+ else 
+  print *,"TANK_MK_R_WIDTH invalid"
   stop
  endif
 else
