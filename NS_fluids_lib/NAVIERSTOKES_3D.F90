@@ -11177,6 +11177,7 @@ END SUBROUTINE SIMP
                else if (is_rigid(nmat,im).eq.0) then
                 if ((imattype.gt.0).and.(imattype.lt.999)) then
                  print *,"disallowed: volume flux<>0 for compressible material"
+                 stop
                 else if (imattype.eq.0) then
                  ! do nothing
                 else
@@ -11344,7 +11345,16 @@ END SUBROUTINE SIMP
                 endif
                 Tflux=region_energy_flux/region_energy_per_kelvin
                 if (Tflux.ne.zero) then
-                 temperature_new=local_temp+dt*Tflux
+                 temperature_new=local_temp
+                 if (vfrac.gt.zero) then
+                  temperature_new=temperature_new+dt*Tflux*charfn
+                 else if (vfrac.eq.zero) then
+                  ! do nothing
+                 else
+                  print *,"vfrac invalid"
+                  stop
+                 endif
+                 
                  if (temperature_new.gt.zero) then
                   snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_new
                  else
