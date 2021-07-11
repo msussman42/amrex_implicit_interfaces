@@ -618,7 +618,7 @@ extern "C"
 
    void fort_estdt(
       int* caller_id,
-      Real* dt_ratio,
+      Real* dt_prev,
       int* enable_spectral,
       Real* AMR_min_phase_change_rate,
       Real* AMR_max_phase_change_rate,

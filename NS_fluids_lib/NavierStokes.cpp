@@ -19849,10 +19849,10 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
   Real time_nm1=cur_time_slab;
-  Real dt_ratio=1.0;
+  Real dt_prev=1.0;
   if ((caller_id==0)||   //computeInitialDt
       (caller_id==3)) {  //sum_integrated_quantities
-	  // do nothing
+   // do nothing
   } else if ((caller_id==1)||  //computeNewDt
              (caller_id==2)) { //do_the_advance
 
@@ -19863,8 +19863,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
        (lower_slab_time>=0.0)&&
        (upper_slab_time>=cur_time_slab)&&
        (lower_slab_time<=prev_time_slab)) {
-    dt_ratio=(upper_slab_time-lower_slab_time)/
-	     (cur_time_slab-prev_time_slab);
+    dt_prev=(cur_time_slab-prev_time_slab);
 
    } else
     amrex::Error("error finding dt_ratio");
@@ -19913,7 +19912,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     // in: GODUNOV_3D.F90
    fort_estdt(
     &caller_id,
-    &dt_ratio,
+    &dt_prev,
     &local_enable_spectral,
     parent->AMR_min_phase_change_rate.dataPtr(),
     parent->AMR_max_phase_change_rate.dataPtr(),
