@@ -152,9 +152,11 @@ ns.slice_dir=1 # y (aka z) direction
 ns.xslice=0.0000001 0.0
 #amr.slice_int=2000
 amr.plot_int        = 2000   # number of timesteps between plot files
+#amr.plot_int        = 10   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 100    # timesteps between computing mass 
+ns.sum_interval     = 10     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -354,8 +356,10 @@ ns.temperature_primitive_variable=1 1 1
 ns.solidheat_flag   =0
 
 # Heat flux from band heater
-# this source will be distributed: 1/2 in the fluid near the wall,
+# Eventually this source will be distributed: 1/2 in the fluid near the wall,
 # and 1/2 in the wall.
+# For now, the added energy only goes into the fluid since the solid is
+# unrealistically thick.  also heatviscconst=0 in the solid for now.
 ns.xblob3 = 2.0 # Watts=J/s
 
 # ----------------------------------------------------------

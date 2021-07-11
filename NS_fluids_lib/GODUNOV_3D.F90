@@ -6141,7 +6141,9 @@ stop
         ! do nothing
        else if ((caller_id.eq.1).or. & ! computeNewDT
                 (caller_id.eq.2)) then ! do_the_advance
-        local_gravity_coefficient=zero
+        if (1.eq.0) then
+         local_gravity_coefficient=zero
+        endif
        else
         print *,"caller_id invalid"
         stop
