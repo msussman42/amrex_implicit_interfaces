@@ -32747,13 +32747,13 @@ end subroutine initialize2d
 
       end subroutine fort_init_regions_list
 
-      subroutine fort_delete_regions_list() &
+      subroutine fort_delete_regions_list(ioproc) &
       bind(c,name='fort_delete_regions_list')
 
       use probcommon_module
       use geometry_intersect_module
-      use amrex_parallel_module
       IMPLICIT NONE
+      INTEGER_T, intent(in) :: ioproc
       INTEGER_T lower_bound(2)
       INTEGER_T upper_bound(2)
       INTEGER_T iregions
@@ -32771,8 +32771,7 @@ end subroutine initialize2d
            (upper_bound(1).eq.number_of_source_regions).and. &
            (upper_bound(2).eq.number_of_threads_regions)) then
 
-        if (amrex_parallel_ioprocessor().eqv..true.) then
-
+        if (ioproc.eq.1) then
          do iregions=1,number_of_source_regions
 
           if (regions_list(iregions,0)%region_dt.gt.zero) then
@@ -32825,11 +32824,10 @@ end subroutine initialize2d
             regions_list(iregions,0)%region_dt
 
          enddo ! do iregions=1,number_of_source_regions
-
-        else if (amrex_parallel_ioprocessor().eqv..false.) then
+        else if (ioproc.eq.0) then
          ! do nothing
         else
-         print *,"amrex_parallel_ioprocessor() invalid"
+         print *,"ioproc invalid"
          stop
         endif
 

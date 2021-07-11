@@ -10715,11 +10715,126 @@ END SUBROUTINE SIMP
        return
        end subroutine fort_summass
 
+       subroutine fort_get_number_regions(cpp_number_regions) &
+       bind(c,name='fort_get_number_regions')
+
+       use probcommon_module
+       IMPLICIT NONE
+       INTEGER_T, intent(out) :: cpp_number_regions
+
+       cpp_number_regions=number_of_source_regions
+
+       return
+       end subroutine fort_get_number_regions
+
+       subroutine fort_get_region_data(isweep, &
+         cpp_energy_per_kelvin, &
+         cpp_mass, &
+         cpp_energy, &
+         cpp_volume, &
+         cpp_volume_raster, & ! this and above, isweep==0
+         cpp_mass_after, &
+         cpp_energy_after, &
+         cpp_volume_after) &
+       bind(c,name='fort_get_region_data')
+       use probcommon_module
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: isweep
+       REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
+       INTEGER_T iregions
+
+       do iregions=1,number_of_source_regions
+        if (isweep.eq.0) then
+         cpp_energy_per_kelvin(iregions)= &
+               regions_list(iregions,0)%region_energy_per_kelvin
+         cpp_mass(iregions)= &
+               regions_list(iregions,0)%region_mass
+         cpp_energy(iregions)= &
+               regions_list(iregions,0)%region_energy
+         cpp_volume(iregions)= &
+               regions_list(iregions,0)%region_volume
+         cpp_volume_raster(iregions)= &
+               regions_list(iregions,0)%region_volume_raster
+        else if (isweep.eq.1) then
+         cpp_mass_after(iregions)= &
+               regions_list(iregions,0)%region_mass_after
+         cpp_energy_after(iregions)= &
+               regions_list(iregions,0)%region_energy_after
+         cpp_volume_after(iregions)= &
+               regions_list(iregions,0)%region_volume_after
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+       enddo ! iregions=1,number_source_regions
+         
+       end subroutine fort_get_region_data
+
+
+       subroutine fort_put_region_data(isweep, &
+         cpp_energy_per_kelvin, &
+         cpp_mass, &
+         cpp_energy, &
+         cpp_volume, &
+         cpp_volume_raster, & ! this and above, isweep==0
+         cpp_mass_after, &
+         cpp_energy_after, &
+         cpp_volume_after) &
+       bind(c,name='fort_put_region_data')
+       use probcommon_module
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: isweep
+       REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
+       REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
+       INTEGER_T iregions
+
+       do iregions=1,number_of_source_regions
+        if (isweep.eq.0) then
+         regions_list(iregions,0)%region_energy_per_kelvin= &
+          cpp_energy_per_kelvin(iregions)
+         regions_list(iregions,0)%region_mass= &
+          cpp_mass(iregions)
+         regions_list(iregions,0)%region_energy= &
+          cpp_energy(iregions)
+         regions_list(iregions,0)%region_volume= &
+          cpp_volume(iregions)
+         regions_list(iregions,0)%region_volume_raster= &
+          cpp_volume_raster(iregions)
+        else if (isweep.eq.1) then
+         regions_list(iregions,0)%region_mass_after= &
+          cpp_mass_after(iregions)
+         regions_list(iregions,0)%region_energy_after= &
+          cpp_energy_after(iregions)
+         regions_list(iregions,0)%region_volume_after= &
+          cpp_volume_after(iregions)
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+       enddo ! iregions=1,number_source_regions
+         
+       end subroutine fort_put_region_data
+
+
        subroutine fort_reduce_sum_regions(isweep) &
        bind(c,name='fort_reduce_sum_regions')
 
        use probcommon_module
-       use amrex_parallel_module
        IMPLICIT NONE
 
        INTEGER_T, intent(in) :: isweep
@@ -10727,7 +10842,6 @@ END SUBROUTINE SIMP
        INTEGER_T ithreads,iregions
 
        do iregions=1,number_of_source_regions
-
         if (isweep.eq.0) then
 
          regions_list(iregions,0)%region_energy_per_kelvin=zero
@@ -10754,33 +10868,6 @@ END SUBROUTINE SIMP
            regions_list(iregions,ithreads)%region_volume_raster
          enddo ! ithreads=1,number_of_threads_regions
 
-         ! amrex_parallel_reduce_sum is a fortran templated subroutine.
-         ! The online recommendation is that
-         ! the subroutine itself has "type, intent(inout) :: xx"
-         ! Then there is an interface block with a "module procedure"
-         ! corresponding to each allowable type.
-         ! AMReX does it in a more understandable way:
-         ! see: amrex-master/Src/F_Interfaces/Base/AMReX_parallel_mod.F90
-         !  public :: amrex_parallel_reduce_sum
-         !    interface amrex_parallel_reduce_sum
-         !     module procedure amrex_parallel_reduce_sum_is
-         !     module procedure amrex_parallel_reduce_sum_iv
-         !     module procedure amrex_parallel_reduce_sum_rs
-         !     module procedure amrex_parallel_reduce_sum_rv
-         !    end interface amrex_parallel_reduce_sum
-         !  each module procedure is specific to each type.
-
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_energy_per_kelvin)
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_mass)
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_energy)
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_volume)
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_volume_raster)
-
         else if (isweep.eq.1) then
 
          regions_list(iregions,0)%region_mass_after=zero
@@ -10798,13 +10885,6 @@ END SUBROUTINE SIMP
            regions_list(iregions,0)%region_volume_after+ &
            regions_list(iregions,ithreads)%region_volume_after
          enddo ! ithreads=1,number_of_threads_regions
-
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_mass_after)
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_energy_after)
-         call amrex_parallel_reduce_sum( &
-               regions_list(iregions,0)%region_volume_after)
 
         else
          print *,"isweep invalid"

@@ -207,7 +207,7 @@ namespace amrex{
 	int* num_materials,
 	int* nthreads);
   
-     void fort_delete_regions_list();
+     void fort_delete_regions_list(int* ioproc);
 
      void fort_initdatasolid(
       int* nmat,
