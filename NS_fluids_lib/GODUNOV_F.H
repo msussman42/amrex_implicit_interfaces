@@ -617,6 +617,8 @@ extern "C"
 
 
    void fort_estdt(
+      int* caller_id,
+      Real* dt_ratio,
       int* enable_spectral,
       Real* AMR_min_phase_change_rate,
       Real* AMR_max_phase_change_rate,
@@ -635,6 +637,8 @@ extern "C"
       Real* molar_mass,
       Real* species_molar_mass,
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
+      const Real* Umac_nm1, 
+      AMREX_ARLIM_P(umacnm1lo),AMREX_ARLIM_P(umacnm1hi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
       const Real* sol, AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
       Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
