@@ -11968,12 +11968,72 @@ void NavierStokes::Mass_Energy_Sources_SinksALL() {
 
   } else
    amrex::Error("level<=finest_level required");
-  
+
+   // multi threading synchronization  
   fort_reduce_sum_regions(&isweep);
+
+  int cpp_number_regions=0;
+  fort_get_number_regions(&cpp_number_regions);
+
+  if (cpp_number_regions==0) {
+   // do nothing
+  } else if (cpp_number_regions>0) {
+
+   Vector<Real> cpp_energy_per_kelvin(cpp_number_regions);
+   Vector<Real> cpp_mass(cpp_number_regions);
+   Vector<Real> cpp_energy(cpp_number_regions);
+   Vector<Real> cpp_volume(cpp_number_regions);
+   Vector<Real> cpp_volume_raster(cpp_number_regions);
+   Vector<Real> cpp_mass_after(cpp_number_regions);
+   Vector<Real> cpp_energy_after(cpp_number_regions);
+   Vector<Real> cpp_volume_after(cpp_number_regions);
+
+   fort_get_region_data(&isweep,
+    cpp_energy_per_kelvin.dataPtr(),
+    cpp_mass.dataPtr(),
+    cpp_energy.dataPtr(),
+    cpp_volume.dataPtr(),
+    cpp_volume_raster.dataPtr(),
+    cpp_mass_after.dataPtr(),
+    cpp_energy_after.dataPtr(),
+    cpp_volume_after.dataPtr());
+
+   for (int iregions=0;iregions<cpp_number_regions;iregions++) {
+    if (isweep==0) {
+     ParallelDescriptor::ReduceRealSum(cpp_energy_per_kelvin[iregions]);
+     ParallelDescriptor::ReduceRealSum(cpp_mass[iregions]);
+     ParallelDescriptor::ReduceRealSum(cpp_energy[iregions]);
+     ParallelDescriptor::ReduceRealSum(cpp_volume[iregions]);
+     ParallelDescriptor::ReduceRealSum(cpp_volume_raster[iregions]);
+    } else if (isweep==1) {
+     ParallelDescriptor::ReduceRealSum(cpp_mass_after[iregions]);
+     ParallelDescriptor::ReduceRealSum(cpp_energy_after[iregions]);
+     ParallelDescriptor::ReduceRealSum(cpp_volume_after[iregions]);
+    } else
+     amrex::Error("isweep invalid");
+   }
+
+   fort_put_region_data(&isweep,
+    cpp_energy_per_kelvin.dataPtr(),
+    cpp_mass.dataPtr(),
+    cpp_energy.dataPtr(),
+    cpp_volume.dataPtr(),
+    cpp_volume_raster.dataPtr(),
+    cpp_mass_after.dataPtr(),
+    cpp_energy_after.dataPtr(),
+    cpp_volume_after.dataPtr());
+
+  } else
+   amrex::Error("cpp_number_regions invalid");
 
  } //isweep=0,1
 
- fort_delete_regions_list();
+ int ioproc=0;
+ if (ParallelDescriptor::IOProcessor()) {
+  ioproc=1;
+ }
+
+ fort_delete_regions_list(&ioproc);
 
 } // end subroutine Mass_Energy_Sources_SinksALL()
 

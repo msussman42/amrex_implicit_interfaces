@@ -671,6 +671,29 @@ extern "C" {
        int* level,
        int* finest_level);
 
+    void fort_get_number_regions(int* cpp_number_regions);
+    void fort_get_region_data(
+      int* isweep,
+      Real* cpp_energy_per_kelvin,
+      Real* cpp_mass,
+      Real* cpp_energy,
+      Real* cpp_volume,
+      Real* cpp_volume_raster,
+      Real* cpp_mass_after,
+      Real* cpp_energy_after,
+      Real* cpp_volume_after);
+
+    void fort_put_region_data(
+      int* isweep,
+      Real* cpp_energy_per_kelvin,
+      Real* cpp_mass,
+      Real* cpp_energy,
+      Real* cpp_volume,
+      Real* cpp_volume_raster,
+      Real* cpp_mass_after,
+      Real* cpp_energy_after,
+      Real* cpp_volume_after);
+
     void fort_reduce_sum_regions(int* isweep);
 
     void fort_sumdot(Real* mass1,
