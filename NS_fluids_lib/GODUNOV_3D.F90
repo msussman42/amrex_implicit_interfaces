@@ -4900,7 +4900,7 @@ stop
         ! u_max(sdim+1) is max c^2
       subroutine fort_estdt( &
         caller_id, &
-        dt_ratio, &
+        dt_prev, &
         enable_spectral, &
         AMR_min_phase_change_rate, &
         AMR_max_phase_change_rate, &
@@ -4975,7 +4975,7 @@ stop
       INTEGER_T, intent(in) :: nmat,nten
       REAL_T, intent(in) :: AMR_min_phase_change_rate(SDIM)
       REAL_T, intent(in) :: AMR_max_phase_change_rate(SDIM)
-      REAL_T, intent(in) :: dt_ratio
+      REAL_T, intent(in) :: dt_prev
       REAL_T, intent(in) :: elastic_time(nmat)
       INTEGER_T, intent(in) :: shock_timestep(nmat)
       INTEGER_T, intent(in) :: material_type(nmat)
@@ -5067,6 +5067,7 @@ stop
       REAL_T dxmin,dxmax,dxmaxLS,den1,den2,visc1,visc2
       INTEGER_T recompute_wave_speed
       REAL_T uulocal
+      REAL_T du_dt
       REAL_T smallestL
       REAL_T denjump
       REAL_T denjump_gravity
@@ -5108,6 +5109,7 @@ stop
       REAL_T effective_velocity
       REAL_T local_elastic_time
       REAL_T ugrav
+      REAL_T local_gravity_coefficient
 
       nhalf=3
 
@@ -5128,10 +5130,10 @@ stop
        print *,"caller_id invalid"
        stop
       endif
-      if (dt_ratio.ge.one-VOFTOL) then
+      if (dt_prev.gt.zero) then
        ! do nothing
       else
-       print *,"dt_ratio invalid"
+       print *,"dt_prev invalid"
        stop
       endif
 
@@ -5578,6 +5580,8 @@ stop
        enddo ! partid=0..nparts-1
 
        uulocal=abs(velmac(D_DECL(i,j,k)))
+       du_dt=abs(velmac(D_DECL(i,j,k))-velmac_nm1(D_DECL(i,j,k)))/dt_prev
+
        if (levelrz.eq.0) then
         ! do nothing
        else if ((levelrz.eq.1).or. &
@@ -5586,9 +5590,11 @@ stop
             (xstenMAC(0,1).gt.VOFTOL*dx(1))) then
          if (xstenMAC(0,1).ge.hxmac) then
           uulocal=uulocal/( one-three*hxmac/(four*xstenMAC(0,1)) )  
+          du_dt=du_dt/( one-three*hxmac/(four*xstenMAC(0,1)) )  
          else if ((xstenMAC(0,1).gt.zero).and. &
                   (xstenMAC(-1,1).gt.zero)) then
           uulocal=four*uulocal
+          du_dt=four*du_dt
          else
           print *,"xstenMAC invalid estdt 2"
           print *,"i,j,k,dirnormal ",i,j,k,dirnormal
@@ -6126,7 +6132,29 @@ stop
       enddo
       enddo  ! i,j,k
 
-      if (abs(ns_gravity).gt.zero) then
+      local_gravity_coefficient=abs(ns_gravity)
+
+      if (local_gravity_coefficient.gt.zero) then
+
+       if ((caller_id.eq.0).or. & !computeInitialDt
+           (caller_id.eq.3)) then !sum_integrated_quantities.
+        ! do nothing
+       else if ((caller_id.eq.1).or. & ! computeNewDT
+                (caller_id.eq.2)) then ! do_the_advance
+        local_gravity_coefficient=zero
+       else
+        print *,"caller_id invalid"
+        stop
+       endif
+
+      else if (local_gravity_coefficient.eq.zero) then
+       ! do nothing
+      else
+       print *,"local_gravity_coefficient bust"
+       stop
+      endif
+
+      if (local_gravity_coefficient.gt.zero) then
 
        if (denmax.gt.zero) then
 
@@ -6150,7 +6178,7 @@ stop
 !      sqrt(dx/(g (delta rho))) if ubase=0
 !      dx/ubase          if g=0
           ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
-                  four*abs(denjump*ns_gravity)*dxmin))
+            four*abs(denjump*local_gravity_coefficient)*dxmin))
           if (ugrav.gt.zero) then
            dthold=dxmin/ugrav 
            dt_min=min(dt_min,dthold)
@@ -6158,7 +6186,7 @@ stop
            print *,"ugrav invalid 1"
            print *,"uu_estdt ",uu_estdt
            print *,"denjump ",denjump
-           print *,"ns_gravity ",ns_gravity
+           print *,"local_gravity_coefficient ",local_gravity_coefficient
            print *,"dxmin ",dxmin
            print *,"denmax ",denmax
            stop
@@ -6174,7 +6202,7 @@ stop
           if (denmax_gravity.gt.zero) then
            denjump_gravity=denjump_gravity/denmax_gravity
            ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
-                  four*abs(denjump_gravity*ns_gravity)*dxmin))
+             four*abs(denjump_gravity*local_gravity_coefficient)*dxmin))
            if (ugrav.gt.zero) then
             dthold=dxmin/ugrav 
             dt_min=min(dt_min,dthold)
@@ -6182,7 +6210,7 @@ stop
             print *,"ugrav invalid 2"
             print *,"uu_estdt ",uu_estdt
             print *,"denjump_gravity ",denjump_gravity
-            print *,"ns_gravity ",ns_gravity
+            print *,"local_gravity_coefficient ",local_gravity_coefficient
             print *,"dxmin ",dxmin
             print *,"denmax ",denmax
             stop
@@ -6224,11 +6252,11 @@ stop
           
          if (denjump_terminal.gt.zero) then
           if (fort_viscconst(1).gt.zero) then
-           if (abs(ns_gravity).gt.zero) then
+           if (local_gravity_coefficient.gt.zero) then
             if (radblob.gt.zero) then
              ! units: kg/m^3  m s/kg   m/s^2  m^2=(s/m^2) m^3/s^2=m/s
              v_terminal=(two/nine)*(denjump_terminal)* &
-              (one/fort_viscconst(1))*abs(ns_gravity)*(radblob**2) 
+              (one/fort_viscconst(1))*local_gravity_coefficient*(radblob**2) 
              v_terminal=two*v_terminal
              if (v_terminal.gt.zero) then
               dthold=dxmin/v_terminal
@@ -6255,7 +6283,7 @@ stop
              stop
             endif
            else
-            print *,"ns_gravity invalid"
+            print *,"local_gravity_coefficient invalid"
             stop
            endif
           else
@@ -6277,12 +6305,24 @@ stop
         stop
        endif
 
-      else if (abs(ns_gravity).eq.zero) then
+      else if (local_gravity_coefficient.eq.zero) then
        ! do nothing
       else
-       print *,"ns_gravity bust"
+       print *,"local_gravity_coefficient bust"
        stop
       endif 
+
+      ugrav=half*(uu_estdt+sqrt(uu_estdt**2+ &
+         four*du_dt*dxmin))
+      if (ugrav.gt.zero) then
+       dthold=dxmin/ugrav
+       dt_min=min(dt_min,dthold)
+      else if (ugrav.eq.zero) then
+       ! do nothing
+      else
+       print *,"ugrav invalid 6323"
+       stop
+      endif
 
       if (u_max(dirnormal+1).lt.u_core) then
        u_max(dirnormal+1)=u_core
