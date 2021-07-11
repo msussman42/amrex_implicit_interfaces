@@ -3487,7 +3487,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("nsteps invalid");
        }
 
-       Real dt_predict=estTimeStep(local_fixed_dt);
+       int caller_id=2;
+       Real dt_predict=estTimeStep(local_fixed_dt,caller_id);
        Real dt_predict_max=dt_predict;
        Real dt_predict_min=dt_predict;
        ParallelDescriptor::ReduceRealMax(dt_predict_max);

@@ -1097,8 +1097,8 @@ StateData::CopyNewToOld(int level,int max_level) {
    } else
     amrex::Error("level invalid");
   } else {
-   std::cout << "ncompPC=" << ncompPC << '\n';
-   amrex::Error("This ncompPC value not supported.");
+   std::cout << "ncomp_PC=" << ncomp_PC << '\n';
+   amrex::Error("This ncomp_PC value not supported.");
   }
  }
 
@@ -1136,8 +1136,8 @@ StateData::CopyOldToNew(int level,int max_level) {
    } else
     amrex::Error("level invalid");
   } else {
-   std::cout << "ncompPC=" << ncompPC << '\n';
-   amrex::Error("This ncompPC value not supported.");
+   std::cout << "ncomp_PC=" << ncomp_PC << '\n';
+   amrex::Error("This ncomp_PC value not supported.");
   }
 
  }

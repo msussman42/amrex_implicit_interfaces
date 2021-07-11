@@ -19695,9 +19695,11 @@ void NavierStokes::DumpProcNum() {
  ns_reconcile_d_num(105);
 }
 
-// called from: estTimeStep
+// called from: estTimeStep (caller_id=0,1,2)
+//              sum_integrated_quantities (caller_id=3) 
 void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
-  Real* vel_max,Real* vel_max_estdt,Real& vel_max_cap_wave) {
+  Real* vel_max,Real* vel_max_estdt,Real& vel_max_cap_wave,
+  int caller_id) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -19740,7 +19742,7 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
    local_dt_min=dt_max;
 
   ns_level.MaxAdvectSpeed(local_dt_min,local_vel_max,local_vel_max_estdt,
-		  local_vel_max_cap_wave); 
+    local_vel_max_cap_wave,caller_id); 
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
    vel_max[dir] = std::max(vel_max[dir],local_vel_max[dir]);
    vel_max_estdt[dir] = std::max(vel_max_estdt[dir],local_vel_max_estdt[dir]);
@@ -19750,9 +19752,12 @@ void NavierStokes::MaxAdvectSpeedALL(Real& dt_min,
  } // ilev 
 } // end subroutine MaxAdvectSpeedALL
 
+// MaxAdvectSpeedALL called from: 
+//     estTimeStep (caller_id=0,1,2)
+//     sum_integrated_quantities (caller_id=3) 
 // vel_max[0,1,2]= max vel in direction  vel_max[sdim]=max c^2
 void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
- Real* vel_max_estdt,Real& vel_max_cap_wave) {
+ Real* vel_max_estdt,Real& vel_max_cap_wave,int caller_id) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -19999,10 +20004,13 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 
 } // subroutine MaxAdvectSpeed
 
-// called from: computeNewDt, computeInitialDt
+// called from: do_the_advance (caller_id==2)
+//              computeNewDt (caller_id==1) 
+//              computeInitialDt (caller_id==0)
 // fixed_dt==0.0 if dt not prescribed.
 // fixed_dt>0.0 if dt prescribed.
-Real NavierStokes::estTimeStep (Real local_fixed_dt) {
+//
+Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
 
  Real return_dt=0.0;
 
@@ -20035,7 +20043,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt) {
    Real u_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
    Real u_max_cap_wave;
 
-   MaxAdvectSpeedALL(dt_min,u_max,u_max_estdt,u_max_cap_wave);
+   MaxAdvectSpeedALL(dt_min,u_max,u_max_estdt,u_max_cap_wave,caller_id);
    if (min_velocity_for_dt>0.0) {
     Real local_dt_max=smallest_dx/min_velocity_for_dt;
     if (dt_min>local_dt_max)
@@ -20158,7 +20166,8 @@ void NavierStokes::computeNewDt (int finest_level,
 
   if (level==0) {
 
-   Real newdt=estTimeStep(local_fixed_dt);
+   int caller_id=1;
+   Real newdt=estTimeStep(local_fixed_dt,caller_id);
 
    if ((local_fixed_dt==0.0)&&(fixed_dt_velocity==0.0)) {
     if  (newdt>local_change_max*dt)
@@ -20237,7 +20246,8 @@ void NavierStokes::computeInitialDt (int finest_level,
   amrex::Error("ns_time_order invalid");
  }
 
- Real newdt=init_shrink*estTimeStep(fixed_dt_init)/shrink_factor;
+ int caller_id=0;
+ Real newdt=init_shrink*estTimeStep(fixed_dt_init,caller_id)/shrink_factor;
 
  Real dt_0 = newdt;
 
