@@ -19847,12 +19847,37 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
  MultiFab* velcell=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
   
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
- 
-  MultiFab* velmac=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(denmf->boxArray().d_numPts());
+  Real time_nm1=cur_time_slab;
+  Real dt_ratio=1.0;
+  if ((caller_id==0)||   //computeInitialDt
+      (caller_id==3)) {  //sum_integrated_quantities
+	  // do nothing
+  } else if ((caller_id==1)||  //computeNewDt
+             (caller_id==2)) { //do_the_advance
+
+   time_nm1=prev_time_slab;
+   if ((cur_time_slab>prev_time_slab)&&
+       (upper_slab_time>lower_slab_time)&&
+       (upper_slab_time>0.0)&&
+       (lower_slab_time>=0.0)&&
+       (upper_slab_time>=cur_time_slab)&&
+       (lower_slab_time<=prev_time_slab)) {
+    dt_ratio=(upper_slab_time-lower_slab_time)/
+	     (cur_time_slab-prev_time_slab);
+
+   } else
+    amrex::Error("error finding dt_ratio");
+
+  } else
+   amrex::Error("caller_id invalid");
+
+  MultiFab* velmac=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
+  MultiFab* velmac_nm1=getStateMAC(Umac_Type,0,dir,0,1,time_nm1);
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(denmf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -19871,6 +19896,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 
    const Real* xlo = grid_loc[gridno].lo();
    FArrayBox& Umac=(*velmac)[mfi];
+   FArrayBox& Umac_nm1=(*velmac_nm1)[mfi];
    FArrayBox& Ucell=(*velcell)[mfi];
    FArrayBox& distfab=(*distmf)[mfi];
    FArrayBox& voffab=(*vofmf)[mfi];
@@ -19886,6 +19912,8 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 
     // in: GODUNOV_3D.F90
    fort_estdt(
+    &caller_id,
+    &dt_ratio,
     &local_enable_spectral,
     parent->AMR_min_phase_change_rate.dataPtr(),
     parent->AMR_max_phase_change_rate.dataPtr(),
@@ -19904,6 +19932,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
+    Umac_nm1.dataPtr(),ARLIM(Umac_nm1.loVect()),ARLIM(Umac_nm1.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
     denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -19983,6 +20012,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
   ParallelDescriptor::ReduceRealMin(local_dt_min[0]);
 
   delete velmac;
+  delete velmac_nm1;
  }  // dir=0..sdim-1
 
  delete velcell;
@@ -20005,7 +20035,7 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 } // subroutine MaxAdvectSpeed
 
 // called from: do_the_advance (caller_id==2)
-//              computeNewDt (caller_id==1) 
+//              computeNewDt (caller_id==1, nsteps>0) 
 //              computeInitialDt (caller_id==0)
 // fixed_dt==0.0 if dt not prescribed.
 // fixed_dt>0.0 if dt prescribed.

@@ -318,6 +318,8 @@ AmrLevel::FillPatch (AmrLevel & old,
   Real nudge_time;
   int best_index;
   StateData& fstatedata = old.state[index];
+   //nudge_time=time_array[best_index]
+   //0<=best_index<=bfact_time_order
   fstatedata.get_time_index(time,nudge_time,best_index);
 
   MultiFab& fmf=fstatedata.newData(best_index);

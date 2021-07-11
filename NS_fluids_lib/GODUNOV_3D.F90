@@ -4899,6 +4899,8 @@ stop
         ! u_max(1..sdim) is max vel in dir.
         ! u_max(sdim+1) is max c^2
       subroutine fort_estdt( &
+        caller_id, &
+        dt_ratio, &
         enable_spectral, &
         AMR_min_phase_change_rate, &
         AMR_max_phase_change_rate, &
@@ -4917,6 +4919,7 @@ stop
         molar_mass, &
         species_molar_mass, &
         velmac,DIMS(velmac), &
+        velmac_nm1,DIMS(velmac_nm1), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
         den,DIMS(den), &
@@ -4960,6 +4963,7 @@ stop
       use hydrateReactor_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -4971,6 +4975,7 @@ stop
       INTEGER_T, intent(in) :: nmat,nten
       REAL_T, intent(in) :: AMR_min_phase_change_rate(SDIM)
       REAL_T, intent(in) :: AMR_max_phase_change_rate(SDIM)
+      REAL_T, intent(in) :: dt_ratio
       REAL_T, intent(in) :: elastic_time(nmat)
       INTEGER_T, intent(in) :: shock_timestep(nmat)
       INTEGER_T, intent(in) :: material_type(nmat)
@@ -5015,6 +5020,7 @@ stop
       REAL_T, intent(in) :: ns_gravity
       INTEGER_T, intent(inout) :: terminal_velocity_dt
       INTEGER_T, intent(in) :: DIMDEC(velmac)
+      INTEGER_T, intent(in) :: DIMDEC(velmac_nm1)
       INTEGER_T, intent(in) :: DIMDEC(velcell)
       INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(dist)
@@ -5022,6 +5028,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(den)
       REAL_T, target, intent(in) :: velmac(DIMV(velmac))
       REAL_T, pointer :: velmac_ptr(D_DECL(:,:,:))
+      REAL_T, target, intent(in) :: velmac_nm1(DIMV(velmac_nm1))
+      REAL_T, pointer :: velmac_nm1_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(in) :: velcell(DIMV(velcell),SDIM)
       REAL_T, pointer :: velcell_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
@@ -5104,11 +5112,28 @@ stop
       nhalf=3
 
       velmac_ptr=>velmac
+      velmac_nm1_ptr=>velmac_nm1
       velcell_ptr=>velcell
       solidfab_ptr=>solidfab
       den_ptr=>den
       vof_ptr=>vof
       dist_ptr=>dist
+
+      if ((caller_id.eq.0).or. & !computeInitialDt
+          (caller_id.eq.1).or. & !computeNewDT
+          (caller_id.eq.2).or. & !do_the_advance
+          (caller_id.eq.3)) then !sum_integrated_quantities.
+       ! do nothing
+      else
+       print *,"caller_id invalid"
+       stop
+      endif
+      if (dt_ratio.ge.one-VOFTOL) then
+       ! do nothing
+      else
+       print *,"dt_ratio invalid"
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -5386,6 +5411,7 @@ stop
       endif
 
       call checkbound_array1(fablo,fabhi,velmac_ptr,0,dirnormal,4)
+      call checkbound_array1(fablo,fabhi,velmac_nm1_ptr,0,dirnormal,4)
       call checkbound_array(fablo,fabhi,velcell_ptr,1,-1,4)
       call checkbound_array(fablo,fabhi,solidfab_ptr,0,dirnormal,4)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,4)
