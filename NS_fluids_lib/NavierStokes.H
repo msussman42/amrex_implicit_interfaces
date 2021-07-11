@@ -597,7 +597,7 @@ public:
     //
     // Timestep estimation functions follow ...
     //
-    virtual Real estTimeStep (Real local_fixed_dt);
+   Real estTimeStep (Real local_fixed_dt,int caller_id);
 
    virtual void computeInitialDt (int    finest_level,
                                   Real&  dt,
@@ -801,9 +801,9 @@ protected:
     void delete_localMF_if_exist(int idx_MF,int ncomp); 
 
     void MaxAdvectSpeedALL(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
-		    Real& vel_max_cap_wave);
+	Real& vel_max_cap_wave,int caller_id);
     void MaxAdvectSpeed(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
-		    Real& vel_max_cap_wave);
+        Real& vel_max_cap_wave,int caller_id);
     void DumpProcNum();
 
       // interpolates coarsedata from level-1 to level.

@@ -1932,7 +1932,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  Real vel_max[AMREX_SPACEDIM+1];
  Real vel_max_estdt[AMREX_SPACEDIM+1];
  Real vel_max_cap_wave=0.0;
- MaxAdvectSpeedALL(dt_min,vel_max,vel_max_estdt,vel_max_cap_wave);
+ int caller_id=3;
+ MaxAdvectSpeedALL(dt_min,vel_max,vel_max_estdt,vel_max_cap_wave,caller_id);
 
   // 0 empty
   // F,E  2 x nmat
@@ -2927,6 +2928,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "done sum_integrated_quantities\n";
   }
-} // subroutine sum_integrated_quantities
+} // end subroutine sum_integrated_quantities
 
 }/* namespace amrex */
