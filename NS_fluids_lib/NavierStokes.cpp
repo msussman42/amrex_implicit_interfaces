@@ -8820,6 +8820,8 @@ void NavierStokes::CopyNewToOldALL() {
   int nstate=ns_level.state.size();
   if (nstate!=NUM_STATE_TYPE)
    amrex::Error("nstate invalid");
+   //copy bfact_time_order component to the
+   //components: 0..bfact_time_order-1
   for (int k = 0; k < nstate; k++) {
    ns_level.state[k].CopyNewToOld(level,max_level);  
   }
@@ -8849,10 +8851,10 @@ void NavierStokes::CopyOldToNewALL() {
   amrex::Error("level invalid CopyOldToNewALL");
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-   // oldtime=newtime=start_time newtime+=dt
   int nstate=ns_level.state.size();
   if (nstate!=NUM_STATE_TYPE)
    amrex::Error("nstate invalid");
+   //copy component "0" to components 1..bfact_time_order.
   for (int k = 0; k < nstate; k++) {
    ns_level.state[k].CopyOldToNew(level,max_level);
   }
@@ -19998,6 +20000,8 @@ void NavierStokes::MaxAdvectSpeed(Real& dt_min,Real* vel_max,
 } // subroutine MaxAdvectSpeed
 
 // called from: computeNewDt, computeInitialDt
+// fixed_dt==0.0 if dt not prescribed.
+// fixed_dt>0.0 if dt prescribed.
 Real NavierStokes::estTimeStep (Real local_fixed_dt) {
 
  Real return_dt=0.0;

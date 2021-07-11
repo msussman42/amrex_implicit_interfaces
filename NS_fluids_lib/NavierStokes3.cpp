@@ -954,6 +954,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
  if (level==0) {
 
+   //do {...} while (advance_status==0);
   do {
 
    SDC_outer_sweeps=0;
@@ -1058,7 +1059,10 @@ Real NavierStokes::advance(Real time,Real dt) {
     amrex::Error("particles_flag invalid");
    }
 
+   //copy bfact_time_order component to the
+   //components: 0..bfact_time_order-1
    CopyNewToOldALL();
+   // new_time=time+dt_new  old_time=time
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.setTimeLevel(time+dt_new,dt_new);
@@ -1082,9 +1086,11 @@ Real NavierStokes::advance(Real time,Real dt) {
     // do nothing (success)
    } else if (advance_status==0) { // failure
     dt_new=0.5*dt_new;
+     //copy component "0" to components 1..bfact_time_order.
     CopyOldToNewALL();
     for (int ilev=level;ilev<=finest_level;ilev++) {
      NavierStokes& ns_level=getLevel(ilev);
+      // new_time=lower_slab_time  old_time=lower_slab_time-dt_new
      ns_level.setTimeLevel(lower_slab_time,dt_new);
     }
     parent->setDt(dt_new);
@@ -3469,6 +3475,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (very_last_sweep==0) {
 
+        // fixed_dt==0.0 if dt not prescribed.
+        // fixed_dt>0.0 if dt prescribed.
        Real local_fixed_dt;
        if (nsteps==0) {
         local_fixed_dt=fixed_dt_init;
