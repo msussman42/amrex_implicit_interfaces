@@ -7,7 +7,6 @@
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
 #    define FORT_ADDNOISE    addnoise
-#    define FORT_VFRACERROR  vfracerror
 #    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
@@ -38,7 +37,6 @@
 #    define FORT_SETFORTSCALES SETFORTSCALES
 #    define FORT_FORCEVELOCITY FORCEVELOCITY
 #    define FORT_ADDNOISE    ADDNOISE
-#    define FORT_VFRACERROR  VFRACERROR
 #    define FORT_VISCFLUXFILL VISCFLUXFILL
 #    define FORT_UMACFILL    UMACFILL
 #    define FORT_XDMACFILL   XDMACFILL
@@ -69,7 +67,6 @@
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
 #    define FORT_ADDNOISE    addnoise
-#    define FORT_VFRACERROR  vfracerror
 #    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
@@ -99,7 +96,6 @@
 #    define FORT_SETFORTSCALES setfortscales_
 #    define FORT_FORCEVELOCITY forcevelocity_
 #    define FORT_ADDNOISE    addnoise_
-#    define FORT_VFRACERROR  vfracerror_
 #    define FORT_VISCFLUXFILL viscfluxfill_
 #    define FORT_UMACFILL    umacfill_
 #    define FORT_XDMACFILL   xdmacfill_
@@ -234,7 +230,7 @@ namespace amrex{
       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
       const Real* dx,const Real* xlo);
 
-     void FORT_VFRACERROR  (
+     void fort_vfracerror(
       int* tag, AMREX_ARLIM_P(tlo), AMREX_ARLIM_P(thi),
       const int* tagval, const int* clearval,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -248,6 +244,7 @@ namespace amrex{
       const int* level,
       const int* max_level,
       const int* max_level_two_materials,
+      const int* max_level_for_use,
       int* nblocks,
       Real* xblocks,Real* yblocks,Real* zblocks,
       Real* rxblocks,Real* ryblocks,Real* rzblocks,

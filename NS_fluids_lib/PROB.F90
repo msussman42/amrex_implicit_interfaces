@@ -26144,6 +26144,204 @@ end subroutine initialize2d
        return
        end subroutine superheat_temperature
 
+       ! before this routine:
+       ! calc_error_indicator
+       ! EOS_error_ind
+      subroutine fort_vfracerror(  &
+       tag,DIMS(tag), &
+       set,clear, &
+       vfrac,DIMS(vfrac), &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       nvar, &
+       domlo,domhi, &
+       dx,xlo,problo, &
+       time, &
+       level, &
+       max_level, &
+       max_level_two_materials, &
+       max_level_for_use, &
+       nblocks, &
+       xblocks,yblocks,zblocks, &
+       rxblocks,ryblocks,rzblocks,ncoarseblocks, &
+       xcoarseblocks,ycoarseblocks,zcoarseblocks, &
+       rxcoarseblocks,rycoarseblocks,rzcoarseblocks) &
+      bind(c,name='fort_vfracerror')
+
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nblocks,ncoarseblocks
+      REAL_T, intent(in) :: xblocks(10),yblocks(10),zblocks(10)
+      REAL_T, intent(in) :: rxblocks(10),ryblocks(10),rzblocks(10)
+      REAL_T, intent(in) :: xcoarseblocks(10),ycoarseblocks(10),zcoarseblocks(10)
+      REAL_T, intent(in) :: rxcoarseblocks(10)
+      REAL_T, intent(in) :: rycoarseblocks(10)
+      REAL_T, intent(in) :: rzcoarseblocks(10)
+
+      INTEGER_T, intent(in) :: DIMDEC(tag)
+      INTEGER_T, intent(in) :: DIMDEC(vfrac)
+      INTEGER_T, intent(in) :: nvar, set, clear
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: max_level
+      INTEGER_T, intent(in) :: max_level_two_materials
+      INTEGER_T, intent(in) :: max_level_for_use
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T   growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), problo(SDIM), time
+      INTEGER_T, intent(out), target :: tag(DIMV(tag))
+      INTEGER_T, pointer :: tag_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: vfrac(DIMV(vfrac),nvar)
+      REAL_T, pointer :: vfrac_ptr(D_DECL(:,:,:),:)
+      REAL_T    x, y, z, rflag
+      INTEGER_T   i, j,k,np
+      INTEGER_T   tagflag
+      REAL_T xsten(-1:1,SDIM)
+      INTEGER_T nhalf
+
+      nhalf=1
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+
+      if (level.lt.0) then
+       print *,"level invalid vfrac error"
+       stop
+      endif
+      if (max_level.le.level) then
+       print *,"max_level invalid"
+       stop
+      endif
+      if ((max_level_two_materials.lt.0).or. &
+          (max_level_two_materials.gt.max_level)) then
+       print *,"max_level_two_materials invalid"
+       stop
+      endif
+      if ((max_level_for_use.lt.0).or. &
+          (max_level_for_use.gt.max_level)) then
+       print *,"max_level_for_use invalid"
+       stop
+      endif
+      if ((nblocks.lt.0).or.(ncoarseblocks.lt.0).or. &
+          (nblocks.ge.10).or.(ncoarseblocks.ge.10)) then
+       print *,"nblocks or ncoarseblocks out of range"
+       stop
+      endif
+
+      tag_ptr=>tag
+      vfrac_ptr=>vfrac
+
+      call checkbound_int_array1(fablo,fabhi,tag_ptr,0,-1,1400)
+      call checkbound_array(fablo,fabhi,vfrac_ptr,0,-1,1400)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+       x=xsten(0,1)
+       y=xsten(0,2)
+       z=xsten(0,SDIM)
+
+        ! GRIDS ARE CREATED AS FOLLOWS:
+        ! 1. cells are tagged for refinement (tagflag==1) or not
+        !    tagged (tagflag==0)
+        ! 2. depending on "amr.n_error_buf", neighboring cells of tagged
+        !    cells are also tagged.
+        !    For each cell (i,j,k) that is tagged with tagflag==1, the
+        !    following cells are also tagged:
+        !    i-n_error_buf<= i* <=i+n_error_buf
+        !    j-n_error_buf<= j* <=j+n_error_buf
+        !    k-n_error_buf<= k* <=k+n_error_buf
+        ! 3. The Berger and Rigoustos clustering algorithm is invoked which
+        !    forms minimal boxes surrounding all the tagged cells, making
+        !    sure that appropriate proper nesting and blocking factor
+        !    conditions are satisfied.
+        ! NOTE: vfrac(D_DECL(i,j,k),1) is initialized ultimately 
+        !   from calc_error_indicator and EOS_error_ind
+       rflag=vfrac(D_DECL(i,j,k),1)
+       tagflag=0
+
+       if (level.lt.max_level_for_use) then
+
+        call override_tagflag(xsten,nhalf,time,rflag,tagflag)
+
+        if (rflag.ge.one) then
+         tagflag=1
+        endif
+        if ((rflag.gt.zero).and.(level.lt.max_level_two_materials)) then
+         tagflag=1
+        endif
+
+        if ((probtype.eq.66).and.(SDIM.eq.2)) then
+         if (xblob2.lt.xblob3) then
+          if ((x.lt.xblob2).or.(x.gt.xblob3)) then
+           tagflag=0
+          endif
+         endif
+        endif
+       
+        if (ractivex.gt.zero) then
+         if ((abs(x-xactive).gt.ractivex).or. &
+#if (AMREX_SPACEDIM==3)
+             (abs(z-zactive).gt.ractivez).or. &
+#endif
+             (abs(y-yactive).gt.ractivey)) then
+          tagflag=0
+         endif
+        endif
+
+        if (nblocks.gt.0) then
+         do np=1,nblocks
+          if ((abs(x-xblocks(np)).le.rxblocks(np)).and. &
+#if (AMREX_SPACEDIM==3)
+              (abs(z-zblocks(np)).le.rzblocks(np)).and. &
+#endif
+              (abs(y-yblocks(np)).le.ryblocks(np))) then
+           tagflag=1
+          endif
+         enddo
+        endif
+
+        if (ncoarseblocks.gt.0) then
+         if (((probtype.eq.541).and.(level.gt.3)).or.(probtype.ne.541)) then
+          do np=1,ncoarseblocks
+           if ((abs(x-xcoarseblocks(np)).ge.rxcoarseblocks(np)).or. &
+#if (AMREX_SPACEDIM==3)
+               (abs(z-zcoarseblocks(np)).ge.rzcoarseblocks(np)).or. &
+#endif
+               (abs(y-ycoarseblocks(np)).ge.rycoarseblocks(np))) then
+            tagflag=0
+           endif
+          enddo
+         endif
+        endif ! ncoarseblocks>0
+
+       else if (level.ge.max_level_for_use) then
+        ! do nothing
+       else
+        print *,"level invalid"
+        stop
+       endif
+
+       if (tagflag.eq.1) then
+        tag(D_DECL(i,j,k))=set
+       endif
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_vfracerror
+
+
  
        end module probf90_module
 
@@ -34328,183 +34526,6 @@ end subroutine initialize2d
 
       return
       end subroutine fort_initvelocity
-
-       ! before this routine:
-       ! calc_error_indicator
-       ! EOS_error_ind
-      subroutine FORT_VFRACERROR (  &
-       tag,DIMS(tag), &
-       set,clear, &
-       vfrac,DIMS(vfrac), &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       nvar, &
-       domlo,domhi, &
-       dx,xlo,problo, &
-       time, &
-       level, &
-       max_level, &
-       max_level_two_materials, &
-       nblocks, &
-       xblocks,yblocks,zblocks, &
-       rxblocks,ryblocks,rzblocks,ncoarseblocks, &
-       xcoarseblocks,ycoarseblocks,zcoarseblocks, &
-       rxcoarseblocks,rycoarseblocks,rzcoarseblocks)
-
-      use probf90_module
-      use global_utility_module
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: nblocks,ncoarseblocks
-      REAL_T, intent(in) :: xblocks(10),yblocks(10),zblocks(10)
-      REAL_T, intent(in) :: rxblocks(10),ryblocks(10),rzblocks(10)
-      REAL_T, intent(in) :: xcoarseblocks(10),ycoarseblocks(10),zcoarseblocks(10)
-      REAL_T, intent(in) :: rxcoarseblocks(10)
-      REAL_T, intent(in) :: rycoarseblocks(10)
-      REAL_T, intent(in) :: rzcoarseblocks(10)
-
-      INTEGER_T, intent(in) :: DIMDEC(tag)
-      INTEGER_T, intent(in) :: DIMDEC(vfrac)
-      INTEGER_T, intent(in) :: nvar, set, clear
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: max_level
-      INTEGER_T, intent(in) :: max_level_two_materials
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T   growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), problo(SDIM), time
-      INTEGER_T, intent(out) :: tag(DIMV(tag))
-      REAL_T, intent(in) :: vfrac(DIMV(vfrac),nvar)
-      REAL_T    x, y, z, rflag
-      INTEGER_T   i, j,k,np
-      INTEGER_T   tagflag
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=1
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid200"
-       stop
-      endif
-
-      if (level.lt.0) then
-       print *,"level invalid vfrac error"
-       stop
-      endif
-      if (max_level.le.level) then
-       print *,"max_level invalid"
-       stop
-      endif
-      if ((max_level_two_materials.lt.0).or. &
-          (max_level_two_materials.gt.max_level)) then
-       print *,"max_level_two_materials invalid"
-       stop
-      endif
-      if ((nblocks.lt.0).or.(ncoarseblocks.lt.0).or. &
-          (nblocks.ge.10).or.(ncoarseblocks.ge.10)) then
-       print *,"nblocks or ncoarseblocks out of range"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(tag),0,-1,1400)
-      call checkbound(fablo,fabhi,DIMS(vfrac),0,-1,1400)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-       call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-       x=xsten(0,1)
-       y=xsten(0,2)
-       z=xsten(0,SDIM)
-
-        ! GRIDS ARE CREATED AS FOLLOWS:
-        ! 1. cells are tagged for refinement (tagflag==1) or not
-        !    tagged (tagflag==0)
-        ! 2. depending on "amr.n_error_buf", neighboring cells of tagged
-        !    cells are also tagged.
-        !    For each cell (i,j,k) that is tagged with tagflag==1, the
-        !    following cells are also tagged:
-        !    i-n_error_buf<= i* <=i+n_error_buf
-        !    j-n_error_buf<= j* <=j+n_error_buf
-        !    k-n_error_buf<= k* <=k+n_error_buf
-        ! 3. The Berger and Rigoustos clustering algorithm is invoked which
-        !    forms minimal boxes surrounding all the tagged cells, making
-        !    sure that appropriate proper nesting and blocking factor
-        !    conditions are satisfied.
-        ! NOTE: vfrac(D_DECL(i,j,k),1) is initialized ultimately 
-        !   from calc_error_indicator and EOS_error_ind
-       rflag=vfrac(D_DECL(i,j,k),1)
-       tagflag=0
-
-       call override_tagflag(xsten,nhalf,time,rflag,tagflag)
-
-       if (rflag.ge.one) then
-        tagflag=1
-       endif
-       if ((rflag.gt.zero).and.(level.lt.max_level_two_materials)) then
-        tagflag=1
-       endif
-
-       if ((probtype.eq.66).and.(SDIM.eq.2)) then
-        if (xblob2.lt.xblob3) then
-         if ((x.lt.xblob2).or.(x.gt.xblob3)) then
-          tagflag=0
-         endif
-        endif
-       endif
-      
-       if (ractivex.gt.zero) then
-        if ((abs(x-xactive).gt.ractivex).or. &
-#if (AMREX_SPACEDIM==3)
-            (abs(z-zactive).gt.ractivez).or. &
-#endif
-            (abs(y-yactive).gt.ractivey)) then
-         tagflag=0
-        endif
-       endif
-
-       if (nblocks.gt.0) then
-        do np=1,nblocks
-         if ((abs(x-xblocks(np)).le.rxblocks(np)).and. &
-#if (AMREX_SPACEDIM==3)
-             (abs(z-zblocks(np)).le.rzblocks(np)).and. &
-#endif
-             (abs(y-yblocks(np)).le.ryblocks(np))) then
-          tagflag=1
-         endif
-        enddo
-       endif
-
-       if (ncoarseblocks.gt.0) then
-        if (((probtype.eq.541).and.(level.gt.3)).or.(probtype.ne.541)) then
-         do np=1,ncoarseblocks
-          if ((abs(x-xcoarseblocks(np)).ge.rxcoarseblocks(np)).or. &
-#if (AMREX_SPACEDIM==3)
-              (abs(z-zcoarseblocks(np)).ge.rzcoarseblocks(np)).or. &
-#endif
-              (abs(y-ycoarseblocks(np)).ge.rycoarseblocks(np))) then
-           tagflag=0
-          endif
-         enddo
-        endif
-       endif ! ncoarseblocks>0
-
-       if (tagflag.eq.1) then
-        tag(D_DECL(i,j,k))=set
-       endif
-
-      enddo
-      enddo
-      enddo
-
-      return
-      end subroutine FORT_VFRACERROR
 
       subroutine FORT_FORCEVELOCITY( &
         problo,probhi, &
