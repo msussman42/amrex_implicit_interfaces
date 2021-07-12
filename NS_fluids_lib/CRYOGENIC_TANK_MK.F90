@@ -162,6 +162,7 @@ contains
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(in) :: t
   REAL_T, intent(out) :: LS(nmat)
+  REAL_T :: xlo,xhi,ylo,yhi,nozzle_dist
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -1295,6 +1296,21 @@ INTEGER_T :: im,iregion,dir
  regions_list(2,0)%region_energy_flux= &
       (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_WATTS ! Watts=J/s
 
+  ! inflow
+ regions_list(3,0)%region_material_id=1
+ regions_list(3,0)%region_volume_flux=xblob5
+ regions_list(3,0)%region_temperature_prescribe=xblob6
+ if (TANK_MK_NOZZLE_RAD.gt.zero) then
+  regions_list(3,0)%region_velocity_prescribe(SDIM)= &
+     xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
+ else
+  print *,"TANK_MK_NOZZLE_RAD invalid"
+  stop
+ endif
+  ! outflow
+ regions_list(4,0)%region_material_id=1
+ regions_list(4,0)%region_volume_flux=-xblob5
+
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
 subroutine CRYOGENIC_TANK_MK_CHARFN_REGION(region_id,x,cur_time,charfn_out)
@@ -1339,6 +1355,21 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    else
     print *,"position bust"
     stop
+   endif
+  else if (region_id.eq.3) then ! inflow
+   if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
+       (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
+       (x(2).le.TANK_MK_NOZZLE_BASE+two*TANK_MK_NOZZLE_HT)) then
+    charfn_out=one
+   else
+    charfn_out=zero
+   endif
+  else if (region_id.eq.4) then ! outflow
+   if ((abs(x(1)).gt.TANK_MK_NOZZLE_RAD).and. &
+       (x(2).le.TANK_MK_NOZZLE_BASE+0.016d0)) then
+    charfn_out=one
+   else
+    charfn_out=zero
    endif
   else
    print *,"region_id invalid"
