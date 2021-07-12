@@ -80,6 +80,22 @@ stop
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
       end type probe_parm_type
 
+      type probe_out_type
+      REAL_T :: T_probe(2)
+      REAL_T :: T_probe_raw(2)
+      REAL_T :: T_probe_raw_smooth(2)
+      REAL_T :: Y_probe(2)
+      REAL_T :: den_I_interp(2)
+      REAL_T :: den_probe(2)
+      REAL_T :: T_I_interp(2)
+      REAL_T :: Y_I_interp(2)
+      REAL_T :: pres_I_interp(2)
+      REAL_T :: vfrac_I(2) !solids and fluids tessellate
+      REAL_T :: dxprobe_target(2)
+      INTEGER_T :: interp_valid_flag(2)
+      INTEGER_T :: at_interface
+      end type probe_out_type
+
       type TSAT_MASS_FRAC_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
        INTEGER_T :: Tanasawa_or_Schrage_or_Kassemi
@@ -2112,21 +2128,11 @@ stop
 
        ! called from: mdot_from_Y_probe
        !              mdot_from_T_probe
-       !              RATEMASSCHANGE
+       !              fort_ratemasschange
       subroutine probe_interpolation( &
        PROBE_PARMS, &
        T_I,Y_I, &
-       T_probe,Y_probe, &
-       den_I_interp, &
-       den_probe, &
-       T_I_interp,Y_I_interp, &
-       pres_I_interp, &
-       vfrac_I, &  ! solids and fluids tessellate
-       T_probe_raw, &
-       T_probe_raw_smooth, &
-       dxprobe_target, &
-       interp_valid_flag, &
-       at_interface)
+       POUT)
       use global_utility_module
       use MOF_routines_module
 
@@ -2135,21 +2141,9 @@ stop
       type(probe_parm_type), intent(in) :: PROBE_PARMS
       REAL_T, intent(in) :: T_I
       REAL_T, intent(in) :: Y_I
-      REAL_T, intent(out) :: T_probe(2)
+      type(probe_out_type), intent(out) :: POUT
       REAL_T :: T_probe_no_constrain
-      REAL_T, intent(out) :: T_probe_raw(2)
-      REAL_T, intent(out) :: T_probe_raw_smooth(2)
-      REAL_T, intent(out) :: Y_probe(2)
       REAL_T :: Y_probe_no_constrain
-      REAL_T, intent(out) :: den_I_interp(2)
-      REAL_T, intent(out) :: den_probe(2)
-      REAL_T, intent(out) :: T_I_interp(2)
-      REAL_T, intent(out) :: Y_I_interp(2)
-      REAL_T, intent(out) :: pres_I_interp(2)
-      REAL_T, intent(out) :: vfrac_I(2)
-      REAL_T, intent(out) :: dxprobe_target(2)
-      INTEGER_T, intent(out) :: interp_valid_flag(2)
-      INTEGER_T, intent(out) :: at_interface
       INTEGER_T :: iprobe
       INTEGER_T LS_pos_probe_counter
       INTEGER_T LS_INT_VERY_CLOSE_counter
@@ -2192,8 +2186,8 @@ stop
        ! 2=can do supermesh interp.
        ! iprobe=1 source
        ! iprobe=2 dest
-      interp_valid_flag(1)=0
-      interp_valid_flag(2)=0
+      POUT%interp_valid_flag(1)=0
+      POUT%interp_valid_flag(2)=0
 
       LS_pos_probe_counter=0
       LS_INT_VERY_CLOSE_counter=0
@@ -2239,7 +2233,7 @@ stop
         tcomp_probe(iprobe)=PROBE_PARMS%tcomp_dest
         Ycomp_probe(iprobe)=PROBE_PARMS%Ycomp_dest
         dencomp_probe(iprobe)=PROBE_PARMS%dencomp_dest
-        dxprobe_target(iprobe)=PROBE_PARMS%dxprobe_dest
+        POUT%dxprobe_target(iprobe)=PROBE_PARMS%dxprobe_dest
        else
         print *,"iprobe invalid"
         stop
@@ -2267,7 +2261,7 @@ stop
         stop
        endif
 
-       vfrac_I(iprobe)=F_tess(im_target_probe(iprobe))
+       POUT%vfrac_I(iprobe)=F_tess(im_target_probe(iprobe))
 
        mtype=fort_material_type(im_target_probe(iprobe))
        if ((mtype.ge.0).and. &
@@ -2287,7 +2281,7 @@ stop
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
          PROBE_PARMS%recon, &
-         den_I_interp(iprobe))
+         POUT%den_I_interp(iprobe))
 
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
@@ -2304,7 +2298,7 @@ stop
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
          PROBE_PARMS%recon, &
-         den_probe(iprobe))
+         POUT%den_probe(iprobe))
 
        else
         print *,"mtype invalid"
@@ -2332,12 +2326,12 @@ stop
         PROBE_PARMS%EOS, &
         PROBE_PARMS%LS, &
         PROBE_PARMS%recon, &
-        T_probe(iprobe), &
+        POUT%T_probe(iprobe), &
         PROBE_PARMS%debugrate)
 
-       if (T_probe(iprobe).lt.zero) then
+       if (POUT%T_probe(iprobe).lt.zero) then
         print *,"T_probe went negative"
-        print *,"T_probe ",T_probe(iprobe)
+        print *,"T_probe ",POUT%T_probe(iprobe)
         stop
        endif
 
@@ -2367,13 +2361,13 @@ stop
        if (1.eq.0) then
         print *,"probe_constrain,iprobe,T_probe,T_probe_new ", &
          PROBE_PARMS%probe_constrain, &
-         iprobe,T_probe(iprobe),T_probe_no_constrain
+         iprobe,POUT%T_probe(iprobe),T_probe_no_constrain
        endif
 
        if (PROBE_PARMS%probe_constrain.eq.1) then
         ! do nothing
        else if (PROBE_PARMS%probe_constrain.eq.0) then
-        T_probe(iprobe)=T_probe_no_constrain
+        POUT%T_probe(iprobe)=T_probe_no_constrain
        else 
         print *,"PROBE_PARMS%probe_constrain invalid"
         stop
@@ -2402,21 +2396,21 @@ stop
          PROBE_PARMS%EOS, &
          PROBE_PARMS%LS, &
          PROBE_PARMS%recon, &
-         Y_probe(iprobe), &
+         POUT%Y_probe(iprobe), &
          PROBE_PARMS%debugrate)
 
-        if ((Y_probe(iprobe).ge.-VOFTOL).and. &
-            (Y_probe(iprobe).le.zero)) then
-         Y_probe(iprobe)=zero
-        else if ((Y_probe(iprobe).ge.zero).and. &
-                 (Y_probe(iprobe).le.one)) then
+        if ((POUT%Y_probe(iprobe).ge.-VOFTOL).and. &
+            (POUT%Y_probe(iprobe).le.zero)) then
+         POUT%Y_probe(iprobe)=zero
+        else if ((POUT%Y_probe(iprobe).ge.zero).and. &
+                 (POUT%Y_probe(iprobe).le.one)) then
          ! do nothing
-        else if ((Y_probe(iprobe).ge.one).and. &
-                 (Y_probe(iprobe).le.one+VOFTOL)) then
-         Y_probe(iprobe)=one
+        else if ((POUT%Y_probe(iprobe).ge.one).and. &
+                 (POUT%Y_probe(iprobe).le.one+VOFTOL)) then
+         POUT%Y_probe(iprobe)=one
         else
          print *,"Y_probe out of bounds probe_interpolation"
-         print *,"Y_probe ",Y_probe(iprobe)
+         print *,"Y_probe ",POUT%Y_probe(iprobe)
          stop
         endif
 
@@ -2455,7 +2449,7 @@ stop
         if (PROBE_PARMS%probe_constrain.eq.1) then
          ! do nothing
         else if (PROBE_PARMS%probe_constrain.eq.0) then
-         Y_probe(iprobe)=Y_probe_no_constrain
+         POUT%Y_probe(iprobe)=Y_probe_no_constrain
         else 
          print *,"PROBE_PARMS%probe_constrain invalid"
          stop
@@ -2478,10 +2472,10 @@ stop
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &
          PROBE_PARMS%recon, &
-         Y_I_interp(iprobe))
+         POUT%Y_I_interp(iprobe))
        else if (Ycomp_probe(iprobe).eq.0) then
-        Y_probe(iprobe)=one
-        Y_I_interp(iprobe)=one
+        POUT%Y_probe(iprobe)=one
+        POUT%Y_I_interp(iprobe)=one
        else
         print *,"Ycomp_probe invalid"
         stop
@@ -2530,14 +2524,14 @@ stop
         call grad_probe_sanity( &
          PROBE_PARMS%xI, &
          xtarget_probe, &
-         T_probe(iprobe), &
+         POUT%T_probe(iprobe), &
          T_I, &
          PROBE_PARMS%LL)
 
         call grad_probe_sanity( &
          PROBE_PARMS%xI, &
          xtarget_probe, &
-         Y_probe(iprobe), &
+         POUT%Y_probe(iprobe), &
          Y_I, &
          PROBE_PARMS%LL)
 
@@ -2548,9 +2542,9 @@ stop
                 PROBE_PARMS%nmat)) then
 
         ! default value for T_probe
-        T_probe(iprobe)=T_I
+        POUT%T_probe(iprobe)=T_I
         ! default value for Y_probe
-        Y_probe(iprobe)=Y_I
+        POUT%Y_probe(iprobe)=Y_I
 
         call get_secondary_material(LSPROBE, &
          PROBE_PARMS%nmat, &
@@ -2564,7 +2558,7 @@ stop
             (LSPROBE(im_target_probe(iprobe)).ge. &
              -dist_probe_sanity)) then
 
-         interp_valid_flag(iprobe)=2
+         POUT%interp_valid_flag(iprobe)=2
 
          dummy_VOF_pos_probe_counter=VOF_pos_probe_counter
 
@@ -2594,7 +2588,7 @@ stop
           PROBE_PARMS%EOS, &
           PROBE_PARMS%LS, &
           PROBE_PARMS%recon, &
-          T_probe(iprobe), &
+          POUT%T_probe(iprobe), &
           dxprobe_target(iprobe), &
           VOF_pos_probe_counter, &
           PROBE_PARMS%use_supermesh)
@@ -2628,29 +2622,29 @@ stop
            PROBE_PARMS%EOS, &
            PROBE_PARMS%LS, &
            PROBE_PARMS%recon, &
-           Y_probe(iprobe), &
-           dxprobe_target(iprobe), &
+           POUT%Y_probe(iprobe), &
+           POUT%dxprobe_target(iprobe), &
            dummy_VOF_pos_probe_counter, &
            PROBE_PARMS%use_supermesh)
 
 
-          if ((Y_probe(iprobe).ge.-VOFTOL).and. &
-              (Y_probe(iprobe).le.zero)) then
-           Y_probe(iprobe)=zero
-          else if ((Y_probe(iprobe).ge.zero).and. &
-                   (Y_probe(iprobe).le.one)) then
+          if ((POUT%Y_probe(iprobe).ge.-VOFTOL).and. &
+              (POUT%Y_probe(iprobe).le.zero)) then
+           POUT%Y_probe(iprobe)=zero
+          else if ((POUT%Y_probe(iprobe).ge.zero).and. &
+                   (POUT%Y_probe(iprobe).le.one)) then
            ! do nothing
-          else if ((Y_probe(iprobe).ge.one).and. &
-                   (Y_probe(iprobe).le.one+VOFTOL)) then
-           Y_probe(iprobe)=one
+          else if ((POUT%Y_probe(iprobe).ge.one).and. &
+                   (POUT%Y_probe(iprobe).le.one+VOFTOL)) then
+           POUT%Y_probe(iprobe)=one
           else
            print *,"Y_probe out of bounds probe_interpolation (filament probe)"
-           print *,"Y_probe ",Y_probe(iprobe)
+           print *,"Y_probe ",POUT%Y_probe(iprobe)
            stop
           endif
 
          else if (Ycomp_probe(iprobe).eq.0) then
-          Y_probe(iprobe)=one
+          POUT%Y_probe(iprobe)=one
          else
           print *,"Ycomp_probe invalid"
           stop
@@ -2660,8 +2654,8 @@ stop
                   im_target_probe(iprobe)).or. &
                  (LSPROBE(im_target_probe(iprobe)).le. &
                   -dist_probe_sanity)) then
-         T_probe(iprobe)=T_I
-         Y_probe(iprobe)=Y_I
+         POUT%T_probe(iprobe)=T_I
+         POUT%Y_probe(iprobe)=Y_I
         else
          print *,"probe parameters bust"
          stop
@@ -2692,16 +2686,16 @@ stop
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
         PROBE_PARMS%recon, &
-        T_probe_raw(iprobe))
+        POUT%T_probe_raw(iprobe))
 
-       if (T_probe_raw(iprobe).lt.zero) then
+       if (POUT%T_probe_raw(iprobe).lt.zero) then
         print *,"T_probe_raw went negative"
-        print *,"T_probe_raw ",T_probe_raw(iprobe)
+        print *,"T_probe_raw ",POUT%T_probe_raw(iprobe)
         stop
        endif
 
        if (PROBE_PARMS%smoothing_length_scale.eq.zero) then
-        T_probe_raw_smooth(iprobe)=T_probe_raw(iprobe)
+        POUT%T_probe_raw_smooth(iprobe)=POUT%T_probe_raw(iprobe)
        else if (PROBE_PARMS%smoothing_length_scale.gt.zero) then 
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
@@ -2718,11 +2712,11 @@ stop
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%smoothfab, &
          PROBE_PARMS%recon, &
-         T_probe_raw_smooth(iprobe))
+         POUT%T_probe_raw_smooth(iprobe))
 
-        if (T_probe_raw_smooth(iprobe).lt.zero) then
+        if (POUT%T_probe_raw_smooth(iprobe).lt.zero) then
          print *,"T_probe_raw_smooth went negative"
-         print *,"T_probe_raw_smooth ",T_probe_raw_smooth(iprobe)
+         print *,"T_probe_raw_smooth ",POUT%T_probe_raw_smooth(iprobe)
          stop
         endif
 
@@ -2746,7 +2740,7 @@ stop
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
         PROBE_PARMS%recon, &
-        T_I_interp(iprobe))
+        POUT%T_I_interp(iprobe))
 
        call single_interpfab( &
         PROBE_PARMS%bfact, &
@@ -2759,7 +2753,7 @@ stop
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%pres, &
-        pres_I_interp(iprobe))
+        POUT%pres_I_interp(iprobe))
 
        ! local_freezing_model=0 (sharp interface stefan model)
        ! local_freezing_model=1 (source term model)
@@ -2806,8 +2800,8 @@ stop
        endif
       endif
 
-      if ((interp_valid_flag(1).ge.1).and. &
-          (interp_valid_flag(2).ge.1)) then
+      if ((POUT%interp_valid_flag(1).ge.1).and. &
+          (POUT%interp_valid_flag(2).ge.1)) then
 
        ! LS_pos_probe_counter is incremented when
        ! im_primary_probe(iprobe)==im_target_probe(iprobe)
@@ -2818,7 +2812,7 @@ stop
         if (LS_INT_VERY_CLOSE_counter.eq.2) then
          if (LS_INT_OWN_counter.eq.1) then
           if (LS_pos_probe_counter+VOF_pos_probe_counter.eq.2) then
-           at_interface=1
+           POUT%at_interface=1
           else if (VOF_pos_probe_counter.eq.0) then
            ! do nothing
           else
@@ -2845,8 +2839,8 @@ stop
         stop
        endif
 
-      else if ((interp_valid_flag(1).eq.0).or. &
-               (interp_valid_flag(2).eq.0)) then
+      else if ((POUT%interp_valid_flag(1).eq.0).or. &
+               (POUT%interp_valid_flag(2).eq.0)) then
        ! do nothing
       else
        print *,"interp_valid_flag invalid"
@@ -7221,9 +7215,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(curvfab)
 
       REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: colorfab(DIMV(colorfab))
+      REAL_T, pointer :: colorfab_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov)) 
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
 
         ! destination vel: first nten components are the status.
       REAL_T, intent(out), target :: burnvel(DIMV(burnvel),nburning)
@@ -7234,6 +7231,7 @@ stop
       REAL_T, pointer :: Tsatfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) :: smoothfab(DIMV(smoothfab),nmat)
+      REAL_T, pointer :: smoothfab_ptr(D_DECL(:,:,:),:)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
@@ -7244,11 +7242,16 @@ stop
       REAL_T, target, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
+      REAL_T, pointer :: LS_slopes_FD_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
+      REAL_T, pointer :: EOS_ptr(D_DECL(:,:,:),:)
        ! F,X,order,SL,I x nmat
       REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: pres(DIMV(pres)) 
+      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(in) :: pres_eos(DIMV(pres_eos)) 
+      REAL_T, pointer :: pres_eos_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
 
@@ -7391,12 +7394,16 @@ stop
 
       nhalf=3
 
+      maskcov_ptr=>maskcov
       burnvel_ptr=>burnvel
       Tsatfab_ptr=>Tsatfab
       LS_ptr=>LS
       LSnew_ptr=>LSnew
       Snew_ptr=>Snew
       curvfab_ptr=>curvfab
+      EOS_ptr=>EOS
+      pres_ptr=>pres
+      pres_eos_ptr=>pres_eos
 
       if (prev_time.ge.zero) then
        cur_time=prev_time+dt
@@ -7493,12 +7500,12 @@ stop
       ngrow=normal_probe_size+3
 
       if (ngrow_distance.ne.4) then
-       print *,"expecting ngrow_distance==4 in RATEMASSCHANGE"
+       print *,"expecting ngrow_distance==4 in fort_ratemasschange"
        stop
       endif
 
       if (ngrow.ne.ngrow_distance) then
-       print *,"ngrow or ngrow_distance invalid in RATEMASSCHANGE"
+       print *,"ngrow or ngrow_distance invalid in fort_ratemasschange"
        print *,"ngrow=",ngrow
        print *,"ngrow_distance=",ngrow_distance
        stop
@@ -7552,18 +7559,20 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,maskcov,1,-1,1251)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1251)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1253)
       call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1253)
-      call checkbound_array(fablo,fabhi,EOS,ngrow,-1,1254)
-      call checkbound_array1(fablo,fabhi,pres,ngrow,-1,1255)
-      call checkbound_array1(fablo,fabhi,pres_eos,1,-1,1255)
+      call checkbound_array(fablo,fabhi,EOS_ptr,ngrow,-1,1254)
+      call checkbound_array1(fablo,fabhi,pres_ptr,ngrow,-1,1255)
+      call checkbound_array1(fablo,fabhi,pres_eos_ptr,1,-1,1255)
 
 
       if (nucleation_flag.eq.0) then
 
-       call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
-       call checkbound_array1(fablo,fabhi,colorfab,1,-1,6626)
+       typefab_ptr=>typefab
+       call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
+       colorfab_ptr=>colorfab
+       call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
 
        ! nmat x (sdim+1) components
        call checkbound_array(fablo,fabhi, &
@@ -7573,17 +7582,20 @@ stop
         Tsatfab_ptr, &
         ngrow_make_distance,-1,1250)
 
+       smoothfab_ptr=>smoothfab
        call checkbound_array(fablo,fabhi, &
-        smoothfab, &
+        smoothfab_ptr, &
         ngrow_distance,-1,1250)
 
        call checkbound_array(fablo,fabhi, &
         curvfab_ptr, &
         ngrow_make_distance,-1,1250)
 
-       call checkbound_array(fablo,fabhi,recon,ngrow,-1,1251)
+       recon_ptr=>recon
+       call checkbound_array(fablo,fabhi,recon_ptr,ngrow,-1,1251)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1252)
-       call checkbound_array(fablo,fabhi,LS_slopes_FD,1,-1,1253)
+       LS_slopes_FD_ptr=>LS_slopes_FD
+       call checkbound_array(fablo,fabhi,LS_slopes_FD_ptr,1,-1,1253)
 
       else if (nucleation_flag.eq.1) then
        ! do nothing
@@ -8708,7 +8720,8 @@ stop
                         (microlayer_substrate_probe.le.nmat)) then
                      icolor=NINT(colorfab(D_DECL(i,j,k)))
                      if ((icolor.gt.color_count).or.(icolor.le.0)) then
-                      print *,"icolor invalid in RATEMASSCHANGE icolor=",icolor
+                      print *,"icolor invalid in fort_ratemasschange icolor=",&
+                        icolor
                       print *,"i,j,k ",i,j,k
                       stop
                      endif
