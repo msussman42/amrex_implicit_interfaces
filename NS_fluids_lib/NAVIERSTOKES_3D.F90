@@ -11274,23 +11274,34 @@ END SUBROUTINE SIMP
                  divu=region_volume_flux/region_volume_raster
                  mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
                   divu*local_cellvol*charfn*vfrac_raster/dt
+
                  temperature_prescribe= &
-                      regions_list(iregions,0)%region_temperature_prescribe
-                 if (temperature_prescribe.eq.zero) then
-                  ! do nothing
-                 else if (temperature_prescribe.gt.zero) then
-                  if (region_volume_flux.gt.zero) then
-                   if (vfrac_raster.eq.zero) then
-                    ! do nothing
-                   else if (vfrac_raster.eq.one) then
-                    do dir=1,SDIM
-                     snew(D_DECL(i,j,k),dir)= &
-                      regions_list(iregions,0)%region_velocity_prescribe(dir)
-                    enddo
-                   else
-                    print *,"vfrac_raster invalid"
-                    stop
-                   endif
+                   regions_list(iregions,0)%region_temperature_prescribe
+
+                 if (region_volume_flux.lt.zero) then
+                  if (temperature_prescribe.eq.zero) then
+                   ! do nothing
+                  else
+                   print *,"cannot prescribe temperature if volume_flux<0"
+                   stop
+                  endif
+                 else if (region_volume_flux.gt.zero) then
+
+                  if (vfrac_raster.eq.zero) then
+                   ! do nothing
+                  else if (vfrac_raster.eq.one) then
+                   do dir=1,SDIM
+                    snew(D_DECL(i,j,k),dir)= &
+                     regions_list(iregions,0)%region_velocity_prescribe(dir)
+                   enddo
+                  else
+                   print *,"vfrac_raster invalid"
+                   stop
+                  endif
+
+                  if (temperature_prescribe.eq.zero) then
+                   ! do nothing
+                  else if (temperature_prescribe.gt.zero) then
                    if (vfrac.eq.zero) then
                     ! do nothing
                    else if ((vfrac.gt.zero).and. &
@@ -11301,13 +11312,15 @@ END SUBROUTINE SIMP
                     stop
                    endif
                   else
-                   print *,"cannot prescribe state if volume_flux<=0"
+                   print *,"temperature_prescribe invalid"
                    stop
                   endif
+
                  else
-                  print *,"temperature_prescribe invalid"
+                  print *,"region_volume_flux bust"
                   stop
                  endif
+
                 else if (charfn.eq.zero) then
                  ! do nothing
                 else
@@ -11519,7 +11532,7 @@ END SUBROUTINE SIMP
       enddo
 
       if (isweep.eq.0) then
-              ! do nothing
+       ! do nothing
       else if (isweep.eq.1) then
 
        do dir=1,SDIM
@@ -11616,13 +11629,18 @@ END SUBROUTINE SIMP
               region_volume_flux=regions_list(iregions,0)%region_volume_flux
               region_volume_raster=regions_list(iregions,0)%region_volume_raster
 
-              if (region_volume_flux.ne.zero) then
+              if (region_volume_flux.lt.zero) then
+               ! do nothing
+              else if (region_volume_flux.eq.zero) then
+               ! do nothing
+              else if (region_volume_flux.gt.zero) then
+
                if (is_rigid(nmat,im).eq.1) then
-                print *,"disallowed: volume_flux<>0 for is_rigid==1 material"
+                print *,"disallowed: volume_flux>0 for is_rigid==1 material"
                 stop
                else if (is_rigid(nmat,im).eq.0) then
                 if ((imattype.gt.0).and.(imattype.lt.999)) then
-                 print *,"disallowed: volume flux<>0 for compressible material"
+                 print *,"disallowed: volume flux>0 for compressible material"
                 else if (imattype.eq.0) then
                  ! do nothing
                 else
@@ -11636,38 +11654,24 @@ END SUBROUTINE SIMP
 
                if (region_volume_raster.gt.zero) then 
                 if (charfn.eq.one) then
-                 temperature_prescribe= &
-                      regions_list(iregions,0)%region_temperature_prescribe
-                 if (temperature_prescribe.eq.zero) then
+                 if (vfrac_raster.eq.zero) then
                   ! do nothing
-                 else if (temperature_prescribe.gt.zero) then
-                  if (region_volume_flux.gt.zero) then
-                   if (vfrac_raster.eq.zero) then
-                    ! do nothing
-                   else if (vfrac_raster.eq.one) then
-                    if (dir.eq.1) then
-                     umacnew(D_DECL(i,j,k))= &
-                      regions_list(iregions,0)%region_velocity_prescribe(dir)
-                    else if (dir.eq.2) then
-                     vmacnew(D_DECL(i,j,k))= &
-                      regions_list(iregions,0)%region_velocity_prescribe(dir)
-                    else if ((dir.eq.3).and.(SDIM.eq.3)) then
-                     wmacnew(D_DECL(i,j,k))= &
-                      regions_list(iregions,0)%region_velocity_prescribe(dir)
-                    else
-                     print *,"dir invalid"
-                     stop
-                    endif
-                   else
-                    print *,"vfrac_raster invalid"
-                    stop
-                   endif
+                 else if (vfrac_raster.eq.one) then
+                  if (dir.eq.1) then
+                   umacnew(D_DECL(i,j,k))= &
+                    regions_list(iregions,0)%region_velocity_prescribe(dir)
+                  else if (dir.eq.2) then
+                   vmacnew(D_DECL(i,j,k))= &
+                    regions_list(iregions,0)%region_velocity_prescribe(dir)
+                  else if ((dir.eq.3).and.(SDIM.eq.3)) then
+                   wmacnew(D_DECL(i,j,k))= &
+                    regions_list(iregions,0)%region_velocity_prescribe(dir)
                   else
-                   print *,"cannot prescribe state if volume_flux<=0"
+                   print *,"dir invalid"
                    stop
                   endif
                  else
-                  print *,"temperature_prescribe invalid"
+                  print *,"vfrac_raster invalid"
                   stop
                  endif
                 else if (charfn.eq.zero) then
@@ -11682,8 +11686,6 @@ END SUBROUTINE SIMP
                 print *,"region_volume_raster invalid"
                 stop
                endif
-              else if (region_volume_flux.eq.zero) then
-               ! do nothing
               else
                print *,"region_volume_flux invalid"
                stop

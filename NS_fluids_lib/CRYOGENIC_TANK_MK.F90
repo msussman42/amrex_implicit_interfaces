@@ -48,6 +48,10 @@ REAL_T :: TANK_MK_HEATER_HIGH
 REAL_T :: TANK_MK_HEATER_R
 REAL_T :: TANK_MK_HEATER_R_LOW
 
+REAL_T :: TANK_MK_NOZZLE_RAD
+REAL_T :: TANK_MK_NOZZLE_HT
+REAL_T :: TANK_MK_NOZZLE_BASE
+
 ! Flat or spherical interface
 REAL_T :: TANK_MK_INTERFACE_RADIUS
 REAL_T :: TANK_MK_BUBBLE_X
@@ -69,8 +73,6 @@ contains
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
-  
-  
   
   TANK_MK_RADIUS             = xblob
   TANK_MK_HEIGHT             = yblob
@@ -102,10 +104,11 @@ contains
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
 
-  
-  
+  TANK_MK_NOZZLE_RAD=0.032D0  !dx coarsest=0.015875
+  TANK_MK_NOZZLE_HT=0.032D0
+  TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT
 
-  ! ASSUMING IDEA GAS => The gas heat cpacities should satisfy this
+  ! ASSUMING IDEAL GAS => The gas heat cpacities should satisfy this
   ! R_spc = C_{p,spc}-C_{v,spc}
   ! to have ideal mixture gas as well =>
   ! Only C_p or C_v can be picked from table and the other one
@@ -152,6 +155,7 @@ contains
 
  subroutine CRYOGENIC_TANK_MK_LS(x,t,LS,nmat)
   use probcommon_module
+  use global_utility_module
   IMPLICIT NONE
 
   INTEGER_T, intent(in) :: nmat
@@ -194,6 +198,16 @@ contains
    LS(2)=-LS(1)
    ! Solid
    LS(3)=SOLID_TOP_HALF_DIST(x)
+
+   xlo=-TANK_MK_NOZZLE_RAD
+   xhi=TANK_MK_NOZZLE_RAD
+   ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
+   yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
+   call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,nozzle_dist)
+   nozzle_dist=-nozzle_dist !now, nozzle_dist>0 in the nozzle.
+   if (nozzle_dist.gt.LS(3)) then
+    LS(3)=nozzle_dist
+   endif
   else
    print *,"num_materials ", num_materials
    print *,"probtype ", probtype
@@ -1248,7 +1262,7 @@ INTEGER_T :: im,iregion,dir
   endif
  enddo ! im=1..num_materials
 
- number_of_source_regions=2
+ number_of_source_regions=4
  number_of_threads_regions=num_threads_in
  allocate(regions_list(1:number_of_source_regions, &
                        0:number_of_threads_regions))
