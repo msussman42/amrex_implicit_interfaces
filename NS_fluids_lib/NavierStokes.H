@@ -2105,6 +2105,7 @@ protected:
 
     static int tecplot_max_level; //def=0
     static int max_level_two_materials;
+    static int max_level_for_use;
 
       // 0=>never adapt  -1=>always adapt
       // otherwise, if radius<radius_cutoff * dx then adapt.

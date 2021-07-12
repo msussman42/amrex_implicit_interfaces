@@ -486,6 +486,7 @@ Vector<Real> NavierStokes::rzblocks;
 
 int NavierStokes::tecplot_max_level=0;
 int NavierStokes::max_level_two_materials=0;
+int NavierStokes::max_level_for_use=0;
 
 // default=0.
 // 0=> never adapt  -1=> tag cell for AMR if owned by material in question.
@@ -2252,8 +2253,10 @@ NavierStokes::read_params ()
 
     tecplot_max_level=ns_max_level;
     max_level_two_materials=ns_max_level;
+    max_level_for_use=ns_max_level;
     pp.query("tecplot_max_level",tecplot_max_level);
     pp.query("max_level_two_materials",max_level_two_materials);
+    pp.query("max_level_for_use",max_level_for_use);
 
     radius_cutoff.resize(nmat);
     for (int i=0;i<nmat;i++)
@@ -2276,6 +2279,10 @@ NavierStokes::read_params ()
         (max_level_two_materials>ns_max_level))
      amrex::Error("max_level_two_materials invalid"); 
 
+    if ((max_level_for_use<0)||
+        (max_level_for_use>ns_max_level))
+     amrex::Error("max_level_for_use invalid"); 
+
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "use_supermesh " << 
        use_supermesh << '\n';
@@ -2287,6 +2294,8 @@ NavierStokes::read_params ()
        tecplot_max_level << '\n';
      std::cout << "max_level_two_materials " << 
        max_level_two_materials << '\n';
+     std::cout << "max_level_for_use " << 
+       max_level_for_use << '\n';
      for (int i=0;i<nmat;i++)
       std::cout << "im=" << i << " radius_cutoff= " << 
         radius_cutoff[i] << '\n';
@@ -7271,6 +7280,8 @@ void NavierStokes::ns_header_msg_level(
 
  if ((level>max_level)||(finest_level>max_level))
   amrex::Error("(level>max_level)||(finest_level>max_level)");
+ if ((level>max_level_for_use)||(finest_level>max_level_for_use))
+  amrex::Error("(level>max_level_for_use)||(finest_level>max_level_for_use)");
 
  const Real* dx = geom.CellSize();
  Real h_small=dx[0];
@@ -16655,7 +16666,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // declared in PROB.F90
-  FORT_VFRACERROR(
+  fort_vfracerror(
     tptr, ARLIM(tlo), ARLIM(thi), 
     &tagval, &clearval, 
     dat, ARLIM(dlo), ARLIM(dhi),
@@ -16668,6 +16679,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
     &level,
     &max_level,
     &max_level_two_materials,
+    &max_level_for_use,
     &nblocks,
     xblocks.dataPtr(),yblocks.dataPtr(),zblocks.dataPtr(),
     rxblocks.dataPtr(),ryblocks.dataPtr(),rzblocks.dataPtr(),

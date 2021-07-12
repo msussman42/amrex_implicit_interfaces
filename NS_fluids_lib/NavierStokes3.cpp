@@ -942,10 +942,10 @@ Real NavierStokes::advance(Real time,Real dt) {
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
 
- if (finest_level==max_level) {
+ if (finest_level==max_level_for_use) {
   // do nothing
  } else
-  amrex::Error("it is required that finest_level==max_level");
+  amrex::Error("it is required that finest_level==max_level_for_use");
 
  int nmat=num_materials;
  
@@ -2188,6 +2188,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   amrex::Error("level should equal zero in do_the_advance");
  if (finest_level>max_level)
   amrex::Error("max_level or finest_level invalid");
+ if (finest_level>max_level_for_use)
+  amrex::Error("max_level_for_use or finest_level invalid");
  
  debug_memory();
 

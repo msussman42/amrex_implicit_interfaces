@@ -7514,6 +7514,11 @@ void NavierStokes::move_particles(
  } else 
   amrex::Error("level invalid");
 
+ if ((level>=0)&&(level<=max_level_for_use)) {
+  // do nothing
+ } else 
+  amrex::Error("level invalid");
+
  int nmat=num_materials;
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
