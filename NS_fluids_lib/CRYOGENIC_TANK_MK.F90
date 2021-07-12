@@ -85,9 +85,9 @@ contains
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
    TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
    TANK_MK_HEATER_LOW       = -0.16
-   TANK_MK_HEATER_HIGH      = -0.14
+   TANK_MK_HEATER_HIGH      = -0.12
    TANK_MK_HEATER_R         = 0.09
-   TANK_MK_HEATER_R_LOW     = 0.08
+   TANK_MK_HEATER_R_LOW     = 0.05
   else if (axis_dir.eq.1) then ! volume=pi(.1^2)*(0.2)
    TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
    TANK_MK_HEATER_LOW       = -0.5
