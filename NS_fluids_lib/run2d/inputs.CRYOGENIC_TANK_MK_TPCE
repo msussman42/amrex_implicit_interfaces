@@ -1,57 +1,50 @@
 # For more information check
-# NASA_CRYOGENICS_GITHUB => 
-#  references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
-# Tank Pressure Control Experiment:
-#   Section 4.3
-#   Validation of two-phase CFD models for propellant tank 
-#   self-pressurization: Crossing fluid types, scales, and gravity levels 
-#   Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
-#   (2018) Cryogenics Journal.
-#   Space Shuttle Experiment 1991 (STS-43)
-#     transparent acrylic tank walls.
-#     83 percent Freon-113
-#     Heater A:top of dome opposite the nozzle.
-#     Header B:at the center of the tank near the wall.
-#     Ra_L = 2.7E+6  Ra_V=2.23E+7
-#     Bo=0.014
-#     gravity points awaw from Heater B.
-#     Heater B heat flux=0.0
-#     Heater A (top heater) heat flux=1 kW/m^2
-#     initial uniform state: T0=296K  P0=41.164kPa
-#     0<time<120 seconds
-#     A video of
-#     only the first 120 s of the test is available and seems to indicate that
-#     initially the ullage bubble was slightly below the top heater near the
-#     side of the tank opposite to heater B;
-#     just prior to the start of the jet mixing interval that 
-#     immediately followed the self-pressurization shows that
-#     the ullage is now centrally located in the top of the enclosure
-#
+# NASA_CRYOGENICS_GITHUB => references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
+# Kassemi, Kartuzova, Hylton, Cryogenics, 2018
+#  section 4.1 ZBOT
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
 #max_step=200
 max_step=99999999
-stop_time=1.0e+20
+stop_time=8000.0
 
 # unique problem identifier associated with each new plug-in:
+# CRYOGENIC_TANK_MK.F90
 ns.probtype         = 423
 # variable accessible from plug-in:
 ns.axis_dir         = 0
+# variable for compiling diagnostic output
+# integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
+# T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
+# bottom of cylindrical section: -0.2032
+# so Z_code=-0.2032+0.2921=0.0889
+ns.ncomp_sum_int_user1=1 
+ns.ncomp_sum_int_user2=2  # pressure and temperature 
 
 # 1=liquid 2=gas(placeholder) 3=solid wall
 ns.num_materials    = 3
 # vapor
 ns.num_species_var  = 1
 
+# The grid independent evaporation model for fully saturated gas:
+# Clausius Clapyron:
+# P_gamma=P_ref * e^{(1/R)(1/T_ref-1/T_gamma)=P_{CC}(T_gamma)
+# P=density (cp-cv) T  equation of state
+# 1. density in the gas and liquid satisfies:
+#    density=density_{0}(time) * (1-beta*(T-T_{0}))
+# 2. find grid independent pressure by diffusing an auxiliary temperature
+#    field for 0<time<time_critical; call the diffused pressure immediately
+#    next to the interface as "P_gamma."
+# 3. solve for T_gamma: P_gamma=P_{CC}(T_gamma)
+# 4. mdot=[k grad T]/L  where T_gamma is the interface temperature.
 # Material type:
 # 0  => incompressible
 # 24 => compressible 
-# ([EOS/SOUNDSQR/INTERNAL/TEMPERATURE]_CRYOGENIC_TANK1 called from
-# PROB.F90 and declared in CRYOGENIC_TANK1.F90)
+# 1=liquid HFE7000  2=gaseous HFE7000  3=solid acrylic
 ns.material_type = 0 0 999 
 ns.material_type_evap = 0 24 999 # needed for Kassemi model
-ns.material_type_lowmach = 0 24 999 # Tryggvason low mach number model
+ns.material_type_lowmach = 0 0 999 # Tryggvason low mach number model
 ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
 #u_t + div(uu) = -grad p/rho + div tau/rho
@@ -80,29 +73,31 @@ ns.FSI_flag         = 0 0 1
 
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
-ns.xblob            = 0.127 # Tank cavity radius for TPCE
-#ns.xblob            = 0.1016 # Tank cavity radius NOT ALIGNED, ZBOT
-#ns.xblob            = 0.09525 # Tank cavity radius ALIGNED
-#ns.yblob            = 0.4064 # Height of Cylindrical part NOT ALIGNED, ZBOT
-#ns.yblob            = 0.396875 # Height of Cylindrical part ALIGNED
-ns.yblob            = 0.127 # Height of cylindrical part for TPCE
+# See Barsi and Kassemi, "Investigation of Tank Pressurization and 
+# Pressure Control - part I: experimental study",
+# Journal of Thermal Science and Engineeing Applications,
+# December 2013, vol 5, 041005-1.
+# Probe positions of Figure 3 are relative to the bottom of the
+# cylindrical section.
+ns.xblob            = 0.1016 # Tank cavity radius 
+ns.yblob            = 0.4064 # Height of Cylindrical part 
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
+ns.radblob2         = 0.0    # make this > zero for spherical ullage.
+ns.xblob2           = 0.0
+ns.yblob2           = 0.0
+ns.zblob2           = 0.0
 
-#ns.xblob4 	    = 0.2159 # End cap radius NOT ALIGNED,ZBOT
-ns.xblob4 	    = 0.127 # End cap radius NOT ALIGNED,TPCE
-#ns.xblob4 	    = 0.0 # End cap radius ALIGNED
+ns.xblob4 	    = 0.2159 # End cap radius 
 
-#ns.yblob4	    = 0.0127 # X_{SDIM} of spherical cap center, ZBOT 
-ns.yblob4	    = 0.0635 # X_{SDIM} of spherical cap center, TPCE
-
-ns.zblob3	    = -0.1429 # X_{SDIM} of heater top 
-ns.yblob3	    = -0.1683 # X_{SDIM} of heater bottom
-#n_cell=16 64
-# 0 < r < 0.127
-# 0.09525 - (1/2) 0.127/16 = 0.09128125
-ns.radblob3         = 0.09128125  # r_end of location of heater filament
-ns.radblob4         = 0.09128125  # r_start of heater filament
+#TANK_MK_END_CENTER=yblob4
+#top of cylindrical section: z=0.2032
+#bottom of crylindrical section: z=-0.2032
+#radius of the spherical cap is 0.2159
+#z coordinate of tank bottom: -0.2286=-0.2032-0.0254
+#z coordinate of tank top: 0.2286
+#z tank top-radius of sphere cap = 0.2286-.2159=0.0127
+ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center 
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
@@ -111,22 +106,21 @@ ns.radblob4         = 0.09128125  # r_start of heater filament
 # n_cell=16x64       
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0   -0.254
-#geometry.prob_hi    = 0.127  0.254 # ZBOT
-geometry.prob_hi    = 0.254  0.254 # TPCE
+geometry.prob_hi    = 0.127  0.254
 #geometry.prob_hi    = 0.508  0.254  # square domain
 geometry.is_periodic= 0 0
 
-# dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
+# dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x=.127/8=0.015875
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-#amr.n_cell          = 16 64 # ZBOT
-amr.n_cell          = 32 64 # TPCE
+amr.n_cell          = 8 32
 #amr.n_cell          = 64 64  # square domain
 # just 1 level:
-amr.max_level       = 2
+amr.max_level       = 3
+ns.max_level_for_use = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 16    # 64 is optimal for MPI
+amr.max_grid_size   = 64    # 64 is optimal for MPI
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
@@ -154,17 +148,19 @@ ns.shock_timestep=2 2 2
 ns.visual_option    =-2
 #ns.visual_buoyancy_plot_int=2000
 
-amr.check_int       = 2000     # number of timesteps between checkpoints
+amr.check_int       = 1000     # number of timesteps between checkpoints
+#amr.check_int       = 10     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
 ns.slice_dir=1 # y (aka z) direction
-# 2 * 0.0635=.127
-ns.xslice=0.0635 0.127
-amr.slice_int=2000
-amr.plot_int        = 2000   # number of timesteps between plot files
+ns.xslice=0.0000001 0.0
+#amr.slice_int=2000
+amr.plot_int        = 1000   # number of timesteps between plot files
+#amr.plot_int        = 10   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 100    # timesteps between computing mass 
+ns.sum_interval     = 10     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -172,7 +168,7 @@ amr.file_name_digits= 7
 
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=0
-#amr.restart        = chk00400 # Name of the restart checkpoint file
+#amr.restart        = chk0000010 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
 
@@ -193,7 +189,11 @@ ns.gravity_potential_form=1
 #   rho independent of T or Z, but the gravity force is modified.
 ns.override_density=1 1 0  # 1..num_materials
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
-ns.DrhoDT = -0.0007 -0.0034 0.0   # units: 1/degree K
+# coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
+# (PNP: 0.002252)
+# coefficient for heat expansion for an ideal gas: (1/T)=
+# 1/298=0.0034
+ns.DrhoDT = -0.00219 -0.0034 0.0   # units: 1/degree K
 
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
@@ -218,12 +218,14 @@ ns.visc_coef        = 1.0
 
 # Molar mass [kg/mol]
 # Acrylic ??? (Not used)
+# HFE7000, molar_mass=0.2?  Molar mass used in the Clausius Clapyron
+#                           equation.
 ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
                            # molar mass.
 
-# Density [kg/m^3]
-ns.denconst= 1400 5.3421449445 1190
+# Density [kg/m^3]  HFE7000
+ns.denconst= 1400.0 5.3421449445 1190.0
 ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
 
@@ -241,14 +243,24 @@ ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 # Not used ???
 
 # Specific heat capacity [J/(kg.K)]
-ns.stiffCP=1300 2400.0          1500
-ns.stiffCV=1300 2358.4276869092 1500  #CV used CRYOGENIC_TANK_MK to get CP
+# in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
+ns.stiffCP=1300.0 2400.0 1500.0
+# Ground based experiments used HFE7000.
+# Space-Station experiments used Perfluoro-n-Pentane (PnP, or C5F12)
+# REFPROP (Refrigerant), (RE347MCC), Methyl-Heptafluoropropyl, 
+# https://pubchem.ncbi.nlm.nih.gov/compound/2774943#section=Synonyms
+# Methyl-Perfluoropropyl, HFE7000, CV=
+ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
-ns.heatviscconst=0.075 0.00375 0.189
+#ns.heatviscconst=0.075 0.00375 0.189
+# even for axis_dir==0, source is concentrated in the fluid.  Later, when
+# the solid is made just a shell, then we can diffuse into the solid.
+ns.heatviscconst=0.075 0.00375 0.0
 
 # Dynamic viscosity [Pa.s]
 # mu_gas=1.093e-6, but make zero to avoid jump condition issue.
+# (PNP: 4.2E-4)
 ns.viscconst=4.48E-04 0.0 1.0
 
 # Initial temeparture [K]
@@ -256,7 +268,7 @@ ns.tempconst=295.41 295.41 295.41
 
 # Surface tension [N/m]
 ns.tension=0.0 0.0 0.0
-#ns.tension=2.0E-03 2.0E-03 2.0E-03
+#ns.tension=1.2E-02 1.2E-02 1.2E-02
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -294,14 +306,21 @@ ns.freezing_model=      6 0 0 0 0 0
 # Tanasawa_or_Schrage_or_Kassemi=3 => Kassemi
 ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 
+# if initial temperature is 295.41 Kelvin,
+# find P_ref so that
+# P_gamma=P_{CC}(T_gamma)  T_gamma=295.41 P_gamma=PEOS(T_gamma)
+# i.e. density_init_vapor * R * 295.41 = P_CC(295.41)
+# i.e.
+# density_init_vapor * R * 295.41=
+#    P_ref * e^{(1/R)(1/T_ref-1/T_gamma)
 # The phase-change saturation temperature and pressure are calculated
 # from Clausius–Clapeyron relation. The "reference" temprature and
 # pressure are given below.
-ns.saturation_temp=307 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp=307.0 0.0 0.0 0.0 0.0 0.0  # T_ref
 ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
-ns.reference_pressure=101325 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=101513.36461739511 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
-# Universal gas constant:
+# Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
 
 # ----------------------------------------------------------
@@ -321,7 +340,8 @@ ns.hi_bc          = 3 3
 ns.temperature_lo_bc = 3 3
 ns.temperature_hi_bc = 3 3
 
-
+# -n=use LS with smeared thermal conductivity at material boundaries.
+# n=1,2,3,... (smearing thickness is 2n * Delta x)
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0
@@ -339,9 +359,15 @@ ns.temperature_primitive_variable=1 1 1
 # 0=diffuse in solid 1=dirichlet 2=neumann
 ns.solidheat_flag   =0
 
-# Heat flux from band heater
-#ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
-ns.xblob3 = 61.6726637934 # -q dot n=Watts/m^2
+# Heat flux from band heater in WATTS!
+# Eventually this source will be distributed: 1/2 in the fluid near the wall,
+# and 1/2 in the wall.
+# For now, the added energy only goes into the fluid since the solid is
+# unrealistically thick.  also heatviscconst=0 in the solid for now.
+ns.xblob3 = 2.0 # Watts=J/s
+# 0.0 if no inflow, pi (.00635 *.5)^2 0.241 = 7.6E-6 m^3/s
+ns.xblob5 = 7.6e-6  # volume flow rate into nozzle m^3/s=pi r^2 u_inflow
+ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
