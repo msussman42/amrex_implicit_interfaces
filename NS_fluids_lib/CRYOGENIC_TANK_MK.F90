@@ -1299,6 +1299,7 @@ INTEGER_T :: im,iregion,dir
   ! inflow
  regions_list(3,0)%region_material_id=1
  regions_list(3,0)%region_volume_flux=xblob5
+ regions_list(3,0)%region_mass_flux=xblob5*fort_denconst(1)
  regions_list(3,0)%region_temperature_prescribe=xblob6
  if (TANK_MK_NOZZLE_RAD.gt.zero) then
   regions_list(3,0)%region_velocity_prescribe(SDIM)= &
@@ -1310,6 +1311,7 @@ INTEGER_T :: im,iregion,dir
   ! outflow
  regions_list(4,0)%region_material_id=1
  regions_list(4,0)%region_volume_flux=-xblob5
+ regions_list(4,0)%region_mass_flux=-xblob5*fort_denconst(1)
 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 

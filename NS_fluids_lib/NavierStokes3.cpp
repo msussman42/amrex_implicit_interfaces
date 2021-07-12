@@ -942,10 +942,10 @@ Real NavierStokes::advance(Real time,Real dt) {
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
 
- if (finest_level==max_level_for_use) {
+ if (finest_level<=max_level_for_use) {
   // do nothing
  } else
-  amrex::Error("it is required that finest_level==max_level_for_use");
+  amrex::Error("it is required that finest_level<=max_level_for_use");
 
  int nmat=num_materials;
  
