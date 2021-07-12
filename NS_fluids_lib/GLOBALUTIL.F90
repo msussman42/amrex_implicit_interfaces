@@ -11781,23 +11781,36 @@ contains
 
       subroutine geom_avg(local_plus,local_minus,wt_plus,wt_minus, &
                       coeff)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: local_plus,local_minus
       REAL_T, intent(in) :: wt_plus,wt_minus
       REAL_T, intent(out) :: coeff
 
-      if ((local_plus.eq.zero).and.(local_minus.eq.zero)) then
-       coeff=zero
-      else if ((local_plus.eq.zero).and.(local_minus.gt.zero)) then
-       coeff=zero
-      else if ((local_plus.gt.zero).and.(local_minus.eq.zero)) then
-       coeff=zero
-      else if ((local_plus.gt.zero).and.(local_minus.gt.zero)) then
-       coeff=local_plus*local_minus/(wt_plus*local_minus+wt_minus*local_plus)
+      if ((wt_plus.ge.zero).and.(wt_minus.ge.zero).and. &
+          (abs(wt_plus+wt_minus-one).le.VOFTOL)) then
+       ! do nothing
       else
-       print *,"local_plus or local_minus invalid"
+       print *,"wt_plus+wt_minus should be 1"
        stop
+      endif
+
+      if (1.eq.0) then
+       coeff=wt_plus*local_plus+wt_minus*local_minus
+      else
+       if ((local_plus.eq.zero).and.(local_minus.eq.zero)) then
+        coeff=zero
+       else if ((local_plus.eq.zero).and.(local_minus.gt.zero)) then
+        coeff=zero
+       else if ((local_plus.gt.zero).and.(local_minus.eq.zero)) then
+        coeff=zero
+       else if ((local_plus.gt.zero).and.(local_minus.gt.zero)) then
+        coeff=local_plus*local_minus/(wt_plus*local_minus+wt_minus*local_plus)
+       else
+        print *,"local_plus or local_minus invalid"
+        stop
+       endif
       endif
 
       return
