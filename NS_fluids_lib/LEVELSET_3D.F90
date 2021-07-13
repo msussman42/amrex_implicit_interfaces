@@ -6694,7 +6694,20 @@ stop
                     print *,"ncomp_mdot invalid"
                     stop
                    endif
-
+                  else if ((blob_cell_count.ge.zero).and. &
+                           (blob_cellvol_count.ge.zero).and. &
+                           (blob_mass.ge.zero).and. &
+                           (blob_volume.ge.zero)) then
+                   if (1.eq.0) then
+                    print *,"WARNING for blob_cell_count,blob_cellvol_count"
+                    print *,"blob_cell_count=",blob_cell_count
+                    print *,"blob_cellvol_count=",blob_cellvol_count
+                    print *,"blob_mass=",blob_mass
+                    print *,"blob_volume=",blob_volume
+                    print *,"im=",im
+                    print *,"opposite_color(im)= (1..ncolors) ", &
+                           opposite_color(im)
+                   endif
                   else
                    print *,"blob_cell_count,or ..."
                    print *,"blob_cellvol_count,or ..."
