@@ -87,22 +87,22 @@ contains
   TANK_MK_HEATER_WATTS      = xblob3
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
    TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
-   TANK_MK_HEATER_LOW       = -0.16
-   TANK_MK_HEATER_HIGH      = -0.12
-   TANK_MK_HEATER_R         = 0.09
-   TANK_MK_HEATER_R_LOW     = 0.05
+   TANK_MK_HEATER_LOW       = -0.16d0
+   TANK_MK_HEATER_HIGH      = -0.12d0
+   TANK_MK_HEATER_R         = 0.09d0
+   TANK_MK_HEATER_R_LOW     = 0.05d0
   else if (axis_dir.eq.1) then ! volume=pi(.1^2)*(0.2)
    TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
-   TANK_MK_HEATER_LOW       = -0.5
-   TANK_MK_HEATER_HIGH      = 0.5
-   TANK_MK_HEATER_R         = 0.5
-   TANK_MK_HEATER_R_LOW     = 0.0
+   TANK_MK_HEATER_LOW       = -0.5d0
+   TANK_MK_HEATER_HIGH      = 0.0d0-0.03175d0  ! 0.03175 = 4 * dx_coarse
+   TANK_MK_HEATER_R         = 0.5d0
+   TANK_MK_HEATER_R_LOW     = 0.0d0
   else if (axis_dir.eq.2) then ! heater on top
    TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
-   TANK_MK_HEATER_LOW       = 0.2032-0.004
-   TANK_MK_HEATER_HIGH      = 0.2032
-   TANK_MK_HEATER_R         = 0.05
-   TANK_MK_HEATER_R_LOW     = 0.0
+   TANK_MK_HEATER_LOW       = 0.2032d0-0.004d0
+   TANK_MK_HEATER_HIGH      = 0.2032d0
+   TANK_MK_HEATER_R         = 0.05d0
+   TANK_MK_HEATER_R_LOW     = 0.0d0
   else
    print *,"axis_dir invalid"
    stop
