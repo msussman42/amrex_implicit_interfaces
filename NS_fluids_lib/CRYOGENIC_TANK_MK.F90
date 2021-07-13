@@ -50,6 +50,7 @@ REAL_T :: TANK_MK_HEATER_R_LOW
 
 REAL_T :: TANK_MK_NOZZLE_RAD
 REAL_T :: TANK_MK_NOZZLE_HT
+REAL_T :: TANK_MK_NOZZLE_HT_OUTLET
 REAL_T :: TANK_MK_NOZZLE_BASE
 
 ! Flat or spherical interface
@@ -112,6 +113,7 @@ contains
 
   TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.001984375, 1cm diameter.
   TANK_MK_NOZZLE_HT=0.064D0
+  TANK_MK_NOZZLE_HT_OUTLET=0.005D0
   TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT
 
   ! ASSUMING IDEAL GAS => The gas heat cpacities should satisfy this
@@ -206,14 +208,22 @@ contains
    ! Solid
    LS(3)=SOLID_TOP_HALF_DIST(x)
 
-   xlo=-TANK_MK_NOZZLE_RAD
-   xhi=TANK_MK_NOZZLE_RAD
-   ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
-   yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
-   call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,nozzle_dist)
-   nozzle_dist=-nozzle_dist !now, nozzle_dist>0 in the nozzle.
-   if (nozzle_dist.gt.LS(3)) then
-    LS(3)=nozzle_dist
+   if ((axis_dir.eq.0).or. &
+       (axis_dir.eq.2)) then
+    xlo=-TANK_MK_NOZZLE_RAD
+    xhi=TANK_MK_NOZZLE_RAD
+    ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
+    yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
+    call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,nozzle_dist)
+    nozzle_dist=-nozzle_dist !now, nozzle_dist>0 in the nozzle.
+    if (nozzle_dist.gt.LS(3)) then
+     LS(3)=nozzle_dist
+    endif
+   else if (axis_dir.eq.1) then
+    ! do nothing
+   else
+    print *,"axis_dir invalid"
+    stop
    endif
   else
    print *,"num_materials ", num_materials
@@ -1269,7 +1279,15 @@ INTEGER_T :: im,iregion,dir
   endif
  enddo ! im=1..num_materials
 
- number_of_source_regions=4
+ if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
+  number_of_source_regions=4
+ else if (axis_dir.eq.1) then
+  number_of_source_regions=2
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+
  number_of_threads_regions=num_threads_in
  allocate(regions_list(1:number_of_source_regions, &
                        0:number_of_threads_regions))
@@ -1302,23 +1320,30 @@ INTEGER_T :: im,iregion,dir
  regions_list(2,0)%region_energy_flux= &
       (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_WATTS ! Watts=J/s
 
+ if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
   ! inflow
- regions_list(3,0)%region_material_id=1
- regions_list(3,0)%region_volume_flux=xblob5
- regions_list(3,0)%region_mass_flux=xblob5*fort_denconst(1)
- regions_list(3,0)%region_temperature_prescribe=xblob6
- if (TANK_MK_NOZZLE_RAD.gt.zero) then
-  regions_list(3,0)%region_velocity_prescribe(SDIM)= &
-     xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
+  regions_list(3,0)%region_material_id=1
+  regions_list(3,0)%region_volume_flux=xblob5
+  regions_list(3,0)%region_mass_flux=xblob5*fort_denconst(1)
+  regions_list(3,0)%region_temperature_prescribe=xblob6
+  if (TANK_MK_NOZZLE_RAD.gt.zero) then
+   regions_list(3,0)%region_velocity_prescribe(SDIM)= &
+      xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
+  else
+   print *,"TANK_MK_NOZZLE_RAD invalid"
+   stop
+  endif
+   ! outflow
+  regions_list(4,0)%region_material_id=1
+  regions_list(4,0)%region_volume_flux=-xblob5
+  regions_list(4,0)%region_mass_flux=-xblob5*fort_denconst(1)
+ else if (axis_dir.eq.1) then
+  ! do nothing
  else
-  print *,"TANK_MK_NOZZLE_RAD invalid"
+  print *,"axis_dir invalid"
   stop
  endif
-  ! outflow
- regions_list(4,0)%region_material_id=1
- regions_list(4,0)%region_volume_flux=-xblob5
- regions_list(4,0)%region_mass_flux=-xblob5*fort_denconst(1)
-
+ 
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
 subroutine CRYOGENIC_TANK_MK_CHARFN_REGION(region_id,x,cur_time,charfn_out)
@@ -1367,14 +1392,15 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   else if (region_id.eq.3) then ! inflow
    if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
        (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
-       (x(2).le.TANK_MK_NOZZLE_BASE+two*TANK_MK_NOZZLE_HT)) then
+       (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
+                TANK_MK_NOZZLE_HT_OUTLET)) then
     charfn_out=one
    else
     charfn_out=zero
    endif
   else if (region_id.eq.4) then ! outflow
    if ((abs(x(1)).gt.TANK_MK_NOZZLE_RAD).and. &
-       (x(2).le.TANK_MK_NOZZLE_BASE+0.016d0)) then
+       (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT_OUTLET)) then
     charfn_out=one
    else
     charfn_out=zero
