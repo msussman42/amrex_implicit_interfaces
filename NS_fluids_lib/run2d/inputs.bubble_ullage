@@ -13,7 +13,7 @@ stop_time=8000.0
 # CRYOGENIC_TANK_MK.F90
 ns.probtype         = 423
 # variable accessible from plug-in:
-ns.axis_dir         = 1
+ns.axis_dir         = 2 #heater on top
 # variable for compiling diagnostic output
 # integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
 # T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
@@ -83,6 +83,10 @@ ns.xblob            = 0.1016 # Tank cavity radius
 ns.yblob            = 0.4064 # Height of Cylindrical part 
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
+ns.radblob2         = 0.08   # radius of spherical ullage
+ns.xblob2           = 0.0
+ns.yblob2           = 0.1016
+ns.zblob2           = 0.1016
 
 ns.xblob4 	    = 0.2159 # End cap radius 
 
@@ -109,10 +113,9 @@ geometry.is_periodic= 0 0
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-amr.n_cell          = 16 64
-#amr.n_cell          = 64 64  # square domain
-# just 1 level:
+amr.n_cell          = 64 256
 amr.max_level       = 0
+ns.max_level_for_use = 0
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 64    # 64 is optimal for MPI
@@ -134,9 +137,7 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 #0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 2 2 
 
-ns.fixed_dt	    = 48.0   # level 0
-#ns.fixed_dt	    = 24.0   # level 1
-#ns.fixed_dt	    = 12.0   # level 2
+#ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
 # -------- Input/output (IO) -------------------------------
@@ -145,18 +146,21 @@ ns.fixed_dt	    = 48.0   # level 0
 ns.visual_option    =-2
 #ns.visual_buoyancy_plot_int=2000
 
-amr.check_int       = 2000     # number of timesteps between checkpoints
+amr.check_int       = 1000     # number of timesteps between checkpoints
+#amr.check_int       = 10     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
 ns.slice_dir=1 # y (aka z) direction
 ns.xslice=0.0000001 0.0
 #amr.slice_int=2000
-amr.plot_int        = 2000   # number of timesteps between plot files
-amr.plot_int        = 10   # number of timesteps between plot files
+amr.plot_int        = 1000   # number of timesteps between plot files
+#amr.plot_int        = 10   # number of timesteps between plot files
+amr.plot_int        = 1   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.sum_interval     = 100    # timesteps between computing mass 
-ns.sum_interval     = 1    # timesteps between computing mass 
+ns.sum_interval     = 10     # timesteps between computing mass 
+ns.sum_interval     = 1     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -164,7 +168,7 @@ amr.file_name_digits= 7
 
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=0
-#amr.restart        = chk00400 # Name of the restart checkpoint file
+#amr.restart        = chk0000010 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
 
@@ -183,13 +187,13 @@ ns.gravity_potential_form=1
 # override_density=2 => has not been tested in a while 
 #   (Boussinesq approximation)
 #   rho independent of T or Z, but the gravity force is modified.
-ns.override_density=1 1 0  # 1..num_materials
+ns.override_density=0 0 0  # 1..num_materials
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 # coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
 # (PNP: 0.002252)
 # coefficient for heat expansion for an ideal gas: (1/T)=
 # 1/298=0.0034
-ns.DrhoDT = -0.00219 -0.0034 0.0   # units: 1/degree K
+ns.DrhoDT = 0.0 0.0 0.0   # units: 1/degree K
 
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
@@ -249,6 +253,9 @@ ns.stiffCP=1300.0 2400.0 1500.0
 ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
+#ns.heatviscconst=0.075 0.00375 0.189
+# even for axis_dir==0, source is concentrated in the fluid.  Later, when
+# the solid is made just a shell, then we can diffuse into the solid.
 ns.heatviscconst=0.075 0.00375 0.0
 
 # Dynamic viscosity [Pa.s]
@@ -260,7 +267,7 @@ ns.viscconst=4.48E-04 0.0 1.0
 ns.tempconst=295.41 295.41 295.41
 
 # Surface tension [N/m]
-ns.tension=0.0 0.0 0.0
+ns.tension=1.2e-2 1.2e-2 1.2e-2
 #ns.tension=1.2E-02 1.2E-02 1.2E-02
 
 # ----------------------------------------------------------
@@ -352,12 +359,10 @@ ns.temperature_primitive_variable=1 1 1
 # 0=diffuse in solid 1=dirichlet 2=neumann
 ns.solidheat_flag   =0
 
-# Heat flux from band heater
-# if axis_dir==0,
-# this source will be distributed: 1/2 in the fluid near the wall,
-# and 1/2 in the wall.
-# if axis_dir==1, then source concentrated in the fluid.
-ns.xblob3 = 2.0 # Watts=J/s
+# Heat flux from heater A at top.
+ns.xblob3 = 18.3 # Watts=J/s
+ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute)
+ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------

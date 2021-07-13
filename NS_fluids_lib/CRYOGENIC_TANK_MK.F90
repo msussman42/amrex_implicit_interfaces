@@ -96,6 +96,12 @@ contains
    TANK_MK_HEATER_HIGH      = 0.5
    TANK_MK_HEATER_R         = 0.5
    TANK_MK_HEATER_R_LOW     = 0.0
+  else if (axis_dir.eq.2) then ! heater on top
+   TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
+   TANK_MK_HEATER_LOW       = 0.2032-0.004
+   TANK_MK_HEATER_HIGH      = 0.2032
+   TANK_MK_HEATER_R         = 0.05
+   TANK_MK_HEATER_R_LOW     = 0.0
   else
    print *,"axis_dir invalid"
    stop
@@ -104,8 +110,8 @@ contains
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
 
-  TANK_MK_NOZZLE_RAD=0.032D0  !dx coarsest=0.015875
-  TANK_MK_NOZZLE_HT=0.032D0
+  TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.001984375, 1cm diameter.
+  TANK_MK_NOZZLE_HT=0.064D0
   TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT
 
   ! ASSUMING IDEAL GAS => The gas heat cpacities should satisfy this
@@ -1171,7 +1177,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   ! bottom of cylindrical section: -0.2032
   ! so T1_probe_z=-0.2032+0.2921=0.0889
   T1_probe(1)=zero
-  T1_probe(2)=0.0889
+  T1_probe(2)=0.1016
   im=2 ! vapor
   dencomp=(im-1)*num_state_material+1
   den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
@@ -1190,7 +1196,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
   enddo
   support_r=sqrt(support_r) 
-  dx_coarsest=TANK_MK_HEIGHT/32.0d0
+  dx_coarsest=TANK_MK_HEIGHT/64.0d0
   if (support_r.le.dx_coarsest) then
    charfn=one
   else if (support_r.gt.dx_coarsest) then
