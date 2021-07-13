@@ -94,7 +94,7 @@ contains
   else if (axis_dir.eq.1) then ! volume=pi(.1^2)*(0.2)
    TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
    TANK_MK_HEATER_LOW       = -0.5d0
-   TANK_MK_HEATER_HIGH      = 0.0d0-0.03175d0  ! 0.03175 = 4 * dx_coarse
+   TANK_MK_HEATER_HIGH      = 0.0d0-0.0079375d0  ! 1 * dx_coarse
    TANK_MK_HEATER_R         = 0.5d0
    TANK_MK_HEATER_R_LOW     = 0.0d0
   else if (axis_dir.eq.2) then ! heater on top
