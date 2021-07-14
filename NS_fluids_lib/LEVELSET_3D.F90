@@ -2775,7 +2775,7 @@ stop
       end module levelset_module
 
 
-      subroutine FORT_L1_DISTANCE( &
+      subroutine fort_l1_distance( &
        level, &
        finest_level, &
        maskfab,DIMS(maskfab), &
@@ -2786,7 +2786,8 @@ stop
        bfact, &
        xlo,dx, &
        ngrow_distance, &
-       nmat)
+       nmat) &
+      bind(c,name='fort_l1_distance')
 
       use global_utility_module
       use probcommon_module
@@ -2800,9 +2801,14 @@ stop
       INTEGER_T DIMDEC(lsfab)
       INTEGER_T DIMDEC(l1lsfab)
 
-      REAL_T maskfab(DIMV(maskfab),4)
-      REAL_T lsfab(DIMV(lsfab),nmat)
-      REAL_T l1lsfab(DIMV(lsfab),nmat)
+      REAL_T, intent(in), target :: maskfab(DIMV(maskfab),4)
+      REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(out), target :: l1lsfab(DIMV(lsfab),nmat)
+      REAL_T, pointer :: l1lsfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T tilelo(SDIM),tilehi(SDIM)
       INTEGER_T fablo(SDIM),fabhi(SDIM)
@@ -2833,9 +2839,13 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow_distance,-1,2870)
-      call checkbound(fablo,fabhi,DIMS(lsfab),ngrow_distance,-1,2871)
-      call checkbound(fablo,fabhi,DIMS(l1lsfab),ngrow_distance,-1,2872)
+      maskfab_ptr=>maskfab
+      lsfab_ptr=>lsfab
+      l1lsfab_ptr=>l1lsfab
+
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2870)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,ngrow_distance,-1,2871)
+      call checkbound_array(fablo,fabhi,l1lsfab_ptr,ngrow_distance,-1,2872)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -2935,7 +2945,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_L1_DISTANCE
+      end subroutine fort_l1_distance
 
 
        ! for finding areas internal to a cell, perturb each internal 
@@ -19445,7 +19455,7 @@ stop
       enddo
 
       call checkbound_array(fablo_local,fabhi_local,LS_local, &
-         local_ngrow,-1,2872)
+         local_ngrow,-1,19458)
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -19883,23 +19893,23 @@ stop
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      call checkbound_array(fablo_local,fabhi_local,velfab,1,-1,2872)
+      call checkbound_array(fablo_local,fabhi_local,velfab,1,-1,19896)
 
       if (MAC_xd.eq.0) then
-       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,-1,2872)
-       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,-1,2872)
-       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,-1,2872)
+       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,-1,19899)
+       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,-1,19900)
+       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,-1,19901)
       else if (MAC_xd.eq.1) then
-       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,0,2872)
-       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,1,2872)
-       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,SDIM-1,2872)
+       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,0,19903)
+       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,1,19904)
+       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,SDIM-1,19905)
       else
        print *,"accum_PARM%MAC_grid_displacement invalid"
        stop
       endif
 
       call checkbound_array(fablo_local,fabhi_local, &
-              accum_PARM%LS,1,-1,2872)
+              accum_PARM%LS,1,-1,19912)
 
       data_out%data_interp=>data_interp_local
 
@@ -19916,7 +19926,6 @@ stop
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
       data_in%state=>velfab  
-      data_in%LS=accum_PARM%LS  ! not used
 
       single_data_in%interp_dir=0  ! placeholder
       single_data_in%interp_foot_flag=0  ! placeholder
@@ -20342,26 +20351,26 @@ stop
       yd_ptr=>yd
       zd_ptr=>zd
 
-      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,2872)
+      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,20355)
 
       if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xd_ptr,1,-1,2872)
-       call checkbound_array1(fablo,fabhi,yd_ptr,1,-1,2872)
-       call checkbound_array1(fablo,fabhi,zd_ptr,1,-1,2872)
+       call checkbound_array1(fablo,fabhi,xd_ptr,1,-1,20358)
+       call checkbound_array1(fablo,fabhi,yd_ptr,1,-1,20359)
+       call checkbound_array1(fablo,fabhi,zd_ptr,1,-1,20360)
       else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xd_ptr,1,0,2872)
-       call checkbound_array1(fablo,fabhi,yd_ptr,1,1,2872)
-       call checkbound_array1(fablo,fabhi,zd_ptr,1,SDIM-1,2872)
+       call checkbound_array1(fablo,fabhi,xd_ptr,1,0,20362)
+       call checkbound_array1(fablo,fabhi,yd_ptr,1,1,20363)
+       call checkbound_array1(fablo,fabhi,zd_ptr,1,SDIM-1,20364)
       else
        print *,"MAC_grid_displacement invalid"
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,2872)
+      call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,20370)
 
-      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,2872)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,20372)
       call checkbound_array_INTEGER(tilelo,tilehi, &
-              cell_particle_count_ptr,0,-1,2872)
+              cell_particle_count_ptr,0,-1,20374)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
        ! do nothing
@@ -20397,7 +20406,7 @@ stop
       accum_PARM%MAC_grid_displacement=MAC_grid_displacement
       accum_PARM%xd=>xd
       accum_PARM%yd=>yd
-      accum_PARM%yd=>yd
+      accum_PARM%zd=>zd
 
       accum_PARM%cell_particle_count=>cell_particle_count
 
@@ -21215,7 +21224,7 @@ stop
       call checkbound_array1(fablo,fabhi,wmac_ptr,2,SDIM-1,2871)
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr, &
-              particle_interaction_ngrow,-1,2872)
+              particle_interaction_ngrow,-1,21228)
 
       if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
        ! do nothing

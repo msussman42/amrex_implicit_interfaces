@@ -3692,8 +3692,10 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(swept)
 
       REAL_T, target, intent(in) :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
 
       REAL_T, target, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
+      REAL_T, pointer :: nodevel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
       REAL_T, target, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
@@ -3701,16 +3703,19 @@ stop
       REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: LSold(DIMV(LSold),nmat*(1+SDIM))
+      REAL_T, pointer :: LSold_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(out) :: LSnew(DIMV(LSnew),nmat)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(out) :: snew(DIMV(snew),nstate)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
+      REAL_T, pointer :: EOS_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(out) :: swept(DIMV(swept),nmat)
       REAL_T, pointer :: swept_ptr(D_DECL(:,:,:),:)
@@ -3773,22 +3778,12 @@ stop
       REAL_T F_STEN(nmat)
       REAL_T F_STEN_CENTER(nmat)
       REAL_T unsplit_snew(nmat*ngeom_raw)
-      REAL_T unsplit_density(nmat)
-      REAL_T unsplit_temperature(nmat)
-      REAL_T unsplit_species(nmat*(num_species_var+1))
       REAL_T unsplit_lsnew(nmat)
       REAL_T oldLS_point(nmat*(1+SDIM))
       REAL_T dxmax,dxmaxLS
       INTEGER_T recon_ncomp
       INTEGER_T scomp
  
-      INTEGER_T tcomp,dencomp
-      REAL_T density_data(nmat)
-      REAL_T temperature_data(nmat)
-      REAL_T species_data(nmat*(num_species_var+1))
-      REAL_T density_mat(nmat)
-      REAL_T temperature_mat(nmat)
-      REAL_T species_mat(nmat*(num_species_var+1))
       REAL_T mofdata(nmat*ngeom_recon)
       REAL_T mofdata_new(nmat*ngeom_recon)
       REAL_T multi_centroidA(nmat,SDIM)
@@ -3845,7 +3840,6 @@ stop
       REAL_T volcell
       REAL_T volcell_ofs
       REAL_T tempvfrac
-      REAL_T temp_new_vfrac
       REAL_T cencell(SDIM)
       REAL_T cencell_ofs(SDIM)
       REAL_T tempcen(SDIM)
@@ -3863,7 +3857,6 @@ stop
       INTEGER_T speccomp_mod
       INTEGER_T default_comp
       INTEGER_T ncomp_per_tsat
-      INTEGER_T ispec
       INTEGER_T iprobe
       INTEGER_T iprobe_vapor
       INTEGER_T iprobe_condensed
@@ -3878,9 +3871,7 @@ stop
       REAL_T temp_mix_new(2)
       REAL_T mass_frac_new(2)
       REAL_T density_old(2)
-      REAL_T temperature_new(2)
       REAL_T temperature_old(2)
-      REAL_T species_new(2)
       REAL_T species_old(2)
       REAL_T delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
       REAL_T xPOINT_supermesh(SDIM)
@@ -3930,6 +3921,11 @@ stop
       LSnew_ptr=>LSnew
       snew_ptr=>snew
       swept_ptr=>swept
+      maskcov_ptr=>maskcov
+      LSold_ptr=>LSold
+      recon_ptr=>recon
+      EOS_ptr=>EOS
+      nodevel_ptr=>nodevel
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4139,26 +4135,17 @@ stop
        enddo ! im_opp
       enddo !im
 
-      call checkbound_array1(fablo,fabhi, &
-       maskcov,1,-1,1256)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1256)
 
-      call checkbound_array(fablo,fabhi, &
-       JUMPFAB_ptr,ngrow_expansion,-1,1256)
-      call checkbound_array(fablo,fabhi, &
-       TgammaFAB_ptr,ngrow_expansion,-1,1256)
-      call checkbound_array(fablo,fabhi, &
-       LSold,normal_probe_size+3,-1,1257)
-      call checkbound_array(fablo,fabhi, &
-       LSnew_ptr,1,-1,1258)
-      call checkbound_array(fablo,fabhi, &
-       recon,1,-1,1259)
-      call checkbound_array(fablo,fabhi, &
-       snew_ptr,1,-1,1261)
-      call checkbound_array(fablo,fabhi, &
-       EOS,1,-1,1262)
-      call checkbound_array(fablo,fabhi, &
-       swept_ptr,0,-1,1263)
-      call checkbound_array(fablo,fabhi,nodevel,1,-1,12)
+      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1,1256)
+      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_expansion,-1,1256)
+      call checkbound_array(fablo,fabhi,LSold_ptr,normal_probe_size+3,-1,1257)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1258)
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1259)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1261)
+      call checkbound_array(fablo,fabhi,EOS_ptr,1,-1,1262)
+      call checkbound_array(fablo,fabhi,swept_ptr,0,-1,1263)
+      call checkbound_array(fablo,fabhi,nodevel_ptr,1,-1,12)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       if (SDIM.eq.3) then
@@ -4433,17 +4420,10 @@ stop
            absolute_voltotal=zero
            voltotal=zero
            do u_im=1,nmat
-            density_mat(u_im)=zero
-            temperature_mat(u_im)=zero
-            do ispec=1,num_species_var
-             species_mat((ispec-1)*nmat+u_im)=zero
-            enddo
             volmat(u_im)=zero
             do udir=1,SDIM
              cenmat(udir,u_im)=zero
             enddo
-           enddo
-           do u_im=1,nmat
             lsmat(u_im)=zero
            enddo
 
@@ -4632,23 +4612,10 @@ stop
               enddo ! udir
 
               do u_im=1,nmat
+
                lsdata(u_im)= &
                 LSold(D_DECL(i+igrid,j+jgrid,k+kgrid),u_im) 
-              enddo
 
-              do u_im=1,nmat
-
-               dencomp=(u_im-1)*num_state_material+1
-               tcomp=dencomp+1
-                ! mixture density of gas if u_im corresponds to gas
-               density_data(u_im)=EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),dencomp)
-               temperature_data(u_im)= &
-                 EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp)
-               do ispec=1,num_species_var
-                species_data((ispec-1)*nmat+u_im)= &
-                 EOS(D_DECL(i+igrid,j+jgrid,k+kgrid),tcomp+ispec)
-               enddo
-          
                vofcomp_recon=(u_im-1)*ngeom_recon+1
                mofdata(vofcomp_recon)= &
                 recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon) 
@@ -4677,7 +4644,7 @@ stop
                 enddo
                 mofdata(vofcomp_recon+SDIM+1+udir)=nnmap(udir)
                enddo ! udir
-              enddo ! u_im
+              enddo ! u_im=1..nmat
 
               do n=1,nlist
 
@@ -4730,15 +4697,13 @@ stop
                  print *,"is_rigid invalid"
                  stop
                 endif
-                density_mat(u_im)=density_mat(u_im)+ &
-                  multi_volume(u_im)*density_data(u_im)
-                temperature_mat(u_im)=temperature_mat(u_im)+ &
-                  multi_volume(u_im)*temperature_data(u_im)
-                do ispec=1,num_species_var
-                 species_mat((ispec-1)*nmat+u_im)= &
-                  species_mat((ispec-1)*nmat+u_im)+ &
-                  multi_volume(u_im)*species_data((ispec-1)*nmat+u_im)
+
+                volmat(u_im)=volmat(u_im)+multi_volume(u_im)
+                do udir=1,SDIM
+                 cenmat(udir,u_im)=cenmat(udir,u_im)+ &
+                   multi_volume(u_im)*multi_cen(udir,u_im)
                 enddo
+
                enddo ! u_im=1..nmat
 
                voltotal=voltotal+multi_volume_total
@@ -4746,13 +4711,6 @@ stop
                do u_im=1,nmat
                 lsmat(u_im)=lsmat(u_im)+multi_volume_total*lsdata(u_im)
                enddo
-               do u_im=1,nmat 
-                volmat(u_im)=volmat(u_im)+multi_volume(u_im)
-                do udir=1,SDIM
-                 cenmat(udir,u_im)=cenmat(udir,u_im)+ &
-                   multi_volume(u_im)*multi_cen(udir,u_im)
-                enddo
-               enddo  ! u_im
               enddo ! n - traversing triangles in intersection 
              else if (nlist.eq.0) then
               ! do nothing
@@ -4874,26 +4832,6 @@ stop
              unsplit_snew(vofcomp_raw+udir)=tempcen(udir)
             enddo
 
-            if ((tempvfrac.gt.zero).and.(tempvfrac.le.one)) then
-             unsplit_density(u_imaterial)= &
-              density_mat(u_imaterial)/volmat(u_imaterial)
-             unsplit_temperature(u_imaterial)= &
-              temperature_mat(u_imaterial)/volmat(u_imaterial)
-             do ispec=1,num_species_var
-              unsplit_species((ispec-1)*nmat+u_imaterial)= &
-               species_mat((ispec-1)*nmat+u_imaterial)/volmat(u_imaterial)
-             enddo
-            else if (tempvfrac.eq.zero) then
-             unsplit_density(u_imaterial)=fort_denconst(u_imaterial)
-             unsplit_temperature(u_imaterial)=Tgamma_default
-             do ispec=1,num_species_var
-              unsplit_species((ispec-1)*nmat+u_imaterial)=Ygamma_default
-             enddo
-            else
-             print *,"tempvfrac bust3 tempvfrac=",tempvfrac
-             stop
-            endif
-
            enddo  ! u_imaterial=1..nmat
 
            vcompsrc_snew=(SDIM+1)+ &
@@ -5007,8 +4945,10 @@ stop
                ! do nothing
               else if (unsplit_lsnew(im_source).gt.oldLS_point(im_source)) then
                ! do nothing
-              else if ((unsplit_lsnew(im_dest).ge.oldLS_point(im_dest)).and. &
-                       (unsplit_lsnew(im_source).le.oldLS_point(im_source))) then
+              else if ((unsplit_lsnew(im_dest).ge. &
+                        oldLS_point(im_dest)).and. &
+                       (unsplit_lsnew(im_source).le. &
+                        oldLS_point(im_source))) then
                LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
                LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
               else
@@ -5249,26 +5189,6 @@ stop
               stop
              endif
 
-             if (newvfrac(im_probe).ge.EBVOFTOL) then
-              temperature_new(iprobe)=unsplit_temperature(im_probe)
-              if (mfrac_comp_probe.eq.0) then ! no species vars
-               species_new(iprobe)=one
-              else if (mfrac_comp_probe.gt.0) then
-               species_new(iprobe)= &
-                 unsplit_species((mass_frac_id-1)*nmat+im_probe)
-              else
-               print *,"mfrac_comp_probe invalid"
-               stop
-              endif
-             else if ((newvfrac(im_probe).le.EBVOFTOL).and. &
-                      (newvfrac(im_probe).ge.-EBVOFTOL)) then
-              temperature_new(iprobe)=Tgamma_default
-              species_new(iprobe)=Ygamma_default
-             else
-              print *,"newvfrac invalid"
-              stop
-             endif
-
              mtype=fort_material_type(im_probe)
              if (mtype.eq.0) then
 
@@ -5380,68 +5300,10 @@ stop
              stop
             endif
 
-            temp_mix_new(2)=temperature_new(2)
-            temp_mix_new(1)=temperature_new(1)
-
-            if (LL.gt.zero) then ! evaporation or boiling
-
-             temp_new_vfrac=oldvfrac(im_dest)+dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then 
-              
-              if (1.eq.0) then
-               print *,"i,j,k,temp_new_vfrac ",i,j,k,temp_new_vfrac
-               print *,"denold,oldF,vapor_den,dF ", &
-                density_old(2),oldvfrac(im_dest),vapor_den,dF
-              endif
-
-              mtype=fort_material_type(im_vapor)
-              if (mtype.eq.0) then
-               mass_frac_new(2)=Ygamma_default
-              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-               print *,"only spatially uniform density phase change allowed"
-               stop 
-              else
-               print *,"mtype invalid"
-               stop
-              endif
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              mass_frac_new(2)=Ygamma_default
-             else
-              print *,"temp_new_vfrac invalid"
-              stop
-             endif
-            
-             if (im_source.eq.im_condensed) then 
-              ! do nothing
-             else
-              print *,"expecting im_source==im_condensed"
-              stop
-             endif
-             mass_frac_new(1)=Ygamma_default
-
-            else if (LL.lt.zero) then ! condensation
-
-             if (im_dest.eq.im_condensed) then 
-              ! do nothing
-             else
-              print *,"expecting im_dest==im_condensed"
-              stop
-             endif
-
-             temp_new_vfrac=oldvfrac(im_source)-dF
-             if (temp_new_vfrac.gt.EBVOFTOL) then
-              mass_frac_new(1)=Ygamma_default
-             else if (temp_new_vfrac.le.EBVOFTOL) then
-              mass_frac_new(1)=Ygamma_default
-             else
-              print *,"temp_new_vfrac invalid"
-              stop
-             endif
-             mass_frac_new(2)=Ygamma_default
-            else
-             print *,"LL invalid"
-             stop
-            endif
+            mass_frac_new(1)=Ygamma_default ! source
+            mass_frac_new(2)=Ygamma_default ! dest
+            temp_mix_new(1)=Tgamma_default
+            temp_mix_new(2)=Tgamma_default
 
              ! dF>EBVOFTOL in this section, so now let's see
              ! if the cell center has been swept and also the
@@ -5611,6 +5473,8 @@ stop
 
             interp_to_new_supermesh=1
 
+            !dF.gt.EBVOFTOL
+            !oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
             if (oldLS_point(im_dest).ge.zero) then
              do udir=1,SDIM
               old_nrm(udir)=oldLS_point(nmat+(im_source-1)*SDIM+udir)
@@ -6075,7 +5939,6 @@ stop
               data_in%ngrowfab=normal_probe_size+3
 
               data_in%state=>LSold
-              data_in%LS=>LSold
 
               data_in%ncomp=nmat*(1+SDIM)
               data_in%scomp=1

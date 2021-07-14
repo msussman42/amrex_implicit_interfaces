@@ -179,7 +179,6 @@ module probcommon_module_types
       INTEGER_T, pointer :: fabhi(:)
       INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
-      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
       end type interp_from_grid_parm_type
 
 
