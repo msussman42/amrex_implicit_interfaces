@@ -5953,7 +5953,7 @@ stop
         ! factor of 4 in order to guarantee that characteristics do not
         ! collide.
         ! also, the factor of 4 should guarantee that a swept cell is not
-        ! full at the end of CONVERTMATERIAL.
+        ! full at the end of fort_convertmaterial.
        if (min_stefan_velocity_for_dt.ge.zero) then
         if (USTEFAN.lt.min_stefan_velocity_for_dt) then
          USTEFAN=min_stefan_velocity_for_dt
@@ -28954,7 +28954,6 @@ stop
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
       data_in%ngrowfab=2
-      data_in%LS=>VEL_fab  ! not used
       data_in%ncomp=SDIM
       data_in%scomp=1
 

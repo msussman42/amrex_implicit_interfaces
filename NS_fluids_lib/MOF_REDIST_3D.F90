@@ -267,9 +267,13 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
+
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(out), target :: LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
       REAL_T, pointer :: LS_NRM_FD_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -295,6 +299,7 @@ stop
       nhalf=3 
 
       LS_NRM_FD_ptr=>LS_NRM_FD
+      LS_new_ptr=>LS_new
 
       if (bfact.ge.1) then
        ! do nothing
@@ -308,8 +313,8 @@ stop
        print *,"level invalid in fort_fd_normal"
        stop
       endif
-      call checkbound_array(fablo,fabhi,LS_new,1,-1,2871)
-      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr,0,-1,2872)
+      call checkbound_array(fablo,fabhi,LS_new_ptr,1,-1,2871)
+      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr,0,-1,312)
       if (nmat.eq.num_materials) then
        ! do nothing
       else

@@ -5661,6 +5661,9 @@ contains
        print *,"level invalid gridstenMAC_level"
        stop
       endif
+      if (1.eq.0) then
+       print *,"before: i,j,k,ii,jj,kk,nhalf ",i,j,k,ii,jj,kk,nhalf
+      endif
       if ((2*i-ii-nhalf.lt.cache_index_low).or. &
           (2*i-ii+nhalf.gt.cache_index_high)) then
        print *,"i out of range gridstenMAC_level"
@@ -5678,6 +5681,9 @@ contains
         print *,"k out of range"
         stop
        endif
+      endif
+      if (1.eq.0) then
+       print *,"after: i,j,k,ii,jj,kk,nhalf ",i,j,k,ii,jj,kk,nhalf
       endif
       do isten=-nhalf,nhalf
        dir=1
@@ -7834,11 +7840,14 @@ contains
         print *,"istep invalid"
         stop
        endif
+      enddo ! dir_local=1..sdim
 
-       call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
+      call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
         data_in%level,nhalf,data_in%grid_type_data,caller_id)
-       call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
+      call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
         data_in%level,nhalf,data_in%grid_type_data,caller_id)
+
+      do dir_local=1,SDIM 
        dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
       enddo ! dir_local=1..sdim
 
@@ -7949,13 +7958,13 @@ contains
          endif
         enddo ! dir_local=1..sdim
 
-        if ((wt_bot.gt.zero).and.(wt_top.gt.zero)) then 
+        if ((wt_bot.gt.zero).and.(wt_top.ge.zero)) then 
          data_comp=data_in%scomp+nc-1
          data_out%data_interp(nc)=data_out%data_interp(nc)+wt_top* &
           data_in%disp_data(D_DECL(isten,jsten,ksten),data_comp)/ &
           wt_bot
         else
-         print *,"wt_bot or wt_top invalid"
+         print *,"wt_bot or wt_top invalid:",wt_bot,wt_top
          stop
         endif
        enddo !ksten
@@ -7980,7 +7989,6 @@ contains
         data_in2%fabhi=data_in%fabhi
         data_in2%ngrowfab=data_in%ngrowfab
         data_in2%state=data_in%disp_data
-        data_in2%LS=data_in%disp_data
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
@@ -8100,11 +8108,14 @@ contains
         print *,"istep invalid"
         stop
        endif
+      enddo ! dir_local=1..sdim
 
-       call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
+      call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
         data_in%level,nhalf,data_in%grid_type_data,caller_id)
-       call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
+      call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
         data_in%level,nhalf,data_in%grid_type_data,caller_id)
+
+      do dir_local=1,SDIM 
        dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
       enddo ! dir_local=1..sdim
 
@@ -8201,11 +8212,11 @@ contains
          endif
         enddo ! dir_local=1..sdim
 
-        if ((wt_bot.gt.zero).and.(wt_top.gt.zero)) then 
+        if ((wt_bot.gt.zero).and.(wt_top.ge.zero)) then 
          data_out%data_interp(1)=data_out%data_interp(1)+wt_top* &
            data_in%disp_data(D_DECL(isten,jsten,ksten))/wt_bot
         else
-         print *,"wt_bot or wt_top invalid"
+         print *,"wt_bot or wt_top invalid:",wt_bot,wt_top
          stop
         endif
       enddo !ksten

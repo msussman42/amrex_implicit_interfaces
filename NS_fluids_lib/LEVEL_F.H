@@ -3,7 +3,6 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_CURVSTRIP curvstrip
-#    define FORT_L1_DISTANCE l1_distance
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
@@ -24,7 +23,6 @@
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_CURVSTRIP CURVSTRIP
-#    define FORT_L1_DISTANCE L1_DISTANCE
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
@@ -45,7 +43,6 @@
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_CURVSTRIP curvstrip
-#    define FORT_L1_DISTANCE l1_distance
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
@@ -64,7 +61,6 @@
 #    define FORT_COPYFINECOARSECOLOR copyfinecoarsecolor
 #  else
 #    define FORT_CURVSTRIP curvstrip_
-#    define FORT_L1_DISTANCE l1_distance_
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
@@ -682,7 +678,7 @@ namespace amrex{
         int* project_option);
 
 
-     void FORT_L1_DISTANCE(
+     void fort_l1_distance(
        int* level,
        int* finest_level,
        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
