@@ -17,6 +17,7 @@
 
 #include <NavierStokes.H>
 #include <TECPLOTUTIL_F.H>
+#include <MARCHING_TETRA_F.H>
 #include <NAVIERSTOKES_F.H>
 #include <MACOPERATOR_F.H>
 #include <PROB_F.H>
@@ -7849,8 +7850,8 @@ void NavierStokes::output_triangles() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: NAVIERSTOKES_3D.F90
-   FORT_ISOGRID(
+    // in: MARCHING_TETRA_3D.F90
+   fort_isogrid(
     &tid_current,
     &visual_tessellate_vfrac,  // =0,1, or 3
     reconfab.dataPtr(),

@@ -28,10 +28,6 @@
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_DIAGINV     diaginv
-#    define FORT_ISOGRID     isogrid
-#    define FORT_ISOGRIDSINGLE     isogridsingle
-#    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
-#    define FORT_COMBINETRIANGLES combinetriangles
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_MEMSTATUS memstatus
@@ -61,10 +57,6 @@
 #    define FORT_AVGDOWN_BURNING AVGDOWN_BURNING
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
 #    define FORT_DIAGINV     DIAGINV
-#    define FORT_ISOGRID     ISOGRID
-#    define FORT_ISOGRIDSINGLE ISOGRIDSINGLE
-#    define FORT_COMBINETRIANGLESSINGLE COMBINETRIANGLESSINGLE
-#    define FORT_COMBINETRIANGLES COMBINETRIANGLES
 #    define FORT_MEMSTATUS MEMSTATUS
 #    define FORT_OUTPUTSLICE OUTPUTSLICE
 #    define FORT_IO_COMPARE IO_COMPARE
@@ -93,10 +85,6 @@
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_DIAGINV     diaginv
-#    define FORT_ISOGRID     isogrid
-#    define FORT_ISOGRIDSINGLE     isogridsingle
-#    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle
-#    define FORT_COMBINETRIANGLES combinetriangles
 #    define FORT_MEMSTATUS memstatus
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
@@ -124,10 +112,6 @@
 #    define FORT_AVGDOWN_BURNING avgdown_burning_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
 #    define FORT_DIAGINV     diaginv_
-#    define FORT_ISOGRID     isogrid_
-#    define FORT_ISOGRIDSINGLE     isogridsingle_
-#    define FORT_COMBINETRIANGLESSINGLE combinetrianglessingle_
-#    define FORT_COMBINETRIANGLES combinetriangles_
 #    define FORT_MEMSTATUS memstatus_
 #    define FORT_OUTPUTSLICE outputslice_
 #    define FORT_IO_COMPARE io_compare_
@@ -253,35 +237,6 @@ extern "C" {
      int* nstate_slice,int* slice_dir,
      Real* xslice,const Real* dxfinest,
      int* do_plot,int* do_slice);
-
-
-    void FORT_ISOGRID(
-     int* tid,
-     int* visual_tessellate_vfrac,
-     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
-     const Real* xlo,const Real* dx,
-     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,int* bfact,
-     const int* level,const int* gridno,int* nmat);
-
-    void FORT_COMBINETRIANGLES(
-     int* grids_per_level,int* finest_level,
-     int* nsteps,int* imaterial,int* arrdim,
-     Real* time,int* plotint);
-
-
-    void FORT_ISOGRIDSINGLE(
-     Real* ls,AMREX_ARLIM_P(lslo),AMREX_ARLIM_P(lshi),
-     const Real* xlo,const Real* dx,
-     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-     const int* lo,const int* hi,
-     const int* level,const int* gridno);
-
-    void FORT_COMBINETRIANGLESSINGLE(
-     int* grids_per_level,int* finest_level,
-     int* nsteps,int* arrdim);
-
  
     void FORT_MEMSTATUS(int* procnum);
 
