@@ -21612,7 +21612,7 @@ stop
        tennew,DIMS(tennew), & 
        LSnew,DIMS(LSnew), &
        ucell,DIMS(ucell), &  ! other vars
-       vofls0,DIMS(vofls0), &  
+       vof0,DIMS(vof0), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
        unode,DIMS(unode), & ! vel*dt
@@ -21643,7 +21643,7 @@ stop
        ntensor, &
        nc_bucket, &
        nrefine_vof, &
-       num_MAC_vectors, & !=1 or 2 (VFRAC_SPLIT)
+       num_MAC_vectors, & !=1 or 2 (fort_vfrac_split)
        NUM_CELL_ELASTIC, &
        verbose, &
        gridno,ngrid, &
@@ -21719,7 +21719,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
        ! other vars
       INTEGER_T, intent(in) :: DIMDEC(ucell)
-      INTEGER_T, intent(in) :: DIMDEC(vofls0)
+      INTEGER_T, intent(in) :: DIMDEC(vof0)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
       INTEGER_T, intent(in) :: DIMDEC(unode)
@@ -21743,12 +21743,18 @@ stop
        ! FABS
        ! original data
       REAL_T, intent(in), target :: LS(DIMV(LS),nmat)
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: den(DIMV(den),den_recon_ncomp)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
+      REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: tensor(DIMV(tensor),ntensor)
+      REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1)
+      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
        ! slope data
       REAL_T, intent(in), target :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
+      REAL_T, pointer :: PLICSLP_ptr(D_DECL(:,:,:),:)
        ! new data
       REAL_T, intent(inout), target :: snew(DIMV(snew),ncomp_state)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
@@ -21759,24 +21765,37 @@ stop
        ! other vars
        ! displacement
       REAL_T, intent(in), target :: ucell(DIMV(ucell),SDIM)
-      REAL_T, intent(in), target :: vofls0(DIMV(vofls0),2*nmat)
+      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vof0(DIMV(vof0),nmat)
+      REAL_T, pointer :: vof0_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
       ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr)) 
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: unode(DIMV(unode))
+      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
        ! local variables
       REAL_T, intent(in), target :: conserve(DIMV(conserve),nc_conserve)
+      REAL_T, pointer :: conserve_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: xvel(DIMV(xvel), &
          num_MAC_vectors) 
+      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: yvel(DIMV(yvel), &
          num_MAC_vectors)  
+      REAL_T, pointer :: yvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: zvel(DIMV(zvel), &
          num_MAC_vectors) 
+      REAL_T, pointer :: zvel_ptr(D_DECL(:,:,:),:)
        ! xvelslope,xcen
       REAL_T, intent(in), target :: xvelslp(DIMV(xvelslp),1+nmat)  
+      REAL_T, pointer :: xvelslp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: yvelslp(DIMV(yvelslp),1+nmat)  
+      REAL_T, pointer :: yvelslp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: zvelslp(DIMV(zvelslp),1+nmat)  
+      REAL_T, pointer :: zvelslp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: momslope(DIMV(momslope),nc_conserve)
+      REAL_T, pointer :: momslope_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(inout), target :: xmomside(DIMV(xmomside), &
         2*num_MAC_vectors)
@@ -21935,7 +21954,22 @@ stop
 
       INTEGER_T caller_id
     
-! VFRAC_SPLIT code starts here
+! fort_vfrac_split code starts here
+
+      LS_ptr=>LS
+      den_ptr=>den
+      mom_den_ptr=>mom_den
+      tensor_ptr=>tensor
+      velfab_ptr=>velfab
+      PLICSLP_ptr=>PLICSLP
+
+      ucell_ptr=>ucell
+      vof0_ptr=>vof0
+      mask_ptr=>mask
+      masknbr_ptr=>masknbr
+      unode_ptr=>unode
+      momslope_ptr=>momslope
+      conserve_ptr=>conserve
 
       snew_ptr=>snew
       tennew_ptr=>tennew
@@ -21955,7 +21989,7 @@ stop
        stop
       endif
 
-      nmax=POLYGON_LIST_MAX ! in: VFRAC_SPLIT
+      nmax=POLYGON_LIST_MAX ! in: fort_vfrac_split
 
       k1lo=0
       k1hi=0
@@ -22186,23 +22220,23 @@ stop
        ! ghost cells.
 
        ! original data
-      call checkbound_array(fablo,fabhi,LS,1,-1,136)
-      call checkbound_array(fablo,fabhi,den,ngrow,-1,1231)
-      call checkbound_array(fablo,fabhi,mom_den,ngrow,-1,1231)
-      call checkbound_array(fablo,fabhi,tensor,1,-1,1231)
-      call checkbound_array(fablo,fabhi,velfab,ngrow,-1,125)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,136)
+      call checkbound_array(fablo,fabhi,den_ptr,ngrow,-1,1231)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow,-1,1231)
+      call checkbound_array(fablo,fabhi,tensor_ptr,1,-1,1231)
+      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow,-1,125)
        ! slope data
-      call checkbound_array(fablo,fabhi,PLICSLP,ngrow,-1,132)
+      call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow,-1,132)
        ! new data
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,130)
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1,130)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,138)
        ! other vars
-      call checkbound_array(fablo,fabhi,ucell,ngrow-1,-1,135)
-      call checkbound_array(fablo,fabhi,vofls0,1,-1,135)
-      call checkbound_array1(fablo,fabhi,mask,ngrow,-1,133)
-      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,134)
-      call checkbound_array1(fablo,fabhi,unode,ngrow-1,normdir,121)
+      call checkbound_array(fablo,fabhi,ucell_ptr,ngrow-1,-1,135)
+      call checkbound_array(fablo,fabhi,vof0_ptr,1,-1,135)
+      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1,133)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,134)
+      call checkbound_array1(fablo,fabhi,unode_ptr,ngrow-1,normdir,121)
 
       if (dt.le.zero) then
         print *,"dt invalid"
@@ -22241,13 +22275,19 @@ stop
 
       if (face_flag.eq.1) then
 
-       call checkbound_array(fablo,fabhi,xvel,ngrow_mac_old,0,1243)
-       call checkbound_array(fablo,fabhi,yvel,ngrow_mac_old,1,125)
-       call checkbound_array(fablo,fabhi,zvel,ngrow_mac_old,SDIM-1,126)
+       xvel_ptr=>xvel
+       yvel_ptr=>yvel
+       zvel_ptr=>zvel
+       call checkbound_array(fablo,fabhi,xvel_ptr,ngrow_mac_old,0,1243)
+       call checkbound_array(fablo,fabhi,yvel_ptr,ngrow_mac_old,1,125)
+       call checkbound_array(fablo,fabhi,zvel_ptr,ngrow_mac_old,SDIM-1,126)
 
-       call checkbound_array(fablo,fabhi,xvelslp,ngrow_mac_old,0,1243)
-       call checkbound_array(fablo,fabhi,yvelslp,ngrow_mac_old,1,125)
-       call checkbound_array(fablo,fabhi,zvelslp,ngrow_mac_old,SDIM-1,126)
+       xvelslp_ptr=>xvelslp
+       yvelslp_ptr=>yvelslp
+       zvelslp_ptr=>zvelslp
+       call checkbound_array(fablo,fabhi,xvelslp_ptr,ngrow_mac_old,0,1243)
+       call checkbound_array(fablo,fabhi,yvelslp_ptr,ngrow_mac_old,1,125)
+       call checkbound_array(fablo,fabhi,zvelslp_ptr,ngrow_mac_old,SDIM-1,126)
 
        call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1,1271)
        call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1,1271)
@@ -22304,8 +22344,8 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,momslope,1,-1,1238)
-      call checkbound_array(fablo,fabhi,conserve,ngrow,-1,1238)
+      call checkbound_array(fablo,fabhi,momslope_ptr,1,-1,1238)
+      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1,1238)
      
       if (DO_SANITY_CHECK.eq.1) then
        print *,"SANITY CHECK AFTER CONSERVE dir_counter= ",dir_counter
@@ -23645,19 +23685,19 @@ stop
           newvfrac(im)=volmat_target(im)/voltotal_target
           newvfrac_cor(im)=volmat_target_cor(im)/voltotal_target
 
-          if (vofls0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
+          if (vof0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
            newvfrac_weymouth(im)=volmat_depart_cor(im)/voltotal_target
            if (newvfrac_weymouth(im).gt.one) then
             newvfrac_weymouth(im)=one
            endif
-          else if (vofls0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
+          else if (vof0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
            newvfrac_weymouth(im)=one- &
             (voltotal_depart-volmat_depart_cor(im))/voltotal_target
            if (newvfrac_weymouth(im).lt.zero) then
             newvfrac_weymouth(im)=zero
            endif
           else
-           print *,"vofls0 bust"
+           print *,"vof0 bust"
            stop
           endif
 

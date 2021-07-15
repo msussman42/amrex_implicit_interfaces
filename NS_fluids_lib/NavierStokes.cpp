@@ -949,7 +949,7 @@ Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
-// passed to MAC_TO_CELL, CELL_TO_MAC, VFRAC_SPLIT
+// passed to MAC_TO_CELL, CELL_TO_MAC, fort_vfrac_split
 Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
@@ -12811,9 +12811,9 @@ NavierStokes::level_phase_change_convertALL() {
          0,nmat*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
       int update_flag=0; // do not update the error indicator
-      int init_vof_ls_prev_time=0;
+      int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay.
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
         SLOPE_RECON_MF);
      } else if (i_phase_change+1==n_phase_change) {
       // do nothing
@@ -15612,9 +15612,9 @@ NavierStokes::split_scalar_advection() {
  debug_ngrow(SLOPE_RECON_MF,ngrow,36);
  resize_maskfiner(ngrow,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,ngrow,36);
- debug_ngrow(VOF_LS_PREV_TIME_MF,1,38);
- if (localMF[VOF_LS_PREV_TIME_MF]->nComp()!=2*nmat)
-  amrex::Error("vof ls prev time invalid ncomp");
+ debug_ngrow(VOF_PREV_TIME_MF,1,38);
+ if (localMF[VOF_PREV_TIME_MF]->nComp()!=nmat)
+  amrex::Error("vof prev time invalid ncomp");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
@@ -16247,7 +16247,7 @@ NavierStokes::split_scalar_advection() {
     // this is the slope data
   FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-  FArrayBox& vofls0fab=(*localMF[VOF_LS_PREV_TIME_MF])[mfi];
+  FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
 
   int dencomp=(AMREX_SPACEDIM+1);
   int mofcomp=dencomp+nmat*num_state_material;
@@ -16315,7 +16315,7 @@ NavierStokes::split_scalar_advection() {
    fablo,fabhi,
    &bfact,
    &bfact_f,
-   &dt_slab, // VFRAC_SPLIT
+   &dt_slab, // fort_vfrac_split
    &prev_time_slab,
    &prescribed_vel_time_slab,
      // this is the original data
@@ -16341,7 +16341,7 @@ NavierStokes::split_scalar_advection() {
    ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
     // other vars.
    ucellfab.dataPtr(),ARLIM(ucellfab.loVect()),ARLIM(ucellfab.hiVect()),
-   vofls0fab.dataPtr(),ARLIM(vofls0fab.loVect()),ARLIM(vofls0fab.hiVect()),
+   vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    masknbrfab.dataPtr(),
    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
@@ -16402,7 +16402,7 @@ NavierStokes::split_scalar_advection() {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "level= " << level << '\n';
    std::cout << "nprocessed= " << nprocessed[0] << '\n';
-   std::cout << "profile VFRAC_SPLIT time = " << 
+   std::cout << "profile fort_vfrac_split time = " << 
      profile_time_end-profile_time_start << '\n';
   }
  }
@@ -20826,9 +20826,9 @@ NavierStokes::volWgtSumALL(
 
     // vof,ref cen, order,slope,int
  int update_flag=0;  // do not update the error
- int init_vof_ls_prev_time=0;
+ int init_vof_prev_time=0;
  VOF_Recon_ALL(1,cur_time_slab,update_flag,
-   init_vof_ls_prev_time,SLOPE_RECON_MF); 
+   init_vof_prev_time,SLOPE_RECON_MF); 
 
  int project_option=1;  // initial project
   // need to initialize viscosity and density temporary 
@@ -21080,7 +21080,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
    // post_init_flag==1 called from post_init_state
    // post_init_flag==2 called from post_restart
    //
- int init_vof_ls_prev_time=0;
+ int init_vof_prev_time=0;
  int error_update_flag=0;
  int renormalize_only=0; // init:solid TEMP,VEL,LS,extend LSfluid into solid.
  int local_truncate=0; // do not force removal of flotsam.
@@ -21096,7 +21096,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 	
  if (post_init_flag==1) { // called from post_init_state
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-   init_vof_ls_prev_time,SLOPE_RECON_MF);
+   init_vof_prev_time,SLOPE_RECON_MF);
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
@@ -21106,14 +21106,14 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  } else if (post_init_flag==0) { // called from writePlotFile
   if (1==1) {
    VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-    init_vof_ls_prev_time,SLOPE_RECON_MF);
+    init_vof_prev_time,SLOPE_RECON_MF);
    int project_option=1;  // initial project
    int post_restart_flag=0;
    make_physics_varsALL(project_option,post_restart_flag,2);
   }
  } else if (post_init_flag==2) { // called from post_restart
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-    init_vof_ls_prev_time,SLOPE_RECON_MF);
+    init_vof_prev_time,SLOPE_RECON_MF);
   if (1==0) {
    int keep_all_interfaces=0;
    makeStateDistALL(keep_all_interfaces);

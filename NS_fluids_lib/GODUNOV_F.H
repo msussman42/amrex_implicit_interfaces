@@ -1000,7 +1000,7 @@ extern "C"
      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
       // other vars.
      Real* ucell,AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
-     Real* vofls0,AMREX_ARLIM_P(vofls0lo),AMREX_ARLIM_P(vofls0hi),
+     Real* vof0,AMREX_ARLIM_P(vof0lo),AMREX_ARLIM_P(vof0hi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),
