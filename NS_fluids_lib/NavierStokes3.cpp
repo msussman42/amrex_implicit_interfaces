@@ -313,7 +313,7 @@ void NavierStokes::nonlinear_advection() {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.new_localMF(VOF_LS_PREV_TIME_MF,2*nmat,1,-1);
+  ns_level.new_localMF(VOF_PREV_TIME_MF,nmat,1,-1);
  }  // ilev=finest_level ... level
 
   // order_direct_split=base_step mod 2
@@ -365,14 +365,14 @@ void NavierStokes::nonlinear_advection() {
    std::cout << "order_direct_split " << order_direct_split << '\n';
 
  dir_absolute_direct_split=0;
- int init_vof_ls_prev_time=1;
+ int init_vof_prev_time=1;
  int normdir_here=normdir_direct_split[dir_absolute_direct_split];
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
  advect_time_slab=prev_time_slab;
  int update_flag=0;  // do not update the error. 
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
-  init_vof_ls_prev_time,SLOPE_RECON_MF);
+  init_vof_prev_time,SLOPE_RECON_MF);
 
  if (face_flag==1) {
    // delete_advect_vars() called in NavierStokes::do_the_advance
@@ -458,7 +458,7 @@ void NavierStokes::nonlinear_advection() {
    if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
     amrex::Error("normdir_here invalid (in loop)");
 
-   init_vof_ls_prev_time=0;
+   init_vof_prev_time=0;
 
    if (dir_absolute_direct_split==0) {
     advect_time_slab=prev_time_slab;
@@ -468,7 +468,7 @@ void NavierStokes::nonlinear_advection() {
     advect_time_slab=cur_time_slab;
     update_flag=0;  // do not update the error. 
     VOF_Recon_ALL(1,advect_time_slab,update_flag,
-     init_vof_ls_prev_time,SLOPE_RECON_MF);
+     init_vof_prev_time,SLOPE_RECON_MF);
 
    } else
     amrex::Error("dir_absolute_direct_split invalid");
@@ -507,7 +507,7 @@ void NavierStokes::nonlinear_advection() {
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.delete_localMF(VOF_LS_PREV_TIME_MF,1);
+   ns_level.delete_localMF(VOF_PREV_TIME_MF,1);
 
    ns_level.delete_localMF(MAC_VELOCITY_MF,AMREX_SPACEDIM);
    ns_level.delete_localMF(CELL_VELOCITY_MF,1);
@@ -2664,9 +2664,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        // generates SLOPE_RECON_MF
        update_flag=0; // do not update the error indicator
-       int init_vof_ls_prev_time=0;
+       int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay.
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
         SLOPE_RECON_MF);
        int keep_all_interfaces=1;
        makeStateDistALL(keep_all_interfaces);
@@ -2688,8 +2688,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } else if (mass_transfer_active==0) {
 
        update_flag=1;  // update the error in S_new
-       int init_vof_ls_prev_time=0;
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+       int init_vof_prev_time=0;
+       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
         SLOPE_RECON_MF);
        int keep_all_interfaces=0;
        makeStateDistALL(keep_all_interfaces);
@@ -2730,8 +2730,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
 
       update_flag=0;  // do not update the error in S_new
-      int init_vof_ls_prev_time=0;
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+      int init_vof_prev_time=0;
+      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
         SLOPE_RECON_MF);
 
     } else
@@ -2966,8 +2966,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        delete_array(nodevel_MF);
 
        update_flag=1;  // update the error in S_new
-       int init_vof_ls_prev_time=0;
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_ls_prev_time,
+       int init_vof_prev_time=0;
+       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
         SLOPE_RECON_MF);
 
         // in: do_the_advance

@@ -8969,7 +8969,7 @@ void NavierStokes::delete_array(int idx_localMF) {
 }  // subroutine delete_array
 
 void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
-  int update_flag,int init_vof_ls_prev_time,
+  int update_flag,int init_vof_prev_time,
   int dest_mf) {
 
  if (level!=0)
@@ -8978,7 +8978,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
   if (ParallelDescriptor::IOProcessor()) 
    std::cout << "Start: VOF_Recon_ALL: time= " <<
     time << " update_flag= " << update_flag << 
-    " init_vof_ls_prev_time= " << init_vof_ls_prev_time << '\n';
+    " init_vof_prev_time= " << init_vof_prev_time << '\n';
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
@@ -8990,7 +8990,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.VOF_Recon(ngrow,time,update_flag,
-   init_vof_ls_prev_time,dest_mf);
+   init_vof_prev_time,dest_mf);
  }
 
  if (update_flag==0) {
@@ -9042,7 +9042,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow,int dest_mf) {
 // 2. reconstruct interior cells only.
 // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
 void NavierStokes::VOF_Recon(int ngrow,Real time,
-  int update_flag,int init_vof_ls_prev_time,
+  int update_flag,int init_vof_prev_time,
   int dest_mf) {
 
  bool use_tiling=ns_tiling;
@@ -9063,9 +9063,9 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "beginning of VOF_Recon: ngrow,ngrow_distance,level: " << 
     ngrow << ' ' << ngrow_distance << ' ' << level << '\n';
-   std::cout << "time,update_flag,init_vof_ls_prev_time " <<
+   std::cout << "time,update_flag,init_vof_prev_time " <<
     time << ' ' << update_flag << ' ' << 
-    init_vof_ls_prev_time << '\n';
+    init_vof_prev_time << '\n';
   } 
  }
 
@@ -9120,17 +9120,15 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
   int ibase_raw=im*ngeom_raw;
   int ibase_recon=im*ngeom_recon;
   Copy_localMF(dest_mf,VOF_RECON_MF,ibase_raw,ibase_recon,ngeom_raw,1);
-  if (init_vof_ls_prev_time==1) {
-   int ngrow_save=localMF[VOF_LS_PREV_TIME_MF]->nGrow();
+  if (init_vof_prev_time==1) {
+   int ngrow_save=localMF[VOF_PREV_TIME_MF]->nGrow();
    if (ngrow_save!=1)
-    amrex::Error("vof ls prev time has invalid ngrow");
-   Copy_localMF(VOF_LS_PREV_TIME_MF,VOF_RECON_MF,ibase_raw,im,1,ngrow_save); 
-   MultiFab::Copy(*localMF[VOF_LS_PREV_TIME_MF],*lsdata,
-      im,nmat+im,1,ngrow_save);
-  } else if (init_vof_ls_prev_time==0) {
+    amrex::Error("vof prev time has invalid ngrow");
+   Copy_localMF(VOF_PREV_TIME_MF,VOF_RECON_MF,ibase_raw,im,1,ngrow_save); 
+  } else if (init_vof_prev_time==0) {
    // do nothing
   } else
-   amrex::Error("init_vof_ls_prev_time invalid");
+   amrex::Error("init_vof_prev_time invalid");
  } // im=0..nmat-1
 
  resize_maskfiner(1,MASKCOEF_MF);
