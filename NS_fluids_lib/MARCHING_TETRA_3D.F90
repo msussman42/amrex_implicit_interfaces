@@ -12,7 +12,6 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
-#include "N_EXTRA_REAL.H"
 #include "MARCHING_TETRA_F.H"
 
 #if (AMREX_SPACEDIM==3)
