@@ -36,7 +36,6 @@ ns.num_species_var=0
 
 
 ns.advection_order=1  
-ns.slope_limiter_option=1  # 0=no limiting
 
 ns.minimum_relative_error=1.0e-18
 # M.OHTA: scaling set so that initial pressure solve residual ~O(1)

@@ -15,7 +15,6 @@ ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.EILE_flag=-1 # -1 Weymouth and Yue  1=alternate EI LE
 ns.continuous_mof=2
 ns.advection_order=1 1 1 1
-ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3

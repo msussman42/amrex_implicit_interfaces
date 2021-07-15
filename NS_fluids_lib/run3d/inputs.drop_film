@@ -22,7 +22,6 @@ Lp.v = 0
 
 ns.num_materials=2
 ns.num_species_var=0
-ns.slope_limiter_option=1
 ns.advection_order=2 1
 ns.use_lsa=0
 

@@ -100,7 +100,6 @@ ns.viscconst=0.0 0.0
 ns.denconst=1.0 1.0
 ns.advection_order=2 2
 ns.density_advection_order=2 2
-ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 ns.xblob=0.0
 ns.yblob=0.0
 ns.zblob=0.0 

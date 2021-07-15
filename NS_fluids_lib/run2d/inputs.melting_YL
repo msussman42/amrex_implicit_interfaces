@@ -8,7 +8,6 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  104.0e-6 52.0e-6  # centimeters (was 104.0e-6 40.0e-6)
 ns.advection_order=1 1 1
-ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 
 ns.diffusionface_flag=1  # 0=LS face diffcoeff 1=VOF for face diffcoeff
 ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff

@@ -40,7 +40,6 @@ amr.max_level =  3  # 4 is finer
 
 ns.advection_order=2 2 
 ns.density_advection_order=1 1
-ns.slope_limiter_option=2  # 0 or 3=no limiting  1 or 2=minmod
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10  # number of initial jacobi iterations

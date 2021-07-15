@@ -6342,7 +6342,975 @@ stop
       return
       end subroutine fort_estdt
 
+       ! mask=1 if cell not covered.
+       ! masknbr=1 fine-fine border cells and interior cells.
+       ! masknbr=0 coarse-fine cells and cells outside domain.
+       ! called from getStateMOM_DEN
+      subroutine fort_derive_mom_den( &
+       im_parm, &
+       ngrow, &
+       constant_density_all_time, & ! 1..nmat
+       spec_material_id_AMBIENT, &  ! 1..num_species_var
+       presbc_arr, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       dt, &
+       mask,DIMS(mask), &
+       masknbr,DIMS(masknbr), &
+       vol,DIMS(vol), &
+       eosdata,DIMS(eosdata), &
+       momden,DIMS(momden), &
+       recon,DIMS(recon), &
+       xlo,dx, &
+       gravity_normalized, &
+       DrhoDT, &
+       override_density, &
+       nmat, &
+       level,finest_level) &
+      bind(c,name='fort_derive_mom_den')
 
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(eosdata)
+      INTEGER_T, intent(in) :: DIMDEC(momden)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+     
+      REAL_T, intent(in), target :: mask(DIMV(mask)) 
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr)) 
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: vol(DIMV(vol)) 
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
+               num_state_material*nmat)
+      REAL_T, pointer :: eosdata_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: momden(DIMV(momden),nmat)
+      REAL_T, pointer :: momden_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
+
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: override_density(nmat)
+      REAL_T, intent(in) :: DrhoDT(nmat)
+      REAL_T, intent(in) :: gravity_normalized
+     
+      INTEGER_T i,j,k
+      INTEGER_T dir
+
+      INTEGER_T dencomp
+      REAL_T xpos(SDIM)
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T rhohydro,preshydro,temperature
+      INTEGER_T nhalf
+      REAL_T density_of_TZ
+      INTEGER_T caller_id
+      REAL_T rho_base
+      INTEGER_T vofcomp
+      REAL_T local_vfrac
+
+      nhalf=3
+
+      mask_ptr=>mask
+      masknbr_ptr=>masknbr
+      vol_ptr=>vol
+      eosdata_ptr=>eosdata
+      momden_ptr=>momden
+      recon_ptr=>recon
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid66"
+       stop
+      endif
+      if (ngrow.ge.1) then
+       ! do nothing
+      else
+       print *,"ngrow>=1 required"
+       stop
+      endif
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid dencor"
+       stop
+      endif
+      if ((im_parm.ge.1).and.(im_parm.le.nmat)) then
+       ! do nothing
+      else
+       print *,"fort_derive_mom_den: im_parm invalid, im_parm=",im_parm
+       stop
+      endif
+      vofcomp=(im_parm-1)*ngeom_recon+1
+
+      if (levelrz.eq.0) then
+       ! do nothing
+      else if (levelrz.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (levelrz.eq.3) then
+       ! do nothing
+      else
+       print *,"levelrz invalid dencor"
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,vol_ptr,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,momden_ptr,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow,-1,12)
+      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1,12)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,12)
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xpos(dir)=xsten(0,dir)
+       enddo
+
+       if (mask(D_DECL(i,j,k)).eq.zero) then
+          ! a default for coarse grid cells covered by finer levels.
+        momden(D_DECL(i,j,k),im_parm)=fort_denconst(im_parm)
+       else if (mask(D_DECL(i,j,k)).eq.one) then
+     
+        dencomp=(im_parm-1)*num_state_material+1
+
+        if (constant_density_all_time(im_parm).eq.1) then
+         rho_base=fort_denconst(im_parm)
+        else if (constant_density_all_time(im_parm).eq.0) then
+         rho_base=eosdata(D_DECL(i,j,k),dencomp)
+        else
+         print *,"constant_density_all_time(im_parm) invalid"
+         stop
+        endif
+
+        ! rho=rho(T,z)
+        if (override_density(im_parm).eq.1) then
+
+         if (fort_material_type(im_parm).eq.0) then
+          ! do nothing
+         else
+          print *,"override_density==1 for incomp material only"
+          stop
+         endif
+
+         local_vfrac=recon(D_DECL(i,j,k),vofcomp)
+
+         if ((local_vfrac.ge.VOFTOL).and.(local_vfrac.le.one+VOFTOL)) then
+
+           ! den,T
+          temperature=eosdata(D_DECL(i,j,k),dencomp+1)
+
+           ! defined in: GLOBALUTIL.F90
+           ! only takes into account fort_drhodz
+          caller_id=0
+          call default_hydrostatic_pressure_density( &
+            xpos, &
+            rho_base, &
+            rhohydro, &
+            preshydro, &
+            temperature, &
+            gravity_normalized, &
+            im_parm, &
+            override_density(im_parm), &
+            caller_id)
+
+          if (DrhoDT(im_parm).le.zero) then
+           ! do nothing
+          else
+           print *,"DrhoDT invalid"
+           stop
+          endif
+
+          density_of_TZ=rhohydro+ &
+            rho_base*DrhoDT(im_parm)* &
+            (temperature-fort_tempconst(im_parm))
+
+          if ((temperature.ge.zero).and. &
+              (rhohydro.gt.zero).and. &
+              (fort_tempconst(im_parm).ge.zero).and. &
+              (fort_denconst(im_parm).gt.zero).and. &
+              (rho_base.gt.zero)) then 
+           ! do nothing
+          else
+           print *,"invalid parameters to get the density"
+           print *,"im_parm=",im_parm
+           print *,"temperature=",temperature
+           print *,"density_of_TZ=",density_of_TZ
+           print *,"rho_base=",rho_base
+           print *,"rhohydro=",rhohydro
+           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+           stop
+          endif
+
+          if (density_of_TZ.gt.zero) then
+           ! do nothing
+          else if (density_of_TZ.le.zero) then
+           print *,"WARNING density_of_TZ.le.zero"
+           print *,"im_parm=",im_parm
+           print *,"temperature=",temperature
+           print *,"density_of_TZ=",density_of_TZ
+           print *,"rho_base=",rho_base
+           print *,"rhohydro=",rhohydro
+           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+           print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
+          
+           temperature=fort_tempcutoffmax(im_parm)
+  
+           density_of_TZ=rhohydro+ &
+            rho_base*DrhoDT(im_parm)* &
+            (temperature-fort_tempconst(im_parm))
+
+           if (density_of_TZ.gt.zero) then
+            ! do nothing
+           else
+            print *,"density_of_TZ.le.zero (STILL)"
+            stop
+           endif
+
+          else
+           print *,"density_of_TZ bust"
+           stop
+          endif
+
+          momden(D_DECL(i,j,k),im_parm)=density_of_TZ
+
+         else if (abs(local_vfrac).le.VOFTOL) then
+
+          momden(D_DECL(i,j,k),im_parm)=rho_base
+
+         else
+          print *,"local_vfrac invalid"
+          stop
+         endif
+
+        else if ((override_density(im_parm).eq.0).or. &
+                 (override_density(im_parm).eq.2)) then
+         momden(D_DECL(i,j,k),im_parm)=rho_base
+        else
+         print *,"override_density invalid"
+         stop
+        endif
+
+       else
+        print *,"mask invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i,j,k
+
+      return
+      end subroutine fort_derive_mom_den
+
+
+       ! (vel/RR) if R-THETA
+       ! vel=vel*dt , call adjust_du if RZ, override if passive advect.
+      subroutine fort_velmac_override( &
+       nmat, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       velbc, &
+       dt,time, &
+       passive_veltime, &
+       vel_time, &
+       dir_absolute_direct_split, &
+       normdir, &
+       utemp,DIMS(utemp), &
+       unode,DIMS(unode), &
+       ucell,DIMS(ucell), &
+       xlo,dx, &
+       mac_grow, &
+       map_forward, &
+       level, &
+       finest_level, &
+       SDC_outer_sweeps, &
+       ns_time_order, &
+       divu_outer_sweeps, &
+       num_divu_outer_sweeps) &
+      bind(c,name='fort_velmac_override')
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: SDC_outer_sweeps
+      INTEGER_T, intent(in) :: ns_time_order
+      INTEGER_T, intent(in) :: divu_outer_sweeps
+      INTEGER_T, intent(in) :: num_divu_outer_sweeps
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: dir_absolute_direct_split
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: mac_grow,map_forward
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dt,time,vel_time,passive_veltime
+      INTEGER_T, intent(in) :: DIMDEC(utemp)
+      INTEGER_T, intent(in) :: DIMDEC(unode)
+      INTEGER_T, intent(in) :: DIMDEC(ucell)
+     
+      REAL_T, intent(in), target :: utemp(DIMV(utemp)) 
+      REAL_T, pointer :: utemp_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: unode(DIMV(unode)) 
+      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: ucell(DIMV(ucell),SDIM) 
+      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
+      INTEGER_T, intent(in) :: velbc(SDIM,2)
+
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+     
+      INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
+      INTEGER_T idx,side
+      REAL_T delta
+      REAL_T hx
+      REAL_T RR
+      REAL_T xstenMAC(-3:3,SDIM)
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T localbc
+      INTEGER_T local_mac_grow
+
+      nhalf=3
+
+      utemp_ptr=>utemp
+      unode_ptr=>unode
+      ucell_ptr=>ucell
+
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid65"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+ 
+      if ((mac_grow.ne.1).and.(mac_grow.ne.2)) then
+       print *,"mac_grow invalid mac_grow=",mac_grow
+       stop
+      endif
+      if ((map_forward.ne.0).and.(map_forward.ne.1)) then
+       print *,"map_forward invalid"
+       stop
+      endif
+      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"normdir invalid"
+       stop
+      endif
+      if ((dir_absolute_direct_split.ge.0).and. &
+          (dir_absolute_direct_split.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_absolute_direct_split invalid"
+       stop
+      endif
+      if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.4) then
+       print *,"blocking factor should be at least 4"
+       stop
+      endif
+      if (level.gt.finest_level) then
+       print *,"finest_level invalid velmac override"
+       stop
+      else if (level.lt.0) then
+       print *,"level invalid velmac override"
+       stop
+      endif
+      if ((SDC_outer_sweeps.ge.0).and. &
+          (SDC_outer_sweeps.lt.ns_time_order)) then
+       ! do nothing
+      else
+       print *,"SDC_outer_sweeps invalid"
+       stop
+      endif
+      if ((divu_outer_sweeps.lt.0).or. &
+          (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
+       print *,"divu_outer_sweeps invalid fort_velmac_override"
+       stop
+      endif
+  
+      if (levelrz.eq.0) then
+       ! do nothing
+      else if (levelrz.eq.1) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+      else if (levelrz.eq.3) then
+       ! do nothing
+      else
+       print *,"levelrz invalid velmac override"
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,utemp_ptr,mac_grow+1,normdir,12)
+      call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow+1,normdir,12)
+      call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1,12)
+
+      if (dt.le.zero) then
+        print *,"dt invalid"
+        stop
+      endif
+
+      ii=0
+      jj=0
+      kk=0
+      if (normdir.eq.0) then
+       ii=1
+      else if (normdir.eq.1) then
+       jj=1
+      else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"normdir invalid"
+       stop
+      endif
+
+        ! 1. multiply velocity by dt.
+        ! 2. adjust velocity if RZ.
+        ! 3. override velocity if it is a passive advection problem.
+        ! 4. copy into mac_velocity
+        ! 5. repeat for cell_velocity
+
+      local_mac_grow=mac_grow+1
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,local_mac_grow,normdir,28)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+        if (normdir.eq.0) then
+         idx=i
+        else if (normdir.eq.1) then
+         idx=j
+        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+         idx=k
+        else
+         print *,"normdir invalid"
+         stop
+        endif
+
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,32)
+        hx=xstenMAC(1,normdir+1)-xstenMAC(-1,normdir+1)
+        if (hx.gt.zero) then
+         ! do nothing
+        else
+         print *,"xstenMAC bust"
+         stop
+        endif
+
+        RR=one
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+        else if (levelrz.eq.3) then
+         if (normdir.eq.1) then
+          RR=xstenMAC(0,1)
+         endif
+        else
+         print *,"levelrz invalid velmac override"
+         stop
+        endif
+
+        delta=utemp(D_DECL(i,j,k))
+
+        side=0
+
+        if (idx.le.fablo(normdir+1)) then
+         side=1
+        else if (idx.ge.fabhi(normdir+1)+1) then
+         side=2
+        else if ((idx.gt.fablo(normdir+1)).and. &
+                 (idx.lt.fabhi(normdir+1)+1)) then
+         ! do nothing
+        else
+         print *,"idx invalid"
+         stop
+        endif
+
+        if ((side.eq.1).or.(side.eq.2)) then
+         localbc=velbc(normdir+1,side)
+         if (localbc.eq.REFLECT_ODD) then
+          delta=zero
+         else if (localbc.eq.EXT_DIR) then
+          call velbc_override(vel_time,normdir+1,side,normdir+1, &
+           delta, &
+           xstenMAC,nhalf,dx,bfact)
+         else if (localbc.eq.INT_DIR) then
+          ! do nothing
+         else if (localbc.eq.REFLECT_EVEN) then
+          ! do nothing
+         else if (localbc.eq.FOEXTRAP) then
+          ! do nothing
+         else
+          print *,"localbc invalid"
+          stop
+         endif  ! cases for localbc 
+        else if (side.eq.0) then
+         ! do nothing
+        else
+         print *,"side invalid"
+         stop
+        endif  
+
+        delta=dt*delta/RR
+
+        ! modifies "delta" if "passive_advect_flag=1" or RZ. 
+        call departure_node_split( &
+          xstenMAC,nhalf,dx,bfact, &
+          delta,passive_veltime, &
+          normdir,dt,map_forward)
+
+        if (abs(delta).ge.(one-0.001)*hx) then
+         print *,"in: velmac_override"
+         print *,"MAC: displacement exceeds grid cell"
+         print *,"reduce cfl"
+         print *,"utemp ",utemp(D_DECL(i,j,k))
+         print *,"delta (u dt) = ",delta
+         print *,"hx=    ",hx
+         print *,"dt=    ",dt
+         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
+         print *,"normdir= ",normdir
+         print *,"i,j,k ",i,j,k 
+         print *,"level,finest_level ",level,finest_level
+         print *,"SDC_outer_sweeps,ns_time_order ", &
+            SDC_outer_sweeps,ns_time_order
+         print *,"levelrz=",levelrz
+         stop
+        endif
+      
+         ! find displacements 
+        unode(D_DECL(i,j,k))=delta
+
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+         growlo,growhi,mac_grow) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+        if (normdir.eq.0) then
+         idx=i
+        else if (normdir.eq.1) then
+         idx=j
+        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+         idx=k
+        else
+         print *,"normdir invalid"
+         stop
+        endif
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+        hx=xsten(1,normdir+1)-xsten(-1,normdir+1)
+        if (hx.le.zero) then
+         print *,"xsten bust"
+         stop
+        endif
+
+        RR=one
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+        else if (levelrz.eq.3) then
+         if (normdir.eq.1) then
+          RR=xsten(0,1)
+         endif
+        else
+         print *,"levelrz invalid velmac override"
+         stop
+        endif
+
+        delta=ucell(D_DECL(i,j,k),normdir+1)
+
+        side=0
+
+        if (idx.lt.fablo(normdir+1)) then
+         side=1
+        else if (idx.gt.fabhi(normdir+1)) then
+         side=2
+        else if ((idx.ge.fablo(normdir+1)).and. &
+                 (idx.le.fabhi(normdir+1))) then
+         ! do nothing
+        else
+         print *,"idx invalid"
+         stop
+        endif
+
+        if ((side.eq.1).or.(side.eq.2)) then
+         localbc=velbc(normdir+1,side)
+
+         if (localbc.eq.REFLECT_ODD) then
+          delta=zero
+         else if (localbc.eq.EXT_DIR) then
+          call velbc_override(vel_time,normdir+1,side,normdir+1, &
+           delta, &
+           xsten,nhalf,dx,bfact)
+         else if (localbc.eq.INT_DIR) then
+          ! do nothing
+         else if (localbc.eq.REFLECT_EVEN) then
+          ! do nothing
+         else if (localbc.eq.FOEXTRAP) then
+          ! do nothing
+         else
+          print *,"localbc invalid"
+          stop
+         endif  ! cases for localbc 
+        else if (side.eq.0) then
+         ! do nothing
+        else
+         print *,"side invalid"
+         stop
+        endif  
+
+        delta=delta*dt/RR
+
+          ! modifies "delta" if "passive_advect_flag=1" or RZ. 
+        call departure_node_split( &
+          xsten,nhalf,dx,bfact, &
+          delta,passive_veltime, &
+          normdir,dt,map_forward)
+
+        if (abs(delta).ge.(one-0.001)*hx) then
+         print *,"in: velmac_override"
+         print *,"CELL: displacement exceeds grid cell"
+         print *,"reduce cfl"
+         print *,"ucell ",ucell(D_DECL(i,j,k),normdir+1)
+         print *,"delta= ",delta
+         print *,"hx=    ",hx
+         print *,"dt=    ",dt
+         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
+         print *,"normdir= ",normdir
+         print *,"i,j,k ",i,j,k 
+         print *,"level,finest_level ",level,finest_level
+         print *,"SDC_outer_sweeps,ns_time_order ", &
+            SDC_outer_sweeps,ns_time_order
+         stop
+        endif
+        
+        ucell(D_DECL(i,j,k),normdir+1)=delta
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      return
+      end subroutine fort_velmac_override
+
+      subroutine fort_build_conserve( &
+       iden_base, &
+       override_density, &
+       constant_density_all_time, &
+       temperature_primitive_variable, &
+       conserve,DIMS(conserve), &
+       den, &
+       DIMS(den), &
+       mom_den, &
+       DIMS(mom_den), &
+       vel,DIMS(vel), &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       nmat,ngrow, &
+       normdir, &
+       nc_conserve, &
+       nc_den) &
+      bind(c,name='fort_build_conserve')
+
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nmat,ngrow
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: nc_conserve
+      INTEGER_T, intent(in) :: nc_den
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
+      INTEGER_T, intent(in) :: override_density(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(conserve) 
+      INTEGER_T, intent(in) :: DIMDEC(den) 
+      INTEGER_T, intent(in) :: DIMDEC(mom_den) 
+      INTEGER_T, intent(in) :: DIMDEC(vel) 
+      REAL_T, intent(out), target :: conserve(DIMV(conserve), &
+              nc_conserve)
+      REAL_T, pointer :: conserve_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: den(DIMV(den),nc_den)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
+      REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vel(DIMV(den),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T i,j,k,im
+      INTEGER_T istate,ispecies
+      INTEGER_T dencomp,tempcomp,speccomp
+      INTEGER_T veldir
+      INTEGER_T iden_base
+      INTEGER_T igridlo(3),igridhi(3)
+      REAL_T dencore(nmat)
+      REAL_T mom_dencore(nmat)
+      REAL_T KE,vel1D,local_temperature,local_internal
+      REAL_T :: massfrac_parm(num_species_var+1)
+
+      conserve_ptr=>conserve
+      den_ptr=>den
+      mom_den_ptr=>mom_den
+      vel_ptr=>vel
+
+      if (nc_den.ne.num_state_material*nmat) then
+       print *,"nc_den invalid"
+       stop
+      endif
+      if (nc_conserve.ne.SDIM+nmat*num_state_material) then
+       print *,"nc_conserve invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid44"
+       stop
+      endif
+      if (ngrow.lt.1) then
+       print *,"ngrow out of range in BUILD_CONSERVE ngrow=",ngrow
+       stop
+      endif
+      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
+       ! do nothing 
+      else
+       print *,"normdir invalid"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+
+      do im=1,nmat
+       if ((fort_material_type(im).eq.0).or. &
+           (is_rigid(nmat,im).eq.1).or. &
+           (fort_material_type(im).eq.999)) then
+        if (temperature_primitive_variable(im).ne.1) then
+         print *,"temperature_primitive_variable(im) invalid"
+         stop
+        endif
+       else if ((fort_material_type(im).gt.0).and. &
+                (is_rigid(nmat,im).eq.0).and. &
+                (fort_material_type(im).ne.999)) then
+        if ((temperature_primitive_variable(im).eq.0).or. &
+            (temperature_primitive_variable(im).eq.1)) then
+         ! do nothing
+        else
+         print *,"temperature_primitive_variable(im) invalid"
+         stop
+        endif
+       else
+        print *,"fort_material_type(im) or is_rigid invalid"
+        stop
+       endif
+      enddo ! im=1..nmat
+
+      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1,1271)
+      call checkbound_array(fablo,fabhi,den_ptr,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1,1272)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        igridlo,igridhi,ngrow)
+
+      if (iden_base.ne.SDIM) then
+       print *,"iden_base invalid"
+       stop
+      endif
+
+      do i=igridlo(1),igridhi(1)
+      do j=igridlo(2),igridhi(2)
+      do k=igridlo(3),igridhi(3)
+
+        ! KE=u dot u/2
+       KE=zero
+       do veldir=1,SDIM
+        vel1D=vel(D_DECL(i,j,k),veldir)
+        conserve(D_DECL(i,j,k),veldir)=vel1D
+        KE=KE+vel1D**2
+       enddo
+       KE=half*KE
+
+       do im=1,nmat
+        istate=1
+        dencomp=(im-1)*num_state_material+istate
+        dencore(im)=den(D_DECL(i,j,k),dencomp)
+        mom_dencore(im)=mom_den(D_DECL(i,j,k),im)
+          ! sanity check
+        if (constant_density_all_time(im).eq.1) then
+         if (abs(dencore(im)-fort_denconst(im)).le.VOFTOL) then
+          ! do nothing
+         else
+          print *,"dencore(im) invalid"
+          print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
+          print *,"dencomp=",dencomp
+          print *,"normdir=",normdir
+          stop
+         endif
+        else if (constant_density_all_time(im).eq.0) then 
+         ! do nothing
+        else
+         print *,"constant_density_all_time invalid"
+         stop
+        endif
+
+        if (dencore(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"density must be positive build_conserve"
+         print *,"im,dencore(im) ",im,dencore(im)
+         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+         stop
+        endif  
+
+        if (mom_dencore(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"mom_density must be positive build_conserve"
+         print *,"im,mom_dencore(im) ",im,mom_dencore(im)
+         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+         stop
+        endif  
+
+       enddo ! im=1..nmat
+
+       do im=1,nmat
+
+         ! in: fort_build_conserve
+        istate=1
+        do while (istate.le.num_state_material)
+
+         if (istate.eq.1) then ! Density
+          dencomp=(im-1)*num_state_material+istate
+          conserve(D_DECL(i,j,k),iden_base+dencomp)=dencore(im)
+          istate=istate+1
+         else if (istate.eq.2) then ! Temperature
+          tempcomp=(im-1)*num_state_material+istate
+          local_temperature=den(D_DECL(i,j,k),tempcomp)
+          if (temperature_primitive_variable(im).eq.1) then ! non-conservative
+            ! den * T
+           conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
+            dencore(im)*local_temperature
+          else if (temperature_primitive_variable(im).eq.0) then ! conservative
+
+           call init_massfrac_parm(dencore(im),massfrac_parm,im)
+           do ispecies=1,num_species_var
+            massfrac_parm(ispecies)=den(D_DECL(i,j,k),tempcomp+ispecies)
+            if (massfrac_parm(ispecies).ge.zero) then
+             ! do nothing
+            else
+             print *,"massfrac_parm(ispecies) invalid"
+             stop
+            endif
+           enddo
+
+            ! den * (u dot u/2 + cv T)
+           call INTERNAL_material(dencore(im),massfrac_parm, &
+            local_temperature,local_internal, &
+            fort_material_type(im),im)
+           conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
+             dencore(im)*(KE+local_internal) 
+          else
+           print *,"temperature_primitive_variable invalid"
+           stop
+          endif
+          istate=istate+1
+         else if ((istate.eq.num_state_base+1).and. &
+                  (num_species_var.gt.0)) then 
+           ! den * Y
+          do ispecies=1,num_species_var
+           speccomp=(im-1)*num_state_material+num_state_base+ispecies
+           conserve(D_DECL(i,j,k),iden_base+speccomp)= &
+             dencore(im)*den(D_DECL(i,j,k),speccomp)
+           istate=istate+1
+          enddo ! ispecies=1..num_species_var
+         else 
+          print *,"istate invalid"
+          stop
+         endif
+
+        enddo ! do while (istate.le.num_state_material)
+
+        if (dencore(im).gt.zero) then 
+         ! do nothing
+        else
+         print *,"dencore must be positive"
+         stop
+        endif
+
+       enddo ! im=1..nmat
+
+      enddo         
+      enddo         
+      enddo ! i,j,k (cell center "conserved" variables) 
+
+      return
+      end subroutine fort_build_conserve
 
       end module godunov_module
 
@@ -6961,258 +7929,6 @@ stop
 
       return
       end subroutine FORT_BUILD_MASKSEM
-
-
-      subroutine fort_build_conserve( &
-       iden_base, &
-       override_density, &
-       constant_density_all_time, &
-       temperature_primitive_variable, &
-       conserve,DIMS(conserve), &
-       den, &
-       DIMS(den), &
-       mom_den, &
-       DIMS(mom_den), &
-       vel,DIMS(vel), &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       nmat,ngrow, &
-       normdir, &
-       nc_conserve, &
-       nc_den) &
-      bind(c,name='fort_build_conserve')
-
-      use probf90_module
-      use global_utility_module
-      use MOF_routines_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: nmat,ngrow
-      INTEGER_T, intent(in) :: normdir
-      INTEGER_T, intent(in) :: nc_conserve
-      INTEGER_T, intent(in) :: nc_den
-      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
-      INTEGER_T, intent(in) :: override_density(nmat)
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(conserve) 
-      INTEGER_T, intent(in) :: DIMDEC(den) 
-      INTEGER_T, intent(in) :: DIMDEC(mom_den) 
-      INTEGER_T, intent(in) :: DIMDEC(vel) 
-      REAL_T, intent(out), target :: conserve(DIMV(conserve), &
-              nc_conserve)
-      REAL_T, pointer :: conserve_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: den(DIMV(den),nc_den)
-      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
-      REAL_T, intent(in), target :: vel(DIMV(den),SDIM)
-
-      INTEGER_T i,j,k,im
-      INTEGER_T istate,ispecies
-      INTEGER_T dencomp,tempcomp,speccomp
-      INTEGER_T veldir
-      INTEGER_T iden_base
-      INTEGER_T igridlo(3),igridhi(3)
-      REAL_T dencore(nmat)
-      REAL_T mom_dencore(nmat)
-      REAL_T KE,vel1D,local_temperature,local_internal
-      REAL_T :: massfrac_parm(num_species_var+1)
-
-      conserve_ptr=>conserve
-
-      if (nc_den.ne.num_state_material*nmat) then
-       print *,"nc_den invalid"
-       stop
-      endif
-      if (nc_conserve.ne.SDIM+nmat*num_state_material) then
-       print *,"nc_conserve invalid"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid44"
-       stop
-      endif
-      if (ngrow.lt.1) then
-       print *,"ngrow out of range in BUILD_CONSERVE ngrow=",ngrow
-       stop
-      endif
-      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-       ! do nothing 
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      do im=1,nmat
-       if ((fort_material_type(im).eq.0).or. &
-           (is_rigid(nmat,im).eq.1).or. &
-           (fort_material_type(im).eq.999)) then
-        if (temperature_primitive_variable(im).ne.1) then
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else if ((fort_material_type(im).gt.0).and. &
-                (is_rigid(nmat,im).eq.0).and. &
-                (fort_material_type(im).ne.999)) then
-        if ((temperature_primitive_variable(im).eq.0).or. &
-            (temperature_primitive_variable(im).eq.1)) then
-         ! do nothing
-        else
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else
-        print *,"fort_material_type(im) or is_rigid invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
-
-      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1,1271)
-      call checkbound_array(fablo,fabhi,den,ngrow,-1,1272)
-      call checkbound_array(fablo,fabhi,mom_den,ngrow,-1,1272)
-      call checkbound_array(fablo,fabhi,vel,ngrow,-1,1272)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        igridlo,igridhi,ngrow)
-
-      if (iden_base.ne.SDIM) then
-       print *,"iden_base invalid"
-       stop
-      endif
-
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
-      do k=igridlo(3),igridhi(3)
-
-        ! KE=u dot u/2
-       KE=zero
-       do veldir=1,SDIM
-        vel1D=vel(D_DECL(i,j,k),veldir)
-        conserve(D_DECL(i,j,k),veldir)=vel1D
-        KE=KE+vel1D**2
-       enddo
-       KE=half*KE
-
-       do im=1,nmat
-        istate=1
-        dencomp=(im-1)*num_state_material+istate
-        dencore(im)=den(D_DECL(i,j,k),dencomp)
-        mom_dencore(im)=mom_den(D_DECL(i,j,k),im)
-          ! sanity check
-        if (constant_density_all_time(im).eq.1) then
-         if (abs(dencore(im)-fort_denconst(im)).le.VOFTOL) then
-          ! do nothing
-         else
-          print *,"dencore(im) invalid"
-          print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
-          print *,"dencomp=",dencomp
-          print *,"normdir=",normdir
-          stop
-         endif
-        else if (constant_density_all_time(im).eq.0) then 
-         ! do nothing
-        else
-         print *,"constant_density_all_time invalid"
-         stop
-        endif
-
-        if (dencore(im).gt.zero) then
-         ! do nothing
-        else
-         print *,"density must be positive build_conserve"
-         print *,"im,dencore(im) ",im,dencore(im)
-         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-         stop
-        endif  
-
-        if (mom_dencore(im).gt.zero) then
-         ! do nothing
-        else
-         print *,"mom_density must be positive build_conserve"
-         print *,"im,mom_dencore(im) ",im,mom_dencore(im)
-         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-         stop
-        endif  
-
-       enddo ! im=1..nmat
-
-       do im=1,nmat
-
-         ! in: fort_build_conserve
-        istate=1
-        do while (istate.le.num_state_material)
-
-         if (istate.eq.1) then ! Density
-          dencomp=(im-1)*num_state_material+istate
-          conserve(D_DECL(i,j,k),iden_base+dencomp)=dencore(im)
-          istate=istate+1
-         else if (istate.eq.2) then ! Temperature
-          tempcomp=(im-1)*num_state_material+istate
-          local_temperature=den(D_DECL(i,j,k),tempcomp)
-          if (temperature_primitive_variable(im).eq.1) then ! non-conservative
-            ! den * T
-           conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
-            dencore(im)*local_temperature
-          else if (temperature_primitive_variable(im).eq.0) then ! conservative
-
-           call init_massfrac_parm(dencore(im),massfrac_parm,im)
-           do ispecies=1,num_species_var
-            massfrac_parm(ispecies)=den(D_DECL(i,j,k),tempcomp+ispecies)
-            if (massfrac_parm(ispecies).ge.zero) then
-             ! do nothing
-            else
-             print *,"massfrac_parm(ispecies) invalid"
-             stop
-            endif
-           enddo
-
-            ! den * (u dot u/2 + cv T)
-           call INTERNAL_material(dencore(im),massfrac_parm, &
-            local_temperature,local_internal, &
-            fort_material_type(im),im)
-           conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
-             dencore(im)*(KE+local_internal) 
-          else
-           print *,"temperature_primitive_variable invalid"
-           stop
-          endif
-          istate=istate+1
-         else if ((istate.eq.num_state_base+1).and. &
-                  (num_species_var.gt.0)) then 
-           ! den * Y
-          do ispecies=1,num_species_var
-           speccomp=(im-1)*num_state_material+num_state_base+ispecies
-           conserve(D_DECL(i,j,k),iden_base+speccomp)= &
-             dencore(im)*den(D_DECL(i,j,k),speccomp)
-           istate=istate+1
-          enddo ! ispecies=1..num_species_var
-         else 
-          print *,"istate invalid"
-          stop
-         endif
-
-        enddo ! do while (istate.le.num_state_material)
-
-        if (dencore(im).gt.zero) then 
-         ! do nothing
-        else
-         print *,"dencore must be positive"
-         stop
-        endif
-
-       enddo ! im=1..nmat
-
-      enddo         
-      enddo         
-      enddo ! i,j,k (cell center "conserved" variables) 
-
-      return
-      end subroutine fort_build_conserve
 
 
 
@@ -8071,8 +8787,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(slsrc)
       INTEGER_T, intent(in) :: DIMDEC(sldst)
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: slsrc(DIMV(slsrc),nc_conserve)
+      REAL_T, pointer :: slsrc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: sldst(DIMV(sldst),nc_conserve)
       REAL_T, pointer :: sldst_ptr(D_DECL(:,:,:),:)
 
@@ -8108,12 +8827,15 @@ stop
        stop
       endif
 
+      masknbr_ptr=>masknbr
+      recon_ptr=>recon
+      slsrc_ptr=>slsrc
       sldst_ptr=>sldst
 
-      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,1247)
-      call checkbound_array(fablo,fabhi,slsrc,ngrow,-1,1248)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,1247)
+      call checkbound_array(fablo,fabhi,slsrc_ptr,ngrow,-1,1248)
       call checkbound_array(fablo,fabhi,sldst_ptr,1,-1,1249)
-      call checkbound_array(fablo,fabhi,recon,ngrow,-1,1251)
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow,-1,1251)
 
       if (nc_conserve.ne.SDIM+nmat*num_state_material) then
        print *,"nc_conserve invalid"
@@ -8297,14 +9019,28 @@ stop
             (fmixed.gt.one+VOFTOL_SLOPES)) then
          print *,"fsolid_mixed or fmixed invalid"
          stop
+        else if ((fsolid_mixed.ge.zero).and. &
+                 (fsolid_mixed.le.one+VOFTOL_SLOPES).and. &
+                 (fmixed.ge.zero).and. &
+                 (fmixed.le.one+VOFTOL_SLOPES)) then
+         ! do nothing
+        else
+         print *,"fsolid_mixed or fmixed bust"
+         stop
         endif
 
-        if ((fsolid.ge.half).or.(fsolid_mixed.ge.half)) then
+        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.half)) then
          local_order=1
-        else if ((fsolid.le.half).and.(fsolid_mixed.le.half)) then
-         if ((fcen(im_primary).lt.half).or. &
+        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.half)) then
+         if ((fcen(im_primary).lt.one-VOFTOL).or. &
              (fmixed.lt.half)) then
           local_order=1
+         else if ((fcen(im_primary).ge.one-VOFTOL).and. &
+                  (fmixed.ge.half)) then
+          ! do nothing
+         else
+          print *,"fcen or fmixed bust"
+          stop
          endif
         else
          print *,"fsolid or fsolid_mixed invalid"
@@ -8318,19 +9054,7 @@ stop
           if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
            local_order=advection_order(im_primary)
            if (local_order.eq.2) then
-            if ((slope_limiter_option.eq.2).or. &
-                (slope_limiter_option.eq.3)) then
-             if ((abs(fmixed-one).ge.VOFTOL_SLOPES).or. &
-                 (abs(fsolid_mixed).ge.VOFTOL_SLOPES)) then
-              local_order=1
-             endif
-            else if ((slope_limiter_option.eq.1).or. &
-                     (slope_limiter_option.eq.0)) then
-             ! do nothing
-            else
-             print *,"slope_limiter_option invalid"
-             stop
-            endif 
+            ! do nothing
            else if (local_order.eq.1) then
             ! do nothing
            else 
@@ -8365,16 +9089,21 @@ stop
                 (denminus.le.zero)) then
              print *,"dencen,denplus, or denminus invalid"
              stop
+            else if ((dencen.gt.zero).and. &
+                     (denplus.gt.zero).and. &
+                     (denminus.gt.zero)) then
+             ! do nothing
+            else
+             print *,"dencen,denplus or denminus bust"
+             stop
             endif
             
             sleft=(scen*dencen-sminus*denminus)/dxleft
             sright=(splus*denplus-scen*dencen)/dxright
 
-            if ((slope_limiter_option.eq.1).or. &
-                (slope_limiter_option.eq.2)) then
+            if (slope_limiter_option.eq.1) then
              call minmod(sleft,sright,slope_temp)
-            else if ((slope_limiter_option.eq.0).or. &
-                     (slope_limiter_option.eq.3)) then
+            else if (slope_limiter_option.eq.0) then
              slope_temp=half*(sleft+sright)
             else
              print *,"slope_limiter_option invalid"
@@ -8405,24 +9134,8 @@ stop
 
             if (im_local.eq.im_primary) then
 
-             if ((istate_local.eq.1).or. &
-                 (slope_limiter_option.eq.2).or. &
-                 (slope_limiter_option.eq.3)) then ! density
-              if ((abs(fmixed-one).ge.VOFTOL_SLOPES).or. &
-                  (abs(fsolid_mixed).ge.VOFTOL_SLOPES)) then
-               local_order=1
-              endif
-             else if ((istate_local.gt.1).and. &
-                      ((slope_limiter_option.eq.0).or. &
-                       (slope_limiter_option.eq.1))) then
-              ! do nothing
-             else
-              print *,"istate_local or slope_limiter_option invalid"
-              stop
-             endif
-
-             if ((istate_local.eq.1).or. &
-                 (istate_local.eq.2)) then
+             if ((istate_local.eq.1).or. & ! density
+                 (istate_local.eq.2)) then ! temperature or energy
               ! use density_advection_order
              else if ((istate_local.ge.num_state_base+1).and. &
                       (istate_local.le.num_state_base+num_species_var)) then
@@ -8460,6 +9173,13 @@ stop
                  (sminus.le.zero)) then
               print *,"scen,splus, or sminus.le.zero"
               stop
+             else if ((scen.gt.zero).and. &
+                      (splus.gt.zero).and. &
+                      (sminus.gt.zero)) then
+              ! do nothing
+             else
+              print *,"scen, splus, or sminus bust"
+              stop
              endif
             else if ((istate_local.ge.3).and. &
                      (istate_local.le.num_state_material)) then
@@ -8472,11 +9192,9 @@ stop
             sleft=(scen-sminus)/dxleft
             sright=(splus-scen)/dxright
 
-            if ((slope_limiter_option.eq.1).or. &
-                (slope_limiter_option.eq.2)) then
+            if (slope_limiter_option.eq.1) then
              call minmod(sleft,sright,slope_temp)
-            else if ((slope_limiter_option.eq.0).or. &
-                     (slope_limiter_option.eq.3)) then
+            else if (slope_limiter_option.eq.0) then
              slope_temp=half*(sleft+sright)
             else
              print *,"slope_limiter_option invalid"
@@ -8559,9 +9277,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(slsrc)
       INTEGER_T, intent(in) :: DIMDEC(sldst)
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: vfrac(DIMV(vfrac),nmat)
+      REAL_T, pointer :: vfrac_ptr(D_DECL(:,:,:),:)
        !slsrc(1)=xvel  slsrc(2)=xdisp
       REAL_T, intent(in), target :: slsrc(DIMV(slsrc)) 
+      REAL_T, pointer :: slsrc_ptr(D_DECL(:,:,:))
        !sldst(1)=xvelslope,slpdst(2..nmat+1)=xcen
       REAL_T, intent(out), target :: sldst(DIMV(sldst)) 
       REAL_T, pointer :: sldst_ptr(D_DECL(:,:,:))
@@ -8595,12 +9316,15 @@ stop
        stop
       endif
 
+      masknbr_ptr=>masknbr
+      slsrc_ptr=>slsrc
       sldst_ptr=>sldst
+      vfrac_ptr=>vfrac
 
-      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,1247)
-      call checkbound_array1(fablo,fabhi,slsrc,ngrow,slopedir,1248)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,1247)
+      call checkbound_array1(fablo,fabhi,slsrc_ptr,ngrow,slopedir,1248)
       call checkbound_array1(fablo,fabhi,sldst_ptr,ngrow-1,slopedir,1249)
-      call checkbound_array(fablo,fabhi,vfrac,ngrow,slopedir,1251)
+      call checkbound_array(fablo,fabhi,vfrac_ptr,ngrow,slopedir,1251)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -8817,14 +9541,28 @@ stop
             (fmixed.gt.one+VOFTOL_SLOPES)) then
          print *,"fsolid_mixed or fmixed invalid"
          stop
+        else if ((fsolid_mixed.ge.zero).and. &
+                 (fsolid_mixed.le.one+VOFTOL_SLOPES).and. &
+                 (fmixed.ge.zero).and. &
+                 (fmixed.le.one+VOFTOL_SLOPES)) then
+         ! do nothing
+        else
+         print *,"fsolid_mixed or fmixed invalid"
+         stop
         endif
 
-        if ((fsolid.ge.half).or.(fsolid_mixed.ge.half)) then
+        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.half)) then
          local_order=1
-        else if ((fsolid.le.half).and.(fsolid_mixed.le.half)) then
-         if ((fcen(im_primary).lt.half).or. &
+        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.half)) then
+         if ((fcen(im_primary).lt.one-VOFTOL).or. &
              (fmixed.lt.half)) then
           local_order=1
+         else if ((fcen(im_primary).ge.one-VOFTOL).and. &
+                  (fmixed.ge.half)) then
+          ! do nothing
+         else
+          print *,"fcen or fmixed bust"
+          stop
          endif
         else
          print *,"fsolid or fsolid_mixed invalid"
@@ -8835,19 +9573,7 @@ stop
 
          local_order=advection_order(im_primary)
          if (local_order.eq.2) then
-          if ((slope_limiter_option.eq.2).or. &
-              (slope_limiter_option.eq.3)) then
-           if ((abs(fmixed-one).ge.VOFTOL_SLOPES).or. &
-               (abs(fsolid_mixed).ge.VOFTOL_SLOPES)) then
-            local_order=1
-           endif
-          else if ((slope_limiter_option.eq.1).or. &
-                   (slope_limiter_option.eq.0)) then
-           ! do nothing
-          else
-           print *,"slope_limiter_option invalid"
-           stop
-          endif 
+          ! do nothing
          else if (local_order.eq.1) then
           ! do nothing
          else 
@@ -8866,11 +9592,9 @@ stop
           sleft=(scen-sminus)/dxleft
           sright=(splus-scen)/dxright
 
-          if ((slope_limiter_option.eq.1).or. &
-              (slope_limiter_option.eq.2)) then
+          if (slope_limiter_option.eq.1) then
            call minmod(sleft,sright,slope_temp)
-          else if ((slope_limiter_option.eq.0).or. &
-                   (slope_limiter_option.eq.3)) then
+          else if (slope_limiter_option.eq.0) then
            slope_temp=half*(sleft+sright)
           else
            print *,"slope_limiter_option invalid"
@@ -16501,712 +17225,6 @@ stop
 
       return
       end subroutine fort_fix_hoop_tensor
-
-
-
-       ! (vel/RR) if R-THETA
-       ! vel=vel*dt , call adjust_du if RZ, override if passive advect.
-      subroutine fort_velmac_override( &
-       nmat, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       velbc, &
-       dt,time, &
-       passive_veltime, &
-       vel_time, &
-       dir_absolute_direct_split, &
-       normdir, &
-       utemp,DIMS(utemp), &
-       unode,DIMS(unode), &
-       ucell,DIMS(ucell), &
-       xlo,dx, &
-       mac_grow, &
-       map_forward, &
-       level, &
-       finest_level, &
-       SDC_outer_sweeps, &
-       ns_time_order, &
-       divu_outer_sweeps, &
-       num_divu_outer_sweeps) &
-      bind(c,name='fort_velmac_override')
-
-      use godunov_module
-      use probf90_module
-      use global_utility_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: SDC_outer_sweeps
-      INTEGER_T, intent(in) :: ns_time_order
-      INTEGER_T, intent(in) :: divu_outer_sweeps
-      INTEGER_T, intent(in) :: num_divu_outer_sweeps
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: dir_absolute_direct_split
-      INTEGER_T, intent(in) :: normdir
-      INTEGER_T, intent(in) :: mac_grow,map_forward
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: dt,time,vel_time,passive_veltime
-      INTEGER_T, intent(in) :: DIMDEC(utemp)
-      INTEGER_T, intent(in) :: DIMDEC(unode)
-      INTEGER_T, intent(in) :: DIMDEC(ucell)
-     
-      REAL_T, intent(in), target :: utemp(DIMV(utemp)) 
-      REAL_T, pointer :: utemp_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: unode(DIMV(unode)) 
-      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: ucell(DIMV(ucell),SDIM) 
-      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) :: velbc(SDIM,2)
-
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-     
-      INTEGER_T i,j,k
-      INTEGER_T ii,jj,kk
-      INTEGER_T idx,side
-      REAL_T delta
-      REAL_T hx
-      REAL_T RR
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      INTEGER_T localbc
-      INTEGER_T local_mac_grow
-
-      nhalf=3
-
-      utemp_ptr=>utemp
-      unode_ptr=>unode
-      ucell_ptr=>ucell
-
-      if (bfact.ge.1) then
-       ! do nothing
-      else
-       print *,"bfact invalid65"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
- 
-      if ((mac_grow.ne.1).and.(mac_grow.ne.2)) then
-       print *,"mac_grow invalid mac_grow=",mac_grow
-       stop
-      endif
-      if ((map_forward.ne.0).and.(map_forward.ne.1)) then
-       print *,"map_forward invalid"
-       stop
-      endif
-      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-       ! do nothing
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-      if ((dir_absolute_direct_split.ge.0).and. &
-          (dir_absolute_direct_split.lt.SDIM)) then
-       ! do nothing
-      else
-       print *,"dir_absolute_direct_split invalid"
-       stop
-      endif
-      if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.4) then
-       print *,"blocking factor should be at least 4"
-       stop
-      endif
-      if (level.gt.finest_level) then
-       print *,"finest_level invalid velmac override"
-       stop
-      else if (level.lt.0) then
-       print *,"level invalid velmac override"
-       stop
-      endif
-      if ((SDC_outer_sweeps.ge.0).and. &
-          (SDC_outer_sweeps.lt.ns_time_order)) then
-       ! do nothing
-      else
-       print *,"SDC_outer_sweeps invalid"
-       stop
-      endif
-      if ((divu_outer_sweeps.lt.0).or. &
-          (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
-       print *,"divu_outer_sweeps invalid fort_velmac_override"
-       stop
-      endif
-  
-      if (levelrz.eq.0) then
-       ! do nothing
-      else if (levelrz.eq.1) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
-        stop
-       endif
-      else if (levelrz.eq.3) then
-       ! do nothing
-      else
-       print *,"levelrz invalid velmac override"
-       stop
-      endif
-
-      call checkbound_array1(fablo,fabhi,utemp_ptr,mac_grow+1,normdir,12)
-      call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow+1,normdir,12)
-      call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1,12)
-
-      if (dt.le.zero) then
-        print *,"dt invalid"
-        stop
-      endif
-
-      ii=0
-      jj=0
-      kk=0
-      if (normdir.eq.0) then
-       ii=1
-      else if (normdir.eq.1) then
-       jj=1
-      else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-
-        ! 1. multiply velocity by dt.
-        ! 2. adjust velocity if RZ.
-        ! 3. override velocity if it is a passive advection problem.
-        ! 4. copy into mac_velocity
-        ! 5. repeat for cell_velocity
-
-      local_mac_grow=mac_grow+1
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,local_mac_grow,normdir,28)
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-        if (normdir.eq.0) then
-         idx=i
-        else if (normdir.eq.1) then
-         idx=j
-        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-         idx=k
-        else
-         print *,"normdir invalid"
-         stop
-        endif
-
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,32)
-        hx=xstenMAC(1,normdir+1)-xstenMAC(-1,normdir+1)
-        if (hx.gt.zero) then
-         ! do nothing
-        else
-         print *,"xstenMAC bust"
-         stop
-        endif
-
-        RR=one
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if (levelrz.eq.1) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-        else if (levelrz.eq.3) then
-         if (normdir.eq.1) then
-          RR=xstenMAC(0,1)
-         endif
-        else
-         print *,"levelrz invalid velmac override"
-         stop
-        endif
-
-        delta=utemp(D_DECL(i,j,k))
-
-        side=0
-
-        if (idx.le.fablo(normdir+1)) then
-         side=1
-        else if (idx.ge.fabhi(normdir+1)+1) then
-         side=2
-        else if ((idx.gt.fablo(normdir+1)).and. &
-                 (idx.lt.fabhi(normdir+1)+1)) then
-         ! do nothing
-        else
-         print *,"idx invalid"
-         stop
-        endif
-
-        if ((side.eq.1).or.(side.eq.2)) then
-         localbc=velbc(normdir+1,side)
-         if (localbc.eq.REFLECT_ODD) then
-          delta=zero
-         else if (localbc.eq.EXT_DIR) then
-          call velbc_override(vel_time,normdir+1,side,normdir+1, &
-           delta, &
-           xstenMAC,nhalf,dx,bfact)
-         else if (localbc.eq.INT_DIR) then
-          ! do nothing
-         else if (localbc.eq.REFLECT_EVEN) then
-          ! do nothing
-         else if (localbc.eq.FOEXTRAP) then
-          ! do nothing
-         else
-          print *,"localbc invalid"
-          stop
-         endif  ! cases for localbc 
-        else if (side.eq.0) then
-         ! do nothing
-        else
-         print *,"side invalid"
-         stop
-        endif  
-
-        delta=dt*delta/RR
-
-        ! modifies "delta" if "passive_advect_flag=1" or RZ. 
-        call departure_node_split( &
-          xstenMAC,nhalf,dx,bfact, &
-          delta,passive_veltime, &
-          normdir,dt,map_forward)
-
-        if (abs(delta).ge.(one-0.001)*hx) then
-         print *,"in: velmac_override"
-         print *,"MAC: displacement exceeds grid cell"
-         print *,"reduce cfl"
-         print *,"utemp ",utemp(D_DECL(i,j,k))
-         print *,"delta (u dt) = ",delta
-         print *,"hx=    ",hx
-         print *,"dt=    ",dt
-         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
-         print *,"normdir= ",normdir
-         print *,"i,j,k ",i,j,k 
-         print *,"level,finest_level ",level,finest_level
-         print *,"SDC_outer_sweeps,ns_time_order ", &
-            SDC_outer_sweeps,ns_time_order
-         print *,"levelrz=",levelrz
-         stop
-        endif
-      
-         ! find displacements 
-        unode(D_DECL(i,j,k))=delta
-
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,mac_grow) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-        if (normdir.eq.0) then
-         idx=i
-        else if (normdir.eq.1) then
-         idx=j
-        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-         idx=k
-        else
-         print *,"normdir invalid"
-         stop
-        endif
-
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-        hx=xsten(1,normdir+1)-xsten(-1,normdir+1)
-        if (hx.le.zero) then
-         print *,"xsten bust"
-         stop
-        endif
-
-        RR=one
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if (levelrz.eq.1) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-        else if (levelrz.eq.3) then
-         if (normdir.eq.1) then
-          RR=xsten(0,1)
-         endif
-        else
-         print *,"levelrz invalid velmac override"
-         stop
-        endif
-
-        delta=ucell(D_DECL(i,j,k),normdir+1)
-
-        side=0
-
-        if (idx.lt.fablo(normdir+1)) then
-         side=1
-        else if (idx.gt.fabhi(normdir+1)) then
-         side=2
-        else if ((idx.ge.fablo(normdir+1)).and. &
-                 (idx.le.fabhi(normdir+1))) then
-         ! do nothing
-        else
-         print *,"idx invalid"
-         stop
-        endif
-
-        if ((side.eq.1).or.(side.eq.2)) then
-         localbc=velbc(normdir+1,side)
-
-         if (localbc.eq.REFLECT_ODD) then
-          delta=zero
-         else if (localbc.eq.EXT_DIR) then
-          call velbc_override(vel_time,normdir+1,side,normdir+1, &
-           delta, &
-           xsten,nhalf,dx,bfact)
-         else if (localbc.eq.INT_DIR) then
-          ! do nothing
-         else if (localbc.eq.REFLECT_EVEN) then
-          ! do nothing
-         else if (localbc.eq.FOEXTRAP) then
-          ! do nothing
-         else
-          print *,"localbc invalid"
-          stop
-         endif  ! cases for localbc 
-        else if (side.eq.0) then
-         ! do nothing
-        else
-         print *,"side invalid"
-         stop
-        endif  
-
-        delta=delta*dt/RR
-
-          ! modifies "delta" if "passive_advect_flag=1" or RZ. 
-        call departure_node_split( &
-          xsten,nhalf,dx,bfact, &
-          delta,passive_veltime, &
-          normdir,dt,map_forward)
-
-        if (abs(delta).ge.(one-0.001)*hx) then
-         print *,"in: velmac_override"
-         print *,"CELL: displacement exceeds grid cell"
-         print *,"reduce cfl"
-         print *,"ucell ",ucell(D_DECL(i,j,k),normdir+1)
-         print *,"delta= ",delta
-         print *,"hx=    ",hx
-         print *,"dt=    ",dt
-         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
-         print *,"normdir= ",normdir
-         print *,"i,j,k ",i,j,k 
-         print *,"level,finest_level ",level,finest_level
-         print *,"SDC_outer_sweeps,ns_time_order ", &
-            SDC_outer_sweeps,ns_time_order
-         stop
-        endif
-        
-        ucell(D_DECL(i,j,k),normdir+1)=delta
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      return
-      end subroutine fort_velmac_override
-
-
-       ! mask=1 if cell not covered.
-       ! masknbr=1 fine-fine border cells and interior cells.
-       ! masknbr=0 coarse-fine cells and cells outside domain.
-       ! called from getStateMOM_DEN
-      subroutine fort_derive_mom_den( &
-       im_parm, &
-       ngrow, &
-       constant_density_all_time, & ! 1..nmat
-       spec_material_id_AMBIENT, &  ! 1..num_species_var
-       presbc_arr, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       dt, &
-       mask,DIMS(mask), &
-       masknbr,DIMS(masknbr), &
-       vol,DIMS(vol), &
-       eosdata,DIMS(eosdata), &
-       momden,DIMS(momden), &
-       recon,DIMS(recon), &
-       xlo,dx, &
-       gravity_normalized, &
-       DrhoDT, &
-       override_density, &
-       nmat, &
-       level,finest_level) &
-      bind(c,name='fort_derive_mom_den')
-
-      use probf90_module
-      use global_utility_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: im_parm
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
-      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-
-      REAL_T, intent(in) :: dt
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(eosdata)
-      INTEGER_T, intent(in) :: DIMDEC(momden)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-     
-      REAL_T, intent(in), target :: mask(DIMV(mask)) 
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr)) 
-      REAL_T, intent(in), target :: vol(DIMV(vol)) 
-      REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
-               num_state_material*nmat)
-      REAL_T, intent(out), target :: momden(DIMV(momden),nmat)
-      REAL_T, pointer :: momden_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
-
-      INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
-
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: override_density(nmat)
-      REAL_T, intent(in) :: DrhoDT(nmat)
-      REAL_T, intent(in) :: gravity_normalized
-     
-      INTEGER_T i,j,k
-      INTEGER_T dir
-
-      INTEGER_T dencomp
-      REAL_T xpos(SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T rhohydro,preshydro,temperature
-      INTEGER_T nhalf
-      REAL_T density_of_TZ
-      INTEGER_T caller_id
-      REAL_T rho_base
-      INTEGER_T vofcomp
-      REAL_T local_vfrac
-
-      nhalf=3
-
-      momden_ptr=>momden
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid66"
-       stop
-      endif
-      if (ngrow.ge.1) then
-       ! do nothing
-      else
-       print *,"ngrow>=1 required"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid dencor"
-       stop
-      endif
-      if ((im_parm.ge.1).and.(im_parm.le.nmat)) then
-       ! do nothing
-      else
-       print *,"FORT_DERIVE_MOM_DEN: im_parm invalid, im_parm=",im_parm
-       stop
-      endif
-      vofcomp=(im_parm-1)*ngeom_recon+1
-
-      if (levelrz.eq.0) then
-       ! do nothing
-      else if (levelrz.eq.1) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
-        stop
-       endif
-      else if (levelrz.eq.3) then
-       ! do nothing
-      else
-       print *,"levelrz invalid dencor"
-       stop
-      endif
-
-      call checkbound_array1(fablo,fabhi,vol,ngrow,-1,12)
-      call checkbound_array(fablo,fabhi,eosdata,ngrow,-1,12)
-      call checkbound_array(fablo,fabhi,momden_ptr,ngrow,-1,12)
-      call checkbound_array(fablo,fabhi,recon,ngrow,-1,12)
-      call checkbound_array1(fablo,fabhi,mask,ngrow,-1,12)
-      call checkbound_array1(fablo,fabhi,masknbr,ngrow,-1,12)
-
-      if (dt.gt.zero) then
-       ! do nothing
-      else
-       print *,"dt invalid"
-       stop
-      endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-       do dir=1,SDIM
-        xpos(dir)=xsten(0,dir)
-       enddo
-
-       if (mask(D_DECL(i,j,k)).eq.zero) then
-          ! a default for coarse grid cells covered by finer levels.
-        momden(D_DECL(i,j,k),im_parm)=fort_denconst(im_parm)
-       else if (mask(D_DECL(i,j,k)).eq.one) then
-     
-        dencomp=(im_parm-1)*num_state_material+1
-
-        if (constant_density_all_time(im_parm).eq.1) then
-         rho_base=fort_denconst(im_parm)
-        else if (constant_density_all_time(im_parm).eq.0) then
-         rho_base=eosdata(D_DECL(i,j,k),dencomp)
-        else
-         print *,"constant_density_all_time(im_parm) invalid"
-         stop
-        endif
-
-        ! rho=rho(T,z)
-        if (override_density(im_parm).eq.1) then
-
-         if (fort_material_type(im_parm).eq.0) then
-          ! do nothing
-         else
-          print *,"override_density==1 for incomp material only"
-          stop
-         endif
-
-         local_vfrac=recon(D_DECL(i,j,k),vofcomp)
-
-         if ((local_vfrac.ge.VOFTOL).and.(local_vfrac.le.one+VOFTOL)) then
-
-           ! den,T
-          temperature=eosdata(D_DECL(i,j,k),dencomp+1)
-
-           ! defined in: GLOBALUTIL.F90
-           ! only takes into account fort_drhodz
-          caller_id=0
-          call default_hydrostatic_pressure_density( &
-            xpos, &
-            rho_base, &
-            rhohydro, &
-            preshydro, &
-            temperature, &
-            gravity_normalized, &
-            im_parm, &
-            override_density(im_parm), &
-            caller_id)
-
-          if (DrhoDT(im_parm).le.zero) then
-           ! do nothing
-          else
-           print *,"DrhoDT invalid"
-           stop
-          endif
-
-          density_of_TZ=rhohydro+ &
-            rho_base*DrhoDT(im_parm)* &
-            (temperature-fort_tempconst(im_parm))
-
-          if ((temperature.ge.zero).and. &
-              (rhohydro.gt.zero).and. &
-              (fort_tempconst(im_parm).ge.zero).and. &
-              (fort_denconst(im_parm).gt.zero).and. &
-              (rho_base.gt.zero)) then 
-           ! do nothing
-          else
-           print *,"invalid parameters to get the density"
-           print *,"im_parm=",im_parm
-           print *,"temperature=",temperature
-           print *,"density_of_TZ=",density_of_TZ
-           print *,"rho_base=",rho_base
-           print *,"rhohydro=",rhohydro
-           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
-           stop
-          endif
-
-          if (density_of_TZ.gt.zero) then
-           ! do nothing
-          else if (density_of_TZ.le.zero) then
-           print *,"WARNING density_of_TZ.le.zero"
-           print *,"im_parm=",im_parm
-           print *,"temperature=",temperature
-           print *,"density_of_TZ=",density_of_TZ
-           print *,"rho_base=",rho_base
-           print *,"rhohydro=",rhohydro
-           print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
-           print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
-          
-           temperature=fort_tempcutoffmax(im_parm)
-  
-           density_of_TZ=rhohydro+ &
-            rho_base*DrhoDT(im_parm)* &
-            (temperature-fort_tempconst(im_parm))
-
-           if (density_of_TZ.gt.zero) then
-            ! do nothing
-           else
-            print *,"density_of_TZ.le.zero (STILL)"
-            stop
-           endif
-
-          else
-           print *,"density_of_TZ bust"
-           stop
-          endif
-
-          momden(D_DECL(i,j,k),im_parm)=density_of_TZ
-
-         else if (abs(local_vfrac).le.VOFTOL) then
-
-          momden(D_DECL(i,j,k),im_parm)=rho_base
-
-         else
-          print *,"local_vfrac invalid"
-          stop
-         endif
-
-        else if ((override_density(im_parm).eq.0).or. &
-                 (override_density(im_parm).eq.2)) then
-         momden(D_DECL(i,j,k),im_parm)=rho_base
-        else
-         print *,"override_density invalid"
-         stop
-        endif
-
-       else
-        print *,"mask invalid"
-        stop
-       endif
-
-      enddo
-      enddo
-      enddo ! i,j,k
-
-      return
-      end subroutine FORT_DERIVE_MOM_DEN
 
 
        ! adjust_temperature==1  modify temperature (Snew and coeff)

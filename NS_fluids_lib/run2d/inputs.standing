@@ -17,7 +17,6 @@ ns.initial_project_cycles=5
 ns.initial_cg_cycles=5
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.advection_order=2 1
-ns.slope_limiter_option=1 # 0=no limiter 1=minmod
 
 # multigrid class
 mg.verbose = 0

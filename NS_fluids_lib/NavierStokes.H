@@ -2220,8 +2220,8 @@ protected:
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 
-     // 0=no limiter 1=minmod 2=minmod with slope=0 at interface
-     // 3=no limit, but slope=0 at interface
+    // always slope=0 at interfaces.
+    // 0=no limiter 1=minmod  (default=1)
     static int slope_limiter_option;
     static int bicgstab_max_num_outer_iter;
     static Real projection_pressure_scale;

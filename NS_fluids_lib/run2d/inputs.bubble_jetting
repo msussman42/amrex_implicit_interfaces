@@ -124,7 +124,6 @@ ns.viscconst=0.0 0.0 1.0
 ns.denconst=1.0 0.1 1.0 
 ns.advection_order=2 2 1 # liquid, JWL, solid
 ns.density_advection_order=2 2 1 # liquid, JWL, solid
-ns.slope_limiter_option=1  # minmod (if advection_order=2)
 ns.xblob=0.0
 # y=0 corresponds to domain bottom
 # physical y=0 corresponds to free surface.

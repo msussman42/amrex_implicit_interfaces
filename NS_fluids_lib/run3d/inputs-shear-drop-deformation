@@ -45,7 +45,6 @@ ns.advection_order=1 1
 
 # JAN18 - face_flag=1 recommended for all problems.
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
-ns.slope_limiter_option=1
 ns.truncate_thickness= 2
 
 ns.minimum_relative_error=1.0e-18

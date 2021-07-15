@@ -28,7 +28,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 ns.num_materials=3
 ns.num_species_var=0
 ns.advection_order=2 1 2  # slope=0 at boundary, linear reconstruction elsewhere
-ns.slope_limiter_option=1  # 0=no limiting  1=minmod
 
 
 fab.do_initval=0  # default is 1 if DEBUG and 0 if NDEBUG

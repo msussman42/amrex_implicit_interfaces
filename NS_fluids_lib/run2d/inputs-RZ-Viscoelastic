@@ -41,7 +41,6 @@ ns.projection_pressure_scale=10000.0
 # configuration tensor order is first order for Q regardless of advection_order
 ns.advection_order=2 1
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
-ns.slope_limiter_option=1
 
 ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
