@@ -9029,14 +9029,14 @@ stop
          stop
         endif
 
-        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.half)) then
+        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.0.25d0)) then
          local_order=1
-        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.half)) then
+        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.0.25d0)) then
          if ((fcen(im_primary).lt.one-VOFTOL).or. &
-             (fmixed.lt.half)) then
+             (fmixed.lt.0.75d0)) then
           local_order=1
          else if ((fcen(im_primary).ge.one-VOFTOL).and. &
-                  (fmixed.ge.half)) then
+                  (fmixed.ge.0.75d0)) then
           ! do nothing
          else
           print *,"fcen or fmixed bust"
@@ -9551,14 +9551,14 @@ stop
          stop
         endif
 
-        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.half)) then
+        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.0.25d0)) then
          local_order=1
-        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.half)) then
+        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.0.25d0)) then
          if ((fcen(im_primary).lt.one-VOFTOL).or. &
-             (fmixed.lt.half)) then
+             (fmixed.lt.0.75d0)) then
           local_order=1
          else if ((fcen(im_primary).ge.one-VOFTOL).and. &
-                  (fmixed.ge.half)) then
+                  (fmixed.ge.0.75d0)) then
           ! do nothing
          else
           print *,"fcen or fmixed bust"

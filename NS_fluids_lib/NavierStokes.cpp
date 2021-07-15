@@ -164,6 +164,7 @@
 #include <NavierStokes.H>
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>
+#include <MARCHING_TETRA_F.H>
 #include <NAVIERSTOKES_F.H>
 #include <TECPLOTUTIL_F.H>
 #include <GODUNOV_F.H>
@@ -18529,8 +18530,8 @@ void NavierStokes::writeInterfaceReconstruction() {
   int plotint=parent->plotInt();
   int nmat=num_materials;
   for (int im=1;im<=nmat;im++) {
-    // in: NAVIERSTOKES_3D.F90
-   FORT_COMBINETRIANGLES(grids_per_level.dataPtr(),
+    // in: MARCHING_TETRA_3D.F90
+   fort_combinetriangles(grids_per_level.dataPtr(),
     &finest_level,
     &nsteps,
     &im,
