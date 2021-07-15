@@ -277,7 +277,6 @@ ns.advection_order  = 1 1 1
 # 0=no limiter,  1=minmod
 # 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
-ns.slope_limiter_option = 1
 
 # ----------------------------------------------------------
 # -------- Projection --------------------------------------

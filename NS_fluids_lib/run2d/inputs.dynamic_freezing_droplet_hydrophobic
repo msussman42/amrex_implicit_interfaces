@@ -23,7 +23,6 @@ ns.temperatureface_flag=0  # 0=use LS  1=use VOF
 ns.truncate_thickness=2.0
 
 ns.advection_order=1 1 1 1
-ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 
 # 1  => tag cell if this material is primary material in the cell stencil.
 # 0  => tag cell if this material and another *qualified* 

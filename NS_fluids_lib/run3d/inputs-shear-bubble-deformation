@@ -40,7 +40,6 @@ ns.advection_order=1 1
 # JULY 22 use VOF RECON for face density.
 # JULY 22 use LS for face viscosity.
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
-ns.slope_limiter_option=2
 ns.truncate_thickness= 2
 
 ns.minimum_relative_error=1.0e-18

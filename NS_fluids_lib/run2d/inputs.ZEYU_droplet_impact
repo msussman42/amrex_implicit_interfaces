@@ -39,7 +39,6 @@ ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
 ns.num_species_var=0
 # 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
-ns.slope_limiter_option=1
 ns.advection_order=2 2 1
 # 0 = MOF (moment of fluid)
 # 2 = CMOF (continuous moment of fluid)

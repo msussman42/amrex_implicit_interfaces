@@ -31,7 +31,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 2.0
 ns.EILE_flag=-1
 ns.advection_order=1 1 1 1
-ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 # 1  => tag cell if this material is primary material in the cell stencil.
 # 0  => tag cell if this material and another *qualified* 
 #       material are both primary materials in this cell stencil.

@@ -151,7 +151,6 @@ ns.heatviscconst=0.0 0.0 0.0
 ns.include_viscous_heating=0
 ns.denconst=1.0 0.001 1.0
 ns.advection_order=1 1 1 1
-ns.slope_limiter_option=1  # minmod (if advection_order=2)
 ns.xblob=-2.0
 ns.yblob=0.0 
 ns.zblob=0.0

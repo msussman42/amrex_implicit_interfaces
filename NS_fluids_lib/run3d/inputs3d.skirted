@@ -49,7 +49,6 @@ ns.post_init_pressure_solve=1 # 1=INCOMP 0=COMP
 
 ns.advection_order=2 2  # 2 2=INCOMP 1 1=COMP
 ns.density_advection_order=1 1
-ns.slope_limiter_option=2  # 0 or 3=no limiting  1 or 2=minmod
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=3  # number of initial jacobi iterations

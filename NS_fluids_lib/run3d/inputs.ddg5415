@@ -22,7 +22,6 @@ ns.num_materials=3
 ns.num_species_var=0
 
 ns.advection_order=1 1 1
-ns.slope_limiter_option=1  # 0=no limiting
 
 
 # multigrid class

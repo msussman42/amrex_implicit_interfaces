@@ -91,7 +91,6 @@ ns.adv_dir=1
 
 ns.advection_order=2 1
 ns.density_advection_order=1 1
-ns.slope_limiter_option=1  # 0=no limiter 1=minmod
 
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)

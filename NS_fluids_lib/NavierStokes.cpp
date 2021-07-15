@@ -676,9 +676,9 @@ Vector<int> NavierStokes::density_advection_order;
 // 2=always EI   3=always LE
 int NavierStokes::EILE_flag=1;
 
-// 0=no limiter 1=minmod 2=minmod with slope=0 at interface
-// 3=no limit, but slope=0 at interface
-int  NavierStokes::slope_limiter_option=2; 
+// always slope=0 at interfaces.
+// 0=no limiter 1=minmod 
+int  NavierStokes::slope_limiter_option=1; 
 int  NavierStokes::bicgstab_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
 Real NavierStokes::projection_velocity_scale=1.0;
@@ -11693,7 +11693,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // in: GODUNOV_3D.F90
+     // declared in: GODUNOV_3D.F90
     fort_velmac_override(
      &nmat,
      tilelo,tilehi,
@@ -15649,20 +15649,13 @@ NavierStokes::split_scalar_advection() {
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
-  // in the gas regions:
-  //  MASS_cell = volume_cell * density_cell = MASS_liquid + MASS_ambient 
-  //  density_cell=density_liquid + density_ambient
-  //  Y=density_liquid/density_cell
-  // Clausius Clapyron: P_gamma=P_ref * exp(-L M/R * (1/T_Gamma - 1/T_Sat)
-  // EOS: P_gamma=PEOS_liq(rho_liq,T_liq)=PEOS_vap(rho_vap,T_vap)
-  // If there is a mixture, then
-  //  X=exp(-L M/R *(1/T_gamma-1/T_sat))
-  // If there is no mixture, then ???
-  //  Y=mass_cell/(volume_cell * density_liquid)=density_vapor/density_liquid
-  //  Y=X=exp(-L M/R *(1/T_gamma-1/T_sat))
-  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
+ //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
 
-  // getStateMOM_DEN declared in: NavierStokes.cpp
+ // getStateMOM_DEN declared in: NavierStokes.cpp
+ // if override_density(im)==1,
+ // rho_im=rho(z)+drho/dT * (T_im - T0_im)
+ // if override_density(im)=0 or 2, nothing changes:
+ //   P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
  getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
  getStateTensor_localMF(TENSOR_RECON_MF,1,0,
@@ -15778,14 +15771,7 @@ NavierStokes::split_scalar_advection() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
-    // note for evaporation: density_air = total density of ambient gas and
-    //   vapor mixture.
-    // note: Y_vapor = mass_fraction=mass_vapor/mass_total
-    // mass_vapor=V_vapor * den_vapor=F_vapor * V_total * den_vapor
-    // mass_total=V_total * den_total
-    // so, Y_vapor=F_vapor * V_total * den_vapor/(V_total * den_total)=
-    //     F_vapor * den_vapor/den_total 
+    // declared in: GODUNOV_3D.F90
   fort_build_conserve( 
    &iden_base,
    override_density.dataPtr(),

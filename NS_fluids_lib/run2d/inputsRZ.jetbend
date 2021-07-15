@@ -35,7 +35,6 @@ ns.initial_cg_cycles=10
 ns.num_materials=3
 ns.num_species_var=0
 ns.advection_order=1 1 1 # 2nd order results in loss of positivity
-ns.slope_limiter_option=1  # 0=no limiting  1=minmod
 
 ns.visual_option=-2  # output zonal tecplot files
 

@@ -43,7 +43,6 @@ ns.mass_relaxation_factor=0.0
 ns.advection_order=1 1
 
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
-ns.slope_limiter_option=2
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10  # number of initial jacobi iterations

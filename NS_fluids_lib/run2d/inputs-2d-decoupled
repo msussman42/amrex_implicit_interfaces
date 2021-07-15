@@ -39,7 +39,6 @@ ns.projection_pressure_scale=100.0
 ns.advection_order=1 1
 ns.tessellating_advection=0
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
-ns.slope_limiter_option=1
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10  # number of initial jacobi iterations

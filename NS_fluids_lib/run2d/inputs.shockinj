@@ -46,7 +46,6 @@ ns.num_materials=2
 ns.num_species_var=0
 ns.advection_order=1 1 1  
 ns.density_advection_order=1 1 1  
-ns.slope_limiter_option=1  # 0=no limiting  1=minmod
 
 ns.visual_option=-2  # output zonal tecplot files
 ns.post_init_pressure_solve=0  # 0=COMPRESSIBLE 1=INCOMPRESSIBLE
