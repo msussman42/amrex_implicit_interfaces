@@ -38,8 +38,6 @@ ns.projection_pressure_scale=10000.0
 
 # M.OHTA 1 is faster and works well with new version
 # water is 2nd order, gas is 1st order (both first order is ok too)
-# configuration tensor order is first order for Q regardless of advection_order
-ns.advection_order=2 1
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 
 ns.initial_project_cycles=10  # number of initial jacobi iterations

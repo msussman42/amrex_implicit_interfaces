@@ -82,7 +82,6 @@ ns.visual_option=-2 # tecplot (amr hierarchy preserved)
 ns.num_materials=2      
 ns.num_species_var=0
 
-ns.advection_order=2 1
 
 ns.shock_timestep=2 2 2
 

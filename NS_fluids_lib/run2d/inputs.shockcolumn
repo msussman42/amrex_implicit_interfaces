@@ -136,10 +136,7 @@ ns.density_ceiling=1.2 1.0
 # 0.991 is cavitation density using TAIT EOS
 # 0.9999999 "                  " using TILLOTSON EOS
 ns.density_floor=0.9999999 0.0001
-# Nov 15, 2018 advection_order=2 in order to try and 
 # reduce numerical dissipation
-ns.advection_order=2 2
-ns.density_advection_order=2 2
 ns.xblob=0.0
 ns.yblob=5.0
 ns.zblob=0.0

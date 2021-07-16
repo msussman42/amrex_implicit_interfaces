@@ -45,10 +45,8 @@ ns.truncate_thickness=2.0
 # OCTOBER 22 - EILE_flag=-1 performs best
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 # water is 1st order, gas is 1st order 
-# OCTOBER 22 - advection_order=1 1 performs best for bubble
 # NOV 4: 3 values required
 # JAN8: 2nd order so that splash is captured.
-ns.advection_order=2 2 2
 
 # JAN21 - face_flag=1 performs best for this problem (I think).
 # 0=use LS  1=use VOF

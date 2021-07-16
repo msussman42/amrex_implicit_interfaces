@@ -9,7 +9,6 @@ geometry.prob_hi   =   0.3  0.3  0.45 # units of cm
 ns.num_divu_outer_sweeps=2  # 1=INCOMP  2=COMP
 ns.EILE_flag=-1 # -1 Weymouth and Yue  1=alternate EI LE
 ns.continuous_mof=2
-ns.advection_order=1 1 1 1
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 # number of MGPCG steps to do in order to get

@@ -8,7 +8,6 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  30.0  # maximum problem time
-ns.advection_order=2
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble

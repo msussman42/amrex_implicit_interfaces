@@ -2208,14 +2208,9 @@ protected:
     static Real vinletgas;
     static Real twall;
     static Real walltemp;
-    static Vector<int> advection_order;
-    static Vector<int> density_advection_order;
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 
-    // always slope=0 at interfaces.
-    // 0=no limiter 1=minmod  (default=1)
-    static int slope_limiter_option;
     static int bicgstab_max_num_outer_iter;
     static Real projection_pressure_scale;
     static Real projection_velocity_scale;

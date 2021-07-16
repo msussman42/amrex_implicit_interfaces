@@ -30,7 +30,6 @@ mg.rtol_b = -0.01
 Lp.v = 0
 ns.be_cn_theta=1.0
 ns.rk_theta=1.0
-ns.advection_order=1
 ns.pcav=0.0
 ns.dencav=0.0000001
 ns.pchopp=0.0

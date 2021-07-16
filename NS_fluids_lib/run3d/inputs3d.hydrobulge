@@ -54,7 +54,6 @@ ns.walltemp=3.5420001e+3
 ns.cvvapor=1.0
 ns.cvwater=1.0
 ns.solvevapor=1
-ns.advection_order=2
 ns.adiabatic=0
 ns.ls_curvature=1
 

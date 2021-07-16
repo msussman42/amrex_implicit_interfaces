@@ -37,7 +37,6 @@ ns.rk_theta=1.0
 
 amr.n_cell    = 64 128
 amr.max_level = 0  # ns.max_level_solver defaults to this
-ns.advection_order=2
 ns.start_advection_level=9999
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid

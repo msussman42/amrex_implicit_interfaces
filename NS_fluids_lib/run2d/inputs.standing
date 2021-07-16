@@ -16,7 +16,6 @@ Lp.bottom_smooth_type=2
 ns.initial_project_cycles=5
 ns.initial_cg_cycles=5
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-ns.advection_order=2 1
 
 # multigrid class
 mg.verbose = 0

@@ -111,7 +111,6 @@ ns.heatviscconst=58000.0 58000.0
 ns.include_viscous_heating=0
 ns.denconst=1.0 2.0
 #ns.density_floor=0.999957749988 0.001 7.5
-ns.advection_order=1 1 1 1
 ns.xblob=5.0  # initial location of solid center
 ns.yblob=5.0
 ns.zblob=5.0

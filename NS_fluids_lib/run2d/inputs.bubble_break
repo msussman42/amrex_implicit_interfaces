@@ -34,7 +34,6 @@ ns.interface_vel_extrap_order=1
 ns.use_height_for_curv=1
 ns.redistance_narrow_band=3
 ns.use_cell_center_extrap=1
-ns.advection_order=1
 amr.n_cell    = 32 64  # previously 32x96 max_level=3
 amr.max_level = 0
 # 0- 1 level 1- 2 levels  2- 3 levels

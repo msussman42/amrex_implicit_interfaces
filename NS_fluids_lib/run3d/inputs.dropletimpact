@@ -28,7 +28,6 @@ ns.num_materials=3
 ns.num_species_var=0
 # 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
-ns.advection_order=2 2 1
 ns.continuous_mof=0
 ns.FD_curv_interp=1
 ns.EILE_flag=-1

@@ -139,7 +139,6 @@ ns.tension        = 0.0 0.0
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 
-ns.advection_order=2 2
 
 ns.axis_dir=0
 ns.vorterr=0.0 0.0 0.0

@@ -39,7 +39,6 @@ ns.minimum_relative_error=1.0e-18
 ns.projection_pressure_scale=100.0
 # M.OHTA 2 should be ok, 3 is conservative choice
 
-ns.advection_order=1 1
 
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 

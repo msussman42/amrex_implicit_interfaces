@@ -75,7 +75,6 @@ ns.tvdrk=0
 ns.conserve_vof=0
 ns.overlap=2.0
 ns.is_twophase=1   # 1
-ns.advection_order=2
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep

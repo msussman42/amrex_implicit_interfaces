@@ -48,7 +48,6 @@ cg.maxiter = 200
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
-ns.advection_order=2 1 1
 ns.num_materials=3
 ns.num_species_var=0
 

@@ -57,9 +57,7 @@ ns.viscous_maxiter=1000
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 ns.mass_relaxation_factor=0.0
 # water is 1st order, gas is 1st order 
-# OCTOBER 22 - advection_order=1 1 performs best for bubble
 # JAN18 - make 2 2 if high Reynolds number.
-ns.advection_order=1 1
 
 # OCTOBER 22 - face_flag=1 performs best for bubble.
 # JAN18 - face_flag=1 recommended for all problems.

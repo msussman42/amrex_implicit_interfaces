@@ -48,7 +48,6 @@ ns.num_materials=2
 ns.num_species_var=0
 
 ns.post_init_pressure_solve=0 # 1=INCOMP 0=COMPRESSIBLE
-ns.advection_order=1 1 1
 
 
 amr.plotfile_on_restart=1

@@ -9,7 +9,6 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  10.0 20.0  # centimeters
 #geometry.is_periodic=1 0
-ns.advection_order=2
 ns.heat_order=2
 
 # multigrid class

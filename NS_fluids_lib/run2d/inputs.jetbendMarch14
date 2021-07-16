@@ -16,7 +16,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.0 2.0  # units of cm
 geometry.is_periodic = 0 0 
 
-ns.advection_order=2
 # multigrid class
 mg.verbose = 0
 cg.verbose = 0

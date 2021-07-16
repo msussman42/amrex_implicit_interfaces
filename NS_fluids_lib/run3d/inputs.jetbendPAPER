@@ -43,7 +43,6 @@ ns.visual_hi = 22 18 8
 
 ns.conserve_vof=1  # do not truncate small vfrac to 0.
 #ns.use_liquid_for_dt=1
-ns.advection_order=2
 ns.rho_wtd_initial_project=1
 ns.ractivex=1.28
 ns.ractivey=1.28

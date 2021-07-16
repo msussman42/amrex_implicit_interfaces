@@ -21,7 +21,6 @@ ns.post_init_pressure_solve=1
 ns.num_materials=3
 ns.num_species_var=0
 
-ns.advection_order=1 1 1
 
 
 # multigrid class

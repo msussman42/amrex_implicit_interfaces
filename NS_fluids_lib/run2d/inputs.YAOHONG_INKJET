@@ -157,7 +157,6 @@ ns.FSI_flag=0 0 1  # 1 (GLOBALDIST), 2 (cas file)
 ns.heatviscconst=0.0 0.0 0.0 # no thermal diffusion (so that test runs quickly)
 # ns.include_viscous_heating=0
 ns.denconst=1180.0 1.169 1180.0
-ns.advection_order=1 1 1 1
 ns.xblob=0.0
 ns.yblob=0.0
 ns.zblob=0.0

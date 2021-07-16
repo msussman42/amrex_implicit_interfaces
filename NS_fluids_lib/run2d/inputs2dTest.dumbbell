@@ -28,7 +28,6 @@ ns.be_cn_theta=1.0
 ns.rk_theta=1.0
 
 ns.constant_viscosity=0
-ns.advection_order=2
 amr.n_cell    = 24 48  # 24 48
 amr.max_level = 0
 ns.start_tension_level=99999

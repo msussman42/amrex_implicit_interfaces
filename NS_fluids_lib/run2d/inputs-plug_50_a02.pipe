@@ -4,7 +4,6 @@
 # amr.n_error_buf = 6 6 6 6 6
 # 
 # mg.bot_atol = 1.0e-9 (for mac.mac_abs_tol = 1.0e-6)
-# ns.advection_order = 2
 # amr.n_cell = 32 1600
 # amr.max_level = 0
 # amr.max_grid_size = 4096
@@ -36,7 +35,6 @@ cg.maxiter = 200
 mg.bot_atol = 1.0e-9
 mg.rtol_b = -0.01
 Lp.v = 0
-ns.advection_order=2
 
 amr.n_cell    = 32 1600  # L=50*H=1600
 amr.max_level =  0

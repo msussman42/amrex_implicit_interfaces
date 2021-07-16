@@ -18,7 +18,6 @@ stop_time = 0.2
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.0 2.0  # centimeters
-ns.advection_order=1 1 1
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3

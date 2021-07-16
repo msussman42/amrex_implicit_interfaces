@@ -36,7 +36,6 @@ ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.num_materials=3
 ns.num_species_var=0
 #ns.coarse_boundary_order=1  OCTOBER 23: always coarse_boundary_order=1
-ns.advection_order=2 2 1  # slope=0 at boundary, linear reconstruction elsewhere
 #ns.coarse_fine_conservation=0 OCTOBER 23: always =1 I think.
 
 # OCTOBER 23: projection_pressure_scale=1.0e+2

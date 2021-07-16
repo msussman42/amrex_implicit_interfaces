@@ -36,7 +36,6 @@ ns.mapspreadz=0.25
 Lp.smooth_type=2  # 0 GSRB 1 line 2 ILU
 amr.n_cell    = 256 64 64
 amr.max_level = 0 #2   # 2 or more on SUPERCOMPUTER
-ns.advection_order=2
 ns.conservative_advection=1
 ns.sharp_solid=0
 

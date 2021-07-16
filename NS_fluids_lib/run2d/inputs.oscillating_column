@@ -93,8 +93,6 @@ ns.material_type=11 12   # 11=koren_rho1, 12=koren_rho2
 ns.heatviscconst=0.0 0.0
 ns.viscconst=0.0 0.0 
 ns.denconst=1.0 0.001
-ns.advection_order=2 2
-ns.density_advection_order=2 2
 ns.xblob=0.0
 ns.yblob=0.0
 ns.zblob=0.0 
