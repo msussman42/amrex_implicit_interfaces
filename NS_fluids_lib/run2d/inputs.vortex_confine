@@ -87,7 +87,6 @@ ns.tension        = 0.0 0.0
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1          # timesteps between computing mass 
 
-ns.advection_order=2 2
 
 # if 3, add an interface and track it:
 #  dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob

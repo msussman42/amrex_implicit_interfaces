@@ -93,7 +93,6 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2
 
-ns.advection_order=1 1 
 
 ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.viscconst=0.01 1.225e-5

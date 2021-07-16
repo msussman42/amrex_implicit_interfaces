@@ -89,8 +89,6 @@ ns.advbot=0.0
 ns.adv_vel=0.1
 ns.adv_dir=1
 
-ns.advection_order=2 1
-ns.density_advection_order=1 1
 
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)

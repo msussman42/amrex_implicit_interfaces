@@ -39,7 +39,6 @@ ns.initial_cg_cycles=0
 
 amr.n_cell    = 64 64 64
 amr.max_level =  0  
-ns.advection_order=2   # MS (make this 1 for STABLE)
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid

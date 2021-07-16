@@ -40,7 +40,6 @@ ns.num_materials=2
 ns.num_species_var=0
 
 
-ns.advection_order=1  
 
 ns.minimum_relative_error=1.0e-18
 # scaling set so that initial pressure solve residual ~O(1)

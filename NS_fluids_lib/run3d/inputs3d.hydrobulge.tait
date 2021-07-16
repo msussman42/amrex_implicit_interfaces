@@ -49,7 +49,6 @@ ns.ejwl=0.169e+6
 ns.r1jwl=4.4
 ns.r2jwl=1.2
 ns.gammavapor=1.25
-ns.advection_order=2
 ns.ls_curvature=1
 
 ns.hydrostatic_pressure=1.0

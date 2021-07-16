@@ -83,7 +83,6 @@ ns.tension        = 0.0 0.0
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 10        # timesteps between computing mass 
 
-ns.advection_order=2 2
 
 # if 3 for example, add an interface and track it:
 #  dist=abs(y-1/2)-1/4

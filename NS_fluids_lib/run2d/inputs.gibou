@@ -18,7 +18,6 @@ geometry.prob_hi   = 0.04 0.08
 #geometry.is_periodic = 1 0
 ns.expansion_layer_thickness=1.0E-10
 ns.wall_layer_thickness=0.0
-ns.advection_order=2
 
 
 # multigrid class

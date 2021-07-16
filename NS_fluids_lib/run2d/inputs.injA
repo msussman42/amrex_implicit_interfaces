@@ -29,7 +29,6 @@ ns.initial_project_cycles=3  # number of initial jacobi iterations
 
 ns.num_materials=4
 ns.num_species_var=0
-ns.advection_order=1 1 1 1  
 
 ns.wall_scale=0.0
 ns.embedded_wall_scale=0.0

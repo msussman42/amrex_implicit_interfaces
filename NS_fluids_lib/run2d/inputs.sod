@@ -97,8 +97,6 @@ ns.material_type=18 18
 ns.heatviscconst=0.0 0.0
 ns.viscconst=0.0 0.0 
 ns.denconst=1.0 0.125
-ns.advection_order=1 1
-ns.density_advection_order=1 1
 ns.xblob=0.5  # this is the initial interface location if probtype=93
 ns.yblob=0.0
 ns.zblob=0.0 

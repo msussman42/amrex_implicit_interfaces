@@ -27,7 +27,6 @@ mg.rtol_b = -0.01
 ns.be_cn_theta=1.0
 ns.rk_theta=1.0
 
-ns.advection_order=2
 amr.n_cell    = 12 12 24 
 amr.max_level = 3
 ns.start_tension_level=99999

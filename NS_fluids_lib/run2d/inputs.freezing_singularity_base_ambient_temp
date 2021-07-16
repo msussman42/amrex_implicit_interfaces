@@ -23,7 +23,6 @@ geometry.prob_lo   =  0.0 0.0
 # initial contact radius is 0.2 mm
 # dimensionless contact radius 1.0
 geometry.prob_hi   =  1.25 2.5  # r=0.2 r^* 
-ns.advection_order=1 1 1 1
 
 # 1  => tag cell if this material is primary material in the cell stencil.
 # 0  => tag cell if this material and another *qualified* 

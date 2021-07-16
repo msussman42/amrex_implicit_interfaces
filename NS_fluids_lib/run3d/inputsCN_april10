@@ -76,7 +76,6 @@ ns.tvdrk=0
 ns.mac_mg_precond=2
 ns.multilevel_smooth_num=-1
 
-ns.advection_order=1
 ns.thetacut=1.0e-10
 ns.conserve_vof=3
 ns.overlap=1.0

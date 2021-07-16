@@ -42,7 +42,6 @@ ns.projection_pressure_scale=100.0
 ns.operator_split=1
 # water is 2nd order, gas is 1st order (both first order is ok too)
 # AUGUST 19: 3 materials
-ns.advection_order=2 1 1
 
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 

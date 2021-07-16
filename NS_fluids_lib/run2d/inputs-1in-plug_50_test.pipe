@@ -33,7 +33,6 @@ cg.maxiter = 200
 mg.bot_atol = 1.0e-8
 mg.rtol_b = -0.01
 Lp.v = 0
-ns.advection_order=1
 
 amr.n_cell    = 16 800  # L=50*H
 amr.max_level =  1  

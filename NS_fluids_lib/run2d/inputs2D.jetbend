@@ -34,7 +34,6 @@ ns.initial_cg_cycles=5
 ns.num_materials=2 # JCP paper
 #ns.num_materials=3
 ns.num_species_var=0
-ns.advection_order=1 1 1  # 2nd order results in loss of positivity
 
 ns.visual_option=-2  # output zonal tecplot files
 

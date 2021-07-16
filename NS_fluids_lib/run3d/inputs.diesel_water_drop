@@ -34,7 +34,6 @@ ns.num_species_var=0
 # NO BOUNCE: 1 -1 1
 # BOUNCE:    0 0 0
 
-ns.advection_order=1 1 1 
 
 
 ns.minimum_relative_error=1.0e-18

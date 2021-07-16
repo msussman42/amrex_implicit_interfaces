@@ -20,7 +20,6 @@ ns.FSI_flag= 0 0 2
 ns.num_materials=3
 ns.num_species_var=0
 
-ns.advection_order=1  # slope=0 at boundary, linear reconstruction elsewhere
 
 
 # multigrid class

@@ -9,7 +9,6 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ  2=>R theta Z
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  0.01 0.04  
 geometry.is_periodic = 0 0
-ns.advection_order=1
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10

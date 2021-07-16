@@ -6711,7 +6711,6 @@ stop
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T localbc
-      INTEGER_T local_mac_grow
 
       nhalf=3
 
@@ -6730,7 +6729,7 @@ stop
        stop
       endif
  
-      if ((mac_grow.ne.1).and.(mac_grow.ne.2)) then
+      if (mac_grow.ne.1) then
        print *,"mac_grow invalid mac_grow=",mac_grow
        stop
       endif
@@ -6789,8 +6788,8 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,utemp_ptr,mac_grow+1,normdir,12)
-      call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow+1,normdir,12)
+      call checkbound_array1(fablo,fabhi,utemp_ptr,mac_grow,normdir,12)
+      call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow,normdir,12)
       call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1,12)
 
       if (dt.le.zero) then
@@ -6818,10 +6817,8 @@ stop
         ! 4. copy into mac_velocity
         ! 5. repeat for cell_velocity
 
-      local_mac_grow=mac_grow+1
-
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,local_mac_grow,normdir,28)
+        growlo,growhi,mac_grow,normdir,28)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -8377,7 +8374,6 @@ stop
        DIMS(xd_mac_old), &
        xvof,DIMS(xvof), &
        xvel,DIMS(xvel), &  ! 1..num_MAC_vectors
-       xvelslp,DIMS(xvelslp), &  ! xvelslope,xcen
        xlo,dx, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -8413,18 +8409,18 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(xd_mac_old) 
       INTEGER_T, intent(in) :: DIMDEC(xvof) 
       INTEGER_T, intent(in) :: DIMDEC(xvel) !1..num_MAC_vectors
-      INTEGER_T, intent(in) :: DIMDEC(xvelslp) ! xvelslope,xcen
       REAL_T, intent(in), target :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: cenF(DIMV(cenF),nrefine_cen)
+      REAL_T, pointer :: cenF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: x_mac_old(DIMV(x_mac_old))
+      REAL_T, pointer :: x_mac_old_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: xd_mac_old(DIMV(xd_mac_old))
+      REAL_T, pointer :: xd_mac_old_ptr(D_DECL(:,:,:))
       REAL_T, intent(out), target :: xvof(DIMV(xvof),nmat)
       REAL_T, pointer :: xvof_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: xvel(DIMV(xvel),num_MAC_vectors) 
       REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
-       ! xvelslope,xcen
-      REAL_T, intent(out), target :: xvelslp(DIMV(xvelslp),1+nmat) 
-      REAL_T, pointer :: xvelslp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
 
@@ -8433,20 +8429,23 @@ stop
       INTEGER_T im
       REAL_T velmac(num_MAC_vectors)
       REAL_T volmatCV(nmat)
-      REAL_T cenmatCV(nmat)
       REAL_T volCV_fluid
       REAL_T volCV_solid
       REAL_T volquarter
-      INTEGER_T irefine,irefinecen,iside
+      INTEGER_T irefine,iside
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T ivec
 
       nhalf=1
 
+      vofF_ptr=>vofF
+      cenF_ptr=>cenF
+      x_mac_old_ptr=>x_mac_old
+      xd_mac_old_ptr=>xd_mac_old
+
       xvof_ptr=>xvof
       xvel_ptr=>xvel
-      xvelslp_ptr=>xvelslp
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid build macvof"
@@ -8465,8 +8464,7 @@ stop
        stop
       endif
 
-      if ((num_MAC_vectors.eq.1).or. &
-          (num_MAC_vectors.eq.2)) then
+      if (num_MAC_vectors.eq.2) then
        ! do nothing
       else
        print *,"num_MAC_vectors invalid"
@@ -8499,13 +8497,12 @@ stop
        print *,"nrefine_cen invalid in build_macvof"
        stop
       endif
-      call checkbound_array1(fablo,fabhi,x_mac_old,ngrowmac,veldir-1,1271)
-      call checkbound_array1(fablo,fabhi,xd_mac_old,ngrowmac,veldir-1,1271)
+      call checkbound_array1(fablo,fabhi,x_mac_old_ptr,ngrowmac,veldir-1,1271)
+      call checkbound_array1(fablo,fabhi,xd_mac_old_ptr,ngrowmac,veldir-1,1271)
       call checkbound_array(fablo,fabhi,xvof_ptr,ngrowmac,veldir-1,1271)
       call checkbound_array(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1,1271)
-      call checkbound_array(fablo,fabhi,xvelslp_ptr,ngrowmac,veldir-1,1271)
-      call checkbound_array(fablo,fabhi,vofF,ngrow,-1,1272)
-      call checkbound_array(fablo,fabhi,cenF,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,vofF_ptr,ngrow,-1,1272)
+      call checkbound_array(fablo,fabhi,cenF_ptr,ngrow,-1,1272)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrowmac,veldir-1,20)
@@ -8610,7 +8607,6 @@ stop
 
        do im=1,nmat
         volmatCV(im)=zero
-        cenmatCV(im)=zero
        enddo
        volCV_fluid=zero
        volCV_solid=zero
@@ -8643,28 +8639,6 @@ stop
          volquarter=vofF(D_DECL(icell,jcell,kcell),irefine)
          volmatCV(im)=volmatCV(im)+volquarter
 
-         ! centroid in absolute coordinate system
-         if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-
-          if (iside.eq.-1) then !right side of left cell.
-           irefinecen=(veldir-1)*2*nmat*SDIM+ &
-            nmat*SDIM+(im-1)*SDIM+normdir+1
-          else if (iside.eq.1) then !left side of right cell.
-           irefinecen=(veldir-1)*2*nmat*SDIM+ &
-            (im-1)*SDIM+normdir+1
-          else
-           print *,"iside invalid"
-           stop
-          endif
-
-          cenmatCV(im)=cenmatCV(im)+ &
-           volquarter*cenF(D_DECL(icell,jcell,kcell),irefinecen)
-         else
-          print *,"normdir invalid BUILD_MACVOF (2)"
-          stop
-         endif
-
-         
          if (is_rigid(nmat,im).eq.0) then 
           volCV_fluid=volCV_fluid+volquarter
          else if (is_rigid(nmat,im).eq.1) then
@@ -8700,13 +8674,12 @@ stop
           print *,"volmatCV= ",volmatCV(im)
           stop
          else if (volmatCV(im).eq.zero) then
-          cenmatCV(im)=zero  ! placeholder
+          ! do nothing
          else if (volmatCV(im).gt.zero) then
           if (volCV_fluid.le.zero) then
            print *,"volCV_fluid bust"
            stop
           endif
-          cenmatCV(im)=cenmatCV(im)/volmatCV(im)
           volmatCV(im)=volmatCV(im)/volCV_fluid
           if ((volmatCV(im).lt.zero).or. &
               (volmatCV(im).gt.one+VOFTOL_SLOPES)) then
@@ -8718,13 +8691,6 @@ stop
           stop
          endif
       
-         if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-           xvelslp(D_DECL(i,j,k),1+im)=cenmatCV(im) ! xcen
-         else
-           print *,"normdir invalid BUILD_MACVOF (3)"
-           stop
-         endif
-
          xvof(D_DECL(i,j,k),im)=volmatCV(im)
         enddo  ! im=1..nmat
        else
@@ -8738,890 +8704,6 @@ stop
       return
       end subroutine fort_build_macvof
 
-
-      ! masknbr:
-      ! (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
-      ! (2) =1 interior  =0 otherwise
-      ! (3) =1 interior+ngrow-1  =0 otherwise
-      ! (4) =1 interior+ngrow    =0 otherwise
-      subroutine fort_build_slopes( &
-       masknbr,DIMS(masknbr), &
-       recon,DIMS(recon), &
-       slsrc,DIMS(slsrc), &
-       sldst,DIMS(sldst), &
-       nc_conserve, &
-       nmat, &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       level, &
-       finest_level, &
-       velbc, &
-       xlo,dx, &
-       normdir, &
-       ngrow,  &
-       advection_order, &
-       density_advection_order, &
-       slope_limiter_option) &
-      bind(c,name='fort_build_slopes')
-
-      use probcommon_module
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: nc_conserve
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: normdir,ngrow
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: velbc(SDIM,2)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: advection_order(nmat)
-      INTEGER_T, intent(in) :: density_advection_order(nmat)
-      INTEGER_T, intent(in) :: slope_limiter_option
-      INTEGER_T, intent(in) :: DIMDEC(masknbr) 
-      INTEGER_T, intent(in) :: DIMDEC(recon) 
-      INTEGER_T, intent(in) :: DIMDEC(slsrc)
-      INTEGER_T, intent(in) :: DIMDEC(sldst)
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
-      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: slsrc(DIMV(slsrc),nc_conserve)
-      REAL_T, pointer :: slsrc_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: sldst(DIMV(sldst),nc_conserve)
-      REAL_T, pointer :: sldst_ptr(D_DECL(:,:,:),:)
-
-      INTEGER_T igridlo(3),igridhi(3)
-      INTEGER_T i,j,k
-      INTEGER_T n
-      INTEGER_T nden
-      INTEGER_T ii,jj,kk
-      INTEGER_T local_order
-      INTEGER_T local_masknbr
-      INTEGER_T dircheck
-      INTEGER_T icheck
-      INTEGER_T icrit
-      REAL_T fcen(nmat)
-      REAL_T fmixed
-      REAL_T fsolid
-      REAL_T fsolid_mixed
-      REAL_T splus,sminus,scen,sleft,sright
-      REAL_T dencen,denplus,denminus
-      REAL_T slope_temp
-      INTEGER_T im
-      INTEGER_T im_primary
-      INTEGER_T im_local
-      INTEGER_T istate_local
-      INTEGER_T nhalf
-      REAL_T xsub(-3:3)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T dxleft,dxright
-      INTEGER_T vofcomp
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid47"
-       stop
-      endif
-
-      masknbr_ptr=>masknbr
-      recon_ptr=>recon
-      slsrc_ptr=>slsrc
-      sldst_ptr=>sldst
-
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,1247)
-      call checkbound_array(fablo,fabhi,slsrc_ptr,ngrow,-1,1248)
-      call checkbound_array(fablo,fabhi,sldst_ptr,1,-1,1249)
-      call checkbound_array(fablo,fabhi,recon_ptr,ngrow,-1,1251)
-
-      if (nc_conserve.ne.SDIM+nmat*num_state_material) then
-       print *,"nc_conserve invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
-       print *,"normdir invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid build slopes"
-       stop
-      endif
-
-      if (num_state_material.ne.num_state_base+num_species_var) then
-       print *,"num_state_material invalid"
-       stop
-      endif
-
-      ii=0
-      jj=0
-      kk=0
-      if (normdir.eq.0) then
-       ii=1
-      else if (normdir.eq.1) then
-       jj=1
-      else if ((normdir.eq.SDIM-1).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-       igridlo,igridhi,1)
-
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
-      do k=igridlo(3),igridhi(3)
-       do n=1,nc_conserve
-        sldst(D_DECL(i,j,k),n)=zero
-       enddo
-      enddo
-      enddo
-      enddo
-
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
-      do k=igridlo(3),igridhi(3)
-
-       nhalf=1
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       local_order=2 
-       
-       local_masknbr=NINT(masknbr(D_DECL(i,j,k)))
-
-       if (levelrz.eq.0) then
-        ! do nothing
-       else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-        if (xsten(0,1).le.VOFTOL*dx(1)) then
-         local_order=1
-        endif
-       else
-        print *,"levelrz invalid build slopes"
-        stop
-       endif
-       do dircheck=1,SDIM
-        if (dircheck.eq.1) then
-         icheck=i
-        else if (dircheck.eq.2) then
-         icheck=j
-        else if ((dircheck.eq.3).and.(SDIM.eq.3)) then
-         icheck=k
-        else
-         print *,"dircheck invalid"
-         stop
-        endif
-        if (icheck.le.fablo(dircheck)) then
-         if (velbc(dircheck,1).eq.INT_DIR) then
-          if (local_masknbr.eq.0) then ! coarse/fine bdry
-           local_order=1
-          else if (local_masknbr.eq.1) then ! fine/fine bdry
-           ! do nothing
-          else
-           print *,"masknbr invalid"
-           stop
-          endif
-         else
-          local_order=1 ! 1st order slopes touching or outside the domain
-         endif
-        else if (icheck.ge.fabhi(dircheck)) then
-         if (velbc(dircheck,2).eq.INT_DIR) then
-          if (local_masknbr.eq.0) then ! coarse/fine bdry
-           local_order=1
-          else if (local_masknbr.eq.1) then ! fine/fine bdry
-           ! do nothing
-          else
-           print *,"masknbr invalid"
-           stop
-          endif
-         else
-          local_order=1 ! 1st order touching or outside the domain
-         endif
-        else
-         ! do nothing
-        endif
-       enddo ! dircheck=1..sdim
-
-       if (local_order.eq.1) then
-        ! do nothing
-       else if (local_order.eq.2) then
-
-        if (normdir.eq.0) then
-         icrit=i
-        else if (normdir.eq.1) then
-         icrit=j
-        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-         icrit=k
-        else
-         print *,"normdir invalid"
-         stop
-        endif
-
-        nhalf=3 
-        call gridsten1D_level(xsub,icrit,level,normdir+1,nhalf)
-        dxleft=xsub(0)-xsub(-2)
-        dxright=xsub(2)-xsub(0)
-        if ((dxleft.le.zero).or.(dxright.le.zero)) then
-         print *,"(dxleft.le.zero).or.(dxright.le.zero)"
-         stop
-        endif
-
-        fsolid=zero 
-        fsolid_mixed=zero 
-        im_primary=0
-        do im=1,nmat
-         vofcomp=(im-1)*ngeom_recon+1
-         fcen(im)=recon(D_DECL(i,j,k),vofcomp)
-         if (is_rigid(nmat,im).eq.1) then
-          fsolid=fsolid+fcen(im)
-          fsolid_mixed=fsolid_mixed+fcen(im)+ &
-            recon(D_DECL(i+ii,j+jj,k+kk),vofcomp)+ &
-            recon(D_DECL(i-ii,j-jj,k-kk),vofcomp)
-         else if (is_rigid(nmat,im).eq.0) then 
-          if (im_primary.eq.0) then
-           im_primary=im
-          else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
-           if (fcen(im).gt.fcen(im_primary)) then
-            im_primary=im
-           endif
-          else
-           print *,"im_primary invalid"
-           stop
-          endif
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-        if ((im_primary.lt.1).or.(im_primary.gt.nmat)) then
-         print *,"im_primary invalid"
-         stop
-        endif
-
-        fsolid_mixed=fsolid_mixed/three
-
-        vofcomp=(im_primary-1)*ngeom_recon+1
-
-        fmixed=(recon(D_DECL(i+ii,j+jj,k+kk),vofcomp)+ &
-                recon(D_DECL(i-ii,j-jj,k-kk),vofcomp)+ &
-                fcen(im_primary))/three
-
-        if ((fsolid_mixed.lt.zero).or. &
-            (fsolid_mixed.gt.one+VOFTOL_SLOPES).or. &
-            (fmixed.lt.zero).or. &
-            (fmixed.gt.one+VOFTOL_SLOPES)) then
-         print *,"fsolid_mixed or fmixed invalid"
-         stop
-        else if ((fsolid_mixed.ge.zero).and. &
-                 (fsolid_mixed.le.one+VOFTOL_SLOPES).and. &
-                 (fmixed.ge.zero).and. &
-                 (fmixed.le.one+VOFTOL_SLOPES)) then
-         ! do nothing
-        else
-         print *,"fsolid_mixed or fmixed bust"
-         stop
-        endif
-
-        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.0.25d0)) then
-         local_order=1
-        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.0.25d0)) then
-         if ((fcen(im_primary).lt.one-VOFTOL).or. &
-             (fmixed.lt.0.75d0)) then
-          local_order=1
-         else if ((fcen(im_primary).ge.one-VOFTOL).and. &
-                  (fmixed.ge.0.75d0)) then
-          ! do nothing
-         else
-          print *,"fcen or fmixed bust"
-          stop
-         endif
-        else
-         print *,"fsolid or fsolid_mixed invalid"
-         stop
-        endif
-
-        if (local_order.eq.2) then 
- 
-         do n=1,nc_conserve
-
-          if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
-           local_order=advection_order(im_primary)
-           if (local_order.eq.2) then
-            ! do nothing
-           else if (local_order.eq.1) then
-            ! do nothing
-           else 
-            print *,"local_order invalid"
-            stop
-           endif
-
-           if (local_order.eq.1) then
-            ! do nothing, slopes already 0
-           else if (local_order.eq.2) then
-            splus=slsrc(D_DECL(i+ii,j+jj,k+kk),n)
-            sminus=slsrc(D_DECL(i-ii,j-jj,k-kk),n)
-            scen=slsrc(D_DECL(i,j,k),n)
-
-            nden=SDIM+(im_primary-1)*num_state_material+1
-            dencen=slsrc(D_DECL(i,j,k),nden)
-          
-            if ((abs(fmixed-one).ge.VOFTOL_SLOPES).or. &
-                (abs(fsolid_mixed).ge.VOFTOL_SLOPES)) then
-             denplus=dencen
-             denminus=dencen
-            else if ((abs(fmixed-one).le.VOFTOL_SLOPES).and. &
-                     (abs(fsolid_mixed).le.VOFTOL_SLOPES)) then
-             denplus=slsrc(D_DECL(i+ii,j+jj,k+kk),nden)
-             denminus=slsrc(D_DECL(i-ii,j-jj,k-kk),nden)
-            else
-             print *,"fmixed or fsolid_mixed invalid"
-             stop
-            endif 
-            if ((dencen.le.zero).or. &
-                (denplus.le.zero).or. &
-                (denminus.le.zero)) then
-             print *,"dencen,denplus, or denminus invalid"
-             stop
-            else if ((dencen.gt.zero).and. &
-                     (denplus.gt.zero).and. &
-                     (denminus.gt.zero)) then
-             ! do nothing
-            else
-             print *,"dencen,denplus or denminus bust"
-             stop
-            endif
-            
-            sleft=(scen*dencen-sminus*denminus)/dxleft
-            sright=(splus*denplus-scen*dencen)/dxright
-
-            if (slope_limiter_option.eq.1) then
-             call minmod(sleft,sright,slope_temp)
-            else if (slope_limiter_option.eq.0) then
-             slope_temp=half*(sleft+sright)
-            else
-             print *,"slope_limiter_option invalid"
-             stop
-            endif
-            sldst(D_DECL(i,j,k),n)=slope_temp/dencen
-           else
-            print *,"local_order invalid"
-            stop
-           endif
-          else if ((n.gt.SDIM).and.(n.le.nc_conserve)) then
-           im_local=(n-SDIM-1)/num_state_material+1
-           istate_local=n-SDIM-(im_local-1)*num_state_material 
-           if ((im_local.lt.1).or.(im_local.gt.nmat)) then
-            print *,"im_local invalid"
-            stop
-           endif
-
-           if ((istate_local.lt.1).or. &
-               (istate_local.gt.num_state_material)) then
-            print *,"istate_local invalid"
-            stop
-           endif
-
-           local_order=density_advection_order(im_local)
-
-           if (local_order.eq.2) then
-
-            if (im_local.eq.im_primary) then
-
-             if ((istate_local.eq.1).or. & ! density
-                 (istate_local.eq.2)) then ! temperature or energy
-              ! use density_advection_order
-             else if ((istate_local.ge.num_state_base+1).and. &
-                      (istate_local.le.num_state_base+num_species_var)) then
-              local_order=1 ! must have 0<=massfrac<=1
-             else
-              print *,"istate_local invalid"
-              stop
-             endif  
-
-            else if (im_local.ne.im_primary) then
-             local_order=1
-            else
-             print *,"im_local or im_primary invalid"
-             stop
-            endif
-              
-           else if (local_order.eq.1) then
-            ! do nothing
-           else
-            print *,"local_order invalid"
-            stop
-           endif
-
-           if (local_order.eq.1) then
-            ! do nothing, slopes already 0
-           else if (local_order.eq.2) then
-            splus=slsrc(D_DECL(i+ii,j+jj,k+kk),n)
-            sminus=slsrc(D_DECL(i-ii,j-jj,k-kk),n)
-            scen=slsrc(D_DECL(i,j,k),n)
-
-            if ((istate_local.eq.1).or.  & ! density
-                (istate_local.eq.2)) then ! energy
-             if ((scen.le.zero).or. &
-                 (splus.le.zero).or. &
-                 (sminus.le.zero)) then
-              print *,"scen,splus, or sminus.le.zero"
-              stop
-             else if ((scen.gt.zero).and. &
-                      (splus.gt.zero).and. &
-                      (sminus.gt.zero)) then
-              ! do nothing
-             else
-              print *,"scen, splus, or sminus bust"
-              stop
-             endif
-            else if ((istate_local.ge.3).and. &
-                     (istate_local.le.num_state_material)) then
-             ! check nothing
-            else
-             print *,"istate_local invalid"
-             stop
-            endif
-
-            sleft=(scen-sminus)/dxleft
-            sright=(splus-scen)/dxright
-
-            if (slope_limiter_option.eq.1) then
-             call minmod(sleft,sright,slope_temp)
-            else if (slope_limiter_option.eq.0) then
-             slope_temp=half*(sleft+sright)
-            else
-             print *,"slope_limiter_option invalid"
-             stop
-            endif
-            sldst(D_DECL(i,j,k),n)=slope_temp
-           else
-            print *,"local_order invalid"
-            stop
-           endif
-
-          else
-           print *,"n invalid"
-           stop
-          endif
-
-         enddo ! n=1..nc_conserve
-
-        else if (local_order.eq.1) then
-         ! do nothing
-        else
-         print *,"local order invalid"
-         stop
-        endif
-
-       else
-        print *,"local order invalid"
-        stop
-       endif
-
-      enddo
-      enddo
-      enddo ! i,j,k
-
-      return
-      end subroutine fort_build_slopes
-
-
-
-      subroutine fort_build_slopes_face( &
-       masknbr,DIMS(masknbr), &
-       vfrac,DIMS(vfrac), &
-       slsrc,DIMS(slsrc), &
-       sldst,DIMS(sldst), &
-       nmat, &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       level, &
-       finest_level, &
-       velbc, &
-       xlo,dx, &
-       normdir, &
-       slopedir, &
-       ngrow,  &
-       advection_order, &
-       slope_limiter_option) &
-      bind(c,name='fort_build_slopes_face')
-
-      use probcommon_module
-      use global_utility_module
-      IMPLICIT NONE
-
-
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: normdir
-      INTEGER_T, intent(in) :: slopedir
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: velbc(SDIM,2)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: advection_order(nmat)
-      INTEGER_T, intent(in) :: slope_limiter_option
-      INTEGER_T, intent(in) :: DIMDEC(masknbr) 
-      INTEGER_T, intent(in) :: DIMDEC(vfrac) 
-      INTEGER_T, intent(in) :: DIMDEC(slsrc)
-      INTEGER_T, intent(in) :: DIMDEC(sldst)
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
-      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vfrac(DIMV(vfrac),nmat)
-      REAL_T, pointer :: vfrac_ptr(D_DECL(:,:,:),:)
-       !slsrc(1)=xvel  slsrc(2)=xdisp
-      REAL_T, intent(in), target :: slsrc(DIMV(slsrc)) 
-      REAL_T, pointer :: slsrc_ptr(D_DECL(:,:,:))
-       !sldst(1)=xvelslope,slpdst(2..nmat+1)=xcen
-      REAL_T, intent(out), target :: sldst(DIMV(sldst)) 
-      REAL_T, pointer :: sldst_ptr(D_DECL(:,:,:))
-
-      INTEGER_T igridlo(3),igridhi(3)
-      INTEGER_T i,j,k
-      INTEGER_T icell,jcell,kcell
-      INTEGER_T ii,jj,kk
-      INTEGER_T iii,jjj,kkk
-      INTEGER_T local_order
-      INTEGER_T local_masknbr
-      INTEGER_T side
-      INTEGER_T dircheck
-      INTEGER_T icheck
-      INTEGER_T icrit
-      REAL_T fcen(nmat)
-      REAL_T fmixed
-      REAL_T fsolid
-      REAL_T fsolid_mixed
-      REAL_T splus,sminus,scen,sleft,sright
-      REAL_T slope_temp
-      INTEGER_T im
-      INTEGER_T im_primary
-      INTEGER_T nhalf
-      REAL_T xsub(-3:3)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T dxleft,dxright
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid48"
-       stop
-      endif
-
-      masknbr_ptr=>masknbr
-      slsrc_ptr=>slsrc
-      sldst_ptr=>sldst
-      vfrac_ptr=>vfrac
-
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,1247)
-      call checkbound_array1(fablo,fabhi,slsrc_ptr,ngrow,slopedir,1248)
-      call checkbound_array1(fablo,fabhi,sldst_ptr,ngrow-1,slopedir,1249)
-      call checkbound_array(fablo,fabhi,vfrac_ptr,ngrow,slopedir,1251)
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
-       print *,"normdir invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid build slopes_face"
-       stop
-      endif
-
-      iii=0
-      jjj=0
-      kkk=0
-       ! mask is at cells, need to interpolate to faces if slopedir>=0
-      if (slopedir.eq.0) then
-       iii=1
-      else if (slopedir.eq.1) then
-       jjj=1
-      else if ((slopedir.eq.SDIM-1).and.(SDIM.eq.3)) then
-       kkk=1
-      else
-       print *,"slopedir invalid"
-       stop
-      endif
-
-      ii=0
-      jj=0
-      kk=0
-      if (normdir.eq.0) then
-       ii=1
-      else if (normdir.eq.1) then
-       jj=1
-      else if ((normdir.eq.SDIM-1).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-
-      if ((slopedir.ge.0).and.(slopedir.lt.SDIM)) then
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        igridlo,igridhi,ngrow-1,slopedir,21)
-      else
-       print *,"slopedir invalid"
-       stop
-      endif
-
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
-      do k=igridlo(3),igridhi(3)
-       sldst(D_DECL(i,j,k))=zero
-      enddo
-      enddo
-      enddo
-
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
-      do k=igridlo(3),igridhi(3)
-
-       nhalf=1
-       if ((slopedir.ge.0).and.(slopedir.le.SDIM-1)) then
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,slopedir,27)
-       else
-        print *,"slopedir invalid"
-        stop
-       endif
-
-       local_order=2 
-       do side=-1,1,2
-       
-        if (side.eq.-1) then
-         icell=i-iii
-         jcell=j-jjj
-         kcell=k-kkk
-        else if (side.eq.1) then
-         icell=i
-         jcell=j
-         kcell=k
-        else
-         print *,"side invalid"
-         stop
-        endif
-
-        local_masknbr=NINT(masknbr(D_DECL(icell,jcell,kcell)))
-
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
-          local_order=1
-         endif
-        else
-         print *,"levelrz invalid build slopes_face"
-         stop
-        endif
-        do dircheck=1,SDIM
-         if (dircheck.eq.1) then
-          icheck=icell
-         else if (dircheck.eq.2) then
-          icheck=jcell
-         else if ((dircheck.eq.3).and.(SDIM.eq.3)) then
-          icheck=kcell
-         else
-          print *,"dircheck invalid"
-          stop
-         endif
-         if (icheck.le.fablo(dircheck)) then
-          if (velbc(dircheck,1).eq.INT_DIR) then
-           if (local_masknbr.eq.0) then ! coarse/fine bdry
-            local_order=1
-           else if (local_masknbr.eq.1) then
-            ! do nothing
-           else
-            print *,"masknbr invalid"
-            stop
-           endif
-          else
-           local_order=1 ! 1st order touching or outside the domain
-          endif
-         else if (icheck.ge.fabhi(dircheck)) then
-          if (velbc(dircheck,2).eq.INT_DIR) then
-           if (local_masknbr.eq.0) then ! coarse/fine bdry
-            local_order=1
-           else if (local_masknbr.eq.1) then
-            ! do nothing
-           else
-            print *,"masknbr invalid"
-            stop
-           endif
-          else
-           local_order=1 ! 1st order touching or outside the domain
-          endif
-         else
-          ! do nothing
-         endif
-        enddo ! dircheck=1..sdim
-       enddo ! side
-
-       if (local_order.eq.1) then
-        ! do nothing
-       else if (local_order.eq.2) then
-
-        if (normdir.eq.0) then
-         icrit=i
-        else if (normdir.eq.1) then
-         icrit=j
-        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-         icrit=k
-        else
-         print *,"normdir invalid"
-         stop
-        endif
-
-        nhalf=3 
-        if (normdir.eq.slopedir) then
-         call gridsten1DMAC_level(xsub,icrit,level,normdir+1,nhalf)
-        else if ((slopedir.ge.0).and.(slopedir.lt.SDIM)) then
-         call gridsten1D_level(xsub,icrit,level,normdir+1,nhalf)
-        else
-         print *,"slopedir invalid"
-         stop
-        endif
-        dxleft=xsub(0)-xsub(-2)
-        dxright=xsub(2)-xsub(0)
-        if ((dxleft.le.zero).or.(dxright.le.zero)) then
-         print *,"(dxleft.le.zero).or.(dxright.le.zero)"
-         stop
-        endif
-
-        fsolid=zero 
-        fsolid_mixed=zero 
-        im_primary=0
-        do im=1,nmat
-         fcen(im)=vfrac(D_DECL(i,j,k),im)
-         if (is_rigid(nmat,im).eq.1) then
-          fsolid=fsolid+fcen(im)
-          fsolid_mixed=fsolid_mixed+fcen(im)+ &
-            vfrac(D_DECL(i+ii,j+jj,k+kk),im)+ &
-            vfrac(D_DECL(i-ii,j-jj,k-kk),im)
-         else if (is_rigid(nmat,im).eq.0) then 
-          if (im_primary.eq.0) then
-           im_primary=im
-          else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
-           if (fcen(im).gt.fcen(im_primary)) then
-            im_primary=im
-           endif
-          else
-           print *,"im_primary invalid"
-           stop
-          endif
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-        if ((im_primary.lt.1).or.(im_primary.gt.nmat)) then
-         print *,"im_primary invalid"
-         stop
-        endif
-
-        fsolid_mixed=fsolid_mixed/three
-
-        fmixed=(vfrac(D_DECL(i+ii,j+jj,k+kk),im_primary)+ &
-                vfrac(D_DECL(i-ii,j-jj,k-kk),im_primary)+ &
-                fcen(im_primary))/three
-
-        if ((fsolid_mixed.lt.zero).or. &
-            (fsolid_mixed.gt.one+VOFTOL_SLOPES).or. &
-            (fmixed.lt.zero).or. &
-            (fmixed.gt.one+VOFTOL_SLOPES)) then
-         print *,"fsolid_mixed or fmixed invalid"
-         stop
-        else if ((fsolid_mixed.ge.zero).and. &
-                 (fsolid_mixed.le.one+VOFTOL_SLOPES).and. &
-                 (fmixed.ge.zero).and. &
-                 (fmixed.le.one+VOFTOL_SLOPES)) then
-         ! do nothing
-        else
-         print *,"fsolid_mixed or fmixed invalid"
-         stop
-        endif
-
-        if ((fsolid.ge.VOFTOL).or.(fsolid_mixed.ge.0.25d0)) then
-         local_order=1
-        else if ((fsolid.le.VOFTOL).and.(fsolid_mixed.le.0.25d0)) then
-         if ((fcen(im_primary).lt.one-VOFTOL).or. &
-             (fmixed.lt.0.75d0)) then
-          local_order=1
-         else if ((fcen(im_primary).ge.one-VOFTOL).and. &
-                  (fmixed.ge.0.75d0)) then
-          ! do nothing
-         else
-          print *,"fcen or fmixed bust"
-          stop
-         endif
-        else
-         print *,"fsolid or fsolid_mixed invalid"
-         stop
-        endif
-
-        if (local_order.eq.2) then 
-
-         local_order=advection_order(im_primary)
-         if (local_order.eq.2) then
-          ! do nothing
-         else if (local_order.eq.1) then
-          ! do nothing
-         else 
-          print *,"local_order invalid"
-          stop
-         endif
-
-         if (local_order.eq.1) then
-          ! do nothing, slopes already 0
-         else if (local_order.eq.2) then
-
-          splus=slsrc(D_DECL(i+ii,j+jj,k+kk))
-          sminus=slsrc(D_DECL(i-ii,j-jj,k-kk))
-          scen=slsrc(D_DECL(i,j,k))
-
-          sleft=(scen-sminus)/dxleft
-          sright=(splus-scen)/dxright
-
-          if (slope_limiter_option.eq.1) then
-           call minmod(sleft,sright,slope_temp)
-          else if (slope_limiter_option.eq.0) then
-           slope_temp=half*(sleft+sright)
-          else
-           print *,"slope_limiter_option invalid"
-           stop
-          endif
-          sldst(D_DECL(i,j,k))=slope_temp
-         else
-          print *,"local_order invalid"
-          stop
-         endif
-        else if (local_order.eq.1) then
-         ! do nothing
-        else
-         print *,"local order invalid"
-         stop
-        endif
-       else
-        print *,"local order invalid"
-        stop
-       endif
-
-      enddo
-      enddo
-      enddo ! i,j,k
-
-      return
-      end subroutine fort_build_slopes_face
 
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den

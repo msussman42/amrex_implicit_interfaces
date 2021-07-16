@@ -10,7 +10,6 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  6.0 12.0  #
 ns.EILE_flag=-1
-ns.advection_order=1 1 1 
 
 # 1  => tag cell if this material is primary material in the cell stencil.
 # 0  => tag cell if this material and another *qualified* 

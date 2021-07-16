@@ -36,7 +36,6 @@ ns.initial_project_cycles=10  # number of initial jacobi iterations
 
 ns.num_materials=2
 ns.num_species_var=0
-ns.advection_order=2 1 1 #slope=0 at boundary, linear reconstruction elsewhere
 
 
 fab.do_initval=0  # default is 1

@@ -165,7 +165,6 @@ ns.heatviscconst=58000.0 58000.0 58000.0
 ns.include_viscous_heating=0
 # CAVITATION
 ns.denconst=1.0 1.0 1.0
-ns.advection_order=1 1 1 1
 ns.xblob=0.0
 ns.yblob=0.0 
 ns.zblob=0.0

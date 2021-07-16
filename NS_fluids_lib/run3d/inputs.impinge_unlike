@@ -37,7 +37,6 @@ ns.visual_option=-2 # tecplot (amr hierarchy preserved)
 ns.num_materials=3      
 ns.num_species_var=0
 ns.projection_pressure_scale=1.0e+6
-ns.advection_order=2 1 2
 ns.shock_timestep=2 2 2
 
 

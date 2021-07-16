@@ -75,7 +75,6 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=6.9
 ns.adv_dir=1
-ns.advection_order=2
 ns.viscconst=0.013 0.0002 0.0 0.0
 ns.denconst=0.78 0.0012 1.0 1.0
 ns.material_type=0 0 0 0

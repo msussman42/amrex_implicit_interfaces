@@ -1,7 +1,6 @@
 max_step  =  999999   # maximum timestep
 stop_time =  999999  # maximum problem time
 
-ns.advection_order=1 1 1
 ns.num_materials=3
 ns.num_species_var=0
 

@@ -32,7 +32,6 @@ ns.minimum_relative_error=1.0e-18
 # MITSUHIRO: changed scale from 1000 to 10E6
 ns.projection_pressure_scale=1.0e+6
 
-ns.advection_order=1
 
 ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get

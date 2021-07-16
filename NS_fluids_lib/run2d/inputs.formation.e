@@ -48,7 +48,6 @@ ns.num_materials=3
 ns.num_species_var=0
 
 ns.post_init_pressure_solve=1 
-ns.advection_order=1 1 1
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=3  # number of initial jacobi iterations

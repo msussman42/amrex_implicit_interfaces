@@ -18,7 +18,6 @@ geometry.is_periodic = 0 1
 ns.is_ocean=1
 ns.conservative_advection=0
 ns.temperature_conservative_advection=0
-ns.temperature_advection_order=1
 ns.vrotation=3.91
 ns.pseudo_transient_steps=1
 ns.cwater=1.0e+20

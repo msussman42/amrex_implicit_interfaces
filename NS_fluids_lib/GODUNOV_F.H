@@ -348,45 +348,6 @@ extern "C"
     int* bfact_fine,
     int* nmat);
 
-   void fort_build_slopes(
-    Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
-    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
-    Real* data,AMREX_ARLIM_P(datalo),AMREX_ARLIM_P(datahi),
-    Real* slopes,AMREX_ARLIM_P(slopeslo),AMREX_ARLIM_P(slopeshi),
-    int* nc_conserve,
-    int* nmat,
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,int* bfact,
-    int* level,
-    int* finest_level,
-    int* velbc,
-    const Real* xlo,const Real* dx,
-    int* normdir,
-    int* ngrow,
-    int* advection_order,
-    int* density_advection_order,
-    int* slope_limiter_option);
-
-
-   void fort_build_slopes_face(
-    Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
-    Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
-    Real* data,AMREX_ARLIM_P(datalo),AMREX_ARLIM_P(datahi),
-    Real* slopes,AMREX_ARLIM_P(slopeslo),AMREX_ARLIM_P(slopeshi),
-    int* nmat,
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,int* bfact,
-    int* level,
-    int* finest_level,
-    int* velbc,
-    const Real* xlo,const Real* dx,
-    int* normdir,
-    int* slopedir,
-    int* ngrow,
-    int* advection_order,
-    int* slope_limiter_type);
-
-
    void fort_build_conserve(
     int* iden_base,
     int* override_density,
@@ -421,8 +382,6 @@ extern "C"
     AMREX_ARLIM_P(xd_mac_oldhi),
     Real* xvof,AMREX_ARLIM_P(xvoflo),AMREX_ARLIM_P(xvofhi),
     Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),//1..num_MAC_vectors
-    Real* xvelslope,
-    AMREX_ARLIM_P(xvelslopelo),AMREX_ARLIM_P(xvelslopehi), //xvelslope,xcen
     const Real* xlo,const Real* dx,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
