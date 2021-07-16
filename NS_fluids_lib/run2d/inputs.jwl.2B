@@ -15,7 +15,6 @@ geometry.prob_hi   =  1024.0 1024.0
 geometry.prob_hi   =  256.0 256.0  # Jemison, Sussman, Arienti Fig 27
 # 0=cell
 # 1=face
-ns.face_flag=0
 
 # multigrid class
 mg.verbose = 0

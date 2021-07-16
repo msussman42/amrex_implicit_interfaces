@@ -44,7 +44,6 @@ ns.advection_order=1 1 1 # flow away from droplet not important
 # for debugging
 ns.v=1
 
-ns.face_flag=0
 # 0=MOF 2=CMOF 4=CLSVOF/CMOF
 ns.continuous_mof=2
 ns.mof_ordering=0 0 1

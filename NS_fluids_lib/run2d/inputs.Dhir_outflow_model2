@@ -50,7 +50,6 @@ ns.num_species_var=0
 ns.configuration_tensor_var=0
 ns.post_init_pressure_solve=1
 ns.output_drop_distribution=1
-ns.face_flag=1
 
 # multigrid class
 mg.verbose = 0

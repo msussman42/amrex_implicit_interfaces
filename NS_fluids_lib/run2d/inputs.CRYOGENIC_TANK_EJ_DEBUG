@@ -252,8 +252,6 @@ ns.temperature_hi_bc = 1 1
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
 ns.temperatureface_flag=0
-ns.face_flag=1
-ns.filter_velocity=0 0 0
 ns.num_divu_outer_sweeps=1
 
 # Embedded boundary BC

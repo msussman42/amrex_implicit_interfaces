@@ -33,7 +33,6 @@ ns.continuous_mof=2
 # material 1 is the lower stratified fluid
 # material 3 is the upper stratified fluid
 ns.num_materials=3
-ns.face_flag=1
 ns.num_species_var=0
 ns.minimum_relative_error=1.0e-18
 # M.OHTA: scale set in order that initial residual O(1)

@@ -61,8 +61,6 @@ ns.num_species_var=0
 # 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
 ns.advection_order=1 1 1
-ns.face_flag=0
-ns.filter_velocity=1 1 1
 # 0 = MOF (moment of fluid)
 # 2 = CMOF (continuous moment of fluid)
 # 4 = CLSVOF in 2 material cells and CMOF in >2 material cells.

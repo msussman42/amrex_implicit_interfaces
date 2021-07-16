@@ -34,8 +34,6 @@ ns.material_type_lowmach = 0 24 999
 #  rho^{n+1}(u* - u_adv)/dt = div (2 mu D^*) - dt grad p^{n+1,(k)}
 #  div (1/rho) grad p^{n+1,(k+1)}=rho c^2 (p^{n+1,(k+1)}-p^adv)/dt
 # endfor
-ns.face_flag=1
-ns.filter_velocity=0 0 0 
 ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI

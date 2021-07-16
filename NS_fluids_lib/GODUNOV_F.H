@@ -128,35 +128,6 @@ extern "C"
     int* ngrid,int* level,int* finest_level,
     Real* mf,AMREX_ARLIM_P(mflo),AMREX_ARLIM_P(mfhi));
 
-   void fort_tensorforce(
-    int* massface_index,
-    int* vofface_index,
-    int* ncphys,
-    int* nstate,
-    const Real* xlo,const Real* dx,
-    Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
-    Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
-    Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
-    Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
-    Real* yflux,AMREX_ARLIM_P(yfluxlo),AMREX_ARLIM_P(yfluxhi),
-    Real* zflux,AMREX_ARLIM_P(zfluxlo),AMREX_ARLIM_P(zfluxhi),
-    Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),
-    Real* rhoinverse,
-    AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
-    Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
-    Real* tenfab,
-    AMREX_ARLIM_P(tenfablo),AMREX_ARLIM_P(tenfabhi),
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,int* bfact,
-    int* level,
-    Real* dt,
-    Real* cur_time,
-    int* irz,
-    int* im, // =0..nmat-1
-    int* viscoelastic_model,
-    int* nmat,
-    int* nden);
-
    void FORT_TENSORHEAT(
     int* massface_index,
     int* vofface_index,

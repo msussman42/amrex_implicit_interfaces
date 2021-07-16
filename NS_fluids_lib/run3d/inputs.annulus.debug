@@ -61,7 +61,6 @@ ns.temperature_primitive_variable=1 1 1 1 1
 
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 ns.conservative_div_uu=1
-ns.face_flag=1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

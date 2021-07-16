@@ -17,7 +17,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  0.23125 14.8
 # 0=cell
 # 1=face
-ns.face_flag=0
 # continuous_mof=0 regular MOF
 # continuous_mof=2 CMOF
 # continuous_mof=4 CLSVOF + CMOF hybrid

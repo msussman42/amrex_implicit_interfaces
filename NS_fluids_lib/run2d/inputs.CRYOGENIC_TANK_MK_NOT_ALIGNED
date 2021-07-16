@@ -30,19 +30,16 @@ ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 #u_t + div(uu) = -grad p/rho + div tau/rho
 #if face_flag=0, then div(uu), div tau/rho are CC, grad p/rho MAC
 #if face_flag=1, then div(uu and grad p/rho are MAC, div tau/rho is CC
-ns.face_flag=1
 # remark: Lax Friedrichs method:
 #   u_{i+1/2}^{n}=(u_i^{n} + u_{i+1}^{n})/2
 #   u_{i+1/2}^{n+1}=u_{i+1/2}^{n}-dt/dx  (f_{i+1}^{n}-f_{i}^{n})
 #   u_{i}^{n+1}=(u_{i+1/2}^{n+1} + u_{i-1/2}^{n+1})/2
-# if filter_velocity=1 =>
 #   (a) if face_flag=1,
 #      before div tau/rho force, let u_CC=interp_to_CC(u_MAC)
 #      then after div tau/rho force, let u_MAC=interp_to_MAC(u_CC)
 #   (b) if face_flag=0,
 #      before grad p/rho force, let u_MAC=interp_to_MAC(u_CC)
 #      then after grad/rho force, let u_CC=interp_to_CC(u_MAC)
-ns.filter_velocity=0 0 0  # 1..num_materials
 ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI

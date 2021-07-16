@@ -824,21 +824,98 @@ NavierStokes::variableSetUp ()
     } else
      amrex::Error("nparts invalid");
 
+// XDmac_Type ... ZDmac_Type
+
+    int displacement_enable_spectral=0;
+
+    xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
+    xd_mac_lo_interp.interp_enable_spectral=0;
+
+     // ngrow=0
+    desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
+     0,1,&xd_mac_interp,null_ncomp_particles);
+    // ngrow=0,ncomp=1
+    desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
+     0,1,&xd_mac_lo_interp,null_ncomp_particles);
+
+     // same as x_vel_bc except that EXT_DIR => FOEXTRAP
+    set_x_vel_extrap_bc(bc,phys_bc);
+    std::string extrap_str="xd_extrap"; 
+      //dcomp=0
+    desc_lstGHOST.setComponent(XDmac_Type,0,
+      extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+
+     // ngrow=0
+    desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
+     0,1,&xd_mac_interp,null_ncomp_particles);
+     // ngrow=0,ncomp=1
+    desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
+     0,1,&xd_mac_lo_interp,null_ncomp_particles);
+
+     // same as y_vel_bc except that EXT_DIR => FOEXTRAP
+    set_y_vel_extrap_bc(bc,phys_bc);
+    extrap_str="yd_extrap"; 
+      //dcomp=0
+    desc_lstGHOST.setComponent(YDmac_Type,0,
+      extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+
+#if (AMREX_SPACEDIM == 3)
+     // ngrow=0
+    desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
+     0,1,&xd_mac_interp,null_ncomp_particles);
+     // ngrow=0,ncomp=1
+    desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
+     0,1,&xd_mac_lo_interp,null_ncomp_particles);
+
+     // same as z_vel_bc except that EXT_DIR => FOEXTRAP
+    set_z_vel_extrap_bc(bc,phys_bc);
+    extrap_str="zd_extrap"; 
+      //dcomp=0
+    desc_lstGHOST.setComponent(ZDmac_Type,0,
+      extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+#endif
+
+    std::string xd_mac_name="XDMAC";
+    BCRec xd_mac_bcs;
+     // same as x_vel_bc except that EXT_DIR => FOEXTRAP
+    set_x_vel_extrap_bc(xd_mac_bcs,phys_bc);
+    desc_lst.setComponent(XDmac_Type,0,xd_mac_name,xd_mac_bcs,
+       FORT_XDMACFILL,&xd_mac_interp);
+
+    std::string yd_mac_name="YDMAC";
+    BCRec yd_mac_bcs;
+     // same as y_vel_bc except that EXT_DIR => FOEXTRAP
+    set_y_vel_extrap_bc(yd_mac_bcs,phys_bc);
+    desc_lst.setComponent(YDmac_Type,0,yd_mac_name,yd_mac_bcs,
+       FORT_XDMACFILL,&xd_mac_interp);
+
+#if (AMREX_SPACEDIM == 3)
+    std::string zd_mac_name="ZDMAC";
+    BCRec zd_mac_bcs;
+     // same as z_vel_bc except that EXT_DIR => FOEXTRAP
+    set_z_vel_extrap_bc(zd_mac_bcs,phys_bc);
+    desc_lst.setComponent(ZDmac_Type,0,zd_mac_name,zd_mac_bcs,
+       FORT_XDMACFILL,&xd_mac_interp);
+#endif
 
 // Tensor_Type  -------------------------------------------
 
     if (num_materials_viscoelastic!=im_elastic_map.size())
      amrex::Error("num_materials_viscoelastic!=im_elastic_map.size()");
 
+    if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+     // do nothing
+    } else
+     amrex::Error("NUM_TENSOR_TYPE invalid");
+
+    if (NUM_CELL_ELASTIC==num_materials_viscoelastic*NUM_TENSOR_TYPE) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC invalid");
+
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
 
-     if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
-      // do nothing
-     } else
-      amrex::Error("NUM_TENSOR_TYPE invalid");
-
-	// XDISPLACE appended if MAC_grid_displacement==0
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,NUM_CELL_ELASTIC,
       &pc_interp,
@@ -988,171 +1065,42 @@ NavierStokes::variableSetUp ()
 
      } // partid=0..nparts-1
 
-     if (MAC_grid_displacement==0) {
-       if (NUM_CELL_ELASTIC==
-           num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
-        // do nothing
-       } else
-        amrex::Error("NUM_CELL_ELASTIC invalid");
-
-       Vector<std::string> MOFxdisplace_names_tensor;
-       MOFxdisplace_names_tensor.resize(AMREX_SPACEDIM);
-
-       Vector<BCRec> MOFxdisplace_bcs_tensor;
-       MOFxdisplace_bcs_tensor.resize(AMREX_SPACEDIM);
-
-       int dir_local=0;
-       std::string xdisplace_str="XDISPLACE";
-       MOFxdisplace_names_tensor[dir_local]=xdisplace_str;
-        // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-       set_x_vel_extrap_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
-
-       dir_local++;
-       std::string ydisplace_str="YDISPLACE";
-       MOFxdisplace_names_tensor[dir_local]=ydisplace_str;
-        // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-       set_y_vel_extrap_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
-
-#if (AMREX_SPACEDIM == 3)
-       if (AMREX_SPACEDIM==3) {
-        dir_local++;
-        std::string zdisplace_str="ZDISPLACE";
-        MOFxdisplace_names_tensor[dir_local]=zdisplace_str;
-        // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-        set_z_vel_extrap_bc(MOFxdisplace_bcs_tensor[dir_local],phys_bc);
-       }
-#endif
-
-        // sets the EXT_DIR values to 0.0
-       StateDescriptor::BndryFunc 
-        MOFxdisplace_fill_class_tensor(FORT_XDISPLACEFILL,
-         FORT_GROUP_TENSORFILL);
-
-       desc_lst.setComponent(Tensor_Type,
-         num_materials_viscoelastic*NUM_TENSOR_TYPE,
-         MOFxdisplace_names_tensor,
-         MOFxdisplace_bcs_tensor,
-         MOFxdisplace_fill_class_tensor,
-         &pc_interp);
-
-     } else if (MAC_grid_displacement==1) {
-
-       if (NUM_CELL_ELASTIC==
-           num_materials_viscoelastic*NUM_TENSOR_TYPE) {
-        // do nothing
-       } else
-        amrex::Error("NUM_CELL_ELASTIC invalid");
-
-      int displacement_enable_spectral=0;
-
-      xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
-      xd_mac_lo_interp.interp_enable_spectral=0;
-
-       // ngrow=0
-      desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-       0,1,&xd_mac_interp,null_ncomp_particles);
-      // ngrow=0,ncomp=1
-      desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-       0,1,&xd_mac_lo_interp,null_ncomp_particles);
-
-       // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-      set_x_vel_extrap_bc(bc,phys_bc);
-      std::string extrap_str="xd_extrap"; 
-        //dcomp=0
-      desc_lstGHOST.setComponent(XDmac_Type,0,
-        extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
-
-       // ngrow=0
-      desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-       0,1,&xd_mac_interp,null_ncomp_particles);
-       // ngrow=0,ncomp=1
-      desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-       0,1,&xd_mac_lo_interp,null_ncomp_particles);
-
-       // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-      set_y_vel_extrap_bc(bc,phys_bc);
-      extrap_str="yd_extrap"; 
-        //dcomp=0
-      desc_lstGHOST.setComponent(YDmac_Type,0,
-        extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
-
-#if (AMREX_SPACEDIM == 3)
-       // ngrow=0
-      desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-       0,1,&xd_mac_interp,null_ncomp_particles);
-       // ngrow=0,ncomp=1
-      desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-       0,1,&xd_mac_lo_interp,null_ncomp_particles);
-
-       // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-      set_z_vel_extrap_bc(bc,phys_bc);
-      extrap_str="zd_extrap"; 
-        //dcomp=0
-      desc_lstGHOST.setComponent(ZDmac_Type,0,
-        extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
-#endif
-
-      std::string xd_mac_name="XDMAC";
-      BCRec xd_mac_bcs;
-       // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-      set_x_vel_extrap_bc(xd_mac_bcs,phys_bc);
-      desc_lst.setComponent(XDmac_Type,0,xd_mac_name,xd_mac_bcs,
-         FORT_XDMACFILL,&xd_mac_interp);
-
-      std::string yd_mac_name="YDMAC";
-      BCRec yd_mac_bcs;
-       // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-      set_y_vel_extrap_bc(yd_mac_bcs,phys_bc);
-      desc_lst.setComponent(YDmac_Type,0,yd_mac_name,yd_mac_bcs,
-         FORT_XDMACFILL,&xd_mac_interp);
-
-#if (AMREX_SPACEDIM == 3)
-      std::string zd_mac_name="ZDMAC";
-      BCRec zd_mac_bcs;
-       // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-      set_z_vel_extrap_bc(zd_mac_bcs,phys_bc);
-      desc_lst.setComponent(ZDmac_Type,0,zd_mac_name,zd_mac_bcs,
-         FORT_XDMACFILL,&xd_mac_interp);
-#endif
-
-     } else
-      amrex::Error("MAC_grid_displacement invalid");
-
-      //ngrow=1
-      //ncomp=1
-     desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-     postfix_str="XU";
-     set_tensor_extrap_components(coord,postfix_str,TensorXU_Type);
-
-      //ngrow=1
-      //ncomp=1
-     desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-     postfix_str="YU";
-     set_tensor_extrap_components(coord,postfix_str,TensorYU_Type);
-
-      //ngrow=1
-      //ncomp=1
-     desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-     postfix_str="ZU";
-     set_tensor_extrap_components(coord,postfix_str,TensorZU_Type);
-
-      //ngrow=1
-      //ncomp=1
-     desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-     postfix_str="ZV";
-     set_tensor_extrap_components(coord,postfix_str,TensorZV_Type);
-
+    } else if (num_materials_viscoelastic==0) {
+     // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
+     //ngrow=1
+     //ncomp=1
+    desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
+     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
+
+    postfix_str="XU";
+    set_tensor_extrap_components(coord,postfix_str,TensorXU_Type);
+
+     //ngrow=1
+     //ncomp=1
+    desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
+     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
+
+    postfix_str="YU";
+    set_tensor_extrap_components(coord,postfix_str,TensorYU_Type);
+
+     //ngrow=1
+     //ncomp=1
+    desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
+     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
+
+    postfix_str="ZU";
+    set_tensor_extrap_components(coord,postfix_str,TensorZU_Type);
+
+     //ngrow=1
+     //ncomp=1
+    desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
+     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
+
+    postfix_str="ZV";
+    set_tensor_extrap_components(coord,postfix_str,TensorZV_Type);
 
 // LEVELSET ------------------------------------------------- 
 
