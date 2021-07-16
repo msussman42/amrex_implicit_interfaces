@@ -9134,8 +9134,6 @@ contains
       return
       end subroutine curverr
 
-
-
       subroutine aggressive_worker( &
        datatype, &
        warning_cutoff, &
@@ -9151,27 +9149,26 @@ contains
        verbose, &
        force_check, &
        gridno,ngrid,level,finest_level, &
-       mf,DIMS(mf))
+       mf)
 
       IMPLICIT NONE
 
-      INTEGER_T datatype
-      REAL_T warning_cutoff
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(SDIM),growhi(SDIM)
+      INTEGER_T, intent(in) :: datatype
+      REAL_T, intent(in) :: warning_cutoff
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM)
       INTEGER_T growlotest(3),growhitest(3)
-      INTEGER_T bfact
-      REAL_T dx(SDIM)
-      INTEGER_T scomp,ncomp,ndefined
-      INTEGER_T ngrow
-      INTEGER_T dir
-      INTEGER_T id
-      INTEGER_T verbose
-      INTEGER_T force_check
-      INTEGER_T gridno,ngrid,level,finest_level
-      INTEGER_T DIMDEC(mf)
-      REAL_T mf(DIMV(mf),ndefined)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: scomp,ncomp,ndefined
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: id
+      INTEGER_T, intent(in) :: verbose
+      INTEGER_T, intent(in) :: force_check
+      INTEGER_T, intent(in) :: gridno,ngrid,level,finest_level
+      REAL_T, intent(in), pointer :: mf(D_DECL(:,:,:),:)
       INTEGER_T i,j,k,ii,jj,kk,dir2
       INTEGER_T n
       INTEGER_T n_singlelayer,n_interior,n_side,n_corner
@@ -9258,12 +9255,12 @@ contains
        endif
 
        if ((datatype.eq.0).or.(datatype.eq.1)) then
-        call checkbound(fablo,fabhi, &
-         DIMS(mf), &
+        call checkbound_array(fablo,fabhi, &
+         mf, &
          ngrow,dir,id)
        else if (datatype.eq.2) then
-        call checkbound(fablo,fabhi, &
-         DIMS(mf), &
+        call checkbound_array(fablo,fabhi, &
+         mf, &
          1,-1,id)
        else
         print *,"datatype invalid"

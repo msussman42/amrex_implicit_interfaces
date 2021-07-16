@@ -8997,7 +8997,7 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_SOD_SANITY(
+  fort_sod_sanity(
     &id,&nc,fablo,fabhi,
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()));
  }
@@ -13833,8 +13833,8 @@ NavierStokes::level_init_icemask() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
    
-    // in: GODUNOV_3D.F90
-   FORT_INIT_ICEMASK( 
+    // declared in: GODUNOV_3D.F90
+   fort_init_icemask( 
     &cur_time_slab,
     &facecut_index,
     &icefacecut_index,
@@ -14456,7 +14456,7 @@ void NavierStokes::aggressive_debug(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_AGGRESSIVE(
+   fort_aggressive(
     &datatype,
     &warning_cutoff,
     tilelo,tilehi,
@@ -15634,7 +15634,7 @@ NavierStokes::split_scalar_advection() {
      &bfact,
      &nmat,
      &ngrow, 
-     &num_MAC_vectors, //=1 or 2
+     &num_MAC_vectors, //=2
      &ngrow_mac_old,
      &veldir);
   }  // mfi
