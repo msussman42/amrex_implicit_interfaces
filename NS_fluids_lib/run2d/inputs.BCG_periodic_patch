@@ -44,7 +44,6 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2 2  
 amr.grid_eff        = 0.75 
 
-ns.face_flag=1
 
 ns.disable_advection=0
 ns.disable_pressure_solve=0

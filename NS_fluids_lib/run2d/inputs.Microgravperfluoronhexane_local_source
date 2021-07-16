@@ -18,7 +18,6 @@ ns.EILE_flag=-1
 ns.continuous_mof=4  # make continuous_mof=4 for CLSVOF (faster, 
                      # probably similar accuracy compared to continuous_mof=2)
 ns.MOFITERMAX=15
-ns.face_flag=1  # face_flag=0 should work fine too and is faster, but maybe
                 # not as accurate.  Also, face_flag=0 is not guaranteed
                 # to be stable even if the CFL condition is met.
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF

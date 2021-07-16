@@ -30,7 +30,6 @@ mg.visc_bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
 
-ns.face_flag=1
 ns.ns_tiling=false
 ns.MOFITERMAX=15
 # continuous_mof=0 regular MOF

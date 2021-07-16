@@ -950,7 +950,6 @@ protected:
     void make_viscoelastic_tensorMACALL(int im,int interp_Q_to_flux,
         int flux_mf,int flux_grid_type,int fill_state_idx);
 
-    void make_viscoelastic_force(int im);
     void make_viscoelastic_heating(int im,int idx);
 
     // VAHAB HEAT SOURCE
@@ -2128,9 +2127,7 @@ protected:
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
 
-    static int MAC_grid_displacement;
-     //num_material_elastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM if 
-     // MAC_grid_displacement==0.
+     //num_material_elastic*NUM_TENSOR_TYPE
     static int NUM_CELL_ELASTIC; 
 
      // den,denA,E,T,P,species,configuration tensor
@@ -2138,10 +2135,6 @@ protected:
     static int num_state_base;
     static int ngeom_raw;
     static int ngeom_recon;
-     // 0=velocity stored at cells  
-     // 1=velocity stored at faces
-    static int face_flag;
-    static Vector<int> filter_velocity;  //def=0
     static int ignore_div_up; // def=0
     static int interp_vel_increment_from_cell; //def=0
     static Vector<Real> compressible_dt_factor;  //def=1.0
