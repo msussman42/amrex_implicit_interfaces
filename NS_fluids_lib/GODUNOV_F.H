@@ -2,12 +2,9 @@
 #define _GODUNOV_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_SOD_SANITY   sod_sanity
-#    define FORT_AGGRESSIVE   aggressive
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_INIT_ICEMASK init_icemask
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -26,12 +23,9 @@
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_SOD_SANITY   SOD_SANITY
-#    define FORT_AGGRESSIVE   AGGRESSIVE
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
-#    define FORT_INIT_ICEMASK INIT_ICEMASK
 #    define FORT_COMBINEVEL   COMBINEVEL
 #    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
@@ -50,12 +44,9 @@
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_SOD_SANITY   sod_sanity
-#    define FORT_AGGRESSIVE   aggressive
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_INIT_ICEMASK init_icemask
 #    define FORT_COMBINEVEL   combinevel
 #    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
@@ -73,12 +64,9 @@
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
-#    define FORT_SOD_SANITY   sod_sanity_
-#    define FORT_AGGRESSIVE   aggressive_
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
-#    define FORT_INIT_ICEMASK init_icemask_
 #    define FORT_COMBINEVEL   combinevel_
 #    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
@@ -105,12 +93,12 @@ namespace amrex{
 
 extern "C"
 {
-   void FORT_SOD_SANITY(
+   void fort_sod_sanity(
     int* id,int* nc,
     const int* lo,const int* hi,
     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi));
 
-   void FORT_AGGRESSIVE(
+   void fort_aggressive(
     int* datatype,
     Real* warning_cutoff,
     const int* tilelo,const int* tilehi,
@@ -783,7 +771,7 @@ extern "C"
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi));
 
 
-   void FORT_INIT_ICEMASK(
+   void fort_init_icemask(
     Real* time,
     int* facecut_index,
     int* icefacecut_index,
@@ -902,7 +890,6 @@ extern "C"
      int* freezing_model,
      int* distribute_from_target,
      int* nten,
-     int* face_flag,
      int* override_density,
      int* constant_density_all_time,
      int* velbc,
@@ -940,10 +927,6 @@ extern "C"
      Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),
      Real* yvel,AMREX_ARLIM_P(yvello),AMREX_ARLIM_P(yvelhi),
      Real* zvel,AMREX_ARLIM_P(zvello),AMREX_ARLIM_P(zvelhi),
-     Real* xvelslope,AMREX_ARLIM_P(xvelslopelo),AMREX_ARLIM_P(xvelslopehi),
-     Real* yvelslope,AMREX_ARLIM_P(yvelslopelo),AMREX_ARLIM_P(yvelslopehi),
-     Real* zvelslope,AMREX_ARLIM_P(zvelslopelo),AMREX_ARLIM_P(zvelslopehi),
-     Real* momslope,AMREX_ARLIM_P(momslopelo),AMREX_ARLIM_P(momslopehi),
      Real* xmomside,AMREX_ARLIM_P(xmomsidelo),AMREX_ARLIM_P(xmomsidehi),
      Real* ymomside,AMREX_ARLIM_P(ymomsidelo),AMREX_ARLIM_P(ymomsidehi),
      Real* zmomside,AMREX_ARLIM_P(zmomsidelo),AMREX_ARLIM_P(zmomsidehi),
