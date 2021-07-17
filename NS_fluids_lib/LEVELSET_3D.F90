@@ -10743,7 +10743,6 @@ stop
        tessellate, &
        ngrow_refine, &
        nrefine_vof, &
-       nrefine_cen, &
        nten, &
        spec_material_id_AMBIENT, &
        mass_fraction_id, &
@@ -10758,7 +10757,6 @@ stop
        mom_den, &
        DIMS(mom_den), &
        vofF,DIMS(vofF), &
-       cenF,DIMS(cenF), &
        massF,DIMS(massF), &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -10779,7 +10777,6 @@ stop
       INTEGER_T, intent(in) :: ngrow_refine
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: nrefine_vof
-      INTEGER_T, intent(in) :: nrefine_cen
       INTEGER_T, intent(in) :: nten
       INTEGER_T :: nten_test
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
@@ -10798,7 +10795,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(denstate)
       INTEGER_T, intent(in) :: DIMDEC(mom_den)
       INTEGER_T, intent(in) :: DIMDEC(vofF)
-      INTEGER_T, intent(in) :: DIMDEC(cenF)
       INTEGER_T, intent(in) :: DIMDEC(massF)
       REAL_T, intent(in), target :: slope(DIMV(slope),nmat*ngeom_recon) 
       REAL_T, intent(in), target :: denstate(DIMV(denstate), &
@@ -10806,8 +10802,6 @@ stop
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
       REAL_T, intent(out), target :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: cenF(DIMV(cenF),nrefine_cen)
-      REAL_T, pointer :: cenF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: massF(DIMV(massF),nrefine_vof)
       REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -10843,13 +10837,11 @@ stop
 
       INTEGER_T check_donate
       INTEGER_T irefine
-      INTEGER_T irefinecen
       REAL_T xsten_recon(-1:1,SDIM)
       REAL_T xsten_donate(-1:1,SDIM)
       REAL_T mu
 
       vofF_ptr=>vofF
-      cenF_ptr=>cenF
       massF_ptr=>massF
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -10898,10 +10890,6 @@ stop
        print *,"nrefine_vof invalid"
        stop
       endif
-      if (nrefine_cen.ne.2*nmat*SDIM*SDIM) then
-       print *,"nrefine_cen invalid"
-       stop
-      endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
        print *,"nten invalid semi refine vof nten nten_test ",nten,nten_test
@@ -10914,7 +10902,6 @@ stop
       call checkbound_array(fablo,fabhi,denstate,ngrow_refine,-1,223)
       call checkbound_array(fablo,fabhi,mom_den,ngrow_refine,-1,223)
       call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1,227)
-      call checkbound_array(fablo,fabhi,cenF_ptr,ngrow_refine,-1,227)
       call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1,227)
 
       do im=1,nmat
@@ -11017,21 +11004,6 @@ stop
 
             vofF(D_DECL(i,j,k),irefine)=zero
             massF(D_DECL(i,j,k),irefine)=zero
-            do dir2=1,SDIM
-
-             if (iside.eq.-1) then
-              irefinecen=veldir*2*nmat*SDIM+ &
-               (im-1)*SDIM+dir2
-             else if (iside.eq.1) then
-              irefinecen=veldir*2*nmat*SDIM+ &
-               nmat*SDIM+(im-1)*SDIM+dir2
-             else
-              print *,"iside invalid"
-              stop
-             endif
- 
-             cenF(D_DECL(i,j,k),irefinecen)=zero
-            enddo ! dir2 
            enddo ! im=1..nmat
           else if (check_donate.eq.1) then
 
@@ -11159,19 +11131,6 @@ stop
 
             vofF(D_DECL(i,j,k),irefine)=multi_volume(im)
             massF(D_DECL(i,j,k),irefine)=den_value*multi_volume(im)
-            do dir2=1,SDIM
-             if (iside.eq.-1) then
-              irefinecen=veldir*2*nmat*SDIM+ &
-               (im-1)*SDIM+dir2
-             else if (iside.eq.1) then
-              irefinecen=veldir*2*nmat*SDIM+ &
-               nmat*SDIM+(im-1)*SDIM+dir2
-             else
-              print *,"iside invalid"
-              stop
-             endif
-             cenF(D_DECL(i,j,k),irefinecen)=multi_cen(dir2,im)
-            enddo ! dir2 
            enddo ! im=1,nmat
 
            if (tessellate.eq.0) then
@@ -11186,7 +11145,9 @@ stop
             stop
            endif
  
-           if ((voltotal.le.zero).or.(mass_total.le.zero)) then
+           if ((voltotal.gt.zero).and.(mass_total.gt.zero)) then
+            ! do nothing
+           else
             print *,"voltotal or mass_total invalid"
             print *,"voltotal, mass_total, nmat ",voltotal,mass_total,nmat
             print *,"voldonate,volrecon ",voldonate,volrecon
@@ -11197,12 +11158,16 @@ stop
             print *,"level,finest_level ",level,finest_level
             stop
            endif
-           if ((voltotal_solid.lt.zero).or.(mass_total_solid.lt.zero)) then
+           if ((voltotal_solid.ge.zero).and.(mass_total_solid.ge.zero)) then
+            ! do nothing
+           else
             print *,"voltotal_solid or mass_total_solid invalid"
             print *,"level,finest_level ",level,finest_level
             stop
            endif
-           if ((voltotal_fluid.lt.zero).or.(mass_total_fluid.lt.zero)) then
+           if ((voltotal_fluid.ge.zero).and.(mass_total_fluid.ge.zero)) then
+            ! do nothing
+           else
             print *,"voltotal_fluid or mass_total_fluid invalid"
             print *,"level,finest_level ",level,finest_level
             stop

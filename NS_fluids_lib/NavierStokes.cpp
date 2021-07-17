@@ -15472,17 +15472,9 @@ NavierStokes::split_scalar_advection() {
   // (dir-1)*2*nmat + (side-1)*nmat + im
  int nrefine_vof=2*nmat*AMREX_SPACEDIM;
 
-  // (veldir-1)*2*nmat*sdim + (side-1)*nmat*sdim + (im-1)*sdim+dir
- int nrefine_cen=2*nmat*AMREX_SPACEDIM*AMREX_SPACEDIM;
-
  MultiFab* vofF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
    MFInfo().SetTag("vofF"),FArrayBoxFactory());
 
- // linear expansion: 
- // 1. find slopes u_x
- // 2. (rho u)(x)_m = rho_m (u + u_x (x - x_m_centroid))
- MultiFab* cenF=new MultiFab(grids,dmap,nrefine_cen,ngrow,
-   MFInfo().SetTag("cenF"),FArrayBoxFactory());
  MultiFab* massF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
    MFInfo().SetTag("massF"),FArrayBoxFactory());
 
@@ -15511,7 +15503,6 @@ NavierStokes::split_scalar_advection() {
    FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
    FArrayBox& vofFfab=(*vofF)[mfi];
-   FArrayBox& cenFfab=(*cenF)[mfi];
    FArrayBox& massFfab=(*massF)[mfi];
 
    int tessellate=0;
@@ -15530,7 +15521,6 @@ NavierStokes::split_scalar_advection() {
     &tessellate,  // =0
     &ngrow,
     &nrefine_vof,
-    &nrefine_cen,
     &nten,
     spec_material_id_AMBIENT.dataPtr(),
     mass_fraction_id.dataPtr(),
@@ -15546,7 +15536,6 @@ NavierStokes::split_scalar_advection() {
     mom_denfab.dataPtr(),
     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
     vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
-    cenFfab.dataPtr(),ARLIM(cenFfab.loVect()),ARLIM(cenFfab.hiVect()),
     massFfab.dataPtr(),ARLIM(massFfab.loVect()),ARLIM(massFfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,
@@ -15608,7 +15597,6 @@ NavierStokes::split_scalar_advection() {
     FArrayBox& xvoffab=(*xvof[veldir-1])[mfi];
     FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; // 1..num_MAC_vectors
     FArrayBox& vofFfab=(*vofF)[mfi];
-    FArrayBox& cenFfab=(*cenF)[mfi];
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -15621,9 +15609,7 @@ NavierStokes::split_scalar_advection() {
      &finest_level,
      &normdir_here,
      &nrefine_vof,
-     &nrefine_cen,
      vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
-     cenFfab.dataPtr(),ARLIM(cenFfab.loVect()),ARLIM(cenFfab.hiVect()),
      x_mac_old.dataPtr(),ARLIM(x_mac_old.loVect()),ARLIM(x_mac_old.hiVect()),
      xd_mac_old.dataPtr(),ARLIM(xd_mac_old.loVect()),ARLIM(xd_mac_old.hiVect()),
      xvoffab.dataPtr(),ARLIM(xvoffab.loVect()),ARLIM(xvoffab.hiVect()),
@@ -15644,7 +15630,6 @@ NavierStokes::split_scalar_advection() {
  } // veldir=1..sdim
 
  delete vofF;
- delete cenF;
  delete massF;
 
  Vector<int> nprocessed;
@@ -15958,7 +15943,7 @@ NavierStokes::split_scalar_advection() {
 
     // declared in GODUNOV_3D.F90
    fort_build_newmac(
-    &num_MAC_vectors, //num_MAC_vectors=1 or 2
+    &num_MAC_vectors, //num_MAC_vectors=2
     &normdir_here,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
