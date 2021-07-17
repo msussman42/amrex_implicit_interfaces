@@ -5632,13 +5632,9 @@ void NavierStokes::make_physics_vars(int project_option) {
 
   // (dir-1)*2*nmat + (side-1)*nmat + im
  int nrefine_vof=2*nmat*AMREX_SPACEDIM;
-  // (veldir-1)*2*nmat*sdim + (side-1)*nmat*sdim + (im-1)*sdim+dir
- int nrefine_cen=2*nmat*AMREX_SPACEDIM*AMREX_SPACEDIM;
  int ngrow_refine=1;
  MultiFab* vofF=new MultiFab(grids,dmap,nrefine_vof,ngrow_refine,
 	MFInfo().SetTag("vofF"),FArrayBoxFactory());
- MultiFab* cenF=new MultiFab(grids,dmap,nrefine_cen,ngrow_refine,
-	MFInfo().SetTag("cenF"),FArrayBoxFactory());
  MultiFab* massF=new MultiFab(grids,dmap,nrefine_vof,ngrow_refine,
 	MFInfo().SetTag("massF"),FArrayBoxFactory());
 
@@ -5668,7 +5664,6 @@ void NavierStokes::make_physics_vars(int project_option) {
   FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
   FArrayBox& vofFfab=(*vofF)[mfi];
-  FArrayBox& cenFfab=(*cenF)[mfi];
   FArrayBox& massFfab=(*massF)[mfi];
 
   int tessellate=3;
@@ -5687,7 +5682,6 @@ void NavierStokes::make_physics_vars(int project_option) {
    &tessellate,  // =3
    &ngrow_refine,
    &nrefine_vof,
-   &nrefine_cen,
    &nten,
    spec_material_id_AMBIENT.dataPtr(),
    mass_fraction_id.dataPtr(),
@@ -5703,7 +5697,6 @@ void NavierStokes::make_physics_vars(int project_option) {
    mom_denfab.dataPtr(),
    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
    vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
-   cenFfab.dataPtr(),ARLIM(cenFfab.loVect()),ARLIM(cenFfab.hiVect()),
    massFfab.dataPtr(),ARLIM(massFfab.loVect()),ARLIM(massFfab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,
@@ -6029,7 +6022,6 @@ void NavierStokes::make_physics_vars(int project_option) {
 
  delete vofC;
  delete vofF;
- delete cenF;
  delete massF;
  delete modvisc;
  
