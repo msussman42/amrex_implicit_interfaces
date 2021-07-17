@@ -8,27 +8,23 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_MAXPRESVEL maxpresvel 
-#    define FORT_GETDRAG  getdrag
 #    define FORT_DERTURBVISC derturbvisc
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_MAXPRESVEL MAXPRESVEL
-#    define FORT_GETDRAG  GETDRAG
 #    define FORT_DERTURBVISC DERTURBVISC
 #    define FORT_INTEGRATE_RECALESCE INTEGRATE_RECALESCE
 #    define FORT_RESET_TEMPERATURE RESET_TEMPERATURE
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_MAXPRESVEL maxpresvel 
-#    define FORT_GETDRAG  getdrag
 #    define FORT_DERTURBVISC derturbvisc
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #  else
 #    define FORT_MAXPRESVEL maxpresvel_ 
-#    define FORT_GETDRAG  getdrag_
 #    define FORT_DERTURBVISC derturbvisc_
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce_
 #    define FORT_RESET_TEMPERATURE reset_temperature_
@@ -85,7 +81,7 @@ extern "C" {
        int* viscoelastic_model,
        Real* elastic_viscosity);
 
-     void FORT_GETDRAG(
+     void fort_getdrag(
       int* isweep,
       Real* globalsum,Real* localsum,
       Real* gravity_normalized,

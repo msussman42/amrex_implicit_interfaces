@@ -1293,7 +1293,7 @@ stop
        ! 2 dim+1 - 3 dim torque
        ! 3 dim+1 - 4 dim ptorque
        ! 4 dim+1     perimeter
-      subroutine FORT_GETDRAG( &
+      subroutine fort_getdrag( &
        isweep, &
        globalsum, &
        localsum, &
@@ -1333,7 +1333,8 @@ stop
        nmat, &
        nparts, &
        nparts_def, &
-       im_solid_map)
+       im_solid_map) &
+      bind(c,name='fort_getdrag')
 
       use global_utility_module
       use geometry_intersect_module
@@ -1393,29 +1394,49 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(drag)
 
-      REAL_T, intent(in) :: tdata(DIMV(tdata),ntensor)
-      REAL_T, intent(in) :: viscoten(DIMV(viscoten),ntenvisco)
-      REAL_T, intent(in) :: den(DIMV(den),nmat*num_state_material)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: slrecon(DIMV(slrecon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(SDIM+1))
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: areax(DIMV(areax))
-      REAL_T, intent(in) :: areay(DIMV(areay))
-      REAL_T, intent(in) :: areaz(DIMV(areaz))
+      REAL_T, intent(in),target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, pointer :: tdata_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: viscoten(DIMV(viscoten),ntenvisco)
+      REAL_T, pointer :: viscoten_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: slrecon(DIMV(slrecon),nmat*ngeom_recon)
+      REAL_T, pointer :: slrecon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: levelpc(DIMV(levelpc),nmat*(SDIM+1))
+      REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: areax(DIMV(areax))
+      REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: areay(DIMV(areay))
+      REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: areaz(DIMV(areaz))
+      REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: cvisc(DIMV(cvisc))
+      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: yface(DIMV(yface),ncphys)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: cvisc(DIMV(cvisc))
+      REAL_T, pointer :: cvisc_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in) :: pres(DIMV(pres))
-      REAL_T, intent(in) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(inout) :: drag(DIMV(drag),4*SDIM+1)
+      REAL_T, intent(in),target :: pres(DIMV(pres))
+      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: drag(DIMV(drag),4*SDIM+1)
+      REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ii,jj,kk
@@ -1476,51 +1497,72 @@ stop
 
       nhalf=3
 
+      tdata_ptr=>tdata
+      viscoten_ptr=>viscoten
+      den_ptr=>den
+      mask_ptr=>mask
+      slrecon_ptr=>slrecon
+      levelpc_ptr=>levelpc
+      vol_ptr=>vol
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      cvisc_ptr=>cvisc
+      solxfab_ptr=>solxfab
+      solyfab_ptr=>solyfab
+      solzfab_ptr=>solzfab
+      pres_ptr=>pres
+      vel_ptr=>vel
+      drag_ptr=>drag
+
       if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
       else if (time.ge.1.0D+20) then
-       print *,"WARNING time.ge.1.0D+20 in getdrag"
+       print *,"WARNING time.ge.1.0D+20 in fort_getdrag"
       else if (time.lt.zero) then
-       print *,"time invalid in getdrag"
+       print *,"time invalid in fort_getdrag"
        stop
       else
-       print *,"time bust in getdrag"
+       print *,"time bust in fort_getdrag"
        stop
       endif
 
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_GETDRAG"
+       print *,"nparts invalid fort_getdrag"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_GETDRAG"
+       print *,"nparts_def invalid fort_getdrag"
        stop
       endif
 
         ! cell centered grad U
-      call checkbound(fablo,fabhi,DIMS(tdata),0,-1,1252)
-      call checkbound(fablo,fabhi,DIMS(viscoten),1,-1,1253)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,1254)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,1255)
-      call checkbound(fablo,fabhi,DIMS(slrecon),1,-1,12560)
-      call checkbound(fablo,fabhi,DIMS(levelpc),1,-1,1257)
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,6600)
-      call checkbound(fablo,fabhi,DIMS(areax),0,0,6601)
-      call checkbound(fablo,fabhi,DIMS(areay),0,1,6602)
-      call checkbound(fablo,fabhi,DIMS(areaz),0,SDIM-1,6603)
+      call checkbound_array(fablo,fabhi,tdata_ptr,0,-1,1252)
+      call checkbound_array(fablo,fabhi,viscoten_ptr,1,-1,1253)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,1254)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,1255)
+      call checkbound_array(fablo,fabhi,slrecon_ptr,1,-1,12560)
+      call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1,1257)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,6600)
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0,6601)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1,6602)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1,6603)
 
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,1258)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,1259)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,1261)
-      call checkbound(fablo,fabhi,DIMS(cvisc),0,-1,1262)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,1258)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,1259)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,1261)
+      call checkbound_array1(fablo,fabhi,cvisc_ptr,0,-1,1262)
 
-      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,6604)
-      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,6604)
-      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,6604)
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,6604)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,6604)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,6604)
 
-      call checkbound(fablo,fabhi,DIMS(pres),1,-1,6605)
-      call checkbound(fablo,fabhi,DIMS(vel),1,-1,6606)
-      call checkbound(fablo,fabhi,DIMS(drag),0,-1,6607)
+      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,6605)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,6606)
+      call checkbound_array(fablo,fabhi,drag_ptr,0,-1,6607)
 
       if (bfact.lt.1) then
        print *,"bfact invalid5"
@@ -1578,6 +1620,8 @@ stop
         print *,"ntenvisco invalid1"
         stop
        endif
+      else if (num_materials_viscoelastic.eq.0) then
+       ! do nothing
       else
        print *,"num_materials_viscoelastic invalid"
        stop
@@ -1674,7 +1718,7 @@ stop
           else if (levelrz.eq.3) then
            ! do nothing
           else
-           print *,"levelrz invalid getdrag"
+           print *,"levelrz invalid fort_getdrag"
            stop
           endif
          else
@@ -1792,7 +1836,7 @@ stop
           if ((im_solid_crit.ge.0).and.(im_solid_crit.le.nmat)) then
            ! do nothing
           else
-           print *,"im_solid_crit invalid in getdrag:",im_solid_crit
+           print *,"im_solid_crit invalid in fort_getdrag:",im_solid_crit
            stop
           endif
 
@@ -1802,7 +1846,7 @@ stop
           if ((im_fluid.ge.1).and.(im_fluid.le.nmat)) then
            ! do nothing
           else
-           print *,"im_fluid invalid in GETDRAG"
+           print *,"im_fluid invalid in fort_getdrag"
            stop
           endif
 
@@ -2002,7 +2046,7 @@ stop
                 Q(3,1)=Q(1,3)
                 Q(3,2)=Q(2,3)
                else
-                print *,"partid invalid in GETDRAG"
+                print *,"partid invalid in fort_getdrag"
                 stop
                endif
               else if (fort_elastic_viscosity(im_fluid).eq.zero) then
@@ -2137,7 +2181,7 @@ stop
       endif
 
       return
-      end subroutine FORT_GETDRAG
+      end subroutine fort_getdrag
 
 
       subroutine FORT_INTEGRATE_RECALESCE( &
