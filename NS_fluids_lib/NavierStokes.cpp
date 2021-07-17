@@ -16208,7 +16208,7 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
- int im_tensor=-1;
+ int im_tensor=-1; // =-1 if input is velocity, >=0 if displacement input.
  int idx_elastic_flux=-1;
  init_gradu_tensorALL(
   im_tensor,
@@ -16219,13 +16219,13 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
   idx_elastic_flux,
   simple_AMR_BC_flag_viscosity);
 
-  //ngrow,ncomp,grid_type,mf id
-  //VISCOTEN_ALL_MAT_MF initialized to 0.0
- allocate_array(1,num_materials_viscoelastic*NUM_TENSOR_TYPE,-1,
-	 VISCOTEN_ALL_MAT_MF);
-
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
+
+  //ngrow,ncomp,grid_type,mf id
+  //VISCOTEN_ALL_MAT_MF initialized to 0.0
+  allocate_array(1,num_materials_viscoelastic*NUM_TENSOR_TYPE,-1,
+	 VISCOTEN_ALL_MAT_MF);
 
   for (int im=0;im<nmat;im++) {
 
@@ -16261,6 +16261,8 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
     amrex::Error("ns_is_rigid invalid");
 
   } // im=0..nmat-1
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -16271,7 +16273,14 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
   }
  }
 
- delete_array(VISCOTEN_ALL_MAT_MF);
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  delete_array(VISCOTEN_ALL_MAT_MF);
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
@@ -16433,12 +16442,21 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  }
 
  int elastic_ntensor=num_materials_viscoelastic*NUM_TENSOR_TYPE;
- debug_ngrow(VISCOTEN_ALL_MAT_MF,1,50);
- if (localMF[VISCOTEN_ALL_MAT_MF]->nComp()==elastic_ntensor) {
-  //do nothing
- } else {
-  amrex::Error("VISCOTEN_ALL_MAT_MF invalid nComp");
- }
+ int VISOTEN_ALL_MAT_MF_local=0;
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  VISOTEN_ALL_MAT_MF_local=VISCOTEN_ALL_MAT_MF;
+
+  debug_ngrow(VISCOTEN_ALL_MAT_MF_local,1,50);
+  if (localMF[VISCOTEN_ALL_MAT_MF_local]->nComp()==elastic_ntensor) {
+   //do nothing
+  } else {
+   amrex::Error("VISCOTEN_ALL_MAT_MF_local invalid nComp");
+  }
+ } else if (num_materials_viscoelastic==0) {
+  VISCOTEN_ALL_MAT_MF_local=CELLTENSOR_MF;
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -16485,7 +16503,8 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
   FArrayBox& tensor_data=(*localMF[CELLTENSOR_MF])[mfi];
-  FArrayBox& elastic_tensor_data=(*localMF[VISCOTEN_ALL_MAT_MF])[mfi];
+  FArrayBox& elastic_tensor_data=
+     (*localMF[VISCOTEN_ALL_MAT_MF_local])[mfi];
 
   Real gravity_normalized=std::abs(gravity);
   if (invert_gravity==1)
@@ -16503,7 +16522,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
    // hoop stress, centripetal force, coriolis effect still not
    // considered.
    // in: DERIVE_3D.F90
-  FORT_GETDRAG(
+  fort_getdrag(
    &isweep,
    integrated_quantities.dataPtr(),
    local_integrated_quantities[tid_current].dataPtr(),
