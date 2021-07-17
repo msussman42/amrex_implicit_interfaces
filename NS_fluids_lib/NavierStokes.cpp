@@ -522,7 +522,6 @@ int  NavierStokes::ncomp_sum_int_user2=0;
 // set using elastic_viscosity, and other criteria
 int  NavierStokes::num_materials_viscoelastic=0;
 
-int  NavierStokes::MAC_grid_displacement=0;
 int  NavierStokes::NUM_CELL_ELASTIC=0;
 
 int  NavierStokes::num_state_material=SpeciesVar; // den,T
@@ -4647,7 +4646,6 @@ NavierStokes::read_params ()
      std::cout << "TensorYU_Type= " << TensorYU_Type << '\n';
      std::cout << "TensorZU_Type= " << TensorZU_Type << '\n';
      std::cout << "TensorZV_Type= " << TensorZV_Type << '\n';
-     std::cout << "MAC_grid_displacement= " << MAC_grid_displacement << '\n';
      std::cout << "NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
      std::cout << "XDmac_Type= " << XDmac_Type << '\n';
      std::cout << "YDmac_Type= " << YDmac_Type << '\n';
@@ -8470,6 +8468,12 @@ void NavierStokes::init_boundary() {
    // do nothing
   } else if (k==Wmac_Type) {
    // do nothing
+  } else if (k==XDmac_Type) {
+   // do nothing
+  } else if (k==YDmac_Type) {
+   // do nothing
+  } else if (k==ZDmac_Type) {
+   // do nothing
   } else if (k==LS_Type) {
    MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
    MultiFab* lsmf=getStateDist(1,cur_time_slab,3);  
@@ -8485,7 +8489,9 @@ void NavierStokes::init_boundary() {
    MultiFab* velmf=getStateSolid(1,0,nparts*AMREX_SPACEDIM,cur_time_slab);
    MultiFab::Copy(Solid_new,*velmf,0,0,nparts*AMREX_SPACEDIM,1);
    delete velmf;
-  } else if ((k==Tensor_Type)&&(num_materials_viscoelastic>0)) {
+  } else if ((k==Tensor_Type)&&
+             (num_materials_viscoelastic>0)&&
+             (num_materials_viscoelastic<=nmat)) {
    int nparts=im_elastic_map.size();
    if ((nparts<=0)||(nparts>nmat))
     amrex::Error("nparts invalid");
@@ -16013,13 +16019,9 @@ NavierStokes::split_scalar_advection() {
  if ((level>=0)&&(level<finest_level)) {
 
   int spectral_override=1; // order derived from "enable_spectral"
-
-  if (face_flag==1) {
-   avgDownMacState(Umac_Type,spectral_override);
-  } else if (face_flag==0) {
-   // do nothing
-  } else
-   amrex::Error("face_flag invalid 8");
+  avgDownMacState(Umac_Type,spectral_override);
+  spectral_override=0; //always low order
+  avgDownMacState(XDmac_Type,spectral_override);
  
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
@@ -18389,15 +18391,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("visual_compare invalid");
 
- if (MAC_grid_displacement==0) {
-  // do nothing
- } else if (MAC_grid_displacement==1) {
-  int use_VOF_weight=1;
-  int vel_or_disp=1;  // displacement
-  int dest_idx=VISUAL_XDISP_MAC_CELL_MF;
-  VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
- } else
-  amrex::Error("MAC_grid_displacement invalid");
+ int use_VOF_weight=1;
+ int vel_or_disp=1;  // displacement
+ int dest_idx=VISUAL_XDISP_MAC_CELL_MF;
+ VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -18421,38 +18418,33 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     div_data->norm0(0,1) << '\n'; 
   }
   MultiFab* viscoelasticmf=nullptr;
-  if (MAC_grid_displacement==0) {
-   if (NUM_CELL_ELASTIC==
-       num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_ELASTIC invalid");
+  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*NUM_TENSOR_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC invalid");
 
-   viscoelasticmf=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
-  } else if (MAC_grid_displacement==1) {
-   if (NUM_CELL_ELASTIC==
-       num_materials_viscoelastic*NUM_TENSOR_TYPE) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_ELASTIC invalid");
+  viscoelasticmf = new MultiFab(
+   ns_level.state[Tensor_Type].boxArray(),
+   ns_level.dmap,
+   NUM_CELL_ELASTIC+AMREX_SPACEDIM,
+    1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
 
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=nmat)) {
    MultiFab* just_tensors=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,
       cur_time_slab);
-   viscoelasticmf = new MultiFab(
-    ns_level.state[Tensor_Type].boxArray(),
-    ns_level.dmap,
-    NUM_CELL_ELASTIC+AMREX_SPACEDIM,
-    1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
      // dst,src,scomp,dcomp,ncomp,ngrow
    MultiFab::Copy(*viscoelasticmf,*just_tensors,0,0,NUM_CELL_ELASTIC,1); 
-     // dst,src,scomp,dcomp,ncomp,ngrow
-   MultiFab::Copy(*viscoelasticmf,
+   delete just_tensors;
+  } else if (num_materials_viscoelastic==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_viscoelastic invalid");
+
+    // dst,src,scomp,dcomp,ncomp,ngrow
+  MultiFab::Copy(*viscoelasticmf,
     *ns_level.localMF[VISUAL_XDISP_MAC_CELL_MF],0,
     NUM_CELL_ELASTIC,AMREX_SPACEDIM,1); 
-
-   delete just_tensors;
-  } else
-   amrex::Error("MAC_grid_displacement invalid");
 
   ns_level.output_zones(
    visual_fab_output,
@@ -18653,12 +18645,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("output_MAC_vel invalid");
 
- if (MAC_grid_displacement==0) {
-  // do nothing
- } else if (MAC_grid_displacement==1) {
-  delete_array(VISUAL_XDISP_MAC_CELL_MF);
- } else
-  amrex::Error("MAC_grid_displacement invalid");
+ delete_array(VISUAL_XDISP_MAC_CELL_MF);
 
  delete_array(MACDIV_MF);
  delete_array(MAGTRACE_MF); 
@@ -19070,7 +19057,7 @@ NavierStokes::writePlotFile (
        ncomp=nmat*ngeom_raw;
       }
       this_dat=getState(nGrow,comp,ncomp,cur_time_slab);
-     } else if ((typ==Solid_State_Type)&&(im_solid_map.size()!=0)) {
+     } else if ((typ==Solid_State_Type)&&(im_solid_map.size()>0)) {
 
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
@@ -19092,7 +19079,7 @@ NavierStokes::writePlotFile (
        amrex::Error("this_dat->nComp() invalid");
 
      } else if ((typ==Tensor_Type)&&
-		(im_elastic_map.size()>=0)) {
+		(im_elastic_map.size()>0)) {
 
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
@@ -20622,6 +20609,13 @@ NavierStokes::accumulate_PC_info(int im_elastic,
   int nnbr) {
 
  int nmat=num_materials;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level>=0)&&(level<=finest_level)) {
@@ -20682,16 +20676,9 @@ NavierStokes::accumulate_PC_info(int im_elastic,
  MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
  MultiFab* XDISP_new[AMREX_SPACEDIM];
 
- if (MAC_grid_displacement==0) {
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   XDISP_new[dir]=&Tensor_new;
-  }
- } else if (MAC_grid_displacement==1) {
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
-  }
- } else
-  amrex::Error("MAC_grid_displacement invalid");
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
+ }
 
  if (particles_flag==0) {
 
@@ -20703,14 +20690,8 @@ NavierStokes::accumulate_PC_info(int im_elastic,
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    if (MAC_grid_displacement==0) {
-     int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
-     XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
-    } else if (MAC_grid_displacement==1) {
-      //ngrow,dir,scomp,ncomp
-     XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
-    } else
-     amrex::Error("MAC_grid_displacement invalid");
+     //ngrow,dir,scomp,ncomp
+    XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
    } // dir=0..sdim-1
 
    if (thread_class::nthreads<1)
@@ -20772,21 +20753,6 @@ NavierStokes::accumulate_PC_info(int im_elastic,
 
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
-    int scomp_xd=0;
-    int scomp_yd=0;
-    int scomp_zd=0;
-
-    if (MAC_grid_displacement==0) {
-     scomp_xd=NUM_TENSOR_TYPE*num_materials_viscoelastic;
-     scomp_yd=scomp_xd+1;
-     scomp_zd=scomp_yd+1;
-    } else if (MAC_grid_displacement==1) {
-     scomp_xd=0;
-     scomp_yd=0;
-     scomp_zd=0;
-    } else
-     amrex::Error("MAC_grid_displacement invalid");
-
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -20796,7 +20762,6 @@ NavierStokes::accumulate_PC_info(int im_elastic,
     // updates (1) configuration tensor and
     // (2) XDISPLACE data.
     fort_assimilate_tensor_from_particles( 
-     &MAC_grid_displacement,
      &particles_weight_XD,
      &im_elastic, // 0..nmat-1
      &isweep,
@@ -20822,11 +20787,11 @@ NavierStokes::accumulate_PC_info(int im_elastic,
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      TNEWfab.dataPtr(scomp_tensor),
      ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     xdnewfab.dataPtr(scomp_xd),
+     xdnewfab.dataPtr(),
      ARLIM(xdnewfab.loVect()),ARLIM(xdnewfab.hiVect()),
-     ydnewfab.dataPtr(scomp_yd),
+     ydnewfab.dataPtr(),
      ARLIM(ydnewfab.loVect()),ARLIM(ydnewfab.hiVect()),
-     zdnewfab.dataPtr(scomp_zd),
+     zdnewfab.dataPtr(),
      ARLIM(zdnewfab.loVect()),ARLIM(zdnewfab.hiVect()),
      xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
      ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
@@ -20859,6 +20824,13 @@ void
 NavierStokes::accumulate_info_no_particles(int im_elastic) {
 
  int nmat=num_materials;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level>=0)&&(level<=finest_level)) {
@@ -20915,28 +20887,15 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
  MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
  MultiFab* XDISP_new[AMREX_SPACEDIM];
 
- if (MAC_grid_displacement==0) {
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   XDISP_new[dir]=&Tensor_new;
-  }
- } else if (MAC_grid_displacement==1) {
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
-  }
- } else
-  amrex::Error("MAC_grid_displacement invalid");
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
+ }
 
  if (particles_flag==0) {
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   if (MAC_grid_displacement==0) {
-    int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
-    XDISP_LOCAL[dir]=getStateTensor(2,scomp,1,cur_time_slab);
-   } else if (MAC_grid_displacement==1) {
-     //ngrow,dir,scomp,ncomp
-    XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
-   } else
-    amrex::Error("MAC_grid_displacement invalid");
+    //ngrow,dir,scomp,ncomp
+   XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
   } // dir=0..sdim-1
 
   if (thread_class::nthreads<1)
@@ -20977,7 +20936,6 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
     //   calls local_tensor_from_xdisplace
    fort_assimilate_tensor_from_xdisplace( 
      &im_elastic, // 0..nmat-1
-     &MAC_grid_displacement,
      &tid_current,
      tilelo,tilehi,
      fablo,fabhi,
@@ -21219,14 +21177,8 @@ NavierStokes::init_particle_container(int append_flag) {
   MultiFab* xdisplace_mf[AMREX_SPACEDIM];
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   if (MAC_grid_displacement==0) {
-    int scomp=NUM_TENSOR_TYPE*num_materials_viscoelastic+dir;
-    xdisplace_mf[dir]=getStateTensor(1,scomp,1,cur_time_slab);
-   } else if (MAC_grid_displacement==1) {
-     //ngrow,dir,scomp,ncomp
-    xdisplace_mf[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
-   } else
-    amrex::Error("MAC_grid_displacement invalid");
+    //ngrow,dir,scomp,ncomp
+   xdisplace_mf[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
   } // dir=0..sdim-1
 
   if (thread_class::nthreads<1)
@@ -21307,7 +21259,6 @@ NavierStokes::init_particle_container(int append_flag) {
      //                 "         "   =4 => 64 pieces in 2D.
      // 2. for each small sub-box, add a particle at the sub-box center.
      fort_init_particle_container( 
-       &MAC_grid_displacement,
        &particles_weight_XD,
        &particles_weight_VEL,
        &tid_current,
@@ -22571,47 +22522,23 @@ MultiFab* NavierStokes::getStateTensor (
     amrex::Error("NUM_TENSOR_TYPE became corrupted");
 
     // Tensor_Type:
-    //  a) nparts * NUM_TENSOR_TYPE, then
-    //  b) AMREX_SPACEDIM
-   int scomp_bias=scomp-nparts*NUM_TENSOR_TYPE;
+    //   nparts * NUM_TENSOR_TYPE
    int ntotal_test=NUM_CELL_ELASTIC;
 
-   if (MAC_grid_displacement==0) {
-    if (NUM_CELL_ELASTIC==
-        num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_ELASTIC invalid");
-   } else if (MAC_grid_displacement==1) {
-    if (NUM_CELL_ELASTIC==
-        num_materials_viscoelastic*NUM_TENSOR_TYPE) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_ELASTIC invalid");
-    if (scomp_bias>=0)
-     amrex::Error("scomp_bias invalid");
-   } else
-    amrex::Error("MAC_grid_displacement invalid");
-
-   if ((ncomp==ntotal_test)&&
-       (scomp==0)) {
-    if (scomp_bias==-nparts*NUM_TENSOR_TYPE) {
-     // do nothing
-    } else
-     amrex::Error("scomp_bias became corrupted");
-   } else if (((ncomp==1)||
-               (ncomp==AMREX_SPACEDIM))&&
-              (scomp_bias<AMREX_SPACEDIM)&&
-  	      (scomp_bias>=0)) {
+   if (NUM_CELL_ELASTIC==num_materials_viscoelastic*NUM_TENSOR_TYPE) {
     // do nothing
-   } else if ((ncomp%NUM_TENSOR_TYPE==0)&&
-              (scomp_bias<0)) {
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
+
+   if ((ncomp==ntotal_test)&&(scomp==0)) {
+    // do nothing
+   } else if (ncomp%NUM_TENSOR_TYPE==0) {
     int partid=scomp/NUM_TENSOR_TYPE;
     if ((partid<0)||(partid>=nparts))
      amrex::Error("partid invalid");
    } else {
-    std::cout << "ncomp= " << ncomp << " scomp_bias=" <<
-      scomp_bias << " scomp=" << scomp << 
+    std::cout << "ncomp= " << ncomp << 
+      " scomp=" << scomp << 
       " num_materials_viscoelastic= " << num_materials_viscoelastic << 
       " NUM_TENSOR_TYPE= " << NUM_TENSOR_TYPE << 
       " NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
@@ -24076,11 +24003,6 @@ MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
    amrex::Error("ntotal, ncomp, or scomp bust getStateMAC");
 
  } else if (MAC_state_idx==XDmac_Type) {
-
-  if (MAC_grid_displacement==1) {
-   // do nothing
-  } else
-   amrex::Error("MAC_grid_displacement invalid in getStateMAC");
 
   if ((ntotal!=1)||(ncomp!=1)||(scomp!=0))
    amrex::Error("ntotal, ncomp, or scomp bust getStateMAC");

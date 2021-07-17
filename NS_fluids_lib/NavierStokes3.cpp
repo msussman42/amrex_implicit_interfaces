@@ -257,7 +257,6 @@ void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
   } else
    amrex::Error("MAC_state_idx invalid");
    
-
   if ((S_crse.nComp()!=ncomp_edge)||
       (S_fine.nComp()!=ncomp_edge))
    amrex::Error("S_crse.nComp() or S_fine.nComp() invalid");
@@ -496,7 +495,18 @@ void NavierStokes::nonlinear_advection() {
      // "state" (all materials)
     int scomp_den=(AMREX_SPACEDIM+1);
     avgDownALL(State_Type,scomp_den,num_state_material*nmat,1);
-    avgDownALL_TENSOR();
+    if ((num_materials_viscoelastic>=1)&&
+        (num_materials_viscoelastic<=nmat)) {
+     avgDownALL_TENSOR();
+    } else if (num_materials_viscoelastic==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
+
+    for (int ilev=finest_level-1;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     ns_level.avgDownMacState(XDmac_Type,0);
+    }
 
    } else if (dir_absolute_direct_split==AMREX_SPACEDIM-1) {
      // do nothing
@@ -821,6 +831,10 @@ void NavierStokes::tensor_advection_updateALL() {
   } // im=0..nmat-1
 
   avgDownALL_TENSOR();
+  for (int ilev=finest_level-1;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.avgDownMacState(XDmac_Type,0);
+  }
 
  } else
   amrex::Error("num_materials_viscoelastic invalid");
@@ -11719,17 +11733,6 @@ void NavierStokes::avgDownALL_TENSOR() {
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
   avgDownALL(Tensor_Type,0,NUM_CELL_ELASTIC,0);
-
-  if (MAC_grid_displacement==0) {
-   // do nothing
-  } else if (MAC_grid_displacement==1) {
-   if (face_flag==1) {
-    avgDownMacState(XDmac_Type,0);
-   } else 
-    amrex::Error("expecting face_flag==1 if MAC_grid_displacement==1");
-  } else
-   amrex::Error("MAC_grid_displacement invalid");
-
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -11757,117 +11760,61 @@ void NavierStokes::vel_elastic_ALL() {
        int elastic_enable_spectral=0;
        override_enable_spectral(elastic_enable_spectral);
 
-       if (MAC_grid_displacement==0) {
+        // note: tensor_advection_updateALL is called before veldiffuseALL.
+        // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
+       make_viscoelastic_tensorALL(im);
 
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-         allocate_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
-          dir,XDISP_FLUX_MF+dir);
-         setVal_array(0,AMREX_SPACEDIM*AMREX_SPACEDIM,
-          0.0,XDISP_FLUX_MF+dir);
-        }
+       //(a) interpolate Q to CC,XY,XZ,YZ locations, or
+       //(b) find grad X  + grad X^T directly from the 
+       //    displacement vars, and put in the CC,XY,XZ,YZ
+       //    variables.
+       int interp_Q_to_flux=1;
+       if (viscoelastic_model[im]==2) {
+        interp_Q_to_flux=0;  // 1 is a possible option here
+       } else if ((viscoelastic_model[im]==1)||
+          	  (viscoelastic_model[im]==0)||
+		  (viscoelastic_model[im]==3)) { // incremental
+	interp_Q_to_flux=1;
+       } else
+        amrex::Error("viscoelastic_model[im] invalid");
 
-        if (viscoelastic_model[im]==2) {
+       int flux_grid_type=-1;
+       make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+         MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
+       flux_grid_type=3;
+       make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+         MAC_ELASTIC_FLUX_XY_MF,flux_grid_type,TensorYU_Type);
 
-	 int do_alloc=1;
-         int simple_AMR_BC_flag_viscosity=1;
-	  // calls fort_face_gradients and fort_crossterm_elastic
-	 init_gradu_tensorALL(
-          im, // 0<=im<=nmat-1  (signifies displacement input)
-	  XDISPLACE_MF, // deleted in init_gradu_tensorALL since do_alloc==1
-	  do_alloc,
-	  CELLTENSOR_MF,
-	  FACETENSOR_MF,
-	  XDISP_FLUX_MF, // elastic_idx
-          simple_AMR_BC_flag_viscosity);
-
-         delete_array(CELLTENSOR_MF);
-         delete_array(FACETENSOR_MF);
-
-        } else if ((viscoelastic_model[im]==1)||
-   		   (viscoelastic_model[im]==0)||
-		   (viscoelastic_model[im]==3)) { // incremental
-         // do nothing
-        } else
-         amrex::Error("viscoelastic_model[im] invalid");
-
-         // note: tensor_advection_updateALL is called before veldiffuseALL.
-         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
-        make_viscoelastic_tensorALL(im);
-
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.make_viscoelastic_force(im);
-        }
-
-        delete_array(VISCOTEN_MF);
-
-        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-         delete_array(XDISP_FLUX_MF+dir);
-
-       } else if (MAC_grid_displacement==1) {
-
-         // note: tensor_advection_updateALL is called before veldiffuseALL.
-         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
-        make_viscoelastic_tensorALL(im);
-
-	 //MAC_ELASTIC_FLUX_CC_MF, etc. are initialized in
-	 //NavierStokes::make_viscoelastic_tensorMAC
-	 //They each have one ghost cell.
-	 //There is a choice:
-	 //(a) interpolate Q to CC,XY,XZ,YZ locations, or
-	 //(b) find grad X  + grad X^T directly from the 
-	 //    displacement vars, and put in the CC,XY,XZ,YZ
-	 //    variables.
-	int interp_Q_to_flux=1;
-	if (viscoelastic_model[im]==2) {
-         interp_Q_to_flux=0;  // 1 is a possible option here
-        } else if ((viscoelastic_model[im]==1)||
-   		   (viscoelastic_model[im]==0)||
-		   (viscoelastic_model[im]==3)) { // incremental
-	 interp_Q_to_flux=1;
-        } else
-         amrex::Error("viscoelastic_model[im] invalid");
-
-	int flux_grid_type=-1;
+       if (AMREX_SPACEDIM==2) {
+        // do nothing
+       } else if (AMREX_SPACEDIM==3) {
+	flux_grid_type=4;
         make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
-	flux_grid_type=3;
+	  MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type,TensorZU_Type);
+	flux_grid_type=5;
         make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_XY_MF,flux_grid_type,TensorYU_Type);
-
-	if (AMREX_SPACEDIM==2) {
-	 // do nothing
-	} else if (AMREX_SPACEDIM==3) {
-	 flux_grid_type=4;
-         make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type,TensorZU_Type);
-	 flux_grid_type=5;
-         make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
-	     MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type,TensorZV_Type);
-	} else
-	 amrex::Error("dimension bust");
+	  MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type,TensorZV_Type);
+       } else
+        amrex::Error("dimension bust");
 
          // find divergence of the CC,XY,XZ,YZ variables.
-        for (int ilev=finest_level;ilev>=level;ilev--) {
-         NavierStokes& ns_level=getLevel(ilev);
-         ns_level.MAC_GRID_ELASTIC_FORCE(im);
-        }
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.MAC_GRID_ELASTIC_FORCE(im);
+       }
 
-        delete_array(VISCOTEN_MF);
+       delete_array(VISCOTEN_MF);
 
-        delete_array(MAC_ELASTIC_FLUX_CC_MF);
-        delete_array(MAC_ELASTIC_FLUX_XY_MF);
+       delete_array(MAC_ELASTIC_FLUX_CC_MF);
+       delete_array(MAC_ELASTIC_FLUX_XY_MF);
 
-	if (AMREX_SPACEDIM==2) {
-	 // do nothing
-	} else if (AMREX_SPACEDIM==3) {
-         delete_array(MAC_ELASTIC_FLUX_XZ_MF);
-         delete_array(MAC_ELASTIC_FLUX_YZ_MF);
-	} else
-	 amrex::Error("dimension bust");
-
+       if (AMREX_SPACEDIM==2) {
+        // do nothing
+       } else if (AMREX_SPACEDIM==3) {
+        delete_array(MAC_ELASTIC_FLUX_XZ_MF);
+        delete_array(MAC_ELASTIC_FLUX_YZ_MF);
        } else
-        amrex::Error("MAC_grid_displacement invalid");
+        amrex::Error("dimension bust");
 
        override_enable_spectral(push_enable_spectral);
 
@@ -11888,31 +11835,12 @@ void NavierStokes::vel_elastic_ALL() {
     amrex::Error("particles_flag invalid");
   } // im=0..nmat-1
    
-  if (MAC_grid_displacement==0) {
-
-   // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
-
-   // if filter_vel==0 and face_flag==1, then
-   //  umacnew+=INTERP_TO_MAC(unew^CELL-register_mark^CELL) 
-   // else if filter_vel==1 or face_flag==0, then
-   //  umacnew=Interp_from_cell_to_MAC(unew^CELL)
-   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,1); 
-
-  } else if (MAC_grid_displacement==1) {
-
-   if (face_flag==1) {
-     // average down the MAC velocity, set the boundary conditions.
-    make_MAC_velocity_consistentALL();
-    int use_VOF_weight=1;
-    int vel_or_disp=0; //interpolate MAC velocity
-    int dest_idx=-1;   //update State_Type
-    VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
-   } else 
-    amrex::Error("expecting face_flag==1 if MAC_grid_displacement==1");
-
-  } else
-   amrex::Error("MAC_grid_displacement invalid");
+   // average down the MAC velocity, set the boundary conditions.
+  make_MAC_velocity_consistentALL();
+  int use_VOF_weight=1;
+  int vel_or_disp=0; //interpolate MAC velocity
+  int dest_idx=-1;   //update State_Type
+  VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
 
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);

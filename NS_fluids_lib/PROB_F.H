@@ -20,7 +20,6 @@
 #    define FORT_GROUP_STATEFILL group_statefill
 #    define FORT_TENSORFILL   tensorfill
 #    define FORT_GROUP_TENSORFILL group_tensorfill
-#    define FORT_XDISPLACEFILL   xdisplacefill
 #    define FORT_SCALARFILL  scalarfill
 #    define FORT_EXTRAPFILL  extrapfill
 #    define FORT_GROUP_EXTRAPFILL group_extrapfill
@@ -50,7 +49,6 @@
 #    define FORT_GROUP_STATEFILL GROUP_STATEFILL
 #    define FORT_TENSORFILL   TENSORFILL
 #    define FORT_GROUP_TENSORFILL GROUP_TENSORFILL
-#    define FORT_XDISPLACEFILL   XDISPLACEFILL
 #    define FORT_SCALARFILL  SCALARFILL
 #    define FORT_EXTRAPFILL  EXTRAPFILL
 #    define FORT_GROUP_EXTRAPFILL GROUP_EXTRAPFILL
@@ -80,7 +78,6 @@
 #    define FORT_GROUP_STATEFILL group_statefill
 #    define FORT_TENSORFILL   tensorfill
 #    define FORT_GROUP_TENSORFILL group_tensorfill
-#    define FORT_XDISPLACEFILL   xdisplacefill
 #    define FORT_SCALARFILL  scalarfill
 #    define FORT_EXTRAPFILL  extrapfill
 #    define FORT_GROUP_EXTRAPFILL group_extrapfill
@@ -109,7 +106,6 @@
 #    define FORT_GROUP_STATEFILL group_statefill_
 #    define FORT_TENSORFILL   tensorfill_
 #    define FORT_GROUP_TENSORFILL group_tensorfill_
-#    define FORT_XDISPLACEFILL   xdisplacefill_
 #    define FORT_SCALARFILL  scalarfill_
 #    define FORT_EXTRAPFILL  extrapfill_
 #    define FORT_GROUP_EXTRAPFILL group_extrapfill_
@@ -278,15 +274,6 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void FORT_TENSORFILL (
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
-     void FORT_XDISPLACEFILL (
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),

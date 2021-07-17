@@ -2376,7 +2376,6 @@ stop
         ! I1=tr(C),I2=(1/2)Tr(C)^2−tr(C^2),and I3=det(C)
       subroutine local_tensor_from_xdisplace( &
         im_elastic, & ! 1..nmat
-        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -2395,7 +2394,6 @@ stop
       implicit none
 
       INTEGER_T, intent(in) :: im_elastic ! 1..nmat
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
@@ -2458,18 +2456,9 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,TNEWfab,1,-1,1271)
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdfab,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydfab,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab,1,-1,1271)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdfab,1,0,1271)
-       call checkbound_array1(fablo,fabhi,ydfab,1,1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab,1,SDIM-1,1271)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo,fabhi,xdfab,1,0,1271)
+      call checkbound_array1(fablo,fabhi,ydfab,1,1,1271)
+      call checkbound_array1(fablo,fabhi,zdfab,1,SDIM-1,1271)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -2526,15 +2515,8 @@ stop
          data_in%box_type_data(dir_local)=0
         enddo
 
-        if (MAC_grid_displacement.eq.0) then
-         data_in%grid_type_data=-1
-        else if (MAC_grid_displacement.eq.1) then
-         data_in%grid_type_data=dir_XD-1
-         data_in%box_type_data(dir_XD)=1
-        else
-         print *,"MAC_grid_displacement invalid"
-         stop
-        endif
+        data_in%grid_type_data=dir_XD-1
+        data_in%box_type_data(dir_XD)=1
 
         if (dir_XD.eq.1) then
          data_in%disp_data=>xdfab
@@ -9790,25 +9772,24 @@ stop
        stop
       endif
 
-      if ((num_materials_viscoelastic.ge.1).and. &
+      if (ntensor.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
+       ! do nothing
+      else
+       print *,"ntensor invalid"
+       stop
+      endif
+
+      if ((num_materials_viscoelastic.ge.0).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if ((ntensor.eq. &
-            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM).or. &
-           (ntensor.eq. &
-            num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
-        ! do nothing
-       else
-        print *,"ntensor invalid"
-        stop
-       endif
-       if (ntensor.eq.NUM_CELL_ELASTIC) then
-        ! do nothing
-       else
-        print *,"ntensor invalid"
-        stop
-       endif
+       ! do nothing
       else
        print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
+      if (ntensor.eq.NUM_CELL_ELASTIC) then
+       ! do nothing
+      else
+       print *,"ntensor invalid"
        stop
       endif
 
@@ -18166,7 +18147,6 @@ stop
        partid, & ! 0..num_materials_viscoelastic-1
        level, &
        finest_level, &
-       MAC_grid_displacement, &
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
@@ -18194,7 +18174,6 @@ stop
       INTEGER_T, intent(in) :: partid !0..num_materials_viscoelastic-1
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: ncomp_visc
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nmat
@@ -18314,18 +18293,9 @@ stop
        stop
       endif
 
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array(fablo,fabhi,xdfab,2,-1,11)
-       call checkbound_array(fablo,fabhi,ydfab,2,-1,11)
-       call checkbound_array(fablo,fabhi,zdfab,2,-1,11)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array(fablo,fabhi,xdfab,2,0,11)
-       call checkbound_array(fablo,fabhi,ydfab,2,1,11)
-       call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array(fablo,fabhi,xdfab,2,0,11)
+      call checkbound_array(fablo,fabhi,ydfab,2,1,11)
+      call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
 
       call checkbound_array(fablo,fabhi,visc,1,-1,11)
       call checkbound_array(fablo,fabhi,tensor_ptr,1,-1,8)
@@ -18405,25 +18375,11 @@ stop
 
         do dir_XD=1,SDIM
 
-         if (MAC_grid_displacement.eq.0) then
-
-          data_in%grid_type_data=-1
-          do dir_local=1,SDIM
-           data_in%box_type_data(dir_local)=0
-          enddo
-
-         else if (MAC_grid_displacement.eq.1) then
-
-          data_in%grid_type_data=dir_XD-1
-          do dir_local=1,SDIM
-           data_in%box_type_data(dir_local)=0
-          enddo
-          data_in%box_type_data(dir_XD)=1
-
-         else
-          print *,"MAC_grid_displacement invalid"
-          stop
-         endif
+         data_in%grid_type_data=dir_XD-1
+         do dir_local=1,SDIM
+          data_in%box_type_data(dir_local)=0
+         enddo
+         data_in%box_type_data(dir_XD)=1
 
          if (dir_XD.eq.1) then
           data_in%disp_data=>xdfab
@@ -18550,7 +18506,6 @@ stop
        partid, & ! 0..num_materials_viscoelastic-1
        level, &
        finest_level, &
-       MAC_grid_displacement, &
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
@@ -18581,7 +18536,6 @@ stop
       INTEGER_T, intent(in) :: partid !0..num_materials_viscoelastic-1
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: ncomp_visc
       INTEGER_T, intent(in) :: im_parm  ! 0..nmat-1
       INTEGER_T, intent(in) :: nmat
@@ -18705,14 +18659,9 @@ stop
        stop
       endif
 
-      if (MAC_grid_displacement.eq.1) then
-       call checkbound_array(fablo,fabhi,xdfab,2,0,11)
-       call checkbound_array(fablo,fabhi,ydfab,2,1,11)
-       call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array(fablo,fabhi,xdfab,2,0,11)
+      call checkbound_array(fablo,fabhi,ydfab,2,1,11)
+      call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
 
       call checkbound_array(fablo,fabhi,visc,1,-1,11)
       call checkbound_array(fablo,fabhi,tensor,1,-1,8)
@@ -18779,18 +18728,11 @@ stop
 
          do dir_XD=1,SDIM
 
-          if (MAC_grid_displacement.eq.1) then
-
-           data_in%grid_type_data=dir_XD-1
-           do dir_local=1,SDIM
-            data_in%box_type_data(dir_local)=0
-           enddo
-           data_in%box_type_data(dir_XD)=1
-
-          else
-           print *,"MAC_grid_displacement invalid"
-           stop
-          endif
+          data_in%grid_type_data=dir_XD-1
+          do dir_local=1,SDIM
+           data_in%box_type_data(dir_local)=0
+          enddo
+          data_in%box_type_data(dir_XD)=1
 
           if (dir_XD.eq.1) then
            data_in%disp_data=>xdfab
@@ -19313,7 +19255,6 @@ stop
       subroutine fort_updatetensor( &
        level, &
        finest_level, &
-       MAC_grid_displacement, &
        nmat, &
        im_critical, &  ! 0<=im_critical<=nmat-1
        ncomp_visc, & 
@@ -19343,7 +19284,6 @@ stop
       use godunov_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat,im_critical
@@ -19456,18 +19396,9 @@ stop
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
       call checkbound_array(fablo,fabhi,told,0,-1,63)
 
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdisp_ptr,1,-1,63)
-       call checkbound_array1(fablo,fabhi,ydisp_ptr,1,-1,63)
-       call checkbound_array1(fablo,fabhi,zdisp_ptr,1,-1,63)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdisp_ptr,1,0,63)
-       call checkbound_array1(fablo,fabhi,ydisp_ptr,1,1,63)
-       call checkbound_array1(fablo,fabhi,zdisp_ptr,1,SDIM-1,63)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo,fabhi,xdisp_ptr,1,0,63)
+      call checkbound_array1(fablo,fabhi,ydisp_ptr,1,1,63)
+      call checkbound_array1(fablo,fabhi,zdisp_ptr,1,SDIM-1,63)
 
       if ((transposegradu.ne.0).and. &
           (transposegradu.ne.1)) then
@@ -19481,7 +19412,6 @@ stop
         ! elastic bulk modulus not included.
        call local_tensor_from_xdisplace( &
         im_elastic, &  ! 1..nmat
-        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -27578,7 +27508,6 @@ stop
 
 
       subroutine traverse_particles( &
-       MAC_grid_displacement, &
        accum_PARM, &
        matrixfab, &
        xdfab, &
@@ -27588,8 +27517,6 @@ stop
 
       use probcommon_module
       use global_utility_module
-
-      INTEGER_T, intent(in) :: MAC_grid_displacement
 
       INTEGER_T, intent(in) :: ncomp_accumulate
       type(accum_parm_type), intent(in) :: accum_PARM
@@ -27643,18 +27570,9 @@ stop
       enddo
 
       call checkbound_array(tilelo_local,tilehi_local,matrixfab,1,-1,1271)
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo_local,fabhi_local,xdfab,2,-1,1271)
-       call checkbound_array1(fablo_local,fabhi_local,ydfab,2,-1,1271)
-       call checkbound_array1(fablo_local,fabhi_local,zdfab,2,-1,1271)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo_local,fabhi_local,xdfab,2,0,1271)
-       call checkbound_array1(fablo_local,fabhi_local,ydfab,2,1,1271)
-       call checkbound_array1(fablo_local,fabhi_local,zdfab,2,SDIM-1,1271)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo_local,fabhi_local,xdfab,2,0,1271)
+      call checkbound_array1(fablo_local,fabhi_local,ydfab,2,1,1271)
+      call checkbound_array1(fablo_local,fabhi_local,zdfab,2,SDIM-1,1271)
 
       data_out%data_interp=>cell_data_interp
 
@@ -27697,24 +27615,7 @@ stop
         data_in%xtarget=>xpart
         data_in%interp_foot_flag=0
 
-        if (MAC_grid_displacement.eq.0) then
-         do dir=1,SDIM
-          data_in%interp_dir=dir-1
-          if (dir.eq.1) then
-           data_in%state=>xdfab
-          else if (dir.eq.2) then
-           data_in%state=>ydfab
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           data_in%state=>zdfab
-          else
-           print *,"dir invalid"
-           stop
-          endif
-          call single_interp_from_grid_util(data_in,data_out)
-          eulerian_xdisp(dir)=data_out%data_interp(1)
-         enddo ! dir=1..sdim
-        else if (MAC_grid_displacement.eq.1) then
-         call interpfab_XDISP( &
+        call interpfab_XDISP( &
           start_dir, &
           end_dir, &
           data_in%interp_foot_flag, &
@@ -27730,10 +27631,6 @@ stop
           ydfab, &
           zdfab, &
           eulerian_xdisp)
-        else
-         print *,"MAC_grid_displacement invalid"
-         stop
-        endif
 
         call containing_cell(accum_PARM%bfact, &
           accum_PARM%dx, &
@@ -27799,7 +27696,6 @@ stop
        ! 2. isweep==1: calculates the elastic stress tensor from 
        !    u=X(t,x0)-x0
       subroutine fort_assimilate_tensor_from_particles( &
-        MAC_grid_displacement, &
         particles_weight_XD, &
         im_PLS_cpp, & ! 0..nmat-1
         isweep, &
@@ -27846,7 +27742,6 @@ stop
       use godunov_module
       implicit none
 
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: im_PLS_cpp
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
@@ -27981,24 +27876,12 @@ stop
       call checkbound_array(fablo,fabhi,LS_ptr,2,-1,1271)
       call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,1271)
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdNEWfab_ptr,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydNEWfab_ptr,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdNEWfab_ptr,1,-1,1271)
-       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,-1,1271)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdNEWfab_ptr,0,0,1271)
-       call checkbound_array1(fablo,fabhi,ydNEWfab_ptr,0,1,1271)
-       call checkbound_array1(fablo,fabhi,zdNEWfab_ptr,0,SDIM-1,1271)
-       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,1271)
-       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,1271)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo,fabhi,xdNEWfab_ptr,0,0,1271)
+      call checkbound_array1(fablo,fabhi,ydNEWfab_ptr,0,1,1271)
+      call checkbound_array1(fablo,fabhi,zdNEWfab_ptr,0,SDIM-1,1271)
+      call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,1271)
+      call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,1271)
+      call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,1271)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -28043,7 +27926,6 @@ stop
        accum_PARM%Npart=Np_no_nbr
 
        call traverse_particles( &
-         MAC_grid_displacement, &
          accum_PARM, &
          matrixfab_ptr, &
          xdfab_ptr, &
@@ -28055,7 +27937,6 @@ stop
        accum_PARM%Npart=Nn
 
        call traverse_particles( &
-         MAC_grid_displacement, &
          accum_PARM, &
          matrixfab_ptr, &
          xdfab_ptr, &
@@ -28063,49 +27944,7 @@ stop
          zdfab_ptr, &
          ncomp_accumulate)
 
-       if (MAC_grid_displacement.eq.0) then
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
-        do k=growlo(3),growhi(3)
-         call gridsten_level(xsten,i,j,k,level,nhalf)
-         A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
-         do dir=1,SDIM
-          B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(X_cell(xp)-X_cell_p)
-          if (A_matrix.eq.zero) then
-           lambda=zero
-          else if (A_matrix.gt.zero) then
-           ! lambda=sum (interp(XD)-XD_p)w_p/sum w_p
-           lambda=B_matrix/A_matrix
-           local_wt=particles_weight_XD
-           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-            ! do nothing
-           else
-            print *,"local_wt invalid"
-            stop
-           endif
-          else
-           print *,"A_matrix invalid"
-           stop
-          endif
-
-          if (dir.eq.1) then
-           xdNEWfab(D_DECL(i,j,k))=xdfab(D_DECL(i,j,k))-local_wt*lambda
-          else if (dir.eq.2) then
-           ydNEWfab(D_DECL(i,j,k))=ydfab(D_DECL(i,j,k))-local_wt*lambda
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           zdNEWfab(D_DECL(i,j,k))=zdfab(D_DECL(i,j,k))-local_wt*lambda
-          else
-           print *,"dir invalid"
-           stop
-          endif
-         enddo ! dir=1..SDIM
-        enddo
-        enddo
-        enddo
-
-       else if (MAC_grid_displacement.eq.1) then
-
-        do dirmac=1,SDIM
+       do dirmac=1,SDIM
          call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
           growlo,growhi,0,dirmac-1,38)
 
@@ -28161,11 +28000,7 @@ stop
          enddo
          enddo
          enddo
-        enddo ! dirmac=1..sdim
-       else
-        print *,"MAC_grid_displacement invalid"
-        stop
-       endif
+       enddo ! dirmac=1..sdim
 
       else if (isweep.eq.1) then
 
@@ -28184,7 +28019,6 @@ stop
        im_elastic=im_PLS_cpp+1
        call local_tensor_from_xdisplace( &
         im_elastic, &
-        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order
@@ -28210,7 +28044,6 @@ stop
        !  NavierStokes::accumulate_PC_info(int im_elastic)
       subroutine fort_assimilate_tensor_from_xdisplace( &
         im_PLS_cpp, & ! 0..nmat-1
-        MAC_grid_displacement, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
@@ -28238,7 +28071,6 @@ stop
       implicit none
 
       INTEGER_T, intent(in) :: im_PLS_cpp
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: tid
@@ -28305,18 +28137,9 @@ stop
       call checkbound_array(fablo,fabhi,LS,2,-1,1271)
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
 
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,-1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,-1,1271)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,1271)
-       call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,1271)
-       call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,1271)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,1271)
+      call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,1271)
+      call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,1271)
 
       im_elastic=im_PLS_cpp+1
        ! e.g. (grad XD + (grad XD)^{T})/2
@@ -28334,7 +28157,6 @@ stop
        ! in: GODUNOV_3D.F90
       call local_tensor_from_xdisplace( &
         im_elastic, &
-        MAC_grid_displacement, &
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
         bfact, &          ! space order

@@ -744,7 +744,6 @@ namespace amrex{
        int* curv_sten);
 
      void fort_init_particle_container(
-        int* MAC_grid_displacement,
         Real* particles_weight_XD,
         Real* particles_weight_VEL,
         int* tid,

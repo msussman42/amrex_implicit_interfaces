@@ -410,7 +410,6 @@ extern "C"
     int* partid,
     int* level,
     int* finest_level,
-    int* MAC_grid_displacement,
     int* ncomp_visc,
     int* im,
     const Real* xlo,const Real* dx,
@@ -435,7 +434,6 @@ extern "C"
     int* partid,
     int* level,
     int* finest_level,
-    int* MAC_grid_displacement,
     int* ncomp_visc,
     int* im,
     const Real* xlo,const Real* dx,
@@ -489,7 +487,6 @@ extern "C"
    void fort_updatetensor(
     int* level,
     int* finest_level,
-    int* MAC_grid_displacement,
     int* nmat,
     int* im,
     int* ncomp_visc,
@@ -1312,7 +1309,6 @@ extern "C"
 
 
    void fort_assimilate_tensor_from_particles(
-     int* MAC_grid_displacement,
      Real* particles_weight_XD,
      int* im_PLS_cpp,
      int* isweep,
@@ -1408,7 +1404,6 @@ extern "C"
 
    void fort_assimilate_tensor_from_xdisplace(
      int* im_PLS_cpp,
-     int* MAC_grid_displacement,
      int* tid,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
