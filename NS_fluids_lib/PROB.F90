@@ -30029,172 +30029,6 @@ end subroutine initialize2d
       end subroutine FORT_TENSORFILL
 
 
-      subroutine FORT_XDISPLACEFILL ( &
-      grid_type, &
-      level, &
-      u,DIMS(u), &
-      domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
-
-      use filcc_module
-      use probf90_module
-      use global_utility_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
-      INTEGER_T, intent(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
-      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM), time
-      REAL_T, intent(inout), target :: u(DIMV(u))
-      REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
-
-      INTEGER_T, intent(in) :: bc(SDIM,2)
-
-      INTEGER_T i,j,k
-      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
-      INTEGER_T fablo(SDIM)
-      INTEGER_T fabhi(SDIM)
-      INTEGER_T borderlo(3)
-      INTEGER_T borderhi(3)
-      INTEGER_T IWALL(3)
-      INTEGER_T icomplo,icomphi
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T dir_xdisplace,ipart
-
-      nhalf=3
-      if (bfact.lt.1) then
-       print *,"bfact invalid200"
-       stop
-      endif
-      if (grid_type.eq.-1) then
-       ! do nothing
-      else
-       print *,"grid_type invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-       print *,"level invalid in fill 14"
-       stop
-      endif
-
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
-       ! do nothing
-      else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
-       stop
-      endif
-
-      if (ncomp.ne.1) then
-       print *,"ncomp invalid16"
-       stop
-      endif
-       ! c++ index
-      icomplo=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
-      icomphi=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
-      if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
-       print *,"scomp out of range in xdisplace fill"
-       stop
-      endif
-      ipart=(scomp-icomplo)/SDIM+1
-      if (ipart.eq.1) then
-       ! do nothing
-      else
-       print *,"ipart out of range"
-       stop
-      endif
-
-       ! 1<=dir_xdisplace<=sdim
-      dir_xdisplace=scomp-(ipart-1)*SDIM-icomplo+1
-
-      u_ptr=>u
-      call local_filcc(bfact, &
-        u_ptr, &
-        domlo,domhi,bc)
-
-      fablo(1)=LBOUND(u,1)
-      fablo(2)=LBOUND(u,2)
-#if (AMREX_SPACEDIM==3)
-      fablo(SDIM)=LBOUND(u,SDIM)
-#endif
-      fabhi(1)=UBOUND(u,1)
-      fabhi(2)=UBOUND(u,2)
-#if (AMREX_SPACEDIM==3)
-      fabhi(SDIM)=UBOUND(u,SDIM)
-#endif
-
-      do dir2=1,SDIM
-       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
-        print *,"domlo not divisible by bfact"
-        stop
-       endif
-       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
-        print *,"domhi+1 not divisible by bfact"
-        stop
-       endif
-      enddo  ! dir2
-
-      do dir2=1,SDIM
-      do side=1,2
-
-       borderlo(3)=0
-       borderhi(3)=0
-       do dir3=1,SDIM
-        borderlo(dir3)=fablo(dir3)
-        borderhi(dir3)=fabhi(dir3)
-       enddo
-       ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
-        if (side.eq.1) then
-         if (fablo(dir2).lt.domlo(dir2)) then
-          ext_dir_flag=1
-          borderhi(dir2)=domlo(dir2)-1
-          inside_index=domlo(dir2)
-         endif
-        else if (side.eq.2) then
-         if (fabhi(dir2).gt.domhi(dir2)) then
-          ext_dir_flag=1
-          borderlo(dir2)=domhi(dir2)+1
-          inside_index=domhi(dir2)
-         endif
-        else
-         print *,"side invalid"
-         stop
-        endif
-       endif
-
-       if (ext_dir_flag.eq.1) then
-
-         print *,"expecting all BCs to be reflect even or odd"
-         stop
-
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
-         do k=borderlo(3),borderhi(3)
-
-          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-          IWALL(1)=i
-          IWALL(2)=j
-          IWALL(3)=k
-          IWALL(dir2)=inside_index
-
-           ! sets all the physical BCs to 0.0
-          call xdisplaceBC(time,dir2,side, &
-           u(D_DECL(i,j,k)), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-           xsten,nhalf,dx,bfact,dir_xdisplace)
-         enddo
-         enddo
-         enddo
-       endif            
-      enddo ! side
-      enddo ! dir2
-
-      return
-      end subroutine FORT_XDISPLACEFILL
-
       subroutine FORT_PRESSUREFILL ( &
       grid_type, &
       level, &
@@ -30526,11 +30360,11 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T ipart,im,istate
-      INTEGER_T icomp_tensor,icomp_xd,icomp_total
+      INTEGER_T icomp_total
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
 
-      INTEGER_T check_scomp,check_ncomp,max_ncomp,xd_scomp,xd_ncomp
+      INTEGER_T check_scomp,check_ncomp,max_ncomp
       
       nhalf=3
 
@@ -30547,19 +30381,14 @@ end subroutine initialize2d
        stop
       endif
 
-      max_ncomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM
-
-      xd_scomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
-      xd_ncomp=SDIM
+      max_ncomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
 
       check_scomp=0
       check_ncomp=0
-      if ((scomp.eq.0).or.(scomp.eq.xd_scomp)) then
+      if (scomp.eq.0) then
        check_scomp=1
       endif
-      if ((ncomp.eq.max_ncomp).or. &
-          (ncomp.eq.xd_scomp).or. &
-          (ncomp.eq.xd_ncomp)) then
+      if (ncomp.eq.max_ncomp) then
        check_ncomp=1
       endif
 
@@ -30622,8 +30451,6 @@ end subroutine initialize2d
       do side=1,2
 
        icomp_total=0
-       icomp_tensor=0 
-       icomp_xd=0 
 
        if (scomp.eq.0) then
  
@@ -30631,11 +30458,10 @@ end subroutine initialize2d
         do istate=1,FORT_NUM_TENSOR_TYPE
 
          icomp_total=icomp_total+1
-         icomp_tensor=icomp_tensor+1
 
-         if ((icomp_tensor.ge.1).and. &
-             (icomp_tensor.le.ncomp).and. &
-             (icomp_tensor.le. &
+         if ((icomp_total.ge.1).and. &
+             (icomp_total.le.ncomp).and. &
+             (icomp_total.le. &
               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
 
           im=fort_im_elastic_map(ipart)+1
@@ -30697,100 +30523,14 @@ end subroutine initialize2d
           endif  
 
          else
-          print *,"icomp invalid"
+          print *,"icomp_total invalid"
           stop
          endif
 
         enddo ! istate
         enddo ! ipart
-       else if (scomp.eq.xd_scomp) then
-        ! do nothing
        else
-        print *,"scomp ne xd_scomp"
-        stop
-       endif
-
-       if ((ncomp.eq.max_ncomp).or. &
-           (ncomp.eq.xd_ncomp)) then
-
-        ipart=1
-        do istate=1,SDIM
-
-         icomp_xd=icomp_xd+1
-         icomp_total=icomp_total+1
-
-         if ((icomp_total.ge.1).and. &
-             (icomp_total.le.ncomp)) then
-
-          im=fort_im_elastic_map(ipart)+1
-
-          borderlo(3)=0
-          borderhi(3)=0
-          do dir3=1,SDIM
-           borderlo(dir3)=fablo(dir3)
-           borderhi(dir3)=fabhi(dir3)
-          enddo
-          ext_dir_flag=0
-          if (bc(dir2,side,icomp_total).eq.EXT_DIR) then
-           if (side.eq.1) then
-            if (fablo(dir2).lt.domlo(dir2)) then
-             ext_dir_flag=1
-             borderhi(dir2)=domlo(dir2)-1
-             inside_index=domlo(dir2)
-            endif
-           else if (side.eq.2) then
-            if (fabhi(dir2).gt.domhi(dir2)) then
-             ext_dir_flag=1
-             borderlo(dir2)=domhi(dir2)+1
-             inside_index=domhi(dir2)
-            endif
-           else
-            print *,"side invalid"
-            stop
-           endif
-          endif
-
-          if (ext_dir_flag.eq.1) then
-
-           print *,"expecting all BCs to be reflect even or odd"
-           stop
-
-           do i=borderlo(1),borderhi(1)
-           do j=borderlo(2),borderhi(2)
-           do k=borderlo(3),borderhi(3)
-  
-            call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-            IWALL(1)=i
-            IWALL(2)=j
-            IWALL(3)=k
-            IWALL(dir2)=inside_index
-
-             ! sets all the EXT_DIR bcs to 0.0
-            call tensorBC(time,dir2,side, &
-             u(D_DECL(i,j,k),icomp_total), &
-             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_total), &
-             xsten,nhalf,dx,bfact,ipart,im)
-           enddo
-           enddo
-           enddo
-          else if (ext_dir_flag.eq.0) then
-           ! do nothing
-          else
-           print *,"ext_dir_flag invalid"
-           stop
-          endif  
-
-         else
-          print *,"icomp_total invalid"
-          stop
-         endif
-
-        enddo ! istate=1..sdim
-
-       else if (ncomp.eq.xd_scomp) then
-        ! do nothing
-       else
-        print *,"ncomp invalid"
+        print *,"scomp invalid for tensor bc"
         stop
        endif
 

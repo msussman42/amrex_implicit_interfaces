@@ -19327,7 +19327,6 @@ stop
         INTEGER_T, pointer :: fabhi(:)
         INTEGER_T, pointer :: tilelo(:)
         INTEGER_T, pointer :: tilehi(:)
-        INTEGER_T :: MAC_grid_displacement
         INTEGER_T :: append_flag
         INTEGER_T :: bfact
         INTEGER_T :: level
@@ -19831,7 +19830,6 @@ stop
       REAL_T :: local_wt
       INTEGER_T :: start_dir,end_dir
 
-#define MAC_xd accum_PARM%MAC_grid_displacement
 #define xdfab accum_PARM%xd
 #define ydfab accum_PARM%yd
 #define zdfab accum_PARM%zd
@@ -19860,18 +19858,9 @@ stop
 
       call checkbound_array(fablo_local,fabhi_local,velfab,1,-1,19896)
 
-      if (MAC_xd.eq.0) then
-       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,-1,19899)
-       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,-1,19900)
-       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,-1,19901)
-      else if (MAC_xd.eq.1) then
-       call checkbound_array1(fablo_local,fabhi_local,xdfab,1,0,19903)
-       call checkbound_array1(fablo_local,fabhi_local,ydfab,1,1,19904)
-       call checkbound_array1(fablo_local,fabhi_local,zdfab,1,SDIM-1,19905)
-      else
-       print *,"accum_PARM%MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo_local,fabhi_local,xdfab,1,0,19903)
+      call checkbound_array1(fablo_local,fabhi_local,ydfab,1,1,19904)
+      call checkbound_array1(fablo_local,fabhi_local,zdfab,1,SDIM-1,19905)
 
       call checkbound_array(fablo_local,fabhi_local, &
               accum_PARM%LS,1,-1,19912)
@@ -19937,26 +19926,7 @@ stop
         stop
        else if (accum_PARM%append_flag.eq.1) then
         single_data_in%interp_foot_flag=1
-        if (MAC_xd.eq.0) then
-         single_data_in%xtarget=>xpart
-         do dir=1,SDIM
-          single_data_in%interp_dir=dir-1
-          if (dir.eq.1) then
-           single_data_in%state=>xdfab  
-          else if (dir.eq.2) then
-           single_data_in%state=>ydfab  
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           single_data_in%state=>zdfab  
-          else
-           print *,"dir invalid"
-           stop
-          endif
-           ! bilinear interpolation
-          call single_interp_from_grid_util(single_data_in,data_out)
-          x_foot_interp_local(dir)=data_out%data_interp(1)
-         enddo ! dir=1..sdim
-        else if (MAC_xd.eq.1) then
-         call interpfab_XDISP( &
+        call interpfab_XDISP( &
           start_dir, &
           end_dir, &
           single_data_in%interp_foot_flag, &
@@ -19972,10 +19942,6 @@ stop
           ydfab, &
           zdfab, &
           x_foot_interp_local)
-        else
-         print *,"accum_PARM%MAC_grid_displacement invalid"
-         stop
-        endif
 
        else 
         print *,"accum_PARM%append_flag invalid" 
@@ -20051,26 +20017,7 @@ stop
        endif
       else if (accum_PARM%append_flag.eq.1) then
        single_data_in%interp_foot_flag=1
-       if (MAC_xd.eq.0) then
-        single_data_in%xtarget=>xtarget
-        do dir=1,SDIM
-         single_data_in%interp_dir=dir-1
-         if (dir.eq.1) then
-          single_data_in%state=>xdfab  
-         else if (dir.eq.2) then
-          single_data_in%state=>ydfab  
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          single_data_in%state=>zdfab  
-         else
-          print *,"dir invalid"
-          stop
-         endif
-          ! bilinear interpolation
-         call single_interp_from_grid_util(single_data_in,data_out)
-         x_foot_interp(dir)=data_out%data_interp(1)
-        enddo ! dir=1..sdim
-       else if (MAC_xd.eq.1) then
-        call interpfab_XDISP( &
+       call interpfab_XDISP( &
          start_dir, &
          end_dir, &
          single_data_in%interp_foot_flag, &
@@ -20086,10 +20033,6 @@ stop
          ydfab, &
          zdfab, &
          x_foot_interp)
-       else
-        print *,"accum_PARM%MAC_grid_displacement invalid"
-        stop
-       endif
 
        if (A_X.gt.zero) then
         local_wt=particles_weight_XD
@@ -20160,7 +20103,6 @@ stop
 #undef xdfab
 #undef ydfab
 #undef zdfab
-#undef MAC_xd
 
       return
       end subroutine interp_eul_lag_dist
@@ -20168,7 +20110,6 @@ stop
        ! called from NavierStokes.cpp:
        !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
-        MAC_grid_displacement, &
         particles_weight_XD, &
         particles_weight_VEL, &
         tid, &
@@ -20210,7 +20151,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: MAC_grid_displacement
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: single_particle_size
       INTEGER_T, intent(in) :: isweep
@@ -20318,18 +20258,9 @@ stop
 
       call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,20355)
 
-      if (MAC_grid_displacement.eq.0) then
-       call checkbound_array1(fablo,fabhi,xd_ptr,1,-1,20358)
-       call checkbound_array1(fablo,fabhi,yd_ptr,1,-1,20359)
-       call checkbound_array1(fablo,fabhi,zd_ptr,1,-1,20360)
-      else if (MAC_grid_displacement.eq.1) then
-       call checkbound_array1(fablo,fabhi,xd_ptr,1,0,20362)
-       call checkbound_array1(fablo,fabhi,yd_ptr,1,1,20363)
-       call checkbound_array1(fablo,fabhi,zd_ptr,1,SDIM-1,20364)
-      else
-       print *,"MAC_grid_displacement invalid"
-       stop
-      endif
+      call checkbound_array1(fablo,fabhi,xd_ptr,1,0,20362)
+      call checkbound_array1(fablo,fabhi,yd_ptr,1,1,20363)
+      call checkbound_array1(fablo,fabhi,zd_ptr,1,SDIM-1,20364)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,20370)
 
@@ -20368,7 +20299,6 @@ stop
 
       accum_PARM%LS=>lsfab  ! accum_PARM%LS is pointer, LS is target
 
-      accum_PARM%MAC_grid_displacement=MAC_grid_displacement
       accum_PARM%xd=>xd
       accum_PARM%yd=>yd
       accum_PARM%zd=>zd
