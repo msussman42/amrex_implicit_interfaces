@@ -14,10 +14,6 @@
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
 #    define FORT_MARANGONIFORCE marangoniforce
-#    define FORT_SEMDELTAFORCE semdeltaforce
-#    define FORT_SEMDELTAFORCE_FACE semdeltaforce_face
-#    define FORT_UPDATESEMFORCE updatesemforce
-#    define FORT_UPDATESEMFORCE_FACE updatesemforce_face
 #    define FORT_SDC_TIME_QUAD sdc_time_quad
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
@@ -35,10 +31,6 @@
 #    define FORT_TENSORHEAT TENSORHEAT
 #    define FORT_MARANGONIFORCE MARANGONIFORCE
 #    define FORT_HEATSOURCE HEATSOURCE
-#    define FORT_SEMDELTAFORCE SEMDELTAFORCE
-#    define FORT_SEMDELTAFORCE_FACE SEMDELTAFORCE_FACE
-#    define FORT_UPDATESEMFORCE UPDATESEMFORCE
-#    define FORT_UPDATESEMFORCE_FACE UPDATESEMFORCE_FACE
 #    define FORT_SDC_TIME_QUAD SDC_TIME_QUAD
 #    define FORT_SDC_TIME_QUAD_FACE SDC_TIME_QUAD_FACE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
@@ -56,10 +48,6 @@
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_MARANGONIFORCE marangoniforce
 #    define FORT_HEATSOURCE heatsource
-#    define FORT_SEMDELTAFORCE semdeltaforce
-#    define FORT_SEMDELTAFORCE_FACE semdeltaforce_face
-#    define FORT_UPDATESEMFORCE updatesemforce
-#    define FORT_UPDATESEMFORCE_FACE updatesemforce_face
 #    define FORT_SDC_TIME_QUAD sdc_time_quad
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
@@ -76,10 +64,6 @@
 #    define FORT_TENSORHEAT tensorheat_
 #    define FORT_MARANGONIFORCE marangoniforce_
 #    define FORT_HEATSOURCE heatsource_
-#    define FORT_SEMDELTAFORCE semdeltaforce_
-#    define FORT_SEMDELTAFORCE_FACE semdeltaforce_face_
-#    define FORT_UPDATESEMFORCE updatesemforce_
-#    define FORT_UPDATESEMFORCE_FACE updatesemforce_face_
 #    define FORT_SDC_TIME_QUAD sdc_time_quad_
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face_
 #    define FORT_BUILD_MASKSEM build_masksem_
@@ -197,7 +181,7 @@ extern "C"
     int* nmat,
     int* nden);
 
-   void FORT_SEMDELTAFORCE(
+   void fort_semdeltaforce(
     int* nstate,
     int* nfluxSEM,
     int* nstate_SDC,
@@ -207,9 +191,9 @@ extern "C"
     Real* deltafab,AMREX_ARLIM_P(deltafablo),AMREX_ARLIM_P(deltafabhi),
     Real* maskSEMfab,AMREX_ARLIM_P(maskSEMfablo),AMREX_ARLIM_P(maskSEMfabhi),
     Real* rhoinverse,
-   AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
+    AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
     Real* DeDTinverse,
-   AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi),
+    AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi),
     Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,int* bfact,
@@ -217,7 +201,7 @@ extern "C"
     Real* dt);
 
 
-   void FORT_SEMDELTAFORCE_FACE(
+   void fort_semdeltaforce_face(
     int* dir,
     int* faceden_index,
     int* ncphys,
@@ -231,9 +215,7 @@ extern "C"
     int* level,
     Real* dt);
 
-
-
-   void FORT_UPDATESEMFORCE(
+   void fort_updatesemforce(
     int* ns_time_order,
     int* slab_step,
     int* nsolve,
@@ -245,7 +227,6 @@ extern "C"
     int* nmat,
     int* project_option,
     const Real* xlo,const Real* dx,
-    Real* gpfab,AMREX_ARLIM_P(gpfablo),AMREX_ARLIM_P(gpfabhi),
     Real* divfab,AMREX_ARLIM_P(divfablo),AMREX_ARLIM_P(divfabhi),
     Real* hoopfab,AMREX_ARLIM_P(hoopfablo),AMREX_ARLIM_P(hoopfabhi),
     Real* HOfab,AMREX_ARLIM_P(HOfablo),AMREX_ARLIM_P(HOfabhi),
@@ -257,7 +238,7 @@ extern "C"
     Real* dt);
 
 
-   void FORT_UPDATESEMFORCE_FACE(
+   void fort_updatesemforce_face(
     int* project_option,
     int* ns_time_order,
     int* dir,
@@ -274,8 +255,6 @@ extern "C"
     const int* fablo,const int* fabhi,int* bfact,
     int* level,
     Real* dt);
-
-
 
    void FORT_SDC_TIME_QUAD(
     int* HOncomp,int* LOncomp,int* delta_ncomp,
