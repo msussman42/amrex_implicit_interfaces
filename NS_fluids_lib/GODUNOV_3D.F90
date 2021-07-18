@@ -16868,7 +16868,7 @@ stop
 
 
          ! rhoinverse is 1/den
-      subroutine FORT_SEMDELTAFORCE( &
+      subroutine fort_semdeltaforce( &
        nstate, &
        nfluxSEM, &
        nstate_SDC, &
@@ -16884,7 +16884,8 @@ stop
        velnew,DIMS(velnew), &
        tilelo,tilehi, &
        fablo,fabhi,bfact,level, &
-       dt)
+       dt) &
+      bind(c,name='fort_semdeltaforce')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -16907,11 +16908,16 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: deltafab(DIMV(deltafab),nstate_SDC)
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
-      REAL_T, intent(inout) :: velnew(DIMV(velnew),nstate)
+      REAL_T, intent(in),target :: deltafab(DIMV(deltafab),nstate_SDC)
+      REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: rhoinverse(DIMV(rhoinverse),nmat+1)
+      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
+      REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: velnew(DIMV(velnew),nstate)
+      REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: dt
       INTEGER_T idst,isrc,im
       INTEGER_T local_maskSEM
@@ -16938,22 +16944,19 @@ stop
        print *,"dt invalid"
        stop
       endif
-      if (nfluxSEM.ne.SDIM+num_state_base) then
+      if (nfluxSEM.ne.SDIM+1) then
        print *,"nfluxSEM invalid sem delta force"
        stop
       endif
        ! (1) I scheme
        ! (2) temperature
        ! (3) viscosity
-       ! (4) div(up)
-       ! (5) pressure gradient
-       ! (6) momentum force
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM+1+SDIM+SDIM) then
+       ! (4) momentum force
+      if (nstate_SDC.ne.nfluxSEM+1+SDIM+SDIM) then
        print *,"nstate_SDC invalid"
        stop
       endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.2).or. &
+      if ((project_option.eq.2).or. &
           (project_option.eq.3).or. &
           (project_option.eq.4)) then
        ! do nothing
@@ -16962,15 +16965,16 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(deltafab),0,-1,7)
-      call checkbound(fablo,fabhi, &
-       DIMS(rhoinverse), &
-       1,-1,7)
-      call checkbound(fablo,fabhi, &
-       DIMS(DeDTinverse), &
-       1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(velnew),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+      deltafab_ptr=>deltafab
+      call checkbound_array(fablo,fabhi,deltafab_ptr,0,-1,7)
+      rhoinverse_ptr=>rhoinverse
+      call checkbound_array(fablo,fabhi,rhoinverse_ptr,1,-1,7)
+      DeDTinverse_ptr=>DeDTinverse
+      call checkbound_array(fablo,fabhi,DeDTinverse_ptr,1,-1,7)
+      velnew_ptr=>velnew
+      call checkbound_array(fablo,fabhi,velnew_ptr,1,-1,7)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
       do i=growlo(1),growhi(1)
@@ -16991,8 +16995,7 @@ stop
             deltafab(D_DECL(i,j,k),veldir)
          enddo ! veldir=1..sdim
 
-        else if ((project_option.eq.2).or. & ! thermal conduction
-                 (project_option.eq.0)) then ! div(up), grad p
+        else if (project_option.eq.2) then ! thermal conduction
 
          isrc=1
 
@@ -17002,17 +17005,8 @@ stop
           velnew(D_DECL(i,j,k),idst)= &
            velnew(D_DECL(i,j,k),idst)- &
            DeDTinverse(D_DECL(i,j,k),1)*deltafab(D_DECL(i,j,k),isrc)
-         enddo ! im
+         enddo ! im=1..nmat
 
-         if (project_option.eq.0) then ! grad p
-
-          do veldir=1,SDIM
-           velnew(D_DECL(i,j,k),veldir)= &
-             velnew(D_DECL(i,j,k),veldir)- &
-             rhoinverse(D_DECL(i,j,k),1)* &
-             deltafab(D_DECL(i,j,k),isrc+veldir)
-          enddo ! veldir
-         endif
         else
          print *,"project_option invalid"
          stop
@@ -17029,11 +17023,9 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_SEMDELTAFORCE
+      end subroutine fort_semdeltaforce
 
-
-
-      subroutine FORT_SEMDELTAFORCE_FACE( &
+      subroutine fort_semdeltaforce_face( &
        dir, &
        faceden_index, &
        ncphys, &
@@ -17044,7 +17036,8 @@ stop
        xmac,DIMS(xmac), &
        tilelo,tilehi, &
        fablo,fabhi,bfact,level, &
-       dt)
+       dt) &
+      bind(c,name='fort_semdeltaforce_face')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -17064,10 +17057,14 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: deltafab(DIMV(deltafab))
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(inout) :: xmac(DIMV(xmac))
+      REAL_T, intent(in),target :: deltafab(DIMV(deltafab))
+      REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: xmac(DIMV(xmac))
+      REAL_T, pointer :: xmac_ptr(D_DECL(:,:,:))
       REAL_T, intent(in) :: dt
       INTEGER_T maskleft,maskright
       INTEGER_T nmat
@@ -17113,10 +17110,14 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(deltafab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(xface),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(xmac),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+      deltafab_ptr=>deltafab
+      call checkbound_array1(fablo,fabhi,deltafab_ptr,0,dir,7)
+      xface_ptr=>xface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,dir,7)
+      xmac_ptr=>xmac
+      call checkbound_array1(fablo,fabhi,xmac_ptr,0,dir,7)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir,23)
@@ -17160,7 +17161,7 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_SEMDELTAFORCE_FACE
+      end subroutine fort_semdeltaforce_face
 
        ! called from: NavierStokes::update_SEM_delta_force (NavierStokes.cpp)
        !   which is
@@ -17171,7 +17172,7 @@ stop
        ! called from: NavierStokes::veldiffuseALL (NavierStokes3.cpp)
        !   or 
        ! called from: NavierStokes::do_the_advance (NavierStokes3.cpp)
-      subroutine FORT_UPDATESEMFORCE( &
+      subroutine fort_updatesemforce( &
        ns_time_order, &
        slab_step, &
        nsolve, &
@@ -17183,7 +17184,6 @@ stop
        nmat, &
        project_option, &
        xlo,dx,  &
-       gpfab,DIMS(gpfab), &
        divfab,DIMS(divfab), &
        hoopfab,DIMS(hoopfab), &
        HOfab,DIMS(HOfab), &
@@ -17191,40 +17191,44 @@ stop
        maskSEM,DIMS(maskSEM), &
        tilelo,tilehi, &
        fablo,fabhi,bfact,level, &
-       dt)
+       dt) &
+      bind(c,name='fort_updatesemforce')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T ns_time_order
-      INTEGER_T slab_step
-      INTEGER_T nsolve
-      INTEGER_T update_spectral
-      INTEGER_T update_stable
-      INTEGER_T nmat,nstate
-      INTEGER_T nfluxSEM
-      INTEGER_T nstate_SDC
-      INTEGER_T project_option,level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T veldir
-      INTEGER_T DIMDEC(gpfab)
-      INTEGER_T DIMDEC(divfab)
-      INTEGER_T DIMDEC(hoopfab)
-      INTEGER_T DIMDEC(HOfab)
-      INTEGER_T DIMDEC(LOfab)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T gpfab(DIMV(gpfab),SDIM)
-      REAL_T divfab(DIMV(divfab),nsolve)
-      REAL_T hoopfab(DIMV(hoopfab),nsolve)
-      REAL_T HOfab(DIMV(HOfab),nstate_SDC)
-      REAL_T LOfab(DIMV(LOfab),nstate_SDC)
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T dt
+      INTEGER_T, intent(in) :: ns_time_order
+      INTEGER_T, intent(in) :: slab_step
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: update_spectral
+      INTEGER_T, intent(in) :: update_stable
+      INTEGER_T, intent(in) :: nmat,nstate
+      INTEGER_T, intent(in) :: nfluxSEM
+      INTEGER_T, intent(in) :: nstate_SDC
+      INTEGER_T, intent(in) :: project_option,level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: veldir
+      INTEGER_T, intent(in) :: DIMDEC(divfab)
+      INTEGER_T, intent(in) :: DIMDEC(hoopfab)
+      INTEGER_T, intent(in) :: DIMDEC(HOfab)
+      INTEGER_T, intent(in) :: DIMDEC(LOfab)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in),target :: divfab(DIMV(divfab),nsolve)
+      REAL_T, pointer :: divfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: hoopfab(DIMV(hoopfab),nsolve)
+      REAL_T, pointer :: hoopfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: HOfab(DIMV(HOfab),nstate_SDC)
+      REAL_T, pointer :: HOfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: LOfab(DIMV(LOfab),nstate_SDC)
+      REAL_T, pointer :: LOfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: dt
       INTEGER_T local_maskSEM
       INTEGER_T velcomp
 
@@ -17257,17 +17261,19 @@ stop
        print *,"dt invalid"
        stop
       endif
-      if (nfluxSEM.ne.SDIM+num_state_base) then
+      if (nfluxSEM.ne.SDIM+1) then
        print *,"nfluxSEM invalid update sem force"
        stop
       endif
-       ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM+1+SDIM+SDIM) then
+       ! (1) I scheme
+       ! (2) temperature
+       ! (3) viscosity
+       ! (4) momentum force
+      if (nstate_SDC.ne.nfluxSEM+1+SDIM+SDIM) then
        print *,"nstate_SDC invalid"
        stop
       endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.2).or. &
+      if ((project_option.eq.2).or. &
           (project_option.eq.3).or. &
           (project_option.eq.4)) then
        ! do nothing
@@ -17281,12 +17287,16 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(gpfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(divfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(hoopfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(HOfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(LOfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+      divfab_ptr=>divfab
+      call checkbound_array(fablo,fabhi,divfab_ptr,0,-1,7)
+      hoopfab_ptr=>hoopfab
+      call checkbound_array(fablo,fabhi,hoopfab_ptr,0,-1,7)
+      HOfab_ptr=>HOfab
+      call checkbound_array(fablo,fabhi,HOfab_ptr,0,-1,7)
+      LOfab_ptr=>LOfab
+      call checkbound_array(fablo,fabhi,LOfab_ptr,0,-1,7)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -17305,7 +17315,7 @@ stop
             print *,"slab_step invalid"
             stop
            endif
-           ! I-scheme,thermal conduction,viscosity,div(up),gp,-force
+           ! I-scheme,thermal conduction,viscosity,-force
            ! HOfab=-div 2 mu D-HOOP_FORCE_MARK_MF
            HOfab(D_DECL(i,j,k),nfluxSEM+1+veldir)= &
             divfab(D_DECL(i,j,k),veldir)- &
@@ -17322,7 +17332,7 @@ stop
             print *,"slab_step invalid"
             stop
            endif
-           ! I-scheme,thermal conduction,viscosity,div(up),gp,-force
+           ! I-scheme,thermal conduction,viscosity,-force
            ! LOfab=-div 2 mu D-HOOP_FORCE_MARK_MF
            LOfab(D_DECL(i,j,k),nfluxSEM+1+veldir)= &
             divfab(D_DECL(i,j,k),veldir)- &
@@ -17344,9 +17354,9 @@ stop
             print *,"slab_step invalid"
             stop
            endif
-           ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
+           ! I-scheme,thermal conduction,viscosity,-momforce
            ! HOfab=-momforce
-           HOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+1+SDIM+veldir)= &
+           HOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+veldir)= &
              divfab(D_DECL(i,j,k),veldir)
           else if (update_spectral.eq.0) then
            ! do nothing
@@ -17360,9 +17370,9 @@ stop
             print *,"slab_step invalid"
             stop
            endif
-           ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
+           ! I-scheme,thermal conduction,viscosity,-momforce
            ! LOfab=-momforce
-           LOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+1+SDIM+veldir)= &
+           LOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+veldir)= &
             divfab(D_DECL(i,j,k),veldir)
           else if (update_stable.eq.0) then
            ! do nothing
@@ -17382,7 +17392,7 @@ stop
            stop
           endif
 
-          ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
+          ! I-scheme,thermal conduction,viscosity,-momforce
           ! HOfab=-div k grad T-THERMAL_FORCE_MF
           HOfab(D_DECL(i,j,k),nfluxSEM+1)= &
            divfab(D_DECL(i,j,k),velcomp)- &
@@ -17400,81 +17410,11 @@ stop
            stop
           endif
 
-          ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
+          ! I-scheme,thermal conduction,viscosity,-momforce
           ! LOfab=-div k grad T-THERMAL_FORCE_MF
           LOfab(D_DECL(i,j,k),nfluxSEM+1)= &
            divfab(D_DECL(i,j,k),velcomp)- &
            hoopfab(D_DECL(i,j,k),velcomp)
-         else if (update_stable.eq.0) then
-          ! do nothing
-         else
-          print *,"update_stable invalid"
-          stop
-         endif
-
-        else if (project_option.eq.0) then
-
-         do veldir=1,SDIM
-
-          if (update_spectral.eq.1) then
-           if ((slab_step.lt.-1).or.(slab_step.ge.bfact_time_order)) then
-            print *,"slab_step invalid"
-            stop
-           endif
-           ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
-           ! HOfab=grad p
-           HOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+1+veldir)= &
-             gpfab(D_DECL(i,j,k),veldir)
-          else if (update_spectral.eq.0) then
-           ! do nothing
-          else
-           print *,"update_spectral invalid"
-           stop
-          endif
-
-          if (update_stable.eq.1) then
-           if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
-            print *,"slab_step invalid"
-            stop
-           endif
-           ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
-           ! LOfab=grad p
-           LOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+1+veldir)= &
-             gpfab(D_DECL(i,j,k),veldir)
-          else if (update_stable.eq.0) then
-           ! do nothing
-          else
-           print *,"update_stable invalid"
-           stop
-          endif
-
-         enddo ! veldir=1..sdim
-
-         velcomp=1
-
-         if (update_spectral.eq.1) then
-          if ((slab_step.lt.-1).or.(slab_step.ge.bfact_time_order)) then
-           print *,"slab_step invalid"
-           stop
-          endif
-          ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
-          ! HOfab=div (up)
-          HOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+1)=divfab(D_DECL(i,j,k),1)
-         else if (update_spectral.eq.0) then
-          ! do nothing
-         else
-          print *,"update_spectral invalid"
-          stop
-         endif
-
-         if (update_stable.eq.1) then
-          if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
-           print *,"slab_step invalid"
-           stop
-          endif
-          ! I-scheme,thermal conduction,viscosity,div(up),gp,-momforce
-          ! LOfab=div (up)
-          LOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+1)=divfab(D_DECL(i,j,k),1)
          else if (update_stable.eq.0) then
           ! do nothing
          else
@@ -17498,11 +17438,11 @@ stop
       enddo
 
       return
-      end subroutine FORT_UPDATESEMFORCE
+      end subroutine fort_updatesemforce
 
        ! delta_MF, stableF_MF, spectralF_MF are initialized
        ! to zero in NavierStokes::init_delta_SDC()
-      subroutine FORT_UPDATESEMFORCE_FACE( &
+      subroutine fort_updatesemforce_face( &
        project_option, &
        ns_time_order, &
        dir, &
@@ -17518,7 +17458,8 @@ stop
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        level, &
-       dt)
+       dt) &
+      bind(c,name='fort_updatesemforce_face')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -17540,10 +17481,14 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: gpfab(DIMV(gpfab))
-      REAL_T, intent(out) :: HOfab(DIMV(HOfab))
-      REAL_T, intent(out) :: LOfab(DIMV(LOfab))
-      REAL_T, intent(in) :: maskSEM(DIMV(maskSEM))
+      REAL_T, intent(in),target :: gpfab(DIMV(gpfab))
+      REAL_T, pointer :: gpfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: HOfab(DIMV(HOfab))
+      REAL_T, pointer :: HOfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: LOfab(DIMV(LOfab))
+      REAL_T, pointer :: LOfab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in) :: dt
       INTEGER_T maskleft,maskright
       INTEGER_T :: i,j,k
@@ -17604,10 +17549,14 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(gpfab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(HOfab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(LOfab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+      gpfab_ptr=>gpfab
+      call checkbound_array(fablo,fabhi,gpfab_ptr,0,dir,7)
+      HOfab_ptr=>HOfab
+      call checkbound_array(fablo,fabhi,HOfab_ptr,0,dir,7)
+      LOfab_ptr=>LOfab
+      call checkbound_array(fablo,fabhi,LOfab_ptr,0,dir,7)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir,24)
@@ -17681,7 +17630,7 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_UPDATESEMFORCE_FACE
+      end subroutine fort_updatesemforce_face
 
 
       subroutine FORT_SDC_TIME_QUAD( &

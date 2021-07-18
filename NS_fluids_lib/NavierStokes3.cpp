@@ -2141,7 +2141,7 @@ void NavierStokes::prelim_alloc() {
 } // subroutine prelim_alloc
 
 void NavierStokes::advance_MAC_velocity(int project_option) {
-
+FIX ME TO BE CONSERVATIVE (LAX FRIEDRICHS)
  int interp_option=0;
  int idx_velcell=-1;
  Real beta=0.0;
@@ -2685,11 +2685,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	//  unew^{f}=
         // (i) unew^{f} in incompressible non-solid regions
         // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
-        //      regions or compressible regions.
+        //      regions.
         //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
         //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-        // (iii) usolid in solid regions
-
+        // (iii) (unew^{c})^{c->f} in compressible regions.
+        // (iv) usolid in solid regions
        advance_MAC_velocity(project_option);
   
       } else if (mass_transfer_active==0) {
@@ -3053,10 +3053,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        //  unew^{f}=
        // (i) unew^{f} in incompressible non-solid regions
        // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
-       //      regions or compressible regions.
+       //      regions.
        //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
        //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-       // (iii) usolid in solid regions
+       // (iii) (unew^{c})^{c->f} in compressible regions.
+       // (iv) usolid in solid regions
       advance_MAC_velocity(project_option);
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -3064,7 +3065,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        ns_level.delete_advect_vars();
       } // ilev=finest_level ... level
-
+FIX ME DO NOT OVERWRITE CELL VELOCITY UNTIL AFTER THE PROJECTION IS DONE OR
+AFTER ELASTIC FORCES.  DELETE increment_KE
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        //if temperature_primitive_var==0,
@@ -9575,6 +9577,7 @@ void NavierStokes::multiphase_project(int project_option) {
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     int local_project_option=0;
+     //NavierStokes::make_SEM_delta_force declared in NavierStokes.cpp
     ns_level.make_SEM_delta_force(local_project_option); 
    }
   } else if (SDC_outer_sweeps==0) {

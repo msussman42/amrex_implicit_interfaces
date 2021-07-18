@@ -1,8 +1,9 @@
-// I-scheme,thermal and species conduction,viscosity,div(u),gp,-force
+// I-scheme,thermal conduction,viscosity,-force
 // nstate_SDC (c++ and fortran)
-// =nfluxSEM+1+num_species_var+AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM
+// =nfluxSEM+1+AMREX_SPACEDIM+AMREX_SPACEDIM
 // nfluxSEM (c++ and fortran)
-// =AMREX_SPACEDIM+num_state_material
+// =AMREX_SPACEDIM+1
+// Pressure gradient correction terms are on the MAC grid.
 //
 //NUM_CELL_ELASTIC, MAC_grid_displacement,num_materials_viscoelastic,
 //NUM_TENSOR_TYPE,XDmac_Type,NUM_TENSOR_TYPE+SDIM,num_MAC_vectors,
@@ -8848,10 +8849,9 @@ NavierStokes::SDC_setup_step() {
  if ((nmat<1)||(nmat>1000))
   amrex::Error("nmat out of range");
 
- nfluxSEM=AMREX_SPACEDIM+num_state_material;
-  //I-scheme,thermal and species conduction,viscosity,div(u),gp,-force
- nstate_SDC=nfluxSEM+1+num_species_var+
-    AMREX_SPACEDIM+1+AMREX_SPACEDIM+AMREX_SPACEDIM;
+ nfluxSEM=AMREX_SPACEDIM+1;
+  //I-scheme,thermal conduction,viscosity,-force
+ nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM+AMREX_SPACEDIM;
 
  ns_time_order=parent->Time_blockingFactor();
 
@@ -10051,81 +10051,80 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  const Real* dx = geom.CellSize();
  int bfact=parent->Space_blockingFactor(level);
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[delta_MF]->boxArray().d_numPts());
+ if ((project_option==3)|| //viscosity
+     (project_option==4)|| //-momentum force at t^n+1
+     (project_option==2)) {//thermal conduction
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[delta_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[delta_MF],use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
+  for (MFIter mfi(*localMF[delta_MF],use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
 
-  const Real* xlo = grid_loc[gridno].lo();
+   const Real* xlo = grid_loc[gridno].lo();
 
-  // I-scheme,thermal and species conduction,viscosity,div(u),gp,-force
-  FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
-  int deltacomp=0;
-  if (project_option==3) { // viscosity
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var;
-  } else if (project_option==4) { // -momentum force at t^n+1
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var+ 
-      AMREX_SPACEDIM+1+AMREX_SPACEDIM;
-  } else if (project_option==2) { // thermal conduction
-   deltacomp=slab_step*nstate_SDC+nfluxSEM;
-  } else if ((project_option>=100)&& // species conduction
-             (project_option<=100+num_species_var-1)) {
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+project_option-100+1;
-  } else if (project_option==0) { // div(u) and gp 
-     // advection, thermal and species conduction,viscosity,div(u),gp
-   deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var+AMREX_SPACEDIM;
-  } else
-   amrex::Error("project_option invalid4");
+   // I-scheme,thermal conduction,viscosity,-force
+   FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
+   int deltacomp=0;
+   if (project_option==3) { // viscosity
+    deltacomp=slab_step*nstate_SDC+nfluxSEM+1;
+   } else if (project_option==4) { // -momentum force at t^n+1
+    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+AMREX_SPACEDIM;
+   } else if (project_option==2) { // thermal conduction
+    deltacomp=slab_step*nstate_SDC+nfluxSEM;
+   } else if (project_option==0) { 
+    amrex::Error("SEM pressure gradient correction on MAC grid");
+   } else
+    amrex::Error("project_option invalid4");
 
-  FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
-  FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
-  FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
+   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
+   FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
+   FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in: GODUNOV_3D.F90
-  FORT_SEMDELTAFORCE(
-   &nstate,
-   &nfluxSEM,
-   &nstate_SDC,
-   &nmat,
-   &project_option,
-   xlo,dx,
-   deltafab.dataPtr(deltacomp),
-   ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
-   maskSEMfab.dataPtr(),
-   ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-   rhoinversefab.dataPtr(),
-   ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
-   DeDTinversefab.dataPtr(),
-   ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
-   S_new[mfi].dataPtr(),
-   ARLIM(S_new[mfi].loVect()),ARLIM(S_new[mfi].hiVect()),
-   tilelo,tilehi,
-   fablo,fabhi,&bfact,&level,
-   &dt_slab);
- }  // mfi  
+   // declared in: GODUNOV_3D.F90
+   fort_semdeltaforce(
+    &nstate,
+    &nfluxSEM,
+    &nstate_SDC,
+    &nmat,
+    &project_option,
+    xlo,dx,
+    deltafab.dataPtr(deltacomp),
+    ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
+    maskSEMfab.dataPtr(),
+    ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+    rhoinversefab.dataPtr(),
+    ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
+    DeDTinversefab.dataPtr(),
+    ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
+    S_new[mfi].dataPtr(),
+    ARLIM(S_new[mfi].loVect()),ARLIM(S_new[mfi].hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi,&bfact,&level,
+    &dt_slab);
+  }  // mfi  
 } // omp
- ns_reconcile_d_num(58);
+  ns_reconcile_d_num(58);
 
   // pressure gradient at faces.
- if (project_option==0) {
+ } else if (project_option==0) {
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -10162,8 +10161,9 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      // faceden_index=1/rho
-    FORT_SEMDELTAFORCE_FACE(
+     // faceden_index=1/rho
+     // declared in: GODUNOV_3D.F90
+    fort_semdeltaforce_face(
      &dir,
      &faceden_index,
      &ncphys,
@@ -10184,13 +10184,6 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
    ns_reconcile_d_num(59);
   } // dir=0..sdim-1
 
- } else if ((project_option==2)|| // thermal conduction
-            ((project_option>=100)&&
-             (project_option<=100+num_species_var-1))|| //species
-	    (project_option==200)|| //smoothing
-	    (project_option==3)|| // viscosity
-	    (project_option==4)) { // -momentum force at t^n+1
-	 // do nothing
  } else {
   amrex::Error("project_option invalid in make_SEM_delta_force");
  } 
@@ -10417,7 +10410,8 @@ void NavierStokes::add_perturbation() {
 //   NavierStokes::veldiffuseALL
 void NavierStokes::update_SEM_delta_force(
  int project_option,
- int idx_gp,int idx_gpmac,int idx_div,
+ int idx_gpmac,
+ int idx_div,
  int update_spectral,int update_stable,
  int nsolve) {
 
@@ -10443,7 +10437,7 @@ void NavierStokes::update_SEM_delta_force(
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid37");
 
- if (project_option==0) {
+ if (project_option==0) { // pressure gradient
   //do nothing
  } else if (project_option==2) { // thermal diffusion
   //do nothing
@@ -10466,18 +10460,11 @@ void NavierStokes::update_SEM_delta_force(
   amrex::Error("num_state_base invalid");
 
  debug_ngrow(idx_div,0,3);
- debug_ngrow(idx_gp,0,3);
 
  int idx_hoop=idx_div;
 
- if (project_option==0) { // grad p, div(up)
-  idx_hoop=idx_div;
-  if (nsolve!=1)
-   amrex::Error("nsolve invalid");
-  if (localMF[idx_gp]->nComp()!=AMREX_SPACEDIM)
-   amrex::Error("localMF[idx_gp]->nComp() invalid");
-  if (localMF[idx_div]->nComp()!=1)
-   amrex::Error("localMF[idx_div]->nComp() invalid");
+ if (project_option==0) { // grad p  (face)
+  // check nothing
  } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
   idx_hoop=THERMAL_FORCE_MF;
   if (nsolve!=1)
@@ -10520,8 +10507,6 @@ void NavierStokes::update_SEM_delta_force(
   }
  } else if (project_option==4) { // -momentum force
   idx_hoop=idx_div;
-  if (idx_div!=idx_gp)
-   amrex::Error("expecting idx_div==idx_gp");
   if (nsolve!=AMREX_SPACEDIM)
    amrex::Error("nsolve invalid");
   if (localMF[idx_hoop]->nComp()!=nsolve)
@@ -10529,13 +10514,20 @@ void NavierStokes::update_SEM_delta_force(
  } else
   amrex::Error("project_option invalid6");
 
- debug_ngrow(idx_hoop,0,3);
- if (localMF[idx_hoop]->nComp()!=localMF[idx_div]->nComp())
-  amrex::Error("localMF[idx_hoop]->nComp() invalid");
+ if ((project_option==4)||  //momforce
+     (project_option==2)||  //thermal conductivity
+     (project_option==3)) { //viscosity
+  debug_ngrow(idx_hoop,0,3);
+  if (localMF[idx_hoop]->nComp()!=localMF[idx_div]->nComp())
+   amrex::Error("localMF[idx_hoop]->nComp() invalid");
+ } else if (project_option==0) {
+  // check nothing
+ } else
+  amrex::Error("project_option invalid");
 
- if ((project_option==0)||
-     (project_option==2)||
-     (project_option==3)) {
+ if ((project_option==0)||  //pressure gradient (face)
+     (project_option==2)||  //thermal conductivity
+     (project_option==3)) { //viscosity
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    debug_ngrow(idx_gpmac+dir,0,3);
@@ -10575,90 +10567,91 @@ void NavierStokes::update_SEM_delta_force(
  const Real* dx = geom.CellSize();
  int bfact=parent->Space_blockingFactor(level);
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[delta_MF]->boxArray().d_numPts());
+ if ((project_option==4)||  //momforce
+     (project_option==2)||  //thermal conductivity
+     (project_option==3)) { //viscosity
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[delta_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[delta_MF],use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
+  for (MFIter mfi(*localMF[delta_MF],use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+ 
+   const Real* xlo = grid_loc[gridno].lo();
+ 
+   FArrayBox& divfab=(*localMF[idx_div])[mfi];
+   FArrayBox& hoopfab=(*localMF[idx_hoop])[mfi];
+   FArrayBox& HOfab=(*localMF[spectralF_MF])[mfi];
+   FArrayBox& LOfab=(*localMF[stableF_MF])[mfi];
+   FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
-  const Real* xlo = grid_loc[gridno].lo();
-
-  FArrayBox& gpfab=(*localMF[idx_gp])[mfi];
-  FArrayBox& divfab=(*localMF[idx_div])[mfi];
-  FArrayBox& hoopfab=(*localMF[idx_hoop])[mfi];
-  FArrayBox& HOfab=(*localMF[spectralF_MF])[mfi];
-  FArrayBox& LOfab=(*localMF[stableF_MF])[mfi];
-  FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
-
-  int LOcomp=0;
-  int HOcomp=0;
-  if (slab_step==-1)
-   HOcomp=0;
-  else if ((slab_step>=0)&&(slab_step<ns_time_order))
-   HOcomp=nstate_SDC*(slab_step+1);
-  else
-   amrex::Error("slab_step invalid");
-
-  if (update_stable==1) {
-   if ((slab_step>=0)&&(slab_step<ns_time_order))
-    LOcomp=nstate_SDC*slab_step;
+   int LOcomp=0;
+   int HOcomp=0;
+   if (slab_step==-1)
+    HOcomp=0;
+   else if ((slab_step>=0)&&(slab_step<ns_time_order))
+    HOcomp=nstate_SDC*(slab_step+1);
    else
     amrex::Error("slab_step invalid");
-  } else if (update_stable==0) {
-   // do nothing
-  } else
-   amrex::Error("update_stable invalid");
 
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+   if (update_stable==1) {
+    if ((slab_step>=0)&&(slab_step<ns_time_order))
+     LOcomp=nstate_SDC*slab_step;
+    else
+     amrex::Error("slab_step invalid");
+   } else if (update_stable==0) {
+    // do nothing
+   } else
+    amrex::Error("update_stable invalid");
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
-   // in: GODUNOV_3D.F90
-  FORT_UPDATESEMFORCE(
-   &ns_time_order,
-   &slab_step,
-   &nsolve,
-   &update_spectral,
-   &update_stable,
-   &nstate,
-   &nfluxSEM,
-   &nstate_SDC,
-   &nmat,
-   &project_option,
-   xlo,dx,
-   gpfab.dataPtr(),
-   ARLIM(gpfab.loVect()),ARLIM(gpfab.hiVect()),
-   divfab.dataPtr(),
-   ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
-   hoopfab.dataPtr(),
-   ARLIM(hoopfab.loVect()),ARLIM(hoopfab.hiVect()),
-   HOfab.dataPtr(HOcomp),
-   ARLIM(HOfab.loVect()),ARLIM(HOfab.hiVect()),
-   LOfab.dataPtr(LOcomp),
-   ARLIM(LOfab.loVect()),ARLIM(LOfab.hiVect()),
-   maskSEMfab.dataPtr(),
-   ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-   tilelo,tilehi,
-   fablo,fabhi,&bfact,&level,
-   &dt_slab);
- }  // mfi  
+   // declared in: GODUNOV_3D.F90
+   fort_updatesemforce(
+    &ns_time_order,
+    &slab_step,
+    &nsolve,
+    &update_spectral,
+    &update_stable,
+    &nstate,
+    &nfluxSEM,
+    &nstate_SDC,
+    &nmat,
+    &project_option,
+    xlo,dx,
+    divfab.dataPtr(),
+    ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
+    hoopfab.dataPtr(),
+    ARLIM(hoopfab.loVect()),ARLIM(hoopfab.hiVect()),
+    HOfab.dataPtr(HOcomp),
+    ARLIM(HOfab.loVect()),ARLIM(HOfab.hiVect()),
+    LOfab.dataPtr(LOcomp),
+    ARLIM(LOfab.loVect()),ARLIM(LOfab.hiVect()),
+    maskSEMfab.dataPtr(),
+    ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi,&bfact,&level,
+    &dt_slab);
+  }  // mfi  
 } // omp
- ns_reconcile_d_num(62);
+  ns_reconcile_d_num(62);
 
- if (project_option==0) {
+ } else if (project_option==0) {
 
   if (nsolve==1) {
    // do nothing
@@ -10722,7 +10715,7 @@ void NavierStokes::update_SEM_delta_force(
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      //declared in: GODUNOV_3D.F90
-    FORT_UPDATESEMFORCE_FACE(
+    fort_updatesemforce_face(
      &project_option,
      &ns_time_order,
      &dir,
@@ -10748,10 +10741,6 @@ void NavierStokes::update_SEM_delta_force(
 
   } // dir=0..sdim-1
 
- } else if ((project_option==2)||
-            (project_option==3)||
-            (project_option==4)) {
-  // do nothing
  } else {
   amrex::Error("project_option invalid9");
  } 

@@ -209,10 +209,9 @@ namespace amrex{
 
 #define CELL_VELOCITY_MF 200
 
-// nfluxSEM=sdim + num_state_material
-// nstate_SDC= nfluxSEM + 
-// 1 + num_species_var (thermal + species conduction) + sdim (viscosity) + 
-// 1 (div up) + sdim (grad p) + sdim (-momentum force at t^n+1)
+// nfluxSEM=sdim + 1
+// nstate_SDC= nfluxSEM + 1 (thermal conduction) + sdim (viscosity) +
+// sdim (-momentum force at t^n+1)
 #define spectralF_MF 201
 #define spectralF_GP_MF 202
 
@@ -1444,7 +1443,8 @@ void apply_pressure_grad(
      int idx_divup);
 
     void update_SEM_delta_force(int project_option,
-     int idx_gp,int idx_gpmac,int idx_div,
+     int idx_gpmac,
+     int idx_div,
      int update_spectral,int update_stable,
      int nsolve);
 
