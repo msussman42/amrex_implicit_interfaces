@@ -7842,9 +7842,7 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
   new_localMF(PEDGE_MF+dir,2+nsolve,0,dir);
 
   new_localMF(AMRSYNC_PRES_MF+dir,nsolve,0,dir);
-  new_localMF(AMRSYNC_PEDGE_MF+dir,1,0,dir);
   setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,nsolve,0);
-  setVal_localMF(AMRSYNC_PEDGE_MF+dir,1.0e+40,0,1,0);
  } // dir=0..sdim-1
 
 } // subroutine allocate_pressure_work_vars

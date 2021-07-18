@@ -237,7 +237,6 @@ namespace amrex{
 
 #define AMRSYNC_VEL_MF 220
 #define AMRSYNC_PRES_MF 223
-#define AMRSYNC_PEDGE_MF 226
 #define COARSE_FINE_FLUX_MF 229
 
 #define DELTA_CELL_VEL_MF 232
@@ -1043,7 +1042,6 @@ protected:
 
     void allocate_physics_vars();
     void make_physics_vars(int project_option);
-    void density_TO_MAC(int project_option);
 
     void solid_temperature();
 

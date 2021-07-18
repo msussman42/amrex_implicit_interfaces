@@ -636,24 +636,12 @@ void NavierStokes::avgDown_and_Copy_localMF(
   ncomp_flux=nfluxSEM;
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
- } else if (operation_flag==1) { // P^cell->MAC
-  ncomp_den=1;
-  ncomp_vel=1;
-  ncomp_flux=1;
-  scomp_flux=0;
-  ncomp_flux_use=1;
  } else if ((operation_flag==3)|| // u cell to MAC
             (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
 	    (operation_flag==10)||
 	    (operation_flag==11)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
-  ncomp_flux=1;
-  scomp_flux=0;
-  ncomp_flux_use=1;
- } else if (operation_flag==9) {
-  ncomp_den=nmat*num_state_material;
-  ncomp_vel=nmat*num_state_material;
   ncomp_flux=1;
   scomp_flux=0;
   ncomp_flux_use=1;
@@ -814,8 +802,8 @@ void NavierStokes::avgDown_and_Copy_localMF(
 
     FArrayBox& fine_LS_fab=(*fine_lev.localMF[LEVELPC_MF])[mfi];
 
-     // in: NAVIERSTOKES_3D.F90
-    FORT_AVGDOWN_COPY( 
+     // declared in: NAVIERSTOKES_3D.F90
+    fort_avgdown_copy( 
      &enable_spectral,
      &finest_level,
      &operation_flag,
@@ -904,24 +892,12 @@ void NavierStokes::interp_and_Copy_localMF(
   ncomp_flux=nfluxSEM;
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
- } else if (operation_flag==1) { // P^cell->MAC
-  ncomp_den=1;
-  ncomp_vel=1;
-  ncomp_flux=1;
-  scomp_flux=0;
-  ncomp_flux_use=1;
  } else if ((operation_flag==3)|| // u cell to MAC
             (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
 	    (operation_flag==10)||
 	    (operation_flag==11)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
-  ncomp_flux=1;
-  scomp_flux=0;
-  ncomp_flux_use=1;
- } else if (operation_flag==9) {
-  ncomp_den=nmat*num_state_material;
-  ncomp_vel=nmat*num_state_material;
   ncomp_flux=1;
   scomp_flux=0;
   ncomp_flux_use=1;
@@ -1089,8 +1065,8 @@ void NavierStokes::interp_and_Copy_localMF(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // in: NAVIERSTOKES_3D.F90
-    FORT_INTERP_COPY( 
+     // declared in: NAVIERSTOKES_3D.F90
+    fort_interp_copy( 
      &enable_spectral,
      dxc,dx,
      &finest_level,
@@ -1369,7 +1345,7 @@ void NavierStokes::interp_flux_localMF(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    FORT_INTERP_FLUX( 
+    fort_interp_flux( 
      &enable_spectral,
      dxc,dx,
      &finest_level,
@@ -3010,315 +2986,6 @@ void NavierStokes::increment_face_velocity(
  } // spectral_loop
 
 } // subroutine increment_face_velocity
-
-// update the faceden_index component of FACE_VAR_MF
-// called from make_physics_vars
-void NavierStokes::density_TO_MAC(int project_option) {
-
- int operation_flag=9;
-
- int num_colors=0;
- Vector<Real> blob_array;
- blob_array.resize(1);
- int blob_array_size=blob_array.size();
-
- int finest_level = parent->finestLevel();
- int bfact=parent->Space_blockingFactor(level);
- int bfact_c=bfact;
- int bfact_f=bfact;
- if (level>0)
-  bfact_c=parent->Space_blockingFactor(level-1);
- if (level<finest_level)
-  bfact_f=parent->Space_blockingFactor(level+1);
-
- int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-
- int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>nmat))
-  amrex::Error("nparts invalid");
- Vector<int> im_solid_map_null;
- im_solid_map_null.resize(1);
-
- int* im_solid_map_ptr;
- int nparts_def=nparts;
- if (nparts==0) {
-  im_solid_map_ptr=im_solid_map_null.dataPtr();
-  nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
-  im_solid_map_ptr=im_solid_map.dataPtr();
- } else
-  amrex::Error("nparts invalid");
-
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
- }
-
- bool use_tiling=ns_tiling;
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- resize_levelsetLO(2,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,2,110);
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACE_VAR_MF+dir,0,111);
-   // allocated in make_physics_vars 
-   // deallocated in make_physics_varsALL
-  debug_ngrow(AMRSYNC_VEL_MF+dir,0,111); 
- }
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
- }
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,124);
-
- resize_maskfiner(1,MASKCOEF_MF);
- resize_mask_nbr(1);
-
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
-
- const Real* dx = geom.CellSize();
-
- const Box& domain = geom.Domain();
- const int* domlo = domain.loVect();
- const int* domhi = domain.hiVect();
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  debug_ngrow(FACE_VAR_MF+dir,0,126);
-
- debug_ngrow(DEN_RECON_MF,1,127);
- if (localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material)
-  amrex::Error("localMF[DEN_RECON_MF]->nComp() invalid");
-
- if ((projection_enable_spectral==1)||
-     (projection_enable_spectral==2)) { //in:density_TO_MAC
-
-  if (bfact>=2) {
-
-   if (level<finest_level) {
-    avgDown_and_Copy_localMF(
-     DEN_RECON_MF,
-     DEN_RECON_MF,
-     AMRSYNC_VEL_MF,
-     operation_flag);
-   } else if (level==finest_level) {
-    // do nothing
-   } else
-    amrex::Error("level invalid16");
-
-   if ((level>=1)&&(level<=finest_level)) {
-    interp_and_Copy_localMF(
-     DEN_RECON_MF,
-     DEN_RECON_MF,
-     AMRSYNC_VEL_MF,
-     operation_flag);
-   } else if (level==0) {
-    // do nothing
-   } else
-    amrex::Error("level invalid17");
-
-   allocate_flux_register(operation_flag);
-   if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
-    amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid3");
-
-   for (int spectral_loop=0;spectral_loop<end_spectral_loop();
-        spectral_loop++) {
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
- 
-     for (int tileloop=0;tileloop<=1;tileloop++) {
-
-      if (thread_class::nthreads<1)
-       amrex::Error("thread_class::nthreads invalid");
-      thread_class::init_d_numPts(
-       localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-      for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); 
-           mfi.isValid(); ++mfi) {
-       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-       int gridno=mfi.index();
-       const Box& tilegrid = mfi.tilebox();
-       const Box& fabgrid = grids[gridno];
-       const int* tilelo=tilegrid.loVect();
-       const int* tilehi=tilegrid.hiVect();
-       const int* fablo=fabgrid.loVect();
-       const int* fabhi=fabgrid.hiVect();
-
-       const Real* xlo = grid_loc[gridno].lo();
- 
-       FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];  
-       FArrayBox& xp=(*localMF[AMRSYNC_VEL_MF+dir])[mfi];  
-
-       FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
-       FArrayBox& xvel=(*localMF[FACE_VAR_MF+dir])[mfi];  
- 
-       FArrayBox& sol=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
-       FArrayBox& cellvelfab=(*localMF[DEN_RECON_MF])[mfi];
-
-       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-
-       // mask=tag if not covered by level+1 or outside the domain.
-       FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];
-       FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
-
-       FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
-       FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
-       int ncfluxreg=semfluxfab.nComp();
-
-       Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-
-       int scomp_den=(AMREX_SPACEDIM+1);
-       Vector<int> denbc=getBCArray(State_Type,gridno,scomp_den,1);
-
-       Real beta=0.0;
- 
-       int rzflag=0;
-       if (geom.IsRZ())
-        rzflag=1;
-       else if (geom.IsCartesian())
-        rzflag=0;
-       else if (geom.IsCYLINDRICAL())
-        rzflag=3;
-       else
-        amrex::Error("CoordSys bust 20");
-
-       int energyflag=0;
-       int local_enable_spectral=projection_enable_spectral;
-       int simple_AMR_BC_flag=0;
-       int ncomp_xp=1;
-       int ncomp_xgp=1;
-       int ncomp_mgoni=cellvelfab.nComp();
-       int nsolve=1;
-
-       int tid_current=ns_thread();
-       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-        amrex::Error("tid_current invalid");
-       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-        // in density_TO_MAC
-       fort_cell_to_mac(
-        &ncomp_mgoni,
-        &ncomp_xp,
-        &ncomp_xgp,
-        &simple_AMR_BC_flag,
-        &nsolve,
-        &tileloop,
-        &dir,
-        &operation_flag, // 9
-        &energyflag,
-        &beta,
-        &visc_coef,
-        &interp_vel_increment_from_cell,
-        filter_velocity.dataPtr(),
-        temperature_primitive_variable.dataPtr(),
-        &local_enable_spectral,
-        &fluxvel_index,
-        &fluxden_index,
-        &facevel_index,
-        &facecut_index,
-        &icefacecut_index,
-        &curv_index,
-        &conservative_tension_force,
-        &conservative_div_uu,
-        &ignore_div_up,
-        &pforce_index,
-        &faceden_index,
-        &icemask_index,
-        &massface_index,
-        &vofface_index,
-        &ncphys,
-        override_density.dataPtr(),
-        constant_density_all_time.dataPtr(),
-        denbc.dataPtr(),  // presbc
-        velbc.dataPtr(),  
-        &slab_step,
-        &dt_slab,
-        &cur_time_slab, 
-        xlo,dx,
-        &spectral_loop,
-        &ncfluxreg,
-        semfluxfab.dataPtr(),
-        ARLIM(semfluxfab.loVect()),ARLIM(semfluxfab.hiVect()),
-        maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
-        ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-         // mask=tag if not covered by level+1 or outside the domain.
-        maskcoeffab.dataPtr(),
-        ARLIM(maskcoeffab.loVect()),ARLIM(maskcoeffab.hiVect()),
-        maskSEMfab.dataPtr(),
-        ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-        lsfab.dataPtr(),
-        ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-        sol.dataPtr(),ARLIM(sol.loVect()),ARLIM(sol.hiVect()),
-        xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
-        xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-        reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-        xvel.dataPtr(faceden_index),
-        ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), //xgp
-        xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xp
-        xvel.dataPtr(faceden_index),               //xvel=1/rho (destination)
-        ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
-        cellvelfab.dataPtr(), // contains the density
-        ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-        cellvelfab.dataPtr(), // pres
-        ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-        cellvelfab.dataPtr(), // den (source)
-        ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-        cellvelfab.dataPtr(), // mgoni
-        ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-        cellvelfab.dataPtr(), // color
-        ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-        cellvelfab.dataPtr(), // type
-        ARLIM(cellvelfab.loVect()),ARLIM(cellvelfab.hiVect()),
-        tilelo,tilehi,
-        fablo,fabhi,
-        &bfact,&bfact_c,&bfact_f, 
-        &level,
-        &finest_level,
-        &rzflag,domlo,domhi, 
-        &nmat,
-        &nparts,
-        &nparts_def,
-        im_solid_map_ptr,
-        added_weight.dataPtr(),
-        blob_array.dataPtr(),
-        &blob_array_size,
-        &num_elements_blobclass,
-        &num_colors,
-        &nten,
-        &project_option,
-        &SEM_upwind,
-        &SEM_advection_algorithm);
-      } // mfi
-} // omp
-      ns_reconcile_d_num(136);
-     } // tileloop
-    } // dir
-    ParallelDescriptor::Barrier();
-
-    synchronize_flux_register(operation_flag,spectral_loop);
-   } // spectral_loop=0..end_spectral_loop()-1
-
-  } else if (bfact==1) {
-   // do nothing
-  } else
-   amrex::Error("bfact invalid");
-   
- } else if ((projection_enable_spectral==0)||
-            (projection_enable_spectral==3)) { //in:density_TO_MAC
-  // do nothing
- } else
-  amrex::Error("projection_enable_spectral invalid");
-
-} // subroutine density_TO_MAC
 
 // vel_or_disp=0 => interpolate mac velocity
 // vel_or_disp=1 => interpolate mac displacement

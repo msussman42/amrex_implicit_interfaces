@@ -14483,14 +14483,12 @@ NavierStokes::allocate_flux_register(int operation_flag) {
 
   // unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
-  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
-  //        compressible regions.
-  //   (iii) usolid in solid regions
+  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
+  //   (iii) (unew^{c})^{c->f}  compressible regions.
+  //   (iv) usolid in solid regions
  if (operation_flag==11) {
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==10) { // ucell,umac -> umac
-  ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==9) {  // density CELL -> MAC
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==7) {  // advection
   ncfluxreg=AMREX_SPACEDIM*nfluxSEM;
@@ -14585,8 +14583,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
 
- if (nfluxSEM!=AMREX_SPACEDIM+num_state_material)
-  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+num_state_material");
+ if (nfluxSEM!=AMREX_SPACEDIM+1)
+  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+1");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
