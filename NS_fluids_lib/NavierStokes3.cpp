@@ -2154,8 +2154,21 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
  // (iii) usolid in solid regions
+ // m^{f,n+1}=rho^{f,n+1}u^{f,n+1}=
+ // rho^{f,n+1}(u^{f,n} + (u^{c,n+1}-u^{c,n})^{c->f})=
+ // rho^{f,n+1}(u^{c,n+1})^{c->f}+
+ // rho^{f,n+1}(u^{f,n}-(u^{c,n})^{c->f})=
+ // rho^{f,n+1}(u^{c,n+1})^{c->f}+
+ //                                (n)(n+1)
+ // rho^{f,n+1}(u^{f,n}-(u^{f,n})^{f->c->f})    (*)
+ // 1. (*) is not conservative, but works for all of the benchmarks?
+ // 2. m^{f,n+1}=rho^{f,n+1}(u^{c,n+1})^{c->f} is too dissipative
+ // 3. m^{f,n+1}\equiv rho^{f,n+1}u^{f,n+1} is not conservative and
+ //    predicts incorrect shock speed.
+ // 4. option 3, except using "refined density" is conservative, not
+ //    dissipative, but slow.  
  interp_option=4;  
-FIX ME
+
  Vector<blobclass> blobdata;
 
  increment_face_velocityALL(
@@ -2405,19 +2418,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
      } else if (disable_advection==1) {
       
-      if (face_flag==1) {
-       // delete_advect_vars() called in NavierStokes::do_the_advance
-       // right after increment_face_velocityALL. 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        // initialize ADVECT_REGISTER_FACE_MF and
-        //            ADVECT_REGISTER_MF
-        ns_level.prepare_advect_vars(prev_time_slab);
-       }
-      } else if (face_flag==0) {
-       // do nothing
-      } else
-       amrex::Error("face_flag invalid");
+      // delete_advect_vars() called in NavierStokes::do_the_advance
+      // right after increment_face_velocityALL. 
+      for (int ilev=finest_level;ilev>=level;ilev--) {
+       NavierStokes& ns_level=getLevel(ilev);
+       // initialize ADVECT_REGISTER_FACE_MF and
+       //            ADVECT_REGISTER_MF
+       ns_level.prepare_advect_vars(prev_time_slab);
+      }
 
      } else
       amrex::Error("disable_advection invalid");
@@ -2674,8 +2682,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        make_physics_varsALL(project_option,post_restart_flag,5); 
 
-        // if face_flag==0: unew^{f} = unew^{c->f}
-	// if face_flag==1: 
 	//  unew^{f}=
         // (i) unew^{f} in incompressible non-solid regions
         // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
@@ -3044,8 +3050,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-       // if face_flag==0: unew^{f} = unew^{c->f}
-       // if face_flag==1: 
        //  unew^{f}=
        // (i) unew^{f} in incompressible non-solid regions
        // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
@@ -3055,32 +3059,26 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // (iii) usolid in solid regions
       advance_MAC_velocity(project_option);
 
-      if (face_flag==1) {
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-	 // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
-        ns_level.delete_advect_vars();
-       } // ilev=finest_level ... level
+      for (int ilev=finest_level;ilev>=level;ilev--) {
+       NavierStokes& ns_level=getLevel(ilev);
+       // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+       ns_level.delete_advect_vars();
+      } // ilev=finest_level ... level
 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-         //if temperature_primitive_var==0,
-         // add beta * (1/cv) * (u dot u/2) to temp
-        Real beta=1.0;
-        ns_level.increment_KE(beta); 
-	int use_VOF_weight=1;
-        int vel_or_disp=0; //interpolate MAC velocity
-        int dest_idx=-1;   //update State
-        ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
-        beta=-1.0;
-        ns_level.increment_KE(beta);
-       }
+      for (int ilev=finest_level;ilev>=level;ilev--) {
+       NavierStokes& ns_level=getLevel(ilev);
+       //if temperature_primitive_var==0,
+       // add beta * (1/cv) * (u dot u/2) to temp
+       Real beta=1.0;
+       ns_level.increment_KE(beta); 
+       int use_VOF_weight=1;
+       int vel_or_disp=0; //interpolate MAC velocity
+       int dest_idx=-1;   //update State
+       ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
+       beta=-1.0;
+       ns_level.increment_KE(beta);
+      }
  
-      } else if (face_flag==0) {
-       // do nothing
-      } else
-       amrex::Error("face_flag invalid");
-
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        int project_option_combine=2; // temperature in do_the_advance
@@ -11848,7 +11846,7 @@ void NavierStokes::vel_elastic_ALL() {
   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0 and face_flag==1)
+   // (filter_vel==0)
   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
 
     // register_mark=unew
@@ -12171,7 +12169,7 @@ void NavierStokes::veldiffuseALL() {
 
   // unew^MAC+=INTERP_TO_MAC(unew-register_mark)
   //    or
-  // unew^MAC=INTERP_TO_MAC(unew) if filter_velocity[im]==1 or face_flag==0
+  // unew^MAC=INTERP_TO_MAC(unew) if filter_velocity[im]==1 
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,3); 
 
  avgDownALL(State_Type,dencomp,nden,1);
@@ -12211,7 +12209,7 @@ void NavierStokes::veldiffuseALL() {
    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0 and face_flag==1)
+   // (filter_vel==0)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,4); 
 
    // register_mark=unew
@@ -12239,7 +12237,7 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0 and face_flag==1)
+   // (filter_vel==0)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
 
  avgDownALL(State_Type,dencomp,nden,1);
@@ -12293,7 +12291,7 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0 and face_flag==1)
+   // (filter_vel==0)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
 
    // register_mark=unew
@@ -13039,7 +13037,7 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
 //REGISTER_CURRENT_MF=unew-source_mf
 //uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
-// (filter_vel==0 and face_flag==1)
+// (filter_vel==0)
 void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
  if (level!=0)
@@ -13053,7 +13051,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
  }
 
   // unew^f=unew^f+beta * diffuse_register^{c->f}
-  // (filter_vel==0 and face_flag==1)
+  // (filter_vel==0)
   // in: INCREMENT_REGISTERS_ALL
  int interp_option=2;
  int project_option=3; // viscosity
@@ -13061,7 +13059,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
  Vector<blobclass> blobdata;
 
   // operation_flag==5 (interp_option==2)
-  // if filter_velocity[im]==1 or face_flag==0,
+  // if filter_velocity[im]==1,
   //  unew^f=INTERP_TO_MAC(unew)
  increment_face_velocityALL(
    interp_option,project_option,
