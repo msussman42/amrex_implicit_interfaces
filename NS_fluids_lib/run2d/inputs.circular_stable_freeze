@@ -86,7 +86,6 @@ ns.stiffCP = 1.0 1.0
 # ST=0.025=CP Delta T/L or ST=0.1 or ST=0.125 
 ns.latent_heat=-8.0 0.0
 ns.freezing_model=0 0
-ns.temperatureface_flag=0; // 0=use LS  1=use VOF
 
 #ns.saturation_temp = 373.0 0.0 # 12,21   
 #ns.saturation_temp = 273.0 0.0 # 12,21   FREEZING

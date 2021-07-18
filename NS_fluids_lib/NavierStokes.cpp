@@ -970,8 +970,6 @@ Vector<Real> NavierStokes::speciesviscconst_interface;
 Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
-int NavierStokes::diffusionface_flag=1; // 0=use LS  1=use VOF
-int NavierStokes::temperatureface_flag=1; // 0=use LS  1=use VOF
 
 Vector<int> NavierStokes::material_type;
 //0 incomp; material_type_evap needed for the Kassemi model.
@@ -4291,31 +4289,19 @@ NavierStokes::read_params ()
         (prescribe_temperature_outflow>3))
      amrex::Error("prescribe_temperature_outflow invalid");
 
-    pp.query("diffusionface_flag",diffusionface_flag);
-    if ((diffusionface_flag<0)||(diffusionface_flag>1))
-     amrex::Error("diffusionface_flag invalid"); 
-
-    pp.query("temperatureface_flag",temperatureface_flag);
-    if ((temperatureface_flag!=0)&&
-        (temperatureface_flag!=1))
-     amrex::Error("temperatureface_flag invalid"); 
-
     is_phasechange=0;
     for (int i=0;i<2*nten;i++) {
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
       if ((freezing_model[i]==0)||  // Stefan model for phase change (fully sat)
           (freezing_model[i]==5)||  // Stefan model for saturated evap/cond.
-          (freezing_model[i]==6)) { // Palmore and Desjardins
-       if (temperatureface_flag!=0)
-        amrex::Error("must have temperatureface_flag==0");
-      } else if ((freezing_model[i]==1)||
-                 (freezing_model[i]==2)||  // hydrate
-                 (freezing_model[i]==3)||
-                 (freezing_model[i]==4)||  // Tannasawa or Schrage model
-		 (freezing_model[i]==7)) { // cavitation
-       if (temperatureface_flag!=1)
-        amrex::Error("must have temperatureface_flag==1");
+          (freezing_model[i]==6)||  // Palmore and Desjardins
+          (freezing_model[i]==1)||
+          (freezing_model[i]==2)||  // hydrate
+          (freezing_model[i]==3)||
+          (freezing_model[i]==4)||  // Tannasawa or Schrage model
+	  (freezing_model[i]==7)) { // cavitation
+       //do nothing
       } else
        amrex::Error("freezing_model[i] invalid");
 
@@ -4623,10 +4609,7 @@ NavierStokes::read_params ()
      std::cout << "prescribe_temperature_outflow= " << 
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
-     std::cout << "diffusionface_flag= " << diffusionface_flag << '\n';
-     std::cout << "temperatureface_flag= " << temperatureface_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
-     std::cout << "face_flag= " << face_flag << '\n';
      std::cout << "interp_vel_increment_from_cell= " << 
        interp_vel_increment_from_cell << '\n';
      std::cout << "ignore_div_up= " << ignore_div_up << '\n';
@@ -18281,32 +18264,18 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   PCINTERP_fill_bordersALL(MAGTRACE_MF,1,i,1,State_Type,scompBC_map);
  }
  
- int output_MAC_vel=0;
- if (face_flag==1) {
-  output_MAC_vel=1;
- } else if (face_flag==0) {
-  // do nothing
- } else
-  amrex::Error("face_flag invalid");
+  // save a copy of the State_Type cell velocity since it will be
+  // overwritten by the mass weighted MAC velocity interpolant.
+ getStateALL(1,cur_time_slab,0,
+   AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
 
- if (output_MAC_vel==1) {
-   // save a copy of the State_Type cell velocity since it will be
-   // overwritten by the mass weighted MAC velocity interpolant.
-  getStateALL(1,cur_time_slab,0,
-    AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
-
-  int use_VOF_weight=1;
-  int vel_or_disp=0;  // velocity
-  int dest_idx=-1; // we put the interpolant in State_Type so that the
-                   // command MultiFab* velmf=ns_level.getState( ... 
-                   // gets the interpolated data.  We have to restore
-                   // HOLD_VELOCITY_DATA_MF at the end.
-  VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
- } else if (output_MAC_vel==0) {
-  // do nothing
- } else {
-  amrex::Error("output_MAC_vel invalid");
- }
+ int use_VOF_weight=1;
+ int vel_or_disp=0;  // velocity
+ int dest_idx=-1; // we put the interpolant in State_Type so that the
+                  // command MultiFab* velmf=ns_level.getState( ... 
+                  // gets the interpolated data.  We have to restore
+                  // HOLD_VELOCITY_DATA_MF at the end.
+ VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
 
  int tecplot_finest_level=finest_level;
  if (tecplot_max_level<tecplot_finest_level)
@@ -18632,18 +18601,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  ParallelDescriptor::Barrier();
 
- if (output_MAC_vel==1) {
-  for (int ilev=finest_level;ilev>=0;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
-   MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
-     0,0,AMREX_SPACEDIM,1);
-   ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
-  }  // ilev
- } else if (output_MAC_vel==0) {
-  // do nothing
- } else
-  amrex::Error("output_MAC_vel invalid");
+ for (int ilev=finest_level;ilev>=0;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
+  MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
+    0,0,AMREX_SPACEDIM,1);
+  ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
+ }  // ilev
 
  delete_array(VISUAL_XDISP_MAC_CELL_MF);
 

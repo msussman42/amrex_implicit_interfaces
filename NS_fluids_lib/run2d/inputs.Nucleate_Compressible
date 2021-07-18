@@ -30,7 +30,6 @@ ns.num_divu_outer_sweeps=2  # 1=INCOMP  2=COMP
 ns.EILE_flag=-1
 ns.continuous_mof=2
 ns.MOFITERMAX=15
-ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.minimum_relative_error=1.0e-22
 ns.diffusion_minimum_relative_error=1.0e-11
 #number of Jacobi method cycles elliptic solver initially does.

@@ -235,7 +235,6 @@ ns.temperature_hi_bc = 3 3
 
 # 0=use LS (since GFM must be used at interfaces changing phase)
 # 1=use VOF
-ns.temperatureface_flag=0
 ns.compressible_dt_factor=2.0 2.0 2.0
 # temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)

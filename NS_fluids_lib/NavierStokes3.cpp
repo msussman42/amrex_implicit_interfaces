@@ -373,20 +373,14 @@ void NavierStokes::nonlinear_advection() {
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
   init_vof_prev_time,SLOPE_RECON_MF);
 
- if (face_flag==1) {
-   // delete_advect_vars() called in NavierStokes::do_the_advance
-   // right after increment_face_velocityALL. 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-     // initialize ADVECT_REGISTER_FACE_MF and
-     //            ADVECT_REGISTER_MF
-   ns_level.prepare_advect_vars(prev_time_slab);
-  }
-
- } else if (face_flag==0) {
-  // do nothing
- } else
-  amrex::Error("face_flag invalid");
+  // delete_advect_vars() called in NavierStokes::do_the_advance
+  // right after increment_face_velocityALL. 
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+    // initialize ADVECT_REGISTER_FACE_MF and
+    //            ADVECT_REGISTER_MF
+  ns_level.prepare_advect_vars(prev_time_slab);
+ }
 
  if (particles_flag==1) {
 
@@ -2152,23 +2146,16 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  int idx_velcell=-1;
  Real beta=0.0;
 
- if (face_flag==0) {
-  beta=0.0;
-  interp_option=0;  // unew^{f} = unew^{c->f}
- } else if (face_flag==1) {
-  beta=0.0;
-  // interp_option==4:
-  // unew^{f}=
-  // (i) unew^{f} in incompressible non-solid regions
-  // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
-  //      regions or compressible regions.
-  //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
-  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-  // (iii) usolid in solid regions
-  interp_option=4;  
- } else
-  amrex::Error("face_flag invalid 9");
-
+ // interp_option==4:
+ // unew^{f}=
+ // (i) unew^{f} in incompressible non-solid regions
+ // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
+ //      regions or compressible regions.
+ //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
+ //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
+ // (iii) usolid in solid regions
+ interp_option=4;  
+FIX ME
  Vector<blobclass> blobdata;
 
  increment_face_velocityALL(

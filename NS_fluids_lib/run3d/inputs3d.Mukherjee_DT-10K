@@ -13,7 +13,6 @@ geometry.prob_hi   =  5.0e-3 5.0e-3 10.0e-3   # MKS
 ns.EILE_flag=-1
 ns.continuous_mof=2 # CLSVOF in 2 material cells, and MOF in >2 mat cells.
 ns.MOFITERMAX=10
-ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3
