@@ -14334,22 +14334,19 @@ stop
 ! operation_flag=0  pressure gradient on MAC grid
 ! operation_flag=1  interpolate pressure from cell to MAC grid.
 ! operation_flag=2  potential gradient on MAC grid, 
-!                   interpolate potential from cell to MAC grid
 !                   surface tension on MAC grid
-!                   left and right surface tension on MAC grid.
 ! operation_flag=3  unew^MAC=unew^CELL->MAC
 ! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC
 ! operation_flag=5  unew^MAC=unew^MAC+beta diffuse_ref^CELL->MAC
 ! (operation_flag=6 reserved for rate of strain tensor)
 ! operation_flag=7  advection.
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
-! operation_flag=9  density cell -> MAC
 ! operation_flag=10 hybrid of 3 and 4
 ! operation_flag=11 
 !   (i) unew^{f} in incompressible non-solid regions
-!   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
-!        compressible regions.
-!   (iii) usolid in solid regions
+!   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
+!   (iii) (unew^{c})^{c->f}   compressible regions.
+!   (iv) usolid in solid regions
 
       subroutine fort_cell_to_mac( &
        ncomp_mgoni, &
@@ -14859,16 +14856,16 @@ stop
         stop
        endif
 
-       if (ncomp_xp.ne.SDIM+num_state_base) then
+       if (ncomp_xp.ne.SDIM+1) then
         print *,"ncomp_xp invalid(2) ",ncomp_xp
         stop
        endif
-       if (ncomp_xgp.ne.SDIM+num_state_base) then
+       if (ncomp_xgp.ne.SDIM+1) then
         print *,"ncomp_xp invalid(3) ",ncomp_xp
         stop
        endif
        
-       if (ncphys.ne.SDIM+num_state_base) then
+       if (ncphys.ne.SDIM+1) then
         print *,"ncphys invalid"
         stop
        endif
@@ -14960,22 +14957,8 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.9) then
-
-       if (ncomp_mgoni.eq.nmat*num_state_material) then
-        ! do nothing
-       else
-        print *,"ncomp_mgoni invalid"
-        stop
-       endif
-
-       if (ncphys.ne.vofface_index+2*nmat) then
-        print *,"ncphys invalid"
-        stop
-       endif
-
       else 
-       print *,"operation_flag invalid11"
+       print *,"operation_flag invalid11:",operation_flag
        stop
       endif
 
@@ -15017,7 +15000,7 @@ stop
         print *,"energyflag invalid"
         stop
        endif
-      else if (operation_flag.eq.2) then !(grd ppot/den)_MAC,ppot^CELL->MAC,ten.
+      else if (operation_flag.eq.2) then !(grd ppot/den)_MAC,ten.
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
         stop
@@ -15039,11 +15022,6 @@ stop
         ! do nothing
        else
         print *,"project_option invalid"
-        stop
-       endif
-      else if (operation_flag.eq.9) then ! density: CELL->MAC
-       if (energyflag.ne.0) then
-        print *,"energyflag invalid"
         stop
        endif
       else if (operation_flag.eq.0) then ! (grad p)_MAC
@@ -15137,12 +15115,18 @@ stop
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,pres_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,234)
-      call checkbound_array(fablo,fabhi,solfab,0,dir,234)
-      call checkbound_array(fablo,fabhi,mgoni,1,-1,234)
-      call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
-      call checkbound_array1(fablo,fabhi,colorfab,1,-1,6626)
-      call checkbound_array(fablo,fabhi,levelPC,1,-1,234)
-      call checkbound_array(fablo,fabhi,recon,0,-1,234)
+      solfab_ptr=>solfab
+      call checkbound_array(fablo,fabhi,solfab_ptr,0,dir,234)
+      mgoni_ptr=>mgoni
+      call checkbound_array(fablo,fabhi,mgoni_ptr,1,-1,234)
+      typefab_ptr=>typefab
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
+      colorfab_ptr=>colorfab
+      call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
+      levelPC_ptr=>levelPC
+      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,234)
+      recon_ptr=>recon
+      call checkbound_array(fablo,fabhi,recon_ptr,0,-1,234)
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,234)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,234)
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
@@ -15178,7 +15162,7 @@ stop
       else if ((dir.eq.2).and.(SDIM.eq.3)) then
        kk=1
       else
-       print *,"dir out of range in EDGEGRADP"
+       print *,"dir out of range in fort_cell_to_mac, dir=",dir
        stop
       endif 
 
@@ -15232,7 +15216,7 @@ stop
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           idx=k
          else
-          print *,"dir invalid tfrmac"
+          print *,"dir invalid fort_cell_to_mac, dir=",dir
           stop
          endif
 
@@ -15245,18 +15229,11 @@ stop
            ! with the solid velocity.
           local_vel=xvel(D_DECL(i,j,k),1)
 
-         else if (operation_flag.eq.2) then !(grd ppot)_MAC,ppot^CELL->MAC,ten.
+         else if (operation_flag.eq.2) then !(grd ppot)_MAC,ten.
 
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
           enddo
-
-         else if (operation_flag.eq.9) then ! density: CELL->MAC (1/den)
-
-          do im=1,ncphys
-           local_face(im)=xface(D_DECL(i,j,k),im)
-          enddo
-          local_vel=xvel(D_DECL(i,j,k),1) ! low order 1/rho
 
          else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
                   (operation_flag.eq.4).or. & !unew^MAC=uSOLID^MAC / uFLUID^MAC
@@ -15361,7 +15338,7 @@ stop
 
          else if ((operation_flag.eq.0).or. &
                   ((operation_flag.ge.6).and. &
-                   (operation_flag.le.9))) then
+                   (operation_flag.le.8))) then
           ! do nothing
          else 
           print *,"operation_flag invalid15"
@@ -15434,10 +15411,9 @@ stop
              stop
             endif
             templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
-            nc=SDIM+1  ! density
-            local_face(nc)=denlocal  ! NONCONSERVATIVE
-            nc=SDIM+2  ! temperature
+            nc=SDIM+1  !temperature
             local_face(nc)=templocal  ! NONCONSERVATIVE
+FIX ME
            else
             print *,"im invalid 15446:",im
             stop

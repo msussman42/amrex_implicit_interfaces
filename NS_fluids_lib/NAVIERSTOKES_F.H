@@ -19,9 +19,6 @@
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
-#    define FORT_AVGDOWN_COPY avgdown_copy
-#    define FORT_INTERP_COPY interp_copy
-#    define FORT_INTERP_FLUX interp_flux
 #    define FORT_FILLBDRY_FLUX fillbdry_flux
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
@@ -48,9 +45,6 @@
 #    define FORT_MOFAVGDOWN  MOFAVGDOWN
 #    define FORT_ERRORAVGDOWN ERRORAVGDOWN
 #    define FORT_AVGDOWN     AVGDOWN
-#    define FORT_AVGDOWN_COPY AVGDOWN_COPY
-#    define FORT_INTERP_COPY INTERP_COPY
-#    define FORT_INTERP_FLUX INTERP_FLUX
 #    define FORT_FILLBDRY_FLUX FILLBDRY_FLUX
 #    define FORT_AVGDOWN_LOW AVGDOWN_LOW
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
@@ -76,9 +70,6 @@
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
-#    define FORT_AVGDOWN_COPY avgdown_copy
-#    define FORT_INTERP_COPY interp_copy
-#    define FORT_INTERP_FLUX interp_flux
 #    define FORT_FILLBDRY_FLUX fillbdry_flux
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
@@ -103,9 +94,6 @@
 #    define FORT_MOFAVGDOWN  mofavgdown_
 #    define FORT_ERRORAVGDOWN erroravgdown_
 #    define FORT_AVGDOWN     avgdown_
-#    define FORT_AVGDOWN_COPY avgdown_copy_
-#    define FORT_INTERP_COPY interp_copy_
-#    define FORT_INTERP_FLUX interp_flux_
 #    define FORT_FILLBDRY_FLUX fillbdry_flux_
 #    define FORT_AVGDOWN_LOW avgdown_low_
 #    define FORT_AVGDOWN_TAG avgdown_tag_
@@ -352,7 +340,7 @@ extern "C" {
       const int* lof, const int* hif);
 
 
-    void FORT_AVGDOWN_COPY(
+    void fort_avgdown_copy(
       int* enable_spectral,
       int* finest_level,
       int* operation_flag,
@@ -375,7 +363,7 @@ extern "C" {
       const int* lof, const int* hif);
 
 
-    void FORT_INTERP_COPY(
+    void fort_interp_copy(
       int* enable_spectral,
       const Real* dxc,
       const Real* dx,
@@ -401,7 +389,7 @@ extern "C" {
       int* velbc,
       const int* loc, const int* hic);
 
-    void FORT_INTERP_FLUX(
+    void fort_interp_flux(
       int* enable_spectral,
       const Real* dxc,
       const Real* dx,
