@@ -13,7 +13,6 @@ geometry.prob_hi   =  7.5e-3 1.5e-2   # MKS
 ns.EILE_flag=-1
 ns.continuous_mof=2
 ns.MOFITERMAX=15
-ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.minimum_relative_error=1.0e-22
 #number of Jacobi method cycles elliptic solver initially does.
 ns.initial_project_cycles=10

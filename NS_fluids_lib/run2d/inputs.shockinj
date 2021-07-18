@@ -101,7 +101,6 @@ ns.twall=0.1
 # dt=sqrt(dx/p) u=dx/dt=sqrt(dx p) dx~1/100  u~sqrt(10^6)=1000
 # advbot is inflow velocity from bottom if axis_dir<>2
 # advbot=6e4 is the realistic parameter.
-# advbot=3e4 is the limit using face_flag=0.
 ns.advbot=6.0e4     # pressure bc used instead if axis_dir=2
 #ns.outflow_pressure=1.0e+6 # this is "general_hydrostatic_pressure"
 #ns.inflow_pressure=0.5e+8  # pressure is specified at inflow  (80 MPa)

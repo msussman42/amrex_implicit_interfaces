@@ -41,7 +41,6 @@ ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 # water is 1st order, gas is 1st order 
 # JAN18 - make 2 2 if high Reynolds number.
 
-# JAN18 - face_flag=1 recommended for all problems.
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 ns.truncate_thickness= 2
 

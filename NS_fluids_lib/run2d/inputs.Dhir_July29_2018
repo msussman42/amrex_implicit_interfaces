@@ -15,7 +15,6 @@ ns.EILE_flag=-1
 # 2=CMOF
 ns.continuous_mof=4 
 ns.MOFITERMAX=15
-ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3

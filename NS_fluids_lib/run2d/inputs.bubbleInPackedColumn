@@ -13,7 +13,6 @@ geometry.is_periodic = 0 0 0
 # OCTOBER 23 => 3 is ok for these two parameters.
 #ns.use_LS_height=1 OCTOBER 23: LS height always used
 
-# OCTOBER 23 => face_flag=1 should be better at the inflow boundary.
 #ns.solid_staircase=0  OCTOBER 23: always staircase representation
 # (working on high order representation now)
 

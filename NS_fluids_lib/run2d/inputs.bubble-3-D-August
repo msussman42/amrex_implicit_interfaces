@@ -38,7 +38,6 @@ ns.projection_pressure_scale=100.0
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 # water is 1st order, gas is 1st order 
 
-# OCTOBER 22 - face_flag=1 performs best for bubble.
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 #                          2 (same as 1 except use VFRAC)
 #                          3 (same as 0 except use VFRAC)

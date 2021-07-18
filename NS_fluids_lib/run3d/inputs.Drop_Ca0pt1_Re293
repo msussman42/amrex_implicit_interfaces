@@ -32,7 +32,6 @@ ns.continuous_mof=2
 ns.clsmof_weight=0.1 0.1  # CLSMOF II if clsmof_weight>0 and elvira_flag=0
 ns.num_materials=2
 # JAN18 .
-ns.denface_flag=1  # 0=F_face derived from LS  1=F_face derived from recon.
 ns.velocity_extension_method=1 # 0=use cell vel  1=use face vel for cell extrap
 
 ns.num_species_var=0
@@ -59,8 +58,6 @@ ns.mass_relaxation_factor=0.0
 # water is 1st order, gas is 1st order 
 # JAN18 - make 2 2 if high Reynolds number.
 
-# OCTOBER 22 - face_flag=1 performs best for bubble.
-# JAN18 - face_flag=1 recommended for all problems.
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 ns.truncate_volume_fractions= 1 1 1 1
 ns.truncate_thickness= 2

@@ -81,7 +81,6 @@ ns.distribute_target=0 0 0 0 0 0 0 0 0 0 0 0
 ns.saturation_temp = 373.0 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. # 12,21   
 # E=(1/2) u^2 + e(rho,T)
 ns.temperature_primitive_variable=1 1 1 1
-ns.temperatureface_flag=0 # 0=LS face diffcoeff 1=VOF for face diffcoeff
 ns.sum_interval   = 10        # timesteps between computing mass 
 
 ns.axis_dir=2   # 0=no nozzle  1=nozzle (BC=1)  2=nozzle+pressure BC

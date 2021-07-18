@@ -24,7 +24,6 @@
 # max_level=1  recon: .462  LS: .455
 # max_level=2  recon: .460  LS: .456
 # max_level=3  recon: .460  LS: .458  dx_finest=0.00195
-# (face_flag=0 default) 
 max_step  =  99999    # maximum timestep
 #max_step  =  1    # maximum timestep
 stop_time=4.0  # liquid lens

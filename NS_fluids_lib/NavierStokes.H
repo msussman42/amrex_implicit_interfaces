@@ -2280,8 +2280,6 @@ protected:
     static Vector<Real> species_molar_mass;  // def=1
      // default is solidheat_flag=0
     static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
-    static int diffusionface_flag; // 0=use LS 1=use VOF (def=1)
-    static int temperatureface_flag; // 0=use LS 1=use VOF (def=1)
     static Vector<int> material_type; // 0 incomp   
      //0 incomp; material_type_evap needed for the Kassemi model.
     static Vector<int> material_type_evap; 

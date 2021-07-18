@@ -19,7 +19,6 @@ geometry.prob_hi   =  6.0 12.0
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
-ns.temperatureface_flag=0  # 0=use LS  1=use VOF
 ns.truncate_thickness=2.0
 
 

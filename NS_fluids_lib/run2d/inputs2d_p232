@@ -39,7 +39,6 @@ ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 ns.mass_relaxation_factor=0.0
 # water is 1st order, gas is 1st order 
 
-# OCTOBER 22 - face_flag=1 performs best for bubble.
 # recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 
 ns.minimum_relative_error=1.0e-18
