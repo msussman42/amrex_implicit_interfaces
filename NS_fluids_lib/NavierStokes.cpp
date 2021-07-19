@@ -545,47 +545,7 @@ int  NavierStokes::TensorYU_Type=TensorXU_Type+1;
 int  NavierStokes::TensorZU_Type=TensorYU_Type+1;
 int  NavierStokes::TensorZV_Type=TensorZU_Type+1;
 
-// if interp_vel_increment_from_cell==0
-//  face velocity after advection=CISL advection of face velocities
-//     (not conservative for compressible flow, but "monotonic" if first order)
-// if interp_vel_increment_from_cell==1
-//  face velocity after advection=UMAC^n +
-//     I_{cell}^{MAC} (UCELL^advect - UCELL^n)
-//     (still not conservative for compressible flow, and not "monotonic",
-//      and very well can lead to checkerboard instability)
-// 
-int  NavierStokes::interp_vel_increment_from_cell=0;
 int  NavierStokes::ignore_div_up=0;
-
-// Compressible algorithm for each time step:
-// k=0
-// V^{k,n+1}=UMAC^{n}
-// GP^{k,n+1+1/4}=0   -> -dt grad p/rho
-// DUP^{k,n+1+1/4}=0  -> -dt div( up ) /(rho cv) 
-// for k=0 to num_divu_outer_sweeps-1
-//   1. advection using V^{k,n+1} (conservative for density).
-//   2. U^*=U^advect + GP^{k,n+1+1/4}
-//   3. T^*=T^advect + DUP^{k,n+1+1/4}
-//   4. thermal diffusion and viscosity gives U^visc and T^visc
-//   5. U^**=U^visc - GP^{k,n+1+1/4}
-//   6. T^**=T^visc - DUP^{k,n+1+1/4}
-//   7. (p^{k+1,n+1+1/4}-p(rho^{n+1,k},e^visc^{n+1,k}))/(dt^2 rho c^2) =
-//        -div(U^**/dt - grad p^{k+1,n+1+1/4}/rho)
-//   8. initialize GP^{k+1,n+1+1/4}  and DUP^{k+1,n+1+1/4}
-//   9. update U^{n+1,(k+1)},T^{n+1,(k+1)}
-//   10. go back to (1)
-// NOTE: in step 7, p^{k+1,n+1+1/4} is an approximation to
-//   p(rho^{n+1}+rho',e^{n+1}+e')
-//    the increments rho' and e' have the form
-//     rho'= -dt rho div u     e'= - dt p div u
-//   p(rho^{n+1}+rho',e^{n+1}+e')=p(rho^{n+1},e^{n+1})+
-//     rho' dp/drho  + e' dp/de = p(rho^{n+1},e^{n+1}) - dtrho'= 
-//     -dt rho div u   c^2 rho div u
-//   If the advection terms and diffusion terms are ignored, and if
-//   one iterates until convergence, then the above algorithm
-//   reduces to the backwards Euler method for the wave equation.
-//    (p^{n+2}-2 p^{n+1} + p^{n})/(c^2 dt^2) = div grad p^{n+2}
-//
 
 Vector<Real> NavierStokes::compressible_dt_factor; 
 
@@ -3855,14 +3815,6 @@ NavierStokes::read_params ()
 
     polymer_factor.resize(nmat);
 
-    pp.query("interp_vel_increment_from_cell",
-       interp_vel_increment_from_cell);
-    if ((interp_vel_increment_from_cell==0)||
-        (interp_vel_increment_from_cell==1)) {
-     // do nothing
-    } else
-     amrex::Error("interp_vel_increment_from_cell invalid");
-
     pp.query("ignore_div_up",ignore_div_up);
     if ((ignore_div_up==0)||
         (ignore_div_up==1)) {
@@ -4603,8 +4555,6 @@ NavierStokes::read_params ()
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
-     std::cout << "interp_vel_increment_from_cell= " << 
-       interp_vel_increment_from_cell << '\n';
      std::cout << "ignore_div_up= " << ignore_div_up << '\n';
 
      for (int i=0;i<nmat;i++) {
@@ -14475,15 +14425,12 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
   //   (iii) (unew^{c})^{c->f}  compressible regions.
   //   (iv) usolid in solid regions
- FIX ME
  if (operation_flag==11) {
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==10) { // ucell,umac -> umac
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==7) {  // advection
   ncfluxreg=AMREX_SPACEDIM*nfluxSEM;
- } else if (operation_flag==1) { // interp press from cell to MAC.
-  ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==2) { 
   ncfluxreg=AMREX_SPACEDIM; // (grad pressure_potential)_mac
  } else if (operation_flag==3) { // ucell -> umac
@@ -14849,7 +14796,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &energyflag,
       &visc_coef, //beta
       &visc_coef,
-      &interp_vel_increment_from_cell,
       temperature_primitive_variable.dataPtr(),
       &local_enable_spectral,
       &fluxvel_index,
@@ -15015,7 +14961,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
       nmat*num_state_material);
 
-     int operation_flag=6; // advection
+     int operation_flag=107; // advection
      int energyflag=advect_iter;
      int nsolve=nfluxSEM;
      int homflag=source_term;
@@ -15036,7 +14982,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &ns_time_order,
       &divu_outer_sweeps,
       &num_divu_outer_sweeps,
-      &operation_flag, // 6=advection
+      &operation_flag, // 107=advection
       &energyflag,
       temperature_primitive_variable.dataPtr(),
       constant_density_all_time.dataPtr(),

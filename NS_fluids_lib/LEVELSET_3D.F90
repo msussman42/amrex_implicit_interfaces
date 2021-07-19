@@ -14314,7 +14314,6 @@ stop
 ! (operation_flag=6 reserved for rate of strain tensor)
 ! operation_flag=7  advection.
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
-! operation_flag=10 hybrid of 3 and 4
 ! operation_flag=11 
 !   (i) unew^{f} in incompressible non-solid regions
 !   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
@@ -14333,7 +14332,6 @@ stop
        energyflag, & 
        beta, &
        visc_coef, &
-       interp_vel_increment_from_cell, &
        temperature_primitive_variable, &
        enable_spectral, &
        fluxvel_index, &  
@@ -14429,7 +14427,6 @@ stop
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: face_flag 
-      INTEGER_T, intent(in) :: interp_vel_increment_from_cell
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
@@ -14553,6 +14550,7 @@ stop
       REAL_T plocal(2+nsolve)
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
+      INTEGER_T im_left,im_right
       INTEGER_T dir,dir2,side
       INTEGER_T velcomp,iboundary
       REAL_T cutedge,RR
@@ -14622,7 +14620,6 @@ stop
       INTEGER_T partid_solid
       INTEGER_T partid_prescribed
       INTEGER_T partid_check
-      INTEGER_T all_incomp
       REAL_T cutoff
       REAL_T local_tension_force
       INTEGER_T typeleft,typeright,typeface
@@ -14789,14 +14786,6 @@ stop
        stop
       endif
 
-      if ((interp_vel_increment_from_cell.eq.0).or. &
-          (interp_vel_increment_from_cell.eq.1)) then
-       ! do nothing
-      else
-       print *,"interp_vel_increment_from_cell invalid"
-       stop
-      endif
- 
       if ((operation_flag.ge.0).and. &
           (operation_flag.le.11)) then
        ! do nothing
@@ -14895,19 +14884,6 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.10) then
-
-       if (ncphys.ne.vofface_index+2*nmat) then
-        print *,"ncphys invalid"
-        stop
-       endif
-       if (ncomp_mgoni.eq.SDIM) then
-        ! do nothing
-       else
-        print *,"ncomp_mgoni invalid"
-        stop
-       endif
-
       else if (operation_flag.eq.11) then
 
        if (ncphys.ne.vofface_index+2*nmat) then
@@ -14970,7 +14946,6 @@ stop
       else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
                (operation_flag.eq.4).or. & !unew^MAC=uSOLID^MAC / uFLUID^MAC
                (operation_flag.eq.5).or. & !unew^MAC+beta FVISC^CELL->MAC
-               (operation_flag.eq.10).or. & !unew^{CELL,MAC} -> MAC
                (operation_flag.eq.11)) then !unew^{CELL diff,MAC} -> MAC
        if (energyflag.ne.0) then
         print *,"energyflag invalid"
@@ -15092,8 +15067,6 @@ stop
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
-      all_incomp=1
-
       do im=1,nmat
 
        if (fort_material_type(im).eq.0) then
@@ -15102,7 +15075,7 @@ stop
         ! do nothing
        else if ((fort_material_type(im).ge.1).and. &
                 (fort_material_type(im).le.MAX_NUM_EOS)) then
-        all_incomp=0
+        ! do nothing
        else
         print *,"fort_material_type invalid"
         stop
@@ -15138,6 +15111,10 @@ stop
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,22)
 
          is_clamped_face=-1
+
+         local_compressible=0
+         im_left=0
+         im_right=0
 
          if (levelrz.eq.0) then
           RR=one
@@ -15196,7 +15173,6 @@ stop
          else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
                   (operation_flag.eq.4).or. & !unew^MAC=uSOLID^MAC / uFLUID^MAC
                   (operation_flag.eq.5).or. & !unew^MAC+beta FVISC^CELL->MAC
-                  (operation_flag.eq.10).or. & !unew^{CELL,MAC} -> MAC
                   (operation_flag.eq.11)) then !unew^{CELL DIFF,MAC} -> MAC
 
           do im=1,ncphys
@@ -15207,8 +15183,7 @@ stop
               (operation_flag.eq.11)) then
            local_vel_old_MAC=xgp(D_DECL(i,j,k),1)
           else if ((operation_flag.eq.3).or. &
-                   (operation_flag.eq.4).or. &
-                   (operation_flag.eq.10)) then
+                   (operation_flag.eq.4)) then
            local_vel_old_MAC=zero
           else
            print *,"operation_flag invalid13"
@@ -15238,7 +15213,6 @@ stop
              (operation_flag.eq.3).or. &
              (operation_flag.eq.4).or. &
              (operation_flag.eq.5).or. &
-             (operation_flag.eq.10).or. & ! u^MAC,CELL -> u^MAC
              (operation_flag.eq.11).or. & ! u^MAC,CELL DIFF -> u^MAC
              (operation_flag.eq.1)) then  ! p^CELL->MAC
 
@@ -15248,6 +15222,23 @@ stop
            LSright(im)=levelPC(D_DECL(i,j,k),im)
            localLS(im)=half*(LSright(im)+LSleft(im))
           enddo
+          call get_primary_material(LSleft,nmat,im_left)
+          call get_primary_material(LSright,nmat,im_right)
+
+          if ((fort_material_type(im_left).ge.1).and. &
+              (fort_material_type(im_left).le.MAX_NUM_EOS).and. &
+              (fort_material_type(im_right).ge.1).and. &
+              (fort_material_type(im_right).le.MAX_NUM_EOS)) then
+           local_compressible=1
+          else if ((fort_material_type(im_left).eq.0).or. &
+                   (fort_material_type(im_right).eq.0).or. &
+                   (fort_material_type(im_left).eq.999).or. &
+                   (fort_material_type(im_right).eq.999)) then
+           local_compressible=0
+          else
+           print *,"fort_material_type invalid"
+           stop
+          endif
 
           do dir2=1,SDIM
            xmac(dir2)=xstenMAC(0,dir2)
@@ -15424,7 +15415,6 @@ stop
          else if ((operation_flag.eq.3).or. & !u^MAC=u^CELL->MAC
                   (operation_flag.eq.4).or. & !u^MAC=uSOLID^MAC or uFLUID^MAC
                   (operation_flag.eq.5).or. & !u^MAC=u^MAC+beta diff^CELL->MAC
-                  (operation_flag.eq.10).or. & !u^MAC=u^{CELL,MAC}->MAC
                   (operation_flag.eq.11)) then !u^MAC=u^{CELL DIFF,MAC}->MAC
 
           face_velocity_override=0
@@ -15671,35 +15661,30 @@ stop
                   stop
                  endif
 
-                 ! called from NavierStokes::increment_face_velocity
-                 ! interp_option==3
-                 ! this is an obsolete option.
-                else if (operation_flag.eq.10) then ! cell,MAC -> MAC
-
-                 print *,"this option is not used"
-                 stop
-
                  !interp_option==4
                  !called after advection to update u^{advect,MAC}
                  !primary_vel_data=DELTA_CELL_VEL_MF; 
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.11) then ! cell diff,MAC -> MAC
-                 if ((all_incomp.eq.1).or. &
-                     (interp_vel_increment_from_cell.eq.0)) then
+                 if (local_compressible.eq.0) then
                   velcomp=1
                   primary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
                   secondary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
-                 else if ((all_incomp.eq.0).and. &
-                          (interp_vel_increment_from_cell.eq.1)) then
-                      ! UMAC^{ADVECT}=UMAC^n + 
-                      !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
+                 else if (local_compressible.eq.1) then
+                  ! UMAC^{ADVECT}=UMAC^n + 
+                  !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
+                  ! or
+                  ! UMAC^{ADVECT}= 
+                  !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
                   velcomp=dir+1
-                  primary_velmaterial= &
+                  if (1.eq.0) then
+                   primary_velmaterial= &
                      local_vel_old_MAC+vel(D_DECL(ic,jc,kc),velcomp)
-                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
+                  else
+                   primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
+                  endif
                  else
-                  print *,"all_incomp or "
-                  print *,"interp_vel_increment_from_cell invalid"
+                  print *,"local_compressible invalid"
                   stop
                  endif
                 else
@@ -15938,21 +15923,10 @@ stop
           at_coarse_fine_wallF=0
           at_coarse_fine_wallC=0
 
-          use_face_pres=3 ! use both gp and div(up)
+          use_face_pres=1 ! use div(up)
           solid_velocity=local_face(facevel_index+1)
 
           face_velocity_override=0
-
-          if (face_flag.eq.1) then
-
-           use_face_pres=1  ! div(up) ok, but not gp
- 
-          else if (face_flag.eq.0) then
-           use_face_pres=3  ! div(up) and gp ok.
-          else
-           print *,"face_flag invalid"
-           stop
-          endif
 
           do side=1,2
 
@@ -15976,22 +15950,10 @@ stop
              solid_velocity=zero
             else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
              face_velocity_override=1
-             use_face_pres=1 ! do not use gp 
              at_ext_wall=side
             else if (velbc_in(dir+1,side,dir+1).eq.INT_DIR) then
              if (mask_coarsefine(side).eq.0) then  
               at_coarse_fine_wallF=side
-              if ((project_option.eq.1).or. &
-                  (COARSE_FINE_VELAVG.eq.1)) then
-               use_face_pres=1 ! do not use gp 
-              else if (((project_option.eq.0).or. &
-                        (project_option.eq.11)).and. &!FSI_material_exists last
-                       (COARSE_FINE_VELAVG.eq.0)) then
-               ! do nothing
-              else
-               print *,"project_option invalid edge pressure 2"
-               stop
-              endif
              else if (mask_coarsefine(side).eq.1) then
               ! do nothing
              else
@@ -16039,7 +16001,7 @@ stop
           if ((AFACE.ge.zero).and. &
               (AFACE.le.half)) then
            if (at_reflect_wall.eq.0) then
-            use_face_pres=1 ! do not use gp
+            ! do nothing
            else if ((at_reflect_wall.eq.1).or. &
                     (at_reflect_wall.eq.2)) then
             ! do nothing
@@ -16054,27 +16016,20 @@ stop
            stop 
           endif
 
-          do im=1,nmat
-           if ((is_ice(nmat,im).eq.1).or. &  
-               (is_FSI_rigid(nmat,im).eq.1).or. &
-               (CTML_FSI_mat(nmat,im).eq.1)) then  
-            if ((levelPC(D_DECL(i,j,k),im).ge.zero).or. &
-                (levelPC(D_DECL(im1,jm1,km1),im).ge.zero)) then
-             use_face_pres=0 ! do not use gp or div(up)
-            endif
-           else if ((FSI_flag(im).eq.0).or. &
-                    (FSI_flag(im).eq.7)) then ! regular fluid material
-            ! do nothing
-           else if (is_prescribed(nmat,im).eq.1) then
-            ! do nothing (use_face_pres modified above for this case)
-           else
-            print *,"FSI_flag invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
+          if ((is_ice(nmat,im_left).eq.1).or. &  
+              (is_FSI_rigid(nmat,im_left).eq.1).or. &
+              (CTML_FSI_mat(nmat,im_left).eq.1)) then  
+           use_face_pres=0 ! do not use div(up)
+          else if ((is_ice(nmat,im_right).eq.1).or. &  
+                   (is_FSI_rigid(nmat,im_right).eq.1).or. &
+                   (CTML_FSI_mat(nmat,im_right).eq.1)) then  
+           use_face_pres=0 ! do not use div(up)
+          else
+           ! do nothing
+          endif
 
           if (local_face(icemask_index+1).eq.zero) then
-           use_face_pres=0 ! do not use gp or div(up)
+           use_face_pres=0 ! do not use div(up)
           else if (local_face(icemask_index+1).eq.one) then
            ! do nothing
           else
@@ -16108,7 +16063,7 @@ stop
             ! at least 1 side is covered
            if ((mask_covered(1).eq.0).or. &
                (mask_covered(2).eq.0)) then
-            use_face_pres=min(use_face_pres,1) ! do not use gp 
+            ! do nothing
            else if ((mask_covered(1).eq.1).and. &
                     (mask_covered(2).eq.1)) then
             ! do nothing
@@ -16122,7 +16077,7 @@ stop
            ! both sides are covered
            if ((mask_covered(1).eq.0).and. &
                (mask_covered(2).eq.0)) then
-            use_face_pres=0  ! do not use gp or div(up)
+            use_face_pres=0  ! do not use div(up)
            else if ((mask_covered(1).eq.1).or. &
                     (mask_covered(2).eq.1)) then
             ! do nothing
@@ -16195,7 +16150,7 @@ stop
              if ((im_prescribed.ge.1).and. &
                  (im_prescribed.le.nmat)) then
               if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
-               use_face_pres=0 ! do not use gp or div(up)
+               use_face_pres=0 ! do not use div(up)
                face_velocity_override=1
               else
                print *,"im_solid_map(partid_prescribed+1)+1 invalid"
@@ -16224,7 +16179,7 @@ stop
           if ((is_clamped_face.eq.1).or. &
               (is_clamped_face.eq.2).or. &
               (is_clamped_face.eq.3)) then
-           use_face_pres=0 ! do not use gp or div(up)
+           use_face_pres=0 ! do not use div(up)
            face_velocity_override=1
           else if (is_clamped_face.eq.0) then
            ! do nothing
@@ -16553,7 +16508,6 @@ stop
          else if ((operation_flag.eq.3).or. & !u^CELL->MAC
                   (operation_flag.eq.4).or. & !u^MAC=uSOLID^MAC or uFLUID^MAC
                   (operation_flag.eq.5).or. & !u^MAC+beta diff_ref^CELL->MAC
-                  (operation_flag.eq.10).or. & ! u^CELL,MAC -> MAC
                   (operation_flag.eq.11)) then ! u^CELL DIFF,MAC -> MAC
 
           xvel(D_DECL(i,j,k),1)=uedge
@@ -16570,6 +16524,9 @@ stop
 
          else if (operation_flag.eq.1) then !p^CELL->MAC
 
+           ! plocal(1)=use_face_pres flag
+           ! plocal(2)=at_coarse_fine_wallF+at_coarse_fine_wallC*10
+           ! plocal(3)=face pressure
           do im=1,2+nsolve
            xp(D_DECL(i,j,k),im)=plocal(im)
           enddo
@@ -16609,7 +16566,16 @@ stop
       else if (tileloop.eq.1) then
 
         ! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC
-       if (operation_flag.ne.4) then
+       if (operation_flag.eq.4) then
+        ! do nothing
+       else if (operation_flag.eq.1) then ! pressure CELL->MAC
+        ! do nothing
+       else if ((operation_flag.eq.0).or. & ! pressure gradient
+                (operation_flag.eq.2).or. & ! grad ppot/den_pot
+                (operation_flag.eq.3).or. & ! vel CELL->MAC
+                (operation_flag.eq.5).or. & ! u^MAC=u^MAC+DU^{C->M}
+                (operation_flag.eq.11).or.& !  "        "
+                (operation_flag.eq.7)) then & ! advection
 
         if ((enable_spectral.eq.1).or. &
             (enable_spectral.eq.2)) then
@@ -16645,11 +16611,12 @@ stop
                 (local_maskSEM.le.nmat).and. &
                 (maskcov.eq.1)) then
 
-             if ((operation_flag.ge.0).and. &
-                 (operation_flag.le.8)) then
-              ! do nothing
-             else if ((operation_flag.eq.10).or. &
-                      (operation_flag.eq.11)) then
+             if ((operation_flag.eq.0).or. & ! pressure gradient
+                 (operation_flag.eq.2).or. & ! grad ppot/den_pot
+                 (operation_flag.eq.3).or. & ! vel CELL->MAC
+                 (operation_flag.eq.5).or. & ! u^MAC=u^MAC+DU^{C->M}
+                 (operation_flag.eq.11).or.& !  "        "
+                 (operation_flag.eq.7)) then & ! advection
               ! do nothing
              else
               print *,"operation_flag invalid19"
@@ -16664,14 +16631,6 @@ stop
               if (operation_flag.eq.0) then  ! pressure gradient
                scomp=1
                dcomp=1
-               ncomp_dest=1
-               ncomp_source=1
-               scomp_bc=1
-              else if (operation_flag.eq.1) then ! pressure CELL->MAC
-
-               scomp=1
-               dcomp=3
-
                ncomp_dest=1
                ncomp_source=1
                scomp_bc=1
@@ -16692,12 +16651,6 @@ stop
                ncomp_source=1
                scomp_bc=dir+1
               else if (operation_flag.eq.5) then ! u^MAC=u^MAC+beta F^CELL->MAC
-               scomp=dir+1
-               dcomp=1
-               ncomp_dest=1
-               ncomp_source=1
-               scomp_bc=dir+1
-              else if (operation_flag.eq.10) then ! vel CELL,MAC -> MAC
                scomp=dir+1
                dcomp=1
                ncomp_dest=1
@@ -16807,8 +16760,6 @@ stop
          stop
         endif
 
-       else if (operation_flag.eq.4) then
-        ! do nothing
        else
         print *,"operation_flag invalid"
         stop

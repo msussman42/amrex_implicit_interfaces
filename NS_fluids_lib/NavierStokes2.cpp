@@ -1955,7 +1955,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &local_energyflag,
     &beta,
     &visc_coef,
-    &interp_vel_increment_from_cell,
     temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
@@ -2125,9 +2124,9 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    int operation_flag_interp_macvel;
    if (isweep==1)
-    operation_flag_interp_macvel=2; // mac velocity -> cell velocity
+    operation_flag_interp_macvel=103; // mac velocity -> cell velocity
    else if (isweep==2)
-    operation_flag_interp_macvel=3; // (grad p)_CELL, div(up)
+    operation_flag_interp_macvel=101; // div(up) (low order only)
    else
     amrex::Error("operation_flag_interp_macvel invalid1");
 
@@ -2163,7 +2162,7 @@ void NavierStokes::apply_cell_pressure_gradient(
      &ns_time_order,
      &divu_outer_sweeps,
      &num_divu_outer_sweeps,
-     // 2 (mac_vel->cell_vel or 3 (cell gradp, cell energy)
+     // 103 (mac_vel->cell_vel) or 101 ( div(up) low order only)
      &operation_flag_interp_macvel, 
      &energyflag,
      temperature_primitive_variable.dataPtr(),
@@ -2277,7 +2276,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  } else
   amrex::Error("energyflag invalid");
 
-} // subroutine apply_cell_pressure_gradient
+} // end subroutine apply_cell_pressure_gradient
 
 void NavierStokes::save_to_macvel_state(int idx_umac) {
 
@@ -2450,9 +2449,9 @@ void NavierStokes::increment_face_velocityALL(
   // interp_option=4 
   //  unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
-  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
-  //        compressible regions.
-  //   (iii) usolid in solid regions
+  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions
+  //   (iii) (unew^{c})^{c->f} in compressible regions.
+  //   (iv) usolid in solid regions
  if (interp_option==4) {
   minusALL(1,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
  }
@@ -2479,14 +2478,11 @@ void NavierStokes::increment_face_velocityALL(
 // interp_option=0 unew^{f} = unew^{c->f} 
 // interp_option=1 unew^{f} = unew^{f} in fluid  (=usolid in solid)
 // interp_option=2 unew^{f} = unew^{f} + beta * diffuse_register^{c->f}
-// interp_option=3 unew^{f} = 
-//    unew^{c,f -> f} in fluid  (=usolid in solid)
-//    (hybrid of interp_option==0 and 1)
 // interp_option=4 unew^{f} = 
 //   (i) unew^{f} in incompressible non-solid regions
-//   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
-//        compressible regions.
-//   (iii) usolid in solid regions
+//   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
+//   (iii) (unew^{c})^{c->f} in compressible regions.
+//   (iv) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
 // (when project_option==0,1,10,11,13), APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
@@ -2600,15 +2596,11 @@ void NavierStokes::increment_face_velocity(
   if ((beta!=1.0)&&(beta!=-1.0))
    amrex::Error("beta invalid");
 
- } else if (interp_option==3) {//unew^{c,f -> f} in fluid  (=usolid in solid)
-
-  amrex::Error("interp_option==3 not used");
-
   // interp_option=4 unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
-  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions or
-  //        compressible regions.
-  //   (iii) usolid in solid regions
+  //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
+  //   (iii) (unew^{c})^{c->f} in compressible regions
+  //   (iv) usolid in solid regions
  } else if (interp_option==4) {
 
   debug_ngrow(ADVECT_REGISTER_MF,1,2000);
@@ -2716,7 +2708,6 @@ void NavierStokes::increment_face_velocity(
 
  if ((interp_option==0)||
      (interp_option==2)||
-     (interp_option==3)||
      (interp_option==4)) {
 
   if (level<finest_level) {
@@ -2759,10 +2750,9 @@ void NavierStokes::increment_face_velocity(
    if (interp_option==4) { // operation_flag==11
     Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
     U_old=localMF[ADVECT_REGISTER_MF];
-   } else if ((interp_option==0)|| //operation_flag==4
+   } else if ((interp_option==0)|| //operation_flag==3
               (interp_option==1)|| //operation_flag==4
-              (interp_option==2)|| //operation_flag==5
-              (interp_option==3)) {//operation_flag==10
+              (interp_option==2)) {//operation_flag==5
 
     int ncomp_MAC=Umac_new.nComp();
     Umac_old=getStateMAC(Umac_Type,0,dir,0,ncomp_MAC,cur_time_slab); 
@@ -2872,11 +2862,10 @@ void NavierStokes::increment_face_velocity(
        &nsolve,
        &tileloop,
        &dir,
-       &operation_flag, // 3,4,5, or 10
+       &operation_flag, // 3,4,5, or 11
        &energyflag,
        &beta,
        &visc_coef,
-       &interp_vel_increment_from_cell,
        temperature_primitive_variable.dataPtr(),
        &local_enable_spectral,
        &fluxvel_index,
@@ -2965,8 +2954,7 @@ void NavierStokes::increment_face_velocity(
     // do nothing
    } else if ((interp_option==0)|| 
               (interp_option==1)||
-              (interp_option==2)||
-              (interp_option==3)) {
+              (interp_option==2)) {
     delete Umac_old;
    } else
     amrex::Error("interp_option invalid");
@@ -3109,7 +3097,7 @@ void NavierStokes::VELMAC_TO_CELL(
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
- int operation_flag=2;
+ int operation_flag=103; //U^{MAC->CELL}
  int MAC_state_idx=Umac_Type;
 
  int local_enable_spectral=enable_spectral;
@@ -3119,10 +3107,10 @@ void NavierStokes::VELMAC_TO_CELL(
 
  if (vel_or_disp==0) { //velocity
   MAC_state_idx=Umac_Type;
-  operation_flag=2;
+  operation_flag=103;
  } else if (vel_or_disp==1) { //displacement
   MAC_state_idx=XDmac_Type;
-  operation_flag=7;
+  operation_flag=113;
   local_enable_spectral=0;
  } else 
   amrex::Error("vel_or_disp invalid");
@@ -3236,7 +3224,7 @@ void NavierStokes::VELMAC_TO_CELL(
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
-   &operation_flag, // operation_flag=2 (mac_vel -> cell_vel) or 7 (disp)
+   &operation_flag, // operation_flag=103 (mac_vel -> cell_vel) or 113 (disp)
    &energyflag,
    temperature_primitive_variable.dataPtr(),
    constant_density_all_time.dataPtr(),
@@ -4775,7 +4763,6 @@ void NavierStokes::apply_pressure_grad(
      &energyflag,
      &beta,
      &visc_coef,
-     &interp_vel_increment_from_cell,
      temperature_primitive_variable.dataPtr(),
      &local_enable_spectral,
      &fluxvel_index,
@@ -5814,10 +5801,6 @@ void NavierStokes::increment_potential_force() {
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
- debug_ngrow(POTENTIAL_FORCE_CELL_MF,0,260);
- if (localMF[POTENTIAL_FORCE_CELL_MF]->nComp()!=AMREX_SPACEDIM)
-  amrex::Error("localMF[POTENTIAL_FORCE_CELL_MF]->nComp() invalid");
-
  Real gravity_normalized=std::abs(gravity);
  if (invert_gravity==1)
   gravity_normalized=-gravity_normalized;
@@ -5865,7 +5848,6 @@ void NavierStokes::increment_potential_force() {
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& macfab=Umac_new[mfi];
    FArrayBox& facegrav=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
-   FArrayBox& cellgrav=(*localMF[POTENTIAL_FORCE_CELL_MF])[mfi];
    FArrayBox& xfacefab=(*localMF[FACE_VAR_MF+dir])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& lsfab=LS_new[mfi];
@@ -5875,10 +5857,10 @@ void NavierStokes::increment_potential_force() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: NAVIERSTOKES_3D.F90
+   FIX ME (no more CELL)
+    // declared in: NAVIERSTOKES_3D.F90
     // (gravity and surface tension)
     // u+=facegrav 
-    // u+=cellgrav 
    FORT_ADDGRAVITY(
      &dt_slab,
      &cur_time_slab,
@@ -5914,7 +5896,7 @@ void NavierStokes::increment_potential_force() {
   } // mfi
 } // omp
   ns_reconcile_d_num(149);
- }  // dir
+ }  // dir=0..sdim-1
 
 } // increment_potential_force
 
@@ -5984,10 +5966,14 @@ void NavierStokes::process_potential_forceALL() {
  }
 
   // must go from finest to coarsest in order
-  // to average down face pressures.
+  // to average down face forces.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.process_potential_force_cell();
+  int ncomp_edge=-1;
+  int scomp=0;
+  // if level<finest_level then avgdown from level+1 to level.
+  ns_level.avgDownEdge_localMF(POTENTIAL_FORCE_EDGE_MF,scomp,ncomp_edge,
+   0,AMREX_SPACEDIM,1,12);
  }
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -6348,7 +6334,6 @@ void NavierStokes::process_potential_force_face() {
     &local_energyflag,
     &beta,
     &visc_coef,
-    &interp_vel_increment_from_cell,
     temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
@@ -6436,265 +6421,6 @@ void NavierStokes::process_potential_force_face() {
  delete dendata;
 
 }  // subroutine process_potential_force_face
-
-
-// called from: NavierStokes::process_potential_forceALL()
-// u^cell = u^cell + cellgravforce - grad^cell p
-// u^face = u^face + facegravforce - grad^face p
-// reflecting boundary conditions on ppot should be identical to the
-// reflecting boundary conditions on p so that
-// if facegrav = grad^face ppot, then this implies that
-//  div (grad^face ppot - grad^face p)=0 only if ppot=p.
-void NavierStokes::process_potential_force_cell() {
-
- int finest_level=parent->finestLevel();
-
- int operation_flag=4;
- 
- bool use_tiling=ns_tiling;
-
- if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
-  // do nothing
- } else
-  amrex::Error("SDC_outer_sweeps invalid process_potential_force_cell");
-
- int nmat=num_materials;
- int nsolve=1;
-
- int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>nmat))
-  amrex::Error("nparts invalid");
- Vector<int> im_solid_map_null;
- im_solid_map_null.resize(1);
-
- int* im_solid_map_ptr;
- int nparts_def=nparts;
- if (nparts==0) {
-  im_solid_map_ptr=im_solid_map_null.dataPtr();
-  nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
-  im_solid_map_ptr=im_solid_map.dataPtr();
- } else
-  amrex::Error("nparts invalid");
-
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
- }
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
- debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
- debug_ngrow(SLOPE_RECON_MF,1,132);
-
- debug_ngrow(VOLUME_MF,0,751);
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  if (localMF[AREA_MF+dir]->boxArray()!=
-      localMF[FACE_VAR_MF+dir]->boxArray())
-   amrex::Error("boxarrays do not match");
- }
-
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
-
- int pcomp=AMREX_SPACEDIM;
-
- MultiFab &S_new = get_new_data(State_Type,slab_step+1);
-
- const Real* dx = geom.CellSize();
-
- Vector<int> dombcpres(2*AMREX_SPACEDIM);
- const BCRec& descbc = get_desc_lst()[State_Type].getBC(pcomp);
- const int* b_rec=descbc.vect();
- for (int m=0;m<2*AMREX_SPACEDIM;m++)
-  dombcpres[m]=b_rec[m];
-
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
-
- if (projection_enable_spectral!=enable_spectral)
-  amrex::Error("projection_enable_spectral!=enable_spectral");
-
- int ncomp_edge=-1;
- int scomp=0;
-  // if level<finest_level then avgdown from level+1 to level.
- avgDownEdge_localMF(POTENTIAL_FORCE_EDGE_MF,scomp,ncomp_edge,
-   0,AMREX_SPACEDIM,1,12);
- avgDownEdge_localMF(POTENTIAL_EDGE_MF,scomp,ncomp_edge,
-   0,AMREX_SPACEDIM,1,13);
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-  int bfact=parent->Space_blockingFactor(level);
-
-  const Real* xlo = grid_loc[gridno].lo();
-
-  FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
-  FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
-  FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
-  FArrayBox& presdenfab=(*localMF[HYDROSTATIC_PRESDEN_MF])[mfi];
-
-  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
-  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
-  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-
-  Vector<int> presbc=getBCArray(State_Type,gridno,pcomp,1);
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-
-  FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
-  FArrayBox& areax=(*localMF[AREA_MF])[mfi];
-  FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
-  FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& xp=(*localMF[POTENTIAL_EDGE_MF])[mfi];
-  FArrayBox& yp=(*localMF[POTENTIAL_EDGE_MF+1])[mfi];
-  FArrayBox& zp=(*localMF[POTENTIAL_EDGE_MF+AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& gcell=(*localMF[POTENTIAL_FORCE_CELL_MF])[mfi];
-
-  FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
-
-  FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi]; // 1=fine/fine
-  FArrayBox& maskcoef=(*localMF[MASKCOEF_MF])[mfi]; // 1=not cov
-
-  int energyflag=0;
-  int homflag=0; // default
-  int local_project_option=0;
-  int local_enable_spectral=enable_spectral;
-  int use_VOF_weight=0;
-
-  int ncomp_denold=1;
-  int ncomp_veldest=gcell.nComp();
-  int ncomp_dendest=gcell.nComp();
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   // process_potential_force_cell 
-  fort_mac_to_cell(
-   &ns_time_order,
-   &divu_outer_sweeps,
-   &num_divu_outer_sweeps,
-   &operation_flag, // 4 (gravity and surface tension force at cell)
-   &energyflag,
-   temperature_primitive_variable.dataPtr(),
-   constant_density_all_time.dataPtr(),
-   &nmat,
-   &nparts,
-   &nparts_def,
-   im_solid_map_ptr,
-   added_weight.dataPtr(),
-   &nten,
-   &level, 
-   &finest_level,
-   &local_project_option,
-   &local_enable_spectral,
-   &fluxvel_index,
-   &fluxden_index,
-   &facevel_index,
-   &facecut_index,
-   &icefacecut_index,
-   &curv_index,
-   &conservative_tension_force,
-   &conservative_div_uu,
-   &ignore_div_up,
-   &pforce_index,
-   &faceden_index,
-   &icemask_index,
-   &massface_index,
-   &vofface_index,
-   &ncphys,
-   velbc.dataPtr(),
-   presbc.dataPtr(), 
-   &cur_time_slab, 
-   &slab_step,
-   &dt_slab, //calling fort_mac_to_cell
-   xlo,dx,
-   tilelo,tilehi,
-   fablo,fabhi,
-   &bfact,
-   xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),
-   yp.dataPtr(),ARLIM(yp.loVect()),ARLIM(yp.hiVect()),
-   zp.dataPtr(),ARLIM(zp.loVect()),ARLIM(zp.hiVect()),
-   xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xvel
-   yp.dataPtr(),ARLIM(yp.loVect()),ARLIM(yp.hiVect()), //yvel
-   zp.dataPtr(),ARLIM(zp.loVect()),ARLIM(zp.hiVect()), //zvel
-   xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-   yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
-   zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-   areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()), //ax
-   areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()), //ay
-   areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()), //az
-   volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-   volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()), //rhs
-   gcell.dataPtr(),ARLIM(gcell.loVect()),ARLIM(gcell.hiVect()), // veldest
-   gcell.dataPtr(),ARLIM(gcell.loVect()),ARLIM(gcell.hiVect()), // dendest
-   maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
-   ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-   maskcoef.dataPtr(), // 1=not covered  0=covered
-   ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
-   maskSEMfab.dataPtr(), 
-   ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-   levelpcfab.dataPtr(), //levelPC
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-   solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
-   solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
-   solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
-   levelpcfab.dataPtr(),
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
-   presdenfab.dataPtr(0),  // HYDROSTATIC_PRESSURE
-   ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
-   presdenfab.dataPtr(1),  // HYDROSTATIC_DENSITY (denold)
-   ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
-   gcell.dataPtr(),ARLIM(gcell.loVect()),ARLIM(gcell.hiVect()), // ustar
-   reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-   levelpcfab.dataPtr(),
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
-   levelpcfab.dataPtr(),
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskdivres
-   levelpcfab.dataPtr(),
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
-   &SDC_outer_sweeps,
-   &homflag,
-   &use_VOF_weight,
-   &nsolve,
-   &ncomp_denold,
-   &ncomp_veldest,
-   &ncomp_dendest,
-   &SEM_advection_algorithm);
-
- } // mfi
-} // omp
- ns_reconcile_d_num(152);
-
-  // avgdown from level+1 to level.
- avgDown_localMF(POTENTIAL_FORCE_CELL_MF,0,AMREX_SPACEDIM,1);
-
-}  // subroutine process_potential_force_cell
 
 
 // typically ngrow=4 (see call in NavierStokes3.cpp)

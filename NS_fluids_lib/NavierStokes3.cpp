@@ -2141,8 +2141,7 @@ void NavierStokes::prelim_alloc() {
 } // subroutine prelim_alloc
 
 void NavierStokes::advance_MAC_velocity(int project_option) {
-FIX ME TO BE CONSERVATIVE (LAX FRIEDRICHS)
- int interp_option=0;
+
  int idx_velcell=-1;
  Real beta=0.0;
 
@@ -2150,24 +2149,12 @@ FIX ME TO BE CONSERVATIVE (LAX FRIEDRICHS)
  // unew^{f}=
  // (i) unew^{f} in incompressible non-solid regions
  // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
- //      regions or compressible regions.
+ //      regions 
  //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
+ // (iii) (unew^{c})^{c->f} in compressible regions.
  // (iii) usolid in solid regions
- // m^{f,n+1}=rho^{f,n+1}u^{f,n+1}=
- // rho^{f,n+1}(u^{f,n} + (u^{c,n+1}-u^{c,n})^{c->f})=
- // rho^{f,n+1}(u^{c,n+1})^{c->f}+
- // rho^{f,n+1}(u^{f,n}-(u^{c,n})^{c->f})=
- // rho^{f,n+1}(u^{c,n+1})^{c->f}+
- //                                (n)(n+1)
- // rho^{f,n+1}(u^{f,n}-(u^{f,n})^{f->c->f})    (*)
- // 1. (*) is not conservative, but works for all of the benchmarks?
- // 2. m^{f,n+1}=rho^{f,n+1}(u^{c,n+1})^{c->f} is too dissipative
- // 3. m^{f,n+1}\equiv rho^{f,n+1}u^{f,n+1} is not conservative and
- //    predicts incorrect shock speed.
- // 4. option 3, except using "refined density" is conservative, not
- //    dissipative, but slow.  
- interp_option=4;  
+ int interp_option=4;  
 
  Vector<blobclass> blobdata;
 

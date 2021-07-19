@@ -7008,11 +7008,15 @@ contains
          stop
         endif
 
-       else if ((operation_flag.ge.0).and. &
-                (operation_flag.le.5)) then
+       else if (operation_flag.eq.0) then ! grad p_MAC
         ! do nothing
-       else if ((operation_flag.eq.10).or. &
-                (operation_flag.eq.11)) then
+       else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+        ! do nothing
+       else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+        ! do nothing
+       else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+        ! do nothing
+       else if (operation_flag.eq.11) then!u^MAC=u^MAC+(DU)^{cell->mac}
         ! do nothing
        else if (operation_flag.eq.7) then ! advection
         ! do nothing
@@ -7409,13 +7413,19 @@ contains
         dest_grad(i1)=zero
        enddo ! i1=0..bfact
 
-      else if ((operation_flag.ge.0).and. &
-               (operation_flag.le.6)) then
+      else if (operation_flag.eq.0) then ! grad p_MAC
+        ! do nothing
+      else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+        ! do nothing
+      else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+        ! do nothing
+      else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+        ! do nothing
+      else if (operation_flag.ge.6) then ! rate of strain
 
        ! do nothing
 
-      else if ((operation_flag.eq.10).or. &
-               (operation_flag.eq.11)) then
+      else if (operation_flag.eq.11) then
 
        ! do nothing
 
@@ -7452,11 +7462,15 @@ contains
           endif
          endif 
 
-        else if ((operation_flag.ge.0).and. &
-                 (operation_flag.le.5)) then
+        else if (operation_flag.eq.0) then ! grad p_MAC
          ! do nothing
-        else if ((operation_flag.eq.10).or. &
-                 (operation_flag.eq.11)) then
+        else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+         ! do nothing
+        else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+         ! do nothing
+        else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+         ! do nothing
+        else if (operation_flag.eq.11) then
          ! do nothing
         else if (operation_flag.eq.7) then
          ! do nothing (advection)
@@ -7479,7 +7493,7 @@ contains
         stop
        endif
 
-      enddo ! isten
+      enddo ! isten=0..bfact
 
       return
       end subroutine lineGRAD
