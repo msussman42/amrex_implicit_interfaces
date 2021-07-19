@@ -476,7 +476,6 @@ public:
     void deallocate_potential_forceALL();
     void process_potential_forceALL();
     void process_potential_force_face();
-    void process_potential_force_cell();
     void init_gravity_potential();
 
     void GetDrag(Vector<Real>& integrated_quantities,int isweep);
@@ -2132,7 +2131,6 @@ protected:
     static int ngeom_raw;
     static int ngeom_recon;
     static int ignore_div_up; // def=0
-    static int interp_vel_increment_from_cell; //def=0
     static Vector<Real> compressible_dt_factor;  //def=1.0
     static int disable_advection;
     static int disable_pressure_solve;

@@ -335,7 +335,6 @@ namespace amrex{
         int* operation_flag,
         int* energyflag,
         Real* beta,Real* visc_coef,
-        int* interp_vel_increment_from_cell,
         int* temperature_primitive_variable,
         int* enable_spectral,
         int* fluxvel_index,

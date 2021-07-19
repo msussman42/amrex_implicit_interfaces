@@ -13839,19 +13839,17 @@ END SUBROUTINE Adist
       end subroutine eval_face_coeff
 
 ! operation_flag=0  pressure gradient on MAC grid
-! operation_flag=1  interpolate pressure from cell to MAC grid.
 ! operation_flag=2  potential gradient on MAC grid, 
 !                   surface tension on MAC grid
 ! operation_flag=3  unew^MAC=unew^CELL->MAC
-! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC
+! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC (not used here)
 ! operation_flag=5  unew^MAC=unew^MAC+beta diffuse_ref^CELL->MAC
 ! operation_flag=6  evaluate tensor values.
 !   (called from FACE_GRADIENTS)
 ! operation_flag=7  advection.
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
 !   (SEM_CELL_TO_MAC not called with operation_flag==8)
-! operation_flag=10 unew^MAC=unew^CELL,MAC -> MAC
-! operation_flag=11 unew^MAC=unew^CELL DIFF,MAC -> MAC
+! operation_flag=11 unew^MAC=uold^MAC +(unew^cell-uold^cell)^{cell->MAC}
       subroutine SEM_CELL_TO_MAC( &
        conservative_div_uu, &
        ncomp_xp, &  ! number of amrsync components if op=0,3,5,6,7,9,10,11
@@ -14008,12 +14006,11 @@ END SUBROUTINE Adist
       INTEGER_T indexmid(SDIM)
       INTEGER_T index_edge(SDIM)
       INTEGER_T index_opp(SDIM)
-      REAL_T denlocal,templocal,DeDT
+      REAL_T templocal
       INTEGER_T test_maskSEM
       REAL_T shared_xcut
       INTEGER_T nbase
       INTEGER_T ntensor
-      INTEGER_T local_incomp
       INTEGER_T testbc
       REAL_T problo(SDIM),probhi(SDIM),problen(SDIM)
       REAL_T dx_c(SDIM),dx_f(SDIM)
@@ -14241,31 +14238,6 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.1) then ! pressure cell->mac
-  
-       if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid4"
-        stop
-       endif
-       if (ncomp_xp.ne.3) then
-        print *,"ncomp_xp invalid(12) ",ncomp_xp
-        stop
-       endif
-       if (energyflag.ne.0) then
-        print *,"energyflag invalid"
-        stop
-       endif
-       if ((scomp.ne.1).or. &
-           (dcomp.ne.3)) then
-        print *,"parameters invalid for op=1"
-        stop
-       endif
-       if ((ncomp_dest.ne.1).or.(ncomp_source.ne.1).or. &
-           (scomp_bc.ne.1)) then
-        print *,"parameters invalid for op=1"
-        stop
-       endif
-
       else if (operation_flag.eq.2) then ! grad ppot
 
        if (ncomp_xgp.ne.1) then
@@ -14295,7 +14267,6 @@ END SUBROUTINE Adist
        endif
 
       else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-               (operation_flag.eq.10).or. &!unew^MAC,CELL->MAC
                (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
                (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
 
@@ -14319,11 +14290,6 @@ END SUBROUTINE Adist
         print *,"parameters invalid for op=3"
         stop
        endif
-
-      else if (operation_flag.eq.4) then ! umac->umac
-
-       print *,"op=4 disallowed"
-       stop
 
       else
        print *,"operation_flag invalid20"
@@ -14383,13 +14349,14 @@ END SUBROUTINE Adist
        stop
       endif
 
-       ! local_incomp presently not used.
-      local_incomp=0
-
        ! do nothing unless the strip is a spectral element strip.
       if ((cen_maskSEM.ge.1).and. &
           (cen_maskSEM.le.nmat)) then
 
+        ! regardless of "temperature_primitive_variable(cen_maskSEM)",
+        ! the temperature is discretized in the spectral element parts
+        ! NON-CONSERVATIVELY and the div(up) term is treated with low
+        ! order FVM method.
        if ((fort_material_type(cen_maskSEM).eq.0).or. &
            (is_rigid(nmat,cen_maskSEM).eq.1).or. &
            (fort_material_type(cen_maskSEM).eq.999).or. &
@@ -14399,7 +14366,6 @@ END SUBROUTINE Adist
          print *,"temperature_primitive_variable(cen_maskSEM) invalid"
          stop
         endif
-        local_incomp=1
        else if ((fort_material_type(cen_maskSEM).gt.0).and. &
                 (is_rigid(nmat,cen_maskSEM).eq.0).and. &
                 (fort_material_type(cen_maskSEM).ne.999).and. &
@@ -14645,7 +14611,6 @@ END SUBROUTINE Adist
 
            if (operation_flag.eq.7) then ! advection (values outside elem)
 
-            denlocal=den(D_DECL(ic,jc,kc),ibase+1)
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
@@ -14691,18 +14656,6 @@ END SUBROUTINE Adist
              print *,"nc invalid"
              stop
             endif
-           else if (operation_flag.eq.1) then ! MAC pressure 
-            if (nc.eq.1) then
-             if (scomp.eq.1) then
-              local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
-             else
-              print *,"scomp invalid"
-              stop
-             endif
-            else
-             print *,"nc invalid"
-             stop
-            endif
            else if (operation_flag.eq.2) then ! MAC potential grad
             if (nc.eq.1) then
              if (scomp.eq.1) then
@@ -14725,14 +14678,8 @@ END SUBROUTINE Adist
              stop
             endif
            else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-                    (operation_flag.eq.10).or. &!unew^MAC,CELL->MAC
                     (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
                     (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
-
-            if (operation_flag.eq.10) then
-             print *,"this option is not used"
-             stop
-            endif
 
             if (nc.eq.1) then
              if (scomp.eq.dir) then
@@ -14783,9 +14730,8 @@ END SUBROUTINE Adist
             endif
 
            else if ((operation_flag.eq.3).or. & ! U cell to MAC
-                    (operation_flag.eq.10).or. & ! U MAC,cell to MAC
-                    (operation_flag.eq.11).or. & ! U MAC,cell diff to MAC
-                    (operation_flag.eq.5)) then ! UMAC=UMAC+(U cell to MAC)
+                    (operation_flag.eq.11).or. &! UMAC=UMAC+(DU cell to MAC)
+                    (operation_flag.eq.5)) then ! UMAC=UMAC+(DU cell to MAC)
 
             if (velbc_in(dir,side,scomp_bc).eq.REFLECT_EVEN) then
              local_bctype(side)=3 ! reflect even
@@ -14833,7 +14779,6 @@ END SUBROUTINE Adist
                ! udotn<0 => characteristics enter into the domain.
               if (udotn_boundary.lt.zero) then
                local_bctype(side)=1 ! dirichlet
-               denlocal=den(D_DECL(i_out,j_out,k_out),ibase+1)
 
                if ((conservative_div_uu.eq.0).or. &
                    (conservative_div_uu.eq.1)) then
@@ -14891,7 +14836,6 @@ END SUBROUTINE Adist
             endif
 
            else if ((operation_flag.eq.0).or. & ! pressure grad on MAC
-                    (operation_flag.eq.1).or. & ! interp pressure to MAC
                     (operation_flag.eq.2)) then ! potential grad and value
 
             if (presbc_in(dir,side,1).eq.REFLECT_EVEN) then
@@ -15048,7 +14992,6 @@ END SUBROUTINE Adist
              endif
             else if (simple_AMR_BC_flag.eq.1) then
 
-             denlocal=den(D_DECL(ic,jc,kc),ibase+1)
              templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
@@ -15067,15 +15010,12 @@ END SUBROUTINE Adist
             endif
 
             if ((abs(local_data_side(side)).lt.1.0D+20).and. &
-                (abs(denlocal).lt.1.0D+20).and. &
                 (abs(templocal).lt.1.0D+20)) then
              ! do nothing
             else
              print *,"data overflow SEM nc=",nc
              print *,"local_data_side(side)=",local_data_side(side)
-             print *,"denlocal=",denlocal
              print *,"templocal=",templocal
-             print *,"DeDT=",DeDT
              print *,"side=",side
              print *,"simple_AMR_BC_flag=",simple_AMR_BC_flag
              print *,"local_bctype(side) ",local_bctype(side)
@@ -15085,8 +15025,6 @@ END SUBROUTINE Adist
              print *,"level ",level
              print *,"finest_level ",finest_level
              print *,"bfact,bfact_c,bfact_f ",bfact,bfact_c,bfact_f
-             print *,"den(D_DECL(ic,jc,kc),ibase+1) ", &
-               den(D_DECL(ic,jc,kc),ibase+1)
              print *,"den(D_DECL(ic,jc,kc),ibase+2) ", &
                den(D_DECL(ic,jc,kc),ibase+2)
              print *,"ibase= ",ibase
@@ -15167,53 +15105,8 @@ END SUBROUTINE Adist
              print *,"simple_AMR_BC_flag invalid"
              stop
             endif
-           else if (operation_flag.eq.1) then ! MAC pressure 
 
-            if (simple_AMR_BC_flag.eq.0) then
-             local_bctype(side)=bctype_tag
-             if (nc.eq.1) then
-              if (dcomp.eq.3) then
-               local_data_side(side)= &
-                xgp(D_DECL(iface_out,jface_out,kface_out),nc) 
-               if (abs(local_data_side(side)).lt.1.0D+20) then
-                ! do nothing
-               else
-                print *,"SEM data overflow"
-                stop
-               endif
-              else
-               print *,"dcomp invalid"
-               stop
-              endif
-             else
-              print *,"nc invalid"
-              stop
-             endif
-            else if (simple_AMR_BC_flag.eq.1) then
-             if (nc.eq.1) then
-              if (scomp.eq.1) then
-               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
-              else
-               print *,"scomp invalid"
-               stop
-              endif
-             else
-              print *,"nc invalid"
-              stop
-             endif
-            else
-             print *,"simple_AMR_BC_flag invalid"
-             stop
-            endif
-
-            if (abs(local_data_side(side)).lt.1.0D+20) then
-             ! do nothing
-            else
-             print *,"SEM data overflow"
-             stop
-            endif
-
-           else if (operation_flag.eq.2) then ! MAC potential grad,ppot^MAC
+           else if (operation_flag.eq.2) then ! MAC potential grad
 
             if (simple_AMR_BC_flag.eq.1) then
 
@@ -15244,47 +15137,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.9) then ! den: CELL->MAC
-            if (simple_AMR_BC_flag.eq.0) then
-             local_bctype(side)=bctype_tag
-             if (nc.eq.1) then
-              if (dcomp.eq.1) then
-               local_data_side(side)= &
-                xp(D_DECL(iface_out,jface_out,kface_out),dcomp)
-              else
-               print *,"dcomp invalid"
-               stop
-              endif
-             else if (simple_AMR_BC_flag.eq.1) then
-              if (nc.eq.1) then
-               if (scomp.eq.(cen_maskSEM-1)*num_state_material+1) then
-                local_data_side(side)=den(D_DECL(ic,jc,kc),scomp)
-               else
-                print *,"scomp invalid"
-                stop
-               endif
-              else
-               print *,"nc invalid"
-               stop
-              endif
-             else
-              print *,"simple_AMR_BC_flag invalid"
-              stop
-             endif
-
-             if ((local_data_side(side).gt.zero).and. &
-                 (abs(local_data_side(side)).lt.1.0D+20)) then
-              ! do nothing
-             else
-              print *,"local_data_side invalid"
-              stop
-             endif
-            else
-             print *,"nc invalid"
-             stop
-            endif
            else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-                    (operation_flag.eq.10).or. &!unew^MAC,CELL->MAC
                     (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
                     (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
             if (simple_AMR_BC_flag.eq.0) then
@@ -15362,7 +15215,6 @@ END SUBROUTINE Adist
            endif
 
           else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-                   (operation_flag.eq.10).or. &!unew^MAC,CELL->MAC
                    (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
                    (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
 
@@ -15387,15 +15239,6 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.1) then ! interp pressure to MAC
-
-           if (nc.eq.1) then
-            local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
-           else
-            print *,"nc invalid"
-            stop
-           endif
-
           else if (operation_flag.eq.2) then !potential grad/den and value
 
            if (nc.eq.1) then
@@ -15406,30 +15249,8 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.9) then !den: cell->mac
-
-           if (nc.eq.1) then
-            if (scomp.eq.(cen_maskSEM-1)*num_state_material+1) then
-             local_data(isten+1)=den(D_DECL(ic,jc,kc),scomp)
-             if ((local_data(isten+1).gt.zero).and. &
-                 (abs(local_data(isten+1)).lt.1.0D+20)) then
-              ! do nothing
-             else
-              print *,"local_data invalid"
-              stop
-             endif
-            else
-             print *,"scomp invalid"
-             stop
-            endif
-           else
-            print *,"nc invalid"
-            stop
-           endif
-
           else if (operation_flag.eq.7) then ! advection (values inside elem)
 
-           denlocal=den(D_DECL(ic,jc,kc),ibase+1)
            templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
             ! u dot grad u = div(umac u)-u div umac
@@ -15523,9 +15344,13 @@ END SUBROUTINE Adist
             dx(dir), &
             x_sep, &
             operation_flag)
-
-          else if ((operation_flag.ge.0).and. &
-                   (operation_flag.le.11)) then
+          else if ((operation_flag.eq.0).or. & !grad p_MAC
+                   (operation_flag.eq.3).or. & !u^{c->mac}
+                   (operation_flag.eq.5).or. & !u^mac+du^{c->mac}
+                   (operation_flag.eq.6).or. & !rate of strain
+                   (operation_flag.eq.7).or. & !advection
+                   (operation_flag.eq.8).or. & !coupling
+                   (operation_flag.eq.11)) then!u^mac+du^{c->mac}
            ! do nothing
           else
            print *,"operation_flag invalid24"
@@ -15698,8 +15523,14 @@ END SUBROUTINE Adist
            ! do not average with flux from neighboring coarse grid or
            ! from outside the domain.
            ! maskCF==0 at coarse/fine   maskCF==1 at fine/fine
-          else if ((operation_flag.ge.0).and. &
-                   (operation_flag.le.11)) then
+
+          else if ((operation_flag.eq.0).or. & !grad p_MAC
+                   (operation_flag.eq.2).or. & !grad ppot_MAC/rho_mac
+                   (operation_flag.eq.3).or. & !u^{c->mac}
+                   (operation_flag.eq.5).or. & !u^mac+du^{c->mac}
+                   (operation_flag.eq.6).or. & !rate of strain
+                   (operation_flag.eq.8).or. & !coupling
+                   (operation_flag.eq.11)) then!u^mac+du^{c->mac}
 
            do dir2=1,SDIM
             if ((index_opp(dir2).lt.fablo(dir2)).or. &
@@ -16004,132 +15835,10 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.9) then ! den: cell->mac
+          else if (operation_flag.eq.2) then ! potential grad 
 
+           ! potential pressure gradient/den 
            if (ncfluxreg.ne.SDIM) then
-            print *,"ncfluxreg invalid6 ",ncfluxreg
-            stop
-           endif
-
-           if (spectral_loop.eq.0) then
-
-            if ((local_interp(isten+1).gt.zero).and. &
-                (abs(local_interp(isten+1)).lt.1.0D+20)) then
-             ! do nothing
-            else
-             print *,"local_interp invalid den:cell->mac"
-             stop
-            endif
-
-            if (shared_face.eq.0) then
-
-             xvel(D_DECL(ic,jc,kc),1)=one/local_interp(isten+1)
-
-            else if (shared_face.eq.1) then
-             ! do nothing
-            else
-             print *,"shared_face invalid"
-             stop
-            endif
-
-            if ((side.eq.1).or.(side.eq.2)) then
-             semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)=local_interp(isten+1)
-            else if (side.eq.0) then
-             ! do nothing
-            else
-             print *,"side invalid"
-             stop
-            endif
-           else if (spectral_loop.eq.1) then
-            if (mask_out.eq.1) then
-             if ((side.eq.1).or.(side.eq.2)) then
-              local_interp(isten+1)=half*( &
-               semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)+ &
-               semflux(D_DECL(i_out,j_out,k_out),fluxbase+nc))
-              if ((local_interp(isten+1).gt.zero).and. &
-                  (abs(local_interp(isten+1)).lt.1.0D+20)) then
-               ! do nothing
-              else
-               print *,"local_interp invalid den:cell->mac"
-               stop
-              endif
-
-              xvel(D_DECL(ic,jc,kc),1)=one/local_interp(isten+1)
-             else if (side.eq.0) then
-              ! do nothing
-             else
-              print *,"side invalid"
-              stop
-             endif
-            else if (mask_out.eq.0) then
-             ! do nothing
-            else
-             print *,"mask_out invalid"
-             stop
-            endif
-           else
-            print *,"spectral_loop invalid"
-            stop
-           endif
-
-          else if (operation_flag.eq.1) then ! p^CELL->MAC
-
-           if (ncfluxreg.ne.SDIM) then
-            print *,"ncfluxreg invalid6 ",ncfluxreg
-            stop
-           endif
-
-           if (spectral_loop.eq.0) then
-
-            if (shared_face.eq.0) then
-             if (dcomp.eq.3) then
-              xp(D_DECL(ic,jc,kc),dcomp)=local_interp(isten+1)
-             else
-              print *,"dcomp invalid"
-              stop
-             endif
-            else if (shared_face.eq.1) then
-             ! do nothing
-            else
-             print *,"shared_face invalid"
-             stop
-            endif
-
-            if ((side.eq.1).or.(side.eq.2)) then
-             semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)=local_interp(isten+1)
-            else if (side.eq.0) then
-             ! do nothing
-            else
-             print *,"side invalid"
-             stop
-            endif
-           else if (spectral_loop.eq.1) then
-            if (mask_out.eq.1) then
-             if ((side.eq.1).or.(side.eq.2)) then
-               xp(D_DECL(ic,jc,kc),dcomp)=half*( &
-                semflux(D_DECL(i_in,j_in,k_in),fluxbase+nc)+ &
-                semflux(D_DECL(i_out,j_out,k_out),fluxbase+nc))
-             else if (side.eq.0) then
-              ! do nothing
-             else
-              print *,"side invalid"
-              stop
-             endif
-            else if (mask_out.eq.0) then
-             ! do nothing
-            else
-             print *,"mask_out invalid"
-             stop
-            endif
-           else
-            print *,"spectral_loop invalid"
-            stop
-           endif
-
-          else if (operation_flag.eq.2) then ! potential grad and value
-
-           ! potential pressure gradient/den and potential pressure.
-           if (ncfluxreg.ne.2*SDIM) then
             print *,"ncfluxreg invalid7 ",ncfluxreg
             stop
            endif
@@ -16147,8 +15856,6 @@ END SUBROUTINE Adist
              if (nc.eq.1) then
               ! grad ppot/rho_pot at face.
               xgp(D_DECL(ic,jc,kc),nc)=shared_face_value
-              ! ppot at face.
-              xp(D_DECL(ic,jc,kc),1)=local_interp(isten+1)
              else
               print *,"nc invalid"
               stop
@@ -16163,8 +15870,6 @@ END SUBROUTINE Adist
             if ((side.eq.1).or.(side.eq.2)) then
               ! grad ppot/rho_pot at face.
              semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)=shared_face_value
-              ! ppot at face.
-             semflux(D_DECL(i_in,j_in,k_in),fluxbase+2)=local_interp(isten+1)
             else if (side.eq.0) then
              ! do nothing
             else
@@ -16178,10 +15883,6 @@ END SUBROUTINE Adist
               xgp(D_DECL(ic,jc,kc),nc)=half*( &
                semflux(D_DECL(i_in,j_in,k_in),fluxbase+1)+ &
                semflux(D_DECL(i_out,j_out,k_out),fluxbase+1))
-              ! ppot at face.
-              xp(D_DECL(ic,jc,kc),1)=half*( &
-               semflux(D_DECL(i_in,j_in,k_in),fluxbase+2)+ &
-               semflux(D_DECL(i_out,j_out,k_out),fluxbase+2))
              else if (side.eq.0) then
               ! do nothing
              else
@@ -16199,8 +15900,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if ((operation_flag.eq.3).or. &   !unew^CELL->MAC
-                   (operation_flag.eq.10)) then  !unew^MAC,CELL->MAC
+          else if (operation_flag.eq.3) then   !unew^CELL->MAC
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid8 ",ncfluxreg
@@ -16252,7 +15952,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.11) then ! u^MAC,CELL DIFF->MAC
+          else if (operation_flag.eq.11) then ! uold^MAC+(DU)^CELL->MAC
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid8 ",ncfluxreg
@@ -16305,7 +16005,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.5) then ! UMAC=UMAC+beta F^CELL->MAC
+          else if (operation_flag.eq.5) then ! UMAC=UMAC+beta (DU)^CELL->MAC
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid9 ",ncfluxreg

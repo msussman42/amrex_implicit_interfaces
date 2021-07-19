@@ -1764,8 +1764,8 @@ void NavierStokes::apply_div(
 //     (a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/dt+diffusionRHS
 //
 
-  int operation_flag=0;
-  int energyflag=0; // not used when operation_flag==0
+  int operation_flag=100;
+  int energyflag=0; // not used when operation_flag==100
   int local_enable_spectral=enable_spectral;
   int use_VOF_weight=0;
 
@@ -1782,7 +1782,7 @@ void NavierStokes::apply_div(
    &ns_time_order, 
    &divu_outer_sweeps, 
    &num_divu_outer_sweeps, 
-   &operation_flag,  // operation_flag=0
+   &operation_flag,  // operation_flag=100 (RHS)
    &energyflag,
    temperature_primitive_variable.dataPtr(),
    constant_density_all_time.dataPtr(),
@@ -2408,7 +2408,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 //
 
 
-   int operation_flag=1;
+   int operation_flag=110;
    int energyflag=0;
    int project_option=0;
    int homflag=0; // default
@@ -2427,7 +2427,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
-    &operation_flag, // operation_flag==1
+    &operation_flag, // operation_flag==110 (div u)
     &energyflag,
     temperature_primitive_variable.dataPtr(),
     constant_density_all_time.dataPtr(),
