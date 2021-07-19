@@ -121,14 +121,12 @@ namespace amrex{
 #define MAC_TEMP_MF 97
 #define GRADPEDGE_MF 100
 #define PEDGE_MF 103
-#define POTENTIAL_EDGE_MF 106
 #define FACE_WEIGHT_MF 109
 
 #define dt_gradp_over_rho_face_MF 112
 
 #define POTENTIAL_FORCE_EDGE_MF 115
 
-#define POTENTIAL_FORCE_CELL_MF 118
 #define S_NEW_GROW_MF 119
 #define INTERIOR_FLAG_MF 120
 

@@ -13841,9 +13841,7 @@ END SUBROUTINE Adist
 ! operation_flag=0  pressure gradient on MAC grid
 ! operation_flag=1  interpolate pressure from cell to MAC grid.
 ! operation_flag=2  potential gradient on MAC grid, 
-!                   interpolate potential from cell to MAC grid
 !                   surface tension on MAC grid
-!                   left and right surface tension on MAC grid.
 ! operation_flag=3  unew^MAC=unew^CELL->MAC
 ! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC
 ! operation_flag=5  unew^MAC=unew^MAC+beta diffuse_ref^CELL->MAC
@@ -13852,7 +13850,6 @@ END SUBROUTINE Adist
 ! operation_flag=7  advection.
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
 !   (SEM_CELL_TO_MAC not called with operation_flag==8)
-! operation_flag=9  den CELL->MAC
 ! operation_flag=10 unew^MAC=unew^CELL,MAC -> MAC
 ! operation_flag=11 unew^MAC=unew^CELL DIFF,MAC -> MAC
       subroutine SEM_CELL_TO_MAC( &
@@ -14190,11 +14187,11 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.7) then ! advection
 
-       if (ncomp_xp.ne.SDIM+2) then
+       if (ncomp_xp.ne.SDIM+1) then
         print *,"ncomp_xp invalid(11) ",ncomp_xp
         stop
        endif
-       if (ncomp_xgp.ne.SDIM+2) then
+       if (ncomp_xgp.ne.SDIM+1) then
         print *,"ncomp_xgp invalid2"
         stop
        endif
@@ -14202,14 +14199,14 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncfluxreg.ne.SDIM*(SDIM+num_state_base)) then
+       if (ncfluxreg.ne.SDIM*(SDIM+1)) then
         print *,"ncfluxreg invalid operation_flag.eq.7"
         stop
        endif
        if ((scomp.ne.1).or. &
            (dcomp.ne.1).or. &
            (ncomp_dest.ne.ncphys).or. &
-           (ncphys.ne.SDIM+num_state_base).or. &
+           (ncphys.ne.SDIM+1).or. &
            (ncomp_source.ne.SDIM).or. &
            (scomp_bc.ne.1)) then
         print *,"parameters invalid for op=7"
@@ -14269,13 +14266,13 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.2) then ! potential cell->mac, grad ppot
+      else if (operation_flag.eq.2) then ! grad ppot
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid5"
         stop
        endif
-       if (ncomp_xp.ne.3) then
+       if (ncomp_xp.ne.1) then
         print *,"ncomp_xp invalid5 ",ncomp_xp
         stop
        endif
@@ -14294,28 +14291,6 @@ END SUBROUTINE Adist
            (dcomp.ne.1).or. &
            (scomp_bc.ne.1)) then
         print *,"parameters invalid for op=2"
-        stop
-       endif
-
-      else if (operation_flag.eq.9) then ! den CELL->MAC
-
-       if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid6"
-        stop
-       endif
-       if (energyflag.ne.0) then
-        print *,"energyflag invalid"
-        stop
-       endif
-       if ((scomp.ne.(cen_maskSEM-1)*num_state_material+1).or. &
-           (dcomp.ne.1)) then
-        print *,"parameters invalid for op=9"
-        stop
-       endif
-       if ((ncomp_dest.ne.1).or. &
-           (ncomp_source.ne.nmat*num_state_material).or. &
-           (scomp_bc.ne.1)) then
-        print *,"parameters invalid for op=9"
         stop
        endif
 
@@ -14687,12 +14662,8 @@ END SUBROUTINE Adist
               stop
              endif
 
-             ! I(umac) dot grad rho
-            else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
-             local_data_side(side)=denlocal
-
              ! I(umac) dot grad T
-            else if (nc.eq.SDIM+2) then 
+            else if (nc.eq.SDIM+1) then 
              local_data_side(side)=templocal ! temperature: NONCONSERVATIVE
             else
              print *,"nc invalid"
@@ -14732,7 +14703,7 @@ END SUBROUTINE Adist
              print *,"nc invalid"
              stop
             endif
-           else if (operation_flag.eq.2) then ! MAC potential grad, ppot^MAC
+           else if (operation_flag.eq.2) then ! MAC potential grad
             if (nc.eq.1) then
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
@@ -14743,25 +14714,6 @@ END SUBROUTINE Adist
                ! do nothing
               else
                print *,"local_data_side or local_data_side_den invalid"
-               stop
-              endif
-             else
-              print *,"scomp invalid"
-              stop
-             endif
-            else
-             print *,"nc invalid"
-             stop
-            endif
-           else if (operation_flag.eq.9) then ! den: CELL->MAC
-            if (nc.eq.1) then
-             if (scomp.eq.(cen_maskSEM-1)*num_state_material+1) then
-              local_data_side(side)=den(D_DECL(ic,jc,kc),scomp)
-              if ((local_data_side(side).gt.zero).and. &
-                  (abs(local_data_side(side)).lt.1.0D+20)) then
-               ! do nothing
-              else
-               print *,"local_data_side invalid"
                stop
               endif
              else
@@ -14904,37 +14856,7 @@ END SUBROUTINE Adist
               stop
              endif
 
-            else if (nc.eq.SDIM+1) then ! density
-
-             if (presbc_in(dir,side,ibase+1).eq.REFLECT_EVEN) then
-              local_bctype(side)=3 ! reflect even
-              local_bcval(side)=zero 
-             else if (presbc_in(dir,side,ibase+1).eq.FOEXTRAP) then
-              local_bctype(side)=2 ! neumann
-              local_bcval(side)=zero 
-             else if (presbc_in(dir,side,ibase+1).eq.REFLECT_ODD) then
-              print *,"cannot have reflect odd BC for density"
-              stop
-              local_bctype(side)=4
-              local_bcval(side)=zero 
-             else if (presbc_in(dir,side,ibase+1).eq.EXT_DIR) then
-              if (udotn_boundary.lt.zero) then
-               denlocal=den(D_DECL(i_out,j_out,k_out),ibase+1)
-               local_bctype(side)=1 ! dirichlet
-               local_bcval(side)=denlocal
-              else if (udotn_boundary.ge.zero) then
-               local_bctype(side)=2 ! neumann
-               local_bcval(side)=zero
-              else
-               print *,"udotn_boundary invalid"
-               stop
-              endif
-             else
-              print *,"presbc_in is corrupt"
-              stop
-             endif
-
-            else if (nc.eq.SDIM+2) then ! energy: NONCONSERVATIVE
+            else if (nc.eq.SDIM+1) then ! energy: NONCONSERVATIVE
 
              if (presbc_in(dir,side,ibase+2).eq.REFLECT_EVEN) then
               local_bctype(side)=3 ! reflect even
@@ -14963,44 +14885,6 @@ END SUBROUTINE Adist
               print *,"presbc_in is corrupt"
               stop
              endif
-            else
-             print *,"nc invalid"
-             stop
-            endif
-
-           else if (operation_flag.eq.9) then ! den: CELL->MAC
-
-            if (nc.eq.1) then 
-
-             if (presbc_in(dir,side,1).eq.REFLECT_EVEN) then
-              local_bctype(side)=3 ! reflect even
-              local_bcval(side)=zero 
-             else if (presbc_in(dir,side,1).eq.FOEXTRAP) then
-              local_bctype(side)=2 ! neumann
-              local_bcval(side)=zero 
-             else if (presbc_in(dir,side,1).eq.REFLECT_ODD) then
-              local_bctype(side)=4
-              local_bcval(side)=zero 
-              print *,"cannot have reflect odd conditions for density"
-              stop
-             else if (presbc_in(dir,side,1).eq.EXT_DIR) then
-              if (scomp.eq.(cen_maskSEM-1)*num_state_material+1) then
-               denlocal=den(D_DECL(i_out,j_out,k_out),scomp)
-              else
-               print *,"scomp invalid"
-               stop
-              endif
-              local_bctype(side)=1 ! dirichlet
-              local_bcval(side)=denlocal
-              if (denlocal.le.zero) then
-               print *,"denlocal invalid"
-               stop
-              endif
-             else
-              print *,"presbc_in is corrupt"
-              stop
-             endif
-
             else
              print *,"nc invalid"
              stop
@@ -15145,8 +15029,7 @@ END SUBROUTINE Adist
 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
-             denlocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+1)
-             templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+2)
+             templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+1)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
               if ((conservative_div_uu.eq.0).or. &
@@ -15157,9 +15040,7 @@ END SUBROUTINE Adist
                print *,"conservative_div_uu invalid"
                stop
               endif
-             else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
-              local_data_side(side)=denlocal
-             else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
+             else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
               local_data_side(side)=templocal
              else
               print *,"nc invalid"
@@ -15173,9 +15054,7 @@ END SUBROUTINE Adist
              if ((nc.ge.1).and.(nc.le.SDIM)) then
               local_data_side(side)= &
                vel(D_DECL(ic,jc,kc),nc) ! NONCONSERVATIVE
-             else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
-              local_data_side(side)=denlocal
-             else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
+             else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
               local_data_side(side)=templocal
              else
               print *,"nc invalid"
@@ -15565,11 +15444,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
-
-            local_data(isten+1)=denlocal
-
-           else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
+           else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
 
             local_data(isten+1)=templocal
 
@@ -15880,12 +15755,8 @@ END SUBROUTINE Adist
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
-             else if (nc.eq.SDIM+1) then ! density (NONCONSERVATIVE)
-
-              xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
-
                ! temperature (NONCONSERVATIVE)
-             else if (nc.eq.SDIM+2) then ! temperature
+             else if (nc.eq.SDIM+1) then ! temperature
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
@@ -16659,7 +16530,7 @@ END SUBROUTINE Adist
       REAL_T local_POLD_DUAL
       REAL_T TEMPERATURE,Eforce,internal_e
       REAL_T divflux(ncomp)
-      REAL_T den_new,den_old,vel_old,mom_new,T_old,T_new
+      REAL_T vel_old,mom_new,T_old,T_new
       REAL_T vel_new(SDIM)
       REAL_T VOLTERM
       INTEGER_T nbase
@@ -17334,8 +17205,6 @@ END SUBROUTINE Adist
           if ((nc.ge.1).and.(nc.le.SDIM)) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac or u
           else if (nc.eq.SDIM+1) then
-           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! rho 
-          else if (nc.eq.SDIM+2) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! temperature
           else
            print *,"nc invalid"
@@ -17572,8 +17441,8 @@ END SUBROUTINE Adist
         if (operation_flag.eq.3) then
          call line_MAC_TO_CELL(local_data_up,local_cell_up,local_div_up, &
           bfact,maskSEM,dx(dir_main))
-        else if (operation_flag.eq.6) then
-         if ((nc.ge.1).and.(nc.le.SDIM+2)) then
+        else if (operation_flag.eq.107) then !advection
+         if ((nc.ge.1).and.(nc.le.SDIM+1)) then
           call line_MAC_TO_CELL(local_vel_data,local_vel_cell,local_vel_div, &
            bfact,maskSEM,dx(dir_main))
           call line_MAC_TO_CELL(local_vel_data_div, &
@@ -17669,9 +17538,7 @@ END SUBROUTINE Adist
              print *,"conservative_div_uu invalid"
              stop
             endif
-           else if (nc.eq.SDIM+1) then ! density
-            local_div(isten+1)=local_div(isten+1)*local_vel_cell(isten+1)
-           else if (nc.eq.SDIM+2) then ! temperature
+           else if (nc.eq.SDIM+1) then ! temperature
             local_div(isten+1)=local_div(isten+1)*local_vel_cell(isten+1)
            else
             print *,"nc invalid"
@@ -17706,38 +17573,6 @@ END SUBROUTINE Adist
               divflux(nc2)=divdest(D_DECL(ic,jc,kc),nc2)
              enddo ! nc2
 
-             den_old=denold(D_DECL(ic,jc,kc),ibase+1)
-             den_new=den_old-dt*divflux(SDIM+1)
-
-              ! SDC correction term: mass
-             if ((ns_time_order.ge.2).and. &
-                 (ns_time_order.le.32).and. &
-                 (advect_iter.eq.1).and. &
-                 (SDC_outer_sweeps.gt.0).and. &
-                 (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
-              den_new=den_new-cterm(D_DECL(ic,jc,kc),SDIM+1)
-             else if ((ns_time_order.eq.1).or. &
-                      (advect_iter.eq.0).or. &
-                      (SDC_outer_sweeps.eq.0).or. &
-                      (divu_outer_sweeps+1.lt.num_divu_outer_sweeps)) then
-              ! do nothing
-             else
-              print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
-              stop
-             endif
- 
-             if (den_new.le.zero) then
-              print *,"den_new underflow"
-              print *,"dt=",dt
-              print *,"divflux= ",divflux(SDIM+1)
-              print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SDIM+1)
-              print *,"advect_iter =",advect_iter
-              print *,"ic,jc,kc ",ic,jc,kc
-              print *,"level,finest_level ",level,finest_level
-              print *,"maskSEM= ",maskSEM
-              stop
-             endif
-
              do nc2=1,SDIM
               vel_old=ustar(D_DECL(ic,jc,kc),nc2) 
               mom_new=vel_old-dt*divflux(nc2)
@@ -17763,7 +17598,7 @@ END SUBROUTINE Adist
              enddo ! nc2=1..sdim
 
              T_old=denold(D_DECL(ic,jc,kc),ibase+2)
-             T_new=T_old-dt*divflux(SDIM+2)
+             T_new=T_old-dt*divflux(SDIM+1)
 
                ! SDC correction term: energy
              if ((ns_time_order.ge.2).and. &
@@ -17772,7 +17607,7 @@ END SUBROUTINE Adist
                  (SDC_outer_sweeps.gt.0).and. &
                  (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
                 ! cterm corresponds to (*localMF[delta_MF])[mfi]
-              T_new=T_new-cterm(D_DECL(ic,jc,kc),SDIM+2)
+              T_new=T_new-cterm(D_DECL(ic,jc,kc),SDIM+1)
              else if ((ns_time_order.eq.1).or. &
                       (advect_iter.eq.0).or. &
                       (SDC_outer_sweeps.eq.0).or. &
@@ -17793,9 +17628,8 @@ END SUBROUTINE Adist
              if (T_new.le.zero) then
               print *,"T_new underflow"
               print *,"dt=",dt
-              print *,"divflux (div(rho u))= ",divflux(SDIM+1)
-              print *,"divflux (u dot grad T)= ",divflux(SDIM+2)
-              print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SDIM+2)
+              print *,"divflux (u dot grad T)= ",divflux(SDIM+1)
+              print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SDIM+1)
               print *,"energyflag (advect_iter) =",energyflag
               print *,"ic,jc,kc ",ic,jc,kc
               stop
@@ -17805,19 +17639,6 @@ END SUBROUTINE Adist
               veldest(D_DECL(ic,jc,kc),nc2)=vel_new(nc2)
              enddo ! nc2
              dendest(D_DECL(ic,jc,kc),ibase+2)=T_new
-
-             imattype=fort_material_type(maskSEM)
-             if (imattype.eq.999) then
-              ! do nothing
-             else if (imattype.eq.0) then
-              ! do nothing
-             else if ((imattype.gt.0).and. &
-                      (imattype.le.MAX_NUM_EOS)) then
-              dendest(D_DECL(ic,jc,kc),ibase+1)=den_new
-             else
-              print *,"imattype invalid SEM_MAC_TO_CELL"
-              stop
-             endif
 
             else
              print *,"source_term invalid"
@@ -18020,163 +17841,6 @@ END SUBROUTINE Adist
            ! local_data (the MAC data) is multiplied by RR above.
           veldest(D_DECL(ic,jc,kc),dir_main)= &
            local_cell(isten+1)/RR
-
-         else if (operation_flag.eq.3) then ! (grad p)_CELL, p div(u)
-
-           ! maskSEM=0 if FSI_flag(im)=1,2,3,4,5,6
-          ibase=num_state_material*(maskSEM-1)
-
-          prescell=pold(D_DECL(ic,jc,kc),1)
-
-          dencell=dendest(D_DECL(ic,jc,kc),ibase+1)
-            ! dt * gradp/rho
-          dp=dt*local_div(isten+1)/(RRTHETA*dencell)
-
-          if (dencell.le.zero) then
-           print *,"dencell invalid"
-           stop
-          endif
-
-          if ((energyflag.eq.0).or. &
-              (energyflag.eq.1)) then
-           if (face_flag.eq.0) then
-            veldest(D_DECL(ic,jc,kc),dir_main)= &
-             ustar(D_DECL(ic,jc,kc),dir_main)-dp
-           else if (face_flag.eq.1) then
-            ! do nothing; veldest already init when operation_flag==2:
-            ! mac-> cell velocity.
-           else
-            print *,"face_flag invalid"
-            stop
-           endif
-          else if (energyflag.eq.2) then
-           if (face_flag.eq.0) then
-             ! gradp
-            ustar(D_DECL(ic,jc,kc),dir_main)=local_div(isten+1)/RRTHETA
-           else if (face_flag.eq.1) then
-             ! no spectral increment from gradp_cell if face_flag=1.
-            ustar(D_DECL(ic,jc,kc),dir_main)=zero
-           else
-            print *,"face_flag invalid"
-            stop
-           endif
-          else
-           print *,"energyflag invalid"
-           stop
-          endif
-
-           ! p (div u) 
-          if (dir_main.eq.1) then
-           divdest(D_DECL(ic,jc,kc),1)= &
-            prescell*local_div_up(isten+1)/RR
-          else if ((dir_main.eq.2).or.(dir_main.eq.SDIM)) then
-           divdest(D_DECL(ic,jc,kc),1)= &
-            divdest(D_DECL(ic,jc,kc),1)+ &
-            prescell*local_div_up(isten+1)/RRTHETA
-          else
-           print *,"dir_main invalid sem mac to cell 11"
-           stop
-          endif
-
-          if (dir_main.eq.SDIM) then
-
-           if (project_option.eq.0) then
-
-            if ((maskSEM.ge.1).and.(maskSEM.le.nmat)) then
-
-             if (energyflag.eq.1) then ! update temperature
-
-              if (local_incomp.eq.0) then
-
-               TEMPERATURE=dendest(D_DECL(ic,jc,kc),ibase+2)
-               if (TEMPERATURE.le.zero) then
-                print *,"temperature underflow"
-                stop
-               endif
-               ! ibase+1 = den
-               ! ibase+2 = T
-               Eforce=-dt*divdest(D_DECL(ic,jc,kc),1)/dencell
-
-               call init_massfrac_parm(dencell,massfrac_parm,maskSEM)
-               do ispec=1,num_species_var
-                massfrac_parm(ispec)= &
-                 dendest(D_DECL(ic,jc,kc),ibase+2+ispec)
-               enddo
-               call INTERNAL_material(dencell,massfrac_parm, &
-                 TEMPERATURE,internal_e, &
-                 imattype,maskSEM)
-               internal_e=internal_e+Eforce
-               if (internal_e.gt.zero) then
-                call TEMPERATURE_material(dencell,massfrac_parm, &
-                  T_new, &
-                  internal_e,imattype,maskSEM)
-                if (T_new.gt.zero) then
-                 dendest(D_DECL(ic,jc,kc),ibase+2)=T_new
-                else
-                 print *,"T_new must be positive"
-                 stop
-                endif
-               endif ! internal_e > 0
-
-              else if (local_incomp.eq.1) then
-
-               divdest(D_DECL(ic,jc,kc),1)=zero
-
-              else
-               print *,"local_incomp invalid"
-               stop
-              endif
-
-             else if (energyflag.eq.2) then
-
-              if (local_incomp.eq.0) then
-               ! do nothing
-              else if (local_incomp.eq.1) then
-               divdest(D_DECL(ic,jc,kc),1)=zero
-              else
-               print *,"local_incomp invalid"
-               stop
-              endif
-             
-             else if (energyflag.eq.0) then
-              ! do nothing
-             else
-              print *,"energyflag invalid"
-              stop 
-             endif
-
-            else
-             print *,"maskSEM invalid"
-             stop
-            endif
-
-           else if (project_option.eq.1) then
-            ! do nothing if initial project
-           else if (project_option.eq.11) then !FSI_material_exists 2nd 
-            ! do nothing if rigid body project
-           else if (project_option.eq.12) then
-            print *,"extension project should be low order"
-            stop
-           else
-            print *,"project_option invalid sem mac to cell"
-            stop
-           endif
-
-          else if ((dir_main.eq.1).or.(dir_main.eq.SDIM-1)) then
-           ! do nothing
-          else
-           print *,"dir_main invalid sem mac to cell 13"
-           stop
-          endif 
-
-         else if (operation_flag.eq.4) then ! (grad ppot)_CELL
-          dencell=denold(D_DECL(ic,jc,kc),1)
-          if (dencell.le.zero) then
-           print *,"hydrostatic density must be positive"
-           stop
-          endif
-          veldest(D_DECL(ic,jc,kc),dir_main)= &
-           local_div(isten+1)/(dencell*RRTHETA)
          else
           print *,"operation_flag invalid30"
           stop

@@ -1956,7 +1956,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &beta,
     &visc_coef,
     &interp_vel_increment_from_cell,
-    filter_velocity.dataPtr(),
     temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
@@ -2187,7 +2186,6 @@ void NavierStokes::apply_cell_pressure_gradient(
      &curv_index,
      &conservative_tension_force,
      &conservative_div_uu,
-     filter_velocity.dataPtr(),
      &ignore_div_up,
      &pforce_index,
      &faceden_index,
@@ -2430,12 +2428,6 @@ void NavierStokes::make_MAC_velocity_consistent() {
 
 // ucell_new=ucell+old + force_cell
 //
-//   POTENTIALLY UNSTABLE:
-// if (filter_velocity[im]==0) and (interp_option==2) then
-//  umac_new=umac_old + INTERP_CELL_TO_MAC(Force_cell)
-//   VERY DISSIPATIVE:
-// if (filter_velocity[im]==1) and (interp_option==2) then
-//  umac_new=INTERP_CELL_TO_MAC(ucell_new)
 void NavierStokes::increment_face_velocityALL(
  int interp_option,
  int project_option,
@@ -2885,7 +2877,6 @@ void NavierStokes::increment_face_velocity(
        &beta,
        &visc_coef,
        &interp_vel_increment_from_cell,
-       filter_velocity.dataPtr(),
        temperature_primitive_variable.dataPtr(),
        &local_enable_spectral,
        &fluxvel_index,
@@ -3267,7 +3258,6 @@ void NavierStokes::VELMAC_TO_CELL(
    &curv_index,
    &conservative_tension_force,
    &conservative_div_uu,
-   filter_velocity.dataPtr(),
    &ignore_div_up,
    &pforce_index,
    &faceden_index,
@@ -4786,7 +4776,6 @@ void NavierStokes::apply_pressure_grad(
      &beta,
      &visc_coef,
      &interp_vel_increment_from_cell,
-     filter_velocity.dataPtr(),
      temperature_primitive_variable.dataPtr(),
      &local_enable_spectral,
      &fluxvel_index,
@@ -6159,7 +6148,6 @@ void NavierStokes::init_gravity_potential() {
 }  // init_gravity_potential
 
 // called from: NavierStokes::process_potential_forceALL()
-// u^cell = u^cell + cellgravforce - grad^cell p
 // u^face = u^face + facegravforce - grad^face p
 // reflecting boundary conditions on ppot should be identical to the
 // reflecting boundary conditions on p so that
@@ -6231,9 +6219,7 @@ void NavierStokes::process_potential_force_face() {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(POTENTIAL_FORCE_EDGE_MF+dir,1,0,dir);//grad ppot/rhopot
-  new_localMF(POTENTIAL_EDGE_MF+dir,3,0,dir); //ppot,Ften-,Ften+
  }
- new_localMF(POTENTIAL_FORCE_CELL_MF,AMREX_SPACEDIM,0,-1);
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
@@ -6250,9 +6236,9 @@ void NavierStokes::process_potential_force_face() {
 
  MultiFab* dendata=getStateDen(1,cur_time_slab);
 
-  // gpx/rhox,px,gpy/rhoy,py,gpz/rhoz,pz
+  // gpx/rhox,gpy/rhoy,gpz/rhoz
  allocate_flux_register(operation_flag);
- if (localMF[SEM_FLUXREG_MF]->nComp()!=2*AMREX_SPACEDIM)
+ if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid7");
 
  if (projection_enable_spectral!=enable_spectral)
@@ -6294,8 +6280,8 @@ void NavierStokes::process_potential_force_face() {
    FArrayBox& xgp=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
    if (xgp.nComp()!=1)
     amrex::Error("xgp.nComp() invalid");
-   FArrayBox& xp=(*localMF[POTENTIAL_EDGE_MF+dir])[mfi];
-   if (xp.nComp()!=3)
+   FArrayBox& xp=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
+   if (xp.nComp()!=1)
     amrex::Error("xp.nComp() invalid");
 
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
@@ -6321,7 +6307,7 @@ void NavierStokes::process_potential_force_face() {
 
    FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
    int ncfluxreg=semfluxfab.nComp();
-   if (ncfluxreg!=2*AMREX_SPACEDIM) 
+   if (ncfluxreg!=AMREX_SPACEDIM) 
     amrex::Error("ncfluxreg invalid");
 
    int rzflag=0;
@@ -6340,7 +6326,7 @@ void NavierStokes::process_potential_force_face() {
 
    int simple_AMR_BC_flag=1;
 
-   int ncomp_xp=3;
+   int ncomp_xp=1;
    int ncomp_xgp=1;
    int ncomp_mgoni=mgonifab.nComp();
 
@@ -6363,7 +6349,6 @@ void NavierStokes::process_potential_force_face() {
     &beta,
     &visc_coef,
     &interp_vel_increment_from_cell,
-    filter_velocity.dataPtr(),
     temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
@@ -6636,7 +6621,6 @@ void NavierStokes::process_potential_force_cell() {
    &curv_index,
    &conservative_tension_force,
    &conservative_div_uu,
-   filter_velocity.dataPtr(),
    &ignore_div_up,
    &pforce_index,
    &faceden_index,

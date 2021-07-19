@@ -3065,7 +3065,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        ns_level.delete_advect_vars();
       } // ilev=finest_level ... level
-FIX ME DO NOT OVERWRITE CELL VELOCITY UNTIL AFTER THE PROJECTION IS DONE OR
+FIX ME DO NOT OVERWRITE CELL VELOCITY FOR COMPRESSIBLE MATERIALS
+UNTIL AFTER THE PROJECTION IS DONE OR
 AFTER ELASTIC FORCES.  DELETE increment_KE
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
@@ -11826,6 +11827,7 @@ void NavierStokes::vel_elastic_ALL() {
   int use_VOF_weight=1;
   int vel_or_disp=0; //interpolate MAC velocity
   int dest_idx=-1;   //update State_Type
+  FIX ME, only elastic material cell velocity is updated. 
   VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
 
    // register_mark=unew
@@ -11847,7 +11849,6 @@ void NavierStokes::vel_elastic_ALL() {
   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0)
   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
 
     // register_mark=unew
@@ -12168,9 +12169,6 @@ void NavierStokes::veldiffuseALL() {
    // spectral_override==1 => order derived from "enable_spectral"
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
-  // unew^MAC+=INTERP_TO_MAC(unew-register_mark)
-  //    or
-  // unew^MAC=INTERP_TO_MAC(unew) if filter_velocity[im]==1 
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,3); 
 
  avgDownALL(State_Type,dencomp,nden,1);
@@ -12210,7 +12208,6 @@ void NavierStokes::veldiffuseALL() {
    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,4); 
 
    // register_mark=unew
@@ -12238,7 +12235,6 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
 
  avgDownALL(State_Type,dencomp,nden,1);
@@ -12292,7 +12288,6 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (filter_vel==0)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
 
    // register_mark=unew
@@ -13038,7 +13033,6 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
 //REGISTER_CURRENT_MF=unew-source_mf
 //uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
-// (filter_vel==0)
 void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
  if (level!=0)
@@ -13052,7 +13046,6 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
  }
 
   // unew^f=unew^f+beta * diffuse_register^{c->f}
-  // (filter_vel==0)
   // in: INCREMENT_REGISTERS_ALL
  int interp_option=2;
  int project_option=3; // viscosity
@@ -13060,8 +13053,6 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
  Vector<blobclass> blobdata;
 
   // operation_flag==5 (interp_option==2)
-  // if filter_velocity[im]==1,
-  //  unew^f=INTERP_TO_MAC(unew)
  increment_face_velocityALL(
    interp_option,project_option,
    REGISTER_CURRENT_MF,beta,blobdata);
