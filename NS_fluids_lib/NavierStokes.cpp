@@ -306,8 +306,6 @@ int  NavierStokes::SEM_advection_algorithm=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
-Vector<int> NavierStokes::filter_velocity; //def=0
-
 // default=1   
 int NavierStokes::particle_nsubdivide=1; 
 int NavierStokes::particle_max_per_nsubdivide=3; 
@@ -4318,11 +4316,7 @@ NavierStokes::read_params ()
 
     truncate_volume_fractions.resize(nmat);
 
-    filter_velocity.resize(nmat);
-
     for (int i=0;i<nmat;i++) {
-
-     filter_velocity[i]=0;
 
      if ((FSI_flag[i]==0)|| // tessellating
          (FSI_flag[i]==7))  // fluid, tessellating
@@ -4346,8 +4340,6 @@ NavierStokes::read_params ()
 	    particle_max_per_nsubdivide);
     pp.query("particle_min_per_nsubdivide",
 	    particle_min_per_nsubdivide);
-
-    pp.queryarr("filter_velocity",filter_velocity,0,nmat);
 
     if ((particle_nsubdivide<1)||
         (particle_nsubdivide>6))
@@ -4668,9 +4660,6 @@ NavierStokes::read_params ()
 
       std::cout << "truncate_volume_fractions i= " << i << ' ' <<
         truncate_volume_fractions[i] << '\n';
-
-      std::cout << "filter_velocity i= " << i << ' ' <<
-        filter_velocity[i] << '\n';
 
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';
@@ -14486,6 +14475,7 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
   //   (iii) (unew^{c})^{c->f}  compressible regions.
   //   (iv) usolid in solid regions
+ FIX ME
  if (operation_flag==11) {
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==10) { // ucell,umac -> umac
@@ -14494,8 +14484,8 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   ncfluxreg=AMREX_SPACEDIM*nfluxSEM;
  } else if (operation_flag==1) { // interp press from cell to MAC.
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==2) { // ppot cell-> mac  grad ppot
-  ncfluxreg=2*AMREX_SPACEDIM; // (grad ppot)_mac, ppot_mac
+ } else if (operation_flag==2) { 
+  ncfluxreg=AMREX_SPACEDIM; // (grad pressure_potential)_mac
  } else if (operation_flag==3) { // ucell -> umac
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==4) { // umac -> umac
@@ -14860,7 +14850,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &visc_coef, //beta
       &visc_coef,
       &interp_vel_increment_from_cell,
-      filter_velocity.dataPtr(),
       temperature_primitive_variable.dataPtr(),
       &local_enable_spectral,
       &fluxvel_index,
@@ -15069,7 +15058,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &curv_index,
       &conservative_tension_force,
       &conservative_div_uu,
-      filter_velocity.dataPtr(),
       &ignore_div_up,
       &pforce_index,
       &faceden_index,  // 1/rho

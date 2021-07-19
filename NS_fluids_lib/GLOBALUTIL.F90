@@ -7018,8 +7018,6 @@ contains
         ! do nothing
        else if (operation_flag.eq.8) then ! coupling
         ! do nothing
-       else if (operation_flag.eq.9) then ! den: cell->mac
-        ! do nothing
        else
         print *,"operation_flag invalid2"
         stop
@@ -7402,9 +7400,7 @@ contains
           print *,"conservative_div_uu invalid"
           stop
          endif
-        else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
-         ! do nothing
-        else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
+        else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
          ! do nothing
         else
          print *,"nc invalid in lineGRAD"
@@ -7424,10 +7420,6 @@ contains
        ! do nothing
 
       else if (operation_flag.eq.8) then ! coupling terms
-
-       ! do nothing
-
-      else if (operation_flag.eq.9) then ! den: cell->mac
 
        ! do nothing
 
@@ -7470,8 +7462,6 @@ contains
          ! do nothing (advection)
         else if (operation_flag.eq.8) then
          ! do nothing (coupling)
-        else if (operation_flag.eq.9) then
-         ! do nothing (den: cell-to-mac)
         else
          print *,"operation_flag invalid4"
          stop
