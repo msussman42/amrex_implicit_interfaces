@@ -15378,119 +15378,22 @@ stop
           endif 
 
           if (at_RZ_face.eq.1) then
-
            test_velocity_FACE=zero
            idonate=i
            jdonate=j
            kdonate=k
-           do im=1,nmat
-            LSupwind(im)=levelPC(D_DECL(idonate,jdonate,kdonate),im)
-           enddo
-           call get_primary_material(LSupwind,nmat,im)
-           if ((im.ge.1).and.(im.le.nmat)) then
-            ibase=num_state_material*(im-1) 
-            denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+1) 
-            if (denlocal.gt.zero) then
-             ! do nothing
-            else
-             print *,"denlocal invalid"
-             stop
-            endif
-            if (constant_density_all_time(im).eq.1) then
-             if (abs(denlocal-fort_denconst(im)).le. &
-                 VOFTOL*fort_denconst(im)) then
-              ! do nothing
-             else
-              print *,"expecting denlocal=fort_denconst(im)"
-              stop
-             endif
-            else if (constant_density_all_time(im).eq.0) then
-             ! do nothing
-            else
-             print *,"constant_density_all_time invalid"
-             stop
-            endif
-            templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
-            nc=SDIM+1  !temperature
-            local_face(nc)=templocal  ! NONCONSERVATIVE
-FIX ME
-           else
-            print *,"im invalid 15446:",im
-            stop
-           endif
-
           else if (at_RZ_face.eq.0) then
-
            test_velocity_FACE=local_vel
-
            if (test_velocity_FACE.ge.zero) then
             idonate=im1
             jdonate=jm1
             kdonate=km1
-           else
+           else if (test_velocity_FACE.lt.zero) then
             idonate=i
             jdonate=j
             kdonate=k
-           endif
-           do im=1,nmat
-            LSupwind(im)=levelPC(D_DECL(idonate,jdonate,kdonate),im)
-           enddo
-           call get_primary_material(LSupwind,nmat,im)
-           if ((im.ge.1).and.(im.le.nmat)) then
-            ibase=num_state_material*(im-1) 
-            do nc=1,ncphys
-             denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+1) 
-
-             if (denlocal.gt.zero) then
-              ! do nothing
-             else
-              print *,"denlocal invalid"
-              stop
-             endif
-             if (constant_density_all_time(im).eq.1) then
-              if (abs(denlocal-fort_denconst(im)).le. &
-                  VOFTOL*fort_denconst(im)) then
-               ! do nothing
-              else
-               print *,"expecting denlocal=fort_denconst(im)"
-               stop
-              endif
-             else if (constant_density_all_time(im).eq.0) then
-              ! do nothing
-             else
-              print *,"constant_density_all_time invalid"
-              stop
-             endif
-
-             templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
-
-             if ((nc.ge.1).and.(nc.le.SDIM)) then
-              velcomp=nc
-              local_face(nc)= &
-                vel(D_DECL(idonate,jdonate,kdonate),velcomp) !NONCONSERVATIVE
-             else if (nc.eq.SDIM+1) then
-              local_face(nc)=denlocal   !NONCONSERVATIVE
-             else if (nc.eq.SDIM+2) then
-              local_face(nc)=templocal  !NONCONSERVATIVE
-             else
-              print *,"nc invalid"
-              stop
-             endif
-
-             if ((nc.ge.1).and.(nc.le.SDIM)) then
-              local_face(nc)=local_face(nc)*test_velocity_FACE
-             else if (nc.eq.SDIM+1) then ! density
-              ! do nothing
-             else if (nc.eq.SDIM+2) then ! temperature
-              ! do nothing
-             else
-              print *,"nc invalid"
-              stop
-             endif
-
-            enddo ! nc=1..ncphys
            else
-            print *,"im invalid32"
+            print *,"test_velocity_FACE corrupt"
             stop
            endif
           else
@@ -15498,19 +15401,74 @@ FIX ME
            stop
           endif
 
-         else if (operation_flag.eq.9) then ! density: CELL->MAC (1/rho)
+          do im=1,nmat
+           LSupwind(im)=levelPC(D_DECL(idonate,jdonate,kdonate),im)
+          enddo
 
-          if (local_vel.le.zero) then
-           print *,"low order 1/rho invalid"
+          call get_primary_material(LSupwind,nmat,im)
+          if ((im.ge.1).and.(im.le.nmat)) then
+           ibase=num_state_material*(im-1) 
+           denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+1) 
+           if (denlocal.gt.zero) then
+            ! do nothing
+           else
+            print *,"denlocal invalid"
+            stop
+           endif
+           if (constant_density_all_time(im).eq.1) then
+            if (abs(denlocal-fort_denconst(im)).le. &
+                VOFTOL*fort_denconst(im)) then
+             ! do nothing
+            else
+             print *,"expecting denlocal=fort_denconst(im)"
+             stop
+            endif
+           else if (constant_density_all_time(im).eq.0) then
+            ! do nothing
+           else
+            print *,"constant_density_all_time invalid"
+            stop
+           endif
+           templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
+
+           do nc=1,ncphys
+            if ((nc.ge.1).and.(nc.le.SDIM)) then
+             velcomp=nc
+             if (at_RZ_face.eq.1) then
+              local_face(nc)=zero
+             else if (at_RZ_face.eq.0) then
+              local_face(nc)=vel(D_DECL(idonate,jdonate,kdonate),velcomp)
+              if (conservative_div_uu.eq.1) then
+               local_face(nc)=local_face(nc)*test_velocity_FACE
+              else if (conservative_div_uu.eq.0) then
+               ! do nothing
+              else
+               print *,"conservative_div_uu invalid"
+               stop
+              endif
+             else
+              print *,"at_RZ_face invalid"
+              stop
+             endif
+            else if (nc.eq.SDIM+1) then
+             local_face(nc)=templocal  ! NONCONSERVATIVE
+            else
+             print *,"nc invalid"
+             stop
+            endif
+           enddo !nc=1,ncphys
+
+          else
+           print *,"im invalid 15446:",im
            stop
           endif
- 
+
          else if ((operation_flag.eq.3).or. & !u^MAC=u^CELL->MAC
                   (operation_flag.eq.4).or. & !u^MAC=uSOLID^MAC or uFLUID^MAC
                   (operation_flag.eq.5).or. & !u^MAC=u^MAC+beta diff^CELL->MAC
                   (operation_flag.eq.10).or. & !u^MAC=u^{CELL,MAC}->MAC
                   (operation_flag.eq.11)) then !u^MAC=u^{CELL DIFF,MAC}->MAC
-
+FIX ME
           face_velocity_override=0
 
           at_RZ_face=0

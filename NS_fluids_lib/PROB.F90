@@ -15603,7 +15603,8 @@ END SUBROUTINE Adist
          if (spectral_loop.eq.0) then
 
           ! if operation_flag.eq.7 (advection),
-          ! then velocity flux might be multiplied by umac (local_vel) in
+          ! then if conservative_div_uu==1, then
+          ! velocity flux will be multiplied by umac (local_vel) in
           ! lineGRAD (not density and temperature though).
           ! u u_x + v u_y + w u_z = (u umac)_x + (u vmac)_y + (u wmac)_z -
           !                         u umac_x - u vmac_y - u wmac_z
