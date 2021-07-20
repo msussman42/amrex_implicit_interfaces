@@ -1946,7 +1946,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &conservative_tension_force,
     &conservative_div_uu,
     &ignore_div_up,
     &pforce_index,
@@ -2856,7 +2855,6 @@ void NavierStokes::increment_face_velocity(
        &facecut_index,
        &icefacecut_index,
        &curv_index,
-       &conservative_tension_force,
        &conservative_div_uu,
        &ignore_div_up,
        &pforce_index,
@@ -3300,77 +3298,6 @@ void NavierStokes::VELMAC_TO_CELL(
   delete face_velocity[dir]; 
 
 } // subroutine VELMAC_TO_CELL
-
-
-//if temperature_primitive_var==0,
-// add beta * (1/cv) * (u dot u/2) to temp
-void NavierStokes::increment_KE(Real beta) {
- 
- bool use_tiling=ns_tiling;
-
- int finest_level=parent->finestLevel();
- int nmat=num_materials;
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- if ((beta!=-1.0)&&(beta!=1.0))
-  amrex::Error("beta invalid");
-
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
-
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-
- int ncomp_state=(AMREX_SPACEDIM+1)+nmat*num_state_material+
-  nmat*ngeom_raw+1;
- if (ncomp_state!=S_new.nComp()) 
-  amrex::Error("ncomp_state!=S_new.nComp()"); 
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  int gridno=mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-
-   //1=not cov  0=cov
-  FArrayBox& maskcoef = (*localMF[MASKCOEF_MF])[mfi];
-  FArrayBox& sfab=S_new[mfi];
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-  FORT_INC_TEMP(
-   &beta,
-   temperature_primitive_variable.dataPtr(),
-   &nmat,
-   &level,
-   &finest_level,
-   &ncomp_state,
-   tilelo,tilehi,
-   fablo,fabhi,
-   sfab.dataPtr(),ARLIM(sfab.loVect()),ARLIM(sfab.hiVect()), 
-   maskcoef.dataPtr(), // 1=not covered  0=covered
-   ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()));
- }   // mfi
-} // omp
- ns_reconcile_d_num(138);
-
-} // subroutine increment_KE
 
 
 // do_alloc=1 => allocate variable
@@ -4752,7 +4679,6 @@ void NavierStokes::apply_pressure_grad(
      &facecut_index,
      &icefacecut_index,
      &curv_index,
-     &conservative_tension_force,
      &conservative_div_uu,
      &ignore_div_up,
      &pforce_index,
@@ -5838,11 +5764,10 @@ void NavierStokes::increment_potential_force() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FIX ME (no more CELL)
     // declared in: NAVIERSTOKES_3D.F90
     // (gravity and surface tension)
     // u+=facegrav 
-   FORT_ADDGRAVITY(
+   fort_addgravity(
      &dt_slab,
      &cur_time_slab,
      &gravity_potential_form,
@@ -5866,12 +5791,8 @@ void NavierStokes::increment_potential_force() {
      reconfab.dataPtr(),
      ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-     snewfab.dataPtr(),
-     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
      macfab.dataPtr(),
      ARLIM(macfab.loVect()),ARLIM(macfab.hiVect()),
-     cellgrav.dataPtr(),
-     ARLIM(cellgrav.loVect()),ARLIM(cellgrav.hiVect()),
      facegrav.dataPtr(),
      ARLIM(facegrav.loVect()),ARLIM(facegrav.hiVect()) );
   } // mfi
@@ -6323,7 +6244,6 @@ void NavierStokes::process_potential_force_face() {
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &conservative_tension_force,
     &conservative_div_uu,
     &ignore_div_up,
     &pforce_index,

@@ -3052,22 +3052,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        ns_level.delete_advect_vars();
       } // ilev=finest_level ... level
-FIX ME DO NOT OVERWRITE CELL VELOCITY FOR COMPRESSIBLE MATERIALS
-UNTIL AFTER THE PROJECTION IS DONE OR
-AFTER ELASTIC FORCES.  DELETE increment_KE
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       //if temperature_primitive_var==0,
-       // add beta * (1/cv) * (u dot u/2) to temp
-       Real beta=1.0;
-       ns_level.increment_KE(beta); 
-       int use_VOF_weight=1;
-       int vel_or_disp=0; //interpolate MAC velocity
-       int dest_idx=-1;   //update State
-       ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
-       beta=-1.0;
-       ns_level.increment_KE(beta);
-      }
  
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
@@ -11820,6 +11804,8 @@ void NavierStokes::vel_elastic_ALL() {
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);
 
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -12280,31 +12266,14 @@ void NavierStokes::veldiffuseALL() {
    // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF,109);
 
-  // CONSERVATIVE SURFACE TENSION (Marangoni) FORCE
-  // rhonew unew+=dt F_marangoni
-  // 1. initialize CONSERVE_FLUXES_MF to store the force on the MAC grid and
-  //    update the MAC velocity.
-  //    Average down CONSERVE_FLUXES_MF
-  // 2. interpolate F_marangoni from MAC to CELL and update the CELL velocity 
-  //   
-  // faces on the coarse grid or that neighbor a coarse grid 
-  // use the old surface tension algorithm.
- for (int isweep=0;isweep<2;isweep++) {
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.make_marangoni_force(isweep);
-   if (isweep==0) {
-    // do nothing
-   } else if (isweep==1) {
-     // (i) avgDownMacState
-     // (ii) fill boundary for Umac_new
-    ns_level.make_MAC_velocity_consistent();
-   } else
-    amrex::Error("isweep invalid");
-  } // ilev=finest_level ... level
- } // isweep=0,1
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.make_marangoni_force();
+ } // ilev=finest_level ... level
 
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+ INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
 
 // ---------------- begin thermal diffusion ---------------------
 
@@ -12434,98 +12403,11 @@ void NavierStokes::veldiffuseALL() {
    // (rho Y)_{t} + div(rho u Y) =div (rho D) grad Y
    // [rho_t + div(rho u)]Y+rho DY/DT=div(rho D) grad Y
    // DY/DT=div (rho D) grad Y/rho
-   // UPDATESEMFORCE:
-   // HOFAB=-div rho D grad Y 
-   // Ynew=Ynew-(1/rho)(int (HOFAB)dt - dt (LOFAB))
-   // call to semdeltaforce with dcomp=slab_step*nstate_SDC+nfluxSEM+1+
-   // species_comp
-  if ((SDC_outer_sweeps>0)&&
-      (SDC_outer_sweeps<ns_time_order)&&
-      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-
-   if (ns_time_order>=2) {
-
-    if ((viscous_enable_spectral==1)||   // SEM space and time
-        (viscous_enable_spectral==3)) {  // SEM time
-
-     for (int ilev=finest_level;ilev>=level;ilev--) {
-      NavierStokes& ns_level=getLevel(ilev);
-      // calls: SEMDELTAFORCE in GODUNOV_3D.F90
-      ns_level.make_SEM_delta_force(project_option_species);
-     }
-    } else if (viscous_enable_spectral==0) {
-     // do nothing
-    } else
-     amrex::Error("viscous_enable_spectral invalid");
-
-    avgDownALL(State_Type,dencomp,nden,1);
-   } else
-    amrex::Error("ns_time_order invalid");
-
-  } else if (SDC_outer_sweeps==0) {
-   // do nothing
-  } else if ((divu_outer_sweeps>=0)&&
-             (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
-   // do nothing
-  } else 
-   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
    // why average down the density here?
   avgDownALL(State_Type,dencomp,nden,1);
 
   multiphase_project(project_option_species); // species
-
-   // ---------------begin save stable species diffusion 
-
-  if ((ns_time_order>=2)&&
-      (ns_time_order<=32)&&
-      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-
-    //num_materials_combine=1
-   get_mm_scomp_solver(
-    1,
-    project_option_species,
-    state_index,
-    scomp,
-    ncomp,
-    ncomp_check);
-
-   if (ncomp_check!=nsolve_thermal)
-    amrex::Error("ncomp_check invalid");
-
-     //localMF[PRESPC2_MF] will hold the latest species from the implicit
-     //backwards Euler system.
-     //ngrow=1
-   getState_localMF_listALL(
-     PRESPC2_MF,  
-     1,
-     state_index,
-     scomp,
-     ncomp);
-   
-   int update_spectralF=0;
-   int update_stableF=1;
-    // LOfab=-div(rho D grad Y)
-    // calls: UPDATESEMFORCE in GODUNOV_3D.F90
-   if ((viscous_enable_spectral==1)||  // SEM space and time
-       (viscous_enable_spectral==3)) { // SEM time
-    update_SEM_forcesALL(project_option_species,PRESPC2_MF,
-      update_spectralF,update_stableF);
-   } else if (viscous_enable_spectral==0) {
-    // do nothing
-   } else
-    amrex::Error("viscous_enable_spectral invalid");
-
-   delete_array(PRESPC2_MF);
-
-  } else if ((ns_time_order==1)||
-             ((divu_outer_sweeps>=0)&&
-              (divu_outer_sweeps+1<num_divu_outer_sweeps))) {
-   // do nothing
-  } else
-   amrex::Error("ns_time_order or divu_outer_sweeps invalid");
-
-  // ---------------end save stable species diffusion forces
 
  } // species_comp=0..num_species_var-1
 
@@ -12630,6 +12512,8 @@ void NavierStokes::veldiffuseALL() {
      amrex::Error("ns_is_rigid invalid");
    } // im=0..nmat-1
 
+  } else if (num_materials_viscoelastic==0) {
+   // do nothing
   } else {
    amrex::Error("num_materials_viscoelastic invalid");
   }

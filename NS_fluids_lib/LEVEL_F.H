@@ -7,7 +7,6 @@
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
@@ -27,7 +26,6 @@
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
 #    define FORT_BUILD_MODVISC BUILD_MODVISC
-#    define FORT_INC_TEMP INC_TEMP
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
 #    define FORT_PURGEFLOTSAM PURGEFLOTSAM
 #    define FORT_INITSUPERELASTIC INITSUPERELASTIC
@@ -47,7 +45,6 @@
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
 #    define FORT_BUILD_MODVISC build_modvisc
-#    define FORT_INC_TEMP inc_temp
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
@@ -65,7 +62,6 @@
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
 #    define FORT_BUILD_MODVISC build_modvisc_
-#    define FORT_INC_TEMP inc_temp_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
 #    define FORT_PURGEFLOTSAM purgeflotsam_
 #    define FORT_INITRECALESCE initrecalesce_
@@ -343,7 +339,6 @@ namespace amrex{
         int* facecut_index,
         int* icefacecut_index,
         int* curv_index,
-        int* conservative_tension_force,
         int* conservative_div_uu,
         int* ignore_div_up, 
         int* pforce_index,
@@ -489,20 +484,6 @@ namespace amrex{
         int* ncomp_dendest,
         int* SEM_advection_algorithm);
 
-
-      void FORT_INC_TEMP(
-        Real* beta,
-        int* temperature_primitive_variable,
-        int* nmat,
-        int* level,
-        int* finest_level,
-        int* ncomp_state,
-        const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        Real* state,
-        AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
-        Real* maskcov,
-        AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi)); //1=not covered
 
       void fort_init_physics_vars(
        int* tid,
@@ -703,7 +684,6 @@ namespace amrex{
      void FORT_CURVSTRIP(
        int* post_restart_flag,
        int* vof_height_function,
-       int* conservative_tension_force,
        int* level,
        int* finest_level,
        Real* curv_min,

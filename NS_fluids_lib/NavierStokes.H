@@ -1386,8 +1386,6 @@ void apply_pressure_grad(
      // iten>=1  im1,im2>=1
     static void get_inverse_iten_cpp(int& im1,int& im2,int iten,int nmat);
 
-    void increment_KE(Real beta);
-
      // unew^f=unew^f + beta * localMF[idx_velcell]
     void increment_face_velocity(
       int interp_option,
@@ -1482,7 +1480,7 @@ void apply_pressure_grad(
     void makeStateDist(int keep_all_interfaces);
     void correct_dist_uninit();
     void makeStateCurv(int project_option,int post_restart_flag);
-    void make_marangoni_force(int isweep);
+    void make_marangoni_force();
 
     void delete_array(int idx_localMF);
 
@@ -1826,12 +1824,6 @@ protected:
     static int ZDmac_Type;
     static int NUM_STATE_TYPE;
 
-      // 1-2 .. 1-num_materials
-      // 2-3 .. 2-num_materials
-      // 3-4 .. 3-num_materials  ....
-      // n-1  + n-2 + n-3 .. = (1/2) ( (n-1)^2 + (n-1) )
-      // if n=4 => (1/2)(9+3)=6
-    static int conservative_tension_force; // def=0
      // def=1
      // 0=> I(u_GL) dot grad u_GG, no sync project
      // 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project

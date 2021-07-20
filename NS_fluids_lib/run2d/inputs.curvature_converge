@@ -7,7 +7,6 @@ stop_time =  3.5  # maximum problem time
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 ns.FD_curv_interp=1
-ns.conservative_tension_force=1
 
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.0 4.0  

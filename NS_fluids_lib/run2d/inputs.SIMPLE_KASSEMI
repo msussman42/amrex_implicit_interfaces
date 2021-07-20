@@ -88,7 +88,6 @@ ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
-ns.conservative_tension_force=0
 # make this 0.0 g/s^2 instead of 10.0 g/s^2 since the exact solution does not
 # depend on this.
 ns.tension=0.0  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
