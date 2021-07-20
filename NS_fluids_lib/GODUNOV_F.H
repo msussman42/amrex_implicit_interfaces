@@ -1173,7 +1173,6 @@ extern "C"
      int* itensor_iter,
      Real* time,
      int* temperature_primitive_variable,
-     int* face_flag,
      int* enable_spectral,
      int* velbc,
      int* spectral_loop,

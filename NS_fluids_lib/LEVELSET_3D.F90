@@ -11403,15 +11403,14 @@ stop
       return
       end subroutine FORT_BUILD_MODVISC
 
-       ! operation_flag=0 (right hand side for solver)
-       ! operation_flag=1 (divergence)
-       ! operation_flag=2 (mac -> cell velocity in solver or MAC_TO_CELL)
-       ! operation_flag=3 (cell pressure gradient, 
-       !     cell density (if non conservative), cell energy)
-       ! operation_flag=4 (gravity and surface tension force at cell)
-       ! in the face_gradients routine, operation_flag=5 (interp grad U^T)
-       ! operation_flag=6 (advection)
-       ! operation_flag=7 (mac -> cell displacement in MAC_TO_CELL)
+       ! operation_flag=100 (right hand side for solver)
+       ! operation_flag=110 (divergence)
+       ! operation_flag=103 (mac -> cell velocity in solver or MAC_TO_CELL)
+       ! operation_flag=101 (copy u^{mac->cell} to u^{cell},
+       !                     div(up) or p div u or rho div u)
+       ! operation_flag=105 (from face_gradients, interp grad U^T)
+       ! operation_flag=107 (advection)
+       ! operation_flag=113 (mac -> cell displacement in MAC_TO_CELL)
       subroutine fort_mac_to_cell( &
        ns_time_order, &
        divu_outer_sweeps, &
@@ -11428,7 +11427,6 @@ stop
        nten, &
        level, &
        finest_level, &
-       face_flag, &
        project_option, &
        enable_spectral, &
        fluxvel_index, &
@@ -11483,7 +11481,7 @@ stop
        denold,DIMS(denold), &
        ustar,DIMS(ustar), &
        recon,DIMS(recon), &
-       mdotcell,DIMS(mdotcell), & ! holds velocity if operation_flag==6
+       mdotcell,DIMS(mdotcell), & ! holds velocity if operation_flag==107
        maskdivres,DIMS(maskdivres), &
        maskres,DIMS(maskres), &
        SDC_outer_sweeps, &
@@ -11514,7 +11512,6 @@ stop
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: enable_spectral
       INTEGER_T, intent(in) :: SDC_outer_sweeps 
-      INTEGER_T, intent(in) :: face_flag 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: energyflag 
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
@@ -11906,8 +11903,8 @@ stop
       endif
    
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
-      if ((operation_flag.eq.2).or. & ! velocity
-          (operation_flag.eq.7)) then ! displacement
+      if ((operation_flag.eq.103).or. & ! velocity
+          (operation_flag.eq.113)) then ! displacement
        if (ncomp_veldest.ge.SDIM) then
         ! do nothing
        else
@@ -11936,9 +11933,8 @@ stop
         stop
        endif
 
-       ! cell grad p, 
-       ! cell density (if non-conservative), cell energy
-      else if (operation_flag.eq.3) then 
+       ! div(up), p div u, or, rho div u
+      else if (operation_flag.eq.101) then 
  
        if (ncomp_veldest.ge. &
            SDIM+num_state_material*nmat) then
@@ -11969,7 +11965,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.0) then ! rhs of solver
+      else if (operation_flag.eq.100) then ! rhs of solver
 
        if (ncomp_veldest.eq.nsolve) then
         ! do nothing
@@ -12000,7 +11996,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.1) then ! divergence
+      else if (operation_flag.eq.110) then ! divergence
 
        if (ncomp_veldest.eq.1) then
         ! do nothing
@@ -12033,61 +12029,24 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.4) then ! gravity and surface tension
+      else if (operation_flag.eq.107) then ! advection
 
-       if (ncomp_veldest.eq.SDIM) then
+       if (ncomp_veldest.eq. &
+           SDIM+nmat*(num_state_material+ngeom_raw)+1) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.eq.SDIM) then
-        ! do nothing
-       else
-        print *,"ncomp_dendest invalid"
-        stop
-       endif
-       if (ncphys.ne.vofface_index+2*nmat) then
-        print *,"ncphys invalid"
-        stop
-       endif
-       if (nsolve.eq.1) then
-        ! do nothing
-       else
-        print *,"nsolve invalid"
-        stop
-       endif
-
-       if (ncomp_denold.eq.1) then
-        ! do nothing
-       else
-        print *,"ncomp_denold invalid"
-        stop
-       endif
-
-      else if (operation_flag.eq.5) then
-
-       print *,"grad U^MAC -> grad U^CELL called from FACE_GRADIENTS"
-       stop
-
-      else if (operation_flag.eq.6) then ! advection
-
-       if (ncomp_veldest.ge. &
-           SDIM+num_state_material*nmat) then
-        ! do nothing
-       else
-        print *,"ncomp_veldest invalid"
-        stop
-       endif
-       if (ncomp_dendest.ge.num_state_material*nmat) then
+       if (ncomp_dendest.eq.ncomp_veldest-(SDIM+1)) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
         stop
        endif
 
-       if ((nsolve.ne.SDIM+num_state_base).or. &
-           (ncphys.ne.SDIM+num_state_base)) then
+       if ((nsolve.ne.SDIM+1).or. &
+           (ncphys.ne.SDIM+1)) then
         print *,"nsolve or ncphys invalid"
         stop
        endif
@@ -12100,11 +12059,11 @@ stop
        endif
 
       else
-       print *,"operation_flag invalid6"
+       print *,"operation_flag invalid6: ",operation_flag
        stop
       endif
 
-      if (operation_flag.eq.0) then  ! rhs for solver
+      if (operation_flag.eq.100) then  ! rhs for solver
 
        if (energyflag.eq.0) then
         ! do nothing
@@ -12119,7 +12078,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.1) then ! divergence
+      else if (operation_flag.eq.110) then ! divergence
 
        if (energyflag.eq.0) then
         ! do nothing
@@ -12141,8 +12100,8 @@ stop
        endif
 
        ! umac->ucell in solver or VELMAC_TO_CELL
-      else if ((operation_flag.eq.2).or. & ! velocity
-               (operation_flag.eq.7)) then ! displacement
+      else if ((operation_flag.eq.103).or. & ! velocity
+               (operation_flag.eq.113)) then ! displacement
 
        if (homflag.eq.0) then
         ! do nothing
@@ -12160,16 +12119,15 @@ stop
         stop
        endif
 
-        ! gradp^cell, div(up)
+        ! copy u^{mac->cell} to u^{cell}, div(up)
         ! future: p div u, rho div u
-      else if (operation_flag.eq.3) then 
+      else if (operation_flag.eq.101) then 
        if (homflag.ne.0) then
         print *,"homflag invalid"
         stop
        endif
-       if ((energyflag.ne.0).and. & ! grad p but not div(up) for upd. st.
-           (energyflag.ne.1).and. & ! grad p and div(up) for update state
-           (energyflag.ne.2)) then ! grad p, div(up) for space time
+       if ((energyflag.ne.0).and. & ! update u^{cell}, do not use div(up) 
+           (energyflag.ne.1)) then  ! update u^{cell}, use div(up)
         print *,"energyflag invalid"
         stop
        endif
@@ -12178,17 +12136,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.4) then ! gravity and surface tension at cell
-
-       if (energyflag.ne.0) then
-        print *,"energyflag invalid"
-        stop
-       endif
-       if (homflag.ne.0) then
-        print *,"homflag invalid"
-        stop
-       endif
-
+       FIX ME
       else if (operation_flag.eq.6) then ! advection
 
         ! "source_term" 
