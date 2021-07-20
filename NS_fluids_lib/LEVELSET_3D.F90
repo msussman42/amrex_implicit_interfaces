@@ -11435,7 +11435,6 @@ stop
        facecut_index, &
        icefacecut_index, &
        curv_index, &
-       conservative_tension_force, &
        conservative_div_uu, &
        ignore_div_up, &
        pforce_index, &
@@ -11532,7 +11531,6 @@ stop
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
@@ -11683,18 +11681,10 @@ stop
       REAL_T uface(2)
       REAL_T ufacesolid(2)
       REAL_T aface(2)
-      REAL_T pfacegrav(2)
-      REAL_T pfacetenleft(2)
-      REAL_T pfacetenright(2)
-      REAL_T pfaceten(2)
       REAL_T pres_face(2)
-      REAL_T GP_CEN_HOLD(SDIM)
-      REAL_T GP_CEN_OVER_RHO_HOLD(SDIM)
 
-       ! 0=no gp or div(up)
-       ! 1=no gp but div(up)
-       ! 2=no div(up) but gp
-       ! 3=both
+       ! 0=no div(up)
+       ! 1=div(up) ok
       INTEGER_T use_face_pres_cen
       INTEGER_T use_face_pres(2)  ! faces that are on either side of a cell.
       INTEGER_T use_face_pres_combine
@@ -11881,11 +11871,6 @@ stop
        stop
       endif
 
-      if ((conservative_tension_force.ne.0).and. &
-          (conservative_tension_force.ne.1)) then
-       print *,"conservative_tension_force invalid"
-       stop
-      endif
       if ((ignore_div_up.eq.0).or. &
           (ignore_div_up.eq.1)) then
        ! do nothing
@@ -12119,8 +12104,8 @@ stop
         stop
        endif
 
-        ! copy u^{mac->cell} to u^{cell}, div(up)
-        ! future: p div u, rho div u
+        ! copy u^{mac->cell} to u^{cell}, div(up),
+        ! p div u, rho div u
       else if (operation_flag.eq.101) then 
        if (homflag.ne.0) then
         print *,"homflag invalid"
@@ -12136,8 +12121,7 @@ stop
         stop
        endif
 
-       FIX ME
-      else if (operation_flag.eq.6) then ! advection
+      else if (operation_flag.eq.107) then ! advection
 
         ! "source_term" 
        if ((homflag.ne.0).and.(homflag.ne.1)) then
@@ -12184,9 +12168,12 @@ stop
       call checkbound_array(fablo,fabhi,yface_ptr,0,1,33)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,33)
 
-      call checkbound_array1(fablo,fabhi,ax,0,0,33)
-      call checkbound_array1(fablo,fabhi,ay,0,1,33)
-      call checkbound_array1(fablo,fabhi,az,0,SDIM-1,33)
+      ax_ptr=>ax
+      call checkbound_array1(fablo,fabhi,ax_ptr,0,0,33)
+      ay_ptr=>ay
+      call checkbound_array1(fablo,fabhi,ay_ptr,0,1,33)
+      az_ptr=>az
+      call checkbound_array1(fablo,fabhi,az_ptr,0,SDIM-1,33)
 
       call checkbound_array(fablo,fabhi,vol_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,rhs_ptr,0,-1,33)
@@ -12195,17 +12182,25 @@ stop
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,133)
       call checkbound_array(fablo,fabhi,maskcoef_ptr,1,-1,134)
-      call checkbound_array(fablo,fabhi,levelPC,1,-1,135)
 
-      call checkbound_array(fablo,fabhi,solxfab,0,0,136)
-      call checkbound_array(fablo,fabhi,solyfab,0,1,136)
-      call checkbound_array(fablo,fabhi,solzfab,0,SDIM-1,136)
+      levelPC_ptr=>levelPC
+      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,135)
+
+      solxfab_ptr=>solxfab
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,136)
+      solyfab_ptr=>solyfab
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,136)
+      solzfab_ptr=>solzfab
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,136)
 
       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,pold_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,denold_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,ustar_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,recon,0,-1,33)
+
+      recon_ptr=>recon
+      call checkbound_array(fablo,fabhi,recon_ptr,0,-1,33)
+
       call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
       call checkbound_array1(fablo,fabhi,maskdivres_ptr,0,-1,137)
       call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,138)
@@ -12285,7 +12280,7 @@ stop
         stop
        endif
 
-       if (operation_flag.eq.1) then ! DIV
+       if (operation_flag.eq.110) then ! DIV
 
         divu= &
          AXR*xvel(D_DECL(i+1,j,k),1)-  &
@@ -12300,7 +12295,7 @@ stop
         divu=divu/VOLTERM
         rhs(D_DECL(i,j,k),1)=divu
 
-       else if (operation_flag.eq.0) then ! RHS
+       else if (operation_flag.eq.100) then ! RHS
 
         ! (cterm)*p-vol grad dot grad p/rho=-vol div u/dt + mdot +
         !    cterm * p^adv 
@@ -12520,17 +12515,17 @@ stop
         endif
 
        ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
-       else if ((operation_flag.eq.2).or. & ! velocity
-                (operation_flag.eq.7)) then ! displacement
+       else if ((operation_flag.eq.103).or. & ! velocity
+                (operation_flag.eq.113)) then ! displacement
 
          ! LS>0 if clamped
-        if (operation_flag.eq.2) then ! velocity
+        if (operation_flag.eq.103) then ! velocity
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped)
-        else if (operation_flag.eq.7) then ! displacement
+        else if (operation_flag.eq.113) then ! displacement
          LS_clamped=-9999.0
         else
-         print *,"operation_flag invalid"
+         print *,"operation_flag invalid:",operation_flag
          stop
         endif
      
@@ -12693,10 +12688,10 @@ stop
  
           if (dir.eq.0) then
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
-           if (operation_flag.eq.2) then ! velocity
+           if (operation_flag.eq.103) then ! velocity
             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.7) then ! displacement
+           else if (operation_flag.eq.113) then ! displacement
             ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
@@ -12741,10 +12736,10 @@ stop
            endif
           else if (dir.eq.1) then
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
-           if (operation_flag.eq.2) then ! velocity
+           if (operation_flag.eq.103) then ! velocity
             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.7) then ! displacement
+           else if (operation_flag.eq.113) then ! displacement
             ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
@@ -12752,10 +12747,10 @@ stop
            endif
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
-           if (operation_flag.eq.2) then ! velocity
+           if (operation_flag.eq.103) then ! velocity
             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.7) then ! displacement
+           else if (operation_flag.eq.113) then ! displacement
             ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
@@ -12835,22 +12830,18 @@ stop
 
         enddo  ! dir=0..sdim-1
 
-        ! use_face_pres.eq.1   ! div(up) ok, not gp
-        ! use_face_pres.eq.2   ! div(up) not ok, gp ok
-        ! use_face_pres.eq.3 ! div(up) and gp ok
-        ! note: use_face_pres<=1 at faces if face_flag=1
-        ! note: use_face_pres<=3 at faces if face_flag=0
+        ! use_face_pres.eq.1   ! div(up) ok
         ! in: fort_mac_to_cell
-       else if (operation_flag.eq.3) then ! (grad p)_CELL, div(up)
+       else if (operation_flag.eq.101) then ! (grad p)_CELL, div(up)
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped)
 
-        use_face_pres_cen=3 ! both gp and div(up)
+        use_face_pres_cen=1
 
         if (LS_clamped.ge.zero) then
-         use_face_pres_cen=2  ! no div(up), no rho divu (if non-cons)
+         use_face_pres_cen=0
         else if (LS_clamped.lt.zero) then
          ! do nothing
         else
@@ -12872,14 +12863,14 @@ stop
          LStest(im)=levelPC(D_DECL(i,j,k),im)
          if (vfrac(im).ge.VOFTOL) then
           if (is_rigid(nmat,im).eq.1) then
-           use_face_pres_cen=2  ! no div(up), no rho divu (if non-cons)
+           use_face_pres_cen=0
           else if (is_rigid(nmat,im).eq.0) then
            if (is_ice(nmat,im).eq.1) then
-            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
+            use_face_pres_cen=0
            else if (is_FSI_rigid(nmat,im).eq.1) then
-            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
+            use_face_pres_cen=0
            else if (imattype.eq.0) then
-            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
+            use_face_pres_cen=0
            else if ((imattype.ge.1).and. &
                     (imattype.le.MAX_NUM_EOS)) then
             if (constant_density_all_time(im).eq.0) then
@@ -12894,7 +12885,7 @@ stop
            endif
 
            if (ignore_div_up.eq.1) then
-            use_face_pres_cen=2 ! no div(up), no rho divu (if non-cons)
+            use_face_pres_cen=0
            else if (ignore_div_up.eq.0) then
             ! do nothing
            else
@@ -12909,7 +12900,7 @@ stop
          else if (abs(vfrac(im)).le.VOFTOL) then
           ! do nothing
          else
-          print *,"vfrac(im) invalid (1) fort_mac_to_cell op_flag==3"
+          print *,"vfrac(im) invalid (1) fort_mac_to_cell op_flag==101"
           stop
          endif 
         enddo ! im=1..nmat
@@ -13071,7 +13062,7 @@ stop
 
          if (1.eq.0) then
           if (dir.eq.SDIM-1) then
-           print *,"grad p^cell  i,j,k,dir,dencell ",i,j,k,dir,dencell
+           print *,"i,j,k,dir,dencell ",i,j,k,dir,dencell
           endif
          endif
 
@@ -13098,59 +13089,24 @@ stop
           endif
          enddo ! im=1..nmat
 
-           ! use_face_pres.eq.1   ! div(up) ok, not gp
-           ! use_face_pres.eq.2   ! div(up) not ok, gp ok
-           ! use_face_pres.eq.3 ! div(up) and gp ok
+           ! use_face_pres.eq.1   ! div(up) ok
          if (use_face_pres(1).eq.use_face_pres(2)) then
           use_face_pres_combine=use_face_pres(1)
-         else if ((use_face_pres(1).eq.3).or. &
-                  (use_face_pres(2).eq.3)) then
+         else if ((use_face_pres(1).eq.1).or. &
+                  (use_face_pres(2).eq.1)) then
           use_face_pres_combine=min(use_face_pres(1),use_face_pres(2))
          else if ((use_face_pres(1).eq.0).or. &
                   (use_face_pres(2).eq.0)) then
-          use_face_pres_combine=0
-         else if ((use_face_pres(1).eq.1).and. &
-                  (use_face_pres(2).eq.2)) then
-          use_face_pres_combine=0
-         else if ((use_face_pres(1).eq.2).and. &
-                  (use_face_pres(2).eq.1)) then
           use_face_pres_combine=0
          else
           print *,"use_face_pres invalid"
           stop
          endif
         
-         if (use_face_pres_cen.eq.3) then
+         if (use_face_pres_cen.eq.1) then
           use_face_pres_cen=use_face_pres_combine
          else if (use_face_pres_cen.eq.0) then
           ! do nothing
-         else if (use_face_pres_cen.eq.2) then
-          if (use_face_pres_combine.eq.0) then
-           use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.1) then
-           use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.2) then
-           use_face_pres_cen=2
-          else if (use_face_pres_combine.eq.3) then
-           use_face_pres_cen=2
-          else
-           print *,"use_face_pres_combine invalid"
-           stop
-          endif
-         else if (use_face_pres_cen.eq.1) then
-          if (use_face_pres_combine.eq.0) then
-           use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.1) then
-           use_face_pres_cen=1
-          else if (use_face_pres_combine.eq.2) then
-           use_face_pres_cen=0
-          else if (use_face_pres_combine.eq.3) then
-           use_face_pres_cen=1
-          else
-           print *,"use_face_pres_combine invalid"
-           stop
-          endif
-
          else
           print *,"use_face_pres_cen invalid"
           print *,"use_face_pres_cen=",use_face_pres_cen
@@ -13196,113 +13152,34 @@ stop
            print *,"all_incomp invalid"
            stop
           endif
-         else if (energyflag.eq.2) then
-          if (all_incomp.eq.0) then
-
-           RHO_force=RHO_force+ &
-            (aface(2)*uface(2)- &
-             aface(1)*uface(1))/VOLTERM
-
-           Eforce_primitive=Eforce_primitive+ &
-            (aface(2)*uface(2)- &
-             aface(1)*uface(1))*cell_pressure/VOLTERM
-           Eforce_conservative=Eforce_conservative+ &
-            (aface(2)*uface(2)*pres_face(2)- &
-             aface(1)*uface(1)*pres_face(1))/VOLTERM
-
-          else if (all_incomp.eq.1) then
-           ! do nothing
-          else
-           print *,"all_incomp invalid"
-           stop
-          endif
          else
           print *,"energyflag invalid"
           stop
          endif
 
-         GP_CEN_HOLD(dir+1)=(pres_face(2)-pres_face(1))/hx
-         GP_CEN_OVER_RHO_HOLD(dir+1)=GP_CEN_HOLD(dir+1)/dencell
+        enddo ! dir=0..sdim-1 (operation_flag.eq.101)  (grad p)_CELL, div(up)
 
-        enddo ! dir=0..sdim-1 (operation_flag.eq.3)  (grad p)_CELL, div(up)
-
-         ! replace average MAC velocity with less dissipative
-         !  ustar- gp^cell ?
-        do dir=0,SDIM-1
-
-         ! do not overwrite veldest with (un-grad p)^Cell
-         if ((use_face_pres_cen.eq.0).or. &
-             (use_face_pres_cen.eq.1)) then 
-
-          if (energyflag.eq.2) then  ! space-time, set grad p^cell = 0
-           velcomp=dir+1
-           ! this holds grad p^CELL when energyflag==2
-           ustar(D_DECL(i,j,k),velcomp)=zero
-          endif ! energyflag.eq.2
-
-         ! overwrite veldest with (un-grad p)^Cell if use_face_pres_cen==2,3
-         else if ((use_face_pres_cen.eq.2).or. &
-                  (use_face_pres_cen.eq.3)) then 
-
-          ! density=masscell/vol
-          if ((energyflag.eq.0).or. &
-              (energyflag.eq.1)) then
-
-           velcomp=dir+1
-
-           dp=dt*GP_CEN_OVER_RHO_HOLD(velcomp)
-           veldest(D_DECL(i,j,k),velcomp)=ustar(D_DECL(i,j,k),velcomp)-dp
-
-           if (1.eq.0) then
-            if ((i.eq.0).and.(dir.eq.0)) then
-             print *,"i,j,k ",i,j,k
-             print *,"ustar: ",ustar(D_DECL(i,j,k),velcomp)
-             print *,"veldest: ",veldest(D_DECL(i,j,k),velcomp)
-             print *,"dp ",dp
-            endif
-           endif
-
-           ! this is for space-time
-          else if (energyflag.eq.2) then
-
-           velcomp=dir+1
-           ustar(D_DECL(i,j,k),velcomp)=GP_CEN_HOLD(velcomp)
-
-          else
-           print *,"energyflag invalid"
-           stop
-          endif
-
-         else
-          print *,"use_face_pres_cen bust"
-          stop
-         endif
-
-         if (1.eq.0) then
-          print *,"APPLYING GRADP(velocity is scaled)"
-          print *,"i,j,k,dir ",i,j,k,dir
-          print *,"veldest= ",veldest(D_DECL(i,j,k),dir+1)
-          print *,"ustar= ",ustar(D_DECL(i,j,k),dir+1)
-          print *,"level,finest_level ",level,finest_level
-         endif
-
-        enddo ! dir=0..sdim-1
+        if ((use_face_pres_cen.eq.0).or. &
+            (use_face_pres_cen.eq.1)) then 
+         ! do nothing
+        else
+         print *,"use_face_pres_cen bust"
+         stop
+        endif
 
         rhs(D_DECL(i,j,k),1)=zero
 
          ! update the total energy in partial cells (regular project)
         if (project_option.eq.0) then
 
-         if ((use_face_pres_cen.eq.0).or. &
-             (use_face_pres_cen.eq.2)) then
+         if (use_face_pres_cen.eq.0) then
 
           RHO_force=zero
           Eforce_conservative=zero
           Eforce_primitive=zero
           rhs(D_DECL(i,j,k),1)=zero
 
-         else if ((use_face_pres_cen.eq.1).or. &
-                  (use_face_pres_cen.eq.3)) then          
+         else if (use_face_pres_cen.eq.1) then
 
           if (local_primitive.eq.0) then
            rhs(D_DECL(i,j,k),1)=Eforce_conservative
@@ -13484,8 +13361,6 @@ stop
             endif 
            enddo ! im=1..nmat
 
-          else if (energyflag.eq.2) then ! for spectral method
-           ! do nothing
           else if (energyflag.eq.0) then ! do not update temperature
            ! do nothing
           else
@@ -13508,168 +13383,7 @@ stop
          stop
         endif
 
-       else if (operation_flag.eq.4) then ! (grad ppot)_CELL and surface ten.
-
-        if (nsolve.ne.1) then
-         print *,"nsolve invalid7"
-         stop
-        endif
-
-        do dir=0,SDIM-1 
-         ii=0
-         jj=0
-         kk=0
-         if (dir.eq.0) then
-          ii=1
-         else if (dir.eq.1) then
-          jj=1
-         else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          kk=1
-         else
-          print *,"dir out of range in mac to cell"
-          stop
-         endif
-
-         hx=xsten(1,dir+1)-xsten(-1,dir+1)
-         RR=one
-         if ((levelrz.eq.0).or.(levelrz.eq.1)) then
-          RR=one
-         else if (levelrz.eq.3) then
-          if (dir.eq.1) then ! theta direction
-           RR=xsten(0,1)
-          else if ((dir.eq.0).or.(dir.eq.SDIM-1)) then
-           RR=one
-          else
-           print *,"dir invalid mac to cell"
-           stop
-          endif
-         else
-          print *,"levelrz invalid mac to cell 3"
-          stop
-         endif
-         hx=hx*RR
-         if (hx.le.zero) then
-          print *,"hx invalid"
-          stop
-         endif
-
-         dencellgrav=denold(D_DECL(i,j,k),1) ! hydrostatic density
-
-         if (dencellgrav.le.zero) then
-          print *,"hydrostatic density must be positive"
-          stop
-         endif
-
-         ! side=1 left half of cell, side=2 right half of cell
-         do side=1,2
-
-          if (side.eq.1) then
-           iface=i
-           jface=j
-           kface=k
-          else if (side.eq.2) then
-           iface=i+ii
-           jface=j+jj
-           kface=k+kk
-          else
-           print *,"side invalid"
-           stop
-          endif
- 
-          if (dir.eq.0) then 
-           do im=1,ncphys
-            ASIDE(side,im)=xface(D_DECL(iface,jface,kface),im)
-           enddo
-           pfacegrav(side)=xp(D_DECL(iface,jface,kface),1)
-           pfacetenleft(side)=xp(D_DECL(iface,jface,kface),2)
-           pfacetenright(side)=xp(D_DECL(iface,jface,kface),3)
-          else if (dir.eq.1) then
-           do im=1,ncphys
-            ASIDE(side,im)=yface(D_DECL(iface,jface,kface),im)
-           enddo
-           pfacegrav(side)=yp(D_DECL(iface,jface,kface),1)
-           pfacetenleft(side)=yp(D_DECL(iface,jface,kface),2)
-           pfacetenright(side)=yp(D_DECL(iface,jface,kface),3)
-          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           do im=1,ncphys
-            ASIDE(side,im)=zface(D_DECL(iface,jface,kface),im)
-           enddo
-           pfacegrav(side)=zp(D_DECL(iface,jface,kface),1)
-           pfacetenleft(side)=zp(D_DECL(iface,jface,kface),2)
-           pfacetenright(side)=zp(D_DECL(iface,jface,kface),3)
-          else
-           print *,"dir invalid mac to cell 5"
-           stop
-          endif
-
-          if (side.eq.1) then
-           pfaceten(side)=pfacetenright(side) ! surf ten, rt side of lt face
-          else if (side.eq.2) then
-           pfaceten(side)=pfacetenleft(side)  ! surf ten, lt side of rt face
-          else
-           print *,"side invalid"
-           stop
-          endif
-
-          mass_side(side)=zero
-          do im=1,nmat 
-           if (side.eq.1) then  ! left half of cell
-            sidecomp=massface_index+2*(im-1)+2
-           else if (side.eq.2) then ! right half of cell
-            sidecomp=massface_index+2*(im-1)+1
-           else
-            print *,"side invalid"
-            stop
-           endif
-           mass_side(side)=mass_side(side)+ASIDE(side,sidecomp) 
-          enddo ! im
-
-         enddo ! side
-
-         masscell=mass_side(1)+mass_side(2)
-
-         if ((mass_side(1).le.zero).or.(mass_side(2).le.zero).or. &
-             (masscell.le.zero)) then
-          print *,"mass invalid"
-          stop
-         endif
-
-         dencell=masscell/VOLTERM
-         if (dencell.le.zero) then
-          print *,"dencell invalid"
-          stop
-         endif
-
-         if (1.eq.0) then
-          if (dir.eq.SDIM-1) then
-           print *,"grad pot^cell  i,j,k,dir,dencell,dencellgrav ", &
-            i,j,k,dir,dencell,dencellgrav
-          endif
-         endif
-
-          ! p=-|g| dt z
-          ! force=dp/dz=-|g| dt
-         pgrad=(pfacegrav(2)-pfacegrav(1))/(dencellgrav*hx)
-
-         dp=dt*(pfaceten(2)-pfaceten(1))/(dencell*hx)
-
-         pgrad=pgrad-dp
-
-         veldest(D_DECL(i,j,k),dir+1)=pgrad
-
-         if (1.eq.0) then
-          if ((i.eq.0).or.(i.eq.1)) then
-           print *,"i,j,k,dir ",i,j,k,dir
-           print *,"dt,pfacegrav(1),pfacegrav(2),dencellgrav,hx ", &
-            dt,pfacegrav(1),pfacegrav(2),dencellgrav,hx
-           print *,"veldest: ",veldest(D_DECL(i,j,k),dir+1)
-           print *,"dp ",dp
-          endif
-         endif
-
-        enddo ! dir=0..sdim-1
-      
-       else if (operation_flag.eq.6) then ! advection
+       else if (operation_flag.eq.107) then ! advection
         ! low order approximation: CISL or sem_mac_to_cell
         ! high order approximation: sem_mac_to_cell
        else
@@ -13681,6 +13395,7 @@ stop
       enddo
       enddo
 
+      FIX ME
        ! for advection:
        !  1. low order fluxes are calculated in fort_cell_to_mac
        !     and high order fluxes are calculated in SEM_CELL_TO_MAC
