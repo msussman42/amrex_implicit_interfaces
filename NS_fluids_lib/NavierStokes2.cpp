@@ -1704,14 +1704,10 @@ void NavierStokes::apply_cell_pressure_gradient(
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
-  // grad p = div (pI) approx 
-  //  (1/|omega|) \integral_\partial\Omega pI dot n DA=
-  //  (1/|omega|) \integral_\partial\Omega p n DA
-  // each face needs a left and right pressure in order to account for
-  // the contribution from internal faces.
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,101);
   debug_ngrow(PEDGE_MF+dir,0,101);
+   // 0=use_face_pres  1=grid flag  2+1 (3rd component) pface
   if (localMF[PEDGE_MF+dir]->nComp()!=2+nsolve)
    amrex::Error("pedge_mf invalid ncomp");
   if (localMF[AREA_MF+dir]->boxArray()!=
@@ -1786,19 +1782,6 @@ void NavierStokes::apply_cell_pressure_gradient(
   ustar=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
   divup=new MultiFab(grids,dmap,nsolve,0,
    MFInfo().SetTag("divup"),FArrayBoxFactory());
-
-  //Spectral deferred correction:
-  //get grad p,div(up) instead of \pm dt grad p/rho, -dt div(up)/rho
- } else if (energyflag==2) { 
-  debug_ngrow(idx_gpcell,0,101);
-  debug_ngrow(idx_divup,0,101);
-  if (localMF[idx_gpcell]->nComp()!=AMREX_SPACEDIM)
-   amrex::Error("idx_gpcell has invalid ncomp");
-  if (localMF[idx_divup]->nComp()!=nsolve)
-   amrex::Error("idx_divup has invalid ncomp");
-
-  ustar=localMF[idx_gpcell];
-  divup=localMF[idx_divup];
  } else
   amrex::Error("energyflag invalid");
 
