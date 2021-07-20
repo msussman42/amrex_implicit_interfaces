@@ -3094,6 +3094,7 @@ void NavierStokes::VELMAC_TO_CELL(
  } else if (vel_or_disp==-1) { //mac velocity increment
   MAC_state_idx=Umac_Type;
   operation_flag=104;
+  local_enable_spectral=0;
  } else if (vel_or_disp==1) { //displacement
   MAC_state_idx=XDmac_Type;
   operation_flag=113;
