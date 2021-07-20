@@ -2946,6 +2946,7 @@ void NavierStokes::increment_face_velocity(
 
 } // subroutine increment_face_velocity
 
+// vel_or_disp=-1 => interpolate mac velocity increment
 // vel_or_disp=0 => interpolate mac velocity
 // vel_or_disp=1 => interpolate mac displacement
 // dest_idx==-1 => destination is the state data.
@@ -2972,7 +2973,8 @@ void NavierStokes::VELMAC_TO_CELLALL(
   Vector<int> scompBC_map;
   scompBC_map.resize(AMREX_SPACEDIM);
 
-  if (vel_or_disp==0) { // velocity
+  if ((vel_or_disp==0)||   //velocity
+      (vel_or_disp==-1)) { //velocity increment
    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
     scompBC_map[dir]=dir;
    GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
@@ -2996,6 +2998,7 @@ void NavierStokes::VELMAC_TO_CELLALL(
 
 } // end subroutine VELMAC_TO_CELLALL
 
+// vel_or_disp=-1 => interpolate mac velocity increment
 // vel_or_disp=0 => interpolate mac velocity
 // vel_or_disp=1 => interpolate mac displacement
 // dest_idx==-1 => destination is the state data.
@@ -3077,7 +3080,7 @@ void NavierStokes::VELMAC_TO_CELL(
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
- int operation_flag=103; //U^{MAC->CELL}
+ int operation_flag=-1; 
  int MAC_state_idx=Umac_Type;
 
  int local_enable_spectral=enable_spectral;
@@ -3088,6 +3091,9 @@ void NavierStokes::VELMAC_TO_CELL(
  if (vel_or_disp==0) { //velocity
   MAC_state_idx=Umac_Type;
   operation_flag=103;
+ } else if (vel_or_disp==-1) { //mac velocity increment
+  MAC_state_idx=Umac_Type;
+  operation_flag=104;
  } else if (vel_or_disp==1) { //displacement
   MAC_state_idx=XDmac_Type;
   operation_flag=113;
@@ -3101,7 +3107,8 @@ void NavierStokes::VELMAC_TO_CELL(
  }
 
  if (dest_idx==-1) {
-  if (vel_or_disp==0) {
+  if ((vel_or_disp==0)||   //u^{mac->cell}
+      (vel_or_disp==-1)) { //u_increment^{mac->cell}
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    dest_velocity=&S_new;
   } else if (vel_or_disp==1) {
@@ -3204,7 +3211,8 @@ void NavierStokes::VELMAC_TO_CELL(
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
-   &operation_flag, // operation_flag=103 (mac_vel -> cell_vel) or 113 (disp)
+   // operation_flag=103,104 (mac_vel -> cell_vel) or 113 (disp)
+   &operation_flag, 
    &energyflag,
    temperature_primitive_variable.dataPtr(),
    constant_density_all_time.dataPtr(),
