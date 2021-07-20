@@ -5,7 +5,7 @@ module CouplerIO
 
 implicit none
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!This file contains coupled subroutines that echange information between the Euler and
+!This file contains coupled subroutines that exchange information between the Euler and
 !structure code.
 !
 ! subroutines:

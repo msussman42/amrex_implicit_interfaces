@@ -11796,10 +11796,11 @@ void NavierStokes::vel_elastic_ALL() {
    // average down the MAC velocity, set the boundary conditions.
   make_MAC_velocity_consistentALL();
   int use_VOF_weight=1;
-  int vel_or_disp=0; //interpolate MAC velocity
+  int vel_or_disp=-1; //interpolate MAC velocity increment
   int dest_idx=-1;   //update State_Type
   FIX ME, only elastic material cell velocity is updated. 
 
+   // declared in: NavierStokes2.cpp
   VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
 
    // register_mark=unew
@@ -12149,8 +12150,6 @@ void NavierStokes::veldiffuseALL() {
 
   // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF,104);
-
- //vel_elastic_ALL();
 
 // -----------veldiffuseALL: viscosity -----------------------------
 
@@ -12911,7 +12910,8 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
   amrex::Error("level invalid INCREMENT_REGISTERS_ALL");
  int finest_level=parent->finestLevel();
 
-  // REGISTER_CURRENT_MF=unew-source_mf
+  // 1. allocate REGISTER_CURRENT_MF
+  // 2. REGISTER_CURRENT_MF=unew-source_mf
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.INCREMENT_REGISTERS(source_mf,caller_id);
@@ -12925,6 +12925,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
  Vector<blobclass> blobdata;
 
   // operation_flag==5 (interp_option==2)
+  // unew^f=unew^f+beta * REGISTER_CURRENT_MF^{c->f}
  increment_face_velocityALL(
    interp_option,project_option,
    REGISTER_CURRENT_MF,beta,blobdata);
@@ -12933,7 +12934,8 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
 } // end subroutine INCREMENT_REGISTERS_ALL
 
-// REGISTER_CURRENT_MF=(unew-source)
+// 1. allocate REGISTER_CURRENT_MF
+// 2. REGISTER_CURRENT_MF=(unew-source)
 void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
 
  if (num_state_base!=2)
