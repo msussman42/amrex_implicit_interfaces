@@ -105,7 +105,6 @@ ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
-ns.conservative_tension_force=0
 # in the future: impurities in the air effect this.
 ns.tension=72.8  # CODY ~ sigma_liquid=0.01 N/m  (10 g/s^2)
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG

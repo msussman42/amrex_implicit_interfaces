@@ -36,7 +36,6 @@ ns.MOFITERMAX=15
 # continuous_mof=2 CMOF
 # continuous_mof=4 CLSVOF + CMOF hybrid
 ns.continuous_mof=0
-ns.conservative_tension_force=0
 ns.MOF_TURN_OFF_LS=0
 ns.num_materials=2
 ns.num_species_var=0

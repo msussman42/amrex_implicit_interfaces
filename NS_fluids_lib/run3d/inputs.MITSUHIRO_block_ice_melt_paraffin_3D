@@ -164,7 +164,6 @@ ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
-ns.conservative_tension_force=0
 # XYZ
 ns.tension=72.8 29.1 72.8 29.1 143.1 29.1   
 # RZ

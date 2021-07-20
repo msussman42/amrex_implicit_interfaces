@@ -118,7 +118,6 @@ ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
-ns.conservative_tension_force=0
 # in the future: impurities in the air effect this.
 # For comparison with Borodulin et al Figure 8, surface tension
 # should not make a difference since this coefficient is not in the

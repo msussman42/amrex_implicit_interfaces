@@ -86,7 +86,6 @@ ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=lubricant  4=substrate 
 # 12,13,14   23,24  3,4 
-ns.conservative_tension_force=0
 ns.tension=72.8 24.8 128.6 34.0 72.8 61.2
 # contact angle for water drop on substrate: 140 degrees
 # theta=theta_{water,substrate}

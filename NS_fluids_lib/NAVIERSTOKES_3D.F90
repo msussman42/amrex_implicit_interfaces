@@ -11622,7 +11622,7 @@ END SUBROUTINE SIMP
 ! NavierStokes3.cpp: NavierStokes::increment_potential_force()
 ! gravity_normalized>0 means that gravity is directed downwards.
 ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
-      subroutine FORT_ADDGRAVITY( &
+      subroutine fort_addgravity( &
        dt, &
        cur_time, &
        gravity_potential_form, &
@@ -11644,10 +11644,9 @@ END SUBROUTINE SIMP
        xface,DIMS(xface), &
        recon,DIMS(recon), &
        lsnew,DIMS(lsnew), &
-       snew,DIMS(snew), &
        macnew,DIMS(macnew), &
-       cellgrav,DIMS(cellgrav), &
-       facegrav,DIMS(facegrav) )
+       facegrav,DIMS(facegrav) ) &
+      bind(c,name='fort_addgravity')
 
       use global_utility_module
       use probcommon_module
@@ -11679,18 +11678,20 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      INTEGER_T, intent(in) :: DIMDEC(snew)
       INTEGER_T, intent(in) :: DIMDEC(macnew)
-      INTEGER_T, intent(in) :: DIMDEC(cellgrav)
       INTEGER_T, intent(in) :: DIMDEC(facegrav)
 
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
-      REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
-      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
-      REAL_T, intent(inout) :: macnew(DIMV(macnew))
-      REAL_T, intent(in) :: cellgrav(DIMV(cellgrav),SDIM)
-      REAL_T, intent(in) :: facegrav(DIMV(facegrav))
+      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: macnew(DIMV(macnew))
+      REAL_T, pointer :: macnew_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: facegrav(DIMV(facegrav))
+      REAL_T, pointer :: facegrav_ptr(D_DECL(:,:,:))
  
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -11716,6 +11717,12 @@ END SUBROUTINE SIMP
       INTEGER_T nhalf
 
       nhalf=1
+
+      xface_ptr=>xface
+      recon_ptr=>recon
+      lsnew_ptr=>lsnew
+      macnew_ptr=>macnew
+      facegrav_ptr=>facegrav
 
       if (bfact.lt.1) then
        print *,"bfact invalid160"
@@ -11782,13 +11789,11 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(xface),0,dir,42)
-      call checkbound(fablo,fabhi,DIMS(recon),1,-1,42)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,42)
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,42)
-      call checkbound(fablo,fabhi,DIMS(macnew),0,dir,42)
-      call checkbound(fablo,fabhi,DIMS(cellgrav),0,-1,42)
-      call checkbound(fablo,fabhi,DIMS(facegrav),0,dir,42)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,dir,42)
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,42)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,42)
+      call checkbound_array(fablo,fabhi,macnew_ptr,0,dir,42)
+      call checkbound_array(fablo,fabhi,facegrav_ptr,0,dir,42)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,7)
 
@@ -11878,118 +11883,8 @@ END SUBROUTINE SIMP
       enddo
       enddo
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-       do dir_local=1,SDIM
-        xclamped(dir_local)=xsten(0,dir_local)
-       enddo
-         ! LS>0 if clamped
-       call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-           vel_clamped,temperature_clamped)
-
-       if (LS_clamped.ge.zero) then
-        local_cut=zero
-       else if (LS_clamped.lt.zero) then
-        local_cut=one
-        do im=1,nmat
-         if (is_prescribed(nmat,im).eq.1) then
-          if (lsnew(D_DECL(i,j,k),im).ge.zero) then
-           local_cut=zero
-          else if (lsnew(D_DECL(i,j,k),im).lt.zero) then
-           ! do nothing
-          else
-           print *,"lsnew bust"
-           stop
-          endif
-         else if (is_prescribed(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_prescribed(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-       else
-        print *,"LS_clamped invalid"
-        stop
-       endif
-
-       if (local_cut.eq.one) then
-        ! 1. surface tension 
-        ! 2. gravity if gravity_potential_form==1
-        grav_component=cellgrav(D_DECL(i,j,k),dir+1)
-
-        vol_total=zero
-        mass_total=zero
-
-        do iside=0,1
-        do im=1,nmat
-
-         if (iside.eq.0) then
-          volside=xface(D_DECL(i,j,k),vofface_index+2*(im-1)+2)
-         else if (iside.eq.1) then
-          volside=xface(D_DECL(i+ii,j+jj,k+kk),vofface_index+2*(im-1)+1)
-         else
-          print *,"iside invalid"
-          stop
-         endif
-         vol_total=vol_total+volside
-          ! default is denconst_gravity(im)=1.0 im=1..nmat
-         if (denconst_gravity(im).ge.zero) then
-          mass_total=mass_total+denconst_gravity(im)*volside
-         else
-          print *,"denconst_gravity invalid"
-          stop
-         endif
-
-        enddo ! im=1..nmat
-        enddo ! iside=0..1
-
-        if (vol_total.gt.zero) then
-         denface_gravity=mass_total/vol_total
-        else
-         print *,"vol_total invalid"
-         stop
-        endif
-
-        gravity_increment=denface_gravity*grav_component
-
-        if (gravity_potential_form.eq.1) then
-
-         ! do nothing
-
-        else if (gravity_potential_form.eq.0) then
-
-         if (dir+1.eq.gravity_dir_parm) then
-          gravity_increment=gravity_increment- &
-            dt*gravity_normalized
-         endif
-
-        else
-         print *,"gravity_potential_form invalid"
-         stop
-        endif
-
-        velcomp=dir+1 
-        snew(D_DECL(i,j,k),velcomp)= &
-          snew(D_DECL(i,j,k),velcomp)+gravity_increment
-
-       else if (local_cut.eq.zero) then
-        ! do nothing
-       else
-        print *,"local_cut invalid"
-        stop
-       endif 
-
-      enddo
-      enddo
-      enddo
-
       return
-      end subroutine FORT_ADDGRAVITY
+      end subroutine fort_addgravity
 
        ! updatevelALL called from: NavierStokes::multiphase_project
        ! mac_update is called from: NavierStokes::updatevelALL

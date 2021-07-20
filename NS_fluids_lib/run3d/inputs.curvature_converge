@@ -9,7 +9,6 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0 
 geometry.prob_hi   =  3.0 3.0 3.0 
 ns.FD_curv_interp=1
-ns.conservative_tension_force=0
 
 # multigrid class
 #mg.verbose = 1

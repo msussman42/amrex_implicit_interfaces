@@ -57,7 +57,6 @@ mg.rtol_b = -0.01
 ns.continuous_mof=2
 ns.EILE_flag=1
 
-ns.conservative_tension_force=0
 
 ns.num_materials=3
 ns.num_species_var=0

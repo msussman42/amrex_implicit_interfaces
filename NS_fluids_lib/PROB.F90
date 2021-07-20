@@ -16082,13 +16082,11 @@ END SUBROUTINE Adist
       return
       end subroutine SEM_CELL_TO_MAC
       
-       ! operation_flag=0 (right hand side for solver)
-       ! operation_flag=1 (divergence)
-       ! operation_flag=2 (mac -> cell velocity in solver)
-       ! operation_flag=3 (cell pressure gradient, p div (u))
-       ! operation_flag=4 (gravity and surface tension force at cell)
-       ! operation_flag=5 interpolate grad u from MAC to CELL.
-       ! operation_flag=6 advection
+       ! operation_flag=100 (right hand side for solver)
+       ! operation_flag=110 (divergence)
+       ! operation_flag=103 (mac -> cell velocity in solver)
+       ! operation_flag=105 interpolate grad u from MAC to CELL.
+       ! operation_flag=107 advection
        ! mask>0 SEM; mask=0 piecewise finite volume
       subroutine SEM_MAC_TO_CELL( &
        ncomp_denold, &
@@ -16107,7 +16105,6 @@ END SUBROUTINE Adist
        project_option, &
        energyflag, &
        temperature_primitive_variable, &
-       face_flag, &
        homflag, &
        maskSEM, &
        time, &
@@ -16133,7 +16130,7 @@ END SUBROUTINE Adist
        xvel, & 
        maskcoef, & 
        cterm, & 
-       mdotcell, &  ! holds velocity if operation_flag==6
+       mdotcell, &  ! holds velocity if operation_flag==107
        pold, & 
        denold, & 
        ustar, & 
@@ -16161,7 +16158,6 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: homflag
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: energyflag
-      INTEGER_T, intent(in) :: face_flag
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T :: advect_iter
       INTEGER_T :: source_term
@@ -16263,11 +16259,6 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((face_flag.ne.0).and.(face_flag.ne.1)) then
-       print *,"face_flag invalid"
-       stop
-      endif
-
       ntensor=SDIM*SDIM
 
       if (bfact.lt.1) then
@@ -16352,7 +16343,7 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if (operation_flag.eq.5) then ! grad U: MAC -> CELL
+      if (operation_flag.eq.105) then ! grad U: MAC -> CELL
 
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
@@ -16395,7 +16386,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.0) then ! RHS for solver
+      else if (operation_flag.eq.100) then ! RHS for solver
 
        if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
@@ -16480,7 +16471,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.1) then ! divergence
+      else if (operation_flag.eq.110) then ! divergence
 
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
@@ -16528,7 +16519,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.2) then !MAC->CELL in solver or VELMAC_TO_CELL
+      else if (operation_flag.eq.103) then!MAC->CELL in solver or VELMAC_TO_CELL
 
        if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
         print *,"maskSEM invalid"
@@ -16589,124 +16580,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.3) then ! (grad p)^CELL, div(u)p
-
-       if (ncomp_veldest.ge. &
-           SDIM+num_state_material*nmat) then
-        ! do nothing
-       else
-        print *,"ncomp_veldest invalid"
-        stop
-       endif
-       if (ncomp_dendest.ge.num_state_material*nmat) then
-        ! do nothing
-       else
-        print *,"ncomp_dendest invalid"
-        stop
-       endif
-       if (ncomp_denold.eq.1) then
-        ! do nothing
-       else
-        print *,"ncomp_denold invalid"
-        stop
-       endif
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
-        print *,"maskSEM invalid"
-        stop
-       endif 
-       if ((scomp_bc.lt.1).or.(scomp_bc.gt.SDIM)) then
-        print *,"scomp_bc invalid"
-        stop
-       endif
-       if ((dcomp.ge.1).and.(dcomp.le.SDIM)) then
-        ! do nothing
-       else
-        print *,"dcomp invalid"
-        stop
-       endif
-       if (dcomp.eq.dir_main) then
-        ! do nothing
-       else
-        print *,"dcomp invalid"
-        stop
-       endif
-       if ((scomp.ne.1).or.(ncomp.ne.1)) then
-        print *,"scomp or ncomp invalid"
-        stop
-       endif
-       if ((energyflag.ne.0).and. &
-           (energyflag.ne.1).and. &
-           (energyflag.ne.2)) then
-        print *,"energyflag invalid"
-        stop
-       endif
-       if (ncomp_xvel.ne.1) then
-        print *,"ncomp_xvel invalid"
-        stop
-       endif
-       if (ncomp_cterm.ne.1) then
-        print *,"ncomp_cterm invalid"
-        stop
-       endif
-
-      else if (operation_flag.eq.4) then ! (grad pot)^CELL
-
-       if (ncomp_veldest.eq.SDIM) then
-        ! do nothing
-       else
-        print *,"ncomp_veldest invalid"
-        stop
-       endif
-       if (ncomp_dendest.eq.SDIM) then
-        ! do nothing
-       else
-        print *,"ncomp_dendest invalid"
-        stop
-       endif
-       if (ncomp_denold.eq.1) then
-        ! do nothing
-       else
-        print *,"ncomp_denold invalid"
-        stop
-       endif
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
-        print *,"maskSEM invalid"
-        stop
-       endif 
-       if ((scomp_bc.lt.1).or.(scomp_bc.gt.SDIM)) then
-        print *,"scomp_bc invalid"
-        stop
-       endif
-       if ((dcomp.ge.1).and.(dcomp.le.SDIM)) then
-        ! do nothing
-       else
-        print *,"dcomp invalid"
-        stop
-       endif
-       if (dcomp.eq.dir_main) then
-        ! do nothing
-       else
-        print *,"dcomp invalid"
-        stop
-       endif
-       if ((scomp.ne.1).or.(ncomp.ne.1)) then
-        print *,"scomp or ncomp invalid"
-        stop
-       endif
-       if (energyflag.ne.0) then
-        print *,"energyflag invalid"
-        stop
-       endif
-       if (ncomp_xvel.ne.1) then
-        print *,"ncomp_xvel invalid"
-        stop
-       endif
-       if (ncomp_cterm.ne.1) then
-        print *,"ncomp_cterm invalid"
-        stop
-       endif
-
-      else if (operation_flag.eq.6) then ! advection
+      else if (operation_flag.eq.107) then ! advection
 
        if ((maskSEM.ge.1).and.(maskSEM.le.nmat)) then
         ! do nothing
@@ -16715,14 +16589,14 @@ END SUBROUTINE Adist
         stop
        endif 
 
-       if (ncomp_veldest.ge. &
-           SDIM+num_state_material*nmat) then
+       if (ncomp_veldest.eq. &
+           SDIM+nmat*(num_state_material+ngeom_raw)+1) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.ge.num_state_material*nmat) then
+       if (ncomp_dendest.eq.ncomp_veldest-(SDIM+1)) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
@@ -16735,7 +16609,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-       if (ncomp.eq.SDIM+num_state_base) then
+       if (ncomp.eq.SDIM+1) then
         ! do nothing
        else
         print *,"ncomp invalid7"
@@ -16771,7 +16645,7 @@ END SUBROUTINE Adist
        endif
 
       else
-       print *,"operation_flag invalid26"
+       print *,"operation_flag invalid26:",operation_flag
        stop
       endif
 
@@ -16899,9 +16773,9 @@ END SUBROUTINE Adist
          jc=indexmid(2)
          kc=indexmid(SDIM)
 
-         if (operation_flag.eq.5) then ! interp grad U^T to cell.
+         if (operation_flag.eq.105) then ! interp grad U^T to cell.
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scomp+nc-1)
-         else if (operation_flag.eq.6) then ! advection
+         else if (operation_flag.eq.107) then ! advection
           if ((nc.ge.1).and.(nc.le.SDIM)) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac or u
           else if (nc.eq.SDIM+1) then
@@ -16913,7 +16787,7 @@ END SUBROUTINE Adist
           local_vel_data(isten+1)=xvel(D_DECL(ic,jc,kc),1) ! umac
           local_vel_data_div(isten+1)=xvel(D_DECL(ic,jc,kc),1) ! umac
 
-         else if (operation_flag.eq.0) then ! RHS
+         else if (operation_flag.eq.100) then ! RHS
 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),nc)
           xflux_R=xvel(D_DECL(ic,jc,kc),nc)
@@ -16923,7 +16797,7 @@ END SUBROUTINE Adist
            stop
           endif
 
-         else if (operation_flag.eq.1) then ! divergence
+         else if (operation_flag.eq.110) then ! divergence
 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),1)
           xflux_R=xvel(D_DECL(ic,jc,kc),1)
@@ -16933,7 +16807,7 @@ END SUBROUTINE Adist
            stop
           endif
 
-         else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
+         else if (operation_flag.eq.103) then!mac->cell solver or VELMAC_TO_CELL
 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),1)
           xflux_R=xvel(D_DECL(ic,jc,kc),1)
@@ -16942,42 +16816,9 @@ END SUBROUTINE Adist
            print *,"xflux_R invalid"
            stop
           endif
-
-         else if (operation_flag.eq.3) then ! (grad p)_CELL, div(u)p
-
-           ! grad p
-          local_data(isten+1)=xp(D_DECL(ic,jc,kc),2+1)
-          xflux_R=xp(D_DECL(ic,jc,kc),2+1)
-          if (abs(xflux_R-local_data(isten+1)).gt. &
-              VOFTOL*abs(xflux_R)) then
-           print *,"xflux_R invalid"
-           stop
-          endif
-
-           ! p div u
-          if (1.eq.0) then
-           local_data_up(isten+1)=xp(D_DECL(ic,jc,kc),2+1)* &
-            xvel(D_DECL(ic,jc,kc),1)
-           xflux_R=xp(D_DECL(ic,jc,kc),2+1)* &
-            xvel(D_DECL(ic,jc,kc),1)
-          else
-           local_data_up(isten+1)= &
-            xvel(D_DECL(ic,jc,kc),1)
-           xflux_R=xvel(D_DECL(ic,jc,kc),1)
-          endif
-
-          if (abs(xflux_R-local_data_up(isten+1)).gt. &
-              VOFTOL*abs(xflux_R)) then
-           print *,"xflux_R invalid"
-           stop
-          endif
-
-         else if (operation_flag.eq.4) then ! (grad ppot)_CELL
-
-          local_data(isten+1)=xp(D_DECL(ic,jc,kc),1)
 
          else
-          print *,"operation_flag invalid27"
+          print *,"operation_flag invalid27:",operation_flag
           stop
          endif
 
@@ -17012,21 +16853,17 @@ END SUBROUTINE Adist
           stop
          endif 
 
-         if (operation_flag.eq.5) then ! interp grad U^T
+         if (operation_flag.eq.105) then ! interp grad U^T
           ! do nothing
-         else if (operation_flag.eq.0) then !RHS
+         else if (operation_flag.eq.100) then !RHS
           local_data(isten+1)=local_data(isten+1)*RR
-         else if (operation_flag.eq.6) then !advection
+         else if (operation_flag.eq.107) then !advection
           local_data(isten+1)=local_data(isten+1)*RR
           local_vel_data_div(isten+1)=local_vel_data_div(isten+1)*RR
-         else if (operation_flag.eq.1) then !divergence
+         else if (operation_flag.eq.110) then !divergence
           local_data(isten+1)=local_data(isten+1)*RR
-         else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
+         else if (operation_flag.eq.103) then!mac->cell solver or VELMAC_TO_CELL
           local_data(isten+1)=local_data(isten+1)*RR
-         else if (operation_flag.eq.3) then !(grad p)_CELL, div (u)p
-          local_data_up(isten+1)=local_data_up(isten+1)*RR
-         else if (operation_flag.eq.4) then !(grad ppot)_CELL
-          ! do nothing
          else
           print *,"operation_flag invalid28"
           stop
@@ -17089,7 +16926,7 @@ END SUBROUTINE Adist
            stop
           endif
 
-          if (operation_flag.eq.5) then ! grad u^T: MAC->CELL
+          if (operation_flag.eq.105) then ! grad u^T: MAC->CELL
          
              ! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
            if ((velbc_in(dir_main,side,scomp_bc+nc-1).eq.REFLECT_EVEN).or. &
@@ -17110,20 +16947,16 @@ END SUBROUTINE Adist
             print *,"velbc_in is corrupt"
             stop
            endif
-          else if (operation_flag.eq.0) then!RHS
+          else if (operation_flag.eq.100) then!RHS
            ! do nothing
-          else if (operation_flag.eq.6) then!advection
+          else if (operation_flag.eq.107) then!advection
            ! do nothing
-          else if (operation_flag.eq.1) then!divergence
+          else if (operation_flag.eq.110) then!divergence
            ! do nothing
-          else if (operation_flag.eq.2) then!mac->cell solver or VELMAC_TO_CELL
-           ! do nothing
-          else if (operation_flag.eq.3) then!(grad p)_CELL, div(u)p
-           ! do nothing
-          else if (operation_flag.eq.4) then!(grad ppot)_CELL
+          else if (operation_flag.eq.103) then!mac->cell or VELMAC_TO_CELL
            ! do nothing
           else
-           print *,"operation_flag invalid29"
+           print *,"operation_flag invalid29:",operation_flag
            stop
           endif
 
@@ -17138,10 +16971,7 @@ END SUBROUTINE Adist
         call line_MAC_TO_CELL(local_data,local_cell,local_div, &
          bfact,maskSEM,dx(dir_main))
 
-        if (operation_flag.eq.3) then
-         call line_MAC_TO_CELL(local_data_up,local_cell_up,local_div_up, &
-          bfact,maskSEM,dx(dir_main))
-        else if (operation_flag.eq.107) then !advection
+        if (operation_flag.eq.107) then !advection
          if ((nc.ge.1).and.(nc.le.SDIM+1)) then
           call line_MAC_TO_CELL(local_vel_data,local_vel_cell,local_vel_div, &
            bfact,maskSEM,dx(dir_main))
@@ -17152,6 +16982,14 @@ END SUBROUTINE Adist
           print *,"nc invalid"
           stop
          endif
+        else if ((operation_flag.eq.100).or. & ! RHS
+                 (operation_flag.eq.110).or. & ! div u
+                 (operation_flag.eq.103).or. & ! VEL MAC to CELL
+                 (operation_flag.eq.105)) then ! called from face_gradients
+         ! do nothing
+        else
+         print *,"operation_flag invalid16991: ",operation_flag
+         stop
         endif
 
         do isten=0,bfact-1
@@ -17207,11 +17045,11 @@ END SUBROUTINE Adist
           RRTHETA=xsten(0,1)
          endif
 
-         if (operation_flag.eq.5) then ! interp grad U
+         if (operation_flag.eq.105) then ! interp grad U
 
           veldest(D_DECL(ic,jc,kc),dcomp+nc-1)=local_cell(isten+1)
 
-         else if (operation_flag.eq.6) then ! advection
+         else if (operation_flag.eq.107) then ! advection
 
           if ((nc.ge.1).and.(nc.le.ncomp)) then
 
@@ -17254,7 +17092,7 @@ END SUBROUTINE Adist
             divdest(D_DECL(ic,jc,kc),nc)= &
              divdest(D_DECL(ic,jc,kc),nc)+local_div(isten+1)
            else
-            print *,"dir_main invalid mac to cell 5"
+            print *,"dir_main invalid mac to cell 5:",dir_main
             stop
            endif
 
@@ -17358,7 +17196,7 @@ END SUBROUTINE Adist
            stop
           endif 
 
-         else if (operation_flag.eq.0) then ! RHS
+         else if (operation_flag.eq.100) then ! RHS
 
           if (maskcoef(D_DECL(ic,jc,kc),1).eq.one) then ! not covered
 
@@ -17522,7 +17360,7 @@ END SUBROUTINE Adist
            stop
           endif
 
-         else if (operation_flag.eq.1) then ! div
+         else if (operation_flag.eq.110) then ! div
 
           if (dir_main.eq.1) then
            divdest(D_DECL(ic,jc,kc),1)= &
@@ -17537,12 +17375,12 @@ END SUBROUTINE Adist
            stop
           endif
 
-         else if (operation_flag.eq.2) then !mac->cell solver or VELMAC_TO_CELL
+         else if (operation_flag.eq.103) then!mac->cell solver or VELMAC_TO_CELL
            ! local_data (the MAC data) is multiplied by RR above.
           veldest(D_DECL(ic,jc,kc),dir_main)= &
            local_cell(isten+1)/RR
          else
-          print *,"operation_flag invalid30"
+          print *,"operation_flag invalid30:",operation_flag
           stop
          endif
          

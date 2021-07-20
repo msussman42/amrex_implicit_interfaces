@@ -13,7 +13,6 @@
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
-#    define FORT_MARANGONIFORCE marangoniforce
 #    define FORT_SDC_TIME_QUAD sdc_time_quad
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
@@ -29,7 +28,6 @@
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
 #    define FORT_TENSORHEAT TENSORHEAT
-#    define FORT_MARANGONIFORCE MARANGONIFORCE
 #    define FORT_HEATSOURCE HEATSOURCE
 #    define FORT_SDC_TIME_QUAD SDC_TIME_QUAD
 #    define FORT_SDC_TIME_QUAD_FACE SDC_TIME_QUAD_FACE
@@ -46,7 +44,6 @@
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
-#    define FORT_MARANGONIFORCE marangoniforce
 #    define FORT_HEATSOURCE heatsource
 #    define FORT_SDC_TIME_QUAD sdc_time_quad
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
@@ -62,7 +59,6 @@
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
 #    define FORT_TENSORHEAT tensorheat_
-#    define FORT_MARANGONIFORCE marangoniforce_
 #    define FORT_HEATSOURCE heatsource_
 #    define FORT_SDC_TIME_QUAD sdc_time_quad_
 #    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face_
@@ -123,49 +119,16 @@ extern "C"
     int* irz,
     int* im,int* nmat,int* nden);
 
-   void FORT_MARANGONIFORCE(
-    int* conservative_tension_force,
-    int* isweep,
+   void fort_marangoniforce(
     int* nstate,
     int* nten,
     int* num_curv,
     const Real* xlo,const Real* dx,
-    int* facecut_index,
-    int* icefacecut_index,
-    int* curv_index,
-    int* pforce_index,
-    int* faceden_index,
-    int* icemask_index,
-    int* massface_index,
-    int* vofface_index,
-    int* ncphys,
-    Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
-    Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
-    Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
-    Real* xp,AMREX_ARLIM_P(xplo),AMREX_ARLIM_P(xphi),
-    Real* yp,AMREX_ARLIM_P(yplo),AMREX_ARLIM_P(yphi),
-    Real* zp,AMREX_ARLIM_P(zplo),AMREX_ARLIM_P(zphi),
-    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-    Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
-    Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
-    Real* areax,AMREX_ARLIM_P(areaxlo),AMREX_ARLIM_P(areaxhi),
-    Real* areay,AMREX_ARLIM_P(areaylo),AMREX_ARLIM_P(areayhi),
-    Real* areaz,AMREX_ARLIM_P(areazlo),AMREX_ARLIM_P(areazhi),
-    Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
-    Real* yflux,AMREX_ARLIM_P(yfluxlo),AMREX_ARLIM_P(yfluxhi),
-    Real* zflux,AMREX_ARLIM_P(zfluxlo),AMREX_ARLIM_P(zfluxhi),
-    Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
-    Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
     Real* ls,AMREX_ARLIM_P(lslo),AMREX_ARLIM_P(lshi),
-    Real* lsho,AMREX_ARLIM_P(lsholo),AMREX_ARLIM_P(lshohi),
     Real* rhoinverse,
-   AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
-    Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
+    AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
     Real* curv,AMREX_ARLIM_P(curvlo),AMREX_ARLIM_P(curvhi),
     Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
-    Real* umacnew,AMREX_ARLIM_P(umacnewlo),AMREX_ARLIM_P(umacnewhi),
-    Real* vmacnew,AMREX_ARLIM_P(vmacnewlo),AMREX_ARLIM_P(vmacnewhi),
-    Real* wmacnew,AMREX_ARLIM_P(wmacnewlo),AMREX_ARLIM_P(wmacnewhi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -174,12 +137,7 @@ extern "C"
     int* finest_level,
     Real* dt,
     Real* cur_time,
-    Real* visc_coef,
-    const int* presbc,
-    const int* velbc,
-    const int* vofbc,
-    int* nmat,
-    int* nden);
+    int* nmat);
 
    void fort_semdeltaforce(
     int* nstate,

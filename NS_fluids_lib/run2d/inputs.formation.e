@@ -23,7 +23,6 @@ ns.continuous_mof=2
 ns.force_cmof_at_triple_junctions=1
 ns.partial_cmof_stencil_at_walls=1
 ns.MOFITERMAX=15
-ns.conservative_tension_force=0
 ns.vof_height_function=1
 ns.FD_curv_interp=1
 

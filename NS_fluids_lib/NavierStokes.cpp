@@ -656,7 +656,6 @@ Real NavierStokes::mglib_min_coeff_factor=1000.0;
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
 
-int NavierStokes::conservative_tension_force=0;
 // 0=> I(u_GL) dot grad u_GG, no sync project
 // 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 // Option 2,
@@ -3335,7 +3334,6 @@ NavierStokes::read_params ()
     pp.queryarr("prerecalesce_stiffCP",prerecalesce_stiffCP,0,nmat);
     pp.queryarr("prerecalesce_stiffCV",prerecalesce_stiffCV,0,nmat);
 
-    pp.query("conservative_tension_force",conservative_tension_force);
     pp.query("conservative_div_uu",conservative_div_uu);
     if ((conservative_div_uu==0)||   //I(u_GL) dot grad u_GG
         (conservative_div_uu==1)) {  //grad dot (u_GL u_GG) - u_GG div u_GL
@@ -4696,8 +4694,6 @@ NavierStokes::read_params ()
 
      std::cout << "conservative_div_uu " << 
        conservative_div_uu << '\n';
-     std::cout << "conservative_tension_force " << 
-       conservative_tension_force << '\n';
      std::cout << "FD_curv_interp " << FD_curv_interp << '\n';
      std::cout << "vof_height_function " << vof_height_function << '\n';
 
@@ -9660,7 +9656,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
 }   // subroutine make_viscoelastic_heating
 
-void NavierStokes::make_marangoni_force(int isweep) {
+void NavierStokes::make_marangoni_force() {
 
  bool use_tiling=ns_tiling;
 
@@ -9699,7 +9695,6 @@ void NavierStokes::make_marangoni_force(int isweep) {
 
  resize_metrics(2);
 
- MultiFab* CL_velocity=nullptr;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
@@ -9830,60 +9825,19 @@ void NavierStokes::make_marangoni_force(int isweep) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  // force=dt * div((I-nn^T)(sigma) delta) / rho
+  // force=dt * ((I-nn^T)(grad sigma) delta) / rho
   // in: GODUNOV_3D.F90
-  FORT_MARANGONIFORCE(
-   &conservative_tension_force,
-   &isweep,
+  fort_marangoniforce(
    &nstate,
    &nten,
    &num_curv,
    xlo,dx,
-   &facecut_index,
-   &icefacecut_index,
-   &curv_index,
-   &pforce_index,
-   &faceden_index,
-   &icemask_index,
-   &massface_index,
-   &vofface_index,
-   &ncphys,
-   xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-   yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()), 
-   zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()), 
-   xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),
-   yp.dataPtr(),ARLIM(yp.loVect()),ARLIM(yp.hiVect()),
-   zp.dataPtr(),ARLIM(zp.loVect()),ARLIM(zp.hiVect()),
-   maskcov.dataPtr(),
-   ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-   masknbr.dataPtr(),
-   ARLIM(masknbr.loVect()),ARLIM(masknbr.hiVect()),
-   volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-   areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
-   areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
-   areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()),
-   xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
-   yflux.dataPtr(),ARLIM(yflux.loVect()),ARLIM(yflux.hiVect()),
-   zflux.dataPtr(),ARLIM(zflux.loVect()),ARLIM(zflux.hiVect()),
-   velfab.dataPtr(),
-   ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-   denfab.dataPtr(),
-   ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-   lshofab.dataPtr(),
-   ARLIM(lshofab.loVect()),ARLIM(lshofab.hiVect()),
    rhoinversefab.dataPtr(),
    ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
    curvfab.dataPtr(),ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
    S_new[mfi].dataPtr(),
    ARLIM(S_new[mfi].loVect()),ARLIM(S_new[mfi].hiVect()),
-   Umac_new[mfi].dataPtr(),
-   ARLIM(Umac_new[mfi].loVect()),ARLIM(Umac_new[mfi].hiVect()),
-   Vmac_new[mfi].dataPtr(),
-   ARLIM(Vmac_new[mfi].loVect()),ARLIM(Vmac_new[mfi].hiVect()),
-   Wmac_new[mfi].dataPtr(),
-   ARLIM(Wmac_new[mfi].loVect()),ARLIM(Wmac_new[mfi].hiVect()),
    tilelo,tilehi,
    fablo,fabhi,
    &bfact,
@@ -9892,11 +9846,7 @@ void NavierStokes::make_marangoni_force(int isweep) {
    &finest_level,
    &dt_slab,
    &cur_time_slab,
-   &visc_coef,
-   presbc.dataPtr(),
-   velbc.dataPtr(),
-   vofbc.dataPtr(),
-   &nmat,&nden);
+   &nmat);
  }  // mfi  
 } // omp
  ns_reconcile_d_num(57);
@@ -14804,7 +14754,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &facecut_index,
       &icefacecut_index,
       &curv_index,
-      &conservative_tension_force,
       &conservative_div_uu,
       &ignore_div_up,
       &pforce_index,
@@ -23749,7 +23698,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
     FORT_CURVSTRIP(
      &post_restart_flag,
      &vof_height_function,
-     &conservative_tension_force,
      &level,
      &finest_level,
      &curv_min_local[tid_current],

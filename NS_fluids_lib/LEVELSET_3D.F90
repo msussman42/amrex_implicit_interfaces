@@ -628,7 +628,6 @@ stop
        ! called from FORT_CURVSTRIP
       subroutine initheightLS( &
         vof_height_function, &
-        conservative_tension_force, &
         icenter,jcenter,kcenter, &
         level, &
         finest_level, &
@@ -663,7 +662,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: vof_height_function
-      INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: icenter,jcenter,kcenter
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -922,11 +920,6 @@ stop
        print *,"RD_HEIGHT not RD or RD-1. RD_HEIGHT= ",RD_HEIGHT
        stop
       endif
-      if ((conservative_tension_force.ne.0).and. &
-          (conservative_tension_force.ne.1)) then
-       print *,"conservative_tension_force invalid"
-       stop
-      endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -1144,6 +1137,8 @@ stop
        enddo ! dir2
 
         ! tension=sigma_0 + slope*(T-T0)
+        ! (I-nn^T)(grad sigma) delta
+        ! 
        do dir2=1,SDIM
         mgoni_force(dir2)= &
          (fort_tension_slope(iten)*gradT(dir2)- &
@@ -2743,25 +2738,6 @@ stop
        curvFD=curvFD+dnrm(dir2)
       enddo
 
-      if (conservative_tension_force.eq.1) then
-       if (user_tension(iten).gt.zero) then
-        do dir2=1,SDIM
-         mgoni_force(dir2)=mgoni_force(dir2)- &
-          user_tension(iten)*delta_mgoni*nfluid(dir2)*curvHT_choice 
-        enddo
-       else if (user_tension(iten).eq.zero) then
-        ! do nothing
-       else
-        print *,"user_tension(iten) invalid"
-        stop
-       endif
-      else if (conservative_tension_force.eq.0) then
-       ! do nothing
-      else
-       print *,"conservative_tension_force invalid"
-       stop
-      endif
-
       if (1.eq.0) then
        print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
        print *,"dircrit,side,signside ",dircrit,side,signside
@@ -3848,7 +3824,6 @@ stop
       subroutine FORT_CURVSTRIP( &
        post_restart_flag, &
        vof_height_function, &
-       conservative_tension_force, &
        level, &
        finest_level, &
        curv_min, &
@@ -3892,7 +3867,6 @@ stop
       INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: post_restart_flag
       INTEGER_T, intent(in) :: vof_height_function
-      INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nten
@@ -4072,12 +4046,6 @@ stop
        ! do nothing
       else
        print *,"nhistory invalid"
-       stop
-      endif
-
-      if ((conservative_tension_force.ne.0).and. &
-          (conservative_tension_force.ne.1)) then
-       print *,"conservative_tension_force invalid"
        stop
       endif
 
@@ -4766,7 +4734,6 @@ stop
              ! necessary)
              call initheightLS( &
               vof_height_function, &
-              conservative_tension_force, &
               i,j,k, &
               level, &
               finest_level, &
@@ -8007,8 +7974,6 @@ stop
        visc_interface, &
        heatvisc_interface, &
        speciesvisc_interface, &
-       diffusionface_flag, &
-       temperatureface_flag, &
        curv_index, &
        pforce_index, &
        faceden_index, &
@@ -8104,8 +8069,6 @@ stop
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nrefine_vof
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: diffusionface_flag
-      INTEGER_T, intent(in) :: temperatureface_flag
       INTEGER_T, intent(in) :: curv_index
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index
@@ -8436,16 +8399,6 @@ stop
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
-       stop
-      endif
-      if ((diffusionface_flag.ne.0).and. &
-          (diffusionface_flag.ne.1)) then
-       print *,"diffusionface_flag invalid"
-       stop
-      endif
-      if ((temperatureface_flag.ne.0).and. &
-          (temperatureface_flag.ne.1)) then
-       print *,"temperatureface_flag invalid"
        stop
       endif
 
@@ -9670,12 +9623,7 @@ stop
            stop
           endif
 
-          if ((diffusionface_flag.eq.0).and. &
-              (temperatureface_flag.eq.0)) then
-           ! do nothing (use LS)
-          else if ((diffusionface_flag.eq.1).or. &
-                   (temperatureface_flag.eq.1)) then ! use VOF
-
+          if (1.eq.1) then ! this code will soon be obsolete
            ! mu_face=sum F_i/(sum F_i/mu_i)
            voltotal=zero
            visc_total=zero
@@ -9753,7 +9701,7 @@ stop
             stop
            endif
 
-           if (diffusionface_flag.eq.1) then ! use VFRAC
+           if (1.eq.1) then ! use VFRAC for viscosity (soon obsolete)
             if (is_zero_visc.eq.0) then
              facevisc_local=voltotal/visc_total
             else if (is_zero_visc.eq.1) then
@@ -9762,41 +9710,10 @@ stop
              print *,"is_zero_visc invalid"
              stop
             endif
-           else if (diffusionface_flag.eq.0) then ! use LS
+           else if (1.eq.0) then ! use LS
             ! do nothing
            else
-            print *,"diffusionface_flag invalid"
-            stop
-           endif
-
-           if (temperatureface_flag.eq.0) then !GFM (use LS)
-
-            ! do nothing
-
-           else if (temperatureface_flag.eq.1) then ! FVM (use VFRAC)
-
-            if (is_zero_heat.eq.0) then
-             faceheat_local=voltotal/heat_total
-            else if (is_zero_heat.eq.1) then
-             faceheat_local=zero
-            else
-             print *,"is_zero_heat invalid"
-             stop
-            endif
-
-            do imspec=1,num_species_var
-             if (is_zero_spec(imspec).eq.0) then
-              facespecies_local(imspec)=voltotal/spec_total(imspec)
-             else if (is_zero_spec(imspec).eq.1) then
-              facespecies_local(imspec)=zero
-             else
-              print *,"is_zero_spec invalid"
-              stop
-             endif
-            enddo ! imspec
-
-           else
-            print *,"temperatureface_flag invalid"
+            print *,"corrupt"
             stop
            endif
 
@@ -9807,7 +9724,7 @@ stop
                  (FFACE(im_opp).gt.VOFTOL)) then
               call get_iten(im,im_opp,iten,nmat)
 
-              if (diffusionface_flag.eq.1) then
+              if (1.eq.1) then ! soon obsolete
                if (visc_interface(iten).eq.zero) then
                 ! do nothing
                else if (visc_interface(iten).gt.zero) then
@@ -9816,40 +9733,13 @@ stop
                 print *,"visc_interface invalid"
                 stop
                endif
-              else if (diffusionface_flag.eq.0) then
+              else if (1.eq.0) then
                ! do nothing
               else
-               print *,"diffusionface_flag invalid"
+               print *,"corrupt"
                stop
               endif
 
-              if (temperatureface_flag.eq.0) then ! use LS
-               ! do nothing
-              else if (temperatureface_flag.eq.1) then ! use VFRAC
-
-               if (heatvisc_interface(iten).eq.zero) then
-                ! do nothing
-               else if (heatvisc_interface(iten).gt.zero) then
-                faceheat_local=heatvisc_interface(iten)
-               else
-                print *,"heatvisc_interface invalid"
-                stop
-               endif
-               do imspec=1,num_species_var
-                spec_test=speciesvisc_interface((imspec-1)*nten+iten)
-                if (spec_test.eq.zero) then
-                 ! do nothing
-                else if (spec_test.gt.zero) then
-                 facespecies_local(imspec)=spec_test
-                else
-                 print *,"spec_test invalid"
-                 stop
-                endif
-               enddo !imspec
-              else
-               print *,"temperatureface_flag invalid"
-               stop
-              endif
              else if ((FFACE(im).gt.-VOFTOL).and. &
                       (FFACE(im_opp).gt.-VOFTOL)) then
               ! do nothing
@@ -9862,7 +9752,7 @@ stop
            enddo ! im=1..nmat
 
           else
-           print *,"diffusionface_flag or temperatureface_flag invalid"
+           print *,"corruption"
            stop
           endif
   
@@ -13395,7 +13285,6 @@ stop
       enddo
       enddo
 
-      FIX ME
        ! for advection:
        !  1. low order fluxes are calculated in fort_cell_to_mac
        !     and high order fluxes are calculated in SEM_CELL_TO_MAC
@@ -13403,7 +13292,7 @@ stop
        !     calculated in SEM_MAC_TO_CELL (PROB.F90) regardless of the
        !     order.
       high_order_time_advection=0
-      if (operation_flag.eq.6) then ! advection
+      if (operation_flag.eq.107) then ! advection
        if ((ns_time_order.ge.2).and. &
            (ns_time_order.le.32)) then
         high_order_time_advection=1
@@ -13465,14 +13354,14 @@ stop
             do jelem=elemlo(2),elemhi(2)
             do kelem=elemlo(3),elemhi(3)
           
-             if (operation_flag.eq.0) then ! RHS for solver
+             if (operation_flag.eq.100) then ! RHS for solver
               scomp=1
               scomp_bc=dir+1
               dcomp=1
               ncomp=nsolve
               ncomp_xvel=nsolve
               ncomp_cterm=nsolve
-             else if (operation_flag.eq.1) then ! divergence
+             else if (operation_flag.eq.110) then ! divergence
               scomp=1
               scomp_bc=dir+1
               dcomp=1
@@ -13480,31 +13369,18 @@ stop
               ncomp_xvel=nsolve
               ncomp_cterm=1
              ! MAC->CELL in solver or VELMAC_to_CELL
-             else if (operation_flag.eq.2) then  ! velocity
+             else if (operation_flag.eq.103) then  ! velocity
               scomp=1
               scomp_bc=dir+1
               dcomp=dir+1
               ncomp=1
               ncomp_xvel=nsolve
               ncomp_cterm=1
-             else if (operation_flag.eq.7) then  ! displacement
-              print *,"spectral element discretization not allowed for disp"
-              stop 
-             else if (operation_flag.eq.3) then ! (grad p)^CELL, div(up)
-              scomp=1
-              scomp_bc=dir+1
-              dcomp=dir+1
-              ncomp=1
-              ncomp_xvel=nsolve
-              ncomp_cterm=1
-             else if (operation_flag.eq.4) then ! (grad pot)^CELL
-              scomp=1
-              scomp_bc=dir+1
-              dcomp=dir+1
-              ncomp=1
-              ncomp_xvel=nsolve
-              ncomp_cterm=1
-             else if (operation_flag.eq.6) then ! advection
+             else if (operation_flag.eq.113) then  ! displacement
+              ! do nothing
+             else if (operation_flag.eq.101) then ! div(up)
+              ! do nothing
+             else if (operation_flag.eq.107) then ! advection
               scomp=1
               scomp_bc=1
               dcomp=1
@@ -13515,159 +13391,169 @@ stop
               print *,"operation_flag invalid9"
               stop
              endif
-              
-             if (dir.eq.0) then 
+             
+             if ((operation_flag.eq.113).or. & ! displacement
+                 (operation_flag.eq.101)) then !div(up) 
+                 ! do nothing
+             else if ((operation_flag.eq.100).or. & ! RHS for solver
+                      (operation_flag.eq.110).or. & ! divergence
+                      (operation_flag.eq.103).or. & ! MAC -> CELL
+                      (operation_flag.eq.107)) then ! advection
 
-              call SEM_MAC_TO_CELL( &
-               ncomp_denold, &
-               ncomp_veldest, &
-               ncomp_dendest, &
-               conservative_div_uu, &
-               ns_time_order, &
-               divu_outer_sweeps, &
-               num_divu_outer_sweeps, &
-               SDC_outer_sweeps, &
-               SEM_advection_algorithm, &
-               level, &
-               finest_level, &
-               nmat, &
-               operation_flag, & 
-               project_option, &
-               energyflag, &
-               temperature_primitive_variable, &
-               face_flag, &
-               homflag, &
-               local_maskSEM, &
-               cur_time, &
-               slab_step, &
-               dt, &
-               ielem,jelem,kelem, &
-               tilelo,tilehi, &
-               fablo,fabhi, &
-               xlo,dx,dir+1,bfact, &
-               velbc_in, &  
-               presbc_in, &
-               scomp,scomp_bc, &
-               dcomp, &
-               ncomp, &
-               ncomp_xvel, &
-               ncomp_cterm, &
-               vol_ptr, &
-               xface_ptr, &
-               xp_ptr, &
-               xvel_ptr, &
-               maskcoef_ptr, & ! 1=not covered, 0=covered
-               cterm_ptr, &
-               mdotcell_ptr, &
-               pold_ptr, &
-               denold_ptr, &
-               ustar_ptr, &
-               veldest_ptr, &
-               dendest_ptr, &
-               rhs_ptr)  ! divdest
+              if (dir.eq.0) then 
 
-             else if (dir.eq.1) then
+               call SEM_MAC_TO_CELL( &
+                ncomp_denold, &
+                ncomp_veldest, &
+                ncomp_dendest, &
+                conservative_div_uu, &
+                ns_time_order, &
+                divu_outer_sweeps, &
+                num_divu_outer_sweeps, &
+                SDC_outer_sweeps, &
+                SEM_advection_algorithm, &
+                level, &
+                finest_level, &
+                nmat, &
+                operation_flag, & 
+                project_option, &
+                energyflag, &
+                temperature_primitive_variable, &
+                homflag, &
+                local_maskSEM, &
+                cur_time, &
+                slab_step, &
+                dt, &
+                ielem,jelem,kelem, &
+                tilelo,tilehi, &
+                fablo,fabhi, &
+                xlo,dx,dir+1,bfact, &
+                velbc_in, &  
+                presbc_in, &
+                scomp,scomp_bc, &
+                dcomp, &
+                ncomp, &
+                ncomp_xvel, &
+                ncomp_cterm, &
+                vol_ptr, &
+                xface_ptr, &
+                xp_ptr, &
+                xvel_ptr, &
+                maskcoef_ptr, & ! 1=not covered, 0=covered
+                cterm_ptr, &
+                mdotcell_ptr, &
+                pold_ptr, &
+                denold_ptr, &
+                ustar_ptr, &
+                veldest_ptr, &
+                dendest_ptr, &
+                rhs_ptr)  ! divdest
 
-              call SEM_MAC_TO_CELL( &
-               ncomp_denold, &
-               ncomp_veldest, &
-               ncomp_dendest, &
-               conservative_div_uu, &
-               ns_time_order, &
-               divu_outer_sweeps, &
-               num_divu_outer_sweeps, &
-               SDC_outer_sweeps, &
-               SEM_advection_algorithm, &
-               level, &
-               finest_level, &
-               nmat, &
-               operation_flag, & 
-               project_option, &
-               energyflag, &
-               temperature_primitive_variable, &
-               face_flag, &
-               homflag, &
-               local_maskSEM, &
-               cur_time, &
-               slab_step, &
-               dt, &
-               ielem,jelem,kelem, &
-               tilelo,tilehi, &
-               fablo,fabhi, &
-               xlo,dx,dir+1,bfact, &
-               velbc_in, &  
-               presbc_in, &
-               scomp,scomp_bc, &
-               dcomp, &
-               ncomp, &
-               ncomp_xvel, &
-               ncomp_cterm, &
-               vol_ptr, &
-               yface_ptr, &
-               yp_ptr, &
-               yvel_ptr, &
-               maskcoef_ptr, & ! 1=not covered, 0=covered
-               cterm_ptr, &
-               mdotcell_ptr, &
-               pold_ptr, &
-               denold_ptr, &
-               ustar_ptr, &
-               veldest_ptr, &
-               dendest_ptr, &
-               rhs_ptr)  ! divdest
+              else if (dir.eq.1) then
 
-             else if ((dir.eq.2).and.(SDIM.eq.3)) then
+               call SEM_MAC_TO_CELL( &
+                ncomp_denold, &
+                ncomp_veldest, &
+                ncomp_dendest, &
+                conservative_div_uu, &
+                ns_time_order, &
+                divu_outer_sweeps, &
+                num_divu_outer_sweeps, &
+                SDC_outer_sweeps, &
+                SEM_advection_algorithm, &
+                level, &
+                finest_level, &
+                nmat, &
+                operation_flag, & 
+                project_option, &
+                energyflag, &
+                temperature_primitive_variable, &
+                homflag, &
+                local_maskSEM, &
+                cur_time, &
+                slab_step, &
+                dt, &
+                ielem,jelem,kelem, &
+                tilelo,tilehi, &
+                fablo,fabhi, &
+                xlo,dx,dir+1,bfact, &
+                velbc_in, &  
+                presbc_in, &
+                scomp,scomp_bc, &
+                dcomp, &
+                ncomp, &
+                ncomp_xvel, &
+                ncomp_cterm, &
+                vol_ptr, &
+                yface_ptr, &
+                yp_ptr, &
+                yvel_ptr, &
+                maskcoef_ptr, & ! 1=not covered, 0=covered
+                cterm_ptr, &
+                mdotcell_ptr, &
+                pold_ptr, &
+                denold_ptr, &
+                ustar_ptr, &
+                veldest_ptr, &
+                dendest_ptr, &
+                rhs_ptr)  ! divdest
 
-              call SEM_MAC_TO_CELL( &
-               ncomp_denold, &
-               ncomp_veldest, &
-               ncomp_dendest, &
-               conservative_div_uu, &
-               ns_time_order, &
-               divu_outer_sweeps, &
-               num_divu_outer_sweeps, &
-               SDC_outer_sweeps, &
-               SEM_advection_algorithm, &
-               level, &
-               finest_level, &
-               nmat, &
-               operation_flag, & 
-               project_option, &
-               energyflag, &
-               temperature_primitive_variable, &
-               face_flag, &
-               homflag, &
-               local_maskSEM, &
-               cur_time, &
-               slab_step, &
-               dt, &
-               ielem,jelem,kelem, &
-               tilelo,tilehi, &
-               fablo,fabhi, &
-               xlo,dx,dir+1,bfact, &
-               velbc_in, &  
-               presbc_in, &
-               scomp,scomp_bc, &
-               dcomp, &
-               ncomp, &
-               ncomp_xvel, &
-               ncomp_cterm, &
-               vol_ptr, &
-               zface_ptr, &
-               zp_ptr, &
-               zvel_ptr, &
-               maskcoef_ptr, & ! 1=not covered, 0=covered
-               cterm_ptr, &
-               mdotcell_ptr, &
-               pold_ptr, &
-               denold_ptr, &
-               ustar_ptr, &
-               veldest_ptr, &
-               dendest_ptr, &
-               rhs_ptr) ! divdest
+              else if ((dir.eq.2).and.(SDIM.eq.3)) then
+
+               call SEM_MAC_TO_CELL( &
+                ncomp_denold, &
+                ncomp_veldest, &
+                ncomp_dendest, &
+                conservative_div_uu, &
+                ns_time_order, &
+                divu_outer_sweeps, &
+                num_divu_outer_sweeps, &
+                SDC_outer_sweeps, &
+                SEM_advection_algorithm, &
+                level, &
+                finest_level, &
+                nmat, &
+                operation_flag, & 
+                project_option, &
+                energyflag, &
+                temperature_primitive_variable, &
+                homflag, &
+                local_maskSEM, &
+                cur_time, &
+                slab_step, &
+                dt, &
+                ielem,jelem,kelem, &
+                tilelo,tilehi, &
+                fablo,fabhi, &
+                xlo,dx,dir+1,bfact, &
+                velbc_in, &  
+                presbc_in, &
+                scomp,scomp_bc, &
+                dcomp, &
+                ncomp, &
+                ncomp_xvel, &
+                ncomp_cterm, &
+                vol_ptr, &
+                zface_ptr, &
+                zp_ptr, &
+                zvel_ptr, &
+                maskcoef_ptr, & ! 1=not covered, 0=covered
+                cterm_ptr, &
+                mdotcell_ptr, &
+                pold_ptr, &
+                denold_ptr, &
+                ustar_ptr, &
+                veldest_ptr, &
+                dendest_ptr, &
+                rhs_ptr) ! divdest
+
+              else
+               print *,"dir invalid mac_to_cell2 "
+               stop
+              endif
 
              else
-              print *,"dir invalid mac_to_cell2 "
+              print *,"operation_flag invalid"
               stop
              endif
 
@@ -13749,223 +13635,6 @@ stop
       return
       end subroutine fort_mac_to_cell
 
-!if temperature_primitive_var==0,
-! add beta * (1/cv) * (u dot u/2) to temp
-      subroutine FORT_INC_TEMP( &
-       beta, &
-       temperature_primitive_variable, &
-       nmat, &
-       level, &
-       finest_level, &
-       ncomp_state, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       state,DIMS(state), &
-       maskcoef,DIMS(maskcoef)) ! 1=not covered  0=covered
-       use probf90_module
-       use global_utility_module
-       IMPLICIT NONE
-
-      REAL_T beta
-      INTEGER_T nmat
-      INTEGER_T ncomp_state
-      INTEGER_T temperature_primitive_variable(nmat)
-      INTEGER_T level,finest_level
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T DIMDEC(state)
-      INTEGER_T DIMDEC(maskcoef)
-      REAL_T state(DIMV(state),ncomp_state)
-      REAL_T  maskcoef(DIMV(maskcoef))
-
-      INTEGER_T i,j,k
-      INTEGER_T dir
-      INTEGER_T im
-      INTEGER_T imattype
-      INTEGER_T local_mask
-      INTEGER_T vofcomp,dencomp
-      REAL_T vof,KE,rho,TEMPERATURE,internal_e
-      REAL_T massfrac_parm(num_species_var+1)
-      INTEGER_T ispec
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid INC_TEMP"
-       stop
-      endif
-
-      do im=1,nmat
-       imattype=fort_material_type(im)
-       if (imattype.eq.999) then
-        ! do nothing
-       else if ((imattype.ge.0).and. &
-                (imattype.le.MAX_NUM_EOS)) then
-        ! do nothing
-       else
-        print *,"imattype invalid fort_inc_temp"
-        stop
-       endif
-       if ((temperature_primitive_variable(im).ne.0).and. &
-           (temperature_primitive_variable(im).ne.1)) then
-        print *,"temperature_primitive_variable invalid"
-        stop
-       endif
-
-       if ((fort_material_type(im).eq.0).or. &
-           (is_rigid(nmat,im).eq.1).or. &
-           (fort_material_type(im).eq.999)) then
-        if (temperature_primitive_variable(im).ne.1) then
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else if ((fort_material_type(im).gt.0).and. &
-                (is_rigid(nmat,im).eq.0).and. &
-                (fort_material_type(im).ne.999)) then
-        if ((temperature_primitive_variable(im).eq.0).or. &
-            (temperature_primitive_variable(im).eq.1)) then
-         ! do nothing
-        else
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else
-        print *,"fort_material_type(im) or is_rigid invalid"
-        stop
-       endif
-
-      enddo ! im=1..nmat
-
-      if ((beta.ne.one).and.(beta.ne.-one)) then
-       print *,"beta invalid"
-       stop
-      endif 
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      do im=1,nmat
-       if (fort_denconst(im).le.zero) then
-        print *,"denconst invalid"
-        stop
-       endif
-      enddo
-
-      if (ncomp_state.ne.(SDIM+1)+ &
-          nmat*num_state_material+nmat*ngeom_raw+1) then
-       print *,"ncomp_state invalid"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(state),0,-1,33)
-      call checkbound(fablo,fabhi,DIMS(maskcoef),0,-1,134)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       local_mask=NINT(maskcoef(D_DECL(i,j,k)))
-       if (local_mask.eq.1) then ! not covered
-
-        do im=1,nmat
-         if (temperature_primitive_variable(im).eq.1) then
-          ! do nothing
-         else if (temperature_primitive_variable(im).eq.0) then
-          vofcomp=(SDIM+1)+nmat*num_state_material+ &
-            (im-1)*ngeom_raw+1
-          vof=state(D_DECL(i,j,k),vofcomp)
-          if ((vof.ge.-VOFTOL).and.(vof.le.one+VOFTOL)) then
-
-           if (vof.lt.VOFTOL) then
-            ! do nothing
-           else if (vof.ge.VOFTOL) then
-            KE=zero
-            do dir=1,SDIM
-             KE=KE+half*(state(D_DECL(i,j,k),dir)**2)
-            enddo
-            dencomp=(SDIM+1)+ &
-             (im-1)*num_state_material+1
-            rho=state(D_DECL(i,j,k),dencomp)
-            TEMPERATURE=state(D_DECL(i,j,k),dencomp+1)
-            if (rho.gt.zero) then
-             ! do nothing
-            else
-             print *,"density underflow"
-             print *,"i,j,k,im,rho ",i,j,k,im,rho
-             stop
-            endif
-             ! the first part is always to add the old kinetic energy.
-            if (TEMPERATURE.gt.zero) then
-             ! do nothing
-            else
-             print *,"temperature underflow"
-             stop
-            endif
-            imattype=fort_material_type(im)
-            if ((imattype.gt.0).and. &
-                (imattype.le.MAX_NUM_EOS)) then
-
-             call init_massfrac_parm(rho,massfrac_parm,im)
-             do ispec=1,num_species_var
-              massfrac_parm(ispec)= &
-                state(D_DECL(i,j,k),dencomp+1+ispec)
-              if (massfrac_parm(ispec).ge.zero) then
-               ! do nothing
-              else
-               print *,"massfrac_parm invalid"
-               stop
-              endif
-             enddo ! ispec=1..num_species_var
-
-             call INTERNAL_material(rho,massfrac_parm, &
-               TEMPERATURE,internal_e, &
-               imattype,im)
-             internal_e=internal_e+beta*KE
-             if (internal_e.le.zero) then
-              print *,"internal_e.le.zero in INC_TEMP"
-              stop
-             endif
-             call TEMPERATURE_material(rho,massfrac_parm, &
-               TEMPERATURE, &
-               internal_e,imattype,im)
-             state(D_DECL(i,j,k),dencomp+1)=TEMPERATURE
-            else
-             print *,"imattype invalid fort_inc_temp"
-             stop
-            endif
-           else
-            print *,"vof invalid"
-            stop
-           endif
-
-          else
-           print *,"vof out of range"
-           stop
-          endif
-
-         else
-          print *,"temperature_primitive_variable invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-
-       else if (local_mask.eq.0) then ! covered
-        ! do nothing
-       else
-        print *,"local_mask invalid"
-        stop
-       endif
-      enddo !k
-      enddo !j
-      enddo !i
- 
-      return
-      end subroutine FORT_INC_TEMP
 
 ! operation_flag=0  pressure gradient on MAC grid
 ! operation_flag=1  interpolate pressure from cell to MAC grid.
@@ -14003,7 +13672,6 @@ stop
        facecut_index, &
        icefacecut_index, &
        curv_index, &
-       conservative_tension_force, &
        conservative_div_uu, &
        ignore_div_up, &
        pforce_index, &
@@ -14089,7 +13757,6 @@ stop
       REAL_T, intent(in) :: added_weight(nmat)
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: face_flag 
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
@@ -14102,7 +13769,6 @@ stop
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: conservative_tension_force
       INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
@@ -14574,11 +14240,6 @@ stop
        stop
       endif
 
-      if ((conservative_tension_force.ne.0).and. &
-          (conservative_tension_force.ne.1)) then
-       print *,"conservative_tension_force invalid"
-       stop
-      endif
       if ((conservative_div_uu.eq.0).or. &
           (conservative_div_uu.eq.1)) then
        ! do nothing
@@ -16076,14 +15737,7 @@ stop
 
              ! in: fort_cell_to_mac, operation_flag=2,
              !     surface tension on MAC grid ...
-            if (conservative_tension_force.eq.0) then
-             local_tension_force=tension_scaled*local_face(curv_index+1)
-            else if (conservative_tension_force.eq.1) then
-             local_tension_force=zero
-            else
-             print *,"conservative_tension_force invalid"
-             stop
-            endif
+            local_tension_force=tension_scaled*local_face(curv_index+1)
 
              ! pgrad_tension is added to pgrad_gravity at the very end.
             pgrad_tension=-(local_tension_force+ &
