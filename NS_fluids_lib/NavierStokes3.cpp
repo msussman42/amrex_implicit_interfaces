@@ -11799,6 +11799,7 @@ void NavierStokes::vel_elastic_ALL() {
   int vel_or_disp=0; //interpolate MAC velocity
   int dest_idx=-1;   //update State_Type
   FIX ME, only elastic material cell velocity is updated. 
+
   VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
 
    // register_mark=unew
