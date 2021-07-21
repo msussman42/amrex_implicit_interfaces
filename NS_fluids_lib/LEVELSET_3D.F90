@@ -11293,6 +11293,230 @@ stop
       return
       end subroutine FORT_BUILD_MODVISC
 
+
+!if temperature_primitive_var==0,
+! add beta * (1/cv) * (u dot u/2) to temp
+      subroutine fort_inc_temp( &
+       beta, &
+       temperature_primitive_variable, &
+       nmat, &
+       level, &
+       finest_level, &
+       ncomp_state, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       state,DIMS(state), &
+       maskcoef,DIMS(maskcoef)) & ! 1=not covered  0=covered
+       bind(c,name='fort_inc_temp')
+
+       use probf90_module
+       use global_utility_module
+       IMPLICIT NONE
+
+      REAL_T, intent(in) :: beta
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ncomp_state
+      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: DIMDEC(state)
+      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
+      REAL_T, intent(inout), target :: state(DIMV(state),ncomp_state)
+      REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
+
+      INTEGER_T i,j,k
+      INTEGER_T dir
+      INTEGER_T im
+      INTEGER_T imattype
+      INTEGER_T local_mask
+      INTEGER_T vofcomp,dencomp
+      REAL_T vof,KE,rho,TEMPERATURE,internal_e
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid INC_TEMP"
+       stop
+      endif
+
+      do im=1,nmat
+       imattype=fort_material_type(im)
+       if (imattype.eq.999) then
+        ! do nothing
+       else if ((imattype.ge.0).and. &
+                (imattype.le.MAX_NUM_EOS)) then
+        ! do nothing
+       else
+        print *,"imattype invalid fort_inc_temp"
+        stop
+       endif
+       if ((temperature_primitive_variable(im).ne.0).and. &
+           (temperature_primitive_variable(im).ne.1)) then
+        print *,"temperature_primitive_variable invalid"
+        stop
+       endif
+
+       if ((fort_material_type(im).eq.0).or. &
+           (is_rigid(nmat,im).eq.1).or. &
+           (fort_material_type(im).eq.999)) then
+        if (temperature_primitive_variable(im).ne.1) then
+         print *,"temperature_primitive_variable(im) invalid"
+         stop
+        endif
+       else if ((fort_material_type(im).gt.0).and. &
+                (is_rigid(nmat,im).eq.0).and. &
+                (fort_material_type(im).ne.999)) then
+        if ((temperature_primitive_variable(im).eq.0).or. &
+            (temperature_primitive_variable(im).eq.1)) then
+         ! do nothing
+        else
+         print *,"temperature_primitive_variable(im) invalid"
+         stop
+        endif
+       else
+        print *,"fort_material_type(im) or is_rigid invalid"
+        stop
+       endif
+
+      enddo ! im=1..nmat
+
+      if ((beta.ne.one).and.(beta.ne.-one)) then
+       print *,"beta invalid"
+       stop
+      endif 
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+
+      do im=1,nmat
+       if (fort_denconst(im).le.zero) then
+        print *,"denconst invalid"
+        stop
+       endif
+      enddo
+
+      if (ncomp_state.ne.(SDIM+1)+ &
+          nmat*num_state_material+nmat*ngeom_raw+1) then
+       print *,"ncomp_state invalid"
+       stop
+      endif
+
+      state_ptr=>state
+      call checkbound_array(fablo,fabhi,state_ptr,0,-1,33)
+      maskcoef_ptr=>maskcoef
+      call checkbound_array(fablo,fabhi,maskcoef_ptr,0,-1,134)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       local_mask=NINT(maskcoef(D_DECL(i,j,k)))
+       if (local_mask.eq.1) then ! not covered
+
+        do im=1,nmat
+         if (temperature_primitive_variable(im).eq.1) then
+          ! do nothing
+         else if (temperature_primitive_variable(im).eq.0) then
+          vofcomp=(SDIM+1)+nmat*num_state_material+(im-1)*ngeom_raw+1
+          vof=state(D_DECL(i,j,k),vofcomp)
+          if ((vof.ge.-VOFTOL).and.(vof.le.one+VOFTOL)) then
+
+           if (vof.lt.VOFTOL) then
+            ! do nothing
+           else if (vof.ge.VOFTOL) then
+            KE=zero
+            do dir=1,SDIM
+             KE=KE+half*(state(D_DECL(i,j,k),dir)**2)
+            enddo
+            dencomp=(SDIM+1)+(im-1)*num_state_material+1
+            rho=state(D_DECL(i,j,k),dencomp)
+            TEMPERATURE=state(D_DECL(i,j,k),dencomp+1)
+            if (rho.gt.zero) then
+             ! do nothing
+            else
+             print *,"density underflow"
+             print *,"i,j,k,im,rho ",i,j,k,im,rho
+             stop
+            endif
+             ! the first part is always to add the old kinetic energy.
+            if (TEMPERATURE.gt.zero) then
+             ! do nothing
+            else
+             print *,"temperature underflow"
+             stop
+            endif
+            imattype=fort_material_type(im)
+            if ((imattype.gt.0).and. &
+                (imattype.le.MAX_NUM_EOS)) then
+
+             call init_massfrac_parm(rho,massfrac_parm,im)
+             do ispec=1,num_species_var
+              massfrac_parm(ispec)= &
+                state(D_DECL(i,j,k),dencomp+1+ispec)
+              if (massfrac_parm(ispec).ge.zero) then
+               ! do nothing
+              else
+               print *,"massfrac_parm invalid"
+               stop
+              endif
+             enddo ! ispec=1..num_species_var
+
+             call INTERNAL_material(rho,massfrac_parm, &
+               TEMPERATURE,internal_e, &
+               imattype,im)
+             internal_e=internal_e+beta*KE
+             if (internal_e.le.zero) then
+              print *,"internal_e.le.zero in INC_TEMP"
+              stop
+             endif
+             call TEMPERATURE_material(rho,massfrac_parm, &
+               TEMPERATURE, &
+               internal_e,imattype,im)
+             state(D_DECL(i,j,k),dencomp+1)=TEMPERATURE
+            else
+             print *,"imattype invalid fort_inc_temp"
+             stop
+            endif
+           else
+            print *,"vof invalid"
+            stop
+           endif
+
+          else
+           print *,"vof out of range"
+           stop
+          endif
+
+         else
+          print *,"temperature_primitive_variable invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+
+       else if (local_mask.eq.0) then ! covered
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+      enddo !k
+      enddo !j
+      enddo !i
+ 
+      return
+      end subroutine fort_inc_temp
+
+
        ! operation_flag=100 (right hand side for solver)
        ! operation_flag=110 (divergence)
        ! operation_flag=103 (mac -> cell velocity in solver or MAC_TO_CELL)

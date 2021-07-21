@@ -1420,6 +1420,9 @@ void apply_pressure_grad(
       int vel_or_disp, // =0 velocity; =1 displacement
       int dest_idx);
 
+    void increment_KE(Real beta);
+    void increment_KE_ALL(Real beta);
+
     void INCREMENT_REGISTERS_ALL(int source_mf,int caller_id);
     void INCREMENT_REGISTERS(int source_mf,int caller_id);
     void push_back_state_register(int idx_MF,Real time,int caller_id);
