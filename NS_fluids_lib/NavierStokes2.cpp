@@ -2128,130 +2128,108 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    int homflag=0; // default
  
-   int ok_to_call=0;
-   if ((energyflag==0)||
-       (energyflag==1)) {
-    ok_to_call=1;
-
-     // just find (grad p)_CELL, div(up) for space-time algorithm
-   } else if (energyflag==2) { 
-    if (isweep==1) { // disable mac velocity->cell velocity step here.
-     ok_to_call=0;
-    } else if (isweep==2) { // (grad p)_{CELL}, div(up) only
-     ok_to_call=1;
-    } else
-     amrex::Error("isweep invalid");
-   } else
-    amrex::Error("energyflag invalid");
- 
    // in apply_cell_pressure_gradient 
 
-   if (ok_to_call==1) {
-    int local_enable_spectral=enable_spectral;
+   int local_enable_spectral=enable_spectral;
 
-    int ncomp_denold=presfab.nComp();
-    int ncomp_veldest=Snewfab.nComp();
-    int ncomp_dendest=Snewfab.nComp()-scomp_den;
+   int ncomp_denold=presfab.nComp();
+   int ncomp_veldest=Snewfab.nComp();
+   int ncomp_dendest=Snewfab.nComp()-scomp_den;
 
-    fort_mac_to_cell(
-     &ns_time_order,
-     &divu_outer_sweeps,
-     &num_divu_outer_sweeps,
-     // 103 (mac_vel->cell_vel) or 101 ( div(up) low order only)
-     &operation_flag_interp_macvel, 
-     &energyflag,
-     temperature_primitive_variable.dataPtr(),
-     constant_density_all_time.dataPtr(),
-     &nmat,
-     &nparts,
-     &nparts_def,
-     im_solid_map_ptr,
-     added_weight.dataPtr(),
-     &nten,
-     &level, 
-     &finest_level,
-     &project_option,
-     &local_enable_spectral,
-     &fluxvel_index,
-     &fluxden_index,
-     &facevel_index,
-     &facecut_index,
-     &icefacecut_index,
-     &curv_index,
-     &conservative_div_uu,
-     &ignore_div_up,
-     &pforce_index,
-     &faceden_index,
-     &icemask_index,
-     &massface_index,
-     &vofface_index,
-     &ncphys,
-     velbc.dataPtr(),
-     presbc.dataPtr(), 
-     &cur_time_slab, 
-     &slab_step,
-     &dt_slab,
-     xlo,dx,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),
-     yp.dataPtr(),ARLIM(yp.loVect()),ARLIM(yp.hiVect()),
-     zp.dataPtr(),ARLIM(zp.loVect()),ARLIM(zp.hiVect()),
-     xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()),
-     yvel.dataPtr(),ARLIM(yvel.loVect()),ARLIM(yvel.hiVect()),
-     zvel.dataPtr(),ARLIM(zvel.loVect()),ARLIM(zvel.hiVect()),
-     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
-     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-     ax.dataPtr(),ARLIM(ax.loVect()),ARLIM(ax.hiVect()),
-     ay.dataPtr(),ARLIM(ay.loVect()),ARLIM(ay.hiVect()),
-     az.dataPtr(),ARLIM(az.loVect()),ARLIM(az.hiVect()),
-     vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
-     divupfab.dataPtr(), // rhs
-     ARLIM(divupfab.loVect()),ARLIM(divupfab.hiVect()),
-     Snewfab.dataPtr(),
-     ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // veldest
-      // scomp_den=(AMREX_SPACEDIM+1);
-     Snewfab.dataPtr(scomp_den),
-     ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // dendest
-     maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
-     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-     maskcoef.dataPtr(), // 1=not covered  0=covered
-     ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
-     maskSEMfab.dataPtr(), 
-     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-     levelpcfab.dataPtr(), //levelPC
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
-     solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
-     solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
-     presfab.dataPtr(), 
-     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//pold
-     presfab.dataPtr(),
-     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//denold
-     ustarfab.dataPtr(),ARLIM(ustarfab.loVect()),ARLIM(ustarfab.hiVect()),
-     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskdivres
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
-     &SDC_outer_sweeps,
-     &homflag,
-     &nsolve,
-     &ncomp_denold,
-     &ncomp_veldest,
-     &ncomp_dendest,
-     &SEM_advection_algorithm);
-
-   } else if (ok_to_call==0) {
-    // do nothing
-   } else
-    amrex::Error("ok_to_call invalid");
+   fort_mac_to_cell(
+    &ns_time_order,
+    &divu_outer_sweeps,
+    &num_divu_outer_sweeps,
+    // 103 (mac_vel->cell_vel) or 101 ( div(up) low order only)
+    &operation_flag_interp_macvel, 
+    &energyflag,
+    temperature_primitive_variable.dataPtr(),
+    constant_density_all_time.dataPtr(),
+    &nmat,
+    &nparts,
+    &nparts_def,
+    im_solid_map_ptr,
+    added_weight.dataPtr(),
+    &nten,
+    &level, 
+    &finest_level,
+    &project_option,
+    &local_enable_spectral,
+    &fluxvel_index,
+    &fluxden_index,
+    &facevel_index,
+    &facecut_index,
+    &icefacecut_index,
+    &curv_index,
+    &conservative_div_uu,
+    &ignore_div_up,
+    &pforce_index,
+    &faceden_index,
+    &icemask_index,
+    &massface_index,
+    &vofface_index,
+    &ncphys,
+    velbc.dataPtr(),
+    presbc.dataPtr(), 
+    &cur_time_slab, 
+    &slab_step,
+    &dt_slab,
+    xlo,dx,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),
+    yp.dataPtr(),ARLIM(yp.loVect()),ARLIM(yp.hiVect()),
+    zp.dataPtr(),ARLIM(zp.loVect()),ARLIM(zp.hiVect()),
+    xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()),
+    yvel.dataPtr(),ARLIM(yvel.loVect()),ARLIM(yvel.hiVect()),
+    zvel.dataPtr(),ARLIM(zvel.loVect()),ARLIM(zvel.hiVect()),
+    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
+    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
+    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
+    ax.dataPtr(),ARLIM(ax.loVect()),ARLIM(ax.hiVect()),
+    ay.dataPtr(),ARLIM(ay.loVect()),ARLIM(ay.hiVect()),
+    az.dataPtr(),ARLIM(az.loVect()),ARLIM(az.hiVect()),
+    vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+    divupfab.dataPtr(), // rhs
+    ARLIM(divupfab.loVect()),ARLIM(divupfab.hiVect()),
+    Snewfab.dataPtr(),
+    ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // veldest
+     // scomp_den=(AMREX_SPACEDIM+1);
+    Snewfab.dataPtr(scomp_den),
+    ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // dendest
+    maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
+    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    maskcoef.dataPtr(), // 1=not covered  0=covered
+    ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
+    maskSEMfab.dataPtr(), 
+    ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+    levelpcfab.dataPtr(), //levelPC
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+    solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+    solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+    solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+    levelpcfab.dataPtr(),
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
+    presfab.dataPtr(), 
+    ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//pold
+    presfab.dataPtr(),
+    ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//denold
+    ustarfab.dataPtr(),ARLIM(ustarfab.loVect()),ARLIM(ustarfab.hiVect()),
+    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    levelpcfab.dataPtr(),
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
+    levelpcfab.dataPtr(),
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskdivres
+    levelpcfab.dataPtr(),
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
+    &SDC_outer_sweeps,
+    &homflag,
+    &nsolve,
+    &ncomp_denold,
+    &ncomp_veldest,
+    &ncomp_dendest,
+    &SEM_advection_algorithm);
 
   }   // mfi
 } // omp
@@ -2264,8 +2242,6 @@ void NavierStokes::apply_cell_pressure_gradient(
   save_to_macvel_state(idx_umac);
   delete divup; // div(up) is discarded.
   delete ustar;
- } else if (energyflag==2) { // (grad p)_CELL, div(up) for space-time
-  // do nothing
  } else
   amrex::Error("energyflag invalid");
 
@@ -2961,10 +2937,10 @@ void NavierStokes::increment_face_velocity(
 void NavierStokes::increment_KE_ALL(Real beta) {
 
  int finest_level=parent->finestLevel();
- if (level==0) {
+ if ((level==0)&&(level<=finest_level)) {
   // do nothing
  } else
-  amrex::Error("expecting level==0 in increment_KE_ALL");
+  amrex::Error("expecting level==0 and level<=finest_lev in increment_KE_ALL");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
