@@ -477,7 +477,6 @@ namespace amrex{
         AMREX_ARLIM_P(maskreslo),AMREX_ARLIM_P(maskreshi),
         int* SDC_outer_sweeps,
         int* homflag,
-        int* use_VOF_weight,
         int* nsolve,
         int* ncomp_denold,
         int* ncomp_veldest,

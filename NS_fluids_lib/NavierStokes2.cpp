@@ -153,9 +153,23 @@ void NavierStokes::new_localMF_if_not_exist(int idx_MF,int ncomp,
 } //new_localMF_if_not_exist
 
 
+//MAC_state_idx==Umac_Type or (mac velocity)
+//MAC_state_idx==XDmac_Type   (mac displacement)
+//dir=0..sdim-1
 void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
   int idx_MF,int ngrow,int dir,
   int scomp,int ncomp,Real time) {
+
+ if ((dir>=0)&&(dir<AMREX_SPACEDIM)) {
+  // do nothing
+ } else
+  amrex::Error("dir invalid");
+
+ if ((MAC_state_idx==Umac_Type)||
+     (MAC_state_idx==XDmac_Type)) {
+  // do nothing
+ } else
+  amrex::Error("MAC_state_idx invalid");
 
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
@@ -167,7 +181,7 @@ void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
  if (ngrow<0)
   amrex::Error("ngrow invalid");
 
-   // declared in NavierStokes.cpp
+   // NavierStokes::getStateMAC declared in NavierStokes.cpp
  localMF[idx_MF]=getStateMAC(MAC_state_idx,ngrow,dir,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
 } // end getStateMAC_localMF
@@ -2134,7 +2148,6 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    if (ok_to_call==1) {
     int local_enable_spectral=enable_spectral;
-    int use_VOF_weight=1;
 
     int ncomp_denold=presfab.nComp();
     int ncomp_veldest=Snewfab.nComp();
@@ -2229,7 +2242,6 @@ void NavierStokes::apply_cell_pressure_gradient(
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
      &SDC_outer_sweeps,
      &homflag,
-     &use_VOF_weight,
      &nsolve,
      &ncomp_denold,
      &ncomp_veldest,
@@ -2952,7 +2964,6 @@ void NavierStokes::increment_face_velocity(
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
 void NavierStokes::VELMAC_TO_CELLALL(
-  int use_VOF_weight,
   int vel_or_disp,
   int dest_idx) {
 
@@ -2965,8 +2976,9 @@ void NavierStokes::VELMAC_TO_CELLALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.VELMAC_TO_CELL(use_VOF_weight,vel_or_disp,dest_idx);
+  ns_level.VELMAC_TO_CELL(vel_or_disp,dest_idx);
  }
+
  if (dest_idx==-1) {
   // do nothing
  } else if (dest_idx>=0) {
@@ -3004,7 +3016,6 @@ void NavierStokes::VELMAC_TO_CELLALL(
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
 void NavierStokes::VELMAC_TO_CELL(
-  int use_VOF_weight,
   int vel_or_disp,
   int dest_idx) {
  
@@ -3086,6 +3097,7 @@ void NavierStokes::VELMAC_TO_CELL(
  int local_enable_spectral=enable_spectral;
 
  MultiFab* face_velocity[AMREX_SPACEDIM];
+ MultiFab* save_face_velocity[AMREX_SPACEDIM];
  MultiFab* dest_velocity=nullptr;
 
  if (vel_or_disp==0) { //velocity
@@ -3105,7 +3117,19 @@ void NavierStokes::VELMAC_TO_CELL(
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   face_velocity[dir]=getStateMAC(
     MAC_state_idx,0,dir,0,nsolve,cur_time_slab);
+  save_face_velocity[dir]=face_velocity[dir];
  }
+
+ if (vel_or_disp==0) { //velocity
+  // do nothing
+ } else if (vel_or_disp==-1) { //mac velocity increment
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   save_face_velocity[dir]=localMF[REGISTER_MARK_MAC_MF+dir];
+  }
+ } else if (vel_or_disp==1) { //displacement
+  // do nothing
+ } else 
+  amrex::Error("vel_or_disp invalid");
 
  if (dest_idx==-1) {
   if ((vel_or_disp==0)||   //u^{mac->cell}
@@ -3117,7 +3141,13 @@ void NavierStokes::VELMAC_TO_CELL(
   } else
    amrex::Error("vel_or_disp invalid");
  } else if (dest_idx>=0) {
-  dest_velocity=localMF[dest_idx];
+  if ((vel_or_disp==0)||  //velocity
+      (vel_or_disp==1)) { //displacement
+   dest_velocity=localMF[dest_idx];
+  } else if (vel_or_disp==-1) {
+   amrex::Error("increment option only valid if vel_or_disp==0 or 1");
+  } else
+   amrex::Error("vel_or_disp invalid");
  } else
   amrex::Error("dest_idx invalid");
 
@@ -3182,9 +3212,14 @@ void NavierStokes::VELMAC_TO_CELL(
   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+
   FArrayBox& xvel=(*face_velocity[0])[mfi];
   FArrayBox& yvel=(*face_velocity[1])[mfi];
   FArrayBox& zvel=(*face_velocity[AMREX_SPACEDIM-1])[mfi];
+
+  FArrayBox& xvel_save=(*save_face_velocity[0])[mfi];
+  FArrayBox& yvel_save=(*save_face_velocity[1])[mfi];
+  FArrayBox& zvel_save=(*save_face_velocity[AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
   FArrayBox& areax=(*localMF[AREA_MF])[mfi];
@@ -3250,9 +3285,12 @@ void NavierStokes::VELMAC_TO_CELL(
    tilelo,tilehi,
    fablo,fabhi,
    &bfact,
-   xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), // xp
-   yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()), // yp
-   zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()), // zp
+   xvel_save.dataPtr(),
+   ARLIM(xvel_save.loVect()),ARLIM(xvel_save.hiVect()), // xp
+   yvel_save.dataPtr(),
+   ARLIM(yvel_save.loVect()),ARLIM(yvel_save.hiVect()), // yp
+   zvel_save.dataPtr(),
+   ARLIM(zvel_save.loVect()),ARLIM(zvel_save.hiVect()), // zp
    xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
    yvel.dataPtr(),ARLIM(yvel.loVect()),ARLIM(yvel.hiVect()), 
    zvel.dataPtr(),ARLIM(zvel.loVect()),ARLIM(zvel.hiVect()), 
@@ -3293,7 +3331,6 @@ void NavierStokes::VELMAC_TO_CELL(
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//maskres
    &SDC_outer_sweeps,
    &homflag,
-   &use_VOF_weight,
    &nsolve,
    &ncomp_denold,
    &ncomp_veldest,
@@ -3306,7 +3343,7 @@ void NavierStokes::VELMAC_TO_CELL(
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete face_velocity[dir]; 
 
-} // subroutine VELMAC_TO_CELL
+} // end subroutine VELMAC_TO_CELL
 
 
 // do_alloc=1 => allocate variable

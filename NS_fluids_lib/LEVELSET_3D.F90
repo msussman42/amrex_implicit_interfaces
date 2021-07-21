@@ -11375,7 +11375,6 @@ stop
        maskres,DIMS(maskres), &
        SDC_outer_sweeps, &
        homflag, &
-       use_VOF_weight, &
        nsolve, &
        ncomp_denold, &
        ncomp_veldest, &
@@ -11412,7 +11411,6 @@ stop
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: homflag
-      INTEGER_T, intent(in) :: use_VOF_weight
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: fluxvel_index
@@ -11701,13 +11699,6 @@ stop
       if (1.eq.0) then
        print *,"in: mac_to_cell: operation_flag=",operation_flag
       endif
-
-      if ((use_VOF_weight.eq.0).or.(use_VOF_weight.eq.1)) then
-       ! do nothing
-      else
-       print *,"use_VOF_weight invalid"
-       stop
-      endif 
 
       if ((enable_spectral.ge.0).and. &
           (enable_spectral.le.3)) then
@@ -12669,15 +12660,6 @@ stop
             stop
            endif
           enddo ! im=1..nmat
-
-          if (use_VOF_weight.eq.1) then
-           ! do nothing
-          else if (use_VOF_weight.eq.0) then
-           mass_side(side)=one
-          else
-           print *,"use_VOF_weight invalid"
-           stop
-          endif
 
          enddo ! side=1..2
 

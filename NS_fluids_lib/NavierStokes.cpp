@@ -14915,7 +14915,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      int nsolve=nfluxSEM;
      int homflag=source_term;
      int local_enable_spectral=projection_enable_spectral;
-     int use_VOF_weight=0;
 
      int ncomp_denold=nmat*num_state_material;
      int ncomp_veldest=snewfab.nComp();
@@ -14963,7 +14962,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       denbc.dataPtr(),  // presbc
       &prev_time_slab, 
       &slab_step,
-      &dt_slab,  // MAC_TO_CELL
+      &dt_slab,  // calling fort_mac_to_cell
       xlo,dx,
       tilelo,tilehi,
       fablo,fabhi,
@@ -15018,7 +15017,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       &SDC_outer_sweeps,
       &homflag,
-      &use_VOF_weight,
       &nsolve,
       &ncomp_denold,
       &ncomp_veldest,
@@ -18138,13 +18136,12 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
 
- int use_VOF_weight=1;
  int vel_or_disp=0;  // velocity
  int dest_idx=-1; // we put the interpolant in State_Type so that the
                   // command MultiFab* velmf=ns_level.getState( ... 
                   // gets the interpolated data.  We have to restore
                   // HOLD_VELOCITY_DATA_MF at the end.
- VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
+ VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
  int tecplot_finest_level=finest_level;
  if (tecplot_max_level<tecplot_finest_level)
@@ -18229,10 +18226,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("visual_compare invalid");
 
- int use_VOF_weight=1;
  int vel_or_disp=1;  // displacement
  int dest_idx=VISUAL_XDISP_MAC_CELL_MF;
- VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
+ VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
