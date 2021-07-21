@@ -1846,7 +1846,7 @@ void NavierStokes::init_splitting_force_SDC() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   FORT_SDC_TIME_QUAD(
+   fort_sdc_time_quad(
     &HOncomp,
     &LOncomp,
     &delta_ncomp,
@@ -1913,7 +1913,7 @@ void NavierStokes::init_splitting_force_SDC() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    FORT_SDC_TIME_QUAD_FACE(
+    fort_sdc_time_quad_face(
      &dir,
      &HOncomp,
      &LOncomp,

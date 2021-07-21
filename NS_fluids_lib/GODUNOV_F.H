@@ -13,8 +13,6 @@
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
-#    define FORT_SDC_TIME_QUAD sdc_time_quad
-#    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
@@ -29,8 +27,6 @@
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
 #    define FORT_TENSORHEAT TENSORHEAT
 #    define FORT_HEATSOURCE HEATSOURCE
-#    define FORT_SDC_TIME_QUAD SDC_TIME_QUAD
-#    define FORT_SDC_TIME_QUAD_FACE SDC_TIME_QUAD_FACE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
@@ -45,8 +41,6 @@
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
-#    define FORT_SDC_TIME_QUAD sdc_time_quad
-#    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
 #    define FORT_HEATSOURCE_FACE heatsource_face_
@@ -60,8 +54,6 @@
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
 #    define FORT_TENSORHEAT tensorheat_
 #    define FORT_HEATSOURCE heatsource_
-#    define FORT_SDC_TIME_QUAD sdc_time_quad_
-#    define FORT_SDC_TIME_QUAD_FACE sdc_time_quad_face_
 #    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
 #  endif
@@ -214,7 +206,7 @@ extern "C"
     int* level,
     Real* dt);
 
-   void FORT_SDC_TIME_QUAD(
+   void fort_sdc_time_quad(
     int* HOncomp,int* LOncomp,int* delta_ncomp,
     int* nstate,
     int* nfluxSEM,
@@ -232,7 +224,7 @@ extern "C"
     Real* dt);
 
 
-   void FORT_SDC_TIME_QUAD_FACE(
+   void fort_sdc_time_quad_face(
     int* dir,
     int* HOncomp,
     int* LOncomp,

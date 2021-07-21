@@ -4678,13 +4678,12 @@ END SUBROUTINE SIMP
         print *,"ncomp_den invalid"
         stop
        endif
-       if (ncomp_flux.ne.SDIM+num_state_base) then
+       if (ncomp_flux.ne.SDIM+1) then
         print *,"ncomp_flux invalid"
         stop
        endif
       else if ((operation_flag.eq.3).or. & !u cell to MAC
                (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-               (operation_flag.eq.10).or. &
                (operation_flag.eq.11)) then 
        if (ncomp_vel.ne.AMREX_SPACEDIM) then
         print *,"ncomp_vel invalid"
@@ -4698,7 +4697,7 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if (operation_flag.eq.0) then
+      else if (operation_flag.eq.0) then ! grad p
        if (ncomp_vel.ne.1) then
         print *,"ncomp_vel invalid"
         stop
@@ -5116,7 +5115,6 @@ END SUBROUTINE SIMP
              endif
             else if ((operation_flag.eq.3).or. & !u cell to MAC
                      (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-                     (operation_flag.eq.10).or. &
                      (operation_flag.eq.11)) then 
              if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5241,7 +5239,6 @@ END SUBROUTINE SIMP
                   endif
                  else if ((operation_flag.eq.3).or. & !u cell to MAC
                           (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-                          (operation_flag.eq.10).or. &
                           (operation_flag.eq.11)) then 
                   if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5450,7 +5447,6 @@ END SUBROUTINE SIMP
        endif
       else if ((operation_flag.eq.3).or. & !u cell to MAC
                (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-               (operation_flag.eq.10).or. &
                (operation_flag.eq.11)) then 
        if (ncomp_vel.ne.AMREX_SPACEDIM) then
         print *,"ncomp_vel invalid"
@@ -5874,7 +5870,6 @@ END SUBROUTINE SIMP
                endif
               else if ((operation_flag.eq.3).or. & !u cell to MAC
                        (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-                       (operation_flag.eq.10).or. &
                        (operation_flag.eq.11)) then 
                if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5997,7 +5992,6 @@ END SUBROUTINE SIMP
                     endif
                    else if ((operation_flag.eq.3).or. &!u cell to MAC
                             (operation_flag.eq.5).or. &!UMAC=UMAC+beta diff_reg
-                            (operation_flag.eq.10).or. &
                             (operation_flag.eq.11)) then 
                     if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -6074,7 +6068,7 @@ END SUBROUTINE SIMP
       deallocate(ccrse)
 
       return
-      end subroutine FORT_INTERP_COPY
+      end subroutine fort_interp_copy
 
       subroutine fort_interp_flux( &
        enable_spectral, &
@@ -6643,10 +6637,10 @@ END SUBROUTINE SIMP
       deallocate(ccrse)
 
       return
-      end subroutine FORT_INTERP_FLUX
+      end subroutine fort_interp_flux
 
 
-      subroutine FORT_FILLBDRY_FLUX( &
+      subroutine fort_fillbdry_flux( &
        sync_iter, &
        level, &
        finest_level, &
@@ -6658,29 +6652,35 @@ END SUBROUTINE SIMP
        fluxhold,DIMS(fluxhold), &
        maskcov,DIMS(maskcov), &
        masknbr,DIMS(masknbr), &
-       presbc)
+       presbc) &
+       bind(c,name='fort_fillbdry_flux')
 
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T sync_iter
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T dir
-      INTEGER_T ncomp_flux
-      INTEGER_T DIMDEC(fluxtarg)
-      INTEGER_T DIMDEC(fluxhold)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(masknbr)
-      INTEGER_T presbc(SDIM,2)
+      INTEGER_T, intent(in) :: sync_iter
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: ncomp_flux
+      INTEGER_T, intent(in) :: DIMDEC(fluxtarg)
+      INTEGER_T, intent(in) :: DIMDEC(fluxhold)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(masknbr)
+      INTEGER_T, intent(in) :: presbc(SDIM,2)
        ! maskcov=tag if not covered by level+1 or outside the domain.
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T masknbr(DIMV(masknbr))  ! =1 if fine-fine  =0 coarse-fine
-      REAL_T fluxtarg(DIMV(fluxtarg),ncomp_flux) 
-      REAL_T fluxhold(DIMV(fluxhold),ncomp_flux) 
+      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+       ! =1 if fine-fine  =0 coarse-fine
+      REAL_T, intent(in),target :: masknbr(DIMV(masknbr))  
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: fluxtarg(DIMV(fluxtarg),ncomp_flux) 
+      REAL_T, pointer :: fluxtarg_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fluxhold(DIMV(fluxhold),ncomp_flux) 
+      REAL_T, pointer :: fluxhold_ptr(D_DECL(:,:,:),:)
       INTEGER_T i,j,k
       INTEGER_T iface,jface,kface
       INTEGER_T i_out,j_out,k_out
@@ -6693,7 +6693,6 @@ END SUBROUTINE SIMP
       INTEGER_T maskcov_out
       INTEGER_T masknbr_out
       REAL_T flux_orig,flux_copy
-
 
       ii=0
       jj=0
@@ -6709,10 +6708,14 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(fluxtarg),0,dir,411)
-      call checkbound(fablo,fabhi,DIMS(fluxhold),1,-1,411)
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,411)
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,411)
+      fluxtarg_ptr=>fluxtarg
+      call checkbound_array(fablo,fabhi,fluxtarg_ptr,0,dir,411)
+      fluxhold_ptr=>fluxhold
+      call checkbound_array(fablo,fabhi,fluxhold_ptr,1,-1,411)
+      masknbr_ptr=>masknbr
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1,411)
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,411)
 
       if ((level.ge.0).and.(level.le.finest_level)) then
        ! do nothing
@@ -6859,8 +6862,7 @@ END SUBROUTINE SIMP
       enddo ! side=0..1
 
       return
-      end subroutine FORT_FILLBDRY_FLUX
-
+      end subroutine fort_fillbdry_flux
 
       subroutine FORT_AVGDOWN_LOW( &
        problo, &
