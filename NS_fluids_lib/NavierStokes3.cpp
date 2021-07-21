@@ -2383,7 +2383,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        scomp,
        ncomp);
 
-     update_SEM_forcesALL(project_option_placeholder,REGISTER_MARK_MF,
+     update_SEM_forcesALL(
+       project_option_placeholder, //=3 (viscosity)
+       REGISTER_MARK_MF,
        update_placeholder,update_placeholder);
 
      override_enable_spectral(save_enable_spectral);
@@ -3531,7 +3533,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         int update_spectralF=1;
 
-        // grad p and div(up)
+        // grad p (MAC)
         int update_stableF=1;
         if (slab_step==-1)
          update_stableF=0;
@@ -3568,13 +3570,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           scomp,
           ncomp);
 
-         // HOfab=grad p,  div(up)
+         // HOfab=grad p (MAC)
          // calls: UPDATESEMFORCE in GODUNOV_3D.F90
         update_SEM_forcesALL(project_option_op,PRESPC2_MF,
          update_spectralF,update_stableF);
 
         override_enable_spectral(save_enable_spectral);
-        // end: grad p and div(up)
+        // end: grad p (MAC)
 
         save_enable_spectral=enable_spectral;
         override_enable_spectral(viscous_enable_spectral);
@@ -12083,7 +12085,7 @@ void NavierStokes::veldiffuseALL() {
    //num_materials_combine=1
  get_mm_scomp_solver(
   1,
-  project_option_temperature,
+  project_option_temperature, //=2
   state_index,
   scomp,
   ncomp,
@@ -12307,7 +12309,7 @@ void NavierStokes::veldiffuseALL() {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      // calls: SEMDELTAFORCE in GODUNOV_3D.F90
-     ns_level.make_SEM_delta_force(project_option_temperature);
+     ns_level.make_SEM_delta_force(project_option_temperature); //=2
     }
    } else if (viscous_enable_spectral==0) {
     // do nothing
@@ -12344,7 +12346,7 @@ void NavierStokes::veldiffuseALL() {
    //num_materials_combine=1
   get_mm_scomp_solver(
    1,
-   project_option_temperature,
+   project_option_temperature, //=2
    state_index,
    scomp,
    ncomp,

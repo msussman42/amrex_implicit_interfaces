@@ -1876,8 +1876,8 @@ void NavierStokes::apply_div(
 } // subroutine apply_div
 
 
-// if temperature: -div(k grad T)-THERMAL_FORCE_MF
-// if viscosity  : -div(2 mu D)-HOOP_FORCE_MARK_MF
+// if temperature: -div(k grad T)-THERMAL_FORCE_MF (project_option==2)
+// if viscosity  : -div(2 mu D)-HOOP_FORCE_MARK_MF (project_option==3)
 // if mom force  : NEG_MOM_FORCE_MF  (project_option==4)
 // called from: NavierStokes::do_the_advance
 //              NavierStokes::veldiffuseALL
@@ -1896,7 +1896,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 
  int finest_level=parent->finestLevel();
 
- if ((project_option==0)||
+ if ((project_option==0)||   // GP_DEST_FACE
      (project_option==4)||   // NEG_MOM_FORCE
      (project_option==3)) {  // viscosity
   //do nothing
@@ -1906,7 +1906,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   amrex::Error("project_option invalid67");
 
  int nsolve=1;
- if (project_option==0) { // grad p, div(u p)
+ if (project_option==0) { // grad p
   nsolve=1;
  } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
   nsolve=1;
@@ -1917,7 +1917,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  } else
   amrex::Error("project_option invalid68"); 
 
- if ((project_option==0)||   // grad p, div(u p)
+ if ((project_option==0)||   // grad p
      (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
      (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
@@ -1956,9 +1956,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   int create_hierarchy=0;
   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
-   // automatically initializes GP_DEST_CELL=0.0
-  allocate_array(0,AMREX_SPACEDIM,-1,GP_DEST_CELL_MF);
-
  } else if (project_option==4) { // NEG_MOM_FORCE_MF
   // do nothing
  } else
@@ -1970,11 +1967,9 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
     idx_source,update_spectral,update_stable);
  }
 
- if ((project_option==0)||  // grad p, div(u p)
+ if ((project_option==0)||  // grad p
      (project_option==2)||  // -div(k grad T)-THERMAL_FORCE_MF
      (project_option==3)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
-
-  delete_array(GP_DEST_CELL_MF);
 
   deallocate_maccoefALL(project_option);
 
@@ -2017,7 +2012,7 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
 
- if ((project_option==0)||
+ if ((project_option==0)||   // grad p face
      (project_option==4)||   // -momforce
      (project_option==3)) {  // viscosity
   //do nothing
@@ -2026,12 +2021,11 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("project_option invalid71");
 
- int local_idx_gp=GP_DEST_CELL_MF;
  int local_idx_gpmac=GP_DEST_FACE_MF;
  int local_idx_div=MACDIV_MF;
  
  int nsolve=1;
- if (project_option==0) { // grad p, div(u p)
+ if (project_option==0) { // grad p
   nsolve=1;
  } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
   nsolve=1;
@@ -2039,13 +2033,12 @@ void NavierStokes::update_SEM_forces(int project_option,
   nsolve=AMREX_SPACEDIM;
  } else if (project_option==4) { // -mom force
   nsolve=AMREX_SPACEDIM;
-  local_idx_gp=NEG_MOM_FORCE_MF;
   local_idx_gpmac=NEG_MOM_FORCE_MF;
   local_idx_div=NEG_MOM_FORCE_MF;
  } else
   amrex::Error("project_option invalid72"); 
 
- if ((project_option==0)||   // grad p, div(u p)
+ if ((project_option==0)||   // grad p
      (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
      (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
@@ -2096,7 +2089,6 @@ void NavierStokes::update_SEM_forces(int project_option,
 
    // energyflag=2: 
    //   get grad p instead of \pm dt grad p/rho
-   //   get div(up) instead of -dt div(up)/rho
    int energyflag=2;
 
    // GP_DEST_FACE=grad p instead of -dt grad p/rho
@@ -2105,7 +2097,8 @@ void NavierStokes::update_SEM_forces(int project_option,
    apply_pressure_grad(
     simple_AMR_BC_flag,
     simple_AMR_BC_flag_viscosity,
-    homflag,energyflag,GP_DEST_FACE_MF,
+    homflag,energyflag,
+    GP_DEST_FACE_MF,
     idx_source,
     project_option,nsolve);
 
@@ -2115,15 +2108,6 @@ void NavierStokes::update_SEM_forces(int project_option,
     MultiFab::Copy(*localMF[UMAC_MF+dir],*macvel,0,0,nsolve,0);
     delete macvel;
    } 
-   // grad p: GP_DEST_CELL_MF
-   // div(up) : MACDIV_MF 
-   apply_cell_pressure_gradient(
-    project_option,
-    energyflag,
-    idx_source,
-    UMAC_MF,
-    GP_DEST_CELL_MF,
-    MACDIV_MF);
   } else
    amrex::Error("project_option invalid73");
 
@@ -2135,22 +2119,20 @@ void NavierStokes::update_SEM_forces(int project_option,
   // f=-div 2 mu D - HOOP_FORCE_MARK_MF  (project_option==3) or
   // f=NEG_MOM_FORCE_MF                  (project_option==4) or
   // f=-div k grad T - THERMAL_FORCE_MF  (project_option==2) or
-  // f=grad p                            (project_option==0) or
-  // f=div (up)
+  // f=grad p (MAC)                      (project_option==0) 
   // NavierStokes::update_SEM_delta_force (NavierStokes.cpp)
   // calls: FORT_UPDATESEMFORCE
   // does not look at enable_spectral
  if ((update_spectral+update_stable>=1)&&
      (update_spectral+update_stable<=2)) {
   update_SEM_delta_force(project_option,
-   local_idx_gp,
    local_idx_gpmac,
    local_idx_div,
    update_spectral,update_stable,nsolve);
  } else
   amrex::Error("update_spectral+update_stable invalid");
 
- if ((project_option==0)||  // grad p, div(u p)
+ if ((project_option==0)||  // grad p
      (project_option==2)||  // -div(k grad T)-THERMAL_FORCE_MF
      (project_option==3)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
 

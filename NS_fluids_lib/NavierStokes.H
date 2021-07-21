@@ -72,7 +72,6 @@ namespace amrex{
 
 // used in update_SEM_forces
 #define GP_DEST_FACE_MF 50
-#define GP_DEST_CELL_MF 53
 
 #define SATURATION_TEMP_MF 54
 

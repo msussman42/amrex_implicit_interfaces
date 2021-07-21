@@ -10422,8 +10422,12 @@ void NavierStokes::update_SEM_delta_force(
    debug_ngrow(idx_gpmac+dir,0,3);
 
    if (project_option==0) {
-    if (localMF[idx_gpmac]->nComp()!=nsolve)
-     amrex::Error("localMF[idx_gpmac]->nComp() invalid");
+    if (nsolve!=1)
+     amrex::Error("expecting nsolve==1 if project_option==0");
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     if (localMF[idx_gpmac+dir]->nComp()!=nsolve)
+      amrex::Error("localMF[idx_gpmac+dir]->nComp() invalid");
+    }
    } else if ((project_option==2)||
               (project_option==3)) {
     // do nothing

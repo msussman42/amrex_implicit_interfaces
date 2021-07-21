@@ -11342,8 +11342,10 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid INC_TEMP"
+      if ((level.le.finest_level).and.(level.ge.0)) then
+       ! do nothing
+      else
+       print *,"level invalid fort_inc_temp"
        stop
       endif
 
@@ -11388,7 +11390,9 @@ stop
 
       enddo ! im=1..nmat
 
-      if ((beta.ne.one).and.(beta.ne.-one)) then
+      if ((beta.eq.one).or.(beta.eq.-one)) then
+       ! do nothing
+      else
        print *,"beta invalid"
        stop
       endif 
@@ -11398,7 +11402,9 @@ stop
       endif
 
       do im=1,nmat
-       if (fort_denconst(im).le.zero) then
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"denconst invalid"
         stop
        endif
@@ -11431,9 +11437,9 @@ stop
           vof=state(D_DECL(i,j,k),vofcomp)
           if ((vof.ge.-VOFTOL).and.(vof.le.one+VOFTOL)) then
 
-           if (vof.lt.VOFTOL) then
+           if (vof.lt.half) then
             ! do nothing
-           else if (vof.ge.VOFTOL) then
+           else if (vof.ge.half) then
             KE=zero
             do dir=1,SDIM
              KE=KE+half*(state(D_DECL(i,j,k),dir)**2)
@@ -11475,14 +11481,21 @@ stop
                TEMPERATURE,internal_e, &
                imattype,im)
              internal_e=internal_e+beta*KE
-             if (internal_e.le.zero) then
-              print *,"internal_e.le.zero in INC_TEMP"
+             if (internal_e.gt.zero) then
+              ! do nothing
+             else
+              print *,"internal_e.le.zero in fort_inc_temp"
               stop
              endif
              call TEMPERATURE_material(rho,massfrac_parm, &
                TEMPERATURE, &
                internal_e,imattype,im)
-             state(D_DECL(i,j,k),dencomp+1)=TEMPERATURE
+             if (TEMPERATURE.gt.zero) then
+              state(D_DECL(i,j,k),dencomp+1)=TEMPERATURE
+             else
+              print *,"TEMPERATURE underflow in fort_inc_temp"
+              stop
+             endif
             else
              print *,"imattype invalid fort_inc_temp"
              stop
