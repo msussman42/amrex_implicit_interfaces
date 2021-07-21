@@ -650,16 +650,21 @@ void NavierStokes::avgDown_and_Copy_localMF(
   ncomp_flux=nfluxSEM;
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
+
+  if (nfluxSEM==AMREX_SPACEDIM+1) {
+   // do nothing
+  } else
+   amrex::Error("nfluxSEM invalid");
+
  } else if ((operation_flag==3)|| // u cell to MAC
             (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
-	    (operation_flag==10)||
 	    (operation_flag==11)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
   scomp_flux=0;
   ncomp_flux_use=1;
- } else if (operation_flag==0) {
+ } else if (operation_flag==0) { //grad p
   ncomp_den=1;
   ncomp_vel=1;
   ncomp_flux=1;
@@ -906,9 +911,14 @@ void NavierStokes::interp_and_Copy_localMF(
   ncomp_flux=nfluxSEM;
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
+
+  if (nfluxSEM==AMREX_SPACEDIM+1) {
+   // do nothing
+  } else
+   amrex::Error("nfluxSEM invalid");
+
  } else if ((operation_flag==3)|| // u cell to MAC
             (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
-	    (operation_flag==10)||
 	    (operation_flag==11)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
@@ -1183,7 +1193,7 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      FORT_FILLBDRY_FLUX( 
+      fort_fillbdry_flux( 
        &sync_iter,
        &level,
        &finest_level,

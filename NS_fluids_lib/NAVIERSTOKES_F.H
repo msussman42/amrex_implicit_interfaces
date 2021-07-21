@@ -18,7 +18,6 @@
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
-#    define FORT_FILLBDRY_FLUX fillbdry_flux
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_BURNING avgdown_burning
@@ -43,7 +42,6 @@
 #    define FORT_MOFAVGDOWN  MOFAVGDOWN
 #    define FORT_ERRORAVGDOWN ERRORAVGDOWN
 #    define FORT_AVGDOWN     AVGDOWN
-#    define FORT_FILLBDRY_FLUX FILLBDRY_FLUX
 #    define FORT_AVGDOWN_LOW AVGDOWN_LOW
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
 #    define FORT_AVGDOWN_BURNING AVGDOWN_BURNING
@@ -67,7 +65,6 @@
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
-#    define FORT_FILLBDRY_FLUX fillbdry_flux
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_BURNING avgdown_burning
@@ -90,7 +87,6 @@
 #    define FORT_MOFAVGDOWN  mofavgdown_
 #    define FORT_ERRORAVGDOWN erroravgdown_
 #    define FORT_AVGDOWN     avgdown_
-#    define FORT_FILLBDRY_FLUX fillbdry_flux_
 #    define FORT_AVGDOWN_LOW avgdown_low_
 #    define FORT_AVGDOWN_TAG avgdown_tag_
 #    define FORT_AVGDOWN_BURNING avgdown_burning_
@@ -351,8 +347,10 @@ extern "C" {
       int* ncomp_vel,
       const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
-      const Real* den_fine,AMREX_ARLIM_P(den_fine_lo),AMREX_ARLIM_P(den_fine_hi),
-      const Real* vel_fine,AMREX_ARLIM_P(vel_fine_lo),AMREX_ARLIM_P(vel_fine_hi),
+      const Real* den_fine,
+      AMREX_ARLIM_P(den_fine_lo),AMREX_ARLIM_P(den_fine_hi),
+      const Real* vel_fine,
+      AMREX_ARLIM_P(vel_fine_lo),AMREX_ARLIM_P(vel_fine_hi),
       const Real* mask,AMREX_ARLIM_P(mask_lo),AMREX_ARLIM_P(mask_hi),
       const Real* fine_LS,AMREX_ARLIM_P(fine_LS_lo),AMREX_ARLIM_P(fine_LS_hi),
       const int* lo, const int* hi,
@@ -376,11 +374,14 @@ extern "C" {
       int* ncomp_den,
       int* ncomp_vel,
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
-      const Real* den_crse,AMREX_ARLIM_P(den_crse_lo),AMREX_ARLIM_P(den_crse_hi),
-      const Real* vel_crse,AMREX_ARLIM_P(vel_crse_lo),AMREX_ARLIM_P(vel_crse_hi),
+      const Real* den_crse,
+      AMREX_ARLIM_P(den_crse_lo),AMREX_ARLIM_P(den_crse_hi),
+      const Real* vel_crse,
+      AMREX_ARLIM_P(vel_crse_lo),AMREX_ARLIM_P(vel_crse_hi),
       const Real* masknbr,AMREX_ARLIM_P(masknbr_lo),AMREX_ARLIM_P(masknbr_hi),
       const Real* masksem,AMREX_ARLIM_P(masksem_lo),AMREX_ARLIM_P(masksem_hi),
-      const Real* cmasksem,AMREX_ARLIM_P(cmasksem_lo),AMREX_ARLIM_P(cmasksem_hi),
+      const Real* cmasksem,
+      AMREX_ARLIM_P(cmasksem_lo),AMREX_ARLIM_P(cmasksem_hi),
       const Real* cLS,AMREX_ARLIM_P(cLS_lo),AMREX_ARLIM_P(cLS_hi),
       int* velbc,
       const int* loc, const int* hic);
@@ -402,12 +403,13 @@ extern "C" {
       const Real* crse,AMREX_ARLIM_P(crse_lo),AMREX_ARLIM_P(crse_hi),
       const Real* masknbr,AMREX_ARLIM_P(masknbr_lo),AMREX_ARLIM_P(masknbr_hi),
       const Real* masksem,AMREX_ARLIM_P(masksem_lo),AMREX_ARLIM_P(masksem_hi),
-      const Real* cmasksem,AMREX_ARLIM_P(cmasksem_lo),AMREX_ARLIM_P(cmasksem_hi),
+      const Real* cmasksem,
+      AMREX_ARLIM_P(cmasksem_lo),AMREX_ARLIM_P(cmasksem_hi),
       int* velbc,
       const int* loc, const int* hic);
 
 
-    void FORT_FILLBDRY_FLUX(
+    void fort_fillbdry_flux(
       int* sync_iter,
       int* level,
       int* finest_level,
@@ -415,8 +417,10 @@ extern "C" {
       const int* fablo,const int* fabhi,
       int* dir,
       int* ncomp_flux,
-      const Real* fluxtarg,AMREX_ARLIM_P(fluxtarg_lo),AMREX_ARLIM_P(fluxtarg_hi),
-      const Real* fluxhold,AMREX_ARLIM_P(fluxhold_lo),AMREX_ARLIM_P(fluxhold_hi),
+      const Real* fluxtarg,
+      AMREX_ARLIM_P(fluxtarg_lo),AMREX_ARLIM_P(fluxtarg_hi),
+      const Real* fluxhold,
+      AMREX_ARLIM_P(fluxhold_lo),AMREX_ARLIM_P(fluxhold_hi),
       const Real* maskcov,AMREX_ARLIM_P(maskcov_lo),AMREX_ARLIM_P(maskcov_hi),
       const Real* masknbr,AMREX_ARLIM_P(masknbr_lo),AMREX_ARLIM_P(masknbr_hi),
       int* presbc);

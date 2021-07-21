@@ -14727,7 +14727,7 @@ stop
       end subroutine fort_updatesemforce_face
 
 
-      subroutine FORT_SDC_TIME_QUAD( &
+      subroutine fort_sdc_time_quad( &
        HOncomp, &
        LOncomp, &
        delta_ncomp, &
@@ -14744,35 +14744,40 @@ stop
        fablo,fabhi,bfact, &
        level, &
        finest_level, &
-       dt)
+       dt) &
+      bind(c,name='fort_sdc_time_quad')
       use LegendreNodes
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T HOncomp
-      INTEGER_T LOncomp
-      INTEGER_T delta_ncomp
-      INTEGER_T nmat,nstate
-      INTEGER_T nfluxSEM
-      INTEGER_T nstate_SDC
-      INTEGER_T level
-      INTEGER_T finest_level
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: HOncomp
+      INTEGER_T, intent(in) :: LOncomp
+      INTEGER_T, intent(in) :: delta_ncomp
+      INTEGER_T, intent(in) :: nmat,nstate
+      INTEGER_T, intent(in) :: nfluxSEM
+      INTEGER_T, intent(in) :: nstate_SDC
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(deltafab)
+      INTEGER_T, intent(in) :: DIMDEC(HOfab)
+      INTEGER_T, intent(in) :: DIMDEC(LOfab)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(inout), target :: deltafab(DIMV(deltafab),delta_ncomp)
+      REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: HOfab(DIMV(HOfab),HOncomp)
+      REAL_T, pointer :: HOfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: LOfab(DIMV(LOfab),LOncomp)
+      REAL_T, pointer :: LOfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: dt
       INTEGER_T i,j,k
-      INTEGER_T DIMDEC(deltafab)
-      INTEGER_T DIMDEC(HOfab)
-      INTEGER_T DIMDEC(LOfab)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T deltafab(DIMV(deltafab),delta_ncomp)
-      REAL_T HOfab(DIMV(HOfab),HOncomp)
-      REAL_T LOfab(DIMV(LOfab),LOncomp)
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T dt
       INTEGER_T local_maskSEM
       INTEGER_T slab_step
       INTEGER_T ibase,ibase2,icomp
@@ -14784,7 +14789,6 @@ stop
       REAL_T GQwsQUAD(0:bfact_time_order,1:bfact_time_order)
       REAL_T yGL(0:bfact_time_order)
       REAL_T ydiff(1:bfact_time_order)
-      INTEGER_T ok_to_update(nstate_SDC)
       INTEGER_T imattype
 
       if (bfact.lt.1) then
@@ -14808,12 +14812,12 @@ stop
        print *,"dt invalid"
        stop
       endif
-      if (nfluxSEM.ne.SDIM+num_state_base) then
-       print *,"nfluxSEM invalid sdc time quad"
+      if (nfluxSEM.ne.SDIM+1) then
+       print *,"nfluxSEM invalid sdc time quad:",nfluxSEM
        stop
       endif 
-       ! I-scheme, thermal conduction, viscosity, -div(up) ,-grad p,-momforce
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM+1+SDIM+SDIM) then
+       ! I-scheme, thermal conduction, viscosity, -momforce
+      if (nstate_SDC.ne.nfluxSEM+1+SDIM+SDIM) then
        print *,"nstate_SDC invalid"
        stop
       endif
@@ -14834,10 +14838,14 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(HOfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(LOfab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(deltafab),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+      HOfab_ptr=>HOfab
+      call checkbound_array(fablo,fabhi,HOfab_ptr,0,-1,7)
+      LOfab_ptr=>LOfab
+      call checkbound_array(fablo,fabhi,LOfab_ptr,0,-1,7)
+      deltafab_ptr=>deltafab
+      call checkbound_array(fablo,fabhi,deltafab_ptr,0,-1,7)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -14903,43 +14911,6 @@ stop
          ibase=(slab_step-1)*nstate_SDC
 
          do icomp=1,nstate_SDC
-          ok_to_update(icomp)=0
-         enddo
-
-         do icomp=1,SDIM
-          ok_to_update(icomp)=1 ! velocity (I-scheme)
-         enddo
-
-         icomp=SDIM+1
-
-         imattype=fort_material_type(local_maskSEM)
-         if (imattype.eq.999) then
-          ! do nothing
-         else if (imattype.eq.0) then
-          ! do nothing
-         else if ((imattype.gt.0).and. &
-                  (imattype.le.MAX_NUM_EOS)) then
-          ok_to_update(icomp)=1 ! density (I-scheme)
-         else
-          print *,"imattype invalid fort_sdc_time_quad"
-          stop
-         endif
-
-         icomp=SDIM+2
-         ok_to_update(icomp)=1 ! temperature (I-scheme)
-
-         if (icomp.ne.nfluxSEM) then
-          print *,"icomp invalid"
-          stop
-         endif
-
-         ! thermal conduction, viscosity, div(up), grad p,-momforce
-         do icomp=nfluxSEM+1,nstate_SDC
-          ok_to_update(icomp)=1
-         enddo
-
-         do icomp=1,nstate_SDC
-          if (ok_to_update(icomp).eq.1) then
            force_integral=zero
            do jstencil=0,bfact_time_order
             ibase2=jstencil*nstate_SDC+icomp
@@ -14952,13 +14923,7 @@ stop
            deltafab(D_DECL(i,j,k),ibase+icomp)= &
             force_integral*dt_sub/two- &
             dt_sub*LOfab(D_DECL(i,j,k),ibase+icomp)
-          else if (ok_to_update(icomp).eq.0) then
-           ! do nothing
-          else
-           print *,"ok_to_update invalid"
-           stop
-          endif
-         enddo ! icomp
+         enddo ! icomp=1..nstate_SDC
 
         enddo ! slab_step
 
@@ -14972,11 +14937,9 @@ stop
       enddo
 
       return
-      end subroutine FORT_SDC_TIME_QUAD
+      end subroutine fort_sdc_time_quad
 
-
-
-      subroutine FORT_SDC_TIME_QUAD_FACE( &
+      subroutine fort_sdc_time_quad_face( &
        dir, &
        HOncomp, &
        LOncomp, &
@@ -14994,35 +14957,40 @@ stop
        fablo,fabhi,bfact, &
        level, &
        finest_level, &
-       dt)
+       dt) &
+      bind(c,name='fort_sdc_time_quad_face')
       use LegendreNodes
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T dir
-      INTEGER_T HOncomp
-      INTEGER_T LOncomp
-      INTEGER_T delta_ncomp
-      INTEGER_T nmat,nstate
-      INTEGER_T nfluxSEM
-      INTEGER_T nstate_SDC
-      INTEGER_T level
-      INTEGER_T finest_level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T DIMDEC(deltafab)
-      INTEGER_T DIMDEC(HOfab)
-      INTEGER_T DIMDEC(LOfab)
-      INTEGER_T DIMDEC(maskSEM)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T deltafab(DIMV(deltafab),delta_ncomp)
-      REAL_T HOfab(DIMV(HOfab),HOncomp)
-      REAL_T LOfab(DIMV(LOfab),LOncomp)
-      REAL_T maskSEM(DIMV(maskSEM))
-      REAL_T dt
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: HOncomp
+      INTEGER_T, intent(in) :: LOncomp
+      INTEGER_T, intent(in) :: delta_ncomp
+      INTEGER_T, intent(in) :: nmat,nstate
+      INTEGER_T, intent(in) :: nfluxSEM
+      INTEGER_T, intent(in) :: nstate_SDC
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(deltafab)
+      INTEGER_T, intent(in) :: DIMDEC(HOfab)
+      INTEGER_T, intent(in) :: DIMDEC(LOfab)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(inout), target :: deltafab(DIMV(deltafab),delta_ncomp)
+      REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: HOfab(DIMV(HOfab),HOncomp)
+      REAL_T, pointer :: HOfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: LOfab(DIMV(LOfab),LOncomp)
+      REAL_T, pointer :: LOfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: dt
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
       INTEGER_T slab_step
@@ -15057,13 +15025,13 @@ stop
        print *,"dt invalid"
        stop
       endif
-      if (nfluxSEM.ne.SDIM+num_state_base) then
-       print *,"nfluxSEM invalid sdc time quad face"
+      if (nfluxSEM.ne.SDIM+1) then
+       print *,"nfluxSEM invalid sdc time quad face: ",nfluxSEM
        stop
       endif
-       ! I-scheme, thermal conductivity, viscosity, div(up), gp, -momforce
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM+1+SDIM+SDIM) then
-       print *,"nstate_SDC invalid"
+       ! I-scheme, thermal conductivity, viscosity, -momforce
+      if (nstate_SDC.ne.nfluxSEM+1+SDIM+SDIM) then
+       print *,"nstate_SDC invalid:",nstate_SDC
        stop
       endif
       if (HOncomp.ne.(bfact_time_order+1)) then
@@ -15102,10 +15070,14 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(HOfab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(LOfab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(deltafab),0,dir,7)
-      call checkbound(fablo,fabhi,DIMS(maskSEM),1,-1,1264)
+      HOfab_ptr=>HOfab
+      call checkbound_array(fablo,fabhi,HOfab_ptr,0,dir,7)
+      LOfab_ptr=>LOfab
+      call checkbound_array(fablo,fabhi,LOfab_ptr,0,dir,7)
+      deltafab_ptr=>deltafab
+      call checkbound_array(fablo,fabhi,deltafab_ptr,0,dir,7)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0,dir,25)
@@ -15184,7 +15156,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_SDC_TIME_QUAD_FACE
+      end subroutine fort_sdc_time_quad_face
 
       subroutine fort_maketensor( &
        partid, & ! 0..num_materials_viscoelastic-1

@@ -14381,8 +14381,6 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   //   (iv) usolid in solid regions
  if (operation_flag==11) {
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==10) { // ucell,umac -> umac
-  ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==7) {  // advection
   ncfluxreg=AMREX_SPACEDIM*nfluxSEM;
  } else if (operation_flag==2) { 
