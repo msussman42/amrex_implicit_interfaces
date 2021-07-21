@@ -121,6 +121,9 @@ namespace amrex{
 #define MAC_TEMP_MF 97
 #define GRADPEDGE_MF 100
 #define PEDGE_MF 103
+
+#define REGISTER_MARK_MAC_MF 106
+
 #define FACE_WEIGHT_MF 109
 
 #define dt_gradp_over_rho_face_MF 112
@@ -740,9 +743,14 @@ protected:
       // grid_type=-1 ... 5
     void new_localMF_if_not_exist(int idx_MF,int ncomp,int ngrow,
 		    int grid_type);
+
+    //MAC_state_idx==Umac_Type or (mac velocity)
+    //MAC_state_idx==XDmac_Type   (mac displacement)
+    //dir=0..sdim-1
     void getStateMAC_localMF(int MAC_state_idx,
      int idx_MF,int ngrow,int dir,
      int scomp,int ncomp,Real time);
+
     void getStateDen_localMF(int idx_MF,int ngrow,Real time);
     void getStateDist_localMF(int idx_MF,int ngrow,Real time,int caller_id);
     void resize_levelsetLO(int ngrow,int idx);
@@ -1405,12 +1413,10 @@ void apply_pressure_grad(
     void make_MAC_velocity_consistent();
 
     void VELMAC_TO_CELLALL(
-      int use_VOF_weight,
       int vel_or_disp, // =0 velocity; =1 displacement
       int dest_idx);
 
     void VELMAC_TO_CELL(
-      int use_VOF_weight,
       int vel_or_disp, // =0 velocity; =1 displacement
       int dest_idx);
 

@@ -11705,6 +11705,14 @@ void NavierStokes::vel_elastic_ALL() {
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
 
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    ns_level.getStateMAC_localMF(Umac_Type,REGISTER_MARK_MAC_MF+dir,
+	0,dir,0,1,cur_time_slab);
+   }
+  }
+
   for (int im=0;im<nmat;im++) {
    if ((particles_flag==1)||
        (particles_flag==0)) { 
@@ -11720,6 +11728,9 @@ void NavierStokes::vel_elastic_ALL() {
 
         // note: tensor_advection_updateALL is called before veldiffuseALL.
         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
+	// fort_maketensor called from ::make_viscoelastic_tensor
+	// if viscoelastic_model==2 then Q is built from the displacement
+	// vector field.
        make_viscoelastic_tensorALL(im);
 
        //(a) interpolate Q to CC,XY,XZ,YZ locations, or
@@ -11795,16 +11806,18 @@ void NavierStokes::vel_elastic_ALL() {
    
    // average down the MAC velocity, set the boundary conditions.
   make_MAC_velocity_consistentALL();
-  int use_VOF_weight=1;
   int vel_or_disp=-1; //interpolate MAC velocity increment
   int dest_idx=-1;   //update State_Type
-  FIX ME, only elastic material cell velocity is updated. 
 
    // declared in: NavierStokes2.cpp
-  VELMAC_TO_CELLALL(use_VOF_weight,vel_or_disp,dest_idx);
+  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
    // register_mark=unew
   SET_STOKES_MARK(REGISTER_MARK_MF,101);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete_array(REGISTER_MARK_MAC_MF+dir);
+  }
 
  } else if (num_materials_viscoelastic==0) {
   // do nothing

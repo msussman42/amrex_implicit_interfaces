@@ -1767,7 +1767,6 @@ void NavierStokes::apply_div(
   int operation_flag=100;
   int energyflag=0; // not used when operation_flag==100
   int local_enable_spectral=enable_spectral;
-  int use_VOF_weight=0;
 
   int ncomp_denold=nsolve;
   int ncomp_veldest=cterm.nComp();
@@ -1865,7 +1864,6 @@ void NavierStokes::apply_div(
    ARLIM(maskresfab.loVect()),ARLIM(maskresfab.hiVect()),
    &SDC_outer_sweeps,
    &homflag,
-   &use_VOF_weight,
    &nsolve,
    &ncomp_denold,
    &ncomp_veldest,
@@ -2412,7 +2410,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    int project_option=0;
    int homflag=0; // default
    int local_enable_spectral=enable_spectral;
-   int use_VOF_weight=0;
 
    int ncomp_denold=vol.nComp();
    int ncomp_veldest=rhs.nComp();
@@ -2511,7 +2508,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     &SDC_outer_sweeps,
     &homflag,
-    &use_VOF_weight,
     &nsolve,
     &ncomp_denold,
     &ncomp_veldest,
