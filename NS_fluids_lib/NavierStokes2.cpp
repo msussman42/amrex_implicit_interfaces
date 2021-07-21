@@ -2958,6 +2958,92 @@ void NavierStokes::increment_face_velocity(
 
 } // subroutine increment_face_velocity
 
+void NavierStokes::increment_KE_ALL(Real beta) {
+
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==0 in increment_KE_ALL");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.increment_KE(beta);
+ }
+
+} // end subroutine increment_KE_ALL
+
+//if temperature_primitive_var==0,
+// add beta * (1/cv) * (u dot u/2) to temp
+void NavierStokes::increment_KE(Real beta) {
+ 
+ bool use_tiling=ns_tiling;
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ if ((beta!=-1.0)&&(beta!=1.0))
+  amrex::Error("beta invalid");
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ int ncomp_state=(AMREX_SPACEDIM+1)+nmat*num_state_material+
+  nmat*ngeom_raw+1;
+ if (ncomp_state!=S_new.nComp()) 
+  amrex::Error("ncomp_state!=S_new.nComp()"); 
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  int gridno=mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+
+   //1=not cov  0=cov
+  FArrayBox& maskcoef = (*localMF[MASKCOEF_MF])[mfi];
+  FArrayBox& sfab=S_new[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  fort_inc_temp(
+   &beta,
+   temperature_primitive_variable.dataPtr(),
+   &nmat,
+   &level,
+   &finest_level,
+   &ncomp_state,
+   tilelo,tilehi,
+   fablo,fabhi,
+   sfab.dataPtr(),ARLIM(sfab.loVect()),ARLIM(sfab.hiVect()), 
+   maskcoef.dataPtr(), // 1=not covered  0=covered
+   ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()));
+ }   // mfi
+} // omp
+ ns_reconcile_d_num(138);
+
+} // subroutine increment_KE
+
+
 // vel_or_disp=-1 => interpolate mac velocity increment
 // vel_or_disp=0 => interpolate mac velocity
 // vel_or_disp=1 => interpolate mac displacement

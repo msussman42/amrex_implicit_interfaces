@@ -2162,7 +2162,7 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
    interp_option,project_option,
    idx_velcell,beta,blobdata);
 
-} // subroutine advance_MAC_velocity()
+} // end subroutine advance_MAC_velocity()
 
 // called from: NavierStokes::advance
 void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
@@ -2669,16 +2669,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        make_physics_varsALL(project_option,post_restart_flag,5); 
 
-	//  unew^{f}=
-        // (i) unew^{f} in incompressible non-solid regions
-        // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
-        //      regions.
-        //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
-        //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-        // (iii) (unew^{c})^{c->f} in compressible regions.
-        // (iv) usolid in solid regions
-       advance_MAC_velocity(project_option);
-  
       } else if (mass_transfer_active==0) {
 
        update_flag=1;  // update the error in S_new
@@ -3052,7 +3042,18 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        ns_level.delete_advect_vars();
       } // ilev=finest_level ... level
- 
+
+      Real beta=1.0;
+      int vel_or_disp=0;  // velocity
+      int dest_idx=-1;  // update State_Type
+
+        //if temperature_primitive_var==0,
+        // add beta * (1/cv) * (u dot u/2) to temp
+      increment_KE_ALL(beta);
+      VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
+      Real beta=-1.0;
+      increment_KE_ALL(beta);
+
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        int project_option_combine=2; // temperature in do_the_advance
