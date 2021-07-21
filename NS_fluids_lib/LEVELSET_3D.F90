@@ -11296,6 +11296,7 @@ stop
        ! operation_flag=100 (right hand side for solver)
        ! operation_flag=110 (divergence)
        ! operation_flag=103 (mac -> cell velocity in solver or MAC_TO_CELL)
+       ! operation_flag=104 (mac increment -> cell velocity increment)
        ! operation_flag=101 (copy u^{mac->cell} to u^{cell},
        !                     div(up) or p div u or rho div u)
        ! operation_flag=105 (from face_gradients, interp grad U^T)
@@ -11342,9 +11343,9 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xp,DIMS(xp), &
-       yp,DIMS(yp), &
-       zp,DIMS(zp), &
+       xp,DIMS(xp), &  !xvel_save if operation_flag==104
+       yp,DIMS(yp), &  !yvel_save  "          "
+       zp,DIMS(zp), &  !zvel_save  "          "
        xvel,DIMS(xvel), &
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
@@ -11566,7 +11567,9 @@ stop
       REAL_T local_POLD_DUAL
 
       REAL_T DIAG_REGULARIZE
+      REAL_T weight_prev
       REAL_T uface(2)
+      REAL_T save_uface(2)
       REAL_T ufacesolid(2)
       REAL_T aface(2)
       REAL_T pres_face(2)
@@ -11770,6 +11773,7 @@ stop
    
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
       if ((operation_flag.eq.103).or. & ! velocity
+          (operation_flag.eq.104).or. & ! velocity increment
           (operation_flag.eq.113)) then ! displacement
        if (ncomp_veldest.ge.SDIM) then
         ! do nothing
@@ -11967,6 +11971,7 @@ stop
 
        ! umac->ucell in solver or VELMAC_TO_CELL
       else if ((operation_flag.eq.103).or. & ! velocity
+               (operation_flag.eq.104).or. & ! velocity increment
                (operation_flag.eq.113)) then ! displacement
 
        if (homflag.eq.0) then
@@ -12397,10 +12402,12 @@ stop
 
        ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
        else if ((operation_flag.eq.103).or. & ! velocity
+                (operation_flag.eq.104).or. & ! velocity increment
                 (operation_flag.eq.113)) then ! displacement
 
          ! LS>0 if clamped
-        if (operation_flag.eq.103) then ! velocity
+        if ((operation_flag.eq.103).or. & ! velocity
+            (operation_flag.eq.104)) then ! velocity increment
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped)
         else if (operation_flag.eq.113) then ! displacement
@@ -12569,7 +12576,9 @@ stop
  
           if (dir.eq.0) then
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
-           if (operation_flag.eq.103) then ! velocity
+           save_uface(side)=xp(D_DECL(iface,jface,kface),1)
+           if ((operation_flag.eq.103).or. & ! velocity
+               (operation_flag.eq.104)) then ! velocity increment
             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else if (operation_flag.eq.113) then ! displacement
@@ -12585,6 +12594,7 @@ stop
              if (iface.eq.0) then
               if (xsten(-1,1).lt.zero) then
                uface(side)=zero
+               save_uface(side)=zero
                ufacesolid(side)=zero
               endif
              else if (iface.gt.0) then
@@ -12617,7 +12627,9 @@ stop
            endif
           else if (dir.eq.1) then
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
-           if (operation_flag.eq.103) then ! velocity
+           save_uface(side)=yp(D_DECL(iface,jface,kface),1)
+           if ((operation_flag.eq.103).or. & ! velocity
+               (operation_flag.eq.104)) then ! velocity increment
             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else if (operation_flag.eq.113) then ! displacement
@@ -12628,7 +12640,9 @@ stop
            endif
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
-           if (operation_flag.eq.103) then ! velocity
+           save_uface(side)=zp(D_DECL(iface,jface,kface),1)
+           if ((operation_flag.eq.103).or. & ! velocity
+               (operation_flag.eq.104)) then ! velocity increment
             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else if (operation_flag.eq.113) then ! displacement
@@ -12681,9 +12695,21 @@ stop
             (mass_side(1)*ufacesolid(1)+ &
              mass_side(2)*ufacesolid(2))/masscell
           else if (cell_velocity_override.eq.0) then
+           if ((operation_flag.eq.103).or. & ! velocity
+               (operation_flag.eq.113)) then ! displacement
+            weight_prev=zero
+           else if (operation_flag.eq.104) then ! velocity increment
+            uface(1)=uface(1)-save_uface(1)
+            uface(2)=uface(2)-save_uface(2)
+            weight_prev=one
+           else
+            print *,"operation_flag invalid"
+            stop
+           endif
            fluid_velocity=(mass_side(1)*uface(1)+ &
                            mass_side(2)*uface(2))/masscell
-           veldest(D_DECL(i,j,k),velcomp)=fluid_velocity
+           veldest(D_DECL(i,j,k),velcomp)= &
+              weight_prev*veldest(D_DECL(i,j,k),velcomp)+fluid_velocity
           else
            print *,"cell_velocity_override invalid"
            stop
@@ -13358,6 +13384,8 @@ stop
               ncomp=1
               ncomp_xvel=nsolve
               ncomp_cterm=1
+             else if (operation_flag.eq.104) then  ! velocity increment
+              ! do nothing
              else if (operation_flag.eq.113) then  ! displacement
               ! do nothing
              else if (operation_flag.eq.101) then ! div(up)
@@ -13375,6 +13403,7 @@ stop
              endif
              
              if ((operation_flag.eq.113).or. & ! displacement
+                 (operation_flag.eq.104).or. & ! velocity increment
                  (operation_flag.eq.101)) then !div(up) 
                  ! do nothing
              else if ((operation_flag.eq.100).or. & ! RHS for solver
