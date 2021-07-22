@@ -20420,11 +20420,11 @@ END SUBROUTINE Adist
       endif
       if ((ipart.lt.1).or. &
           (ipart.gt.num_materials_viscoelastic)) then
-       print *,"ipart invalid"
+       print *,"ipart invalid:tensorBC"
        stop
       endif
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid81"
+       print *,"im invalid81:tensorBC"
        stop
       endif
       if (fort_im_elastic_map(ipart)+1.ne.im) then
@@ -29135,7 +29135,7 @@ end subroutine initialize2d
       ipart=(scomp-icomplo)/FORT_NUM_TENSOR_TYPE+1
       if ((ipart.lt.1).or. &
           (ipart.gt.num_materials_viscoelastic)) then
-       print *,"ipart out of range"
+       print *,"ipart out of range:FORT_TENSORFILL"
        stop
       endif
       im=fort_im_elastic_map(ipart)+1

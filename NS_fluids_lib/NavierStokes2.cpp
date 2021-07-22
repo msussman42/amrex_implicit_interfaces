@@ -1444,8 +1444,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  if ((im_elastic>=0)&&(im_elastic<nmat)) {
-  if ((particles_flag==1)||
-      (particles_flag==0)) { 
    if (ns_is_rigid(im_elastic)==0) {
     if ((elastic_time[im_elastic]>0.0)&&
         (elastic_viscosity[im_elastic]>0.0)) {
@@ -1457,8 +1455,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      amrex::Error("expecting elastic_time>0 and elastic_viscosity>0");
    } else
     amrex::Error("expecting ns_is_rigid(im_elastic)==0)"); 
-  } else
-   amrex::Error("particls_flag invalid");
  } else
   amrex::Error("im_elastic invalid");
 
@@ -3426,7 +3422,6 @@ void NavierStokes::init_gradu_tensorALL(
  int do_alloc,
  int idx_cell,
  int idx_face,
- int idx_elastic_flux, //xflux,yflux,zflux
  int simple_AMR_BC_flag_viscosity) {
 
  int finest_level=parent->finestLevel();
@@ -3448,10 +3443,9 @@ void NavierStokes::init_gradu_tensorALL(
    ns_level.getState_localMF(idx_vel,1,0,nsolve,cur_time_slab);
       
   } else if (do_alloc==0) {
-   if (idx_elastic_flux==-1) {
-    // do nothing
-   } else
-    amrex::Error("idx_elastic_flux = -1 if do_alloc==0");
+
+   // do nothing
+
   } else
    amrex::Error("do_alloc invalid");
 
@@ -3466,7 +3460,6 @@ void NavierStokes::init_gradu_tensorALL(
     idx_vel,
     idx_cell,
     idx_face,
-    idx_elastic_flux,
     simple_AMR_BC_flag_viscosity);
  } // ilev=finest_level ... level
 
@@ -3508,14 +3501,7 @@ void NavierStokes::init_gradu_tensorALL(
   scompBC_map.resize(1);
   scompBC_map[0]=scomp_extrap;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  if (im_tensor==-1) { //input is velocity
-   PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
-
-   // input is displacement
-  } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
-   PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
-  } else
-   amrex::Error("im_tensor invalid");
+  PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
 
    // 00,10,20,01,11,21,02,12,22
   icol++;
@@ -3557,31 +3543,6 @@ void NavierStokes::doit_gradu_tensor(
  int simple_AMR_BC_flag_viscosity) {
 
  int finest_level = parent->finestLevel();
-
- int elastic_partid=-1;
-
- if (im_tensor==-1) {
-  // check nothing (gradient of velocity)
- } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
-  // sanity checks for gradient of displacement vector.
-  if (homflag==0) {
-   // do nothing
-  } else
-   amrex::Error("expecting homflag=0 for grad displacement vector");
-  if (enable_spectral==0) {
-   elastic_partid=-1;
-   for (int i=0;i<im_elastic_map.size();i++) {
-    if (im_elastic_map[i]==im_tensor)
-     elastic_partid=i;
-   }
-   if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
-    // do nothing
-   } else
-    amrex::Error("elastic_partid invalid");
-  } else
-   amrex::Error("expecting enable_spectral==0 for gradient of xdisp");
- } else
-  amrex::Error("im_tensor invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -3758,9 +3719,6 @@ void NavierStokes::doit_gradu_tensor(
 
     // fort_face_gradients is declared in GODUNOV_3D.F90
     fort_face_gradients(
-     &im_tensor,
-     &elastic_partid,
-     im_elastic_map.dataPtr(),
      &ns_time_order,
      &divu_outer_sweeps,
      &num_divu_outer_sweeps,
@@ -3995,31 +3953,7 @@ void NavierStokes::init_gradu_tensor(
  int idx_vel,
  int idx_cell,
  int idx_face,
- int idx_elastic_flux, //xflux,yflux,zflux
  int simple_AMR_BC_flag_viscosity) {
-
- if (im_tensor==-1) {
-  // check nothing (gradient of velocity)
- } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
-  // sanity checks for gradient of displacement vector.
-  if (homflag==0) {
-   // do nothing
-  } else
-   amrex::Error("expecting homflag=0 for grad displacement vector");
-  if (enable_spectral==0) {
-   int elastic_partid=-1;
-   for (int i=0;i<im_elastic_map.size();i++) {
-    if (im_elastic_map[i]==im_tensor)
-     elastic_partid=i;
-   }
-   if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
-    // do nothing
-   } else
-    amrex::Error("elastic_partid invalid");
-  } else
-   amrex::Error("enable_spectral invalid");
- } else
-  amrex::Error("im_tensor invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -4262,13 +4196,11 @@ void NavierStokes::apply_pressure_grad(
   } else
    amrex::Error("simple_AMR_BC_flag_viscosity invalid");
 
-  int idx_elastic_flux=-1;
   init_gradu_tensor(
     homflag,
     pboth_mf,
     LOCAL_CELLTENSOR_MF,
     LOCAL_FACETENSOR_MF,
-    idx_elastic_flux,
     simple_AMR_BC_flag_viscosity);
 
   show_norm2(localMF[pboth_mf],0,localMF[pboth_mf]->nComp(),20);
@@ -4802,13 +4734,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
  // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
- int idx_elastic_flux=-1;
  init_gradu_tensorALL(
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
    CELLTENSOR_MF,
    FACETENSOR_MF,
-   idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
  override_enable_spectral(save_enable_spectral);
@@ -6869,7 +6799,7 @@ void NavierStokes::move_particles(
   }
 
  } else
-  amrex::Error("expecting NS_ncomp_particles>0");
+  amrex::Error("expecting particles_flag==1 in move_particles");
 
 } // end subroutine move_particles
 
@@ -7075,7 +7005,7 @@ void NavierStokes::output_triangles() {
       fablo,fabhi,&bfact,
       &level,&gridno,&ipart);
    } else
-    amrex::Error("particles_flag invalid");
+    amrex::Error("particles_flag invalid in output_triangles");
 
  }  // mfi
  ns_reconcile_d_num(156);
@@ -9423,14 +9353,18 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
  MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
 
+ MultiFab* tensor=vel;
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
-  // do nothing
- } else 
-  amrex::Error("num_materials_viscoelastic invalid");
 
- MultiFab* tensor=getStateTensor(ngrow,0,
-     num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
+  tensor=getStateTensor(ngrow,0,
+    num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
+
+ } else if (num_materials_viscoelastic==0) {
+	 // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
 
  for (int im=0;im<nmat;im++) {
 
@@ -9698,7 +9632,14 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 
  delete vel;
  delete EOSdata;
- delete tensor;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  delete tensor;
+ } else if (num_materials_viscoelastic==0) {
+	 // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
 
 }  // subroutine getStateVISC
 

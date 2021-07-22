@@ -1074,9 +1074,6 @@ extern "C"
 
 
    void fort_face_gradients(
-     int* im_tensor,
-     int* elastic_partid,
-     int* im_elastic_map,
      int* ns_time_order,
      int* divu_outer_sweeps,
      int* num_divu_outer_sweeps,

@@ -931,7 +931,6 @@ protected:
      int idx_vel,
      int idx_cell,
      int idx_face,
-     int idx_elastic_flux, //xflux,yflux,zflux
      int simple_AMR_BC_flag_viscosity);
 
     void doit_gradu_tensor(
@@ -949,7 +948,6 @@ protected:
      int do_alloc,
      int idx_cell,
      int idx_face,
-     int idx_elastic_flux, //xflux,yflux,zflux
      int simple_AMR_BC_flag_viscosity);
 
     void make_viscoelastic_tensor(int im);

@@ -8400,7 +8400,9 @@ void NavierStokes::init_boundary() {
    delete lsmf;
   } else if (k==DIV_Type) {
    // do nothing
-  } else if ((k==Solid_State_Type)&&(im_solid_map.size()>0)) {
+  } else if ((k==Solid_State_Type)&&
+	     (im_solid_map.size()>=1)&&
+	     (im_solid_map.size()<=nmat)) {
    int nparts=im_solid_map.size();
    if ((nparts<1)||(nparts>nmat))
     amrex::Error("nparts invalid");
@@ -8409,7 +8411,7 @@ void NavierStokes::init_boundary() {
    MultiFab::Copy(Solid_new,*velmf,0,0,nparts*AMREX_SPACEDIM,1);
    delete velmf;
   } else if ((k==Tensor_Type)&&
-             (num_materials_viscoelastic>0)&&
+             (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=nmat)) {
    int nparts=im_elastic_map.size();
    if ((nparts<=0)||(nparts>nmat))
@@ -9031,10 +9033,11 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
    amrex::Error("flux_box_type and local_typ are inconsistent");
  } // dir_local=0..sdim-1
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic bad:make_viscoelastic_tensorMAC");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -9286,10 +9289,11 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:make_viscoelastic_tensor");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -9480,7 +9484,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic bad:make_viscoelastic_heating");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -10655,7 +10659,7 @@ void NavierStokes::tensor_advection_update() {
      (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:tensor_advection_update");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -10947,7 +10951,6 @@ void NavierStokes::tensor_advection_update() {
    amrex::Error("ns_is_rigid invalid");
 
  } // im=0..nmat-1
-
 
 }   // subroutine tensor_advection_update
 
@@ -15543,7 +15546,7 @@ NavierStokes::split_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   ntensor=0;
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
 
  if (dir_absolute_direct_split==0) {
 
@@ -15850,7 +15853,7 @@ NavierStokes::split_scalar_advection() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
  
  delete_localMF(LS_RECON_MF,1);
  
@@ -15888,7 +15891,7 @@ NavierStokes::split_scalar_advection() {
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   amrex::Error("num_materials_viscoelastic invalid");
+   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
 
  } else if (level==finest_level) {
   // do nothing
@@ -16062,13 +16065,11 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
- int idx_elastic_flux=-1;
  init_gradu_tensorALL(
   HOLD_VELOCITY_DATA_MF,
   do_alloc,
   CELLTENSOR_MF,
   FACETENSOR_MF,
-  idx_elastic_flux,
   simple_AMR_BC_flag_viscosity);
 
  if ((num_materials_viscoelastic>=1)&&
@@ -16116,7 +16117,7 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
 
  for (int isweep=0;isweep<2;isweep++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -16131,7 +16132,7 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
 
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
@@ -16152,7 +16153,7 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
   }
  }
 
-} // GetDragALL
+} // end subroutine GetDragALL
 
 // sweep=0: integral (rho x), integral (rho) 
 // sweep=1: find force, torque, moments of inertia, center of mass,mass
@@ -16308,7 +16309,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  } else if (num_materials_viscoelastic==0) {
   VISCOTEN_ALL_MAT_MF_local=CELLTENSOR_MF;
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid:GetDrag");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -16478,7 +16479,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  delete mask; 
  delete mask3; 
 
-} // subroutine GetDrag
+} // end subroutine GetDrag
 
 void NavierStokes::project_right_hand_side(
   int index_MF,int project_option,int& change_flag) {
@@ -18071,13 +18072,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
- int idx_elastic_flux=-1;
  init_gradu_tensorALL(
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
    CELLTENSOR_MF,
    FACETENSOR_MF,
-   idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
@@ -18272,7 +18271,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   amrex::Error("num_materials_viscoelastic invalid");
+   amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
     // dst,src,scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(*viscoelasticmf,
@@ -18885,7 +18884,9 @@ NavierStokes::writePlotFile (
        ncomp=nmat*ngeom_raw;
       }
       this_dat=getState(nGrow,comp,ncomp,cur_time_slab);
-     } else if ((typ==Solid_State_Type)&&(im_solid_map.size()>0)) {
+     } else if ((typ==Solid_State_Type)&&
+		(im_solid_map.size()>=1)&&
+		(im_solid_map.size()<=nmat)) {
 
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
@@ -18907,7 +18908,8 @@ NavierStokes::writePlotFile (
        amrex::Error("this_dat->nComp() invalid");
 
      } else if ((typ==Tensor_Type)&&
-		(im_elastic_map.size()>0)) {
+		(im_elastic_map.size()>=1)&&
+		(im_elastic_map.size()<=nmat)) {
 
       if (comp!=0) {
        std::cout << "comp=" << comp << " ncomp= " <<
@@ -18974,7 +18976,7 @@ NavierStokes::writePlotFile (
  } else
   amrex::Error("visual_option invalid try -1 or -2");
 
-}
+} // end subroutine writePlotFile
 
 void NavierStokes::DumpProcNum() {
 
@@ -20153,13 +20155,11 @@ NavierStokes::volWgtSumALL(
 
  int do_alloc=1;
  int simple_AMR_BC_flag_viscosity=1;
- int idx_elastic_flux=-1;
  init_gradu_tensorALL(
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
    CELLTENSOR_MF,
    FACETENSOR_MF,
-   idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
  for (int ilev = 0; ilev <= finest_level; ilev++) {
@@ -20469,7 +20469,7 @@ NavierStokes::accumulate_PC_info(
 
  if (particles_flag==0) {
 
-  amrex::Error("expecting particles_flag==1");
+  amrex::Error("expecting particles_flag==1 in accumulate_PC_info");
 
  } else if (particles_flag==1) {
 
@@ -20604,7 +20604,7 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
      (num_materials_viscoelastic<=nmat)) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic bad:accumulate_info_no_particles");
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
@@ -20761,7 +20761,7 @@ void NavierStokes::assimilate_vel_from_particles(
  if (particles_flag==1) {
   // do nothing
  } else if (particles_flag==0) {
-  amrex::Error("particles_flag cannot be 0");
+  amrex::Error("particles_flag cannot be 0 in assimilate_vel_from_particles");
  } else
   amrex::Error("particles_flag invalid");
 
@@ -21139,7 +21139,7 @@ NavierStokes::init_particle_container(int append_flag) {
   delete LSmf;
 
  } else
-  amrex::Error("particles_flag invalid");
+  amrex::Error("particles_flag invalid in init_particle_container");
 
 
 }  // end subroutine init_particle_container()
@@ -22333,7 +22333,7 @@ MultiFab* NavierStokes::getStateTensor (
   } else
    amrex::Error("nparts!=num_materials_viscoelastic");
  } else
-  amrex::Error("num_materials_viscoelastic out of range");
+  amrex::Error("num_materials_viscoelastic bad:getStateTensor");
 
  return nullptr;
 
