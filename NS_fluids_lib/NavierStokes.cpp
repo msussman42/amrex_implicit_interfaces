@@ -20431,7 +20431,8 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 
 }  // subroutine prepare_post_process
 
-// called from: NavierStokes::do_the_advance() (NavierStokes3.cpp)
+// called from: NavierStokes::correct_xdisplace_with_particles() 
+// (NavierStokes3.cpp)
 // called prior to tensor_advection_updateALL().
 void 
 NavierStokes::accumulate_PC_info(
@@ -20668,83 +20669,71 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
   XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
  }
 
- if (particles_flag==0) {
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  //ngrow,dir,scomp,ncomp
+  XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
+ } // dir=0..sdim-1
 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow,dir,scomp,ncomp
-   XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
-  } // dir=0..sdim-1
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
+ for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
 
-   const Real* xlo = grid_loc[gridno].lo();
+  const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& TNEWfab=Tensor_new[mfi];
+  FArrayBox& TNEWfab=Tensor_new[mfi];
 
-   FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
-   FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
-   FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
+  FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
+  FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
 
-   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+  FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
  
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // declared in GODUNOV_3D.F90.
-    //   calls local_tensor_from_xdisplace
-   fort_assimilate_tensor_from_xdisplace( 
-     &im_elastic, // 0..nmat-1
-     &tid_current,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     &level,
-     &finest_level,
-     xlo,dx,
-     &ncomp_tensor,
-     &nmat,
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     TNEWfab.dataPtr(scomp_tensor),
-     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-     xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-     ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-     zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()));
-  } // mfi
+   // declared in GODUNOV_3D.F90.
+   //   calls local_tensor_from_xdisplace
+  fort_assimilate_tensor_from_xdisplace( 
+    &im_elastic, // 0..nmat-1
+    &tid_current,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &level,
+    &finest_level,
+    xlo,dx,
+    &ncomp_tensor,
+    &nmat,
+    levelpcfab.dataPtr(),
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
+    TNEWfab.dataPtr(scomp_tensor),
+    ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
+    xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+    ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+    zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()));
+ } // mfi
 } // omp
-  ns_reconcile_d_num(81);
+ ns_reconcile_d_num(81);
 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete XDISP_LOCAL[dir];
-  }
-
- } else if (particles_flag==1) {
-
-  amrex::Error("accumulate_info_no_particles should not be called here");
-
- } else {
-
-  amrex::Error("particles_flag invalid");
-
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete XDISP_LOCAL[dir];
  }
 
 } // end subroutine accumulate_info_no_particles
