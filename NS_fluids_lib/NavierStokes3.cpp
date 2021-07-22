@@ -11692,6 +11692,7 @@ void NavierStokes::diffusion_heatingALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
+   // ::diffusion_heating declared in Diffusion.cpp
   ns_level.diffusion_heating(source_idx,idx_heat);
  } // ilev
 
@@ -11734,8 +11735,6 @@ void NavierStokes::vel_elastic_ALL() {
   }
 
   for (int im=0;im<nmat;im++) {
-   if ((particles_flag==1)||
-       (particles_flag==0)) { 
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
@@ -11820,8 +11819,6 @@ void NavierStokes::vel_elastic_ALL() {
      // do nothing
     } else
      amrex::Error("ns_is_rigid invalid");
-   } else
-    amrex::Error("particles_flag invalid");
   } // im=0..nmat-1
    
    // average down the MAC velocity, set the boundary conditions.
@@ -12523,12 +12520,14 @@ void NavierStokes::veldiffuseALL() {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
       // initializes VISCOTEN_MF
+      // if viscoelastic_model==2 then Q is built from the displacement
+      // vector field.
       make_viscoelastic_tensorALL(im);
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
-        // VISCHEAT_MF is initialized to zero.
-        // VISCHEAT_MF is incremented with heating terms due to viscosity
-        // and viscoelastic heating.
+        // VISCHEAT_MF is initialized to zero in ::prepare_viscous_solver().
+        // VISCHEAT_MF is incremented with heating terms due to 
+        // viscoelastic heating in this loop.
         // uses VISCOTEN_MF
        ns_level.make_viscoelastic_heating(im,VISCHEAT_MF);
       }  
@@ -12557,7 +12556,7 @@ void NavierStokes::veldiffuseALL() {
    // 2. localMF[VISCHEAT_MF]+=(dt/(rho cv)) mu(grad U+grad U^T) ddot grad U 
   diffusion_heatingALL(VISCHEAT_SOURCE_MF,VISCHEAT_MF);
 
-   // add viscous heating term to T_m  m=1...M
+   // add viscous (and viscoelastic) heating to T_m  m=1...M
   APPLY_VISCOUS_HEATINGALL(VISCHEAT_MF); // increment
 
      // overwrite T_m if phi_solid>0   m=1...M
