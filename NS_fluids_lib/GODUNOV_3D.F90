@@ -24705,15 +24705,11 @@ stop
       end subroutine traverse_particles
 
        ! called from NavierStokes.cpp:
-       !  NavierStokes::accumulate_PC_info(int im_elastic)
-       ! 1. isweep==0: gets displacement data from particle data 
-       !    and Eulerian data.
-       ! 2. isweep==1: calculates the elastic stress tensor from 
-       !    u=X(t,x0)-x0
-      subroutine fort_assimilate_tensor_from_particles( &
+       !  NavierStokes::accumulate_PC_info()
+       ! Gets displacement data from particle data 
+       !   and Eulerian data.
+      subroutine fort_assimilate_xdisplace_from_particles( &
         particles_weight_XD, &
-        im_PLS_cpp, & ! 0..nmat-1
-        isweep, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
         fablo,fabhi, &    ! fortran array box dimensions containing the tile
@@ -24727,15 +24723,12 @@ stop
         Np_no_nbr, & ! pass by value
         Np_nbr, & ! pass by value
         Nn, & ! pass by value
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         matrix_points, & 
         RHS_points, &    
         ncomp_accumulate, & ! matrix_points+sdim * RHS_points
         nmat, &
         LS, &
         DIMS(LS), &
-        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
         xdNEWfab, &       
         DIMS(xdNEWfab), &
         ydNEWfab, &       
@@ -24750,18 +24743,15 @@ stop
         DIMS(zdfab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
-      bind(c,name='fort_assimilate_tensor_from_particles')
+      bind(c,name='fort_assimilate_xdisplace_from_particles')
 
       use global_utility_module
       use probcommon_module
       use godunov_module
       implicit none
 
-      INTEGER_T, intent(in) :: im_PLS_cpp
-      INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: particles_weight_XD
-      INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: matrix_points
       INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
@@ -24776,7 +24766,6 @@ stop
       REAL_T, intent(in), target :: dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
       INTEGER_T, intent(in) :: DIMDEC(xdNEWfab) 
       INTEGER_T, intent(in) :: DIMDEC(ydNEWfab) 
       INTEGER_T, intent(in) :: DIMDEC(zdNEWfab) 
@@ -24792,10 +24781,6 @@ stop
         DIMV(LS), &
         nmat*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: TNEWfab( &!Q assim. from particles/cells
-        DIMV(TNEWfab), &
-        ncomp_tensor)
-      REAL_T, pointer :: TNEWfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: xdNEWfab( &  
         DIMV(xdNEWfab))
       REAL_T, pointer :: xdNEWfab_ptr(D_DECL(:,:,:))
@@ -24839,7 +24824,6 @@ stop
       nhalf=3
 
       matrixfab_ptr=>matrixfab
-      TNEWfab_ptr=>TNEWfab
       xdNEWfab_ptr=>xdNEWfab
       ydNEWfab_ptr=>ydNEWfab
       zdNEWfab_ptr=>zdNEWfab
@@ -24855,20 +24839,6 @@ stop
        stop
       endif
 
-      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
-       ! do nothing
-      else
-       print *,"im_PLS_cpp invalid"
-       stop
-      endif
-
-       ! 6 in 3D, 4 in 2D
-      if (ncomp_tensor.eq.2*SDIM) then
-       ! do nothing
-      else
-       print *,"ncomp_tensor invalid"
-       stop
-      endif
       if (matrix_points.eq.1) then
        ! do nothing
       else
@@ -24890,7 +24860,6 @@ stop
 
       call checkbound_array(fablo,fabhi,LS_ptr,2,-1,1271)
       call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,1271)
-      call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,1271)
       call checkbound_array1(fablo,fabhi,xdNEWfab_ptr,0,0,1271)
       call checkbound_array1(fablo,fabhi,ydNEWfab_ptr,0,1,1271)
       call checkbound_array1(fablo,fabhi,zdNEWfab_ptr,0,SDIM-1,1271)
@@ -24935,12 +24904,10 @@ stop
        enddo
       enddo ! interior_ID=1,Np_no_nbr
 
-      if (isweep.eq.0) then
+      accum_PARM%particles=>particles_no_nbr
+      accum_PARM%Npart=Np_no_nbr
 
-       accum_PARM%particles=>particles_no_nbr
-       accum_PARM%Npart=Np_no_nbr
-
-       call traverse_particles( &
+      call traverse_particles( &
          accum_PARM, &
          matrixfab_ptr, &
          xdfab_ptr, &
@@ -24948,10 +24915,10 @@ stop
          zdfab_ptr, &
          ncomp_accumulate)
 
-       accum_PARM%particles=>particles_only_nbr
-       accum_PARM%Npart=Nn
+      accum_PARM%particles=>particles_only_nbr
+      accum_PARM%Npart=Nn
 
-       call traverse_particles( &
+      call traverse_particles( &
          accum_PARM, &
          matrixfab_ptr, &
          xdfab_ptr, &
@@ -24959,104 +24926,69 @@ stop
          zdfab_ptr, &
          ncomp_accumulate)
 
-       do dirmac=1,SDIM
-         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlo,growhi,0,dirmac-1,38)
+      do dirmac=1,SDIM
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0,dirmac-1,38)
 
-         ii=0
-         jj=0
-         kk=0
-         if (dirmac.eq.1) then
-          ii=1
-         else if (dirmac.eq.2) then
-          jj=1
-         else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
-          kk=1
+       ii=0
+       jj=0
+       kk=0
+       if (dirmac.eq.1) then
+        ii=1
+       else if (dirmac.eq.2) then
+        jj=1
+       else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
+        kk=1
+       else
+        print *,"dirmac invalid"
+        stop
+       endif
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        !dirmac=1..sdim
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac-1,59)
+
+        A_matrix=matrixfab(D_DECL(i,j,k),1)+ &
+               matrixfab(D_DECL(i-ii,j-jj,k-kk),1) ! sum w(xp)
+        B_matrix=matrixfab(D_DECL(i,j,k),1+dirmac)+ &
+          matrixfab(D_DECL(i-ii,j-jj,k-kk),1+dirmac) !sum w*(vel(xp)-vel_p)
+        if (A_matrix.eq.zero) then
+         lambda=zero
+        else if (A_matrix.gt.zero) then
+         local_wt=particles_weight_XD
+          ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
+         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
+          lambda=local_wt*B_matrix/A_matrix
          else
-          print *,"dirmac invalid"
+          print *,"local_wt invalid"
           stop
          endif
+        else
+         print *,"A_matrix invalid"
+         stop
+        endif
+        if (dirmac.eq.1) then
+         xdNEWfab(D_DECL(i,j,k))=xdfab(D_DECL(i,j,k))-lambda
+        else if (dirmac.eq.2) then
+         ydNEWfab(D_DECL(i,j,k))=ydfab(D_DECL(i,j,k))-lambda
+        else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
+         zdNEWfab(D_DECL(i,j,k))=zdfab(D_DECL(i,j,k))-lambda
+        else
+         print *,"dirmac invalid"
+         stop
+        endif
+       enddo
+       enddo
+       enddo
+      enddo ! dirmac=1..sdim
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          !dirmac=1..sdim
-          call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac-1,59)
-
-          A_matrix=matrixfab(D_DECL(i,j,k),1)+ &
-                 matrixfab(D_DECL(i-ii,j-jj,k-kk),1) ! sum w(xp)
-          B_matrix=matrixfab(D_DECL(i,j,k),1+dirmac)+ &
-            matrixfab(D_DECL(i-ii,j-jj,k-kk),1+dirmac) !sum w*(vel(xp)-vel_p)
-          if (A_matrix.eq.zero) then
-           lambda=zero
-          else if (A_matrix.gt.zero) then
-           local_wt=particles_weight_XD
-            ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
-           if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-            lambda=local_wt*B_matrix/A_matrix
-           else
-            print *,"local_wt invalid"
-            stop
-           endif
-          else
-           print *,"A_matrix invalid"
-           stop
-          endif
-          if (dirmac.eq.1) then
-           xdNEWfab(D_DECL(i,j,k))=xdfab(D_DECL(i,j,k))-lambda
-          else if (dirmac.eq.2) then
-           ydNEWfab(D_DECL(i,j,k))=ydfab(D_DECL(i,j,k))-lambda
-          else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
-           zdNEWfab(D_DECL(i,j,k))=zdfab(D_DECL(i,j,k))-lambda
-          else
-           print *,"dirmac invalid"
-           stop
-          endif
-         enddo
-         enddo
-         enddo
-       enddo ! dirmac=1..sdim
-
-      else if (isweep.eq.1) then
-
-! grad u=| u_r  u_t/r-v/r  u_z  |
-!        | v_r  v_t/r+u/r  v_z  |
-!        | w_r  w_t/r      w_z  |
-! in RZ:  T33 gets u/r=x_displace/r
-! in RTZ: T12=u_t/r - v/r
-!         T22=v_t/r + u/r
-! later:
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-
-
-       im_elastic=im_PLS_cpp+1
-       call local_tensor_from_xdisplace( &
-        im_elastic, &
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        nmat, &
-        TNEWfab_ptr, &       ! FAB that holds elastic tensor, Q, when complete
-        xdfab_ptr, &      
-        ydfab_ptr, &      
-        zdfab_ptr)
-
-      else 
-       print *,"isweep invalid"
-       stop
-      endif
-
-      end subroutine fort_assimilate_tensor_from_particles
+      end subroutine fort_assimilate_xdisplace_from_particles
 
 
        ! called from NavierStokes.cpp:
-       !  NavierStokes::accumulate_PC_info(int im_elastic)
+       !  NavierStokes::accumulate_info_no_particles(int im_elastic)
       subroutine fort_assimilate_tensor_from_xdisplace( &
         im_PLS_cpp, & ! 0..nmat-1
         tid, &  ! thread id

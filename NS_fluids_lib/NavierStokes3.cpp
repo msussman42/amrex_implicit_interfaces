@@ -717,13 +717,16 @@ void NavierStokes::deallocate_SDC() {
 
 }  // subroutine deallocate_SDC
 
-// called before veldiffuseALL() from NavierStokes::do_the_advance
-// Second half of D^{upside down triangle}/Dt
-void NavierStokes::tensor_advection_updateALL() {
+
+// called before tensor_advection_updateALL() from 
+// NavierStokes::do_the_advance
+void NavierStokes::correct_xdisplace_with_particles() {
 
  int finest_level=parent->finestLevel();
-
- int nmat=num_materials;
+ if ((level==0)&&(level<=finest_level)) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
 
  const Vector<Geometry>& ns_geom=parent->Geom();
  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
@@ -734,6 +737,46 @@ void NavierStokes::tensor_advection_updateALL() {
  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
   refinement_ratio[ilev]=2;
  int nnbr=1;
+
+ if (particles_flag==1) {
+
+  NavierStokes& ns_level0=getLevel(0);
+  bool local_copy_flag=true; 
+  int ipart=0;
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+  NeighborParticleContainer<N_EXTRA_REAL,0> 
+    localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
+  localPC_nbr.fillNeighbors();
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.accumulate_PC_info(localPC_no_nbr,localPC_nbr,nnbr);
+  }
+  localPC_nbr.clearNeighbors();
+
+ } else if (particles_flag==0) {
+  // do nothing
+ } else
+  amrex::Error("particles_flag invalid");
+
+ for (int ilev=finest_level-1;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.avgDownMacState(XDmac_Type,0);
+ }
+
+} // end subroutine correct_xdisplace_with_particles()
+
+
+
+// called before veldiffuseALL() from NavierStokes::do_the_advance
+// Second half of D^{upside down triangle}/Dt
+void NavierStokes::tensor_advection_updateALL() {
+
+ int finest_level=parent->finestLevel();
+
+ int nmat=num_materials;
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
@@ -767,69 +810,40 @@ void NavierStokes::tensor_advection_updateALL() {
   delete_array(FACETENSOR_MF);
 
   for (int im=0;im<nmat;im++) {
-   if ((particles_flag==1)||
-       (particles_flag==0)) { 
-    if (ns_is_rigid(im)==0) {
-     if ((elastic_time[im]>=0.0)&&
-         (elastic_viscosity[im]>=0.0)) {
-      if (store_elastic_data[im]==1) {
-       if (viscoelastic_model[im]==2) {
+   if (ns_is_rigid(im)==0) {
+    if ((elastic_time[im]>=0.0)&&
+        (elastic_viscosity[im]>=0.0)) {
+     if (store_elastic_data[im]==1) {
+      if (viscoelastic_model[im]==2) {
 
-        if (particles_flag==0) {
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.accumulate_info_no_particles(im);
+       }
 
-         for (int ilev=finest_level;ilev>=level;ilev--) {
-          NavierStokes& ns_level=getLevel(ilev);
-          ns_level.accumulate_info_no_particles(im);
-	 }
-
-        } else if (particles_flag==1) {
-
-         NavierStokes& ns_level0=getLevel(0);
-         bool local_copy_flag=true; 
-         int ipart=0;
-         AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-           ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
-         NeighborParticleContainer<N_EXTRA_REAL,0> 
-           localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
-         localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
-         localPC_nbr.fillNeighbors();
-
-         for (int ilev=finest_level;ilev>=level;ilev--) {
-          NavierStokes& ns_level=getLevel(ilev);
-          ns_level.accumulate_PC_info(im,localPC_no_nbr,localPC_nbr,nnbr);
-	 }
-         localPC_nbr.clearNeighbors();
-
-	} else
-         amrex::Error("particles_flag invalid");
-
-       } else if ((viscoelastic_model[im]==1)||
-  		  (viscoelastic_model[im]==0)||
-		  (viscoelastic_model[im]==3)) {
-        // do nothing
-       } else
-        amrex::Error("viscoelastic_model[im] invalid");
-      } else if (store_elastic_data[im]==0) {
+      } else if ((viscoelastic_model[im]==1)||
+          	 (viscoelastic_model[im]==0)||
+       	         (viscoelastic_model[im]==3)) {
        // do nothing
       } else
-       amrex::Error("store_elastic_data invalid");
+       amrex::Error("viscoelastic_model[im] invalid");
+     } else if (store_elastic_data[im]==0) {
+      // do nothing
      } else
-      amrex::Error("elastic_time or elastic_viscosity invalid");
-    } else if (ns_is_rigid(im)==1) {
-     // do nothing
+      amrex::Error("store_elastic_data invalid");
     } else
-     amrex::Error("ns_is_rigid(im) invalid");
+     amrex::Error("elastic_time or elastic_viscosity invalid");
+   } else if (ns_is_rigid(im)==1) {
+    // do nothing
    } else
-    amrex::Error("particles_flag invalid");
+    amrex::Error("ns_is_rigid(im) invalid");
 
   } // im=0..nmat-1
 
   avgDownALL_TENSOR();
-  for (int ilev=finest_level-1;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.avgDownMacState(XDmac_Type,0);
-  }
 
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
@@ -3135,7 +3149,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       }
       debug_memory();
 
-      // 3. TENSOR ADVECTION
+      // 3a. assimilate particle info to xdisplace
+      correct_xdisplace_with_particles();
+
+      // 3b. TENSOR ADVECTION
       //  (non-Newtonian materials)
       // second half of D^{upside down triangle}/Dt
       tensor_advection_updateALL();
