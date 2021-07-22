@@ -573,10 +573,14 @@ stop
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: gammadot(DIMV(gammadot))
+      REAL_T, pointer :: gammadot_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
               nmat*num_state_material)
+      REAL_T, pointer :: eosdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       REAL_T    shear,density,temperature,mu
@@ -694,12 +698,16 @@ stop
        print *,"ncompvisc invalid"
        stop
       endif
-     
+
       call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1,316)
-      call checkbound_array1(fablo,fabhi,gammadot,ngrow,-1,317)
-      call checkbound_array(fablo,fabhi,eosdata,ngrow,-1,318)
-      call checkbound_array(fablo,fabhi,tensor,ngrow,-1,319)
-      call checkbound_array(fablo,fabhi,vel,ngrow,-1,320)
+      gammadot_ptr=>gammadot
+      call checkbound_array1(fablo,fabhi,gammadot_ptr,ngrow,-1,317)
+      eosdata_ptr=>eosdata
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1,318)
+      tensor_ptr=>tensor
+      call checkbound_array(fablo,fabhi,tensor_ptr,ngrow,-1,319)
+      vel_ptr=>vel
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1,320)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -828,7 +836,7 @@ stop
           endif
           if ((num_materials_viscoelastic.lt.1).or. &
               (num_materials_viscoelastic.gt.nmat)) then
-           print *,"num_materials_viscoelastic invalid"
+           print *,"num_materials_viscoelastic invalid:fort_derviscosity"
            stop
           endif
 
@@ -1139,7 +1147,7 @@ stop
       endif
       if (elastic_viscosity(im+1).gt.zero) then
        if (num_materials_viscoelastic.le.0) then
-        print *,"num_materials_viscoelastic.le.0"
+        print *,"num_materials_viscoelastic.le.0:fort_dermagtrace"
         stop
        endif
        if (ncomp_tensor.ne.FORT_NUM_TENSOR_TYPE) then
@@ -1623,7 +1631,7 @@ stop
       else if (num_materials_viscoelastic.eq.0) then
        ! do nothing
       else
-       print *,"num_materials_viscoelastic invalid"
+       print *,"num_materials_viscoelastic invalid: fort_getdrag"
        stop
       endif
        ! indexes start at 0

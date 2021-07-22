@@ -495,7 +495,7 @@ void NavierStokes::nonlinear_advection() {
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
-     amrex::Error("num_materials_viscoelastic invalid");
+     amrex::Error("num_materials_viscoelastic invalid in nonlinear_advection");
 
     for (int ilev=finest_level-1;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -789,13 +789,11 @@ void NavierStokes::tensor_advection_updateALL() {
    // init_gradu_tensorALL declared in NavierStokes2.cpp
   int do_alloc=1;
   int simple_AMR_BC_flag_viscosity=1;
-  int idx_elastic_flux=-1;
   init_gradu_tensorALL(
     HOLD_VELOCITY_DATA_MF,
     do_alloc,
     CELLTENSOR_MF,
     FACETENSOR_MF,
-    idx_elastic_flux,
     simple_AMR_BC_flag_viscosity);
 
    // in: NavierStokes.cpp
@@ -843,7 +841,7 @@ void NavierStokes::tensor_advection_updateALL() {
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic bad tensor_advection_updateALL");
 
 } // subroutine tensor_advection_updateALL
 
@@ -11479,13 +11477,11 @@ void NavierStokes::multiphase_project(int project_option) {
  
    int do_alloc=1;
    int simple_AMR_BC_flag_viscosity=1;
-   int idx_elastic_flux=-1;
    init_gradu_tensorALL(
      HOLD_VELOCITY_DATA_MF,
      do_alloc,
      CELLTENSOR_MF,
      FACETENSOR_MF,
-     idx_elastic_flux,
      simple_AMR_BC_flag_viscosity);
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -11709,7 +11705,7 @@ void NavierStokes::avgDownALL_TENSOR() {
    // spectral_override==0 => always low order.
   avgDownALL(Tensor_Type,0,NUM_CELL_ELASTIC,0);
  } else
-  amrex::Error("num_materials_viscoelastic invalid");
+  amrex::Error("num_materials_viscoelastic invalid avgDownALL_TENSOR");
 
 } // subroutine avgDownALL_TENSOR
 
@@ -12497,13 +12493,11 @@ void NavierStokes::veldiffuseALL() {
   int do_alloc=0;
 
   int simple_AMR_BC_flag_viscosity=1;
-  int idx_elastic_flux=-1;
   init_gradu_tensorALL(
     VISCHEAT_SOURCE_MF,
     do_alloc,
     CELLTENSOR_MF,
     FACETENSOR_MF,
-    idx_elastic_flux,
     simple_AMR_BC_flag_viscosity);
 
   if ((num_materials_viscoelastic>=1)&&

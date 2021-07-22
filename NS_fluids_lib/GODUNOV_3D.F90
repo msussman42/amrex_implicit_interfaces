@@ -9058,7 +9058,7 @@ stop
        tennew_ptr=>snew
        tensor_ptr=>den
       else
-       print *,"num_materials_viscoelastic invalid"
+       print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
        stop
       endif
 
@@ -9223,7 +9223,7 @@ stop
           (num_materials_viscoelastic.le.nmat)) then
        ! do nothing
       else
-       print *,"num_materials_viscoelastic invalid"
+       print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
        stop
       endif
       if (ntensor.eq.NUM_CELL_ELASTIC) then
@@ -10473,7 +10473,7 @@ stop
              else if (num_materials_viscoelastic.eq.0) then
               ! do nothing
              else
-              print *,"num_materials_viscoelastic invalid"
+              print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
               stop
              endif
 
@@ -10756,7 +10756,7 @@ stop
           else if (num_materials_viscoelastic.eq.0) then
            ! do nothing
           else
-           print *,"num_materials_viscoelastic invalid"
+           print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
            stop
           endif
  
@@ -11079,7 +11079,7 @@ stop
           else if (num_materials_viscoelastic.eq.0) then
            ! do nothing
           else
-           print *,"num_materials_viscoelastic invalid"
+           print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
            stop
           endif
 
@@ -12266,8 +12266,10 @@ stop
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
        ! do nothing
+      else if (num_materials_viscoelastic.eq.0) then
+       ! do nothing
       else
-       print *,"num_materials_viscoelastic invalid"
+       print *,"num_materials_viscoelastic invalid:fort_build_macvof"
        stop
       endif
 
@@ -12331,14 +12333,7 @@ stop
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1,26)
 
        velmac(1)=x_mac_old(D_DECL(i,j,k))
-       if (num_MAC_vectors.eq.2) then
-        velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
-       else if (num_MAC_vectors.eq.1) then
-        ! do nothing
-       else
-        print *,"num_MAC_vectors invalid"
-        stop
-       endif
+       velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
 
        if (veldir.eq.1) then
         if (levelrz.eq.0) then
@@ -20960,9 +20955,6 @@ stop
        !   (only called when spectral_loop==0)
        !     
       subroutine fort_face_gradients( &
-       im_tensor, &
-       elastic_partid, &
-       im_elastic_map, &
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
@@ -21019,9 +21011,6 @@ stop
 
       REAL_T def_dt
 
-      INTEGER_T, intent(in) :: im_tensor
-      INTEGER_T, intent(in) :: elastic_partid
-      INTEGER_T, intent(in) :: im_elastic_map(num_materials_viscoelastic)
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
@@ -21253,42 +21242,6 @@ stop
        endif
       else
        print *,"itensor_iter invalid"
-       stop
-      endif
-
-      if (im_tensor.eq.-1) then
-       ! do nothing
-      else if ((im_tensor.ge.0).and.(im_tensor.lt.nmat)) then
-       if ((elastic_partid.ge.0).and. &
-           (elastic_partid.lt.num_materials_viscoelastic)) then
-        if (im_tensor.eq.im_elastic_map(elastic_partid+1)) then
-         if (im_elastic_map(elastic_partid+1).eq. &
-             fort_im_elastic_map(elastic_partid+1)) then
-          if (enable_spectral.eq.0) then
-           if (homflag.eq.0) then
-            ! do nothing
-           else
-            print *,"homflag invalid"
-            stop
-           endif
-          else
-           print *,"expecting enable_spectral==0 for finding disp gradients"
-           stop
-          endif
-         else
-          print *,"im_elastic_map invalid"
-          stop
-         endif
-        else
-         print *,"im_tensor invalid"
-         stop
-        endif
-       else
-        print *,"elastic_partid invalid"
-        stop
-       endif
-      else
-       print *,"im_tensor invalid"
        stop
       endif
 
@@ -21883,52 +21836,25 @@ stop
 
            theta_factor=one
 
-            ! gradient of displacement vector.
-           if ((im_tensor.ge.0).and.(im_tensor.lt.nmat)) then
-
+           if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
             vplus(nc)=vel(D_DECL(i,j,k),velcomp)
             vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
-            if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
-             ! do nothing
-            else if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
-             theta_factor=zero ! zero out the gradient.
-            else if ((left_rigid.eq.0).and.(right_rigid.eq.1)) then
-             theta_factor=zero ! zero out the gradient.
-            else if ((left_rigid.eq.1).and.(right_rigid.eq.0)) then
-             theta_factor=zero ! zero out the gradient.
-            else
-             print *,"left_rigid or right_rigid invalid"
-             stop
-            endif
-
-            ! gradient of velocity vector.
-           else if (im_tensor.eq.-1) then
-
-            if ((left_rigid.eq.0).and.(right_rigid.eq.0)) then
-             vplus(nc)=vel(D_DECL(i,j,k),velcomp)
-             vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
-            else if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
-             vplus(nc)=solidvelright(nc)
-             vminus(nc)=solidvelleft(nc)
-             theta_factor=zero ! zero out the gradient.
-            else if ((left_rigid.eq.0).and.(right_rigid.eq.1)) then
-             vplus(nc)=solidvelright(nc)
-             vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
-             theta_factor=two
-            else if ((left_rigid.eq.1).and.(right_rigid.eq.0)) then
-             vplus(nc)=vel(D_DECL(i,j,k),velcomp)
-             vminus(nc)=solidvelleft(nc)
-             theta_factor=two
-            else
-             print *,"left_rigid or right_rigid invalid"
-             stop
-            endif
-
+           else if ((left_rigid.eq.1).and.(right_rigid.eq.1)) then
+            vplus(nc)=solidvelright(nc)
+            vminus(nc)=solidvelleft(nc)
+            theta_factor=zero ! zero out the gradient.
+           else if ((left_rigid.eq.0).and.(right_rigid.eq.1)) then
+            vplus(nc)=solidvelright(nc)
+            vminus(nc)=vel(D_DECL(im1,jm1,km1),velcomp)
+            theta_factor=two
+           else if ((left_rigid.eq.1).and.(right_rigid.eq.0)) then
+            vplus(nc)=vel(D_DECL(i,j,k),velcomp)
+            vminus(nc)=solidvelleft(nc)
+            theta_factor=two
            else
-            print *,"im_tensor invalid"
+            print *,"left_rigid or right_rigid invalid"
             stop
            endif
-
 
  !ux,vx,wx,uy,vy,wy,uz,vz,wz
  ! grad u in cylindrical coordinates:
@@ -22150,13 +22076,6 @@ stop
        ! in: FACE_GRADIENTS
       if ((enable_spectral.eq.1).or. &  ! SEM space and time
           (enable_spectral.eq.2)) then  ! SEM space only
-
-       if (im_tensor.eq.-1) then
-        ! do nothing
-       else
-        print *,"expecting im_tensor==-1 for spectral method"
-        stop
-       endif
 
        if (bfact.ge.2) then
 
