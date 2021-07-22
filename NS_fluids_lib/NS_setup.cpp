@@ -1075,32 +1075,32 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
-    postfix_str="XU";
-    set_tensor_extrap_components(coord,postfix_str,TensorXU_Type);
+    std::string MAC_postfix_str="XU";
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type);
 
      //ngrow=1
      //ncomp=1
     desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
-    postfix_str="YU";
-    set_tensor_extrap_components(coord,postfix_str,TensorYU_Type);
+    MAC_postfix_str="YU";
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorYU_Type);
 
      //ngrow=1
      //ncomp=1
     desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
-    postfix_str="ZU";
-    set_tensor_extrap_components(coord,postfix_str,TensorZU_Type);
+    MAC_postfix_str="ZU";
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZU_Type);
 
      //ngrow=1
      //ncomp=1
     desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
-    postfix_str="ZV";
-    set_tensor_extrap_components(coord,postfix_str,TensorZV_Type);
+    MAC_postfix_str="ZV";
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZV_Type);
 
 // LEVELSET ------------------------------------------------- 
 
@@ -1305,9 +1305,9 @@ NavierStokes::variableSetUp ()
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);
-    std::string extrap_str="extrap"; 
+    std::string state_extrap_str="extrap"; 
     desc_lstGHOST.setComponent(State_Type,0,
-      extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
+      state_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
 
     dcomp++;
     std::string u_extrap_str="u_extrap";
