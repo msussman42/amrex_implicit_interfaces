@@ -927,20 +927,28 @@ protected:
     void init_splitting_force_SDC();
 
     void init_gradu_tensor(
-     int homflag,int idx_vel,
-     int idx_cell,int idx_face,
+     int homflag,
+     int idx_vel,
+     int idx_cell,
+     int idx_face,
      int idx_elastic_flux, //xflux,yflux,zflux
      int simple_AMR_BC_flag_viscosity);
 
     void doit_gradu_tensor(
-     int homflag,int idx_vel,
-     int idx_cell,int idx_face,int spectral_loop,
-     int itensor_iter,MultiFab* mask3,
+     int homflag,
+     int idx_vel,
+     int idx_cell,
+     int idx_face,
+     int spectral_loop,
+     int itensor_iter,
+     MultiFab* mask3,
      int simple_AMR_BC_flag_viscosity);
 
     void init_gradu_tensorALL(
-     int idx,int do_alloc,
-     int idx_cell,int idx_face,
+     int idx,
+     int do_alloc,
+     int idx_cell,
+     int idx_face,
      int idx_elastic_flux, //xflux,yflux,zflux
      int simple_AMR_BC_flag_viscosity);
 

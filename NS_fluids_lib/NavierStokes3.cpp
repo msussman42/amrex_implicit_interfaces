@@ -789,10 +789,8 @@ void NavierStokes::tensor_advection_updateALL() {
    // init_gradu_tensorALL declared in NavierStokes2.cpp
   int do_alloc=1;
   int simple_AMR_BC_flag_viscosity=1;
-  int im_tensor=-1;
   int idx_elastic_flux=-1;
   init_gradu_tensorALL(
-    im_tensor,
     HOLD_VELOCITY_DATA_MF,
     do_alloc,
     CELLTENSOR_MF,
@@ -11481,10 +11479,8 @@ void NavierStokes::multiphase_project(int project_option) {
  
    int do_alloc=1;
    int simple_AMR_BC_flag_viscosity=1;
-   int im_tensor=-1;
    int idx_elastic_flux=-1;
    init_gradu_tensorALL(
-     im_tensor,
      HOLD_VELOCITY_DATA_MF,
      do_alloc,
      CELLTENSOR_MF,
@@ -12501,10 +12497,8 @@ void NavierStokes::veldiffuseALL() {
   int do_alloc=0;
 
   int simple_AMR_BC_flag_viscosity=1;
-  int im_tensor=-1;
   int idx_elastic_flux=-1;
   init_gradu_tensorALL(
-    im_tensor,
     VISCHEAT_SOURCE_MF,
     do_alloc,
     CELLTENSOR_MF,
