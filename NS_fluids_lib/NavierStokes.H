@@ -630,7 +630,8 @@ public:
     void init_particle_container(int append_flag);
 
     void accumulate_info_no_particles(int im);
-    void accumulate_PC_info(int im,
+
+    void accumulate_PC_info(
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
       NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
       int nnbr);
@@ -877,6 +878,8 @@ protected:
      int project_option,
      MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
      int nsolve);
+
+    void correct_xdisplace_with_particles();
 
     void tensor_advection_update();
     void tensor_advection_updateALL();

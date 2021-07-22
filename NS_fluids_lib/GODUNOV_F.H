@@ -1236,10 +1236,8 @@ extern "C"
      int* num_divu_outer_sweeps);
 
 
-   void fort_assimilate_tensor_from_particles(
+   void fort_assimilate_xdisplace_from_particles(
      Real* particles_weight_XD,
-     int* im_PLS_cpp,
-     int* isweep,
      int* tid,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
@@ -1253,7 +1251,6 @@ extern "C"
      int Np_no_nbr, //pass by value just in case "long" on the c++ side.
      int Np_nbr, //pass by value just in case "long" on the c++ side.
      int Nn,     // pass by value just in case "long" on the c++ side.
-     int* ncomp_tensor,
      int* matrix_points,
      int* RHS_points,
      int* ncomp_accumulate,
@@ -1261,9 +1258,6 @@ extern "C"
      Real* LS,
      AMREX_ARLIM_P(LSlo),
      AMREX_ARLIM_P(LShi),
-     Real* TNEWfab,
-     AMREX_ARLIM_P(TNEWfablo),
-     AMREX_ARLIM_P(TNEWfabhi),
      Real* xdNEWfab,
      AMREX_ARLIM_P(xdNEWfablo),
      AMREX_ARLIM_P(xdNEWfabhi),
