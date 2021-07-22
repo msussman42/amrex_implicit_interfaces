@@ -16062,10 +16062,8 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
- int im_tensor=-1; // =-1 if input is velocity, >=0 if displacement input.
  int idx_elastic_flux=-1;
  init_gradu_tensorALL(
-  im_tensor,
   HOLD_VELOCITY_DATA_MF,
   do_alloc,
   CELLTENSOR_MF,
@@ -18073,13 +18071,12 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
- int im_tensor=-1;
  int idx_elastic_flux=-1;
  init_gradu_tensorALL(
-   im_tensor,
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
-   CELLTENSOR_MF,FACETENSOR_MF,
+   CELLTENSOR_MF,
+   FACETENSOR_MF,
    idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 
@@ -20156,12 +20153,12 @@ NavierStokes::volWgtSumALL(
 
  int do_alloc=1;
  int simple_AMR_BC_flag_viscosity=1;
- int im_tensor=-1;
  int idx_elastic_flux=-1;
  init_gradu_tensorALL(
-   im_tensor,
-   HOLD_VELOCITY_DATA_MF,do_alloc,
-   CELLTENSOR_MF,FACETENSOR_MF,
+   HOLD_VELOCITY_DATA_MF,
+   do_alloc,
+   CELLTENSOR_MF,
+   FACETENSOR_MF,
    idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 

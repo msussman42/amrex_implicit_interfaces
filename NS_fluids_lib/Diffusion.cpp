@@ -94,10 +94,8 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
 
  int simple_AMR_BC_flag_viscosity=1; 
  int do_alloc=0;
- int im_tensor=-1;
  int idx_elastic_flux=-1;
  init_gradu_tensorALL(
-   im_tensor,
    idx_vel,
    do_alloc,
    CELLTENSOR_MF,FACETENSOR_MF,

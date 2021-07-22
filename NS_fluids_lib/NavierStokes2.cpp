@@ -3421,7 +3421,6 @@ void NavierStokes::VELMAC_TO_CELL(
 // do_alloc=1 => allocate variable
 // do_alloc=0 => variable already allocated
 void NavierStokes::init_gradu_tensorALL(
- int im_tensor,  // =-1 if input is velocity, >=0 if input is displacement. 
  int idx_vel, //source velocity or displacement; allocated if do_alloc==1,
               //deleted if do_alloc==1.
  int do_alloc,
@@ -3445,41 +3444,14 @@ void NavierStokes::init_gradu_tensorALL(
 
   if (do_alloc==1) {
 
-   if (im_tensor==-1) {
-     // ngrow,scomp,ncomp
-    ns_level.getState_localMF(idx_vel,1,0,nsolve,cur_time_slab);
-    if (idx_elastic_flux==-1) {
-     // do nothing
-    } else
-     amrex::Error("idx_elastic_flux invalid");
-   } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
-    if (idx_elastic_flux>=0) {
-     // do nothing
-    } else
-     amrex::Error("idx_elastic_flux invalid");
-    if (enable_spectral==0) {
-     int elastic_partid=-1;
-     for (int i=0;i<im_elastic_map.size();i++) {
-      if (im_elastic_map[i]==im_tensor)
-       elastic_partid=i;
-     }
-
-     if ((elastic_partid>=0)&&(elastic_partid<im_elastic_map.size())) {
-      int scomp=num_materials_viscoelastic*NUM_TENSOR_TYPE;
-      ns_level.getStateTensor_localMF(idx_vel,1,scomp,
-		  AMREX_SPACEDIM,cur_time_slab);
-     } else
-      amrex::Error("elastic_partid invalid");
-    } else
-     amrex::Error("enable_spectral invalid");
-   } else
-    amrex::Error("im_tensor invalid");
+    // ngrow,scomp,ncomp
+   ns_level.getState_localMF(idx_vel,1,0,nsolve,cur_time_slab);
       
   } else if (do_alloc==0) {
-   if ((im_tensor==-1)&&(idx_elastic_flux==-1)) {
+   if (idx_elastic_flux==-1) {
     // do nothing
    } else
-    amrex::Error("im_tensor and idx_elastic_flux = -1 if do_alloc==0");
+    amrex::Error("idx_elastic_flux = -1 if do_alloc==0");
   } else
    amrex::Error("do_alloc invalid");
 
@@ -3490,7 +3462,6 @@ void NavierStokes::init_gradu_tensorALL(
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
   int homflag=0;
   ns_level.init_gradu_tensor(
-    im_tensor, // im_tensor=-1 => velocity   0<=im_tensor<=nmat-1 => xdisp
     homflag,
     idx_vel,
     idx_cell,
@@ -3576,9 +3547,12 @@ void NavierStokes::init_gradu_tensorALL(
 // itensor_iter=0 face grad U
 // itensor_iter=1 cell grad U
 void NavierStokes::doit_gradu_tensor(
- int im_tensor, //-1, or, 0..nmat-1
- int homflag,int idx_vel,
- int idx_cell,int idx_face,int spectral_loop,int itensor_iter,
+ int homflag,
+ int idx_vel,
+ int idx_cell,
+ int idx_face,
+ int spectral_loop,
+ int itensor_iter,
  MultiFab* mask3,
  int simple_AMR_BC_flag_viscosity) {
 
@@ -4017,7 +3991,6 @@ void NavierStokes::FillBoundaryTENSOR(
 
 // called from apply_pressure_grad, init_gradu_tensorALL
 void NavierStokes::init_gradu_tensor(
- int im_tensor, //-1, or, 0 .. nmat-1
  int homflag,
  int idx_vel,
  int idx_cell,
@@ -4098,10 +4071,13 @@ void NavierStokes::init_gradu_tensor(
  int spectral_loop=0;
  for (spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
   doit_gradu_tensor(
-   im_tensor,
    homflag,
-   idx_vel,idx_cell,idx_face,spectral_loop,
-   itensor_iter,mask3,
+   idx_vel,
+   idx_cell,
+   idx_face,
+   spectral_loop,
+   itensor_iter,
+   mask3,
    simple_AMR_BC_flag_viscosity);
   synchronize_flux_register(operation_flag,spectral_loop);
  }
@@ -4110,7 +4086,6 @@ void NavierStokes::init_gradu_tensor(
  itensor_iter=1;  // tensor cell
  spectral_loop=0;
  doit_gradu_tensor(
-   im_tensor,
    homflag,
    idx_vel,
    idx_cell,
@@ -4118,167 +4093,6 @@ void NavierStokes::init_gradu_tensor(
    spectral_loop,
    itensor_iter,mask3,
    simple_AMR_BC_flag_viscosity);
-
- if (im_tensor==-1) {
-
-  // do nothing
-
- } else if ((im_tensor>=0)&&(im_tensor<num_materials)) {
-
-  bool use_tiling=ns_tiling;
-
-  int rzflag=0;
-  if (geom.IsRZ())
-   rzflag=1;
-  else if (geom.IsCartesian())
-   rzflag=0;
-  else if (geom.IsCYLINDRICAL())
-   rzflag=3;
-  else
-   amrex::Error("CoordSys bust 20");
-
-
-  const Real* dx = geom.CellSize();
-  int bfact=parent->Space_blockingFactor(level);
-
-  int nmat=num_materials;
-  int nden=nmat*num_state_material;
-
-  resize_levelsetLO(2,LEVELPC_MF);
-  debug_ngrow(LEVELPC_MF,2,110);
-
-  for (int dir=1;dir<=AMREX_SPACEDIM;dir++) {
-
-   debug_ngrow(idx_elastic_flux+dir-1,0,845);
- 
-   MultiFab* umac_new=&get_new_data(Umac_Type+dir-1,slab_step+1);
-   MultiFab* grad_xdisp_mf=localMF[idx_elastic_flux+dir-1];
-   if (grad_xdisp_mf->boxArray()==umac_new->boxArray()) {
-    // do nothing
-   } else
-    amrex::Error("grad_xdisp_mf->boxArray()!=umac_new->boxArray()");
-
-   if (grad_xdisp_mf->nComp()==AMREX_SPACEDIM*AMREX_SPACEDIM) {
-    // do nothing
-   } else
-    amrex::Error("grad_xdisp_mf->nComp()!=AMREX_SPACEDIM^{2}"); 
-
-   if (enable_spectral==0) {
-    // do nothing
-   } else
-    amrex::Error("enable_spectral invalid");
-
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
-  
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-   for (MFIter mfi(*localMF[LEVELPC_MF],use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
- 
-    const Real* xlo = grid_loc[gridno].lo();
-
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-
-    FArrayBox& velfab=(*localMF[idx_vel])[mfi];
-    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-
-    FArrayBox& xflux=(*grad_xdisp_mf)[mfi];
-
-    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
-
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
- 
-    FArrayBox& tensor_data=(*localMF[idx_face])[mfi];
-    FArrayBox& cell_tensor_data=(*localMF[idx_cell])[mfi];
-    FArrayBox& mask_tensor_data=(*localMF[MASKSOLIDTENSOR_MF])[mfi];
-    FArrayBox& faceLS=(*localMF[LSTENSOR_MF])[mfi];
-
-    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
-    // maskcoef=tag if not covered by level+1 or outside the domain.
-    FArrayBox& maskcoef_fab=(*localMF[MASKCOEF_MF])[mfi];
-
-    FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-    int ncomp_visc=viscfab.nComp();
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // declared in: GODUNOV_3D.F90
-    //  visc_coef * viscface * (grad X + grad X^T)
-    fort_crossterm_elastic(
-     &ncomp_visc,
-     &im_tensor, // 0..nmat-1
-     &dir,
-     viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-     maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
-     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-     maskcoef_fab.dataPtr(), // maskcoef=tag if not cov by level+1 or outside.
-     ARLIM(maskcoef_fab.loVect()),ARLIM(maskcoef_fab.hiVect()),
-     faceLS.dataPtr(),
-     ARLIM(faceLS.loVect()),ARLIM(faceLS.hiVect()),
-     mask_tensor_data.dataPtr(),
-     ARLIM(mask_tensor_data.loVect()),ARLIM(mask_tensor_data.hiVect()),
-     tensor_data.dataPtr(),
-     ARLIM(tensor_data.loVect()),ARLIM(tensor_data.hiVect()),
-     cell_tensor_data.dataPtr(),
-     ARLIM(cell_tensor_data.loVect()),ARLIM(cell_tensor_data.hiVect()),
-     xlo,dx,
-     &dt_slab,
-     &cur_time_slab,
-     velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
-     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-     &facevisc_index,
-     &vofface_index,
-     &massface_index,
-     &ncphys,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     &level,
-     &rzflag,
-     velbc.dataPtr(),
-     &visc_coef,
-     &nmat,
-     &nden,
-     &ntensor);
-   } // mfi
-} // omp
-   ns_reconcile_d_num(142);
-
-  } // dir=1..sdim
-
-  int spectral_override=0;  // always do low order average down
-  int ncomp_edge=-1;
-  int caller_id=1;
-   // idxMF,scomp,ncomp,start_dir,ndir,spectral_override,caller_id
-  avgDownEdge_localMF(
-    idx_elastic_flux,
-    0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id); 
-
-  for (int dir=1;dir<=AMREX_SPACEDIM;dir++) {
-   localMF[idx_elastic_flux+dir-1]->
-      FillBoundary(0,AMREX_SPACEDIM*AMREX_SPACEDIM,geom.periodicity());
-  }
-
- } else
-  amrex::Error("im_tensor invalid");
 
  delete mask3; 
 
@@ -4448,10 +4262,8 @@ void NavierStokes::apply_pressure_grad(
   } else
    amrex::Error("simple_AMR_BC_flag_viscosity invalid");
 
-  int im_tensor=-1;
   int idx_elastic_flux=-1;
   init_gradu_tensor(
-    im_tensor,
     homflag,
     pboth_mf,
     LOCAL_CELLTENSOR_MF,
@@ -4990,13 +4802,12 @@ void NavierStokes::make_physics_varsALL(int project_option,
  // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
- int im_tensor=-1;
  int idx_elastic_flux=-1;
  init_gradu_tensorALL(
-   im_tensor,
    HOLD_VELOCITY_DATA_MF,
    do_alloc,
-   CELLTENSOR_MF,FACETENSOR_MF,
+   CELLTENSOR_MF,
+   FACETENSOR_MF,
    idx_elastic_flux,
    simple_AMR_BC_flag_viscosity);
 

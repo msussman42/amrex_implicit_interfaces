@@ -1026,42 +1026,6 @@ extern "C"
      int* constant_viscosity,
      int* homflag);
 
-
-   void fort_crossterm_elastic(
-     int* ncomp_visc,
-     int* im_elastic, //0..nmat-1
-     int* dir, //1..sdim
-     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
-     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-     Real* faceLS,AMREX_ARLIM_P(faceLSlo),AMREX_ARLIM_P(faceLShi),
-     Real* mdata,AMREX_ARLIM_P(mdatalo),AMREX_ARLIM_P(mdatahi),
-     Real* tdata,AMREX_ARLIM_P(tdatalo),AMREX_ARLIM_P(tdatahi),
-     Real* c_tdata,AMREX_ARLIM_P(c_tdatalo),AMREX_ARLIM_P(c_tdatahi),
-     const Real* xlo,const Real* dx,
-     Real* dt,
-     Real* cur_time,
-     Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
-     Real* levelpc,
-     AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
-     Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
-     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
-     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
-     int* facevisc_index,
-     int* vofface_index,
-     int* massface_index,
-     int* ncphys,
-     const int* tilelo,const int* tilehi, 
-     const int* fablo,const int* fabhi, 
-     int* bfact,
-     int* level,
-     int* rzflag,
-     int* velbc,
-     Real* visc_coef, 
-     int* nmat,
-     int* nden,
-     int* ntensor);
-
    void fort_mac_elastic_force(
      int* im_elastic, // 0..nmat-1
      int* partid, // 0..num_materials_viscoelastic-1
