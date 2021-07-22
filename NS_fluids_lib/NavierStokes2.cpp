@@ -1827,6 +1827,8 @@ void NavierStokes::apply_cell_pressure_gradient(
  if (nstate!=scomp_den+nden+nvof+1)
   amrex::Error("invalid ncomp in cell pressure gradient routine");
 
+ FIX ME SEM_FLUXREG NEVER USED HERE!
+
  //interpolate pressure from cell to MAC grid.
  int operation_flag_interp_pres=1; 
  // flux register is initialized to zero.

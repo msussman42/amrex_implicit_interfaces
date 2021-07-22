@@ -435,7 +435,6 @@ namespace amrex{
         int* icefacecut_index,
         int* curv_index,
         int* conservative_div_uu,
-        int* filter_velocity, 
         int* ignore_div_up, 
         int* pforce_index,
         int* faceden_index,

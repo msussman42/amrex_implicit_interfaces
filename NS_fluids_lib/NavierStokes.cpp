@@ -2889,7 +2889,6 @@ NavierStokes::read_params ()
 
 
     pp.query("bicgstab_max_num_outer_iter",bicgstab_max_num_outer_iter);
-    pp.query("slope_limiter_option",slope_limiter_option);
 
     pp.query("EILE_flag",EILE_flag);
 
@@ -4902,7 +4901,6 @@ NavierStokes::read_params ()
 
      std::cout << "bicgstab_max_num_outer_iter " << 
        bicgstab_max_num_outer_iter << '\n';
-     std::cout << "slope_limiter_option " << slope_limiter_option << '\n';
      std::cout << "slipcoeff " << slipcoeff << '\n';
 
      std::cout << "EILE_flag " << EILE_flag << '\n';
@@ -9699,46 +9697,6 @@ void NavierStokes::make_marangoni_force() {
 
  resize_metrics(2);
 
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
-  if (localMF[CONSERVE_FLUXES_MF+dir]->nComp()!=AMREX_SPACEDIM)
-   amrex::Error("localMF[CONSERVE_FLUXES_MF+dir]->nComp() invalid");
- }   
-
- if (isweep==0) {
-   // second order coarse-fine interp for LS
-  getStateDist_localMF(GHOSTDIST_MF,2,cur_time_slab,16);
-  getStateDen_localMF(DEN_RECON_MF,2,prev_time_slab);
-
-  CL_velocity=getState(2,0,(AMREX_SPACEDIM+1),prev_time_slab);
-  if (CL_velocity->nComp()!=AMREX_SPACEDIM+1)
-   amrex::Error("CL_velocity->nComp()!=AMREX_SPACEDIM+1");
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   setVal_localMF(CONSERVE_FLUXES_MF+dir,0.0,0,AMREX_SPACEDIM,0);
-   new_localMF(POTENTIAL_EDGE_MF+dir,2*AMREX_SPACEDIM,0,dir); //Ften-,Ften+
-   setVal_localMF(POTENTIAL_EDGE_MF+dir,0.0,0,2*AMREX_SPACEDIM,0);
-  }
- } else if (isweep==1) {
-  CL_velocity=localMF[GHOSTDIST_MF];
-  if (CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp())
-   amrex::Error("CL_velocity->nComp()!=localMF[GHOSTDIST_MF]->nComp()");
- } else {
-  CL_velocity=nullptr;
-  amrex::Error("isweep invalid");
- }
- if (CL_velocity->nGrow()!=2)
-  amrex::Error("CL_velocity->nGrow()!=2");
-
- debug_ngrow(GHOSTDIST_MF,2,5);
- if (localMF[GHOSTDIST_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
- debug_ngrow(DEN_RECON_MF,2,5);
- if (localMF[DEN_RECON_MF]->nComp()!=nmat*num_state_material)
-  amrex::Error("den_recon has invalid ncomp");
-
- int nden=nmat*num_state_material;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -9747,9 +9705,6 @@ void NavierStokes::make_marangoni_force() {
    nmat*(num_state_material+ngeom_raw)+1;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
-
- int scomp_mofvars=(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
 
  const Real* dx = geom.CellSize();
 
@@ -9764,10 +9719,6 @@ void NavierStokes::make_marangoni_force() {
  if (localMF[DIST_CURV_MF]->nComp()!=num_curv)
   amrex::Error("DIST_CURV invalid ncomp");
   
- MultiFab& Umac_new=get_new_data(Umac_Type,slab_step+1);
- MultiFab& Vmac_new=get_new_data(Umac_Type+1,slab_step+1);
- MultiFab& Wmac_new=get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
-
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(localMF[DIST_CURV_MF]->boxArray().d_numPts());
@@ -9790,39 +9741,9 @@ void NavierStokes::make_marangoni_force() {
 
   const Real* xlo = grid_loc[gridno].lo();
 
-   // mask=tag if not covered by level+1 or outside the domain.
-  FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
   FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
-  FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-  FArrayBox& lshofab=(*localMF[GHOSTDIST_MF])[mfi];
-  FArrayBox& velfab=(*CL_velocity)[mfi];
-  FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
-   // mask_nbr:
-   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
-   // (2) =1 interior  =0 otherwise
-   // (3) =1 interior+ngrow-1  =0 otherwise
-   // (4) =1 interior+ngrow    =0 otherwise
-  FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
-  FArrayBox& areax=(*localMF[AREA_MF])[mfi];
-  FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
-  FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& xflux=(*localMF[CONSERVE_FLUXES_MF])[mfi];
-  FArrayBox& yflux=(*localMF[CONSERVE_FLUXES_MF+1])[mfi];
-  FArrayBox& zflux=(*localMF[CONSERVE_FLUXES_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
-  FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
-  FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
-  FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& xp=(*localMF[POTENTIAL_EDGE_MF])[mfi];
-  FArrayBox& yp=(*localMF[POTENTIAL_EDGE_MF+1])[mfi];
-  FArrayBox& zp=(*localMF[POTENTIAL_EDGE_MF+AMREX_SPACEDIM-1])[mfi];
-
-  Vector<int> presbc=getBCArray(State_Type,gridno,AMREX_SPACEDIM,1);
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-  Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -9854,29 +9775,6 @@ void NavierStokes::make_marangoni_force() {
  }  // mfi  
 } // omp
  ns_reconcile_d_num(57);
-
- if (isweep==0) {
-  delete CL_velocity;
-  int spectral_override=0;  // always do low order average down
-  int ncomp_edge=-1;
-  int caller_id=1;
-  avgDownEdge_localMF(
-   CONSERVE_FLUXES_MF,
-   0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id);
-  
-  caller_id=2;
-
-  avgDownEdge_localMF(
-   POTENTIAL_EDGE_MF,
-   0,ncomp_edge,0,AMREX_SPACEDIM,spectral_override,caller_id);
-
- } else if (isweep==1) {
-  delete_localMF(GHOSTDIST_MF,1);
-  delete_localMF(DEN_RECON_MF,1);
-  delete_localMF(POTENTIAL_EDGE_MF,AMREX_SPACEDIM);
- } else {
-  amrex::Error("isweep invalid");
- }
 
 }   // make_marangoni_force
 
@@ -10428,10 +10326,8 @@ void NavierStokes::update_SEM_delta_force(
    if (project_option==0) {
     if (nsolve!=1)
      amrex::Error("expecting nsolve==1 if project_option==0");
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     if (localMF[idx_gpmac+dir]->nComp()!=nsolve)
-      amrex::Error("localMF[idx_gpmac+dir]->nComp() invalid");
-    }
+    if (localMF[idx_gpmac+dir]->nComp()!=nsolve)
+     amrex::Error("localMF[idx_gpmac+dir]->nComp() invalid");
    } else if ((project_option==2)||
               (project_option==3)) {
     // do nothing
@@ -15834,7 +15730,6 @@ NavierStokes::split_scalar_advection() {
 
 
  delete conserve;
- delete momslope;
  
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    delete xvof[dir];
@@ -16295,10 +16190,10 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  }
 
  int elastic_ntensor=num_materials_viscoelastic*NUM_TENSOR_TYPE;
- int VISOTEN_ALL_MAT_MF_local=0;
+ int VISCOTEN_ALL_MAT_MF_local=0;
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
-  VISOTEN_ALL_MAT_MF_local=VISCOTEN_ALL_MAT_MF;
+  VISCOTEN_ALL_MAT_MF_local=VISCOTEN_ALL_MAT_MF;
 
   debug_ngrow(VISCOTEN_ALL_MAT_MF_local,1,50);
   if (localMF[VISCOTEN_ALL_MAT_MF_local]->nComp()==elastic_ntensor) {
@@ -18224,8 +18119,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("visual_compare invalid");
 
- int vel_or_disp=1;  // displacement
- int dest_idx=VISUAL_XDISP_MAC_CELL_MF;
+ vel_or_disp=1;  // displacement
+ dest_idx=VISUAL_XDISP_MAC_CELL_MF;
  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
@@ -18692,6 +18587,7 @@ NavierStokes::writePlotFile (
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
+ int nmat=num_materials;
 
  SDC_outer_sweeps=SDC_outer_sweeps_in;
  if ((SDC_outer_sweeps>=0)&&
@@ -18877,7 +18773,6 @@ NavierStokes::writePlotFile (
      ncomp=1;
 
      if (typ==State_Type) {
-      int nmat=num_materials;
       int scomp_mofvars=(AMREX_SPACEDIM+1)+
        nmat*num_state_material;
       if (comp==scomp_mofvars) {
@@ -18893,7 +18788,6 @@ NavierStokes::writePlotFile (
         desc_lst[typ].nComp() << '\n';
        amrex::Error("comp invalid for Solid_State_Type");
       }
-      int nmat=num_materials;
       int nparts=im_solid_map.size();
       if ((nparts<1)||(nparts>nmat))
        amrex::Error("nparts invalid");
@@ -18916,7 +18810,6 @@ NavierStokes::writePlotFile (
         desc_lst[typ].nComp() << '\n';
        amrex::Error("comp invalid for Tensor_Type");
       }
-      int nmat=num_materials;
       int nparts=im_elastic_map.size();
       if ((nparts<=0)||(nparts>nmat)||
           (nparts!=num_materials_viscoelastic))
@@ -18938,7 +18831,6 @@ NavierStokes::writePlotFile (
        amrex::Error("comp invalid for LS_Type");
       }
 
-      int nmat=num_materials;
       if (comp==0) {
        ncomp=nmat*(AMREX_SPACEDIM+1);
       } else
