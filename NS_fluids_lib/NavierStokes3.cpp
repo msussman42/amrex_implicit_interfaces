@@ -960,6 +960,11 @@ Real NavierStokes::advance(Real time,Real dt) {
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
 
+ if (finest_level<=max_level) {
+  // do nothing
+ } else
+  amrex::Error("it is required that finest_level<=max_level");
+
  if (finest_level<=max_level_for_use) {
   // do nothing
  } else
@@ -3063,7 +3068,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // add beta * (1/cv) * (u dot u/2) to temp
       increment_KE_ALL(beta);
       VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
-      Real beta=-1.0;
+      beta=-1.0;
       increment_KE_ALL(beta);
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -3166,11 +3171,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int interp_option=0;
        int idx_velcell=-1;
 
-       Real beta=0.0;
+       Real beta_local=0.0;
        Vector<blobclass> local_blobdata;
        increment_face_velocityALL(
          interp_option,project_option,
-         idx_velcell,beta,local_blobdata);
+         idx_velcell,beta_local,local_blobdata);
 
       } else if (is_zalesak()==0) {
 
@@ -7250,7 +7255,6 @@ void NavierStokes::remove_pressure_work_vars() {
  delete_localMF(UMACSTAR_MF,AMREX_SPACEDIM);
  delete_localMF(GRADPEDGE_MF,AMREX_SPACEDIM);
  delete_localMF(PEDGE_MF,AMREX_SPACEDIM);
- delete_localMF(AMRSYNC_PEDGE_MF,AMREX_SPACEDIM);
  delete_localMF(AMRSYNC_PRES_MF,AMREX_SPACEDIM);
 
 } // end subroutine remove_pressure_work_vars
