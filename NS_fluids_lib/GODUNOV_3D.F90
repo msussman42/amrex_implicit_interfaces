@@ -7019,7 +7019,7 @@ stop
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: growloMAC(3),growhiMAC(3)
+      INTEGER_T :: growloMAC(3),growhiMAC(3)
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -13016,6 +13016,7 @@ stop
       REAL_T LScen(nmat)
       INTEGER_T im
       INTEGER_T iten
+      INTEGER_T iforce
       INTEGER_T dirloc
       INTEGER_T i,j,k
       REAL_T surface_tension_force(SDIM)
@@ -13736,8 +13737,6 @@ stop
       INTEGER_T, intent(in) :: nstate_SDC
       INTEGER_T, intent(in) :: project_option,level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T, intent(in) :: veldir
       INTEGER_T, intent(in) :: DIMDEC(divfab)
       INTEGER_T, intent(in) :: DIMDEC(hoopfab)
       INTEGER_T, intent(in) :: DIMDEC(HOfab)
@@ -13753,13 +13752,15 @@ stop
       REAL_T, pointer :: hoopfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: HOfab(DIMV(HOfab),nstate_SDC)
       REAL_T, pointer :: HOfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: LOfab(DIMV(LOfab),nstate_SDC)
+      REAL_T, intent(inout),target :: LOfab(DIMV(LOfab),nstate_SDC)
       REAL_T, pointer :: LOfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in) :: dt
       INTEGER_T local_maskSEM
       INTEGER_T velcomp
+      INTEGER_T :: veldir
+      INTEGER_T :: i,j,k
 
 
        ! in: UPDATESEMFORCE
@@ -14079,13 +14080,13 @@ stop
       endif
 
       gpfab_ptr=>gpfab
-      call checkbound_array(fablo,fabhi,gpfab_ptr,0,dir,7)
+      call checkbound_array1(fablo,fabhi,gpfab_ptr,0,dir,7)
       HOfab_ptr=>HOfab
-      call checkbound_array(fablo,fabhi,HOfab_ptr,0,dir,7)
+      call checkbound_array1(fablo,fabhi,HOfab_ptr,0,dir,7)
       LOfab_ptr=>LOfab
-      call checkbound_array(fablo,fabhi,LOfab_ptr,0,dir,7)
+      call checkbound_array1(fablo,fabhi,LOfab_ptr,0,dir,7)
       maskSEM_ptr=>maskSEM
-      call checkbound_array(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir,24)
@@ -14224,7 +14225,6 @@ stop
       REAL_T GQwsQUAD(0:bfact_time_order,1:bfact_time_order)
       REAL_T yGL(0:bfact_time_order)
       REAL_T ydiff(1:bfact_time_order)
-      INTEGER_T imattype
 
       if (bfact.lt.1) then
        print *,"bfact invalid58"
@@ -14512,7 +14512,7 @@ stop
       deltafab_ptr=>deltafab
       call checkbound_array(fablo,fabhi,deltafab_ptr,0,dir,7)
       maskSEM_ptr=>maskSEM
-      call checkbound_array(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0,dir,25)
@@ -21089,10 +21089,15 @@ stop
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solidx(DIMV(solidx),nparts_def*SDIM)
+      REAL_T, pointer :: solidx_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solidy(DIMV(solidy),nparts_def*SDIM)
+      REAL_T, pointer :: solidy_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solidz(DIMV(solidz),nparts_def*SDIM)
+      REAL_T, pointer :: solidz_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
   
       INTEGER_T i,j,k
       INTEGER_T dir2
@@ -24175,7 +24180,6 @@ stop
 
       REAL_T A_matrix,B_matrix
       REAL_T lambda
-      INTEGER_T im_elastic
       REAL_T local_wt
       INTEGER_T interior_ID
       REAL_T xpart1,xpart2
