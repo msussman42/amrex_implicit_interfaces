@@ -1827,38 +1827,10 @@ void NavierStokes::apply_cell_pressure_gradient(
  if (nstate!=scomp_den+nden+nvof+1)
   amrex::Error("invalid ncomp in cell pressure gradient routine");
 
- FIX ME SEM_FLUXREG NEVER USED HERE!
-
  //interpolate pressure from cell to MAC grid.
  int operation_flag_interp_pres=1; 
- // flux register is initialized to zero.
- allocate_flux_register(operation_flag_interp_pres);
- if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
-  amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid1");
+ int spectral_loop=0;
 
- if (level<finest_level) {
-  avgDown_and_Copy_localMF(
-    idx_pres,
-    idx_pres,
-    AMRSYNC_PEDGE_MF,
-    operation_flag_interp_pres);
- } else if (level==finest_level) {
-  // do nothing
- } else
-  amrex::Error("level invalid12");
-
- if ((level>=1)&&(level<=finest_level)) {
-  interp_and_Copy_localMF(
-    idx_pres,
-    idx_pres,
-    AMRSYNC_PEDGE_MF,
-    operation_flag_interp_pres);
- } else if (level==0) {
-   // do nothing
- } else
-  amrex::Error("level invalid13");
-
- for (int spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
  for (int tileloop=0;tileloop<=1;tileloop++) {
  
@@ -1933,7 +1905,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     rzflag=3;
    else
     amrex::Error("CoordSys bust 21");
-
+FIX ME
    int local_energyflag=0;
    int local_enable_spectral=enable_spectral;
    int simple_AMR_BC_flag=0;
@@ -2044,10 +2016,6 @@ void NavierStokes::apply_cell_pressure_gradient(
  } // tileloop
  } // dir
 
- synchronize_flux_register(operation_flag_interp_pres,spectral_loop);
- } // spectral_loop
-
-
   // 0=use_face_pres
   // 1=grid flag (coarse/fine boundary?)
   // 2=face pressure
@@ -2056,11 +2024,13 @@ void NavierStokes::apply_cell_pressure_gradient(
  int pface_comp=2;
  int ncomp_edge=nsolve;
  int caller_id=5;
- avgDownEdge_localMF(PEDGE_MF,pface_comp,ncomp_edge,0,AMREX_SPACEDIM,1,caller_id);
+ int spectral_override=0; // always low order.
+ avgDownEdge_localMF(PEDGE_MF,pface_comp,ncomp_edge,0,AMREX_SPACEDIM,
+    spectral_override,caller_id);
 
   // isweep=1 calculate cell velocity from mass weighted average of face
   // velocity.
-  // isweep=2 calculate cell pressure gradient, update cell velocity,
+  // isweep=2 update cell velocity,
   //  update density (if non conservative), update energy.
  for (int isweep=1;isweep<=2;isweep++) {
 
