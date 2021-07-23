@@ -8155,6 +8155,15 @@ NavierStokes::initData () {
    amrex::Error("Smac_new.nComp() invalid in initData");
   }
   Smac_new.setVal(0.0,0,1,0);
+
+  MultiFab& XDmac_new = get_new_data(XDmac_Type+dir,slab_step+1);
+
+  if (XDmac_new.nComp()!=1) {
+   std::cout << "nmat = " << nmat << '\n';
+   amrex::Error("XDmac_new.nComp() invalid in initData");
+  }
+  XDmac_new.setVal(0.0,0,1,0);
+
  }  // dir=0..sdim-1
 
  int iter=0; // =>  FSI_touch_flag[tid]=0
@@ -11111,7 +11120,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
  else
   amrex::Error("divu_outer_sweeps invalid prepare_displacement");
 
- int mac_grow_expect=1;
+ int mac_grow_expect=2;
 
  if (mac_grow!=mac_grow_expect)
   amrex::Error("mac_grow invalid in prepare_displacement");
@@ -15028,8 +15037,8 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("dir_absolute_direct_split invalid");
 
  int ngrow=2;
- int mac_grow=1; 
- int ngrow_mac_old=1;
+ int mac_grow=2; 
+ int ngrow_mac_old=2;
  int num_MAC_vectors=2;
 
  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*NUM_TENSOR_TYPE) {
@@ -15274,13 +15283,13 @@ NavierStokes::split_scalar_advection() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    int use_mom_den=0;
-
+FIX ME NO NEED TO CALL THIS,  massF not used either.
     // in: LEVELSET_3D.F90
     // centroid in absolute coordinates.
    fort_build_semirefinevof(
     &tid_current,
     &tessellate,  // =0
-    &ngrow,
+    &ngrow,  //=2
     &nrefine_vof,
     &nten,
     spec_material_id_AMBIENT.dataPtr(),
@@ -15364,6 +15373,9 @@ NavierStokes::split_scalar_advection() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    FIX ME vofF,xvof never used anymore (no MAC slopes)
+    (ngrow=2 for cell and MAC data is fine)
+
      // declared in GODUNOV_3D.F90
     fort_build_macvof( 
      &level,
@@ -15380,9 +15392,9 @@ NavierStokes::split_scalar_advection() {
      fablo,fabhi,
      &bfact,
      &nmat,
-     &ngrow, 
+     &ngrow,  //=2
      &num_MAC_vectors, //=2
-     &ngrow_mac_old,
+     &ngrow_mac_old, //=2
      &veldir);
   }  // mfi
 }// omp
@@ -18125,6 +18137,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  vel_or_disp=1;  // displacement
  dest_idx=VISUAL_XDISP_MAC_CELL_MF;
+ allocate_array(1,AMREX_SPACEDIM,-1,dest_idx);
  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
@@ -18155,7 +18168,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    amrex::Error("NUM_CELL_ELASTIC invalid");
 
   viscoelasticmf = new MultiFab(
-   ns_level.state[Tensor_Type].boxArray(),
+   ns_level.state[State_Type].boxArray(),
    ns_level.dmap,
    NUM_CELL_ELASTIC+AMREX_SPACEDIM,
     1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());

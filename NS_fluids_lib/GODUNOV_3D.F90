@@ -6151,7 +6151,7 @@ stop
        stop
       endif
  
-      if (mac_grow.ne.1) then
+      if (mac_grow.ne.2) then
        print *,"mac_grow invalid mac_grow=",mac_grow
        stop
       endif
@@ -6550,8 +6550,8 @@ stop
        print *,"bfact invalid44"
        stop
       endif
-      if (ngrow.lt.1) then
-       print *,"ngrow out of range in BUILD_CONSERVE ngrow=",ngrow
+      if (ngrow.ne.2) then
+       print *,"ngrow out of range in fort_build_conserve ngrow=",ngrow
        stop
       endif
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
@@ -9578,7 +9578,10 @@ stop
 
             ! veldata(momcomp)  momcomp=(im-1)*sdim+veldir
             ! veldata(iden_mom_base+im)
-
+            !         icell=-1    icell=0  
+            !  imac=-1      imac=0     imac=1
+            !    *------------*----------*
+            ! MAC velocity on left side of cell control volume
             usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
             nhalf=1
              ! normdir=0..sdim-1
@@ -9597,6 +9600,7 @@ stop
              print *,"levelrz invalid add to bucket mac"
              stop
             endif
+             ! MAC velocity on right side of cell control volume
             usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk))
 
             if (usten_accept(-1).gt.zero) then
@@ -9649,6 +9653,7 @@ stop
 
             do istencil=idonatelow,idonatehigh
 
+              ! ipart,jpart,kpart is a cell index
              if (normdir.eq.0) then
               idonate=ipart+istencil
              else if (normdir.eq.1) then
@@ -12191,9 +12196,9 @@ stop
        fablo,fabhi, &
        bfact, &
        nmat, &
-       ngrow, &
+       ngrow, &  !=2
        num_MAC_vectors, & ! num_MAC_vectors=1 or 2
-       ngrowmac, &
+       ngrowmac, & !=2
        veldir) &
       bind(c,name='fort_build_macvof')
 
@@ -12283,10 +12288,12 @@ stop
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
        ! do nothing
       else
-       print *,"normdir invalid BUILD_MACVOF"
+       print *,"normdir invalid fort_build_macvof"
        stop
       endif
-      if (ngrow.lt.0) then
+
+      FIX ME
+      if (ngrow.ne.2) then
        print *,"ngrow invalid"
        stop
       endif
@@ -12294,7 +12301,7 @@ stop
        print *,"veldir invalid"
        stop
       endif
-      if ((ngrowmac.lt.0).or.(ngrowmac.ge.ngrow)) then
+      if (ngrowmac.ne.2) then
        print *,"ngrowmac invalid"
        stop
       endif
@@ -12458,7 +12465,7 @@ stop
         print *,"volCV_fluid invalid"
         stop
        else if (volCV_fluid.ge.zero) then
-
+FIX ME
         do ivec=1,num_MAC_vectors
          xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
         enddo
