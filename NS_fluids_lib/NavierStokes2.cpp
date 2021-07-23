@@ -3461,9 +3461,9 @@ void NavierStokes::init_gradu_tensorALL(
    amrex::Error("irow or icol invalid");
 
   scompBC_map.resize(1);
-  scompBC_map[0]=scomp_extrap;
+  scompBC_map[0]=scomp_extrap+ncghost_state-ncghost_elastic;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  PCINTERP_fill_bordersALL(idx_cell,1,i,1,Tensor_Type,scompBC_map);
+  PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
 
    // 00,10,20,01,11,21,02,12,22
   icol++;
