@@ -566,10 +566,12 @@ NavierStokes::set_tensor_extrap_components(
     T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 #endif
 
-  if (ibase_tensor_local==NUM_TENSOR_TYPE-1) {
+  if (ibase_tensor_local==ibase_tensor+NUM_TENSOR_TYPE-1) {
    // do nothing
-  } else
+  } else {
+   std::cout << "ibase_tensor_local=" << ibase_tensor_local << '\n';
    amrex::Error("ibase_tensor_local invalid");
+  }
 
 } // end subroutine set_tensor_extrap_components
 

@@ -3029,10 +3029,10 @@ void NavierStokes::VELMAC_TO_CELLALL(
     amrex::Error("NUM_TENSOR_TYPE invalid");
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-    scompBC_map[dir]=NUM_TENSOR_TYPE+dir;
+    scompBC_map[dir]=NUM_TENSOR_TYPE+dir+ncghost_state-ncghost_elastic;
 
    PCINTERP_fill_bordersALL(dest_idx,localMF[dest_idx]->nGrow(),0,
-     AMREX_SPACEDIM,Tensor_Type,scompBC_map);
+     AMREX_SPACEDIM,State_Type,scompBC_map);
   } else
    amrex::Error("vel_or_disp invalid");
  } else
@@ -7041,7 +7041,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
   std::cout << "domain= " << domain << '\n';
   std::cout << "ngrid= " << ngrid << '\n';
   std::cout << "mfBA= " << mfBA << '\n';
-  amrex::Error("mf contains nan");
+  amrex::Error("mf contains nan ::check_for_NAN_TENSOR_base");
  }
  if (mf->contains_infTENSOR(datatype,sc,dir)==true) {
   std::cout << "id= " << id << '\n';
@@ -7054,7 +7054,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
   std::cout << "domain= " << domain << '\n';
   std::cout << "ngrid= " << ngrid << '\n';
   std::cout << "mfBA= " << mfBA << '\n';
-  amrex::Error("mf contains inf");
+  amrex::Error("mf contains inf ::check_for_NAN_TENSOR_base");
  }
  int force_check=1;
  int ncomp_tensor=1;
@@ -7142,7 +7142,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
     std::cout << "domain= " << domain << '\n';
     std::cout << "ngrid= " << ngrid << '\n';
     std::cout << "mfBA= " << mfBA << '\n';
-    amrex::Error("mf contains nan");
+    amrex::Error("mf contains nan  ::check_for_NAN");
    }
    ParallelDescriptor::Barrier();
 
@@ -7157,7 +7157,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
     std::cout << "domain= " << domain << '\n';
     std::cout << "ngrid= " << ngrid << '\n';
     std::cout << "mfBA= " << mfBA << '\n';
-    amrex::Error("mf contains inf");
+    amrex::Error("mf contains inf ::check_for_NAN");
    }
    ParallelDescriptor::Barrier();
   }  // ng=0..ngrow
