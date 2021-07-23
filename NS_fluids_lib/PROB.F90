@@ -16195,16 +16195,12 @@ END SUBROUTINE Adist
       REAL_T local_data(bfact+1)
       REAL_T local_vel_data(bfact+1)
       REAL_T local_vel_data_div(bfact+1)
-      REAL_T local_data_up(bfact+1)
       REAL_T local_cell(bfact)
       REAL_T local_vel_cell(bfact)
       REAL_T local_vel_cell_div(bfact)
-      REAL_T local_cell_up(bfact)
-      REAL_T prescell
       REAL_T local_vel_div(bfact)
       REAL_T local_vel_div_div(bfact)
       REAL_T local_div(bfact)
-      REAL_T local_div_up(bfact)
       INTEGER_T ii,jj,kk
       INTEGER_T ic,jc,kc
       INTEGER_T i_out,j_out,k_out
@@ -16220,11 +16216,10 @@ END SUBROUTINE Adist
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
       REAL_T RR,RRTHETA,RR_DIVIDE
-      INTEGER_T nhalf,ibase,imattype,nc2
-      REAL_T divu,CC,CC_DUAL,MDOT,RHS,dp,dencell
+      INTEGER_T nhalf,ibase,nc2
+      REAL_T divu,CC,CC_DUAL,MDOT,RHS
       REAL_T local_POLD
       REAL_T local_POLD_DUAL
-      REAL_T TEMPERATURE,Eforce,internal_e
       REAL_T divflux(ncomp)
       REAL_T vel_old,mom_new,T_old,T_new
       REAL_T vel_new(SDIM)
@@ -16234,8 +16229,6 @@ END SUBROUTINE Adist
       REAL_T xflux_R
       INTEGER_T local_incomp
       REAL_T local_div_val
-      INTEGER_T ispec
-      REAL_T :: massfrac_parm(num_species_var+1)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -29676,7 +29669,7 @@ end subroutine initialize2d
            borderhi(dir3)=fabhi(dir3)
           enddo
           ext_dir_flag=0
-          if (bc(dir2,side,icomp_tensor).eq.EXT_DIR) then
+          if (bc(dir2,side,icomp_total).eq.EXT_DIR) then
            if (side.eq.1) then
             if (fablo(dir2).lt.domlo(dir2)) then
              ext_dir_flag=1
@@ -29712,8 +29705,8 @@ end subroutine initialize2d
 
               ! sets all the physical BCs to 0.0
             call tensorBC(time,dir2,side, &
-             u(D_DECL(i,j,k),icomp_tensor), &
-             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_tensor), &
+             u(D_DECL(i,j,k),icomp_total), &
+             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp_total), &
              xsten,nhalf,dx,bfact,ipart,im)
            enddo
            enddo

@@ -1830,9 +1830,9 @@ void NavierStokes::apply_cell_pressure_gradient(
  //interpolate pressure from cell to MAC grid.
  int operation_flag_interp_pres=1; 
  int spectral_loop=0;
+ int tileloop=0;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
- for (int tileloop=0;tileloop<=1;tileloop++) {
  
   // interpolate pressure to MAC grid.
   // set flag for whether to update cell velocity conservatively
@@ -1872,7 +1872,6 @@ void NavierStokes::apply_cell_pressure_gradient(
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
    FArrayBox& xp=(*localMF[PEDGE_MF+dir])[mfi];
-   FArrayBox& xgp=(*localMF[AMRSYNC_PEDGE_MF+dir])[mfi];
 
    // mask=1.0 at interior fine bc ghost cells
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -1905,9 +1904,9 @@ void NavierStokes::apply_cell_pressure_gradient(
     rzflag=3;
    else
     amrex::Error("CoordSys bust 21");
-FIX ME
+
    int local_energyflag=0;
-   int local_enable_spectral=enable_spectral;
+   int local_enable_spectral=0;
    int simple_AMR_BC_flag=0;
    int ncomp_xp=2+nsolve;
    int ncomp_xgp=1;
@@ -1958,17 +1957,8 @@ FIX ME
     xlo,dx,
     &spectral_loop,
     &ncfluxreg,
-     // semfluxfab(i,j,k)  (as an array4)
-     //   semfluxfab.loVect(1)<=i<=semfluxfab.hiVect(1)
-     //   semfluxfab.loVect(2)<=j<=semfluxfab.hiVect(2)
-     //   semfluxfab.loVect(3)<=k<=semfluxfab.hiVect(3)
-    semfluxfab.dataPtr(),
-     //ARLIM(x) is a macro
-     //the compiler expands this macro as:
-     //x(1),(2),x(3)
-     //here (in 3 dimensions),
-     //semfluxfab.loVect(1),semfluxfab.loVect(2),semfluxfab.loVect(3)
-    ARLIM(semfluxfab.loVect()),ARLIM(semfluxfab.hiVect()),
+    reconfab.dataPtr(), //semflux placeholder
+    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     maskcoef.dataPtr(), // maskcoef=1 if not covered by finer level or outside
@@ -1982,7 +1972,7 @@ FIX ME
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),//holds AMRSYNC_PEDGE
+    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),//xgp 
     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), 
     xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
     presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()), //vel
@@ -2013,8 +2003,7 @@ FIX ME
   } // mfi
 } // omp
   ns_reconcile_d_num(132);
- } // tileloop
- } // dir
+ } // dir=0..sdim-1
 
   // 0=use_face_pres
   // 1=grid flag (coarse/fine boundary?)
@@ -2096,19 +2085,20 @@ FIX ME
     amrex::Error("presbc.size() invalid");
    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
+   int local_enable_spectral=enable_spectral;
    int operation_flag_interp_macvel;
-   if (isweep==1)
+   if (isweep==1) {
     operation_flag_interp_macvel=103; // mac velocity -> cell velocity
-   else if (isweep==2)
+    local_enable_spectral=enable_spectral;
+   } else if (isweep==2) {
     operation_flag_interp_macvel=101; // div(up) (low order only)
-   else
-    amrex::Error("operation_flag_interp_macvel invalid1");
+    local_enable_spectral=0;
+   } else
+    amrex::Error("isweep, operation_flag_interp_macvel invalid1");
 
    int homflag=0; // default
  
    // in apply_cell_pressure_gradient 
-
-   int local_enable_spectral=enable_spectral;
 
    int ncomp_denold=presfab.nComp();
    int ncomp_veldest=Snewfab.nComp();
@@ -5335,9 +5325,6 @@ void NavierStokes::make_physics_vars(int project_option) {
   ns_reconcile_d_num(146);
  } // isweep
 
-  // correction and sanity check if spectral element method.
- density_TO_MAC(project_option);
-
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   if (local_curv_min[tid]<local_curv_min[0])
    local_curv_min[0]=local_curv_min[tid];
@@ -5583,7 +5570,6 @@ void NavierStokes::increment_potential_force() {
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
-   FArrayBox& snewfab=S_new[mfi];
    FArrayBox& macfab=Umac_new[mfi];
    FArrayBox& facegrav=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
    FArrayBox& xfacefab=(*localMF[FACE_VAR_MF+dir])[mfi];
@@ -5641,8 +5627,6 @@ void NavierStokes::deallocate_potential_forceALL() {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.delete_localMF(POTENTIAL_FORCE_EDGE_MF,AMREX_SPACEDIM);
-  ns_level.delete_localMF(POTENTIAL_EDGE_MF,AMREX_SPACEDIM);
-  ns_level.delete_localMF(POTENTIAL_FORCE_CELL_MF,1);
   ns_level.delete_localMF(AMRSYNC_PRES_MF,AMREX_SPACEDIM);
  }
 } // deallocate_potential_forceALL
