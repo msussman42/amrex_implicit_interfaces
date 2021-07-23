@@ -527,6 +527,8 @@ int  NavierStokes::num_state_material=SpeciesVar; // den,T
 int  NavierStokes::num_state_base=SpeciesVar; // den,T
 int  NavierStokes::ngeom_raw=AMREX_SPACEDIM+1;
 int  NavierStokes::ngeom_recon=NUM_MOF_VAR;
+int  NavierStokes::ncghost_elastic=0;
+int  NavierStokes::ncghost_state=0;
 
 int  NavierStokes::State_Type=0;
 int  NavierStokes::Umac_Type=1;
@@ -8134,6 +8136,8 @@ NavierStokes::initData () {
   if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
    amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC,1);
+ } else if (nparts_tensor==0) {
+  // do nothing
  } else 
   amrex::Error("nparts_tensor invalid");
 

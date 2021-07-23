@@ -853,7 +853,7 @@ protected:
     static void override_LS_HO(int Interp_LO); //0=use normals 1=PC
 
     static void set_tensor_extrap_components(
-      int coord,std::string postfix,int indx);
+      int coord,std::string postfix,int indx,int ibase_tensor);
 
     void sum_integrated_quantities (int post_init_flag);
 
@@ -2136,6 +2136,9 @@ protected:
     static int num_state_base;
     static int ngeom_raw;
     static int ngeom_recon;
+    static int ncghost_elastic;
+    static int ncghost_state;
+
     static int ignore_div_up; // def=0
     static Vector<Real> compressible_dt_factor;  //def=1.0
     static int disable_advection;

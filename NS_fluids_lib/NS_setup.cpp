@@ -477,41 +477,46 @@ NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
 
 void
 NavierStokes::set_tensor_extrap_components(
-  int coord,std::string postfix,int indx) {
+  int coord,std::string postfix,int indx,int ibase_tensor) {
 
  BCRec bc;
+
+ if (ibase_tensor>=0) {
+  // do nothing
+ } else
+  amrex::Error("ibase_tensor invalid");
+
+ int ibase_tensor_local=ibase_tensor;
 
  if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
   // do nothing
  } else
   amrex::Error("NUM_TENSOR_TYPE invalid");
 
- int ibase_tensor=0;
-
   // no EXT_DIR BCs
  set_tensor_bc(bc,phys_bc,0,0);
  std::string T11_strE="T11extrap"+postfix; 
   // low order extrapolation (if EXT_DIR BCs were present)
- desc_lstGHOST.setComponent(indx,ibase_tensor,
+ desc_lstGHOST.setComponent(indx,ibase_tensor_local,
    T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 
- ibase_tensor++;
+ ibase_tensor_local++;
      
   // no EXT_DIR BCs
  set_tensor_bc(bc,phys_bc,0,1);
  std::string T12_strE="T12extrap"+postfix; 
- desc_lstGHOST.setComponent(indx,ibase_tensor,
+ desc_lstGHOST.setComponent(indx,ibase_tensor_local,
    T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 
- ibase_tensor++;
+ ibase_tensor_local++;
      
   // no EXT_DIR BCs
  set_tensor_bc(bc,phys_bc,1,1);
  std::string T22_strE="T22extrap"+postfix; 
- desc_lstGHOST.setComponent(indx,ibase_tensor,
+ desc_lstGHOST.setComponent(indx,ibase_tensor_local,
    T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 
- ibase_tensor++;
+ ibase_tensor_local++;
     
  if (AMREX_SPACEDIM==2) {
   if ((CoordSys::CoordType) coord == CoordSys::RZ) {
@@ -540,31 +545,31 @@ NavierStokes::set_tensor_extrap_components(
    amrex::Error("sdim invalid");
  
   std::string T33_strE="T33extrap"+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor,
+  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
     T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 
 #if (AMREX_SPACEDIM == 3)
-  ibase_tensor++;
+  ibase_tensor_local++;
 
    // no EXT_DIR BCs
   set_tensor_bc(bc,phys_bc,0,2);
   std::string T13_strE="T13extrap"+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor,
+  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
     T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
      
-  ibase_tensor++;
+  ibase_tensor_local++;
      
    // no EXT_DIR BCs
   set_tensor_bc(bc,phys_bc,1,2);
   std::string T23_strE="T23extrap"+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor,
+  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
     T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 #endif
 
-  if (ibase_tensor==NUM_TENSOR_TYPE-1) {
+  if (ibase_tensor_local==NUM_TENSOR_TYPE-1) {
    // do nothing
   } else
-   amrex::Error("ibase_tensor invalid");
+   amrex::Error("ibase_tensor_local invalid");
 
 } // end subroutine set_tensor_extrap_components
 
@@ -613,6 +618,19 @@ NavierStokes::variableSetUp ()
 
     int nc=(AMREX_SPACEDIM+1)+
      nmat*(ngeom_raw+num_state_material)+1;
+
+    int ncomp_per_burning=AMREX_SPACEDIM;
+    int ncomp_per_tsat=2; // interface temperature and mass fraction
+      // first nten components represent a status.
+    int nburning=nten*(ncomp_per_burning+1);
+    int ncomp_tsat=nten*(ncomp_per_tsat+1);
+
+     // 11,12,22,33,13,23,XD,YD,ZD
+    ncghost_elastic=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
+    ncghost_state=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning+ncomp_tsat+
+         ncghost_elastic;
+
+    std::string CC_postfix_str="CC";
 
     BCRec bc;
 
@@ -921,9 +939,6 @@ NavierStokes::variableSetUp ()
       &pc_interp,
       null_ncomp_particles);
 
-      // 11,12,22,33,13,23,XD,YD,ZD
-     int ncghost_elastic=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
-
       // null_ncomp_particles==0 => particle container not associated
       // to "Tensor_Type"  (only to "State_Type")
       // ngrow=1
@@ -931,8 +946,7 @@ NavierStokes::variableSetUp ()
       1,ncghost_elastic,&pc_interp,null_ncomp_particles);
 
       // setComponent: 0..NUM_TENSOR_TYPE-1
-     std::string postfix_str="CC";
-     set_tensor_extrap_components(coord,postfix_str,Tensor_Type);
+     set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
 
      int ibase_tensor=NUM_TENSOR_TYPE;
 
@@ -1076,7 +1090,7 @@ NavierStokes::variableSetUp ()
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
     std::string MAC_postfix_str="XU";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type);
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type,0);
 
      //ngrow=1
      //ncomp=1
@@ -1084,7 +1098,7 @@ NavierStokes::variableSetUp ()
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
     MAC_postfix_str="YU";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorYU_Type);
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorYU_Type,0);
 
      //ngrow=1
      //ncomp=1
@@ -1092,7 +1106,7 @@ NavierStokes::variableSetUp ()
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
     MAC_postfix_str="ZU";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZU_Type);
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZU_Type,0);
 
      //ngrow=1
      //ncomp=1
@@ -1100,7 +1114,7 @@ NavierStokes::variableSetUp ()
      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
 
     MAC_postfix_str="ZV";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZV_Type);
+    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZV_Type,0);
 
 // LEVELSET ------------------------------------------------- 
 
@@ -1290,18 +1304,8 @@ NavierStokes::variableSetUp ()
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
      1,nc,&pc_interp,particles_flag);
 
-    int ncomp_per_burning=AMREX_SPACEDIM;
-    int ncomp_per_tsat=2; // interface temperature and mass fraction
-
-      // first nten components represent a status.
-    int nburning=nten*(ncomp_per_burning+1);
-
-    int ncomp_tsat=nten*(ncomp_per_tsat+1);
-
-    int ncghost=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning+ncomp_tsat;
-
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,ncghost,&pc_interp,null_ncomp_particles);
+     1,ncghost_state,&pc_interp,null_ncomp_particles);
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);
@@ -1555,6 +1559,46 @@ NavierStokes::variableSetUp ()
 
     desc_lstGHOST.setComponent(State_Type,tsat_start_pos,TSAT_names,
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
+
+    if (tsat_start_pos==ncghost_state-ncghost_elastic-ncomp_tsat) {
+     // do nothing
+    } else
+     amrex::Error("tsat_start_pos invalid");
+
+     // setComponent: 0..NUM_TENSOR_TYPE-1
+    set_tensor_extrap_components(coord,CC_postfix_str,State_Type,
+		    ncghost_state-ncghost_elastic);
+
+    int ibase_state_tensor=ncghost_state-ncghost_elastic+NUM_TENSOR_TYPE;
+
+     // same as x_vel_bc except that EXT_DIR => FOEXTRAP
+    set_x_vel_extrap_bc(bc,phys_bc);
+    std::string xdisplace_state_strE="XDISPLACEextrap"; 
+    desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
+      xdisplace_state_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+    ibase_state_tensor++;
+
+     // same as y_vel_bc except that EXT_DIR => FOEXTRAP
+    set_y_vel_extrap_bc(bc,phys_bc);
+    std::string ydisplace_state_strE="YDISPLACEextrap"; 
+    desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
+      ydisplace_state_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+#if (AMREX_SPACEDIM == 3)
+    if (AMREX_SPACEDIM==3) {
+     ibase_state_tensor++;
+
+     // same as z_vel_bc except that EXT_DIR => FOEXTRAP
+     set_z_vel_extrap_bc(bc,phys_bc);
+     std::string zdisplace_state_strE="ZDISPLACEextrap"; 
+     desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
+       zdisplace_state_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    }
+#endif
+
+    if (ibase_state_tensor!=ncghost_state-1)
+     amrex::Error("ibase_state_tensor invalid");
 
 
     // boundary routines are of type BndryFuncDefaultSUSSMAN
