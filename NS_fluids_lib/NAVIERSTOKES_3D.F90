@@ -6121,9 +6121,9 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: loc(SDIM),hic(SDIM) ! coarse grid dimensions
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: stenlo(3),stenhi(3)
-      INTEGER_T, intent(in) :: mstenlo(3),mstenhi(3)
-      REAL_T, intent(in),target ::   fine(DIMV(fine),ncomp_flux)
+      INTEGER_T :: stenlo(3),stenhi(3)
+      INTEGER_T :: mstenlo(3),mstenhi(3)
+      REAL_T, intent(inout),target ::   fine(DIMV(fine),ncomp_flux)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target ::   crse(DIMV(crse),ncomp_flux)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
@@ -6677,9 +6677,9 @@ END SUBROUTINE SIMP
        ! =1 if fine-fine  =0 coarse-fine
       REAL_T, intent(in),target :: masknbr(DIMV(masknbr))  
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: fluxtarg(DIMV(fluxtarg),ncomp_flux) 
+      REAL_T, intent(inout),target :: fluxtarg(DIMV(fluxtarg),ncomp_flux) 
       REAL_T, pointer :: fluxtarg_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fluxhold(DIMV(fluxhold),ncomp_flux) 
+      REAL_T, intent(inout),target :: fluxhold(DIMV(fluxhold),ncomp_flux) 
       REAL_T, pointer :: fluxhold_ptr(D_DECL(:,:,:),:)
       INTEGER_T i,j,k
       INTEGER_T iface,jface,kface
@@ -11699,21 +11699,13 @@ END SUBROUTINE SIMP
       INTEGER_T ii,jj,kk
       INTEGER_T iside
 
-      INTEGER_T velcomp
-      REAL_T grav_component
       REAL_T local_cut
       REAL_T local_macnew
 
       REAL_T vol_total,mass_total,volside,denface_gravity
       REAL_T gravity_increment
 
-      INTEGER_T dir_local
       INTEGER_T im
-
-      REAL_T xclamped(SDIM)
-      REAL_T LS_clamped
-      REAL_T vel_clamped(SDIM)
-      REAL_T temperature_clamped
 
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -11794,8 +11786,8 @@ END SUBROUTINE SIMP
       call checkbound_array(fablo,fabhi,xface_ptr,0,dir,42)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,42)
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,42)
-      call checkbound_array(fablo,fabhi,macnew_ptr,0,dir,42)
-      call checkbound_array(fablo,fabhi,facegrav_ptr,0,dir,42)
+      call checkbound_array1(fablo,fabhi,macnew_ptr,0,dir,42)
+      call checkbound_array1(fablo,fabhi,facegrav_ptr,0,dir,42)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,7)
 

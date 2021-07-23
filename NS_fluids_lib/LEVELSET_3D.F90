@@ -11325,7 +11325,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskcoef)
       REAL_T, intent(inout), target :: state(DIMV(state),ncomp_state)
       REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in) :: maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
@@ -11419,7 +11419,7 @@ stop
       state_ptr=>state
       call checkbound_array(fablo,fabhi,state_ptr,0,-1,33)
       maskcoef_ptr=>maskcoef
-      call checkbound_array(fablo,fabhi,maskcoef_ptr,0,-1,134)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,0,-1,134)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -11730,6 +11730,9 @@ stop
       REAL_T, intent(in), target ::  ax(DIMV(ax))
       REAL_T, intent(in), target ::  ay(DIMV(ay))
       REAL_T, intent(in), target ::  az(DIMV(az))
+      REAL_T, pointer :: ax_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: ay_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: az_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: vol(DIMV(vol),1)
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:),:)
@@ -11746,9 +11749,13 @@ stop
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
+      REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, intent(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
       REAL_T, intent(in), target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: cterm(DIMV(cterm),nsolve)
       REAL_T, pointer :: cterm_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: pold(DIMV(pold),nsolve)
@@ -11758,6 +11765,7 @@ stop
       REAL_T, intent(inout), target :: ustar(DIMV(ustar),SDIM) 
       REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mdotcell(DIMV(mdotcell),nsolve)
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskdivres(DIMV(maskdivres))
@@ -11791,14 +11799,13 @@ stop
       REAL_T AXL,AXR
       REAL_T AYL,AYR
       REAL_T AZL,AZR
-      REAL_T pgrad
       REAL_T VOLTERM,hx,RR
-      REAL_T dencell,dencellgrav
+      REAL_T dencell
       REAL_T rho
       REAL_T NEW_DENSITY
       REAL_T TEMPERATURE,internal_e
       REAL_T NEW_TEMPERATURE
-      REAL_T CC,CC_DUAL,MSKDV,MSKRES,MDOT,divu,dp
+      REAL_T CC,CC_DUAL,MSKDV,MSKRES,MDOT,divu
       REAL_T local_rhs
       REAL_T local_POLD
       REAL_T local_POLD_DUAL
@@ -13893,7 +13900,7 @@ stop
 ! operation_flag=5  unew^MAC=unew^MAC+beta diffuse_ref^CELL->MAC
 ! (operation_flag=6 reserved for rate of strain tensor)
 ! operation_flag=7  advection.
-! operation_flag=8  reserved for coupling terms in CROSSTERM
+! operation_flag=8  reserved for coupling terms in fort_crossterm
 ! operation_flag=11 
 !   (i) unew^{f} in incompressible non-solid regions
 !   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
@@ -14070,7 +14077,9 @@ stop
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
+      REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
+      REAL_T, pointer :: solfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
       REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: xcut(DIMV(xcut),1)
@@ -14079,6 +14088,7 @@ stop
       REAL_T, intent(inout), target :: xface(DIMV(xface),ncphys) 
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
        !holds Umac_old if operation_flag==5 or 11
       REAL_T, intent(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
       REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:),:)
@@ -14178,7 +14188,6 @@ stop
       REAL_T AFACE
       REAL_T AFACE_ICE
       REAL_T denlocal,templocal
-      INTEGER_T imattype
       REAL_T test_velocity_FACE
       INTEGER_T im_solid
       INTEGER_T im_prescribed
@@ -14207,6 +14216,7 @@ stop
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
+      INTEGER_T local_compressible
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
@@ -14848,11 +14858,12 @@ stop
           endif
 
          else if ((operation_flag.eq.0).or. &
-                  ((operation_flag.ge.6).and. &
-                   (operation_flag.le.8))) then
+                  (operation_flag.eq.6).or. & ! rate of strain tensor stuff
+                  (operation_flag.eq.7).or. & ! advection
+                  (operation_flag.eq.8)) then ! coupling terms
           ! do nothing
          else 
-          print *,"operation_flag invalid15"
+          print *,"operation_flag invalid15:",operation_flag
           stop
          endif
 
@@ -16045,13 +16056,13 @@ stop
           endif
 
          else
-          print *,"operation_flag invalid17"
+          print *,"operation_flag invalid17:",operation_flag
           stop
          endif
 
          if (operation_flag.eq.7) then ! advection
 
-          if (ncphys.ne.SDIM+num_state_base) then
+          if (ncphys.ne.SDIM+1) then
            print *,"ncphys invalid"
            stop
           endif
@@ -16130,7 +16141,7 @@ stop
                 (operation_flag.eq.3).or. & ! vel CELL->MAC
                 (operation_flag.eq.5).or. & ! u^MAC=u^MAC+DU^{C->M}
                 (operation_flag.eq.11).or.& !  "        "
-                (operation_flag.eq.7)) then & ! advection
+                (operation_flag.eq.7)) then ! advection
 
         if ((enable_spectral.eq.1).or. &
             (enable_spectral.eq.2)) then
@@ -16171,7 +16182,7 @@ stop
                  (operation_flag.eq.3).or. & ! vel CELL->MAC
                  (operation_flag.eq.5).or. & ! u^MAC=u^MAC+DU^{C->M}
                  (operation_flag.eq.11).or.& !  "        "
-                 (operation_flag.eq.7)) then & ! advection
+                 (operation_flag.eq.7)) then ! advection
               ! do nothing
              else
               print *,"operation_flag invalid19"
@@ -16224,7 +16235,7 @@ stop
                ncomp_source=SDIM
                scomp_bc=1
               else
-               print *,"operation_flag invalid20"
+               print *,"operation_flag invalid20: ",operation_flag
                stop
               endif
     
