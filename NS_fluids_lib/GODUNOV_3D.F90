@@ -8732,7 +8732,6 @@ stop
        ncomp_state, &
        ntensor, &
        nc_bucket, &
-       nrefine_vof, &
        num_MAC_vectors, & !=2 (fort_vfrac_split)
        NUM_CELL_ELASTIC, &
        verbose, &
@@ -8758,7 +8757,6 @@ stop
 
       INTEGER_T, intent(in) :: iden_base
       INTEGER_T, intent(in) :: nc_conserve
-      INTEGER_T, intent(in) :: nrefine_vof
       INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
       INTEGER_T, intent(in) :: solidheat_flag
       INTEGER_T, intent(in) :: nten
@@ -9096,10 +9094,6 @@ stop
        print *,"bfact invalid71"
        stop
       endif
-      if (nrefine_vof.ne.nmat*2*SDIM) then
-       print *,"nrefine_vof invalid"
-       stop
-      endif
       if ((solidheat_flag.lt.0).or. &
           (solidheat_flag.gt.2)) then
        print *,"solidheat_flag invalid"
@@ -9133,7 +9127,7 @@ stop
        stop
       endif
 
-      if (ngrow_mac_old.eq.1) then
+      if (ngrow_mac_old.eq.2) then
        ! do nothing
       else
        print *,"ngrow_mac_old invalid"
@@ -9310,7 +9304,7 @@ stop
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1,130)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,138)
        ! other vars
-      call checkbound_array(fablo,fabhi,ucell_ptr,ngrow-1,-1,135)
+      call checkbound_array(fablo,fabhi,ucell_ptr,ngrow,-1,135)
       call checkbound_array(fablo,fabhi,vof0_ptr,1,-1,135)
       call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1,133)
       call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,134)
@@ -9656,6 +9650,7 @@ stop
             enddo
             do ivec=1,num_MAC_vectors
              veldata_MAC(veldir,ivec)=zero
+             veldata_MAC_mass(veldir,ivec)=zero
             enddo
 
             do istencil=idonatelow,idonatehigh
@@ -9820,7 +9815,9 @@ stop
                  endif
                 enddo !im=1..nmat
 
-                if (LS_voltotal_depart.le.zero) then
+                if (LS_voltotal_depart.gt.zero) then
+                 ! do nothing
+                else
                  print *,"LS_voltotal_depart bust "
                  print *,"LS_voltotal_depart ",LS_voltotal_depart
                  stop
@@ -10327,7 +10324,9 @@ stop
 
             enddo  ! im=1,..,nmat
 
-            if (LS_voltotal_depart.le.zero) then
+            if (LS_voltotal_depart.gt.zero) then
+             ! do nothing
+            else
              print *,"LS_voltotal_depart bust "
              print *,"LS_voltotal_depart ",LS_voltotal_depart
              print *,"map_forward,volint ",map_forward,volint
@@ -12099,6 +12098,11 @@ stop
                ! do nothing
               else
                print *,"massquarter cannot be negative, ivec=",ivec
+               print *,"icell,jcell,kcell,ibucket_map ", &
+                 icell,jcell,kcell,ibucket_map 
+               print *,"i,j,k ",i,j,k
+               print *,"massquarter ",massquarter
+               print *,"momquarter ",momquarter
                stop
               endif
 
@@ -12190,7 +12194,6 @@ stop
        level, &
        finest_level, &
        normdir, &
-       nrefine_vof, &
        x_mac_old, &
        DIMS(x_mac_old), &
        xd_mac_old, & 
@@ -12218,7 +12221,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: normdir
-      INTEGER_T, intent(in) :: nrefine_vof
       INTEGER_T, intent(in) :: nmat,ngrow
       INTEGER_T, intent(in) :: ngrowmac,veldir
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)

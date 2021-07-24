@@ -15473,7 +15473,6 @@ NavierStokes::split_scalar_advection() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FIX ME
    // solid distance function and solid moments are not modified.
    // solid temperature is modified only if solidheat_flag==0.
   fort_vfrac_split(
@@ -15554,7 +15553,6 @@ NavierStokes::split_scalar_advection() {
    &ncomp_state,
    &ntensor,
    &nc_bucket,
-   &nrefine_vof,
    &num_MAC_vectors,
    &NUM_CELL_ELASTIC,
    &verbose,
@@ -15667,7 +15665,6 @@ NavierStokes::split_scalar_advection() {
  delete conserve;
  
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete xvof[dir];
    delete xvel[dir];
    delete side_bucket_mom[dir];
    delete side_bucket_mass[dir];
