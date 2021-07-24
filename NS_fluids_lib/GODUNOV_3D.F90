@@ -6615,6 +6615,13 @@ stop
        enddo
        KE=half*KE
 
+       if (KE.ge.zero) then
+        ! do nothing
+       else
+        print *,"KE is NaN"
+        stop
+       endif
+
        do im=1,nmat
         istate=1
         dencomp=(im-1)*num_state_material+istate
@@ -12184,12 +12191,10 @@ stop
        finest_level, &
        normdir, &
        nrefine_vof, &
-       vofF,DIMS(vofF), &
        x_mac_old, &
        DIMS(x_mac_old), &
        xd_mac_old, & 
        DIMS(xd_mac_old), &
-       xvof,DIMS(xvof), &
        xvel,DIMS(xvel), &  ! 1..num_MAC_vectors
        xlo,dx, &
        tilelo,tilehi, &
@@ -12197,7 +12202,7 @@ stop
        bfact, &
        nmat, &
        ngrow, &  !=2
-       num_MAC_vectors, & ! num_MAC_vectors=1 or 2
+       num_MAC_vectors, & ! num_MAC_vectors=2
        ngrowmac, & !=2
        veldir) &
       bind(c,name='fort_build_macvof')
@@ -12209,7 +12214,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors !num_MAC_vectors=1 or 2.
+      INTEGER_T, intent(in) :: num_MAC_vectors !num_MAC_vectors=2.
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: normdir
@@ -12219,44 +12224,30 @@ stop
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(vofF) 
       INTEGER_T, intent(in) :: DIMDEC(x_mac_old) 
       INTEGER_T, intent(in) :: DIMDEC(xd_mac_old) 
-      INTEGER_T, intent(in) :: DIMDEC(xvof) 
       INTEGER_T, intent(in) :: DIMDEC(xvel) !1..num_MAC_vectors
-      REAL_T, intent(in), target :: vofF(DIMV(vofF),nrefine_vof)
-      REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: x_mac_old(DIMV(x_mac_old))
       REAL_T, pointer :: x_mac_old_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: xd_mac_old(DIMV(xd_mac_old))
       REAL_T, pointer :: xd_mac_old_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: xvof(DIMV(xvof),nmat)
-      REAL_T, pointer :: xvof_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: xvel(DIMV(xvel),num_MAC_vectors) 
       REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
 
-      INTEGER_T icell,jcell,kcell,i,j,k,ii,jj,kk
+      INTEGER_T i,j,k
       INTEGER_T igridlo(3),igridhi(3)
-      INTEGER_T im
       REAL_T velmac(num_MAC_vectors)
-      REAL_T volmatCV(nmat)
-      REAL_T volCV_fluid
-      REAL_T volCV_solid
-      REAL_T volquarter
-      INTEGER_T irefine,iside
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T ivec
 
       nhalf=1
 
-      vofF_ptr=>vofF
       x_mac_old_ptr=>x_mac_old
       xd_mac_old_ptr=>xd_mac_old
 
-      xvof_ptr=>xvof
       xvel_ptr=>xvel
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -12292,7 +12283,6 @@ stop
        stop
       endif
 
-      FIX ME
       if (ngrow.ne.2) then
        print *,"ngrow invalid"
        stop
@@ -12305,33 +12295,13 @@ stop
        print *,"ngrowmac invalid"
        stop
       endif
-      if (nrefine_vof.ne.2*nmat*SDIM) then
-       print *,"nrefine_vof invalid"
-       stop
-      endif
       call checkbound_array1(fablo,fabhi,x_mac_old_ptr,ngrowmac,veldir-1,1271)
       call checkbound_array1(fablo,fabhi,xd_mac_old_ptr,ngrowmac,veldir-1,1271)
-      call checkbound_array(fablo,fabhi,xvof_ptr,ngrowmac,veldir-1,1271)
       call checkbound_array(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1,1271)
-      call checkbound_array(fablo,fabhi,vofF_ptr,ngrow,-1,1272)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrowmac,veldir-1,20)
 
-      ii=0
-      jj=0
-      kk=0
-      if (veldir.eq.1) then
-       ii=1
-      else if (veldir.eq.2) then
-       jj=1
-      else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"veldir invalid in build_macvof"
-       stop
-      endif
-       
       do i=igridlo(1),igridhi(1)
       do j=igridlo(2),igridhi(2)
       do k=igridlo(3),igridhi(3)
@@ -12409,98 +12379,16 @@ stop
         stop
        endif
 
-       do im=1,nmat
-        volmatCV(im)=zero
-       enddo
-       volCV_fluid=zero
-       volCV_solid=zero
-
-       do iside=-1,1,2
-        if (iside.eq.-1) then
-         icell=i-ii
-         jcell=j-jj
-         kcell=k-kk
-        else if (iside.eq.1) then
-         icell=i
-         jcell=j
-         kcell=k
+       do ivec=1,num_MAC_vectors
+        if ((velmac(ivec).ge.zero).or. &
+            (velmac(ivec).le.zero)) then
+         xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
         else
-         print *,"iside invalid"
+         print *,"velmac is NaN"
          stop
         endif
+       enddo
 
-        do im=1,nmat
-         if (iside.eq.-1) then
-          irefine=(veldir-1)*2*nmat+nmat+im
-         else if (iside.eq.1) then
-          irefine=(veldir-1)*2*nmat+im
-         else
-          print *,"side invalid"
-          stop
-         endif
-
-           ! tessellate==0  (see BUILD_SEMIREFINEVOF)
-         volquarter=vofF(D_DECL(icell,jcell,kcell),irefine)
-         volmatCV(im)=volmatCV(im)+volquarter
-
-         if (is_rigid(nmat,im).eq.0) then 
-          volCV_fluid=volCV_fluid+volquarter
-         else if (is_rigid(nmat,im).eq.1) then
-          volCV_solid=volCV_solid+volquarter
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-
-        enddo ! im=1..nmat
-
-       enddo ! iside=-1,1,2
-
-       if (volCV_solid.lt.zero) then
-        print *,"volCV_solid invalid"
-        stop
-       endif
-
-       if (volCV_fluid.lt.zero) then
-        print *,"volCV_fluid invalid"
-        stop
-       else if (volCV_fluid.ge.zero) then
-FIX ME
-        do ivec=1,num_MAC_vectors
-         xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
-        enddo
-
-        do im=1,nmat
-
-         if (volmatCV(im).lt.zero) then
-          print *,"volmatCV invalid"
-          print *,"im= ",im
-          print *,"volmatCV= ",volmatCV(im)
-          stop
-         else if (volmatCV(im).eq.zero) then
-          ! do nothing
-         else if (volmatCV(im).gt.zero) then
-          if (volCV_fluid.le.zero) then
-           print *,"volCV_fluid bust"
-           stop
-          endif
-          volmatCV(im)=volmatCV(im)/volCV_fluid
-          if ((volmatCV(im).lt.zero).or. &
-              (volmatCV(im).gt.one+VOFTOL_SLOPES)) then
-           print *,"volmatCV(im) invalid"
-           stop
-          endif
-         else
-          print *,"volmatCV(im) bust"
-          stop
-         endif
-      
-         xvof(D_DECL(i,j,k),im)=volmatCV(im)
-        enddo  ! im=1..nmat
-       else
-        print *,"volCV_fluid bust"
-        stop
-       endif
       enddo         
       enddo         
       enddo ! i,j,k (face center "conserved" variables) 

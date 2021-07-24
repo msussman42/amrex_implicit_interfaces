@@ -10639,7 +10639,6 @@ stop
        cavitation_vapor_density, &
        override_density, &
        constant_density_all_time, &
-       use_mom_den, &
        xlo,dx, &
        slope,DIMS(slope), &
        denstate, &
@@ -10677,7 +10676,6 @@ stop
       INTEGER_T :: veldir
       INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
-      INTEGER_T, intent(in) :: use_mom_den
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -10926,14 +10924,7 @@ stop
             den=denstate(D_DECL(i,j,k),dencomp)
             mom_den_local=mom_den(D_DECL(i,j,k),im)
 
-            if (use_mom_den.eq.0) then
-             den_value=den
-            else if (use_mom_den.eq.1) then
-             den_value=mom_den_local
-            else
-             print *,"use_mom_den invalid"
-             stop
-            endif
+            den_value=mom_den_local
 
             if (constant_density_all_time(im).eq.1) then
              if (abs(den-fort_denconst(im)).le.VOFTOL) then

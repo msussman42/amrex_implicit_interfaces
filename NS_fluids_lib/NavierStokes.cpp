@@ -531,15 +531,15 @@ int  NavierStokes::ncghost_elastic=0;
 int  NavierStokes::ncghost_state=0;
 
 int  NavierStokes::State_Type=0;
-int  NavierStokes::Umac_Type=1;
-int  NavierStokes::Vmac_Type=2;
-int  NavierStokes::Wmac_Type=AMREX_SPACEDIM;
-int  NavierStokes::LS_Type=AMREX_SPACEDIM+1;
-int  NavierStokes::DIV_Type=AMREX_SPACEDIM+2;
-int  NavierStokes::Solid_State_Type=AMREX_SPACEDIM+3;
+int  NavierStokes::Umac_Type=State_Type+1;
+int  NavierStokes::Vmac_Type=Umac_Type+1;
+int  NavierStokes::Wmac_Type=Vmac_Type+AMREX_SPACEDIM-2;
+int  NavierStokes::LS_Type=Wmac_Type+1;
+int  NavierStokes::DIV_Type=LS_Type+1;
+int  NavierStokes::Solid_State_Type=DIV_Type+1;
 int  NavierStokes::XDmac_Type=Solid_State_Type+1;
-int  NavierStokes::YDmac_Type=Solid_State_Type+2;
-int  NavierStokes::ZDmac_Type=Solid_State_Type+AMREX_SPACEDIM;
+int  NavierStokes::YDmac_Type=XDmac_Type+1;
+int  NavierStokes::ZDmac_Type=YDmac_Type+AMREX_SPACEDIM-2;
 int  NavierStokes::Tensor_Type=ZDmac_Type+1;
 int  NavierStokes::NUM_STATE_TYPE=Tensor_Type+1;
 int  NavierStokes::TensorXU_Type=NUM_STATE_TYPE;
@@ -892,7 +892,7 @@ Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
-// passed to MAC_TO_CELL, CELL_TO_MAC, fort_vfrac_split
+// passed to fort_mac_to_cell, fort_cell_to_mac, fort_vfrac_split
 Vector<Real> NavierStokes::added_weight; // def=1.0
 
 Vector<Real> NavierStokes::stiffPINF;
@@ -2787,16 +2787,17 @@ NavierStokes::read_params ()
     if (nparts==0) {
      Solid_State_Type=-1;
     } else if ((nparts>=1)&&(nparts<=nmat)) {
-     Solid_State_Type=NUM_STATE_TYPE;
+     Solid_State_Type=DIV_Type+1;
      NUM_STATE_TYPE++;
     } else
      amrex::Error("nparts invalid");
  
     XDmac_Type=NUM_STATE_TYPE;
     NUM_STATE_TYPE++;
-    YDmac_Type=NUM_STATE_TYPE;
+    YDmac_Type=XDmac_Type+1;
     NUM_STATE_TYPE++;
-    ZDmac_Type=NUM_STATE_TYPE;
+    ZDmac_Type=YDmac_Type+AMREX_SPACEDIM-2;
+
     if (AMREX_SPACEDIM==3) {
      NUM_STATE_TYPE++;
     } else if (AMREX_SPACEDIM==2) {
@@ -2811,7 +2812,7 @@ NavierStokes::read_params ()
      Tensor_Type=NUM_STATE_TYPE;
      NUM_STATE_TYPE++;
     } else if (num_materials_viscoelastic==0) {
-     // do nothing
+     Tensor_Type=-1;
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
@@ -9247,6 +9248,14 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
  } else
   amrex::Error("level invalid");
 
+ int nmat=num_materials;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic bad:make_viscoelastic_tensorALL");
+
  int push_enable_spectral=enable_spectral;
  int elastic_enable_spectral=0;
  override_enable_spectral(elastic_enable_spectral);
@@ -15234,91 +15243,11 @@ NavierStokes::split_scalar_advection() {
 } // omp
  ns_reconcile_d_num(86);
 
- MultiFab* xvof[AMREX_SPACEDIM]; // nmat components
  MultiFab* xvel[AMREX_SPACEDIM]; // num_MAC_vectors components
  MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
  MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
 
-  // (dir-1)*2*nmat + (side-1)*nmat + im
- int nrefine_vof=2*nmat*AMREX_SPACEDIM;
-
- MultiFab* vofF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
-   MFInfo().SetTag("vofF"),FArrayBoxFactory());
-
- MultiFab* massF=new MultiFab(grids,dmap,nrefine_vof,ngrow,
-   MFInfo().SetTag("massF"),FArrayBoxFactory());
-
- if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(vofF->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(*vofF,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
-   FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
-   FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
-
-   FArrayBox& vofFfab=(*vofF)[mfi];
-   FArrayBox& massFfab=(*massF)[mfi];
-
-   int tessellate=0;
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   int use_mom_den=0;
-FIX ME NO NEED TO CALL THIS,  massF not used either.
-    // in: LEVELSET_3D.F90
-    // centroid in absolute coordinates.
-   fort_build_semirefinevof(
-    &tid_current,
-    &tessellate,  // =0
-    &ngrow,  //=2
-    &nrefine_vof,
-    &nten,
-    spec_material_id_AMBIENT.dataPtr(),
-    mass_fraction_id.dataPtr(),
-    cavitation_vapor_density.dataPtr(),
-    override_density.dataPtr(),
-    constant_density_all_time.dataPtr(),
-    &use_mom_den,
-    xlo,dx,
-    slopefab.dataPtr(),
-    ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
-    denstatefab.dataPtr(),
-    ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
-    mom_denfab.dataPtr(),
-    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
-    vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
-    massFfab.dataPtr(),ARLIM(massFfab.loVect()),ARLIM(massFfab.hiVect()),
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &nmat,
-    &level,&finest_level);
- }  // mfi
-}// omp
- ns_reconcile_d_num(88);
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  xvof[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,nmat,
-    ngrow_mac_old,MFInfo().SetTag("xvof"),FArrayBoxFactory());
 
   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,
     num_MAC_vectors,
@@ -15364,28 +15293,20 @@ FIX ME NO NEED TO CALL THIS,  massF not used either.
 
     FArrayBox& x_mac_old=(*localMF[UMACOLD_MF+veldir-1])[mfi];
     FArrayBox& xd_mac_old=(*localMF[XDMACOLD_MF+veldir-1])[mfi];
-    FArrayBox& xvoffab=(*xvof[veldir-1])[mfi];
     FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; // 1..num_MAC_vectors
-    FArrayBox& vofFfab=(*vofF)[mfi];
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    FIX ME vofF,xvof never used anymore (no MAC slopes)
-    (ngrow=2 for cell and MAC data is fine)
-
      // declared in GODUNOV_3D.F90
     fort_build_macvof( 
      &level,
      &finest_level,
      &normdir_here,
-     &nrefine_vof,
-     vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
      x_mac_old.dataPtr(),ARLIM(x_mac_old.loVect()),ARLIM(x_mac_old.hiVect()),
      xd_mac_old.dataPtr(),ARLIM(xd_mac_old.loVect()),ARLIM(xd_mac_old.hiVect()),
-     xvoffab.dataPtr(),ARLIM(xvoffab.loVect()),ARLIM(xvoffab.hiVect()),
      xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
      xlo,dx,
      tilelo,tilehi,
@@ -15401,9 +15322,6 @@ FIX ME NO NEED TO CALL THIS,  massF not used either.
   ns_reconcile_d_num(89);
 
  } // veldir=1..sdim
-
- delete vofF;
- delete massF;
 
  Vector<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
@@ -15555,6 +15473,7 @@ FIX ME NO NEED TO CALL THIS,  massF not used either.
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+  FIX ME
    // solid distance function and solid moments are not modified.
    // solid temperature is modified only if solidheat_flag==0.
   fort_vfrac_split(

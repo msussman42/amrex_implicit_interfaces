@@ -596,7 +596,6 @@ namespace amrex{
         Real* cavitation_vapor_density,
         int* override_density,
         int* constant_density_all_time,
-	int* use_mom_den,
         const Real* xlo,const Real* dx,
         Real* slope,AMREX_ARLIM_P(slopelo),AMREX_ARLIM_P(slopehi), 
         Real* denstate,

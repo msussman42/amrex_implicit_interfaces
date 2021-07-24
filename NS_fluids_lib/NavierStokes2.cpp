@@ -3433,7 +3433,7 @@ void NavierStokes::init_gradu_tensorALL(
  int icol=0;
  for (int i=0;i<ntensor;i++) {
   Vector<int> scompBC_map;
-   // desc_lstGHOST.setComponent(Tensor_Type, ...
+   // desc_lstGHOST.setComponent(State_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
    // FORT_EXTRAPFILL
    // (i.e. the coarse/fine BC and physical BC will be low order)
@@ -5037,10 +5037,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  int use_mom_den=1;
-
-    // in: LEVELSET_3D.F90
-    // centroid in absolute coordinates.
+   // declared in: LEVELSET_3D.F90
   fort_build_semirefinevof(
    &tid_current,
    &tessellate,  // =3
@@ -5052,7 +5049,6 @@ void NavierStokes::make_physics_vars(int project_option) {
    cavitation_vapor_density.dataPtr(),
    override_density.dataPtr(),
    constant_density_all_time.dataPtr(),
-   &use_mom_den,
    xlo,dx,
    slopefab.dataPtr(),
    ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
