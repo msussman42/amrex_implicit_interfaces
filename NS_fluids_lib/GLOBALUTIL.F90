@@ -11075,13 +11075,13 @@ contains
        stop
       endif
 
-      Varname='X'
+      Varname='x_pos'
       call dumpstring(Varname)
-      Varname='Y'
+      Varname='y_pos'
       call dumpstring(Varname)
 
       if (plot_sdim.eq.3) then
-       Varname='Z'
+       Varname='z_pos'
        call dumpstring(Varname)
       endif
 
@@ -11094,9 +11094,8 @@ contains
         endif
        enddo
 
-       ih=1
-       Varname='U'
-       ih=ih+1
+       Varname='sanity_var'  ! 17..26=>26-17+1=10
+       ih=11
        do i=1,3
         Varname(ih:ih)=matstr(i:i)
         ih=ih+1
