@@ -34,6 +34,8 @@ module probcommon_module_types
        INTEGER_T :: bfact
        INTEGER_T :: ntensor
        INTEGER_T :: den_ncomp
+       INTEGER_T :: level
+       INTEGER_T :: finest_level
        INTEGER_T, pointer :: tilelo(:)
        INTEGER_T, pointer :: tilehi(:)
        INTEGER_T, pointer :: fablo(:)

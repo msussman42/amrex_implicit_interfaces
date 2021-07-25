@@ -552,6 +552,8 @@ extern "C" {
 
     void fort_summass(
      int* tid,
+     int* level,
+     int* finest_level,
      int* ncomp_sum_int_user1,
      int* ncomp_sum_int_user2,
      int* adapt_quad_depth,

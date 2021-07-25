@@ -14399,7 +14399,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.1) then
+      else if (operation_flag.eq.1) then ! P^{cell->mac}
        
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
