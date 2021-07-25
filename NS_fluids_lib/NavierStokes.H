@@ -455,6 +455,9 @@ public:
     static int project_option_momeqn(int project_option);
     static int project_option_is_valid(int project_option);
 
+    static int is_multi_component_evap(int freezing_model,
+		    int evap_flag,Real latent_heat);
+
     //
     // Set time levels of state data.
     //

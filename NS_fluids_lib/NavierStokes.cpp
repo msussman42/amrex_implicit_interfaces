@@ -4358,17 +4358,15 @@ NavierStokes::read_params ()
         // do nothing
        } else
         amrex::Error("LL invalid");
-       
-       if ((freezing_model[indexEXP]==4)||  // Tannasawa or Schrage
-           (freezing_model[indexEXP]==5)||  // Stefan model evap/cond.
-           (freezing_model[indexEXP]==6)||  // Palmore and Desjardins
-	   (freezing_model[indexEXP]==7)) { // cavitation
-        if (LL!=0.0) {
+      
+       if (is_multi_component_evap(freezing_model[indexEXP],
+         Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==1) {
 
-         int massfrac_id=mass_fraction_id[indexEXP];
-         if ((massfrac_id<1)||(massfrac_id>num_species_var))
-          amrex::Error("massfrac_id invalid");
-         if (LL>0.0) { //evaporation
+        int massfrac_id=mass_fraction_id[indexEXP];
+
+        if ((massfrac_id<1)||(massfrac_id>num_species_var))
+         amrex::Error("massfrac_id invalid");
+        if (LL>0.0) { //evaporation
           spec_material_id_LIQUID[massfrac_id-1]=im_source;
           spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
 
@@ -4377,7 +4375,7 @@ NavierStokes::read_params ()
 	  } else
 	   amrex::Error("material_type[im_dest-1] invalid for evaporation");
 
-         } else if (LL<0.0) { // condensation
+        } else if (LL<0.0) { // condensation
           spec_material_id_LIQUID[massfrac_id-1]=im_dest;
           spec_material_id_AMBIENT[massfrac_id-1]=im_source;
 
@@ -4386,13 +4384,15 @@ NavierStokes::read_params ()
 	  } else
 	   amrex::Error("material_type[im_source-1] invalid for condensation");
 
-         } else
+        } else
           amrex::Error("LL invalid");
-        } else if (LL==0.0) {
-         // do nothing
-	} else
-	 amrex::Error("LL invalid");
-       } // if (freezing_model[indexEXP]==4,5 or 6)
+
+       } else if (is_multi_component_evap(freezing_model[indexEXP],
+         Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==0) {
+        // do nothing
+       } else
+        amrex::Error("is_multi_component_evap invalid");
+
       } // ireverse
      } //im_opp
     } // im=1..nmat
@@ -5074,6 +5074,41 @@ int NavierStokes::ns_is_lag_part(int im) {
  return local_flag;
 
 } // subroutine ns_is_lag_part
+
+int NavierStokes::is_multi_component_evap(int freezing_model,
+           int evap_flag,Real latent_heat) {
+
+ if (latent_heat==0.0) {
+  return 0;
+ } else if (latent_heat!=0.0) {
+
+  if ((freezing_model==4)|| //Tannasawa or Schrage 
+      (freezing_model==5)|| //Stefan model evaporation or condensation
+      (freezing_model==6)|| //Palmore and Desjardins
+      (freezing_model==7)) {//cavitation
+
+   if (evap_flag==0) { //Palmore and Desjardins
+    return 1;
+   } else if ((evap_flag==1)|| //Tanasawa
+              (evap_flag==2)|| //Schrage
+              (evap_flag==3)|| //Kassemi
+              (evap_flag==4)) {//Tanguy recommendation.
+    return 0;
+   } else
+    amrex::Error("evap_flag invalid");
+
+  } else if ((freezing_model==0)|| //Energy jump model
+             (freezing_model==1)|| //source term
+             (freezing_model==2)|| //hydrate
+             (freezing_model==3)) {//wildfire
+   return 0;
+  } else
+   amrex::Error("freezing_model invalid");
+
+ } else
+  amrex::Error("latent_heat invalid");
+
+} // end function is_multi_component_evap
 
 int NavierStokes::project_option_is_valid(int project_option) {
 

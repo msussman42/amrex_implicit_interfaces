@@ -25,7 +25,7 @@ ns.ncomp_sum_int_user2=2  # pressure and temperature
 # 1=liquid 2=gas(placeholder) 3=solid wall
 ns.num_materials    = 3
 # vapor
-ns.num_species_var  = 1
+ns.num_species_var  = 0
 
 # The grid independent evaporation model for fully saturated gas:
 # Clausius Clapyron:
@@ -214,20 +214,13 @@ ns.visc_coef        = 1.0
 # HFE7000, molar_mass=0.2?  Molar mass used in the Clausius Clapyron
 #                           equation.
 ns.molar_mass = 0.2 0.2 1  # 1..num_materials
-ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
+#ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
                            # molar mass.
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
 ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
-
-ns.speciesconst= 1.0 1.0 1.0  #Kassemi
-
-# Diffusion coefficient [m^2/s]
-# Not used ???
-# liquid, vapor, solid
-ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 
 # 1. input to the Schrage velocity model: Temperature, gas mixture density,
 #    mass fraction, liquid density
@@ -289,7 +282,7 @@ ns.constant_density_all_time=1 0 1 # sealed 1..nmat
 ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
-ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
+#ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
 # freezing_model==0 => Energy jump model, no species
 # freezing_model==6 => Either Villegas etal/Palmore Desjardins model with
 #  species for evaporation/condensation or 
