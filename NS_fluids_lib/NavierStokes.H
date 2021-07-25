@@ -457,6 +457,9 @@ public:
 
     static int is_multi_component_evap(int freezing_model,
 		    int evap_flag,Real latent_heat);
+    static int is_GFM_freezing_model(int freezing_model);
+    static int is_hydrate_freezing_model(int freezing_model);
+    static int is_valid_freezing_model(int freezing_model);
 
     //
     // Set time levels of state data.

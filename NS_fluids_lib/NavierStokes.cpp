@@ -3679,10 +3679,16 @@ NavierStokes::read_params ()
      amrex::Error("num_state_base invalid 10");
 
     for (int i=0;i<nten;i++) {
-     if ((freezing_model[i]<0)||(freezing_model[i]>7))
+
+     if (is_valid_freezing_model(freezing_model[i])==1) {
+      // do nothing
+     } else
       amrex::Error("freezing_model invalid in read_params (i)");
-     if ((freezing_model[i+nten]<0)||(freezing_model[i+nten]>7))
+     if (is_valid_freezing_model(freezing_model[i+nten])==1) {
+      // do nothing
+     } else
       amrex::Error("freezing_model invalid in read_params (i+nten)");
+
      if ((distribute_from_target[i]<0)||(distribute_from_target[i]>1))
       amrex::Error("distribute_from_target invalid in read_params (i)");
      if ((distribute_from_target[i+nten]<0)||(distribute_from_target[i+nten]>1))
@@ -4244,26 +4250,26 @@ NavierStokes::read_params ()
     for (int i=0;i<2*nten;i++) {
      if (latent_heat[i]!=0.0) {
       is_phasechange=1;
-      if ((freezing_model[i]==0)||  // Stefan model for phase change (fully sat)
-          (freezing_model[i]==5)||  // Stefan model for saturated evap/cond.
-          (freezing_model[i]==6)||  // Palmore and Desjardins
-          (freezing_model[i]==1)||
-          (freezing_model[i]==2)||  // hydrate
-          (freezing_model[i]==3)||
-          (freezing_model[i]==4)||  // Tannasawa or Schrage model
-	  (freezing_model[i]==7)) { // cavitation
-       //do nothing
+      if (is_valid_freezing_model(freezing_model[i])==1) {
+       // do nothing
       } else
        amrex::Error("freezing_model[i] invalid");
-
      } // latent_heat<>0
     }  // i=0;i<2*nten
 
     hydrate_flag=0;
     for (int i=0;i<2*nten;i++) {
-     if (latent_heat[i]!=0.0)
-      if (freezing_model[i]==2)
+     if (latent_heat[i]!=0.0) {
+      if (is_hydrate_freezing_model(freezing_model[i])==1) {
        hydrate_flag=1;
+      } else if (is_hydrate_freezing_model(freezing_model[i])==0) {
+       // do nothing
+      } else
+       amrex::Error("is_hydrate_freezing_model bust");
+     } else if (latent_heat[i]==0.0) {
+      // do nothing
+     } else
+      amrex::Error("latent_heat is NaN");
     } // i
 
     truncate_volume_fractions.resize(nmat);
@@ -4360,7 +4366,7 @@ NavierStokes::read_params ()
         amrex::Error("LL invalid");
       
        if (is_multi_component_evap(freezing_model[indexEXP],
-         Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==1) {
+           Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==1) {
 
         int massfrac_id=mass_fraction_id[indexEXP];
 
@@ -4388,13 +4394,13 @@ NavierStokes::read_params ()
           amrex::Error("LL invalid");
 
        } else if (is_multi_component_evap(freezing_model[indexEXP],
-         Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==0) {
+                  Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==0) {
         // do nothing
        } else
         amrex::Error("is_multi_component_evap invalid");
 
-      } // ireverse
-     } //im_opp
+      } // ireverse=0,1
+     } //im_opp=im+1..nmat
     } // im=1..nmat
 
     for (int i=0;i<num_species_var;i++) {
@@ -5074,6 +5080,51 @@ int NavierStokes::ns_is_lag_part(int im) {
  return local_flag;
 
 } // subroutine ns_is_lag_part
+
+int NavierStokes::is_GFM_freezing_model(int freezing_model) {
+
+ if ((freezing_model[im]==0)||   //fully saturated
+     (freezing_model[im]==5)||   //stefan model evap or condensation
+     (freezing_model[im]==6)) {  //Palmore and Desjardins
+  return 1;
+ } else if (is_valid_freezing_model(freezing_model)==1) {
+  return 0;
+ } else
+  amrex::Error("freezing_model bust");
+
+} //end function is_GFM_freezing_model(int freezing_model) 
+
+int NavierStokes::is_hydrate_freezing_model(int freezing_model) {
+
+ if (freezing_model==2) {
+  return 1;
+ } else if (is_valid_freezing_model(freezing_model)) {
+  return 0;
+ } else {
+  amrex::Error("freezing_model invalid");
+  return 0;
+ }
+} // end function is_hydrate_freezing_model(int freezing_model)
+
+int NavierStokes::is_valid_freezing_model(int freezing_model) {
+
+ if ((freezing_model==4)|| //Tannasawa or Schrage 
+     (freezing_model==5)|| //Stefan model evaporation or condensation
+     (freezing_model==6)|| //Palmore and Desjardins
+     (freezing_model==7)) {//cavitation
+  return 1;
+ } else if ((freezing_model==0)|| //Energy jump model
+            (freezing_model==1)|| //source term
+            (freezing_model==2)|| //hydrate
+            (freezing_model==3)) {//wildfire
+  return 1;
+ } else {
+  amrex::Error("freezing_model invalid");
+  return 0;
+ }
+
+} // end function is_valid_freezing_model
+
 
 int NavierStokes::is_multi_component_evap(int freezing_model,
            int evap_flag,Real latent_heat) {
@@ -13697,7 +13748,7 @@ NavierStokes::level_init_icemask() {
 } // subroutine level_init_icemask
 
 
-// 1. called if freezing_model==0,5,6.
+// 1. called if "is_GFM_freezing_model"
 // 2. multiphase_project->allocate_project_variables->stefan_solver_init
 //    (adjust_temperature==1)
 //    coeffMF==localMF[OUTER_ITER_PRESSURE_MF]
@@ -13795,10 +13846,12 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    face_comp_index=faceheat_index;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
-     if ((freezing_model[im]==0)|| //fully saturated
-         (freezing_model[im]==5)|| //cavitation
-         (freezing_model[im]==6))  //Palmore and Desjardins
+     if (is_GFM_freezing_model(freezing_model[im])==1) {
       GFM_flag=1;
+     } else if (is_GFM_freezing_model(freezing_model[im])==0) {
+      // do nothing
+     } else 
+      amrex::Error("is_GFM_freezing_model bust");
     } else if (latent_heat[im]==0.0) {
      // do nothing
     } else
@@ -13808,19 +13861,22 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 	     (project_option<100+num_species_var)) { //mass fraction
    face_comp_index=facespecies_index+project_option-100;
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
-     if (freezing_model[im]==6) {  // Palmore and Desjardins
-      int ispec=mass_fraction_id[im];
-      if ((ispec>=1)&&(ispec<=num_species_var)) {
-       if (ispec==project_option-100+1)
-        GFM_flag=1;
-      } else
-       amrex::Error("ispec invalid");
-     }
-    } else if (latent_heat[im]==0.0) {
+    if (is_multi_component_evap(freezing_model[im],
+	   Tanasawa_or_Schrage_or_Kassemi[im],
+           latent_heat[im])==1) {
+     int ispec=mass_fraction_id[im];
+     if ((ispec>=1)&&(ispec<=num_species_var)) {
+      if (ispec==project_option-100+1) {
+       GFM_flag=1;
+      }
+     } else
+      amrex::Error("ispec invalid");
+    } else if (is_multi_component_evap(freezing_model[im],
+           Tanasawa_or_Schrage_or_Kassemi[im],
+           latent_heat[im])==0) {
      // do nothing
-    } else
-     amrex::Error("latent_heat[im] invalid");
+    } else 
+     amrex::Error("is_multi_component_evap invalid");
    } // im=0.. 2 nten -1
   } else
    amrex::Error("project_option invalid");
