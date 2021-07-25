@@ -1500,11 +1500,13 @@ END SUBROUTINE SIMP
 
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
        if (SDIM.eq.2) then
-        write(11,'(A25)',ADVANCE="NO")  &
-         'VARIABLES="X","Y","U","V"'
+         !61-11+1=51
+        write(11,'(A51)',ADVANCE="NO")  &
+         'VARIABLES="x_pos","y_pos","x_velocity","y_velocity"'
        else if (SDIM.eq.3) then
-        write(11,'(A33)',ADVANCE="NO") &
-         'VARIABLES="X","Y","Z","U","V","W"'
+         !82-11+1=72
+        write(11,'(A72)',ADVANCE="NO") &
+         'VARIABLES="x_pos","y_pos","z_pos","x_velocity","y_velocity","z_velocity"'
        else
         print *,"dimension bust"
         stop

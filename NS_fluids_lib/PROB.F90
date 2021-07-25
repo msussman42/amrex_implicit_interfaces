@@ -189,13 +189,13 @@ stop
        stop
       endif
 
-      Varname='X'
+      Varname='x_pos'
       call dumpstring(Varname)
-      Varname='Y'
+      Varname='y_pos'
       call dumpstring(Varname)
 
       if (plot_sdim.eq.3) then
-       Varname='Z'
+       Varname='z_pos'
        call dumpstring(Varname)
       endif
 
@@ -208,8 +208,8 @@ stop
       enddo
 
       ih=1
-      Varname='U'
-      ih=ih+1
+      Varname='x_velocity' !25-16+1=10
+      ih=11
       do i=1,2
        Varname(ih:ih)=matstr(i:i)
        ih=ih+1
@@ -217,8 +217,8 @@ stop
       call dumpstring(Varname)
 
       ih=1
-      Varname='V'
-      ih=ih+1
+      Varname='y_velocity'
+      ih=11
       do i=1,2
        Varname(ih:ih)=matstr(i:i)
        ih=ih+1
@@ -227,8 +227,8 @@ stop
 
       if (plot_sdim.eq.3) then
        ih=1
-       Varname='W'
-       ih=ih+1
+       Varname='z_velocity'
+       ih=11
        do i=1,2
         Varname(ih:ih)=matstr(i:i)
         ih=ih+1
@@ -422,19 +422,17 @@ stop
 
        do dir=1,plot_sdim
         ih=1
-        Varname='N'
-        ih=ih+1
         if (dir.eq.1) then
-         Varname(ih:ih)='X'
+         Varname='x_normal'
         else if (dir.eq.2) then
-         Varname(ih:ih)='Y'
+         Varname='y_normal'
         else if ((dir.eq.3).and.(plot_sdim.eq.3)) then
-         Varname(ih:ih)='Z'
+         Varname='z_normal'
         else
          print *,"dir invalid dumpstring_headers"
          stop
         endif
-        ih=ih+1
+        ih=9
 
         do i=1,2
          Varname(ih:ih)=matstr(i:i)
@@ -570,13 +568,13 @@ stop
        endif
       enddo ! partid=1..num_materials_viscoelastic 
 
-      Varname='XDISPLACE'
+      Varname='x_displace'
       call dumpstring(Varname)
-      Varname='YDISPLACE'
+      Varname='y_displace'
       call dumpstring(Varname)
 
       if (SDIM.eq.3) then
-       Varname='ZDISPLACE'
+       Varname='z_displace'
        call dumpstring(Varname)
       endif
 
