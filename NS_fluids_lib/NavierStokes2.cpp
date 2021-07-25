@@ -1884,8 +1884,7 @@ void NavierStokes::apply_cell_pressure_gradient(
    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
-   FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
-   int ncfluxreg=semfluxfab.nComp();
+   int ncfluxreg=AMREX_SPACEDIM; //placeholder
 
    Vector<int> presbc;
    getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
@@ -1956,7 +1955,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &cur_time_slab,
     xlo,dx,
     &spectral_loop,
-    &ncfluxreg,
+    &ncfluxreg, //=AMREX_SPACEDIM (placeholder)
     reconfab.dataPtr(), //semflux placeholder
     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells

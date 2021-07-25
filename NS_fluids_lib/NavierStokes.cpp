@@ -17252,6 +17252,12 @@ void NavierStokes::volWgtSum(
  
  bool use_tiling=ns_tiling;
 
+ int finest_level=parent->finestLevel();
+ if ((level<=finest_level)&&(level>=0)) {
+  // do nothing
+ } else
+  amrex::Error("level or finest_level invalid");
+
  int nmat=num_materials;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
@@ -17326,8 +17332,6 @@ void NavierStokes::volWgtSum(
   amrex::Error("sumdata_type size invalid");
  if (total_comp!=sumdata_sweep.size())
   amrex::Error("sumdata_sweep size invalid");
-
- int finest_level=parent->finestLevel();
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -17471,6 +17475,8 @@ void NavierStokes::volWgtSum(
     // in: NAVIERSTOKES_3D.F90
    fort_summass(
     &tid_current,
+    &level,
+    &finest_level,
     &ncomp_sum_int_user1,
     &ncomp_sum_int_user2,
     &adapt_quad_depth,

@@ -8136,6 +8136,8 @@ END SUBROUTINE SIMP
 
        subroutine fort_summass( &
         tid, &
+        level, &
+        finest_level, &
         ncomp_sum_int_user1, &
         ncomp_sum_int_user2, &
         adapt_quad_depth, &
@@ -8178,6 +8180,8 @@ END SUBROUTINE SIMP
        INTEGER_T, intent(in) :: ncomp_sum_int_user1
        INTEGER_T, intent(in) :: ncomp_sum_int_user2
        INTEGER_T, intent(in) :: tid
+       INTEGER_T, intent(in) :: level
+       INTEGER_T, intent(in) :: finest_level
        INTEGER_T, intent(in) :: adapt_quad_depth
        INTEGER_T :: max_level_adapt
        INTEGER_T, intent(in) :: slice_dir
@@ -8241,7 +8245,8 @@ END SUBROUTINE SIMP
        REAL_T xstenMAC(-3:3,SDIM)
        REAL_T mofdata(nmat*ngeom_recon)
        REAL_T mofdata_tess(nmat*ngeom_recon)
-       INTEGER_T level,dir2,dir3
+       INTEGER_T stack_error_level
+       INTEGER_T dir2,dir3
        REAL_T errorparm(nmat*2) ! fi,ei
        REAL_T xbottom,xtop,ls_above,ls_below,ZZgrid
        REAL_T vof_below,vof_above,vof_face
@@ -8473,6 +8478,8 @@ END SUBROUTINE SIMP
        GRID_DATA_PARM%bfact=bfact
        GRID_DATA_PARM%ntensor=ntensor
        GRID_DATA_PARM%den_ncomp=den_ncomp
+       GRID_DATA_PARM%level=level
+       GRID_DATA_PARM%finest_level=finest_level
        GRID_DATA_PARM%tilelo=>tilelo
        GRID_DATA_PARM%tilehi=>tilehi
        GRID_DATA_PARM%fablo=>fablo
@@ -8544,7 +8551,7 @@ END SUBROUTINE SIMP
           mofdata_tess(dir)=mofdata(dir)
          enddo
 
-         level=0
+         stack_error_level=0
 
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
@@ -8569,7 +8576,10 @@ END SUBROUTINE SIMP
           xsten,nhalf, &
           mofdata, &
           mofdata_tess, &
-          errorparm,level,max_level_adapt,nmat,time)
+          errorparm, &
+          stack_error_level, &
+          max_level_adapt, &
+          nmat,time)
 
           ! F1,E1,F2,E2,F3,E3,...
          do dir=1,2*nmat

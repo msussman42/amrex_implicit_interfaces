@@ -1169,16 +1169,30 @@ INTEGER_T dir
 INTEGER_T dencomp,local_ispec
 REAL_T den,temperature,internal_energy,pressure
 REAL_T support_r
+REAL_T dx_test
 REAL_T dx_coarsest
 REAL_T charfn
 REAL_T volgrid
 REAL_T denom
 
+INTEGER_T :: level,finest_level
+
 INTEGER_T :: i,j,k
+INTEGER_T :: ilev
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
+level=GRID_DATA_IN%level
+finest_level=GRID_DATA_IN%finest_level
+
+if ((level.le.finest_level).and.(level.ge.0)) then
+ ! do nothing
+else
+ print *,"level invalid"
+ stop
+endif
+
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
  if ((nsum1.eq.1).and.(nsum2.eq.2)) then
@@ -1207,6 +1221,20 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   enddo
   support_r=sqrt(support_r) 
   dx_coarsest=TANK_MK_HEIGHT/64.0d0
+  dx_test=GRID_DATA_IN%dx(SDIM)
+  do ilev=0,level-1
+   dx_test=2.0d0*dx_test
+  enddo
+
+  if (dx_test.gt.dx_coarsest) then
+   dx_coarsest=dx_test
+  else if (dx_test.le.dx_coarsest) then
+   ! do nothing
+  else
+   print *,"dx_test is NaN"
+   stop
+  endif
+
   if (support_r.le.dx_coarsest) then
    charfn=one
   else if (support_r.gt.dx_coarsest) then
@@ -1218,13 +1246,24 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   volgrid=GRID_DATA_IN%volgrid
   if (isweep.eq.0) then
    increment_out1(1)=charfn*volgrid
+   if (1.eq.0) then
+    print *,"nsum1,nsum2 ",nsum1,nsum2
+    print *,"charfn,volgrid,pressure,temperature ", &
+       charfn,volgrid,pressure,temperature
+    print *,"i,j,k ",i,j,k
+   endif
+
   else if (isweep.eq.1) then
    denom=increment_out1(1)
    if (denom.gt.zero) then
     increment_out2(1)=charfn*volgrid*pressure/denom
     increment_out2(2)=charfn*volgrid*temperature/denom
    else
-    print *,"expecting denom>0.0"
+    print *,"expecting denom>0.0:",denom
+    print *,"nsum1,nsum2 ",nsum1,nsum2
+    print *,"charfn,volgrid,pressure,temperature ", &
+       charfn,volgrid,pressure,temperature
+    print *,"i,j,k ",i,j,k
     stop
    endif
   else
