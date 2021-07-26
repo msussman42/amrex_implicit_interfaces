@@ -1,0 +1,17 @@
+1. Controls
+2. Expressions
+3. "Display expressions from database and auto-generated expressions"
+4. New
+5. Name: u_vector2d
+6. Type: Vector mesh variable
+7. "Show variable in plot menus"
+8. Definition:
+   {x_velocity01,y_velocity01} or
+   {x_velocity01,y_velocity01,z_velocity01}
+9. "save": "u_vector"
+10. Apply
+11. to plot vector field: "Add","Vector", "u_vector"
+12. to add mat* data:
+    (a) open
+    (b) make sure active source is mat*.tec database
+    (c) "Add", "Mesh" (choose to save index files)
