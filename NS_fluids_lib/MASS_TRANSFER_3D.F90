@@ -6468,7 +6468,7 @@ stop
                print *,"local_freezing_model invalid 1"
                stop
               endif
-FIX ME
+
              else if (LL.eq.zero) then
               ! do nothing
              else
@@ -6871,7 +6871,6 @@ FIX ME
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
        finest_level, &
-       constrain_normal_probe_for_evap, &
        normal_probe_size, &
        ngrow_distance, &
        nstate, &
@@ -6965,7 +6964,6 @@ FIX ME
       INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, target, intent(in) :: level
       INTEGER_T, target, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: constrain_normal_probe_for_evap
       INTEGER_T :: local_probe_constrain
       INTEGER_T :: probe_ok
       INTEGER_T, intent(in) :: normal_probe_size
@@ -7160,6 +7158,7 @@ FIX ME
       INTEGER_T icolor,base_type,ic,im1,im2
       REAL_T normal_probe_factor
       INTEGER_T iprobe_vapor
+      INTEGER_T im_vapor
       REAL_T, target :: Y_TOLERANCE
        ! iten=1..nten  ireverse=0..1
       REAL_T temp_target_probe_history(2*nten,2)
@@ -7608,16 +7607,6 @@ FIX ME
              local_Tanasawa_or_Schrage_or_Kassemi= &
                Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten)
 
-             ispec=mass_fraction_id(iten+ireverse*nten)
-             if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-              molar_mass_vapor=species_molar_mass(ispec)
-             else if (ispec.eq.0) then
-              molar_mass_vapor=zero
-             else
-              print *,"ispec invalid"
-              stop
-             endif
-
              if (ireverse.eq.0) then
               im_source=im
               im_dest=im_opp
@@ -7626,6 +7615,27 @@ FIX ME
               im_dest=im
              else
               print *,"ireverse invalid"
+              stop
+             endif
+
+             if (LL(ireverse).eq.zero) then
+              im_vapor=im_dest ! placeholder
+             else if (LL(ireverse).gt.zero) then
+              im_vapor=im_dest
+             else if (LL(ireverse).lt.zero) then
+              im_vapor=im_source
+             else
+              print *,"LL invalid"
+              stop
+             endif
+
+             ispec=mass_fraction_id(iten+ireverse*nten)
+             if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+              molar_mass_vapor=species_molar_mass(ispec)
+             else if (ispec.eq.0) then
+              molar_mass_vapor=molar_mass(im_vapor)
+             else
+              print *,"ispec invalid"
               stop
              endif
 
@@ -7639,7 +7649,7 @@ FIX ME
               stop
              endif
 
-             vapor_den=fort_denconst(im_dest) ! default
+             vapor_den=fort_denconst(im_vapor) ! default
 
              if (LL(ireverse).eq.zero) then
               ! do nothing
@@ -7669,10 +7679,14 @@ FIX ME
              if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
               ! do nothing
              else if (ispec.eq.0) then
-              if ((local_freezing_model.eq.2).or. & !hydrate
-                  (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
-                  (local_freezing_model.eq.5).or. & !stefan evap/cond
-                  (local_freezing_model.eq.6)) then !Palmore/Desjardins
+
+              if (is_multi_component_evapF(local_freezing_model, &
+                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                   LL(ireverse)).eq.0) then
+               ! do nothing
+              else if (is_multi_component_evapF(local_freezing_model, &
+                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                        LL(ireverse)).eq.1) then
                print *,"ispec invalid"
                stop
               endif
@@ -7691,22 +7705,9 @@ FIX ME
 
               !Kassemi or Palmore and Desjardins
              if (local_freezing_model.eq.6) then 
-              local_probe_constrain=constrain_normal_probe_for_evap
-              if (local_probe_constrain.eq.1) then
-               normal_probe_factor=half
-              else if (local_probe_constrain.eq.0) then
-               normal_probe_factor=one
-              else
-               print *,"local_probe_constrain invalid"
-               stop
-              endif
-             else if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
-                      (local_freezing_model.eq.5).or. & !Stefan evap/cond
-                      (local_freezing_model.eq.0).or. & ! Stefan model
-                      (local_freezing_model.eq.1).or. & ! source term
-                      (local_freezing_model.eq.2).or. & ! hydrate
-                      (local_freezing_model.eq.3).or. & ! wildfire
-                      (local_freezing_model.eq.7)) then ! cavitation
+              local_probe_constrain=0
+              normal_probe_factor=one
+             else if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
               local_probe_constrain=1
               normal_probe_factor=half
              else
@@ -7848,20 +7849,18 @@ FIX ME
                  Ycomp_source=0
                  Ycomp_dest=0
 
-                 if ((local_freezing_model.eq.2).or. & !hydrate
-                     (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
-                     (local_freezing_model.eq.5).or. & !Stefan evap/cond
-                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
-                     (local_freezing_model.eq.7)) then !Cavitation
-                  if (LL(ireverse).gt.zero) then ! evaporation
-                   im_ambient=im_dest
-                  else if (LL(ireverse).lt.zero) then ! condensation
-                   im_ambient=im_source
-                  else
-                   print *,"LL invalid"
-                   stop
-                  endif
+                 if (LL(ireverse).gt.zero) then ! evaporation
+                  im_ambient=im_dest
+                 else if (LL(ireverse).lt.zero) then ! condensation
+                  im_ambient=im_source
+                 else
+                  print *,"LL invalid"
+                  stop
+                 endif
                     
+                 if (is_multi_component_evapF(local_freezing_model, &
+                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                      LL(ireverse)).eq.1) then
                   if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                    Ycomp_source=(im_source-1)*num_state_material+2+ispec
                    Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
@@ -7873,13 +7872,15 @@ FIX ME
                    print *,"ispec invalid"
                    stop
                   endif
-                 else if ((local_freezing_model.eq.0).or. & ! Stefan model
-                          (local_freezing_model.eq.1).or. & ! source term
-                          (local_freezing_model.eq.3)) then ! wild fire
+                 else if (is_multi_component_evapF(local_freezing_model, &
+                           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                           LL(ireverse)).eq.0) then
 
                   if (ispec.eq.0) then
                    Ycomp_source=0
                    Ycomp_dest=0
+                   FicksLawD(1)=zero
+                   FicksLawD(2)=zero
                   else if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                    print *,"expecting ispec ==0 "
                    stop
@@ -8029,11 +8030,8 @@ FIX ME
                    stop
                   endif
 
-                 else if ((local_freezing_model.eq.0).or. & ! Stefan model
-                          (local_freezing_model.eq.1).or. & ! source term
-                          (local_freezing_model.eq.2).or. & ! hydrate
-                          (local_freezing_model.eq.3).or. & ! wildfire
-                          (local_freezing_model.eq.7)) then ! cavitation
+                 else if &
+                   (is_valid_freezing_modelF(local_freezing_model).eq.1) then
                   ! do nothing
                  else
                   print *,"local_freezing_model invalid"
@@ -8490,35 +8488,21 @@ FIX ME
 
                    if ((local_freezing_model.eq.5).or. & !stefan evap/cond
                        (local_freezing_model.eq.6)) then !Palmore/Desjardins
-                    if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-                     if (vapor_den.gt.zero) then
-                      if (LL(ireverse).gt.zero) then ! evaporation
-                       den_I_interp_SAT(2)=vapor_den ! dest
-                      else if (LL(ireverse).lt.zero) then ! condensation
-                       den_I_interp_SAT(1)=vapor_den ! source
-                      else
-                       print *,"LL invalid"
-                       stop
-                      endif
+                    if (vapor_den.gt.zero) then
+                     if (LL(ireverse).gt.zero) then ! evaporation
+                      den_I_interp_SAT(2)=vapor_den ! dest
+                     else if (LL(ireverse).lt.zero) then ! condensation
+                      den_I_interp_SAT(1)=vapor_den ! source
                      else
-                      print *,"vapor_den invalid"
+                      print *,"LL invalid"
                       stop
-                     endif  
+                     endif
                     else
-                     print *,"ispec invalid"
+                     print *,"vapor_den invalid"
                      stop
-                    endif
-                   else if (local_freezing_model.eq.4) then ! Tanasawa/Schrage
-                    ! do nothing
-                   else if (local_freezing_model.eq.7) then ! cavitation
-                    ! do nothing
-                   else if (local_freezing_model.eq.3) then ! wild fire
-                    ! do nothing
-                   else if (local_freezing_model.eq.2) then ! hydrate
-                    ! do nothing
-                   else if (local_freezing_model.eq.1) then ! source term
-                    ! do nothing
-                   else if (local_freezing_model.eq.0) then ! stefan cond
+                    endif  
+                   else if &
+                    (is_valid_freezing_modelF(local_freezing_model).eq.1) then
                     ! do nothing
                    else
                     print *,"local_freezing_model invalid 14"
@@ -8610,14 +8594,20 @@ FIX ME
                       print *,"contact_line_perim invalid"
                       stop
                      endif
-                    else if ((local_freezing_model.gt.0).or. &
-                             (max_contact_line_size(im_probe).eq.zero).or. &
-                             (microlayer_size(im_probe).eq.zero).or. &
-                             (macrolayer_size(im_probe).eq.zero).or. &
-                             (microlayer_substrate_probe.eq.0)) then
-                     ! do nothing
+                    else if &
+                      (is_valid_freezing_modelF(local_freezing_model).eq.1) &
+                      then
+                     if ((max_contact_line_size(im_probe).eq.zero).or. &
+                         (microlayer_size(im_probe).eq.zero).or. &
+                         (macrolayer_size(im_probe).eq.zero).or. &
+                         (microlayer_substrate_probe.eq.0)) then
+                      ! do nothing
+                     else
+                      print *,"microlayer parameters invalid"
+                      stop
+                     endif
                     else
-                     print *,"microlayer parameters invalid"
+                     print *,"is_valid_freezing_modelF invalid"
                      stop
                     endif
        
@@ -8955,7 +8945,9 @@ FIX ME
                      Y_predict,TSAT_correct, &
                      mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
 
-                   else if (local_freezing_model.ge.0) then
+                   else if &
+                     (is_valid_freezing_modelF(local_freezing_model).eq.1) &
+                     then
 
                     mdotT_debug=zero
                     mdotY_top_debug=zero
@@ -9096,19 +9088,6 @@ FIX ME
                   if (debugrate.eq.1) then
                    print *,"i,j,k,ireverse,vel_phasechange ", &
                     i,j,k,ireverse,vel_phasechange(ireverse)
-                  endif
-                  if (1.eq.0) then
-                   if (local_freezing_model.eq.4) then
-                    print *,"Tanasawa or Schrage"
-                    print *,"i,j,k,ireverse,vel_phasechange ", &
-                     i,j,k,ireverse,vel_phasechange(ireverse)
-                    print *,"im_source,im_dest ",im_source,im_dest
-                    print *,"local_Tsat(ireverse) ",local_Tsat(ireverse)
-                    print *,"T_probe(1),T_I_interp(1) ",POUT%T_probe(1), &
-                     POUT%T_I_interp(1)
-                    print *,"T_probe(2),T_I_interp(2) ",POUT%T_probe(2), &
-                     POUT%T_I_interp(2)
-                   endif
                   endif
 
                   ! Li-Shi Luo - invite him to talk with FSU?
