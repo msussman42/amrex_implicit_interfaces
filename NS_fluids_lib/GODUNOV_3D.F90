@@ -5122,10 +5122,19 @@ stop
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          TSAT=saturation_temp(iten+ireverse*nten)
 
-         if ((local_freezing_model.eq.2).and.(num_species_var.ne.1)) then
-          print *,"must define species var if hydrate model"
+         if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then
+          if (num_species_var.eq.1) then
+           ! do nothing
+          else
+           print *,"num_species_var invalid for hydrate"
+           stop
+          endif 
+         else if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
+          ! do nothing
+         else
+          print *,"local_freezing_model invalid"
           stop
-         endif
+         endif 
 
          if (ireverse.eq.0) then
           im_source=im
@@ -5143,7 +5152,7 @@ stop
          dcompdst=(im_dest-1)*num_state_material+1
          tcompdst=(im_dest-1)*num_state_material+2
          vofcompdst=(im_dest-1)*ngeom_raw+1 
-
+FIX ME
          ispec=mass_fraction_id(iten+ireverse*nten)
          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
           ! do nothing
