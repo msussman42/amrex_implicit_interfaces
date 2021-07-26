@@ -5083,9 +5083,9 @@ int NavierStokes::ns_is_lag_part(int im) {
 
 int NavierStokes::is_GFM_freezing_model(int freezing_model) {
 
- if ((freezing_model[im]==0)||   //fully saturated
-     (freezing_model[im]==5)||   //stefan model evap or condensation
-     (freezing_model[im]==6)) {  //Palmore and Desjardins
+ if ((freezing_model==0)||   //fully saturated
+     (freezing_model==5)||   //stefan model evap or condensation
+     (freezing_model==6)) {  //Palmore and Desjardins
   return 1;
  } else if (is_valid_freezing_model(freezing_model)==1) {
   return 0;
@@ -12717,6 +12717,7 @@ NavierStokes::level_phase_change_convert(
     latent_heat.dataPtr(),
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
+    Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
     mass_fraction_id.dataPtr(),
     distribute_from_target.dataPtr(),
     constant_density_all_time.dataPtr(),

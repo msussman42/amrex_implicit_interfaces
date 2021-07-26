@@ -28,6 +28,7 @@ extern "C"
     Real* latent_heat,
     Real* saturation_temp,
     int* freezing_model,
+    int* Tanasawa_or_Schrage_or_Kassemi,
     int* mass_fraction_id,
     int* distribute_from_target,
     int* constant_density_all_time,

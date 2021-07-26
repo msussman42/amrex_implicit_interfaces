@@ -19624,5 +19624,112 @@ INTEGER_T, intent(in) :: project_option
 
 end function project_option_projectionF
 
+INTEGER_T function is_GFM_freezing_modelF(freezing_model) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+
+ if ((freezing_model.eq.0).or. &   !fully saturated
+     (freezing_model.eq.5).or. &   !stefan model evap or condensation
+     (freezing_model.eq.6)) then   !Palmore and Desjardins
+  is_GFM_freezing_model=1
+ else if (is_valid_freezing_modelF(freezing_model).eq.1) then
+  is_GFM_freezing_model=0
+ else
+  print *,"freezing_model bust(F)"
+  stop
+  is_GFM_freezing_model=0
+ endif
+
+end function is_GFM_freezing_modelF 
+
+INTEGER_T function is_hydrate_freezing_modelF(freezing_model) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+
+ if (freezing_model.eq.2) then
+  is_hydrate_freezing_modelF=1
+ else if (is_valid_freezing_modelF(freezing_model).eq.1) then
+  is_hydrate_freezing_modelF=0
+ else
+  print *,"freezing_model invalid (F)"
+  stop
+  is_hydrate_freezing_modelF=0
+ endif
+end function is_hydrate_freezing_modelF
+
+INTEGER_T function is_valid_freezing_modelF(freezing_model) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+
+ if ((freezing_model.eq.4).or. & !Tannasawa or Schrage 
+     (freezing_model.eq.5).or. & !Stefan model evaporation or condensation
+     (freezing_model.eq.6).or. & !Palmore and Desjardins
+     (freezing_model.eq.7)) then !cavitation
+  is_valid_freezing_modelF=1
+ else if ((freezing_model.eq.0).or. & !Energy jump model
+          (freezing_model.eq.1).or. & !source term
+          (freezing_model.eq.2).or. & !hydrate
+          (freezing_model.eq.3)) then !wildfire
+  is_valid_freezing_modelF=1
+ else 
+  print *,"freezing_model invalid (F)"
+  stop
+  is_valid_freezing_modelF=0
+ endif
+
+end function is_valid_freezing_modelF
+
+INTEGER_T function is_multi_component_evapF(freezing_model, &
+   evap_flag,latent_heat) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+INTEGER_T, intent(in) :: evap_flag
+REAL_T, intent(in) :: latent_heat
+
+ if (latent_heat.eq.zero) then
+  is_multi_component_evapF=0
+ else if (latent_heat.ne.zero) then
+
+  if ((freezing_model.eq.4).or. & !Tannasawa or Schrage 
+      (freezing_model.eq.5).or. & !Stefan model evaporation or condensation
+      (freezing_model.eq.6).or. & !Palmore and Desjardins
+      (freezing_model.eq.7)) then !cavitation
+
+   if (evap_flag.eq.0) then !Palmore and Desjardins
+    is_multi_component_evapF=1
+   else if ((evap_flag.eq.1).or. & !Tanasawa
+            (evap_flag.eq.2).or. & !Schrage
+            (evap_flag.eq.3).or. & !Kassemi
+            (evap_flag.eq.4)) then !Tanguy recommendation.
+    is_multi_component_evapF=0
+   else
+    print *,"evap_flag invalid (F) "
+    stop
+    is_multi_component_evapF=0
+   endif
+
+  else if ((freezing_model.eq.0).or. & !Energy jump model
+           (freezing_model.eq.1).or. & !source term
+           (freezing_model.eq.2).or. & !hydrate
+           (freezing_model.eq.3)) then !wildfire
+   is_multi_component_evapF=0
+  else
+   print *,"freezing_model invalid (F) "
+   stop
+   is_multi_component_evapF=0
+  endif
+ else
+  print *,"latent_heat invalid (F)"
+  stop
+  is_multi_component_evapF=0
+ endif
+
+end function is_multi_component_evapF
+
+
 end module global_utility_module
 

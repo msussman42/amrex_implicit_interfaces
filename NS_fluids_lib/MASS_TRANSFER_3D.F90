@@ -2763,24 +2763,14 @@ stop
        !  or Schrage)
        ! local_freezing_model=5 (evaporation/condensation)
        ! local_freezing_model=6 (evaporation/condensation Palmore)
-       if ((PROBE_PARMS%local_freezing_model.eq.0).or. & !fully saturated
-           (PROBE_PARMS%local_freezing_model.eq.5).or. & !Stefan evap/cond
-           (PROBE_PARMS%local_freezing_model.eq.6)) then !Palmore,Desjardins
-        ! do nothing
-       else if ((PROBE_PARMS%local_freezing_model.eq.1).or. & !source term
-                (PROBE_PARMS%local_freezing_model.eq.2).or. & !hydrate
-                (PROBE_PARMS%local_freezing_model.eq.4).or. & !Tanasawa,Schrage
-                (PROBE_PARMS%local_freezing_model.eq.7)) then !Cavitation
-
-       else if (PROBE_PARMS%local_freezing_model.eq.7) then ! cavitation
-        print *,"cavitation model still under construction"
-        stop
-       else if (PROBE_PARMS%local_freezing_model.ne.2) then
+       ! local_freezing_model=7 (cavitation (under construction))
+       if &
+        (is_valid_freezing_modelF(PROBE_PARMS%local_freezing_model).eq.1) then
         ! do nothing
        else
-        print *,"PROBE_PARMS%local_freezing_model bust"
+        print *,"PROBE_PARMS%local_freezing_model invalid"
         stop
-       endif  ! hydrate
+       endif
 
       enddo ! iprobe=1..2
 
@@ -3610,6 +3600,7 @@ stop
        latent_heat, &
        saturation_temp, &
        freezing_model, &
+       Tanasawa_or_Schrage_or_Kassemi, &
        mass_fraction_id, &
        distribute_from_target, &
        constant_density_all_time, &
@@ -3667,6 +3658,7 @@ stop
       REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
@@ -4061,17 +4053,16 @@ stop
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          LL=latent_heat(iten+ireverse*nten)
-         if ((local_freezing_model.eq.0).or. & ! Stefan model
-             (local_freezing_model.eq.1).or. & ! source term
-             (local_freezing_model.eq.2)) then ! hydrate
+         mass_frac_id=0
+
+         if (is_multi_component_evapF(local_freezing_model, &
+              Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+              LL).eq.0) then 
           ! do nothing
-         else if (local_freezing_model.eq.3) then ! wildfire
-          print *,"fix me"
-          stop
-         else if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-                  (local_freezing_model.eq.5).or. & ! Stefan model evap/cond.
-                  (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                  (local_freezing_model.eq.7)) then ! Cavitation
+         else if (is_multi_component_evapF(local_freezing_model, &
+                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                   LL).eq.1) then 
+
           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
           if ((mass_frac_id.ge.1).and. &
               (mass_frac_id.le.num_species_var)) then
@@ -4080,51 +4071,48 @@ stop
            print *,"mass_frac_id invalid"
            stop
           endif
-          if (local_freezing_model.eq.4) then 
-           if (LL.ne.zero) then
-            if (ireverse.eq.0) then ! evaporation
-             if (LL.le.zero) then
-              print *,"LL invalid"
-              stop
-             endif
-             if (distribute_from_targ.ne.0) then
-              print *,"distribute_from_targ invalid"
-              stop
-             endif
-             im_source=im
-             im_dest=im_opp
-            else if (ireverse.eq.1) then ! condensation
-             if (LL.ge.zero) then
-              print *,"LL invalid"
-              stop
-             endif
-             if (distribute_from_targ.ne.1) then
-              print *,"distribute_from_targ invalid"
-              stop
-             endif
-             im_source=im_opp
-             im_dest=im
-            else
-             print *,"ireverse invalid"
+         else
+          print *,"is_multi_component_evapF invalid"
+          stop
+         endif
+
+          ! some sanity checks here.
+         if (local_freezing_model.eq.4) then 
+          if (LL.ne.zero) then
+           if (ireverse.eq.0) then ! evaporation
+            if (LL.le.zero) then
+             print *,"LL invalid"
              stop
             endif
-           else if (LL.eq.zero) then
-            ! do nothing
+            if (distribute_from_targ.ne.0) then
+             print *,"distribute_from_targ invalid"
+             stop
+            endif
+            im_source=im
+            im_dest=im_opp
+           else if (ireverse.eq.1) then ! condensation
+            if (LL.ge.zero) then
+             print *,"LL invalid"
+             stop
+            endif
+            if (distribute_from_targ.ne.1) then
+             print *,"distribute_from_targ invalid"
+             stop
+            endif
+            im_source=im_opp
+            im_dest=im
            else
-            print *,"LL invalid"
+            print *,"ireverse invalid"
             stop
-           endif 
-          else if (local_freezing_model.eq.5) then  ! stefan evap/cond
-           ! do nothing
-          else if (local_freezing_model.eq.6) then  ! Palmore/Desjardin
-           ! do nothing
-          else if (local_freezing_model.eq.7) then  ! Cavitation
+           endif
+          else if (LL.eq.zero) then
            ! do nothing
           else
-           print *,"local_freezing_model invalid in fort_convertmaterial"
+           print *,"LL invalid"
            stop
-          endif
-
+          endif 
+         else if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
+          ! do nothing
          else
           print *,"local_freezing_model invalid in fort_convertmaterial"
           print *,"local_freezing_model= ",local_freezing_model
@@ -5260,43 +5248,31 @@ stop
              ! "vapor" is what material transforms FROM if system is COOLED.
              ! "condensed" is what material transforms TO if system is COOLED.
              ! 
-            if (local_freezing_model.eq.0) then !Stefan model
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if (local_freezing_model.eq.1) then !source term
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if (local_freezing_model.eq.2) then !hydrate
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if (local_freezing_model.eq.3) then !wildfire
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-            else if ((local_freezing_model.eq.4).or. & !Tannasawa or Schrage
-                     (local_freezing_model.eq.5).or. & !Stefan evap/cond model
-                     (local_freezing_model.eq.6).or. & !Palmore/Desjardins
-                     (local_freezing_model.eq.7)) then !Cavitation
-
+            vapor_den=density_old(iprobe_vapor)
+            condensed_den=density_old(iprobe_condensed)
+            if ((vapor_den.gt.zero).and.(condensed_den.gt.zero)) then
+             ! do nothing
+            else
+             print *,"vapor_den or condensed_den invalid"
+             stop
+            endif
+            if (is_multi_component_evapF(local_freezing_model, &
+                 Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                 LL).eq.0) then 
+             ! do nothing
+            else if (is_multi_component_evapF(local_freezing_model, &
+                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                      LL).eq.1) then 
              if ((mass_frac_id.ge.1).and. &
                  (mass_frac_id.le.num_species_var)) then
-
-              vapor_den=density_old(iprobe_vapor)
-              condensed_den=density_old(iprobe_condensed)
-
-              if ((vapor_den.gt.zero).and.(condensed_den.gt.zero)) then
-               ! do nothing
-              else
-               print *,"vapor_den or condensed_den invalid"
-               stop
-              endif
-
+              ! do nothing
              else
               print *,"mass_frac_id invalid"
               stop
              endif
 
             else
-             print *,"local_freezing_model invalid 1"
+             print *,"is_multi_component_evapF invalid 1"
              stop
             endif
 
@@ -5700,8 +5676,9 @@ stop
              stop
             endif
 
-            if ((local_freezing_model.lt.0).or. &
-                (local_freezing_model.gt.7)) then
+            if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
+             ! do nothing
+            else
              print *,"local_freezing_model invalid 2"
              stop
             endif
@@ -5891,9 +5868,7 @@ stop
              endif
 
              ! divide and conquer temperature equation (TSAT Dirichlet BC)
-             if ((local_freezing_model.eq.0).or. &
-                 (local_freezing_model.eq.5).or. & ! Stefan evap/cond.
-                 (local_freezing_model.eq.6)) then ! Palmore/Desjardins 
+             if (is_GFM_freezing_modelF(freezing_model).eq.1) then
 
                !F dt=Fn (tnp1-t) + Fnp1 (t-tn)
                !dt/2 = Fn tnp1 - Fnp1 tn + t(Fnp1-Fn)
@@ -6182,7 +6157,9 @@ stop
 ! source term at the interface.  Hydrates.
 ! rho c T^new - rho c T^old = rho (dt A LL/V) dS/dt = LL * dF
 ! c T^new - c T^old = (dt A LL/V) dS/dt = LL * dF 
-             else if (local_freezing_model.eq.2) then ! hydrate
+
+             else if &
+               (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
 
 #if (STANDALONE==0)
 
@@ -6386,31 +6363,47 @@ stop
               local_freezing_model=freezing_model(iten+ireverse*nten)
               mass_frac_id=mass_fraction_id(iten+ireverse*nten)
 
-              if (local_freezing_model.eq.0) then ! standard Stefan model
+              if (LL.gt.zero) then ! evaporation
+               im_condensed=im_source
+              else if (LL.lt.zero) then ! condensation
+               im_condensed=im_dest
+              else
+               print *,"LL invalid"
+               stop
+              endif
+
+              if (is_GFM_freezing_modelF(freezing_model).eq.1) then
+
+               Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
+               if (ireverse.eq.0) then
+                ! do nothing
+               else if (ireverse.eq.1) then
+                Tsat_flag=-Tsat_flag
+               else
+                print *,"ireverse invalid"
+                stop
+               endif
+
+              else if (is_GFM_freezing_modelF(freezing_model).eq.0) then
+
+               Tsat_flag=0
+
+              else
+               print *,"is_GFM_freezing_modelF invalid"
+               stop
+              endif
+
+              if (is_multi_component_evapF(local_freezing_model, &
+                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                   LL).eq.0) then 
                ! do nothing
-              else if (local_freezing_model.eq.1) then ! source term
-               ! do nothing
-              else if (local_freezing_model.eq.2) then !hydrate
-               ! do nothing
-              else if (local_freezing_model.eq.3) then !wildfire
-               ! do nothing
-              else if ((local_freezing_model.eq.4).or. & ! Tannasawa or Schrage
-                       (local_freezing_model.eq.5).or. & ! Stefan model
-                       (local_freezing_model.eq.6).or. & ! Palmore/Desjardins
-                       (local_freezing_model.eq.7)) then ! Cavitation
+              else if (is_multi_component_evapF(local_freezing_model, &
+                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                        LL).eq.1) then 
 
                if ((mass_frac_id.ge.1).and. &
                    (mass_frac_id.le.num_species_var)) then
 
-                if (LL.gt.zero) then ! evaporation
-                 im_condensed=im_source
-                else if (LL.lt.zero) then ! condensation
-                 im_condensed=im_dest
-                else
-                 print *,"LL invalid"
-                 stop
-                endif
-                       
                 speccomp_mod=(SDIM+1)+ &
                  (im_condensed-1)*num_state_material+num_state_base+ &
                  mass_frac_id
@@ -6418,16 +6411,6 @@ stop
                 default_comp=(mass_frac_id-1)*nmat+im_condensed 
                 Ygamma_default=fort_speciesconst(default_comp)
 
-                Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
-                if (ireverse.eq.0) then
-                 ! do nothing
-                else if (ireverse.eq.1) then
-                 Tsat_flag=-Tsat_flag
-                else
-                 print *,"ireverse invalid"
-                 stop
-                endif
-            
                 if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
                  Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
                    nten+(iten-1)*ncomp_per_tsat+2)
@@ -6485,7 +6468,7 @@ stop
                print *,"local_freezing_model invalid 1"
                stop
               endif
-
+FIX ME
              else if (LL.eq.zero) then
               ! do nothing
              else
