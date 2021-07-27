@@ -19045,7 +19045,7 @@ stop
       DATA_FLOOR=zero
 
       nhalf=3
-      nmax=POLYGON_LIST_MAX ! in: COMBINEVEL
+      nmax=POLYGON_LIST_MAX ! in: fort_combinevel
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -19113,11 +19113,11 @@ stop
       endif
 
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_COMBINEVEL"
+       print *,"nparts invalid fort_combinevel"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_COMBINEVEL"
+       print *,"nparts_def invalid fort_combinevel"
        stop
       endif
 
@@ -20030,7 +20030,7 @@ stop
              stop
             endif
 
-             ! in: FORT_COMBINEVEL
+             ! in: fort_combinevel
             call center_centroid_interchange( &
              DATA_FLOOR, &
              nsolve, &
@@ -20203,10 +20203,10 @@ stop
       enddo ! i,j,k
 
       return
-      end subroutine FORT_COMBINEVEL
+      end subroutine fort_combinevel
 
        ! combine_flag==2 (only overwrite if F=0)
-      subroutine FORT_COMBINEVELFACE( &
+      subroutine fort_combinevelface( &
        tid, &
        hflag, &
        facecut_index, &
@@ -20233,7 +20233,8 @@ stop
        solfab,DIMS(solfab), &
        xlo,dx, &
        dir, &
-       cur_time)
+       cur_time) &
+      bind(c,name='fort_combinevelface')
       use probf90_module
       use global_utility_module
       use geometry_intersect_module
@@ -20275,11 +20276,16 @@ stop
       INTEGER_T, intent(in) :: dir
       REAL_T, intent(in) :: cur_time
 
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(inout) :: mac(DIMV(mac))
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T, intent(in) :: solfab(DIMV(solfab),nparts_def*SDIM)
+      REAL_T, intent(in),target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: mac(DIMV(mac))
+      REAL_T, pointer :: mac_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solfab(DIMV(solfab),nparts_def*SDIM)
+      REAL_T, pointer :: solfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T nten_test 
       INTEGER_T ii,jj,kk 
@@ -20411,15 +20417,20 @@ stop
       else if ((dir.eq.2).and.(SDIM.eq.3)) then
        kk=1
       else
-       print *,"dir out of range in COMBINEVELFACE"
+       print *,"dir out of range in fort_combinevelface"
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vof),1,-1,1273)
-      call checkbound(fablo,fabhi,DIMS(mac),0,dir,1273)
-      call checkbound(fablo,fabhi,DIMS(xface),0,dir,1273)
-      call checkbound(fablo,fabhi,DIMS(solfab),0,dir,1276)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1276)
+      vof_ptr=>vof
+      call checkbound_array(fablo,fabhi,vof_ptr,1,-1,1273)
+      mac_ptr=>mac
+      call checkbound_array1(fablo,fabhi,mac_ptr,0,dir,1273)
+      xface_ptr=>xface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,dir,1273)
+      solfab_ptr=>solfab
+      call checkbound_array(fablo,fabhi,solfab_ptr,0,dir,1276)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1276)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir,33)
@@ -20874,7 +20885,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_COMBINEVELFACE
+      end subroutine fort_combinevelface
 
        ! PART I (low order):
        !

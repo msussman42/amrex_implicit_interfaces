@@ -7430,22 +7430,32 @@ void NavierStokes::allocate_FACE_WEIGHT(
             (project_option<100+num_species_var)) {
 
   for (int im=0;im<2*nten;im++) {
-   if (is_multi_component_evap(freezing_model[im],
-         Tanasawa_or_Schrage_or_Kassemi[im],
-	 latent_heat[im])==1) {
-    int ispec=mass_fraction_id[im];
-    if ((ispec>=1)&&(ispec<=num_species_var)) {
-     if (ispec==project_option-100+1) {
-      GFM_flag=1;
-     }
-    } else
-     amrex::Error("ispec invalid");
-   } else if (is_multi_component_evap(freezing_model[im],
+   if (latent_heat[im]!=0.0) {
+    if (is_GFM_freezing_model(freezing_model[im])==1) {
+     if (is_multi_component_evap(freezing_model[im],
+          Tanasawa_or_Schrage_or_Kassemi[im],
+ 	  latent_heat[im])==1) {
+      int ispec=mass_fraction_id[im];
+      if ((ispec>=1)&&(ispec<=num_species_var)) {
+       if (ispec==project_option-100+1) {
+        GFM_flag=1;
+       }
+      } else
+       amrex::Error("ispec invalid");
+     } else if (is_multi_component_evap(freezing_model[im],
          Tanasawa_or_Schrage_or_Kassemi[im],
          latent_heat[im])==0) {
+      // do nothing
+     } else 
+      amrex::Error("is_multi_component_evap invalid");
+    } else if (is_GFM_freezing_model(freezing_model[im])==0) {
+     // do nothing
+    } else 
+     amrex::Error("is_GFM_freezing_model invalid");
+   } else if (latent_heat[im]==0.0) {
     // do nothing
-   } else 
-    amrex::Error("is_multi_component_evap invalid");
+   } else
+    amrex::Error("latent_heat[im] invalid");
 
   } // im=0..2 nten -1
  } else if (project_option_is_valid(project_option)==1) {
@@ -7721,22 +7731,32 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   if (is_phasechange==1) {
 
    for (int im=0;im<2*nten;im++) {
-    if (is_multi_component_evap(freezing_model[im],
-         Tanasawa_or_Schrage_or_Kassemi[im],
-	 latent_heat[im])==1) {
-     int ispec=mass_fraction_id[im];
-     if ((ispec>=1)&&(ispec<=num_species_var)) {
-      if (ispec==project_option-100+1) {
-       GFM_flag=1;
-      }
-     } else
-      amrex::Error("ispec invalid");
-    } else if (is_multi_component_evap(freezing_model[im],
-                 Tanasawa_or_Schrage_or_Kassemi[im],
-                 latent_heat[im])==0) {
+    if (latent_heat[im]!=0.0) {
+     if (is_GFM_freezing_model(freezing_model[im])==1) {
+      if (is_multi_component_evap(freezing_model[im],
+           Tanasawa_or_Schrage_or_Kassemi[im],
+   	   latent_heat[im])==1) {
+       int ispec=mass_fraction_id[im];
+       if ((ispec>=1)&&(ispec<=num_species_var)) {
+        if (ispec==project_option-100+1) {
+         GFM_flag=1;
+        }
+       } else
+        amrex::Error("ispec invalid");
+      } else if (is_multi_component_evap(freezing_model[im],
+                   Tanasawa_or_Schrage_or_Kassemi[im],
+                   latent_heat[im])==0) {
+       // do nothing
+      } else 
+       amrex::Error("is_multi_component_evap invalid");
+     } else if (is_GFM_freezing_model(freezing_model[im])==0) {
+      // do nothing
+     } else 
+      amrex::Error("is_GFM_freezing_model invalid");
+    } else if (latent_heat[im]==0.0) {
      // do nothing
-    } else 
-     amrex::Error("is_multi_component_evap invalid");
+    } else
+     amrex::Error("latent_heat[im] invalid");
      
    } // im=0.. 2 nten -1
 
