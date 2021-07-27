@@ -22522,12 +22522,7 @@ end subroutine RatePhaseChange
          print *,"prev_time invalid"
          stop
         endif
-       else if ((local_freezing_model.eq.1).or. & !source term
-                (local_freezing_model.eq.2).or. & !Hydrate
-                (local_freezing_model.eq.3).or. & !wildfire
-                (local_freezing_model.eq.4).or. & !Tanasawa or Schrage
-                (local_freezing_model.eq.5).or. & !fully saturated evap/cond
-                (local_freezing_model.eq.6)) then !Palmore/Desjardins
+       else if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
         ! do nothing
        else
         print *,"local_freezing_model invalid 10"
@@ -22794,16 +22789,23 @@ end subroutine RatePhaseChange
        print *,"distribute_from_target invalid"
        stop
       endif
-      if ((local_freezing_model.ge.0).and. &
-          (local_freezing_model.le.7)) then
+      if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
        ! do nothing
       else
        print *,"local_freezing_model invalid 11"
        stop
       endif
-      if ((local_freezing_model.eq.2).and. &
-          (num_species_var.ne.1)) then
-       print *,"must define species var if hydrate model"
+      if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
+       if (num_species_var.eq.1) then
+        ! do nothing
+       else
+        print *,"must define species var if hydrate model"
+        stop
+       endif
+      else if (is_hydrate_freezing_modelF(local_freezing_model).eq.0) then 
+       ! do nothing
+      else
+       print *,"is_hydrate_freezing_modelF invalid"
        stop
       endif
 
@@ -22877,10 +22879,8 @@ end subroutine RatePhaseChange
         ! local_freezing_model=5 (Stefan model evaporation/condensation)
         ! local_freezing_model=6 (Palmore and Desjardins)
         ! local_freezing_model=7 (Cavitation)
-       else if ((local_freezing_model.eq.0).or. &
-                (local_freezing_model.eq.1).or. &
-                (local_freezing_model.eq.5).or. &
-                (local_freezing_model.eq.6)) then
+       else if ((is_GFM_freezing_modelF(local_freezing_model).eq.1).or. &
+                (local_freezing_model.eq.1)) then
          ! LL<0 if freezing
 
         if ((LL.eq.zero).or. &
@@ -22990,6 +22990,7 @@ end subroutine RatePhaseChange
           stop
          endif
 
+         ! above: local_freezing_model==0
         else if (local_freezing_model.eq.1) then
          ! do nothing
 
@@ -29829,9 +29830,17 @@ end subroutine initialize2d
         LL=latent_heat(iten+ireverse*nten)
         local_freezing_model=freezing_model(iten+ireverse*nten)
         TSAT=saturation_temp(iten+ireverse*nten)
-        if ((local_freezing_model.eq.2).and. &
-            (num_species_var.ne.1)) then
-         print *,"must define species var if hydrate model"
+        if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
+         if (num_species_var.eq.1) then
+          ! do nothing
+         else
+          print *,"must define species var if hydrate model"
+          stop
+         endif
+        else if (is_hydrate_freezing_modelF(local_freezing_model).eq.0) then 
+         ! do nothing
+        else
+         print *,"is_hydrate_freezing_modelF invalid"
          stop
         endif
 
