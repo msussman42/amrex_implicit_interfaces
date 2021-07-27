@@ -19722,6 +19722,7 @@ stop
 
                         ! Palmore/Desjardins, partial mass fraction
                        else if (local_freezing_model.eq.6) then 
+FIX ME
                         ispec=mass_fraction_id(iten+ireverse*nten)
                         if (ispec.eq.project_option-100+1) then
                          ! do nothing
