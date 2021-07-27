@@ -19712,9 +19712,12 @@ REAL_T, intent(in) :: latent_heat
     is_multi_component_evapF=0
    endif
 
+  else if (freezing_model.eq.2) then !hydrate
+
+   is_multi_component_evapF=1
+
   else if ((freezing_model.eq.0).or. & !Energy jump model
            (freezing_model.eq.1).or. & !source term
-           (freezing_model.eq.2).or. & !hydrate
            (freezing_model.eq.3)) then !wildfire
    is_multi_component_evapF=0
   else
