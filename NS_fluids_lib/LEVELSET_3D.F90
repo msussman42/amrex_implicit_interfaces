@@ -11110,12 +11110,16 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(levelPC)
       INTEGER_T, intent(in) :: DIMDEC(modvisc)
       REAL_T, intent(in),target :: slope(DIMV(slope),nmat*ngeom_recon) 
-      FIX ME POINTERS
+      REAL_T, pointer :: slope_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: &
               denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: viscstate(DIMV(viscstate),nmat) 
+      REAL_T, pointer :: viscstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: levelPC(DIMV(levelPC),nmat)
+      REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out),target :: modvisc(DIMV(modvisc),nmat)
+      REAL_T, pointer :: modvisc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
@@ -11174,17 +11178,16 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(slope),ngrow_visc,-1,219)
-      call checkbound(fablo,fabhi, &
-       DIMS(denstate), &
-       ngrow_visc,-1,223)
-      call checkbound(fablo,fabhi, &
-       DIMS(viscstate), &
-       ngrow_visc,-1,224)
-      call checkbound(fablo,fabhi, &
-       DIMS(levelPC), &
-       ngrow_visc+1,-1,229) 
-      call checkbound(fablo,fabhi,DIMS(modvisc),ngrow_visc,-1,227)
+      slope_ptr=>slope
+      call checkbound_array(fablo,fabhi,slope_ptr,ngrow_visc,-1,219)
+      denstate_ptr=>denstate
+      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_visc,-1,223)
+      viscstate_ptr=>viscstate
+      call checkbound_array(fablo,fabhi,viscstate_ptr,ngrow_visc,-1,224)
+      levelPC_ptr=>levelPC
+      call checkbound_array(fablo,fabhi,levelPC_ptr,ngrow_visc+1,-1,229) 
+      modvisc_ptr=>modvisc
+      call checkbound_array(fablo,fabhi,modvisc_ptr,ngrow_visc,-1,227)
 
       do im=1,nmat
 

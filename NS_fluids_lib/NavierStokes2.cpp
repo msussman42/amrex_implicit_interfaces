@@ -5129,7 +5129,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    // declared in: LEVELSET_3D.F90
    // visc_coef passed as a parameter so that Guibo can
    // calculate the dynamic contact angle condition. 
-   FIX ME
+  FIX ME this routine is not needed.
   fort_build_modvisc(
    &ngrow_visc,
    &cur_time_slab,
