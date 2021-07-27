@@ -11069,7 +11069,7 @@ stop
       return
       end subroutine fort_build_semirefinevof
 
-      subroutine FORT_BUILD_MODVISC( &
+      subroutine fort_build_modvisc( &
        ngrow_visc, &
        time, &
        problo,probhi, &
@@ -11085,7 +11085,8 @@ stop
        fablo,fabhi, &
        bfact, &
        nmat, &
-       level,finest_level)
+       level,finest_level) &
+      bind(c,name='fort_build_modvisc')
       use global_utility_module
       use probf90_module
       use geometry_intersect_module
@@ -11108,12 +11109,14 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(viscstate)
       INTEGER_T, intent(in) :: DIMDEC(levelPC)
       INTEGER_T, intent(in) :: DIMDEC(modvisc)
-      REAL_T, intent(in) :: slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T, intent(in) :: denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T, intent(in) :: viscstate(DIMV(viscstate),nmat) 
-      REAL_T, intent(in) :: levelPC(DIMV(levelPC),nmat)
-      REAL_T, intent(out) :: modvisc(DIMV(modvisc),nmat)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in),target :: slope(DIMV(slope),nmat*ngeom_recon) 
+      FIX ME POINTERS
+      REAL_T, intent(in),target :: &
+              denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, intent(in),target :: viscstate(DIMV(viscstate),nmat) 
+      REAL_T, intent(in),target :: levelPC(DIMV(levelPC),nmat)
+      REAL_T, intent(out),target :: modvisc(DIMV(modvisc),nmat)
+      REAL_T, intent(in),target :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
 
@@ -11214,7 +11217,7 @@ stop
        if (fort_energyconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"energy must be positive in FORT_BUILD_MODVISC"
+        print *,"energy must be positive in fort_build_modvisc"
         print *,"im= ",im
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
@@ -11281,7 +11284,7 @@ stop
 
  
       return
-      end subroutine FORT_BUILD_MODVISC
+      end subroutine fort_build_modvisc
 
 
 !if temperature_primitive_var==0,

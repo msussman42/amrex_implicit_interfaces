@@ -6,7 +6,6 @@
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
-#    define FORT_BUILD_MODVISC build_modvisc
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
@@ -25,7 +24,6 @@
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_BUILDFACEWT BUILDFACEWT
-#    define FORT_BUILD_MODVISC BUILD_MODVISC
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
 #    define FORT_PURGEFLOTSAM PURGEFLOTSAM
 #    define FORT_INITSUPERELASTIC INITSUPERELASTIC
@@ -44,7 +42,6 @@
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_BUILDFACEWT buildfacewt
-#    define FORT_BUILD_MODVISC build_modvisc
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
@@ -61,7 +58,6 @@
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_BUILDFACEWT buildfacewt_
-#    define FORT_BUILD_MODVISC build_modvisc_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
 #    define FORT_PURGEFLOTSAM purgeflotsam_
 #    define FORT_INITRECALESCE initrecalesce_
@@ -610,7 +606,7 @@ namespace amrex{
         int* nmat,
         int* level,int* finest_level);
 
-      void FORT_BUILD_MODVISC(
+      void fort_build_modvisc(
         int* ngrow_visc,
         Real* time,
         Real* problo,Real* probhi,
