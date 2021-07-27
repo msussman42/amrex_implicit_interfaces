@@ -5152,19 +5152,27 @@ stop
          dcompdst=(im_dest-1)*num_state_material+1
          tcompdst=(im_dest-1)*num_state_material+2
          vofcompdst=(im_dest-1)*ngeom_raw+1 
-FIX ME
+
          ispec=mass_fraction_id(iten+ireverse*nten)
-         if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-          ! do nothing
-         else if (ispec.eq.0) then
-          if ((local_freezing_model.eq.4).or. & ! Tanasawa or Schrage
-              (local_freezing_model.eq.5).or. & ! Stefan evap model
-              (local_freezing_model.eq.2)) then ! hydrate
+
+         if (is_multi_component_evapF(local_freezing_model, &
+              local_Tanasawa_or_Schrage_or_Kassemi,LL).eq.1) then 
+          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+           ! do nothing
+          else if (ispec.eq.0) then
            print *,"ispec invalid"
            stop
           endif
+         else if (is_multi_component_evapF(local_freezing_model, &
+              local_Tanasawa_or_Schrage_or_Kassemi,LL).eq.0) then 
+          if (ispec.eq.0) then
+           ! do nothing
+          else
+           print *,"expecting ispec=0"
+           stop
+          endif
          else
-          print *,"ispec invalid"
+          print *,"is_multi_component_evapF invalid"
           stop
          endif
 
@@ -5221,34 +5229,33 @@ FIX ME
             stop
            endif
 
-           if (local_freezing_model.eq.5) then ! stefan evap model
-            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-             if (vapor_den.gt.zero) then
-              ! do nothing
-             else
-              print *,"vapor_den invalid"
-              stop
-             endif  
-            else
-             print *,"ispec invalid"
-             stop
-            endif
-           endif ! local_freezing_model==5
+           if (vapor_den.gt.zero) then
+            ! do nothing
+           else
+            print *,"vapor_den invalid"
+            stop
+           endif  
 
            Csrc=zero
            Cdst=zero
 
-            ! hydrates
-           if (local_freezing_model.eq.2) then
+           if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
             if (distribute_from_targ.ne.0) then
              print *,"distribute_from_targ invalid"
              stop
             endif
             Csrc=den(D_DECL(icell,jcell,kcell),tcompsrc+1)
             Cdst=den(D_DECL(icell,jcell,kcell),tcompdst+1)
+           else if (is_hydrate_freezing_modelF(local_freezing_model).eq.0) then 
+            ! do nothing
+           else
+            print *,"is_hydrate_freezing_modelF invalid"
+            stop
            endif
 
-           if ((Dsrc.le.zero).or.(Ddst.le.zero)) then
+           if ((Dsrc.gt.zero).and.(Ddst.gt.zero)) then
+            ! do nothing
+           else
             print *,"density must be positive estdt "
             print *,"im,im_opp ",im,im_opp
             print *,"im_source,im_dest ",im_source,im_dest
@@ -6868,8 +6875,9 @@ FIX ME
         do ireverse=0,1
          call get_iten(im,im_opp,iten,nmat)
          iten_shift=iten+ireverse*nten
-         if ((freezing_model(iten_shift).lt.0).or. &
-             (freezing_model(iten_shift).gt.7)) then
+         if (is_valid_freezing_modelF(freezing_model(iten_shift)).eq.1) then
+          ! do nothing 
+         else
           print *,"freezing_model invalid init jump term"
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
@@ -7159,8 +7167,10 @@ FIX ME
        do im_opp=im+1,nmat
         do ireverse=0,1
          call get_iten(im,im_opp,iten,nmat)
-         if ((freezing_model(iten+ireverse*nten).lt.0).or. &
-             (freezing_model(iten+ireverse*nten).gt.7)) then
+         if (is_valid_freezing_modelF( &
+              freezing_model(iten+ireverse*nten)).eq.1) then
+          ! do nothing 
+         else
           print *,"freezing_model invalid init ice mask"
           print *,"iten,ireverse,nten ",iten,ireverse,nten
           stop
@@ -7514,8 +7524,9 @@ FIX ME
       call checkbound_array1(fablo,fabhi,tag_comp_ptr,2*ngrow_expansion,-1,1275)
 
       local_freezing_model=freezing_model(indexEXP+1)
-      if ((local_freezing_model.lt.0).or. &
-          (local_freezing_model.gt.7)) then
+      if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
+       ! do nothing
+      else
        print *,"local_freezing_model invalid 17"
        stop
       endif
@@ -16838,9 +16849,7 @@ FIX ME
                ! local_freezing_model=5 (evaporation/condensation)
                ! local_freezing_model=6 (Palmore Desjardins)
                ! local_freezing_model=7 (Cavitation)
-               if ((local_freezing_model.eq.0).or. &
-                   (local_freezing_model.eq.5).or. &
-                   (local_freezing_model.eq.6)) then
+               if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then 
 
                 if (project_option.eq.2) then
                    ! default Tgamma
@@ -17032,9 +17041,7 @@ FIX ME
                  stop
                 endif
 
-               else if ((local_freezing_model.eq.1).or. &
-                        (local_freezing_model.eq.2).or. &
-                        (local_freezing_model.eq.4)) then !Tanasawa or Schrage
+               else if (is_GFM_freezing_modelF(local_freezing_model).eq.0) then 
                 ! do nothing
                else
                 print *,"freezing_model invalid in stefansolver"
@@ -19677,9 +19684,7 @@ FIX ME
                    stop
                   endif
 
-                  if ((local_freezing_model.eq.0).or. &
-                      (local_freezing_model.eq.5).or. &
-                      (local_freezing_model.eq.6)) then ! Palmore/Desjardins
+                  if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then 
 
                    if ((im_primary.eq.im).or.(im_primary.eq.im_opp)) then
 
@@ -19832,10 +19837,8 @@ FIX ME
                     endif ! im_secondary==im or im_opp
                    endif ! im_primary=im or im_opp
 
-                  else if ((local_freezing_model.eq.1).or. &
-                           (local_freezing_model.eq.2).or. &
-                           (local_freezing_model.eq.4).or. & !Tanasawa/Schrage
-                           (local_freezing_model.eq.7)) then ! cavitation
+                  else if (is_GFM_freezing_modelF( &
+                            local_freezing_model).eq.0) then 
                    ! do nothing
                   else 
                    print *,"local_freezing_model not supported"
