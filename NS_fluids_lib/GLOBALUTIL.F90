@@ -19632,13 +19632,13 @@ INTEGER_T, intent(in) :: freezing_model
  if ((freezing_model.eq.0).or. &   !fully saturated
      (freezing_model.eq.5).or. &   !stefan model evap or condensation
      (freezing_model.eq.6)) then   !Palmore and Desjardins
-  is_GFM_freezing_model=1
+  is_GFM_freezing_modelF=1
  else if (is_valid_freezing_modelF(freezing_model).eq.1) then
-  is_GFM_freezing_model=0
+  is_GFM_freezing_modelF=0
  else
   print *,"freezing_model bust(F)"
   stop
-  is_GFM_freezing_model=0
+  is_GFM_freezing_modelF=0
  endif
 
 end function is_GFM_freezing_modelF 

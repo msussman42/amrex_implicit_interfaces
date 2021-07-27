@@ -5868,7 +5868,7 @@ stop
              endif
 
              ! divide and conquer temperature equation (TSAT Dirichlet BC)
-             if (is_GFM_freezing_modelF(freezing_model).eq.1) then
+             if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then
 
                !F dt=Fn (tnp1-t) + Fnp1 (t-tn)
                !dt/2 = Fn tnp1 - Fnp1 tn + t(Fnp1-Fn)
@@ -6372,7 +6372,7 @@ stop
                stop
               endif
 
-              if (is_GFM_freezing_modelF(freezing_model).eq.1) then
+              if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then
 
                Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
                if (ireverse.eq.0) then
@@ -6384,7 +6384,7 @@ stop
                 stop
                endif
 
-              else if (is_GFM_freezing_modelF(freezing_model).eq.0) then
+              else if (is_GFM_freezing_modelF(local_freezing_model).eq.0) then
 
                Tsat_flag=0
 
