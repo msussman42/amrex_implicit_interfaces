@@ -5,8 +5,6 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_COMBINEVEL   combinevel
-#    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
@@ -19,8 +17,6 @@
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
-#    define FORT_COMBINEVEL   COMBINEVEL
-#    define FORT_COMBINEVELFACE COMBINEVELFACE
 #    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
@@ -33,8 +29,6 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_COMBINEVEL   combinevel
-#    define FORT_COMBINEVELFACE combinevelface
 #    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
@@ -46,8 +40,6 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
-#    define FORT_COMBINEVEL   combinevel_
-#    define FORT_COMBINEVELFACE combinevelface_
 #    define FORT_VISCTENSORHEAT visctensorheat_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MOMENT build_moment_
@@ -898,13 +890,14 @@ extern "C"
      int* level,int* finest_level);
 
 
-   void FORT_COMBINEVEL(
+   void fort_combinevel(
      int* tid,
      int* hflag,
      int* num_materials_combine,
      int* mass_fraction_id,
      Real* latent_heat,
      int* freezing_model,
+     int* Tanasawa_or_Schrage_or_Kassemi,
      int* distribute_from_target,
      Real* saturation_temp,
      int* hydrate_flag, // scalar
@@ -950,7 +943,7 @@ extern "C"
      Real* cur_time);
 
 
-   void FORT_COMBINEVELFACE(
+   void fort_combinevelface(
      int* tid,
      int* hflag,
      int* facecut_index,

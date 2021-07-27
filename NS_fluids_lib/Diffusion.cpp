@@ -1006,7 +1006,7 @@ void NavierStokes::combine_state_variable(
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
       // in: GODUNOV_3D.F90
-     FORT_COMBINEVELFACE(
+     fort_combinevelface(
       &tid_current,
       &hflag,
       &facecut_index,
@@ -1176,13 +1176,14 @@ void NavierStokes::combine_state_variable(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: GODUNOV_3D.F90
-   FORT_COMBINEVEL(
+   fort_combinevel(
     &tid_current,
     &hflag,
     &num_materials_combine,
     mass_fraction_id.dataPtr(),
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
+    Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),
     &hydrate_flag,
