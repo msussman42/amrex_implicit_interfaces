@@ -500,7 +500,7 @@ stop
         enddo
         call dumpstring(Varname)
    
-       enddo  ! ispec
+       enddo  ! ispec=1..num_species_var
 
       enddo  ! im (state variables)
 
@@ -22806,6 +22806,26 @@ end subroutine RatePhaseChange
        ! do nothing
       else
        print *,"is_hydrate_freezing_modelF invalid"
+       stop
+      endif
+      if (is_multi_component_evapF(local_freezing_model, &
+           local_Tanasawa_or_Schrage_or_Kassemi,LL).eq.1) then
+       if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+        ! do nothing
+       else
+        print *,"ispec invalid"
+        stop
+       endif
+      else if (is_multi_component_evapF(local_freezing_model, &
+           local_Tanasawa_or_Schrage_or_Kassemi,LL).eq.0) then
+       if (ispec.eq.0) then
+        ! do nothing
+       else
+        print *,"ispec invalid"
+        stop
+       endif
+      else
+       print *,"is_multi_component_evapF invalid"
        stop
       endif
 

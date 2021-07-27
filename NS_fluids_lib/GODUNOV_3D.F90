@@ -18804,13 +18804,14 @@ stop
       ! combine_flag==2 (combine if vfrac<VOFTOL)
       ! project_option==3 (cell centered velocity)
       ! project_option==0 (MAC velocity - COMBINEVELFACE is called)
-      subroutine FORT_COMBINEVEL( &
+      subroutine fort_combinevel( &
        tid, &
        hflag, &
        num_materials_combine, &
        mass_fraction_id, &
        latent_heat, &
        freezing_model, &
+       Tanasawa_or_Schrage_or_Kassemi, &
        distribute_from_target, &
        saturation_temp, &
        hydrate_flag, & ! scalar
@@ -18849,7 +18850,8 @@ stop
        velbc, &
        listbc, &
        xlo,dx, &
-       cur_time)
+       cur_time) &
+      bind(c,name='fort_combinevel')
       use probf90_module
       use global_utility_module
       use geometry_intersect_module
@@ -18870,6 +18872,7 @@ stop
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: hydrate_flag
@@ -18912,18 +18915,29 @@ stop
 
       REAL_T, intent(in) :: cur_time
 
-      REAL_T, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: LSNEW(DIMV(LSNEW),nmat*(1+SDIM))
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T, intent(inout) :: cellfab(DIMV(cellfab),ncomp_cell)
-      REAL_T, intent(out) :: newcell(DIMV(newcell), &
+      REAL_T, intent(in),target :: TgammaFAB(DIMV(TgammaFAB),ntsat)
+      REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: LSNEW(DIMV(LSNEW),nmat*(1+SDIM))
+      REAL_T, pointer :: LSNEW_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: cellfab(DIMV(cellfab),ncomp_cell)
+      REAL_T, pointer :: cellfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: newcell(DIMV(newcell), &
               nsolve*num_materials_combine)
-      REAL_T, intent(in) :: state(DIMV(state),nstate_main) !Snew
+      REAL_T, pointer :: newcell_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: state(DIMV(state),nstate_main) !Snew
+      REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
 
       REAL_T DATA_FLOOR
  
@@ -19178,19 +19192,30 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,1276)
-      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,1276)
-      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,1276)
-      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,1276)
-      call checkbound(fablo,fabhi,DIMS(LSNEW),1,-1,1276)
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1276)
+      solxfab_ptr=>solxfab
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,1276)
+      solyfab_ptr=>solyfab
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,1276)
+      solzfab_ptr=>solzfab
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,1276)
+      LSNEW_ptr=>LSNEW
+      call checkbound_array(fablo,fabhi,LSNEW_ptr,1,-1,1276)
 
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1276)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1276)
 
-      call checkbound(fablo,fabhi,DIMS(vof),1,-1,1276)
-      call checkbound(fablo,fabhi,DIMS(cellfab),1,-1,1273)
-      call checkbound(fablo,fabhi,DIMS(newcell),0,-1,1273)
-      call checkbound(fablo,fabhi,DIMS(state),1,-1,1273)
-      call checkbound(fablo,fabhi,DIMS(TgammaFAB),1,-1,234)
+      vof_ptr=>vof
+      call checkbound_array(fablo,fabhi,vof_ptr,1,-1,1276)
+      cellfab_ptr=>cellfab
+      call checkbound_array(fablo,fabhi,cellfab_ptr,1,-1,1273)
+      newcell_ptr=>newcell
+      call checkbound_array(fablo,fabhi,newcell_ptr,0,-1,1273)
+      state_ptr=>state
+      call checkbound_array(fablo,fabhi,state_ptr,1,-1,1273)
+      TgammaFAB_ptr=>TgammaFAB
+      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1,234)
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
@@ -19716,25 +19741,33 @@ stop
                        ! do nothing
                       else if ((project_option.ge.100).and. &
                                (project_option.lt.100+num_species_var)) then
-                       if ((local_freezing_model.eq.0).or. & !saturated
-                           (local_freezing_model.eq.5)) then !saturated
-                        Tgamma_STATUS=0
-
-                        ! Palmore/Desjardins, partial mass fraction
-                       else if (local_freezing_model.eq.6) then 
-FIX ME
-                        ispec=mass_fraction_id(iten+ireverse*nten)
-                        if (ispec.eq.project_option-100+1) then
-                         ! do nothing
-                        else if ((ispec.ge.1).and. &
-                                 (ispec.le.num_species_var)) then
+                       if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
+                        if (is_multi_component_evapF(local_freezing_model, &
+                         Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten),&
+                         LL).eq.0) then
                          Tgamma_STATUS=0
+                        else if &
+                         (is_multi_component_evapF(local_freezing_model, &
+                         Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten),&
+                         LL).eq.1) then
+                         ispec=mass_fraction_id(iten+ireverse*nten)
+                         if (ispec.eq.project_option-100+1) then
+                          ! do nothing
+                         else if ((ispec.ge.1).and. &
+                                  (ispec.le.num_species_var)) then
+                          Tgamma_STATUS=0
+                         else
+                          print *,"ispec invalid"
+                          stop
+                         endif
                         else
-                         print *,"ispec invalid"
+                         print *,"is_multi_component_evapF invalid"
                          stop
                         endif
+                       else if (Tgamma_STATUS.eq.0) then
+                        ! do nothing
                        else
-                        print *,"local_freezing_model invalid"
+                        print *,"Tgamma_STATUS invalid"
                         stop
                        endif
                       else
