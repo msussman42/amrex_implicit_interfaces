@@ -5074,24 +5074,26 @@ int NavierStokes::ns_is_lag_part(int im) {
 
 } // subroutine ns_is_lag_part
 
-int NavierStokes::is_GFM_freezing_model(int freezing_model) {
+int NavierStokes::is_GFM_freezing_model(int loc_freezing_model) {
 
- if ((freezing_model==0)||   //fully saturated
-     (freezing_model==5)||   //stefan model evap or condensation
-     (freezing_model==6)) {  //Palmore and Desjardins
+ if ((loc_freezing_model==0)||   //fully saturated
+     (loc_freezing_model==5)||   //stefan model evap or condensation
+     (loc_freezing_model==6)) {  //Palmore and Desjardins
   return 1;
- } else if (is_valid_freezing_model(freezing_model)==1) {
+ } else if (is_valid_freezing_model(loc_freezing_model)==1) {
   return 0;
- } else
+ } else {
   amrex::Error("freezing_model bust");
+  return 0;
+ }
 
 } //end function is_GFM_freezing_model(int freezing_model) 
 
-int NavierStokes::is_hydrate_freezing_model(int freezing_model) {
+int NavierStokes::is_hydrate_freezing_model(int loc_freezing_model) {
 
- if (freezing_model==2) {
+ if (loc_freezing_model==2) {
   return 1;
- } else if (is_valid_freezing_model(freezing_model)) {
+ } else if (is_valid_freezing_model(loc_freezing_model)) {
   return 0;
  } else {
   amrex::Error("freezing_model invalid");
@@ -5099,58 +5101,64 @@ int NavierStokes::is_hydrate_freezing_model(int freezing_model) {
  }
 } // end function is_hydrate_freezing_model(int freezing_model)
 
-int NavierStokes::is_valid_freezing_model(int freezing_model) {
+int NavierStokes::is_valid_freezing_model(int loc_freezing_model) {
 
- if ((freezing_model==4)|| //Tannasawa or Schrage 
-     (freezing_model==5)|| //Stefan model evaporation or condensation
-     (freezing_model==6)|| //Palmore and Desjardins
-     (freezing_model==7)) {//cavitation
+ if ((loc_freezing_model==4)|| //Tannasawa or Schrage 
+     (loc_freezing_model==5)|| //Stefan model evaporation or condensation
+     (loc_freezing_model==6)|| //Palmore and Desjardins
+     (loc_freezing_model==7)) {//cavitation
   return 1;
- } else if ((freezing_model==0)|| //Energy jump model
-            (freezing_model==1)|| //source term
-            (freezing_model==2)|| //hydrate
-            (freezing_model==3)) {//wildfire
+ } else if ((loc_freezing_model==0)|| //Energy jump model
+            (loc_freezing_model==1)|| //source term
+            (loc_freezing_model==2)|| //hydrate
+            (loc_freezing_model==3)) {//wildfire
   return 1;
  } else {
-  amrex::Error("freezing_model invalid");
+  amrex::Error("loc_freezing_model invalid");
   return 0;
  }
 
 } // end function is_valid_freezing_model
 
 
-int NavierStokes::is_multi_component_evap(int freezing_model,
-           int evap_flag,Real latent_heat) {
+int NavierStokes::is_multi_component_evap(int loc_freezing_model,
+           int loc_evap_flag,Real loc_latent_heat) {
 
- if (latent_heat==0.0) {
+ if (loc_latent_heat==0.0) {
   return 0;
- } else if (latent_heat!=0.0) {
+ } else if (loc_latent_heat!=0.0) {
 
-  if ((freezing_model==4)|| //Tannasawa or Schrage 
-      (freezing_model==5)|| //Stefan model evaporation or condensation
-      (freezing_model==6)|| //Palmore and Desjardins
-      (freezing_model==7)) {//cavitation
+  if ((loc_freezing_model==4)|| //Tannasawa or Schrage 
+      (loc_freezing_model==5)|| //Stefan model evaporation or condensation
+      (loc_freezing_model==6)|| //Palmore and Desjardins
+      (loc_freezing_model==7)) {//cavitation
 
-   if (evap_flag==0) { //Palmore and Desjardins
+   if (loc_evap_flag==0) { //Palmore and Desjardins
     return 1;
-   } else if ((evap_flag==1)|| //Tanasawa
-              (evap_flag==2)|| //Schrage
-              (evap_flag==3)|| //Kassemi
-              (evap_flag==4)) {//Tanguy recommendation.
+   } else if ((loc_evap_flag==1)|| //Tanasawa
+              (loc_evap_flag==2)|| //Schrage
+              (loc_evap_flag==3)|| //Kassemi
+              (loc_evap_flag==4)) {//Tanguy recommendation.
     return 0;
-   } else
-    amrex::Error("evap_flag invalid");
+   } else {
+    amrex::Error("loc_evap_flag invalid");
+    return 0;
+   }
 
-  } else if ((freezing_model==0)|| //Energy jump model
-             (freezing_model==1)|| //source term
-             (freezing_model==2)|| //hydrate
-             (freezing_model==3)) {//wildfire
+  } else if ((loc_freezing_model==0)|| //Energy jump model
+             (loc_freezing_model==1)|| //source term
+             (loc_freezing_model==2)|| //hydrate
+             (loc_freezing_model==3)) {//wildfire
    return 0;
-  } else
-   amrex::Error("freezing_model invalid");
+  } else {
+   amrex::Error("loc_freezing_model invalid");
+   return 0;
+  }
 
- } else
+ } else {
   amrex::Error("latent_heat invalid");
+  return 0;
+ }
 
 } // end function is_multi_component_evap
 

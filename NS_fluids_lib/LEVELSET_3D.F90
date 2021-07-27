@@ -8491,16 +8491,12 @@ stop
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1,227)
       call checkbound_array(fablo,fabhi,modvisc_ptr,1,-1,227)
 
-      do im=1,nten
+      do im=1,2*nten
 
-       if ((freezing_model(im).lt.0).or. &
-           (freezing_model(im).gt.7)) then
+       if (is_valid_freezing_modelF(freezing_model(im)).eq.1) then
+        ! do nothing
+       else
         print *,"freezing_model invalid fort_init_physics_vars"
-        stop
-       endif
-       if ((freezing_model(im+nten).lt.0).or. &
-           (freezing_model(im+nten).gt.7)) then
-        print *,"freezing_model invalid fort_init_physics_vars 2"
         stop
        endif
 
@@ -8509,20 +8505,23 @@ stop
         print *,"distribute_from_target invalid"
         stop
        endif
-       if ((distribute_from_target(im+nten).lt.0).or. &
-           (distribute_from_target(im+nten).gt.1)) then
-        print *,"distribute_from_target invalid"
-        stop
-       endif
 
-       if ((den_interface(im).lt.zero).or. &
-           (visc_interface(im).lt.zero).or. &
-           (heatvisc_interface(im).lt.zero)) then
+      enddo !im=1,2*nten
+
+      do im=1,nten
+
+       if ((den_interface(im).ge.zero).and. &
+           (visc_interface(im).ge.zero).and. &
+           (heatvisc_interface(im).ge.zero)) then
+        ! do nothing
+       else
         print *,"den,visc, or heat interface coeff wrong"
         stop
        endif
        do imspec=1,num_species_var
-        if (speciesvisc_interface(nten*(imspec-1)+im).lt.zero) then
+        if (speciesvisc_interface(nten*(imspec-1)+im).ge.zero) then
+         !do nothing
+        else
          print *,"species interface coeff wrong"
          stop
         endif

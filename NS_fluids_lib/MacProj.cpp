@@ -396,7 +396,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 	 latent_heat[im])==1) {
      int ispec=mass_fraction_id[im];
      if ((ispec>=1)&&(ispec<=num_species_var)) {
-      if (ispec==project_option-100+1)
+      if (ispec==project_option-100+1) {
        GFM_flag=1;
       }
      } else
