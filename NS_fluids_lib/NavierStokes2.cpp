@@ -396,6 +396,25 @@ void NavierStokes::getStateVISC_ALL(int idx,int ngrow) {
 } // subroutine getStateVISC_ALL 
 
 
+void NavierStokes::getStateCONDUCTIVITY_ALL(int idx,int ngrow) {
+
+ if (level!=0)
+  amrex::Error("level invalid getStateCONDUCTIVITY_ALL");
+
+ int finest_level=parent->finestLevel();
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.getStateCONDUCTIVITY(idx,ngrow);
+  int scomp=0;
+  int ncomp=ns_level.localMF[idx]->nComp();
+   // spectral_override==1 => order derived from "enable_spectral"
+   // spectral_override==0 => always low order.
+  ns_level.avgDown_localMF(idx,scomp,ncomp,0);
+ }
+
+} // subroutine getStateCONDUCTIVITY_ALL 
+
+
 void NavierStokes::delete_localMF(int idx_MF,int ncomp) {
 
  for (int scomp=idx_MF;scomp<idx_MF+ncomp;scomp++) {
@@ -4706,6 +4725,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   //ngrow=1
  getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
+ getStateCONDUCTIVITY_ALL(CELL_CONDUCTIVITY_MATERIAL_MF,1);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -5106,10 +5126,11 @@ void NavierStokes::make_physics_vars(int project_option) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in: LEVELSET_3D.F90
+   // declared in: LEVELSET_3D.F90
    // visc_coef passed as a parameter so that Guibo can
    // calculate the dynamic contact angle condition. 
-  FORT_BUILD_MODVISC(
+   FIX ME
+  fort_build_modvisc(
    &ngrow_visc,
    &cur_time_slab,
    problo,probhi,

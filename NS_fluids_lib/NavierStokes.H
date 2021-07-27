@@ -106,6 +106,8 @@ namespace amrex{
 #define LEVELPC_MF 79
 #define VOF_PREV_TIME_MF 80
 
+#define CELL_CONDUCTIVITY_MATERIAL_MF 81
+
 #define MAC_VELOCITY_MF 82
 
 #define MASK_NBR_MF 85
@@ -733,6 +735,8 @@ protected:
       int flux_MF,
       int ncomp_flux);
 
+     // spectral_override==1 => order derived from "enable_spectral"
+     // spectral_override==0 => always low order.
     void avgDown_localMF(int idxMF,int scomp,int ncomp,
      int spectral_override);
     void Plus_localMF(int idx_dest,Real val,
@@ -805,6 +809,9 @@ protected:
 
     void getStateVISC(int idx,int ngrow);
     void getStateVISC_ALL(int idx,int ngrow);
+
+    void getStateCONDUCTIVITY(int idx,int ngrow);
+    void getStateCONDUCTIVITY_ALL(int idx,int ngrow);
 
     void delete_localMF(int idx_MF,int ncomp); 
     void delete_localMF_if_exist(int idx_MF,int ncomp); 
