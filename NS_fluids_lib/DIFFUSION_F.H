@@ -6,25 +6,7 @@
 */
 
 #ifdef BL_LANG_FORT
-#    define FORT_COMPUTE_NEG_MOM_FORCE compute_neg_mom_force
-#    define FORT_HOOPIMPLICIT hoopimplicit
-#    define FORT_THERMAL_OFFSET_FORCE thermal_offset_force
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_COMPUTE_NEG_MOM_FORCE COMPUTE_NEG_MOM_FORCE
-#    define FORT_HOOPIMPLICIT HOOPIMPLICIT
-#    define FORT_THERMAL_OFFSET_FORCE THERMAL_OFFSET_FORCE
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_COMPUTE_NEG_MOM_FORCE compute_neg_mom_force
-#    define FORT_HOOPIMPLICIT hoopimplicit
-#    define FORT_THERMAL_OFFSET_FORCE thermal_offset_force
-#  else
-#    define FORT_COMPUTE_NEG_MOM_FORCE compute_neg_mom_force_
-#    define FORT_HOOPIMPLICIT hoopimplicit_
-#    define FORT_THERMAL_OFFSET_FORCE thermal_offset_force_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -32,7 +14,7 @@ namespace amrex{
 
 extern "C"
 {
-    void FORT_HOOPIMPLICIT (
+    void fort_hoopimplicit(
       int* override_density,
       Real* gravity_normalized,
       int* gravity_dir,
@@ -71,7 +53,7 @@ extern "C"
       int* nsolve);
 
 
-    void FORT_COMPUTE_NEG_MOM_FORCE (
+    void fort_compute_neg_mom_force(
       Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
       const Real *xlo,const Real* dx,
       Real *unew,AMREX_ARLIM_P(unewlo),AMREX_ARLIM_P(unewhi),
@@ -88,10 +70,7 @@ extern "C"
       int* nmat,
       int* nsolve);
 
-
-
-
-    void FORT_THERMAL_OFFSET_FORCE (
+    void fort_thermal_offset_force(
       int* override_density,
       Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
       Real *thermal,AMREX_ARLIM_P(thermallo),AMREX_ARLIM_P(thermalhi),
