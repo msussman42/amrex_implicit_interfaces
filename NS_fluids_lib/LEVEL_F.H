@@ -566,7 +566,6 @@ namespace amrex{
        Real* vofC,AMREX_ARLIM_P(vofClo),AMREX_ARLIM_P(vofChi),
        Real* vofF,AMREX_ARLIM_P(vofFlo),AMREX_ARLIM_P(vofFhi),
        Real* massF,AMREX_ARLIM_P(massFlo),AMREX_ARLIM_P(massFhi),
-       Real* modvisc,AMREX_ARLIM_P(modvisclo),AMREX_ARLIM_P(modvischi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
@@ -605,25 +604,6 @@ namespace amrex{
         int* bfact,
         int* nmat,
         int* level,int* finest_level);
-
-      void fort_build_modvisc(
-        int* ngrow_visc,
-        Real* time,
-        Real* problo,Real* probhi,
-        Real* visc_coef,
-        int* nten,
-        const Real* xlo,const Real* dx,
-        Real* slope,AMREX_ARLIM_P(slopelo),AMREX_ARLIM_P(slopehi), 
-        Real* denstate,AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi), 
-        Real* viscstate,AMREX_ARLIM_P(viscstatelo),AMREX_ARLIM_P(viscstatehi), 
-        Real* levelpc,AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
-        Real* modvisc,AMREX_ARLIM_P(modvisclo),AMREX_ARLIM_P(modvischi),
-        const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        int* bfact,
-        int* nmat,
-        int* level,int* finest_level);
-
 
       void FORT_BUILDFACEWT(
         int* facewt_iter,

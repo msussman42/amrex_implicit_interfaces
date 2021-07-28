@@ -8018,7 +8018,7 @@ stop
        DIMS(denstate), &
        mom_den, &
        DIMS(mom_den), &
-       viscstate,DIMS(viscstate), &
+       viscstate,DIMS(viscstate), & ! 3 * nmat components
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
@@ -8035,7 +8035,6 @@ stop
        vofC,DIMS(vofC), &
        vofF,DIMS(vofF), &
        massF,DIMS(massF), &
-       modvisc,DIMS(modvisc), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        presbc_arr, &
@@ -8131,7 +8130,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vofC)
       INTEGER_T, intent(in) :: DIMDEC(vofF)
       INTEGER_T, intent(in) :: DIMDEC(massF)
-      INTEGER_T, intent(in) :: DIMDEC(modvisc)
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4)
@@ -8151,7 +8149,7 @@ stop
       REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: viscstate(DIMV(viscstate),nmat) 
+      REAL_T, intent(in), target :: viscstate(DIMV(viscstate),3*nmat) 
       REAL_T, pointer :: viscstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
@@ -8177,8 +8175,6 @@ stop
       REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: massF(DIMV(massF),nrefine_vof)
       REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: modvisc(DIMV(modvisc),nmat)
-      REAL_T, pointer :: modvisc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
@@ -8350,7 +8346,6 @@ stop
       vofC_ptr=>vofC
       vofF_ptr=>vofF
       massF_ptr=>massF
-      modvisc_ptr=>modvisc
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -8489,7 +8484,6 @@ stop
       call checkbound_array(fablo,fabhi,vofC_ptr,1,-1,227)
       call checkbound_array(fablo,fabhi,vofF_ptr,1,-1,227)
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1,227)
-      call checkbound_array(fablo,fabhi,modvisc_ptr,1,-1,227)
 
       do im=1,2*nten
 
@@ -8546,7 +8540,7 @@ stop
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"density must be positive init_physics_vars"
+        print *,"density must be positive fort_init_physics_vars"
         print *,"im,denconst ",im,fort_denconst(im)
         stop
        endif
@@ -8566,7 +8560,7 @@ stop
         stop
        endif
         ! sanity check: the real viscosity coefficient(s) are derived from
-        ! modvisc(D_DECL(:,:,:),nmat)
+        ! viscstate(D_DECL(:,:,:),3*nmat)
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
        if (mu.ge.zero) then
         ! do nothing
@@ -9155,8 +9149,8 @@ stop
           facespecies_local(imspec)=zero
          enddo
          do im=1,nmat
-          localvisc_plus(im)=modvisc(D_DECL(i,j,k),im)
-          localvisc_minus(im)=modvisc(D_DECL(im1,jm1,km1),im)
+          localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
+          localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
          enddo
 
          if (gradh.ne.zero) then
@@ -10510,7 +10504,7 @@ stop
 
          cenden(D_DECL(i,j,k),im+1)=one/den 
 
-         localvisc(im)=modvisc(D_DECL(i,j,k),im)
+         localvisc(im)=viscstate(D_DECL(i,j,k),im)
          if (localvisc(im).lt.zero) then
           print *,"viscstate gone negative"
           stop
@@ -10521,9 +10515,10 @@ stop
          else if (localvisc(im).gt.zero) then
           ! do nothing
          else
-          print *,"localvisc invalid"
+          print *,"localvisc NaN"
           stop
          endif
+         FIX ME
          cenvisc(D_DECL(i,j,k),im+1)=localvisc(im)
 
          one_over_mu=one/(localvisc(im)+VISCINVTOL)
@@ -11068,226 +11063,6 @@ stop
 
       return
       end subroutine fort_build_semirefinevof
-
-      subroutine fort_build_modvisc( &
-       ngrow_visc, &
-       time, &
-       problo,probhi, &
-       visc_coef, &
-       nten, &
-       xlo,dx, &
-       slope,DIMS(slope), &
-       denstate,DIMS(denstate), &
-       viscstate,DIMS(viscstate), &
-       levelPC,DIMS(levelPC), &
-       modvisc,DIMS(modvisc), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       nmat, &
-       level,finest_level) &
-      bind(c,name='fort_build_modvisc')
-      use global_utility_module
-      use probf90_module
-      use geometry_intersect_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: ngrow_visc
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nten
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
-      REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(slope)
-      INTEGER_T, intent(in) :: DIMDEC(denstate)
-      INTEGER_T, intent(in) :: DIMDEC(viscstate)
-      INTEGER_T, intent(in) :: DIMDEC(levelPC)
-      INTEGER_T, intent(in) :: DIMDEC(modvisc)
-      REAL_T, intent(in),target :: slope(DIMV(slope),nmat*ngeom_recon) 
-      REAL_T, pointer :: slope_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: &
-              denstate(DIMV(denstate),nmat*num_state_material) 
-      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: viscstate(DIMV(viscstate),nmat) 
-      REAL_T, pointer :: viscstate_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: levelPC(DIMV(levelPC),nmat)
-      REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: modvisc(DIMV(modvisc),nmat)
-      REAL_T, pointer :: modvisc_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: xlo(SDIM),dx(SDIM)
-
-      INTEGER_T i,j,k
-
-      INTEGER_T im
-
-      INTEGER_T nten_test
-      REAL_T localvisc(nmat)
-      INTEGER_T check_accept
-
-      INTEGER_T igridlo(3),igridhi(3)
-
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-      REAL_T mu
-
-      nhalf=1
-
-      if (bfact.lt.1) then
-       print *,"bfact too small"
-       stop
-      endif
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level or finest_level invalid build modvisc"
-       stop
-      endif
-
- 
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
-      if (nten_test.ne.nten) then
-       print *,"nten invalid build modvisc nten nten_test ",nten,nten_test
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid build modvisc "
-       print *,"ngeom_recon= ",ngeom_recon
-       stop
-      endif
-      if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid build modvisc "
-       print *,"ngeom_raw= ",ngeom_raw
-       stop
-      endif
-      if (ngrow_visc.lt.1) then
-       print *,"ngrow_visc out of range"
-       stop
-      endif
-
-      slope_ptr=>slope
-      call checkbound_array(fablo,fabhi,slope_ptr,ngrow_visc,-1,219)
-      denstate_ptr=>denstate
-      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_visc,-1,223)
-      viscstate_ptr=>viscstate
-      call checkbound_array(fablo,fabhi,viscstate_ptr,ngrow_visc,-1,224)
-      levelPC_ptr=>levelPC
-      call checkbound_array(fablo,fabhi,levelPC_ptr,ngrow_visc+1,-1,229) 
-      modvisc_ptr=>modvisc
-      call checkbound_array(fablo,fabhi,modvisc_ptr,ngrow_visc,-1,227)
-
-      do im=1,nmat
-
-       if (fort_material_type(im).eq.0) then
-        ! do nothing
-       else if (fort_material_type(im).eq.999) then
-        ! do nothing
-       else if ((fort_material_type(im).gt.0).and. &
-                (fort_material_type(im).le.MAX_NUM_EOS)) then
-        ! do nothing
-       else 
-        print *,"material_type invalid"
-        stop
-       endif
-
-       if (fort_denconst(im).gt.zero) then
-        ! do nothing
-       else
-        print *,"density must be positive build modvisc"
-        print *,"im,denconst ",im,fort_denconst(im)
-        stop
-       endif
-       if (fort_tempconst(im).gt.zero) then
-        ! do nothing
-       else
-        print *,"build modvisc:temperature must be positive"
-        print *,"im,fort_tempconst : ",im,fort_tempconst(im)
-        stop
-       endif
-       if (fort_energyconst(im).gt.zero) then
-        ! do nothing
-       else
-        print *,"energy must be positive in fort_build_modvisc"
-        print *,"im= ",im
-        print *,"fort_energyconst(im)= ",fort_energyconst(im)
-        stop
-       endif
-        ! sanity check: the real viscosity coefficient(s) are derived from
-        ! viscstate(D_DECL(:,:,:),nmat)
-       mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.ge.zero) then
-        ! do nothing
-       else
-        print *,"viscosity cannot be negative"
-        stop
-       endif
-
-      enddo ! im  (checking parameters)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi, &
-       ngrow_visc) 
-
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
-      do k=igridlo(3),igridhi(3)
-
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       check_accept=1
-       if (levelrz.eq.0) then
-        ! do nothing
-       else if ((levelrz.eq.1).or. &
-                (levelrz.eq.3)) then
-        if (xsten(0,1).lt.VOFTOL*dx(1)) then
-         check_accept=0
-        endif
-       else
-        print *,"levelrz invalid build mod visc"
-        stop
-       endif
-
-       if (check_accept.eq.0) then
-
-        do im=1,nmat
-         modvisc(D_DECL(i,j,k),im)=zero
-        enddo
-
-       else if (check_accept.eq.1) then
-
-        do im=1,nmat
-         localvisc(im)=viscstate(D_DECL(i,j,k),im)
-         if (localvisc(im).lt.zero) then
-          print *,"viscstate gone negative"
-          stop
-         endif
-         modvisc(D_DECL(i,j,k),im)=localvisc(im)
-        enddo
-
-       else
-        print *,"check_accept invalid"
-        stop
-       endif
-
-      enddo
-      enddo
-      enddo  ! i,j,k (modvisc)
-
- 
-      return
-      end subroutine fort_build_modvisc
 
 
 !if temperature_primitive_var==0,
