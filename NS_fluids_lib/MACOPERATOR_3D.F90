@@ -25,7 +25,7 @@ stop
 
 
 
-       subroutine FORT_SCALARCOEFF( &
+       subroutine fort_scalarcoeff( &
          nsolve, &
          nmat, &
          xlo,dx, &
@@ -49,7 +49,9 @@ stop
          cur_time, &
          project_option, &
          rzflag, &
-         solidheat_flag)
+         solidheat_flag) &
+       bind(c,name='fort_scalarcoeff')
+
        use probf90_module
        use global_utility_module
        IMPLICIT NONE
@@ -78,14 +80,22 @@ stop
        REAL_T, intent(in) :: cur_time
        INTEGER_T, intent(in) :: project_option,rzflag
 
-       REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
-       REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
-       REAL_T, intent(in) ::  offdiagcheck(DIMV(offdiagcheck),nsolve)
-       REAL_T, intent(out) ::  cterm(DIMV(cterm),nsolve)
-       REAL_T, intent(in) ::  c2(DIMV(c2),2)
-       REAL_T, intent(in) ::  DeDT(DIMV(DeDT),nmat+1)
-       REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T, intent(in) ::  lsnew(DIMV(lsnew),nmat*(SDIM+1))
+       REAL_T, intent(in),target :: mu(DIMV(mu))
+       REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: den(DIMV(den))
+       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
+       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(out),target :: cterm(DIMV(cterm),nsolve)
+       REAL_T, pointer :: cterm_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: c2(DIMV(c2),2)
+       REAL_T, pointer :: c2_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: DeDT(DIMV(DeDT))
+       REAL_T, pointer :: DeDT_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
+       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
        INTEGER_T i,j,k
        INTEGER_T in_rigid
@@ -110,14 +120,22 @@ stop
 
        nhalf=1
 
-       call checkbound(fablo,fabhi,DIMS(mu),1,-1,33)
-       call checkbound(fablo,fabhi,DIMS(den),1,-1,33)
-       call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,33)
-       call checkbound(fablo,fabhi,DIMS(cterm),0,-1,33)
-       call checkbound(fablo,fabhi,DIMS(c2),0,-1,33)
-       call checkbound(fablo,fabhi,DIMS(DeDT),1,-1,33)
-       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,33)
-       call checkbound(fablo,fabhi,DIMS(recon),1,-1,33)
+       mu_ptr=>mu
+       call checkbound_array1(fablo,fabhi,mu_ptr,1,-1,33)
+       den_ptr=>den
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1,33)
+       offdiagcheck_ptr=>offdiagcheck
+       call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,33)
+       cterm_ptr=>cterm
+       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
+       c2_ptr=>c2
+       call checkbound_array(fablo,fabhi,c2_ptr,0,-1,33)
+       DeDT_ptr=>DeDT
+       call checkbound_array1(fablo,fabhi,DeDT_ptr,1,-1,33)
+       lsnew_ptr=>lsnew
+       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,33)
+       recon_ptr=>recon
+       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,33)
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -294,8 +312,10 @@ stop
           stop
          endif
           ! 1/(den cv)  note: De/DT=cv
-         dedt_inverse=DeDT(D_DECL(i,j,k),1)
-         if (dedt_inverse.le.zero) then
+         dedt_inverse=DeDT(D_DECL(i,j,k))
+         if (dedt_inverse.gt.zero) then
+          ! do nothing
+         else
           print *,"dedt_inverse invalid"
           stop
          endif
@@ -362,8 +382,10 @@ stop
           print *,"dt invalid"
           stop
          endif
-         den_inverse=den(D_DECL(i,j,k),1) ! 1/den
-         if (den_inverse.le.zero) then
+         den_inverse=den(D_DECL(i,j,k)) ! 1/den
+         if (den_inverse.gt.zero) then
+          ! do nothing
+         else
           print *,"den_inverse invalid"
           stop
          endif
@@ -413,8 +435,10 @@ stop
           print *,"dt invalid"
           stop
          endif
-         den_inverse=den(D_DECL(i,j,k),1) ! 1/den
-         if (den_inverse.le.zero) then
+         den_inverse=den(D_DECL(i,j,k)) ! 1/den
+         if (den_inverse.gt.zero) then
+          ! do nothing
+         else
           print *,"den_inverse invalid"
           stop
          endif
@@ -440,7 +464,7 @@ stop
        enddo
  
        return
-       end subroutine FORT_SCALARCOEFF
+       end subroutine fort_scalarcoeff
 
 
        subroutine FORT_RESTORE_PRES( &

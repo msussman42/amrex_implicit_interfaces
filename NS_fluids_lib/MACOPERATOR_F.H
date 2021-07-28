@@ -8,7 +8,6 @@
 #    define FORT_DIVIDEDX      dividedx
 #    define FORT_MULT_FACEWT   mult_facewt
 #    define FORT_INTERPMAC     interpmac
-#    define FORT_SCALARCOEFF   scalarcoeff
 #    define FORT_RESTORE_PRES  restore_pres
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
@@ -18,7 +17,6 @@
 #    define FORT_DIVIDEDX      DIVIDEDX
 #    define FORT_MULT_FACEWT   MULT_FACEWT
 #    define FORT_INTERPMAC     INTERPMAC
-#    define FORT_SCALARCOEFF   SCALARCOEFF
 #    define FORT_RESTORE_PRES  RESTORE_PRES
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
@@ -28,7 +26,6 @@
 #    define FORT_DIVIDEDX      dividedx
 #    define FORT_MULT_FACEWT   mult_facewt
 #    define FORT_INTERPMAC     interpmac
-#    define FORT_SCALARCOEFF   scalarcoeff
 #    define FORT_RESTORE_PRES  restore_pres
 #  else
 #    define FORT_REGULARIZE_BX regularize_bx_
@@ -37,7 +34,6 @@
 #    define FORT_DIVIDEDX      dividedx_
 #    define FORT_MULT_FACEWT   mult_facewt_
 #    define FORT_INTERPMAC     interpmac_
-#    define FORT_SCALARCOEFF   scalarcoeff_
 #    define FORT_RESTORE_PRES  restore_pres_
 #  endif
 #endif
@@ -140,7 +136,7 @@ extern "C"
         Real* cdiag,AMREX_ARLIM_P(cdiag_lo),AMREX_ARLIM_P(cdiag_hi),
         Real* fdiag,AMREX_ARLIM_P(fdiag_lo),AMREX_ARLIM_P(fdiag_hi));
 
-    void FORT_SCALARCOEFF(
+    void fort_scalarcoeff(
        int* nsolve,
        int* nmat,
        const Real* xlo,

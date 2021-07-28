@@ -195,9 +195,9 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  debug_ngrow(CELL_DEN_MF,1,811);
  debug_ngrow(CELL_VISC_MF,1,811);
 
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_VISC_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_VISC_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
 
  MultiFab* Un=localMF[idx_vel];
@@ -253,8 +253,8 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: DIFFUSION_3D.F90
-  FORT_HOOPIMPLICIT(
+    // declared in: DIFFUSION_3D.F90
+  fort_hoopimplicit(
    &override_density[0], 
    &gravity_normalized,
    &gravity_dir,
@@ -339,7 +339,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
  debug_ngrow(CELL_DEN_MF,1,811);
 
    // 1/rho
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
@@ -396,7 +396,7 @@ void NavierStokes::mom_force(int idx_neg_mom_force,int update_state) {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: DIFFUSION_3D.F90
-  FORT_COMPUTE_NEG_MOM_FORCE(
+  fort_compute_neg_mom_force(
    forcefab.dataPtr(),
    ARLIM(forcefab.loVect()),ARLIM(forcefab.hiVect()),
    xlo,dx,
@@ -478,11 +478,11 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
  debug_ngrow(CELL_VISC_MF,1,811);
  debug_ngrow(CELL_DEDT_MF,1,811); //stores 1/(rho cv)   (cv=de/dT)
 
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_VISC_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_VISC_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
- if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  MultiFab* Un=localMF[idx_vel];
@@ -534,7 +534,7 @@ void NavierStokes::thermal_transform_force(int idx_vel,int idx_thermal,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    //declared in DIFFUSION_3D.F90
-  FORT_THERMAL_OFFSET_FORCE(
+  fort_thermal_offset_force(
    &override_density[0], 
    forcefab.dataPtr(),
    ARLIM(forcefab.loVect()),ARLIM(forcefab.hiVect()),

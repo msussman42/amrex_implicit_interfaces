@@ -270,11 +270,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  if (localMF[OFF_DIAG_CHECK_MF]->nComp()!=nsolve)
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_VISC_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_VISC_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
- if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  if (localMF[CELL_SOUND_MF]->nComp()!=2)
@@ -327,7 +327,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // defined in MACOPERATOR_3D.F90
-  FORT_SCALARCOEFF(
+  fort_scalarcoeff(
     &nsolve,
     &nmat,
     xlo,dx,

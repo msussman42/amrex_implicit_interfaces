@@ -103,7 +103,7 @@ stop
 ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
-       subroutine FORT_HOOPIMPLICIT( &
+       subroutine fort_hoopimplicit( &
          override_density, &
          gravity_normalized, & ! gravity_normalized>0 unless invert_gravity
          grav_dir, &
@@ -136,7 +136,8 @@ stop
          nparts_def, &
          im_solid_map, &
          ntensor, &
-         nsolve)
+         nsolve) &
+       bind(c,name='fort_hoopimplicit')
 
        use probf90_module
        use global_utility_module 
@@ -179,18 +180,30 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(den)
        INTEGER_T, intent(in) :: DIMDEC(mu)
 
-       REAL_T, intent(out) ::  force(DIMV(force),nsolve)
-       REAL_T, intent(in) ::  tensor(DIMV(tensor),ntensor)
-       REAL_T, intent(in) ::  thermal(DIMV(thermal))
-       REAL_T, intent(in) ::  recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T, intent(in) ::  solxfab(DIMV(solxfab),nparts_def*SDIM)
-       REAL_T, intent(in) ::  solyfab(DIMV(solyfab),nparts_def*SDIM)
-       REAL_T, intent(in) ::  solzfab(DIMV(solzfab),nparts_def*SDIM)
-       REAL_T, intent(in) ::  uold(DIMV(uold),nsolve)
-       REAL_T, intent(out) ::  unew(DIMV(unew),nsolve)
-       REAL_T, intent(in) ::  lsnew(DIMV(lsnew),nmat*(SDIM+1))
-       REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
-       REAL_T, intent(in) ::  mu(DIMV(mu),nmat+1)
+       REAL_T, intent(out),target :: force(DIMV(force),nsolve)
+       REAL_T, pointer :: force_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: tensor(DIMV(tensor),ntensor)
+       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: thermal(DIMV(thermal))
+       REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
+       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+       REAL_T, intent(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+       REAL_T, intent(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+       REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+       REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: uold(DIMV(uold),nsolve)
+       REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(out),target :: unew(DIMV(unew),nsolve)
+       REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: den(DIMV(den))
+       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: mu(DIMV(mu))
+       REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
        REAL_T, intent(in) ::  xlo(SDIM)
        REAL_T ::  xsten(-3:3,SDIM)
        REAL_T, intent(in) ::  dx(SDIM)
@@ -244,11 +257,11 @@ stop
         stop
        endif
        if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-        print *,"nparts invalid FORT_HOOPIMPLICIT"
+        print *,"nparts invalid fort_hoopimplicit"
         stop
        endif
        if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-        print *,"nparts_def invalid FORT_HOOPIMPLICIT"
+        print *,"nparts_def invalid fort_hoopimplicit"
         stop
        endif
 
@@ -288,18 +301,30 @@ stop
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(force),1,-1,42)
-       call checkbound(fablo,fabhi,DIMS(tensor),0,-1,42)
-       call checkbound(fablo,fabhi,DIMS(thermal),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(recon),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(solxfab),0,0,1330)
-       call checkbound(fablo,fabhi,DIMS(solyfab),0,1,1330)
-       call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,1330)
-       call checkbound(fablo,fabhi,DIMS(uold),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(unew),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1251)
-       call checkbound(fablo,fabhi,DIMS(den),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(mu),1,-1,1330)
+       force_ptr=>force
+       call checkbound_array(fablo,fabhi,force_ptr,1,-1,42)
+       tensor_ptr=>tensor
+       call checkbound_array(fablo,fabhi,tensor_ptr,0,-1,42)
+       thermal_ptr=>thermal
+       call checkbound_array(fablo,fabhi,thermal_ptr,1,-1,1330)
+       recon_ptr=>recon
+       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1330)
+       solxfab_ptr=>solxfab
+       solyfab_ptr=>solyfab
+       solzfab_ptr=>solzfab
+       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,1330)
+       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,1330)
+       call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,1330)
+       uold_ptr=>uold
+       call checkbound_array(fablo,fabhi,uold_ptr,1,-1,1330)
+       unew_ptr=>unew
+       call checkbound_array(fablo,fabhi,unew_ptr,1,-1,1330)
+       lsnew_ptr=>lsnew
+       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,1251)
+       den_ptr=>den
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1,1330)
+       mu_ptr=>mu
+       call checkbound_array1(fablo,fabhi,mu_ptr,1,-1,1330)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -375,13 +400,17 @@ stop
          stop
         endif
 
-        inverseden=den(D_DECL(i,j,k),1)
-        mu_cell=mu(D_DECL(i,j,k),1)
-        if (inverseden.le.zero) then
+        inverseden=den(D_DECL(i,j,k))
+        mu_cell=mu(D_DECL(i,j,k))
+        if (inverseden.ge.zero) then
+         ! do nothing
+        else
          print *,"inverseden invalid"
          stop
         endif
-        if (mu_cell.lt.zero) then
+        if (mu_cell.ge.zero) then
+         ! do nothing
+        else
          print *,"mu_cell invalid"
          stop
         endif
@@ -604,7 +633,9 @@ stop
          stop
         endif
 
-        if (dt.le.zero) then
+        if (dt.gt.zero) then
+         ! do nothing
+        else
          print *,"dt invalid"
          stop
         endif
@@ -628,10 +659,10 @@ stop
        enddo
 
        return
-       end subroutine FORT_HOOPIMPLICIT
+       end subroutine fort_hoopimplicit
 
 
-       subroutine FORT_COMPUTE_NEG_MOM_FORCE( &
+       subroutine fort_compute_neg_mom_force( &
          force,DIMS(force), &
          xlo,dx, &
          unew,DIMS(unew), &
@@ -646,7 +677,8 @@ stop
          prev_time, &
          cur_time, &
          nmat, &
-         nsolve)
+         nsolve) &
+       bind(c,name='fort_compute_neg_mom_force')
 
        use probf90_module
        use global_utility_module 
@@ -669,11 +701,14 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(unew)
        INTEGER_T, intent(in) :: DIMDEC(den)
 
-       REAL_T, intent(out) ::  force(DIMV(force),nsolve)
-       REAL_T, intent(inout) ::  unew(DIMV(unew),nsolve)
-       REAL_T, intent(in) ::  den(DIMV(den),nmat+1)
-       REAL_T, intent(in) ::  xlo(SDIM)
-       REAL_T, intent(in) ::  dx(SDIM)
+       REAL_T, intent(out),target :: force(DIMV(force),nsolve)
+       REAL_T, pointer :: force_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(inout),target :: unew(DIMV(unew),nsolve)
+       REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: den(DIMV(den))
+       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in) :: xlo(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
        REAL_T ::  xsten(-3:3,SDIM)
 
        INTEGER_T i,j,k,dir
@@ -697,7 +732,7 @@ stop
         stop
        endif
        if ((level.lt.0).or.(level.gt.finest_level)) then
-        print *,"level invalid COMPUTE_NEG_MOM_FORCE"
+        print *,"level invalid fort_compute_neg_mom_force"
         stop
        endif
 
@@ -734,9 +769,12 @@ stop
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(force),1,-1,42)
-       call checkbound(fablo,fabhi,DIMS(unew),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(den),1,-1,1330)
+       force_ptr=>force
+       call checkbound_array(fablo,fabhi,force_ptr,1,-1,42)
+       unew_ptr=>unew
+       call checkbound_array(fablo,fabhi,unew_ptr,1,-1,1330)
+       den_ptr=>den
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1,1330)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -754,8 +792,10 @@ stop
         call get_local_neg_mom_force(xlocal,prev_time,cur_time, &
           dt,update_state,local_neg_force)
 
-        inverseden=den(D_DECL(i,j,k),1)
-        if (inverseden.le.zero) then
+        inverseden=den(D_DECL(i,j,k))
+        if (inverseden.gt.zero) then
+         ! do nothing
+        else
          print *,"inverseden invalid"
          stop
         endif
@@ -779,10 +819,10 @@ stop
        enddo
 
        return
-       end subroutine FORT_COMPUTE_NEG_MOM_FORCE
+       end subroutine fort_compute_neg_mom_force
 
 
-       subroutine FORT_THERMAL_OFFSET_FORCE( &
+       subroutine fort_thermal_offset_force( &
          override_density, &
          force,DIMS(force), &
          thermal,DIMS(thermal), &
@@ -802,7 +842,8 @@ stop
          rzflag, &
          nmat, &
          nstate, &
-         nsolve)
+         nsolve) &
+       bind(c,name='fort_thermal_offset_force')
 
        use probf90_module
        use global_utility_module 
@@ -832,13 +873,20 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(den)
        INTEGER_T, intent(in) :: DIMDEC(DEDT)
 
-       REAL_T, intent(inout) :: force(DIMV(force))
-       REAL_T, intent(in) :: thermal(DIMV(thermal))
-       REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T, intent(in) :: uold(DIMV(uold),nsolve)
-       REAL_T, intent(out) :: snew(DIMV(snew),nstate)
-       REAL_T, intent(in) :: den(DIMV(den),nmat+1)
-       REAL_T, intent(in) :: DEDT(DIMV(DEDT),nmat+1)
+       REAL_T, intent(inout),target :: force(DIMV(force))
+       REAL_T, pointer :: force_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: thermal(DIMV(thermal))
+       REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
+       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: uold(DIMV(uold),nsolve)
+       REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(out),target :: snew(DIMV(snew),nstate)
+       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: den(DIMV(den))
+       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: DEDT(DIMV(DEDT))
+       REAL_T, pointer :: DEDT_ptr(D_DECL(:,:,:))
        REAL_T, intent(in) :: xlo(SDIM)
        REAL_T, intent(in) :: dx(SDIM)
        REAL_T :: xsten(-3:3,SDIM)
@@ -905,13 +953,20 @@ stop
         stop
        endif
 
-       call checkbound(fablo,fabhi,DIMS(force),1,-1,42)
-       call checkbound(fablo,fabhi,DIMS(thermal),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(recon),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(uold),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(snew),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(den),1,-1,1330)
-       call checkbound(fablo,fabhi,DIMS(DEDT),1,-1,1330)
+       force_ptr=>force
+       call checkbound_array1(fablo,fabhi,force_ptr,1,-1,42)
+       thermal_ptr=>thermal
+       call checkbound_array1(fablo,fabhi,thermal_ptr,1,-1,1330)
+       recon_ptr=>recon
+       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1330)
+       uold_ptr=>uold
+       call checkbound_array(fablo,fabhi,uold_ptr,1,-1,1330)
+       snew_ptr=>snew
+       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1330)
+       den_ptr=>den
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1,1330)
+       DEDT_ptr=>DEDT
+       call checkbound_array1(fablo,fabhi,DEDT_ptr,1,-1,1330)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -924,16 +979,20 @@ stop
         temp_n=thermal(D_DECL(i,j,k))
         temp_np1=thermal(D_DECL(i,j,k))
 
-        inverseden=den(D_DECL(i,j,k),1)
-        over_rhocv=DEDT(D_DECL(i,j,k),1)
+        inverseden=den(D_DECL(i,j,k))
+        over_rhocv=DEDT(D_DECL(i,j,k))
 
-        if (inverseden.le.zero) then
-          print *,"inverseden invalid"
-          stop
+        if (inverseden.gt.zero) then
+         ! do nothing
+        else
+         print *,"inverseden invalid"
+         stop
         endif
-        if (over_rhocv.le.zero) then
-          print *,"over_rhocv invalid"
-          stop
+        if (over_rhocv.gt.zero) then
+         ! do nothing 
+        else
+         print *,"over_rhocv invalid"
+         stop
         endif
 
         if ((override_density.eq.0).or. & ! Drho/DT=-divu rho
@@ -999,7 +1058,7 @@ stop
        enddo
 
        return
-       end subroutine FORT_THERMAL_OFFSET_FORCE
+       end subroutine fort_thermal_offset_force
 
 
 
