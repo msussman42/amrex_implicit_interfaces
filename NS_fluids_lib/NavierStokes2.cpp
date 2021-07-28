@@ -4725,6 +4725,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   //ngrow=1
  getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
+ int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
+ if (ncomp_visc!=3*nmat)
+  amrex::Error("visc_data invalid ncomp");
+
  getStateCONDUCTIVITY_ALL(CELL_CONDUCTIVITY_MATERIAL_MF,1);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -5088,73 +5093,6 @@ void NavierStokes::make_physics_vars(int project_option) {
 
  resize_levelsetLO(2,LEVELPC_MF);
 
- int ngrow_visc=1;
- MultiFab* modvisc=new MultiFab(grids,dmap,nmat,ngrow_visc,
-	MFInfo().SetTag("modvisc"),FArrayBoxFactory());
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(tempmf.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(tempmf,use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-  int bfact=parent->Space_blockingFactor(level);
-
-  const Real* xlo = grid_loc[gridno].lo();
-
-  FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
-  FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
-  FArrayBox& viscstatefab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-
-  FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-
-  FArrayBox& modviscfab=(*modvisc)[mfi];
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   // declared in: LEVELSET_3D.F90
-   // visc_coef passed as a parameter so that Guibo can
-   // calculate the dynamic contact angle condition. 
-  FIX ME this routine is not needed.
-  fort_build_modvisc(
-   &ngrow_visc,
-   &cur_time_slab,
-   problo,probhi,
-   &visc_coef,
-   &nten,
-   xlo,dx,
-   slopefab.dataPtr(),
-   ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
-   denstatefab.dataPtr(), // denstate unused for now.
-   ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
-   viscstatefab.dataPtr(),
-   ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
-   levelpcfab.dataPtr(),
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-   modviscfab.dataPtr(),ARLIM(modviscfab.loVect()),ARLIM(modviscfab.hiVect()),
-   tilelo,tilehi,
-   fablo,fabhi,
-   &bfact,
-   &nmat,
-   &level,&finest_level);
- }  // mfi
-} // omp
- ns_reconcile_d_num(145);
-
  Vector< Real > local_curv_min;
  Vector< Real > local_curv_max;
  local_curv_min.resize(thread_class::nthreads);
@@ -5215,6 +5153,8 @@ void NavierStokes::make_physics_vars(int project_option) {
    FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
    FArrayBox& viscstatefab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+   if (viscstatefab.nComp()!=ncomp_visc)
+    amrex::Error("viscstatefab.nComp()!=ncomp_visc");
 
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
@@ -5239,7 +5179,6 @@ void NavierStokes::make_physics_vars(int project_option) {
 
    FArrayBox& vofFfab=(*vofF)[mfi];
    FArrayBox& massFfab=(*massF)[mfi];
-   FArrayBox& modviscfab=(*modvisc)[mfi];
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -5305,7 +5244,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     mom_denfab.dataPtr(),
     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
-    viscstatefab.dataPtr(),
+    viscstatefab.dataPtr(), //3*nmat components
     ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
     solxfab.dataPtr(),
     ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
@@ -5324,7 +5263,6 @@ void NavierStokes::make_physics_vars(int project_option) {
     vofCfab.dataPtr(),ARLIM(vofCfab.loVect()),ARLIM(vofCfab.hiVect()),
     vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
     massFfab.dataPtr(),ARLIM(massFfab.loVect()),ARLIM(massFfab.hiVect()),
-    modviscfab.dataPtr(),ARLIM(modviscfab.loVect()),ARLIM(modviscfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     presbc.dataPtr(), 
@@ -5398,7 +5336,6 @@ void NavierStokes::make_physics_vars(int project_option) {
  delete vofC;
  delete vofF;
  delete massF;
- delete modvisc;
  
 } // end subroutine make_physics_vars
 
