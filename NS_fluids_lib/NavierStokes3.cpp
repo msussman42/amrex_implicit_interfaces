@@ -7360,9 +7360,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  debug_ngrow(CELL_VISC_MF,1,47);
  debug_ngrow(CELL_DEN_MF,1,47);
- if (localMF[CELL_VISC_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_VISC_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
  int bcsize=AMREX_SPACEDIM*2*nsolve*grids.size();
@@ -7548,7 +7548,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // BUILDFACEWT is defined in LEVELSET_3D.F90
+   // BUILDFACEWT is declared in LEVELSET_3D.F90
    fort_buildfacewt(
     &facewt_iter,
     &level,
