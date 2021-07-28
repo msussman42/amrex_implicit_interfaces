@@ -5,7 +5,6 @@
 #    define FORT_CURVSTRIP curvstrip
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
-#    define FORT_BUILDFACEWT buildfacewt
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
@@ -23,7 +22,6 @@
 #    define FORT_CURVSTRIP CURVSTRIP
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
-#    define FORT_BUILDFACEWT BUILDFACEWT
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
 #    define FORT_PURGEFLOTSAM PURGEFLOTSAM
 #    define FORT_INITSUPERELASTIC INITSUPERELASTIC
@@ -41,7 +39,6 @@
 #    define FORT_CURVSTRIP curvstrip
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
-#    define FORT_BUILDFACEWT buildfacewt
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
@@ -57,7 +54,6 @@
 #    define FORT_CURVSTRIP curvstrip_
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
-#    define FORT_BUILDFACEWT buildfacewt_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
 #    define FORT_PURGEFLOTSAM purgeflotsam_
 #    define FORT_INITRECALESCE initrecalesce_
@@ -605,7 +601,7 @@ namespace amrex{
         int* nmat,
         int* level,int* finest_level);
 
-      void FORT_BUILDFACEWT(
+      void fort_buildfacewt(
         int* facewt_iter,
         int* level,
         int* finest_level,

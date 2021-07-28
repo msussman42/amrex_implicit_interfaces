@@ -9726,6 +9726,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     ! declared in: GODUNOV_3D.F90
     FORT_TENSORHEAT(
      &massface_index,
      &vofface_index,
