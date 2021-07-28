@@ -13993,7 +13993,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
      amrex::Error("coefffab.nComp() invalid");
     }
    } else if (adjust_temperature==-1) {
-    if (coefffab.nComp()<1) {
+    if (coefffab.nComp()!=1) {
      std::cout << "coefffab.nComp()= " << coefffab.nComp() << '\n';
      std::cout << "nsolve= " << nsolve << '\n';
      std::cout << "adjust_temperature= " << adjust_temperature << '\n';
