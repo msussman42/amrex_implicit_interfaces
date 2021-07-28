@@ -7549,7 +7549,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // BUILDFACEWT is defined in LEVELSET_3D.F90
-   FORT_BUILDFACEWT(
+   fort_buildfacewt(
     &facewt_iter,
     &level,
     &finest_level,

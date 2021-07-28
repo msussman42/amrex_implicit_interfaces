@@ -4839,14 +4839,14 @@ void NavierStokes::allocate_physics_vars() {
  } else
   amrex::Error("localMF_grow[SWEPT_CROSSING_MF] invalid");
 
- new_localMF_if_not_exist(CELL_DEDT_MF,nmat+1,1,-1); // ncomp,ngrow,dir
- new_localMF_if_not_exist(CELL_DEN_MF,nmat+1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_DEDT_MF,1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_DEN_MF,1,1,-1); // ncomp,ngrow,dir
   // coeff_avg,padvect_avg 
  new_localMF_if_not_exist(CELL_SOUND_MF,2,0,-1); // ncomp,ngrow,dir
 
   // tessellating volume fractions.
  new_localMF_if_not_exist(CELL_VOF_MF,nmat,1,-1); // ncomp,ngrow,dir
- new_localMF_if_not_exist(CELL_VISC_MF,nmat+1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_VISC_MF,1,1,-1); // ncomp,ngrow,dir
 
 } // allocate_physics_vars
 
@@ -5184,7 +5184,8 @@ void NavierStokes::make_physics_vars(int project_option) {
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
+ 
+   FIX ME cenden cenvisc  cenDeDT
     // in: LEVELSET_3D.F90
    fort_init_physics_vars(
     &tid_current,

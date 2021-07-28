@@ -8157,14 +8157,14 @@ stop
       REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
       REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: cenDeDT(DIMV(cenDeDT),nmat+1)
-      REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: cenden(DIMV(cenden),nmat+1)
-      REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenDeDT(DIMV(cenDeDT))
+      REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: cenden(DIMV(cenden))
+      REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
       REAL_T, intent(out), target :: cenvof(DIMV(cenvof),nmat)  
       REAL_T, pointer :: cenvof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: cenvisc(DIMV(cenvisc),nmat+1)
-      REAL_T, pointer :: cenvisc_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: cenvisc(DIMV(cenvisc))
+      REAL_T, pointer :: cenvisc_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: vol(DIMV(vol))
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat)
@@ -8464,10 +8464,10 @@ stop
       call checkbound_array(fablo,fabhi,yface_ptr,0,1,214)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,215)
 
-      call checkbound_array(fablo,fabhi,cenDeDT_ptr,1,-1,216)
-      call checkbound_array(fablo,fabhi,cenden_ptr,1,-1,217)
+      call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1,216)
+      call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1,217)
       call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1,217)
-      call checkbound_array(fablo,fabhi,cenvisc_ptr,1,-1,218)
+      call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1,218)
 
       call checkbound_array(fablo,fabhi,slope_ptr,1,-1,219)
       call checkbound_array(fablo,fabhi,curv_ptr,1,-1,221)
@@ -10502,8 +10502,6 @@ stop
           stop
          endif
 
-         cenden(D_DECL(i,j,k),im+1)=one/den 
-
          localvisc(im)=viscstate(D_DECL(i,j,k),im)
          if (localvisc(im).lt.zero) then
           print *,"viscstate gone negative"
@@ -10518,8 +10516,6 @@ stop
           print *,"localvisc NaN"
           stop
          endif
-         FIX ME
-         cenvisc(D_DECL(i,j,k),im+1)=localvisc(im)
 
          one_over_mu=one/(localvisc(im)+VISCINVTOL)
          visc_total=visc_total+one_over_mu*volmat(im)
@@ -10558,7 +10554,6 @@ stop
           print *,"DeDT must be positive"
           stop
          endif
-         cenDeDT(D_DECL(i,j,k),im+1)=one/(den*DeDT)
 
          delta_mass=den*volmat(im)
          mass_total=mass_total+delta_mass
@@ -10579,13 +10574,13 @@ stop
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
-        cenden(D_DECL(i,j,k),1)=voltotal/mass_total 
-        cenDeDT(D_DECL(i,j,k),1)=voltotal/DeDT_total
+        cenden(D_DECL(i,j,k))=voltotal/mass_total 
+        cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
         if (null_viscosity.eq.1) then
-         cenvisc(D_DECL(i,j,k),1)=zero
+         cenvisc(D_DECL(i,j,k))=zero
         else if (null_viscosity.eq.0) then
-         cenvisc(D_DECL(i,j,k),1)= &
+         cenvisc(D_DECL(i,j,k))= &
           one/((visc_total/voltotal)+VISCINVTOL)  ! mu
         else
          print *,"null_viscosity invalid"
@@ -16117,7 +16112,7 @@ stop
       !   NavierStokes::multiphase_project
       !   NavierStokes::diffusion_heatingALL 
       ! mask=1 at fine-fine boundaries
-      subroutine FORT_BUILDFACEWT( &
+      subroutine fort_buildfacewt( &
        facewt_iter, &
        level, &
        finest_level, &
@@ -16147,7 +16142,9 @@ stop
        presbc_arr, &
        visc_coef, &
        constant_viscosity, &
-       project_option)
+       project_option) &
+      bind(c,name='fort_buildfacewt')
+
       use global_utility_module
       use probcommon_module
       use probf90_module
@@ -16184,17 +16181,28 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(zface)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(inout) :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
-      REAL_T, intent(in) :: cenden(DIMV(cenden),nmat+1) 
-      REAL_T, intent(in) :: cenvisc(DIMV(cenvisc),nmat+1) 
-      REAL_T, intent(out) :: xfwt(DIMV(xfwt),nsolve)
-      REAL_T, intent(out) :: yfwt(DIMV(yfwt),nsolve)
-      REAL_T, intent(out) :: zfwt(DIMV(zfwt),nsolve)
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
+      REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: cenden(DIMV(cenden)) 
+      REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: cenvisc(DIMV(cenvisc)) 
+      REAL_T, pointer :: cenvisc_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: xfwt(DIMV(xfwt),nsolve)
+      REAL_T, pointer :: xfwt_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: yfwt(DIMV(yfwt),nsolve)
+      REAL_T, pointer :: yfwt_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: zfwt(DIMV(zfwt),nsolve)
+      REAL_T, pointer :: zfwt_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: yface(DIMV(yface),ncphys)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2,nsolve)
   
       INTEGER_T i,j,k
@@ -16256,17 +16264,28 @@ stop
        stop
       endif 
 
-      call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,241)
-      call checkbound(fablo,fabhi,DIMS(recon),1,-1,241)
-      call checkbound(fablo,fabhi,DIMS(cenden),1,-1,241)
-      call checkbound(fablo,fabhi,DIMS(cenvisc),1,-1,241)
-      call checkbound(fablo,fabhi,DIMS(xfwt),0,0,242)
-      call checkbound(fablo,fabhi,DIMS(yfwt),0,1,242)
-      call checkbound(fablo,fabhi,DIMS(zfwt),0,SDIM-1,242)
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,244)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,244)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,244)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,246)
+      offdiagcheck_ptr=>offdiag_check
+      call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,241)
+      recon_ptr=>recon
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,241)
+      cenden_ptr=>cenden
+      call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1,241)
+      cenvisc_ptr=>cenvisc
+      call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1,241)
+      xfwt_ptr=>xfwt
+      yfwt_ptr=>yfwt
+      zfwt_ptr=>zfwt
+      call checkbound_array(fablo,fabhi,xfwt_ptr,0,0,242)
+      call checkbound_array(fablo,fabhi,yfwt_ptr,0,1,242)
+      call checkbound_array(fablo,fabhi,zfwt_ptr,0,SDIM-1,242)
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,244)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,244)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,244)
+      mask_ptr=>mask
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,246)
 
       if (facewt_iter.eq.0) then
 
@@ -16282,7 +16301,7 @@ stop
         else if ((dir.eq.2).and.(SDIM.eq.3)) then
          kk=1
         else
-         print *,"dir out of range in BUILDFACEWT"
+         print *,"dir out of range in fort_buildfacewt"
          stop
         endif 
   
@@ -16516,8 +16535,7 @@ stop
       endif
 
       return
-      end subroutine FORT_BUILDFACEWT
-
+      end subroutine fort_buildfacewt
 
 
        ! solid: velx,vely,velz,dist  (dist<0 in solid)
