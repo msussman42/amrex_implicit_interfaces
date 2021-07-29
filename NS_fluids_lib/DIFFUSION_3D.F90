@@ -306,7 +306,7 @@ stop
        tensor_ptr=>tensor
        call checkbound_array(fablo,fabhi,tensor_ptr,0,-1,42)
        thermal_ptr=>thermal
-       call checkbound_array(fablo,fabhi,thermal_ptr,1,-1,1330)
+       call checkbound_array1(fablo,fabhi,thermal_ptr,1,-1,1330)
        recon_ptr=>recon
        call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1330)
        solxfab_ptr=>solxfab

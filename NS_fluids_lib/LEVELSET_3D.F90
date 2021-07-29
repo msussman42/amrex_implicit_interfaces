@@ -8019,6 +8019,7 @@ stop
        mom_den, &
        DIMS(mom_den), &
        viscstate,DIMS(viscstate), & ! 3 * nmat components
+       conductstate,DIMS(conductstate), & ! nmat components
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
@@ -8118,6 +8119,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(denstate)
       INTEGER_T, intent(in) :: DIMDEC(mom_den)
       INTEGER_T, intent(in) :: DIMDEC(viscstate)
+      INTEGER_T, intent(in) :: DIMDEC(conductstate)
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
       INTEGER_T, intent(in) :: DIMDEC(solyfab)
       INTEGER_T, intent(in) :: DIMDEC(solzfab)
@@ -8151,6 +8153,8 @@ stop
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: viscstate(DIMV(viscstate),3*nmat) 
       REAL_T, pointer :: viscstate_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: conductstate(DIMV(viscstate),nmat) 
+      REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
@@ -8202,8 +8206,7 @@ stop
       INTEGER_T im
       INTEGER_T nmax
       INTEGER_T vofcomp
-      REAL_T visc_total,heat_total
-      REAL_T spec_total(num_species_var+1) ! +1 to avoid 0 size 
+      REAL_T visc_total
       REAL_T DeDT,DeDT_total
 
       REAL_T volmat(nmat)
@@ -8250,6 +8253,8 @@ stop
       REAL_T spec_test
       REAL_T localvisc_plus(nmat)
       REAL_T localvisc_minus(nmat)
+      REAL_T localheatvisc_plus(nmat)
+      REAL_T localheatvisc_minus(nmat)
       INTEGER_T implus_majority,imminus_majority
 
       REAL_T local_face(ncphys)
@@ -8261,8 +8266,7 @@ stop
       REAL_T, dimension(:,:), allocatable :: comparemassface
       REAL_T, dimension(:,:), allocatable :: comparedenface
       INTEGER_T noslip_wall,velbclo,velbchi
-      INTEGER_T imspec,is_zero_visc,is_zero_heat
-      INTEGER_T is_zero_spec(num_species_var+1)
+      INTEGER_T imspec,is_zero_visc
       REAL_T solid_velocity
 
       REAL_T LSIDE(2)
@@ -8320,7 +8324,7 @@ stop
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T local_tessellate
 
-! INIT_PHYSICS_VARS code starts here:
+! fort_init_physics_vars code starts here:
 
       nhalf=3
 
@@ -8334,6 +8338,7 @@ stop
       denstate_ptr=>denstate
       mom_den_ptr=>mom_den
       viscstate_ptr=>viscstate
+      conductstate_ptr=>conductstate
       solxfab_ptr=>solxfab
       solyfab_ptr=>solyfab
       solzfab_ptr=>solzfab
@@ -8382,11 +8387,11 @@ stop
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_INIT_PHYSICS_VARS"
+       print *,"nparts invalid fort_init_physics_vars"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_INIT_PHYSICS_VARS"
+       print *,"nparts_def invalid fort_init_physics_vars"
        stop
       endif
 
@@ -8455,7 +8460,7 @@ stop
        stop
       endif
 
-      nmax=POLYGON_LIST_MAX ! in: INIT_PHYSICS_VARS
+      nmax=POLYGON_LIST_MAX ! in: fort_init_physics_vars
 
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,213)
       call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1,213)
@@ -8474,6 +8479,7 @@ stop
       call checkbound_array(fablo,fabhi,denstate_ptr,1,-1,223)
       call checkbound_array(fablo,fabhi,mom_den_ptr,1,-1,223)
       call checkbound_array(fablo,fabhi,viscstate_ptr,1,-1,224)
+      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,224)
 
       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,225)
       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,225)
@@ -8547,14 +8553,14 @@ stop
        if (fort_tempconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"INIT_PHYSICS_VAR:temperature must be positive"
+        print *,"fort_init_physics_vars:temperature must be positive"
         print *,"im,fort_tempconst : ",im,fort_tempconst(im)
         stop
        endif
        if (fort_energyconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"energy must be positive in FORT_INIT_PHYSICS_VARS"
+        print *,"energy must be positive in fort_init_physics_vars"
         print *,"im= ",im
         print *,"fort_energyconst(im)= ",fort_energyconst(im)
         stop
@@ -8691,7 +8697,7 @@ stop
           stop
          endif
 
-          ! in: FORT_INIT_PHYSICS_VARS 
+          ! in: fort_init_physics_vars
          local_face(icemask_index+1)=one
          local_face(curv_index+1)=zero
          local_face(pforce_index+1)=zero
@@ -8815,7 +8821,7 @@ stop
          if ((time.ge.zero).and.(dt.ge.zero)) then
           ! do nothing
          else
-          print *,"FORT_INIT_PHYSICS_VARS:"
+          print *,"fort_init_physics_vars:"
           print *,"time or dt invalid: time,dt ",time,dt
           stop
          endif
@@ -8943,7 +8949,7 @@ stop
              stop
             endif 
            else
-            print *,"in FORT_INIT_PHYSICS_VARS"
+            print *,"in fort_init_physics_vars"
             print *,"is_solid_face invalid(2) is_solid_face= ",is_solid_face
             print *,"tid=",tid
             print *,"isweep=",isweep
@@ -9151,6 +9157,8 @@ stop
          do im=1,nmat
           localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
           localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
+          localheatvisc_plus(im)=conductstate(D_DECL(i,j,k),im)
+          localheatvisc_minus(im)=conductstate(D_DECL(im1,jm1,km1),im)
          enddo
 
          if (gradh.ne.zero) then
@@ -9264,8 +9272,8 @@ stop
 
           facevisc_local=zero  ! dirichlet cond for velocity at the solid.
 
-          local_plus=get_user_heatviscconst(implus_majority)
-          local_minus=get_user_heatviscconst(imminus_majority)
+          local_plus=localheatvisc_plus(implus_majority)
+          local_minus=localheatvisc_minus(imminus_majority)
           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
@@ -9311,8 +9319,8 @@ stop
                   localvisc_minus(imminus_majority), &
                   wtR,wtL,facevisc_local)
 
-          local_plus=get_user_heatviscconst(implus_majority)
-          local_minus=get_user_heatviscconst(imminus_majority)
+          local_plus=localheatvisc_plus(implus_majority)
+          local_minus=localheatvisc_minus(imminus_majority)
           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
@@ -9447,8 +9455,8 @@ stop
                   localvisc_minus(imminus_majority), &
                   wtR,wtL,facevisc_local)
 
-           local_plus=get_user_heatviscconst(implus_majority)
-           local_minus=get_user_heatviscconst(imminus_majority)
+           local_plus=localheatvisc_plus(implus_majority)
+           local_minus=localheatvisc_minus(imminus_majority)
            call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
            do imspec=1,num_species_var
@@ -9474,18 +9482,22 @@ stop
 
            if (LSIDE(1).ge.LSIDE(2)) then
             visc1=localvisc_minus(im_main)
+            heat1=localheatvisc_minus(im_main)
             visc2=localvisc_plus(im_main_opp)
+            heat2=localheatvisc_plus(im_main_opp)
            else if (LSIDE(1).le.LSIDE(2)) then
             visc1=localvisc_plus(im_main)
+            heat1=localheatvisc_plus(im_main)
             visc2=localvisc_minus(im_main_opp)
+            heat2=localheatvisc_minus(im_main_opp)
            else
             print *,"LSIDE bust"
             stop
            endif
 
-           heat1=get_user_heatviscconst(im_main) 
-           heat2=get_user_heatviscconst(im_main_opp) 
-           if ((heat1.lt.zero).or.(heat2.lt.zero)) then
+           if ((heat1.ge.zero).and.(heat2.ge.zero)) then
+            ! do nothing
+           else
             print *,"heat1 or heat2 invalid"
             stop
            endif
@@ -9616,139 +9628,91 @@ stop
            stop
           endif
 
-          if (1.eq.1) then ! this code will soon be obsolete
+           ! we always use the volume fractions for the viscosity
+           ! and density coefficients.
            ! mu_face=sum F_i/(sum F_i/mu_i)
-           voltotal=zero
-           visc_total=zero
-           heat_total=zero
-           do im=1,nmat
-            FFACE(im)=zero
-           enddo
-           do imspec=1,num_species_var
-            spec_total(imspec)=zero
-           enddo
-           is_zero_visc=0
-           is_zero_heat=0
-           do imspec=1,num_species_var
-            is_zero_spec(imspec)=0
-           enddo
-           do iside=0,1
-           do im=1,nmat
-            voldepart=local_face(vofface_index+2*(im-1)+iside+1)
-            voltotal=voltotal+voldepart
-            FFACE(im)=FFACE(im)+voldepart
-            heat1=get_user_heatviscconst(im)
-            do imspec=1,num_species_var
-             spec1(imspec)=fort_speciesviscconst((imspec-1)*nmat+im)
-            enddo
-            if (iside.eq.0) then
-             visc1=localvisc_minus(im)
-            else if (iside.eq.1) then
-             visc1=localvisc_plus(im)
-            else
-             print *,"iside invalid"
-             stop
-            endif
-            if (voldepart.gt.zero) then
-             if (visc1.eq.zero) then
-              is_zero_visc=1
-             else if (visc1.gt.zero) then
-              visc_total=visc_total+voldepart/visc1
-             else
-              print *,"visc1 invalid"
-              stop
-             endif
-             if (heat1.eq.zero) then
-              is_zero_heat=1
-             else if (heat1.gt.zero) then
-              heat_total=heat_total+voldepart/heat1
-             else
-              print *,"heat1 invalid"
-              stop
-             endif
-             do imspec=1,num_species_var
-              if (spec1(imspec).eq.zero) then
-               is_zero_spec(imspec)=1
-              else if (spec1(imspec).gt.zero) then
-               spec_total(imspec)=spec_total(imspec)+voldepart/spec1(imspec)
-              else
-               print *,"spec1 invalid"
-               stop
-              endif
-             enddo ! imspec
-            else if (voldepart.eq.zero) then
-             ! do nothing
-            else 
-             print *,"voldepart invalid"
-             stop
-            endif   
-           enddo ! im=1..nmat
-           enddo ! iside=0..1
-
-           if (voltotal.gt.zero) then
-            do im=1,nmat
-             FFACE(im)=FFACE(im)/voltotal
-            enddo
+          voltotal=zero
+          visc_total=zero
+          do im=1,nmat
+           FFACE(im)=zero
+          enddo
+          is_zero_visc=0
+          do iside=0,1
+          do im=1,nmat
+           voldepart=local_face(vofface_index+2*(im-1)+iside+1)
+           voltotal=voltotal+voldepart
+           FFACE(im)=FFACE(im)+voldepart
+           if (iside.eq.0) then
+            visc1=localvisc_minus(im)
+           else if (iside.eq.1) then
+            visc1=localvisc_plus(im)
            else
-            print *,"voltotal invalid voltotal= ",voltotal
+            print *,"iside invalid"
             stop
            endif
-
-           if (1.eq.1) then ! use VFRAC for viscosity (soon obsolete)
-            if (is_zero_visc.eq.0) then
-             facevisc_local=voltotal/visc_total
-            else if (is_zero_visc.eq.1) then
-             facevisc_local=zero
+           if (voldepart.gt.zero) then
+            if (visc1.eq.zero) then
+             is_zero_visc=1
+            else if (visc1.gt.zero) then
+             visc_total=visc_total+voldepart/visc1
             else
-             print *,"is_zero_visc invalid"
+             print *,"visc1 invalid"
              stop
             endif
-           else if (1.eq.0) then ! use LS
+           else if (voldepart.eq.zero) then
             ! do nothing
-           else
-            print *,"corrupt"
+           else 
+            print *,"voldepart invalid"
             stop
-           endif
+           endif   
+          enddo ! im=1..nmat
+          enddo ! iside=0..1
 
+          if (voltotal.gt.zero) then
            do im=1,nmat
-            do im_opp=im+1,nmat 
- 
-             if ((FFACE(im).gt.VOFTOL).and. &
-                 (FFACE(im_opp).gt.VOFTOL)) then
-              call get_iten(im,im_opp,iten,nmat)
-
-              if (1.eq.1) then ! soon obsolete
-               if (visc_interface(iten).eq.zero) then
-                ! do nothing
-               else if (visc_interface(iten).gt.zero) then
-                facevisc_local=visc_interface(iten)
-               else
-                print *,"visc_interface invalid"
-                stop
-               endif
-              else if (1.eq.0) then
-               ! do nothing
-              else
-               print *,"corrupt"
-               stop
-              endif
-
-             else if ((FFACE(im).gt.-VOFTOL).and. &
-                      (FFACE(im_opp).gt.-VOFTOL)) then
-              ! do nothing
-             else
-              print *,"FFACE invalid"
-              stop
-             endif
-
-            enddo ! im_opp=1..nmat
-           enddo ! im=1..nmat
-
+            FFACE(im)=FFACE(im)/voltotal
+           enddo
           else
-           print *,"corruption"
+           print *,"voltotal invalid voltotal= ",voltotal
            stop
           endif
-  
+
+          if (is_zero_visc.eq.0) then
+           facevisc_local=voltotal/visc_total
+          else if (is_zero_visc.eq.1) then
+           facevisc_local=zero
+          else
+           print *,"is_zero_visc invalid"
+           stop
+          endif
+
+          do im=1,nmat
+           do im_opp=im+1,nmat 
+ 
+            if ((FFACE(im).gt.VOFTOL).and. &
+                (FFACE(im_opp).gt.VOFTOL)) then
+             call get_iten(im,im_opp,iten,nmat)
+
+             if (visc_interface(iten).eq.zero) then
+              ! do nothing
+             else if (visc_interface(iten).gt.zero) then
+              facevisc_local=visc_interface(iten)
+             else
+              print *,"visc_interface invalid"
+              stop
+             endif
+
+            else if ((FFACE(im).gt.-VOFTOL).and. &
+                     (FFACE(im_opp).gt.-VOFTOL)) then
+             ! do nothing
+            else
+             print *,"FFACE invalid"
+             stop
+            endif
+
+           enddo ! im_opp=1..nmat
+          enddo ! im=1..nmat
+
          else
           print *,"solid_present_flag bust"
           stop
@@ -10357,7 +10321,7 @@ stop
                endif
 
               else if (project_option.eq.11) then ! FSI_material_exists last
-               print *,"FORT_INIT_PHYSICS_VARS should not be called here"
+               print *,"fort_init_physics_vars should not be called here"
                stop
               else
                print *,"project_option invalid"
@@ -10618,7 +10582,7 @@ stop
       endif
  
       return
-      end subroutine FORT_INIT_PHYSICS_VARS
+      end subroutine fort_init_physics_vars
 
 
       subroutine fort_build_semirefinevof( &
@@ -16268,7 +16232,7 @@ stop
        stop
       endif 
 
-      offdiagcheck_ptr=>offdiag_check
+      offdiagcheck_ptr=>offdiagcheck
       call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,241)
       recon_ptr=>recon
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,241)

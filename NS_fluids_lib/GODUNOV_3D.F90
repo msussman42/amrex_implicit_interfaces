@@ -12712,7 +12712,8 @@ stop
        bfact, &
        level, &
        dt,irz, &
-       nmat,nden)
+       nmat,nden) &
+      bind(c,name='fort_visctensorheat')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -13130,7 +13131,8 @@ stop
        bfact, &
        level, &
        finest_level, &
-       dt,time)
+       dt,time) &
+      bind(c,name='fort_heatsource')
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -13164,12 +13166,12 @@ stop
       REAL_T, intent(in),target :: lsfab(DIMV(lsfab),nmat)
       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, pointer :: DIMS(recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),DIMS(target :: vol(DIMV(vol))
-      REAL_T, pointer :: DIMS(vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in) DIMS(:: dt,time
-                         DIMS(
-      REAL_T xsten(-3:3,SDIMS(DIM)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: dt,time
+                         
+      REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_cell(SDIM)
       INTEGER_T nhalf
       REAL_T LS(nmat)
@@ -17517,7 +17519,8 @@ stop
        heatz,DIMS(heatz), &
        areax,DIMS(areax), &
        areay,DIMS(areay), &
-       areaz,DIMS(areaz) )
+       areaz,DIMS(areaz) ) &
+      bind(c,name='fort_heatsource_face')
 
       use probf90_module
       use global_utility_module

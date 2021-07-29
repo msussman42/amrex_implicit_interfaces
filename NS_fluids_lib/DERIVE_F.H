@@ -203,6 +203,20 @@ extern "C" {
       const int* bcrec,int* ngrow,
       int* ncompvisc);
 
+     void fort_derconductivity(
+      int* level,
+      int* finest_level,
+      int* fortran_im,
+      int* nmat,
+      Real* dt,
+      Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
+      Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),
+      const int* tilelo, const int* tilehi,
+      const int* fablo, const int* fabhi,
+      int* bfact,
+      Real* time,
+      const Real* dx, const Real* xlo,
+      int* ngrow);
 
      void FORT_DERTURBVISC(
       int* level,

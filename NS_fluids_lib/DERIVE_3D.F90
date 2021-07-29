@@ -721,7 +721,8 @@ stop
        enddo
       else if (is_rigid(nmat,im_parm).eq.0) then
 
-       call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,321)
+       vel_ptr=>vel
+       call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,321)
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
@@ -989,6 +990,126 @@ stop
       end subroutine fort_derviscosity
 
 
+       ! called from getStateCONDUCTIVITY
+      subroutine fort_derconductivity( &
+        level, &
+        finest_level, &
+        im_parm, & ! =1..nmat
+        nmat, &
+        dt, &
+        conduct,DIMS(conduct), &
+        eosdata,DIMS(eosdata), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        time, &
+        dx,xlo, &
+        ngrow) &
+      bind(c,name='fort_derconductivity')
+
+      use global_utility_module
+      use probf90_module
+      use derive_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: im_parm !=1..nmat
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(conduct)
+      INTEGER_T, intent(in) :: DIMDEC(eosdata)
+      INTEGER_T, intent(in) :: ngrow
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
+      REAL_T, intent(out), target :: conduct(DIMV(conduct),nmat) 
+      REAL_T, pointer :: conduct_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
+              nmat*num_state_material)
+      REAL_T, pointer :: eosdata_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T i,j,k
+      INTEGER_T dir
+      INTEGER_T flagcomp
+      REAL_T density,temperature
+      REAL_T thermal_k
+      REAL_T xvec(SDIM)
+      REAL_T xsten(-1:1,SDIM)
+      INTEGER_T nhalf
+
+      nhalf=1
+
+      conduct_ptr=>conduct
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid3"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid 31"
+       stop
+      endif
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((im_parm.lt.1).or.(im_parm.gt.nmat)) then
+       print *,"im_parm invalid3"
+       stop
+      endif
+
+      if (dt.gt.zero) then 
+       ! do nothing
+      else
+       print *,"dt invalid in fort_derconductivity"
+       stop
+      endif
+      if (time.ge.zero) then 
+       ! do nothing
+      else
+       print *,"time invalid in fort_derconductivity"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,conduct_ptr,ngrow,-1,316)
+      eosdata_ptr=>eosdata
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1,318)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xvec(dir)=xsten(0,dir)
+       enddo
+
+       flagcomp=(im_parm-1)*num_state_material+1
+       density=eosdata(D_DECL(i,j,k),flagcomp)
+       temperature=eosdata(D_DECL(i,j,k),flagcomp+1)
+
+       thermal_k=get_user_heatviscconst(im_parm)
+
+       if (is_in_probtype_list().eq.1) then
+        call SUB_THERMAL_K(xvec,time,density,temperature, &
+                thermal_k,im_parm)
+       endif
+
+       conduct(D_DECL(i,j,k),im_parm) = thermal_k
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_derconductivity
 
 ! if FENE-CR+Carreau,
 ! liquid viscosity=etaS+etaP ( 1+ (beta gamma_dot)^alpha )^((n-1)/alpha)
