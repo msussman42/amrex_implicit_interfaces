@@ -2246,8 +2246,8 @@ void NavierStokes::ADVECT_DIV() {
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in: NAVIERSTOKES_3D.F90
-  FORT_UPDATE_DIV(
+   // declared in: NAVIERSTOKES_3D.F90
+  fort_update_div(
    xlo,dx,
    &dt_slab,
    volumefab.dataPtr(),

@@ -13190,7 +13190,7 @@ END SUBROUTINE SIMP
       end subroutine FORT_ADVECTIVE_PRESSURE
 
        ! called from NavierStokes::ADVECT_DIV which is declared in MacProj.cpp
-      subroutine FORT_UPDATE_DIV( &
+      subroutine fort_update_div( &
         xlo,dx, &
         dt, &
         vol,DIMS(vol), &
@@ -13200,7 +13200,8 @@ END SUBROUTINE SIMP
         divnew,DIMS(divnew), &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
-        nmat)
+        nmat) &
+      bind(c,name='fort_update_div')
 
       use global_utility_module
       use probf90_module
@@ -13222,11 +13223,16 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(pnew)
       INTEGER_T, intent(in) :: DIMDEC(divnew)
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: csound(DIMV(csound),2) 
-      REAL_T, intent(in) :: mdot(DIMV(mdot)) 
-      REAL_T, intent(in) :: pnew(DIMV(pnew)) 
-      REAL_T, intent(out) :: divnew(DIMV(divnew)) 
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: csound(DIMV(csound),2) 
+      REAL_T, pointer :: csound_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: mdot(DIMV(mdot)) 
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: pnew(DIMV(pnew)) 
+      REAL_T, pointer :: pnew_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: divnew(DIMV(divnew)) 
+      REAL_T, pointer :: divnew_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
       REAL_T coeff_hold,compress_term,mdot_term
@@ -13246,11 +13252,16 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(csound),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(pnew),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(divnew),1,-1,44)
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
+      csound_ptr=>csound
+      call checkbound_array(fablo,fabhi,csound_ptr,0,-1,44)
+      mdot_ptr=>mdot
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
+      pnew_ptr=>pnew
+      call checkbound_array1(fablo,fabhi,pnew_ptr,1,-1,44)
+      divnew_ptr=>divnew
+      call checkbound_array1(fablo,fabhi,divnew_ptr,1,-1,44)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
