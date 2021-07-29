@@ -12694,7 +12694,7 @@ stop
 
 
          ! rhoinverse is 1/den
-      subroutine FORT_VISCTENSORHEAT( &
+      subroutine fort_visctensorheat( &
        ntensor, &
        nsolve, &
        nstate, &
@@ -12717,32 +12717,41 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T ntensor
-      INTEGER_T nsolve
-      INTEGER_T nmat
-      INTEGER_T nden,nstate,level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T DIMDEC(lsfab)
-      INTEGER_T DIMDEC(DeDTinverse)
-      INTEGER_T DIMDEC(vischeat)
-      INTEGER_T DIMDEC(xstress)
-      INTEGER_T DIMDEC(ystress)
-      INTEGER_T DIMDEC(zstress)
-      INTEGER_T DIMDEC(gradu)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T lsfab(DIMV(lsfab),nmat)
-      REAL_T DeDTinverse(DIMV(DeDTinverse),nmat+1)
-      REAL_T vischeat(DIMV(vischeat))
-      REAL_T xstress(DIMV(xstress),nsolve)
-      REAL_T ystress(DIMV(ystress),nsolve)
-      REAL_T zstress(DIMV(zstress),nsolve)
-      REAL_T gradu(DIMV(gradu),ntensor)
-      REAL_T dt
-      INTEGER_T irz
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden,nstate,level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(DeDTinverse)
+      INTEGER_T, intent(in) :: DIMDEC(vischeat)
+      INTEGER_T, intent(in) :: DIMDEC(xstress)
+      INTEGER_T, intent(in) :: DIMDEC(ystress)
+      INTEGER_T, intent(in) :: DIMDEC(zstress)
+      INTEGER_T, intent(in) :: DIMDEC(gradu)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in),target :: lsfab(DIMV(lsfab),nmat)
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: DeDTinverse(DIMV(DeDTinverse))
+      REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: vischeat(DIMV(vischeat))
+      REAL_T, pointer :: vischeat_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: xstress(DIMV(xstress),nsolve)
+      REAL_T, intent(in),target :: ystress(DIMV(ystress),nsolve)
+      REAL_T, intent(in),target :: zstress(DIMV(zstress),nsolve)
+      REAL_T, pointer :: xstress_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: ystress_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: zstress_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in),target :: gradu(DIMV(gradu),ntensor)
+      REAL_T, pointer :: gradu_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: irz
+
+      INTEGER_T :: i,j,k
       INTEGER_T veldir,dir
       REAL_T IEforce,Tforce
       REAL_T one_over_DeDT
@@ -12791,15 +12800,20 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,7)
-      call checkbound(fablo,fabhi, &
-       DIMS(DeDTinverse), &
-       0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(vischeat),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(xstress),0,0,7)
-      call checkbound(fablo,fabhi,DIMS(ystress),0,1,7)
-      call checkbound(fablo,fabhi,DIMS(zstress),0,SDIM-1,7)
-      call checkbound(fablo,fabhi,DIMS(gradu),0,-1,7)
+      lsfab_ptr=>lsfab
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,7)
+      DeDTinverse_ptr=>DeDTinverse
+      call checkbound_array1(fablo,fabhi,DeDTinverse_ptr,0,-1,7)
+      vischeat_ptr=>vischeat
+      call checkbound_array1(fablo,fabhi,vischeat_ptr,0,-1,7)
+      xstress_ptr=>xstress
+      ystress_ptr=>ystress
+      zstress_ptr=>zstress
+      call checkbound_array(fablo,fabhi,xstress_ptr,0,0,7)
+      call checkbound_array(fablo,fabhi,ystress_ptr,0,1,7)
+      call checkbound_array(fablo,fabhi,zstress_ptr,0,SDIM-1,7)
+      gradu_ptr=>gradu
+      call checkbound_array(fablo,fabhi,gradu_ptr,0,-1,7)
 
 ! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
@@ -12875,9 +12889,11 @@ stop
        enddo
        enddo
 
-       one_over_DeDT=DeDTinverse(D_DECL(i,j,k),1)  ! 1/(rho cv)
+       one_over_DeDT=DeDTinverse(D_DECL(i,j,k))  ! 1/(rho cv)
 
-       if (one_over_DeDT.le.zero) then
+       if (one_over_DeDT.gt.zero) then
+        ! do nothing
+       else
         print *,"one_over_DeDT invalid"
         stop
        endif
@@ -12890,7 +12906,7 @@ stop
       enddo ! i,j,k
  
       return
-      end subroutine FORT_VISCTENSORHEAT
+      end subroutine fort_visctensorheat
 
       ! rhoinverse is 1/den
       ! curv(nten*(SDIM+5)+3+dir)=mgoni_force(dir)=

@@ -9795,7 +9795,7 @@ void NavierStokes::make_marangoni_force() {
  debug_ngrow(SLOPE_RECON_MF,2,3);
  debug_ngrow(DIST_CURV_MF,1,3);
  debug_ngrow(CELL_DEN_MF,1,5);
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
   // mask=1 if not covered or if outside the domain.
