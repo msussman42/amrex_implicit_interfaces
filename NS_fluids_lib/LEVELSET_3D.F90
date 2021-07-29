@@ -10560,12 +10560,16 @@ stop
          DeDT_total=DeDT_total+DeDT*delta_mass
         enddo ! im=1..nmat
 
-        if (mass_total.le.zero) then
+        if (mass_total.gt.zero) then
+         ! do nothing
+        else
          print *,"mass_total invalid"
          stop
         endif
 
-        if (DeDT_total.le.zero) then
+        if (DeDT_total.gt.zero) then
+         ! do nothing
+        else
          print *,"DeDT_total must be positive"
          stop
         endif

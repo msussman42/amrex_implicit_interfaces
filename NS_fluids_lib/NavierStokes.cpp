@@ -9613,9 +9613,9 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  // 1. viscosity coefficient - 1..nmat
@@ -9701,7 +9701,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      amrex::Error("tenfab.nComp invalid");
 
     FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
-    if (DeDTinversefab.nComp()!=nmat+1)
+    if (DeDTinversefab.nComp()!=1)
      amrex::Error("DeDTinversefab.nComp() invalid");
 
     FArrayBox& gradufab=(*localMF[CELLTENSOR_MF])[mfi];
@@ -9726,8 +9726,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     ! declared in: GODUNOV_3D.F90
-    FORT_TENSORHEAT(
+     // declared in: GODUNOV_3D.F90
+    fort_tensorheat(
      &massface_index,
      &vofface_index,
      &ncphys,
@@ -13829,9 +13829,9 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
 

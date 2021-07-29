@@ -12421,7 +12421,7 @@ stop
 
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
-      subroutine FORT_TENSORHEAT( &
+      subroutine fort_tensorheat( &
        massface_index, &
        vofface_index, &
        ncphys, &
@@ -12443,7 +12443,8 @@ stop
        dt, &
        irz, &
        im_parm, &
-       nmat,nden)
+       nmat,nden) &
+      bind(c,name='fort_tensorheat')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -12468,14 +12469,22 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
-      REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
-      REAL_T, intent(inout) :: vischeat(DIMV(vischeat))
-      REAL_T, intent(in) :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
-      REAL_T, intent(in) :: gradu(DIMV(gradu),ntensor)
+      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in),target :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: lsfab(DIMV(lsfab),nmat*(1+SDIM))
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: DeDTinverse(DIMV(DeDTinverse))
+      REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: vischeat(DIMV(vischeat))
+      REAL_T, pointer :: vischeat_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: gradu(DIMV(gradu),ntensor)
+      REAL_T, pointer :: gradu_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: irz
       INTEGER_T :: i,j,k
@@ -12541,17 +12550,23 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,263)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,263)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,263)
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,263)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,263)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,263)
 
-      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,7)
-      call checkbound(fablo,fabhi, &
-       DIMS(DeDTinverse), &
-       0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(vischeat),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(tensor),0,-1,7)
-      call checkbound(fablo,fabhi,DIMS(gradu),0,-1,7)
+      lsfab_ptr=>lsfab
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,7)
+      DeDTinverse_ptr=>DeDTinverse
+      call checkbound_array1(fablo,fabhi,DeDTinverse_ptr,0,-1,7)
+      vischeat_ptr=>vischeat
+      call checkbound_array1(fablo,fabhi,vischeat_ptr,0,-1,7)
+      tensor_ptr=>tensor
+      call checkbound_array(fablo,fabhi,tensor_ptr,0,-1,7)
+      gradu_ptr=>gradu
+      call checkbound_array(fablo,fabhi,gradu_ptr,0,-1,7)
 
 ! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
@@ -12652,9 +12667,11 @@ stop
         enddo
         enddo
 
-        one_over_DeDT=DeDTinverse(D_DECL(i,j,k),1)  ! 1/(rho cv)
+        one_over_DeDT=DeDTinverse(D_DECL(i,j,k))  ! 1/(rho cv)
 
-        if (one_over_DeDT.le.zero) then
+        if (one_over_DeDT.gt.zero) then
+         ! do nothing
+        else
          print *,"one_over_DeDT invalid"
          stop
         endif
@@ -12673,7 +12690,7 @@ stop
       enddo ! i,j,k
  
       return
-      end subroutine FORT_TENSORHEAT
+      end subroutine fort_tensorheat
 
 
          ! rhoinverse is 1/den
@@ -16448,27 +16465,35 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areay)
       INTEGER_T, intent(in) :: DIMDEC(areaz)
       REAL_T, target, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
+      REAL_T, pointer :: STATEFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
       REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: swept(DIMV(swept),nmat)
+      REAL_T, pointer :: swept_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: T_fab(DIMV(T_fab),nmat)
+      REAL_T, pointer :: T_fab_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: TorY_fab(DIMV(TorY_fab),nmat)
+      REAL_T, pointer :: TorY_fab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(out) :: Snew(DIMV(Snew),nstate)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
 
       ! 1/(rho cv) (cv=DeDT)
-      REAL_T, target, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  
+      REAL_T, target, intent(in) :: DeDT(DIMV(DeDT))  
+      REAL_T, pointer :: DeDT_ptr(D_DECL(:,:,:))
 
       ! 1/den (i.e. den actually stores 1/den)
-      REAL_T, target, intent(in) :: den(DIMV(den),nmat+1)  
+      REAL_T, target, intent(in) :: den(DIMV(den))  
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
 
        ! alphanovolume or outer_iter_pressure
       REAL_T, target, intent(out) :: coeff(DIMV(coeff))  
       REAL_T, pointer :: coeff_ptr(D_DECL(:,:,:))
 
       REAL_T, target, intent(in) :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
        ! thermal conductivity
       REAL_T, target, intent(out) :: heatx(DIMV(heatx))
       REAL_T, pointer :: heatx_ptr(D_DECL(:,:,:))
@@ -16480,6 +16505,9 @@ stop
       REAL_T, target, intent(in) :: areax(DIMV(areax))
       REAL_T, target, intent(in) :: areay(DIMV(areay))
       REAL_T, target, intent(in) :: areaz(DIMV(areaz))
+      REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
@@ -16650,25 +16678,37 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,STATEFAB,1,-1,234)
+      STATEFAB_ptr=>STATEFAB
+      call checkbound_array(fablo,fabhi,STATEFAB_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1,234)
 
-      call checkbound_array(fablo,fabhi,swept,0,-1,234)
+      swept_ptr=>swept
+      call checkbound_array(fablo,fabhi,swept_ptr,0,-1,234)
 
-      call checkbound_array(fablo,fabhi,LS,1,-1,1226)
-      call checkbound_array(fablo,fabhi,T_fab,1,-1,1226)
-      call checkbound_array(fablo,fabhi,TorY_fab,1,-1,1226)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1226)
+      T_fab_ptr=>T_fab
+      call checkbound_array(fablo,fabhi,T_fab_ptr,1,-1,1226)
+      TorY_fab_ptr=>TorY_fab
+      call checkbound_array(fablo,fabhi,TorY_fab_ptr,1,-1,1226)
       call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1227)
-      call checkbound_array(fablo,fabhi,DeDT,1,-1,1228) ! 1/(density * cv)
-      call checkbound_array(fablo,fabhi,den,1,-1,1229)  ! 1/(density)
+
+      DeDT_ptr=>DeDT
+      call checkbound_array1(fablo,fabhi,DeDT_ptr,1,-1,1228) !1/(density * cv)
+      den_ptr=>den
+      call checkbound_array1(fablo,fabhi,den_ptr,1,-1,1229)  !1/(density)
       call checkbound_array1(fablo,fabhi,coeff_ptr,0,-1,1230)
-      call checkbound_array1(fablo,fabhi,vol,0,-1,1231)
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,1231)
       call checkbound_array1(fablo,fabhi,heatx_ptr,0,0,1232)
       call checkbound_array1(fablo,fabhi,heaty_ptr,0,1,1233)
       call checkbound_array1(fablo,fabhi,heatz_ptr,0,SDIM-1,1234)
-      call checkbound_array1(fablo,fabhi,areax,0,0,1235)
-      call checkbound_array1(fablo,fabhi,areay,0,1,1236)
-      call checkbound_array1(fablo,fabhi,areaz,0,SDIM-1,1237)
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0,1235)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1,1236)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1,1237)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -17096,8 +17136,8 @@ stop
           print *,"SWEPTFACTOR INVALID"
           stop
          endif
-         over_den=den(D_DECL(i,j,k),1)  ! 1/(rho)
-         over_cv=DeDT(D_DECL(i,j,k),1)  ! 1/(rho cv)
+         over_den=den(D_DECL(i,j,k))  ! 1/(rho)
+         over_cv=DeDT(D_DECL(i,j,k))  ! 1/(rho cv)
          local_vol=vol(D_DECL(i,j,k))
          single_material_den=STATEFAB(D_DECL(i,j,k), &
            (im_primary-1)*num_state_material+1)

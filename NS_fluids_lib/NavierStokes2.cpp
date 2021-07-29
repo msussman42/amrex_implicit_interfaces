@@ -5185,7 +5185,6 @@ void NavierStokes::make_physics_vars(int project_option) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
-   FIX ME cenden cenvisc  cenDeDT
     // in: LEVELSET_3D.F90
    fort_init_physics_vars(
     &tid_current,

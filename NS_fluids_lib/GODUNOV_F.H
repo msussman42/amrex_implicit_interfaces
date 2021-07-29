@@ -9,7 +9,6 @@
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
@@ -21,7 +20,6 @@
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
-#    define FORT_TENSORHEAT TENSORHEAT
 #    define FORT_HEATSOURCE HEATSOURCE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
@@ -33,7 +31,6 @@
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_TENSORHEAT tensorheat
 #    define FORT_HEATSOURCE heatsource
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
@@ -44,7 +41,6 @@
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
-#    define FORT_TENSORHEAT tensorheat_
 #    define FORT_HEATSOURCE heatsource_
 #    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
@@ -80,7 +76,7 @@ extern "C"
     int* ngrid,int* level,int* finest_level,
     Real* mf,AMREX_ARLIM_P(mflo),AMREX_ARLIM_P(mfhi));
 
-   void FORT_TENSORHEAT(
+   void fort_tensorheat(
     int* massface_index,
     int* vofface_index,
     int* ncphys,
