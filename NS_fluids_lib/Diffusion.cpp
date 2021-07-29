@@ -1373,7 +1373,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   FArrayBox& zstress=(*localMF[CONSERVE_FLUXES_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
-  if (DeDTinversefab.nComp()!=nmat+1)
+  if (DeDTinversefab.nComp()!=1)
    amrex::Error("DeDTinversefab.nComp() invalid");
 
   FArrayBox& gradufab=(*localMF[CELLTENSOR_MF])[mfi];
@@ -1395,7 +1395,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    //declared in: GODUNOV_3D.F90
-  FORT_VISCTENSORHEAT(
+  fort_visctensorheat(
    &ntensor,
    &nsolve,
    &nstate,

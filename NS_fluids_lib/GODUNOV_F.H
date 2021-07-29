@@ -5,7 +5,6 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
@@ -16,7 +15,6 @@
 #    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
-#    define FORT_VISCTENSORHEAT     VISCTENSORHEAT
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
@@ -27,7 +25,6 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
-#    define FORT_VISCTENSORHEAT visctensorheat
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
@@ -37,7 +34,6 @@
 #    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
-#    define FORT_VISCTENSORHEAT visctensorheat_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
@@ -1112,7 +1108,7 @@ extern "C"
      int* simple_AMR_BC_flag_viscosity);
 
 
-   void FORT_VISCTENSORHEAT(
+   void fort_visctensorheat(
      int* ntensor,
      int* nsolve,
      int* nstate,
