@@ -2,42 +2,34 @@
 #define _GODUNOV_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_HEATSOURCE heatsource
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_HEATSOURCE_FACE HEATSOURCE_FACE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
-#    define FORT_HEATSOURCE HEATSOURCE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_HEATSOURCE_FACE heatsource_face
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
-#    define FORT_HEATSOURCE heatsource
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
-#    define FORT_HEATSOURCE_FACE heatsource_face_
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
-#    define FORT_HEATSOURCE heatsource_
 #    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
 #  endif
@@ -604,7 +596,7 @@ extern "C"
     Real* areaz,AMREX_ARLIM_P(areazlo),AMREX_ARLIM_P(areazhi) ); 
 
 
-   void FORT_HEATSOURCE_FACE(
+   void fort_heatsource_face(
     int* nmat,int* nten,int* nstate,
     Real* latent_heat,
     Real* saturation_temp,
@@ -629,7 +621,7 @@ extern "C"
     Real* areaz,AMREX_ARLIM_P(areazlo),AMREX_ARLIM_P(areazhi) ); 
 
 
-   void FORT_HEATSOURCE(
+   void fort_heatsource(
     int* nstate,
     int* nmat,
     int* nden,

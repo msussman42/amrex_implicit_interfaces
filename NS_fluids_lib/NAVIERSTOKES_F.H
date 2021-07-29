@@ -9,7 +9,6 @@
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
 #    define FORT_EOS_PRESSURE eos_pressure
 #    define FORT_ADVECTIVE_PRESSURE advective_pressure
-#    define FORT_UPDATE_DIV update_div
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
@@ -32,7 +31,6 @@
 #    define FORT_PRESSURE_INDICATOR PRESSURE_INDICATOR
 #    define FORT_EOS_PRESSURE EOS_PRESSURE
 #    define FORT_ADVECTIVE_PRESSURE ADVECTIVE_PRESSURE
-#    define FORT_UPDATE_DIV UPDATE_DIV
 #    define FORT_COFLOW COFLOW
 #    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
@@ -56,7 +54,6 @@
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
 #    define FORT_EOS_PRESSURE eos_pressure
 #    define FORT_ADVECTIVE_PRESSURE advective_pressure
-#    define FORT_UPDATE_DIV update_div
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
@@ -78,7 +75,6 @@
 #    define FORT_PRESSURE_INDICATOR pressure_indicator_
 #    define FORT_EOS_PRESSURE eos_pressure_
 #    define FORT_ADVECTIVE_PRESSURE advective_pressure_
-#    define FORT_UPDATE_DIV update_div_
 #    define FORT_COFLOW coflow_
 #    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
@@ -125,7 +121,7 @@ extern "C" {
      int* pressure_select_criterion,
      int* project_option);
 
-    void FORT_UPDATE_DIV(
+    void fort_update_div(
      const Real* xlo,const Real* dx,
      Real* dt,
      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),

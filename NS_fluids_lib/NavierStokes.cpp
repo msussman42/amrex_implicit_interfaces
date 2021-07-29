@@ -9938,9 +9938,9 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  debug_ngrow(MASKSEM_MF,1,28); 
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -10122,10 +10122,10 @@ void NavierStokes::make_heat_source() {
  debug_ngrow(VOLUME_MF,1,28); 
 
  debug_ngrow(CELL_DEN_MF,1,5);
- if (localMF[CELL_DEN_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  debug_ngrow(CELL_DEDT_MF,1,5);
- if (localMF[CELL_DEDT_MF]->nComp()!=nmat+1)
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -10186,7 +10186,7 @@ void NavierStokes::make_heat_source() {
    // 1/(rho cv) : (m^3 Kelvin)/J
    // heat_source: J/(m^3 s)
    // in: GODUNOV_3D.F90
-  FORT_HEATSOURCE(
+  fort_heatsource(
    &nstate,
    &nmat,
    &nden,
@@ -14148,11 +14148,11 @@ NavierStokes::heat_source_term_flux_source() {
    FArrayBox& lsfab=(*LSmf)[mfi];
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
-   if (DeDTfab.nComp()!=nmat+1)
+   if (DeDTfab.nComp()!=1)
     amrex::Error("DeDTfab.nComp() invalid");
 
    FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
-   if (denfab.nComp()!=nmat+1)
+   if (denfab.nComp()!=1)
     amrex::Error("denfab.nComp() invalid");
 
    FArrayBox& heatx=(*localMF[FACE_VAR_MF])[mfi];
@@ -14168,8 +14168,8 @@ NavierStokes::heat_source_term_flux_source() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
-   FORT_HEATSOURCE_FACE( 
+    // declared in: GODUNOV_3D.F90
+   fort_heatsource_face( 
     &nmat,&nten,&nstate,
     latent_heat.dataPtr(),
     saturation_temp.dataPtr(),

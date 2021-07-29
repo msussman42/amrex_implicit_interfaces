@@ -12953,8 +12953,8 @@ stop
       INTEGER_T, intent(in) :: bfact_grid
       REAL_T, intent(in), target :: ls(DIMV(ls),nmat*(SDIM+1))
       REAL_T, pointer :: ls_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: rhoinverse(DIMV(rhoinverse))
+      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: curv(DIMV(curv),num_curv)
       REAL_T, pointer :: curv_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: velnew(DIMV(velnew),SDIM)
@@ -13045,7 +13045,7 @@ stop
       ls_ptr=>ls
       call checkbound_array(fablo,fabhi,ls_ptr,2,-1,7)
       rhoinverse_ptr=>rhoinverse
-      call checkbound_array(fablo,fabhi,rhoinverse_ptr,1,-1,7)
+      call checkbound_array1(fablo,fabhi,rhoinverse_ptr,1,-1,7)
       curv_ptr=>curv
       call checkbound_array(fablo,fabhi,curv_ptr,1,-1,7)
       velnew_ptr=>velnew
@@ -13080,7 +13080,7 @@ stop
           iforce=(iten-1)*(5+SDIM)+3+dirloc
           surface_tension_force(dirloc)= &
            surface_tension_force(dirloc)+ &
-           curv(D_DECL(i,j,k),iforce)*dt*rhoinverse(D_DECL(i,j,k),1)
+           curv(D_DECL(i,j,k),iforce)*dt*rhoinverse(D_DECL(i,j,k))
          enddo  ! dirloc
 
         enddo !iten
@@ -13109,7 +13109,7 @@ stop
        ! Q units: J/(m^3 s)
        ! called from: make_heat_source
        ! make_heat_source is called from veldiffuseALL
-      subroutine FORT_HEATSOURCE( &
+      subroutine fort_heatsource( &
        nstate, &
        nmat, &
        nden, &
@@ -13155,15 +13155,21 @@ stop
       REAL_T, intent(in) :: temperature_source
       REAL_T, intent(in) :: temperature_source_cen(SDIM)
       REAL_T, intent(in) :: temperature_source_rad(SDIM)
-      REAL_T, intent(in) :: rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T, intent(in) :: DeDTinverse(DIMV(DeDTinverse),nmat+1) ! 1/(rho cv)
-      REAL_T, intent(inout) :: Tnew(DIMV(Tnew),nden)
-      REAL_T, intent(in) :: lsfab(DIMV(lsfab),nmat)
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: dt,time
-
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T, intent(in),target :: rhoinverse(DIMV(rhoinverse))
+      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: DeDTinverse(DIMV(DeDTinverse)) ! 1/(rho cv)
+      REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: Tnew(DIMV(Tnew),nden)
+      REAL_T, pointer :: Tnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: lsfab(DIMV(lsfab),nmat)
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: DIMS(recon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),DIMS(target :: vol(DIMV(vol))
+      REAL_T, pointer :: DIMS(vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) DIMS(:: dt,time
+                         DIMS(
+      REAL_T xsten(-3:3,SDIMS(DIM)
       REAL_T xsten_cell(SDIM)
       INTEGER_T nhalf
       REAL_T LS(nmat)
@@ -13216,21 +13222,25 @@ stop
        print *,"time invalid"
        stop
       endif
-      if (temperature_source.lt.zero) then
+      if (temperature_source.ge.zero) then
+       ! do nothing
+      else
        print *,"temperature_source invalid"
        stop
       endif
 
-      call checkbound(fablo,fabhi, &
-       DIMS(rhoinverse), &
-       1,-1,7)
-      call checkbound(fablo,fabhi, &
-       DIMS(DeDTinverse), &
-       1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(Tnew),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(recon),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(vol),1,-1,7)
+      rhoinverse_ptr=>rhoinverse
+      call checkbound_array1(fablo,fabhi,rhoinverse_ptr,1,-1,7)
+      DeDTinverse_ptr=>DeDTinverse
+      call checkbound_array1(fablo,fabhi,DeDTinverse_ptr,1,-1,7)
+      Tnew_ptr=>Tnew
+      call checkbound_array(fablo,fabhi,Tnew_ptr,1,-1,7)
+      lsfab_ptr=>lsfab
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,7)
+      recon_ptr=>recon
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,7)
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1,7)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
@@ -13327,7 +13337,7 @@ stop
          ! DeDTinverse = 1/(rho cv)
        do im=1,nmat
         T_local(im)=T_local(im)+ &
-          dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total
+          dt*DeDTinverse(D_DECL(i,j,k))*heat_source_total
         if (1.eq.0) then
          if (heat_source_local(im).ne.zero) then
           print *,"x,im,heat_source_local ",xsten(0,1),xsten(0,2), &
@@ -13344,7 +13354,7 @@ stop
       enddo ! i,j,k
  
       return
-      end subroutine FORT_HEATSOURCE
+      end subroutine fort_heatsource
 
 
          ! rhoinverse is 1/den
@@ -13392,10 +13402,10 @@ stop
       REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: rhoinverse(DIMV(rhoinverse),nmat+1)
-      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: DeDTinverse(DIMV(DeDTinverse),nmat+1)
-      REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: rhoinverse(DIMV(rhoinverse))
+      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: DeDTinverse(DIMV(DeDTinverse))
+      REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout),target :: velnew(DIMV(velnew),nstate)
       REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: dt
@@ -13448,9 +13458,9 @@ stop
       deltafab_ptr=>deltafab
       call checkbound_array(fablo,fabhi,deltafab_ptr,0,-1,7)
       rhoinverse_ptr=>rhoinverse
-      call checkbound_array(fablo,fabhi,rhoinverse_ptr,1,-1,7)
+      call checkbound_array1(fablo,fabhi,rhoinverse_ptr,1,-1,7)
       DeDTinverse_ptr=>DeDTinverse
-      call checkbound_array(fablo,fabhi,DeDTinverse_ptr,1,-1,7)
+      call checkbound_array1(fablo,fabhi,DeDTinverse_ptr,1,-1,7)
       velnew_ptr=>velnew
       call checkbound_array(fablo,fabhi,velnew_ptr,1,-1,7)
       maskSEM_ptr=>maskSEM
@@ -13471,7 +13481,7 @@ stop
          do veldir=1,SDIM
           velnew(D_DECL(i,j,k),veldir)= &
             velnew(D_DECL(i,j,k),veldir)- &
-            rhoinverse(D_DECL(i,j,k),1)* &
+            rhoinverse(D_DECL(i,j,k))* &
             deltafab(D_DECL(i,j,k),veldir)
          enddo ! veldir=1..sdim
 
@@ -13484,7 +13494,7 @@ stop
            (im-1)*num_state_material+2
           velnew(D_DECL(i,j,k),idst)= &
            velnew(D_DECL(i,j,k),idst)- &
-           DeDTinverse(D_DECL(i,j,k),1)*deltafab(D_DECL(i,j,k),isrc)
+           DeDTinverse(D_DECL(i,j,k))*deltafab(D_DECL(i,j,k),isrc)
          enddo ! im=1..nmat
 
         else
@@ -17485,7 +17495,7 @@ stop
 ! MEHDI VAHAB HEAT SOURCE
 ! T^new=T^* + dt A Q/(rho cv V) 
 ! Q units: J/(m^2 s)
-      subroutine FORT_HEATSOURCE_FACE( &
+      subroutine fort_heatsource_face( &
        nmat,nten,nstate, &
        latent_heat, &
        saturation_temp, &
@@ -17537,18 +17547,29 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areax)
       INTEGER_T, intent(in) :: DIMDEC(areay)
       INTEGER_T, intent(in) :: DIMDEC(areaz)
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(inout) :: Snew(DIMV(Snew),nstate)
-      REAL_T, intent(in) :: DeDT(DIMV(DeDT),nmat+1)  ! 1/(rho cv) (cv=DeDT)
+      REAL_T, intent(in),target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: Snew(DIMV(Snew),nstate)
+      REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: DeDT(DIMV(DeDT))  ! 1/(rho cv) (cv=DeDT)
+      REAL_T, pointer :: DeDT_ptr(D_DECL(:,:,:))
        ! 1/den (i.e. den actually stores 1/den)
-      REAL_T, intent(in) :: den(DIMV(den),nmat+1) 
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: heatx(DIMV(heatx))
-      REAL_T, intent(in) :: heaty(DIMV(heaty))
-      REAL_T, intent(in) :: heatz(DIMV(heatz))
-      REAL_T, intent(in) :: areax(DIMV(areax))
-      REAL_T, intent(in) :: areay(DIMV(areay))
-      REAL_T, intent(in) :: areaz(DIMV(areaz))
+      REAL_T, intent(in),target :: den(DIMV(den)) 
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: heatx(DIMV(heatx))
+      REAL_T, intent(in),target :: heaty(DIMV(heaty))
+      REAL_T, intent(in),target :: heatz(DIMV(heatz))
+      REAL_T, pointer :: heatx_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: heaty_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: heatz_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: areax(DIMV(areax))
+      REAL_T, intent(in),target :: areay(DIMV(areay))
+      REAL_T, intent(in),target :: areaz(DIMV(areaz))
+      REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
       INTEGER_T heat_dir
@@ -17597,31 +17618,46 @@ stop
        print *,"level invalid heat source face"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
 
       nhalf=3
 
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1239)
-      call checkbound(fablo,fabhi,DIMS(Snew),1,-1,1240)
-      call checkbound(fablo,fabhi,DIMS(DeDT),0,-1,1241)
-      call checkbound(fablo,fabhi,DIMS(den),0,-1,1242)
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,1243)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1239)
+      Snew_ptr=>Snew
+      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1240)
+      DeDT_ptr=>DeDT
+      call checkbound_array1(fablo,fabhi,DeDT_ptr,0,-1,1241)
+      den_ptr=>den
+      call checkbound_array1(fablo,fabhi,den_ptr,0,-1,1242)
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,1243)
 
        ! thermal conductivity
-      call checkbound(fablo,fabhi,DIMS(heatx),0,0,1244)
-      call checkbound(fablo,fabhi,DIMS(heaty),0,1,1245)
-      call checkbound(fablo,fabhi,DIMS(heatz),0,SDIM-1,1246)
+      heatx_ptr=>heatx
+      heaty_ptr=>heaty
+      heatz_ptr=>heatz
+      call checkbound_array1(fablo,fabhi,heatx_ptr,0,0,1244)
+      call checkbound_array1(fablo,fabhi,heaty_ptr,0,1,1245)
+      call checkbound_array1(fablo,fabhi,heatz_ptr,0,SDIM-1,1246)
 
-      call checkbound(fablo,fabhi,DIMS(areax),0,0,1247)
-      call checkbound(fablo,fabhi,DIMS(areay),0,1,1248)
-      call checkbound(fablo,fabhi,DIMS(areaz),0,SDIM-1,1249)
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0,1247)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1,1248)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1,1249)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -17690,7 +17726,7 @@ stop
 
          if (is_rigid(nmat,im_primary_cell).eq.0) then
 
-           ! in: subroutine FORT_HEATSOURCE_FACE
+           ! in: subroutine fort_heatsource_face
           if (heat_dir.eq.1) then
            aface=areax(D_DECL(iface,jface,kface))
            hface=heatx(D_DECL(iface,jface,kface))
@@ -17705,19 +17741,24 @@ stop
            stop
           endif
 
-          if ((aface.lt.zero).or.(hface.lt.zero)) then
+          if ((aface.ge.zero).and.(hface.ge.zero)) then
+           ! do nothing
+          else
            print *,"aface or hface (thermal conductivity) invalid"
            stop
           endif
 
-          over_den=den(D_DECL(i,j,k),1)
-          over_cv=DeDT(D_DECL(i,j,k),1)  ! 1/(rho cv)
+          over_den=den(D_DECL(i,j,k))
+          over_cv=DeDT(D_DECL(i,j,k))  ! 1/(rho cv)
           local_vol=vol(D_DECL(i,j,k))
 
-          if ((over_den.le.zero).or.(over_cv.le.zero).or. &
-               (local_vol.le.zero)) then
-            print *,"over_den, over_cv, or local_vol invalid"
-            stop
+          if ((over_den.gt.zero).and. &
+              (over_cv.gt.zero).and. &
+              (local_vol.gt.zero)) then
+           ! do nothing
+          else
+           print *,"over_den, over_cv, or local_vol invalid"
+           stop
           endif
 
           heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
@@ -17751,9 +17792,7 @@ stop
       enddo 
 
       return
-      end subroutine FORT_HEATSOURCE_FACE
-
-
+      end subroutine fort_heatsource_face
 
        ! called from:NavierStokes::init_FSI_GHOST_MAC_MF(int ngrow) 
        ! (in NavierStokes.cpp)
