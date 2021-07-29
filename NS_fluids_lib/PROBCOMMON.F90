@@ -488,6 +488,16 @@ implicit none
       REAL_T, intent(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
+      subroutine TEMPLATE_THERMAL_K(x,cur_time,density,temperature, &
+                      thermal_k,im)
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: density
+      REAL_T, intent(in) :: temperature
+      REAL_T, intent(inout) :: thermal_k
+      end subroutine TEMPLATE_THERMAL_K
+
       subroutine TEMPLATE_DELETE_REGIONS_LIST()
       end subroutine TEMPLATE_DELETE_REGIONS_LIST
 
@@ -776,6 +786,9 @@ implicit none
       PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION
       PROCEDURE(TEMPLATE_DELETE_REGIONS_LIST), POINTER ::  &
               SUB_DELETE_REGIONS_LIST
+
+      PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
+
 contains
 
       subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)

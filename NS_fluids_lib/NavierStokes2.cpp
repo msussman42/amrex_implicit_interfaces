@@ -4723,6 +4723,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  override_enable_spectral(save_enable_spectral);
 
+  //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
  getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
@@ -4731,6 +4732,10 @@ void NavierStokes::make_physics_varsALL(int project_option,
   amrex::Error("visc_data invalid ncomp");
 
  getStateCONDUCTIVITY_ALL(CELL_CONDUCTIVITY_MATERIAL_MF,1);
+ debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
+ int ncomp_conductivity=localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
+ if (ncomp_conductivity!=nmat)
+  amrex::Error("conductivity_data invalid ncomp");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -5153,8 +5158,12 @@ void NavierStokes::make_physics_vars(int project_option) {
    FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
    FArrayBox& viscstatefab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-   if (viscstatefab.nComp()!=ncomp_visc)
-    amrex::Error("viscstatefab.nComp()!=ncomp_visc");
+   if (viscstatefab.nComp()!=3*nmat)
+    amrex::Error("viscstatefab.nComp()!=3*nmat");
+
+   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (conductivity_fab.nComp()!=nmat)
+    amrex::Error("conductivity_fab.nComp()!=nmat");
 
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
@@ -5246,6 +5255,8 @@ void NavierStokes::make_physics_vars(int project_option) {
     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
     viscstatefab.dataPtr(), //3*nmat components
     ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
+    conductivity_fab.dataPtr(), //nmat components
+    ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
     solxfab.dataPtr(),
     ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
     solyfab.dataPtr(),
@@ -9550,7 +9561,96 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
-}  // subroutine getStateVISC
+}  // end subroutine getStateVISC
+
+
+void NavierStokes::getStateCONDUCTIVITY(int idx,int ngrow) {
+
+ delete_localMF_if_exist(idx,1);
+
+ if ((ngrow==0)||(ngrow==1)) {
+  // do nothing
+ } else
+  amrex::Error("ngrow invalid in getStateCONDUCTIVITY");
+ 
+ int finest_level=parent->finestLevel();
+
+ bool use_tiling=ns_tiling;
+
+ int nmat=num_materials;
+
+ VOF_Recon_resize(2,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,2,670);
+ if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+
+ new_localMF(idx,nmat,ngrow,-1); // sets values to 0.0
+
+ MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
+ const Real* dx = geom.CellSize();
+
+ for (int im=0;im<nmat;im++) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(EOSdata->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*EOSdata,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& conductivity_fab=(*localMF[idx])[mfi];
+
+   FArrayBox& eosfab=(*EOSdata)[mfi];
+
+   int fortran_im=im+1;
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // declared in: DERIVE_3D.F90
+   fort_derconductivity(
+      &level,
+      &finest_level,
+      &fortran_im,
+      &nmat,
+      &dt_slab,
+      conductivity_fab.dataPtr(),
+      ARLIM(conductivity_fab.loVect()),
+      ARLIM(conductivity_fab.hiVect()),
+      eosfab.dataPtr(),
+      ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      &cur_time_slab,
+      dx,xlo,
+      &ngrow);
+  } //mfi
+} // omp
+  ns_reconcile_d_num(165);
+
+ } // im=0..nmat-1
+
+ delete EOSdata;
+
+}  // end subroutine getStateCONDUCTIVITY
+
 
 
 // if FENE-CR+Carreau,

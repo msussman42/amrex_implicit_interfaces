@@ -18024,6 +18024,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[FACETENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
+  //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
  getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
