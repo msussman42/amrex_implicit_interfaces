@@ -925,11 +925,13 @@ stop
           index3d=index3d+plot_sdim
           index2d=index2d+SDIM
          enddo
-          ! den,configuration tensor,visc,trace
+          ! den,configuration tensor,visc,conduct,trace
          do ivar_gb=1,nmat*num_state_material+ &
               nmat+ &  ! mom_den
               num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
-              nmat+5*nmat
+              nmat+ &
+              nmat+ &
+              5*nmat
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
@@ -1797,6 +1799,7 @@ END SUBROUTINE SIMP
        elastic,DIMS(elastic), &
        lsdist,DIMS(lsdist), &
        visc,DIMS(visc), &
+       conduct,DIMS(conduct), &
        trace,DIMS(trace), &
        problo, &
        probhi, &
@@ -1862,6 +1865,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(elastic)
       INTEGER_T, intent(in) :: DIMDEC(lsdist)
       INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(conduct)
       INTEGER_T, intent(in) :: DIMDEC(trace)
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -1870,17 +1874,31 @@ END SUBROUTINE SIMP
       REAL_T, intent(out), target :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM+1)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: pres(DIMV(pres))
+      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: div(DIMV(div))
+      REAL_T, pointer :: div_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: divdat(DIMV(divdat))
+      REAL_T, pointer :: divdat_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: den(DIMV(den),num_state_material*nmat)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
+      REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: elastic(DIMV(elastic),elastic_ncomp)
+      REAL_T, pointer :: elastic_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: visc(DIMV(visc),nmat)
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: conduct(DIMV(conduct),nmat)
+      REAL_T, pointer :: conduct_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: trace(DIMV(trace),5*nmat)
+      REAL_T, pointer :: trace_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
+      REAL_T, pointer :: lsdist_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
       REAL_T machnd
@@ -1903,6 +1921,7 @@ END SUBROUTINE SIMP
       REAL_T lsdistnd((SDIM+1)*nmat)
       REAL_T local_LS_data((SDIM+1)*nmat)
       REAL_T viscnd(nmat)
+      REAL_T conductnd(nmat)
       REAL_T tracend(5*nmat)
       REAL_T writend(nmat*200)
       INTEGER_T scomp,iw
@@ -2086,21 +2105,36 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound_array1(lo,hi,maskSEM,0,-1,1264)
+      maskSEM_ptr=>maskSEM
+      call checkbound_array1(lo,hi,maskSEM_ptr,0,-1,1264)
 
       plotfab_ptr=>plotfab
       call checkbound_array(lo,hi,plotfab_ptr,1,-1,411)
-      call checkbound_array1(lo,hi,pres,1,-1,411)
-      call checkbound_array1(lo,hi,div,1,-1,411)
-      call checkbound_array1(lo,hi,divdat,1,-1,411)
-      call checkbound_array(lo,hi,den,1,-1,411)
-      call checkbound_array(lo,hi,mom_den,1,-1,411)
-      call checkbound_array(lo,hi,elastic,1,-1,411)
-      call checkbound_array(lo,hi,lsdist,1,-1,411)
-      call checkbound_array(lo,hi,visc,1,-1,411)
-      call checkbound_array(lo,hi,trace,1,-1,411)
-      call checkbound_array(lo,hi,vel,1,-1,411)
-      call checkbound_array(lo,hi,vof,1,-1,411)
+
+      pres_ptr=>pres
+      call checkbound_array1(lo,hi,pres_ptr,1,-1,411)
+      div_ptr=>div
+      call checkbound_array1(lo,hi,div_ptr,1,-1,411)
+      divdat_ptr=>divdat
+      call checkbound_array1(lo,hi,divdat_ptr,1,-1,411)
+      den_ptr=>den
+      call checkbound_array(lo,hi,den_ptr,1,-1,411)
+      mom_den_ptr=>mom_den
+      call checkbound_array(lo,hi,mom_den_ptr,1,-1,411)
+      elastic_ptr=>elastic
+      call checkbound_array(lo,hi,elastic_ptr,1,-1,411)
+      lsdist_ptr=>lsdist
+      call checkbound_array(lo,hi,lsdist_ptr,1,-1,411)
+      visc_ptr=>visc
+      call checkbound_array(lo,hi,visc_ptr,1,-1,411)
+      conduct_ptr=>conduct
+      call checkbound_array(lo,hi,conduct_ptr,1,-1,411)
+      trace_ptr=>trace
+      call checkbound_array(lo,hi,trace_ptr,1,-1,411)
+      vel_ptr=>vel
+      call checkbound_array(lo,hi,vel_ptr,1,-1,411)
+      vof_ptr=>vof
+      call checkbound_array(lo,hi,vof_ptr,1,-1,411)
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
@@ -2268,6 +2302,7 @@ END SUBROUTINE SIMP
         do dir=1,nmat
          vofnd(dir)=zero
          viscnd(dir)=zero
+         conductnd(dir)=zero
         enddo
         do dir=1,nmat*(SDIM+1)
          lsdistnd(dir)=zero
@@ -2410,6 +2445,8 @@ END SUBROUTINE SIMP
           vofnd(dir)=vofnd(dir)+localwt*vofcell(dir)
           viscnd(dir)=viscnd(dir)+ &
             localwt*visc(D_DECL(i-i1,j-j1,k-k1),dir)
+          conductnd(dir)=conductnd(dir)+ &
+            localwt*conduct(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
          do dir=1,nmat*(SDIM+1)
           lsdistnd(dir)=lsdistnd(dir)+ &
@@ -2477,6 +2514,7 @@ END SUBROUTINE SIMP
         do dir=1,nmat
          vofnd(dir)=vofnd(dir)/sumweight
          viscnd(dir)=viscnd(dir)/sumweight
+         conductnd(dir)=conductnd(dir)/sumweight
         enddo
         do dir=1,nmat*(SDIM+1)
          lsdistnd(dir)=lsdistnd(dir)/sumweightLS
@@ -2785,6 +2823,11 @@ END SUBROUTINE SIMP
 
         do iw=1,nmat
          writend(scomp+iw)=viscnd(iw)
+        enddo
+        scomp=scomp+nmat
+
+        do iw=1,nmat
+         writend(scomp+iw)=conductnd(iw)
         enddo
         scomp=scomp+nmat
 

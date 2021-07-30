@@ -7158,6 +7158,7 @@ void NavierStokes::output_zones(
    MultiFab* viscoelasticmf,
    MultiFab* lsdistmf,
    MultiFab* viscmf,
+   MultiFab* conductmf,
    MultiFab* magtracemf,
    int& grids_per_level,
    BoxArray& cgrids_minusBA,
@@ -7320,6 +7321,10 @@ void NavierStokes::output_zones(
      nmat,1,
      MFInfo().SetTag("viscmfminus"),FArrayBoxFactory());
 
+   MultiFab* conductmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     nmat,1,
+     MFInfo().SetTag("conductmfminus"),FArrayBoxFactory());
+
    MultiFab* magtracemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      5*nmat,1,
      MFInfo().SetTag("magtracemfminus"),FArrayBoxFactory());
@@ -7413,6 +7418,13 @@ void NavierStokes::output_zones(
    check_for_NAN(viscmfminus,19);
 
    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   conductmfminus->ParallelCopy(*conductmf,0,0,nmat,
+                   1,1,geom.periodicity());
+
+   check_for_NAN(conductmf,9);
+   check_for_NAN(conductmfminus,19);
+
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
    magtracemfminus->ParallelCopy(*magtracemf,0,0,5*nmat,
 		   1,1,geom.periodicity()); 
 
@@ -7476,6 +7488,7 @@ void NavierStokes::output_zones(
     FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
     FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
     FArrayBox& viscfab=(*viscmfminus)[mfi];
+    FArrayBox& conductfab=(*conductmfminus)[mfi];
     FArrayBox& magtracefab=(*magtracemfminus)[mfi];
 
       // in: NAVIERSTOKES_3D.F90
@@ -7504,6 +7517,7 @@ void NavierStokes::output_zones(
      ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
      lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+     conductfab.dataPtr(),ARLIM(conductfab.loVect()),ARLIM(conductfab.hiVect()),
      magtracefab.dataPtr(),
      ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
      prob_lo,

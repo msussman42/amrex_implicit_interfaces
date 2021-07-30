@@ -139,6 +139,7 @@ stop
        nmat+ & ! mom_den
        num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
        nmat+ & ! visc
+       nmat+ & ! conduct
        5*nmat  ! trace vars and vorticity
 
       return
@@ -596,6 +597,26 @@ stop
        enddo
        call dumpstring(Varname)
       enddo  ! im (viscosity variables)
+
+       ! thermal conductivity
+      do im=1,nmat
+       write(matstr,'(I2)') im
+       do i=1,2
+        if (matstr(i:i).eq.' ') then
+         matstr(i:i)='0'
+        endif
+       enddo
+
+       ih=1
+       Varname='K_THERMAL'
+       ih=ih+9
+       do i=1,2
+        Varname(ih:ih)=matstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+      enddo  ! im (thermal conductivity variables)
+
 
        ! gamma_dot, TR(A), TR(A)*shear thinning factor, TR(A)*thin*f(A),
        ! vorticity
