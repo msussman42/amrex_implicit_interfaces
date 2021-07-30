@@ -12701,7 +12701,7 @@ NavierStokes::level_phase_change_convert(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // nodevelfab (=nodevel) is node based (interior: lo..hi+1)
-    // in: MASS_TRANSFER_3D.F90
+    // declared in: MASS_TRANSFER_3D.F90
    fort_convertmaterial( 
     &tid_current,
     &im_outer,
@@ -18025,7 +18025,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
- getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
+ getStateVISC_ALL();
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
 

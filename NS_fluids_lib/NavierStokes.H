@@ -807,11 +807,11 @@ protected:
     void avgDownError_ALL();
     void avgDownError();
 
-    void getStateVISC(int idx,int ngrow);
-    void getStateVISC_ALL(int idx,int ngrow);
+    void getStateVISC();
+    void getStateVISC_ALL();
 
-    void getStateCONDUCTIVITY(int idx,int ngrow);
-    void getStateCONDUCTIVITY_ALL(int idx,int ngrow);
+    void getStateCONDUCTIVITY();
+    void getStateCONDUCTIVITY_ALL();
 
     void delete_localMF(int idx_MF,int ncomp); 
     void delete_localMF_if_exist(int idx_MF,int ncomp); 
