@@ -193,6 +193,7 @@ extern "C" {
      Real* elastic,AMREX_ARLIM_P(elasticlo),AMREX_ARLIM_P(elastichi),
      Real* lsdist,AMREX_ARLIM_P(lsdistlo),AMREX_ARLIM_P(lsdisthi),
      Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
+     Real* conduct,AMREX_ARLIM_P(conductlo),AMREX_ARLIM_P(conducthi),
      Real* trace,AMREX_ARLIM_P(tracelo),AMREX_ARLIM_P(tracehi),
      const Real* problo,
      const Real* probhi,

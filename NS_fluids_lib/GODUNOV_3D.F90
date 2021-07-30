@@ -1067,6 +1067,7 @@ stop
       end subroutine derive_mappings
 
       subroutine get_default_scalar_diffusion(project_option, &
+                     thermal_k, &
                      LS1,im_source,im_dest, &
                      den, &
                      heatcoeff)
@@ -1075,6 +1076,7 @@ stop
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: im_source
       INTEGER_T, intent(in) :: im_dest
+      REAL_T, intent(in) :: thermal_k(num_materials)
       REAL_T, intent(in) :: den
       REAL_T, intent(in) :: LS1
       REAL_T, intent(out) :: heatcoeff
@@ -1092,9 +1094,9 @@ stop
 
       if (project_option.eq.2) then ! thermal diffusion
        if (LS1.ge.zero) then ! center cell owned by im_source
-        heatcoeff=get_user_heatviscconst(im_source)
+        heatcoeff=thermal_k(im_source)
        else  ! center cell owned by im_dest
-        heatcoeff=get_user_heatviscconst(im_dest)
+        heatcoeff=thermal_k(im_dest)
        endif
       else if ((project_option.ge.100).and. & ! species diffusion
                (project_option.lt.100+num_species_var)) then
@@ -1106,6 +1108,12 @@ stop
        endif
       else
        print *,"project_option invalid"
+       stop
+      endif
+      if (heatcoeff.ge.zero) then
+       ! do nothing
+      else
+       print *,"heatcoeff invalid"
        stop
       endif
 
@@ -16423,6 +16431,7 @@ stop
        finest_level, &
        xlo,dx, &
        dt, &
+       conductstate,DIMS(conductstate), & ! nmat components
        STATEFAB,DIMS(STATEFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
        swept,DIMS(swept), &
@@ -16475,6 +16484,7 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: DIMDEC(conductstate)
       INTEGER_T, intent(in) :: DIMDEC(STATEFAB)
       INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
       INTEGER_T, intent(in) :: DIMDEC(swept)
@@ -16492,6 +16502,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(areax)
       INTEGER_T, intent(in) :: DIMDEC(areay)
       INTEGER_T, intent(in) :: DIMDEC(areaz)
+      REAL_T, target, intent(in) :: conductstate(DIMV(conductstate),nmat)
+      REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: STATEFAB(DIMV(STATEFAB),nden) 
       REAL_T, pointer :: STATEFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
@@ -16605,6 +16617,7 @@ stop
       INTEGER_T nhalf
       INTEGER_T dir_inner
       REAL_T T_or_Y_min_sanity
+      REAL_T thermal_k(nmat)
 
       nhalf=3
 
@@ -16614,6 +16627,7 @@ stop
       heaty_ptr=>heaty
       heatz_ptr=>heatz
       TgammaFAB_ptr=>TgammaFAB
+      conductstate_ptr=>conductstate
 
       theta_cutoff=0.001
 
@@ -16706,6 +16720,7 @@ stop
        stop
       endif
 
+      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,12)
       STATEFAB_ptr=>STATEFAB
       call checkbound_array(fablo,fabhi,STATEFAB_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1,234)
@@ -16757,6 +16772,7 @@ stop
 
        do im=1,nmat
         LS_no_tess(im)=LS(D_DECL(i,j,k),im)
+        thermal_k(im)=conductstate(D_DECL(i,j,k),im)
        enddo
        call LS_tessellate(LS_no_tess,LS_center,nmat)
        im_primary=1
@@ -17280,6 +17296,7 @@ stop
              LS1=LS_center(im_source)-LS_center(im_dest)
              LS2=LS_side(im_source)-LS_side(im_dest)
              call get_default_scalar_diffusion(project_option, &
+                     thermal_k, &
                      LS1,im_source,im_dest, &
                      single_material_den, &
                      heatcoeff)
@@ -17291,6 +17308,7 @@ stop
              LS1=LS_center(im_source_substrate)-LS_center(im_dest_substrate)
              LS2=LS_side(im_source_substrate)-LS_side(im_dest_substrate)
              call get_default_scalar_diffusion(project_option, &
+                     thermal_k, &
                      LS1,im_source_substrate,im_dest_substrate, &
                      single_material_den, &
                      heatcoeff)

@@ -11846,6 +11846,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    FArrayBox& presfab=(*presmf)[mfi]; 
    FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
+   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (conductivity_fab.nComp()!=nmat)
+    amrex::Error("conductivity_fab.nComp()!=nmat");
+
    int stefan_flag=1;
    Vector<int> use_exact_temperature(2*nten);
    for (int im=0;im<2*nten;im++)
@@ -11960,6 +11964,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+     conductivity_fab.dataPtr(), //nmat components
+     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
      burnvelfab.dataPtr(),
      ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
      Tsatfab.dataPtr(),
@@ -12049,6 +12055,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+     conductivity_fab.dataPtr(), //nmat components
+     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
      lsnewfab.dataPtr(), //burnvelfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      lsnewfab.dataPtr(), //Tsatfab
@@ -12669,6 +12677,10 @@ NavierStokes::level_phase_change_convert(
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
+   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (conductivity_fab.nComp()!=nmat)
+    amrex::Error("conductivity_fab.nComp()!=nmat");
+
    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
    if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
     // do nothing
@@ -12732,6 +12744,8 @@ NavierStokes::level_phase_change_convert(
     delta_mass_local[tid_current].dataPtr(),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+    conductivity_fab.dataPtr(), //nmat components
+    ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
     nodevelfab.dataPtr(),
     ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
     JUMPfab.dataPtr(),
@@ -14018,6 +14032,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     amrex::Error("Tsatfab.nComp()!=ntsat 4");
    }
 
+   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (conductivity_fab.nComp()!=nmat)
+    amrex::Error("conductivity_fab.nComp()!=nmat");
+
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -14053,6 +14071,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &finest_level,
     xlo,dx,
     &dt_slab,
+    conductivity_fab.dataPtr(), //nmat components
+    ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
     statefab.dataPtr(),
     ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
     Tsatfab.dataPtr(),
@@ -18026,8 +18046,14 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
  getStateVISC_ALL();
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
+
+ getStateCONDUCTIVITY_ALL();
+ debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
+ if (localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp()!=nmat)
+  amrex::Error("conductivity_data invalid ncomp");
 
   // declared in: MacProj.cpp
  getStateDIV_ALL(MACDIV_MF,1);
@@ -18230,6 +18256,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    viscoelasticmf,
    lsdist,
    ns_level.localMF[CELL_VISC_MATERIAL_MF],
+   ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF],
    ns_level.localMF[MAGTRACE_MF],
    grids_per_level_array[ilev],
    cgrids_minusBA_array[ilev],
