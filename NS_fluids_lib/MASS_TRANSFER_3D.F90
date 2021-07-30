@@ -2944,6 +2944,9 @@ stop
            endif
           else
            print *,"D_MASS or den_G invalid"
+           print *,"Kassemi_flag=",Kassemi_flag
+           print *,"D_MASS=",D_MASS
+           print *,"den_G=",den_G
            stop
           endif
 
@@ -3037,6 +3040,7 @@ stop
       REAL_T, intent(out) :: TEMP_PROBE_source
       REAL_T, intent(out) :: TEMP_PROBE_dest
       REAL_T D_MASS
+      INTEGER_T Kassemi_flag
       REAL_T LL
       INTEGER_T iprobe_vapor
       REAL_T den_G
@@ -3051,9 +3055,29 @@ stop
           (YI_min.le.one).and. &
           (Y_gamma.le.one)) then
 
+       Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
        D_MASS=TSAT_Y_PARMS%D_MASS
        den_G=TSAT_Y_PARMS%den_G
-       if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
+       if (Kassemi_flag.eq.0) then
+        if (D_MASS.gt.zero) then
+         ! do nothing
+        else 
+         print *,"D_MASS invalid in mdot_from_T_probe"
+         stop
+        endif
+       else if (Kassemi_flag.eq.3) then
+        if (D_MASS.eq.zero) then
+         ! do nothing
+        else
+         print *,"D_MASS invalid in mdot_from_T_probe"
+         stop
+        endif
+       else
+        print *,"Kassemi_flag invalid in mdot_from_T_probe"
+        stop
+       endif
+
+       if ((D_MASS.ge.zero).and.(den_G.gt.zero)) then
 
         if (probe_ok.eq.1) then
          ! do nothing
