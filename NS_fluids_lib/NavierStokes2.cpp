@@ -379,7 +379,7 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
  localMF_grow[idx_MF]=ngrow;
 }  // subroutine maskfiner_localMF
 
-void NavierStokes::getStateVISC_ALL(int idx,int ngrow) {
+void NavierStokes::getStateVISC_ALL() {
 
  if (level!=0)
   amrex::Error("level invalid getStateVISC_ALL");
@@ -387,16 +387,16 @@ void NavierStokes::getStateVISC_ALL(int idx,int ngrow) {
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateVISC(idx,ngrow);
+  ns_level.getStateVISC();
   int scomp=0;
-  int ncomp=ns_level.localMF[idx]->nComp();
-  ns_level.avgDown_localMF(idx,scomp,ncomp,0);
+  int ncomp=ns_level.localMF[CELL_VISC_MATERIAL_MF]->nComp();
+  ns_level.avgDown_localMF(CELL_VISC_MATERIAL_MF,scomp,ncomp,0);
  }
 
 } // subroutine getStateVISC_ALL 
 
 
-void NavierStokes::getStateCONDUCTIVITY_ALL(int idx,int ngrow) {
+void NavierStokes::getStateCONDUCTIVITY_ALL() {
 
  if (level!=0)
   amrex::Error("level invalid getStateCONDUCTIVITY_ALL");
@@ -404,12 +404,12 @@ void NavierStokes::getStateCONDUCTIVITY_ALL(int idx,int ngrow) {
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateCONDUCTIVITY(idx,ngrow);
+  ns_level.getStateCONDUCTIVITY();
   int scomp=0;
-  int ncomp=ns_level.localMF[idx]->nComp();
+  int ncomp=ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
-  ns_level.avgDown_localMF(idx,scomp,ncomp,0);
+  ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,scomp,ncomp,0);
  }
 
 } // subroutine getStateCONDUCTIVITY_ALL 
@@ -4725,13 +4725,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
- getStateVISC_ALL(CELL_VISC_MATERIAL_MF,1);
+ getStateVISC_ALL();
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
  if (ncomp_visc!=3*nmat)
   amrex::Error("visc_data invalid ncomp");
 
- getStateCONDUCTIVITY_ALL(CELL_CONDUCTIVITY_MATERIAL_MF,1);
+ getStateCONDUCTIVITY_ALL();
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
  int ncomp_conductivity=localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
  if (ncomp_conductivity!=nmat)
@@ -9185,15 +9185,13 @@ void NavierStokes::scale_variables(int scale_flag) {
 // 3. relaxation time - 1..nmat
 // the viscous and viscoelastic forces should both be multiplied by
 // visc_coef.  
-void NavierStokes::getStateVISC(int idx,int ngrow) {
+void NavierStokes::getStateVISC() {
+
+ int ngrow=1;
+ int idx=CELL_VISC_MATERIAL_MF;
 
  delete_localMF_if_exist(idx,1);
 
- if ((ngrow==0)||(ngrow==1)) {
-  // do nothing
- } else
-  amrex::Error("ngrow invalid in getStateVISC");
- 
  int finest_level=parent->finestLevel();
 
  bool use_tiling=ns_tiling;
@@ -9564,15 +9562,13 @@ void NavierStokes::getStateVISC(int idx,int ngrow) {
 }  // end subroutine getStateVISC
 
 
-void NavierStokes::getStateCONDUCTIVITY(int idx,int ngrow) {
+void NavierStokes::getStateCONDUCTIVITY() {
+
+ int idx=CELL_CONDUCTIVITY_MATERIAL_MF;
+ int ngrow=1;
 
  delete_localMF_if_exist(idx,1);
 
- if ((ngrow==0)||(ngrow==1)) {
-  // do nothing
- } else
-  amrex::Error("ngrow invalid in getStateCONDUCTIVITY");
- 
  int finest_level=parent->finestLevel();
 
  bool use_tiling=ns_tiling;
