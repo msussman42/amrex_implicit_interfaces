@@ -3688,7 +3688,7 @@ stop
       REAL_T, target, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
 
-      REAL_T, target, intent(in) :: conductstate(DIMV(conductstate))
+      REAL_T, target, intent(in) :: conductstate(DIMV(conductstate),nmat)
       REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
