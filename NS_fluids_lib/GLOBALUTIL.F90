@@ -7782,6 +7782,7 @@ contains
       REAL_T xhi_sten(-3:3,SDIM)
       REAL_T xlo_sten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
+      REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
 #ifdef SANITY_CHECK
@@ -7947,13 +7948,19 @@ contains
           ! do nothing
          else if (ihi(dir_local).gt.ilo(dir_local)) then
           if (ii(dir_local).eq.ihi(dir_local)) then
-           wt_top=wt_top*(xtarget(dir_local)-xlo_sten(0,dir_local))  
+           dx_top=(xtarget(dir_local)-xlo_sten(0,dir_local))
            wt_bot=wt_bot*dx_sten(dir_local)
           else if (ii(dir_local).eq.ilo(dir_local)) then
-           wt_top=wt_top*(xhi_sten(0,dir_local)-xtarget(dir_local))  
+           dx_top=(xhi_sten(0,dir_local)-xtarget(dir_local))
            wt_bot=wt_bot*dx_sten(dir_local)
           else
            print *,"ii(dir_local) invalid"
+           stop
+          endif
+          if (dx_top.ge.zero) then
+           wt_top=wt_top*dx_top
+          else
+           print *,"dx_top bust"
            stop
           endif
          else
@@ -7962,13 +7969,17 @@ contains
          endif
         enddo ! dir_local=1..sdim
 
-        if ((wt_bot.gt.zero).and.(wt_top.ge.zero)) then 
+        if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
          data_comp=data_in%scomp+nc-1
          data_out%data_interp(nc)=data_out%data_interp(nc)+wt_top* &
           data_in%disp_data(D_DECL(isten,jsten,ksten),data_comp)/ &
           wt_bot
         else
-         print *,"wt_bot or wt_top invalid:",wt_bot,wt_top
+         print *,"wt_bot or wt_top invalid (deriv_from_grid_util):", &
+                 wt_bot,wt_top
+         print *,"isten,jsten,ksten ",isten,jsten,ksten
+         print *,"dir_FD ",dir_FD
+         print *,"ilo,ihi ",ilo(1),ilo(2),ilo(SDIM),ihi(1),ihi(2),ihi(SDIM)
          stop
         endif
        enddo !ksten
@@ -7978,7 +7989,7 @@ contains
 
 #ifdef SANITY_CHECK
       if (dir_FD.eq.-1) then
-       if (data_in%grid_type_flux.eq.-1) then
+       if (data_in%grid_type_data.eq.-1) then
         data_in2%scomp=data_in%scomp
         data_in2%ncomp=data_in%ncomp
         data_in2%level=data_in%level
@@ -7987,12 +7998,20 @@ contains
         data_in2%nmat=num_materials
         data_in2%interp_foot_flag=0
         data_in2%xtarget=>xtarget
-        data_in2%dx=data_in%dx
-        data_in2%xlo=data_in%xlo
-        data_in2%fablo=data_in%fablo
-        data_in2%fabhi=data_in%fabhi
+        if ((data_in%dx(1).gt.zero).and. &
+            (data_in%dx(2).gt.zero).and. &
+            (data_in%dx(SDIM).gt.zero)) then
+         ! do nothing
+        else
+         print *,"data_in%dx bust"
+         stop
+        endif
+        data_in2%dx=>data_in%dx
+        data_in2%xlo=>data_in%xlo
+        data_in2%fablo=>data_in%fablo
+        data_in2%fabhi=>data_in%fabhi
         data_in2%ngrowfab=data_in%ngrowfab
-        data_in2%state=data_in%disp_data
+        data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
@@ -8001,15 +8020,17 @@ contains
           ! do nothing
          else
           print *,"data_out%data_interp(nc) invalid"
+          print *,"data_out%data_interp(nc) ",data_out%data_interp(nc)
+          print *,"data_out2%data_interp(nc) ",data_out2%data_interp(nc)
           stop
          endif
         enddo ! nc=1..data_in%ncomp
         deallocate(data_out2%data_interp)
-       else if ((data_in%grid_type_flux.ge.0).and. &
-                (data_in%grid_type_flux.le.5)) then
+       else if ((data_in%grid_type_data.ge.0).and. &
+                (data_in%grid_type_data.le.5)) then
         ! do nothing
        else
-        print *,"data_in%grid_type_flux invalid"
+        print *,"data_in%grid_type_data invalid"
         stop
        endif
       else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
@@ -8050,6 +8071,7 @@ contains
       REAL_T xhi_sten(-3:3,SDIM)
       REAL_T xlo_sten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
+      REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
 #ifdef SANITY_CHECK
@@ -8201,13 +8223,19 @@ contains
           ! do nothing
          else if (ihi(dir_local).gt.ilo(dir_local)) then
           if (ii(dir_local).eq.ihi(dir_local)) then
-           wt_top=wt_top*(xtarget(dir_local)-xlo_sten(0,dir_local))  
+           dx_top=(xtarget(dir_local)-xlo_sten(0,dir_local))
            wt_bot=wt_bot*dx_sten(dir_local)
           else if (ii(dir_local).eq.ilo(dir_local)) then
-           wt_top=wt_top*(xhi_sten(0,dir_local)-xtarget(dir_local))  
+           dx_top=(xhi_sten(0,dir_local)-xtarget(dir_local))
            wt_bot=wt_bot*dx_sten(dir_local)
           else
            print *,"ii(dir_local) invalid"
+           stop
+          endif
+          if (dx_top.ge.zero) then
+           wt_top=wt_top*dx_top
+          else
+           print *,"dx_top bust"
            stop
           endif
          else
@@ -8216,11 +8244,15 @@ contains
          endif
         enddo ! dir_local=1..sdim
 
-        if ((wt_bot.gt.zero).and.(wt_top.ge.zero)) then 
+        if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
          data_out%data_interp(1)=data_out%data_interp(1)+wt_top* &
            data_in%disp_data(D_DECL(isten,jsten,ksten))/wt_bot
         else
-         print *,"wt_bot or wt_top invalid:",wt_bot,wt_top
+         print *,"wt_bot or wt_top invalid (single_deriv_from_grid_util:", &
+                 wt_bot,wt_top
+         print *,"isten,jsten,ksten ",isten,jsten,ksten
+         print *,"dir_FD ",dir_FD
+         print *,"ilo,ihi ",ilo(1),ilo(2),ilo(SDIM),ihi(1),ihi(2),ihi(SDIM)
          stop
         endif
       enddo !ksten
@@ -8229,37 +8261,41 @@ contains
 
 #ifdef SANITY_CHECK
       if (dir_FD.eq.-1) then
-       if (data_in%grid_type_flux.eq.-1) then
+        ! do sanity check if data is at cell centers
+       if (data_in%grid_type_data.eq.-1) then 
         data_in2%level=data_in%level
         data_in2%finest_level=data_in%finest_level
         data_in2%bfact=data_in%bfact
         data_in2%interp_foot_flag=0
         data_in2%interp_dir=0 ! not used if interp_foot_flag==0
         data_in2%xtarget=>xtarget
-        data_in2%dx=data_in%dx
-        data_in2%xlo=data_in%xlo
-        data_in2%fablo=data_in%fablo
-        data_in2%fabhi=data_in%fabhi
+        data_in2%dx=>data_in%dx
+        data_in2%xlo=>data_in%xlo
+        data_in2%fablo=>data_in%fablo
+        data_in2%fabhi=>data_in%fabhi
         data_in2%ngrowfab=data_in%ngrowfab
-        data_in2%state=data_in%disp_data
+        data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(1))
         call single_interp_from_grid_util(data_in2,data_out2)
         if (abs(data_out%data_interp(1)- &
                 data_out2%data_interp(1)).le.1.0E-12) then
          ! do nothing
         else
-         print *,"data_out%data_interp(1) invalid"
+         print *,"data_in%grid_type_data=",data_in%grid_type_data
+         print *,"data_out%data_interp(1) ",data_out%data_interp(1)
+         print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
+         print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
          stop
         endif
         deallocate(data_out2%data_interp)
-       else if ((data_in%grid_type_flux.ge.0).and. &
-                (data_in%grid_type_flux.le.SDIM-1)) then
+       else if ((data_in%grid_type_data.ge.0).and. &
+                (data_in%grid_type_data.le.SDIM-1)) then
         allocate(data_out2%data_interp(1))
         data_in2%interp_foot_flag=0
 
         call interpfab_XDISP( &
-          data_in%grid_type_flux, &
-          data_in%grid_type_flux, &
+          data_in%grid_type_data, & ! start_dir
+          data_in%grid_type_data, & ! end_dir
           data_in2%interp_foot_flag, &
           data_in%bfact, &
           data_in%level, &
@@ -8278,15 +8314,18 @@ contains
                 data_out2%data_interp(1)).le.1.0E-12) then
          ! do nothing
         else
-         print *,"data_out%data_interp(1) invalid"
+         print *,"data_in%grid_type_data=",data_in%grid_type_data
+         print *,"data_out%data_interp(1) ",data_out%data_interp(1)
+         print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
+         print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
          stop
         endif
         deallocate(data_out2%data_interp)
-       else if ((data_in%grid_type_flux.ge.3).and. &
-                (data_in%grid_type_flux.le.5)) then
+       else if ((data_in%grid_type_data.ge.3).and. &
+                (data_in%grid_type_data.le.5)) then
         ! do nothing
        else
-        print *,"data_in%grid_type_flux invalid"
+        print *,"data_in%grid_type_data invalid"
         stop
        endif
       else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
