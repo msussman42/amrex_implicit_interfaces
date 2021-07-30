@@ -3613,6 +3613,7 @@ stop
        dt, &
        delta_mass, &
        maskcov,DIMS(maskcov), &
+       conductstate,DIMS(conductstate), & ! nmat components
        nodevel,DIMS(nodevel), &
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
@@ -3673,6 +3674,7 @@ stop
       REAL_T, intent(in) :: dt
       REAL_T, intent(inout) :: delta_mass(2*nmat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(conductstate)
       INTEGER_T, intent(in) :: DIMDEC(nodevel)
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
       INTEGER_T, intent(in) :: DIMDEC(TgammaFAB)
@@ -3685,6 +3687,9 @@ stop
 
       REAL_T, target, intent(in) :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+      REAL_T, target, intent(in) :: conductstate(DIMV(conductstate))
+      REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
       REAL_T, pointer :: nodevel_ptr(D_DECL(:,:,:),:)
@@ -3918,6 +3923,7 @@ stop
       recon_ptr=>recon
       EOS_ptr=>EOS
       nodevel_ptr=>nodevel
+      conductstate_ptr=>conductstate
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -4134,6 +4140,7 @@ stop
       call checkbound_array(fablo,fabhi,EOS_ptr,1,-1,1262)
       call checkbound_array(fablo,fabhi,swept_ptr,0,-1,1263)
       call checkbound_array(fablo,fabhi,nodevel_ptr,1,-1,12)
+      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,12)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       if (SDIM.eq.3) then
@@ -5731,14 +5738,13 @@ stop
               stop
              endif
 
-#if (STANDALONE==0)
-             thermal_k(iprobe)=get_user_heatviscconst(im_probe)
-#elif (STANDALONE==1)
-             thermal_k(iprobe)=fort_heatviscconst(im_probe)
-#else
-             print *,"bust compiling fort_convertmaterial"
-             stop
-#endif
+             thermal_k(iprobe)=conductstate(D_DECL(i,j,k),im_probe)
+             if (thermal_k(iprobe).ge.zero) then
+              ! do nothing
+             else
+              print *,"thermal_k(iprobe) invalid"
+              stop
+             endif
 
             enddo ! iprobe=1,2
 
@@ -6930,6 +6936,7 @@ stop
        colorfab,DIMS(colorfab), &
        typefab,DIMS(typefab), &
        maskcov,DIMS(maskcov), &
+       conductstate,DIMS(conductstate), &
        burnvel,DIMS(burnvel), &
        Tsatfab,DIMS(Tsatfab), &
        smoothfab,DIMS(smoothfab), &
@@ -7031,6 +7038,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(colorfab)
       INTEGER_T, intent(in) :: DIMDEC(typefab)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(conductstate)
       INTEGER_T, intent(in) :: DIMDEC(burnvel)
       INTEGER_T, intent(in) :: DIMDEC(Tsatfab)
       INTEGER_T, intent(in) :: DIMDEC(smoothfab)
@@ -7051,6 +7059,9 @@ stop
 
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov)) 
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: conductstate(DIMV(conductstate),nmat)
+      REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
         ! destination vel: first nten components are the status.
       REAL_T, intent(out), target :: burnvel(DIMV(burnvel),nburning)
@@ -7214,6 +7225,7 @@ stop
       nhalf=3
 
       maskcov_ptr=>maskcov
+      conductstate_ptr=>conductstate
       burnvel_ptr=>burnvel
       Tsatfab_ptr=>Tsatfab
       LS_ptr=>LS
@@ -7392,6 +7404,8 @@ stop
        call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
        colorfab_ptr=>colorfab
        call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
+
+       call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,1250)
 
        ! nmat x (sdim+1) components
        call checkbound_array(fablo,fabhi, &
@@ -8070,16 +8084,8 @@ stop
                  PROBE_PARMS%dencomp_dest=>dencomp_dest
                  PROBE_PARMS%xI=>xI
 
-#if (STANDALONE==0)
-                 thermal_k(1)=get_user_heatviscconst(im_source)
-                 thermal_k(2)=get_user_heatviscconst(im_dest)
-#elif (STANDALONE==1)
-                 thermal_k(1)=fort_heatviscconst(im_source)
-                 thermal_k(2)=fort_heatviscconst(im_dest)
-#else
-                 print *,"bust compiling ratemasschange"
-                 stop
-#endif
+                 thermal_k(1)=conductstate(D_DECL(i,j,k),im_source)
+                 thermal_k(2)=conductstate(D_DECL(i,j,k),im_dest)
 
                  if (LL(ireverse).gt.zero) then ! evaporation
                   iprobe_vapor=2  ! destination
