@@ -1412,6 +1412,63 @@ contains
       return
       end subroutine ghostnormal
 
+      subroutine safe_data_single(i,j,k,datafab,data_out)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k
+      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:))
+      REAL_T, intent(out) :: data_out
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,SDIM
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..sdim
+      data_out=datafab(D_DECL(idata(1),idata(2),idata(3)))
+
+      return
+      end subroutine safe_data_single
+
+      subroutine safe_data(i,j,k,n,datafab,data_out)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k,n
+      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:),:)
+      REAL_T, intent(out) :: data_out
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,SDIM
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..sdim
+      data_out=datafab(D_DECL(idata(1),idata(2),idata(3)),n)
+
+      return
+      end subroutine safe_data
+
+
       ! Added by Guibo 11-12-2012
       subroutine dumpstring(instring)
       implicit none
@@ -8074,6 +8131,9 @@ contains
       REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
+      REAL_T, pointer :: local_data(D_DECL(:,:,:))
+      REAL_T :: local_data_out
+
 #ifdef SANITY_CHECK
       type(single_interp_from_grid_parm_type) :: data_in2 
       type(interp_from_grid_out_parm_type) :: data_out2
@@ -8090,7 +8150,9 @@ contains
        print *,"dir_FD invalid"
        stop
       endif
- 
+
+      local_data=>data_in%disp_data
+
       nhalf=3 
       caller_id=10
       call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
@@ -8245,8 +8307,9 @@ contains
         enddo ! dir_local=1..sdim
 
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
-         data_out%data_interp(1)=data_out%data_interp(1)+wt_top* &
-           data_in%disp_data(D_DECL(isten,jsten,ksten))/wt_bot
+         call safe_data_single(isten,jsten,ksten,local_data,local_data_out)
+         data_out%data_interp(1)=data_out%data_interp(1)+ &
+             wt_top*local_data_out/wt_bot
         else
          print *,"wt_bot or wt_top invalid (single_deriv_from_grid_util:", &
                  wt_bot,wt_top
@@ -8415,11 +8478,11 @@ contains
       do dir_disp_comp=start_dir,end_dir
 
        if (dir_disp_comp.eq.0) then
-        call checkbound_array1(lo,hi,xdata,ngrow,0,1221)
+        call checkbound_array1(lo,hi,xdata,ngrow,0,8418)
        else if (dir_disp_comp.eq.1) then
-        call checkbound_array1(lo,hi,ydata,ngrow,1,1221)
+        call checkbound_array1(lo,hi,ydata,ngrow,1,8420)
        else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
-        call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,1221)
+        call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,8422)
        else
         print *,"dir_disp_comp invalid"
         stop
