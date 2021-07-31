@@ -7915,7 +7915,14 @@ contains
         data_in%level,nhalf,data_in%grid_type_data,caller_id)
 
       do dir_local=1,SDIM 
-       dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+       if (ilo(dir_local).eq.ihi(dir_local)) then
+        dx_sten(dir_local)=one
+       else if (ilo(dir_local).lt.ihi(dir_local)) then
+        dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+       else
+        print *,"ilo or ihi invalid"
+        stop
+       endif
       enddo ! dir_local=1..sdim
 
       if ((data_in%level.ge.0).and. &
@@ -8209,7 +8216,14 @@ contains
         data_in%level,nhalf,data_in%grid_type_data,caller_id)
 
       do dir_local=1,SDIM 
-       dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+       if (ilo(dir_local).eq.ihi(dir_local)) then
+        dx_sten(dir_local)=one
+       else if (ilo(dir_local).lt.ihi(dir_local)) then
+        dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+       else
+        print *,"ilo or ihi invalid"
+        stop
+       endif
       enddo ! dir_local=1..sdim
 
       if ((data_in%level.ge.0).and. &
@@ -8316,7 +8330,7 @@ contains
          data_out%data_interp(1)=data_out%data_interp(1)+ &
              wt_top*local_data_out/wt_bot
         else
-         print *,"wt_bot or wt_top invalid (single_deriv_from_grid_util:", &
+         print *,"wt_bot or wt_top invalid(single_deriv_from_grid_util):", &
                  wt_bot,wt_top
          print *,"isten,jsten,ksten ",isten,jsten,ksten
          print *,"dir_FD ",dir_FD
@@ -8381,10 +8395,18 @@ contains
                 data_out2%data_interp(1)).le.1.0E-12) then
          ! do nothing
         else
+         print *,"data_in%grid_type_flux=",data_in%grid_type_flux
          print *,"data_in%grid_type_data=",data_in%grid_type_data
          print *,"data_out%data_interp(1) ",data_out%data_interp(1)
          print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
          print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
+         print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+         print *,"ilocal ",ilocal(1),ilocal(2),ilocal(SDIM)
+         print *,"ilo: ",ilo(1),ilo(2),ilo(SDIM)
+         print *,"ihi: ",ihi(1),ihi(2),ihi(SDIM)
+         print *,"istep: ",istep(1),istep(2),istep(SDIM)
+         print *,"klosten,khisten,kstep: ",klosten,khisten,kstep
+         print *,"dx_sten ",dx_sten(1),dx_sten(2),dx_sten(SDIM)
          stop
         endif
         deallocate(data_out2%data_interp)
