@@ -851,6 +851,7 @@ stop
 
        ! declared in GLOBALUTIL.F90
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
+FIX ME use safe_data
 
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow+1) then
@@ -978,7 +979,7 @@ stop
        print *,"nmax invalid"
        stop
       endif
-
+FIX ME use safe_data
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
 
       do dir=1,SDIM
@@ -1150,7 +1151,7 @@ stop
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-
+FIX ME use safe_data
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow+1) then
         cell_index(dir)=lo(dir)-ngrow+1
@@ -1276,7 +1277,7 @@ stop
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-
+FIX ME use safe_data
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow+1) then
         cell_index(dir)=lo(dir)-ngrow+1
@@ -1596,7 +1597,7 @@ stop
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-
+FIX ME use safe data
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow) then
         cell_index(dir)=lo(dir)-ngrow
@@ -1721,7 +1722,7 @@ stop
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-
+FIX ME use safe data
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow) then
         cell_index(dir)=lo(dir)-ngrow
@@ -1844,7 +1845,7 @@ stop
       endif
 
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
-
+FIX ME use safe data
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow+1) then
         cell_index(dir)=lo(dir)-ngrow+1
@@ -2017,7 +2018,7 @@ stop
 
         ! cell that contains xtarget
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-
+FIX ME use safe_data
       do dir=1,SDIM
        if (cell_index(dir).lt.lo(dir)-ngrow) then
         cell_index(dir)=lo(dir)-ngrow
@@ -5941,7 +5942,6 @@ stop
               data_in%xlo=>xlo
               data_in%fablo=>fablo
               data_in%fabhi=>fabhi
-              data_in%ngrowfab=normal_probe_size+3
 
               data_in%state=>LSold
 
