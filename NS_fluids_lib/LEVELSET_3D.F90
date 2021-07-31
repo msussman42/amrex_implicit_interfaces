@@ -181,6 +181,8 @@ stop
         REAL_T shortest_dist_to_fluid
         REAL_T dist_stencil_to_bulk
         REAL_T :: LS_interp_low_order(num_materials)
+        REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+        REAL_T local_data_out
 
         INTEGER_T LSstenlo(3)
         INTEGER_T LSstenhi(3)
@@ -192,7 +194,6 @@ stop
 
         nhalf=3
 
-        FIX ME use safe data
          ! cell_index is containing cell for xCP
         do dir=1,SDIM
          local_index(dir)=cell_index(dir)
@@ -231,8 +232,11 @@ stop
          enddo
          dist_stencil_to_bulk=sqrt(dist_stencil_to_bulk)
 
+         local_data_fab=>CP%LS
          do im_local=1,CP%nmat
-          LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
+          call safe_data(isten,jsten,ksten,im_local, &
+           local_data_fab,local_data_out)
+          LS_virtual(im_local)=local_data_out
          enddo
 
          ! the fluid cells closest to the substrate, but not
@@ -19669,6 +19673,7 @@ stop
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       REAL_T wt_lagrangian
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
 
       nhalf=3      
 
@@ -19770,20 +19775,21 @@ stop
          jright=jmac
          kright=kmac
          local_mass=one
-FIX ME use safe data
+
          isten=imac-imaclo(1)+1
          jsten=jmac-imaclo(2)+1
          ksten=kmac-imaclo(3)+1
          if (dir.eq.1) then
-          local_data=grid_PARM%umac(D_DECL(imac,jmac,kmac))
+          local_data_fab=>grid_PARM%umac
          else if (dir.eq.2) then
-          local_data=grid_PARM%vmac(D_DECL(imac,jmac,kmac))
+          local_data_fab=>grid_PARM%vmac
          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          local_data=grid_PARM%wmac(D_DECL(imac,jmac,kmac))
+          local_data_fab=>grid_PARM%wmac
          else
           print *,"dir invalid"
           stop
          endif
+         call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
 
          data_stencil(D_DECL(isten,jsten,ksten),1)=local_mass*local_data
          data_mass_stencil(D_DECL(isten,jsten,ksten),1)=local_mass
