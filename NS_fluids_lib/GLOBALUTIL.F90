@@ -7842,6 +7842,9 @@ contains
       REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T :: local_data_out
+
 #ifdef SANITY_CHECK
       type(interp_from_grid_parm_type) :: data_in2 
       type(interp_from_grid_out_parm_type) :: data_out2
@@ -7858,6 +7861,8 @@ contains
        print *,"dir_FD invalid"
        stop
       endif
+
+      local_data_fab=>data_in%disp_data
  
       nhalf=3 
       caller_id=10
@@ -8028,9 +8033,10 @@ contains
 
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
          data_comp=data_in%scomp+nc-1
-         data_out%data_interp(nc)=data_out%data_interp(nc)+wt_top* &
-          data_in%disp_data(D_DECL(isten,jsten,ksten),data_comp)/ &
-          wt_bot
+         call safe_data(isten,jsten,ksten,data_comp, &
+           local_data_fab,local_data_out)
+         data_out%data_interp(nc)=data_out%data_interp(nc)+ &
+            wt_top*local_data_out/wt_bot
         else
          print *,"wt_bot or wt_top invalid (deriv_from_grid_util):", &
                  wt_bot,wt_top

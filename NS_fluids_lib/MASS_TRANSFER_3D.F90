@@ -70,7 +70,6 @@ stop
        REAL_T, pointer :: xlo(:)
        REAL_T, pointer :: xI(:)
        INTEGER_T, pointer :: nmat
-       INTEGER_T, pointer :: ngrow
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
@@ -127,7 +126,6 @@ stop
         level, &
         finest_level, &
         dx,xlo, &
-        ngrow_tsat, &
         fablo,fabhi, &
         TSATFAB, &
         T_I, &
@@ -146,7 +144,6 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: ngrow_tsat
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       REAL_T, pointer, intent(in) :: TSATFAB(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: caller_id
@@ -169,7 +166,6 @@ stop
       REAL_T, external   :: exact_temperature
 #endif
 
-      call checkbound_array(fablo,fabhi,TSATFAB,ngrow_tsat,-1,122)
       ncomp_per_tsat=2
       tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
 
@@ -207,7 +203,6 @@ stop
              dx,xlo, &
              x_I, &
              tsat_comp, &
-             ngrow_tsat, &
              fablo,fabhi, &
              TSATFAB, &
              T_I)
@@ -771,7 +766,6 @@ stop
        xlo,x, &
        im,nmat,&
        comp, &
-       ngrow, &
        lo,hi, &
        data, &
        recon, &
@@ -788,7 +782,7 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: x(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: comp,ngrow
+      INTEGER_T, intent(in) :: comp
       INTEGER_T, intent(in) :: im,nmat
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
@@ -819,11 +813,10 @@ stop
       INTEGER_T tsat_flag
       INTEGER_T nsolve
       REAL_T Tsat
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       DATA_FLOOR=zero
-
-      call checkbound_array(lo,hi,data,ngrow,-1,825)
-      call checkbound_array(lo,hi,recon,ngrow,-1,1222)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -851,16 +844,6 @@ stop
 
        ! declared in GLOBALUTIL.F90
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
-FIX ME use safe_data
-
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
-       endif
-      enddo ! dir
 
       vofcomp=(im-1)*ngeom_recon+1
 
@@ -883,11 +866,16 @@ FIX ME use safe_data
        call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
          volcell,cencell,SDIM)
 
-       T_sten(D_DECL(i1,j1,k1))=data(D_DECL(isten,jsten,ksten),comp)
-       VF_sten(D_DECL(i1,j1,k1))=recon(D_DECL(isten,jsten,ksten),vofcomp)
+       local_data_fab=>data
+       call safe_data(isten,jsten,ksten,comp,local_data_fab,local_data_out)
+       T_sten(D_DECL(i1,j1,k1))=local_data_out
+       local_data_fab=>recon
+       call safe_data(isten,jsten,ksten,vofcomp,local_data_fab,local_data_out)
+       VF_sten(D_DECL(i1,j1,k1))=local_data_out
        do dir=1,SDIM
-        XC_sten(D_DECL(i1,j1,k1),dir)= &
-         recon(D_DECL(isten,jsten,ksten),vofcomp+dir)+cencell(dir)
+        call safe_data(isten,jsten,ksten,vofcomp+dir, &
+          local_data_fab,local_data_out)
+        XC_sten(D_DECL(i1,j1,k1),dir)=local_data_out+cencell(dir)
        enddo
 
       enddo
@@ -931,7 +919,6 @@ FIX ME use safe_data
        dx, &
        xlo,x, &
        nmat,&
-       ngrow, &
        lo,hi, &
        recon, & ! fluids tess, solids overlay
        dest)
@@ -948,13 +935,11 @@ FIX ME use safe_data
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: x(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: nmat
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest(nmat)
 
       INTEGER_T im
-      INTEGER_T dir
       INTEGER_T ic,jc,kc
       INTEGER_T nhalf
       INTEGER_T vofcomp
@@ -966,8 +951,8 @@ FIX ME use safe_data
       REAL_T cencell(SDIM)
       INTEGER_T nmax
       INTEGER_T local_tessellate
-
-      call checkbound_array(lo,hi,recon,ngrow,-1,1222)
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       if (bfact.lt.1) then 
        print *,"bfact invalid113"
@@ -979,17 +964,7 @@ FIX ME use safe_data
        print *,"nmax invalid"
        stop
       endif
-FIX ME use safe_data
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
-
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
-       endif
-      enddo ! dir
 
       ic=cell_index(1)
       jc=cell_index(2)
@@ -1000,8 +975,10 @@ FIX ME use safe_data
       call Box_volumeFAST(bfact,dx,xsten,nhalf, &
         volcell,cencell,SDIM)
 
+      local_data_fab=>recon
       do im=1,nmat*ngeom_recon
-       mofdata(im)=recon(D_DECL(ic,jc,kc),im)
+       call safe_data(ic,jc,kc,im,local_data_fab,local_data_out)
+       mofdata(im)=local_data_out
       enddo
 
       local_tessellate=3
@@ -1086,7 +1063,6 @@ FIX ME use safe_data
        xlo, &
        xtarget, &
        comp, &
-       ngrow, &
        lo,hi, &
        data, &
        dest)
@@ -1102,15 +1078,15 @@ FIX ME use safe_data
       INTEGER_T, intent(in) :: lo(SDIM)
       INTEGER_T, intent(in) :: hi(SDIM)
       INTEGER_T, intent(in) :: comp
-      INTEGER_T, intent(in) :: ngrow
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       REAL_T :: DATA_FLOOR
 
       REAL_T :: T_out(1)
 
-      INTEGER_T dir
       INTEGER_T ic,jc,kc
       INTEGER_T i1,j1,k1
       INTEGER_T isten,jsten,ksten
@@ -1127,8 +1103,6 @@ FIX ME use safe_data
       REAL_T Tsat
 
       DATA_FLOOR=zero
-
-      call checkbound_array(lo,hi,data,ngrow,-1,122)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1151,15 +1125,6 @@ FIX ME use safe_data
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-FIX ME use safe_data
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
-       endif
-      enddo ! dir
       ic=cell_index(1)
       jc=cell_index(2)
       kc=cell_index(SDIM)
@@ -1174,8 +1139,9 @@ FIX ME use safe_data
        isten=i1+ic
        jsten=j1+jc
        ksten=k1+kc
-
-       T_sten(D_DECL(i1,j1,k1))=data(D_DECL(isten,jsten,ksten),comp)
+       local_data_fab=>data
+       call safe_data(isten,jsten,ksten,comp,local_data_fab,local_data_out)
+       T_sten(D_DECL(i1,j1,k1))=local_data_out
 
       enddo
       enddo
@@ -1217,7 +1183,6 @@ FIX ME use safe_data
        dx, &
        xlo, &
        xtarget, &
-       ngrow, &
        lo,hi, &
        data, &
        dest)
@@ -1232,15 +1197,15 @@ FIX ME use safe_data
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM)
       INTEGER_T, intent(in) :: hi(SDIM)
-      INTEGER_T, intent(in) :: ngrow
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:))
       REAL_T, intent(out) :: dest
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
+      REAL_T local_data_out
 
       REAL_T :: DATA_FLOOR
 
       REAL_T :: T_out(1)
 
-      INTEGER_T dir
       INTEGER_T ic,jc,kc
       INTEGER_T i1,j1,k1
       INTEGER_T isten,jsten,ksten
@@ -1257,8 +1222,6 @@ FIX ME use safe_data
       REAL_T Tsat
 
       DATA_FLOOR=zero
-
-      call checkbound_array1(lo,hi,data,ngrow,-1,122)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1277,15 +1240,6 @@ FIX ME use safe_data
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-FIX ME use safe_data
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
-       endif
-      enddo ! dir
       ic=cell_index(1)
       jc=cell_index(2)
       kc=cell_index(SDIM)
@@ -1301,7 +1255,9 @@ FIX ME use safe_data
        jsten=j1+jc
        ksten=k1+kc
 
-       T_sten(D_DECL(i1,j1,k1))=data(D_DECL(isten,jsten,ksten))
+       local_data_fab=>data
+       call safe_data_single(isten,jsten,ksten,local_data_fab,local_data_out)
+       T_sten(D_DECL(i1,j1,k1))=local_data_out
 
       enddo
       enddo
@@ -1351,7 +1307,6 @@ FIX ME use safe_data
        xlo, &
        xtarget, &
        comp, &
-       ngrow, &
        lo,hi, &
        data, &
        TSAT)
@@ -1370,7 +1325,7 @@ FIX ME use safe_data
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: comp,ngrow
+      INTEGER_T, intent(in) :: comp
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: TSAT
 
@@ -1388,8 +1343,8 @@ FIX ME use safe_data
       REAL_T local_TSAT
       REAL_T local_weight
       REAL_T eps
-
-      call checkbound_array(lo,hi,data,ngrow,-1,122)
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       ncomp_per_tsat=2
       if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
@@ -1455,7 +1410,9 @@ FIX ME use safe_data
        ksten=k1+k
        call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
 
-       TSAT_FLAG=NINT(data(D_DECL(isten,jsten,ksten),iten))
+       local_data_fab=>data
+       call safe_data(isten,jsten,ksten,iten,local_data_fab,local_data_out)
+       TSAT_FLAG=NINT(local_data_out)
        if (ireverse.eq.0) then
         ! do nothing
        else if (ireverse.eq.1) then
@@ -1465,7 +1422,8 @@ FIX ME use safe_data
         stop
        endif
        if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
-        local_TSAT=data(D_DECL(isten,jsten,ksten),comp)
+        call safe_data(isten,jsten,ksten,comp,local_data_fab,local_data_out)
+        local_TSAT=local_data_out
         local_weight=zero
         eps=dx(1)*0.001
         do dir=1,SDIM
@@ -1503,7 +1461,7 @@ FIX ME use safe_data
                i,j,k,ireverse,iten,nten,ntsat,bfact
        print *,"level,finest_level,dx ",level,finest_level, &
                dx(1),dx(2),dx(SDIM)
-       print *,"xlo,xtarget,comp,ngrow ",xlo(1),xlo(2),xlo(SDIM), &
+       print *,"xlo,xtarget,comp ",xlo(1),xlo(2),xlo(SDIM), &
                xtarget(1),xtarget(2),xtarget(SDIM)
        print *,"TSAT_weight ",TSAT_weight
        stop
@@ -1523,7 +1481,6 @@ FIX ME use safe_data
        dx, &
        xlo, &
        xtarget, &
-       ngrow, &
        lo,hi, &
        data, &
        CURV_OUT)
@@ -1540,7 +1497,6 @@ FIX ME use safe_data
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: ngrow
        ! first nmat+nten components are curvatures
        ! second nmat+nten components are status (0=bad 1=good)
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
@@ -1548,21 +1504,20 @@ FIX ME use safe_data
 
       INTEGER_T k1lo,k1hi
       INTEGER_T cell_index(3)
-      INTEGER_T sten_index(3)
       INTEGER_T dir
       INTEGER_T nhalf
+      INTEGER_T CURV_FLAG
       REAL_T CURV_times_weight
       REAL_T CURV_weight
       INTEGER_T i1,j1,k1
       INTEGER_T isten,jsten,ksten
       REAL_T xsten(-3:3,SDIM)
-      INTEGER_T CURV_FLAG
       REAL_T local_CURV
       REAL_T local_weight
       REAL_T eps
       INTEGER_T nten_test
-
-      call checkbound_array(lo,hi,data,ngrow,-1,122)
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -1597,15 +1552,6 @@ FIX ME use safe_data
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-FIX ME use safe data
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow) then
-        cell_index(dir)=lo(dir)-ngrow
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow) then
-        cell_index(dir)=hi(dir)+ngrow
-       endif
-      enddo ! dir
 
       nhalf=3
 
@@ -1619,27 +1565,18 @@ FIX ME use safe data
        isten=i1+cell_index(1)
        jsten=j1+cell_index(2)
        ksten=k1+cell_index(3)
-       sten_index(1)=isten
-       sten_index(2)=jsten
-       sten_index(3)=ksten
 
-       CURV_FLAG=1
+       call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
 
-       do dir=1,SDIM
-        if ((sten_index(dir).lt.lo(dir)-ngrow).or. &
-            (sten_index(dir).gt.hi(dir)+ngrow)) then
-         CURV_FLAG=0
-        endif
-       enddo ! dir
+       local_data_fab=>data
+       call safe_data(isten,jsten,ksten,nmat+nten+curv_comp, &
+           local_data_fab,local_data_out)
+       CURV_FLAG=NINT(local_data_out)
 
        if (CURV_FLAG.eq.1) then
-
-        call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
-
-        CURV_FLAG=NINT(data(D_DECL(isten,jsten,ksten),nmat+nten+curv_comp))
-
-        if (CURV_FLAG.eq.1) then
-         local_CURV=data(D_DECL(isten,jsten,ksten),curv_comp)
+         call safe_data(isten,jsten,ksten,curv_comp, &
+           local_data_fab,local_data_out)
+         local_CURV=local_data_out
          local_weight=zero
          eps=dx(1)*0.001
          do dir=1,SDIM
@@ -1649,18 +1586,11 @@ FIX ME use safe data
          local_weight=one/local_weight
          CURV_weight=CURV_weight+local_weight
          CURV_times_weight=CURV_times_weight+local_weight*local_CURV
-        else if (CURV_FLAG.eq.0) then
+       else if (CURV_FLAG.eq.0) then
          ! do nothing
-        else
+       else
          print *,"CURV_FLAG invalid"
          stop
-        endif
-
-       else if (CURV_FLAG.eq.0) then
-        ! do nothing
-       else
-        print *,"CURV_FLAG invalid"
-        stop
        endif
 
       enddo
@@ -1688,7 +1618,6 @@ FIX ME use safe data
        xlo, &
        xtarget, &
        comp, &
-       ngrow, &
        lo,hi, &
        data, &
        dest)
@@ -1702,15 +1631,14 @@ FIX ME use safe data
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: comp,ngrow
+      INTEGER_T, intent(in) :: comp
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
 
-      INTEGER_T dir
       INTEGER_T ic,jc,kc
       INTEGER_T cell_index(SDIM)
-
-      call checkbound_array(lo,hi,data,ngrow,-1,122)
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       if (bfact.lt.1) then 
        print *,"bfact invalid115"
@@ -1722,20 +1650,13 @@ FIX ME use safe data
       endif
 
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-FIX ME use safe data
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow) then
-        cell_index(dir)=lo(dir)-ngrow
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow) then
-        cell_index(dir)=hi(dir)+ngrow
-       endif
-      enddo ! dir
       ic=cell_index(1)
       jc=cell_index(2)
       kc=cell_index(SDIM)
 
-      dest=data(D_DECL(ic,jc,kc),comp)
+      local_data_fab=>data
+      call safe_data(ic,jc,kc,comp,local_data_fab,local_data_out)
+      dest=local_data_out
 
       return 
       end subroutine interpfab_piecewise_constant
@@ -1751,7 +1672,6 @@ FIX ME use safe data
        Tsat, &
        im,nmat, &
        comp, &
-       ngrow, &
        lo,hi, &
        tempfab, &
        LS, &
@@ -1773,11 +1693,13 @@ FIX ME use safe data
       REAL_T, intent(in) :: xI(SDIM)
       REAL_T, intent(in) :: Tsat
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: im,nmat,comp,ngrow
+      INTEGER_T, intent(in) :: im,nmat,comp
       REAL_T, pointer, intent(in) :: tempfab(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: LS(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       REAL_T :: DATA_FLOOR
 
@@ -1809,10 +1731,6 @@ FIX ME use safe data
        print *,"bfact invalid116"
        stop
       endif
-      if (ngrow.lt.1) then
-       print *,"ngrow invalid"
-       stop
-      endif
       if ((comp.lt.1).or.(comp.gt.1000)) then
        print *,"comp out of range"
        stop
@@ -1829,10 +1747,6 @@ FIX ME use safe data
        stop
       endif
 
-      call checkbound_array(lo,hi,tempfab,ngrow,-1,1223)
-      call checkbound_array(lo,hi,LS,ngrow,-1,1224)
-      call checkbound_array(lo,hi,recon,ngrow,-1,1224)
-
       if (SDIM.eq.2) then
        k1lo=0
        k1hi=0
@@ -1845,15 +1759,6 @@ FIX ME use safe data
       endif
 
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
-FIX ME use safe data
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow+1) then
-        cell_index(dir)=lo(dir)-ngrow+1
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow-1) then
-        cell_index(dir)=hi(dir)+ngrow-1
-       endif
-      enddo ! dir
 
       vofcomp=(im-1)*ngeom_recon+1
 
@@ -1876,13 +1781,20 @@ FIX ME use safe data
        call Box_volumeFAST(bfact,dx,xsten_stencil,nhalf, &
          volcell,cencell,SDIM)
 
-       T_sten(D_DECL(i1,j1,k1))=tempfab(D_DECL(isten,jsten,ksten),comp)
-       VF_sten(D_DECL(i1,j1,k1))=recon(D_DECL(isten,jsten,ksten),vofcomp)
-       LS_sten(D_DECL(i1,j1,k1))=LS(D_DECL(isten,jsten,ksten),im)
+       local_data_fab=>tempfab
+       call safe_data(isten,jsten,ksten,comp,local_data_fab,local_data_out)
+       T_sten(D_DECL(i1,j1,k1))=local_data_out
+       local_data_fab=>recon
+       call safe_data(isten,jsten,ksten,vofcomp,local_data_fab,local_data_out)
+       VF_sten(D_DECL(i1,j1,k1))=local_data_out
        do dir=1,SDIM
-        XC_sten(D_DECL(i1,j1,k1),dir)= &
-         recon(D_DECL(isten,jsten,ksten),vofcomp+dir)+cencell(dir)
+        call safe_data(isten,jsten,ksten,vofcomp+dir, &
+          local_data_fab,local_data_out)
+        XC_sten(D_DECL(i1,j1,k1),dir)=local_data_out+cencell(dir)
        enddo
+       local_data_fab=>LS
+       call safe_data(isten,jsten,ksten,im,local_data_fab,local_data_out)
+       LS_sten(D_DECL(i1,j1,k1))=local_data_out
 
       enddo
       enddo
@@ -1929,7 +1841,6 @@ FIX ME use safe data
        im_target_probe, &
        nmat, &
        comp_probe, &
-       ngrow, &
        lo,hi, &
        tempfab, &
        LS, &
@@ -1955,7 +1866,6 @@ FIX ME use safe data
       INTEGER_T, intent(in) :: im_target_probe
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: comp_probe
-      INTEGER_T, intent(in) :: ngrow
       REAL_T, pointer, intent(in) :: tempfab(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: LS(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
@@ -1978,6 +1888,8 @@ FIX ME use safe data
       REAL_T XC_sten(SDIM)
       REAL_T mag
       INTEGER_T material_found_in_cell
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T local_data_out
 
       if (bfact.lt.1) then 
        print *,"bfact invalid116"
@@ -1991,10 +1903,6 @@ FIX ME use safe data
        stop
       endif
 
-      if (ngrow.lt.1) then
-       print *,"ngrow invalid"
-       stop
-      endif
       if ((comp_probe.lt.1).or.(comp_probe.gt.1000)) then
        print *,"comp_probe out of range"
        stop
@@ -2012,21 +1920,8 @@ FIX ME use safe data
        stop
       endif
 
-      call checkbound_array(lo,hi,tempfab,ngrow,-1,1223)
-      call checkbound_array(lo,hi,LS,ngrow,-1,1224)
-      call checkbound_array(lo,hi,recon,ngrow,-1,1224)
-
         ! cell that contains xtarget
       call containing_cell(bfact,dx,xlo,lo,xtarget,cell_index)
-FIX ME use safe_data
-      do dir=1,SDIM
-       if (cell_index(dir).lt.lo(dir)-ngrow) then
-        cell_index(dir)=lo(dir)-ngrow
-       endif
-       if (cell_index(dir).gt.hi(dir)+ngrow) then
-        cell_index(dir)=hi(dir)+ngrow
-       endif
-      enddo ! dir
 
       vofcomp=(im_target_probe-1)*ngeom_recon+1
 
@@ -2041,12 +1936,16 @@ FIX ME use safe_data
         volcell,cencell,SDIM)
 
        ! temperature at the material centroid of cell (isten,jsten,ksten)
-      T_sten=tempfab(D_DECL(ic,jc,kc),comp_probe)
-      VF_sten=recon(D_DECL(ic,jc,kc),vofcomp)
+      local_data_fab=>tempfab
+      call safe_data(ic,jc,kc,comp_probe,local_data_fab,local_data_out)
+      T_sten=local_data_out
+      local_data_fab=>recon
+      call safe_data(ic,jc,kc,vofcomp,local_data_fab,local_data_out)
+      VF_sten=local_data_out
       mag=zero
       do dir=1,SDIM
-       XC_sten(dir)= &
-        recon(D_DECL(ic,jc,kc),vofcomp+dir)+cencell(dir)
+       call safe_data(ic,jc,kc,vofcomp+dir,local_data_fab,local_data_out)
+       XC_sten(dir)=local_data_out+cencell(dir)
        mag=mag+(XC_sten(dir)-cencell(dir))**2
       enddo
       mag=sqrt(mag)
@@ -2205,7 +2104,6 @@ FIX ME use safe_data
        PROBE_PARMS%xlo, &
        PROBE_PARMS%xI, &
        PROBE_PARMS%nmat, &
-       PROBE_PARMS%ngrow, &
        PROBE_PARMS%fablo, &
        PROBE_PARMS%fabhi, &
        PROBE_PARMS%recon, &
@@ -2277,7 +2175,6 @@ FIX ME use safe_data
          im_target_probe(iprobe), &
          PROBE_PARMS%nmat, &
          dencomp_probe(iprobe), &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
@@ -2294,7 +2191,6 @@ FIX ME use safe_data
          im_target_probe(iprobe), &
          PROBE_PARMS%nmat, &
          dencomp_probe(iprobe), &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
@@ -2321,7 +2217,6 @@ FIX ME use safe_data
         im_target_probe(iprobe), &
         PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
-        PROBE_PARMS%ngrow, &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
@@ -2346,7 +2241,6 @@ FIX ME use safe_data
         im_target_probe(iprobe), &
         PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
-        PROBE_PARMS%ngrow, &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &        ! Fortran array box
@@ -2391,7 +2285,6 @@ FIX ME use safe_data
          im_target_probe(iprobe), &
          PROBE_PARMS%nmat, &
          Ycomp_probe(iprobe), &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &
@@ -2425,7 +2318,6 @@ FIX ME use safe_data
          im_target_probe(iprobe), &
          PROBE_PARMS%nmat, &
          Ycomp_probe(iprobe), &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &        ! Fortran array box
@@ -2468,7 +2360,6 @@ FIX ME use safe_data
          im_target_probe(iprobe), &
          PROBE_PARMS%nmat, &
          Ycomp_probe(iprobe), &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%EOS, &
@@ -2494,7 +2385,6 @@ FIX ME use safe_data
          PROBE_PARMS%xlo, &
          xtarget_probe, &
          imls, &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%LS, &
@@ -2583,7 +2473,6 @@ FIX ME use safe_data
           im_target_probe(iprobe), &
           PROBE_PARMS%nmat, &
           tcomp_probe(iprobe), &
-          PROBE_PARMS%ngrow, &
           PROBE_PARMS%fablo, &
           PROBE_PARMS%fabhi, &
           PROBE_PARMS%EOS, &
@@ -2617,7 +2506,6 @@ FIX ME use safe_data
            im_target_probe(iprobe), &
            PROBE_PARMS%nmat, &
            Ycomp_probe(iprobe), &
-           PROBE_PARMS%ngrow, &
            PROBE_PARMS%fablo, &
            PROBE_PARMS%fabhi, &
            PROBE_PARMS%EOS, &
@@ -2682,7 +2570,6 @@ FIX ME use safe_data
         im_target_probe(iprobe), &
         PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
-        PROBE_PARMS%ngrow, &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
@@ -2708,7 +2595,6 @@ FIX ME use safe_data
          im_target_probe(iprobe), &
          PROBE_PARMS%nmat, &
          im_target_probe(iprobe), &
-         PROBE_PARMS%ngrow, &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%smoothfab, &
@@ -2736,7 +2622,6 @@ FIX ME use safe_data
         im_target_probe(iprobe), &
         PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
-        PROBE_PARMS%ngrow, &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
@@ -2750,7 +2635,6 @@ FIX ME use safe_data
         PROBE_PARMS%dx, &
         PROBE_PARMS%xlo, &
         PROBE_PARMS%xI, &
-        PROBE_PARMS%ngrow, &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%pres, &
@@ -7593,7 +7477,6 @@ FIX ME use safe_data
       PROBE_PARMS%dx=>dx
       PROBE_PARMS%xlo=>xlo
       PROBE_PARMS%nmat=>nmat
-      PROBE_PARMS%ngrow=>ngrow
       PROBE_PARMS%fablo=>fablo
       PROBE_PARMS%fabhi=>fabhi
 
@@ -7937,7 +7820,6 @@ FIX ME use safe_data
                   finest_level, &
                   dx,xlo, &
                   xI, &
-                  ngrow_make_distance, &
                   fablo,fabhi, &
                   curvfab_ptr, &
                   CURV_OUT_I)
@@ -7958,7 +7840,6 @@ FIX ME use safe_data
                    level, &
                    finest_level, &
                    dx,xlo, &
-                   ngrow_make_distance, & ! ngrow_tsat
                    fablo,fabhi, &
                    Tsatfab_ptr, & ! not used since use_tsatfab==0
                    local_Tsat(ireverse), & !user def. interface temperature 
@@ -8044,7 +7925,6 @@ FIX ME use safe_data
                    dx, &
                    xlo,xI, &
                    imls, &
-                   ngrow, &
                    fablo,fabhi, &
                    LS_ptr, &
                    LSINT(imls))

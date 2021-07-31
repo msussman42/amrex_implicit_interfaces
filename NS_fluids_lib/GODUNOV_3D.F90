@@ -17378,7 +17378,6 @@ stop
                dx,xlo, &
                x_interface, &
                tsat_comp, &
-               ngrow_tsat, &
                fablo,fabhi, &
                TgammaFAB_ptr, &
                TorYgamma_BC)  ! TorYgamma_BC here is an output
