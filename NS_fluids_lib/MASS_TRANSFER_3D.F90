@@ -822,7 +822,7 @@ stop
 
       DATA_FLOOR=zero
 
-      call checkbound_array(lo,hi,data,ngrow,-1,1221)
+      call checkbound_array(lo,hi,data,ngrow,-1,825)
       call checkbound_array(lo,hi,recon,ngrow,-1,1222)
 
       if (SDIM.eq.2) then
