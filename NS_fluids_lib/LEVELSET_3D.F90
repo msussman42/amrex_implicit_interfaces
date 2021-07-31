@@ -45,7 +45,6 @@ stop
          INTEGER_T bfact
          INTEGER_T level
          INTEGER_T finest_level
-         INTEGER_T ngrow_LS
          INTEGER_T, pointer :: fablo(:)
          INTEGER_T, pointer :: fabhi(:)
          REAL_T, pointer :: dx(:)
@@ -188,139 +187,128 @@ stop
 
         ASSOCIATE(CP=>cell_CP_parm)
 
-        if (CP%ngrow_LS.eq.4) then
+        LSstenlo(3)=0
+        LSstenhi(3)=0
 
-         LSstenlo(3)=0
-         LSstenhi(3)=0
+        nhalf=3
 
-         nhalf=3
+        FIX ME use safe data
+         ! cell_index is containing cell for xCP
+        do dir=1,SDIM
+         local_index(dir)=cell_index(dir)
+         LSstenlo(dir)=-1
+         LSstenhi(dir)=1
+        enddo ! dir=1..sdim
 
-          ! cell_index is containing cell for xCP
+        shortest_dist_to_fluid=-one
+        im_fluid_critical=0
+
+         ! stencil radius is 1.
+        do i2=LSstenlo(1),LSstenhi(1)
+        do j2=LSstenlo(2),LSstenhi(2)
+        do k2=LSstenlo(3),LSstenhi(3)
+
+          ! local_index is the containing cell for xCP
+         isten=local_index(1)+i2
+         jsten=local_index(2)+j2
+         ksten=local_index(SDIM)+k2
+
+         call gridsten_level(xsten, &
+          isten,jsten,ksten, &
+          CP%level,nhalf)
+
+         dist_stencil_to_bulk=zero
+
+          ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
+          ! xSOLID_BULK usually in the solid, but it might be
+          ! in the fluid, at most 1 cell away from a solid cell.
+          ! NOTE: the output from this routine is ignored if xSOLID_BULK
+          ! in a fluid cell.
          do dir=1,SDIM
-          local_index(dir)=cell_index(dir)
-          if (cell_index(dir)-1.lt.CP%fablo(dir)-CP%ngrow_LS) then
-           local_index(dir)=CP%fablo(dir)-CP%ngrow_LS+1
-          endif
-          if (cell_index(dir)+1.gt.CP%fabhi(dir)+CP%ngrow_LS) then
-           local_index(dir)=CP%fabhi(dir)+CP%ngrow_LS-1
-          endif
-          LSstenlo(dir)=-1
-          LSstenhi(dir)=1
-         enddo ! dir=1..sdim
+          ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
+          dist_stencil_to_bulk=dist_stencil_to_bulk+ &
+                  (xsten(0,dir)-xSOLID_BULK(dir))**2
+         enddo
+         dist_stencil_to_bulk=sqrt(dist_stencil_to_bulk)
 
-         shortest_dist_to_fluid=-one
-         im_fluid_critical=0
+         do im_local=1,CP%nmat
+          LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
+         enddo
 
-          ! stencil radius is 1.
-         do i2=LSstenlo(1),LSstenhi(1)
-         do j2=LSstenlo(2),LSstenhi(2)
-         do k2=LSstenlo(3),LSstenhi(3)
+         ! the fluid cells closest to the substrate, but not
+         ! in the substrate, have the most weight.
+         call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
 
-           ! local_index is the containing cell for xCP
-          isten=local_index(1)+i2
-          jsten=local_index(2)+j2
-          ksten=local_index(SDIM)+k2
+         if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
 
-          call gridsten_level(xsten, &
-           isten,jsten,ksten, &
-           CP%level,nhalf)
-
-          dist_stencil_to_bulk=zero
-
-           ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
-           ! xSOLID_BULK usually in the solid, but it might be
-           ! in the fluid, at most 1 cell away from a solid cell.
-           ! NOTE: the output from this routine is ignored if xSOLID_BULK
-           ! in a fluid cell.
-          do dir=1,SDIM
-           ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
-           dist_stencil_to_bulk=dist_stencil_to_bulk+ &
-                   (xsten(0,dir)-xSOLID_BULK(dir))**2
-          enddo
-          dist_stencil_to_bulk=sqrt(dist_stencil_to_bulk)
-
-          do im_local=1,CP%nmat
-           LS_virtual(im_local)=CP%LS(D_DECL(isten,jsten,ksten),im_local)
-          enddo
-
-          ! the fluid cells closest to the substrate, but not
-          ! in the substrate, have the most weight.
-          call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
-
-          if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
-
-           if (shortest_dist_to_fluid.eq.-one) then
+          if (shortest_dist_to_fluid.eq.-one) then
+           im_fluid_critical=im_primary_sub_stencil
+           shortest_dist_to_fluid=dist_stencil_to_bulk
+           do im_local=1,CP%nmat
+            LS_interp_low_order(im_local)=LS_virtual(im_local)
+           enddo
+          else if (shortest_dist_to_fluid.ge.zero) then
+           if (dist_stencil_to_bulk.lt. &
+               shortest_dist_to_fluid) then
             im_fluid_critical=im_primary_sub_stencil
             shortest_dist_to_fluid=dist_stencil_to_bulk
             do im_local=1,CP%nmat
              LS_interp_low_order(im_local)=LS_virtual(im_local)
             enddo
-           else if (shortest_dist_to_fluid.ge.zero) then
-            if (dist_stencil_to_bulk.lt. &
-                shortest_dist_to_fluid) then
-             im_fluid_critical=im_primary_sub_stencil
-             shortest_dist_to_fluid=dist_stencil_to_bulk
-             do im_local=1,CP%nmat
-              LS_interp_low_order(im_local)=LS_virtual(im_local)
-             enddo
-            else if (dist_stencil_to_bulk.ge. &
-                     shortest_dist_to_fluid) then
-             ! do nothing
-            else
-             print *,"dist_stencil_bulk invalid"
-             stop
-            endif
+           else if (dist_stencil_to_bulk.ge. &
+                    shortest_dist_to_fluid) then
+            ! do nothing
            else
-            print *,"shortest_dist_to_fluid invalid"
+            print *,"dist_stencil_bulk invalid"
             stop
            endif
-
-          else if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.1) then
-
-           ! do nothing
- 
           else
-           print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
-           stop 
+           print *,"shortest_dist_to_fluid invalid"
+           stop
           endif
-          
-          ZEYU_DAT%ZEYU_WT(i2,j2,k2)=one
-          do im_local=1,CP%nmat
-           ZEYU_DAT%ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
-          enddo
 
-         enddo 
-         enddo 
-         enddo  !i2,j2,k2=LSstenlo ... LSstenhi
-        
-         if (shortest_dist_to_fluid.ge.zero) then
+         else if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.1) then
 
-          do im_local=1,CP%nmat
-           LS_interp(im_local)=LS_interp_low_order(im_local)
-          enddo
-           !no fluid cells in stencil
-         else if (shortest_dist_to_fluid.eq.-one) then 
-                 !no fluid cells in stencil
-
-          call level_set_extrapolation( &
-           ZEYU_DAT%ZEYU_XPOS, &
-           ZEYU_DAT%ZEYU_LS, &
-           ZEYU_DAT%ZEYU_WT, &
-           CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
-           LS_interp, &
-           CP%least_sqr_radius, &
-           CP%least_sqrZ, &
-           CP%nmat,SDIM)
+          ! do nothing
 
          else
-          print *,"shortest_dist_to_fluid invalid"
-          stop
+          print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
+          stop 
          endif
+         
+         ZEYU_DAT%ZEYU_WT(i2,j2,k2)=one
+         do im_local=1,CP%nmat
+          ZEYU_DAT%ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
+         enddo
+
+        enddo 
+        enddo 
+        enddo  !i2,j2,k2=LSstenlo ... LSstenhi
+       
+        if (shortest_dist_to_fluid.ge.zero) then
+
+         do im_local=1,CP%nmat
+          LS_interp(im_local)=LS_interp_low_order(im_local)
+         enddo
+          !no fluid cells in stencil
+        else if (shortest_dist_to_fluid.eq.-one) then 
+                !no fluid cells in stencil
+
+         call level_set_extrapolation( &
+          ZEYU_DAT%ZEYU_XPOS, &
+          ZEYU_DAT%ZEYU_LS, &
+          ZEYU_DAT%ZEYU_WT, &
+          CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
+          LS_interp, &
+          CP%least_sqr_radius, &
+          CP%least_sqrZ, &
+          CP%nmat,SDIM)
 
         else
-         print *,"CP%ngrow_LS invalid"
+         print *,"shortest_dist_to_fluid invalid"
          stop
         endif
+
 
         END ASSOCIATE
 
@@ -16860,7 +16848,6 @@ stop
       cell_CP_parm%bfact=bfact
       cell_CP_parm%level=level
       cell_CP_parm%finest_level=finest_level
-      cell_CP_parm%ngrow_LS=ngrow_distance
       cell_CP_parm%fablo=>fablo
       cell_CP_parm%fabhi=>fabhi
       cell_CP_parm%dx=>dx
@@ -18910,7 +18897,6 @@ stop
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
       data_in%nmat=num_materials
-      data_in%ngrowfab=1
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
@@ -18922,7 +18908,6 @@ stop
       single_data_in%level=accum_PARM%level
       single_data_in%finest_level=accum_PARM%finest_level
       single_data_in%bfact=accum_PARM%bfact
-      single_data_in%ngrowfab=1
       single_data_in%dx=>dx_local
       single_data_in%xlo=>xlo_local
       single_data_in%fablo=>fablo_local
@@ -19712,16 +19697,6 @@ stop
           xpart, &
           cell_index)
 
-       do dir=1,SDIM
-        if (cell_index(dir).lt.grid_PARM%fablo(dir)) then
-         cell_index(dir)=grid_PARM%fablo(dir)
-        else if (cell_index(dir).gt.grid_PARM%fabhi(dir)) then
-         cell_index(dir)=grid_PARM%fabhi(dir)
-        else
-         ! do nothing
-        endif
-       enddo
-
        i=cell_index(1)
        j=cell_index(2)
        k=cell_index(SDIM)
@@ -19795,7 +19770,7 @@ stop
          jright=jmac
          kright=kmac
          local_mass=one
-
+FIX ME use safe data
          isten=imac-imaclo(1)+1
          jsten=jmac-imaclo(2)+1
          ksten=kmac-imaclo(3)+1

@@ -8067,7 +8067,6 @@ contains
         data_in2%xlo=>data_in%xlo
         data_in2%fablo=>data_in%fablo
         data_in2%fabhi=>data_in%fabhi
-        data_in2%ngrowfab=data_in%ngrowfab
         data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
@@ -8131,7 +8130,7 @@ contains
       REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
-      REAL_T, pointer :: local_data(D_DECL(:,:,:))
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
       REAL_T :: local_data_out
 
 #ifdef SANITY_CHECK
@@ -8151,7 +8150,7 @@ contains
        stop
       endif
 
-      local_data=>data_in%disp_data
+      local_data_fab=>data_in%disp_data
 
       nhalf=3 
       caller_id=10
@@ -8307,7 +8306,7 @@ contains
         enddo ! dir_local=1..sdim
 
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
-         call safe_data_single(isten,jsten,ksten,local_data,local_data_out)
+         call safe_data_single(isten,jsten,ksten,local_data_fab,local_data_out)
          data_out%data_interp(1)=data_out%data_interp(1)+ &
              wt_top*local_data_out/wt_bot
         else
@@ -8336,7 +8335,6 @@ contains
         data_in2%xlo=>data_in%xlo
         data_in2%fablo=>data_in%fablo
         data_in2%fabhi=>data_in%fabhi
-        data_in2%ngrowfab=data_in%ngrowfab
         data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(1))
         call single_interp_from_grid_util(data_in2,data_out2)
@@ -8451,19 +8449,17 @@ contains
       INTEGER_T mac_cell_index(SDIM)
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T stencil_offset(SDIM)
-      INTEGER_T mac_lo(SDIM),mac_hi(SDIM)
       REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
       REAL_T local_data
-      INTEGER_T ngrow
+
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
 
       INTEGER_T nhalf
       REAL_T xsten_center(-3:3,SDIM)
       REAL_T xsten_offset(-3:3,SDIM)
 
       nhalf=3
-
-      ngrow=2
 
       if (start_dir.le.end_dir) then
        ! do nothing
@@ -8477,17 +8473,6 @@ contains
        ! dir_disp_comp==2 => zdata interpolation
       do dir_disp_comp=start_dir,end_dir
 
-       if (dir_disp_comp.eq.0) then
-        call checkbound_array1(lo,hi,xdata,ngrow,0,8418)
-       else if (dir_disp_comp.eq.1) then
-        call checkbound_array1(lo,hi,ydata,ngrow,1,8420)
-       else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
-        call checkbound_array1(lo,hi,zdata,ngrow,SDIM-1,8422)
-       else
-        print *,"dir_disp_comp invalid"
-        stop
-       endif
-
         ! strategy:
         !   1. determine 3x3x3 MAC grid stencil about x
         !   2. determine the bilinear interpolation weights
@@ -8496,21 +8481,9 @@ contains
         ! containing_MACcell declared in GLOBALUTIL.F90
        call containing_MACcell(bfact,dx,xlo,lo,x,dir_disp_comp,mac_cell_index)
 
-       do dir_local=1,SDIM
-        mac_lo(dir_local)=lo(dir_local)
-        mac_hi(dir_local)=hi(dir_local)
-       enddo
-       mac_hi(dir_disp_comp+1)=hi(dir_disp_comp+1)+1
-
        istenlo(3)=0
        istenhi(3)=0
        do dir_local=1,SDIM
-        if (mac_cell_index(dir_local)-1.lt.mac_lo(dir_local)-ngrow) then
-         mac_cell_index(dir_local)=mac_lo(dir_local)-ngrow+1
-        endif
-        if (mac_cell_index(dir_local)+1.gt.mac_hi(dir_local)+ngrow) then
-         mac_cell_index(dir_local)=mac_hi(dir_local)+ngrow-1
-        endif
         istenlo(dir_local)=mac_cell_index(dir_local)-1
         istenhi(dir_local)=mac_cell_index(dir_local)+1
        enddo ! dir_local=1..sdim
@@ -8545,15 +8518,17 @@ contains
         endif
 
         if (dir_disp_comp.eq.0) then
-         local_data=xdata(D_DECL(isten,jsten,ksten))
+         local_data_fab=>xdata
         else if (dir_disp_comp.eq.1) then
-         local_data=ydata(D_DECL(isten,jsten,ksten))
+         local_data_fab=>ydata
         else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
-         local_data=zdata(D_DECL(isten,jsten,ksten))
+         local_data_fab=>zdata
         else
          print *,"dir_disp_comp invalid"
          stop
         endif
+        call safe_data_single(isten,jsten,ksten,local_data_fab,local_data)
+
         if ((local_data.ge.-1.0D+30).and. &
             (local_data.le.1.0D+30)) then
 
@@ -8567,7 +8542,7 @@ contains
           stop
          endif
          dest(dir_disp_comp-start_dir+1)= &
-               dest(dir_disp_comp-start_dir+1)+WT*local_data
+            dest(dir_disp_comp-start_dir+1)+WT*local_data
         else
          print *,"local_data overflow"
          print *,"local_data ",local_data
@@ -8614,6 +8589,7 @@ contains
       INTEGER_T isten,jsten,ksten
       INTEGER_T im
       REAL_T, allocatable, dimension(:) :: local_data
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
      
       if ((data_in%level.ge.0).and. &
           (data_in%level.le.data_in%finest_level).and. &
@@ -8678,6 +8654,8 @@ contains
 
       allocate(local_data(data_in%ncomp))
 
+      local_data_fab=>data_in%state
+
       nhalf=3
 
       call containing_cell( &
@@ -8691,12 +8669,6 @@ contains
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       if (cell_index(dir)-1.lt.data_in%fablo(dir)-data_in%ngrowfab) then
-        cell_index(dir)=data_in%fablo(dir)-data_in%ngrowfab+1
-       endif
-       if (cell_index(dir)+1.gt.data_in%fabhi(dir)+data_in%ngrowfab) then
-        cell_index(dir)=data_in%fabhi(dir)+data_in%ngrowfab-1
-       endif
        istenlo(dir)=cell_index(dir)-1
        istenhi(dir)=cell_index(dir)+1
       enddo ! dir=1..sdim
@@ -8732,8 +8704,8 @@ contains
        endif
 
        do im=1,data_in%ncomp
-        local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
-          data_in%scomp+im-1)
+        call safe_data(isten,jsten,ksten,data_in%scomp+im-1, &
+                local_data_fab,local_data(im))
         if ((local_data(im).ge.-1.0D+30).and. &
             (local_data(im).le.1.0D+30)) then
 
@@ -8796,7 +8768,8 @@ contains
       INTEGER_T istenhi(3)
       REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
-      REAL_T, allocatable, dimension(:) :: local_data
+      REAL_T :: local_data
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
      
       if ((data_in%level.ge.0).and. &
           (data_in%level.le.data_in%finest_level).and. &
@@ -8836,7 +8809,7 @@ contains
        stop
       endif
        
-      allocate(local_data(1))
+      local_data_fab=>data_in%state
 
       nhalf=3
 
@@ -8851,12 +8824,6 @@ contains
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       if (cell_index(dir)-1.lt.data_in%fablo(dir)-data_in%ngrowfab) then
-        cell_index(dir)=data_in%fablo(dir)-data_in%ngrowfab+1
-       endif
-       if (cell_index(dir)+1.gt.data_in%fabhi(dir)+data_in%ngrowfab) then
-        cell_index(dir)=data_in%fabhi(dir)+data_in%ngrowfab-1
-       endif
        istenlo(dir)=cell_index(dir)-1
        istenhi(dir)=cell_index(dir)+1
       enddo ! dir=1..sdim
@@ -8889,25 +8856,25 @@ contains
         stop
        endif
 
-       local_data(1)=data_in%state(D_DECL(isten,jsten,ksten))
-       if ((local_data(1).ge.-1.0D+30).and. &
-           (local_data(1).le.1.0D+30)) then
+       call safe_data_single(isten,jsten,ksten,local_data_fab,local_data)
+       if ((local_data.ge.-1.0D+30).and. &
+           (local_data.le.1.0D+30)) then
 
          if (data_in%interp_foot_flag.eq.0) then
           ! do nothing
          else if (data_in%interp_foot_flag.eq.1) then
            ! xdisplace=x-xfoot    xfoot=x-xdisplace
-          local_data(1)=xsten(0,data_in%interp_dir+1)-local_data(1)
+          local_data=xsten(0,data_in%interp_dir+1)-local_data
          else
           print *,"interp_foot_flag invalid"
           stop
          endif
 
-         data_out%data_interp(1)=data_out%data_interp(1)+WT*local_data(1)
+         data_out%data_interp(1)=data_out%data_interp(1)+WT*local_data
 
        else
-         print *,"local_data(1) overflow"
-         print *,"local_data(1) ",local_data(1)
+         print *,"local_data overflow"
+         print *,"local_data ",local_data
          stop
        endif
 
@@ -8925,8 +8892,6 @@ contains
        print *,"total_WT invalid"
        stop
       endif
-
-      deallocate(local_data)
 
       return
       end subroutine single_interp_from_grid_util

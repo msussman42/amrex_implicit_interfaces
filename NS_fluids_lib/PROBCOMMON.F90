@@ -142,7 +142,6 @@ module probcommon_module_types
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: disp_data
       end type deriv_from_grid_parm_type
 
@@ -161,7 +160,6 @@ module probcommon_module_types
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: disp_data
       end type single_deriv_from_grid_parm_type
 
@@ -179,7 +177,6 @@ module probcommon_module_types
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
       end type interp_from_grid_parm_type
 
@@ -196,7 +193,6 @@ module probcommon_module_types
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: state 
       end type single_interp_from_grid_parm_type
 

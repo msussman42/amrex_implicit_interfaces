@@ -143,7 +143,6 @@ stop
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      INTEGER_T :: ngrowfab ! should be 4
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSCP
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSFD
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nden comp.
@@ -1157,6 +1156,11 @@ stop
       REAL_T LS_sten(num_materials*(SDIM+1))
       INTEGER_T im_primary_sten
       REAL_T local_temperature
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T, pointer :: local_data_fab_LS(D_DECL(:,:,:),:)
+
+      local_data_fab=>LOW%state
+      local_data_fab_LS=>LOW%LSCP
 
       nhalf=3
 
@@ -1171,12 +1175,6 @@ stop
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       if (cell_index(dir)-1.lt.LOW%fablo(dir)-LOW%ngrowfab) then
-        cell_index(dir)=LOW%fablo(dir)-LOW%ngrowfab+1
-       endif
-       if (cell_index(dir)+1.gt.LOW%fabhi(dir)+LOW%ngrowfab) then
-        cell_index(dir)=LOW%fabhi(dir)+LOW%ngrowfab-1
-       endif
        istenlo(dir)=cell_index(dir)-1
        istenhi(dir)=cell_index(dir)+1
       enddo ! dir=1..sdim
@@ -1215,7 +1213,7 @@ stop
        endif
  
        do im=1,LOW%nmat*(1+SDIM)
-        LS_sten(im)=LOW%LSCP(D_DECL(isten,jsten,ksten),im)
+        call safe_data(isten,jsten,ksten,im,local_data_fab_LS,LS_sten(im))
        enddo
 
        call get_primary_material(LS_sten,LOW%nmat,im_primary_sten)
@@ -1250,9 +1248,9 @@ stop
         LS_interp(im)=LS_interp(im)+WT*LS_sten(im)
        enddo
        do im=1,LOW%nmat
-        local_temperature= &
-          LOW%state(D_DECL(isten,jsten,ksten), &
-             (im-1)*num_state_material+2) 
+        call safe_data(isten,jsten,ksten, &
+          (im-1)*num_state_material+2, &
+          local_data_fab,local_temperature)
         if (local_temperature.ge.zero) then
          thermal_interp(im)=thermal_interp(im)+WT*local_temperature
         else
@@ -1425,12 +1423,6 @@ stop
        endif
        if ((im_solid.lt.1).or.(im_solid.gt.num_materials)) then
         print *,"im_solid invalid in getGhostVel"
-        stop
-       endif
-       if (LOW%ngrowfab.eq.4) then
-        ! do nothing
-       else
-        print *,"LOW%ngrowfab invalid"
         stop
        endif
        if (is_rigid(LOW%nmat,im_solid).eq.1) then
@@ -2500,7 +2492,6 @@ stop
        data_in%xlo=>xlo
        data_in%fablo=>fablo
        data_in%fabhi=>fabhi
-       data_in%ngrowfab=1
 
        data_in%index_flux(1)=i
        data_in%index_flux(2)=j
@@ -14772,7 +14763,6 @@ stop
         data_in%xlo=>xlo_local
         data_in%fablo=>fablo_local
         data_in%fabhi=>fabhi_local
-        data_in%ngrowfab=2
 
         data_in%ncomp=1
         data_in%scomp=1
@@ -15127,7 +15117,6 @@ stop
          data_in%xlo=>xlo_local
          data_in%fablo=>fablo_local
          data_in%fabhi=>fabhi_local
-         data_in%ngrowfab=2
 
          data_in%ncomp=1
          data_in%scomp=1
@@ -15260,7 +15249,6 @@ stop
         enddo
         data_in%ncomp=1
         data_in%scomp=nmat+im_parm+1
-        data_in%ngrowfab=1
         call deriv_from_grid_util(data_in,data_out)
         if (cell_data_deriv(1).ge.zero) then
          ! do nothing
@@ -15291,7 +15279,6 @@ stop
          enddo
          data_in%ncomp=1
          data_in%scomp=itensor
-         data_in%ngrowfab=1
          call deriv_from_grid_util(data_in,data_out)
          tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
         enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
@@ -18063,7 +18050,6 @@ stop
       law_of_wall_parm%xlo=>xlo
       law_of_wall_parm%fablo=>fablo
       law_of_wall_parm%fabhi=>fabhi
-      law_of_wall_parm%ngrowfab=ngrow_distance
       law_of_wall_parm%LSCP=>LSCP
       law_of_wall_parm%LSFD=>LSFD
       law_of_wall_parm%state=>state
@@ -22711,7 +22697,6 @@ stop
        data_in%xlo=>xlo_local
        data_in%fablo=>fablo_local
        data_in%fabhi=>fabhi_local
-       data_in%ngrowfab=2
 
        data_in%ncomp=nmat*(1+SDIM)
        data_in%scomp=1
@@ -23538,7 +23523,6 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%ngrowfab=2
       data_in%ncomp=SDIM
       data_in%scomp=1
 
@@ -24033,7 +24017,6 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%ngrowfab=2
 
       nhalf=3
 
