@@ -5,10 +5,6 @@
 // =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
 //
-// nstate=state.size(); state[0..NUM_STATE_TYPE-1] are valid states.
-// state[NUM_STATE_TYPE...] are "for_GHOST_only"
-// do not save "for_GHOST_only" state[idx] entries to checkpoint.
-
 #include <algorithm>
 #include <vector>
 
@@ -905,8 +901,9 @@ Real NavierStokes::angular_velocity=0.0;
 Vector<Real> NavierStokes::DrhoDT;  // def=0.0
 Vector<Real> NavierStokes::DrhoDz;  // def=0.0
 
- // 1=>rho=rho(T,Y,z)
- // 2=>P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
+// 1=>rho=rho(T,Y,z)
+// 2=>Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
+// DrhoDT has units of 1/Temperature.
 Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
@@ -4414,8 +4411,7 @@ NavierStokes::read_params ()
        } else if (override_density[im-1]==0) {
 	// do nothing
        } else {
-	std::cout << "override_density==0,1, or 2 if mass fraction variable\n";
-	std::cout << "defined and incompressible material.\n";
+	std::cout << "override_density==0,1, or 2 allowed if incomp mat.\n";
         std::cout << "nmat= " << nmat << '\n';
         std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
 	     override_density[im-1] << '\n';
@@ -10997,9 +10993,10 @@ void NavierStokes::tensor_advection_update() {
 
 // non-conservative correction to density.
 // if override_density(im)==1,
-// rho_im=rho(z)+drho/dT * (T_im - T0_im)
-// if override_density(im)=0 or 2, nothing changes:
-//   P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
+// rho_im=rho(z)+rho0 * DrhoDT * (T_im - T0_im)
+// if override_density(im)=0 or 2, density field is not changed.
+// if override_density==2:
+// Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
 void 
 NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
@@ -11062,7 +11059,8 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
   } else if (DrhoDT[im]!=0.0) {
    if (override_density[im]==0) {
     amrex::Error("DrhoDT mismatch"); 
-   } else if (override_density[im]!=0) {
+   } else if ((override_density[im]==1)||
+              (override_density[im]==2)) {
     // do nothing
    } else
     amrex::Error("override_density[im] invalid");
@@ -11074,7 +11072,8 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
   } else if (DrhoDz[im]!=0.0) {
    if (override_density[im]==0) {
     amrex::Error("DrhoDz mismatch"); 
-   } else if (override_density[im]!=0) {
+   } else if ((override_density[im]==1)||
+              (override_density[im]==2)) {
     // do nothing
    } else
     amrex::Error("override_density[im] invalid");
@@ -15259,9 +15258,9 @@ NavierStokes::split_scalar_advection() {
 
  // getStateMOM_DEN declared in: NavierStokes.cpp
  // if override_density(im)==1,
- // rho_im=rho(z)+drho/dT * (T_im - T0_im)
- // if override_density(im)=0 or 2, nothing changes:
- //   P_hydro=P_hydro(rho(T,Y,z)) (Boussinesq like approximation)
+ // rho_im=rho(z)+rho0* DrhoDT * (T_im - T0_im)
+ // if override_density(im)=0 or 2, density is not modified:
+ // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
  getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
  int TENSOR_RECON_MF_local=TENSOR_RECON_MF;

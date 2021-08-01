@@ -144,11 +144,11 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: override_density
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: override_density(nmat)
        INTEGER_T, intent(in) :: grav_dir
        REAL_T, intent(in) :: gravity_normalized
  
-       INTEGER_T, intent(in) :: nmat
        INTEGER_T, intent(in) :: nparts
        INTEGER_T, intent(in) :: nparts_def
        INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -217,7 +217,7 @@ stop
        REAL_T mu_cell
        INTEGER_T vofcomp
        INTEGER_T nhalf
-       REAL_T DTEMP,FWATER,liquid_temp
+       REAL_T DTEMP,localF,liquid_temp
        REAL_T vt_over_r,ut_over_r
        REAL_T param1,param2,hoop_force_coef
        INTEGER_T ut_comp
@@ -296,7 +296,9 @@ stop
         stop
        endif
 
-       if (angular_velocity.lt.zero) then
+       if (angular_velocity.ge.zero) then
+        ! do nothing
+       else
         print *,"angular_velocity cannot be negative"
         stop
        endif
@@ -441,13 +443,18 @@ stop
 
          RCEN=xsten(0,1)
 
-         if ((override_density.eq.0).or. & ! rho_t + div (rho u) = 0
-             (override_density.eq.1)) then ! rho=rho(T,Y,z)
-          DTEMP=zero
-         else if (override_density.eq.2) then ! P_hydro=P_hydro(rho(T,Y,Z))
-          im=1
-          vofcomp=(im-1)*ngeom_recon+1
-          FWATER=recon(D_DECL(i,j,k),vofcomp)
+         do im=1,nmat
+
+          if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
+              (override_density(im).eq.1)) then ! rho=rho(T,Y,z)
+           DTEMP=zero
+
+  !Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
+          else if (override_density(im).eq.2) then 
+           vofcomp=(im-1)*ngeom_recon+1
+           localF=recon(D_DECL(i,j,k),vofcomp)
+
+           
           if ((FWATER.le.half).and.(FWATER.ge.-VOFTOL)) then
            DTEMP=zero
           else if ((FWATER.ge.half).and.(FWATER.le.one+VOFTOL)) then

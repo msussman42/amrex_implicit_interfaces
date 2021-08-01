@@ -12144,7 +12144,9 @@ void NavierStokes::veldiffuseALL() {
    // check nothing
   } else if (override_density[im]==1) { // rho=rho(T,Y,z)
    // check nothing
-  } else if (override_density[im]==2) { // P_hydro=P_hydro(rho(T,Y,Z))
+   
+   // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+  } else if (override_density[im]==2) { 
    // check nothing
   } else
    amrex::Error("override_density invalid");  
