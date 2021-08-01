@@ -255,7 +255,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
     // declared in: DIFFUSION_3D.F90
   fort_hoopimplicit(
-   &override_density[0], 
+   override_density.dataPtr(), 
    &gravity_normalized,
    &gravity_dir,
    forcefab.dataPtr(),
