@@ -46,7 +46,6 @@ ns.r2jwl=0.95
 ns.gammavapor=1.3
 
 ns.hydrostatic_pressure=1.013
-ns.visual_option=8
 ns.visual_lo = 0 720
 ns.visual_hi = 128 1028
 ns.visual_side_max = 512

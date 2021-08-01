@@ -59,7 +59,6 @@ ns.bubble_pressure=0.0
 ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=10.0
-ns.visual_option=0
 ns.visual_lo = 0 0
 ns.visual_hi = 2048 3072
 ns.visual_side_max = 2048

@@ -78,8 +78,6 @@ ns.densolid=1.0e+10
 ns.projection_mg=0
 
 ns.hydrostatic_pressure=1.013
-#ns.visual_option=2
-ns.visual_option=-1
 #level 2 values
 ns.visual_lo = 0 100
 ns.visual_hi = 160 340

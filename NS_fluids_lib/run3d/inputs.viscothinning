@@ -63,7 +63,6 @@ ns.dt_cutoff      = 5.0e-7  # truncate u if u dt_cut>dx
 mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-8
 
-ns.visual_option=-2
 
 ns.transposegradu=0
 ns.elastic_time=0.4699 0.0     # relaxation time or Deborah number

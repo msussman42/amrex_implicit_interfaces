@@ -43,7 +43,6 @@ ns.num_species_var=0
 ns.shock_timestep=2 2 2
 # MARCO "refluxing" to correct the coarse grid solution 
 #  not important for this problem I think.
-ns.visual_option=-2 # tecplot (amr hierarchy preserved)
 
 # MARCO: for testing on my laptop, I must use AMR instead of 128x128x256 grid
 amr.n_cell    = 16 16 32

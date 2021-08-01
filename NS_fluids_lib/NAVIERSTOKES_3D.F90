@@ -392,7 +392,6 @@ stop
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        plotint, &
        nmat, &
@@ -419,7 +418,6 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
       INTEGER_T, intent(in) :: plotint
       INTEGER_T, intent(in) :: nmat
@@ -1809,7 +1807,6 @@ END SUBROUTINE SIMP
        finest_level, &
        gridno, &
        visual_tessellate_vfrac, &
-       visual_option, &
        rz_flag, &
        nmat, &
        nparts, &
@@ -1849,7 +1846,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: im_solid_map(nparts_def) 
       INTEGER_T, intent(in) :: elastic_ncomp
       INTEGER_T, intent(in) :: visual_tessellate_vfrac
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_ncomp
       INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
@@ -3510,11 +3506,9 @@ END SUBROUTINE SIMP
       end subroutine FORT_MEMSTATUS
 
       subroutine FORT_OUTPUTSLICE( &
-       time,nsteps,sliceint,slice_data,nslice,nstate_slice, &
-       visual_option)
+       time,nsteps,sliceint,slice_data,nslice,nstate_slice)
       IMPLICIT NONE
 
-      INTEGER_T visual_option
       REAL_T time
       INTEGER_T nsteps,nslice,nstate_slice,n,sliceint,strandid
       REAL_T slice_data(nslice*nstate_slice)
@@ -3552,34 +3546,18 @@ END SUBROUTINE SIMP
       print *,"sfilename ",sfilename
       open(unit=11,file=sfilename)
 
-      if (visual_option.eq.-1) then
-
-       if (SDIM.eq.2) then
-        write(11,*) '# x,y,xvel,yvel,PMG,PEOS,DIV,den,temp,KE'
-       else if (SDIM.eq.3) then
-        write(11,*) '# x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,temp,KE'
-       else
-        print *,"dimension bust"
-        stop
-       endif
-
-      else if (visual_option.eq.-2) then
-
-       write(11,*) '"CLSVOF data"'
-       if (SDIM.eq.2) then
-        write(11,*) 'VARIABLES="X","Y","U","V","PMG","PEOS","DIV","D","T","KE"'
-       else if (SDIM.eq.3) then
-        write(11,*) 'VARIABLES="X","Y","Z","U","V","W","PMG","PEOS","DIV","D","T","KE"'
-       else
-        print *,"dimension bust"
-        stop
-       endif
-       write(11,*)'zone i=',nslice-1,' SOLUTIONTIME=',time, &
-        ' STRANDID=',strandid
+      ! to use gnuplot, put # at beginning of comment lines.
+      write(11,*) '"CLSVOF data"'
+      if (SDIM.eq.2) then
+       write(11,*) 'VARIABLES="X","Y","U","V","PMG","PEOS","DIV","D","T","KE"'
+      else if (SDIM.eq.3) then
+       write(11,*) 'VARIABLES="X","Y","Z","U","V","W","PMG","PEOS","DIV","D","T","KE"'
       else
-       print *,"visual_option invalid"
+       print *,"dimension bust"
        stop
       endif
+      write(11,*)'zone i=',nslice-1,' SOLUTIONTIME=',time, &
+       ' STRANDID=',strandid
 
       do i=-1,nslice-2
        do n=1,nstate_slice-1
@@ -3609,7 +3587,6 @@ END SUBROUTINE SIMP
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        plotint, &
        nmat, &
@@ -3637,7 +3614,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
       INTEGER_T, intent(in) :: plotint
       INTEGER_T, intent(in) :: nmat
@@ -3757,7 +3733,6 @@ END SUBROUTINE SIMP
         nsteps, &
         num_levels, &
         time, &
-        visual_option, &
         visual_revolve, &
         plotint, &
         nmat, &

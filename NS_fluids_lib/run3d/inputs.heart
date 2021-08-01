@@ -62,7 +62,6 @@ ns.bubble_density=0.0011
  
 ns.hydrostatic_pressure=0.0
 ns.visual_header=1  # 0 for VIOREL 1 for MARK
-ns.visual_option=-2  # 7 for VIOREL -2 for MARK (7 velmix,lvapor,lsolid,vof)
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = -1 -1 -1
 ns.overlap=1.0

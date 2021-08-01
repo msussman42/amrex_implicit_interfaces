@@ -82,8 +82,6 @@ mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-8
 mac.use_cg_solve   = 1
 
-ns.visual_option=-2
-ns.visual_option_preplot=2
 ns.output_drop_distribution=1
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

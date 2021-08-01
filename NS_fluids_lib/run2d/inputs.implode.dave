@@ -45,7 +45,6 @@ ns.hydrostatic_pressure=73.
 #ns.hydrostatic_pressure=51.0
 ns.glassmass=00.0
 ns.glassviscosity=00.0
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 110 110
 ns.visual_side_max = 512

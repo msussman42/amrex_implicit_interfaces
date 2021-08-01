@@ -45,7 +45,6 @@ ns.initial_cg_cycles=10
 ns.num_materials=2
 ns.num_species_var=0
 
-ns.visual_option=-2  # output zonal tecplot files
 ns.post_init_pressure_solve=0  # 0=COMPRESSIBLE 1=INCOMPRESSIBLE
 
 # for big domain:

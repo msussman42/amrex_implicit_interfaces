@@ -58,7 +58,6 @@ ns.bubble_density=1.0
                  
 #amr.plotfile_on_restart=1
 ns.hydrostatic_pressure=1.013
-ns.visual_option=-1
 ns.visual_lo = 0 0
 ns.visual_hi = 2048 2048
 ns.visual_side_max = 2048

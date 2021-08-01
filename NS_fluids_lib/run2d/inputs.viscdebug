@@ -44,7 +44,6 @@ ns.bjwl=1.0
 ns.ajwl=1.0
 ns.rho0gas=0.001
 
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 512 512
 ns.visual_side_max = 512

@@ -34,7 +34,6 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 # Lp.smooth_type=2
 # Lp.bottom_smooth_type=2
 #
-ns.visual_option=-2
 
 ns.num_divu_outer_sweeps=2
 amr.n_cell    = 200 4

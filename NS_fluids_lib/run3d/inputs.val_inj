@@ -37,7 +37,6 @@ ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=0.0
 ns.visual_header=1
-ns.visual_option=-2  
 # -1= output plt files for Visit; output "levvap?????.tec"
 # -2=tecplot files
 ns.visual_lo = -1 -1 -1

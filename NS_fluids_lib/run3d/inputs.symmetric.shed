@@ -65,7 +65,6 @@ ns.bubble_density=0.001
 ns.hydrostatic_pressure=0.0
 ns.visual_lo = 0 0 0
 ns.visual_hi = 256 256 256
-ns.visual_option=-1
 ns.visual_side_max=512
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

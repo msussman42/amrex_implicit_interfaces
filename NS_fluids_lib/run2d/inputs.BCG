@@ -93,7 +93,6 @@ ns.initial_cg_cycles=2
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 
-ns.visual_option=-2
 ns.visual_compare=0 # if 1, then compare to COARSEDATA.tec
 ns.visual_ncell=256 256
 

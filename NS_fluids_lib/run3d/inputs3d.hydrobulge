@@ -58,7 +58,6 @@ ns.adiabatic=0
 ns.ls_curvature=1
 
 ns.hydrostatic_pressure=1.0
-ns.visual_option=-1  # was 2
 ns.visual_lo = 0 0 0
 ns.visual_hi = 128 128 128
 ns.visual_side_max = 512

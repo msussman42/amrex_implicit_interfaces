@@ -63,7 +63,6 @@ ns.bubble_density=1.0
 
 ns.hydrostatic_pressure=10.0
 amr.plotfile_on_restart=1
-ns.visual_option=11  # velliq,velmix,lsgas
 ns.visual_lo = 0 0
 ns.visual_hi = 512 512
 ns.visual_side_max = 512

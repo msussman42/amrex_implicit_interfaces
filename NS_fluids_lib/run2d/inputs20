@@ -60,7 +60,6 @@ ns.soundchopp=1.0
 ns.bubble_pressure=0
 ns.bubble_density=0.001
 
-ns.visual_option=-1   # was 0  MS
 ns.visual_header=1
 amr.plotfile_on_restart=1
 ns.visual_lo = 0  0  0

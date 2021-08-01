@@ -66,7 +66,6 @@ ns.bubble_pressure=0
 ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=0.0
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 ns.visual_lo = -1 -1 
 #ns.visual_lo = 0 8 
 ns.visual_hi = 16 40

@@ -52,7 +52,6 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-8
 
-ns.visual_option=-2
 
 #probtype=1 axis_dir=11 => LS<0 inside of drop LS>0 outside of drop
 # material 1 corresponds to material where LS>0 (outside drop)

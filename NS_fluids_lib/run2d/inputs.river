@@ -69,7 +69,6 @@ mac.mac_abs_tol    = 1.0e-13
 mac.visc_abs_tol    = 1.0e-5
 
 #MATT
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 ns.cfl            = 0.5    
 ns.init_shrink    = 0.1  

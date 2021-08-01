@@ -41,7 +41,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
-ns.visual_option=-2
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est

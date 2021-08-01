@@ -40,7 +40,6 @@ ns.bubble_pressure=0.0
 ns.bubble_density=0.00064094
 // 1.013 is 1 atm
 ns.hydrostatic_pressure=1.0  # in bars
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 512 512
 ns.visual_side_max = 512

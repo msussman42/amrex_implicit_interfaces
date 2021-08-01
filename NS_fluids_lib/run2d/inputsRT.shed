@@ -73,7 +73,6 @@ ns.bubble_density=0.001
 ns.hydrostatic_pressure=0.0
 ns.visual_lo = 0 0
 ns.visual_hi = 4 64 
-ns.visual_option=-2
 ns.is_compressible=0
 ns.is_twophase=0
 

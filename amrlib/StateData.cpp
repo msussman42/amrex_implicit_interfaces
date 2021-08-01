@@ -417,10 +417,13 @@ StateData::buildBC ()
 
 StateData::~StateData() {
 
-// int ncomp_PC = desc->get_ncomp_PC();
  desc = 0;
  descGHOST = 0;
  for (int i=0;i<=bfact_time_order;i++) {
+
+  int state_holds_data=1;
+  if (new_data[i]==nullptr)
+   state_holds_data=0;
 
   if (state_holds_data==1) {
    delete new_data[i];
@@ -1149,8 +1152,10 @@ StateData::CopyNewToOld(int level,int max_level) {
    }
   }
  } else if (state_holds_data==0) {
-  if (new_data[i]!=nullptr)
-   amrex::Error("new_data[i]!=nullptr");
+  for (int i=0;i<bfact_time_order;i++) {
+   if (new_data[i]!=nullptr)
+    amrex::Error("new_data[i]!=nullptr");
+  }
   if (ncomp_PC!=0)
    amrex::Error("ncomp_PC invalid");
  } else
@@ -1201,8 +1206,10 @@ StateData::CopyOldToNew(int level,int max_level) {
   }
 
  } else if (state_holds_data==0) {
-  if (new_data[i]!=nullptr)
-   amrex::Error("new_data[i]!=nullptr");
+  for (int i=1;i<=bfact_time_order;i++) {
+   if (new_data[i]!=nullptr)
+    amrex::Error("new_data[i]!=nullptr");
+  }
   if (ncomp_PC!=0)
    amrex::Error("ncomp_PC invalid");
  } else

@@ -73,7 +73,6 @@ mac.mac_abs_tol    = 1.0e-8
 #    (sudo apt-get xterm)
 #    ffmpeg -r 5 -i movie%04d.jpeg -r 30 out.mp4
 #
-ns.visual_option=-2  # -2 zonal tecplot,-1 plot files
 
 
 ns.cfl            = 0.5

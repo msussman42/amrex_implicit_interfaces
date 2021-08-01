@@ -46,7 +46,6 @@ ns.gammavapor=1.28;
 ns.tvdrk=2
 
 ns.hydrostatic_pressure=10.0
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 512 512
 ns.visual_side_max = 512

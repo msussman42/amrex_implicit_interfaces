@@ -1078,38 +1078,6 @@ AmrLevel::getBCArrayGHOST (int State_Type,
  return bc;
 } // getBCArrayGHOST
 
-void
-AmrLevel::setPlotVariables ()
-{
-    ParmParse pp("amr");
-
-    if (pp.contains("plot_vars"))
-    {
-        std::string nm;
-      
-        int nPltVars = pp.countval("plot_vars");
-      
-        for (int iplot = 0; iplot < nPltVars; iplot++)
-        {
-            pp.get("plot_vars", nm, iplot);
-
-            if (nm == "ALL") 
-                parent->fillStatePlotVarList();
-            else if (nm == "NONE")
-                parent->clearStatePlotVarList();
-            else
-                parent->addStatePlotVar(nm);
-        }
-    }
-    else 
-    {
-        //
-        // The default is to add them all.
-        //
-        parent->fillStatePlotVarList();
-    }
-  
-} // subroutine setPlotVariables
 
 } // namespace amrex
 

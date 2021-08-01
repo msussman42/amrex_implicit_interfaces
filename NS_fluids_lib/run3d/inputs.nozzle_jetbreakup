@@ -32,7 +32,6 @@ Lp.v = 0
 ns.num_materials=3
 ns.num_species_var=0
 
-ns.visual_option=-2
 
 
 amr.n_cell    = 48 48 768  # 48 48 768 CHANGE TO 32 32 64

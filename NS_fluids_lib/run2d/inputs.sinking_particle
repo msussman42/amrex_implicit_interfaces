@@ -142,7 +142,6 @@ mac.visc_abs_tol    = 1.0e-11
 #mac.visc_abs_tol    = 1.0e-21
 
 
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec 
 ns.visual_ncell=16 32
 

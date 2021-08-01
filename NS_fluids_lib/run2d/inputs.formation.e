@@ -84,7 +84,6 @@ mac.mac_tol        = 1.0e-10   # tolerence for mac projections
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_option=-2 # -2,-3 zonal tecplot, -1 plot files
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep

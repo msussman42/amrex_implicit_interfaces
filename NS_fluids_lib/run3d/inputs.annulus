@@ -126,7 +126,6 @@ ns.initial_cg_cycles=2
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1000.0
 
-ns.visual_option=-2
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system 0.5
 ns.init_shrink    = 0.5      # scale back initial timestep

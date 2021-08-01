@@ -63,9 +63,7 @@ ns.bubble_pressure=0.0
 ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=10.0
-ns.visual_option=-3  # visual_option=5 =>level2,vof2 
 ns.visual_lo = -1  -1  -1  # -1 => default to outputting whole domain
-ns.visual_hi = 512 512 512  # always the whole domain is visual_option<0
 
 ns.redist_on_init=0
 

@@ -39,7 +39,6 @@ ns.bubble_density=0.001 #?
 
 ns.hydrostatic_pressure=0.0
 ns.visual_header=1
-ns.visual_option=-1  # 5=ls,vof  (choose 7 to get velocity too)
 ns.visual_lo = -1 -1     # ?
 ns.visual_hi = 512 512   # ?
 ns.visual_lo_phys=0.0 0.0 

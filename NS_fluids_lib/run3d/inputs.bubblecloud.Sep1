@@ -44,7 +44,6 @@ ns.ajwl=1.0
 ns.rho0gas=5.0
 
 ns.visual_header=0  # 0=no header ascii  1=tecplot header ascii
-ns.visual_option=-1 # Viorel: 10=lvapor,lsolid,temp  
                     # -1=plt files for Visit,ascii isosurface files for tecplot
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = 512 512 512

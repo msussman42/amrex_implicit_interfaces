@@ -63,7 +63,6 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 #effective fine grid: 64 x 128
 #amr.n_cell    = 32 64 # 1.25x2.5  

@@ -38,7 +38,6 @@ ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=0.0
 ns.visual_header=3  # 3=Viorel binary 2=Amira binary  1=tecplot ascii
-ns.visual_option=12 # 5=ls,vof  12=ls,lssolid
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = 512 512 512
 ns.visual_lo_phys=0.0 0.0 0.0

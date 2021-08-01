@@ -89,7 +89,6 @@ godunov.printMinMax=0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 ns.visual_tessellate_vfrac=1
 
 amr.n_cell    = 32 128

@@ -39,9 +39,6 @@ mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 Lp.v = 0
 
-# visual_option=-1 (plt files for Visit and levvap*.tec)
-# visual_option=-2 or -3 zonal tecplot files
-ns.visual_option=-2
 
 amr.n_cell    = 48 32 32
 amr.max_level =  3  # 4 for production runs 

@@ -36,7 +36,6 @@ ns.num_species_var=0
 
 fab.do_initval=0  # default is 1
 
-ns.visual_option=-2  # -1 for VISIT plt files
 
 # XYZ
 # amr.n_cell    = 128 16 64

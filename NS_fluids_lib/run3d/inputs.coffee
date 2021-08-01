@@ -60,7 +60,6 @@ ns.soundchopp=100.0
 ns.bubble_pressure=1.0
 ns.bubble_density=0.001                                                                                
 ns.hydrostatic_pressure=0.5 #was 1 VM
-ns.visual_option=7
 ns.visual_lo =-1.0 -1.0 -1.0  # MS
 ns.visual_hi =-1.0 -1.0 -1.0  # MS
 ns.visual_lo_phys =0.0 0.0 0.0  # MS  (always assumes 0,0,0 is smallest coord)

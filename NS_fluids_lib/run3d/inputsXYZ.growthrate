@@ -65,7 +65,6 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 mac.mac_abs_tol    = 1.0e-10
 
 #amr.plotfile_on_restart=1
-ns.visual_option=-2
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = 5120 5120 5120
 

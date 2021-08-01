@@ -49,8 +49,6 @@ namespace amrex {
 // Static class members.  
 // Set defaults in Initialize()!!!
 //
-std::list<std::string> Amr::state_plot_vars;
-bool                   Amr::first_plotfile;
 Vector<BoxArray>       Amr::initial_ba;
 Vector<BoxArray>       Amr::regrid_ba;
 
@@ -70,7 +68,6 @@ namespace
     int  plot_nfiles;
     int  mffile_nstreams;
     int  probinit_natonce;
-    bool plot_files_output;
     int  checkpoint_nfiles;
     int  regrid_on_restart;
     int  use_efficient_regrid;
@@ -143,11 +140,9 @@ Amr::Initialize ()
     //
     // Set all defaults here!!!
     //
-    Amr::first_plotfile      = true;
     plot_nfiles              = 64;
     mffile_nstreams          = 1;
     probinit_natonce         = 512;
-    plot_files_output        = true;
     checkpoint_nfiles        = 64;
     regrid_on_restart        = 0;
     use_efficient_regrid     = 0;
@@ -169,14 +164,12 @@ Amr::Initialize ()
 void
 Amr::Finalize ()
 {
-    Amr::state_plot_vars.clear();
     Amr::regrid_ba.clear();
     Amr::initial_ba.clear();
 
     initialized = false;
 }
 
-bool Amr::Plot_Files_Output () { return plot_files_output; }
 
 std::ostream&
 Amr::DataLog (int i)
@@ -323,7 +316,6 @@ Amr::InitAmr () {
     pp.query("checkpoint_on_restart",checkpoint_on_restart);
 
     pp.query("checkpoint_files_output", checkpoint_files_output);
-    pp.query("plot_files_output", plot_files_output);
 
     plot_nfiles = ParallelDescriptor::NProcs();
     checkpoint_nfiles = ParallelDescriptor::NProcs();
@@ -519,53 +511,6 @@ Amr::InitAmr () {
 
 } // subroutine InitAmr
 
-bool
-Amr::isStatePlotVar (const std::string& name)
-{
-    for (std::list<std::string>::const_iterator li = state_plot_vars.begin(), End = state_plot_vars.end();
-         li != End;
-         ++li)
-    {
-        if (*li == name)
-            return true;
-    }
-    return false;
-}
-
-void
-Amr::fillStatePlotVarList ()
-{
-    state_plot_vars.clear();
-    const DescriptorList &desc_lst = AmrLevel::get_desc_lst();
-    for (int typ(0); typ < desc_lst.size(); ++typ) {
-        for (int comp(0); comp < desc_lst[typ].nComp(); ++comp) {
-            if (desc_lst[typ].getType() == IndexType::TheCellType()) {
-                state_plot_vars.push_back(desc_lst[typ].name(comp));
-            }
-        }
-    }
-}
-
-void
-Amr::clearStatePlotVarList ()
-{
-    state_plot_vars.clear();
-}
-
-void
-Amr::addStatePlotVar (const std::string& name)
-{
-    if (!isStatePlotVar(name))
-        state_plot_vars.push_back(name);
-}
-
-void
-Amr::deleteStatePlotVar (const std::string& name)
-{
-    if (isStatePlotVar(name))
-        state_plot_vars.remove(name);
-}
-
 Amr::~Amr ()
 {
     if (level_steps[0] > last_checkpoint)
@@ -576,8 +521,8 @@ Amr::~Amr ()
      int do_slice=((slice_int>0) ? 1 : 0);
      int SDC_outer_sweeps=0;
      int slab_step=Time_blockingFactor()-1;
-     writePlotFile(plot_file_root,
-      level_steps[0],do_plot,do_slice,
+     writePlotFile(
+      do_plot,do_slice,
       SDC_outer_sweeps,slab_step);
     }
 
@@ -656,150 +601,27 @@ Amr::okToContinue () noexcept
 void
 Amr::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
 
- const std::string debug_root("DEB");
  int do_plot=1;
  int do_slice=((slice_int>0) ? 1 : 0);
- writePlotFile(debug_root,
-   num,do_plot,do_slice,
+ writePlotFile(
+   do_plot,do_slice,
    SDC_outer_sweeps,slab_step);
 
 }
 
 void
-Amr::writePlotFile (const std::string& root,
-                    int                num,
-                    int do_plot,int do_slice,
+Amr::writePlotFile (int do_plot,int do_slice,
                     int SDC_outer_sweeps,int slab_step) {
 
- if (!Plot_Files_Output()) {
-  return;
- }
-
- if (do_plot==1) {
-
-  VisMF::SetNOutFiles(plot_nfiles);
-  VisMF::Header::Version currentVersion(VisMF::GetHeaderVersion());
-  VisMF::SetHeaderVersion(currentVersion);
-
-  if (first_plotfile) {
-     first_plotfile = false;
-     amr_level[0]->setPlotVariables();
-  }
-
-  double dPlotFileTime0 = ParallelDescriptor::second();
-
-  const std::string pltfile = amrex::Concatenate(root,num,file_name_digits);
-
-  if (verbose>0) {
-   amrex::Print() << "PLOTFILE: file = " << pltfile << '\n';
-  }
-
-  if (record_run_info && ParallelDescriptor::IOProcessor())
-     runlog << "PLOTFILE: file = " << pltfile << '\n';
-
-  int stream_max_tries=4;
-  bool abort_on_stream_retry_failure=false;
-  amrex::StreamRetry sretry(pltfile, abort_on_stream_retry_failure,
-                             stream_max_tries);
-
-  const std::string pltfileTemp(pltfile + ".temp");
-
-  while(sretry.TryFileOutput()) {
-
-   //
-   //  if either the pltfile or pltfileTemp exists, rename them
-   //  to move them out of the way.  then create pltfile
-   //  with the temporary name, then rename it back when
-   //  it is finished writing.  then stream retry can rename
-   //  it to a bad suffix if there were stream errors.
-   //
-
-   if(precreateDirectories) {    // ---- make all directories at once
-     // MEHDI VAHAB: UtilRenameDirectoryToOld is in: AMReX_Utility.cpp
-     // Comment out this line to disable saving old plot files.
-    amrex::UtilRenameDirectoryToOld(pltfile, false);      // dont call barrier
-    if ((verbose > 1)||(1==1)) {
-     amrex::Print() << "IOIOIOIO:  precreating directories for " << 
-	     pltfileTemp << "\n";
-    }
-    amrex::PreBuildDirectorHierarchy(pltfileTemp, "Level_", 
-	finest_level + 1, true);  // call barrier
-   } else {
-    amrex::UtilRenameDirectoryToOld(pltfile, false);     // dont call barrier
-    amrex::UtilCreateCleanDirectory(pltfileTemp, true);  // call barrier
-   }
-
-   std::string HeaderFileName(pltfileTemp + "/Header");
-
-   VisMF::IO_Buffer io_buffer(VisMF::GetIOBufferSize());
-
-   std::ofstream HeaderFile;
-
-   HeaderFile.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
-
-   int old_prec(0);
-
-   if (ParallelDescriptor::IOProcessor()) {
-     //
-     // Only the IOProcessor() writes to the header file.
-     //
-    HeaderFile.open(HeaderFileName.c_str(), 
-	std::ios::out | std::ios::trunc | std::ios::binary);
-    if ( ! HeaderFile.good()) {
-     amrex::FileOpenFailed(HeaderFileName);
-    }
-    old_prec = HeaderFile.precision(15);
-   }
+ if ((do_plot==1)||
+     ((do_plot==0)&&(do_slice==1))) {
 
    for (int k(0); k <= finest_level; ++k) {
     amr_level[k]->writePlotFile(
-	pltfileTemp, HeaderFile,
 	do_plot,do_slice,
         SDC_outer_sweeps,slab_step);
    }
 
-   if (ParallelDescriptor::IOProcessor()) {
-    HeaderFile.precision(old_prec);
-    if ( ! HeaderFile.good()) {
-     amrex::Error("Amr::writePlotFile() failed");
-    }
-   }
-
-    //last_plotfile = level_steps[0]; (set outside this routine)
-
-   if (verbose > 0) {
-    const int IOProc     = ParallelDescriptor::IOProcessorNumber();
-    double dPlotFileTime = ParallelDescriptor::second() - dPlotFileTime0;
-
-    ParallelDescriptor::ReduceRealMax(dPlotFileTime,IOProc);
-
-    amrex::Print() << "Write plotfile time = " << dPlotFileTime << 
-		"  seconds" << "\n\n";
-   }
-   ParallelDescriptor::Barrier("Amr::writePlotFile::end");
-
-    // if "old plotfile" is disabled, will this command have
-    // problems if file of same name already exists?
-   if(ParallelDescriptor::IOProcessor()) {
-     std::rename(pltfileTemp.c_str(), pltfile.c_str());
-   }
-   ParallelDescriptor::Barrier("Renaming temporary plotfile.");
-   //
-   // the plotfile file now has the regular name
-   //
-  }  // end while
-
-  VisMF::SetHeaderVersion(currentVersion);
-
-  BL_PROFILE_REGION_STOP("Amr::writePlotFile()");
-
- } else if ((do_plot==0)&&(do_slice==1)) {
-  const std::string pltfile = amrex::Concatenate(root,num,file_name_digits);
-  std::ofstream HeaderFile;
-  for (int k = 0; k <= finest_level; k++)
-   amr_level[k]->writePlotFile(pltfile,HeaderFile,
-    do_plot,do_slice,
-    SDC_outer_sweeps,slab_step);
  } else if ((do_plot==0)&&(do_slice==0)) {
   // do nothing
  } else
@@ -965,18 +787,11 @@ Amr::init (Real strt_time,
          int do_slice=((slice_int>0) ? 1 : 0);
          int SDC_outer_sweeps=0;
          int slab_step=Time_blockingFactor()-1;
-         writePlotFile(plot_file_root,level_steps[0],
+         writePlotFile(
           do_plot,do_slice,
           SDC_outer_sweeps,slab_step);
         }
     }
-#ifdef HAS_XGRAPH
-    if (first_plotfile)
-    {
-        first_plotfile = false;
-        amr_level[0]->setPlotVariables();
-    }
-#endif
 }
 
 void
@@ -1559,7 +1374,7 @@ Amr::timeStep (Real time,
   int do_slice=((slice_int>0) ? 1 : 0);
   int SDC_outer_sweeps=0;
   int slab_step=Time_blockingFactor()-1;
-  writePlotFile(plot_file_root,level_steps[0],
+  writePlotFile(
    do_plot,do_slice,
    SDC_outer_sweeps,slab_step);
  }
@@ -1883,7 +1698,7 @@ Amr::coarseTimeStep (Real stop_time)
       last_plotfile = level_steps[0];
      int SDC_outer_sweeps=0;
      int slab_step=Time_blockingFactor()-1;
-     writePlotFile(plot_file_root,level_steps[0],
+     writePlotFile(
       do_plot,do_slice,
       SDC_outer_sweeps,slab_step);
     }

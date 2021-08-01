@@ -82,7 +82,6 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-8
 
-ns.visual_option=-2
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep

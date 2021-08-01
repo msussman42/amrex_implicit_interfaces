@@ -32,7 +32,6 @@ ns.num_species_var=0
 
 fab.do_initval=0  # default is 1 if DEBUG and 0 if NDEBUG
 
-ns.visual_option=-2  # -1 for VISIT plt files
 
 # MARCO: 64, 64, 576, max_level=0 for live runs. 
 #        64 64 128, max_level=0 for debugging

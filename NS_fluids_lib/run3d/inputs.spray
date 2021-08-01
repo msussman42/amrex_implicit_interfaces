@@ -32,9 +32,6 @@ mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 Lp.v = 0
 
-# visual_option=-1 (plt files for Visit and levvap*.tec)
-# visual_option=-2 or -3 zonal tecplot files
-ns.visual_option=-2
 
 # dx=2.56/(16*64)=0.0025=25 microns
 amr.n_cell    = 64 16 32

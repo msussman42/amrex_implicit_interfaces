@@ -78,7 +78,6 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_option=-2  # -2 zonal tecplot, -1 plot files (VISIT)
 
 amr.n_cell=32 32 # convergence 32 x 32 coarsest
 amr.max_level = 2
