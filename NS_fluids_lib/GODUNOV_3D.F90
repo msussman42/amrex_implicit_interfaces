@@ -5969,11 +5969,13 @@ stop
 
          local_vfrac=recon(D_DECL(i,j,k),vofcomp)
 
+FIX ME only where F>1-eps
          if ((local_vfrac.ge.VOFTOL).and.(local_vfrac.le.one+VOFTOL)) then
 
            ! den,T
           temperature=eosdata(D_DECL(i,j,k),dencomp+1)
 
+FIX ME remove this
            ! defined in: GLOBALUTIL.F90
            ! only takes into account fort_drhodz
           caller_id=0

@@ -217,7 +217,9 @@ stop
        REAL_T mu_cell
        INTEGER_T vofcomp
        INTEGER_T nhalf
-       REAL_T DTEMP,localF,liquid_temp
+       REAL_T localF
+       REAL_T local_temp
+       REAL_T DTEMP
        REAL_T vt_over_r,ut_over_r
        REAL_T param1,param2,hoop_force_coef
        INTEGER_T ut_comp
@@ -443,54 +445,63 @@ stop
 
          RCEN=xsten(0,1)
 
+         DTEMP=zero
+
          do im=1,nmat
 
           if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
               (override_density(im).eq.1)) then ! rho=rho(T,Y,z)
-           DTEMP=zero
+           ! do nothing
 
   !Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
           else if (override_density(im).eq.2) then 
            vofcomp=(im-1)*ngeom_recon+1
            localF=recon(D_DECL(i,j,k),vofcomp)
 
-           
-          if ((FWATER.le.half).and.(FWATER.ge.-VOFTOL)) then
-           DTEMP=zero
-          else if ((FWATER.ge.half).and.(FWATER.le.one+VOFTOL)) then
+           if ((localF.ge.-VOFTOL).and.(localF.lt.one-VOFTOL)) then
+            ! do nothing
+           else if (abs(localF-one).le.VOFTOL) then
+ 
+            local_temp=thermal(D_DECL(i,j,k))
 
-           liquid_temp=thermal(D_DECL(i,j,k))
+            if (local_temp.gt.zero) then
+             ! do nothing
+            else
+             print *,"local_temp cannot be <= 0 (1)"
+             stop
+            endif
 
-           if (liquid_temp.le.zero) then
-            print *,"liquid_temp cannot be <= 0 (1)"
-            stop
-           endif
+             ! e.g. transformation for differentiated heated rotating annulus
+            call thermal_offset(im,xsten,nhalf,temp_offset,gtemp_offset)
+            local_temp=local_temp+temp_offset
 
-           call thermal_offset(xsten,nhalf,temp_offset,gtemp_offset)
-           liquid_temp=liquid_temp+temp_offset
+            if (local_temp.gt.zero) then
+             ! do nothing
+            else
+             print *,"local_temp cannot be <= 0 (2)"
+             stop
+            endif
 
-           if (liquid_temp.le.zero) then
-            print *,"liquid_temp cannot be <= 0 (2)"
-            stop
-           endif
-
-           if (fort_drhodt(im).gt.zero) then
-            print *,"fort_drhodt has invalid sign"
-            stop
-           endif
+            if (fort_drhodt(im).le.zero) then
+             ! do nothing
+            else
+             print *,"fort_drhodt has invalid sign"
+             stop
+            endif
             ! units of drhodt are 1/(degrees Kelvin)
             ! DTEMP has no units
             ! fort_tempconst is the temperature of the inner boundary
             ! for the differentially heated rotating annulus problem.
-           DTEMP=fort_drhodt(im)*(liquid_temp-fort_tempconst(im))
+            DTEMP=DTEMP+fort_drhodt(im)*(local_temp-fort_tempconst(im))
+           else
+            print *,"localF invalid"
+            stop
+           endif
           else
-           print *,"FWATER invalid"
+           print *,"override_density invalid"
            stop
           endif
-         else
-          print *,"override_density invalid"
-          stop
-         endif
+         enddo ! im=1..nmat
 
           ! gravity force (temperature dependence)
           ! gravity_normalized>0 means that gravity is directed downwards.
@@ -506,7 +517,9 @@ stop
           ! in PROB.F90: 
           ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
          if (rzflag.eq.3) then
-          if (RCEN.le.zero) then
+          if (RCEN.gt.zero) then
+           ! do nothing
+          else
            print *,"RCEN invalid"
            stop
           endif
@@ -530,7 +543,9 @@ stop
            print *,"dimension bust"
            stop
           endif
-          if (angular_velocity.ne.zero) then
+          if (angular_velocity.eq.zero) then
+           ! do nothing
+          else
            print *,"angular_velocity<>0 not implemented here"
            stop
           endif
@@ -584,7 +599,9 @@ stop
            print *,"dimension bust"
            stop
           endif
-          if (RCEN.le.zero) then
+          if (RCEN.gt.zero) then
+           ! do nothing
+          else
            print *,"RCEN invalid"
            stop
           endif
@@ -608,7 +625,9 @@ stop
 
          else if (rzflag.eq.3) then
 
-          if (RCEN.le.zero) then
+          if (RCEN.gt.zero) then
+           ! do nothing
+          else
            print *,"RCEN invalid"
            stop
           endif
@@ -668,7 +687,7 @@ stop
        return
        end subroutine fort_hoopimplicit
 
-
+FIX ME get rid of this. (and reduce the number of SEM vars further)
        subroutine fort_compute_neg_mom_force( &
          force,DIMS(force), &
          xlo,dx, &
@@ -828,7 +847,7 @@ stop
        return
        end subroutine fort_compute_neg_mom_force
 
-
+FIX ME delete this stuff
        subroutine fort_thermal_offset_force( &
          override_density, &
          force,DIMS(force), &

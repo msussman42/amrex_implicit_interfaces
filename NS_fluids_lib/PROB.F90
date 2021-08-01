@@ -3565,7 +3565,7 @@ end subroutine dynamic_contact_angle
 
       return
       end subroutine get_vort_vel_error
-
+FIX ME delete this stuff
       subroutine get_local_neg_mom_force(x,prev_time,cur_time, &
         dt,update_state,neg_force)
       IMPLICIT NONE
@@ -3632,13 +3632,14 @@ end subroutine dynamic_contact_angle
       return
       end subroutine get_local_neg_mom_force
 
-      subroutine thermal_offset(xsten,nhalf,temp_offset,gtemp_offset)
+      subroutine thermal_offset(im,xsten,nhalf,temp_offset,gtemp_offset)
       IMPLICIT NONE
 
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T temp_offset
-      REAL_T gtemp_offset(SDIM)
+      INTEGER_T, intent(in) :: im ! im=1..nmat
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(out) :: temp_offset
+      REAL_T, intent(out) :: gtemp_offset(SDIM)
       REAL_T ACOEF,BCOEF,rval
       INTEGER_T dir
 
@@ -3657,68 +3658,85 @@ end subroutine dynamic_contact_angle
        gtemp_offset(dir)=zero
       enddo
 
-      if (probtype.eq.82) then
+      if (probtype.eq.82) then ! differentiated heated rotating annulus
 
-       if (twall.lt.fort_tempconst(1)) then
-        print *,"outer temperature must be >= inner"
+       if (im.eq.1) then
+
+        if (twall.ge.fort_tempconst(1)) then
+         ! do nothing
+        else
+         print *,"outer temperature must be >= inner"
+         stop
+        endif
+
+        if (levelrz.eq.0) then
+
+         ! T=A x + B
+         ! T_x = A
+         ! T_xx = 0
+         ! T1=A x1 + B 
+         ! T2=A x2 + B 
+         ! A(x2 - x1)=T2-T1
+
+         ACOEF=(twall-fort_tempconst(1))/(probhix-problox)
+         BCOEF=twall-fort_tempconst(1)+ACOEF*probhix
+         rval=xsten(0,1)
+         if (ACOEF.lt.zero) then
+          print *,"ACOEF invalid"
+          stop
+         endif
+         temp_offset=ACOEF*rval+BCOEF
+         gtemp_offset(1)=ACOEF
+
+        else if (levelrz.eq.1) then
+
+         print *,"levelrz invalid for annulus problem"
+         stop
+
+        else if (levelrz.eq.3) then
+
+         ! T=A log r + B
+         ! T_r = A/r
+         ! (r T_r)_r = 0
+         ! T1=A log r1 + B 
+         ! T2=A log r2 + B 
+         ! A(log r2 - log r1)=T2-T1
+
+         if (problox.gt.zero) then
+          ! do nothing
+         else
+          print *,"problox invalid"
+          stop
+         endif
+         ACOEF=(twall-fort_tempconst(1))/log(probhix/problox)
+         BCOEF=twall-fort_tempconst(1)+ACOEF*log(probhix)
+         rval=xsten(0,1)
+         if (rval.gt.zero) then
+          ! do nothing
+         else
+          print *,"rval invalid"
+          stop
+         endif
+         if (ACOEF.ge.zero) then
+          ! do nothing
+         else
+          print *,"ACOEF invalid"
+          stop
+         endif
+         temp_offset=ACOEF*log(rval)+BCOEF
+         gtemp_offset(1)=ACOEF/rval
+
+        else
+         print *,"levelrz invalid"
+         stop
+        endif   
+
+       else if ((im.ge.2).and.(im.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im invalid"
         stop
        endif
-
-       if (levelrz.eq.0) then
-
-        ! T=A x + B
-        ! T_x = A
-        ! T_xx = 0
-        ! T1=A x1 + B 
-        ! T2=A x2 + B 
-        ! A(x2 - x1)=T2-T1
-
-        ACOEF=(twall-fort_tempconst(1))/(probhix-problox)
-        BCOEF=twall-fort_tempconst(1)+ACOEF*probhix
-        rval=xsten(0,1)
-        if (ACOEF.lt.zero) then
-         print *,"ACOEF invalid"
-         stop
-        endif
-        temp_offset=ACOEF*rval+BCOEF
-        gtemp_offset(1)=ACOEF
-
-       else if (levelrz.eq.1) then
-
-        print *,"levelrz invalid for annulus problem"
-        stop
-
-       else if (levelrz.eq.3) then
-
-        ! T=A log r + B
-        ! T_r = A/r
-        ! (r T_r)_r = 0
-        ! T1=A log r1 + B 
-        ! T2=A log r2 + B 
-        ! A(log r2 - log r1)=T2-T1
-
-        if (problox.le.zero) then
-         print *,"problox invalid"
-         stop
-        endif
-        ACOEF=(twall-fort_tempconst(1))/log(probhix/problox)
-        BCOEF=twall-fort_tempconst(1)+ACOEF*log(probhix)
-        rval=xsten(0,1)
-        if (rval.le.zero) then
-         print *,"rval invalid"
-         stop
-        endif
-        if (ACOEF.lt.zero) then
-         print *,"ACOEF invalid"
-         stop
-        endif
-        temp_offset=ACOEF*log(rval)+BCOEF
-        gtemp_offset(1)=ACOEF/rval
-
-       else
-        print *,"levelrz invalid"
-        stop
-       endif   
  
       endif ! probtype.eq.82 ?
 
