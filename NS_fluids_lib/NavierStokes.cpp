@@ -5,7 +5,6 @@
 // =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
 //
-// add flag to StateData "for_GHOST_only"
 // nstate=state.size(); state[0..NUM_STATE_TYPE-1] are valid states.
 // state[NUM_STATE_TYPE...] are "for_GHOST_only"
 // do not save "for_GHOST_only" state[idx] entries to checkpoint.
@@ -540,11 +539,12 @@ int  NavierStokes::XDmac_Type=Solid_State_Type+1;
 int  NavierStokes::YDmac_Type=XDmac_Type+1;
 int  NavierStokes::ZDmac_Type=YDmac_Type+AMREX_SPACEDIM-2;
 int  NavierStokes::Tensor_Type=ZDmac_Type+1;
-int  NavierStokes::NUM_STATE_TYPE=Tensor_Type+1;
-int  NavierStokes::TensorXU_Type=NUM_STATE_TYPE;
+int  NavierStokes::TensorXU_Type=Tensor_Type+1;
 int  NavierStokes::TensorYU_Type=TensorXU_Type+1;
 int  NavierStokes::TensorZU_Type=TensorYU_Type+1;
 int  NavierStokes::TensorZV_Type=TensorZU_Type+1;
+
+int  NavierStokes::NUM_STATE_TYPE=TensorZV_Type+1;
 
 int  NavierStokes::ignore_div_up=0;
 
@@ -2808,16 +2808,21 @@ NavierStokes::read_params ()
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
      Tensor_Type=NUM_STATE_TYPE;
-     NUM_STATE_TYPE++;
+
+     TensorXU_Type=Tensor_Type+1;
+     TensorYU_Type=TensorXU_Type+1;
+     TensorZU_Type=TensorYU_Type+1;
+     TensorZV_Type=TensorZU_Type+1;
+
+     NUM_STATE_TYPE=TensorZV_Type+1;
     } else if (num_materials_viscoelastic==0) {
      Tensor_Type=-1;
+     TensorXU_Type=-1;
+     TensorYU_Type=-1;
+     TensorZU_Type=-1;
+     TensorZV_Type=-1;
     } else
      amrex::Error("num_materials_viscoelastic invalid");
-
-    TensorXU_Type=NUM_STATE_TYPE;
-    TensorYU_Type=TensorXU_Type+1;
-    TensorZU_Type=TensorYU_Type+1;
-    TensorZV_Type=TensorZU_Type+1;
 
     for (int i=0;i<nmat;i++) {
      if (material_type[i]==0) {
@@ -8524,6 +8529,22 @@ void NavierStokes::init_boundary() {
    MultiFab::Copy(Tensor_new,*tensormf,0,0,
      NUM_CELL_ELASTIC,1);
    delete tensormf;
+  } else if ((k==TensorXU_Type)&&
+             (num_materials_viscoelastic>=1)&&
+             (num_materials_viscoelastic<=nmat)) {
+   // do nothing
+  } else if ((k==TensorYU_Type)&&
+             (num_materials_viscoelastic>=1)&&
+             (num_materials_viscoelastic<=nmat)) {
+   // do nothing
+  } else if ((k==TensorZU_Type)&&
+             (num_materials_viscoelastic>=1)&&
+             (num_materials_viscoelastic<=nmat)) {
+   // do nothing
+  } else if ((k==TensorZV_Type)&&
+             (num_materials_viscoelastic>=1)&&
+             (num_materials_viscoelastic<=nmat)) {
+   // do nothing
   } else 
    amrex::Error("k invalid");
 
@@ -8579,60 +8600,69 @@ NavierStokes::init(
 
  for (int k=0;k<nstate;k++) {
 
-  MultiFab &S_new = get_new_data(k,ns_time_order);
+  int state_holds_data=get_desc_lst()[k].get_state_holds_data();
+  if (state_holds_data==1) {
 
-  if (S_new.DistributionMap()==dmap_in) {
-   // do nothing
-  } else {
-   amrex::Error("dmap_in invalid");
-  }
-   //  Are the BoxArrays equal after conversion to cell-centered?
-  if (S_new.boxArray().CellEqual(ba_in)) {
-   // do nothing
-  } else {
-   amrex::Error("S_new.boxArray().CellEqual(ba_in) failed");
-  }
+   MultiFab &S_new = get_new_data(k,ns_time_order);
+
+   if (S_new.DistributionMap()==dmap_in) {
+    // do nothing
+   } else {
+    amrex::Error("dmap_in invalid");
+   }
+    //  Are the BoxArrays equal after conversion to cell-centered?
+   if (S_new.boxArray().CellEqual(ba_in)) {
+    // do nothing
+   } else {
+    amrex::Error("S_new.boxArray().CellEqual(ba_in) failed");
+   }
 
 
-  int ncomp=S_new.nComp();
+   int ncomp=S_new.nComp();
 
-  int numparts=1;
-  int ncomp_part[4];
-  int scomp_part[4];
-  
-  if (k==State_Type) {
-   int test_ncomp=0;
-
-   numparts=4;
-   scomp_part[0]=0;
-   scomp_part[1]=(AMREX_SPACEDIM+1);
-   scomp_part[2]=scomp_part[1]+nmat*num_state_material;
-   scomp_part[3]=scomp_part[2]+nmat*ngeom_raw;
-
-   ncomp_part[0]=scomp_part[1];
-   test_ncomp+=ncomp_part[0];
-   ncomp_part[1]=scomp_part[2]-scomp_part[1];
-   test_ncomp+=ncomp_part[1];
-   ncomp_part[2]=scomp_part[3]-scomp_part[2];
-   test_ncomp+=ncomp_part[2];
-   ncomp_part[3]=1;
-   test_ncomp+=ncomp_part[3];
-   if (test_ncomp!=ncomp)
-    amrex::Error("test ncomp invalid");
-
-  } else {
-   numparts=1;
-   scomp_part[0]=0;
-   ncomp_part[0]=ncomp;
-  }
+   int numparts=1;
+   int ncomp_part[4];
+   int scomp_part[4];
    
-  for (int part_iter=0;part_iter<numparts;part_iter++) { 
-   FillPatch(old,S_new,scomp_part[part_iter],
-      upper_slab_time,k,
-      scomp_part[part_iter],
-      ncomp_part[part_iter],
-      debug_fillpatch);
-  }
+   if (k==State_Type) {
+    int test_ncomp=0;
+
+    numparts=4;
+    scomp_part[0]=0;
+    scomp_part[1]=(AMREX_SPACEDIM+1);
+    scomp_part[2]=scomp_part[1]+nmat*num_state_material;
+    scomp_part[3]=scomp_part[2]+nmat*ngeom_raw;
+
+    ncomp_part[0]=scomp_part[1];
+    test_ncomp+=ncomp_part[0];
+    ncomp_part[1]=scomp_part[2]-scomp_part[1];
+    test_ncomp+=ncomp_part[1];
+    ncomp_part[2]=scomp_part[3]-scomp_part[2];
+    test_ncomp+=ncomp_part[2];
+    ncomp_part[3]=1;
+    test_ncomp+=ncomp_part[3];
+    if (test_ncomp!=ncomp)
+     amrex::Error("test ncomp invalid");
+
+   } else {
+    numparts=1;
+    scomp_part[0]=0;
+    ncomp_part[0]=ncomp;
+   }
+    
+   for (int part_iter=0;part_iter<numparts;part_iter++) { 
+    FillPatch(old,S_new,scomp_part[part_iter],
+       upper_slab_time,k,
+       scomp_part[part_iter],
+       ncomp_part[part_iter],
+       debug_fillpatch);
+   }
+
+  } else if (state_holds_data==0) {
+   // do nothing
+  } else
+   amrex::Error("state_holds_data invalid");
+
  }  // k=0..nstate-1
 
  if (level==0) {
@@ -8729,43 +8759,52 @@ NavierStokes::init (const BoxArray& ba_in,
 
  for (int k=0;k<nstate;k++) {
 
-  MultiFab &S_new = get_new_data(k,ns_time_order);
-  int ncomp=S_new.nComp();
+  int state_holds_data=get_desc_lst()[k].get_state_holds_data();
+  if (state_holds_data==1) {
 
-  int numparts=1;
-  int ncomp_part[4];
-  int scomp_part[4];
-  
-  if (k==State_Type) {
-   int test_ncomp=0;
+   MultiFab &S_new = get_new_data(k,ns_time_order);
+   int ncomp=S_new.nComp();
 
-   numparts=4;
-   scomp_part[0]=0;
-   scomp_part[1]=(AMREX_SPACEDIM+1);
-   scomp_part[2]=scomp_part[1]+nmat*num_state_material;
-   scomp_part[3]=scomp_part[2]+nmat*ngeom_raw;
+   int numparts=1;
+   int ncomp_part[4];
+   int scomp_part[4];
+   
+   if (k==State_Type) {
+    int test_ncomp=0;
 
-   ncomp_part[0]=scomp_part[1];
-   test_ncomp+=ncomp_part[0];
-   ncomp_part[1]=scomp_part[2]-scomp_part[1];
-   test_ncomp+=ncomp_part[1];
-   ncomp_part[2]=scomp_part[3]-scomp_part[2];
-   test_ncomp+=ncomp_part[2];
-   ncomp_part[3]=1;
-   test_ncomp+=ncomp_part[3];
-   if (test_ncomp!=ncomp)
-    amrex::Error("test ncomp invalid");
+    numparts=4;
+    scomp_part[0]=0;
+    scomp_part[1]=(AMREX_SPACEDIM+1);
+    scomp_part[2]=scomp_part[1]+nmat*num_state_material;
+    scomp_part[3]=scomp_part[2]+nmat*ngeom_raw;
 
-  } else {
-   numparts=1;
-   scomp_part[0]=0;
-   ncomp_part[0]=ncomp;
-  }
+    ncomp_part[0]=scomp_part[1];
+    test_ncomp+=ncomp_part[0];
+    ncomp_part[1]=scomp_part[2]-scomp_part[1];
+    test_ncomp+=ncomp_part[1];
+    ncomp_part[2]=scomp_part[3]-scomp_part[2];
+    test_ncomp+=ncomp_part[2];
+    ncomp_part[3]=1;
+    test_ncomp+=ncomp_part[3];
+    if (test_ncomp!=ncomp)
+     amrex::Error("test ncomp invalid");
 
-  for (int part_iter=0;part_iter<numparts;part_iter++) { 
-   FillCoarsePatch(S_new,scomp_part[part_iter],upper_slab_time,k,
-     scomp_part[part_iter],ncomp_part[part_iter],debug_fillpatch);
-  }
+   } else {
+    numparts=1;
+    scomp_part[0]=0;
+    ncomp_part[0]=ncomp;
+   }
+
+   for (int part_iter=0;part_iter<numparts;part_iter++) { 
+    FillCoarsePatch(S_new,scomp_part[part_iter],upper_slab_time,k,
+      scomp_part[part_iter],ncomp_part[part_iter],debug_fillpatch);
+   }
+
+  } else if (state_holds_data==0) {
+   // do nothing
+  } else
+   amrex::Error("state_holds_data invalid");
+
  } // k=0..nstate-1
 
  init_regrid_history();
