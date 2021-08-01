@@ -44,7 +44,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
-ns.visual_option=-2
 ns.shock_timestep=2 2 2
 
 amr.regrid_int      = 1       # how often to regrid

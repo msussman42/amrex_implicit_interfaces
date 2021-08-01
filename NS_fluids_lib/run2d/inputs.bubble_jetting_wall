@@ -45,7 +45,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 # Lp.smooth_type=2
 # Lp.bottom_smooth_type=2
 #
-ns.visual_option=-2
 
 # dx=200/(256)
 amr.n_cell    = 128 128

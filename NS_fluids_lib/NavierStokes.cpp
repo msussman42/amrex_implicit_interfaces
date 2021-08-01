@@ -416,7 +416,6 @@ int  NavierStokes::adapt_quad_depth=1;
 //    if F_solid<1/2, replace with F_solid=0.
 int  NavierStokes::visual_tessellate_vfrac=0;   
 int  NavierStokes::visual_revolve=0;   
-int  NavierStokes::visual_option=-2; // -2 zonal tecplot,-1 plot files (visit)
 int  NavierStokes::visual_phase_change_plot_int=0; 
 int  NavierStokes::visual_buoyancy_plot_int=0; 
 int  NavierStokes::visual_divergence_plot_int=0; 
@@ -2583,7 +2582,6 @@ NavierStokes::read_params ()
 
     pp.query("visual_tessellate_vfrac",visual_tessellate_vfrac);
     pp.query("visual_revolve",visual_revolve);
-    pp.query("visual_option",visual_option); //-2 tecplot, -1 visit files
     pp.query("visual_phase_change_plot_int",visual_phase_change_plot_int);
     pp.query("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
     pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
@@ -2597,8 +2595,6 @@ NavierStokes::read_params ()
      std::cout << "visual_revolve: " << visual_revolve << '\n';
      amrex::Error("visual_revolve invalid");
     }
-    if ((visual_option<-2)||(visual_option>-1))
-     amrex::Error("visual_option invalid try -1 or -2");
 
     if (AMREX_SPACEDIM==2) {
      adapt_quad_depth=2;
@@ -4931,7 +4927,6 @@ NavierStokes::read_params ()
      std::cout << "initial_thermal_cycles " <<initial_thermal_cycles<< '\n';
      std::cout << "visual_tessellate_vfrac " << visual_tessellate_vfrac << '\n';
      std::cout << "visual_revolve " << visual_revolve << '\n';
-     std::cout << "visual_option " << visual_option << '\n';
      std::cout << "visual_phase_change_plot_int " << 
 	     visual_phase_change_plot_int << '\n';
      std::cout << "visual_buoyancy_plot_int " << 
@@ -17819,23 +17814,6 @@ void NavierStokes::volWgtSum(
 }  // subroutine volWgtSum
 
 
-void
-NavierStokes::setPlotVariables()
-{
-  AmrLevel::setPlotVariables();
-}
-
-std::string
-NavierStokes::thePlotFileType () const
-{
-    //
-    // Increment this whenever the writePlotFile() format changes.
-    //
-    static const std::string the_plot_file_type("NavierStokes-V1.1");
-
-    return the_plot_file_type;
-}
-
 void 
 NavierStokes::debug_memory() {
 
@@ -18416,7 +18394,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     &nsteps,
     &num_levels,
     &cur_time_slab,
-    &visual_option,
     &visual_revolve,
     &plotint,
     &nmat, 
@@ -18431,8 +18408,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   if (do_slice==1) {
    if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
     FORT_OUTPUTSLICE(&cur_time_slab,&nsteps,&sliceint,
-     slice_data.dataPtr(),&nslice,&nstate_slice,
-     &visual_option);
+     slice_data.dataPtr(),&nslice,&nstate_slice);
    } else
     amrex::Error("slice_dir invalid");
   } else if (do_slice==0) {
@@ -18674,7 +18650,6 @@ void NavierStokes::writeSanityCheckData(
     &nsteps,
     &num_levels,
     &cur_time_slab,
-    &visual_option,
     &visual_revolve,
     &ncomp);
 
@@ -18690,14 +18665,11 @@ void NavierStokes::writeSanityCheckData(
 
 void
 NavierStokes::writePlotFile (
-  const std::string& dir,
-  std::ostream& os,
   int do_plot,int do_slice,
   int SDC_outer_sweeps_in,int slab_step_in) {
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
- int nmat=num_materials;
 
  SDC_outer_sweeps=SDC_outer_sweeps_in;
  if ((SDC_outer_sweeps>=0)&&
@@ -18709,10 +18681,6 @@ NavierStokes::writePlotFile (
  slab_step=slab_step_in; 
 
  SDC_setup_step();
-
- int i, n;
-
- int f_lev = parent->finestLevel();
 
   // metrics_dataALL
   // MASKCOEF_MF
@@ -18728,255 +18696,10 @@ NavierStokes::writePlotFile (
  } // level==0
 
   // output tecplot zonal files  x,y,z,u,v,w,phi,psi
- if (visual_option==-2) {
 
-  if (level==0) {
-   writeTECPLOT_File(do_plot,do_slice);
-  }
-
-  // output isosurface for LevelVapor and LevelSolid
-  // output plot files
- } else if (visual_option==-1) {
-
-  if (level==0) { 
-   if (do_slice==1) {
-    int do_plot_kluge=0;
-    writeTECPLOT_File(do_plot_kluge,do_slice);
-   } 
-  }
-
-  ParallelDescriptor::Barrier();
-
-  if (do_plot==1) {
-
-   if (level == 0) {
-    writeInterfaceReconstruction();
-   } // level==0
-
-   //
-   // The list of indices of State to write to plotfile.
-   // first component of pair is state_type,
-   // second component of pair is component # within the state_type
-   //
-
-   std::vector<std::pair<int,int> > plot_var_map;
-
-   for (int typ=State_Type;typ<NUM_STATE_TYPE;typ++) {
-    for (int comp = 0; comp < desc_lst[typ].nComp();comp++) {
-     if ((parent->isStatePlotVar(desc_lst[typ].name(comp))) &&
-         (desc_lst[typ].getType() == IndexType::TheCellType())) {
-      plot_var_map.push_back(std::pair<int,int>(typ,comp));
-     }
-    }  // comp
-   } // typ
-
-   int n_data_items = plot_var_map.size();
-
-   if (level == 0 && ParallelDescriptor::IOProcessor()) {
-     //
-     // The first thing we write out is the plotfile type.
-     //
-     os << thePlotFileType() << '\n';
-
-     if (n_data_items == 0)
-         amrex::Error("Must specify at least one valid data item to plot");
-
-     os << n_data_items << '\n';
-
-     //
-     // Names of variables -- first state, then derived
-     //
-     for (i =0; i < plot_var_map.size(); i++) {
-         int typ  = plot_var_map[i].first;
-         int comp = plot_var_map[i].second;
-         os << desc_lst[typ].name(comp) << '\n';
-     }
-
-     os << AMREX_SPACEDIM << '\n';
-     os << parent->cumTime() << '\n';
-     os << f_lev << '\n';
-     for (i = 0; i < AMREX_SPACEDIM; i++)
-         os << geom.ProbLo(i) << ' ';
-     os << '\n';
-     for (i = 0; i < AMREX_SPACEDIM; i++)
-         os << geom.ProbHi(i) << ' ';
-     os << '\n';
-     for (i = 0; i < f_lev; i++)
-         os << 2 << ' ';
-     os << '\n';
-     for (i = 0; i <= f_lev; i++)
-         os << parent->Geom(i).Domain() << ' ';
-     os << '\n';
-     for (i = 0; i <= f_lev; i++)
-         os << parent->levelSteps(i) << ' ';
-     os << '\n';
-     for (i = 0; i <= f_lev; i++) {
-         for (int k = 0; k < AMREX_SPACEDIM; k++)
-             os << parent->Geom(i).CellSize()[k] << ' ';
-         os << '\n';
-     }
-     os << (int) geom.Coord() << '\n';
-     os << "0\n"; // Write bndry data.
-   }
-   // Build the directory to hold the MultiFab at this level.
-   // The name is relative to the directory containing the Header file.
-   //
-   static const std::string BaseName = "/Cell";
-   char buf[64];
-   sprintf(buf, "Level_%d", level);
-   std::string Level_str = buf;
-   //
-   // Now for the full pathname of that directory.
-   //
-   std::string FullPath = dir;
-   if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/')
-     FullPath += '/';
-   FullPath += Level_str;
-   //
-   // Only the I/O processor makes the directory if it doesn't already exist.
-   //
-   if (ParallelDescriptor::IOProcessor())
-     if (!amrex::UtilCreateDirectory(FullPath, 0755))
-         amrex::CreateDirectoryFailed(FullPath);
-   //
-   // Force other processors to wait till directory is built.
-   //
-   ParallelDescriptor::Barrier();
-
-   if (ParallelDescriptor::IOProcessor()) {
-     os << level << ' ' << grids.size() << ' ' << cur_time_slab << '\n';
-     os << parent->levelSteps(level) << '\n';
-
-     for (i = 0; i < grids.size(); ++i) {
-         for (n = 0; n < AMREX_SPACEDIM; n++)
-             os << grid_loc[i].lo(n) << ' ' << grid_loc[i].hi(n) << '\n';
-     }
-     //
-     // The full relative pathname of the MultiFabs at this level.
-     // The name is relative to the Header file containing this name.
-     // It's the name that gets written into the Header.
-     //
-     if (n_data_items > 0) {
-         std::string PathNameInHeader = Level_str;
-         PathNameInHeader += BaseName;
-         os << PathNameInHeader << '\n';
-     }
-   } // if IOProc
-
-   //
-   // We combine all of the multifabs -- state, etc -- into one
-   // multifab -- plotMF.
-   // Each state variable has one component.
-   // The VOF variables have to be obtained together with Centroid vars.
-   int       cnt   = 0;
-   int       ncomp = 1;
-   const int nGrow = 0;
-   MultiFab  plotMF(grids,dmap,n_data_items,nGrow,
-		 MFInfo().SetTag("plotMF"),FArrayBoxFactory());
-   //
-   // Cull data from state variables 
-   //
-   for (i = 0; i < plot_var_map.size(); i++) {
-     int typ  = plot_var_map[i].first;
-     int comp = plot_var_map[i].second;
-     MultiFab* this_dat=nullptr;
-     ncomp=1;
-
-     if (typ==State_Type) {
-      int scomp_mofvars=(AMREX_SPACEDIM+1)+
-       nmat*num_state_material;
-      if (comp==scomp_mofvars) {
-       ncomp=nmat*ngeom_raw;
-      }
-      this_dat=getState(nGrow,comp,ncomp,cur_time_slab);
-     } else if ((typ==Solid_State_Type)&&
-		(im_solid_map.size()>=1)&&
-		(im_solid_map.size()<=nmat)) {
-
-      if (comp!=0) {
-       std::cout << "comp=" << comp << " ncomp= " <<
-        desc_lst[typ].nComp() << '\n';
-       amrex::Error("comp invalid for Solid_State_Type");
-      }
-      int nparts=im_solid_map.size();
-      if ((nparts<1)||(nparts>nmat))
-       amrex::Error("nparts invalid");
-      if (comp==0) {
-       ncomp=nparts*AMREX_SPACEDIM;
-      } else
-       amrex::Error("comp invalid");
-
-      this_dat=getStateSolid(nGrow,comp,ncomp,cur_time_slab);
-
-      if (this_dat->nComp()!=ncomp)
-       amrex::Error("this_dat->nComp() invalid");
-
-     } else if ((typ==Tensor_Type)&&
-		(im_elastic_map.size()>=1)&&
-		(im_elastic_map.size()<=nmat)) {
-
-      if (comp!=0) {
-       std::cout << "comp=" << comp << " ncomp= " <<
-        desc_lst[typ].nComp() << '\n';
-       amrex::Error("comp invalid for Tensor_Type");
-      }
-      int nparts=im_elastic_map.size();
-      if ((nparts<=0)||(nparts>nmat)||
-          (nparts!=num_materials_viscoelastic))
-       amrex::Error("nparts invalid");
-      if (comp==0) {
-       ncomp=NUM_CELL_ELASTIC;
-      } else
-       amrex::Error("comp invalid");
-
-      this_dat=getStateTensor(nGrow,comp,ncomp,cur_time_slab);
-
-      if (this_dat->nComp()!=ncomp) 
-       amrex::Error("this_dat->nComp() invalid");
-
-     } else if (typ==LS_Type) {
-      if (comp!=0) {
-       std::cout << "comp=" << comp << " ncomp= " <<
-        desc_lst[typ].nComp() << '\n';
-       amrex::Error("comp invalid for LS_Type");
-      }
-
-      if (comp==0) {
-       ncomp=nmat*(AMREX_SPACEDIM+1);
-      } else
-       amrex::Error("comp invalid");
-
-      this_dat=getStateDist(nGrow,cur_time_slab,13);
-      if (this_dat->nComp()!=ncomp)
-       amrex::Error("this_dat->nComp() invalid");
-
-     } else if (typ==DIV_Type) {
-      if (comp!=0)
-       amrex::Error("comp invalid for DIV_Type");
-      ncomp=1;
-      this_dat=getStateDIV_DATA(1,comp,ncomp,cur_time_slab);
-     } else
-      amrex::Error("typ invalid");
-
-     MultiFab::Copy(plotMF,*this_dat,0,cnt,ncomp,nGrow);
-     delete this_dat;
-     cnt+= ncomp;
-     i+=(ncomp-1);
-   }  // i
-   //
-   // Use the Full pathname when naming the MultiFab.
-   //
-   std::string TheFullPath = FullPath;
-   TheFullPath += BaseName;
-   VisMF::Write(plotMF,TheFullPath);
-   ParallelDescriptor::Barrier();
-  } else if (do_plot==0) {
-   // do nothing
-  } else
-   amrex::Error("do_plot invalid");
-
- } else
-  amrex::Error("visual_option invalid try -1 or -2");
+ if (level==0) {
+  writeTECPLOT_File(do_plot,do_slice);
+ }
 
 } // end subroutine writePlotFile
 

@@ -57,7 +57,6 @@ ns.denchopp=0.001
 ns.soundchopp=1.0
 
 ns.hydrostatic_pressure=10.0
-ns.visual_option=-3 # output stress information
 ns.visual_lo = -1 -1
 ns.visual_hi = 512 512
 

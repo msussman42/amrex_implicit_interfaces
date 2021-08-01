@@ -31,7 +31,6 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 amr.n_cell    = 32 32
 amr.max_level = 0

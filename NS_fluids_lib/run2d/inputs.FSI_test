@@ -98,7 +98,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 
 # -2,-3 zonal tecplot, -1 plot files
-ns.visual_option=-2
 
 ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
 ns.change_max     = 1.1     

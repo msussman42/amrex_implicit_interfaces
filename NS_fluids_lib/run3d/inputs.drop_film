@@ -24,7 +24,6 @@ ns.num_materials=2
 ns.num_species_var=0
 ns.use_lsa=0
 
-ns.visual_option=-1
 
 
 amr.n_cell    = 24 24 24

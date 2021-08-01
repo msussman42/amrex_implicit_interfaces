@@ -37,7 +37,6 @@ ns.denchopp=0.9
 ns.soundchopp=1500.0
 
 ns.hydrostatic_pressure=1.013
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 512 512
 ns.visual_side_max = 512

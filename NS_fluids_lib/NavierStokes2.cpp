@@ -7528,7 +7528,6 @@ void NavierStokes::output_zones(
      &finest_level,
      &gridno,
      &visual_tessellate_vfrac,  // = 0,1,3
-     &visual_option,
      &rzflag,
      &nmat,
      &nparts,

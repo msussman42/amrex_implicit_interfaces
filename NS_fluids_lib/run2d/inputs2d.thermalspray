@@ -52,7 +52,6 @@ Lp.v = 0
 
 amr.plotfile_on_restart=0
 #ns.visual_revolve=32
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 # domain size is 0.0003 x 0.0003 x 0.00015 (meters)
 # minimum radius is 15

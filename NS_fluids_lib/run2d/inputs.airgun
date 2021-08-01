@@ -45,7 +45,6 @@ ns.djwl=0.0
 ns.ejwl=0.0
 
 ns.hydrostatic_pressure=1.013
-ns.visual_option=8
 ns.visual_lo = 0 500
 ns.visual_hi = 256 1028
 ns.visual_side_max = 512

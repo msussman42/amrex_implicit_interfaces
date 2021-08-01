@@ -45,7 +45,6 @@ ns.hydrostatic_pressure=52.723
 #ns.p_structure2=5.0
 #ns.gamma_structure2=1.0
 
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 64 64
 ns.visual_side_max = 512

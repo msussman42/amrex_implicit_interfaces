@@ -11261,7 +11261,6 @@ contains
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        ncomp)
       use probcommon_module
@@ -11288,7 +11287,6 @@ contains
       INTEGER_T, intent(in) :: data_id
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
 
       INTEGER_T strandid

@@ -28,7 +28,6 @@ mg.rtol_b = -0.01
 Lp.smooth_type=2
 Lp.v = 0
 
-ns.visual_option=-2  
 
 amr.n_cell    = 40 200  # originally 32 32 MS
 amr.max_level =  3       # originally 3 MS

@@ -58,7 +58,6 @@ ns.bubble_density=1.0
 
 #amr.plotfile_on_restart=1
 ns.hydrostatic_pressure=1.013
-ns.visual_option=-2
 # coarse box for contour plotter (>128 to see majority of domain)
 ns.visual_lo = 0 0
 ns.visual_hi = 32 32

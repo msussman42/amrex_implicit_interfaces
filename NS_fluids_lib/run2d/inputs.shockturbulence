@@ -43,7 +43,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 # Lp.smooth_type=2
 # Lp.bottom_smooth_type=2
 #
-ns.visual_option=-2  # -1 = VISIT  -2 = TECPLOT
 
 amr.n_cell    = 800 4
 amr.max_level =  0

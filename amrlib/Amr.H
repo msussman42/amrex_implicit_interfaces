@@ -81,12 +81,6 @@ public:
     Real plotPer () const;
 
     static const std::list<std::string>& statePlotVars ();
-    static bool isStatePlotVar (const std::string& name);
-    static void addStatePlotVar (const std::string& name);
-    static void deleteStatePlotVar (const std::string& name);
-    static void clearStatePlotVarList ();
-    static void fillStatePlotVarList ();
-    static bool Plot_Files_Output ();
 
     static void Initialize ();
     void InitAmr ();
@@ -138,8 +132,6 @@ protected:
     // Write the plot file to be used for visualization.
     //
     void writePlotFile (
-     const std::string& root, 
-     int num,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,int slab_step_in);
     //
@@ -262,11 +254,6 @@ protected:
     Vector<std::unique_ptr<std::fstream> > datalog;
     std::string      restart_file;
     LevelBld*        levelbld;
-    //
-    // The static data ...
-    //
-    static std::list<std::string> state_plot_vars;  // State Vars to dump to plotfile 
-    static bool                   first_plotfile;
 
 private:
     //
@@ -323,13 +310,6 @@ Real
 Amr::plotPer () const
 {
     return plot_per;
-}
-
-inline
-const std::list<std::string>&
-Amr::statePlotVars ()
-{
-    return state_plot_vars;
 }
 
 

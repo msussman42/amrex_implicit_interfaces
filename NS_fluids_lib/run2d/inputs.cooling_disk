@@ -63,7 +63,6 @@ mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.visc_abs_tol    = 1.0e-8
 mac.mac_abs_tol    = 1.0e-8
 
-ns.visual_option=-2
 
 
 ns.cfl            = 0.5

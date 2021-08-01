@@ -29,7 +29,6 @@ Lp.v = 0
 ns.num_materials=3
 ns.num_species_var=0
 
-ns.visual_option=-2  # output zonal tecplot files
 
 amr.n_cell    = 160 32
 amr.max_level =  5  # 5 for production runs  

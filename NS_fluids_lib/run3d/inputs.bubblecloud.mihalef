@@ -45,7 +45,6 @@ ns.ajwl=1.0
 ns.rho0gas=5.0
 
 ns.visual_header=1  # 0=no header ascii  1=tecplot header ascii
-ns.visual_option=7  # velmix,lvapor,lsolid,vof
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = 512 512 512
 

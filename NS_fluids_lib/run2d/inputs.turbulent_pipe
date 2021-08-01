@@ -69,7 +69,6 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 mac.mac_abs_tol    = 1.0e-9
 
 #amr.plotfile_on_restart=1
-ns.visual_option=-2 # -2,-3 zonal tecplot, -1 plot files
 
 ns.ns_tiling=false
 ns.shock_timestep=2 2 2      # 1=use max |u|+c  2=use max |u|

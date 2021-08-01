@@ -65,7 +65,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 #
 ns.inflow_pressure=1.0e+6  # atmospheric pressure
 ns.outflow_pressure=2.002455e+6 # tank pressure at the impact plate
-ns.visual_option=-2
 
 amr.n_cell    = 128 128
 amr.max_level =  3

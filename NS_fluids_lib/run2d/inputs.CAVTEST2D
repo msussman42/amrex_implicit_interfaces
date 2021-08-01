@@ -73,7 +73,6 @@ ns.minimum_relative_error=1.0e-24
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-ns.visual_option=-2 # -2 for tecplot, -1 for visit
 
 amr.n_cell    = 64 64 
 amr.max_level =  1

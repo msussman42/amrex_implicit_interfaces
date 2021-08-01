@@ -65,8 +65,6 @@ amr.max_grid_size   = 64     # 32 on SUPERCOMPUTER (3D)
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 mac.mac_abs_tol    = 1.0e-10
 
-ns.visual_option=-2 # AMR tecplot  (zonal files)
-#ns.visual_option=-1 #  (-1=plt files and isosurface files)
 #amr.plotfile_on_restart=1     
 #SUPERCOMPUTER
 

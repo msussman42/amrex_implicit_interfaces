@@ -76,7 +76,6 @@ ns.bubble_density=1.0
 
 #amr.plotfile_on_restart=1
 ns.hydrostatic_pressure=1.013
-ns.visual_option=-2  # -2 zonal tecplot, -1 plotfile, 
                     # 2=matlab "visual" files: x,y,z,u,v,w,l1,l2,p
 ns.visual_header=0
 

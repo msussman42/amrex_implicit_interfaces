@@ -34,7 +34,6 @@ mg.bot_atol = 1.0e-10  # the coarsest coarsening of level 0 in old version;
                        # level 0 in the new version.
 mac.mac_abs_tol    = 1.0e-8
 
-ns.visual_option=-2  # -2=tecplot -1=visit
 
 amr.n_cell    = 40 40 16  # 160 160 64
 amr.max_level =  1 # 4 for production runs MS

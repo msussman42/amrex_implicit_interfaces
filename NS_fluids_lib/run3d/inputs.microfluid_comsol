@@ -38,7 +38,6 @@ ns.bubble_pressure=0.0
 
 ns.hydrostatic_pressure=0.0
 ns.visual_header=1
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plt files for Visit
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = 512 512 512
 

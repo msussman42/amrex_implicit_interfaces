@@ -61,7 +61,6 @@ ns.bubble_density=0.001
  
 ns.hydrostatic_pressure=0.0
 ns.visual_header=1   # 0 for Viorel  1 for Mark MS
-ns.visual_option=-1   # 7 for Viorel  6 for Mark MS
 amr.derive_plot_vars=volrender
 ns.visual_lo =0 0  # MS 
 ns.visual_hi =512 512  # MS

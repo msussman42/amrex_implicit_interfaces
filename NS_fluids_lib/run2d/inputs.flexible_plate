@@ -115,7 +115,6 @@ Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
 # ZEYU
-ns.visual_option=-2 # -2=tecplot -1=plot files (visit or paraview)
 ns.shock_timestep=2 2 2
 
 amr.regrid_int      = 1       # how often to regrid

@@ -61,7 +61,6 @@ ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=10.0
 ns.visual_header=1  # tecplot
-ns.visual_option=12 # ls,lssolid (was visual_option=0)
 ns.visual_lo = -1 -1
 ns.visual_hi = 2048 2048
 

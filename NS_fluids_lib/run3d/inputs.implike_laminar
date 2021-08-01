@@ -32,7 +32,6 @@ mg.bot_atol = 1.0e-12  # the coarsest coarsening of level 0 in old version;
 mg.rtol_b = -0.01
 Lp.v = 0
 
-ns.visual_option=-2 # tecplot (amr hierarchy preserved)
 
 ns.num_materials=2      
 ns.num_species_var=0

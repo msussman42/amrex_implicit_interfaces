@@ -580,11 +580,7 @@ public:
 		int state_type_mf,
 		int data_dir);
 
-    virtual std::string thePlotFileType () const;
-
     virtual void writePlotFile (
-     const std::string& dir,
-     std::ostream& os,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,int slab_step_in);
 
@@ -596,8 +592,6 @@ public:
       const Real* xlo,const int* fablo,const int* fabhi,
       const Real* dx,int dir,int id,int comp,int ncomp,
       int interior_only);
-
-    virtual void setPlotVariables();
 
     //
     // Timestep estimation functions follow ...
@@ -2100,7 +2094,6 @@ protected:
 
     static int visual_tessellate_vfrac; // def=0
     static int visual_revolve;
-    static int visual_option;
     static int visual_phase_change_plot_int; //def=0
     static int visual_buoyancy_plot_int; //def=0
     static int visual_divergence_plot_int; //def=0

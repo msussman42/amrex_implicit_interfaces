@@ -662,7 +662,7 @@ NavierStokes::set_tensor_extrap_components_main(
     T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
 #endif
 
-  if (ibase_tensor_local==ibase_tensor+NUM_TENSOR_TYPE-1) {
+  if (ibase_tensor_local==NUM_TENSOR_TYPE-1) {
    // do nothing
   } else {
    std::cout << "ibase_tensor_local=" << ibase_tensor_local << '\n';

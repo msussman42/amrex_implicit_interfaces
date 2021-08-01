@@ -60,7 +60,6 @@ ns.bubble_density=0.001
 
 ns.hydrostatic_pressure=0.0
 ns.visual_header=1  # 2=Amira  1=tecplot
-ns.visual_option=1  # lsgas,ls,lssolid
 ns.visual_lo = -1 -1 -1
 ns.visual_hi = 512 512 512
 amr.plotfile_on_restart=0 

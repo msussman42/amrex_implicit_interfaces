@@ -35,7 +35,6 @@ ns.num_materials=2 # JCP paper
 #ns.num_materials=3
 ns.num_species_var=0
 
-ns.visual_option=-2  # output zonal tecplot files
 
 amr.n_cell    = 64 32  # JCP PAPER (symmetric bc)
 amr.max_level =  4  # 4 for production runs JCP PAPER

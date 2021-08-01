@@ -54,7 +54,6 @@ ns.num_species_var=0
 ns.post_init_pressure_solve=1
 ns.EILE_flag=-1
 
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 ns.redist_on_init=0
 

@@ -65,7 +65,6 @@ Lp.bottom_smooth_type=2
 
 ns.visual_ncell=48 24  # ascii tecplot files "uniform<stuff>.tec"
                         # uniform data.
-ns.visual_option=-2  # -1=VISIT format  -2=tecplot format
 # make ns.visual_tessellate_vfrac==0 in order to see extrapolated level set
 # function in the mat*.tec files.
 ns.visual_tessellate_vfrac=0

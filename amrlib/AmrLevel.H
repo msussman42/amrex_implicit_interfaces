@@ -51,21 +51,8 @@ public:
     //
     virtual ~AmrLevel ();
     //
-    // A string written as the first item in writePlotFile() at
-    // level zero. This MUST be defined by each derived class.
-    // It is so we can distinguish between different types of
-    // plot files.  This is a pure virtual function and hence MUST
-    // be implemented by derived classes.
-    //
-    virtual std::string thePlotFileType () const = 0;
-    //
-    // Write plot file stuff to specified directory.  This is a
-    // pure virtual function and hence MUST be implemented by
-    // derived classes.
     //
     virtual void writePlotFile (
-     const std::string& dir,
-     std::ostream& os,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,int slab_step_in) = 0;
 
@@ -278,10 +265,6 @@ public:
     virtual void manual_tags_placement (TagBoxArray&    tags,
              const Vector<IntVect>& bf_lev);
     const BoxArray& getAreaNotToTag() noexcept;
-    //
-    // Modify list of variables to be plotted
-    // 
-    virtual void setPlotVariables ();
 
     //
 protected:

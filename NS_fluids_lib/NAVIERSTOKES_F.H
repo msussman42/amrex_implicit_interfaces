@@ -203,7 +203,6 @@ extern "C" {
      const int* finest_level,
      const int* gridno,
      int* visual_tessellate_vfrac,
-     int* visual_option,
      int* rz_flag,
      int* nmat,
      int* nparts,
@@ -229,7 +228,6 @@ extern "C" {
      int* nsteps,
      int* num_levels,
      Real* time,
-     int* visual_option,
      int* visual_revolve,
      int* plotint,
      int* nmat,
@@ -239,8 +237,7 @@ extern "C" {
 
 
     void FORT_OUTPUTSLICE(Real* time,int* nsteps,int* sliceint,
-     Real* slice_data,int* nslice,int* nstate_slice,
-     int* visual_option);
+     Real* slice_data,int* nslice,int* nstate_slice);
 
     void FORT_IO_COMPARE(
      int* nmat,

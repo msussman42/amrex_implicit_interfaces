@@ -37,7 +37,6 @@ extern "C" {
      int* data_id,
      int* nsteps,
      Real* time,
-     int* visual_option,
      int* visual_revolve,
      int* level, 
      int* finest_level, 
@@ -77,7 +76,6 @@ extern "C" {
      int* nsteps,
      int* num_levels,
      Real* time,
-     int* visual_option,
      int* visual_revolve,
      int* ncomp);
 }

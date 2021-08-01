@@ -33,7 +33,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 # Lp.smooth_type=2
 # Lp.bottom_smooth_type=2
 #
-ns.visual_option=-2
 
 # CHANGE FIXED_DT IF N_CELL is CHANGED.
 amr.n_cell    = 160 2

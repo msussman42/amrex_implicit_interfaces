@@ -75,7 +75,6 @@ mac.mac_tol        = 1.0e-6  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-6
 
 
-ns.visual_option=-2
 # M.OHTA this option not used in 3d since output files already 
 # binary format.
 # I set to 2 for debugging RZ

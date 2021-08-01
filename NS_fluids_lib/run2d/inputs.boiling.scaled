@@ -41,7 +41,6 @@ ns.bubble_density=0.0015  # rho*(cp-cv)*T=0.0015*5.1555*409.16005=3.16413696
 // 1.013 is 1 atm
 #ns.hydrostatic_pressure=1.0  # in bars
 ns.hydrostatic_pressure=3.162  # in bars
-ns.visual_option=2
 ns.visual_lo = 0 0
 ns.visual_hi = 512 512
 ns.visual_side_max = 512

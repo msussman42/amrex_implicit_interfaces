@@ -35,7 +35,6 @@ mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
 
-ns.visual_option=-2  # -2,-3 zonal tecplot, -1 plot files
 
 amr.n_cell    = 128 32
 amr.max_level =  2  # 1 for stefan, 2 for sucking, 0 for testing

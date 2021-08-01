@@ -703,7 +703,6 @@ stop
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        ncomp) &
       bind(c,name='fort_combinezones_sanity')
@@ -731,7 +730,6 @@ stop
       INTEGER_T, intent(in) :: data_id
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
 
       INTEGER_T strandid
@@ -850,7 +848,6 @@ stop
         nsteps, &
         num_levels, &
         time, &
-        visual_option, &
         visual_revolve, &
         ncomp)
       else if (visual_revolve.eq.0) then
@@ -1307,7 +1304,6 @@ stop
        data_id, &
        nsteps, &
        time, &
-       visual_option, &
        visual_revolve, &
        level, &
        finest_level, &
@@ -1331,7 +1327,6 @@ stop
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
       INTEGER_T, intent(in) :: DIMDEC(datafab)
@@ -1398,7 +1393,6 @@ stop
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        ncomp)
 
