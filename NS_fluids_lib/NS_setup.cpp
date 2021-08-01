@@ -575,6 +575,104 @@ NavierStokes::set_tensor_extrap_components(
 
 } // end subroutine set_tensor_extrap_components
 
+
+void
+NavierStokes::set_tensor_extrap_components_main(
+  int coord,std::string postfix,int indx) {
+
+ BCRec bc;
+
+ int ibase_tensor_local=0;
+
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("NUM_TENSOR_TYPE invalid");
+
+  // no EXT_DIR BCs
+ set_tensor_bc(bc,phys_bc,0,0);
+ std::string T11_strE="T11main"+postfix; 
+  // low order extrapolation (if EXT_DIR BCs were present)
+ desc_lst.setComponent(indx,ibase_tensor_local,
+   T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+ ibase_tensor_local++;
+     
+  // no EXT_DIR BCs
+ set_tensor_bc(bc,phys_bc,0,1);
+ std::string T12_strE="T12main"+postfix; 
+ desc_lst.setComponent(indx,ibase_tensor_local,
+   T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+ ibase_tensor_local++;
+     
+  // no EXT_DIR BCs
+ set_tensor_bc(bc,phys_bc,1,1);
+ std::string T22_strE="T22main"+postfix; 
+ desc_lst.setComponent(indx,ibase_tensor_local,
+   T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+ ibase_tensor_local++;
+    
+ if (AMREX_SPACEDIM==2) {
+  if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+    // no EXT_DIR BCs
+   set_hoop_bc(bc,phys_bc);
+  } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+   // placeholder: Q33 should always be 0
+   // no EXT_DIR BCs
+   set_hoop_bc(bc,phys_bc);
+  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+   // placeholder: Q33 should always be 0
+   // no EXT_DIR BCs
+   set_hoop_bc(bc,phys_bc);
+  } else
+   amrex::Error("(CoordSys::CoordType) coord invalid");
+ } else if (AMREX_SPACEDIM==3) {
+  if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+   // no EXT_DIR BCs
+   set_tensor_bc(bc,phys_bc,2,2);
+  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+   // no EXT_DIR BCs
+   set_tensor_bc(bc,phys_bc,2,2);
+  } else
+   amrex::Error("(CoordSys::CoordType) coord invalid");
+  } else
+   amrex::Error("sdim invalid");
+ 
+  std::string T33_strE="T33main"+postfix; 
+  desc_lst.setComponent(indx,ibase_tensor_local,
+    T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+
+#if (AMREX_SPACEDIM == 3)
+  ibase_tensor_local++;
+
+   // no EXT_DIR BCs
+  set_tensor_bc(bc,phys_bc,0,2);
+  std::string T13_strE="T13main"+postfix; 
+  desc_lst.setComponent(indx,ibase_tensor_local,
+    T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+     
+  ibase_tensor_local++;
+     
+   // no EXT_DIR BCs
+  set_tensor_bc(bc,phys_bc,1,2);
+  std::string T23_strE="T23main"+postfix; 
+  desc_lst.setComponent(indx,ibase_tensor_local,
+    T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+#endif
+
+  if (ibase_tensor_local==ibase_tensor+NUM_TENSOR_TYPE-1) {
+   // do nothing
+  } else {
+   std::cout << "ibase_tensor_local=" << ibase_tensor_local << '\n';
+   amrex::Error("ibase_tensor_local invalid");
+  }
+
+} // end subroutine set_tensor_extrap_components_main
+
+
+
 void
 NavierStokes::variableSetUp ()
 {
@@ -612,6 +710,8 @@ NavierStokes::variableSetUp ()
     // to most State Data Types, only "State_Type" will have
     // particle containers associated.
     int null_ncomp_particles=0; 
+    int null_state_holds_data=0;
+    int state_holds_data=1;
 
     if ((nmat<1)||(nmat>999)) {
      std::cout << "nmat= " << nmat << '\n';
@@ -668,9 +768,9 @@ NavierStokes::variableSetUp ()
      // AmrLevel.H, protected: static DescriptorList desc_lst
      // ngrow=0
     desc_lst.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,1,&umac_interp,null_ncomp_particles);
+       0,1,&umac_interp,null_ncomp_particles,state_holds_data);
     desc_lstGHOST.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,1,&umac_interp,null_ncomp_particles);
+       0,1,&umac_interp,null_ncomp_particles,null_state_holds_data);
     set_x_vel_bc(bc,phys_bc);
 
      // if new parameters added to the FILL routine, then
@@ -689,9 +789,9 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,1,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles,state_holds_data);
     desc_lstGHOST.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,1,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles,null_state_holds_data);
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
@@ -706,9 +806,9 @@ NavierStokes::variableSetUp ()
 
       // ngrow=0
     desc_lst.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,1,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles,state_holds_data);
     desc_lstGHOST.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,1,&umac_interp,null_ncomp_particles);
+      0,1,&umac_interp,null_ncomp_particles,null_state_holds_data);
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
@@ -730,10 +830,10 @@ NavierStokes::variableSetUp ()
 // DIV -------------------------------------------
 
     desc_lst.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,null_ncomp_particles);
+     1,1,&sem_interp_DEFAULT,null_ncomp_particles,state_holds_data);
 
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,null_ncomp_particles);
+     1,1,&sem_interp_DEFAULT,null_ncomp_particles,null_state_holds_data);
 
     set_extrap_bc(bc,phys_bc);
     std::string divghost_str="divghost"; 
@@ -753,12 +853,12 @@ NavierStokes::variableSetUp ()
     if ((nparts>=1)&&(nparts<nmat)) {
  
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,nparts*AMREX_SPACEDIM,&pc_interp,null_ncomp_particles);
+      1,nparts*AMREX_SPACEDIM,&pc_interp,null_ncomp_particles,state_holds_data);
 
      int ncghost_solid=1+AMREX_SPACEDIM;
 
      desc_lstGHOST.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,ncghost_solid,&pc_interp,null_ncomp_particles);
+      1,ncghost_solid,&pc_interp,null_ncomp_particles,null_state_holds_data);
 
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
@@ -853,10 +953,10 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-     0,1,&xd_mac_interp,null_ncomp_particles);
+     0,1,&xd_mac_interp,null_ncomp_particles,state_holds_data);
     // ngrow=0,ncomp=1
     desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-     0,1,&xd_mac_lo_interp,null_ncomp_particles);
+     0,1,&xd_mac_lo_interp,null_ncomp_particles,null_state_holds_data);
 
      // same as x_vel_bc except that EXT_DIR => FOEXTRAP
     set_x_vel_extrap_bc(bc,phys_bc);
@@ -867,10 +967,10 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-     0,1,&xd_mac_interp,null_ncomp_particles);
+     0,1,&xd_mac_interp,null_ncomp_particles,state_holds_data);
      // ngrow=0,ncomp=1
     desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-     0,1,&xd_mac_lo_interp,null_ncomp_particles);
+     0,1,&xd_mac_lo_interp,null_ncomp_particles,null_state_holds_data);
 
      // same as y_vel_bc except that EXT_DIR => FOEXTRAP
     set_y_vel_extrap_bc(bc,phys_bc);
@@ -882,10 +982,10 @@ NavierStokes::variableSetUp ()
 #if (AMREX_SPACEDIM == 3)
      // ngrow=0
     desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-     0,1,&xd_mac_interp,null_ncomp_particles);
+     0,1,&xd_mac_interp,null_ncomp_particles,state_holds_data);
      // ngrow=0,ncomp=1
     desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-     0,1,&xd_mac_lo_interp,null_ncomp_particles);
+     0,1,&xd_mac_lo_interp,null_ncomp_particles,null_state_holds_data);
 
      // same as z_vel_bc except that EXT_DIR => FOEXTRAP
     set_z_vel_extrap_bc(bc,phys_bc);
@@ -939,13 +1039,13 @@ NavierStokes::variableSetUp ()
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,NUM_CELL_ELASTIC,
       &pc_interp,
-      null_ncomp_particles);
+      null_ncomp_particles,state_holds_data);
 
       // null_ncomp_particles==0 => particle container not associated
       // to "Tensor_Type"  (only to "State_Type")
       // ngrow=1
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,ncghost_elastic,&pc_interp,null_ncomp_particles);
+      1,ncghost_elastic,&pc_interp,null_ncomp_particles,null_state_holds_data);
 
       // setComponent: 0..NUM_TENSOR_TYPE-1
      set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
@@ -1081,49 +1181,66 @@ NavierStokes::variableSetUp ()
 
      } // partid=0..nparts-1
 
+     //ngrow=1
+     desc_lst.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+     desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+
+     std::string MAC_postfix_str="XU";
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type,0);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorXU_Type);
+
+     //ngrow=1
+     desc_lst.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+     desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+
+     MAC_postfix_str="YU";
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorYU_Type,0);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorYU_Type);
+
+      //ngrow=1
+     desc_lst.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+     desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+
+     MAC_postfix_str="ZU";
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorZU_Type,0);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZU_Type);
+
+     //ngrow=1
+     desc_lst.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+     desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      null_state_holds_data);
+
+     MAC_postfix_str="ZV";
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorZV_Type,0);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZV_Type);
+
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
-     //ngrow=1
-     //ncomp=1
-    desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-    std::string MAC_postfix_str="XU";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type,0);
-
-     //ngrow=1
-     //ncomp=1
-    desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
-     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-    MAC_postfix_str="YU";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorYU_Type,0);
-
-     //ngrow=1
-     //ncomp=1
-    desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
-     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-    MAC_postfix_str="ZU";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZU_Type,0);
-
-     //ngrow=1
-     //ncomp=1
-    desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
-     1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles);
-
-    MAC_postfix_str="ZV";
-    set_tensor_extrap_components(coord,MAC_postfix_str,TensorZV_Type,0);
 
 // LEVELSET ------------------------------------------------- 
 
     int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_ls_ho,&pc_interp,null_ncomp_particles);
+     1,ncomp_ls_ho,&pc_interp,null_ncomp_particles,state_holds_data);
 
      // components 0..nmat * AMREX_SPACEDIM-1 are for interface normal vectors.
      // components nmat * AMREX_SPACEDIM .. nmat * AMREX_SPACEDIM + 
@@ -1132,7 +1249,7 @@ NavierStokes::variableSetUp ()
     int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*nmat;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_LS_ghost,&pc_interp,null_ncomp_particles);
+     1,ncomp_LS_ghost,&pc_interp,null_ncomp_particles,null_state_holds_data);
 
     int dcomp=0;
     for (int imls=0;imls<nmat;imls++) { 
@@ -1304,10 +1421,10 @@ NavierStokes::variableSetUp ()
 // newdata FABS have ncomp=desc->nComp() components.
 //
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,nc,&pc_interp,particles_flag);
+     1,nc,&pc_interp,particles_flag,state_holds_data);
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,ncghost_state,&pc_interp,null_ncomp_particles);
+     1,ncghost_state,&pc_interp,null_ncomp_particles,null_state_holds_data);
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);

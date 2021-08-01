@@ -867,6 +867,8 @@ protected:
 
     static void set_tensor_extrap_components(
       int coord,std::string postfix,int indx,int ibase_tensor);
+    static void set_tensor_extrap_components_main(
+      int coord,std::string postfix,int indx);
 
     void sum_integrated_quantities (int post_init_flag);
 
