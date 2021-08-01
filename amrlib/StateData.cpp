@@ -178,10 +178,18 @@ StateData::define (
  
     int ncomp = desc->nComp();
     int ncomp_PC = desc->get_ncomp_PC();
+    int state_holds_data = desc->get_state_holds_data();
 
     for (int i=0;i<=bfact_time_order;i++) {
-     new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
+
+     if (state_holds_data==1) {
+      new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
        MFInfo().SetTag("new_data"),FArrayBoxFactory());
+     } else if (state_holds_data==0) {
+      new_data[i]=nullptr;
+     } else
+      amrex::Error("state_holds_data invalid");
+
      if (ncomp_PC>0) {
       if (level==0) {
        new_dataPC[i].resize(ncomp_PC);
@@ -283,17 +291,23 @@ StateData::restart (
      amrex::Error("all slab data should be checkpointed");
 
     for (int i=0;i<StateData_MAX_NUM_SLAB;i++)
-     new_data[i]=0;
+     new_data[i]=nullptr;
 
     std::string mf_name;
     std::string FullPathName;
 
     int ncomp_PC = desc->get_ncomp_PC();
+    int state_holds_data = desc->get_state_holds_data();
 
     for (int i=0;i<=bfact_time_order;i++) {
 
-     new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
+     if (state_holds_data==1) {
+      new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
         MFInfo().SetTag("new_data"),FArrayBoxFactory());
+     } else if (state_holds_data==0) {
+      new_data[i]=nullptr;
+     } else
+      amrex::Error("state_holds_data invalid");
 
      if (ncomp_PC>0) {
       if (level==0) {
