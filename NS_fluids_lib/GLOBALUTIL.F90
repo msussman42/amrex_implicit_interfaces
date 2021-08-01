@@ -1172,7 +1172,7 @@ CONTAINS
          else
           exact=zero
          endif
-         if (abs(sum-exact).gt.1.0E-13) then
+         if (abs(sum-exact).gt.1.0D-13) then
           print *,"sanity check failed integral"
           print *,"typ,order_r,p,exact,sum ",typ,order_r,p,exact,sum
           stop
@@ -1189,7 +1189,7 @@ CONTAINS
           call polyinterp_weights(order_r,y,w,xtarget)
           call do_polyinterp(order_r,w,data,sum)
           exact=xtarget**p
-          if (abs(sum-exact).gt.1.0E-13) then
+          if (abs(sum-exact).gt.1.0D-13) then
            print *,"sanity check failed polyinterp"
            print *,"r,p ",order_r,p
            stop
@@ -1206,7 +1206,7 @@ CONTAINS
           else
            exact=p*(xtarget**(p-1))
           endif
-          if (abs(sum-exact).gt.1.0E-10) then
+          if (abs(sum-exact).gt.1.0D-10) then
            print *,"sanity check failed polyinterp_Dmatrix"
            print *,"r,p,typ ",order_r,p,typ
            print *,"sum-exact= ",sum-exact
@@ -2628,7 +2628,7 @@ contains
           holdvalue=holdvalue+AAhold(i,k)*xx(k,j)
          enddo 
          if (i.ne.j) then
-          if (abs(holdvalue).gt.1.0E-12) then
+          if (abs(holdvalue).gt.1.0D-12) then
            print *,"inverse failed1"
            print *,"AAhold="
            call print_matrix(AAhold,numelem)
@@ -2637,7 +2637,7 @@ contains
            stop
           endif
          else if (i.eq.j) then
-          if (abs(holdvalue-one).gt.1.0E-12) then
+          if (abs(holdvalue-one).gt.1.0D-12) then
            print *,"inverse failed2"
            print *,"AAhold="
            call print_matrix(AAhold,numelem)
@@ -4190,7 +4190,7 @@ contains
       IMPLICIT NONE
       REAL_T phi,cutoff,EPS
 
-      EPS=1.0E-6
+      EPS=1.0D-6
       if (phi.ge.cutoff) then
         hs=one
       else if (phi.le.-cutoff) then
@@ -4214,7 +4214,7 @@ contains
       IMPLICIT NONE
       REAL_T phi,cutoff,EPS
 
-      EPS=1.0E-6
+      EPS=1.0D-6
       if (phi.ge.cutoff) then
         hs_scale=one
       else if (phi.le.-cutoff) then
@@ -6749,7 +6749,7 @@ contains
       INTEGER_T caller_id
       INTEGER_T :: box_type(SDIM)
 
-      INTERP_TOL=1.0E-10
+      INTERP_TOL=1.0D-10
 
       call grid_type_to_box_type(grid_type,box_type)
 
@@ -7746,7 +7746,7 @@ contains
        if (xtarget(dir).le.xsten_center(0,dir)) then
         if ((stencil_offset(dir).eq.0).or. &
             (stencil_offset(dir).eq.-1)) then
-         denom=xsten_center(0,dir)-xsten_center(-1,dir)
+         denom=xsten_center(0,dir)-xsten_center(-2,dir)
          if (denom.gt.zero) then
           theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
          else
@@ -7762,7 +7762,7 @@ contains
        else if (xtarget(dir).ge.xsten_center(0,dir)) then
         if ((stencil_offset(dir).eq.0).or. &
             (stencil_offset(dir).eq.1)) then
-         denom=xsten_center(0,dir)-xsten_center(1,dir)
+         denom=xsten_center(0,dir)-xsten_center(2,dir)
          if (denom.lt.zero) then
           theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
          else
@@ -8085,7 +8085,7 @@ contains
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
          if (abs(data_out%data_interp(nc)- &
-                 data_out2%data_interp(nc)).le.1.0E-12) then
+                 data_out2%data_interp(nc)).le.1.0D-12) then
           ! do nothing
          else
           print *,"data_out%data_interp(nc) invalid"
@@ -8327,6 +8327,10 @@ contains
 
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
          call safe_data_single(isten,jsten,ksten,local_data_fab,local_data_out)
+         if (1.eq.0) then
+          print *,"dir_FD,wt_top,wt_bot,isten,jsten,ksten,local_data_out ", &
+            dir_FD,wt_top,wt_bot,isten,jsten,ksten,local_data_out
+         endif
          data_out%data_interp(1)=data_out%data_interp(1)+ &
              wt_top*local_data_out/wt_bot
         else
@@ -8359,7 +8363,7 @@ contains
         allocate(data_out2%data_interp(1))
         call single_interp_from_grid_util(data_in2,data_out2)
         if (abs(data_out%data_interp(1)- &
-                data_out2%data_interp(1)).le.1.0E-12) then
+                data_out2%data_interp(1)).le.1.0D-12) then
          ! do nothing
         else
          print *,"data_in%grid_type_data=",data_in%grid_type_data
@@ -8375,8 +8379,8 @@ contains
         data_in2%interp_foot_flag=0
 
         call interpfab_XDISP( &
-          data_in%grid_type_data, & ! start_dir
-          data_in%grid_type_data, & ! end_dir
+          data_in%grid_type_data, & ! start_dir=0..sdim-1
+          data_in%grid_type_data, & ! end_dir=0..sdim-1
           data_in2%interp_foot_flag, &
           data_in%bfact, &
           data_in%level, &
@@ -8392,11 +8396,20 @@ contains
           data_out2%data_interp)
 
         if (abs(data_out%data_interp(1)- &
-                data_out2%data_interp(1)).le.1.0E-12) then
+                data_out2%data_interp(1)).le.1.0D-12) then
          ! do nothing
         else
+         print *,"dir_FD=",dir_FD
          print *,"data_in%grid_type_flux=",data_in%grid_type_flux
          print *,"data_in%grid_type_data=",data_in%grid_type_data
+         print *,"data_in%box_type_flux=", &
+          data_in%box_type_flux(1), &
+          data_in%box_type_flux(2), &
+          data_in%box_type_flux(SDIM)
+         print *,"data_in%box_type_data=", &
+          data_in%box_type_data(1), &
+          data_in%box_type_data(2), &
+          data_in%box_type_data(SDIM)
          print *,"data_out%data_interp(1) ",data_out%data_interp(1)
          print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
          print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
@@ -8445,7 +8458,7 @@ contains
        finest_level, &
        dx, &
        xlo, &
-       x, &
+       xtarget, &
        lo,hi, &
        xdata, &
        ydata, &
@@ -8461,7 +8474,7 @@ contains
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
        ! pointers are always intent(in).
        ! the intent attribute of the data itself is inherited from the
@@ -8495,6 +8508,18 @@ contains
        print *,"start_dir or end_dir invalid"
        stop
       endif
+      if ((start_dir.ge.0).and.(start_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"start_dir invalid"
+       stop
+      endif
+      if ((end_dir.ge.0).and.(end_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"end_dir invalid"
+       stop
+      endif
 
        ! dir_disp_comp==0 => xdata interpolation
        ! dir_disp_comp==1 => ydata interpolation
@@ -8507,7 +8532,8 @@ contains
         !      (weights are only nonzero in the appropriate 2x2x2 MAC
         !       grid stencil) 
         ! containing_MACcell declared in GLOBALUTIL.F90
-       call containing_MACcell(bfact,dx,xlo,lo,x,dir_disp_comp,mac_cell_index)
+       call containing_MACcell(bfact,dx,xlo,lo,xtarget, &
+         dir_disp_comp,mac_cell_index)
 
        istenlo(3)=0
        istenhi(3)=0
@@ -8526,6 +8552,13 @@ contains
        call gridstenMAC_level(xsten_center,isten,jsten,ksten,level,nhalf, &
               dir_disp_comp,81)
 
+       if (1.eq.0) then
+        print *,"dir_disp_comp,xsten_center,xtarget ", &
+         dir_disp_comp,xsten_center(0,1),xsten_center(0,2), &
+         xsten_center(0,SDIM),xtarget(1),xtarget(2), &
+         xtarget(SDIM)
+       endif
+
        do isten=istenlo(1),istenhi(1)
        do jsten=istenlo(2),istenhi(2)
        do ksten=istenlo(3),istenhi(3)
@@ -8537,7 +8570,7 @@ contains
         if (SDIM.eq.3) then
          stencil_offset(SDIM)=ksten-mac_cell_index(SDIM)
         endif
-        call bilinear_interp_WT(xsten_center,nhalf,stencil_offset,x,WT)
+        call bilinear_interp_WT(xsten_center,nhalf,stencil_offset,xtarget,WT)
         if ((WT.ge.zero).and.(WT.le.one)) then
          ! do nothing
         else
@@ -8569,6 +8602,13 @@ contains
           print *,"interp_foot_flag invalid"
           stop
          endif
+
+         if (1.eq.0) then
+          print *,"dir_disp_comp,WT,local_data ", &
+            dir_disp_comp,WT,local_data
+          print *,"isten,jsten,ksten ",isten,jsten,ksten
+         endif
+
          dest(dir_disp_comp-start_dir+1)= &
             dest(dir_disp_comp-start_dir+1)+WT*local_data
         else
@@ -12773,12 +12813,12 @@ contains
        rhoMKS=1000.0*rho  ! kg/m^3
        rho_molar=rhoMKS/(0.001*water_molar_mass)  ! mol/m^3
         ! if rho=1g/cm^3 then rhoMKS=1000 kg/m^3 , rho_molar=1D+6/18 mol/m^3
-        !  Vm=18E-6 m^3/mole 
+        !  Vm=18D-6 m^3/mole 
        Vm=one/rho_molar     ! m^3/mole
 
        water_critical_temperature=647.0  ! degrees Kelvin
        water_critical_pressure=22.064D+6 ! Pascals=N/m^2
-        ! 55.9 cm^3/mol=55.9E-6 m^3/mole=5.59E-5 m^3/mole
+        ! 55.9 cm^3/mol=55.9D-6 m^3/mole=5.59D-5 m^3/mole
        water_critical_molar_volume=5.59D-5 ! m^3/mole
         ! units: J^2/(mol^2 N/m^2)=J^2 m^2/(mol^2 N)
         !  =(kg^2 m^4/s^4)m^2/(mol^2 kg m/s^2)=
@@ -13718,7 +13758,7 @@ contains
        B = 5.657D+8 ! dyne/cm^2 at 363 K
        Tc = 658.6
        T = internal_energy/cv
-       rho0 = 0.9291654-0.5174730*1e-3*T-3.338672*1E-7*T*T
+       rho0 = 0.9291654-0.5174730*1e-3*T-3.338672*1D-7*T*T
        Tred = T/Tc
        pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
        if (pressure.lt.pcav) then
@@ -17620,9 +17660,9 @@ if (probtype.eq.55) then
 
   if ((num_materials.ge.3).and. &
       (im_solid_substrate.ge.3).and. &
-      (abs(xcheck).lt.1.0E-7).and. &
-      (abs(ycheck).lt.1.0E-7).and. &
-      (abs(zcheck).lt.1.0E-7)) then
+      (abs(xcheck).lt.1.0D-7).and. &
+      (abs(ycheck).lt.1.0D-7).and. &
+      (abs(zcheck).lt.1.0D-7)) then
    im=1
    im_opp=2
    im_3=im_solid_substrate
@@ -17640,7 +17680,7 @@ if (probtype.eq.55) then
 
     ! angles other than 0 or pi are supported:
     ! 0 < angle < pi
-   if (abs(cos_angle).lt.one-1.0E-2) then 
+   if (abs(cos_angle).lt.one-1.0D-2) then 
 
     if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
         ((SDIM.eq.2).and.(levelrz.eq.1))) then
@@ -18254,7 +18294,7 @@ else if ((imattype.eq.999).or. &
          ((imattype.ge.1).and.(imattype.le.MAX_NUM_EOS))) then
  call INTERNAL_material(rho,massfrac_parm, &
    temperature,e1,imattype,im)
- DT=temperature*1.0E-6
+ DT=temperature*1.0D-6
  T2=temperature+DT
  call INTERNAL_material(rho,massfrac_parm, &
    T2,e2,imattype,im)

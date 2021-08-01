@@ -5,11 +5,10 @@
 // =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
 //
-//NUM_CELL_ELASTIC, MAC_grid_displacement,num_materials_viscoelastic,
-//NUM_TENSOR_TYPE,XDmac_Type,NUM_TENSOR_TYPE+SDIM,num_MAC_vectors,
-//nsolveMM_FACE,ntensorMM,num_materials_face,num_materials_vel,
-//num_materials_scalar_solve
-//#include <winstd.H>
+// add flag to StateData "for_GHOST_only"
+// nstate=state.size(); state[0..NUM_STATE_TYPE-1] are valid states.
+// state[NUM_STATE_TYPE...] are "for_GHOST_only"
+// do not save "for_GHOST_only" state[idx] entries to checkpoint.
 
 #include <algorithm>
 #include <vector>
@@ -9033,7 +9032,8 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
 
 
 void NavierStokes::make_viscoelastic_tensorMACALL(int im,
-  int interp_Q_to_flux,int flux_mf,int flux_grid_type,int fill_state_idx) {
+  int interp_Q_to_flux,int flux_mf,int flux_grid_type,
+  int fill_state_idx) {
 
  int finest_level=parent->finestLevel();
 
