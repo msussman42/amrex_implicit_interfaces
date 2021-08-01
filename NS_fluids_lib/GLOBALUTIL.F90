@@ -7844,6 +7844,7 @@ contains
       INTEGER_T nhalf
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T :: local_data_out
+      REAL_T :: scaling
 
 #ifdef SANITY_CHECK
       type(interp_from_grid_parm_type) :: data_in2 
@@ -8084,8 +8085,12 @@ contains
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
+         scaling=data_out%data_interp(nc)
+         if (scaling.lt.one) then
+          scaling=one
+         endif
          if (abs(data_out%data_interp(nc)- &
-                 data_out2%data_interp(nc)).le.1.0D-12) then
+                 data_out2%data_interp(nc)).le.1.0D-12*scaling) then
           ! do nothing
          else
           print *,"data_out%data_interp(nc) invalid"
@@ -8145,6 +8150,7 @@ contains
       INTEGER_T nhalf
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
       REAL_T :: local_data_out
+      REAL_T :: scaling
 
 #ifdef SANITY_CHECK
       type(single_interp_from_grid_parm_type) :: data_in2 
@@ -8362,8 +8368,12 @@ contains
         data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(1))
         call single_interp_from_grid_util(data_in2,data_out2)
+        scaling=data_out%data_interp(1)
+        if (scaling.lt.one) then
+         scaling=one
+        endif
         if (abs(data_out%data_interp(1)- &
-                data_out2%data_interp(1)).le.1.0D-12) then
+                data_out2%data_interp(1)).le.1.0D-12*scaling) then
          ! do nothing
         else
          print *,"data_in%grid_type_data=",data_in%grid_type_data
@@ -8395,8 +8405,12 @@ contains
           data_in%disp_data, &
           data_out2%data_interp)
 
+        scaling=data_out%data_interp(1)
+        if (scaling.lt.one) then
+         scaling=one
+        endif
         if (abs(data_out%data_interp(1)- &
-                data_out2%data_interp(1)).le.1.0D-12) then
+                data_out2%data_interp(1)).le.1.0D-12*scaling) then
          ! do nothing
         else
          print *,"dir_FD=",dir_FD
