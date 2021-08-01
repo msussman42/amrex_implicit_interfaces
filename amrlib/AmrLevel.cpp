@@ -440,10 +440,10 @@ AmrLevel::FillCoarsePatchGHOST (
   amrex::Error("ncomp+scomp>mf.nComp()");
  if (ncomp+scomp>cmf.nComp())
   amrex::Error("ncomp+scomp>cmf.nComp()");
- if ((index<0)||(index>=desc_lst.size()))
-  amrex::Error("(index<0)||(index>=desc_lst.size())");
+
  if ((index<0)||(index>=desc_lstGHOST.size()))
   amrex::Error("(index<0)||(index>=desc_lstGHOST.size())");
+
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
@@ -625,8 +625,9 @@ AmrLevel::InterpBordersGHOST (
   amrex::Error("level invalid in InterpBordersGHOST");
 
  BL_ASSERT(ncomp <= (mf.nComp()-scomp));
- BL_ASSERT(0 <= index && index < desc_lst.size());
+
  BL_ASSERT(0 <= index && index < desc_lstGHOST.size());
+
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
@@ -762,8 +763,9 @@ AmrLevel::InterpBorders (
   amrex::Error("level invalid in InterpBorders");
 
  BL_ASSERT(ncomp <= (mf.nComp()-scomp));
+
  BL_ASSERT(0 <= index && index < desc_lst.size());
- BL_ASSERT(0 <= index && index < desc_lstGHOST.size());
+
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
