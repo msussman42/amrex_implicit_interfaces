@@ -3787,7 +3787,7 @@ FIX ME delete this stuff
         print *,"twall invalid"
         stop
        endif
-       denjump_temp=abs(fort_drhodt(1)*(twall-fort_tempconst(1)))
+       denjump_temp=abs(fort_DrhoDT(1)*(twall-fort_tempconst(1)))
        if (denjump_temp.gt.denjump) then
         denjump=denjump_temp
        endif

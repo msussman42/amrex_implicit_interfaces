@@ -13,7 +13,6 @@
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
-#    define FORT_INITPOTENTIAL initpotential
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
@@ -36,7 +35,6 @@
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
 #    define FORT_VOFFLUX_CORRECT VOFFLUX_CORRECT
 #    define FORT_FLUIDSOLIDCOR    FLUIDSOLIDCOR
-#    define FORT_INITPOTENTIAL INITPOTENTIAL
 #    define FORT_MOFAVGDOWN  MOFAVGDOWN
 #    define FORT_ERRORAVGDOWN ERRORAVGDOWN
 #    define FORT_AVGDOWN     AVGDOWN
@@ -58,7 +56,6 @@
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
-#    define FORT_INITPOTENTIAL initpotential
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
@@ -79,7 +76,6 @@
 #    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor_
-#    define FORT_INITPOTENTIAL initpotential_
 #    define FORT_MOFAVGDOWN  mofavgdown_
 #    define FORT_ERRORAVGDOWN erroravgdown_
 #    define FORT_AVGDOWN     avgdown_
@@ -261,10 +257,8 @@ extern "C" {
        int* level,
       AMREX_ARLIM_P(ulo),AMREX_ARLIM_P(uhi),const Real* time);
 
-    void FORT_INITPOTENTIAL(
+    void fort_init_potential(
       int* nmat,
-      int* ngrow,
-      int* override_density,
       Real* presden,AMREX_ARLIM_P(presdenlo),AMREX_ARLIM_P(presdenhi),
       Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi),
       const int* tilelo,const int* tilehi,
@@ -493,7 +487,6 @@ extern "C" {
     void fort_addgravity(
       Real* dt,
       Real* cur_time,
-      int* gravity_potential_form,
       Real* gravity_normalized,
       int* gravity_dir,
       Real* angular_velocity,

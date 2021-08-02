@@ -114,7 +114,6 @@ ns.gravity_dir = 2  # 1,2, or 3  (2 in 2D is default)
 ns.gravity        = -9.8 #  dimensional  MKS
 ns.use_lsa=0
 ns.DrhoDT = 0.0 0.0 0.0 0.0   # units: 1/degree K
-ns.DrhoDz = 0.0 0.0 0.0 0.0
 ns.override_density=0 0 0 0
 # 12,13,23
 ns.tension=0.0 0.0 0.0

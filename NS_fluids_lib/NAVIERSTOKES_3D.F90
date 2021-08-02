@@ -11374,10 +11374,8 @@ END SUBROUTINE SIMP
 ! gravity_normalized>0 means that gravity is directed downwards.
 ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
 
-      subroutine FORT_INITPOTENTIAL( &
+      subroutine fort_initpotential( &
        nmat, &
-       ngrow, &
-       override_density, &
        presden,DIMS(presden), &
        state,DIMS(state), &
        tilelo,tilehi, &
@@ -11387,11 +11385,13 @@ END SUBROUTINE SIMP
        presbc_arr, &
        dombcpres, &
        domlo,domhi, &
-       xlo,dx,dt, &
+       xlo,dx, &
+       dt, &
        gravity_normalized, &
        gravity_dir_parm, &
        angular_velocity, &
-       isweep)
+       isweep) &
+      bind(c,name='fort_initpotential')
 
       use global_utility_module
       use probf90_module
@@ -11399,8 +11399,7 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: override_density,level
+      INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: gravity_dir_parm
       INTEGER_T, intent(in) :: isweep
       REAL_T, intent(in) :: dt
@@ -11419,8 +11418,10 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: presbc_arr(SDIM,2) 
 
        !HYDROSTATIC_PRESSURE,HYDROSTATIC_DENSITY
-      REAL_T, intent(inout) :: presden(DIMV(presden),2) 
-      REAL_T, intent(in) :: state(DIMV(state),nmat*num_state_material) 
+      REAL_T, intent(inout),target :: presden(DIMV(presden),2) 
+      REAL_T, pointer :: presden_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: state(DIMV(state),nmat*num_state_material) 
+      REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T xcell(SDIM)
       REAL_T xwall_normal
@@ -11443,10 +11444,6 @@ END SUBROUTINE SIMP
        print *,"bfact invalid159"
        stop
       endif
-      if (ngrow.ne.1) then
-       print *,"ngrow invalid"
-       stop
-      endif
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
@@ -11458,8 +11455,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(presden),ngrow,-1,42)
-      call checkbound(fablo,fabhi,DIMS(state),ngrow,-1,42)
+      presden_ptr=>presden
+      state_ptr=>state
+      call checkbound_array(fablo,fabhi,presden_ptr,1,-1,42)
+      call checkbound_array(fablo,fabhi,state_ptr,1,-1,42)
      
       if (isweep.eq.0) then
  
@@ -11657,7 +11656,6 @@ END SUBROUTINE SIMP
       subroutine fort_addgravity( &
        dt, &
        cur_time, &
-       gravity_potential_form, &
        gravity_normalized, &
        gravity_dir_parm, &
        angular_velocity, &
@@ -11688,7 +11686,6 @@ END SUBROUTINE SIMP
 
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: cur_time
-      INTEGER_T, intent(in) :: gravity_potential_form
       INTEGER_T, intent(in) :: gravity_dir_parm
       REAL_T, intent(in) :: gravity_normalized  
       REAL_T, intent(in) :: angular_velocity
@@ -11865,21 +11862,9 @@ END SUBROUTINE SIMP
        endif
 
         ! 1. surface tension 
-        ! 2. gravity if gravity_potential_form==1
+        ! 2. gravity 
        gravity_increment= &
           denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
-
-       if (gravity_potential_form.eq.1) then
-        ! do nothing
-       else if (gravity_potential_form.eq.0) then
-        if (dir+1.eq.gravity_dir_parm) then
-         gravity_increment=gravity_increment- &
-           dt*gravity_normalized*local_cut
-        endif
-       else
-        print *,"gravity_potential_form invalid"
-        stop
-       endif
 
        local_macnew=macnew(D_DECL(i,j,k))+gravity_increment
 

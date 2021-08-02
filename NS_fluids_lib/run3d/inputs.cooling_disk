@@ -112,7 +112,6 @@ ns.override_density=1 0
 # rho=998.2071 T=20
 # drho/dT=-1.5E-1 (kg/m^3)/K = -1.5E-4 (g/cm^3)/K
 ns.DrhoDT=-2.0e-4 0.0
-ns.DrhoDz=-1.0 0.0
 ns.shock_timestep=2 2 
 ns.material_type=0 0  
 ns.pressure_error_cutoff=0.0 0.0 

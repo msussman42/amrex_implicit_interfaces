@@ -235,6 +235,8 @@ implicit none
 ! num_materials_vel deleted, June 7.
 ! num_materials_scalar_solve deleted, June 9.
 ! fort_reference_pressure added, July 8.
+! fort_drhodz deleted, Aug 2.
+! fort_drhodt renamed to fort_DrhoDT, Aug 2.
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2

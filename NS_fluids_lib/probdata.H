@@ -35,8 +35,7 @@
       REAL_T fort_stop_time
       REAL_T fort_energyconst(MAX_NUM_MATERIALS)
       REAL_T fort_energycutoff(MAX_NUM_MATERIALS)
-      REAL_T fort_drhodt(MAX_NUM_MATERIALS)
-      REAL_T fort_drhodz(MAX_NUM_MATERIALS)
+      REAL_T fort_DrhoDT(MAX_NUM_MATERIALS)
       REAL_T fort_tempconst(MAX_NUM_MATERIALS)
       REAL_T fort_initial_temperature(MAX_NUM_MATERIALS)
       REAL_T fort_tempcutoff(MAX_NUM_MATERIALS)

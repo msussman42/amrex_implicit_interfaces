@@ -119,7 +119,6 @@ ns.v=0
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..sdim
 ns.invert_gravity   = 0
-ns.gravity_potential_form=1
 ns.override_density=1 1 0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 -0.0034 0.0   # units: 1/degree K

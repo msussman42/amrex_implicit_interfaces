@@ -329,7 +329,6 @@ Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::MUSHY_THICK  = 2.0;
 Real NavierStokes::gravity      = 0.0;
-int  NavierStokes::gravity_potential_form = 1;
 
 // terminal_velocity_dt==1 =>
 // use the terminal velocity for CFL condition instead 
@@ -899,7 +898,6 @@ int NavierStokes::constant_viscosity=0;
 
 Real NavierStokes::angular_velocity=0.0;
 Vector<Real> NavierStokes::DrhoDT;  // def=0.0
-Vector<Real> NavierStokes::DrhoDz;  // def=0.0
 
 // 1=>rho=rho(T,Y,z)
 // 2=>Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
@@ -1559,7 +1557,6 @@ void fortran_parameters() {
  Vector<Real> stiffGAMMAtemp(nmat);
 
  Vector<Real> DrhoDTtemp(nmat);
- Vector<Real> DrhoDztemp(nmat);
  Vector<Real> tempcutofftemp(nmat);
  Vector<Real> tempcutoffmaxtemp(nmat);
  Vector<Real> tempconst_temp(nmat);
@@ -1586,7 +1583,6 @@ void fortran_parameters() {
   stiffGAMMAtemp[im]=1.4;
 
   DrhoDTtemp[im]=0.0;
-  DrhoDztemp[im]=0.0;
   tempcutofftemp[im]=1.0e-8;
   tempcutoffmaxtemp[im]=1.0e+99;
   FSI_flag_temp[im]=0;
@@ -1607,7 +1603,6 @@ void fortran_parameters() {
  pp.queryarr("initial_temperature",initial_temperature_temp,0,nmat);
 
  pp.queryarr("DrhoDT",DrhoDTtemp,0,nmat);
- pp.queryarr("DrhoDz",DrhoDztemp,0,nmat);
 
  pp.queryarr("stiffPINF",stiffPINFtemp,0,nmat);
 
@@ -1884,7 +1879,6 @@ void fortran_parameters() {
   material_type_temp.dataPtr(),
   &nten,
   DrhoDTtemp.dataPtr(),
-  DrhoDztemp.dataPtr(),
   tempconst_temp.dataPtr(),
   initial_temperature_temp.dataPtr(),
   tempcutofftemp.dataPtr(),
@@ -2467,7 +2461,6 @@ NavierStokes::read_params ()
 
     pp.query("gravity",gravity);
     pp.query("gravity_dir",gravity_dir);
-    pp.query("gravity_potential_form",gravity_potential_form);
     pp.query("terminal_velocity_dt",terminal_velocity_dt);
     pp.query("invert_gravity",invert_gravity);
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
@@ -2508,8 +2501,6 @@ NavierStokes::read_params ()
      std::cout << "MUSHY_THICK " << MUSHY_THICK << '\n';
 
      std::cout << "gravity " << gravity << '\n';
-     std::cout << "gravity_potential_form " << 
-	     gravity_potential_form << '\n';
      std::cout << "invert_gravity " << invert_gravity << '\n';
      std::cout << "gravity_dir " << gravity_dir << '\n';
      std::cout << "terminal_velocity_dt " << terminal_velocity_dt << '\n';
@@ -2936,7 +2927,6 @@ NavierStokes::read_params ()
     stiffGAMMA.resize(nmat);
 
     DrhoDT.resize(nmat);
-    DrhoDz.resize(nmat);
     override_density.resize(nmat);
 
     temperature_source_cen.resize(AMREX_SPACEDIM);
@@ -3205,7 +3195,6 @@ NavierStokes::read_params ()
      tempcutoff[i]=1.0e-8;
      tempcutoffmax[i]=1.0e+99;
      DrhoDT[i]=0.0;
-     DrhoDz[i]=0.0;
      override_density[i]=0;
      temperature_error_cutoff[i]=0.0;
     }
@@ -3226,7 +3215,6 @@ NavierStokes::read_params ()
     pp.query("constant_viscosity",constant_viscosity);
 
     pp.queryarr("DrhoDT",DrhoDT,0,nmat);
-    pp.queryarr("DrhoDz",DrhoDz,0,nmat);
     pp.queryarr("override_density",override_density,0,nmat);
 
     pp.getarr("vorterr",vorterr,0,nmat);
@@ -3642,8 +3630,6 @@ NavierStokes::read_params ()
      }
      if (DrhoDT[im]>0.0)
       amrex::Error("DrhoDT cannot be positive");
-     if ((DrhoDz[im]!=-1.0)&&(DrhoDz[im]<0.0))
-      amrex::Error("DrhoDz invalid"); 
 
      if (constant_viscosity==0) {
       // do nothing
@@ -4647,7 +4633,6 @@ NavierStokes::read_params ()
       std::cout << "tempcutoff i=" << i << " " << tempcutoff[i] << '\n';
       std::cout << "tempcutoffmax i=" << i << " " << tempcutoffmax[i] << '\n';
       std::cout << "DrhoDT i=" << i << " " << DrhoDT[i] << '\n';
-      std::cout << "DrhoDz i=" << i << " " << DrhoDz[i] << '\n';
       std::cout << "override_density i=" << i << " " << 
          override_density[i] << '\n';
       std::cout << "viscconst i=" << i << "  " << viscconst[i] << '\n';
@@ -11066,19 +11051,6 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
     amrex::Error("override_density[im] invalid");
   } else
    amrex::Error("DrhoDT[im] invalid");
-
-  if (DrhoDz[im]==0.0) {
-   // check nothing
-  } else if (DrhoDz[im]!=0.0) {
-   if (override_density[im]==0) {
-    amrex::Error("DrhoDz mismatch"); 
-   } else if ((override_density[im]==1)||
-              (override_density[im]==2)) {
-    // do nothing
-   } else
-    amrex::Error("override_density[im] invalid");
-  } else
-   amrex::Error("DrhoDz[im] invalid");
 
   if ((override_density[im]==0)||
       (override_density[im]==1)||

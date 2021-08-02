@@ -89,10 +89,8 @@ ns.gravity        = -2.45E-6 #  dimensional  MKS
 ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
-ns.DrhoDz = 0.0 0.0 0.0
 # override_density=1 => rho=rho(T,z)
 # "default_hydrostatic_pressure_density" called if override_density=1.
-# since DrhoDz=0.0,
 # gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
 # rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
 ns.override_density=1 0 0

@@ -106,7 +106,6 @@ ns.v=0
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..sdim
 ns.invert_gravity   = 0
-ns.gravity_potential_form=1
 ns.twall            = 0.0
 ns.rgasinlet        = 0.0
 ns.vinletgas        = 0.0
