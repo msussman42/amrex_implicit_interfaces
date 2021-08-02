@@ -14960,8 +14960,7 @@ contains
 
        ! density_at_depth previously initialized by:
        ! init_density_at_depth() 
-       ! called from: FORT_DERIVE_MOM_DEN, 
-       ! general_hydrostatic_pressure_density,
+       ! called from:  
        ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
        ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
       subroutine tait_hydrostatic_pressure_density( &
@@ -14976,265 +14975,109 @@ contains
       REAL_T denfree,zfree
       REAL_T z_at_depth
 
-      if (is_in_probtype_list().eq.1) then
+      ! in tait_hydrostatic_pressure_density
+      if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
+       rho=one
+       call EOS_tait_ADIABATIC(rho,pres)
+      ! JICF nozzle+pressure bc
+      else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
+       rho=one
+       call EOS_tait_ADIABATIC(rho,pres)
+       ! JICF
+      else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
+       rho=fort_denconst(1)
+       call EOS_tait_ADIABATIC_rho(rho,pres)
+      ! impinging jets
+      else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
+               (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
+       rho=fort_denconst(1)
+       call EOS_tait_ADIABATIC_rho(rho,pres)
 
-       call SUB_hydro_pressure_density(xpos,rho,pres, &
-               from_boundary_hydrostatic)
+       ! in: tait_hydrostatic_pressure_density
+      else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
 
-      else
+       if (probloy.ne.zero) then
+        print *,"probloy must be 0 for bubble jetting problem"
+        stop
+       endif
+       ! yblob is distance from domain bottom of charge
+       ! zblob is depth of charge
+       denfree=one
+       zfree=zblob+yblob  ! relative to computational grid
+       z_at_depth=yblob
+       if (xpos(SDIM).gt.zfree) then
+        rho=denfree
+       else
+        rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+       endif
+       call EOS_tait_ADIABATIC(rho,pres)
 
-       ! in tait_hydrostatic_pressure_density
-       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
-        rho=one
-        call EOS_tait_ADIABATIC(rho,pres)
-       ! JICF nozzle+pressure bc
-       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
-        rho=one
-        call EOS_tait_ADIABATIC(rho,pres)
-        ! JICF
-       else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
-        rho=fort_denconst(1)
-        call EOS_tait_ADIABATIC_rho(rho,pres)
-       ! impinging jets
-       else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
-                (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
-        rho=fort_denconst(1)
-        call EOS_tait_ADIABATIC_rho(rho,pres)
+      else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
 
-        ! in: tait_hydrostatic_pressure_density
-       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
-
-        if (probloy.ne.zero) then
-         print *,"probloy must be 0 for bubble jetting problem"
-         stop
-        endif
-        ! yblob is distance from domain bottom of charge
-        ! zblob is depth of charge
-        denfree=one
+       if (probloy.ne.zero) then
+        print *,"probloy must be 0 for cavitation problem"
+        stop
+       endif
+       ! yblob is distance from domain bottom of charge/sphere
+       ! zblob is depth of charge (for jwl problem)
+       denfree=one
+       if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
         zfree=zblob+yblob  ! relative to computational grid
         z_at_depth=yblob
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC(rho,pres)
-
-       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
-
-        if (probloy.ne.zero) then
-         print *,"probloy must be 0 for cavitation problem"
-         stop
-        endif
-        ! yblob is distance from domain bottom of charge/sphere
-        ! zblob is depth of charge (for jwl problem)
-        denfree=one
-        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-         zfree=zblob+yblob  ! relative to computational grid
-         z_at_depth=yblob
-        else if (axis_dir.eq.10) then
-         zfree=zblob
-         z_at_depth=zero
-        else if (axis_dir.eq.20) then
-         print *,"there is no gravity for the CODY ESTEBE created test problem"
-         stop
-        else
-         print *,"axis_dir out of range"
-         stop
-        endif
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC(rho,pres)
-
-       else if (fort_material_type(1).eq.13) then
-
-        denfree=fort_denconst(1)
-        if (SDIM.eq.2) then
-         zfree=probhiy
-         z_at_depth=probloy
-        else if (SDIM.eq.3) then
-         zfree=probhiz
-         z_at_depth=probloz
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-         ! density_at_depth is found so that
-         ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
-         !
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+       else if (axis_dir.eq.10) then
+        zfree=zblob
+        z_at_depth=zero
+       else if (axis_dir.eq.20) then
+        print *,"there is no gravity for the CODY ESTEBE created test problem"
+        stop
        else
-        print *,"probtype invalid tait_hydrostatic_pressure_density"
+        print *,"axis_dir out of range"
+        stop
+       endif
+       if (xpos(SDIM).gt.zfree) then
+        rho=denfree
+       else
+        rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+       endif
+       call EOS_tait_ADIABATIC(rho,pres)
+
+      else if (fort_material_type(1).eq.13) then
+
+       denfree=fort_denconst(1)
+       if (SDIM.eq.2) then
+        zfree=probhiy
+        z_at_depth=probloy
+       else if (SDIM.eq.3) then
+        zfree=probhiz
+        z_at_depth=probloz
+       else
+        print *,"dimension bust"
         stop
        endif
 
+        ! density_at_depth is found so that
+        ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
+        !
+       if (xpos(SDIM).gt.zfree) then
+        rho=denfree
+       else
+        rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+       endif
+       call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+      else
+       print *,"probtype invalid tait_hydrostatic_pressure_density"
+       stop
       endif
 
       return
       end subroutine tait_hydrostatic_pressure_density
 
-FIX ME get rid of this stuff, get rid of DrhoDz, fort_drhodz
-
-       ! only called if override_density=1 or override_density=2
-       ! caller_id==0  => called from DERIVE_MOM_DEN (GODUNOV_3D.F90)
-       ! caller_id==1  => called from general_hydrostatic_pressure_density
-       !                  (which is called from INITPOTENTIAL)
-      subroutine default_hydrostatic_pressure_density( &
-        xpos, &
-        rho_base, &
-        rho, &
-        pres, &
-        liquid_temp, &
-        gravity_normalized, &
-        imat, &
-        override_density, &
-        caller_id)
-      use probcommon_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: imat
-      INTEGER_T, intent(in) :: override_density
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T nmat
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: rho_base
-      REAL_T, intent(inout) :: rho,pres
-      REAL_T, intent(in) :: gravity_normalized
-      REAL_T, intent(in) :: liquid_temp
-      REAL_T denfree,zfree,z_at_depth
-      REAL_T energy_free,csqr,max_depth
-
-
-      nmat=num_materials
-      if ((imat.lt.1).or.(imat.gt.nmat)) then
-       print *,"imat invalid"
-       stop
-      endif
-
-      if ((override_density.ne.1).and. &
-          (override_density.ne.2)) then
-       print *,"override_density invalid"
-       stop
-      endif
-      if (liquid_temp.ge.zero) then
-       ! do nothing
-      else
-       print *,"liquid_temp cannot be negative"
-       stop
-      endif
-      if ((caller_id.eq.0).or. &
-          (caller_id.eq.1)) then
-       ! do nothing
-      else
-       print *,"caller_id invalid"
-       stop
-      endif
-
-      if (rho_base.gt.zero) then
-       ! do nothing
-      else
-       print *,"rho_base invalid"
-       stop
-      endif
-
-      ! in default_hydrostatic_pressure_density
-
-!     denfree=fort_denconst(imat)
-      denfree=rho_base
-      energy_free=fort_energyconst(imat)
-      if (energy_free.gt.zero) then
-       ! do nothing
-      else
-       print *,"energy_free invalid in default_hydrostatic_pressure_density"
-       print *,"imat,energy_free= ",imat,energy_free
-       stop
-      endif
-
-      if (SDIM.eq.2) then
-       zfree=probhiy
-       z_at_depth=probloy
-      else if (SDIM.eq.3) then
-       zfree=probhiz
-       z_at_depth=probloz
-      else
-       print *,"sdim invalid"
-       stop
-      endif
-
-! let z be depth
-! rho=rho0 + Az
-! p=c^2 rho
-! grad p/rho+g=0
-! p_z=-(rho0+Az)g
-! p=-rho0 g z - Az^2 g/2 +C
-! at z=0, p=c^2 rho0=C
-! at z=L,
-! -rho0 g L - A L^2 g/2 + c^2 rho0=c^2(rho0+A L)
-! A( -L^2 g/2 - c^2 L)=rho0 g L
-! A=rho0 g/(-L g/2 -c^2)=rho0/(c^2/|g|-L/2)
-
-      call SOUNDSQR_tait(denfree,energy_free,csqr)
-      max_depth=zfree-z_at_depth
-
-      rho=denfree
-
-       ! rho=rho(T,Y,z)
-      if (override_density.eq.1) then
-
-       if (gravity_normalized.eq.zero) then
-
-        if (caller_id.eq.0) then
-         ! do nothing, called from DERIVE_MOM_DEN, 
-         !  keep rho=denfree=rho_base
-        else if (caller_id.eq.1) then 
-          ! called from general_hydrostatic_pressure_density
-         if (imat.eq.1) then
-!         rho=fort_denconst(1)
-          rho=rho_base
-         else
-          print *,"imat invalid"
-          stop
-         endif
-        else
-         print *,"caller_id invalid"
-         stop
-        endif
-
-        pres=zero
-       else if (gravity_normalized.ne.zero) then
-        pres=-gravity_normalized*rho*xpos(SDIM)
-       else
-        print *,"gravity_normalized invalid"
-        stop
-       endif
-
-       ! temperature dependent buoyancy force term
-      else if (override_density.eq.2) then
-
-       pres=-gravity_normalized*rho*xpos(SDIM)
-
-      else
-       print *,"override_density invalid"
-       stop
-      endif
-
-      return
-      end subroutine default_hydrostatic_pressure_density
 
       subroutine EOS_air_rho2(rho,internal_energy,pressure)
       use probcommon_module

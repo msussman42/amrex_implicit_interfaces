@@ -10382,8 +10382,7 @@ void NavierStokes::update_SEM_delta_force(
 
  if (project_option==0) { // grad p  (face)
   // check nothing
- } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
-  idx_hoop=THERMAL_FORCE_MF;
+ } else if (project_option==2) { // -div(k grad T)
   if (nsolve!=1)
    amrex::Error("nsolve invalid");
   if (localMF[idx_div]->nComp()!=1) {
@@ -10393,14 +10392,6 @@ void NavierStokes::update_SEM_delta_force(
    std::cout << "localMF ncomp= " <<
      localMF[idx_div]->nComp() << '\n';
    amrex::Error("localMF[idx_div]->nComp() invalid");
-  }
-  if (localMF[idx_hoop]->nComp()!=nsolve) {
-   std::cout << "project_option = " << project_option << '\n';
-   std::cout << "idx_hoop = " << idx_hoop << '\n';
-   std::cout << "nsolve = " << nsolve << '\n';
-   std::cout << "localMF ncomp= " << 
-     localMF[idx_hoop]->nComp() << '\n';
-   amrex::Error("localMF[idx_hoop]->nComp() invalid");
   }
  } else if (project_option==3) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
   idx_hoop=HOOP_FORCE_MARK_MF;
