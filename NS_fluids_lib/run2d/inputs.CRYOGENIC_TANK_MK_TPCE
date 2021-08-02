@@ -170,7 +170,6 @@ ns.v=0
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
-ns.gravity_potential_form=1
 #override_density=0 if compressible material
 #if incompressible material:
 # override_density=0 => rho independent of T or Z

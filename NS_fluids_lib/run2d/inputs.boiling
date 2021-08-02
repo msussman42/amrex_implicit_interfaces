@@ -90,7 +90,6 @@ mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = -1.0 #  U^2=gL
 ns.use_lsa=0
 ns.DrhoDT = -0.004 0.0 0.0   # (-700E-6)(6.2)
-ns.DrhoDz = 0.0 0.0 0.0
 ns.override_density=1 0 0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # sigma_{SL}=1  sigma_{SV}=1+cos(theta)

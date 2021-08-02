@@ -15091,7 +15091,6 @@ contains
 FIX ME get rid of this stuff, get rid of DrhoDz, fort_drhodz
 
        ! only called if override_density=1 or override_density=2
-       ! only takes into account fort_drhodz.
        ! caller_id==0  => called from DERIVE_MOM_DEN (GODUNOV_3D.F90)
        ! caller_id==1  => called from general_hydrostatic_pressure_density
        !                  (which is called from INITPOTENTIAL)
@@ -15118,7 +15117,7 @@ FIX ME get rid of this stuff, get rid of DrhoDz, fort_drhodz
       REAL_T, intent(in) :: gravity_normalized
       REAL_T, intent(in) :: liquid_temp
       REAL_T denfree,zfree,z_at_depth
-      REAL_T energy_free,csqr,max_depth,DrhoDz
+      REAL_T energy_free,csqr,max_depth
 
 
       nmat=num_materials
@@ -15192,36 +15191,12 @@ FIX ME get rid of this stuff, get rid of DrhoDz, fort_drhodz
       call SOUNDSQR_tait(denfree,energy_free,csqr)
       max_depth=zfree-z_at_depth
 
-      if (fort_drhodz(imat).eq.-one) then
-       DrhoDz=denfree/(csqr/abs(gravity)-half*max_depth)
-      else if (fort_drhodz(imat).ge.zero) then
-       DrhoDz=fort_drhodz(imat)
-      else
-       print *,"fort_drhodz invalid"
-       stop
-      endif
-
-      if (DrhoDz.ge.zero) then
-       ! do nothing
-      else
-       print *,"DrhoDz invalid"
-       stop
-      endif
-
-      if (xpos(SDIM).gt.zfree) then
-       rho=denfree
-      else if (xpos(SDIM).le.zfree) then
-       rho=denfree+DrhoDz*(zfree-xpos(SDIM))
-      else
-       print *,"xpos(SDIM) became corrupt"
-       stop
-      endif
+      rho=denfree
 
        ! rho=rho(T,Y,z)
       if (override_density.eq.1) then
 
-       if ((DrhoDz.eq.zero).and. &
-           (gravity_normalized.eq.zero)) then
+       if (gravity_normalized.eq.zero) then
 
         if (caller_id.eq.0) then
          ! do nothing, called from DERIVE_MOM_DEN, 
@@ -15241,13 +15216,10 @@ FIX ME get rid of this stuff, get rid of DrhoDz, fort_drhodz
         endif
 
         pres=zero
-       else if ((DrhoDz.eq.zero).and. &
-                (gravity_normalized.ne.zero)) then
+       else if (gravity_normalized.ne.zero) then
         pres=-gravity_normalized*rho*xpos(SDIM)
-       else if (DrhoDz.ne.zero) then
-        pres=csqr*rho
        else
-        print *,"DrhoDz and/or gravity_normalized invalid"
+        print *,"gravity_normalized invalid"
         stop
        endif
 

@@ -1781,7 +1781,6 @@ protected:
     static int        extend_pressure_into_solid; // default=0
     static Real       MUSHY_THICK; // default==2.0
     static Real       gravity;
-    static int        gravity_potential_form; //default=1
     static int        invert_gravity;
     static int        gravity_dir;
     // terminal_velocity_dt==1 =>
@@ -2265,10 +2264,9 @@ protected:
 
     static Real angular_velocity;
     static Vector<Real> DrhoDT; // default 0.0
-    static Vector<Real> DrhoDz; // default 0.0
 
-      // 1=>rho=rho(T,z)
-      // 2=>P_hydro=P_hydro(rho(T,z)) (Boussinesq like approximation)
+     //1=>rho=rho(T)
+     //2=>Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
     static Vector<int> override_density; // default 0 
     static Vector<Real> viscconst;
     static Real viscconst_max;

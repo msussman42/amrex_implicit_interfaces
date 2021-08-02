@@ -5977,7 +5977,6 @@ FIX ME only where F>1-eps
 
 FIX ME remove this
            ! defined in: GLOBALUTIL.F90
-           ! only takes into account fort_drhodz
           caller_id=0
           call default_hydrostatic_pressure_density( &
             xpos, &

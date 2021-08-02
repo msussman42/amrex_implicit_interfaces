@@ -5551,7 +5551,6 @@ void NavierStokes::increment_potential_force() {
    fort_addgravity(
      &dt_slab,
      &cur_time_slab,
-     &gravity_potential_form,
      &gravity_normalized,
      &gravity_dir,
      &angular_velocity,
@@ -5694,13 +5693,6 @@ void NavierStokes::init_gravity_potential() {
 
  Real gravity_normalized=std::abs(gravity);
 
- if (gravity_potential_form==1) {
-  // do nothing
- } else if (gravity_potential_form==0) {
-  gravity_normalized=0.0;
- } else
-  amrex::Error("gravity_potential_form invalid");
-
  if (invert_gravity==1)
   gravity_normalized=-gravity_normalized;
  else if (invert_gravity==0) {
@@ -5709,7 +5701,6 @@ void NavierStokes::init_gravity_potential() {
   amrex::Error("invert_gravity invalid");
 
  int bfact=parent->Space_blockingFactor(level);
- int ngrow=1;
 
   // isweep=0 => interior cells updated, coarse_lev.avgDown_localMF,
   //   PCINTERP_fill_borders
@@ -5752,11 +5743,11 @@ void NavierStokes::init_gravity_potential() {
      // isweep=1 => exterior cells outside domain are updated:
      //   REFLECT_EVEN BC if wall, EXT_DIR BC on the wall if
      //   outflow.
+     // if angular_velocity==0.0:
+     // \vec{g} = \frac{ \nabla rho_{0} (\vec{g} dot \vec{x})}{rho_{0}}
      // in: NAVIERSTOKES_3D.F90
-    FORT_INITPOTENTIAL(
+    fort_init_potential(
      &nmat,
-     &ngrow,
-     &override_density[0], 
      presdenfab.dataPtr(),
      ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()),
      statefab.dataPtr(),
@@ -5797,7 +5788,8 @@ void NavierStokes::init_gravity_potential() {
 
    int extrap_enable_spectral=projection_enable_spectral;
    override_enable_spectralGHOST(0,1,extrap_enable_spectral);
-   PCINTERP_fill_borders(HYDROSTATIC_PRESDEN_MF,ngrow,0,2,
+    //ngrow=1
+   PCINTERP_fill_borders(HYDROSTATIC_PRESDEN_MF,1,0,2,
      State_Type,scompBC_map);
    
    extrap_enable_spectral=0;

@@ -83,7 +83,6 @@ ns.gravity        = -9.8 #  dimensional  MKS
 ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
-ns.DrhoDz = 0.0 0.0 0.0
 ns.override_density=1 0 0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # sigma_{SL}=sigma_{LV}

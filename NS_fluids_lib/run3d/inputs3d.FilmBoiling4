@@ -177,19 +177,13 @@ mac.visc_abs_tol   = 1.0e-9
 # NOV 2018 (3 or 4 materials)
 ns.gravity_dir = 3  # 1,2, or 3  (2 in 2D is default)
 ns.gravity        = -9.8 #  dimensional  MKS
-# =1 (default) grad p_hydro(z)/rho_hydro(z)
-# =0  -|g|
-ns.gravity_potential_form=1
 
 ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 #ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
-#ns.DrhoDz = 0.0 0.0 0.0
 ns.DrhoDT = 0.0 0.0 0.0 0.0   # units: 1/degree K
-ns.DrhoDz = 0.0 0.0 0.0 0.0
 # override_density=1 => rho=rho(T,z)
 # "default_hydrostatic_pressure_density" called if override_density=1.
-# since DrhoDz=0.0,
 # gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
 # rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
 # override_density=2 0 0 0 => P_hydro=P_hydro(rho(T,z)) (like Boussinesq) 

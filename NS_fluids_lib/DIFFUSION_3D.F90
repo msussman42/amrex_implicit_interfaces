@@ -482,17 +482,17 @@ stop
              stop
             endif
 
-            if (fort_drhodt(im).le.zero) then
+            if (fort_DrhoDT(im).le.zero) then
              ! do nothing
             else
-             print *,"fort_drhodt has invalid sign"
+             print *,"fort_DrhoDT has invalid sign"
              stop
             endif
-            ! units of drhodt are 1/(degrees Kelvin)
+            ! units of DrhoDT are 1/(degrees Kelvin)
             ! DTEMP has no units
             ! fort_tempconst is the temperature of the inner boundary
             ! for the differentially heated rotating annulus problem.
-            DTEMP=DTEMP+fort_drhodt(im)*(local_temp-fort_tempconst(im))
+            DTEMP=DTEMP+fort_DrhoDT(im)*(local_temp-fort_tempconst(im))
            else
             print *,"localF invalid"
             stop

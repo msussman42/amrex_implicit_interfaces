@@ -74,8 +74,7 @@ stop
         ccnum_materials, &
         ccmaterial_type, &
         ccnten, &
-        ccdrhodt, &
-        ccdrhodz, &
+        ccDrhoDT, &
         cctempconst, &
         ccinitial_temperature, &
         cctempcutoff, &
@@ -209,8 +208,7 @@ stop
       INTEGER_T, intent(in) :: ccngeom_recon
       
       INTEGER_T, intent(in) :: ccmaterial_type(ccnum_materials)
-      REAL_T, intent(in) :: ccdrhodt(ccnum_materials)
-      REAL_T, intent(in) :: ccdrhodz(ccnum_materials)
+      REAL_T, intent(in) :: ccDrhoDT(ccnum_materials)
       REAL_T, intent(in) :: cctempconst(ccnum_materials)
       REAL_T, intent(in) :: ccinitial_temperature(ccnum_materials)
       REAL_T, intent(in) :: cctempcutoff(ccnum_materials)
@@ -896,8 +894,7 @@ stop
       
       do im=1,num_materials
       
-       fort_drhodt(im)=ccdrhodt(im)
-       fort_drhodz(im)=ccdrhodz(im)
+       fort_DrhoDT(im)=ccDrhoDT(im)
        fort_tempconst(im)=cctempconst(im)
        fort_initial_temperature(im)=ccinitial_temperature(im)
        fort_tempcutoff(im)=cctempcutoff(im) ! default 1.0E-8
@@ -1017,8 +1014,7 @@ stop
        do im=1,num_materials
         print *,"im,mat type ",im,fort_material_type(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
-        print *,"im,drhodt ",im,fort_drhodt(im)
-        print *,"im,drhodz ",im,fort_drhodz(im)
+        print *,"im,DrhoDT ",im,fort_DrhoDT(im)
         print *,"im,temp ",im,fort_tempconst(im)
         print *,"im,initial_temp ",im,fort_initial_temperature(im)
         print *,"im,tempcutoff ",im,fort_tempcutoff(im)
