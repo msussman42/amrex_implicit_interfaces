@@ -52,46 +52,6 @@ extern "C"
       int* ntensor,
       int* nsolve);
 
-
-    void fort_compute_neg_mom_force(
-      Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
-      const Real *xlo,const Real* dx,
-      Real *unew,AMREX_ARLIM_P(unewlo),AMREX_ARLIM_P(unewhi),
-      Real *den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),  
-      const int* tilelo, const int* tilehi,
-      const int* fablo, const int* fabhi,
-      int* bfact,
-      int* level,
-      int* finest_level,
-      int* update_state,
-      Real* dt,
-      Real* prev_time,
-      Real* cur_time,
-      int* nmat,
-      int* nsolve);
-
-    void fort_thermal_offset_force(
-      int* override_density,
-      Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
-      Real *thermal,AMREX_ARLIM_P(thermallo),AMREX_ARLIM_P(thermalhi),
-      Real *recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
-      const Real *xlo,const Real* dx,
-      Real *uold,AMREX_ARLIM_P(uoldlo),AMREX_ARLIM_P(uoldhi),
-      Real *snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
-      Real *den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),   // 1/den
-      Real *DEDT,AMREX_ARLIM_P(DEDTlo),AMREX_ARLIM_P(DEDThi), // 1/(rho cv)
-      const int* tilelo, const int* tilehi,
-      const int* fablo, const int* fabhi,
-      int* bfact,
-      int* level,
-      int* finest_level,
-      int* update_state,
-      Real* dt,
-      int* rzflag,
-      int* nmat,
-      int* nstate,
-      int* nsolve);
-
 }
 
 }/* namespace amrex */

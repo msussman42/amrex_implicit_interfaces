@@ -1893,12 +1893,11 @@ void NavierStokes::apply_div(
 } // subroutine apply_div
 
 
-// if temperature: -div(k grad T)-THERMAL_FORCE_MF (project_option==2)
+// if temperature: -div(k grad T) (project_option==2)
 // if viscosity  : -div(2 mu D)-HOOP_FORCE_MARK_MF (project_option==3)
-// if mom force  : NEG_MOM_FORCE_MF  (project_option==4)
 // called from: NavierStokes::do_the_advance
 //              NavierStokes::veldiffuseALL
-// called if project_option==0,2,3,4
+// called if project_option==0,2,3
 void NavierStokes::update_SEM_forcesALL(int project_option,
  int idx_source,int update_spectral,int update_stable) {
 
@@ -1914,7 +1913,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  int finest_level=parent->finestLevel();
 
  if ((project_option==0)||   // GP_DEST_FACE
-     (project_option==4)||   // NEG_MOM_FORCE
      (project_option==3)) {  // viscosity
   //do nothing
  } else if (project_option==2) {  // thermal diffusion
@@ -1925,17 +1923,15 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  int nsolve=1;
  if (project_option==0) { // grad p
   nsolve=1;
- } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
+ } else if (project_option==2) { // -div(k grad T)
   nsolve=1;
  } else if (project_option==3) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
-  nsolve=AMREX_SPACEDIM;
- } else if (project_option==4) { // NEG_MOM_FORCE_MF
   nsolve=AMREX_SPACEDIM;
  } else
   amrex::Error("project_option invalid68"); 
 
  if ((project_option==0)||   // grad p
-     (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
+     (project_option==2)||   // -div(k grad T)
      (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
    // allocate and initialize to 0.0
@@ -1973,8 +1969,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   int create_hierarchy=0;
   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
- } else if (project_option==4) { // NEG_MOM_FORCE_MF
-  // do nothing
  } else
   amrex::Error("project_option invalid69");
 
@@ -1985,7 +1979,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  }
 
  if ((project_option==0)||  // grad p
-     (project_option==2)||  // -div(k grad T)-THERMAL_FORCE_MF
+     (project_option==2)||  // -div(k grad T)
      (project_option==3)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
   deallocate_maccoefALL(project_option);
@@ -2005,8 +1999,6 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   remove_MAC_velocityALL(UMAC_MF);
   remove_MAC_velocityALL(GP_DEST_FACE_MF);
 
- } else if (project_option==4) { // NEG_MOM_FORCE_MF
-  // do nothing
  } else
   amrex::Error("project_option invalid70");
 
@@ -2044,19 +2036,15 @@ void NavierStokes::update_SEM_forces(int project_option,
  int nsolve=1;
  if (project_option==0) { // grad p
   nsolve=1;
- } else if (project_option==2) { // -div(k grad T)-THERMAL_FORCE_MF
+ } else if (project_option==2) { // -div(k grad T)
   nsolve=1;
  } else if (project_option==3) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
   nsolve=AMREX_SPACEDIM;
- } else if (project_option==4) { // -mom force
-  nsolve=AMREX_SPACEDIM;
-  local_idx_gpmac=NEG_MOM_FORCE_MF;
-  local_idx_div=NEG_MOM_FORCE_MF;
  } else
   amrex::Error("project_option invalid72"); 
 
  if ((project_option==0)||   // grad p
-     (project_option==2)||   // -div(k grad T)-THERMAL_FORCE_MF
+     (project_option==2)||   // -div(k grad T)
      (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
   if (localMF_grow[MACDIV_MF]==-1) {
@@ -2134,8 +2122,7 @@ void NavierStokes::update_SEM_forces(int project_option,
   amrex::Error("project_option invalid74");
 
   // f=-div 2 mu D - HOOP_FORCE_MARK_MF  (project_option==3) or
-  // f=NEG_MOM_FORCE_MF                  (project_option==4) or
-  // f=-div k grad T - THERMAL_FORCE_MF  (project_option==2) or
+  // f=-div k grad T                     (project_option==2) or
   // f=grad p (MAC)                      (project_option==0) 
   // NavierStokes::update_SEM_delta_force (NavierStokes.cpp)
   // calls: FORT_UPDATESEMFORCE
@@ -2150,7 +2137,7 @@ void NavierStokes::update_SEM_forces(int project_option,
   amrex::Error("update_spectral+update_stable invalid");
 
  if ((project_option==0)||  // grad p
-     (project_option==2)||  // -div(k grad T)-THERMAL_FORCE_MF
+     (project_option==2)||  // -div(k grad T)
      (project_option==3)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
   delete_localMF(MACDIV_MF,1);

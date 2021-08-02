@@ -2410,10 +2410,6 @@ END SUBROUTINE SIMP
           mom_dencell(dir)=mom_den(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
 
-          ! e.g. transform temperature for rotating convection instability
-          ! problem.
-         call derive_plot_data(xsten,nhalf,dencell,nmat)
-
          do dir=1,num_state_material*nmat
           dennd(dir)=dennd(dir)+localwt*dencell(dir)
          enddo
@@ -11374,7 +11370,7 @@ END SUBROUTINE SIMP
 ! gravity_normalized>0 means that gravity is directed downwards.
 ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
 
-      subroutine fort_initpotential( &
+      subroutine fort_init_potential( &
        nmat, &
        presden,DIMS(presden), &
        state,DIMS(state), &
@@ -11391,7 +11387,7 @@ END SUBROUTINE SIMP
        gravity_dir_parm, &
        angular_velocity, &
        isweep) &
-      bind(c,name='fort_initpotential')
+      bind(c,name='fort_init_potential')
 
       use global_utility_module
       use probf90_module
@@ -11423,18 +11419,12 @@ END SUBROUTINE SIMP
       REAL_T, intent(in),target :: state(DIMV(state),nmat*num_state_material) 
       REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T xcell(SDIM)
-      REAL_T xwall_normal
-      REAL_T xsten(-1:1,SDIM)
+
       REAL_T den_cell,pres_cell
 
-      INTEGER_T i,j,k,im,icomp,nhalf,dir2
+      INTEGER_T i,j,k
       INTEGER_T ii,jj,kk,dir,side,inside
       INTEGER_T bctypepres,local_bctype,exteriorbc
-      INTEGER_T for_hydro
-      REAL_T liquid_temp
-
-      nhalf=1
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -11451,7 +11441,7 @@ END SUBROUTINE SIMP
       endif
 
       if ((gravity_dir_parm.lt.1).or.(gravity_dir_parm.gt.SDIM)) then
-       print *,"gravity dir invalid initpotential"
+       print *,"gravity dir invalid fort_init_potential"
        stop
       endif
 
@@ -11466,25 +11456,17 @@ END SUBROUTINE SIMP
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-        do dir2=1,SDIM
-         xcell(dir2)=xsten(0,dir2)
-        enddo 
 
          ! includes centrifugal force but not "coriolis force"
          ! p=dt( -|g| z + (1/2)Omega^2 r^2 )
-        for_hydro=1
-        im=1
-        icomp=(im-1)*num_state_material+2
-        liquid_temp=state(D_DECL(i,j,k),icomp) 
         call general_hydrostatic_pressure_density( &
-          override_density, &
-          xcell, &
+          i,j,k,level, &
           gravity_normalized, &
           gravity_dir_parm, &
           angular_velocity, &
-          dt,den_cell,pres_cell, &
-          for_hydro,liquid_temp)
+          dt, &
+          den_cell,pres_cell, &
+          state_ptr)
         presden(D_DECL(i,j,k),1)=pres_cell
         presden(D_DECL(i,j,k),2)=den_cell
        enddo     
@@ -11496,39 +11478,8 @@ END SUBROUTINE SIMP
        do dir=1,SDIM
        do side=1,2
 
-        if (dir.eq.1) then
-         if (side.eq.1) then
-          xwall_normal=problox
-         else if (side.eq.2) then
-          xwall_normal=probhix
-         else
-          print *,"side invalid"
-          stop
-         endif
-        else if (dir.eq.2) then
-         if (side.eq.1) then
-          xwall_normal=probloy
-         else if (side.eq.2) then
-          xwall_normal=probhiy
-         else
-          print *,"side invalid"
-          stop
-         endif
-        else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-         if (side.eq.1) then
-          xwall_normal=probloz
-         else if (side.eq.2) then
-          xwall_normal=probhiz
-         else
-          print *,"side invalid"
-          stop
-         endif
-        else
-         print *,"dir invalid"
-         stop
-        endif
-
-        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
+         ! ngrow=1
+        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
 
          ! dombcpres=get_desc_lst()[State_Type].getBC(pcomp)
         bctypepres=dombcpres(dir,side)  
@@ -11565,25 +11516,15 @@ END SUBROUTINE SIMP
             ! outflow wall
            if (local_bctype.eq.EXT_DIR) then
 
-            call gridsten_level(xsten,i,j,k,level,nhalf)
-            do dir2=1,SDIM
-             xcell(dir2)=xsten(0,dir2)
-            enddo 
-            xcell(dir)=xwall_normal
-
-            for_hydro=1
-            im=1
-            icomp=(im-1)*num_state_material+2
-            liquid_temp=state(D_DECL(i,j,k),icomp) 
              ! p=dt( -|g| z + (1/2)Omega^2 r^2 )
             call general_hydrostatic_pressure_density( &
-             override_density, &
-             xcell, &
+             i,j,k,level, &
              gravity_normalized, &
              gravity_dir_parm, &
              angular_velocity, &
-             dt,den_cell,pres_cell, &
-             for_hydro,liquid_temp)
+             dt, &
+             den_cell,pres_cell, &
+             state_ptr)
 
             ! periodic BC
            else if (local_bctype.eq.INT_DIR) then
@@ -11603,7 +11544,7 @@ END SUBROUTINE SIMP
             else if ((dir.eq.3).and.(SDIM.eq.3)) then
              kk=inside
             else
-             print *,"dir invalid initpotential"
+             print *,"dir invalid fort_init_potential"
              stop
             endif
             pres_cell=presden(D_DECL(ii,jj,kk),1)
@@ -11648,7 +11589,7 @@ END SUBROUTINE SIMP
       endif
 
       return
-      end subroutine FORT_INITPOTENTIAL
+      end subroutine fort_init_potential
 
 ! NavierStokes3.cpp: NavierStokes::increment_potential_force()
 ! gravity_normalized>0 means that gravity is directed downwards.

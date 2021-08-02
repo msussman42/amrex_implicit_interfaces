@@ -1205,7 +1205,7 @@ stop
         local_diag=alpha(D_DECL(i,j,k),veldir)+offdiagsum
 
         local_diag_check1=facewtsum
-          ! offdiagcheck is initialized in BUILDFACEWT which
+          ! offdiagcheck is initialized in fort_buildfacewt which
           ! is declared in LEVELSET_3D.F90
         local_diag_check2=offdiagcheck(D_DECL(i,j,k),veldir)
 

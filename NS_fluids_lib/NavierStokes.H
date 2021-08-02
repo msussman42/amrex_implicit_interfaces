@@ -165,8 +165,6 @@ namespace amrex{
 
 #define VOF_RECON_MF 144
 
-#define THERMAL_FORCE_MF 145
-
 #define CGRESID_ZERO_MF 146
 #define V_MF 147
 #define Y_MF 148
@@ -234,8 +232,6 @@ namespace amrex{
 #define TENSOR_RECON_MF 216
 
 #define DIV_SAVE_MF 218
-
-#define NEG_MOM_FORCE_MF 219
 
 #define AMRSYNC_VEL_MF 220
 #define AMRSYNC_PRES_MF 223
@@ -1292,17 +1288,9 @@ void mac_update(MultiFab* mac_phi_crse,int project_option,int nsolve);
 
 void diffuse_coefficients();
 
-void mom_forceALL(int idx_neg_mom_force,int update_state);
-void mom_force(int idx_neg_mom_force,int update_state);
-
 void diffuse_hoopALL(int idx_vel,int idx_thermal,
  int idx_force,int update_state);
 void diffuse_hoop(int idx_vel,int idx_thermal,
- int idx_force,int update_state);
-
-void thermal_transform_forceALL(int idx_vel,int idx_thermal,
- int idx_force,int update_state);
-void thermal_transform_force(int idx_vel,int idx_thermal,
  int idx_force,int update_state);
 
 void apply_pressure_grad(

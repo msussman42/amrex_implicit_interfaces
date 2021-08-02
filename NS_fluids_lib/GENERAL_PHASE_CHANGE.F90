@@ -103,129 +103,6 @@ endif
 return
 end subroutine acoustic_pulse_bc 
 
- ! density_at_depth previously initialized by:
- ! init_density_at_depth() 
- ! called from: FORT_DERIVE_MOM_DEN, 
- ! general_hydrostatic_pressure_density,
- ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
- ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
-subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density( &
-  xpos,rho,pres,from_boundary_hydrostatic)
-use probcommon_module
-IMPLICIT NONE
-
-REAL_T, intent(in) :: xpos(SDIM)
-REAL_T, intent(inout) :: rho
-REAL_T, intent(inout) :: pres
-INTEGER_T, intent(in) :: from_boundary_hydrostatic
-REAL_T denfree,zfree
-REAL_T den_top,z_top
-REAL_T z_at_depth
-INTEGER_T continue_to_hydrostatic_part
-
- if (probtype.eq.55) then
-
-  continue_to_hydrostatic_part=1
-   
-   ! this will never happen since boundary_hydrostatic is called
-   ! from presBDRYCOND, but the code never reaches this point since
-   ! SUB_PRES_BC is called at the very beginning of presBDRYCOND.
-  if (from_boundary_hydrostatic.eq.1) then
-   if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
-    continue_to_hydrostatic_part=0  ! compressible drop
-   else if (axis_dir.eq.6) then
-    print *,"axis_dir==6 is for incompressible nucleate boiling"
-    stop
-   else if (axis_dir.eq.7) then
-    continue_to_hydrostatic_part=1
-   else
-    print *,"axis_dir invalid"
-    stop
-   endif
-  else if (from_boundary_hydrostatic.eq.0) then
-   continue_to_hydrostatic_part=1
-  else
-   print *,"from_boundary_hydrostatic invalid"
-   stop
-  endif
-
-  if (continue_to_hydrostatic_part.eq.1) then
-
-   if (axis_dir.eq.7) then ! compressible boiling
-
-    if (SDIM.eq.2) then
-     z_at_depth=probloy
-     z_top=probhiy
-    else if (SDIM.eq.3) then
-     z_at_depth=probloz
-     z_top=probhiz
-    else
-     print *,"dimension bust GENERAL_PHASE_CHANGE_hydro_pressure_density"
-     stop
-    endif
-
-    if (z_at_depth.eq.zero) then
-     ! do nothing
-    else
-     print *,"z_at_depth must be 0 for compressible boiling problem"
-     stop
-    endif
-
-    den_top=fort_denconst(1)
-
-    if (xpos(SDIM).gt.z_top) then
-     rho=den_top ! atmos pressure at top of domain
-    else
-     rho= &
-      ((density_at_depth-den_top)/ &
-       (z_at_depth-z_top))*(xpos(SDIM)-z_top)+den_top
-    endif
-    call EOS_tait_ADIABATIC_rhohydro(rho,pres)
-
-   else if (fort_material_type(1).eq.13) then
-
-    denfree=fort_denconst(1)
-    if (SDIM.eq.2) then
-     zfree=probhiy
-     z_at_depth=probloy
-    else if (SDIM.eq.3) then
-     zfree=probhiz
-     z_at_depth=probloz
-    else
-     print *,"dimension bust"
-     stop
-    endif
-
-    ! density_at_depth is found so that
-    ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
-    !
-    if (xpos(SDIM).gt.zfree) then
-     rho=denfree
-    else
-     rho= &
-      ((density_at_depth-denfree)/ &
-       (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-    endif
-     ! in: PROBCOMMON.F90
-    call EOS_tait_ADIABATIC_rhohydro(rho,pres)
-   else
-    print *,"axis_dir invalid GENERAL_PHASE_CHANGE_hydro_pressure_density"
-    stop
-   endif
-  else if (continue_to_hydrostatic_part.eq.0) then
-   ! do nothing
-  else
-   print *,"continue_to_hydrostatic_part invalid"
-   stop
-  endif
- else
-  print *,"probtype invalid GENERAL_PHASE_CHANGE_hydro_pressure_density"
-  stop
- endif
-
-return
-end subroutine GENERAL_PHASE_CHANGE_hydro_pressure_density
-
 subroutine GENERAL_PHASE_CHANGE_CFL_HELPER(time,dir,uu,dx)
 use probcommon_module
 implicit none
@@ -1099,8 +976,6 @@ INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T base_pres
 REAL_T gravity_dz
-REAL_T rhohydro
-INTEGER_T :: from_boundary_hydrostatic
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1108,8 +983,6 @@ else
  print *,"nmat invalid"
  stop
 endif
-
-from_boundary_hydrostatic=0
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -1128,16 +1001,6 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
  if (probtype.eq.55) then
 
   base_pres=zero
-  if (fort_material_type(2).ne.0) then
-   call general_hydrostatic_pressure(base_pres)
-   PRES=base_pres
-   if (fort_material_type(1).eq.13) then 
-    call GENERAL_PHASE_CHANGE_hydro_pressure_density(xghost,rhohydro,PRES, &
-      from_boundary_hydrostatic)
-   else if (axis_dir.eq.6) then
-    PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
-   endif
-  endif
 
  else
   print *,"expecting probtype.eq.55"

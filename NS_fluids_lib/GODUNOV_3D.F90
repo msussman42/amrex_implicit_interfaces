@@ -3475,6 +3475,7 @@ stop
                      nbr_outside_domain_flag(side)
                    stop
                   endif
+                   ! currently in: fort_crossterm
                   if ((velbc(dir,side,dir).eq.REFLECT_EVEN).or. &
                       (velbc(dir,side,dir).eq.FOEXTRAP).or. &
                       (velbc(dir,side,dir).eq.REFLECT_ODD).or. &
@@ -5784,7 +5785,7 @@ stop
        ! masknbr=0 coarse-fine cells and cells outside domain.
        ! called from getStateMOM_DEN
       subroutine fort_derive_mom_den( &
-       im_parm, &
+       im_parm, & ! 1..nmat
        ngrow, &
        constant_density_all_time, & ! 1..nmat
        spec_material_id_AMBIENT, &  ! 1..num_species_var
@@ -5812,7 +5813,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im_parm
+      INTEGER_T, intent(in) :: im_parm ! 1..nmat
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
@@ -5858,10 +5859,9 @@ stop
       INTEGER_T dencomp
       REAL_T xpos(SDIM)
       REAL_T xsten(-3:3,SDIM)
-      REAL_T rhohydro,preshydro,temperature
+      REAL_T temperature
       INTEGER_T nhalf
       REAL_T density_of_TZ
-      INTEGER_T caller_id
       REAL_T rho_base
       INTEGER_T vofcomp
       REAL_T local_vfrac
@@ -5969,25 +5969,13 @@ stop
 
          local_vfrac=recon(D_DECL(i,j,k),vofcomp)
 
-FIX ME only where F>1-eps
-         if ((local_vfrac.ge.VOFTOL).and.(local_vfrac.le.one+VOFTOL)) then
+         if ((local_vfrac.ge.-VOFTOL).and. &
+             (local_vfrac.lt.one-VOFTOL)) then
+          momden(D_DECL(i,j,k),im_parm)=rho_base
+         else if (abs(local_vfrac-one).le.VOFTOL) then
 
            ! den,T
           temperature=eosdata(D_DECL(i,j,k),dencomp+1)
-
-FIX ME remove this
-           ! defined in: GLOBALUTIL.F90
-          caller_id=0
-          call default_hydrostatic_pressure_density( &
-            xpos, &
-            rho_base, &
-            rhohydro, &
-            preshydro, &
-            temperature, &
-            gravity_normalized, &
-            im_parm, &
-            override_density(im_parm), &
-            caller_id)
 
           if (DrhoDT(im_parm).le.zero) then
            ! do nothing
@@ -5996,12 +5984,11 @@ FIX ME remove this
            stop
           endif
 
-          density_of_TZ=rhohydro+ &
+          density_of_TZ=rho_base+ &
             rho_base*DrhoDT(im_parm)* &
             (temperature-fort_tempconst(im_parm))
 
           if ((temperature.ge.zero).and. &
-              (rhohydro.gt.zero).and. &
               (fort_tempconst(im_parm).ge.zero).and. &
               (fort_denconst(im_parm).gt.zero).and. &
               (rho_base.gt.zero)) then 
@@ -6012,7 +5999,6 @@ FIX ME remove this
            print *,"temperature=",temperature
            print *,"density_of_TZ=",density_of_TZ
            print *,"rho_base=",rho_base
-           print *,"rhohydro=",rhohydro
            print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
            stop
           endif
@@ -6025,13 +6011,12 @@ FIX ME remove this
            print *,"temperature=",temperature
            print *,"density_of_TZ=",density_of_TZ
            print *,"rho_base=",rho_base
-           print *,"rhohydro=",rhohydro
            print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
            print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
           
            temperature=fort_tempcutoffmax(im_parm)
   
-           density_of_TZ=rhohydro+ &
+           density_of_TZ=rho_base+ &
             rho_base*DrhoDT(im_parm)* &
             (temperature-fort_tempconst(im_parm))
 
@@ -6048,10 +6033,6 @@ FIX ME remove this
           endif
 
           momden(D_DECL(i,j,k),im_parm)=density_of_TZ
-
-         else if (abs(local_vfrac).le.VOFTOL) then
-
-          momden(D_DECL(i,j,k),im_parm)=rho_base
 
          else
           print *,"local_vfrac invalid"
@@ -13884,11 +13865,10 @@ FIX ME remove this
            stop
           endif
 
-          ! I-scheme,thermal conduction,viscosity,-momforce
-          ! HOfab=-div k grad T-THERMAL_FORCE_MF
+          ! I-scheme,thermal conduction,viscosity
+          ! HOfab=-div k grad T
           HOfab(D_DECL(i,j,k),nfluxSEM+1)= &
-           divfab(D_DECL(i,j,k),velcomp)- &
-           hoopfab(D_DECL(i,j,k),velcomp)
+           divfab(D_DECL(i,j,k),velcomp)
          else if (update_spectral.eq.0) then
           ! do nothing
          else
@@ -13902,11 +13882,10 @@ FIX ME remove this
            stop
           endif
 
-          ! I-scheme,thermal conduction,viscosity,-momforce
-          ! LOfab=-div k grad T-THERMAL_FORCE_MF
+          ! I-scheme,thermal conduction,viscosity
+          ! LOfab=-div k grad T
           LOfab(D_DECL(i,j,k),nfluxSEM+1)= &
-           divfab(D_DECL(i,j,k),velcomp)- &
-           hoopfab(D_DECL(i,j,k),velcomp)
+           divfab(D_DECL(i,j,k),velcomp)
          else if (update_stable.eq.0) then
           ! do nothing
          else

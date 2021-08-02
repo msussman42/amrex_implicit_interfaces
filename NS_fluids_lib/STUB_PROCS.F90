@@ -628,36 +628,25 @@ make_seed=0
 return
 end subroutine STUB_nucleation
 
-
-
-subroutine STUB_hydro_pressure_density( &
-  xpos,rho,pres,from_boundary_hydrostatic)
-use probcommon_module
-IMPLICIT NONE
-
-REAL_T, intent(in) :: xpos(SDIM)
-REAL_T, intent(inout) :: rho
-REAL_T, intent(inout) :: pres
-INTEGER_T, intent(in) :: from_boundary_hydrostatic
-
-pres=zero
-
-return
-end subroutine STUB_hydro_pressure_density
-
-
 subroutine STUB_correct_pres_rho_hydrostatic( &
-  pres_hydrostatic,rho_hydrostatic, &
-  xpos, &
+  i,j,k,level, &
   gravity_normalized, &
-  gravity_dir_parm)
+  gravity_dir_parm, &
+  angular_velocity, &
+  dt, &
+  rho_hydrostatic, &
+  pres_hydrostatic, &
+  state_ptr)
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: i,j,k,level
+INTEGER_T, intent(in) :: gravity_dir_parm
+REAL_T, intent(in) :: angular_velocity
+REAL_T, intent(in) :: gravity_normalized
+REAL_T, intent(in) :: dt
 REAL_T, intent(inout) :: rho_hydrostatic
 REAL_T, intent(inout) :: pres_hydrostatic
-REAL_T, intent(in) :: xpos(SDIM)
-REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
-INTEGER_T, intent(in) :: gravity_dir_parm
+REAL_T, intent(in),pointer :: state_ptr(D_DECL(:,:,:),:)
 
 end subroutine STUB_correct_pres_rho_hydrostatic
 

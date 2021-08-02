@@ -3627,7 +3627,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           scomp,
           ncomp);
 
-         // -div(k grad T)-THERMAL_FORCE_MF
+         // -div(k grad T)
         update_stableF=0;
         project_option_op=2; // temperature project_option
 
@@ -3654,12 +3654,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           scomp,
           ncomp);
 
-        allocate_array(1,nsolve,-1,THERMAL_FORCE_MF);
-        int update_state=0;
-        thermal_transform_forceALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
-         THERMAL_FORCE_MF,update_state);
-
-        // HOfab=-div(k grad T)-THERMAL_FORCE_MF
+        // HOfab=-div(k grad T)
         // calls: UPDATESEMFORCE in GODUNOV_3D.F90
         if ((viscous_enable_spectral==1)||  // SEM space and time
             (viscous_enable_spectral==3)) { // SEM time
@@ -3669,28 +3664,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          // do nothing
         } else
          amrex::Error("viscous_enable_spectral invalid");
-
-        override_enable_spectral(save_enable_spectral);
-
-         // -momforce
-        update_stableF=0;
-        project_option_op=4;  // project_option for prescribed Mom. force
-
-        nsolve=AMREX_SPACEDIM;
-
-        allocate_array(1,nsolve,-1,NEG_MOM_FORCE_MF);
-         // force at time = cur_time_slab
-        update_state=0;
-        mom_forceALL(NEG_MOM_FORCE_MF,update_state);
-
-        // force at time = cur_time_slab
-        // HOfab=NEG_MOM_FORCE_MF
-        // calls: UPDATESEMFORCE in GODUNOV_3D.F90
-        update_SEM_forcesALL(project_option_op,NEG_MOM_FORCE_MF,
-         update_spectralF,update_stableF);
-
-        save_enable_spectral=enable_spectral;
-        override_enable_spectral(viscous_enable_spectral);
 
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
         // calls: UPDATESEMFORCE in GODUNOV_3D.F90
@@ -3718,7 +3691,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
          // update_state==0:
          //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
-        update_state=0;  
+        int update_state=0;  
         diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          HOOP_FORCE_MARK_MF,update_state);
 
@@ -3739,8 +3712,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         delete_array(REGISTER_MARK_MF); // velocity
         delete_array(BOUSSINESQ_TEMP_MF); // temperature
         delete_array(HOOP_FORCE_MARK_MF);
-        delete_array(NEG_MOM_FORCE_MF);
-        delete_array(THERMAL_FORCE_MF);
 
        } else if ((divu_outer_sweeps>=0)&&
                   (divu_outer_sweeps+1<local_num_divu_outer_sweeps)) {
@@ -12119,7 +12090,6 @@ void NavierStokes::veldiffuseALL() {
 
  int project_option_temperature=2; // temperature conduction
  int vel_project_option=3; // viscosity
- int mom_force_project_option=4; // neg mom force
 
  Vector<int> scomp;
  Vector<int> ncomp;
@@ -12192,15 +12162,6 @@ void NavierStokes::veldiffuseALL() {
  diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
    HOOP_FORCE_MARK_MF,update_state);
 
-  // for annulus problem:
-  // rho cv (theta_t + u dot grad theta)= div k grad theta
-  // T=theta + T_{1}(r)
-  // if update_state==1,
-  //  T_new=T_new-dt (-u T_{1}'(r))/(rho cv)
-  // thermal_force=-(-u T_{1}'(r))
- thermal_transform_forceALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
-   THERMAL_FORCE_MF,update_state);
-
  show_norm2_id(REGISTER_MARK_MF,2);
 
    // spectral_override==1 => order derived from "enable_spectral"
@@ -12272,6 +12233,7 @@ void NavierStokes::veldiffuseALL() {
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
 
+  // spectral_override==1 => not always low order
  avgDownALL(State_Type,dencomp,nden,1);
 
  SET_STOKES_MARK(REGISTER_MARK_MF,108); //register_mark=unew
@@ -12279,54 +12241,6 @@ void NavierStokes::veldiffuseALL() {
 // ---------------- end viscosity ---------------------
 
  vel_elastic_ALL();
-
-   // back to "enable_spectral" for momentum eqn
- override_enable_spectral(save_enable_spectral);
-
-  // force at time = cur_time_slab
-  // NEG_MOM_FORCE_MF=-(unp1-un)rho/dt
-  // unew=unp1 if update_state==1
- update_state=1;
- mom_forceALL(NEG_MOM_FORCE_MF,update_state);
-
- if ((SDC_outer_sweeps>0)&&
-     (SDC_outer_sweeps<ns_time_order)&&
-     (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-
-  if (ns_time_order>=2) {
-   // UPDATESEMFORCE:
-   // HOFAB=NEG_MOM_FORCE_MF (update_state=0 at end of 
-   //                         NavierStokes::do_the_advance)
-   // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    // calls: SEMDELTAFORCE in GODUNOV_3D.F90
-    // does not look at: enable_spectral
-    ns_level.make_SEM_delta_force(mom_force_project_option);
-   } // ilev=finest_level ... level
-
-  } else
-   amrex::Error("ns_time_order invalid");
-
- } else if (SDC_outer_sweeps==0) {
-  // do nothing
- } else if ((divu_outer_sweeps>=0)&&
-            (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
-  // do nothing
- } else 
-  amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
-
- save_enable_spectral=enable_spectral;
- override_enable_spectral(viscous_enable_spectral);
-
-  // spectral_override==1 => not always low order
- avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
-
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
- INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
-
-   // register_mark=unew
- SET_STOKES_MARK(REGISTER_MARK_MF,109);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12340,7 +12254,7 @@ void NavierStokes::veldiffuseALL() {
 // ---------------- begin thermal diffusion ---------------------
 
    // UPDATESEMFORCE:
-   // HOFAB=-div k grad T - THERMAL_FORCE_MF
+   // HOFAB=-div k grad T 
    // Tnew=Tnew-(1/(rho cv))(int (HOFAB) - dt (LOFAB))
    // call to semdeltaforce with dcomp=slab_step*nstate_SDC+nfluxSEM
  if ((SDC_outer_sweeps>0)&&
@@ -12413,7 +12327,7 @@ void NavierStokes::veldiffuseALL() {
   
   int update_spectralF=0;
   int update_stableF=1;
-   // LOfab=-div(k grad T)-THERMAL_FORCE_MF
+   // LOfab=-div(k grad T)
    // calls: UPDATESEMFORCE in GODUNOV_3D.F90
   if ((viscous_enable_spectral==1)||  // SEM space and time
       (viscous_enable_spectral==3)) { // SEM time
@@ -12437,17 +12351,6 @@ void NavierStokes::veldiffuseALL() {
    // do nothing
   } else
    amrex::Error("viscous_enable_spectral invalid");
-
-   // enable spectral for momentum equation.
-  override_enable_spectral(save_enable_spectral);
-
-   // LOfab=NEG_MOM_FORCE_MF
-   // calls: UPDATESEMFORCE in GODUNOV_3D.F90
-  update_SEM_forcesALL(mom_force_project_option,NEG_MOM_FORCE_MF,
-   update_spectralF,update_stableF);
-
-  save_enable_spectral=enable_spectral;
-  override_enable_spectral(viscous_enable_spectral);
 
  } else if ((ns_time_order==1)||
             ((divu_outer_sweeps>=0)&&
@@ -12828,8 +12731,6 @@ void NavierStokes::exit_viscous_solver() {
 
  delete_localMF(REGISTER_MARK_MF,1);
  delete_localMF(HOOP_FORCE_MARK_MF,1);
- delete_localMF(NEG_MOM_FORCE_MF,1);
- delete_localMF(THERMAL_FORCE_MF,1);
  delete_localMF(VISCHEAT_MF,1);
  delete_localMF(VISCHEAT_SOURCE_MF,1);
 
@@ -13221,8 +13122,6 @@ void NavierStokes::prepare_viscous_solver() {
 
  new_localMF(REGISTER_MARK_MF,nsolve,1,-1);
  new_localMF(HOOP_FORCE_MARK_MF,nsolve,1,-1);
- new_localMF(NEG_MOM_FORCE_MF,nsolve,1,-1);
- new_localMF(THERMAL_FORCE_MF,1,1,-1);
  new_localMF(VISCHEAT_SOURCE_MF,nsolve,1,-1);
 
  new_localMF(VISCHEAT_MF,1,0,-1);

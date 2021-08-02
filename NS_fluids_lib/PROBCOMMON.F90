@@ -503,25 +503,24 @@ implicit none
       end subroutine TEMPLATE_INIT_MODULE
 
       subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
-         pres_hydrostatic,rho_hydrostatic, &
-         xpos, &
-         gravity_normalized, &
-         gravity_dir_parm)
+        i,j,k,level, &
+        gravity_normalized, &
+        gravity_dir_parm, &
+        angular_velocity, &
+        dt, &
+        rho_hydrostatic, &
+        pres_hydrostatic, &
+        state_ptr)
+      INTEGER_T, intent(in) :: i,j,k,level
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      REAL_T, intent(in) :: angular_velocity
+      REAL_T, intent(in) :: gravity_normalized
+      REAL_T, intent(in) :: dt
       REAL_T, intent(inout) :: rho_hydrostatic
       REAL_T, intent(inout) :: pres_hydrostatic
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
-      INTEGER_T, intent(in) :: gravity_dir_parm
+      REAL_T, intent(in),pointer :: state_ptr(D_DECL(:,:,:),:)
       end subroutine TEMPLATE_correct_pres_rho_hydrostatic
         
-      subroutine TEMPLATE_hydro_pressure_density( &
-           xpos,rho,pres,from_boundary_hydrostatic)
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: rho
-      REAL_T, intent(inout) :: pres
-      INTEGER_T, intent(in) :: from_boundary_hydrostatic
-      end subroutine TEMPLATE_hydro_pressure_density
-
       subroutine TEMPLATE_CFL_HELPER(time,dir,uu,dx)
       INTEGER_T, intent(in) :: dir
       REAL_T, intent(in) :: time
@@ -752,8 +751,6 @@ implicit none
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
-      PROCEDURE(TEMPLATE_hydro_pressure_density), POINTER :: &
-              SUB_hydro_pressure_density
       PROCEDURE(TEMPLATE_correct_pres_rho_hydrostatic), POINTER :: &
               SUB_correct_pres_rho_hydrostatic
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER

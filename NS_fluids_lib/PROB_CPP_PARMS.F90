@@ -321,7 +321,6 @@ stop
       SUB_velfreestream=>STUB_velfreestream
       SUB_nucleation=>STUB_nucleation
       SUB_CFL_HELPER=>STUB_CFL_HELPER
-      SUB_hydro_pressure_density=>STUB_hydro_pressure_density
       SUB_correct_pres_rho_hydrostatic=>STUB_correct_pres_rho_hydrostatic
       SUB_ASSIMILATE=>STUB_ASSIMILATE
       SUB_SUMINT=>STUB_SUMINT
@@ -383,8 +382,6 @@ stop
        SUB_VEL_BC=>CRYOGENIC_TANK_MK_VEL_BC
        SUB_PRES_BC=>CRYOGENIC_TANK_MK_PRES_BC
        SUB_STATE_BC=>CRYOGENIC_TANK_MK_STATE_BC
-       SUB_correct_pres_rho_hydrostatic=> &
-              CRYOGENIC_TANK_MK_correct_pres_rho_hydrostatic
        SUB_HEATSOURCE=>CRYOGENIC_TANK_MK_HEATSOURCE
 
        SUB_SUMINT=>CRYOGENIC_TANK_MK_SUMINT
@@ -523,7 +520,6 @@ stop
        SUB_nucleation=>GENERAL_PHASE_CHANGE_nucleation
        SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
        SUB_SUMINT=>GENERAL_PHASE_CHANGE_SUMINT ! Nusseltt number
-       SUB_hydro_pressure_density=>GENERAL_PHASE_CHANGE_hydro_pressure_density
       else
        ! assign null routines here that would cause the program to abort
        ! if called.  In otherwords, these are routines THAT MUST BE DEFINED
@@ -549,7 +545,6 @@ stop
        SUB_velfreestream=>NULL()
        SUB_nucleation=>NULL()
        SUB_CFL_HELPER=>NULL()
-       SUB_hydro_pressure_density=>NULL()
        SUB_correct_pres_rho_hydrostatic=>NULL()
       endif
       

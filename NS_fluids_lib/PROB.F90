@@ -3565,182 +3565,6 @@ end subroutine dynamic_contact_angle
 
       return
       end subroutine get_vort_vel_error
-FIX ME delete this stuff
-      subroutine get_local_neg_mom_force(x,prev_time,cur_time, &
-        dt,update_state,neg_force)
-      IMPLICIT NONE
-
-      INTEGER_T update_state
-      REAL_T x(SDIM)
-      REAL_T prev_time,cur_time,dt
-      REAL_T neg_force(SDIM)
-      REAL_T vel(SDIM)
-      REAL_T vort
-      REAL_T energy_moment
-      INTEGER_T dir
-
-      do dir=1,SDIM
-       neg_force(dir)=zero
-      enddo
-
-      if (update_state.eq.1) then
-       if ((dt.le.zero).or. &
-           (prev_time.lt.zero).or. &
-           (abs(cur_time-prev_time-dt).gt.1.0e-5)) then
-        print *,"dt, prev_time, or cur_time invalid"
-        stop
-       endif
-      else if (update_state.eq.0) then
-       if ((dt.le.zero).or. &
-           (prev_time.lt.zero).or. &
-           (cur_time.lt.zero)) then
-        print *,"dt, prev_time, or cur_time invalid"
-        stop
-       endif
-      else
-       print *,"update_state invalid"
-       stop
-      endif
-
-      if (probtype.eq.26) then
-       if ((axis_dir.eq.2).or.(axis_dir.eq.3)) then
-        if ((adv_dir.eq.1).or. &
-            (adv_dir.eq.2).or. &
-            (adv_dir.eq.3)) then
-         if (SDIM.eq.2) then
-          call get_vortex_info(x,cur_time,neg_force,vel,vort,energy_moment)
-         else
-          print *,"sdim==3 not implemented yet: get_vortex_info"
-          stop
-         endif
-        else
-         print *,"adv_dir invalid probtype==26 (3)"
-         stop
-        endif
-       else if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
-        ! do nothing
-       else if (axis_dir.eq.10) then
-        ! do nothing
-       else if (axis_dir.eq.11) then ! BCG_periodic
-        call get_vortex_info(x,cur_time,neg_force,vel,vort,energy_moment)
-       else
-        print *,"axis_dir invalid"
-        stop
-       endif
-      endif ! probtype.eq.26
-
-      return
-      end subroutine get_local_neg_mom_force
-
-      subroutine thermal_offset(im,xsten,nhalf,temp_offset,gtemp_offset)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: im ! im=1..nmat
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(out) :: temp_offset
-      REAL_T, intent(out) :: gtemp_offset(SDIM)
-      REAL_T ACOEF,BCOEF,rval
-      INTEGER_T dir
-
-      if (nhalf.lt.1) then
-       print *,"nhalf invalid"
-       stop
-      endif
-
-      if (probhix.le.problox) then
-       print *,"probhix invalid"
-       stop
-      endif
-
-      temp_offset=zero
-      do dir=1,SDIM
-       gtemp_offset(dir)=zero
-      enddo
-
-      if (probtype.eq.82) then ! differentiated heated rotating annulus
-
-       if (im.eq.1) then
-
-        if (twall.ge.fort_tempconst(1)) then
-         ! do nothing
-        else
-         print *,"outer temperature must be >= inner"
-         stop
-        endif
-
-        if (levelrz.eq.0) then
-
-         ! T=A x + B
-         ! T_x = A
-         ! T_xx = 0
-         ! T1=A x1 + B 
-         ! T2=A x2 + B 
-         ! A(x2 - x1)=T2-T1
-
-         ACOEF=(twall-fort_tempconst(1))/(probhix-problox)
-         BCOEF=twall-fort_tempconst(1)+ACOEF*probhix
-         rval=xsten(0,1)
-         if (ACOEF.lt.zero) then
-          print *,"ACOEF invalid"
-          stop
-         endif
-         temp_offset=ACOEF*rval+BCOEF
-         gtemp_offset(1)=ACOEF
-
-        else if (levelrz.eq.1) then
-
-         print *,"levelrz invalid for annulus problem"
-         stop
-
-        else if (levelrz.eq.3) then
-
-         ! T=A log r + B
-         ! T_r = A/r
-         ! (r T_r)_r = 0
-         ! T1=A log r1 + B 
-         ! T2=A log r2 + B 
-         ! A(log r2 - log r1)=T2-T1
-
-         if (problox.gt.zero) then
-          ! do nothing
-         else
-          print *,"problox invalid"
-          stop
-         endif
-         ACOEF=(twall-fort_tempconst(1))/log(probhix/problox)
-         BCOEF=twall-fort_tempconst(1)+ACOEF*log(probhix)
-         rval=xsten(0,1)
-         if (rval.gt.zero) then
-          ! do nothing
-         else
-          print *,"rval invalid"
-          stop
-         endif
-         if (ACOEF.ge.zero) then
-          ! do nothing
-         else
-          print *,"ACOEF invalid"
-          stop
-         endif
-         temp_offset=ACOEF*log(rval)+BCOEF
-         gtemp_offset(1)=ACOEF/rval
-
-        else
-         print *,"levelrz invalid"
-         stop
-        endif   
-
-       else if ((im.ge.2).and.(im.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im invalid"
-        stop
-       endif
- 
-      endif ! probtype.eq.82 ?
-
-      end subroutine thermal_offset
 
        ! called by ESTDT: determine maximum force due to buoyancy. 
       subroutine get_max_denjump(denjump,nmat)
@@ -3808,41 +3632,37 @@ FIX ME delete this stuff
        ! gravity_normalized>0 means that gravity is directed downwards.
        ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
        !
-       ! called from initpotential. (NAVIERSTOKES_3D.F90)
+       ! called from fort_init_potential. (NAVIERSTOKES_3D.F90)
       subroutine general_hydrostatic_pressure_density( &
-        override_density, &
-        xpos, &
+        i,j,k,level, &
         gravity_normalized, &
         gravity_dir_parm, &
         angular_velocity, &
         dt, &
-        rho_hydrostatic,pres_hydrostatic, &
-        for_hydro,liquid_temp)
+        rho_hydrostatic, &
+        pres_hydrostatic, &
+        state_ptr)
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: for_hydro 
-      INTEGER_T, intent(in) :: override_density 
+      INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T, intent(in) :: gravity_dir_parm
       REAL_T, intent(in) :: angular_velocity
-      REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(in) :: gravity_normalized
       REAL_T, intent(in) :: dt
       REAL_T, intent(out) :: rho_hydrostatic
       REAL_T, intent(out) :: pres_hydrostatic
-      REAL_T, intent(in) :: liquid_temp
-      INTEGER_T imat
-      INTEGER_T from_boundary_hydrostatic
-      INTEGER_T caller_id
+      REAL_T, intent(in),pointer :: state_ptr(D_DECL(:,:,:),:)
+      REAL_T xsten(-1:1,SDIM)
+      REAL_T xcell(SDIM)
+      INTEGER_T nhalf
+      INTEGER_T local_dir
 
-      from_boundary_hydrostatic=0
+      nhalf=1
 
-      if (for_hydro.ne.1) then
-       print *,"for_hydro invalid"
-       stop
-      endif
-
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt must be positive"
        stop
       endif
@@ -3852,118 +3672,67 @@ FIX ME delete this stuff
        stop
       endif
 
-      imat=1
-      if (fort_denconst(imat).ge.fort_denconst(2)) then
-       ! do nothing
-      else
-       print *,"expecting material 1 to be liquid"
-       print *,"expecting denconst(1)>=denconst(2)"
-       print *,"in general_hydrostatic_pressure_density"
+      if ((probtype.eq.42).or. & ! bubble jetting
+          (probtype.eq.46)) then ! cavitation
+       print *,"see tait_hydrostatic_pressure_density and make user def."
        stop
       endif
 
-       ! in: general_hydrostatic_pressure_density
-      if ((probtype.eq.42).and.(SDIM.eq.2)) then ! bubble jetting
-       call tait_hydrostatic_pressure_density(xpos, &
-               rho_hydrostatic,pres_hydrostatic, &
-               from_boundary_hydrostatic)
-      else if ((probtype.eq.46).and.(SDIM.eq.2)) then ! cavitation
+      call gridsten_level(xsten,i,j,k,level,nhalf)
+      do local_dir=1,SDIM
+       xcell(local_dir)=xsten(0,local_dir)
+      enddo 
 
-       if ((axis_dir.ge.0).and.(axis_dir.le.10)) then
-        call tait_hydrostatic_pressure_density(xpos, &
-                rho_hydrostatic,pres_hydrostatic, &
-                from_boundary_hydrostatic)
-       else if (axis_dir.eq.20) then ! no gravity for this test problem
-        rho_hydrostatic=one
-        pres_hydrostatic=zero
-       else
-        print *,"axis_dir invalid"
-        stop
-       endif
-
-       ! rising bubble, compressible nucleate boiling
-      else if (fort_material_type(1).eq.13) then 
-       call tait_hydrostatic_pressure_density(xpos, &
-               rho_hydrostatic,pres_hydrostatic, &
-               from_boundary_hydrostatic)
-      else if (fort_material_type(1).eq.0) then
-
-        ! the force is grad p^hydrostatic/rho^hydrostatic
-       if (override_density.eq.0) then
-        rho_hydrostatic=fort_denconst(imat) ! imat=1
-        pres_hydrostatic= &
-              -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
-       else if (override_density.eq.1) then
-
-         ! in: GLOBALUTIL.F90
-         ! rho_hydrostatic=rho_hydrostatic(T,Y,z)
-        caller_id=1
-        call default_hydrostatic_pressure_density( &
-         xpos, &
-         fort_denconst(imat), & ! imat=1 
-         rho_hydrostatic, &
-         pres_hydrostatic, &
-         liquid_temp, &
-         gravity_normalized, &
-         imat, &  ! =1
-         override_density, &
-         caller_id)
-       else if (override_density.eq.2) then
-        ! same as override_density==0:
-        ! temperature dependence handled in DIFFUSION_3D.F90
-        rho_hydrostatic=fort_denconst(imat)  ! imat=1
-        pres_hydrostatic= &
-             -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
-       else
-        print *,"override_density invalid"
-        stop
-       endif
-
-      else if (fort_material_type(1).gt.0) then
-       rho_hydrostatic=fort_denconst(imat)  ! imat=1
+       ! the force is grad p^hydrostatic/rho^hydrostatic
+      rho_hydrostatic=fort_denconst(1) 
+      if (rho_hydrostatic.gt.zero) then
        pres_hydrostatic= &
-             -gravity_normalized*rho_hydrostatic*xpos(gravity_dir_parm)
-      else
-       print *,"fort_material_type invalid"
-       stop
-      endif
+           -gravity_normalized*rho_hydrostatic*xcell(gravity_dir_parm)
     
-      if (angular_velocity.lt.zero) then
-       print *,"angular_velocity should be nonneg"
-       stop
-      endif
+       if (angular_velocity.ge.zero) then
+        ! do nothing
+       else
+        print *,"angular_velocity should be nonneg"
+        stop
+       endif
 
-        ! temperature dependence handled in DIFFUSION_3D.F90
-      if (levelrz.eq.0) then
-       pres_hydrostatic=pres_hydrostatic+ &
-            half*rho_hydrostatic*(angular_velocity**2)*(xpos(1)**2)
-      else if (levelrz.eq.1) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
+       if (levelrz.eq.0) then
+        pres_hydrostatic=pres_hydrostatic+ &
+            half*rho_hydrostatic*(angular_velocity**2)*(xcell(1)**2)
+       else if (levelrz.eq.1) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+        if (angular_velocity.eq.zero) then
+         ! do nothing
+        else
+         print *,"angular_velocity must be 0 for RZ for now"
+         stop
+        endif
+       else if (levelrz.eq.3) then
+        pres_hydrostatic=pres_hydrostatic+ &
+           half*rho_hydrostatic*(angular_velocity**2)*(xcell(1)**2)
+       else
+        print *,"levelrz invalid general hydrostatic pressure density"
         stop
        endif
-       if (angular_velocity.ne.zero) then
-        print *,"angular_velocity must be 0 for RZ for now"
-        stop
-       endif
-        ! temperature dependence handled in DIFFUSION_3D.F90
-      else if (levelrz.eq.3) then
-       pres_hydrostatic=pres_hydrostatic+ &
-           half*rho_hydrostatic*(angular_velocity**2)*(xpos(1)**2)
       else
-       print *,"levelrz invalid general hydrostatic pressure density"
+       print *,"rho_hydrostatic invalid"
        stop
       endif
 
       if (is_in_probtype_list().eq.1) then
        call SUB_correct_pres_rho_hydrostatic( &
-         pres_hydrostatic, &
-         rho_hydrostatic, &
-         xpos, &
-         gravity_normalized, &
-         gravity_dir_parm)
+        i,j,k,level, &
+        gravity_normalized, &
+        gravity_dir_parm, &
+        angular_velocity, &
+        dt, &
+        rho_hydrostatic, &
+        pres_hydrostatic, &
+        state_ptr)
       endif
-
 
         ! dt multiplied by velocity scale.
       pres_hydrostatic=pres_hydrostatic*dt/global_pressure_scale
@@ -3987,11 +3756,6 @@ FIX ME delete this stuff
        ! first material obeys TAIT EOS
       if (fort_material_type(1).eq.13) then
 
-       if (is_in_probtype_list().eq.1) then
-        call SUB_hydro_pressure_density(xpos,rho,pres, &
-                from_boundary_hydrostatic)
-       else
-
         if ((probtype.eq.36).or. &   ! bubble in liquid
             (probtype.eq.601).or. &  ! cooling disk
             (probtype.eq.602)) then  ! Rayleigh-Taylor
@@ -4007,8 +3771,6 @@ FIX ME delete this stuff
          print *,"expecting probtype=36,601, or 602"
          stop
         endif
-
-       endif
 
       else
        print *,"expecting liquid to be compressible (Tait EOS)"
@@ -19500,37 +19262,6 @@ END SUBROUTINE Adist
       return
       end subroutine presBDRYCOND
 
-      subroutine derive_plot_data(xsten,nhalf,den,nmat)
-      IMPLICIT NONE
-
-      INTEGER_T nmat
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T den(nmat*num_state_material)
-      REAL_T temp_offset
-      REAL_T gtemp_offset(SDIM)
-      INTEGER_T im,icomp
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nhalf.lt.1) then
-       print *,"nhalf invalid"
-       stop
-      endif
-
-      if (probtype.eq.82) then ! annulus
-       call thermal_offset(xsten,nhalf,temp_offset,gtemp_offset)
-       if (1.eq.0) then
-        im=1
-        icomp=(im-1)*num_state_material+2 ! temperature
-        den(icomp)=den(icomp)+temp_offset
-       endif
-      endif
-
-      end subroutine derive_plot_data
-     
       ! called from FORT_STATEFILL, FORT_GROUP_STATEFILL if EXT_DIR
       subroutine denBC(time,dir,side,ADV,ADVwall_in, &
          xsten,nhalf,dx,bfact,istate,im)
