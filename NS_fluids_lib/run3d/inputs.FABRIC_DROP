@@ -23,10 +23,10 @@ geometry.is_periodic = 1 1 0
 # -----------------------------------------
 # I/O
 # -----------------------------------------
-ns.visual_option    = -1      # -1 => VisIt format, -2 => Tecplot format
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10      # number of timesteps between plots
+amr.plot_int        = 2      # number of timesteps between plots
 amr.plot_file       = plt     # root name of VisIr plot file
 amr.grid_log        = grdlog  # name of grid logging file
 #amr.restart        = chk0500
@@ -41,8 +41,11 @@ cg.verbose = 0
 # -----------------------------------------
 # Space and time discretization and AMR
 # -----------------------------------------
+# number of grid points on level=0
 amr.n_cell          = 96 96 96
 amr.max_level       = 1
+amr.n_cell = 32 32 32
+amr.max_level       = 0
 #ns.fixed_dt        = 5.0e-5   # hardwire dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
@@ -57,7 +60,7 @@ amr.regrid_int      = 1        # how often to regrid
 amr.n_error_buf     = 4 4 4 4  # number of buffer cells in error est
 amr.grid_eff        = 0.8      # what constitutes an efficient grid (smaller=> less boxes)
 amr.blocking_factor = 8        # block factor in grid generation
-amr.max_grid_size   = 64
+amr.max_grid_size   = 32
 ns.vorterr=0.0 0.0 0.0        # AMR based on vorticity
 
 # -----------------------------------------
@@ -74,6 +77,18 @@ ns.adv_dir = 3   # Direction of the drop
 ns.denconst      = 1.0000E+03 1.1270E+00 1.0000E+03
 ns.viscconst     = 6.5000E-01 1.9180E-02 6.5000E-01
 ns.heatviscconst = 0.0 0.0 0.0
+# sigma_12 = 22.0  (gas/liquid)
+# sigma_13 = 97.0  (liquid/solid)
+# sigma_23 = 75.7  (gas/solid)
+# theta_1 (the angle between the gamma_12 and gamma_13 interfaces):
+#  Young's condition:
+#  sigma_12 * cos(theta_1)+sigma_13 = sigma_23
+#  cos(theta_1)=(sigma_23-sigma_13)/sigma_12
+#  sigma_23-sigma_13=sigma_12 cos(theta_1)
+#  sigma_23=sigma_12 cos(theta_1) + sigma_13
+#  if cos(theta_1)<0 => set sigma_13=sigma_12
+#  otherwise
+#  if cos(theta_1)>0 => set sigma_23=sigma_12
 ns.tension       = 2.2000E+01 7.5700E+01 9.7000E+01
 ns.stiffCP       = 4.1785E+03 1.0070E+03 4.1785E+03
 ns.tempconst     = 293.0 293.0 293.0
@@ -99,6 +114,9 @@ ns.zblob4= 0.75
 ns.xblob5= 96.0
 ns.yblob5= 96.0
 ns.zblob5= 96.0
+ns.xblob5= 32.0
+ns.yblob5= 32.0
+ns.zblob5= 32.0
 
 # max thread level set value
 ns.radblob3=2.0 # Larger distance to low point of the thread
@@ -136,10 +154,6 @@ mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 1
 
-# 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
-# 3=no limiter with slope=0 at interface
-ns.slope_limiter_option=1
-ns.advection_order=1 1 1
 ns.continuous_mof=0
 ns.FD_curv_interp=1
 ns.EILE_flag=-1
