@@ -7990,7 +7990,6 @@ stop
        spec_material_id_AMBIENT, & ! 1..num_species_var+1
        mass_fraction_id, &
        cavitation_vapor_density, &
-       override_density, &
        constant_density_all_time, &
        time, &
        dt, &
@@ -8091,7 +8090,6 @@ stop
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T :: veldir
-      INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
@@ -8564,13 +8562,6 @@ stop
         ! do nothing
        else
         print *,"viscosity cannot be negative"
-        stop
-       endif
-
-       if ((override_density(im).ne.0).and. &
-           (override_density(im).ne.1).and. &
-           (override_density(im).ne.2)) then
-        print *,"override_density invalid"
         stop
        endif
 
@@ -10444,7 +10435,6 @@ stop
           !   density=massdepart/voltarget
          call derive_density( &
           voldepart,voldepart,voltotal, &
-          override_density, &
           constant_density_all_time, &
           delta_mass, &
           im,nmat, &
@@ -10586,8 +10576,6 @@ stop
        spec_material_id_AMBIENT, &
        mass_fraction_id, &
        cavitation_vapor_density, &
-       override_density, &
-       constant_density_all_time, &
        xlo,dx, &
        slope,DIMS(slope), &
        denstate, &
@@ -10623,8 +10611,6 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat
       INTEGER_T :: veldir
-      INTEGER_T, intent(in) :: override_density(nmat)
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -10788,13 +10774,6 @@ stop
         stop
        endif
 
-       if ((override_density(im).ne.0).and. &
-           (override_density(im).ne.1).and. &
-           (override_density(im).ne.2)) then
-        print *,"override_density invalid"
-        stop
-       endif
-
       enddo ! im=1..nmat  (checking parameters)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi, &
@@ -10874,41 +10853,6 @@ stop
             mom_den_local=mom_den(D_DECL(i,j,k),im)
 
             den_value=mom_den_local
-
-            if (constant_density_all_time(im).eq.1) then
-             if (abs(den-fort_denconst(im)).le.VOFTOL) then
-              ! do nothing
-             else
-              print *,"den invalid"
-              print *,"im,i,j,k,den ",im,i,j,k,den
-              print *,"dencomp=",dencomp
-              print *,"level,finest_level ",level,finest_level
-              stop
-             endif
-             if ((override_density(im).eq.0).or. &
-                 (override_density(im).eq.2)) then
-              if (abs(den_value-fort_denconst(im)).le.VOFTOL) then
-               ! do nothing
-              else
-               print *,"den_value invalid"
-               print *,"im,i,j,k,den_value ",im,i,j,k,den_value
-               print *,"dencomp=",dencomp
-               print *,"level,finest_level ",level,finest_level
-               stop
-              endif
-             else if (override_density(im).eq.1) then
-              ! do nothing
-             else
-              print *,"override_density invalid"
-              stop
-             endif
-            else if (constant_density_all_time(im).eq.0) then 
-             ! do nothing
-            else
-             print *,"constant_density_all_time invalid"
-             print *,"level,finest_level ",level,finest_level
-             stop
-            endif
 
             if (den.gt.zero) then
              ! do nothing
@@ -13661,7 +13605,6 @@ stop
        massface_index, &
        vofface_index, &
        ncphys, &  ! nflux for advection
-       override_density, &
        constant_density_all_time, &
        presbc_in, &  ! denbc for advection
        velbc_in, &
@@ -13758,7 +13701,6 @@ stop
       INTEGER_T, intent(in) :: massface_index
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
-      INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       REAL_T, intent(in) :: dt,time,beta,visc_coef
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -14297,14 +14239,6 @@ stop
         ! do nothing
        else
         print *,"denconst invalid"
-        stop
-       endif
-       if ((override_density(im).eq.0).or. & ! Dp/Drho=-rho c^2 div u
-           (override_density(im).eq.1).or. & ! rho=rho(T,z)
-           (override_density(im).eq.2)) then ! Boussinesq
-        ! do nothing
-       else
-        print *,"override_density invalid"
         stop
        endif
 

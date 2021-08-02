@@ -613,7 +613,6 @@ stop
 
       subroutine derive_density( &
        voldepart,voltarget,voltotal_depart, &
-       override_density, &
        constant_density_all_time, &
        massdepart, &
        im,nmat, &
@@ -623,7 +622,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: im,nmat
-      INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       REAL_T, intent(in) :: voldepart,voltarget,voltotal_depart
       REAL_T, intent(in) :: massdepart
@@ -5957,7 +5955,7 @@ stop
          stop
         endif
 
-        ! rho=rho(T,z)
+        ! rho=rho(T)
         if (override_density(im_parm).eq.1) then
 
          if (fort_material_type(im_parm).eq.0) then
@@ -6473,7 +6471,6 @@ stop
 
       subroutine fort_build_conserve( &
        iden_base, &
-       override_density, &
        constant_density_all_time, &
        temperature_primitive_variable, &
        conserve,DIMS(conserve), &
@@ -6500,7 +6497,6 @@ stop
       INTEGER_T, intent(in) :: nc_conserve
       INTEGER_T, intent(in) :: nc_den
       INTEGER_T, intent(in) :: temperature_primitive_variable(nmat) 
-      INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -8682,7 +8678,6 @@ stop
        freezing_model, &
        distribute_from_target, &
        nten, &
-       override_density, &
        constant_density_all_time, &
        velbc, &
        EILE_flag, &
@@ -8788,7 +8783,6 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: bfact_f
-      INTEGER_T, intent(in) :: override_density(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       REAL_T, intent(in) :: dt,time
        ! original data
@@ -9196,13 +9190,6 @@ stop
         endif
        else
         print *,"fort_material_type(im) or is_rigid invalid"
-        stop
-       endif
-
-       if ((override_density(im).ne.0).and. &
-           (override_density(im).ne.1).and. &
-           (override_density(im).ne.2)) then
-        print *,"override_density invalid"
         stop
        endif
 
@@ -10689,7 +10676,6 @@ stop
           ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
           call derive_density(volmat_depart_cor(im), &
            vol_target_local,voltotal_depart, &
-           override_density, &
            constant_density_all_time, &
            massdepart,im,nmat, &
            dencore(im))

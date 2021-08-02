@@ -12111,7 +12111,7 @@ void NavierStokes::veldiffuseALL() {
  for (int im=0;im<nmat;im++) {
   if (override_density[im]==0) { // Drho/DT=-divu rho
    // check nothing
-  } else if (override_density[im]==1) { // rho=rho(T,Y,z)
+  } else if (override_density[im]==1) { // rho=rho(T,Y)
    // check nothing
    
    // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)

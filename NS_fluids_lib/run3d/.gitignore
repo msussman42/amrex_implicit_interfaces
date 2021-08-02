@@ -29,4 +29,5 @@ Mukherjee/
 ICE_RESISTANT/
 cavity_surface/
 FilmBoiling/
-FABRIC_DROP/
+FABRIC_DROP/*
+!FABRIC_DROP/threads
