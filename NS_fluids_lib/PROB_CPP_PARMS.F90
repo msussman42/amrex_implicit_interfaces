@@ -144,6 +144,7 @@ stop
       use DROP_IN_SHEAR_module
       use MITSUHIRO_MELTING_module
       use AHMED_ICE_RESISTANT_module
+      use FABRIC_DROP_MODULE
       use CRYOGENIC_TANK1_module
       use CRYOGENIC_TANK2_module
       use CRYOGENIC_TANK_MK_module
@@ -286,7 +287,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=13
+      probtype_list_size=14
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -300,6 +301,7 @@ stop
       used_probtypes(11)=222 ! CONE3D_module 
       used_probtypes(12)=2011 ! YAOHONG_INKJET 
       used_probtypes(13)=425  ! AHMED_ICE_RESISTANT
+      used_probtypes(14)=7001 ! FABRIC_DROP
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -414,6 +416,19 @@ stop
        SUB_PRES_BC=>MITSUHIRO_MELTING_PRES_BC
        SUB_STATE_BC=>MITSUHIRO_MELTING_STATE_BC
        SUB_HEATSOURCE=>MITSUHIRO_MELTING_HEATSOURCE
+
+      else if (probtype.eq.7001) then
+
+       SUB_INIT_MODULE=>INIT_FABRIC_DROP_MODULE
+       SUB_LS=>FABRIC_DROP_LS
+       SUB_VEL=>FABRIC_DROP_VEL
+       SUB_PRES=>FABRIC_DROP_PRES
+       SUB_STATE=>FABRIC_DROP_STATE
+       SUB_LS_BC=>FABRIC_DROP_LS_BC
+       SUB_VEL_BC=>FABRIC_DROP_VEL_BC
+       SUB_PRES_BC=>FABRIC_DROP_PRES_BC
+       SUB_STATE_BC=>FABRIC_DROP_STATE_BC
+       SUB_HEATSOURCE=>FABRIC_DROP_HEATSOURCE
 
       else if (probtype.eq.425) then
        SUB_INIT_MODULE=>INIT_AHMED_ICE_RESISTANT_MODULE
