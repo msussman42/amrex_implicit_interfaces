@@ -3644,11 +3644,15 @@ NavierStokes::read_params ()
        amrex::Error("solid cannot have 0 viscosity");
       if (ns_is_rigid(im)!=1)
        amrex::Error("ns_is_rigid invalid");
+      if (override_density[im]!=0)
+       amrex::Error("override_density invalid");
      } else if (material_type[im]==0) {
       if (ns_is_rigid(im)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[im]>0)&& 
                 (material_type[im]<999)) {
+      if (override_density[im]!=0)
+       amrex::Error("override_density invalid");
       if (ns_is_rigid(im)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else {
@@ -4404,9 +4408,11 @@ NavierStokes::read_params ()
         amrex::Error("override_density invalid (2)");
        }
       } else if (material_type[im-1]==999) {
-       // do nothing
+       if (override_density[im]!=0)
+        amrex::Error("override_density invalid");
       } else if (material_type[im-1]>=1) {
-       // do nothing
+       if (override_density[im]!=0)
+        amrex::Error("override_density invalid");
       } else
        amrex::Error("material_type[im-1] invalid");
      } else
@@ -11070,7 +11076,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // in: GODUNOV_3D.F90
-     // if override_density[im]==1, then rho_im=rho(T,Y,z) 
+     // if override_density[im]==1, then rho_im=rho(T) 
     int fort_im=im+1;
     fort_derive_mom_den(
      &fort_im,
@@ -14791,7 +14797,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &massface_index,
       &vofface_index,
       &nfluxSEM, // ncphys (nflux for advection)
-      override_density.dataPtr(),
       constant_density_all_time.dataPtr(),
       denbc.dataPtr(),  // presbc
       velbc.dataPtr(),  
@@ -15330,7 +15335,6 @@ NavierStokes::split_scalar_advection() {
     // declared in: GODUNOV_3D.F90
   fort_build_conserve( 
    &iden_base,
-   override_density.dataPtr(),
    constant_density_all_time.dataPtr(),
    temperature_primitive_variable.dataPtr(),
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
@@ -15594,7 +15598,6 @@ NavierStokes::split_scalar_advection() {
    freezing_model.dataPtr(),
    distribute_from_target.dataPtr(),
    &nten,
-   override_density.dataPtr(),
    constant_density_all_time.dataPtr(),
    velbc.dataPtr(),
    &EILE_flag,

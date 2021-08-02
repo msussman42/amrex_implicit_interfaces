@@ -469,13 +469,6 @@ stop
              stop
             endif
 
-            if (local_temp.gt.zero) then
-             ! do nothing
-            else
-             print *,"local_temp cannot be <= 0 (2)"
-             stop
-            endif
-
             if (fort_DrhoDT(im).le.zero) then
              ! do nothing
             else

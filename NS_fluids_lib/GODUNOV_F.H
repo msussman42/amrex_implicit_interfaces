@@ -243,7 +243,6 @@ extern "C"
 
    void fort_build_conserve(
     int* iden_base,
-    int* override_density,
     int* constant_density_all_time,
     int* temperature_primitive_variable,
     Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
@@ -790,7 +789,6 @@ extern "C"
      int* freezing_model,
      int* distribute_from_target,
      int* nten,
-     int* override_density,
      int* constant_density_all_time,
      int* velbc,
      int* EILE_flag,
