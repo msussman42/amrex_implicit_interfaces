@@ -51,7 +51,7 @@ INTEGER_T inode
 #endif
 
 ! Reading and storing thread files
-100  FORMAT('../threads/thread_',I3.3,'.txt')
+100  FORMAT('./threads/thread_',I3.3,'.txt')
 
 if ((probtype.ne.FABRIC_DROP_PROB_TYPE).or.(SDIM.ne.3)) then
  print *,"probtype or SDIM invalid!"
@@ -143,6 +143,7 @@ INTEGER_T ind(3)
 REAL_T c_000, c_001, c_010, c_011, c_100, c_101, c_110, c_111
 REAL_T c_00, c_01, c_10, c_11
 REAL_T c_0, c_1, c
+INTEGER_T dir
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -208,9 +209,18 @@ else
  ! For 'x_p' as object point 
  ! interpolate from internal fine mesh
  ! low side cell index
+ ! IDINT = fractional part truncated and sign preserved
  ind(1)=IDINT((x_p(1)-xblob3)/internal_dx(1))
  ind(2)=IDINT((x_p(2)-yblob3)/internal_dx(2)) 
  ind(3)=IDINT((x_p(3)-zblob3)/internal_dx(3))
+ do dir=1,SDIM
+  if (ind(dir).lt.1) then
+   ind(dir)=1
+  endif
+  if (ind(dir)+1.gt.UBOUND(internal_thread_ls,dir)) then
+   ind(dir)=UBOUND(internal_thread_ls,dir)-1
+  endif
+ enddo ! dir=1..sdim
 
  ! x is in the cube {ind, ind+1}
  ! trilinear interpolation
