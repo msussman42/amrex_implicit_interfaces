@@ -635,7 +635,7 @@ void NavierStokes::allocate_SDC() {
      (enable_spectral==1)||   // spectral in space and time
      (enable_spectral==2)) {  // spectral in space only
 
-   // I-scheme,thermal conduction, viscosity, div(up),gp, -force
+   // I-scheme,thermal conduction, viscosity
   if (localMF_grow[stableF_MF]==-1) {
    new_localMF(stableF_MF,nstate_SDC*ns_time_order,0,-1);
   } else
@@ -9563,8 +9563,7 @@ void NavierStokes::multiphase_project(int project_option) {
   deallocate_potential_forceALL(); 
 
 
-   // div up and grad p  cell/face
-   // T=T-(1/(rho cv))(int div(up)-dt div(up))
+   // grad p  face
    // u=u-(1/rho)(int gp - dt gp)
   if ((SDC_outer_sweeps>0)&&
       (SDC_outer_sweeps<ns_time_order)&&
