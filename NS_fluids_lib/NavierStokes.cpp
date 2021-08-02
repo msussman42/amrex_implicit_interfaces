@@ -1,6 +1,6 @@
-// I-scheme,thermal conduction,viscosity,-force
+// I-scheme,thermal conduction,viscosity
 // nstate_SDC (c++ and fortran)
-// =nfluxSEM+1+AMREX_SPACEDIM+AMREX_SPACEDIM
+// =nfluxSEM+1+AMREX_SPACEDIM
 // nfluxSEM (c++ and fortran)
 // =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
@@ -8901,8 +8901,8 @@ NavierStokes::SDC_setup_step() {
   amrex::Error("nmat out of range");
 
  nfluxSEM=AMREX_SPACEDIM+1;
-  //I-scheme,thermal conduction,viscosity,-force
- nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM+AMREX_SPACEDIM;
+  //I-scheme,thermal conduction,viscosity
+ nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM;
 
  ns_time_order=parent->Time_blockingFactor();
 
@@ -9969,7 +9969,6 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  int bfact=parent->Space_blockingFactor(level);
 
  if ((project_option==3)|| //viscosity
-     (project_option==4)|| //-momentum force at t^n+1
      (project_option==2)) {//thermal conduction
 
   if (thread_class::nthreads<1)
@@ -9997,8 +9996,6 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
    int deltacomp=0;
    if (project_option==3) { // viscosity
     deltacomp=slab_step*nstate_SDC+nfluxSEM+1;
-   } else if (project_option==4) { // -momentum force at t^n+1
-    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+AMREX_SPACEDIM;
    } else if (project_option==2) { // thermal conduction
     deltacomp=slab_step*nstate_SDC+nfluxSEM;
    } else if (project_option==0) { 
@@ -10360,8 +10357,6 @@ void NavierStokes::update_SEM_delta_force(
   //do nothing
  } else if (project_option==3) { // viscosity
   //do nothing
- } else if (project_option==4) { // -momentum force
-  //do nothing
  } else
   amrex::Error("project_option invalid5");
 
@@ -10413,21 +10408,15 @@ void NavierStokes::update_SEM_delta_force(
      localMF[idx_hoop]->nComp() << '\n';
    amrex::Error("localMF[idx_hoop]->nComp() invalid");
   }
- } else if (project_option==4) { // -momentum force
-  idx_hoop=idx_div;
-  if (nsolve!=AMREX_SPACEDIM)
-   amrex::Error("nsolve invalid");
-  if (localMF[idx_hoop]->nComp()!=nsolve)
-   amrex::Error("localMF[idx_hoop]->nComp() invalid");
  } else
   amrex::Error("project_option invalid6");
 
- if ((project_option==4)||  //momforce
-     (project_option==2)||  //thermal conductivity
-     (project_option==3)) { //viscosity
+ if (project_option==3) { //viscosity
   debug_ngrow(idx_hoop,0,3);
   if (localMF[idx_hoop]->nComp()!=localMF[idx_div]->nComp())
    amrex::Error("localMF[idx_hoop]->nComp() invalid");
+ } else if (project_option==2) { //thermal conductivity
+  // check nothing
  } else if (project_option==0) {
   // check nothing
  } else
@@ -10456,8 +10445,6 @@ void NavierStokes::update_SEM_delta_force(
    debug_ngrow(delta_GP_MF+dir,0,3);
   } // dir=0..sdim-1
 
- } else if (project_option==4) { // -momentum force
-  // check nothing
  } else
   amrex::Error("project_option invalid8");
 
@@ -10477,8 +10464,7 @@ void NavierStokes::update_SEM_delta_force(
  const Real* dx = geom.CellSize();
  int bfact=parent->Space_blockingFactor(level);
 
- if ((project_option==4)||  //momforce
-     (project_option==2)||  //thermal conductivity
+ if ((project_option==2)||  //thermal conductivity
      (project_option==3)) { //viscosity
 
   if (thread_class::nthreads<1)

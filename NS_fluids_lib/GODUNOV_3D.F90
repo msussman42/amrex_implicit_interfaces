@@ -13424,14 +13424,12 @@ stop
        ! (1) I scheme
        ! (2) temperature
        ! (3) viscosity
-       ! (4) momentum force
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM+SDIM) then
+      if (nstate_SDC.ne.nfluxSEM+1+SDIM) then
        print *,"nstate_SDC invalid"
        stop
       endif
       if ((project_option.eq.2).or. &
-          (project_option.eq.3).or. &
-          (project_option.eq.4)) then
+          (project_option.eq.3)) then
        ! do nothing
       else
        print *,"project_option invalid"
@@ -13458,8 +13456,7 @@ stop
        if ((local_maskSEM.ge.1).and. &
            (local_maskSEM.le.nmat)) then
 
-        if ((project_option.eq.3).or. &
-            (project_option.eq.4)) then ! viscosity or -momentum force
+        if (project_option.eq.3) then ! viscosity
 
          do veldir=1,SDIM
           velnew(D_DECL(i,j,k),veldir)= &
@@ -13739,16 +13736,14 @@ stop
        stop
       endif
        ! (1) I scheme
-       ! (2) temperature
+       ! (2) thermal conductivity
        ! (3) viscosity
-       ! (4) momentum force
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM+SDIM) then
+      if (nstate_SDC.ne.nfluxSEM+1+SDIM) then
        print *,"nstate_SDC invalid"
        stop
       endif
-      if ((project_option.eq.2).or. &
-          (project_option.eq.3).or. &
-          (project_option.eq.4)) then
+      if ((project_option.eq.2).or. & !thermal conductivity
+          (project_option.eq.3)) then !viscosity
        ! do nothing
       else
        print *,"project_option invalid"
@@ -13818,43 +13813,6 @@ stop
           endif
          enddo ! veldir=1..sdim
 
-        else if (project_option.eq.4) then ! -momforce
-
-         do veldir=1,SDIM
-
-          if (update_spectral.eq.1) then
-           if ((slab_step.lt.-1).or.(slab_step.ge.bfact_time_order)) then
-            print *,"slab_step invalid"
-            stop
-           endif
-           ! I-scheme,thermal conduction,viscosity,-momforce
-           ! HOfab=-momforce
-           HOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+veldir)= &
-             divfab(D_DECL(i,j,k),veldir)
-          else if (update_spectral.eq.0) then
-           ! do nothing
-          else
-           print *,"update_spectral invalid"
-           stop
-          endif
-
-          if (update_stable.eq.1) then
-           if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
-            print *,"slab_step invalid"
-            stop
-           endif
-           ! I-scheme,thermal conduction,viscosity,-momforce
-           ! LOfab=-momforce
-           LOfab(D_DECL(i,j,k),nfluxSEM+1+SDIM+veldir)= &
-            divfab(D_DECL(i,j,k),veldir)
-          else if (update_stable.eq.0) then
-           ! do nothing
-          else
-           print *,"update_stable invalid"
-           stop
-          endif
-         enddo ! veldir=1..sdim
- 
         else if (project_option.eq.2) then  ! temperature diffusion
 
          velcomp=1

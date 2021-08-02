@@ -2006,7 +2006,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 
 } // subroutine update_SEM_forcesALL
 
-// called if project_option==0,2,3,4
+// called if project_option==0,2,3
 void NavierStokes::update_SEM_forces(int project_option,
  int idx_source,int update_spectral,int update_stable) {
 
@@ -2022,7 +2022,6 @@ void NavierStokes::update_SEM_forces(int project_option,
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
 
  if ((project_option==0)||   // grad p face
-     (project_option==4)||   // -momforce
      (project_option==3)) {  // viscosity
   //do nothing
  } else if (project_option==2) { // thermal diffusion
@@ -2116,8 +2115,6 @@ void NavierStokes::update_SEM_forces(int project_option,
   } else
    amrex::Error("project_option invalid73");
 
- } else if (project_option==4) { // -momforce
-  // do nothing
  } else
   amrex::Error("project_option invalid74");
 
@@ -2142,8 +2139,6 @@ void NavierStokes::update_SEM_forces(int project_option,
 
   delete_localMF(MACDIV_MF,1);
 
- } else if (project_option==4) { // -momforce
-  // do nothing
  } else
   amrex::Error("project_option invalid75");
 
