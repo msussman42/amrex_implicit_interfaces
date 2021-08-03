@@ -12,7 +12,6 @@ ns.MOFITERMAX=15
 ns.num_materials=3
 ns.num_species_var=0
 ns.post_init_pressure_solve=1
-ns.use_lsa=0
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

@@ -59,7 +59,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 1.0     # coef of viscosity
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     
-ns.use_lsa=0
 ns.tension        = 0.0  # 12 - liquid/vapor
 # D=2e-5 cm^2/s=k/(rho cp)
 # cp hardwired to be 4.1855E+7 (all incompressible materials)

@@ -63,7 +63,6 @@ ns.visc_coef      = 1.0 # Re=rho L U/mu  U=1
 ns.gravity        = 0.0   
 ns.gravityangle = 0.0
 ns.tension        = 24.0 # We=rho U^2 L/sigma  U=1
-ns.use_lsa=0  # use_lsa=0 for paper.
 #ns.fixed_dt	  = 4.0e-4   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 

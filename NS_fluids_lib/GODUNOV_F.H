@@ -471,7 +471,6 @@ extern "C"
       int* rzflag,
       Real* Uref,Real* Lref,
       int* nten,
-      int* use_lsa,
       Real* denconst,
       Real* denconst_gravity,
       Real* visc_coef,

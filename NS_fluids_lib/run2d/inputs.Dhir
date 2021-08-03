@@ -77,7 +77,6 @@ ns.change_max     = 1.1    # scale back initial timestep
 ns.visc_coef      = 1.0  
 ns.visc_abs_tol   = 1.0e-10
 ns.gravity        = -9.8 #  dimensional  MKS
-ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
 # override_density=1 => rho=rho(T,z)

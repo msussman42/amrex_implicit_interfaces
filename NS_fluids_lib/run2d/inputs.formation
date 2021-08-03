@@ -71,7 +71,6 @@ ns.visc_coef      = 6.666666666667  # was 0.2749, now included in viscconst
 mac.visc_abs_tol   = 1.0e-2
 # was -980
 ns.gravity        = -0.054444444444    # body force  (gravity in MKS units)
-ns.use_lsa=0
 # 12, 13, 23
 # material 1 is liquid (ambient phase)
 # material 2 will be gas

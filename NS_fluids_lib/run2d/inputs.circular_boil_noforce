@@ -60,7 +60,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 0.0
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     # Bo/We=0.025/5E-5=500.0
-ns.use_lsa=0
 ns.tension        = 0.0  # 12 - liquid/gas
 ns.stiffCP = 1.0 1.0
 ns.latent_heat=1.0e+10 0.0

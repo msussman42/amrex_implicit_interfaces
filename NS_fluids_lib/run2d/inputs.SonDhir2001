@@ -175,7 +175,6 @@ ns.gravity        = -9.8 #  dimensional  MKS
 # =1 (default) grad p_hydro(z)/rho_hydro(z)
 # =0  -|g|
 
-ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 #ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
 ns.DrhoDT = 0.0 0.0 0.0 0.0   # units: 1/degree K

@@ -115,7 +115,6 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 0.20000000       # 1/Re
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -0.0049000     # 1/Fr
-ns.use_lsa=0
 # AUGUST 19: 3 materials (90 degree contact angle prescribed here)
 ns.tension        = 0.100000 0.0 0.0  # 1/We
 ns.ignition       = -30000.0

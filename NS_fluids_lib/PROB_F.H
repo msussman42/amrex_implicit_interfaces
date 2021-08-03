@@ -141,7 +141,7 @@ namespace amrex{
       int* bfact,
       Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
       const Real* dx,const Real* xlo, const Real* xhi,
-      Real* Re,Real* We,Real* RGASRWATER,int* use_lsa);
+      Real* Re,Real* We,Real* RGASRWATER);
 
      void fort_initdata_alloc(
       int* nmat,int* nten,int* nc,

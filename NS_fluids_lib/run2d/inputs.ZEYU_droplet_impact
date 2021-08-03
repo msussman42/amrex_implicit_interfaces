@@ -148,7 +148,6 @@ ns.law_of_the_wall=2
 # =7 Blake2006, Popescu2008
 # =8 Cox 1986
 ns.ZEYU_DCA_SELECT=1
-ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 ns.twall=0.0

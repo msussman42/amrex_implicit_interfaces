@@ -63,7 +63,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0  # -9.8e+8 after scaling
-ns.use_lsa=0
 # water-methane-hydrate
 ns.tension = 0.0 0.0 0.0 # 72e+6 25e+6 97e+6 after scaling
 # default is 4.1855e+7

@@ -83,7 +83,6 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     
-ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta_{L})
 # assume theta_L=45 degrees (wetting preferred for additive manufact)
 # and sigma_SL=sigma_LV then

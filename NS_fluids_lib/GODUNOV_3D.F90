@@ -4358,7 +4358,6 @@ stop
         rzflag, &
         Uref,Lref, &
         nten, &
-        use_lsa, &
         denconst, &
         denconst_gravity, &
         visc_coef, &
@@ -4388,7 +4387,6 @@ stop
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: use_lsa
       INTEGER_T, intent(in) :: level,finest_level
       REAL_T, intent(in) :: cfl
       INTEGER_T, intent(in) :: EILE_flag
@@ -4626,11 +4624,6 @@ stop
        stop
       endif
 
-      if ((use_lsa.ne.0).and.(use_lsa.ne.1)) then
-       print *,"use_lsa invalid"
-       stop
-      endif
-
       if (Uref.lt.zero) then
        print *,"Uref invalid"
        stop
@@ -4762,7 +4755,7 @@ stop
           visc2=visc_coef*mu+1.0D-10
             ! typically smallestL=dxmin
           call capillary_wave_speed(smallestL,den1,den2,visc1,visc2, &
-            user_tension(iten),cap_wave_speed(iten),use_lsa)
+            user_tension(iten),cap_wave_speed(iten))
          else
           print *,"user_tension invalid"
           stop
@@ -4779,7 +4772,6 @@ stop
        enddo
       else
        print *,"recompute wave speed invalid"
-       print *,"use_lsa=",use_lsa
        print *,"Uref=",Uref
        print *,"Lref=",Lref
        print *,"nmat=",nmat

@@ -104,7 +104,6 @@ ns.visc_coef      = 1.0
 ns.visc_abs_tol   = 1.0e-10
 # Units: Length/Time^2
 ns.gravity        = -39.2 #  dimensional  CGS
-ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
 # FOR INCOMPRESSIBLE CASE:

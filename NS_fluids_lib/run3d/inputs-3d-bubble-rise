@@ -83,7 +83,6 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 0.139665        # 1/Re
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -3.805174      # 1/Fr
-ns.use_lsa=0
 ns.tension        = 0.032770   # 1/We
 ns.ignition       = -30000.0
 #ns.fixed_dt	  = 0.0025     # hardwire dt

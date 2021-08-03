@@ -100,7 +100,6 @@ ns.visc_coef      = 0.0166667    # 1/60 liquid lens
 #ns.visc_coef      = 0.01  # water viscosity gas lens
 ns.gravity        = 0.0
 ns.min_velocity_for_dt=1.0
-ns.use_lsa=0
 # 12, 13, 23
 # material 2 will be bubble
 # material 1 top half material 2 bottom half

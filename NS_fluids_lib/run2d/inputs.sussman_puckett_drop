@@ -66,7 +66,6 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 1.0     # coef of viscosity
 ns.gravity        = -980.0
 ns.tension        = 73.2
-ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 ns.twall=0.0

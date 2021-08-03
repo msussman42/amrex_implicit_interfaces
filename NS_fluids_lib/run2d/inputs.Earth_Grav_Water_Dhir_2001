@@ -99,7 +99,6 @@ ns.visc_coef      = 1.0
 ns.visc_abs_tol   = 1.0e-10
 #ns.gravity        = -1.0 #  dimensionless
 ns.gravity        = -9.8 #  dimensional  MKS
-ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 # Temperature not scaled, so this value is the same regardless of
 # dimensionless or dimensional

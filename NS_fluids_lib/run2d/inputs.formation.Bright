@@ -69,7 +69,6 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 1.0  # was 0.2749, now included in viscconst
 mac.visc_abs_tol   = 1.0e-6
 ns.gravity        = -980    # body force  (gravity in MKS units)
-ns.use_lsa=1
 # 12, 13, 23
 # material 1 is liquid (ambient phase)
 # material 2 will be gas

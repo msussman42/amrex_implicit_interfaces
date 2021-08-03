@@ -1541,11 +1541,9 @@ Amr::coarseTimeStep (Real stop_time)
 
      // check dt on all the levels.
     if (level_steps[0] > 0) {
-        int post_regrid_flag = 0;
          // in AmrLevel.H: virtual void computeNewDt
          // NavierStokes::computeNewDt
-        amr_level[0]->computeNewDt(finest_level,
-         dt_AMR,stop_time,post_regrid_flag);
+        amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
     } else if (level_steps[0]==0) {
      // do nothing since initial dt already calculated 
      // NavierStokes::computeInitialDt

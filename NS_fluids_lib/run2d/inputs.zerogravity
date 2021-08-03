@@ -64,7 +64,6 @@ mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0    # body force  (gravity in MKS units)
 ns.gravityangle = 0.0
 ns.tension        = 0.5 
-ns.use_lsa=1
 ns.capillary_artificial_viscosity=0.0
 ns.Uref=0.0
 ns.Lref=0.0  # coarsest: 1.5/32=0.046825

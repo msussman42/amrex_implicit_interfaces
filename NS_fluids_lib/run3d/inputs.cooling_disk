@@ -68,7 +68,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 1.0   
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -1000.0
-ns.use_lsa=0
 ns.tension        = 0.0
 # delta_t=20 in MIT test
 ns.min_velocity_for_dt=20.0

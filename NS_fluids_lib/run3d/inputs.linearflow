@@ -66,7 +66,6 @@ ns.visc_coef      = 0.038    # coef of viscosity 0.038
 mac.visc_abs_tol   = 1.0e-8
 ns.init_iter      = 2        # number of init iters to def pressure
 ns.gravity        = -1.321   # -1.321
-ns.use_lsa=1
 ns.tension        = 0.0025 0.0 0.0 0.0 0.0 0.0 # 0.0025
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 

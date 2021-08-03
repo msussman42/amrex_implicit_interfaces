@@ -20997,12 +20997,11 @@ END SUBROUTINE Adist
       end subroutine
 
       subroutine capillary_wave_speed(wavelen,den1,den2,visc1,visc2, &
-       tension,wavespeed,use_lsa)
+       tension,wavespeed)
       IMPLICIT NONE
 
       REAL_T wavelen,den1,den2,visc1,visc2,tension,wavespeed
       REAL_T omega,k
-      INTEGER_T use_lsa
       REAL_T wavespeed_no_viscosity
       REAL_T Lscale,liquid_viscosity,liquid_density
       REAL_T Uscale,density_ratio,viscosity_ratio,Re,We
@@ -21020,29 +21019,6 @@ END SUBROUTINE Adist
       omega=(k**(1.5))*sqrt(tension/(den1+den2))
       wavespeed=omega/k
       wavespeed_no_viscosity=wavespeed
-
-      if (use_lsa.eq.0) then
-       ! do nothing
-      else if (use_lsa.eq.1) then
-       Lscale=wavelen
-       liquid_viscosity=visc1
-       liquid_density=den1
-       Uscale=liquid_viscosity/(Lscale*liquid_density)
-       density_ratio=den2/den1
-       viscosity_ratio=visc2/visc1
-       Re=(liquid_density*Lscale*Uscale)/liquid_viscosity
-       We=(Uscale**2)*Lscale/tension
-       RGASRWATER=two
-       call get_surface_tension_wave_speed(wavelen,Uscale, &
-         Lscale,Re,We,RGASRWATER,wavespeed,density_ratio, &
-         viscosity_ratio,wavespeed_no_viscosity)
-
-       print *,"old_speed, new_speed,Lscale ", &
-        wavespeed_no_viscosity,wavespeed,Lscale
-      else
-       print *,"use_lsa invalid"
-       stop
-      endif
 
       return
       end subroutine capillary_wave_speed
@@ -31780,7 +31756,7 @@ end subroutine initialize2d
         fablo,fabhi,bfact, &
         vel,DIMS(vel), &
         dx,xlo,xhi, &
-        Re,We,RGASRWATER,use_lsa) &
+        Re,We,RGASRWATER) &
       bind(c,name='fort_initvelocity')
 
       use probf90_module
@@ -31802,7 +31778,6 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: use_lsa
       REAL_T density_ratio,viscosity_ratio
       REAL_T liquid_density,liquid_viscosity
       REAL_T dxmin,Uscale,Lscale,surface_tension_factor
@@ -31860,49 +31835,8 @@ end subroutine initialize2d
        print *,"bfact too small"
        stop
       endif 
-      if ((use_lsa.ne.0).and.(use_lsa.ne.1)) then
-       print *,"use_lsa invalid"
-       stop
-      endif
 
       velsolid_flag=0
-
-      if ((1.eq.0).and.(use_lsa.eq.1)) then
-       dxmin=5.8832/32
-       Lscale=dxmin
-       liquid_viscosity=0.01
-       liquid_density=1.0
-       Uscale=liquid_viscosity/(Lscale*liquid_density)
-       density_ratio=one
-       viscosity_ratio=one
-       Re=(liquid_density*Lscale*Uscale)/liquid_viscosity
-       We=(Uscale**2)*Lscale/5660.0
-       RGASRWATER=two
-        ! Brackbill Zemach and Kothe might have a different
-        ! proportionality constant.
-        ! c_2 depends on  how the curvature is discretized according to
-        ! Galusinski et al
-        ! Sussman and Ohta use 1/sqrt(8 pi^3)
-        ! Sussman (2011) uses 1/sqrt(8 pi)
-        ! dispersion relation for capillary waves: (Batchelor, ...)
-        ! omega^2=k^3 * sigma/(rho1+rho2)  k=2 pi/lambda
-        ! T=2 pi/omega  lambda=2 pi/k
-        ! speed is lambda/T=omega/k=
-        ! k^(3/2) sqrt(sigma/(rho1+rho2)) /k=
-        ! sqrt(sigma k/(rho1+rho2))  if rho1=rho2=rho
-        ! sqrt(sigma pi/(lambda rho))
-       surface_tension_factor=one/sqrt(Pi)
-       old_speed=(one/sqrt(dxmin*liquid_density/5660.0))/ &
-        surface_tension_factor
-
-       call get_surface_tension_wave_speed(dxmin,Uscale, &
-         Lscale,Re,We,RGASRWATER,wave_speed,density_ratio, &
-         viscosity_ratio,old_speed)
-
-       print *,"old_speed, new_speed ",old_speed,wave_speed
-
-       stop
-      endif
 
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
 
@@ -32177,46 +32111,6 @@ end subroutine initialize2d
       else
        print *,"dimension bust"
        stop
-      endif
-
-
-      if((probtype.eq.41).and.(axis_dir.eq.4).and. &
-         (use_lsa.eq.1).and.(SDIM.eq.2)) then
-       print *,"NOTICE: use_lsa is 1 initializing base velocity"
-       N1parm=20
-       N2parm=90
-       nn=0
-       allocate(r1(0:N1parm))
-       allocate(W1bar(0:N1parm))
-       allocate(vel_lr(0:N1parm))
-       allocate(vel_lz(0:N1parm))
-       allocate(r2(0:N2parm))
-       allocate(W2bar(0:N2parm))
-       allocate(vel_gr(0:N2parm))
-       allocate(vel_gz(0:N2parm))
-       print *,"calling initialvel N1,N2 ",N1parm,N2parm
-       call initialvel(N1parm,N2parm,vel_lr,     &
-        vel_lz,vel_gr, vel_gz, r1, r2,W1bar,W2bar,Re,We,RGASRWATER)
-       print *,"initialvel done"
-
-       inquire(file='initialvel.dat',exist=alive)
-       if (alive.eqv..false.) then
-         open(20, file='initialvel.dat')
-         do i=0, N1parm
-          write(20,*) real(vel_lr(i)), aimag(vel_lr(i)),   &
-               real(vel_lz(i)), aimag(vel_lz(i))
-         enddo
-         do i=0, N2parm
-          write(20,*) real(vel_gr(i)), aimag(vel_gr(i)),   &
-               real(vel_gz(i)), aimag(vel_gz(i))
-         enddo
-         close(20)
-       endif
-!       inquire(file='velfield.dat',exist=alive)
-!       if (alive.eqv..false.) then
-!         open(30, file='velfield.dat')
-!       endif
-
       endif
 
       if (1.eq.0) then
@@ -32632,14 +32526,6 @@ end subroutine initialize2d
            call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)  ! time=0
            y_vel=velcell(2)
            x_vel=zero
-
-           if (use_lsa.eq.1) then
-            call velinterpolation(N1parm,N2parm, r1, r2, vel_lr,vel_lz, &
-                 vel_gr, vel_gz, x, y, dist, x_vel, y_vel,W1bar,W2bar)
-!           if (alive.eqv..false.) then
-!              write(30,*) x, y, x_vel, y_vel
-!           endif
-           endif
           else
            print *,"axis_dir invalid initvel axis_dir=",axis_dir
            stop
@@ -33241,19 +33127,6 @@ end subroutine initialize2d
       enddo
       enddo
       enddo
-
-      if((probtype.eq.41).and. &
-         (axis_dir.eq.4).and. &
-         (use_lsa.eq.1).and.(SDIM.eq.2)) then
-       deallocate(r1)
-       deallocate(W1bar)
-       deallocate(vel_lr)
-       deallocate(vel_lz)
-       deallocate(r2)
-       deallocate(W2bar)
-       deallocate(vel_gr)
-       deallocate(vel_gz)
-      endif
 
       deallocate(distbatch)
 

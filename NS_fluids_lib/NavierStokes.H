@@ -599,8 +599,7 @@ public:
 
    virtual void computeNewDt (int   finest_level,
                               Real& dt,
-                              Real  stop_time,
-                              int   post_regrid_flag);
+                              Real  stop_time);
 
     virtual Real advance (Real time,Real dt);
 
@@ -1738,6 +1737,15 @@ protected:
     static int  partial_cmof_stencil_at_walls;  // default is 0
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
+
+     // default=0
+     // 1 bit => ignore advective scales
+     // 2 bit => ignore surface tension scales
+     // 4 bit => ignore gravity scales
+    static int ignore_fast_scales;
+    static Vector<Real> current_dt_group; 
+    static Vector<Real> hold_dt_group;
+
     static Real fixed_dt;      // set > 0 to specify dt
     static Real fixed_dt_init; // set > 0 to specify dt
     static Real min_velocity_for_dt; // dt<dx/min_velocity_for_dt
@@ -2000,7 +2008,6 @@ protected:
 
     static Real Uref;
     static Real Lref;
-    static int use_lsa; 
     static int last_finest_level;
 
      // 0=volume fraction  1=mass fraction 2=impedance fraction

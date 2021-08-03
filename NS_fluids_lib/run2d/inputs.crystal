@@ -77,7 +77,6 @@ ns.gravity        = -1000.0
 ns.gravityangle = 0.0
 # 12, 13, 23
 # sigma_12 cos theta_12 + sigma_23=sigma_13
-ns.use_lsa=1
 ns.tension        = 10.0 0.0 0.0  # 73
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 

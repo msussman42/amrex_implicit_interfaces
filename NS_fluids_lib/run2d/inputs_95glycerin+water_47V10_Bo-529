@@ -94,7 +94,6 @@ mac.visc_abs_tol   = 1.0e-10
 #JULY 2020, gravity_dir==2 is the default in 2D.
 #ns.gravity_dir = 2  # 1,2, or 3  (2 in 2D is default)
 ns.gravity        = -980.0 #  dimensional  MKS
-ns.use_lsa=0
 #ns.override_density=2 0 0 0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # sigma_{SL}=sigma_{LV}

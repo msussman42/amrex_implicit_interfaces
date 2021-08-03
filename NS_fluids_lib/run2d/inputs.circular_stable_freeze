@@ -73,7 +73,6 @@ ns.change_max     = 1.01
 ns.visc_coef      = 7.25     # Prandtl=CPL muL/kL
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     # Bo/We=0.025/5E-5=500.0
-ns.use_lsa=0
 # even ice/water interface should have surface tension in order
 # to prescribe contact angle .
 ns.tension        = 1.0  # 12 - liquid/solid

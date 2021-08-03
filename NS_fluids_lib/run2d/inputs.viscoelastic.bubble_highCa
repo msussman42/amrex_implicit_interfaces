@@ -111,8 +111,6 @@ ns.gravity        = -6.133   # 1 m/s^2 = 100 cm/s^2 if scale pressure by 10^6
                              # and velocity by 10^3 and time by 10^-3, then
                              # gravity,surface tension mult by 10^-6
                              # viscosity mult by 10^-3
-# M.OHTA set use_lsa=0 to be conservative
-ns.use_lsa=0
 # tension=1/4 => M=94 E0=98
 # tension=1,viscconst=2,elastic_viscosity=0.2 => M=98, E0=24
 ns.tension        = 0.25   # interfacial tension force 1 N/m = 1000 dyne/cm

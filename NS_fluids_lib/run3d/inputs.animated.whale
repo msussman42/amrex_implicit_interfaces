@@ -73,7 +73,6 @@ ns.change_max     = 1.1    # scale back initial timestep
 ns.visc_coef=0.0
 ns.gravity = 0.0 # MS ZERO if no FREE SURFACE
 ns.gravityangle = 0.0
-ns.use_lsa=0
 ns.tension=0.0
 
 ns.fixed_dt	  = 0.002    # dz_coarse=1/16  max_level=3 => dz=1/128

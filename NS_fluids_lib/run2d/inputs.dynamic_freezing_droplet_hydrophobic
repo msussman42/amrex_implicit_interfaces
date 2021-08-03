@@ -91,7 +91,6 @@ mac.visc_abs_tol   = 1.0e-10
 # Weber=1.7E-7  BO/WE=1.8e+6
 # 1/Weber=5.9e+6  (BO/WE=3.9e+6 if R=0.2 cm instead of 0.15 cm)
 ns.gravity        = 1.8e+6
-ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # material 1=liquid 2=gas  3=ice (substrate)
 # 12,13,23
