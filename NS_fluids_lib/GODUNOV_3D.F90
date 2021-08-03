@@ -5967,10 +5967,10 @@ stop
 
          local_vfrac=recon(D_DECL(i,j,k),vofcomp)
 
-         if ((local_vfrac.ge.-VOFTOL).and. &
-             (local_vfrac.lt.one-VOFTOL)) then
+         if (abs(local_vfrac).le.VOFTOL) then
           momden(D_DECL(i,j,k),im_parm)=rho_base
-         else if (abs(local_vfrac-one).le.VOFTOL) then
+         else if ((local_vfrac.ge.VOFTOL).and. &
+                  (local_vfrac.le.one+VOFTOL)) then
 
            ! den,T
           temperature=eosdata(D_DECL(i,j,k),dencomp+1)
