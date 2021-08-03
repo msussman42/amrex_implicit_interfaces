@@ -804,9 +804,11 @@ protected:
     void delete_localMF(int idx_MF,int ncomp); 
     void delete_localMF_if_exist(int idx_MF,int ncomp); 
 
-    void MaxAdvectSpeedALL(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
+    void MaxAdvectSpeedALL(Vector<Real> dt_min,
+        Real* vel_max,Real* vel_max_estdt,
 	Real& vel_max_cap_wave,int caller_id);
-    void MaxAdvectSpeed(Real& dt_min,Real* vel_max,Real* vel_max_estdt,
+    void MaxAdvectSpeed(Vector<Real> dt_min,
+        Real* vel_max,Real* vel_max_estdt,
         Real& vel_max_cap_wave,int caller_id);
     void DumpProcNum();
 
