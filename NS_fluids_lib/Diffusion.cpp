@@ -201,7 +201,13 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
 
  MultiFab* Un=localMF[idx_vel];
+
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
+ int nstate=(AMREX_SPACEDIM+1)+
+  nmat*(num_state_material+ngeom_raw)+1;
+ if (U_new.nComp()!=nstate) 
+  amrex::Error("U_new.nComp()!=nstate");
+
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
@@ -256,6 +262,8 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
     // declared in: DIFFUSION_3D.F90
   fort_hoopimplicit(
    override_density.dataPtr(), 
+   constant_density_all_time.dataPtr(),
+   &nstate,
    &gravity_normalized,
    &gravity_dir,
    forcefab.dataPtr(),
