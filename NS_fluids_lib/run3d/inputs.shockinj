@@ -77,7 +77,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 1.0     
 mac.visc_abs_tol   = 1.0e-7
 ns.gravity        = 0.0  
-ns.use_lsa=0   # not applicable for compressible flows
 ns.tension        = 72.8 72.8 # 90 degree contact angle 
 #ns.fixed_dt	  = 0.02     # hardwire dt
 ns.sum_interval   = -1        # timesteps between computing mass 

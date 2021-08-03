@@ -81,7 +81,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 0.0017
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0
-ns.use_lsa=1
 # 12 (water-air), 13 (water-water), 23 (water-air)
 # sigma_12=1/We  
 # non-dim values: 72.8, 0.0, 72.8

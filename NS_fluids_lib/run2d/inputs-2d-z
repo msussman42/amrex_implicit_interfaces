@@ -80,7 +80,6 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 0.00138889       # 1/Re
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -0.29334278     # 1/Fr
-ns.use_lsa=0
 ns.tension        = 0.34881097   # 1/We
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 

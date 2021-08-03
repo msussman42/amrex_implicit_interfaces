@@ -72,7 +72,6 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-7
 ns.gravity        = 0.0  
 ns.tension        = 0.0 0.0 0.0  
-ns.use_lsa=0
 ns.shock_timestep=0 0 0      # 0=use "c" at t=0, 1=always use "c", 2=never
 #ns.fixed_dt	  = 2.0e-8   # hardwire dt
 ns.sum_interval   = 10      # timesteps between computing mass 

@@ -90,7 +90,6 @@ ns.tension        = 37.2 37.2 0.57  # 4.0=157 2.0=164 1.0=169
 ns.capillary_artificial_viscosity=0.0 0.0 0.0  
 ns.Lref=0.0  
 ns.Uref=0.0  
-ns.use_lsa=0
 #ns.fixed_dt	  = 1.0e-5   # hardwire dt
 ns.sum_interval   = 20      # timesteps between computing mass 
 

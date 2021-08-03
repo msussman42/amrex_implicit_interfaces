@@ -78,7 +78,6 @@ ns.gravity        = 0.0
 ns.tension        = 5.0 8.54 5.0 # 5.0 cgs
 ns.sum_interval   = 10       # timesteps between computing mass 
 
-ns.use_lsa=0
 ns.axis_dir=4  # 0 Roper's geometry  1 Comsol's dimensions 4=hardwired geom.
 ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=1.57

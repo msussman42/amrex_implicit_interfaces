@@ -92,7 +92,6 @@ ns.visc_coef      = 1.0    # coef of viscosity 0.038
 # 1.321=L g/(50/(1 x L x 0.0025))=L^2 980 0.0025/50  
 # L=5.19222
 ns.gravity        = -980.0   # -1.321
-ns.use_lsa=0
 # 0.0025=sigma/(rho U^2 L)  U^2=50/(1 x L x 0.0025)
 # U=sqrt(50/(1 x L x 0.0025))=62.06
 ns.tension        = 50.0

@@ -155,7 +155,6 @@ ns.gravity        = -9.8
 ns.terminal_velocity_dt=0
 ns.min_velocity_for_dt=1.0e-16
 ns.dt_max=1.0e+16
-ns.use_lsa=0
 # pick a surface tension so that dt~1E9
 # k=2 pi/dxmin = 2 pi 128
 # omega=k^(3/2)sqrt(tension/(den1+den2))

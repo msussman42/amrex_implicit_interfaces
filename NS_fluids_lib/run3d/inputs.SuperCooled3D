@@ -79,7 +79,6 @@ ns.change_max     = 1.01
 ns.visc_coef      = 14.4     # Prandtl
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     
-ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # material 1=liquid 2=gas  3=ice 4=substrate
 ns.tension = 7.1e+4 2.5e+4 2.5e+4 7.1e+4 7.1e+4 2.5e+4 # 12 - liquid/vapor

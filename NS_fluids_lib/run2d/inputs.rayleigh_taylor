@@ -78,7 +78,6 @@ ns.visc_coef      = 1.0  # 1.0
 # invert_gravity=1 => force points from light fluid to heavy fluid
 ns.invert_gravity=0
 ns.gravity        = -980.0  # cgs
-ns.use_lsa=0
 ns.tension        = 72.8  # cgs units
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 20        # timesteps between computing mass 

@@ -87,7 +87,6 @@ mac.visc_abs_tol   = 1.0e-10
 # so new dimensionless gravity is 3.9e+4
 #ns.gravity        = 3.9e+4
 ns.gravity        = 1.0e+4
-ns.use_lsa=0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # material 1=liquid 2=gas  3=ice 4=solid
 # 12,13,14,23,24,34

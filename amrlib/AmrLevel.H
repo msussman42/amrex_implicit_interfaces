@@ -86,7 +86,7 @@ public:
     // and hence MUST be implemented by derived classes.
     //
     virtual void computeNewDt (int finest_level,
-       Real& dt,Real stop_time,int post_regrid_flag)=0;
+       Real& dt,Real stop_time)=0;
     //
     // Do an integration step on this level.  Returns maximum safe
     // time step.  This is a pure virtual function and hence MUST

@@ -89,7 +89,6 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 1.0        # 1/Re
 ns.visc_abs_tol   = 1.0e-8
 ns.gravity        = -980     # 1/Fr
-ns.use_lsa=0
 # 12, 13, 23
 # material 2 will be bubble
 # if materials 1 and 3 are the same, then sigma_13=0 and

@@ -97,7 +97,6 @@ ns.change_max     = 1.1    # scale back initial timestep
 ns.visc_coef      = 1.0  
 ns.visc_abs_tol   = 1.0e-10
 ns.gravity        = -980.0 
-ns.use_lsa=0
 ns.override_density=0 0 0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # sigma_{SL}=sigma_{LV}

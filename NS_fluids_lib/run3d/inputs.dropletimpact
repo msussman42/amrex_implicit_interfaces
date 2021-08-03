@@ -95,7 +95,6 @@ ns.gravity        = -980.0  # Kensuke
 #  | 13 | 23 
 ns.tension=72.0 140.9 72.0  #Kensuke 163 degrees
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface
-ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 ns.twall=0.0

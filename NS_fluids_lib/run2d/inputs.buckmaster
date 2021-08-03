@@ -97,7 +97,6 @@ mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -2.576   # body force  (gravity in MKS units)
 ns.gravityangle = 0.0
 ns.tension        = 0.06549    # interfacial tension force
-ns.use_lsa=1
 #ns.fixed_dt	  = 0.0025   # hardwire dt
 ns.sum_interval   = 10        # timesteps between computing mass 
 

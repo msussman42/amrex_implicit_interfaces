@@ -80,7 +80,6 @@ ns.init_shrink    = 0.1
 ns.change_max     = 1.1  
 ns.visc_coef      = 1.0   
 ns.gravity        = -980.0  # MIKE  
-ns.use_lsa=0
 ns.tension        = 0.0
 # delta_t=20 in MIT test
 ns.min_velocity_for_dt=1.0

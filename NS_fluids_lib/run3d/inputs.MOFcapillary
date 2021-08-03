@@ -81,11 +81,9 @@ ns.tension        = 24.
 # MARCO: for the small length scales, there is no surface tension
 # time step stability constraint. The viscous forces damp out quickly
 # any surface tension waves (this is found using linear stability
-# analysis "ns.use_lsa=1").
 # The following option essentially prescribes a suitable "dt_max"
 # at t=0.  (dt>dxmin/min_velocity_for_dt)
 ns.min_velocity_for_dt=1.0
-ns.use_lsa=1  # this is the default
 #ns.fixed_dt	  = 1.0e-7     # hardwire dt
 ns.sum_interval   = -1       # timesteps between computing mass 
 

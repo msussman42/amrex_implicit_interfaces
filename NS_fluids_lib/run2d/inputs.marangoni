@@ -113,7 +113,6 @@ ns.init_shrink    = 0.1
 ns.change_max     = 1.1      
 ns.visc_coef      = 1.0  
 ns.gravity        = 0.0
-ns.use_lsa=0
 ns.tension        = 7.0
 ns.tension_min    = 0.5
 ns.tension_T0     = 383.0

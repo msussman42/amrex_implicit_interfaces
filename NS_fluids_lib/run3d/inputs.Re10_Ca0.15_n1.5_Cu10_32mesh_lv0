@@ -12,7 +12,6 @@ geometry.is_periodic = 1 1 0
 
 ns.tempconst=293.0 293.0 # default values for incomp flows
 ns.pressure_error_cutoff=0.0 0.0  # used only for compressible flows
-ns.use_lsa=1 # 1=use linear stability analysis to determined capillary speed.
 ns.num_materials=2
 ns.num_species_var=0
 

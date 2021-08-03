@@ -81,7 +81,6 @@ ns.change_max     = 1.1
 ns.visc_coef      = 0.0033
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0
-ns.use_lsa=0
 # 12 (diesel-air), 13 (diesel-water), 23 (water-air)
 # sigma_12=1/We  
 # non-dim values: 28.3, 50.0, 72.7

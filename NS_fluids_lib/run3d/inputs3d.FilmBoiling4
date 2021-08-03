@@ -178,7 +178,6 @@ mac.visc_abs_tol   = 1.0e-9
 ns.gravity_dir = 3  # 1,2, or 3  (2 in 2D is default)
 ns.gravity        = -9.8 #  dimensional  MKS
 
-ns.use_lsa=0
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 #ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
 ns.DrhoDT = 0.0 0.0 0.0 0.0   # units: 1/degree K

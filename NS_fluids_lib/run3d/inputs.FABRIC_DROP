@@ -173,7 +173,6 @@ Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 mac.mac_tol=1.0e-10
 mac.mac_abs_tol    = 1.0e-10
-ns.use_lsa=0
 
 
 # select single or double precision of FAB output data

@@ -71,7 +71,6 @@ ns.gravity        = 0.0
 # contact angle 135
 # We=rho L U^2/sigma
 ns.tension        = 50.0 85.4 50.0 # 50.0 cgs 
-ns.use_lsa=1
 ns.capillary_artificial_viscosity=0.0 0.0 0.0
 ns.Lref=0.0  # if Lref=0 then use dx
 ns.Uref=0.0  # reduce capillary_artificial_viscosity until

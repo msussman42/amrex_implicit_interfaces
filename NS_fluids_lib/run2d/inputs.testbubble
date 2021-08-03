@@ -124,7 +124,6 @@ ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
 # 1.321=L^2 980 0.0025/50   L^2=1.321 * 50/(980*0.0025)=26.959 L=5.19
 # U^2=Lg/1.321=5.19 * 980/1.321   U=62.1
 ns.gravity        = -980.0   # 1.321=L g/U^2
-ns.use_lsa=0
 # U^2=50/(1 L 0.0025)
 ns.tension        = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 #ns.fixed_dt	  = 0.0025     # hardwire dt

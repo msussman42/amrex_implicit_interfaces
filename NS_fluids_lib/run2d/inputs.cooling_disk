@@ -70,7 +70,6 @@ ns.init_shrink    = 0.1
 ns.change_max     = 1.1  
 ns.visc_coef      = 1.0   
 ns.gravity        = -1000.0
-ns.use_lsa=0
 ns.tension        = 0.0
 # delta_t=20 in MIT test
 ns.min_velocity_for_dt=20.0

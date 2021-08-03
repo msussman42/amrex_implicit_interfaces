@@ -80,7 +80,6 @@ ns.gravity        = -980.0
 # 1-68.2/71.7 =cos(theta)
 # 76 degrees: 21.25-3.64=71.7 cos(76 degrees)
 ns.tension        = 71.7 3.64 21.25   # LV SL SV
-ns.use_lsa=0
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 ns.twall=0.0

@@ -116,7 +116,6 @@ ns.visc_coef      = 1.0
 ns.gravity        = 0.0   # body force  (gravity in MKS units)
 ns.gravityangle = 0.0
 ns.tension        = 73.0 
-ns.use_lsa=1
 #ns.fixed_dt	  = 0.02     # hardwire dt
 ns.sum_interval   = 10      # timesteps between computing mass 
 

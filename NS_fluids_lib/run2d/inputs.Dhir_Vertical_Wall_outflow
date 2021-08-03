@@ -98,7 +98,6 @@ ns.visc_abs_tol   = 1.0e-10
 ns.gravity        = -9.8 #  dimensional  MKS
 # NOV 2018 (3 or 4 materials)
 ns.gravity_dir=1 #gravity direction:1=x,2=y (2 in 2D is default)
-ns.use_lsa=0
 # NOV 2018 (3 or 4 materials)
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 ns.DrhoDT = -0.0007 0.0 0.0 0.0  # units: 1/degree K

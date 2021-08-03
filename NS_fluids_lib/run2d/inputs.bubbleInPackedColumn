@@ -84,7 +84,6 @@ ns.gravity        = 0.0
 ns.tension        = 71.7  71.7  41.7 #  VS VL VS LS   contact angle=70
 # OCTOBER 23: surface tension was causing the inlet instability.
 #ns.tension        = 0.0 0.0 0.0
-ns.use_lsa=0
 ns.shock_timestep=0 0 0      # 0=use "c" at t=0, 1=always use "c", 2=never
 #ns.fixed_dt	  = 2.0e-8   # hardwire dt
 ns.sum_interval   = 10      # timesteps between computing mass 

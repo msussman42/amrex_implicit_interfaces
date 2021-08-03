@@ -75,7 +75,6 @@ ns.gravity        = 980.7
 # 1-68.2/71.7 =cos(theta)
 ns.tension        = 71.7 3.64 21.25   # LV SL SV
 #ns.tension        = 71.7 71.7 71.7   # LV SL SV
-ns.use_lsa=1
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 ns.twall=0.0
