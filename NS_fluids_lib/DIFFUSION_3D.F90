@@ -528,7 +528,7 @@ stop
              stop
             endif
             ! units of DrhoDT are 1/(degrees Kelvin)
-            ! DTEMP will have no units after dividing by density.
+            ! DTEMP will have no units after dividing by total density.
             ! fort_tempconst is the temperature of the inner boundary
             ! for the differentially heated rotating annulus problem.
             DTEMP=DTEMP+ &
