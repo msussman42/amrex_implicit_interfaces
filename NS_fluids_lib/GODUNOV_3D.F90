@@ -5799,7 +5799,7 @@ stop
        momden,DIMS(momden), &
        recon,DIMS(recon), &
        xlo,dx, &
-       gravity_normalized, &
+       gravity_normalized, & !gravity_normalized>0 unless invert_gravity
        DrhoDT, &
        override_density, &
        nmat, &
@@ -5911,6 +5911,14 @@ stop
        ! do nothing
       else
        print *,"levelrz invalid dencor"
+       stop
+      endif
+      if (gravity_normalized.ge.zero) then
+       ! do nothing
+      else if (gravity_normalized.le.zero) then
+       ! do nothing
+      else
+       print *,"gravity_normalized is NaN"
        stop
       endif
 
@@ -6026,7 +6034,7 @@ stop
            endif
 
           else
-           print *,"density_of_TZ bust"
+           print *,"density_of_TZ is NaN"
            stop
           endif
 

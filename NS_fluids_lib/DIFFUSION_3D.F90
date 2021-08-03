@@ -105,6 +105,8 @@ stop
 ! Diagonal terms not multiplied by 2.
        subroutine fort_hoopimplicit( &
          override_density, &
+         constant_density_all_time, & ! 1..nmat
+         nstate, &
          gravity_normalized, & ! gravity_normalized>0 unless invert_gravity
          grav_dir, &
          force,DIMS(force), &
@@ -145,7 +147,9 @@ stop
        IMPLICIT NONE
 
        INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: nstate
        INTEGER_T, intent(in) :: override_density(nmat)
+       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
        INTEGER_T, intent(in) :: grav_dir
        REAL_T, intent(in) :: gravity_normalized
  
@@ -196,7 +200,7 @@ stop
        REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: uold(DIMV(uold),nsolve)
        REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(out),target :: unew(DIMV(unew),nsolve)
+       REAL_T, intent(inout),target :: unew(DIMV(unew),nstate)
        REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
        REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
@@ -216,10 +220,14 @@ stop
        REAL_T inverseden
        REAL_T mu_cell
        INTEGER_T vofcomp
+       INTEGER_T dencomp
        INTEGER_T nhalf
        REAL_T localF
+       REAL_T rho_base
        REAL_T local_temp
        REAL_T DTEMP
+       REAL_T cell_density_denom
+       REAL_T Fsolid
        REAL_T vt_over_r,ut_over_r
        REAL_T param1,param2,hoop_force_coef
        INTEGER_T ut_comp
@@ -227,6 +235,13 @@ stop
        REAL_T LStest,LScrit
 
        nhalf=3
+
+       if (nstate.eq.(SDIM+1)+nmat*(num_state_material+ngeom_raw)+1) then
+        ! do nothing
+       else
+        print *,"nstate invalid"
+        stop
+       endif
 
        if (nsolve.eq.SDIM) then
         ! do nothing
@@ -300,6 +315,14 @@ stop
         ! do nothing
        else
         print *,"angular_velocity cannot be negative"
+        stop
+       endif
+       if (gravity_normalized.ge.zero) then
+        ! do nothing
+       else if (gravity_normalized.le.zero) then
+        ! do nothing
+       else
+        print *,"gravity_normalized is NaN"
         stop
        endif
 
@@ -444,22 +467,51 @@ stop
          RCEN=xsten(0,1)
 
          DTEMP=zero
+         cell_density_denom=zero
+         Fsolid=zero
 
          do im=1,nmat
 
-          if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
-              (override_density(im).eq.1)) then ! rho=rho(T,Y,z)
+          vofcomp=(im-1)*ngeom_recon+1
+          localF=recon(D_DECL(i,j,k),vofcomp)
+          if ((localF.ge.-VOFTOL).and.(localF.le.one+VOFTOL)) then
+           if (localF.lt.zero) then
+            localF=zero
+           endif
+           if (localF.gt.one) then
+            localF=one
+           endif
+          else
+           print *,"localF out of range"
+           stop
+          endif
+          dencomp=(SDIM+1)+(im-1)*num_state_material+1
+          if (constant_density_all_time(im).eq.1) then
+           rho_base=fort_denconst(im)
+          else if (constant_density_all_time(im).eq.0) then
+           rho_base=unew(D_DECL(i,j,k),dencomp)
+          else
+           print *,"constant_density_all_time(im) invalid"
+           stop
+          endif
+          if (rho_base.gt.zero) then
            ! do nothing
+          else
+           print *,"rho_base invalid"
+           stop
+          endif
+          if (is_rigid(nmat,im).eq.1) then
+           Fsolid=Fsolid+localF
+          else if (is_rigid(nmat,im).eq.0) then
+           cell_density_denom=cell_density_denom+localF*rho_base
+
+           if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
+               (override_density(im).eq.1)) then ! rho=rho(T,Y)
+            ! do nothing
 
   !Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
-          else if (override_density(im).eq.2) then 
-           vofcomp=(im-1)*ngeom_recon+1
-           localF=recon(D_DECL(i,j,k),vofcomp)
+           else if (override_density(im).eq.2) then 
 
-           if ((localF.ge.-VOFTOL).and.(localF.lt.one-VOFTOL)) then
-            ! do nothing
-           else if (abs(localF-one).le.VOFTOL) then
- 
             local_temp=thermal(D_DECL(i,j,k))
 
             if (local_temp.gt.zero) then
@@ -476,26 +528,55 @@ stop
              stop
             endif
             ! units of DrhoDT are 1/(degrees Kelvin)
-            ! DTEMP has no units
+            ! DTEMP will have no units after dividing by density.
             ! fort_tempconst is the temperature of the inner boundary
             ! for the differentially heated rotating annulus problem.
-            DTEMP=DTEMP+fort_DrhoDT(im)*(local_temp-fort_tempconst(im))
+            DTEMP=DTEMP+ &
+              localF*rho_base* &
+              fort_DrhoDT(im)*(local_temp-fort_tempconst(im))
+
            else
-            print *,"localF invalid"
+            print *,"override_density invalid"
             stop
            endif
           else
-           print *,"override_density invalid"
+           print *,"is_rigid(nmat,im) invalid"
            stop
           endif
          enddo ! im=1..nmat
+
+         if (cell_density_denom.gt.zero) then
+          ! do nothing
+         else
+          print *,"cell_density_denom invalid"
+          stop
+         endif
+         if ((Fsolid.ge.zero).and.(Fsolid.le.one+VOFTOL)) then
+          ! do nothing
+         else
+          print *,"Fsolid invalid"
+          stop
+         endif
+         if (Fsolid.ge.half) then
+          DTEMP=zero
+         else if (Fsolid.le.half) then
+          DTEMP=DTEMP/cell_density_denom
+         else
+          print *,"Fsolid is NaN"
+          stop
+         endif
 
           ! gravity force (temperature dependence)
           ! gravity_normalized>0 means that gravity is directed downwards.
           ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
           ! units of gravity_normalized: m/s^2
           ! DTEMP has no units.
-         unp1(grav_dir)=unp1(grav_dir)-dt*gravity_normalized*DTEMP
+         if (abs(DTEMP).ge.zero) then
+          unp1(grav_dir)=unp1(grav_dir)-dt*gravity_normalized*DTEMP
+         else
+          print *,"DTEMP is NaN"
+          stop
+         endif
 
           ! polar coordinates: coriolis force (temperature dependence)
           !                    centrifugal force (temperature dependence).

@@ -11075,7 +11075,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // in: GODUNOV_3D.F90
+     // declared in: GODUNOV_3D.F90
      // if override_density[im]==1, then rho_im=rho(T) 
     int fort_im=im+1;
     fort_derive_mom_den(

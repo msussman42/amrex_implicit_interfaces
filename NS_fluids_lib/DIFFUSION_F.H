@@ -16,6 +16,8 @@ extern "C"
 {
     void fort_hoopimplicit(
       int* override_density,
+      int* constant_density_all_time,
+      int* nstate,
       Real* gravity_normalized,
       int* gravity_dir,
       Real *force,AMREX_ARLIM_P(forcelo),AMREX_ARLIM_P(forcehi),
