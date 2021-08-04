@@ -490,7 +490,6 @@ extern "C" {
       Real* gravity_normalized,
       int* gravity_dir,
       Real* angular_velocity,
-      Real* denconst_gravity,
       int* level,
       int* finest_level,
       int* facecut_index,

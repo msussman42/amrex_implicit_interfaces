@@ -805,10 +805,10 @@ protected:
     void delete_localMF_if_exist(int idx_MF,int ncomp); 
 
     void MaxAdvectSpeedALL(Vector<Real> dt_min,
-        Real* vel_max,Real* vel_max_estdt,
+        Real* vel_max_estdt,
 	Real& vel_max_cap_wave,int caller_id);
     void MaxAdvectSpeed(Vector<Real> dt_min,
-        Real* vel_max,Real* vel_max_estdt,
+        Real* vel_max_estdt,
         Real& vel_max_cap_wave,int caller_id);
     void DumpProcNum();
 
@@ -1744,6 +1744,7 @@ protected:
      // 1 bit => ignore advective scales
      // 2 bit => ignore surface tension scales
      // 4 bit => ignore gravity scales
+    static int n_scales;
     static int ignore_fast_scales;
     static Vector<Real> current_dt_group; 
     static Vector<Real> hold_dt_group;
@@ -1780,10 +1781,6 @@ protected:
     static Real       gravity;
     static int        invert_gravity;
     static int        gravity_dir;
-    // terminal_velocity_dt==1 =>
-    // use the terminal velocity for CFL condition instead 
-    // of the default condition: u dt < dx  u=g dt  g dt^2 < dx   dt<sqrt(dx/g)
-    static int        terminal_velocity_dt;
     static int        NUM_SCALARS;      // number of non-velocity components
     static Real       visc_coef; 
 
@@ -2240,7 +2237,6 @@ protected:
     static Vector<Real> denconst;
     static Real denconst_max;
     static Real denconst_min;
-    static Vector<Real> denconst_gravity; // def=1.0
      // if stokes_flow==1, do not include u dot grad u term.
     static int stokes_flow;  // def=0
      // if cancel_advection==1, do not include u dot grad S terms for any

@@ -5548,7 +5548,6 @@ void NavierStokes::increment_potential_force() {
      &gravity_normalized,
      &gravity_dir,
      &angular_velocity,
-     denconst_gravity.dataPtr(),
      &level,
      &finest_level,
      &facecut_index,
