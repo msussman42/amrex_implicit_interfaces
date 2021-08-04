@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name="cone_problem"
-#SBATCH --ntasks=8
+#SBATCH --job-name="fabric_drop_problem"
+#SBATCH --ntasks=4
 #SBATCH --partition=backfill
 #SBATCH --mail-type="ALL"
 #SBATCH --mail-user=msussman@fsu.edu
@@ -14,8 +14,8 @@
 # engineering_q
 # engineering_long
 # compiling options:
-# module load gnu-openmpi/2.1.0
-# module load intel-openmpi/2.1.0
+# module load gnu-openmpi
+# module load intel-openmpi
 # sussman@hpc-login.rcc.fsu.edu
 
 # To submit the job 
@@ -40,9 +40,9 @@
 
 # More resourecs at: https://rcc.fsu.edu/doc/ [rcc.fsu.edu]
 pwd;hostname;date
-echo "running amrcone on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
+echo "running amrMPI (FABRIC) on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
 module purge
-module load gnu-openmpi/2.1.0
-#module load intel-openmpi/2.1.0
-srun ~/cone3D/amrcone inputs.cone3d
+module load gnu-openmpi
+#module load intel-openmpi
+srun ~/FABRIC_DROP/amrMPI inputs.FABRIC_DROP
 
