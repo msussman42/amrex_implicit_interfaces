@@ -4320,7 +4320,9 @@ stop
         ! u_max(sdim+1) is max c^2
       subroutine fort_estdt( &
         caller_id, &
-        dt_prev, &
+        tid, &
+        n_scales, &
+        ignore_fast_scales, &
         enable_spectral, &
         AMR_min_phase_change_rate, &
         AMR_max_phase_change_rate, &
@@ -4339,7 +4341,6 @@ stop
         molar_mass, &
         species_molar_mass, &
         velmac,DIMS(velmac), &
-        velmac_nm1,DIMS(velmac_nm1), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
         den,DIMS(den), &
@@ -4351,18 +4352,15 @@ stop
         bfact, &
         min_stefan_velocity_for_dt, &
         cap_wave_speed, &
-        u_max, &
-        u_max_estdt, &
+        uu_estdt_max, &
         u_max_cap_wave, &
         dt_min, &
         rzflag, &
         Uref,Lref, &
         nten, &
         denconst, &
-        denconst_gravity, &
         visc_coef, &
         ns_gravity, &
-        terminal_velocity_dt, &
         dirnormal, &
         nmat, &
         nparts, &
@@ -4378,11 +4376,15 @@ stop
 
       use probf90_module
       use global_utility_module
+      use geometry_intersect_module
       use MOF_routines_module
       use hydrateReactor_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: n_scales
+      INTEGER_T, intent(in) :: ignore_fast_scales
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -4393,7 +4395,6 @@ stop
       INTEGER_T, intent(in) :: nmat,nten
       REAL_T, intent(in) :: AMR_min_phase_change_rate(SDIM)
       REAL_T, intent(in) :: AMR_max_phase_change_rate(SDIM)
-      REAL_T, intent(in) :: dt_prev
       REAL_T, intent(in) :: elastic_time(nmat)
       INTEGER_T, intent(in) :: shock_timestep(nmat)
       INTEGER_T, intent(in) :: material_type(nmat)
@@ -4413,7 +4414,10 @@ stop
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, intent(in) :: time
-      REAL_T u_core,u_core_estdt,uu,uu_estdt,c_core
+      REAL_T uu_estdt
+      REAL_T uu_estdt_core
+      REAL_T uu_estdt_phase_change
+      REAL_T c_core
       REAL_T cc,cleft,cright
       REAL_T cc_diag,cleft_diag,cright_diag
       INTEGER_T i,j,k
@@ -4426,19 +4430,15 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(inout) :: u_max(SDIM+1)
-      REAL_T, intent(inout) :: u_max_estdt(SDIM+1)
+      REAL_T, intent(inout) :: uu_estdt_max(SDIM+1)
       REAL_T, intent(inout) :: u_max_cap_wave
-      REAL_T, intent(inout) :: dt_min
+      REAL_T, intent(inout) :: dt_min(0:n_scales)
       REAL_T user_tension(nten)
       REAL_T Uref,Lref
       REAL_T, intent(in) :: denconst(nmat)
-      REAL_T, intent(in) :: denconst_gravity(nmat)
       REAL_T, intent(in) :: visc_coef
       REAL_T, intent(in) :: ns_gravity
-      INTEGER_T, intent(inout) :: terminal_velocity_dt
       INTEGER_T, intent(in) :: DIMDEC(velmac)
-      INTEGER_T, intent(in) :: DIMDEC(velmac_nm1)
       INTEGER_T, intent(in) :: DIMDEC(velcell)
       INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: DIMDEC(dist)
@@ -4446,8 +4446,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(den)
       REAL_T, target, intent(in) :: velmac(DIMV(velmac))
       REAL_T, pointer :: velmac_ptr(D_DECL(:,:,:))
-      REAL_T, target, intent(in) :: velmac_nm1(DIMV(velmac_nm1))
-      REAL_T, pointer :: velmac_nm1_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(in) :: velcell(DIMV(velcell),SDIM)
       REAL_T, pointer :: velcell_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
@@ -4485,14 +4483,10 @@ stop
       REAL_T dxmin,dxmax,dxmaxLS,den1,den2,visc1,visc2
       INTEGER_T recompute_wave_speed
       REAL_T uulocal
-      REAL_T du_dt
       REAL_T smallestL
       REAL_T denjump
-      REAL_T denjump_gravity
-      REAL_T denjump_terminal
       REAL_T denjump_temp
       REAL_T denmax
-      REAL_T denmax_gravity
       REAL_T USTEFAN,USTEFAN_hold
       REAL_T LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
       REAL_T VOFsrc,VOFdst
@@ -4523,16 +4517,33 @@ stop
       REAL_T elastic_wave_speed
       REAL_T source_perim_factor
       REAL_T dest_perim_factor
-      REAL_T v_terminal
       REAL_T effective_velocity
       REAL_T local_elastic_time
       REAL_T ugrav
       REAL_T local_gravity_coefficient
+      INTEGER_T ignore_advection
+      INTEGER_T ignore_surface_tension
+      INTEGER_T ignore_gravity
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid in fort_estdt"
+       stop
+      endif
+      if (n_scales.eq.3) then
+       ! do nothing
+      else
+       print *,"n_scales invalid"
+       stop
+      endif
+
+      ignore_advection=IAND(ignore_fast_scales,1)
+      ignore_surface_tension=IAND(ignore_fast_scales,2)
+      ignore_gravity=IAND(ignore_fast_scales,4)
 
       nhalf=3
 
       velmac_ptr=>velmac
-      velmac_nm1_ptr=>velmac_nm1
       velcell_ptr=>velcell
       solidfab_ptr=>solidfab
       den_ptr=>den
@@ -4546,12 +4557,6 @@ stop
        ! do nothing
       else
        print *,"caller_id invalid"
-       stop
-      endif
-      if (dt_prev.gt.zero) then
-       ! do nothing
-      else
-       print *,"dt_prev invalid"
        stop
       endif
 
@@ -4573,20 +4578,10 @@ stop
        stop
       endif
 
-      if ((terminal_velocity_dt.eq.0).or. &
-          (terminal_velocity_dt.eq.1)) then
-       ! do nothing
-      else
-       print *,"terminal_velocity_dt invalid"
-       stop
-      endif
-
       vapor_den=one
 
       denjump=zero
-      denjump_gravity=zero
       denmax=zero
-      denmax_gravity=zero
 
        ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
        ! gridtype=MAC or CELL
@@ -4672,10 +4667,6 @@ stop
         print *,"denconst invalid"
         stop
        endif
-       if (denconst_gravity(im).lt.zero) then
-        print *,"denconst_gravity invalid"
-        stop
-       endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
        if (mu.lt.zero) then
         print *,"viscconst invalid"
@@ -4685,9 +4676,6 @@ stop
        if (is_rigid(nmat,im).eq.0) then
         if (denconst(im).gt.denmax) then
          denmax=denconst(im)
-        endif
-        if (denconst_gravity(im).gt.denmax_gravity) then
-         denmax_gravity=denconst_gravity(im)
         endif
        else if (is_rigid(nmat,im).eq.1) then
         ! do nothing
@@ -4699,30 +4687,6 @@ stop
       enddo  ! im=1..nmat
 
       call get_max_denjump(denjump,nmat)
-
-      denjump_gravity=zero
-      do im=1,nmat 
-       if (is_rigid(nmat,im).eq.0) then
-        do im_opp=im+1,nmat
-         if (is_rigid(nmat,im_opp).eq.0) then
-          denjump_temp=abs(denconst_gravity(im)-denconst_gravity(im_opp))
-          if (denjump_temp.gt.denjump_gravity) then
-           denjump_gravity=denjump_temp
-          endif
-         else if (is_rigid(nmat,im_opp).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid invalid"
-          stop
-         endif
-        enddo ! im_opp
-       else if (is_rigid(nmat,im).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
 
       call get_max_user_tension(fort_tension,user_tension,nmat,nten)
 
@@ -4825,7 +4789,6 @@ stop
       endif
 
       call checkbound_array1(fablo,fabhi,velmac_ptr,0,dirnormal,4)
-      call checkbound_array1(fablo,fabhi,velmac_nm1_ptr,0,dirnormal,4)
       call checkbound_array(fablo,fabhi,velcell_ptr,1,-1,4)
       call checkbound_array(fablo,fabhi,solidfab_ptr,0,dirnormal,4)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,4)
@@ -4856,12 +4819,11 @@ stop
               0,dirnormal,27)
 
       if (1.eq.0) then
-       print *,"dt_min before estdt loop: ",dt_min
+       print *,"dt_min before estdt loop: ",dt_min(0)
        print *,"weymouth_factor= ",weymouth_factor
       endif
 
-      u_core = zero
-      u_core_estdt = zero
+      uu_estdt_core = zero
       c_core = zero  ! max of c^2
 
 ! if rz and dirnormal=0 and u>0, need u dt r/(r-u dt) < dx
@@ -4927,8 +4889,8 @@ stop
         stop
        endif
 
-       uu=zero
        uu_estdt=zero
+       uu_estdt_phase_change=zero
 
         ! first check that characteristics do not collide or that
         ! a cell does not become a vacuum.
@@ -4941,15 +4903,12 @@ stop
         uleft=velmac(D_DECL(i,j,k))
         uright=velmac(D_DECL(ifaceR,jfaceR,kfaceR))
         if (uleft*uright.le.zero) then
-         uu=max(uu,abs(uleft-uright))
          uu_estdt=max(uu_estdt,abs(uleft-uright))
         endif
        endif
       
        uleftcell=velcell(D_DECL(i-ii,j-jj,k-kk),dirnormal+1)
        urightcell=velcell(D_DECL(i,j,k),dirnormal+1)
-       uu=max(uu,abs(uleftcell))
-       uu=max(uu,abs(urightcell))
        uu_estdt=max(uu_estdt,abs(uleftcell))
        uu_estdt=max(uu_estdt,abs(urightcell))
 
@@ -4969,7 +4928,7 @@ stop
            umaxcell=abs(udiffcell)
           endif
           velsum=velsum+umaxcell
-         enddo ! dir2
+         enddo ! dir2=1..sdim
          uu_estdt=max(uu_estdt,velsum)
         else if (bfact.eq.1) then
          ! do nothing
@@ -4987,12 +4946,10 @@ stop
 
        do partid=0,nparts-1
         velcomp=partid*SDIM+dirnormal+1
-        uu=max(uu,abs(solidfab(D_DECL(i,j,k),velcomp)))
         uu_estdt=max(uu_estdt,abs(solidfab(D_DECL(i,j,k),velcomp)))
        enddo ! partid=0..nparts-1
 
        uulocal=abs(velmac(D_DECL(i,j,k)))
-       du_dt=abs(velmac(D_DECL(i,j,k))-velmac_nm1(D_DECL(i,j,k)))/dt_prev
 
        if (levelrz.eq.0) then
         ! do nothing
@@ -5002,11 +4959,9 @@ stop
             (xstenMAC(0,1).gt.VOFTOL*dx(1))) then
          if (xstenMAC(0,1).ge.hxmac) then
           uulocal=uulocal/( one-three*hxmac/(four*xstenMAC(0,1)) )  
-          du_dt=du_dt/( one-three*hxmac/(four*xstenMAC(0,1)) )  
          else if ((xstenMAC(0,1).gt.zero).and. &
                   (xstenMAC(-1,1).gt.zero)) then
           uulocal=four*uulocal
-          du_dt=four*du_dt
          else
           print *,"xstenMAC invalid estdt 2"
           print *,"i,j,k,dirnormal ",i,j,k,dirnormal
@@ -5020,7 +4975,6 @@ stop
         print *,"levelrz invalid estdt"
         stop
        endif
-       uu=max(uu,uulocal)
        uu_estdt=max(uu_estdt,uulocal)
 
        cleft=zero
@@ -5054,7 +5008,7 @@ stop
             if (elastic_wave_speed.gt.zero) then
              elastic_wave_speed=sqrt(elastic_wave_speed)
              dthold=hx/elastic_wave_speed
-             dt_min=min(dt_min,dthold)
+             dt_min(0)=min(dt_min(0),dthold)
             else if (elastic_wave_speed.eq.zero) then
              ! do nothing
             else
@@ -5331,7 +5285,9 @@ stop
               PHYDWATER, &
               VOFsrc,VOFdst)
 
-             if (USTEFAN_hold.lt.zero) then
+             if (USTEFAN_hold.ge.zero) then
+              ! do nothing
+             else
               print *,"USTEFAN_hold.lt.zero"
               stop
              endif
@@ -5396,8 +5352,7 @@ stop
         stop
        endif
 
-       uu=abs(uu)+two*USTEFAN
-       uu_estdt=abs(uu_estdt)+two*USTEFAN
+       uu_estdt_phase_change=abs(uu_estdt_phase_change)+two*USTEFAN
 
        if (is_rigid(nmat,im_primaryL).eq.0) then
         ibase=(im_primaryL-1)*num_state_material
@@ -5495,23 +5450,31 @@ stop
        cc=max(cleft,cright)  ! c^2
 
        call check_user_defined_velbc(time,dirnormal,uu_estdt,dx)
-       call check_user_defined_velbc(time,dirnormal,uu,dx)
 
-       u_core = max(u_core,abs(uu))
-       u_core_estdt = max(u_core_estdt,abs(uu_estdt))
+       uu_estdt_core = max(uu_estdt_core, &
+           abs(uu_estdt)+abs(uu_estdt_phase_change))
        c_core = max(c_core,abs(cc_diag))  ! c^2
 
-       if (uu_estdt.lt.uu) then
-        print *,"uu_estdt invalid"
+       effective_velocity=abs(uu_estdt_phase_change/weymouth_factor)
+       if (effective_velocity.gt.zero) then
+        dt_min(0)=min(dt_min(0),hx/effective_velocity)
+       else if (effective_velocity.eq.zero) then
+        ! do nothing
+       else
+        print *,"effective_velocity invalid"
         stop
        endif
-       if (u_core_estdt.lt.u_core) then
-        print *,"u_core_estdt invalid"
-        stop
-       endif
+
        effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)
        if (effective_velocity.gt.zero) then
-        dt_min=min(dt_min,hx/effective_velocity)
+        if (ignore_advection.eq.0) then
+         dt_min(0)=min(dt_min(0),hx/effective_velocity)
+        else if (ignore_advection.eq.1) then
+         dt_min(1)=min(dt_min(1),hx/effective_velocity)
+        else
+         print *,"ignore_advection invalid"
+         stop
+        endif
        else if (effective_velocity.eq.zero) then
         ! do nothing
        else
@@ -5544,9 +5507,19 @@ stop
          stop
         else if (level_cap_wave_speed(iten).eq.zero) then
          ! do nothing
-        else
+        else if (level_cap_wave_speed(iten).gt.zero) then
          dthold=hx/level_cap_wave_speed(iten)
-         dt_min=min(dt_min,dthold)
+         if (ignore_surface_tension.eq.0) then
+          dt_min(0)=min(dt_min(0),dthold)
+         else if (ignore_surface_tension.eq.2) then
+          dt_min(2)=min(dt_min(2),dthold)
+         else
+          print *,"ignore_surface_tension invalid"
+          stop
+         endif
+        else
+         print *,"level_cap_wave_speed is NaN"
+         stop
         endif
 
        else if (gradh.eq.zero) then
@@ -5562,25 +5535,21 @@ stop
 
       local_gravity_coefficient=abs(ns_gravity)
 
-      if (local_gravity_coefficient.gt.zero) then
-
-       if ((caller_id.eq.0).or. & !computeInitialDt
-           (caller_id.eq.3)) then !sum_integrated_quantities.
-        ! do nothing
-       else if ((caller_id.eq.1).or. & ! computeNewDT
-                (caller_id.eq.2)) then ! do_the_advance
-        if (1.eq.0) then
-         local_gravity_coefficient=zero
-        endif
-       else
-        print *,"caller_id invalid"
-        stop
-       endif
-
-      else if (local_gravity_coefficient.eq.zero) then
+      if (local_gravity_coefficient.ge.zero) then
        ! do nothing
       else
-       print *,"local_gravity_coefficient bust"
+       print *,"local_gravity_coefficient is NaN"
+       stop
+      endif
+
+      if ((caller_id.eq.0).or. & !computeInitialDt
+          (caller_id.eq.3)) then !sum_integrated_quantities.
+       ! do nothing
+      else if ((caller_id.eq.1).or. & ! computeNewDT
+               (caller_id.eq.2)) then ! do_the_advance
+       ! do nothing
+      else
+       print *,"caller_id invalid"
        stop
       endif
 
@@ -5588,9 +5557,8 @@ stop
 
        if (denmax.gt.zero) then
 
-        if (terminal_velocity_dt.eq.0) then
-
          if (denjump.gt.zero) then
+
           if (denmax.gt.zero) then
            denjump=denjump/denmax
           else
@@ -5611,7 +5579,14 @@ stop
             four*abs(denjump*local_gravity_coefficient)*dxmin))
           if (ugrav.gt.zero) then
            dthold=dxmin/ugrav 
-           dt_min=min(dt_min,dthold)
+           if (ignore_gravity.eq.0) then
+            dt_min(0)=min(dt_min(0),dthold)
+           else if (ignore_gravity.eq.4) then
+            dt_min(3)=min(dt_min(3),dthold)
+           else
+            print *,"ignore_gravity invalid"
+            stop
+           endif
           else
            print *,"ugrav invalid 1"
            print *,"uu_estdt ",uu_estdt
@@ -5628,108 +5603,6 @@ stop
           stop
          endif
 
-         if (denjump_gravity.gt.zero) then
-          if (denmax_gravity.gt.zero) then
-           denjump_gravity=denjump_gravity/denmax_gravity
-           ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
-             four*abs(denjump_gravity*local_gravity_coefficient)*dxmin))
-           if (ugrav.gt.zero) then
-            dthold=dxmin/ugrav 
-            dt_min=min(dt_min,dthold)
-           else
-            print *,"ugrav invalid 2"
-            print *,"uu_estdt ",uu_estdt
-            print *,"denjump_gravity ",denjump_gravity
-            print *,"local_gravity_coefficient ",local_gravity_coefficient
-            print *,"dxmin ",dxmin
-            print *,"denmax ",denmax
-            stop
-           endif
-          else if (denmax_gravity.eq.zero) then
-           ! do nothing
-          else
-           print *,"denmax_gravity invalid"
-           stop
-          endif
-         else if (denjump_gravity.eq.zero) then
-          ! do nothing
-         else
-          print *,"denjump_gravity cant be neg, denjump_gravity = ", &
-            denjump_gravity
-          stop
-         endif
-
-        else if (terminal_velocity_dt.eq.1) then
-
-         denjump_terminal=fort_denconst(2)-fort_denconst(1)
-         if (denjump_terminal.eq.zero) then
-          denjump_terminal=denconst_gravity(2)-denconst_gravity(1)
-          if (denjump_terminal.eq.zero) then
-           print *,"denjump_terminal invalid"
-           stop
-          else if (denjump_terminal.gt.zero) then
-           ! do nothing
-          else
-           print *,"denjump_terminal invalid"
-           stop
-          endif
-         else if (denjump_terminal.gt.zero) then
-          ! do nothing
-         else
-          print *,"denjump_terminal invalid"
-          stop
-         endif
-          
-         if (denjump_terminal.gt.zero) then
-          if (fort_viscconst(1).gt.zero) then
-           if (local_gravity_coefficient.gt.zero) then
-            if (radblob.gt.zero) then
-             ! units: kg/m^3  m s/kg   m/s^2  m^2=(s/m^2) m^3/s^2=m/s
-             v_terminal=(two/nine)*(denjump_terminal)* &
-              (one/fort_viscconst(1))*local_gravity_coefficient*(radblob**2) 
-             v_terminal=two*v_terminal
-             if (v_terminal.gt.zero) then
-              dthold=dxmin/v_terminal
-              dt_min=min(dt_min,dthold)
-
-              if (1.eq.0) then
-               print *,"v_terminal= ",v_terminal
-               print *,"dthold= ",dthold
-               print *,"dt_min= ",dt_min
-               print *,"dirnormal= ",dirnormal
-               print *,"u_core= ",u_core
-               print *,"u_core_estdt= ",u_core_estdt
-               print *,"uu ",uu
-               print *,"uu_estdt ",uu_estdt
-               print *,"u_max(dirnormal+1)= ",u_max(dirnormal+1)
-               print *,"u_max_estdt(dirnormal+1)= ",u_max_estdt(dirnormal+1)
-              endif
-             else
-              print *,"v_terminal invalid"
-              stop
-             endif
-            else
-             print *,"radblob invalid"
-             stop
-            endif
-           else
-            print *,"local_gravity_coefficient invalid"
-            stop
-           endif
-          else
-           print *,"fort_viscconst(1) invalid"
-           stop
-          endif
-         else
-          print *,"denjump_terminal invalid"
-          stop
-         endif
-
-        else
-         print *,"terminal_velocity_dt invalid"
-         stop
-        endif
-
        else
         print *,"denmax invalid"
         stop
@@ -5738,33 +5611,15 @@ stop
       else if (local_gravity_coefficient.eq.zero) then
        ! do nothing
       else
-       print *,"local_gravity_coefficient bust"
+       print *,"local_gravity_coefficient is NaN"
        stop
       endif 
 
-      ugrav=half*(uu_estdt+sqrt(uu_estdt**2+ &
-         four*du_dt*dxmin))
-      if (ugrav.gt.zero) then
-       dthold=dxmin/ugrav
-       dt_min=min(dt_min,dthold)
-      else if (ugrav.eq.zero) then
-       ! do nothing
-      else
-       print *,"ugrav invalid 6323"
-       stop
+      if (uu_estdt_max(dirnormal+1).lt.uu_estdt_core) then
+       uu_estdt_max(dirnormal+1)=uu_estdt_core
       endif
-
-      if (u_max(dirnormal+1).lt.u_core) then
-       u_max(dirnormal+1)=u_core
-      endif
-      if (u_max_estdt(dirnormal+1).lt.u_core_estdt) then
-       u_max_estdt(dirnormal+1)=u_core_estdt
-      endif
-      if (u_max(SDIM+1).lt.c_core) then
-       u_max(SDIM+1)=c_core  ! c^2
-      endif
-      if (u_max_estdt(SDIM+1).lt.c_core) then
-       u_max_estdt(SDIM+1)=c_core  ! c^2
+      if (uu_estdt_max(SDIM+1).lt.c_core) then
+       uu_estdt_max(SDIM+1)=c_core  ! c^2
       endif
 
       return

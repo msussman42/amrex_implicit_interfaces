@@ -11600,7 +11600,6 @@ END SUBROUTINE SIMP
        gravity_normalized, &
        gravity_dir_parm, &
        angular_velocity, &
-       denconst_gravity, &
        level, &
        finest_level, &
        facecut_index, &
@@ -11644,7 +11643,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: denconst_gravity(nmat)
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
@@ -11665,15 +11663,11 @@ END SUBROUTINE SIMP
  
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
-      INTEGER_T iside
 
       REAL_T local_cut
       REAL_T local_macnew
 
-      REAL_T vol_total,mass_total,volside,denface_gravity
       REAL_T gravity_increment
-
-      INTEGER_T im
 
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -11765,33 +11759,6 @@ END SUBROUTINE SIMP
 
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,16)
 
-       vol_total=zero
-       mass_total=zero
-
-       do iside=0,1
-       do im=1,nmat
-
-        volside=xface(D_DECL(i,j,k),vofface_index+2*(im-1)+iside+1)
-        vol_total=vol_total+volside
-        if (denconst_gravity(im).ge.zero) then
-         mass_total=mass_total+denconst_gravity(im)*volside
-        else
-         print *,"denconst_gravity invalid"
-         stop
-        endif
-     
-       enddo ! im=1..nmat
-       enddo ! iside=0..1
-
-       if (vol_total.eq.zero) then
-        denface_gravity=one
-       else if (vol_total.gt.zero) then
-        denface_gravity=mass_total/vol_total
-       else
-        print *,"vol_total invalid"
-        stop
-       endif
-
        local_cut=xface(D_DECL(i,j,k),facecut_index+1)
        if ((local_cut.ge.zero).and.(local_cut.le.half)) then
         local_cut=zero
@@ -11804,8 +11771,7 @@ END SUBROUTINE SIMP
 
         ! 1. surface tension 
         ! 2. gravity 
-       gravity_increment= &
-          denface_gravity*local_cut*facegrav(D_DECL(i,j,k))
+       gravity_increment=local_cut*facegrav(D_DECL(i,j,k))
 
        local_macnew=macnew(D_DECL(i,j,k))+gravity_increment
 

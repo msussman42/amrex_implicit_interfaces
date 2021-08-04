@@ -322,6 +322,7 @@ Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
 
+int NavierStokes::n_scales=3;
 int NavierStokes::ignore_fast_scales=0;
 Vector<Real> NavierStokes::current_dt_group;
 Vector<Real> NavierStokes::hold_dt_group;
@@ -335,10 +336,6 @@ Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::MUSHY_THICK  = 2.0;
 Real NavierStokes::gravity      = 0.0;
 
-// terminal_velocity_dt==1 =>
-// use the terminal velocity for CFL condition instead 
-// of the default condition: u dt < dx  u=g dt  g dt^2 < dx   dt<sqrt(dx/g)
-int NavierStokes::terminal_velocity_dt = 0;
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
 int  NavierStokes::sum_interval = -1;
@@ -884,7 +881,6 @@ Vector<Real> NavierStokes::denconst;
 Real NavierStokes::denconst_max=0.0;
 Real NavierStokes::denconst_min=0.0;
 Vector<Real> NavierStokes::denconst_interface;
-Vector<Real> NavierStokes::denconst_gravity; // def=1.0
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
@@ -2434,8 +2430,8 @@ NavierStokes::read_params ()
     pp.query("change_max_init",change_max_init);
 
     ignore_fast_scales=0;
-    current_dt_group.resize(3);
-    hold_dt_group.resize(3);
+    current_dt_group.resize(n_scales);
+    hold_dt_group.resize(n_scales);
     for (int iscale=0;iscale<current_dt_group.size();iscale++) {
      current_dt_group[iscale]=0.0;
      hold_dt_group[iscale]=0.0;
@@ -2478,13 +2474,9 @@ NavierStokes::read_params ()
 
     pp.query("gravity",gravity);
     pp.query("gravity_dir",gravity_dir);
-    pp.query("terminal_velocity_dt",terminal_velocity_dt);
     pp.query("invert_gravity",invert_gravity);
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
      amrex::Error("gravity dir invalid");
-    if ((terminal_velocity_dt<0)||
-        (terminal_velocity_dt>1))
-     amrex::Error("terminal_velocity_dt invalid");
 
     pp.get("visc_coef",visc_coef);
 
@@ -2520,7 +2512,6 @@ NavierStokes::read_params ()
      std::cout << "gravity " << gravity << '\n';
      std::cout << "invert_gravity " << invert_gravity << '\n';
      std::cout << "gravity_dir " << gravity_dir << '\n';
-     std::cout << "terminal_velocity_dt " << terminal_velocity_dt << '\n';
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
      std::cout << "viscous_enable_spectral " << 
@@ -3183,11 +3174,6 @@ NavierStokes::read_params ()
     for (int i=0;i<nten;i++) 
      denconst_interface[i]=0.0;
     pp.queryarr("denconst_interface",denconst_interface,0,nten);
-
-    denconst_gravity.resize(nmat);
-    for (int i=0;i<nmat;i++) 
-     denconst_gravity[i]=1.0;
-    pp.queryarr("denconst_gravity",denconst_gravity,0,nmat);
 
     pp.query("stokes_flow",stokes_flow);
     pp.query("cancel_advection",cancel_advection);
@@ -4640,8 +4626,6 @@ NavierStokes::read_params ()
       std::cout << "stiffCV i=" << i << " " << stiffCV[i] << '\n';
       std::cout << "stiffGAMMA i=" << i << " " << stiffGAMMA[i] << '\n';
       std::cout << "added_weight i=" << i << " " << added_weight[i] << '\n';
-      std::cout << "denconst_gravity i=" << i << " " << 
-         denconst_gravity[i] << '\n';
       std::cout << "denconst i=" << i << " " << denconst[i] << '\n';
       std::cout << "density_floor i=" << i << " " << density_floor[i] << '\n';
       std::cout << "density_ceiling i="<<i<<" "<< density_ceiling[i] << '\n';
@@ -18702,8 +18686,9 @@ void NavierStokes::DumpProcNum() {
 
 // called from: estTimeStep (caller_id=0,1,2)
 //              sum_integrated_quantities (caller_id=3) 
-void NavierStokes::MaxAdvectSpeedALL(Vector<Real> dt_min,
-  Real* vel_max,Real* vel_max_estdt,
+void NavierStokes::MaxAdvectSpeedALL(
+  Vector<Real> dt_min,
+  Real* vel_max_estdt,
   Real& vel_max_cap_wave,
   int caller_id) {
 
@@ -18713,14 +18698,12 @@ void NavierStokes::MaxAdvectSpeedALL(Vector<Real> dt_min,
 
  last_finest_level=finest_level; 
  
- Real local_vel_max[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real local_vel_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real local_vel_max_cap_wave;
  Vector<Real> local_dt_min;
  local_dt_min.resize(dt_min.size());
 
  for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
-  vel_max[dir]=0.0;
   vel_max_estdt[dir]=0.0;
  }
  vel_max_cap_wave=0.0;
@@ -18742,21 +18725,20 @@ void NavierStokes::MaxAdvectSpeedALL(Vector<Real> dt_min,
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
-   local_vel_max[dir]=0.0;
    local_vel_max_estdt[dir]=0.0;
   }
   local_vel_max_cap_wave=0.0;
 
   for (int iscale=0;iscale<local_dt_min.size();iscale++) {
-   local_dt_min[iscale]=1.0E+25;
+   local_dt_min[iscale]=1.0E+30;
    if (local_dt_min[iscale]<dt_max) 
     local_dt_min[iscale]=dt_max;
   }
 
-  ns_level.MaxAdvectSpeed(local_dt_min,local_vel_max,local_vel_max_estdt,
+  ns_level.MaxAdvectSpeed(local_dt_min,
+    local_vel_max_estdt,
     local_vel_max_cap_wave,caller_id); 
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
-   vel_max[dir] = std::max(vel_max[dir],local_vel_max[dir]);
    vel_max_estdt[dir] = std::max(vel_max_estdt[dir],local_vel_max_estdt[dir]);
   }
   vel_max_cap_wave = std::max(vel_max_cap_wave,local_vel_max_cap_wave);
@@ -18769,9 +18751,10 @@ void NavierStokes::MaxAdvectSpeedALL(Vector<Real> dt_min,
 // MaxAdvectSpeedALL called from: 
 //     estTimeStep (caller_id=0,1,2)
 //     sum_integrated_quantities (caller_id=3) 
-// vel_max[0,1,2]= max vel in direction  vel_max[sdim]=max c^2
+// vel_max_estdt[0,1,2]= max vel in direction + extra cell centered velocity
+//   considerations if spectral element method.
+//   vel_max_estdt[sdim]=max c^2
 void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
- Real* vel_max,
  Real* vel_max_estdt,
  Real& vel_max_cap_wave,
  int caller_id) {
@@ -18822,28 +18805,25 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
  const Real* dx = geom.CellSize();
 
  for (int iscale=0;iscale<dt_min.size();iscale++) {
-  dt_min[iscale]=1.0E+25;
+  dt_min[iscale]=1.0E+30;
   if (dt_min[iscale]<dt_max) 
    dt_min[iscale]=dt_max;
  }
 
  for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
-  vel_max[dir]=0.0;
   vel_max_estdt[dir]=0.0;
  }
  vel_max_cap_wave=0.0;
 
  Vector< Vector<Real> > local_cap_wave_speed;
- Vector< Vector<Real> > local_vel_max;
  Vector< Vector<Real> > local_vel_max_estdt;
  Vector<Real> local_vel_max_cap_wave;
  Vector< Vector< Real > > local_dt_min;
  local_cap_wave_speed.resize(thread_class::nthreads);
- local_vel_max.resize(thread_class::nthreads);
  local_vel_max_estdt.resize(thread_class::nthreads);
  local_vel_max_cap_wave.resize(thread_class::nthreads);
 
- local_dt_min.resize(dt_min.size);
+ local_dt_min.resize(dt_min.size());
 
  for (int iscale=0;iscale<dt_min.size();iscale++) {
   local_dt_min[iscale].resize(thread_class::nthreads);
@@ -18856,16 +18836,14 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
    local_cap_wave_speed[tid][iten]=cap_wave_speed[iten];
   }
 
-  local_vel_max[tid].resize(AMREX_SPACEDIM+1);//last component max|c|^2
   local_vel_max_estdt[tid].resize(AMREX_SPACEDIM+1);//last component max|c|^2
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
-   local_vel_max[tid][dir]=0.0;
    local_vel_max_estdt[tid][dir]=0.0;
   }
   local_vel_max_cap_wave[tid]=0.0;
 
   for (int iscale=0;iscale<dt_min.size();iscale++) {
-   local_dt_min[iscale][tid]=1.0E+25;
+   local_dt_min[iscale][tid]=1.0E+30;
    if (local_dt_min[iscale][tid]<dt_max) 
     local_dt_min[iscale][tid]=dt_max;
   }
@@ -18931,10 +18909,19 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-FIX ME
+
+   Vector<Real> local_dt_min_thread;
+   local_dt_min_thread.resize(n_scales+1);
+   for (int iscale=0;iscale<dt_min.size();iscale++) {
+    local_dt_min_thread[iscale]=local_dt_min[iscale][tid_current];
+   }
+
     // in: GODUNOV_3D.F90
    fort_estdt(
     &caller_id,
+    &tid_current,
+    &n_scales,
+    &ignore_fast_scales,
     &local_enable_spectral,
     parent->AMR_min_phase_change_rate.dataPtr(),
     parent->AMR_max_phase_change_rate.dataPtr(),
@@ -18964,18 +18951,15 @@ FIX ME
     &bfact,
     &min_stefan_velocity_for_dt,
     local_cap_wave_speed[tid_current].dataPtr(),
-    local_vel_max[tid_current].dataPtr(),
     local_vel_max_estdt[tid_current].dataPtr(),
     &local_vel_max_cap_wave[tid_current],
-    &local_dt_min[tid_current],
+    local_dt_min_thread.dataPtr(),
     &rzflag,
     &Uref,&Lref,
     &nten,
     denconst.dataPtr(),
-    denconst_gravity.dataPtr(),
     &visc_coef,
     &gravity,
-    &terminal_velocity_dt,
     &dir,
     &nmat,
     &nparts,
@@ -18988,6 +18972,11 @@ FIX ME
     &EILE_flag, 
     &level,
     &finest_level);
+
+   for (int iscale=0;iscale<dt_min.size();iscale++) {
+    local_dt_min[iscale][tid_current]=local_dt_min_thread[iscale];
+   }
+
   }  //mfi
 } // omp
   ns_reconcile_d_num(106);
@@ -19002,11 +18991,6 @@ FIX ME
     if (local_dt_min[iscale][tid]<local_dt_min[iscale][0])
      local_dt_min[iscale][0]=local_dt_min[iscale][tid];
    }
-
-   if (local_vel_max[tid][dir]>local_vel_max[0][dir])
-    local_vel_max[0][dir]=local_vel_max[tid][dir];
-   if (local_vel_max[tid][AMREX_SPACEDIM]>local_vel_max[0][AMREX_SPACEDIM])
-    local_vel_max[0][AMREX_SPACEDIM]=local_vel_max[tid][AMREX_SPACEDIM];
 
    if (local_vel_max_estdt[tid][dir]>local_vel_max_estdt[0][dir])
     local_vel_max_estdt[0][dir]=local_vel_max_estdt[tid][dir];
@@ -19023,8 +19007,6 @@ FIX ME
    ParallelDescriptor::ReduceRealMax(local_cap_wave_speed[0][iten]);
   }
 
-  ParallelDescriptor::ReduceRealMax(local_vel_max[0][dir]);
-  ParallelDescriptor::ReduceRealMax(local_vel_max[0][AMREX_SPACEDIM]);
   ParallelDescriptor::ReduceRealMax(local_vel_max_estdt[0][dir]);
   ParallelDescriptor::ReduceRealMax(local_vel_max_estdt[0][AMREX_SPACEDIM]);
 
@@ -19043,7 +19025,6 @@ FIX ME
   cap_wave_speed[iten]=local_cap_wave_speed[0][iten];
 
  for (int dir=0;dir<=AMREX_SPACEDIM;dir++) {
-  vel_max[dir]=local_vel_max[0][dir];
   vel_max_estdt[dir]=local_vel_max_estdt[0][dir];
  }
  vel_max_cap_wave=local_vel_max_cap_wave[0];
@@ -19084,12 +19065,11 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
    smallest_dx=dxfine[dir];
  }
 
- Array<Real> dt_min;
- dt_min.resize(4);
+ Vector<Real> dt_min;
+ dt_min.resize(n_scales+1);
  for (int iscale=0;iscale<dt_min.size();iscale++) {
   dt_min[iscale]=0.0;
  }
- Real u_max[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real u_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real u_max_cap_wave;
 
@@ -19114,8 +19094,8 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
 
   } else if (fixed_dt_velocity==0.0) {
 
-   MaxAdvectSpeedALL(dt_min,u_max,u_max_estdt,u_max_cap_wave,caller_id);
-   need_dt_values=0;
+   MaxAdvectSpeedALL(dt_min,u_max_estdt,u_max_cap_wave,caller_id);
+   need_all_dt_values=0;
 
    if (min_velocity_for_dt>0.0) {
     Real local_dt_max=smallest_dx/min_velocity_for_dt;
@@ -19162,12 +19142,12 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
   amrex::Error("local_fixed_dt invalid");
  }
 
- if (need_dt_values==1) {
-  MaxAdvectSpeedALL(dt_min,u_max,u_max_estdt,u_max_cap_wave,caller_id);
- } else if (need_dt_values==0) {
+ if (need_all_dt_values==1) {
+  MaxAdvectSpeedALL(dt_min,u_max_estdt,u_max_cap_wave,caller_id);
+ } else if (need_all_dt_values==0) {
   // do nothing
  } else
-  amrex::Error("need_dt_values invalid");
+  amrex::Error("need_all_dt_values invalid");
 
  for (int iscale=0;iscale<current_dt_group.size();iscale++) {
   current_dt_group[iscale]=dt_min[iscale+1];
