@@ -18687,7 +18687,7 @@ void NavierStokes::DumpProcNum() {
 // called from: estTimeStep (caller_id=0,1,2)
 //              sum_integrated_quantities (caller_id=3) 
 void NavierStokes::MaxAdvectSpeedALL(
-  Vector<Real> dt_min,
+  Vector<Real>& dt_min,
   Real* vel_max_estdt,
   Real& vel_max_cap_wave,
   int caller_id) {
@@ -18700,6 +18700,12 @@ void NavierStokes::MaxAdvectSpeedALL(
  
  Real local_vel_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real local_vel_max_cap_wave;
+
+ if (dt_min.size()==n_scales+1) {
+  // do nothing
+ } else
+  amrex::Error("dt_min.size() is invalid");
+
  Vector<Real> local_dt_min;
  local_dt_min.resize(dt_min.size());
 
@@ -18735,17 +18741,25 @@ void NavierStokes::MaxAdvectSpeedALL(
     local_dt_min[iscale]=dt_max;
   }
 
-  ns_level.MaxAdvectSpeed(local_dt_min,
+  ns_level.MaxAdvectSpeed(
+    local_dt_min,
     local_vel_max_estdt,
     local_vel_max_cap_wave,caller_id); 
+
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
    vel_max_estdt[dir] = std::max(vel_max_estdt[dir],local_vel_max_estdt[dir]);
   }
   vel_max_cap_wave = std::max(vel_max_cap_wave,local_vel_max_cap_wave);
   for (int iscale=0;iscale<local_dt_min.size();iscale++) {
+   if (1==0) {
+    std::cout << "in MaxAdvectSpeedALL: iscale,dt_min,local_dt_min " <<
+      iscale << ' ' << dt_min[iscale] << ' ' << local_dt_min[iscale] << '\n';
+   }
+
    dt_min[iscale]=std::min(dt_min[iscale],local_dt_min[iscale]);
   }
- } // ilev 
+ } // ilev = finest_level downto 0
+
 } // end subroutine MaxAdvectSpeedALL
 
 // MaxAdvectSpeedALL called from: 
@@ -18754,7 +18768,8 @@ void NavierStokes::MaxAdvectSpeedALL(
 // vel_max_estdt[0,1,2]= max vel in direction + extra cell centered velocity
 //   considerations if spectral element method.
 //   vel_max_estdt[sdim]=max c^2
-void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
+void NavierStokes::MaxAdvectSpeed(
+ Vector<Real>& dt_min,
  Real* vel_max_estdt,
  Real& vel_max_cap_wave,
  int caller_id) {
@@ -18803,6 +18818,11 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
   amrex::Error("CoordSys bust 5");
 
  const Real* dx = geom.CellSize();
+
+ if (dt_min.size()==n_scales+1) {
+  // do nothing
+ } else 
+  amrex::Error("dt_min has wrong size");
 
  for (int iscale=0;iscale<dt_min.size();iscale++) {
   dt_min[iscale]=1.0E+30;
@@ -18914,6 +18934,10 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
    local_dt_min_thread.resize(n_scales+1);
    for (int iscale=0;iscale<dt_min.size();iscale++) {
     local_dt_min_thread[iscale]=local_dt_min[iscale][tid_current];
+    if (1==0) {
+     std::cout << "before: iscale,dt_min " << iscale << ' ' <<
+       local_dt_min_thread[iscale] << '\n';
+    }
    }
 
     // in: GODUNOV_3D.F90
@@ -18974,6 +18998,10 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
     &finest_level);
 
    for (int iscale=0;iscale<dt_min.size();iscale++) {
+    if (1==0) {
+     std::cout << "after: iscale,dt_min " << iscale << ' ' <<
+       local_dt_min_thread[iscale] << '\n';
+    }
     local_dt_min[iscale][tid_current]=local_dt_min_thread[iscale];
    }
 
@@ -19001,7 +19029,7 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
 
    if (local_vel_max_cap_wave[tid]>local_vel_max_cap_wave[0])
     local_vel_max_cap_wave[0]=local_vel_max_cap_wave[tid];
-  } // tid
+  } // tid=1..nthreads
 
   for (int iten=0;iten<nten;iten++) {
    ParallelDescriptor::ReduceRealMax(local_cap_wave_speed[0][iten]);
@@ -19031,6 +19059,10 @@ void NavierStokes::MaxAdvectSpeed(Vector<Real> dt_min,
 
  for (int iscale=0;iscale<dt_min.size();iscale++) {
   dt_min[iscale]=local_dt_min[iscale][0];
+  if (1==0) {
+   std::cout << "end of MaxAdvectSpeed: iscale,dt_min " << iscale << ' ' <<
+      dt_min[iscale] << '\n';
+  }
  }
 
  delete denmf;
@@ -19095,6 +19127,16 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
   } else if (fixed_dt_velocity==0.0) {
 
    MaxAdvectSpeedALL(dt_min,u_max_estdt,u_max_cap_wave,caller_id);
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "after MaxAdvectSpeedALL " << '\n';
+     for (int iscale=0;iscale<dt_min.size();iscale++)
+      std::cout << "iscale dt_min "<<iscale<<' '<<dt_min[iscale]<< '\n';
+     for (int dir=0;dir<AMREX_SPACEDIM+1;dir++)
+      std::cout << "dir u_max_estdt "<<dir<<' '<<u_max_estdt[dir]<< '\n';
+    }
+   }
+
    need_all_dt_values=0;
 
    if (min_velocity_for_dt>0.0) {
