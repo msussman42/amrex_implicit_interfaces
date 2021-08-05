@@ -2011,9 +2011,21 @@ void NavierStokes::SEM_advectALL(int source_term) {
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      //ngrow,dir,scomp,ncomp,time
      ns_level.getStateMAC_localMF(
        Umac_Type,UMAC_MF+dir,0,dir,0,1,vel_time_slab);
+
+     if (hold_dt_factors[0]==1.0) {
+      // do nothing
+     } else if ((hold_dt_factors[0]>0.0)&&
+    	        (hold_dt_factors[0]<1.0)) {
+       //scomp,ncomp,ngrow
+      ns_level.localMF[UMAC_MF+dir]->mult(hold_dt_factors[0],0,1,0);
+     } else
+      amrex::Error("hold_dt_factors[0] invalid");
+
+    }  //dir=0,...,sdim-1
    } //ilev=finest_level ... level
 
    int advect_iter_max=2;
@@ -2307,6 +2319,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        slab_step++) {
 
    SDC_setup_step();
+
+   if (current_dt_group.size()!=n_scales)
+    amrex::Error("current_dt_group.size() invalid")
+   if (hold_dt_factors.size()!=n_scales)
+    amrex::Error("hold_dt_factors.size() invalid")
 
    for (int iscale=0;iscale<current_dt_group.size();iscale++) {
     hold_dt_factors[iscale]=1.0;
@@ -12634,7 +12651,7 @@ void NavierStokes::veldiffuseALL() {
 
  override_enable_spectral(save_enable_spectral);
 
-}   // subroutine veldiffuseALL
+}   // end subroutine veldiffuseALL
 
 void NavierStokes::PCINTERP_fill_bordersALL(int idx_MF,
   int ngrow,int scomp,int ncomp,int index,Vector<int> scompBC_map) {

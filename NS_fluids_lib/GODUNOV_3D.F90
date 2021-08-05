@@ -6064,9 +6064,11 @@ stop
       call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow,normdir,12)
       call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1,12)
 
-      if (dt.le.zero) then
-        print *,"dt invalid"
-        stop
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
       endif
 
       ii=0
@@ -9153,9 +9155,11 @@ stop
       call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1,134)
       call checkbound_array1(fablo,fabhi,unode_ptr,ngrow-1,normdir,121)
 
-      if (dt.le.zero) then
-        print *,"dt invalid"
-        stop
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
       endif
 
       if (dencomp.ne.SDIM+1) then

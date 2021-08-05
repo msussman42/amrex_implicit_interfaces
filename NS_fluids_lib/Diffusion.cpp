@@ -1127,6 +1127,15 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   FArrayBox& heatfab=(*localMF[idx_heat])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
+  Real local_dt_slab=dt_slab;
+  if (hold_dt_factors[0]==1.0) {
+   // do nothing
+  } else if ((hold_dt_factors[0]>0.0)&&
+             (hold_dt_factors[0]<1.0)) {
+   local_dt_slab*=hold_dt_factors[0];
+  } else
+   amrex::Error("hold_dt_factors[0] invalid");
+
   int tid_current=0;
 #ifdef _OPENMP
   tid_current = omp_get_thread_num();
@@ -1159,7 +1168,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
    ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,&level,
-   &dt_slab,&rzflag,&nmat,&nden);
+   &local_dt_slab,&rzflag,&nmat,&nden);
  }  // mfi  
 } // omp
 
