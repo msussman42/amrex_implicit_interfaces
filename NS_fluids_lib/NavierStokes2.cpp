@@ -1853,9 +1853,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
  
-  // interpolate pressure to MAC grid.
-  // set flag for whether to update cell velocity conservatively
-  // or non-conservatively.
+  // interpolate pressure to MAC grid for div(up) term.
   // Modify MAC velocity with solid velocity or ice velocity.
   
   if (thread_class::nthreads<1)
@@ -2121,6 +2119,20 @@ void NavierStokes::apply_cell_pressure_gradient(
    int ncomp_veldest=Snewfab.nComp();
    int ncomp_dendest=Snewfab.nComp()-scomp_den;
 
+   Real local_dt_slab=dt_slab;
+   if (operation_flag_interp_macvel==103) {//103 (mac_vel->cell_vel)
+    //do nothing
+   } else if (operation_flag_interp_macvel==101) {//101 div(up) 
+    if (hold_dt_factors[0]==1.0) {
+     // do nothing
+    } else if ((hold_dt_factors[0]>0.0)&&
+   	       (hold_dt_factors[0]<1.0)) {
+     local_dt_slab*=hold_dt_factors[0];
+    } else
+     amrex::Error("hold_dt_factors[0] invalid");
+   } else
+    amrex::Error("operation_flag_interp_macvel invalid");
+
    fort_mac_to_cell(
     &ns_time_order,
     &divu_outer_sweeps,
@@ -2158,7 +2170,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     presbc.dataPtr(), 
     &cur_time_slab, 
     &slab_step,
-    &dt_slab,
+    &local_dt_slab,
     xlo,dx,
     tilelo,tilehi,
     fablo,fabhi,

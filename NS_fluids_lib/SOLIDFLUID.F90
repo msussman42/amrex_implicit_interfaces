@@ -728,7 +728,8 @@
            FSI_operation, &
            touch_flag, &
            h_small, &
-           time,dt, &
+           time, &
+           dt, &
            problo3D,probhi3D, &
            xmap3D, &
            xslice3D, &
@@ -1187,7 +1188,9 @@
        print *,"time invalid"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif

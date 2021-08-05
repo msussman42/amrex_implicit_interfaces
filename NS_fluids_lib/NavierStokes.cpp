@@ -7129,7 +7129,9 @@ void NavierStokes::Transfer_FSI_To_STATE(Real time) {
 // 3. copy Lagrangian Force to Eulerian Force and update Eulerian velocity.
 void NavierStokes::ns_header_msg_level(
  int FSI_operation,int FSI_sub_operation,
- Real time,Real dt,int iter) {
+ Real time,
+ Real dt,
+ int iter) {
 
  Vector< int > num_tiles_on_thread_proc;
  num_tiles_on_thread_proc.resize(thread_class::nthreads);
@@ -9740,6 +9742,15 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
     FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
     FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
 
+    Real local_dt_slab=dt_slab;
+    if (hold_dt_factors[0]==1.0) {
+     // do nothing
+    } else if ((hold_dt_factors[0]>0.0)&&
+               (hold_dt_factors[0]<1.0)) {
+     local_dt_slab*=hold_dt_factors[0];
+    } else
+     amrex::Error("hold_dt_factors[0] invalid");
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -9767,7 +9778,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,&bfact,&level,
-     &dt_slab,&rzflag,&im,&nmat,&nden);
+     &local_dt_slab,
+     &rzflag,&im,&nmat,&nden);
    }  // mfi  
 }//omp
 
@@ -9875,6 +9887,15 @@ void NavierStokes::make_marangoni_force() {
   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
+  Real local_dt_slab_surface_tension=dt_slab;
+  if (hold_dt_factors[1]==1.0) {
+   // do nothing
+  } else if ((hold_dt_factors[1]>0.0)&&
+             (hold_dt_factors[1]<1.0)) {
+   local_dt_slab_surface_tension*=hold_dt_factors[1];
+  } else
+   amrex::Error("hold_dt_factors[1] invalid");
+
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -9899,7 +9920,7 @@ void NavierStokes::make_marangoni_force() {
    &bfact_grid,
    &level,
    &finest_level,
-   &dt_slab,
+   &local_dt_slab_surface_tension,
    &cur_time_slab,
    &nmat);
  }  // mfi  
@@ -10835,6 +10856,15 @@ void NavierStokes::tensor_advection_update() {
 
       int transposegradu=0;
 
+      Real local_dt_slab=dt_slab;
+      if (hold_dt_factors[0]==1.0) {
+       // do nothing
+      } else if ((hold_dt_factors[0]>0.0)&&
+                 (hold_dt_factors[0]<1.0)) {
+       local_dt_slab*=hold_dt_factors[0];
+      } else
+       amrex::Error("hold_dt_factors[0] invalid");
+
       int tid_current=ns_thread();
       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
        amrex::Error("tid_current invalid");
@@ -10866,7 +10896,7 @@ void NavierStokes::tensor_advection_update() {
        tilelo,tilehi,
        fablo,fabhi,
        &bfact, 
-       &dt_slab,
+       &local_dt_slab,
        &elastic_time[im],
        &viscoelastic_model[im],
        &polymer_factor[im],
