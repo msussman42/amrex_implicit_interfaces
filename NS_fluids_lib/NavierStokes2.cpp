@@ -5739,6 +5739,15 @@ void NavierStokes::init_gravity_potential() {
 
     Vector<int> presbc=getBCArray(State_Type,gridno,pcomp,1);
 
+    Real local_dt_slab_gravity=dt_slab;
+    if (hold_dt_factors[2]==1.0) {
+     // do nothing
+    } else if ((hold_dt_factors[2]>0.0)&&
+               (hold_dt_factors[2]<1.0)) {
+     local_dt_slab_gravity*=hold_dt_factors[2];
+    } else
+     amrex::Error("hold_dt_factors[2] invalid");
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -5746,7 +5755,7 @@ void NavierStokes::init_gravity_potential() {
 
      // isweep=0 => interior cells updated
      // isweep=1 => exterior cells outside domain are updated:
-     //   REFLECT_EVEN BC if wall, EXT_DIR BC on the wall if
+     //   REFLECT_EVEN BC if wall, EXT_DIR BC on the ghost cell if
      //   outflow.
      // if angular_velocity==0.0:
      // \vec{g} = \frac{ \nabla rho_{0} (\vec{g} dot \vec{x})}{rho_{0}}
@@ -5765,7 +5774,7 @@ void NavierStokes::init_gravity_potential() {
      dombcpres.dataPtr(),
      domlo,domhi,
      xlo,dx,
-     &dt_slab,
+     &local_dt_slab_gravity,
      &gravity_normalized,
      &gravity_dir,
      &angular_velocity,
@@ -5994,6 +6003,15 @@ void NavierStokes::process_potential_force_face() {
    int ncomp_xgp=1;
    int ncomp_mgoni=mgonifab.nComp();
 
+   Real local_dt_slab_surface_tension=dt_slab;
+   if (hold_dt_factors[1]==1.0) {
+    // do nothing
+   } else if ((hold_dt_factors[1]>0.0)&&
+              (hold_dt_factors[1]<1.0)) {
+    local_dt_slab_surface_tension*=hold_dt_factors[1];
+   } else
+    amrex::Error("hold_dt_factors[1] invalid");
+
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -6032,7 +6050,7 @@ void NavierStokes::process_potential_force_face() {
     presbc.dataPtr(),
     velbc.dataPtr(),
     &slab_step,
-    &dt_slab,
+    &local_dt_slab_surface_tension,
     &cur_time_slab,
     xlo,dx,
     &spectral_loop,
