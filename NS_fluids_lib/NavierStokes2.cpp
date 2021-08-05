@@ -6655,6 +6655,15 @@ void NavierStokes::move_particles(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   Real local_dt_slab=dt_slab;
+   if (hold_dt_factors[0]==1.0) {
+    // do nothing
+   } else if ((hold_dt_factors[0]>0.0)&&
+  	      (hold_dt_factors[0]<1.0)) {
+    local_dt_slab*=hold_dt_factors[0];
+   } else
+    amrex::Error("hold_dt_factors[0] invalid");
+
      // declared in: LEVELSET_3D.F90
    fort_move_particle_container( 
      &tid_current,
@@ -6678,7 +6687,7 @@ void NavierStokes::move_particles(
      cell_particle_count.dataPtr(),
      ARLIM(cell_particle_count.loVect()),
      ARLIM(cell_particle_count.hiVect()),
-     &dt_slab,
+     &local_dt_slab,
      &vel_time_slab,
      xvelfab.dataPtr(),
      ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),

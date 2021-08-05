@@ -11262,6 +11262,15 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
+    Real local_dt_slab=dt_slab;
+    if (hold_dt_factors[0]==1.0) {
+     // do nothing
+    } else if ((hold_dt_factors[0]>0.0)&&
+   	       (hold_dt_factors[0]<1.0)) {
+     local_dt_slab*=hold_dt_factors[0];
+    } else
+     amrex::Error("hold_dt_factors[0] invalid");
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -11274,7 +11283,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
      fablo,fabhi,
      &bfact,
      velbc.dataPtr(),
-     &dt_slab,
+     &local_dt_slab,
      &prev_time_slab,
      &prescribed_vel_time_slab,
      &vel_time_slab,
@@ -15576,6 +15585,15 @@ NavierStokes::split_scalar_advection() {
 
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
+  Real local_dt_slab=dt_slab;
+  if (hold_dt_factors[0]==1.0) {
+   // do nothing
+  } else if ((hold_dt_factors[0]>0.0)&&
+             (hold_dt_factors[0]<1.0)) {
+   local_dt_slab*=hold_dt_factors[0];
+  } else
+   amrex::Error("hold_dt_factors[0] invalid");
+
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -15605,7 +15623,7 @@ NavierStokes::split_scalar_advection() {
    fablo,fabhi,
    &bfact,
    &bfact_f,
-   &dt_slab, // fort_vfrac_split
+   &local_dt_slab, // fort_vfrac_split
    &prev_time_slab,
    &prescribed_vel_time_slab,
      // this is the original data
