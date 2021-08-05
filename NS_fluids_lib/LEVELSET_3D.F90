@@ -13702,7 +13702,9 @@ stop
       INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
-      REAL_T, intent(in) :: dt,time,beta,visc_coef
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: beta,visc_coef
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(semflux)
       INTEGER_T, intent(in) :: DIMDEC(mask)
@@ -13787,7 +13789,7 @@ stop
       REAL_T pplus
       REAL_T pminus
       REAL_T pgrad
-      REAL_T pgrad_gravity
+      REAL_T pgrad_gravity ! grad ppot/den_pot  ppot=dt * rho g z
       REAL_T pgrad_tension
       REAL_T gradh
       REAL_T dplus,dminus
@@ -14093,7 +14095,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.2) then
+      else if (operation_flag.eq.2) then !potential gradient, surface tension
 
        if (ncphys.ne.vofface_index+2*nmat) then
         print *,"ncphys invalid"
@@ -14441,7 +14443,7 @@ stop
          endif
 
           ! set LSleft, LSright, localLS, xmac
-         if ((operation_flag.eq.2).or. &
+         if ((operation_flag.eq.2).or. & ! potential gradient, surface tension
              (operation_flag.eq.3).or. &
              (operation_flag.eq.4).or. &
              (operation_flag.eq.5).or. &
@@ -15648,7 +15650,7 @@ stop
              !     surface tension on MAC grid ...
             local_tension_force=tension_scaled*local_face(curv_index+1)
 
-             ! pgrad_tension is added to pgrad_gravity at the very end.
+             ! pgrad_tension is combined with pgrad_gravity at the very end.
             pgrad_tension=-(local_tension_force+ &
                     pforce_scaled*local_face(pforce_index+1))*gradh
             pgrad_tension=dt*pgrad_tension/hx
@@ -15744,9 +15746,7 @@ stop
 
          else if (operation_flag.eq.2) then ! potential grad+surface tension
        
-          pgrad_gravity=pgrad_gravity+pgrad_tension
-
-          xgp(D_DECL(i,j,k),1)=pgrad_gravity
+          xgp(D_DECL(i,j,k),1)=pgrad_gravity+pgrad_tension
 
          else if (operation_flag.eq.1) then !p^CELL->MAC
 

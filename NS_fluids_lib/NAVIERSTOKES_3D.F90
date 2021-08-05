@@ -11465,7 +11465,8 @@ END SUBROUTINE SIMP
           gravity_dir_parm, &
           angular_velocity, &
           dt, &
-          den_cell,pres_cell, &
+          den_cell, &
+          pres_cell, &
           state_ptr)
         presden(D_DECL(i,j,k),1)=pres_cell
         presden(D_DECL(i,j,k),2)=den_cell
