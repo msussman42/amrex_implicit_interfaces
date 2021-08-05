@@ -12852,11 +12852,15 @@ stop
        stop
       endif
 
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
-      if (cur_time.lt.zero) then
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
        print *,"cur_time invalid"
        stop
       endif
@@ -15575,7 +15579,9 @@ stop
        print *,"ncomp visc invalid"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif

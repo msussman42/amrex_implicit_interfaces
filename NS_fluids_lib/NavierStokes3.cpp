@@ -538,7 +538,9 @@ void NavierStokes::nonlinear_advection() {
     ns_level.resize_mask_nbr(ngrowFSI);
     ns_level.ns_header_msg_level(
       FSI_operation,FSI_sub_operation,
-      cur_time_slab,dt_slab,iter);
+      cur_time_slab,
+      dt_slab,
+      iter);
    } // ilev=level..finest_level
   } // FSI_sub_operation=0,1,2
 
@@ -2321,9 +2323,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    SDC_setup_step();
 
    if (current_dt_group.size()!=n_scales)
-    amrex::Error("current_dt_group.size() invalid")
+    amrex::Error("current_dt_group.size() invalid");
    if (hold_dt_factors.size()!=n_scales)
-    amrex::Error("hold_dt_factors.size() invalid")
+    amrex::Error("hold_dt_factors.size() invalid");
 
    for (int iscale=0;iscale<current_dt_group.size();iscale++) {
     hold_dt_factors[iscale]=1.0;

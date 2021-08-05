@@ -21000,13 +21000,9 @@ END SUBROUTINE Adist
        tension,wavespeed)
       IMPLICIT NONE
 
-      REAL_T wavelen,den1,den2,visc1,visc2,tension,wavespeed
+      REAL_T, intent(in) :: wavelen,den1,den2,visc1,visc2,tension
+      REAL_T, intent(out) :: wavespeed
       REAL_T omega,k
-      REAL_T wavespeed_no_viscosity
-      REAL_T Lscale,liquid_viscosity,liquid_density
-      REAL_T Uscale,density_ratio,viscosity_ratio,Re,We
-      REAL_T RGASRWATER
-
 
       if ((wavelen.le.zero).or.(den1.le.zero).or. &
           (den2.le.zero).or.(visc1.le.zero).or. &
@@ -21018,7 +21014,6 @@ END SUBROUTINE Adist
       k=two*Pi/wavelen
       omega=(k**(1.5))*sqrt(tension/(den1+den2))
       wavespeed=omega/k
-      wavespeed_no_viscosity=wavespeed
 
       return
       end subroutine capillary_wave_speed
@@ -31778,10 +31773,6 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      REAL_T density_ratio,viscosity_ratio
-      REAL_T liquid_density,liquid_viscosity
-      REAL_T dxmin,Uscale,Lscale,surface_tension_factor
-      REAL_T old_speed,wave_speed
       REAL_T, intent(out) :: Re,We,RGASRWATER
       REAL_T kterm,velperturb
       REAL_T ktermx,velperturbx
@@ -31818,12 +31809,6 @@ end subroutine initialize2d
       INTEGER_T nhalf
       REAL_T jumpval,alpha
 
-      logical  alive 
-      integer N1parm,N2parm,nn
-      complex*16, allocatable, dimension(:) :: vel_lr,vel_lz
-      complex*16, allocatable, dimension(:) :: vel_gr,vel_gz
-      real*8, allocatable, dimension(:) :: r1,r2
-      real*8, allocatable, dimension(:) :: W1bar,W2bar
       REAL_T, allocatable, dimension(:) :: distbatch
       INTEGER_T velsolid_flag
  
