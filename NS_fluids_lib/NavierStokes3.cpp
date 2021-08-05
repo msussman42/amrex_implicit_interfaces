@@ -2299,19 +2299,68 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   } else
    amrex::Error("SDC_outer_sweeps_end invalid");
 
+   //slab_step==-1 is needed to compute grad p^n with spectral accuracy.
+   //slab_step==ns_time_order is needed to compute the SDC correction:
+   // delta=integral_tn^tnp1  f^spectral dt - deltatn F^stable
   for (slab_step=slab_step_start;
        ((slab_step<=slab_step_end)&&(advance_status==1));
        slab_step++) {
 
    SDC_setup_step();
 
+   for (int iscale=0;iscale<current_dt_group.size();iscale++) {
+    hold_dt_factors[iscale]=1.0;
+   }
+
    int local_num_divu_outer_sweeps=num_divu_outer_sweeps;
-   if ((slab_step==-1)||(slab_step==ns_time_order))
+   if ((slab_step==-1)||(slab_step==ns_time_order)) {
     local_num_divu_outer_sweeps=1;
-   else if ((slab_step>=0)&&(slab_step<ns_time_order))
+   } else if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+
+    if (dt_slab>0.0) {
+     int ignore_advection=(ignore_fast_scales & 1);
+     int ignore_surface_tension=(ignore_fast_scales & 2);
+     int ignore_gravity=(ignore_fast_scales & 4);
+
+     if (ignore_advection==0) {
+      // do nothing
+     } else if (ignore_advection==1) {
+      if (current_dt_group[0]<dt_slab)
+       hold_dt_factors[0]=current_dt_group[0]/dt_slab;
+     } else
+      amrex::Error("ignore_advection invalid");
+
+     if (ignore_surface_tension==0) {
+      // do nothing
+     } else if (ignore_surface_tension==2) {
+      if (current_dt_group[1]<dt_slab)
+       hold_dt_factors[1]=current_dt_group[1]/dt_slab;
+     } else
+      amrex::Error("ignore_surface_tension invalid");
+
+     if (ignore_gravity==0) {
+      // do nothing
+     } else if (ignore_gravity==4) {
+      if (current_dt_group[2]<dt_slab)
+       hold_dt_factors[2]=current_dt_group[2]/dt_slab;
+     } else
+      amrex::Error("ignore_gravity invalid");
+
+    } else
+     amrex::Error("dt_slab must be positive");
+
     local_num_divu_outer_sweeps=num_divu_outer_sweeps;
-   else
+   } else
     amrex::Error("slab_step invalid");
+
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     for (int iscale=0;iscale<hold_dt_factors.size();iscale++) {
+      std::cout << "iscale hold_dt_factors " << iscale << ' ' <<
+	  hold_dt_factors[iscale] << '\n';
+     }
+    }
+   }
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
@@ -7288,7 +7337,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  bool use_tiling=ns_tiling;
 
- if (dt_slab<=0.0)
+ if (dt_slab>0.0) {
+  // do nothing
+ } else
   amrex::Error("cannot have dt_slab<=0 in allocate_FACE_WEIGHT");
 
  int nmat=num_materials;
@@ -7602,8 +7653,11 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  } else
   amrex::Error("project_option_momeqn invalid32");
 
- if (dt_slab<=0.0)
+ if (dt_slab>0.0) {
+  // do nothing
+ } else
   amrex::Error("cannot have dt_slab<=0 in allocate_project_variables");
+
  debug_ngrow(FACE_VAR_MF,0,850);
 
  int state_index;
@@ -8677,8 +8731,11 @@ void NavierStokes::updatevelALL(
 void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   int nsolve) {
 
- if (dt_slab<=0.0)
+ if (dt_slab>0.0) {
+  // do nothing
+ } else
   amrex::Error("dt_slab invalid4");
+
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
 

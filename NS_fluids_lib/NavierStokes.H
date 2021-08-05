@@ -1746,8 +1746,8 @@ protected:
      // 4 bit => ignore gravity scales
     static int n_scales;
     static int ignore_fast_scales;
-    static Vector<Real> current_dt_group; 
-    static Vector<Real> hold_dt_group;
+    static Vector<Real> current_dt_group; //0,...,n_scales-1
+    static Vector<Real> hold_dt_factors;  //0,...,n_scales-1
 
     static Real fixed_dt;      // set > 0 to specify dt
     static Real fixed_dt_init; // set > 0 to specify dt
