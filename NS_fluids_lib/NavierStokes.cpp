@@ -325,7 +325,7 @@ Real NavierStokes::change_max_init = 1.1;
 int NavierStokes::n_scales=3;
 int NavierStokes::ignore_fast_scales=0;
 Vector<Real> NavierStokes::current_dt_group;
-Vector<Real> NavierStokes::hold_dt_group;
+Vector<Real> NavierStokes::hold_dt_factors;
 
 Real NavierStokes::fixed_dt     = 0.0;
 Real NavierStokes::fixed_dt_init = 0.0;
@@ -2431,10 +2431,10 @@ NavierStokes::read_params ()
 
     ignore_fast_scales=0;
     current_dt_group.resize(n_scales);
-    hold_dt_group.resize(n_scales);
+    hold_dt_factors.resize(n_scales);
     for (int iscale=0;iscale<current_dt_group.size();iscale++) {
      current_dt_group[iscale]=0.0;
-     hold_dt_group[iscale]=0.0;
+     hold_dt_factors[iscale]=1.0;
     }
     pp.query("ignore_fast_scales",ignore_fast_scales);
 
