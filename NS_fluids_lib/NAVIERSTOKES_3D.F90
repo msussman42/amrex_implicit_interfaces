@@ -9724,6 +9724,7 @@ END SUBROUTINE SIMP
 
            vofcomp=(im-1)*ngeom_recon+1
            vfrac=mofdata(vofcomp)
+
            if ((vfrac.ge.zero).and.(vfrac.le.one)) then
             if (vfrac.le.one-VOFTOL) then
              vfrac_raster=zero

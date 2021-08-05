@@ -1293,10 +1293,10 @@ INTEGER_T :: im,iregion,dir
  enddo ! iregion=1,number_of_source_regions
 
  if (axis_dir.eq.0) then
-  regions_list(1,0)%region_material_id=0
+  regions_list(1,0)%region_material_id=3
   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
  else if (axis_dir.eq.1) then
-  regions_list(1,0)%region_material_id=0
+  regions_list(1,0)%region_material_id=3
   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
    ! inflow
   regions_list(2,0)%region_material_id=1

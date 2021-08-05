@@ -159,7 +159,7 @@ ns.v=0
 # if first bit (2^0) is set, then ignore fast advective scales.
 # if second bit (2^1) is set, then ignore fast capillary wave scales.
 # if third bit (2^2) is set, then ignore fast gravity wave scales.
-ns.ignore_fast_scales=2+4  
+ns.ignore_fast_scales=6  
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
@@ -240,7 +240,7 @@ ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 #ns.heatviscconst=0.075 0.00375 0.189
 # even for axis_dir==0, source is concentrated in the fluid.  Later, when
 # the solid is made just a shell, then we can diffuse into the solid.
-ns.heatviscconst=0.075 0.00375 0.0
+ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
 # mu_gas=1.093e-6, but make zero to avoid jump condition issue.
