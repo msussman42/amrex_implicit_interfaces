@@ -41,12 +41,15 @@ REAL_T :: TANK_MK_END_RADIUS
 REAL_T :: TANK_MK_END_CENTER
 ! Heater flux
 REAL_T :: TANK_MK_HEATER_WATTS
-REAL_T :: TANK_MK_HEATER_FLUID_FRACTION
 ! Heater location in dim=2 direction
 REAL_T :: TANK_MK_HEATER_LOW
 REAL_T :: TANK_MK_HEATER_HIGH
 REAL_T :: TANK_MK_HEATER_R
 REAL_T :: TANK_MK_HEATER_R_LOW
+
+REAL_T :: TANK_MK_INSULATE_R
+REAL_T :: TANK_MK_INSULATE_R_HIGH
+REAL_T :: TANK_MK_INSULATE_THICK
 
 REAL_T :: TANK_MK_NOZZLE_RAD
 REAL_T :: TANK_MK_NOZZLE_HT
@@ -85,24 +88,32 @@ contains
   TANK_MK_BUBBLE_Z         = zblob2
 
   TANK_MK_HEATER_WATTS      = xblob3
+
+   ! see Barsi and Kassemi 2013, Journal of Thermal Science and Engineering
+   ! Applications.
+   ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
-   TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
-   TANK_MK_HEATER_LOW       = -0.16d0
-   TANK_MK_HEATER_HIGH      = -0.12d0
-   TANK_MK_HEATER_R         = 0.09d0
-   TANK_MK_HEATER_R_LOW     = 0.05d0
-  else if (axis_dir.eq.1) then ! volume=pi(.1^2)*(0.2)
-   TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
-   TANK_MK_HEATER_LOW       = -0.5d0
-   TANK_MK_HEATER_HIGH      = 0.0d0-0.0079375d0  ! 1 * dx_coarse
-   TANK_MK_HEATER_R         = 0.5d0
-   TANK_MK_HEATER_R_LOW     = 0.0d0
-  else if (axis_dir.eq.2) then ! heater on top
-   TANK_MK_HEATER_FLUID_FRACTION = 1.0d0
+   TANK_MK_HEATER_LOW       = -0.1683d0
+   TANK_MK_HEATER_HIGH      = -0.1429d0
+   TANK_MK_HEATER_R         = 0.1016d0+0.027d0
+   TANK_MK_HEATER_R_LOW     = 0.1016d0
+
+   TANK_MK_INSULATE_R = xblob+0.027d0
+   TANK_MK_INSULATE_THICK = 0.0508
+   TANK_MK_INSULATE_R_HIGH = 0.4064d0/2.0d0
+
+   ! TPCE
+  else if (axis_dir.eq.1) then ! heater on top
    TANK_MK_HEATER_LOW       = 0.2032d0-0.004d0
    TANK_MK_HEATER_HIGH      = 0.2032d0
    TANK_MK_HEATER_R         = 0.05d0
    TANK_MK_HEATER_R_LOW     = 0.0d0
+
+   TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.001984375, 1cm diameter.
+   TANK_MK_NOZZLE_HT=0.064D0
+   TANK_MK_NOZZLE_HT_OUTLET=0.005D0
+   TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT
+
   else
    print *,"axis_dir invalid"
    stop
@@ -110,11 +121,6 @@ contains
 
   TANK_MK_END_RADIUS       = xblob4
   TANK_MK_END_CENTER       = yblob4
-
-  TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.001984375, 1cm diameter.
-  TANK_MK_NOZZLE_HT=0.064D0
-  TANK_MK_NOZZLE_HT_OUTLET=0.005D0
-  TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT
 
   ! ASSUMING IDEAL GAS => The gas heat cpacities should satisfy this
   ! R_spc = C_{p,spc}-C_{v,spc}
@@ -208,8 +214,9 @@ contains
    ! Solid
    LS(3)=SOLID_TOP_HALF_DIST(x)
 
-   if ((axis_dir.eq.0).or. &
-       (axis_dir.eq.2)) then
+   if (axis_dir.eq.0) then
+    ! do nothing
+   else if (axis_dir.eq.1) then ! TPCE
     xlo=-TANK_MK_NOZZLE_RAD
     xhi=TANK_MK_NOZZLE_RAD
     ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
@@ -219,8 +226,6 @@ contains
     if (nozzle_dist.gt.LS(3)) then
      LS(3)=nozzle_dist
     endif
-   else if (axis_dir.eq.1) then
-    ! do nothing
    else
     print *,"axis_dir invalid"
     stop
@@ -1254,10 +1259,10 @@ INTEGER_T :: im,iregion,dir
   endif
  enddo ! im=1..num_materials
 
- if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
-  number_of_source_regions=4
+ if (axis_dir.eq.0) then
+  number_of_source_regions=1
  else if (axis_dir.eq.1) then
-  number_of_source_regions=2
+  number_of_source_regions=3
  else
   print *,"axis_dir invalid"
   stop
@@ -1287,33 +1292,28 @@ INTEGER_T :: im,iregion,dir
   regions_list(iregion,0)%region_energy_after=zero 
  enddo ! iregion=1,number_of_source_regions
 
- regions_list(1,0)%region_material_id=1
- regions_list(1,0)%region_energy_flux= &
-         TANK_MK_HEATER_FLUID_FRACTION*TANK_MK_HEATER_WATTS ! Watts=J/s
-
- regions_list(2,0)%region_material_id=3
- regions_list(2,0)%region_energy_flux= &
-      (1.0d0-TANK_MK_HEATER_FLUID_FRACTION)*TANK_MK_HEATER_WATTS ! Watts=J/s
-
- if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
-  ! inflow
-  regions_list(3,0)%region_material_id=1
-  regions_list(3,0)%region_volume_flux=xblob5
-  regions_list(3,0)%region_mass_flux=xblob5*fort_denconst(1)
-  regions_list(3,0)%region_temperature_prescribe=xblob6
+ if (axis_dir.eq.0) then
+  regions_list(1,0)%region_material_id=0
+  regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
+ else if (axis_dir.eq.1) then
+  regions_list(1,0)%region_material_id=0
+  regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
+   ! inflow
+  regions_list(2,0)%region_material_id=1
+  regions_list(2,0)%region_volume_flux=xblob5
+  regions_list(2,0)%region_mass_flux=xblob5*fort_denconst(1)
+  regions_list(2,0)%region_temperature_prescribe=xblob6
   if (TANK_MK_NOZZLE_RAD.gt.zero) then
-   regions_list(3,0)%region_velocity_prescribe(SDIM)= &
+   regions_list(2,0)%region_velocity_prescribe(SDIM)= &
       xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
   else
    print *,"TANK_MK_NOZZLE_RAD invalid"
    stop
   endif
    ! outflow
-  regions_list(4,0)%region_material_id=1
-  regions_list(4,0)%region_volume_flux=-xblob5
-  regions_list(4,0)%region_mass_flux=-xblob5*fort_denconst(1)
- else if (axis_dir.eq.1) then
-  ! do nothing
+  regions_list(3,0)%region_material_id=1
+  regions_list(3,0)%region_volume_flux=-xblob5
+  regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
  else
   print *,"axis_dir invalid"
   stop
@@ -1332,62 +1332,82 @@ REAL_T, intent(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
- TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
- if (TANK_MK_R_WIDTH.gt.0.0d0) then
-  if (region_id.eq.1) then
-   if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-       (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
-       (x(2).ge.TANK_MK_HEATER_LOW).and.&
-       (x(2).le.TANK_MK_HEATER_HIGH)) then
-    charfn_out=one
-   else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
-            (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
-            (x(2).lt.TANK_MK_HEATER_LOW).or. &
-            (x(2).gt.TANK_MK_HEATER_HIGH)) then
-    charfn_out=zero
+
+ if (axis_dir.eq.0) then ! ZBOT
+  TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
+  if (TANK_MK_R_WIDTH.gt.0.0d0) then
+   if (region_id.eq.1) then
+    if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
+        (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
+        (x(2).ge.TANK_MK_HEATER_LOW).and.&
+        (x(2).le.TANK_MK_HEATER_HIGH)) then
+     charfn_out=one
+    else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
+             (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
+             (x(2).lt.TANK_MK_HEATER_LOW).or. &
+             (x(2).gt.TANK_MK_HEATER_HIGH)) then
+     charfn_out=zero
+    else
+     print *,"position bust"
+     stop
+    endif
    else
-    print *,"position bust"
+    print *,"region_id invalid"
     stop
-   endif
-  else if (region_id.eq.2) then
-   if ((abs(x(1)).le.TANK_MK_RADIUS+TANK_MK_R_WIDTH).and.&
-       (abs(x(1)).ge.TANK_MK_RADIUS).and.&
-       (x(2).ge.TANK_MK_HEATER_LOW).and.&
-       (x(2).le.TANK_MK_HEATER_HIGH)) then
-    charfn_out=one
-   else if ((abs(x(1)).gt.TANK_MK_RADIUS+TANK_MK_R_WIDTH).or. &
-            (abs(x(1)).lt.TANK_MK_RADIUS).or. &
-            (x(2).lt.TANK_MK_HEATER_LOW).or. &
-            (x(2).gt.TANK_MK_HEATER_HIGH)) then
-    charfn_out=zero
-   else
-    print *,"position bust"
-    stop
-   endif
-  else if (region_id.eq.3) then ! inflow
-   if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
-       (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
-       (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
-                TANK_MK_NOZZLE_HT_OUTLET)) then
-    charfn_out=one
-   else
-    charfn_out=zero
-   endif
-  else if (region_id.eq.4) then ! outflow
-   if ((abs(x(1)).gt.TANK_MK_NOZZLE_RAD).and. &
-       (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT_OUTLET)) then
-    charfn_out=one
-   else
-    charfn_out=zero
    endif
   else
-   print *,"region_id invalid"
+   print *,"TANK_MK_R_WIDTH invalid"
    stop
   endif
- else 
-  print *,"TANK_MK_R_WIDTH invalid"
+ else if (axis_dir.eq.1) then !TPCE
+
+  TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
+  if (TANK_MK_R_WIDTH.gt.0.0d0) then
+   if (region_id.eq.1) then
+    if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
+        (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
+        (x(2).ge.TANK_MK_HEATER_LOW).and.&
+        (x(2).le.TANK_MK_HEATER_HIGH)) then
+     charfn_out=one
+    else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
+             (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
+             (x(2).lt.TANK_MK_HEATER_LOW).or. &
+             (x(2).gt.TANK_MK_HEATER_HIGH)) then
+     charfn_out=zero
+    else
+     print *,"position bust"
+     stop
+    endif
+   else if (region_id.eq.2) then ! inflow
+    if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
+        (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
+        (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
+                 TANK_MK_NOZZLE_HT_OUTLET)) then
+     charfn_out=one
+    else
+     charfn_out=zero
+    endif
+   else if (region_id.eq.3) then ! outflow
+    if ((abs(x(1)).gt.TANK_MK_NOZZLE_RAD).and. &
+        (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT_OUTLET)) then
+     charfn_out=one
+    else
+     charfn_out=zero
+    endif
+   else
+    print *,"region_id invalid"
+    stop
+   endif
+  else
+   print *,"TANK_MK_R_WIDTH invalid"
+   stop
+  endif
+
+ else
+  print *,"axis_dir invalid"
   stop
  endif
+
 else
  print *,"num_materials ", num_materials
  print *,"probtype ", probtype
@@ -1396,5 +1416,59 @@ else
 endif
 
 end subroutine CRYOGENIC_TANK_MK_CHARFN_REGION
+
+
+subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,cur_time,density,temperature, &
+          thermal_k,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: im
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: cur_time
+REAL_T, intent(in) :: density
+REAL_T, intent(in) :: temperature
+REAL_T, intent(inout) :: thermal_k
+
+if (probtype.eq.423) then
+ ! do nothing
+else
+ print *,"probtype invalid"
+ stop
+endif
+
+if ((im.ge.1).and.(im.le.num_materials)) then
+ if (im.eq.1) then ! liquid
+  ! do nothing
+ else if (im.eq.2) then ! vapor
+  ! do nothing
+ else if (im.eq.3) then ! solid
+  if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
+      (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
+      (x(2).ge.TANK_MK_HEATER_LOW).and.&
+      (x(2).le.TANK_MK_HEATER_HIGH)) then
+   thermal_k=fort_heatviscconst(im)*1.0D+3
+  else if ((abs(x(2)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
+           (abs(x(1)).ge.TANK_MK_INSULATE_R_HIGH)) then
+   thermal_k=0.0d0
+  else if ((abs(x(2)).le.TANK_MK_HEIGHT/2.0d0).and. &
+           (abs(x(1)).ge.TANK_MK_INSULATE_R)) then
+   thermal_k=0.0d0
+  else
+   ! do nothing
+  endif
+
+ else
+  print *,"im invalid"
+  stop
+ endif
+
+else 
+ print *,"im invalid in CRYOGENIC_TANK_MK_THERMAL_K"
+ stop
+endif
+
+end subroutine CRYOGENIC_TANK_MK_THERMAL_K
+
 
 end module CRYOGENIC_TANK_MK_module

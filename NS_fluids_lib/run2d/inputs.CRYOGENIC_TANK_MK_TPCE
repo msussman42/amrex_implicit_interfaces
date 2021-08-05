@@ -13,7 +13,7 @@ stop_time=8000.0
 # CRYOGENIC_TANK_MK.F90
 ns.probtype         = 423
 # variable accessible from plug-in:
-ns.axis_dir         = 0
+ns.axis_dir         = 1 # heater on top
 # variable for compiling diagnostic output
 # integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
 # T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.

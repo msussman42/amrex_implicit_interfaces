@@ -77,13 +77,16 @@ ns.xblob4 	    = 0.2159 # End cap radius
 #z coordinate of tank bottom: -0.2286=-0.2032-0.0254
 #z coordinate of tank top: 0.2286
 #z tank top-radius of sphere cap = 0.2286-.2159=0.0127
+#Note: z_heater_top=-0.2286+0.0857=-0.1429
+#      z_heater_bot=-0.1429-0.0254=-0.1683
 ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center 
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
 # 0 => cart (XY or XYZ), 1 => RZ
-# n_cell=16x64       
+# n_cell=32x128      
+# dx=.127/32=0.00396875
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0   -0.254
 geometry.prob_hi    = 0.127  0.254
@@ -93,11 +96,10 @@ geometry.is_periodic= 0 0
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-amr.n_cell          = 8 32
+amr.n_cell          = 32 128
 #amr.n_cell          = 64 64  # square domain
 # just 1 level:
-amr.max_level       = 3
-ns.max_level_for_use = 0
+amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 64    # 64 is optimal for MPI
@@ -153,6 +155,11 @@ ns.v=0
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
+# 2^1 + 2^2
+# if first bit (2^0) is set, then ignore fast advective scales.
+# if second bit (2^1) is set, then ignore fast capillary wave scales.
+# if third bit (2^2) is set, then ignore fast gravity wave scales.
+ns.ignore_fast_scales=2+4  
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
@@ -244,8 +251,9 @@ ns.viscconst=4.48E-04 0.0 1.0
 ns.tempconst=295.41 295.41 295.41
 
 # Surface tension [N/m]
-ns.tension=0.0 0.0 0.0
-#ns.tension=1.2E-02 1.2E-02 1.2E-02
+#ns.tension=0.0 0.0 0.0
+#90 degree contact angle
+ns.tension=1.2E-02 1.2E-02 1.2E-02 
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -332,10 +340,6 @@ ns.temperature_primitive_variable=1 1 1
 ns.solidheat_flag   =0
 
 # Heat flux from band heater
-# Eventually this source will be distributed: 1/2 in the fluid near the wall,
-# and 1/2 in the wall.
-# For now, the added energy only goes into the fluid since the solid is
-# unrealistically thick.  also heatviscconst=0 in the solid for now.
 ns.xblob3 = 2.0 # Watts=J/s
 
 # ----------------------------------------------------------
