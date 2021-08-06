@@ -334,6 +334,8 @@ stop
       
       SUB_THERMAL_K=>STUB_THERMAL_K
 
+      SUB_reference_depth=>STUB_reference_depth
+
       if (probtype.eq.421) then
        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
        SUB_LS=>CRYOGENIC_TANK1_LS

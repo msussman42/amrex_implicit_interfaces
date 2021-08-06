@@ -4518,6 +4518,7 @@ stop
       REAL_T local_elastic_time
       REAL_T ugrav
       REAL_T local_gravity_coefficient
+      REAL_T reference_depth
       INTEGER_T ignore_advection
       INTEGER_T ignore_surface_tension
       INTEGER_T ignore_gravity
@@ -5542,18 +5543,14 @@ stop
            print *,"denmax became corrupt"
            stop
           endif
-!   "delta rho" accounts for buoancy effects.
-!   u dt < dx  u=(ubase + g (delta rho) dt)  
-!   (ubase*dt+g (delta rho) dt^2) = dx   
-!   g (delta rho) dt^2 + ubase dt - dx =0 
-!   dt=(-ubase + sqrt(ubase^2 + 4 g (delta rho) dx))/(2 g drho) =
-!      4 g (delta rho) dx/( 2 g (delta rho) 
-!             (ubase+sqrt(ubase^2 + 4 g (delta rho) dx)))=
-!      2 dx / (ubase+sqrt(ubase^2 + 4 g (delta rho) dx))=
-!      sqrt(dx/(g (delta rho))) if ubase=0
-!      dx/ubase          if g=0
-          ugrav=half*(uu_estdt+sqrt(uu_estdt**2+  &
-            four*abs(denjump*local_gravity_coefficient)*dxmin))
+          call SUB_reference_depth(reference_depth)
+          if (reference_depth.gt.zero) then
+           call gravity_wave_speed(reference_depth, &
+             local_gravity_coefficient,ugrav)
+          else
+           print *,"reference_depth invalid"
+           stop
+          endif
           if (ugrav.gt.zero) then
            dthold=dxmin/ugrav 
            if (ignore_gravity.eq.0) then

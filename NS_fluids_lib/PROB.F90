@@ -21007,7 +21007,6 @@ END SUBROUTINE Adist
 
       REAL_T, intent(in) :: wavelen,gravity
       REAL_T, intent(out) :: wavespeed
-      REAL_T omega,k
 
       if ((wavelen.gt.zero).and.(gravity.gt.zero)) then
        ! do nothing
