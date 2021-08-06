@@ -1032,12 +1032,12 @@ ABecLaplacian::ABecLaplacian (
  MG_CG_diagsumL.resize(MG_numlevels_var, (MultiFab*)0);
  MG_CG_ones_mf_copy.resize(MG_numlevels_var, (MultiFab*)0);
 
- GMRES_V_MF.resize(gmres_max_iter*nsolve_bicgstab);
- GMRES_U_MF.resize(gmres_max_iter*nsolve_bicgstab);
- GMRES_Z_MF.resize(gmres_max_iter*nsolve_bicgstab);
+ GMRES_V_MF.resize(gmres_max_iter);
+ GMRES_U_MF.resize(gmres_max_iter);
+ GMRES_Z_MF.resize(gmres_max_iter);
 
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
-  for (int m=0;m<gmres_max_iter*nsolve_bicgstab;m++) {
+  for (int m=0;m<gmres_max_iter;m++) {
    GMRES_V_MF[m][coarsefine]=(MultiFab*)0;
    GMRES_U_MF[m][coarsefine]=(MultiFab*)0;
    GMRES_Z_MF[m][coarsefine]=(MultiFab*)0;
@@ -1196,7 +1196,7 @@ ABecLaplacian::ABecLaplacian (
   } else
    amrex::Error("coarsefine invalid");
 
-  for (int j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab;j++) {
+  for (int j=0;j<gmres_precond_iter_base_mg;j++) {
    GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
     nsolve_bicgstab,nghostRHS,
     MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
@@ -1210,7 +1210,7 @@ ABecLaplacian::ABecLaplacian (
    GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
    GMRES_U_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
    GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-  } //j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab
+  } //j=0;j<gmres_precond_iter_base_mg
   GMRES_W_MF[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
    nsolve_bicgstab,nghostRHS,
    MFInfo().SetTag("GMRES_W_MF"),FArrayBoxFactory());
@@ -1346,7 +1346,7 @@ ABecLaplacian::~ABecLaplacian ()
  MG_pbdryhom=(MultiFab*)0;
 
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
-  for (int j=0;j<gmres_precond_iter_base_mg*nsolve_bicgstab;j++) {
+  for (int j=0;j<gmres_precond_iter_base_mg;j++) {
    delete GMRES_V_MF[j][coarsefine];
    GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
    delete GMRES_U_MF[j][coarsefine];
@@ -2594,7 +2594,7 @@ ABecLaplacian::pcg_GMRES_solve(
  } else if ((gmres_precond_iter>0)&&
             (gmres_precond_iter<=gmres_max_iter)) {
 
-  int m=nsolve_bicgstab*gmres_precond_iter;
+  int m=gmres_precond_iter;
 
   Real beta=0.0;
   LP_dot(*r_in,*r_in,level,beta);
@@ -2631,7 +2631,7 @@ ABecLaplacian::pcg_GMRES_solve(
    int m_small=m;
 
    for (int j=1;j<m;j++) {
-    if (j>=gmres_precond_iter_base_mg*nsolve_bicgstab) {
+    if (j>=gmres_precond_iter_base_mg) {
      GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
       nsolve_bicgstab,nghostRHS,
       MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
@@ -2789,7 +2789,7 @@ ABecLaplacian::pcg_GMRES_solve(
    } else
     amrex::Error("status invalid");
 
-   for (int j=gmres_precond_iter_base_mg*nsolve_bicgstab;j<m;j++) {
+   for (int j=gmres_precond_iter_base_mg;j<m;j++) {
     delete GMRES_V_MF[j][coarsefine];
     delete GMRES_Z_MF[j][coarsefine];
     GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
