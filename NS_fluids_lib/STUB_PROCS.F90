@@ -764,4 +764,22 @@ endif
 
 end subroutine STUB_THERMAL_K
 
+subroutine STUB_reference_depth(depth)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(out) :: depth
+
+ if (gravity_dir.eq.1) then
+  depth=problenx
+ else if (gravity_dir.eq.2) then
+  depth=probleny
+ else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
+  depth=problenz
+ else
+  print *,"gravity_dir invalid"
+  stop
+ endif
+
+end subroutine STUB_reference_depth
+
 end module STUB_module
