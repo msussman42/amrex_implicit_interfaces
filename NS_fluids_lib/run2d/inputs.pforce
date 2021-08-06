@@ -72,9 +72,6 @@ ns.gravity        = -980.0
 # We=rho L U^2/sigma
 ns.tension        = 0.0 0.0  
 ns.capillary_artificial_viscosity=0.0 0.0 0.0
-ns.Lref=0.0  # if Lref=0 then use dx
-ns.Uref=0.0  # reduce capillary_artificial_viscosity until
-             # cap_wave_speed>Uref, do nothing if Uref=0
 
 ns.sum_interval   = 100      # timesteps between computing mass 
 

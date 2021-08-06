@@ -21001,6 +21001,31 @@ END SUBROUTINE Adist
       return
       end subroutine
 
+
+      subroutine gravity_wave_speed(wavelen,gravity,wavespeed)
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: wavelen,gravity
+      REAL_T, intent(out) :: wavespeed
+      REAL_T omega,k
+
+      if ((wavelen.gt.zero).and.(gravity.gt.zero)) then
+       ! do nothing
+      else
+       print *,"parameters invalid in gravity wave speed"
+       stop
+      endif
+
+       ! Denner and van Wachem, JCP 285 (2015) 24-40 (27)
+       ! omega/k = sqrt(g/k)
+       ! for shallow waves: omega/k = sqrt(g h)  where h is the depth
+       ! wavelen = depth on input
+      wavespeed=sqrt(gravity * wavelen)
+
+      return
+      end subroutine gravity_wave_speed
+
+
       subroutine capillary_wave_speed(wavelen,den1,den2,visc1,visc2, &
        tension,wavespeed)
       IMPLICIT NONE
@@ -21009,13 +21034,18 @@ END SUBROUTINE Adist
       REAL_T, intent(out) :: wavespeed
       REAL_T omega,k
 
-      if ((wavelen.le.zero).or.(den1.le.zero).or. &
-          (den2.le.zero).or.(visc1.le.zero).or. &
-          (visc2.le.zero).or.(tension.le.zero)) then
-       print *,"parameter invalid in capillary wave speed"
+      if ((wavelen.gt.zero).and.(den1.gt.zero).and. &
+          (den2.gt.zero).and.(visc1.gt.zero).and. &
+          (visc2.gt.zero).and.(tension.gt.zero)) then
+       ! do nothing
+      else
+       print *,"parameters invalid in capillary wave speed"
        stop
       endif
 
+       ! Denner and van Wachem, JCP 285 (2015) 24-40 (1)
+       ! omega/k = k^{1/2} (sigma/(den_liquid+den_gas))^{1/2}
+       ! wavelen = dxmin
       k=two*Pi/wavelen
       omega=(k**(1.5))*sqrt(tension/(den1+den2))
       wavespeed=omega/k
