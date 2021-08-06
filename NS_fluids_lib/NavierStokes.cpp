@@ -323,6 +323,9 @@ Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
 
 int NavierStokes::n_scales=3;
+// 2^0=1 bit => ignore advective scales
+// 2^1=2 bit => ignore surface tension scales
+// 2^2=4 bit => ignore gravity scales
 int NavierStokes::ignore_fast_scales=0;
 Vector<Real> NavierStokes::current_dt_group;
 Vector<Real> NavierStokes::hold_dt_factors;
@@ -19240,7 +19243,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
   amrex::Error("need_all_dt_values invalid");
 
  for (int iscale=0;iscale<current_dt_group.size();iscale++) {
-  current_dt_group[iscale]=dt_min[iscale+1];
+  current_dt_group[iscale]=std::min(cfl,0.5)*dt_min[iscale+1];
  }
 
  if (return_dt>dt_max)

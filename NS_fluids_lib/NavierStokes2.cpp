@@ -2108,8 +2108,10 @@ void NavierStokes::apply_cell_pressure_gradient(
    } else if (isweep==2) {
     operation_flag_interp_macvel=101; // div(up) (low order only)
     local_enable_spectral=0;
-   } else
+   } else {
+    operation_flag_interp_macvel=-1; 
     amrex::Error("isweep, operation_flag_interp_macvel invalid1");
+   }
 
    int homflag=0; // default
  

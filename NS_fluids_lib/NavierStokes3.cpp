@@ -2378,6 +2378,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       std::cout << "iscale hold_dt_factors " << iscale << ' ' <<
 	  hold_dt_factors[iscale] << '\n';
      }
+     std::cout << "dt_slab= " << dt_slab << '\n';
     }
    }
 
