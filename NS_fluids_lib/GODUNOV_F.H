@@ -468,7 +468,6 @@ extern "C"
       Real* u_max_cap_wave,
       Real* dt_min,
       int* rzflag,
-      Real* Uref,Real* Lref,
       int* nten,
       Real* denconst,
       Real* visc_coef,

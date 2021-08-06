@@ -850,13 +850,9 @@ int NavierStokes::normal_probe_size=1;
 // 3=dirichlet at inflow, outflow, and walls.
 int NavierStokes::prescribe_temperature_outflow=0; // default is 0
 
-Real NavierStokes::Uref=0.0;
-Real NavierStokes::Lref=0.0;
-
 // 0=volume fraction  1=mass fraction 2=impedance fraction
 int  NavierStokes::pressure_select_criterion=0;
 
-int  NavierStokes::last_finest_level=-1;
 
 Vector<Real> NavierStokes::vorterr;
 Vector<Real> NavierStokes::pressure_error_cutoff;
@@ -3788,13 +3784,6 @@ NavierStokes::read_params ()
       amrex::Error("geometry_is_periodic[dir] invalid"); 
     } // dir=0..sdim-1
 
-    pp.query("Uref",Uref);
-    pp.query("Lref",Lref);
-    if (Uref<0.0)
-     amrex::Error("Uref invalid");
-    if (Lref<0.0)
-     amrex::Error("Lref invalid");
-
     pp.query("pressure_select_criterion",pressure_select_criterion);
     if ((pressure_select_criterion<0)||
         (pressure_select_criterion>2))
@@ -4844,8 +4833,6 @@ NavierStokes::read_params ()
        cavitation_tension[i] << '\n';
      } // i=0..nmat-1
 
-     std::cout << "Uref " << Uref << '\n';
-     std::cout << "Lref " << Lref << '\n';
      std::cout << "pressure_select_criterion " << 
        pressure_select_criterion << '\n';
 
@@ -18747,7 +18734,6 @@ void NavierStokes::MaxAdvectSpeedALL(
  if (level!=0)
   amrex::Error("level invalid MaxAdvectSpeedALL");
 
- last_finest_level=finest_level; 
  
  Real local_vel_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
  Real local_vel_max_cap_wave;
@@ -19030,7 +19016,6 @@ void NavierStokes::MaxAdvectSpeed(
     &local_vel_max_cap_wave[tid_current],
     local_dt_min_thread.dataPtr(),
     &rzflag,
-    &Uref,&Lref,
     &nten,
     denconst.dataPtr(),
     &visc_coef,

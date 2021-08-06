@@ -4356,7 +4356,6 @@ stop
         u_max_cap_wave, &
         dt_min, &
         rzflag, &
-        Uref,Lref, &
         nten, &
         denconst, &
         visc_coef, &
@@ -4434,7 +4433,6 @@ stop
       REAL_T, intent(inout) :: u_max_cap_wave
       REAL_T, intent(inout) :: dt_min(0:n_scales)
       REAL_T user_tension(nten)
-      REAL_T Uref,Lref
       REAL_T, intent(in) :: denconst(nmat)
       REAL_T, intent(in) :: visc_coef
       REAL_T, intent(in) :: ns_gravity
@@ -4483,7 +4481,6 @@ stop
       REAL_T dxmin,dxmax,dxmaxLS,den1,den2,visc1,visc2
       INTEGER_T recompute_wave_speed
       REAL_T uulocal
-      REAL_T smallestL
       REAL_T denjump
       REAL_T denjump_temp
       REAL_T denmax
@@ -4597,14 +4594,6 @@ stop
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      if (Lref.eq.zero) then
-       smallestL=dxmin
-      else if (Lref.lt.dxmin) then
-       smallestL=Lref
-      else
-       smallestL=dxmin
-      endif
-
       if (visc_coef.ge.zero) then
        ! do nothing
       else
@@ -4616,15 +4605,6 @@ stop
           (level.lt.0).or. &
           (level.gt.finest_level)) then
        print *,"level or finest level invalid estdt"
-       stop
-      endif
-
-      if (Uref.lt.zero) then
-       print *,"Uref invalid"
-       stop
-      endif
-      if (Lref.lt.zero) then
-       print *,"Lref invalid"
        stop
       endif
 
@@ -4717,8 +4697,8 @@ stop
           visc1=visc_coef*mu+1.0D-10
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
           visc2=visc_coef*mu+1.0D-10
-            ! typically smallestL=dxmin
-          call capillary_wave_speed(smallestL,den1,den2,visc1,visc2, &
+           ! declared in PROB.F90
+          call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
             user_tension(iten),cap_wave_speed(iten))
          else
           print *,"user_tension invalid"
@@ -4736,12 +4716,9 @@ stop
        enddo
       else
        print *,"recompute wave speed invalid"
-       print *,"Uref=",Uref
-       print *,"Lref=",Lref
        print *,"nmat=",nmat
        print *,"level=",level
        print *,"finest_level=",finest_level
-       print *,"smallestL= ",smallestL
        print *,"dxmin= ",dxmin
        print *,"cfl= ",cfl
        print *,"denconst(1)= ",denconst(1)

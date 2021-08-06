@@ -2005,10 +2005,6 @@ protected:
     static int ngrow_expansion;  // should always be 2
     static int prescribe_temperature_outflow;
 
-    static Real Uref;
-    static Real Lref;
-    static int last_finest_level;
-
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
 
