@@ -742,13 +742,14 @@ IMPLICIT NONE
 
 end subroutine STUB_DELETE_REGIONS_LIST
 
-subroutine STUB_THERMAL_K(x,cur_time,density,temperature, &
+subroutine STUB_THERMAL_K(x,dx,cur_time,density,temperature, &
           thermal_k,im)
 use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im
 REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(in) :: density
 REAL_T, intent(in) :: temperature

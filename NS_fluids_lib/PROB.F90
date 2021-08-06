@@ -3734,6 +3734,11 @@ end subroutine dynamic_contact_angle
         state_ptr)
       endif
 
+      if (1.eq.0) then
+       print *,"before: rho,pres,dt,global_pressure_scale ", &
+         rho_hydrostatic,pres_hydrostatic,dt,global_pressure_scale
+      endif
+ 
         ! dt multiplied by velocity scale.
       pres_hydrostatic=pres_hydrostatic*dt/global_pressure_scale
 

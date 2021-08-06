@@ -1418,13 +1418,14 @@ endif
 end subroutine CRYOGENIC_TANK_MK_CHARFN_REGION
 
 
-subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,cur_time,density,temperature, &
+subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,dx,cur_time,density,temperature, &
           thermal_k,im)
 use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im
 REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(in) :: density
 REAL_T, intent(in) :: temperature
@@ -1438,13 +1439,11 @@ else
 endif
 
 if ((im.ge.1).and.(im.le.num_materials)) then
- if (im.eq.1) then ! liquid
+ if (im.eq.2) then ! vapor
   ! do nothing
- else if (im.eq.2) then ! vapor
-  ! do nothing
- else if (im.eq.3) then ! solid
+ else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
   if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-      (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
+      (abs(x(1)).ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
       (x(2).ge.TANK_MK_HEATER_LOW).and.&
       (x(2).le.TANK_MK_HEATER_HIGH)) then
    thermal_k=fort_heatviscconst(im)*1.0D+3

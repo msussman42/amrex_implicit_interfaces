@@ -1098,7 +1098,7 @@ stop
        thermal_k=get_user_heatviscconst(im_parm)
 
        if (is_in_probtype_list().eq.1) then
-        call SUB_THERMAL_K(xvec,time,density,temperature, &
+        call SUB_THERMAL_K(xvec,dx,time,density,temperature, &
                 thermal_k,im_parm)
        endif
 

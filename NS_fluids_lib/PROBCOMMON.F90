@@ -486,10 +486,11 @@ implicit none
       REAL_T, intent(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
-      subroutine TEMPLATE_THERMAL_K(x,cur_time,density,temperature, &
+      subroutine TEMPLATE_THERMAL_K(x,dx,cur_time,density,temperature, &
                       thermal_k,im)
       INTEGER_T, intent(in) :: im
       REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: density
       REAL_T, intent(in) :: temperature

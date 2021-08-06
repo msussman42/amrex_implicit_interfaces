@@ -11460,6 +11460,8 @@ END SUBROUTINE SIMP
 
          ! includes centrifugal force but not "coriolis force"
          ! p=dt( -|g| z + (1/2)Omega^2 r^2 )
+         ! general_hydrostatic_pressure_density is declared in:
+         !  PROB.F90
         call general_hydrostatic_pressure_density( &
           i,j,k,level, &
           gravity_normalized, &
