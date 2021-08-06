@@ -8865,8 +8865,8 @@ void NavierStokes::multiphase_GMRES_preconditioner(
    presmooth,postsmooth,
    idx_Z,idx_R,nsolve);
  } else if ((gmres_precond_iter>0)&&
-            (gmres_precond_iter*nsolve<=MAX_GMRES_BUFFER)) {
-  int m=gmres_precond_iter*nsolve;
+            (gmres_precond_iter<=MAX_GMRES_BUFFER)) {
+  int m=gmres_precond_iter;
 
   Real beta=0.0;
   dot_productALL(project_option,idx_R,idx_R,beta,nsolve);
@@ -9093,6 +9093,7 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
  } else {
   std::cout << "gmres_precond_iter= " << gmres_precond_iter << '\n';
+  std::cout << "nsolve= " << nsolve << '\n';
   amrex::Error("NavierStokes3.cpp: gmres_precond_iter invalid");
  }
  project_right_hand_side(idx_Z,project_option,change_flag);

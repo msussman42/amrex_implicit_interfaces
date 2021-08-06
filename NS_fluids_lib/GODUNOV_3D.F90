@@ -4467,6 +4467,7 @@ stop
       INTEGER_T nhalf
       REAL_T LSleft(nmat)
       REAL_T LSright(nmat)
+      REAL_T LSsub(nmat)
       INTEGER_T im_opp
       INTEGER_T iten
       INTEGER_T im_source,im_dest
@@ -4518,6 +4519,12 @@ stop
       REAL_T local_elastic_time
       REAL_T ugrav
       REAL_T local_gravity_coefficient
+
+      INTEGER_T istenlo(3),istenhi(3)
+      INTEGER_T ivec(3)
+      INTEGER_T triple_flag
+      INTEGER_T im_sub
+
       REAL_T reference_depth
       INTEGER_T ignore_advection
       INTEGER_T ignore_surface_tension
@@ -4812,6 +4819,12 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
+       ivec(1)=i
+       ivec(2)=j
+       if (SDIM.eq.3) then
+        ivec(SDIM)=k
+       endif
 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal,31)
        hx=xstenMAC(1,dirnormal+1)-xstenMAC(-1,dirnormal+1)
@@ -5472,6 +5485,8 @@ stop
         stop 
        endif
 
+        ! gradh<>0 if the levelset function changes sign across a MAC
+        ! face.
        if (gradh.ne.zero) then
 
         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
@@ -5486,7 +5501,38 @@ stop
         else if (level_cap_wave_speed(iten).eq.zero) then
          ! do nothing
         else if (level_cap_wave_speed(iten).gt.zero) then
+
+         istenlo(3)=0
+         istenhi(3)=0
+         do dir2=1,SDIM
+          istenlo(dir2)=ivec(dir2)-1
+          istenhi(dir2)=ivec(dir2)+1
+          if (dirnormal+1.eq.dir2) then
+           istenlo(dir2)=ivec(dir2)-2
+          endif
+         enddo !dir2=1..sdim
+
+         triple_flag=0
+         do ialt=istenlo(1),istenhi(1)
+         do jalt=istenlo(2),istenhi(2)
+         do kalt=istenlo(3),istenhi(3)
+          do im_sub=1,nmat
+           LSsub(im_sub)=dist(D_DECL(ialt,jalt,kalt),im_sub)
+          enddo
+          call get_primary_material(LSsub,nmat,im_sub)
+          if ((im_sub.ne.im).and. &
+              (im_sub.ne.im_opp)) then
+           triple_flag=1
+          endif
+         enddo ! kalt
+         enddo ! jalt
+         enddo ! ialt
+
          dthold=hx/level_cap_wave_speed(iten)
+         if (triple_flag.eq.1) then
+          dthold=dthold/three
+         endif
+
          if (ignore_surface_tension.eq.0) then
           dt_min(0)=min(dt_min(0),dthold)
          else if (ignore_surface_tension.eq.2) then
