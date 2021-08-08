@@ -61,8 +61,12 @@ ns.FSI_flag         = 0 0 1
 # December 2013, vol 5, 041005-1.
 # Probe positions of Figure 3 are relative to the bottom of the
 # cylindrical section.
-ns.xblob            = 0.1016 # Tank cavity radius 
-ns.yblob            = 0.4064 # Height of Cylindrical part 
+#ns.xblob            = 0.1016 # Tank cavity radius (ZBOT)
+#TPCE: Kassemi, Kartuzova, Hylton 2018 (83 percent volume)
+#      Bentz, Knoll, Lin 1993
+#13.7 liter tank
+ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
+ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
 ns.radblob2         = 0.08   # radius of spherical ullage
@@ -70,16 +74,15 @@ ns.xblob2           = 0.0
 ns.yblob2           = 0.1016
 ns.zblob2           = 0.1016
 
-ns.xblob4 	    = 0.2159 # End cap radius 
+ns.xblob4 	    = 0.127 # End cap radius 
 
 #TANK_MK_END_CENTER=yblob4
-#top of cylindrical section: z=0.2032
-#bottom of crylindrical section: z=-0.2032
-#radius of the spherical cap is 0.2159
-#z coordinate of tank bottom: -0.2286=-0.2032-0.0254
-#z coordinate of tank top: 0.2286
-#z tank top-radius of sphere cap = 0.2286-.2159=0.0127
-ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center 
+#top of cylindrical section: z=0.102/2
+#bottom of crylindrical section: z=-0.102/2
+#radius of the spherical cap is 0.127
+#z coordinate of tank bottom: -0.178=-0.102/2-0.127
+#z coordinate of tank top: 0.178
+ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center 
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
@@ -233,9 +236,6 @@ ns.stiffCP=1300.0 2400.0 1500.0
 ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
-#ns.heatviscconst=0.075 0.00375 0.189
-# even for axis_dir==0, source is concentrated in the fluid.  Later, when
-# the solid is made just a shell, then we can diffuse into the solid.
 ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]

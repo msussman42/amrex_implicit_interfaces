@@ -235,9 +235,6 @@ ns.stiffCP=1300.0 2400.0 1500.0
 ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
-#ns.heatviscconst=0.075 0.00375 0.189
-# even for axis_dir==0, source is concentrated in the fluid.  Later, when
-# the solid is made just a shell, then we can diffuse into the solid.
 ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
@@ -273,7 +270,7 @@ ns.tempconst=295.41 295.41 295.41
 #   Algorithm to overcome the gravity time step:
 #   for tau=0..dt
 #    multimaterial volume preserving motion by "normal": 
-#      v=g zvec dot n [rho]/rho
+#      v=g (zvec dot n)n [rho]/rho 
 # Surface tension [N/m]
 #90 degree contact angle
 #ns.tension=1.2E-02 1.2E-02 1.2E-02 
