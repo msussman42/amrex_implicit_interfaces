@@ -25,7 +25,7 @@ ns.ncomp_sum_int_user2=2  # pressure and temperature
 # 1=liquid 2=gas(placeholder) 3=solid wall
 ns.num_materials    = 3
 # vapor
-ns.num_species_var  = 1
+ns.num_species_var  = 0
 
 # The grid independent evaporation model for fully saturated gas:
 # Clausius Clapyron:
@@ -47,22 +47,11 @@ ns.material_type_evap = 0 24 999 # needed for Kassemi model
 ns.material_type_lowmach = 0 0 999 # Tryggvason low mach number model
 ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
-#u_t + div(uu) = -grad p/rho + div tau/rho
-# remark: Lax Friedrichs method:
-#   u_{i+1/2}^{n}=(u_i^{n} + u_{i+1}^{n})/2
-#   u_{i+1/2}^{n+1}=u_{i+1/2}^{n}-dt/dx  (f_{i+1}^{n}-f_{i}^{n})
-#   u_{i}^{n+1}=(u_{i+1/2}^{n+1} + u_{i-1/2}^{n+1})/2
-#      before div tau/rho force, let u_CC=interp_to_CC(u_MAC)
-#      then after div tau/rho force, let u_MAC=interp_to_MAC(u_CC)
-#      before grad p/rho force, let u_MAC=interp_to_MAC(u_CC)
-#      then after grad/rho force, let u_CC=interp_to_CC(u_MAC)
 ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
-
-# currently: only one tank allowed in the domain.
 
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
@@ -108,7 +97,6 @@ geometry.is_periodic= 0 0
 # best to have dx=dy for now.
 amr.n_cell          = 64 256
 amr.max_level       = 0
-ns.max_level_for_use = 0
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 64    # 64 is optimal for MPI
@@ -167,17 +155,18 @@ ns.v=0
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
+ns.ignore_fast_scales=0
 ns.gravity          = 0.0
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
 #override_density=0 if compressible material
 #if incompressible material:
-# override_density=0 => rho independent of T or Z
-# override_density=1 => rho=rho(T,Z)  in the grad p/rho and div tau/rho
+# override_density=0 => rho independent of T
+# override_density=1 => rho=rho(T)  in the grad p/rho and div tau/rho
 #  force terms.
-# override_density=2 => has not been tested in a while 
-#   (Boussinesq approximation)
-#   rho independent of T or Z, but the gravity force is modified.
+# override_density=2 => Boussinesq approximation
+#   rho independent of T, but the gravity force is modified.
+#   Boussinesq approx: Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
 ns.override_density=0 0 0  # 1..num_materials
 # rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
 # coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
@@ -212,7 +201,7 @@ ns.visc_coef        = 1.0
 # HFE7000, molar_mass=0.2?  Molar mass used in the Clausius Clapyron
 #                           equation.
 ns.molar_mass = 0.2 0.2 1  # 1..num_materials
-ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
+#ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
                            # molar mass.
 
 # Density [kg/m^3]  HFE7000
@@ -220,12 +209,12 @@ ns.denconst= 1400.0 5.3421449445 1190.0
 ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
 
-ns.speciesconst= 1.0 1.0 1.0  #Kassemi
+#ns.speciesconst= 1.0 1.0 1.0  #Kassemi
 
 # Diffusion coefficient [m^2/s]
 # Not used ???
 # liquid, vapor, solid
-ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
+#ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
 
 # 1. input to the Schrage velocity model: Temperature, gas mixture density,
 #    mass fraction, liquid density
@@ -247,7 +236,7 @@ ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 #ns.heatviscconst=0.075 0.00375 0.189
 # even for axis_dir==0, source is concentrated in the fluid.  Later, when
 # the solid is made just a shell, then we can diffuse into the solid.
-ns.heatviscconst=0.075 0.00375 0.0
+ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
 # mu_gas=1.093e-6, but make zero to avoid jump condition issue.
@@ -287,7 +276,7 @@ ns.constant_density_all_time=1 0 1 # sealed 1..nmat
 ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
-ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
+#ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
 # freezing_model==0 => Energy jump model, no species
 # freezing_model==6 => Either Villegas etal/Palmore Desjardins model with
 #  species for evaporation/condensation or 
@@ -366,14 +355,6 @@ ns.EILE_flag        = -1
 ns.MOFITERMAX       = 15
 
 ns.truncate_thickness=2.0
-
-# ----------------------------------------------------------
-# -------- Advection ---------------------------------------
-# ----------------------------------------------------------
-
-# 0=no limiter,  1=minmod
-# 2=minmod with slope=0 at interface 
-# 3=no limiter with slope=0 at interface
 
 # ----------------------------------------------------------
 # -------- Projection --------------------------------------
