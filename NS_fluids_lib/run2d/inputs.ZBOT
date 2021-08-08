@@ -53,8 +53,6 @@ ns.num_divu_outer_sweeps=1
 # 1 => By levelset definition in PROB.F90 (and module file)
 ns.FSI_flag         = 0 0 1
 
-# currently: only one tank allowed in the domain.
-
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
 # See Barsi and Kassemi, "Investigation of Tank Pressurization and 
@@ -159,7 +157,7 @@ ns.v=0
 # if first bit (2^0) is set, then ignore fast advective scales.
 # if second bit (2^1) is set, then ignore fast capillary wave scales.
 # if third bit (2^2) is set, then ignore fast gravity wave scales.
-ns.ignore_fast_scales=6  
+ns.ignore_fast_scales=4  
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
@@ -250,10 +248,36 @@ ns.viscconst=4.48E-04 0.0 1.0
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
 
+#In the future: resurrect the Sussman and Ohta algorithm with accelerated
+#"coloring" update scheme:
+#(the savings is much more significant now since there is additional savings
+#in not having to calculate motion due to phase change during the motion
+#by mean curvature iteration!)
+#
+#for tau=0...dt
+# multimaterial volume preserving motion by mean curvature v=sigma kappa:
+#   a) marching tetrahedra redistancing
+#   b) height function level set
+#   c) extension of level set function into solid.
+#endfor
+#kappa=(LS(dt)-LS(0)
+#Also in the future: (for gravity)
+# for free surface problem:
+#   ppot=rho dot zvec g   zvec=(0 0 z)
+#   p=p' + ppot
+#   u_t = -grad(p'+ppot)/rho + g zhat   p'=-ppot on free surface
+#   u_t = -grad p'/rho - grad ppot/rho + g zhat = -grad p'/rho 
+#   or, as a two phase problem:
+#   u_t = -grad p'/rho - g zvec dot grad rho/rho =  
+#       = -grad p'/rho - g zvec dot n [rho] delta/rho
+#   Algorithm to overcome the gravity time step:
+#   for tau=0..dt
+#    multimaterial volume preserving motion by "normal": 
+#      v=g zvec dot n [rho]/rho
 # Surface tension [N/m]
-#ns.tension=0.0 0.0 0.0
 #90 degree contact angle
-ns.tension=1.2E-02 1.2E-02 1.2E-02 
+#ns.tension=1.2E-02 1.2E-02 1.2E-02 
+ns.tension=0.0 0.0 0.0
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -354,10 +378,6 @@ ns.EILE_flag        = -1
 ns.MOFITERMAX       = 15
 
 ns.truncate_thickness=2.0
-
-# 0=no limiter,  1=minmod
-# 2=minmod with slope=0 at interface 
-# 3=no limiter with slope=0 at interface
 
 # ----------------------------------------------------------
 # -------- Projection --------------------------------------
