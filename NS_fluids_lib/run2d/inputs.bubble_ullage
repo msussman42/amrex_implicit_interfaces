@@ -62,17 +62,20 @@ ns.FSI_flag         = 0 0 1
 # Probe positions of Figure 3 are relative to the bottom of the
 # cylindrical section.
 #ns.xblob            = 0.1016 # Tank cavity radius (ZBOT)
-#TPCE: Kassemi, Kartuzova, Hylton 2018 (83 percent volume)
+#TPCE: Kassemi, Kartuzova, Hylton 2018 (tank liquid fill level: 83 percent vol)
 #      Bentz, Knoll, Lin 1993
 #13.7 liter tank
+#1 liter=1000 cm^3 =10^{-3} m^3
+#volume= pi (.127)^2 .102 + (4/3)pi (.127)^3=0.01375 m^3
 ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
 ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
-ns.radblob2         = 0.08   # radius of spherical ullage
+# volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
+ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
-ns.yblob2           = 0.1016
-ns.zblob2           = 0.1016
+ns.yblob2           = 0.051
+ns.zblob2           = 0.051
 
 ns.xblob4 	    = 0.127 # End cap radius 
 
@@ -82,6 +85,7 @@ ns.xblob4 	    = 0.127 # End cap radius
 #radius of the spherical cap is 0.127
 #z coordinate of tank bottom: -0.178=-0.102/2-0.127
 #z coordinate of tank top: 0.178
+#z coordinate of tank bottom: -0.178
 ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center 
 
 # ----------------------------------------------------------
@@ -90,15 +94,15 @@ ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center
 # 0 => cart (XY or XYZ), 1 => RZ
 # n_cell=16x64       
 geometry.coord_sys  = 1
-geometry.prob_lo    = 0.0   -0.254
-geometry.prob_hi    = 0.127  0.254
+geometry.prob_lo    = 0.0  -0.2
+geometry.prob_hi    = 0.2  0.2
 #geometry.prob_hi    = 0.508  0.254  # square domain
 geometry.is_periodic= 0 0
 
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-amr.n_cell          = 64 256
+amr.n_cell          = 128 256
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
