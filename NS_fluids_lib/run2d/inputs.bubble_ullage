@@ -14,11 +14,15 @@ stop_time=8000.0
 ns.probtype         = 423
 # variable accessible from plug-in:
 ns.axis_dir         = 1 #heater on top
+# for ZBOT:
 # variable for compiling diagnostic output
 # integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
 # T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
 # bottom of cylindrical section: -0.2032
 # so Z_code=-0.2032+0.2921=0.0889
+# for TPCE: (Bentz 1993)
+# T4 is 2.5 cm from very top of tank.
+# T4: r=0.0  Z=0.051+0.127-0.025=0.153 m
 ns.ncomp_sum_int_user1=1 
 ns.ncomp_sum_int_user2=2  # pressure and temperature 
 
@@ -92,11 +96,14 @@ ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center
 # -------- Domain and space/time discretization ------------
 # ----------------------------------------------------------
 # 0 => cart (XY or XYZ), 1 => RZ
-# n_cell=16x64       
+# n_cell=128 x 256
+# dx_coarse=.2/128=0.0015625 m
+# nozzle thickness=0.4 inches=0.01016 m
+# nozzle length=2.5inches=0.0635 m
+# thermister T4 is 2.5 cm from the very top of the tank.
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0  -0.2
 geometry.prob_hi    = 0.2  0.2
-#geometry.prob_hi    = 0.508  0.254  # square domain
 geometry.is_periodic= 0 0
 
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
@@ -222,12 +229,6 @@ cg.mglib_blocking_factor=2
 # Not used ???
 # liquid, vapor, solid
 #ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
-
-# 1. input to the Schrage velocity model: Temperature, gas mixture density,
-#    mass fraction, liquid density
-# 2. input to the expansion model: Delta F * (liquid density/vapor density)
-#    It is assume that Y_{Interface}=1.
-# Not used ???
 
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
