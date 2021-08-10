@@ -47,6 +47,9 @@ REAL_T :: TANK_MK_HEATER_HIGH
 REAL_T :: TANK_MK_HEATER_R
 REAL_T :: TANK_MK_HEATER_R_LOW
 
+REAL_T :: TANK_MK_HEATER_THICK
+REAL_T :: TANK_MK_HEATER_TOTAL_ANGLE
+
 REAL_T :: TANK_MK_INSULATE_R
 REAL_T :: TANK_MK_INSULATE_R_HIGH
 REAL_T :: TANK_MK_INSULATE_THICK
@@ -82,6 +85,9 @@ contains
   TANK_MK_HEIGHT             = yblob
   TANK_MK_INTERFACE_LOCATION = zblob
 
+  TANK_MK_END_RADIUS       = xblob4
+  TANK_MK_END_CENTER       = yblob4
+
   TANK_MK_INTERFACE_RADIUS = radblob2
   TANK_MK_BUBBLE_X         = xblob2
   TANK_MK_BUBBLE_Y         = yblob2
@@ -104,23 +110,18 @@ contains
 
    ! TPCE
   else if (axis_dir.eq.1) then ! heater on top
-   TANK_MK_HEATER_LOW       = 0.2032d0-0.004d0
-   TANK_MK_HEATER_HIGH      = 0.2032d0
-   TANK_MK_HEATER_R         = 0.05d0
-   TANK_MK_HEATER_R_LOW     = 0.0d0
+   TANK_MK_HEATER_THICK     = 0.01d0
+   TANK_MK_HEATER_TOTAL_ANGLE = 20.0d0*Pi/180.0d0
 
-   TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.001984375, 1cm diameter.
+   TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.0015625, 1cm diameter.
    TANK_MK_NOZZLE_HT=0.064D0
-   TANK_MK_NOZZLE_HT_OUTLET=0.005D0
-   TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT
+   TANK_MK_NOZZLE_THICK_OUTLET=0.005d0
+   TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
   else
    print *,"axis_dir invalid"
    stop
   endif
-
-  TANK_MK_END_RADIUS       = xblob4
-  TANK_MK_END_CENTER       = yblob4
 
   ! ASSUMING IDEAL GAS => The gas heat cpacities should satisfy this
   ! R_spc = C_{p,spc}-C_{v,spc}
@@ -156,6 +157,27 @@ contains
   return
  end subroutine INIT_CRYOGENIC_TANK_MK_MODULE
 
+ 
+ subroutine CRYOGENIC_TANK_MK_LS_NOZZLE(x,LS)
+  use probcommon_module
+  use global_utility_module
+  IMPLICIT NONE
+
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(out) :: LS
+  REAL_T :: xlo,xhi,ylo,yhi
+
+  xlo=-TANK_MK_NOZZLE_RAD
+  xhi=TANK_MK_NOZZLE_RAD
+   ! "TANK_MK_HEIGHT" term insures nozzle is flush against the
+   ! bottom of the tank.
+  ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
+  yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
+  call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,LS)
+  LS=-LS !now, LS>0 in the nozzle.
+
+  return
+ end subroutine CRYOGENIC_TANK_MK_LS_NOZZLE
 
  ! fluids tessellate the domain, solids are immersed. 
  ! fluid interfaces are extended into solids.
@@ -176,7 +198,7 @@ contains
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(in) :: t
   REAL_T, intent(out) :: LS(nmat)
-  REAL_T :: xlo,xhi,ylo,yhi,nozzle_dist
+  REAL_T :: nozzle_dist
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -217,19 +239,21 @@ contains
    if (axis_dir.eq.0) then
     ! do nothing
    else if (axis_dir.eq.1) then ! TPCE
-    xlo=-TANK_MK_NOZZLE_RAD
-    xhi=TANK_MK_NOZZLE_RAD
-    ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
-    yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
-    call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,nozzle_dist)
-    nozzle_dist=-nozzle_dist !now, nozzle_dist>0 in the nozzle.
-    if (nozzle_dist.gt.LS(3)) then
+    call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
+    if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
      LS(3)=nozzle_dist
     endif
    else
     print *,"axis_dir invalid"
     stop
    endif
+
+   caller_id=0
+   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
+   if (LS_A.gt.LS(3)) then
+    LS(3)=LS_A
+   endif
+
   else
    print *,"num_materials ", num_materials
    print *,"probtype ", probtype
@@ -239,6 +263,63 @@ contains
   ! print*,"X= ",x," LS= ", LS
   return
  end subroutine CRYOGENIC_TANK_MK_LS
+
+   !LS>0 in heater A region.
+   !caller_id=0 if called from geometry routine
+   !caller_id=1 if called from heater source routine.
+ subroutine CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS,caller_id)
+  use probcommon_module
+  use global_utility_module
+  IMPLICIT NONE
+
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(out) :: LS
+  INTEGER_T, intent(in) :: caller_id
+  REAL_T zdiff
+  REAL_T angle_end_center
+  REAL_T shell_R
+  REAL_T shell_center
+  REAL_T r_crit
+  REAL_T z_crit
+
+  zdiff=x(2)-TANK_MK_END_CENTER
+
+  if (zdiff.le.0.0d0) then
+   LS=-TANK_MK_END_RADIUS
+  else if (zdiff.gt.0.0d0) then
+   angle_end_center=atan(abs(x(1))/zdiff)
+   shell_R=sqrt(x(1)**2+(x(2)-TANK_MK_END_CENTER)**2)
+   shell_center=TANK_MK_END_CENTER+TANK_MK_END_RADIUS- &
+          0.5d0*TANK_MK_HEATER_THICK
+
+   if (caller_id.eq.1) then
+    LS=0.5d0*TANK_MK_HEATER_THICK-abs(shell_R-shell_center)
+   else if (caller_id.eq.0) then
+    LS=shell_R-TANK_MK_END_CENTER-TANK_MK_END_RADIUS+TANK_MK_HEATER_THICK
+   else
+    print *,"caller_id invalid"
+    stop
+   endif
+
+   if (angle_end_center.le.TANK_MK_HEATER_TOTAL_ANGLE) then
+    ! do nothing
+   else if (angle_end_center.ge.TANK_MK_HEATER_TOTAL_ANGLE) then
+    r_crit=sin(TANK_MK_HEATER_TOTAL_ANGLE)*(TANK_MK_END_RADIUS+ &
+            0.5d0*TANK_MK_HEATER_THICK)
+    z_crit=cos(TANK_MK_HEATER_TOTAL_ANGLE)*(TANK_MK_END_RADIUS+ &
+            0.5d0*TANK_MK_HEATER_THICK)+TANK_MK_END_CENTER
+    LS=sqrt( (abs(x(1))-r_crit)**2+(x(2)-z_crit)**2 )
+   else
+    print *,"angle_end_center is NaN"
+    stop
+   endif 
+  else
+   print *,"zdiff is NaN"
+   stop
+  endif
+
+  return
+ end subroutine CRYOGENIC_TANK_MK_LS_HEATER_A
 
  ! if SOLID VELOCITY requested everywhere (including outside of the solid),
  ! then velsolid==1
@@ -402,7 +483,7 @@ end function SOLID_TOP_HALF_DIST
 ! compressible material functions for 
 !   (ns.material_type = TANK_MK_MATERIAL_TYPE)
 ! C_spc => Specific heat capacity [J(kg K)]
-! C_m   =>    Moalr heat capacity [J(mol K)]
+! C_m   =>    Molar heat capacity [J(mol K)]
 !
 ! U = C_{v,spc} T
 ! [U] = J/kg= J/(kg K)  K
@@ -1104,7 +1185,8 @@ REAL_T, intent(inout) :: increment_out1(nsum1)
 REAL_T, intent(inout) :: increment_out2(nsum2)
 
 REAL_T massfrac_parm(num_species_var+1)
-REAL_T T1_probe(SDIM)
+REAL_T T1_probe(SDIM)  !ZBOT
+REAL_T T4_probe(SDIM)  !TPCE
 INTEGER_T im
 INTEGER_T dir
 INTEGER_T dencomp,local_ispec
@@ -1143,6 +1225,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   ! so T1_probe_z=-0.2032+0.2921=0.0889
   T1_probe(1)=zero
   T1_probe(2)=0.1016
+  T4_probe(1)=zero
+  T4_probe(2)=half*TANK_MK_HEIGHT+TANK_MK_END_RADIUS-0.025d0
   im=2 ! vapor
   dencomp=(im-1)*num_state_material+1
   den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
@@ -1158,7 +1242,14 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
   support_r=zero
   do dir=1,SDIM
-   support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
+   if (axis_dir.eq.0) then
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
+   else if (axis_dir.eq.1) then
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
   enddo
   support_r=sqrt(support_r) 
   dx_coarsest=TANK_MK_HEIGHT/64.0d0
@@ -1260,9 +1351,9 @@ INTEGER_T :: im,iregion,dir
  enddo ! im=1..num_materials
 
  if (axis_dir.eq.0) then
-  number_of_source_regions=1
+  number_of_source_regions=1 ! side heater
  else if (axis_dir.eq.1) then
-  number_of_source_regions=3
+  number_of_source_regions=3 ! heater A, inflow, outflow
  else
   print *,"axis_dir invalid"
   stop
@@ -1359,47 +1450,60 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    print *,"TANK_MK_R_WIDTH invalid"
    stop
   endif
+
  else if (axis_dir.eq.1) then !TPCE
 
-  TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
-  if (TANK_MK_R_WIDTH.gt.0.0d0) then
-   if (region_id.eq.1) then
-    if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-        (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
-        (x(2).ge.TANK_MK_HEATER_LOW).and.&
-        (x(2).le.TANK_MK_HEATER_HIGH)) then
-     charfn_out=one
-    else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
-             (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
-             (x(2).lt.TANK_MK_HEATER_LOW).or. &
-             (x(2).gt.TANK_MK_HEATER_HIGH)) then
-     charfn_out=zero
-    else
-     print *,"position bust"
-     stop
-    endif
-   else if (region_id.eq.2) then ! inflow
-    if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
-        (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
-        (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
-                 TANK_MK_NOZZLE_HT_OUTLET)) then
-     charfn_out=one
-    else
-     charfn_out=zero
-    endif
-   else if (region_id.eq.3) then ! outflow
-    if ((abs(x(1)).gt.TANK_MK_NOZZLE_RAD).and. &
-        (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT_OUTLET)) then
-     charfn_out=one
-    else
-     charfn_out=zero
-    endif
+  if (region_id.eq.1) then
+   caller_id=1
+   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
+   if (LS_A.ge.zero) then
+    charfn_out=one
+   else if (LS_A.le.zero) then
+    charfn_out=zero
    else
-    print *,"region_id invalid"
+    print *,"LS_A invalid"
     stop
    endif
+  else if (region_id.eq.2) then ! inflow
+   if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
+       (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
+       (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
+                TANK_MK_NOZZLE_HT_OUTLET)) then
+    charfn_out=one
+   else
+    charfn_out=zero
+   endif
+  else if (region_id.eq.3) then ! outflow
+   call CRYOGENIC_TANK_MK_LS_NOZZLE(x,LS_nozzle)
+   if (LS_nozzle.ge.zero) then
+    charfn_out=zero
+   else if (LS_nozzle.le.zero) then
+    if (x(2).ge.-TANK_MK_END_CENTER) then
+     charfn_out=zero
+    else if (x(2).le.-TANK_MK_END_CENTER) then
+     shell_R=sqrt(x(1)**2+(x(2)+TANK_MK_END_CENTER)**2)
+     shell_center=-TANK_MK_END_CENTER-TANK_MK_END_RADIUS+ &
+          0.5d0*TANK_MK_HEATER_THICK
+     LS_SHELL=0.5d0*TANK_MK_HEATER_THICK-abs(shell_R-shell_center)
+     if (LS_SHELL.ge.zero) then
+      charfn_out=one
+     else if (LS_SHELL.le.zero) then
+      charfn_out=zero
+     else
+      print *,"LS_SHELL invalid"
+      stop
+     endif
+    else
+     print *,"x(2) is NaN"
+     stop
+    endif
+   else
+    print *,"LS_nozzle is NaN"
+    stop
+   endif
+
   else
-   print *,"TANK_MK_R_WIDTH invalid"
+   print *,"region_id invalid"
    stop
   endif
 
