@@ -104,16 +104,16 @@ contains
    TANK_MK_HEATER_R         = 0.1016d0+0.027d0
    TANK_MK_HEATER_R_LOW     = 0.1016d0
 
-   TANK_MK_INSULATE_R = xblob+0.027d0
+   TANK_MK_INSULATE_R = xblob+0.027d0 !xblob is the tank cavity radius
    TANK_MK_INSULATE_THICK = 0.0508
-   TANK_MK_INSULATE_R_HIGH = 0.4064d0/2.0d0
+   TANK_MK_INSULATE_R_HIGH = yblob/2.0d0 !yblob is height of cylindrical part
 
    ! TPCE
   else if (axis_dir.eq.1) then ! heater on top
    TANK_MK_HEATER_THICK     = 0.01d0
    TANK_MK_HEATER_TOTAL_ANGLE = 20.0d0*Pi/180.0d0
 
-   TANK_MK_NOZZLE_RAD=0.005D0  !dx =0.0015625, 1cm diameter.
+   TANK_MK_NOZZLE_RAD=0.005D0  !dx coarsest =0.0015625, "1cm diameter."
    TANK_MK_NOZZLE_HT=0.064D0
    TANK_MK_NOZZLE_THICK_OUTLET=0.005d0
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
@@ -135,7 +135,7 @@ contains
 
   TANK_MK_GAS_CV = fort_stiffCV(2) ![J/(kg K)]
 !  TANK_MK_GAS_CP = fort_stiffCP(2) ![J∕(kg·K)]
-  TANK_MK_GAS_CP = TANK_MK_GAS_CV + TANK_MK_R_UNIV/fort_molar_mass(2)  ! [J∕(kg·K)]
+  TANK_MK_GAS_CP=TANK_MK_GAS_CV+TANK_MK_R_UNIV/fort_molar_mass(2) ![J∕(kg·K)]
   TANK_MK_GAS_GAMMA = TANK_MK_GAS_CP / TANK_MK_GAS_CV
 
   ! Initial pressure based on the given density and temeprature
@@ -157,7 +157,7 @@ contains
   return
  end subroutine INIT_CRYOGENIC_TANK_MK_MODULE
 
- 
+  ! LS>0 in the nozzle 
  subroutine CRYOGENIC_TANK_MK_LS_NOZZLE(x,LS)
   use probcommon_module
   use global_utility_module
@@ -198,7 +198,8 @@ contains
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(in) :: t
   REAL_T, intent(out) :: LS(nmat)
-  REAL_T :: nozzle_dist
+  REAL_T :: nozzle_dist,LS_A
+  INTEGER_T :: caller_id
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -243,15 +244,14 @@ contains
     if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
      LS(3)=nozzle_dist
     endif
+    caller_id=0
+    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
+    if (LS_A.gt.LS(3)) then
+     LS(3)=LS_A
+    endif
    else
     print *,"axis_dir invalid"
     stop
-   endif
-
-   caller_id=0
-   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
-   if (LS_A.gt.LS(3)) then
-    LS(3)=LS_A
    endif
 
   else
@@ -1192,7 +1192,6 @@ INTEGER_T dir
 INTEGER_T dencomp,local_ispec
 REAL_T den,temperature,internal_energy,pressure
 REAL_T support_r
-REAL_T dx_test
 REAL_T dx_coarsest
 REAL_T charfn
 REAL_T volgrid
@@ -1252,24 +1251,14 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    endif
   enddo
   support_r=sqrt(support_r) 
-  dx_coarsest=TANK_MK_HEIGHT/64.0d0
-  dx_test=GRID_DATA_IN%dx(SDIM)
+  dx_coarsest=GRID_DATA_IN%dx(SDIM)
   do ilev=0,level-1
-   dx_test=2.0d0*dx_test
+   dx_coarsest=2.0d0*dx_coarsest
   enddo
 
-  if (dx_test.gt.dx_coarsest) then
-   dx_coarsest=dx_test
-  else if (dx_test.le.dx_coarsest) then
-   ! do nothing
-  else
-   print *,"dx_test is NaN"
-   stop
-  endif
-
-  if (support_r.le.dx_coarsest) then
+  if (support_r.le.2.0d0*dx_coarsest) then
    charfn=one
-  else if (support_r.gt.dx_coarsest) then
+  else if (support_r.gt.2.0d0*dx_coarsest) then
    charfn=zero
   else
    print *,"support_r invalid"
@@ -1421,6 +1410,7 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
+REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
@@ -1541,7 +1531,7 @@ else
  print *,"probtype invalid"
  stop
 endif
-
+FIX ME
 if ((im.ge.1).and.(im.le.num_materials)) then
  if (im.eq.2) then ! vapor
   ! do nothing
@@ -1553,10 +1543,24 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    thermal_k=fort_heatviscconst(im)*1.0D+3
   else if ((abs(x(2)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
            (abs(x(1)).ge.TANK_MK_INSULATE_R_HIGH)) then
-   thermal_k=0.0d0
+   if (im.eq.3) then
+    thermal_k=0.0d0
+   else if (im.eq.1) then
+    ! do nothing
+   else
+    print *,"im invalid"
+    stop
+   endif
   else if ((abs(x(2)).le.TANK_MK_HEIGHT/2.0d0).and. &
            (abs(x(1)).ge.TANK_MK_INSULATE_R)) then
-   thermal_k=0.0d0
+   if (im.eq.3) then
+    thermal_k=0.0d0
+   else if (im.eq.1) then
+    ! do nothing
+   else
+    print *,"im invalid"
+    stop
+   endif
   else
    ! do nothing
   endif
