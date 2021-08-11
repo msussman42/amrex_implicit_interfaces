@@ -56,7 +56,7 @@ REAL_T :: TANK_MK_INSULATE_THICK
 
 REAL_T :: TANK_MK_NOZZLE_RAD
 REAL_T :: TANK_MK_NOZZLE_HT
-REAL_T :: TANK_MK_NOZZLE_HT_OUTLET
+REAL_T :: TANK_MK_NOZZLE_THICK_OUTLET
 REAL_T :: TANK_MK_NOZZLE_BASE
 
 ! Flat or spherical interface
@@ -1411,6 +1411,7 @@ REAL_T, intent(in) :: cur_time
 REAL_T, intent(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
 REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle
+INTEGER_T :: caller_id
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
@@ -1458,7 +1459,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
        (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
        (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
-                TANK_MK_NOZZLE_HT_OUTLET)) then
+                TANK_MK_NOZZLE_THICK_OUTLET)) then
     charfn_out=one
    else
     charfn_out=zero
@@ -1524,6 +1525,8 @@ REAL_T, intent(in) :: cur_time
 REAL_T, intent(in) :: density
 REAL_T, intent(in) :: temperature
 REAL_T, intent(inout) :: thermal_k
+REAL_T :: LS_A
+INTEGER_T :: caller_id
 
 if (probtype.eq.423) then
  ! do nothing
@@ -1531,42 +1534,76 @@ else
  print *,"probtype invalid"
  stop
 endif
-FIX ME
+
 if ((im.ge.1).and.(im.le.num_materials)) then
- if (im.eq.2) then ! vapor
-  ! do nothing
- else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
-  if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-      (abs(x(1)).ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
-      (x(2).ge.TANK_MK_HEATER_LOW).and.&
-      (x(2).le.TANK_MK_HEATER_HIGH)) then
-   thermal_k=fort_heatviscconst(im)*1.0D+3
-  else if ((abs(x(2)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
-           (abs(x(1)).ge.TANK_MK_INSULATE_R_HIGH)) then
-   if (im.eq.3) then
-    thermal_k=0.0d0
-   else if (im.eq.1) then
-    ! do nothing
+
+ if (axis_dir.eq.0) then ! ZBOT
+
+  if (im.eq.2) then ! vapor
+   ! do nothing
+  else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
+   if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
+       (abs(x(1)).ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
+       (x(2).ge.TANK_MK_HEATER_LOW).and.&
+       (x(2).le.TANK_MK_HEATER_HIGH)) then
+    thermal_k=fort_heatviscconst(im)*1.0D+3
+   else if ((abs(x(2)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
+            (abs(x(1)).ge.TANK_MK_INSULATE_R_HIGH)) then
+    if (im.eq.3) then
+     thermal_k=0.0d0
+    else if (im.eq.1) then
+     ! do nothing
+    else
+     print *,"im invalid"
+     stop
+    endif
+   else if ((abs(x(2)).le.TANK_MK_HEIGHT/2.0d0).and. &
+            (abs(x(1)).ge.TANK_MK_INSULATE_R)) then
+    if (im.eq.3) then
+     thermal_k=0.0d0
+    else if (im.eq.1) then
+     ! do nothing
+    else
+     print *,"im invalid"
+     stop
+    endif
    else
-    print *,"im invalid"
-    stop
+    ! do nothing
    endif
-  else if ((abs(x(2)).le.TANK_MK_HEIGHT/2.0d0).and. &
-           (abs(x(1)).ge.TANK_MK_INSULATE_R)) then
-   if (im.eq.3) then
-    thermal_k=0.0d0
-   else if (im.eq.1) then
-    ! do nothing
+
+  else
+   print *,"im invalid"
+   stop
+  endif
+
+ else if (axis_dir.eq.1) then !TPCE
+  if (im.eq.2) then ! vapor
+   ! do nothing
+  else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
+   caller_id=1
+   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id)
+   if (LS_A.gt.-dx(1)) then
+    thermal_k=fort_heatviscconst(im)*1.0D+3
+   else if (LS_A.le.-dx(1)) then
+    if (im.eq.3) then
+     thermal_k=0.0d0
+    else if (im.eq.1) then
+     ! do nothing
+    else
+     print *,"im invalid"
+     stop
+    endif
    else
-    print *,"im invalid"
+    print *,"LS_A is NaN"
     stop
    endif
   else
-   ! do nothing
+   print *,"im invalid"
+   stop
   endif
 
  else
-  print *,"im invalid"
+  print *,"axis_dir out of range"
   stop
  endif
 
