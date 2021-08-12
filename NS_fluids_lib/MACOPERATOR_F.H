@@ -4,35 +4,27 @@
 #ifdef BL_LANG_FORT
 #    define FORT_REGULARIZE_BX regularize_bx
 #    define FORT_INIT_MASK_SING init_mask_sing
-#    define FORT_NSGENERATE    nsgenerate
 #    define FORT_DIVIDEDX      dividedx
-#    define FORT_MULT_FACEWT   mult_facewt
 #    define FORT_INTERPMAC     interpmac
 #    define FORT_RESTORE_PRES  restore_pres
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_REGULARIZE_BX REGULARIZE_BX
 #    define FORT_INIT_MASK_SING INIT_MASK_SING
-#    define FORT_NSGENERATE    NSGENERATE
 #    define FORT_DIVIDEDX      DIVIDEDX
-#    define FORT_MULT_FACEWT   MULT_FACEWT
 #    define FORT_INTERPMAC     INTERPMAC
 #    define FORT_RESTORE_PRES  RESTORE_PRES
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_REGULARIZE_BX regularize_bx
 #    define FORT_INIT_MASK_SING init_mask_sing
-#    define FORT_NSGENERATE    nsgenerate
 #    define FORT_DIVIDEDX      dividedx
-#    define FORT_MULT_FACEWT   mult_facewt
 #    define FORT_INTERPMAC     interpmac
 #    define FORT_RESTORE_PRES  restore_pres
 #  else
 #    define FORT_REGULARIZE_BX regularize_bx_
 #    define FORT_INIT_MASK_SING init_mask_sing_
-#    define FORT_NSGENERATE    nsgenerate_
 #    define FORT_DIVIDEDX      dividedx_
-#    define FORT_MULT_FACEWT   mult_facewt_
 #    define FORT_INTERPMAC     interpmac_
 #    define FORT_RESTORE_PRES  restore_pres_
 #  endif
@@ -88,7 +80,7 @@ extern "C"
      int* bfact,
      int* bc);
 
-   void FORT_NSGENERATE (
+   void fort_nsgenerate(
      int* level,
      int* finest_level,
      int* nsolve,
@@ -117,7 +109,7 @@ extern "C"
      int* dir);
 
 
-    void FORT_MULT_FACEWT(
+    void fort_mult_facewt(
      int* nsolve,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
      Real* facewt,AMREX_ARLIM_P(facewtlo),AMREX_ARLIM_P(facewthi),
