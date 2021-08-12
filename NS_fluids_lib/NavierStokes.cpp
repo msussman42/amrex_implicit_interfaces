@@ -4939,6 +4939,36 @@ NavierStokes::read_params ()
      }
     }  // if IO processor
 
+    int project_option_tol=0;
+    set_local_tolerances(project_option_tol);
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "project_option_tol(regular project)= " << 
+	     project_option_tol << '\n';
+     std::cout << "save_mac_abs_tol= " << save_mac_abs_tol << '\n';
+     std::cout << "save_atol_b= " << save_atol_b << '\n';
+     std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
+    }
+
+    project_option_tol=2;
+    set_local_tolerances(project_option_tol);
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "project_option_tol(thermal)= " << 
+	     project_option_tol << '\n';
+     std::cout << "save_mac_abs_tol= " << save_mac_abs_tol << '\n';
+     std::cout << "save_atol_b= " << save_atol_b << '\n';
+     std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
+    }
+
+    project_option_tol=3;
+    set_local_tolerances(project_option_tol);
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "project_option_tol(viscosity)= " << 
+	     project_option_tol << '\n';
+     std::cout << "save_mac_abs_tol= " << save_mac_abs_tol << '\n';
+     std::cout << "save_atol_b= " << save_atol_b << '\n';
+     std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
+    }
+
     if ((projection_enable_spectral>0)||
         (viscous_enable_spectral>0)||
         (enable_spectral>0)) {

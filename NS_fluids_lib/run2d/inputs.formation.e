@@ -80,7 +80,6 @@ amr.max_grid_size   = 1024
 ns.dt_cutoff      = 0.000001  # level 0 timestep below which we halt
 
 mac.mac_abs_tol        = 1.0e-10   # tolerence for mac projections
-mac.mac_tol        = 1.0e-10   # tolerence for mac projections
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32

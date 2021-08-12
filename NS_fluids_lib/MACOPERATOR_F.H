@@ -2,27 +2,23 @@
 #define _MACOPERATOR_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_REGULARIZE_BX regularize_bx
 #    define FORT_INIT_MASK_SING init_mask_sing
 #    define FORT_DIVIDEDX      dividedx
 #    define FORT_INTERPMAC     interpmac
 #    define FORT_RESTORE_PRES  restore_pres
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_REGULARIZE_BX REGULARIZE_BX
 #    define FORT_INIT_MASK_SING INIT_MASK_SING
 #    define FORT_DIVIDEDX      DIVIDEDX
 #    define FORT_INTERPMAC     INTERPMAC
 #    define FORT_RESTORE_PRES  RESTORE_PRES
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_REGULARIZE_BX regularize_bx
 #    define FORT_INIT_MASK_SING init_mask_sing
 #    define FORT_DIVIDEDX      dividedx
 #    define FORT_INTERPMAC     interpmac
 #    define FORT_RESTORE_PRES  restore_pres
 #  else
-#    define FORT_REGULARIZE_BX regularize_bx_
 #    define FORT_INIT_MASK_SING init_mask_sing_
 #    define FORT_DIVIDEDX      dividedx_
 #    define FORT_INTERPMAC     interpmac_
@@ -38,7 +34,7 @@ extern "C"
 {
 
 
-    void FORT_REGULARIZE_BX(
+    void fort_regularize_bx(
      int* nsolve,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
      Real* min_interior_coeff,

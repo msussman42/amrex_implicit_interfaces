@@ -171,7 +171,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
-mac.mac_tol=1.0e-10
 mac.mac_abs_tol    = 1.0e-10
 
 

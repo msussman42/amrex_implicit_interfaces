@@ -70,7 +70,6 @@ amr.max_grid_size   = 24
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 4.0e-12 # level 0 timestep below which we halt
-mac.mac_tol        = 1.0e-10
 mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

@@ -53,7 +53,6 @@ ns.fab_verbose=0 # for circle, fab_verbose=1, for plane (210), fab_verbose=0
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 
-mac.mac_tol        = 1.0e-4  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-4
 
 ns.visual_tessellate_vfrac=0

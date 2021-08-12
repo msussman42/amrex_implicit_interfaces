@@ -625,7 +625,7 @@ stop
        end subroutine FORT_DIVIDEDX
 
 
-       subroutine FORT_REGULARIZE_BX ( &
+       subroutine fort_regularize_bx( &
          nsolve, &
          bx,DIMS(bx), &
          min_interior_coeff, &
@@ -635,7 +635,8 @@ stop
          bfact, &
          level, &
          xlo,dx, &
-         dir)
+         dir) &
+       bind(c,name='fort_regularize_bx')
        use probf90_module
        use global_utility_module
        IMPLICIT NONE
@@ -650,7 +651,10 @@ stop
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: bfact
        REAL_T, intent(in) :: min_interior_coeff
-       REAL_T, intent(inout) :: bx(DIMV(bx),nsolve)
+
+       REAL_T, intent(inout),target :: bx(DIMV(bx),nsolve)
+       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
+
        REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
@@ -680,7 +684,9 @@ stop
         print *,"dir invalid mult_facewt"
         stop
        endif
-       call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
+
+       bx_ptr=>bx
+       call checkbound_array(fablo,fabhi,bx_ptr,0,dir,33)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,14) 
        do i=growlo(1),growhi(1)
@@ -724,7 +730,7 @@ stop
        enddo
  
        return
-       end subroutine FORT_REGULARIZE_BX
+       end subroutine fort_regularize_bx
 
 
        subroutine fort_mult_facewt( &

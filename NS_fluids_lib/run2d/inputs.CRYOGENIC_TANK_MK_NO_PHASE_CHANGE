@@ -286,7 +286,6 @@ mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 1
 
-mac.mac_tol=1.0e-10
 mac.mac_abs_tol    = 1.0e-10
 
 

@@ -174,6 +174,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   bfact,
   level,
   project_option,
+  mglib_min_coeff_factor,
   nsolve,
   ns_tiling,
   local_use_mg_precond);
@@ -661,8 +662,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
     // BXCOEFNOAREA = min_interior_coeff if not on the
     // edge of the domain and BXCOEFNOAREA previously = 0.0
-    // REGULARIZE_BX is in MACOPERATOR_3D.F90
-    FORT_REGULARIZE_BX(
+    // REGULARIZE_BX is declared in MACOPERATOR_3D.F90
+    fort_regularize_bx(
      &nsolve,
      bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
      &min_interior_coeff,

@@ -1339,7 +1339,7 @@ void apply_pressure_grad(
 
     void multiphase_project(int project_option);
 
-    void set_local_tolerances(int project_option);
+    static void set_local_tolerances(int project_option);
 
     void multiphase_preconditioner(
      int project_option,int project_timings,

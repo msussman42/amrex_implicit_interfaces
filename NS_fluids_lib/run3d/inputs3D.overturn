@@ -56,7 +56,6 @@ proj.sync_tol       = 1.0e-4   # tolerence for projections
 proj.proj_abs_error = 1.0e-5  # abs error for proj multigrid iter
 proj.bottom_tol     = 1.0e-4
 proj.level_dump     = -1
-mac.mac_tol        = 1.0e-4  # tolerence for mac projections
 mac.mac_sync_tol   = 1.0e-4   # tolerence for mac SYNC projection
 mac.mac_abs_tol    = 1.0e-4
 
