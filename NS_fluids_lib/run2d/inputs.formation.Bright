@@ -58,7 +58,6 @@ ns.dt_cutoff      = 0.000001  # level 0 timestep below which we halt
 
 # M.OHTA tolerance made less strict.
 mac.mac_abs_tol        = 1.0e-8   # tolerence for mac projections
-mac.mac_tol        = 1.0e-8   # tolerence for mac projections
 
 # M.OHTA change back to 1
 

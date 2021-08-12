@@ -113,7 +113,7 @@ amr.n_cell          = 128 256
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 64    # 64 is optimal for MPI
+amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
@@ -220,7 +220,7 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
-ns.mglib_min_coeff_factor=1000.0
+ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
 #ns.speciesconst= 1.0 1.0 1.0  #Kassemi
@@ -386,13 +386,11 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-8
 mg.rtol_b = -0.01
 Lp.v = 1
 
-mac.mac_tol=1.0e-10
-mac.mac_abs_tol    = 1.0e-10
-
+mac.mac_abs_tol=1.0e-8
 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 

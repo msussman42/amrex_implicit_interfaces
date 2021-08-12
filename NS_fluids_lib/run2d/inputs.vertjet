@@ -47,7 +47,6 @@ amr.max_grid_size   = 256
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
-mac.mac_tol        = 1.0e-7  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-7
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

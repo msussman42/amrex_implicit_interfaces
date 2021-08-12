@@ -66,7 +66,6 @@ amr.max_grid_size   = 32  # old version: 48  new version: 16
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.0000005  # level 0 timestep below which we halt
 
-mac.mac_tol        = 1.0e-8  # tolerence for mac projections
 mac.mac_abs_tol    = 1.0e-8
 ns.minimum_relative_error=1.0e-18
 
