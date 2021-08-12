@@ -1469,6 +1469,37 @@ contains
       end subroutine safe_data
 
 
+      subroutine safe_data_index(i,j,k,i_safe,j_safe,k_safe,datafab)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(out) :: i_safe,j_safe,k_safe
+      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:),:)
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,SDIM
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..sdim
+      i_safe=idata(1)
+      j_safe=idata(2)
+      k_safe=idata(3)
+
+      return
+      end subroutine safe_data_index
+
+
       ! Added by Guibo 11-12-2012
       subroutine dumpstring(instring)
       implicit none
@@ -5594,6 +5625,7 @@ contains
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T isten,dir
+      INTEGER_T dummy_input
  
       if (nhalf.lt.0) then
        print *,"nhalf invalid"
@@ -5609,7 +5641,15 @@ contains
        print *,"i,nhalf,level ",i,nhalf,level
        print *,"cache_index_low ",cache_index_low
        print *,"cache_index_high ",cache_index_high
-       stop
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:5618"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+       read *,dummy_input
+       error stop
       endif
       if ((2*j-nhalf.lt.cache_index_low).or. &
           (2*j+nhalf.gt.cache_index_high)) then

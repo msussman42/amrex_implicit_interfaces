@@ -520,7 +520,7 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
    else
     print *,"imattype= ",imattype
     print *,"imattype invalid EOS_CRYOGENIC_TANK_MK"
-    print *,"break point and gdb: "
+    print *,"(breakpoint) break point and gdb: "
     print *,"(1) compile with the -g option"
     print *,"(2) break CRYOGENIC_TANK_MK.F90:350"
     print *,"By pressing <CTRL C> during this read statement, the"
@@ -577,7 +577,7 @@ INTEGER_T :: dummy_input
    else
     print *,"imattype= ",imattype
     print *,"imattype invalid dVdT_CRYOGENIC_TANK_MK"
-    print *,"break point and gdb: "
+    print *,"(breakpoint) break point and gdb: "
     print *,"(1) compile with the -g option"
     print *,"(2) break CRYOGENIC_TANK_MK.F90:350"
     print *,"By pressing <CTRL C> during this read statement, the"

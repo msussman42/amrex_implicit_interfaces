@@ -33,12 +33,6 @@ stop
         module levelset_module
         use probf90_module
 
-        type prealloc_type
-         REAL_T, pointer :: ZEYU_XPOS(:,:,:,:)
-         REAL_T, pointer :: ZEYU_LS(:,:,:,:)
-         REAL_T, pointer :: ZEYU_WT(:,:,:)
-        end type prealloc_type
-
         type cell_CP_parm_type
          REAL_T dxmaxLS
          INTEGER_T i,j,k
@@ -54,7 +48,6 @@ stop
          INTEGER_T :: least_sqr_radius
          INTEGER_T :: least_sqrZ
          REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-         INTEGER_T, pointer, dimension(:) :: local_is_fluid
 
         end type cell_CP_parm_type
 
@@ -148,7 +141,6 @@ stop
 
 
         subroutine interp_fluid_LS( &
-         ZEYU_DAT, &
          cell_CP_parm, &
          xCP, &
          xSOLID_BULK, &
@@ -159,10 +151,8 @@ stop
         use global_utility_module
         use global_distance_module
         use probf90_module
-        use ZEYU_LS_extrapolation, only : level_set_extrapolation
         IMPLICIT NONE
         type(cell_CP_parm_type), intent(in) :: cell_CP_parm
-        type(prealloc_type), intent(out) :: ZEYU_DAT
         REAL_T, intent(in) :: xCP(SDIM)
         REAL_T, intent(in) :: xSOLID_BULK(SDIM)
         INTEGER_T, intent(in) :: cell_index(SDIM)
@@ -170,12 +160,14 @@ stop
         INTEGER_T, intent(in) :: im_solid 
         INTEGER_T, intent(out) :: im_fluid_critical
         INTEGER_T :: nhalf
-        REAL_T :: xsten(-3:3,SDIM)
+        REAL_T :: xsten(-1:1,SDIM)
         INTEGER_T :: dir
         INTEGER_T :: local_index(SDIM)
         INTEGER_T :: i2,j2,k2
+        INTEGER_T :: i_safe,j_safe,k_safe
         INTEGER_T :: isten,jsten,ksten
         REAL_T :: LS_virtual(num_materials)
+        REAL_T :: LS_center_stencil(num_materials)
         INTEGER_T im_local
         INTEGER_T im_primary_sub_stencil
         REAL_T shortest_dist_to_fluid
@@ -192,7 +184,7 @@ stop
         LSstenlo(3)=0
         LSstenhi(3)=0
 
-        nhalf=3
+        nhalf=1
 
          ! cell_index is containing cell for xCP
         do dir=1,SDIM
@@ -203,6 +195,7 @@ stop
 
         shortest_dist_to_fluid=-one
         im_fluid_critical=0
+        local_data_fab=>CP%LS
 
          ! stencil radius is 1.
         do i2=LSstenlo(1),LSstenhi(1)
@@ -214,8 +207,11 @@ stop
          jsten=local_index(2)+j2
          ksten=local_index(SDIM)+k2
 
+         call safe_data_index(isten,jsten,ksten,i_safe,j_safe,k_safe, &
+                 local_data_fab)
+
          call gridsten_level(xsten, &
-          isten,jsten,ksten, &
+          i_safe,j_safe,k_safe, &
           CP%level,nhalf)
 
          dist_stencil_to_bulk=zero
@@ -226,18 +222,19 @@ stop
           ! NOTE: the output from this routine is ignored if xSOLID_BULK
           ! in a fluid cell.
          do dir=1,SDIM
-          ZEYU_DAT%ZEYU_XPOS(i2,j2,k2,dir)=xsten(0,dir)
           dist_stencil_to_bulk=dist_stencil_to_bulk+ &
                   (xsten(0,dir)-xSOLID_BULK(dir))**2
          enddo
          dist_stencil_to_bulk=sqrt(dist_stencil_to_bulk)
 
-         local_data_fab=>CP%LS
          do im_local=1,CP%nmat
           call safe_data(isten,jsten,ksten,im_local, &
            local_data_fab,local_data_out)
           LS_virtual(im_local)=local_data_out
-         enddo
+          if ((i2.eq.0).and.(j2.eq.0).and.(k2.eq.0)) then
+           LS_center_stencil(im_local)=local_data_out
+          endif
+         enddo !im_local=1,CP%nmat
 
          ! the fluid cells closest to the substrate, but not
          ! in the substrate, have the most weight.
@@ -280,11 +277,6 @@ stop
           stop 
          endif
          
-         ZEYU_DAT%ZEYU_WT(i2,j2,k2)=one
-         do im_local=1,CP%nmat
-          ZEYU_DAT%ZEYU_LS(i2,j2,k2,im_local)=LS_virtual(im_local)
-         enddo
-
         enddo 
         enddo 
         enddo  !i2,j2,k2=LSstenlo ... LSstenhi
@@ -297,16 +289,9 @@ stop
           !no fluid cells in stencil
         else if (shortest_dist_to_fluid.eq.-one) then 
                 !no fluid cells in stencil
-
-         call level_set_extrapolation( &
-          ZEYU_DAT%ZEYU_XPOS, &
-          ZEYU_DAT%ZEYU_LS, &
-          ZEYU_DAT%ZEYU_WT, &
-          CP%local_is_fluid, & ! is_fluid(im)=1 if is_rigid(nmat,im)=0
-          LS_interp, &
-          CP%least_sqr_radius, &
-          CP%least_sqrZ, &
-          CP%nmat,SDIM)
+         do im_local=1,CP%nmat
+          LS_interp(im_local)=LS_center_stencil(im_local)
+         enddo
 
         else
          print *,"shortest_dist_to_fluid invalid"
@@ -16584,10 +16569,6 @@ stop
       INTEGER_T extrap_radius
       INTEGER_T least_sqr_radius
       INTEGER_T least_sqrZ
-      REAL_T, allocatable, target :: ZEYU_XPOS(:,:,:,:)
-      REAL_T, allocatable, target :: ZEYU_LS(:,:,:,:)
-      REAL_T, allocatable, target :: ZEYU_WT(:,:,:)
-      INTEGER_T, target :: local_is_fluid(nmat)
       INTEGER_T center_stencil_im_only
       INTEGER_T center_stencil_wetting_im
       INTEGER_T im1_substencil
@@ -16612,7 +16593,6 @@ stop
       REAL_T local_temperature(nmat)
       REAL_T local_mof(nmat*ngeom_recon)
       type(cell_CP_parm_type) :: cell_CP_parm
-      type(prealloc_type) :: ZEYU_DAT
       INTEGER_T cell_index(3)
       REAL_T xCP(SDIM)
       REAL_T xSOLID_BULK(SDIM)
@@ -16755,31 +16735,6 @@ stop
        stop
       endif
 
-      allocate(ZEYU_XPOS(-least_sqr_radius:least_sqr_radius, &
-              -least_sqr_radius:least_sqr_radius, &
-              -least_sqrZ:least_sqrZ,SDIM))
-      allocate(ZEYU_LS(-least_sqr_radius:least_sqr_radius, &
-              -least_sqr_radius:least_sqr_radius, &
-              -least_sqrZ:least_sqrZ,nmat))
-      allocate(ZEYU_WT(-least_sqr_radius:least_sqr_radius, &
-              -least_sqr_radius:least_sqr_radius, &
-              -least_sqrZ:least_sqrZ))
-
-      ZEYU_DAT%ZEYU_XPOS=>ZEYU_XPOS
-      ZEYU_DAT%ZEYU_LS=>ZEYU_LS
-      ZEYU_DAT%ZEYU_WT=>ZEYU_WT
-
-      do im=1,nmat
-       if (is_rigid(nmat,im).eq.0) then
-        local_is_fluid(im)=1
-       else if (is_rigid(nmat,im).eq.1) then
-        local_is_fluid(im)=0
-       else
-        print *,"is_rigid(nmat,im) invalid"
-        stop
-       endif
-      enddo ! im=1..nmat
-
       cell_CP_parm%least_sqrZ=least_sqrZ
       cell_CP_parm%least_sqr_radius=least_sqr_radius
       cell_CP_parm%dxmaxLS=dxmaxLS
@@ -16792,7 +16747,6 @@ stop
       cell_CP_parm%time=time
       cell_CP_parm%nmat=nmat
       cell_CP_parm%LS=>LS
-      cell_CP_parm%local_is_fluid=>local_is_fluid
 
       nmat_fluid=0
       nmat_solid=0
@@ -17384,7 +17338,6 @@ stop
              !LS_solid(<found stencil closest>)<0
              !LS_FLUID(<found stencil closest>)>0
             call interp_fluid_LS( &
-             ZEYU_DAT, &
              cell_CP_parm, &
              xCP, &
              xSOLID_BULK, &
@@ -17956,9 +17909,6 @@ stop
       enddo
       enddo  ! i,j,k
 
-      deallocate(ZEYU_XPOS)
-      deallocate(ZEYU_LS)
-      deallocate(ZEYU_WT)
 
       return
       end subroutine FORT_RENORMALIZE_PRESCRIBE
