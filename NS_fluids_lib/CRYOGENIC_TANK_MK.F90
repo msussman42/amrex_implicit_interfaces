@@ -1436,7 +1436,7 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
-REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle
+REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
 INTEGER_T :: caller_id
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
@@ -1509,10 +1509,10 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      zdiff=x(2)+TANK_MK_END_CENTER
      if (zdiff.ge.0.0d0) then
       charfn_out=0.0d0
-     else if (abs(zdiff).ge.TANK_MK_END_RADIUS) then
+     else if (zdiff.le.-TANK_MK_END_RADIUS) then
       charfn_out=0.0d0
      else if ((zdiff.lt.0.0d0).and. &
-              (abs(zdiff).le.TANK_MK_END_RADIUS)) then
+              (zdiff.gt.-TANK_MK_END_RADIUS)) then
       shell_R=sqrt(x(1)**2+zdiff**2)
       shell_center=TANK_MK_END_RADIUS-0.5d0*TANK_MK_HEATER_THICK
       LS_SHELL=0.5d0*TANK_MK_HEATER_THICK-abs(shell_R-shell_center)

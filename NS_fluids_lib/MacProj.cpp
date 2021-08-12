@@ -495,7 +495,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     // FACE_WEIGHT_MF initialized in BUILDFACEWT (LEVELSET_3D.F90)
     // BXCOEFNOAREA *= (facewtL + facewtR)/2
     // MULT_FACEWT is in MACOPERATOR_3D.F90
-   FORT_MULT_FACEWT(
+   fort_mult_facewt(
     &nsolve,
     bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
     facefab.dataPtr(),ARLIM(facefab.loVect()),ARLIM(facefab.hiVect()),
@@ -765,9 +765,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
-   // FORT_NSGENERATE is in MACOPERATOR_3D.F90
+   // fort_nsgenerate is declared in MACOPERATOR_3D.F90
    // initializes DIAG_REGULARIZE
-  FORT_NSGENERATE(
+  fort_nsgenerate(
     &level,
     &finest_level,
     &nsolve,

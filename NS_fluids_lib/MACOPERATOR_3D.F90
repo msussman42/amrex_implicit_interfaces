@@ -727,7 +727,7 @@ stop
        end subroutine FORT_REGULARIZE_BX
 
 
-       subroutine FORT_MULT_FACEWT ( &
+       subroutine fort_mult_facewt( &
          nsolve, &
          bx,DIMS(bx), &
          facewt,DIMS(facewt), &
@@ -736,7 +736,8 @@ stop
          bfact, &
          level, &
          xlo,dx, &
-         dir)
+         dir) &
+       bind(c,name='fort_mult_facewt')
        use probf90_module
        use global_utility_module
        IMPLICIT NONE
@@ -750,8 +751,10 @@ stop
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: bfact
-       REAL_T, intent(out) :: bx(DIMV(bx),nsolve)
-       REAL_T, intent(in) :: facewt(DIMV(facewt),nsolve)
+       REAL_T, intent(out),target :: bx(DIMV(bx),nsolve)
+       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
+       REAL_T, intent(in),target :: facewt(DIMV(facewt),nsolve)
+       REAL_T, pointer :: facewt_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
@@ -772,8 +775,10 @@ stop
         print *,"dir invalid mult_facewt"
         stop
        endif
-       call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
-       call checkbound(fablo,fabhi,DIMS(facewt),0,dir,33)
+       bx_ptr=>bx
+       facewt_ptr=>facewt
+       call checkbound_array(fablo,fabhi,bx_ptr,0,dir,33)
+       call checkbound_array(fablo,fabhi,facewt_ptr,0,dir,33)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,15) 
        do i=growlo(1),growhi(1)
@@ -789,7 +794,7 @@ stop
        enddo
  
        return
-       end subroutine FORT_MULT_FACEWT
+       end subroutine fort_mult_facewt
 
       subroutine FORT_INTERPMAC( &
         bfact,bfact_f, &
@@ -1247,7 +1252,7 @@ stop
 ! maskcov=1 for interior cells not covered by a finer cell
 ! fwtx,fwty,fwtz are not averaged down.
 ! bx,by,bz are equal to bx_noarea * area/dx and bx_noarea is averaged down.
-      subroutine FORT_NSGENERATE( &
+      subroutine fort_nsgenerate( &
        level, &
        finest_level, &
        nsolve, &
@@ -1262,7 +1267,8 @@ stop
        bz,DIMS(bz), &
        tilelo,tilehi, &
        fablo,fabhi, &
-       bfact)
+       bfact) &
+      bind(c,name='fort_nsgenerate')
       use probf90_module
       use global_utility_module
       IMPLICIT NONE
@@ -1283,12 +1289,17 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T             :: growlo(3), growhi(3)
 
-      REAL_T, intent(in) :: alpha(DIMV(alpha),nsolve)
-      REAL_T, intent(out) :: diag_reg(DIMV(diag_reg),nsolve)
+      REAL_T, intent(in),target :: alpha(DIMV(alpha),nsolve)
+      REAL_T, pointer :: alpha_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: diag_reg(DIMV(diag_reg),nsolve)
+      REAL_T, pointer :: diag_reg_ptr(D_DECL(:,:,:),:)
       ! coeff * areafrac * areaface / (dxfrac*dx)  (if coeff>0.0)
-      REAL_T, intent(in) :: bx(DIMV(bx),nsolve) 
-      REAL_T, intent(in) :: by(DIMV(by),nsolve)
-      REAL_T, intent(in) :: bz(DIMV(bz),nsolve)
+      REAL_T, intent(in),target :: bx(DIMV(bx),nsolve) 
+      REAL_T, intent(in),target :: by(DIMV(by),nsolve)
+      REAL_T, intent(in),target :: bz(DIMV(bz),nsolve)
+      REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: by_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: bz_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T veldir
@@ -1314,11 +1325,16 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(alpha),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(diag_reg),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(bx),0,0,140)
-      call checkbound(fablo,fabhi,DIMS(by),0,1,140)
-      call checkbound(fablo,fabhi,DIMS(bz),0,AMREX_SPACEDIM-1,140)
+      alpha_ptr=>alpha
+      call checkbound_array(fablo,fabhi,alpha_ptr,0,-1,140)
+      diag_reg_ptr=>diag_reg
+      call checkbound_array(fablo,fabhi,diag_reg_ptr,0,-1,140)
+      bx_ptr=>bx
+      by_ptr=>by
+      bz_ptr=>bz
+      call checkbound_array(fablo,fabhi,bx_ptr,0,0,140)
+      call checkbound_array(fablo,fabhi,by_ptr,0,1,140)
+      call checkbound_array(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1,140)
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -1367,5 +1383,5 @@ stop
       enddo
 
       return
-      end subroutine FORT_NSGENERATE
+      end subroutine fort_nsgenerate
 

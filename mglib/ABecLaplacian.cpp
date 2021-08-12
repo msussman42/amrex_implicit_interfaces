@@ -872,7 +872,7 @@ ABecLaplacian::buildMatrix() {
 
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      // in: LO_3D.F90
+      // declared in: LO_3D.F90
      fort_buildmat(
       &level, // level==0 is finest
       &veldir,
