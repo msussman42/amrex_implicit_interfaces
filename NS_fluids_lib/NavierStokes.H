@@ -310,7 +310,11 @@ enum StateNames {
 
   DenVar=0, TemperatureVar, SpeciesVar };
 
- 
+// Q is stored in the code.  A=Q+I   A is sometimes called the
+// "configuration tensor" 
+// See: Stewart, Lay, Sussman, Ohta (and papers cited, and papers who
+// cite this)
+// See also earlier work involving Pushpendra Singh (NJIT).
 #if (AMREX_SPACEDIM == 2)
 
 enum TensorNames {T11=0,T12,T22,T33,NUM_TENSOR_TYPE};

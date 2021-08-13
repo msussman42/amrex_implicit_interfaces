@@ -18124,8 +18124,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    // liquid viscosity=etaS+etaP ( 1+ (beta gamma_dot)^alpha )^((n-1)/alpha)
    //
    // for each material, there are 5 components:
-   // 1. \dot{gamma}
-   // 2. Tr(A) if viscoelastic
+   // 1. \dot{gamma}=sqrt(2 * D:D)  D=(grad U + grad U^T)/2 (plot label: DT)
+   // 2. Tr(A) if viscoelastic (plot label: TR)
    //    \dot{gamma} o.t.
    // 3. Tr(A) (liquid viscosity - etaS)/etaP  if FENE-CR+Carreau
    //    Tr(A) if FENE-CR

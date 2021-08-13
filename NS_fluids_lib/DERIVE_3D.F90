@@ -1354,6 +1354,7 @@ stop
        dest(D_DECL(i,j,k),5)= &
          sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
 
+        ! dest(1) calculated in fort_getshear.
        if (elastic_viscosity(im+1).eq.zero) then
         dest(D_DECL(i,j,k),2)=dest(D_DECL(i,j,k),1)
         dest(D_DECL(i,j,k),3)=dest(D_DECL(i,j,k),1)
