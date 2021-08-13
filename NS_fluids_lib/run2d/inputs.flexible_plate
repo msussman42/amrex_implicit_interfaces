@@ -244,7 +244,11 @@ ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
 # elastic_time is not used for viscoelastic_model==2
 ns.elastic_time=0.0 0.0 1.0e+9
-ns.viscoelastic_model=0 0 2
+# 0,1 => viscoelastic FENE-CR material (do not divide by lambda in
+#  viscoelastic source term if viscoelastic_model==1.
+# 2=> elastic material (e.g. Q ~ (grad X + grad X^T) )
+# 3=> incremental elastic material (Jaumann derivative)
+ns.viscoelastic_model=0 0 3
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
