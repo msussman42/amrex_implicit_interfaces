@@ -4216,7 +4216,7 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
  MultiFab* S_fine=fine_lev.localMF[idx_color];
 
  if (grids!=S_crse->boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid avgDownColor");
  if (fgrids!=S_fine->boxArray())
   amrex::Error("S_fine invalid");
 
@@ -4329,7 +4329,7 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(
  MultiFab* maskfinemf=fine_lev.maskfiner(ngrowmask,tag,clear_phys_boundary);
 
  if (grids!=S_crse->boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid CopyFineToCoarseColor");
  if (fgrids!=S_fine->boxArray())
   amrex::Error("S_fine invalid");
  if (fgrids!=maskfinemf->boxArray())

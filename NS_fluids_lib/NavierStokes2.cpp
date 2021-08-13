@@ -1430,7 +1430,8 @@ void NavierStokes::interp_flux_localMF(
 // interpolate from level+1 to level.
 // spectral_override==0 => always do low order average down.
 void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
-  int start_dir,int ndir,int spectral_override,int caller_id) {
+  int start_grid_type,int n_grid_type,
+  int spectral_override,int caller_id) {
 
  if (1==0) {
   std::cout << "avgDownEdge_localMF caller_id= " << caller_id << '\n';
@@ -1439,14 +1440,39 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
  int finest_level=parent->finestLevel();
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
-  for (int dir=start_dir;dir<start_dir+ndir;dir++) {
-   debug_ngrow(idxMF+dir,0,1000+dir);
-   ns_fine.debug_ngrow(idxMF+dir,0,1500+dir);
-   MultiFab& S_crse=*localMF[idxMF+dir];
-   MultiFab& S_fine=*ns_fine.localMF[idxMF+dir];
-   int caller_id_alt=4;
-   avgDownEdge(dir,S_crse,S_fine,scomp,ncomp,spectral_override,caller_id_alt);
-  } // dir
+
+  int local_grid_type=start_grid_type;
+  int caller_id_alt=4;
+
+  if (n_grid_type==-1) {
+   debug_ngrow(idxMF,0,1000+local_grid_type);
+   ns_fine.debug_ngrow(idxMF,0,1500+local_grid_type);
+   MultiFab& S_crse=*localMF[idxMF];
+   MultiFab& S_fine=*ns_fine.localMF[idxMF];
+   avgDownEdge(local_grid_type,
+	S_crse,S_fine,
+	scomp,ncomp,
+	spectral_override,caller_id_alt);
+  } else if ((n_grid_type==1)||(n_grid_type==AMREX_SPACEDIM)) {
+
+   for (local_grid_type=start_grid_type;
+        local_grid_type<start_grid_type+n_grid_type;
+        local_grid_type++) {
+    debug_ngrow(idxMF+local_grid_type,0,1000+local_grid_type);
+    ns_fine.debug_ngrow(idxMF+local_grid_type,0,1500+local_grid_type);
+    MultiFab& S_crse=*localMF[idxMF+local_grid_type];
+    MultiFab& S_fine=*ns_fine.localMF[idxMF+local_grid_type];
+    avgDownEdge(local_grid_type,
+	S_crse,S_fine,
+	scomp,ncomp,
+	spectral_override,caller_id_alt);
+   } // local_grid_type=start_grid_type...start_grid_type+n_grid_type-1
+  } else
+   amrex::Error("n_grid_type invalid");
+ } else if (level==finest_level) {
+  // do nothing
+ } else {
+  amrex::Error("level invalid");
  }
 
 } // avgDownEdge_localMF

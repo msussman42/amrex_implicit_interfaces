@@ -1180,7 +1180,8 @@ protected:
      // spectral_override==1 => order derived from "enable_spectral"
      // spectral_override==0 => always low order.
     void avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
-     int start_dir,int ndir,int spectral_override,int caller_id);
+     int start_grid_type,int n_grid_type,
+     int spectral_override,int caller_id);
 
     void smearvariable(int scomp,
      MultiFab* mask_extrapolate,int ngrow,Real def_value);
