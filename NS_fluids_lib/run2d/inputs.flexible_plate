@@ -242,7 +242,7 @@ ns.elastic_regularization=0.0 0.0 0.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
-# elastic_time is not used for viscoelastic_model==2
+# elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
 # 0,1 => viscoelastic FENE-CR material (do not divide by lambda in
 #  viscoelastic source term if viscoelastic_model==1.
