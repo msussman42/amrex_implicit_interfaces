@@ -15517,16 +15517,22 @@ stop
       REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+
        ! 1: sqrt(2 * D : D)
        ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
        ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
       REAL_T, intent(in), target :: tendata(DIMV(tendata),20)
+      REAL_T, pointer :: tendata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(out), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in), target :: xdisp(DIMV(xdisp))
       REAL_T, pointer :: xdisp_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: ydisp(DIMV(ydisp))
@@ -15582,7 +15588,10 @@ stop
        stop
       endif
 
-      if (viscoelastic_model.lt.0) then
+      if ((viscoelastic_model.ge.0).and. &
+          (viscoelastic_model.le.3)) then
+       ! do nothing
+      else
        print *,"viscoelastic_model invalid"
        stop
       endif
@@ -15606,11 +15615,16 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,visc,0,-1,9)
-      call checkbound_array(fablo,fabhi,tendata,0,-1,9)
-      call checkbound_array(fablo,fabhi,vel,1,-1,61)
+      visc_ptr=>visc
+      call checkbound_array(fablo,fabhi,visc_ptr,0,-1,9)
+      tendata_ptr=>tendata
+      call checkbound_array(fablo,fabhi,tendata_ptr,0,-1,9)
+      vel_ptr=>vel
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,61)
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
-      call checkbound_array(fablo,fabhi,told,0,-1,63)
+
+      told_ptr=>told
+      call checkbound_array(fablo,fabhi,told_ptr,0,-1,63)
 
       call checkbound_array1(fablo,fabhi,xdisp_ptr,1,0,63)
       call checkbound_array1(fablo,fabhi,ydisp_ptr,1,1,63)
