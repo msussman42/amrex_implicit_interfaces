@@ -5726,6 +5726,7 @@ contains
       INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T isten,dir,ii,jj,kk
       INTEGER_T box_type(SDIM)
+      INTEGER_T dummy_input
 
       if ((grid_type.ge.-1).and.(grid_type.le.5)) then
        ! do nothing
@@ -5756,7 +5757,21 @@ contains
       endif
       if ((level.lt.0).or.(level.gt.cache_max_level)) then
        print *,"level invalid gridstenMAC_level"
-       stop
+       print *,"level,cache_max_level ",level,cache_max_level
+       print *,"nhalf,grid_type,caller_id ", &
+               nhalf,grid_type,caller_id
+       print *,"x(0,1..sdim),i,j,k ",x(0,1),x(0,2),x(0,SDIM),i,j,k
+       print *,"box_type ",box_type(1),box_type(2),box_type(SDIM)
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:5771"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read *,dummy_input
+       error stop
       endif
       if (1.eq.0) then
        print *,"before: i,j,k,ii,jj,kk,nhalf ",i,j,k,ii,jj,kk,nhalf

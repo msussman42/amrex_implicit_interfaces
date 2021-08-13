@@ -329,7 +329,7 @@ extern "C"
     Real* polymer_factor,
     int* irz,int* nmat);
 
-   void fort_maketensorMAC(
+   void fort_maketensor_mac(
     int* interp_Q_to_flux,
     int* flux_grid_type,
     int* partid,

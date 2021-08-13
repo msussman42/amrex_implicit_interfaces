@@ -14717,7 +14717,7 @@ stop
       return
       end subroutine fort_maketensor
 
-      subroutine fort_maketensorMAC( &
+      subroutine fort_maketensor_mac( &
        interp_Q_to_flux, &
        flux_grid_type, &
        partid, & ! 0..num_materials_viscoelastic-1
@@ -14741,7 +14741,7 @@ stop
        viscoelastic_model, &
        polymer_factor, &
        irz,nmat) &
-      bind(c,name='fort_maketensorMAC')
+      bind(c,name='fort_maketensor_mac')
 
       use probcommon_module
       use global_utility_module
@@ -14771,9 +14771,14 @@ stop
       REAL_T, intent(in), target :: xdfab(DIMV(xdfab),1)
       REAL_T, intent(in), target :: ydfab(DIMV(ydfab),1)
       REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
+      REAL_T, pointer :: xdfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: ydfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: zdfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: tensor(DIMV(tensor), &
               FORT_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: tensorMAC(DIMV(tensorMAC), &
               FORT_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensorMAC_ptr(D_DECL(:,:,:),:)
@@ -14869,6 +14874,16 @@ stop
        stop
       endif
 
+      if ((flux_grid_type.eq.-1).or. &
+          (flux_grid_type.eq.3).or. &
+          ((flux_grid_type.eq.4).and.(SDIM.eq.3)).or. &
+          ((flux_grid_type.eq.5).and.(SDIM.eq.3))) then
+       ! do nothing
+      else
+       print *,"flux_grid_type invalid"
+       stop
+      endif
+
       im_elastic_p1=im_parm+1
 
       if (ncomp_visc.ne.3*nmat) then
@@ -14876,12 +14891,17 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,xdfab,2,0,11)
-      call checkbound_array(fablo,fabhi,ydfab,2,1,11)
-      call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
+      xdfab_ptr=>xdfab
+      ydfab_ptr=>ydfab
+      zdfab_ptr=>zdfab
+      call checkbound_array(fablo,fabhi,xdfab_ptr,2,0,11)
+      call checkbound_array(fablo,fabhi,ydfab_ptr,2,1,11)
+      call checkbound_array(fablo,fabhi,zdfab_ptr,2,SDIM-1,11)
 
-      call checkbound_array(fablo,fabhi,visc,1,-1,11)
-      call checkbound_array(fablo,fabhi,tensor,1,-1,8)
+      visc_ptr=>visc
+      tensor_ptr=>tensor
+      call checkbound_array(fablo,fabhi,visc_ptr,1,-1,11)
+      call checkbound_array(fablo,fabhi,tensor_ptr,1,-1,8)
       call checkbound_array(fablo,fabhi,tensorMAC_ptr,1,flux_grid_type,8)
 
       do dir_local=1,SDIM
@@ -14890,6 +14910,20 @@ stop
        fablo_local(dir_local)=fablo(dir_local)
        fabhi_local(dir_local)=fabhi(dir_local)
       enddo
+
+      !type(deriv_from_grid_parm_type) :: data_in
+      data_in%level=level
+      data_in%finest_level=finest_level
+      data_in%bfact=bfact ! bfact=kind of spectral element grid 
+      data_in%dx=>dx_local
+      data_in%xlo=>xlo_local
+      data_in%fablo=>fablo_local
+      data_in%fabhi=>fabhi_local
+
+      data_in%grid_type_flux=flux_grid_type
+      call grid_type_to_box_type(flux_grid_type,data_in%box_type_flux)
+
+      data_out%data_interp=>cell_data_deriv
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
               flux_grid_type,28) 
@@ -14903,6 +14937,17 @@ stop
         xcenter(dir_local)=xsten(0,dir_local)
        enddo
 
+       data_in%index_flux(1)=i
+       data_in%index_flux(2)=j
+       if (SDIM.eq.3) then
+        data_in%index_flux(SDIM)=k
+       else if (SDIM.eq.2) then
+        !do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
        if (interp_Q_to_flux.eq.0) then
 
         if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
@@ -14914,33 +14959,9 @@ stop
          stop
         else if (viscoelastic_model.eq.2) then ! elastic model
 
-         data_out%data_interp=>cell_data_deriv
-
           !type(deriv_from_grid_parm_type) :: data_in
-         data_in%level=level
-         data_in%finest_level=finest_level
-         data_in%bfact=bfact ! bfact=kind of spectral element grid 
-         data_in%dx=>dx_local
-         data_in%xlo=>xlo_local
-         data_in%fablo=>fablo_local
-         data_in%fabhi=>fabhi_local
-
          data_in%ncomp=1
          data_in%scomp=1
-
-         data_in%index_flux(1)=i
-         data_in%index_flux(2)=j
-         if (SDIM.eq.3) then
-          data_in%index_flux(SDIM)=k
-         else if (SDIM.eq.2) then
-          !do nothing
-         else
-          print *,"dimension bust"
-          stop
-         endif
-
-         data_in%grid_type_flux=flux_grid_type
-         call grid_type_to_box_type(flux_grid_type,data_in%box_type_flux)
 
          do dir_XD=1,SDIM
 
@@ -15077,7 +15098,9 @@ stop
         tensorMAC(D_DECL(i,j,k),6)=TQ(2,3)
 #endif
        else if (interp_Q_to_flux.eq.1) then
+
         do itensor=1,FORT_NUM_TENSOR_TYPE
+
          data_in%disp_data=>tensor
          data_in%dir_deriv=-1
          data_in%grid_type_data=-1
@@ -15086,7 +15109,9 @@ stop
          enddo
          data_in%ncomp=1
          data_in%scomp=itensor
+
          call deriv_from_grid_util(data_in,data_out)
+
          tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
         enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
        else
@@ -15099,7 +15124,7 @@ stop
       enddo
 
       return
-      end subroutine fort_maketensorMAC
+      end subroutine fort_maketensor_mac
 
 
       subroutine FORT_COPY_VEL_ON_SIGN( &

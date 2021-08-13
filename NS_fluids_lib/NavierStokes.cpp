@@ -9083,6 +9083,14 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } else
   amrex::Error("level invalid");
 
+ if ((flux_grid_type==-1)||
+     (flux_grid_type==3)||
+     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))||
+     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {
+  // do nothing
+ } else
+  amrex::Error("flux_grid_type invalid");
+
  int push_enable_spectral=enable_spectral;
  int elastic_enable_spectral=0;
  override_enable_spectral(elastic_enable_spectral);
@@ -9133,7 +9141,17 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  debug_boxArray(localMF[flux_mf],flux_grid_type,flux_mf);
 
   // spectral_override==0 => always low order.
- avgDown_localMF_ALL(flux_mf,0,NUM_TENSOR_TYPE,0);
+ for (int ilev=finest_level-1;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  int spectral_override=0; //always do low order average down
+  int caller_id=flux_grid_type+300;
+   //declared in NavierStokes2.cpp
+  ns_level.avgDownEdge_localMF(flux_mf,
+    0,NUM_TENSOR_TYPE,
+    flux_grid_type,-1,
+    spectral_override,
+    caller_id);
+ } // ilev=finest_level-1 ... level
 
  for (int scomp_extrap=0;scomp_extrap<NUM_TENSOR_TYPE;scomp_extrap++) {
   Vector<int> scompBC_map;
@@ -9159,6 +9177,14 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
+
+ if ((flux_grid_type==-1)||
+     (flux_grid_type==3)||
+     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))||
+     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {
+  // do nothing
+ } else
+  amrex::Error("flux_grid_type invalid");
 
  IndexType local_typ(get_desc_lstGHOST()[fill_state_idx].getType());
  int flux_box_type[AMREX_SPACEDIM];
@@ -9313,7 +9339,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
        // viscoelastic_model==2 => (eta)*visc_coef*Q
        // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
-     fort_maketensorMAC(
+     fort_maketensor_mac(
       &interp_Q_to_flux,
       &flux_grid_type,
       &partid,
@@ -21250,7 +21276,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid level_avgDown_tag");
  if (fgrids!=S_fine.boxArray())
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
@@ -21363,7 +21389,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid level_avgDownBURNING");
  if (fgrids!=S_fine.boxArray())
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
@@ -21470,7 +21496,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  const DistributionMapping& fdmap=fine_lev.dmap;
 
  if (grids!=S_crse.boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid level_avgDownCURV");
  if (fgrids!=S_fine.boxArray())
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
@@ -21569,8 +21595,11 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
  const BoxArray& fgrids=fine_lev.grids;
  const DistributionMapping& fdmap=fine_lev.dmap;
 
- if (grids!=S_crse.boxArray())
-  amrex::Error("S_crse invalid");
+ if (grids!=S_crse.boxArray()) {
+  std::cout << "scomp=" << scomp << "ncomp=" << ncomp <<
+   "spectral_override=" << spectral_override << '\n';
+  amrex::Error("S_crse invalid avgDown");
+ }
  if (fgrids!=S_fine.boxArray())
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
@@ -21750,7 +21779,7 @@ void NavierStokes::MOFavgDown() {
  const Real* prob_lo   = geom.ProbLo();
 
  if (grids!=S_crse.boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid MOFavgDown");
  if (fgrids!=S_fine.boxArray())
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
@@ -21848,7 +21877,7 @@ void NavierStokes::avgDownError() {
  const Real* prob_lo   = geom.ProbLo();
 
  if (grids!=S_crse.boxArray())
-  amrex::Error("S_crse invalid");
+  amrex::Error("S_crse invalid avgDownError()");
  if (fgrids!=S_fine.boxArray())
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
