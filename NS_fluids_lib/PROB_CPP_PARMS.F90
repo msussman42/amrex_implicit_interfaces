@@ -21,6 +21,7 @@ stop
 #endif
 
       subroutine fort_blb_init( &
+       num_materials_in, &
        blb_matrix_in, &
        blb_rhs_in, &
        blb_vel_in, &
@@ -43,6 +44,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: num_materials_in
       INTEGER_T, intent(in) :: blb_matrix_in
       INTEGER_T, intent(in) :: blb_rhs_in
       INTEGER_T, intent(in) :: blb_vel_in
@@ -62,7 +64,7 @@ stop
       INTEGER_T, intent(in) :: num_elements_blobclass_in
       INTEGER_T :: nmat
     
-      nmat=num_materials
+      nmat=num_materials_in
 
       BLB_MATRIX=blb_matrix_in
       BLB_RHS=blb_rhs_in
@@ -103,6 +105,26 @@ stop
           ! do nothing
       else
        print *,"BLB parameters invalid"
+       print *,"BLB_MATRIX ",BLB_MATRIX
+       print *,"BLB_RHS ",BLB_RHS
+       print *,"BLB_VEL ",BLB_VEL
+       print *,"BLB_INT_MOM ",BLB_INT_MOM
+       print *,"BLB_ENERGY ",BLB_ENERGY
+       print *,"BLB_MASS_VEL ",BLB_MASS_VEL
+       print *,"BLB_VOL ",BLB_VOL
+       print *,"BLB_CEN_INT ",BLB_CEN_INT
+       print *,"BLB_CEN_ACT ",BLB_CEN_ACT
+       print *,"BLB_PERIM ",BLB_PERIM
+       print *,"BLB_PERIM_MAT ",BLB_PERIM_MAT
+       print *,"BLB_TRIPLE_PERIM ",BLB_TRIPLE_PERIM
+       print *,"BLB_CELL_CNT ",BLB_CELL_CNT
+       print *,"BLB_CELLVOL_CNT ",BLB_CELLVOL_CNT
+       print *,"BLB_MASS ",BLB_MASS
+       print *,"BLB_PRES ",BLB_PRES
+       print *,"num_elements_blobclass ",num_elements_blobclass
+       print *,"nmat=",nmat
+       print *,"num_materials_in=",num_materials_in
+       print *,"AMREX_SPACEDIM=",AMREX_SPACEDIM
        stop
       endif
 

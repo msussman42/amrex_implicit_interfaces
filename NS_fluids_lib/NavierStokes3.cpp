@@ -3345,6 +3345,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
              (material_type_lowmach[im_low]>0)&&
              (material_type_lowmach[im_low]<999)) {
           is_any_lowmach=1;
+         } else if ((material_type[im_low]==0)&&
+                    (material_type_lowmach[im_low]==0)) {
+          // do nothing
          } else if ((material_type[im_low]>0)&&
                     (material_type[im_low]<999)&&
                     (material_type_lowmach[im_low]==

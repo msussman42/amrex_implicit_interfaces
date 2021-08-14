@@ -2127,6 +2127,7 @@ NavierStokes::read_params ()
     num_elements_blobclass=BLB_PRES+1;
 
     fort_blb_init(
+     &num_materials,
      &BLB_MATRIX,
      &BLB_RHS,
      &BLB_VEL,

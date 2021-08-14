@@ -12,6 +12,7 @@ namespace amrex{
   extern "C" {
 
     void fort_blb_init(
+      int* num_materials_in,
       int* blb_matrix_in,
       int* blb_rhs_in,
       int* blb_vel_in,
