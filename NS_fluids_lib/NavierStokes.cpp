@@ -629,17 +629,23 @@ int NavierStokes::curv_stencil_height=4;
 int NavierStokes::ngrow_distance=4;
 int NavierStokes::ngrow_make_distance=3;
 
-// blob_matrix,blob_RHS,blob_velocity,
-// blob_integral_momentum,blob_energy,
-// blob_mass_for_velocity (3 components)
-// blob_volume, 
-// blob_center_integral,blob_center_actual
-// blob_perim, blob_perim_mat, blob_triple_perim, 
-// blob_cell_count
-// blob_cellvol_count
-// blob_mass
-// blob_pressure
-int NavierStokes::num_elements_blobclass=0;
+int NavierStokes::num_elements_blobclass=-32767;
+int NavierStokes::BLB_MATRIX=-32767;
+int NavierStokes::BLB_RHS=-32767;
+int NavierStokes::BLB_VEL=-32767;
+int NavierStokes::BLB_INT_MOM=-32767;
+int NavierStokes::BLB_ENERGY=-32767;
+int NavierStokes::BLB_MASS_VEL=-32767;
+int NavierStokes::BLB_VOL=-32767;
+int NavierStokes::BLB_CEN_INT=-32767;
+int NavierStokes::BLB_CEN_ACT=-32767;
+int NavierStokes::BLB_PERIM=-32767;
+int NavierStokes::BLB_PERIM_MAT=-32767;
+int NavierStokes::BLB_TRIPLE_PERIM=-32767;
+int NavierStokes::BLB_CELL_CNT=-32767;
+int NavierStokes::BLB_CELLVOL_CNT=-32767;
+int NavierStokes::BLB_MASS=-32767;
+int NavierStokes::BLB_PRES=-32767;
 
 int NavierStokes::ngrowFSI=3;
 int NavierStokes::nFSI_sub=12; //velocity+LS+temperature+flag+stress (3D)
@@ -2102,32 +2108,42 @@ NavierStokes::read_params ()
     } else
      amrex::Error("ncomp_sum_int_user2 invalid");
 
-    // blob_matrix,blob_RHS,blob_velocity,
-    // blob_integral_momentum,blob_energy,
-    // blob_mass_for_velocity (3 components)
-    // blob_volume, 
-    // blob_center_integral,blob_center_actual
-    // blob_perim, blob_perim_mat, blob_triple_perim, 
-    // blob_cell_count
-    // blob_cellvol_count
-    // blob_mass
-    // blob_pressure
-    num_elements_blobclass=
-     3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)+  // blob_matrix * 3
-     3*(2*AMREX_SPACEDIM)+                     // blob_RHS * 3
-     3*(2*AMREX_SPACEDIM)+                     // blob_velocity * 3
-     2*(2*AMREX_SPACEDIM)+                     // blob_integral_momentum * 2
-     1+                                        // blob_energy
-     3+                                        // blob_mass_for_velocity
-     1+                                        // blob_volume
-     2*AMREX_SPACEDIM+                         // blob_center_integral/actual
-     1+                                        // blob_perim
-     nmat+                                     // blob_perim_mat
-     nmat*nmat+                                // blob_triple_perim
-     1+                                        // blob_cell_count
-     1+                                        // blob_cellvol_count
-     1+                                        // blob_mass
-     1;                                        // blob_pressure
+    BLB_MATRIX=0;
+    BLB_RHS=BLB_MATRIX+3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);
+    BLB_VEL=BLB_RHS+3*(2*AMREX_SPACEDIM);
+    BLB_INT_MOM=BLB_VEL+3*(2*AMREX_SPACEDIM);
+    BLB_ENERGY=BLB_INT_MOM+2*(2*AMREX_SPACEDIM);
+    BLB_MASS_VEL=BLB_ENERGY+1;
+    BLB_VOL=BLB_MASS_VEL+3;
+    BLB_CEN_INT=BLB_VOL+1;
+    BLB_CEN_ACT=BLB_CEN_INT+AMREX_SPACEDIM;
+    BLB_PERIM=BLB_CEN_ACT+AMREX_SPACEDIM;
+    BLB_PERIM_MAT=BLB_PERIM+1;
+    BLB_TRIPLE_PERIM=BLB_PERIM_MAT+nmat;
+    BLB_CELL_CNT=BLB_TRIPLE_PERIM+nmat*nmat; //F_m>=1/2
+    BLB_CELLVOL_CNT=BLB_CELL_CNT+1; //F_m>=1/2
+    BLB_MASS=BLB_CELLVOL_CNT+1;
+    BLB_PRES=BLB_MASS+1; //F_m>=1/2
+    num_elements_blobclass=BLB_PRES+1;
+
+    fort_blb_init(
+     &BLB_MATRIX,
+     &BLB_RHS,
+     &BLB_VEL,
+     &BLB_INT_MOM,
+     &BLB_ENERGY,
+     &BLB_MASS_VEL,
+     &BLB_VOL,
+     &BLB_CEN_INT,
+     &BLB_CEN_ACT,
+     &BLB_PERIM,
+     &BLB_PERIM_MAT,
+     &BLB_TRIPLE_PERIM,
+     &BLB_CELL_CNT,
+     &BLB_CELLVOL_CNT,
+     &BLB_MASS,
+     &BLB_PRES,
+     &num_elements_blobclass);
 
     int ns_max_level;
     int cnt_max_grid_size;
@@ -12027,7 +12043,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &dt_slab,
      &blob_arraysize,
      blob_array.dataPtr(),
-     &num_elements_blobclass,
      &color_count,
      colorfab.dataPtr(),
      ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
@@ -12118,7 +12133,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &dt_slab,
      &blob_arraysize,
      blob_array.dataPtr(),
-     &num_elements_blobclass,
      &color_count,
      lsnewfab.dataPtr(), //colorfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
@@ -14931,7 +14945,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       added_weight.dataPtr(),
       blob_array.dataPtr(),
       &blob_array_size,
-      &num_elements_blobclass,
       &num_colors,
       &nten,
       &project_option_visc,

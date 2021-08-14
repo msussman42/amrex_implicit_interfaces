@@ -5025,7 +5025,6 @@ stop
        level_mdot_complement_data_redistribute, &
        arraysize, &
        mdot_arraysize, &
-       num_elements_blobclass, &
        ncomp_mdot_alloc, &
        ncomp_mdot, &
        levelbc, &
@@ -5059,7 +5058,6 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       INTEGER_T, intent(in) :: levelbc(SDIM,2)
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: ncomp_mdot_alloc
       INTEGER_T, intent(in) :: ncomp_mdot
       INTEGER_T, intent(in) :: material_type_lowmach(nmat)
@@ -5326,36 +5324,6 @@ stop
       call checkbound_array1(fablo,fabhi,color,1,-1,6626)
       call checkbound_array1(fablo,fabhi,mask,1,-1,6627)
   
-      !blob_matrix,blob_RHS,blob_velocity,
-      !blob_integral_momentum,blob_energy,
-      !blob_mass_for_velocity (3 comp)
-      !blob_volume, 
-      !blob_center_integral,blob_center_actual
-      !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
-      !blob_cellvol_count
-      !blob_mass
-      !blob_pressure
-      if (num_elements_blobclass.ne. &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-          3+ & ! blob_mass_for_velocity
-          1+ & ! blob_volume
-          2*SDIM+ & ! blob_center_integral,blob_center_actual
-          1+ & ! blob_perim
-          nmat+ & ! blob_perim_mat 
-          nmat*nmat+ & ! blob_triple_perim
-          1+ &    ! blob_cell_count
-          1+ &    ! blob_cellvol_count
-          1+ &    ! blob_mass
-          1) then ! blob_pressure
-       print *,"num_elements_blobclass invalid"
-       print *,"blob_cell_count readded February, 2021"
-       print *,"blob_cellvol_count added December 6, 2020"
-       print *,"blob_mass added January 23, 2021"
-       print *,"blob_pressure added April 26, 2021"
-       stop
-      endif
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
        stop
@@ -5798,12 +5766,7 @@ stop
               (opposite_color(im).le.num_colors)) then
 
            ic_center=(opposite_color(im)-1)*num_elements_blobclass+ &
-            3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-            2*(2*SDIM)+1+ & !blob_integral_momentum,blob_energy
-            3+ & ! blob_mass_for_velocity
-            1+ & ! blob volume
-            SDIM+ & ! blob_center_integral
-            1       ! first component of blob_center_actual
+                   BLB_CEN_ACT+1
 
            do dir=1,3
             blob_center_actual(dir)=zero
@@ -5818,7 +5781,7 @@ stop
 
             ! index for first component associated with material im
            ic_base=(opposite_color(im)-1)*num_elements_blobclass
-           ic=ic_base+1
+           ic=ic_base+BLB_MATRIX+1
 
            if (operation_flag.eq.0) then
 
@@ -5890,7 +5853,7 @@ stop
              enddo ! irow=1..2*sdim
             enddo ! veltype=1..3
 
-            ic=ic+3*(2*SDIM) ! skip over blob_velocity 
+            ic=ic_base+BLB_INT_MOM+1  
 
              ! blob_integral_momentum  2 * (2 * sdim) components
              ! first group: momentum
@@ -5936,12 +5899,9 @@ stop
              ic=ic+1
             enddo ! veltype=1..3
 
-            if (ic.ne.ic_base+3*(2*SDIM)*(2*SDIM)+ &
-                3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1) then
+            if (ic.ne.ic_base+BLB_VOL+1) then
              print *,"ic invalid ic=",ic
-             print *,"expecting ic=", &
-              ic_base+3*(2*SDIM)*(2*SDIM)+ &
-                3*(2*SDIM)+3*(2*SDIM)+2*(2*SDIM)+1+3+1
+             print *,"expecting ic=",ic_base+BLB_VOL+1
              stop
             endif
 
@@ -6007,7 +5967,9 @@ stop
             enddo ! im2=1..nmat
             enddo ! im1=1..nmat
 
-            if (ic.eq.opposite_color(im)*num_elements_blobclass-3) then
+            if (ic.eq. &
+                (opposite_color(im)-1)*num_elements_blobclass+ &
+                 BLB_CELL_CNT+1) then
              ! do nothing
             else
              print *,"ic invalid for blob_cell_count"
@@ -6118,7 +6080,9 @@ stop
             ! blob_pressure (ic+3)
             ic=ic+3
 
-            if (ic.eq.opposite_color(im)*num_elements_blobclass) then
+            if (ic.eq. &
+                (opposite_color(im)-1)*num_elements_blobclass+ &
+                 BLB_PRES+1) then
              ! do nothing
             else
              print *,"ic invalid, blob_mass is last?"
@@ -6159,7 +6123,9 @@ stop
 
             ic=ic+1
 
-            if (ic.eq.opposite_color(im)*num_elements_blobclass+1) then
+            if (ic.eq. &
+                (opposite_color(im)-1)*num_elements_blobclass+ &
+                 BLB_PRES+1) then
              ! do nothing
             else
              print *,"ic invalid in getcolorsum"
@@ -6167,10 +6133,6 @@ stop
              print *,"im=",im
              print *,"opposite_color(im)=",opposite_color(im)
              print *,"num_elements_blobclass=",num_elements_blobclass
-             print *,"blob_cell_count readded Feb 8, 2021"
-             print *,"blob_cellvol_count added December 6, 2020"
-             print *,"blob_mass added January 23, 2021"
-             print *,"blob_pressure added April 26, 2021"
              stop
             endif
 
@@ -6258,15 +6220,7 @@ stop
               endif
 
                ! F,CEN_INTEGRATE,CEN_ACTUAL,AREA,AREA(im_opp)
-              ic=(opposite_color(im)-1)*num_elements_blobclass+ &
-               3*(2*SDIM)*(2*SDIM)+ & ! blob_matrix
-               3*(2*SDIM)+ & ! blob_RHS
-               3*(2*SDIM)+ & ! blob_velocity
-               2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-               3+ & ! blob_mass_for_velocity
-               1+ & ! blob_volume
-               2*SDIM+ & ! blob_center_integral,blob_center_actual
-               1 ! blob_perim  
+              ic=(opposite_color(im)-1)*num_elements_blobclass+BLB_PERIM+1
 
                ! ic component is blob_perim
               do im_opp=1,nmat
@@ -6282,7 +6236,8 @@ stop
                  stop
                 endif
                  ! overall perimeter
-                level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
+                level_blobdata(ic)=level_blobdata(ic)+ &
+                        frac_pair(ml,mr)*areaface 
                endif
               enddo !im_opp=1..nmat
 
@@ -6300,29 +6255,20 @@ stop
                  print *,"side invalid"
                  stop
                 endif
-                level_blobdata(ic)=level_blobdata(ic)+frac_pair(ml,mr)*areaface 
+                level_blobdata(ic)=level_blobdata(ic)+ &
+                        frac_pair(ml,mr)*areaface 
                endif
                ic=ic+1
               enddo ! im_opp=1..nmat
-              ic=ic+nmat*nmat ! blob_triple_perim
-              ic=ic+1  ! blob_cell_count readded Feb 11, 2020
-              ic=ic+1  ! blob_cellvol_count added December 6, 2020
-              ic=ic+1  ! blob_mass added January 23, 2021
-              ic=ic+1  ! blob_pressure added April 26, 2021
-  
-              if (ic.ne.opposite_color(im)*num_elements_blobclass+1) then
-               print *,"ic invalid in getcolorsum 2"
-               print *,"ic=",ic
-               print *,"im=",im
-               print *,"opposite_color(im)=",opposite_color(im)
-               print *,"num_elements_blobclass=",num_elements_blobclass
-               print *,"blob_cell_count readded Feb 11, 2020"
-               print *,"blob_cellvol_count added December 6, 2020"
-               print *,"blob_mass added January 23, 2021"
-               print *,"blob_pressure added April 26, 2021"
+              if (ic.eq. &
+                  (opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_TRIPLE_PERIM+1) then
+               ! do nothing
+              else
+               print *,"ic invalid for blob_cell_count"
                stop
               endif
-
+  
              enddo ! side
             enddo ! dir
 
@@ -6386,11 +6332,8 @@ stop
                     ! sum alpha V_i = mdot_total
                     ! alpha=mdot_total/(sum V_i) 
                    if (im.eq.im_evenly) then 
-                    !opposite_color(im)*num_elements_blobclass-3=blob_cellcount
-                    !opposite_color(im)*num_elements_blobclass-2=blob_cellvol
-                    !opposite_color(im)*num_elements_blobclass-1=blob_mass
-                    !opposite_color(im)*num_elements_blobclass=blob_pressure
-                    ic=opposite_color(im)*num_elements_blobclass-3
+                    ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+                            BLB_CELL_CNT+1
                     blob_cell_count=cum_blobdata(ic)
                     blob_cellvol_count=cum_blobdata(ic+1)
                     if ((blob_cellvol_count.gt.zero).and. &
@@ -6504,13 +6447,15 @@ stop
                   endif
 
                   if (1.eq.0) then
-                   print *,"i,j,k,im,im_negate,vfrac ",i,j,k,im,im_negate,vfrac
+                   print *,"i,j,k,im,im_negate,vfrac ", &
+                           i,j,k,im,im_negate,vfrac
                    print *,"iten_shift,im_mdot,im_opp_mdot ", &
                     iten_shift,im_mdot,im_opp_mdot
                    print *,"complement_flag ",complement_flag
                   endif
  
-                  ic=opposite_color(im)*num_elements_blobclass-3
+                  ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+                          BLB_CELL_CNT+1
 
                   blob_cell_count=cum_blobdata(ic)
                   blob_cellvol_count=cum_blobdata(ic+1)
@@ -6532,12 +6477,7 @@ stop
                    stop
                   endif
 
-                  ic= &
-                   ic_base+ &
-                   3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                   2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-                   3+ & ! blob_mass_for_velocity
-                   1    ! blob_volume
+                  ic=ic_base+BLB_VOL+1
 
                   blob_volume=cum_blobdata(ic)
 
@@ -6764,7 +6704,6 @@ stop
        level_mdot_data, &
        arraysize, & ! size of level_blobdata
        mdot_arraysize, & ! size of level_mdot_data
-       num_elements_blobclass, &
        material_type_lowmach)
       use probcommon_module
       use global_utility_module
@@ -6782,7 +6721,6 @@ stop
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: material_type_lowmach(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
 
@@ -6891,36 +6829,6 @@ stop
       call checkbound(fablo,fabhi,DIMS(color),1,-1,6626)
       call checkbound(fablo,fabhi,DIMS(mask),1,-1,6627)
   
-      !blob_matrix,blob_RHS,blob_velocity,
-      !blob_integral_momentum,blob_energy,
-      !blob_mass_for_velocity (3 comp)
-      !blob_volume, 
-      !blob_center_integral,blob_center_actual
-      !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
-      !blob_cellvol_count
-      !blob_mass
-      !blob_pressure
-      if (num_elements_blobclass.ne. &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-          3+ & ! blob_mass_for_velocity
-          1+ & ! blob_volume
-          2*SDIM+ & ! blob_center_integral,blob_center_actual
-          1+ & ! blob_perim
-          nmat+ & ! blob_perim_mat 
-          nmat*nmat+ & ! blob_triple_perim
-          1+ &    ! blob_cell_count
-          1+ &    ! blob_cellvol_count
-          1+ &    ! blob_mass
-          1) then ! blob_pressure
-       print *,"num_elements_blobclass invalid"
-       print *,"blob_cell_count readded February, 2021"
-       print *,"blob_cellvol_count added December 6, 2020"
-       print *,"blob_mass added January 23, 2021"
-       print *,"blob_pressure added April 26, 2021"
-       stop
-      endif
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
        stop
@@ -7034,7 +6942,7 @@ stop
               endif
              enddo ! dir=1..sdim
 
-             ic=icolor*num_elements_blobclass
+             ic=(icolor-1)*num_elements_blobclass+BLB_PRES+1
              pressure_sum=level_blobdata(ic) ! sum pres * vol
              blob_cellvol_count=level_blobdata(ic-2)
              if (blob_cellvol_count.gt.zero) then
@@ -7125,6 +7033,7 @@ stop
 
                 else
                  print *,"pressure_sum invalid pressure_sum=",pressure_sum
+                 print *,"blob_cellvol_count=",blob_cellvol_count
                  stop
                 endif
 
@@ -13631,7 +13540,6 @@ stop
        added_weight, &
        blob_array, &
        blob_array_size, &
-       num_elements_blobclass, &
        num_colors, &
        nten, &
        project_option, &
@@ -13659,7 +13567,6 @@ stop
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
 
       INTEGER_T, intent(in) :: blob_array_size
-      INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: num_colors
       REAL_T, intent(in) :: blob_array(blob_array_size)
         
@@ -13980,28 +13887,6 @@ stop
        ! do nothing
       else
        print *,"ignore_div_up invalid"
-       stop
-      endif
-
-      !blob_matrix,blob_RHS,blob_velocity,
-      !blob_integral_momentum,blob_energy,
-      !blob_mass_for_velocity (3 comp)
-      !blob_volume, 
-      !blob_center_integral,blob_center_actual
-      !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
-      !blob_cellvol_count
-      !blob_mass
-      !blob_pressure
-      if (num_elements_blobclass.ne. &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ & ! blob_integral_momentum, blob_energy
-          3+1+ & ! blob_mass_for_velocity, blob_volume
-          2*SDIM+ & ! blob_center_integral,blob_center_actual
-          1+nmat+nmat*nmat+ & ! blob_perim, blob_perim_mat, blob_triple_perim
-          1+1+1+1) then !blob_cell_count,blob_cellvol_count,blob_mass,
-                        ! blob_pressure
-       print *,"num_elements_blobclass invalid"
        stop
       endif
 
@@ -15006,7 +14891,7 @@ stop
                      FSI_prescribed_flag, &
                      colorface,dir+1,uedge_rigid, &
                      xmac,blob_array, &
-                     blob_array_size,num_colors,num_elements_blobclass) 
+                     blob_array_size,num_colors) 
 
                     uedge=test_current_icemask*uedge+ &
                           (one-test_current_icemask)*uedge_rigid

@@ -1994,14 +1994,13 @@ contains
       subroutine get_rigid_velocity( &
         FSI_prescribed_flag, &
         color,dir,vel,xrigid, &
-        blob_array,blob_array_size,num_colors,num_elements_blobclass)
+        blob_array,blob_array_size,num_colors)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T, intent(out) :: FSI_prescribed_flag
       INTEGER_T, intent(in) :: color,dir,blob_array_size,num_colors
-      INTEGER_T, intent(in) :: num_elements_blobclass
       REAL_T, intent(in) :: xrigid(SDIM)
       REAL_T xrigid3D(3)
       REAL_T, intent(out) :: vel
@@ -2022,44 +2021,11 @@ contains
        stop
       endif
 
-      !blob_matrix,blob_RHS,blob_velocity,
-      !blob_integral_momentum,blob_energy,
-      !blob_mass_for_velocity (3 comp)
-      !blob_volume, 
-      !blob_center_integral,blob_center_actual
-      !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
-      !blob_cellvol_count
-      !blob_mass
-      !blob_pressure
-      if (num_elements_blobclass.ne. &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ &
-          3+ & ! blob_mass_for_velocity 
-          1+ & ! blob_volume
-          2*SDIM+ & ! blob_center integral, blob_center_actual
-          1+ & ! blob_perim
-          nmat+ & ! blob_perim_mat 
-          nmat*nmat+ & ! blob_triple_perim
-          1+ & ! blob_cell_count
-          1+ & ! blob_cellvol_count
-          1+ & ! blob_mass
-          1) then ! blob_pressure
-       print *,"num_elements_blobclass invalid"
-       print *,"blob_cell_count readded Feb 11, 2021"
-       print *,"blob_cellvol_count added December 6, 2020"
-       print *,"blob_mass added January 23, 2021"
-       print *,"blob_pressure added April 26, 2021"
-       stop
-      endif
-
       FSI_prescribed_flag=0
 
-      cen_comp=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-        2*(2*SDIM)+1+ &
-        3+1+SDIM
-      vel_comp=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)
-      vol_comp=vel_comp+3*(2*SDIM)+2*(2*SDIM)+1
+      cen_comp=BLB_CEN_ACT
+      vel_comp=BLB_VEL 
+      vol_comp=BLB_MASS_VEL
       
       if ((color.ge.1).and.(color.le.num_colors)) then
 

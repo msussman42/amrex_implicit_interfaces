@@ -3345,9 +3345,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
              (material_type_lowmach[im_low]>0)&&
              (material_type_lowmach[im_low]<999)) {
           is_any_lowmach=1;
-         } else if (((material_type[im_low]>0)&&
-                     (material_type[im_low]<999))||
-                    (material_type_lowmach[im_low]==0)) {
+         } else if ((material_type[im_low]>0)&&
+                    (material_type[im_low]<999)&&
+                    (material_type_lowmach[im_low]==
+		     material_type[im_low])) {
           // do nothing
          } else
           amrex::Error("material_type or material_type_lowmach invalid");
@@ -5392,7 +5393,6 @@ NavierStokes::ColorSum(
    level_mdot_comp_redistribute_array[tid_current].dataPtr(),
    &blob_array_size,
    &mdot_array_size,
-   &num_elements_blobclass,
    &ncomp_mdot_alloc,
    &ncomp_mdot,
    levelbc.dataPtr(),
@@ -5874,7 +5874,6 @@ NavierStokes::LowMachDIVU(
    level_mdot_array[tid_current].dataPtr(),
    &blob_array_size,
    &mdot_array_size,
-   &num_elements_blobclass,
    material_type_lowmach.dataPtr());
  } // mfi
 } // omp
@@ -6125,58 +6124,51 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
  if (counter!=i*num_elements_blobclass)
   amrex::Error("counter invalid");
  for (int dir=0;dir<3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);dir++) {
-  blobdata[i].blob_matrix[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_matrix[dir]=blob_array[counter+BLB_MATRIX+dir];
  }
  for (int dir=0;dir<3*(2*AMREX_SPACEDIM);dir++) {
-  blobdata[i].blob_RHS[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_RHS[dir]=blob_array[counter+BLB_RHS+dir];
  }
  for (int dir=0;dir<3*(2*AMREX_SPACEDIM);dir++) {
-  blobdata[i].blob_velocity[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_velocity[dir]=blob_array[counter+BLB_VEL+dir];
  }
  for (int dir=0;dir<2*(2*AMREX_SPACEDIM);dir++) {
-  blobdata[i].blob_integral_momentum[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_integral_momentum[dir]=
+	  blob_array[counter+BLB_INT_MOM+dir];
  }
- blobdata[i].blob_energy=blob_array[counter];
- counter++;
+ blobdata[i].blob_energy=blob_array[counter+BLB_ENERGY];
+
  for (int dir=0;dir<3;dir++) {
-  blobdata[i].blob_mass_for_velocity[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_mass_for_velocity[dir]=
+	  blob_array[counter+BLB_MASS_VEL+dir];
  }
- blobdata[i].blob_volume=blob_array[counter];
- counter++;
+ blobdata[i].blob_volume=blob_array[counter+BLB_VOL];
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  blobdata[i].blob_center_integral[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_center_integral[dir]=
+	  blob_array[counter+BLB_CEN_INT+dir];
  }
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  blobdata[i].blob_center_actual[dir]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_center_actual[dir]=
+	  blob_array[counter+BLB_CEN_ACT+dir];
  }
- blobdata[i].blob_perim=blob_array[counter];
- counter++;
+ blobdata[i].blob_perim=blob_array[counter+BLB_PERIM];
+
  for (int imnbr=0;imnbr<nmat;imnbr++) {
-  blobdata[i].blob_perim_mat[imnbr]=blob_array[counter];
-  counter++;
+  blobdata[i].blob_perim_mat[imnbr]=blob_array[counter+BLB_PERIM_MAT+imnbr];
  }
  for (int im1=0;im1<nmat;im1++) {
   for (int im2=0;im2<nmat;im2++) {
-   blobdata[i].blob_triple_perim[im1][im2]=blob_array[counter];
-   counter++;
+   blobdata[i].blob_triple_perim[im1][im2]=
+     blob_array[counter+BLB_TRIPLE_PERIM+nmat*im1+im2];
   } // im2
  } // im1
 
- blobdata[i].blob_cell_count=blob_array[counter];
- counter++;
- blobdata[i].blob_cellvol_count=blob_array[counter];
- counter++;
- blobdata[i].blob_mass=blob_array[counter];
- counter++;
- blobdata[i].blob_pressure=blob_array[counter];
- counter++;
+ blobdata[i].blob_cell_count=blob_array[counter+BLB_CELL_CNT];
+ blobdata[i].blob_cellvol_count=blob_array[counter+BLB_CELLVOL_CNT];
+ blobdata[i].blob_mass=blob_array[counter+BLB_MASS];
+ blobdata[i].blob_pressure=blob_array[counter+BLB_PRES];
+ counter+=num_elements_blobclass;
 
 } // end subroutine copy_to_blobdata
 
@@ -6328,57 +6320,48 @@ void NavierStokes::copy_from_blobdata(int i,int& counter,
   amrex::Error("counter invalid");
 
  for (int dir=0;dir<3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);dir++) {
-  blob_array[counter]=blobdata[i].blob_matrix[dir];
-  counter++;
+  blob_array[counter+BLB_MATRIX+dir]=blobdata[i].blob_matrix[dir];
  }
  for (int dir=0;dir<3*(2*AMREX_SPACEDIM);dir++) {
-  blob_array[counter]=blobdata[i].blob_RHS[dir];
-  counter++;
+  blob_array[counter+BLB_RHS+dir]=blobdata[i].blob_RHS[dir];
  }
  for (int dir=0;dir<3*(2*AMREX_SPACEDIM);dir++) {
-  blob_array[counter]=blobdata[i].blob_velocity[dir];
-  counter++;
+  blob_array[counter+BLB_VEL+dir]=blobdata[i].blob_velocity[dir];
  }
  for (int dir=0;dir<2*(2*AMREX_SPACEDIM);dir++) {
-  blob_array[counter]=blobdata[i].blob_integral_momentum[dir];
-  counter++;
+  blob_array[counter+BLB_INT_MOM+dir]=
+	  blobdata[i].blob_integral_momentum[dir];
  }
- blob_array[counter]=blobdata[i].blob_energy;
- counter++;
+ blob_array[counter+BLB_ENERGY]=blobdata[i].blob_energy;
+
  for (int dir=0;dir<3;dir++) {
-  blob_array[counter]=blobdata[i].blob_mass_for_velocity[dir];
-  counter++;
+  blob_array[counter+BLB_MASS_VEL+dir]=
+	  blobdata[i].blob_mass_for_velocity[dir];
  }
- blob_array[counter]=blobdata[i].blob_volume;
- counter++;
+ blob_array[counter+BLB_VOL]=blobdata[i].blob_volume;
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  blob_array[counter]=blobdata[i].blob_center_integral[dir];
-  counter++;
+  blob_array[counter+BLB_CEN_INT+dir]=blobdata[i].blob_center_integral[dir];
  }
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  blob_array[counter]=blobdata[i].blob_center_actual[dir];
-  counter++;
+  blob_array[counter+BLB_CEN_ACT+dir]=blobdata[i].blob_center_actual[dir];
  }
- blob_array[counter]=blobdata[i].blob_perim;
- counter++;
+ blob_array[counter+BLB_PERIM]=blobdata[i].blob_perim;
+
  for (int imnbr=0;imnbr<nmat;imnbr++) {
-  blob_array[counter]=blobdata[i].blob_perim_mat[imnbr];
-  counter++;
+  blob_array[counter+BLB_PERIM_MAT+imnbr]=blobdata[i].blob_perim_mat[imnbr];
  }
  for (int im1=0;im1<nmat;im1++) {
   for (int im2=0;im2<nmat;im2++) {
-   blob_array[counter]=blobdata[i].blob_triple_perim[im1][im2];
-   counter++;
+   blob_array[counter+BLB_TRIPLE_PERIM+nmat*im1+im2]=
+     blobdata[i].blob_triple_perim[im1][im2];
   } // im2
  } // im1
- blob_array[counter]=blobdata[i].blob_cell_count;
- counter++;
- blob_array[counter]=blobdata[i].blob_cellvol_count;
- counter++;
- blob_array[counter]=blobdata[i].blob_mass;
- counter++;
- blob_array[counter]=blobdata[i].blob_pressure;
- counter++;
+ blob_array[counter+BLB_CELL_CNT]=blobdata[i].blob_cell_count;
+ blob_array[counter+BLB_CELLVOL_CNT]=blobdata[i].blob_cellvol_count;
+ blob_array[counter+BLB_MASS]=blobdata[i].blob_mass;
+ blob_array[counter+BLB_PRES]=blobdata[i].blob_pressure;
+ counter+=num_elements_blobclass;
 
 }  // end subroutine copy_from_blobdata
 
@@ -6672,10 +6655,6 @@ NavierStokes::ColorSumALL(
     if (sweep_num==0) {
 
      for (int i=0;i<color_count;i++) {
-      // blob_volume, blob_center_integral, blob_perim, blob_perim_mat,
-      // blob_triple_perim, 
-      // blob_cell_count,blob_cellvol_count, blob_mass,
-      // blob_pressure
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
 
       int j=0;
@@ -6708,8 +6687,6 @@ NavierStokes::ColorSumALL(
 
     } else if (sweep_num==1) {
 
-     // blob_energy, blob_matrix, blob_RHS, blob_integral_momentum,
-     // blob_mass_for_velocity
      for (int i=0;i<color_count;i++) {
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
      }  // i=0..color_count-1
@@ -13155,7 +13132,7 @@ void NavierStokes::alloc_DTDt(int alloc_flag) {
   // DTdt_MF=T_new - T_advect_MF
 
  get_mm_scomp_solver(
-   nmat,
+   nmat, //num_materials_combine=nmat
    project_option_thermal,
    state_index,
    scomp,
