@@ -8140,9 +8140,14 @@ contains
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
-         scaling=data_out%data_interp(nc)
-         if (scaling.lt.one) then
+         scaling=abs(data_out%data_interp(nc))
+         if ((scaling.ge.zero).and.(scaling.le.one)) then
           scaling=one
+         else if (scaling.ge.one) then
+          ! do nothing
+         else
+          print *,"scaling is NaN"
+          stop
          endif
          if (abs(data_out%data_interp(nc)- &
                  data_out2%data_interp(nc)).le.1.0D-12*scaling) then
@@ -8423,9 +8428,14 @@ contains
         data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(1))
         call single_interp_from_grid_util(data_in2,data_out2)
-        scaling=data_out%data_interp(1)
-        if (scaling.lt.one) then
+        scaling=abs(data_out%data_interp(1))
+        if ((scaling.ge.zero).and.(scaling.le.one)) then
          scaling=one
+        else if (scaling.ge.one) then
+         ! do nothing
+        else
+         print *,"scaling is NaN"
+         stop
         endif
         if (abs(data_out%data_interp(1)- &
                 data_out2%data_interp(1)).le.1.0D-12*scaling) then
@@ -8460,9 +8470,14 @@ contains
           data_in%disp_data, &
           data_out2%data_interp)
 
-        scaling=data_out%data_interp(1)
-        if (scaling.lt.one) then
+        scaling=abs(data_out%data_interp(1))
+        if ((scaling.ge.zero).and.(scaling.le.one)) then
          scaling=one
+        else if (scaling.ge.one) then
+         ! do nothing
+        else
+         print *,"scaling is NaN"
+         stop
         endif
         if (abs(data_out%data_interp(1)- &
                 data_out2%data_interp(1)).le.1.0D-12*scaling) then
