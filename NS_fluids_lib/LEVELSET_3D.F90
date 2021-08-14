@@ -6125,7 +6125,7 @@ stop
 
             if (ic.eq. &
                 (opposite_color(im)-1)*num_elements_blobclass+ &
-                 BLB_PRES+1) then
+                 BLB_PRES+2) then
              ! do nothing
             else
              print *,"ic invalid in getcolorsum"
@@ -6470,7 +6470,9 @@ stop
                    print *,"ic_base invalid"
                    stop
                   endif
-                  if (ic.eq.opposite_color(im)*num_elements_blobclass) then
+                  if (ic.eq. &
+                      (opposite_color(im)-1)*num_elements_blobclass+ &
+                       BLB_PRES+1) then
                    ! do nothing
                   else
                    print *,"ic invalid"

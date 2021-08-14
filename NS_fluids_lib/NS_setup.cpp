@@ -690,6 +690,7 @@ NavierStokes::variableSetUp ()
         phys_bc.setHi(dir,NoSlipWall);
     }
 
+    std::cout << "entering variableSetUp before read_params\n";
 
     read_params();
 
