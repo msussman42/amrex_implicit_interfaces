@@ -6839,7 +6839,6 @@ stop
        dt, &
        arraysize, &
        blob_array, &
-       num_elements_blobclass, &
        color_count, &
        colorfab,DIMS(colorfab), &
        typefab,DIMS(typefab), &
@@ -6941,7 +6940,6 @@ stop
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: arraysize
       REAL_T, intent(in) :: blob_array(arraysize)
-      INTEGER_T, intent(in) :: num_elements_blobclass
       INTEGER_T, intent(in) :: color_count
       INTEGER_T, intent(in) :: DIMDEC(colorfab)
       INTEGER_T, intent(in) :: DIMDEC(typefab)
@@ -7345,35 +7343,6 @@ stop
        stop
       endif
 
-      !blob_matrix,blob_RHS,blob_velocity,
-      !blob_integral_momentum,blob_energy,
-      !blob_mass_for_velocity (3 comp)
-      !blob_volume, 
-      !blob_center_integral,blob_center_actual
-      !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
-      !blob_cellvol_count
-      !blob_mass
-      !blob_pressure
-      if (num_elements_blobclass.ne. &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ &
-          3+ & ! blob_mass_for_velocity
-          1+ & ! volume
-          2*SDIM+ & ! centroid integral, actual
-          1+ & ! perim 
-          nmat+ & ! perim_mat
-          nmat*nmat+ & ! blob_triple_perim 
-          1+1+1+1) then
-       print *,"num_elements_blobclass invalid rate mass change:", &
-         num_elements_blobclass
-       print *,"blob_cell_count readded Febrary 11, 2020"
-       print *,"blob_cellvol_count added December 6, 2020"
-       print *,"blob_mass added January 23, 2021"
-       print *,"blob_pressure added April 26, 2021"
-       stop
-      endif
-
       if (STANDALONE.eq.0) then
        if (arraysize.ne.num_elements_blobclass*color_count) then
         print *,"arraysize invalid rate mass change (get stat==1)"
@@ -7396,9 +7365,6 @@ stop
          !  vapor bubble statistics are in 
          !   blob_array((color-1)*num_elements_blobclass + l)
          !  l=1..num_elements_blobclass
-         ! for example l=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+
-         !               2*(2*SDIM)+1+
-         !               3+1  corresponds to blob_volume.
          ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
          !  volume/dt^2
          ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
@@ -8453,27 +8419,9 @@ stop
                       print *,"base_type invalid"
                       stop
                      endif
-                     ! blob_matrix,blob_RHS,blob_velocity,
-                     ! blob_integral_momentum,blob_energy,
-                     ! blob_mass_for_velocity, (3 comp)
-                     ! volume, 
-                     ! centroid_integral, centroid_actual, 
-                     ! perim, perim_mat, 
-                     ! blob_triple_perim,
-                     ! blob_cell_count
-                     ! blob_cellvol_count
-                     ! blob_mass
-                     ! blob_pressure
 
                       ! ic+1 is blob_triple_perim index
-                     ic=(icolor-1)*num_elements_blobclass+ &
-                      3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-                      2*(2*SDIM)+1+ &
-                      3+ &  ! blob_mass_for_velocity
-                      1+ &  ! volume
-                      2*SDIM+ & ! centroid integral, centroid actual
-                      1+ & ! perim 
-                      nmat ! perim_mat
+                     ic=(icolor-1)*num_elements_blobclass+BLB_TRIPLE_PERIM
 
                      im2=microlayer_substrate_probe
                      if ((im2.ge.1).and.(im2.le.nmat)) then

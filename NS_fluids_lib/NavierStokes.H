@@ -1991,19 +1991,27 @@ protected:
     static int ngrow_distance;  // should always be 4
     static int ngrow_make_distance;  // should always be 3
 
-    // blob_matrix,blob_RHS,blob_velocity,
-    // blob_mass_for_velocity
-    // blob_volume, 
-    // blob_center_integral,blob_center_actual
-    // blob_perim, blob_perim_mat, blob_triple_perim, 
-    // blob_cell_count,     (summed over cells in which F_m>=1/2)
-    // blob_cellvol_count,  (summed over cells in which F_m>=1/2)
-    // blob_mass, 
-    // blob_pressure,  (summed over cells in which F_m>=1/2)
     static int num_elements_blobclass;
+    static int BLB_MATRIX;
+    static int BLB_RHS;
+    static int BLB_VEL;
+    static int BLB_INT_MOM;
+    static int BLB_ENERGY;
+    static int BLB_MASS_VEL;
+    static int BLB_VOL;
+    static int BLB_CEN_INT;
+    static int BLB_CEN_ACT;
+    static int BLB_PERIM;
+    static int BLB_PERIM_MAT;
+    static int BLB_TRIPLE_PERIM;
+    static int BLB_CELL_CNT;
+    static int BLB_CELLVOL_CNT;
+    static int BLB_MASS;
+    static int BLB_PRES;
 
     static int ngrowFSI;//should be 3
-    static int nFSI_sub;//should be 12=velocity+LS+temperature+flag+stress (3D)
+     //should be 12=velocity+LS+temperature+flag+stress (3D)
+    static int nFSI_sub;
     static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
     static Vector<int> im_elastic_map;
 

@@ -20,7 +20,93 @@ print *,"dimension bust"
 stop
 #endif
 
+      subroutine fort_blb_init( &
+       blb_matrix_in, &
+       blb_rhs_in, &
+       blb_vel_in, &
+       blb_int_mom_in, &
+       blb_energy_in, &
+       blb_mass_vel_in, &
+       blb_vol_in, &
+       blb_cen_int_in, &
+       blb_cen_act_in, &
+       blb_perim_in, &
+       blb_perim_mat_in, &
+       blb_triple_perim_in, &
+       blb_cell_cnt_in, &
+       blb_cellvol_cnt_in, &
+       blb_mass_in, &
+       blb_pres_in, &
+       num_elements_blobclass_in) &
+      bind(c,name='fort_blb_init')
 
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: blb_matrix_in
+      INTEGER_T, intent(in) :: blb_rhs_in
+      INTEGER_T, intent(in) :: blb_vel_in
+      INTEGER_T, intent(in) :: blb_int_mom_in
+      INTEGER_T, intent(in) :: blb_energy_in
+      INTEGER_T, intent(in) :: blb_mass_vel_in
+      INTEGER_T, intent(in) :: blb_vol_in
+      INTEGER_T, intent(in) :: blb_cen_int_in
+      INTEGER_T, intent(in) :: blb_cen_act_in
+      INTEGER_T, intent(in) :: blb_perim_in
+      INTEGER_T, intent(in) :: blb_perim_mat_in
+      INTEGER_T, intent(in) :: blb_triple_perim_in
+      INTEGER_T, intent(in) :: blb_cell_cnt_in
+      INTEGER_T, intent(in) :: blb_cellvol_cnt_in
+      INTEGER_T, intent(in) :: blb_mass_in
+      INTEGER_T, intent(in) :: blb_pres_in
+      INTEGER_T, intent(in) :: num_elements_blobclass_in
+      INTEGER_T :: nmat
+    
+      nmat=num_materials
+
+      BLB_MATRIX=blb_matrix_in
+      BLB_RHS=blb_rhs_in
+      BLB_VEL=blb_vel_in
+      BLB_INT_MOM=blb_int_mom_in
+      BLB_ENERGY=blb_energy_in
+      BLB_MASS_VEL=blb_mass_vel_in
+      BLB_VOL=blb_vol_in
+      BLB_CEN_INT=blb_cen_int_in
+      BLB_CEN_ACT=blb_cen_act_in
+      BLB_PERIM=blb_perim_in
+      BLB_PERIM_MAT=blb_perim_mat_in
+      BLB_TRIPLE_PERIM=blb_triple_perim_in
+      BLB_CELL_CNT=blb_cell_cnt_in
+      BLB_CELLVOL_CNT=blb_cellvol_cnt_in
+      BLB_MASS=blb_mass_in
+      BLB_PRES=blb_pres_in
+      num_elements_blobclass=num_elements_blobclass_in
+
+      if ((BLB_MATRIX.eq.0).and. &
+          (BLB_RHS.eq.BLB_MATRIX+ &
+             3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)).and. &
+          (BLB_VEL.eq.BLB_RHS+3*(2*AMREX_SPACEDIM)).and. &
+          (BLB_INT_MOM.eq.BLB_VEL+3*(2*AMREX_SPACEDIM)).and. &
+          (BLB_ENERGY.eq.BLB_INT_MOM+2*(2*AMREX_SPACEDIM)).and. &
+          (BLB_MASS_VEL.eq.BLB_ENERGY+1).and. &
+          (BLB_VOL.eq.BLB_MASS_VEL+3).and. &
+          (BLB_CEN_INT.eq.BLB_VOL+1).and. &
+          (BLB_CEN_ACT.eq.BLB_CEN_INT+AMREX_SPACEDIM).and. &
+          (BLB_PERIM.eq.BLB_CEN_ACT+AMREX_SPACEDIM).and. &
+          (BLB_PERIM_MAT.eq.BLB_PERIM+1).and. &
+          (BLB_TRIPLE_PERIM.eq.BLB_PERIM_MAT+nmat).and. &
+          (BLB_CELL_CNT.eq.BLB_TRIPLE_PERIM+nmat*nmat).and. &
+          (BLB_CELLVOL_CNT.eq.BLB_CELL_CNT+1).and. &
+          (BLB_MASS.eq.BLB_CELLVOL_CNT+1).and. &
+          (BLB_PRES.eq.BLB_MASS+1).and. &
+          (num_elements_blobclass.eq.BLB_PRES+1)) then
+          ! do nothing
+      else
+       print *,"BLB parameters invalid"
+       stop
+      endif
+
+      end subroutine fort_blb_init
 
       subroutine fort_override( &
         ccmax_level, &

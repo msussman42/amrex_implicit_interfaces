@@ -11,6 +11,25 @@ namespace amrex{
 
   extern "C" {
 
+    void fort_blb_init(
+      int* blb_matrix_in,
+      int* blb_rhs_in,
+      int* blb_vel_in,
+      int* blb_int_mom_in,
+      int* blb_energy_in,
+      int* blb_mass_vel_in,
+      int* blb_vol_in,
+      int* blb_cen_int_in,
+      int* blb_cen_act_in,
+      int* blb_perim_in,
+      int* blb_perim_mat_in,
+      int* blb_triple_perim_in,
+      int* blb_cell_cnt_in,
+      int* blb_cellvol_cnt_in,
+      int* blb_mass_in,
+      int* blb_pres_in,
+      int* num_elements_blobclass_in);
+
      void fort_override(
        const int* max_level,
        const int* n_cell,

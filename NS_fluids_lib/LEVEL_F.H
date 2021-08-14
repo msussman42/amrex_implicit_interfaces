@@ -142,7 +142,6 @@ namespace amrex{
        Real* level_mdot_comp_redistribute_array,
        int* arraysize,
        int* mdot_arraysize,
-       int* num_elements_blobclass,
        int* ncomp_mdot_alloc,
        int* ncomp_mdot,
        int* levelbc,
@@ -183,7 +182,6 @@ namespace amrex{
        Real* level_mdot_array,
        int* arraysize,
        int* mdot_arraysize,
-       int* num_elements_blobclass,
        int* material_type_lowmach);
 
 
@@ -379,7 +377,6 @@ namespace amrex{
         Real* added_weight,
         Real* blob_array,
         int* blob_array_size,
-        int* num_elements_blobclass,
         int* num_colors,
         int* nten,
         int* project_option,

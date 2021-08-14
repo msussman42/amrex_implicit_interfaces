@@ -132,7 +132,6 @@ extern "C"
     Real* dt,
     int* arraysize,
     Real* blob_array,
-    int* num_elements_blobclass,
     int* color_count,
     Real* colorfab,AMREX_ARLIM_P(colorfablo),AMREX_ARLIM_P(colorfabhi), 
     Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi), 
