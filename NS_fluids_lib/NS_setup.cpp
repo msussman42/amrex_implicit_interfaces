@@ -2482,12 +2482,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
       Real cellvol=blobdata[iblob].blob_cellvol_count;
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
-       " cellvol= " <<
+       " blob_cellvol= " <<
         cellvol << '\n';
       if (cellvol>0.0) {
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
         " im= " << imbase <<
-        " pressure= " << blobdata[iblob].blob_pressure/cellvol
+        " blob_pressure= " << blobdata[iblob].blob_pressure/cellvol
          << '\n';
       } else if (cellvol==0.0) {
        // do nothing
