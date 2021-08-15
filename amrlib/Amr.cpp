@@ -967,7 +967,7 @@ Amr::restart (const std::string& filename)
       is >> recalesce_state_new[j];
 
     } else
-        amrex::Error("checkpoint_recalesce_data invalid");
+     amrex::Error("checkpoint_recalesce_data invalid");
 
 
 // END SUSSMAN KLUGE RESTART

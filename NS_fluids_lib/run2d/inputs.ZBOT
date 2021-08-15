@@ -115,7 +115,8 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
 #0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 2 2 
-
+#advection, surface tension, gravity
+ns.fixed_dt_scales=0.0 1.0 1.0
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
@@ -150,11 +151,6 @@ ns.v=0
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
-# 2^1 + 2^2
-# if first bit (2^0) is set, then ignore fast advective scales.
-# if second bit (2^1) is set, then ignore fast capillary wave scales.
-# if third bit (2^2) is set, then ignore fast gravity wave scales.
-ns.ignore_fast_scales=4  
 ns.gravity          = 9.8
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.

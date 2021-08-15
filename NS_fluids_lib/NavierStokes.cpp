@@ -322,11 +322,11 @@ Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
 
+// component 0 => advective scales
+// component 1 => surface tension scales
+// component 2 => gravity scales
 int NavierStokes::n_scales=3;
-// 2^0=1 bit => ignore advective scales
-// 2^1=2 bit => ignore surface tension scales
-// 2^2=4 bit => ignore gravity scales
-int NavierStokes::ignore_fast_scales=0;
+Vector<Real> NavierStokes::fixed_dt_scales; //default is 0.0
 Vector<Real> NavierStokes::current_dt_group;
 Vector<Real> NavierStokes::hold_dt_factors;
 
@@ -2445,14 +2445,22 @@ NavierStokes::read_params ()
     change_max_init=change_max;
     pp.query("change_max_init",change_max_init);
 
-    ignore_fast_scales=0;
+    fixed_dt_scales.resize(n_scales);
     current_dt_group.resize(n_scales);
     hold_dt_factors.resize(n_scales);
     for (int iscale=0;iscale<current_dt_group.size();iscale++) {
+     fixed_dt_scales[iscale]=0.0;
      current_dt_group[iscale]=0.0;
      hold_dt_factors[iscale]=1.0;
     }
-    pp.query("ignore_fast_scales",ignore_fast_scales);
+    pp.queryarr("fixed_dt_scales",fixed_dt_scales,0,n_scales);
+
+    for (int iscale=0;iscale<current_dt_group.size();iscale++) {
+     if (fixed_dt_scales[iscale]>=0.0) {
+      // do nothing
+     } else
+      amrex::Error("fixed_dt_scales[iscale] invalid");
+    }
 
     pp.query("fixed_dt",fixed_dt);
     fixed_dt_init=fixed_dt;
@@ -4932,7 +4940,10 @@ NavierStokes::read_params ()
      }
      std::cout << "change_max=" << change_max << '\n';
      std::cout << "change_max_init=" << change_max_init << '\n';
-     std::cout << "ignore_fast_scales=" << ignore_fast_scales << '\n';
+     for (int iscale=0;iscale<current_dt_group.size();iscale++) {
+      std::cout << "iscale=" << iscale << " fixed_dt_scales= " <<
+        fixed_dt_scales[iscale] << '\n';
+     }
      std::cout << "fixed_dt=" << fixed_dt << '\n';
      std::cout << "fixed_dt_init=" << fixed_dt_init << '\n';
      std::cout << "fixed_dt_velocity=" << fixed_dt_velocity << '\n';
@@ -19054,7 +19065,7 @@ void NavierStokes::MaxAdvectSpeed(
     &caller_id,
     &tid_current,
     &n_scales,
-    &ignore_fast_scales,
+    fixed_dt_scales.dataPtr(),
     &local_enable_spectral,
     parent->AMR_min_phase_change_rate.dataPtr(),
     parent->AMR_max_phase_change_rate.dataPtr(),
@@ -19214,13 +19225,14 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
  Real u_max_cap_wave;
 
  int need_all_dt_values=0;
-
- if (ignore_fast_scales==0) {
-  // do nothing
- } else if (ignore_fast_scales>0) {
-  need_all_dt_values=1;
- } else
-  amrex::Error("ignore_fast_scales invalid");
+ for (int iscale=0;iscale<fixed_dt_scales.size();iscale++) {
+  if (fixed_dt_scales[iscale]==0.0) {
+   // do nothing
+  } else if (fixed_dt_scales[iscale]>0.0) {
+   need_all_dt_values=1;
+  } else
+   amrex::Error("fixed_dt_scales invalid");
+ } //iscale=0;iscale<fixed_dt_scales.size()
 
  if (local_fixed_dt>0.0) {
 

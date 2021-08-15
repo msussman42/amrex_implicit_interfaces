@@ -434,7 +434,7 @@ extern "C"
       int* caller_id,
       int* tid,
       int* n_scales,
-      int* ignore_fast_scales,
+      Real* fixed_dt_scales,
       int* enable_spectral,
       Real* AMR_min_phase_change_rate,
       Real* AMR_max_phase_change_rate,

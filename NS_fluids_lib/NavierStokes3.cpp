@@ -2337,31 +2337,64 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    } else if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
     if (dt_slab>0.0) {
-     int ignore_advection=(ignore_fast_scales & 1);
-     int ignore_surface_tension=(ignore_fast_scales & 2);
-     int ignore_gravity=(ignore_fast_scales & 4);
+     int ignore_advection=0;
+     int ignore_surface_tension=0;
+     int ignore_gravity=0;
+
+     if (fixed_dt_scales[0]==0.0) {
+      //do nothing
+     } else if (fixed_dt_scales[0]>0.0) {
+      ignore_advection=1;
+     } else
+      amrex::Error("fixed_dt_scales[0] invalid");
+
+     if (fixed_dt_scales[1]==0.0) {
+      //do nothing
+     } else if (fixed_dt_scales[1]>0.0) {
+      ignore_surface_tension=1;
+     } else
+      amrex::Error("fixed_dt_scales[1] invalid");
+
+     if (fixed_dt_scales[2]==0.0) {
+      //do nothing
+     } else if (fixed_dt_scales[2]>0.0) {
+      ignore_gravity=1;
+     } else
+      amrex::Error("fixed_dt_scales[2] invalid");
 
      if (ignore_advection==0) {
       // do nothing
      } else if (ignore_advection==1) {
-      if (current_dt_group[0]<dt_slab)
-       hold_dt_factors[0]=current_dt_group[0]/dt_slab;
+      Real dt_slab_max=std::max(dt_slab,fixed_dt_scales[0]);
+
+      if (current_dt_group[0]<dt_slab_max)
+       hold_dt_factors[0]=current_dt_group[0]/dt_slab_max;
      } else
       amrex::Error("ignore_advection invalid");
 
+      //for both surface tension and gravity, dt = K/sqrt(coeff)
+      //dt_large = K/sqrt(alpha * coeff) = dt_small/sqrt(alpha)
+      //alpha=(dt_small/dt_large)^2
+      // 
      if (ignore_surface_tension==0) {
       // do nothing
-     } else if (ignore_surface_tension==2) {
-      if (current_dt_group[1]<dt_slab)
-       hold_dt_factors[1]=current_dt_group[1]/dt_slab;
+     } else if (ignore_surface_tension==1) {
+      Real dt_slab_max=std::max(dt_slab,fixed_dt_scales[1]);
+      if (current_dt_group[1]<dt_slab_max) {
+       hold_dt_factors[1]=current_dt_group[1]/dt_slab_max;
+       hold_dt_factors[1]*=hold_dt_factors[1];
+      }
      } else
       amrex::Error("ignore_surface_tension invalid");
 
      if (ignore_gravity==0) {
       // do nothing
-     } else if (ignore_gravity==4) {
-      if (current_dt_group[2]<dt_slab)
-       hold_dt_factors[2]=current_dt_group[2]/dt_slab;
+     } else if (ignore_gravity==1) {
+      Real dt_slab_max=std::max(dt_slab,fixed_dt_scales[2]);
+      if (current_dt_group[2]<dt_slab_max) {
+       hold_dt_factors[2]=current_dt_group[2]/dt_slab_max;
+       hold_dt_factors[2]*=hold_dt_factors[2];
+      }
      } else
       amrex::Error("ignore_gravity invalid");
 
