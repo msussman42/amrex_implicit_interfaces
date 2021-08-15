@@ -5403,6 +5403,7 @@ NavierStokes::ColorSum(
    levelbc.dataPtr(),
    velbc.dataPtr(),
    material_type_lowmach.dataPtr(),
+   material_type_visual.dataPtr(),
    &nface,
    &nface_dst,
    &ncellfrac);
@@ -5951,28 +5952,6 @@ NavierStokes::LowMachDIVUALL(
  if (level!=0)
   amrex::Error("level=0 in LowMachDIVUALL");
 
- Real problo_array[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  problo_array[dir]=geom.ProbLo(dir);
-
- FIX ME symmetric_flag
- int symmetric_flag=1;
- for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
-  if (phys_bc.lo(dir)!=Symmetry)
-   symmetric_flag=0;
-  if (problo_array[dir]!=0.0)
-   symmetric_flag=0;
- } // dir=0..sdim-2
-
- if (geom.IsRZ()) {
-  if (symmetric_flag==1) {
-   // do nothing
-  } else if (symmetric_flag==0) {
-   amrex::Error("we force symmetric_flag==1 if geom.IsRZ()");
-  } else
-   amrex::Error("symmetric_flag error");
- }  // IsRZ?
-
  if (color_count==0)
   amrex::Error("num_colors=0 in LowMachDIVUALL");
 
@@ -6176,6 +6155,7 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
  blobdata[i].blob_cellvol_count=blob_array[counter+BLB_CELLVOL_CNT];
  blobdata[i].blob_mass=blob_array[counter+BLB_MASS];
  blobdata[i].blob_pressure=blob_array[counter+BLB_PRES];
+
  counter+=num_elements_blobclass;
 
 } // end subroutine copy_to_blobdata
@@ -6369,6 +6349,7 @@ void NavierStokes::copy_from_blobdata(int i,int& counter,
  blob_array[counter+BLB_CELLVOL_CNT]=blobdata[i].blob_cellvol_count;
  blob_array[counter+BLB_MASS]=blobdata[i].blob_mass;
  blob_array[counter+BLB_PRES]=blobdata[i].blob_pressure;
+
  counter+=num_elements_blobclass;
 
 }  // end subroutine copy_from_blobdata
@@ -6398,6 +6379,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
  blobdata[i].blob_cellvol_count=0.0;
  blobdata[i].blob_mass=0.0;
  blobdata[i].blob_pressure=0.0;
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   blobdata[i].blob_center_integral[dir]=0.0;
   blobdata[i].blob_center_actual[dir]=0.0;
@@ -6470,21 +6452,22 @@ NavierStokes::ColorSumALL(
   problo_array[dir]=geom.ProbLo(dir);
  }
 
- int symmetric_flag=1;
+ int disallow_rotation=1;
+
  for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
   if (phys_bc.lo(dir)!=Symmetry)
-   symmetric_flag=0;
+   disallow_rotation=0;
   if (problo_array[dir]!=0.0)
-   symmetric_flag=0;
+   disallow_rotation=0;
  } // dir=0..sdim-2
 
  if (geom.IsRZ()) {
-  if (symmetric_flag==1) {
+  if (disallow_rotation==1) {
    // do nothing
-  } else if (symmetric_flag==0) {
-   amrex::Error("we force symmetric_flag==1 if geom.IsRZ()");
+  } else if (disallow_rotation==0) {
+   amrex::Error("it is required that disallow_rotation==1 if geom.IsRZ()");
   } else
-   amrex::Error("symmetric_flag error");
+   amrex::Error("disallow_rotation out of range");
  }  // IsRZ?
 
  if (color_count==0)
@@ -6598,11 +6581,13 @@ NavierStokes::ColorSumALL(
  } // i=0..color_count-1
 
  int num_sweeps=2;
+
  if (operation_flag==0) {
   // do nothing
  } else if (operation_flag==1) { 
    // (dest,source)
   copy_blobdata(level_blobdata,blobdata);
+
   for (int i=0;i<color_count;i++) {
    int j=0;
    for (j=0;j<ncomp_mdot_alloc;j++) {
@@ -6668,6 +6653,7 @@ NavierStokes::ColorSumALL(
     if (sweep_num==0) {
 
      for (int i=0;i<color_count;i++) {
+
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
 
       int j=0;
@@ -6707,7 +6693,7 @@ NavierStokes::ColorSumALL(
     } else
      amrex::Error("sweep_num invalid");
 
-   } else if (operation_flag==1) {
+   } else if (operation_flag==1) { //blobdata not updated for this case.
 
     if (sweep_num==0) {
 
@@ -6754,9 +6740,13 @@ NavierStokes::ColorSumALL(
        blobdata[i].blob_center_actual[dir]= 
         blobdata[i].blob_center_integral[dir]/blobvol;
       }
-      if (symmetric_flag==1) {
+      if (disallow_rotation==1) {
        for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
         blobdata[i].blob_center_actual[dir]=0.0;
+      } else if (disallow_rotation==0) {
+       // do nothing
+      } else {
+       amrex::Error("disallow_rotation out of range");
       }
      } else if (blobvol==0.0) {
       // do nothing
@@ -6799,17 +6789,19 @@ NavierStokes::ColorSumALL(
        } 
        if (imatrix!=matrix_ncomp*(veltype+1))
         amrex::Error("imatrix invalid");
+
        for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
         BB3D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
         XX3D[irow]=0.0;
 	 //rotational motions 
         if ((irow>=AMREX_SPACEDIM)&&(irow<=2*AMREX_SPACEDIM-1)) {
-	 if (symmetric_flag==1) {
+	 if (disallow_rotation==1) {
 	  BB3D[irow]=0.0;
-	 } else if (symmetric_flag==0) {
+	 } else if (disallow_rotation==0) {
 	  // do nothing
-	 } else
-          amrex::Error("symmetric_flag invalid");
+	 } else {
+          amrex::Error("disallow_rotation out of range");
+	 }
 
          if (veltype==1)
 	  BB3D[irow]=0.0;
@@ -6820,27 +6812,40 @@ NavierStokes::ColorSumALL(
 	} else {
 	 amrex::Error("irow invalid");
         }
-        if (irow<AMREX_SPACEDIM+1) {
+
+	 //motions for 2D or 3D
+        if ((irow>=0)&&(irow<=AMREX_SPACEDIM)) {
+
          BB2D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
          XX2D[irow]=0.0;
 	  //rotational motions 
          if ((irow>=AMREX_SPACEDIM)&&(irow<=2*AMREX_SPACEDIM-1)) {
-	  if (symmetric_flag==1) {
+
+	  if (disallow_rotation==1) {
            BB2D[irow]=0.0;
-          } else if (symmetric_flag==0) {
+          } else if (disallow_rotation==0) {
            // do nothing
           } else
-           amrex::Error("symmetric_flag invalid");
+           amrex::Error("disallow_rotation invalid");
 
           if (veltype==1)
   	   BB2D[irow]=0.0;
+
+	  //translational motions
 	 } else if ((irow>=0)&&(irow<AMREX_SPACEDIM)) {
  	  // do nothing
 	 } else {
 	  amrex::Error("irow invalid");
          }
-        } // irow<sdim+1
-       }
+
+	 //3D motions only.
+	} else if ((irow>=AMREX_SPACEDIM+1)&&(irow<=2*AMREX_SPACEDIM-1)) {
+ 	 // do nothing
+	} else {
+	 amrex::Error("irow invalid");
+        } 
+       } //for (int irow=0;irow<2*AMREX_SPACEDIM;irow++)
+
        int mat_status=0;
        if (AMREX_SPACEDIM==3) {
         matrix_solveCPP(AA3D,XX3D,BB3D,mat_status,2*AMREX_SPACEDIM);
@@ -6854,30 +6859,32 @@ NavierStokes::ColorSumALL(
          for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX3D[dir];
          }
-         if (symmetric_flag==1) {
-          for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
-           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
+         if (disallow_rotation==1) {
           for (int dir=AMREX_SPACEDIM;dir<2*AMREX_SPACEDIM;dir++)
            blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-         } else if (symmetric_flag==0) {
+         } else if (disallow_rotation==0) {
           // do nothing
          } else {
-          amrex::Error("symmetric_flag invalid");
+          amrex::Error("disallow_rotation invalid");
          }
         } else if (AMREX_SPACEDIM==2) {
          for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX2D[dir];
          }
-         if ((geom.IsRZ())||(symmetric_flag==1)) {
-          int dir=0;
+	 if (disallow_rotation==1) {
+          int dir=AMREX_SPACEDIM;
           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-          dir=AMREX_SPACEDIM;
-          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-         } else if ((!geom.IsRZ())&&(symmetric_flag==0)) {
+         } else if (disallow_rotation==0) {
           // do nothing
          } else {
-          amrex::Error("IsRZ or symmetric_flag invalid");
-         }
+          amrex::Error("disallow_rotation invalid");
+	 }
+
+         if (geom.IsRZ()) {
+          int dir=0;
+          blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
+	 }
+
         } else
          amrex::Error("dimension bust");
 
@@ -7011,7 +7018,7 @@ NavierStokes::ColorSumALL(
   if (ParallelDescriptor::IOProcessor()) {
 
    std::cout << "in color sum color_count = " << color_count << '\n';
-   std::cout << "symmetric_flag= " << symmetric_flag << '\n';
+   std::cout << "disallow_rotation= " << disallow_rotation << '\n';
 
    for (int i=0;i<color_count;i++) {
 
