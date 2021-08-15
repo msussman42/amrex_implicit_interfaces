@@ -5954,6 +5954,8 @@ NavierStokes::LowMachDIVUALL(
  Real problo_array[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   problo_array[dir]=geom.ProbLo(dir);
+
+ FIX ME symmetric_flag
  int symmetric_flag=1;
  for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
   if (phys_bc.lo(dir)!=Symmetry)
@@ -5961,6 +5963,7 @@ NavierStokes::LowMachDIVUALL(
   if (problo_array[dir]!=0.0)
    symmetric_flag=0;
  } // dir=0..sdim-2
+
  if (geom.IsRZ()) {
   if (symmetric_flag==1) {
    // do nothing
@@ -6463,8 +6466,10 @@ NavierStokes::ColorSumALL(
   amrex::Error("operation_flag invalid");
 
  Real problo_array[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   problo_array[dir]=geom.ProbLo(dir);
+ }
+
  int symmetric_flag=1;
  for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
   if (phys_bc.lo(dir)!=Symmetry)
@@ -6472,6 +6477,7 @@ NavierStokes::ColorSumALL(
   if (problo_array[dir]!=0.0)
    symmetric_flag=0;
  } // dir=0..sdim-2
+
  if (geom.IsRZ()) {
   if (symmetric_flag==1) {
    // do nothing
@@ -6796,7 +6802,8 @@ NavierStokes::ColorSumALL(
        for (int irow=0;irow<2*AMREX_SPACEDIM;irow++) {
         BB3D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
         XX3D[irow]=0.0;
-        if (irow>=AMREX_SPACEDIM) {
+	 //rotational motions 
+        if ((irow>=AMREX_SPACEDIM)&&(irow<=2*AMREX_SPACEDIM-1)) {
 	 if (symmetric_flag==1) {
 	  BB3D[irow]=0.0;
 	 } else if (symmetric_flag==0) {
@@ -6806,11 +6813,18 @@ NavierStokes::ColorSumALL(
 
          if (veltype==1)
 	  BB3D[irow]=0.0;
+
+	  //translational motions
+	} else if ((irow>=0)&&(irow<AMREX_SPACEDIM)) {
+ 	 // do nothing
+	} else {
+	 amrex::Error("irow invalid");
         }
         if (irow<AMREX_SPACEDIM+1) {
          BB2D[irow]=blobdata[i].blob_RHS[2*AMREX_SPACEDIM*veltype+irow];
          XX2D[irow]=0.0;
-         if (irow>=AMREX_SPACEDIM) {
+	  //rotational motions 
+         if ((irow>=AMREX_SPACEDIM)&&(irow<=2*AMREX_SPACEDIM-1)) {
 	  if (symmetric_flag==1) {
            BB2D[irow]=0.0;
           } else if (symmetric_flag==0) {
@@ -6820,6 +6834,10 @@ NavierStokes::ColorSumALL(
 
           if (veltype==1)
   	   BB2D[irow]=0.0;
+	 } else if ((irow>=0)&&(irow<AMREX_SPACEDIM)) {
+ 	  // do nothing
+	 } else {
+	  amrex::Error("irow invalid");
          }
         } // irow<sdim+1
        }
