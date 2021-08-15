@@ -4322,7 +4322,7 @@ stop
         caller_id, &
         tid, &
         n_scales, &
-        ignore_fast_scales, &
+        fixed_dt_scales, &
         enable_spectral, &
         AMR_min_phase_change_rate, &
         AMR_max_phase_change_rate, &
@@ -4383,7 +4383,7 @@ stop
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: n_scales
-      INTEGER_T, intent(in) :: ignore_fast_scales
+      REAL_T, intent(in) :: fixed_dt_scales(n_scales)
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -4542,9 +4542,30 @@ stop
        stop
       endif
 
-      ignore_advection=IAND(ignore_fast_scales,1)
-      ignore_surface_tension=IAND(ignore_fast_scales,2)
-      ignore_gravity=IAND(ignore_fast_scales,4)
+      if (fixed_dt_scales(1).eq.zero) then
+       ignore_advection=0
+      else if (fixed_dt_scales(1).gt.zero) then
+       ignore_advection=1
+      else
+       print *,"fixed_dt_scales(1) invalid"
+       stop
+      endif
+      if (fixed_dt_scales(2).eq.zero) then
+       ignore_surface_tension=0
+      else if (fixed_dt_scales(2).gt.zero) then
+       ignore_surface_tension=1
+      else
+       print *,"fixed_dt_scales(2) invalid"
+       stop
+      endif
+      if (fixed_dt_scales(3).eq.zero) then
+       ignore_gravity=0
+      else if (fixed_dt_scales(3).gt.zero) then
+       ignore_gravity=1
+      else
+       print *,"fixed_dt_scales(3) invalid"
+       stop
+      endif
 
       nhalf=3
 
@@ -5535,7 +5556,7 @@ stop
 
          if (ignore_surface_tension.eq.0) then
           dt_min(0)=min(dt_min(0),dthold)
-         else if (ignore_surface_tension.eq.2) then
+         else if (ignore_surface_tension.eq.1) then
           dt_min(2)=min(dt_min(2),dthold)
          else
           print *,"ignore_surface_tension invalid"
@@ -5601,7 +5622,7 @@ stop
            dthold=dxmin/ugrav 
            if (ignore_gravity.eq.0) then
             dt_min(0)=min(dt_min(0),dthold)
-           else if (ignore_gravity.eq.4) then
+           else if (ignore_gravity.eq.1) then
             dt_min(3)=min(dt_min(3),dthold)
            else
             print *,"ignore_gravity invalid"
