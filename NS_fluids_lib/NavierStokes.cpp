@@ -13075,6 +13075,8 @@ NavierStokes::phase_change_redistributeALL() {
 
  int color_count=0;
  int coarsest_level=0;
+  //idx_mdot,idx_mdot_complement >=0 signals ColorSumALL to compute
+  //auxiliary sums.
  int idx_mdot=JUMP_STRENGTH_MF;
  int idx_mdot_complement=JUMP_STRENGTH_COMPLEMENT_MF;
  int tessellate=3;
@@ -21130,7 +21132,7 @@ NavierStokes::post_init_state () {
 
  int color_count=0;
  int coarsest_level=0;
- int idx_mdot=-1;
+ int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
  int tessellate=1;
  int operation_flag=0;
 

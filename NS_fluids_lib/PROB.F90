@@ -25452,12 +25452,13 @@ end subroutine initialize2d
        return
        end subroutine fort_overridepbc
 
-       subroutine FORT_FLUSH_FORTRAN()
+       subroutine fort_flush_fortran() &
+       bind(c,name='fort_flush_fortran')
        IMPLICIT NONE
 
        call FLUSH(6)   ! unit=6 screen
 
-       end subroutine FORT_FLUSH_FORTRAN
+       end subroutine fort_flush_fortran
 
        subroutine FORT_SET_PERIODIC_VAR(periodic_in)
        use probf90_module

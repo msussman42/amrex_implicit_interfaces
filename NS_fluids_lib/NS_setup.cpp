@@ -1956,12 +1956,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  std::fflush(NULL);
   // call FLUSH(6), unit=6 screen
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
 
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
 
  if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Starting: sum_integrated_quantities\n";
@@ -1974,11 +1974,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  }
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
 
  if (level!=0)
   amrex::Error("level invalid in sum_integrated_quantities");
@@ -2211,11 +2211,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
 
  for (int isweep=0;isweep<2;isweep++) {
    // VOF_Recon_ALL 
@@ -2259,11 +2259,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
 
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
@@ -2276,7 +2276,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   int color_count=0;
   int coarsest_level=0;
   int tessellate=1;
-  int idx_mdot=-1;
+  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
   int operation_flag=0;
 
    // declared in NavierStokes3.cpp
@@ -2309,7 +2309,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
  ParallelDescriptor::Barrier();
 
  if (ParallelDescriptor::IOProcessor()) {
@@ -2478,6 +2478,21 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
        " im= " << imbase <<
        " energy= " <<
         blobdata[iblob].blob_energy << '\n';
+
+      Real cellvol=blobdata[iblob].blob_cellvol_count;
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " cellvol= " <<
+        cellvol << '\n';
+      if (cellvol>0.0) {
+       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+        " im= " << imbase <<
+        " pressure= " << blobdata[iblob].blob_pressure/cellvol
+         << '\n';
+      } else if (cellvol==0.0) {
+       // do nothing
+      } else
+       amrex::Error("cellvol invalid");
 
      }  // isort1=0..material_blob_count-1
      std::cout << "-----------------------------------------------\n";
@@ -2969,7 +2984,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
  ParallelDescriptor::Barrier();
 
  delete_array(MASKCOEF_MF);
@@ -2977,7 +2992,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  ParallelDescriptor::Barrier();
  std::fflush(NULL);
   // call FLUSH(6)
- FORT_FLUSH_FORTRAN();
+ fort_flush_fortran();
  ParallelDescriptor::Barrier();
 
  if (verbose>0)
