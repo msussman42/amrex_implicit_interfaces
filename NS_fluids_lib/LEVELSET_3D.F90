@@ -5030,6 +5030,7 @@ stop
        levelbc, &
        velbc, &
        material_type_lowmach, &
+       material_type_visual, &
        nface, &
        nface_dst, &
        ncellfrac) &
@@ -5061,6 +5062,7 @@ stop
       INTEGER_T, intent(in) :: ncomp_mdot_alloc
       INTEGER_T, intent(in) :: ncomp_mdot
       INTEGER_T, intent(in) :: material_type_lowmach(nmat)
+      INTEGER_T, intent(in) :: material_type_visual(nmat)
       INTEGER_T, intent(in) :: distribute_mdot_evenly(2*nten)
       INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
       REAL_T, intent(in) :: latent_heat(2*nten)
@@ -5120,20 +5122,35 @@ stop
       REAL_T, pointer :: mdot_complement_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: VEL(DIMV(VEL),SDIM+1)
+      REAL_T, pointer :: VEL_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
+      REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: xface(DIMV(xface),nface_dst)
       REAL_T, intent(in), target :: yface(DIMV(yface),nface_dst)
       REAL_T, intent(in), target :: zface(DIMV(zface),nface_dst)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: areax(DIMV(areax))
       REAL_T, intent(in), target :: areay(DIMV(areay))
       REAL_T, intent(in), target :: areaz(DIMV(areaz))
+      REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: cellfab(DIMV(cellfab),ncellfrac)
+      REAL_T, pointer :: cellfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: color(DIMV(color))
+      REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T dir,side
       INTEGER_T dir2
@@ -5216,6 +5233,8 @@ stop
       INTEGER_T ireverse
       INTEGER_T complement_flag
       INTEGER_T im_negate
+
+      INTEGER_T local_material_type
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -5308,21 +5327,37 @@ stop
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
       call checkbound_array(fablo,fabhi,mdot_ptr,0,-1,6615)
       call checkbound_array(fablo,fabhi,mdot_complement_ptr,0,-1,6615)
-      call checkbound_array(fablo,fabhi,LS,1,-1,6615)
-      call checkbound_array(fablo,fabhi,VEL,1,-1,6615)
-      call checkbound_array(fablo,fabhi,DEN,1,-1,6615)
-      call checkbound_array(fablo,fabhi,VOF,1,-1,6616)
-      call checkbound_array(fablo,fabhi,facefab,1,-1,6617)
-      call checkbound_array(fablo,fabhi,xface,0,0,6618)
-      call checkbound_array(fablo,fabhi,yface,0,1,6619)
-      call checkbound_array(fablo,fabhi,zface,0,SDIM-1,6620)
-      call checkbound_array1(fablo,fabhi,areax,0,0,6621)
-      call checkbound_array1(fablo,fabhi,areay,0,1,6622)
-      call checkbound_array1(fablo,fabhi,areaz,0,SDIM-1,6623)
-      call checkbound_array(fablo,fabhi,cellfab,0,-1,6624)
-      call checkbound_array1(fablo,fabhi,typefab,1,-1,6625)
-      call checkbound_array1(fablo,fabhi,color,1,-1,6626)
-      call checkbound_array1(fablo,fabhi,mask,1,-1,6627)
+
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,6615)
+      VEL_ptr=>VEL
+      call checkbound_array(fablo,fabhi,VEL_ptr,1,-1,6615)
+      DEN_ptr=>DEN
+      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1,6615)
+      VOF_ptr=>VOF
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
+      facefab_ptr=>facefab
+      call checkbound_array(fablo,fabhi,facefab_ptr,1,-1,6617)
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,6618)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,6619)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,6620)
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0,6621)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1,6622)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1,6623)
+      cellfab_ptr=>cellfab
+      call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1,6624)
+      typefab_ptr=>typefab
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
+      color_ptr=>color
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,6626)
+      mask_ptr=>mask
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,6627)
   
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
@@ -5992,10 +6027,42 @@ stop
 
              pressure_local=VEL(D_DECL(i,j,k),SDIM+1)
              if (is_rigid(nmat,im).eq.0) then
-              if (material_type_lowmach(im).eq.0) then
+
+              if ((fort_material_type(im).ge.1).and. &
+                  (fort_material_type(im).le.MAX_NUM_EOS)) then 
+               local_material_type=fort_material_type(im)
+              else if (fort_material_type(im).eq.0) then
+
+               if ((material_type_lowmach(im).ge.1).and. &
+                   (material_type_lowmach(im).le.MAX_NUM_EOS)) then
+                local_material_type=material_type_lowmach(im)
+               else if (material_type_lowmach(im).eq.0) then
+
+                if ((material_type_visual(im).ge.1).and. &
+                    (material_type_visual(im).le.MAX_NUM_EOS)) then
+                 local_material_type=material_type_visual(im)
+                else if (material_type_visual(im).eq.0) then
+                 local_material_type=0
+                else
+                 print *,"material_type_visual(im) invalid"
+                 stop
+                endif
+
+               else
+                print *,"material_type_lowmach(im) invalid"
+                stop
+               endif
+
+              else
+               print *,"fort_material_type(im) invalid"
+               stop
+              endif
+
+
+              if (local_material_type.eq.0) then
                ! do nothing
-              else if ((material_type_lowmach(im).gt.0).and. &
-                       (material_type_lowmach(im).le.MAX_NUM_EOS)) then
+              else if ((local_material_type.ge.1).and. &
+                       (local_material_type.le.MAX_NUM_EOS)) then
                dencomp=(im-1)*num_state_material+1
                
                if (constant_density_all_time(im).eq.1) then
@@ -6024,7 +6091,7 @@ stop
                 massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
                enddo
                call INTERNAL_material(den_mat,massfrac_parm,TEMP_mat, &
-                internal_energy,material_type_lowmach(im),im)
+                internal_energy,local_material_type,im)
                if (internal_energy.gt.zero) then
                 ! do nothing
                else
@@ -6034,11 +6101,12 @@ stop
                call EOS_material(den_mat,massfrac_parm, &
                 internal_energy, &
                 pressure_local, &
-                material_type_lowmach(im),im)
+                local_material_type,im)
               else
-               print *,"material_type_lowmach(im) invalid"
+               print *,"local_material_type invalid"
                stop
               endif
+
              else if (is_rigid(nmat,im).eq.1) then
               ! do nothing
              else
@@ -6046,8 +6114,15 @@ stop
               stop
              endif
 
-             level_blobdata(ic+3)=level_blobdata(ic+3)+ &
+             if (ic+3.eq. &
+                 (opposite_color(im)-1)*num_elements_blobclass+ &
+                  BLB_PRES+1) then
+              level_blobdata(ic+3)=level_blobdata(ic+3)+ &
                 vol*pressure_local !blob_pressure
+             else
+              print *,"expecting ic+3 to correspond to BLB_PRES+1"
+              stop
+             endif
 
              if (ncomp_mdot.eq.2*nten) then
               ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
@@ -6067,10 +6142,11 @@ stop
               print *,"ncomp_mdot invalid"
               stop
              endif
+
             else if (vfrac.lt.half) then
              ! do nothing
             else
-             print *,"vfrac bust"
+             print *,"vfrac is NaN"
              stop
             endif
 

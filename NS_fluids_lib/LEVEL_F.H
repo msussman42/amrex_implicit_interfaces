@@ -147,6 +147,7 @@ namespace amrex{
        int* levelbc,
        int* velbc,
        int* material_type_lowmach,
+       int* material_type_visual,
        int* nface,
        int* nface_dst,
        int* ncellfrac);
