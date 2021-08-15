@@ -2699,7 +2699,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        ParallelDescriptor::Barrier();
 
        tessellate=1;
-       int idx_mdot=-1;
+       int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
        int operation_flag=0;
 
        ColorSumALL( 
@@ -3370,7 +3370,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         int local_color_count=0;
         int local_coarsest_level=0;
-        int idx_mdot=-1;
+        int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
         int local_tessellate=3;
         int operation_flag=0; // allocate TYPE_MF,COLOR_MF
 
@@ -4965,6 +4965,8 @@ int ilev;
 } // subroutine color_variable
 
 
+//operation_flag==1 => scatter data collected when operation_flag==0 to mdot
+//  or density.
 void
 NavierStokes::ColorSum(
  int operation_flag, //=0 or 1
@@ -5340,7 +5342,7 @@ NavierStokes::ColorSum(
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in: LEVELSET_3D.F90
+   // declared in: LEVELSET_3D.F90
   fort_getcolorsum(
    &tid_current,
    &operation_flag,
@@ -5673,7 +5675,7 @@ NavierStokes::LowMachDIVU(
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
  if (level>finest_level)
-  amrex::Error("level invalid ColorSum");
+  amrex::Error("level invalid LowMachDIVU");
 
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
@@ -5969,7 +5971,7 @@ NavierStokes::LowMachDIVUALL(
  }  // IsRZ?
 
  if (color_count==0)
-  amrex::Error("num_colors=0 in ColorSumALL");
+  amrex::Error("num_colors=0 in LowMachDIVUALL");
 
    // initializes MDOT_LOCAL_MF to 0.0
  allocate_array(0,1,-1,MDOT_LOCAL_MF); 
@@ -6411,6 +6413,8 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 
 } // end subroutine clear_blobdata
 
+//operation_flag==1 => scatter data collected when operation_flag==0 to mdot
+//  or density.
 void
 NavierStokes::ColorSumALL(
  int operation_flag, // =0 or 1
@@ -9703,7 +9707,7 @@ void NavierStokes::multiphase_project(int project_option) {
     check_value_max(41,DIFFUSIONRHS_MF,0,1,0,0.0);
    }
 
-   int idx_mdot=-1;
+   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
 
    int tessellate=1;
    int operation_flag=0;
