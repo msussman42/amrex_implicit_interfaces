@@ -345,9 +345,18 @@ ns.solidheat_flag   =0
 
 # Heat flux from heater A at top.
 ns.xblob3 = 18.3 # Watts=J/s
-ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute)
-#ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute)
-#ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute)
+#nozzle velocity (v_n) measured from simulations.
+#nozzle radius is 0.005m
+#Dj=0.049 meters
+#Weber number=rho_liq * v_n^2 * r_nozzle^2 /(sigma * Dj)=
+#(3.35 Liters/min) 48.2
+#(1.5 Liters/min) 48.2 * (.44/.90)^2=11.5
+#(0.6 Liters/min) 48.2 * (.18/.90)^2=1.9
+#(0.3 Liters/min) 48.2 * (??/.90)^2=?
+ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute) (v_n=0.90 m/s)
+#ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute) (v_n=0.44 m/s)
+#ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute) (v_n=0.18 m/s)
+#ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=?? m/s)
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
