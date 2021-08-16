@@ -141,14 +141,14 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 # output file -2=> tecplot -1=> plot files (visit or paraview)
 #ns.visual_buoyancy_plot_int=2000
 
-amr.check_int       = 500     # number of timesteps between checkpoints
+amr.check_int       = 200     # number of timesteps between checkpoints
 #amr.check_int       = 10     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
 ns.slice_dir=1 # y (aka z) direction
 ns.xslice=0.0000001 0.0
 #amr.slice_int=2000
-amr.plot_int        = 500   # number of timesteps between plot files
+amr.plot_int        = 200   # number of timesteps between plot files
 #amr.plot_int        = 10   # number of timesteps between plot files
 #amr.plot_int        = 1   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
@@ -245,9 +245,8 @@ ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
-# mu_gas=1.093e-6, but make zero to avoid jump condition issue.
 # (PNP: 4.2E-4)
-ns.viscconst=4.48E-04 0.0 1.0
+ns.viscconst=4.48E-04 1.093e-6 1.0
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
@@ -347,6 +346,8 @@ ns.solidheat_flag   =0
 # Heat flux from heater A at top.
 ns.xblob3 = 18.3 # Watts=J/s
 ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute)
+#ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute)
+#ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute)
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
