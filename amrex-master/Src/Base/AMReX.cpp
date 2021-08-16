@@ -577,6 +577,7 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
 
     BL_TINY_PROFILE_INITIALIZE();
 
+      //SUSSMAN: m_geom=new Geometry()
     AMReX::push(new AMReX());
     return AMReX::top();
 }

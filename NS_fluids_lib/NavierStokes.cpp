@@ -338,6 +338,7 @@ Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::MUSHY_THICK  = 2.0;
 Real NavierStokes::gravity      = 0.0;
+Real NavierStokes::gravity_reference_depth = 0.0;
 
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
@@ -2502,6 +2503,20 @@ NavierStokes::read_params ()
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
      amrex::Error("gravity dir invalid");
 
+    Real gravity_reference_depth_default=
+	  geometry_prob_hi[gravity_dir-1]-
+	  geometry_prob_lo[gravity_dir-1];
+    if (gravity_reference_depth_default>0.0) {
+     gravity_reference_depth=gravity_reference_depth_default;
+     pp.query("gravity_reference_depth",gravity_reference_depth);
+     if ((gravity_reference_depth>0.0)&&
+         (gravity_reference_depth<=gravity_reference_depth_default*(1.0001))) {
+      // do nothing
+     } else
+      amrex::Error("gravity_reference_depth out of range");
+    } else
+     amrex::Error("gravity_reference_depth_default invalid");
+
     pp.get("visc_coef",visc_coef);
 
     pp.query("include_viscous_heating",include_viscous_heating);
@@ -2534,6 +2549,8 @@ NavierStokes::read_params ()
      std::cout << "MUSHY_THICK " << MUSHY_THICK << '\n';
 
      std::cout << "gravity " << gravity << '\n';
+     std::cout << "gravity_reference_depth " << 
+	  gravity_reference_depth << '\n';
      std::cout << "invert_gravity " << invert_gravity << '\n';
      std::cout << "gravity_dir " << gravity_dir << '\n';
      std::cout << "cfl " << cfl << '\n';
@@ -19103,6 +19120,7 @@ void NavierStokes::MaxAdvectSpeed(
     denconst.dataPtr(),
     &visc_coef,
     &gravity,
+    &gravity_reference_depth,
     &dir,
     &nmat,
     &nparts,
@@ -19247,6 +19265,18 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
   } else if (fixed_dt_velocity==0.0) {
 
    MaxAdvectSpeedALL(dt_min,u_max_estdt,u_max_cap_wave,caller_id);
+
+   for (int iscale=0;iscale<fixed_dt_scales.size();iscale++) {
+
+    if (fixed_dt_scales[iscale]==0.0) {
+     // do nothing
+    } else if (fixed_dt_scales[iscale]>0.0) {
+     dtmin[0]=std::min(dtmin[0],fixed_dt_scales[iscale]);
+    } else
+     amrex::Error("fixed_dt_scales[iscale] invalid");
+
+   } //iscale=0;iscale<fixed_dt_scales.size()
+
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "after MaxAdvectSpeedALL " << '\n';

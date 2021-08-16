@@ -35,7 +35,8 @@ main (int   argc,
 {
 
     std::cout.imbue(std::locale("C"));
-    amrex::Initialize(argc,argv);  // mpi initialization.
+    // mpi initialization; allocate m_geom
+    amrex::Initialize(argc,argv);  
     std::fflush(NULL);
     amrex::ParallelDescriptor::Barrier();
 
@@ -44,7 +45,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 08/16/21, 1:30am on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 08/16/21, 12:50pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -91,8 +92,15 @@ main (int   argc,
             "Exiting because neither max_step nor stop_time is non-negative.");
     }
 
-      // calls InitAmr() which calls
-      // geom[i].define(index_domain)   i=0..max_level 
+      // 1. call AmrMesh()
+      //   a. AmrMesh() calls Geometry::Setup() 
+      //     (rb==nullptr, coord=-1, is_per=nullptr)
+      //   b. AmrMesh() calls InitAmrMesh
+      //     i. geom[i].define(index_domain)  i=0..max_level
+      //                      
+      // 2. Initialize()
+      // 3. InitAmr() 
+      //   a.  levelbld = getLevelBld();
     Amr* amrptr = new Amr();
 
     amrex::ParallelDescriptor::Barrier();

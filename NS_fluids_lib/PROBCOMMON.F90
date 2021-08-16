@@ -516,7 +516,7 @@ implicit none
       end subroutine TEMPLATE_THERMAL_K
 
       subroutine TEMPLATE_reference_depth(depth)
-      REAL_T, intent(out) :: depth
+      REAL_T, intent(inout) :: depth
       end subroutine TEMPLATE_reference_depth
 
       subroutine TEMPLATE_DELETE_REGIONS_LIST()

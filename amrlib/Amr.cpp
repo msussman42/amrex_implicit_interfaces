@@ -194,11 +194,15 @@ Amr::getAmrLevels () noexcept
     return amr_level;
 }
 
-// AmrMesh() does the following:
-// Geometry::Setup();
+// 1. AmrMesh():
+//  a. Geometry::Setup()  (rb==nullptr, coord=-1, is_per=nullptr)
 //   Setup Geometry from ParmParse file.
-//    (might be needed for variableSetup or even getLevelBld)
-//   geom[i].define(index_domain)  i=0...max_level
+//   (might be needed for variableSetup or getLevelBld)
+//  b. InitAmrMesh
+//     i. geom[i].define(index_domain)  i=0...max_level
+// 2. Initialize()
+// 3. InitAmr()
+//  a. levelbld = getLevelBld();
 Amr::Amr () 
   : AmrMesh() {
 

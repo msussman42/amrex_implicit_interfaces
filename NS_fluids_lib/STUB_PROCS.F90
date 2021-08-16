@@ -767,16 +767,27 @@ end subroutine STUB_THERMAL_K
 subroutine STUB_reference_depth(depth)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(out) :: depth
+REAL_T, intent(inout) :: depth
+REAL_T :: default_depth
 
  if (gravity_dir.eq.1) then
-  depth=problenx
+  default_depth=problenx
  else if (gravity_dir.eq.2) then
-  depth=probleny
+  default_depth=probleny
  else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
-  depth=problenz
+  default_depth=problenz
  else
   print *,"gravity_dir invalid"
+  stop
+ endif
+
+ if ((depth.gt.zero).and. &
+     (depth.le.default_depth*(one+VOFTOL)) then
+  ! do nothing
+ else
+  print *,"input depth out of range"
+  print *,"depth (input) = ",depth
+  print *,"default_default_depth (max depth) = ",default_depth
   stop
  endif
 

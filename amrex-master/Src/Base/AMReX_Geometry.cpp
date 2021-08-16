@@ -74,6 +74,7 @@ void
 Geometry::define (const Box& dom, const RealBox* rb, int coord,
                   int const* is_per) noexcept
 {
+     //SUSSMAN: mgeom->ok=true after this routine.
     Setup(rb,coord,is_per);
 
     Geometry* gg = AMReX::top()->getDefaultGeometry();
@@ -109,8 +110,11 @@ Geometry::define (const Box& dom, const RealBox* rb, int coord,
 void
 Geometry::Setup (const RealBox* rb, int coord, int const* isper) noexcept
 {
+     //SUSSMAN: gg=m_geom; m_geom initialized in amrex::Initialize.
     Geometry* gg = AMReX::top()->getDefaultGeometry();
-
+ 
+     //SUSSMAN: "ok" is a member of CoordSys (derived from Geometry)
+     //"ok" is set to "true" at the end of this routine.
     if (gg->ok) return;
 
     BL_ASSERT(!OpenMP::in_parallel());
@@ -118,6 +122,7 @@ Geometry::Setup (const RealBox* rb, int coord, int const* isper) noexcept
     ParmParse pp("geometry");
 
      // SUSSMAN
+     // class Geometry is derived from CoordSys
     if (coord >=0 && coord <= 3) {
         gg->SetCoord( (CoordType) coord );        
     } else {
