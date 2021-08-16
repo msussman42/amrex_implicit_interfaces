@@ -116,7 +116,7 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 #0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 2 2 
 #advection, surface tension, gravity
-ns.fixed_dt_scales=0.0 1.0e-10 1.0e-10
+ns.fixed_dt_scales=0.0 1.0 1.0
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
@@ -232,9 +232,8 @@ ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 ns.heatviscconst=0.075 0.00375 0.189
 
 # Dynamic viscosity [Pa.s]
-# mu_gas=1.093e-6, but make zero to avoid jump condition issue.
 # (PNP: 4.2E-4)
-ns.viscconst=4.48E-04 0.0 1.0
+ns.viscconst=4.48E-04 1.093e-6 1.0
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
