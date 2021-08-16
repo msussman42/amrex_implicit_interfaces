@@ -472,6 +472,7 @@ extern "C"
       Real* denconst,
       Real* visc_coef,
       Real* ns_gravity,
+      Real* gravity_reference_depth_in,
       int* dir,
       int* nmat,
       int* nparts,

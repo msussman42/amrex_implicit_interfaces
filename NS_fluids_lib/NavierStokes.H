@@ -1779,6 +1779,7 @@ protected:
     static int        extend_pressure_into_solid; // default=0
     static Real       MUSHY_THICK; // default==2.0
     static Real       gravity;
+    static Real       gravity_reference_depth;
     static int        invert_gravity;
     static int        gravity_dir;
     static int        NUM_SCALARS;      // number of non-velocity components
