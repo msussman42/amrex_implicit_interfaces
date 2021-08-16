@@ -782,7 +782,7 @@ REAL_T :: default_depth
  endif
 
  if ((depth.gt.zero).and. &
-     (depth.le.default_depth*(one+VOFTOL)) then
+     (depth.le.default_depth*(one+VOFTOL))) then
   ! do nothing
  else
   print *,"input depth out of range"

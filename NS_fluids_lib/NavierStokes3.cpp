@@ -2365,10 +2365,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      if (ignore_advection==0) {
       // do nothing
      } else if (ignore_advection==1) {
-      Real dt_slab_max=std::max(dt_slab,fixed_dt_scales[0]);
-
-      if (current_dt_group[0]<dt_slab_max)
-       hold_dt_factors[0]=current_dt_group[0]/dt_slab_max;
+      if (current_dt_group[0]<dt_slab)
+       hold_dt_factors[0]=current_dt_group[0]/dt_slab;
      } else
       amrex::Error("ignore_advection invalid");
 
@@ -2379,9 +2377,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      if (ignore_surface_tension==0) {
       // do nothing
      } else if (ignore_surface_tension==1) {
-      Real dt_slab_max=std::max(dt_slab,fixed_dt_scales[1]);
-      if (current_dt_group[1]<dt_slab_max) {
-       hold_dt_factors[1]=current_dt_group[1]/dt_slab_max;
+      if (current_dt_group[1]<dt_slab) {
+       hold_dt_factors[1]=current_dt_group[1]/dt_slab;
        hold_dt_factors[1]*=hold_dt_factors[1];
       }
      } else
@@ -2390,9 +2387,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      if (ignore_gravity==0) {
       // do nothing
      } else if (ignore_gravity==1) {
-      Real dt_slab_max=std::max(dt_slab,fixed_dt_scales[2]);
-      if (current_dt_group[2]<dt_slab_max) {
-       hold_dt_factors[2]=current_dt_group[2]/dt_slab_max;
+      if (current_dt_group[2]<dt_slab) {
+       hold_dt_factors[2]=current_dt_group[2]/dt_slab;
        hold_dt_factors[2]*=hold_dt_factors[2];
       }
      } else
