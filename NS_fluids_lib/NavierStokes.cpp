@@ -19271,7 +19271,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
     if (fixed_dt_scales[iscale]==0.0) {
      // do nothing
     } else if (fixed_dt_scales[iscale]>0.0) {
-     dtmin[0]=std::min(dtmin[0],fixed_dt_scales[iscale]);
+     dt_min[0]=std::min(dt_min[0],fixed_dt_scales[iscale]);
     } else
      amrex::Error("fixed_dt_scales[iscale] invalid");
 
