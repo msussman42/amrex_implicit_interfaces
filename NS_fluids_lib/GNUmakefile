@@ -60,28 +60,29 @@ CTML_FBC = FALSE
 COMP	  = g++
 FCOMP = gfortran
 # total view:
-#  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 56)
+#  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 57)
 #  2. module load gnu-openmpi  (can I leave out the /8.2.1-4.0.0 ?)
 #  2.5 cd multimaterialTV
 #  2.6 get latest code, USE_MPI=TRUE
 #  3. make clean
 #  4. srun  --pty -t 30:00 -n 4  -p genacc_q /bin/bash
 #  5. module load tv
-#  6. module load gnu-openmpi (can I leave out the /8.2.1-4.0.0 ?)
+#  6. module load gnu-openmpi
 #  7. mpirun -tv -np 4 ./amr2<tab> inputs<tab>
 #     (same directory where program compiled)
 #  8. A few windows appear, press "GO", then program output will appear
 #     in the xterminal.  "HALT" to pause, "GO" to continue.
 #  For memory debugging: "DEBUG" "OPEN MemoryScape"
 #  Memory Debugging Options=Extreme
-# module load gnu-openmpi/8.2.1-4.0.0 
+# module load gnu-openmpi
 # module load intel-openmpi/??
 # mecfd_q  (dedicated nodes)
 # mecfd18_q (dedicated nodes)
 # backfill
 # engineering_q
 # engineering_long
-# hpc-login.rcc.fsu.edu  "module load intel" (44 not 56)
+# hpc-login.rcc.fsu.edu  "module load intel" or 
+#                        "module load gnu-openmpi"(44 not 57)
 # sussman + old password
 # bromwich or compute1 GNU MPI:
 #  "module load mpi/openmpi-4-gcc8"
