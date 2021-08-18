@@ -1246,10 +1246,11 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
  if ((nsum1.eq.1).and.(nsum2.eq.2)) then
   ! integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
   ! T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
+  ! (note the very bottom of the tank corresponds to z=-0.2032-0.0254)
   ! bottom of cylindrical section: -0.2032
   ! so T1_probe_z=-0.2032+0.2921=0.0889
   T1_probe(1)=0.0d0
-  T1_probe(2)=0.1016d0
+  T1_probe(2)=0.0889d0
   T4_probe(1)=0.0d0
   T4_probe(2)=half*TANK_MK_HEIGHT+TANK_MK_END_RADIUS-0.025d0
   im=2 ! vapor
