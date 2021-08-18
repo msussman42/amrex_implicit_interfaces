@@ -442,7 +442,7 @@ stop
       
       SUB_THERMAL_K=>STUB_THERMAL_K
 
-      SUB_reference_depth=>STUB_reference_depth
+      SUB_reference_wavelen=>STUB_reference_wavelen
 
       if (probtype.eq.421) then
        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE

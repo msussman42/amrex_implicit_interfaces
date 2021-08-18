@@ -515,9 +515,9 @@ implicit none
       REAL_T, intent(inout) :: thermal_k
       end subroutine TEMPLATE_THERMAL_K
 
-      subroutine TEMPLATE_reference_depth(depth)
-      REAL_T, intent(inout) :: depth
-      end subroutine TEMPLATE_reference_depth
+      subroutine TEMPLATE_reference_wavelen(wavelen)
+      REAL_T, intent(inout) :: wavelen
+      end subroutine TEMPLATE_reference_wavelen
 
       subroutine TEMPLATE_DELETE_REGIONS_LIST()
       end subroutine TEMPLATE_DELETE_REGIONS_LIST
@@ -807,7 +807,7 @@ implicit none
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
 
-      PROCEDURE(TEMPLATE_reference_depth), POINTER :: SUB_reference_depth
+      PROCEDURE(TEMPLATE_reference_wavelen), POINTER :: SUB_reference_wavelen
 
 contains
 

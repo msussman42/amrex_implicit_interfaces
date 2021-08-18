@@ -4360,7 +4360,7 @@ stop
         denconst, &
         visc_coef, &
         ns_gravity, &
-        gravity_reference_depth_in, &
+        gravity_reference_wavelen_in, &
         dirnormal, &
         nmat, &
         nparts, &
@@ -4437,8 +4437,8 @@ stop
       REAL_T, intent(in) :: denconst(nmat)
       REAL_T, intent(in) :: visc_coef
       REAL_T, intent(in) :: ns_gravity
-      REAL_T, intent(in) :: gravity_reference_depth_in
-      REAL_T :: gravity_reference_depth
+      REAL_T, intent(in) :: gravity_reference_wavelen_in
+      REAL_T :: gravity_reference_wavelen
 
       INTEGER_T, intent(in) :: DIMDEC(velmac)
       INTEGER_T, intent(in) :: DIMDEC(velcell)
@@ -5613,13 +5613,13 @@ stop
            print *,"denmax became corrupt"
            stop
           endif
-          gravity_reference_depth=gravity_reference_depth_in
-          call SUB_reference_depth(gravity_reference_depth)
-          if (gravity_reference_depth.gt.zero) then
-           call gravity_wave_speed(gravity_reference_depth, &
+          gravity_reference_wavelen=gravity_reference_wavelen_in
+          call SUB_reference_wavelen(gravity_reference_wavelen)
+          if (gravity_reference_wavelen.gt.zero) then
+           call gravity_wave_speed(gravity_reference_wavelen, &
              local_gravity_coefficient,ugrav)
           else
-           print *,"gravity_reference_depth invalid"
+           print *,"gravity_reference_wavelen invalid"
            stop
           endif
           if (ugrav.gt.zero) then

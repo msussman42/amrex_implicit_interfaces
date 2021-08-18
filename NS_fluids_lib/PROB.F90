@@ -21016,10 +21016,13 @@ END SUBROUTINE Adist
       endif
 
        ! Denner and van Wachem, JCP 285 (2015) 24-40 (27)
-       ! omega/k = sqrt(g/k)
-       ! for shallow waves: omega/k = sqrt(g h)  where h is the depth
-       ! wavelen = depth on input
-      wavespeed=sqrt(gravity * wavelen)
+       ! omega/k = sqrt(g/k) 
+       ! for SHALLOW (h<<1) waves: omega/k = sqrt(g h)  where h is the depth.
+       ! Denner and van Wachem's formula is derived from:
+       ! c=omega/k=sqrt((g/k) tanh(kh))  h=depth k=2 pi/lambda
+       ! since 0<=tanh(kh)<=1 =>
+       ! c<=sqrt(g/k)=sqrt(g * lambda/(2 pi))
+      wavespeed=sqrt(gravity * wavelen/(two*Pi))
 
       return
       end subroutine gravity_wave_speed
