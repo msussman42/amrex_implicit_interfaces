@@ -116,7 +116,7 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 #0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 2 2 
 #advection, surface tension, gravity
-ns.fixed_dt_scales=0.0 0.2 0.2
+ns.fixed_dt_scales=0.0 0.1 0.1
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
@@ -153,8 +153,10 @@ ns.v=0
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
 ns.gravity          = 9.8
-#ns.gravity_reference_depth=0.2032 #half the height of the cylindrical part.
-ns.gravity_reference_depth=0.01
+#the longest wavelength is half the tank radius. (since axisymmetric)
+#(in 3D, without reflecting BC, the longest wavelength is half the tank
+#diameter)
+ns.gravity_reference_wavelen=0.0508
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
 #override_density=0 if compressible material

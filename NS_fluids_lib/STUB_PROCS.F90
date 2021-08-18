@@ -764,33 +764,36 @@ endif
 
 end subroutine STUB_THERMAL_K
 
-subroutine STUB_reference_depth(depth)
+subroutine STUB_reference_wavelen(wavelen)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(inout) :: depth
-REAL_T :: default_depth
+REAL_T, intent(inout) :: wavelen
+REAL_T :: default_wavelen
+REAL_T :: problen_array(SDIM)
+INTEGER_T :: dir_local
 
- if (gravity_dir.eq.1) then
-  default_depth=problenx
- else if (gravity_dir.eq.2) then
-  default_depth=probleny
- else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
-  default_depth=problenz
- else
-  print *,"gravity_dir invalid"
-  stop
+ problen_array(1)=problenx
+ problen_array(2)=probleny
+ if (SDIM.eq.3) then
+  problen_array(SDIM)=problenz
  endif
+ default_wavelen=zero
+ do dir_local=1,SDIM
+  if (gravity_dir.ne.dir_local) then
+   default_wavelen=max(default_wavelen,problen_array(dir_local))
+  endif
+ enddo
 
- if ((depth.gt.zero).and. &
-     (depth.le.default_depth*(one+VOFTOL))) then
+ if ((wavelen.gt.zero).and. &
+     (wavelen.le.default_wavelen*(one+VOFTOL))) then
   ! do nothing
  else
-  print *,"input depth out of range"
-  print *,"depth (input) = ",depth
-  print *,"default_default_depth (max depth) = ",default_depth
+  print *,"input wavelen out of range"
+  print *,"wavelen (input) = ",wavelen
+  print *,"default_wavelen (max wavelen) = ",default_wavelen
   stop
  endif
 
-end subroutine STUB_reference_depth
+end subroutine STUB_reference_wavelen
 
 end module STUB_module

@@ -338,7 +338,7 @@ Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::MUSHY_THICK  = 2.0;
 Real NavierStokes::gravity      = 0.0;
-Real NavierStokes::gravity_reference_depth = 0.0;
+Real NavierStokes::gravity_reference_wavelen = 0.0;
 
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
@@ -2503,19 +2503,26 @@ NavierStokes::read_params ()
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
      amrex::Error("gravity dir invalid");
 
-    Real gravity_reference_depth_default=
-	  geometry_prob_hi[gravity_dir-1]-
-	  geometry_prob_lo[gravity_dir-1];
-    if (gravity_reference_depth_default>0.0) {
-     gravity_reference_depth=gravity_reference_depth_default;
-     pp.query("gravity_reference_depth",gravity_reference_depth);
-     if ((gravity_reference_depth>0.0)&&
-         (gravity_reference_depth<=gravity_reference_depth_default*(1.0001))) {
+    Real gravity_reference_wavelen_default=0.0;
+    for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
+     if (local_dir+1!=gravity_dir) {
+      gravity_reference_wavelen_default=
+       std::max(gravity_reference_wavelen_default,
+        geometry_prob_hi[local_dir]-geometry_prob_lo[local_dir]);
+     }
+    } //local_dir
+
+    if (gravity_reference_wavelen_default>0.0) {
+     gravity_reference_wavelen=gravity_reference_wavelen_default;
+     pp.query("gravity_reference_wavelen",gravity_reference_wavelen);
+     if ((gravity_reference_wavelen>0.0)&&
+         (gravity_reference_wavelen<=
+	  gravity_reference_wavelen_default*(1.0001))) {
       // do nothing
      } else
-      amrex::Error("gravity_reference_depth out of range");
+      amrex::Error("gravity_reference_wavelen out of range");
     } else
-     amrex::Error("gravity_reference_depth_default invalid");
+     amrex::Error("gravity_reference_wavelen_default invalid");
 
     pp.get("visc_coef",visc_coef);
 
@@ -2549,8 +2556,8 @@ NavierStokes::read_params ()
      std::cout << "MUSHY_THICK " << MUSHY_THICK << '\n';
 
      std::cout << "gravity " << gravity << '\n';
-     std::cout << "gravity_reference_depth " << 
-	  gravity_reference_depth << '\n';
+     std::cout << "gravity_reference_wavelen " << 
+	  gravity_reference_wavelen << '\n';
      std::cout << "invert_gravity " << invert_gravity << '\n';
      std::cout << "gravity_dir " << gravity_dir << '\n';
      std::cout << "cfl " << cfl << '\n';
@@ -19120,7 +19127,7 @@ void NavierStokes::MaxAdvectSpeed(
     denconst.dataPtr(),
     &visc_coef,
     &gravity,
-    &gravity_reference_depth,
+    &gravity_reference_wavelen,
     &dir,
     &nmat,
     &nparts,
