@@ -10,7 +10,8 @@
 
 # other partitions:
 # backfill, backfill2, genacc_q
-# mecfd18_q
+# mecfd_q  (Sussman might not have access to this one)
+# mecfd18_q (processors might be more modern here)
 # engineering_q
 # engineering_long
 # compiling options:
