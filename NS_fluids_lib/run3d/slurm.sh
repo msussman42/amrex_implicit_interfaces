@@ -14,8 +14,8 @@
 # engineering_q
 # engineering_long
 # compiling options:
-# module load gnu-openmpi
-# module load intel-openmpi
+# module load gnu openmpi
+# module load intel openmpi
 # sussman@hpc-login.rcc.fsu.edu
 
 # To submit the job 
@@ -42,7 +42,7 @@
 pwd;hostname;date
 echo "running amrMPI (FABRIC) on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
 module purge
-module load gnu-openmpi
-#module load intel-openmpi
+module load gnu openmpi
+#module load intel openmpi
 srun ~/FABRIC_DROP/amrMPI inputs.FABRIC_DROP
 
