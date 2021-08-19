@@ -15,8 +15,8 @@
 # engineering_q
 # engineering_long
 # compiling options:
-# module load gnu-openmpi/8.2.1-4.0.0
-# module load intel-openmpi/?
+# module load gnu openmpi
+# module load intel openmpi
 # sussman@hpc-login.rcc.fsu.edu (44 not 54)
 
 # To submit the job 
@@ -43,6 +43,6 @@
 pwd;hostname;date
 echo "running amrbcg on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
 module purge
-module load gnu-openmpi/8.2.1-4.0.0
+module load gnu openmpi
 srun ~/swirl256-8/amrMPI inputs.swirl
 
