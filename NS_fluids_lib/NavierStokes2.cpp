@@ -1720,6 +1720,9 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
   ns_reconcile_d_num(132);
  } // dir = 0..sdim-1
 
+  //1. avgDownMacState
+  //2. tempmac=getStateMAC
+  //3. copy tempmac to Umac_new.
  make_MAC_velocity_consistent();
 
 } // end subroutine MAC_GRID_ELASTIC_FORCE
@@ -2405,14 +2408,13 @@ void NavierStokes::make_MAC_velocity_consistent() {
  if (level<finest_level)
   avgDownMacState(Umac_Type,spectral_override); 
 
- int nsolve=1;
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    // ngrow,dir,scomp,ncomp,time
   MultiFab* tempmac=getStateMAC(
-     Umac_Type,0,dir,0,nsolve,cur_time_slab);
+     Umac_Type,0,dir,0,1,cur_time_slab);
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-  MultiFab::Copy(Umac_new,*tempmac,0,0,nsolve,0);
+   // scomp,dcomp,ncomp,ngrow
+  MultiFab::Copy(Umac_new,*tempmac,0,0,1,0);
   delete tempmac;
  } // dir=0..sdim-1
 
@@ -3436,7 +3438,8 @@ void NavierStokes::VELMAC_TO_CELL(
 // do_alloc=1 => allocate variable
 // do_alloc=0 => variable already allocated
 void NavierStokes::init_gradu_tensorALL(
- int idx_vel, //source velocity or displacement; allocated if do_alloc==1,
+ int idx_vel, //source velocity or displacement; 
+              //allocated if do_alloc==1,
               //deleted if do_alloc==1.
  int do_alloc,
  int idx_cell,
@@ -4749,6 +4752,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  override_enable_spectral(viscous_enable_spectral);
 
  // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
+ // (since do_alloc==1)
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  init_gradu_tensorALL(
@@ -7210,6 +7214,7 @@ void NavierStokes::output_zones(
    MultiFab* viscmf,
    MultiFab* conductmf,
    MultiFab* magtracemf,
+   MultiFab* elasticforcemf,
    int& grids_per_level,
    BoxArray& cgrids_minusBA,
    Real* slice_data,
@@ -8036,6 +8041,7 @@ void NavierStokes::copyALL(int ngrow,int ncomp,
  }
 } // end subroutine copyALL
 
+//dest=dest-source
 void NavierStokes::minusALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
 
  int finest_level = parent->finestLevel();
@@ -8044,6 +8050,7 @@ void NavierStokes::minusALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
 
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
+   //dest=dest-source
   ns_level.minus_localMF(idx_dest,idx_source,ncomp,ngrow);
  }
 } // end subroutine minusALL

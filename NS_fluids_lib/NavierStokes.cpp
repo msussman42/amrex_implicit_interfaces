@@ -16145,7 +16145,7 @@ NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1;
  init_gradu_tensorALL(
-  HOLD_VELOCITY_DATA_MF,
+  HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
   do_alloc,
   CELLTENSOR_MF,
   FACETENSOR_MF,
@@ -18138,10 +18138,50 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
   amrex::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
+ getStateALL(1,cur_time_slab,0,
+   AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
+ for (int ilev=finest_level;ilev>=0;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //ngrow=0,scomp=0,ncomp=1
+   ns_level.getStateMAC_localMF(Umac_Type,HOLD_VELOCITY_DATA_MAC_MF+dir,
+		   0,dir,0,1,cur_time_slab);
+  } //dir=0,...,sdim-1
+ } //ilev
+
+ vel_elastic_ALL();
+
+ getStateALL(1,cur_time_slab,0,
+   AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF);
+
+ minusALL(1,AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF,HOLD_VELOCITY_DATA_MF);
+ if (dt_slab>0.0) {
+  Real over_dt=1.0/dt_slab;
+  mult_array(1,AMREX_SPACEDIM,over_dt,CELL_ELASTIC_FORCE_MF);
+ } else
+  amrex::Error("cannot have dt_slab<=0.0 in writeTECPLOT_File");
+
+ for (int ilev=finest_level;ilev>=0;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
+  MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
+    0,0,AMREX_SPACEDIM,1);
+  ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   MultiFab& Smac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+   MultiFab::Copy(Smac_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MAC_MF+dir],
+    0,0,AMREX_SPACEDIM,1);
+   ns_level.delete_localMF(HOLD_VELOCITY_DATA_MAC_MF+dir,1);
+  } //dir=0,...,sdim-1
+
+ }  // ilev
+
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  init_gradu_tensorALL(
-   HOLD_VELOCITY_DATA_MF,
+   HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
    do_alloc,
    CELLTENSOR_MF,
    FACETENSOR_MF,
@@ -18369,6 +18409,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    ns_level.localMF[CELL_VISC_MATERIAL_MF],
    ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF],
    ns_level.localMF[MAGTRACE_MF],
+   ns_level.localMF[CELL_ELASTIC_FORCE_MF],
    grids_per_level_array[ilev],
    cgrids_minusBA_array[ilev],
    slice_data.dataPtr(), 
@@ -18551,6 +18592,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  delete_array(MACDIV_MF);
  delete_array(MAGTRACE_MF); 
+ delete_array(CELL_ELASTIC_FORCE_MF); 
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
@@ -19038,6 +19080,7 @@ void NavierStokes::MaxAdvectSpeed(
   } else
    amrex::Error("caller_id invalid");
 
+   //ngrow=0,scomp=0,ncomp=1
   MultiFab* velmac=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
 
   if (thread_class::nthreads<1)
@@ -20075,7 +20118,7 @@ NavierStokes::volWgtSumALL(
  int do_alloc=1;
  int simple_AMR_BC_flag_viscosity=1;
  init_gradu_tensorALL(
-   HOLD_VELOCITY_DATA_MF,
+   HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
    do_alloc,
    CELLTENSOR_MF,
    FACETENSOR_MF,
