@@ -1799,6 +1799,8 @@ END SUBROUTINE SIMP
        visc,DIMS(visc), &
        conduct,DIMS(conduct), &
        trace,DIMS(trace), &
+       elasticforce, &
+       DIMS(elasticforce), &
        problo, &
        probhi, &
        dx, &
@@ -1863,6 +1865,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(conduct)
       INTEGER_T, intent(in) :: DIMDEC(trace)
+      INTEGER_T, intent(in) :: DIMDEC(elasticforce)
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
@@ -1893,6 +1896,8 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: conduct_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: trace(DIMV(trace),5*nmat)
       REAL_T, pointer :: trace_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: elasticforce(DIMV(elasticforce),SDIM)
+      REAL_T, pointer :: elasticforce_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
       REAL_T, pointer :: lsdist_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
@@ -1919,6 +1924,7 @@ END SUBROUTINE SIMP
       REAL_T viscnd(nmat)
       REAL_T conductnd(nmat)
       REAL_T tracend(5*nmat)
+      REAL_T elasticforcend(SDIM)
       REAL_T writend(nmat*200)
       INTEGER_T scomp,iw
       INTEGER_T istate,idissolution
@@ -2127,6 +2133,8 @@ END SUBROUTINE SIMP
       call checkbound_array(lo,hi,conduct_ptr,1,-1,411)
       trace_ptr=>trace
       call checkbound_array(lo,hi,trace_ptr,1,-1,411)
+      elasticforce_ptr=>elasticforce
+      call checkbound_array(lo,hi,elasticforce_ptr,1,-1,411)
       vel_ptr=>vel
       call checkbound_array(lo,hi,vel_ptr,1,-1,411)
       vof_ptr=>vof
@@ -2306,6 +2314,9 @@ END SUBROUTINE SIMP
         do dir=1,5*nmat
          tracend(dir)=zero
         enddo
+        do dir=1,SDIM
+         elasticforcend(dir)=zero
+        enddo
 
          ! two types of low order interpolation:
          ! (a) the weights are the area of the intersection of the node control
@@ -2460,6 +2471,10 @@ END SUBROUTINE SIMP
           tracend(dir)=tracend(dir)+ &
             localwt*trace(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
+         do dir=1,SDIM
+          elasticforcend(dir)=elasticforcend(dir)+ &
+            localwt*elasticforce(D_DECL(i-i1,j-j1,k-k1),dir)
+         enddo
          call get_mach_number(visual_tessellate_vfrac, &
            velcell,dencell,vofcell,machcell,nmat)
 
@@ -2485,6 +2500,9 @@ END SUBROUTINE SIMP
         enddo
         do dir=1,5*nmat
          tracend(dir)=tracend(dir)/sumweight
+        enddo
+        do dir=1,SDIM
+         elasticforcend(dir)=elasticforcend(dir)/sumweight
         enddo
 
         do dir=1,num_state_material*nmat
@@ -2828,6 +2846,10 @@ END SUBROUTINE SIMP
         enddo
         scomp=scomp+5*nmat
 
+        do iw=1,SDIM
+         writend(scomp+iw)=elasticforcend(iw)
+        enddo
+        scomp=scomp+SDIM
 
 ! pgf90 will automatically break up lines if they exceed 80 chars.
 ! a format must be specified.  e.g. '(D25.16)' or '(E25.16)'

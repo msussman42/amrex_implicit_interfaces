@@ -93,7 +93,9 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T plot_sdim,nwrite,nmat,nten
+      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T, intent(out) :: nwrite
+      INTEGER_T nmat,nten
       INTEGER_T nparts,nparts_def
       INTEGER_T im
 
@@ -140,7 +142,8 @@ stop
        num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
        nmat+ & ! visc
        nmat+ & ! conduct
-       5*nmat  ! trace vars and vorticity
+       5*nmat+ &  ! trace vars and vorticity
+       plot_sdim  ! elastic force
 
       return
       end subroutine get_nwrite
@@ -190,13 +193,13 @@ stop
        stop
       endif
 
-      Varname='x_pos'
+      Varname='X'
       call dumpstring(Varname)
-      Varname='y_pos'
+      Varname='Y'
       call dumpstring(Varname)
 
       if (plot_sdim.eq.3) then
-       Varname='z_pos'
+       Varname='Z'
        call dumpstring(Varname)
       endif
 
@@ -674,6 +677,9 @@ stop
        call dumpstring(Varname)
 
       enddo  ! im (trace variables)
+
+      Varname='ELSTCFORCE'
+      call dumpstring(Varname)
 
       return
       end subroutine dumpstring_headers

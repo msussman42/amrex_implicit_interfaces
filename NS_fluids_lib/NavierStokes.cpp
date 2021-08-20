@@ -18138,6 +18138,17 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
   amrex::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
+  //Note possible AMR repositories:
+  //AMReX - block structured
+  //SAMRAI
+  //Dr. Donna Calhoun => improved ClawPack which only stores necessary DOF.
+  //Oct-Tree => Gerris, Basilisk
+  //Wavelet Adaptive => "AWESOME" (Oleg Vasilyev, was at U. Colorado) 
+  //Algorithm for getting the elastic force for plotting purposes:
+  //a) save the state velocity
+  //b) call vel_elastic_ALL:  u=u+ dt F_elastic
+  //c) F_elastic=(current_velocity-saved_velocity)/dt
+  //d) restore the saved velocity
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
  for (int ilev=finest_level;ilev>=0;ilev--) {
@@ -18169,7 +18180,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   NavierStokes& ns_level=getLevel(ilev);
    MultiFab& Smac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
    MultiFab::Copy(Smac_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MAC_MF+dir],
     0,0,AMREX_SPACEDIM,1);
