@@ -22,6 +22,8 @@ namespace amrex{
 #define ADVECT_REGISTER_MF 5
 #define DRAG_MF 6
 
+#define CELL_ELASTIC_FORCE_MF 7
+
 #define REGISTER_MARK_MF 8
 
 #define HOLD_VELOCITY_DATA_MF 9
@@ -295,7 +297,9 @@ namespace amrex{
 // holds the cell centered interpolant of the MAC XDISP.
 #define VISUAL_XDISP_MAC_CELL_MF (MAC_ELASTIC_FLUX_YZ_MF+1)
 
-#define NEXT_MF (VISUAL_XDISP_MAC_CELL_MF+1)
+#define HOLD_VELOCITY_DATA_MAC_MF (VISUAL_XDISP_MAC_CELL_MF+1)
+
+#define NEXT_MF (HOLD_VELOCITY_DATA_MAC_MF+3)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
@@ -1222,6 +1226,7 @@ protected:
 
     void output_triangles();
 
+      //declared in: NavierStokes2.cpp
     void output_zones(
       FArrayBox& visual_fab_output,
       Box& visual_domain,
@@ -1237,6 +1242,7 @@ protected:
       MultiFab* viscmf,
       MultiFab* conductmf,
       MultiFab* magtracemf,
+      MultiFab* elasticforcemf,
       int& grids_per_level,
       BoxArray& cgrids_minusBA,
       Real* slice_data,

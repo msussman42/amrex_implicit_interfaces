@@ -792,7 +792,7 @@ void NavierStokes::tensor_advection_updateALL() {
   int do_alloc=1;
   int simple_AMR_BC_flag_viscosity=1;
   init_gradu_tensorALL(
-    HOLD_VELOCITY_DATA_MF,
+    HOLD_VELOCITY_DATA_MF,//deleted at end of init_gradu_tensorALL(do_alloc=1)
     do_alloc,
     CELLTENSOR_MF,
     FACETENSOR_MF,
@@ -11602,7 +11602,7 @@ void NavierStokes::multiphase_project(int project_option) {
    int do_alloc=1;
    int simple_AMR_BC_flag_viscosity=1;
    init_gradu_tensorALL(
-     HOLD_VELOCITY_DATA_MF,
+     HOLD_VELOCITY_DATA_MF,//deleted at end of init_gradu_tensorALL(do_alloc=1)
      do_alloc,
      CELLTENSOR_MF,
      FACETENSOR_MF,
@@ -11848,6 +11848,8 @@ void NavierStokes::vel_elastic_ALL() {
      // ngrow=0,scomp=0,ncomp=1
      // REGISTER_MARK_MAC_MF is needed by "VELMAC_TO_CELLALL" in order to
      // interpolate the increment from the MAC grid to the CELL grid.
+     // 1. increment=UMAC_new - localMF[REGISTER_MARK_MAC_MF]
+     // 2. UCELL_new+=interp_mac_to_cell(increment)
     ns_level.getStateMAC_localMF(Umac_Type,REGISTER_MARK_MAC_MF+dir,
 	0,dir,0,1,cur_time_slab);
    }
@@ -11905,6 +11907,8 @@ void NavierStokes::vel_elastic_ALL() {
         amrex::Error("dimension bust");
 
          // find divergence of the CC,XY,XZ,YZ variables.
+	 // NavierStokes::MAC_GRID_ELASTIC_FORCE is declared in
+	 // NavierStokes2.cpp
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.MAC_GRID_ELASTIC_FORCE(im);
