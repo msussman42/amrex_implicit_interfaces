@@ -7384,6 +7384,10 @@ void NavierStokes::output_zones(
      5*nmat,1,
      MFInfo().SetTag("magtracemfminus"),FArrayBoxFactory());
 
+   MultiFab* elasticforcemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     AMREX_SPACEDIM,1,
+     MFInfo().SetTag("elasticforcemfminus"),FArrayBoxFactory());
+
    ParallelDescriptor::Barrier();
 
      // FabArray.H     
@@ -7488,6 +7492,15 @@ void NavierStokes::output_zones(
  
    ParallelDescriptor::Barrier();
 
+   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+   elasticforcemfminus->ParallelCopy(*elasticforcemf,0,0,AMREX_SPACEDIM,
+		   1,1,geom.periodicity()); 
+
+   check_for_NAN(elasticforcemf,10);
+   check_for_NAN(elasticforcemfminus,20);
+ 
+   ParallelDescriptor::Barrier();
+
    int bfact=parent->Space_blockingFactor(level);
 
    if (thread_class::nthreads<1)
@@ -7545,6 +7558,7 @@ void NavierStokes::output_zones(
     FArrayBox& viscfab=(*viscmfminus)[mfi];
     FArrayBox& conductfab=(*conductmfminus)[mfi];
     FArrayBox& magtracefab=(*magtracemfminus)[mfi];
+    FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
 
       // in: NAVIERSTOKES_3D.F90
     fort_cellgrid(
@@ -7575,6 +7589,8 @@ void NavierStokes::output_zones(
      conductfab.dataPtr(),ARLIM(conductfab.loVect()),ARLIM(conductfab.hiVect()),
      magtracefab.dataPtr(),
      ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
+     elasticforcefab.dataPtr(),
+     ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
      prob_lo,
      prob_hi,
      dx,
@@ -7611,6 +7627,7 @@ void NavierStokes::output_zones(
    delete lsdistmfminus;
    delete viscmfminus;
    delete magtracemfminus;
+   delete elasticforcemfminus;
 
   } else if (grids_per_level==0) {
   
