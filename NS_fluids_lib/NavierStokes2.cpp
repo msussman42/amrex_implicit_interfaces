@@ -3064,7 +3064,7 @@ void NavierStokes::VELMAC_TO_CELLALL(
  }
 
  if (dest_idx==-1) {
-  // do nothing
+  // do nothing (update State_Type)
  } else if (dest_idx>=0) {
   Vector<int> scompBC_map;
   scompBC_map.resize(AMREX_SPACEDIM);
@@ -3085,6 +3085,8 @@ void NavierStokes::VELMAC_TO_CELLALL(
    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
     scompBC_map[dir]=NUM_TENSOR_TYPE+dir+ncghost_state-ncghost_elastic;
 
+    // there is no cell centered displacement, so PCINTERP_fill_bordersALL
+    // must be called instead of GetStateFromLocalALL
    PCINTERP_fill_bordersALL(dest_idx,localMF[dest_idx]->nGrow(),0,
      AMREX_SPACEDIM,State_Type,scompBC_map);
   } else
@@ -3184,7 +3186,7 @@ void NavierStokes::VELMAC_TO_CELL(
  MultiFab* save_face_velocity[AMREX_SPACEDIM];
  MultiFab* dest_velocity=nullptr;
 
- if (vel_or_disp==0) { //velocity
+ if (vel_or_disp==0) { //mac velocity (not the increment)
   MAC_state_idx=Umac_Type;
   operation_flag=103;
  } else if (vel_or_disp==-1) { //mac velocity increment
@@ -3199,6 +3201,7 @@ void NavierStokes::VELMAC_TO_CELL(
   amrex::Error("vel_or_disp invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+	 //ngrow=0, scomp=0, ncomp=nsolve=1
   face_velocity[dir]=getStateMAC(
     MAC_state_idx,0,dir,0,nsolve,cur_time_slab);
   save_face_velocity[dir]=face_velocity[dir];

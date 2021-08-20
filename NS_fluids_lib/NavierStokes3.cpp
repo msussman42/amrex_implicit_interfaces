@@ -11845,6 +11845,9 @@ void NavierStokes::vel_elastic_ALL() {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     // ngrow=0,scomp=0,ncomp=1
+     // REGISTER_MARK_MAC_MF is needed by "VELMAC_TO_CELLALL" in order to
+     // interpolate the increment from the MAC grid to the CELL grid.
     ns_level.getStateMAC_localMF(Umac_Type,REGISTER_MARK_MAC_MF+dir,
 	0,dir,0,1,cur_time_slab);
    }
@@ -11943,6 +11946,7 @@ void NavierStokes::vel_elastic_ALL() {
   int dest_idx=-1;   //update State_Type
 
    // declared in: NavierStokes2.cpp
+   // increment: State_Type+=interp_mac_to_cell(Umac_new-REGISTER_MARK_MAC)
   VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
    // register_mark=unew
