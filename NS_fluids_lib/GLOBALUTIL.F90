@@ -11411,6 +11411,13 @@ contains
        stop
       endif
 
+      if (ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+
       nwrite2d=SDIM+ncomp
       nwrite3d=plot_sdim+ncomp
 
@@ -11772,7 +11779,7 @@ contains
          stop
         endif
 
-       enddo  ! dir
+       enddo  ! dir = 1..sdim
 
        dir=plot_sdim
        lo(dir)=0
@@ -11826,11 +11833,10 @@ contains
           stop
          endif
 
-        enddo ! k
+        enddo ! k=0,hi_index_shift(3)
 
-       enddo
-       enddo
-!      enddo
+       enddo ! i=0,hi_index_shift(1)
+       enddo ! j=0,hi_index_shift(2)
 
        close(4)
 
@@ -11861,7 +11867,7 @@ contains
         enddo
         enddo
         enddo
-       enddo
+       enddo ! do ivar_gb=1,nwrite3d
 
        deallocate(zone3d_gb(iz_gb)%var)
        deallocate(zone2d_gb(iz_gb)%var)
@@ -11872,7 +11878,7 @@ contains
         igrid=0
        endif
 
-      enddo  ! iz_gb
+      enddo  ! iz_gb=1,nzones_gp
 
       deallocate(zone3d_gb)
       deallocate(zone2d_gb)
