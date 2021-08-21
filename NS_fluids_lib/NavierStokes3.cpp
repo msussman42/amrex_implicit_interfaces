@@ -11834,7 +11834,7 @@ void NavierStokes::avgDownALL_TENSOR() {
 } // subroutine avgDownALL_TENSOR
 
 // VISCOELASTIC, CTML FORCE
-void NavierStokes::vel_elastic_ALL() {
+void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
  int nmat=num_materials;
  int finest_level=parent->finestLevel();
@@ -11953,8 +11953,15 @@ void NavierStokes::vel_elastic_ALL() {
    // increment: State_Type+=interp_mac_to_cell(Umac_new-REGISTER_MARK_MAC)
   VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
-   // register_mark=unew
-  SET_STOKES_MARK(REGISTER_MARK_MF,101);
+  if (viscoelastic_force_only==0) {
+
+    // register_mark=unew
+   SET_STOKES_MARK(REGISTER_MARK_MF,101);
+
+  } else if (viscoelastic_force_only==1) {
+   // do nothing
+  } else
+   amrex::Error("viscoelastic_force_only invalid");
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    delete_array(REGISTER_MARK_MAC_MF+dir);
@@ -11966,27 +11973,34 @@ void NavierStokes::vel_elastic_ALL() {
   amrex::Error("num_materials_viscoelastic invalid");
 
 
- if (CTML_FSI_flagC()==1) {
+ if (viscoelastic_force_only==0) {
 
-  // Add the solid force term on the right hand side
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.ctml_fsi_transfer_force();
-  }
+  if (CTML_FSI_flagC()==1) {
+
+   // Add the solid force term on the right hand side
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.ctml_fsi_transfer_force();
+   }
 
    // spectral_override==1 => order derived from "enable_spectral"
-  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
-  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
+   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
 
     // register_mark=unew
-  SET_STOKES_MARK(REGISTER_MARK_MF,102);
+   SET_STOKES_MARK(REGISTER_MARK_MF,102);
 
- } else if (CTML_FSI_flagC()==0) {
+  } else if (CTML_FSI_flagC()==0) {
+   // do nothing
+  } else
+   amrex::Error("CTML_FSI_flagC() invalid");
+
+ } else if (viscoelastic_force_only==1) {
   // do nothing
  } else
-  amrex::Error("CTML_FSI_flagC() invalid");
+  amrex::Error("viscoelastic_force_only invalid");
 
 } // end subroutine vel_elastic_ALL
 
@@ -12363,7 +12377,8 @@ void NavierStokes::veldiffuseALL() {
 
 // ---------------- end viscosity ---------------------
 
- vel_elastic_ALL();
+ int viscoelastic_force_only=0;
+ vel_elastic_ALL(viscoelastic_force_only);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);

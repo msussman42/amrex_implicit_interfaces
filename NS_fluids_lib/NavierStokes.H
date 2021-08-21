@@ -1393,7 +1393,7 @@ void apply_pressure_grad(
     void unscale_variablesALL();
     void scale_variables(int scale_flag); // scale_flag=0=>scale, 1=>unscale
 
-    void vel_elastic_ALL();
+    void vel_elastic_ALL(int viscoelastic_force_only);
 
     void veldiffuseALL();
 
