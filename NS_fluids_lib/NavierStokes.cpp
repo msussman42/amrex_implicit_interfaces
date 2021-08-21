@@ -18160,7 +18160,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } //dir=0,...,sdim-1
  } //ilev
 
- vel_elastic_ALL();
+ int viscoelastic_force_only=1;
+ vel_elastic_ALL(viscoelastic_force_only);
 
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF);
@@ -18181,8 +18182,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Smac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+     // dst,src,scomp,dcomp,ncomp,ngrow
    MultiFab::Copy(Smac_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MAC_MF+dir],
-    0,0,AMREX_SPACEDIM,1);
+    0,0,1,0);
    ns_level.delete_localMF(HOLD_VELOCITY_DATA_MAC_MF+dir,1);
   } //dir=0,...,sdim-1
 
