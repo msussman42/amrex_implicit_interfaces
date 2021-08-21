@@ -106,7 +106,7 @@ stop
       if (plot_sdim.ge.SDIM) then
        ! do nothing
       else
-       print *,"expecting plot_sdim>=sdim"
+       print *,"expecting plot_sdim>=sdim in get_nwrite"
        stop
       endif
 
@@ -169,6 +169,12 @@ stop
 
       if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
        print *,"plot_sdim invalid"
+       stop
+      endif
+      if (plot_sdim.ge.SDIM) then
+       ! do nothing
+      else
+       print *,"expecting plot_sdim>=sdim in dumpstring_headers"
        stop
       endif
 

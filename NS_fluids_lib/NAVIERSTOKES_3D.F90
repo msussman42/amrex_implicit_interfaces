@@ -426,8 +426,6 @@ stop
 
       INTEGER_T nwrite3d,nwrite2d,index3d,index2d
 
-      INTEGER_T partid
-
       character*3 levstr
       character*5 gridstr
       character*18 filename18
@@ -619,7 +617,7 @@ stop
          print *,"hi+1 not divisible by bfact"
          stop
         endif
-       enddo ! dir
+       enddo ! dir=1..sdim
  
        close(4)
 
@@ -772,8 +770,8 @@ stop
         klo_plot=lo(plot_sdim)
         khi_plot=hi(plot_sdim)+1
        else if (plot_sdim.eq.2) then
-        klo_plot=0
-        khi_plot=0
+        print *,"expecting plot_sdim==2 in zones_revolve"
+        stop
        else
         print *,"plot_sdim invalid"
         stop
@@ -827,7 +825,7 @@ stop
          stop
         endif
 
-       enddo  ! dir
+       enddo  ! dir = 1..sdim
 
        dir=plot_sdim
        lo(dir)=0
@@ -881,21 +879,6 @@ stop
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
 
-         do partid=0,nparts_def-1
-          ivel2d=partid*SDIM
-          ivel3d=partid*plot_sdim
-          ur=zone2d_gb(iz_gb)%var(index2d+1+ivel2d,i,j)
-          uz=zone2d_gb(iz_gb)%var(index2d+2+ivel2d,i,j)
-          ux=ur*cos(theta)
-          uy=ur*sin(theta)
-          zone3d_gb(iz_gb)%var(index3d+1+ivel3d,i,j,k)=ux
-          zone3d_gb(iz_gb)%var(index3d+2+ivel3d,i,j,k)=uy
-          zone3d_gb(iz_gb)%var(index3d+3+ivel3d,i,j,k)=uz
-         enddo ! partid=0..nparts_def-1
-
-         index3d=index3d+plot_sdim*nparts_def
-         index2d=index2d+SDIM*nparts_def
-
           ! pressure,presder,div,divdat,mach,vof
          do ivar_gb=1,5+nmat
           index3d=index3d+1
@@ -922,30 +905,58 @@ stop
           zone3d_gb(iz_gb)%var(index3d+3,i,j,k)=uz
           index3d=index3d+plot_sdim
           index2d=index2d+SDIM
-         enddo
-          ! den,configuration tensor,visc,conduct,trace
+         enddo !ivar_gp=1..nmat
+
+          ! den,mom_den,configuration tensor
          do ivar_gb=1,nmat*num_state_material+ &
-              nmat+ &  ! mom_den
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
-              nmat+ &
-              nmat+ &
-              5*nmat
+              nmat+ & !mom_den
+              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
+          index3d=index3d+1
+          index2d=index2d+1
+          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
+            zone2d_gb(iz_gb)%var(index2d,i,j)
+         enddo ! do ivar_gb=1,nmat*num_state_material+nmat+viscoelastic stuff
+
+          ! displacement
+         ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
+         uz=zone2d_gb(iz_gb)%var(index2d+2,i,j)
+         ux=ur*cos(theta)
+         uy=ur*sin(theta)
+         zone3d_gb(iz_gb)%var(index3d+1,i,j,k)=ux
+         zone3d_gb(iz_gb)%var(index3d+2,i,j,k)=uy
+         zone3d_gb(iz_gb)%var(index3d+3,i,j,k)=uz
+         index3d=index3d+plot_sdim
+         index2d=index2d+SDIM
+
+          ! visc,conduct,trace
+         do ivar_gb=1,nmat+nmat+5*nmat
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo
+
+          ! elastic force
+         ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
+         uz=zone2d_gb(iz_gb)%var(index2d+2,i,j)
+         ux=ur*cos(theta)
+         uy=ur*sin(theta)
+         zone3d_gb(iz_gb)%var(index3d+1,i,j,k)=ux
+         zone3d_gb(iz_gb)%var(index3d+2,i,j,k)=uy
+         zone3d_gb(iz_gb)%var(index3d+3,i,j,k)=uz
+         index3d=index3d+plot_sdim
+         index2d=index2d+SDIM
+
          if ((index3d.ne.nwrite3d).or. &
              (index2d.ne.nwrite2d)) then
           print *,"index mismatch in zone_revolve"
           stop
          endif
 
-        enddo ! k
+        enddo ! do k=0,hi_index_shift(3)
 
-       enddo
-       enddo
-!      enddo
+       enddo ! do i=0,hi_index_shift(1)
+       enddo ! do j=0,hi_index_shift(2)
 
        close(4)
 
@@ -987,7 +998,7 @@ stop
         igrid=0
        endif
 
-      enddo  ! iz_gb
+      enddo  ! iz_gb=1,nzones_gb
 
       deallocate(zone3d_gb)
       deallocate(zone2d_gb)
@@ -2607,6 +2618,11 @@ END SUBROUTINE SIMP
 
           enddo ! dir2=1..sdim
 
+           ! x,u,p,den,T,Y1..Yn,mag vort,LS
+          if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+           print *,"visual_ncomp invalid" 
+           stop
+          endif
           ncomp_SEM=visual_ncomp-SDIM
           VORT_comp_SEM=SDIM+3+num_species_var+1
           do n=1,ncomp_SEM
