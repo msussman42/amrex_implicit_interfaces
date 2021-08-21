@@ -502,7 +502,7 @@ stop
        stop
       endif
 
-       ! in PROB.F90
+       ! get_nwrite is declared in PROB.F90
       call get_nwrite(SDIM,nwrite2d)
       call get_nwrite(plot_sdim,nwrite3d)
 
@@ -570,7 +570,7 @@ stop
        open(unit=4,file=filename18)
 
        do dir=1,plot_sdim
-        if (dir.ne.3) then
+        if ((dir.eq.1).or.(dir.eq.2)) then
          read(4,*) lo(dir),hi(dir)
         else if (dir.eq.3) then
          lo(dir)=0

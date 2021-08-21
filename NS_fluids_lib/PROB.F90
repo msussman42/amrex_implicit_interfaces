@@ -103,6 +103,12 @@ stop
        print *,"plot_sdim invalid"
        stop
       endif
+      if (plot_sdim.ge.SDIM) then
+       ! do nothing
+      else
+       print *,"expecting plot_sdim>=sdim"
+       stop
+      endif
 
       nmat=num_materials
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -139,7 +145,8 @@ stop
        nmat*plot_sdim+ & ! ls slope
        nmat*num_state_material+ & ! den 
        nmat+ & ! mom_den
-       num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM+ &
+       num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+       plot_sdim+ & ! displacement
        nmat+ & ! visc
        nmat+ & ! conduct
        5*nmat+ &  ! trace vars and vorticity
@@ -203,155 +210,36 @@ stop
        call dumpstring(Varname)
       endif
 
-      im=1
-      write(matstr,'(I2)') im
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-
-      ih=1
-      Varname='x_velocity' !25-16+1=10
-      ih=11
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
+      Varname='x_velocity' 
       call dumpstring(Varname)
-
-      ih=1
       Varname='y_velocity'
-      ih=11
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
       call dumpstring(Varname)
 
       if (plot_sdim.eq.3) then
-       ih=1
        Varname='z_velocity'
-       ih=11
-       do i=1,2
-        Varname(ih:ih)=matstr(i:i)
-        ih=ih+1
-       enddo
        call dumpstring(Varname)
       endif
 
-       ! multigrid pressure  "PMG"
-      im=1
-      write(matstr,'(I2)') im
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-
-      ih=1
-      Varname='P'
-      ih=ih+1
-      Varname(ih:ih)='M'
-      ih=ih+1
-      Varname(ih:ih)='G'
-      ih=ih+1
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
+       ! multigrid pressure  "PRES_MG"
+      Varname='PRES_MG'
       call dumpstring(Varname)
 
-       ! EOS pressure: "PEOS"
-      im=1
-      write(matstr,'(I2)') im
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-      ih=1
-      Varname='P'
-      ih=ih+1
-      Varname(ih:ih)='E'
-      ih=ih+1
-      Varname(ih:ih)='O'
-      ih=ih+1
-      Varname(ih:ih)='S'
-      ih=ih+1
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
+       ! EOS pressure: "PRES_EOS"
+      Varname='PRES_EOS'
       call dumpstring(Varname)
 
        ! Divergence derived from the velocity: "DIV"
        ! see MacProj.cpp: NavierStokes::getStateDIV_ALL
-      im=1
-      write(matstr,'(I2)') im
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-      ih=1
-      Varname='D'
-      ih=ih+1
-      Varname(ih:ih)='I'
-      ih=ih+1
-      Varname(ih:ih)='V'
-      ih=ih+1
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
+      Varname='DIV_DERIVED'
       call dumpstring(Varname)
 
-       ! expected divergence: "DIVDT"
+       ! expected divergence: "DIV_EXPECT"
        ! see NavierStokes.cpp: NavierStokes::getStateDIV_DATA
        ! "DIV_Type"
-      im=1
-      write(matstr,'(I2)') im
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-      ih=1
-      Varname='D'
-      ih=ih+1
-      Varname(ih:ih)='I'
-      ih=ih+1
-      Varname(ih:ih)='V'
-      ih=ih+1
-      Varname(ih:ih)='D'
-      ih=ih+1
-      Varname(ih:ih)='T'
-      ih=ih+1
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
+      Varname='DIV_EXPECT'
       call dumpstring(Varname)
 
-      im=1
-      write(matstr,'(I2)') im
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-      ih=1
-      Varname='M'
-      ih=ih+1
-      Varname(ih:ih)='C'
-      ih=ih+1
-      Varname(ih:ih)='H'
-      ih=ih+1
-      do i=1,2
-       Varname(ih:ih)=matstr(i:i)
-       ih=ih+1
-      enddo
+      Varname='MACH'
       call dumpstring(Varname)
 
        !VFRACS 
@@ -447,7 +335,7 @@ stop
          ih=ih+1
         enddo
         call dumpstring(Varname)
-       enddo  ! dir
+       enddo  ! dir=1..plot_sdim
       enddo  ! imls (levelset normal variables)
 
        ! density, temperature, mass fractions
@@ -577,7 +465,7 @@ stop
       Varname='y_displace'
       call dumpstring(Varname)
 
-      if (SDIM.eq.3) then
+      if (plot_sdim.eq.3) then
        Varname='z_displace'
        call dumpstring(Varname)
       endif
@@ -624,6 +512,7 @@ stop
        ! gamma_dot, TR(A), TR(A)*shear thinning factor, TR(A)*thin*f(A),
        ! vorticity
       do im=1,nmat
+
        write(matstr,'(I2)') im
        do i=1,2
         if (matstr(i:i).eq.' ') then
@@ -678,8 +567,15 @@ stop
 
       enddo  ! im (trace variables)
 
-      Varname='ELSTCFORCE'
+      Varname='x_ELSTCFORCE'
       call dumpstring(Varname)
+      Varname='y_ELSTCFORCE'
+      call dumpstring(Varname)
+
+      if (plot_sdim.eq.3) then
+       Varname='z_ELSTCFORCE'
+       call dumpstring(Varname)
+      endif
 
       return
       end subroutine dumpstring_headers
