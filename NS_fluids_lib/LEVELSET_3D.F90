@@ -6751,7 +6751,7 @@ stop
       return
       end subroutine fort_getcolorsum
 
-      subroutine FORT_GET_LOWMACH_DIVU( &
+      subroutine fort_get_lowmach_divu( &
        tid_current, &
        sweep_num, & !sweep_num=0: sum V_T rho DT/Dt, sweep_num=1:sum mdot=0
        constant_density_all_time, & ! 1..nmat
@@ -6782,7 +6782,9 @@ stop
        level_mdot_data, &
        arraysize, & ! size of level_blobdata
        mdot_arraysize, & ! size of level_mdot_data
-       material_type_lowmach)
+       material_type_lowmach) &
+      bind(c,name='fort_get_lowmach_divu')
+
       use probcommon_module
       use global_utility_module
       use geometry_intersect_module
@@ -6822,15 +6824,25 @@ stop
       REAL_T, intent(in) ::level_blobdata(arraysize)
       REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
 
-      REAL_T, intent(inout) :: mdot_local(DIMV(mdot_local))
-      REAL_T, intent(inout) :: mdot_global(DIMV(mdot_global))
-      REAL_T, intent(in) :: typefab(DIMV(typefab))
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) :: DEN(DIMV(DEN),nmat*num_state_material)
-      REAL_T, intent(in) :: DTDt(DIMV(DTDt),nmat) ! T_after_diffusion-T_adv
-      REAL_T, intent(in) :: VOF(DIMV(VOF),nmat*ngeom_recon)
-      REAL_T, intent(in) :: color(DIMV(color))
-      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(inout), target :: mdot_local(DIMV(mdot_local))
+      REAL_T, pointer :: mdot_local_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: mdot_global(DIMV(mdot_global))
+      REAL_T, pointer :: mdot_global_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
+       ! T_after_diffusion-T_adv
+      REAL_T, intent(in), target :: DTDt(DIMV(DTDt),nmat) 
+      REAL_T, pointer :: DTDt_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: color(DIMV(color))
+      REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T :: i,j,k
       INTEGER_T :: dir
@@ -6840,7 +6852,7 @@ stop
       INTEGER_T ic
       INTEGER_T icolor
       REAL_T vfrac
-      REAL_T vol
+      REAL_T volcell
       REAL_T den_mat
       REAL_T TEMP_mat
       REAL_T internal_energy
@@ -6861,6 +6873,7 @@ stop
       REAL_T mdot_local_scalar
       REAL_T mdot_sum_denom
       REAL_T mdot_sum_numerator
+      REAL_T DTDt_local
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T nten_test
 
@@ -6889,7 +6902,7 @@ stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
-       print *,"nten invalid GET_LOWMACH_DIVU nten nten_test ",nten,nten_test
+       print *,"nten invalid get_lowmach_divu nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -6898,24 +6911,34 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(mdot_local),0,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(mdot_global),0,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(DEN),0,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(DTDt),0,-1,6615)
-      call checkbound(fablo,fabhi,DIMS(VOF),1,-1,6616)
-      call checkbound(fablo,fabhi,DIMS(color),1,-1,6626)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,6627)
+      mdot_local_ptr=>mdot_local
+      call checkbound_array1(fablo,fabhi,mdot_local_ptr,0,-1,6615)
+      mdot_global_ptr=>mdot_global
+      call checkbound_array1(fablo,fabhi,mdot_global_ptr,0,-1,6615)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,6615)
+      DEN_ptr=>DEN
+      call checkbound_array(fablo,fabhi,DEN_ptr,0,-1,6615)
+      DTDt_ptr=>DTDt
+      call checkbound_array(fablo,fabhi,DTDt_ptr,0,-1,6615)
+      VOF_ptr=>VOF
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
+      color_ptr=>color
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,6626)
+      typefab_ptr=>typefab
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6626)
+      mask_ptr=>mask
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,6627)
   
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
        stop
       endif
       
-        ! need sum mdot_local=0
-        ! let mdot_local=mdotold - alpha V
-        ! sum mdot_local= sum mdotold -alpha sum V=0
-        ! alpha=sum mdotold/sum V
+        ! need sum mdot_local_{ij}=0
+        ! let mdot_local_{ij}=mdot_original_{ij} - alpha Volume
+        ! sum mdot_local_{ij}= sum mdot_original_{ij} -alpha sum Volume=0
+        ! alpha=sum mdot_original_{ij}/sum Volume
         ! sum is over FULL cells. 
       if (mdot_arraysize.eq.2*num_colors) then
        ! do nothing
@@ -6943,7 +6966,7 @@ stop
 
         icolor=NINT(color(D_DECL(i,j,k)))
         if ((icolor.gt.num_colors).or.(icolor.le.0)) then
-         print *,"icolor invalid in GET_LOWMACH_DIVU icolor=",icolor
+         print *,"icolor invalid in fort_get_lowmach_divu icolor=",icolor
          print *,"i,j,k ",i,j,k
          stop
         endif
@@ -6966,7 +6989,13 @@ stop
         call get_primary_material(LScen,nmat,im_primary)
 
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-         vol,cencell,SDIM)
+         volcell,cencell,SDIM)
+        if (volcell.gt.zero) then
+         ! do nothing
+        else
+         print *,"volcell invalid"
+         stop
+        endif
 
         vofcomp=(im_primary-1)*ngeom_recon+1
         vfrac=mofdata(vofcomp)
@@ -6988,7 +7017,7 @@ stop
 
              if (sweep_num.eq.0) then
               level_mdot_data(2*(icolor-1)+1)= &
-               level_mdot_data(2*(icolor-1)+1)+vol
+               level_mdot_data(2*(icolor-1)+1)+volcell
              else if (sweep_num.eq.1) then
               ! do nothing
              else
@@ -7014,7 +7043,9 @@ stop
 
              do dir=1,SDIM
               dx_sten(dir)=xsten(1,dir)-xsten(-1,dir)
-              if (dx_sten(dir).le.zero) then
+              if (dx_sten(dir).gt.zero) then
+               ! do nothing
+              else
                print *,"dx_sten invalid"
                stop
               endif
@@ -7022,7 +7053,14 @@ stop
 
              ic=(icolor-1)*num_elements_blobclass+BLB_PRES+1
              pressure_sum=level_blobdata(ic) ! sum pres * vol
-             blob_cellvol_count=level_blobdata(ic-2)
+
+             if (BLB_PRES-2.eq.BLB_CELLVOL_CNT) then
+              blob_cellvol_count=level_blobdata(ic-2)
+             else
+              print *,"BLB_PRES or BLB_CELLVOL_CNT invalid"
+              stop
+             endif
+
              if (blob_cellvol_count.gt.zero) then
 
               if ((pressure_sum.ge.zero).or. &
@@ -7040,7 +7078,7 @@ stop
                  if (TEMP_mat.gt.zero) then
                   ! do nothing
                  else
-                  print *,"TEMP_mat has gone nonpos"
+                  print *,"TEMP_mat has gone nonpos:",TEMP_mat
                   stop
                  endif
                  call init_massfrac_parm(den_mat,massfrac_parm,im_primary)
@@ -7053,7 +7091,7 @@ stop
                  if (internal_energy.gt.zero) then
                   ! do nothing
                  else
-                  print *,"internal_energy has gone nonpos"
+                  print *,"internal_energy has gone nonpos:",internal_energy
                   stop
                  endif
                  call EOS_material(den_mat,massfrac_parm, &
@@ -7061,9 +7099,22 @@ stop
                   pressure_local, &
                   material_type_lowmach(im_primary),im_primary)
 
+                  ! for perfect gas:dVdT=(gamma-1)Cv/p
+                  ! Cv units=J/(kg Kelvin)  J=Newton meter
+                  ! (kinetic energy= mass m^2/sec^2=(kg m/s^2) * (m) )
+                  ! pressure=Newton/m^2
+                  ! Cv/p units = (Newton Meter)/(kg Kelvin)  / (Newton/m^2)=
+                  ! m^3/(kg Kelvin) = 1/((kg/m^3) * Kelvin) 
                  call dVdT_material(dVdT,massfrac_parm, &
                   pressure_sum,TEMP_mat, &
                   material_type_lowmach(im_primary),im_primary)
+
+                 if (dVdT.gt.zero) then
+                  ! do nothing
+                 else
+                  print *,"expecting dVdT>0: ",dVdT
+                  stop
+                 endif
 
                  !F_t + s|grad F|=0
                  ! dF=F_t dt=-s|grad F|dt=-s dt/dx
@@ -7073,10 +7124,17 @@ stop
                  ! "div velocity" * Length * area / seconds =
                  ! "div velocity" * volume / seconds = (1/s)(cm^3)/s=cm^3/s^2
                  !
+                 !DTDt=T_after_diffusion-T_after_advection
+                 !
                  ! units of mdot_local_scalar: (1/density)(1/Kelvin)(density)
                  !   (Kelvin)*cm^3/s^2=cm^3/s^2
-                 mdot_local_scalar=dVdT*den_mat* &
-                  DTDt(D_DECL(i,j,k),im_primary)*vol/(dt*dt)
+                 DTDt_local=DTDt(D_DECL(i,j,k),im_primary)
+                 if ((DTDt_local.ge.zero).or.(DTDt_local.le.zero)) then
+                  mdot_local_scalar=dVdT*den_mat*DTDt_local*volcell/(dt*dt)
+                 else
+                  print *,"DTDt_local is NaN"
+                  stop
+                 endif
 
                  if (sweep_num.eq.0) then
                   mdot_local(D_DECL(i,j,k))=mdot_local_scalar
@@ -7089,7 +7147,7 @@ stop
                    mdot_sum_numerator=level_mdot_data(2*(icolor-1)+2)
                    mdot_local(D_DECL(i,j,k))= &
                     mdot_local(D_DECL(i,j,k))- &
-                    mdot_sum_numerator*vol/mdot_sum_denom
+                    mdot_sum_numerator*volcell/mdot_sum_denom
  
                    mdot_global(D_DECL(i,j,k))=mdot_global(D_DECL(i,j,k))+ &
                     mdot_local(D_DECL(i,j,k))
@@ -7129,6 +7187,7 @@ stop
               stop
              else
               print *,"blob_cellvol_count invalid"
+              print *,"blob_cellvol_count=",blob_cellvol_count
               stop
              endif
             else
@@ -7169,7 +7228,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_GET_LOWMACH_DIVU
+      end subroutine fort_get_lowmach_divu
 
 
 

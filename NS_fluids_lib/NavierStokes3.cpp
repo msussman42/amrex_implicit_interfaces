@@ -3391,6 +3391,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (is_any_lowmach==1) {
 
         Vector<blobclass> local_blobdata;
+ 
+         //local_mdot_data, local_mdot_comp_data,
+         //local_mdot_data_redistribute, 
+         //local_mdot_comp_data_redistribute,
+         //are not used; they are placeholders.
         Vector< Vector<Real> > local_mdot_data;
         Vector< Vector<Real> > local_mdot_comp_data;
         Vector< Vector<Real> > local_mdot_data_redistribute;
@@ -5695,7 +5700,7 @@ NavierStokes::LowMachDIVU(
  MultiFab* mdot_global, 
  Vector<blobclass> cum_blobdata,
  Vector< Vector<Real> >& level_mdot_data,
- Vector< Vector<Real> > cum_mdot_data
+ Vector< Vector<Real> >& cum_mdot_data
  ) {
 
  int finest_level=parent->finestLevel();
@@ -5704,7 +5709,7 @@ NavierStokes::LowMachDIVU(
  int nmat=num_materials;
  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
- if (level>finest_level)
+ if ((level<0)||(level>finest_level))
   amrex::Error("level invalid LowMachDIVU");
 
  if (ngrow_distance!=4)
@@ -5780,6 +5785,8 @@ NavierStokes::LowMachDIVU(
  level_mdot_array.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
+
+   //mdot_array_size=num_colors*2
   level_mdot_array[tid].resize(mdot_array_size);
 
   for (int i=0;i<mdot_array_size;i++) {
@@ -5877,7 +5884,7 @@ NavierStokes::LowMachDIVU(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: LEVELSET_3D.F90
-  FORT_GET_LOWMACH_DIVU(
+  fort_get_lowmach_divu(
    &tid_current,
    &sweep_num,
    constant_density_all_time.dataPtr(),
@@ -5985,6 +5992,7 @@ NavierStokes::LowMachDIVUALL(
   amrex::Error("num_colors=0 in LowMachDIVUALL");
 
    // initializes MDOT_LOCAL_MF to 0.0
+   // ngrow=0, ncomp=1, grid_type=-1
  allocate_array(0,1,-1,MDOT_LOCAL_MF); 
 
  if (MDOT_LOCAL_MF>=0) {
@@ -6016,6 +6024,7 @@ NavierStokes::LowMachDIVUALL(
  } else
   amrex::Error("MDOT_MF invalid");
 
+  //mdot_data[icolor][j=0 or 1]
  Vector< Vector<Real> > mdot_data;
 
  mdot_data.resize(color_count);
@@ -6036,6 +6045,7 @@ NavierStokes::LowMachDIVUALL(
 
  }  // i=0..color_count-1
 
+  //level_mdot_data[icolor][j=0 or 1]
  Vector< Vector<Real> > level_mdot_data;
  level_mdot_data.resize(color_count);
 

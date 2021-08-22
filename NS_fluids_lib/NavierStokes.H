@@ -1154,7 +1154,7 @@ protected:
      MultiFab* mdot_global,
      Vector<blobclass> cum_blobdata,
      Vector< Vector<Real> >& level_mdot_data,
-     Vector< Vector<Real> > cum_mdot_data
+     Vector< Vector<Real> >& cum_mdot_data
      );
 
     void LowMachDIVUALL(
