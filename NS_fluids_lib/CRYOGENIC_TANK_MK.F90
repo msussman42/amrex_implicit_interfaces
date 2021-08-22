@@ -583,13 +583,13 @@ INTEGER_T :: dummy_input
  if (pressure.gt.0.0d0) then
   ! do nothing
  else
-  print *,"pressure invalid"
+  print *,"pressure invalid dVdT_CRYOGENIC_TANK_MK:",pressure
   stop
  endif
  if (temperature.gt.0.0d0) then
   ! do nothing
  else
-  print *,"temperature invalid"
+  print *,"temperature invalid dVdT_CRYOGENIC_TANK_MK:",temperature
   stop
  endif
 

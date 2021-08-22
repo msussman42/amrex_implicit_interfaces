@@ -9,7 +9,6 @@
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
-#    define FORT_GET_LOWMACH_DIVU get_lowmach_divu
 #    define FORT_LEVELRECOLOR levelrecolor
 #    define FORT_COLORFILL colorfill
 #    define FORT_GRIDRECOLOR gridrecolor
@@ -27,7 +26,6 @@
 #    define FORT_INITSUPERELASTIC INITSUPERELASTIC
 #    define FORT_INITRECALESCE INITRECALESCE
 #    define FORT_GETTYPEFAB GETTYPEFAB
-#    define FORT_GET_LOWMACH_DIVU GET_LOWMACH_DIVU
 #    define FORT_LEVELRECOLOR LEVELRECOLOR
 #    define FORT_COLORFILL COLORFILL
 #    define FORT_GRIDRECOLOR GRIDRECOLOR
@@ -43,7 +41,6 @@
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
-#    define FORT_GET_LOWMACH_DIVU get_lowmach_divu
 #    define FORT_LEVELRECOLOR levelrecolor
 #    define FORT_COLORFILL colorfill
 #    define FORT_GRIDRECOLOR gridrecolor
@@ -58,7 +55,6 @@
 #    define FORT_PURGEFLOTSAM purgeflotsam_
 #    define FORT_INITRECALESCE initrecalesce_
 #    define FORT_GETTYPEFAB gettypefab_
-#    define FORT_GET_LOWMACH_DIVU get_lowmach_divu_
 #    define FORT_LEVELRECOLOR levelrecolor_
 #    define FORT_COLORFILL colorfill_
 #    define FORT_GRIDRECOLOR gridrecolor_
@@ -152,7 +148,7 @@ namespace amrex{
        int* nface_dst,
        int* ncellfrac);
 
-     void FORT_GET_LOWMACH_DIVU(
+     void fort_get_lowmach_divu(
        int* tid_current,
        int* sweep_num,
        int* constant_density_all_time,
