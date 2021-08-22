@@ -107,7 +107,11 @@ USE_OMP = FALSE
 EBASE = amr
 
 AMREX_PARTICLES = TRUE
-BL_NO_FORT = FALSE
+BL_NO_FORT = TRUE
+ifeq ($(BL_NO_FORT),TRUE)
+  CPPFLAGS += -DBL_NO_FORT
+endif
+
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
@@ -156,13 +160,15 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
 include $(MOF_HOME)/Vicar3D/Make.package
 endif
 
+include $(AMREX_HOME)/Src/Base/Make.package
+
 include ./Make.package
 
 include $(MOF_HOME)/mglib/Make.package
 include $(MOF_HOME)/amrlib/Make.package
 
-include $(AMREX_HOME)/Src/Base/Make.package
-include $(AMREX_HOME)/Src/F_Interfaces/Base/Make.package
+#include $(AMREX_HOME)/Src/Base/Make.package
+#include $(AMREX_HOME)/Src/F_Interfaces/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

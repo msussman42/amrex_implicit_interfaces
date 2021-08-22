@@ -192,11 +192,11 @@ C$(AMREX_BASE)_headers += AMReX_BaseUmap.H
 #
 # Fortran interface routines.
 #
+# SUSSMAN
+F90$(AMREX_BASE)_sources += AMReX_fort_mod.F90
+F90$(AMREX_BASE)_sources +=  AMReX_constants_mod.F90
 
 ifneq ($(BL_NO_FORT),TRUE)
-
-  # SUSSMAN
-  F90$(AMREX_BASE)_sources += AMReX_fort_mod.F90
 
   ifeq ($(findstring FALSE,$(USE_CUDA)$(USE_GPU_PRAGMA)$(GPU_PRAGMA_NO_HOST_VERSION)),FALSE)
 # SUSSMAN
@@ -209,7 +209,6 @@ ifneq ($(BL_NO_FORT),TRUE)
 
 # SUSSMAN (copy AMReX_constants_mod.f90 to AMReX_constants_mod.F90)
 #  f90$(AMREX_BASE)_sources +=  AMReX_constants_mod.f90
-  F90$(AMREX_BASE)_sources +=  AMReX_constants_mod.F90
 
   F90$(AMREX_BASE)_sources += AMReX_filcc_mod.F90
 
