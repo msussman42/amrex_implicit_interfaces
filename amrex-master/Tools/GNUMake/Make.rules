@@ -357,12 +357,17 @@ $(depEXETempDir)/f90.depends: $(f90EXE_sources) $(F90EXE_sources)
 	@if [ ! -d $(objEXETempDir) ]; then mkdir -p $(objEXETempDir); fi
 	@if [ ! -d $(depEXETempDir) ]; then mkdir -p $(depEXETempDir); fi
 	@if [ ! -d $(f77EXETempDir) ]; then mkdir -p $(f77EXETempDir); fi
+ifeq ($(BUILD_f90_F90_dependencies),TRUE)
 	@echo "Building f90/F90 dependency File ..."
 	$(MODDEP) $(DEP_CHECK_OPTS) --prefix $(objEXETempDir) \
             --temp_dir $(f77EXETempDir) \
             --cpp "$(FORT_CPP)" \
             --defines "-DBL_LANG_FORT -DAMREX_LANG_FORT $(CPPFLAGS) $(fincludes)" \
             --f90_preprocess "$(F90PREP)" $^ > $(depEXETempDir)/f90.depends
+else
+	@echo "NOT Building f90/F90 dependency File ..."
+endif
+
 
 # $(CEXE_sources)
 ifeq ($(USE_GPU_PRAGMA),TRUE)

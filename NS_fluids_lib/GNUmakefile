@@ -108,6 +108,7 @@ EBASE = amr
 
 AMREX_PARTICLES = TRUE
 BL_NO_FORT = TRUE
+BUILD_f90_F90_dependencies = TRUE
 ifeq ($(BL_NO_FORT),TRUE)
   CPPFLAGS += -DBL_NO_FORT
 endif
@@ -161,14 +162,13 @@ include $(MOF_HOME)/Vicar3D/Make.package
 endif
 
 include $(AMREX_HOME)/Src/Base/Make.package
+include $(AMREX_HOME)/Src/Particle/Make.package
 
 include ./Make.package
-
-include $(MOF_HOME)/mglib/Make.package
 include $(MOF_HOME)/amrlib/Make.package
 
-#include $(AMREX_HOME)/Src/Base/Make.package
+include $(MOF_HOME)/mglib/Make.package
+
 #include $(AMREX_HOME)/Src/F_Interfaces/Base/Make.package
-include $(AMREX_HOME)/Src/Particle/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

@@ -1335,7 +1335,6 @@ end subroutine CRYOGENIC_TANK_MK_SUMINT
 subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST(constant_density_all_time, &
       num_materials_in,num_threads_in)
 use probcommon_module
-use geometry_intersect_module
 
 IMPLICIT NONE
 
@@ -1350,10 +1349,10 @@ INTEGER_T :: im,iregion,dir
   print *,"num_materials_in invalid"
   stop
  endif
- if (num_threads_in.eq.geom_nthreads) then
+ if (num_threads_in.ge.1) then
   ! do nothing
  else
-  print *,"num_threads_in invalid"
+  print *,"num_threads_in invalid: ",num_threads_in
   stop
  endif
  do im=1,num_materials
