@@ -7,7 +7,7 @@
 # ----------------------------------------------------------
 #max_step=200
 max_step=99999999
-stop_time=8000.0
+stop_time=80000.0
 
 # unique problem identifier associated with each new plug-in:
 # CRYOGENIC_TANK_MK.F90
