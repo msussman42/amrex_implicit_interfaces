@@ -359,12 +359,12 @@ ns.xblob3 = 18.3 # Watts=J/s
 #BREAKUP:
 #(0.6 Liters/min) 1400 * (0.18)^2 * (0.005)^2 /(0.012 * 0.012)=7.9
 #(0.3 Liters/min) 1400 * (0.084)^2 * (0.005)^2 /(0.012 * 0.012)=1.7
-#(0.1 Liters/min) 1400 * (??)^2 * (0.005)^2 /(0.012 * 0.012)=??
+#(0.1 Liters/min) 1400 * (0.023)^2 * (0.005)^2 /(0.012 * 0.012)=0.13
 ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute) (v_n=0.95 m/s, Dj=0.012)
 #ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute) (v_n=0.42 m/s, Dj=0.012)
 #ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute) (v_n=0.18 m/s, Dj=0.012)
 #ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
-#ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=?? m/s, Dj=0.012)
+#ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=0.023 m/s, Dj=0.012)
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
