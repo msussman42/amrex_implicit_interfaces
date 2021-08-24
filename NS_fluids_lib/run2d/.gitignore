@@ -67,6 +67,8 @@ ZEYU_droplet_impact/
 CRYOGENIC_TANK/
 CRYOGENIC_TANK_TPCE/
 ZBOT/
+ZBOT_level1/
+ZBOT_uniform_finer/
 ZBOT_microgravity/
 flexible_plate/
 ICE_ON_SUBSTRATE/
