@@ -13,7 +13,7 @@ newfile=_sumint_${file}_sumint_
 sed 's/TIME=//' ${file}_sumint2_ > ${newfile}
 rm ${file}_sumint1_
 rm ${file}_sumint2_
-ewfile_up_one="$newfile$num"
+newfile_up_one="$newfile$num"
 echo ${newfile}
 echo ${newfile_up_one}
 mv ${newfile} ../${newfile_up_one}
