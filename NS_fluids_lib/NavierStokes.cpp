@@ -9135,10 +9135,10 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } else
   amrex::Error("level invalid");
 
- if ((flux_grid_type==-1)||
-     (flux_grid_type==3)||
-     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))||
-     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {
+ if ((flux_grid_type==-1)|| //cell center
+     (flux_grid_type==3)||  //X,Y Node, Z Cell
+     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))|| //X,Z Node, Y cell
+     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {//Y,Z Node, X cell
   // do nothing
  } else
   amrex::Error("flux_grid_type invalid");
@@ -9218,6 +9218,18 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 	fill_state_idx,scompBC_map);
  } // scomp_extrap=0..NUM_TENSOR_TYPE-1
 
+ if (1==0) {
+  int caller_id=10+flux_grid_type;
+  writeSanityCheckData(
+   "FLUX_MF",
+   "T11,T12,T22,T33,T13,T23",
+   caller_id,
+   localMF[flux_mf]->nComp(), 
+   flux_mf,
+   -1, //State_Type==-1
+   flux_grid_type);
+ }
+
  override_enable_spectral(push_enable_spectral);
 
 } // end subroutine make_viscoelastic_tensorMACALL
@@ -9230,16 +9242,17 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
 
- if ((flux_grid_type==-1)||
-     (flux_grid_type==3)||
-     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))||
-     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {
+ if ((flux_grid_type==-1)|| //cell center
+     (flux_grid_type==3)||  //X,Y Node, Z Cell
+     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))|| //X,Z Node, Y cell
+     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {//Y,Z Node, X cell
   // do nothing
  } else
   amrex::Error("flux_grid_type invalid");
 
  IndexType local_typ(get_desc_lstGHOST()[fill_state_idx].getType());
  int flux_box_type[AMREX_SPACEDIM];
+  // NavierStokes::grid_type_to_box_type_cpp declared in NavierStokes2.cpp
  grid_type_to_box_type_cpp(flux_grid_type,flux_box_type);
  for (int dir_local=0;dir_local<AMREX_SPACEDIM;dir_local++) {
   if ((flux_box_type[dir_local]==0)&&
@@ -14495,6 +14508,7 @@ void NavierStokes::aggressive_debug(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // declared in GODUNOV_3D.F90
    fort_aggressive(
     &datatype,
     &warning_cutoff,
@@ -18724,7 +18738,9 @@ void NavierStokes::writeSanityCheckData(
 
    // data_dir=-1 cell centered data
    // data_dir=0..sdim-1 face centered data.
-   // data_dir=sdim node data
+   // data_dir=3  X,Y node
+   // data_dir=4  X,Z node
+   // data_dir=5  Y,Z node
   ns_level.Sanity_output_zones(
    data_id,
    data_dir,

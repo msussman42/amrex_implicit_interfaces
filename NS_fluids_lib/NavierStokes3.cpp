@@ -11897,6 +11897,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        } else
         amrex::Error("viscoelastic_model[im] invalid");
 
+        // NavierStokes::make_viscoelastic_tensorMACALL is declared in
+	// NavierStokes.cpp
        int flux_grid_type=-1;
        make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
          MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);

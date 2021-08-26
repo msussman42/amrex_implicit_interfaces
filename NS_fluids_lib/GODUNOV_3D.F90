@@ -8500,7 +8500,9 @@ stop
        scomp, &
        ncomp, &
        ndefined, &
-       ngrow,dir,id, &
+       ngrow, &
+       dir, &
+       id, &
        verbose, &
        force_check, &
        gridno, &
@@ -8520,7 +8522,9 @@ stop
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: scomp,ncomp,ndefined
-      INTEGER_T, intent(in) :: ngrow,dir,id
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: id
       INTEGER_T, intent(in) :: verbose
       INTEGER_T, intent(in) :: force_check
       INTEGER_T, intent(in) :: gridno,ngrid,level,finest_level
@@ -8549,7 +8553,9 @@ stop
         scomp, &
         ncomp, &
         ndefined, &
-        ngrow,dir,id, &
+        ngrow, &
+        dir, &
+        id, &
         verbose, &
         force_check, &
         gridno,ngrid,level,finest_level, &
