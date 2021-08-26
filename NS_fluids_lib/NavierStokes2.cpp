@@ -7649,7 +7649,9 @@ void NavierStokes::output_zones(
 
 // data_dir=-1 cell centered data
 // data_dir=0..sdim-1 face centered data.
-// data_dir=sdim node data
+// data_dir=3  X,Y node
+// data_dir=4  X,Z node
+// data_dir=5  Y,Z node
 void NavierStokes::Sanity_output_zones(
    int data_id,
    int data_dir,
@@ -7712,14 +7714,17 @@ void NavierStokes::Sanity_output_zones(
 
    BoxArray minus_boxes(cgrids_minusBA);
 
-   if (data_dir==-1) {
-    // do nothing
-   } else if ((data_dir>=0)&&(data_dir<AMREX_SPACEDIM)) {
-    minus_boxes.surroundingNodes(data_dir);
-   } else if (data_dir==AMREX_SPACEDIM) {
-    minus_boxes.convert(IndexType::TheNodeType()); 
-   } else
-    amrex::Error("data_dir invalid sanity_output_zones");
+   int box_type[AMREX_SPACEDIM];
+   grid_type_to_box_type_cpp(data_dir,box_type);
+
+   for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
+    if (box_type[local_dir]==0) {
+     // do nothing
+    } else if (box_type[local_dir]==1) {
+     minus_boxes.surroundingNodes(local_dir);
+    } else
+     amrex::Error("box_type[local_dir] invalid");
+   }
 
    MultiFab* datamfminus=new MultiFab(minus_boxes,cgrids_minus_map,
     ncomp,0,
@@ -7734,10 +7739,7 @@ void NavierStokes::Sanity_output_zones(
    datamfminus->ParallelCopy(*datamf,0,0,
     ncomp,0,0,geom.periodicity());
 
-   if (data_dir==-1) {
-    check_for_NAN(datamf,1);
-    check_for_NAN(datamfminus,11);
-   } else if ((data_dir>=0)&&(data_dir<=AMREX_SPACEDIM)) {
+   if ((data_dir>=-1)&&(data_dir<=5)) {
     check_for_NAN(datamf,1);
     check_for_NAN(datamfminus,11);
    } else
@@ -7791,7 +7793,7 @@ void NavierStokes::Sanity_output_zones(
 
     FArrayBox& datafab=(*datamfminus)[mfi];
 
-     // in: NAVIERSTOKES_3D.F90
+     // declared in: TECPLOTUTIL.F90
     fort_cellgrid_sanity(
      &tid_current,
      &data_dir,

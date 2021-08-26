@@ -557,7 +557,9 @@ public:
 
      // data_dir=-1 cell centered data
      // data_dir=0..sdim-1 face centered data.
-     // data_dir=sdim node data.
+     // data_dir=3  X,Y node
+     // data_dir=4  X,Z node
+     // data_dir=5  Y,Z node
      // a tecplot file is output in which the raw data is
      // output as follows (2D cell center):
      //   x x               x x
@@ -1250,7 +1252,9 @@ protected:
 
      // data_dir=-1 cell centered data
      // data_dir=0..sdim-1 face centered data.
-     // data_dir=sdim node data
+     // data_dir=3  X,Y node
+     // data_dir=4  X,Z node
+     // data_dir=5  Y,Z node
     void Sanity_output_zones(
       int data_id,
       int data_dir,

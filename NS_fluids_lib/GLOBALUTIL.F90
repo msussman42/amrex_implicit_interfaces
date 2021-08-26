@@ -9334,7 +9334,9 @@ contains
        scomp, &
        ncomp, &
        ndefined, &
-       ngrow,dir,id, &
+       ngrow, &
+       dir, &
+       id, &
        verbose, &
        force_check, &
        gridno,ngrid,level,finest_level, &
@@ -9358,7 +9360,8 @@ contains
       INTEGER_T, intent(in) :: force_check
       INTEGER_T, intent(in) :: gridno,ngrid,level,finest_level
       REAL_T, intent(in), pointer :: mf(D_DECL(:,:,:),:)
-      INTEGER_T i,j,k,ii,jj,kk,dir2
+      INTEGER_T i,j,k,dir2
+      INTEGER_T box_type(SDIM)
       INTEGER_T n
       INTEGER_T n_singlelayer,n_interior,n_side,n_corner
       REAL_T sum_interior,sum_side,sum_corner,sum_singlelayer
@@ -9379,45 +9382,18 @@ contains
       else if ((verbose.eq.2).or.(force_check.eq.1)) then
        call FLUSH(6) ! unit=6 (screen)
 
-       ii=0
-       jj=0
-       kk=0
+       call grid_type_to_box_type(dir,box_type)
 
        if (datatype.eq.0) then
-        if (dir.eq.-1) then
-         ! do nothing
-        else if (dir.eq.0) then
-         ii=1
-        else if (dir.eq.1) then
-         jj=1
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid aggressive worker"
-         stop
-        endif
-       else if (datatype.eq.1) then
-
-        if (dir.eq.0) then
-         ii=1
-        else if (dir.eq.1) then
-         jj=1
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid aggressive worker"
-         stop
-        endif
-
-       else if (datatype.eq.2) then
-
         ! do nothing
-
+       else if (datatype.eq.1) then
+        ! do nothing
+       else if (datatype.eq.2) then
+        ! do nothing
        else
         print *,"datatype invalid"
         stop
        endif
-
 
        if (scomp+ncomp.gt.ndefined) then
         print *,"scomp invalid aggressive worker"
@@ -9473,7 +9449,7 @@ contains
         if (dir.eq.-1) then
          call growntilebox(tilelo,tilehi,fablo,fabhi, &
           growlotest,growhitest,ngrow)
-        else if ((dir.ge.0).and.(dir.lt.SDIM)) then
+        else if ((dir.ge.0).and.(dir.le.5)) then
          call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
           growlotest,growhitest,ngrow,dir,1)
         else
@@ -9534,23 +9510,23 @@ contains
         do k=growlotest(3),growhitest(3)
          noutside=0
          noutside_single=0
-         if ((i.lt.fablo(1)).or.(i.gt.fabhi(1)+ii)) then
+         if ((i.lt.fablo(1)).or.(i.gt.fabhi(1)+box_type(1))) then
           noutside=noutside+1
          endif
-         if ((i.lt.fablo(1)-1).or.(i.gt.fabhi(1)+ii+1)) then
+         if ((i.lt.fablo(1)-1).or.(i.gt.fabhi(1)+box_type(1)+1)) then
           noutside_single=noutside_single+1
          endif
-         if ((j.lt.fablo(2)).or.(j.gt.fabhi(2)+jj)) then
+         if ((j.lt.fablo(2)).or.(j.gt.fabhi(2)+box_type(2))) then
           noutside=noutside+1
          endif
-         if ((j.lt.fablo(2)-1).or.(j.gt.fabhi(2)+jj+1)) then
+         if ((j.lt.fablo(2)-1).or.(j.gt.fabhi(2)+box_type(2)+1)) then
           noutside_single=noutside_single+1
          endif
          if (SDIM.eq.3) then
-          if ((k.lt.fablo(SDIM)).or.(k.gt.fabhi(SDIM)+kk)) then
+          if ((k.lt.fablo(SDIM)).or.(k.gt.fabhi(SDIM)+box_type(SDIM))) then
            noutside=noutside+1
           endif
-          if ((k.lt.fablo(SDIM)-1).or.(k.gt.fabhi(SDIM)+kk+1)) then
+          if ((k.lt.fablo(SDIM)-1).or.(k.gt.fabhi(SDIM)+box_type(SDIM)+1)) then
            noutside_single=noutside_single+1
           endif
          endif
@@ -11459,8 +11435,12 @@ contains
         dir_chars='YC'
       else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
         dir_chars='ZC'
-      else if (data_dir.eq.SDIM) then
-        dir_chars='ND'
+      else if (data_dir.eq.3) then
+        dir_chars='XY'
+      else if ((data_dir.eq.4).and.(SDIM.eq.3)) then
+        dir_chars='XZ'
+      else if ((data_dir.eq.5).and.(SDIM.eq.3)) then
+        dir_chars='YZ'
       else
         print *,"data_dir invalid"
         stop

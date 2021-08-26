@@ -326,7 +326,7 @@ stop
 
       subroutine fort_cellgrid_sanity( &
        tid, &
-       data_dir, & ! data_dir=-1,0..sdim
+       data_dir, & ! data_dir=-1,0..sdim,3,4,5
        bfact, &
        ncomp, &
        datafab,DIMS(datafab), &
@@ -358,6 +358,7 @@ stop
       INTEGER_T, intent(in) :: gridno
       REAL_T, intent(in), target :: datafab(DIMV(datafab), &
         ncomp)
+      REAL_T, pointer :: datafab_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
       REAL_T datand(ncomp)
@@ -389,6 +390,7 @@ stop
       REAL_T xstenND(-3:3,SDIM)
       REAL_T dxleft,dxright
       INTEGER_T local_nd
+      INTEGER_T box_type(SDIM)
 
       nhalf=3
 
@@ -408,14 +410,12 @@ stop
        stop
       endif
 
+      datafab_ptr=>datafab
+
       if (data_dir.eq.-1) then 
-       call checkbound_array(lo,hi,datafab,0,-1,411)
-      else if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-       call checkbound_array(lo,hi,datafab,0,data_dir,411)
-      else if (data_dir.eq.SDIM) then
-       do dir=0,SDIM-1
-        call checkbound_array(lo,hi,datafab,0,dir,411)
-       enddo
+       call checkbound_array(lo,hi,datafab_ptr,0,-1,411)
+      else if ((data_dir.ge.0).and.(data_dir.le.5)) then
+       call checkbound_array(lo,hi,datafab_ptr,0,data_dir,411)
       else
        print *,"data_dir invalid"
        stop
@@ -504,6 +504,8 @@ stop
 
              ! iproblo=0
              call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
+             call grid_type_to_box_type(data_dir,box_type)
+
              do dir=1,SDIM
               dxleft=xstenND(0,dir)-xstenND(-1,dir)
               dxright=xstenND(1,dir)-xstenND(0,dir)
@@ -538,16 +540,8 @@ stop
                stop
               endif
 
-              if (data_dir.eq.-1) then
-               local_nd=0
-              else if ((data_dir+1.eq.dir).or.(data_dir.eq.SDIM)) then
-               local_nd=1
-              else if ((data_dir+1.ne.dir).and.(data_dir.lt.SDIM)) then
-               local_nd=0
-              else
-               print *,"data_dir invalid"
-               stop
-              endif
+              local_nd=box_type(dir)
+
               dxright=xstenND(2,dir)-xstenND(0,dir)
               if (dxright.gt.zero) then
                if (isub_nrm.eq.0) then
@@ -612,7 +606,7 @@ stop
               if ((icell(dir).ge.lo(dir)).and. &
                   (icell(dir).le.hi(dir))) then
 
-               if ((data_dir.eq.SDIM).or.(data_dir+1.eq.dir)) then
+               if (box_type(dir).eq.1) then
                 if ((isub_nrm.eq.0).or.(isub_nrm.eq.1)) then
                  ! do nothing
                 else if (isub_nrm.eq.2) then
@@ -621,16 +615,22 @@ stop
                  print *,"isub_nrm invalid"
                  stop
                 endif
-               else
+               else if (box_type(dir).eq.0) then
                 ! do nothing
+               else
+                print *,"box_type invalid"
+                stop
                endif
 
               else if (icell(dir).eq.hi(dir)+1) then
 
-               if ((data_dir.eq.SDIM).or.(data_dir+1.eq.dir)) then
+               if (box_type(dir).eq.1) then
                 ! do nothing
-               else
+               else if (box_type(dir).eq.0) then
                 icell(dir)=hi(dir)
+               else
+                print *,"box_type invalid"
+                stop
                endif
 
               else
@@ -829,6 +829,7 @@ stop
 
        plot_sdim=3
 
+        ! declared in: GLOBALUTIL.F90
        call zones_revolve_sanity( &
         root_char_array, &
         n_root, &
@@ -900,8 +901,12 @@ stop
         dir_chars='YC'
        else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
         dir_chars='ZC'
-       else if (data_dir.eq.SDIM) then
-        dir_chars='ND'
+       else if (data_dir.eq.3) then
+        dir_chars='XY'
+       else if ((data_dir.eq.4).and.(SDIM.eq.3)) then
+        dir_chars='XZ'
+       else if ((data_dir.eq.5).and.(SDIM.eq.3)) then
+        dir_chars='YZ'
        else
         print *,"data_dir invalid"
         stop
