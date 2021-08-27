@@ -1838,6 +1838,7 @@ void fortran_parameters() {
   std::cout << "n_sites= " << n_sites << '\n';
   amrex::Error("n_sites invalid(1)");
  }
+ double start_initialization = ParallelDescriptor::second();
 
  fort_override(
   &ns_max_level,
@@ -1931,6 +1932,14 @@ void fortran_parameters() {
   &invert_gravity_temp,
   &fort_stop_time,
   &ioproc);
+
+ ParallelDescriptor::Barrier();
+
+ double finish_initialization = ParallelDescriptor::second();
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "elapsed time in fort_override " << finish_initialization-
+        start_initialization << '\n';
+ }
 
  int mof_error_ordering_local=0;
  pp.query("mof_error_ordering",mof_error_ordering_local);
