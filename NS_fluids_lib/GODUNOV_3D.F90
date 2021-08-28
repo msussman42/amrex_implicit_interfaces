@@ -22421,10 +22421,10 @@ stop
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: mask(DIMV(mask))
-      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
-      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
       REAL_T, target, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
@@ -22878,6 +22878,10 @@ stop
           box_type_adj(dir_local)=box_type_flux(dir_local)
          enddo
 
+          ! first, get the index for the adjacent element on the high
+          ! side of the flux face.
+          ! Beware of the distinction between "dir_flux" and
+          ! "force_dir".
          if (box_type_adj(dir_flux+1).eq.1) then
           box_type_adj(dir_flux+1)=0
          else if (box_type_adj(dir_flux+1).eq.0) then
@@ -22897,7 +22901,7 @@ stop
          endif
 
          call box_type_to_grid_type(grid_type_adj,box_type_adj)
-         if (grid_type_adj.eq.dir) then
+         if (grid_type_adj.eq.force_dir) then
           ! do nothing
          else
           print *,"expecting the adjoining LS to live on the same MAC grid"
@@ -22979,7 +22983,9 @@ stop
          ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
         center_hoop_22=center_hoop_22/(2*SDIM)
 
-         ! divergence of fluxes goes here
+         ! divergence of fluxes goes here.
+         ! first we find fluxes at the MAC grid location by way of 
+         ! averaging
         do dir_XD=1,SDIM
          do dir_deriv=1,SDIM
           center_flux(dir_XD,dir_deriv)=zero
@@ -23026,6 +23032,7 @@ stop
           LS_control_volume,LS_control_volume, &
           Htensor_cen)
 
+         ! find "H" at the flux locations.
         do dir_local=1,SDIM
         do side_local=1,2
 
@@ -23045,6 +23052,8 @@ stop
           Htensor(dir_local,side_local))
         enddo ! side_local=1,2
         enddo ! dir_local=1,SDIM
+
+         !x_at_flux_point(side_flux+1,dir_flux+1,dir_local)
 
         dir_local=1
         hx=x_at_flux_point(2,dir_local,dir_local)- &
@@ -23155,7 +23164,7 @@ stop
             stop
            endif
  
-           if (dir_XD.eq.dir+1) then
+           if (dir_XD.eq.force_dir+1) then
             XFORCE_local=force(dir_XD)*deninv
             UMACNEW(D_DECL(i,j,k))=UMACNEW(D_DECL(i,j,k))+XFORCE_local
            endif
