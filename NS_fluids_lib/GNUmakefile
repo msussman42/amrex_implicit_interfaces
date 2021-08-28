@@ -108,7 +108,7 @@ EBASE = amr
 
 AMREX_PARTICLES = TRUE
 BL_NO_FORT = TRUE
-BUILD_f90_F90_dependencies = FALSE
+BUILD_f90_F90_dependencies = TRUE
 ifeq ($(BL_NO_FORT),TRUE)
   CPPFLAGS += -DBL_NO_FORT
 endif
