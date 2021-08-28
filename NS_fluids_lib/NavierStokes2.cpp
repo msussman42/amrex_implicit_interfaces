@@ -1656,10 +1656,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   if (viscoelastic_model[im_elastic]==2) {
-
     // declared in: GODUNOV_3D.F90
-    fort_mac_elastic_force(
+   fort_mac_elastic_force(
      &im_elastic,
      &partid,
      &dir, // dir=0,1,..sdim-1  
@@ -1702,18 +1700,12 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
-     &level,&finest_level,
+     &level,
+     &finest_level,
      &rzflag,
      domlo,domhi,
      &nmat,
      &nten);
-
-   } else if ((viscoelastic_model[im_elastic]==1)||
-              (viscoelastic_model[im_elastic]==0)||
-	      (viscoelastic_model[im_elastic]==3)) { //incremental
-    // do nothing
-   } else
-    amrex::Error("viscoelastic_model[im_elastic] invalid");
 
   } // mfi
 } // omp
