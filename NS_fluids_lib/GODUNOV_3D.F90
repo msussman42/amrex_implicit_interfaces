@@ -22531,24 +22531,24 @@ stop
       endif
 
       MACFLUX_CC_ptr=>MACFLUX_CC
-      call checkbound_array(fablo,fabhi,MACFLUX_CC,1,grid_type_CC,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_CC_ptr,1,grid_type_CC,11)
       MACFLUX_XY_ptr=>MACFLUX_XY
-      call checkbound_array(fablo,fabhi,MACFLUX_XY,1,grid_type_XY,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_XY_ptr,1,grid_type_XY,11)
       MACFLUX_XZ_ptr=>MACFLUX_XZ
-      call checkbound_array(fablo,fabhi,MACFLUX_XZ,1,grid_type_XZ,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_XZ_ptr,1,grid_type_XZ,11)
       MACFLUX_YZ_ptr=>MACFLUX_YZ
-      call checkbound_array(fablo,fabhi,MACFLUX_YZ,1,grid_type_YZ,11)
+      call checkbound_array(fablo,fabhi,MACFLUX_YZ_ptr,1,grid_type_YZ,11)
 
       visc_ptr=>visc
-      call checkbound_array(fablo,fabhi,visc,1,-1,11)
+      call checkbound_array(fablo,fabhi,visc_ptr,1,-1,11)
       mask_ptr=>mask
-      call checkbound_array1(fablo,fabhi,mask,1,-1,1277)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,1277)
       maskcoef_ptr=>maskcoef
-      call checkbound_array1(fablo,fabhi,maskcoef,1,-1,1277)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,1277)
       levelpc_ptr=>levelpc
-      call checkbound_array(fablo,fabhi,levelpc,2,-1,1277)
+      call checkbound_array(fablo,fabhi,levelpc_ptr,2,-1,1277)
       xfacefab_ptr=>xfacefab
-      call checkbound_array(fablo,fabhi,xfacefab,0,force_dir,1277)
+      call checkbound_array(fablo,fabhi,xfacefab_ptr,0,force_dir,1277)
 
       call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,force_dir,1277)
 
