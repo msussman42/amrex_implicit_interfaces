@@ -22517,6 +22517,19 @@ stop
 
       im_elastic_p1=im_elastic+1
 
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+      if (nten.eq.((nmat-1)*(nmat-1)+nmat-1)/2) then
+       ! do nothing
+      else
+       print *,"nten invalid"
+       stop
+      endif
+
       do dir_local=1,SDIM
        dx_local(dir_local)=dx(dir_local)
        xlo_local(dir_local)=xlo(dir_local)
@@ -22574,6 +22587,19 @@ stop
        ! do nothing
       else
        print *,"partid invalid"
+       stop
+      endif
+      if ((level.ge.0).and. &
+          (level.le.finest_level)) then
+       ! do nothing
+      else
+       print *,"level invalid"
+       stop
+      endif
+      if (bfact.ge.1) then
+       ! do nothing
+      else
+       print *,"bfact invalid"
        stop
       endif
 
@@ -22660,7 +22686,8 @@ stop
         print *,"LS_clamped invalid"
         stop
        endif
-       if ((rzflag.eq.1).or.(rzflag.eq.3)) then
+       if ((rzflag.eq.1).or. &
+           (rzflag.eq.3)) then
         if (force_dir.eq.0) then
          if (abs(x_MAC_control_volume(force_dir+1)).le. &
              VOFTOL*dx(force_dir+1)) then
@@ -22882,9 +22909,9 @@ stop
           ! side of the flux face.
           ! Beware of the distinction between "dir_flux" and
           ! "force_dir".
-         if (box_type_adj(dir_flux+1).eq.1) then
+         if (box_type_flux(dir_flux+1).eq.1) then
           box_type_adj(dir_flux+1)=0
-         else if (box_type_adj(dir_flux+1).eq.0) then
+         else if (box_type_flux(dir_flux+1).eq.0) then
           box_type_adj(dir_flux+1)=1
           iadj_array(dir_flux+1)=iadj_array(dir_flux+1)+1
          else
@@ -23024,13 +23051,21 @@ stop
 
          ! [n dot tau dot n] = - sigma kappa
          ! [n dot tau dot tj] = 0
-      
+     
+         ! declared in: GLOBALUTIL.F90 
         call tensor_Heaviside( &
           dxmin, &
           im_elastic, & ! 0..nmat-1
           mask_control_volume,mask_control_volume, &
           LS_control_volume,LS_control_volume, &
           Htensor_cen)
+
+        if ((Htensor_cen.ge.zero).and.(Htensor_cen.le.one)) then
+         ! do nothing
+        else
+         print *,"Htensor_cen invalid"
+         stop
+        endif
 
          ! find "H" at the flux locations.
         do dir_local=1,SDIM
@@ -23050,6 +23085,14 @@ stop
           mask_left,mask_right, &
           LS_left,LS_right, &
           Htensor(dir_local,side_local))
+
+         if ((Htensor(dir_local,side_local).ge.zero).and. &
+             (Htensor(dir_local,side_local).le.one)) then
+          ! do nothing
+         else
+          print *,"Htensor(dir_local,side_local) invalid"
+          stop
+         endif
         enddo ! side_local=1,2
         enddo ! dir_local=1,SDIM
 
@@ -23104,7 +23147,13 @@ stop
            ! -T33/r
            ! center_hoop_22=2 * xdisp/r
           dir_XD=1
-          bodyforce=-center_hoop_22/rval
+          if (rval.gt.zero) then
+           bodyforce=-center_hoop_22/rval
+          else
+           print *,"rval invalid"
+           stop
+          endif
+
           if (abs(bodyforce).lt.OVERFLOW_CUTOFF) then
            ! do nothing
           else
@@ -23116,7 +23165,14 @@ stop
          else if (rzflag.eq.3) then
           ! -T22/r
           dir_XD=1
-          bodyforce=-center_flux(2,2)/rval
+
+          if (rval.gt.zero) then
+           bodyforce=-center_flux(2,2)/rval
+          else
+           print *,"rval invalid"
+           stop
+          endif
+
           force(dir_XD)=force(dir_XD)+Htensor_cen*bodyforce
          else
           print *,"rzflag invalid"
@@ -23133,7 +23189,14 @@ stop
           ! do nothing
          else if (rzflag.eq.3) then ! T12/r
           dir_XD=2
-          bodyforce=center_flux(1,2)/rval
+
+          if (rval.gt.zero) then
+           bodyforce=center_flux(1,2)/rval
+          else
+           print *,"rval invalid"
+           stop
+          endif
+
           force(dir_XD)=force(dir_XD)+Htensor_cen*bodyforce
          else
           print *,"rzflag invalid"
