@@ -366,6 +366,7 @@ ifeq ($(BUILD_f90_F90_dependencies),TRUE)
             --f90_preprocess "$(F90PREP)" $^ > $(depEXETempDir)/f90.depends
 else
 	@echo "NOT Building f90/F90 dependency File ..."
+	@echo "Did you touch all of the f90 and F90 files ? "
 endif
 
 
