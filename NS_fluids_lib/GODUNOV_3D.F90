@@ -22628,7 +22628,18 @@ stop
        do dircomp=1,SDIM
         x_MAC_control_volume(dircomp)=xstenMAC(0,dircomp)
        enddo
-       rval=x_MAC_control_volume(1)
+
+        !rzflag=0 => volume and area independent of r.
+       if (rzflag.eq.0) then
+        !volume=dx dy dz
+        rval=one
+       else if ((rzflag.eq.1).or.(rzflag.eq.3)) then
+        !volume=(dtheta/2)*(r_{2}^2 - r_{1}^{2}) dz=dtheta*dz*dr r
+        rval=x_MAC_control_volume(1)
+       else
+        print *,"rzflag invalid"
+        stop
+       endif
 
        data_out%data_interp=>cell_data_interp
 
@@ -23110,28 +23121,73 @@ stop
 
         if ((hx.gt.zero).and.(hy.gt.zero).and.(hz.gt.zero)) then
 
-         rplus=x_at_flux_point(2,1,1)
-         rminus=x_at_flux_point(1,1,1)
+         if (rzflag.eq.0) then
+          !areax=dz dy
+          !areay=dx dz
+          !areaz=dx dy
+          !volume=dx dy dz
+          rplus=one
+          rminus=one
+         else if ((rzflag.eq.1).or.(rzflag.eq.3)) then
+          ! areax=dz * dtheta * r
+          ! areaz=(dtheta/2)*(r_{2}^2 - r_{1}^{2})=dtheta*dr*r
+          ! areay=dr * dz
+          ! volume=dtheta*dz*dr r
+          rplus=x_at_flux_point(2,1,1)
+          rminus=x_at_flux_point(1,1,1)
+          if (rzflag.eq.3) then
+           hy=hy*rval
+          endif
+         else
+          print *,"rzflag invalid"
+          stop
+         endif
 
          do dir_XD=1,SDIM
 
           force(dir_XD)=zero
 
           dir_local=1
-          force(dir_XD)=force(dir_XD)+ &
-           (rplus*Htensor(dir_local,2)*xflux_local(1,dir_XD,dir_local)- &
-            rminus*Htensor(dir_local,1)*xflux_local(-1,dir_XD,dir_local))/hx
 
-          dir_local=2
-          force(dir_XD)=force(dir_XD)+ &
-           (Htensor(dir_local,2)*yflux_local(1,dir_XD,dir_local)- &
-            Htensor(dir_local,1)*yflux_local(-1,dir_XD,dir_local))/hy
+          if ((rplus.gt.zero).and. &
+              (rminus.ge.zero).and. &
+              (rval.gt.zero).and. &
+              (hx.gt.zero)) then
+           force(dir_XD)=force(dir_XD)+ &
+            (rplus*Htensor(dir_local,2)*xflux_local(1,dir_XD,dir_local)- &
+             rminus*Htensor(dir_local,1)*xflux_local(-1,dir_XD,dir_local))/ &
+            (rval*hx)
+          else
+           print *,"rplus=",rplus
+           print *,"rminus=",rminus
+           print *,"rval=",rval
+           print *,"hx=",hx
+           print *,"rplus, rminus, rval, or hx invalid"
+           stop
+          endif
+
+          if (hy.gt.zero) then
+           dir_local=2
+           force(dir_XD)=force(dir_XD)+ &
+            (Htensor(dir_local,2)*yflux_local(1,dir_XD,dir_local)- &
+             Htensor(dir_local,1)*yflux_local(-1,dir_XD,dir_local))/hy
+          else
+           print *,"hy=",hy
+           print *,"hy invalid"
+           stop
+          endif
 
           if (SDIM.eq.3) then
-           dir_local=SDIM
-           force(dir_XD)=force(dir_XD)+ &
+           if (hz.gt.zero) then
+            dir_local=SDIM
+            force(dir_XD)=force(dir_XD)+ &
              (Htensor(dir_local,2)*zflux_local(1,dir_XD,dir_local)- &
               Htensor(dir_local,1)*zflux_local(-1,dir_XD,dir_local))/hz
+           else
+            print *,"hz=",hz
+            print *,"hz invalid"
+            stop
+           endif
           endif
 
          enddo ! dir_XD=1..sdim
