@@ -826,7 +826,7 @@ stop
 
       if (1.eq.0) then
        if ((probtype.eq.26).and. &
-           (axis_dir.eq.11).and. &
+           (axis_dir.eq.11).and. & ! BCG smooth test with periodic BC
            (project_option.eq.3).and. &
            (SDIM.eq.2)) then
          ! u=-f_sinx * f_cosy
@@ -1006,7 +1006,7 @@ stop
 
       if (1.eq.0) then
        if ((probtype.eq.26).and. &
-           (axis_dir.eq.11).and. &
+           (axis_dir.eq.11).and. & ! BCG smooth test with periodic BC.
            (fort_viscconst(1).gt.zero).and. &
            (SDIM.eq.2)) then
          ! u=-f_sinx * f_cosy
@@ -3132,7 +3132,8 @@ end subroutine dynamic_contact_angle
       endif
 
       if ((probtype.eq.26).and. &
-          ((axis_dir.eq.2).or.(axis_dir.eq.3))) then
+          ((axis_dir.eq.2).or. &  ! vortex confinement, no interface
+           (axis_dir.eq.3))) then ! vortex confinement, interface
 
        if (SDIM.eq.2) then
 
@@ -3222,7 +3223,8 @@ end subroutine dynamic_contact_angle
         stop
        endif
 
-      else if ((probtype.eq.26).and.(axis_dir.eq.11)) then
+      else if ((probtype.eq.26).and. &
+               (axis_dir.eq.11)) then ! BCG smooth test, periodic BC.
 
        do dir=1,SDIM
         xprime(dir)=x(dir)
@@ -3433,7 +3435,8 @@ end subroutine dynamic_contact_angle
       endif
       
       if (probtype.eq.26) then
-       if ((axis_dir.eq.2).or.(axis_dir.eq.3)) then
+       if ((axis_dir.eq.2).or. & ! vortex confinement, no interface.
+           (axis_dir.eq.3)) then ! vortex confinement, interface.
         if ((adv_dir.eq.1).or. &
             (adv_dir.eq.2).or. &
             (adv_dir.eq.3)) then
@@ -10773,15 +10776,15 @@ END SUBROUTINE Adist
         dist=yblob+radblob*cos(two*Pi*x/xblob)-y
 ! 2d: vapordist
        else if (probtype.eq.26) then
-        if (axis_dir.eq.1) then
+        if (axis_dir.eq.1) then !swirl with interface
          dist=abs(y-half)-one/four
-        else if (axis_dir.eq.0) then
+        else if (axis_dir.eq.0) then ! swirl, no interface
          ! do nothing
-        else if (axis_dir.eq.2) then ! inputs.vortex_confine
+        else if (axis_dir.eq.2) then ! inputs.vortex_confine (no interface)
          ! do nothing
-        else if (axis_dir.eq.3) then
+        else if (axis_dir.eq.3) then ! vortex_confinement w/interface
          dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
-        else if (axis_dir.eq.10) then ! inputs.BCG
+        else if (axis_dir.eq.10) then ! inputs.BCG, Dirichlet BC.
          ! do nothing
         else if (axis_dir.eq.11) then ! inputs.BCG_periodic
          ! do nothing
@@ -11114,21 +11117,21 @@ END SUBROUTINE Adist
         endif
        else if (probtype.eq.26) then ! 3D: vapordist
 ! x-y plane
-        if (axis_dir.eq.3) then
+        if (axis_dir.eq.3) then !3D vortex confinement, with interface
          dist=abs(y-half)-one/four
 ! x-z plane
-        else if (axis_dir.eq.2) then
+        else if (axis_dir.eq.2) then !3D vortex confinement, with interface
          dist=abs(z-half)-one/four
 ! y-z plane
-        else if (axis_dir.eq.1) then
+        else if (axis_dir.eq.1) then !3D vortex confinement, with interface
          dist=abs(z-half)-one/four
-        else if (axis_dir.eq.0) then
+        else if (axis_dir.eq.0) then ! 3D swirl, no interface
          ! do nothing
-        else if (axis_dir.eq.4) then
+        else if (axis_dir.eq.4) then ! 3D vortex confinement, no interface
          ! do nothing
-        else if (axis_dir.eq.5) then
+        else if (axis_dir.eq.5) then ! 3D vortex confinement, w/interface
          dist=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
-        else if (axis_dir.eq.11) then
+        else if (axis_dir.eq.11) then ! BCG smooth test, periodic
          ! do nothing
         else
          print *,"axis_dir 0,1,2,3,4,5, or 11 expected"
@@ -30369,18 +30372,21 @@ end subroutine initialize2d
           endif
 
            ! in: INITDATA
-          if (probtype.eq.26) then ! swirl
+          if (probtype.eq.26) then ! swirl if axis_dir=0 or 1.
 
            if (axis_dir.eq.10) then ! BCG test
             scalc(ibase+2)=fort_initial_temperature(1)
            else if (axis_dir.eq.11) then ! BCG periodic test
             scalc(ibase+2)=fort_initial_temperature(1)
-           else if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
+           else if ((axis_dir.ge.0).and. & !swirl,vortex confinement
+                    (axis_dir.le.5)) then
             doubly_flag=1
             if (SDIM.eq.2) then
-             if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
+             if ((axis_dir.eq.0).or. & ! swirl
+                 (axis_dir.eq.1)) then
               rr=y
-             else if ((axis_dir.eq.2).or.(axis_dir.eq.3)) then
+             else if ((axis_dir.eq.2).or. & ! vortex confinement
+                      (axis_dir.eq.3)) then
               rr=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
               doubly_flag=0
              else
@@ -30388,18 +30394,20 @@ end subroutine initialize2d
               stop
              endif
             else if (SDIM.eq.3) then
-             if ((axis_dir.ge.0).and.(axis_dir.le.3)) then
-              if (adv_dir.eq.3) then
+             if ((axis_dir.ge.0).and. & !swirl or vortex confinement
+                 (axis_dir.le.3)) then
+              if (adv_dir.eq.3) then ! vortex confinement
                rr=y
-              else if (adv_dir.eq.2) then
+              else if (adv_dir.eq.2) then ! vortex confinement
                rr=z
-              else if (adv_dir.eq.1) then
+              else if (adv_dir.eq.1) then ! swirl
                rr=z
               else
                print *,"adv_dir invalid probtype==26 (11)"
                stop
               endif
-             else if ((axis_dir.eq.4).or.(axis_dir.eq.5)) then
+             else if ((axis_dir.eq.4).or. & ! vortex confinement.
+                      (axis_dir.eq.5)) then
               rr=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
               doubly_flag=0
              else
@@ -32490,7 +32498,8 @@ end subroutine initialize2d
 ! swirl 2D, in: fort_initvelocity
          else if (probtype.eq.26) then
 
-          if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
+          if ((axis_dir.eq.0).or. & !swirl
+              (axis_dir.eq.1)) then
 
            if (y.le.half) then
             x_vel=tanh( (y-one/four)*30.0 )
@@ -32499,7 +32508,8 @@ end subroutine initialize2d
            endif
            y_vel=0.05*sin(two*Pi*x)
 
-          else if ((axis_dir.eq.2).or.(axis_dir.eq.3)) then
+          else if ((axis_dir.eq.2).or. & !vortex confinement
+                   (axis_dir.eq.3)) then
 
            dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
            jumpval=tanh(30.0*dist)
@@ -32513,7 +32523,7 @@ end subroutine initialize2d
            if ((adv_dir.eq.2).or.(adv_dir.eq.3)) then
             y_vel=y_vel+adv_vel
            endif
-          else if (axis_dir.eq.10) then
+          else if (axis_dir.eq.10) then !BCG homogeneous bc
            x_vel=-(sin(Pi*x)**2)*sin(two*Pi*y)
            y_vel=sin(two*Pi*x)*(sin(Pi*y)**2)
           else if (axis_dir.eq.11) then  ! 2D BCG periodic
@@ -32743,7 +32753,8 @@ end subroutine initialize2d
 ! swirl 3D
          else if (probtype.eq.26) then 
 
-          if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
+          if ((axis_dir.eq.0).or. & !swirl
+              (axis_dir.eq.1)) then
            ! x-y
            if (adv_dir.eq.3) then
             if (y.le.half) then
@@ -32776,7 +32787,8 @@ end subroutine initialize2d
             stop
            endif
 
-          else if ((axis_dir.eq.2).or.(axis_dir.eq.3)) then
+          else if ((axis_dir.eq.2).or. & !vortex confinement 3D
+                   (axis_dir.eq.3)) then
 
            dist=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
            jumpval=tanh(30.0*dist)
