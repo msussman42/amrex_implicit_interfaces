@@ -239,18 +239,19 @@ print *,"constant_K_test= ",constant_K_test
 ! dendrite probtype_in.eq.403
 ! N space
 ! M time
-! for dendrite growth test problem, time step is variable
-! (fixed_dt_main==0.0)
+! for dendrite growth test problem, time step is fixed
+! (fixed_dt_main==-1.0)
 ! 64,128,256
 ! VERIFICATION: M_START=1600, 1600, 1600 corresponding to 64,128,256
+! 
+! saturation_temp_vel(1)=0.002   (liquid to ice)
+! saturation_temp_curv(1)=0.002  (liquid to ice)
 !
-!For convergence study:
-! 32,64,128, radblob10=1.0, fixed_dt_main=-1.0,
-! M_START=32,64,128
-! saturation_temp_vel=0.0
-! saturation_temp_curv=0.002
-N_START=128
-N_FINISH=128
+! In order to rotate the dendrite:
+! in subroutine dendrite_dist, multimat_FVM.F90, set
+! dendrite_angle.
+N_START=256
+N_FINISH=256
 M_START=1600
 M_FACTOR=2
 
@@ -1010,10 +1011,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! extra factor of 2 is not included.   Recommended to compare
     ! with Chen et al since they observed less numerically induced 
     ! instability, than what observed by Juric and Tryggvason.
-   saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al
-   saturation_temp_curv(2)=0.0d0 
-   saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al
-   saturation_temp_vel(2)=0.0d0 
+   saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al (liquid to ice)
+   saturation_temp_curv(2)=0.0d0    ! ice to liquid
+   saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al (liquid to ice)
+   saturation_temp_vel(2)=0.0d0     ! ice to liquid
 
    print *,"saturation_temp_curv(1)=",saturation_temp_curv(1) 
    print *,"saturation_temp_curv(2)=",saturation_temp_curv(2) 

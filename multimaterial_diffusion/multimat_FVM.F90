@@ -1912,14 +1912,19 @@ subroutine dendrite_dist(imat,x,y,dist)
  integer,intent(in)        :: imat
  real(kind=8)              :: x0,y0,c1,c2,tt,pi
  real(kind=8)              :: dist,dist1
+ real(kind=8)              :: dendrite_angle
   
  pi=4.0*atan(1.0d0)
+ dendrite_angle=pi/4.0d0  ! 45 degrees
+! dendrite_angle=pi/6.0d0  ! 30 degrees
+! dendrite_angle=pi/3.0d0  ! 60 degrees
 
- x0=x
- y0=y
 
  c1 = 2.0d0
  c2 = 2.0d0
+
+ x0=cos(dendrite_angle)*(x-c1)-sin(dendrite_angle)*(y-c2)+c1
+ y0=cos(dendrite_angle)*(y-c2)+sin(dendrite_angle)*(x-c1)+c2
 
  if (axis_dir.eq.0) then
 
@@ -2108,6 +2113,7 @@ else if (probtype_in.eq.402) then
  center(2)=y
  call dist_fns_NASA_boiling(imat,center,dist)
 
+ ! we are currently in: subroutine dist_concentric
 else if (probtype_in.eq.403) then
 
  call dendrite_dist(imat,x,y,dist)
