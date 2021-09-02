@@ -159,7 +159,6 @@ namespace amrex{
       int* nmat,int* nten,
       Real* latent_heat,
       Real* saturation_temp,
-      int* radius_cutoff,
       Real* scal,AMREX_ARLIM_P(scallo),AMREX_ARLIM_P(scalhi),
       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
       const Real* dx,const Real* xlo, const Real* xhi);

@@ -6414,18 +6414,13 @@ END SUBROUTINE Adist
       end subroutine adapt_at_nozzle
 
 
-      radius_cutoff
-      max_level_two_materials
-
        ! called from SLOPERECON and INITDATA
        ! (note see NavierStokes::init_pressure_error_indicator() too,
        !  which calls FORT_PRESSURE_INDICATOR, which calls
        !  EOS_error_ind)
-       ! stencil_valid==1 => coarse/fine ghost values use 2nd order interp.
-       ! stencil_valid==0 => coarse/fine ghost values use piecewise const int.
       subroutine calc_error_indicator( &
-        stencil_valid, &
-        level,max_level, &
+        level, &
+        max_level, &
         xsten, &
         nhalf, &
         dx, &
@@ -6434,36 +6429,33 @@ END SUBROUTINE Adist
         LS_stencil, &
         nmat, &
         nten, &
-        latent_heat, &
-        err,time)
+        err, &
+        time)
 
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: stencil_valid
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: max_level
       INTEGER_T, intent(in) :: nhalf
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
-      INTEGER_T inear
-      INTEGER_T im,im_opp,im_primary
-      INTEGER_T ireverse
-      INTEGER_T nten_test,iten
 
-      REAL_T, intent(in) :: latent_heat(2*nten)
-
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
       REAL_T, intent(in) :: voflist(nmat)
-
       REAL_T, intent(in) :: time
       REAL_T, intent(out) :: err
-      REAL_T dxmin,dxmax
+
+      INTEGER_T inear
+      INTEGER_T im,im_primary
+      INTEGER_T nten_test
+
+      REAL_T dxmin
       REAL_T dist,dist3
-      REAL_T dx(SDIM)
       INTEGER_T i1,j1,k1
       INTEGER_T material_count
       INTEGER_T adapt_nozzle_flag
@@ -6471,17 +6463,12 @@ END SUBROUTINE Adist
       INTEGER_T k1lo,k1hi
       REAL_T vfrac_rigid_sum
       REAL_T LS_temp(nmat)
-      REAL_T LL
-      REAL_T curv
 
       if ((level.lt.0).or.(level.gt.max_level)) then
        print *,"level invalid calc_error_indicator"
        stop
       endif
-      if ((stencil_valid.ne.0).and.(stencil_valid.ne.1)) then
-       print *,"stencil_valid invalid"
-       stop
-      endif
+
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
        print *,"nten invalid calc_error_ind",nten,nten_test
@@ -6510,17 +6497,13 @@ END SUBROUTINE Adist
       endif
 
       call get_dxmin(dx,bfact,dxmin)
-      if (dxmin.le.zero) then
-       print *,"dxmin bust"
-       stop
-      endif
-      call get_dxmax(dx,bfact,dxmax)
-      if (dxmax.le.zero) then
-       print *,"dxmax bust"
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin invalid"
        stop
       endif
 
-      err=zero
       inear=0 
 
       call adapt_at_nozzle(adapt_nozzle_flag)
@@ -6540,6 +6523,11 @@ END SUBROUTINE Adist
        endif
        if (abs(dist).le.two*dxmin) then
         inear=2
+       else if (abs(dist).ge.two*dxmin) then
+        ! do nothing
+       else
+        print *,"dist is NaN"
+        stop
        endif
 
        if (nmat.eq.2) then
@@ -6558,6 +6546,11 @@ END SUBROUTINE Adist
          call materialdist(xsten,nhalf,dx,bfact,dist3,im,time)
          if (abs(dist3).le.two*dxmin) then
           inear=2
+         else if (abs(dist3).ge.two*dxmin) then
+          ! do nothing
+         else
+          print *,"dist3 is NaN"
+          stop
          endif
         else
          print *,"FSI_flag(im) invalid"
@@ -6594,25 +6587,35 @@ END SUBROUTINE Adist
        endif
       enddo ! im=1..nmat
 
+      if ((vfrac_rigid_sum.ge.one-VOFTOL).and. &
+          (vfrac_rigid_sum.le.one+VOFTOL)) then
+       vfrac_rigid_sum=one
+      else if (abs(vfrac_rigid_sum).le.VOFTOL) then
+       vfrac_rigid_sum=zero
+      else if ((vfrac_rigid_sum.gt.zero).and. &
+               (vfrac_rigid_sum.lt.one)) then
+       ! do nothing
+      else
+       print *,"vfrac_rigid_sum invalid"
+       stop
+      endif
+
       call get_primary_material(LS_temp,nmat,im_primary)
 
       material_present_flag(im_primary)=1
-
-      if (radius_cutoff(im_primary).eq.-1) then
-       inear=2
-      endif
 
       if ((is_rigid(nmat,im_primary).eq.0).or. &   ! fluid primary
           ((is_rigid(nmat,im_primary).eq.1).and. & ! solid primary, but fluids
            (vfrac_rigid_sum.le.one-VOFTOL))) then  ! in the cell.
 
        do im=1,nmat 
-        if (voflist(im).gt.VOFTOL) then
+        if ((voflist(im).ge.VOFTOL).and. &
+            (voflist(im).le.one+VOFTOL)) then
          material_present_flag(im)=1
-        endif
-        if ((voflist(im).lt.-VOFTOL).or. &
-            (voflist(im).gt.one+VOFTOL)) then
-         print *,"voflist is corrupt"
+        else if (abs(voflist(im)).le.VOFTOL) then
+         ! do nothing
+        else
+         print *,"voflist invalid"
          stop
         endif
        enddo ! im=1..nmat
@@ -6688,140 +6691,13 @@ END SUBROUTINE Adist
        inear=max(inear,2)
       endif
 
-       ! BEFORE:
-       ! always adapt to finest level an interface changing phase.
-       ! temperature gradient not accurate across coarse/fine boundary.
-       ! (pc_interp used for temperature interpolation)
-       ! NOW: 
-       ! always adapt to finest level a fluid-fluid interface too.
-      do im=1,nmat-1
-       do im_opp=im+1,nmat
-        if ((material_present_flag(im).eq.1).and. &
-            (material_present_flag(im_opp).eq.1)) then
-
-         if ((is_rigid(nmat,im).eq.0).and. &
-             (is_rigid(nmat,im_opp).eq.0)) then
-          inear=max(inear,2)
-         else if ((is_rigid(nmat,im).eq.1).or. &
-                  (is_rigid(nmat,im_opp).eq.1)) then
-          ! do nothing
-         else
-          print *,"is_rigid invalid"
-          stop
-         endif
-
-         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
-          print *,"im or im_opp bust 87"
-          stop
-         endif
-
-         do ireverse=0,1
-          call get_iten(im,im_opp,iten,nmat)
-          LL=latent_heat(iten+ireverse*nten)
-          if (LL.ne.zero) then
-           inear=max(inear,2)
-          else if (LL.eq.zero) then
-           ! do nothing
-          else
-           print *,"LL invalid"
-           stop
-          endif
-         enddo ! ireverse=0..1
-
-        else if ((material_present_flag(im).eq.0).or. &
-                 (material_present_flag(im_opp).eq.0)) then
-         ! do nothing
-        else
-         print *,"material_present_flag invalid"
-         stop
-        endif
-       enddo ! im_opp=im+1..nmat
-      enddo ! im=1..nmat-1
-
-      if (inear.eq.1) then ! 2 materials
-
-       ! 0=>never adapt  -1=>always adapt
-       ! otherwise, if radius<radius_cutoff * dx then adapt.
-       do im=1,nmat
-        if (material_present_flag(im).eq.1) then
-         if (radius_cutoff(im).eq.-1) then
-          inear=2
-         endif
-        endif
-       enddo
-
-      else if ((inear.eq.0).or.(inear.eq.2)) then
-       ! do nothing
-      else
-       print *,"inear invalid"
-       stop
-      endif
- 
-      if ((inear.eq.1).and. &  ! 2 materials
-          (stencil_valid.eq.1).and. & !high order coarse/fine interp=>ok curv.
-          (material_count.ge.2)) then
-
-       do im=1,nmat 
-        if (material_present_flag(im).eq.1) then
-
-         if (radius_cutoff(im).eq.0) then
-          ! do nothing, never adapt if level<max_level_two_materials, and
-          ! not a fluid.
-         else if (radius_cutoff(im).ge.1) then
-          do i1=-1,1
-          do j1=-1,1
-          do k1=k1lo,k1hi
-           LSCURV(D_DECL(i1,j1,k1))=LS_stencil(D_DECL(i1,j1,k1),im)
-          enddo 
-          enddo 
-          enddo 
-          call curverr(curv,LSCURV,xsten,nhalf)
-          if (abs(curv).gt.zero) then
-           if (one/abs(curv).lt.radius_cutoff(im)*dxmin) then
-            inear=2
-            if ((1.eq.0).and.(level.eq.max_level-1)) then
-             print *,"(PASS)im,x,y,curv ",im,xsten(0,1),xsten(0,2),curv
-             print *,"1/abs(curv),dxmin ",one/abs(curv),dxmin
-            endif
-           endif
-          else if (curv.eq.zero) then
-           ! do nothing
-          else
-           print *,"curv is corrupt"
-           stop
-          endif
-
-         else
-          print *,"radius_cutoff invalid"
-          stop
-         endif
-
-        else if (material_present_flag(im).eq.0) then
-         ! do nothing
-        else
-         print *,"material_present_flag invalid"
-         stop
-        endif
-       enddo ! im=1..nmat
-
-      else if ((inear.eq.0).or. &
-               (inear.eq.2).or. &
-               (stencil_valid.eq.0).or. &
-               (material_count.eq.1)) then
-       ! do nothing
-      else
-       print *,"parameter bust"
-       stop
-      endif 
-
-       ! if err>0.0 and level<max_level_two_materials => adapt
-       ! if err>=1.0 => adapt
+       ! if err>0.0 => adapt
       if (inear.eq.1) then
-       err=VOFTOL
+       err=one
       else if (inear.eq.2) then
-       err=VOFTOL+one
+       err=one
       else if (inear.eq.0) then
-       ! do nothing
+       err=zero
       else
        print *,"inear invalid"
        stop
@@ -7803,10 +7679,11 @@ END SUBROUTINE Adist
       use global_distance_module
       IMPLICIT NONE
 
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,rflag
-      INTEGER_T tagflag
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: rflag
+      INTEGER_T, intent(inout) :: tagflag
       REAL_T radx,radshrink,dist
       REAL_T x,y,z,delta
 
@@ -7818,7 +7695,9 @@ END SUBROUTINE Adist
       y=xsten(0,2)
       z=xsten(0,SDIM)
       delta=xsten(1,1)-xsten(-1,1)
-      if (delta.le.zero) then
+      if (delta.gt.zero) then
+       ! do nothing
+      else
        print *,"delta invalid override_tagflag"
        stop
       endif
@@ -7828,8 +7707,13 @@ END SUBROUTINE Adist
        if ( (abs(x-xblob).le.radblob).and.(y.le.zblob) ) then
         tagflag=1
        endif
-       if (rflag.gt.zero) then
+       if (rflag.eq.one) then
         tagflag=1
+       else if (rflag.eq.zero) then
+        ! do nothing
+       else
+        print *,"rflag invalid"
+        stop
        endif
       endif
 
@@ -7857,6 +7741,11 @@ END SUBROUTINE Adist
        call naca_dist(x,y,z,time,dist)
        if (abs(dist).le.delta) then
         tagflag=1
+       else if (abs(dist).ge.delta) then
+        ! do nothing
+       else
+        print *,"dist or delta is NaN"
+        stop
        endif
        if ((abs(y+0.1).le.0.4).and.(x.le.3.0)) then
         tagflag=1
@@ -25067,7 +24956,6 @@ end subroutine initialize2d
        time, &
        level, &
        max_level, &
-       max_level_two_materials, &
        max_level_for_use, &
        nblocks, &
        xblocks,yblocks,zblocks, &
@@ -25083,7 +24971,10 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: nblocks,ncoarseblocks
       REAL_T, intent(in) :: xblocks(10),yblocks(10),zblocks(10)
       REAL_T, intent(in) :: rxblocks(10),ryblocks(10),rzblocks(10)
-      REAL_T, intent(in) :: xcoarseblocks(10),ycoarseblocks(10),zcoarseblocks(10)
+      REAL_T, intent(in) :: xcoarseblocks(10)
+      REAL_T, intent(in) :: ycoarseblocks(10)
+      REAL_T, intent(in) :: zcoarseblocks(10)
+      
       REAL_T, intent(in) :: rxcoarseblocks(10)
       REAL_T, intent(in) :: rycoarseblocks(10)
       REAL_T, intent(in) :: rzcoarseblocks(10)
@@ -25093,7 +24984,6 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: nvar, set, clear
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: max_level
-      INTEGER_T, intent(in) :: max_level_two_materials
       INTEGER_T, intent(in) :: max_level_for_use
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
@@ -25124,11 +25014,6 @@ end subroutine initialize2d
       endif
       if (max_level.le.level) then
        print *,"max_level invalid"
-       stop
-      endif
-      if ((max_level_two_materials.lt.0).or. &
-          (max_level_two_materials.gt.max_level)) then
-       print *,"max_level_two_materials invalid"
        stop
       endif
       if ((max_level_for_use.lt.0).or. &
@@ -25178,13 +25063,16 @@ end subroutine initialize2d
 
        if (level.lt.max_level_for_use) then
 
+         ! updates "tagflag"
         call override_tagflag(xsten,nhalf,time,rflag,tagflag)
 
-        if (rflag.ge.one) then
+        if (rflag.eq.one) then
          tagflag=1
-        endif
-        if ((rflag.gt.zero).and.(level.lt.max_level_two_materials)) then
-         tagflag=1
+        else if (rflag.eq.zero) then
+         ! do nothing
+        else
+         print *,"rflag invalid"
+         stop
         endif
 
         if ((probtype.eq.66).and.(SDIM.eq.2)) then
@@ -29887,7 +29775,6 @@ end subroutine initialize2d
         nten, &
         latent_heat, &
         saturation_temp, &
-        radius_cutoff, &
         scal,DIMS(scal), &
         LS,DIMS(LS), &
         dx,xlo,xhi) &
@@ -29918,7 +29805,6 @@ end subroutine initialize2d
        IMPLICIT NONE
 
        INTEGER_T, intent(in) :: nmat
-       INTEGER_T, intent(in) :: radius_cutoff(nmat)
        INTEGER_T, intent(in) :: adapt_quad_depth,tid
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -30003,7 +29889,6 @@ end subroutine initialize2d
        REAL_T T_FIELD
        REAL_T den_ratio
        REAL_T dxmaxLS
-       INTEGER_T stencil_valid
        INTEGER_T im_solid_initdata
        REAL_T lsnormal(nmat,SDIM)
        INTEGER_T lsnormal_valid(nmat)
@@ -31141,8 +31026,6 @@ end subroutine initialize2d
         enddo
         enddo ! i1,j1,k1 = -1..1
 
-        stencil_valid=1
- 
         do im=1,nmat
          vofcomp_recon=(im-1)*ngeom_recon+1
          vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
@@ -31169,14 +31052,11 @@ end subroutine initialize2d
         enddo
 
         call calc_error_indicator( &
-         stencil_valid, &
          level,max_level, &
          xsten,nhalf,dx,bfact, &
          voflist, &
          LS_stencil, &
          nmat,nten, &
-         latent_heat, &
-         radius_cutoff, &
          err,time)
 
         scalc(nc)=err
