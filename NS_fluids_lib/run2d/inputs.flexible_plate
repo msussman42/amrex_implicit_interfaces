@@ -91,7 +91,6 @@ ns.particle_relaxation_time_to_fluid=0.0
 ns.fluid_relaxation_time_to_particle=1.0e+20
 ns.particle_interaction_ngrow=1
 
-ns.radius_cutoff=0 0 -1
 ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-18

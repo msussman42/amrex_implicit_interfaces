@@ -54,10 +54,8 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 amr.n_cell    = 120 192
 amr.max_level = 5
 # May 14, 2018
-ns.max_level_two_materials=2 # check curvature for levels 3..5
 # 0=>never adapt at 2 material interface (for levels 3..5)
 #-1=> always adapt at 2 material interface (for levels 3..5)
-ns.radius_cutoff=0 -1 0 # adapt if curvature exceeds 1/(radius_cutoff*dx)
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 4 2   # number of buffer cells in error est
 # M.OHTA 0.85 a more conservative choice than 0.95, but 0.95 works too.

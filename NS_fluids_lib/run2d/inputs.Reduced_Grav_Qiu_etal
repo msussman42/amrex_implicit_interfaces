@@ -53,8 +53,6 @@ amr.plotfile_on_restart=1
 
 amr.n_cell    = 64 128
 amr.max_level =  1
-ns.max_level_two_materials=0
-ns.radius_cutoff=0 0 0
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
 #amr.max_level =  0

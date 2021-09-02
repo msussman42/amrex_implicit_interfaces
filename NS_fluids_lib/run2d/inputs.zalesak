@@ -34,13 +34,6 @@ ns.num_materials=2
 ns.num_species_var=0
 amr.n_cell    = 24 24
 amr.max_level = 2
-# if max_level_two_materials<max_level, then
-# AMR on max_level if
-#   (a) curvature exceeds 1/(radius_cutoff*dx) or
-#   (b) 3 materials in cell or
-#   (c) interface is undergoing phase change
-ns.max_level_two_materials=1
-ns.radius_cutoff=2 2 2 2
 
 ns.profile_debug=0
 ns.ns_tiling=false
@@ -50,7 +43,7 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2    # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 4 4    # block factor in grid generation
+amr.blocking_factor = 8 8 2 4    # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file

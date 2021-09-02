@@ -50,13 +50,11 @@ ns.output_drop_distribution=1
 # radblob=2e-3  about 10 points per radblob.
 amr.n_cell    = 32 32
 amr.max_level =  3 
-ns.max_level_two_materials=0
 # 0=never adapt   1=if radius< 1 * dx then adapt
 # -1=always adapt
 # An interface changing phase will always be adapted
 # to the finest possible level.
 # Triple junctions will always be adapted to the finest possible level.
-ns.radius_cutoff=0 0 0 0
 
 # force tagging in the heater region
 ns.nblocks=1

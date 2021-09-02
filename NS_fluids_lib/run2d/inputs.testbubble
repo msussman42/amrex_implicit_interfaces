@@ -57,13 +57,11 @@ ns.initial_cg_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 32 64
 amr.max_level = 1  # default 1
-#ns.max_level_two_materials=1
 # 0=never adapt   2=if radius< 2 * dx then adapt
 # -1=always adapt
 # An interface changing phase will always be adapted
 # to the finest possible level.
 # Triple junctions will always be adapted to the finest possible level.
-ns.radius_cutoff=2 2 2 2 2 2
 ns.ns_tiling=false
 
 # 0- 1 level 1- 2 levels  2- 3 levels

@@ -2119,13 +2119,8 @@ protected:
     static Vector<Real> ryblocks;
     static Vector<Real> rzblocks;
 
-    static int tecplot_max_level; //def=0
-    static int max_level_two_materials;
+    static int tecplot_max_level; //def=max_level
     static int max_level_for_use;
-
-      // 0=>never adapt  -1=>always adapt
-      // otherwise, if radius<radius_cutoff * dx then adapt.
-    static Vector<int> radius_cutoff; //def=0 
 
     static int ncoarseblocks;
     static Vector<Real> xcoarseblocks;

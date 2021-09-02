@@ -6413,6 +6413,10 @@ END SUBROUTINE Adist
       return
       end subroutine adapt_at_nozzle
 
+
+      radius_cutoff
+      max_level_two_materials
+
        ! called from SLOPERECON and INITDATA
        ! (note see NavierStokes::init_pressure_error_indicator() too,
        !  which calls FORT_PRESSURE_INDICATOR, which calls
@@ -6422,40 +6426,41 @@ END SUBROUTINE Adist
       subroutine calc_error_indicator( &
         stencil_valid, &
         level,max_level, &
-        xsten,nhalf,dx,bfact, &
+        xsten, &
+        nhalf, &
+        dx, &
+        bfact, &
         voflist, &
         LS_stencil, &
         nmat, &
         nten, &
         latent_heat, &
-        radius_cutoff, &
         err,time)
 
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T stencil_valid
-      INTEGER_T level
-      INTEGER_T max_level
-      INTEGER_T nhalf,bfact
-      INTEGER_T nmat
-      INTEGER_T nten
+      INTEGER_T, intent(in) :: stencil_valid
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: max_level
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
       INTEGER_T inear
       INTEGER_T im,im_opp,im_primary
       INTEGER_T ireverse
       INTEGER_T nten_test,iten
 
-      INTEGER_T radius_cutoff(nmat)
-
-      REAL_T latent_heat(2*nten)
+      REAL_T, intent(in) :: latent_heat(2*nten)
 
       REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
-      REAL_T LSCURV(D_DECL(-1:1,-1:1,-1:1))
+      REAL_T, intent(in) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T, intent(in) :: voflist(nmat)
 
-      REAL_T time
-      REAL_T err
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: err
       REAL_T dxmin,dxmax
       REAL_T dist,dist3
       REAL_T dx(SDIM)
@@ -6465,7 +6470,6 @@ END SUBROUTINE Adist
       INTEGER_T material_present_flag(nmat)
       INTEGER_T k1lo,k1hi
       REAL_T vfrac_rigid_sum
-      REAL_T voflist(nmat)
       REAL_T LS_temp(nmat)
       REAL_T LL
       REAL_T curv

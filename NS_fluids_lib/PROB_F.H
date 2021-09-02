@@ -235,7 +235,6 @@ namespace amrex{
       const Real* time,
       const int* level,
       const int* max_level,
-      const int* max_level_two_materials,
       const int* max_level_for_use,
       int* nblocks,
       Real* xblocks,Real* yblocks,Real* zblocks,
