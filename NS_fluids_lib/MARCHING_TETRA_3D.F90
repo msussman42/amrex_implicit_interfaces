@@ -3,6 +3,7 @@
 #define BL_LANG_FORT
 #endif
 
+! get rid of autoindent   :setl noai nocin nosi inde=
 ! CLOSEST POINT MAP: make STANDALONE equal to 1.
 #define STANDALONE 0
 
@@ -1324,8 +1325,8 @@ stop
       REAL_T, pointer :: levelset_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       REAL_T valu
-      REAL_T xlo(SDIM),dx(SDIM)
 
       character*3 levstr
       character*5 gridstr
@@ -1597,6 +1598,477 @@ stop
  
       return
       end subroutine fort_isogridsingle
+
+
+      subroutine fort_closest_point_map( &
+       tid, & ! thread id
+       sweep, & ! sweep=0 or 1
+       ngrow, & 
+       minLS, &
+       maxLS, &
+       ls_old, &
+       DIMS(ls_old), &
+       ls_new, &
+       DIMS(ls_new), &
+       ls_grad_new, &
+       DIMS(ls_grad_new), &
+       xlo,dx, &
+       mask, &
+       DIMS(mask), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level) &
+      bind(c,name='fort_closest_point_map')
+
+      use probcommon_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: sweep ! sweep=0 or 1
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(ls_old) !ls_oldxlo,ls_oldxhi,...
+      INTEGER_T, intent(in) :: DIMDEC(ls_new)
+      INTEGER_T, intent(in) :: DIMDEC(ls_grad_new)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: level
+      REAL_T, intent(in), target :: ls_old(DIMV(ls_old))
+      REAL_T, intent(inout), target :: ls_new(DIMV(ls_new))
+      REAL_T, intent(inout), target ::  &
+        ls_grad_new(DIMV(ls_grad_new),SDIM)
+      REAL_T, pointer :: ls_old_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: ls_new_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: ls_grad_new_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(inout) :: minLS
+      REAL_T, intent(inout) :: maxLS
+
+      REAL_T valu
+
+      real(8), dimension(:,:), allocatable :: Node  ! dir,index
+      integer(4), dimension(:,:), allocatable :: IntElem  ! 1 or 2, index
+      integer(4) :: NumNodes
+      integer(4) :: NumIntElems
+      integer(4) :: CurNodes
+      integer(4) :: CurIntElems
+      INTEGER_T imaxtri,itri,curtri,ipass
+      REAL_T trianglelist(SDIM,200)
+      REAL_T lnode(0:1,0:1,0:1)
+      REAL_T xnode(0:1,0:1,0:1,SDIM)
+      INTEGER_T i,j,k,ii,jj,kk,dir,ISUM,itemp,jtemp
+      REAL_T gridval(8)
+      REAL_T gridx(8)
+      REAL_T gridy(8)
+      REAL_T gridz(8)
+
+      REAL_T xtarget(SDIM)
+      REAL_T xoutput(SDIM)
+      REAL_T xoutputT(SDIM)
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T kklo,kkhi,nodehi
+      REAL_T degenerate_face_tol
+     
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid151"
+       stop
+      endif
+
+      call get_dxmin(dx,bfact,dxmin)
+      degenerate_face_tol=1.0D-8*dxmin
+ 
+      nhalf=3
+
+      ls_old_ptr=>ls_old
+      ls_new_ptr=>ls_new
+      ls_grad_new_ptr=>ls_grad_new
+      mask_ptr=>mask
+
+      imaxtri=200
+
+      if (ngrow.ge.1) then
+       ! do nothing
+      else
+       print *,"ngrow invalid"
+       stop
+      endif
+
+      call checkbound_array1(lo,hi,ls_old_ptr,ngrow,-1,411)
+      call checkbound_array1(lo,hi,ls_new_ptr,0,-1,411)
+      call checkbound_array1(lo,hi,ls_grad_new_ptr,0,-1,411)
+      call checkbound_array1(lo,hi,mask_ptr,0,-1,411)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+
+       do dir_local=1,SDIM
+        xcc(dir_local)=xsten(0,dir_local)
+       enddo
+
+       if (sweep.eq.0) then
+
+        valu=zero
+
+        if (SDIM.eq.3) then
+         ngrow_k=ngrow
+         kklo=0
+         kkhi=1
+         nodehi=8
+        else if (SDIM.eq.2) then
+         ngrow_k=0
+         kklo=0
+         kkhi=0
+         nodehi=4
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        if (mask(D_DECL(i,j,k)).eq.one) then
+
+         save_LS=ls_old(D_DECL(i,j,k))
+         if (save_LS.gt.zero) then
+          initial_LS=1.0D+20
+         else if (save_LS.lt.zero) then
+          initial_LS=-1.0D+20 
+         else if (save_LS.eq.zero) then
+          ls_new(D_DECL(i,j,k))=zero
+          do local_dir=1,SDIM
+           ls_grad_new(D_DECL(i,j,k),local_dir)=zero
+          enddo
+         else
+          print *,"save_LS is NaN"
+          stop
+         endif
+
+         if (save_LS.eq.zero) then
+          ! do nothing
+         else if (save_LS.ne.zero) then
+
+          do ilocal=i-ngrow,i+ngrow
+          do jlocal=j-ngrow,j+ngrow
+          do klocal=k-ngrow_k,k+ngrow_k
+           call gridsten(xsten_local,xlo,ilocal,jlocal,klocal, &
+             fablo,bfact,dx,nhalf)
+
+           itri=0
+           do ii=0,1
+           do jj=0,1
+           do kk=kklo,kkhi
+
+            do local_dir=1,SDIM
+             xtarget(local_dir)=xsten_local(-1,local_dir)
+            enddo
+            if (ii.eq.1) then
+             local_dir=1 
+             xtarget(local_dir)=xsten_local(1,local_dir)
+            endif
+            if (jj.eq.1) then
+             dir=2 
+             xtarget(local_dir)=xsten_local(1,local_dir)
+            endif
+            if (kk.eq.1) then
+             dir=SDIM 
+             xtarget(local_dir)=xsten_local(1,local_dir)
+            endif
+            do local_dir=1,SDIM
+             xnode(ii,jj,kk,local_dir)=xtarget(local_dir)
+            enddo
+
+            lnode(ii,jj,kk)=( &
+              ls_old(D_DECL(i_local+ii-1,j_local+jj-1,k_local+kk-1))+ &
+              ls_old(D_DECL(i_local+ii,j_local+jj-1,k_local+kk-1))+ &
+              ls_old(D_DECL(i_local+ii-1,j_local+jj,k_local+kk-1))+ &
+              ls_old(D_DECL(i_local+ii,j_local+jj,k_local+kk-1))+ &
+              ls_old(D_DECL(i_local+ii-1,j_local+jj-1,k_local+kk))+ &
+              ls_old(D_DECL(i_local+ii,j_local+jj-1,k_local+kk))+ &
+              ls_old(D_DECL(i_local+ii-1,j_local+jj,k_local+kk))+ &
+              ls_old(D_DECL(i_local+ii,j_local+jj,k_local+kk)))/eight
+
+           enddo
+           enddo
+           enddo
+
+            !gridval,ISUM are outputs.
+           call copy_levelset_node_to_gridval( &
+            lnode,gridval,ISUM,kkhi,nodehi,valu)
+
+           if ((ISUM.eq.0).or.(ISUM.eq.nodehi)) then
+            goto 999
+           endif
+
+           call add_to_triangle_list( &
+            gridx,gridy,gridz,gridval,valu,trianglelist, &
+            itri,imaxtri,xnode,kkhi,nodehi)
+
+           ibase=0
+           do while (ibase.lt.itri)
+ 
+            p1(1)=trianglelist(1,ibase+1)
+            p1(2)=trianglelist(2,ibase+1)
+            p1(SDIM)=trianglelist(SDIM,ibase+1)
+
+            p2(1)=trianglelist(1,ibase+2)
+            p2(2)=trianglelist(2,ibase+2)
+            p2(SDIM)=trianglelist(SDIM,ibase+2)
+
+            p3(1)=trianglelist(1,ibase+3)
+            p3(2)=trianglelist(2,ibase+3)
+            p3(SDIM)=trianglelist(SDIM,ibase+3)
+
+            dist_p12=zero 
+            dist_p13=zero 
+            dist_p23=zero 
+            do dir_local=1,SDIM
+             dist_p12=dist_p12+(p1(dir_local)-p2(dir_local))**2
+             dist_p13=dist_p13+(p1(dir_local)-p3(dir_local))**2
+             dist_p23=dist_p23+(p2(dir_local)-p3(dir_local))**2
+            enddo
+            dist_p12=sqrt(dist_p12)
+            dist_p13=sqrt(dist_p13)
+            dist_p23=sqrt(dist_p23)
+
+            if ((dist_p12.le.degenerate_face_tol).and. &
+                (dist_p13.le.degenerate_face_tol).and. &
+                (dist_p23.le.degenerate_face_tol)) then
+             do dir_local=1,SDIM
+              x_cp(dir_local)=p1(dir_local)
+             enddo 
+            
+            else if ((dist_p12.le.degenerate_face_tol).or. &
+                     (dist_p13.le.degenerate_face_tol).or. &
+                     (dist_p23.le.degenerate_face_tol)) then
+             if (dist_p12.le.degenerate_face_tol)then
+              do dir_local=1,SDIM
+               pt1(dir_local) = p1(dir_local)
+               pt2(dir_local) = p3(dir_local)
+              enddo
+             else
+              do dir_local=1,SDIM
+               pt1(dir_local) = p1(dir_local)
+               pt2(dir_local) = p2(dir_local)
+              enddo
+             endif
+
+             dot_top=zero
+             dot_bot=zero
+             do dir_local=1,SDIM
+              dot_top=dot_top+(xcc(dir_local)-pt1(dir_local))* &
+                              (pt2(dir_local)-pt1(dir_local))
+              dot_bot=dot_bot+(pt2(dir_local)-pt1(dir_local))**2
+             enddo
+             distline=dot_top/dot_bot
+             if (distline.lt.zero) then
+              distline=zero
+             endif
+             if (distline.gt.one) then
+              distline=one
+             endif
+             do dir_local=1,SDIM
+              x_cp(dir_local) = pt1(dir_local) +  &
+                distline*(pt2(dir_local)-pt1(dir_local))
+             enddo
+            else
+             !closest point on surface and dist between triangle and pt
+             !!add in condition for SDIM==3
+             do dir_local = 1,SDIM
+              t1(dir_local) = p2(dir_local)-p1(dir_local)
+              t2(dir_local) = p3(dir_local)-p1(dir_local)
+             enddo
+              ! FIX ME (sign of LS?)
+             n(1) = t1(2)*t2(3)-t1(3)*t2(2)
+             n(2) = t1(3)*t2(1)-t1(1)*t2(3)
+             n(3) = t1(1)*t2(2)-t1(2)*t2(1)
+             n_magnitude = sqrt(n(1)**2+n(2)**2+n(3)**2)
+             do dir_local = 1,SDIM
+              n(dir_local) = n(dir_local)/n_magnitude 
+             enddo
+           
+             phi_x=zero
+ 
+             do dir_local = 1,SDIM
+              phi_x=phi_x+n(dir_local)*(xcc(dir_local)-p1(dir_local))
+             enddo
+            
+             do dir_local = 1,SDIM
+              xcp_0(dir_local) = x(dir_local)-phi_x*n(dir_local) 
+             enddo
+            
+              !components of matrix (A^TA)^-1
+             a = (x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2
+             b = (x2-x1)*(x3-x1) + (y2-y1)*(y3-y1) + (z2-z1)*(z3-z1)
+             !c==b
+             d = (x3-x1)**2 + (y3-y1)**2 + (z3-z1)**2
+              !components of A^Tb
+             e = (x2-x1)*(xcp_0(1)-x1) + (y2-y1)*(xcp_0(2)-y1) + (z2-z1)*(xcp_0(3)-z1)
+             f = (x3-x1)*(xcp_0(1)-x1) + (y3-y1)*(xcp_0(2)-y1) + (z3-z1)*(xcp_0(3)-z1)
+            
+             detA = a*d-b*b
+              ![u;v] = (A^TA)^-1A^Tb
+             u = (d*e-b*f)/detA
+             v = (a*f-b*e)/detA
+            
+             x_cp(:) = (1-u-v)*p1(:) + u*p2(:) + v*p3(:)
+              !catch cases where x_cp outside of triangle, need to find closest pt on edge of triangle instead
+             if (u .lt. 0)then
+              !!does it make a diff here if using prev x_cp or using x as initial pt?
+              distline = ((x(1)-p1(1))*(p3(1)-p1(1)) + &
+                         (x(2)-p1(2))*(p3(2)-p1(2)) + &
+                         (x(3)-p1(3))*(p3(3)-p1(3))) / &
+                         ((p3(1)-p1(1))**2 + (p3(2)-p1(2))**2 + (p3(3)-p1(3))**2)
+              x_cp(:) = p1(:) + distline*(p3(:)-p1(:))
+             elseif (v .lt. 0)then
+              distline = ((x(1)-p1(1))*(p2(1)-p1(1)) + &
+                         (x(2)-p1(2))*(p2(2)-p1(2)) + &
+                         (x(3)-p1(3))*(p2(3)-p1(3))) / &
+                         ((p2(1)-p1(1))**2 + (p2(2)-p1(2))**2 + (p2(3)-p1(3))**2)
+              x_cp(:) = p1(:) + distline*(p2(:)-p1(:))
+             elseif (u+v .gt. 1)then
+              distline = ((x(1)-p2(1))*(p3(1)-p2(1)) + &
+                         (x(2)-p2(2))*(p3(2)-p2(2)) + &
+                         (x(3)-p2(3))*(p3(3)-p2(3))) / &
+                         ((p3(1)-p2(1))**2 + (p3(2)-p2(1))**2 + (p3(3)-p2(3))**2)
+              x_cp(:) = p2(:) + distline*(p3(:)-p2(:))
+             endif
+              
+            endif !endif closest pt
+            
+            dist_cp = sqrt((x(1)-x_cp(1))**2+(x(2)-x_cp(2))**2+(x(3)-x_cp(3))**2)
+            
+           enddo
+          endif
+         enddo !enddo klocal
+         enddo !enddo jlocal
+         enddo !enddo ilocal
+         !!!!!!!!
+          !    do ilocal=i-nband,i+nband
+          !    do jlocal=j-nband,j+nband
+          !    do klocal=k-nband,k+nband
+          !     if (ilocal,jlocal,klocal) is an index in the interior of the
+          !     given box, i.e.  lox <= ilocal <= hix,
+          !                      loy <= jlocal <= hiy,
+          !                      loz <= klocal <= hiz,
+          !     determine closest point on triangle to the cell center
+          !     of (ilocal,jlocal,klocal)
+          !      for itri_local=1..itri/sdim
+          !        ibase=sdim*(itri_local-1)
+          !        (x1,y1,z1)=trianglelist(dir,ibase+1)  dir=1..sdim
+          !        (x2,y2,z2)=trianglelist(ibase+2,dir)  dir=1..sdim
+          !        (x3,y3,z3)=trianglelist(ibase+3,dir)  dir=1..sdim
+          !        t1=p2-p1
+          !        t2=p3-p1
+          !        n=t1 x t2
+          !        LS(x)=n dot (x - p1)
+          !        given a point "x", xcp=x-n LS(x)
+          !        xcp might be outside of the "triangle domain"
+          !        A point, T(u,v), on a triangle is given by:
+          !        (1-u-v)p1+ u p2 + v p3
+          !        0<=u+v<=1   u>=0  v>=0
+          !        xcp=(1-u-v)x1+u x2 + v x3
+          !        ycp=(1-u-v)y1+u y2 + v y3
+          !        zcp=(1-u-v)z1+u z2 + v z3
+          !        A (u v) = b  A 3x2
+          !                     b 3x1  
+          !        A^T A (u v)=A^T b
+999      continue
+          ! CLOSEST POINT MAP: ignore everything below
+
+         if (ipass.eq.0) then
+          NumNodes=NumNodes+itri
+          NumIntElems=NumIntElems+itri/SDIM
+         else if (ipass.eq.1) then
+          curtri=0
+          do itemp=1,itri/SDIM
+           CurIntElems=CurIntElems+1
+           if (CurIntElems.gt.NumIntElems) then
+            print *,"CurIntElems invalid"
+            stop
+           endif
+           do jtemp=1,SDIM
+            CurNodes=CurNodes+1
+            if (CurNodes.gt.NumNodes) then
+             print *,"CurNodes invalid"
+             stop
+            endif
+            curtri=curtri+1
+            if (curtri.gt.itri) then
+             print *,"curtri invalid"
+             stop
+            endif
+            do dir=1,SDIM
+             Node(dir,CurNodes)=trianglelist(dir,curtri)
+            enddo
+            IntElem(jtemp,CurIntElems)=CurNodes
+           enddo  ! jtemp=1..sdim
+          enddo  ! itemp=1..itri/sdim
+         else
+          print *,"ipass invalid"
+          stop
+         endif
+  
+        endif ! mask=1
+       enddo
+       enddo
+       enddo
+      enddo ! ipass
+
+      open(unit=11,file=filename18)
+      write(11,*) NumNodes
+      write(11,*) NumIntElems
+      do i=1,NumNodes 
+       do dir=1,SDIM
+        xoutput(dir)=Node(dir,i)
+        xoutputT(dir)=xoutput(dir)
+       enddo
+       if (visual_RT_transform.eq.1) then
+        call RT_transform(xoutput,xoutputT)
+       endif
+       if (SDIM.eq.3) then
+        write(11,*) xoutputT(1),xoutputT(2),xoutputT(SDIM)
+       else if (SDIM.eq.2) then
+        write(11,*) xoutputT(1),xoutputT(2)
+       else
+        print *,"dimension bust"
+        stop
+       endif
+      enddo
+      do i=1,NumIntElems
+       if (SDIM.eq.3) then
+        write(11,*) IntElem(1,i),IntElem(2,i),IntElem(SDIM,i)
+       else if (SDIM.eq.2) then
+        write(11,*) IntElem(1,i),IntElem(2,i)
+       else
+        print *,"dimension bust"
+        stop
+       endif
+      enddo
+      close(11)
+
+      deallocate(Node)
+      deallocate(IntElem)
+ 
+      return
+      end subroutine fort_isogridsingle
+
+
+
+
+
 
 #if (STANDALONE==0)
 
