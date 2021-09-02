@@ -16,6 +16,8 @@ use MOF_pair_module
 implicit none
 
 integer,parameter :: shapeflag = 0   
+real(kind=8) :: dendrite_angle
+
 ! asteroid test case 0: asteroid 1:diamand
 ! 2: circle
 
@@ -1912,13 +1914,8 @@ subroutine dendrite_dist(imat,x,y,dist)
  integer,intent(in)        :: imat
  real(kind=8)              :: x0,y0,c1,c2,tt,pi
  real(kind=8)              :: dist,dist1
- real(kind=8)              :: dendrite_angle
   
  pi=4.0*atan(1.0d0)
- dendrite_angle=pi/4.0d0  ! 45 degrees
-! dendrite_angle=pi/6.0d0  ! 30 degrees
-! dendrite_angle=pi/3.0d0  ! 60 degrees
-
 
  c1 = 2.0d0
  c2 = 2.0d0

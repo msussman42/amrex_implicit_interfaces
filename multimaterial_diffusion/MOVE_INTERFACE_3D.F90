@@ -2102,8 +2102,8 @@ stop
 
         ! dendrite
        if (probtype.eq.403) then
-        saturation_temp_min(1)=1.0d-20
-        saturation_temp_max(1)=1.0d+20
+        saturation_temp_min(1)=173.0d0
+        saturation_temp_max(1)=373.0d0
        endif
 
        do im=1,nmat

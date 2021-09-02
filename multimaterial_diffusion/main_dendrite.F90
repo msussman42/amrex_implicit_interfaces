@@ -248,10 +248,9 @@ print *,"constant_K_test= ",constant_K_test
 ! saturation_temp_curv(1)=0.002  (liquid to ice)
 !
 ! In order to rotate the dendrite:
-! in subroutine dendrite_dist, multimat_FVM.F90, set
-! dendrite_angle.
-N_START=256
-N_FINISH=256
+! set dendrite_angle.
+N_START=64
+N_FINISH=64
 M_START=1600
 M_FACTOR=2
 
@@ -341,6 +340,10 @@ ERRTOL=0.01D0
 VOFTOL_local=VOFTOL
 
 local_Pi=4.0d0*atan(1.0d0)
+
+ dendrite_angle=pi/4.0d0  ! 45 degrees
+! dendrite_angle=pi/6.0d0  ! 30 degrees
+! dendrite_angle=pi/3.0d0  ! 60 degrees
 
 ! pcurve_ls defined in vof_cisl.F90
 pcurve_ls = 0.0d0
@@ -515,6 +518,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    FSI_flag(1)=7 ! gingerbread (in the man)
 
  else if (probtype_in.eq.403) then  ! dendrite
+
+   print *,"dendrite_angle is ",dendrite_angle
 
    sci_max_level=0
    nmat_in=2
@@ -999,7 +1004,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     ! Twater=0.5
     ! Tsolid=1.0
     ! Tsat=1.0
-   saturation_temp(1)=1.0 ! liquid -> solid
+!   saturation_temp(1)=1.0 ! liquid -> solid
+   saturation_temp(1)=273.0 ! liquid -> solid
    saturation_temp(2)=0.0
     ! phi_{12}=(phi_1 - phi_2)/2  < 0 in the dendrite
     ! phi_{12} > 0 in the liquid
@@ -1020,8 +1026,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    print *,"saturation_temp_curv(2)=",saturation_temp_curv(2) 
    print *,"saturation_temp_vel(1)=",saturation_temp_vel(1) 
    print *,"saturation_temp_vel(2)=",saturation_temp_vel(2) 
-   fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
-   fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
+!   fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
+!   fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
+   fort_tempconst(1)=272.5d0  ! liquid (outside dendrite)
+   fort_tempconst(2)=273.0d0  ! solid  (inside dendrite)
 
    if (transition_region.gt.0.0d0) then
     fort_tempconst(1)=fort_tempconst(1)-saturation_temp_curv(1)/radblob10
