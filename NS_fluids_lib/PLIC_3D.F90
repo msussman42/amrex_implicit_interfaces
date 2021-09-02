@@ -65,8 +65,7 @@ stop
         total_iterations, &
         continuous_mof, &
         force_cmof_at_triple_junctions, &
-        partial_cmof_stencil_at_walls, &
-        radius_cutoff) &
+        partial_cmof_stencil_at_walls) &
       bind(c,name='fort_sloperecon')
 
 #if (STANDALONE==0)
@@ -86,8 +85,6 @@ stop
       INTEGER_T, intent(in) :: nsteps
 
       INTEGER_T, intent(in) :: nmat
-
-      INTEGER_T, intent(in) :: radius_cutoff(nmat)
 
       INTEGER_T, intent(in) :: continuous_mof
       INTEGER_T, intent(in) :: force_cmof_at_triple_junctions
@@ -134,7 +131,6 @@ stop
 #if (STANDALONE==0)
       REAL_T err,errsave
       INTEGER_T local_mask
-      INTEGER_T stencil_valid
 #elif (STANDALONE==1)
       ! do nothing
 #else
@@ -986,7 +982,6 @@ stop
 
         if ((level.ge.0).and.(level.le.finest_level)) then
 
-         stencil_valid=1
          do i1=-1,1
          do j1=-1,1
          do k1=klosten,khisten
@@ -994,7 +989,7 @@ stop
           if (local_mask.eq.1) then ! fine-fine ghost in domain or interior.
            ! do nothing
           else if (local_mask.eq.0) then ! ghost value is low order accurate.
-           stencil_valid=0
+           ! do nothing
           else
            print *,"local_mask invalid"
            stop
@@ -1004,15 +999,12 @@ stop
          enddo 
 
          call calc_error_indicator( &
-          stencil_valid, &
           level,max_level, &
           xsten,nhalf,dx,bfact, &
           voflist_center, &
           LS_stencil, &
           nmat, &
           nten, &
-          latent_heat, &
-          radius_cutoff, &
           err,time)
          errsave=snew(D_DECL(i,j,k),nmat*ngeom_raw+1)
          if (errsave.lt.err) then

@@ -8324,8 +8324,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     total_iterations[tid_current].dataPtr(),
     &continuous_mof, 
     &force_cmof_at_triple_junctions, 
-    &partial_cmof_stencil_at_walls, 
-    radius_cutoff.dataPtr());
+    &partial_cmof_stencil_at_walls);
  }  // mfi
 } // omp
  ns_reconcile_d_num(158);
@@ -8718,7 +8717,7 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
 //   ns_level.init_pressure_error_indicator();
 //  avgDownError_ALL();
 // during regridding, the following routine checks the error:
-//  NavierStokes::errorEst  (calls VFRACERROR)
+//  NavierStokes::errorEst  (calls fort_vfracerror)
 void NavierStokes::init_pressure_error_indicator() {
 
  bool use_tiling=ns_tiling;
