@@ -34,6 +34,27 @@ extern "C" {
      const int* lo,const int* hi,
      const int* level,const int* gridno);
 
+     //sweep==0 => find closest point map
+     //sweep==1 => set "nice" values far from the interface.
+    void fort_closest_point_map(
+     int* tid, //thread id
+     int* sweep,  //sweep=0 or 1
+     int* ngrow,
+     Real* minLS,
+     Real* maxLS,
+     Real* ls,AMREX_ARLIM_P(lslo),AMREX_ARLIM_P(lshi),
+     Real* ls_out,
+     AMREX_ARLIM_P(ls_outlo),AMREX_ARLIM_P(ls_outhi),
+     Real* ls_grad_out,
+     AMREX_ARLIM_P(ls_grad_outlo),
+     AMREX_ARLIM_P(ls_grad_outhi),
+     const Real* xlo,const Real* dx,
+     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,int* bfact,
+     const int* level);
+
+
     void fort_combinetrianglessingle(
      int* grids_per_level,int* finest_level,
      int* nsteps,int* arrdim);
