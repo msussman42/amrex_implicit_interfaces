@@ -41,9 +41,7 @@ ns.visual_tessellate_vfrac=1
 
 amr.n_cell    = 64 128
 amr.max_level =  3
-ns.max_level_two_materials=1
 # adapt on levels 2 and 3 at triple points or at liquid/vapor interface.
-ns.radius_cutoff=0 0 0
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
 #amr.max_level =  0

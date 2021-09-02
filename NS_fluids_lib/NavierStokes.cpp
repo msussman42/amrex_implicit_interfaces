@@ -482,15 +482,8 @@ Vector<Real> NavierStokes::rxblocks;
 Vector<Real> NavierStokes::ryblocks;
 Vector<Real> NavierStokes::rzblocks;
 
-int NavierStokes::tecplot_max_level=0;
-int NavierStokes::max_level_two_materials=0;
+int NavierStokes::tecplot_max_level=-1;
 int NavierStokes::max_level_for_use=0;
-
-// default=0.
-// 0=> never adapt  -1=> tag cell for AMR if owned by material in question.
-// otherwise, if radius<radius_cutoff * dx then adapt.
-// fluid-fluid interfaces are always adapted.
-Vector<int> NavierStokes::radius_cutoff;
 
 // tagflag forced to 0 OUTSIDE these specified boxes.
 int NavierStokes::ncoarseblocks=0;
@@ -2203,32 +2196,42 @@ NavierStokes::read_params ()
     ppamr.query("regrid_on_restart",local_regrid_on_restart);
 
     tecplot_max_level=ns_max_level;
-    max_level_two_materials=ns_max_level;
     max_level_for_use=ns_max_level;
     pp.query("tecplot_max_level",tecplot_max_level);
-    pp.query("max_level_two_materials",max_level_two_materials);
     pp.query("max_level_for_use",max_level_for_use);
 
+    int max_level_two_materials=999;
+    pp.query("max_level_two_materials",max_level_two_materials);
+    if (max_level_two_materials==999) {
+     // do nothing
+    } else {
+     std::cout << "max_level_two_materials no longer an option\n";
+     std::cout << "reduce amr.blocking_factor on the finest level \n";
+     std::cout << "reduce amr.n_error_buf on the finest level possible \n";
+     std::cout << "increase amr.grid_eff \n";
+     amrex::Error("aborting ...");
+    }
+
+    Vector<int> radius_cutoff;
     radius_cutoff.resize(nmat);
     for (int i=0;i<nmat;i++)
-     radius_cutoff[i]=0;
-
-     // default=0.
-     // 0=>never adapt  -1=>tag cell for AMR if owned by material in question.
-     // otherwise, if radius<radius_cutoff * dx then adapt.
-     // fluid-fluid interfaces are always adapted.
+     radius_cutoff[i]=999;
     pp.queryarr("radius_cutoff",radius_cutoff,0,nmat);
-    for (int i=0;i<nmat;i++)
-     if (radius_cutoff[i]<-1)
-      amrex::Error("radius_cutoff invalid");
+    for (int i=0;i<nmat;i++) {
+     if (radius_cutoff[i]==999) {
+      // do nothing
+     } else {
+      std::cout << "radius_cutoff no longer an option\n";
+      std::cout << "reduce amr.blocking_factor on the finest level \n";
+      std::cout << "reduce amr.n_error_buf on the finest level possible\n";
+      std::cout << "increase amr.grid_eff \n";
+      amrex::Error("aborting ...");
+     }
+    } // i=0..nmat-1
 
     if ((tecplot_max_level<0)||
         (tecplot_max_level>ns_max_level))
      amrex::Error("tecplot_max_level invalid"); 
-
-    if ((max_level_two_materials<0)||
-        (max_level_two_materials>ns_max_level))
-     amrex::Error("max_level_two_materials invalid"); 
 
     if ((max_level_for_use<0)||
         (max_level_for_use>ns_max_level))
@@ -2243,13 +2246,8 @@ NavierStokes::read_params ()
        ncomp_sum_int_user2 << '\n';
      std::cout << "tecplot_max_level " << 
        tecplot_max_level << '\n';
-     std::cout << "max_level_two_materials " << 
-       max_level_two_materials << '\n';
      std::cout << "max_level_for_use " << 
        max_level_for_use << '\n';
-     for (int i=0;i<nmat;i++)
-      std::cout << "im=" << i << " radius_cutoff= " << 
-        radius_cutoff[i] << '\n';
     }
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "num_elements_blobclass= " << 
@@ -3326,15 +3324,9 @@ NavierStokes::read_params ()
      } else if (viscoelastic_model[i]==1) {
       // do nothing
      } else if (viscoelastic_model[i]==2) {
-      if (radius_cutoff[i]==-1) {
-       // do nothing
-      } else
-       amrex::Error("expecting radius_cutoff==-1 for elastic material");
+      // do nothing
      } else if (viscoelastic_model[i]==3) {
-      if (radius_cutoff[i]==-1) {
-       // do nothing
-      } else
-       amrex::Error("expecting radius_cutoff==-1 for elastic material");
+      // do nothing
      } else
       amrex::Error("viscoelastic_model invalid");
     } // i=0..nmat-1
@@ -8397,7 +8389,6 @@ NavierStokes::initData () {
    &nmat,&nten,
    latent_heat.dataPtr(),
    saturation_temp.dataPtr(),
-   radius_cutoff.dataPtr(),
    S_new[mfi].dataPtr(),
    ARLIM(S_new[mfi].loVect()),
    ARLIM(S_new[mfi].hiVect()),
@@ -16104,7 +16095,6 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
     &upper_slab_time, 
     &level,
     &max_level,
-    &max_level_two_materials,
     &max_level_for_use,
     &nblocks,
     xblocks.dataPtr(),yblocks.dataPtr(),zblocks.dataPtr(),
@@ -18292,8 +18282,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
  int tecplot_finest_level=finest_level;
- if (tecplot_max_level<tecplot_finest_level)
+ if ((tecplot_max_level<tecplot_finest_level)&&
+     (tecplot_max_level>=0)) {
   tecplot_finest_level=tecplot_max_level;
+ } else if (tecplot_max_level>=tecplot_finest_level) {
+  // do nothing
+ } else
+  amrex::Error("tecplot_max_level invalid");
 
  IntVect visual_fab_lo(IntVect::TheZeroVector()); 
  IntVect visual_fab_hi(visual_ncell); 
@@ -18706,8 +18701,14 @@ void NavierStokes::writeSanityCheckData(
   amrex::Error("data_mf invalid");
 
  int tecplot_finest_level=finest_level;
- if (tecplot_max_level<tecplot_finest_level)
+
+ if ((tecplot_max_level<tecplot_finest_level)&&
+     (tecplot_max_level>=0)) {
   tecplot_finest_level=tecplot_max_level;
+ } else if (tecplot_max_level>=tecplot_finest_level) {
+  // do nothing
+ } else
+  amrex::Error("tecplot_max_level invalid");
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);

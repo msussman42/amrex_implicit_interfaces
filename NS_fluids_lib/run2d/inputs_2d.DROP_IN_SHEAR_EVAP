@@ -65,7 +65,6 @@ amr.n_cell=32 32 # convergence 32 x 32 coarsest
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
-ns.radius_cutoff=0 0 0 0 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
