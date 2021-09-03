@@ -7866,6 +7866,7 @@ contains
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T :: local_data_out
       REAL_T :: scaling
+      INTEGER_T dummy_input
 
 #ifdef SANITY_CHECK
       type(interp_from_grid_parm_type) :: data_in2 
@@ -8120,8 +8121,24 @@ contains
           ! do nothing
          else
           print *,"data_out%data_interp(nc) invalid"
+          print *,"nc=",nc
+          print *,"data_in%ncomp=",data_in%ncomp
+          print *,"data_in%grid_type_flux=",data_in%grid_type_flux
+          print *,"data_in%box_type_flux=",data_in%box_type_flux(1), &
+           data_in%box_type_flux(2),data_in%box_type_flux(SDIM)
+          print *,"data_in%index_flux=",data_in%index_flux(1), &
+           data_in%index_flux(2),data_in%index_flux(SDIM)
+          print *,"xtarget=",xtarget(1),xtarget(2),xtarget(SDIM)
           print *,"data_out%data_interp(nc) ",data_out%data_interp(nc)
           print *,"data_out2%data_interp(nc) ",data_out2%data_interp(nc)
+
+          print *,"(breakpoint) break point and gdb: "
+          print *,"(1) compile with the -g option"
+          print *,"(2) break GLOBALUTIL.F90:8140"
+          print *,"By pressing <CTRL C> during this read statement, the"
+          print *,"gdb debugger will produce a stacktrace."
+          print *,"type 0 then <enter> to exit the program"
+          read *,dummy_input
           stop
          endif
         enddo ! nc=1..data_in%ncomp
