@@ -5610,12 +5610,13 @@ contains
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
-       print *,"(2) break GLOBALUTIL.F90:5618"
+       print *,"(2) break GLOBALUTIL.F90:5613"
        print *,"By pressing <CTRL C> during this read statement, the"
        print *,"gdb debugger will produce a stacktrace."
        print *,"type 0 then <enter> to exit the program"
-       read *,dummy_input
-       error stop
+
+       read (*,*) dummy_input
+       stop
       endif
       if ((2*j-nhalf.lt.cache_index_low).or. &
           (2*j+nhalf.gt.cache_index_high)) then
@@ -5731,13 +5732,13 @@ contains
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
-       print *,"(2) break GLOBALUTIL.F90:5771"
+       print *,"(2) break GLOBALUTIL.F90:5735"
        print *,"By pressing <CTRL C> during this read statement, the"
        print *,"gdb debugger will produce a stacktrace."
        print *,"type 0 then <enter> to exit the program"
 
-       read *,dummy_input
-       error stop
+       read (*,*) dummy_input
+       stop
       endif
       if (1.eq.0) then
        print *,"before: i,j,k,ii,jj,kk,nhalf ",i,j,k,ii,jj,kk,nhalf
@@ -7868,7 +7869,7 @@ contains
       REAL_T, allocatable, dimension(:) :: local_data_max
       REAL_T, allocatable, dimension(:) :: local_data_min
       REAL_T :: scaling
-      INTEGER_T dummy_input
+      INTEGER_T :: dummy_input
 
 #ifdef SANITY_CHECK
       type(interp_from_grid_parm_type) :: data_in2 
@@ -8073,12 +8074,14 @@ contains
          data_comp=data_in%scomp+nc-1
          call safe_data(isten,jsten,ksten,data_comp, &
            local_data_fab,local_data_out)
+
          if (local_data_out.gt.local_data_max(nc)) then
           local_data_max(nc)=local_data_out
          endif
          if (local_data_out.lt.local_data_min(nc)) then
           local_data_min(nc)=local_data_out
          endif
+
          data_out%data_interp(nc)=data_out%data_interp(nc)+ &
             wt_top*local_data_out/wt_bot
         else
@@ -8121,10 +8124,12 @@ contains
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
+
          scaling=abs(local_data_max(nc))
          if (scaling.lt.abs(local_data_min(nc))) then
           scaling=abs(local_data_min(nc))
          endif        
+
          if ((scaling.ge.zero).and.(scaling.le.one)) then
           scaling=one
          else if (scaling.ge.one) then
@@ -8133,6 +8138,7 @@ contains
           print *,"scaling is NaN"
           stop
          endif
+
          if (abs(data_out%data_interp(nc)- &
                  data_out2%data_interp(nc)).le.1.0D-12*scaling) then
           ! do nothing
@@ -8148,17 +8154,18 @@ contains
           print *,"xtarget=",xtarget(1),xtarget(2),xtarget(SDIM)
           print *,"data_out%data_interp(nc) ",data_out%data_interp(nc)
           print *,"data_out2%data_interp(nc) ",data_out2%data_interp(nc)
+
           print *,"local_data_max(nc)=",local_data_max(nc)
           print *,"local_data_min(nc)=",local_data_min(nc)
           print *,"scaling=",scaling
 
           print *,"(breakpoint) break point and gdb: "
           print *,"(1) compile with the -g option"
-          print *,"(2) break GLOBALUTIL.F90:8154"
+          print *,"(2) break GLOBALUTIL.F90:8164"
           print *,"By pressing <CTRL C> during this read statement, the"
           print *,"gdb debugger will produce a stacktrace."
           print *,"type 0 then <enter> to exit the program"
-          read *,dummy_input
+          read (*,*) dummy_input
           stop
          endif
         enddo ! nc=1..data_in%ncomp
@@ -8216,7 +8223,10 @@ contains
       INTEGER_T nhalf
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
       REAL_T :: local_data_out
+      REAL_T :: local_data_max
+      REAL_T :: local_data_min
       REAL_T :: scaling
+      INTEGER_T :: dummy_input
 
 #ifdef SANITY_CHECK
       type(single_interp_from_grid_parm_type) :: data_in2 
@@ -8333,6 +8343,9 @@ contains
        print *,"sdim invalid"
        stop
       endif
+      
+      local_data_max=-1.0D-20
+      local_data_min=1.0D-20
 
       data_out%data_interp(1)=zero
 
@@ -8399,10 +8412,19 @@ contains
 
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
          call safe_data_single(isten,jsten,ksten,local_data_fab,local_data_out)
+
+         if (local_data_out.gt.local_data_max) then
+          local_data_max=local_data_out
+         endif
+         if (local_data_out.lt.local_data_min) then
+          local_data_min=local_data_out
+         endif
+
          if (1.eq.0) then
           print *,"dir_FD,wt_top,wt_bot,isten,jsten,ksten,local_data_out ", &
             dir_FD,wt_top,wt_bot,isten,jsten,ksten,local_data_out
          endif
+
          data_out%data_interp(1)=data_out%data_interp(1)+ &
              wt_top*local_data_out/wt_bot
         else
@@ -8434,7 +8456,12 @@ contains
         data_in2%state=>data_in%disp_data
         allocate(data_out2%data_interp(1))
         call single_interp_from_grid_util(data_in2,data_out2)
-        scaling=abs(data_out%data_interp(1))
+
+        scaling=abs(local_data_max)
+        if (scaling.lt.abs(local_data_min)) then
+         scaling=abs(local_data_min)
+        endif 
+
         if ((scaling.ge.zero).and.(scaling.le.one)) then
          scaling=one
         else if (scaling.ge.one) then
@@ -8443,14 +8470,32 @@ contains
          print *,"scaling is NaN"
          stop
         endif
+
         if (abs(data_out%data_interp(1)- &
                 data_out2%data_interp(1)).le.1.0D-12*scaling) then
          ! do nothing
         else
          print *,"data_in%grid_type_data=",data_in%grid_type_data
+         print *,"data_in%grid_type_flux=",data_in%grid_type_flux
+         print *,"data_in%box_type_flux=",data_in%box_type_flux(1), &
+          data_in%box_type_flux(2),data_in%box_type_flux(SDIM)
+         print *,"data_in%index_flux=",data_in%index_flux(1), &
+          data_in%index_flux(2),data_in%index_flux(SDIM)
          print *,"data_out%data_interp(1) ",data_out%data_interp(1)
          print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
          print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
+
+         print *,"local_data_max=",local_data_max
+         print *,"local_data_min=",local_data_min
+         print *,"scaling=",scaling
+
+         print *,"(breakpoint) break point and gdb: "
+         print *,"(1) compile with the -g option"
+         print *,"(2) break GLOBALUTIL.F90:8494"
+         print *,"By pressing <CTRL C> during this read statement, the"
+         print *,"gdb debugger will produce a stacktrace."
+         print *,"type 0 then <enter> to exit the program"
+         read (*,*) dummy_input
          stop
         endif
         deallocate(data_out2%data_interp)
@@ -8476,7 +8521,11 @@ contains
           data_in%disp_data, &
           data_out2%data_interp)
 
-        scaling=abs(data_out%data_interp(1))
+        scaling=abs(local_data_max)
+        if (scaling.lt.abs(local_data_min)) then
+         scaling=abs(local_data_min)
+        endif        
+
         if ((scaling.ge.zero).and.(scaling.le.one)) then
          scaling=one
         else if (scaling.ge.one) then
@@ -8496,6 +8545,8 @@ contains
           data_in%box_type_flux(1), &
           data_in%box_type_flux(2), &
           data_in%box_type_flux(SDIM)
+         print *,"data_in%index_flux=",data_in%index_flux(1), &
+          data_in%index_flux(2),data_in%index_flux(SDIM)
          print *,"data_in%box_type_data=", &
           data_in%box_type_data(1), &
           data_in%box_type_data(2), &
@@ -8510,6 +8561,18 @@ contains
          print *,"istep: ",istep(1),istep(2),istep(SDIM)
          print *,"klosten,khisten,kstep: ",klosten,khisten,kstep
          print *,"dx_sten ",dx_sten(1),dx_sten(2),dx_sten(SDIM)
+
+         print *,"local_data_max=",local_data_max
+         print *,"local_data_min=",local_data_min
+         print *,"scaling=",scaling
+
+         print *,"(breakpoint) break point and gdb: "
+         print *,"(1) compile with the -g option"
+         print *,"(2) break GLOBALUTIL.F90:8571"
+         print *,"By pressing <CTRL C> during this read statement, the"
+         print *,"gdb debugger will produce a stacktrace."
+         print *,"type 0 then <enter> to exit the program"
+         read (*,*) dummy_input
          stop
         endif
         deallocate(data_out2%data_interp)
@@ -10145,11 +10208,16 @@ contains
       if ((im.lt.1).or.(im.gt.nmat)) then
        print *,"im invalid17 in is_rigid: im=",im
        print *,"nmat=",nmat
-! By pressing <CTRL C> during this read statement, the
-! gdb debugger will produce a stacktrace.
-!       print *,"type 0 then <enter> to exit the program"
-!       read(*,*) dummy_input
-       error stop
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:10214"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_rigid"
