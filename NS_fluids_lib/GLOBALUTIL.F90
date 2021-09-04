@@ -7865,6 +7865,8 @@ contains
       INTEGER_T nhalf
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T :: local_data_out
+      REAL_T, allocatable, dimension(:) :: local_data_max
+      REAL_T, allocatable, dimension(:) :: local_data_min
       REAL_T :: scaling
       INTEGER_T dummy_input
 
@@ -7996,7 +7998,13 @@ contains
        stop
       endif
 
+      allocate(local_data_max(data_in%ncomp))
+      allocate(local_data_min(data_in%ncomp))
+
       do nc=1,data_in%ncomp
+
+       local_data_max(nc)=-1.0D-20
+       local_data_min(nc)=1.0D-20
 
        data_out%data_interp(nc)=zero
 
@@ -8065,6 +8073,12 @@ contains
          data_comp=data_in%scomp+nc-1
          call safe_data(isten,jsten,ksten,data_comp, &
            local_data_fab,local_data_out)
+         if (local_data_out.gt.local_data_max(nc)) then
+          local_data_max(nc)=local_data_out
+         endif
+         if (local_data_out.lt.local_data_min(nc)) then
+          local_data_min(nc)=local_data_out
+         endif
          data_out%data_interp(nc)=data_out%data_interp(nc)+ &
             wt_top*local_data_out/wt_bot
         else
@@ -8107,7 +8121,10 @@ contains
         allocate(data_out2%data_interp(data_in2%ncomp))
         call interp_from_grid_util(data_in2,data_out2)
         do nc=1,data_in%ncomp
-         scaling=abs(data_out%data_interp(nc))
+         scaling=abs(local_data_max(nc))
+         if (scaling.lt.abs(local_data_min(nc))) then
+          scaling=abs(local_data_min(nc))
+         endif        
          if ((scaling.ge.zero).and.(scaling.le.one)) then
           scaling=one
          else if (scaling.ge.one) then
@@ -8131,10 +8148,13 @@ contains
           print *,"xtarget=",xtarget(1),xtarget(2),xtarget(SDIM)
           print *,"data_out%data_interp(nc) ",data_out%data_interp(nc)
           print *,"data_out2%data_interp(nc) ",data_out2%data_interp(nc)
+          print *,"local_data_max(nc)=",local_data_max(nc)
+          print *,"local_data_min(nc)=",local_data_min(nc)
+          print *,"scaling=",scaling
 
           print *,"(breakpoint) break point and gdb: "
           print *,"(1) compile with the -g option"
-          print *,"(2) break GLOBALUTIL.F90:8140"
+          print *,"(2) break GLOBALUTIL.F90:8154"
           print *,"By pressing <CTRL C> during this read statement, the"
           print *,"gdb debugger will produce a stacktrace."
           print *,"type 0 then <enter> to exit the program"
@@ -8157,6 +8177,9 @@ contains
        stop
       endif
 #endif
+
+      deallocate(local_data_max)
+      deallocate(local_data_min)
 
 #undef ilocal
 #undef dir_FD
@@ -9730,7 +9753,7 @@ contains
         print *,"bfact invalid38"
         stop
        endif
-      enddo ! dir
+      enddo ! dir=1..sdim
 
       return
       end subroutine containing_cell
