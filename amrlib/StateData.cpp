@@ -17,8 +17,6 @@
 
 #include <INTERP_F.H>
 
-#define debug_PC 1
-
 namespace amrex {
 
 const Real INVALID_TIME = -1.0e200;
@@ -35,7 +33,6 @@ const Real INVALID_TIME = -1.0e200;
 //    spectral deferred correction (a SLAB) in time:
 //                           new_data[0] ....
 //                           new_data[order+1]
-//                           new_dataPC[0] ... new_dataPC[order+1]
 StateData::StateData () 
 {
    StateData_level=0;
@@ -48,7 +45,6 @@ StateData::StateData ()
 
    time_array.resize(StateData_MAX_NUM_SLAB);
    new_data.resize(StateData_MAX_NUM_SLAB);
-   new_dataPC.resize(StateData_MAX_NUM_SLAB);
 
    for (int i=0;i<StateData_MAX_NUM_SLAB;i++) {
     new_data[i]=0;
@@ -124,7 +120,6 @@ StateData::define (
     }
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
-    new_dataPC.resize(StateData_MAX_NUM_SLAB);
 
     domain = p_domain;
     desc = &d;
@@ -177,7 +172,6 @@ StateData::define (
     }
  
     int ncomp = desc->nComp();
-    int ncomp_PC = desc->get_ncomp_PC();
     int state_holds_data = desc->get_state_holds_data();
 
     for (int i=0;i<=bfact_time_order;i++) {
@@ -185,30 +179,11 @@ StateData::define (
      if (state_holds_data==1) {
       new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
        MFInfo().SetTag("new_data"),FArrayBoxFactory());
-
-      if (ncomp_PC>0) {
-       if (level==0) {
-        new_dataPC[i].resize(ncomp_PC);
-        for (int j=0;j<ncomp_PC;j++) {
-         new_dataPC[i][j]=
- 	  new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-        }
-       } else if ((level>=1)&&(level<=max_level)) {
-        // do nothing
-       } else
-        amrex::Error("level invalid");
-      } else if (ncomp_PC==0) {
-       // do nothing
-      } else
-       amrex::Error("ncomp_PC invalid");
-
      } else if (state_holds_data==0) {
       new_data[i]=nullptr;
-      if (ncomp_PC!=0)
-       amrex::Error("ncomp_PC invalid");
      } else
       amrex::Error("state_holds_data invalid");
-    }
+    }// for (int i=0;i<=bfact_time_order;i++) 
 
     buildBC();
 } // end subroutine StateData::define 
@@ -243,7 +218,6 @@ StateData::restart (
 
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
-    new_dataPC.resize(StateData_MAX_NUM_SLAB);
 
     bfact_time_order=time_order;
 
@@ -299,7 +273,6 @@ StateData::restart (
     std::string mf_name;
     std::string FullPathName;
 
-    int ncomp_PC = desc->get_ncomp_PC();
     int state_holds_data = desc->get_state_holds_data();
 
     for (int i=0;i<=bfact_time_order;i++) {
@@ -307,27 +280,8 @@ StateData::restart (
      if (state_holds_data==1) {
       new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
         MFInfo().SetTag("new_data"),FArrayBoxFactory());
-
-      if (ncomp_PC>0) {
-       if (level==0) {
-        new_dataPC[i].resize(ncomp_PC);
-        for (int j=0;j<ncomp_PC;j++) {
-         new_dataPC[i][j]=
- 	  new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-        }
-       } else if ((level>=1)&&(level<=max_level)) {
-        // do nothing
-       } else
-        amrex::Error("level invalid");
-      } else if (ncomp_PC==0) {
-       // do nothing
-      } else
-       amrex::Error("ncomp_PC invalid");
-
      } else if (state_holds_data==0) {
       new_data[i]=nullptr;
-      if (ncomp_PC!=0)
-       amrex::Error("ncomp_PC invalid");
      } else
       amrex::Error("state_holds_data invalid");
 
@@ -351,6 +305,7 @@ StateData::restart (
        // read from a file other than the header file.
       VisMF::Read(*new_data[i], FullPathName);
 
+      FIX ME move to Amr.cpp
       if (ncomp_PC==0) {
        // do nothing
       } else if (ncomp_PC>0) {
@@ -427,6 +382,8 @@ StateData::~StateData() {
 
   if (state_holds_data==1) {
    delete new_data[i];
+
+   FIX ME move to Amr.cpp
 
    int ncomp_PC_test=new_dataPC[i].size();
    if (ncomp_PC_test==0) {
@@ -523,6 +480,7 @@ StateData::newData (int slab_index) const
 }
 
 
+FIX ME move to Amr.cpp
 
 AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
 StateData::newDataPC (int slab_index,int sub_index)
@@ -546,6 +504,7 @@ StateData::newDataPC (int slab_index,int sub_index)
  return *new_dataPC[project_slab_index][sub_index];
 }
 
+FIX ME move to Amr.cpp
 const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
 StateData::newDataPC (int slab_index,int sub_index) const
 {
@@ -1108,6 +1067,8 @@ void
 StateData::CopyNewToOld(int level,int max_level) {
 
  int state_holds_data = desc->get_state_holds_data();
+ FIX ME move to Amr.cpp
+
  int ncomp_PC = desc->get_ncomp_PC();
 
  if (state_holds_data==1) {
@@ -1180,6 +1141,7 @@ StateData::CopyOldToNew(int level,int max_level) {
    MultiFab & newmulti = *new_data[i];
    MultiFab::Copy(newmulti,oldmulti,0,0,ncomp,ngrow);
 
+   FIX ME move to Amr.cpp
    if (ncomp_PC==0) {
     // do nothing
    } else if (ncomp_PC==1) {
@@ -1276,6 +1238,8 @@ StateData::checkPoint (const std::string& name,
      }  // i
 
     }  // IOProcessor ?
+
+    FIX ME move Amr.cpp
 
     int ncomp_PC = desc->get_ncomp_PC();
     int state_holds_data = desc->get_state_holds_data();

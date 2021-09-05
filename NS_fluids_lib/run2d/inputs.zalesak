@@ -35,22 +35,36 @@ ns.num_species_var=0
 amr.n_cell    = 24 24
 amr.max_level = 2
 
+ns.particles_flag=1
+ns.particles_weight_XD=0.0 # 0.0=>particles have no weight   0<=wt<=1
+# particles_weight_VEL used for initializing particle velocity
+# from existing fluid and particle velocity.
+ns.particles_weight_VEL=0.0 # 0.0=>particles have no weight   0<=wt<=1
+ns.particle_nsubdivide=1
+ns.particle_min_per_nsubdivide=0
+ns.particle_max_per_nsubdivide=100
+
+ns.particle_volume=1.0
+ns.particle_relaxation_time_to_fluid=0.0
+ns.fluid_relaxation_time_to_particle=1.0e+20
+ns.particle_interaction_ngrow=1
+
 ns.profile_debug=0
 ns.ns_tiling=false
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 1 1 1    # number of buffer cells in error est
+amr.n_error_buf     = 2 1 1    # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 2 4    # block factor in grid generation
+amr.blocking_factor = 8 8 2     # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 40       # 157 for convergence check
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 128 128 128
 #amr.restart         = chk00960
 #amr.v=1
 #amr.trace   =1

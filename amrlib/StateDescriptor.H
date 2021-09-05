@@ -109,7 +109,6 @@ public:
                      int           nextra,
                      int           num_comp,
                      Interpolater* interp,
-                     int           ncomp_PC,
 		     int           state_holds_data_in); 
     //
     // The destructor.
@@ -123,7 +122,6 @@ public:
                  int           nextra,
                  int           num_comp,
                  Interpolater* interp,
-                 int           ncomp_PC,
 		 int           state_holds_data_in);  
     //
     // Sets details of comp component.
@@ -228,11 +226,6 @@ public:
     std::vector< std::pair<int,int> > 
       sameInterps (Vector<int> scompBC_map, int ncomp_in) const;
 
-    //
-    // number of particle containers per slab.
-    //
-    int get_ncomp_PC () const noexcept;
-
     int get_state_holds_data () const noexcept;
 
     bool master (int i) const { return m_master[i]; }
@@ -246,7 +239,6 @@ private:
     int                ncomp;    // Number of components
     int                ngrow;    // Grow factor
     Interpolater*      mapper;   // Default interpolator
-    int                m_ncomp_PC; // used by "get_ncomp_PC()"
     int                state_holds_data; //used by "get_state_holds_data()"
     Vector<std::string> names;    // Printable names of components
     Vector<BCRec>       bc;       // Array of bndry types for entire level
@@ -305,7 +297,6 @@ public:
           int                         nextra,
           int                         num_comp,
           Interpolater*               interp,
-          int                         ncomp_PC,
 	  int                         state_holds_data_in); 
     //
     // Calls resetComponentBCs() on StateDescriptor at index indx.

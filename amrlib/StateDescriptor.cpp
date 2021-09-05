@@ -174,13 +174,12 @@ DescriptorList::addDescriptor (int indx,
       int                         nextra,
       int                         num_comp, 
       Interpolater*               interp,
-      int                         ncomp_PC,
       int                         state_holds_data_in)
 {
     if (indx >= desc.size())
         desc.resize(indx+1);
     desc[indx].reset(new StateDescriptor(typ,indx,nextra,num_comp,
-     interp,ncomp_PC,state_holds_data_in));
+     interp,state_holds_data_in));
 }  
 
 StateDescriptor::StateDescriptor () noexcept
@@ -189,7 +188,6 @@ StateDescriptor::StateDescriptor () noexcept
     ncomp(0),
     ngrow(0),
     mapper(0),
-    m_ncomp_PC(0),
     state_holds_data(0)
 {}
 
@@ -198,7 +196,6 @@ StateDescriptor::StateDescriptor (IndexType btyp,
         int                         nextra, 
         int                         num_comp,
         Interpolater*               interp,
-        int                         ncomp_PC,
 	int                         state_holds_data_in)
     :
     type(btyp),
@@ -206,7 +203,6 @@ StateDescriptor::StateDescriptor (IndexType btyp,
     ncomp(num_comp),
     ngrow(nextra),
     mapper(interp),
-    m_ncomp_PC(ncomp_PC),
     state_holds_data(state_holds_data_in)
 {
     BL_ASSERT (num_comp > 0);
@@ -319,12 +315,6 @@ StateDescriptor::getBCs () const noexcept
 
 
 int
-StateDescriptor::get_ncomp_PC () const noexcept
-{
-    return m_ncomp_PC;
-}
-
-int
 StateDescriptor::get_state_holds_data () const noexcept
 {
     return state_holds_data;
@@ -354,7 +344,6 @@ StateDescriptor::define (IndexType btyp,
       int                         nextra,
       int                         num_comp,
       Interpolater*               interp,
-      int                         ncomp_PC,
       int                         state_holds_data_in)
 {
     type     = btyp;
@@ -362,7 +351,6 @@ StateDescriptor::define (IndexType btyp,
     ngrow    = nextra;
     ncomp    = num_comp;
     mapper   = interp;
-    m_ncomp_PC = ncomp_PC;
     state_holds_data = state_holds_data_in;
 
     BL_ASSERT (num_comp > 0);
