@@ -305,29 +305,6 @@ StateData::restart (
        // read from a file other than the header file.
       VisMF::Read(*new_data[i], FullPathName);
 
-      FIX ME move to Amr.cpp
-      if (ncomp_PC==0) {
-       // do nothing
-      } else if (ncomp_PC>0) {
-
-       if (level==0) {
-        for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-         int raw_index=ncomp_PC * i + PC_mat_index;
-         std::string Part_name="FusionPart";
-         std::stringstream raw_string_stream(std::stringstream::in |
-            std::stringstream::out);
-         raw_string_stream << raw_index;
-         std::string raw_string=raw_string_stream.str();
-         Part_name+=raw_string;
-         new_dataPC[i][PC_mat_index]->Restart(FullPathName,Part_name);
-        } // PC_mat_index=0..ncomp_PC-1 
-       } else if ((level>=1)&&(level<=max_level)) {
-        // do nothing
-       } else
-        amrex::Error("level invalid");
-      } else
-       amrex::Error("ncomp_PC invalid");
-
      } else if (state_holds_data==0) {
       new_data[i]=nullptr;
       if (ncomp_PC!=0)
@@ -382,22 +359,8 @@ StateData::~StateData() {
 
   if (state_holds_data==1) {
    delete new_data[i];
-
-   FIX ME move to Amr.cpp
-
-   int ncomp_PC_test=new_dataPC[i].size();
-   if (ncomp_PC_test==0) {
-    // do nothing
-   } else if (ncomp_PC_test>=1) {
-     for (int j=0;j<ncomp_PC_test;j++) {
-      delete new_dataPC[i][j];
-     }
-   } else
-    amrex::Error("ncomp_PC_test invalid");
   } else if (state_holds_data==0) {
-   int ncomp_PC_test=new_dataPC[i].size();
-   if (ncomp_PC_test!=0)
-    amrex::Error("ncomp_PC_test invalid");
+   // do nothing
   } else
    amrex::Error("state_holds_data invalid");
 
@@ -478,55 +441,6 @@ StateData::newData (int slab_index) const
 
  return *new_data[project_slab_index];
 }
-
-
-FIX ME move to Amr.cpp
-
-AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-StateData::newDataPC (int slab_index,int sub_index)
-{
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==bfact_time_order+1)
-  project_slab_index=bfact_time_order;
- if ((project_slab_index<0)||
-     (project_slab_index>bfact_time_order)) {
-  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid1");
- }
- if (new_dataPC[project_slab_index].size()>sub_index) {
-  // do nothing
- } else
-  amrex::Error("new_dataPC[project_slab_index].size() invalid");
-
- return *new_dataPC[project_slab_index][sub_index];
-}
-
-FIX ME move to Amr.cpp
-const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-StateData::newDataPC (int slab_index,int sub_index) const
-{
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==bfact_time_order+1)
-  project_slab_index=bfact_time_order;
- if ((project_slab_index<0)||
-     (project_slab_index>bfact_time_order)) {
-  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid2");
- }
- if (new_dataPC[project_slab_index].size()>sub_index) {
-  // do nothing
- } else
-  amrex::Error("new_dataPC[project_slab_index].size() invalid");
-
- return *new_dataPC[project_slab_index][sub_index];
-}
-
 
 Vector<BCRec>&
 StateData::getBCs (int comp)
@@ -1067,58 +981,22 @@ void
 StateData::CopyNewToOld(int level,int max_level) {
 
  int state_holds_data = desc->get_state_holds_data();
- FIX ME move to Amr.cpp
-
- int ncomp_PC = desc->get_ncomp_PC();
 
  if (state_holds_data==1) {
 
   MultiFab & newmulti = *new_data[bfact_time_order];
   int ncomp=newmulti.nComp();
   int ngrow=newmulti.nGrow();
-  if (debug_PC==1) {
-   std::cout << "PC: level, max_level " << level << ' ' << max_level << '\n';
-   std::cout << "ncomp_PC,bfact_time_order " << ncomp_PC << ' ' <<
-    bfact_time_order << '\n';
-  }
+
   for (int i=0;i<bfact_time_order;i++) {
    MultiFab & oldmulti = *new_data[i];
    MultiFab::Copy(oldmulti,newmulti,0,0,ncomp,ngrow);
-
-   if (ncomp_PC==0) {
-    // do nothing
-   } else if (ncomp_PC==1) {
-    if (level==0) {
-     int ncomp_PC_test=new_dataPC[i].size();
-     if (ncomp_PC_test==ncomp_PC) {
-      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-       if (debug_PC==1) {
-        std::cout << "PC: i,PC_mat_index,bfact_time_order " << i << ' ' << 
-	       PC_mat_index << ' ' << bfact_time_order << '\n';
-       }
-        // dest PC is cleared prior to copy.
-       bool local=false;  // redistribute after copy
-       new_dataPC[i][PC_mat_index]->copyParticles(
-        *new_dataPC[bfact_time_order][PC_mat_index],local);
-      }
-     } else
-      amrex::Error("ncomp_PC_test or ncomp_PC invalid");
-    } else if ((level>=1)&&(level<=max_level)) {
-     // do nothing
-    } else
-     amrex::Error("level invalid");
-   } else {
-    std::cout << "ncomp_PC=" << ncomp_PC << '\n';
-    amrex::Error("This ncomp_PC value not supported.");
-   }
   }
  } else if (state_holds_data==0) {
   for (int i=0;i<bfact_time_order;i++) {
    if (new_data[i]!=nullptr)
     amrex::Error("new_data[i]!=nullptr");
   }
-  if (ncomp_PC!=0)
-   amrex::Error("ncomp_PC invalid");
  } else
   amrex::Error("state_holds_data invalid");
 
@@ -1128,7 +1006,6 @@ void
 StateData::CopyOldToNew(int level,int max_level) {
 
  int state_holds_data = desc->get_state_holds_data();
- int ncomp_PC = desc->get_ncomp_PC();
 
  if (state_holds_data==1) {
 
@@ -1140,31 +1017,6 @@ StateData::CopyOldToNew(int level,int max_level) {
   for (int i=1;i<=bfact_time_order;i++) {
    MultiFab & newmulti = *new_data[i];
    MultiFab::Copy(newmulti,oldmulti,0,0,ncomp,ngrow);
-
-   FIX ME move to Amr.cpp
-   if (ncomp_PC==0) {
-    // do nothing
-   } else if (ncomp_PC==1) {
-    if (level==0) {
-     int ncomp_PC_test=new_dataPC[i].size();
-     if (ncomp_PC_test==ncomp_PC) {
-      for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-        // dest PC is cleared prior to copy.
-       bool local=false;  // redistribute after copy
-       new_dataPC[i][PC_mat_index]->copyParticles(
-        *new_dataPC[0][PC_mat_index],local);
-      }
-     } else
-      amrex::Error("ncomp_PC_test or ncomp_PC invalid");
-    } else if ((level>=1)&&(level<=max_level)) {
-     // do nothing
-    } else
-     amrex::Error("level invalid");
-   } else {
-    std::cout << "ncomp_PC=" << ncomp_PC << '\n';
-    amrex::Error("This ncomp_PC value not supported.");
-   }
-
   }
 
  } else if (state_holds_data==0) {
@@ -1172,26 +1024,11 @@ StateData::CopyOldToNew(int level,int max_level) {
    if (new_data[i]!=nullptr)
     amrex::Error("new_data[i]!=nullptr");
   }
-  if (ncomp_PC!=0)
-   amrex::Error("ncomp_PC invalid");
  } else
   amrex::Error("state_holds_data invalid");
 
 } // end subroutine CopyOldToNew
 
-// template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
-// void
-// ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>
-// ::Checkpoint (const std::string& dir, const std::string& name) const
-// template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
-// void
-// ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>
-// ::Restart (const std::string& dir, const std::string& file)
-//
-// in: AMReX_ParticleIO.H
-//
-// os=HeaderFile 
-// how=VisMF::OneFilePerCPU
 void
 StateData::checkPoint (const std::string& name,
                        const std::string& fullpathname,
@@ -1239,9 +1076,6 @@ StateData::checkPoint (const std::string& name,
 
     }  // IOProcessor ?
 
-    FIX ME move Amr.cpp
-
-    int ncomp_PC = desc->get_ncomp_PC();
     int state_holds_data = desc->get_state_holds_data();
 
     for (int i=0;i<=bfact_time_order;i++) {
@@ -1258,37 +1092,9 @@ StateData::checkPoint (const std::string& name,
       // this file is not the header file
       VisMF::Write(*new_data[i],mf_fullpath_new);
 
-      if (ncomp_PC==0) {
-       // do nothing
-      } else if (ncomp_PC>0) {
-
-       if (level==0) {
-        int ncomp_PC_test=new_dataPC[i].size();
-        if (ncomp_PC_test==ncomp_PC) {
-         for (int PC_mat_index=0;PC_mat_index<ncomp_PC;PC_mat_index++) {
-          int raw_index=ncomp_PC * i + PC_mat_index;
-          std::string Part_name="FusionPart";
-          std::stringstream raw_string_stream(std::stringstream::in |
-           std::stringstream::out);
-          raw_string_stream << raw_index;
-          std::string raw_string=raw_string_stream.str();
-          Part_name+=raw_string;
-          new_dataPC[i][PC_mat_index]->Checkpoint(mf_fullpath_new,Part_name);
-         } // PC_mat_index=0..ncomp_PC-1 
-        } else
-         amrex::Error("ncomp_PC_test or ncomp_PC invalid");
-       } else if ((level>=1)&&(level<=max_level)) {
-        // do nothing
-       } else
-        amrex::Error("level invalid");
-      } else
-       amrex::Error("ncomp_PC invalid");
-
      } else if (state_holds_data==0) {
       if (new_data[i]!=nullptr)
        amrex::Error("new_data[i]!=nullptr");
-      if (ncomp_PC!=0)
-       amrex::Error("ncomp_PC invalid");
      } else
       amrex::Error("state_holds_data invalid");
 

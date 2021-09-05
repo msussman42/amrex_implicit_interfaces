@@ -537,6 +537,15 @@ Amr::~Amr ()
       do_plot,do_slice,
       SDC_outer_sweeps,slab_step);
     }
+    for (int i=0;i<=time_blocking_factor;i++) {
+     if (global_AMR_ncomp_PC>0) {
+      for (int j=0;j<global_AMR_ncomp_PC;j++) {
+       delete new_dataPC[i][j];
+      }
+      new_dataPC[i].resize(0);
+     }
+    }
+    new_dataPC.resize(0);
 
     levelbld->variableCleanUp();
 
@@ -890,6 +899,7 @@ Amr::restart (const std::string& filename)
     // Open the checkpoint header file for reading.
     //
     std::string File = filename;
+    std::string FullPathName=filename;
 
     File += '/';
     File += "Header";
@@ -981,6 +991,27 @@ Amr::restart (const std::string& filename)
     } else
      amrex::Error("checkpoint_recalesce_data invalid");
 
+    for (int i=0;i<=time_blocking_factor;i++) {
+
+     if (global_AMR_ncomp_PC==0) {
+      // do nothing
+     } else if (global_AMR_ncomp_PC>0) {
+
+      for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
+       int raw_index=global_AMR_ncomp_PC * i + PC_index;
+       std::string Part_name="FusionPart";
+       std::stringstream raw_string_stream(std::stringstream::in |
+           std::stringstream::out);
+       raw_string_stream << raw_index;
+       std::string raw_string=raw_string_stream.str();
+       Part_name+=raw_string;
+       new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
+      } // PC_index=0..global_AMR_ncomp_PC-1 
+
+     } else
+      amrex::Error("global_AMR_ncomp_PC invalid");
+
+    }//for (int i=0;i<=time_blocking_factor;i++) 
 
 // END SUSSMAN KLUGE RESTART
 
@@ -1136,157 +1167,314 @@ Amr::restart (const std::string& filename)
 void
 Amr::checkPoint ()
 {
-    if (!checkpoint_files_output) return;
+ if (!checkpoint_files_output) return;
 
-    VisMF::SetNOutFiles(checkpoint_nfiles);
-    //
-    // In checkpoint files always write out FABs in NATIVE format.
-    //
-    FABio::Format thePrevFormat = FArrayBox::getFormat();
+ VisMF::SetNOutFiles(checkpoint_nfiles);
+ //
+ // In checkpoint files always write out FABs in NATIVE format.
+ //
+ FABio::Format thePrevFormat = FArrayBox::getFormat();
 
-    FArrayBox::setFormat(FABio::FAB_NATIVE);
+ FArrayBox::setFormat(FABio::FAB_NATIVE);
 
-    double dCheckPointTime0 = ParallelDescriptor::second();
+ double dCheckPointTime0 = ParallelDescriptor::second();
 
-    const std::string ckfile = amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
+ const std::string ckfile = amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
 
-    if (verbose > 0 && ParallelDescriptor::IOProcessor())
-        std::cout << "CHECKPOINT: file = " << ckfile << std::endl;
+ std::string FullPathName=ckfile;
 
-    if (record_run_info && ParallelDescriptor::IOProcessor())
-        runlog << "CHECKPOINT: file = " << ckfile << '\n';
-    //
-    // Only the I/O processor makes the directory if it doesn't already exist.
-    //
-    if (ParallelDescriptor::IOProcessor())
-        if (!amrex::UtilCreateDirectory(ckfile, 0755))
-            amrex::CreateDirectoryFailed(ckfile);
-    //
-    // Force other processors to wait till directory is built.
-    //
-    ParallelDescriptor::Barrier();
+ if (verbose > 0 && ParallelDescriptor::IOProcessor())
+     std::cout << "CHECKPOINT: file = " << ckfile << std::endl;
 
-    std::string HeaderFileName = ckfile + "/Header";
+ if (record_run_info && ParallelDescriptor::IOProcessor())
+     runlog << "CHECKPOINT: file = " << ckfile << '\n';
+ //
+ // Only the I/O processor makes the directory if it doesn't already exist.
+ //
+ if (ParallelDescriptor::IOProcessor())
+     if (!amrex::UtilCreateDirectory(ckfile, 0755))
+         amrex::CreateDirectoryFailed(ckfile);
+ //
+ // Force other processors to wait till directory is built.
+ //
+ ParallelDescriptor::Barrier();
 
-    VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
+ std::string HeaderFileName = ckfile + "/Header";
 
-    std::ofstream HeaderFile;
+ VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
 
-    HeaderFile.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
+ std::ofstream HeaderFile;
 
-    int old_prec = 0, i;
+ HeaderFile.rdbuf()->pubsetbuf(io_buffer.dataPtr(), io_buffer.size());
 
-    if (ParallelDescriptor::IOProcessor())
-    {
-        //
-        // Only the IOProcessor() writes to the header file.
-        //
-        HeaderFile.open(HeaderFileName.c_str(), std::ios::out|std::ios::trunc|std::ios::binary);
+ int old_prec = 0, i;
 
-        if (!HeaderFile.good())
-            amrex::FileOpenFailed(HeaderFileName);
+ if (ParallelDescriptor::IOProcessor()) {
+  //
+  // Only the IOProcessor() writes to the header file.
+  //
+  HeaderFile.open(HeaderFileName.c_str(), std::ios::out|std::ios::trunc|std::ios::binary);
 
-        old_prec = HeaderFile.precision(15);
+  if (!HeaderFile.good())
+      amrex::FileOpenFailed(HeaderFileName);
 
-        HeaderFile << CheckPointVersion << '\n'
-                   << AMREX_SPACEDIM       << '\n'
-                   << cumtime           << '\n'
-                   << max_level         << '\n'
-                   << finest_level      << '\n';
+  old_prec = HeaderFile.precision(15);
+
+  HeaderFile << CheckPointVersion << '\n'
+             << AMREX_SPACEDIM       << '\n'
+             << cumtime           << '\n'
+             << max_level         << '\n'
+             << finest_level      << '\n';
 
 // SUSSMAN KLUGE CHECKPOINT
 
-        int num_materials=AMR_volume_history.size();
-        if (num_materials<=0)
-         amrex::Error("num_materials invalid in checkpoint");
-        HeaderFile << num_materials << '\n';
+  int num_materials=AMR_volume_history.size();
+  if (num_materials<=0)
+   amrex::Error("num_materials invalid in checkpoint");
+  HeaderFile << num_materials << '\n';
 
-        for (int j=0;j<AMREX_SPACEDIM;j++) {
-         HeaderFile << AMR_max_phase_change_rate[j] << '\n';
-         HeaderFile << AMR_min_phase_change_rate[j] << '\n';
-        }
+  for (int j=0;j<AMREX_SPACEDIM;j++) {
+   HeaderFile << AMR_max_phase_change_rate[j] << '\n';
+   HeaderFile << AMR_min_phase_change_rate[j] << '\n';
+  }
 
-        HeaderFile << AMR_volume_history_recorded << '\n';
-        for (int j=0;j<num_materials;j++) {
-         HeaderFile << AMR_volume_history[j] << '\n';
-         if (AMR_volume_history[j]<0.0) 
-          amrex::Error("AMR_volume_history cannot be negative");
-        }
+  HeaderFile << AMR_volume_history_recorded << '\n';
+  for (int j=0;j<num_materials;j++) {
+   HeaderFile << AMR_volume_history[j] << '\n';
+   if (AMR_volume_history[j]<0.0) 
+    amrex::Error("AMR_volume_history cannot be negative");
+  }
 
-        int checkpoint_recalesce_data=0;
-        for (int im=0;im<AMR_num_materials;im++) {
-         if (recalesce_flag[im]!=0)
-          checkpoint_recalesce_data=1;
-        }
+  int checkpoint_recalesce_data=0;
+  for (int im=0;im<AMR_num_materials;im++) {
+   if (recalesce_flag[im]!=0)
+    checkpoint_recalesce_data=1;
+  }
 
-        if (checkpoint_recalesce_data==0) {
-         // do nothing
-        } else if (checkpoint_recalesce_data==1) {
+  if (checkpoint_recalesce_data==0) {
+   // do nothing
+  } else if (checkpoint_recalesce_data==1) {
 
-         HeaderFile << recalesce_state_old.size() << '\n';
-         for (int j=0;j<recalesce_state_old.size();j++)
-          HeaderFile << recalesce_state_old[j] << '\n';
-         HeaderFile << recalesce_state_new.size() << '\n';
-         for (int j=0;j<recalesce_state_new.size();j++)
-          HeaderFile << recalesce_state_new[j] << '\n';
+   HeaderFile << recalesce_state_old.size() << '\n';
+   for (int j=0;j<recalesce_state_old.size();j++)
+    HeaderFile << recalesce_state_old[j] << '\n';
+   HeaderFile << recalesce_state_new.size() << '\n';
+   for (int j=0;j<recalesce_state_new.size();j++)
+    HeaderFile << recalesce_state_new[j] << '\n';
 
-        } else
-         amrex::Error("checkpoint_recalesce_data invalid");
+  } else
+   amrex::Error("checkpoint_recalesce_data invalid");
 
 
+// template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
+// void
+// ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>
+// ::Checkpoint (const std::string& dir, const std::string& name) const
+// template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
+// void
+// ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>
+// ::Restart (const std::string& dir, const std::string& file)
+//
+// in: AMReX_ParticleIO.H
+//
+// os=HeaderFile 
+// how=VisMF::OneFilePerCPU
+
+  for (int i=0;i<=time_blocking_factor;i++) {
+
+   if (global_AMR_ncomp_PC==0) {
+    // do nothing
+   } else if (global_AMR_ncomp_PC>0) {
+
+    int ncomp_PC_test=new_dataPC[i].size();
+    if (ncomp_PC_test==global_AMR_ncomp_PC) {
+     for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
+      int raw_index=global_AMR_ncomp_PC * i + PC_index;
+      std::string Part_name="FusionPart";
+      std::stringstream raw_string_stream(std::stringstream::in |
+        std::stringstream::out);
+      raw_string_stream << raw_index;
+      std::string raw_string=raw_string_stream.str();
+      Part_name+=raw_string;
+      new_dataPC[i][PC_index]->Checkpoint(FullPathName,Part_name);
+     } // PC_index=0..global_AMR_ncomp_PC-1 
+    } else
+     amrex::Error("ncomp_PC_test or global_AMR_ncomp_PC invalid");
+
+   } else
+    amrex::Error("global_AMR_ncomp_PC invalid");
+
+  } //for (int i=0;i<=time_blocking_factor;i++) 
 
 // END SUSSMAN KLUGE CHECKPOINT
 
-        HeaderFile << dt_AMR << ' ' << '\n';
+  HeaderFile << dt_AMR << ' ' << '\n';
 
-        //
-        // Write out problem domain.
-        //
-        for (i = 0; i <= max_level; i++) HeaderFile << geom[i]        << ' ';
-        HeaderFile << '\n';
+  //
+  // Write out problem domain.
+  //
+  for (i = 0; i <= max_level; i++) HeaderFile << geom[i]        << ' ';
+  HeaderFile << '\n';
 
-        for (i = 0; i <= max_level; i++) HeaderFile << level_steps[i] << ' ';
-        HeaderFile << '\n';
+  for (i = 0; i <= max_level; i++) HeaderFile << level_steps[i] << ' ';
+  HeaderFile << '\n';
 
-          // level_cells_advanced is not checkpointed.
+    // level_cells_advanced is not checkpointed.
 
-        for (i = 0; i <= max_level; i++) HeaderFile << level_count[i] << ' ';
-        HeaderFile << '\n';
+  for (i = 0; i <= max_level; i++) HeaderFile << level_count[i] << ' ';
+  HeaderFile << '\n';
 
-    }  // if IOProcessor
+ }  // if IOProcessor
 
-     // dir="ckfile" (directory)
-     // os=HeaderFile 
-    for (i = 0; i <= finest_level; i++)
-        amr_level[i]->checkPoint(ckfile, HeaderFile);
+  // dir="ckfile" (directory)
+  // os=HeaderFile 
+ for (i = 0; i <= finest_level; i++)
+  amr_level[i]->checkPoint(ckfile, HeaderFile);
 
-    if (ParallelDescriptor::IOProcessor())
-    {
-        HeaderFile.precision(old_prec);
+ if (ParallelDescriptor::IOProcessor()) {
+  HeaderFile.precision(old_prec);
 
-        if (!HeaderFile.good())
-            amrex::Error("Amr::checkpoint() failed");
-    }
+  if (!HeaderFile.good())
+   amrex::Error("Amr::checkpoint() failed");
+ }
 
-    //
-    // Don't forget to reset FAB format.
-    //
-    FArrayBox::setFormat(thePrevFormat);
+ //
+ // Don't forget to reset FAB format.
+ //
+ FArrayBox::setFormat(thePrevFormat);
 
-    if (verbose > 0) {
-     double dCheckPointTime = ParallelDescriptor::second() - dCheckPointTime0;
+ if (verbose > 0) {
+  double dCheckPointTime = ParallelDescriptor::second() - dCheckPointTime0;
 
-     ParallelDescriptor::ReduceRealMax(dCheckPointTime,
-          ParallelDescriptor::IOProcessorNumber());
+  ParallelDescriptor::ReduceRealMax(dCheckPointTime,
+    ParallelDescriptor::IOProcessorNumber());
 
-     if (ParallelDescriptor::IOProcessor()) {
-      std::cout << "checkPoint() time = " << dCheckPointTime << 
-        " secs." << '\n';
-     }
-    }
-    ParallelDescriptor::Barrier();
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "checkPoint() time = " << dCheckPointTime << 
+     " secs." << '\n';
+  }
+ }
+ ParallelDescriptor::Barrier();
 }
 
+
+AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+Amr::newDataPC (int slab_index,int sub_index)
+{
+if (global_AMR_ncomp_PC>0) {
+
+ int project_slab_index=slab_index;
+ if (project_slab_index==-1)
+  project_slab_index=0;
+ if (project_slab_index==time_blocking_factor+1)
+  project_slab_index=time_blocking_factor;
+ if ((project_slab_index<0)||
+     (project_slab_index>time_blocking_factor)) {
+  std::cout << "time_blocking_factor= " << time_blocking_factor << '\n';
+  std::cout << "project_slab_index= " << project_slab_index << '\n';
+  amrex::Error("project_slab_index invalid1");
+ }
+ if (new_dataPC[project_slab_index].size()>sub_index) {
+  // do nothing
+ } else
+  amrex::Error("new_dataPC[project_slab_index].size() invalid");
+
+ return *new_dataPC[project_slab_index][sub_index];
+
+} else
+ amrex::Error("global_AMR_ncomp_PC invalid");
+
+}
+
+const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+Amr::newDataPC (int slab_index,int sub_index) const
+{
+
+if (global_AMR_ncomp_PC>0) {
+
+ int project_slab_index=slab_index;
+ if (project_slab_index==-1)
+  project_slab_index=0;
+ if (project_slab_index==time_blocking_factor+1)
+  project_slab_index=time_blocking_factor;
+ if ((project_slab_index<0)||
+     (project_slab_index>time_blocking_factor)) {
+  std::cout << "time_blocking_factor= " << time_blocking_factor << '\n';
+  std::cout << "project_slab_index= " << project_slab_index << '\n';
+  amrex::Error("project_slab_index invalid2");
+ }
+ if (new_dataPC[project_slab_index].size()>sub_index) {
+  // do nothing
+ } else
+  amrex::Error("new_dataPC[project_slab_index].size() invalid");
+
+ return *new_dataPC[project_slab_index][sub_index];
+
+} else
+ amrex::Error("global_AMR_ncomp_PC invalid");
+
+}
+
+
+void
+Amr::CopyNewToOldPC() {
+
+ if (debug_PC==1) {
+  std::cout << "global_AMR_ncomp_PC,time_blocking_factor " << 
+    global_AMR_ncomp_PC << ' ' <<
+    time_blocking_factor << '\n';
+ }
+
+ for (int i=0;i<time_blocking_factor;i++) {
+
+  if (global_AMR_ncomp_PC==0) {
+   // do nothing
+  } else if (global_AMR_ncomp_PC>=1) {
+   int ncomp_PC_test=new_dataPC[i].size();
+   if (ncomp_PC_test==global_AMR_ncomp_PC) {
+    for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
+     if (debug_PC==1) {
+      std::cout << "PC: i,PC_index,time_blocking_factor " << i << ' ' << 
+        PC_index << ' ' << time_blocking_factor << '\n';
+     }
+
+     // dest PC is cleared prior to copy.
+     bool local=false;  // redistribute after copy
+     new_dataPC[i][PC_index]->copyParticles(
+        *new_dataPC[time_blocking_factor][PC_index],local);
+    }
+   } else
+    amrex::Error("ncomp_PC_test or global_AMR_ncomp_PC invalid");
+  } else 
+   amrex::Error("global_AMR_ncomp_PC invalid");
+ } //i=0;i<time_blocking_factor;i++
+
+} // end subroutine CopyNewToOldPC()
+
+
+void
+Amr::CopyOldToNewPC() {
+
+ for (int i=1;i<=time_blocking_factor;i++) {
+
+  if (global_AMR_ncomp_PC==0) {
+   // do nothing
+  } else if (global_AMR_ncomp_PC>=1) {
+   int ncomp_PC_test=new_dataPC[i].size();
+   if (ncomp_PC_test==global_AMR_ncomp_PC) {
+    for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
+     // dest PC is cleared prior to copy.
+     bool local=false;  // redistribute after copy
+     new_dataPC[i][PC_index]->copyParticles(
+        *new_dataPC[0][PC_index],local);
+    }
+   } else
+    amrex::Error("ncomp_PC_test or global_AMR_ncomp_PC invalid");
+  } else 
+   amrex::Error("global_AMR_ncomp_PC invalid");
+ } // i=1..time_blocking_factor
+
+} // end subroutine CopyOldToNewPC()
 
 void
 Amr::regrid_level_0_on_restart()

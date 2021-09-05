@@ -385,10 +385,9 @@ void NavierStokes::nonlinear_advection() {
  if (particles_flag==1) {
 
   int ipart=0;
-  NavierStokes& ns_level0=getLevel(0);
   bool local_copy_flag=true; 
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-   ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+   parent->newDataPC(slab_step+1,ipart);
 
    // first add particles if needed
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -742,11 +741,10 @@ void NavierStokes::correct_xdisplace_with_particles() {
 
  if (particles_flag==1) {
 
-  NavierStokes& ns_level0=getLevel(0);
   bool local_copy_flag=true; 
   int ipart=0;
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+    parent->newDataPC(slab_step+1,ipart);
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
   localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
@@ -12666,11 +12664,10 @@ void NavierStokes::veldiffuseALL() {
    refinement_ratio[ilev]=2;
   int nnbr=1;
 
-  NavierStokes& ns_level0=getLevel(0);
   bool local_copy_flag=true; 
   int ipart=0;
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-      ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+    parent->newDataPC(slab_step+1,ipart);
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
   localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
