@@ -134,6 +134,9 @@ public:
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
 
+    CopyNewToOldPC();
+    CopyOldToNewPC();
+
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index);
 

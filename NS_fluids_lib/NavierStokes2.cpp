@@ -6886,7 +6886,6 @@ void NavierStokes::output_triangles() {
  int finest_level = parent->finestLevel();
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid output_triangles");
- NavierStokes& ns_level0=getLevel(0);
 
  bool use_tiling=ns_tiling;
 
@@ -6953,7 +6952,7 @@ void NavierStokes::output_triangles() {
 
     int ipart=0;
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.get_new_dataPC(State_Type,slab_step+1,ipart);
+     parent->newDataPC(slab_step+1,ipart);
 
     auto& particles = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
