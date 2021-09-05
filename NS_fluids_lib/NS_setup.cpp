@@ -707,10 +707,6 @@ NavierStokes::variableSetUp ()
     int nmat=num_materials;
     int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
 
-    // null_ncomp_particles==0 => particle container not associated
-    // to most State Data Types, only "State_Type" will have
-    // particle containers associated.
-    int null_ncomp_particles=0; 
     int null_state_holds_data=0;
     int state_holds_data=1;
 
@@ -769,9 +765,9 @@ NavierStokes::variableSetUp ()
      // AmrLevel.H, protected: static DescriptorList desc_lst
      // ngrow=0
     desc_lst.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,1,&umac_interp,null_ncomp_particles,state_holds_data);
+       0,1,&umac_interp,state_holds_data);
     desc_lstGHOST.addDescriptor(Umac_Type,IndexType::TheUMACType(),
-       0,1,&umac_interp,null_ncomp_particles,null_state_holds_data);
+       0,1,&umac_interp,null_state_holds_data);
     set_x_vel_bc(bc,phys_bc);
 
      // if new parameters added to the FILL routine, then
@@ -790,9 +786,9 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,1,&umac_interp,null_ncomp_particles,state_holds_data);
+      0,1,&umac_interp,state_holds_data);
     desc_lstGHOST.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
-      0,1,&umac_interp,null_ncomp_particles,null_state_holds_data);
+      0,1,&umac_interp,null_state_holds_data);
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
@@ -807,9 +803,9 @@ NavierStokes::variableSetUp ()
 
       // ngrow=0
     desc_lst.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,1,&umac_interp,null_ncomp_particles,state_holds_data);
+      0,1,&umac_interp,state_holds_data);
     desc_lstGHOST.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
-      0,1,&umac_interp,null_ncomp_particles,null_state_holds_data);
+      0,1,&umac_interp,null_state_holds_data);
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
@@ -831,10 +827,10 @@ NavierStokes::variableSetUp ()
 // DIV -------------------------------------------
 
     desc_lst.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,null_ncomp_particles,state_holds_data);
+     1,1,&sem_interp_DEFAULT,state_holds_data);
 
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,null_ncomp_particles,null_state_holds_data);
+     1,1,&sem_interp_DEFAULT,null_state_holds_data);
 
     set_extrap_bc(bc,phys_bc);
     std::string divghost_str="divghost"; 
@@ -854,12 +850,12 @@ NavierStokes::variableSetUp ()
     if ((nparts>=1)&&(nparts<nmat)) {
  
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,nparts*AMREX_SPACEDIM,&pc_interp,null_ncomp_particles,state_holds_data);
+      1,nparts*AMREX_SPACEDIM,&pc_interp,state_holds_data);
 
      int ncghost_solid=1+AMREX_SPACEDIM;
 
      desc_lstGHOST.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,ncghost_solid,&pc_interp,null_ncomp_particles,null_state_holds_data);
+      1,ncghost_solid,&pc_interp,null_state_holds_data);
 
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
@@ -954,10 +950,10 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-     0,1,&xd_mac_interp,null_ncomp_particles,state_holds_data);
+     0,1,&xd_mac_interp,state_holds_data);
     // ngrow=0,ncomp=1
     desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-     0,1,&xd_mac_lo_interp,null_ncomp_particles,null_state_holds_data);
+     0,1,&xd_mac_lo_interp,null_state_holds_data);
 
      // same as x_vel_bc except that EXT_DIR => FOEXTRAP
     set_x_vel_extrap_bc(bc,phys_bc);
@@ -968,10 +964,10 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-     0,1,&xd_mac_interp,null_ncomp_particles,state_holds_data);
+     0,1,&xd_mac_interp,state_holds_data);
      // ngrow=0,ncomp=1
     desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-     0,1,&xd_mac_lo_interp,null_ncomp_particles,null_state_holds_data);
+     0,1,&xd_mac_lo_interp,null_state_holds_data);
 
      // same as y_vel_bc except that EXT_DIR => FOEXTRAP
     set_y_vel_extrap_bc(bc,phys_bc);
@@ -983,10 +979,10 @@ NavierStokes::variableSetUp ()
 #if (AMREX_SPACEDIM == 3)
      // ngrow=0
     desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-     0,1,&xd_mac_interp,null_ncomp_particles,state_holds_data);
+     0,1,&xd_mac_interp,state_holds_data);
      // ngrow=0,ncomp=1
     desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-     0,1,&xd_mac_lo_interp,null_ncomp_particles,null_state_holds_data);
+     0,1,&xd_mac_lo_interp,null_state_holds_data);
 
      // same as z_vel_bc except that EXT_DIR => FOEXTRAP
     set_z_vel_extrap_bc(bc,phys_bc);
@@ -1040,13 +1036,11 @@ NavierStokes::variableSetUp ()
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,NUM_CELL_ELASTIC,
       &pc_interp,
-      null_ncomp_particles,state_holds_data);
+      state_holds_data);
 
-      // null_ncomp_particles==0 => particle container not associated
-      // to "Tensor_Type"  (only to "State_Type")
       // ngrow=1
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,ncghost_elastic,&pc_interp,null_ncomp_particles,null_state_holds_data);
+      1,ncghost_elastic,&pc_interp,null_state_holds_data);
 
       // setComponent: 0..NUM_TENSOR_TYPE-1
      set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
@@ -1184,10 +1178,10 @@ NavierStokes::variableSetUp ()
 
      //ngrow=1
      desc_lst.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
      desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
      std::string MAC_postfix_str="XU";
@@ -1196,10 +1190,10 @@ NavierStokes::variableSetUp ()
 
      //ngrow=1
      desc_lst.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
      desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
      MAC_postfix_str="YU";
@@ -1208,10 +1202,10 @@ NavierStokes::variableSetUp ()
 
       //ngrow=1
      desc_lst.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
      desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
      MAC_postfix_str="ZU";
@@ -1220,10 +1214,10 @@ NavierStokes::variableSetUp ()
 
      //ngrow=1
      desc_lst.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
      desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
-      1,NUM_TENSOR_TYPE,&tensor_pc_interp,null_ncomp_particles,
+      1,NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
      MAC_postfix_str="ZV";
@@ -1241,7 +1235,7 @@ NavierStokes::variableSetUp ()
     int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_ls_ho,&pc_interp,null_ncomp_particles,state_holds_data);
+     1,ncomp_ls_ho,&pc_interp,state_holds_data);
 
      // components 0..nmat * AMREX_SPACEDIM-1 are for interface normal vectors.
      // components nmat * AMREX_SPACEDIM .. nmat * AMREX_SPACEDIM + 
@@ -1250,7 +1244,7 @@ NavierStokes::variableSetUp ()
     int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*nmat;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_LS_ghost,&pc_interp,null_ncomp_particles,null_state_holds_data);
+     1,ncomp_LS_ghost,&pc_interp,null_state_holds_data);
 
     int dcomp=0;
     for (int imls=0;imls<nmat;imls++) { 
@@ -1422,10 +1416,10 @@ NavierStokes::variableSetUp ()
 // newdata FABS have ncomp=desc->nComp() components.
 //
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,nc,&pc_interp,particles_flag,state_holds_data);
+     1,nc,&pc_interp,state_holds_data);
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,ncghost_state,&pc_interp,null_ncomp_particles,null_state_holds_data);
+     1,ncghost_state,&pc_interp,null_state_holds_data);
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);

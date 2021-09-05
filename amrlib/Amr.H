@@ -14,6 +14,13 @@
 #include <AMReX_BCRec.H>
 #include <AMReX_AmrMesh.H>
 
+#include <AMReX_Particles.H>
+#include <AMReX_AmrParticles.H>
+#include <AMReX_NeighborParticles.H>
+
+#include <N_EXTRA_REAL.H>
+
+
 namespace amrex {
 
 class AmrParGDB;
@@ -127,6 +134,14 @@ public:
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
 
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+       newDataPC (int slab_index,int sub_index);
+
+    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+       newDataPC (int slab_index,int sub_index) const;
+
+    int global_AMR_ncomp_PC; //init in InitAmr
+
 protected:
     //
     // Write the plot file to be used for visualization.
@@ -215,6 +230,17 @@ protected:
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
 
+     // 
+     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
+     // STRUCTURE OF ARRAYS: no base
+     //
+    using PLS_ParticleContainerType=
+	    AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+    Vector< 
+	Vector<PLS_ParticleContainerType*> 
+	  > new_dataPC;
+
     std::unique_ptr<AmrParGDB> m_gdb;
 
     std::string      regrid_grids_file;   
@@ -228,8 +254,8 @@ protected:
     Vector<int>       level_steps;  // Number of time steps at this level.
     Vector<int>       level_count;
     bool             isPeriodic[BL_SPACEDIM];  // Domain periodic?
-    Vector<int>       regrid_int;      // Interval between regridding.
-    Vector<int>       space_blocking_factor; 
+    int              regrid_int;      // Interval between regridding.
+    Vector<int>      space_blocking_factor; 
     int              time_blocking_factor;
     int              slab_dt_type; 
     int              MAX_NUM_SLAB; 
@@ -336,9 +362,9 @@ Amr::cumTime () const
 
 inline
 int
-Amr::regridInt (int lev) const
+Amr::regridInt () const
 {
-    return regrid_int[lev];
+    return regrid_int;
 }
 
 inline

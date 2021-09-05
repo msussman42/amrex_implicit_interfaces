@@ -16,14 +16,9 @@
 #include <PhysBCFunctSUSSMAN.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_RealBox.H>
-#include <AMReX_Particles.H>
-#include <AMReX_AmrParticles.H>
-#include <AMReX_NeighborParticles.H>
 
 #include <StateDescriptor.H>
 #include <Amr.H>
-
-#include <N_EXTRA_REAL.H>
 
 namespace amrex {
 
@@ -162,18 +157,10 @@ public:
     //
     MultiFab& newData (int slab_index);
 
-      // lives only on level==0
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-       newDataPC (int slab_index,int sub_index);
-
     //
     // Returns the new data.
     //
     const MultiFab& newData (int slab_index) const;
-
-      // lives only on level==0
-    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-       newDataPC (int slab_index,int sub_index) const;
 
     //
     // Returns an array of boundary condition records for the 
@@ -230,24 +217,7 @@ private:
     // Pointer to new-time data.
     // MAX_NUM_SLAB entries.
     Vector< MultiFab* > new_data;
-     // ONLY LEVEL==0 STATEDATA PARTICLES GET INITIALIZED: THEY HOLD
-     // PARTICLES THAT APPEAR ON ALL THE LEVELS.
-     // 
-     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
-     // STRUCTURE OF ARRAYS: no base
-     //
-     // If ns.viscoelastic_model[im]==2 (elastic material) and
-     //    ns.particleLS_flag[im]==1 (particle levelset==0.0 for
-     //    interface particles),
-     //    then define "new_dataPC"; 
-     //
-    using PLS_ParticleContainerType=
-	    AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
 
-     // lives only on level==0
-    Vector< 
-	Vector<PLS_ParticleContainerType*> 
-	  > new_dataPC;
     //
     // Boundary conditions for the grids at this level.
     //

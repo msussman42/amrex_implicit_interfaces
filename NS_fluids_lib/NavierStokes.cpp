@@ -8606,6 +8606,8 @@ void NavierStokes::init_boundary() {
 
 }  // subroutine init_boundary()
 
+FIX ME the particle container on level 0 has to be copied to a new particle
+container with the updated grid structure.
 void
 NavierStokes::init(
   AmrLevel & old,
@@ -8657,6 +8659,7 @@ NavierStokes::init(
   int state_holds_data=get_desc_lst()[k].get_state_holds_data();
   if (state_holds_data==1) {
 
+    // data with respect to new grid structure.
    MultiFab &S_new = get_new_data(k,ns_time_order);
 
    if (S_new.DistributionMap()==dmap_in) {
@@ -8719,6 +8722,7 @@ NavierStokes::init(
 
  }  // k=0..nstate-1
 
+ FIX ME call for any level (but only update level=0)
  if (level==0) {
    // old particle data will be deleted, so that the data
    // must be saved here.
@@ -8758,9 +8762,10 @@ NavierStokes::init(
  is_first_step_after_regrid = 1;
 
  debug_fillpatch=0;
-}  // subroutine init(old)
+}  // end subroutine init(old)
 
-
+FIX ME the particle container on level 0 has to be copied to a new particle
+container with the updated grid structure.
 // init a new level that did not exist on the previous step.
 void
 NavierStokes::init (const BoxArray& ba_in,
@@ -16004,8 +16009,14 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 
  int bfact=parent->Space_blockingFactor(level);
 
- if (n_error_buf<2)
-  amrex::Error("amr.n_error_buf<2");
+ if (level==max_level-1) {
+  if (n_error_buf<1)
+   amrex::Error("amr.n_error_buf<1 on level==max_level-1");
+ } else if ((level>=0)&&(level<max_level-1)) {
+  if (n_error_buf<2)
+   amrex::Error("amr.n_error_buf<2 on level<max_level-1");
+ } else
+  amrex::Error("level invalid in errorEst");
 
  const int*  domain_lo = geom.Domain().loVect();
  const int*  domain_hi = geom.Domain().hiVect();
@@ -19440,6 +19451,10 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
 
 } // subroutine estTimeStep
 
+// post_regrid is called from either:
+// 1. Amr::initialInit, 
+// 2. Amr::regrid_level_0_on_restart, or
+// 3. Amr::regrid 
 void NavierStokes::post_regrid (int lbase,
   int start_level,int new_finest,int initialInit_flag,Real time) {
 
@@ -19478,7 +19493,7 @@ void NavierStokes::post_regrid (int lbase,
    state[k].CopyNewToOld(level,max_level); 
    state[k].setTimeLevel(time,dt_amr);
   }
-}
+} // end subroutine post_regrid
 
 void NavierStokes::computeNewDt (int finest_level,
   Real& dt,Real stop_time) {

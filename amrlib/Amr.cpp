@@ -43,6 +43,8 @@
 #include <DatasetClient.H>
 #endif
 
+#define debug_PC 1
+
 namespace amrex {
 
 //
@@ -392,12 +394,7 @@ Amr::InitAmr () {
         space_blocking_factor[i] = 1;
     }
 
-    if (max_level > 0) 
-    {
-       regrid_int.resize(max_level);
-       for (i = 0; i < max_level; i++)
-           regrid_int[i]  = 0;
-    }
+    regrid_int=0;
 
     //
     // Read other amr specific values.
@@ -446,6 +443,8 @@ Amr::InitAmr () {
     pp.query("MAX_NUM_SLAB",MAX_NUM_SLAB);
     if (time_blocking_factor+1>MAX_NUM_SLAB)
      amrex::Error("MAX_NUM_SLAB too small");
+    if (time_blocking_factor<1)
+     amrex::Error("time_blocking_factor too small");
 
     pp.query("slab_dt_type",slab_dt_type);
     if ((slab_dt_type!=0)&&
@@ -453,35 +452,19 @@ Amr::InitAmr () {
      amrex::Error("slab_dt_type invalid");
 
     //
-    // Read in the regrid interval if max_level > 0.
+    // SUSSMAN: just one regrid_int value
     //
-    if (max_level > 0) 
-    {
-       int numvals = pp.countval("regrid_int");
-       if (numvals == 1)
-       {
-           //
-           // Set all values to the single available value.
-           //
-           int the_regrid_int = 0;
-           pp.query("regrid_int",the_regrid_int);
-           for (i = 0; i < max_level; i++)
-           {
-               regrid_int[i] = the_regrid_int;
-           }
-       }
-       else if (numvals < max_level)
-       {
-           amrex::Error("You did not specify enough values of regrid_int");
-       }
-       else 
-       {
-           //
-           // Otherwise we expect a vector of max_level values
-           //
-           pp.queryarr("regrid_int",regrid_int,0,max_level);
-       }
+    if (max_level > 0) {
+
+     int numvals = pp.countval("regrid_int");
+     if (numvals == 1) {
+      pp.query("regrid_int",regrid_int);
+     } else {
+      amrex::Error("specify just one regrid_int value");
+     }
+
     }
+
     //
     // SUSSMAN:
     // Now check offset; CoordSys does not need it anymore though.
@@ -510,6 +493,31 @@ Amr::InitAmr () {
      std::cout << "Amr.slab_dt_type= " <<
         slab_dt_type << '\n';
     }
+
+    global_AMR_ncomp_PC=0;
+    ppns.query("particles_flag",global_AMR_ncomp_PC);
+    if ((global_AMR_ncomp_PC==0)||
+        (global_AMR_ncomp_PC==1)) {
+     //do nothing
+    } else
+     amrex::Error("global_AMR_ncomp_PC invalid");
+
+    new_dataPC.resize(MAX_NUM_SLAB);
+
+    for (int i=0;i<=time_blocking_factor;i++) {
+
+     if (global_AMR_ncomp_PC>0) {
+      new_dataPC[i].resize(global_AMR_ncomp_PC);
+      for (int j=0;j<global_AMR_ncomp_PC;j++) {
+       new_dataPC[i][j]=
+         new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(this);
+      }
+     } else if (global_AMR_ncomp_PC==0) {
+      // do nothing
+     } else
+      amrex::Error("global_AMR_ncomp_PC invalid");
+
+    }// for (int i=0;i<=time_blocking_factor;i++) 
 
     m_gdb.reset(new AmrParGDB(this));
 
@@ -657,8 +665,8 @@ Amr::AMR_checkInput ()
 	 if (k<Old_blockingFactor(i+1))
 	  amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
 	}
-        if (k<4)
-         amrex::Error("blocking factor must be 4 or larger");
+        if (k<2)
+         amrex::Error("blocking factor must be 2 or larger on max_level");
 
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
@@ -760,8 +768,8 @@ Amr::AMR_checkInput ()
         amrex::Error("checkInput: bad physical problem size");
 
     if (max_level > 0) 
-       if (regrid_int[0] <= 0)
-          amrex::Error("checkinput: regrid_int not defined and max_level > 0");
+     if (regrid_int <= 0)
+      amrex::Error("checkinput: regrid_int must be positive if max_level>0");
 
     if (verbose > 0 && ParallelDescriptor::IOProcessor())
        std::cout << "Successfully read inputs file ... " << '\n';
@@ -1004,7 +1012,7 @@ Amr::restart (const std::string& filename)
        }
 
        if (regrid_on_restart and max_level > 0)
-           level_count[0] = regrid_int[0];
+           level_count[0] = regrid_int;
 
        AMR_checkInput();
        //
@@ -1067,7 +1075,7 @@ Amr::restart (const std::string& filename)
        for (i = max_level+1; i <= mx_lev   ; i++) is >> int_dummy;
 
        if (regrid_on_restart and max_level > 0)
-           level_count[0] = regrid_int[0];
+           level_count[0] = regrid_int;
 
        AMR_checkInput();
 
@@ -1283,49 +1291,59 @@ Amr::checkPoint ()
 void
 Amr::regrid_level_0_on_restart()
 {
-    regrid_on_restart = 0;
-    //
-    // Coarsening before we split the grids ensures that each resulting
-    // grid will have an even number of cells in each direction.
-    //
-    BoxArray lev0(amrex::coarsen(Geom(0).Domain(),2));
-    //
-    // Now split up into list of grids within max_grid_size[0] limit.
-    //
-    lev0.maxSize(Old_maxGridSize(0)/2);
-    //
-    // Now refine these boxes back to level 0.
-    //
-    lev0.refine(2);
-    
-     //
-     // Construct skeleton of new level.
-     //
-    DistributionMapping dm(lev0);
-    AmrLevel* a = (*levelbld)(*this,0,Geom(0),lev0,dm,cumtime);
-	
-    a->init(*amr_level[0],lev0,dm);
-    amr_level[0].reset(a);
-	
-    this->SetBoxArray(0, amr_level[0]->boxArray());
-    this->SetDistributionMap(0, amr_level[0]->DistributionMap());
 
-    // calls CopyNewToOld 
-    // calls setTimeLevel(cumtime,dt_AMR) 
-    int initialInit_flag=0;
-    amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
-	
-    if (ParallelDescriptor::IOProcessor()) {
-     if (verbose > 1) {
-      printGridInfo(amrex::OutStream(),0,finest_level);
-     } else if (verbose > 0) {
-      printGridSummary(amrex::OutStream(),0,finest_level);
-     }
-    }
-	
-    if (record_grid_info && ParallelDescriptor::IOProcessor())
-     printGridInfo(gridlog,0,finest_level);
-}
+
+ if ((max_level==0)&&(regrid_on_restart==1)) {
+
+  regrid_on_restart = 0;
+  //
+  // Coarsening before we split the grids ensures that each resulting
+  // grid will have an even number of cells in each direction.
+  //
+  BoxArray lev0(amrex::coarsen(Geom(0).Domain(),2));
+  //
+  // Now split up into list of grids within max_grid_size[0] limit.
+  //
+  lev0.maxSize(Old_maxGridSize(0)/2);
+  //
+  // Now refine these boxes back to level 0.
+  //
+  lev0.refine(2);
+  
+   //
+   // Construct skeleton of new level.
+   //
+  DistributionMapping dm(lev0);
+  AmrLevel* a = (*levelbld)(*this,0,Geom(0),lev0,dm,cumtime);
+      
+  a->init(*amr_level[0],lev0,dm);
+  amr_level[0].reset(a);
+      
+  this->SetBoxArray(0, amr_level[0]->boxArray());
+  this->SetDistributionMap(0, amr_level[0]->DistributionMap());
+
+  // calls CopyNewToOld 
+  // calls setTimeLevel(cumtime,dt_AMR) 
+  int initialInit_flag=0;
+  amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
+      
+  if (ParallelDescriptor::IOProcessor()) {
+   if (verbose > 1) {
+    printGridInfo(amrex::OutStream(),0,finest_level);
+   } else if (verbose > 0) {
+    printGridSummary(amrex::OutStream(),0,finest_level);
+   }
+  }
+      
+  if (record_grid_info && ParallelDescriptor::IOProcessor())
+   printGridInfo(gridlog,0,finest_level);
+
+ } else {
+  std::cout << "max_level not 0 or regrid_on_restart not 1\n";
+  amrex::Error("regrid_level_0_on_restart(): invalid environment");
+ }
+
+} // end subroutine regrid_level_0_on_restart()
 
 
 void
@@ -1343,7 +1361,7 @@ Amr::timeStep (Real time,
   if (record_grid_info && ParallelDescriptor::IOProcessor())
    printGridInfo(gridlog,0,finest_level);
  
- } else if ((finest_level>0)||(regrid_on_restart==0)) {
+ } else if ((max_level>0)||(regrid_on_restart==0)) {
   // do nothing
  } else
   amrex::Error("finest_level or regrid_on_restart invalid");
@@ -1355,7 +1373,7 @@ Amr::timeStep (Real time,
 
   const int old_finest = finest_level;
 
-  if (level_count[level] >= regrid_int[level]) {
+  if (level_count[level] >= regrid_int) {
 
    regrid(level,time); // new levels might be created here.
  
@@ -1933,7 +1951,7 @@ Amr::regrid (int  lbase,
    printGridSummary(std::cout,start,finest_level);
   }
  }
-} // subroutine regrid
+} // end subroutine regrid
 
 void 
 Amr::print_cells_advanced() {
