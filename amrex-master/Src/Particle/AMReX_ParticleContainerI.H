@@ -979,6 +979,8 @@ copyParticles (const ParticleContainerType& other, F&& f, bool local)
 {
     BL_PROFILE("ParticleContainer::copyParticles");
     clearParticles();
+     //SUSSMAN KLUGE to initialize the hierarchy first.
+    Redistribute();
     addParticles(other, std::forward<F>(f), local);
 }
 

@@ -493,7 +493,9 @@ if (level==0) {
     for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
 
      // dest PC is cleared prior to copy.
-     bool local=false;  // redistribute after copy
+     // do not redistribute inside of copyParticles since lev_max is not
+     // used.
+     bool local=true;  
      new_dataPC[i][PC_index]->copyParticles(
         *new_dataPC[time_order][PC_index],local);
      int lev_min=0;
@@ -530,7 +532,9 @@ if (level==0) {
    if (ncomp_PC_test==level_ncomp_PC) {
     for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
      // dest PC is cleared prior to copy.
-     bool local=false;  // redistribute after copy
+     // do not redistribute inside of copyParticles since lev_max is not
+     // used.
+     bool local=true;
      new_dataPC[i][PC_index]->copyParticles(
         *new_dataPC[0][PC_index],local);
      int lev_min=0;
@@ -543,7 +547,7 @@ if (level==0) {
     amrex::Error("ncomp_PC_test or level_ncomp_PC invalid");
   } else 
    amrex::Error("level_ncomp_PC invalid");
- } // i=1..time_order_factor
+ } // i=1..time_order
 } else
  amrex::Error("level invalid in CopyOldToNewPC");
 

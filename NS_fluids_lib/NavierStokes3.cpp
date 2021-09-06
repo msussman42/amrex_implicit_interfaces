@@ -385,7 +385,7 @@ void NavierStokes::nonlinear_advection() {
  if (particles_flag==1) {
 
   int ipart=0;
-  bool local_copy_flag=true; 
+  bool local_copy_flag=true; //do not redistribute inside of copyParticle
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
    ns_level0.newDataPC(slab_step+1,ipart);
@@ -742,7 +742,7 @@ void NavierStokes::correct_xdisplace_with_particles() {
 
  if (particles_flag==1) {
 
-  bool local_copy_flag=true; 
+  bool local_copy_flag=true; //do not redistribue inside of copyParticles
   int ipart=0;
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
@@ -12667,7 +12667,7 @@ void NavierStokes::veldiffuseALL() {
    refinement_ratio[ilev]=2;
   int nnbr=1;
 
-  bool local_copy_flag=true; 
+  bool local_copy_flag=true; //do not redistribute inside of copyParticles
   int ipart=0;
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
