@@ -8485,8 +8485,33 @@ NavierStokes::initData () {
    // time_array[bfact_time_order]=strt_time
   state[k].setTimeLevel(strt_time,dt_amr); 
  }
- NavierStokes& ns_level0=getLevel(0);
- ns_level0.CopyNewToOldPC();
+  // even though there are no particles yet, the grid hierarchy should
+  // be initialized.
+ if (particles_flag==0) {
+  // do nothing
+ } else if (particles_flag==1) {
+  int ipart=0;
+  NavierStokes& ns_level0=getLevel(0);
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
+    ns_level0.newDataPC(ns_time_order,ipart);
+  int lev_min=0;
+  int lev_max=level;
+  int nGrow_Redistribute=0;
+  int local_Redistribute=0;
+  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_Redistribute);
+
+FIX ME
+  if (1==1) {
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_slab_PC=
+    ns_level0.newDataPC(0,ipart);
+   old_slab_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_Redistribute);
+  }
+
+  ns_level0.CopyNewToOldPC(lev_max); //copy and redistribute
+ } else
+  amrex::Error("particles_flag invalid");
 
 }  // end subroutine initData
 
@@ -8602,8 +8627,6 @@ void NavierStokes::init_boundary() {
 
 }  // subroutine init_boundary()
 
-//FIX ME the particle container on level 0 has to be copied to a new particle
-//container with the updated grid structure.
 void
 NavierStokes::init(
   AmrLevel & old,
@@ -8611,8 +8634,6 @@ NavierStokes::init(
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
  
  NavierStokes* oldns     = (NavierStokes*) &old;
-
- int max_level = parent->maxLevel();
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -8718,36 +8739,38 @@ NavierStokes::init(
 
  }  // k=0..nstate-1
 
-// FIX ME call for any level (but only update level=0)
- if (level==0) {
-   // old particle data will be deleted, so that the data
-   // must be saved here.
-  if (particles_flag==0) {
-   // do nothing
-  } else if (particles_flag==1) {
+ if (particles_flag==0) {
+  // do nothing
+ } else if (particles_flag==1) {
 
    int ipart=0;
    int lev_min=0;
-   int lev_max=-1;
+   int lev_max=level;
    int nGrow_Redistribute=0;
-   int local_Redistribute=0;
+   bool local_copy=false;
+   int local_redistribute=0;
 
-    //FIX ME: update the associated particle hierarchy here.
    NavierStokes& ns_level0=getLevel(0);
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
+
+   if (level==0) {
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
+     ns_level0.newDataPC(ns_time_order,ipart);
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
+     oldns->newDataPC(ns_time_order,ipart);
+    new_PC.copyParticles(old_PC,local_copy);
+   } else if (level>0) {
+    // do nothing
+   } else
+    amrex::Error("level invalid");
+     
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
     ns_level0.newDataPC(ns_time_order,ipart);
 
-    // Redistribute called since level=0 grids might have changed.
-   old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
+   new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_redistribute);
 
-  } else
-   amrex::Error("particles_flag invalid");
-
- } else if ((level>=1)&&(level<=max_level)) {
-  // do nothing
  } else
-  amrex::Error("level invalid");
+  amrex::Error("particles_flag invalid");
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
  is_first_step_after_regrid = 1;
@@ -8755,8 +8778,6 @@ NavierStokes::init(
  debug_fillpatch=0;
 }  // end subroutine init(old)
 
-//FIX ME the particle container on level 0 has to be copied to a new particle
-//container with the updated grid structure.
 // init a new level that did not exist on the previous step.
 void
 NavierStokes::init (const BoxArray& ba_in,
@@ -8857,6 +8878,33 @@ NavierStokes::init (const BoxArray& ba_in,
 
  } // k=0..nstate-1
 
+ if (particles_flag==0) {
+  // do nothing
+ } else if (particles_flag==1) {
+
+   int ipart=0;
+   int lev_min=0;
+   int lev_max=level;
+   int nGrow_Redistribute=0;
+   int local_Redistribute=0;
+
+   if (level==0) {
+    amrex::Error("level==0 cannot be made from nothing");
+   } else if (level>0) {
+    // do nothing
+   } else
+    amrex::Error("level invalid");
+     
+   NavierStokes& ns_level0=getLevel(0);
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
+    ns_level0.newDataPC(ns_time_order,ipart);
+
+   new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+
+ } else
+  amrex::Error("particles_flag invalid");
+
  init_regrid_history();
  is_first_step_after_regrid = 2;
 
@@ -8881,7 +8929,7 @@ void NavierStokes::CopyNewToOldALL() {
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++) 
  NavierStokes& ns_level0=getLevel(0);
- ns_level0.CopyNewToOldPC();
+ ns_level0.CopyNewToOldPC(finest_level);
 
  int nmat=num_materials;
 
@@ -8917,7 +8965,7 @@ void NavierStokes::CopyOldToNewALL() {
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++)
  NavierStokes& ns_level0=getLevel(0);
- ns_level0.CopyOldToNewPC();
+ ns_level0.CopyOldToNewPC(finest_level);
 
  int nmat=num_materials;
 
@@ -19467,6 +19515,11 @@ void NavierStokes::post_regrid (int lbase,
   } else
    amrex::Error("initialInit_flag invalid");
 
+  int lev_min=0;
+  int lev_max=new_finest;
+  int nGrow_Redistribute=0;
+  int local_Redistribute=0;
+
   if (particles_flag==0) {
    // do nothing
   } else if (particles_flag==1) {
@@ -19474,10 +19527,6 @@ void NavierStokes::post_regrid (int lbase,
    NavierStokes& ns_level0=getLevel(0);
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
       ns_level0.newDataPC(ns_time_order,ipart);
-   int lev_min=0;
-   int lev_max=-1;
-   int nGrow_Redistribute=0;
-   int local_Redistribute=0;
    current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
   } else
@@ -19489,7 +19538,7 @@ void NavierStokes::post_regrid (int lbase,
    state[k].setTimeLevel(time,dt_amr);
   }
   NavierStokes& ns_level0=getLevel(0);
-  ns_level0.CopyNewToOldPC();
+  ns_level0.CopyNewToOldPC(lev_max);
 
 } // end subroutine post_regrid
 
