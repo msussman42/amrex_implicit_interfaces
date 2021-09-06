@@ -602,7 +602,7 @@ stop
       return
       end subroutine hhorizontal_coeffRZ
  
-       ! called from FORT_CURVSTRIP
+       ! called from fort_curvstrip
       subroutine initheightLS( &
         vof_height_function, &
         icenter,jcenter,kcenter, &
@@ -3798,7 +3798,7 @@ stop
       end subroutine FORT_CELLFACEINIT
 
 
-      subroutine FORT_CURVSTRIP( &
+      subroutine fort_curvstrip( &
        post_restart_flag, &
        vof_height_function, &
        level, &
@@ -3815,7 +3815,6 @@ stop
        areaz,DIMS(areaz), &
        masknbr,DIMS(masknbr), &
        LSPC,DIMS(LSPC), &
-       LSHO,DIMS(LSHO), &
        recon,DIMS(recon), &
        curvfab,DIMS(curvfab), &
        velfab,DIMS(velfab), &
@@ -3831,7 +3830,8 @@ stop
        nmat,nten, & 
        num_curv, &
        ngrow_distance, &
-       RD)
+       RD) &
+      bind(c,name='fort_curvstrip')
 
       use global_utility_module
       use global_distance_module
@@ -3858,7 +3858,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(masknbr)
       INTEGER_T, intent(in) :: DIMDEC(LSPC)
-      INTEGER_T, intent(in) :: DIMDEC(LSHO)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(curvfab)
       INTEGER_T, intent(in) :: DIMDEC(velfab)
@@ -3872,20 +3871,32 @@ stop
       REAL_T, intent(out) :: curv_min
       REAL_T, intent(out) :: curv_max
 
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: areax(DIMV(areax))
-      REAL_T, intent(in) :: areay(DIMV(areay))
-      REAL_T, intent(in) :: areaz(DIMV(areaz))
+      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: areax(DIMV(areax))
+      REAL_T, intent(in), target :: areay(DIMV(areay))
+      REAL_T, intent(in), target :: areaz(DIMV(areaz))
+      REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory)
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4)
-      REAL_T, intent(in) :: LSPC(DIMV(LSPC),nmat*(1+SDIM))
-      REAL_T, intent(in) :: LSHO(DIMV(LSHO),nmat*(1+SDIM))
-      REAL_T, intent(in) :: recon(DIMV(LSHO),nmat*ngeom_recon)
-      REAL_T, intent(out) :: curvfab(DIMV(curvfab),num_curv)
-      REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM)
-      REAL_T, intent(in) :: denfab(DIMV(denfab),nmat*num_state_material)
+      REAL_T, intent(out),target :: history_dat(DIMV(history_dat),nhistory)
+      REAL_T, pointer :: history_dat_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4)
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: LSPC(DIMV(LSPC),nmat*(1+SDIM))
+      REAL_T, pointer :: LSPC_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: curvfab(DIMV(curvfab),num_curv)
+      REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM)
+      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target ::  &
+              denfab(DIMV(denfab),nmat*num_state_material)
+      REAL_T, pointer :: denfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -4009,8 +4020,19 @@ stop
        print *,"bfact invalid90"
        stop
       endif
-      if (bfact_grid.lt.4) then
-       print *,"bfact_grid invalid in curvstrip"
+
+      if ((level.lt.finest_level).and.(level.ge.0)) then
+       if (bfact_grid.lt.4) then
+        print *,"bfact_grid invalid in curvstrip(1)"
+        stop
+       endif
+      else if (level.eq.finest_level) then
+       if (bfact_grid.lt.2) then
+        print *,"bfact_grid invalid in curvstrip(2)"
+        stop
+       endif
+      else
+       print *,"level invalid"
        stop
       endif
 
@@ -4034,11 +4056,11 @@ stop
       if (post_restart_flag.eq.0) then 
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
-         print *,"fablo mod bfact_grid not 0 in CURVSTRIP"
+         print *,"fablo mod bfact_grid not 0 in fort_curvstrip"
          stop
         endif
         if (((fabhi(dirloc)+1)/bfact_grid)*bfact_grid.ne.fabhi(dirloc)+1) then
-         print *,"fabhi+1 mod bfact_grid not 0 in CURVSTRIP"
+         print *,"fabhi+1 mod bfact_grid not 0 in fort_curvstrip"
          stop
         endif
        enddo ! dirloc=1..sdim
@@ -4049,21 +4071,32 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,2896)
-      call checkbound(fablo,fabhi,DIMS(LSPC),RD,-1,2897)
-      call checkbound(fablo,fabhi,DIMS(LSHO),RD,-1,2898)
-      call checkbound(fablo,fabhi,DIMS(recon),RD,-1,2898)
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,2899)
-      call checkbound(fablo,fabhi,DIMS(curvfab),1,-1,2900)
-      call checkbound(fablo,fabhi,DIMS(velfab),2,-1,2901)
-      call checkbound(fablo,fabhi,DIMS(denfab),2,-1,2902)
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,2896)
+      LSPC_ptr=>LSPC
+      call checkbound_array(fablo,fabhi,LSPC_ptr,RD,-1,2897)
+      recon_ptr=>recon
+      call checkbound_array(fablo,fabhi,recon_ptr,RD,-1,2898)
+      masknbr_ptr=>masknbr
+      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1,2899)
+      curvfab_ptr=>curvfab
+      call checkbound_array(fablo,fabhi,curvfab_ptr,1,-1,2900)
+      velfab_ptr=>velfab
+      call checkbound_array(fablo,fabhi,velfab_ptr,2,-1,2901)
+      denfab_ptr=>denfab
+      call checkbound_array(fablo,fabhi,denfab_ptr,2,-1,2902)
 
-      call checkbound(fablo,fabhi,DIMS(vol),1,-1,6611)
-      call checkbound(fablo,fabhi,DIMS(areax),1,0,6612)
-      call checkbound(fablo,fabhi,DIMS(areay),1,1,6613)
-      call checkbound(fablo,fabhi,DIMS(areaz),1,SDIM-1,6614)
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1,6611)
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      call checkbound_array1(fablo,fabhi,areax_ptr,1,0,6612)
+      call checkbound_array1(fablo,fabhi,areay_ptr,1,1,6613)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,1,SDIM-1,6614)
 
-      call checkbound(fablo,fabhi,DIMS(history_dat),1,-1,2902)
+      history_dat_ptr=>history_dat
+      call checkbound_array(fablo,fabhi,history_dat_ptr,1,-1,2902)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -4142,7 +4175,7 @@ stop
           curvfab(D_DECL(i,j,k),icurv)=zero
          enddo 
          do im=1,nmat
-          LS(im)=LSHO(D_DECL(i,j,k),im)
+          LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
          call FIX_LS_tessellate(LS,LS_fixed,nmat)
@@ -4188,7 +4221,7 @@ stop
             kside=k+sidestar*kk
 
             do im=1,nmat
-             LSSIDE(im)=LSHO(D_DECL(iside,jside,kside),im)
+             LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
             call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed,nmat)
             call get_primary_material(LSSIDE_fixed,nmat,im_opp)
@@ -4456,7 +4489,7 @@ stop
 
              ! get normals at the cell center.
              do inormal=1,SDIM*nmat
-              nrmPROBE(inormal)=LSHO(D_DECL(i,j,k),nmat+inormal)
+              nrmPROBE(inormal)=LSPC(D_DECL(i,j,k),nmat+inormal)
              enddo ! inormal
 
               ! get normals at the cell center using finite differences. 
@@ -4624,7 +4657,7 @@ stop
 
               if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
                do inormal=1,SDIM*nmat
-                nrm_local(inormal)=LSHO(D_DECL(i+i1,j+j1,k+k1),nmat+inormal)
+                nrm_local(inormal)=LSPC(D_DECL(i+i1,j+j1,k+k1),nmat+inormal)
                enddo
               else if ((abs(i1).le.RD_HEIGHT).and. &
                        (abs(j1).le.RD_HEIGHT).and. &
@@ -4636,7 +4669,7 @@ stop
               endif
 
               do im_curv=1,nmat
-               LSCEN_hold(im_curv)=LSHO(D_DECL(i+i1,j+j1,k+k1),im_curv)
+               LSCEN_hold(im_curv)=LSPC(D_DECL(i+i1,j+j1,k+k1),im_curv)
                vofcomp=(im_curv-1)*ngeom_recon+1
                vofsten(D_DECL(i1,j1,k1),im_curv)= &
                   recon(D_DECL(i+i1,j+j1,k+k1),vofcomp)
@@ -4822,7 +4855,7 @@ stop
       deallocate(xsten_curv)
 
       return
-      end subroutine FORT_CURVSTRIP
+      end subroutine fort_curvstrip
 
       subroutine FORT_GETTYPEFAB( &
        source_fab, &

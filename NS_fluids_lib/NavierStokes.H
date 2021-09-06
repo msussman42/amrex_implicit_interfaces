@@ -222,7 +222,6 @@ namespace amrex{
 #define nodevel_MF 209
 #define LSNEW_MF 210
 #define donorflag_MF 211
-#define GHOSTDIST_MF 212
 
 #define L1_LEVELPC_MF 213
 

@@ -1408,8 +1408,9 @@ NavierStokes::variableSetUp ()
     ls_ho_interp_LOW_PARM.LSHOInterp_nmat=nmat;
     ls_ho_interp_LOW_PARM.LSHOInterp_LO=1; // 0=use normals 1=piecewise const 
 
+      //default is low order (piecewise constant)
     desc_lst.setComponent(LS_Type,0,LS_main_names,
-      LS_main_bcs,LS_main_fill_class,&ls_ho_interp_HIGH_PARM);
+      LS_main_bcs,LS_main_fill_class,&ls_ho_interp_LOW_PARM);
 
 
 // State_Type  ------------------------------------------------- 
