@@ -2,7 +2,6 @@
 #define _LEVEL_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_CURVSTRIP curvstrip
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -18,7 +17,6 @@
 
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_CURVSTRIP CURVSTRIP
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
 #    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
@@ -34,7 +32,6 @@
 #    define FORT_COPYFINECOARSECOLOR COPYFINECOARSECOLOR
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_CURVSTRIP curvstrip
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
@@ -48,7 +45,6 @@
 #    define FORT_AVGDOWNCOLOR avgdowncolor
 #    define FORT_COPYFINECOARSECOLOR copyfinecoarsecolor
 #  else
-#    define FORT_CURVSTRIP curvstrip_
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
 #    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
@@ -658,7 +654,7 @@ namespace amrex{
        Real* time,int* ngrow,
        int* nmat,int* ncellfrac);
 
-     void FORT_CURVSTRIP(
+     void fort_curvstrip(
        int* post_restart_flag,
        int* vof_height_function,
        int* level,
@@ -675,7 +671,6 @@ namespace amrex{
        Real* areaz,AMREX_ARLIM_P(areazlo),AMREX_ARLIM_P(areazhi),
        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
        Real* LSPC,AMREX_ARLIM_P(LSPClo),AMREX_ARLIM_P(LSPChi),
-       Real* LSHO,AMREX_ARLIM_P(LSHOlo),AMREX_ARLIM_P(LSHOhi),
        Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
        Real* curvfab,AMREX_ARLIM_P(curvfablo),AMREX_ARLIM_P(curvfabhi),
        Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),

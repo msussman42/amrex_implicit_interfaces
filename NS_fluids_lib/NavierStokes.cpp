@@ -11302,13 +11302,27 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 // fine grid dimensions are perfectly divisible by the blocking factor.
 void NavierStokes::check_grid_places() {
 
+ int finest_level=parent->finestLevel();
  int bfact_SEM_coarse=0;
  int bfact_SEM=parent->Space_blockingFactor(level);
  int bfact_grid=parent->Old_blockingFactor(level);
- if (bfact_grid<4)
-  amrex::Error("we must have blocking factor at least 4");
 
- int bfact_fine_min=((bfact_SEM<4) ? 4 : bfact_SEM);
+ int bfact_fine_min=0;
+ if ((level>=0)&&(level<finest_level)) {
+  bfact_fine_min=((bfact_SEM<4) ? 4 : bfact_SEM);
+  if (bfact_grid<4)
+   amrex::Error("we must have blocking factor at least 4(1)");
+  if (bfact_fine_min<4)
+   amrex::Error("bfact_fine_min<4");
+ } else if (level==finest_level) {
+  bfact_fine_min=((bfact_SEM<2) ? 2 : bfact_SEM);
+  if (bfact_grid<2)
+   amrex::Error("we must have blocking factor at least 2(1)");
+  if (bfact_fine_min<2)
+   amrex::Error("bfact_fine_min<2");
+ } else
+  amrex::Error("level invalid");
+
  if (bfact_fine_min<bfact_grid)
   bfact_fine_min=bfact_grid;
 
@@ -11322,8 +11336,14 @@ void NavierStokes::check_grid_places() {
    bfact_fine_min=2*bfact_SEM_coarse;
  }
 
- if (bfact_fine_min<4)
-  amrex::Error("bfact_fine_min<4");
+ if ((level>=0)&&(level<finest_level)) {
+  if (bfact_fine_min<4)
+   amrex::Error("bfact_fine_min<4");
+ } else if (level==finest_level) {
+  if (bfact_fine_min<2)
+   amrex::Error("bfact_fine_min<2");
+ } else
+  amrex::Error("level invalid");
 
  for (int gridno=0;gridno<grids.size();gridno++) {
   const Box& fabgrid = grids[gridno];
@@ -23587,11 +23607,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  new_localMF(DIST_CURV_MF,num_curv,1,-1);
  localMF[DIST_CURV_MF]->setVal(0.0);
 
- getStateDist_localMF(GHOSTDIST_MF,ngrow_distance,cur_time_slab,16);
- debug_ngrow(GHOSTDIST_MF,ngrow_distance,906);
- if (localMF[GHOSTDIST_MF]->nComp()!=(1+AMREX_SPACEDIM)*nmat)
-  amrex::Error("localMF[GHOSTDIST_MF]->nComp() invalid");
-
  VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,90);
  if (localMF[SLOPE_RECON_MF]->nComp()==nmat*ngeom_recon) {
@@ -23653,7 +23668,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-    FArrayBox& lshofab=(*localMF[GHOSTDIST_MF])[mfi];
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
     FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
@@ -23672,7 +23686,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // declared in: LEVELSET_3D.F90
-    FORT_CURVSTRIP(
+    fort_curvstrip(
      &post_restart_flag,
      &vof_height_function,
      &level,
@@ -23692,8 +23706,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      lsfab.dataPtr(),
      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-     lshofab.dataPtr(),
-     ARLIM(lshofab.loVect()),ARLIM(lshofab.hiVect()),
      reconfab.dataPtr(),
      ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      curvfab.dataPtr(),
@@ -23773,10 +23785,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
      tecplot_debug(lsfab,xlo,fablo,fabhi,dx,-1,0,0,nmat,interior_only);
 
-     std::cout << "output of lshofab (GHOSTDIST)" << '\n';
-     FArrayBox& lshofab=(*localMF[GHOSTDIST_MF])[mfi];
-     tecplot_debug(lshofab,xlo,fablo,fabhi,dx,-1,0,0,nmat,interior_only);
-
     } // mfi
     ns_reconcile_d_num(124);
 
@@ -23787,8 +23795,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
  } else
    amrex::Error("project_option invalid10");
-
- delete_localMF(GHOSTDIST_MF,1);
 
 }  // subroutine makeStateCurv
 

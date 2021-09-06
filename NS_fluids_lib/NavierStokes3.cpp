@@ -399,8 +399,7 @@ void NavierStokes::nonlinear_advection() {
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
-   //local=1 since particles only displace 1 cell max.
-  int local_Redistribute=1; 
+  int local_Redistribute=0; 
   localPC_no_nbr.Redistribute(lev_min,lev_max,
      nGrow_Redistribute,local_Redistribute);
 
@@ -432,8 +431,7 @@ void NavierStokes::nonlinear_advection() {
   lev_min=0;
   lev_max=-1;
   nGrow_Redistribute=0;
-   //local=1 since particles only displace 1 cell max.
-  local_Redistribute=1; 
+  local_Redistribute=0; 
   localPC_no_nbr.Redistribute(lev_min,lev_max,
      nGrow_Redistribute,local_Redistribute);
   localPC_nbr.clearNeighbors();
@@ -2243,8 +2241,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   int bfact_grid=parent->Old_blockingFactor(ilev);
   if ((bfact_space<1)||(bfact_space>64))
    amrex::Error("bfact_space out of range");
-  if (bfact_grid<4)
-   amrex::Error("we must have blocking factor at least 4");
+  if ((ilev>=0)&&(ilev<finest_level)) {
+   if (bfact_grid<4)
+    amrex::Error("we must have blocking factor at least 4(1)");
+  } else if (ilev==finest_level) {
+   if (bfact_grid<2)
+    amrex::Error("we must have blocking factor at least 2(1)");
+  } else
+   amrex::Error("ilev invalid");
   ns_level.check_grid_places();
  } // ilev=level ... finest_level
 

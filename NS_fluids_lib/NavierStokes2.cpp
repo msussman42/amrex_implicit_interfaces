@@ -4911,17 +4911,11 @@ void NavierStokes::allocate_levelsetLO(int ngrow,int idx) {
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
 
- int Interp_LO=1;
- override_LS_HO(Interp_LO);  // do not use normals for coarse/fine interp.
-
  delete_localMF_if_exist(idx,1);
  getStateDist_localMF(idx,ngrow,cur_time_slab,17);
  if (localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
  debug_ngrow(idx,ngrow,90);
-
- Interp_LO=0;
- override_LS_HO(Interp_LO);  // use normals
 
 } // subroutine allocate_levelsetLO
 
