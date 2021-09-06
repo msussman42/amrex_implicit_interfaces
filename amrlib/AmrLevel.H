@@ -272,8 +272,8 @@ public:
              const Vector<IntVect>& bf_lev);
     const BoxArray& getAreaNotToTag() noexcept;
 
-    void CopyNewToOldPC();
-    void CopyOldToNewPC();
+    void CopyNewToOldPC(int lev_max);
+    void CopyOldToNewPC(int lev_max);
 
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index);

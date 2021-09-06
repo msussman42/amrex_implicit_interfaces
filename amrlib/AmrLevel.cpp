@@ -476,7 +476,7 @@ if (level==0) {
 }
 
 void
-AmrLevel::CopyNewToOldPC() {
+AmrLevel::CopyNewToOldPC(int lev_max) {
 
 if (level==0) {
 
@@ -496,6 +496,11 @@ if (level==0) {
      bool local=false;  // redistribute after copy
      new_dataPC[i][PC_index]->copyParticles(
         *new_dataPC[time_order][PC_index],local);
+     int lev_min=0;
+     int nGrow_Redistribute=0;
+     int local_Redistribute=0;
+     new_dataPC[i][PC_index]->Redistribute(lev_min,lev_max,nGrow_Redistribute,
+        local_Redistribute);
     }
    } else
     amrex::Error("ncomp_PC_test or level_ncomp_PC invalid");
@@ -509,7 +514,7 @@ if (level==0) {
 
 
 void
-AmrLevel::CopyOldToNewPC() {
+AmrLevel::CopyOldToNewPC(int lev_max) {
 
 if (level==0) {
 
@@ -528,6 +533,11 @@ if (level==0) {
      bool local=false;  // redistribute after copy
      new_dataPC[i][PC_index]->copyParticles(
         *new_dataPC[0][PC_index],local);
+     int lev_min=0;
+     int nGrow_Redistribute=0;
+     int local_Redistribute=0;
+     new_dataPC[i][PC_index]->Redistribute(lev_min,lev_max,nGrow_Redistribute,
+        local_Redistribute);
     }
    } else
     amrex::Error("ncomp_PC_test or level_ncomp_PC invalid");
