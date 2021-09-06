@@ -187,8 +187,6 @@ namespace amrex{
 
 #define DEFAULT_MOFITERMAX 15
 
-#define debug_PC 1
-
 #define PCOPY_DEBUG 0
 //
 // Static objects.
@@ -8482,17 +8480,13 @@ NavierStokes::initData () {
   amrex::Error("nstate invalid");
 
  for (int k=0;k<nstate;k++) {
-  if (debug_PC==1) {
-   std::cout << "PC: before CopyNewToOld k,nstate,level,max_level " << 
-     k << ' ' << nstate << ' ' <<
-     level << ' ' << max_level << '\n';
-  }
   state[k].CopyNewToOld(level,max_level);  // olddata=newdata 
    // time_array[0]=strt_time-dt_amr  
    // time_array[bfact_time_order]=strt_time
   state[k].setTimeLevel(strt_time,dt_amr); 
  }
- parent->CopyNewToOldPC();
+ NavierStokes& ns_level0=getLevel(0);
+ ns_level0.CopyNewToOldPC();
 
 }  // end subroutine initData
 
@@ -8739,8 +8733,9 @@ NavierStokes::init(
    int local_Redistribute=0;
 
     //FIX ME: update the associated particle hierarchy here.
+   NavierStokes& ns_level0=getLevel(0);
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
-    parent->newDataPC(ns_time_order,ipart);
+    ns_level0.newDataPC(ns_time_order,ipart);
 
     // Redistribute called since level=0 grids might have changed.
    old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -8760,8 +8755,8 @@ NavierStokes::init(
  debug_fillpatch=0;
 }  // end subroutine init(old)
 
-FIX ME the particle container on level 0 has to be copied to a new particle
-container with the updated grid structure.
+//FIX ME the particle container on level 0 has to be copied to a new particle
+//container with the updated grid structure.
 // init a new level that did not exist on the previous step.
 void
 NavierStokes::init (const BoxArray& ba_in,
@@ -8885,7 +8880,8 @@ void NavierStokes::CopyNewToOldALL() {
    ns_level.state[k].CopyNewToOld(level,max_level);  
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++) 
- parent->CopyNewToOldPC();
+ NavierStokes& ns_level0=getLevel(0);
+ ns_level0.CopyNewToOldPC();
 
  int nmat=num_materials;
 
@@ -8920,7 +8916,8 @@ void NavierStokes::CopyOldToNewALL() {
    ns_level.state[k].CopyOldToNew(level,max_level);
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++)
- parent->CopyOldToNewPC();
+ NavierStokes& ns_level0=getLevel(0);
+ ns_level0.CopyOldToNewPC();
 
  int nmat=num_materials;
 
@@ -19474,8 +19471,9 @@ void NavierStokes::post_regrid (int lbase,
    // do nothing
   } else if (particles_flag==1) {
    int ipart=0;
+   NavierStokes& ns_level0=getLevel(0);
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
-      parent->newDataPC(ns_time_order,ipart);
+      ns_level0.newDataPC(ns_time_order,ipart);
    int lev_min=0;
    int lev_max=-1;
    int nGrow_Redistribute=0;
@@ -19490,7 +19488,8 @@ void NavierStokes::post_regrid (int lbase,
    state[k].CopyNewToOld(level,max_level); 
    state[k].setTimeLevel(time,dt_amr);
   }
-  parent->CopyNewToOldPC();
+  NavierStokes& ns_level0=getLevel(0);
+  ns_level0.CopyNewToOldPC();
 
 } // end subroutine post_regrid
 
@@ -20946,8 +20945,9 @@ NavierStokes::init_particle_container(int append_flag) {
 
   MultiFab* init_velocity_mf=getState(1,0,AMREX_SPACEDIM+1,cur_time_slab);
 
+  NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-    parent->newDataPC(slab_step+1,ipart);
+    ns_level0.newDataPC(slab_step+1,ipart);
 
   MultiFab* xdisplace_mf[AMREX_SPACEDIM];
 
@@ -21079,11 +21079,6 @@ NavierStokes::init_particle_container(int append_flag) {
     using My_ParticleContainer =
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
 
-    if (debug_PC==1) {
-     std::cout << "gridno " << gridno << " Np_append " <<
-       Np_append << '\n';
-    }
-
     int Np_delete=0;
     for (int i_delete=0;i_delete<Np;i_delete++) {
      if (particle_delete_flag[i_delete]==1) {
@@ -21208,18 +21203,14 @@ NavierStokes::post_init_state () {
 
   int ipart=0;
 
-  if (debug_PC==1) {
-   std::cout << "PC: slab_step, ns_time_order, ipart " <<
-    slab_step << ' ' << ns_time_order << ' ' << ipart << '\n';
-  }
-
   int append_flag=0;
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.init_particle_container(append_flag);
   }
+  NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-   parent->newDataPC(slab_step+1,ipart);
+   ns_level0.newDataPC(slab_step+1,ipart);
 
   int lev_min=0;
   int lev_max=-1;

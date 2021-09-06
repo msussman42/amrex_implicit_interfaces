@@ -6951,8 +6951,9 @@ void NavierStokes::output_triangles() {
    } else if (particles_flag==1) {
 
     int ipart=0;
+    NavierStokes& ns_level0=getLevel(0);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     parent->newDataPC(slab_step+1,ipart);
+     ns_level0.newDataPC(slab_step+1,ipart);
 
     auto& particles = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];

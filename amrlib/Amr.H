@@ -14,13 +14,6 @@
 #include <AMReX_BCRec.H>
 #include <AMReX_AmrMesh.H>
 
-#include <AMReX_Particles.H>
-#include <AMReX_AmrParticles.H>
-#include <AMReX_NeighborParticles.H>
-
-#include <N_EXTRA_REAL.H>
-
-
 namespace amrex {
 
 class AmrParGDB;
@@ -80,7 +73,7 @@ public:
 
     int levelSteps (int lev) const;
     int levelCount (int lev) const;
-    int regridInt (int lev) const;
+    int regridInt () const;
     int checkInt () const;
     Real checkPer() const;
     int plotInt () const;
@@ -133,15 +126,6 @@ public:
     void print_cells_advanced();
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
-
-    CopyNewToOldPC();
-    CopyOldToNewPC();
-
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-       newDataPC (int slab_index,int sub_index);
-
-    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-       newDataPC (int slab_index,int sub_index) const;
 
     int global_AMR_ncomp_PC; //init in InitAmr
 
@@ -232,17 +216,6 @@ protected:
     
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
-
-     // 
-     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
-     // STRUCTURE OF ARRAYS: no base
-     //
-    using PLS_ParticleContainerType=
-	    AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
-
-    Vector< 
-	Vector<PLS_ParticleContainerType*> 
-	  > new_dataPC;
 
     std::unique_ptr<AmrParGDB> m_gdb;
 

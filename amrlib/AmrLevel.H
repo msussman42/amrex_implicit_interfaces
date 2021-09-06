@@ -18,6 +18,12 @@
 #include <StateDescriptor.H>
 #include <StateData.H>
 
+#include <AMReX_Particles.H>
+#include <AMReX_AmrParticles.H>
+#include <AMReX_NeighborParticles.H>
+
+#include <N_EXTRA_REAL.H>
+
 #include <memory>
 #include <map>
 
@@ -266,6 +272,15 @@ public:
              const Vector<IntVect>& bf_lev);
     const BoxArray& getAreaNotToTag() noexcept;
 
+    void CopyNewToOldPC();
+    void CopyOldToNewPC();
+
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+       newDataPC (int slab_index,int sub_index);
+
+    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+       newDataPC (int slab_index,int sub_index) const;
+
     //
 protected:
     //
@@ -297,6 +312,17 @@ protected:
     Vector<StateData> state;           // Array of state data.
 
     BoxArray m_AreaNotToTag;
+
+     // 
+     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
+     // STRUCTURE OF ARRAYS: no base
+     //
+    using PLS_ParticleContainerType=
+            AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+    Vector<
+        Vector<PLS_ParticleContainerType*>
+          > new_dataPC;
 
 private:
     //
@@ -349,13 +375,6 @@ AmrLevel::get_state_data (int state_indx)
 }
 
 inline
-AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-AmrLevel::get_new_dataPC(int state_indx,int slab_indx,int particle_index) {
-
- return state[state_indx].newDataPC(slab_indx,particle_index);
-}
-
-inline
 MultiFab&
 AmrLevel::get_new_data (int state_indx,int slab_index)
 {
@@ -367,14 +386,6 @@ const MultiFab&
 AmrLevel::get_new_data (int state_indx,int slab_index) const
 {
     return state[state_indx].newData(slab_index);
-}
-
-inline
-const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-AmrLevel::get_new_dataPC(
-  int state_indx,int slab_indx,int particle_index) const {
-
- return state[state_indx].newDataPC(slab_indx,particle_index);
 }
 
 inline
