@@ -8501,15 +8501,7 @@ NavierStokes::initData () {
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_Redistribute);
 
-FIX ME
-  if (1==1) {
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_slab_PC=
-    ns_level0.newDataPC(0,ipart);
-   old_slab_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_Redistribute);
-  }
-
-  ns_level0.CopyNewToOldPC(lev_max); //copy and redistribute
+  ns_level0.CopyNewToOldPC(lev_max); //copy and redistribute up to lev_max
  } else
   amrex::Error("particles_flag invalid");
 
@@ -8747,7 +8739,7 @@ NavierStokes::init(
    int lev_min=0;
    int lev_max=level;
    int nGrow_Redistribute=0;
-   bool local_copy=false;
+   bool local_copy=true; //do not redistribute inside of copyParticles
    int local_redistribute=0;
 
    NavierStokes& ns_level0=getLevel(0);
@@ -8757,6 +8749,7 @@ NavierStokes::init(
      ns_level0.newDataPC(ns_time_order,ipart);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
      oldns->newDataPC(ns_time_order,ipart);
+     //clears new_PC first
     new_PC.copyParticles(old_PC,local_copy);
    } else if (level>0) {
     // do nothing
