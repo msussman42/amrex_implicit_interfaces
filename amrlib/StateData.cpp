@@ -90,8 +90,6 @@ StateData::define (
   int MAX_NUM_SLAB)
 {
  
-    Amr* parent=&papa;
-
     if (dt<=0.0) {
      std::cout << "dt = " << dt << '\n';
      amrex::Error("dt invalid in StateData define");
@@ -205,8 +203,6 @@ StateData::restart (
   const StateDescriptor& dGHOST,
   const std::string&     chkfile)
 {
-    Amr* parent=&papa;
-
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
     if (StateData_MAX_NUM_SLAB<33)
      amrex::Error("StateData_MAX_NUM_SLAB too small");
@@ -307,8 +303,6 @@ StateData::restart (
 
      } else if (state_holds_data==0) {
       new_data[i]=nullptr;
-      if (ncomp_PC!=0)
-       amrex::Error("ncomp_PC invalid");
      } else
       amrex::Error("state_holds_data invalid");
 

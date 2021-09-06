@@ -71,9 +71,34 @@ AmrLevel::AmrLevel (Amr&            papa,
     if ((level_slab_dt_type!=0)&&(level_slab_dt_type!=1))
      amrex::Error("level_slab_dt_type invalid");
 
+    int time_order=parent->Time_blockingFactor();
+    int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+    if (level==0) {
+
+     new_dataPC.resize(level_MAX_NUM_SLAB);
+
+     for (int i=0;i<=time_order;i++) {
+
+      if (level_ncomp_PC>0) {
+       new_dataPC[i].resize(level_ncomp_PC);
+       for (int j=0;j<level_ncomp_PC;j++) {
+        new_dataPC[i][j]=
+          new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+       }
+      } else if (level_ncomp_PC==0) {
+       // do nothing
+      } else
+       amrex::Error("level_ncomp_PC invalid");
+
+     }// for (int i=0;i<=time_order;i++) 
+    } else if (level>0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid");
+
     for (int icomp = 0; icomp < state.size(); icomp++)
     {
-        int time_order=parent->Time_blockingFactor();
         state[icomp].define(
 			papa,
 			level,
@@ -92,6 +117,8 @@ AmrLevel::AmrLevel (Amr&            papa,
 
     finishConstructor();
 }
+
+
 
 void
 AmrLevel::restart (Amr&          papa,
@@ -122,6 +149,55 @@ AmrLevel::restart (Amr&          papa,
     parent->SetDistributionMap(level, dmap);
     int level_MAX_NUM_SLAB=parent->get_MAX_NUM_SLAB();
     int level_slab_dt_type=parent->get_slab_dt_type();
+
+      // e.g. chkfile=./chk<nsteps>
+    std::string chkfile=papa.theRestartFile();
+    std::string Level_string = amrex::Concatenate("Level_", level, 1);
+    std::string FullPath = chkfile;
+    if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/') {
+     FullPath += '/';
+    }
+    FullPath += Level_string;
+
+    if (level==0) {
+
+     // SUSSMAN restart the particle data
+     std::string FullPathName=FullPath;
+     int time_order=parent->Time_blockingFactor();
+     int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+     new_dataPC.resize(level_MAX_NUM_SLAB);
+
+     for (int i=0;i<=time_order;i++) {
+
+      if (level_ncomp_PC==0) {
+       // do nothing
+      } else if (level_ncomp_PC>0) {
+
+       new_dataPC[i].resize(level_ncomp_PC);
+       for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
+        new_dataPC[i][PC_index]=
+         new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+      
+        int raw_index=level_ncomp_PC * i + PC_index;
+        std::string Part_name="FusionPart";
+        std::stringstream raw_string_stream(std::stringstream::in |
+            std::stringstream::out);
+        raw_string_stream << raw_index;
+        std::string raw_string=raw_string_stream.str();
+        Part_name+=raw_string;
+        new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
+       } // PC_index=0..level_ncomp_PC-1 
+
+      } else
+       amrex::Error("level_ncomp_PC invalid");
+
+     }//for (int i=0;i<=time_order;i++) 
+
+    } else if (level>0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid");
 
     state.resize(ndesc);
     for (int icomp = 0; icomp < ndesc; icomp++)
@@ -219,9 +295,8 @@ AmrLevel::checkPoint (const std::string& dir,
     // Now for the full pathname of that directory.
     //
     std::string FullPath = dir;
-    if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/')
-    {
-        FullPath += '/';
+    if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/') {
+     FullPath += '/';
     }
      //SUSSMAN
     FullPath += Level_string;
@@ -242,6 +317,41 @@ AmrLevel::checkPoint (const std::string& dir,
         grids.writeOn(os);
         os << ndesc << '\n';
     }
+
+    if (level==0) {
+
+     // SUSSMAN checkpoint the particle data
+     std::string FullPathName=FullPath;
+     int time_order=parent->Time_blockingFactor();
+     int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+     for (int i=0;i<=time_order;i++) {
+
+      if (level_ncomp_PC==0) {
+       // do nothing
+      } else if (level_ncomp_PC>0) {
+
+       for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
+        int raw_index=level_ncomp_PC * i + PC_index;
+        std::string Part_name="FusionPart";
+        std::stringstream raw_string_stream(std::stringstream::in |
+            std::stringstream::out);
+        raw_string_stream << raw_index;
+        std::string raw_string=raw_string_stream.str();
+        Part_name+=raw_string;
+        new_dataPC[i][PC_index]->Checkpoint(FullPathName,Part_name);
+       } // PC_index=0..level_ncomp_PC-1 
+
+      } else
+       amrex::Error("level_ncomp_PC invalid");
+
+     }//for (int i=0;i<=time_order;i++) 
+
+    } else if (level>0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid");
+
     //
     // Output state data.
     //
@@ -265,12 +375,171 @@ AmrLevel::checkPoint (const std::string& dir,
 			level,max_level);
         
     }
-}
+} // end subroutine AmrLevel::checkPoint
 
 AmrLevel::~AmrLevel ()
 {
+
+    if (level==0) {
+     int time_order=parent->Time_blockingFactor();
+     int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+     for (int i=0;i<=time_order;i++) {
+      if (level_ncomp_PC>0) {
+       for (int j=0;j<level_ncomp_PC;j++) {
+        delete new_dataPC[i][j];
+       }
+       new_dataPC[i].resize(0);
+      }
+     }
+     new_dataPC.resize(0);
+    } else if (level>0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid");
+
     parent = 0;
 }
+
+AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+AmrLevel::newDataPC (int slab_index,int sub_index)
+{
+
+if (level==0) {
+ int time_order=parent->Time_blockingFactor();
+ int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+ if (level_ncomp_PC>0) {
+
+  int project_slab_index=slab_index;
+  if (project_slab_index==-1)
+   project_slab_index=0;
+  if (project_slab_index==time_order+1)
+   project_slab_index=time_order;
+  if ((project_slab_index<0)||
+      (project_slab_index>time_order)) {
+   std::cout << "time_order= " << time_order << '\n';
+   std::cout << "project_slab_index= " << project_slab_index << '\n';
+   amrex::Error("project_slab_index invalid1");
+  }
+  if (new_dataPC[project_slab_index].size()>sub_index) {
+   // do nothing
+  } else
+   amrex::Error("new_dataPC[project_slab_index].size() invalid");
+
+  return *new_dataPC[project_slab_index][sub_index];
+
+ } else {
+  amrex::Error("level_ncomp_PC invalid"); 
+  return *new_dataPC[0][0];
+ }
+} else {
+ amrex::Error("level invalid"); 
+ return *new_dataPC[0][0];
+}
+
+}
+
+const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+AmrLevel::newDataPC (int slab_index,int sub_index) const
+{
+
+if (level==0) {
+ int time_order=parent->Time_blockingFactor();
+ int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+ if (level_ncomp_PC>0) {
+
+  int project_slab_index=slab_index;
+  if (project_slab_index==-1)
+   project_slab_index=0;
+  if (project_slab_index==time_order+1)
+   project_slab_index=time_order;
+  if ((project_slab_index<0)||
+      (project_slab_index>time_order)) {
+   std::cout << "time_order= " << time_order << '\n';
+   std::cout << "project_slab_index= " << project_slab_index << '\n';
+   amrex::Error("project_slab_index invalid2");
+  }
+  if (new_dataPC[project_slab_index].size()>sub_index) {
+   // do nothing
+  } else
+   amrex::Error("new_dataPC[project_slab_index].size() invalid");
+
+  return *new_dataPC[project_slab_index][sub_index];
+ } else {
+  amrex::Error("level_ncomp_PC invalid"); 
+  return *new_dataPC[0][0];
+ }
+} else {
+ amrex::Error("level invalid"); 
+ return *new_dataPC[0][0];
+}
+
+}
+
+void
+AmrLevel::CopyNewToOldPC() {
+
+if (level==0) {
+
+ int time_order=parent->Time_blockingFactor();
+ int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+ for (int i=0;i<time_order;i++) {
+
+  if (level_ncomp_PC==0) {
+   // do nothing
+  } else if (level_ncomp_PC>=1) {
+   int ncomp_PC_test=new_dataPC[i].size();
+   if (ncomp_PC_test==level_ncomp_PC) {
+    for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
+
+     // dest PC is cleared prior to copy.
+     bool local=false;  // redistribute after copy
+     new_dataPC[i][PC_index]->copyParticles(
+        *new_dataPC[time_order][PC_index],local);
+    }
+   } else
+    amrex::Error("ncomp_PC_test or level_ncomp_PC invalid");
+  } else 
+   amrex::Error("level_ncomp_PC invalid");
+ } //i=0;i<time_order;i++
+} else
+ amrex::Error("level invalid in CopyNewToOldPC");
+
+} // end subroutine CopyNewToOldPC()
+
+
+void
+AmrLevel::CopyOldToNewPC() {
+
+if (level==0) {
+
+ int time_order=parent->Time_blockingFactor();
+ int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+ for (int i=1;i<=time_order;i++) {
+
+  if (level_ncomp_PC==0) {
+   // do nothing
+  } else if (level_ncomp_PC>=1) {
+   int ncomp_PC_test=new_dataPC[i].size();
+   if (ncomp_PC_test==level_ncomp_PC) {
+    for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
+     // dest PC is cleared prior to copy.
+     bool local=false;  // redistribute after copy
+     new_dataPC[i][PC_index]->copyParticles(
+        *new_dataPC[0][PC_index],local);
+    }
+   } else
+    amrex::Error("ncomp_PC_test or level_ncomp_PC invalid");
+  } else 
+   amrex::Error("level_ncomp_PC invalid");
+ } // i=1..time_order_factor
+} else
+ amrex::Error("level invalid in CopyOldToNewPC");
+
+} // end subroutine CopyOldToNewPC()
+
+
 
 void
 AmrLevel::FillPatch (AmrLevel & old,

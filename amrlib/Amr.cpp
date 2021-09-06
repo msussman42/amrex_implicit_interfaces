@@ -43,8 +43,6 @@
 #include <DatasetClient.H>
 #endif
 
-#define debug_PC 1
-
 namespace amrex {
 
 //
@@ -502,23 +500,6 @@ Amr::InitAmr () {
     } else
      amrex::Error("global_AMR_ncomp_PC invalid");
 
-    new_dataPC.resize(MAX_NUM_SLAB);
-
-    for (int i=0;i<=time_blocking_factor;i++) {
-
-     if (global_AMR_ncomp_PC>0) {
-      new_dataPC[i].resize(global_AMR_ncomp_PC);
-      for (int j=0;j<global_AMR_ncomp_PC;j++) {
-       new_dataPC[i][j]=
-         new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(this);
-      }
-     } else if (global_AMR_ncomp_PC==0) {
-      // do nothing
-     } else
-      amrex::Error("global_AMR_ncomp_PC invalid");
-
-    }// for (int i=0;i<=time_blocking_factor;i++) 
-
     m_gdb.reset(new AmrParGDB(this));
 
 } // subroutine InitAmr
@@ -537,15 +518,6 @@ Amr::~Amr ()
       do_plot,do_slice,
       SDC_outer_sweeps,slab_step);
     }
-    for (int i=0;i<=time_blocking_factor;i++) {
-     if (global_AMR_ncomp_PC>0) {
-      for (int j=0;j<global_AMR_ncomp_PC;j++) {
-       delete new_dataPC[i][j];
-      }
-      new_dataPC[i].resize(0);
-     }
-    }
-    new_dataPC.resize(0);
 
     levelbld->variableCleanUp();
 
@@ -991,28 +963,6 @@ Amr::restart (const std::string& filename)
     } else
      amrex::Error("checkpoint_recalesce_data invalid");
 
-    for (int i=0;i<=time_blocking_factor;i++) {
-
-     if (global_AMR_ncomp_PC==0) {
-      // do nothing
-     } else if (global_AMR_ncomp_PC>0) {
-
-      for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
-       int raw_index=global_AMR_ncomp_PC * i + PC_index;
-       std::string Part_name="FusionPart";
-       std::stringstream raw_string_stream(std::stringstream::in |
-           std::stringstream::out);
-       raw_string_stream << raw_index;
-       std::string raw_string=raw_string_stream.str();
-       Part_name+=raw_string;
-       new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
-      } // PC_index=0..global_AMR_ncomp_PC-1 
-
-     } else
-      amrex::Error("global_AMR_ncomp_PC invalid");
-
-    }//for (int i=0;i<=time_blocking_factor;i++) 
-
 // END SUSSMAN KLUGE RESTART
 
     is >> dt_AMR;
@@ -1265,47 +1215,6 @@ Amr::checkPoint ()
   } else
    amrex::Error("checkpoint_recalesce_data invalid");
 
-
-// template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
-// void
-// ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>
-// ::Checkpoint (const std::string& dir, const std::string& name) const
-// template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>
-// void
-// ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>
-// ::Restart (const std::string& dir, const std::string& file)
-//
-// in: AMReX_ParticleIO.H
-//
-// os=HeaderFile 
-// how=VisMF::OneFilePerCPU
-
-  for (int i=0;i<=time_blocking_factor;i++) {
-
-   if (global_AMR_ncomp_PC==0) {
-    // do nothing
-   } else if (global_AMR_ncomp_PC>0) {
-
-    int ncomp_PC_test=new_dataPC[i].size();
-    if (ncomp_PC_test==global_AMR_ncomp_PC) {
-     for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
-      int raw_index=global_AMR_ncomp_PC * i + PC_index;
-      std::string Part_name="FusionPart";
-      std::stringstream raw_string_stream(std::stringstream::in |
-        std::stringstream::out);
-      raw_string_stream << raw_index;
-      std::string raw_string=raw_string_stream.str();
-      Part_name+=raw_string;
-      new_dataPC[i][PC_index]->Checkpoint(FullPathName,Part_name);
-     } // PC_index=0..global_AMR_ncomp_PC-1 
-    } else
-     amrex::Error("ncomp_PC_test or global_AMR_ncomp_PC invalid");
-
-   } else
-    amrex::Error("global_AMR_ncomp_PC invalid");
-
-  } //for (int i=0;i<=time_blocking_factor;i++) 
-
 // END SUSSMAN KLUGE CHECKPOINT
 
   HeaderFile << dt_AMR << ' ' << '\n';
@@ -1357,124 +1266,6 @@ Amr::checkPoint ()
  ParallelDescriptor::Barrier();
 }
 
-
-AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-Amr::newDataPC (int slab_index,int sub_index)
-{
-if (global_AMR_ncomp_PC>0) {
-
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==time_blocking_factor+1)
-  project_slab_index=time_blocking_factor;
- if ((project_slab_index<0)||
-     (project_slab_index>time_blocking_factor)) {
-  std::cout << "time_blocking_factor= " << time_blocking_factor << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid1");
- }
- if (new_dataPC[project_slab_index].size()>sub_index) {
-  // do nothing
- } else
-  amrex::Error("new_dataPC[project_slab_index].size() invalid");
-
- return *new_dataPC[project_slab_index][sub_index];
-
-} else
- amrex::Error("global_AMR_ncomp_PC invalid");
-
-}
-
-const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-Amr::newDataPC (int slab_index,int sub_index) const
-{
-
-if (global_AMR_ncomp_PC>0) {
-
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==time_blocking_factor+1)
-  project_slab_index=time_blocking_factor;
- if ((project_slab_index<0)||
-     (project_slab_index>time_blocking_factor)) {
-  std::cout << "time_blocking_factor= " << time_blocking_factor << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid2");
- }
- if (new_dataPC[project_slab_index].size()>sub_index) {
-  // do nothing
- } else
-  amrex::Error("new_dataPC[project_slab_index].size() invalid");
-
- return *new_dataPC[project_slab_index][sub_index];
-
-} else
- amrex::Error("global_AMR_ncomp_PC invalid");
-
-}
-
-
-void
-Amr::CopyNewToOldPC() {
-
- if (debug_PC==1) {
-  std::cout << "global_AMR_ncomp_PC,time_blocking_factor " << 
-    global_AMR_ncomp_PC << ' ' <<
-    time_blocking_factor << '\n';
- }
-
- for (int i=0;i<time_blocking_factor;i++) {
-
-  if (global_AMR_ncomp_PC==0) {
-   // do nothing
-  } else if (global_AMR_ncomp_PC>=1) {
-   int ncomp_PC_test=new_dataPC[i].size();
-   if (ncomp_PC_test==global_AMR_ncomp_PC) {
-    for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
-     if (debug_PC==1) {
-      std::cout << "PC: i,PC_index,time_blocking_factor " << i << ' ' << 
-        PC_index << ' ' << time_blocking_factor << '\n';
-     }
-
-     // dest PC is cleared prior to copy.
-     bool local=false;  // redistribute after copy
-     new_dataPC[i][PC_index]->copyParticles(
-        *new_dataPC[time_blocking_factor][PC_index],local);
-    }
-   } else
-    amrex::Error("ncomp_PC_test or global_AMR_ncomp_PC invalid");
-  } else 
-   amrex::Error("global_AMR_ncomp_PC invalid");
- } //i=0;i<time_blocking_factor;i++
-
-} // end subroutine CopyNewToOldPC()
-
-
-void
-Amr::CopyOldToNewPC() {
-
- for (int i=1;i<=time_blocking_factor;i++) {
-
-  if (global_AMR_ncomp_PC==0) {
-   // do nothing
-  } else if (global_AMR_ncomp_PC>=1) {
-   int ncomp_PC_test=new_dataPC[i].size();
-   if (ncomp_PC_test==global_AMR_ncomp_PC) {
-    for (int PC_index=0;PC_index<global_AMR_ncomp_PC;PC_index++) {
-     // dest PC is cleared prior to copy.
-     bool local=false;  // redistribute after copy
-     new_dataPC[i][PC_index]->copyParticles(
-        *new_dataPC[0][PC_index],local);
-    }
-   } else
-    amrex::Error("ncomp_PC_test or global_AMR_ncomp_PC invalid");
-  } else 
-   amrex::Error("global_AMR_ncomp_PC invalid");
- } // i=1..time_blocking_factor
-
-} // end subroutine CopyOldToNewPC()
 
 void
 Amr::regrid_level_0_on_restart()
