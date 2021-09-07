@@ -701,6 +701,19 @@ stop
         if (tsat_flag.eq.1) then
          if (T_hold.lt.zero) then
           print *,"temperature underflow in center_centroid_interchange"
+          print *,"xI ",xI(1),xI(2),xI(SDIM)
+          print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+          print *,"nsolve=",nsolve
+          print *,"cc_flag=",cc_flag
+          print *,"tsat_flag=",tsat_flag
+          print *,"bfact=",bfact
+          print *,"level=",level
+          print *,"finest_level=",finest_level
+          print *,"TSAT = ",TSAT
+          print *,"TMIN = ",TMIN
+          print *,"TMAX = ",TMAX
+          print *,"T_avg = ",T_avg
+          print *,"DATA_FLOOR= ",DATA_FLOOR
           print *,"T_hold=",T_hold
           stop
          endif
