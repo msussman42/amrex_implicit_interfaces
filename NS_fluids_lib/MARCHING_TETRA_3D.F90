@@ -87,6 +87,8 @@ stop
       VEC1(2)=YY(SDIM)-YY(1)
       VEC1(3)=ZZ(SDIM)-ZZ(1)
 #elif (AMREX_SPACEDIM==2)
+       ! assume the "triangle element" in 2D is a fictitious 3D element
+       ! which is perfectly vertical.
       VEC1(1)=zero
       VEC1(2)=zero
       VEC1(3)=one
@@ -100,7 +102,7 @@ stop
 #if (AMREX_SPACEDIM==3)
       VEC2(3)=ZZ(2)-ZZ(1)
 #elif (AMREX_SPACEDIM==2)
-      VEC2(3)=zero
+      VEC2(3)=zero  ! since it is assumed that ZZ(2)=ZZ(1)
 #else
       print *,"dimension bust"
       stop
@@ -133,13 +135,16 @@ stop
        trianglelist(1,itri+SDIM)=XX(SDIM)
        trianglelist(2,itri+SDIM)=YY(SDIM)
        trianglelist(SDIM,itri+SDIM)=ZZ(SDIM)
-      else
+      else if (DOTPROD.le.zero) then
        trianglelist(1,itri+2)=XX(SDIM)
        trianglelist(2,itri+2)=YY(SDIM)
        trianglelist(3,itri+2)=ZZ(SDIM)
        trianglelist(1,itri+SDIM)=XX(2)
        trianglelist(2,itri+SDIM)=YY(2)
        trianglelist(SDIM,itri+SDIM)=ZZ(2)
+      else
+       print *,"DOTPROD is NaN"
+       stop
       endif
 #elif (AMREX_SPACEDIM==2)
       trianglelist(1,itri+2)=XX(2)
@@ -205,6 +210,11 @@ stop
        bb(3)=gridval(IV2)
        bb(4)=gridval(IV0)
        call matrix_solve(AA,sourcex,bb,istat,4)
+
+        ! NORMAL is proportional to the gradient of the level
+        ! set function, considering IV0,IV1,IV2
+        ! (levelset function is constant in the z direction for
+        ! 2D case)
        if (istat.ne.0) then
         NORMAL(1)=sourcex(1)
         NORMAL(2)=sourcex(2)
@@ -427,6 +437,20 @@ stop
       INTEGER_T, intent(inout) :: itri
       INTEGER_T, intent(inout) :: imaxtri
       INTEGER_T :: dir
+
+      if (SDIM.eq.2) then
+       if (kkhi.eq.0) then
+        ! do nothing
+       else
+        print *,"kkhi invalid"
+        stop
+       endif
+      else if (SDIM.eq.3) then
+       ! do nothing
+      else
+       print *,"SDIM invalid"
+       stop
+      endif
 
       dir=1
       gridx(1)=xnode(0,0,0,dir)
@@ -1642,14 +1666,12 @@ stop
       REAL_T dist_p23
       REAL_T dot_top,dot_bot,distline
       REAL_T t1(3),t2(3)
-      !REAL_T t1(SDIM) FIX ME
-      !REAL_T t2(SDIM)
       REAL_T n(3)
-      !REAL_T n(SDIM) FIX ME
       REAL_T n_magnitude
       REAL_T phi_x
       REAL_T a,b,d,e,f,detmatrix,u,v
       REAL_T dist_cp
+      REAL_T save_x_cp(SDIM)
     
       if (tid.ge.0) then
        ! do nothing
@@ -1686,6 +1708,7 @@ stop
       call checkbound_array(fablo,fabhi,ls_grad_new_ptr,0,-1,411)
       call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,411)
 
+        ! ok for 2D or 3D
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -1717,12 +1740,18 @@ stop
 
         if (mask(D_DECL(i,j,k)).eq.one) then
 
+         do local_dir=1,SDIM
+          ls_grad_new(D_DECL(i,j,k),local_dir)=zero
+          save_x_cp(local_dir)=xcc(local_dir)
+         enddo
+
          save_LS=ls_old(D_DECL(i,j,k))
          if (save_LS.gt.zero) then
           initial_LS=1.0D+20
          else if (save_LS.lt.zero) then
           initial_LS=-1.0D+20 
          else if (save_LS.eq.zero) then
+          initial_LS=zero
           ls_new(D_DECL(i,j,k))=zero
           do local_dir=1,SDIM
            ls_grad_new(D_DECL(i,j,k),local_dir)=zero
@@ -1739,6 +1768,22 @@ stop
           do ilocal=i-ngrow,i+ngrow
           do jlocal=j-ngrow,j+ngrow
           do klocal=k-ngrow_k,k+ngrow_k
+
+            ! klocal=0 in 2D
+           if (SDIM.eq.2) then
+            if (klocal.eq.0) then
+             ! do nothing
+            else
+             print *,"klocal invalid"
+             stop
+            endif
+           else if (SDIM.eq.3) then
+            ! check nothing
+           else
+            print *,"SDIM invalid"
+            stop
+           endif
+
            call gridsten(xsten_local,xlo,ilocal,jlocal,klocal, &
              fablo,bfact,dx,nhalf)
 
@@ -1747,6 +1792,21 @@ stop
            do jj=0,1
            do kk=kklo,kkhi
 
+            if (SDIM.eq.2) then
+             if (kk.eq.0) then
+              ! do nothing
+             else
+              print *,"kk invalid"
+              stop
+             endif
+            else if (SDIM.eq.3) then
+             ! check nothing
+            else
+             print *,"SDIM invalid"
+             stop
+            endif
+
+             ! initialize xtarget to be the LLL corner of the box.
             do local_dir=1,SDIM
              xtarget(local_dir)=xsten_local(-1,local_dir)
             enddo
@@ -1758,14 +1818,24 @@ stop
              local_dir=2 
              xtarget(local_dir)=xsten_local(1,local_dir)
             endif
+
             if (kk.eq.1) then
+             if (SDIM.eq.3) then
+              ! do nothing
+             else
+              print *,"SDIM invalid"
+              stop
+             endif
              local_dir=SDIM 
              xtarget(local_dir)=xsten_local(1,local_dir)
             endif
+
             do local_dir=1,SDIM
              xnode(ii,jj,kk,local_dir)=xtarget(local_dir)
             enddo
 
+              ! D_DECL(i,j,k)  => "i,j,k" in 3D
+              !                   "i,j" in 2D
             lnode(ii,jj,kk)=( &
               ls_old(D_DECL(ilocal+ii-1,jlocal+jj-1,klocal+kk-1))+ &
               ls_old(D_DECL(ilocal+ii,jlocal+jj-1,klocal+kk-1))+ &
@@ -1781,6 +1851,7 @@ stop
            enddo
 
             !gridval,ISUM are outputs.
+            !3D data assumed
            call copy_levelset_node_to_gridval( &
             lnode,gridval,ISUM,kkhi,nodehi,valu)
 
@@ -1792,6 +1863,18 @@ stop
              itri,imaxtri,xnode,kkhi,nodehi)
            endif
 
+            ! in 2D:
+            !  first segment:
+            ! trianglelist(1,1)
+            ! trianglelist(2,1)
+            ! trianglelist(1,2)
+            ! trianglelist(2,2)
+            !  second segment:
+            ! trianglelist(1,3)
+            ! trianglelist(2,3)
+            ! trianglelist(1,4)
+            ! trianglelist(2,4)
+            !  ...
            ibase=0
            do while (ibase.lt.itri)
  
@@ -1803,6 +1886,7 @@ stop
             p2(2)=trianglelist(2,ibase+2)
             p2(SDIM)=trianglelist(SDIM,ibase+2)
 
+             ! p3 = p2 in 2D
             p3(1)=trianglelist(1,ibase+SDIM)
             p3(2)=trianglelist(2,ibase+SDIM)
             p3(SDIM)=trianglelist(SDIM,ibase+SDIM)
@@ -1866,7 +1950,14 @@ stop
               t1(local_dir) = p2(local_dir)-p1(local_dir)
               t2(local_dir) = p3(local_dir)-p1(local_dir)
              enddo
-              ! FIX ME (sign of LS?)
+              ! p3 = p2 in 2D
+              ! t1 = t2 in 2D
+             if (SDIM.eq.3) then
+              ! do nothing
+             else
+              print *,"SDIM invalid"
+              stop
+             endif
              n(1) = t1(2)*t2(3)-t1(3)*t2(2)
              n(2) = t1(3)*t2(1)-t1(1)*t2(3)
              n(3) = t1(1)*t2(2)-t1(2)*t2(1)
@@ -1965,17 +2056,55 @@ stop
             dist_cp = sqrt(dist_cp)
            
             ibase=ibase+SDIM 
+
+            if (dist_cp.lt.abs(initial_LS)) then
+             if (save_LS.gt.zero) then
+              initial_LS=dist_cp
+             else if (save_LS.lt.zero) then
+              initial_LS=-dist_cp
+             else
+              print *,"save_LS invalid"
+              stop
+             endif
+             do local_dir=1,SDIM
+              save_x_cp(local_dir)=x_cp(local_dir)
+             enddo
+            else if (dist_cp.ge.abs(initial_LS)) then
+             ! do nothing
+            else
+             print *,"dist_cp is NaN"
+             stop
+            endif
            enddo ! while (ibase.lt.itri)
           enddo !enddo klocal
           enddo !enddo jlocal
           enddo !enddo ilocal
 
+          if (minLS.gt.initial_LS) then
+           minLS=initial_LS
+          endif
+          if (maxLS.lt.initial_LS) then
+           maxLS=initial_LS
+          endif
+          ls_new(D_DECL(i,j,k))=initial_LS
+          if (abs(initial_LS).gt.zero) then
+           do local_dir=1,SDIM
+            ls_grad_new(D_DECL(i,j,k),local_dir)= &
+              (xcc(local_dir)-save_x_cp(local_dir))/initial_LS
+           enddo
+          else if (abs(initial_LS).eq.zero) then
+           do local_dir=1,SDIM
+            ls_grad_new(D_DECL(i,j,k),local_dir)=zero
+           enddo
+          else
+           print *,"initial_LS is NaN"
+           stop
+          endif
          else
           print *,"save_LS is NaN"
           stop
          endif
 
-          ! update new level set function and gradient here 
         else if (mask(D_DECL(i,j,k)).eq.zero) then
          ! do nothing
         else
@@ -1984,7 +2113,21 @@ stop
         endif 
 
        else if (sweep.eq.1) then
+
         !set uninit distances to maxLS,minLS respectively
+        if (mask(D_DECL(i,j,k)).eq.one) then
+         if (ls_new(D_DECL(i,j,k)).lt.minLS) then
+          ls_new(D_DECL(i,j,k))=minLS
+         endif
+         if (ls_new(D_DECL(i,j,k)).gt.maxLS) then
+          ls_new(D_DECL(i,j,k))=maxLS
+         endif
+        else if (mask(D_DECL(i,j,k)).eq.zero) then
+         ! do nothing
+        else
+         print *,"mask invalid"
+         stop
+        endif 
        else
         print *,"sweep invalid"
         stop
