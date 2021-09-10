@@ -8744,6 +8744,8 @@ NavierStokes::init(
 
    NavierStokes& ns_level0=getLevel(0);
 
+    // if level==0, we must copy from the old Amr_level (level==0) to the
+    // new Amr_level prior to deleting the old level==0 structure.
    if (level==0) {
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
      ns_level0.newDataPC(ns_time_order,ipart);
