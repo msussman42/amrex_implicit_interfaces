@@ -18010,7 +18010,7 @@ NavierStokes::debug_memory() {
   ParallelDescriptor::Barrier();
   int proc=ParallelDescriptor::MyProc();
   std::cout << "calling memory status on processor=" << proc << '\n';
-  FORT_MEMSTATUS(&proc);
+  fort_memstatus(&proc);
   std::cout << "after calling memory status on processor=" << proc << '\n';
   std::fflush(NULL);
   ParallelDescriptor::Barrier();
@@ -18020,6 +18020,10 @@ NavierStokes::debug_memory() {
 }
 
 void NavierStokes::writeInterfaceReconstruction() {
+
+ std::string path1="./temptecplot";
+ UtilCreateDirectoryDestructive(path1);
+ CreateDirectoryFailed(path1);
 
  debug_ngrow(SLOPE_RECON_MF,1,55);
  if (level!=0)
@@ -18071,7 +18075,11 @@ void NavierStokes::writeInterfaceReconstruction() {
  }
  ParallelDescriptor::Barrier();
 
-}  // writeInterfaceReconstruction
+ std::string path2="./temptecplot";
+ UtilCreateDirectoryDestructive(path2);
+ CreateDirectoryFailed(path2);
+
+}  // end subroutine writeInterfaceReconstruction
 
 // in the future, FillPatchUtil should check if 
 // new fine grid data gets initialized properly by 
@@ -18166,6 +18174,10 @@ void NavierStokes::debug_ParallelCopy() {
 // init_FSI_GHOST_MAC_MF() called for all relevant 
 // levels prior to this routine.
 void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
+
+ std::string path1="./temptecplot";
+ UtilCreateDirectoryDestructive(path1);
+ CreateDirectoryFailed(path1);
 
  if (level!=0)
   amrex::Error("level invalid writeTECPLOT_File");
@@ -18452,6 +18464,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  allocate_array(1,AMREX_SPACEDIM,-1,dest_idx);
  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
+ std::string path2="./temptecplot";
+ UtilCreateDirectoryDestructive(path2);
+ CreateDirectoryFailed(path2);
+
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
@@ -18704,6 +18720,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
+ std::string path3="./temptecplot";
+ UtilCreateDirectoryDestructive(path3);
+ CreateDirectoryFailed(path3);
+
 } // subroutine writeTECPLOT_File
 
 
@@ -18716,6 +18736,10 @@ void NavierStokes::writeSanityCheckData(
                 int data_mf, 
 		int state_type_mf,
                 int data_dir) {
+
+ std::string path1="./temptecplot";
+ UtilCreateDirectoryDestructive(path1);
+ CreateDirectoryFailed(path1);
 
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "in: writeSanityCheckData, root_string= " <<
@@ -18912,6 +18936,10 @@ void NavierStokes::writeSanityCheckData(
 
  ParallelDescriptor::Barrier();
 
+ std::string path2="./temptecplot";
+ UtilCreateDirectoryDestructive(path2);
+ CreateDirectoryFailed(path2);
+
 } // subroutine writeSanityCheckData
 
 
@@ -18919,6 +18947,10 @@ void
 NavierStokes::writePlotFile (
   int do_plot,int do_slice,
   int SDC_outer_sweeps_in,int slab_step_in) {
+
+ std::string path1="./temptecplot";
+ UtilCreateDirectoryDestructive(path1);
+ CreateDirectoryFailed(path1);
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -18952,6 +18984,10 @@ NavierStokes::writePlotFile (
  if (level==0) {
   writeTECPLOT_File(do_plot,do_slice);
  }
+
+ std::string path2="./temptecplot";
+ UtilCreateDirectoryDestructive(path2);
+ CreateDirectoryFailed(path2);
 
 } // end subroutine writePlotFile
 
