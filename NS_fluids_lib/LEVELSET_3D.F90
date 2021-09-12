@@ -20013,6 +20013,7 @@ stop
       REAL_T temperature_clamped
       REAL_T wt_lagrangian
       REAL_T temp_relaxation_time
+      REAL_T wrap_pos
 
       cell_particle_count_ptr=>cell_particle_count
       lsfab_ptr=>lsfab
@@ -20273,6 +20274,7 @@ stop
 
        if (LS_clamped.ge.zero) then
 
+         ! (x0,y0,z0,r,u,v,w,den,T,insert time,vorticity,type) is extra. 
         do dir=1,SDIM
          particles(interior_ID)%extra_state(SDIM+1+dir)=vel_clamped(dir)
         enddo
@@ -20310,7 +20312,61 @@ stop
         stop
        endif
 
-      enddo!traverse all particles
+       do dir=1,SDIM
+        wrap_pos=particles(interior_ID)%pos(dir)
+        if (wrap_pos.lt.problo_arr(dir)) then
+         if (dombc(dir,1).eq.INT_DIR) then
+          if (dombc(dir,2).eq.INT_DIR) then
+           particles(interior_ID)%pos(dir)= &
+             wrap_pos+ &
+             (probhi_arr(dir)-problo_arr(dir))
+           particles(interior_ID)%extra_state(dir)= &
+             particles(interior_ID)%extra_state(dir)+ &
+             (probhi_arr(dir)-problo_arr(dir))
+          else
+           print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
+           stop
+          endif
+         else if ((dombc(dir,1).eq.EXT_DIR).or. &
+                  (dombc(dir,1).eq.REFLECT_EVEN).or. &
+                  (dombc(dir,1).eq.FOEXTRAP)) then
+          ! do nothing
+         else
+          print *,"dombc(dir,1) invalid in fort_move_particle_container"
+          stop
+         endif
+        else if (wrap_pos.gt.probhi_arr(dir)) then
+         if (dombc(dir,2).eq.INT_DIR) then
+          if (dombc(dir,1).eq.INT_DIR) then
+           particles(interior_ID)%pos(dir)= &
+             wrap_pos- &
+             (probhi_arr(dir)-problo_arr(dir))
+           particles(interior_ID)%extra_state(dir)= &
+             particles(interior_ID)%extra_state(dir)- &
+             (probhi_arr(dir)-problo_arr(dir))
+          else
+           print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
+           stop
+          endif
+         else if ((dombc(dir,2).eq.EXT_DIR).or. &
+                  (dombc(dir,2).eq.REFLECT_EVEN).or. &
+                  (dombc(dir,2).eq.FOEXTRAP)) then
+          ! do nothing
+         else
+          print *,"dombc(dir,2) invalid in fort_move_particle_container"
+          stop
+         endif
+
+        else if ((wrap_pos.ge.problo_arr(dir)).and. &
+                 (wrap_pos.le.probhi_arr(dir))) then
+         ! do nothing
+        else
+         print *,"wrap_pos is NaN"
+         stop
+        endif
+       enddo ! dir=1..sdim
+
+      enddo!do interior_ID=1,Np
 
       return
       end subroutine fort_move_particle_container

@@ -18023,7 +18023,6 @@ void NavierStokes::writeInterfaceReconstruction() {
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
- CreateDirectoryFailed(path1);
 
  debug_ngrow(SLOPE_RECON_MF,1,55);
  if (level!=0)
@@ -18077,7 +18076,6 @@ void NavierStokes::writeInterfaceReconstruction() {
 
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
- CreateDirectoryFailed(path2);
 
 }  // end subroutine writeInterfaceReconstruction
 
@@ -18177,7 +18175,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
- CreateDirectoryFailed(path1);
 
  if (level!=0)
   amrex::Error("level invalid writeTECPLOT_File");
@@ -18466,7 +18463,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
- CreateDirectoryFailed(path2);
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -18722,7 +18718,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  std::string path3="./temptecplot";
  UtilCreateDirectoryDestructive(path3);
- CreateDirectoryFailed(path3);
 
 } // subroutine writeTECPLOT_File
 
@@ -18739,7 +18734,6 @@ void NavierStokes::writeSanityCheckData(
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
- CreateDirectoryFailed(path1);
 
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "in: writeSanityCheckData, root_string= " <<
@@ -18938,7 +18932,6 @@ void NavierStokes::writeSanityCheckData(
 
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
- CreateDirectoryFailed(path2);
 
 } // subroutine writeSanityCheckData
 
@@ -18950,7 +18943,6 @@ NavierStokes::writePlotFile (
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
- CreateDirectoryFailed(path1);
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -18987,7 +18979,6 @@ NavierStokes::writePlotFile (
 
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
- CreateDirectoryFailed(path2);
 
 } // end subroutine writePlotFile
 

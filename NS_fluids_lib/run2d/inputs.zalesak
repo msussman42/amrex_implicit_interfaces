@@ -15,6 +15,7 @@ stop_time =  628.0  # maximum problem time
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  100.0 100.0
+geometry.is_periodic = 1 1
 # multigrid class
 mg.verbose = 0
 cg.verbose = 0
@@ -41,7 +42,7 @@ ns.particles_weight_XD=0.0 # 0.0=>particles have no weight   0<=wt<=1
 # from existing fluid and particle velocity.
 ns.particles_weight_VEL=0.0 # 0.0=>particles have no weight   0<=wt<=1
 ns.particle_nsubdivide=1
-ns.particle_min_per_nsubdivide=1
+ns.particle_min_per_nsubdivide=0
 ns.particle_max_per_nsubdivide=100
 
 ns.particle_volume=1.0
@@ -117,8 +118,8 @@ ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 2 2
-ns.hi_bc          = 2 2
+ns.lo_bc          = 0 0
+ns.hi_bc          = 0 0
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
