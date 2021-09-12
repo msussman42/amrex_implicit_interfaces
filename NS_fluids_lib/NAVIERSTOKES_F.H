@@ -23,7 +23,6 @@
 #    define FORT_DIAGINV     diaginv
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
-#    define FORT_MEMSTATUS memstatus
 #    define FORT_METRICS metrics
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
@@ -43,7 +42,6 @@
 #    define FORT_AVGDOWN_BURNING AVGDOWN_BURNING
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
 #    define FORT_DIAGINV     DIAGINV
-#    define FORT_MEMSTATUS MEMSTATUS
 #    define FORT_OUTPUTSLICE OUTPUTSLICE
 #    define FORT_IO_COMPARE IO_COMPARE
 #    define FORT_METRICS METRICS
@@ -64,7 +62,6 @@
 #    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_DIAGINV     diaginv
-#    define FORT_MEMSTATUS memstatus
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
@@ -84,7 +81,6 @@
 #    define FORT_AVGDOWN_BURNING avgdown_burning_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
 #    define FORT_DIAGINV     diaginv_
-#    define FORT_MEMSTATUS memstatus_
 #    define FORT_OUTPUTSLICE outputslice_
 #    define FORT_IO_COMPARE io_compare_
 #    define FORT_METRICS metrics_
@@ -213,7 +209,7 @@ extern "C" {
      Real* xslice,const Real* dxfinest,
      int* do_plot,int* do_slice);
  
-    void FORT_MEMSTATUS(int* procnum);
+    void fort_memstatus(int* procnum);
 
     void fort_combinezones(
      int* total_number_grids,

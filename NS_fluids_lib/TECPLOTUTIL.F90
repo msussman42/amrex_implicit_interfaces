@@ -3,6 +3,8 @@
 #define BL_LANG_FORT
 #endif
 
+#define STANDALONE 0
+
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -54,7 +56,7 @@ stop
 
       INTEGER_T ih
 
-      character*17 newfilename
+      character*17 newfilename !fabdata ...
       character*2 matstr
       character*6 stepstr
 
@@ -139,7 +141,8 @@ stop
 
       !-----------------------------------------------------------
       ZONEMARKER = 299.0
-      EOHMARKER  = 357.0
+      EOHMARKER  = 357.0 
+       !fabdata ...
       open(unit=11,file=newfilename,form="unformatted",access="stream")
 
       ! +++++++ HEADER SECTION ++++++
@@ -371,7 +374,7 @@ stop
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32 !./temptecplot/tempnddata ...
 
       INTEGER_T i,j,k
       INTEGER_T isub,jsub,ksub
@@ -448,10 +451,20 @@ stop
          gridstr(i:i)='0'
         endif
       enddo
-      write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-      print *,"filename18 ",filename18
+#if (STANDALONE==0)
+      write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+      write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+      print *,"STANDALONE invalid"
+      stop
+#endif
 
-      open(unit=11,file=filename18)
+      print *,"filename32 ",filename32
+      open(unit=11,file=filename32)
+
       do dir=1,SDIM
        write(11,*) lo(dir),hi(dir)
       enddo
@@ -738,7 +751,7 @@ stop
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32 ! ./temptecplot_tempnddata
       character*80 rmcommand
 
       character*6 stepstr
@@ -970,8 +983,20 @@ stop
           gridstr(i:i)='0'
          endif
         enddo
-        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-        open(unit=4,file=filename18)
+
+#if (STANDALONE==0)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+        print *,"STANDALONE invalid"
+        stop
+#endif
+
+        print *,"filename32 ",filename32
+        open(unit=4,file=filename32)
 
         do dir=1,plot_sdim
          read(4,*) lo(dir),hi(dir)
@@ -1191,9 +1216,19 @@ stop
          endif
         enddo
 
-        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-        open(unit=4,file=filename18)
-        print *,"filename18 ",filename18
+#if (STANDALONE==0)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+        print *,"STANDALONE invalid"
+        stop
+#endif
+
+        open(unit=4,file=filename32)
+        print *,"filename32 ",filename32
 
         do dir=1,SDIM
          read(4,*) lo(dir),hi(dir)
@@ -1269,21 +1304,23 @@ stop
 
        close(11)
      
-       rmcommand='rm tempnddata*'
-
-       print *,"issuing command ",rmcommand
-
+       rmcommand='rm ./temptecplot_tempnddata*'
        sysret=0
 
-#ifdef PGIFORTRAN
-       call system(rmcommand)
-#else
+#if (STANDALONE==0)
+       ! do nothing
+#elif (STANDALONE==1)
+       print *,"issuing command ",rmcommand
        call execute_command_line(rmcommand,exitstat=sysret)
-#endif
+
        if (sysret.ne.0) then
         print *,"execute_command_line has sysret=",sysret
         stop
        endif
+#else
+       print *,"STANDALONE invalid"
+       stop
+#endif
 
       else
        print *,"visual_revolve invalid"
@@ -1406,3 +1443,4 @@ stop
 
       end module tecplotutil_cpp_module
 
+#undef STANDALONE

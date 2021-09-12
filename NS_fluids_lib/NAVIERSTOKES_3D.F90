@@ -428,8 +428,7 @@ stop
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
-      character*80 rmcommand
+      character*32 filename32
 
       character*6 stepstr
       character*16 newfilename16
@@ -437,7 +436,6 @@ stop
       INTEGER_T i,j,k,dir
       INTEGER_T ilev,igrid,ivel2d,ivel3d
       INTEGER_T lo(plot_sdim),hi(plot_sdim)
-      INTEGER_T sysret
       INTEGER_T hi_index_shift(3)
 
 ! Guibo
@@ -564,8 +562,9 @@ stop
          gridstr(i:i)='0'
         endif
        enddo
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       open(unit=4,file=filename18)
+       write(filename32,'(A14,A10,A3,A5)') &
+               './temptecplot/','tempnddata',levstr,gridstr
+       open(unit=4,file=filename32)
 
        do dir=1,plot_sdim
         if ((dir.eq.1).or.(dir.eq.2)) then
@@ -805,9 +804,10 @@ stop
         endif
        enddo
 
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       open(unit=4,file=filename18)
-       print *,"filename18 ",filename18
+       write(filename32,'(A14,A10,A3,A5)') &
+               './temptecplot/','tempnddata',levstr,gridstr
+       open(unit=4,file=filename32)
+       print *,"filename32 ",filename32
 
        do dir=1,SDIM
         read(4,*) lo(dir),hi(dir)
@@ -1007,22 +1007,6 @@ stop
 
       close(11)
      
-      rmcommand='rm tempnddata*'
-
-      print *,"issuing command ",rmcommand
-
-      sysret=0
-
-#ifdef PGIFORTRAN
-      call system(rmcommand)
-#else
-      call execute_command_line(rmcommand,exitstat=sysret)
-#endif
-      if (sysret.ne.0) then
-       print *,"execute_command_line has sysret=",sysret
-       stop
-      endif
-
       return
       end subroutine zones_revolve
 
@@ -1951,7 +1935,7 @@ END SUBROUTINE SIMP
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj
@@ -2224,10 +2208,11 @@ END SUBROUTINE SIMP
           gridstr(i:i)='0'
          endif
        enddo
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       print *,"filename18 ",filename18
+       write(filename32,'(A14,A10,A3,A5)') &
+               './temptecplot/','tempnddata',levstr,gridstr
+       print *,"filename32 ",filename32
 
-       open(unit=11,file=filename18)
+       open(unit=11,file=filename32)
        do dir=1,SDIM
         write(11,*) lo(dir),hi(dir)
        enddo
@@ -3432,7 +3417,9 @@ END SUBROUTINE SIMP
       end subroutine fort_cellgrid
 
 
-      subroutine FORT_MEMSTATUS(procnum)
+      subroutine fort_memstatus(procnum) &
+      bind(c,name='fort_memstatus')
+
       IMPLICIT NONE
 
       INTEGER_T procnum,i
@@ -3537,7 +3524,7 @@ END SUBROUTINE SIMP
       call FLUSH(6)  ! unit=6 screen
 
       return
-      end subroutine FORT_MEMSTATUS
+      end subroutine fort_memstatus
 
       subroutine FORT_OUTPUTSLICE( &
        time,nsteps,sliceint,slice_data,nslice,nstate_slice)
@@ -3658,8 +3645,7 @@ END SUBROUTINE SIMP
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
-      character*80 rmcommand
+      character*32 filename32
 
       character*6 stepstr
       character*16 newfilename16
@@ -3685,10 +3671,6 @@ END SUBROUTINE SIMP
       type(zone_t), dimension(:), allocatable :: zone_gb
 
       INTEGER_T plot_sdim,klo_plot,khi_plot
-
-! Guibo
-      INTEGER_T sysret
-
 
       plot_sdim=SDIM
 
@@ -3843,8 +3825,9 @@ END SUBROUTINE SIMP
           gridstr(i:i)='0'
          endif
         enddo
-        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-        open(unit=4,file=filename18)
+        write(filename32,'(A14,A10,A3,A5)') &
+                './temptecplot/','tempnddata',levstr,gridstr
+        open(unit=4,file=filename32)
 
         do dir=1,plot_sdim
          read(4,*) lo(dir),hi(dir)
@@ -4068,9 +4051,10 @@ END SUBROUTINE SIMP
          endif
         enddo
 
-        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-        open(unit=4,file=filename18)
-        print *,"filename18 ",filename18
+        write(filename32,'(A14,A10,A3,A5)') &
+               'temptecplot/','tempnddata',levstr,gridstr
+        open(unit=4,file=filename32)
+        print *,"filename32 ",filename32
 
         do dir=1,SDIM
          read(4,*) lo(dir),hi(dir)
@@ -4146,22 +4130,6 @@ END SUBROUTINE SIMP
 
        close(11)
      
-       rmcommand='rm tempnddata*'
-
-       print *,"issuing command ",rmcommand
-
-       sysret=0
-
-#ifdef PGIFORTRAN
-       call system(rmcommand)
-#else
-       call execute_command_line(rmcommand,exitstat=sysret)
-#endif
-       if (sysret.ne.0) then
-        print *,"execute_command_line has sysret=",sysret
-        stop
-       endif
-
       else
        print *,"visual_revolve invalid"
        stop
@@ -13959,14 +13927,11 @@ END SUBROUTINE SIMP
 
       character*21 newcenfilename21
 
-      character*80 rmcommand_refcen
-
       INTEGER_T i
       INTEGER_T ilev,igrid,ipass
       REAL_T xref(SDIM+SDIM+N_EXTRA_REAL)
       INTEGER_T nparticles,Part_nparticles
       INTEGER_T alloc_flag
-      INTEGER_T sysret
       INTEGER_T istruct
 
       alloc_flag=0
@@ -14107,25 +14072,6 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      sysret=0
-
-      if (ipart.eq.NS_ncomp_particles-1) then
-
-       rmcommand_refcen='rm tempPARCON*'
-       print *,"issuing command ",rmcommand_refcen
-
-#ifdef PGIFORTRAN
-       call system(rmcommand_refcen)
-#else
-       call execute_command_line(rmcommand_refcen,exitstat=sysret)
-#endif
-      endif
-
-      if (sysret.ne.0) then
-       print *,"execute_command_line has sysret=",sysret
-       stop
-      endif
- 
       return
       end subroutine fort_combine_particles
 

@@ -3,6 +3,8 @@
 #define BL_LANG_FORT
 #endif
 
+#define STANDALONE 0
+
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -11429,7 +11431,7 @@ contains
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32
       character*80 rmcommand
 
       character*6 stepstr
@@ -11610,8 +11612,17 @@ contains
          gridstr(i:i)='0'
         endif
        enddo
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       open(unit=4,file=filename18)
+#if (STANDALONE==0)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+      print *,"STANDALONE invalid"
+      stop
+#endif
+       open(unit=4,file=filename32)
 
        do dir=1,plot_sdim
         if ((dir.eq.1).or.(dir.eq.2)) then
@@ -11847,9 +11858,18 @@ contains
         endif
        enddo
 
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       open(unit=4,file=filename18)
-       print *,"filename18 ",filename18
+#if (STANDALONE==0)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+       print *,"STANDALONE invalid"
+       stop
+#endif
+       open(unit=4,file=filename32)
+       print *,"filename32 ",filename32
 
        do dir=1,SDIM
         read(4,*) lo(dir),hi(dir)
@@ -11975,21 +11995,23 @@ contains
 
       close(11)
      
-      rmcommand='rm tempnddata*'
-
-      print *,"issuing command ",rmcommand
-
+      rmcommand='rm ./temptecplot_tempnddata*'
       sysret=0
 
-#ifdef PGIFORTRAN
-      call system(rmcommand)
-#else
+#if (STANDALONE==0)
+      ! do nothing
+#elif (STANDALONE==1)
+      print *,"issuing command ",rmcommand
       call execute_command_line(rmcommand,exitstat=sysret)
-#endif
+
       if (sysret.ne.0) then
        print *,"execute_command_line has sysret=",sysret
        stop
       endif
+#else
+      print *,"STANDALONE invalid"
+      stop
+#endif
 
       return
       end subroutine zones_revolve_sanity
@@ -19829,3 +19851,4 @@ end function is_multi_component_evapF
 
 end module global_utility_module
 
+#undef STANDALONE
