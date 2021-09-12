@@ -13271,17 +13271,18 @@ NavierStokes::phase_change_redistributeALL() {
   } else
    amrex::Error("mdot_comp_data[i] or mdot_comp_data_redistribute[i] bad size");
  }
- 
- if (ParallelDescriptor::IOProcessor()) {
-  std::cout << "color_count=" << color_count << '\n';
-  std::cout << "i=0..mdot_data.size()-1 (color_count) \n";
-  std::cout << "j=0..mdot_data_redistribute[i].size()-1 (2 * nten) \n";
 
-  for (int i=0;i<mdot_data.size();i++) {
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "color_count=" << color_count << '\n';
+   std::cout << "i=0..mdot_data.size()-1 (color_count) \n";
+   std::cout << "j=0..mdot_data_redistribute[i].size()-1 (2 * nten) \n";
 
-   int j=0;
-   for (j=0;j<mdot_data_redistribute[i].size();j++) {
-    std::cout << "i=" << i << " j=" << j << " im=" <<
+   for (int i=0;i<mdot_data.size();i++) {
+
+    int j=0;
+    for (j=0;j<mdot_data_redistribute[i].size();j++) {
+     std::cout << "i=" << i << " j=" << j << " im=" <<
       blobdata[i].im << 
       " blobdata[i].blob_cell_count=" <<
       blobdata[i].blob_cell_count << 
@@ -13292,19 +13293,19 @@ NavierStokes::phase_change_redistributeALL() {
       " mdot_data[i][j]=" << mdot_data[i][j] << 
       " mdot_data_redistribute[i][j]=" <<
       mdot_data_redistribute[i][j] << '\n';
-   } // j=0..2*nten-1
-   if (j==2*nten) {
-    // do nothing
-   } else
-    amrex::Error("j!=2*nten");
+    } // j=0..2*nten-1
+    if (j==2*nten) {
+     // do nothing
+    } else
+     amrex::Error("j!=2*nten");
 
-  } // i=0..color_count-1
+   } // i=0..color_count-1
 
-  for (int i=0;i<mdot_comp_data.size();i++) {
+   for (int i=0;i<mdot_comp_data.size();i++) {
 
-   int j=0;
-   for (j=0;j<mdot_comp_data_redistribute[i].size();j++) {
-    std::cout << "i=" << i << " j=" << j << " im=" <<
+    int j=0;
+    for (j=0;j<mdot_comp_data_redistribute[i].size();j++) {
+     std::cout << "i=" << i << " j=" << j << " im=" <<
       blobdata[i].im << 
       " blobdata[i].blob_cell_count=" <<
       blobdata[i].blob_cell_count << 
@@ -13315,14 +13316,21 @@ NavierStokes::phase_change_redistributeALL() {
       " mdot_comp_data[i][j]=" << mdot_comp_data[i][j] << 
       " mdot_comp_data_redistribute[i][j]=" <<
       mdot_comp_data_redistribute[i][j] << '\n';
-   } // j=0..2*nten-1
-   if (j==2*nten) {
-    // do nothing
-   } else
-    amrex::Error("j!=2*nten");
+    } // j=0..2*nten-1
+    if (j==2*nten) {
+     // do nothing
+    } else
+     amrex::Error("j!=2*nten");
 
-  } // i=0..color_count-1
- } // if (ParallelDescriptor::IOProcessor())
+   } // i=0..color_count-1
+  } else if (! ParallelDescriptor::IOProcessor()) {
+   // do nothing
+  } else
+   amrex::Error("ParallelDescriptor::IOProcessor() invalid");
+ } else if (verbose==0) {
+  // do nothing
+ } else
+  amrex::Error("verbose invalid");
 
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
