@@ -563,7 +563,7 @@ stop
         endif
        enddo
        write(filename32,'(A14,A10,A3,A5)') &
-               './temptecplot/','tempnddata',levstr,gridstr
+          './temptecplot/','tempnddata',levstr,gridstr
        open(unit=4,file=filename32)
 
        do dir=1,plot_sdim
@@ -805,7 +805,7 @@ stop
        enddo
 
        write(filename32,'(A14,A10,A3,A5)') &
-               './temptecplot/','tempnddata',levstr,gridstr
+          './temptecplot/','tempnddata',levstr,gridstr
        open(unit=4,file=filename32)
        print *,"filename32 ",filename32
 
@@ -2209,7 +2209,7 @@ END SUBROUTINE SIMP
          endif
        enddo
        write(filename32,'(A14,A10,A3,A5)') &
-               './temptecplot/','tempnddata',levstr,gridstr
+          './temptecplot/','tempnddata',levstr,gridstr
        print *,"filename32 ",filename32
 
        open(unit=11,file=filename32)
@@ -3826,7 +3826,7 @@ END SUBROUTINE SIMP
          endif
         enddo
         write(filename32,'(A14,A10,A3,A5)') &
-                './temptecplot/','tempnddata',levstr,gridstr
+          './temptecplot/','tempnddata',levstr,gridstr
         open(unit=4,file=filename32)
 
         do dir=1,plot_sdim
@@ -4052,7 +4052,7 @@ END SUBROUTINE SIMP
         enddo
 
         write(filename32,'(A14,A10,A3,A5)') &
-               'temptecplot/','tempnddata',levstr,gridstr
+          './temptecplot/','tempnddata',levstr,gridstr
         open(unit=4,file=filename32)
         print *,"filename32 ",filename32
 
@@ -13808,10 +13808,10 @@ END SUBROUTINE SIMP
 
       character*2 matstr
 
-      character*15 cennamestr15
+      character*29 cennamestr29
       character*3 levstr
       character*5 gridstr
-      character*23 cenfilename23
+      character*37 cenfilename37
 
       REAL_T xref(SDIM)
       REAL_T xrefT(SDIM)
@@ -13835,7 +13835,8 @@ END SUBROUTINE SIMP
        endif
       enddo
 
-      write(cennamestr15,'(A10,A2,A3)') 'tempPARCON',matstr,'pos'
+      write(cennamestr29,'(A14,A10,A2,A3)') &
+          './temptecplot/','tempPARCON',matstr,'pos'
 
       write(levstr,'(I3)') level
       write(gridstr,'(I5)') gridno
@@ -13850,8 +13851,8 @@ END SUBROUTINE SIMP
         gridstr(i:i)='0'
        endif
       enddo
-      write(cenfilename23,'(A15,A3,A5)') cennamestr15,levstr,gridstr
-      print *,"cenfilename23 ",cenfilename23
+      write(cenfilename37,'(A29,A3,A5)') cennamestr29,levstr,gridstr
+      print *,"cenfilename37 ",cenfilename37
 
        !x,y,z is base; (x0,y0,z0,r,u,v,w,den,T,insert time,vort,type) is extra.
       if (N_EXTRA_REAL.eq.3*SDIM+5) then
@@ -13861,7 +13862,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      open(unit=12,file=cenfilename23)
+      open(unit=12,file=cenfilename37)
       write(12,*) Np
 
       do ipart_counter=1,Np
@@ -13914,13 +13915,13 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: NS_ncomp_particles
       INTEGER_T, intent(in) :: grids_per_level(arrdim)
 
-      character*15 cennamestr15
+      character*29 cennamestr29
       character*11 newcennamestr11
 
       character*3 levstr
       character*5 gridstr
 
-      character*23 cenfilename23
+      character*37 cenfilename37
 
       character*2 matstr
       character*6 stepstr
@@ -13950,7 +13951,8 @@ END SUBROUTINE SIMP
        endif
       enddo
       
-      write(cennamestr15,'(A10,A2,A3)') 'tempPARCON',matstr,'pos'
+      write(cennamestr29,'(A14,A10,A2,A3)') &
+          './temptecplot/','tempPARCON',matstr,'pos'
       write(newcennamestr11,'(A6,A2,A3)') 'PARCON',matstr,'pos'
 
       nparticles=0
@@ -14036,9 +14038,9 @@ END SUBROUTINE SIMP
           endif
          enddo
 
-         write(cenfilename23,'(A15,A3,A5)') cennamestr15,levstr,gridstr
-         print *,"cenfilename23 ",cenfilename23
-         open(unit=5,file=cenfilename23)
+         write(cenfilename37,'(A29,A3,A5)') cennamestr29,levstr,gridstr
+         print *,"cenfilename37 ",cenfilename37
+         open(unit=5,file=cenfilename37)
 
          read(5,*) Part_nparticles
 
