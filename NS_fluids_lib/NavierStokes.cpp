@@ -973,6 +973,9 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // 5 FSI rigid solid, tessellating (PROB.F90)
 // 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
 // 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
+// 8 FSI, non-tessellating, force comes from Eulerian code,
+//   velocity comes from Lagrangian code.  User defined fortran routines
+//   used in some places. 
 Vector<int> NavierStokes::FSI_flag; 
 Vector<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
 // default: 1
