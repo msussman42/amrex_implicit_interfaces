@@ -1827,6 +1827,7 @@ protected:
      // 6=FSI ice, represented as a tessellating fluid
      //   (initial geometry: sci_clsvof.F90)
      // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
+     // 8=FSI, non-tessellating link w/user defined fortran code.
     static Vector<int>  FSI_flag; 
 
     static int         CTML_FSI_numsolids;
