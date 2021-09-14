@@ -1121,6 +1121,9 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
              (FSI_flag_temp[im]==6)) { // ice (PROB.F90),ice (sci_clsvof.F90)
    // do nothing, tessellating
    
+   // FSI elastic link w/user defined, pressure/vel coupling (sci_clsvof.F90)
+  } else if (FSI_flag_temp[im]==8) {  
+   mof_ordering_local[im]=1; // non-tessellating
    // FSI elastic link w/Kourosh (sci_clsvof.F90)
   } else if (FSI_flag_temp[im]==4) {  
    mof_ordering_local[im]=1; // non-tessellating
@@ -1146,6 +1149,10 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
    } else if ((FSI_flag_temp[im]==3)||
 	      (FSI_flag_temp[im]==6)) { // ice (PROB.F90),ice (sci_clsvof.F90)
     mof_ordering_local[im]=nmat; // tessellating
+
+    // FSI elastic link w/user defined, pressure/vel coupling (sci_clsvof.F90)
+   } else if (FSI_flag_temp[im]==8) {  
+    mof_ordering_local[im]=1; // non-tessellating
    } else if (FSI_flag_temp[im]==4) { // FSI link w/Kourosh (sci_clsvof.F90)
     mof_ordering_local[im]=1;  // non-tessellating
    } else if (FSI_flag_temp[im]==5) { // FSI rigid solid (PROB.F90)
@@ -1527,15 +1534,22 @@ void fortran_parameters() {
  pp.queryarr("shear_modulus",shear_modulus_temp,0,nmat);
  pp.query("particles_flag",particles_flag_temp);
 
+  //SEE "is_eulerian_elastic_model"
  for (int im=0;im<nmat;im++) {
-  if (is_eulerian_elastic_model(elastic_viscosity_temp[im],
-        viscoelastic_model_temp[im])==1) {
-   store_elastic_data_temp[im]=1;
-  } else if (is_eulerian_elastic_model(elastic_viscosity_temp[im],
-               viscoelastic_model_temp[im])==0) {
+  if (elastic_viscosity_temp[im]>0.0) {
+   if ((viscoelastic_model_temp[im]==0)||
+       (viscoelastic_model_temp[im]==1)||
+       (viscoelastic_model_temp[im]==2)||
+       (viscoelastic_model_temp[im]==3)) {
+    store_elastic_data_temp[im]=1;
+   } else if (viscoelastic_model_temp[im]==4) {
+    // do nothing
+   } else
+    amrex::Error("viscoelastic_model_temp[im] invalid");
+  } else if (elastic_viscosity_temp[im]==0.0) {
    // do nothing
   } else
-   amrex::Error("is_eulerian_elastic_model invalid");
+   amrex::Error("elastic_viscosity_temp[im] invalid");
  } // im=0..nmat-1 
 
  num_materials_viscoelastic_temp=0;
@@ -5167,8 +5181,10 @@ int NavierStokes::is_eulerian_elastic_model(Real elastic_visc_in,
    return 1;
   } else if (viscoelastic_model_in==4) {
    return 0;
-  } else
+  } else {
    amrex::Error("viscoelastic_model_in invalid");
+   return 0;
+  }
  } else if (elastic_visc_in==0.0) {
   return 0;
  } else {
