@@ -4003,6 +4003,8 @@ NavierStokes::read_params ()
       } else if ((viscoelastic_model[i]==1)||
    	         (viscoelastic_model[i]==0)) {
        // do nothing
+      } else if (viscoelastic_model[i]==4) {
+       // do nothing
       } else
        amrex::Error("viscoelastic_model invalid");
      } else

@@ -5018,8 +5018,13 @@ stop
              ! kg/(m^2 s^2) = (1/m) beta
              ! beta = kg/(m s^2)
              ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
-            elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
+            if (fort_elastic_viscosity(im).ge.zero) then
+             elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
                 (local_elastic_time*fort_denconst(im))
+            else
+             print *,"fort_elastic_viscosity(im) invalid"
+             stop
+            endif
             if (elastic_wave_speed.gt.zero) then
              elastic_wave_speed=sqrt(elastic_wave_speed)
              dthold=hx/elastic_wave_speed
