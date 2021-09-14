@@ -746,6 +746,8 @@ stop
         if ((viscoelastic_model.eq.0).or. &
             (Viscoelastic_model.eq.1)) then
          ! do nothing
+        else if (viscoelastic_model.eq.4) then
+         ! do nothing
         else if ((viscoelastic_model.eq.2).or. & !displacement gradient
                  (viscoelastic_model.eq.3)) then !incremental
          bulk_modulus=elastic_viscosity
@@ -1266,7 +1268,8 @@ stop
        print *,"elastic_viscosity(im+1) invalid"
        stop
       endif
-      if (elastic_viscosity(im+1).gt.zero) then
+      if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+             fort_viscoelastic_model(im+1)).eq.1) then 
        if (num_materials_viscoelastic.le.0) then
         print *,"num_materials_viscoelastic.le.0:fort_dermagtrace"
         stop
@@ -1275,13 +1278,14 @@ stop
         print *,"ncomp_tensor.ne.FORT_NUM_TENSOR_TYPE"
         stop
        endif
-      else if (elastic_viscosity(im+1).eq.zero) then
+      else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+                 fort_viscoelastic_model(im+1)).eq.0) then 
        if (ncomp_tensor.ne.ncomp_den) then
         print *,"ncomp_tensor.ne.ncomp_den"
         stop
        endif
       else
-       print *,"elastic_viscosity invalid"
+       print *,"fort_is_eulerian_elastic_model invalid"
        stop
       endif  
 
@@ -1355,11 +1359,13 @@ stop
          sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
 
         ! dest(1) calculated in fort_getshear.
-       if (elastic_viscosity(im+1).eq.zero) then
+       if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+             fort_viscoelastic_model(im+1)).eq.0) then 
         dest(D_DECL(i,j,k),2)=dest(D_DECL(i,j,k),1)
         dest(D_DECL(i,j,k),3)=dest(D_DECL(i,j,k),1)
         dest(D_DECL(i,j,k),4)=dest(D_DECL(i,j,k),1)
-       else if (elastic_viscosity(im+1).gt.zero) then
+       else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+                 fort_viscoelastic_model(im+1)).eq.1) then 
         if (ncomp_visc.ne.3*nmat) then
          print *,"ncomp_visc invalid"
          stop
@@ -1403,7 +1409,7 @@ stop
         endif
 
        else
-        print *,"elastic_viscosity invalid"
+        print *,"fort_is_eulerian_elastic_model invalid"
         stop
        endif
 
@@ -2154,7 +2160,9 @@ stop
               enddo
               enddo
 
-              if (fort_elastic_viscosity(im_fluid).gt.zero) then
+              if (fort_is_eulerian_elastic_model( &
+                    fort_elastic_viscosity(im_fluid), &
+                    fort_viscoelastic_model(im_fluid)).eq.1) then 
                partid=1
                do while ((fort_im_elastic_map(partid)+1.ne.im_fluid).and. &
                          (partid.le.num_materials_viscoelastic))
@@ -2179,10 +2187,12 @@ stop
                 print *,"partid invalid in fort_getdrag"
                 stop
                endif
-              else if (fort_elastic_viscosity(im_fluid).eq.zero) then
+              else if (fort_is_eulerian_elastic_model( &
+                        fort_elastic_viscosity(im_fluid), &
+                        fort_viscoelastic_model(im_fluid)).eq.0) then 
                ! do nothing
               else
-               print *,"fort_elastic_viscosity(im_fluid) invalid"
+               print *,"fort_is_eulerian_elastic_model invalid"
                stop
               endif
 

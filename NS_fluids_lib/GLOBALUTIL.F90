@@ -10204,7 +10204,7 @@ contains
       IMPLICIT NONE
 
       INTEGER_T is_rigid
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
       INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.nmat)) then
@@ -10246,6 +10246,38 @@ contains
       return
       end function is_rigid
 
+      function fort_is_eulerian_elastic_model(elastic_visc_in, &
+        viscoelastic_model_in) 
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T fort_is_eulerian_elastic_model
+      REAL_T, intent(in) :: elastic_visc_in
+      INTEGER_T, intent(in) :: viscoelastic_model_in
+
+      if (elastic_visc_in.gt.zero) then
+       if ((viscoelastic_model_in.eq.0).or. &
+           (viscoelastic_model_in.eq.1).or. &
+           (viscoelastic_model_in.eq.2).or. &
+           (viscoelastic_model_in.eq.3)) then
+        fort_is_eulerian_elastic_model=1
+       else if (viscoelastic_model_in.eq.4) then
+        fort_is_eulerian_elastic_model=0
+       else
+        print *,"viscoelastic_model_in invalid"
+        stop
+        fort_is_eulerian_elastic_model=0
+       endif
+      else if (elastic_visc_in.eq.zero) then
+       fort_is_eulerian_elastic_model=0
+      else
+       print *,"elastic_visc_in invalid"
+       stop
+       fort_is_eulerian_elastic_model=0
+      endif
+
+      return
+      end function fort_is_eulerian_elastic_model
 
       function is_prescribed(nmat,im)
       use probcommon_module
