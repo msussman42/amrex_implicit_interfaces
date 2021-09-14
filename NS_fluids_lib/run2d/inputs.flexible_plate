@@ -136,9 +136,6 @@ ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-10
 
-# the "method":
-# (x^n+1-x^n)/dt= - u dot grad x + u
-# (u^n+1-u^n)/dt= - u dot grad u + div c^2 H (grad x+grad x^t).
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
@@ -168,7 +165,7 @@ ns.gravity        = -9.8  # ZEYU
 #  if theta=90 degrees,
 #  sigma_SV=sigma_SL
 #  12=LV,13=SL,23=SV
-ns.tension=0.073 0.0 0.0  #ZEYU  N/m
+ns.tension=0.073 0.073 0.073  #ZEYU  N/m
 # law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 #law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 
@@ -211,23 +208,13 @@ ns.radblob=1.0e-3 # ZEYU
 ns.xblob2=0.0
 #ns.radblob2=1.0e+10  # plate extends the whole domain 
 ns.radblob2=2.0e-3  # plate extends 2/3 of the way to the end of the domain. 
-# SUBSTRATE THICKNESS SHOULD BE A MULTIPLE OF dx_{coarsest}
-# if n_cell=32 32 and domain height=0.4 cm then
-# dx_coarsest=0.4/32=0.0125
-#ns.yblob2=0.125  # center of plate
-#ns.zblob2=0.125  # center of plate
-#ns.radblob3=0.025 
-#ns.radblob4=0.025 
-ns.yblob2=1.25e-3
-ns.zblob2=0.0
-ns.radblob3=0.25e-3  # vertical radius of the plate (2D)
-ns.radblob4=0.25e-3
-ns.radblob5=0.25e-3  # width of clamped region
+ns.yblob2=1.25e-3  # plate y coordinate
+ns.zblob2=1.25e-3  # plate z coordinate
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2000
-ns.material_type=0 0 0
-ns.FSI_flag=0 0 0
+ns.material_type=0 0 999
+ns.FSI_flag=0 0 8
 ns.heatviscconst=0.0 0.0 0.0
 #ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
 #material 1 is water
@@ -250,7 +237,8 @@ ns.elastic_time=0.0 0.0 1.0e+9
 #  viscoelastic source term if viscoelastic_model==1.
 # 2=> elastic material (e.g. Q ~ (grad X + grad X^T) )
 # 3=> incremental elastic material (Jaumann derivative)
-ns.viscoelastic_model=0 0 3
+# 4=> elastic model handled in the coupler. (lagrangian)
+ns.viscoelastic_model=0 0 4
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
