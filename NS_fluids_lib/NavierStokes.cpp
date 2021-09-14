@@ -10085,7 +10085,7 @@ void NavierStokes::make_marangoni_force() {
 } // omp
  ns_reconcile_d_num(57);
 
-}   // make_marangoni_force
+}   // end subroutine make_marangoni_force
 
 void NavierStokes::ns_reconcile_d_num(int caller_id) {
 
