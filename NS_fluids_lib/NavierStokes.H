@@ -2191,6 +2191,7 @@ protected:
      //       (iii) X=I+dt W
      //       (iv) S^{n+1}=X A^advect X^T-I=
      //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
+     // 4=> elastic model handled in the coupler (Lagrangian).
      //
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
