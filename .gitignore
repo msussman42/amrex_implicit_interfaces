@@ -19,6 +19,7 @@ NS_fluids_lib/amr*
 NS_fluids_lib/run2d/test*
 NS_fluids_lib/run3d/test*
 markerLS/Exec/tmp_build_dir
+markerLS/Exec/main*
 TAGS
 tags
 *~

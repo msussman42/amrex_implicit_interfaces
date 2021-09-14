@@ -1,5 +1,5 @@
-#ifndef _MARCHING_TETRA_F_H_
-#define _MARCHING_TETRA_F_H_
+#ifndef _INIT_MARCHING_F_H_
+#define _INIT_MARCHING_F_H_
 
 #ifdef BL_LANG_FORT
 #else
@@ -17,4 +17,4 @@ extern "C" {
 }/* namespace amrex */
     
 #endif
-#endif /*_MARCHING_TETRA_F_H_*/
+#endif /*_INIT_MARCHING_F_H_*/

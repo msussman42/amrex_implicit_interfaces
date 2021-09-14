@@ -517,8 +517,54 @@
          print *,"frac_gap or frac_same invalid"
          stop
         endif 
-       enddo
-       enddo
+       enddo !sidesten=1,2
+       enddo !dir=1..sdim
+
+       if (probtypeCG.eq.403) then !dendrite problem
+        if (ntsat.eq.3) then
+         ilocal=i
+         jlocal=j
+         if (ilocal.le.lox) then
+          ilocal=lox+1
+         endif
+         if (ilocal.ge.hix) then
+          ilocal=hix-1
+         endif
+         if (jlocal.le.loy) then
+          ylocal=loy+1
+         endif
+         if (ylocal.ge.hiy) then
+          ylocal=hiy-1
+         endif
+         vfrac_comp=1
+         F1=mofdata_cell(vfrac_comp)
+         F2=mofdata_cell(vfrac_comp+ngeom_reconCG)
+         if (((F1.gt.VOFTOL).and.(F1.lt.one-VOFTOL)).or. &
+             ((F2.gt.VOFTOL).and.(F2.lt.one-VOFTOL))) then
+
+          TSAT_FLAG=NINT(tsatfab(i,j,iten))
+         if (TSAT_FLAG.eq.0) then
+          local_gap_alarm=1.0d0
+         else if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
+          ! check 5 point stencil, if flag is "ok" for all points
+          ! in the stencil then
+          ! we must have |div grad TI| < M/dx
+           print *,"i,j,TSAT_FLAG,T_GAMMA,Y_GAMMA ",i,j, &
+               tsatfab(i,j,iten), &
+               tsatfab(i,j,iten+1), &
+               tsatfab(i,j,iten+2)
+         else
+          print *,"TSAT_FLAG invalid TSAT_FLAG=",TSAT_FLAG
+          print *,"tsatfab(i,j,iten)= ",tsatfab(i,j,iten)
+          print *,"i,j,iten ",i,j,iten
+          stop
+         endif
+        else
+         print *,"ntsat invalid"
+         stop
+        endif
+       endif
+
        gap_alarm_FAB(i,j)=local_gap_alarm
       enddo
       enddo ! i,j=lo,...,hi
@@ -616,7 +662,7 @@
       VP_max_LS_error=0.0d0
 
       if (1.eq.0) then
-       if (probtypeCG.eq.403) then
+       if (probtypeCG.eq.403) then ! dendrite problem
         iten=1
         do i=lox,hix
         do j=loy,hiy

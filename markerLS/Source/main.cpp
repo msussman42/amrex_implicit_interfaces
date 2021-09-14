@@ -6,6 +6,7 @@
 #include "myfunc.H"
 #include "myfunc_F.H"
 #include "INIT_MARCHING_F.H"
+#include "MARCHING_TETRA_F.H"
 
 #include "particle_container.H"
 
@@ -122,7 +123,11 @@ void main_main ()
     n_cell_fort[0]=n_cell;
     n_cell_fort[1]=n_cell;
     n_cell_fort[2]=n_cell;
-    fort_init_marching(xlo_fort,geom.CellSize(),n_cell_fort);
+
+    fort_init_marching(
+     xlo_fort,
+     geom.CellSize(),
+     n_cell_fort);
 
     // compute the time step
     const amrex::Real* dx=geom.CellSize();
@@ -132,6 +137,55 @@ void main_main ()
 
     // time = starting time in the simulation
     Real time = 0.0;
+
+    int thread_id=0;
+    Real minLS=1.0e+20;
+    Real maxLS=-1.0e+20;
+    MultiFab phi_distance(ba, dm, Ncomp, Nghost);
+    MultiFab phi_grad(ba, dm, AMREX_SPACEDIM, Nghost);
+    MultiFab mask_finer(ba, dm, 1, Nghost);
+    mask_finer.setVal(1.0,0,1,Nghost);
+    int bfact=1;
+    int level=0;
+
+    for (int sweep=0;sweep<=1;sweep++) {
+     for ( MFIter mfi(phi); mfi.isValid(); ++mfi ){
+      const Box& bx = mfi.validbox();
+      const int gridno = mfi.index();
+      const Box& fabgrid = bx;
+      const int* fablo=fabgrid.loVect();
+      const int* fabhi=fabgrid.hiVect();
+      FArrayBox& phi_fab=phi[mfi];
+      FArrayBox& phi_dist_fab=phi_distance[mfi];
+      FArrayBox& phi_grad_fab=phi_grad[mfi];
+      FArrayBox& mask_fab=mask_finer[mfi];
+
+      fort_closest_point_map(
+       &thread_id,
+       &sweep,
+       &Nghost,
+       &minLS, 
+       &maxLS, 
+       phi_fab.dataPtr(),
+       ARLIM(phi_fab.loVect()),ARLIM(phi_fab.hiVect()),
+       phi_dist_fab.dataPtr(),
+       ARLIM(phi_dist_fab.loVect()),ARLIM(phi_dist_fab.hiVect()),
+       phi_grad_fab.dataPtr(),
+       ARLIM(phi_grad_fab.loVect()),ARLIM(phi_grad_fab.hiVect()),
+       xlo_fort,
+       geom.CellSize(),
+       mask_fab.dataPtr(),
+       ARLIM(mask_fab.loVect()),ARLIM(mask_fab.hiVect()),
+       fablo,fabhi, //tilelo,tilehi
+       fablo,fabhi,
+       &bfact,
+       &level);
+     }
+     phi_distance.FillBoundary(geom.periodicity());
+     phi_grad.FillBoundary(geom.periodicity());
+    } // sweep=0,1
+    MultiFab::Copy(phi,phi_distance,0,0,1,Nghost);
+
 
     // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
     if (plot_int > 0 && plotEulerian){
