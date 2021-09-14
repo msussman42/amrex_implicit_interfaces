@@ -3,8 +3,9 @@ CEXE_sources += particle_operations.cpp
 CEXE_sources += cellsortedPC.cpp
 
 CEXE_headers += myfunc.H particle_container.H
-FEXE_headers += myfunc_F.H MARCHING_TETRA_F.H INIT_MARCHING_F.H
-F90EXE_headers += MARCHING_TETRA_F.H
+FEXE_headers += myfunc_F.H
+FEXE_headers += MARCHING_TETRA_F.H
+FEXE_headers += INIT_MARCHING_F.H
 
 F90EXE_sources += PROBMAIN.F90
 F90EXE_sources += PROBCOMMON.F90
