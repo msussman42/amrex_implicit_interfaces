@@ -1528,12 +1528,14 @@ void fortran_parameters() {
  pp.query("particles_flag",particles_flag_temp);
 
  for (int im=0;im<nmat;im++) {
-  if (elastic_viscosity_temp[im]>0.0) {
+  if (is_eulerian_elastic_model(elastic_viscosity_temp[im],
+        viscoelastic_model_temp[im])==1) {
    store_elastic_data_temp[im]=1;
-  } else if (elastic_viscosity_temp[im]==0.0) {
+  } else if (is_eulerian_elastic_model(elastic_viscosity_temp[im],
+               viscoelastic_model_temp[im])==0) {
    // do nothing
   } else
-   amrex::Error("elastic_viscosity_temp invalid");
+   amrex::Error("is_eulerian_elastic_model invalid");
  } // im=0..nmat-1 
 
  num_materials_viscoelastic_temp=0;
@@ -2776,6 +2778,27 @@ NavierStokes::read_params ()
      store_elastic_data[im]=0;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
+
+    viscoelastic_model.resize(nmat);
+    for (int i=0;i<nmat;i++)
+     viscoelastic_model[i]=0;
+    pp.queryarr("viscoelastic_model",viscoelastic_model,0,nmat);
+
+    for (int i=0;i<nmat;i++) {
+     if (viscoelastic_model[i]==0) {
+      // do nothing
+     } else if (viscoelastic_model[i]==1) {
+      // do nothing
+     } else if (viscoelastic_model[i]==2) {
+      // do nothing
+     } else if (viscoelastic_model[i]==3) {
+      // do nothing
+     } else if (viscoelastic_model[i]==4) {
+      // do nothing
+     } else
+      amrex::Error("viscoelastic_model invalid");
+    } // i=0..nmat-1
+
     pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
     pp.queryarr("damping_coefficient",damping_coefficient,0,nmat);
     pp.queryarr("lame_coefficient",lame_coefficient,0,nmat);
@@ -2793,12 +2816,14 @@ NavierStokes::read_params ()
     pp.query("particle_interaction_ngrow",particle_interaction_ngrow);
 
     for (int im=0;im<nmat;im++) {
-     if (elastic_viscosity[im]>0.0) {
+     if (is_eulerian_elastic_model(elastic_viscosity[im],
+       viscoelastic_model[im])==1) {
       store_elastic_data[im]=1;
-     } else if (elastic_viscosity[im]==0.0) {
+     } else if (is_eulerian_elastic_model(elastic_viscosity[im],
+                 viscoelastic_model[im])==0) {
       // do nothing
      } else
-      amrex::Error("elastic_viscosity invalid");
+      amrex::Error("is_eulerian_elastic_model invalid");
     } // im=0..nmat-1 
 
     num_materials_viscoelastic=0;
@@ -3004,7 +3029,6 @@ NavierStokes::read_params ()
     viscconst.resize(nmat);
     viscconst_eddy.resize(nmat);
     viscosity_state_model.resize(nmat);
-    viscoelastic_model.resize(nmat);
     les_model.resize(nmat);
     viscconst_interface.resize(nten);
     speciesconst.resize((num_species_var+1)*nmat);
@@ -3315,24 +3339,6 @@ NavierStokes::read_params ()
      viscosity_state_model[i]=0;
     pp.queryarr("viscosity_state_model",viscosity_state_model,0,nmat);
     
-    for (int i=0;i<nmat;i++)
-     viscoelastic_model[i]=0;
-
-    pp.queryarr("viscoelastic_model",viscoelastic_model,0,nmat);
-
-    for (int i=0;i<nmat;i++) {
-     if (viscoelastic_model[i]==0) {
-      // do nothing
-     } else if (viscoelastic_model[i]==1) {
-      // do nothing
-     } else if (viscoelastic_model[i]==2) {
-      // do nothing
-     } else if (viscoelastic_model[i]==3) {
-      // do nothing
-     } else
-      amrex::Error("viscoelastic_model invalid");
-    } // i=0..nmat-1
-
     for (int i=0;i<nmat;i++)
      les_model[i]=0;
     pp.queryarr("les_model",les_model,0,nmat);
@@ -5147,6 +5153,28 @@ int NavierStokes::is_GFM_freezing_model(int loc_freezing_model) {
  }
 
 } //end function is_GFM_freezing_model(int freezing_model) 
+
+int NavierStokes::is_eulerian_elastic_model(Real elastic_visc_in,
+		int viscoelastic_model_in) {
+
+ if (elastic_visc_in>0.0) {
+  if ((viscoelastic_model_in==0)||
+      (viscoelastic_model_in==1)||
+      (viscoelastic_model_in==2)||
+      (viscoelastic_model_in==3)) {
+   return 1;
+  } else if (viscoelastic_model_in==4) {
+   return 0;
+  } else
+   amrex::Error("viscoelastic_model_in invalid");
+ } else if (elastic_visc_in==0.0) {
+  return 0;
+ } else {
+  amrex::Error("elastic_visc_in invalid");
+  return 0;
+ }
+
+} // end is_eulerian_elastic_model
 
 int NavierStokes::is_hydrate_freezing_model(int loc_freezing_model) {
 

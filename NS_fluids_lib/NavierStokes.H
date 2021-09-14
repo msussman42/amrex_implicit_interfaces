@@ -464,6 +464,8 @@ public:
     static int is_GFM_freezing_model(int freezing_model);
     static int is_hydrate_freezing_model(int freezing_model);
     static int is_valid_freezing_model(int freezing_model);
+    static int is_eulerian_elastic_model(Real elastic_visc_in,
+        int viscoelastic_model_in);
 
     //
     // Set time levels of state data.
