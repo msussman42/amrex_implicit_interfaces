@@ -190,6 +190,12 @@
       integer ncomp_gap
       integer TSAT_FLAG
       integer iten
+      integer ilocal,jlocal
+      REAL*8 F1,F2
+      integer ip1,iminus1,jp1,jminus1
+      integer TF_xp,TF_xm,TF_yp,TF_ym
+      REAL*8 TI,TI_xp,TI_xm,TI_yp,TI_ym
+      REAL*8 lap_TI,MTI,lap_TI_min,lap_TI_max
 
 
       nhalf=3
@@ -404,6 +410,11 @@
        enddo
       enddo
 
+      MTI=40.0d0
+
+      lap_TI_min=1.0d+20
+      lap_TI_max=0.0d0
+
       do i=lox,hix
       do j=loy,hiy
 
@@ -520,7 +531,17 @@
        enddo !sidesten=1,2
        enddo !dir=1..sdim
 
+       do imof=1,ngeom_reconCG*nmat
+        mofdata_cell(imof)=mofdata_FAB(i,j,imof)
+       enddo
+
        if (probtypeCG.eq.403) then !dendrite problem
+        if (nmat.eq.2) then
+         ! do nothing
+        else
+         print *,"nmat invalid"
+         stop
+        endif
         if (ntsat.eq.3) then
          ilocal=i
          jlocal=j
@@ -531,43 +552,96 @@
           ilocal=hix-1
          endif
          if (jlocal.le.loy) then
-          ylocal=loy+1
+          jlocal=loy+1
          endif
-         if (ylocal.ge.hiy) then
-          ylocal=hiy-1
+         if (jlocal.ge.hiy) then
+          jlocal=hiy-1
          endif
-         vfrac_comp=1
-         F1=mofdata_cell(vfrac_comp)
-         F2=mofdata_cell(vfrac_comp+ngeom_reconCG)
-         if (((F1.gt.VOFTOL).and.(F1.lt.one-VOFTOL)).or. &
-             ((F2.gt.VOFTOL).and.(F2.lt.one-VOFTOL))) then
+         vofcomp=1
+         F1=mofdata_cell(vofcomp)
+         F2=mofdata_cell(vofcomp+ngeom_reconCG)
+         if (((F1.gt.VOFTOL).and.(F1.lt.1.0d0-VOFTOL)).and. &
+             ((F2.gt.VOFTOL).and.(F2.lt.1.0d0-VOFTOL))) then
 
-          TSAT_FLAG=NINT(tsatfab(i,j,iten))
-         if (TSAT_FLAG.eq.0) then
-          local_gap_alarm=1.0d0
-         else if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
-          ! check 5 point stencil, if flag is "ok" for all points
-          ! in the stencil then
-          ! we must have |div grad TI| < M/dx
-           print *,"i,j,TSAT_FLAG,T_GAMMA,Y_GAMMA ",i,j, &
-               tsatfab(i,j,iten), &
-               tsatfab(i,j,iten+1), &
-               tsatfab(i,j,iten+2)
+          TSAT_FLAG=NINT(abs(tsatfab(ilocal,jlocal,1)))
+          if (1.eq.0) then
+           print *,"i,j,TSAT_FLAG ",i,j,TSAT_FLAG
+          endif
+          if (TSAT_FLAG.eq.0) then
+           local_gap_alarm=1.0d0
+          else if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
+           ! check 5 point stencil, if flag is "ok" for all points
+           ! in the stencil then
+           ! we must have |div grad TI| < M/dx
+           ip1=ilocal+1
+           iminus1=ilocal-1
+           jp1=jlocal+1
+           jminus1=jlocal-1
+           TI=tsatfab(ilocal,jlocal,2)
+           TF_xp=NINT(abs(tsatfab(ip1,jlocal,1)))
+           TI_xp=tsatfab(ip1,jlocal,2)
+           TF_xm=NINT(abs(tsatfab(iminus1,jlocal,1)))
+           TI_xm=tsatfab(iminus1,jlocal,2)
+           TF_yp=NINT(abs(tsatfab(ilocal,jp1,1)))
+           TI_yp=tsatfab(ilocal,jp1,2)
+           TF_ym=NINT(abs(tsatfab(ilocal,jminus1,1)))
+           TI_ym=tsatfab(ilocal,jminus1,2)
+           lap_TI=abs(TI_xp+TI_xm+TI_yp+TI_ym-4.0d0*TI)
+           if (lap_TI_min.gt.lap_TI) then
+            lap_TI_min=lap_TI
+           endif
+           if (lap_TI_max.lt.lap_TI) then
+            lap_TI_max=lap_TI
+           endif
+
+           MTI=40.0d0
+
+           if (1.eq.0) then
+            print *,"BEFORE: i,j,alarm ",i,j,local_gap_alarm
+           endif
+
+           if (lap_TI.gt.MTI*dx(1)) then
+            local_gap_alarm=1.0d0
+           endif
+           if ((TF_xp.eq.0).or.(TF_xm.eq.0).or. &
+               (TF_yp.eq.0).or.(TF_ym.eq.0)) then
+            local_gap_alarm=1.0d0
+           else if (((TF_xp.eq.1).or.(TF_xp.eq.2)).and. &
+                    ((TF_xm.eq.1).or.(TF_xm.eq.2)).and. &
+                    ((TF_yp.eq.1).or.(TF_yp.eq.2)).and. &
+                    ((TF_ym.eq.1).or.(TF_ym.eq.2))) then
+            ! do nothing
+           else
+            print *,"flag(s) invalid in 5 pt stencil"
+            stop
+           endif
+           if (1.eq.0) then
+            print *,"i,j,lap_TI,MTI x h,alarm ",i,j, &
+                 lap_TI,MTI*dx(1),local_gap_alarm
+           endif
+          else
+           print *,"TSAT_FLAG invalid"
+           stop
+          endif
+         else if (abs(F1+F2-1.0d0).le.VOFTOL) then
+          ! do nothing
          else
-          print *,"TSAT_FLAG invalid TSAT_FLAG=",TSAT_FLAG
-          print *,"tsatfab(i,j,iten)= ",tsatfab(i,j,iten)
-          print *,"i,j,iten ",i,j,iten
+          print *,"F1 or F2 invalid: ",F1,F2
           stop
          endif
+           
         else
          print *,"ntsat invalid"
          stop
         endif
-       endif
+       endif !if probtypeCG.eq.403
 
        gap_alarm_FAB(i,j)=local_gap_alarm
       enddo
       enddo ! i,j=lo,...,hi
+
+      print *,"lap_TI_min,lap_TI_max,MTI x h ", &
+          lap_TI_min,lap_TI_max,MTI*dx(1)
 
       fablo(1)=lox
       fablo(2)=loy
