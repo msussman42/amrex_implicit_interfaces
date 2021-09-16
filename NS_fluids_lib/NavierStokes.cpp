@@ -6925,7 +6925,6 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-//   FIX ME
     // updates FSI_MF for FSI_flag(im)==1 type materials.
    fort_initdatasolid(
      &nmat,
@@ -7055,6 +7054,8 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
 
  } else if (FSI_flag[im_part]==4) { // FSI CTML material
   // do nothing (CTML)
+ } else if (FSI_flag[im_part]==8) { // FSI pres-vel coupling
+  // do nothing (pres-vel coupling)
  } else
   amrex::Error("FSI_flag[im_part] invalid");
 
@@ -7190,6 +7191,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real time) {
 
    if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
        (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
+       (FSI_flag[im_part]==8)|| //FSI pres-vel sci_clsvof.F90 solid
        (FSI_flag[im_part]==6)|| //initial ice from CAD file
        (FSI_flag[im_part]==7)) {//initial fluid from CAD file 
 
@@ -7205,7 +7207,8 @@ void NavierStokes::Transfer_FSI_To_STATE(Real time) {
      } else
       amrex::Error("time invalid");
     } else if ((FSI_flag[im_part]==2)||
-               (FSI_flag[im_part]==4)) {
+               (FSI_flag[im_part]==4)||
+	       (FSI_flag[im_part]==8)) {
      // do nothing
     } else
      amrex::Error("FSI_flag invalid");
@@ -7303,6 +7306,12 @@ void NavierStokes::ns_header_msg_level(
   if (FSI_sub_operation!=0)
    amrex::Error("FSI_sub_operation!=0");
  } else if (FSI_operation==4) { //copy Eulerian velocity to Lagrangian velocity
+  if (iter!=0)
+   amrex::Error("iter invalid");
+  if ((FSI_sub_operation<0)||
+      (FSI_sub_operation>2)) 
+   amrex::Error("FSI_sub_operation invalid");
+ } else if (FSI_operation==5) { //copy Eulerian pressure to Lagrangian pressure
   if (iter!=0)
    amrex::Error("iter invalid");
   if ((FSI_sub_operation<0)||
@@ -7602,6 +7611,7 @@ void NavierStokes::ns_header_msg_level(
  
       if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
           (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
+          (FSI_flag[im_part]==8)|| //FSI pres-vel sci_clsvof.F90 solid
 	  (FSI_flag[im_part]==6)||
 	  (FSI_flag[im_part]==7)) { 
 
@@ -7615,11 +7625,13 @@ void NavierStokes::ns_header_msg_level(
 	} else
 	 amrex::Error("time invalid");
        } else if ((FSI_flag[im_part]==2)||
+                  (FSI_flag[im_part]==8)||//FSI pres-vel sci_clsvof.F90 solid
   	          (FSI_flag[im_part]==4)) {
         // do nothing
        } else
         amrex::Error("FSI_flag invalid");
 
+       //FIX ME HERE
        if (ok_to_modify_EUL==1) {
 
         dcomp=im_part;
