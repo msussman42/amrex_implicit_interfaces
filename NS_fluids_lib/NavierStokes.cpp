@@ -7631,7 +7631,6 @@ void NavierStokes::ns_header_msg_level(
        } else
         amrex::Error("FSI_flag invalid");
 
-       //FIX ME HERE
        if (ok_to_modify_EUL==1) {
 
         dcomp=im_part;
@@ -8417,7 +8416,7 @@ NavierStokes::initData () {
  
  // initialize one ghost cell of LS_new so that LS_stencil needed
  // by the AMR error indicator can be initialized for those
- // level set components with FSI_flag==2,4,6,7.
+ // level set components with FSI_flag==2,4,6,7,8.
  MultiFab* lsmf=getStateDist(1,cur_time_slab,101);
  MultiFab::Copy(LS_new,*lsmf,0,0,nmat*(1+AMREX_SPACEDIM),1);
  delete lsmf;
@@ -8447,8 +8446,8 @@ NavierStokes::initData () {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // if FSI_flag==2,4,6,7 then LS_new is used.
-   // if FSI_flag==2,4,6,7 then S_new (volume fractions and centroids)
+   // if FSI_flag==2,4,6,7,8 then LS_new is used.
+   // if FSI_flag==2,4,6,7,8 then S_new (volume fractions and centroids)
    //  is used.
   fort_initdata(
    &tid_current,
@@ -8533,7 +8532,7 @@ NavierStokes::initData () {
 }//omp
  ns_reconcile_d_num(52);
 
- // for FSI_flag==2 or 4: (prescribed sci_clsvof.F90 rigid material)
+ // for FSI_flag==2, 4, 8: (prescribed sci_clsvof.F90 rigid material)
  // 1. copy_velocity_on_sign
  // 2. update Solid_new
  // 3. update LS_new
