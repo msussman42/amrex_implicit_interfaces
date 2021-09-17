@@ -143,6 +143,8 @@ void main_main ()
     Real maxLS=-1.0e+20;
     MultiFab phi_distance(ba, dm, Ncomp, Nghost);
     MultiFab phi_grad(ba, dm, AMREX_SPACEDIM, Nghost);
+    phi_grad.setVal(0.0,0,AMREX_SPACEDIM,Nghost);
+    phi_distance.setVal(0.0,0,1,Nghost);
     MultiFab mask_finer(ba, dm, 1, Nghost);
     mask_finer.setVal(1.0,0,1,Nghost);
     int bfact=1;
@@ -159,6 +161,8 @@ void main_main ()
       FArrayBox& phi_dist_fab=phi_distance[mfi];
       FArrayBox& phi_grad_fab=phi_grad[mfi];
       FArrayBox& mask_fab=mask_finer[mfi];
+
+      std::cout << "(before) sweep= " << sweep << '\n';
 
       fort_closest_point_map(
        &thread_id,
@@ -183,15 +187,21 @@ void main_main ()
      }
      phi_distance.FillBoundary(geom.periodicity());
      phi_grad.FillBoundary(geom.periodicity());
+     std::cout << "(after) sweep= " << sweep << '\n';
     } // sweep=0,1
-    MultiFab::Copy(phi,phi_distance,0,0,1,Nghost);
-
+//    MultiFab::Copy(phi,phi_distance,0,0,1,Nghost);
+    MultiFab phi_plot(ba, dm, 2+AMREX_SPACEDIM, Nghost);
+    MultiFab::Copy(phi_plot,phi,0,0,1,Nghost);
+    MultiFab::Copy(phi_plot,phi_distance,0,1,1,Nghost);
+    MultiFab::Copy(phi_plot,phi_grad,0,2,AMREX_SPACEDIM,Nghost);
+    std::cout << "(after) copy " << '\n';
 
     // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
     if (plot_int > 0 && plotEulerian){
         int n = 0;
         const std::string& pltfile = amrex::Concatenate("plt",n,5);
-        WriteSingleLevelPlotfile(pltfile, phi, {"phi"}, geom, time, 0);
+        WriteSingleLevelPlotfile(pltfile, phi_plot, 
+	 {"phi_plot","phi_dist","gx","gy","gz"}, geom, time, 0);
     }
 
     // build the flux multifabs

@@ -1724,7 +1724,7 @@ stop
         valu=zero
 
         if (SDIM.eq.3) then
-         ngrow_k=ngrow
+         ngrow_k=ngrow-1
          kklo=0
          kkhi=1
          nodehi=8
@@ -1765,8 +1765,8 @@ stop
           ! do nothing
          else if (save_LS.ne.zero) then
 
-          do ilocal=i-ngrow,i+ngrow
-          do jlocal=j-ngrow,j+ngrow
+          do ilocal=i-ngrow+1,i+ngrow-1
+          do jlocal=j-ngrow+1,j+ngrow-1
           do klocal=k-ngrow_k,k+ngrow_k
 
             ! klocal=0 in 2D
