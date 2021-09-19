@@ -1558,8 +1558,9 @@ void apply_pressure_grad(
 
     void init_regrid_history();
 
+     //cur_time=prev_time+dt
     void ns_header_msg_level(int FSI_operation,int FSI_sub_operation,
-      Real time,Real dt,int iter);
+      Real cur_time,Real dt,int iter);
 
     static int read_from_CAD();
     static int is_ice_matC(int im);
@@ -1577,7 +1578,8 @@ void apply_pressure_grad(
 
     void resize_FSI_MF();
 
-    void FSI_make_distance(Real time,Real dt);
+      //cur_time=prev_time+dt
+    void FSI_make_distance(Real cur_time,Real dt);
 
     void create_fortran_grid_struct(Real time,Real dt);
 
@@ -1587,7 +1589,7 @@ void apply_pressure_grad(
     static int ns_is_lag_part(int im);
 
     void copy_velocity_on_sign(int partid);
-    void Transfer_FSI_To_STATE(Real time);
+    void Transfer_FSI_To_STATE(Real cur_time);
     void build_moment_from_FSILS();
 
     void ctml_fsi_transfer_force();
