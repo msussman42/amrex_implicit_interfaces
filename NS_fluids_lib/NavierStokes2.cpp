@@ -5447,7 +5447,7 @@ void NavierStokes::solid_temperature() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // if (FSI_flag(im)==1,2,4),
+     // if (FSI_flag(im)==1,2,4,8),
      //  T(im)=TSOLID
      // else if (FSI_flag(im)==0,3,5,6,7),
      //  T(im)=TSOLID if in the solid.
@@ -5455,6 +5455,7 @@ void NavierStokes::solid_temperature() {
      // note: if FSI_flag==2, then solid temperature copied to itself since
      //  solid temp initialized in another routine.
      // (i.e. no change here)
+     // fort_initsolidtemp declared in PROB.F90
     fort_initsolidtemp(
      &nmat,
      &nden,

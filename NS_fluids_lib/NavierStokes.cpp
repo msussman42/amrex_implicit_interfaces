@@ -5,6 +5,8 @@
 // =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
 //
+//FSI_make_distance
+//ns_header_msg_level
 #include <algorithm>
 #include <vector>
 
