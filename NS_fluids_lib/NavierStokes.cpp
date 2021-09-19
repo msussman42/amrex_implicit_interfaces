@@ -5,9 +5,6 @@
 // =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
 //
-//FSI_make_distance
-//ns_header_msg_level
-//Transfer_FSI_To_STATE
 #include <algorithm>
 #include <vector>
 
@@ -5973,6 +5970,40 @@ int NavierStokes::FSI_material_exists() {
 
 }  // FSI_material_exists()
 
+int NavierStokes::FSI_material_exists_presvel() {
+
+ int local_flag=0;
+ int nmat=num_materials;
+
+ for (int im=0;im<nmat;im++) {
+  if (FSI_flag[im]==8) {
+   local_flag=1;
+  } else if (FSI_flag_valid(im)==1) {
+   // do nothing
+  } else {
+   amrex::Error("FSI_flag_valid(im)!=1");
+  }
+ }
+
+ return local_flag;
+
+}  // FSI_material_exists_presvel()
+
+int NavierStokes::FSI_flag_valid(int im) {
+
+ int local_flag=0;
+ int nmat=num_materials;
+ if ((im>=0)&&(im<nmat)) {
+  if ((FSI_flag[im]>=0)&&(FSI_flag[im]<=8)) {
+   local_flag=1;
+  } else
+   amrex::Error("FSI_flag[im] invalid");
+ } else
+  amrex::Error("im invalid");
+
+ return local_flag;
+
+}  //end function FSI_flag_valid
 
 int NavierStokes::is_FSI_rigid_matC(int im) {
 
