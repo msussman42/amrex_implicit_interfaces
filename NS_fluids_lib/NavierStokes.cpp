@@ -7,6 +7,7 @@
 //
 //FSI_make_distance
 //ns_header_msg_level
+//Transfer_FSI_To_STATE
 #include <algorithm>
 #include <vector>
 
@@ -6830,7 +6831,8 @@ void NavierStokes::resize_FSI_MF() {
 // calls fill coarse patch if level>0
 // called from: NavierStokes::initData ()
 //              NavierStokes::nonlinear_advection()
-void NavierStokes::FSI_make_distance(Real time,Real dt) {
+// cur_time=prev_time+dt
+void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
 
  int nmat=num_materials;
  int nparts=im_solid_map.size();
@@ -6869,7 +6871,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
     //    (CLSVOF_FILLCONTAINER called from fort_fillcontainer)
     //    i.e. associate to each tile a set of Lagrangian nodes and elements
     //    that are located in or very near the tile.
-   create_fortran_grid_struct(time,dt);
+   create_fortran_grid_struct(cur_time,dt);
 
    int iter=0; // touch_flag=0
    int FSI_operation=2;  // make distance in narrow band
@@ -6879,13 +6881,13 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
     // 1.FillCoarsePatch
     // 2.traverse lagrangian elements belonging to each tile and update
     //   cells within "bounding box" of the element.
-   ns_header_msg_level(FSI_operation,FSI_sub_operation,time,dt,iter);
+   ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
   
    do {
  
     FSI_operation=3; // sign update   
     FSI_sub_operation=0;
-    ns_header_msg_level(FSI_operation,FSI_sub_operation,time,dt,iter);
+    ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
     iter++;
   
    } while (FSI_touch_flag[0]==1);
@@ -6935,7 +6937,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
      &nFSI,
      &ngrowFSI,
      im_solid_map.dataPtr(),
-     &time,
+     &cur_time,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -6960,7 +6962,7 @@ void NavierStokes::FSI_make_distance(Real time,Real dt) {
   amrex::Error("nparts invalid");
  }
 
-}  // subroutine FSI_make_distance
+}  // end subroutine FSI_make_distance
 
 // called from: Transfer_FSI_To_STATE()
 // Transfer_FSI_To_STATE() called from: ns_header_msg_level,initData ()
@@ -7151,7 +7153,7 @@ void NavierStokes::build_moment_from_FSILS() {
 } // subroutine build_moment_from_FSILS
 
 // called from: ns_header_msg_level,initData ()
-void NavierStokes::Transfer_FSI_To_STATE(Real time) {
+void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
  // nparts x (velocity + LS + temperature + flag + stress)
  int nmat=num_materials;
@@ -7202,12 +7204,12 @@ void NavierStokes::Transfer_FSI_To_STATE(Real time) {
     int ok_to_modify_EUL=1;
     if ((FSI_flag[im_part]==6)||
         (FSI_flag[im_part]==7)) {
-     if (time==0.0) {
+     if (cur_time==0.0) {
       // do nothing
-     } else if (time>0.0) {
+     } else if (cur_time>0.0) {
       ok_to_modify_EUL=0;
      } else
-      amrex::Error("time invalid");
+      amrex::Error("cur_time invalid");
     } else if ((FSI_flag[im_part]==2)||
                (FSI_flag[im_part]==4)||
 	       (FSI_flag[im_part]==8)) {
@@ -7268,9 +7270,14 @@ void NavierStokes::Transfer_FSI_To_STATE(Real time) {
 // 3. copy Lagrangian Force to Eulerian Force and update Eulerian velocity.
 void NavierStokes::ns_header_msg_level(
  int FSI_operation,int FSI_sub_operation,
- Real time,
+ Real cur_time,
  Real dt,
  int iter) {
+
+ if (cur_time==cur_time_slab) {
+  //do nothing
+ } else
+  amrex::Error("cur_time<>cur_time_slab");
 
  Vector< int > num_tiles_on_thread_proc;
  num_tiles_on_thread_proc.resize(thread_class::nthreads);
@@ -7370,7 +7377,7 @@ void NavierStokes::ns_header_msg_level(
    std::cout << "level= " << level << " finest_level= " << finest_level <<
     " max_level= " << max_level << '\n';
    std::cout << "FSI_operation= " << FSI_operation <<
-    " time = " << time << " dt= " << dt << " iter = " << iter << '\n';
+    " cur_time = " << cur_time << " dt= " << dt << " iter = " << iter << '\n';
   }
  } else if (verbose==0) {
   // do nothing
@@ -7505,7 +7512,7 @@ void NavierStokes::ns_header_msg_level(
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
-     &time, 
+     &cur_time, 
      &dt, 
      FSI_refine_factor.dataPtr(),
      FSI_bounding_box_ngrow.dataPtr(),
@@ -7552,7 +7559,7 @@ void NavierStokes::ns_header_msg_level(
       MFInfo().SetTag("S_new_coarse"),FArrayBoxFactory());
      int dcomp=0;
      int scomp=0;
-     FillCoarsePatch(*S_new_coarse,dcomp,time,State_Type,
+     FillCoarsePatch(*S_new_coarse,dcomp,cur_time,State_Type,
 		     scomp,AMREX_SPACEDIM,debug_fillpatch);
 
      if (verbose>0) {
@@ -7577,7 +7584,7 @@ void NavierStokes::ns_header_msg_level(
       std::fflush(NULL);
      }
 
-     FillCoarsePatch(*Solid_new_coarse,dcomp,time,Solid_State_Type,scomp,
+     FillCoarsePatch(*Solid_new_coarse,dcomp,cur_time,Solid_State_Type,scomp,
         nparts*AMREX_SPACEDIM,debug_fillpatch);
 
      if (verbose>0) {
@@ -7593,7 +7600,7 @@ void NavierStokes::ns_header_msg_level(
       MFInfo().SetTag("LS_new_coarse"),FArrayBoxFactory());
      dcomp=0;
      scomp=0;
-     FillCoarsePatch(*LS_new_coarse,dcomp,time,LS_Type,scomp,
+     FillCoarsePatch(*LS_new_coarse,dcomp,cur_time,LS_Type,scomp,
         nmat*(AMREX_SPACEDIM+1),debug_fillpatch);
 
      if (verbose>0) {
@@ -7620,12 +7627,12 @@ void NavierStokes::ns_header_msg_level(
        int ok_to_modify_EUL=1;
        if ((FSI_flag[im_part]==6)||
            (FSI_flag[im_part]==7)) {
-	if (time==0.0) {
+	if (cur_time==0.0) {
 	 // do nothing
-	} else if (time>0.0) {
+	} else if (cur_time>0.0) {
 	 ok_to_modify_EUL=0;
 	} else
-	 amrex::Error("time invalid");
+	 amrex::Error("cur_time invalid");
        } else if ((FSI_flag[im_part]==2)||
                   (FSI_flag[im_part]==8)||//FSI pres-vel sci_clsvof.F90 solid
   	          (FSI_flag[im_part]==4)) {
@@ -7656,7 +7663,7 @@ void NavierStokes::ns_header_msg_level(
         dcomp=0;
         int scomp_thermal=dencomp+im_part*num_state_material+1;
         //ncomp==1
-        FillCoarsePatch(*new_coarse_thermal,dcomp,time,State_Type,
+        FillCoarsePatch(*new_coarse_thermal,dcomp,cur_time,State_Type,
          scomp_thermal,1,debug_fillpatch);
 
          //ngrow==0
@@ -7697,9 +7704,9 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("FSI_operation invalid");
 
    MultiFab* solidmf=getStateSolid(ngrowFSI,0,
-     nparts*AMREX_SPACEDIM,time);
-   MultiFab* denmf=getStateDen(ngrowFSI,time);  
-   MultiFab* LSMF=getStateDist(ngrowFSI,time,2);
+     nparts*AMREX_SPACEDIM,cur_time);
+   MultiFab* denmf=getStateDen(ngrowFSI,cur_time);  
+   MultiFab* LSMF=getStateDist(ngrowFSI,cur_time,2);
    if (LSMF->nGrow()!=ngrowFSI)
     amrex::Error("LSMF->nGrow()!=ngrow_distance");
 
@@ -7728,12 +7735,12 @@ void NavierStokes::ns_header_msg_level(
     if (FSI_operation==2) {
 
      if ((level>0)||
-         ((level==0)&&(time>0.0))) {
+         ((level==0)&&(cur_time>0.0))) {
       setVal_localMF(FSI_MF,10.0,ibase+5,1,ngrowFSI); 
-     } else if ((level==0)&&(time==0.0)) {
+     } else if ((level==0)&&(cur_time==0.0)) {
       // do nothing
      } else
-      amrex::Error("level or time invalid");
+      amrex::Error("level or cur_time invalid");
 
     } else if (FSI_operation==3) {
      // do nothing
@@ -7813,7 +7820,7 @@ void NavierStokes::ns_header_msg_level(
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
-     &time, 
+     &cur_time, 
      &dt, 
      FSI_refine_factor.dataPtr(),
      FSI_bounding_box_ngrow.dataPtr(),
@@ -7871,7 +7878,7 @@ void NavierStokes::ns_header_msg_level(
     // 3. update LS_new
     // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
 
-   Transfer_FSI_To_STATE(time);
+   Transfer_FSI_To_STATE(cur_time);
 
    delete solidmf;
    delete denmf;
@@ -7905,10 +7912,10 @@ void NavierStokes::ns_header_msg_level(
     if (FSI_sub_operation==0) {
      // Two layers of ghost cells are needed if
      // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
-     getState_localMF(VELADVECT_MF,ngrowFSI,0,AMREX_SPACEDIM,cur_time_slab); 
+     getState_localMF(VELADVECT_MF,ngrowFSI,0,AMREX_SPACEDIM,cur_time); 
 
       // in: NavierStokes::ns_header_msg_level
-     create_fortran_grid_struct(time,dt);
+     create_fortran_grid_struct(cur_time,dt);
     } else if (FSI_sub_operation==2) {
      delete_localMF(VELADVECT_MF,1);
     } else
@@ -7973,7 +7980,7 @@ void NavierStokes::ns_header_msg_level(
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
-     &time, 
+     &cur_time, 
      &dt, 
      FSI_refine_factor.dataPtr(),
      FSI_bounding_box_ngrow.dataPtr(),
@@ -8052,7 +8059,7 @@ void NavierStokes::ns_header_msg_level(
       &nparts,
       im_solid_map.dataPtr(),
       &h_small,
-      &time, 
+      &cur_time, 
       &dt, 
       FSI_refine_factor.dataPtr(),
       FSI_bounding_box_ngrow.dataPtr(),
@@ -8087,7 +8094,7 @@ void NavierStokes::ns_header_msg_level(
     " max_level= " << max_level << '\n';
    std::cout << "FSI_operation= " << FSI_operation <<
     " FSI_sub_operation= " << FSI_sub_operation <<
-    " time = " << time << " dt= " << dt << " iter = " << iter << '\n';
+    " cur_time = " << cur_time << " dt= " << dt << " iter = " << iter << '\n';
   }
  } else if (verbose==0) {
   // do nothing
@@ -8105,6 +8112,11 @@ void NavierStokes::post_restart() {
 
  SDC_outer_sweeps=0;
  SDC_setup_step();
+
+ if (upper_slab_time==cur_time_slab) {
+  // do nothing
+ } else
+  amrex::Error("expecting upper_slab_time==cur_time_slab");
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor())
@@ -8199,8 +8211,6 @@ void NavierStokes::post_restart() {
 void
 NavierStokes::initData () {
 
- Real strt_time=0.0;
-
  int bfact_space=parent->Space_blockingFactor(level);
  int bfact_grid=parent->Old_blockingFactor(level);
 
@@ -8249,6 +8259,8 @@ NavierStokes::initData () {
 
  if (upper_slab_time!=0.0)
   amrex::Error("upper_slab_time should be zero at the very beginning");
+ if (cur_time_slab!=0.0)
+  amrex::Error("cur_time_slab should be zero at the very beginning");
 
  if (level==0) {
 
@@ -8419,7 +8431,7 @@ NavierStokes::initData () {
  // initialize one ghost cell of LS_new so that LS_stencil needed
  // by the AMR error indicator can be initialized for those
  // level set components with FSI_flag==2,4,6,7,8.
- MultiFab* lsmf=getStateDist(1,cur_time_slab,101);
+ MultiFab* lsmf=getStateDist(1,upper_slab_time,101);
  MultiFab::Copy(LS_new,*lsmf,0,0,nmat*(1+AMREX_SPACEDIM),1);
  delete lsmf;
 
@@ -8539,7 +8551,7 @@ NavierStokes::initData () {
  // 2. update Solid_new
  // 3. update LS_new
  // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
- Transfer_FSI_To_STATE(strt_time);
+ Transfer_FSI_To_STATE(upper_slab_time);
 
   // if nparts>0,
   //  Initialize FSI_GHOST_MAC_MF from Solid_State_Type
@@ -8556,9 +8568,9 @@ NavierStokes::initData () {
 
  for (int k=0;k<nstate;k++) {
   state[k].CopyNewToOld(level,max_level);  // olddata=newdata 
-   // time_array[0]=strt_time-dt_amr  
-   // time_array[bfact_time_order]=strt_time
-  state[k].setTimeLevel(strt_time,dt_amr); 
+   // time_array[0]=upper_slab_time-dt_amr  
+   // time_array[bfact_time_order]=upper_slab_time (=0.0)
+  state[k].setTimeLevel(upper_slab_time,dt_amr); 
  }
   // even though there are no particles yet, the grid hierarchy should
   // be initialized.
