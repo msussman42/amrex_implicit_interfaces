@@ -25472,6 +25472,7 @@ end subroutine initialize2d
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T im
@@ -25487,6 +25488,7 @@ end subroutine initialize2d
       nhalf=1
 
       snew_ptr=>snew
+      lsnew_ptr=>lsnew
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -25519,7 +25521,7 @@ end subroutine initialize2d
       endif
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1303)
-      call checkbound_array(fablo,fabhi,lsnew,1,-1,1303)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,1303)
 
       im_solid_thermal=im_solid_primary()
 
@@ -25545,7 +25547,8 @@ end subroutine initialize2d
          call materialdistsolid(xsten(0,1),xsten(0,2), &
            xsten(0,SDIM),disttest,time,im)
          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
-             (FSI_flag(im).eq.4)) then ! CTML FSI
+             (FSI_flag(im).eq.4).or. & ! CTML FSI
+             (FSI_flag(im).eq.8)) then ! pres-vel coupling
           disttest=lsnew(D_DECL(i,j,k),im)
          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
           ! do nothing
@@ -25574,7 +25577,8 @@ end subroutine initialize2d
        call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
          temp_solid_mat,time,im_solid_crit)
        if ((FSI_flag(im_solid_crit).eq.2).or. & ! prescribed solid (CAD)
-           (FSI_flag(im_solid_crit).eq.4)) then ! CTML FSU
+           (FSI_flag(im_solid_crit).eq.4).or. & ! CTML FSI
+           (FSI_flag(im_solid_crit).eq.8)) then ! pres-vel coupling
         tcomp=(im_solid_crit-1)*num_state_material+2  ! den,T
         temp_solid_mat=snew(D_DECL(i,j,k),tcomp)
        else if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid (EUL)
