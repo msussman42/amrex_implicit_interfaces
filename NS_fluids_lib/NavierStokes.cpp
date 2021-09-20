@@ -18116,7 +18116,8 @@ void NavierStokes::volWgtSum(
  delete vel;
 }  // subroutine volWgtSum
 
-
+//put "ns.show_mem=1" in the inputs file to activate this.
+//called from NavierStokes::do_the_advance
 void 
 NavierStokes::debug_memory() {
 
@@ -18135,7 +18136,7 @@ NavierStokes::debug_memory() {
  } else if (show_mem!=0)
   amrex::Error("show_mem invalid");
 
-}
+} // end subroutine debug_memory()
 
 void NavierStokes::writeInterfaceReconstruction() {
 

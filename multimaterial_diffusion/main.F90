@@ -99,7 +99,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
-INTEGER,PARAMETER          :: plot_int = 1  ! 20
+INTEGER,PARAMETER          :: plot_int = 20  ! 20
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1

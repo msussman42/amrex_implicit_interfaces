@@ -6072,10 +6072,23 @@ stop
        print *,"dir_absolute_direct_split invalid"
        stop
       endif
-      if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.4) then
-       print *,"blocking factor should be at least 4"
+      if ((level.ge.0).and.(level.lt.finest_level)) then
+       if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.4) then
+        print *,"blocking factor should be at least 4"
+        print *,"level,finest_level ",level,finest_level
+        stop
+       endif
+      else if (level.eq.finest_level) then
+       if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.2) then
+        print *,"blocking factor should be at least 2"
+        print *,"level,finest_level ",level,finest_level
+        stop
+       endif
+      else
+       print *,"level or finest_level invalid"
        stop
       endif
+
       if (level.gt.finest_level) then
        print *,"finest_level invalid velmac override"
        stop
