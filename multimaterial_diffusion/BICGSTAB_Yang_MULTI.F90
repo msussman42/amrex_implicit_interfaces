@@ -191,11 +191,12 @@
       integer TSAT_FLAG
       integer iten
       integer ilocal,jlocal
+      integer iofs,jofs
       REAL*8 F1,F2
-      integer ip1,iminus1,jp1,jminus1
-      integer TF_xp,TF_xm,TF_yp,TF_ym
-      REAL*8 TI,TI_xp,TI_xm,TI_yp,TI_ym
-      REAL*8 lap_TI,MTI,lap_TI_min,lap_TI_max
+      integer TF,dir_minmod
+      integer pos_flag(2)
+      integer neg_flag(2)
+      REAL*8 slope_left,slope_right
 
 
       nhalf=3
@@ -410,11 +411,6 @@
        enddo
       enddo
 
-      MTI=40.0d0
-
-      lap_TI_min=1.0d+20
-      lap_TI_max=0.0d0
-
       do i=lox,hix
       do j=loy,hiy
 
@@ -570,54 +566,80 @@
           if (TSAT_FLAG.eq.0) then
            local_gap_alarm=1.0d0
           else if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
-           ! check 5 point stencil, if flag is "ok" for all points
-           ! in the stencil then
-           ! we must have |div grad TI| < M/dx
-           ip1=ilocal+1
-           iminus1=ilocal-1
-           jp1=jlocal+1
-           jminus1=jlocal-1
-           TI=tsatfab(ilocal,jlocal,2)
-           TF_xp=NINT(abs(tsatfab(ip1,jlocal,1)))
-           TI_xp=tsatfab(ip1,jlocal,2)
-           TF_xm=NINT(abs(tsatfab(iminus1,jlocal,1)))
-           TI_xm=tsatfab(iminus1,jlocal,2)
-           TF_yp=NINT(abs(tsatfab(ilocal,jp1,1)))
-           TI_yp=tsatfab(ilocal,jp1,2)
-           TF_ym=NINT(abs(tsatfab(ilocal,jminus1,1)))
-           TI_ym=tsatfab(ilocal,jminus1,2)
-           lap_TI=abs(TI_xp+TI_xm+TI_yp+TI_ym-4.0d0*TI)
-           if (lap_TI_min.gt.lap_TI) then
-            lap_TI_min=lap_TI
-           endif
-           if (lap_TI_max.lt.lap_TI) then
-            lap_TI_max=lap_TI
-           endif
+           !minmod indicator in directions x and y
+           !check for valid TI in 9 point stencil, or
+           !check for valid TI in 5 point stencil.
+           do iofs=-1,1
+           do jofs=-1,1
+            if ((iofs.eq.0).or.(jofs.eq.0)) then
+             TF=NINT(abs(tsatfab(ilocal+iofs,jlocal+jofs,1)))
+             if (TF.eq.0) then
+              local_gap_alarm=1.0d0
+             else if ((TF.eq.1).or.(TF.eq.2)) then
+              ! do nothing
+             else
+              print *,"TF invalid"
+              stop
+             endif
+            endif
+           enddo
+           enddo
+           dir_minmod=2  ! y direction slopes
+           pos_flag(dir_minmod)=0
+           neg_flag(dir_minmod)=0
+           do iofs=-1,1
+            if (iofs.eq.0) then
+             slope_left=tsatfab(ilocal+iofs,jlocal,2)- &
+                    tsatfab(ilocal+iofs,jlocal-1,2)
+             slope_right=tsatfab(ilocal+iofs,jlocal+1,2)- &
+                    tsatfab(ilocal+iofs,jlocal,2)
+             if ((slope_left.gt.0.0d0).or. &
+                 (slope_right.gt.0.0d0)) then
+              pos_flag(dir_minmod)=1
+             endif
+             if ((slope_left.lt.0.0d0).or. &
+                 (slope_right.lt.0.0d0)) then
+              neg_flag(dir_minmod)=1
+             endif
+            endif
+           enddo !iofs=-1,1
 
-           MTI=40.0d0
+           dir_minmod=1  ! x direction slopes
+           pos_flag(dir_minmod)=0
+           neg_flag(dir_minmod)=0
+           do jofs=-1,1
+            if (jofs.eq.0) then
+             slope_left=tsatfab(ilocal,jlocal+jofs,2)- &
+                    tsatfab(ilocal-1,jlocal+jofs,2)
+             slope_right=tsatfab(ilocal+1,jlocal+jofs,2)- &
+                    tsatfab(ilocal,jlocal+jofs,2)
+             if ((slope_left.gt.0.0d0).or. &
+                 (slope_right.gt.0.0d0)) then
+              pos_flag(dir_minmod)=1
+             endif
+             if ((slope_left.lt.0.0d0).or. &
+                 (slope_right.lt.0.0d0)) then
+              neg_flag(dir_minmod)=1
+             endif
+            endif
+           enddo !jofs=-1,1
 
            if (1.eq.0) then
             print *,"BEFORE: i,j,alarm ",i,j,local_gap_alarm
            endif
 
-           if (lap_TI.gt.MTI*dx(1)) then
-            local_gap_alarm=1.0d0
+           if (1.eq.1) then
+            if ((pos_flag(1).eq.1).and.(neg_flag(1).eq.1)) then
+             local_gap_alarm=1.0d0
+            endif
+            if ((pos_flag(2).eq.1).and.(neg_flag(2).eq.1)) then
+             local_gap_alarm=1.0d0
+            endif
            endif
-           if ((TF_xp.eq.0).or.(TF_xm.eq.0).or. &
-               (TF_yp.eq.0).or.(TF_ym.eq.0)) then
-            local_gap_alarm=1.0d0
-           else if (((TF_xp.eq.1).or.(TF_xp.eq.2)).and. &
-                    ((TF_xm.eq.1).or.(TF_xm.eq.2)).and. &
-                    ((TF_yp.eq.1).or.(TF_yp.eq.2)).and. &
-                    ((TF_ym.eq.1).or.(TF_ym.eq.2))) then
-            ! do nothing
-           else
-            print *,"flag(s) invalid in 5 pt stencil"
-            stop
-           endif
-           if (1.eq.0) then
-            print *,"i,j,lap_TI,MTI x h,alarm ",i,j, &
-                 lap_TI,MTI*dx(1),local_gap_alarm
+           if (1.eq.1) then
+            print *,"i,j,pos(1),pos(2),neg(1),neg(2),alrm ",i,j, &
+                 pos_flag(1),pos_flag(2),neg_flag(1),neg_flag(2), &
+                 local_gap_alarm
            endif
           else
            print *,"TSAT_FLAG invalid"
@@ -639,9 +661,6 @@
        gap_alarm_FAB(i,j)=local_gap_alarm
       enddo
       enddo ! i,j=lo,...,hi
-
-      print *,"lap_TI_min,lap_TI_max,MTI x h ", &
-          lap_TI_min,lap_TI_max,MTI*dx(1)
 
       fablo(1)=lox
       fablo(2)=loy
