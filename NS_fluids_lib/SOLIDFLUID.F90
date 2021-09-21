@@ -1090,7 +1090,7 @@
         level, &
         finest_level, &
         sci_max_level, &
-        time, &
+        cur_time, &
         dt, &
         tilelo_array, &
         tilehi_array, &
@@ -1134,7 +1134,7 @@
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tilelo_array(tile_dim*SDIM)
       INTEGER_T, intent(in) :: tilehi_array(tile_dim*SDIM)
-      REAL_T, intent(in) :: time,dt
+      REAL_T, intent(in) :: cur_time,dt
       REAL_T, intent(in) :: xlo_array(tile_dim*SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dx_max_level(SDIM)
@@ -1184,8 +1184,10 @@
        print *,"nparts invalid fort_fillcontainer"
        stop
       endif
-      if (time.lt.zero) then
-       print *,"time invalid"
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid"
        stop
       endif
       if (dt.gt.zero) then
@@ -1425,7 +1427,7 @@
              (local_flag.eq.6).or. & !ice from CAD
              (local_flag.eq.7)) then !fluid from CAD
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &
-           dx3D,partid,im_part,nmat,time,dt)
+           dx3D,partid,im_part,nmat,cur_time,dt)
          else if (local_flag.eq.1) then ! prescribed solid (EUL)
           ! do nothing
          else

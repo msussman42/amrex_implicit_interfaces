@@ -57,7 +57,7 @@ namespace amrex{
      int* level,
      int* finest_level,
      const int* sci_max_level,
-     Real* time,
+     Real* cur_time,
      Real* dt,
      int* tilelo_array,
      int* tilehi_array,

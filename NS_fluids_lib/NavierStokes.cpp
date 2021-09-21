@@ -6125,7 +6125,7 @@ int NavierStokes::CTML_FSI_matC(int im) {
 //  (FSI_operation==4, FSI_sub_operation==0)
 // time is used just in case the actual node position depends on time.
 // i.e. for finding target of characteristic given the foot.
-void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
+void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 
  if (read_from_CAD()!=1)
   amrex::Error("read_from_CAD()!=1");
@@ -6380,11 +6380,12 @@ void NavierStokes::create_fortran_grid_struct(Real time,Real dt) {
  if ((nparts<1)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
+  // declared in: SOLIDFLUID.F90
  fort_fillcontainer(
   &level,
   &finest_level,
   &max_level,
-  &time,
+  &cur_time,
   &dt,
   tilelo_array.dataPtr(),
   tilehi_array.dataPtr(),
