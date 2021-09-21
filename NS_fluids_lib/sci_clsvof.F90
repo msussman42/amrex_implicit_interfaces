@@ -7643,7 +7643,7 @@ subroutine CLSVOF_FILLCONTAINER( &
  part_id, &
  im_part, &
  nmat, &
- time, &
+ cur_time, &
  dt)
 use global_utility_module
 
@@ -7656,7 +7656,7 @@ IMPLICIT NONE
  INTEGER_T part_id
  INTEGER_T im_part
  INTEGER_T nmat
- REAL_T time
+ REAL_T cur_time
  REAL_T dt
 
  INTEGER_T interior_flag
@@ -7856,13 +7856,13 @@ IMPLICIT NONE
        if (interior_flag.eq.1) then
         ! do nothing
        else if (interior_flag.eq.0) then
-        call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode) 
+        call get_minmax_nodeBIG(part_id,ielem,cur_time,minnode,maxnode) 
         do tid_loop=1,nthread_parm
         do tilenum_loop=1, &
                contain_elem(lev77)%num_tiles_on_thread3D_proc(tid_loop)
          if ((tid_loop.ne.tid).or.(tilenum_loop.ne.tilenum)) then
            ! isweep==2
-          call check_overlap(part_id,ielem,time,minnode,maxnode, &
+          call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
             tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep)
          endif
         enddo
@@ -7880,7 +7880,7 @@ IMPLICIT NONE
 
          ! traverse FSI(part_id)%IntElemBIG(inode,ielem)
          ! look at FSI(part_id)%NodeBIG(dir,node_id)
-      call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
+      call get_minmax_nodeBIG(part_id,ielem,cur_time,minnode,maxnode)
      
       if (ielem.eq.1) then
        tid_predict=0
@@ -7896,7 +7896,7 @@ IMPLICIT NONE
        ! isweep==1
        ! check_overlap increments
        !  contain_elem(lev77)%level_elem_data(tid,part_id,tilenum)%numElems
-      call check_overlap(part_id,ielem,time,minnode,maxnode, &
+      call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
         tid_predict,tilenum_predict, &
         dx3D,lev77,interior_flag,overlap,isweep)
       cache_saved=0
@@ -7920,7 +7920,7 @@ IMPLICIT NONE
         if ((tid_loop.ne.tid_predict).or. &
             (tilenum_loop.ne.tilenum_predict)) then
           ! isweep==1
-         call check_overlap(part_id,ielem,time,minnode,maxnode, &
+         call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
           tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep)
          if (overlap.eq.1) then
           if ((cache_saved.eq.0).or.(interior_flag.eq.1)) then
@@ -8006,12 +8006,12 @@ IMPLICIT NONE
        stop
       endif
 
-      call get_contained_nodeBIG(part_id,inode,time,minnode)
+      call get_contained_nodeBIG(part_id,inode,cur_time,minnode)
 
        ! isweep==1
        ! check_overlap_nodeBIG increments
        !  contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes
-      call check_overlap_nodeBIG(part_id,inode,time, &
+      call check_overlap_nodeBIG(part_id,inode,cur_time, &
         minnode, &
         tid_predict,tilenum_predict, &
         dx3D,lev77,overlap)
@@ -8031,7 +8031,7 @@ IMPLICIT NONE
          if ((tid_loop.ne.tid_predict).or. &
              (tilenum_loop.ne.tilenum_predict)) then
            ! isweep==1
-          call check_overlap_nodeBIG(part_id,inode,time, &
+          call check_overlap_nodeBIG(part_id,inode,cur_time, &
            minnode, &
            tid_loop,tilenum_loop, &
            dx3D,lev77,overlap)

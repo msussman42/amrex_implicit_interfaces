@@ -1583,7 +1583,7 @@ void apply_pressure_grad(
       //cur_time=prev_time+dt
     void FSI_make_distance(Real cur_time,Real dt);
 
-    void create_fortran_grid_struct(Real time,Real dt);
+    void create_fortran_grid_struct(Real cur_time,Real dt);
 
     void cpp_overridepbc(int homflag_in,int project_option_in);
 
