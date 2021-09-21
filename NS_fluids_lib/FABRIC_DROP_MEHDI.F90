@@ -26,83 +26,15 @@ stop
 ! probtype==FABRIC_DROP_PROB_TYPE (see run2d/inputs.FABRIC_DROP)
 module FABRIC_DROP_MODULE
 implicit none 
-REAL(KIND=8),PARAMETER        :: pi=4.0d0*atan(1.0d0)
-REAL(KIND=8),PARAMETER        :: a_wavy=0.4d0
-REAL(KIND=8),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
-REAL(KIND=8),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
-INTEGER,PARAMETER             :: N1=4   ! wavy threads
-INTEGER,PARAMETER             :: N2=4   ! Straight threads
-integer,parameter             :: P=192  ! number of partition points
-REAL(KIND=8),PARAMETER        :: omega=pi/(3.0d0/4.0d0)
+REAL_T, allocatable, dimension(:,:,:) :: thread_nodes
+REAL_T, allocatable, dimension(:) :: thread_radius
+INTEGER_T, allocatable, dimension(:) :: num_nodes
+INTEGER_T num_threads
 
+REAL_T, allocatable, dimension(:,:,:) :: internal_thread_ls
+REAL_T internal_dx(3)
 contains
 
-subroutine l2normd(s,x1,x2, x1x2norm)
-implicit none
-
-integer,intent(in)       :: s
-real(kind=8),intent(in)  :: x1(s),x2(s)
-real(kind=8)             :: x1x2norm
-
-integer                  :: i
-real(kind=8),allocatable :: diff(:)
-
-x1x2norm = 0.0d0
-allocate(diff(s))
-do i = 1,s
- diff(i) = x1(i)-x2(i)
-enddo
-
-do i = 1,s
- x1x2norm = x1x2norm + diff(i)**2.0d0
-enddo
-
-x1x2norm = sqrt(x1x2norm)
-
-deallocate(diff)
-
-end subroutine l2normd
-
-
-
-subroutine find_xc(la,lb,flag,xz,xc)
-! flag =1 sinecurve   =2 cosinecurve
-implicit none
-
-real(kind=8),intent(in) :: la,lb
-integer,intent(in)      :: flag
-real(kind=8),intent(in) :: xz(2)
-integer                 :: k
-real(kind=8)            :: spl(2,P+1)
-real(kind=8)            :: dist,dtemp
-real(kind=8),intent(out):: xc(3)
-real(kind=8)            :: spltemp(2)
-
-   do k=1,P+1
-     spl(1,k)=la+(k-1)*(lb-la)/real(P,8)
-    if(flag.eq.0)then
-     spl(2,k)=a_wavy*sin(omega*(spl(1,k)+1.5d0)) 
-    elseif(flag.eq.1)then
-     spl(2,k)=-a_wavy*sin(omega*(spl(1,k)+1.5d0))
-    else
-     print *,"flag invalid"
-     stop
-    endif
-   enddo
-   dist=1.0e+8
-   xc=0.0d0
-   do k=1,P+1
-    spltemp(1)=spl(1,k)
-    spltemp(2)=spl(2,k)
-    call l2normd(2,xz,spltemp,dtemp)
-    if(dtemp .lt. dist)then
-     dist=dtemp
-     xc(1)=spl(1,k)
-     xc(3)=spl(2,k)
-    endif
-   enddo  
-
-end subroutine find_xc
 ! do any initial preparation needed
 subroutine INIT_FABRIC_DROP_MODULE()
 use probcommon_module
@@ -112,20 +44,82 @@ REAL_T internal_x(3)
 INTEGER_T ithread
 INTEGER_T i,j,k
 INTEGER_T N, N_max
-
+character*40 tr_file
 
 #ifdef DEBUG_FABRIC_DROP
 INTEGER_T inode
 #endif
 
-
+! Reading and storing thread files
+100  FORMAT('./threads/thread_',I3.3,'.txt')
 
 if ((probtype.ne.FABRIC_DROP_PROB_TYPE).or.(SDIM.ne.3)) then
  print *,"probtype or SDIM invalid!"
  stop
 endif
 
+num_threads = IDNINT(xblob2)
+N_max=0
 
+do ithread=1,num_threads
+ WRITE(tr_file,100) ithread
+ OPEN(unit=101,&
+  file=tr_file,&
+  form="formatted",&
+  status='old',&
+  action='read')
+ READ(101,*) N, R
+
+ if(N.gt.N_max) then
+  N_max=N
+ endif
+ CLOSE(101) 
+enddo ! ithread
+
+
+
+allocate(thread_nodes(num_threads,N_max,3))
+allocate(thread_radius(num_threads))
+allocate(num_nodes(num_threads))
+
+do ithread=1,num_threads
+ WRITE(tr_file,100) ithread
+ OPEN(unit=101,&
+  file=tr_file,&
+  form="formatted",&
+  status='old',&
+  action='read')
+ READ(101,*) num_nodes(ithread), thread_radius(ithread)
+ READ(101,*) ((thread_nodes(ithread,i,j), j=1,3), i=1,num_nodes(ithread))
+ CLOSE(101) 
+enddo ! ithread
+
+
+
+! Evaluate level set function on internal fine mesh
+allocate(internal_thread_ls(IDNINT(xblob5),IDNINT(yblob5),IDNINT(zblob5)))
+
+internal_dx(1)=(xblob4-xblob3)/xblob5
+internal_dx(2)=(yblob4-yblob3)/yblob5
+internal_dx(3)=(zblob4-zblob3)/zblob5
+
+print *,"Internal dx for thread LS calculation:", internal_dx
+print *,"Calculating thread level set on internal mesh..."
+
+do k=1,IDNINT(zblob5)
+#ifdef DEBUG_FABRIC_DROP
+ print *,"k=", k
+#endif
+ do j=1,IDNINT(yblob5)
+  do i=1,IDNINT(xblob5)
+   internal_x(1)=xblob3+(i-half)*internal_dx(1)
+   internal_x(2)=yblob3+(j-half)*internal_dx(2)
+   internal_x(3)=zblob3+(k-half)*internal_dx(3)
+
+   internal_thread_ls(i,j,k) = DIST_THREADS(internal_x)
+  enddo
+ enddo
+enddo
 
 print *,"... done!"
 
@@ -134,27 +128,22 @@ return
 end subroutine INIT_FABRIC_DROP_MODULE
 
 
+! fluids tessellate the domain, solids are immersed. 
 subroutine FABRIC_DROP_LS(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
-
 
 INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
-real(kind=8)         :: xlo,xhi,ylo,yhi,zlo,zhi
-real(kind=8)         :: spl(2,P+1)
-real(kind=8)         :: hN1,hN2,xctemp
-real(kind=8)         :: xy(3),xc(3),xz(2),xh(3)
-integer              :: i,j,k,l,ky,kx
-real(kind=8)         :: lstemp1,lstemp2
-real(kind=8)         :: a,b
-real(kind=8)         :: dtemp,dist
-real(kind=8)         :: ynf(N1+2)  ! wavy thread
-real(kind=8)         :: xnf(N2+2)  ! straight thread
-integer              :: fnflag
 
+REAL_T x_d(3),x_0(3),x_p(3)
+INTEGER_T ind(3)
+REAL_T c_000, c_001, c_010, c_011, c_100, c_101, c_110, c_111
+REAL_T c_00, c_01, c_10, c_11
+REAL_T c_0, c_1, c
+INTEGER_T dir
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -167,87 +156,108 @@ endif
 LS(1)=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
 LS(2)=-LS(1)
 
+! Direct thread level set calculation 
+! LS(3)= DIST_THREADS(x)
 
-xlo=problox
-xhi=probhix
-ylo=probloy
-yhi=probhiy
-zlo=probloz
-zhi=probhiz
+! Approximate level set calcualtion from internal fine mesh
+if ((x(3).lt.(zblob3+internal_dx(3))).or.(x(3).gt.(zblob4-internal_dx(3)))) then
+ ! use large level set value
+ LS(3)=-abs(radblob3)
+else
+ ! assuming [xblob3,yblob3]:[xblob4,yblob4] is the repeating pattern
+ x_p(1)=modulo(x(1),xblob4)
+ x_p(2)=modulo(x(2),yblob4)
+ x_p(3)=x(3)
 
-hN1=(yhi-ylo)/real(N1,8)
-hN2=(xhi-xlo)/real(N2,8)
+ ! ! For 'x' as object point 
+ ! ! interpolate from internal fine mesh
+ ! ! low side cell index
+ ! ind(1)=IDINT((x(1)-xblob3)/internal_dx(1))
+ ! ind(2)=IDINT((x(2)-yblob3)/internal_dx(2)) 
+ ! ind(3)=IDINT((x(3)-zblob3)/internal_dx(3))
 
-!hN1=(prob_hi(2)-prob_lo(2))/real(N1,8)
-!hN2=(prob_hi(1)-prob_lo(1))/real(N2,8)
-
-do i=1,N1+2
- ynf(i)=ylo-0.5d0*hN1+(i-1)*hN1 
-enddo
-do i=1,N2+2
- xnf(i)=xlo-0.5d0*hN2+(i-1)*hN2
-enddo
-
-!do i=1,N1+2
-! ynf(i)=prob_lo(2)-0.5d0*hN1+(i-1)*hN1 
-!enddo
-!do i=1,N2+2
-! xnf(i)=prob_lo(1)-0.5d0*hN2+(i-1)*hN2
-!enddo
-
-LS(3)=0.0d0
-
-   xy(1)=x(1)
-   xy(2)=x(2)
-   xy(3)=x(3)
-   xz(1)=x(1)
-   xz(2)=x(3)
-
-  do ky=1,N1+2
-   if( x(2).ge.ynf(ky)-0.5d0*hN1 .and. x(2).lt. ynf(ky)+0.5d0*hN1)then
-    do kx=1,N2+2
-     if( x(1).ge.xnf(kx) .and. x(1).lt.xnf(kx)+hN2)then
-      a=xnf(kx)
-      b=xnf(kx)+hN2      
-      exit
-     endif
-    enddo
-    xctemp=ynf(ky)
-    fnflag=mod(ky,2)
-    exit
-   endif
-  enddo
+ ! ! x is in the cube {ind, ind+1}
+ ! ! trilinear interpolation
+ ! ! (https://en.wikipedia.org/wiki/Trilinear_interpolation)
+ ! x_0(1)=xblob3+(ind(1)-half)*internal_dx(1)
+ ! x_0(2)=yblob3+(ind(2)-half)*internal_dx(2)
+ ! x_0(3)=zblob3+(ind(3)-half)*internal_dx(3)
  
-  call find_xc(a,b,fnflag,xz,xc)
-  xc(2)=xctemp
-  call l2normd(3,xy,xc,lstemp1)
-  lstemp1=lstemp1-r_1
+ ! x_d=(x-x_0)/internal_dx ! component-wise division
 
+ ! c_000=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+0)
+ ! c_100=internal_thread_ls(ind(1)+1, ind(2)+0, ind(3)+0)
+ ! c_010=internal_thread_ls(ind(1)+0, ind(2)+1, ind(3)+0)
+ ! c_110=internal_thread_ls(ind(1)+1, ind(2)+1, ind(3)+0)
+ ! c_001=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+1)
+ ! c_101=internal_thread_ls(ind(1)+1, ind(2)+0, ind(3)+1)
+ ! c_011=internal_thread_ls(ind(1)+0, ind(2)+1, ind(3)+1)
+ ! c_111=internal_thread_ls(ind(1)+1, ind(2)+1, ind(3)+1)
 
-    do kx=1,N2+2
-     if( x(1).ge.xnf(kx)-0.5d0*hN2 .and. x(1).lt.xnf(kx)+0.5d0*hN2)then
-      xh(1)=xnf(kx)
-      xh(2)=xy(2)
-      xh(3)=0.0d0     
-      exit
-     endif
-    enddo
-   call l2normd(3,xy,xh,lstemp2)
-   lstemp2=lstemp2-r_2
+ ! c_00=c_000*(one-x_d(1)) + c_100*x_d(1)
+ ! c_01=c_001*(one-x_d(1)) + c_101*x_d(1)
+ ! c_10=c_010*(one-x_d(1)) + c_110*x_d(1)
+ ! c_11=c_011*(one-x_d(1)) + c_111*x_d(1)
 
- if(lstemp1.lt.0.0d0)then
-  LS(3)=lstemp1
- elseif(lstemp2.lt.0.0d0)then
-  LS(3)=lstemp2
- else
-  LS(3)=min(lstemp1,lstemp2)
- endif
+ ! c_0=c_00*(one-x_d(2)) + c_10*x_d(2)
+ ! c_1=c_01*(one-x_d(2)) + c_11*x_d(2)
 
+ ! c=c_0*(one-x_d(3)) + c_1*x_d(3)
+
+ ! LS(3)=c
+ 
+ ! For 'x_p' as object point 
+ ! interpolate from internal fine mesh
+ ! low side cell index
+ ! IDINT = fractional part truncated and sign preserved
+ ind(1)=IDINT((x_p(1)-xblob3)/internal_dx(1))
+ ind(2)=IDINT((x_p(2)-yblob3)/internal_dx(2)) 
+ ind(3)=IDINT((x_p(3)-zblob3)/internal_dx(3))
+ do dir=1,SDIM
+  if (ind(dir).lt.1) then
+   ind(dir)=1
+  endif
+  if (ind(dir)+1.gt.UBOUND(internal_thread_ls,dir)) then
+   ind(dir)=UBOUND(internal_thread_ls,dir)-1
+  endif
+ enddo ! dir=1..sdim
+
+ ! x is in the cube {ind, ind+1}
+ ! trilinear interpolation
+ ! (https://en.wikipedia.org/wiki/Trilinear_interpolation)
+ x_0(1)=xblob3+(ind(1)-half)*internal_dx(1)
+ x_0(2)=yblob3+(ind(2)-half)*internal_dx(2)
+ x_0(3)=zblob3+(ind(3)-half)*internal_dx(3)
+ 
+ x_d=(x_p-x_0)/internal_dx ! component-wise division
+
+ c_000=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+0)
+ c_100=internal_thread_ls(ind(1)+1, ind(2)+0, ind(3)+0)
+ c_010=internal_thread_ls(ind(1)+0, ind(2)+1, ind(3)+0)
+ c_110=internal_thread_ls(ind(1)+1, ind(2)+1, ind(3)+0)
+ c_001=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+1)
+ c_101=internal_thread_ls(ind(1)+1, ind(2)+0, ind(3)+1)
+ c_011=internal_thread_ls(ind(1)+0, ind(2)+1, ind(3)+1)
+ c_111=internal_thread_ls(ind(1)+1, ind(2)+1, ind(3)+1)
+
+ c_00=c_000*(one-x_d(1)) + c_100*x_d(1)
+ c_01=c_001*(one-x_d(1)) + c_101*x_d(1)
+ c_10=c_010*(one-x_d(1)) + c_110*x_d(1)
+ c_11=c_011*(one-x_d(1)) + c_111*x_d(1)
+
+ c_0=c_00*(one-x_d(2)) + c_10*x_d(2)
+ c_1=c_01*(one-x_d(2)) + c_11*x_d(2)
+
+ c=c_0*(one-x_d(3)) + c_1*x_d(3)
+
+ LS(3)=c
+
+endif
+
+! print *,"X, LS", x, LS
 
 return
 end subroutine FABRIC_DROP_LS
-
-
 
 subroutine FABRIC_DROP_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
@@ -324,9 +334,71 @@ endif
 return 
 end subroutine FABRIC_DROP_VEL
 
+function DIST_THREADS(P)
+ ! Returns the signed distance function to the thrads' surfaces
+ ! Inside the threads > 0
+ ! Outside the threads < 0
+ IMPLICIT NONE
+ REAL_T DIST_THREADS
+ REAL_T P(SDIM)
+ REAL_T dist,seg_dist,thr_dist
+ INTEGER_T ithread,inode
 
+ ! Iterate over threads
+ ! Iterrate over thread nodes-1
+ ! Find distance to line segment/thread surface
+ dist=-1.0d15
+ do ithread = 1,num_threads
+  thr_dist=1.0d15
+  do inode = 1,num_nodes(ithread)-1
+   seg_dist=DIST_SEGMENT(P,&
+    thread_nodes(ithread,inode,:),&
+    thread_nodes(ithread,inode+1,:))
+   thr_dist=min(thr_dist,seg_dist)
+  enddo ! num_nodes
 
+  thr_dist=-(thr_dist-thread_radius(ithread))
 
+  if(abs(thr_dist).lt.abs(dist)) then
+   dist=thr_dist
+  endif
+ enddo ! num_threads
+
+ DIST_THREADS=dist
+
+ return
+end function DIST_THREADS
+
+function DIST_SEGMENT(P,M,N)
+ ! Returns the distance o point P from line segment MN
+ IMPLICIT NONE
+ REAL_T DISt_SEGMENT
+ REAL_T P(SDIM)
+ REAL_T M(SDIM)
+ REAL_T N(SDIM)
+ REAL_T NM_unit(SDIM)
+ REAL_T LMN,LMP,L,dist
+
+ LMN=sqrt(dot_product(N-M,N-M))
+ NM_unit=(N-M)/LMN
+ L=dot_product(P-M,NM_unit)
+
+ if ((L.ge.zero).and.(L.le.LMN)) then
+  LMP=sqrt(dot_product(P-M,P-M))
+  dist=sqrt(LMP**2-L**2)
+ elseif (L.lt.zero) then
+  dist=sqrt(dot_product(P-M,P-M))
+ elseif (L.gt.LMN) then
+  dist=sqrt(dot_product(P-N,P-N))
+ endif
+
+ DIST_SEGMENT=dist
+ 
+ return
+end function DIST_SEGMENT
+  
+  
+ 
 
 
 ! ! These next routines only used for compressible materials.
