@@ -26,14 +26,173 @@ stop
 ! probtype==FABRIC_DROP_PROB_TYPE (see run2d/inputs.FABRIC_DROP)
 module FABRIC_DROP_MODULE
 implicit none 
-REAL_T, allocatable, dimension(:,:,:) :: thread_nodes
-REAL_T, allocatable, dimension(:) :: thread_radius
-INTEGER_T, allocatable, dimension(:) :: num_nodes
-INTEGER_T num_threads
+REAL(KIND=8),PARAMETER        :: pi=4.0d0*atan(1.0d0)
+REAL(KIND=8),PARAMETER        :: a_wavy=0.4d0
+REAL(KIND=8),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
+REAL(KIND=8),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
+INTEGER,PARAMETER             :: N1=4   ! wavy threads
+INTEGER,PARAMETER             :: N2=4   ! Straight threads
+integer,parameter             :: P=96  ! number of partition points
+REAL(KIND=8),PARAMETER        :: omega=pi/(3.0d0/4.0d0)
 
 REAL_T, allocatable, dimension(:,:,:) :: internal_thread_ls
 REAL_T internal_dx(3)
+
 contains
+
+subroutine l2normd(s,x1,x2, x1x2norm)
+implicit none
+
+integer,intent(in)       :: s
+real(kind=8),intent(in)  :: x1(s),x2(s)
+real(kind=8)             :: x1x2norm
+
+integer                  :: i
+real(kind=8),allocatable :: diff(:)
+
+x1x2norm = 0.0d0
+allocate(diff(s))
+do i = 1,s
+ diff(i) = x1(i)-x2(i)
+enddo
+
+do i = 1,s
+ x1x2norm = x1x2norm + diff(i)**2.0d0
+enddo
+
+x1x2norm = sqrt(x1x2norm)
+
+deallocate(diff)
+
+end subroutine l2normd
+
+subroutine dist_point_to_lined(sd,p1,p2,x,pout,dist)
+implicit none
+! represent the line in parametric form,(v = f(s))
+! v^x = x1 + (x2-x1)s
+! v^y = y1 + (y2-y1)s
+! v^z = z1 + (z2-z1)s
+! 
+! if the closest point on the line to point x  is outside p1 -- p2, 
+! --------> return the distance from x either to p1 or p2 which is shorter.
+! otherwise
+! --------> return the distance from x to the cloest point
+
+integer,intent(in)           :: sd
+real(kind=8),intent(in)      ::  p1(sd),p2(sd),x(sd)
+real(kind=8),intent(out)     ::  dist
+real(kind=8),intent(out)     ::  pout(sd)
+
+real(kind=8)                 :: diff10,diff21,diffx
+real(kind=8),allocatable     :: x10(:), x21(:)
+integer                      :: i
+real(kind=8)                 :: s
+
+
+dist = 0.0d0
+
+allocate(x10(sd),x21(sd))
+do i = 1,sd
+ x10(i) = p1(i) - x(i)
+ x21(i) = p2(i) - p1(i)
+enddo
+
+if (maxval(abs(x21)) .lt. 10d-8)then
+ print *,"p1 and p2 are coincide with each other",p1,p2
+ stop
+endif
+
+call l2normd(sd, p1, x, diff10)
+call l2normd(sd, p2, p1, diff21)
+
+!print *,"diff10",diff10
+!print *,"diff21",diff21
+
+s = -1.0d0*(dot_product(x10,x21))/(diff21**2.0d0)
+
+!write(13,*) "s=",s
+
+if(s .gt. 1.0d0)then
+ call l2normd(sd, p2, x,dist)
+ do i=1,sd
+  pout(i)=p1(i)
+ enddo
+elseif(s .lt. 0.0d0)then
+ call l2normd(sd,p1,x,dist)
+ do i=1,sd
+  pout(i)=p2(i)
+ enddo
+else
+! if(abs((diff10**2.0d0 )*(diff21**2.0d0) - & 
+!        (dot_product(x10,x21))**2.0d0) .lt. 1.0e-10)then
+!   dist= 0.0d0
+! else
+  dist = sqrt(((diff10**2.0d0 )*(diff21**2.0d0) - & 
+        (dot_product(x10,x21))**2.0d0)/ &
+        (diff21**2.0d0))
+  do i=1,sd
+   pout(i)=p1(i)+s*(p2(i) - p1(i))
+  enddo
+! endif
+endif
+
+deallocate(x10,x21) 
+
+end subroutine dist_point_to_lined
+
+
+subroutine find_xc(la,lb,flag,xz,xc)
+! flag =1 sinecurve   =2 cosinecurve
+implicit none
+
+real(kind=8),intent(in) :: la,lb
+integer,intent(in)      :: flag
+real(kind=8),intent(in) :: xz(2)
+integer                 :: k
+real(kind=8),allocatable         :: spl(:,:)
+real(kind=8)            :: dist,dtemp
+real(kind=8),intent(out):: xc(3)
+real(kind=8)            :: spltemp(2),pout(2)
+
+
+allocate(spl(2,P+1))
+   do k=1,P+1
+     spl(1,k)=la+(k-1)*(lb-la)/real(P,8)
+    if(flag.eq.0)then
+     spl(2,k)=a_wavy*sin(omega*(spl(1,k)+1.5d0)) 
+    elseif(flag.eq.1)then
+     spl(2,k)=-a_wavy*sin(omega*(spl(1,k)+1.5d0))
+    else
+     print *,"flag invalid"
+     stop
+    endif
+   enddo
+   dist=1.0e+8
+   xc=0.0d0
+
+!   do k=1,P+1
+!    spltemp(1)=spl(1,k)
+!    spltemp(2)=spl(2,k)
+!    call l2normd(2,xz,spltemp,dtemp)
+!    if(dtemp .lt. dist)then
+!     dist=dtemp
+!     xc(1)=spl(1,k)
+!     xc(3)=spl(2,k)
+!    endif
+!   enddo  
+   do k=1,P
+    call dist_point_to_lined(2,spl(:,k),spl(:,k+1),xz,pout,dtemp)
+    if(dtemp .lt. dist)then
+     dist=dtemp
+     xc(1)=pout(1)
+     xc(3)=pout(2)
+    endif
+   enddo 
+
+ deallocate(spl)
+end subroutine find_xc
+
+
 
 ! do any initial preparation needed
 subroutine INIT_FABRIC_DROP_MODULE()
@@ -44,57 +203,18 @@ REAL_T internal_x(3)
 INTEGER_T ithread
 INTEGER_T i,j,k
 INTEGER_T N, N_max
-character*40 tr_file
+
 
 #ifdef DEBUG_FABRIC_DROP
 INTEGER_T inode
 #endif
 
-! Reading and storing thread files
-100  FORMAT('./threads/thread_',I3.3,'.txt')
+
 
 if ((probtype.ne.FABRIC_DROP_PROB_TYPE).or.(SDIM.ne.3)) then
  print *,"probtype or SDIM invalid!"
  stop
 endif
-
-num_threads = IDNINT(xblob2)
-N_max=0
-
-do ithread=1,num_threads
- WRITE(tr_file,100) ithread
- OPEN(unit=101,&
-  file=tr_file,&
-  form="formatted",&
-  status='old',&
-  action='read')
- READ(101,*) N, R
-
- if(N.gt.N_max) then
-  N_max=N
- endif
- CLOSE(101) 
-enddo ! ithread
-
-
-
-allocate(thread_nodes(num_threads,N_max,3))
-allocate(thread_radius(num_threads))
-allocate(num_nodes(num_threads))
-
-do ithread=1,num_threads
- WRITE(tr_file,100) ithread
- OPEN(unit=101,&
-  file=tr_file,&
-  form="formatted",&
-  status='old',&
-  action='read')
- READ(101,*) num_nodes(ithread), thread_radius(ithread)
- READ(101,*) ((thread_nodes(ithread,i,j), j=1,3), i=1,num_nodes(ithread))
- CLOSE(101) 
-enddo ! ithread
-
-
 
 ! Evaluate level set function on internal fine mesh
 allocate(internal_thread_ls(IDNINT(xblob5),IDNINT(yblob5),IDNINT(zblob5)))
@@ -116,10 +236,13 @@ do k=1,IDNINT(zblob5)
    internal_x(2)=yblob3+(j-half)*internal_dx(2)
    internal_x(3)=zblob3+(k-half)*internal_dx(3)
 
-   internal_thread_ls(i,j,k) = DIST_THREADS(internal_x)
-  enddo
+!   internal_thread_ls(i,j,k) = DIST_THREADS(internal_x)
+   call FABRIC_LS(internal_x,internal_thread_ls(i,j,k))
+   enddo
  enddo
 enddo
+
+
 
 print *,"... done!"
 
@@ -127,8 +250,6 @@ print *,"... done!"
 return
 end subroutine INIT_FABRIC_DROP_MODULE
 
-
-! fluids tessellate the domain, solids are immersed. 
 subroutine FABRIC_DROP_LS(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -169,54 +290,14 @@ else
  x_p(2)=modulo(x(2),yblob4)
  x_p(3)=x(3)
 
- ! ! For 'x' as object point 
- ! ! interpolate from internal fine mesh
- ! ! low side cell index
- ! ind(1)=IDINT((x(1)-xblob3)/internal_dx(1))
- ! ind(2)=IDINT((x(2)-yblob3)/internal_dx(2)) 
- ! ind(3)=IDINT((x(3)-zblob3)/internal_dx(3))
-
- ! ! x is in the cube {ind, ind+1}
- ! ! trilinear interpolation
- ! ! (https://en.wikipedia.org/wiki/Trilinear_interpolation)
- ! x_0(1)=xblob3+(ind(1)-half)*internal_dx(1)
- ! x_0(2)=yblob3+(ind(2)-half)*internal_dx(2)
- ! x_0(3)=zblob3+(ind(3)-half)*internal_dx(3)
- 
- ! x_d=(x-x_0)/internal_dx ! component-wise division
-
- ! c_000=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+0)
- ! c_100=internal_thread_ls(ind(1)+1, ind(2)+0, ind(3)+0)
- ! c_010=internal_thread_ls(ind(1)+0, ind(2)+1, ind(3)+0)
- ! c_110=internal_thread_ls(ind(1)+1, ind(2)+1, ind(3)+0)
- ! c_001=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+1)
- ! c_101=internal_thread_ls(ind(1)+1, ind(2)+0, ind(3)+1)
- ! c_011=internal_thread_ls(ind(1)+0, ind(2)+1, ind(3)+1)
- ! c_111=internal_thread_ls(ind(1)+1, ind(2)+1, ind(3)+1)
-
- ! c_00=c_000*(one-x_d(1)) + c_100*x_d(1)
- ! c_01=c_001*(one-x_d(1)) + c_101*x_d(1)
- ! c_10=c_010*(one-x_d(1)) + c_110*x_d(1)
- ! c_11=c_011*(one-x_d(1)) + c_111*x_d(1)
-
- ! c_0=c_00*(one-x_d(2)) + c_10*x_d(2)
- ! c_1=c_01*(one-x_d(2)) + c_11*x_d(2)
-
- ! c=c_0*(one-x_d(3)) + c_1*x_d(3)
-
- ! LS(3)=c
- 
- ! For 'x_p' as object point 
- ! interpolate from internal fine mesh
- ! low side cell index
- ! IDINT = fractional part truncated and sign preserved
  ind(1)=IDINT((x_p(1)-xblob3)/internal_dx(1))
- ind(2)=IDINT((x_p(2)-yblob3)/internal_dx(2)) 
+ ind(2)=IDINT((x_p(2)-yblob3)/internal_dx(2))
  ind(3)=IDINT((x_p(3)-zblob3)/internal_dx(3))
  do dir=1,SDIM
   if (ind(dir).lt.1) then
    ind(dir)=1
   endif
+
   if (ind(dir)+1.gt.UBOUND(internal_thread_ls,dir)) then
    ind(dir)=UBOUND(internal_thread_ls,dir)-1
   endif
@@ -228,7 +309,7 @@ else
  x_0(1)=xblob3+(ind(1)-half)*internal_dx(1)
  x_0(2)=yblob3+(ind(2)-half)*internal_dx(2)
  x_0(3)=zblob3+(ind(3)-half)*internal_dx(3)
- 
+
  x_d=(x_p-x_0)/internal_dx ! component-wise division
 
  c_000=internal_thread_ls(ind(1)+0, ind(2)+0, ind(3)+0)
@@ -258,6 +339,118 @@ endif
 
 return
 end subroutine FABRIC_DROP_LS
+
+
+
+
+
+subroutine FABRIC_LS(x,LS)
+use probcommon_module
+IMPLICIT NONE
+
+
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(out) :: LS
+real(kind=8)         :: xlo,xhi,ylo,yhi,zlo,zhi
+real(kind=8)         :: hN1,hN2,xctemp
+real(kind=8)         :: xy(3),xc(3),xz(2),xh(3)
+integer              :: i,j,k,l,ky,kx
+real(kind=8)         :: lstemp1,lstemp2
+real(kind=8)         :: a,b
+real(kind=8)         :: dtemp,dist
+real(kind=8),allocatable :: ynf(:)  ! wavy thread
+real(kind=8),allocatable :: xnf(:)  ! straight thread
+integer              :: fnflag
+
+
+
+allocate(ynf(N1+2),xnf(N2+2))
+
+xlo=problox
+xhi=probhix
+ylo=probloy
+yhi=probhiy
+zlo=probloz
+zhi=probhiz
+
+hN1=(yhi-ylo)/real(N1,8)
+hN2=(xhi-xlo)/real(N2,8)
+
+!hN1=(prob_hi(2)-prob_lo(2))/real(N1,8)
+!hN2=(prob_hi(1)-prob_lo(1))/real(N2,8)
+
+do i=1,N1+2
+ ynf(i)=ylo-0.5d0*hN1+(i-1)*hN1 
+enddo
+do i=1,N2+2
+ xnf(i)=xlo-0.5d0*hN2+(i-1)*hN2
+enddo
+
+!do i=1,N1+2
+! ynf(i)=prob_lo(2)-0.5d0*hN1+(i-1)*hN1 
+!enddo
+!do i=1,N2+2
+! xnf(i)=prob_lo(1)-0.5d0*hN2+(i-1)*hN2
+!enddo
+
+LS=0.0d0
+
+   xy(1)=x(1)
+   xy(2)=x(2)
+   xy(3)=x(3)
+   xz(1)=x(1)
+   xz(2)=x(3)
+
+  do ky=1,N1+2
+   if( x(2).ge.ynf(ky)-0.5d0*hN1 .and. x(2).lt. ynf(ky)+0.5d0*hN1)then
+    do kx=1,N2+2
+     if( x(1).ge.xnf(kx) .and. x(1).lt.xnf(kx)+hN2)then
+      a=xnf(kx)
+      b=xnf(kx)+hN2      
+      exit
+     endif
+    enddo
+    xctemp=ynf(ky)
+    fnflag=mod(ky,2)
+    exit
+   endif
+  enddo
+ 
+  call find_xc(a,b,fnflag,xz,xc)
+  xc(2)=xctemp
+  call l2normd(3,xy,xc,lstemp1)
+  lstemp1=r_1-lstemp1
+
+
+    do kx=1,N2+2
+     if( x(1).ge.xnf(kx)-0.5d0*hN2 .and. x(1).lt.xnf(kx)+0.5d0*hN2)then
+      xh(1)=xnf(kx)
+      xh(2)=xy(2)
+      xh(3)=0.0d0     
+      exit
+     endif
+    enddo
+   call l2normd(3,xy,xh,lstemp2)
+   lstemp2=r_2-lstemp2
+
+ if(lstemp1.ge.0.0d0.and.lstemp2.ge.0.0d0)then
+   print *,"lstemp1 and lstemp2 can not both be positive"
+   stop
+ endif
+
+ LS=min(abs(lstemp1),abs(lstemp2))
+ if(lstemp1.ge.0.0d0 .or. lstemp2.ge.0.0d0)then
+  ! DO NOTHING
+ else
+  LS=-1.0d0*LS
+ endif
+
+deallocate(xnf,ynf)
+
+return
+end subroutine FABRIC_LS
+
+
 
 subroutine FABRIC_DROP_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
@@ -334,71 +527,9 @@ endif
 return 
 end subroutine FABRIC_DROP_VEL
 
-function DIST_THREADS(P)
- ! Returns the signed distance function to the thrads' surfaces
- ! Inside the threads > 0
- ! Outside the threads < 0
- IMPLICIT NONE
- REAL_T DIST_THREADS
- REAL_T P(SDIM)
- REAL_T dist,seg_dist,thr_dist
- INTEGER_T ithread,inode
 
- ! Iterate over threads
- ! Iterrate over thread nodes-1
- ! Find distance to line segment/thread surface
- dist=-1.0d15
- do ithread = 1,num_threads
-  thr_dist=1.0d15
-  do inode = 1,num_nodes(ithread)-1
-   seg_dist=DIST_SEGMENT(P,&
-    thread_nodes(ithread,inode,:),&
-    thread_nodes(ithread,inode+1,:))
-   thr_dist=min(thr_dist,seg_dist)
-  enddo ! num_nodes
 
-  thr_dist=-(thr_dist-thread_radius(ithread))
 
-  if(abs(thr_dist).lt.abs(dist)) then
-   dist=thr_dist
-  endif
- enddo ! num_threads
-
- DIST_THREADS=dist
-
- return
-end function DIST_THREADS
-
-function DIST_SEGMENT(P,M,N)
- ! Returns the distance o point P from line segment MN
- IMPLICIT NONE
- REAL_T DISt_SEGMENT
- REAL_T P(SDIM)
- REAL_T M(SDIM)
- REAL_T N(SDIM)
- REAL_T NM_unit(SDIM)
- REAL_T LMN,LMP,L,dist
-
- LMN=sqrt(dot_product(N-M,N-M))
- NM_unit=(N-M)/LMN
- L=dot_product(P-M,NM_unit)
-
- if ((L.ge.zero).and.(L.le.LMN)) then
-  LMP=sqrt(dot_product(P-M,P-M))
-  dist=sqrt(LMP**2-L**2)
- elseif (L.lt.zero) then
-  dist=sqrt(dot_product(P-M,P-M))
- elseif (L.gt.LMN) then
-  dist=sqrt(dot_product(P-N,P-N))
- endif
-
- DIST_SEGMENT=dist
- 
- return
-end function DIST_SEGMENT
-  
-  
- 
 
 
 ! ! These next routines only used for compressible materials.
