@@ -3467,8 +3467,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (disable_pressure_solve==0) {
  
 	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
-        if ((FSI_material_exists()==1)||
-            (FSI_material_exists_presvel()==1))	{
+        if (FSI_material_exists()==1) {
 
           // MDOT term included
          int rigid_project_option=0;
@@ -3484,8 +3483,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          rigid_project_option=11; // final project
          multiphase_project(rigid_project_option);
 
-        } else if ((FSI_material_exists()==0)&&
-   	           (FSI_material_exists_presvel()==0)) {
+        } else if (FSI_material_exists()==0) {
 
          multiphase_project(project_option); // pressure
 
