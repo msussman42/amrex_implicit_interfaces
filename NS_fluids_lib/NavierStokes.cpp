@@ -2044,7 +2044,6 @@ NavierStokes::read_params ()
     pp.query("v",verbose);
     pp.query("fab_verbose",fab_verbose);
     pp.query("output_drop_distribution",output_drop_distribution);
-    pp.query("extend_pressure_into_solid",extend_pressure_into_solid);
     pp.query("show_timings",show_timings);
     pp.query("show_mem",show_mem);
 
@@ -2574,8 +2573,6 @@ NavierStokes::read_params ()
      std::cout << "show_mem " << show_mem << '\n';
      std::cout << "output_drop_distribution " << 
       output_drop_distribution << '\n';
-     std::cout << "extend_pressure_into_solid " << 
-      extend_pressure_into_solid << '\n';
      std::cout << "visc_coef " << visc_coef << '\n';
      std::cout << "include_viscous_heating " << include_viscous_heating << '\n';
 
@@ -2775,6 +2772,23 @@ NavierStokes::read_params ()
     if (nparts!=im_solid_map.size())
      amrex::Error("nparts!=im_solid_map.size()");
 
+    if (FSI_material_exists_presvel()==1) {
+     extend_pressure_into_solid=1;
+    } else if (FSI_material_exists_presvel()==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_material_exists_presvel() invalid");
+
+    pp.query("extend_pressure_into_solid",extend_pressure_into_solid);
+
+    if (FSI_material_exists_presvel()==1) {
+     if (extend_pressure_into_solid!=1)
+      amrex::Error("need extend_pressure_into_solid==1 if presvel coupling");
+    } else if (FSI_material_exists_presvel()==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_material_exists_presvel() invalid");
+
     elastic_viscosity.resize(nmat);
     elastic_regularization.resize(nmat);
     lame_coefficient.resize(nmat);
@@ -2946,6 +2960,8 @@ NavierStokes::read_params ()
      amrex::Error("global_presmooth!=global_postsmooth");
 
     if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "extend_pressure_into_solid " << 
+      extend_pressure_into_solid << '\n';
      std::cout << "smooth_type " << smooth_type << '\n';
      std::cout << "bottom_smooth_type " << bottom_smooth_type << '\n';
      std::cout << "global_presmooth " << global_presmooth << '\n';
