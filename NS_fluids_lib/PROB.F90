@@ -25345,8 +25345,8 @@ end subroutine initialize2d
        print *,"nparts invalid"
        stop
       endif
-      if (nFSI_sub.ne.12) then
-       print *,"nFSI_sub.ne.12"
+      if (nFSI_sub.ne.9) then
+       print *,"nFSI_sub.ne.9"
        stop
       endif
       if (nFSI.ne.nparts*nFSI_sub) then
@@ -25415,6 +25415,7 @@ end subroutine initialize2d
           enddo
          else if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
                   (FSI_flag(im).eq.4).or. & ! CTML FSI
+                  (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
                   (FSI_flag(im).eq.6).or. & ! ice (CAD)
                   (FSI_flag(im).eq.7)) then ! fluid (CAD)
           ! do nothing

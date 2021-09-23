@@ -1833,11 +1833,11 @@ protected:
      // 6=FSI ice, represented as a tessellating fluid
      //   (initial geometry: sci_clsvof.F90)
      // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
-     // 8=FSI, non-tessellating link w/user defined fortran code.
+     // 8=FSI, non-tessellating link w/Kourosh, pres-vel coupling.
     static Vector<int>  FSI_flag; 
 
     static int         CTML_FSI_numsolids;
-    static int         CTML_force_model; // 0=Lag force  1=Lag stress
+    static Vector<int> CTML_force_model; // 0=Lag force 2=presvel
     static int         CTML_FSI_init;
 
     static Vector<int>  shock_timestep;
@@ -2022,7 +2022,7 @@ protected:
     static int BLB_PRES;
 
     static int ngrowFSI;//should be 3
-     //should be 12=velocity+LS+temperature+flag+stress (3D)
+     //should be 9=velocity+LS+temperature+flag+force (3D)
     static int nFSI_sub;
     static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
     static Vector<int> im_elastic_map;

@@ -6,7 +6,6 @@
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
-#    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
@@ -14,7 +13,6 @@
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MOMENT BUILD_MOMENT
-#    define FORT_COPY_VEL_ON_SIGN COPY_VEL_ON_SIGN
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
@@ -22,14 +20,12 @@
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MOMENT build_moment
-#    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MOMENT build_moment_
-#    define FORT_COPY_VEL_ON_SIGN copy_vel_on_sign_
 #    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
 #  endif
@@ -354,7 +350,7 @@ extern "C"
     Real* polymer_factor,
     int* irz,int* nmat);
 
-   void FORT_COPY_VEL_ON_SIGN(
+   void fort_copy_vel_on_sign(
     int* im_part,
     int* nparts,
     int* partid,

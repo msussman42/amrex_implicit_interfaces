@@ -97,6 +97,7 @@ stop
             CP%im_solid_max)
 
           if ((FSI_flag(CP%im_solid_max).eq.2).or. & ! prescribed solid CAD
+              (FSI_flag(CP%im_solid_max).eq.8).or. & ! CTML FSI pres-vel
               (FSI_flag(CP%im_solid_max).eq.4)) then ! CTML FSI
            LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im_solid_max)
            do dir=1,SDIM

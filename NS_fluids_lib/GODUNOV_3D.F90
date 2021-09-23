@@ -15186,7 +15186,7 @@ stop
       end subroutine fort_maketensor_mac
 
 
-      subroutine FORT_COPY_VEL_ON_SIGN( &
+      subroutine fort_copy_vel_on_sign( &
        im_part, &
        nparts, &
        partid, &
@@ -15198,32 +15198,38 @@ stop
        fsi,DIMS(fsi), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
-       nmat,nstate)
+       nmat,nstate) &
+      bind(c,name='fort_copy_vel_on_sign')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T im_part
-      INTEGER_T nparts
-      INTEGER_T partid
-      INTEGER_T ngrowFSI
-      INTEGER_T nFSI
-      INTEGER_T nFSI_sub
-      INTEGER_T nmat
-      INTEGER_T nstate
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(fsi)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: im_part
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: partid
+      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: nFSI
+      INTEGER_T, intent(in) :: nFSI_sub
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nstate
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(fsi)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
 
-      REAL_T snew(DIMV(snew),nstate)
-      REAL_T fsi(DIMV(fsi),nFSI)
+      REAL_T, intent(inout),target :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fsi(DIMV(fsi),nFSI)
+      REAL_T, pointer :: fsi_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k,dir,ibase
       REAL_T LS
+
+      snew_ptr=>snew
+      fsi_ptr=>fsi
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -15247,14 +15253,14 @@ stop
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_COPY_VEL_ON_SIGN"
+       print *,"nparts invalid fort_copy_vel_on_sign"
        stop
       endif
       if ((partid.lt.0).or.(partid.ge.nparts)) then
        print *,"partid invalid"
        stop
       endif
-      if (nFSI_sub.ne.12) then
+      if (nFSI_sub.ne.9) then
        print *,"nFSI_sub invalid"
        stop
       endif
@@ -15265,8 +15271,8 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,8)
-      call checkbound(fablo,fabhi,DIMS(fsi),ngrowFSI,-1,8)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,8)
+      call checkbound_array(fablo,fabhi,fsi_ptr,ngrowFSI,-1,8)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -15276,7 +15282,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-        ! nmat x (velocity + LS + temperature + flag + stress)
+        ! nmat x (velocity + LS + temperature + flag + force)
        LS=fsi(D_DECL(i,j,k),ibase+4)
        if (LS.ge.zero) then
         do dir=1,SDIM
@@ -15294,8 +15300,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_COPY_VEL_ON_SIGN
-
+      end subroutine fort_copy_vel_on_sign
 
       subroutine FORT_BUILD_MOMENT( &
        level, &
@@ -15373,7 +15378,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nFSI_sub.ne.12) then
+      if (nFSI_sub.ne.9) then
        print *,"nFSI_sub invalid"
        stop
       endif
@@ -15433,7 +15438,7 @@ stop
           stop
          endif
 
-         ! nparts x (vel+LS+temperature+flag+stress)
+         ! nparts x (vel+LS+temperature+flag+force)
          ibase=(partid-1)*nFSI_sub
          do i1=-1,1
          do j1=-1,1
