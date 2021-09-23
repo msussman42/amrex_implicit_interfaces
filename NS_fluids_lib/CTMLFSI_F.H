@@ -2,17 +2,8 @@
 #define _CTMLFSI_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_CTMLTRANSFERFORCE ctmltransferforce
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_CTMLTRANSFERFORCE CTMLTRANSFERFORCE
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_CTMLTRANSFERFORCE ctmltransferforce
-#  else
-#    define FORT_CTMLTRANSFERFORCE ctmltransferforce_
-#  endif
-#endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -20,7 +11,7 @@ namespace amrex{
 
 extern "C" {
 			
- void FORT_CTMLTRANSFERFORCE( 
+ void fort_ctmltransferforce( 
   const int* tilelo, const int* tilehi,
   const int* fablo, const int* fabhi, 
   Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),

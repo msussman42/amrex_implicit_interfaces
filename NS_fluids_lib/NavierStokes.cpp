@@ -3820,6 +3820,7 @@ NavierStokes::read_params ()
     projection_velocity_scale=sqrt(projection_pressure_scale);
 
     num_divu_outer_sweeps=1;
+
     if (some_materials_compressible()==1) {
      num_divu_outer_sweeps=2;
     } else if (some_materials_compressible()==0) {
@@ -3827,7 +3828,32 @@ NavierStokes::read_params ()
     } else {
      amrex::Error("some_materials_compressible invalid");
     }
+
+    if (FSI_material_exists_presvel()==1) {
+     num_divu_outer_sweeps=2;
+    } else if (FSI_material_exists_presvel()==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_material_exists_presvel() invalid");
+
     pp.query("num_divu_outer_sweeps",num_divu_outer_sweeps);
+
+    if (some_materials_compressible()==1) {
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("num_divu_outer_sweeps must be >1 (compres)");
+    } else if (some_materials_compressible()==0) {
+     // do nothing
+    } else {
+     amrex::Error("some_materials_compressible invalid");
+    }
+
+    if (FSI_material_exists_presvel()==1) {
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("num_divu_outer_sweeps must be >1 (presvel coupling)");
+    } else if (FSI_material_exists_presvel()==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_material_exists_presvel() invalid");
      
     pp.query("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
@@ -7310,7 +7336,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 //FSI_operation=2  make distance in narrow band
 //  (nparts x (vel, LS, Temp, flag, stress)
 //FSI_operation=3  update the sign.
-//FSI_operation=4  copy Eulerian vel. to lag.
+//FSI_operation=4  copy Eulerian velocity and/or pressure to lag.
 //
 // note for CTML algorithm:
 // 1. copy Eulerian velocity to Lagrangian velocity.
@@ -7345,7 +7371,7 @@ void NavierStokes::ns_header_msg_level(
    amrex::Error("FSI_sub_operation!=0");
   if (CTML_FSI_flagC()==1) {
    if (num_divu_outer_sweeps!=1)
-    amrex::Error("num_divu_outer_sweeps!=1");
+    amrex::Error("num_divu_outer_sweeps!=1, tick only once per step");
    if (ns_time_order!=1)
     amrex::Error("ns_time_order!=1");
   } else if (CTML_FSI_flagC()==0) {
@@ -24075,11 +24101,14 @@ NavierStokes::ctml_fsi_transfer_force() {
       // nparts x (velocity + LS + temperature + flag + stress)
      int ibase=partid*nFSI_sub+6;
 
-     FORT_CTMLTRANSFERFORCE(
+      // declared in: CTMLFSI.F90
+      // velocity is incremented with the force stored in FSI_MF.
+     fort_ctmltransferforce(
       tilelo, tilehi, 
       fablo, fabhi, 
       snewfab.dataPtr(), 
-      ARLIM(snewfab.loVect()), ARLIM(snewfab.hiVect()), 
+      ARLIM(snewfab.loVect()), 
+      ARLIM(snewfab.hiVect()), 
       forcefab.dataPtr(ibase), 
       ARLIM(forcefab.loVect()), ARLIM(forcefab.hiVect()));
 #else

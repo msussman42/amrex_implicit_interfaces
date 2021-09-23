@@ -292,7 +292,10 @@ stop
       return
       end subroutine CTML_RESET_ARRAYS
 
-
+       ! (NodeVel was initialized when FSI_sub_operation==1)
+       ! called from: sci_clsvof.F90 (CLSVOF_sync_lag_data)
+       ! this routine copies FSI(partid)%NodeVel(dir,inode)
+       ! (fib_vel) to the Lagrangian code.
       subroutine CTML_SET_VELOCITY(&
        nparts,max_n_fib_nodes,fib_vel)
       use dummy_module
@@ -477,26 +480,27 @@ stop
 
 !!*****************************************************
 
-subroutine FORT_CTMLTRANSFERFORCE(&
+subroutine fort_ctmltransferforce(&
  tilelo,&
  tilehi,&
  fablo,&
  fabhi,&
  velnew,DIMS(velnew),&
- force,DIMS(force))
+ force,DIMS(force)) &
+bind(c,name='fort_ctmltransferforce')
 
  use probcommon_module
  use global_utility_module
 
  IMPLICIT NONE
- INTEGER_T tilelo(SDIM)
- INTEGER_T tilehi(SDIM)
- INTEGER_T fablo(SDIM)
- INTEGER_T fabhi(SDIM)
- INTEGER_T DIMDEC(velnew)
- REAL_T velnew(DIMV(velnew),SDIM)
- INTEGER_T DIMDEC(force)
- REAL_T force(DIMV(force),SDIM)
+ INTEGER_T, intent(in) :: tilelo(SDIM)
+ INTEGER_T, intent(in) :: tilehi(SDIM)
+ INTEGER_T, intent(in) :: fablo(SDIM)
+ INTEGER_T, intent(in) :: fabhi(SDIM)
+ INTEGER_T, intent(in) :: DIMDEC(velnew)
+ REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
+ INTEGER_T, intent(in) :: DIMDEC(force)
+ REAL_T, intent(in) :: force(DIMV(force),SDIM)
 
  INTEGER_T growlo(3),growhi(3)
  INTEGER_T i,j,k,idir
@@ -518,5 +522,5 @@ subroutine FORT_CTMLTRANSFERFORCE(&
  end do
 
  return
-end subroutine FORT_CTMLTRANSFERFORCE
+end subroutine fort_ctmltransferforce
 
