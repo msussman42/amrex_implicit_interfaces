@@ -518,7 +518,11 @@ void NavierStokes::nonlinear_advection() {
    ns_level.debug_ngrow(MASKCOEF_MF,1,6003);
  } // ilev=level..finest_level
 
-// 0. convert Lagrangian description to Eulerian if read_from_CAD==1
+// 0. if read_from_CAD==1
+//   (a) copy eulerian velocity and/or force to lagrangian.
+//   (b) update Lagrangian node positions
+//   (c) convert Lagrangian position, velocity, temperature, and
+//       force (if CTML) to Eulerian.
 // 1. renormalize variables
 // 2. extend from F>0 fluid regions into F=0 regions
 // 3. if renormalize_only==0, 
@@ -11996,7 +12000,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
   if (CTML_FSI_flagC()==1) {
 
-   // Add the solid force term on the right hand side
+   // Add the Lagrangian solid force term on the right hand side of the
+   // Eulerian fluid velocity.
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.ctml_fsi_transfer_force();
@@ -12538,7 +12543,7 @@ void NavierStokes::veldiffuseALL() {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  // if (FSI_flag(im)==1,2,4)
+  // if (FSI_flag(im)==1,2,4,8)
   //  T(im)=TSOLID
   // else if (FSI_flag(im)=0,3,5,6,7)
   //  T(im)=TSOLID if in the solid.
