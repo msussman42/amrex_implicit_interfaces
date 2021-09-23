@@ -41,7 +41,7 @@ namespace amrex{
      int* nparts,
      int* im_solid_map,
      Real* h_small,
-     Real* time,
+     Real* cur_time,
      Real* dt,
      int* FSI_refine_factor,
      int* FSI_bounding_box_ngrow,

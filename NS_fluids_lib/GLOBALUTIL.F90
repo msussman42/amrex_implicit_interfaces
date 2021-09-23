@@ -9997,7 +9997,8 @@ contains
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_flagF
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid CTML_FSI_flagF"
@@ -10008,7 +10009,8 @@ contains
 
       CTML_FSI_flagF=0
       do im=1,nmat
-       if (FSI_flag(im).eq.4) then
+       if ((FSI_flag(im).eq.4).or. &
+           (FSI_flag(im).eq.8)) then
 #ifdef MVAHABFSI
         CTML_FSI_flagF=1
 #else
@@ -10039,7 +10041,7 @@ contains
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_mat
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid CTML_FSI_MAT"
@@ -10052,7 +10054,8 @@ contains
        stop
       endif
       CTML_FSI_mat=0
-      if (FSI_flag(im).eq.4) then
+      if ((FSI_flag(im).eq.4).or. &
+          (FSI_flag(im).eq.8)) then
 #ifdef MVAHABFSI
        CTML_FSI_mat=1
 #else
@@ -10075,6 +10078,32 @@ contains
       return
       end function CTML_FSI_mat
 
+      function fort_FSI_flag_valid(nmat,im)
+      use probcommon_module
+      IMPLICIT NONE
+      INTEGER_T fort_FSI_flag_valid
+      INTEGER_T, intent(in) :: nmat,im
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid fort_FSI_flag_valid"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid16"
+       stop
+      endif
+      if ((FSI_flag(im).ge.0).and.(FSI_flag(im).le.8)) then
+       fort_FSI_flag_valid=1
+      else
+       print *,"FSI_flag invalid"
+       stop
+       fort_FSI_flag_valid=0
+      endif
+
+      return
+      end function fort_FSI_flag_valid
 
       function is_ice(nmat,im)
       use probcommon_module
@@ -10082,7 +10111,7 @@ contains
       IMPLICIT NONE
 
       INTEGER_T is_ice
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_ice"
@@ -10103,6 +10132,7 @@ contains
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.4).or. &
+               (FSI_flag(im).eq.8).or. &
                (FSI_flag(im).eq.5)) then
        is_ice=0
       else
@@ -10140,6 +10170,7 @@ contains
 ! 5 FSI rigid solid, tessellating (PROB.F90)
 ! 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
 ! 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
+! 8 FSI, non-tessellating link w/Kourosh Shoele, pres-vel coupling
       is_FSI_rigid=0
       if (FSI_flag(im).eq.5) then
        is_FSI_rigid=1
@@ -10148,6 +10179,7 @@ contains
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.4).or. &
+               (FSI_flag(im).eq.8).or. &
                (FSI_flag(im).eq.3).or. &
                (FSI_flag(im).eq.6)) then
        is_FSI_rigid=0
@@ -10183,6 +10215,7 @@ contains
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
           (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (CAD)
           (FSI_flag(im).eq.4).or. & ! FSI link w/Kourosh Shoele
+          (FSI_flag(im).eq.8).or. & ! FSI link w/Kourosh Shoele, pres-vel
           (FSI_flag(im).eq.6).or. & ! lag ice (CAD)
           (FSI_flag(im).eq.7)) then ! lag fluid (CAD)
        is_lag_part=1
@@ -10230,6 +10263,7 @@ contains
 
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
           (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (sci_clsvof.F90)
+          (FSI_flag(im).eq.8).or. & ! FSI pres-vel, Kourosh Shoele
           (FSI_flag(im).eq.4)) then ! FSI link w/Kourosh Shoele
        is_rigid=1  ! non-tessellating material
       else if ((FSI_flag(im).eq.0).or. &
@@ -10298,14 +10332,26 @@ contains
        stop
       endif
 
-      if ((is_rigid(nmat,im).eq.1).and. &
-          (CTML_FSI_mat(nmat,im).eq.0)) then
-       is_prescribed=1
-      else if ((is_rigid(nmat,im).eq.0).or. &
-               (CTML_FSI_mat(nmat,im).eq.1)) then
+      if (is_rigid(nmat,im).eq.0) then
        is_prescribed=0
+      else if (is_rigid(nmat,im).eq.1) then
+       if (CTML_FSI_mat(nmat,im).eq.0) then
+        is_prescribed=1
+       else if (CTML_FSI_mat(nmat,im).eq.1) then
+        if (FSI_flag(im).eq.4) then ! Goldstein et al
+         is_prescribed=0
+        else if (FSI_flag(im).eq.8) then ! pres-vel coupling
+         is_prescribed=1
+        else
+         print *,"FSI_flag invalid"
+         stop
+        endif
+       else 
+        print *,"CTML_FSI_mat(nmat,im) invalid"
+        stop
+       endif
       else
-       print *,"is_rigid or CTML_FSI_mat invalid"
+       print *,"is_rigid invalid"
        stop
       endif
 

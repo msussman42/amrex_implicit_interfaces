@@ -548,12 +548,10 @@ void NavierStokes::nonlinear_advection() {
 
    // fort_headermsg (SOLIDFLUID.F90)
    // CLSVOF_ReadNodes (sci_clsvof.F90)
-   // if FSI_flag==4, then
+   // if FSI_flag==4 or FSI_flag==8, then
    //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
    //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
    //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
-   // if FSI_flag==8, then
-   //  a) USER_SOLVE_SOLID is called from sci_clsvof.F90
   FSI_operation=1; // update node locations
   FSI_sub_operation=0;
   ns_header_msg_level(FSI_operation,FSI_sub_operation,

@@ -77,7 +77,7 @@ type mesh_type
  INTEGER_T, pointer :: ElemNodeCountBIG(:)
  REAL_T, pointer :: NodeBIG(:,:)
  REAL_T, pointer :: NodeVelBIG(:,:)
- REAL_T, pointer :: NodeForceBIG(:,:)  ! (6,node_id)
+ REAL_T, pointer :: NodeForceBIG(:,:)  ! (3,node_id)
  REAL_T, pointer :: NodeDensityBIG(:)
  REAL_T, pointer :: NodeMassBIG(:)
  REAL_T, pointer :: NodeTempBIG(:)  
@@ -257,14 +257,14 @@ INTEGER_T inode,dir
   do dir=1,3
    FSI(part_id)%NodeVel_old(dir,inode)=0.0
   enddo
-  do dir=1,6
+  do dir=1,3
    FSI(part_id)%NodeForce_old(dir,inode)=0.0
   enddo
   do dir=1,3
    FSI(part_id)%Node_current(dir,inode)=FSI(part_id)%Node_new(dir,inode)
    FSI(part_id)%NodeVel_new(dir,inode)=FSI(part_id)%NodeVel_old(dir,inode)
   enddo
-  do dir=1,6
+  do dir=1,3
    FSI(part_id)%NodeForce_new(dir,inode)=FSI(part_id)%NodeForce_old(dir,inode)
   enddo
    ! in: init2_FSI
@@ -299,7 +299,7 @@ REAL_T dilated_time
   if (ifirst.eq.1) then
    allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
    allocate(FSI(part_id)%NodeVel(3,FSI(part_id)%NumNodes))
-   allocate(FSI(part_id)%NodeForce(6,FSI(part_id)%NumNodes))
+   allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
    allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
   else if (ifirst.eq.0) then
    ! do nothing
@@ -313,7 +313,7 @@ REAL_T dilated_time
     FSI(part_id)%Node(dir,inode)=FSI(part_id)%Node_current(dir,inode)
     FSI(part_id)%NodeVel(dir,inode)=FSI(part_id)%NodeVel_new(dir,inode)
    enddo
-   do dir=1,6
+   do dir=1,3
     FSI(part_id)%NodeForce(dir,inode)=FSI(part_id)%NodeForce_new(dir,inode)
    enddo
     ! in: init3_FSI
@@ -581,8 +581,8 @@ INTEGER_T inode,dir,allocate_intelem
  allocate(FSI(part_id)%Node_current(3,FSI(part_id)%NumNodes))
  allocate(FSI(part_id)%NodeVel_old(3,FSI(part_id)%NumNodes))
  allocate(FSI(part_id)%NodeVel_new(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeForce_old(6,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeForce_new(6,FSI(part_id)%NumNodes))
+ allocate(FSI(part_id)%NodeForce_old(3,FSI(part_id)%NumNodes))
+ allocate(FSI(part_id)%NodeForce_new(3,FSI(part_id)%NumNodes))
  allocate(FSI(part_id)%NodeTemp_old(FSI(part_id)%NumNodes))
  allocate(FSI(part_id)%NodeTemp_new(FSI(part_id)%NumNodes))
 
@@ -606,7 +606,7 @@ INTEGER_T inode,dir,allocate_intelem
    FSI(part_id)%NodeVel_old(dir,inode)=0.0
    FSI(part_id)%NodeVel_new(dir,inode)=0.0
   enddo
-  do dir=1,6
+  do dir=1,3
    FSI(part_id)%NodeForce_old(dir,inode)=0.0
    FSI(part_id)%NodeForce_new(dir,inode)=0.0
   enddo
@@ -942,7 +942,7 @@ INTEGER_T :: local_refine_factor
   enddo
   multi_lag(1)%ndmass(i)=FSI(part_id)%NodeMass(i)
   multi_lag(1)%nddensity(i)=FSI(part_id)%NodeDensity(i)
-  do dir=1,6
+  do dir=1,3
    multi_lag(1)%ndforce(dir,i)=FSI(part_id)%NodeForce(dir,i)
   enddo
   multi_lag(1)%ndtemp(i)=FSI(part_id)%NodeTemp(i)
@@ -996,7 +996,7 @@ INTEGER_T :: local_refine_factor
      enddo
      multi_lag(ilevel+1)%ndmass(i)=multi_lag(ilevel)%ndmass(i)
      multi_lag(ilevel+1)%nddensity(i)=multi_lag(ilevel)%nddensity(i)
-     do dir=1,6
+     do dir=1,3
       multi_lag(ilevel+1)%ndforce(dir,i)=multi_lag(ilevel)%ndforce(dir,i)
      enddo
      multi_lag(ilevel+1)%ndtemp(i)=multi_lag(ilevel)%ndtemp(i)
@@ -1027,7 +1027,7 @@ INTEGER_T :: local_refine_factor
     den1=multi_lag(ilevel_current)%nddensity(node1)
     den2=multi_lag(ilevel_current)%nddensity(node2)
     den3=multi_lag(ilevel_current)%nddensity(node3)
-    do dir=1,6
+    do dir=1,3
      force1(dir)=multi_lag(ilevel)%ndforce(dir,node1)
      force2(dir)=multi_lag(ilevel)%ndforce(dir,node2)
      force3(dir)=multi_lag(ilevel)%ndforce(dir,node3)
@@ -1047,7 +1047,7 @@ INTEGER_T :: local_refine_factor
       xsplit(dir)=0.5d0*(x1(dir)+x2(dir))
       velsplit(dir)=0.5d0*(vel1(dir)+vel2(dir))
      enddo
-     do dir=1,6
+     do dir=1,3
       forcesplit(dir)=0.5d0*(force1(dir)+force2(dir))
      enddo
 
@@ -1089,7 +1089,7 @@ INTEGER_T :: local_refine_factor
        multi_lag(ilevel+1)%nd(dir,nsplit)=xsplit(dir)
        multi_lag(ilevel+1)%ndvel(dir,nsplit)=velsplit(dir)
       enddo 
-      do dir=1,6
+      do dir=1,3
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%nddensity(nsplit)=den_split
@@ -1128,7 +1128,7 @@ INTEGER_T :: local_refine_factor
       xsplit(dir)=0.5d0*(x2(dir)+x3(dir))
       velsplit(dir)=0.5d0*(vel2(dir)+vel3(dir))
      enddo
-     do dir=1,6
+     do dir=1,3
       forcesplit(dir)=0.5d0*(force2(dir)+force3(dir))
      enddo
  
@@ -1167,7 +1167,7 @@ INTEGER_T :: local_refine_factor
        multi_lag(ilevel+1)%nd(dir,nsplit)=xsplit(dir)
        multi_lag(ilevel+1)%ndvel(dir,nsplit)=velsplit(dir)
       enddo 
-      do dir=1,6
+      do dir=1,3
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%nddensity(nsplit)=den_split
@@ -1204,7 +1204,7 @@ INTEGER_T :: local_refine_factor
       xsplit(dir)=0.5d0*(x1(dir)+x3(dir))
       velsplit(dir)=0.5d0*(vel1(dir)+vel3(dir))
      enddo
-     do dir=1,6
+     do dir=1,3
       forcesplit(dir)=0.5d0*(force1(dir)+force3(dir))
      enddo
 
@@ -1243,7 +1243,7 @@ INTEGER_T :: local_refine_factor
        multi_lag(ilevel+1)%nd(dir,nsplit)=xsplit(dir)
        multi_lag(ilevel+1)%ndvel(dir,nsplit)=velsplit(dir)
       enddo 
-      do dir=1,6
+      do dir=1,3
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%nddensity(nsplit)=den_split
@@ -1319,7 +1319,7 @@ INTEGER_T :: local_refine_factor
  allocate(FSI(part_id)%NodeBIG(3,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeNormalBIG(3,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeVelBIG(3,FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeForceBIG(6,FSI(part_id)%NumNodesBIG))
+ allocate(FSI(part_id)%NodeForceBIG(3,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeMassBIG(FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeDensityBIG(FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeTempBIG(FSI(part_id)%NumNodesBIG))
@@ -1353,7 +1353,7 @@ INTEGER_T :: local_refine_factor
    FSI(part_id)%NodeBIG(dir,inode)=multi_lag(n_lag_levels)%nd(dir,inode)
    FSI(part_id)%NodeVelBIG(dir,inode)=multi_lag(n_lag_levels)%ndvel(dir,inode)
   enddo
-  do dir=1,6
+  do dir=1,3
    FSI(part_id)%NodeForceBIG(dir,inode)= &
      multi_lag(n_lag_levels)%ndforce(dir,inode)
   enddo
@@ -1540,7 +1540,7 @@ INTEGER_T :: dir
 
 REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
 REAL_T, dimension(3) :: vel_local
-REAL_T, dimension(6) :: stress_local
+REAL_T, dimension(3) :: force_local
 REAL_T :: mass_local
 REAL_T :: density_local
 REAL_T :: volm1,volp1
@@ -1646,11 +1646,11 @@ INTEGER_T :: ctml_part_id
      volp1=half*sqrt(volp1)
     endif
 
-    do dir=1,6
-     stress_local(dir)=zero
+    do dir=1,3
+     force_local(dir)=zero
     enddo
-    do dir=1,2*AMREX_SPACEDIM
-     stress_local(dir)=ctml_fib_frc(ctml_part_id,inode,dir)
+    do dir=1,AMREX_SPACEDIM
+     force_local(dir)=ctml_fib_frc(ctml_part_id,inode,dir)
     enddo
     mass_local=ctml_fib_mass(ctml_part_id,inode)
     if (mass_local.gt.zero) then
@@ -1709,10 +1709,10 @@ INTEGER_T :: ctml_part_id
      FSI(part_id)%NodeVel_old(dir,inode)=vel_local(dir)
      FSI(part_id)%NodeVel_new(dir,inode)=vel_local(dir)
     enddo ! dir=1,3
-    do dir=1,6
-     FSI(part_id)%NodeForce(dir,inode)=stress_local(dir)
-     FSI(part_id)%NodeForce_old(dir,inode)=stress_local(dir)
-     FSI(part_id)%NodeForce_new(dir,inode)=stress_local(dir)
+    do dir=1,3
+     FSI(part_id)%NodeForce(dir,inode)=force_local(dir)
+     FSI(part_id)%NodeForce_old(dir,inode)=force_local(dir)
+     FSI(part_id)%NodeForce_new(dir,inode)=force_local(dir)
     enddo
 
      ! in: CTML_init_sci_node
@@ -1901,7 +1901,7 @@ INTEGER_T :: local_elements
 
     allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeVel(3,FSI(part_id)%NumNodes))
-    allocate(FSI(part_id)%NodeForce(6,FSI(part_id)%NumNodes))
+    allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
    else
     print *,"something wrong, ifirst should be 1 here"
@@ -2727,7 +2727,7 @@ INTEGER_T local_nodes,orig_nodes,dir
      FSI(part_id)%NodeVel_new(dir,inode+orig_nodes)= &
         FSI(part_id)%NodeVel(dir,orig_nodes)
     enddo ! dir=1..3
-    do dir=1,6
+    do dir=1,3
      FSI(part_id)%NodeForce(dir,inode+orig_nodes)= &
         FSI(part_id)%NodeForce(dir,inode)
      FSI(part_id)%NodeForce_old(dir,inode+orig_nodes)= &
@@ -5984,7 +5984,7 @@ INTEGER_T :: i,dir,istep
    FSI(part_id)%Node_old(dir,i)=FSI(part_id)%Node_new(dir,i)
    FSI(part_id)%NodeVel_old(dir,i)=FSI(part_id)%NodeVel_new(dir,i)
   enddo
-  do dir=1,6
+  do dir=1,3
    FSI(part_id)%NodeForce_old(dir,i)=FSI(part_id)%NodeForce_new(dir,i)
   enddo
  enddo
@@ -5994,7 +5994,7 @@ INTEGER_T :: i,dir,istep
    FSI(part_id)%Node(dir,i)=FSI(part_id)%Node_new(dir,i)
    FSI(part_id)%NodeVel(dir,i)=FSI(part_id)%NodeVel_new(dir,i)
   enddo
-  do dir=1,6
+  do dir=1,3
    FSI(part_id)%NodeForce(dir,i)=FSI(part_id)%NodeForce_new(dir,i)
   enddo
 
@@ -6039,7 +6039,7 @@ INTEGER_T :: i,dir,istep
    do dir=1,3
     FSI(part_id)%NodeVel_new(dir,i)=0.0
    enddo
-   do dir=1,6
+   do dir=1,3
     FSI(part_id)%NodeForce_new(dir,i)=0.0
    enddo
   enddo
@@ -6812,7 +6812,7 @@ INTEGER_T :: dir,inode,num_nodes
      enddo
      FSI(part_id)%NodeMass(inode)=one
      FSI(part_id)%NodeDensity(inode)=one
-     do dir=1,6
+     do dir=1,3
       FSI(part_id)%NodeForce(dir,inode)=zero
       FSI(part_id)%NodeForce_old(dir,inode)=zero
       FSI(part_id)%NodeForce_new(dir,inode)=zero
@@ -8148,7 +8148,7 @@ return
 end subroutine CLSVOF_FILLCONTAINER
 
 ! nFSI==nparts*nFSI_sub
-! nparts x (vel + LS + temperature + flag + stress)
+! nparts x (vel + LS + temperature + flag + force)
 ! mask=0 prior to entry
 ! mask=1 velocity is init from fine lev, but sign is not
 ! mask=2 both sign and velocity are init on fine lev
@@ -8254,7 +8254,7 @@ IMPLICIT NONE
   REAL_T :: dotprod
   REAL_T :: unsigned_mindist  ! unsigned
   REAL_T :: weighttotal,distwt,weight
-    ! (vel + LS + temperature + flag + stress)
+    ! (vel + LS + temperature + flag + force)
   REAL_T, dimension(nFSI_sub) :: weight_top 
   REAL_T :: weight_bot
   REAL_T, dimension(3) :: minnode,maxnode
@@ -8276,7 +8276,7 @@ IMPLICIT NONE
   INTEGER_T mask_local,mask_node
   INTEGER_T new_mask_local
   REAL_T, dimension(3) :: vel_local
-  REAL_T, dimension(6) :: stress_local
+  REAL_T, dimension(6) :: force_local
   REAL_T temp_local
   INTEGER_T nc
   INTEGER_T sign_defined
@@ -8463,13 +8463,13 @@ IMPLICIT NONE
     stop
    endif
 
-    ! nparts x (vel + LS + temperature + flag + stress)
+    ! nparts x (vel + LS + temperature + flag + force)
 
    if (nFSI.ne.nparts*nFSI_sub) then
     print *,"nFSI invalid"
     stop
    endif
-   if (nFSI_sub.ne.12) then
+   if (nFSI_sub.ne.9) then
     print *,"nFSI_sub invalid CLSVOF_InitBox: ",nFSI_sub
     stop
    endif
@@ -8507,12 +8507,12 @@ IMPLICIT NONE
     !
     ! in NavierStokes::FSI_make_distance FSI_MF is initialized as
     ! follows:
-    ! nparts x (vel + LS + temperature + flag + stress)
+    ! nparts x (vel + LS + temperature + flag + force)
     ! velocity=0.0
     ! LS=-99999
     ! temperature=0.0
     ! mask=0.0
-    ! stress=0.0
+    ! force=0.0
     !
     ! then in NavierStokes::ns_header_msg_level:
     ! 1. fill coarse patch if level>0 and copy into level state variable
@@ -8692,7 +8692,7 @@ IMPLICIT NONE
             ! calls either CTML_DELTA or hsprime
            call check_force_weightBIG(xmap3D,inode,ielem, &
             xx,part_id,time,dxBB,force_weight,force_vector)
-           ! nparts x (vel + LS + temperature + flag + stress)
+           ! nparts x (vel + LS + temperature + flag + force)
            do dir=1,3
             FSIdata3D(i,j,k,ibase+6+dir)=  &
               FSIdata3D(i,j,k,ibase+6+dir)+ &
@@ -8700,7 +8700,8 @@ IMPLICIT NONE
            enddo 
           enddo ! inode=1,nodes_per_elem
          else if (CTML_force_model.eq.1) then
-          ! do nothing
+          print *,"CTML_force_model.eq.1 not supported"
+          stop
          else
           print *,"CTML_force_model invalid"
           stop
@@ -8959,14 +8960,14 @@ IMPLICIT NONE
 
          modify_vel=0
 
-         ! nmat x (vel + LS + temperature + flag + stress)
+         ! nmat x (vel + LS + temperature + flag + force)
          ls_local=FSIdata3D(i,j,k,ibase+4)
          mask_local=NINT(FSIdata3D(i,j,k,ibase+6))
          do dir=1,3
           vel_local(dir)=FSIdata3D(i,j,k,ibase+dir)
          enddo
-         do dir=1,6
-          stress_local(dir)=FSIdata3D(i,j,k,ibase+6+dir)
+         do dir=1,3
+          force_local(dir)=FSIdata3D(i,j,k,ibase+6+dir)
          enddo
          temp_local=FSIdata3D(i,j,k,ibase+5)
 
@@ -9041,8 +9042,8 @@ IMPLICIT NONE
            do dir=1,3
             vel_local(dir)=0.0d0
            enddo
-           do dir=1,6
-            stress_local(dir)=0.0d0
+           do dir=1,3
+            force_local(dir)=0.0d0
            enddo
            temp_local=0.0d0
 
@@ -9058,7 +9059,7 @@ IMPLICIT NONE
              print *,"massparm invalid"
              stop
             endif
-            do dir=1,6
+            do dir=1,3
              forceparm(dir)=FSI(part_id)%NodeForceBIG(dir,nodeptr)
             enddo
             call get_target_from_foot(xfoot,xtarget, &
@@ -9081,8 +9082,8 @@ IMPLICIT NONE
             do dir=1,3
              vel_local(dir)=vel_local(dir)+weight*velparm(dir)
             enddo
-            do dir=1,6
-             stress_local(dir)=stress_local(dir)+ &
+            do dir=1,3
+             force_local(dir)=force_local(dir)+ &
               weight*FSI(part_id)%NodeForceBIG(dir,nodeptr)
             enddo
             temp_local=temp_local+ & 
@@ -9093,8 +9094,8 @@ IMPLICIT NONE
            do dir=1,3
             vel_local(dir)=vel_local(dir)/weighttotal
            enddo
-           do dir=1,6
-            stress_local(dir)=stress_local(dir)/weighttotal
+           do dir=1,3
+            force_local(dir)=force_local(dir)/weighttotal
            enddo
 
            if ((probtype.eq.9).and.(axis_dir.gt.1)) then
@@ -9130,16 +9131,15 @@ IMPLICIT NONE
           stop
          endif 
 
-         ! nparts x (vel + LS + temperature + flag + stress)
+         ! nparts x (vel + LS + temperature + flag + force)
          FSIdata3D(i,j,k,ibase+4)=ls_local
          FSIdata3D(i,j,k,ibase+6)=mask_local
          do dir=1,3
           FSIdata3D(i,j,k,ibase+dir)=vel_local(dir)
          enddo 
          if (CTML_force_model.eq.1) then
-          do dir=1,6
-           FSIdata3D(i,j,k,ibase+6+dir)=stress_local(dir)
-          enddo 
+          print *,"CTML_force_model.eq.1 not supported"
+          stop
          else if (CTML_force_model.eq.0) then
           ! do nothing
          else
@@ -9219,7 +9219,7 @@ IMPLICIT NONE
      !  coarse/fine ghost cell.
      if ((mask1.eq.0).or.(mask2.eq.1)) then
 
-      ! nparts x (vel + LS + temperature + flag + stress)
+      ! nparts x (vel + LS + temperature + flag + force)
       ls_local=FSIdata3D(i,j,k,ibase+4)
       mask_local=NINT(FSIdata3D(i,j,k,ibase+6))
 
@@ -9276,7 +9276,7 @@ IMPLICIT NONE
        stop
       endif
 
-      ! nparts x (vel + LS + temperature + flag + stress)
+      ! nparts x (vel + LS + temperature + flag + force)
       FSIdata3D(i,j,k,ibase+4)=ls_local
       FSIdata3D(i,j,k,ibase+6)=mask_local
 
@@ -9307,7 +9307,7 @@ IMPLICIT NONE
      !  coarse/fine ghost cell.
      if ((mask1.eq.0).or.(mask2.eq.1)) then
 
-      ! nparts x (vel + LS + temperature + flag + stress)
+      ! nparts x (vel + LS + temperature + flag + force)
       ls_local=FSIdata3D(i,j,k,ibase+4)
       mask_local=NINT(FSIdata3D(i,j,k,ibase+6))
       if (mask_local.eq.103) then   !doubly wetted, d init
@@ -9524,7 +9524,7 @@ IMPLICIT NONE
        !  coarse/fine ghost cell.
        if ((mask1.eq.0).or.(mask2.eq.1)) then
 
-        ! nparts x (vel + LS + temperature + flag + stress)
+        ! nparts x (vel + LS + temperature + flag + force)
         mask_local=NINT(old_FSIdata(i,j,k,ibase+6))
         ls_local=old_FSIdata(i,j,k,ibase+4)
         new_mask_local=mask_local
@@ -9562,7 +9562,7 @@ IMPLICIT NONE
            mminus=0
           else if ((i_norm.gt.FSI_growlo(dir)).and. &
                    (i_norm.le.FSI_growhi(dir))) then
-           ! nparts x (vel + LS + temperature + flag + stress)
+           ! nparts x (vel + LS + temperature + flag + force)
            do nc=1,nFSI_sub
             data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
            enddo
@@ -9578,7 +9578,7 @@ IMPLICIT NONE
            mplus=0
           else if ((i_norm.ge.FSI_growlo(dir)).and. &
                    (i_norm.lt.FSI_growhi(dir))) then
-           ! nparts x (vel + LS + temperature + flag + stress)
+           ! nparts x (vel + LS + temperature + flag + force)
            do nc=1,nFSI_sub
             data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
            enddo
@@ -9693,12 +9693,12 @@ IMPLICIT NONE
 
          if (vel_valid(mask_local).eq.0) then 
 
-          if (nFSI_sub.ne.12) then
-           print *,"nFSI_sub.ne.12"
+          if (nFSI_sub.ne.9) then
+           print *,"nFSI_sub.ne.9"
            stop
           endif
 
-          ! (vel + LS + temperature + flag + stress)
+          ! (vel + LS + temperature + flag + force)
           do dir=1,nFSI_sub
            weight_top(dir)=zero
           enddo
@@ -9721,7 +9721,7 @@ IMPLICIT NONE
               stop
              endif
              weight=one/weight
-             ! nparts x (vel + LS + temperature + flag + stress)
+             ! nparts x (vel + LS + temperature + flag + force)
              do dir=1,3
               weight_top(dir)=weight_top(dir)+ &
                old_FSIdata(i+i1,j+j1,k+k1,ibase+dir)*weight
@@ -9729,8 +9729,8 @@ IMPLICIT NONE
               ! temperature
              weight_top(5)=weight_top(5)+ &
                old_FSIdata(i+i1,j+j1,k+k1,ibase+5)*weight
-              ! stress
-             do dir=1,6
+              ! force
+             do dir=1,3
               weight_top(6+dir)=weight_top(6+dir)+ &
                old_FSIdata(i+i1,j+j1,k+k1,ibase+6+dir)*weight
              enddo
@@ -9747,15 +9747,14 @@ IMPLICIT NONE
           enddo
           enddo ! i1,j1,k1
           if (weight_bot.gt.zero) then
-           ! (vel + LS + temperature + flag + stress)
+           ! (vel + LS + temperature + flag + force)
            do dir=1,3
             FSIdata3D(i,j,k,ibase+dir)=weight_top(dir)/weight_bot
            enddo
            FSIdata3D(i,j,k,ibase+5)=weight_top(5)/weight_bot
            if (CTML_force_model.eq.1) then
-            do dir=1,6
-             FSIdata3D(i,j,k,ibase+6+dir)=weight_top(6+dir)/weight_bot
-            enddo
+            print *,"CTML_force_model.eq.1 not supported"
+            stop
            else if (CTML_force_model.eq.0) then
             ! do nothing
            else
@@ -9766,15 +9765,14 @@ IMPLICIT NONE
            if (sweepmax.eq.1) then
             ! do nothing
            else if (sweepmax.eq.2) then
-            ! (vel + LS + temperature + flag + stress)
+            ! (vel + LS + temperature + flag + force)
             do dir=1,3
              old_FSIdata(i,j,k,ibase+dir)=weight_top(dir)/weight_bot
             enddo
             old_FSIdata(i,j,k,ibase+5)=weight_top(5)/weight_bot
             if (CTML_force_model.eq.1) then
-             do dir=1,6
-              old_FSIdata(i,j,k,ibase+6+dir)=weight_top(6+dir)/weight_bot
-             enddo
+             print *,"CTML_force_model.eq.1 not supported"
+             stop
             else if (CTML_force_model.eq.0) then
              ! do nothing
             else
@@ -9816,7 +9814,7 @@ IMPLICIT NONE
          stop
         endif
 
-        ! (vel + LS + temperature + flag + stress)
+        ! (vel + LS + temperature + flag + force)
         FSIdata3D(i,j,k,ibase+6)=new_mask_local 
         FSIdata3D(i,j,k,ibase+4)=ls_local 
 
@@ -10099,13 +10097,13 @@ end subroutine CLSVOF_InitBox
         stop
        endif
 
-        ! nparts x (vel + LS + temperature + flag + stress)
+        ! nparts x (vel + LS + temperature + flag + force)
 
        if (nFSI.ne.nparts*nFSI_sub) then
         print *,"nFSI invalid"
         stop
        endif
-       if (nFSI_sub.ne.12) then
+       if (nFSI_sub.ne.9) then
         print *,"nFSI_sub invalid CLSVOF_Copy_To_LAG: ",nFSI_sub
         stop
        endif
