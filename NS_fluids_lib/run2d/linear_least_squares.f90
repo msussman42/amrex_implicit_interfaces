@@ -27,8 +27,13 @@
        sumx2=sumx2+x**2
        sumxy=sumxy+x*y
       enddo
+       !y=A x^p
+       !log y=logA + p log x
+       ! alpha=logA
+       ! A=e^alpha
       p=(N*sumxy-sumx*sumy)/(N*sumx2-sumx**2)
       A=(sumy*sumx2-sumx*sumxy)/(N*sumx2-sumx**2)
+      A=exp(A)
       print *,"A,p ",A,p
 
       END PROGRAM
