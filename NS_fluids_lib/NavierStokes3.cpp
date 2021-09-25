@@ -7679,7 +7679,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
     max_face_wt[tid_current].dataPtr(),
     presbc.dataPtr(),
     &visc_coef,
-    &constant_viscosity,
+    &uncoupled_viscosity,
     &project_option);
 
   }  // mfi
@@ -10538,7 +10538,21 @@ void NavierStokes::multiphase_project(int project_option) {
                 (enable_spectral==3)) {  // SEM time
 
       if (project_option==3) { //viscosity
-       BICGSTAB_ACTIVE=1;
+
+       if (uncoupled_viscosity==1) {
+        BICGSTAB_ACTIVE=0;
+       } else if (uncoupled_viscosity==0) {
+        BICGSTAB_ACTIVE=1;
+       } else
+        amrex::Error("uncoupled_viscosity invalid");
+
+       if (always_use_bicgstab==1) {
+        BICGSTAB_ACTIVE=1;
+       } else if (always_use_bicgstab==0) {
+        // do nothing
+       } else
+        amrex::Error("always_use_bicgstab invalid");
+
       } else if (project_option_is_valid(project_option)==1) {
 
        if (always_use_bicgstab==1) {
@@ -12298,11 +12312,11 @@ void NavierStokes::veldiffuseALL() {
  // u+=dt * (v^2/r +2 omega v)
  // v+=dt * (-uv/r -2 omega u)
  //
- // constant_viscosity==0:
+ // uncoupled_viscosity==0:
  // u=u-dt * (1/r) * mu * (3 v_t/r + 2 u/r)/rho
  // v=v+dt * (1/r) * mu * (3 u_t/r - v/r) 
  //
- // constant_viscosity==1:
+ // uncoupled_viscosity==1:
  // u=u-dt * (1/r) * mu * (2 v_t/r + u/r)/rho
  // v=v+dt * (1/r) * mu * (2 u_t/r - v/r) 
  //

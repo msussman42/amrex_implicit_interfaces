@@ -122,8 +122,8 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=1 # adv_dir=1 (x direction)
 ns.heatviscconst=0.0 0.0 0.0 0.0
-#ns.constant_viscosity=0  # gas lens
-ns.constant_viscosity=1  # liquid lens
+#ns.uncoupled_viscosity=0  # gas lens
+ns.uncoupled_viscosity=1  # liquid lens
 #ns.viscconst=1.0 0.01 1.0 # gas lens
 ns.viscconst=1.0 1.0 1.0 # liquid lens
 #ns.denconst=1.0 0.001 1.0 # gas lens

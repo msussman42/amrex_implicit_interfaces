@@ -688,7 +688,7 @@ stop
 
       subroutine SEM_VISC_SANITY(caller_id,dt,xsten,nhalf, &
          flux_in,dir,velcomp,use_dt,use_HO,project_option,bfact, &
-         enable_spectral,constant_viscosity)
+         enable_spectral,uncoupled_viscosity)
       use global_utility_module
       IMPLICIT NONE
 
@@ -701,7 +701,7 @@ stop
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: uncoupled_viscosity
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: flux_in
@@ -755,7 +755,7 @@ stop
        print *,"project_option=",project_option
        print *,"bfact=",bfact
        print *,"enable_spectral=",enable_spectral
-       print *,"constant_viscosity=",constant_viscosity
+       print *,"uncoupled_viscosity=",uncoupled_viscosity
        stop
       endif
       if ((dir.eq.-1).or. &
@@ -785,12 +785,13 @@ stop
        stop
       endif
 
-      if ((constant_viscosity.eq.0).or.(constant_viscosity.eq.1)) then
+      if ((uncoupled_viscosity.eq.0).or. &
+          (uncoupled_viscosity.eq.1)) then
        if (dir.eq.-1) then
-        if (constant_viscosity.eq.1) then
+        if (uncoupled_viscosity.eq.1) then
          ! do nothing
         else
-         print *,"constant_viscosity invalid"
+         print *,"uncoupled_viscosity invalid"
          stop
         endif
        else if ((dir.ge.1).and.(dir.le.SDIM)) then
@@ -800,7 +801,7 @@ stop
         stop
        endif
       else
-       print *,"constant_viscosity invalid"
+       print *,"uncoupled_viscosity invalid"
        stop
       endif
 
@@ -883,12 +884,12 @@ stop
             (caller_id.eq.3).or. &
             (caller_id.eq.4).or. &
             (caller_id.eq.5)) then
-         if (constant_viscosity.eq.1) then
+         if (uncoupled_viscosity.eq.1) then
           flux_err=abs(flux_exact-flux_in)
-         else if (constant_viscosity.eq.0) then
+         else if (uncoupled_viscosity.eq.0) then
           flux_err=abs(flux_exact_tensor-flux_in)
          else
-          print *,"constant_viscosity invalid"
+          print *,"uncoupled_viscosity invalid"
           stop
          endif
         else
@@ -13114,7 +13115,8 @@ END SUBROUTINE Adist
        dd,dd_group, &
        visc_coef, &
        nsolve,dir,veldir,project_option, &
-       constant_viscosity,side,local_presbc,local_wt)
+       uncoupled_viscosity, &
+       side,local_presbc,local_wt)
       use global_utility_module
       IMPLICIT NONE
 
@@ -13127,7 +13129,7 @@ END SUBROUTINE Adist
       REAL_T, intent(out) :: dd_group
       REAL_T, intent(in) :: visc_coef
       INTEGER_T, intent(in) :: nsolve,dir,veldir,project_option
-      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: uncoupled_viscosity
       INTEGER_T, intent(in) :: side
       INTEGER_T, intent(in) :: local_presbc
       REAL_T, intent(out) :: local_wt(nsolve)
@@ -13145,7 +13147,7 @@ END SUBROUTINE Adist
           (dir.ge.0).and. &
           (dir.lt.SDIM).and. &
           (project_option_is_validF(project_option).eq.1).and. &
-          (constant_viscosity.ge.0).and. &
+          (uncoupled_viscosity.ge.0).and. &
           (side.ge.0).and. &
           (level.ge.0).and. &
           (level.le.finest_level)) then
@@ -13382,14 +13384,14 @@ END SUBROUTINE Adist
         ddfactor=one
         if ((dd_group.ge.zero).and. &
             (cc_group.eq.one)) then
-         if (constant_viscosity.eq.0) then
+         if (uncoupled_viscosity.eq.0) then
           if (dir+1.eq.veldir) then
            ddfactor=two
           endif
-         else if (constant_viscosity.eq.1) then
+         else if (uncoupled_viscosity.eq.1) then
           ! do nothing
          else
-          print *,"constant_viscosity invalid"
+          print *,"uncoupled_viscosity invalid"
           stop
          endif
 
@@ -13439,7 +13441,7 @@ END SUBROUTINE Adist
        print *,"dir=",dir
        print *,"side=",side
        print *,"project_option=",project_option
-       print *,"constant_viscosity=",constant_viscosity
+       print *,"uncoupled_viscosity=",uncoupled_viscosity
        stop
       endif
 
@@ -16860,7 +16862,7 @@ END SUBROUTINE Adist
              ! use_dt=1 dir=-1
              ! use_HO=1
              ! enable_spectral=1
-             ! constant_viscosity=1
+             ! uncoupled_viscosity=1
             local_div_val=divu/VOLTERM
             call SEM_VISC_SANITY(10,dt,xsten,nhalf,local_div_val, &
               -1,nc,1,1,project_option,bfact,1,1)

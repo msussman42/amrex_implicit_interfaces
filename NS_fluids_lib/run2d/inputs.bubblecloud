@@ -49,7 +49,7 @@ ns.visual_side_max = 512
 
 amr.n_cell    = 128  128
 amr.max_level =  0
-#ns.constant_viscosity=1
+#ns.uncoupled_viscosity=1
 ns.radblob4=2000.0
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid

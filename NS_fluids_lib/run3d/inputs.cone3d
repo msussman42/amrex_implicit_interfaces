@@ -125,7 +125,7 @@ ns.advbot=0.0
 ns.adv_vel=0.2143  # inflow velocity in the x-direction (see cone3D.F90)
 ns.adv_dir=1  # not used (adv_dir=1,2,3; adv_dir==1 is a good placeholder)
 ns.viscconst=1.825e-5 1.825e-5
-ns.constant_viscosity=0
+ns.uncoupled_viscosity=0
 ns.tempconst=293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 #ns.material_type=1 999 # COMPRESSIBLE (EOS_tait)

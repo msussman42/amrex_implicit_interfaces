@@ -85,7 +85,7 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
 // hoop term 1st component:  -3 v_t/r^2 - 2 u/r^2
 // hoop term 2nd component:   3 u_t/r^2 - v/r^2
 // 
-// If constant_viscosity==true:
+// If uncoupled_viscosity==true:
 // hoop term 1st component:  -2 v_t/r^2 - u/r^2
 // hoop term 2nd component:   2 u_t/r^2 - v/r^2
 // No coupling terms.
@@ -292,7 +292,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &finest_level,
    &local_visc_coef,
    &angular_velocity,
-   &constant_viscosity,
+   &uncoupled_viscosity,
    &update_state,
    &dt_slab,
    &rzflag,

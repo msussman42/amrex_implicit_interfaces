@@ -4,7 +4,6 @@
 #ifdef BL_LANG_FORT
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
-#    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
@@ -19,7 +18,6 @@
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_CELLFACEINIT CELLFACEINIT
 #    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
-#    define FORT_RENORMALIZE_PRESCRIBE RENORMALIZE_PRESCRIBE
 #    define FORT_PURGEFLOTSAM PURGEFLOTSAM
 #    define FORT_INITSUPERELASTIC INITSUPERELASTIC
 #    define FORT_INITRECALESCE INITRECALESCE
@@ -34,7 +32,6 @@
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_CELLFACEINIT cellfaceinit
 #    define FORT_NEUMANNEXTRAP neumannextrap
-#    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe
 #    define FORT_PURGEFLOTSAM purgeflotsam
 #    define FORT_INITRECALESCE initrecalesce
 #    define FORT_GETTYPEFAB gettypefab
@@ -47,7 +44,6 @@
 #  else
 #    define FORT_CELLFACEINIT cellfaceinit_
 #    define FORT_NEUMANNEXTRAP neumannextrap_
-#    define FORT_RENORMALIZE_PRESCRIBE renormalize_prescribe_
 #    define FORT_PURGEFLOTSAM purgeflotsam_
 #    define FORT_INITRECALESCE initrecalesce_
 #    define FORT_GETTYPEFAB gettypefab_
@@ -250,7 +246,7 @@ namespace amrex{
      const int* domlo,const int* domhi);
 
 
-     void FORT_RENORMALIZE_PRESCRIBE(
+     void fort_renormalize_prescribe(
        int* tid,
        int* level,int* finest_level,
        Real* solid_time,
@@ -619,7 +615,7 @@ namespace amrex{
         Real* max_face_wt,
         int* presbc,
         Real* visc_coef,
-        int* constant_viscosity,
+        int* uncoupled_viscosity,
         int* project_option);
 
 

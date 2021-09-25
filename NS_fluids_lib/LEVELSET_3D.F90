@@ -8364,8 +8364,8 @@ stop
       INTEGER_T FD_curv_interp
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T micro_table(nmat,nmat)
-      REAL_T predict_face_afrac_solid
-      REAL_T predict_face_afrac_prescribed
+      REAL_T predict_face_afrac_solid !=0 if clamped or is_rigid
+      REAL_T predict_face_afrac_prescribed !=0 if clamped or prescribed
       INTEGER_T is_solid_face
       INTEGER_T is_prescribed_face
       INTEGER_T im_solid
@@ -12284,7 +12284,7 @@ stop
            ! divu=-dt VOLTERM * visc_coef div(2 mu D) project_option==3
            ! use_dt=1 dir=-1
            ! use_HO=0
-           ! constant_viscosity=1
+           ! uncoupled_viscosity=1
           local_div_val=divu/VOLTERM
 
           if ((local_div_val.ge.zero).or.(local_div_val.le.zero)) then
@@ -16076,7 +16076,7 @@ stop
        max_face_wt, & ! static variable
        presbc_arr, &
        visc_coef, &
-       constant_viscosity, &
+       uncoupled_viscosity, &
        project_option) &
       bind(c,name='fort_buildfacewt')
 
@@ -16096,7 +16096,7 @@ stop
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: ncphys
       REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: uncoupled_viscosity
       INTEGER_T, intent(in) :: project_option
       REAL_T, intent(inout) :: min_face_wt(4)
       REAL_T, intent(inout) :: max_face_wt(4)
@@ -16182,9 +16182,9 @@ stop
        stop
       endif
 
-      if ((constant_viscosity.ne.0).and. &
-          (constant_viscosity.ne.1)) then
-       print *,"constant_viscosity invalid"
+      if ((uncoupled_viscosity.ne.0).and. &
+          (uncoupled_viscosity.ne.1)) then
+       print *,"uncoupled_viscosity invalid"
        stop
       endif
 
@@ -16348,7 +16348,7 @@ stop
              dd,dd_group, &
              visc_coef, &
              nsolve,dir,veldir,project_option, &
-             constant_viscosity,side,local_presbc,local_wt)
+             uncoupled_viscosity,side,local_presbc,local_wt)
 
             if (dd_group.lt.min_face_wt(1)) then
              min_face_wt(1)=dd_group
@@ -16476,7 +16476,7 @@ stop
        ! solid: velx,vely,velz,dist  (dist<0 in solid)
        ! called from: NavierStokes::prescribe_solid_geometry
        !   (declared in NavierStokes2.cpp)
-      subroutine FORT_RENORMALIZE_PRESCRIBE( &
+      subroutine fort_renormalize_prescribe( &
        tid, &
        level,finest_level, &
        solid_time, &
@@ -16507,7 +16507,8 @@ stop
        num_LS_extrap_iter, &
        LS_extrap_iter, &
        ngrow_distance, &
-       constant_density_all_time)
+       constant_density_all_time) &
+      bind(c,name='fort_renormalize_prescribe')
       use global_utility_module
       use global_distance_module
       use probf90_module
@@ -16553,19 +16554,32 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(velnew)
       INTEGER_T, intent(in) :: DIMDEC(dennew)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      REAL_T, intent(inout) ::  vofnew(DIMV(vofnew),nmat*ngeom_raw)
-      REAL_T, intent(in) ::  vel(DIMV(vel),SDIM+1)
-      REAL_T, intent(out) ::  velnew(DIMV(velnew),SDIM+1)
-      REAL_T, intent(in), target ::  &
+      REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),nmat*ngeom_raw)
+      REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vel(DIMV(vel),SDIM+1)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: velnew(DIMV(velnew),SDIM+1)
+      REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target ::  &
               LS(DIMV(LS),nmat*(1+SDIM))
-      REAL_T, intent(in) ::  state_mof(DIMV(state_mof),nmat*ngeom_raw)
-      REAL_T, intent(in) ::  den(DIMV(den),nmat*num_state_material)
-      REAL_T, intent(inout) ::  dennew(DIMV(dennew),nmat*num_state_material)
-      REAL_T, intent(inout) ::  lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      REAL_T, intent(in) ::  solxfab(DIMV(solxfab),SDIM*nparts_def)
-      REAL_T, intent(in) ::  solyfab(DIMV(solyfab),SDIM*nparts_def)
-      REAL_T, intent(in) ::  solzfab(DIMV(solzfab),SDIM*nparts_def)
-      REAL_T, intent(in) ::  maskcov(DIMV(maskcov))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: state_mof(DIMV(state_mof),nmat*ngeom_raw)
+      REAL_T, pointer :: state_mof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: &
+              dennew(DIMV(dennew),nmat*num_state_material)
+      REAL_T, pointer :: dennew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
+      REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
+      REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
@@ -16701,7 +16715,7 @@ stop
 
       tessellate=0
 
-      nmax=POLYGON_LIST_MAX  ! in: RENORMALIZE_PRESCRIBE
+      nmax=POLYGON_LIST_MAX  ! in: fort_renormalize_prescribe
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
        stop
@@ -16769,11 +16783,11 @@ stop
       endif
 
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid RENORMALIZE_PRESCRIBE"
+       print *,"nparts invalid fort_renormalize_prescribe"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid RENORMALIZE_PRESCRIBE"
+       print *,"nparts_def invalid fort_renormalize_prescribe"
        stop
       endif
 
@@ -16850,20 +16864,32 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(velnew),1,-1,26)
+      vofnew_ptr=>vofnew
+      call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1,26)
+      velnew_ptr=>velnew
+      call checkbound_array(fablo,fabhi,velnew_ptr,1,-1,26)
 
-      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,26)
-      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,26)
-      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,26)
+      solxfab_ptr=>solxfab
+      solyfab_ptr=>solyfab
+      solzfab_ptr=>solzfab
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,26)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,26)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,26)
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),0,-1,26)
-      call checkbound(fablo,fabhi,DIMS(LS),ngrow_distance,-1,26)
-      call checkbound(fablo,fabhi,DIMS(state_mof),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(vel),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(dennew),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,26)
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,0,-1,26)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS,ngrow_distance,-1,26)
+      state_mof_ptr=>state_mof
+      call checkbound_array(fablo,fabhi,state_mof_ptr,1,-1,26)
+      vel_ptr=>vel
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,26)
+      den_ptr=>den
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,26)
+      dennew_ptr=>dennew
+      call checkbound_array(fablo,fabhi,dennew_ptr,1,-1,26)
+      lsnew_ptr=>lsnew
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,26)
 
       istenlo(3)=0
       istenhi(3)=0
@@ -16908,7 +16934,8 @@ stop
            if (constant_density_all_time(im).eq.1) then
             ! do nothing
            else
-            print *,"constant_density_all_time(im) invalid, RENORM"
+            print *,"constant_density_all_time(im) invalid"
+            print *,"in: fort_renormalize_prescribe"
             stop
            endif
           else if (is_rigid(nmat,im).eq.0) then
@@ -16929,7 +16956,7 @@ stop
 
              F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
-              ! in: subroutine FORT_RENORMALIZE_PRESCRIBE
+              ! in: subroutine fort_renormalize_prescribe
 
              istate=1
              do while (istate.le.num_state_material)
@@ -16955,7 +16982,8 @@ stop
                  stop
                 endif
                else
-                print *,"constant_density_all_time(im) invalid, RENORM2"
+                print *,"constant_density_all_time(im) invalid"
+                print *,"fort_renormalize_prescribe (2)"
                 stop
                endif
                istate=istate+1
@@ -17062,7 +17090,7 @@ stop
          partid_max=0
 
          if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-          print *,"nparts invalid FORT_RENORMALIZE_PRESCRIBE"
+          print *,"nparts invalid fort_renormalize_prescribe"
           stop
          endif
 
@@ -17088,7 +17116,8 @@ stop
              LS_solid_new(im),time,im)
 
             if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                (FSI_flag(im).eq.4)) then ! CTML FSI
+                (FSI_flag(im).eq.8).or. & ! CTML FSI, pres vel
+                (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
              LS_solid_new(im)=LS(D_DECL(i,j,k),im)
             else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
              ! do nothing
@@ -17121,7 +17150,8 @@ stop
              im)
 
             if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                (FSI_flag(im).eq.4)) then ! CTML FSI
+                (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
+                (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
              vofcompraw=(im-1)*ngeom_raw+1
              vfrac_solid_new(im)=vofnew(D_DECL(i,j,k),vofcompraw)
              do dir=1,SDIM
@@ -17149,7 +17179,8 @@ stop
              time,im)
 
             if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                (FSI_flag(im).eq.4)) then ! CTML FSI
+                (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
+                (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
              do dir=1,SDIM
               nslope_solid(dir)=LS(D_DECL(i,j,k),nmat+SDIM*(im-1)+dir)
              enddo
@@ -17217,7 +17248,8 @@ stop
               endif
              else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
               if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                  (FSI_flag(im).eq.4)) then ! CTML FSI
+                  (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
+                  (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
                ! den_hold(statecomp) already has the solid temperature
               else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
@@ -17477,7 +17509,7 @@ stop
            if (im1_substencil.eq.0) then
 
             if (abs(LS_solid_new(im_solid_max)).le.VOFTOL*dxmaxLS) then
-             print *,"all materials disappeared in FORT_RENORMALIZE_PRESCRIBE?"
+             print *,"all materials disappeared in fort_renormalize_prescribe?"
              print *,"abs(LS_solid_new(im_solid_max)) very small, ", &
               abs(LS_solid_new(im_solid_max))
              print *,"but yet no negative values for "
@@ -17967,8 +17999,7 @@ stop
 
 
       return
-      end subroutine FORT_RENORMALIZE_PRESCRIBE
-
+      end subroutine fort_renormalize_prescribe
 
 
       subroutine FORT_PURGEFLOTSAM( &

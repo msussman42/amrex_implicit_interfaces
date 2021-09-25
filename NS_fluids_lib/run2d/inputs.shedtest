@@ -29,7 +29,7 @@ Lp.v = 1
 
 ns.sharp_solid=0
 ns.conservative_advection=1
-ns.constant_viscosity=1
+ns.uncoupled_viscosity=1
 amr.n_cell    = 64 64
 amr.max_level =  0
 ns.densolid=1.0e+8

@@ -2269,7 +2269,7 @@ protected:
     static Vector<Real> stiffCV; // def=4.1855E+7
     static Vector<Real> stiffGAMMA;
 
-    static int constant_viscosity;
+    static int uncoupled_viscosity;
 
     static Real angular_velocity;
     static Vector<Real> DrhoDT; // default 0.0

@@ -71,7 +71,7 @@ ns.redist_on_init=0
 
 ns.extrapolation_order=1  # default
 ns.conserve_vof=4   # default
-ns.constant_viscosity=0
+ns.uncoupled_viscosity=0
 
 ns.overlap=0.0
 ns.is_twophase=1

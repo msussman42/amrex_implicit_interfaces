@@ -149,7 +149,7 @@ ns.twall=20.03820  # twall-tempconst=Delta T
 ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2
-ns.constant_viscosity=1
+ns.uncoupled_viscosity=1
 # Re=rho U L/mu  units of mu=(kg/m^3) (m/s) (m) = kg/(m s)
 # units of nu are kg/(m s)  (m^3/kg) = m^2/s
 ns.viscconst= 0.0100798 0.0100798 

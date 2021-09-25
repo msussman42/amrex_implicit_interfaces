@@ -43,7 +43,7 @@ extern "C"
       int* finest_level,
       Real* visc_coef,
       Real* angular_velocity,
-      int* constant_viscosity,
+      int* uncoupled_viscosity,
       int* update_state,
       Real* dt,
       int* rzflag,

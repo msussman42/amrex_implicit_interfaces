@@ -989,7 +989,7 @@ extern "C"
      int* nmat,
      int* nden,
      int* ntensor,
-     int* constant_viscosity,
+     int* uncoupled_viscosity,
      int* homflag);
 
    void fort_mac_elastic_force(

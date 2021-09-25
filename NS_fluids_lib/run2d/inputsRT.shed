@@ -38,7 +38,7 @@ mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 1
 
-ns.constant_viscosity=0
+ns.uncoupled_viscosity=0
 amr.n_cell    = 128 16
 amr.max_level =  2  # 6
 # 0- 1 level 1- 2 levels  2- 3 levels
