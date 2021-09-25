@@ -26259,7 +26259,7 @@ end subroutine initialize2d
        ! grad= -dt k grad S 
        ! called from: NavierStokes::viscous_boundary_fluxes
        ! which is called from: NavierStokes::apply_pressure_grad
-      subroutine FORT_VISCFLUXFILL ( &
+      subroutine fort_viscfluxfill( &
        macrolayer_size, &
        microlayer_substrate, &
        microlayer_temperature_substrate, &
@@ -26283,7 +26283,8 @@ end subroutine initialize2d
        nten, &
        solidheat_flag, &
        project_option, &
-       time)
+       time) &
+      bind(c,name='fort_viscfluxfill')
 
       use filcc_module
       use probf90_module
@@ -26313,9 +26314,12 @@ end subroutine initialize2d
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T, intent(in) :: area(DIMV(area))
-      REAL_T, intent(inout) :: xflux(DIMV(xflux),nsolve)
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: area(DIMV(area))
+      REAL_T, pointer :: area_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: xflux(DIMV(xflux),nsolve)
+      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: tempbc(SDIM,2)
       INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
@@ -26383,9 +26387,12 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,1302)
-      call checkbound(fablo,fabhi,DIMS(area),0,dir,1303)
-      call checkbound(fablo,fabhi,DIMS(xflux),0,dir,1304)
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1302)
+      area_ptr=>area
+      call checkbound_array1(fablo,fabhi,area_ptr,0,dir,1303)
+      xflux_ptr=>xflux
+      call checkbound_array(fablo,fabhi,xflux_ptr,0,dir,1304)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
@@ -26660,7 +26667,7 @@ end subroutine initialize2d
       endif  
 
       return
-      end subroutine VISCFLUXFILL
+      end subroutine fort_viscfluxfill
 
 
       subroutine FORT_UMACFILL ( &

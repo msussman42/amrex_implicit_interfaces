@@ -411,8 +411,8 @@ void NavierStokes::viscous_boundary_fluxes(
 
       // if solidheat_flag=2, then inhomogeneous Neumann BC are
       // prescribed.
-
-    FORT_VISCFLUXFILL(
+      // declared in: PROB.F90
+    fort_viscfluxfill(
      macrolayer_size.dataPtr(),
      microlayer_substrate.dataPtr(),
      microlayer_temperature_substrate.dataPtr(),
@@ -749,7 +749,7 @@ void NavierStokes::combine_state_variable(
      int tid_current=ns_thread();
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
-      // in: GODUNOV_3D.F90
+      // declared in: GODUNOV_3D.F90
      fort_combinevelface(
       &tid_current,
       &hflag,
