@@ -1162,7 +1162,7 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
    } else
     amrex::Error("FSI_flag_temp invalid");
 
-  } // im
+  } // im=0..nmat-1
 
    // impinge jets unlike material
   if ((probtype==530)&&(AMREX_SPACEDIM==3)) {
@@ -1219,6 +1219,7 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
  } else if (mof_error_ordering_local==1) {
 
   // do nothing, order=0 
+  
   // FSI_flag=1,2,4,8 non-tessellating
   // FSI_flag=0,3,5,6,7  tessellating
 

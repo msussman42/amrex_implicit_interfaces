@@ -20676,7 +20676,8 @@ stop
         partidL=0
         partidR=0
 
-        if (is_prescribed(nmat,imL).eq.1) then ! is_rigid=1 CTML_FSI_mat=0
+         ! is_rigid==1 and CTML_FSI_mat==0 or FSI_flag=2,8 (not 4)
+        if (is_prescribed(nmat,imL).eq.1) then 
          do im=1,imL-1
           if (is_lag_part(nmat,im).eq.1) then
            partidL=partidL+1
@@ -20716,7 +20717,7 @@ stop
         else if (is_prescribed(nmat,imR).eq.0) then
          ! do nothing 
         else
-         print *,"is_rigid(nmat,imR) invalid"
+         print *,"is_prescribed(nmat,imR) invalid"
          stop
         endif
 

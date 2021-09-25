@@ -6,7 +6,6 @@
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
 #    define FORT_ADDNOISE    addnoise
-#    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
 #    define FORT_X_EXTRAPFILL x_extrapfill
@@ -34,7 +33,6 @@
 #    define FORT_SETFORTSCALES SETFORTSCALES
 #    define FORT_FORCEVELOCITY FORCEVELOCITY
 #    define FORT_ADDNOISE    ADDNOISE
-#    define FORT_VISCFLUXFILL VISCFLUXFILL
 #    define FORT_UMACFILL    UMACFILL
 #    define FORT_XDMACFILL   XDMACFILL
 #    define FORT_X_EXTRAPFILL X_EXTRAPFILL
@@ -62,7 +60,6 @@
 #    define FORT_SETFORTSCALES setfortscales
 #    define FORT_FORCEVELOCITY forcevelocity
 #    define FORT_ADDNOISE    addnoise
-#    define FORT_VISCFLUXFILL viscfluxfill
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
 #    define FORT_X_EXTRAPFILL x_extrapfill
@@ -89,7 +86,6 @@
 #    define FORT_SETFORTSCALES setfortscales_
 #    define FORT_FORCEVELOCITY forcevelocity_
 #    define FORT_ADDNOISE    addnoise_
-#    define FORT_VISCFLUXFILL viscfluxfill_
 #    define FORT_UMACFILL    umacfill_
 #    define FORT_XDMACFILL   xdmacfill_
 #    define FORT_X_EXTRAPFILL x_extrapfill_
@@ -421,7 +417,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_VISCFLUXFILL(
+     void fort_viscfluxfill(
       Real* macrolayer_size,
       int* microlayer_substrate,
       Real* microlayer_temperature_substrate,
