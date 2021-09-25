@@ -891,7 +891,7 @@ Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 
-int NavierStokes::constant_viscosity=0;
+int NavierStokes::uncoupled_viscosity=0;
 
 Real NavierStokes::angular_velocity=0.0;
 Vector<Real> NavierStokes::DrhoDT;  // def=0.0
@@ -3353,7 +3353,7 @@ NavierStokes::read_params ()
 
     pp.query("angular_velocity",angular_velocity);
 
-    pp.query("constant_viscosity",constant_viscosity);
+    pp.query("uncoupled_viscosity",uncoupled_viscosity);
 
     pp.queryarr("DrhoDT",DrhoDT,0,nmat);
     pp.queryarr("override_density",override_density,0,nmat);
@@ -3747,14 +3747,6 @@ NavierStokes::read_params ()
      }
      if (DrhoDT[im]>0.0)
       amrex::Error("DrhoDT cannot be positive");
-
-     if (constant_viscosity==0) {
-      // do nothing
-     } else if (constant_viscosity==1) {
-      if (std::abs(viscconst[im]-viscconst[0])>1.0e-12)
-       amrex::Warning("variable visc but constant_viscosity==1");
-     } else
-      amrex::Error("constant_viscosity invalid");
 
      if (material_type[im]==999) {
       if (viscconst[im]<=0.0)
@@ -4706,7 +4698,7 @@ NavierStokes::read_params ()
 
      std::cout << "angular_velocity= " << angular_velocity << '\n';
 
-     std::cout << "constant_viscosity= " << constant_viscosity << '\n';
+     std::cout << "uncoupled_viscosity= " << uncoupled_viscosity << '\n';
 
      std::cout << "pressure_error_flag=" << pressure_error_flag << '\n';
 

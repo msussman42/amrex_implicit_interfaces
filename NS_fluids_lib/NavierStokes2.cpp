@@ -4345,7 +4345,7 @@ void NavierStokes::apply_pressure_grad(
      &nmat,
      &nden,
      &ntensor,
-     &constant_viscosity,
+     &uncoupled_viscosity,
      &homflag);
    } // mfi
 } // omp
@@ -6493,7 +6493,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // in: LEVELSET_3D.F90
-    FORT_RENORMALIZE_PRESCRIBE(
+    fort_renormalize_prescribe(
       &tid_current,
       &level,&finest_level,
       &time,

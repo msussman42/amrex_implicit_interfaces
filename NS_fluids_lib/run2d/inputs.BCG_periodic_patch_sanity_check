@@ -109,7 +109,7 @@ ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=2.0
 ns.adv_dir=3  # 1=advect in x direction  2=advect in y direction 3=x and y
-ns.constant_viscosity=1
+ns.uncoupled_viscosity=1
 ns.viscconst= 0.0 0.0 
 ns.denconst=1.0 1.0 
 ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0

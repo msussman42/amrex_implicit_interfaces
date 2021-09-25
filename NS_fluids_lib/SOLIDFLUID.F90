@@ -769,7 +769,7 @@
            FSIdata3D, &
            masknbr3D, &
            DIMS3D(FSIdata3D), &
-           CTML_force_model, &
+           CTML_force_model(im_part), &
            ioproc,isout)
 
          else if (FSI_flag(im_part).eq.1) then ! prescribed solid (EUL)

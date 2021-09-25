@@ -141,7 +141,7 @@ ns.twall=0.1
 ns.advbot=0.0 
 ns.adv_vel=0  # not used
 ns.adv_dir=1  # not used (adv_dir=1,2,3; adv_dir==1 is a good placeholder)
-ns.constant_viscosity=1
+ns.uncoupled_viscosity=1
 ns.viscconst=5e-3 5e-3
 ns.tempconst=293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0

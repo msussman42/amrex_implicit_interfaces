@@ -11908,7 +11908,7 @@ END SUBROUTINE SIMP
       REAL_T AL
       REAL_T AL_ice
       REAL_T local_dd,local_visc_coef,cc_group,local_dd_group
-      INTEGER_T local_constant_viscosity
+      INTEGER_T local_uncoupled_viscosity
       INTEGER_T icrit,side,bccrit
       INTEGER_T bc_comp
       REAL_T local_wt(nsolve)
@@ -12068,7 +12068,7 @@ END SUBROUTINE SIMP
 
          local_dd=one
          local_visc_coef=one
-         local_constant_viscosity=1
+         local_uncoupled_viscosity=1
 
          side=0
          if (icrit.eq.fablo(dir+1)) then
@@ -12102,7 +12102,7 @@ END SUBROUTINE SIMP
            local_dd,local_dd_group, &
            local_visc_coef, &
            nsolve,dir,veldir,project_option, &
-           local_constant_viscosity,side,bccrit,local_wt)
+           local_uncoupled_viscosity,side,bccrit,local_wt)
 
          if (local_wt(veldir).ge.zero) then
 

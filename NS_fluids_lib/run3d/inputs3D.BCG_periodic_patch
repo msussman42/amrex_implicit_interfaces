@@ -102,7 +102,7 @@ ns.adv_vel=2.0
 # 4=x and y 5=x and z  6=y and z
 # 7=x,y, and z
 ns.adv_dir=4 #XYZ
-ns.constant_viscosity=1
+ns.uncoupled_viscosity=1
 ns.viscconst= 0.0 0.0 
 ns.denconst=1.0 1.0 
 ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0

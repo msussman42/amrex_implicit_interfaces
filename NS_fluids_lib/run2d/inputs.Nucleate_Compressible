@@ -25,7 +25,7 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 # vertical coordinant low value must be zero
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  0.4 0.8   # CGS
-ns.constant_viscosity=0
+ns.uncoupled_viscosity=0
 ns.num_divu_outer_sweeps=2  # 1=INCOMP  2=COMP
 ns.EILE_flag=-1
 ns.continuous_mof=2

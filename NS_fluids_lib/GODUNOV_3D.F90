@@ -2669,7 +2669,7 @@ stop
        nmat, &
        nden, &
        ntensor, &
-       constant_viscosity, &
+       uncoupled_viscosity, &
        homflag) &
       bind(c,name='fort_crossterm')
 
@@ -2693,7 +2693,7 @@ stop
       INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: homflag
       INTEGER_T :: nc
-      INTEGER_T, intent(in) :: constant_viscosity
+      INTEGER_T, intent(in) :: uncoupled_viscosity
       INTEGER_T, intent(in) :: nmat,nden
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
       INTEGER_T, intent(in) :: rzflag 
@@ -2828,7 +2828,7 @@ stop
       INTEGER_T velcomp
       INTEGER_T tcompMM
       REAL_T xflux_temp
-      INTEGER_T constant_viscosity_override
+      INTEGER_T uncoupled_viscosity_override
       INTEGER_T side_cell,side_face
       INTEGER_T velcomp_alt
       INTEGER_T inorm
@@ -2907,9 +2907,9 @@ stop
        print *,"cur_time must be nonneg in crossterm"
        stop
       endif
-      if ((constant_viscosity.ne.0).and. &
-          (constant_viscosity.ne.1)) then
-       print *,"constant_viscosity invalid"
+      if ((uncoupled_viscosity.ne.0).and. &
+          (uncoupled_viscosity.ne.1)) then
+       print *,"uncoupled_viscosity invalid"
        stop
       endif
 
@@ -3040,7 +3040,7 @@ stop
           stop
          endif
 
-         constant_viscosity_override=0
+         uncoupled_viscosity_override=0
 
          side_face=0
          if (inorm.eq.fablo(dir)) then
@@ -3064,7 +3064,7 @@ stop
                (local_bc.eq.REFLECT_EVEN).or. &
                (local_bc.eq.REFLECT_ODD).or. &
                (local_bc.eq.FOEXTRAP)) then
-            constant_viscosity_override=1
+            uncoupled_viscosity_override=1
            else if (local_bc.eq.INT_DIR) then
             ! do nothing
            else
@@ -3114,8 +3114,8 @@ stop
           diff_flux(velcomp)=zero
          enddo  ! velcomp
 
-         if ((constant_viscosity.eq.0).and. &
-             (constant_viscosity_override.eq.0)) then
+         if ((uncoupled_viscosity.eq.0).and. &
+             (uncoupled_viscosity_override.eq.0)) then
 
           do nc=1,SDIM-1
 
@@ -3184,11 +3184,11 @@ stop
 
           enddo ! nc=1..sdim-1
 
-         else if ((constant_viscosity.eq.1).or. &
-                  (constant_viscosity_override.eq.1)) then
+         else if ((uncoupled_viscosity.eq.1).or. &
+                  (uncoupled_viscosity_override.eq.1)) then
           ! do nothing
          else
-          print *,"constant_viscosity or constant_viscosity_override invalid"
+          print *,"uncoupled_viscosity or uncoupled_viscosity_override invalid"
           stop
          endif
     
@@ -3199,16 +3199,16 @@ stop
 
          do nc=1,SDIM
 
-          if (constant_viscosity.eq.0) then
+          if (uncoupled_viscosity.eq.0) then
            if (nc.eq.dir) then
             alpha=two
            else
             alpha=one
            endif
-          else if (constant_viscosity.eq.1) then
+          else if (uncoupled_viscosity.eq.1) then
            alpha=one
           else
-           print *,"constant_viscosity invalid"
+           print *,"uncoupled_viscosity invalid"
            stop
           endif
 
@@ -3231,7 +3231,7 @@ stop
            ! use_HO=0
           call SEM_VISC_SANITY(101,dt,xstenMAC,nhalf,local_flux_val, &
             dir,nc,0,0,project_option,bfact,enable_spectral, &
-            constant_viscosity)
+            uncoupled_viscosity)
 
           gradterm=alpha*local_flux_val
 
@@ -3255,9 +3255,9 @@ stop
            stop
           endif
     
-          if (constant_viscosity.eq.0) then 
+          if (uncoupled_viscosity.eq.0) then 
            diff_flux(nc)=diff_flux(nc)+gradterm
-          else if (constant_viscosity.eq.1) then
+          else if (uncoupled_viscosity.eq.1) then
            if (diff_flux(nc).eq.zero) then
             diff_flux(nc)=gradterm
            else
@@ -3265,7 +3265,7 @@ stop
             stop
            endif
           else
-           print *,"constant_viscosity invalid"
+           print *,"uncoupled_viscosity invalid"
            stop
           endif
 
@@ -3380,7 +3380,7 @@ stop
                enddo
               enddo
 
-              if (constant_viscosity.eq.0) then
+              if (uncoupled_viscosity.eq.0) then
 
                do nc=1,SDIM-1
 
@@ -3560,7 +3560,7 @@ stop
                   stop
                  endif
 
-                 constant_viscosity_override=0
+                 uncoupled_viscosity_override=0
                 
                  do velcomp_alt=1,SDIM
                   if (side_cell.eq.0) then
@@ -3572,7 +3572,7 @@ stop
                        (local_bc.eq.REFLECT_EVEN).or. &
                        (local_bc.eq.REFLECT_ODD).or. &
                        (local_bc.eq.FOEXTRAP)) then
-                    constant_viscosity_override=1
+                    uncoupled_viscosity_override=1
                    else if (local_bc.eq.INT_DIR) then
                     ! do nothing
                    else
@@ -3587,23 +3587,23 @@ stop
                   endif
                  enddo ! velcomp_alt=1..sdim
 
-                 if (constant_viscosity_override.eq.0) then
+                 if (uncoupled_viscosity_override.eq.0) then
                   lineflux(isten,dirtan(nc))= & 
                    lineflux(isten,dirtan(nc))+local_interp(isten)
-                 else if (constant_viscosity_override.eq.1) then
+                 else if (uncoupled_viscosity_override.eq.1) then
                   ! do nothing
                  else
-                  print *,"constant_viscosity_override invalid"
+                  print *,"uncoupled_viscosity_override invalid"
                   stop
                  endif
                 enddo ! isten=0..bfact
 
                enddo ! nc=1..sdim-1
 
-              else if (constant_viscosity.eq.1) then
+              else if (uncoupled_viscosity.eq.1) then
                ! do nothing
               else
-               print *,"constant_viscosity invalid"
+               print *,"uncoupled_viscosity invalid"
                stop
               endif
                  
@@ -3667,16 +3667,16 @@ stop
 
                do nc=1,SDIM
 
-                if (constant_viscosity.eq.0) then
+                if (uncoupled_viscosity.eq.0) then
                  if (nc.eq.dir) then
                   alpha=two
                  else
                   alpha=one
                  endif
-                else if (constant_viscosity.eq.1) then
+                else if (uncoupled_viscosity.eq.1) then
                  alpha=one
                 else 
-                 print *,"constant_viscosity invalid"
+                 print *,"uncoupled_viscosity invalid"
                  stop
                 endif
 
@@ -3691,7 +3691,7 @@ stop
                  ! use_HO=1
                 call SEM_VISC_SANITY(1,dt,xstenMAC,nhalf,local_flux_val, &
                   dir,nc,0,1,project_option,bfact,enable_spectral, &
-                  constant_viscosity)
+                  uncoupled_viscosity)
 
                 gradterm=alpha*local_flux_val
 
@@ -3735,9 +3735,9 @@ stop
                  stop
                 endif
                
-                if (constant_viscosity.eq.0) then 
+                if (uncoupled_viscosity.eq.0) then 
                  lineflux(isten,nc)=lineflux(isten,nc)+gradterm
-                else if (constant_viscosity.eq.1) then
+                else if (uncoupled_viscosity.eq.1) then
                  if (lineflux(isten,nc).eq.zero) then
                   lineflux(isten,nc)=gradterm
                  else
@@ -3745,7 +3745,7 @@ stop
                   stop
                  endif
                 else
-                 print *,"constant_viscosity invalid"
+                 print *,"uncoupled_viscosity invalid"
                  stop
                 endif
 
@@ -4030,7 +4030,7 @@ stop
            ! use_HO=1
           call SEM_VISC_SANITY(2,dt,xstenMAC,nhalf,local_flux_val, &
             dir,velcomp,0,1,project_option,bfact,enable_spectral, &
-            constant_viscosity)
+            uncoupled_viscosity)
 
           xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
 
@@ -4227,7 +4227,7 @@ stop
                  ! use_HO=1
                 call SEM_VISC_SANITY(3,dt,xstenMAC,nhalf,xflux_temp, &
                   dir,nc,1,1,project_option,bfact,enable_spectral, &
-                  constant_viscosity)
+                  uncoupled_viscosity)
 
                 semflux(D_DECL(i_in,j_in,k_in),nbase+nc)=xflux_temp
                enddo ! nc
@@ -4244,10 +4244,10 @@ stop
                   ! use_HO=1
                  call SEM_VISC_SANITY(4,dt,xstenMAC,nhalf,local_flux_val_in, &
                          dir,nc,1,1,project_option,bfact,enable_spectral, &
-                         constant_viscosity)
+                         uncoupled_viscosity)
                  call SEM_VISC_SANITY(5,dt,xstenMAC,nhalf,local_flux_val_out, &
                          dir,nc,1,1,project_option,bfact,enable_spectral, &
-                         constant_viscosity)
+                         uncoupled_viscosity)
 
                  avgflux(nc)=half*(local_flux_val_in+local_flux_val_out)
 
@@ -18981,7 +18981,6 @@ stop
       REAL_T xsten_ofs(-3:3,SDIM)
 
       REAL_T total_vol_cell
-      REAL_T fluid_vfrac_cell
       REAL_T mass_sum
       REAL_T weight_sum
 
@@ -19275,7 +19274,6 @@ stop
          nmat,SDIM,3)
 
         mass_sum=zero
-        fluid_vfrac_cell=zero
         total_vol_cell=zero
 
         do im=1,nmat
@@ -19306,37 +19304,23 @@ stop
          endif
          local_mass=test_density*local_volume ! local_volume is a volume frac.
          total_vol_cell=total_vol_cell+local_volume
-         if (is_rigid(nmat,im).eq.0) then
-          fluid_vfrac_cell=fluid_vfrac_cell+local_volume
-         else if (is_rigid(nmat,im).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid invalid"
-          stop
-         endif
          mass_sum=mass_sum+local_mass
 
          cell_mfrac(im)=local_mass
 
         enddo ! im=1,nmat
 
-        if (total_vol_cell.le.zero) then
+        if (total_vol_cell.gt.zero) then
+         ! do nothing
+        else
          print *,"total_vol_cell invalid: ",total_vol_cell
          stop
         endif
 
-        if (mass_sum.le.zero) then
-         print *,"mass_sum invalid"
-         stop
-        endif
-
-        fluid_vfrac_cell=fluid_vfrac_cell/total_vol_cell
-
-        if ((fluid_vfrac_cell.ge.zero).and. &
-            (fluid_vfrac_cell.le.one+VOFTOL)) then
+        if (mass_sum.gt.zero) then
          ! do nothing
         else
-         print *,"fluid_vfrac_cell invalid"
+         print *,"mass_sum invalid"
          stop
         endif
 
@@ -19425,6 +19409,7 @@ stop
 
         if ((im_solid_vel_plus.ge.1).and. &
             (im_solid_vel_plus.le.nmat)) then
+          ! e.g. FSI_flag=2,8
          if (is_prescribed(nmat,im_solid_vel_plus).eq.1) then
           is_solid_cell=im_solid_vel_plus
           if (im_solid_map(partid_vel_plus+1)+1.ne.im_solid_vel_plus) then
@@ -21888,7 +21873,7 @@ stop
  ! hoop term 1st component:  -3 v_t/r^2 - 2 u/r^2
  ! hoop term 2nd component:   3 u_t/r^2 - v/r^2
  ! 
- ! If constant_viscosity==true:
+ ! If uncoupled_viscosity==true:
  ! hoop term 1st component:  -2 v_t/r^2 - u/r^2
  ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
  ! No coupling terms.

@@ -66,7 +66,7 @@ ns.is_compressible=0
 ns.redist_on_init=0                   
 
 ns.conserve_vof=4   # default
-ns.constant_viscosity=0
+ns.uncoupled_viscosity=0
 
 ns.overlap=2.0
 ns.is_twophase=1

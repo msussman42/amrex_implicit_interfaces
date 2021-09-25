@@ -98,7 +98,7 @@ stop
 ! hoop term 1st component:  -3 v_t/r^2 - 2 u/r^2
 ! hoop term 2nd component:   3 u_t/r^2 - v/r^2
 ! 
-! If constant_viscosity==true:
+! If uncoupled_viscosity==true:
 ! hoop term 1st component:  -2 v_t/r^2 - u/r^2
 ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
 ! No coupling terms.
@@ -129,7 +129,7 @@ stop
          finest_level, &
          visc_coef, &
          angular_velocity, &
-         constant_viscosity, &
+         uncoupled_viscosity, &
          update_state, &
          dt, &
          rzflag, &
@@ -163,7 +163,7 @@ stop
        INTEGER_T, intent(in) :: rzflag
        REAL_T, intent(in) :: angular_velocity
        REAL_T, intent(in) :: visc_coef
-       INTEGER_T, intent(in) :: constant_viscosity
+       INTEGER_T, intent(in) :: uncoupled_viscosity
        INTEGER_T, intent(in) :: update_state
        REAL_T, intent(in) :: dt
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -257,9 +257,9 @@ stop
         stop
        endif
 
-       if ((constant_viscosity.ne.0).and. &
-           (constant_viscosity.ne.1)) then
-        print *,"constant_viscosity invalid"
+       if ((uncoupled_viscosity.ne.0).and. &
+           (uncoupled_viscosity.ne.1)) then
+        print *,"uncoupled_viscosity invalid"
         stop
        endif
        if ((update_state.ne.0).and. &
@@ -622,14 +622,14 @@ stop
           stop
          endif
             
-         if (constant_viscosity.eq.0) then
+         if (uncoupled_viscosity.eq.0) then
           param1=three
           param2=two
-         else if (constant_viscosity.eq.1) then
+         else if (uncoupled_viscosity.eq.1) then
           param1=two
           param2=one
          else
-          print *,"constant viscosity invalid"
+          print *,"uncoupled_viscosity invalid"
           stop
          endif
 
