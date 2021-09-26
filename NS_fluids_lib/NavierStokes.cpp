@@ -6898,6 +6898,7 @@ void NavierStokes::resize_FSI_MF() {
  if (nparts==0) {
   // do nothing
  } else if ((nparts>=1)&&(nparts<=nmat)) {
+   //velocity+LS+temperature+flag+force (3D)
   if (nFSI_sub!=9)
    amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
@@ -7028,6 +7029,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // updates FSI_MF for FSI_flag(im)==1 type materials.
+    // (prescribed solid from PROB.F90, not from CAD)
    fort_initdatasolid(
      &nmat,
      &nparts,
@@ -7131,7 +7133,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // declared in: GODUNOV_3D.F90
-     // copies velocity from fsifab to snewfab is fsifab_LS>0
+     // copies velocity from fsifab to snewfab if fsifab_LS>0
     fort_copy_vel_on_sign(
      &im_part, 
      &nparts,
@@ -7230,7 +7232,7 @@ void NavierStokes::build_moment_from_FSILS() {
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_BUILD_MOMENT(
+  fort_build_moment(
     &level,
     &finest_level,
     &nFSI, 
@@ -7280,6 +7282,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
   MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
   if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
    amrex::Error("LS_new invalid ncomp");
+   //velocity+LS+temperature+flag+force (3D)
   if (nFSI_sub!=9)
    amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;
@@ -7545,6 +7548,7 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("problen[dir]<=0.0");
   }
 
+   //velocity+LS+temperature+flag+force (3D)
   if (nFSI_sub!=9)
    amrex::Error("nFSI_sub invalid");
   int nFSI=nparts*nFSI_sub;

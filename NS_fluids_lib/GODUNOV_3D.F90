@@ -15260,6 +15260,7 @@ stop
        print *,"partid invalid"
        stop
       endif
+       !velocity + LS + temperature + flag + force
       if (nFSI_sub.ne.9) then
        print *,"nFSI_sub invalid"
        stop
@@ -15302,7 +15303,7 @@ stop
       return
       end subroutine fort_copy_vel_on_sign
 
-      subroutine FORT_BUILD_MOMENT( &
+      subroutine fort_build_moment( &
        level, &
        finest_level, &
        nFSI, &
@@ -15316,34 +15317,39 @@ stop
        fsi,DIMS(fsi), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
-       nmat,nstate)
+       nmat,nstate) &
+      bind(c,name='fort_build_moment')
+
       use probcommon_module
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T level 
-      INTEGER_T finest_level 
-      INTEGER_T nFSI
-      INTEGER_T nFSI_sub
-      INTEGER_T nparts
-      INTEGER_T ngrowFSI
-      INTEGER_T im_solid_map(nparts)
-      INTEGER_T nmat
-      INTEGER_T nstate
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(lsnew)
-      INTEGER_T DIMDEC(fsi)
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: level 
+      INTEGER_T, intent(in) :: finest_level 
+      INTEGER_T, intent(in) :: nFSI
+      INTEGER_T, intent(in) :: nFSI_sub
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: im_solid_map(nparts)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nstate
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      INTEGER_T, intent(in) :: DIMDEC(fsi)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
 
-      REAL_T snew(DIMV(snew),nstate)
-      REAL_T lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      REAL_T fsi(DIMV(fsi),nFSI)
+      REAL_T, intent(inout), target :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: fsi(DIMV(fsi),nFSI)
+      REAL_T, pointer :: fsi_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
@@ -15378,6 +15384,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
+       !velocity + LS + temperature + flag + force
       if (nFSI_sub.ne.9) then
        print *,"nFSI_sub invalid"
        stop
@@ -15387,7 +15394,7 @@ stop
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_BUILD_MOMENT"
+       print *,"nparts invalid fort_build_moment"
        stop
       endif
       if (ngrowFSI.ne.3) then
@@ -15399,9 +15406,12 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,8)
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,8)
-      call checkbound(fablo,fabhi,DIMS(fsi),ngrowFSI,-1,8)
+      lsnew_ptr=>lsnew
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,8)
+      snew_ptr=>snew
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,8)
+      fsi_ptr=>fsi
+      call checkbound_array(fablo,fabhi,fsi_ptr,ngrowFSI,-1,8)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -15425,11 +15435,12 @@ stop
        do partid=1,nparts
         im_part=im_solid_map(partid)+1
         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-         print *,"im_part invalid FORT_BUILD_MOMENT"
+         print *,"im_part invalid fort_build_moment"
          stop
         endif
         if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
-            (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+            (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
+            (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres-vel
             (FSI_flag(im_part).eq.6).or. & ! ice CAD
             (FSI_flag(im_part).eq.7)) then ! fluid CAD
 
@@ -15550,7 +15561,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_BUILD_MOMENT
+      end subroutine fort_build_moment
 
 
         ! called form tensor_advecton_update() in NavierStokes.cpp
