@@ -1833,7 +1833,7 @@ stop
           print *,"mass cannot be negative  im_test,mass=",im_test,mass
           stop
          else if (mass.eq.zero) then
-          print *,"WARNING: FSI_flag(im_test)=1,2,4 mass=0"
+          print *,"WARNING: FSI_flag(im_test)=1,2,4,8 mass=0"
           print *,"im_test=",im_test
           print *,"FSI_flag(im_test)=",FSI_flag(im_test)
           do dir=1,SDIM

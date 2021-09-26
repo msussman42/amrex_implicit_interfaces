@@ -337,6 +337,7 @@ REAL_T :: initial_time
   if (probtype.eq.424) then
 
    do im=1,nmat
+     ! prescribed rigid solid (PROB.F90)
     if (FSI_flag(im).eq.1) then
      call DROP_IN_SHEAR_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
      LS(im)=-LS(im)   ! now LS>0 in solid
