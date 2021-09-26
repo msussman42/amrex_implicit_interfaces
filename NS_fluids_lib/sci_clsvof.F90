@@ -6153,7 +6153,7 @@ INTEGER_T CTML_DEBUG_Mass
        (xmap3D(dir).eq.2).or. &
        (xmap3D(dir).eq.AMREX_SPACEDIM)) then
     dist_scale=abs(xc(dir)-xtarget(dir))/dx(dir)
-    if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+    if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4 or 8
 #ifdef MVAHABFSI
      call CTML_DELTA(dir,dist_scale,df)
 #else
@@ -6759,7 +6759,7 @@ INTEGER_T :: dir,inode,num_nodes
 
  if (TOTAL_NPARTS.ge.1) then
 
-  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
    call CTML_RESET_ARRAYS(); ! vel_fib=zero  force_fib=zero
 #else
@@ -6940,7 +6940,7 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 
   enddo !part_id=1,TOTAL_NPARTS
 
-  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
    call CTML_SET_VELOCITY(CTML_NPARTS, &
     ctml_max_n_fib_nodes,ctml_fib_vel) !vel_fib=ctml_fib_vel
@@ -7028,7 +7028,7 @@ INTEGER_T im_sanity_check
 
    im_solid_mapF(part_id)=im_solid_map_in(part_id)
    im_part=im_solid_mapF(part_id)+1
-   if (CTML_FSI_mat(nmat,im_part).eq.1) then ! FSI_flag==4
+   if (CTML_FSI_mat(nmat,im_part).eq.1) then ! FSI_flag==4,8
     ctml_part_id=ctml_part_id+1
     CTML_partid_map(part_id)=ctml_part_id
    else if (CTML_FSI_mat(nmat,im_part).eq.0) then
@@ -7043,7 +7043,8 @@ INTEGER_T im_sanity_check
     fsi_part_id=fsi_part_id+1
     FSI_partid_map(part_id)=fsi_part_id
    else if ((FSI_flag(im_part).eq.1).or. & ! prescribed solid (EUL)
-            (FSI_flag(im_part).eq.4)) then ! CTML FSI
+            (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres vel
+            (FSI_flag(im_part).eq.4)) then ! CTML FSI Goldstein et al
     FSI_partid_map(part_id)=0
    else
     print *,"FSI_flag(im_part) invalid"
@@ -7092,7 +7093,7 @@ INTEGER_T im_sanity_check
 
   use_temp=0
 
-  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4 for some materials
+  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8 for some materials
 #ifdef MVAHABFSI
    if (CTML_FSI_INIT.eq.0) then
     call CTML_INIT_SOLID(dx_max_level, &
@@ -8429,7 +8430,8 @@ IMPLICIT NONE
     print *,"im_part invalid"
     stop
    endif
-   if ((CTML_force_model.ne.0).and.(CTML_force_model.ne.1)) then
+   if ((CTML_force_model.ne.0).and. &  !Goldstein et al
+       (CTML_force_model.ne.2)) then   !pres vel
     print *,"CTML_force_model invalid"
     stop
    endif
@@ -8502,8 +8504,8 @@ IMPLICIT NONE
    LSMAX_debug=-1.0D+10
 
     ! in NavierStokes::initData ():
-    !  state solid velocity for FSI_flag=2,4,6,7 is init to 0.0
-    !  state level set function for FSI_flag=2,4,6,7 is init to -99999.0
+    !  state solid velocity for FSI_flag=2,4,6,7,8 is init to 0.0
+    !  state level set function for FSI_flag=2,4,6,7,8 is init to -99999.0
     !
     ! in NavierStokes::FSI_make_distance FSI_MF is initialized as
     ! follows:
@@ -8522,7 +8524,7 @@ IMPLICIT NONE
     ! the order of operations on startup:
     ! 1. initData is called and LS=-99999.0, vel=0.0
     ! 2. FSI_make_distance is called from initData
-    ! 3. The rest of the (non FSI_flag=2,4,6,7) materials are initialized.
+    ! 3. The rest of the (non FSI_flag=2,4,6,7,8) materials are initialized.
    if (FSI_operation.eq.2) then ! make distance in narrow band
 
     num_elements_container=contain_elem(lev77)% &
@@ -8687,7 +8689,7 @@ IMPLICIT NONE
           xx(dir)=xdata3D(i,j,k,dir)
          enddo
 
-         if (CTML_force_model.eq.0) then
+         if (CTML_force_model.eq.0) then !Goldstein et al
           do inode=1,nodes_per_elem
             ! calls either CTML_DELTA or hsprime
            call check_force_weightBIG(xmap3D,inode,ielem, &
@@ -8699,8 +8701,8 @@ IMPLICIT NONE
               dt*force_weight*force_vector(dir)
            enddo 
           enddo ! inode=1,nodes_per_elem
-         else if (CTML_force_model.eq.1) then
-          print *,"CTML_force_model.eq.1 not supported"
+         else if (CTML_force_model.eq.2) then
+          print *,"CTML_force_model.eq.2 not supported"
           stop
          else
           print *,"CTML_force_model invalid"
@@ -9137,10 +9139,10 @@ IMPLICIT NONE
          do dir=1,3
           FSIdata3D(i,j,k,ibase+dir)=vel_local(dir)
          enddo 
-         if (CTML_force_model.eq.1) then
-          print *,"CTML_force_model.eq.1 not supported"
+         if (CTML_force_model.eq.2) then !pres-vel
+          print *,"CTML_force_model.eq.2 not supported"
           stop
-         else if (CTML_force_model.eq.0) then
+         else if (CTML_force_model.eq.0) then ! Goldstein et al.
           ! do nothing
          else
           print *,"CTML_force_model invalid"
@@ -9693,6 +9695,7 @@ IMPLICIT NONE
 
          if (vel_valid(mask_local).eq.0) then 
 
+          ! (vel + LS + temperature + flag + force)
           if (nFSI_sub.ne.9) then
            print *,"nFSI_sub.ne.9"
            stop
@@ -9752,10 +9755,10 @@ IMPLICIT NONE
             FSIdata3D(i,j,k,ibase+dir)=weight_top(dir)/weight_bot
            enddo
            FSIdata3D(i,j,k,ibase+5)=weight_top(5)/weight_bot
-           if (CTML_force_model.eq.1) then
-            print *,"CTML_force_model.eq.1 not supported"
+           if (CTML_force_model.eq.2) then ! pres vel
+            print *,"CTML_force_model.eq.2 not supported"
             stop
-           else if (CTML_force_model.eq.0) then
+           else if (CTML_force_model.eq.0) then ! Goldstein et al
             ! do nothing
            else
             print *,"CTML_force_model invalid"
@@ -9770,10 +9773,10 @@ IMPLICIT NONE
              old_FSIdata(i,j,k,ibase+dir)=weight_top(dir)/weight_bot
             enddo
             old_FSIdata(i,j,k,ibase+5)=weight_top(5)/weight_bot
-            if (CTML_force_model.eq.1) then
-             print *,"CTML_force_model.eq.1 not supported"
+            if (CTML_force_model.eq.2) then ! pres-vel
+             print *,"CTML_force_model.eq.2 not supported"
              stop
-            else if (CTML_force_model.eq.0) then
+            else if (CTML_force_model.eq.0) then ! Goldstein et al
              ! do nothing
             else
              print *,"CTML_force_model invalid"
@@ -10223,7 +10226,7 @@ end subroutine CLSVOF_InitBox
                (xmap3D(dir).eq.2).or. &
                (xmap3D(dir).eq.sdim_AMR)) then
             dist_scale=abs(xdata3D(i,j,k,dir)-xnot(dir))/dxBB(dir)
-            if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+            if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
              call CTML_DELTA(dir,dist_scale,df)
 #else
@@ -11531,7 +11534,7 @@ IMPLICIT NONE
 
   if ((TOTAL_NPARTS.ge.1).and.(TOTAL_NPARTS.le.MAX_PARTS)) then
 
-   if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+   if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
     call CTML_SOLVE_SOLID( &
      CLSVOF_curtime, &

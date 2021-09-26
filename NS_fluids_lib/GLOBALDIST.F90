@@ -1833,10 +1833,12 @@ end subroutine nozzle2d
        endif ! cases in which soliddist is called.
 
       else if ((FSI_flag(im).eq.2).or. & ! prescribed CAD
-               (FSI_flag(im).eq.4)) then ! CTML FSI 
+               (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
+               (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
 
 ! dist>0 in the solid
-! in future: FSI_MF multifab copied to fortran.
+! eventually as the program is running FSI_MF multifab will be
+! copied to the fortran.
 ! closest value(s) on same processor are used.
 
        dist=-99999.0

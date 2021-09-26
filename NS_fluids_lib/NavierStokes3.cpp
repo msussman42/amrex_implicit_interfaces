@@ -12010,10 +12010,10 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
  if (viscoelastic_force_only==0) {
 
-  if (CTML_FSI_flagC()==1) {
+  if (CTML_FSI_flagC()==1) { //FSI_flag=4 or 8
 
    // Add the Lagrangian solid force term on the right hand side of the
-   // Eulerian fluid velocity.
+   // Eulerian fluid velocity. (if FSI_flag=4)
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.ctml_fsi_transfer_force();

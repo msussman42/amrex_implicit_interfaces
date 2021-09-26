@@ -1183,7 +1183,7 @@ stop
        LL(ireverse)=latent_heat(iten+ireverse*nten)
       enddo
 
-! FSI_flag==3 or 6?
+      ! is_ice=1 if FSI_flag==3 or 6.
       if ((is_ice(nmat,im).eq.0).and. &
           (is_ice(nmat,im_opp).eq.0)) then
        im_ice=0
@@ -1201,7 +1201,7 @@ stop
        stop
       endif
      
-! FSI_flag==5? FSI rigid solid, tessellating (PROB.F90)
+      ! is_FSI_rigid=1 if FSI_flag==5:FSI rigid solid, tessellating (PROB.F90)
       if ((is_FSI_rigid(nmat,im).eq.0).and. &
           (is_FSI_rigid(nmat,im_opp).eq.0)) then
        im_FSI_rigid=0
@@ -6540,6 +6540,7 @@ END SUBROUTINE Adist
             (FSI_flag(im).eq.3).or. &
             (FSI_flag(im).eq.6).or. &
             (FSI_flag(im).eq.4).or. &
+            (FSI_flag(im).eq.8).or. &
             (FSI_flag(im).eq.5)) then
          ! do nothing
         else if ((FSI_flag(im).eq.0).or. &
@@ -7956,9 +7957,10 @@ END SUBROUTINE Adist
         enddo
        endif
       else if ((FSI_flag(im).eq.2).or. & ! prescribed solid - CAD
-               (FSI_flag(im).eq.4)) then ! CTML FSI - velsolid
+               (FSI_flag(im).eq.8).or. & ! CTML FSI - velsolid (pres vel)
+               (FSI_flag(im).eq.4)) then ! CTML FSI - velsolid (Goldstein)
 
-! in future: FSI_MF multifab copied to fortran.
+! as simulation progresses: FSI_MF multifab copied to fortran.
 ! closest value(s) on same processor are used.
 
        do dir=1,SDIM
@@ -11696,7 +11698,8 @@ END SUBROUTINE Adist
        else if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
                 (FSI_flag(im).eq.6).or. & ! ice - from CAD
                 (FSI_flag(im).eq.7).or. & ! fluid - from CAD
-                (FSI_flag(im).eq.4)) then ! CTML FSI
+                (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
+                (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
         VOF(vofcomp)=VOFwall(vofcomp)
         do dir2=1,SDIM
          VOF(vofcomp+dir2)=VOFwall(vofcomp+dir2)
@@ -11732,7 +11735,8 @@ END SUBROUTINE Adist
        else if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
                 (FSI_flag(im).eq.6).or. & ! ice - from CAD
                 (FSI_flag(im).eq.7).or. & ! fluid - from CAD
-                (FSI_flag(im).eq.4)) then ! CTML FSI
+                (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+                (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
         LS(im)=LSwall(im)
        else
         print *,"FSI_flag invalid"
@@ -11878,6 +11882,7 @@ END SUBROUTINE Adist
        stop
        do im=1,nmat
         if ((FSI_flag(im).ne.2).and. &
+            (FSI_flag(im).ne.8).and. &
             (FSI_flag(im).ne.4)) then
          vofcomp=(im-1)*ngeom_raw+1
          call HYD_VOLF_BC(time,dir,side,VOF(vofcomp), &
@@ -11900,7 +11905,8 @@ END SUBROUTINE Adist
 
        im=nmat
        vofcomp=(im-1)*ngeom_raw+1
-       if (FSI_flag(im).eq.4) then
+       if ((FSI_flag(im).eq.4).or. & ! CTML Goldstein et al
+           (FSI_flag(im).eq.8)) then ! CTML pres vel
         VOF(vofcomp)=zero
         do dir2=1,SDIM
          VOF(vofcomp+dir2)=zero
@@ -11996,7 +12002,8 @@ END SUBROUTINE Adist
          else if (axis_dir.eq.2) then
           do im=1,nmat
            if ((FSI_flag(im).ne.2).and. &
-               (FSI_flag(im).ne.4)) then
+               (FSI_flag(im).ne.4).and. &
+               (FSI_flag(im).ne.8)) then
             vofcomp=(im-1)*(ngeom_raw)+1
             if (im.eq.1) then
              VOF(vofcomp)=one
@@ -12603,10 +12610,11 @@ END SUBROUTINE Adist
          xwall,LSwall(imls),x,y,z,dx,im)
        enddo
        imls=nmat
-       if (FSI_flag(imls).eq.4) then
+       if ((FSI_flag(imls).eq.4).or. & !CTML Goldstein
+           (FSI_flag(imls).eq.8)) then !CTML pres vel
         LS(imls)=-ten
        else
-        print *,"expecting FSI_flag equal to 4"
+        print *,"expecting FSI_flag equal to 4 or 8"
         stop
        endif
 
@@ -25417,7 +25425,7 @@ end subroutine initialize2d
            solid(D_DECL(i,j,k),ibase+dir)=vel(dir)
           enddo
          else if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
-                  (FSI_flag(im).eq.4).or. & ! CTML FSI
+                  (FSI_flag(im).eq.4).or. & ! CTML FSI Goldstein et al
                   (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
                   (FSI_flag(im).eq.6).or. & ! ice (CAD)
                   (FSI_flag(im).eq.7)) then ! fluid (CAD)
@@ -30895,7 +30903,8 @@ end subroutine initialize2d
         do im=1,nmat
          if (is_rigid(nmat,im).eq.1) then
           if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
-              (FSI_flag(im).eq.4)) then ! CTML FSI
+              (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+              (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
            distbatch(im)=LS(D_DECL(ic,jc,kc),im)
           else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
            ! do nothing
@@ -30957,7 +30966,8 @@ end subroutine initialize2d
           debug_vfrac_sum=debug_vfrac_sum+vofdark(im)
          else if (is_rigid(nmat,im).eq.1) then
           if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
-              (FSI_flag(im).eq.4)) then ! CTML FSI (EUL)
+              (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+              (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
            scalc(vofcomp_raw)=scal(D_DECL(ic,jc,kc),vofcomp_raw)
            do dir=1,SDIM 
             scalc(vofcomp_raw+dir)=scal(D_DECL(ic,jc,kc),vofcomp_raw+dir)
@@ -30986,7 +30996,8 @@ end subroutine initialize2d
          enddo
          call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
          if ((FSI_flag(im_solid_initdata).eq.2).or. & ! prescribed solid (CAD)
-             (FSI_flag(im_solid_initdata).eq.4)) then ! CTML FSI
+             (FSI_flag(im_solid_initdata).eq.8).or. & ! CTML FSI pres vel
+             (FSI_flag(im_solid_initdata).eq.4)) then ! CTML FSI Goldstein
           distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
          endif
          print *,"result of materialdistsolid: distsolid=",distsolid
@@ -31020,7 +31031,8 @@ end subroutine initialize2d
          do im=1,nmat
           if (is_rigid(nmat,im).eq.1) then
            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-               (FSI_flag(im).eq.4)) then ! CTML FSI
+               (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+               (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al.
             distbatch(im)=LS(D_DECL(ic+i1,jc+j1,kc+k1),im)
            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
             ! do nothing

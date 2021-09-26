@@ -399,15 +399,14 @@
        stop
       endif
       do im_local=1,nmat
-       if (FSI_flag(im_local).eq.4) then
-        if ((CTML_force_model(im_local).eq.0).or. &
-            (CTML_force_model(im_local).eq.1)) then
+       if (FSI_flag(im_local).eq.4) then !CTML Goldstein et al
+        if (CTML_force_model(im_local).eq.0) then
          ! do nothing
         else
          print *,"CTML_force_model invalid"
          stop
         endif
-       else if (FSI_flag(im_local).eq.8) then
+       else if (FSI_flag(im_local).eq.8) then !CTML pres-vel
         if (CTML_force_model(im_local).eq.2) then
          ! do nothing
         else
@@ -584,6 +583,7 @@
         print *,"CTML_FSI_INIT.ne.1"
         stop
        endif
+        ! (velocity + LS + temperature + flag + force)
        if (nFSI_sub.ne.9) then 
         print *,"nFSI_sub invalid fort headermsg 2: ",nFSI_sub
         stop
@@ -700,7 +700,8 @@
         if (is_lag_part(nmat,im_part).eq.1) then
 
          if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid from CAD
-             (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+             (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
+             (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres vel
              (FSI_flag(im_part).eq.6).or. & ! ice from CAD
              (FSI_flag(im_part).eq.7)) then ! fluid from CAD
 
@@ -997,7 +998,8 @@
          if (is_lag_part(nmat,im_part).eq.1) then
 
           if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
-              (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+              (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
+              (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres-vel
               (FSI_flag(im_part).eq.6).or. & ! ice from CAD
               (FSI_flag(im_part).eq.7)) then ! fluid from CAD
 
@@ -1452,7 +1454,8 @@
          endif
          local_flag=FSI_flag(im_part)
          if ((local_flag.eq.2).or. & !prescribed solid from CAD
-             (local_flag.eq.4).or. & !CTML FSI
+             (local_flag.eq.4).or. & !CTML FSI Goldstein et al.
+             (local_flag.eq.8).or. & !CTML FSI pres-vel
              (local_flag.eq.6).or. & !ice from CAD
              (local_flag.eq.7)) then !fluid from CAD
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &

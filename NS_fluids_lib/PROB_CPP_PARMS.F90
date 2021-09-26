@@ -913,7 +913,8 @@ stop
        else if (fort_material_type(im).eq.999) then
         if ((FSI_flag(im).ne.1).and. &
             (FSI_flag(im).ne.2).and. &
-            (FSI_flag(im).ne.4)) then
+            (FSI_flag(im).ne.8).and. & !CTML pres vel
+            (FSI_flag(im).ne.4)) then  !CTML Goldstein et al.
          print *,"FSI_flag invalid"
          stop
         endif

@@ -2768,10 +2768,14 @@ NavierStokes::read_params ()
     int CTML_FSI_numsolids_test=0;
     for (int im=0;im<nmat;im++) {
 
-     if (FSI_flag[im]==4) // non-tessellating
+     if (FSI_flag[im]==4) { // non-tessellating Goldstein et al
       CTML_FSI_numsolids_test++;
-     if (FSI_flag[im]==8) // non-tessellating
+     } else if (FSI_flag[im]==8) { // non-tessellating, pres-vel
       CTML_FSI_numsolids_test++;
+     } else if (FSI_flag_valid(im)==1) {
+      //do nothing
+     } else
+      amrex::Error("FSI_flag_valid invalid");
  
      if (ns_is_lag_part(im)==1) {
       nparts++;
@@ -3003,7 +3007,6 @@ NavierStokes::read_params ()
       std::cout << "i= " << i << " FSI_bounding_box_ngrow " << 
 	     FSI_bounding_box_ngrow[i] << '\n';
      }
-     std::cout << "CTML_FSI_numsolids " << CTML_FSI_numsolids << '\n';
 
      std::cout << "invert_solid_levelset " << invert_solid_levelset << '\n';
      std::cout << "law_of_the_wall " << law_of_the_wall << '\n';
@@ -4396,11 +4399,11 @@ NavierStokes::read_params ()
       truncate_volume_fractions[i]=1;
      else if (FSI_flag[i]==1) // prescribed PROB.F90 solid, non-tessellating
       truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==2) // prescribed sci_clsvof.F90 solid, non-tessell.
+     else if (FSI_flag[i]==2) // prescribed sci_clsvof.F90 solid, non-tess.
       truncate_volume_fractions[i]=0;
      else if (FSI_flag[i]==4) // FSI CTML solid, non-tesellating
       truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==8) // FSI pressure-velocity coupling,non-tesellating
+     else if (FSI_flag[i]==8) // FSI CTML solid, pres-vel coupling,non-tess.
       truncate_volume_fractions[i]=0;
      else if (is_FSI_rigid_matC(i)==1) // FSI rigid solid, tessellating
       truncate_volume_fractions[i]=0;
@@ -4652,6 +4655,7 @@ NavierStokes::read_params ()
      }  
 
      std::cout << "CTML_FSI_numsolids " << CTML_FSI_numsolids << '\n';
+
      for (int i=0;i<nmat;i++)
       std::cout << "i=" << i << "CTML_force_model[i] " << 
         CTML_force_model[i] << '\n';
@@ -5187,7 +5191,7 @@ int NavierStokes::ns_is_rigid(int im) {
  } else if ((FSI_flag[im]==1)|| //prescribed PROB.F90 rigid solid,non-tess.
             (FSI_flag[im]==2)|| //prescribed sci_clsvof.F90 rigid solid,non-tess
             (FSI_flag[im]==4)|| //FSI CTML solid,non-tess.
-	    (FSI_flag[im]==8)) {//FSI pressure-vel coupling, non-tess.
+	    (FSI_flag[im]==8)) {//FSI CTML pres-vel coupling, non-tess.
   local_flag=1;
  } else
   amrex::Error("FSI_flag invalid");
@@ -5938,7 +5942,7 @@ int NavierStokes::read_from_CAD() {
  for (int im=0;im<nmat;im++) {
   if ((FSI_flag[im]==2)||   // prescribed sci_clsvof.F90 rigid material 
       (FSI_flag[im]==4)||   // FSI CTML sci_clsvof.F90 material
-      (FSI_flag[im]==8)||   // FSI pressure-vel sci_clsvof.F90 material
+      (FSI_flag[im]==8)||   // FSI CTML pressure-vel sci_clsvof.F90 material
       (FSI_flag[im]==6)||   // sci_clsvof.F90 ice
       (FSI_flag[im]==7)) {  // sci_clsvof.F90 fluid
    local_read_from_CAD=1;
@@ -5969,7 +5973,7 @@ int NavierStokes::is_ice_matC(int im) {
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (FSI_flag[im]==4)||  // FSI CTML sci_clsvof.F90 material
-             (FSI_flag[im]==8)||  // FSI pres-vel sci_clsvof.F90 material
+             (FSI_flag[im]==8)||  // FSI CTML pres-vel sci_clsvof.F90 material
 	     (FSI_flag[im]==5)) { // FSI PROB.F90 rigid material
    // do nothing
   } else
@@ -6019,11 +6023,11 @@ int NavierStokes::FSI_material_exists() {
  int nmat=num_materials;
 
  for (int im=0;im<nmat;im++) {
-  if ((is_ice_matC(im)==0)&&
-      (is_FSI_rigid_matC(im)==0)) {
+  if ((is_ice_matC(im)==0)&& 
+      (is_FSI_rigid_matC(im)==0)) { 
    // do nothing
-  } else if ((is_ice_matC(im)==1)||
-             (is_FSI_rigid_matC(im)==1)) {
+  } else if ((is_ice_matC(im)==1)||        //FSI_flag=3,6
+             (is_FSI_rigid_matC(im)==1)) { //FSI_flag=5
    local_flag=1;
   } else
    amrex::Error("is_ice_matC or is_FSI_rigid_matC invalid");
@@ -6079,7 +6083,7 @@ int NavierStokes::is_FSI_rigid_matC(int im) {
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (FSI_flag[im]==4)||  // FSI CTML sci_clsvof.F90 material
-             (FSI_flag[im]==8)||  // FSI pres-vel sci_clsvof.F90 material
+             (FSI_flag[im]==8)||  // FSI CTML pres-vel sci_clsvof.F90 material
              (FSI_flag[im]==3)||  // ice
              (FSI_flag[im]==6)) { // ice
    // do nothing
@@ -6172,7 +6176,7 @@ int NavierStokes::CTML_FSI_matC(int im) {
              (FSI_flag[im]==1)||  // prescribed PROB.F90 rigid material
              (FSI_flag[im]==2)||  // prescribed sci_clsvof.F90 rigid material
              (is_FSI_rigid_matC(im)==1)||  // FSI PROB.F90 rigid material
-             (is_ice_matC(im)==1)) { // FSI ice material
+             (is_ice_matC(im)==1)) { // FSI ice material FSI_flag=3,6
    // do nothing
   } else
    amrex::Error("FSI_flag invalid");
@@ -7297,30 +7301,32 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
    if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
        (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
-       (FSI_flag[im_part]==8)|| //FSI pres-vel sci_clsvof.F90 solid
+       (FSI_flag[im_part]==8)|| //FSI CTML pres-vel sci_clsvof.F90 solid
        (FSI_flag[im_part]==6)|| //initial ice from CAD file
        (FSI_flag[im_part]==7)) {//initial fluid from CAD file 
 
     int ibase=partid*nFSI_sub;
 
     int ok_to_modify_EUL=1;
-    if ((FSI_flag[im_part]==6)||
-        (FSI_flag[im_part]==7)) {
+    if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
+        (FSI_flag[im_part]==7)) { //initial fluid from CAD file.
      if (cur_time==0.0) {
-      // do nothing
+      ok_to_modify_EUL=1;
      } else if (cur_time>0.0) {
       ok_to_modify_EUL=0;
      } else
       amrex::Error("cur_time invalid");
-    } else if ((FSI_flag[im_part]==2)||
-               (FSI_flag[im_part]==4)||
-	       (FSI_flag[im_part]==8)) {
+    } else if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid sol.
+               (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 Goldstein..
+	       (FSI_flag[im_part]==8)) {//FSI CTML sci_clsvof.F90 pres-vel
+     ok_to_modify_EUL=1;
      // do nothing
     } else
      amrex::Error("FSI_flag invalid");
 
     if (ok_to_modify_EUL==1) {
 
+      //modifies S_new velocity if FSI_flag=2,6,7,8 (but not 4)
      copy_velocity_on_sign(partid);
      // Solid velocity
      //ngrow=0
@@ -7735,15 +7741,15 @@ void NavierStokes::ns_header_msg_level(
        if ((FSI_flag[im_part]==6)||
            (FSI_flag[im_part]==7)) {
 	if (cur_time==0.0) {
-	 // do nothing
+         ok_to_modify_EUL=1;
 	} else if (cur_time>0.0) {
 	 ok_to_modify_EUL=0;
 	} else
 	 amrex::Error("cur_time invalid");
        } else if ((FSI_flag[im_part]==2)||
-                  (FSI_flag[im_part]==8)||//FSI pres-vel sci_clsvof.F90 solid
-  	          (FSI_flag[im_part]==4)) {
-        // do nothing
+                  (FSI_flag[im_part]==8)|| //FSI CTML pres-vel sci_clsvof.F90
+  	          (FSI_flag[im_part]==4)) {//FSI CTML Goldstein et al 
+        ok_to_modify_EUL=1;
        } else
         amrex::Error("FSI_flag invalid");
 

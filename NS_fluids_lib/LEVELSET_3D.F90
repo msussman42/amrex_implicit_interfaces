@@ -9169,7 +9169,7 @@ stop
           stop
          endif
 
-          ! does not consider materials with FSI_flag=1,2,4
+          ! does not consider materials with FSI_flag=1,2,4,8
           ! gradh>0 => im_main material dominates right and im_main_opp left.
           ! gradh<0 => im_main material dominates left and im_main_opp right.
           ! im_main<im_main_opp
@@ -15651,7 +15651,7 @@ stop
           else if ((at_reflect_wall.eq.0).and. &
                    (at_wall.eq.0)) then
 
-           ! gradh=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4
+           ! gradh=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4,8
            if (is_solid_face.eq.1) then
             gradh=zero
            else if (is_solid_face.eq.0) then
@@ -17237,7 +17237,8 @@ stop
               ! do nothing (heat conduction in solid)
              else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
               if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                  (FSI_flag(im).eq.4)) then ! CTML FSI
+                  (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
+                  (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
                ! den_hold(statecomp) already has the solid temperature
               else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &

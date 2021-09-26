@@ -11368,8 +11368,8 @@ stop
            local_maskSEM=0
           else if (is_FSI_rigid(nmat,imcrit).eq.1) then
            local_maskSEM=0
-          else if ((FSI_flag(imcrit).eq.0).or. &
-                   (FSI_flag(imcrit).eq.7)) then
+          else if ((FSI_flag(imcrit).eq.0).or. & ! fluid
+                   (FSI_flag(imcrit).eq.7)) then ! fluid - IC from CAD
            local_maskSEM=imcrit
           else
            print *,"FSI_flag invalid"
@@ -19420,7 +19420,7 @@ stop
 
         if ((im_solid_vel_plus.ge.1).and. &
             (im_solid_vel_plus.le.nmat)) then
-          ! e.g. FSI_flag=2,8
+          ! e.g. FSI_flag=2,8 (not 4!)
          if (is_prescribed(nmat,im_solid_vel_plus).eq.1) then
           is_solid_cell=im_solid_vel_plus
           if (im_solid_map(partid_vel_plus+1)+1.ne.im_solid_vel_plus) then
