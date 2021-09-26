@@ -25347,6 +25347,7 @@ end subroutine initialize2d
        print *,"nparts invalid"
        stop
       endif
+       !velocity + LS + temperature + flag + force
       if (nFSI_sub.ne.9) then
        print *,"nFSI_sub.ne.9"
        stop

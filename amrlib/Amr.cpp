@@ -82,7 +82,6 @@ namespace
     VisMF::Header::Version plot_headerversion(VisMF::Header::Version_v1);
     VisMF::Header::Version checkpoint_headerversion(VisMF::Header::Version_v1);
     Vector<int> recalesce_flag;  //if set, then "recalesce_state" checkpointed.
-    Vector<int> AMR_FSI_flag;
     int  AMR_num_materials;
 
 //}
@@ -295,21 +294,6 @@ Amr::InitAmr () {
          (recalesce_flag[im]!=1)&&
          (recalesce_flag[im]!=2))
       amrex::Error("recalesce_flag invalid");
-    }
-
-    AMR_FSI_flag.resize(AMR_num_materials);
-    for (int im=0;im<AMR_num_materials;im++) {
-     AMR_FSI_flag[im]=0;
-    }
-    ppns.queryarr("FSI_flag",AMR_FSI_flag,0,AMR_num_materials);
-    for (int im=0;im<AMR_num_materials;im++) {
-     if ((AMR_FSI_flag[im]!=0)&& 
-         (AMR_FSI_flag[im]!=1)&&
-         (AMR_FSI_flag[im]!=2)&&
-         (AMR_FSI_flag[im]!=3)&&
-         (AMR_FSI_flag[im]!=4)&&
-	 (AMR_FSI_flag[im]!=5))
-      amrex::Error("AMR_FSI_flag invalid in Amr.cpp");
     }
 
     pp.query("regrid_on_restart",regrid_on_restart);

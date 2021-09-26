@@ -5,27 +5,23 @@
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_BUILD_MOMENT build_moment
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_HEATADVANCE  HEATADVANCE
-#    define FORT_BUILD_MOMENT BUILD_MOMENT
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_BUILD_MOMENT build_moment
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
 #    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_HEATADVANCE  heatadvance_
-#    define FORT_BUILD_MOMENT build_moment_
 #    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
 #  endif
@@ -364,7 +360,7 @@ extern "C"
     const int* fablo,const int* fabhi,int* bfact,
     int* nmat,int* nstate);
 
-   void FORT_BUILD_MOMENT(
+   void fort_build_moment(
     int* level,
     int* finest_level,
     int* nFSI,
