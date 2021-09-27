@@ -168,6 +168,8 @@ ns.solidheat_flag=1
 ns.tempconst=273.15 273.15 273.15 271.15  
 ns.initial_temperature=273.15 273.15 273.15 271.15  
 ns.xblob=0.0  # center of water drop
+# See "drop_slope_dist" in GLOBALUTIL.F90
+# drop is positioned to get proper volume and contact angle at t=0.
 ns.yblob=0.0000625 #4*dxcoarse=0.0000625
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
