@@ -247,6 +247,8 @@ ns.initial_temperature=273.0 273.0 273.0 272.0  # dimensionless
 ns.xblob=0.0  # center of water drop
 ns.yblob=0.1171875 #dimensionless dxcoarse=2.5/64  3*dxcoarse=0.1171875
 # freezing test 10:
+# See "drop_slope_dist" in GLOBALUTIL.F90
+# drop is positioned to get proper volume and contact angle at t=0.
 ns.yblob=0.08203125 #dimensionless dxcoarse=1.75/64  3*dxcoarse=0.08203125
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  

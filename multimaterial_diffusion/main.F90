@@ -341,9 +341,10 @@ VOFTOL_local=VOFTOL
 
 local_Pi=4.0d0*atan(1.0d0)
 
- dendrite_angle=pi/4.0d0  ! 45 degrees
+! dendrite_angle=pi/4.0d0  ! 45 degrees
 ! dendrite_angle=pi/6.0d0  ! 30 degrees
 ! dendrite_angle=pi/3.0d0  ! 60 degrees
+ dendrite_angle=0.0d0     ! 0 degrees
 
 ! pcurve_ls defined in vof_cisl.F90
 pcurve_ls = 0.0d0
