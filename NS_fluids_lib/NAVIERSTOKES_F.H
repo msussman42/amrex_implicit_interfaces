@@ -8,7 +8,6 @@
 #ifdef BL_LANG_FORT
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
 #    define FORT_EOS_PRESSURE eos_pressure
-#    define FORT_ADVECTIVE_PRESSURE advective_pressure
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
@@ -28,7 +27,6 @@
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_PRESSURE_INDICATOR PRESSURE_INDICATOR
 #    define FORT_EOS_PRESSURE EOS_PRESSURE
-#    define FORT_ADVECTIVE_PRESSURE ADVECTIVE_PRESSURE
 #    define FORT_COFLOW COFLOW
 #    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
@@ -49,7 +47,6 @@
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
 #    define FORT_EOS_PRESSURE eos_pressure
-#    define FORT_ADVECTIVE_PRESSURE advective_pressure
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
@@ -68,7 +65,6 @@
 #  else
 #    define FORT_PRESSURE_INDICATOR pressure_indicator_
 #    define FORT_EOS_PRESSURE eos_pressure_
-#    define FORT_ADVECTIVE_PRESSURE advective_pressure_
 #    define FORT_COFLOW coflow_
 #    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
@@ -93,7 +89,7 @@ namespace amrex{
 
 extern "C" {
 
-    void FORT_ADVECTIVE_PRESSURE(
+    void fort_advective_pressure(
      int* level,
      int* finest_level,
      const Real* xlo,const Real* dx,

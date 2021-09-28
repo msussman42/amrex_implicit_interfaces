@@ -1828,6 +1828,16 @@ void NavierStokes::apply_cell_pressure_gradient(
   // old cell velocity before application of pressure gradient.
  MultiFab* ustar;
 
+  // TODO:
+  // Low order: 
+  //   a) non-conservative at interfaces.
+  //   b) conservative in bulk where gradients are large.
+  //       -> div(up)   rho_t + div(rho u)=0  E_t + ...
+  // Space time spectral:
+  //   a) non conservative advection (non-diffusive version for velocity)
+  //   b) Drho/Dt=0  DT/Dt=0
+  //      div u = -(pnew-padv)/(rho c^2 dt)
+  //      Drho/Dt=-rho div u   DT/Dt=-p(rho,T) div u (T/T1)
  if (enable_spectral!=0) {
   std::cout << "non-conservative: \n";
   std::cout << "divup (1) rho div u , (2) p div u \n";
@@ -8998,8 +9008,12 @@ void NavierStokes::init_advective_pressure(int project_option) {
  } else if (project_option==11) { //FSI_material_exists last project
    // dst,src,scomp,dcomp,ncomp,ngrow
   int sc=scomp[0];
-  int dc=1; // copy 1st component of DIV_TYPE contents 
-            // into 2nd component of 
+  if (sc==0) {
+   // do nothing
+  } else
+   amrex::Error("sc invalid");
+
+  int dc=1; // copy 1st component of DIV_TYPE into 2nd component of 
             // localMF[CELL_SOUND_MF]
             // DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
   MultiFab::Copy(*localMF[CELL_SOUND_MF],S_new,sc,dc,1,0);
@@ -9053,9 +9067,9 @@ void NavierStokes::init_advective_pressure(int project_option) {
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-FIX ME
+
     // declared in: NAVIERSTOKES_3D.F90
-  FORT_ADVECTIVE_PRESSURE(
+  fort_advective_pressure(
    &level,
    &finest_level,
    xlo,dx,
