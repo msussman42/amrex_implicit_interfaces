@@ -1,9 +1,10 @@
-// I-scheme,thermal conduction,viscosity
+// I-scheme,thermal conduction,species conduction,viscosity
 // nstate_SDC (c++ and fortran)
-// =nfluxSEM+1+AMREX_SPACEDIM
+// =nfluxSEM+1+num_species_var+AMREX_SPACEDIM
 // nfluxSEM (c++ and fortran)
-// =AMREX_SPACEDIM+1
+// =AMREX_SPACEDIM+2+num_species_var
 // Pressure gradient correction terms are on the MAC grid.
+// DIV(U) terms are stored in the state variables: DIV_Type
 //
 #include <algorithm>
 #include <vector>
@@ -9226,9 +9227,9 @@ NavierStokes::SDC_setup_step() {
  if ((nmat<1)||(nmat>1000))
   amrex::Error("nmat out of range");
 
- nfluxSEM=AMREX_SPACEDIM+1;
-  //I-scheme,thermal conduction,viscosity
- nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM;
+ nfluxSEM=AMREX_SPACEDIM+2+num_species_var;
+  //I-scheme,thermal conduction,species conduction,viscosity
+ nstate_SDC=nfluxSEM+1+num_species_var+AMREX_SPACEDIM;
 
  ns_time_order=parent->Time_blockingFactor();
 
@@ -10379,9 +10380,12 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
    FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
    int deltacomp=0;
    if (project_option==3) { // viscosity
-    deltacomp=slab_step*nstate_SDC+nfluxSEM+1;
+    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var;
    } else if (project_option==2) { // thermal conduction
     deltacomp=slab_step*nstate_SDC+nfluxSEM;
+   } else if ((project_option>=100)&&
+	      (project_option<100+num_species_var)) {
+    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+project_option-100;
    } else if (project_option==0) { 
     amrex::Error("SEM pressure gradient correction on MAC grid");
    } else
@@ -14930,8 +14934,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
 
- if (nfluxSEM!=AMREX_SPACEDIM+1)
-  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+1");
+ if (nfluxSEM!=AMREX_SPACEDIM+2+num_species_var)
+  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+2+num_species_var");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing

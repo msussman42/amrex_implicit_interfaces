@@ -2223,7 +2223,7 @@ void NavierStokes::ADVECT_DIV() {
 
   FArrayBox& volumefab=(*localMF[VOLUME_MF])[mfi];
 
-  // coeff_avg,padvect_avg,coeff1,padvect1, ... ,coeffn,padvectn 
+  // coeff,padvect 
   FArrayBox& csoundfab=(*localMF[CELL_SOUND_MF])[mfi];
   FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
   FArrayBox& snewfab=S_new[mfi];
