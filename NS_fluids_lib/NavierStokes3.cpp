@@ -3877,6 +3877,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   slab_step=ns_time_order-1;
 
   // declared in: MacProj.cpp
+  // CELL_SOUND_MF contains: (i) coefficient (1/(rho c^2 dt^2))
+  //                         (ii) p_advect
   // MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
   // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
   //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol

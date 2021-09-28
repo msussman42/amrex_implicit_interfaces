@@ -68,8 +68,9 @@ namespace amrex{
 
 #define dt_gradp_over_rho_cell_MF 45
 
-// I-scheme, conduction, viscosity, div(up), grad p
+// I-scheme, conduction, species conduction, viscosity
 #define stableF_MF 46
+// pressure gradient (MAC grid)
 #define stableF_GP_MF 47
 
 // used in update_SEM_forces
@@ -161,6 +162,8 @@ namespace amrex{
 
 #define DINVERSE_MF 139
 #define TENSOR_RHS_MF 140
+
+#define MASKCONSERVE_MF 141
 
 #define HOOP_FORCE_MARK_MF 142
 #define BOUSSINESQ_TEMP_MF 143

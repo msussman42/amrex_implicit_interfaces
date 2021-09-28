@@ -670,7 +670,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
 
-  if (nfluxSEM==AMREX_SPACEDIM+1) {
+  if (nfluxSEM==AMREX_SPACEDIM+2+num_species_var) {
    // do nothing
   } else
    amrex::Error("nfluxSEM invalid");
@@ -931,7 +931,7 @@ void NavierStokes::interp_and_Copy_localMF(
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
 
-  if (nfluxSEM==AMREX_SPACEDIM+1) {
+  if (nfluxSEM==AMREX_SPACEDIM+2+num_species_var) {
    // do nothing
   } else
    amrex::Error("nfluxSEM invalid");
