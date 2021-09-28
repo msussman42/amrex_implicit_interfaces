@@ -456,18 +456,18 @@ NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
   amrex::Error("Interp_LO invalid");
 
  int nmat=num_materials;
- int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
+ int ncomp_ls=(AMREX_SPACEDIM+1)*nmat;
 
  if (Interp_LO==0) {
   ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
   ls_ho_interp_HIGH_PARM.LSHOInterp_LO=Interp_LO;
-  for (int im=0;im<ncomp_ls_ho;im++) {
+  for (int im=0;im<ncomp_ls;im++) {
    desc_lst.resetMapper(LS_Type,im,&ls_ho_interp_HIGH_PARM);
   } // im
  } else if (Interp_LO==1) {
   ls_ho_interp_LOW_PARM.LSHOInterp_nmat=nmat;
   ls_ho_interp_LOW_PARM.LSHOInterp_LO=Interp_LO;
-  for (int im=0;im<ncomp_ls_ho;im++) {
+  for (int im=0;im<ncomp_ls;im++) {
    desc_lst.resetMapper(LS_Type,im,&ls_ho_interp_LOW_PARM);
   } // im
  } else
@@ -1232,10 +1232,10 @@ NavierStokes::variableSetUp ()
 
 // LEVELSET ------------------------------------------------- 
 
-    int ncomp_ls_ho=(AMREX_SPACEDIM+1)*nmat;
+    int ncomp_ls=(AMREX_SPACEDIM+1)*nmat;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_ls_ho,&pc_interp,state_holds_data);
+     1,ncomp_ls,&pc_interp,state_holds_data);
 
      // components 0..nmat * AMREX_SPACEDIM-1 are for interface normal vectors.
      // components nmat * AMREX_SPACEDIM .. nmat * AMREX_SPACEDIM + 
@@ -1284,9 +1284,9 @@ NavierStokes::variableSetUp ()
      amrex::Error("dcomp invalid");
 
     Vector<std::string> LS_HO_names;
-    LS_HO_names.resize(ncomp_ls_ho);
+    LS_HO_names.resize(ncomp_ls);
     Vector<BCRec> LS_HO_bcs;
-    LS_HO_bcs.resize(ncomp_ls_ho);
+    LS_HO_bcs.resize(ncomp_ls);
 
     dcomp=0;
   
@@ -1330,7 +1330,7 @@ NavierStokes::variableSetUp ()
 
     if (dcomp!=AMREX_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
-    if (dcomp+nmat!=ncomp_ls_ho)
+    if (dcomp+nmat!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
      // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
@@ -1349,9 +1349,9 @@ NavierStokes::variableSetUp ()
       LS_HO_bcs,LS_HO_fill_class,&ls_ho_interp_HIGH_PARM);
 
     Vector<std::string> LS_main_names;
-    LS_main_names.resize(ncomp_ls_ho);
+    LS_main_names.resize(ncomp_ls);
     Vector<BCRec> LS_main_bcs;
-    LS_main_bcs.resize(ncomp_ls_ho);
+    LS_main_bcs.resize(ncomp_ls);
 
     dcomp=0;
 
@@ -1394,7 +1394,7 @@ NavierStokes::variableSetUp ()
 
     if (dcomp!=AMREX_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
-    if (dcomp+nmat!=ncomp_ls_ho)
+    if (dcomp+nmat!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
      // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat

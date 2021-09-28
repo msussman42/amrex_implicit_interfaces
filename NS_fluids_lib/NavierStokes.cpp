@@ -519,10 +519,13 @@ int  NavierStokes::ngeom_recon=NUM_MOF_VAR;
 int  NavierStokes::ncghost_elastic=0;
 int  NavierStokes::ncghost_state=0;
 
+// vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
 int  NavierStokes::State_Type=0;
+// mac vel, displacement
 int  NavierStokes::Umac_Type=State_Type+1;
 int  NavierStokes::Vmac_Type=Umac_Type+1;
 int  NavierStokes::Wmac_Type=Vmac_Type+AMREX_SPACEDIM-2;
+//  LS 1..nmat, LS_slope sdim x nmat
 int  NavierStokes::LS_Type=Wmac_Type+1;
 int  NavierStokes::DIV_Type=LS_Type+1;
 int  NavierStokes::Solid_State_Type=DIV_Type+1;
