@@ -9053,8 +9053,8 @@ void NavierStokes::init_advective_pressure(int project_option) {
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // in: NAVIERSTOKES_3D.F90
+FIX ME
+    // declared in: NAVIERSTOKES_3D.F90
   FORT_ADVECTIVE_PRESSURE(
    &level,
    &finest_level,

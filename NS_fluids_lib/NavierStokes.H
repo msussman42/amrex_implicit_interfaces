@@ -303,7 +303,14 @@ namespace amrex{
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
 // State_Type:
-// velocity, pressure, state x nmat, interface vars x nmat, error ind
+//  vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
+// Umac_Type, Vmac_Type, Wmac_Type:
+//  mac vel, displacement
+// LS_Type:
+//  LS 1..nmat, LS_slope sdim x nmat
+// DIV_Type:
+//  (a) temporary "pressure" for project_option==11
+//  (b) -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
 // Solid_State_Type:
 // velocity
 // Tensor_Type:
@@ -1842,10 +1849,13 @@ protected:
 
     static Vector<int>  shock_timestep;
 
-    static int State_Type;
+     // vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
+    static int State_Type; 
+     // mac vel, displacement
     static int Umac_Type;
     static int Vmac_Type;
     static int Wmac_Type;
+     //  LS 1..nmat, LS_slope sdim x nmat
     static int LS_Type;
     static int DIV_Type;
     static int Solid_State_Type;
