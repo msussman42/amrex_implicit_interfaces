@@ -3878,7 +3878,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
   // declared in: MacProj.cpp
   // MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
-  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
+  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
+  //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol
+  //                          
   // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
 
@@ -3912,7 +3914,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     //DIV_Type<stuff>.plt (visit can open binary tecplot files)
     writeSanityCheckData(
       "DIV_Type",
-      "DIV_Type: -dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol",
+      "DIV_Type: -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol",
       caller_id,
       DIV_new.nComp(), 
       -1,
@@ -7890,6 +7892,18 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
    amrex::Error("scomp.size() invalid");
   if (ncomp[0]!=1)
    amrex::Error("ncomp[0] invalid");
+
+   //   if (project_option==11) then
+   //    a-1) ADVECT_DIV_ALL() puts latest div(u) in DIV_Type.
+   //    a-2) DIV_Type=-dt*(pnew-padv)/(rho c^2 dt^2) + mdot * dt/vol=
+   //                  -(pnew-padv)/(rho c^2 dt) + mdot * dt/vol
+   //    b) if (incomp): csnd(1)=0, (coefficient)
+   //                    csnd(2)=0, (padvect)
+   //                    DIFFSUIONRHS=(1/dt)( DIV_Type ) * vol
+   //    c) if (comp): csnd(2)=DIV_TYPE / (1/(rho c^2 dt)) =
+   //                          DIV_TYPE * (rho c^2 dt)
+   //    d) csnd(2) is copied to DIV_Type overwriting div(u)
+
   current_contents_mf=getStateDIV_DATA(1,scomp[0],ncomp[0],cur_time_slab);
  } else {
   current_contents_mf=nullptr;
@@ -9374,7 +9388,8 @@ void NavierStokes::multiphase_project(int project_option) {
       DIV_new,0,0,1,1);
   } // ilev=level ... finest_level
   // in: MacProj.cpp
-  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol
+  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
+  //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
   // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
  } else if (project_option==12) { // pressure extension
@@ -9926,14 +9941,26 @@ void NavierStokes::multiphase_project(int project_option) {
    // do nothing
   } else if (project_option_projection(project_option)==1) {
 
-   // updates CELL_SOUND_MF, DIFFUSIONRHS, and 
-   // S_new 
-   //  State_Type if project_option==0 
-   //  DIV_Type if project_option==11
-   //   DIV_Type=-dt*(pnew-padv)/(rho c^2 dt^2) + mdot * dt/vol
+   if ((project_option==0)||   // regular project
+       (project_option==11)||  // FSI_material_exists last project
+       (project_option==1)) {  // initial_project
+    // do nothing
+   } else
+    amrex::Error("project_option invalid");
+
+   // updates CELL_SOUND_MF, DIFFUSIONRHS, and S_new. 
+   //  State_Type is updated by solver if project_option==0. 
+   //  DIV_Type is updated by solver if project_option==11
    //   if (project_option==11) then
-   //    if (incomp): csnd(2)=0, DIFFSUIONRHS=(1/dt)( DIV_Type ) * vol
-   //    if (comp): csnd(2)=DIV_TYPE
+   //    a-1) ADVECT_DIV_ALL() puts latest div(u) in DIV_Type.
+   //    a-2) DIV_Type=-dt*(pnew-padv)/(rho c^2 dt^2) + mdot * dt/vol=
+   //                  -(pnew-padv)/(rho c^2 dt) + mdot * dt/vol
+   //    b) if (incomp): csnd(1)=0, (coefficient)
+   //                    csnd(2)=0, (padvect)
+   //                    DIFFSUIONRHS=(1/dt)( DIV_Type ) * vol
+   //    c) if (comp): csnd(2)=DIV_TYPE / (1/(rho c^2 dt)) =
+   //                          DIV_TYPE * (rho c^2 dt)
+   //    d) csnd(2) is copied to DIV_Type overwriting div(u)
    // 
    //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
    ns_level.init_advective_pressure(project_option); 

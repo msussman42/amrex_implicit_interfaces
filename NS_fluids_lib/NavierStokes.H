@@ -1855,8 +1855,9 @@ protected:
     static int Umac_Type;
     static int Vmac_Type;
     static int Wmac_Type;
-     //  LS 1..nmat, LS_slope sdim x nmat
+     // LS 1..nmat, LS_slope sdim x nmat
     static int LS_Type;
+     // -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
     static int DIV_Type;
     static int Solid_State_Type;
     static int Tensor_Type;

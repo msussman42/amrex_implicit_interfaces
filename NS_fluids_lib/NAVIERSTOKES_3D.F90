@@ -12536,7 +12536,7 @@ END SUBROUTINE SIMP
 ! called from:
 ! NavierStokes::init_advective_pressure
 !
-      subroutine FORT_ADVECTIVE_PRESSURE( &
+      subroutine fort_advective_pressure( &
         level, &
         finest_level, &
         xlo,dx, &
@@ -12553,7 +12553,8 @@ END SUBROUTINE SIMP
         nmat,nden, &
         compressible_dt_factor, &
         pressure_select_criterion, &
-        project_option)
+        project_option) &
+      bind(c,name='fort_advective_pressure')
 
       use global_utility_module
       use probf90_module
@@ -12584,13 +12585,20 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(cvof)
       INTEGER_T, intent(in) :: DIMDEC(den)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: vol(DIMV(vol))
-      REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      REAL_T, intent(inout) :: csnd(DIMV(csnd),2) 
-      REAL_T, intent(in) :: cvof(DIMV(cvof),nmat) 
-      REAL_T, intent(in) :: den(DIMV(den),nden) ! den,temp
-      REAL_T, intent(inout) :: mdot(DIMV(mdot)) 
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: csnd(DIMV(csnd),2) 
+      REAL_T, pointer :: csnd_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: cvof(DIMV(cvof),nmat) 
+      REAL_T, pointer :: cvof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: mdot(DIMV(mdot)) 
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
       INTEGER_T im,imcrit,im_weight
@@ -12673,13 +12681,21 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(csnd),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(cvof),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,44)
+      maskcov_ptr=>maskcov
+      vol_ptr=>vol
+      lsnew_ptr=>lsnew
+      csnd_ptr=>csnd
+      cvof_ptr=>cvof
+      den_ptr=>den
+      mdot_ptr=>mdot
+
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,csnd_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,cvof_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=two*DXMAXLS
@@ -12768,8 +12784,8 @@ END SUBROUTINE SIMP
            ! coeff_avg,p_avg
            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
           div_hold=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
-                                              ! of DIV_Type)
-           ! FORT_ADVECTIVE_PRESSURE called from 
+                                           ! of DIV_Type)
+           ! fort_advective_pressure called from 
            !   NavierStokes::init_advective_pressure
            ! init_advective_pressure called from
            !   NavierStokes::multiphase_project
@@ -12964,24 +12980,30 @@ END SUBROUTINE SIMP
           stop
          endif
        
-         if (imcrit.eq.0) then 
+         if (imcrit.eq.0) then ! is_rigid material(s) dominate.
 
           csnd(D_DECL(i,j,k),1)=zero  ! coeff
           csnd(D_DECL(i,j,k),2)=zero  ! padvect
 
-          if (imcrit.ne.im_weight) then
-           print *,"imcrit.ne.im_weight"
+          if (im_weight.eq.0) then
+           ! do nothing
+          else
+           print *,"expecting im_weight==0"
            stop
           endif
 
          else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
 
-          if (is_rigid(nmat,imcrit).ne.0) then
+          if (is_rigid(nmat,imcrit).eq.0) then
+           ! do nothing
+          else
            print *,"is_rigid(nmat,imcrit) invalid"
            stop
           endif
 
-          if (is_rigid(nmat,im_weight).ne.0) then
+          if (is_rigid(nmat,im_weight).eq.0) then
+           ! do nothing
+          else
            print *,"is_rigid(nmat,im_weight).ne.0"
            stop
           endif
@@ -13032,7 +13054,12 @@ END SUBROUTINE SIMP
               (compressible_dt_factor(im_weight)*rho(im_weight)*dt*dt)
 
              ! coeff
-            csnd(D_DECL(i,j,k),1)=csound_hold
+            if (csound_hold.ge.zero) then
+             csnd(D_DECL(i,j,k),1)=csound_hold
+            else
+             print *,"csound_hold invalid"
+             stop
+            endif
 
             if (project_option.eq.11) then !FSI_material_exists (2nd project)
 
@@ -13041,7 +13068,7 @@ END SUBROUTINE SIMP
                ! localMF[DIFFUSIONRHS_MF]
                ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
               mdot(D_DECL(i,j,k))=local_volume*div_hold/dt 
-             else if (csound_hold.ne.zero) then
+             else if (csound_hold.gt.zero) then
               ! "div" = -(pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
               ! (1/(rho c^2 dt^2))p=div/dt
               ! csound_hold p = div/dt
@@ -13107,7 +13134,7 @@ END SUBROUTINE SIMP
       enddo  ! i,j,k
 
       return
-      end subroutine FORT_ADVECTIVE_PRESSURE
+      end subroutine fort_advective_pressure
 
        ! called from NavierStokes::ADVECT_DIV which is declared in MacProj.cpp
       subroutine fort_update_div( &
@@ -13219,7 +13246,7 @@ END SUBROUTINE SIMP
       enddo  ! i,j,k
 
       return
-      end subroutine FORT_UPDATE_DIV
+      end subroutine fort_update_div
 
 
        ! spectral_override==0 => always low order

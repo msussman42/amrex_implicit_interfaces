@@ -525,8 +525,9 @@ int  NavierStokes::State_Type=0;
 int  NavierStokes::Umac_Type=State_Type+1;
 int  NavierStokes::Vmac_Type=Umac_Type+1;
 int  NavierStokes::Wmac_Type=Vmac_Type+AMREX_SPACEDIM-2;
-//  LS 1..nmat, LS_slope sdim x nmat
+// LS 1..nmat, LS_slope sdim x nmat
 int  NavierStokes::LS_Type=Wmac_Type+1;
+// -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
 int  NavierStokes::DIV_Type=LS_Type+1;
 int  NavierStokes::Solid_State_Type=DIV_Type+1;
 int  NavierStokes::XDmac_Type=Solid_State_Type+1;
