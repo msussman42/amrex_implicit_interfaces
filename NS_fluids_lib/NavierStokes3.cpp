@@ -1968,6 +1968,8 @@ void NavierStokes::init_splitting_force_SDC() {
 
 } // subroutine init_splitting_force_SDC
 
+//source_term==1 => compute F(t^{n+k/order})
+//source_term==0 => compute F(t^{n+k/order,*})
 void NavierStokes::SEM_advectALL(int source_term) {
 
  if (stokes_flow==0) {
@@ -2574,7 +2576,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if ((slab_step==0)&&
            (SDC_outer_sweeps>0)&&
            (SDC_outer_sweeps<ns_time_order)) {
-        // do nothing: F(t^n) already init.
+        // do nothing: F(t^n) already init when SDC_outer_sweeps==0.
        } else if ((slab_step==0)&&
                   (SDC_outer_sweeps==0)) {
         SEM_advectALL(source_term);
@@ -3173,8 +3175,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       int vel_or_disp=0;  // velocity
       int dest_idx=-1;  // update State_Type
 
-        //if temperature_primitive_var==0,
-        // add beta * (1/cv) * (u dot u/2) to temp
+       // maintain conservation of energy for compressible materials.
       increment_KE_ALL(beta);
       VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
       beta=-1.0;
@@ -12393,8 +12394,9 @@ void NavierStokes::veldiffuseALL() {
        (viscous_enable_spectral==3)) { // SEM time
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
-     // calls: SEMDELTAFORCE in GODUNOV_3D.F90
+     // calls: fort_semdeltaforce in GODUNOV_3D.F90
      // does not look at: enable_spectral
+     // vel_project_option=3
      ns_level.make_SEM_delta_force(vel_project_option);
     }
    } else if (viscous_enable_spectral==0) {
@@ -12456,10 +12458,9 @@ void NavierStokes::veldiffuseALL() {
 
 // ---------------- begin thermal diffusion ---------------------
 
-   // UPDATESEMFORCE:
    // HOFAB=-div k grad T 
    // Tnew=Tnew-(1/(rho cv))(int (HOFAB) - dt (LOFAB))
-   // call to semdeltaforce with dcomp=slab_step*nstate_SDC+nfluxSEM
+   // call to fort_semdeltaforce with dcomp=slab_step*nstate_SDC+nfluxSEM
  if ((SDC_outer_sweeps>0)&&
      (SDC_outer_sweeps<ns_time_order)&&
      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
@@ -12471,7 +12472,7 @@ void NavierStokes::veldiffuseALL() {
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
-     // calls: SEMDELTAFORCE in GODUNOV_3D.F90
+     // calls: fort_semdeltaforce in GODUNOV_3D.F90
      ns_level.make_SEM_delta_force(project_option_temperature); //=2
     }
    } else if (viscous_enable_spectral==0) {

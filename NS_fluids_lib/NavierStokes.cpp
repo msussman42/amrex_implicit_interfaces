@@ -1,13 +1,13 @@
-// I-scheme,thermal conduction,species conduction,viscosity
+// I-scheme,thermal conduction,viscosity
 // nstate_SDC (c++ and fortran)
-// =nfluxSEM+1+num_species_var+AMREX_SPACEDIM
+// =nfluxSEM+1+AMREX_SPACEDIM
 // nfluxSEM (c++ and fortran)
-// =AMREX_SPACEDIM+2+num_species_var
+// =AMREX_SPACEDIM+1
 // Pressure gradient correction terms are on the MAC grid.
-// DIV(U) terms are stored in the state variables: DIV_Type
 //
-//keywords: nfluxSEM, nstate_SDC, SEM_advection_algorithm, 
-//SEM_scalar_advection, MASKSEM_MF, MASKCONSERVE_MF
+//keywords: nfluxSEM, nstate_SDC, 
+//SEM_scalar_advection, MASKSEM_MF,deltacomp,make_SEM_delta_force,
+//fort_updatesemforce, SEM_MAC_TO_CELL, SEM_CELL_TO_MAC
 #include <algorithm>
 #include <vector>
 
@@ -295,8 +295,6 @@ int  NavierStokes::enable_spectral=0;
 int  NavierStokes::viscous_enable_spectral=0;
 int  NavierStokes::projection_enable_spectral=0;
 int  NavierStokes::SEM_upwind=1;
-//0=div(uS)-S div(u)    1=u dot grad S
-int  NavierStokes::SEM_advection_algorithm=0;
 // default: tessellating fluid => default==1
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
@@ -566,22 +564,6 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 3=> incremental elastic material
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
-// temperature_primitive_variable defaults to 0 (conservative) for
-// inviscid compressible materials, and 1 (non conservative) for other
-// materials.
-// if shock_timestep<>1, temperature_primitive_variable=1
-// E=u dot u/2 + e
-// e=cv T (compressible)   cp T (incompressible)
-// 0=> conservative advection of temperature:
-//    (rho E)_t + div(rho u E + up)=div(k grad T) 
-//    it is assumed the fluid is inviscid and 
-//    compressible for this option.
-// 1=> non-conservative advection of temperature:
-//    (rho e)_t + div(rho u e)+div(u)p=div(k grad T)
-// if u is changed, then T must be changed if energy is to be conserved:
-//  u_new^2/2 + cv T_new = u_old^2/2 + cv T_old
-//  Tnew=Told+(1/cv)(u_old^2/2 - u_new^2/2)
-Vector<int> NavierStokes::temperature_primitive_variable; 
 
 Vector<int> NavierStokes::store_elastic_data; // def=0
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
@@ -660,13 +642,6 @@ Real NavierStokes::mglib_min_coeff_factor=1000.0;
 
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
-
-// 0=> I(u_GL) dot grad u_GG, no sync project
-// 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-// Option 2,
-//  grad dot (u_GL u_GG) - u_GG div u_GL, sync project
-// is now obsolete since mdot!=0 in SEM regions for phase change problems.
-int NavierStokes::conservative_div_uu=1;
 
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
@@ -784,8 +759,6 @@ Vector<Real> NavierStokes::reaction_rate;
 //   ->  m_vapor
 //   material_type
 //   0 ?? 999
-//   temperature_primitive_variable
-//   1 1 1
 //
 // 5=evaporation/condensation (Stefan model speed)
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
@@ -2461,14 +2434,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("SEM_upwind invalid");
 
-    pp.query("SEM_advection_algorithm",SEM_advection_algorithm);
-    if (SEM_advection_algorithm==1) { // u dot grad S
-     // do nothing
-    } else if (SEM_advection_algorithm==0) { // div(uS)-S div u
-     // do nothing
-    } else
-     amrex::Error("SEM_advection_algorithm invalid");
-
     pp.query("continuous_mof",continuous_mof);
     pp.query("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
     pp.query("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
@@ -2599,8 +2564,6 @@ NavierStokes::read_params ()
      std::cout << "projection_enable_spectral " << 
        projection_enable_spectral << '\n';
      std::cout << "SEM_upwind " << SEM_upwind << '\n';
-     std::cout << "SEM_advection_algorithm " << 
-       SEM_advection_algorithm << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
      std::cout << "force_cmof_at_triple_junctions " << 
        force_cmof_at_triple_junctions << '\n';
@@ -3447,13 +3410,6 @@ NavierStokes::read_params ()
     pp.queryarr("prerecalesce_stiffCP",prerecalesce_stiffCP,0,nmat);
     pp.queryarr("prerecalesce_stiffCV",prerecalesce_stiffCV,0,nmat);
 
-    pp.query("conservative_div_uu",conservative_div_uu);
-    if ((conservative_div_uu==0)||   //I(u_GL) dot grad u_GG
-        (conservative_div_uu==1)) {  //grad dot (u_GL u_GG) - u_GG div u_GL
-     // do nothing
-    } else
-     amrex::Error("conservative_div_uu invalid");
-
     pp.query("mglib_min_coeff_factor",mglib_min_coeff_factor);
 
     pp.getarr("tension",tension,0,nten);
@@ -3932,7 +3888,6 @@ NavierStokes::read_params ()
         (pressure_select_criterion>2))
      amrex::Error("pressure_select_criterion invalid");
 
-    temperature_primitive_variable.resize(nmat);
     elastic_time.resize(nmat);
 
     Carreau_alpha.resize(nmat);
@@ -3980,36 +3935,6 @@ NavierStokes::read_params ()
      amrex::Error("disable_pressure_solve invalid 1");
 
     for (int i=0;i<nmat;i++) {
-     temperature_primitive_variable[i]=0;
-     if (is_ice_matC(i)==1) {
-      temperature_primitive_variable[i]=1;
-     } else if (is_FSI_rigid_matC(i)==1) {
-      temperature_primitive_variable[i]=1;
-     } else if (CTML_FSI_matC(i)==1) {
-      temperature_primitive_variable[i]=1;
-     } else if (ns_is_rigid(i)==1) {
-      temperature_primitive_variable[i]=1;
-     } else if (visc_coef*viscconst[i]>0.0) {
-      temperature_primitive_variable[i]=1;
-     } else if (material_type[i]==0) {
-      temperature_primitive_variable[i]=1;
-     } else if (material_type[i]==999) {
-      temperature_primitive_variable[i]=1;
-     } else if ((shock_timestep[i]==0)||
-                (shock_timestep[i]==2)) {
-      temperature_primitive_variable[i]=1;
-     } else if (shock_timestep[i]==1) {
-      // do nothing
-     } else if (ns_is_rigid(i)==0) {
-      // do nothing
-     } else if (visc_coef*viscconst[i]==0.0) {
-      // do nothing
-     } else if (material_type[i]>0) {
-      // do nothing
-     } else {
-      amrex::Error("parameter bust");
-     }
-
      elastic_time[i]=0.0;
 
      Carreau_alpha[i]=1.0;
@@ -4018,57 +3943,6 @@ NavierStokes::read_params ()
      Carreau_mu_inf[i]=0.0;
 
      polymer_factor[i]=0.0;
-    }  // i=0..nmat-1
-
-    pp.queryarr("temperature_primitive_variable",
-     temperature_primitive_variable,0,nmat);
-
-    for (int i=0;i<nmat;i++) {
-
-     if (temperature_primitive_variable[i]==0) {
-      if (ns_is_rigid(i)==1) {
-       amrex::Error("make temperature_primitive_variable=1 for solids");
-      } else if (is_ice_matC(i)==1) {
-       amrex::Error("make temperature_primitive_variable=1 for ice");
-      } else if (is_FSI_rigid_matC(i)==1) {
-       amrex::Error("make temperature_primitive_variable=1 for FSI_rigid");
-      } else if (CTML_FSI_matC(i)==1) {
-       amrex::Error("make temperature_primitive_variable=1 for CTML");
-      } else if (visc_coef*viscconst[i]>0.0) {
-       amrex::Error("make temperature_primitive_variable=1 for visc. fluids");
-      } else if (material_type[i]==0) {
-       amrex::Error("make temperature_primitive_variable=1 for incomp fluids");
-      } else if (material_type[i]==999) {
-       amrex::Error("make temperature_primitive_variable=1 for solids");
-      } else if ((shock_timestep[i]==0)||
-                 (shock_timestep[i]==2)) {
-       std::cout << "make temperature_primitive_variable=1 if \n";
-       std::cout << "shock_timestep=0 or 2\n";
-       amrex::Error("make temperature_primitive_variable=1 if big dt");
-      } else if (ns_is_rigid(i)==0) {
-       // do nothing
-      } else if (visc_coef*viscconst[i]==0.0) {
-       // do nothing
-      } else if (material_type[i]>0) {
-       // do nothing
-      } else {
-       amrex::Error("parameter bust");
-      }
-     } else if (temperature_primitive_variable[i]==1) {
-      if ((ns_is_rigid(i)==0)&& 
-          (is_ice_matC(i)==0)&&
-          (is_FSI_rigid_matC(i)==0)&&
-          (CTML_FSI_matC(i)==0)&&
-          (visc_coef*viscconst[i]==0)&& 
-          (material_type[i]>=1)&&
-          (material_type[i]<999)&&
-          (shock_timestep[i]==1)) {
-       amrex::Warning("make temperature_primitive_variable=0 for shock capt.");
-      }
-     } else {
-      amrex::Error("temperature_primitive_variable[i] invalid");
-     }
-
     }  // i=0..nmat-1
 
     pp.queryarr("elastic_time",elastic_time,0,nmat);
@@ -4746,8 +4620,6 @@ NavierStokes::read_params ()
         viscoelastic_model[i] << '\n';
       std::cout << "les_model i= " << i << ' ' <<
         les_model[i] << '\n';
-      std::cout << "temperature_primitive_variable i= " << i << ' ' <<
-       temperature_primitive_variable[i] << '\n';
       std::cout << "shock_timestep i=" << i << " " << 
           shock_timestep[i] << '\n';
       std::cout << "material_type i=" << i << " " << material_type[i] << '\n';
@@ -4820,8 +4692,6 @@ NavierStokes::read_params ()
      std::cout << "custom_nucleation_model " << 
        custom_nucleation_model << '\n';
 
-     std::cout << "conservative_div_uu " << 
-       conservative_div_uu << '\n';
      std::cout << "FD_curv_interp " << FD_curv_interp << '\n';
      std::cout << "vof_height_function " << vof_height_function << '\n';
 
@@ -9229,9 +9099,10 @@ NavierStokes::SDC_setup_step() {
  if ((nmat<1)||(nmat>1000))
   amrex::Error("nmat out of range");
 
- nfluxSEM=AMREX_SPACEDIM+2+num_species_var;
-  //I-scheme,thermal conduction,species conduction,viscosity
- nstate_SDC=nfluxSEM+1+num_species_var+AMREX_SPACEDIM;
+  //velocity, temperature
+ nfluxSEM=AMREX_SPACEDIM+1;
+  //I-scheme,thermal conduction,viscosity
+ nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM;
 
  ns_time_order=parent->Time_blockingFactor();
 
@@ -10378,16 +10249,13 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   // I-scheme,thermal conduction,viscosity,-force
+   // I-scheme,thermal conduction,viscosity (-div(2 mu D)-force)
    FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
    int deltacomp=0;
    if (project_option==3) { // viscosity
-    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+num_species_var;
+    deltacomp=slab_step*nstate_SDC+nfluxSEM+1;
    } else if (project_option==2) { // thermal conduction
     deltacomp=slab_step*nstate_SDC+nfluxSEM;
-   } else if ((project_option>=100)&&
-	      (project_option<100+num_species_var)) {
-    deltacomp=slab_step*nstate_SDC+nfluxSEM+1+project_option-100;
    } else if (project_option==0) { 
     amrex::Error("SEM pressure gradient correction on MAC grid");
    } else
@@ -14895,6 +14763,9 @@ NavierStokes::end_spectral_loop() {
  
 } // end_spectral_loop
 
+//source_term==1 => compute F(t^{n+k/order})
+//source_term==0 => compute F(t^{n+k/order,*})
+//
 // first: NavierStokes::nonlinear_advection() is called
 // second: NavierStokes::SEM_advectALL is called
 // This routine is called from  NavierStokes::SEM_advectALL
@@ -14936,9 +14807,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
 
-  // velocity, density, temperature, mass fraction
- if (nfluxSEM!=AMREX_SPACEDIM+2+num_species_var)
-  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+2+num_species_var");
+  // velocity, temperature
+ if (nfluxSEM!=AMREX_SPACEDIM+1)
+  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+1");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -15213,7 +15084,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &energyflag,
       &visc_coef, //beta
       &visc_coef,
-      temperature_primitive_variable.dataPtr(),
       &local_enable_spectral,
       &fluxvel_index,
       &fluxden_index,
@@ -15221,7 +15091,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &facecut_index,
       &icefacecut_index,
       &curv_index,
-      &conservative_div_uu,
       &ignore_div_up,
       &pforce_index,
       &faceden_index,
@@ -15283,8 +15152,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &num_colors,
       &nten,
       &project_option_visc,
-      &SEM_upwind,
-      &SEM_advection_algorithm);
+      &SEM_upwind);
     }   // mfi
 } // omp
     ns_reconcile_d_num(84);
@@ -15350,6 +15218,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& S_old_fab = S_old[mfi];
 
      FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
+     FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
 
      FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
      FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
@@ -15397,7 +15266,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &num_divu_outer_sweeps,
       &operation_flag, // 107=advection
       &energyflag,
-      temperature_primitive_variable.dataPtr(),
       constant_density_all_time.dataPtr(),
       &nmat,
       &nparts,
@@ -15415,7 +15283,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &facecut_index,
       &icefacecut_index,
       &curv_index,
-      &conservative_div_uu,
       &ignore_div_up,
       &pforce_index,
       &faceden_index,  // 1/rho
@@ -15474,10 +15341,10 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       slopefab.dataPtr(), // recon
       ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
-      velfab.dataPtr(), // mdot
+      velfab.dataPtr(), // operation_flag==107, mdot
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-      S_old_fab.dataPtr(), // maskdivres
-      ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
+      denfab.dataPtr(), // operation_flag==107, maskdivres
+      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
       S_old_fab.dataPtr(), // maskres
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       &SDC_outer_sweeps,
@@ -15485,8 +15352,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nsolve,
       &ncomp_denold,
       &ncomp_veldest,
-      &ncomp_dendest,
-      &SEM_advection_algorithm);
+      &ncomp_dendest);
 
      if (1==0) {
       std::cout << "SEM_scalar_advect c++ level,finest_level " << 
@@ -15500,7 +15366,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 }// omp
     ns_reconcile_d_num(85);
 
-    // rhs=div(uF)  (except for temperature: rhs=u dot grad Theta)
+    // rhs=div(uF)  
     if (source_term==0) {
 
      if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -15767,7 +15633,6 @@ NavierStokes::split_scalar_advection() {
   fort_build_conserve( 
    &iden_base,
    constant_density_all_time.dataPtr(),
-   temperature_primitive_variable.dataPtr(),
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -16032,7 +15897,6 @@ NavierStokes::split_scalar_advection() {
    density_floor.dataPtr(),
    density_ceiling.dataPtr(),
    &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
-   temperature_primitive_variable.dataPtr(),
    &dencomp,&mofcomp,&errcomp,
    latent_heat.dataPtr(),
    freezing_model.dataPtr(),

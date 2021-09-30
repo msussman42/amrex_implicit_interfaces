@@ -38,12 +38,9 @@ ns.num_divu_outer_sweeps=1
 ns.FSI_flag         = 0 0 1
 
 
-# temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = 0  (energy advection)
 #   E=1/2  u dot u + e  e=e(T)
-# temperature_primitive_variable=1:
 #   (rho T)_{t} + div (rho u T) = 0  (energy advection)
-ns.temperature_primitive_variable = 1 1 1
 
 # Values simplified for debugging
 ns.xblob            = 4.0   # outer tank radius (4.21 m in DaigleETAL2012)

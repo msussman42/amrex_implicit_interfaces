@@ -239,7 +239,6 @@ ns.latent_heat=276.4e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # if nucleation_period>0.0, periodically nucleate bubbles.
 #ns.nucleation_period= 37.28
 #ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
-#ns.temperature_primitive_variable=1 1 1
 # NUCLEATION: UNDER CONSTRUCTION
 # NavierStokes::level_phase_change_rate
 # FORT_RATEMASSCHANGE in MASS_TRANSFER_3D.F90
@@ -248,7 +247,6 @@ ns.pos_sites_random_flag=0
 #ns.nucleation_init_time=0.0  #have bubbles nucleated at t=0
 # NOV 2018 (3 or 4 materials)
 ns.saturation_temp=646.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1 1
 
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1      # timesteps between computing mass 

@@ -122,7 +122,6 @@ ns.init_shrink    = 0.5      # scale back initial timestep
 ns.change_max     = 1.1    # scale back initial timestep
 ns.change_max_init= 1.0e+4     
 ns.visc_coef      = 1.0    # coef of viscosity
-ns.temperature_primitive_variable=1 1
 mac.visc_abs_tol   = 1.0e-13
 #ns.gravity        = -9.8
 ns.gravity =0.0  # no density variation in this problem.

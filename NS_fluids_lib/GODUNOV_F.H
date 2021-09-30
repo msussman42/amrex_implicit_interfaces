@@ -236,7 +236,6 @@ extern "C"
    void fort_build_conserve(
     int* iden_base,
     int* constant_density_all_time,
-    int* temperature_primitive_variable,
     Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
     Real* den,
     AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
@@ -771,7 +770,6 @@ extern "C"
      Real* density_floor,
      Real* density_ceiling,
      int* solidheat_flag,
-     int* temperature_primitive_variable,
      int* dencomp,int* mofcomp,int* errcomp,
      Real* latent_heat,
      int* freezing_model,
@@ -1045,7 +1043,6 @@ extern "C"
      int* slab_step,
      int* itensor_iter,
      Real* time,
-     int* temperature_primitive_variable,
      int* enable_spectral,
      int* velbc,
      int* spectral_loop,
@@ -1085,7 +1082,6 @@ extern "C"
      int* homflag,
      int* ntensor,
      int* SEM_upwind,
-     int* SEM_advection_algorithm,
      int* simple_AMR_BC_flag_viscosity);
 
 

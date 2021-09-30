@@ -75,7 +75,6 @@ ns.freezing_model=0 0
 ns.distribute_target=0 0
 ns.saturation_temp = 373.0 0.0 # 12,21   
 # E=(1/2) u^2 + e(rho,T)
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

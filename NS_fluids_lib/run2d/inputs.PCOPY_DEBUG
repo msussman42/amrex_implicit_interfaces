@@ -184,7 +184,6 @@ ns.nucleation_period=0.07	#Every 90ms?
 ns.nucleation_period=0.05	#Every 90ms?
 # NOV 2018 (3 or 4 materials)
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 ns.viscosity_state_model=0 0 0 0

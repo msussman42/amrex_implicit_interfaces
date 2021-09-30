@@ -57,7 +57,6 @@ geometry.is_periodic = 0 1 0
 
 ns.MOFITERMAX=15
 ns.continuous_mof=0
-ns.temperature_primitive_variable=1 1 1 1 1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
@@ -100,7 +99,6 @@ ns.viscous_enable_spectral=0
 ns.projection_enable_spectral=1
 
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-ns.conservative_div_uu=1
 
 amr.plotfile_on_restart=1
 ns.perturbation_on_restart=0

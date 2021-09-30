@@ -89,7 +89,6 @@ ns.nucleation_temp = 0.0 270.0 0.0 0.0 0.0 0.0
 ns.custom_nucleation_model=1
 ns.truncate_volume_fractions=1 1 0
 # E=(1/2) u^2 + e(rho,T)
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 

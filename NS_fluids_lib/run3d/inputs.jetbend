@@ -88,7 +88,6 @@ amr.blocking_factor = 4 4 4 4 4 4  # block factor in grid generation
 amr.space_blocking_factor = 2 2 2 2 2
 amr.time_blocking_factor=2
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-ns.conservative_div_uu=1
 ns.enable_spectral=1
 ns.viscous_enable_spectral=0
 

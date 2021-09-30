@@ -70,7 +70,6 @@ ns.latent_heat = -3.34e+9 0.0 # 12,21 liquid-> ice, ice -> liquid FREEZING
 #ns.saturation_temp = 373.0 0.0 # 12,21   
 #ns.saturation_temp = 273.0 0.0 # 12,21   FREEZING
 ns.saturation_temp = 273.0 0.0 # 12,21   FREEZING
-ns.temperature_primitive_variable=1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

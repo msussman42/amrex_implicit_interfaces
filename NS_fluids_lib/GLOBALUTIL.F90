@@ -1518,6 +1518,34 @@ contains
       return
       end subroutine dumpstring
 
+      INTEGER_T function is_compressible_mat(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: im
+      INTEGER_T nmat
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+
+      if ((fort_material_type(im).ge.1).and. &
+          (fort_material_type(im).le.MAX_NUM_EOS)) then
+       is_compressible_mat=1
+      else if ((fort_material_type(im).eq.0).or. &
+               (fort_material_type(im).eq.999)) then
+       is_compressible_mat=0
+      else
+       print *,"fort_material_type invalid"
+       stop
+       is_compressible_mat=0
+      endif
+
+      return
+      end function is_compressible_mat
+
       subroutine debug_EOS(im)
       use probcommon_module
       IMPLICIT NONE
@@ -6980,7 +7008,6 @@ contains
 
 
       subroutine lineGRAD( &
-       conservative_div_uu, &
        levelrz_in, &
        dir, &
        nc, &
@@ -7001,7 +7028,6 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: levelrz_in
       INTEGER_T, intent(in) :: dir,nc
@@ -7477,16 +7503,9 @@ contains
 
        do i1=0,bfact
         if ((nc.ge.1).and.(nc.le.SDIM)) then
-         if (conservative_div_uu.eq.1) then
-          dest_interp(i1)=dest_interp(i1)*vel(i1)
-         else if (conservative_div_uu.eq.0) then
-          ! do nothing
-         else
-          print *,"conservative_div_uu invalid"
-          stop
-         endif
-        else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
-         ! do nothing
+         dest_interp(i1)=dest_interp(i1)*vel(i1)
+        else if (nc.eq.SDIM+1) then ! temperature
+         dest_interp(i1)=dest_interp(i1)*vel(i1)
         else
          print *,"nc invalid in lineGRAD"
          stop

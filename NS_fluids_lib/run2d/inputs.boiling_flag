@@ -122,7 +122,6 @@ ns.stiffCP=4.2170e+05 2.0290e+05 4.2170e+05
 # Joule/kg
 ns.latent_heat=2.2570e+08 0.0 0.0 0.0 0.0 0.0  
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1
 ns.fixed_dt	  = 1.0e-4  # hardwire dt
 ns.sum_interval   = 400     # timesteps between computing mass 
 

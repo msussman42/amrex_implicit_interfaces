@@ -129,7 +129,6 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7  # erg/(g K)
 # material_type==5 EOS_air
 # R_AIR_PARMS=0.287D+7  CV_AIR_PARMS=0.72D+7 ... (PROBCOMMON.H)
 ns.material_type=0 5 999
-ns.temperature_primitive_variable=1 1 1 1
 ns.xblob=0.0  # center of cylinder
 ns.yblob=0.0
 ns.zblob=0.0

@@ -145,7 +145,6 @@ ns.nucleation_period=0.0
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
 # 0=>conservatuve advection of total energy (rho E is advected)
 # 1=>non-conservative advection of total energy (rho T is advected)
-ns.temperature_primitive_variable=1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

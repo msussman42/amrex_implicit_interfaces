@@ -25,7 +25,6 @@ ns.continuous_mof=2
 ns.vof_height_function=1
 
 ns.MOFITERMAX=15
-ns.temperature_primitive_variable=1 1 1 1 1
 ns.num_divu_outer_sweeps=1
 ns.minimum_relative_error=1.0e-22
 #number of Jacobi method cycles elliptic solver initially does.
@@ -76,7 +75,6 @@ amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-ns.conservative_div_uu=1 # only used for SEM algorithm.
 ns.num_SDC_outer_sweeps=1
 ns.enable_spectral=0
 ns.diffusion_enable_spectral=0

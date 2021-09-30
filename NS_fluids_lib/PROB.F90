@@ -13469,7 +13469,6 @@ END SUBROUTINE Adist
 !   (SEM_CELL_TO_MAC not called with operation_flag==8)
 ! operation_flag=11 unew^MAC=uold^MAC +(unew^cell-uold^cell)^{cell->MAC}
       subroutine SEM_CELL_TO_MAC( &
-       conservative_div_uu, &
        ncomp_xp, &  ! number of amrsync components if op=0,3,5,6,7,9,10,11
        simple_AMR_BC_flag_in, &
        level, &
@@ -13477,10 +13476,8 @@ END SUBROUTINE Adist
        nmat, &
        operation_flag, &
        energyflag, &
-       temperature_primitive_variable, &
        project_option, &
        SEM_upwind, &
-       SEM_advection_algorithm, &
        beta, &
        visc_coef, &
        time, &
@@ -13519,7 +13516,6 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: ncomp_xp
       INTEGER_T, intent(in) :: simple_AMR_BC_flag_in
       INTEGER_T :: simple_AMR_BC_flag
@@ -13532,10 +13528,8 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: beta,visc_coef
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
-      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: SEM_upwind
-      INTEGER_T, intent(in) :: SEM_advection_algorithm
       INTEGER_T, intent(in) :: i,j,k
       INTEGER_T, intent(in) :: dir
       INTEGER_T, intent(in) :: bfact,bfact_c,bfact_f
@@ -13610,7 +13604,7 @@ END SUBROUTINE Adist
       INTEGER_T mask_out
       INTEGER_T local_maskcov
       INTEGER_T local_maskCF
-      INTEGER_T shared_face ! in: fort_sem_cell_to_mac
+      INTEGER_T shared_face ! in: SEM_CELL_TO_MAC
       REAL_T shared_face_value
       INTEGER_T i_in,j_in,k_in
       INTEGER_T ic,jc,kc
@@ -13711,13 +13705,6 @@ END SUBROUTINE Adist
        print *,"SEM_upwind invalid"
        stop
       endif
-      if ((SEM_advection_algorithm.eq.0).or. &
-          (SEM_advection_algorithm.eq.1)) then
-       ! do nothing
-      else
-       print *,"SEM_advection_algorithm invalid"
-       stop
-      endif
 
       ntensor=SDIM*SDIM
 
@@ -13742,7 +13729,7 @@ END SUBROUTINE Adist
       cen_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
       local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
       if (local_maskcov.ne.1) then
-       print *,"local_maskcov invalid in sem_cell_to_mac"
+       print *,"local_maskcov invalid in SEM_CELL_TO_MAC"
        stop
       endif
       if ((cen_maskSEM.lt.0).or.(cen_maskSEM.gt.nmat)) then
@@ -13970,41 +13957,11 @@ END SUBROUTINE Adist
        ! do nothing unless the strip is a spectral element strip.
       if ((cen_maskSEM.ge.1).and. &
           (cen_maskSEM.le.nmat)) then
-
-        ! regardless of "temperature_primitive_variable(cen_maskSEM)",
-        ! the temperature is discretized in the spectral element parts
-        ! NON-CONSERVATIVELY and the div(up) term is treated with low
-        ! order FVM method.
-       if ((fort_material_type(cen_maskSEM).eq.0).or. &
-           (is_rigid(nmat,cen_maskSEM).eq.1).or. &
-           (fort_material_type(cen_maskSEM).eq.999).or. &
-           (is_FSI_rigid(nmat,cen_maskSEM).eq.1).or. &
-           (is_ice(nmat,cen_maskSEM).eq.1)) then
-        if (temperature_primitive_variable(cen_maskSEM).ne.1) then
-         print *,"temperature_primitive_variable(cen_maskSEM) invalid"
-         stop
-        endif
-       else if ((fort_material_type(cen_maskSEM).gt.0).and. &
-                (is_rigid(nmat,cen_maskSEM).eq.0).and. &
-                (fort_material_type(cen_maskSEM).ne.999).and. &
-                (is_FSI_rigid(nmat,cen_maskSEM).eq.0).and. &
-                (is_ice(nmat,cen_maskSEM).eq.0)) then
-        if ((temperature_primitive_variable(cen_maskSEM).eq.0).or. &
-            (temperature_primitive_variable(cen_maskSEM).eq.1)) then
-         ! do nothing
-        else
-         print *,"temperature_primitive_variable(cen_maskSEM) invalid"
-         stop
-        endif
-       else
-        print *,"fort_material_type(cen_maskSEM) or is_rigid invalid"
-        stop
-       endif
-
+       ! do nothing
       else if (cen_maskSEM.eq.0) then
        ! do nothing
       else
-       print *,"cen_maskSEM invalid sem_cell_to_mac: ",cen_maskSEM
+       print *,"cen_maskSEM invalid SEM_CELL_TO_MAC: ",cen_maskSEM
        print *,"i,j,k : ",i,j,k
        stop
       endif
@@ -14236,18 +14193,12 @@ END SUBROUTINE Adist
              ! (S_{i+1/2}+S_{i-1/2})(u_{i+1/2}-u_{i-1/2})/2 +
              ! (u_{i+1/2}+u_{i-1/2})(S_{i+1/2}-S_{i-1/2})/2
              ! u dot grad u = div(umac u)-I(umac) div umac
-             if ((conservative_div_uu.eq.0).or. &
-                 (conservative_div_uu.eq.1)) then
-              local_data_side(side)= &
-               vel(D_DECL(ic,jc,kc),nc) ! NONCONSERVATIVE
-             else
-              print *,"conservative_div_uu invalid"
-              stop
-             endif
+             local_data_side(side)= &
+               vel(D_DECL(ic,jc,kc),nc)   ! velocity
 
              ! I(umac) dot grad T
             else if (nc.eq.SDIM+1) then 
-             local_data_side(side)=templocal ! temperature: NONCONSERVATIVE
+             local_data_side(side)=templocal ! temperature
             else
              print *,"nc invalid"
              stop
@@ -14398,14 +14349,8 @@ END SUBROUTINE Adist
               if (udotn_boundary.lt.zero) then
                local_bctype(side)=1 ! dirichlet
 
-               if ((conservative_div_uu.eq.0).or. &
-                   (conservative_div_uu.eq.1)) then
-                local_bcval(side)= &
-                 vel(D_DECL(i_out,j_out,k_out),nc) !NONCONSERVATIVE
-               else
-                print *,"conservative_div_uu invalid"
-                stop
-               endif
+               local_bcval(side)= &
+                 vel(D_DECL(i_out,j_out,k_out),nc) 
               else if (udotn_boundary.ge.zero) then
                local_bctype(side)=2 ! neumann
                local_bcval(side)=zero
@@ -14419,7 +14364,7 @@ END SUBROUTINE Adist
               stop
              endif
 
-            else if (nc.eq.SDIM+1) then ! energy: NONCONSERVATIVE
+            else if (nc.eq.SDIM+1) then ! temperature
 
              if (presbc_in(dir,side,ibase+2).eq.REFLECT_EVEN) then
               local_bctype(side)=3 ! reflect even
@@ -14594,15 +14539,9 @@ END SUBROUTINE Adist
              templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+1)
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
-              if ((conservative_div_uu.eq.0).or. &
-                  (conservative_div_uu.eq.1)) then
-               local_data_side(side)= &
-                xp(D_DECL(iface_out,jface_out,kface_out),nc)
-              else
-               print *,"conservative_div_uu invalid"
-               stop
-              endif
-             else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
+              local_data_side(side)= &
+               xp(D_DECL(iface_out,jface_out,kface_out),nc)
+             else if (nc.eq.SDIM+1) then ! temperature
               local_data_side(side)=templocal
              else
               print *,"nc invalid"
@@ -14614,8 +14553,8 @@ END SUBROUTINE Adist
 
              if ((nc.ge.1).and.(nc.le.SDIM)) then
               local_data_side(side)= &
-               vel(D_DECL(ic,jc,kc),nc) ! NONCONSERVATIVE
-             else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
+               vel(D_DECL(ic,jc,kc),nc) 
+             else if (nc.eq.SDIM+1) then ! temperature
               local_data_side(side)=templocal
              else
               print *,"nc invalid"
@@ -14874,16 +14813,10 @@ END SUBROUTINE Adist
             ! u dot grad u = div(umac u)-u div umac
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
 
-            if ((conservative_div_uu.eq.0).or. &
-                (conservative_div_uu.eq.1)) then
-             local_data(isten+1)= &
-              vel(D_DECL(ic,jc,kc),nc) !NONCONSERVATIVE
-            else
-             print *,"conservative_div_uu invalid"
-             stop
-            endif
+            local_data(isten+1)= &
+              vel(D_DECL(ic,jc,kc),nc) 
 
-           else if (nc.eq.SDIM+1) then ! temperature: NONCONSERVATIVE
+           else if (nc.eq.SDIM+1) then ! temperature
 
             local_data(isten+1)=templocal
 
@@ -14916,14 +14849,13 @@ END SUBROUTINE Adist
 
          if (spectral_loop.eq.0) then
 
-          ! if operation_flag.eq.7 (advection),
-          ! then if conservative_div_uu==1, then
-          ! velocity flux will be multiplied by umac (local_vel) in
-          ! lineGRAD (not temperature though).
+          ! if operation_flag.eq.7 (advection), then
+          ! velocity/temperature flux 
+          ! will be multiplied by umac (local_vel) in
+          ! lineGRAD.
           ! u u_x + v u_y + w u_z = (u umac)_x + (u vmac)_y + (u wmac)_z -
           !                         u umac_x - u vmac_y - u wmac_z
           call lineGRAD( &
-           conservative_div_uu, &
            levelrz, &
            dir, &
            nc, &
@@ -14948,7 +14880,6 @@ END SUBROUTINE Adist
             endif
            enddo
            call lineGRAD( &
-            conservative_div_uu, &
             levelrz, &
             dir, &
             nc, &
@@ -15200,12 +15131,12 @@ END SUBROUTINE Adist
 
             if (shared_face.eq.0) then
 
-             if ((nc.ge.1).and.(nc.le.SDIM)) then ! u * velocity (if cons)
+             if ((nc.ge.1).and.(nc.le.SDIM)) then ! u * velocity 
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
-               ! temperature (NONCONSERVATIVE)
-             else if (nc.eq.SDIM+1) then ! temperature
+               ! temperature
+             else if (nc.eq.SDIM+1) then ! u * temperature
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
@@ -15690,7 +15621,7 @@ END SUBROUTINE Adist
        else if (cen_maskSEM.eq.0) then
         ! do nothing
        else
-        print *,"cen_maskSEM invalid sem_cell_to_mac: ",cen_maskSEM
+        print *,"cen_maskSEM invalid SEM_CELL_TO_MAC: ",cen_maskSEM
         print *,"i,j,k : ",i,j,k
         stop
        endif
@@ -15710,19 +15641,16 @@ END SUBROUTINE Adist
        ncomp_denold, &
        ncomp_veldest, &
        ncomp_dendest, &
-       conservative_div_uu, &
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
        SDC_outer_sweeps, &
-       SEM_advection_algorithm, &
        level, &
        finest_level, &
        nmat, &
        operation_flag, &
        project_option, &
        energyflag, &
-       temperature_primitive_variable, &
        homflag, &
        maskSEM, &
        time, &
@@ -15748,7 +15676,8 @@ END SUBROUTINE Adist
        xvel, & 
        maskcoef, & 
        cterm, & 
-       mdotcell, &  ! holds velocity if operation_flag==107
+       mdotcell, &  ! VELADVECT_MF, operation_flag==107
+       maskdivres, & ! DEN_RECON_MF, operation_flag==107
        pold, & 
        denold, & 
        ustar, & 
@@ -15762,12 +15691,10 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: ncomp_denold
       INTEGER_T, intent(in) :: ncomp_veldest
       INTEGER_T, intent(in) :: ncomp_dendest
-      INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
       INTEGER_T, intent(in) :: SDC_outer_sweeps
-      INTEGER_T, intent(in) :: SEM_advection_algorithm
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat
@@ -15776,7 +15703,6 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: homflag
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: energyflag
-      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T :: advect_iter
       INTEGER_T :: source_term
       INTEGER_T, intent(in) :: maskSEM
@@ -15803,7 +15729,10 @@ END SUBROUTINE Adist
       REAL_T, intent(in), pointer :: xvel(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: maskcoef(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: cterm(D_DECL(:,:,:),:)
-      REAL_T, intent(in), pointer :: mdotcell(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: &
+          mdotcell(D_DECL(:,:,:),:) !VELADVECT_MF,if operation_flag=107
+      REAL_T, intent(in), pointer :: &
+          maskdivres(D_DECL(:,:,:),:) !DEN_RECON_MF,if operation_flag=107
       REAL_T, intent(in), pointer :: pold(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: denold(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: dendest(D_DECL(:,:,:),:)
@@ -15845,7 +15774,6 @@ END SUBROUTINE Adist
       INTEGER_T nbase
       INTEGER_T ntensor
       REAL_T xflux_R
-      INTEGER_T local_incomp
       REAL_T local_div_val
 
       if (nmat.ne.num_materials) then
@@ -15902,49 +15830,13 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if ((SEM_advection_algorithm.eq.0).or. &
-          (SEM_advection_algorithm.eq.1)) then
-       ! do nothing
-      else
-       print *,"SEM_advection_algorithm invalid"
-       stop
-      endif
-
       advect_iter=energyflag
       source_term=homflag
-
-      local_incomp=0
 
       if ((maskSEM.ge.1).and. &
           (maskSEM.le.nmat)) then
 
-       if ((fort_material_type(maskSEM).eq.0).or. &
-           (is_rigid(nmat,maskSEM).eq.1).or. &
-           (fort_material_type(maskSEM).eq.999).or. &
-           (is_FSI_rigid(nmat,maskSEM).eq.1).or. &
-           (is_ice(nmat,maskSEM).eq.1)) then
-        if (temperature_primitive_variable(maskSEM).ne.1) then
-         print *,"temperature_primitive_variable(maskSEM) invalid"
-         stop
-        endif
-        local_incomp=1
-       else if ((fort_material_type(maskSEM).gt.0).and. &
-                (fort_material_type(maskSEM).le.MAX_NUM_EOS).and. &
-                (is_rigid(nmat,maskSEM).eq.0).and. &
-                (fort_material_type(maskSEM).ne.999).and. &
-                (is_FSI_rigid(nmat,maskSEM).eq.0).and. &
-                (is_ice(nmat,maskSEM).eq.0)) then
-        if ((temperature_primitive_variable(maskSEM).eq.0).or. &
-            (temperature_primitive_variable(maskSEM).eq.1)) then
-         ! do nothing
-        else
-         print *,"temperature_primitive_variable(maskSEM) invalid"
-         stop
-        endif
-       else
-        print *,"fort_material_type(maskSEM) or is_rigid invalid"
-        stop
-       endif
+       ! do nothing
 
       else if (maskSEM.eq.0) then
        ! do nothing
@@ -16201,7 +16093,7 @@ END SUBROUTINE Adist
        endif 
 
        if (ncomp_veldest.eq. &
-           SDIM+nmat*(num_state_material+ngeom_raw)+1) then
+           (SDIM+1)+nmat*(num_state_material+ngeom_raw)+1) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -16310,12 +16202,13 @@ END SUBROUTINE Adist
        endif
       enddo ! dir2=1..sdim
 
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid dt=",dt
        print *,"operation_flag= ",operation_flag
        stop
       endif
-
 
       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
        print *,"maskSEM invalid"
@@ -16388,9 +16281,9 @@ END SUBROUTINE Adist
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scomp+nc-1)
          else if (operation_flag.eq.107) then ! advection
           if ((nc.ge.1).and.(nc.le.SDIM)) then
-           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac or u
+           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac 
           else if (nc.eq.SDIM+1) then
-           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! temperature
+           local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! temperature * umac
           else
            print *,"nc invalid"
            stop
@@ -16584,7 +16477,8 @@ END SUBROUTINE Adist
 
         if (operation_flag.eq.107) then !advection
          if ((nc.ge.1).and.(nc.le.SDIM+1)) then
-          call line_MAC_TO_CELL(local_vel_data,local_vel_cell,local_vel_div, &
+          call line_MAC_TO_CELL(local_vel_data, &
+           local_vel_cell,local_vel_div, &
            bfact,maskSEM,dx(dir_main))
           call line_MAC_TO_CELL(local_vel_data_div, &
            local_vel_cell_div,local_vel_div_div, &
@@ -16676,19 +16570,15 @@ END SUBROUTINE Adist
             ! local_data (the MAC data) is multiplied by RR above.
 
             ! velocity = div (umac u) - u div(u)
+            ! temperature = div (umac T) - T div(u)
             ! mdotcell corresponds to VELADVECT_MF in the caller.
+            ! maskdivres corresponds to DEN_RECON_MF in the caller.
            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
-            if (conservative_div_uu.eq.1) then
-             local_div(isten+1)=local_div(isten+1)- &
-                mdotcell(D_DECL(ic,jc,kc),nc)*local_vel_div_div(isten+1)
-            else if (conservative_div_uu.eq.0) then
-             local_div(isten+1)=local_div(isten+1)*local_vel_cell(isten+1)
-            else
-             print *,"conservative_div_uu invalid"
-             stop
-            endif
+            local_div(isten+1)=local_div(isten+1)- &
+             mdotcell(D_DECL(ic,jc,kc),nc)*local_vel_div_div(isten+1)
            else if (nc.eq.SDIM+1) then ! temperature
-            local_div(isten+1)=local_div(isten+1)*local_vel_cell(isten+1)
+            local_div(isten+1)=local_div(isten+1)- & 
+             maskdivres(D_DECL(ic,jc,kc),ibase+2)*local_vel_div_div(isten+1)
            else
             print *,"nc invalid"
             stop
@@ -16774,7 +16664,9 @@ END SUBROUTINE Adist
               T_new=fort_tempcutoffmax(maskSEM)
              endif 
 
-             if (T_new.le.zero) then
+             if (T_new.gt.zero) then
+              ! do nothing
+             else
               print *,"T_new underflow"
               print *,"dt=",dt
               print *,"divflux (u dot grad T)= ",divflux(SDIM+1)

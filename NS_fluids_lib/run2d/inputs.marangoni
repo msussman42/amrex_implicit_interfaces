@@ -53,7 +53,6 @@ ns.saturation_temp=370.0 330.0
 ns.freezing_model=4 4
 # 0=> conservative advection of temperature
 # 1=> non-conservative advection of temperature
-ns.temperature_primitive_variable=1 1 1 1 1
 # 0=use LS  1=use VOF
 
 # 0=GSRB 1=ICRB 2=ILU

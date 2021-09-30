@@ -66,7 +66,6 @@ ns.tension        = 0.0  # 12 - liquid/vapor
 # D=k/L  L=k/D=cp*rho=4.1855E+7
 ns.latent_heat = 0.0 -4.1855e+7 # 12,21 21 => solute -> solvent
 ns.saturation_temp = 0.0 2.0 # 12,21 
-ns.temperature_primitive_variable=1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

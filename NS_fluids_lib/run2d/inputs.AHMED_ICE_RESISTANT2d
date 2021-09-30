@@ -98,7 +98,6 @@ ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 #There are over 300 oil parcels to have statistics for in 3D,
 #so recommended sum_interval>1

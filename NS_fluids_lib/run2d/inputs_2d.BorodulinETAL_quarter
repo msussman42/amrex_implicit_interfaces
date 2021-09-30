@@ -145,7 +145,6 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 # 3=Kassemi 0=Palmore and Desjardins
 ns.mass_fraction_id=1 0  # 1.. 2 nten
 ns.saturation_temp = 373.15 0.0  # CODY ~ T_gamma = 373.15 K
 ns.saturation_temp_min = 273.0 0.0  
-ns.temperature_primitive_variable=1 1 1 1
 # convergence
 # coarse grid: 16x16 xhi=0.1 dx_coarse=0.1/16=1/160
 # case 1: velocity 0<t<0.1 is about u=0.02 dx/u=0.3125 

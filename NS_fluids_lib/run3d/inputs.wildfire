@@ -76,7 +76,6 @@ ns.freezing_model=3 0 0 0 0 0
 # wood burns at 451 degrees fahrenheit which is 506 degrees kelvin
 ns.saturation_temp = 506.0 0.0 0.0 0.0 0.0 0.0
 # E=(1/2) u^2 + e(rho,T)
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

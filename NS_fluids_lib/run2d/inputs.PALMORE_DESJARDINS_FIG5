@@ -24,12 +24,9 @@ ns.material_type    = 0 25
 ns.FSI_flag         = 0 0 
 
 
-# temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = 0  (energy advection)
 #   E=1/2  u dot u + e  e=e(T)
-# temperature_primitive_variable=1:
 #   (rho T)_{t} + div (rho u T) = 0  (energy advection)
-ns.temperature_primitive_variable = 1 1 
 
 ns.xblob            = 0.02   # initial position of the front
 ns.yblob            = 0.0

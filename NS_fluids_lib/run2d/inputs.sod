@@ -8,7 +8,6 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 0.01   # 1/100
 ns.compressible_dt_factor=1.0 1.0
-ns.temperature_primitive_variable=0 0
 
 ns.EILE_flag=1  # alternate EI-LE 
 ns.num_divu_outer_sweeps=2

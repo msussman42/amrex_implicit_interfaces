@@ -104,7 +104,6 @@ ns.override_density=0 0 0
 # theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
 # 12,13,23
 ns.tension=72.0 72.0 72.0 
-ns.temperature_primitive_variable=1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 ns.viscosity_state_model=0 0 0
