@@ -84,7 +84,6 @@ ns.latent_heat=0.0 0.0 0.0 0.0 3.34e9 0.0
 ns.freezing_model=0 0 0 0 0 0 
 ns.saturation_temp = 0.0 0.0 0.0 0.0 273.0 0.0
 # E=(1/2) u^2 + e(rho,T)
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 

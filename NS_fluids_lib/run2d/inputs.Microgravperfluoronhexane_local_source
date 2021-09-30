@@ -136,7 +136,6 @@ ns.latent_heat=86097.0 0.0 0.0 0.0 0.0 0.0
 # if nucleation_period>0.0, periodically nucleate bubbles.
 ns.nucleation_period=0.0
 ns.saturation_temp=329.1 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 # August 31, 2018 make sum_interval=10 since it takes time to compute 
 # diagnostics.

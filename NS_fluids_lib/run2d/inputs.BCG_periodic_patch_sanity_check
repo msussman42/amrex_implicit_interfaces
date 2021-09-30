@@ -50,7 +50,6 @@ ns.SEM_upwind=1 # the default
 # Option 2,
 #  grad dot (u_GL u_GG) - u_GG div u_GL, sync project
 # is now obsolete since mdot!=0 in SEM regions for phase change problems.
-ns.conservative_div_uu=1
 amr.space_blocking_factor=2 2
 #amr.space_blocking_factor=1 1
 #amr.space_blocking_factor=2 2

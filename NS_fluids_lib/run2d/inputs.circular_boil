@@ -65,7 +65,6 @@ ns.stiffCP = 1.0 1.0
 ns.latent_heat=1.0e+10 0.0
 ns.saturation_temp = 373.0 0.0 # 12,21   
 # E=(1/2) u^2 + e(rho,T)
-ns.temperature_primitive_variable=1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

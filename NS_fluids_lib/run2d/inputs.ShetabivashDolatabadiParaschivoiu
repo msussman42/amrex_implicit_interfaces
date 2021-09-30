@@ -130,7 +130,6 @@ ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 #12 13 14 23 24 34 then reverse
 ns.saturation_temp = 0.0 273.15 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 10        # timesteps between computing mass 
 

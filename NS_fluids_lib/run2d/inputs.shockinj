@@ -24,7 +24,6 @@ ns.compressible_dt_factor=1.0 1.0 1.0
 # 0: use volume fraction
 # 1: use mass fraction
 ns.pressure_select_criterion=0
-ns.temperature_primitive_variable=0 0
 
 # multigrid class
 mg.verbose = 0

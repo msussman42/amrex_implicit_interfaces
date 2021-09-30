@@ -310,7 +310,6 @@ namespace amrex{
         int* operation_flag,
         int* energyflag,
         Real* beta,Real* visc_coef,
-        int* temperature_primitive_variable,
         int* enable_spectral,
         int* fluxvel_index,
         int* fluxden_index,
@@ -318,7 +317,6 @@ namespace amrex{
         int* facecut_index,
         int* icefacecut_index,
         int* curv_index,
-        int* conservative_div_uu,
         int* ignore_div_up, 
         int* pforce_index,
         int* faceden_index,
@@ -369,13 +367,11 @@ namespace amrex{
         int* num_colors,
         int* nten,
         int* project_option,
-        int* SEM_upwind,
-        int* SEM_advection_algorithm);
+        int* SEM_upwind);
 
 
       void fort_inc_temp(
         Real* beta,
-        int* temperature_primitive_variable,
         int* nmat,
         int* level,
         int* finest_level,
@@ -393,7 +389,6 @@ namespace amrex{
         int* num_divu_outer_sweeps,
         int* operation_flag,
         int* energyflag,
-        int* temperature_primitive_variable,
         int* constant_density_all_time,
         int* nmat,
         int* nparts,
@@ -411,7 +406,6 @@ namespace amrex{
         int* facecut_index,
         int* icefacecut_index,
         int* curv_index,
-        int* conservative_div_uu,
         int* ignore_div_up, 
         int* pforce_index,
         int* faceden_index,
@@ -471,8 +465,7 @@ namespace amrex{
         int* nsolve,
         int* ncomp_denold,
         int* ncomp_veldest,
-        int* ncomp_dendest,
-        int* SEM_advection_algorithm);
+        int* ncomp_dendest);
 
 
       void fort_init_physics_vars(

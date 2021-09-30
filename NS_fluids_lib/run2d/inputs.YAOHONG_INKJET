@@ -87,7 +87,6 @@ amr.blocking_factor = 8 8 8 8 8      # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1
 amr.time_blocking_factor=1
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-ns.conservative_div_uu=1
 ns.enable_spectral=0  # enable_spectral=0 or 1 (advection, pressure grad are
                       #  high order in space and time.
 ns.viscous_enable_spectral=0
@@ -117,7 +116,6 @@ ns.init_shrink    = 0.5      # scale back initial timestep
 ns.change_max     = 1.1    # scale back initial timestep
 ns.change_max_init= 1.1
 ns.visc_coef      = 1.0    # coef of viscosity
-ns.temperature_primitive_variable=1 1 1
 mac.visc_abs_tol   = 1.0e-13
 #ns.gravity        = -9.8
 ns.gravity =0.0  

@@ -273,7 +273,6 @@ ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 #NO EVAPORATION:
 ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
 # 
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 

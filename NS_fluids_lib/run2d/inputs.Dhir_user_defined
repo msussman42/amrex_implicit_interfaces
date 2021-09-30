@@ -136,7 +136,6 @@ ns.stiffCP=4217.0 2029.0 385.0 385.0
 # Joule/kg
 ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 ns.viscosity_state_model=0 0 0 0

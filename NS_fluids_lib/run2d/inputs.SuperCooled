@@ -85,7 +85,6 @@ ns.latent_heat = 0.0 -0.4 0.0 0.0 0.0 0.0 #12 13 23 21 31 32
 # 2->3 gas->ice 
 ns.saturation_temp = 0.0  273.0  0.0 0.0 0.0 0.0 # 12,13,23 21 31 32 
 # 
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 

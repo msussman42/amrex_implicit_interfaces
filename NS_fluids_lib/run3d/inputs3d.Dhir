@@ -122,7 +122,6 @@ ns.nucleation_period=0.002  # t>0, randomly select bubble x,y coord.
 ns.nucleation_init_time=0.0  #have bubbles nucleated at t=0
 
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 ns.viscosity_state_model=0 0 0 0

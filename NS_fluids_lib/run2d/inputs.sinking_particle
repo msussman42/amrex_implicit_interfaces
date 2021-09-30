@@ -72,7 +72,6 @@ ns.MOFITERMAX=15
 # continuous_mof=4 CLSVOF + CMOF hybrid
 # continuous_mof=4 CLSVOF + CMOF hybrid
 ns.continuous_mof=0
-ns.temperature_primitive_variable=1 1 1 1 1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

@@ -40,7 +40,6 @@ amr.blocking_factor = 32 32
 ns.SEM_upwind=1
 # 0=> I(u_GL) dot grad u_GG, no sync project
 # 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-ns.conservative_div_uu=1
 amr.space_blocking_factor=8 8
 #amr.space_blocking_factor=1 1
 #amr.space_blocking_factor=2 2

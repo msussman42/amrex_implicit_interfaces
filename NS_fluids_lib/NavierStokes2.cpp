@@ -670,7 +670,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
 
-  if (nfluxSEM==AMREX_SPACEDIM+2+num_species_var) {
+  if (nfluxSEM==AMREX_SPACEDIM+1) {
    // do nothing
   } else
    amrex::Error("nfluxSEM invalid");
@@ -931,7 +931,7 @@ void NavierStokes::interp_and_Copy_localMF(
   scomp_flux=0;
   ncomp_flux_use=nfluxSEM;
 
-  if (nfluxSEM==AMREX_SPACEDIM+2+num_species_var) {
+  if (nfluxSEM==AMREX_SPACEDIM+1) {
    // do nothing
   } else
    amrex::Error("nfluxSEM invalid");
@@ -1388,6 +1388,7 @@ void NavierStokes::interp_flux_localMF(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     //declared in: NAVIERSTOKES_3D.F90
     fort_interp_flux( 
      &enable_spectral,
      dxc,dx,
@@ -1978,7 +1979,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &local_energyflag,
     &beta,
     &visc_coef,
-    temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
     &fluxden_index,
@@ -1986,7 +1986,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &conservative_div_uu,
     &ignore_div_up,
     &pforce_index,
     &faceden_index,
@@ -2043,8 +2042,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &num_colors,
     &nten,
     &project_option,
-    &SEM_upwind,
-    &SEM_advection_algorithm);
+    &SEM_upwind);
   } // mfi
 } // omp
   ns_reconcile_d_num(132);
@@ -2172,7 +2170,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     // 103 (mac_vel->cell_vel) or 101 ( div(up) low order only)
     &operation_flag_interp_macvel, 
     &energyflag,
-    temperature_primitive_variable.dataPtr(),
     constant_density_all_time.dataPtr(),
     &nmat,
     &nparts,
@@ -2190,7 +2187,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &conservative_div_uu,
     &ignore_div_up,
     &pforce_index,
     &faceden_index,
@@ -2257,8 +2253,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &nsolve,
     &ncomp_denold,
     &ncomp_veldest,
-    &ncomp_dendest,
-    &SEM_advection_algorithm);
+    &ncomp_dendest);
 
   }   // mfi
 } // omp
@@ -2863,7 +2858,6 @@ void NavierStokes::increment_face_velocity(
        &energyflag,
        &beta,
        &visc_coef,
-       temperature_primitive_variable.dataPtr(),
        &local_enable_spectral,
        &fluxvel_index,
        &fluxden_index,
@@ -2871,7 +2865,6 @@ void NavierStokes::increment_face_velocity(
        &facecut_index,
        &icefacecut_index,
        &curv_index,
-       &conservative_div_uu,
        &ignore_div_up,
        &pforce_index,
        &faceden_index,
@@ -2937,8 +2930,7 @@ void NavierStokes::increment_face_velocity(
        &num_colors,
        &nten,
        &project_option,
-       &SEM_upwind,
-       &SEM_advection_algorithm);
+       &SEM_upwind);
     } // mfi
 } // omp
     ns_reconcile_d_num(134);
@@ -2975,8 +2967,6 @@ void NavierStokes::increment_KE_ALL(Real beta) {
 
 } // end subroutine increment_KE_ALL
 
-//if temperature_primitive_var==0,
-// add beta * (1/cv) * (u dot u/2) to temp
 void NavierStokes::increment_KE(Real beta) {
  
  bool use_tiling=ns_tiling;
@@ -3029,7 +3019,6 @@ void NavierStokes::increment_KE(Real beta) {
 
   fort_inc_temp(
    &beta,
-   temperature_primitive_variable.dataPtr(),
    &nmat,
    &level,
    &finest_level,
@@ -3341,7 +3330,6 @@ void NavierStokes::VELMAC_TO_CELL(
    // operation_flag=103,104 (mac_vel -> cell_vel) or 113 (disp)
    &operation_flag, 
    &energyflag,
-   temperature_primitive_variable.dataPtr(),
    constant_density_all_time.dataPtr(),
    &nmat,
    &nparts,
@@ -3359,7 +3347,6 @@ void NavierStokes::VELMAC_TO_CELL(
    &facecut_index,
    &icefacecut_index,
    &curv_index,
-   &conservative_div_uu,
    &ignore_div_up,
    &pforce_index,
    &faceden_index,
@@ -3425,8 +3412,7 @@ void NavierStokes::VELMAC_TO_CELL(
    &nsolve,
    &ncomp_denold,
    &ncomp_veldest,
-   &ncomp_dendest,
-   &SEM_advection_algorithm);
+   &ncomp_dendest);
  }   // mfi
 } // omp
  ns_reconcile_d_num(137);
@@ -3752,7 +3738,6 @@ void NavierStokes::doit_gradu_tensor(
      &slab_step,
      &itensor_iter,
      &cur_time_slab,
-     temperature_primitive_variable.dataPtr(),
      &local_enable_spectral,
      velbc.dataPtr(),
      &spectral_loop,
@@ -3800,7 +3785,6 @@ void NavierStokes::doit_gradu_tensor(
      &homflag,
      &ntensor,
      &SEM_upwind,
-     &SEM_advection_algorithm,
      &simple_AMR_BC_flag_viscosity);
    } // mfi
 } // omp
@@ -4557,7 +4541,6 @@ void NavierStokes::apply_pressure_grad(
      &energyflag,
      &beta,
      &visc_coef,
-     temperature_primitive_variable.dataPtr(),
      &local_enable_spectral,
      &fluxvel_index,
      &fluxden_index,
@@ -4565,7 +4548,6 @@ void NavierStokes::apply_pressure_grad(
      &facecut_index,
      &icefacecut_index,
      &curv_index,
-     &conservative_div_uu,
      &ignore_div_up,
      &pforce_index,
      &faceden_index, 
@@ -4627,8 +4609,7 @@ void NavierStokes::apply_pressure_grad(
      &num_colors,
      &nten,
      &project_option,
-     &SEM_upwind,
-     &SEM_advection_algorithm);
+     &SEM_upwind);
 
    }  // mfi
 } // omp
@@ -6059,7 +6040,6 @@ void NavierStokes::process_potential_force_face() {
     &local_energyflag,
     &beta,
     &visc_coef,
-    temperature_primitive_variable.dataPtr(),
     &local_enable_spectral,
     &fluxvel_index,
     &fluxden_index,
@@ -6067,7 +6047,6 @@ void NavierStokes::process_potential_force_face() {
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &conservative_div_uu,
     &ignore_div_up,
     &pforce_index,
     &faceden_index,
@@ -6130,8 +6109,7 @@ void NavierStokes::process_potential_force_face() {
     &num_colors,
     &nten,
     &local_project_option,
-    &SEM_upwind,
-    &SEM_advection_algorithm);
+    &SEM_upwind);
   } // mfi
 } // omp
   ns_reconcile_d_num(151);

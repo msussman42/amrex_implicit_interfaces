@@ -1801,7 +1801,6 @@ void NavierStokes::apply_div(
    &num_divu_outer_sweeps, 
    &operation_flag,  // operation_flag=100 (RHS)
    &energyflag,
-   temperature_primitive_variable.dataPtr(),
    constant_density_all_time.dataPtr(),
    &nmat,
    &nparts,
@@ -1819,7 +1818,6 @@ void NavierStokes::apply_div(
    &facecut_index,
    &icefacecut_index,
    &curv_index,
-   &conservative_div_uu,
    &ignore_div_up,
    &pforce_index,
    &faceden_index,
@@ -1885,8 +1883,7 @@ void NavierStokes::apply_div(
    &nsolve,
    &ncomp_denold,
    &ncomp_veldest,
-   &ncomp_dendest,
-   &SEM_advection_algorithm);
+   &ncomp_dendest);
  } // mfi
 } // omp
  ns_reconcile_d_num(40);
@@ -2410,7 +2407,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &num_divu_outer_sweeps,
     &operation_flag, // operation_flag==110 (div u)
     &energyflag,
-    temperature_primitive_variable.dataPtr(),
     constant_density_all_time.dataPtr(),
     &nmat,
     &nparts,
@@ -2428,7 +2424,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &conservative_div_uu,
     &ignore_div_up,
     &pforce_index,
     &faceden_index,
@@ -2496,8 +2491,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &nsolve,
     &ncomp_denold,
     &ncomp_veldest,
-    &ncomp_dendest,
-    &SEM_advection_algorithm);
+    &ncomp_dendest);
  } // mfi
 } // omp
  ns_reconcile_d_num(42);

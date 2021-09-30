@@ -362,14 +362,11 @@ ns.temperature_lo_bc = 3 3
 ns.temperature_hi_bc = 3 3
 
 ns.compressible_dt_factor=2.0 2.0 2.0
-# temperature_primitive_variable=0:
 #   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
 #   rho_t + div (rho u) =0
 #   E=1/2  u dot u + e  e=e(T)
-# temperature_primitive_variable=1:
 #   (rho T)_{t} + div (rho u T) = -p div u  (energy advection)
 #   rho_t + u dot grad rho = -rho div u
-ns.temperature_primitive_variable=1 1 1
 
 # Embedded boundary BC
 # 0=diffuse in solid 1=dirichlet 2=neumann

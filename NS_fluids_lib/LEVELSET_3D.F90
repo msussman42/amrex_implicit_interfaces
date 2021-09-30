@@ -11029,11 +11029,10 @@ stop
       end subroutine fort_build_semirefinevof
 
 
-!if temperature_primitive_var==0,
+!if compressible material,
 ! add beta * (1/cv) * (u dot u/2) to temp
       subroutine fort_inc_temp( &
        beta, &
-       temperature_primitive_variable, &
        nmat, &
        level, &
        finest_level, &
@@ -11051,7 +11050,6 @@ stop
       REAL_T, intent(in) :: beta
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncomp_state
-      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -11093,33 +11091,6 @@ stop
         ! do nothing
        else
         print *,"imattype invalid fort_inc_temp"
-        stop
-       endif
-       if ((temperature_primitive_variable(im).ne.0).and. &
-           (temperature_primitive_variable(im).ne.1)) then
-        print *,"temperature_primitive_variable invalid"
-        stop
-       endif
-
-       if ((fort_material_type(im).eq.0).or. &
-           (is_rigid(nmat,im).eq.1).or. &
-           (fort_material_type(im).eq.999)) then
-        if (temperature_primitive_variable(im).ne.1) then
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else if ((fort_material_type(im).gt.0).and. &
-                (is_rigid(nmat,im).eq.0).and. &
-                (fort_material_type(im).ne.999)) then
-        if ((temperature_primitive_variable(im).eq.0).or. &
-            (temperature_primitive_variable(im).eq.1)) then
-         ! do nothing
-        else
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else
-        print *,"fort_material_type(im) or is_rigid invalid"
         stop
        endif
 
@@ -11165,9 +11136,9 @@ stop
        if (local_mask.eq.1) then ! not covered
 
         do im=1,nmat
-         if (temperature_primitive_variable(im).eq.1) then
+         if (is_compressible_mat(im).eq.0) then
           ! do nothing
-         else if (temperature_primitive_variable(im).eq.0) then
+         else if (is_compressible_mat(im).eq.1) then
           vofcomp=(SDIM+1)+nmat*num_state_material+(im-1)*ngeom_raw+1
           vof=state(D_DECL(i,j,k),vofcomp)
           if ((vof.ge.-VOFTOL).and.(vof.le.one+VOFTOL)) then
@@ -11197,8 +11168,7 @@ stop
              stop
             endif
             imattype=fort_material_type(im)
-            if ((imattype.gt.0).and. &
-                (imattype.le.MAX_NUM_EOS)) then
+            if (is_compressible_mat(im).eq.1) then
 
              call init_massfrac_parm(rho,massfrac_parm,im)
              do ispec=1,num_species_var
@@ -11232,6 +11202,7 @@ stop
               stop
              endif
             else
+             print *,"is_compressible_mat invalid"
              print *,"imattype invalid fort_inc_temp"
              stop
             endif
@@ -11246,7 +11217,7 @@ stop
           endif
 
          else
-          print *,"temperature_primitive_variable invalid"
+          print *,"is_compressible_mat invalid"
           stop
          endif
         enddo ! im=1..nmat
@@ -11280,7 +11251,6 @@ stop
        num_divu_outer_sweeps, &
        operation_flag, &
        energyflag, &
-       temperature_primitive_variable, &
        constant_density_all_time, &
        nmat, &
        nparts, &
@@ -11298,7 +11268,6 @@ stop
        facecut_index, &
        icefacecut_index, &
        curv_index, &
-       conservative_div_uu, &
        ignore_div_up, &
        pforce_index, &
        faceden_index, &
@@ -11343,16 +11312,15 @@ stop
        denold,DIMS(denold), &
        ustar,DIMS(ustar), &
        recon,DIMS(recon), &
-       mdotcell,DIMS(mdotcell), & ! holds velocity if operation_flag==107
-       maskdivres,DIMS(maskdivres), &
+       mdotcell,DIMS(mdotcell), & !VELADVECT_MF if operation_flag=107
+       maskdivres,DIMS(maskdivres), & !DEN_RECON_MF if operation_flag=107
        maskres,DIMS(maskres), &
        SDC_outer_sweeps, &
        homflag, &
        nsolve, &
        ncomp_denold, &
        ncomp_veldest, &
-       ncomp_dendest, &
-       SEM_advection_algorithm) &
+       ncomp_dendest) &
        bind(c,name='fort_mac_to_cell')
 
        use probf90_module
@@ -11367,7 +11335,6 @@ stop
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
-      INTEGER_T, intent(in) :: SEM_advection_algorithm
       INTEGER_T :: high_order_time_advection
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: slab_step
@@ -11375,7 +11342,6 @@ stop
       INTEGER_T, intent(in) :: SDC_outer_sweeps 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: energyflag 
-      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
@@ -11392,7 +11358,6 @@ stop
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index
@@ -11501,10 +11466,12 @@ stop
       REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mdotcell(DIMV(mdotcell),nsolve)
+      REAL_T, intent(in), target :: &
+       mdotcell(DIMV(mdotcell),nsolve) !VELADVECT_MF operation_flag=107
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: maskdivres(DIMV(maskdivres))
-      REAL_T, pointer :: maskdivres_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: &
+       maskdivres(DIMV(maskdivres),ncomp_dendest) !DEN_RECON_MF op_flag=107
+      REAL_T, pointer :: maskdivres_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskres(DIMV(maskres))
       REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
 
@@ -11650,14 +11617,6 @@ stop
        stop
       endif
 
-      if ((SEM_advection_algorithm.eq.0).or. &
-          (SEM_advection_algorithm.eq.1)) then
-       ! do nothing
-      else
-       print *,"SEM_advection_algorithm invalid"
-       stop
-      endif
-       
       if ((level.gt.finest_level).or.(level.lt.0)) then
        print *,"level invalid mac to cell"
        stop
@@ -11712,11 +11671,6 @@ stop
         print *,"added_weight invalid"
         stop
        endif
-       if ((temperature_primitive_variable(im).ne.0).and. &
-           (temperature_primitive_variable(im).ne.1)) then
-        print *,"temperature_primitive_variable invalid"
-        stop
-       endif
       enddo ! im=1..nmat
  
       ! indexes start at 0
@@ -11742,14 +11696,6 @@ stop
        stop
       endif
 
-      if ((conservative_div_uu.eq.0).or. &
-          (conservative_div_uu.eq.1)) then
-       ! do nothing
-      else
-       print *,"conservative_div_uu invalid"
-       stop
-      endif
-   
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
       if ((operation_flag.eq.103).or. & ! velocity
           (operation_flag.eq.104).or. & ! velocity increment
@@ -11881,7 +11827,7 @@ stop
       else if (operation_flag.eq.107) then ! advection
 
        if (ncomp_veldest.eq. &
-           SDIM+nmat*(num_state_material+ngeom_raw)+1) then
+           (SDIM+1)+nmat*(num_state_material+ngeom_raw)+1) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
@@ -12067,7 +12013,7 @@ stop
       call checkbound_array(fablo,fabhi,recon_ptr,0,-1,33)
 
       call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
-      call checkbound_array1(fablo,fabhi,maskdivres_ptr,0,-1,137)
+      call checkbound_array(fablo,fabhi,maskdivres_ptr,0,-1,137)
       call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,138)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
@@ -12178,7 +12124,7 @@ stop
            print *,"CC_DUAL invalid"
            stop
           endif
-          MSKDV=maskdivres(D_DECL(i,j,k))
+          MSKDV=maskdivres(D_DECL(i,j,k),1)
           MSKRES=maskres(D_DECL(i,j,k))
           MDOT=mdotcell(D_DECL(i,j,k),veldir)
 
@@ -12727,7 +12673,7 @@ stop
         endif
 
          ! note, in FORT_BUILD_CONSERVE, if 
-         ! temperature_primitive_variable==1,
+         ! is_compressible_mat==0,
          ! then 
          ! (1) (rho T) is advected instead of (rho cv T + rho u dot u/2)
          ! (2) rho_t + u dot grad rho=0 instead of
@@ -12794,12 +12740,12 @@ stop
 
         do im=1,nmat
          if (vfrac(im).ge.VOFTOL) then
-          if (temperature_primitive_variable(im).eq.1) then
+          if (is_compressible_mat(im).eq.0) then
            local_primitive=1
-          else if (temperature_primitive_variable(im).eq.0) then
+          else if (is_compressible_mat(im).eq.1) then
            ! do nothing
           else
-           print *,"temperature_primitive_variable(im) invalid"
+           print *,"is_compressible_mat invalid"
            stop
           endif
          else if (abs(vfrac(im)).le.VOFTOL) then
@@ -13155,27 +13101,6 @@ stop
               stop
              endif
 
-             if (temperature_primitive_variable(im).eq.0) then
-              ! do nothing, rho div u term included during advection
-             else if (temperature_primitive_variable(im).eq.1) then
-
-              if (RHO_force.ge.zero) then 
-               ! RHO_force = -dt divu
-               NEW_DENSITY=rho*(one+RHO_force)
-              else if (RHO_force.le.zero) then
-               ! d^n+1 = d^n + f * d^n+1
-               ! (1-f)d^n+1 = d^n
-               ! d^n+1=d^n/(1-f)
-               NEW_DENSITY=rho/(one-RHO_force)
-              else
-               print *,"RHO_force invalid"
-               stop
-              endif
-
-             else
-              print *,"temp prim var invalid"
-              stop
-             endif
 
              if (local_primitive.eq.0) then
 
@@ -13396,19 +13321,16 @@ stop
                 ncomp_denold, &
                 ncomp_veldest, &
                 ncomp_dendest, &
-                conservative_div_uu, &
                 ns_time_order, &
                 divu_outer_sweeps, &
                 num_divu_outer_sweeps, &
                 SDC_outer_sweeps, &
-                SEM_advection_algorithm, &
                 level, &
                 finest_level, &
                 nmat, &
                 operation_flag, & 
                 project_option, &
                 energyflag, &
-                temperature_primitive_variable, &
                 homflag, &
                 local_maskSEM, &
                 cur_time, &
@@ -13431,7 +13353,8 @@ stop
                 xvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
-                mdotcell_ptr, &
+                mdotcell_ptr, & !VELADVECT_MF, operation_flag==107
+                maskdivres_ptr, & !DEN_RECON_MF, operation_flag==107
                 pold_ptr, &
                 denold_ptr, &
                 ustar_ptr, &
@@ -13445,19 +13368,16 @@ stop
                 ncomp_denold, &
                 ncomp_veldest, &
                 ncomp_dendest, &
-                conservative_div_uu, &
                 ns_time_order, &
                 divu_outer_sweeps, &
                 num_divu_outer_sweeps, &
                 SDC_outer_sweeps, &
-                SEM_advection_algorithm, &
                 level, &
                 finest_level, &
                 nmat, &
                 operation_flag, & 
                 project_option, &
                 energyflag, &
-                temperature_primitive_variable, &
                 homflag, &
                 local_maskSEM, &
                 cur_time, &
@@ -13480,7 +13400,8 @@ stop
                 yvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
-                mdotcell_ptr, &
+                mdotcell_ptr, & !VELADVECT_MF, operation_flag==107
+                maskdivres_ptr, & !DEN_RECON_MF, operation_flag==107
                 pold_ptr, &
                 denold_ptr, &
                 ustar_ptr, &
@@ -13494,19 +13415,16 @@ stop
                 ncomp_denold, &
                 ncomp_veldest, &
                 ncomp_dendest, &
-                conservative_div_uu, &
                 ns_time_order, &
                 divu_outer_sweeps, &
                 num_divu_outer_sweeps, &
                 SDC_outer_sweeps, &
-                SEM_advection_algorithm, &
                 level, &
                 finest_level, &
                 nmat, &
                 operation_flag, & 
                 project_option, &
                 energyflag, &
-                temperature_primitive_variable, &
                 homflag, &
                 local_maskSEM, &
                 cur_time, &
@@ -13529,7 +13447,8 @@ stop
                 zvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
-                mdotcell_ptr, &
+                mdotcell_ptr, & !VELADVECT_MF, operation_flag==107
+                maskdivres_ptr, & !DEN_RECON_MF, operation_flag==107
                 pold_ptr, &
                 denold_ptr, &
                 ustar_ptr, &
@@ -13654,7 +13573,6 @@ stop
        energyflag, & 
        beta, &
        visc_coef, &
-       temperature_primitive_variable, &
        enable_spectral, &
        fluxvel_index, &  
        fluxden_index, &  
@@ -13662,7 +13580,6 @@ stop
        facecut_index, &
        icefacecut_index, &
        curv_index, &
-       conservative_div_uu, &
        ignore_div_up, &
        pforce_index, &
        faceden_index, &  
@@ -13714,8 +13631,7 @@ stop
        num_colors, &
        nten, &
        project_option, &
-       SEM_upwind, &
-       SEM_advection_algorithm) &
+       SEM_upwind) &
       bind(c,name='fort_cell_to_mac')
 
       use global_utility_module
@@ -13744,7 +13660,6 @@ stop
       REAL_T, intent(in) :: added_weight(nmat)
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: temperature_primitive_variable(nmat)
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
       INTEGER_T, intent(in) :: enable_spectral
@@ -13756,7 +13671,6 @@ stop
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index 
@@ -13799,7 +13713,6 @@ stop
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: SEM_upwind
-      INTEGER_T, intent(in) :: SEM_advection_algorithm
 
       REAL_T, intent(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
@@ -14021,13 +13934,6 @@ stop
        print *,"SEM_upwind invalid cell to mac"
        stop
       endif
-      if ((SEM_advection_algorithm.eq.0).or. &
-          (SEM_advection_algorithm.eq.1)) then
-       ! do nothing
-      else
-       print *,"SEM_advection_algorithm invalid"
-       stop
-      endif
  
       if ((enable_spectral.lt.0).or. &
           (enable_spectral.gt.3)) then
@@ -14199,14 +14105,6 @@ stop
        stop
       endif
 
-      if ((conservative_div_uu.eq.0).or. &
-          (conservative_div_uu.eq.1)) then
-       ! do nothing
-      else
-       print *,"conservative_div_uu invalid"
-       stop
-      endif
-
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
        stop
@@ -14282,28 +14180,6 @@ stop
         ! do nothing
        else
         print *,"denconst invalid"
-        stop
-       endif
-
-       if ((fort_material_type(im).eq.0).or. &
-           (is_rigid(nmat,im).eq.1).or. &
-           (fort_material_type(im).eq.999)) then
-        if (temperature_primitive_variable(im).ne.1) then
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else if ((fort_material_type(im).gt.0).and. &
-                (is_rigid(nmat,im).eq.0).and. &
-                (fort_material_type(im).ne.999)) then
-        if ((temperature_primitive_variable(im).eq.0).or. &
-            (temperature_primitive_variable(im).eq.1)) then
-         ! do nothing
-        else
-         print *,"temperature_primitive_variable(im) invalid"
-         stop
-        endif
-       else
-        print *,"fort_material_type(im) or is_rigid invalid"
         stop
        endif
 
@@ -14663,20 +14539,14 @@ stop
               local_face(nc)=zero
              else if (at_RZ_face.eq.0) then
               local_face(nc)=vel(D_DECL(idonate,jdonate,kdonate),velcomp)
-              if (conservative_div_uu.eq.1) then
-               local_face(nc)=local_face(nc)*test_velocity_FACE
-              else if (conservative_div_uu.eq.0) then
-               ! do nothing
-              else
-               print *,"conservative_div_uu invalid"
-               stop
-              endif
+              local_face(nc)=local_face(nc)*test_velocity_FACE
              else
               print *,"at_RZ_face invalid"
               stop
              endif
             else if (nc.eq.SDIM+1) then
-             local_face(nc)=templocal  ! NONCONSERVATIVE
+             local_face(nc)=templocal 
+             local_face(nc)=local_face(nc)*test_velocity_FACE
             else
              print *,"nc invalid"
              stop
@@ -15941,7 +15811,6 @@ stop
               endif
     
               call SEM_CELL_TO_MAC( &
-               conservative_div_uu, &
                ncomp_xp, &
                simple_AMR_BC_flag, &
                level, &
@@ -15949,10 +15818,8 @@ stop
                nmat, &
                operation_flag, & 
                energyflag, &
-               temperature_primitive_variable, &
                project_option, &
                SEM_upwind, &
-               SEM_advection_algorithm, &
                beta, &
                visc_coef, &
                time, &

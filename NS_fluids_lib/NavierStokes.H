@@ -163,8 +163,6 @@ namespace amrex{
 #define DINVERSE_MF 139
 #define TENSOR_RHS_MF 140
 
-#define MASKCONSERVE_MF 141
-
 #define HOOP_FORCE_MARK_MF 142
 #define BOUSSINESQ_TEMP_MF 143
 
@@ -311,8 +309,8 @@ namespace amrex{
 //  mac vel, displacement
 // LS_Type:
 //  LS 1..nmat, LS_slope sdim x nmat
-// DIV_Type:
-//  (a) temporary "pressure" for project_option==11
+// DIV_Type (1 variable):
+//  (a) temporary "pressure" for project_option==11, or
 //  (b) -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
 // Solid_State_Type:
 // velocity
@@ -1755,8 +1753,6 @@ protected:
     static int  viscous_enable_spectral; // def 0
     static int  projection_enable_spectral;
     static int  SEM_upwind;
-     //0=div(uS)-S div(u)    1=u dot grad S  def=0
-    static int  SEM_advection_algorithm;
      // continuous_mof = 0 => regular MOF
      // continuous_mof = 2 => CMOF ("continuous MOF ")
      // continuous_mof = 3 => CLSVOF except use MOF in cells with >2 materials.
@@ -1873,11 +1869,6 @@ protected:
     static int ZDmac_Type;
     static int NUM_STATE_TYPE;
 
-     // def=1
-     // 0=> I(u_GL) dot grad u_GG, no sync project
-     // 1=> grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-     // 2=> grad dot (u_GL u_GG) - u_GG div u_GL, sync project
-    static int conservative_div_uu; 
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope;
@@ -2216,9 +2207,6 @@ protected:
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
-     // def=0 if shock_timestep=1, 1 otherwise
-     // applies to both density and temperature.
-    static Vector<int> temperature_primitive_variable; 
 
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
