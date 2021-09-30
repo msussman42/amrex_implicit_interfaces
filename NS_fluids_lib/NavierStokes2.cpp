@@ -1829,24 +1829,6 @@ void NavierStokes::apply_cell_pressure_gradient(
   // old cell velocity before application of pressure gradient.
  MultiFab* ustar;
 
-  // TODO:
-  // Low order: 
-  //   a) non-conservative at interfaces.
-  //   b) conservative in bulk where gradients are large.
-  //       -> div(up)   rho_t + div(rho u)=0  E_t + ...
-  // Space time spectral:
-  //   a) non conservative advection (non-diffusive version for velocity)
-  //   b) Drho/Dt=0  DT/Dt=0
-  //      div u = -(pnew-padv)/(rho c^2 dt)
-  //      Drho/Dt=-rho div u   DT/Dt=-p(rho,T) div u (T/T1)
- if (enable_spectral!=0) {
-  std::cout << "non-conservative: \n";
-  std::cout << "divup (1) rho div u , (2) p div u \n";
-  std::cout << "conservative: \n";
-  std::cout << "divup (1) 0 , (2) div (up) \n";
-  amrex::Error("upgrade space time spectral element");
- }
-
  MultiFab* divup;
  if ((energyflag==0)|| //do not update the energy
      (energyflag==1)) {//update the energy
@@ -1986,7 +1968,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &ignore_div_up,
     &pforce_index,
     &faceden_index,
     &icemask_index,
@@ -2187,7 +2168,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &ignore_div_up,
     &pforce_index,
     &faceden_index,
     &icemask_index,
@@ -2865,7 +2845,6 @@ void NavierStokes::increment_face_velocity(
        &facecut_index,
        &icefacecut_index,
        &curv_index,
-       &ignore_div_up,
        &pforce_index,
        &faceden_index,
        &icemask_index,
@@ -3347,7 +3326,6 @@ void NavierStokes::VELMAC_TO_CELL(
    &facecut_index,
    &icefacecut_index,
    &curv_index,
-   &ignore_div_up,
    &pforce_index,
    &faceden_index,
    &icemask_index,
@@ -4548,7 +4526,6 @@ void NavierStokes::apply_pressure_grad(
      &facecut_index,
      &icefacecut_index,
      &curv_index,
-     &ignore_div_up,
      &pforce_index,
      &faceden_index, 
      &icemask_index,
@@ -6047,7 +6024,6 @@ void NavierStokes::process_potential_force_face() {
     &facecut_index,
     &icefacecut_index,
     &curv_index,
-    &ignore_div_up,
     &pforce_index,
     &faceden_index,
     &icemask_index,

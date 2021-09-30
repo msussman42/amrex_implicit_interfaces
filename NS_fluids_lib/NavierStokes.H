@@ -2161,7 +2161,6 @@ protected:
     static int ncghost_elastic;
     static int ncghost_state;
 
-    static int ignore_div_up; // def=0
     static Vector<Real> compressible_dt_factor;  //def=1.0
     static int disable_advection;
     static int disable_pressure_solve;

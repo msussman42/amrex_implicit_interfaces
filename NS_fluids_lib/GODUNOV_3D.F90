@@ -22172,6 +22172,7 @@ stop
                tdata_ptr, & ! maskcoef
                tdata_ptr, & ! cterm
                tdata_ptr, & ! mdotcell
+               tdata_ptr, & ! maskdivres
                tdata_ptr, & ! pold
                tdata_ptr, & ! denold
                tdata_ptr, & ! ustar
