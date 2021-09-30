@@ -542,7 +542,6 @@ int  NavierStokes::TensorZV_Type=TensorZU_Type+1;
 
 int  NavierStokes::NUM_STATE_TYPE=TensorZV_Type+1;
 
-int  NavierStokes::ignore_div_up=0;
 
 Vector<Real> NavierStokes::compressible_dt_factor; 
 
@@ -3897,13 +3896,6 @@ NavierStokes::read_params ()
 
     polymer_factor.resize(nmat);
 
-    pp.query("ignore_div_up",ignore_div_up);
-    if ((ignore_div_up==0)||
-        (ignore_div_up==1)) {
-     // do nothing
-    } else
-     amrex::Error("ignore_div_up invalid");
-
     compressible_dt_factor.resize(nmat);
     for (int i=0;i<nmat;i++) {
      compressible_dt_factor[i]=1.0;
@@ -4558,7 +4550,6 @@ NavierStokes::read_params ()
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
-     std::cout << "ignore_div_up= " << ignore_div_up << '\n';
 
      for (int i=0;i<nmat;i++) {
       std::cout << "i= " << i << " compressible_dt_factor= " <<
@@ -15091,7 +15082,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &facecut_index,
       &icefacecut_index,
       &curv_index,
-      &ignore_div_up,
       &pforce_index,
       &faceden_index,
       &icemask_index,
@@ -15283,7 +15273,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &facecut_index,
       &icefacecut_index,
       &curv_index,
-      &ignore_div_up,
       &pforce_index,
       &faceden_index,  // 1/rho
       &icemask_index,

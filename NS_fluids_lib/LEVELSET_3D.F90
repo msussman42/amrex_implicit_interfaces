@@ -11268,7 +11268,6 @@ stop
        facecut_index, &
        icefacecut_index, &
        curv_index, &
-       ignore_div_up, &
        pforce_index, &
        faceden_index, &
        icemask_index, &
@@ -11358,7 +11357,6 @@ stop
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index
       INTEGER_T, intent(in) :: icemask_index
@@ -11476,18 +11474,11 @@ stop
       REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
 
       REAL_T DXMAXLS,cutoff
-      INTEGER_T all_incomp
-      INTEGER_T local_primitive
-      REAL_T Eforce_conservative,Eforce_primitive
-      REAL_T RHO_force  ! -dt div u
-      REAL_T cell_pressure
+      REAL_T Eforce_conservative
       REAL_T KE_diff
 
-      INTEGER_T cell_is_ice
-      INTEGER_T cell_is_FSI_rigid
-
       INTEGER_T i,j,k
-      INTEGER_T dir,dir2,side
+      INTEGER_T dir,side
       INTEGER_T veldir
       INTEGER_T im
       INTEGER_T vofcomp
@@ -11504,7 +11495,6 @@ stop
       REAL_T VOLTERM,hx,RR
       REAL_T dencell
       REAL_T rho
-      REAL_T NEW_DENSITY
       REAL_T TEMPERATURE,internal_e
       REAL_T NEW_TEMPERATURE
       REAL_T CC,CC_DUAL,MSKDV,MSKRES,MDOT,divu
@@ -11524,7 +11514,6 @@ stop
        ! 1=div(up) ok
       INTEGER_T use_face_pres_cen
       INTEGER_T use_face_pres(2)  ! faces that are on either side of a cell.
-      INTEGER_T use_face_pres_combine
       REAL_T coarse_fine_face(2)
       REAL_T ASIDE(2,ncphys)
       REAL_T mass_side(2)
@@ -11538,6 +11527,7 @@ stop
       INTEGER_T ncomp_xvel
       INTEGER_T ncomp_cterm
       REAL_T vfrac(nmat)
+      REAL_T vfrac_embedded
       REAL_T LStest(nmat)
       INTEGER_T velcomp
       INTEGER_T partid
@@ -11685,14 +11675,6 @@ stop
           (fluxvel_index.ne.0).or. &
           (fluxden_index.ne.SDIM)) then
        print *,"face_index bust 2"
-       stop
-      endif
-
-      if ((ignore_div_up.eq.0).or. &
-          (ignore_div_up.eq.1)) then
-       ! do nothing
-      else
-       print *,"ignore_div_up invalid"
        stop
       endif
 
@@ -12018,24 +12000,6 @@ stop
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
-
-      all_incomp=1
-
-      do im=1,nmat
-
-       if (fort_material_type(im).eq.0) then
-        ! do nothing
-       else if (fort_material_type(im).eq.999) then
-        ! do nothing
-       else if ((fort_material_type(im).ge.1).and. &
-                (fort_material_type(im).le.MAX_NUM_EOS)) then
-        all_incomp=0
-       else
-        print *,"fort_material_type invalid"
-        stop
-       endif
-
-      enddo  ! im=1..nmat
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -12672,98 +12636,53 @@ stop
          stop
         endif
 
-         ! note, in FORT_BUILD_CONSERVE, if 
+         ! note, in fort_build_conserve, if 
          ! is_compressible_mat==0,
          ! then 
          ! (1) (rho T) is advected instead of (rho cv T + rho u dot u/2)
          ! (2) rho_t + u dot grad rho=0 instead of
          !     rho_t + div(rho u)=0
          ! 
+        vfrac_embedded=zero
         do im=1,nmat
-         imattype=fort_material_type(im)
          vofcomp=(im-1)*ngeom_recon+1
          vfrac(im)=recon(D_DECL(i,j,k),vofcomp)
-         LStest(im)=levelPC(D_DECL(i,j,k),im)
-         if (vfrac(im).ge.VOFTOL) then
-          if (is_rigid(nmat,im).eq.1) then
-           use_face_pres_cen=0
-          else if (is_rigid(nmat,im).eq.0) then
-           if (is_ice(nmat,im).eq.1) then
-            use_face_pres_cen=0
-           else if (is_FSI_rigid(nmat,im).eq.1) then
-            use_face_pres_cen=0
-           else if (imattype.eq.0) then
-            use_face_pres_cen=0
-           else if ((imattype.ge.1).and. &
-                    (imattype.le.MAX_NUM_EOS)) then
-            if (constant_density_all_time(im).eq.0) then
-             ! do nothing
-            else
-             print *,"expecting constant_density_all_time(im).eq.0"
-             stop
-            endif
-           else
-            print *,"imattype or FSI_flag invalid"
-            stop
-           endif
-
-           if (ignore_div_up.eq.1) then
-            use_face_pres_cen=0
-           else if (ignore_div_up.eq.0) then
-            ! do nothing
-           else
-            print *,"ignore_div_up invalid"
-            stop
-           endif
-           
-          else
-           print *,"is_rigid(nmat,im) invalid"
-           stop
-          endif 
-         else if (abs(vfrac(im)).le.VOFTOL) then
+         if (is_rigid(nmat,im).eq.1) then
+          vfrac_embedded=vfrac_embedded+vfrac(im)
+         else if (is_rigid(nmat,im).eq.0) then
           ! do nothing
          else
-          print *,"vfrac(im) invalid (1) fort_mac_to_cell op_flag==101"
-          stop
-         endif 
-        enddo ! im=1..nmat
-
-        local_primitive=0
-        if (all_incomp.eq.1) then
-         local_primitive=1
-        else if (all_incomp.eq.0) then
-         ! do nothing
-        else
-         print *,"all_incomp invalid"
-         stop
-        endif 
-
-        do im=1,nmat
-         if (vfrac(im).ge.VOFTOL) then
-          if (is_compressible_mat(im).eq.0) then
-           local_primitive=1
-          else if (is_compressible_mat(im).eq.1) then
-           ! do nothing
-          else
-           print *,"is_compressible_mat invalid"
-           stop
-          endif
-         else if (abs(vfrac(im)).le.VOFTOL) then
-          ! do nothing
-         else
-          print *,"vfrac(im) invalid (2) fort_mac_to_cell op_flag==3"
+          print *,"is_rigid(nmat,im) invalid"
           stop
          endif
         enddo ! im=1..nmat
-     
-        Eforce_conservative=zero
-        Eforce_primitive=zero
-        RHO_force=zero
 
-        cell_pressure=pold(D_DECL(i,j,k),1)
-        if (cell_pressure.lt.zero) then
-         cell_pressure=zero
-        endif
+        if (vfrac_embedded.ge.VOFTOL) then
+         use_face_pres_cen=0
+        else if (abs(vfrac_embedded).le.VOFTOL) then
+         do im=1,nmat
+          if (vfrac(im).ge.VOFTOL) then
+           if (is_compressible_mat(im).eq.0) then
+            use_face_pres_cen=0
+           else if (is_compressible_mat(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_compressible_mat invalid"
+            stop
+           endif
+          else if (abs(vfrac(im)).le.VOFTOL) then
+           ! do nothing
+          else
+           print *,"vfrac(im) invalid (1) fort_mac_to_cell op_flag==101"
+           stop
+          endif 
+         enddo ! im=1..nmat
+        else
+         print *,"vfrac_embedded invalid (1) fort_mac_to_cell op_flag==101"
+         stop
+        endif 
+
+        Eforce_conservative=zero
 
         do dir=0,SDIM-1 
          ii=0
@@ -12776,7 +12695,7 @@ stop
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           kk=1
          else
-          print *,"dir out of range in EDGEPRESSURE"
+          print *,"dir out of range in fort_mac_to_cell"
           stop
          endif
 
@@ -12889,92 +12808,27 @@ stop
           endif
          endif
 
-         cell_is_ice=0
-         cell_is_FSI_rigid=0
-
-         do im=1,nmat
-          if (is_rigid(nmat,im).eq.1) then
-           ! do nothing
-          else if ((FSI_flag(im).eq.0).or. &
-                   (FSI_flag(im).eq.7)) then
-           ! do nothing
-          else if (is_ice(nmat,im).eq.1) then
-           if (LStest(im).ge.zero) then
-            cell_is_ice=1
-           endif
-          else if (is_FSI_rigid(nmat,im).eq.1) then
-           if (LStest(im).ge.zero) then
-            cell_is_FSI_rigid=1
-           endif
-          else
-           print *,"FSI_flag invalid"
-           stop
-          endif
-         enddo ! im=1..nmat
-
            ! use_face_pres.eq.1   ! div(up) ok
-         if (use_face_pres(1).eq.use_face_pres(2)) then
-          use_face_pres_combine=use_face_pres(1)
-         else if ((use_face_pres(1).eq.1).or. &
-                  (use_face_pres(2).eq.1)) then
-          use_face_pres_combine=min(use_face_pres(1),use_face_pres(2))
+         if ((use_face_pres(1).eq.1).and. &
+             (use_face_pres(2).eq.1)) then
+          ! do nothing
          else if ((use_face_pres(1).eq.0).or. &
                   (use_face_pres(2).eq.0)) then
-          use_face_pres_combine=0
+          use_face_pres_cen=0
          else
           print *,"use_face_pres invalid"
           stop
          endif
         
-         if (use_face_pres_cen.eq.1) then
-          use_face_pres_cen=use_face_pres_combine
-         else if (use_face_pres_cen.eq.0) then
-          ! do nothing
-         else
-          print *,"use_face_pres_cen invalid"
-          print *,"use_face_pres_cen=",use_face_pres_cen
-          stop
-         endif
-
-         if ((cell_is_ice.eq.1).or. &
-             (cell_is_FSI_rigid.eq.1)) then
-          use_face_pres_cen=0
-         endif
-
-         if (LS_clamped.ge.zero) then
-          use_face_pres_cen=0  
-         else if (LS_clamped.lt.zero) then
-          ! do nothing
-         else
-          print *,"LS_clamped invalid"
-          stop
-         endif
-
          if (energyflag.eq.0) then
           ! do nothing
          else if (energyflag.eq.1) then
 
-          if (all_incomp.eq.0) then
-
-           RHO_force=RHO_force- &
-            dt*(aface(2)*uface(2)- &
-                aface(1)*uface(1))/VOLTERM
-
-           Eforce_primitive=Eforce_primitive- &
-            dt*(aface(2)*uface(2)- &
-                aface(1)*uface(1))*cell_pressure/ &
-               (dencell*VOLTERM)
-           Eforce_conservative=Eforce_conservative- &
+          Eforce_conservative=Eforce_conservative- &
             dt*(aface(2)*uface(2)*pres_face(2)- &
                 aface(1)*uface(1)*pres_face(1))/ &
-               (dencell*VOLTERM)
+            (dencell*VOLTERM)
 
-          else if (all_incomp.eq.1) then
-           ! do nothing
-          else
-           print *,"all_incomp invalid"
-           stop
-          endif
          else
           print *,"energyflag invalid"
           stop
@@ -12992,169 +12846,115 @@ stop
 
         rhs(D_DECL(i,j,k),1)=zero
 
-         ! update the total energy in partial cells (regular project)
+         ! update the total energy in compressible cells (regular project)
         if (project_option.eq.0) then
 
          if (use_face_pres_cen.eq.0) then
 
-          RHO_force=zero
           Eforce_conservative=zero
-          Eforce_primitive=zero
           rhs(D_DECL(i,j,k),1)=zero
 
          else if (use_face_pres_cen.eq.1) then
 
-          if (local_primitive.eq.0) then
-           rhs(D_DECL(i,j,k),1)=Eforce_conservative
-          else if (local_primitive.eq.1) then
-           rhs(D_DECL(i,j,k),1)=Eforce_primitive
-          else
-           print *,"local_primitve invalid"
-           stop
-          endif
+          rhs(D_DECL(i,j,k),1)=Eforce_conservative
 
-           ! update the density (if non conservative) and temperature
+           ! update the temperature
           if (energyflag.eq.1) then 
 
            do im=1,nmat
 
             KE_diff=zero
-            do dir2=1,SDIM
-             velcomp=dir2
+            do velcomp=1,SDIM
              KE_diff=KE_diff+ &
               half*ustar(D_DECL(i,j,k),velcomp)**2- &
               half*veldest(D_DECL(i,j,k),velcomp)**2
-            enddo ! dir2
+            enddo ! velcomp=1..sdim
 
             if (vfrac(im).gt.VOFTOL) then
 
-             imattype=fort_material_type(im)
+             if (is_compressible_mat(im).eq.1) then
 
-             ibase=(im-1)*num_state_material
+              imattype=fort_material_type(im)
+
+              ibase=(im-1)*num_state_material
            
-              ! dendest is Snewfab.dataPtr(scomp_den) 
+               ! dendest is Snewfab.dataPtr(scomp_den) 
 
-             rho=dendest(D_DECL(i,j,k),ibase+1)
+              rho=dendest(D_DECL(i,j,k),ibase+1)
+              TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)
 
-             if (constant_density_all_time(im).eq.1) then
-              if (abs(rho-fort_denconst(im)).le. &
-                  VOFTOL*fort_denconst(im)) then
+              if (rho.gt.zero) then
                ! do nothing
               else
-               print *,"expecting rho=fort_denconst(im)"
+               print *,"density underflow"
+               print *,"i,j,k,im,rho ",i,j,k,im,rho
                stop
               endif
-             else if (constant_density_all_time(im).eq.0) then
-              ! do nothing
-             else
-              print *,"constant_density_all_time invalid"
-              stop
-             endif
-
-             NEW_DENSITY=rho
-
-             TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)
-
-             if (rho.gt.zero) then
-              ! do nothing
-             else
-              print *,"density underflow"
-              print *,"i,j,k,im,rho ",i,j,k,im,rho
-              stop
-             endif
-             if (TEMPERATURE.gt.zero) then
-              ! do nothing
-             else
-              print *,"temperature underflow"
-              stop
-             endif
-             call init_massfrac_parm(rho,massfrac_parm,im)
-             do ispec=1,num_species_var
-              massfrac_parm(ispec)= &
+              if (TEMPERATURE.gt.zero) then
+               ! do nothing
+              else
+               print *,"temperature underflow"
+               stop
+              endif
+              call init_massfrac_parm(rho,massfrac_parm,im)
+              do ispec=1,num_species_var
+               massfrac_parm(ispec)= &
                 dendest(D_DECL(i,j,k),ibase+2+ispec)
-              if (massfrac_parm(ispec).ge.zero) then
-               ! do nothing
-              else
-               print *,"massfrac_parm invalid"
-               stop
-              endif
-             enddo ! ispec=1..num_species_var
+               if (massfrac_parm(ispec).ge.zero) then
+                ! do nothing
+               else
+                print *,"massfrac_parm invalid"
+                stop
+               endif
+              enddo ! ispec=1..num_species_var
 
-             call INTERNAL_material(rho,massfrac_parm, &
+              call INTERNAL_material(rho,massfrac_parm, &
                TEMPERATURE,internal_e, &
                imattype,im)
 
               ! sanity checks
-             if (internal_e.gt.zero) then
-              call TEMPERATURE_material(rho,massfrac_parm, &
-               NEW_TEMPERATURE, &
-               internal_e,imattype,im)
-              if (abs(TEMPERATURE-NEW_TEMPERATURE).le. &
-                  1.0D-3*TEMPERATURE) then
-               ! do nothing 
+              if (internal_e.gt.zero) then
+               call TEMPERATURE_material(rho,massfrac_parm, &
+                NEW_TEMPERATURE, &
+                internal_e,imattype,im)
+               if (abs(TEMPERATURE-NEW_TEMPERATURE).le. &
+                   1.0D-3*TEMPERATURE) then
+                ! do nothing 
+               else
+                print *,"T(rho,e) and e(rho,T) are not inverses"
+                stop
+               endif
               else
-               print *,"T(rho,e) and e(rho,T) are not inverses"
+               print *,"internal_e must be positive"
                stop
               endif
-             else
-              print *,"internal_e must be positive"
-              stop
-             endif
-
-
-             if (local_primitive.eq.0) then
 
               internal_e=internal_e+KE_diff+Eforce_conservative
 
-             else if (local_primitive.eq.1) then
-
-              if (Eforce_primitive.ge.zero) then
-               internal_e=internal_e+Eforce_primitive
-              else if (Eforce_primitive.le.zero) then
-               ! e^n+1 = e^n + f e^n+1/e^n
-               ! (1-f/e^n)e^n+1 = e^n
-               internal_e=internal_e/(one-Eforce_primitive/internal_e)
+              if (internal_e.le.zero) then
+               NEW_TEMPERATURE=TEMPERATURE
+              else if (internal_e.gt.zero) then
+               call TEMPERATURE_material(rho,massfrac_parm, &
+                NEW_TEMPERATURE, &
+                internal_e,imattype,im)
               else
-               print *,"Eforce_primitive invalid"
-               stop
-              endif
-              if (internal_e.gt.zero) then
-               ! do nothing
-              else
-               print *,"internal_e invalid"
+               print *,"internal_e bust"
                stop
               endif
 
+              if (NEW_TEMPERATURE.gt.zero) then
+               dendest(D_DECL(i,j,k),ibase+2)=NEW_TEMPERATURE
+              else
+               print *,"NEW_TEMPERATURE must be positive"
+               stop
+              endif
+
+             else if (is_compressible_mat(im).eq.0) then
+              ! do nothing
              else
-              print *,"local_primitive invalid"
+              print *,"is_compressible_mat(im) invalid"
               stop
              endif
-
-             if (internal_e.le.zero) then
-              NEW_TEMPERATURE=TEMPERATURE
-             else if (internal_e.gt.zero) then
-              call TEMPERATURE_material(rho,massfrac_parm, &
-               NEW_TEMPERATURE, &
-               internal_e,imattype,im)
-             else
-              print *,"internal_e bust"
-              stop
-             endif
-
-             if (NEW_TEMPERATURE.gt.zero) then
-              dendest(D_DECL(i,j,k),ibase+2)=NEW_TEMPERATURE
-             else
-              print *,"NEW_TEMPERATURE must be positive"
-              stop
-             endif
-
-             if (NEW_DENSITY.gt.zero) then
-              dendest(D_DECL(i,j,k),ibase+1)=NEW_DENSITY
-             else
-              print *,"NEW_DENSITY must be positive"
-              stop
-             endif
-
             else if (abs(vfrac(im)).le.VOFTOL) then
              ! do nothing
             else
@@ -13580,7 +13380,6 @@ stop
        facecut_index, &
        icefacecut_index, &
        curv_index, &
-       ignore_div_up, &
        pforce_index, &
        faceden_index, &  
        icemask_index, &
@@ -13671,7 +13470,6 @@ stop
       INTEGER_T, intent(in) :: facecut_index
       INTEGER_T, intent(in) :: icefacecut_index
       INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: ignore_div_up
       INTEGER_T, intent(in) :: pforce_index
       INTEGER_T, intent(in) :: faceden_index 
       INTEGER_T, intent(in) :: icemask_index
@@ -13956,14 +13754,6 @@ stop
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten.ne.nten_test) then
        print *,"nten invalid edge grad nten nten_test ",nten,nten_test
-       stop
-      endif
-
-      if ((ignore_div_up.eq.0).or. &
-          (ignore_div_up.eq.1)) then
-       ! do nothing
-      else
-       print *,"ignore_div_up invalid"
        stop
       endif
 
@@ -14376,18 +14166,14 @@ stop
           call get_primary_material(LSleft,nmat,im_left)
           call get_primary_material(LSright,nmat,im_right)
 
-          if ((fort_material_type(im_left).ge.1).and. &
-              (fort_material_type(im_left).le.MAX_NUM_EOS).and. &
-              (fort_material_type(im_right).ge.1).and. &
-              (fort_material_type(im_right).le.MAX_NUM_EOS)) then
+          if ((is_compressible_mat(im_left).eq.1).and. &
+              (is_compressible_mat(im_right).eq.1)) then
            local_compressible=1
-          else if ((fort_material_type(im_left).eq.0).or. &
-                   (fort_material_type(im_right).eq.0).or. &
-                   (fort_material_type(im_left).eq.999).or. &
-                   (fort_material_type(im_right).eq.999)) then
+          else if ((is_compressible_mat(im_left).eq.0).or. &
+                   (is_compressible_mat(im_right).eq.0)) then
            local_compressible=0
           else
-           print *,"fort_material_type invalid"
+           print *,"is_compressible invalid"
            stop
           endif
 
@@ -15162,16 +14948,13 @@ stop
            stop 
           endif
 
-          if ((is_ice(nmat,im_left).eq.1).or. &  
-              (is_FSI_rigid(nmat,im_left).eq.1).or. &
-              (CTML_FSI_mat(nmat,im_left).eq.1)) then  
+          if (local_compressible.eq.0) then
            use_face_pres=0 ! do not use div(up)
-          else if ((is_ice(nmat,im_right).eq.1).or. &  
-                   (is_FSI_rigid(nmat,im_right).eq.1).or. &
-                   (CTML_FSI_mat(nmat,im_right).eq.1)) then  
-           use_face_pres=0 ! do not use div(up)
-          else
+          else if (local_compressible.eq.1) then
            ! do nothing
+          else
+           print *,"local_compressible invalid"
+           stop
           endif
 
           if (local_face(icemask_index+1).eq.zero) then
