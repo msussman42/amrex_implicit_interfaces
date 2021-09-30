@@ -6,6 +6,8 @@
 // Pressure gradient correction terms are on the MAC grid.
 // DIV(U) terms are stored in the state variables: DIV_Type
 //
+//keywords: nfluxSEM, nstate_SDC, SEM_advection_algorithm, 
+//SEM_scalar_advection, MASKSEM_MF, MASKCONSERVE_MF
 #include <algorithm>
 #include <vector>
 
@@ -2460,9 +2462,9 @@ NavierStokes::read_params ()
      amrex::Error("SEM_upwind invalid");
 
     pp.query("SEM_advection_algorithm",SEM_advection_algorithm);
-    if (SEM_advection_algorithm==1) {
+    if (SEM_advection_algorithm==1) { // u dot grad S
      // do nothing
-    } else if (SEM_advection_algorithm==0) {
+    } else if (SEM_advection_algorithm==0) { // div(uS)-S div u
      // do nothing
     } else
      amrex::Error("SEM_advection_algorithm invalid");
@@ -14934,6 +14936,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
 
+  // velocity, density, temperature, mass fraction
  if (nfluxSEM!=AMREX_SPACEDIM+2+num_species_var)
   amrex::Error("nfluxSEM!=AMREX_SPACEDIM+2+num_species_var");
 
