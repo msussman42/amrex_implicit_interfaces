@@ -39,19 +39,29 @@ class TagBoxArray;
 // and also manages the advancement of data in time.
 //
 
+class FSI_container_class
+{
+public:
+
+int num_nodes;
+int num_elements;
+Vector< Vector<Real> > node_list;
+Vector< Vector<int> > element_list;
+Vector< Vector<Real> > displacement_list;
+Vector< Vector<Real> > velocity_list;
+Vector< Vector<Real> > force_list;
+Vector< Real > temperature_list;
+
+void initData_FSI();
+void copyFrom_FSI(const FSI_container_class& source_FSI);
+void clear_FSI();
+
+};
+
 class AmrLevel
 {
 
 public:
-    //
-    // What time are we at?
-    //
-    enum TimeLevel { AmrOldTime,
-                     AmrHalfTime,
-                     AmrNewTime,
-                     Amr1QtrTime,
-                     Amr3QtrTime,
-                     AmrOtherTime };
     //
     // The destructor.
     //
@@ -242,12 +252,6 @@ public:
     MultiFab& get_new_data (int state_indx,int slab_index);
     const MultiFab& get_new_data (int state_indx,int slab_index) const;
 
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& get_new_dataPC(int state_indx,
-      int slab_indx,int particle_index);
-    const AmrParticleContainer<N_EXTRA_REAL,0,0,0>& 
-	get_new_dataPC(int state_indx,
-         int slab_indx,int particle_index) const;
-
     //
     // Returns list of Descriptors.
     //
@@ -280,6 +284,8 @@ public:
 
     const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
        newDataPC (int slab_index,int sub_index) const;
+
+    Vector< Vector< FSI_container_class > > new_data_FSI;
 
     //
 protected:
