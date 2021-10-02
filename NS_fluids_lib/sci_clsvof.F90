@@ -6965,6 +6965,12 @@ end subroutine CLSVOF_sync_lag_data
 
 
 ! called from fort_headermsg when FSI_operation==0
+! fort_headermsg is called from NavierStokes::ns_header_msg_level
+! ns_header_msg_level is called from:
+!   NavierStokes::FSI_make_distance (op=2,3)
+!   NavierStokes::post_restart (op=0)
+!   NavierStokes::initData (op=0)
+!   NavierStokes::nonlinear_advection (op=4,1)
 ! isout==1 => verbose
 subroutine CLSVOF_ReadHeader( &
   FSI_refine_factor, &
