@@ -476,6 +476,10 @@ Amr::InitAmr () {
         slab_dt_type << '\n';
     }
 
+    ppns.get("num_materials",global_AMR_num_materials);
+    if ((global_AMR_num_materials<2)||(global_AMR_num_materials>999))
+     amrex::Error("global_AMR_num materials invalid");
+
     global_AMR_ncomp_PC=0;
     ppns.query("particles_flag",global_AMR_ncomp_PC);
     if ((global_AMR_ncomp_PC==0)||

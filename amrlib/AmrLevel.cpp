@@ -16,6 +16,79 @@ namespace amrex {
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
+void FSI_container_class::initData_FSI() {
+
+num_nodes=0;
+num_elements=0;
+node_list.resize(0);
+element_list.resize(0);
+displacement_list.resize(0);
+velocity_list.resize(0);
+force_list.resize(0);
+temperature_list.resize(0);
+
+} // end subroutine initData_FSI()
+
+void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
+
+ num_nodes=source_FSI.num_nodes;
+ num_elements=source_FSI.num_elements;
+ node_list.resize(num_nodes);
+ element_list.resize(num_elements);
+ displacement_list.resize(num_nodes);
+ velocity_list.resize(num_nodes);
+ force_list.resize(num_nodes);
+ temperature_list.resize(num_nodes);
+
+ for (int ielem=0;ielem<num_elements;ielem++) {
+  int num_vertices=source_FSI.element_list[ielem].size();
+  element_list[ielem].resize(num_vertices);
+  for (int ivert=0;ivert<num_vertices;ivert++) {
+   element_list[ielem][ivert]=
+     source_FSI.element_list[ielem][ivert];
+  }
+ } //ielem=0..num_elements-1
+
+ for (int inode=0;inode<num_nodes;inode++) {
+  node_list[inode].resize(3);
+  displacement_list[inode].resize(3);
+  velocity_list[inode].resize(3);
+  force_list[inode].resize(3);
+
+  for (int dir=0;dir<3;dir++) {
+   node_list[inode][dir]=source_FSI.node_list[inode][dir];
+   displacement_list[inode][dir]=source_FSI.displacement_list[inode][dir];
+   velocity_list[inode][dir]=source_FSI.velocity_list[inode][dir];
+   force_list[inode][dir]=source_FSI.force_list[inode][dir];
+  } //dir=0..2
+  temperature_list[inode]=source_FSI.temperature_list[inode];
+ } //inode=0..num_nodes-1
+
+} // end subroutine copyFrom_FSI
+
+void FSI_container_class::clear_FSI() {
+
+ for (int ielem=0;ielem<num_elements;ielem++) {
+  element_list[ielem].resize(0);
+ }
+ element_list.resize(0);
+
+ for (int inode=0;inode<num_nodes;inode++) {
+  node_list[inode].resize(0);
+  displacement_list[inode].resize(0);
+  velocity_list[inode].resize(0);
+  force_list[inode].resize(0);
+ } //inode=0..num_nodes-1
+ node_list.resize(0);
+ displacement_list.resize(0);
+ velocity_list.resize(0);
+ force_list.resize(0);
+ temperature_list.resize(0);
+
+} // end subroutine FSI_container_class::clear_FSI() 
+
+
+
 void
 AmrLevel::manual_tags_placement (TagBoxArray&    tags,
              const Vector<IntVect>& bf_lev)
@@ -73,12 +146,19 @@ AmrLevel::AmrLevel (Amr&            papa,
 
     int time_order=parent->Time_blockingFactor();
     int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+    int nmat=parent->global_AMR_num_materials;
 
     if (level==0) {
 
      new_dataPC.resize(level_MAX_NUM_SLAB);
+     new_data_FSI.resize(level_MAX_NUM_SLAB);
 
      for (int i=0;i<=time_order;i++) {
+
+      new_data_FSI[i].resize(nmat);
+      for (int j=0;j<nmat;j++) {
+       new_data_FSI[i][j].initData_FSI();
+      }
 
       if (level_ncomp_PC>0) {
        new_dataPC[i].resize(level_ncomp_PC);
@@ -165,10 +245,17 @@ AmrLevel::restart (Amr&          papa,
      std::string FullPathName=FullPath;
      int time_order=parent->Time_blockingFactor();
      int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+     int nmat=parent->global_AMR_num_materials;
 
      new_dataPC.resize(level_MAX_NUM_SLAB);
+     new_data_FSI.resize(level_MAX_NUM_SLAB);
 
      for (int i=0;i<=time_order;i++) {
+
+      new_data_FSI[i].resize(nmat);
+      for (int j=0;j<nmat;j++) {
+       new_data_FSI[i][j].initData_FSI();
+      }
 
       if (level_ncomp_PC==0) {
        // do nothing
@@ -324,6 +411,7 @@ AmrLevel::checkPoint (const std::string& dir,
      std::string FullPathName=FullPath;
      int time_order=parent->Time_blockingFactor();
      int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+     int nmat=parent->global_AMR_num_materials;
 
      for (int i=0;i<=time_order;i++) {
 
@@ -383,15 +471,24 @@ AmrLevel::~AmrLevel ()
     if (level==0) {
      int time_order=parent->Time_blockingFactor();
      int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+     int nmat=parent->global_AMR_num_materials;
+
      for (int i=0;i<=time_order;i++) {
+
+      for (int j=0;j<nmat;j++) {
+       new_data_FSI[i][j].clear_FSI();
+      }
+      new_data_FSI[i].resize(0);
+
       if (level_ncomp_PC>0) {
        for (int j=0;j<level_ncomp_PC;j++) {
         delete new_dataPC[i][j];
        }
        new_dataPC[i].resize(0);
       }
-     }
+     } // for (int i=0;i<=time_order;i++) 
      new_dataPC.resize(0);
+     new_data_FSI.resize(0);
     } else if (level>0) {
      // do nothing
     } else
@@ -482,8 +579,13 @@ if (level==0) {
 
  int time_order=parent->Time_blockingFactor();
  int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+ int nmat=parent->global_AMR_num_materials;
 
  for (int i=0;i<time_order;i++) {
+
+  for (int j=0;j<nmat;j++) {
+   new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[time_order][j]);
+  }
 
   if (level_ncomp_PC==0) {
    // do nothing
@@ -522,8 +624,13 @@ if (level==0) {
 
  int time_order=parent->Time_blockingFactor();
  int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+ int nmat=parent->global_AMR_num_materials;
 
  for (int i=1;i<=time_order;i++) {
+
+  for (int j=0;j<nmat;j++) {
+   new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[0][j]);
+  }
 
   if (level_ncomp_PC==0) {
    // do nothing
