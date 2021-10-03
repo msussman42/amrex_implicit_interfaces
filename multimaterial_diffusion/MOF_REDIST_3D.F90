@@ -762,11 +762,10 @@ stop
       REAL_T local_LS(nmat)
       REAL_T kappa(nmat+1)  !nmat+nten
       REAL_T F_local
+      REAL_T LS_local
       INTEGER_T curv_valid
       REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
-      REAL_T expect_curv,local_curv_err,max_curv_err,total_curv_err
-      INTEGER_T total_curv_count
-      INTEGER_T verbose_flag
+      REAL_T, dimension(nmat,-3:3,-3:3) :: ls_curv
 
       nhalf=3 
 
@@ -854,9 +853,6 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_nrm)
 
-      total_curv_err=0.0d0
-      total_curv_count=0
-      max_curv_err=0.0d0
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -1027,8 +1023,7 @@ stop
          CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
         enddo ! im=1..nmat+nten
 
-       else if ((height_function_flag.eq.1).or. &
-                (height_function_flag.eq.2)) then
+       else if (height_function_flag.eq.1) then
 
         if (SDIM.eq.2) then
          ! do nothing
@@ -1039,6 +1034,12 @@ stop
         k1=0
 
         if (nmat.eq.2) then
+
+         do im=1,nmat+1
+          kappa(im)=0.0d0
+         enddo
+         curv_valid=1
+
          do i1=-3,3
          do j1=-3,3
           if ((i+i1.ge.fablo(1)).and. &
@@ -1046,9 +1047,12 @@ stop
               (j+j1.le.fabhi(2)).and. &
               (j+j1.ge.fablo(2))) then
            F_local=F_new(D_DECL(i+i1,j+j1,k+k1),1)
+           LS_local=F_local-0.5d0
           else
 #if (STANDALONE==1)
-           F_local=one
+           curv_valid=0
+           F_local=1.0d0
+           LS_local=F_local-0.5d0
 #else
            print *,"only use height function in prototype code"
            stop
@@ -1056,51 +1060,146 @@ stop
 
           endif
           vf_curv(1,i1,j1)=F_local
+          ls_curv(1,i1,j1)=F_local-0.5d0
           vf_curv(2,i1,j1)=one-F_local
+          ls_curv(2,i1,j1)=0.5d0-F_local
          enddo
          enddo
 
-         verbose_flag=0
-         if (height_function_flag.eq.2) then
-          if (abs(vf_curv(1,0,0)-0.5d0).lt.0.45d0) then
-           verbose_flag=1
+         if (curv_valid.eq.1) then
+
+          curv_valid=0
+
+          if (ls_curv(1,0,0).ge.0.0d0) then
+
+           if ((ls_curv(1,1,0).lt.0.0d0).and. &
+               (ls_curv(1,-1,0).lt.0.0d0)) then
+            curv_valid=-1
+           else if ((ls_curv(1,1,0).ge.0.0d0).and. &
+                    (ls_curv(1,-1,0).ge.0.0d0)) then
+            ! do nothing
+           else if ((ls_curv(1,1,0).lt.0.0d0).and. &
+                    (ls_curv(1,-1,0).ge.0.0d0)) then
+            curv_valid=1
+           else if ((ls_curv(1,1,0).ge.0.0d0).and. &
+                    (ls_curv(1,-1,0).lt.0.0d0)) then
+            curv_valid=1
+           else
+            print *,"ls_curv NaN"
+            stop
+           endif
+
+           if (curv_valid.ge.0) then
+
+            if ((ls_curv(1,0,1).lt.0.0d0).and. &
+                (ls_curv(1,0,-1).lt.0.0d0)) then
+             curv_valid=-1
+            else if ((ls_curv(1,0,1).ge.0.0d0).and. &
+                     (ls_curv(1,0,-1).ge.0.0d0)) then
+             ! do nothing
+            else if ((ls_curv(1,0,1).lt.0.0d0).and. &
+                     (ls_curv(1,0,-1).ge.0.0d0)) then
+             curv_valid=1
+            else if ((ls_curv(1,0,1).ge.0.0d0).and. &
+                     (ls_curv(1,0,-1).lt.0.0d0)) then
+             curv_valid=1
+            else
+             print *,"ls_curv NaN"
+             stop
+            endif
+
+           else if (curv_valid.eq.-1) then
+            ! do nothing
+           else
+            print *,"curv_valid invalid"
+            stop
+           endif
+
+          else if (ls_curv(1,0,0).lt.0.0d0) then
+
+           if ((ls_curv(1,1,0).ge.0.0d0).and. &
+               (ls_curv(1,-1,0).ge.0.0d0)) then
+            curv_valid=-1
+           else if ((ls_curv(1,1,0).lt.0.0d0).and. &
+                    (ls_curv(1,-1,0).lt.0.0d0)) then
+            ! do nothing
+           else if ((ls_curv(1,1,0).lt.0.0d0).and. &
+                    (ls_curv(1,-1,0).ge.0.0d0)) then
+            curv_valid=1
+           else if ((ls_curv(1,1,0).ge.0.0d0).and. &
+                    (ls_curv(1,-1,0).lt.0.0d0)) then
+            curv_valid=1
+           else
+            print *,"ls_curv NaN"
+            stop
+           endif
+
+           if (curv_valid.ge.0) then
+
+            if ((ls_curv(1,0,1).ge.0.0d0).and. &
+                (ls_curv(1,0,-1).ge.0.0d0)) then
+             curv_valid=-1
+            else if ((ls_curv(1,0,1).lt.0.0d0).and. &
+                     (ls_curv(1,0,-1).lt.0.0d0)) then
+             ! do nothing
+            else if ((ls_curv(1,0,1).lt.0.0d0).and. &
+                     (ls_curv(1,0,-1).ge.0.0d0)) then
+             curv_valid=1
+            else if ((ls_curv(1,0,1).ge.0.0d0).and. &
+                     (ls_curv(1,0,-1).lt.0.0d0)) then
+             curv_valid=1
+            else
+             print *,"ls_curv NaN"
+             stop
+            endif
+
+           else if (curv_valid.eq.-1) then
+            ! do nothing
+           else
+            print *,"curv_valid invalid"
+            stop
+           endif
+
+          else
+           print *,"ls_curv(1,0,0) is NaN"
+           stop
           endif
+
+          if (curv_valid.eq.1) then
+
+           call get_curvature_heightf(nmat,ls_curv,vf_curv,dx(1), &
+              kappa,curv_valid)
+
+           if (curv_valid.eq.1) then
+            kappa(nmat+1)=kappa(1)
+           endif
+
+          else if ((curv_valid.eq.-1).or.(curv_valid.eq.0)) then
+           ! do nothing
+          else
+           print *,"curv_valid invalid"
+           stop
+          endif
+
+         else if (curv_valid.eq.0) then
+          ! do nothing
+         else
+          print *,"curv_valid invalid"
+          stop
          endif
 
-         call get_curvature_heightf(nmat,vf_curv,dx(1),kappa,verbose_flag)
-         kappa(nmat+1)=kappa(1)
-         if (height_function_flag.eq.2) then
-                 ! outside is material 1
-          if (abs(vf_curv(1,0,0)-0.5d0).lt.0.45d0) then
-           do im=1,nmat
-            if (im.eq.1) then
-             expect_curv=1.0/radblob10
-            else
-             expect_curv=-1.0/radblob10
-            endif
-            local_curv_err=abs(expect_curv-kappa(im))
-            total_curv_err=total_curv_err+local_curv_err
-            total_curv_count=total_curv_count+1
-            if (local_curv_err.gt.max_curv_err) then
-             max_curv_err=local_curv_err
-            endif
-            print *,"i,j,im,expect,actual ",i,j,im,expect_curv,kappa(im)
-           enddo ! im=1..nmat
-          endif
+         if (curv_valid.eq.-1) then
+          curv_valid=0
          endif
 
          do im=1,nmat+1
           CURV_CELL(D_DECL(i,j,k),im)=kappa(im)
          enddo
-         if (abs(LS_new(D_DECL(i,j,k),1)).le.dx(1)) then
-          curv_valid=1
-         else
-          curv_valid=0
-         endif
           ! status=1 good status=0 bad
          do im=1,nmat+1
           CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=curv_valid
          enddo
+
         else
          print *,"only two materials in 2d supported"
          stop
@@ -1114,17 +1213,9 @@ stop
       enddo
       enddo
       enddo  !i,j,k 
-      if (height_function_flag.eq.2) then
-       print *,"total_curv_count=",total_curv_count
-       print *,"total_curv_err=",(total_curv_err)/(total_curv_count+ &
-               1.0D-15)
-       print *,"max_curv_err=",max_curv_err
-       stop
-      endif
 
       return
       end subroutine FORT_NODE_TO_CELL
-
 
 
 
