@@ -33,52 +33,34 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
  num_nodes=source_FSI.num_nodes;
  num_elements=source_FSI.num_elements;
- node_list.resize(num_nodes);
- element_list.resize(num_elements);
- displacement_list.resize(num_nodes);
- velocity_list.resize(num_nodes);
- force_list.resize(num_nodes);
+ node_list.resize(num_nodes*3);
+ element_list.resize(num_elements*4);
+ displacement_list.resize(num_nodes*3);
+ velocity_list.resize(num_nodes*3);
+ force_list.resize(num_nodes*3);
  temperature_list.resize(num_nodes);
 
- for (int ielem=0;ielem<num_elements;ielem++) {
-  int num_vertices=source_FSI.element_list[ielem].size();
-  element_list[ielem].resize(num_vertices);
-  for (int ivert=0;ivert<num_vertices;ivert++) {
-   element_list[ielem][ivert]=
-     source_FSI.element_list[ielem][ivert];
-  }
- } //ielem=0..num_elements-1
+ for (int ielem=0;ielem<4*num_elements;ielem++) {
+  element_list[ielem]=source_FSI.element_list[ielem];
+ } //ielem=0..4*num_elements-1
 
  for (int inode=0;inode<num_nodes;inode++) {
-  node_list[inode].resize(3);
-  displacement_list[inode].resize(3);
-  velocity_list[inode].resize(3);
-  force_list[inode].resize(3);
-
-  for (int dir=0;dir<3;dir++) {
-   node_list[inode][dir]=source_FSI.node_list[inode][dir];
-   displacement_list[inode][dir]=source_FSI.displacement_list[inode][dir];
-   velocity_list[inode][dir]=source_FSI.velocity_list[inode][dir];
-   force_list[inode][dir]=source_FSI.force_list[inode][dir];
-  } //dir=0..2
   temperature_list[inode]=source_FSI.temperature_list[inode];
- } //inode=0..num_nodes-1
+ }
+
+ for (int inode=0;inode<3*num_nodes;inode++) {
+  node_list[inode]=source_FSI.node_list[inode];
+  displacement_list[inode]=source_FSI.displacement_list[inode];
+  velocity_list[inode]=source_FSI.velocity_list[inode];
+  force_list[inode]=source_FSI.force_list[inode];
+ } //inode=0..3*num_nodes-1
 
 } // end subroutine copyFrom_FSI
 
 void FSI_container_class::clear_FSI() {
 
- for (int ielem=0;ielem<num_elements;ielem++) {
-  element_list[ielem].resize(0);
- }
  element_list.resize(0);
 
- for (int inode=0;inode<num_nodes;inode++) {
-  node_list[inode].resize(0);
-  displacement_list[inode].resize(0);
-  velocity_list[inode].resize(0);
-  force_list[inode].resize(0);
- } //inode=0..num_nodes-1
  node_list.resize(0);
  displacement_list.resize(0);
  velocity_list.resize(0);

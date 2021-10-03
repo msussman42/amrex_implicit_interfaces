@@ -45,11 +45,11 @@ public:
 
 int num_nodes;
 int num_elements;
-Vector< Vector<Real> > node_list;
-Vector< Vector<int> > element_list;
-Vector< Vector<Real> > displacement_list;
-Vector< Vector<Real> > velocity_list;
-Vector< Vector<Real> > force_list;
+Vector< Real > node_list;
+Vector< int > element_list;
+Vector< Real > displacement_list;
+Vector< Real > velocity_list;
+Vector< Real > force_list;
 Vector< Real > temperature_list;
 
 void initData_FSI();
