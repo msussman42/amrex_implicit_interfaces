@@ -531,7 +531,7 @@
         mofdata_cell(imof)=mofdata_FAB(i,j,imof)
        enddo
 
-       if (probtypeCG.eq.403) then !dendrite problem
+       if ((probtypeCG.eq.403).and.(1.eq.0)) then !dendrite problem
         if (nmat.eq.2) then
          ! do nothing
         else
