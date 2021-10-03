@@ -7373,14 +7373,18 @@ void NavierStokes::ns_header_msg_level(
  if (FSI_operation==0) { // init node locations
   if (level==0) {
    elements_generated=0;
-  } else {
+  } else if ((level>=1)&&(level<=finest_level)) {
    elements_generated=1;
+  } else {
+   amrex::Error("level invalid");
   }
  } else if (FSI_operation==1) { // update node locations
   if (level==0) {
    elements_generated=0;
-  } else {
+  } else if ((level>=1)&&(level<=finest_level)) {
    elements_generated=1;
+  } else {
+   amrex::Error("level invalid");
   }
  } else if ((FSI_operation>=2)&&(FSI_operation<=3)) {
   elements_generated=1;
@@ -7427,6 +7431,52 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("problen[dir]<=0.0");
   }
 
+  Vector<FSI_container_class> FSI_input;
+  Vector<FSI_container_class> FSI_output;
+  Vector<int> num_nodes_list;
+  Vector<int> num_elements_list;
+  num_nodes_list.resize(nmat);
+  num_elements_list.resize(nmat);
+
+  int im_critical=0;
+  int im_index=0;
+
+  for (int im=0;im<nmat;im++) {
+   FSI_input[im].initData_FSI();
+   FSI_output[im].initData_FSI();
+  }
+  NavierStokes& ns_level0=getLevel(0);
+
+  if ((FSI_operation==0)||  // initialize nodes
+      (FSI_operation==1)) { // update node locations
+
+   if (FSI_operation==0) {
+    // do nothing
+   } else if (FSI_operation==1) {
+    if (level==0) {
+     for (int im=0;im<nmat;im++) {
+      FSI_input[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step][im]);
+      FSI_output[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1][im]);
+     }
+    } else if ((level>=1)&&(level<=finest_level)) {
+     // do nothing
+    } else
+     amrex::Error("level invalid");
+   } else
+    amrex::Error("FSI_operation invalid");
+  } else if ((FSI_operation==2)||  // make distance in narrow band
+             (FSI_operation==3)) { // update the sign
+   // do nothing
+  } else if (FSI_operation==4) { // copy Eul. vel/pres to struct vel/pres
+   // do nothing
+  } else
+   amrex::Error("FSI_operation invalid");
+
+  for (int im=0;im<nmat;im++) {
+   num_nodes_list[im]=FSI_input[im].num_nodes;
+   num_elements_list[im]=FSI_input[im].num_elements;
+  }
+
    //velocity+LS+temperature+flag+force (3D)
   if (nFSI_sub!=9)
    amrex::Error("nFSI_sub invalid");
@@ -7461,57 +7511,81 @@ void NavierStokes::ns_header_msg_level(
     for (int i=0;i<vofbc.size();i++)
      vofbc[i]=0;
 
-    int CTML_num_nodes=0;
-    int CTML_num_elements=0;
-
     int tid=0;
     int gridno=0;
 
-    fort_headermsg(
-     &tid,
-     &num_tiles_on_thread_proc[tid],
-     &gridno,
-     &thread_class::nthreads,
-     &level,
-     &finest_level,
-     &max_level,
-     &FSI_operation, // 0 or 1 (initialize or update nodes)
-     &FSI_sub_operation, // 0
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     problo,
-     problen, 
-     dx_max_level, 
-     problo,
-     probhi, 
-     velbc.dataPtr(),  
-     vofbc.dataPtr(), 
-     FSIfab.dataPtr(), // placeholder
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // velfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // mnbrfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // mfiner spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     &nFSI,
-     &nFSI_sub,
-     &ngrowFSI_unitfab,
-     &nparts,
-     im_solid_map.dataPtr(),
-     &h_small,
-     &cur_time, 
-     &dt, 
-     FSI_refine_factor.dataPtr(),
-     FSI_bounding_box_ngrow.dataPtr(),
-     &FSI_touch_flag[tid],
-     &CTML_FSI_init,
-     CTML_force_model.dataPtr(),
-     &iter,
-     &current_step,
-     &plot_interval,
-     &ioproc);
+    for (im_critical=-1;im_critical<nmat;im_critical++) {
+
+     im_index=im_critical;
+     if (im_critical==-1)
+      im_index=0;
+
+     fort_headermsg(
+      &tid,
+      &num_tiles_on_thread_proc[tid],
+      &gridno,
+      &thread_class::nthreads,
+      &level,
+      &finest_level,
+      &max_level,
+      &im_critical,
+      num_nodes_list.dataPtr(),
+      num_elements_list.dataPtr(),
+      &FSI_input[im_index].num_nodes,
+      &FSI_input[im_index].num_elements,
+      FSI_input[im_index].node_list.dataPtr(),
+      FSI_input[im_index].element_list.dataPtr(),
+      FSI_input[im_index].displacement_list.dataPtr(),
+      FSI_input[im_index].velocity_list.dataPtr(),
+      FSI_input[im_index].force_list.dataPtr(),
+      FSI_input[im_index].temperature_list.dataPtr(),
+      &FSI_output[im_index].num_nodes,
+      &FSI_output[im_index].num_elements,
+      FSI_output[im_index].node_list.dataPtr(),
+      FSI_output[im_index].element_list.dataPtr(),
+      FSI_output[im_index].displacement_list.dataPtr(),
+      FSI_output[im_index].velocity_list.dataPtr(),
+      FSI_output[im_index].force_list.dataPtr(),
+      FSI_output[im_index].temperature_list.dataPtr(),
+      &FSI_operation, // 0 or 1 (initialize or update nodes)
+      &FSI_sub_operation, // 0
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      problo,
+      problen, 
+      dx_max_level, 
+      problo,
+      probhi, 
+      velbc.dataPtr(),  
+      vofbc.dataPtr(), 
+      FSIfab.dataPtr(), // placeholder
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // velfab spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // mnbrfab spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // mfiner spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      &nFSI,
+      &nFSI_sub,
+      &ngrowFSI_unitfab,
+      &nparts,
+      im_solid_map.dataPtr(),
+      &h_small,
+      &cur_time, 
+      &dt, 
+      FSI_refine_factor.dataPtr(),
+      FSI_bounding_box_ngrow.dataPtr(),
+      &FSI_touch_flag[tid],
+      &CTML_FSI_init,
+      CTML_force_model.dataPtr(),
+      &iter,
+      &current_step,
+      &plot_interval,
+      &ioproc);
+
+    } //im_critical=-1..nmat-1
 
     elements_generated=1;
    } else if (elements_generated==1) {
@@ -7783,6 +7857,25 @@ void NavierStokes::ns_header_msg_level(
      &level,
      &finest_level,
      &max_level,
+     &im_critical,
+     num_nodes_list.dataPtr(),
+     num_elements_list.dataPtr(),
+     &FSI_input[im_index].num_nodes,
+     &FSI_input[im_index].num_elements,
+     FSI_input[im_index].node_list.dataPtr(),
+     FSI_input[im_index].element_list.dataPtr(),
+     FSI_input[im_index].displacement_list.dataPtr(),
+     FSI_input[im_index].velocity_list.dataPtr(),
+     FSI_input[im_index].force_list.dataPtr(),
+     FSI_input[im_index].temperature_list.dataPtr(),
+     &FSI_output[im_index].num_nodes,
+     &FSI_output[im_index].num_elements,
+     FSI_output[im_index].node_list.dataPtr(),
+     FSI_output[im_index].element_list.dataPtr(),
+     FSI_output[im_index].displacement_list.dataPtr(),
+     FSI_output[im_index].velocity_list.dataPtr(),
+     FSI_output[im_index].force_list.dataPtr(),
+     FSI_output[im_index].temperature_list.dataPtr(),
      &FSI_operation, // 2 or 3 (make distance or update sign)
      &FSI_sub_operation, // 0
      tilelo,tilehi,
@@ -7943,6 +8036,25 @@ void NavierStokes::ns_header_msg_level(
      &level,
      &finest_level,
      &max_level,
+     &im_critical,
+     num_nodes_list.dataPtr(),
+     num_elements_list.dataPtr(),
+     &FSI_input[im_index].num_nodes,
+     &FSI_input[im_index].num_elements,
+     FSI_input[im_index].node_list.dataPtr(),
+     FSI_input[im_index].element_list.dataPtr(),
+     FSI_input[im_index].displacement_list.dataPtr(),
+     FSI_input[im_index].velocity_list.dataPtr(),
+     FSI_input[im_index].force_list.dataPtr(),
+     FSI_input[im_index].temperature_list.dataPtr(),
+     &FSI_output[im_index].num_nodes,
+     &FSI_output[im_index].num_elements,
+     FSI_output[im_index].node_list.dataPtr(),
+     FSI_output[im_index].element_list.dataPtr(),
+     FSI_output[im_index].displacement_list.dataPtr(),
+     FSI_output[im_index].velocity_list.dataPtr(),
+     FSI_output[im_index].force_list.dataPtr(),
+     FSI_output[im_index].temperature_list.dataPtr(),
      &FSI_operation, // 4
      &FSI_sub_operation, // 0 (clear lag data) or 2 (sync lag data)
      tilelo,tilehi,
@@ -8022,6 +8134,25 @@ void NavierStokes::ns_header_msg_level(
       &level,
       &finest_level,
       &max_level,
+      &im_critical,
+      num_nodes_list.dataPtr(),
+      num_elements_list.dataPtr(),
+      &FSI_input[im_index].num_nodes,
+      &FSI_input[im_index].num_elements,
+      FSI_input[im_index].node_list.dataPtr(),
+      FSI_input[im_index].element_list.dataPtr(),
+      FSI_input[im_index].displacement_list.dataPtr(),
+      FSI_input[im_index].velocity_list.dataPtr(),
+      FSI_input[im_index].force_list.dataPtr(),
+      FSI_input[im_index].temperature_list.dataPtr(),
+      &FSI_output[im_index].num_nodes,
+      &FSI_output[im_index].num_elements,
+      FSI_output[im_index].node_list.dataPtr(),
+      FSI_output[im_index].element_list.dataPtr(),
+      FSI_output[im_index].displacement_list.dataPtr(),
+      FSI_output[im_index].velocity_list.dataPtr(),
+      FSI_output[im_index].force_list.dataPtr(),
+      FSI_output[im_index].temperature_list.dataPtr(),
       &FSI_operation, //4 (copy eul. fluid vel/pres to lag. solid vel/pres)
       &FSI_sub_operation, // 1 
       tilelo,tilehi,
