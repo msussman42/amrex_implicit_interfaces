@@ -7392,6 +7392,11 @@ void NavierStokes::ns_header_msg_level(
  int current_step = nStep();
  int plot_interval=parent->plotInt();
 
+  //(FSI_flag[im]==2) prescribed sci_clsvof.F90 rigid material 
+  //(FSI_flag[im]==4) FSI CTML sci_clsvof.F90 material
+  //(FSI_flag[im]==8) FSI CTML pressure-vel sci_clsvof.F90 material
+  //(FSI_flag[im]==6) sci_clsvof.F90 ice
+  //(FSI_flag[im]==7) sci_clsvof.F90 fluid
  if (read_from_CAD()==1) {
 
    // nparts x (velocity + LS + temperature + flag)
@@ -7455,6 +7460,9 @@ void NavierStokes::ns_header_msg_level(
     vofbc.resize(2*AMREX_SPACEDIM);
     for (int i=0;i<vofbc.size();i++)
      vofbc[i]=0;
+
+    int CTML_num_nodes=0;
+    int CTML_num_elements=0;
 
     int tid=0;
     int gridno=0;
