@@ -23,8 +23,8 @@ REAL_T :: LS1,LS2
 
 SIGN_COUNT=0
 do i=-3,2
- LS1=LSCOL(i)
- LS2=LSCOL(i+1)
+ LS1=LSCOL(i)  ! F-1/2
+ LS2=LSCOL(i+1)  ! F-1/2
  if ((LS1.ge.0.0d0).and.(LS2.ge.0.0d0)) then
   ! do nothing
  else if ((LS1.lt.0.0d0).and.(LS2.lt.0.0d0)) then
@@ -77,15 +77,15 @@ endif
 do imat=1,2
 
   do i=-1,1
-   FVERTICAL(i)=0.0d0
-   FHORIZONTAL(i)=0.0d0
+   FVERTICAL(i)=0.0d0  ! vertical orientation
+   FHORIZONTAL(i)=0.0d0  ! horizontal orientation
   enddo
 
 !  horizontal
 ! sum up the volume fraction of the chosen material in each column
   do j=-1,1
   do i=-3,3
-   FHORIZONTAL(j)=FHORIZONTAL(j)+vf_in(imat,j,i)
+   FHORIZONTAL(j)=FHORIZONTAL(j)+vf_in(imat,j,i)  ! column sum
    LSCOL(i)=ls_in(imat,j,i)
   enddo
   call count_sign_change(LSCOL,SIGN_HORIZONTAL(j))
@@ -155,8 +155,11 @@ if (curv_valid.eq.0) then
 else if (curv_valid.eq.1) then
  kappa_scale=max(abs(kappa(1)),abs(kappa(2)))
  kappa_scale=max(kappa_scale,1.0d0)
- if (abs(kappa(1)+kappa(2)).ge.1.0D-14*kappa_scale) then
+ if (abs(kappa(1)+kappa(2)).ge.1.0D-12*kappa_scale) then
   print *,"kappa(1) and kappa(2) failed sanity check"
+  print *,"kappa(1)=",kappa(1)
+  print *,"kappa(2)=",kappa(2)
+  print *,"kappa_scale=",kappa_scale
   stop
  endif
 endif

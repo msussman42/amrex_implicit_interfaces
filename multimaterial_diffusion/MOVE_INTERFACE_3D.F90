@@ -2625,7 +2625,7 @@ stop
         root_char_array='CURVCL'
         data_id=2
 
-        if (1.eq.0) then
+        if (1.eq.1) then
          call FORT_TECPLOTFAB_SANITY( &
           root_char_array, &
           n_root, &
