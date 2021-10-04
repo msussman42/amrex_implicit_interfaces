@@ -251,6 +251,8 @@ print *,"constant_K_test= ",constant_K_test
 ! set dendrite_angle.
 N_START=256
 N_FINISH=256
+!N_START=64
+!N_FINISH=64
 M_START=1600
 M_FACTOR=2
 
