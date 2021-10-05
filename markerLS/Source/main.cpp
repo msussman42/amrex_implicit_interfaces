@@ -185,6 +185,9 @@ void main_main ()
        &bfact,
        &level);
      }
+     ParallelDescriptor::Barrier();
+     ParallelDescriptor::ReduceRealMax(maxLS);
+     ParallelDescriptor::ReduceRealMin(minLS);
      phi_distance.FillBoundary(geom.periodicity());
      phi_grad.FillBoundary(geom.periodicity());
      std::cout << "(after) sweep= " << sweep << '\n';
@@ -198,11 +201,44 @@ void main_main ()
 
     // Write a plotfile of the initial data if plot_int > 0 (plot_int was defined in the inputs file)
     if (plot_int > 0 && plotEulerian){
-        int n = 0;
-        const std::string& pltfile = amrex::Concatenate("plt",n,5);
-        WriteSingleLevelPlotfile(pltfile, phi_plot, 
-	 {"phi_plot","phi_dist","gx","gy","gz"}, geom, time, 0);
+     int n = 0;
+     const std::string& pltfile = amrex::Concatenate("plt",n,5);
+     WriteSingleLevelPlotfile(pltfile, phi_plot, 
+       {"phi_plot","phi_dist","gx","gy","gz"}, geom, time, 0);
+
+
+     for ( MFIter mfi(phi); mfi.isValid(); ++mfi ){
+      const Box& bx = mfi.validbox();
+      const int gridno = mfi.index();
+      const Box& fabgrid = bx;
+      const int* fablo=fabgrid.loVect();
+      const int* fabhi=fabgrid.hiVect();
+      FArrayBox& phi_fab=phi[mfi];
+      FArrayBox& mask_fab=mask_finer[mfi];
+
+      fort_isogridsingle(
+       phi_fab.dataPtr(),
+       ARLIM(phi_fab.loVect()),ARLIM(phi_fab.hiVect()),
+       xlo_fort,
+       geom.CellSize(),
+       mask_fab.dataPtr(),
+       ARLIM(mask_fab.loVect()),ARLIM(mask_fab.hiVect()),
+       fablo,fabhi,
+       &bfact,
+       &level,
+       &gridno);
+     }
+     ParallelDescriptor::Barrier();
+
+     int grids_per_level=ba.size();
+     int finest_level=0;
+     int arrdim=finest_level+1;
+     fort_combinetrianglessingle(&grids_per_level,
+		     &finest_level,
+		     &n,
+		     &arrdim);
     }
+
 
     // build the flux multifabs
     Array<MultiFab, AMREX_SPACEDIM> flux;

@@ -32,7 +32,9 @@ extern "C" {
      const Real* xlo,const Real* dx,
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      const int* lo,const int* hi,
-     const int* level,const int* gridno);
+     int* bfact,
+     const int* level,
+     const int* gridno);
 
      //sweep==0 => find closest point map
      //sweep==1 => set "nice" values far from the interface.
@@ -51,7 +53,8 @@ extern "C" {
      const Real* xlo,const Real* dx,
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,int* bfact,
+     const int* fablo,const int* fabhi,
+     int* bfact,
      const int* level);
 
 
