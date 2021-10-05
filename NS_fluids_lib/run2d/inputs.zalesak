@@ -33,6 +33,7 @@ ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15
 ns.num_materials=2
 ns.num_species_var=0
+# effective fine grid resolution: 96x96
 amr.n_cell    = 24 24
 amr.max_level = 2
 
@@ -62,7 +63,8 @@ amr.blocking_factor = 8 8 2     # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 40       # 157 for convergence check
+amr.plot_int        = 20       # 157 for convergence check
+ns.visual_ncell     = 96 96  # effective fine grid resolution 24x24 + 2 levels
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 128 128 128
@@ -118,6 +120,8 @@ ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
+#ns.lo_bc          = 2 2
+#ns.hi_bc          = 2 2
 ns.lo_bc          = 0 0
 ns.hi_bc          = 0 0
 
