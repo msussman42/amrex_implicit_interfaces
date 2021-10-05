@@ -1369,7 +1369,9 @@ stop
        mask, &
        DIMS(mask), &
        lo,hi, &
-       level,gridno) &
+       bfact, &
+       level, &
+       gridno) &
       bind(c,name='fort_isogridsingle')
 
       use probcommon_module
@@ -1382,6 +1384,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(levelset)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: level,gridno
+      INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in), target :: levelset(DIMV(levelset))
       REAL_T, pointer :: levelset_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: mask(DIMV(mask))
@@ -1415,11 +1418,12 @@ stop
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T kklo,kkhi,nodehi
-      INTEGER_T bfact
 
       nhalf=3
-      bfact=1
-      print *,"----------WARNING: bfact override to be 1------------"
+      if (bfact.lt.1) then
+       print *,"bfact invalid151"
+       stop
+      endif
 
       levelset_ptr=>levelset
       mask_ptr=>mask
@@ -1504,6 +1508,12 @@ stop
            xtarget(dir)=xsten(1,dir)
           endif
           if (kk.eq.1) then
+           if (SDIM.eq.3) then
+            ! do nothing
+           else
+            print *,"SDIM invalid"
+            stop
+           endif
            dir=SDIM 
            xtarget(dir)=xsten(1,dir)
           endif
@@ -1536,14 +1546,14 @@ stop
            lnode,gridval,ISUM,kkhi,nodehi,valu)
 
          if ((ISUM.eq.0).or.(ISUM.eq.nodehi)) then
-          goto 999
+          itri=0
+         else
+
+          call add_to_triangle_list( &
+           gridx,gridy,gridz,gridval,valu,trianglelist, &
+           itri,imaxtri,xnode,kkhi,nodehi)
+
          endif
-
-         call add_to_triangle_list( &
-          gridx,gridy,gridz,gridval,valu,trianglelist, &
-          itri,imaxtri,xnode,kkhi,nodehi)
-
-999      continue
 
          if (ipass.eq.0) then
           NumNodes=NumNodes+itri
@@ -2186,8 +2196,6 @@ stop
       return
       end subroutine fort_closest_point_map
 
-#if (STANDALONE==0)
-
       subroutine fort_combinetrianglessingle( &
        grids_per_level,finest_level,nsteps,arrdim) &
       bind(c,name='fort_combinetrianglessingle')
@@ -2412,8 +2420,6 @@ stop
  
       return
       end subroutine fort_combinetrianglessingle
-
-#endif
 
 
       end module marching_tetra_module
