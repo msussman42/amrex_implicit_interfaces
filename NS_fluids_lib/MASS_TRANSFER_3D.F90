@@ -1485,6 +1485,7 @@ stop
 
        ! i,j,k is the cell containing xtarget
       subroutine interpfab_curv( &
+       interp_status, &  !interp_status=1 good, =0 not valid.
        curv_comp, &
        nten, &
        nmat, &
@@ -1500,6 +1501,7 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(out) :: interp_status
       INTEGER_T, intent(in) :: curv_comp
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nmat
@@ -1612,8 +1614,10 @@ stop
 
       if (CURV_weight.gt.zero) then
        CURV_OUT=CURV_times_weight/CURV_weight
+       interp_status=1
       else if (CURV_weight.eq.zero) then
        CURV_OUT=zero
+       interp_status=0
       else
        print *,"CURV_weight invalid"
        stop
@@ -7114,6 +7118,7 @@ stop
       REAL_T molar_mass_vapor
       INTEGER_T interp_valid_flag_initial(2) ! iprobe=1 source iprobe=2 dest
       INTEGER_T interface_resolved
+      INTEGER_T interp_status
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
       type(nucleation_parm_type_input) :: create_in
@@ -7791,6 +7796,7 @@ stop
                  endif
 
                  call interpfab_curv( &
+                  interp_status, &
                   nmat+iten, &
                   nten, &
                   nmat, &
@@ -7995,8 +8001,15 @@ stop
                   !
                  if (hardwire_flag(ireverse).eq.0) then
 
-                  delta_Tsat= &
+                  if (interp_status.eq.1) then
+                   delta_Tsat= &
                     saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
+                  else if (interp_status.eq.0) then
+                   delta_Tsat=zero
+                  else
+                   print *,"interp_status invalid"
+                   stop
+                  endif
 
                    ! T_Gamma = Tsat - eps1 * kappa
                   local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
@@ -8845,20 +8858,19 @@ stop
 
                   if (hardwire_flag(ireverse).eq.0) then
 
-                   if ((interface_resolved.eq.1).or. &
-                       (TSAT_iter.eq.0)) then
+                   if ((interface_resolved.eq.1).and. &
+                       (interp_status.eq.1)) then
                     delta_Tsat= &
                      saturation_temp_vel(iten+ireverse*nten)* &
                      (VEL_correct-VEL_predict)
-                   else if ((interface_resolved.eq.0).and. &
-                            (TSAT_iter.gt.0)) then
+                   else if ((interface_resolved.eq.0).or. &
+                            (interp_status.eq.0)) then
                     delta_Tsat=zero
                    else
                     print *,"interface_resolved or TSAT_iter invalid"
                     stop
                    endif
 
-                    ! if interface_resolved==1 or first iteration,
                     !  Tgamma^{k+1}=Tgamma^{k}- 
                     !    eps2 * (V^{k+1}(Tgamma^{k})-
                     !            V^{k}(Tgamma^{k-1}) ) 
