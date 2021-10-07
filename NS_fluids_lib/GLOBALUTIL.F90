@@ -9464,12 +9464,16 @@ contains
        verbose, &
        force_check, &
        gridno,ngrid,level,finest_level, &
-       mf)
+       mf, &
+       critical_cutoff_low, & ! e.g. -1.0D+99
+       critical_cutoff_high)  ! e.g. 1.0D+99
 
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: datatype
       REAL_T, intent(in) :: warning_cutoff
+      REAL_T, intent(in) :: critical_cutoff_low
+      REAL_T, intent(in) :: critical_cutoff_high
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM)
@@ -9492,18 +9496,25 @@ contains
       REAL_T max_interior,max_side,max_corner,max_singlelayer
       REAL_T val
       INTEGER_T noutside,noutside_single
-      REAL_T critical_cutoff
 
-      critical_cutoff=1.0D+99
 
       if (bfact.lt.1) then
        print *,"bfact invalid36"
        stop
       endif
 
-      if (((verbose.eq.0).or.(verbose.eq.1)).and.(force_check.eq.0)) then
+      if (critical_cutoff_low.lt.critical_cutoff_high) then
        ! do nothing
-      else if ((verbose.eq.2).or.(force_check.eq.1)) then
+      else
+       print *,"critical_cutoff_low or critical_cutoff_high invalid"
+       stop
+      endif
+
+      if (((verbose.eq.0).or.(verbose.eq.1)).and. &
+          (force_check.eq.0)) then
+       ! do nothing
+      else if ((verbose.eq.2).or. &
+               (force_check.eq.1)) then
        call FLUSH(6) ! unit=6 (screen)
 
        call grid_type_to_box_type(dir,box_type)
@@ -9656,7 +9667,8 @@ contains
          endif
          val=mf(D_DECL(i,j,k),n+scomp)
 
-         if (val.ge.critical_cutoff) then
+         if (val.ge.critical_cutoff_high) then
+          print *,"val.ge.critical_cutoff_high ",val,critical_cutoff_high
           print *,"val overflow val,dir,i,j,k,n,scomp,id ", &
            val,dir,i,j,k,n,scomp,id
           print *,"bfact,level,finest_level ",bfact,level,finest_level
@@ -9665,11 +9677,12 @@ contains
            print *,"dir2,tilelo,tilehi ",dir2,tilelo(dir2),tilehi(dir2)
           enddo
           stop
-         else if ((val.lt.critical_cutoff).and. &
-                  (val.gt.-critical_cutoff)) then
+         else if ((val.lt.critical_cutoff_high).and. &
+                  (val.gt.critical_cutoff_low)) then
           ! do nothing
-         else if (val.le.-critical_cutoff) then
-          print *,"-val overflow val,dir,i,j,k,n,scomp,id ", &
+         else if (val.le.critical_cutoff_low) then
+          print *,"val.le.critical_cutoff_low ",val,critical_cutoff_low
+          print *,"val out of bounds val,dir,i,j,k,n,scomp,id ", &
            val,dir,i,j,k,n,scomp,id
           print *,"bfact,level,finest_level ",bfact,level,finest_level
           do dir2=1,SDIM
