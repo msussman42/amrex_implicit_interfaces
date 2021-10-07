@@ -1,5 +1,9 @@
 #undef BL_LANG_CC
+#ifndef BL_LANG_FORT
 #define BL_LANG_FORT
+#endif
+
+#define STANDALONE 1
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
@@ -1170,7 +1174,7 @@ CONTAINS
          else
           exact=zero
          endif
-         if (abs(sum-exact).gt.1.0E-13) then
+         if (abs(sum-exact).gt.1.0D-13) then
           print *,"sanity check failed integral"
           print *,"typ,order_r,p,exact,sum ",typ,order_r,p,exact,sum
           stop
@@ -1187,7 +1191,7 @@ CONTAINS
           call polyinterp_weights(order_r,y,w,xtarget)
           call do_polyinterp(order_r,w,data,sum)
           exact=xtarget**p
-          if (abs(sum-exact).gt.1.0E-13) then
+          if (abs(sum-exact).gt.1.0D-13) then
            print *,"sanity check failed polyinterp"
            print *,"r,p ",order_r,p
            stop
@@ -1204,7 +1208,7 @@ CONTAINS
           else
            exact=p*(xtarget**(p-1))
           endif
-          if (abs(sum-exact).gt.1.0E-10) then
+          if (abs(sum-exact).gt.1.0D-10) then
            print *,"sanity check failed polyinterp_Dmatrix"
            print *,"r,p,typ ",order_r,p,typ
            print *,"sum-exact= ",sum-exact
@@ -1410,6 +1414,94 @@ contains
       return
       end subroutine ghostnormal
 
+      subroutine safe_data_single(i,j,k,datafab,data_out)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k
+      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:))
+      REAL_T, intent(out) :: data_out
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,SDIM
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..sdim
+      data_out=datafab(D_DECL(idata(1),idata(2),idata(3)))
+
+      return
+      end subroutine safe_data_single
+
+      subroutine safe_data(i,j,k,n,datafab,data_out)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k,n
+      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:),:)
+      REAL_T, intent(out) :: data_out
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,SDIM
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..sdim
+      data_out=datafab(D_DECL(idata(1),idata(2),idata(3)),n)
+
+      return
+      end subroutine safe_data
+
+
+      subroutine safe_data_index(i,j,k,i_safe,j_safe,k_safe,datafab)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(out) :: i_safe,j_safe,k_safe
+      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:),:)
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,SDIM
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..sdim
+      i_safe=idata(1)
+      j_safe=idata(2)
+      k_safe=idata(3)
+
+      return
+      end subroutine safe_data_index
+
+
       ! Added by Guibo 11-12-2012
       subroutine dumpstring(instring)
       implicit none
@@ -1425,6 +1517,108 @@ contains
 
       return
       end subroutine dumpstring
+
+      INTEGER_T function is_compressible_mat(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: im
+      INTEGER_T nmat
+
+      nmat=num_materials
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im out of range"
+       stop
+      endif
+
+      if ((fort_material_type(im).ge.1).and. &
+          (fort_material_type(im).le.MAX_NUM_EOS)) then
+       is_compressible_mat=1
+      else if ((fort_material_type(im).eq.0).or. &
+               (fort_material_type(im).eq.999)) then
+       is_compressible_mat=0
+      else
+       print *,"fort_material_type invalid"
+       stop
+       is_compressible_mat=0
+      endif
+
+      return
+      end function is_compressible_mat
+
+      subroutine debug_EOS(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T im
+      INTEGER_T verbose_EOS
+      INTEGER_T mat_type
+      INTEGER_T nden
+      INTEGER_T i,iden
+      REAL_T temperature,denlo,denhi,den
+      REAL_T internal_energy
+      REAL_T pressure
+      REAL_T soundsqr
+      REAL_T massfrac_parm(num_species_var+1)
+      character*2 im_str
+      character*4 filename4
+      character*5 filename5
+
+
+      verbose_EOS=0
+      mat_type=fort_material_type(im)
+      if ((mat_type.gt.0).and.(mat_type.le.MAX_NUM_EOS)) then
+       if (verbose_EOS.eq.1) then
+        temperature=fort_tempconst(im)
+        print *,"EOS and C2 files when temperature=",temperature
+        denlo=fort_density_floor(im)
+        denhi=fort_density_ceiling(im)
+        nden=1000
+        print *,"EOS and C2 files when temperature=",temperature
+        print *,"im=",im
+        print *,"denlo=",denlo
+        print *,"denhi=",denhi
+        print *,"nden=",nden
+
+        write(im_str,'(I2)') im
+        do i=1,2
+         if (im_str(i:i).eq.' ') then
+          im_str(i:i)='0'
+         endif
+        enddo
+        write(filename5,'(A3,A2)') 'EOS',im_str
+        open(unit=11,file=filename5)
+        write(filename4,'(A2,A2)') 'C2',im_str
+        open(unit=12,file=filename4)
+
+        do iden=0,nden
+         den=denlo+iden*(denhi-denlo)/nden
+         call init_massfrac_parm(den,massfrac_parm,im)
+         call INTERNAL_material(den,massfrac_parm, &
+          temperature,internal_energy, &
+          mat_type,im)
+         call EOS_material(den,massfrac_parm, &
+          internal_energy,pressure,mat_type,im)
+         call SOUNDSQR_material(den,massfrac_parm, &
+          internal_energy,soundsqr,mat_type,im)
+         write (11,*) den,pressure
+         write (12,*) den,soundsqr
+        enddo ! iden=0..nden
+
+        close(11)
+        close(12)
+       else if (verbose_EOS.eq.0) then
+        ! do nothing
+       else
+        print *,"verbose_EOS invalid"
+        stop
+       endif
+      else
+       print *,"mat_type invalid"
+       stop
+      endif 
+       
+      end subroutine debug_EOS
 
       REAL_T function get_user_temperature(time,bcflag,im)
       use probcommon_module
@@ -1830,14 +2024,13 @@ contains
       subroutine get_rigid_velocity( &
         FSI_prescribed_flag, &
         color,dir,vel,xrigid, &
-        blob_array,blob_array_size,num_colors,num_elements_blobclass)
+        blob_array,blob_array_size,num_colors)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T, intent(out) :: FSI_prescribed_flag
       INTEGER_T, intent(in) :: color,dir,blob_array_size,num_colors
-      INTEGER_T, intent(in) :: num_elements_blobclass
       REAL_T, intent(in) :: xrigid(SDIM)
       REAL_T xrigid3D(3)
       REAL_T, intent(out) :: vel
@@ -1858,29 +2051,11 @@ contains
        stop
       endif
 
-      !blob_matrix,blob_RHS,blob_velocity,
-      !blob_integral_momentum,blob_energy,
-      !blob_mass_for_velocity (3 comp)
-      !blob_volume, 
-      !blob_center_integral,blob_center_actual
-      !blob_perim, blob_perim_mat, blob_triple_perim, 
-      !blob_cell_count
-      if (num_elements_blobclass.ne. &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat+1) then
-       print *,"num_elements_blobclass invalid"
-       print *,"blob_cell_count added December 6, 2020"
-       stop
-      endif
-
       FSI_prescribed_flag=0
 
-      cen_comp=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-        2*(2*SDIM)+1+ &
-        3+1+SDIM
-      vel_comp=3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)
-      vol_comp=vel_comp+3*(2*SDIM)+2*(2*SDIM)+1
+      cen_comp=BLB_CEN_ACT
+      vel_comp=BLB_VEL 
+      vol_comp=BLB_MASS_VEL
       
       if ((color.ge.1).and.(color.le.num_colors)) then
 
@@ -2480,7 +2655,7 @@ contains
           holdvalue=holdvalue+AAhold(i,k)*xx(k,j)
          enddo 
          if (i.ne.j) then
-          if (abs(holdvalue).gt.1.0E-12) then
+          if (abs(holdvalue).gt.1.0D-12) then
            print *,"inverse failed1"
            print *,"AAhold="
            call print_matrix(AAhold,numelem)
@@ -2489,7 +2664,7 @@ contains
            stop
           endif
          else if (i.eq.j) then
-          if (abs(holdvalue-one).gt.1.0E-12) then
+          if (abs(holdvalue-one).gt.1.0D-12) then
            print *,"inverse failed2"
            print *,"AAhold="
            call print_matrix(AAhold,numelem)
@@ -2659,17 +2834,17 @@ contains
       subroutine derive_dist( &
        xsten,nhalf, &
        dist, &
-       DIMS(dist), &
        i,j,k,im,LS)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T i,j,k,im,nhalf,dir
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T LS
-      INTEGER_T DIMDEC(dist)
-      REAL_T dist(DIMV(dist),num_materials)
+      INTEGER_T, intent(in) :: i,j,k,im
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T :: dir
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(inout) :: LS
+      REAL_T, intent(in), pointer :: dist(D_DECL(:,:,:),:)
       REAL_T n(SDIM)
       REAL_T nsave(SDIM)
       REAL_T RR,mag
@@ -2731,16 +2906,21 @@ contains
       return
       end subroutine derive_dist
 
+       ! grid_type=-1..5
       subroutine checkbound(lo,hi, &
        DIMS(data), &
-       ngrow,dir,id)
+       ngrow,grid_type,id)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
       INTEGER_T, intent(in) ::  DIMDEC(data)
-      INTEGER_T, intent(in) ::  ngrow,dir,id
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
 
-      INTEGER_T ii(SDIM)
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
 
       INTEGER_T    hidata(SDIM)
       INTEGER_T    lodata(SDIM)
@@ -2758,20 +2938,15 @@ contains
       do dir2=1,SDIM
        if (lodata(dir2).gt.hidata(dir2)) then
         print *,"swapped bounds in checkbound id=",id
-        print *,"dir=",dir
+        print *,"grid_type=",grid_type
         print *,"dir2=",dir2
         stop
        endif
-       ii(dir2)=0
+       box_type(dir2)=0
       enddo
-      if ((dir.ge.0).and.(dir.lt.SDIM)) then
-       ii(dir+1)=1
-      else if (dir.eq.-1) then
-       ! do nothing
-      else
-       print *,"dir invalid checkbound"
-       stop
-      endif
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
 
       do dir2=1,SDIM
        if (lo(dir2).lt.0) then
@@ -2780,7 +2955,7 @@ contains
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
         print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
-        print *,"dir=",dir
+        print *,"grid_type=",grid_type
         stop
        endif
       enddo
@@ -2801,25 +2976,372 @@ contains
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
          print *,"dataxhi ",hidata(dir2)
-         print *,"dir=",dir
+         print *,"grid_type=",grid_type
          print *,"dir2=",dir2
          stop
         endif
-        if (hidata(dir2).lt.hi(dir2)+ngrow+ii(dir2)) then
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
          print *,"hi mismatch id=",id
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
-         print *,"ii(dir2) ",ii(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
-         print *,"dir=",dir
+         print *,"grid_type=",grid_type
          print *,"dir2=",dir2
          stop
         endif
 
-      enddo ! dir2
+      enddo ! dir2=1..SDIM
 
       return
       end subroutine checkbound
 
+       ! grid_type=-1..5
+      subroutine checkbound_array(lo,hi, &
+       data_array, &
+       ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
+      REAL_T, intent(in), pointer :: data_array(D_DECL(:,:,:),:)
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
+
+      INTEGER_T    hidata(SDIM+1)
+      INTEGER_T    lodata(SDIM+1)
+      INTEGER_T    dir2
+
+      hidata=UBOUND(data_array)
+      lodata=LBOUND(data_array)
+ 
+      do dir2=1,SDIM
+       if (lodata(dir2).gt.hidata(dir2)) then
+        print *,"swapped bounds in checkbound_array id=",id
+        print *,"grid_type=",grid_type
+        print *,"dir2=",dir2
+        stop
+       endif
+       box_type(dir2)=0
+      enddo
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       if (lo(dir2).lt.0) then
+        print *,"lo invalid in checkbound_array id=",id
+        print *,"dir2,dataxlo ",dir2,lodata(dir2)
+        print *,"dir2,dataxhi ",dir2,hidata(dir2)
+        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
+        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
+        print *,"grid_type=",grid_type
+        stop
+       endif
+      enddo
+      if (ngrow.lt.0) then
+       print *,"ngrow invalid in checkbound_array"
+       stop
+      endif
+      if (id.lt.0) then
+       print *,"id invalid in checkbound_array"
+       stop
+      endif
+
+      do dir2=1,SDIM
+
+        if (lodata(dir2).gt.lo(dir2)-ngrow) then
+         print *,"checkbound_array:lo mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"dataxlo ",lodata(dir2)
+         print *,"dataxhi ",hidata(dir2)
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+         print *,"hi mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+
+      enddo ! dir2=1..SDIM
+
+      return
+      end subroutine checkbound_array
+
+
+       ! grid_type=-1..5
+      subroutine checkbound_array_INTEGER(lo,hi, &
+       data_array, &
+       ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
+      INTEGER_T, intent(in), pointer :: data_array(D_DECL(:,:,:),:)
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
+
+      INTEGER_T    hidata(SDIM+1)
+      INTEGER_T    lodata(SDIM+1)
+      INTEGER_T    dir2
+
+      hidata=UBOUND(data_array)
+      lodata=LBOUND(data_array)
+ 
+      do dir2=1,SDIM
+       if (lodata(dir2).gt.hidata(dir2)) then
+        print *,"swapped bounds in checkbound_array id=",id
+        print *,"grid_type=",grid_type
+        print *,"dir2=",dir2
+        stop
+       endif
+       box_type(dir2)=0
+      enddo
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       if (lo(dir2).lt.0) then
+        print *,"lo invalid in checkbound_array id=",id
+        print *,"dir2,dataxlo ",dir2,lodata(dir2)
+        print *,"dir2,dataxhi ",dir2,hidata(dir2)
+        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
+        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
+        print *,"grid_type=",grid_type
+        stop
+       endif
+      enddo
+      if (ngrow.lt.0) then
+       print *,"ngrow invalid in checkbound_array"
+       stop
+      endif
+      if (id.lt.0) then
+       print *,"id invalid in checkbound_array"
+       stop
+      endif
+
+      do dir2=1,SDIM
+
+        if (lodata(dir2).gt.lo(dir2)-ngrow) then
+         print *,"checkbound_array:lo mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"dataxlo ",lodata(dir2)
+         print *,"dataxhi ",hidata(dir2)
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+         print *,"hi mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+
+      enddo ! dir2=1..SDIM
+
+      return
+      end subroutine checkbound_array_INTEGER
+
+
+
+       ! grid_type=-1..5
+      subroutine checkbound_array1(lo,hi, &
+       data_array1, &
+       ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
+      REAL_T, intent(in), pointer :: data_array1(D_DECL(:,:,:))
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
+
+      INTEGER_T    hidata(SDIM)
+      INTEGER_T    lodata(SDIM)
+      INTEGER_T    dir2
+
+      hidata=UBOUND(data_array1)
+      lodata=LBOUND(data_array1)
+ 
+      do dir2=1,SDIM
+       if (lodata(dir2).gt.hidata(dir2)) then
+        print *,"swapped bounds in checkbound_array1 id=",id
+        print *,"grid_type=",grid_type
+        print *,"dir2=",dir2
+        stop
+       endif
+       box_type(dir2)=0
+      enddo
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       if (lo(dir2).lt.0) then
+        print *,"lo invalid in checkbound_array1 id=",id
+        print *,"dir2,dataxlo ",dir2,lodata(dir2)
+        print *,"dir2,dataxhi ",dir2,hidata(dir2)
+        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
+        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
+        print *,"grid_type=",grid_type
+        stop
+       endif
+      enddo
+      if (ngrow.lt.0) then
+       print *,"ngrow invalid in checkbound_array1"
+       stop
+      endif
+      if (id.lt.0) then
+       print *,"id invalid in checkbound_array1"
+       stop
+      endif
+
+      do dir2=1,SDIM
+
+        if (lodata(dir2).gt.lo(dir2)-ngrow) then
+         print *,"checkbound_array:lo mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"dataxlo ",lodata(dir2)
+         print *,"dataxhi ",hidata(dir2)
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+         print *,"hi mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+
+      enddo ! dir2=1..SDIM
+
+      return
+      end subroutine checkbound_array1
+
+
+       ! grid_type=-1..5
+      subroutine checkbound_int_array1(lo,hi, &
+       data_array1, &
+       ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
+        ! intent(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the intent attribute from the
+        ! target.
+      INTEGER_T, intent(in), pointer :: data_array1(D_DECL(:,:,:))
+      INTEGER_T, intent(in) ::  ngrow
+      INTEGER_T, intent(in) ::  grid_type
+      INTEGER_T, intent(in) ::  id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(SDIM)
+
+      INTEGER_T    hidata(SDIM)
+      INTEGER_T    lodata(SDIM)
+      INTEGER_T    dir2
+
+      hidata=UBOUND(data_array1)
+      lodata=LBOUND(data_array1)
+ 
+      do dir2=1,SDIM
+       if (lodata(dir2).gt.hidata(dir2)) then
+        print *,"swapped bounds in checkbound_array1 id=",id
+        print *,"grid_type=",grid_type
+        print *,"dir2=",dir2
+        stop
+       endif
+       box_type(dir2)=0
+      enddo
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
+      do dir2=1,SDIM
+       if (lo(dir2).lt.0) then
+        print *,"lo invalid in checkbound_array1 id=",id
+        print *,"dir2,dataxlo ",dir2,lodata(dir2)
+        print *,"dir2,dataxhi ",dir2,hidata(dir2)
+        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
+        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
+        print *,"grid_type=",grid_type
+        stop
+       endif
+      enddo
+      if (ngrow.lt.0) then
+       print *,"ngrow invalid in checkbound_array1"
+       stop
+      endif
+      if (id.lt.0) then
+       print *,"id invalid in checkbound_array1"
+       stop
+      endif
+
+      do dir2=1,SDIM
+
+        if (lodata(dir2).gt.lo(dir2)-ngrow) then
+         print *,"checkbound_array:lo mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"dataxlo ",lodata(dir2)
+         print *,"dataxhi ",hidata(dir2)
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+         print *,"hi mismatch id=",id
+         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
+         print *,"box_type(dir2) ",box_type(dir2)
+         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
+         print *,"grid_type=",grid_type
+         print *,"dir2=",dir2
+         stop
+        endif
+
+      enddo ! dir2=1..SDIM
+
+      return
+      end subroutine checkbound_int_array1
 
 ! find reconstruction from cell averaged data.
 ! point value lives at the center of the cell in 3D.
@@ -3351,40 +3873,6 @@ contains
       return
       end subroutine set_dimdec
 
-      subroutine copy_dimdec(DIMS(dest),DIMS(source))
-      IMPLICIT NONE
-
-      INTEGER_T, intent(out) :: DIMDEC(dest)
-      INTEGER_T, intent(in) :: DIMDEC(source)
-
-      ARG_L1(dest)=ARG_L1(source)
-      ARG_L2(dest)=ARG_L2(source)
-      ARG_H1(dest)=ARG_H1(source)
-      ARG_H2(dest)=ARG_H2(source)
-
-#if (AMREX_SPACEDIM==3)
-      if (SDIM.eq.3) then
-       ARG_L3(dest)=ARG_L3(source)
-       ARG_H3(dest)=ARG_H3(source)
-      else
-       print *,"dimension bust"
-       stop
-      endif
-#elif (AMREX_SPACEDIM==2)
-      if (SDIM.eq.2) then
-       ! do nothing
-      else
-       print *,"dimension bust"
-       stop
-      endif
-#else
-      print *,"dimension bust"
-      stop
-#endif
-      return
-      end subroutine copy_dimdec
-
-
       subroutine RT_transformVEL(x,vel,velT)
       use probcommon_module
 
@@ -3729,7 +4217,7 @@ contains
       IMPLICIT NONE
       REAL_T phi,cutoff,EPS
 
-      EPS=1.0E-6
+      EPS=1.0D-6
       if (phi.ge.cutoff) then
         hs=one
       else if (phi.le.-cutoff) then
@@ -3753,7 +4241,7 @@ contains
       IMPLICIT NONE
       REAL_T phi,cutoff,EPS
 
-      EPS=1.0E-6
+      EPS=1.0D-6
       if (phi.ge.cutoff) then
         hs_scale=one
       else if (phi.le.-cutoff) then
@@ -3806,10 +4294,6 @@ contains
 
       if (nmat.ne.num_materials) then
        print *,"nmat bust"
-       stop
-      endif
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
        stop
       endif
 
@@ -4189,11 +4673,14 @@ contains
 
       end subroutine gridsten
 
-        ! 1<=normdir<=sdim
-      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,normdir)
+        ! -1<=grid_type<=5
+      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type, &
+                      caller_id)
       IMPLICIT NONE 
 
-      INTEGER_T, intent(in) :: nhalf,normdir
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: grid_type
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -4201,13 +4688,22 @@ contains
       INTEGER_T, intent(in) :: i,j,k,bfact
       INTEGER_T dir,icrit
       REAL_T, dimension(:), allocatable :: xsub
+      INTEGER_T :: box_type(SDIM)
+
+      if ((grid_type.ge.-1).and.(grid_type.le.5)) then
+       ! do nothing
+      else
+       print *,"grid_type invalid gridstenMAC: grid_type,caller_id", &
+          grid_type,caller_id
+       stop
+      endif
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
 
       if (bfact.lt.1) then
        print *,"bfact invalid23"
-       stop
-      endif
-      if ((normdir.lt.1).or.(normdir.gt.SDIM)) then
-       print *,"normdir invalid"
        stop
       endif
 
@@ -4222,18 +4718,22 @@ contains
        else
         print *,"dir invalid gridsten mac"
         stop
-       endif
-       if (dir.eq.normdir) then
+       endif 
+        ! NODE
+       if (box_type(dir).eq.1) then
         call gridsten1DMAC(xsub,xlo,icrit,fablo,bfact,dx,dir,nhalf)
-       else
+       else if (box_type(dir).eq.0) then ! CELL
         call gridsten1D(xsub,xlo,icrit,fablo,bfact,dx,dir,nhalf)
+       else
+        print *,"box_type(dir) invalid"
+        stop
        endif
        do icrit=-nhalf,nhalf
         x(icrit,dir)=xsub(icrit)
        enddo
 
        deallocate(xsub)
-      enddo ! dir
+      enddo ! dir=1..sdim
 
       end subroutine gridstenMAC
 
@@ -5121,6 +5621,7 @@ contains
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T isten,dir
+      INTEGER_T dummy_input
  
       if (nhalf.lt.0) then
        print *,"nhalf invalid"
@@ -5136,6 +5637,15 @@ contains
        print *,"i,nhalf,level ",i,nhalf,level
        print *,"cache_index_low ",cache_index_low
        print *,"cache_index_high ",cache_index_high
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:5613"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read (*,*) dummy_input
        stop
       endif
       if ((2*j-nhalf.lt.cache_index_low).or. &
@@ -5201,42 +5711,72 @@ contains
 
 
 
-       ! 1<=normdir<=sdim
-      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,normdir)
+       ! -1<=grid_type<=5
+      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,grid_type,caller_id)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf,normdir
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, intent(in) :: grid_type
       REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: i,j,k,level
       INTEGER_T isten,dir,ii,jj,kk
+      INTEGER_T box_type(SDIM)
+      INTEGER_T dummy_input
 
+      if ((grid_type.ge.-1).and.(grid_type.le.5)) then
+       ! do nothing
+      else
+       print *,"grid_type invalid gridstenMAC_level: grid_type,caller_id", &
+          grid_type,caller_id
+       stop
+      endif
+
+      call grid_type_to_box_type(grid_type,box_type)
       ii=0
       jj=0
       kk=0
-      if (normdir.eq.1) then
-       ii=1
-      else if (normdir.eq.2) then
-       jj=1
-      else if ((normdir.eq.3).and.(SDIM.eq.3)) then
-       kk=1
+      ii=box_type(1)
+      jj=box_type(2)
+      if (SDIM.eq.3) then
+       kk=box_type(SDIM)
+      else if (SDIM.eq.2) then
+       ! do nothing
       else
-       print *,"normdir invalid"
+       print *,"dimension bust"
        stop
       endif
- 
+
       if (nhalf.lt.0) then
        print *,"nhalf invalid"
        stop
       endif
       if ((level.lt.0).or.(level.gt.cache_max_level)) then
        print *,"level invalid gridstenMAC_level"
+       print *,"level,cache_max_level ",level,cache_max_level
+       print *,"nhalf,grid_type,caller_id ", &
+               nhalf,grid_type,caller_id
+       print *,"x(0,1..sdim),i,j,k ",x(0,1),x(0,2),x(0,SDIM),i,j,k
+       print *,"box_type ",box_type(1),box_type(2),box_type(SDIM)
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:5735"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read (*,*) dummy_input
        stop
+      endif
+      if (1.eq.0) then
+       print *,"before: i,j,k,ii,jj,kk,nhalf ",i,j,k,ii,jj,kk,nhalf
       endif
       if ((2*i-ii-nhalf.lt.cache_index_low).or. &
           (2*i-ii+nhalf.gt.cache_index_high)) then
        print *,"i out of range gridstenMAC_level"
-       print *,"i,nhalf,level,normdir ",i,nhalf,level,normdir
+       print *,"i,nhalf,level,grid_type ",i,nhalf,level,grid_type
        stop
       endif
       if ((2*j-jj-nhalf.lt.cache_index_low).or. &
@@ -5251,6 +5791,9 @@ contains
         stop
        endif
       endif
+      if (1.eq.0) then
+       print *,"after: i,j,k,ii,jj,kk,nhalf ",i,j,k,ii,jj,kk,nhalf
+      endif
       do isten=-nhalf,nhalf
        dir=1
        x(isten,dir)=grid_cache(level,2*i-ii+isten,dir)
@@ -5260,7 +5803,7 @@ contains
         dir=SDIM
         x(isten,dir)=grid_cache(level,2*k-kk+isten,dir)
        endif
-      enddo
+      enddo ! isten=-nhalf,nhalf
        
       return
       end subroutine gridstenMAC_level
@@ -5574,17 +6117,110 @@ contains
       return
       end subroutine coarse_subelement_stencil
 
-
-      subroutine coarse_subelement_stencilMAC( &
-       ifine,jfine,kfine,stenlo,stenhi,bfact_c,bfact_f,dir)
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      subroutine grid_type_to_box_type(grid_type,box_type)
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(out) :: box_type(SDIM)
       INTEGER_T dir
-      INTEGER_T ifine,jfine,kfine
+
+      do dir=1,SDIM
+       box_type(dir)=0  ! default to CELL
+      enddo
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else if ((grid_type.ge.0).and. &
+               (grid_type.lt.SDIM)) then
+       box_type(grid_type+1)=1  ! NODE
+      else if (grid_type.eq.3) then
+       box_type(1)=1 ! NODE
+       box_type(2)=1 ! NODE
+      else if ((grid_type.eq.4).and.(SDIM.eq.3)) then
+       box_type(1)=1 ! NODE
+       box_type(SDIM)=1 ! NODE
+      else if ((grid_type.eq.5).and.(SDIM.eq.3)) then
+       box_type(2)=1 ! NODE
+       box_type(SDIM)=1 ! NODE
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
+     
+      return 
+      end subroutine grid_type_to_box_type
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      subroutine box_type_to_grid_type(grid_type,box_type)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(out) :: grid_type
+      INTEGER_T, intent(in) :: box_type(SDIM)
+
+      if ((box_type(1).eq.0).and. &
+          (box_type(2).eq.0).and. &
+          (box_type(SDIM).eq.0)) then
+          grid_type=-1  ! cell centered
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.0).and. &
+               (box_type(SDIM).eq.0)) then
+       grid_type=0  !UMAC
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.1).and. &
+               (SDIM.eq.2)) then
+       grid_type=1  !VMAC
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.1).and. &
+               (box_type(SDIM).eq.0).and. &
+               (SDIM.eq.3)) then
+       grid_type=1  !VMAC
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.0).and. &
+               (box_type(SDIM).eq.1).and. &
+               (SDIM.eq.3)) then
+       grid_type=2  !WMAC
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.1).and. &
+               (box_type(SDIM).eq.0).and. &
+               (SDIM.eq.3)) then
+       grid_type=3  !XY
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.1).and. &
+               (SDIM.eq.2)) then
+       grid_type=3  !XY
+      else if ((box_type(1).eq.1).and. &
+               (box_type(2).eq.0).and. &
+               (box_type(SDIM).eq.1).and. &
+               (SDIM.eq.3)) then
+       grid_type=4  !XZ
+      else if ((box_type(1).eq.0).and. &
+               (box_type(2).eq.1).and. &
+               (box_type(SDIM).eq.1).and. &
+               (SDIM.eq.3)) then
+       grid_type=5  !YZ
+      else
+       print *,"box_type not recognizable"
+       stop
+      endif
+
+      return 
+      end subroutine box_type_to_grid_type
+
+
+      subroutine coarse_subelement_stencilMAC( &
+       ifine,jfine,kfine,stenlo,stenhi,bfact_c,bfact_f, &
+       grid_type)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(in) :: ifine,jfine,kfine
       INTEGER_T fine_index(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T bfact_c,bfact_f
+      INTEGER_T, intent(out) :: stenlo(3),stenhi(3)
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
       INTEGER_T dir2,denom
+      INTEGER_T :: box_type(SDIM)
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -5595,11 +6231,7 @@ contains
        print *,"bfact_c invalid"
        stop
       endif
-      if ((dir.lt.0).or.(dir.ge.SDIM)) then
-       print *,"dir invalid coarse subelement stencil mac"
-       print *,"dir=",dir
-       stop
-      endif
+      call grid_type_to_box_type(grid_type,box_type)
 
       stenlo(3)=0
       stenhi(3)=0
@@ -5612,16 +6244,21 @@ contains
        if (bfact_c.eq.1) then
         stenlo(dir2)=DIV_FLOOR(fine_index(dir2),2)
         stenhi(dir2)=stenlo(dir2)
-        if (dir2.eq.dir+1) then
+        if (box_type(dir2).eq.1) then ! NODE
          if (2*(fine_index(dir2)/2).ne.fine_index(dir2)) then
           stenhi(dir2)=stenhi(dir2)+1
          endif
+        else if (box_type(dir2).eq.0) then ! CELL
+         ! do nothing
+        else
+         print *,"box_type invalid"
+         stop
         endif
        else if (bfact_c.gt.1) then
         stenlo(dir2)=DIV_FLOOR(fine_index(dir2),2*bfact_c)
         stenlo(dir2)=stenlo(dir2)*bfact_c
         stenhi(dir2)=stenlo(dir2)+bfact_c-1
-        if (dir2.eq.dir+1) then
+        if (box_type(dir2).eq.1) then ! NODE
          denom=2*bfact_c
          if (denom*(fine_index(dir2)/denom).eq.fine_index(dir2)) then
           stenlo(dir2)=fine_index(dir2)/2
@@ -5629,6 +6266,11 @@ contains
          else
           stenhi(dir2)=stenhi(dir2)+1
          endif
+        else if (box_type(dir2).eq.0) then ! CELL
+         ! do nothing
+        else
+         print *,"box_type invalid"
+         stop
         endif
        else
         print *,"bfact_c invalid"
@@ -5642,14 +6284,16 @@ contains
 
         ! 1<=dir<=sdim
       subroutine fine_subelement_stencilMAC( &
-       ic,jc,kc,stenlo,stenhi,bfact_c,bfact_f,dir)
+       ic,jc,kc,stenlo,stenhi,bfact_c,bfact_f,grid_type)
       IMPLICIT NONE
 
-      INTEGER_T ic,jc,kc,dir
+      INTEGER_T, intent(in) :: ic,jc,kc
+      INTEGER_T, intent(in) :: grid_type
       INTEGER_T coarse_index(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T bfact_c,bfact_f
+      INTEGER_T, intent(out) :: stenlo(3),stenhi(3)
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
       INTEGER_T dir2
+      INTEGER_T :: box_type(SDIM)
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -5660,13 +6304,7 @@ contains
        print *,"bfact_c invalid"
        stop
       endif
-      if ((dir.lt.1).or.(dir.gt.SDIM)) then
-       print *,"dir invalid fine subelement stencil mac"
-       print *,"dir=",dir
-       print *,"ic,jc,kc=",ic,jc,kc
-       print *,"bfactc, bfactf=",bfact_c,bfact_f
-       stop
-      endif
+      call grid_type_to_box_type(grid_type,box_type)
 
       stenlo(3)=0
       stenhi(3)=0
@@ -5679,14 +6317,19 @@ contains
        if (bfact_c.eq.1) then
         stenlo(dir2)=2*coarse_index(dir2)
         stenhi(dir2)=stenlo(dir2)+1
-        if (dir2.eq.dir) then
+        if (box_type(dir2).eq.1) then ! NODE
          stenhi(dir2)=stenlo(dir2)
+        else if (box_type(dir2).eq.0) then ! CELL
+         ! do nothing
+        else
+         print *,"box_type invalid"
+         stop
         endif
        else if (bfact_c.gt.1) then
         stenlo(dir2)=DIV_FLOOR(coarse_index(dir2),bfact_c)
         stenlo(dir2)=stenlo(dir2)*bfact_c*2
         stenhi(dir2)=stenlo(dir2)+bfact_c*2-1
-        if (dir2.eq.dir) then
+        if (box_type(dir2).eq.1) then ! NODE
          if (bfact_c*(coarse_index(dir2)/bfact_c).eq.coarse_index(dir2)) then
           stenlo(dir2)=2*coarse_index(dir2)
           stenhi(dir2)=stenlo(dir2)
@@ -5695,6 +6338,11 @@ contains
           stenlo(dir2)=stenlo(dir2)*bfact_c*2
           stenhi(dir2)=stenlo(dir2)+bfact_c*2
          endif
+        else if (box_type(dir2).eq.0) then ! CELL
+         ! do nothing
+        else
+         print *,"box_type invalid"
+         stop
         endif
        else
         print *,"bfact_c invalid"
@@ -5706,27 +6354,37 @@ contains
       end subroutine fine_subelement_stencilMAC
 
 
-       ! 0<=dir<sdim
+       ! -1<=grid_type<=5
       subroutine growntileboxMAC( &
-       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,dir)
+       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,grid_type,caller_id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: grid_type
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(out) :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: ng
       INTEGER_T dir2
+      INTEGER_T :: box_type(SDIM)
 
       growlo(3)=0
       growhi(3)=0
 
-      if ((dir.ge.0).and.(dir.lt.SDIM)) then
+      if ((grid_type.ge.-1).and.(grid_type.le.5)) then
        ! do nothing
       else
-       print *,"dir invalid growntilebox mac"
+       print *,"grid_type invalid growntilebox mac"
+       print *,"ng=",ng
+       print *,"grid_type=",grid_type
+       print *,"caller_id=",caller_id
        stop
       endif 
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type(grid_type,box_type)
+
       do dir2=1,SDIM
        growlo(dir2)=tilelo(dir2)
        if (tilelo(dir2).eq.fablo(dir2)) then
@@ -5748,11 +6406,22 @@ contains
         print *,"tile box incorrect"
         stop
        endif
-      enddo ! dir2
-      if (tilehi(dir+1).eq.fabhi(dir+1)) then
-       growhi(dir+1)=growhi(dir+1)+1
-      endif
-      
+      enddo ! dir2=1..sdim
+
+      do dir2=1,SDIM
+        ! NODE
+       if (box_type(dir2).eq.1) then
+        if (tilehi(dir2).eq.fabhi(dir2)) then
+         growhi(dir2)=growhi(dir2)+1
+        endif
+       else if (box_type(dir2).eq.0) then ! CELL
+        ! do nothing
+       else
+        print *,"box_type(dir2) invalid"
+        stop
+       endif
+      enddo !dir2=1..sdim
+
       return
       end subroutine growntileboxMAC
 
@@ -6097,20 +6766,21 @@ contains
        ! xfine is relative to the lower left hand corner of the
        ! grid element.
       subroutine SEM_INTERP_ELEMENT( &
-       nvar,bfact,gridtype, &
+       nvar,bfact,grid_type, &
        stenhi,dx,xfine,fcoarse,fxfine,caller_id)
       use LagrangeInterpolationPolynomial
       use LegendreNodes
 
       IMPLICIT NONE
-      INTEGER_T nvar
-      INTEGER_T bfact
-      INTEGER_T gridtype ! 0:ggg; 1:lgg; 2:glg; 3:ggl
-      INTEGER_T stenhi(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T xfine(SDIM)
-      REAL_T fcoarse(D_DECL(0:stenhi(1),0:stenhi(2),0:stenhi(3)),nvar)
-      REAL_T fxfine(nvar)
+      INTEGER_T, intent(in) :: nvar
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: grid_type ! -1:ggg; 0:lgg; 1:glg; 2:ggl
+      INTEGER_T, intent(in) :: stenhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xfine(SDIM)
+      REAL_T, intent(in) ::  &
+        fcoarse(D_DECL(0:stenhi(1),0:stenhi(2),0:stenhi(3)),nvar)
+      REAL_T, intent(out) :: fxfine(nvar)
  
       INTEGER_T i1
       INTEGER_T i,j,k
@@ -6129,23 +6799,19 @@ contains
       REAL_T wtsum
       REAL_T local_data
       INTEGER_T caller_id
+      INTEGER_T :: box_type(SDIM)
 
-      INTERP_TOL=1.0E-10
+      INTERP_TOL=1.0D-10
+
+      call grid_type_to_box_type(grid_type,box_type)
 
       ii=0
       jj=0
       kk=0
-      if (gridtype.eq.0) then
-       ! do nothing
-      else if (gridtype.eq.1) then
-       ii=1
-      else if (gridtype.eq.2) then
-       jj=1
-      else if ((gridtype.eq.3).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"gridtype invalid"
-       stop
+      ii=box_type(1)
+      jj=box_type(2)
+      if (SDIM.eq.3) then
+       kk=box_type(SDIM)
       endif
 
       if (nvar.le.0) then
@@ -6163,22 +6829,20 @@ contains
        stop
       endif 
 
-      if ((gridtype.lt.0).or.(gridtype.gt.SDIM)) then
-       print *,"gridtype invalid"
-       stop
-      endif 
-
       do dir=1,SDIM
-       if (dir.eq.gridtype) then
+       if (box_type(dir).eq.1) then
         if (stenhi(dir).ne.bfact) then
          print *,"stenhi invalid"
          stop
         endif
-       else
+       else if (box_type(dir).eq.0) then
         if (stenhi(dir).ne.bfact-1) then
          print *,"stenhi invalid"
          stop
         endif
+       else
+        print *,"box_type invalid"
+        stop
        endif
        if (abs(dx(dir)).le.1.0E+20) then
         ! do nothing
@@ -6241,32 +6905,35 @@ contains
       deallocate(bwG)
       deallocate(ypoints)
 
-      if (gridtype.eq.0) then
-       ! do nothing
-      else if ((gridtype.ge.1).and.(gridtype.le.SDIM)) then
+      do dir=1,SDIM
+       if (box_type(dir).eq.0) then
+        ! do nothing
+       else if (box_type(dir).eq.1) then
  
-       allocate(ypointsGL(0:bfact))
-       allocate(bwGL(0:bfact))
-       allocate(tempGL(0:bfact))
+        allocate(ypointsGL(0:bfact))
+        allocate(bwGL(0:bfact))
+        allocate(tempGL(0:bfact))
 
-       do i=0,bfact
-        ypointsGL(i)=(yGL(i)+one)*bfact*dx(gridtype)/two
-       enddo
-       call BarycentricWeights(bfact,ypointsGL,bwGL)
-       call LagrangeInterpolatingPolynomial(bfact, &
-         xfine(gridtype),ypointsGL,bwGL,tempGL)
-       do i=0,bfact
-        lg(i,gridtype)=tempGL(i)
-       enddo
+        do i=0,bfact
+         ypointsGL(i)=(yGL(i)+one)*bfact*dx(dir)/two
+        enddo
+        call BarycentricWeights(bfact,ypointsGL,bwGL)
+        call LagrangeInterpolatingPolynomial(bfact, &
+         xfine(dir),ypointsGL,bwGL,tempGL)
+        do i=0,bfact
+         lg(i,dir)=tempGL(i)
+        enddo
 
-       deallocate(tempGL)
-       deallocate(bwGL)
-       deallocate(ypointsGL)
+        deallocate(tempGL)
+        deallocate(bwGL)
+        deallocate(ypointsGL)
 
-      else
-       print *,"gridtype invalid"
-       stop
-      endif
+       else
+        print *,"box_type(dir) invalid"
+        stop
+       endif
+
+      enddo ! dir=1..sdim
 
       if (SDIM.eq.2) then
        khi=0
@@ -6314,7 +6981,7 @@ contains
        print *,"wtsum=",wtsum
        print *,"nvar=",nvar
        print *,"bfact=",bfact
-       print *,"gridtype=",gridtype
+       print *,"grid_type=",grid_type
        do dir=1,SDIM
         print *,"dir,xfine(dir),dx(dir)*bfact ",dir, &
          xfine(dir),dx(dir)*bfact
@@ -6341,7 +7008,6 @@ contains
 
 
       subroutine lineGRAD( &
-       conservative_div_uu, &
        levelrz_in, &
        dir, &
        nc, &
@@ -6362,7 +7028,6 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: conservative_div_uu
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: levelrz_in
       INTEGER_T, intent(in) :: dir,nc
@@ -6450,17 +7115,19 @@ contains
          stop
         endif
 
-       else if ((operation_flag.ge.0).and. &
-                (operation_flag.le.5)) then
+       else if (operation_flag.eq.0) then ! grad p_MAC
         ! do nothing
-       else if ((operation_flag.eq.10).or. &
-                (operation_flag.eq.11)) then
+       else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+        ! do nothing
+       else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+        ! do nothing
+       else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+        ! do nothing
+       else if (operation_flag.eq.11) then!u^MAC=u^MAC+(DU)^{cell->mac}
         ! do nothing
        else if (operation_flag.eq.7) then ! advection
         ! do nothing
        else if (operation_flag.eq.8) then ! coupling
-        ! do nothing
-       else if (operation_flag.eq.9) then ! den: cell->mac
         ! do nothing
        else
         print *,"operation_flag invalid2"
@@ -6836,18 +7503,9 @@ contains
 
        do i1=0,bfact
         if ((nc.ge.1).and.(nc.le.SDIM)) then
-         if (conservative_div_uu.eq.1) then
-          dest_interp(i1)=dest_interp(i1)*vel(i1)
-         else if (conservative_div_uu.eq.0) then
-          ! do nothing
-         else
-          print *,"conservative_div_uu invalid"
-          stop
-         endif
-        else if (nc.eq.SDIM+1) then ! density: NONCONSERVATIVE
-         ! do nothing
-        else if (nc.eq.SDIM+2) then ! temperature: NONCONSERVATIVE
-         ! do nothing
+         dest_interp(i1)=dest_interp(i1)*vel(i1)
+        else if (nc.eq.SDIM+1) then ! temperature
+         dest_interp(i1)=dest_interp(i1)*vel(i1)
         else
          print *,"nc invalid in lineGRAD"
          stop
@@ -6855,21 +7513,23 @@ contains
         dest_grad(i1)=zero
        enddo ! i1=0..bfact
 
-      else if ((operation_flag.ge.0).and. &
-               (operation_flag.le.6)) then
+      else if (operation_flag.eq.0) then ! grad p_MAC
+        ! do nothing
+      else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+        ! do nothing
+      else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+        ! do nothing
+      else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+        ! do nothing
+      else if (operation_flag.ge.6) then ! rate of strain
 
        ! do nothing
 
-      else if ((operation_flag.eq.10).or. &
-               (operation_flag.eq.11)) then
+      else if (operation_flag.eq.11) then
 
        ! do nothing
 
       else if (operation_flag.eq.8) then ! coupling terms
-
-       ! do nothing
-
-      else if (operation_flag.eq.9) then ! den: cell->mac
 
        ! do nothing
 
@@ -6902,18 +7562,20 @@ contains
           endif
          endif 
 
-        else if ((operation_flag.ge.0).and. &
-                 (operation_flag.le.5)) then
+        else if (operation_flag.eq.0) then ! grad p_MAC
          ! do nothing
-        else if ((operation_flag.eq.10).or. &
-                 (operation_flag.eq.11)) then
+        else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+         ! do nothing
+        else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+         ! do nothing
+        else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+         ! do nothing
+        else if (operation_flag.eq.11) then
          ! do nothing
         else if (operation_flag.eq.7) then
          ! do nothing (advection)
         else if (operation_flag.eq.8) then
          ! do nothing (coupling)
-        else if (operation_flag.eq.9) then
-         ! do nothing (den: cell-to-mac)
         else
          print *,"operation_flag invalid4"
          stop
@@ -6931,7 +7593,7 @@ contains
         stop
        endif
 
-      enddo ! isten
+      enddo ! isten=0..bfact
 
       return
       end subroutine lineGRAD
@@ -7093,6 +7755,13 @@ contains
       return
       end subroutine get_longdir
 
+       ! nhalf>=3
+       ! xsten_center(0,dir)  dir=1..sdim is the coordinate of the center
+       !   of the containing cell.
+       ! xsten_center(i,dir)  dir=1 is the x coordinate for the 1/2 cell
+       !  distances, if uniform, then xsten_center(i,dir)=xcenter+i*dx/2
+       ! stencil_offset(dir)= -1,0, or 1.
+       ! 
       subroutine bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
         xtarget,WT)
       IMPLICIT NONE
@@ -7120,7 +7789,7 @@ contains
        if (xtarget(dir).le.xsten_center(0,dir)) then
         if ((stencil_offset(dir).eq.0).or. &
             (stencil_offset(dir).eq.-1)) then
-         denom=xsten_center(0,dir)-xsten_center(-1,dir)
+         denom=xsten_center(0,dir)-xsten_center(-2,dir)
          if (denom.gt.zero) then
           theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
          else
@@ -7136,7 +7805,7 @@ contains
        else if (xtarget(dir).ge.xsten_center(0,dir)) then
         if ((stencil_offset(dir).eq.0).or. &
             (stencil_offset(dir).eq.1)) then
-         denom=xsten_center(0,dir)-xsten_center(1,dir)
+         denom=xsten_center(0,dir)-xsten_center(2,dir)
          if (denom.lt.zero) then
           theta(dir)=(xsten_center(0,dir)-xtarget(dir))/denom
          else
@@ -7186,6 +7855,964 @@ contains
       return
       end subroutine bilinear_interp_WT 
 
+#define SANITY_CHECK 1
+
+       ! data_in%dir_deriv=1..sdim (derivative)
+       ! data_in%dir_deriv=-1 (interp)
+      subroutine deriv_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+
+      type(deriv_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+
+      INTEGER_T caller_id
+      INTEGER_T dir_local
+      INTEGER_T ilo(SDIM)
+      INTEGER_T ihi(SDIM)
+      INTEGER_T istep(SDIM)
+      INTEGER_T klosten,khisten,kstep
+      INTEGER_T nc
+      INTEGER_T data_comp
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T ii(3)
+      REAL_T SGN_FACT
+      REAL_T wt_top,wt_bot
+      REAL_T xflux_sten(-3:3,SDIM)
+      REAL_T xhi_sten(-3:3,SDIM)
+      REAL_T xlo_sten(-3:3,SDIM)
+      REAL_T dx_sten(SDIM)
+      REAL_T dx_top
+      REAL_T, target :: xtarget(SDIM)
+      INTEGER_T nhalf
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+      REAL_T :: local_data_out
+      REAL_T, allocatable, dimension(:) :: local_data_max
+      REAL_T, allocatable, dimension(:) :: local_data_min
+      REAL_T :: scaling
+      INTEGER_T :: dummy_input
+
+#ifdef SANITY_CHECK
+      type(interp_from_grid_parm_type) :: data_in2 
+      type(interp_from_grid_out_parm_type) :: data_out2
+#endif
+
+#define dir_FD data_in%dir_deriv
+#define ilocal data_in%index_flux
+
+      if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing (derivative operation)
+      else if (dir_FD.eq.-1) then
+       ! do nothing (interpolation operation)
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+
+      local_data_fab=>data_in%disp_data
+ 
+      nhalf=3 
+      caller_id=10
+      call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_flux,caller_id)
+
+      do dir_local=1,SDIM 
+       xtarget(dir_local)=xflux_sten(0,dir_local)
+
+       if (data_in%box_type_flux(dir_local).eq. &
+           data_in%box_type_data(dir_local)) then
+        if (dir_local.eq.dir_FD) then
+         ilo(dir_local)=ilocal(dir_local)-1
+         ihi(dir_local)=ilocal(dir_local)+1
+        else if (dir_local.ne.dir_FD) then
+         ilo(dir_local)=ilocal(dir_local)
+         ihi(dir_local)=ilocal(dir_local)
+        else
+         print *,"dir_local bust"
+         stop
+        endif
+       else if ((data_in%box_type_flux(dir_local).eq.0).and. & !CELL
+                (data_in%box_type_data(dir_local).eq.1)) then  !NODE
+        ilo(dir_local)=ilocal(dir_local)
+        ihi(dir_local)=ilocal(dir_local)+1
+       else if ((data_in%box_type_flux(dir_local).eq.1).and. & !NODE
+                (data_in%box_type_data(dir_local).eq.0)) then  !CELL
+        ilo(dir_local)=ilocal(dir_local)-1
+        ihi(dir_local)=ilocal(dir_local)
+       else
+        print *,"box_type corruption"
+        stop
+       endif
+       istep(dir_local)=ihi(dir_local)-ilo(dir_local)
+       if (istep(dir_local).eq.0) then
+        istep(dir_local)=1
+       else if (istep(dir_local).eq.2) then
+        ! do nothing
+       else if (istep(dir_local).eq.1) then
+        ! do nothing
+       else
+        print *,"istep invalid"
+        stop
+       endif
+      enddo ! dir_local=1..sdim
+
+      call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+      call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+
+      do dir_local=1,SDIM 
+       if (ilo(dir_local).eq.ihi(dir_local)) then
+        dx_sten(dir_local)=one
+       else if (ilo(dir_local).lt.ihi(dir_local)) then
+        dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+       else
+        print *,"ilo or ihi invalid"
+        stop
+       endif
+      enddo ! dir_local=1..sdim
+
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir_local=1,SDIM
+       if (data_in%dx(dir_local).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir_local).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo  ! dir_local=1..sdim
+      if (data_in%ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+      if (data_in%scomp.ge.1) then
+       ! do nothing
+      else
+       print *,"scomp invalid"
+       stop
+      endif
+
+      if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+       kstep=1
+      else if (SDIM.eq.3) then
+       klosten=ilo(SDIM)
+       khisten=ihi(SDIM)
+       kstep=istep(SDIM)
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+
+      allocate(local_data_max(data_in%ncomp))
+      allocate(local_data_min(data_in%ncomp))
+
+      do nc=1,data_in%ncomp
+
+       local_data_max(nc)=-1.0D-20
+       local_data_min(nc)=1.0D-20
+
+       data_out%data_interp(nc)=zero
+
+       do isten=ilo(1),ihi(1),istep(1)
+       do jsten=ilo(2),ihi(2),istep(2)
+       do ksten=klosten,khisten,kstep
+        ii(1)=isten
+        ii(2)=jsten
+        ii(3)=ksten
+
+        if (dir_FD.eq.-1) then
+         SGN_FACT=one
+        else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+         if (ii(dir_FD).eq.ilo(dir_FD)) then
+          SGN_FACT=-one
+         else if (ii(dir_FD).eq.ihi(dir_FD)) then
+          SGN_FACT=one
+         else
+          print *,"ii(dir_FD) invalid"
+          stop
+         endif
+        else 
+         print *,"dir_FD invalid"
+         stop
+        endif
+
+        wt_top=one
+        wt_bot=one
+        
+        do dir_local=1,SDIM
+         if (dir_local.eq.dir_FD) then
+          wt_top=wt_top*SGN_FACT
+          wt_bot=wt_bot*dx_sten(dir_local)
+          if (ihi(dir_local).gt.ilo(dir_local)) then
+           ! do nothing
+          else
+           print *,"ihi or ilo bust"
+           stop
+          endif
+         else if (ihi(dir_local).eq.ilo(dir_local)) then
+          ! do nothing
+         else if (ihi(dir_local).gt.ilo(dir_local)) then
+          if (ii(dir_local).eq.ihi(dir_local)) then
+           dx_top=(xtarget(dir_local)-xlo_sten(0,dir_local))
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else if (ii(dir_local).eq.ilo(dir_local)) then
+           dx_top=(xhi_sten(0,dir_local)-xtarget(dir_local))
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else
+           print *,"ii(dir_local) invalid"
+           stop
+          endif
+          if (dx_top.ge.zero) then
+           wt_top=wt_top*dx_top
+          else
+           print *,"dx_top bust"
+           stop
+          endif
+         else
+          print *,"ihi or ilo invalid"
+          stop
+         endif
+        enddo ! dir_local=1..sdim
+
+        if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
+         data_comp=data_in%scomp+nc-1
+         call safe_data(isten,jsten,ksten,data_comp, &
+           local_data_fab,local_data_out)
+
+         if (local_data_out.gt.local_data_max(nc)) then
+          local_data_max(nc)=local_data_out
+         endif
+         if (local_data_out.lt.local_data_min(nc)) then
+          local_data_min(nc)=local_data_out
+         endif
+
+         data_out%data_interp(nc)=data_out%data_interp(nc)+ &
+            wt_top*local_data_out/wt_bot
+        else
+         print *,"wt_bot or wt_top invalid (deriv_from_grid_util):", &
+                 wt_bot,wt_top
+         print *,"isten,jsten,ksten ",isten,jsten,ksten
+         print *,"dir_FD ",dir_FD
+         print *,"ilo,ihi ",ilo(1),ilo(2),ilo(SDIM),ihi(1),ihi(2),ihi(SDIM)
+         stop
+        endif
+       enddo !ksten
+       enddo !jsten
+       enddo !isten
+      enddo ! nc=1 .. data_in%ncomp
+
+#ifdef SANITY_CHECK
+      if (dir_FD.eq.-1) then
+       if (data_in%grid_type_data.eq.-1) then
+        data_in2%scomp=data_in%scomp
+        data_in2%ncomp=data_in%ncomp
+        data_in2%level=data_in%level
+        data_in2%finest_level=data_in%finest_level
+        data_in2%bfact=data_in%bfact
+        data_in2%nmat=num_materials
+        data_in2%interp_foot_flag=0
+        data_in2%xtarget=>xtarget
+        if ((data_in%dx(1).gt.zero).and. &
+            (data_in%dx(2).gt.zero).and. &
+            (data_in%dx(SDIM).gt.zero)) then
+         ! do nothing
+        else
+         print *,"data_in%dx bust"
+         stop
+        endif
+        data_in2%dx=>data_in%dx
+        data_in2%xlo=>data_in%xlo
+        data_in2%fablo=>data_in%fablo
+        data_in2%fabhi=>data_in%fabhi
+        data_in2%state=>data_in%disp_data
+        allocate(data_out2%data_interp(data_in2%ncomp))
+        call interp_from_grid_util(data_in2,data_out2)
+        do nc=1,data_in%ncomp
+
+         scaling=abs(local_data_max(nc))
+         if (scaling.lt.abs(local_data_min(nc))) then
+          scaling=abs(local_data_min(nc))
+         endif        
+
+         if ((scaling.ge.zero).and.(scaling.le.one)) then
+          scaling=one
+         else if (scaling.ge.one) then
+          ! do nothing
+         else
+          print *,"scaling is NaN"
+          stop
+         endif
+
+         if (abs(data_out%data_interp(nc)- &
+                 data_out2%data_interp(nc)).le.1.0D-12*scaling) then
+          ! do nothing
+         else
+          print *,"data_out%data_interp(nc) invalid"
+          print *,"nc=",nc
+          print *,"data_in%ncomp=",data_in%ncomp
+          print *,"data_in%grid_type_flux=",data_in%grid_type_flux
+          print *,"data_in%box_type_flux=",data_in%box_type_flux(1), &
+           data_in%box_type_flux(2),data_in%box_type_flux(SDIM)
+          print *,"data_in%index_flux=",data_in%index_flux(1), &
+           data_in%index_flux(2),data_in%index_flux(SDIM)
+          print *,"xtarget=",xtarget(1),xtarget(2),xtarget(SDIM)
+          print *,"data_out%data_interp(nc) ",data_out%data_interp(nc)
+          print *,"data_out2%data_interp(nc) ",data_out2%data_interp(nc)
+
+          print *,"local_data_max(nc)=",local_data_max(nc)
+          print *,"local_data_min(nc)=",local_data_min(nc)
+          print *,"scaling=",scaling
+
+          print *,"(breakpoint) break point and gdb: "
+          print *,"(1) compile with the -g option"
+          print *,"(2) break GLOBALUTIL.F90:8164"
+          print *,"By pressing <CTRL C> during this read statement, the"
+          print *,"gdb debugger will produce a stacktrace."
+          print *,"type 0 then <enter> to exit the program"
+          read (*,*) dummy_input
+          stop
+         endif
+        enddo ! nc=1..data_in%ncomp
+        deallocate(data_out2%data_interp)
+       else if ((data_in%grid_type_data.ge.0).and. &
+                (data_in%grid_type_data.le.5)) then
+        ! do nothing
+       else
+        print *,"data_in%grid_type_data invalid"
+        stop
+       endif
+      else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+#endif
+
+      deallocate(local_data_max)
+      deallocate(local_data_min)
+
+#undef ilocal
+#undef dir_FD
+
+      return
+      end subroutine deriv_from_grid_util
+
+
+       ! data_in%dir_deriv=1..sdim (derivative)
+       ! data_in%dir_deriv=-1 (interp)
+      subroutine single_deriv_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+
+      type(single_deriv_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+
+      INTEGER_T caller_id
+      INTEGER_T dir_local
+      INTEGER_T ilo(SDIM)
+      INTEGER_T ihi(SDIM)
+      INTEGER_T istep(SDIM)
+      INTEGER_T klosten,khisten,kstep
+      INTEGER_T isten,jsten,ksten
+      INTEGER_T ii(3)
+      REAL_T SGN_FACT
+      REAL_T wt_top,wt_bot
+      REAL_T xflux_sten(-3:3,SDIM)
+      REAL_T xhi_sten(-3:3,SDIM)
+      REAL_T xlo_sten(-3:3,SDIM)
+      REAL_T dx_sten(SDIM)
+      REAL_T dx_top
+      REAL_T, target :: xtarget(SDIM)
+      INTEGER_T nhalf
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
+      REAL_T :: local_data_out
+      REAL_T :: local_data_max
+      REAL_T :: local_data_min
+      REAL_T :: scaling
+      INTEGER_T :: dummy_input
+
+#ifdef SANITY_CHECK
+      type(single_interp_from_grid_parm_type) :: data_in2 
+      type(interp_from_grid_out_parm_type) :: data_out2
+#endif
+  
+#define dir_FD data_in%dir_deriv
+#define ilocal data_in%index_flux
+
+      if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing (derivative operation)
+      else if (dir_FD.eq.-1) then
+       ! do nothing (interpolation operation)
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+
+      local_data_fab=>data_in%disp_data
+
+      nhalf=3 
+      caller_id=10
+      call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_flux,caller_id)
+
+      do dir_local=1,SDIM 
+       xtarget(dir_local)=xflux_sten(0,dir_local)
+
+       if (data_in%box_type_flux(dir_local).eq. &
+           data_in%box_type_data(dir_local)) then
+        if (dir_local.eq.dir_FD) then
+         ilo(dir_local)=ilocal(dir_local)-1
+         ihi(dir_local)=ilocal(dir_local)+1
+        else if (dir_local.ne.dir_FD) then
+         ilo(dir_local)=ilocal(dir_local)
+         ihi(dir_local)=ilocal(dir_local)
+        else
+         print *,"dir_local bust"
+         stop
+        endif
+       else if ((data_in%box_type_flux(dir_local).eq.0).and. & !CELL
+                (data_in%box_type_data(dir_local).eq.1)) then  !NODE
+        ilo(dir_local)=ilocal(dir_local)
+        ihi(dir_local)=ilocal(dir_local)+1
+       else if ((data_in%box_type_flux(dir_local).eq.1).and. & !NODE
+                (data_in%box_type_data(dir_local).eq.0)) then  !CELL
+        ilo(dir_local)=ilocal(dir_local)-1
+        ihi(dir_local)=ilocal(dir_local)
+       else
+        print *,"box_type corruption"
+        stop
+       endif
+       istep(dir_local)=ihi(dir_local)-ilo(dir_local)
+       if (istep(dir_local).eq.0) then
+        istep(dir_local)=1
+       else if (istep(dir_local).eq.2) then
+        ! do nothing
+       else if (istep(dir_local).eq.1) then
+        ! do nothing
+       else
+        print *,"istep invalid"
+        stop
+       endif
+      enddo ! dir_local=1..sdim
+
+      call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+      call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
+        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+
+      do dir_local=1,SDIM 
+       if (ilo(dir_local).eq.ihi(dir_local)) then
+        dx_sten(dir_local)=one
+       else if (ilo(dir_local).lt.ihi(dir_local)) then
+        dx_sten(dir_local)=xhi_sten(0,dir_local)-xlo_sten(0,dir_local)
+       else
+        print *,"ilo or ihi invalid"
+        stop
+       endif
+      enddo ! dir_local=1..sdim
+
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir_local=1,SDIM
+       if (data_in%dx(dir_local).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir_local).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo  ! dir_local=1..sdim
+
+      if (SDIM.eq.2) then
+       klosten=0
+       khisten=0
+       kstep=1
+      else if (SDIM.eq.3) then
+       klosten=ilo(SDIM)
+       khisten=ihi(SDIM)
+       kstep=istep(SDIM)
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+      
+      local_data_max=-1.0D-20
+      local_data_min=1.0D-20
+
+      data_out%data_interp(1)=zero
+
+      do isten=ilo(1),ihi(1),istep(1)
+      do jsten=ilo(2),ihi(2),istep(2)
+      do ksten=klosten,khisten,kstep
+        ii(1)=isten
+        ii(2)=jsten
+        ii(3)=ksten
+
+        if (dir_FD.eq.-1) then
+         SGN_FACT=one
+        else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+         if (ii(dir_FD).eq.ilo(dir_FD)) then
+          SGN_FACT=-one
+         else if (ii(dir_FD).eq.ihi(dir_FD)) then
+          SGN_FACT=one
+         else
+          print *,"ii(dir_FD) invalid"
+          stop
+         endif
+        else 
+         print *,"dir_FD invalid"
+         stop
+        endif
+
+        wt_top=one
+        wt_bot=one
+        
+        do dir_local=1,SDIM
+         if (dir_local.eq.dir_FD) then
+          wt_top=wt_top*SGN_FACT
+          wt_bot=wt_bot*dx_sten(dir_local)
+          if (ihi(dir_local).gt.ilo(dir_local)) then
+           ! do nothing
+          else
+           print *,"ihi or ilo bust"
+           stop
+          endif
+         else if (ihi(dir_local).eq.ilo(dir_local)) then
+          ! do nothing
+         else if (ihi(dir_local).gt.ilo(dir_local)) then
+          if (ii(dir_local).eq.ihi(dir_local)) then
+           dx_top=(xtarget(dir_local)-xlo_sten(0,dir_local))
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else if (ii(dir_local).eq.ilo(dir_local)) then
+           dx_top=(xhi_sten(0,dir_local)-xtarget(dir_local))
+           wt_bot=wt_bot*dx_sten(dir_local)
+          else
+           print *,"ii(dir_local) invalid"
+           stop
+          endif
+          if (dx_top.ge.zero) then
+           wt_top=wt_top*dx_top
+          else
+           print *,"dx_top bust"
+           stop
+          endif
+         else
+          print *,"ihi or ilo invalid"
+          stop
+         endif
+        enddo ! dir_local=1..sdim
+
+        if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
+         call safe_data_single(isten,jsten,ksten,local_data_fab,local_data_out)
+
+         if (local_data_out.gt.local_data_max) then
+          local_data_max=local_data_out
+         endif
+         if (local_data_out.lt.local_data_min) then
+          local_data_min=local_data_out
+         endif
+
+         if (1.eq.0) then
+          print *,"dir_FD,wt_top,wt_bot,isten,jsten,ksten,local_data_out ", &
+            dir_FD,wt_top,wt_bot,isten,jsten,ksten,local_data_out
+         endif
+
+         data_out%data_interp(1)=data_out%data_interp(1)+ &
+             wt_top*local_data_out/wt_bot
+        else
+         print *,"wt_bot or wt_top invalid(single_deriv_from_grid_util):", &
+                 wt_bot,wt_top
+         print *,"isten,jsten,ksten ",isten,jsten,ksten
+         print *,"dir_FD ",dir_FD
+         print *,"ilo,ihi ",ilo(1),ilo(2),ilo(SDIM),ihi(1),ihi(2),ihi(SDIM)
+         stop
+        endif
+      enddo !ksten
+      enddo !jsten
+      enddo !isten
+
+#ifdef SANITY_CHECK
+      if (dir_FD.eq.-1) then
+        ! do sanity check if data is at cell centers
+       if (data_in%grid_type_data.eq.-1) then 
+        data_in2%level=data_in%level
+        data_in2%finest_level=data_in%finest_level
+        data_in2%bfact=data_in%bfact
+        data_in2%interp_foot_flag=0
+        data_in2%interp_dir=0 ! not used if interp_foot_flag==0
+        data_in2%xtarget=>xtarget
+        data_in2%dx=>data_in%dx
+        data_in2%xlo=>data_in%xlo
+        data_in2%fablo=>data_in%fablo
+        data_in2%fabhi=>data_in%fabhi
+        data_in2%state=>data_in%disp_data
+        allocate(data_out2%data_interp(1))
+        call single_interp_from_grid_util(data_in2,data_out2)
+
+        scaling=abs(local_data_max)
+        if (scaling.lt.abs(local_data_min)) then
+         scaling=abs(local_data_min)
+        endif 
+
+        if ((scaling.ge.zero).and.(scaling.le.one)) then
+         scaling=one
+        else if (scaling.ge.one) then
+         ! do nothing
+        else
+         print *,"scaling is NaN"
+         stop
+        endif
+
+        if (abs(data_out%data_interp(1)- &
+                data_out2%data_interp(1)).le.1.0D-12*scaling) then
+         ! do nothing
+        else
+         print *,"data_in%grid_type_data=",data_in%grid_type_data
+         print *,"data_in%grid_type_flux=",data_in%grid_type_flux
+         print *,"data_in%box_type_flux=",data_in%box_type_flux(1), &
+          data_in%box_type_flux(2),data_in%box_type_flux(SDIM)
+         print *,"data_in%index_flux=",data_in%index_flux(1), &
+          data_in%index_flux(2),data_in%index_flux(SDIM)
+         print *,"data_out%data_interp(1) ",data_out%data_interp(1)
+         print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
+         print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
+
+         print *,"local_data_max=",local_data_max
+         print *,"local_data_min=",local_data_min
+         print *,"scaling=",scaling
+
+         print *,"(breakpoint) break point and gdb: "
+         print *,"(1) compile with the -g option"
+         print *,"(2) break GLOBALUTIL.F90:8494"
+         print *,"By pressing <CTRL C> during this read statement, the"
+         print *,"gdb debugger will produce a stacktrace."
+         print *,"type 0 then <enter> to exit the program"
+         read (*,*) dummy_input
+         stop
+        endif
+        deallocate(data_out2%data_interp)
+       else if ((data_in%grid_type_data.ge.0).and. &
+                (data_in%grid_type_data.le.SDIM-1)) then
+        allocate(data_out2%data_interp(1))
+        data_in2%interp_foot_flag=0
+
+        call interpfab_XDISP( &
+          data_in%grid_type_data, & ! start_dir=0..sdim-1
+          data_in%grid_type_data, & ! end_dir=0..sdim-1
+          data_in2%interp_foot_flag, &
+          data_in%bfact, &
+          data_in%level, &
+          data_in%finest_level, &
+          data_in%dx, &
+          data_in%xlo, &
+          xtarget, &
+          data_in%fablo, &
+          data_in%fabhi, &
+          data_in%disp_data, &
+          data_in%disp_data, &
+          data_in%disp_data, &
+          data_out2%data_interp)
+
+        scaling=abs(local_data_max)
+        if (scaling.lt.abs(local_data_min)) then
+         scaling=abs(local_data_min)
+        endif        
+
+        if ((scaling.ge.zero).and.(scaling.le.one)) then
+         scaling=one
+        else if (scaling.ge.one) then
+         ! do nothing
+        else
+         print *,"scaling is NaN"
+         stop
+        endif
+        if (abs(data_out%data_interp(1)- &
+                data_out2%data_interp(1)).le.1.0D-12*scaling) then
+         ! do nothing
+        else
+         print *,"dir_FD=",dir_FD
+         print *,"data_in%grid_type_flux=",data_in%grid_type_flux
+         print *,"data_in%grid_type_data=",data_in%grid_type_data
+         print *,"data_in%box_type_flux=", &
+          data_in%box_type_flux(1), &
+          data_in%box_type_flux(2), &
+          data_in%box_type_flux(SDIM)
+         print *,"data_in%index_flux=",data_in%index_flux(1), &
+          data_in%index_flux(2),data_in%index_flux(SDIM)
+         print *,"data_in%box_type_data=", &
+          data_in%box_type_data(1), &
+          data_in%box_type_data(2), &
+          data_in%box_type_data(SDIM)
+         print *,"data_out%data_interp(1) ",data_out%data_interp(1)
+         print *,"data_out2%data_interp(1) ",data_out2%data_interp(1)
+         print *,"data_out%data_interp(1) invalid(single_deriv_from_grid_util)"
+         print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+         print *,"ilocal ",ilocal(1),ilocal(2),ilocal(SDIM)
+         print *,"ilo: ",ilo(1),ilo(2),ilo(SDIM)
+         print *,"ihi: ",ihi(1),ihi(2),ihi(SDIM)
+         print *,"istep: ",istep(1),istep(2),istep(SDIM)
+         print *,"klosten,khisten,kstep: ",klosten,khisten,kstep
+         print *,"dx_sten ",dx_sten(1),dx_sten(2),dx_sten(SDIM)
+
+         print *,"local_data_max=",local_data_max
+         print *,"local_data_min=",local_data_min
+         print *,"scaling=",scaling
+
+         print *,"(breakpoint) break point and gdb: "
+         print *,"(1) compile with the -g option"
+         print *,"(2) break GLOBALUTIL.F90:8571"
+         print *,"By pressing <CTRL C> during this read statement, the"
+         print *,"gdb debugger will produce a stacktrace."
+         print *,"type 0 then <enter> to exit the program"
+         read (*,*) dummy_input
+         stop
+        endif
+        deallocate(data_out2%data_interp)
+       else if ((data_in%grid_type_data.ge.3).and. &
+                (data_in%grid_type_data.le.5)) then
+        ! do nothing
+       else
+        print *,"data_in%grid_type_data invalid"
+        stop
+       endif
+      else if ((dir_FD.ge.1).and.(dir_FD.le.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_FD invalid"
+       stop
+      endif
+#endif
+
+#undef ilocal
+#undef dir_FD
+
+      return
+      end subroutine single_deriv_from_grid_util
+
+#undef SANITY_CHECK
+
+
+       !  This routine calculates the bilinear interpolant at a given point
+       !  "x" 
+      subroutine interpfab_XDISP( &
+       start_dir, &  ! 0<=start_dir<=sdim-1
+       end_dir, &    ! 0<=start_dir<=end_dir<=sdim-1
+       interp_foot_flag, &
+       bfact, &
+       level, &
+       finest_level, &
+       dx, &
+       xlo, &
+       xtarget, &
+       lo,hi, &
+       xdata, &
+       ydata, &
+       zdata, &
+       dest) ! 1..SDIM
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: start_dir
+      INTEGER_T, intent(in) :: end_dir
+      INTEGER_T, intent(in) :: interp_foot_flag
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+       ! pointers are always intent(in).
+       ! the intent attribute of the data itself is inherited from the
+       ! target.
+       ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
+      REAL_T, intent(in), pointer :: xdata(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: ydata(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: zdata(D_DECL(:,:,:))
+      REAL_T, intent(out) :: dest(1:end_dir-start_dir+1)
+
+      INTEGER_T dir_disp_comp  ! 0..sdim-1
+      INTEGER_T dir_local
+      INTEGER_T mac_cell_index(SDIM)
+      INTEGER_T istenlo(3),istenhi(3)
+      INTEGER_T stencil_offset(SDIM)
+      REAL_T WT,total_WT
+      INTEGER_T isten,jsten,ksten
+      REAL_T local_data
+
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
+
+      INTEGER_T nhalf
+      REAL_T xsten_center(-3:3,SDIM)
+      REAL_T xsten_offset(-3:3,SDIM)
+
+      nhalf=3
+
+      if (start_dir.le.end_dir) then
+       ! do nothing
+      else
+       print *,"start_dir or end_dir invalid"
+       stop
+      endif
+      if ((start_dir.ge.0).and.(start_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"start_dir invalid"
+       stop
+      endif
+      if ((end_dir.ge.0).and.(end_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"end_dir invalid"
+       stop
+      endif
+
+       ! dir_disp_comp==0 => xdata interpolation
+       ! dir_disp_comp==1 => ydata interpolation
+       ! dir_disp_comp==2 => zdata interpolation
+      do dir_disp_comp=start_dir,end_dir
+
+        ! strategy:
+        !   1. determine 3x3x3 MAC grid stencil about x
+        !   2. determine the bilinear interpolation weights
+        !      (weights are only nonzero in the appropriate 2x2x2 MAC
+        !       grid stencil) 
+        ! containing_MACcell declared in GLOBALUTIL.F90
+       call containing_MACcell(bfact,dx,xlo,lo,xtarget, &
+         dir_disp_comp,mac_cell_index)
+
+       istenlo(3)=0
+       istenhi(3)=0
+       do dir_local=1,SDIM
+        istenlo(dir_local)=mac_cell_index(dir_local)-1
+        istenhi(dir_local)=mac_cell_index(dir_local)+1
+       enddo ! dir_local=1..sdim
+
+       total_WT=zero
+       dest(dir_disp_comp-start_dir+1)=zero
+
+       isten=mac_cell_index(1)
+       jsten=mac_cell_index(2)
+       ksten=mac_cell_index(SDIM)
+
+       call gridstenMAC_level(xsten_center,isten,jsten,ksten,level,nhalf, &
+              dir_disp_comp,81)
+
+       if (1.eq.0) then
+        print *,"dir_disp_comp,xsten_center,xtarget ", &
+         dir_disp_comp,xsten_center(0,1),xsten_center(0,2), &
+         xsten_center(0,SDIM),xtarget(1),xtarget(2), &
+         xtarget(SDIM)
+       endif
+
+       do isten=istenlo(1),istenhi(1)
+       do jsten=istenlo(2),istenhi(2)
+       do ksten=istenlo(3),istenhi(3)
+        call gridstenMAC_level(xsten_offset,isten,jsten,ksten,level,nhalf, &
+              dir_disp_comp,81)
+
+        stencil_offset(1)=isten-mac_cell_index(1)
+        stencil_offset(2)=jsten-mac_cell_index(2)
+        if (SDIM.eq.3) then
+         stencil_offset(SDIM)=ksten-mac_cell_index(SDIM)
+        endif
+        call bilinear_interp_WT(xsten_center,nhalf,stencil_offset,xtarget,WT)
+        if ((WT.ge.zero).and.(WT.le.one)) then
+         ! do nothing
+        else
+         print *,"WT invalid"
+         stop
+        endif
+
+        if (dir_disp_comp.eq.0) then
+         local_data_fab=>xdata
+        else if (dir_disp_comp.eq.1) then
+         local_data_fab=>ydata
+        else if ((dir_disp_comp.eq.2).and.(SDIM.eq.3)) then
+         local_data_fab=>zdata
+        else
+         print *,"dir_disp_comp invalid"
+         stop
+        endif
+        call safe_data_single(isten,jsten,ksten,local_data_fab,local_data)
+
+        if ((local_data.ge.-1.0D+30).and. &
+            (local_data.le.1.0D+30)) then
+
+         if (interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data=xsten_offset(0,dir_disp_comp+1)-local_data
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
+
+         if (1.eq.0) then
+          print *,"dir_disp_comp,WT,local_data ", &
+            dir_disp_comp,WT,local_data
+          print *,"isten,jsten,ksten ",isten,jsten,ksten
+         endif
+
+         dest(dir_disp_comp-start_dir+1)= &
+            dest(dir_disp_comp-start_dir+1)+WT*local_data
+        else
+         print *,"local_data overflow"
+         print *,"local_data ",local_data
+         stop
+        endif
+
+        total_WT=total_WT+WT
+
+       enddo ! ksten
+       enddo ! jsten
+       enddo ! isten
+
+       if (total_WT.gt.zero) then
+
+        dest(dir_disp_comp-start_dir+1)= &
+           dest(dir_disp_comp-start_dir+1)/total_WT
+
+       else
+        print *,"total_WT invalid"
+        stop
+       endif
+
+      enddo ! dir_disp_comp=start_dir ... end_dir (0<=dir_disp_comp<=sdim-1)
+
+      return 
+      end subroutine interpfab_XDISP
+
+
       subroutine interp_from_grid_util(data_in,data_out)
       use probcommon_module
       IMPLICIT NONE
@@ -7200,11 +8827,11 @@ contains
       INTEGER_T stencil_offset(SDIM)
       INTEGER_T istenlo(3)
       INTEGER_T istenhi(3)
-      REAL_T WT,total_WT,WT_LS
-      REAL_T LS_local
+      REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
       INTEGER_T im
       REAL_T, allocatable, dimension(:) :: local_data
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
      
       if ((data_in%level.ge.0).and. &
           (data_in%level.le.data_in%finest_level).and. &
@@ -7269,6 +8896,8 @@ contains
 
       allocate(local_data(data_in%ncomp))
 
+      local_data_fab=>data_in%state
+
       nhalf=3
 
       call containing_cell( &
@@ -7282,12 +8911,6 @@ contains
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       if (cell_index(dir)-1.lt.data_in%fablo(dir)-data_in%ngrowfab) then
-        cell_index(dir)=data_in%fablo(dir)-data_in%ngrowfab+1
-       endif
-       if (cell_index(dir)+1.gt.data_in%fabhi(dir)+data_in%ngrowfab) then
-        cell_index(dir)=data_in%fabhi(dir)+data_in%ngrowfab-1
-       endif
        istenlo(dir)=cell_index(dir)-1
        istenhi(dir)=cell_index(dir)+1
       enddo ! dir=1..sdim
@@ -7321,31 +8944,10 @@ contains
         print *,"WT invalid"
         stop
        endif
-       WT_LS=one
-       if (data_in%im_PLS.eq.0) then
-        ! do nothing
-       else if ((data_in%im_PLS.ge.1).and. &
-                (data_in%im_PLS.le.data_in%nmat)) then
-        LS_local=data_in%LS(D_DECL(isten,jsten,ksten), &
-                data_in%im_PLS)
-        if (LS_local.ge.zero) then
-         ! do nothing
-        else if (LS_local.lt.zero) then
-         WT_LS=1.0D-3
-        else
-         print *,"LS_local invalid"
-         stop
-        endif
-       else
-        print *,"data_in%im_PLS invalid"
-        stop
-       endif
-
-       WT=WT*WT_LS
 
        do im=1,data_in%ncomp
-        local_data(im)=data_in%state(D_DECL(isten,jsten,ksten), &
-          data_in%scomp+im-1)
+        call safe_data(isten,jsten,ksten,data_in%scomp+im-1, &
+                local_data_fab,local_data(im))
         if ((local_data(im).ge.-1.0D+30).and. &
             (local_data(im).le.1.0D+30)) then
 
@@ -7390,6 +8992,152 @@ contains
 
       return
       end subroutine interp_from_grid_util
+
+
+      subroutine single_interp_from_grid_util(data_in,data_out)
+      use probcommon_module
+      IMPLICIT NONE
+ 
+      type(single_interp_from_grid_parm_type), intent(in) :: data_in 
+      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten_center(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T dir
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T stencil_offset(SDIM)
+      INTEGER_T istenlo(3)
+      INTEGER_T istenhi(3)
+      REAL_T WT,total_WT
+      INTEGER_T isten,jsten,ksten
+      REAL_T :: local_data
+      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
+     
+      if ((data_in%level.ge.0).and. &
+          (data_in%level.le.data_in%finest_level).and. &
+          (data_in%bfact.ge.1)) then
+       ! do nothing
+      else
+       print *,"level, finest_level or bfact invalid"
+       stop
+      endif
+      do dir=1,SDIM
+       if (data_in%dx(dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"data_in%dx invalid"
+        stop
+       endif
+       if (data_in%fablo(dir).ge.0) then
+        ! do nothing
+       else
+        print *,"data_in%fablo invalid"
+        stop
+       endif
+      enddo 
+      if ((data_in%interp_dir.ge.0).and. &
+          (data_in%interp_dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"data_in%interp_dir invalid"
+       stop
+      endif
+      if (data_in%interp_foot_flag.eq.0) then
+       ! do nothing
+      else if (data_in%interp_foot_flag.eq.1) then
+       ! do nothing
+      else
+       print *,"interp_foot_flag invalid"
+       stop
+      endif
+       
+      local_data_fab=>data_in%state
+
+      nhalf=3
+
+      call containing_cell( &
+        data_in%bfact, &
+        data_in%dx, &
+        data_in%xlo, &
+        data_in%fablo, &
+        data_in%xtarget, &
+        cell_index)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       istenlo(dir)=cell_index(dir)-1
+       istenhi(dir)=cell_index(dir)+1
+      enddo ! dir=1..sdim
+
+      total_WT=zero
+      data_out%data_interp(1)=zero
+
+      isten=cell_index(1)
+      jsten=cell_index(2)
+      ksten=cell_index(SDIM)
+
+      call gridsten_level(xsten_center,isten,jsten,ksten,data_in%level,nhalf)
+
+      do isten=istenlo(1),istenhi(1)
+      do jsten=istenlo(2),istenhi(2)
+      do ksten=istenlo(3),istenhi(3)
+
+       call gridsten_level(xsten,isten,jsten,ksten,data_in%level,nhalf)
+       stencil_offset(1)=isten-cell_index(1)
+       stencil_offset(2)=jsten-cell_index(2)
+       if (SDIM.eq.3) then
+        stencil_offset(SDIM)=ksten-cell_index(SDIM)
+       endif
+       call bilinear_interp_WT(xsten_center,nhalf,stencil_offset, &
+        data_in%xtarget,WT)
+       if ((WT.ge.zero).and.(WT.le.one)) then
+        ! do nothing
+       else
+        print *,"WT invalid"
+        stop
+       endif
+
+       call safe_data_single(isten,jsten,ksten,local_data_fab,local_data)
+       if ((local_data.ge.-1.0D+30).and. &
+           (local_data.le.1.0D+30)) then
+
+         if (data_in%interp_foot_flag.eq.0) then
+          ! do nothing
+         else if (data_in%interp_foot_flag.eq.1) then
+           ! xdisplace=x-xfoot    xfoot=x-xdisplace
+          local_data=xsten(0,data_in%interp_dir+1)-local_data
+         else
+          print *,"interp_foot_flag invalid"
+          stop
+         endif
+
+         data_out%data_interp(1)=data_out%data_interp(1)+WT*local_data
+
+       else
+         print *,"local_data overflow"
+         print *,"local_data ",local_data
+         stop
+       endif
+
+       total_WT=total_WT+WT
+
+      enddo ! ksten
+      enddo ! jsten
+      enddo ! isten
+
+      if (total_WT.gt.zero) then
+
+       data_out%data_interp(1)=data_out%data_interp(1)/total_WT
+
+      else
+       print *,"total_WT invalid"
+       stop
+      endif
+
+      return
+      end subroutine single_interp_from_grid_util
+
 
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
                       ncomp,data_interp,caller_id)
@@ -7699,8 +9447,9 @@ contains
       return
       end subroutine curverr
 
-
-
+       ! datatype=0 scalar or vector
+       ! datatype=1 tensor face
+       ! datatype=2 tensor cell
       subroutine aggressive_worker( &
        datatype, &
        warning_cutoff, &
@@ -7712,91 +9461,77 @@ contains
        scomp, &
        ncomp, &
        ndefined, &
-       ngrow,dir,id, &
+       ngrow, &
+       dir, &
+       id, &
        verbose, &
        force_check, &
        gridno,ngrid,level,finest_level, &
-       mf,DIMS(mf))
+       mf, &
+       critical_cutoff_low, & ! e.g. -1.0D+99
+       critical_cutoff_high)  ! e.g. 1.0D+99
 
       IMPLICIT NONE
 
-      INTEGER_T datatype
-      REAL_T warning_cutoff
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(SDIM),growhi(SDIM)
+      INTEGER_T, intent(in) :: datatype
+      REAL_T, intent(in) :: warning_cutoff
+      REAL_T, intent(in) :: critical_cutoff_low
+      REAL_T, intent(in) :: critical_cutoff_high
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM)
       INTEGER_T growlotest(3),growhitest(3)
-      INTEGER_T bfact
-      REAL_T dx(SDIM)
-      INTEGER_T scomp,ncomp,ndefined
-      INTEGER_T ngrow
-      INTEGER_T dir
-      INTEGER_T id
-      INTEGER_T verbose
-      INTEGER_T force_check
-      INTEGER_T gridno,ngrid,level,finest_level
-      INTEGER_T DIMDEC(mf)
-      REAL_T mf(DIMV(mf),ndefined)
-      INTEGER_T i,j,k,ii,jj,kk,dir2
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: scomp,ncomp,ndefined
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T, intent(in) :: id
+      INTEGER_T, intent(in) :: verbose
+      INTEGER_T, intent(in) :: force_check
+      INTEGER_T, intent(in) :: gridno,ngrid,level,finest_level
+      REAL_T, intent(in), pointer :: mf(D_DECL(:,:,:),:)
+      INTEGER_T i,j,k,dir2
+      INTEGER_T box_type(SDIM)
       INTEGER_T n
       INTEGER_T n_singlelayer,n_interior,n_side,n_corner
       REAL_T sum_interior,sum_side,sum_corner,sum_singlelayer
       REAL_T max_interior,max_side,max_corner,max_singlelayer
       REAL_T val
       INTEGER_T noutside,noutside_single
-      REAL_T critical_cutoff
 
-      critical_cutoff=1.0D+99
 
       if (bfact.lt.1) then
        print *,"bfact invalid36"
        stop
       endif
 
-      if (((verbose.eq.0).or.(verbose.eq.1)).and.(force_check.eq.0)) then
+      if (critical_cutoff_low.lt.critical_cutoff_high) then
        ! do nothing
-      else if ((verbose.eq.2).or.(force_check.eq.1)) then
+      else
+       print *,"critical_cutoff_low or critical_cutoff_high invalid"
+       stop
+      endif
+
+      if (((verbose.eq.0).or.(verbose.eq.1)).and. &
+          (force_check.eq.0)) then
+       ! do nothing
+      else if ((verbose.eq.2).or. &
+               (force_check.eq.1)) then
        call FLUSH(6) ! unit=6 (screen)
 
-       ii=0
-       jj=0
-       kk=0
+       call grid_type_to_box_type(dir,box_type)
 
        if (datatype.eq.0) then
-        if (dir.eq.-1) then
-         ! do nothing
-        else if (dir.eq.0) then
-         ii=1
-        else if (dir.eq.1) then
-         jj=1
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid aggressive worker"
-         stop
-        endif
-       else if (datatype.eq.1) then
-
-        if (dir.eq.0) then
-         ii=1
-        else if (dir.eq.1) then
-         jj=1
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid aggressive worker"
-         stop
-        endif
-
-       else if (datatype.eq.2) then
-
         ! do nothing
-
+       else if (datatype.eq.1) then
+        ! do nothing
+       else if (datatype.eq.2) then
+        ! do nothing
        else
         print *,"datatype invalid"
         stop
        endif
-
 
        if (scomp+ncomp.gt.ndefined) then
         print *,"scomp invalid aggressive worker"
@@ -7823,12 +9558,12 @@ contains
        endif
 
        if ((datatype.eq.0).or.(datatype.eq.1)) then
-        call checkbound(fablo,fabhi, &
-         DIMS(mf), &
+        call checkbound_array(fablo,fabhi, &
+         mf, &
          ngrow,dir,id)
        else if (datatype.eq.2) then
-        call checkbound(fablo,fabhi, &
-         DIMS(mf), &
+        call checkbound_array(fablo,fabhi, &
+         mf, &
          1,-1,id)
        else
         print *,"datatype invalid"
@@ -7852,9 +9587,9 @@ contains
         if (dir.eq.-1) then
          call growntilebox(tilelo,tilehi,fablo,fabhi, &
           growlotest,growhitest,ngrow)
-        else if ((dir.ge.0).and.(dir.lt.SDIM)) then
+        else if ((dir.ge.0).and.(dir.le.5)) then
          call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlotest,growhitest,ngrow,dir)
+          growlotest,growhitest,ngrow,dir,1)
         else
          print *,"dir invalid aggressive worker 2"
          stop
@@ -7913,29 +9648,30 @@ contains
         do k=growlotest(3),growhitest(3)
          noutside=0
          noutside_single=0
-         if ((i.lt.fablo(1)).or.(i.gt.fabhi(1)+ii)) then
+         if ((i.lt.fablo(1)).or.(i.gt.fabhi(1)+box_type(1))) then
           noutside=noutside+1
          endif
-         if ((i.lt.fablo(1)-1).or.(i.gt.fabhi(1)+ii+1)) then
+         if ((i.lt.fablo(1)-1).or.(i.gt.fabhi(1)+box_type(1)+1)) then
           noutside_single=noutside_single+1
          endif
-         if ((j.lt.fablo(2)).or.(j.gt.fabhi(2)+jj)) then
+         if ((j.lt.fablo(2)).or.(j.gt.fabhi(2)+box_type(2))) then
           noutside=noutside+1
          endif
-         if ((j.lt.fablo(2)-1).or.(j.gt.fabhi(2)+jj+1)) then
+         if ((j.lt.fablo(2)-1).or.(j.gt.fabhi(2)+box_type(2)+1)) then
           noutside_single=noutside_single+1
          endif
          if (SDIM.eq.3) then
-          if ((k.lt.fablo(SDIM)).or.(k.gt.fabhi(SDIM)+kk)) then
+          if ((k.lt.fablo(SDIM)).or.(k.gt.fabhi(SDIM)+box_type(SDIM))) then
            noutside=noutside+1
           endif
-          if ((k.lt.fablo(SDIM)-1).or.(k.gt.fabhi(SDIM)+kk+1)) then
+          if ((k.lt.fablo(SDIM)-1).or.(k.gt.fabhi(SDIM)+box_type(SDIM)+1)) then
            noutside_single=noutside_single+1
           endif
          endif
          val=mf(D_DECL(i,j,k),n+scomp)
 
-         if (val.ge.critical_cutoff) then
+         if (val.ge.critical_cutoff_high) then
+          print *,"val.ge.critical_cutoff_high ",val,critical_cutoff_high
           print *,"val overflow val,dir,i,j,k,n,scomp,id ", &
            val,dir,i,j,k,n,scomp,id
           print *,"bfact,level,finest_level ",bfact,level,finest_level
@@ -7944,11 +9680,12 @@ contains
            print *,"dir2,tilelo,tilehi ",dir2,tilelo(dir2),tilehi(dir2)
           enddo
           stop
-         else if ((val.lt.critical_cutoff).and. &
-                  (val.gt.-critical_cutoff)) then
+         else if ((val.lt.critical_cutoff_high).and. &
+                  (val.gt.critical_cutoff_low)) then
           ! do nothing
-         else if (val.le.-critical_cutoff) then
-          print *,"-val overflow val,dir,i,j,k,n,scomp,id ", &
+         else if (val.le.critical_cutoff_low) then
+          print *,"val.le.critical_cutoff_low ",val,critical_cutoff_low
+          print *,"val out of bounds val,dir,i,j,k,n,scomp,id ", &
            val,dir,i,j,k,n,scomp,id
           print *,"bfact,level,finest_level ",bfact,level,finest_level
           do dir2=1,SDIM
@@ -8116,11 +9853,118 @@ contains
         print *,"bfact invalid38"
         stop
        endif
-      enddo ! dir
+      enddo ! dir=1..sdim
 
       return
       end subroutine containing_cell
-    
+   
+      ! future work:
+      ! turn all the fortran code into an optimized library of routines
+      ! that can be called from c++ or python.
+      ! NOTE: Antoine Lemoine, JCP, Notus, has developed the fastest 
+      !  subroutines for MOF reconstruction.
+      !This routine finds the MAC cell that contains "x" 
+      ! dir_mac=0,..,sdim-1
+      subroutine containing_MACcell( &
+       bfact,dx,xlo,lo,x,dir_mac,mac_cell_index)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: dir_mac
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: lo(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      INTEGER_T, intent(out) :: mac_cell_index(SDIM)
+
+      INTEGER_T lo_e,e_index
+      INTEGER_T i1
+      INTEGER_T i1crit
+      INTEGER_T dir_local
+      REAL_T xnodes(bfact+1)
+
+      if ((dir_mac.ge.0).and.(dir_mac.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir_mac invalid"
+       stop
+      endif
+
+       ! NINT=nearest int
+      do dir_local=1,SDIM
+       if (bfact.eq.1) then  ! evenly spaced points
+        ! dir_local!=dir_mac+1: x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
+        ! dir_local==dir_mac+1: x=(i-lo)dx+xlo  i=(x-xlo)/dx+lo
+        if (dir_local.ne.dir_mac+1) then
+         mac_cell_index(dir_local)= &
+          NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local)-half )+ &
+          lo(dir_local)
+        else if (dir_local.eq.dir_mac+1) then
+         mac_cell_index(dir_local)= &
+          NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local) )+ &
+          lo(dir_local)
+        else
+         print *,"dir_local or dir_mac bust"
+         stop
+        endif
+       else if (bfact.gt.1) then
+        lo_e=lo(dir_local)/bfact
+        if (lo_e*bfact.ne.lo(dir_local)) then
+         print *,"bfact invalid37"
+         stop
+        endif
+         ! find element whose center is closest to x (i.e. find the
+         ! element that contains x)
+         ! dx_e=bfact*dx
+         ! x=(e_index-lo_e+1/2)dx_e+xlo
+        e_index= &
+          NINT( (x(dir_local)-xlo(dir_local))/(bfact*dx(dir_local))-half )+lo_e
+         ! returns the Gauss Lobatto points in element e_index
+        call element_GLnodes1D(xnodes,xlo(dir_local),e_index,lo_e, &
+         dx(dir_local),bfact)
+       
+        if (dir_local.ne.dir_mac+1) then
+         if (x(dir_local).le.xnodes(1)) then
+          mac_cell_index(dir_local)=e_index*bfact
+         else if (x(dir_local).ge.xnodes(bfact+1)) then 
+          mac_cell_index(dir_local)=e_index*bfact+bfact-1
+         else
+          do i1=1,bfact
+           if ((x(dir_local).ge.xnodes(i1)).and. &
+               (x(dir_local).le.xnodes(i1+1))) then
+            mac_cell_index(dir_local)=e_index*bfact+i1-1
+           endif
+          enddo
+         endif
+        else if (dir_local.eq.dir_mac+1) then
+
+         i1crit=1
+         do i1=2,bfact+1
+          if (xnodes(i1).gt.xnodes(i1crit)) then
+           if (abs(x(dir_local)-xnodes(i1)).le. &
+               abs(x(dir_local)-xnodes(i1crit))) then
+            i1crit=i1
+           endif
+          else
+           print *,"expecting xnodes(i1).gt.xnodes(i1crit)"
+           stop
+          endif
+         enddo ! i1=2..bfact+1
+         mac_cell_index(dir_local)=e_index*bfact+i1crit-1
+
+        else
+         print *,"dir_local or dir_mac bust"
+         stop
+        endif
+       else
+        print *,"bfact invalid38"
+        stop
+       endif
+      enddo ! dir_local=1..sdim
+
+      return
+      end subroutine containing_MACcell
+
 
       subroutine containing_node( &
        bfact,dx,xlo,lo,x,node_index)
@@ -8188,7 +10032,8 @@ contains
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_flagF
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid CTML_FSI_flagF"
@@ -8199,7 +10044,8 @@ contains
 
       CTML_FSI_flagF=0
       do im=1,nmat
-       if (FSI_flag(im).eq.4) then
+       if ((FSI_flag(im).eq.4).or. &
+           (FSI_flag(im).eq.8)) then
 #ifdef MVAHABFSI
         CTML_FSI_flagF=1
 #else
@@ -8230,7 +10076,7 @@ contains
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_mat
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid CTML_FSI_MAT"
@@ -8243,7 +10089,8 @@ contains
        stop
       endif
       CTML_FSI_mat=0
-      if (FSI_flag(im).eq.4) then
+      if ((FSI_flag(im).eq.4).or. &
+          (FSI_flag(im).eq.8)) then
 #ifdef MVAHABFSI
        CTML_FSI_mat=1
 #else
@@ -8266,6 +10113,32 @@ contains
       return
       end function CTML_FSI_mat
 
+      function fort_FSI_flag_valid(nmat,im)
+      use probcommon_module
+      IMPLICIT NONE
+      INTEGER_T fort_FSI_flag_valid
+      INTEGER_T, intent(in) :: nmat,im
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid fort_FSI_flag_valid"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid16"
+       stop
+      endif
+      if ((FSI_flag(im).ge.0).and.(FSI_flag(im).le.8)) then
+       fort_FSI_flag_valid=1
+      else
+       print *,"FSI_flag invalid"
+       stop
+       fort_FSI_flag_valid=0
+      endif
+
+      return
+      end function fort_FSI_flag_valid
 
       function is_ice(nmat,im)
       use probcommon_module
@@ -8273,7 +10146,7 @@ contains
       IMPLICIT NONE
 
       INTEGER_T is_ice
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_ice"
@@ -8294,6 +10167,7 @@ contains
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.4).or. &
+               (FSI_flag(im).eq.8).or. &
                (FSI_flag(im).eq.5)) then
        is_ice=0
       else
@@ -8303,56 +10177,6 @@ contains
 
       return
       end function is_ice
-
-      function is_elastic_material(nmat,im)
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T :: is_elastic_material
-      INTEGER_T, intent(in) :: nmat,im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_elastic_material"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
-       print *,"im invalid16"
-       stop
-      endif
-      is_elastic_material=0
-
-      if (is_rigid(nmat,im).eq.0) then
-       if ((fort_elastic_time(im).gt.zero).and. &
-           (fort_elastic_viscosity(im).gt.zero)) then
-        if (fort_viscoelastic_model(im).eq.2) then
-         is_elastic_material=1
-        else if ((fort_viscoelastic_model(im).eq.1).or. &
-                 (fort_viscoelastic_model(im).eq.0)) then
-         ! do nothing
-        else
-         print *,"viscoelastic_model(im) invalid"
-         stop
-        endif
-       else if ((fort_elastic_time(im).eq.zero).or. &
-                (fort_elastic_viscosity(im).eq.zero)) then
-        ! do nothing
-       else
-        print *,"fort_elastic_time(im) or fort_elastic_viscosity(im) invalid"
-        stop
-       endif
-      else if (is_rigid(nmat,im).eq.1) then
-       ! do nothing
-      else
-       print *,"is_rigid invalid"
-       stop
-      endif
-
-      return
-      end function is_elastic_material
-
 
       function is_FSI_rigid(nmat,im)
       use probcommon_module
@@ -8372,6 +10196,16 @@ contains
        print *,"im invalid16"
        stop
       endif
+! FSI_flag:
+! 0 fluid, tessellating (default)
+! 1 prescribed rigid solid, non-tessellating (PROB.F90)
+! 2 prescribed rigid solid, non-tessellating (sci_clsvof.F90)
+! 3 FSI ice,tessellating
+! 4 FSI, non-tessellating link w/Kourosh Shoele
+! 5 FSI rigid solid, tessellating (PROB.F90)
+! 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
+! 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
+! 8 FSI, non-tessellating link w/Kourosh Shoele, pres-vel coupling
       is_FSI_rigid=0
       if (FSI_flag(im).eq.5) then
        is_FSI_rigid=1
@@ -8380,6 +10214,7 @@ contains
                (FSI_flag(im).eq.1).or. &
                (FSI_flag(im).eq.2).or. &
                (FSI_flag(im).eq.4).or. &
+               (FSI_flag(im).eq.8).or. &
                (FSI_flag(im).eq.3).or. &
                (FSI_flag(im).eq.6)) then
        is_FSI_rigid=0
@@ -8415,6 +10250,7 @@ contains
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
           (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (CAD)
           (FSI_flag(im).eq.4).or. & ! FSI link w/Kourosh Shoele
+          (FSI_flag(im).eq.8).or. & ! FSI link w/Kourosh Shoele, pres-vel
           (FSI_flag(im).eq.6).or. & ! lag ice (CAD)
           (FSI_flag(im).eq.7)) then ! lag fluid (CAD)
        is_lag_part=1
@@ -8436,17 +10272,22 @@ contains
       IMPLICIT NONE
 
       INTEGER_T is_rigid
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
       INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.nmat)) then
        print *,"im invalid17 in is_rigid: im=",im
        print *,"nmat=",nmat
-! By pressing <CTRL C> during this read statement, the
-! gdb debugger will produce a stacktrace.
-!       print *,"type 0 then <enter> to exit the program"
-!       read(*,*) dummy_input
-       error stop
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:10214"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid is_rigid"
@@ -8457,6 +10298,7 @@ contains
 
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
           (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (sci_clsvof.F90)
+          (FSI_flag(im).eq.8).or. & ! FSI pres-vel, Kourosh Shoele
           (FSI_flag(im).eq.4)) then ! FSI link w/Kourosh Shoele
        is_rigid=1  ! non-tessellating material
       else if ((FSI_flag(im).eq.0).or. &
@@ -8473,6 +10315,38 @@ contains
       return
       end function is_rigid
 
+      function fort_is_eulerian_elastic_model(elastic_visc_in, &
+        viscoelastic_model_in) 
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T fort_is_eulerian_elastic_model
+      REAL_T, intent(in) :: elastic_visc_in
+      INTEGER_T, intent(in) :: viscoelastic_model_in
+
+      if (elastic_visc_in.gt.zero) then
+       if ((viscoelastic_model_in.eq.0).or. &
+           (viscoelastic_model_in.eq.1).or. &
+           (viscoelastic_model_in.eq.2).or. &
+           (viscoelastic_model_in.eq.3)) then
+        fort_is_eulerian_elastic_model=1
+       else if (viscoelastic_model_in.eq.4) then
+        fort_is_eulerian_elastic_model=0
+       else
+        print *,"viscoelastic_model_in invalid"
+        stop
+        fort_is_eulerian_elastic_model=0
+       endif
+      else if (elastic_visc_in.eq.zero) then
+       fort_is_eulerian_elastic_model=0
+      else
+       print *,"elastic_visc_in invalid"
+       stop
+       fort_is_eulerian_elastic_model=0
+      endif
+
+      return
+      end function fort_is_eulerian_elastic_model
 
       function is_prescribed(nmat,im)
       use probcommon_module
@@ -8493,14 +10367,26 @@ contains
        stop
       endif
 
-      if ((is_rigid(nmat,im).eq.1).and. &
-          (CTML_FSI_mat(nmat,im).eq.0)) then
-       is_prescribed=1
-      else if ((is_rigid(nmat,im).eq.0).or. &
-               (CTML_FSI_mat(nmat,im).eq.1)) then
+      if (is_rigid(nmat,im).eq.0) then
        is_prescribed=0
+      else if (is_rigid(nmat,im).eq.1) then
+       if (CTML_FSI_mat(nmat,im).eq.0) then
+        is_prescribed=1
+       else if (CTML_FSI_mat(nmat,im).eq.1) then
+        if (FSI_flag(im).eq.4) then ! Goldstein et al
+         is_prescribed=0
+        else if (FSI_flag(im).eq.8) then ! pres-vel coupling
+         is_prescribed=1
+        else
+         print *,"FSI_flag invalid"
+         stop
+        endif
+       else 
+        print *,"CTML_FSI_mat(nmat,im) invalid"
+        stop
+       endif
       else
-       print *,"is_rigid or CTML_FSI_mat invalid"
+       print *,"is_rigid invalid"
        stop
       endif
 
@@ -8805,9 +10691,9 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,iten
-      REAL_T LS(nmat)
-      REAL_T LS_extend
+      INTEGER_T, intent(in) :: nmat,iten
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(out) :: LS_extend
       INTEGER_T im,im_opp
 
       if (nmat.ne.num_materials) then
@@ -8839,10 +10725,10 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,iten
-      REAL_T LS(nmat)
-      REAL_T NRM(nmat*SDIM)
-      REAL_T NRM_extend(SDIM)
+      INTEGER_T, intent(in) :: nmat,iten
+      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(in) :: NRM(nmat*SDIM)
+      REAL_T, intent(out) :: NRM_extend(SDIM)
       INTEGER_T im,im_opp,dir
 
       if (nmat.ne.num_materials) then
@@ -8877,6 +10763,54 @@ contains
       
       return
       end subroutine get_LSNRM_extend
+
+
+      subroutine get_VOF_extend(VOF,nmat,iten,VOF_extend)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: nmat,iten
+      REAL_T, intent(in) :: VOF(nmat)
+      REAL_T, intent(out) :: VOF_extend
+      INTEGER_T im,im_opp
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid get_VOF_extend"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+      call get_inverse_iten(im,im_opp,iten,nmat)
+      if (im.ge.im_opp) then
+       print *,"im or im_opp invalid"
+       stop
+      endif
+      if ((VOF(im).ge.-VOFTOL).and. &
+          (VOF(im).le.one+VOFTOL).and. &
+          (VOF(im_opp).ge.-VOFTOL).and. &
+          (VOF(im_opp).le.one+VOFTOL)) then 
+
+       if (VOF(im).gt.VOF(im_opp)) then
+        VOF_extend=one-VOF(im_opp)
+       else if (VOF(im_opp).gt.VOF(im)) then
+        VOF_extend=VOF(im)
+       else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL)  then
+        VOF_extend=half
+       else
+        print *,"VOF bust"
+        stop
+       endif
+
+      else
+       print *,"VOF bust"
+       stop
+      endif
+      
+      return
+      end subroutine get_VOF_extend
+
+
 
         ! "minus" refers to the cell containing the interface with the
         ! largest surface area.
@@ -9194,6 +11128,195 @@ contains
       return
       end subroutine tridiag_solve
 
+      subroutine patterned_substrates(x,y,z,dist,time,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: x,y,z,time
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(out) :: dist
+      REAL_T :: xprime
+      REAL_T :: yprime
+      REAL_T :: zprime
+      REAL_T :: xvec(SDIM)
+      REAL_T :: local_pi
+      REAL_T :: pitch,ptb_f,ptb_disbtx,ptb_disbty,ptb_dist,rPillar
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid10"
+       stop
+      endif
+
+      if ((time.ge.zero).and.(time.le.1.0D+20)) then
+       ! do nothing
+      else if (time.ge.1.0D+20) then
+       print *,"WARNING time.ge.1.0D+20 in patterned dist"
+      else if (time.lt.zero) then
+       print *,"time invalid in patterned dist"
+       stop
+      else
+       print *,"time bust in patterned dist"
+       stop
+      endif
+
+      if (is_rigid(num_materials,im).ne.1) then
+       print *,"is_rigid invalid"
+       stop
+      endif
+
+      if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
+       print *,"adv_dir invalid patterned dist (1)"
+       stop
+      endif
+
+      xprime=x
+      yprime=y
+      zprime=z
+      xvec(1)=x
+      xvec(2)=y
+      if (SDIM.eq.3) then
+       xvec(SDIM)=z
+      endif
+
+      ! ysg patterned surface 
+      ! ptb_f=66 !3333.3333
+      ! pi=3.14159265
+      ! ptb_dist=(sin(pi/2+pi*ptb_f*x)-1.0)**2+(sin(pi/2+pi*ptb_f*y)-1.0)**2
+      !  if (ptb_dist.ge.3.95) then
+      !          ptb_dist=0.14
+      !  else 
+      !          ptb_dist=0.0
+      !  endif
+      !------------------------------------------------------------------------
+      ! Ahmed -- this is the first set of run with modified air density to see
+      ! what happens with high penetration (more SE to KE conversion)
+      ! Do not work on this anymore, copy and paste it to second one to change
+      ! and study the pitch , call this study 1 - Ahmed, 11/8/2020
+      !------------------------------------------------------------------------
+      ! Study 1 - Pillar Penetration with pitch of 0.027
+      
+      !pi=3.14159265
+      !pitch=0.027
+      !ptb_f=2/pitch
+      ! ptb_disbtx=MOD(x,pitch)
+      ! ptb_disbty=MOD(y,pitch)
+      !if((ptb_disbtx.le.0.016.or.ptb_disbtx.ge.0.044).and. &
+      ! (ptb_disbty.le.0.016.or.ptb_disbty.ge.0.044))then
+      ! if(ptb_disbtx.ge.0.044)then
+      !  ptb_disbtx=pitch-ptb_disbtx
+      ! endif
+      ! if(ptb_disbty.ge.0.044)then
+      !  ptb_disbty=pitch-ptb_disbty
+      ! endif
+      ! rPillar=SQRT(ptb_disbtx**2+ptb_disbty**2)
+      ! if(rPillar.le.0.016)then
+      !  !ptb_dist=SQRT(0.00016**2-rPillar**2)-SQRT(0.00016**2-0.00015**2)+0.002
+      !  ptb_dist=0.1
+      ! else
+      !  ptb_dist=0
+      ! endif
+      !else
+      ! ptb_dist=0
+      ! endif
+      
+      !------------------------------------------------------------------------
+      ! Study 2
+      !ptb_dist=0.01*sin(20000*pi*x)+(1*10**(-8))*y
+      ! this works like a sine function - Ahmed 10-31-2020
+      !ptb_dist = 0.03+0.5*0.04*sin((2*pi/0.030)*x) <---- this works
+      !ptb_dist = 0.03+0.5*0.04*sin((2*pi/0.031)*x) <---- did not work
+      !------------------------------------------------------------------------
+      ! Study 3
+      ! Implement Paper Guo et al. Droplet Impact on Anisotropic
+      ! Superhydrophobic Surfaces, Langmuir
+      !ptb_dist=0.05+(8*(2**0.5)/(pi**2))*((0.04*sin(200*x) &
+      !         +(0.04*sin(200*3*x)/9)-(0.04*sin(200*5*x)/25) &
+      !         -(0.04*sin(200*7*x)/49)+(0.04*sin(200*9*x)/81) &
+      !         +(0.04*sin(200*11*x)/121)))    
+      !---------------------------------------------------------------
+      ! Study 4 - Pillar Penetration with pitch of 0.02 and 0.035 
+      !           Pillar radius is held at 0.0125
+
+      local_pi=four*atan(one)
+
+       ! pitch value large yields larger radii posts
+      pitch=0.02d0 !0.0350 !0.080 !0.040 !0.030 !0.06 
+                   !< this controls the pitch
+      ptb_f=two/pitch
+      ptb_disbtx=MOD(x,pitch)
+      ptb_disbty=MOD(y,pitch)
+       ! ! if pitch value cross the limit below, 
+       ! ! then the radius of the pillar becomes
+       ! ! smaller (less than the .le.) or
+       ! ! bigger (if more than .ge.)
+      if((ptb_disbtx.le.0.020.or.ptb_disbtx.ge.0.040).and. &
+         (ptb_disbty.le.0.020.or.ptb_disbty.ge.0.040))then
+
+        if(ptb_disbtx.ge.0.040)then
+         ptb_disbtx=pitch-ptb_disbtx
+        endif
+        if(ptb_disbty.ge.0.040)then
+         ptb_disbty=pitch-ptb_disbty
+        endif
+        rPillar=SQRT(ptb_disbtx**2+ptb_disbty**2)
+        if(rPillar.le.0.01250)then !0.01250 !0.025 !0.025 !0.0125 
+                                   !< this controls the radius
+         
+         !ptb_dist=SQRT(0.00016**2-rPillar**2)-SQRT(0.00016**2-0.00015**2)+ &
+         ! 0.002
+         ptb_dist=0.05 !< Was 0.0005 to make a dimple surface, now turned it
+                         !to 0.001 to make all flat surface
+        else
+         ptb_dist=0.1
+        endif
+      else
+       ptb_dist=0.1
+      endif
+       
+       !---------------------------------------------------------------------
+       !---------------------------------------------------------------------
+       ! Study 5 - Pancake Bouncing on Superhydrophobic Surfaces 
+       !   Liu,Moevius,Xu,Qian 
+       !           Pancake Bouncing: Simulations and Theory and 
+       !           Experimental Verification
+       !			by Moevius, Liu, Wang, Yeomans
+       !pi=3.14159265
+       !! pitch value large yields larger radii posts
+       !pitch=0.030  !0.080 !0.040 !0.030 !0.06 !< this controls the pitch
+       !!ptb_f=2/pitch
+       ! ptb_disbtx=MOD(x,pitch)
+       ! ptb_disbty=MOD(y,pitch)
+       ! ! if pitch value cross the limit below, 
+       ! ! then the radius of the pillar becomes
+       ! ! smaller (less than the .le.) or
+       ! ! bigger (if more than .ge.)
+       !if((ptb_disbtx.le.0.010.or.ptb_disbtx.ge.0.0440).and. &
+       ! (ptb_disbty.le.0.010.or.ptb_disbty.ge.0.0440))then
+       ! if(ptb_disbtx.ge.0.040)then
+       !  ptb_disbtx=pitch-ptb_disbtx
+       ! endif
+       ! if(ptb_disbty.ge.0.040)then
+       !  ptb_disbty=pitch-ptb_disbty
+       ! endif
+       ! rPillar=SQRT(ptb_disbtx**2+ptb_disbty**2)
+       ! if(rPillar.le.0.010)then !0.01250 !0.025 !0.025 !0.0125 
+                                  !< this controls the radius
+         
+       !  !ptb_dist=SQRT(0.00016**2-rPillar**2)- &
+       !  SQRT(0.00016**2-0.00015**2)+0.002
+       !  ptb_dist=0.14
+       ! else
+       !  ptb_dist=0
+       ! endif
+       !else
+       ! ptb_dist=0
+       ! endif
+       
+       !------------------------------------------------------------------------
+      dist=z-ptb_dist
+      
+      return
+      end subroutine patterned_substrates
 
        ! negative on the inside of the square
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
@@ -9316,44 +11439,6 @@ contains
       return
       end subroutine cubedist
 
-      subroutine make_mixture_density(massfrac, &
-        den_ambient,denvapor)
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: massfrac
-      REAL_T, intent(in) :: denvapor
-      REAL_T, intent(inout) :: den_ambient
-
-       ! input: denvapor = vapor density
-       !        den_ambient = ambient density
-       ! output: den_ambient = total density
-       !   (  denvapor * F =den_total * Y  ) * den_ambient +
-       !   (  den_ambient (1-F) = den_total * (1-Y) ) * denvapor
-       !   denvapor * den_ambient = 
-       !     den_total (Y * den_ambient + (1-Y) * denvapor)
-       !   den_total=denvapor * den_ambient/ 
-       !     (Y * den_ambient + (1-Y) * denvapor)
-      if ((massfrac.ge.zero).and.(massfrac.le.one)) then
-       if (denvapor.gt.zero) then
-        if (den_ambient.gt.zero) then
-         den_ambient=den_ambient*denvapor/ &
-           (denvapor*(one-massfrac)+den_ambient*massfrac)
-        else
-         print *,"den_ambient invalid"
-         stop
-        endif
-       else
-        print *,"denvapor invalid"
-        stop
-       endif
-      else
-       print *,"massfrac invalid"
-       stop
-      endif
-
-      return
-      end subroutine make_mixture_density
-
       subroutine dumpstring_headers_sanity(plot_sdim,ncomp)
       IMPLICIT NONE
 
@@ -9374,13 +11459,13 @@ contains
        stop
       endif
 
-      Varname='X'
+      Varname='x_pos'
       call dumpstring(Varname)
-      Varname='Y'
+      Varname='y_pos'
       call dumpstring(Varname)
 
       if (plot_sdim.eq.3) then
-       Varname='Z'
+       Varname='z_pos'
        call dumpstring(Varname)
       endif
 
@@ -9393,9 +11478,8 @@ contains
         endif
        enddo
 
-       ih=1
-       Varname='U'
-       ih=ih+1
+       Varname='sanity_var'  ! 17..26=>26-17+1=10
+       ih=11
        do i=1,3
         Varname(ih:ih)=matstr(i:i)
         ih=ih+1
@@ -9426,7 +11510,6 @@ contains
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        ncomp)
       use probcommon_module
@@ -9453,7 +11536,6 @@ contains
       INTEGER_T, intent(in) :: data_id
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
 
       INTEGER_T strandid
@@ -9462,7 +11544,7 @@ contains
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32
       character*80 rmcommand
 
       character*6 stepstr
@@ -9528,6 +11610,13 @@ contains
        stop
       endif
 
+      if (ncomp.ge.1) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+
       nwrite2d=SDIM+ncomp
       nwrite3d=plot_sdim+ncomp
 
@@ -9569,8 +11658,12 @@ contains
         dir_chars='YC'
       else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
         dir_chars='ZC'
-      else if (data_dir.eq.SDIM) then
-        dir_chars='ND'
+      else if (data_dir.eq.3) then
+        dir_chars='XY'
+      else if ((data_dir.eq.4).and.(SDIM.eq.3)) then
+        dir_chars='XZ'
+      else if ((data_dir.eq.5).and.(SDIM.eq.3)) then
+        dir_chars='YZ'
       else
         print *,"data_dir invalid"
         stop
@@ -9632,8 +11725,17 @@ contains
          gridstr(i:i)='0'
         endif
        enddo
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       open(unit=4,file=filename18)
+#if (STANDALONE==0)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+      print *,"STANDALONE invalid"
+      stop
+#endif
+       open(unit=4,file=filename32)
 
        do dir=1,plot_sdim
         if ((dir.eq.1).or.(dir.eq.2)) then
@@ -9869,9 +11971,18 @@ contains
         endif
        enddo
 
-       write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-       open(unit=4,file=filename18)
-       print *,"filename18 ",filename18
+#if (STANDALONE==0)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+       write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+       print *,"STANDALONE invalid"
+       stop
+#endif
+       open(unit=4,file=filename32)
+       print *,"filename32 ",filename32
 
        do dir=1,SDIM
         read(4,*) lo(dir),hi(dir)
@@ -9889,7 +12000,7 @@ contains
          stop
         endif
 
-       enddo  ! dir
+       enddo  ! dir = 1..sdim
 
        dir=plot_sdim
        lo(dir)=0
@@ -9943,11 +12054,10 @@ contains
           stop
          endif
 
-        enddo ! k
+        enddo ! k=0,hi_index_shift(3)
 
-       enddo
-       enddo
-!      enddo
+       enddo ! i=0,hi_index_shift(1)
+       enddo ! j=0,hi_index_shift(2)
 
        close(4)
 
@@ -9978,7 +12088,7 @@ contains
         enddo
         enddo
         enddo
-       enddo
+       enddo ! do ivar_gb=1,nwrite3d
 
        deallocate(zone3d_gb(iz_gb)%var)
        deallocate(zone2d_gb(iz_gb)%var)
@@ -9989,7 +12099,7 @@ contains
         igrid=0
        endif
 
-      enddo  ! iz_gb
+      enddo  ! iz_gb=1,nzones_gp
 
       deallocate(zone3d_gb)
       deallocate(zone2d_gb)
@@ -9998,21 +12108,23 @@ contains
 
       close(11)
      
-      rmcommand='rm tempnddata*'
-
-      print *,"issuing command ",rmcommand
-
+      rmcommand='rm ./temptecplot_tempnddata*'
       sysret=0
 
-#ifdef PGIFORTRAN
-      call system(rmcommand)
-#else
+#if (STANDALONE==0)
+      ! do nothing
+#elif (STANDALONE==1)
+      print *,"issuing command ",rmcommand
       call execute_command_line(rmcommand,exitstat=sysret)
-#endif
+
       if (sysret.ne.0) then
        print *,"execute_command_line has sysret=",sysret
        stop
       endif
+#else
+      print *,"STANDALONE invalid"
+      stop
+#endif
 
       return
       end subroutine zones_revolve_sanity
@@ -10175,6 +12287,44 @@ contains
       end subroutine VISC_dodecane
 
 
+      subroutine geom_avg(local_plus,local_minus,wt_plus,wt_minus, &
+                      coeff)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: local_plus,local_minus
+      REAL_T, intent(in) :: wt_plus,wt_minus
+      REAL_T, intent(out) :: coeff
+
+      if ((wt_plus.ge.zero).and.(wt_minus.ge.zero).and. &
+          (abs(wt_plus+wt_minus-one).le.VOFTOL)) then
+       ! do nothing
+      else
+       print *,"wt_plus+wt_minus should be 1"
+       stop
+      endif
+
+      if (1.eq.0) then
+       coeff=wt_plus*local_plus+wt_minus*local_minus
+      else
+       if ((local_plus.eq.zero).and.(local_minus.eq.zero)) then
+        coeff=zero
+       else if ((local_plus.eq.zero).and.(local_minus.gt.zero)) then
+        coeff=zero
+       else if ((local_plus.gt.zero).and.(local_minus.eq.zero)) then
+        coeff=zero
+       else if ((local_plus.gt.zero).and.(local_minus.gt.zero)) then
+        coeff=local_plus*local_minus/(wt_plus*local_minus+wt_minus*local_plus)
+       else
+        print *,"local_plus or local_minus invalid"
+        stop
+       endif
+      endif
+
+      return
+      end subroutine geom_avg
+
+
         ! CONTAINER ROUTINE FOR MEHDI VAHAB, MITSUHIRO OHTA, and
         ! MARCO ARIENTI
       REAL_T function get_user_viscconst(im,density,temperature)
@@ -10302,7 +12452,8 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,nmat,ibase,stage
+      INTEGER_T, intent(in) :: im
+      INTEGER_T :: nmat,ibase,stage
 
       nmat=num_materials
       if ((im.lt.1).or.(im.gt.nmat)) then
@@ -10579,7 +12730,7 @@ contains
       INTEGER_T dir
  
       if (n_sites.lt.1) then
-       print *,"n_sites invalid"
+       print *,"n_sites invalid (GLOBALUTIL.F90), n_sites=",n_sites
        stop
       endif
  
@@ -10939,12 +13090,12 @@ contains
        rhoMKS=1000.0*rho  ! kg/m^3
        rho_molar=rhoMKS/(0.001*water_molar_mass)  ! mol/m^3
         ! if rho=1g/cm^3 then rhoMKS=1000 kg/m^3 , rho_molar=1D+6/18 mol/m^3
-        !  Vm=18E-6 m^3/mole 
+        !  Vm=18D-6 m^3/mole 
        Vm=one/rho_molar     ! m^3/mole
 
        water_critical_temperature=647.0  ! degrees Kelvin
        water_critical_pressure=22.064D+6 ! Pascals=N/m^2
-        ! 55.9 cm^3/mol=55.9E-6 m^3/mole=5.59E-5 m^3/mole
+        ! 55.9 cm^3/mol=55.9D-6 m^3/mole=5.59D-5 m^3/mole
        water_critical_molar_volume=5.59D-5 ! m^3/mole
         ! units: J^2/(mol^2 N/m^2)=J^2 m^2/(mol^2 N)
         !  =(kg^2 m^4/s^4)m^2/(mol^2 kg m/s^2)=
@@ -11884,7 +14035,7 @@ contains
        B = 5.657D+8 ! dyne/cm^2 at 363 K
        Tc = 658.6
        T = internal_energy/cv
-       rho0 = 0.9291654-0.5174730*1e-3*T-3.338672*1E-7*T*T
+       rho0 = 0.9291654-0.5174730*1e-3*T-3.338672*1D-7*T*T
        Tred = T/Tc
        pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
        if (pressure.lt.pcav) then
@@ -13062,6 +15213,7 @@ contains
       IMPLICIT NONE
       REAL_T, intent(out) :: R,cp,cv,gamma_constant,omega
 
+       ! PARAMETERS declared in PROBCOMMON.F90
       R=R_AIR_PARMS  ! ergs/(Kelvin g)
       cv=CV_AIR_PARMS ! ergs/(Kelvin g)
       cp=cv+R  ! ergs/(Kelvin g)
@@ -13073,7 +15225,7 @@ contains
 
        ! density_at_depth previously initialized by:
        ! init_density_at_depth() 
-       ! called from: FORT_DENCOR, general_hydrostatic_pressure_density,
+       ! called from:  
        ! boundary_hydrostatic, EOS_air_rho2, EOS_air_rho2_ADIABAT,
        ! SOUNDSQR_air_rho2, EOS_error_ind, presBDRYCOND, FORT_INITDATA 
       subroutine tait_hydrostatic_pressure_density( &
@@ -13088,270 +15240,109 @@ contains
       REAL_T denfree,zfree
       REAL_T z_at_depth
 
-      if (is_in_probtype_list().eq.1) then
+      ! in tait_hydrostatic_pressure_density
+      if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
+       rho=one
+       call EOS_tait_ADIABATIC(rho,pres)
+      ! JICF nozzle+pressure bc
+      else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
+       rho=one
+       call EOS_tait_ADIABATIC(rho,pres)
+       ! JICF
+      else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
+       rho=fort_denconst(1)
+       call EOS_tait_ADIABATIC_rho(rho,pres)
+      ! impinging jets
+      else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
+               (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
+       rho=fort_denconst(1)
+       call EOS_tait_ADIABATIC_rho(rho,pres)
 
-       call SUB_hydro_pressure_density(xpos,rho,pres, &
-               from_boundary_hydrostatic)
+       ! in: tait_hydrostatic_pressure_density
+      else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
 
-      else
+       if (probloy.ne.zero) then
+        print *,"probloy must be 0 for bubble jetting problem"
+        stop
+       endif
+       ! yblob is distance from domain bottom of charge
+       ! zblob is depth of charge
+       denfree=one
+       zfree=zblob+yblob  ! relative to computational grid
+       z_at_depth=yblob
+       if (xpos(SDIM).gt.zfree) then
+        rho=denfree
+       else
+        rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+       endif
+       call EOS_tait_ADIABATIC(rho,pres)
 
-       ! in tait_hydrostatic_pressure_density
-       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
-        rho=one
-        call EOS_tait_ADIABATIC(rho,pres)
-       ! JICF nozzle+pressure bc
-       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
-        rho=one
-        call EOS_tait_ADIABATIC(rho,pres)
-        ! JICF
-       else if ((probtype.eq.53).and.(fort_material_type(1).eq.7)) then
-        rho=fort_denconst(1)
-        call EOS_tait_ADIABATIC_rho(rho,pres)
-       ! impinging jets
-       else if ((probtype.eq.530).and.(axis_dir.eq.1).and. &
-                (fort_material_type(1).eq.7).and.(SDIM.eq.3)) then
-        rho=fort_denconst(1)
-        call EOS_tait_ADIABATIC_rho(rho,pres)
+      else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
 
-        ! in: tait_hydrostatic_pressure_density
-       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
-
-        if (probloy.ne.zero) then
-         print *,"probloy must be 0 for bubble jetting problem"
-         stop
-        endif
-        ! yblob is distance from domain bottom of charge
-        ! zblob is depth of charge
-        denfree=one
+       if (probloy.ne.zero) then
+        print *,"probloy must be 0 for cavitation problem"
+        stop
+       endif
+       ! yblob is distance from domain bottom of charge/sphere
+       ! zblob is depth of charge (for jwl problem)
+       denfree=one
+       if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
         zfree=zblob+yblob  ! relative to computational grid
         z_at_depth=yblob
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC(rho,pres)
-
-       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
-
-        if (probloy.ne.zero) then
-         print *,"probloy must be 0 for cavitation problem"
-         stop
-        endif
-        ! yblob is distance from domain bottom of charge/sphere
-        ! zblob is depth of charge (for jwl problem)
-        denfree=one
-        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-         zfree=zblob+yblob  ! relative to computational grid
-         z_at_depth=yblob
-        else if (axis_dir.eq.10) then
-         zfree=zblob
-         z_at_depth=zero
-        else if (axis_dir.eq.20) then
-         print *,"there is no gravity for the CODY ESTEBE created test problem"
-         stop
-        else
-         print *,"axis_dir out of range"
-         stop
-        endif
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC(rho,pres)
-
-       else if (fort_material_type(1).eq.13) then
-
-        denfree=fort_denconst(1)
-        if (SDIM.eq.2) then
-         zfree=probhiy
-         z_at_depth=probloy
-        else if (SDIM.eq.3) then
-         zfree=probhiz
-         z_at_depth=probloz
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-         ! density_at_depth is found so that
-         ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
-         !
-        if (xpos(SDIM).gt.zfree) then
-         rho=denfree
-        else
-         rho= &
-           ((density_at_depth-denfree)/ &
-            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-        endif
-        call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+       else if (axis_dir.eq.10) then
+        zfree=zblob
+        z_at_depth=zero
+       else if (axis_dir.eq.20) then
+        print *,"there is no gravity for the CODY ESTEBE created test problem"
+        stop
        else
-        print *,"probtype invalid tait_hydrostatic_pressure_density"
+        print *,"axis_dir out of range"
+        stop
+       endif
+       if (xpos(SDIM).gt.zfree) then
+        rho=denfree
+       else
+        rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+       endif
+       call EOS_tait_ADIABATIC(rho,pres)
+
+      else if (fort_material_type(1).eq.13) then
+
+       denfree=fort_denconst(1)
+       if (SDIM.eq.2) then
+        zfree=probhiy
+        z_at_depth=probloy
+       else if (SDIM.eq.3) then
+        zfree=probhiz
+        z_at_depth=probloz
+       else
+        print *,"dimension bust"
         stop
        endif
 
+        ! density_at_depth is found so that
+        ! (p(density_at_depth)-p(rho_0))/(rho_0 (z_at_depth-zfree))=g
+        !
+       if (xpos(SDIM).gt.zfree) then
+        rho=denfree
+       else
+        rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+       endif
+       call EOS_tait_ADIABATIC_rhohydro(rho,pres)
+      else
+       print *,"probtype invalid tait_hydrostatic_pressure_density"
+       stop
       endif
 
       return
       end subroutine tait_hydrostatic_pressure_density
 
-
-       ! only called if override_density=1 or override_density=2
-       ! only takes into account fort_drhodz.
-       ! caller_id==0  => called from DENCOR
-       ! caller_id==1  => called from general_hydrostatic_pressure_density
-       !                  (which is called from INITPOTENTIAL)
-      subroutine default_hydrostatic_pressure_density( &
-        xpos,rho,pres,liquid_temp, &
-        gravity_normalized, &
-        imat,override_density, &
-        caller_id)
-      use probcommon_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: imat
-      INTEGER_T, intent(in) :: override_density
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T nmat
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: rho,pres
-      REAL_T, intent(in) :: gravity_normalized
-      REAL_T, intent(in) :: liquid_temp
-      REAL_T denfree,zfree,z_at_depth
-      REAL_T energy_free,csqr,max_depth,DrhoDz
-
-
-      nmat=num_materials
-      if ((imat.lt.1).or.(imat.gt.nmat)) then
-       print *,"imat invalid"
-       stop
-      endif
-
-      if ((override_density.ne.1).and. &
-          (override_density.ne.2)) then
-       print *,"override_density invalid"
-       stop
-      endif
-      if (liquid_temp.ge.zero) then
-       ! do nothing
-      else
-       print *,"liquid_temp cannot be negative"
-       stop
-      endif
-      if ((caller_id.eq.0).or. &
-          (caller_id.eq.1)) then
-       ! do nothing
-      else
-       print *,"caller_id invalid"
-       stop
-      endif
-
-       ! in default_hydrostatic_pressure_density
-      denfree=fort_denconst(imat)
-      energy_free=fort_energyconst(imat)
-      if (energy_free.gt.zero) then
-       ! do nothing
-      else
-       print *,"energy_free invalid in default_hydrostatic_pressure_density"
-       print *,"imat,energy_free= ",imat,energy_free
-       stop
-      endif
-
-      if (SDIM.eq.2) then
-       zfree=probhiy
-       z_at_depth=probloy
-      else if (SDIM.eq.3) then
-       zfree=probhiz
-       z_at_depth=probloz
-      else
-       print *,"sdim invalid"
-       stop
-      endif
-
-! let z be depth
-! rho=rho0 + Az
-! p=c^2 rho
-! grad p/rho+g=0
-! p_z=-(rho0+Az)g
-! p=-rho0 g z - Az^2 g/2 +C
-! at z=0, p=c^2 rho0=C
-! at z=L,
-! -rho0 g L - A L^2 g/2 + c^2 rho0=c^2(rho0+A L)
-! A( -L^2 g/2 - c^2 L)=rho0 g L
-! A=rho0 g/(-L g/2 -c^2)=rho0/(c^2/|g|-L/2)
-
-      call SOUNDSQR_tait(denfree,energy_free,csqr)
-      max_depth=zfree-z_at_depth
-
-      if (fort_drhodz(imat).eq.-one) then
-       DrhoDz=denfree/(csqr/abs(gravity)-half*max_depth)
-      else if (fort_drhodz(imat).ge.zero) then
-       DrhoDz=fort_drhodz(imat)
-      else
-       print *,"fort_drhodz invalid"
-       stop
-      endif
-
-      if (DrhoDz.ge.zero) then
-       ! do nothing
-      else
-       print *,"DrhoDz invalid"
-       stop
-      endif
-
-      if (xpos(SDIM).gt.zfree) then
-       rho=denfree
-      else if (xpos(SDIM).le.zfree) then
-       rho=denfree+DrhoDz*(zfree-xpos(SDIM))
-      else
-       print *,"xpos(SDIM) became corrupt"
-       stop
-      endif
-
-       ! rho=rho(T,Y,z)
-      if (override_density.eq.1) then
-
-       if ((DrhoDz.eq.zero).and. &
-           (gravity_normalized.eq.zero)) then
-
-        if (caller_id.eq.0) then
-         ! do nothing, called from DENCOR, keep rho=denfree=denconst(imat)
-        else if (caller_id.eq.1) then 
-          ! called from general_hydrostatic_pressure_density
-         rho=fort_denconst(1)
-        else
-         print *,"caller_id invalid"
-         stop
-        endif
-
-        pres=zero
-       else if ((DrhoDz.eq.zero).and. &
-                (gravity_normalized.ne.zero)) then
-        pres=-gravity_normalized*rho*xpos(SDIM)
-       else if (DrhoDz.ne.zero) then
-        pres=csqr*rho
-       else
-        print *,"DrhoDz and/or gravity_normalized invalid"
-        stop
-       endif
-
-       ! temperature dependent buoyancy force term
-      else if (override_density.eq.2) then
-
-       pres=-gravity_normalized*rho*xpos(SDIM)
-
-      else
-       print *,"override_density invalid"
-       stop
-      endif
-
-      return
-      end subroutine default_hydrostatic_pressure_density
 
       subroutine EOS_air_rho2(rho,internal_energy,pressure)
       use probcommon_module
@@ -13381,6 +15372,14 @@ contains
        print *,"cp error"
        stop
       endif
+       ! (gamma-1)rho*cv T=(cp/cv -1)*rho*cv T=
+       ! (cp-cv)*rho*T=(R_universal/MolarMass)*rho*T
+       ! R_universal ergs/(mol K)
+       ! MolarMass g/mol
+       ! erg=g cm^2/s^2
+       ! R_universal/MolarMass=g cm^2 / (s^2 g K)  
+       ! (g cm^2 / (s^2 g K)) *( g/cm^3 )  * K = (g/cm)/s^2
+       ! pressure=dyne/m^2=g (cm/s^2 )/cm^2 = (g/cm)/s^2
       pressure_adjust=omega*fort_denconst(2)* &
          cv*fort_tempconst(2)
 
@@ -15135,6 +17134,64 @@ contains
       return
       end subroutine EOS_material_CORE
 
+      subroutine dVdT_material_CORE(dVdT,massfrac_var, &
+        pressure,temperature, &
+        imattype,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: imattype,im
+      REAL_T, intent(in) :: pressure,temperature
+      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
+      REAL_T, intent(out) :: dVdT
+
+
+      if (pressure.gt.zero) then
+       ! do nothing
+      else
+       print *,"pressure invalid"
+       stop
+      endif
+      if (temperature.gt.zero) then
+       ! do nothing
+      else
+       print *,"temperature invalid"
+       stop
+      endif
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im invalid 16827:",im
+       stop
+      endif
+      if (fort_stiffGAMMA(im).ge.one) then
+       ! do nothing
+      else
+       print *,"fort_stiffGAMMA(im) invalid"
+       stop
+      endif
+      if (fort_stiffCV(im).gt.zero) then
+       ! do nothing
+      else
+       print *,"fort_stiffCV(im) invalid"
+       stop
+      endif
+
+      if ((imattype.ge.1).and. &
+          (imattype.le.23)) then
+       dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
+      else if (imattype.eq.0) then
+       dVdT=zero
+      else if (imattype.eq.999) then
+       dVdT=zero
+      else
+       print *,"imattype invalid in dVdT_material_CORE"
+       stop
+      endif
+
+      return
+      end subroutine dVdT_material_CORE
+
 
         ! in general for gas: e=cv T
         !                     p=(gamma-1)rho e=(gamma-1)rho cv T
@@ -15696,9 +17753,9 @@ if (probtype.eq.55) then
 
   if ((num_materials.ge.3).and. &
       (im_solid_substrate.ge.3).and. &
-      (abs(xcheck).lt.1.0E-7).and. &
-      (abs(ycheck).lt.1.0E-7).and. &
-      (abs(zcheck).lt.1.0E-7)) then
+      (abs(xcheck).lt.1.0D-7).and. &
+      (abs(ycheck).lt.1.0D-7).and. &
+      (abs(zcheck).lt.1.0D-7)) then
    im=1
    im_opp=2
    im_3=im_solid_substrate
@@ -15716,7 +17773,7 @@ if (probtype.eq.55) then
 
     ! angles other than 0 or pi are supported:
     ! 0 < angle < pi
-   if (abs(cos_angle).lt.one-1.0E-2) then 
+   if (abs(cos_angle).lt.one-1.0D-2) then 
 
     if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
         ((SDIM.eq.2).and.(levelrz.eq.1))) then
@@ -15907,7 +17964,8 @@ if ((sigma.ge.zero).and.(sigma.lt.two).and. &
     (Tvapor_probe.gt.zero)) then
  MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
    sqrt(MolarMassFluid/(2.0d0*Pi*R))* &
-   (Pgamma/sqrt(Tgamma)-Pvapor_probe/sqrt(Tvapor_probe))
+   (1.0d0/sqrt(Tgamma))* &
+   (Pgamma-Pvapor_probe)
 
 else
  print *,"parameter problems in MDOT_Kassemi"
@@ -15980,6 +18038,25 @@ if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
  if (R.gt.zero) then
   if (L.ne.zero) then
    if (WV.gt.zero) then
+    if (L.gt.zero) then  ! evaporation
+     if (Tgamma.le.TSAT) then
+      ! do nothing
+     else
+      print *,"Tgamma exceeds TSAT"
+      print *,"Tgamma,TSAT,R,L,WV ",Tgamma,TSAT,R,L,WV
+      stop
+     endif
+    else if (L.lt.zero) then ! condensation
+     if (Tgamma.ge.TSAT) then
+      ! do nothing
+     else
+      print *,"Tgamma is below TSAT"
+      stop
+     endif
+    else
+     print *,"L invalid"
+     stop
+    endif
     X=exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
    else
     print *,"WV invalid in X_from_Tgamma"
@@ -16144,6 +18221,7 @@ if ((X.ge.zero).and.(X.le.one)) then
  endif
 else
  print *,"X invalid in massfrac_from_volfrac"
+ print *,"X,WA,WV ",X,WA,WV
  stop
 endif
 
@@ -16205,6 +18283,75 @@ return
 end subroutine EOS_material
 
 
+subroutine dVdT_material(dVdT,massfrac_parm, &
+  pressure_in,temperature, &
+  imattype,im)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: imattype,im
+REAL_T, intent(in) :: pressure_in,temperature
+REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+REAL_T, intent(out) :: dVdT
+REAL_T :: pressure
+INTEGER_T :: ispec
+
+if (pressure_in.gt.zero) then
+ ! do nothing
+else
+ print *,"pressure_in invalid"
+ stop
+endif
+if (temperature.gt.zero) then
+ ! do nothing
+else
+ print *,"temperature invalid"
+ stop
+endif
+if ((im.ge.1).and.(im.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im invalid 17977:",im
+ stop
+endif
+if (fort_stiffGAMMA(im).ge.one) then
+ ! do nothing
+else
+ print *,"fort_stiffGAMMA(im) invalid"
+ stop
+endif
+if (fort_stiffCV(im).gt.zero) then
+ ! do nothing
+else
+ print *,"fort_stiffCV(im) invalid"
+ stop
+endif
+
+do ispec=1,num_species_var
+ if (massfrac_parm(ispec).ge.zero) then
+  ! do nothing
+ else
+  print *,"massfrac_parm invalid"
+  stop
+ endif
+enddo ! ispec
+
+pressure=pressure_in*global_pressure_scale
+
+if (is_in_probtype_list().eq.1) then
+ call SUB_dVdT(dVdT,massfrac_parm, &
+   pressure,temperature, &
+   imattype,im,num_species_var)
+else 
+ call dVdT_material_CORE(dVdT,massfrac_parm, &
+         pressure,temperature, &
+         imattype,im)
+endif
+
+return
+end subroutine dVdT_material
+
+
   ! returns De/DT / scale 
   ! T=(e/scale)*scale/cv
 subroutine DeDT_material(rho,massfrac_parm, &
@@ -16240,7 +18387,7 @@ else if ((imattype.eq.999).or. &
          ((imattype.ge.1).and.(imattype.le.MAX_NUM_EOS))) then
  call INTERNAL_material(rho,massfrac_parm, &
    temperature,e1,imattype,im)
- DT=temperature*1.0E-6
+ DT=temperature*1.0D-6
  T2=temperature+DT
  call INTERNAL_material(rho,massfrac_parm, &
    T2,e2,imattype,im)
@@ -16392,7 +18539,7 @@ return
 end subroutine INTERNAL_material
 
 
- ! called from FORT_OVERRIDE 
+ ! called from fort_override 
 subroutine init_density_at_depth()
 use probcommon_module
 IMPLICIT NONE
@@ -17117,8 +19264,9 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 end subroutine smooth_init
 
 subroutine stress_from_strain( &
- im_elastic, &
- xsten,nhalf, &
+ im_elastic, & ! =1..nmat
+ x_stress, & ! 1..sdim (x,y,z)
+ dx, &  ! representative dx values 1..sdim
  gradu, &  ! dir_x (displace),dir_space
  xdisplace, &
  ydisplace, &
@@ -17128,8 +19276,8 @@ use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im_elastic
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: x_stress(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: gradu(SDIM,SDIM)
 REAL_T, intent(in) :: xdisplace
 REAL_T, intent(in) :: ydisplace
@@ -17137,7 +19285,6 @@ REAL_T, intent(out) :: DISP_TEN(SDIM,SDIM)
 REAL_T, intent(out) :: hoop_22
 REAL_T :: gradu_local(SDIM,SDIM)
 INTEGER_T :: dir_x,dir_space,dir_inner
-REAL_T :: dx_local(SDIM)
 
 REAL_T :: hoop_12
 REAL_T strain_displacement(SDIM,SDIM)
@@ -17149,12 +19296,6 @@ REAL_T scale_factor
 REAL_T Identity_comp,trace_E,trace_SD,bulk_modulus,lame_coefficient
 INTEGER_T linear_elastic_model
 
-if (nhalf.ge.1) then
- ! do nothing
-else
- print *,"nhalf invalid"
- stop
-endif
 if ((im_elastic.ge.1).and.(im_elastic.le.num_materials)) then
  ! do nothing
 else
@@ -17162,6 +19303,7 @@ else
  stop
 endif
 
+ ! gradient of the Displacement: GRAD X
 do dir_x=1,SDIM  ! dir_x (displace)
 do dir_space=1,SDIM
  gradu_local(dir_x,dir_space)=gradu(dir_x,dir_space)
@@ -17169,11 +19311,10 @@ enddo
 enddo
 
 do dir_space=1,SDIM
- dx_local(dir_space)=xsten(1,dir_space)-xsten(-1,dir_space)
- if (dx_local(dir_space).gt.zero) then
+ if (dx(dir_space).gt.zero) then
   ! do nothing
  else
-  print *,"dx_local invalid"
+  print *,"dx invalid"
   stop
  endif
 enddo
@@ -17184,31 +19325,31 @@ if (SDIM.eq.2) then
  if (levelrz.eq.0) then
   ! do nothing
  else if (levelrz.eq.1) then
-  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
-  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+  if (x_stress(1).gt.VOFTOL*dx(1)) then
+   hoop_22=xdisplace/x_stress(1)  ! xdisplace/r
+  else if (abs(x_stress(1)).le.VOFTOL*dx(1)) then
    hoop_22=zero
   else 
    print *,"xsten(0,1) invalid"
    stop
   endif
  else if (levelrz.eq.3) then
-  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
-   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+  if (x_stress(1).gt.VOFTOL*dx(1)) then
+   hoop_12=-ydisplace/x_stress(1)  ! -ydisplace/r
+   hoop_22=xdisplace/x_stress(1)  ! xdisplace/r
    do dir_x=1,SDIM
-    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/x_stress(1)
    enddo
    gradu_local(1,2)=gradu_local(1,2)+hoop_12
    gradu_local(2,2)=gradu_local(2,2)+hoop_22
-  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+  else if (abs(x_stress(1)).le.VOFTOL*dx(1)) then
    hoop_12=zero
    hoop_22=zero
    do dir_x=1,SDIM
     gradu_local(dir_x,2)=zero
    enddo
   else 
-   print *,"xsten(0,1) invalid"
+   print *,"x_stress(1) invalid"
    stop
   endif
  else
@@ -17219,22 +19360,22 @@ else if (SDIM.eq.3) then
  if (levelrz.eq.0) then
   ! do nothing
  else if (levelrz.eq.3) then
-  if (xsten(0,1).gt.VOFTOL*dx_local(1)) then
-   hoop_12=-ydisplace/xsten(0,1)  ! -ydisplace/r
-   hoop_22=xdisplace/xsten(0,1)  ! xdisplace/r
+  if (x_stress(1).gt.VOFTOL*dx(1)) then
+   hoop_12=-ydisplace/x_stress(1)  ! -ydisplace/r
+   hoop_22=xdisplace/x_stress(1)  ! xdisplace/r
    do dir_x=1,SDIM
-    gradu_local(dir_x,2)=gradu_local(dir_x,2)/xsten(0,1)
+    gradu_local(dir_x,2)=gradu_local(dir_x,2)/x_stress(1)
    enddo
    gradu_local(1,2)=gradu_local(1,2)+hoop_12
    gradu_local(2,2)=gradu_local(2,2)+hoop_22
-  else if (abs(xsten(0,1)).le.VOFTOL*dx_local(1)) then
+  else if (abs(x_stress(1)).le.VOFTOL*dx(1)) then
    hoop_12=zero
    hoop_22=zero
    do dir_x=1,SDIM
     gradu_local(dir_x,2)=zero
    enddo
   else 
-   print *,"xsten(0,1) invalid"
+   print *,"x_stress(1) invalid"
    stop
   endif
  else
@@ -17250,6 +19391,8 @@ endif
 scale_factor=zero
 
  ! gradu(i,j)=partial XD_{i}/partial x_j
+ ! F=grad X + I
+ ! strain_displacement=(grad X + grad X^T)/2
 do dir_x=1,SDIM 
 do dir_space=1,SDIM
  if (dir_x.eq.dir_space) then
@@ -17285,6 +19428,7 @@ if (scale_factor.lt.one) then
 endif
 scale_factor=scale_factor*scale_factor
 
+ ! F=grad X + I
  ! C=F^T F = right cauchy green tensor
  ! E=(1/2)*(C-I)  Green Lagrange strain tensor
 do dir_x=1,SDIM 
@@ -17306,7 +19450,7 @@ do dir_space=1,SDIM
   ! do nothing
  else
   print *,"scale_factor = ",scale_factor
-  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"x=",x_stress(1),x_stress(2),x_stress(SDIM)
   print *,"dir_x,dir_space ",dir_x,dir_space
   print *,"C(dir_x,dir_space)=",C(dir_x,dir_space)
   print *,"C(dir_space,dir_x)=",C(dir_space,dir_x)
@@ -17318,7 +19462,7 @@ do dir_space=1,SDIM
   ! do nothing
  else
   print *,"scale_factor = ",scale_factor
-  print *,"x=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+  print *,"x=",x_stress(1),x_stress(2),x_stress(SDIM)
   print *,"dir_x,dir_space ",dir_x,dir_space
   print *,"B(dir_x,dir_space)=",B(dir_x,dir_space)
   print *,"B(dir_space,dir_x)=",B(dir_space,dir_x)
@@ -17337,6 +19481,9 @@ do dir_space=1,SDIM
  else
   Identity_comp=zero
  endif
+  ! grad X is synonomous with grad u (gradient of displacement vector)
+  ! (note: grad V=gradient of velocity vector)
+  ! F=grad X + I
   ! C=F^T F=right cauchy green tensor
   ! strain_displacement=(1/2)(grad u + (grad u)^T) = eps_ij
   ! E=(C-I)/2=( (grad u + I)^T(grad u +I) - I)/2=eps_ij +
@@ -17346,6 +19493,8 @@ do dir_space=1,SDIM
  trace_SD=trace_SD+Identity_comp*strain_displacement(dir_x,dir_space)
 enddo
 enddo 
+ ! E=(C-I)/2=(F^T F -I)/2=( (grad X^T+I)(grad X+I)-I )/2=
+ ! (1/2)(grad X +grad X^T + grad X^T * grad X)
  ! Sigma=2 mu_s E + lambda Tr(E) I
  ! structure force is div Sigma=div mu_s (Sigma/mu_s)
  ! Richter, JCP, 2013
@@ -17368,11 +19517,14 @@ do dir_space=1,SDIM
  if (bulk_modulus.gt.zero) then
 
   if (linear_elastic_model.eq.1) then
-         ! only valid for small deformations
+    ! only valid for small deformations:
+    !  strain displacement=SD= (1/2)(grad XD + grad XD^T)=( (F + F^T)/2 - I )
+    !  2 mu_S SD + lambda TRACE(SD)
    DISP_TEN(dir_x,dir_space)=( &
        two*bulk_modulus*strain_displacement(dir_x,dir_space)+ &
           lame_coefficient*trace_SD*Identity_comp)/bulk_modulus
   else if (linear_elastic_model.eq.0) then
+    ! E=(C-I)/2  C=F^T F = right cauchy green tensor
    DISP_TEN(dir_x,dir_space)=(two*bulk_modulus*E(dir_x,dir_space)+ &
           lame_coefficient*trace_E*Identity_comp)/bulk_modulus
   else
@@ -17388,73 +19540,428 @@ enddo
 
 end subroutine stress_from_strain
 
-subroutine project_tensor(mask_center,n_elastic, &
-        mask_left,mask_right,tensor_data)
+subroutine get_primary_material(LS,nmat,im_primary)
+use probcommon_module
+
 IMPLICIT NONE
 
-INTEGER_T, intent(out) :: mask_center
-INTEGER_T, intent(in) :: mask_left
-INTEGER_T, intent(in) :: mask_right
-REAL_T, intent(in) :: n_elastic(SDIM)
-REAL_T, intent(inout) :: tensor_data(0:1,SDIM,SDIM)
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, intent(out) :: im_primary
+INTEGER_T im,imtest
+INTEGER_T tessellate
+INTEGER_T is_rigid_local(nmat)
 
-INTEGER_T idest,isource
-INTEGER_T iprod,jprod,kprod
-REAL_T PIK,PKJ
-REAL_T PT(SDIM,SDIM)
-REAL_T PTP(SDIM,SDIM)
+tessellate=0
 
-
-if ((mask_left.eq.0).and.(mask_right.eq.0)) then
- mask_center=0
-else if ((mask_left.eq.1).and.(mask_right.eq.1)) then
- mask_center=1
-else if (((mask_left.eq.0).and.(mask_right.eq.1)).or. &
-         ((mask_left.eq.1).and.(mask_right.eq.0))) then
- mask_center=1
- if ((mask_left.eq.0).and.(mask_right.eq.1)) then
-  idest=0
-  isource=1
- else if ((mask_right.eq.0).and.(mask_left.eq.1)) then
-  idest=1
-  isource=0
+do im=1,nmat
+ is_rigid_local(im)=is_rigid(nmat,im)
+ if (tessellate.eq.2) then
+  is_rigid_local(im)=0
+  print *,"expecting tessellate==0"
+  stop
+ else if (tessellate.eq.0) then
+  ! do nothing
+ else if (tessellate.eq.1) then
+  print *,"expecting tessellate==0"
+  stop
+ else if (tessellate.eq.3) then
+  print *,"expecting tessellate==0"
+  stop
  else
-  print *,"mask_left or mask_right invalid"
+  print *,"tessellate invalid38"
   stop
  endif
-  ! P=(I - n^T n)
- do iprod=1,SDIM
- do jprod=1,SDIM
-  PT(iprod,jprod)=zero
-  do kprod=1,SDIM
-   PIK=-n_elastic(iprod)*n_elastic(kprod)  
-   if (iprod.eq.kprod) then
-    PIK=PIK+one
-   endif
-   PT(iprod,jprod)=PT(iprod,jprod)+PIK*tensor_data(isource,kprod,jprod)
-  enddo ! kprod=1..sdim
- enddo ! jprod
- enddo ! iprod
+enddo ! im=1..nmat
 
- do iprod=1,SDIM
- do jprod=1,SDIM
-  PTP(iprod,jprod)=zero
-  do kprod=1,SDIM
-   PKJ=-n_elastic(kprod)*n_elastic(jprod)  
-   if (jprod.eq.kprod) then
-    PKJ=PKJ+one
-   endif
-   PTP(iprod,jprod)=PTP(iprod,jprod)+PKJ*PT(iprod,kprod)
-  enddo ! kprod=1..sdim
-  tensor_data(idest,iprod,jprod)=PTP(iprod,jprod)
- enddo ! jprod
- enddo ! iprod
-else
- print *,"mask_left or mask_right invalid"
+if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
+ print *,"nmat invalid get_primary_material"
+ print *,"nmat= ",nmat
  stop
 endif
 
-end subroutine project_tensor
+im_primary=0
+do im=1,nmat
+ if (is_rigid_local(im).eq.1) then
+  if (LS(im).ge.zero) then
+   if (im_primary.ne.0) then
+    print *,"cannot have two rigid materials in same place"
+    do imtest=1,nmat
+     print *,"imtest,LS(imtest) ",imtest,LS(imtest)
+    enddo
+    stop
+   endif
+   im_primary=im
+  else if (LS(im).le.zero) then
+   ! do nothing
+  else
+   print *,"LS bust"
+   stop
+  endif
+ else if (is_rigid_local(im).eq.0) then
+  ! do nothing
+ else
+  print *,"is_rigid invalid"
+  stop
+ endif
+enddo !im=1..nmat
+
+if (im_primary.eq.0) then
+
+ do im=1,nmat
+   if (im_primary.eq.0) then
+    im_primary=im
+   else if ((im_primary.ge.1).and.(im_primary.lt.im)) then
+    if (LS(im).gt.LS(im_primary)) then
+     im_primary=im
+    else if (LS(im).le.LS(im_primary)) then
+     ! do nothing
+    else
+     print *,"LS bust"
+     stop
+    endif
+   else
+    print *,"im_primary invalid"
+    stop
+   endif
+ enddo !im=1..nmat
+
+else if (is_rigid_local(im_primary).eq.1) then
+ ! do nothing
+else
+ print *,"is_rigid or im_primary invalid"
+ stop
+endif
+
+end subroutine get_primary_material
+
+
+subroutine tensor_Heaviside( &
+    dxmin, &
+    im_parm, & ! 0..nmat-1
+    mask1,mask2, &
+    LS1,LS2, &
+    HVAL)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: dxmin
+INTEGER_T, intent(in) :: im_parm ! 0..nmat-1
+REAL_T, intent(out) :: HVAL
+INTEGER_T, intent(in) :: mask1,mask2
+REAL_T, intent(in) :: LS1(num_materials)
+REAL_T, intent(in) :: LS2(num_materials)
+INTEGER_T im1,im2
+REAL_T LS_avg
+
+if ((im_parm.ge.0).and.(im_parm.lt.num_materials)) then
+ ! do nothing
+else
+ print *,"im_parm invalid"
+ stop
+endif
+
+if ((mask1.eq.0).or.(mask2.eq.0)) then
+ HVAL=zero
+else if ((mask1.eq.1).and.(mask2.eq.1)) then
+ call get_primary_material(LS1,num_materials,im1)
+ call get_primary_material(LS2,num_materials,im2)
+ if ((im1.eq.im_parm+1).and.(im2.eq.im_parm+1)) then
+  LS_avg=half*(LS1(im_parm+1)+LS2(im_parm+1))-dxmin
+  HVAL=hs(LS_avg,dxmin)
+ else
+  print *,"im1 or im2 invalid"
+  stop
+ endif
+else
+ print *,"mask1 or mask2 invalid"
+ stop
+endif
+
+end subroutine tensor_Heaviside
+
+
+INTEGER_T function project_option_is_validF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+if (project_option_momeqnF(project_option).eq.1) then
+ project_option_is_validF=1
+else if (project_option_momeqnF(project_option).eq.0) then
+ project_option_is_validF=1
+else
+ print *,"project_option not valid"
+ stop
+ project_option_is_validF=0
+endif
+
+end function project_option_is_validF
+
+INTEGER_T function project_option_momeqnF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.1).or. & ! initial project
+     (project_option.eq.11).or.& ! FSI_material_exists (last project)
+     (project_option.eq.12).or.& ! pressure extrapolation
+     (project_option.eq.3)) then ! viscosity
+  project_option_momeqnF=1
+ else if ((project_option.eq.2).or. & ! thermal diffusion
+          ((project_option.ge.100).and. & ! species
+           (project_option.lt.100+num_species_var)).or. &
+          (project_option.eq.200)) then ! smooth temperature
+  project_option_momeqnF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_momeqnF=0
+ endif
+
+end function project_option_momeqnF
+
+
+INTEGER_T function project_option_singular_possibleF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.1).or. & ! initial project
+     (project_option.eq.11).or. & !FSI_material_exists (last project)
+     (project_option.eq.12)) then ! pressure extension
+  project_option_singular_possibleF=1
+ else if ((project_option.eq.2).or. & ! thermal diffusion
+          (project_option.eq.3).or. & ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & !species
+          (project_option.eq.200)) then !smoothing
+  project_option_singular_possibleF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_singular_possibleF=0
+ endif
+
+end function project_option_singular_possibleF
+
+INTEGER_T function project_option_olddata_neededF(project_option) 
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.1).or. & ! initial project
+     (project_option.eq.11).or. & ! FSI_material_exists (last project)
+     (project_option.eq.12)) then ! pressure extension
+  project_option_olddata_neededF=0
+ else if ((project_option.eq.2).or. & ! thermal diffusion
+          (project_option.eq.3).or. & ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & !species
+          (project_option.eq.200)) then !smoothing
+  project_option_olddata_neededF=1
+ else 
+  print *,"project_option invalid"
+  stop
+  project_option_olddata_neededF=0
+ endif
+
+end function project_option_olddata_neededF
+
+INTEGER_T function project_option_pressureF(project_option)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. &
+     (project_option.eq.1).or. &
+     (project_option.eq.12)) then ! pressure extrapolation
+  project_option_pressureF=1
+ else if ((project_option.eq.11).or. & ! FSI_material_exists (last project)
+          (project_option.eq.2).or. &  ! temperature
+          (project_option.eq.3).or. &  ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & ! species
+          (project_option.eq.200)) then ! smoothing of temperature
+  project_option_pressureF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_pressureF=0
+ endif 
+
+end function project_option_pressureF
+
+
+INTEGER_T function project_option_needs_scalingF(project_option)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.11).or. & !FSI_material_exists last project
+     (project_option.eq.12)) then ! pressure extrapolation
+  project_option_needs_scalingF=1
+ else if ((project_option.eq.1).or. & ! initial project
+          (project_option.eq.2).or. &  ! temperature
+          (project_option.eq.3).or. &  ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & ! species
+          (project_option.eq.200)) then ! smoothing of temperature
+  project_option_needs_scalingF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_needs_scalingF=0
+ endif 
+
+end function project_option_needs_scalingF
+
+
+INTEGER_T function project_option_projectionF(project_option)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: project_option
+
+ if ((project_option.eq.0).or. & ! regular project
+     (project_option.eq.11).or. & !FSI_material_exists last project
+     (project_option.eq.1)) then ! initial_project
+  project_option_projectionF=1
+ else if ((project_option.eq.12).or. & ! pressure extrapolation
+          (project_option.eq.2).or. &  ! temperature
+          (project_option.eq.3).or. &  ! viscosity
+          ((project_option.ge.100).and. &
+           (project_option.lt.100+num_species_var)).or. & ! species
+          (project_option.eq.200)) then ! smoothing of temperature
+  project_option_projectionF=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_projectionF=0
+ endif 
+
+end function project_option_projectionF
+
+INTEGER_T function is_GFM_freezing_modelF(freezing_model) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+
+ if ((freezing_model.eq.0).or. &   !fully saturated
+     (freezing_model.eq.5).or. &   !stefan model evap or condensation
+     (freezing_model.eq.6)) then   !Palmore and Desjardins
+  is_GFM_freezing_modelF=1
+ else if (is_valid_freezing_modelF(freezing_model).eq.1) then
+  is_GFM_freezing_modelF=0
+ else
+  print *,"freezing_model bust(F)"
+  stop
+  is_GFM_freezing_modelF=0
+ endif
+
+end function is_GFM_freezing_modelF 
+
+INTEGER_T function is_hydrate_freezing_modelF(freezing_model) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+
+ if (freezing_model.eq.2) then
+  is_hydrate_freezing_modelF=1
+ else if (is_valid_freezing_modelF(freezing_model).eq.1) then
+  is_hydrate_freezing_modelF=0
+ else
+  print *,"freezing_model invalid (F)"
+  stop
+  is_hydrate_freezing_modelF=0
+ endif
+end function is_hydrate_freezing_modelF
+
+INTEGER_T function is_valid_freezing_modelF(freezing_model) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+
+ if ((freezing_model.eq.4).or. & !Tannasawa or Schrage 
+     (freezing_model.eq.5).or. & !Stefan model evaporation or condensation
+     (freezing_model.eq.6).or. & !Palmore and Desjardins
+     (freezing_model.eq.7)) then !cavitation
+  is_valid_freezing_modelF=1
+ else if ((freezing_model.eq.0).or. & !Energy jump model
+          (freezing_model.eq.1).or. & !source term
+          (freezing_model.eq.2).or. & !hydrate
+          (freezing_model.eq.3)) then !wildfire
+  is_valid_freezing_modelF=1
+ else 
+  print *,"freezing_model invalid (F)"
+  stop
+  is_valid_freezing_modelF=0
+ endif
+
+end function is_valid_freezing_modelF
+
+INTEGER_T function is_multi_component_evapF(freezing_model, &
+   evap_flag,latent_heat) 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: freezing_model
+INTEGER_T, intent(in) :: evap_flag
+REAL_T, intent(in) :: latent_heat
+
+ if (latent_heat.eq.zero) then
+  is_multi_component_evapF=0
+ else if (latent_heat.ne.zero) then
+
+  if ((freezing_model.eq.4).or. & !Tannasawa or Schrage 
+      (freezing_model.eq.5).or. & !Stefan model evaporation or condensation
+      (freezing_model.eq.6).or. & !Palmore and Desjardins
+      (freezing_model.eq.7)) then !cavitation
+
+   if (evap_flag.eq.0) then !Palmore and Desjardins
+    is_multi_component_evapF=1
+   else if ((evap_flag.eq.1).or. & !Tanasawa
+            (evap_flag.eq.2).or. & !Schrage
+            (evap_flag.eq.3).or. & !Kassemi
+            (evap_flag.eq.4)) then !Tanguy recommendation.
+    is_multi_component_evapF=0
+   else
+    print *,"evap_flag invalid (F) "
+    stop
+    is_multi_component_evapF=0
+   endif
+
+  else if (freezing_model.eq.2) then !hydrate
+
+   is_multi_component_evapF=1
+
+  else if ((freezing_model.eq.0).or. & !Energy jump model
+           (freezing_model.eq.1).or. & !source term
+           (freezing_model.eq.3)) then !wildfire
+   is_multi_component_evapF=0
+  else
+   print *,"freezing_model invalid (F) "
+   stop
+   is_multi_component_evapF=0
+  endif
+ else
+  print *,"latent_heat invalid (F)"
+  stop
+  is_multi_component_evapF=0
+ endif
+
+end function is_multi_component_evapF
+
 
 end module global_utility_module
 
+#undef STANDALONE

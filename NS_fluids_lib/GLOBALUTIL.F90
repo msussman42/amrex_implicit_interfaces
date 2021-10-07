@@ -9447,6 +9447,9 @@ contains
       return
       end subroutine curverr
 
+       ! datatype=0 scalar or vector
+       ! datatype=1 tensor face
+       ! datatype=2 tensor cell
       subroutine aggressive_worker( &
        datatype, &
        warning_cutoff, &

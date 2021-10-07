@@ -8519,8 +8519,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(mf)
       REAL_T, intent(in), target :: mf(DIMV(mf),ndefined)
       REAL_T, pointer :: mf_ptr(D_DECL(:,:,:),:)
+      REAL_T :: critical_cutoff_low
+      REAL_T :: critical_cutoff_high
 
       mf_ptr=>mf
+
+      critical_cutoff_low=-1.0D+99
+      critical_cutoff_high=1.0D+99
 
       if (bfact.lt.1) then
        print *,"bfact invalid69"
@@ -8547,7 +8552,9 @@ stop
         verbose, &
         force_check, &
         gridno,ngrid,level,finest_level, &
-        mf_ptr)
+        mf_ptr, &
+        critical_cutoff_low, &
+        critical_cutoff_high)
       else
        print *,"verbose invalid"
        stop
@@ -8911,6 +8918,8 @@ stop
       REAL_T massfrac_parm(num_species_var+1)
 
       INTEGER_T caller_id
+      REAL_T :: critical_cutoff_low
+      REAL_T :: critical_cutoff_high
     
 ! fort_vfrac_split code starts here
 
@@ -8937,6 +8946,9 @@ stop
       xmassside_ptr=>xmassside
       ymassside_ptr=>ymassside
       zmassside_ptr=>zmassside
+
+      critical_cutoff_low=-1.0D+99
+      critical_cutoff_high=1.0D+99
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -9296,7 +9308,9 @@ stop
        force_check, &
        gridno,ngrid, &
        level,finest_level, &
-       PLICSLP_ptr)
+       PLICSLP_ptr, &
+       critical_cutoff_low, &
+       critical_cutoff_high)
 
       warning_cutoff=1.0e+15
       call aggressive_worker( &
@@ -9316,7 +9330,9 @@ stop
        gridno,ngrid, &
        level, &
        finest_level, &
-       conserve_ptr)
+       conserve_ptr, &
+       critical_cutoff_low, &
+       critical_cutoff_high)
 
       if (iden_base.ne.SDIM) then
        print *,"iden_base invalid"

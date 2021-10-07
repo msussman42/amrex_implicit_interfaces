@@ -2425,6 +2425,54 @@ stop
          n_normal, &
          ngrow_dest)
 
+       do im=1,nmat
+        scomp=(im-1)*2+2
+        ncomp=1
+        ndefined=nmat*2
+        ngrow_sanity=0
+        dir_sanity=-1
+        id_sanity=1
+        verbose_sanity=2
+        force_check=1
+        ngrid=1
+        print *,"BEFORE aggressive_worker1, scomp ,im=",scomp,im
+
+        datatype=0
+        warning_cutoff=1.0D+20
+        if (probtype.eq.403) then
+         critical_cutoff_low=saturation_temp_min(1)
+         critical_cutoff_high=saturation_temp_max(1)
+        else
+         critical_cutoff_low=-1.0D+99
+         critical_cutoff_high=1.0D+99
+        endif
+        call aggressive_worker( &
+         datatype, &
+         warning_cutoff, &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact, &
+         dx, &
+         scomp, &
+         ncomp, &
+         ndefined, &
+         ngrow_sanity, &
+         dir_sanity, &
+         id_sanity, &
+         verbose_sanity, &
+         force_check, &
+         level, &  ! gridno
+         ngrid, &
+         level, &
+         finest_level, &
+         EOS_ptr, &
+         critical_cutoff_low, &
+         critical_cutoff_high)
+
+        print *,"AFTER aggressive_worker1, scomp ,im=",scomp,im
+       enddo ! im=1..nmat
+
        print *,"BEFORE FORT_RATEMASSCHANGE"
 
        if (1.eq.1) then 
