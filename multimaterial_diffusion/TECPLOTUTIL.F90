@@ -22,31 +22,30 @@ print *,"dimension bust"
 stop
 #endif
 
-#if (STANDALONE==1)
       module tecplotutil_cpp_module
       contains
-#endif
 
-      subroutine FORT_TECPLOTFAB( &
+      subroutine fort_tecplotfab( &
        time, &
        fabdata,DIMS(fabdata), &
        growlo,growhi, &
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       dir,ncomp,interior_only,nsteps)
+       dir,ncomp,interior_only,nsteps) &
+      bind(c,name='fort_tecplotfab')
 
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T dir,ncomp,interior_only,nsteps,bfact
-      INTEGER_T growlo(SDIM),growhi(SDIM) 
-      INTEGER_T fablo(SDIM),fabhi(SDIM) 
+      INTEGER_T, intent(in) :: dir,ncomp,interior_only,nsteps,bfact
+      INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM) 
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
       INTEGER_T plotlo(SDIM),plothi(SDIM) 
       INTEGER_T lo(SDIM),hi(SDIM) 
-      INTEGER_T DIMDEC(fabdata)
-      REAL_T fabdata(DIMV(fabdata),ncomp)
+      INTEGER_T, intent(in) :: DIMDEC(fabdata)
+      REAL_T, intent(in) :: fabdata(DIMV(fabdata),ncomp)
       REAL_T xlo(SDIM)
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -57,7 +56,7 @@ stop
 
       INTEGER_T ih
 
-      character*17 newfilename
+      character*17 newfilename !fabdata ...
       character*2 matstr
       character*6 stepstr
 
@@ -142,7 +141,8 @@ stop
 
       !-----------------------------------------------------------
       ZONEMARKER = 299.0
-      EOHMARKER  = 357.0
+      EOHMARKER  = 357.0 
+       !fabdata ...
       open(unit=11,file=newfilename,form="unformatted",access="stream")
 
       ! +++++++ HEADER SECTION ++++++
@@ -265,7 +265,7 @@ stop
        if (dir.eq.-1) then
         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
        else if ((dir.ge.0).and.(dir.lt.SDIM)) then
-        call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir+1)
+        call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,70)
        else
         print *,"dir invalid tecplotfab 2"
         stop
@@ -324,12 +324,12 @@ stop
 
       close(11)
       return
-      end subroutine FORT_TECPLOTFAB
+      end subroutine fort_tecplotfab
 
 
-      subroutine FORT_CELLGRID_SANITY( &
+      subroutine fort_cellgrid_sanity( &
        tid, &
-       data_dir, & ! data_dir=-1,0..sdim
+       data_dir, & ! data_dir=-1,0..sdim,3,4,5
        bfact, &
        ncomp, &
        datafab,DIMS(datafab), &
@@ -340,7 +340,9 @@ stop
        level, &
        finest_level, &
        gridno, &
-       rz_flag)
+       rz_flag) &
+      bind(c,name='fort_cellgrid_sanity')
+
       use probcommon_module
       use global_utility_module
 
@@ -357,8 +359,9 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
-      REAL_T, intent(in) :: datafab(DIMV(datafab), &
+      REAL_T, intent(in), target :: datafab(DIMV(datafab), &
         ncomp)
+      REAL_T, pointer :: datafab_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
       REAL_T datand(ncomp)
@@ -371,7 +374,7 @@ stop
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32 !./temptecplot/tempnddata ...
 
       INTEGER_T i,j,k
       INTEGER_T isub,jsub,ksub
@@ -390,6 +393,7 @@ stop
       REAL_T xstenND(-3:3,SDIM)
       REAL_T dxleft,dxright
       INTEGER_T local_nd
+      INTEGER_T box_type(SDIM)
 
       nhalf=3
 
@@ -409,14 +413,12 @@ stop
        stop
       endif
 
+      datafab_ptr=>datafab
+
       if (data_dir.eq.-1) then 
-       call checkbound(lo,hi,DIMS(datafab),0,-1,411)
-      else if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
-       call checkbound(lo,hi,DIMS(datafab),0,data_dir,411)
-      else if (data_dir.eq.SDIM) then
-       do dir=0,SDIM-1
-        call checkbound(lo,hi,DIMS(datafab),0,dir,411)
-       enddo
+       call checkbound_array(lo,hi,datafab_ptr,0,-1,411)
+      else if ((data_dir.ge.0).and.(data_dir.le.5)) then
+       call checkbound_array(lo,hi,datafab_ptr,0,data_dir,411)
       else
        print *,"data_dir invalid"
        stop
@@ -449,10 +451,20 @@ stop
          gridstr(i:i)='0'
         endif
       enddo
-      write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-      print *,"filename18 ",filename18
+#if (STANDALONE==0)
+      write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+      write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+      print *,"STANDALONE invalid"
+      stop
+#endif
 
-      open(unit=11,file=filename18)
+      print *,"filename32 ",filename32
+      open(unit=11,file=filename32)
+
       do dir=1,SDIM
        write(11,*) lo(dir),hi(dir)
       enddo
@@ -505,6 +517,8 @@ stop
 
              ! iproblo=0
              call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
+             call grid_type_to_box_type(data_dir,box_type)
+
              do dir=1,SDIM
               dxleft=xstenND(0,dir)-xstenND(-1,dir)
               dxright=xstenND(1,dir)-xstenND(0,dir)
@@ -539,16 +553,8 @@ stop
                stop
               endif
 
-              if (data_dir.eq.-1) then
-               local_nd=0
-              else if ((data_dir+1.eq.dir).or.(data_dir.eq.SDIM)) then
-               local_nd=1
-              else if ((data_dir+1.ne.dir).and.(data_dir.lt.SDIM)) then
-               local_nd=0
-              else
-               print *,"data_dir invalid"
-               stop
-              endif
+              local_nd=box_type(dir)
+
               dxright=xstenND(2,dir)-xstenND(0,dir)
               if (dxright.gt.zero) then
                if (isub_nrm.eq.0) then
@@ -613,7 +619,7 @@ stop
               if ((icell(dir).ge.lo(dir)).and. &
                   (icell(dir).le.hi(dir))) then
 
-               if ((data_dir.eq.SDIM).or.(data_dir+1.eq.dir)) then
+               if (box_type(dir).eq.1) then
                 if ((isub_nrm.eq.0).or.(isub_nrm.eq.1)) then
                  ! do nothing
                 else if (isub_nrm.eq.2) then
@@ -622,16 +628,22 @@ stop
                  print *,"isub_nrm invalid"
                  stop
                 endif
-               else
+               else if (box_type(dir).eq.0) then
                 ! do nothing
+               else
+                print *,"box_type invalid"
+                stop
                endif
 
               else if (icell(dir).eq.hi(dir)+1) then
 
-               if ((data_dir.eq.SDIM).or.(data_dir+1.eq.dir)) then
+               if (box_type(dir).eq.1) then
                 ! do nothing
-               else
+               else if (box_type(dir).eq.0) then
                 icell(dir)=hi(dir)
+               else
+                print *,"box_type invalid"
+                stop
                endif
 
               else
@@ -683,10 +695,10 @@ stop
       close(11)
 
       return
-      end subroutine FORT_CELLGRID_SANITY
+      end subroutine fort_cellgrid_sanity
 
 
-      subroutine FORT_COMBINEZONES_SANITY( &
+      subroutine fort_combinezones_sanity( &
        root_char_array, &
        n_root, &
        data_dir, &
@@ -704,9 +716,9 @@ stop
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
-       ncomp)
+       ncomp) &
+      bind(c,name='fort_combinezones_sanity')
 
       use probcommon_module
       use global_utility_module
@@ -731,7 +743,6 @@ stop
       INTEGER_T, intent(in) :: data_id
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
 
       INTEGER_T strandid
@@ -740,7 +751,7 @@ stop
 
       character*3 levstr
       character*5 gridstr
-      character*18 filename18
+      character*32 filename32 ! ./temptecplot_tempnddata
       character*80 rmcommand
 
       character*6 stepstr
@@ -831,6 +842,7 @@ stop
 
        plot_sdim=3
 
+        ! declared in: GLOBALUTIL.F90
        call zones_revolve_sanity( &
         root_char_array, &
         n_root, &
@@ -850,7 +862,6 @@ stop
         nsteps, &
         num_levels, &
         time, &
-        visual_option, &
         visual_revolve, &
         ncomp)
       else if (visual_revolve.eq.0) then
@@ -903,8 +914,12 @@ stop
         dir_chars='YC'
        else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
         dir_chars='ZC'
-       else if (data_dir.eq.SDIM) then
-        dir_chars='ND'
+       else if (data_dir.eq.3) then
+        dir_chars='XY'
+       else if ((data_dir.eq.4).and.(SDIM.eq.3)) then
+        dir_chars='XZ'
+       else if ((data_dir.eq.5).and.(SDIM.eq.3)) then
+        dir_chars='YZ'
        else
         print *,"data_dir invalid"
         stop
@@ -968,8 +983,20 @@ stop
           gridstr(i:i)='0'
          endif
         enddo
-        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-        open(unit=4,file=filename18)
+
+#if (STANDALONE==0)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+        print *,"STANDALONE invalid"
+        stop
+#endif
+
+        print *,"filename32 ",filename32
+        open(unit=4,file=filename32)
 
         do dir=1,plot_sdim
          read(4,*) lo(dir),hi(dir)
@@ -1189,9 +1216,19 @@ stop
          endif
         enddo
 
-        write(filename18,'(A10,A3,A5)') 'tempnddata',levstr,gridstr
-        open(unit=4,file=filename18)
-        print *,"filename18 ",filename18
+#if (STANDALONE==0)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot/','tempnddata',levstr,gridstr
+#elif (STANDALONE==1)
+        write(filename32,'(A14,A10,A3,A5)') &
+              './temptecplot_','tempnddata',levstr,gridstr
+#else
+        print *,"STANDALONE invalid"
+        stop
+#endif
+
+        open(unit=4,file=filename32)
+        print *,"filename32 ",filename32
 
         do dir=1,SDIM
          read(4,*) lo(dir),hi(dir)
@@ -1267,21 +1304,23 @@ stop
 
        close(11)
      
-       rmcommand='rm tempnddata*'
-
-       print *,"issuing command ",rmcommand
-
+       rmcommand='rm ./temptecplot_tempnddata*'
        sysret=0
 
-#ifdef PGIFORTRAN
-       call system(rmcommand)
-#else
+#if (STANDALONE==0)
+       ! do nothing
+#elif (STANDALONE==1)
+       print *,"issuing command ",rmcommand
        call execute_command_line(rmcommand,exitstat=sysret)
-#endif
+
        if (sysret.ne.0) then
         print *,"execute_command_line has sysret=",sysret
         stop
        endif
+#else
+       print *,"STANDALONE invalid"
+       stop
+#endif
 
       else
        print *,"visual_revolve invalid"
@@ -1289,9 +1328,9 @@ stop
       endif
 
       return
-      end subroutine FORT_COMBINEZONES_SANITY
+      end subroutine fort_combinezones_sanity
 
-      subroutine FORT_TECPLOTFAB_SANITY( &
+      subroutine fort_tecplotfab_sanity( &
        root_char_array, &
        n_root, &
        data_dir, &
@@ -1307,11 +1346,12 @@ stop
        data_id, &
        nsteps, &
        time, &
-       visual_option, &
        visual_revolve, &
        level, &
        finest_level, &
-       ncomp)
+       ncomp) &
+      bind(c,name='fort_tecplotfab_sanity')
+
       use probcommon_module
       use global_utility_module
 
@@ -1329,7 +1369,6 @@ stop
       INTEGER_T, intent(in) :: nsteps
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: visual_option
       INTEGER_T, intent(in) :: visual_revolve
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
       INTEGER_T, intent(in) :: DIMDEC(datafab)
@@ -1352,7 +1391,7 @@ stop
       tid_local=0
       gridno_local=0
 
-      call FORT_CELLGRID_SANITY( &
+      call fort_cellgrid_sanity( &
        tid_local, &
        data_dir, &
        bfact, &
@@ -1378,7 +1417,7 @@ stop
        gridhi_array(dir_local)=fabhi(dir_local)
       enddo
 
-      call FORT_COMBINEZONES_SANITY( &
+      call fort_combinezones_sanity( &
        root_char_array, &
        n_root, &
        data_dir, &
@@ -1396,15 +1435,12 @@ stop
        nsteps, &
        num_levels, &
        time, &
-       visual_option, &
        visual_revolve, &
        ncomp)
 
       return
-      end subroutine FORT_TECPLOTFAB_SANITY
+      end subroutine fort_tecplotfab_sanity
 
-#if (STANDALONE==1)
       end module tecplotutil_cpp_module
-#endif
 
 #undef STANDALONE

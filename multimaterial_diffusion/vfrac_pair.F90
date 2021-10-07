@@ -2782,9 +2782,8 @@ contains
                   level_tsat, &
                   finest_level_tsat, &
                   dx_tsat,xlo_tsat, &
-                  ngrow_tsat, &
                   fablo_tsat,fabhi_tsat, &
-                  TSATFAB,DIMS(TSATFAB), &
+                  tsatfab_ptr, &
                   Tdata(1), &
                   internal_multimaterial, &
                   saturation_temp, &
@@ -2804,9 +2803,8 @@ contains
                   level_tsat, &
                   finest_level_tsat, &
                   dx_tsat,xlo_tsat, &
-                  ngrow_tsat, &
                   fablo_tsat,fabhi_tsat, &
-                  TSATFAB,DIMS(TSATFAB), &
+                  tsatfab_ptr, &
                   Tdata(2), &
                   internal_multimaterial, &
                   saturation_temp, &
@@ -2826,9 +2824,8 @@ contains
                   level_tsat, &
                   finest_level_tsat, &
                   dx_tsat,xlo_tsat, &
-                  ngrow_tsat, &
                   fablo_tsat,fabhi_tsat, &
-                  TSATFAB,DIMS(TSATFAB), &
+                  tsatfab_ptr, &
                   Tdata(3), &
                   internal_multimaterial, &
                   saturation_temp, &
@@ -2852,9 +2849,8 @@ contains
                   level_tsat, &
                   finest_level_tsat, &
                   dx_tsat,xlo_tsat, &
-                  ngrow_tsat, &
                   fablo_tsat,fabhi_tsat, &
-                  TSATFAB,DIMS(TSATFAB), &
+                  tsatfab_ptr, &
                   Tdata(4), &
                   internal_multimaterial, &
                   saturation_temp, &
@@ -3032,9 +3028,8 @@ contains
                level_tsat, &
                finest_level_tsat, &
                dx_tsat,xlo_tsat, &
-               ngrow_tsat, &
                fablo_tsat,fabhi_tsat, &
-               TSATFAB,DIMS(TSATFAB), &
+               tsatfab_ptr, &
                rho_I, &
                internal_multimaterial, &
                saturation_temp, &
@@ -3281,9 +3276,8 @@ contains
             level_tsat, &
             finest_level_tsat, &
             dx_tsat,xlo_tsat, &
-            ngrow_tsat, &
             fablo_tsat,fabhi_tsat, &
-            TSATFAB,DIMS(TSATFAB), &
+            tsatfab_ptr, &
             rho_I, &
             internal_multimaterial, &
             saturation_temp, &

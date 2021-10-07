@@ -1,5 +1,7 @@
 #undef BL_LANG_CC
+#ifndef BL_LANG_FORT
 #define BL_LANG_FORT
+#endif
 
 #define PROTOTYPE_PROBCOMMON 1
 
@@ -21,7 +23,8 @@ stop
 module probcommon_module_types
 
       type user_defined_sum_int_type
-       INTEGER_T ncomp_sum_int_user
+       INTEGER_T ncomp_sum_int_user1
+       INTEGER_T ncomp_sum_int_user2
        REAL_T, pointer :: problo(:)      
        REAL_T, pointer :: probhi(:) 
        INTEGER_T :: igrid,jgrid,kgrid
@@ -29,8 +32,10 @@ module probcommon_module_types
        INTEGER_T :: nhalf
        INTEGER_T :: nmat
        INTEGER_T :: bfact
-       INTEGER_T :: ntensorMM
+       INTEGER_T :: ntensor
        INTEGER_T :: den_ncomp
+       INTEGER_T :: level
+       INTEGER_T :: finest_level
        INTEGER_T, pointer :: tilelo(:)
        INTEGER_T, pointer :: tilehi(:)
        INTEGER_T, pointer :: fablo(:)
@@ -43,7 +48,7 @@ module probcommon_module_types
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
         ! 1..nmat*ngeom_recon
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
-        ! num_materials * num_state_type
+        ! num_materials * num_state_material
         ! density1,temperature1,species1_1,...,species_N_1
         ! density2,temperature2,species1_2,...,species_N_2
         ! density3,temperature3,species1_3,...,species_N_3
@@ -69,13 +74,8 @@ module probcommon_module_types
        INTEGER_T :: nstate
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
-       INTEGER_T :: DIMDEC(EOS)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       INTEGER_T :: DIMDEC(LSnew)
-       INTEGER_T :: DIMDEC(Snew)
-       INTEGER_T :: DIMDEC(pres)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
-       INTEGER_T :: DIMDEC(pres_eos)
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
        INTEGER_T :: custom_nucleation_model
        INTEGER_T :: do_the_nucleate
@@ -125,6 +125,45 @@ module probcommon_module_types
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macz
       end type assimilate_out_parm_type
 
+       ! used by deriv_from_grid_util
+      type deriv_from_grid_parm_type
+      INTEGER_T :: scomp
+      INTEGER_T :: ncomp
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: index_flux(SDIM)  !flux point where derivative needed.
+      INTEGER_T :: dir_deriv !dir_deriv=1..sdim or dir_deriv=-1
+      INTEGER_T :: box_type_flux(SDIM) !0=CELL 1=NODE
+      INTEGER_T :: box_type_data(SDIM)
+      INTEGER_T :: grid_type_flux  ! -1..5
+      INTEGER_T :: grid_type_data  ! -1..5
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: disp_data
+      end type deriv_from_grid_parm_type
+
+       ! used by single_deriv_from_grid_util
+      type single_deriv_from_grid_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: index_flux(SDIM)  !flux point where derivative needed.
+      INTEGER_T :: dir_deriv !dir_deriv=1..sdim or dir_deriv=-1
+      INTEGER_T :: box_type_flux(SDIM) !0=CELL 1=NODE
+      INTEGER_T :: box_type_data(SDIM)
+      INTEGER_T :: grid_type_flux  ! -1..5
+      INTEGER_T :: grid_type_data  ! -1..5
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: disp_data
+      end type single_deriv_from_grid_parm_type
+
+       ! used by interp_from_grid_util
       type interp_from_grid_parm_type
       INTEGER_T :: scomp
       INTEGER_T :: ncomp
@@ -133,16 +172,30 @@ module probcommon_module_types
       INTEGER_T :: bfact
       INTEGER_T :: nmat
       INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
-      INTEGER_T :: im_PLS  ! =0 if not weighted
       REAL_T, pointer :: xtarget(:)
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xlo(:)
       INTEGER_T, pointer :: fablo(:)
       INTEGER_T, pointer :: fabhi(:)
-      INTEGER_T :: ngrowfab 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
-      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
       end type interp_from_grid_parm_type
+
+
+       ! used by single_interp_from_grid_util
+      type single_interp_from_grid_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
+      INTEGER_T :: interp_dir ! interp_dir=0..sdim-1
+      REAL_T, pointer :: xtarget(:)
+      REAL_T, pointer :: dx(:)
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: state 
+      end type single_interp_from_grid_parm_type
+
 
       type interp_from_grid_out_parm_type
       REAL_T, pointer :: data_interp(:)
@@ -176,7 +229,14 @@ implicit none
 ! fort_linear_elastic_model added November 4.
 ! fort_elastic_time added December 30
 ! fort_viscoelastic_model added December 30
-
+! fort_R_Palmore_Desjardins added January 30
+! fort_n_cell added March 11.
+! pos_sites has 5000 components, May 8.
+! num_materials_vel deleted, June 7.
+! num_materials_scalar_solve deleted, June 9.
+! fort_reference_pressure added, July 8.
+! fort_drhodz deleted, Aug 2.
+! fort_drhodt renamed to fort_DrhoDT, Aug 2.
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -250,6 +310,8 @@ implicit none
 
       REAL_T, PARAMETER :: ICEFACECUT_EPS=1.0D-5
 
+      REAL_T, PARAMETER :: OVERFLOW_CUTOFF=1.0D+20
+
       ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
 #if (PROTOTYPE_PROBCOMMON==0)
       REAL_T, PARAMETER :: FACETOL_DVOL=1.0D-3
@@ -309,6 +371,24 @@ implicit none
       INTEGER_T, PARAMETER :: SHALLOW_N=1000
       REAL_T, PARAMETER :: SHALLOW_TIME=12.0
 
+      INTEGER_T :: BLB_MATRIX=-32767
+      INTEGER_T :: BLB_RHS=-32767
+      INTEGER_T :: BLB_VEL=-32767
+      INTEGER_T :: BLB_INT_MOM=-32767
+      INTEGER_T :: BLB_ENERGY=-32767
+      INTEGER_T :: BLB_MASS_VEL=-32767
+      INTEGER_T :: BLB_VOL=-32767
+      INTEGER_T :: BLB_CEN_INT=-32767
+      INTEGER_T :: BLB_CEN_ACT=-32767
+      INTEGER_T :: BLB_PERIM=-32767
+      INTEGER_T :: BLB_PERIM_MAT=-32767
+      INTEGER_T :: BLB_TRIPLE_PERIM=-32767
+      INTEGER_T :: BLB_CELL_CNT=-32767
+      INTEGER_T :: BLB_CELLVOL_CNT=-32767
+      INTEGER_T :: BLB_MASS=-32767
+      INTEGER_T :: BLB_PRES=-32767
+      INTEGER_T :: num_elements_blobclass=-32767
+
       REAL_T shallow_water_data(0:SHALLOW_M,0:SHALLOW_N,2)
       REAL_T inflow_time(3000)
       REAL_T inflow_elevation(3000)
@@ -341,6 +421,31 @@ implicit none
       INTEGER_T cache_index_low,cache_index_high,cache_max_level
       INTEGER_T :: grid_cache_allocated=0
 
+      INTEGER_T :: number_of_source_regions=0
+      INTEGER_T :: number_of_threads_regions=0
+
+      type region_info_type
+       INTEGER_T :: region_material_id
+       REAL_T :: region_dt
+       REAL_T :: region_mass_flux   ! e.g. kg/s
+       REAL_T :: region_volume_flux ! e.g. m^3/s
+       REAL_T :: region_temperature_prescribe ! e.g. degrees Kelvin
+       REAL_T :: region_velocity_prescribe(SDIM) ! e.g. degrees Kelvin
+       REAL_T :: region_energy_flux ! e.g. J/s = Watts
+       REAL_T :: region_volume_raster ! e.g. m^3
+       REAL_T :: region_volume        ! e.g. m^3
+       REAL_T :: region_mass          ! e.g. kg
+       REAL_T :: region_energy        ! e.g. J
+       REAL_T :: region_energy_per_kelvin ! e.g. J/K
+       REAL_T :: region_volume_after
+       REAL_T :: region_mass_after
+       REAL_T :: region_energy_after
+      end type region_info_type
+
+       ! first index: 1..number_of_source_regions
+       ! second index: 0..number_of_threads_regions
+      type(region_info_type), allocatable :: regions_list(:,:)
+      
        ! interface particle container class
        ! refined data 
       type elem_contain_type
@@ -385,29 +490,60 @@ implicit none
 
       ABSTRACT INTERFACE
 
+      subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
+          num_materials_in,num_threads_in)
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_threads_in
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+      end subroutine TEMPLATE_INIT_REGIONS_LIST
+
+      subroutine TEMPLATE_CHARFN_REGION(region_id,x,cur_time,charfn_out)
+      INTEGER_T, intent(in) :: region_id
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(out) :: charfn_out
+      end subroutine TEMPLATE_CHARFN_REGION
+
+      subroutine TEMPLATE_THERMAL_K(x,dx,cur_time,density,temperature, &
+                      thermal_k,im)
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: density
+      REAL_T, intent(in) :: temperature
+      REAL_T, intent(inout) :: thermal_k
+      end subroutine TEMPLATE_THERMAL_K
+
+      subroutine TEMPLATE_reference_wavelen(wavelen)
+      REAL_T, intent(inout) :: wavelen
+      end subroutine TEMPLATE_reference_wavelen
+
+      subroutine TEMPLATE_DELETE_REGIONS_LIST()
+      end subroutine TEMPLATE_DELETE_REGIONS_LIST
+
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
       subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
-         pres_hydrostatic,rho_hydrostatic, &
-         xpos, &
-         gravity_normalized, &
-         gravity_dir_parm)
+        i,j,k,level, &
+        gravity_normalized, &
+        gravity_dir_parm, &
+        angular_velocity, &
+        dt, &
+        rho_hydrostatic, &
+        pres_hydrostatic, &
+        state_ptr)
+      INTEGER_T, intent(in) :: i,j,k,level
+      INTEGER_T, intent(in) :: gravity_dir_parm
+      REAL_T, intent(in) :: angular_velocity
+      REAL_T, intent(in) :: gravity_normalized
+      REAL_T, intent(in) :: dt
       REAL_T, intent(inout) :: rho_hydrostatic
       REAL_T, intent(inout) :: pres_hydrostatic
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(in) :: gravity_normalized ! usually |g| (point down case)
-      INTEGER_T, intent(in) :: gravity_dir_parm
+      REAL_T, intent(in),pointer :: state_ptr(D_DECL(:,:,:),:)
       end subroutine TEMPLATE_correct_pres_rho_hydrostatic
         
-      subroutine TEMPLATE_hydro_pressure_density( &
-           xpos,rho,pres,from_boundary_hydrostatic)
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: rho
-      REAL_T, intent(inout) :: pres
-      INTEGER_T, intent(in) :: from_boundary_hydrostatic
-      end subroutine TEMPLATE_hydro_pressure_density
-
       subroutine TEMPLATE_CFL_HELPER(time,dir,uu,dx)
       INTEGER_T, intent(in) :: dir
       REAL_T, intent(in) :: time
@@ -416,12 +552,14 @@ implicit none
       end subroutine TEMPLATE_CFL_HELPER
 
 
-      subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out,nsum)
+      subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out1, &
+            increment_out2,nsum1,nsum2,isweep)
       use probcommon_module_types
 
-      INTEGER_T, intent(in) :: nsum
+      INTEGER_T, intent(in) :: nsum1,nsum2,isweep
       type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-      REAL_T, intent(out) :: increment_out(nsum)
+      REAL_T, intent(inout) :: increment_out1(nsum1)
+      REAL_T, intent(inout) :: increment_out2(nsum2)
       end subroutine TEMPLATE_SUMINT
       
       subroutine TEMPLATE_LS(x,t,LS,nmat)
@@ -458,6 +596,17 @@ implicit none
       REAL_T, intent(in) :: internal_energy
       REAL_T, intent(out) :: pressure
       end subroutine TEMPLATE_EOS
+
+
+      subroutine TEMPLATE_dVdT(dVdT,massfrac_var, &
+        pressure,temperature, &
+        imattype,im,num_species_var_in)
+      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
+      REAL_T, intent(in) :: pressure,temperature
+      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, intent(out) :: dVdT
+      end subroutine TEMPLATE_dVdT
+
 
       subroutine TEMPLATE_SOUNDSQR(rho,massfrac_var, &
         internal_energy,soundsqr, &
@@ -625,8 +774,6 @@ implicit none
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
-      PROCEDURE(TEMPLATE_hydro_pressure_density), POINTER :: &
-              SUB_hydro_pressure_density
       PROCEDURE(TEMPLATE_correct_pres_rho_hydrostatic), POINTER :: &
               SUB_correct_pres_rho_hydrostatic
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
@@ -635,6 +782,7 @@ implicit none
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
+      PROCEDURE(TEMPLATE_dVdT), POINTER :: SUB_dVdT
       PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR
       PROCEDURE(TEMPLATE_INTERNAL), POINTER :: SUB_INTERNAL
       PROCEDURE(TEMPLATE_TEMPERATURE), POINTER :: SUB_TEMPERATURE
@@ -651,6 +799,15 @@ implicit none
       PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
               SUB_microcell_heat_coeff
       PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
+
+      PROCEDURE(TEMPLATE_INIT_REGIONS_LIST), POINTER :: SUB_INIT_REGIONS_LIST
+      PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION
+      PROCEDURE(TEMPLATE_DELETE_REGIONS_LIST), POINTER ::  &
+              SUB_DELETE_REGIONS_LIST
+
+      PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
+
+      PROCEDURE(TEMPLATE_reference_wavelen), POINTER :: SUB_reference_wavelen
 
 contains
 

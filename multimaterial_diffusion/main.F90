@@ -1,9 +1,12 @@
 #undef BL_LANG_CC
+#ifndef BL_LANG_FORT
 #define BL_LANG_FORT
+#endif
 
 #include "AMReX_BC_TYPES.H"
 
 PROGRAM test 
+USE MOF_cpp_module
 USE GeneralClass ! vof_cisl.F90
 USE probmain_module 
 USE probcommon_module 
@@ -249,10 +252,10 @@ print *,"constant_K_test= ",constant_K_test
 !
 ! In order to rotate the dendrite:
 ! set dendrite_angle.
-N_START=256
-N_FINISH=256
-!N_START=64
-!N_FINISH=64
+!N_START=256
+!N_FINISH=256
+N_START=64
+N_FINISH=64
 M_START=1600
 M_FACTOR=2
 
@@ -343,10 +346,10 @@ VOFTOL_local=VOFTOL
 
 local_Pi=4.0d0*atan(1.0d0)
 
-! dendrite_angle=pi/4.0d0  ! 45 degrees
+ dendrite_angle=pi/4.0d0  ! 45 degrees
 ! dendrite_angle=pi/6.0d0  ! 30 degrees
 ! dendrite_angle=pi/3.0d0  ! 60 degrees
- dendrite_angle=0.0d0     ! 0 degrees
+! dendrite_angle=0.0d0     ! 0 degrees
 
 ! pcurve_ls defined in vof_cisl.F90
 pcurve_ls = 0.0d0
@@ -831,11 +834,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  gravity=0.0d0
  visc_coef=0.0d0
  num_state_base=2
- num_materials_vel=1
- num_materials_scalar_solve=nmat_in
  do im=1,nmat_in
    fort_drhodt(im)=0.0d0
-   fort_drhodz(im)=0.0d0
    fort_tempconst(im)=1.0d0
    fort_initial_temperature(im)=1.0d0
    fort_tempcutoff(im)=1.0E+20
@@ -1221,7 +1221,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  ngeom_recon=3+2*AMREX_SPACEDIM
  ngeom_recon_in=3+2*AMREX_SPACEDIM
 
- call initmof(order_algorithm, &
+ call fort_initmof(order_algorithm, &
           nmat_in,MOFITERMAX, &
           0, &  ! MOF_DEBUG_RECON_in=0
           1, &  ! MOF_TURN_OFF_LS_in=1

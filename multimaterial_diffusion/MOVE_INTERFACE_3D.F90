@@ -982,6 +982,39 @@ stop
       INTEGER_T ic,jc,kc
       REAL_T coarse_data
 
+      INTEGER_T :: im_critical
+      INTEGER_T :: num_nodes_list(num_materials)
+      INTEGER_T :: num_elements_list(num_materials)
+
+      INTEGER_T, PARAMETER :: FSI_input_num_nodes=0
+      INTEGER_T, PARAMETER :: FSI_input_num_elements=0
+      REAL_T :: FSI_input_node_list(3*FSI_input_num_nodes)
+      INTEGER_T :: &
+        FSI_input_element_list(4*FSI_input_num_elements)
+      REAL_T :: &
+        FSI_input_displacement_list(3*FSI_input_num_nodes)
+      REAL_T :: &
+        FSI_input_velocity_list(3*FSI_input_num_nodes)
+      REAL_T :: FSI_input_force_list(3*FSI_input_num_nodes)
+      REAL_T :: &
+        FSI_input_temperature_list(FSI_input_num_nodes)
+
+      INTEGER_T, PARAMETER :: FSI_output_num_nodes=0
+      INTEGER_T, PARAMETER :: FSI_output_num_elements=0
+      REAL_T :: &
+       FSI_output_node_list(3*FSI_output_num_nodes)
+      INTEGER_T :: &
+              FSI_output_element_list(4*FSI_output_num_elements)
+      REAL_T :: &
+              FSI_output_displacement_list(3*FSI_output_num_nodes)
+      REAL_T :: &
+              FSI_output_velocity_list(3*FSI_output_num_nodes)
+      REAL_T :: &
+              FSI_output_force_list(3*FSI_output_num_nodes)
+      REAL_T :: &
+              FSI_output_temperature_list(FSI_output_num_nodes)
+
+
       REAL_T, allocatable, dimension(D_DECL(:,:,:),:) :: unitdata
 
       if ((ilev.ge.0).and.(ilev.le.cache_max_level)) then
@@ -996,6 +1029,8 @@ stop
       ioproc=1
 
       do im=1,num_materials
+       num_nodes_list(im)=0
+       num_elements_list(im)=0
        FSI_refine_factor(im)=1
        FSI_bounding_box_ngrow(im)=3
       enddo
@@ -1136,7 +1171,9 @@ stop
         call set_dimdec(DIMS(unitdata),unitlo,unithi,ngrowFSI_unitfab)
         allocate(unitdata(DIMV(unitdata),nFSI_all))
 
-        call FORT_HEADERMSG( &
+        im_critical=1
+
+        call fort_headermsg( &
           tid, &
           tilenum, &
           gridno, &
@@ -1144,6 +1181,25 @@ stop
           ilev, &
           cache_max_level, &
           cache_max_level, &
+          im_critical, &  
+          num_nodes_list, &
+          num_elements_list, &
+          FSI_input_num_nodes, &
+          FSI_input_num_elements, &
+          FSI_input_node_list, &
+          FSI_input_element_list, &
+          FSI_input_displacement_list, &
+          FSI_input_velocity_list, &
+          FSI_input_force_list, &
+          FSI_input_temperature_list, &
+          FSI_output_num_nodes, &
+          FSI_output_num_elements, &
+          FSI_output_node_list, &
+          FSI_output_element_list, &
+          FSI_output_displacement_list, &
+          FSI_output_velocity_list, &
+          FSI_output_force_list, &
+          FSI_output_temperature_list, &
           FSI_operation, & ! 0 or 1 (initialize or update nodes)
           FSI_sub_operation, & ! 0
           unitlo,unithi, &
@@ -1308,8 +1364,10 @@ stop
         ! (2) =1 interior  =0 otherwise
         ! (3) =1 interior+ngrow-1  =0 otherwise
         ! (4) =1 interior+ngrow    =0 otherwise
+
+       im_critical=1
  
-       call FORT_HEADERMSG( &
+       call fort_headermsg( &
           tid, &
           tilenum, &
           gridno, &
@@ -1317,6 +1375,25 @@ stop
           ilev, &
           cache_max_level, &
           cache_max_level, &
+          im_critical, &  
+          num_nodes_list, &
+          num_elements_list, &
+          FSI_input_num_nodes, &
+          FSI_input_num_elements, &
+          FSI_input_node_list, &
+          FSI_input_element_list, &
+          FSI_input_displacement_list, &
+          FSI_input_velocity_list, &
+          FSI_input_force_list, &
+          FSI_input_temperature_list, &
+          FSI_output_num_nodes, &
+          FSI_output_num_elements, &
+          FSI_output_node_list, &
+          FSI_output_element_list, &
+          FSI_output_displacement_list, &
+          FSI_output_velocity_list, &
+          FSI_output_force_list, &
+          FSI_output_temperature_list, &
           FSI_operation, & ! 2 or 3 (make distance or update sign)
           FSI_sub_operation, & ! 0
           local_domlo,local_domhi, &
@@ -1423,10 +1500,10 @@ stop
 
       CTML_FSI_init=0
       CTML_FSI_numsolids=0
-      CTML_force_model=0
 
       global_nparts=0
       do im=1,num_materials
+       CTML_force_model(im)=0
        if (FSI_flag(im).eq.7) then
         global_nparts=global_nparts+1
        else if (FSI_flag(im).eq.0) then
@@ -1606,7 +1683,7 @@ stop
         !    (CLSVOF_FILLCONTAINER called from FILLCONTAINER)
         !    i.e. associate to each tile a set of Lagrangian nodes and elements
         !    that are located in or very near the tile.
-        call FORT_FILLCONTAINER( &
+        call fort_fillcontainer( &
           ilev, &
           cache_max_level, &
           cache_max_level, &
@@ -1691,7 +1768,8 @@ stop
       REAL_T dx(SDIM)
       REAL_T prev_time,dt
       REAL_T UOLD(-1:NCELL,-1:NCELL,1:state_ncomp)
-      REAL_T UNEW(-1:NCELL,-1:NCELL,1:state_ncomp)
+      REAL_T, target ::  UNEW(-1:NCELL,-1:NCELL,1:state_ncomp)
+      REAL_T, pointer :: UNEW_ptr(:,:,:)
       INTEGER_T nten
       INTEGER_T nmat
       INTEGER_T nLS
@@ -1705,6 +1783,8 @@ stop
       INTEGER_T DIMDEC(VOF_HT)
       INTEGER_T DIMDEC(Snew)
       INTEGER_T DIMDEC(EOS)
+      INTEGER_T DIMDEC(smoothfab)
+      INTEGER_T DIMDEC(conductstate)
       INTEGER_T DIMDEC(recon)
       INTEGER_T DIMDEC(pres)
       INTEGER_T DIMDEC(FD_NRM_ND)
@@ -1726,7 +1806,10 @@ stop
       REAL_T, dimension(:,:,:), allocatable :: VOFnew
       REAL_T, dimension(:,:,:), allocatable :: VOF_HT
       REAL_T, dimension(:,:,:), allocatable :: Snew
-      REAL_T, dimension(:,:,:), allocatable :: EOS
+      REAL_T, dimension(:,:,:), allocatable, target :: EOS
+      REAL_T, dimension(:,:,:), allocatable :: smoothfab
+      REAL_T, dimension(:,:,:), allocatable :: conductstate
+      REAL_T, pointer :: EOS_ptr(:,:,:)
       REAL_T, dimension(:,:,:), allocatable :: recon
       REAL_T, dimension(:,:), allocatable :: pres
         ! (nmat+nten)*(sdim+1), ngrow_distance
@@ -1756,7 +1839,7 @@ stop
 
       REAL_T blob_array(2)
       INTEGER_T arraysize
-      INTEGER_T radius_cutoff(num_materials)
+      INTEGER_T constant_density_all_time(num_materials)
       INTEGER_T update_flag
       INTEGER_T total_calls(num_materials)
       INTEGER_T total_iterations(num_materials)
@@ -1797,7 +1880,6 @@ stop
       INTEGER_T n_curvcell
       INTEGER_T nprocessed
       INTEGER_T nstate
-      INTEGER_T num_elements_blobclass
       INTEGER_T rzflag
       INTEGER_T solvability_projection
       INTEGER_T tessellate
@@ -1863,7 +1945,7 @@ stop
       INTEGER_T n_root
       character(len=6) :: root_char_array
       INTEGER_T data_dir,SDC_outer_sweeps,slab_step
-      INTEGER_T data_id,visual_revolve,visual_option
+      INTEGER_T data_id,visual_revolve
 
       REAL_T :: molar_mass(num_materials)
       REAL_T :: species_molar_mass(1)
@@ -1891,7 +1973,14 @@ stop
       REAL_T min_stefan_velocity_for_dt
       INTEGER_T force_cmof_at_triple_junctions
       INTEGER_T partial_cmof_stencil_at_walls
+      
+      INTEGER_T ndefined,ngrow_sanity,dir_sanity,id_sanity,verbose_sanity
+      INTEGER_T force_check,ngrid,datatype,ncomp
+      REAL_T critical_cutoff_low
+      REAL_T critical_cutoff_high
+      REAL_T warning_cutoff
 
+      REAL_T smoothing_length_scale
 
        ! VERIFICATION
       diagnostic_output=0
@@ -1913,11 +2002,13 @@ stop
       tid_data=0
       nucleation_flag=0
       R_Palmore_desjardins=1.0d0  ! placeholder
+      fort_R_Palmore_desjardins=R_Palmore_desjardins
+      fort_reference_pressure=1.0d0
       do im=1,2*nten_in
        hardwire_Y_gamma(im)=0.0d0
        hardwire_T_gamma(im)=0.0d0
        accommodation_coefficient(im)=0.0d0
-       reference_pressure(im)=0.0d0
+       reference_pressure(im)=1.0d0
       enddo
       min_stefan_velocity_for_dt=0.0d0
 
@@ -2084,7 +2175,7 @@ stop
        enddo
 
        do im=1,nmat
-        radius_cutoff(im)=0
+        constant_density_all_time(im)=1
         microlayer_substrate(im)=0
         microlayer_angle(im)=0.0d0
         microlayer_size(im)=0.0d0
@@ -2109,12 +2200,7 @@ stop
        do im=1,nmat
         species_evaporation_density(im)=1.0d0
        enddo
-       num_elements_blobclass= &
-          3*(2*SDIM)*(2*SDIM)+3*(2*SDIM)+3*(2*SDIM)+ &
-          2*(2*SDIM)+1+ &
-          3+1+2*SDIM+1+nmat+nmat*nmat+1
-
-       arraysize=num_elements_blobclass
+       arraysize=1
        color_count=0
 
        call set_dimdec(DIMS(maskcov),fablo,fabhi,ngrow_distance)
@@ -2128,6 +2214,10 @@ stop
        call set_dimdec(DIMS(VOFnew),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(Snew),fablo,fabhi,1)
        call set_dimdec(DIMS(EOS),fablo,fabhi,ngrow)
+
+       call set_dimdec(DIMS(smoothfab),fablo,fabhi,ngrow)
+       call set_dimdec(DIMS(conductstate),fablo,fabhi,ngrow)
+
        call set_dimdec(DIMS(recon),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(pres),fablo,fabhi,ngrow)
        call set_dimdec(DIMS(FD_NRM_ND),fablo,fabhi,ngrow_distance+1)
@@ -2145,9 +2235,6 @@ stop
        allocate(maskcov(DIMV(maskcov)))
        allocate(masknbr(DIMV(masknbr),4))
        allocate(burnvel(DIMV(burnvel),nburning))
-       if (1.eq.0) then
-        allocate(tsatfab(DIMV(tsatfab),ntsat))
-       endif
        allocate(nodevel(DIMV(nodevel),2*nten*SDIM))
        allocate(LS(DIMV(LS),nmat*(SDIM+1)))
        allocate(LSnew(DIMV(LSnew),nmat*(SDIM+1)))
@@ -2155,6 +2242,8 @@ stop
        allocate(VOFnew(DIMV(VOFnew),nmat*ngeom_raw))
        allocate(VOF_HT(DIMV(VOF_HT),nmat))
        allocate(Snew(DIMV(Snew),nstate))
+       allocate(smoothfab(DIMV(smoothfab),nmat))
+       allocate(conductstate(DIMV(conductstate),nmat))
        allocate(EOS(DIMV(EOS),nden))
        allocate(recon(DIMV(recon),nmat*ngeom_recon)) ! F,X,order,SL,I x nmat
        allocate(pres(DIMV(pres)))
@@ -2295,7 +2384,9 @@ stop
          scomp=(im-1)*2
          EOS(i,j,scomp+1)=fort_denconst(im)
          EOS(i,j,scomp+2)=UOLD(i,j,im)
-        enddo
+         smoothfab(i,j,im)=UOLD(i,j,im)
+         conductstate(i,j,im)=fort_heatviscconst(im)
+        enddo ! im=1..nmat
         do im=1,nmat*ngeom_recon
          scomp=nmat+nten*SDIM
          recon(i,j,im)=UOLD(i,j,scomp+im)
@@ -2325,13 +2416,18 @@ stop
 
        do i=fablo(1)-ngrow,fabhi(1)+ngrow
        do j=fablo(2)-ngrow,fabhi(2)+ngrow
+        do im=1,nmat
+         scomp=(im-1)*2
+         smoothfab(i,j,im)=EOS(i,j,scomp+2)
+         conductstate(i,j,im)=fort_heatviscconst(im)
+        enddo
         do im=1,nmat*SDIM
          LS_slopes_FD(i,j,im)=LS(i,j,nmat+im)
         enddo
        enddo
        enddo
 
-       call FORT_FD_NORMAL( &
+       call fort_fd_normal( &
          level, &
          finest_level, &
          LS, &
@@ -2395,7 +2491,7 @@ stop
      
        ngrow_dest=ngrow_distance-1
  
-       call FORT_FD_NODE_NORMAL( &
+       call fort_fd_node_normal( &
          level, &
          finest_level, &
          LS,DIMS(LS),  & ! ngrow==ngrow_distance
@@ -2409,7 +2505,7 @@ stop
          ngrow_dest)
 
        height_function_flag=height_function_flag_global
-       call FORT_NODE_TO_CELL( &
+       call fort_node_to_cell( &
          level, &
          finest_level, &
          height_function_flag, &
@@ -2426,7 +2522,7 @@ stop
          ngrow_dest)
 
        do im=1,nmat
-        scomp=(im-1)*2+2
+        scomp=(im-1)*2+2-1 ! scomp starts at 0
         ncomp=1
         ndefined=nmat*2
         ngrow_sanity=0
@@ -2446,6 +2542,8 @@ stop
          critical_cutoff_low=-1.0D+99
          critical_cutoff_high=1.0D+99
         endif
+        EOS_ptr=>EOS
+
         call aggressive_worker( &
          datatype, &
          warning_cutoff, &
@@ -2475,9 +2573,11 @@ stop
 
        print *,"BEFORE FORT_RATEMASSCHANGE"
 
+       smoothing_length_scale=0.0d0
+
        if (1.eq.1) then 
         ! burnvel flag==1 if valid rate of phase change.
-        call FORT_RATEMASSCHANGE( &
+        call fort_ratemasschange( &
          tid, &  ! NEW
          nucleation_flag, & ! NEW
          stefan_flag, & ! do not update LSnew if stefan_flag==0
@@ -2491,8 +2591,6 @@ stop
          nburning, &
          ntsat, &
          nden, &
-         fort_density_floor, &
-         fort_density_ceiling, &
          custom_nucleation_model, &
          do_the_nucleate, &
          nucleate_pos, &
@@ -2510,6 +2608,7 @@ stop
          macrolayer_size, &
          max_contact_line_size, &
          R_Palmore_Desjardins, & ! NEW
+         smoothing_length_scale, &
          latent_heat, &
          use_exact_temperature, &
          reaction_rate, &
@@ -2526,7 +2625,7 @@ stop
          Tanasawa_or_Schrage_or_Kassemi, & !NEW(CHANGED)
          distribute_from_target, &
          mass_fraction_id, &
-         species_evaporation_density, &
+         constant_density_all_time, & ! 1..nmat
          fort_material_type, &
          molar_mass, &
          species_molar_mass, &
@@ -2538,13 +2637,14 @@ stop
          dt, &
          arraysize, &
          blob_array, &
-         num_elements_blobclass, &
          color_count, &
          maskcov,DIMS(maskcov), & ! colorfab 1 grow unused
          maskcov,DIMS(maskcov), & ! ! typefab 1 grow unused
          maskcov,DIMS(maskcov), & ! 1 grow
+         conductstate,DIMS(conductstate), &
          burnvel,DIMS(burnvel), & ! ngrow_make_distance
          tsatfab,DIMS(tsatfab), & ! ngrow_make_distance
+         smoothfab,DIMS(smoothfab), &
          LS,DIMS(LS),  & ! ngrow
          LSnew,DIMS(LSnew), &  ! ngrow
          Snew,DIMS(Snew), & ! 1 ghost
@@ -2623,9 +2723,8 @@ stop
         slab_step=0
         data_id=stefan_flag
         visual_revolve=0
-        visual_option=-2
 
-        call FORT_TECPLOTFAB_SANITY( &
+        call fort_tecplotfab_sanity( &
          root_char_array, &
          n_root, &
          data_dir, &
@@ -2640,7 +2739,6 @@ stop
          data_id, &
          nsteps, &
          prev_time, &  ! cur_time will not show on same mesh as prev_time.
-         visual_option, &
          visual_revolve, &
          level, &
          finest_level, &
@@ -2649,7 +2747,7 @@ stop
         root_char_array='LVLSET'
         data_id=1
 
-        call FORT_TECPLOTFAB_SANITY( &
+        call fort_tecplotfab_sanity( &
          root_char_array, &
          n_root, &
          data_dir, &
@@ -2664,7 +2762,6 @@ stop
          data_id, &
          nsteps, &
          prev_time, &  ! cur_time will not show on same mesh as prev_time.
-         visual_option, &
          visual_revolve, &
          level, &
          finest_level, &
@@ -2674,7 +2771,7 @@ stop
         data_id=2
 
         if (1.eq.1) then
-         call FORT_TECPLOTFAB_SANITY( &
+         call fort_tecplotfab_sanity( &
           root_char_array, &
           n_root, &
           data_dir, &
@@ -2689,7 +2786,6 @@ stop
           data_id, &
           nsteps, &
           prev_time, &  ! cur_time will not show on same mesh as prev_time.
-          visual_option, &
           visual_revolve, &
           level, &
           finest_level, &
@@ -2698,7 +2794,7 @@ stop
          root_char_array='TSATFB'
          data_id=3
 
-         call FORT_TECPLOTFAB_SANITY( &
+         call fort_tecplotfab_sanity( &
           root_char_array, &
           n_root, &
           data_dir, &
@@ -2713,7 +2809,6 @@ stop
           data_id, &
           nsteps, &
           prev_time, &  ! cur_time will not show on same mesh as prev_time.
-          visual_option, &
           visual_revolve, &
           level, &
           finest_level, &
@@ -2724,7 +2819,7 @@ stop
         root_char_array='DENTMP'
         data_id=4
 
-        call FORT_TECPLOTFAB_SANITY( &
+        call fort_tecplotfab_sanity( &
          root_char_array, &
          n_root, &
          data_dir, &
@@ -2739,7 +2834,6 @@ stop
          data_id, &
          nsteps, &
          prev_time, &  ! cur_time will not show on same mesh as prev_time.
-         visual_option, &
          visual_revolve, &
          level, &
          finest_level, &
@@ -2752,7 +2846,7 @@ stop
        !burnvel flag set from 0 to 2 if
        !foot of characteristic within range.
        velflag=1
-       call FORT_EXTEND_BURNING_VEL( &
+       call fort_extend_burning_vel( &
          velflag, &
          level, &
          finest_level, &
@@ -2770,7 +2864,7 @@ stop
        print *,"BEFORE EXTEND_BURNING_VEL 2"
 
        velflag=0
-       call FORT_EXTEND_BURNING_VEL( &
+       call fort_extend_burning_vel( &
          velflag, &
          level, &
          finest_level, &
@@ -2811,9 +2905,8 @@ stop
         slab_step=0
         data_id=stefan_flag
         visual_revolve=0
-        visual_option=-2
 
-        call FORT_TECPLOTFAB_SANITY( &
+        call fort_tecplotfab_sanity( &
          root_char_array, &
          n_root, &
          data_dir, &
@@ -2828,7 +2921,6 @@ stop
          data_id, &
          nsteps, &
          prev_time, &  ! cur_time will not show on same mesh as prev_time.
-         visual_option, &
          visual_revolve, &
          level, &
          finest_level, &
@@ -2840,7 +2932,7 @@ stop
 
        print *,"BEFORE NODEDISPLACE "
 
-       call FORT_NODEDISPLACE( &
+       call fort_nodedisplace( &
         nmat, &
         nten, &
         nburning, &
@@ -2849,10 +2941,12 @@ stop
         bfact, &
         velbc, &
         dt, &
+        normal_probe_size, &
         nodevel, &
         DIMS(nodevel), &
         burnvel, &
         DIMS(burnvel), &
+        LS,DIMS(LS),  & ! ngrow==ngrow_distance
         xlo,dx, &
         level,finest_level)
 
@@ -2880,11 +2974,10 @@ stop
 
          print *,"calling CONVERTMATERIAL im_outer,im_opp_outer ", &
                  im_outer,im_opp_outer
-         call FORT_CONVERTMATERIAL( &
+         call fort_convertmaterial( &
           tid_data, &
           im_outer, &
           im_opp_outer, &
-          solvability_projection, &
           ngrow_expansion, &
           level,finest_level, &
           normal_probe_size, &
@@ -2894,14 +2987,13 @@ stop
           nstate, &
           ntsat, &
           use_supermesh, &
-          fort_density_floor, &
-          fort_density_ceiling, &
           latent_heat, &
           saturation_temp, &
           freezing_model, &
+          Tanasawa_or_Schrage_or_Kassemi, &
           mass_fraction_id, &
-          species_evaporation_density, &
           distribute_from_target, &
+          constant_density_all_time, &
           fablo,fabhi, &
           fablo,fabhi, &
           bfact,  &
@@ -2911,6 +3003,7 @@ stop
           dt, &
           delta_mass_local, &
           maskcov,DIMS(maskcov), &
+          conductstate,DIMS(conductstate), & ! nmat components
           nodevel,DIMS(nodevel), &
           jump_strength, &
           DIMS(jump_strength), &
@@ -3003,7 +3096,7 @@ stop
          print *,"calling SLOPERECON im_outer,im_opp_outer ", &
                  im_outer,im_opp_outer
 
-         call FORT_SLOPERECON( &
+         call fort_sloperecon( &
           tid, &
           gridno, &
           level, &
@@ -3028,8 +3121,7 @@ stop
           total_iterations, &
           continuous_mof, &
           force_cmof_at_triple_junctions, &
-          partial_cmof_stencil_at_walls, &
-          radius_cutoff)
+          partial_cmof_stencil_at_walls)
 
          print *,"AFTER SLOPERECON"
          call set_boundary_recon( &
@@ -3069,7 +3161,7 @@ stop
        cur_time=prev_time+dt
 
        print *,"BEFORE FACEINIT"
-       call FORT_FACEINIT( &
+       call fort_faceinit( &
         tid, &
         tessellate, &
         nten, &
@@ -3094,7 +3186,7 @@ stop
 
        print *,"BEFORE FACEPROCESS X"
        dir=0
-       call FORT_FACEPROCESS( &
+       call fort_faceprocess( &
         ngrow_distance, &
         ngrow_distance, &
         tid, &
@@ -3115,7 +3207,7 @@ stop
 
        print *,"BEFORE FACEPROCESS Y"
        dir=1
-       call FORT_FACEPROCESS( &
+       call fort_faceprocess( &
         ngrow_distance, &
         ngrow_distance, &
         tid, &
@@ -3134,7 +3226,7 @@ stop
         nmat,nface,npair)
 
        print *,"BEFORE FACEINITTEST"
-       call FORT_FACEINITTEST(  &
+       call fort_faceinittest(  &
         tid, &
         tessellate, &
         level, &
@@ -3157,7 +3249,7 @@ stop
         nface)
 
        print *,"BEFORE STENINIT"
-       call FORT_STENINIT( & 
+       call fort_steninit( & 
         level, &
         finest_level, &
         stencil, &
@@ -3179,7 +3271,7 @@ stop
        keep_all_interfaces=1
 
        print *,"BEFORE LEVELSTRIP"
-       call FORT_LEVELSTRIP(  &
+       call fort_levelstrip(  &
         keep_all_interfaces, &
         nprocessed, &
         minLS, &
@@ -3225,7 +3317,7 @@ stop
         nmat,nten,nstar,nface,npair)
 
        print *,"BEFORE CORRECT_UNINIT"
-       call FORT_CORRECT_UNINIT(  &
+       call fort_correct_uninit(  &
         minLS, &
         maxLS, &
         max_problen, &
@@ -3259,7 +3351,7 @@ stop
 
        print *,"BEFORE (second) SLOPERECON"
        
-       call FORT_SLOPERECON( &
+       call fort_sloperecon( &
         tid, &
         gridno, &
         level, &
@@ -3284,8 +3376,7 @@ stop
         total_iterations, &
         continuous_mof, &
         force_cmof_at_triple_junctions, &
-        partial_cmof_stencil_at_walls, &
-        radius_cutoff)
+        partial_cmof_stencil_at_walls)
 
        call set_boundary_recon( &
         slopes,DIMS(slopes), &
@@ -3350,8 +3441,57 @@ stop
          scomp=nten+im
          UNEW(i,j,dcomp)=burnvel(i,j,scomp)
         enddo
-       enddo
-       enddo
+       enddo !j
+       enddo !i
+
+       do im=1,nmat
+        scomp=im-1 ! scomp starts at 0
+        ncomp=1
+        ndefined=nmat
+        ngrow_sanity=0
+        dir_sanity=-1
+        id_sanity=2
+        verbose_sanity=2
+        force_check=1
+        ngrid=1
+        print *,"BEFORE aggressive_worker2, scomp ,im=",scomp,im
+
+        datatype=0
+        warning_cutoff=1.0D+20
+        if (probtype.eq.403) then
+         critical_cutoff_low=saturation_temp_min(1)
+         critical_cutoff_high=saturation_temp_max(1)
+        else
+         critical_cutoff_low=-1.0D+99
+         critical_cutoff_high=1.0D+99
+        endif
+        UNEW_ptr=>UNEW
+        call aggressive_worker( &
+         datatype, &
+         warning_cutoff, &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         fablo,fabhi, &
+         bfact, &
+         dx, &
+         scomp, &
+         ncomp, &
+         ndefined, &
+         ngrow_sanity, &
+         dir_sanity, &
+         id_sanity, &
+         verbose_sanity, &
+         force_check, &
+         level, &  ! gridno
+         ngrid, &
+         level, &
+         finest_level, &
+         UNEW_ptr, &
+         critical_cutoff_low, &
+         critical_cutoff_high)
+
+        print *,"AFTER aggressive_worker2, scomp ,im=",scomp,im
+       enddo ! im=1..nmat
 
        do iten=1,nten
         l1_interface(iten)=0.0d0
@@ -3650,10 +3790,6 @@ stop
        deallocate(masknbr)
        deallocate(burnvel)
 
-       if (1.eq.0) then
-        deallocate(tsatfab)
-       endif
-
        deallocate(nodevel)
        deallocate(LS)
        deallocate(LSnew)
@@ -3662,6 +3798,8 @@ stop
        deallocate(VOFnew)
        deallocate(Snew)
        deallocate(EOS)
+       deallocate(smoothfab)
+       deallocate(conductstate)
        deallocate(recon)
        deallocate(pres)
        deallocate(FD_NRM_ND)

@@ -3,16 +3,10 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
-
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
-#if (STANDALONE==0)
-#include "MOF_F.H"
-#endif
- 
 #define MAXTET (5)
 #define MAXAREA (5)
 ! this should be larger than INTERCEPT_TOL
@@ -22104,6 +22098,9 @@ contains
 end module MOF_routines_module
 
 
+module MOF_cpp_module
+
+contains
 
       subroutine fort_initmof( &
        order_algorithm_in, &
@@ -22202,6 +22199,5 @@ end module MOF_routines_module
       return
       end subroutine delete_mof
 
-
-#undef STANDALONE
+end module MOF_cpp_module
 

@@ -39,7 +39,7 @@ implicit none
 
       INTEGER_T CTML_FSI_numsolids
       INTEGER_T CTML_FSI_init
-      INTEGER_T CTML_force_model
+      INTEGER_T CTML_force_model(100)
 
       INTEGER_T FSI_touch_flag
       INTEGER_T elements_generated

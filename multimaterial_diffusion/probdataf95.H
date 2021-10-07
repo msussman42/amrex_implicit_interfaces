@@ -1,4 +1,5 @@
       INTEGER_T fort_max_level
+      INTEGER_T fort_n_cell(3)
       INTEGER_T bfact_space_order(0:100)
       INTEGER_T bfact_time_order
  
@@ -34,8 +35,7 @@
       REAL_T fort_stop_time
       REAL_T fort_energyconst(MAX_NUM_MATERIALS)
       REAL_T fort_energycutoff(MAX_NUM_MATERIALS)
-      REAL_T fort_drhodt(MAX_NUM_MATERIALS)
-      REAL_T fort_drhodz(MAX_NUM_MATERIALS)
+      REAL_T fort_DrhoDT(MAX_NUM_MATERIALS)
       REAL_T fort_tempconst(MAX_NUM_MATERIALS)
       REAL_T fort_initial_temperature(MAX_NUM_MATERIALS)
       REAL_T fort_tempcutoff(MAX_NUM_MATERIALS)
@@ -64,6 +64,7 @@
 
       REAL_T fort_latent_heat(2*MAX_NUM_INTERFACES)
       REAL_T fort_saturation_temp(2*MAX_NUM_INTERFACES)
+      REAL_T fort_reference_pressure(2*MAX_NUM_INTERFACES)
 
       REAL_T fort_molar_mass(MAX_NUM_MATERIALS)
       REAL_T fort_species_molar_mass(MAX_NUM_SPECIES)
@@ -76,6 +77,9 @@
       REAL_T fort_jacob_number(2*MAX_NUM_INTERFACES)
 
       REAL_T fort_stiffPINF(MAX_NUM_MATERIALS)
+
+      REAL_T fort_R_Palmore_Desjardins
+
       REAL_T fort_stiffCP(MAX_NUM_MATERIALS)
       REAL_T fort_stiffCV(MAX_NUM_MATERIALS)
       REAL_T fort_stiffGAMMA(MAX_NUM_MATERIALS)
@@ -101,8 +105,6 @@
       INTEGER_T ngeom_raw
       INTEGER_T ngeom_recon
       INTEGER_T num_materials
-      INTEGER_T num_materials_vel
-      INTEGER_T num_materials_scalar_solve
       INTEGER_T probtype, adv_dir, axis_dir
       INTEGER_T levelrz
       INTEGER_T prescribe_temperature_outflow
@@ -120,5 +122,5 @@
       INTEGER_T fort_finest_level
       INTEGER_T n_sites
       REAL_T nucleation_init_time
-      REAL_T pos_sites(400)
+      REAL_T pos_sites(5000)
 

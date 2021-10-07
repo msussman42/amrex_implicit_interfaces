@@ -2,17 +2,8 @@
 #define _PLIC_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_SLOPERECON   sloperecon
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_SLOPERECON   SLOPERECON
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_SLOPERECON   sloperecon
-#  else
-#    define FORT_SLOPERECON   sloperecon_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -20,7 +11,7 @@ namespace amrex{
 
 extern "C"
 {
-      void FORT_SLOPERECON(
+      void fort_sloperecon(
         int* tid,
         const int* gridno,
         int* level,
@@ -45,8 +36,7 @@ extern "C"
         int* total_iterations,
         int* continuous_mof,
         int* force_cmof_at_triple_junctions, 
-        int* partial_cmof_stencil_at_walls, 
-        int* radius_cutoff);
+        int* partial_cmof_stencil_at_walls);
 
 }
 }/* namespace amrex */

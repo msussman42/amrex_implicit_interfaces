@@ -4,6 +4,7 @@
 #include "AMReX_BC_TYPES.H"
 
 PROGRAM test 
+USE MOF_cpp_module
 USE GeneralClass ! vof_cisl.F90
 USE probmain_module 
 USE probcommon_module 
@@ -770,11 +771,8 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  gravity=0.0d0
  visc_coef=0.0d0
  num_state_base=2
- num_materials_vel=1
- num_materials_scalar_solve=nmat_in
  do im=1,nmat_in
    fort_drhodt(im)=0.0d0
-   fort_drhodz(im)=0.0d0
    fort_tempconst(im)=1.0d0
    fort_initial_temperature(im)=1.0d0
    fort_tempcutoff(im)=1.0E+20
@@ -1065,7 +1063,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  ngeom_recon=3+2*AMREX_SPACEDIM
  ngeom_recon_in=3+2*AMREX_SPACEDIM
 
- call initmof(order_algorithm, &
+ call fort_initmof(order_algorithm, &
           nmat_in,MOFITERMAX, &
           0, &  ! MOF_DEBUG_RECON_in=0
           1, &  ! MOF_TURN_OFF_LS_in=1
