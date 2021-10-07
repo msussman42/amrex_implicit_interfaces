@@ -63,7 +63,7 @@
 
       if (SDIM.eq.2) then
 
-       if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4
+       if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4 or 8
         xmap3D(1)=1
         xmap3D(2)=2
         xmap3D(3)=0
@@ -162,7 +162,7 @@
 
       else if (SDIM.eq.3) then
 
-       do dir=1,3
+       do dir=1,SDIM
         problo3D(dir)=problo(dir)
         probhi3D(dir)=probhi(dir)
        enddo
@@ -177,20 +177,18 @@
 
       end module solidfluid_module
 
-#if (STANDALONE==1)
       module solidfluid_cpp_module
       contains
-#endif
 
        !FSI_operation=0  initialize node locations; generate_new_triangles
        !FSI_operation=1  update node locations
        !FSI_operation=2  make distance in narrow band
        !FSI_operation=3  update the sign.
-       !FSI_operation=4  copy eul fluid vel to solid
+       !FSI_operation=4  copy eul fluid vel/pres to solid
        !  FSI_sub_operation.eq.0 (clear lagrangian data)
        !  FSI_sub_operation.eq.1 (actual copy)
        !  FSI_sub_operation.eq.2 (sync lag data)
-      subroutine FORT_HEADERMSG( &
+      subroutine fort_headermsg( &
         tid, &
         tilenum, &
         gridno, &
@@ -198,6 +196,25 @@
         level, &
         finest_level, &
         max_level, &
+        im_critical, &
+        num_nodes_list, &
+        num_elements_list, &
+        FSI_input_num_nodes, &
+        FSI_input_num_elements, &
+        FSI_input_node_list, &
+        FSI_input_element_list, &
+        FSI_input_displacement_list, &
+        FSI_input_velocity_list, &
+        FSI_input_force_list, &
+        FSI_input_temperature_list, &
+        FSI_output_num_nodes, &
+        FSI_output_num_elements, &
+        FSI_output_node_list, &
+        FSI_output_element_list, &
+        FSI_output_displacement_list, &
+        FSI_output_velocity_list, &
+        FSI_output_force_list, &
+        FSI_output_temperature_list, &
         FSI_operation, &
         FSI_sub_operation, &
         tilelo,tilehi, &
@@ -224,7 +241,7 @@
         nparts, &
         im_solid_map, & ! type: 0..nmat-1
         h_small, &  ! smallest mesh size from the max_level.
-        time, &
+        cur_time, &
         dt, &
         FSI_refine_factor, &
         FSI_bounding_box_ngrow, &
@@ -234,7 +251,9 @@
         iter, &
         current_step, &
         plot_interval, &
-        ioproc)
+        ioproc) &
+      bind(c,name='fort_headermsg')
+
       use CLSVOFCouplerIO, only : CLSVOF_ReadHeader,CLSVOF_ReadNodes, &
        CLSVOF_InitBox,CLSVOF_clear_lag_data,CLSVOF_sync_lag_data, &
        CLSVOF_Copy_To_LAG
@@ -253,6 +272,39 @@
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: max_level
+
+      INTEGER_T, intent(in) :: im_critical
+      INTEGER_T, intent(in) :: num_nodes_list(num_materials)
+      INTEGER_T, intent(in) :: num_elements_list(num_materials)
+
+      INTEGER_T, intent(in) :: FSI_input_num_nodes
+      INTEGER_T, intent(in) :: FSI_input_num_elements
+      REAL_T, intent(in) :: FSI_input_node_list(3*FSI_input_num_nodes)
+      INTEGER_T, intent(in) :: &
+        FSI_input_element_list(4*FSI_input_num_elements)
+      REAL_T, intent(in) :: &
+        FSI_input_displacement_list(3*FSI_input_num_nodes)
+      REAL_T, intent(in) :: &
+        FSI_input_velocity_list(3*FSI_input_num_nodes)
+      REAL_T, intent(in) :: FSI_input_force_list(3*FSI_input_num_nodes)
+      REAL_T, intent(in) :: &
+        FSI_input_temperature_list(FSI_input_num_nodes)
+
+      INTEGER_T, intent(in) :: FSI_output_num_nodes
+      INTEGER_T, intent(in) :: FSI_output_num_elements
+      REAL_T, intent(inout) :: &
+       FSI_output_node_list(3*FSI_output_num_nodes)
+      INTEGER_T, intent(in) :: &
+              FSI_output_element_list(4*FSI_output_num_elements)
+      REAL_T, intent(inout) :: &
+              FSI_output_displacement_list(3*FSI_output_num_nodes)
+      REAL_T, intent(inout) :: &
+              FSI_output_velocity_list(3*FSI_output_num_nodes)
+      REAL_T, intent(inout) :: &
+              FSI_output_force_list(3*FSI_output_num_nodes)
+      REAL_T, intent(inout) :: &
+              FSI_output_temperature_list(FSI_output_num_nodes)
+
       INTEGER_T, intent(in) :: FSI_operation
       INTEGER_T, intent(in) :: FSI_sub_operation
       INTEGER_T, intent(in) :: nFSI
@@ -262,13 +314,13 @@
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       INTEGER_T nmat
       REAL_T, intent(in) :: h_small ! smallest mesh size from the max_level
-      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: FSI_refine_factor(num_materials)
       INTEGER_T, intent(in) :: FSI_bounding_box_ngrow(num_materials)
       INTEGER_T, intent(inout) :: touch_flag
       INTEGER_T, intent(inout) :: CTML_FSI_init
-      INTEGER_T, intent(in) :: CTML_force_model
+      INTEGER_T, intent(in) :: CTML_force_model(num_materials)
       INTEGER_T, intent(in) :: iter
       INTEGER_T, intent(in) :: current_step 
       INTEGER_T, intent(in) :: plot_interval 
@@ -279,10 +331,14 @@
       INTEGER_T, intent(in) :: DIMDEC(masknbr) 
       INTEGER_T, intent(in) :: DIMDEC(maskfiner) 
         ! velfab if FSI_operation==4
-      REAL_T, intent(inout) :: FSIdata(DIMV(FSIdata),nFSI) 
-      REAL_T, intent(in) :: velfab(DIMV(velfab),SDIM)
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr),2)
-      REAL_T, intent(in) :: maskfiner(DIMV(maskfiner),4)
+      REAL_T, intent(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
+      REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1)
+      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),2)
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: maskfiner(DIMV(maskfiner),4)
+      REAL_T, pointer :: maskfiner_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -322,8 +378,13 @@
       INTEGER_T partid
       INTEGER_T nhalf
       INTEGER_T lev77
+      INTEGER_T im_local
  
       nhalf=3
+
+      FSIdata_ptr=>FSIdata
+
+      nmat=num_materials
 
       if (nthread_parm.ne.geom_nthreads) then
        print *,"nthread_parm invalid"
@@ -384,14 +445,34 @@
        print *,"touch_flag invalid"
        stop
       endif
-      if ((CTML_FSI_init.ne.0).and.(CTML_FSI_init.ne.1)) then
+      if ((CTML_FSI_init.ne.0).and. &
+          (CTML_FSI_init.ne.1)) then
        print *,"CTML_FSI_init invalid"
        stop
       endif
-      if ((CTML_force_model.ne.0).and.(CTML_force_model.ne.1)) then
-       print *,"CTML_force_model invalid"
-       stop
-      endif
+      do im_local=1,nmat
+       if (FSI_flag(im_local).eq.4) then !CTML Goldstein et al
+        if (CTML_force_model(im_local).eq.0) then
+         ! do nothing
+        else
+         print *,"CTML_force_model invalid"
+         stop
+        endif
+       else if (FSI_flag(im_local).eq.8) then !CTML pres-vel
+        if (CTML_force_model(im_local).eq.2) then
+         ! do nothing
+        else
+         print *,"CTML_force_model invalid"
+         stop
+        endif
+       else if (fort_FSI_flag_valid(nmat,im_local).eq.1) then
+        ! do nothing
+       else
+        print *,"fort_FSI_flag_valid invalid"
+        stop
+       endif
+      enddo ! im_local=1..nmat
+
       if (iter.lt.0) then
        print *,"iter invalid"
        stop
@@ -404,31 +485,29 @@
        print *,"plot_interval invalid"
        stop
       endif
-      nmat=num_materials
 
-      if (num_materials_vel.ne.1) then
-       print *,"num_materials_vel invalid"
-       stop
-      endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_HEADERMSG"
+       print *,"nparts invalid fort_headermsg"
        stop
       endif
  
-       ! nparts x (velocity + LS + temperature + flag + stress)
+       ! nparts x (velocity + LS + temperature + flag + force)
       if (nFSI.ne.nparts*nFSI_sub) then 
        print *,"nFSI invalid"
        stop
       endif
-      if (nFSI_sub.ne.12) then 
-       print *,"nFSI_sub invalid 1 fort headermsg: ",nFSI_sub
+      if (nFSI_sub.ne.9) then 
+       print *,"nFSI_sub invalid 1 fort_headermsg: ",nFSI_sub
        stop
       endif
   
-      call checkbound(fablo,fabhi,DIMS(FSIdata),ngrowFSI,-1,2910)
-      call checkbound(fablo,fabhi,DIMS(velfab),ngrowFSI,-1,2910)
-      call checkbound(fablo,fabhi,DIMS(masknbr),ngrowFSI,-1,2910)
-      call checkbound(fablo,fabhi,DIMS(maskfiner),ngrowFSI,-1,2910)
+      call checkbound_array(fablo,fabhi,FSIdata_ptr,ngrowFSI,-1,2910)
+      velfab_ptr=>velfab
+      call checkbound_array(fablo,fabhi,velfab_ptr,ngrowFSI,-1,2910)
+      masknbr_ptr=>masknbr
+      call checkbound_array(fablo,fabhi,masknbr_ptr,ngrowFSI,-1,2910)
+      maskfiner_ptr=>maskfiner
+      call checkbound_array(fablo,fabhi,maskfiner_ptr,ngrowFSI,-1,2910)
 
       ! update ngrowFSI grow layers of FSIdata that do not overlap
       ! with another tile.
@@ -523,20 +602,20 @@
           nparts, &
           im_solid_map, &
           h_small,dx_max_level,CTML_FSI_INIT, &
-          time,problo3D,probhi3D,ioproc,isout)
+          cur_time,problo3D,probhi3D,ioproc,isout)
        else if (FSI_operation.eq.1) then 
         if (CTML_FSI_INIT.ne.1) then
          print *,"CTML_FSI_INIT.ne.1"
          stop
         endif
-         ! time=t^{n+1}
-         ! if FSI_flag==4, then
+         ! cur_time=t^{n+1}
+         ! if FSI_flag==4 or 8, then
          !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
-          time,dt,h_small,problo3D,probhi3D, &
+          cur_time,dt,h_small,problo3D,probhi3D, &
           current_step,plot_interval,ioproc,isout)
        else
         print *,"FSI_operation invalid"
@@ -556,11 +635,12 @@
         print *,"CTML_FSI_INIT.ne.1"
         stop
        endif
-       if (nFSI_sub.ne.12) then 
+        ! (velocity + LS + temperature + flag + force)
+       if (nFSI_sub.ne.9) then 
         print *,"nFSI_sub invalid fort headermsg 2: ",nFSI_sub
         stop
        endif
-       ! nparts x (velocity + LS + temperature + flag + stress)
+       ! nparts x (velocity + LS + temperature + flag + force)
        if (nFSI.ne.nparts*nFSI_sub) then 
         print *,"nFSI invalid"
         stop
@@ -617,7 +697,6 @@
          endif
          call gridsten_level(xsten,i2d,j2d,k2d,level,nhalf)
 
-          ! stress: T11,T12,T22,T33,T13,T23
          do partid=1,nparts
           ibase=(partid-1)*nFSI_sub
           FSIdata3D(i,j,k,ibase+4)=FSIdata(D_DECL(i2d,j2d,k2d),ibase+4) !LS
@@ -635,9 +714,9 @@
            endif
            FSIdata3D(i,j,k,ibase+dir)=vel3D(dir)
           enddo ! dir=1..3
-          do dir=1,6
+          do dir=1,3
            FSIdata3D(i,j,k,ibase+6+dir)= &
-             FSIdata(D_DECL(i2d,j2d,k2d),ibase+6+dir) !stress
+             FSIdata(D_DECL(i2d,j2d,k2d),ibase+6+dir) !force
           enddo
          enddo ! partid=1,nparts
           
@@ -667,13 +746,14 @@
        do partid=1,nparts
         im_part=im_solid_map(partid)+1
         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-         print *,"im_part invalid FORT_HEADERMSG"
+         print *,"im_part invalid fort_headermsg"
          stop
         endif
         if (is_lag_part(nmat,im_part).eq.1) then
 
          if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid from CAD
-             (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+             (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
+             (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres vel
              (FSI_flag(im_part).eq.6).or. & ! ice from CAD
              (FSI_flag(im_part).eq.7)) then ! fluid from CAD
 
@@ -729,7 +809,8 @@
            FSI_operation, &
            touch_flag, &
            h_small, &
-           time,dt, &
+           cur_time, &
+           dt, &
            problo3D,probhi3D, &
            xmap3D, &
            xslice3D, &
@@ -741,7 +822,7 @@
            FSIdata3D, &
            masknbr3D, &
            DIMS3D(FSIdata3D), &
-           CTML_force_model, &
+           CTML_force_model(im_part), &
            ioproc,isout)
 
          else if (FSI_flag(im_part).eq.1) then ! prescribed solid (EUL)
@@ -780,12 +861,12 @@
          ! mask2==1 => (i,j,k) in the interior of the tile.
          ! mask1==0 => (i,j,k) in coarse/fine ghost cell
         if ((mask1.eq.0).or.(mask2.eq.1)) then
-         ! nparts x (velocity + LS + temperature + flag + stress)
+         ! nparts x (velocity + LS + temperature + flag + force)
          if (nFSI.ne.nparts*nFSI_sub) then 
           print *,"nFSI invalid"
           stop
          endif
-         if (nFSI_sub.ne.12) then 
+         if (nFSI_sub.ne.9) then 
           print *,"nFSI_sub invalid fort headermsg 3: ",nFSI_sub
           stop
          endif
@@ -832,9 +913,9 @@
              stop
             endif
            enddo ! dir=1..3
-           do dir=1,6
+           do dir=1,3
             FSIdata(D_DECL(i,j,k),ibase+6+dir)=  &
-             FSIdata3D(idx(1),idx(2),idx(3),ibase+6+dir) ! stress
+             FSIdata3D(idx(1),idx(2),idx(3),ibase+6+dir) ! force
            enddo
           enddo ! partid=1..nparts
          else
@@ -857,7 +938,7 @@
        deallocate(FSIdata3D)
        deallocate(masknbr3D)
 
-      else if (FSI_operation.eq.4) then ! copy Eul fluid vel to solid
+      else if (FSI_operation.eq.4) then ! copy Eul fluid vel/pres to solid
 
        isout=1 ! verbose on in sci_clsvof.F90
 
@@ -869,7 +950,7 @@
        if (FSI_sub_operation.eq.0) then
         call CLSVOF_clear_lag_data(ioproc,isout)
        else if (FSI_sub_operation.eq.1) then 
-        allocate(veldata3D(DIMV3D(FSIdata3D),3))
+        allocate(veldata3D(DIMV3D(FSIdata3D),4)) ! 3+1
         allocate(xdata3D(DIMV3D(FSIdata3D),3))
         allocate(masknbr3D(DIMV3D(FSIdata3D),2))
         allocate(maskfiner3D(DIMV3D(FSIdata3D)))
@@ -883,7 +964,7 @@
 
          if (SDIM.eq.3) then
           call gridsten_level(xsten,i,j,k,level,nhalf)
-          do dir=1,SDIM
+          do dir=1,SDIM+1
            veldata3D(i,j,k,dir)=velfab(D_DECL(i,j,k),dir)
           enddo
           do dir=1,SDIM
@@ -934,6 +1015,7 @@
            endif
            veldata3D(i,j,k,dir)=vel3D(dir)
           enddo ! dir=1..3
+          veldata3D(i,j,k,4)=velfab(D_DECL(i2d,j2d,k2d),SDIM+1)
 
           do nc=1,2
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
@@ -962,13 +1044,14 @@
         do partid=1,nparts
          im_part=im_solid_map(partid)+1
          if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-          print *,"im_part invalid FORT_HEADERMSG"
+          print *,"im_part invalid fort_headermsg"
           stop
          endif
          if (is_lag_part(nmat,im_part).eq.1) then
 
           if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
-              (FSI_flag(im_part).eq.4).or. & ! CTML FSI
+              (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
+              (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres-vel
               (FSI_flag(im_part).eq.6).or. & ! ice from CAD
               (FSI_flag(im_part).eq.7)) then ! fluid from CAD
 
@@ -1028,7 +1111,7 @@
             nFSI, &
             nFSI_sub, &
             FSI_operation, &
-            time, &
+            cur_time, &
             problo3D,probhi3D, &
             xmap3D, &
             xslice3D, &
@@ -1060,7 +1143,7 @@
         enddo ! partid=1..nparts
 
         if (nparts.gt.nmat) then
-         print *,"nparts out of range FORT_HEADERMSG"
+         print *,"nparts out of range fort_headermsg"
          stop
         endif
 
@@ -1083,14 +1166,14 @@
  
     
       return
-      end subroutine FORT_HEADERMSG
+      end subroutine fort_headermsg
 
 
-      subroutine FORT_FILLCONTAINER( &
+      subroutine fort_fillcontainer( &
         level, &
         finest_level, &
         sci_max_level, &
-        time, &
+        cur_time, &
         dt, &
         tilelo_array, &
         tilehi_array, &
@@ -1109,7 +1192,9 @@
         nparts, &
         im_solid_map, &
         problo, &
-        probhi)
+        probhi) &
+      bind(c,name='fort_fillcontainer')
+
       use CLSVOFCouplerIO, only : CLSVOF_FILLCONTAINER
       use solidfluid_module
       use global_utility_module
@@ -1132,7 +1217,7 @@
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tilelo_array(tile_dim*SDIM)
       INTEGER_T, intent(in) :: tilehi_array(tile_dim*SDIM)
-      REAL_T, intent(in) :: time,dt
+      REAL_T, intent(in) :: cur_time,dt
       REAL_T, intent(in) :: xlo_array(tile_dim*SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dx_max_level(SDIM)
@@ -1179,14 +1264,18 @@
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_FILLCONTAINER"
+       print *,"nparts invalid fort_fillcontainer"
        stop
       endif
-      if (time.lt.zero) then
-       print *,"time invalid"
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
@@ -1417,11 +1506,12 @@
          endif
          local_flag=FSI_flag(im_part)
          if ((local_flag.eq.2).or. & !prescribed solid from CAD
-             (local_flag.eq.4).or. & !CTML FSI
+             (local_flag.eq.4).or. & !CTML FSI Goldstein et al.
+             (local_flag.eq.8).or. & !CTML FSI pres-vel
              (local_flag.eq.6).or. & !ice from CAD
              (local_flag.eq.7)) then !fluid from CAD
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &
-           dx3D,partid,im_part,nmat,time,dt)
+           dx3D,partid,im_part,nmat,cur_time,dt)
          else if (local_flag.eq.1) then ! prescribed solid (EUL)
           ! do nothing
          else
@@ -1441,11 +1531,9 @@
       endif
 
       return
-      end subroutine FORT_FILLCONTAINER
+      end subroutine fort_fillcontainer
 
-#if (STANDALONE==1)
       end module solidfluid_cpp_module
-#endif
 
 #undef STANDALONE
 

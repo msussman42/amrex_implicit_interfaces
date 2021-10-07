@@ -3,16 +3,10 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 1
-
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
-#if (STANDALONE==0)
-#include "MOF_F.H"
-#endif
- 
 #define MAXTET (5)
 #define MAXAREA (5)
 ! this should be larger than INTERCEPT_TOL
@@ -6176,7 +6170,7 @@ end subroutine volume_sanity_check
           if (sdim.eq.3) then
            xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
           endif
-         enddo ! isten
+         enddo ! isten=-1..1
 
          ! in: tets_box_planes_super
          call tets_box_planes( &
@@ -10173,7 +10167,8 @@ contains
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen, &
-         cencell_cen,sdim)
+         cencell_cen, &
+         sdim)
        else if (continuous_mof.eq.2) then
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
@@ -10182,7 +10177,8 @@ contains
         call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
-         volcell_cen,cencell_cen, &
+         volcell_cen, &
+         cencell_cen, &
          sdim)
        else
         print *,"continuous_mof invalid"
@@ -10273,7 +10269,7 @@ contains
 
          if (sdim.eq.3) then
           ksten_low=-1
-          ksten_high=-1
+          ksten_high=1
          else if (sdim.eq.2) then
           ksten_low=0
           ksten_high=0
@@ -11605,15 +11601,19 @@ contains
           (continuous_mof.eq.5)) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
         cencell_vof,sdim)
-       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_cen, &
-        cencell_cen,sdim)
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell_cen, &
+        cencell_cen, &
+        sdim)
       else if (continuous_mof.eq.2) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
          cencell_vof,sdim)
        call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
-         volcell_cen,cencell_cen, &
+         volcell_cen, &
+         cencell_cen, &
          sdim)
       else
         print *,"continuous_mof invalid"
@@ -12115,15 +12115,20 @@ contains
       return
       end subroutine individual_MOF
 
-
+        ! input: n1d
         ! n1d=1 => im material on top
         ! n1d=-1 => im material on bottom
       subroutine get_col_ht_LS( &
+       vof_height_function, &
        crossing_status, &
        bfact,dx,xsten0, &
        csten,csten_x,csten_HT, &
-       lsdata,ht, &
-       dircrit,n1d, &
+       lsdata, &
+       vofdata, &
+       ht_from_LS, &
+       ht_from_VOF, &
+       dircrit, & ! dircrit=1..sdim
+       n1d, &
        nmat, &
        sdim)
       use probcommon_module
@@ -12131,6 +12136,7 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: vof_height_function
       INTEGER_T, intent(out) :: crossing_status
       INTEGER_T, intent(in) :: sdim
       INTEGER_T, intent(in) :: csten,csten_x,csten_HT
@@ -12138,18 +12144,29 @@ contains
       REAL_T, intent(in) :: dx(sdim)
       REAL_T, intent(in) :: xsten0(-csten_x:csten_x,sdim)
       REAL_T, intent(in) :: lsdata(-csten:csten)
-      REAL_T, intent(out) :: ht
+      REAL_T, intent(in) :: vofdata(-csten:csten)
+      REAL_T, intent(out) :: ht_from_LS
+      REAL_T, intent(out) :: ht_from_VOF
       REAL_T, intent(in) :: n1d
       INTEGER_T, intent(in) :: dircrit
       INTEGER_T, intent(in) :: nmat
 
-      INTEGER_T l,lmin,lmax,lcrit
+      INTEGER_T l
+      INTEGER_T l_vof
+      INTEGER_T lmin,lmax
+      INTEGER_T lvof_min,lvof_max
+      INTEGER_T lcrit
       REAL_T xbottom,xtop
-      REAL_T XMIN,LSMIN,LSTEST
+      REAL_T current_xbottom
+      INTEGER_T vof_ratio_ht_power
+      REAL_T X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
       REAL_T ls1,ls2,x1,x2,slope
       REAL_T charfn(-csten:csten)
       REAL_T LS
+      REAL_T vof_top_sum,vof_bot_sum
+      REAL_T dr,dz,volcell,vof_crit
+      REAL_T dx_norm,dx_tan1,dx_tan2
 
       if (csten_x.ne.2*csten+1) then
        print *,"csten_x invalid"
@@ -12202,7 +12219,7 @@ contains
       lmin=-csten_HT
       lmax=csten_HT
       if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-       if (dircrit.eq.1) then
+       if (dircrit.eq.1) then ! horizontal column
         do while (xsten0(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
          if (2*lmin.gt.csten_x) then
@@ -12218,13 +12235,13 @@ contains
        stop
       endif 
 
-      LSMIN=abs(lsdata(lmin))
-      XMIN=xsten0(2*lmin,dircrit)
+      ABS_LSMIN=abs(lsdata(lmin))
+      X_AT_ABS_LSMIN=xsten0(2*lmin,dircrit)
       do l=lmin+1,lmax
        LSTEST=abs(lsdata(l))
-       if (LSTEST.lt.LSMIN) then
-        LSMIN=LSTEST
-        XMIN=xsten0(2*l,dircrit)
+       if (LSTEST.lt.ABS_LSMIN) then
+        ABS_LSMIN=LSTEST
+        X_AT_ABS_LSMIN=xsten0(2*l,dircrit)
        endif
       enddo
 
@@ -12248,10 +12265,15 @@ contains
        ! n1d>0 if LS>0 material on top and LS<0 material on bottom.
        ! n1d<0 otherwise
       do l=0,csten_HT-1
+
+        ! first check upper half of stencil for a crossing
        if ((crossing_status.eq.0).and.(l+1.le.lmax)) then 
         ls1=charfn(l)
         ls2=charfn(l+1)
-        if ((ls1*ls2.lt.zero).and.((ls2-ls1)*n1d.gt.zero)) then
+        ! n1d=1 => im material on top
+        ! n1d=-1 => im material on bottom
+        if ((ls1*ls2.lt.zero).and. &
+            ((ls2-ls1)*n1d.gt.zero)) then
          lcrit=l
          crossing_status=1
          ls1=lsdata(l)
@@ -12260,16 +12282,18 @@ contains
          x2=xsten0(2*l+2,dircrit)
           ! LS=LS1+slope(x-x1)  xzero=-LS1/slope+x1
          if (ls1.eq.zero) then
-          ht=x1
+          ht_from_LS=x1
          else if (ls2.eq.zero) then 
-          ht=x2
+          ht_from_LS=x2
          else
           slope=(ls1-ls2)/(x1-x2)
-          ht=x1-ls1/slope
+          ht_from_LS=x1-ls1/slope
          endif
         endif   
        endif
-       if ((crossing_status.eq.0).and.(-(l+1).ge.lmin)) then 
+        ! second: check lower half of stencil for a crossing
+       if ((crossing_status.eq.0).and. &
+           (-(l+1).ge.lmin)) then 
         ls1=charfn(-l)
         ls2=charfn(-(l+1))
         if ((ls1*ls2.lt.zero).and.((ls1-ls2)*n1d.gt.zero)) then
@@ -12280,12 +12304,12 @@ contains
          x1=xsten0(-2*l,dircrit)
          x2=xsten0(-(2*l+2),dircrit)
          if (ls1.eq.zero) then
-          ht=x1
+          ht_from_LS=x1
          else if (ls2.eq.zero) then
-          ht=x2
+          ht_from_LS=x2
          else
           slope=(ls1-ls2)/(x1-x2)
-          ht=x1-ls1/slope
+          ht_from_LS=x1-ls1/slope
          endif
         endif   
        endif
@@ -12295,22 +12319,324 @@ contains
          ! given volume for column, find the interface.
          ! for RZ, if dircrit=1, then column extends to r=0
 
-      if (crossing_status.eq.1) then
+      if (crossing_status.eq.1) then ! crossing found
        if ((lcrit.lt.lmin).or.(lcrit+1.gt.lmax)) then
         print *,"lcrit invalid"
         stop
        endif
-      else if (crossing_status.eq.0) then
+      else if (crossing_status.eq.0) then ! crossing not found
        ! do nothing
       else 
        print *,"crossing_status invalid"
        stop
       endif
 
+      ht_from_VOF=ht_from_LS
+
       if (crossing_status.eq.1) then
-       ! do nothing
+       if (vof_height_function.eq.1) then
+        lvof_min=max(lcrit-1,lmin)
+        lvof_max=min(lcrit+2,lmax)
+
+        if ((lvof_min.ge.lmin).and. &
+            (lvof_max.le.lmax).and. &
+            (lcrit.ge.lmin).and. &
+            (lcrit+1.le.lmax)) then
+
+         vof_top_sum=zero
+         vof_bot_sum=zero
+
+         do l_vof=lmin,lmax
+
+          if (n1d.eq.1) then ! n1d=1 => im material on top
+           vof_crit=one-vofdata(l_vof)
+          else if (n1d.eq.-1) then ! n1d=-1 => im material on bottom
+           vof_crit=vofdata(l_vof)
+          else
+           print *,"n1d invalid"
+           stop
+          endif
+
+          if (l_vof.lt.lvof_min) then
+           vof_crit=one
+          else if ((l_vof.ge.lvof_min).and. &
+                   (l_vof.le.lvof_max)) then
+           ! do nothing
+          else if (l_vof.gt.lvof_max) then
+           vof_crit=zero
+          else
+           print *,"l_vof invalid"
+           stop
+          endif
+
+          if (abs(vof_crit).le.VOFTOL) then
+           vof_crit=zero
+          else if (abs(vof_crit-one).le.VOFTOL) then
+           vof_crit=one
+          else if ((vof_crit.gt.zero).and. &
+                   (vof_crit.lt.one)) then
+           ! do nothing
+          else
+           print *,"vof_crit invalid"
+           stop
+          endif
+
+          if (levelrz.eq.3) then
+           print *,"vof_height_function not ready for levelrz==3"
+           stop
+          else if (levelrz.eq.1) then
+           if (dircrit.eq.1) then ! horizontal column
+
+            dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+            dz=xsten0(1,2)-xsten0(-1,2)
+            if ((dz.gt.zero).and.(dr.gt.zero)) then
+             volcell=Pi*(xsten0(2*l_vof-1,dircrit)+ &
+                         xsten0(2*l_vof+1,dircrit))*dz*dr
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+             
+           else if (dircrit.eq.2) then ! vertical column
+
+            dz=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+            dr=xsten0(1,1)-xsten0(-1,1)
+            if ((dz.gt.zero).and.(dr.gt.zero)) then
+             volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+
+           else
+            print *,"dircrit invalid"
+            stop
+           endif
+
+          else if (levelrz.eq.0) then
+
+           if (SDIM.eq.2) then
+
+            if (dircrit.eq.1) then ! horizontal column
+             dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+             dz=xsten0(1,2)-xsten0(-1,2)
+             if ((dz.gt.zero).and.(dr.gt.zero)) then
+              volcell=dz*dr
+             else
+              print *,"dz or dr invalid"
+              stop
+             endif
+            else if (dircrit.eq.2) then ! vertical column
+
+             dz=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+             dr=xsten0(1,1)-xsten0(-1,1)
+             if ((dz.gt.zero).and.(dr.gt.zero)) then
+              volcell=dz*dr
+             else
+              print *,"dz or dr invalid"
+              stop
+             endif
+            else
+             print *,"dircrit invalid"
+             stop
+            endif
+
+           else if (SDIM.eq.3) then
+
+            dx_norm=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
+            if (dx_norm.gt.zero) then
+             if (dircrit.eq.1) then ! horizontal column
+              dx_tan1=xsten0(1,2)-xsten0(-1,2)
+              dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+             else if (dircrit.eq.2) then ! vertical column
+              dx_tan1=xsten0(1,1)-xsten0(-1,1)
+              dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+             else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
+              dx_tan1=xsten0(1,1)-xsten0(-1,1)
+              dx_tan2=xsten0(1,2)-xsten0(-1,2)
+             else
+              print *,"dircrit invalid"
+              stop
+             endif
+             if ((dx_tan1.gt.zero).and.(dx_tan2.gt.zero)) then
+              volcell=dx_norm*dx_tan1*dx_tan2
+             else
+              print *,"dx_tan1 or dx_tan2 invalid"
+              stop
+             endif
+            else
+             print *,"dx_norm invalid"
+             stop
+            endif
+
+           else
+            print *,"dimension bust"
+            stop
+           endif
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+
+          vof_top_sum=vof_top_sum+vof_crit*volcell
+          vof_bot_sum=vof_bot_sum+volcell
+         enddo !l_vof=lmin,lmax
+
+         current_xbottom=xbottom
+         vof_ratio_ht_power=1
+
+         if (levelrz.eq.3) then
+          print *,"vof_height_function not ready for levelrz==3"
+          stop
+         else if (levelrz.eq.1) then
+          if (dircrit.eq.1) then ! horizontal column
+           if (problox.ge.zero) then
+            vof_ratio_ht_power=2
+            current_xbottom=zero
+            dr=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dz=xsten0(1,2)-xsten0(-1,2)
+            if ((dz.gt.zero).and.(dr.ge.zero)) then
+             volcell=Pi*(xsten0(2*lmin-1,dircrit)+ &
+                         current_xbottom)*dr*dz
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+           else
+            print *,"expecting  problox>=0"
+            stop
+           endif  
+          else if (dircrit.eq.2) then ! vertical column
+
+           dz=xsten0(2*lmin-1,dircrit)-current_xbottom
+           dr=xsten0(1,1)-xsten0(-1,1)
+           if ((dz.ge.zero).and.(dr.gt.zero)) then
+            volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
+           else
+            print *,"dz or dr invalid"
+            stop
+           endif
+
+          else
+           print *,"dircrit invalid"
+           stop
+          endif
+
+         else if (levelrz.eq.0) then
+
+          if (SDIM.eq.2) then
+
+           if (dircrit.eq.1) then ! horizontal column
+            dr=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dz=xsten0(1,2)-xsten0(-1,2)
+            if ((dz.gt.zero).and.(dr.ge.zero)) then
+             volcell=dr*dz
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+           else if (dircrit.eq.2) then ! vertical column
+            dz=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dr=xsten0(1,1)-xsten0(-1,1)
+            if ((dz.ge.zero).and.(dr.gt.zero)) then
+             volcell=dz*dr
+            else
+             print *,"dz or dr invalid"
+             stop
+            endif
+           else
+            print *,"dircrit invalid"
+            stop
+           endif
+
+          else if (SDIM.eq.3) then
+
+           dx_norm=xsten0(2*lmin-1,dircrit)-current_xbottom
+           if (dx_norm.ge.zero) then
+            if (dircrit.eq.1) then ! horizontal column
+             dx_tan1=xsten0(1,2)-xsten0(-1,2)
+             dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+            else if (dircrit.eq.2) then ! vertical column
+             dx_tan1=xsten0(1,1)-xsten0(-1,1)
+             dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+            else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
+             dx_tan1=xsten0(1,1)-xsten0(-1,1)
+             dx_tan2=xsten0(1,2)-xsten0(-1,2)
+            else
+             print *,"dircrit invalid"
+             stop
+            endif
+            if ((dx_tan1.gt.zero).and.(dx_tan2.gt.zero)) then
+             volcell=dx_norm*dx_tan1*dx_tan2
+            else
+             print *,"dx_tan1 or dx_tan2 invalid"
+             stop
+            endif
+           else
+            print *,"dx_norm invalid"
+            stop
+           endif
+
+          else
+           print *,"dimension bust"
+           stop
+          endif
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+
+         vof_top_sum=vof_top_sum+volcell
+         vof_bot_sum=vof_bot_sum+volcell
+
+         if (vof_bot_sum.gt.zero) then
+          if (vof_ratio_ht_power.eq.1) then
+           ht_from_VOF= &
+             vof_top_sum*(xtop-current_xbottom)/vof_bot_sum+current_xbottom
+          else if (vof_ratio_ht_power.eq.2) then
+           dr=xsten0(1,1)-xsten0(-1,1)
+           ht_from_VOF=(xtop**2)*vof_top_sum/vof_bot_sum
+           if (ht_from_VOF.ge.zero) then
+            ht_from_VOF=sqrt(ht_from_VOF)
+            if (abs(ht_from_VOF-xbottom).le.VOFTOL*dr) then
+             ht_from_VOF=xbottom
+            else if (abs(ht_from_VOF-xtop).le.VOFTOL*dr) then
+             ht_from_VOF=xtop
+            else if ((ht_from_VOF.ge.xbottom).and. &
+                     (ht_from_VOF.le.xtop)) then
+             ! do nothing
+            else
+             print*,"ht_from_VOF invalid"
+             stop
+            endif
+                    
+           else
+            print *,"ht_from_VOF invalid"
+            stop
+           endif
+          else 
+           print *,"vof_ratio_ht_power invalid"
+           stop
+          endif
+         else
+          print *,"vof_bot_sum invalid"
+          stop
+         endif
+
+        else
+         print *,"lcrit,lvof_min, or lvof_max invalid"
+         stop
+        endif
+                ! do nothing
+       else if (vof_height_function.eq.0) then
+        ! do nothing
+       else
+        print *,"vof_height_function invalid"
+        stop
+       endif
       else if (crossing_status.eq.0) then
-       ht=XMIN
+       ht_from_LS=X_AT_ABS_LSMIN
+       ht_from_VOF=X_AT_ABS_LSMIN
       else
        print *,"crossing_status invalid"
        stop
@@ -13573,12 +13899,15 @@ contains
          if ((continuous_mof.eq.0).or. &
              (continuous_mof.eq.5)) then
 
-          call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
+          call Box_volumeFAST( &
+           bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_vof, &
            uncaptured_centroid_vof,sdim)
-          call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
+          call Box_volumeFAST( &
+           bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_cen, &
-           uncaptured_centroid_cen,sdim)
+           uncaptured_centroid_cen, &
+           sdim)
 
          else if (continuous_mof.eq.2) then
 
@@ -13589,7 +13918,8 @@ contains
           call Box_volume_super( &
            cmofsten, &
            bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen,uncaptured_centroid_cen, &
+           uncaptured_volume_cen, &
+           uncaptured_centroid_cen, &
            sdim)
 
          else
@@ -14732,7 +15062,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box, &
+        xsten0,nhalf0, &
+        nhalf_box, & ! =1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
         mofdata,mofdatavalid,nmat,sdim,1)
@@ -16073,14 +16404,16 @@ contains
       normalize_tessellate=0  ! do not override "is_rigid"
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0_plus,nhalf0,nhalf_box, &
+        xsten0_plus,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
         nmat,sdim,3000)
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0_minus,nhalf0,nhalf_box, &
+        xsten0_minus,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
@@ -17000,7 +17333,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
        cmofsten, &
-       xsten0,nhalf0,nhalf_box, &
+       xsten0,nhalf0, &
+       nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
        mofdata,mofdatavalid,nmat,sdim,101)
@@ -18031,7 +18365,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box, &
+        xsten0,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
         mofdata,mofdatavalid,nmat,sdim,102)
@@ -18134,6 +18469,9 @@ contains
 
        ! uncaptured_volume_fluid and uncaptured_volume_solid should be the
        ! same here.
+       ! This "if" clause takes care of the scenario when the
+       ! intersection of the departure region with the grid cell
+       ! is very small.
       if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
           (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
 
@@ -19083,7 +19421,8 @@ contains
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_base( &
        cmofsten, &
-       xsten0,nhalf0,nhalf_box, &
+       xsten0,nhalf0, &
+       nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        renorm_tessellate, & !=0
        mofdata,nmat,sdim,1)
@@ -20188,7 +20527,8 @@ contains
         ! sum F_solid<=1 
        call make_vfrac_sum_ok_copy( &
          cmofsten, &
-         xsten0,nhalf0,nhalf_box, &
+         xsten0,nhalf0, &
+         nhalf_box, & !=1 (=> do not use cmofsten)
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
          mofdata,mofdatavalid,nmat,sdim,3)
@@ -20386,7 +20726,8 @@ contains
        ! sum F_solid <= 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten_recon,nhalf_recon,nhalf_box, &
+        xsten_recon,nhalf_recon, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
         mofdata,mofdatavalid,nmat,sdim,30)
@@ -20963,7 +21304,8 @@ contains
        ! sum voffluid=1 ,  sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box, &
+        xsten0,nhalf0, &
+        nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! =0
         mofdata,mofdatavalid,nmat,sdim,300)
@@ -21247,102 +21589,6 @@ contains
       return
       end subroutine multi_get_volumePOINT
 
-      subroutine get_primary_material(LS,nmat,im_primary)
-      use probcommon_module
-      use geometry_intersect_module
-      use global_utility_module
- 
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: LS(nmat)
-      INTEGER_T, intent(out) :: im_primary
-      INTEGER_T im,imtest
-      INTEGER_T tessellate
-      INTEGER_T is_rigid_local(nmat)
-
-      tessellate=0
-
-      do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
-       if (tessellate.eq.2) then
-        is_rigid_local(im)=0
-        print *,"expecting tessellate==0"
-        stop
-       else if (tessellate.eq.0) then
-        ! do nothing
-       else if (tessellate.eq.1) then
-        print *,"expecting tessellate==0"
-        stop
-       else if (tessellate.eq.3) then
-        print *,"expecting tessellate==0"
-        stop
-       else
-        print *,"tessellate invalid38"
-        stop
-       endif
-      enddo ! im=1..nmat
-
-      if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-       print *,"nmat invalid get_primary_material"
-       print *,"nmat= ",nmat
-       stop
-      endif
-
-      im_primary=0
-      do im=1,nmat
-       if (is_rigid_local(im).eq.1) then
-        if (LS(im).ge.zero) then
-         if (im_primary.ne.0) then
-          print *,"cannot have two rigid materials in same place"
-          do imtest=1,nmat
-           print *,"imtest,LS(imtest) ",imtest,LS(imtest)
-          enddo
-          stop
-         endif
-         im_primary=im
-        else if (LS(im).le.zero) then
-         ! do nothing
-        else
-         print *,"LS bust"
-         stop
-        endif
-       else if (is_rigid_local(im).eq.0) then
-        ! do nothing
-       else
-        print *,"is_rigid invalid"
-        stop
-       endif
-      enddo !im=1..nmat
-
-      if (im_primary.eq.0) then
-
-       do im=1,nmat
-         if (im_primary.eq.0) then
-          im_primary=im
-         else if ((im_primary.ge.1).and.(im_primary.lt.im)) then
-          if (LS(im).gt.LS(im_primary)) then
-           im_primary=im
-          else if (LS(im).le.LS(im_primary)) then
-           ! do nothing
-          else
-           print *,"LS bust"
-           stop
-          endif
-         else
-          print *,"im_primary invalid"
-          stop
-         endif
-       enddo !im=1..nmat
-
-      else if (is_rigid_local(im_primary).eq.1) then
-       ! do nothing
-      else
-       print *,"is_rigid or im_primary invalid"
-       stop
-      endif
-
-      end subroutine get_primary_material
 
        ! called from: get_mach_number, FORT_EOS_PRESSURE,
        !        FORT_PRESSURE_INDICATOR, FORT_ADVECTIVE_PRESSURE
@@ -21852,27 +22098,18 @@ contains
 end module MOF_routines_module
 
 
+module MOF_cpp_module
 
-#if (STANDALONE==0)
-      subroutine FORT_INITMOF( &
+contains
+
+      subroutine fort_initmof( &
        order_algorithm_in, &
        nmat,MOFITERMAX_in, &
        MOF_DEBUG_RECON_in, &
        MOF_TURN_OFF_LS_in, &
        nthreads, &
-       nmax_in)
-#elif (STANDALONE==1)
-      subroutine initmof( &
-       order_algorithm_in, &
-       nmat,MOFITERMAX_in, &
-       MOF_DEBUG_RECON_in, &
-       MOF_TURN_OFF_LS_in, &
-       nthreads, &
-       nmax_in)
-#else
-      print *,"bust initmof"
-      stop
-#endif
+       nmax_in) &
+      bind(c,name='fort_initmof')
 
       use probcommon_module
       use geometry_intersect_module
@@ -21938,7 +22175,7 @@ end module MOF_routines_module
       endif
 
       return
-      end
+      end subroutine fort_initmof
 
       subroutine delete_mof()
 
@@ -21962,6 +22199,5 @@ end module MOF_routines_module
       return
       end subroutine delete_mof
 
-
-#undef STANDALONE
+end module MOF_cpp_module
 

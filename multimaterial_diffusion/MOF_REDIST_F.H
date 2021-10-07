@@ -2,49 +2,8 @@
 #define _MOF_REDIST_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_NODE_TO_CELL node_to_cell
-#    define FORT_FD_NODE_NORMAL fd_node_normal
-#    define FORT_FD_NORMAL fd_normal
-#    define FORT_LEVELSTRIP levelstrip
-#    define FORT_STENINIT steninit
-#    define FORT_FACEINITTEST faceinittest
-#    define FORT_FACEINIT faceinit
-#    define FORT_FACEPROCESS faceprocess
-#    define FORT_CORRECT_UNINIT correct_uninit
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_NODE_TO_CELL NODE_TO_CELL
-#    define FORT_FD_NODE_NORMAL FD_NODE_NORMAL
-#    define FORT_FD_NORMAL FD_NORMAL
-#    define FORT_LEVELSTRIP LEVELSTRIP
-#    define FORT_STENINIT STENINIT
-#    define FORT_FACEINITTEST FACEINITTEST
-#    define FORT_FACEINIT FACEINIT
-#    define FORT_FACEPROCESS FACEPROCESS
-#    define FORT_CORRECT_UNINIT CORRECT_UNINIT
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_NODE_TO_CELL node_to_cell
-#    define FORT_FD_NODE_NORMAL fd_node_normal
-#    define FORT_FD_NORMAL fd_normal
-#    define FORT_LEVELSTRIP levelstrip
-#    define FORT_STENINIT steninit
-#    define FORT_FACEINITTEST faceinittest
-#    define FORT_FACEINIT faceinit
-#    define FORT_FACEPROCESS faceprocess
-#    define FORT_CORRECT_UNINIT correct_uninit
-#  else
-#    define FORT_NODE_TO_CELL node_to_cell_
-#    define FORT_FD_NODE_NORMAL fd_node_normal_
-#    define FORT_FD_NORMAL fd_normal_
-#    define FORT_LEVELSTRIP levelstrip_
-#    define FORT_STENINIT steninit_
-#    define FORT_FACEINITTEST faceinittest_
-#    define FORT_FACEINIT faceinit_
-#    define FORT_FACEPROCESS faceprocess_
-#    define FORT_CORRECT_UNINIT correct_uninit_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -53,7 +12,7 @@ namespace amrex{
   extern "C" {
 
 
-     void FORT_FD_NORMAL(
+     void fort_fd_normal(
        int* level,
        int* finest_level,
        Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
@@ -65,7 +24,7 @@ namespace amrex{
        int* nmat);
 
 
-     void FORT_FD_NODE_NORMAL(
+     void fort_fd_node_normal(
        int* level,
        int* finest_level,
        Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
@@ -79,7 +38,7 @@ namespace amrex{
        int* n_normal,
        int* ngrow_dest);
 
-     void FORT_NODE_TO_CELL(
+     void fort_node_to_cell(
        int* level,
        int* finest_level,
        int* height_function_flag,
@@ -97,7 +56,7 @@ namespace amrex{
        int* ngrow_nrm);
 
 
-     void FORT_LEVELSTRIP(
+     void fort_levelstrip(
        int* keep_all_interfaces,
        int* nprocessed,
        Real* minLS,
@@ -135,7 +94,7 @@ namespace amrex{
        int* nface,
        int* nface_dst);
 
-     void FORT_CORRECT_UNINIT(
+     void fort_correct_uninit(
        Real* minLS,
        Real* maxLS,
        Real* max_problen,
@@ -150,7 +109,7 @@ namespace amrex{
        Real* time,
        int* nmat);
 
-     void FORT_STENINIT(
+     void fort_steninit(
        int* level,int* finest_level,
        Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
        Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
@@ -164,7 +123,7 @@ namespace amrex{
        int* nmat,int* nstar);
 
 
-     void FORT_FACEINIT(
+     void fort_faceinit(
        int* tid,
        int* tessellate,
        int* nten,
@@ -184,7 +143,7 @@ namespace amrex{
        int* nface,
        int* nface_decomp);
 
-     void FORT_FACEINITTEST(
+     void fort_faceinittest(
        int* tid,
        int* tessellate,
        int* level,
@@ -203,7 +162,7 @@ namespace amrex{
        int* nmat,
        int* nface);
 
-     void FORT_FACEPROCESS(
+     void fort_faceprocess(
        int* ngrow_source,
        int* ngrow_dest,
        int* tid,

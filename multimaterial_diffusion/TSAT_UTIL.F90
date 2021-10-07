@@ -50,7 +50,8 @@ stop
       INTEGER_T DIMDEC(swept)
 
       REAL_T, dimension(:,:,:), allocatable :: burnvel
-      REAL_T, dimension(:,:,:), allocatable :: tsatfab
+      REAL_T, dimension(:,:,:), allocatable, target :: tsatfab
+      REAL_T, pointer :: tsatfab_ptr(:,:,:)
         ! ncomp=nmat, ngrow=0
       REAL_T, dimension(:,:,:), allocatable :: swept
 
@@ -125,7 +126,10 @@ contains
       ngrow_tsat=ngrow_make_distance
       call set_dimdec(DIMS(tsatfab),fablo_tsat,fabhi_tsat, &
         ngrow_tsat)
+
       allocate(tsatfab(DIMV(tsatfab),ntsat))
+      tsatfab_ptr=>tsatfab
+
       call set_dimdec(DIMS(swept),fablo_tsat,fabhi_tsat,0)
       allocate(swept(DIMV(swept),nmat))
       do i=0,NCELL-1

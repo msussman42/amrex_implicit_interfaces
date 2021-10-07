@@ -23,10 +23,8 @@ print *,"dimension bust"
 stop
 #endif
 
-#if (STANDALONE==1)
       module plic_cpp_module
       contains
-#endif
 
 ! mask=0 at coarse/fine border cells and physical boundaries.
 ! mask=1 at fine/fine and periodic border cells.
@@ -42,7 +40,7 @@ stop
       ! (2) =1 interior  =0 otherwise
       ! (3) =1 interior+ngrow-1  =0 otherwise
       ! (4) =1 interior+ngrow    =0 otherwise
-      subroutine FORT_SLOPERECON( &
+      subroutine fort_sloperecon( &
         tid, &
         gridno, &
         level, &
@@ -67,8 +65,9 @@ stop
         total_iterations, &
         continuous_mof, &
         force_cmof_at_triple_junctions, &
-        partial_cmof_stencil_at_walls, &
-        radius_cutoff)
+        partial_cmof_stencil_at_walls) &
+      bind(c,name='fort_sloperecon')
+
 #if (STANDALONE==0)
       use probf90_module
 #elif (STANDALONE==1)
@@ -86,8 +85,6 @@ stop
       INTEGER_T, intent(in) :: nsteps
 
       INTEGER_T, intent(in) :: nmat
-
-      INTEGER_T, intent(in) :: radius_cutoff(nmat)
 
       INTEGER_T, intent(in) :: continuous_mof
       INTEGER_T, intent(in) :: force_cmof_at_triple_junctions
@@ -107,11 +104,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(slopes)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
      
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr),4) 
-      REAL_T, intent(in) :: vof(DIMV(vof),nmat*ngeom_raw) 
-      REAL_T, intent(in) :: LS(DIMV(LS),nmat) 
-      REAL_T, intent(out) :: slopes(DIMV(slopes),nmat*ngeom_recon) 
-      REAL_T, intent(inout) :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4) 
+      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_raw) 
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat) 
+      REAL_T, intent(out), target :: slopes(DIMV(slopes),nmat*ngeom_recon) 
+      REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: latent_heat(2*nten)
       
       INTEGER_T i,j,k,dir
@@ -132,7 +131,6 @@ stop
 #if (STANDALONE==0)
       REAL_T err,errsave
       INTEGER_T local_mask
-      INTEGER_T stencil_valid
 #elif (STANDALONE==1)
       ! do nothing
 #else
@@ -186,6 +184,9 @@ stop
 
       nhalf_box=1
 
+      slopes_ptr=>slopes
+      snew_ptr=>snew
+
       tessellate=0
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -223,7 +224,7 @@ stop
       endif 
      
       if (debugslope.eq.1) then
-       print *,"BEFORE SLOPERECON --------------------------------"
+       print *,"BEFORE fort_sloperecon --------------------------------"
        print *,"grid,level,finest ",gridno,level,finest_level
        print *,"STEP,TIME ",nsteps,time
       endif
@@ -282,11 +283,11 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(vof),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,12)
-      call checkbound(fablo,fabhi,DIMS(slopes),ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,masknbr,1,-1,12)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,12)
+      call checkbound_array(fablo,fabhi,vof,1,-1,12)
+      call checkbound_array(fablo,fabhi,LS,1,-1,12)
+      call checkbound_array(fablo,fabhi,slopes_ptr,ngrow,-1,12)
 
       if (SDIM.eq.3) then
        klosten=-1
@@ -936,7 +937,9 @@ stop
           multi_centroidA, &
           continuous_mof_parm, &
           cmofsten, &
-          nmat,SDIM,2)
+          nmat, &
+          SDIM, &
+          2)
 
         if (continuous_mof_parm.eq.2) then
            ! center cell centroids.
@@ -979,7 +982,6 @@ stop
 
         if ((level.ge.0).and.(level.le.finest_level)) then
 
-         stencil_valid=1
          do i1=-1,1
          do j1=-1,1
          do k1=klosten,khisten
@@ -987,7 +989,7 @@ stop
           if (local_mask.eq.1) then ! fine-fine ghost in domain or interior.
            ! do nothing
           else if (local_mask.eq.0) then ! ghost value is low order accurate.
-           stencil_valid=0
+           ! do nothing
           else
            print *,"local_mask invalid"
            stop
@@ -997,15 +999,12 @@ stop
          enddo 
 
          call calc_error_indicator( &
-          stencil_valid, &
           level,max_level, &
           xsten,nhalf,dx,bfact, &
           voflist_center, &
           LS_stencil, &
           nmat, &
           nten, &
-          latent_heat, &
-          radius_cutoff, &
           err,time)
          errsave=snew(D_DECL(i,j,k),nmat*ngeom_raw+1)
          if (errsave.lt.err) then
@@ -1021,7 +1020,7 @@ stop
          stop
         endif
 #elif (STANDALONE==1)
-        print *,"update_flag invalid for stand alone SLOPERECON"
+        print *,"update_flag invalid for stand alone fort_sloperecon"
         stop
 #else
         print *,"bust compiling PLIC_3D.F90"
@@ -1039,19 +1038,15 @@ stop
       enddo
 
       if (debugslope.eq.1) then
-       print *,"AFTER SLOPERECON --------------------------------"
+       print *,"AFTER fort_sloperecon --------------------------------"
        print *,"grid,level,finest ",gridno,level,finest_level
        print *,"STEP,TIME ",nsteps,time
       endif
 
       return
-      end subroutine FORT_SLOPERECON
+      end subroutine fort_sloperecon
 
-
-
-#if (STANDALONE==1)
       end module plic_cpp_module
-#endif
 
 #undef STANDALONE
 

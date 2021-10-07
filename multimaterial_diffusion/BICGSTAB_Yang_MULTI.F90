@@ -180,7 +180,7 @@
       INTEGER_T n_root
       character(len=6) :: root_char_array
       INTEGER_T data_dir,SDC_outer_sweeps,slab_step
-      INTEGER_T data_id,visual_revolve,visual_option
+      INTEGER_T data_id,visual_revolve
       integer local_bfact
       REAL*8 dx_local(2)
       REAL*8 problo_local(2)
@@ -673,7 +673,6 @@
       slab_step=0
       data_id=0
       visual_revolve=0
-      visual_option=-2
       call set_dimdec(DIMS(GAPFAB),fablo,fabhi,1)
 
       local_bfact=1
@@ -687,7 +686,7 @@
       ncomp_gap=1
        ! VERIFICATION
       if (1.eq.1) then
-       call FORT_TECPLOTFAB_SANITY( &
+       call fort_tecplotfab_sanity( &
         root_char_array, &
         n_root, &
         data_dir, &
@@ -702,7 +701,6 @@
         data_id, &
         nsteps_global, &
         current_time, & ! this time might be out of sync 
-        visual_option, &
         visual_revolve, &
         local_level, &
         local_level, &

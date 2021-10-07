@@ -2,29 +2,8 @@
 #define _MASS_TRANSFER_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_CONVERTMATERIAL convertmaterial
-#    define FORT_NODEDISPLACE nodedisplace
-#    define FORT_RATEMASSCHANGE ratemasschange
-#    define FORT_EXTEND_BURNING_VEL extend_burning_vel
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_CONVERTMATERIAL CONVERTMATERIAL
-#    define FORT_NODEDISPLACE NODEDISPLACE
-#    define FORT_RATEMASSCHANGE RATEMASSCHANGE
-#    define FORT_EXTEND_BURNING_VEL EXTEND_BURNING_VEL
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_CONVERTMATERIAL convertmaterial
-#    define FORT_NODEDISPLACE nodedisplace
-#    define FORT_RATEMASSCHANGE ratemasschange
-#    define FORT_EXTEND_BURNING_VEL extend_burning_vel
-#  else
-#    define FORT_CONVERTMATERIAL convertmaterial_
-#    define FORT_NODEDISPLACE nodedisplace_
-#    define FORT_RATEMASSCHANGE ratemasschange_
-#    define FORT_EXTEND_BURNING_VEL extend_burning_vel_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -33,11 +12,10 @@ namespace amrex{
 extern "C"
 {
 
-   void FORT_CONVERTMATERIAL(
+   void fort_convertmaterial(
     int* tid,
     int* im_outer,
     int* im_opp_outer,
-    int* solvability_projection,
     int* ngrow_expansion,
     int* level,int* finest_level,
     int* normal_probe_size,
@@ -47,14 +25,13 @@ extern "C"
     int* nstate,
     int* ntsat,
     int* supermesh_flag,
-    Real* density_floor_expansion,
-    Real* density_ceiling_expansion,
     Real* latent_heat,
     Real* saturation_temp,
     int* freezing_model,
+    int* Tanasawa_or_Schrage_or_Kassemi,
     int* mass_fraction_id,
-    Real* species_evaporation_density,
     int* distribute_from_target,
+    int* constant_density_all_time,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -64,6 +41,9 @@ extern "C"
     Real* dt,
     Real* delta_mass,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* conductstate,
+    AMREX_ARLIM_P(conductstatelo),
+    AMREX_ARLIM_P(conductstatehi), 
     Real* nodevel,AMREX_ARLIM_P(nodevello),AMREX_ARLIM_P(nodevelhi), 
     Real* jumpfab,AMREX_ARLIM_P(jumpfablo),AMREX_ARLIM_P(jumpfabhi),
     Real* tsatfab,AMREX_ARLIM_P(tsatfablo),AMREX_ARLIM_P(tsatfabhi),
@@ -75,7 +55,7 @@ extern "C"
     Real* swept,AMREX_ARLIM_P(sweptlo),AMREX_ARLIM_P(swepthi)); 
 
 
-   void FORT_NODEDISPLACE(
+   void fort_nodedisplace(
      int* nmat,
      int* nten,
      int* nburning,
@@ -84,12 +64,14 @@ extern "C"
      int* bfact,
      int* velbc,
      Real* dt,
+     int* normal_probe_size,
      Real* unode,AMREX_ARLIM_P(unodelo),AMREX_ARLIM_P(unodehi),
      Real* ucell,AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
+     Real* oldLS,AMREX_ARLIM_P(oldLSlo),AMREX_ARLIM_P(oldLShi),
      const Real* xlo,const Real* dx,
      int* level,int* finest_level);
 
-   void FORT_RATEMASSCHANGE(
+   void fort_ratemasschange(
     int* tid,
     int* nucleation_flag,
     int* stefan_flag,
@@ -103,8 +85,6 @@ extern "C"
     int* nburning,
     int* ntsat,
     int* nden,
-    Real* density_floor_expansion,
-    Real* density_ceiling_expansion,
     int* custom_nucleation_model,
     int* do_the_nucleate,
     Real* nucleate_pos,
@@ -122,6 +102,7 @@ extern "C"
     Real* macrolayer_size,
     Real* max_contact_line_size,
     Real* R_Palmore_Desjardins,
+    Real* smoothing_length_scale,
     Real* latent_heat,
     int* use_exact_temperature,
     Real* reaction_rate,
@@ -138,7 +119,7 @@ extern "C"
     int* Tanasawa_or_Schrage_or_Kassemi,
     int* distribute_from_target,
     int* mass_fraction_id,
-    Real* species_evaporation_density,
+    int* constant_density_all_time,
     int* material_type_evap, 
     Real* molar_mass,
     Real* species_molar_mass,
@@ -151,13 +132,16 @@ extern "C"
     Real* dt,
     int* arraysize,
     Real* blob_array,
-    int* num_elements_blobclass,
     int* color_count,
     Real* colorfab,AMREX_ARLIM_P(colorfablo),AMREX_ARLIM_P(colorfabhi), 
     Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi), 
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* conductstate,
+    AMREX_ARLIM_P(conductstatelo),
+    AMREX_ARLIM_P(conductstatehi), 
     Real* burnvel,AMREX_ARLIM_P(burnvello),AMREX_ARLIM_P(burnvelhi), 
     Real* Tsatfab,AMREX_ARLIM_P(Tsatfablo),AMREX_ARLIM_P(Tsatfabhi), 
+    Real* smoothfab,AMREX_ARLIM_P(smoothfablo),AMREX_ARLIM_P(smoothfabhi), 
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi), 
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
     Real* Snew,AMREX_ARLIM_P(Snewlo),AMREX_ARLIM_P(Snewhi), 
@@ -173,7 +157,7 @@ extern "C"
     AMREX_ARLIM_P(curvfabhi) ); 
 
 
-   void FORT_EXTEND_BURNING_VEL(
+   void fort_extend_burning_vel(
     int* velflag,
     int* level,
     int* finest_level,

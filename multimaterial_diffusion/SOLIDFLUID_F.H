@@ -2,21 +2,8 @@
 #define _SOLIDFLUID_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_HEADERMSG headermsg
-#    define FORT_FILLCONTAINER fillcontainer
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_HEADERMSG HEADERMSG
-#    define FORT_FILLCONTAINER FILLCONTAINER
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_HEADERMSG headermsg
-#    define FORT_FILLCONTAINER fillcontainer
-#  else
-#    define FORT_HEADERMSG headermsg_
-#    define FORT_FILLCONTAINER fillcontainer_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -24,7 +11,7 @@ namespace amrex{
 
   extern "C" {
 
-    void FORT_HEADERMSG(
+    void fort_headermsg(
      int* tid,
      int* tilenum,
      const int* gridno,
@@ -32,6 +19,25 @@ namespace amrex{
      int* level,
      int* finest_level,
      const int* max_level,
+     int* im_critical,
+     int* num_nodes_list,
+     int* num_elements_list,
+     int* FSI_input_num_nodes,
+     int* FSI_input_num_elements,
+     Real* FSI_input_node_list,
+     int* FSI_input_element_list,
+     Real* FSI_input_displacement_list,
+     Real* FSI_input_velocity_list,
+     Real* FSI_input_force_list,
+     Real* FSI_input_temperature_list,
+     int* FSI_output_num_nodes,
+     int* FSI_output_num_elements,
+     Real* FSI_output_node_list,
+     int* FSI_output_element_list,
+     Real* FSI_output_displacement_list,
+     Real* FSI_output_velocity_list,
+     Real* FSI_output_force_list,
+     Real* FSI_output_temperature_list,
      int* FSI_operation,
      int* FSI_sub_operation,
      const int* tilelo,const int* tilehi,
@@ -54,7 +60,7 @@ namespace amrex{
      int* nparts,
      int* im_solid_map,
      Real* h_small,
-     Real* time,
+     Real* cur_time,
      Real* dt,
      int* FSI_refine_factor,
      int* FSI_bounding_box_ngrow,
@@ -66,11 +72,11 @@ namespace amrex{
      int* plot_interval,
      int* ioproc);
 
-    void FORT_FILLCONTAINER(
+    void fort_fillcontainer(
      int* level,
      int* finest_level,
      const int* sci_max_level,
-     Real* time,
+     Real* cur_time,
      Real* dt,
      int* tilelo_array,
      int* tilehi_array,
