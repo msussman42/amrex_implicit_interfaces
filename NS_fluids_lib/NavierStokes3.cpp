@@ -539,7 +539,8 @@ void NavierStokes::nonlinear_advection() {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.resize_mask_nbr(ngrowFSI);
     ns_level.ns_header_msg_level(
-      FSI_operation,FSI_sub_operation,
+      FSI_operation, //=4
+      FSI_sub_operation,
       cur_time_slab,
       dt_slab,
       iter);
@@ -554,8 +555,11 @@ void NavierStokes::nonlinear_advection() {
    //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
   FSI_operation=1; // update node locations
   FSI_sub_operation=0;
-  ns_header_msg_level(FSI_operation,FSI_sub_operation,
-   cur_time_slab,dt_slab,iter);
+  ns_header_msg_level(
+   FSI_operation, //=1
+   FSI_sub_operation,
+   cur_time_slab,
+   dt_slab,iter);
  } else if (read_from_CAD()==0) {
   // do nothing
  } else
