@@ -6973,6 +6973,25 @@ end subroutine CLSVOF_sync_lag_data
 !   NavierStokes::nonlinear_advection (op=4,1)
 ! isout==1 => verbose
 subroutine CLSVOF_ReadHeader( &
+  im_critical, &
+  num_nodes_list, &
+  num_elements_list, &
+  FSI_input_num_nodes, &
+  FSI_input_num_elements, &
+  FSI_input_node_list, &
+  FSI_input_element_list, &
+  FSI_input_displacement_list, &
+  FSI_input_velocity_list, &
+  FSI_input_force_list, &
+  FSI_input_temperature_list, &
+  FSI_output_num_nodes, &
+  FSI_output_num_elements, &
+  FSI_output_node_list, &
+  FSI_output_element_list, &
+  FSI_output_displacement_list, &
+  FSI_output_velocity_list, &
+  FSI_output_force_list, &
+  FSI_output_temperature_list, &
   FSI_refine_factor, &
   FSI_bounding_box_ngrow, &
   nparts_in, &
@@ -6988,6 +7007,8 @@ use CTML_module
 #endif
 
 IMPLICIT NONE
+
+INTEGER_T, intent(in) :: im_critical
 
 INTEGER_T :: nparts_in
 INTEGER_T im_solid_map_in(nparts_in)
@@ -11485,6 +11506,25 @@ end subroutine find_grid_bounding_box_node
 ! called from fort_headermsg with FSI_operation=1
 ! isout==1 => verbose
 subroutine CLSVOF_ReadNodes( &
+  im_critical, &
+  num_nodes_list, &
+  num_elements_list, &
+  FSI_input_num_nodes, &
+  FSI_input_num_elements, &
+  FSI_input_node_list, &
+  FSI_input_element_list, &
+  FSI_input_displacement_list, &
+  FSI_input_velocity_list, &
+  FSI_input_force_list, &
+  FSI_input_temperature_list, &
+  FSI_output_num_nodes, &
+  FSI_output_num_elements, &
+  FSI_output_node_list, &
+  FSI_output_element_list, &
+  FSI_output_displacement_list, &
+  FSI_output_velocity_list, &
+  FSI_output_force_list, &
+  FSI_output_temperature_list, &
   FSI_refine_factor, &
   FSI_bounding_box_ngrow, &
   CLSVOF_curtime,CLSVOF_dt, &

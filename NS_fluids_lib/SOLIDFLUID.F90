@@ -597,6 +597,25 @@
        isout=1 ! verbose on in sci_clsvof.F90
        if (FSI_operation.eq.0) then ! initialize node locations
         call CLSVOF_ReadHeader( &
+          im_critical, &
+          num_nodes_list, &
+          num_elements_list, &
+          FSI_input_num_nodes, &
+          FSI_input_num_elements, &
+          FSI_input_node_list, &
+          FSI_input_element_list, &
+          FSI_input_displacement_list, &
+          FSI_input_velocity_list, &
+          FSI_input_force_list, &
+          FSI_input_temperature_list, &
+          FSI_output_num_nodes, &
+          FSI_output_num_elements, &
+          FSI_output_node_list, &
+          FSI_output_element_list, &
+          FSI_output_displacement_list, &
+          FSI_output_velocity_list, &
+          FSI_output_force_list, &
+          FSI_output_temperature_list, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
           nparts, &
@@ -613,6 +632,25 @@
          !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
+          im_critical, &
+          num_nodes_list, &
+          num_elements_list, &
+          FSI_input_num_nodes, &
+          FSI_input_num_elements, &
+          FSI_input_node_list, &
+          FSI_input_element_list, &
+          FSI_input_displacement_list, &
+          FSI_input_velocity_list, &
+          FSI_input_force_list, &
+          FSI_input_temperature_list, &
+          FSI_output_num_nodes, &
+          FSI_output_num_elements, &
+          FSI_output_node_list, &
+          FSI_output_element_list, &
+          FSI_output_displacement_list, &
+          FSI_output_velocity_list, &
+          FSI_output_force_list, &
+          FSI_output_temperature_list, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
           cur_time,dt,h_small,problo3D,probhi3D, &
