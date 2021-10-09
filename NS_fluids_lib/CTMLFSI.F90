@@ -196,13 +196,13 @@ stop
       use probcommon_module
 
       IMPLICIT NONE
-      INTEGER_T n_fib_bodies
-      INTEGER_T max_n_fib_nodes
-      INTEGER_T ifib
-      REAL_T fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T fib_frc(n_fib_bodies,max_n_fib_nodes,2*SDIM)
-      REAL_T fib_wt(n_fib_bodies,max_n_fib_nodes)
+      INTEGER_T, intent(in) :: n_fib_bodies
+      INTEGER_T, intent(in) :: max_n_fib_nodes
+      INTEGER_T, intent(in) :: ifib
+      REAL_T, intent(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
       INTEGER_T inode,idir,inode_cutoff
 
       if (1.eq.1) then
@@ -225,7 +225,7 @@ stop
          fib_pst(ifib,inode,idir)=coord_fib(ifib,inode,idir)
          fib_vel(ifib,inode,idir)=vel_fib(ifib,1,inode,idir)
         end do
-        do idir=1,2*SDIM
+        do idir=1,SDIM
          fib_frc(ifib,inode,idir)=zero
         enddo
         do idir=1,SDIM

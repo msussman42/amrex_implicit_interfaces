@@ -206,6 +206,7 @@
         FSI_input_displacement_list, &
         FSI_input_velocity_list, &
         FSI_input_force_list, &
+        FSI_input_mass_list, &
         FSI_input_temperature_list, &
         FSI_output_num_nodes, &
         FSI_output_num_elements, &
@@ -214,6 +215,7 @@
         FSI_output_displacement_list, &
         FSI_output_velocity_list, &
         FSI_output_force_list, &
+        FSI_output_mass_list, &
         FSI_output_temperature_list, &
         FSI_operation, &
         FSI_sub_operation, &
@@ -274,27 +276,29 @@
       INTEGER_T, intent(in) :: max_level
 
       INTEGER_T, intent(in) :: im_critical
-      INTEGER_T, intent(in) :: num_nodes_list(num_materials)
-      INTEGER_T, intent(in) :: num_elements_list(num_materials)
+      INTEGER_T, intent(inout) :: num_nodes_list(num_materials)
+      INTEGER_T, intent(inout) :: num_elements_list(num_materials)
 
       INTEGER_T, intent(in) :: FSI_input_num_nodes
       INTEGER_T, intent(in) :: FSI_input_num_elements
-      REAL_T, intent(in) :: FSI_input_node_list(3*FSI_input_num_nodes)
-      INTEGER_T, intent(in) :: &
+      REAL_T, intent(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
+      INTEGER_T, intent(inout) :: &
         FSI_input_element_list(4*FSI_input_num_elements)
-      REAL_T, intent(in) :: &
+      REAL_T, intent(inout) :: &
         FSI_input_displacement_list(3*FSI_input_num_nodes)
-      REAL_T, intent(in) :: &
+      REAL_T, intent(inout) :: &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-      REAL_T, intent(in) :: FSI_input_force_list(3*FSI_input_num_nodes)
-      REAL_T, intent(in) :: &
+      REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+      REAL_T, intent(inout) :: &
+        FSI_input_mass_list(FSI_input_num_nodes)
+      REAL_T, intent(inout) :: &
         FSI_input_temperature_list(FSI_input_num_nodes)
 
       INTEGER_T, intent(in) :: FSI_output_num_nodes
       INTEGER_T, intent(in) :: FSI_output_num_elements
       REAL_T, intent(inout) :: &
        FSI_output_node_list(3*FSI_output_num_nodes)
-      INTEGER_T, intent(in) :: &
+      INTEGER_T, intent(inout) :: &
               FSI_output_element_list(4*FSI_output_num_elements)
       REAL_T, intent(inout) :: &
               FSI_output_displacement_list(3*FSI_output_num_nodes)
@@ -302,6 +306,8 @@
               FSI_output_velocity_list(3*FSI_output_num_nodes)
       REAL_T, intent(inout) :: &
               FSI_output_force_list(3*FSI_output_num_nodes)
+      REAL_T, intent(inout) :: &
+              FSI_output_mass_list(FSI_output_num_nodes)
       REAL_T, intent(inout) :: &
               FSI_output_temperature_list(FSI_output_num_nodes)
 
@@ -607,6 +613,7 @@
           FSI_input_displacement_list, &
           FSI_input_velocity_list, &
           FSI_input_force_list, &
+          FSI_input_mass_list, &
           FSI_input_temperature_list, &
           FSI_output_num_nodes, &
           FSI_output_num_elements, &
@@ -615,6 +622,7 @@
           FSI_output_displacement_list, &
           FSI_output_velocity_list, &
           FSI_output_force_list, &
+          FSI_output_mass_list, &
           FSI_output_temperature_list, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
@@ -642,6 +650,7 @@
           FSI_input_displacement_list, &
           FSI_input_velocity_list, &
           FSI_input_force_list, &
+          FSI_input_mass_list, &
           FSI_input_temperature_list, &
           FSI_output_num_nodes, &
           FSI_output_num_elements, &
@@ -650,6 +659,7 @@
           FSI_output_displacement_list, &
           FSI_output_velocity_list, &
           FSI_output_force_list, &
+          FSI_output_mass_list, &
           FSI_output_temperature_list, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &

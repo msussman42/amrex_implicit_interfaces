@@ -50,6 +50,7 @@ Vector< int > element_list;
 Vector< Real > displacement_list;
 Vector< Real > velocity_list;
 Vector< Real > force_list;
+Vector< Real > mass_list;
 Vector< Real > temperature_list;
 
 void initData_FSI(int num_nodes_init,int num_elements_init);
