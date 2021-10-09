@@ -28,6 +28,7 @@ if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
  displacement_list.resize(num_nodes*3);
  velocity_list.resize(num_nodes*3);
  force_list.resize(num_nodes*3);
+ mass_list.resize(num_nodes);
  temperature_list.resize(num_nodes);
 } else
  amrex::Error("num_nodes_init or num_elements_init invalid");
@@ -43,6 +44,7 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
  } //ielem=0..4*num_elements-1
 
  for (int inode=0;inode<num_nodes;inode++) {
+  mass_list[inode]=source_FSI.mass_list[inode];
   temperature_list[inode]=source_FSI.temperature_list[inode];
  }
 

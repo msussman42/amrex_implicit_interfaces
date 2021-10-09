@@ -7468,6 +7468,8 @@ void NavierStokes::ns_header_msg_level(
   int im_index=0;
 
   for (int im=0;im<nmat;im++) {
+   num_nodes_list[im]=0;
+   num_elements_list[im]=0;
    FSI_input[im].initData_FSI(0,0);
    FSI_output[im].initData_FSI(0,0);
   }
@@ -7575,6 +7577,7 @@ void NavierStokes::ns_header_msg_level(
       FSI_input[im_index].displacement_list.dataPtr(),
       FSI_input[im_index].velocity_list.dataPtr(),
       FSI_input[im_index].force_list.dataPtr(),
+      FSI_input[im_index].mass_list.dataPtr(),
       FSI_input[im_index].temperature_list.dataPtr(),
       &FSI_output[im_index].num_nodes,
       &FSI_output[im_index].num_elements,
@@ -7583,6 +7586,7 @@ void NavierStokes::ns_header_msg_level(
       FSI_output[im_index].displacement_list.dataPtr(),
       FSI_output[im_index].velocity_list.dataPtr(),
       FSI_output[im_index].force_list.dataPtr(),
+      FSI_output[im_index].mass_list.dataPtr(),
       FSI_output[im_index].temperature_list.dataPtr(),
       &FSI_operation, // 0 or 1 (initialize or update nodes)
       &FSI_sub_operation, // 0
@@ -7953,6 +7957,7 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].displacement_list.dataPtr(),
      FSI_input[im_index].velocity_list.dataPtr(),
      FSI_input[im_index].force_list.dataPtr(),
+     FSI_input[im_index].mass_list.dataPtr(),
      FSI_input[im_index].temperature_list.dataPtr(),
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
@@ -7961,6 +7966,7 @@ void NavierStokes::ns_header_msg_level(
      FSI_output[im_index].displacement_list.dataPtr(),
      FSI_output[im_index].velocity_list.dataPtr(),
      FSI_output[im_index].force_list.dataPtr(),
+     FSI_output[im_index].mass_list.dataPtr(),
      FSI_output[im_index].temperature_list.dataPtr(),
      &FSI_operation, // 2 or 3 (make distance or update sign)
      &FSI_sub_operation, // 0
@@ -8136,6 +8142,7 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].displacement_list.dataPtr(),
      FSI_input[im_index].velocity_list.dataPtr(),
      FSI_input[im_index].force_list.dataPtr(),
+     FSI_input[im_index].mass_list.dataPtr(),
      FSI_input[im_index].temperature_list.dataPtr(),
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
@@ -8144,6 +8151,7 @@ void NavierStokes::ns_header_msg_level(
      FSI_output[im_index].displacement_list.dataPtr(),
      FSI_output[im_index].velocity_list.dataPtr(),
      FSI_output[im_index].force_list.dataPtr(),
+     FSI_output[im_index].mass_list.dataPtr(),
      FSI_output[im_index].temperature_list.dataPtr(),
      &FSI_operation, // 4
      &FSI_sub_operation, // 0 (clear lag data) or 2 (sync lag data)
@@ -8234,6 +8242,7 @@ void NavierStokes::ns_header_msg_level(
       FSI_input[im_index].displacement_list.dataPtr(),
       FSI_input[im_index].velocity_list.dataPtr(),
       FSI_input[im_index].force_list.dataPtr(),
+      FSI_input[im_index].mass_list.dataPtr(),
       FSI_input[im_index].temperature_list.dataPtr(),
       &FSI_output[im_index].num_nodes,
       &FSI_output[im_index].num_elements,
@@ -8242,6 +8251,7 @@ void NavierStokes::ns_header_msg_level(
       FSI_output[im_index].displacement_list.dataPtr(),
       FSI_output[im_index].velocity_list.dataPtr(),
       FSI_output[im_index].force_list.dataPtr(),
+      FSI_output[im_index].mass_list.dataPtr(),
       FSI_output[im_index].temperature_list.dataPtr(),
       &FSI_operation, //4 (copy eul. fluid vel/pres to lag. solid vel/pres)
       &FSI_sub_operation, // 1 
