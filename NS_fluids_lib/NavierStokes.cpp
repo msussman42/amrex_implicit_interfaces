@@ -7265,12 +7265,15 @@ void NavierStokes::ns_header_msg_level(
   num_tiles_on_thread_proc[tid]=0;
  }
 
- if (FSI_operation==0) { //initialize node locations; generate_new_triangles
+  //initialize node locations; generate_new_triangles
+ if (FSI_operation==0) { 
   if (iter!=0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
    amrex::Error("FSI_sub_operation!=0");
- } else if (FSI_operation==1) { //update node locations
+
+  //update node locations
+ } else if (FSI_operation==1) { 
   if (iter!=0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
@@ -7284,23 +7287,23 @@ void NavierStokes::ns_header_msg_level(
    // do nothing
   } else
    amrex::Error("CTML_FSI_flagC() invalid");
- } else if (FSI_operation==2) { //make distance in narrow band
+
+  //make distance in narrow band
+ } else if (FSI_operation==2) { 
   if (iter!=0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
    amrex::Error("FSI_sub_operation!=0");
- } else if (FSI_operation==3) { //update the sign.
+
+  //update the sign.
+ } else if (FSI_operation==3) { 
   if (iter<0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
    amrex::Error("FSI_sub_operation!=0");
- } else if (FSI_operation==4) { //copy Eulerian velocity to Lagrangian velocity
-  if (iter!=0)
-   amrex::Error("iter invalid");
-  if ((FSI_sub_operation<0)||
-      (FSI_sub_operation>2)) 
-   amrex::Error("FSI_sub_operation invalid");
- } else if (FSI_operation==5) { //copy Eulerian pressure to Lagrangian pressure
+
+  //copy Eulerian velocity or pressure to Lagrangian velocity or pressure
+ } else if (FSI_operation==4) { 
   if (iter!=0)
    amrex::Error("iter invalid");
   if ((FSI_sub_operation<0)||
@@ -7370,7 +7373,8 @@ void NavierStokes::ns_header_msg_level(
  else
   ioproc=0;
 
- if (FSI_operation==0) { // init node locations
+  //initialize node locations; generate_new_triangles
+ if (FSI_operation==0) { 
   if (level==0) {
    elements_generated=0;
   } else if ((level>=1)&&(level<=finest_level)) {
@@ -7378,7 +7382,9 @@ void NavierStokes::ns_header_msg_level(
   } else {
    amrex::Error("level invalid");
   }
- } else if (FSI_operation==1) { // update node locations
+
+  //update node locations
+ } else if (FSI_operation==1) { 
   if (level==0) {
    elements_generated=0;
   } else if ((level>=1)&&(level<=finest_level)) {
@@ -7386,9 +7392,17 @@ void NavierStokes::ns_header_msg_level(
   } else {
    amrex::Error("level invalid");
   }
- } else if ((FSI_operation>=2)&&(FSI_operation<=3)) {
+
+  //make distance in narrow band
+ } else if (FSI_operation==2) {
   elements_generated=1;
- } else if (FSI_operation==4) { // copy Eul. fluid vel to Lag. fluid vel.
+
+  //update the sign.
+ } else if (FSI_operation==3) {
+  elements_generated=1;
+
+  //copy Eulerian velocity or pressure to Lagrangian velocity or pressure
+ } else if (FSI_operation==4) { 
   elements_generated=1;
  } else
   amrex::Error("FSI_operation invalid");
@@ -7403,7 +7417,6 @@ void NavierStokes::ns_header_msg_level(
   //(FSI_flag[im]==7) sci_clsvof.F90 fluid
  if (read_from_CAD()==1) {
 
-   // nparts x (velocity + LS + temperature + flag)
   int nparts=im_solid_map.size();
   if ((nparts<1)||(nparts>nmat))
    amrex::Error("nparts invalid");
@@ -7447,27 +7460,33 @@ void NavierStokes::ns_header_msg_level(
   }
   NavierStokes& ns_level0=getLevel(0);
 
-  if ((FSI_operation==0)||  // initialize nodes
-      (FSI_operation==1)) { // update node locations
-
-   if (FSI_operation==0) {
-    // do nothing
-   } else if (FSI_operation==1) {
-    if (level==0) {
-     for (int im=0;im<nmat;im++) {
-      FSI_input[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step][im]);
-      FSI_output[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1][im]);
-     }
-    } else if ((level>=1)&&(level<=finest_level)) {
-     // do nothing
-    } else
-     amrex::Error("level invalid");
-   } else
-    amrex::Error("FSI_operation invalid");
-  } else if ((FSI_operation==2)||  // make distance in narrow band
-             (FSI_operation==3)) { // update the sign
+   //initialize node locations; generate_new_triangles
+  if (FSI_operation==0) { 
    // do nothing
-  } else if (FSI_operation==4) { // copy Eul. vel/pres to struct vel/pres
+    
+   //update node locations
+  } else if (FSI_operation==1) { 
+    
+   if (level==0) {
+    for (int im=0;im<nmat;im++) {
+     FSI_input[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step][im]);
+     FSI_output[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1][im]);
+    }
+   } else if ((level>=1)&&(level<=finest_level)) {
+    // do nothing
+   } else
+    amrex::Error("level invalid");
+
+   //make distance in narrow band
+  } else if (FSI_operation==2) {
+   // do nothing
+
+   //update the sign.
+  } else if (FSI_operation==3) {
+   // do nothing
+
+   //copy Eulerian velocity or pressure to Lagrangian velocity or pressure
+  } else if (FSI_operation==4) { 
    // do nothing
   } else
    amrex::Error("FSI_operation invalid");
@@ -7520,6 +7539,7 @@ void NavierStokes::ns_header_msg_level(
      if (im_critical==-1)
       im_index=0;
 
+      // declared in SOLIDFLUID.F90
      fort_headermsg(
       &tid,
       &num_tiles_on_thread_proc[tid],
@@ -7688,15 +7708,15 @@ void NavierStokes::ns_header_msg_level(
 	  (FSI_flag[im_part]==7)) { 
 
        int ok_to_modify_EUL=1;
-       if ((FSI_flag[im_part]==6)||
-           (FSI_flag[im_part]==7)) {
+       if ((FSI_flag[im_part]==6)|| //FSI ice, tessellating 
+           (FSI_flag[im_part]==7)) {//fluid, tessellating
 	if (cur_time==0.0) {
          ok_to_modify_EUL=1;
 	} else if (cur_time>0.0) {
 	 ok_to_modify_EUL=0;
 	} else
 	 amrex::Error("cur_time invalid");
-       } else if ((FSI_flag[im_part]==2)||
+       } else if ((FSI_flag[im_part]==2)|| //prescribed rigid solid, non-tess.
                   (FSI_flag[im_part]==8)|| //FSI CTML pres-vel sci_clsvof.F90
   	          (FSI_flag[im_part]==4)) {//FSI CTML Goldstein et al 
         ok_to_modify_EUL=1;
