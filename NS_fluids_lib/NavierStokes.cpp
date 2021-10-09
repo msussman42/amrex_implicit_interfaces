@@ -7129,11 +7129,21 @@ void NavierStokes::build_moment_from_FSILS() {
 void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
  // nparts x (velocity + LS + temperature + flag + force)
+ if (nFSI_sub!=9)
+  amrex::Error("nFSI_sub invalid");
+ if (ngrowFSI!=3)
+  amrex::Error("ngrowFSI invalid");
+
  int nmat=num_materials;
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
+  //(FSI_flag[im]==2) prescribed sci_clsvof.F90 rigid material 
+  //(FSI_flag[im]==4) FSI CTML sci_clsvof.F90 material
+  //(FSI_flag[im]==8) FSI CTML pressure-vel sci_clsvof.F90 material
+  //(FSI_flag[im]==6) sci_clsvof.F90 ice
+  //(FSI_flag[im]==7) sci_clsvof.F90 fluid
  if (read_from_CAD()==1) {
 
   if ((nparts<1)||(nparts>nmat))
@@ -7281,8 +7291,6 @@ void NavierStokes::ns_header_msg_level(
   if (CTML_FSI_flagC()==1) {
    if (num_divu_outer_sweeps<2)
     amrex::Error("num_divu_outer_sweeps<2, need to iterate w/tick");
-   if (ns_time_order!=1)
-    amrex::Error("ns_time_order!=1");
   } else if (CTML_FSI_flagC()==0) {
    // do nothing
   } else
@@ -7460,8 +7468,8 @@ void NavierStokes::ns_header_msg_level(
   int im_index=0;
 
   for (int im=0;im<nmat;im++) {
-   FSI_input[im].initData_FSI();
-   FSI_output[im].initData_FSI();
+   FSI_input[im].initData_FSI(0,0);
+   FSI_output[im].initData_FSI(0,0);
   }
   NavierStokes& ns_level0=getLevel(0);
 
@@ -7613,6 +7621,55 @@ void NavierStokes::ns_header_msg_level(
       &current_step,
       &plot_interval,
       &ioproc);
+
+      //initialize node locations
+     if (FSI_operation==0) { 
+
+      if (im_critical==-1) {
+       for (int im=0;im<nmat;im++) {
+        if (num_nodes_list[im]>0) {
+         FSI_input[im].initData_FSI(num_nodes_list[im],
+            num_elements_list[im]);
+         FSI_output[im].initData_FSI(num_nodes_list[im],
+            num_elements_list[im]);
+        } else if (num_nodes_list[im]==0) {
+         //do nothing
+        } else 
+         amrex::Error("num_nodes_list invalid");
+       } //im=0..nmat-1
+      } else if ((im_critical>=0)&&(im_critical<nmat)) {
+       if (num_nodes_list[im_critical]>0) {
+        for (int i=0;i<=ns_time_order;i++) {
+         ns_level0.new_data_FSI[i][im_critical]. 
+           copyFrom_FSI(FSI_output[im_critical]); 
+        }
+       } else if (num_nodes_list[im_critical]==0) {
+        //do nothing
+       } else 
+        amrex::Error("num_nodes_list invalid");
+      } else
+       amrex::Error("im_critical invalid");
+
+      //update node locations
+     } else if (FSI_operation==1) { 
+
+      if (im_critical==-1) {
+       // do nothing
+      } else if ((im_critical>=0)&&(im_critical<nmat)) {
+
+       if (num_nodes_list[im_critical]>0) {
+        ns_level0.new_data_FSI[slab_step+1][im_critical]. 
+           copyFrom_FSI(FSI_output[im_critical]); 
+       } else if (num_nodes_list[im_critical]==0) {
+        //do nothing
+       } else 
+        amrex::Error("num_nodes_list invalid");
+
+      } else
+       amrex::Error("im_critical invalid");
+
+     } else
+      amrex::Error("FSI_operation invalid");
 
     } //im_critical=-1..nmat-1
 
@@ -7886,7 +7943,7 @@ void NavierStokes::ns_header_msg_level(
      &level,
      &finest_level,
      &max_level,
-     &im_critical,
+     &im_critical, // =0 (default; 0<=im<=nmat-1)
      num_nodes_list.dataPtr(),
      num_elements_list.dataPtr(),
      &FSI_input[im_index].num_nodes,
@@ -7985,6 +8042,7 @@ void NavierStokes::ns_header_msg_level(
    } // partid=0..nparts-1
 
     // 1. copy_velocity_on_sign
+    //    (modifies S_new velocity if FSI_flag=2,6,7,8 (but not 4))
     // 2. update Solid_new
     // 3. update LS_new
     // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
@@ -8024,6 +8082,8 @@ void NavierStokes::ns_header_msg_level(
     if (FSI_sub_operation==0) {
      // Two layers of ghost cells are needed if
      // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
+     if (ngrowFSI!=3)
+      amrex::Error("ngrowFSI invalid");
      getState_localMF(VELADVECT_MF,ngrowFSI,0,AMREX_SPACEDIM+1,cur_time); 
 
       // in: NavierStokes::ns_header_msg_level
@@ -8066,7 +8126,7 @@ void NavierStokes::ns_header_msg_level(
      &level,
      &finest_level,
      &max_level,
-     &im_critical,
+     &im_critical, //==0
      num_nodes_list.dataPtr(),
      num_elements_list.dataPtr(),
      &FSI_input[im_index].num_nodes,
@@ -8164,7 +8224,7 @@ void NavierStokes::ns_header_msg_level(
       &level,
       &finest_level,
       &max_level,
-      &im_critical,
+      &im_critical, //=0
       num_nodes_list.dataPtr(),
       num_elements_list.dataPtr(),
       &FSI_input[im_index].num_nodes,
