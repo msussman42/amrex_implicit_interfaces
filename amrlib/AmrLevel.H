@@ -52,7 +52,7 @@ Vector< Real > velocity_list;
 Vector< Real > force_list;
 Vector< Real > temperature_list;
 
-void initData_FSI();
+void initData_FSI(int num_nodes_init,int num_elements_init);
 void copyFrom_FSI(const FSI_container_class& source_FSI);
 void clear_FSI();
 

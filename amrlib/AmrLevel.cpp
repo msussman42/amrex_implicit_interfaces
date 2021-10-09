@@ -16,29 +16,27 @@ namespace amrex {
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
-void FSI_container_class::initData_FSI() {
+void FSI_container_class::initData_FSI(int num_nodes_init,
+  int num_elements_init) {
 
-num_nodes=0;
-num_elements=0;
-node_list.resize(0);
-element_list.resize(0);
-displacement_list.resize(0);
-velocity_list.resize(0);
-force_list.resize(0);
-temperature_list.resize(0);
+if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
+ num_nodes=num_nodes_init;
+ num_elements=num_elements_init;
 
-} // end subroutine initData_FSI()
-
-void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
-
- num_nodes=source_FSI.num_nodes;
- num_elements=source_FSI.num_elements;
  node_list.resize(num_nodes*3);
  element_list.resize(num_elements*4);
  displacement_list.resize(num_nodes*3);
  velocity_list.resize(num_nodes*3);
  force_list.resize(num_nodes*3);
  temperature_list.resize(num_nodes);
+} else
+ amrex::Error("num_nodes_init or num_elements_init invalid");
+
+} // end subroutine initData_FSI()
+
+void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
+
+ initData_FSI(source_FSI.num_nodes,source_FSI.num_elements);
 
  for (int ielem=0;ielem<4*num_elements;ielem++) {
   element_list[ielem]=source_FSI.element_list[ielem];
@@ -59,13 +57,7 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
 void FSI_container_class::clear_FSI() {
 
- element_list.resize(0);
-
- node_list.resize(0);
- displacement_list.resize(0);
- velocity_list.resize(0);
- force_list.resize(0);
- temperature_list.resize(0);
+ initData_FSI(0,0);
 
 } // end subroutine FSI_container_class::clear_FSI() 
 
@@ -139,7 +131,7 @@ AmrLevel::AmrLevel (Amr&            papa,
 
       new_data_FSI[i].resize(nmat);
       for (int j=0;j<nmat;j++) {
-       new_data_FSI[i][j].initData_FSI();
+       new_data_FSI[i][j].initData_FSI(0,0);
       }
 
       if (level_ncomp_PC>0) {
@@ -236,7 +228,7 @@ AmrLevel::restart (Amr&          papa,
 
       new_data_FSI[i].resize(nmat);
       for (int j=0;j<nmat;j++) {
-       new_data_FSI[i][j].initData_FSI();
+       new_data_FSI[i][j].initData_FSI(0,0);
       }
 
       if (level_ncomp_PC==0) {
