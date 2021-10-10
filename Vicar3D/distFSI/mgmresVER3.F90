@@ -3082,7 +3082,9 @@ subroutine rearrange_cr ( n, nz_num, ia, ja, a )
 
   return
 end
-subroutine timestamp ( )
+
+! SUSSMAN: modified the name to avoid conflict
+subroutine timestamp_Burkardt( )
 
 !*****************************************************************************80
 !

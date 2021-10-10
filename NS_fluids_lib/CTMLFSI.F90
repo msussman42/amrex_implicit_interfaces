@@ -35,6 +35,8 @@ stop
       REAL_T df
 
       if ((idir.ge.1).and.(idir.le.SDIM)) then
+        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
+        ! deltao_fun declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
        call deltao_fun(dtypeDelta(idir),dist_scale,df)
       else
        print *,"idir invalid"
@@ -183,6 +185,7 @@ stop
       return
       end subroutine CTML_GET_FIB_NODE_COUNT
 
+       ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
       subroutine CTML_GET_POS_VEL_FORCE_WT(&
        fib_pst,&
        fib_vel,&
@@ -223,12 +226,11 @@ stop
        do inode=1,nIBM_fib
         do idir=1,SDIM
          fib_pst(ifib,inode,idir)=coord_fib(ifib,inode,idir)
+           ! section=1
          fib_vel(ifib,inode,idir)=vel_fib(ifib,1,inode,idir)
         end do
         do idir=1,SDIM
-         fib_frc(ifib,inode,idir)=zero
-        enddo
-        do idir=1,SDIM
+           ! section=1
          fib_frc(ifib,inode,idir)=force_fib(ifib,1,inode,idir)
         enddo
         fib_wt(ifib,inode)=ds_fib(ifib,inode)
@@ -267,6 +269,99 @@ stop
 
       return
       end subroutine CTML_GET_POS_VEL_FORCE_WT
+
+
+       ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
+      subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT(&
+       fib_pst,&
+       fib_vel,&
+       fib_frc,&
+       fib_wt,&
+       n_fib_bodies,&
+       max_n_fib_nodes,&
+       ifib)
+
+      use dummy_module
+      use probcommon_module
+
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: n_fib_bodies
+      INTEGER_T, intent(in) :: max_n_fib_nodes
+      INTEGER_T, intent(in) :: ifib
+      REAL_T, intent(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
+      INTEGER_T inode,idir,inode_cutoff
+
+      if (1.eq.1) then
+       print *,"calling CTML_PUT_PREV_POS_VEL_FORCE_WT"
+       print *,"ifib=",ifib
+      endif
+
+      if (n_fib_bodies.ne.nrIBM_fib) then
+       print *,"n_fib_bodies.ne.nrIBM_fib"
+       stop
+      endif
+      if (max_n_fib_nodes.ne.nIBM_fib) then
+       print *,"max_n_fib_nodes.ne.nIBM_fib"
+       stop
+      endif
+      if ((ifib.ge.1).and.(ifib.le.nrIBM_fib)) then
+       inode_cutoff=0
+       do inode=1,nIBM_fib
+        do idir=1,SDIM
+         coord_fib_prev(ifib,inode,idir)= &
+           fib_pst(ifib,inode,idir)
+          !section=1
+         vel_fib_prev(ifib,1,inode,idir)= &
+           fib_vel(ifib,inode,idir)
+        end do
+        do idir=1,SDIM
+          ! section=1
+         force_fib_prev(ifib,1,inode,idir)= &
+           fib_frc(ifib,inode,idir)
+        enddo
+        ds_fib_prev(ifib,inode)= &
+          fib_wt(ifib,inode)
+        if (fib_wt(ifib,inode).gt.zero) then
+         ! do nothing
+        else if ((fib_wt(ifib,inode).eq.zero).and.(inode.gt.1)) then
+         if (inode_cutoff.eq.0) then
+          inode_cutoff=inode
+         endif
+        else 
+         print *,"fib_wt(ifib,inode) invalid"
+         print *,"ifib= ",ifib
+         print *,"inode= ",inode
+         print *,"nIBM_fib= ",nIBM_fib
+         print *,"nrIBM_fib= ",nrIBM_fib
+         stop
+        endif
+       end do
+
+       if (inode_cutoff.ne.0) then
+        print *,"WARNING, ds_fib==0 for some nodes"
+        print *,"inode_cutoff=",inode_cutoff 
+        print *,"ifib= ",ifib
+        print *,"nIBM_fib= ",nIBM_fib
+        print *,"nrIBM_fib= ",nrIBM_fib
+       endif
+
+      else
+       print *,"ifib invalid"
+       stop
+      endif
+
+      if (1.eq.1) then
+       print *,"done with CTML_PUT_PREV_POS_VEL_FORCE_WT"
+       print *,"ifib=",ifib
+      endif
+
+      return
+      end subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT
+
+
 
       subroutine CTML_RESET_ARRAYS()
 
@@ -402,7 +497,11 @@ stop
        enddo
       endif
 
-       ! declared in: ../Vicar3D/distFSI/tick.F
+       ! case insensitive search in vi:  ":set ignorecase" or ":set ic"
+       ! case sensitive search in vi:  ":set noignorecase" or ":set noic"
+       ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
+       ! tick declared in: ../Vicar3D/distFSI/tick.F
+       ! keyword: "INCLUDE_FIB"
       call tick(time,dt,step,monitorON,plot_int, &
        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_vel 
        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_vel
