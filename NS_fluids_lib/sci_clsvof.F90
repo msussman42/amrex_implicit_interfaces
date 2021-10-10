@@ -11707,6 +11707,7 @@ INTEGER_T im_sanity_check
 
    if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
+     ! declared in: CTMLFSI.F90
     call CTML_SOLVE_SOLID( &
      CLSVOF_curtime, &
      CLSVOF_dt, &

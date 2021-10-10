@@ -325,7 +325,7 @@
       INTEGER_T, intent(in) :: FSI_refine_factor(num_materials)
       INTEGER_T, intent(in) :: FSI_bounding_box_ngrow(num_materials)
       INTEGER_T, intent(inout) :: touch_flag
-      INTEGER_T, intent(inout) :: CTML_FSI_init
+      INTEGER_T, intent(in) :: CTML_FSI_init
       INTEGER_T, intent(in) :: CTML_force_model(num_materials)
       INTEGER_T, intent(in) :: iter
       INTEGER_T, intent(in) :: current_step 
