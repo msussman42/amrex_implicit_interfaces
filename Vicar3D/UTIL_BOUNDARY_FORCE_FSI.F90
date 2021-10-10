@@ -15,20 +15,20 @@
 !  Latest Modification: June, 01 2016 
 !  by Kourosh Shoele
 ! --------------------------------------------------------------------
-#if (BL_SPACEDIM==3)
+#if (AMREX_SPACEDIM==3)
 #define SDIM 3
-#elif (BL_SPACEDIM==2)
+#elif (AMREX_SPACEDIM==2)
 #define SDIM 2
 #else  
 print *,"dimension bust"
 stop
 #endif
 
-#include "REAL.H"
-#include "CONSTANTS.H"
-#include "BC_TYPES.H"
-#include "ArrayLim.H"
-#include "SPACE.H"
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_BC_TYPES.H"
+#include "AMReX_ArrayLim.H"
+#include "AMReX_SPACE.H"
 
 #ifdef BL_USE_MPI
 #define mpi_activate 1
@@ -64,18 +64,39 @@ include './distFSI/grid_def'
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_fsh,nIBM_q_fsh 
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_esh 
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_fbc 
+
  real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc
+
+ real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib_prev
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc_prev
+
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib, force_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh, force_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh, force_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc, force_fbc
+
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_prev, force_fib_prev
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_prev, force_fsh_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_prev, force_esh_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_prev, force_fbc_prev
+
+
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib
  real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fbc
+
+ real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib_prev
+ real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh_prev
+ real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh_prev
+ real*8, SAVE, allocatable, dimension(:,:)   :: ds_fbc_prev
+
+
  parameter(nqIBM_fsh=nq_IBM_fsh)
 
  parameter(nIBM_fib=ns_IBM_fib) ! Max number of points in each fiber
@@ -91,7 +112,7 @@ include './distFSI/grid_def'
 
  parameter(nsecIBMmax=Nsec_IBMmax)
 
-END MODULE
+END MODULE dummy_module
 
 
 ! interpolate velocities on the body marker
@@ -1756,6 +1777,37 @@ subroutine init_membrane_solver(&
        'Allocate_memory: Memory Allocation Error for ds_fib'
         STOP
       ENDIF ! iErrin
+
+
+      ALLOCATE(coord_fib_prev(nr_IBM_fib,ns_IBM_fib,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for coord_fib_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(vel_fib_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for vel_fib_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(force_fib_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for force_fib_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(ds_fib_prev(nr_IBM_fib,ns_IBM_fib),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for ds_fib_prev'
+        STOP
+      ENDIF ! iErrin
+
+
 !%===============================================================
       ALLOCATE(coord_fsh(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
@@ -1784,7 +1836,39 @@ subroutine init_membrane_solver(&
        'Allocate_memory: Memory Allocation Error for ds_fsh'
         STOP
       ENDIF ! iErrin
+
+
+      ALLOCATE(coord_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for coord_fsh_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(vel_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for vel_fsh_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(force_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for force_fsh_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(ds_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for ds_fsh_prev'
+        STOP
+      ENDIF ! iErrin
+
+
 !%===============================================================
+
       ALLOCATE(coord_esh(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
@@ -1812,7 +1896,38 @@ subroutine init_membrane_solver(&
        'Allocate_memory: Memory Allocation Error for ds_esh'
         STOP
       ENDIF ! iErrin
+
+
+      ALLOCATE(coord_esh_prev(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for coord_esh_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(vel_esh_prev(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for vel_esh_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(force_esh_prev(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for force_esh_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(ds_esh_prev(nr_IBM_esh,ns_IBM_esh),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for ds_esh_prev'
+        STOP
+      ENDIF ! iErrin
+
 !%===============================================================
+
       ALLOCATE(coord_fbc(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
@@ -1840,6 +1955,37 @@ subroutine init_membrane_solver(&
        'Allocate_memory: Memory Allocation Error for ds_fbc'
         STOP
       ENDIF ! iErrin
+
+
+      ALLOCATE(coord_fbc_prev(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for coord_fbc_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(vel_fbc_prev(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for vel_fbc_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(force_fbc_prev(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for force_fbc_prev'
+        STOP
+      ENDIF ! iErrin
+
+      ALLOCATE(ds_fbc_prev(nr_IBM_fbc,ns_IBM_fbc),STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for ds_fbc_prev'
+        STOP
+      ENDIF ! iErrin
+
+
 !%===============================================================
 
 
@@ -1913,6 +2059,7 @@ subroutine init_membrane_solver(&
     do isec=1,nsecIBM
     do j=1,nIBM_fib
       force_fib(i,isec,j,1:3)=0.d0
+      force_fib_prev(i,isec,j,1:3)=0.d0
     enddo
     enddo      
  enddo
@@ -1920,17 +2067,20 @@ subroutine init_membrane_solver(&
     do jq=1,nqIBM_fsh
     do j=1,nIBM_fsh
       force_fsh(i,jq,j,1:3)=0.d0
+      force_fsh_prev(i,jq,j,1:3)=0.d0
     enddo
     enddo      
  enddo
  do i=1,nrIBM_esh
     do j=1,nIBM_esh
       force_esh(i,j,1:3)=0.d0
+      force_esh_prev(i,j,1:3)=0.d0
     enddo
  enddo
  do i=1,nrIBM_fbc
     do j=1,nIBM_fbc
       force_fbc(i,j,1:3)=0.d0
+      force_fbc_prev(i,j,1:3)=0.d0
     enddo
  enddo
 #if (mpi_activate==1)

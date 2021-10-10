@@ -7552,11 +7552,25 @@ void NavierStokes::ns_header_msg_level(
     int tid=0;
     int gridno=0;
 
-    for (im_critical=-1;im_critical<nmat;im_critical++) {
+    int im_critical_start=-1;
+    if (FSI_operation==0) { 
+     // do nothing
+    } else if (FSI_operation==1) {
+     im_critical_start=-1-nmat;
+    } else
+     amrex::Error("FSI_operation invalid");
+
+    for (im_critical=im_critical_start;im_critical<nmat;im_critical++) {
 
      im_index=im_critical;
-     if (im_critical==-1)
+     if (im_critical==-1) {
       im_index=0;
+     } else if (im_critical<-1) {
+      im_index=-im_critical-2;
+     } else if ((im_critical>=0)&&(im_critical<nmat)) {
+      // do nothing
+     } else
+      amrex::Error("im_critical invalid");
 
       // declared in SOLIDFLUID.F90
      fort_headermsg(

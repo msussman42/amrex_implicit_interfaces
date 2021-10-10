@@ -22,8 +22,6 @@ FEXE_sources += \
 				boundary_ibm_generalalpha_fbc.F \
 				boundary_ibm_generalalpha_fsh.F \
 				FSI_Fabric_EnergyFns.F \
-				PiezoforceFSimple.F \
-				PiezoforceF.F \
 				ddKapaCalculation.F \
 				USRDEFINED_materialModel.F \
 				matreadContact.F \
@@ -36,6 +34,8 @@ FEXE_sources += \
 				
 ifeq ($(CTML_FSH),TRUE)
  FEXE_sources += \
+				PiezoforceFSimple.F \
+				PiezoforceF.F \
      				matfibrous_Huang.F \
 				matfibrous_Huang_GALPHA.F \
 				matfibrous_Huang_GALPHAPiezo.F \
