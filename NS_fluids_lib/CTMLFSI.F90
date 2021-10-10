@@ -346,12 +346,12 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T time
-      REAL_T dt
-      INTEGER_T step
-      INTEGER_T verbose
-      INTEGER_T plot_int
-      INTEGER_T io_proc
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: step
+      INTEGER_T, intent(in) :: verbose
+      INTEGER_T, intent(in) :: plot_int
+      INTEGER_T, intent(in) :: io_proc
       INTEGER_T debug_tick
       INTEGER_T ifib,isec,inode,idir
 
@@ -402,10 +402,11 @@ stop
        enddo
       endif
 
+       ! declared in: ../Vicar3D/distFSI/tick.F
       call tick(time,dt,step,monitorON,plot_int, &
-       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), &
-       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
-       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3),  &
+       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_vel 
+       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_vel
+       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & !ctml_fib_vel
        vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1), &
        vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2), &
        vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3),  &
@@ -415,9 +416,9 @@ stop
        vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,1), &
        vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,2), &
        vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,3),  &
-       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), &
-       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
-       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), &
+       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_frc
+       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_frc
+       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & !ctml_fib_frc
        force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1), &
        force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2), &
        force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3), &
@@ -427,9 +428,9 @@ stop
        force_fbc(1:nrIBM_fbc,1:nIBM_fbc,1), &
        force_fbc(1:nrIBM_fbc,1:nIBM_fbc,2), &
        force_fbc(1:nrIBM_fbc,1:nIBM_fbc,3), &
-       coord_fib(1:nrIBM_fib,1:nIBM_fib,1),   &
-       coord_fib(1:nrIBM_fib,1:nIBM_fib,2),   &
-       coord_fib(1:nrIBM_fib,1:nIBM_fib,3),   &
+       coord_fib(1:nrIBM_fib,1:nIBM_fib,1), & !ctml_fib_pst  
+       coord_fib(1:nrIBM_fib,1:nIBM_fib,2), & !ctml_fib_pst
+       coord_fib(1:nrIBM_fib,1:nIBM_fib,3), & !ctml_fib_pst
        coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1),   &
        coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2),   &
        coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3),   &
