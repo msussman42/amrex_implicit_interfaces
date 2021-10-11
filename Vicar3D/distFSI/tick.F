@@ -92,10 +92,13 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
        do j=1,ns_ibm_r_fib(i)
+            ! gx_ibm_fib data at t^{n-1}
           gx_ibmpre_fib(i,j)=gx_ibm_fib(i,j)
           gy_ibmpre_fib(i,j)=gy_ibm_fib(i,j)
+            ! gx_ibm_massive_fib data at t^{n}
           gx_ibm_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibm_fib(i,j)=gy_ibm_massive_fib(i,j)
+            ! gx_ibm_massive_fib data at t^{n}
           gx_ibmo1_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibmo1_fib(i,j)=gy_ibm_massive_fib(i,j)
        end do
