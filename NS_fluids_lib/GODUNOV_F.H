@@ -2,24 +2,20 @@
 #define _GODUNOV_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_WALLFUNCTION WALLFUNCTION
 #    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_WALLFUNCTION wallfunction
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
-#    define FORT_WALLFUNCTION wallfunction_
 #    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MASKSEM build_masksem_
@@ -477,7 +473,7 @@ extern "C"
       int* finest_level);
 
 
-   void FORT_WALLFUNCTION(
+   void fort_wallfunction(
     int* data_dir,
     int* law_of_the_wall,
     int* im_solid_map,

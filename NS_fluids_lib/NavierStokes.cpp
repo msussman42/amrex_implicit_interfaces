@@ -6350,11 +6350,20 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 
 // called from:
 //  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
+//    (caller_id=3)
+//
 //  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
+//    (caller_id=4)
+//
 //  NavierStokes::do_the_advance (prior to viscous diffusion)
-//  NavierStokes::MaxAdvectSpeedALL
+//    (caller_id=4)
+//
+//  NavierStokes::MaxAdvectSpeedALL (caller_id=1)
+//
 //  NavierStokes::sum_integrated_quantities
-//  NavierStokes::prepare_post_process
+//    (caller_id==5)
+//
+//  NavierStokes::prepare_post_process (caller_id=2)
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  int finest_level=parent->finestLevel();
@@ -6374,9 +6383,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
   //    | solid cell |   LS_solid(x_image)<0  LS_solid(x_solid)>0
   //    --------------
   //
-  //    angle = ange measured at the solid normal probe in the fluid
+  //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
- if ((1==0)&&(caller_id==3)) {
+ if ((1==1)&&(caller_id==3)) {
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 
@@ -6385,15 +6394,17 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
     //
     //MAC grid law of the wall information.
     //WALLFUNCTION<stuff>.plt (visit can open binary tecplot files)
-   writeSanityCheckData(
-    "WALLFUNCTION",
-    "GNBC DEBUGGING velINT,imgVR,solVR,angle",
-    caller_id,
-     //velINT,image vel,velsol,image vel raster,velsol raster,angle
-    localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
-    HISTORY_MAC_MF+data_dir,
-    -1,  // State_Type==-1 
-    data_dir); 
+   if (1==0) {
+    writeSanityCheckData(
+     "WALLFUNCTION",
+     "GNBC DEBUGGING velINT,imgVR,solVR,angle",
+     caller_id,
+      //velINT,image vel,velsol,image vel raster,velsol raster,angle
+     localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
+     HISTORY_MAC_MF+data_dir,
+     -1,  // State_Type==-1 
+     data_dir); 
+   }
 
     //MAC grid rasterized solid boundary condition.
     //WALLVEL<stuff>.plt (visit can open binary tecplot files)
@@ -6581,7 +6592,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      //     0>phi_solid>-|cutoff|)
      //    ghost normal velocity = solid normal velocity everywhere.
      // in: GODUNOV_3D.F90
-    FORT_WALLFUNCTION( 
+    fort_wallfunction( 
      &data_dir,
      &law_of_the_wall,
      im_solid_map.dataPtr(),

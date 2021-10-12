@@ -154,9 +154,9 @@ ns.density_ceiling=1.006 1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
 ns.density_floor=999.0 999.0
 ns.density_ceiling=1001.0 1001.0
 
-# see FORT_WALLFUNCTION in GODUNOV_3D.F90
+# see fort_wallfunction in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
-ns.law_of_the_wall=1  # make 1 for law of the wall
+ns.law_of_the_wall=1  # make 1 for law of the wall (2 for GNBC)
 ns.FSI_flag=0 0 1 # CAVITATION
 
 ns.FSI_flag=0 1 # Simple J nozzle
