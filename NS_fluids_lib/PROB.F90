@@ -19787,7 +19787,7 @@ END SUBROUTINE Adist
 
         ADV_merge=ADV
 
-       else if (species_flag.eq.1) then
+       else if (species_flag.eq.1) then ! not density and not temperature
 
         ! CODY ESTEBE created test problem (species=0 at inflow)
         if ((probtype.eq.46).and.(axis_dir.eq.20)) then

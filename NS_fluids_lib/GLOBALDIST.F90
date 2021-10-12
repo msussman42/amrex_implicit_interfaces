@@ -1415,8 +1415,9 @@ end subroutine dist_point_to_lined
 
 ! from: nozzle2D.f90
 ! Phi>0 in the solid
-subroutine nozzle2d(x_cm,y_cm,Phi) !return nozzle signed distance function Phi
- !2d nozzle test case, lower half (Brusiani et al 2013)
+!2d nozzle test case, lower half (Brusiani et al 2013)
+!return nozzle signed distance function Phi (dist>0 in the substrate/solid)
+subroutine nozzle2d(x_cm,y_cm,Phi) 
  implicit none
  !spatial coordinates, domain: x=[0:7000],y=[-300:2000] microns
  !  0<=x<=0.7cm
@@ -1431,162 +1432,178 @@ subroutine nozzle2d(x_cm,y_cm,Phi) !return nozzle signed distance function Phi
  REAL_T :: round_l, round_r !for nozzle corners
  REAL_T :: x_um,y_um
 
- x_um=x_cm*1.0e+4
- y_um=(0.2-y_cm)*1.0e+4
+ x_um=x_cm*radblob5 
+ y_um=(0.2-y_cm)*radblob5
 
  !nozzle configuration
- nozzletype = 2; !J:0, U:1, W:2
- if (nozzletype.eq.0) then
-  nl_width=299
-  nr_width=299
- elseif (nozzletype.eq.1) then
-  nl_width=301
-  nr_width=284
- elseif (nozzletype.eq.2) then
-  nl_width=301
-  nr_width=270
+ !J:0, U:1, W:2
+ nozzletype = 2; 
+ if (nozzletype.eq.0) then ! J nozzle
+  nl_width=radblob3 ! left (inflow) width
+  nr_width=radblob4 ! right (outflow) width
+ elseif (nozzletype.eq.1) then ! U nozzle
+  nl_width=radblob3
+  nr_width=radblob4
+ elseif (nozzletype.eq.2) then ! W nozzle 
+  nl_width=radblob3
+  nr_width=radblob4
  else
   print *,"nozzletype invalid"
   stop
  endif
- r=20; !inlet radius
+ r=radblob6; !inlet radius of curvature
 
  !vertical height of nozzle entrance/exit
- nl = 2000-nl_width/2.0-r
- nr = 2000-nr_width/2.0
+ nl = yblob-nl_width/2.0d0-r
+ nr = yblob-nr_width/2.0d0
+
+ if ((xblob.eq.0.0d0).and. &   !no channel on either side of core nozzle
+     (radblob2.eq.0.0d0).and. &!radblob2=J nozzle
+     (radblob3.eq.radblob4)) then ! nl_width = nr_width
+
+  Phi=abs(y_um-yblob)-nl_width/2.0d0
+
+ else if ((xblob.gt.0.0d0).or. &
+          (radblob2.eq.1.0d0).or. & ! U nozzle
+          (radblob2.eq.2.0d0).or. & ! W nozzle
+          (radblob3.ne.radblob4)) then
+
+  !line tangent to circle at point a,b (for nozzle inlet)
+  !
+  !                            .(l1,l2)
+  !                          /
+  !                        /
+  !                      /
+  !                    /
+  !                  /
+  !                /
+  !              / _-----_
+  !            /-          \
+  !    (a,b).//              \
+  !           |               |
+  !          |                 |
+  !          |       .(0,0)    |
+  !          |                |
+  !           \              /
+  !             -          /
+  !               -------
+  
+  l1=2.0d0*yblob-(xblob+r)
+  l2=nr-(nl)
+  a=(2*l1*(r**2)-sqrt(4*(l1**2)*(r**4)-4*((l1**2)+(l2**2))* &
+    ((r**4)-(r**2)*(l2**2))))/(2*(l1**2+l2**2)) !-sqrt if slope pos and tangent to upper side of circle, else +sqrt
+  bottom=(r**2-l1*a)/l2
+  a=a+(xblob+r)
+  bottom=bottom+(nl)
+
+  !        | \
+  !        | 
+  !        :  ...  
+  !        | <vertDisplace
+  !        |          \
+  !    \\  |          /\
+  !     \\ |      1/    \
+  !      \\|phi1/        \
+  !       \\ / phi2       \
+  !        \\-------       \
+  !         \\              \
+
+  m = (nr-bottom)/(2.0d0*yblob-a) !slope nozzle
+  m2 = -1.0/m
+  phi1 = abs(atan(m2))
+  phi2 = Pi/2.0-phi1
+  vertDisplace = 1.0/cos(phi2)
 
 
- !line tangent to circle at point a,b (for nozzle inlet)
- !
- !                            .(l1,l2)
- !                          /
- !                        /
- !                      /
- !                    /
- !                  /
- !                /
- !              / _-----_
- !            /-          \
- !    (a,b).//              \
- !           |               |
- !          |                 |
- !          |       .(0,0)    |
- !          |                |
- !           \              /
- !             -          /
- !               -------
- 
- l1=4000-(3000+r)
- l2=nr-(nl)
- a=(2*l1*(r**2)-sqrt(4*(l1**2)*(r**4)-4*((l1**2)+(l2**2))* &
-   ((r**4)-(r**2)*(l2**2))))/(2*(l1**2+l2**2)) !-sqrt if slope pos and tangent to upper side of circle, else +sqrt
- bottom=(r**2-l1*a)/l2
- a=a+(3000+r)
- bottom=bottom+(nl)
-
- !        | \
- !        | 
- !        :  ...  
- !        | <vertDisplace
- !        |          \
- !    \\  |          /\
- !     \\ |      1/    \
- !      \\|phi1/        \
- !       \\ / phi2       \
- !        \\-------       \
- !         \\              \
-
- m = (nr-bottom)/(4000-a) !slope nozzle
- m2 = -1.0/m
- phi1 = abs(atan(m2))
- phi2 = Pi/2.0-phi1
- vertDisplace = 1.0/cos(phi2)
-
-
- insideflag = 0
- if (((y_um.ge.((-1/m)*(x_um-a)+bottom)).and. &
-     (x_um.le.4000).and. &
-     (y_um.le.(m*(x_um-a)+bottom))).or. &
-    ((x_um.ge.3000).and. &
-     (x_um.le.4000).and. &
-     (y_um.le.nl))) then
-  Phi = MIN(x_um-3000, 4000-x_um) !inside,column vert
-  insideflag = 1
- endif
- if (((y_um.ge.((-1/m)*(x_um-a)+bottom)).and. &
-      (x_um.le.4000).and.  &
-      (y_um.le.(m*(x_um-a)+bottom))) .or. &
-     ((x_um.ge.3000).and. &
-      (x_um.le.4000).and. &
+  insideflag = 0
+  if (((y_um.ge.((-1/m)*(x_um-a)+bottom)).and. &
+      (x_um.le.2.0d0*yblob).and. &
+      (y_um.le.(m*(x_um-a)+bottom))).or. &
+     ((x_um.ge.xblob).and. &
+      (x_um.le.2.0d0*yblob).and. &
       (y_um.le.nl))) then
-  Phi = MIN(Phi, ((m*(x_um-a)+bottom)-y_um)/vertDisplace) !inside,column horiz
-  insideflag = 1
- endif
- if ((x_um.ge.3000).and. &
-     (x_um.le.3000+r).and. &
-     (y_um.ge.nl).and. &
-     (y_um.le.nl+r).and. &
-     (y_um.le.((-1/m)*(x_um-a)+bottom))) then
-  Phi = r-sqrt((x_um-(3000+r))**2+(y_um-nl)**2) !inside, circle
-  insideflag = 1
- endif
- if ((y_um.le.0).and. &
-     (x_um.ge.3000).and. &
-     (x_um.le.4000)) then
-  round_l = sqrt((x_um-3000)**2+(y_um-0)**2) !inside bottom left corner
-  round_r = sqrt((x_um-4000)**2+(y_um-0)**2) !inside bottom right corner
-  Phi = MIN(round_l,round_r)
- endif
- if (y_um.le.0) then
-  Phi = MAX(Phi,0-y_um) !inside,bottom
-  insideflag = 1
+   Phi = MIN(x_um-xblob, 2.0d0*yblob-x_um) !inside,column vert
+   insideflag = 1
+  endif
+  if (((y_um.ge.((-1/m)*(x_um-a)+bottom)).and. &
+       (x_um.le.2.0*yblob).and.  &
+       (y_um.le.(m*(x_um-a)+bottom))) .or. &
+      ((x_um.ge.xblob).and. &
+       (x_um.le.2.0*yblob).and. &
+       (y_um.le.nl))) then
+   Phi = MIN(Phi, ((m*(x_um-a)+bottom)-y_um)/vertDisplace) !inside,column horiz
+   insideflag = 1
+  endif
+  if ((x_um.ge.xblob).and. &
+      (x_um.le.xblob+r).and. &
+      (y_um.ge.nl).and. &
+      (y_um.le.nl+r).and. &
+      (y_um.le.((-1/m)*(x_um-a)+bottom))) then
+   Phi = r-sqrt((x_um-(xblob+r))**2+(y_um-nl)**2) !inside, circle
+   insideflag = 1
+  endif
+  if ((y_um.le.0).and. &
+      (x_um.ge.xblob).and. &
+      (x_um.le.2.0d0*yblob)) then
+   round_l = sqrt((x_um-xblob)**2+(y_um-0)**2) !inside bottom left corner
+   round_r = sqrt((x_um-2.0d0*yblob)**2+(y_um-0)**2) !inside bottom right corner
+   Phi = MIN(round_l,round_r)
+  endif
+  if (y_um.le.0) then
+   Phi = MAX(Phi,0-y_um) !inside,bottom
+   insideflag = 1
+  endif
+
+  if (insideflag.eq.0) then
+   !outside
+   !left region,vert
+   if ((y_um.gt.0).and. &
+       (x_um.lt.xblob).and. &
+       (y_um.lt.nl)) then
+    Phi = x_um-xblob
+   endif
+   !right region,vert
+   if ((y_um.gt.0).and. &
+       (x_um.gt.2.0d0*yblob).and. &
+       (y_um.lt.nr)) then
+    Phi = 2.0d0*yblob-x_um
+   endif
+   !nozzle corners
+   round_l=0
+   round_r=0
+   if ((x_um.le.2.0d0*yblob).and. &
+       (y_um.gt.nl).and. &
+       (y_um.le.((-1/m)*(x_um-2.0d0*yblob)+nr))) then
+    round_l = r-sqrt((x_um-(xblob+r))**2+(y_um-nl)**2)
+   endif
+   if ((y_um.gt.((-1/m)*(x_um-2.0d0*yblob)+nr)).and. &
+       (y_um.gt.nr)) then 
+    round_r = 0-sqrt((x_um-2.0d0*yblob)**2+(y_um-nr)**2)
+   endif
+   Phi = MIN(Phi,round_l,round_r)  
+   !nozzle
+   if ((y_um.gt.(m*(x_um-a)+bottom)).and. &
+       (x_um.le.2.0d0*yblob).and. &
+       (y_um.gt.((-1/m)*(x_um-a)+bottom)).and. &
+       (y_um.le.((-1/m)*(x_um-2.0d0*yblob)+nr))) then
+    Phi = MAX(Phi, ((m*(x_um-a)+bottom)-y_um)/vertDisplace)
+   endif
+   !left region,horiz
+   if ((y_um.gt.0).and.(x_um.lt.xblob)) then
+    Phi = MAX(Phi,0-y_um)
+   endif
+   !right region,horiz
+   if ((y_um.gt.0).and.(x_um.gt.2.0d0*yblob)) then
+    Phi = MAX(Phi,0-y_um)
+   endif
+  endif
+
+ else
+  print *,"parameters invalid in nozzle2d"
+  stop
  endif
 
- if (insideflag.eq.0) then
-  !outside
-  !left region,vert
-  if ((y_um.gt.0).and. &
-      (x_um.lt.3000).and. &
-      (y_um.lt.nl)) then
-   Phi = x_um-3000
-  endif
-  !right region,vert
-  if ((y_um.gt.0).and. &
-      (x_um.gt.4000).and. &
-      (y_um.lt.nr)) then
-   Phi = 4000-x_um
-  endif
-  !nozzle corners
-  round_l=0
-  round_r=0
-  if ((x_um.le.4000).and. &
-      (y_um.gt.nl).and. &
-      (y_um.le.((-1/m)*(x_um-4000)+nr))) then
-   round_l = r-sqrt((x_um-(3000+r))**2+(y_um-nl)**2)
-  endif
-  if ((y_um.gt.((-1/m)*(x_um-4000)+nr)).and. &
-      (y_um.gt.nr)) then 
-   round_r = 0-sqrt((x_um-4000)**2+(y_um-nr)**2)
-  endif
-  Phi = MIN(Phi,round_l,round_r)  
-  !nozzle
-  if ((y_um.gt.(m*(x_um-a)+bottom)).and. &
-      (x_um.le.4000).and. &
-      (y_um.gt.((-1/m)*(x_um-a)+bottom)).and. &
-      (y_um.le.((-1/m)*(x_um-4000)+nr))) then
-   Phi = MAX(Phi, ((m*(x_um-a)+bottom)-y_um)/vertDisplace)
-  endif
-  !left region,horiz
-  if ((y_um.gt.0).and.(x_um.lt.3000)) then
-   Phi = MAX(Phi,0-y_um)
-  endif
-  !right region,horiz
-  if ((y_um.gt.0).and.(x_um.gt.4000)) then
-   Phi = MAX(Phi,0-y_um)
-  endif
- endif
-
- Phi=Phi*(10.0**(-4.0))
+ Phi=Phi/radblob5
 
 end subroutine nozzle2d
 
@@ -1772,6 +1789,7 @@ end subroutine nozzle2d
        else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
 
           ! dist>0 in the substrate (solid) region.
+          ! nozzle2d is declared in GLOBALDIST.F90
         call nozzle2d(xprime,yprime,dist)  
 
         ! materialdistsolid: flapping wing, FSI_flag=0

@@ -1,15 +1,18 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
-stop_time =  1.4e-3  # 20 x (0.7cm / 10^4 cm/s)
+stop_time =  1.4e-3  # 20 x (0.7cm / 10^4 cm/s) W NOZZLE
+stop_time =  100.0   # Simple J Nozzle
 
-# liquid,vacuum,solid
+# liquid,vacuum,solid  W Nozzle
 ns.truncate_volume_fractions=1 0 0 # CAVITATION
 ns.num_materials=3  # CAVITATION
 ns.num_species_var=1 # CAVITATION
 ns.num_divu_outer_sweeps=4
-
-# 0=cell
-# 1=face
+# Simple J Nozzle
+ns.truncate_volume_fractions=0 0  # liquid,solid
+ns.num_materials=2  # CAVITATION
+ns.num_species_var=0 # CAVITATION
+ns.num_divu_outer_sweeps=1
 
 ns.post_init_pressure_solve=1
 ns.slice_dir=1 # 0..sdim-1
@@ -18,7 +21,10 @@ ns.xslice=0.0 0.0
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
+# W nozzle
 geometry.prob_hi   =  0.7 0.35  # centimeters scale
+# simple J nozzle
+geometry.prob_hi   =  4.0 2.0  # centimeters scale
 
 # multigrid class
 mg.verbose = 0
@@ -48,7 +54,8 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 
 amr.n_cell    = 64 32
-amr.max_level =  3
+amr.max_level =  0
+# W Nozzle
 ns.ncoarseblocks=1
 ns.xcoarseblocks=0.35
 ns.ycoarseblocks=0.0
@@ -56,6 +63,9 @@ ns.zcoarseblocks=0.0
 ns.rxcoarseblocks=0.1
 ns.rycoarseblocks=0.05
 ns.rzcoarseblocks=0.0
+
+# J Simple Nozzle
+ns.ncoarseblocks=0
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -83,6 +93,7 @@ mac.mac_abs_tol    = 1.0e-10
 # water, vacuum, sphere
 ns.shock_timestep=1 2  # COMPRESSIBLE
 #ns.shock_timestep=2 2   # INCOMPRESSIBLE
+ns.shock_timestep=2 2   # INCOMPRESSIBLE SIMPLE J Nozzle
 ns.cfl            = 0.5    # cfl number for hyperbolic system
 ns.init_shrink    = 0.5      # scale back initial timestep
 ns.change_max     = 1.1    # scale back initial timestep
@@ -96,6 +107,10 @@ ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0 # disable CAVITATION
 #ns.latent_heat=1.0 0.0 0.0 0.0 0.0 0.0 # enable CAVITATION
 ns.mass_fraction_id=1 0 0 0 0 0 # CAVITATION
 ns.freezing_model=7 0 0 0 0 0 # CAVITATION
+
+# Simple J Nozzle
+ns.mass_fraction_id=0 0 0 0 0 0 # CAVITATION
+ns.freezing_model=0 0 0 0 0 0 # CAVITATION
 
 #CAVITATION saturation pressure g/(cm s^2)
 ns.cavitation_pressure=35400.0 0.0 
@@ -117,19 +132,35 @@ ns.twall=0.1
 ns.advbot=0.0 
 # we want the velocity in the constricted part to be ~ 1.0e+4 cm/s
 # aspect ratio is 2mm/150 microns=13.3
-ns.adv_vel=0.75e+3 
+ns.adv_vel=0.75e+3  # W Nozzle
+ns.adv_vel=0.5      # Simple J nozzle
+
 ns.adv_dir=1  # adv_dir=1..sdim+1
-ns.viscconst=0.00853 0.00853 0.00853 #CAVITATION
+ns.viscconst=0.00853 0.00853 0.00853 #CAVITATION W Nozzle
+
+ns.viscconst=0.0010016  # Simple J Nozzle (Pascals * sec)
+
 ns.tempconst=293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 #ns.material_type=0 999 # INCOMPRESSIBLE
 ns.material_type=1 1 999 # COMPRESSIBLE (EOS_tait) CAVITATION
+
+ns.material_type=1 999 # Simple J Nozzle
+
 ns.density_floor=0.9999577 0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
 ns.density_ceiling=1.006 1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
+
+# Simple J Nozzle
+ns.density_floor=999.0 999.0
+ns.density_ceiling=1001.0 1001.0
+
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
-ns.law_of_the_wall=0  # make 1 for law of the wall
+ns.law_of_the_wall=1  # make 1 for law of the wall
 ns.FSI_flag=0 0 1 # CAVITATION
+
+ns.FSI_flag=0 1 # Simple J nozzle
+
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
 # 1 ERG= 1 (gram cm^2/s^2)
@@ -141,10 +172,31 @@ ns.heatviscconst=58000.0 58000.0 58000.0
 ns.include_viscous_heating=0
 # CAVITATION
 ns.denconst=1.0 1.0 1.0
-ns.xblob=0.0
-ns.yblob=0.0 
+
+ns.denconst=1000.0 1000.0  # Simple J nozzle
 ns.zblob=0.0
 ns.radblob=1.0
+
+ns.xblob=3000.0  # length of thicker part of nozzle (Brusiani)
+ns.yblob=2000.0  # J, U or W nozzle (centerline)
+ns.radblob2=2.0  # W nozzle configuration Brusiani et al 2013
+ns.radblob3=301.0 # W or U nozzle, nl_width
+ns.radblob4=270.0 # W nozzle, nr_width
+ns.radblob6=20.0  # J, U or W nozzle (radius of curvature of rounded edge)
+
+#ns.radblob4=284.0 # U nozzle, nr_width
+ns.radblob5=1.0e+4  # scaling for the J, U or W nozzle from Brusiani
+
+ns.radblob2=0.0  # J nozzle configuration
+ns.radblob3=299.0 # J nozzle, nl_width
+ns.radblob4=299.0 # J nozzle, nr_width
+ns.radblob3=1.0 # J nozzle, nl_width
+ns.radblob4=1.0 # J nozzle, nr_width
+ns.radblob5=1.0 # scaling for nozzle
+ns.radblob6=0.0  # J, U or W nozzle (radius of curvature of rounded edge)
+ns.yblob=1.0    # centerline of nozzle
+ns.xblob=0.0  # length of thicker part of nozzle (Brusiani)
+
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=46
