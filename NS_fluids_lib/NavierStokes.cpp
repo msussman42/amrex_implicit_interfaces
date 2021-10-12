@@ -1832,7 +1832,10 @@ void fortran_parameters() {
  }
  double start_initialization = ParallelDescriptor::second();
 
+ const int cc_int_size=sizeof(int);
+
  fort_override(
+  &cc_int_size,
   &ns_max_level,
   ns_n_cell.dataPtr(),
   ns_space_blocking_factor.dataPtr(),
