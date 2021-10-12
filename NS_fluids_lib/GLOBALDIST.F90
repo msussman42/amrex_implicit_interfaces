@@ -1433,7 +1433,7 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
  REAL_T :: x_um,y_um
 
  x_um=x_cm*radblob5 
- y_um=(0.2-y_cm)*radblob5
+ y_um=(yblob/radblob5-y_cm)*radblob5
 
  !nozzle configuration
  !J:0, U:1, W:2
@@ -1461,7 +1461,7 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
      (radblob2.eq.0.0d0).and. &!radblob2=J nozzle
      (radblob3.eq.radblob4)) then ! nl_width = nr_width
 
-  Phi=abs(y_um-yblob)-nl_width/2.0d0
+  Phi=abs(y_um)-nl_width/2.0d0
 
  else if ((xblob.gt.0.0d0).or. &
           (radblob2.eq.1.0d0).or. & ! U nozzle

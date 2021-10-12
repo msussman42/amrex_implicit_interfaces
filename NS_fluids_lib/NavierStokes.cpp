@@ -17136,12 +17136,20 @@ void NavierStokes::project_right_hand_side(
    mf_combine_ones(project_option,index_MF,coef);
    zap_resid_where_singular(index_MF);
 
-  } else {
+  } else if (at_least_one_active==0) {
    std::cout << "index_MF = " << index_MF << '\n';
    std::cout << "project_option = " << project_option << '\n';
+   std::cout << "color_ONES_count = " << color_ONES_count << '\n';
+   for (int icolor=0;icolor<color_ONES_count;icolor++) {
+    std::cout << "prj_rhs,icolor="<<icolor<<" ones_sum_global="<<
+      ones_sum_global[icolor]<<" singular_patch_flag="<<
+      singular_patch_flag[icolor]<<'\n';
+   }
    std::cout << "at_least_one_active = " << at_least_one_active << '\n';
-   amrex::Error("at_least_one_active invalid");
-  }
+   std::cout << "verify rigid body level set functions init. correctly\n";
+   amrex::Error("at_least_one_active is 0");
+  } else 
+   amrex::Error("at least_one_active neither 0 nor 1");
 
  } else if (project_option_singular_possible(project_option)==0) {
 
