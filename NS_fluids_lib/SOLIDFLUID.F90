@@ -204,6 +204,7 @@
         FSI_input_node_list, &
         FSI_input_element_list, &
         FSI_input_displacement_list, &
+        FSI_input_velocity_halftime_list, &
         FSI_input_velocity_list, &
         FSI_input_force_list, &
         FSI_input_mass_list, &
@@ -213,6 +214,7 @@
         FSI_output_node_list, &
         FSI_output_element_list, &
         FSI_output_displacement_list, &
+        FSI_output_velocity_halftime_list, &
         FSI_output_velocity_list, &
         FSI_output_force_list, &
         FSI_output_mass_list, &
@@ -287,6 +289,8 @@
       REAL_T, intent(inout) :: &
         FSI_input_displacement_list(3*FSI_input_num_nodes)
       REAL_T, intent(inout) :: &
+        FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
+      REAL_T, intent(inout) :: &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
       REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
       REAL_T, intent(inout) :: &
@@ -302,6 +306,8 @@
               FSI_output_element_list(4*FSI_output_num_elements)
       REAL_T, intent(inout) :: &
               FSI_output_displacement_list(3*FSI_output_num_nodes)
+      REAL_T, intent(inout) :: &
+              FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
       REAL_T, intent(inout) :: &
               FSI_output_velocity_list(3*FSI_output_num_nodes)
       REAL_T, intent(inout) :: &
@@ -611,6 +617,7 @@
           FSI_input_node_list, &
           FSI_input_element_list, &
           FSI_input_displacement_list, &
+          FSI_input_velocity_halftime_list, &
           FSI_input_velocity_list, &
           FSI_input_force_list, &
           FSI_input_mass_list, &
@@ -620,6 +627,7 @@
           FSI_output_node_list, &
           FSI_output_element_list, &
           FSI_output_displacement_list, &
+          FSI_output_velocity_halftime_list, &
           FSI_output_velocity_list, &
           FSI_output_force_list, &
           FSI_output_mass_list, &
@@ -648,6 +656,7 @@
           FSI_input_node_list, &
           FSI_input_element_list, &
           FSI_input_displacement_list, &
+          FSI_input_velocity_halftime_list, &
           FSI_input_velocity_list, &
           FSI_input_force_list, &
           FSI_input_mass_list, &
@@ -657,6 +666,7 @@
           FSI_output_node_list, &
           FSI_output_element_list, &
           FSI_output_displacement_list, &
+          FSI_output_velocity_halftime_list, &
           FSI_output_velocity_list, &
           FSI_output_force_list, &
           FSI_output_mass_list, &

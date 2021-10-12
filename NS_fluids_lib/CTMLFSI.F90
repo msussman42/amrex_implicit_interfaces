@@ -274,6 +274,7 @@ stop
        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
       subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT(&
        fib_pst,&
+       fib_vel_halftime,&
        fib_vel,&
        fib_frc,&
        fib_wt,&
@@ -289,7 +290,10 @@ stop
       INTEGER_T, intent(in) :: max_n_fib_nodes
       INTEGER_T, intent(in) :: ifib
       REAL_T, intent(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: &
+              fib_vel_halftime(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, intent(inout) :: &
+              fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
       REAL_T, intent(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
       REAL_T, intent(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
       INTEGER_T inode,idir,inode_cutoff
@@ -316,6 +320,7 @@ stop
           !section=1
          vel_fib_prev(ifib,1,inode,idir)= &
            fib_vel(ifib,inode,idir)
+          ! need to overwrite X^{n-1}
         end do
         do idir=1,SDIM
           ! section=1

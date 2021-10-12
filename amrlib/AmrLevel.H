@@ -49,6 +49,7 @@ Vector< Real > node_list;
 Vector< int > element_list;
 Vector< Real > displacement_list;
 Vector< Real > velocity_list;
+Vector< Real > velocity_halftime_list;
 Vector< Real > force_list;
 Vector< Real > mass_list;
 Vector< Real > temperature_list;

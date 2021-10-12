@@ -164,6 +164,7 @@ REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc
 REAL_T, dimension(:,:), allocatable :: ctml_fib_mass
 
 REAL_T, dimension(:,:,:), allocatable :: ctml_fib_pst_prev
+REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel_halftime_prev
 REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel_prev
 REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc_prev
 REAL_T, dimension(:,:), allocatable :: ctml_fib_mass_prev
@@ -6990,6 +6991,7 @@ subroutine CLSVOF_ReadHeader( &
   FSI_input_node_list, &
   FSI_input_element_list, &
   FSI_input_displacement_list, &
+  FSI_input_velocity_halftime_list, &
   FSI_input_velocity_list, &
   FSI_input_force_list, &
   FSI_input_mass_list, &
@@ -6999,6 +7001,7 @@ subroutine CLSVOF_ReadHeader( &
   FSI_output_node_list, &
   FSI_output_element_list, &
   FSI_output_displacement_list, &
+  FSI_output_velocity_halftime_list, &
   FSI_output_velocity_list, &
   FSI_output_force_list, &
   FSI_output_mass_list, &
@@ -7027,7 +7030,10 @@ INTEGER_T, intent(in) :: FSI_input_num_elements
 REAL_T, intent(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
 INTEGER_T, intent(inout) :: FSI_input_element_list(4*FSI_input_num_elements)
 REAL_T, intent(inout) :: FSI_input_displacement_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_velocity_list(3*FSI_input_num_nodes)
+REAL_T, intent(inout) ::  &
+        FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
+REAL_T, intent(inout) ::  &
+        FSI_input_velocity_list(3*FSI_input_num_nodes)
 REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
 REAL_T, intent(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
 REAL_T, intent(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
@@ -7037,7 +7043,10 @@ INTEGER_T, intent(in) :: FSI_output_num_elements
 REAL_T, intent(inout) :: FSI_output_node_list(3*FSI_output_num_nodes)
 INTEGER_T, intent(inout) :: FSI_output_element_list(4*FSI_output_num_elements)
 REAL_T, intent(inout) :: FSI_output_displacement_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_velocity_list(3*FSI_output_num_nodes)
+REAL_T, intent(inout) :: &
+        FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
+REAL_T, intent(inout) :: &
+        FSI_output_velocity_list(3*FSI_output_num_nodes)
 REAL_T, intent(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
 REAL_T, intent(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
 REAL_T, intent(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
@@ -7185,7 +7194,11 @@ INTEGER_T idir,ielem,inode
 
       allocate(ctml_fib_pst_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
              AMREX_SPACEDIM))
-      allocate(ctml_fib_vel_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+      allocate(ctml_fib_vel_halftime_prev( &
+             ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+             AMREX_SPACEDIM))
+      allocate(ctml_fib_vel_prev( &
+             ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
              AMREX_SPACEDIM))
       allocate(ctml_fib_frc_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
              AMREX_SPACEDIM))
@@ -7355,6 +7368,8 @@ INTEGER_T idir,ielem,inode
          FSI_output_node_list((inode-1)*3+idir)= &
            ctml_fib_pst(ctml_part_id,inode,idir)
          FSI_output_displacement_list((inode-1)*3+idir)=zero
+         FSI_output_velocity_halftime_list((inode-1)*3+idir)= &
+           ctml_fib_vel(ctml_part_id,inode,idir)
          FSI_output_velocity_list((inode-1)*3+idir)= &
            ctml_fib_vel(ctml_part_id,inode,idir)
          FSI_output_force_list((inode-1)*3+idir)= &
@@ -11623,6 +11638,7 @@ subroutine CLSVOF_ReadNodes( &
   FSI_input_node_list, &
   FSI_input_element_list, &
   FSI_input_displacement_list, &
+  FSI_input_velocity_halftime_list, &
   FSI_input_velocity_list, &
   FSI_input_force_list, &
   FSI_input_mass_list, &
@@ -11632,6 +11648,7 @@ subroutine CLSVOF_ReadNodes( &
   FSI_output_node_list, &
   FSI_output_element_list, &
   FSI_output_displacement_list, &
+  FSI_output_velocity_halftime_list, &
   FSI_output_velocity_list, &
   FSI_output_force_list, &
   FSI_output_mass_list, &
@@ -11658,7 +11675,10 @@ INTEGER_T, intent(in) :: FSI_input_num_elements
 REAL_T, intent(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
 INTEGER_T, intent(inout) :: FSI_input_element_list(4*FSI_input_num_elements)
 REAL_T, intent(inout) :: FSI_input_displacement_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_velocity_list(3*FSI_input_num_nodes)
+REAL_T, intent(inout) :: &
+        FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
+REAL_T, intent(inout) :: &
+        FSI_input_velocity_list(3*FSI_input_num_nodes)
 REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
 REAL_T, intent(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
 REAL_T, intent(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
@@ -11668,7 +11688,10 @@ INTEGER_T, intent(in) :: FSI_output_num_elements
 REAL_T, intent(inout) :: FSI_output_node_list(3*FSI_output_num_nodes)
 INTEGER_T, intent(inout) :: FSI_output_element_list(4*FSI_output_num_elements)
 REAL_T, intent(inout) :: FSI_output_displacement_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_velocity_list(3*FSI_output_num_nodes)
+REAL_T, intent(inout) :: &
+        FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
+REAL_T, intent(inout) :: &
+        FSI_output_velocity_list(3*FSI_output_num_nodes)
 REAL_T, intent(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
 REAL_T, intent(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
 REAL_T, intent(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
@@ -11735,6 +11758,8 @@ INTEGER_T :: idir,ielem,im_part
          do idir=1,AMREX_SPACEDIM
           ctml_fib_pst_prev(ctml_part_id,inode,idir)= &
             FSI_input_node_list((inode-1)*3+idir)
+          ctml_fib_vel_halftime_prev(ctml_part_id,inode,idir)= &
+            FSI_input_velocity_halftime_list((inode-1)*3+idir)
           ctml_fib_vel_prev(ctml_part_id,inode,idir)= &
             FSI_input_velocity_list((inode-1)*3+idir)
           ctml_fib_frc_prev(ctml_part_id,inode,idir)= &
@@ -11800,6 +11825,7 @@ INTEGER_T :: idir,ielem,im_part
        inode_crit=0 ! node index of first inactive node.
        call CTML_PUT_PREV_POS_VEL_FORCE_WT( &
          ctml_fib_pst_prev, &
+         ctml_fib_vel_halftime_prev, &
          ctml_fib_vel_prev, &
          ctml_fib_frc_prev, &
          ctml_fib_mass_prev, &
@@ -12007,8 +12033,14 @@ INTEGER_T :: idir,ielem,im_part
           FSI_output_node_list((inode-1)*3+idir)= &
            ctml_fib_pst(ctml_part_id,inode,idir)
           FSI_output_displacement_list((inode-1)*3+idir)=zero
+
+          FSI_output_velocity_halftime_list((inode-1)*3+idir)= &
+             (FSI_output_node_list((inode-1)*3+idir)- &
+              FSI_input_node_list((inode-1)*3+idir))/CLSVOF_dt
+
           FSI_output_velocity_list((inode-1)*3+idir)= &
            ctml_fib_vel(ctml_part_id,inode,idir)
+
           FSI_output_force_list((inode-1)*3+idir)= &
            ctml_fib_frc(ctml_part_id,inode,idir)
          enddo !idir=1,sdim
