@@ -1285,9 +1285,9 @@ stop
       subroutine getGhostVel( &
        LOW, &
        law_of_the_wall, &
-       iSD,jSD,kSD, &
-       iFD,jFD,kFD, &
-       side_solid, &
+       iSD,jSD,kSD, & ! index for the solid cell
+       iFD,jFD,kFD, & ! index for the fluid cell
+       side_solid, &  ! =0 if solid on the left
        side_image, &
        data_dir, &
        uimage_raster, &
@@ -17691,7 +17691,7 @@ stop
        ! if nparts==0 => interpolate state cell velocity to MAC grid.
        ! if nparts>0 and law_of_the_wall==0 => interpolate solid cell velocity
        ! to MAC grid.
-      subroutine FORT_WALLFUNCTION( &
+      subroutine fort_wallfunction( &
        data_dir, &
        law_of_the_wall, &
        im_solid_map, &
@@ -17717,7 +17717,8 @@ stop
        history_dat, &
        DIMS(history_dat), &
        nhistory, &
-       visc_coef)
+       visc_coef) &
+      bind(c,name='fort_wallfunction')
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -17759,14 +17760,28 @@ stop
         !DIMV(LS)=x,y,z  nmat=num. materials
       !CP=Closest Point
       REAL_T, intent(in), target :: LSCP(DIMV(LSCP),nmat*(SDIM+1)) 
+      REAL_T, pointer :: LSCP_ptr(D_DECL(:,:,:),:)
+
       ! FD=Finite Difference
       REAL_T, intent(in), target :: LSFD(DIMV(LSFD),nmat*SDIM)  
+      REAL_T, pointer :: LSFD_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in), target :: state(DIMV(state),nden)
+      REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in), target :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
+      REAL_T, pointer :: ufluid_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in), target :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
-      REAL_T, intent(out) :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
+      REAL_T, pointer :: usolid_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(out),target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
+      REAL_T, pointer :: ughost_ptr(D_DECL(:,:,:),:)
+
        ! nhistory=nparts_ghost * (usolid_law_of_wall,uimage,usolid,angle)
       REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory) 
+      REAL_T, pointer :: history_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
       REAL_T xsten(-3:3,SDIM)
@@ -17831,7 +17846,7 @@ stop
       if ((nparts.ge.0).and.(nparts.le.nmat)) then 
        ! do nothing
       else
-       print *,"nparts invalid FORT_WALLFUNCTION"
+       print *,"nparts invalid fort_wallfunction"
        stop
       endif
       if ((nparts_ghost.ge.1).and. &
@@ -17839,7 +17854,7 @@ stop
           (nparts_ghost.ge.nparts)) then 
        ! do nothing
       else
-       print *,"nparts_ghost invalid FORT_WALLFUNCTION"
+       print *,"nparts_ghost invalid fort_wallfunction"
        stop
       endif
 
@@ -17913,13 +17928,20 @@ stop
        ! are 0,1,..,SDIM-1. The last parameter is a "unique" 
        ! caller id that is printed to the screen if the sanity
        ! check fails.
-      call checkbound(fablo,fabhi,DIMS(LSCP),ngrow_distance,-1,1252)
-      call checkbound(fablo,fabhi,DIMS(LSFD),ngrow_distance,-1,1252)
-      call checkbound(fablo,fabhi,DIMS(state),ngrow_law_of_wall,-1,1253)
-      call checkbound(fablo,fabhi,DIMS(ufluid),ngrow_law_of_wall,-1,1254)
-      call checkbound(fablo,fabhi,DIMS(usolid),ngrow_law_of_wall,-1,1255)
-      call checkbound(fablo,fabhi,DIMS(ughost),0,data_dir,1255)
-      call checkbound(fablo,fabhi,DIMS(history_dat),0,data_dir,1255)
+      LSCP_ptr=>LSCP
+      call checkbound_array(fablo,fabhi,LSCP_ptr,ngrow_distance,-1,1252)
+      LSFP_ptr=>LSFP
+      call checkbound_array(fablo,fabhi,LSFD_ptr,ngrow_distance,-1,1252)
+      state_ptr=>state
+      call checkbound_array(fablo,fabhi,state_ptr,ngrow_law_of_wall,-1,1253)
+      ufluid_ptr=>ufluid
+      call checkbound_array(fablo,fabhi,ufluid_ptr,ngrow_law_of_wall,-1,1254)
+      usolid_ptr=>usolid
+      call checkbound_array(fablo,fabhi,usolid_ptr,ngrow_law_of_wall,-1,1255)
+      ughost_ptr=>ughost
+      call checkbound_array(fablo,fabhi,ughost_ptr,0,data_dir,1255)
+      history_dat_ptr=>history_dat
+      call checkbound_array(fablo,fabhi,history_dat_ptr,0,data_dir,1255)
 
       law_of_wall_parm%visc_coef=visc_coef
       law_of_wall_parm%time=time
@@ -17959,7 +17981,9 @@ stop
       do k=growlo(3),growhi(3)
 
        if (nparts.eq.0) then
-        if (nparts_ghost.eq.1) then
+         ! no solids, as placeholder put fictitious fluid velocity
+         ! on the face.
+        if (nparts_ghost.eq.1) then 
          do dir=1,SDIM
           ughost(D_DECL(i,j,k),dir)= &
             half*(ufluid(D_DECL(i,j,k),dir)+ &
@@ -18003,7 +18027,7 @@ stop
           if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
            ! do nothing
           else
-           print *,"im_solid invalid FORT_WALLFUNCTION"
+           print *,"im_solid invalid fort_wallfunction"
            stop
           endif
 
@@ -18092,8 +18116,11 @@ stop
               x_projection_raster(dir)=xsten(0,dir)
               x_image_raster(dir)=xsten(0,dir)
              enddo
+              ! left side is solid
              if ((side_solid.eq.0).and.(side_image.eq.1)) then
+                ! x_projection on the face.
               x_projection_raster(data_dir+1)=xsten(1,data_dir+1)
+                ! x_image_raster is in the fluid.
               x_image_raster(data_dir+1)=xsten(2,data_dir+1)
              else if ((side_solid.eq.1).and.(side_image.eq.0)) then
               x_projection_raster(data_dir+1)=xsten(-1,data_dir+1)
@@ -18175,7 +18202,7 @@ stop
       enddo ! i
 
       return
-      end subroutine FORT_WALLFUNCTION
+      end subroutine fort_wallfunction
 
         ! called from NavierStokes.cpp
         ! put ns.wall_slip_weight=0.5 for example in the inputs file.
@@ -18320,7 +18347,7 @@ stop
           (nparts_ghost.ge.nparts)) then 
        ! do nothing
       else
-       print *,"nparts_ghost invalid FORT_WALLFUNCTION"
+       print *,"nparts_ghost invalid fort_wallfunction"
        stop
       endif
 
