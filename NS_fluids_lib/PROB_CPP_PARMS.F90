@@ -131,6 +131,7 @@ stop
       end subroutine fort_blb_init
 
       subroutine fort_override( &
+        cc_int_size, &
         ccmax_level, &
         ccn_cell, &
         ccbfact_space_order, &
@@ -264,6 +265,7 @@ stop
       
       IMPLICIT NONE
       
+      INTEGER_T, intent(in) :: cc_int_size
       INTEGER_T, intent(in) :: ccmax_level
       INTEGER_T, intent(in) :: ccn_cell(SDIM)
       INTEGER_T, intent(in) :: ccbfact_space_order(0:ccmax_level)
@@ -374,6 +376,7 @@ stop
       INTEGER_T nten
       INTEGER_T level,bfactmax
       REAL_T :: massfrac_parm(ccnum_species_var+1)
+      INTEGER_T :: fort_double_size,fort_int_size
       
       probtype=ccprobtype
       num_materials=ccnum_materials
@@ -673,7 +676,23 @@ stop
        SUB_CFL_HELPER=>NULL()
        SUB_correct_pres_rho_hydrostatic=>NULL()
       endif
-      
+     
+      fort_double_size=SIZEOF(global_pressure_scale)
+      fort_int_size=SIZEOF(local_dir)
+     
+      if ((fort_double_size.eq.8).and. &
+          (fort_int_size.eq.cc_int_size)) then
+       print *,"fort_double_size=",fort_double_size     
+       print *,"fort_int_size=",fort_int_size     
+       print *,"cc_int_size=",cc_int_size     
+      else
+       print *,"fort_double_size or fort_int_size invalid"
+       print *,"fort_double_size=",fort_double_size     
+       print *,"fort_int_size=",fort_int_size     
+       print *,"cc_int_size=",cc_int_size     
+       stop
+      endif
+
       global_pressure_scale=one
       global_velocity_scale=one
      
