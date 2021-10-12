@@ -16,7 +16,8 @@ namespace amrex {
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
-void FSI_container_class::initData_FSI(int num_nodes_init,
+void FSI_container_class::initData_FSI(
+  int num_nodes_init,
   int num_elements_init) {
 
 if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
@@ -26,6 +27,7 @@ if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
  node_list.resize(num_nodes*3);
  element_list.resize(num_elements*4);
  displacement_list.resize(num_nodes*3);
+ velocity_halftime_list.resize(num_nodes*3);
  velocity_list.resize(num_nodes*3);
  force_list.resize(num_nodes*3);
  mass_list.resize(num_nodes);
@@ -52,6 +54,7 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
   node_list[inode]=source_FSI.node_list[inode];
   displacement_list[inode]=source_FSI.displacement_list[inode];
   velocity_list[inode]=source_FSI.velocity_list[inode];
+  velocity_halftime_list[inode]=source_FSI.velocity_halftime_list[inode];
   force_list[inode]=source_FSI.force_list[inode];
  } //inode=0..3*num_nodes-1
 
@@ -228,6 +231,7 @@ AmrLevel::restart (Amr&          papa,
 
      for (int i=0;i<=time_order;i++) {
 
+       //TODO: restart the FSI data.
       new_data_FSI[i].resize(nmat);
       for (int j=0;j<nmat;j++) {
        new_data_FSI[i][j].initData_FSI(0,0);
