@@ -32,6 +32,7 @@ namespace amrex{
       int* num_elements_blobclass_in);
 
      void fort_override(
+       const int* cc_int_size,
        const int* max_level,
        const int* n_cell,
        const int* bfact_space_order,

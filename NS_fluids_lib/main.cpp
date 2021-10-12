@@ -45,7 +45,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 10/09/21, 17:30pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 10/12/21, 10:30am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -57,9 +57,24 @@ main (int   argc,
     }  // pid=0..NProcs-1
 
     amrex::ParallelDescriptor::Barrier();
-    if (amrex::ParallelDescriptor::IOProcessor())
+    if (amrex::ParallelDescriptor::IOProcessor()) {
      std::cout << "after the barrier on IO processor " << 
 	    amrex::ParallelDescriptor::MyProc() << "\n";
+     int double_size=sizeof(double);
+     if (sizeof(amrex::Real)!=double_size) 
+      amrex::Error("expecting amrex::Real and double_size to be equal");
+     if (double_size!=8)
+      amrex::Error("expecting double_size == 8 ");
+     int int_size=sizeof(int);
+     if ((int_size==4)||(int_size==8)) {
+      // do nothing
+     } else {
+      std::cout << "int_size= " << int_size << '\n';
+      amrex::Error("expecting int_size == 4 or 8");
+     }
+     std::cout << "double_size= " << double_size << '\n';
+     std::cout << "int_size= " << int_size << '\n';
+    } //IOProcessor==TRUE
 
     const double run_strt = amrex::ParallelDescriptor::second();
 
@@ -67,6 +82,7 @@ main (int   argc,
     int  max_step;  // int is 4 bytes
     amrex::Real strt_time;
     amrex::Real stop_time;
+
 
     ParmParse pp;
 
