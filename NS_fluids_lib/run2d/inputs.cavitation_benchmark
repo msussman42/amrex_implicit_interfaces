@@ -8,6 +8,9 @@ ns.truncate_volume_fractions=1 0 0 # CAVITATION
 ns.num_materials=3  # CAVITATION
 ns.num_species_var=1 # CAVITATION
 ns.num_divu_outer_sweeps=4
+
+ns.extend_pressure_into_solid=1
+
 # Simple J Nozzle
 ns.truncate_volume_fractions=0 0  # liquid,solid
 ns.num_materials=2  # CAVITATION
@@ -21,10 +24,12 @@ ns.xslice=0.0 0.0
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
+
 # W nozzle
 geometry.prob_hi   =  0.7 0.35  # centimeters scale
+
 # simple J nozzle
-geometry.prob_hi   =  4.0 2.0  # centimeters scale
+geometry.prob_hi   =  4.0 2.0  # meters scale
 
 # multigrid class
 mg.verbose = 0
@@ -116,8 +121,10 @@ ns.freezing_model=0 0 0 0 0 0 # CAVITATION
 ns.cavitation_pressure=35400.0 0.0 
 ns.cavitation_vapor_density=0.00002558 0.0 0.0
 ns.cavitation_tension=71.7 0.0 0.0
+
 ns.inflow_pressure=1.0e+6  # should not be used
 ns.outflow_pressure=1.0e+6  # this will be used at all outflow boundaries.
+
 ns.tension        = 0.0 0.0 0.0 
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
@@ -125,6 +132,7 @@ ns.sum_interval   = 1        # timesteps between computing mass
 # axis_dir=10 inputs.sphere_cavitation: density_at_depth=1.0000423520369408
 # axis_dir=20 inputs.cavitation_benchmark
 ns.axis_dir=20 
+
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
@@ -138,14 +146,14 @@ ns.adv_vel=0.5      # Simple J nozzle
 ns.adv_dir=1  # adv_dir=1..sdim+1
 ns.viscconst=0.00853 0.00853 0.00853 #CAVITATION W Nozzle
 
-ns.viscconst=0.0010016  # Simple J Nozzle (Pascals * sec)
+ns.viscconst=0.0010016 0.0010016 # Simple J Nozzle (Pascals * sec)
 
 ns.tempconst=293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 #ns.material_type=0 999 # INCOMPRESSIBLE
 ns.material_type=1 1 999 # COMPRESSIBLE (EOS_tait) CAVITATION
 
-ns.material_type=1 999 # Simple J Nozzle
+ns.material_type=0 999 # Simple J Nozzle
 
 ns.density_floor=0.9999577 0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
 ns.density_ceiling=1.006 1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
@@ -174,6 +182,7 @@ ns.include_viscous_heating=0
 ns.denconst=1.0 1.0 1.0
 
 ns.denconst=1000.0 1000.0  # Simple J nozzle
+
 ns.zblob=0.0
 ns.radblob=1.0
 
@@ -190,8 +199,8 @@ ns.radblob5=1.0e+4  # scaling for the J, U or W nozzle from Brusiani
 ns.radblob2=0.0  # J nozzle configuration
 ns.radblob3=299.0 # J nozzle, nl_width
 ns.radblob4=299.0 # J nozzle, nr_width
-ns.radblob3=1.0 # J nozzle, nl_width
-ns.radblob4=1.0 # J nozzle, nr_width
+ns.radblob3=1.0 # J nozzle, nl_width (simple test)
+ns.radblob4=1.0 # J nozzle, nr_width (simple test)
 ns.radblob5=1.0 # scaling for nozzle
 ns.radblob6=0.0  # J, U or W nozzle (radius of curvature of rounded edge)
 ns.yblob=1.0    # centerline of nozzle

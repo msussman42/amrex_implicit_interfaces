@@ -17779,8 +17779,8 @@ stop
       REAL_T, pointer :: ughost_ptr(D_DECL(:,:,:),:)
 
        ! nhistory=nparts_ghost * (usolid_law_of_wall,uimage,usolid,angle)
-      REAL_T, intent(out) :: history_dat(DIMV(history_dat),nhistory) 
-      REAL_T, pointer :: history_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: history_dat(DIMV(history_dat),nhistory) 
+      REAL_T, pointer :: history_dat_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -17930,7 +17930,7 @@ stop
        ! check fails.
       LSCP_ptr=>LSCP
       call checkbound_array(fablo,fabhi,LSCP_ptr,ngrow_distance,-1,1252)
-      LSFP_ptr=>LSFP
+      LSFD_ptr=>LSFD
       call checkbound_array(fablo,fabhi,LSFD_ptr,ngrow_distance,-1,1252)
       state_ptr=>state
       call checkbound_array(fablo,fabhi,state_ptr,ngrow_law_of_wall,-1,1253)

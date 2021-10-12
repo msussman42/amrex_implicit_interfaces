@@ -3584,10 +3584,26 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
+      if (gravity_normalized.eq.zero) then
+       ! do nothing
+      else if (gravity_normalized.ne.zero) then
+       ! do nothing
+      else
+       print *,"gravity_normalized became NaN"
+       stop
+      endif
+
       if ((probtype.eq.42).or. & ! bubble jetting
           (probtype.eq.46)) then ! cavitation
-       print *,"see tait_hydrostatic_pressure_density and make user def."
-       stop
+       if (gravity_normalized.eq.zero) then
+        ! do nothing
+       else if (gravity_normalized.ne.zero) then
+        print *,"see tait_hydrostatic_pressure_density and make user def."
+        stop
+       else
+        print *,"gravity_normalized became NaN"
+        stop
+       endif
       endif
 
       call gridsten_level(xsten,i,j,k,level,nhalf)
