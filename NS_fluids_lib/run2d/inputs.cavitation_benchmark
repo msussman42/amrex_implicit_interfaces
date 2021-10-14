@@ -58,7 +58,7 @@ ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 
-amr.n_cell    = 64 32
+amr.n_cell    = 64 32 # 4x2 domain  4x1 nozzle  max_level=0 dx_finest=2/32=1/16
 amr.max_level =  0
 # W Nozzle
 ns.ncoarseblocks=1
@@ -141,12 +141,17 @@ ns.advbot=0.0
 # we want the velocity in the constricted part to be ~ 1.0e+4 cm/s
 # aspect ratio is 2mm/150 microns=13.3
 ns.adv_vel=0.75e+3  # W Nozzle
+
+# for the rasterized formulation, the normal distance of the image point
+# to the wall is dx/2 which is the same as the normal distance of the ghost
+# point to the wall.
 ns.adv_vel=0.5      # Simple J nozzle
 
 ns.adv_dir=1  # adv_dir=1..sdim+1
 ns.viscconst=0.00853 0.00853 0.00853 #CAVITATION W Nozzle
 
-ns.viscconst=0.0010016 0.0010016 # Simple J Nozzle (Pascals * sec)
+ns.viscconst=0.001 0.001 # Simple J Nozzle (Pascals * sec)
+ns.viscconst_eddy=1.0e-10 0.0
 
 ns.tempconst=293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
@@ -159,8 +164,8 @@ ns.density_floor=0.9999577 0.9999577 0.9999999 # corresponds ~ 250 dyne/cm^2
 ns.density_ceiling=1.006 1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
 
 # Simple J Nozzle
-ns.density_floor=999.0 999.0
-ns.density_ceiling=1001.0 1001.0
+ns.density_floor=0.999 0.999
+ns.density_ceiling=1.001 1.001
 
 # see fort_wallfunction in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
@@ -181,7 +186,7 @@ ns.include_viscous_heating=0
 # CAVITATION
 ns.denconst=1.0 1.0 1.0
 
-ns.denconst=1000.0 1000.0  # Simple J nozzle
+ns.denconst=1.0 1.0  # Simple J nozzle
 
 ns.zblob=0.0
 ns.radblob=1.0
