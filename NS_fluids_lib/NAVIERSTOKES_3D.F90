@@ -13799,8 +13799,8 @@ END SUBROUTINE SIMP
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-           ! (x0,y0,z0,r,u,v,w,den,T,insert time,
-           !  type_molecule,type_atom) is extra. 
+         ! (x0,y0,z0,r,u,v,w,pres,den,T,stress,
+         !  insert time,type_molecule,type_atom) is extra.
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -13884,9 +13884,9 @@ END SUBROUTINE SIMP
       write(cenfilename37,'(A29,A3,A5)') cennamestr29,levstr,gridstr
       print *,"cenfilename37 ",cenfilename37
 
-       ! (x0,y0,z0,r,u,v,w,den,T,insert time,
-       !  type_molecule,type_atom) is extra. 
-      if (N_EXTRA_REAL.eq.2*SDIM+6) then
+      ! (x0,y0,z0,r,u,v,w,pres,den,T,stress,
+      !  insert time,type_molecule,type_atom) is extra.
+      if (N_EXTRA_REAL.eq.4*SDIM+7) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL invalid"
@@ -14016,9 +14016,9 @@ END SUBROUTINE SIMP
         print *,"newcenfilename21 ",newcenfilename21
         open(unit=12,file=newcenfilename21)
 
-         ! (x0,y0,z0,r,u,v,w,den,T,insert time,
-         !  type_molecule,type_atom) is extra. 
-        if (N_EXTRA_REAL.eq.2*SDIM+6) then
+        ! (x0,y0,z0,r,u,v,w,pres,den,T,stress,
+        !  insert time,type_molecule,type_atom) is extra.
+        if (N_EXTRA_REAL.eq.4*SDIM+7) then
          ! do nothing
         else
          print *,"N_EXTRA_REAL invalid"
