@@ -82,7 +82,6 @@ namespace
     VisMF::Header::Version plot_headerversion(VisMF::Header::Version_v1);
     VisMF::Header::Version checkpoint_headerversion(VisMF::Header::Version_v1);
     Vector<int> recalesce_flag;  //if set, then "recalesce_state" checkpointed.
-    int  AMR_num_materials;
 
 //}
 
@@ -145,7 +144,6 @@ Amr::Initialize ()
     checkpoint_nfiles        = 64;
     regrid_on_restart        = 0;
     use_efficient_regrid     = 0;
-    AMR_num_materials = 0;
     plotfile_on_restart      = 0;
     checkpoint_on_restart    = 0;
     checkpoint_files_output  = true;
@@ -179,7 +177,7 @@ Amr::DataLog (int i)
 int 
 Amr::AMR_recalesce_flag(int im) const {
 
- if ((im<1)||(im>AMR_num_materials))
+ if ((im<1)||(im>global_AMR_num_materials))
   amrex::Error("im out of range");
 
  return recalesce_flag[im-1];
@@ -280,16 +278,16 @@ Amr::InitAmr () {
      std::cout << "Amr.verbose= " << verbose << '\n';
     }
 
-    ppns.get("num_materials",AMR_num_materials);
-    if (AMR_num_materials<1)
-     amrex::Error("AMR_num_materials invalid");
+    ppns.get("num_materials",global_AMR_num_materials);
+    if ((global_AMR_num_materials<2)||(global_AMR_num_materials>999))
+     amrex::Error("global_AMR_num_materials invalid");
 
-    recalesce_flag.resize(AMR_num_materials);
-    for (int im=0;im<AMR_num_materials;im++) {
+    recalesce_flag.resize(global_AMR_num_materials);
+    for (int im=0;im<global_AMR_num_materials;im++) {
      recalesce_flag[im]=0;
     }
-    ppns.queryarr("recalesce_flag",recalesce_flag,0,AMR_num_materials);
-    for (int im=0;im<AMR_num_materials;im++) {
+    ppns.queryarr("recalesce_flag",recalesce_flag,0,global_AMR_num_materials);
+    for (int im=0;im<global_AMR_num_materials;im++) {
      if ((recalesce_flag[im]!=0)&&
          (recalesce_flag[im]!=1)&&
          (recalesce_flag[im]!=2))
@@ -475,10 +473,6 @@ Amr::InitAmr () {
      std::cout << "Amr.slab_dt_type= " <<
         slab_dt_type << '\n';
     }
-
-    ppns.get("num_materials",global_AMR_num_materials);
-    if ((global_AMR_num_materials<2)||(global_AMR_num_materials>999))
-     amrex::Error("global_AMR_num_materials invalid");
 
     ppns.get("num_species_var",global_AMR_num_species_var);
     if ((global_AMR_num_species_var<0)||(global_AMR_num_species_var>999))
@@ -932,7 +926,7 @@ Amr::restart (const std::string& filename)
     }
 
     int checkpoint_recalesce_data=0;
-    for (int im=0;im<AMR_num_materials;im++) {
+    for (int im=0;im<global_AMR_num_materials;im++) {
      if (recalesce_flag[im]!=0)
       checkpoint_recalesce_data=1;
     }
@@ -1188,7 +1182,7 @@ Amr::checkPoint ()
   }
 
   int checkpoint_recalesce_data=0;
-  for (int im=0;im<AMR_num_materials;im++) {
+  for (int im=0;im<global_AMR_num_materials;im++) {
    if (recalesce_flag[im]!=0)
     checkpoint_recalesce_data=1;
   }
@@ -1413,7 +1407,7 @@ Amr::timeStep (Real time,
 
 void Amr::recalesce_copy_new_to_old(int nmat) {
 
- if (nmat!=AMR_num_materials)
+ if (nmat!=global_AMR_num_materials)
   amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
@@ -1435,7 +1429,7 @@ void Amr::recalesce_copy_new_to_old(int nmat) {
 
 void Amr::recalesce_copy_old_to_new(int nmat) {
 
- if (nmat!=AMR_num_materials)
+ if (nmat!=global_AMR_num_materials)
   amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
@@ -1456,7 +1450,7 @@ void Amr::recalesce_copy_old_to_new(int nmat) {
 
 void Amr::recalesce_init(int nmat) {
 
- if (nmat!=AMR_num_materials)
+ if (nmat!=global_AMR_num_materials)
   amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
@@ -1474,7 +1468,7 @@ void Amr::recalesce_init(int nmat) {
 
 void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out,int nmat) { 
 
- if (nmat!=AMR_num_materials)
+ if (nmat!=global_AMR_num_materials)
   amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;
@@ -1492,7 +1486,7 @@ void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out,int nmat) {
 
 void Amr::recalesce_put_state(Vector<Real>& recalesce_state_in,int nmat) {
 
- if (nmat!=AMR_num_materials)
+ if (nmat!=global_AMR_num_materials)
   amrex::Error("nmat invalid");
 
  int recalesce_num_state=6;

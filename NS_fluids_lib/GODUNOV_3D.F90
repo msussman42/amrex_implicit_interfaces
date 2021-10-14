@@ -23452,7 +23452,8 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-           ! xfoot,dist,vel,den,T,insert time
+           ! (x0,y0,z0,r,u,v,w,den,T,insert time,
+           !  type_molecule,type_atom) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu

@@ -6623,6 +6623,7 @@ void NavierStokes::move_particles(
 
    const Real* xlo = grid_loc[gridno].lo();
 
+    // TODO: manage SoA data.
    auto& particles = localPC_no_nbr.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
    auto& particles_AoS = particles.GetArrayOfStructs();
@@ -6913,6 +6914,8 @@ void NavierStokes::output_triangles() {
     NavierStokes& ns_level0=getLevel(0);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
      ns_level0.newDataPC(slab_step+1,ipart);
+
+     //TODO: manage SoA data.
 
     auto& particles = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];

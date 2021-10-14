@@ -10,6 +10,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
 #include "LEVEL_F.H"
 
@@ -17965,7 +17966,8 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-           ! xfoot,rad,vel,den,T,insert time
+           ! (x0,y0,z0,r,u,v,w,den,T,insert time,
+           !  type_molecule,type_atom) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -19957,7 +19959,8 @@ stop
 
        if (LS_clamped.ge.zero) then
 
-         ! (x0,y0,z0,r,u,v,w,den,T,insert time,vorticity,type) is extra. 
+         ! (x0,y0,z0,r,u,v,w,den,T,insert time,
+         !  type_molecule,type_atom) is extra. 
         do dir=1,SDIM
          particles(interior_ID)%extra_state(SDIM+1+dir)=vel_clamped(dir)
         enddo
