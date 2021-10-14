@@ -8,6 +8,9 @@
 //keywords: nfluxSEM, nstate_SDC, 
 //SEM_scalar_advection, MASKSEM_MF,deltacomp,make_SEM_delta_force,
 //fort_updatesemforce, SEM_MAC_TO_CELL, SEM_CELL_TO_MAC
+//
+//supermesh (using particle container) used to capture shocks 
+//and materials regions with large gap error.
 #include <algorithm>
 #include <vector>
 
@@ -20975,9 +20978,10 @@ NavierStokes::accumulate_PC_info(
     // see AMReX_ArrayOfStructs.H
     // particles is of type:
     //  amrex::ParticleTile<SDIM,0,0,0>
-    //
+    // (Todo: Species are stored in "Structure of Arrays" (SoA) )
     auto& particles_no_nbr = localPC_no_nbr.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+
     auto& particles_AoS_no_nbr = particles_no_nbr.GetArrayOfStructs();
     int Np_no_nbr=particles_AoS_no_nbr.size();
 
@@ -21276,7 +21280,7 @@ void NavierStokes::assimilate_vel_from_particles(
   // see AMReX_ArrayOfStructs.H
   // particles is of type:
   //  amrex::ParticleTile<SDIM,0,0,0>
-  //
+  // (species variables are stored in "SoA = structure of arrays")
 
   auto& particles_no_nbr = localPC_no_nbr.GetParticles(level)
     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
@@ -21288,7 +21292,7 @@ void NavierStokes::assimilate_vel_from_particles(
   auto& particles_AoS_nbr = particles_nbr.GetArrayOfStructs();
   int Np_nbr=particles_AoS_nbr.size();
 
-   // ParticleVector&
+   // ParticleVector& (does this get SoA data?)
   auto& neighbors_local = 
     localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
   int Nn=neighbors_local.size();
@@ -21454,7 +21458,8 @@ NavierStokes::init_particle_container(int append_flag) {
       // SoA data.
     auto& particles = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-
+ 
+     // Todo: manage SoA data.
     auto& particles_AoS = particles.GetArrayOfStructs();
     int Np=particles_AoS.size();
 

@@ -126,6 +126,7 @@ AmrLevel::AmrLevel (Amr&            papa,
     int time_order=parent->Time_blockingFactor();
     int level_ncomp_PC=parent->global_AMR_ncomp_PC;
     int nmat=parent->global_AMR_num_materials;
+    int num_species_var=parent->global_AMR_num_species_var;
 
     if (level==0) {
 
@@ -144,7 +145,9 @@ AmrLevel::AmrLevel (Amr&            papa,
        for (int j=0;j<level_ncomp_PC;j++) {
         new_dataPC[i][j]=
           new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-       }
+	for (int ns=0;ns<num_species_var;ns++)
+ 	 new_dataPC[i][j]->AddRealComp(true);//add Structure of Array component
+       } //j=0..level_ncomp_PC-1
       } else if (level_ncomp_PC==0) {
        // do nothing
       } else
@@ -225,6 +228,7 @@ AmrLevel::restart (Amr&          papa,
      int time_order=parent->Time_blockingFactor();
      int level_ncomp_PC=parent->global_AMR_ncomp_PC;
      int nmat=parent->global_AMR_num_materials;
+     int num_species_var=parent->global_AMR_num_species_var;
 
      new_dataPC.resize(level_MAX_NUM_SLAB);
      new_data_FSI.resize(level_MAX_NUM_SLAB);
@@ -245,6 +249,8 @@ AmrLevel::restart (Amr&          papa,
        for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
         new_dataPC[i][PC_index]=
          new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+	for (int ns=0;ns<num_species_var;ns++)
+ 	 new_dataPC[i][PC_index]->AddRealComp(true);
       
         int raw_index=level_ncomp_PC * i + PC_index;
         std::string Part_name="FusionPart";
