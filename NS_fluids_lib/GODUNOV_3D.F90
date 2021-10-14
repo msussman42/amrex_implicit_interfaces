@@ -42,11 +42,46 @@ stop
        if (u_tau.eq.zero) then
         print *,"u_tau.eq.zero"
         stop
+       else if (u_tau.ne.zero) then
+        ! do nothing
+       else
+        print *,"u_tau is NaN"
+        stop
        endif
        if (mu_w.eq.zero) then
         print *,"mu_w.eq.zero"
         stop
+       else if (mu_w.ne.zero) then
+        ! do nothing
+       else
+        print *,"mu_w is NaN"
+        stop
        endif
+       if (rho_w.gt.zero) then
+        ! do nothing
+       else
+        print *,"rho_w invalid"
+        stop
+       endif
+       if ((K.gt.zero).and.(B.gt.zero)) then
+        ! do nothing
+       else
+        print *,"K or B invalid"
+        stop
+       endif
+       if (y.gt.zero) then
+        ! do nothing
+       else
+        print *,"y invalid"
+        stop
+       endif
+       if ((u.le.zero).or.(u.ge.zero)) then
+        ! do nothing
+       else
+        print *,"u is NaN"
+        stop
+       endif
+
        u_plus = u/u_tau
        y_plus = rho_w*u_tau*y/mu_w
 
@@ -84,6 +119,7 @@ stop
        REAL_T, intent(in) :: u, y !uimage_tngt, delta_r
        REAL_T, intent(out) :: tau_w
        REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
+       REAL_T :: iter_diff
        REAL_T :: f, fprime
        REAL_T :: wallFunc, wallFuncDeriv
        INTEGER_T :: iter, iter_max=1000
@@ -98,9 +134,13 @@ stop
        endif
 
        mu_w=fort_viscconst(im_fluid) 
+       rho_w=fort_denconst(im_fluid)
 
        x_n = u !initial guess for u_tau
-       do while ((abs(x_np1-x_n).gt.VOFTOL).and.(iter.lt.iter_max))
+       x_np1=u
+       iter_diff=one
+       iter=0
+       do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
         f = wallFunc(x_n,u,y,K,B,rho_w,mu_w)
         fprime = wallFuncDeriv(x_n,u,y,K,B,rho_w,mu_w)
    
@@ -110,16 +150,42 @@ stop
         else
          x_np1 = x_n-f/fprime
         endif
-    
+        iter_diff=abs(x_np1-x_n)
+        x_n=x_np1
+
         iter = iter+1
         if(iter.ge.iter_max)then
           print *, "wallFunc_NewtonsMethod: no convergence"
+          print *, "u (image velocity tangent) = ",u
+          print *, "y (delta_r) = ",y
+          print *, "im_fluid= ",im_fluid
+          print *, "mu_w= ",mu_w
+          print *, "rho_w= ",rho_w
+          print *, "f= ",f
+          print *, "fprime= ",fprime
+          print *, "x_np1= ",x_np1
+          print *, "x_n= ",x_n
+          print *, "iter=",iter
+          print *, "iter_diff = ",iter_diff
           stop
         endif
-       enddo ! while (abs(x_np1-x_n)>VOFTOL .and. iter<iter_max)
+       enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
     
        u_tau = x_np1
        tau_w = rho_w*u_tau**2
+
+       if (1.eq.0) then
+          print *, "u (image velocity tangent) = ",u
+          print *, "y (delta_r) = ",y
+          print *, "im_fluid= ",im_fluid
+          print *, "mu_w= ",mu_w
+          print *, "rho_w= ",rho_w
+          print *, "u_tau= ",u_tau
+          print *, "tau_w= ",tau_w
+          print *, "iter=",iter
+          print *, "iter_diff = ",iter_diff
+       endif
+
       end subroutine wallFunc_NewtonsMethod
 
 
@@ -2169,19 +2235,32 @@ stop
           if (delta_r_raster.gt.zero) then
            call wallFunc_NewtonsMethod(uimage_tngt_mag, &
                  delta_r_raster,tau_w,im_fluid) 
+            ! this will not be the velocity at the ghost point, it will be
+            ! a velocity at the projection (wall) point.
            ughost_tngt = uimage_tngt_mag - &
             tau_w*delta_r_raster/ &
             (viscosity_molecular+viscosity_eddy)
 
+           if (1.eq.0) then
+            print *,"after wallFunc_NewtonsMethod"
+            print *,"uimage_tngt_mag=",uimage_tngt_mag
+            print *,"ughost_tngt (projection point vel)=",ughost_tngt
+            print *,"delta_r_raster=",delta_r_raster
+           endif
+
            predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/ &
               delta_r_raster
-           max_deriv_utan=two*uimage_tngt_mag/critical_length
+           max_deriv_utan=four*uimage_tngt_mag/critical_length
            if (predict_deriv_utan.lt.max_deriv_utan) then
             ! do nothing
            else
             print *,"predict_deriv_utan or max_deriv_utan invalid"
             print *,"predict_deriv_utan= ",predict_deriv_utan
             print *,"max_deriv_utan= ",max_deriv_utan
+            print *,"ughost_tngt=",ughost_tngt
+            print *,"uimage_tngt_mag=",uimage_tngt_mag
+            print *,"critical_length= ",critical_length
+            print *,"delta_r_raster= ",delta_r_raster
             stop
            endif
           else

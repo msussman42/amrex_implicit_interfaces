@@ -1431,42 +1431,36 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
  REAL_T :: m, m2, phi1, phi2, vertDisplace !for inner slope of nozzle
  REAL_T :: round_l, round_r !for nozzle corners
  REAL_T :: x_um,y_um
+ REAL_T :: scaling_factor
 
- x_um=x_cm*radblob5 
- y_um=(yblob/radblob5-y_cm)*radblob5
+ scaling_factor=radblob5
+
+ x_um=x_cm*scaling_factor 
+ y_um=(yblob/scaling_factor-y_cm)*scaling_factor
 
  !nozzle configuration
  !J:0, U:1, W:2
- nozzletype = 2; 
- if (nozzletype.eq.0) then ! J nozzle
-  nl_width=radblob3 ! left (inflow) width
-  nr_width=radblob4 ! right (outflow) width
- elseif (nozzletype.eq.1) then ! U nozzle
-  nl_width=radblob3
-  nr_width=radblob4
- elseif (nozzletype.eq.2) then ! W nozzle 
-  nl_width=radblob3
-  nr_width=radblob4
- else
-  print *,"nozzletype invalid"
-  stop
- endif
- r=radblob6; !inlet radius of curvature
+ nozzletype = NINT(radblob2)
+ nl_width=radblob3
+ nr_width=radblob4
+
+ r=radblob6 !inlet radius of curvature
 
  !vertical height of nozzle entrance/exit
+ !yblob should be the domain height divided by 2.
  nl = yblob-nl_width/2.0d0-r
  nr = yblob-nr_width/2.0d0
 
  if ((xblob.eq.0.0d0).and. &   !no channel on either side of core nozzle
-     (radblob2.eq.0.0d0).and. &!radblob2=J nozzle
-     (radblob3.eq.radblob4)) then ! nl_width = nr_width
+     (nozzletype.eq.0).and. &!J nozzle
+     (nl_width.eq.nr_width)) then ! nl_width = nr_width
 
   Phi=abs(y_um)-nl_width/2.0d0
 
  else if ((xblob.gt.0.0d0).or. &
-          (radblob2.eq.1.0d0).or. & ! U nozzle
-          (radblob2.eq.2.0d0).or. & ! W nozzle
-          (radblob3.ne.radblob4)) then
+          (nozzletype.eq.1).or. & ! U nozzle
+          (nozzletype.eq.2).or. & ! W nozzle
+          (nl_width.ne.nr_width)) then
 
   !line tangent to circle at point a,b (for nozzle inlet)
   !
@@ -1492,7 +1486,14 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
   l2=nr-(nl)
   a=(2*l1*(r**2)-sqrt(4*(l1**2)*(r**4)-4*((l1**2)+(l2**2))* &
     ((r**4)-(r**2)*(l2**2))))/(2*(l1**2+l2**2)) !-sqrt if slope pos and tangent to upper side of circle, else +sqrt
-  bottom=(r**2-l1*a)/l2
+  if (l2.gt.zero) then
+   bottom=(r**2-l1*a)/l2
+  else if (l2.eq.zero) then
+   bottom=zero
+  else
+   print *,"l2 invalid"
+   stop
+  endif
   a=a+(xblob+r)
   bottom=bottom+(nl)
 
@@ -1603,7 +1604,7 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
   stop
  endif
 
- Phi=Phi/radblob5
+ Phi=Phi/scaling_factor
 
 end subroutine nozzle2d
 
