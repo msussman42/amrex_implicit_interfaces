@@ -17966,8 +17966,8 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         ! (x0,y0,z0,r,u,v,w,pres,den,T,stress,
-         !  insert time,type_molecule,type_atom) is extra.
+         ! (x0,y0,z0,r,u,v,w,den,T,
+         !  insert time,type_molecule,type_atom) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -19185,12 +19185,11 @@ stop
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub(dir)
              new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
-             new_particles(ibase+2*SDIM+1+dir)=vel_sub(dir)
+             new_particles(ibase+SDIM+N_EXTRA_REAL_u+dir)=vel_sub(dir)
             enddo
-            new_particles(ibase+2*SDIM+1)=one  ! stub for radius
-            new_particles(ibase+3*SDIM+2)=one  ! stub for pressure
-            new_particles(ibase+3*SDIM+3)=one  ! stub for density
-            new_particles(ibase+3*SDIM+4)=zero ! stub for temperature
+            new_particles(ibase+SDIM+N_EXTRA_REAL_r+1)=one !stub for radius
+            new_particles(ibase+SDIM+N_EXTRA_REAL_den+1)=one !stub for density
+            new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)=zero !stub for temp.
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
            else
             print *,"isweep invalid"

@@ -419,7 +419,7 @@ void NavierStokes::nonlinear_advection() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
-  for (int ns=0;ns<num_species_var;ns++) 
+  for (int ns=0;ns<num_SoA_var;ns++) 
    localPC_nbr.AddRealComp(true);
 
   localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
@@ -759,7 +759,7 @@ void NavierStokes::correct_xdisplace_with_particles() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
-  for (int ns=0;ns<num_species_var;ns++)
+  for (int ns=0;ns<num_SoA_var;ns++)
    localPC_nbr.AddRealComp(true);
 
   localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
@@ -12739,7 +12739,7 @@ void NavierStokes::veldiffuseALL() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
-  for (int ns=0;ns<num_species_var;ns++)
+  for (int ns=0;ns<num_SoA_var;ns++)
    localPC_nbr.AddRealComp(true);
 
   localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);

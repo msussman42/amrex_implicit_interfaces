@@ -476,7 +476,12 @@ Amr::InitAmr () {
 
     ppns.get("num_species_var",global_AMR_num_species_var);
     if ((global_AMR_num_species_var<0)||(global_AMR_num_species_var>999))
-     amrex::Error("global_AMR_numspecies_var invalid");
+     amrex::Error("global_AMR_num_species_var invalid");
+
+    global_AMR_num_SoA_var=0;
+    ppns.query("num_SoA_var",global_AMR_num_SoA_var);
+    if ((global_AMR_num_SoA_var<0)||(global_AMR_num_SoA_var>999))
+     amrex::Error("global_AMR_num_SoA_var invalid");
 
     global_AMR_ncomp_PC=0;
     ppns.query("particles_flag",global_AMR_ncomp_PC);
