@@ -127,6 +127,7 @@ AmrLevel::AmrLevel (Amr&            papa,
     int level_ncomp_PC=parent->global_AMR_ncomp_PC;
     int nmat=parent->global_AMR_num_materials;
     int num_species_var=parent->global_AMR_num_species_var;
+    int num_SoA_var=parent->global_AMR_num_SoA_var;
 
     if (level==0) {
 
@@ -145,7 +146,7 @@ AmrLevel::AmrLevel (Amr&            papa,
        for (int j=0;j<level_ncomp_PC;j++) {
         new_dataPC[i][j]=
           new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-	for (int ns=0;ns<num_species_var;ns++)
+	for (int ns=0;ns<num_SoA_var;ns++)
  	 new_dataPC[i][j]->AddRealComp(true);//add Structure of Array component
        } //j=0..level_ncomp_PC-1
       } else if (level_ncomp_PC==0) {
@@ -229,6 +230,7 @@ AmrLevel::restart (Amr&          papa,
      int level_ncomp_PC=parent->global_AMR_ncomp_PC;
      int nmat=parent->global_AMR_num_materials;
      int num_species_var=parent->global_AMR_num_species_var;
+     int num_SoA_var=parent->global_AMR_num_SoA_var;
 
      new_dataPC.resize(level_MAX_NUM_SLAB);
      new_data_FSI.resize(level_MAX_NUM_SLAB);
@@ -249,7 +251,7 @@ AmrLevel::restart (Amr&          papa,
        for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
         new_dataPC[i][PC_index]=
          new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-	for (int ns=0;ns<num_species_var;ns++)
+	for (int ns=0;ns<num_SoA_var;ns++)
  	 new_dataPC[i][PC_index]->AddRealComp(true);
       
         int raw_index=level_ncomp_PC * i + PC_index;

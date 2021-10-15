@@ -499,6 +499,7 @@ Vector<Real> NavierStokes::rzcoarseblocks;
 int  NavierStokes::override_bc_to_homogeneous=0;
 
 int  NavierStokes::num_species_var=0;
+int  NavierStokes::num_SoA_var=0;
 
 // search num_materials,AMREX_SPACEDIM+1,SDIM+1,idenbase,ipres_base,
 //  iden_base,scomp_mofvars,nstate=,scomp_den,pressure_comp,dcomp,
@@ -3015,6 +3016,10 @@ NavierStokes::read_params ()
     } else
      amrex::Error("EILE_flag invalid");
 
+    pp.query("num_SoA_var",num_SoA_var); // number of Structure of Array vars.
+    if (num_SoA_var<0)
+     amrex::Error("num_SoA_var invalid");
+
     num_species_var=0;
 
     pp.get("num_species_var",num_species_var);
@@ -4855,6 +4860,7 @@ NavierStokes::read_params ()
 
      std::cout << "num_materials_viscoelastic " << 
         num_materials_viscoelastic << '\n';
+     std::cout << "num_SoA_var " << num_SoA_var << '\n';
      std::cout << "num_species_var " << num_species_var << '\n';
      std::cout << "num_materials " << num_materials << '\n';
      std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
