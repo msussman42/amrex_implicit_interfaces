@@ -18575,6 +18575,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   // uses "slope_recon" 
  if (do_plot==1) {
   writeInterfaceReconstruction();
+
   if (visual_output_raw_State_Type==1) {
    int caller_id=0;
    MultiFab& S_new_temp=get_new_data(State_Type,slab_step+1);
@@ -18586,7 +18587,30 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     -1,  //data_mf=-1
     State_Type, //state_type_mf
     -1); //data_dir=-1
+  } else if (visual_output_raw_State_Type==0) {
+   // do nothing
+  } else
+   amrex::Error("visual_output_raw_State_Type invalid");
 
+  if (visual_output_raw_mac_Type==1) {
+
+   for (int dir_mac=0;dir_mac<AMREX_SPACEDIM;dir_mac++) {
+    int caller_id=dir_mac;
+    MultiFab& mac_new_temp=get_new_data(Umac_Type+dir_mac,slab_step+1);
+    writeSanityCheckData(
+     "RawMacType",
+     "RawMacType: vel,displacement",
+     caller_id,
+     mac_new_temp.nComp(),
+     -1,  //data_mf=-1
+     Umac_Type+dir_mac, //state_type_mf
+     dir_mac); //data_dir=dir_mac
+   } //dir_mac=0,..,sdim-1
+
+  } else if (visual_output_raw_mac_Type==0) {
+   // do nothing
+  } else
+   amrex::Error("visual_output_raw_mac_Type invalid");
 
  } else if (do_plot==0) {
   // do nothing
