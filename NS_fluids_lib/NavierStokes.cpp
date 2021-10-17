@@ -419,6 +419,8 @@ int  NavierStokes::adapt_quad_depth=1;
 //    if F_solid<1/2, replace with F_solid=0.
 int  NavierStokes::visual_tessellate_vfrac=0;   
 int  NavierStokes::visual_revolve=0;   
+int  NavierStokes::visual_output_raw_State_Type=0; 
+int  NavierStokes::visual_output_raw_mac_Type=0; 
 int  NavierStokes::visual_phase_change_plot_int=0; 
 int  NavierStokes::visual_buoyancy_plot_int=0; 
 int  NavierStokes::visual_divergence_plot_int=0; 
@@ -2627,6 +2629,8 @@ NavierStokes::read_params ()
 
     pp.query("visual_tessellate_vfrac",visual_tessellate_vfrac);
     pp.query("visual_revolve",visual_revolve);
+    pp.query("visual_output_raw_State_Type",visual_output_raw_State_Type);
+    pp.query("visual_output_raw_mac_Type",visual_output_raw_mac_Type);
     pp.query("visual_phase_change_plot_int",visual_phase_change_plot_int);
     pp.query("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
     pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
@@ -4924,6 +4928,10 @@ NavierStokes::read_params ()
      std::cout << "initial_thermal_cycles " <<initial_thermal_cycles<< '\n';
      std::cout << "visual_tessellate_vfrac " << visual_tessellate_vfrac << '\n';
      std::cout << "visual_revolve " << visual_revolve << '\n';
+     std::cout << "visual_output_raw_State_Type " << 
+	     visual_output_raw_State_Type << '\n';
+     std::cout << "visual_output_raw_mac_Type " << 
+	     visual_output_raw_mac_Type << '\n';
      std::cout << "visual_phase_change_plot_int " << 
 	     visual_phase_change_plot_int << '\n';
      std::cout << "visual_buoyancy_plot_int " << 
@@ -18567,6 +18575,19 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   // uses "slope_recon" 
  if (do_plot==1) {
   writeInterfaceReconstruction();
+  if (visual_output_raw_State_Type==1) {
+   int caller_id=0;
+   MultiFab& S_new_temp=get_new_data(State_Type,slab_step+1);
+   writeSanityCheckData(
+    "RawStateType",
+    "RawStateType: vel,pres,den_temp_spec,mofvars,error ind",
+    caller_id,
+    S_new_temp.nComp(),
+    -1,  //data_mf=-1
+    State_Type, //state_type_mf
+    -1); //data_dir=-1
+
+
  } else if (do_plot==0) {
   // do nothing
  } else

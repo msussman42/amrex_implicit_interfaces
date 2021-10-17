@@ -3015,6 +3015,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	 if (ratio==nsteps+1) {
 
 	  int caller_id=1;
+	   //writeSanityCheckData outputs raw data that exists on the
+	   //computational domain boundary or within.
            //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
           writeSanityCheckData(
            "TY_GAMMA",

@@ -2111,7 +2111,9 @@ protected:
     static Real perturbation_eps_vel;
 
     static int visual_tessellate_vfrac; // def=0
-    static int visual_revolve;
+    static int visual_revolve; //def=0
+    static int visual_output_raw_State_Type; //def=0
+    static int visual_output_raw_mac_Type; //def=0
     static int visual_phase_change_plot_int; //def=0
     static int visual_buoyancy_plot_int; //def=0
     static int visual_divergence_plot_int; //def=0
