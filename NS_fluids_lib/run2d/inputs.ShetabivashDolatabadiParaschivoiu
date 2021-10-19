@@ -174,6 +174,8 @@ ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
 ns.yblob2=0.0000625 #dxcoarse=0.001/64  4*dxcoarse=0.001/16=0.0000625
 ns.zblob2=0.0
+#ns.zblob4=0.0000625 #transitional substrate temperature
+ns.zblob4=0.0 # substrate temperature=wall temperature (at ylo)
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
 ns.radblob3=0.00003125 #dimensionless 2*dxcoarse=0.001/32=0.00003125

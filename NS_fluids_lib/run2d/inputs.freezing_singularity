@@ -252,6 +252,7 @@ ns.yblob=0.08203125 #dimensionless dxcoarse=1.75/64  3*dxcoarse=0.08203125
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
 ns.yblob2=0.1171875 #dimensionless dxcoarse=2.5/64  3*dxcoarse=0.1171875
+ns.zblob4=0.1171875 #transition temperature in substrate
 # freezing test 10:
 ns.yblob2=0.08203125 #dimensionless dxcoarse=1.75/64  3*dxcoarse=0.08203125
 ns.zblob2=0.0

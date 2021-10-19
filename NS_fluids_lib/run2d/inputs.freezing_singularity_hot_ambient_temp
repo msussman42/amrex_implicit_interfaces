@@ -180,6 +180,7 @@ ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
 #ns.yblob2=0.02 #dimensional
 ns.yblob2=0.1 #dimensionless
+ns.zblob4=0.1 #transition temperature substrate.
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
