@@ -1223,7 +1223,7 @@ protected:
 
      // particle_id==-1 => no info from particles
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
-      int local_truncate);
+      int local_truncate,int caller_id);
     void prescribe_solid_geometry(Real time,int renormalize_only);
 
     void move_particles(
@@ -2117,6 +2117,7 @@ protected:
     static int visual_phase_change_plot_int; //def=0
     static int visual_buoyancy_plot_int; //def=0
     static int visual_divergence_plot_int; //def=0
+    static int visual_WALLVEL_plot_int; //def=0
 
     static Vector<int> visual_ncell;
     static int visual_compare;

@@ -84,6 +84,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10     # 10 for debug, 100 for production run? 
 ns.visual_output_raw_State_Type=1
 ns.visual_output_raw_mac_Type=1
+ns.visual_WALLVEL_plot_int=1
 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file

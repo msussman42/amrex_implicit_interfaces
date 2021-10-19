@@ -424,6 +424,7 @@ int  NavierStokes::visual_output_raw_mac_Type=0;
 int  NavierStokes::visual_phase_change_plot_int=0; 
 int  NavierStokes::visual_buoyancy_plot_int=0; 
 int  NavierStokes::visual_divergence_plot_int=0; 
+int  NavierStokes::visual_WALLVEL_plot_int=0; 
 
 int NavierStokes::visual_compare=0; 
 Vector<int> NavierStokes::visual_ncell;
@@ -2634,6 +2635,7 @@ NavierStokes::read_params ()
     pp.query("visual_phase_change_plot_int",visual_phase_change_plot_int);
     pp.query("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
     pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
+    pp.query("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
 
     if ((visual_tessellate_vfrac!=0)&&
         (visual_tessellate_vfrac!=1)&&
@@ -4938,6 +4940,8 @@ NavierStokes::read_params ()
 	     visual_buoyancy_plot_int << '\n';
      std::cout << "visual_divergence_plot_int " << 
 	     visual_divergence_plot_int << '\n';
+     std::cout << "visual_WALLVEL_plot_int " << 
+	     visual_WALLVEL_plot_int << '\n';
 
      std::cout << "visual_compare " << visual_compare << '\n';
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -6367,7 +6371,7 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 
 // called from:
 //  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
-//    (caller_id=3)
+//    (caller_id=31,32,33,34,35,36,37)
 //
 //  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
 //    (caller_id=4)
@@ -6402,7 +6406,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
   //
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
- if ((1==1)&&(caller_id==3)) {
+ if (caller_id==34) {
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 
@@ -6423,18 +6427,34 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
      data_dir); 
    }
 
-    //MAC grid rasterized solid boundary condition.
-    //WALLVEL<stuff>.plt (visit can open binary tecplot files)
-   writeSanityCheckData(
-    "WALLVEL",
-    "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious solid velocity
-    caller_id,
-    localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
-    FSI_GHOST_MAC_MF+data_dir,
-    -1,  // State_Type==-1 
-    data_dir); 
-  }
- }
+   if (visual_WALLVEL_plot_int>0) {
+    if (very_last_sweep==1) {
+     int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+     int ratio=(nsteps+1)/visual_WALLVEL_plot_int;
+     ratio=ratio*visual_WALLVEL_plot_int;
+     if (ratio==nsteps+1) {
+
+      //MAC grid rasterized solid boundary condition.
+      //WALLVEL<stuff>.plt (visit can open binary tecplot files)
+      writeSanityCheckData(
+       "WALLVEL",
+       "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious sol vel
+       caller_id,
+       localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
+       FSI_GHOST_MAC_MF+data_dir,
+       -1,  // State_Type==-1 
+       data_dir); 
+     }
+    } else if (very_last_sweep==0) {
+     // do nothing
+    } else
+     amrex::Error("very_last_sweep invalid");
+   } else if (visual_WALLVEL_plot_int==0) {
+    // do nothing
+   } else
+    amrex::Error("visual_WALLVEL_plot_int invalid");
+  } //data_dir=0..sdim-1
+ }  // caller_id==34
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   delete_array(HISTORY_MAC_MF+data_dir);
@@ -20923,7 +20943,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
    init_vof_prev_time,SLOPE_RECON_MF);
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
-  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
+  int caller_id=1;
+  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+		  local_truncate,caller_id);
   int project_option=1;  // initial project
   int post_restart_flag=0;
   make_physics_varsALL(project_option,post_restart_flag,1);
@@ -20941,7 +20963,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   if (1==0) {
    int keep_all_interfaces=0;
    makeStateDistALL(keep_all_interfaces);
-   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,local_truncate);
+   int caller_id=2;
+   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+		   local_truncate,caller_id);
   }
   int project_option=1;  // initial project
   int post_restart_flag=1;

@@ -6237,9 +6237,18 @@ void NavierStokes::metrics_data_min_max(int caller_id) {
 
 } // subroutine metrics_data_min_max
 
-
+// caller_id=1 NavierStokes::prepare_post_process, from post_init_state
+// caller_id=2 NavierStokes::prepare_post_process, from post_restart
+// caller_id=3 NavierStokes::nonlinear_advection, renormalize_only=1
+// caller_id=4 NavierStokes::nonlinear_advection, renormalize_only=0
+// caller_id=5 NavierStokes::advance, renormalize_only=0
+// caller_id=6 NavierStokes::do_the_advance, renormalize_only=0,
+//                 mass_transfer_active==1
+// caller_id=7 NavierStokes::do_the_advance, renormalize_only=0,
+//                 after projection.
+//
 void NavierStokes::prescribe_solid_geometryALL(Real time,
-  int renormalize_only,int local_truncate) {
+  int renormalize_only,int local_truncate,int caller_id) {
 
  if (level!=0)
   amrex::Error("level should be 0 in prescribe_solid_geometryALL");
@@ -6277,7 +6286,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   if (std::abs(time-cur_time_slab)>1.0e-8)
    amrex::Error("prescribe solid at the new time");
 
-  init_FSI_GHOST_MAC_MF_ALL(3);
+  int local_caller_id=caller_id + 30;
+  init_FSI_GHOST_MAC_MF_ALL(local_caller_id);
  
  } else if (renormalize_only==1) {
   // do nothing
