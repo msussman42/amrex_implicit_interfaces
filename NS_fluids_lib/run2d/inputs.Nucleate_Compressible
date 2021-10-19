@@ -266,6 +266,7 @@ ns.pos_sites=0.0 1.536e-1 0.0 2.0e-1
 # x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
 ns.xblob2=0.0 
 ns.yblob2=2.5e-2 # 2 * dxcoarsest=2 * 0.4/32=2.5e-2
+ns.zblob4=2.5e-2
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 ns.radblob3=0.0
