@@ -1910,6 +1910,16 @@ contains
           print *,"bcflag invalid"
           stop
          endif
+        else if (yblob2.eq.zero) then
+         ! do nothing
+        else
+         print *,"not expecting yblob2<0"
+         print *,"probtype,axis_dir,bcflag ",probtype,axis_dir,bcflag
+         print *,"im=",im
+         print *,"time=",time
+         print *,"zprime=",zprime
+         print *,"yblob2=",yblob2
+         stop
         endif ! yblob2>0
 
         ! boiling sites problem
