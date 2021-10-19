@@ -481,8 +481,9 @@ void NavierStokes::nonlinear_advection() {
      // projects volume fractions so that sum F_m_fluid=1.
     renormalize_only=1;
     int local_truncate=0;
+    int caller_id=3;
     prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
-      local_truncate);
+      local_truncate,caller_id);
 
      // velocity and pressure
      // spectral_override==1 => order derived from "enable_spectral"
@@ -607,8 +608,9 @@ void NavierStokes::nonlinear_advection() {
   // in: NavierStokes2.cpp
  renormalize_only=0;
  int local_truncate=1;
+ int caller_id=4;
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-   local_truncate);
+   local_truncate,caller_id);
 
  avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
@@ -1071,8 +1073,9 @@ Real NavierStokes::advance(Real time,Real dt) {
     // projects volume fractions so that sum F_m_fluid=1.
    int renormalize_only=0;
    int local_truncate=0;
+   int caller_id=5;
    prescribe_solid_geometryALL(upper_slab_time,renormalize_only,
-      local_truncate);
+      local_truncate,caller_id);
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
@@ -3101,8 +3104,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 2. extend level set functions into the solid.
        int renormalize_only=0;
        int local_truncate=0;
+       int caller_id=6;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate);
+        local_truncate,caller_id);
 
        int keep_all_interfaces=0;
        makeStateDistALL(keep_all_interfaces);
@@ -3542,8 +3546,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 2. extend level set functions into the solid.
        int renormalize_only=0;
        int local_truncate=0;
+       int caller_id=7;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate);
+        local_truncate,caller_id);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
