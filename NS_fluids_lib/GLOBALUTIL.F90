@@ -1848,6 +1848,16 @@ contains
        if (axis_dir.eq.5) then ! freezing: solid, ice, water, air
          ! substrate: 0<y<yblob2
         if (yblob2.gt.zero) then  
+
+         if (zblob4.eq.yblob2) then !transition thermal layer
+          ! do nothing
+         else if (zblob4.eq.zero) then ! no transition, T=T_substrate
+          ! do nothing
+         else
+          print *,"zblob4 invalid"
+          stop
+         endif
+
           ! called from initdata
          if (bcflag.eq.0) then
           if ((im.eq.1).or.(im.eq.2)) then ! water or air
@@ -1867,11 +1877,20 @@ contains
             temperature=get_user_temperature(time,bcflag,3) ! ice
            else if ((zprime.ge.zero).and. &
                     (zprime.le.yblob2)) then
-            temperature= &
-             get_user_temperature(time,bcflag,im_solid_temperature)+ &
-             (get_user_temperature(time,bcflag,3)- &
-              get_user_temperature(time,bcflag,im_solid_temperature))* &
-             zprime/yblob2 
+
+            if (zblob4.eq.zero) then
+             temperature=get_user_temperature(time,bcflag,im_solid_temperature)
+            else if (zblob4.eq.yblob2) then
+             temperature= &
+              get_user_temperature(time,bcflag,im_solid_temperature)+ &
+              (get_user_temperature(time,bcflag,3)- &
+               get_user_temperature(time,bcflag,im_solid_temperature))* &
+              zprime/yblob2 
+            else
+             print *,"zblob4 invalid"
+             stop
+            endif
+
            else if (zprime.le.zero) then
             temperature= &
              get_user_temperature(time,bcflag,im_solid_temperature) !substrate
@@ -1884,6 +1903,7 @@ contains
            stop
           endif
          else if (bcflag.eq.1) then ! called from denBC
+
           if (im_solid_temperature.ne.4) then
            print *,"im_solid_temperature invalid"
            stop
@@ -1894,11 +1914,20 @@ contains
            temperature=get_user_temperature(time,bcflag,3) ! ice
           else if ((zprime.ge.zero).and. &
                    (zprime.le.yblob2)) then
-           temperature= &
-            get_user_temperature(time,bcflag,im_solid_temperature)+ &
-            (get_user_temperature(time,bcflag,3)- &
-             get_user_temperature(time,bcflag,im_solid_temperature))* &
+
+           if (zblob4.eq.zero) then
+            temperature=get_user_temperature(time,bcflag,im_solid_temperature)
+           else if (zblob4.eq.yblob2) then
+            temperature= &
+             get_user_temperature(time,bcflag,im_solid_temperature)+ &
+             (get_user_temperature(time,bcflag,3)- &
+              get_user_temperature(time,bcflag,im_solid_temperature))* &
              zprime/yblob2
+           else
+            print *,"zblob4 invalid"
+            stop
+           endif
+
           else if (zprime.le.zero) then
            ! substrate
            temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
