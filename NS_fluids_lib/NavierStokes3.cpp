@@ -207,7 +207,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
    amrex::Error("box_type bust");
  } // local_dir=0 ... sdim-1
 
-}  // avgDownEdge
+}  // end subroutine avgDownEdge
 
 
 // called from updatevelALL,multiphase_project
@@ -222,7 +222,7 @@ NavierStokes::avgDownMac() {
  avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM, 
    spectral_override,14);
 
-}  // avgDownMac
+}  // end subroutine avgDownMac
 
 // spectral_override==0 => always do low order average down.
 void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
@@ -265,7 +265,7 @@ void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
   avgDownEdge(dir,S_crse,S_fine,scomp,ncomp_edge,spectral_override,caller_id);
  }  // dir=0..sdim-1
 
-}  // subroutine avgDownMacState
+}  // end subroutine avgDownMacState
 
 void NavierStokes::nonlinear_advection() {
 
@@ -561,7 +561,7 @@ void NavierStokes::nonlinear_advection() {
   FSI_sub_operation=0;
   ns_header_msg_level(
    FSI_operation, //=1
-   FSI_sub_operation,
+   FSI_sub_operation, //=0
    cur_time_slab,
    dt_slab,iter);
  } else if (read_from_CAD()==0) {
