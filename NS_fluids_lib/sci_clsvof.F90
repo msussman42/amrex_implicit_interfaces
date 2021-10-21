@@ -11657,7 +11657,8 @@ subroutine CLSVOF_ReadNodes( &
   FSI_output_temperature_list, &
   FSI_refine_factor, &
   FSI_bounding_box_ngrow, &
-  CLSVOF_curtime,CLSVOF_dt, &
+  CLSVOF_curtime, & ! t^{n+1}
+  CLSVOF_dt, &
   h_small, &
   problo,probhi, &
   current_step,plot_interval, &

@@ -273,11 +273,11 @@ stop
 
        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
       subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT(&
-       fib_pst,&
-       fib_vel_halftime,&
-       fib_vel,&
-       fib_frc,&
-       fib_wt,&
+       fib_pst,& !caller: ctml_fib_pst_prev
+       fib_vel_halftime,& !caller: ctml_fib_vel_halftime_prev
+       fib_vel,& !caller: ctml_fib_vel_prev
+       fib_frc,& !caller: ctml_fib_frc_prev
+       fib_wt,&  !caller: ctml_fib_mass_prev
        n_fib_bodies,&
        max_n_fib_nodes,&
        ifib)
@@ -317,8 +317,14 @@ stop
         do idir=1,SDIM
          coord_fib_prev(ifib,inode,idir)= &
            fib_pst(ifib,inode,idir)
+         coord_fib(ifib,inode,idir)= &
+           fib_pst(ifib,inode,idir)
           !section=1
+         vel_fib_halftime_prev(ifib,1,inode,idir)= &
+           fib_vel_halftime(ifib,inode,idir)
          vel_fib_prev(ifib,1,inode,idir)= &
+           fib_vel(ifib,inode,idir)
+         vel_fib(ifib,1,inode,idir)= &
            fib_vel(ifib,inode,idir)
           ! need to overwrite X^{n-1}
         end do
@@ -326,8 +332,12 @@ stop
           ! section=1
          force_fib_prev(ifib,1,inode,idir)= &
            fib_frc(ifib,inode,idir)
+         force_fib(ifib,1,inode,idir)= &
+           fib_frc(ifib,inode,idir)
         enddo
         ds_fib_prev(ifib,inode)= &
+          fib_wt(ifib,inode)
+        ds_fib(ifib,inode)= &
           fib_wt(ifib,inode)
         if (fib_wt(ifib,inode).gt.zero) then
          ! do nothing
@@ -436,7 +446,7 @@ stop
 
 
       subroutine CTML_SOLVE_SOLID(&
-       time,&
+       cur_time,& ! t^{n+1}
        dt,&
        step, &
        verbose, &
@@ -446,7 +456,7 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: cur_time ! t^{n+1}
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: step
       INTEGER_T, intent(in) :: verbose
@@ -461,7 +471,7 @@ stop
 
       if (debug_tick.ge.1) then
        print *,"calling CTML_SOLVE_SOLID"
-       print *,"time,dt,step,io_proc ",time,dt,step,io_proc
+       print *,"cur_time,dt,step,io_proc ",cur_time,dt,step,io_proc
       endif
 
       if(verbose.gt.0) then
@@ -477,7 +487,7 @@ stop
       end if
 
       if (debug_tick.ge.2) then
-       print *,"tick time,dt,step,io_proc = ",time,dt,step,io_proc
+       print *,"tick cur_time,dt,step,io_proc = ",cur_time,dt,step,io_proc
        print *,"nrIBM_fib,nsecIBMmax,nIBM_fib ", &
         nrIBM_fib,nsecIBMmax,nIBM_fib
        do ifib=1,nrIBM_fib
@@ -507,47 +517,88 @@ stop
        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
        ! tick declared in: ../Vicar3D/distFSI/tick.F
        ! keyword: "INCLUDE_FIB"
-      call tick(time,dt,step,monitorON,plot_int, &
-       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_vel 
-       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_vel
-       vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & !ctml_fib_vel
-       vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1), &
-       vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2), &
-       vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3),  &
-       vel_esh(1:nrIBM_esh,1:nIBM_esh,1), &
-       vel_esh(1:nrIBM_esh,1:nIBM_esh,2), &
-       vel_esh(1:nrIBM_esh,1:nIBM_esh,3),  &
-       vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,1), &
-       vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,2), &
-       vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,3),  &
-       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_frc
-       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_frc
-       force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & !ctml_fib_frc
-       force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1), &
-       force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2), &
-       force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3), &
-       force_esh(1:nrIBM_esh,1:nIBM_esh,1), &
-       force_esh(1:nrIBM_esh,1:nIBM_esh,2), &
-       force_esh(1:nrIBM_esh,1:nIBM_esh,3), &
-       force_fbc(1:nrIBM_fbc,1:nIBM_fbc,1), &
-       force_fbc(1:nrIBM_fbc,1:nIBM_fbc,2), &
-       force_fbc(1:nrIBM_fbc,1:nIBM_fbc,3), &
-       coord_fib(1:nrIBM_fib,1:nIBM_fib,1), & !ctml_fib_pst  
-       coord_fib(1:nrIBM_fib,1:nIBM_fib,2), & !ctml_fib_pst
-       coord_fib(1:nrIBM_fib,1:nIBM_fib,3), & !ctml_fib_pst
-       coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1),   &
-       coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2),   &
-       coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3),   &
-       coord_esh(1:nrIBM_esh,1:nIBM_esh,1),   &
-       coord_esh(1:nrIBM_esh,1:nIBM_esh,2),   &
-       coord_esh(1:nrIBM_esh,1:nIBM_esh,3),   &
-       coord_fbc(1:nrIBM_fbc,1:nIBM_fbc,1),   &
-       coord_fbc(1:nrIBM_fbc,1:nIBM_fbc,2),   &
-       coord_fbc(1:nrIBM_fbc,1:nIBM_fbc,3),   &
-       theboss)
+      if (1.eq.1) then
+#ifdef INCLUDE_FIB
+       call tick_fib(cur_time, &  ! t^{n+1}
+        dt,step,monitorON,plot_int, &
+        !ctml_fib_vel_halftime_prev
+        vel_fib_halftime_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
+        vel_fib_halftime_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
+        vel_fib_halftime_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & 
+        !ctml_fib_vel_prev
+        vel_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
+        vel_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
+        vel_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & 
+        !ctml_fib_vel_prev
+        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
+        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
+        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), &
+        !ctml_fib_frc_prev
+        force_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
+        force_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
+        force_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & 
+        force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
+        force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
+        force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & 
+        !ctml_fib_pst_prev 
+        coord_fib_prev(1:nrIBM_fib,1:nIBM_fib,1), & 
+        coord_fib_prev(1:nrIBM_fib,1:nIBM_fib,2), & 
+        coord_fib_prev(1:nrIBM_fib,1:nIBM_fib,3), &
+        coord_fib(1:nrIBM_fib,1:nIBM_fib,1), & 
+        coord_fib(1:nrIBM_fib,1:nIBM_fib,2), & 
+        coord_fib(1:nrIBM_fib,1:nIBM_fib,3), &
+        theboss)
+#else 
+       print *,"include_fib not defined"
+       stop
+#endif
+      else if (1.eq.0) then
+       call tick(cur_time,  & ! t^{n+1}
+        dt,step,monitorON,plot_int, &
+        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_vel 
+        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_vel
+        vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & !ctml_fib_vel
+        vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1), &
+        vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2), &
+        vel_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3),  &
+        vel_esh(1:nrIBM_esh,1:nIBM_esh,1), &
+        vel_esh(1:nrIBM_esh,1:nIBM_esh,2), &
+        vel_esh(1:nrIBM_esh,1:nIBM_esh,3),  &
+        vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,1), &
+        vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,2), &
+        vel_fbc(1:nrIBM_fbc,1:nIBM_fbc,3),  &
+        force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & !ctml_fib_frc
+        force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), & !ctml_fib_frc
+        force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & !ctml_fib_frc
+        force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1), &
+        force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2), &
+        force_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3), &
+        force_esh(1:nrIBM_esh,1:nIBM_esh,1), &
+        force_esh(1:nrIBM_esh,1:nIBM_esh,2), &
+        force_esh(1:nrIBM_esh,1:nIBM_esh,3), &
+        force_fbc(1:nrIBM_fbc,1:nIBM_fbc,1), &
+        force_fbc(1:nrIBM_fbc,1:nIBM_fbc,2), &
+        force_fbc(1:nrIBM_fbc,1:nIBM_fbc,3), &
+        coord_fib(1:nrIBM_fib,1:nIBM_fib,1), & !ctml_fib_pst  
+        coord_fib(1:nrIBM_fib,1:nIBM_fib,2), & !ctml_fib_pst
+        coord_fib(1:nrIBM_fib,1:nIBM_fib,3), & !ctml_fib_pst
+        coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,1),   &
+        coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,2),   &
+        coord_fsh(1:nrIBM_fsh,1:nqIBM_fsh,1:nIBM_fsh,3),   &
+        coord_esh(1:nrIBM_esh,1:nIBM_esh,1),   &
+        coord_esh(1:nrIBM_esh,1:nIBM_esh,2),   &
+        coord_esh(1:nrIBM_esh,1:nIBM_esh,3),   &
+        coord_fbc(1:nrIBM_fbc,1:nIBM_fbc,1),   &
+        coord_fbc(1:nrIBM_fbc,1:nIBM_fbc,2),   &
+        coord_fbc(1:nrIBM_fbc,1:nIBM_fbc,3),   &
+        theboss)
+      else
+       print *,"tick not called; if statement corrupt"
+       stop
+      endif
 
       if (debug_tick.ge.2) then
-       print *,"tick time,dt,step = ",time,dt,step
+       print *,"tick cur_time,dt,step = ",cur_time,dt,step
        print *,"nrIBM_fib,nsecIBMmax,nIBM_fib ", &
         nrIBM_fib,nsecIBMmax,nIBM_fib
        do ifib=1,nrIBM_fib
@@ -573,7 +624,7 @@ stop
 
       if (debug_tick.ge.1) then
        print *,"done with CTML_SOLVE_SOLID"
-       print *,"time,dt,step ",time,dt,step
+       print *,"cur_time,dt,step ",cur_time,dt,step
       endif
 
       return

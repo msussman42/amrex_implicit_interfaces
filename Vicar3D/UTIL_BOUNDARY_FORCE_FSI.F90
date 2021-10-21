@@ -85,6 +85,10 @@ include './distFSI/grid_def'
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_prev, force_esh_prev
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_prev, force_fbc_prev
 
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_halftime_prev
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_halftime_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_halftime_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_halftime_prev
 
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib
  real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh
@@ -179,7 +183,7 @@ SUBROUTINE cal_velIBM_fib(&
  REAL*8 xp, yp, zp, gx, gy, gz, dfx, dfy, dfz
  integer imin, imax, jmin, jmax, kmin, kmax
  integer, allocatable, dimension (:,:) :: iCellMarker, jCellMarker, kCellMarker
- integer isecIBM,isec
+ integer isec
  REAL*8  zsecIBM,ysecIBM
 
  
@@ -997,7 +1001,7 @@ SUBROUTINE cal_fxyz_fib(ndim1, bodyIBM, fIBM, dsIBM, dtype,dsecIBMy,dsecIBMz,nrI
  REAL*8 xp, yp, zp, gx, gy, gz, dfx, dfy, dfz
  integer imin, imax, jmin, jmax, kmin, kmax
  integer, allocatable, dimension (:,:) :: iCellMarker, jCellMarker, kCellMarker
- integer isecIBM,isec
+ integer isec
  REAL*8  dsecIBMy,dsecIBMz,zsecIBM,ysecIBM,CoefsecIBM
 
  ALLOCATE(iCellMarker(nsecIBM,nIBM))
@@ -1793,6 +1797,14 @@ subroutine init_membrane_solver(&
         STOP
       ENDIF ! iErrin
 
+      ALLOCATE(vel_fib_halftime_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3), &
+               STAT=iErrin)
+      IF ( iErrin/= 0 ) THEN
+        WRITE(*,*) &
+       'Allocate_memory: Memory Allocation Error for vel_fib_halftime_prev'
+        STOP
+      ENDIF ! iErrin
+
       ALLOCATE(force_fib_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
@@ -2097,8 +2109,7 @@ subroutine solve_membranetest(iter,nmonitor,theboss,dt,rtime,ntsave,irestart,idi
  implicit none
  integer irestart,nrestart,ierr1,nReadtmp
  integer iter, i, kk, ntsave,idim1,j
- character*80 fname
- real*8 dt, uavg, vavg, xc, yc, rtime
+ real*8 dt, xc, yc, rtime
  logical monitorON,theboss,temprestart
  integer nmonitor
  real*8 xp,yp,zp,time2tmp 
@@ -2195,7 +2206,6 @@ subroutine solve_membrane(iter,monitorON,theboss,dt,rtime,ntsave,irestart,idim1)
  integer irestart, ierr1
  logical monitorON ,theboss
  integer iter, i, kk, ntsave,idim1,j
- character*80 fname
  real*8 dt, uavg, vavg, xc, yc, rtime,temp_ibm2
 
  real*8 xp,yp,zp 
