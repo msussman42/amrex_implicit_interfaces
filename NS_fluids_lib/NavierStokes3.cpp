@@ -617,14 +617,14 @@ void NavierStokes::nonlinear_advection() {
  if (1==0) {
     // S_new is level 0 data
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-  int caller_id=1;
+  int state_caller_id=1;
    // data file name "AFTERPRESCRIBE<stuff>.plt"
    // xvel,yvel,zvel,pressure,(density, temperature) x nmat,
    // (VFRAC,centroid) x nmat, error indicator
   writeSanityCheckData(
    "AFTERPRESCRIBE",
    "in: NavierStokes::nonlinear_advection, State_Type ", 
-   caller_id,
+   state_caller_id,
    S_new.nComp(),
    -1, // data_mf==-1
    State_Type,

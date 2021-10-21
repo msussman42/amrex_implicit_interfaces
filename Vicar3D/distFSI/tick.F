@@ -1,6 +1,8 @@
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
-!@c
-      subroutine tick(rtime,dt,nt,monitorON,ntsave
+c rtime = t^{n+1}
+c
+      subroutine tick(rtime
+     &     ,dt,nt,monitorON,ntsave
      &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
      &     ,uibm1in_fsh,uibm2in_fsh,uibm3in_fsh
      &     ,uibm1in_esh,uibm2in_esh,uibm3in_esh
@@ -735,6 +737,222 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       gz_ibm_massiveout_fbc(i,j)=gz_ibm_massive_fbc(i,j)
         end do
       end do
+#endif
+
+      return
+      end
+
+c rtime = t^{n+1}
+c
+      subroutine tick_fib(rtime
+     &     ,dt,nt,monitorON,ntsave
+     &     ,uhibm1in_fib,uhibm2in_fib,uhibm3in_fib
+     &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
+     &     ,uibm1out_fib,uibm2out_fib,uibm3out_fib
+     &     ,fibm1in_fib,fibm2in_fib,fibm3in_fib
+     &     ,fibm1out_fib,fibm2out_fib,fibm3out_fib
+     &     ,gx_ibm_massivein_fib
+     &     ,gy_ibm_massivein_fib
+     &     ,gz_ibm_massivein_fib
+     &     ,gx_ibm_massiveout_fib
+     &     ,gy_ibm_massiveout_fib
+     &     ,gz_ibm_massiveout_fib
+     &     ,theboss
+     &       )
+      USE HeaderFSI
+!@T This subroutine calls the structural solver and pass {\bf Vicar3D}
+!variables from subroutine [[solve_membranetest]] or [[solve_membrane]] \\
+
+! this subroutines are called from [[UTIL_BOUNDARY_FORCE_FSI.F90]] file.\\
+! Depending on the mass ratio of the structure $m_s$ different initial values
+! is assumed for the calculation at time $t (n)$ based on the variables at time
+! $t-\Delta t (n-1)$. \\
+!$ x^*=2 * x^{n} - x^{n-1}\/\/ \textrm{if}\/\/  m_s\/\/  \ge\/\/  1.05$ \\
+!$ x^*= x^{n}\/\/\/\/\/\/  \textrm{if}\/\/   m_s\/\/  \ge\/\/  1.05$ \\
+!@q
+      implicit none
+      real*8 UHIBM1in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,UHIBM2in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,UHIBM3in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib) 
+     &      ,UIBM1in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,UIBM2in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,UIBM3in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib) 
+     &      ,UIBM1out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,UIBM2out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,UIBM3out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib) 
+
+      real*8 FIBM1in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,FIBM2in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,FIBM3in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,FIBM1out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,FIBM2out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &      ,FIBM3out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+
+      real*8 GX_IBM_MASSIVEin_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+      real*8 rtime, dt
+      logical monitorON,theboss
+    
+      integer nt, ntsave,i,j,iiter2
+      integer ibm_solve,isavesigma
+      integer isec,i_glb
+
+#ifdef INCLUDE_FIB
+
+      ibm_solve=0
+! if converged
+! check to see we need resorting of buckets "for contact algorithms"
+      timebucket=timebucket+dt
+      if(timebucket .gt. Bucketntinterval) then
+            call  BucketSorting
+            timebucket=0.0
+      endif
+! passing old fiber values to pre variables and initialize new variables 
+      do i=1,nr_ibm_fib
+       do j=1,ns_ibm_r_fib(i)
+            ! gx_ibm_fib data at t^{n-1}
+          gx_ibmpre_fib(i,j)=gx_ibm_fib(i,j)
+          gy_ibmpre_fib(i,j)=gy_ibm_fib(i,j)
+            ! gx_ibm_massive_fib data at t^{n}
+          gx_ibm_fib(i,j)=gx_ibm_massive_fib(i,j)
+          gy_ibm_fib(i,j)=gy_ibm_massive_fib(i,j)
+            ! gx_ibm_massive_fib data at t^{n}
+          gx_ibmo1_fib(i,j)=gx_ibm_massive_fib(i,j)
+          gy_ibmo1_fib(i,j)=gy_ibm_massive_fib(i,j)
+       end do
+       if(ndim .gt.2) then
+
+       do j=1,ns_ibm_r_fib(i)
+          gz_ibmpre_fib(i,j)=gz_ibm_fib(i,j)
+          gz_ibm_fib(i,j)=gz_ibm_massive_fib(i,j)
+          gz_ibmo1_fib(i,j)=gz_ibm_massive_fib(i,j)
+       end do
+       endif
+       do isec=1,nsec_ibm
+       do j=1,ns_ibm_r_fib(i)
+          UIBM1_fib(i,isec,j)=UIBM1in_fib(i,isec,j)
+          UIBM2_fib(i,isec,j)=UIBM2in_fib(i,isec,j)
+          fk_mass1o_fib(i,isec,j)=fk_mass1_fib(i,isec,j)
+          fk_mass2o_fib(i,isec,j)=fk_mass2_fib(i,isec,j)
+       end do
+       if(ndim .gt.2) then
+       do j=1,ns_ibm_r_fib(i)
+          UIBM3_fib(i,isec,j)=UIBM3in_fib(i,isec,j)
+          fk_mass3o_fib(i,isec,j)=fk_mass3_fib(i,isec,j)
+       end do
+       endif
+      end do
+      end do
+
+! computing predicted x^*=2 * x^{n} - x^{n-1}
+      do i=1,nr_ibm_fib
+       i_glb=Ilocglb_fib(i);
+       do j=1,ns_ibm_r_fib(i)
+          gx_ibm_massiveo_fib(i,j)=
+     &                 2.0d0*gx_ibm_fib(i,j)-gx_ibmpre_fib(i,j)
+          gy_ibm_massiveo_fib(i,j)=
+     &                 2.0d0*gy_ibm_fib(i,j)-gy_ibmpre_fib(i,j)
+          if(ndim .gt.2) gz_ibm_massiveo_fib(i,j)=
+     &                 2.0d0*gz_ibm_fib(i,j)-gz_ibmpre_fib(i,j)
+
+        if(density_coef(i_glb) .ge. 1.05) then
+          gx_ibm_massive_fib(i,j)=gx_ibm_massiveo_fib(i,j)
+          gy_ibm_massive_fib(i,j)=gy_ibm_massiveo_fib(i,j)
+          if(ndim .gt.2) gz_ibm_massive_fib(i,j)=
+     &                   gz_ibm_massiveo_fib(i,j)
+         else
+          gx_ibm_massive_fib(i,j)=gx_ibm_fib(i,j)
+          gy_ibm_massive_fib(i,j)=gy_ibm_fib(i,j)
+          if(ndim .gt.2) gz_ibm_massive_fib(i,j)=gz_ibm_fib(i,j)
+         endif
+
+          fs_1_ibmo_fib(i,j)=fs_1_ibm_fib(i,j)
+          gx_ibmo1_fib(i,j)=gx_ibm_massiveo_fib(i,j)
+          gy_ibmo1_fib(i,j)=gy_ibm_massiveo_fib(i,j)
+          if(ndim .gt.2) 
+     &       gz_ibmo1_fib(i,j)=gz_ibm_massiveo_fib(i,j)
+  
+        end do
+       end do
+
+       delta_t=dt
+       time=rtime
+       time2=rtime
+!perfrom iteration over structural solver
+         do iiter2=1,maxiter
+
+          call r_stang(ibm_solve,monitorON,isavesigma)
+          do i=1,nr_ibm_fib
+           do j=1,ns_ibm_r_fib(i)
+            gx_ibmo1_fib(i,j)=gx_ibm_massive_fib(i,j)
+            gy_ibmo1_fib(i,j)=gy_ibm_massive_fib(i,j)
+            if(ndim .gt.2) then
+             gz_ibmo1_fib(i,j)=gz_ibm_massive_fib(i,j)
+            endif
+           end do
+          end do
+         end do
+          
+! call one more time at the end of the iteration
+         time_step=nt
+         if(mod(time_step,ntsave).eq. 0 ) isavesigma=1         
+         call r_stang(ibm_solve,monitorON,isavesigma)
+!!?!!         call r_stang(ibm_solve,monitorON)
+!!?!!         time_step=nt
+!computing output forces
+
+         if(theboss) then
+         if (mod(time_step,save_force_int).lt. del_force) then
+           if(mod(time_step,save_force_int)==0) then
+               call compute_force(.true.)
+           else
+               call compute_force(.false.)
+           end if
+         endif
+
+! write tecplot files for structural components
+           if(mod(time_step,ntsave).eq. 0 ) then
+              call outputstr(nt,ntsave)
+           endif
+
+! write geometrical restart file for Fe shell  structures
+           if(     (flag_restartfile)  
+     &        .and.(time_step .ge.t0_restartfile) 
+     &        .and.(mod(time_step,dt_restartfile).eq. 0 ) 
+     &       ) then
+            call restartInput_esh(nt,nt-t0_restartfile,dt_restartfile)
+           endif
+         endif
+
+! initialize and assign output variables
+      if(nr_ibm_fib>=1) FIBM1out_fib=0.0
+      if(nr_ibm_fib>=1) FIBM2out_fib=0.0
+      if(nr_ibm_fib>=1) FIBM3out_fib=0.0
+
+      do i=1,nr_ibm_fib
+        do isec=1,nsec_ibm
+        do j=1,ns_ibm_r_fib(i)
+          FIBM1out_fib(i,isec,j)=ffluidsum1_fib(i,isec,j)
+          FIBM2out_fib(i,isec,j)=ffluidsum2_fib(i,isec,j)
+          if(ndim .gt.2) 
+     &       FIBM3out_fib(i,isec,j)=ffluidsum3_fib(i,isec,j)
+        end do
+        end do
+        do j=1,ns_ibm_r_fib(i)
+          gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
+          gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
+          if(ndim .gt.2) 
+     &       gz_ibm_massiveout_fib(i,j)=gz_ibm_massive_fib(i,j)
+        end do
+       end do
+
+#else 
+      print *,"include_fib not defined"
+      stop
 #endif
 
       return
