@@ -11626,8 +11626,10 @@ IMPLICIT NONE
 return
 end subroutine find_grid_bounding_box_node
 
-
-! called from fort_headermsg with FSI_operation=1
+! ns_header_msg_level is called from NavierStokes::nonlinear_advection
+! fort_headermsg is called from NavierStokes::ns_header_msg_level
+! CLSVOF_ReadNodes is called from fort_headermsg 
+! (FSI_operation=1, FSI_sub_operation=0)
 ! isout==1 => verbose
 subroutine CLSVOF_ReadNodes( &
   im_critical, &
@@ -11745,7 +11747,8 @@ INTEGER_T :: idir,ielem,im_part
 
   if ((TOTAL_NPARTS.ge.1).and.(TOTAL_NPARTS.le.MAX_PARTS)) then
 
-   if (im_critical.lt.-1) then
+   if ((im_critical.lt.-1).and. &
+       (im_critical.ge.-nmat-1)) then
 
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
@@ -12032,11 +12035,15 @@ INTEGER_T :: idir,ielem,im_part
          do idir=1,AMREX_SPACEDIM
           FSI_output_node_list((inode-1)*3+idir)= &
            ctml_fib_pst(ctml_part_id,inode,idir)
-          FSI_output_displacement_list((inode-1)*3+idir)=zero
 
           FSI_output_velocity_halftime_list((inode-1)*3+idir)= &
              (FSI_output_node_list((inode-1)*3+idir)- &
               FSI_input_node_list((inode-1)*3+idir))/CLSVOF_dt
+
+          FSI_output_displacement_list((inode-1)*3+idir)= &
+            FSI_input_displacement_list((inode-1)*3+idir)+ &
+            CLSVOF_dt* &
+            FSI_output_velocity_halftime_list((inode-1)*3+idir)
 
           FSI_output_velocity_list((inode-1)*3+idir)= &
            ctml_fib_vel(ctml_part_id,inode,idir)
