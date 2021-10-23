@@ -2594,19 +2594,24 @@ contains
       end subroutine EVAL_rotate
       
        !columns of "evecs" are the eigenvectors.
-       !This routine will modify S.
+       !This routine will modify S, but then restore S at the end.
       subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: n
-      REAL_T, intent(in) :: S(n,n)
+      REAL_T, intent(inout) :: S(n,n)
       REAL_T, intent(out) :: evals(n)
       REAL_T, intent(out) :: evecs(n,n)
       REAL_T :: S_SAVE(n,n)
-      INTEGER_T :: i,j,k,l,m,state
+      INTEGER_T :: i,j,k,k_in,l,m,state
       REAL_T :: sinrot,cosrot,t,p,y,d,r
       INTEGER_T :: ind(n)
       INTEGER_T :: changed(n)
+      REAL_T :: eik,eil
+      REAL_T :: XL(n,n)
+      REAL_T :: XLXT(n,n)
+      REAL_T :: max_S
+      REAL_T :: sanity_err
 
       if (n.ge.2) then
        ! do nothing
@@ -2617,16 +2622,143 @@ contains
 
       do i=1,n
       do j=1,n
-       evecs(i,j)=zero
+       if (i.eq.j) then
+        evecs(i,j)=one
+       else if (i.ne.j) then
+        evecs(i,j)=zero
+       else
+        print *,"i or j corrupt"
+        stop
+       endif
        S_SAVE(i,j)=S(i,j)
       enddo
       enddo
+
       state=n
       
       do k=1,n
        call maxind(k,S,n,ind(k))
        evals(k)=S(k,k)
        changed(k)=1
+      enddo
+
+      do while (state.ne.0)
+       m=1
+       do k=2,n-1
+        if (abs(S(k,ind(k))).gt.abs(S(m,ind(m)))) then
+         m=k
+        endif
+       enddo
+       k=m
+       l=ind(m)
+       p=S(k,l)
+       y=(evals(l)-evals(k))/two
+       d=abs(y)+sqrt(p**2+y**2)
+       r=sqrt(p**2+d**2)
+       if (r.gt.zero) then
+        cosrot=d/r
+        sinrot=p/r
+       else
+        print *,"expecting r>0"
+        stop
+       endif
+       if (d.gt.zero) then
+        t=p**2/d
+       else
+        print *,"expecting d>0"
+        stop
+       endif
+       if (y.lt.zero) then
+        sinrot=-sinrot
+        t=-t
+       else if (y.ge.zero) then
+        ! do nothing
+       else
+        print *,"y invalid"
+        stop
+       endif
+       S(k,l)=zero
+       call EVAL_update(k,-t,y,changed,evals,state,n)       
+       call EVAL_update(l,t,y,changed,evals,state,n)       
+       do i=1,k-1
+        call EVAL_rotate(i,k,i,l,S,n,sinrot,cosrot)
+       enddo
+       do i=k+1,l-1
+        call EVAL_rotate(k,i,i,l,S,n,sinrot,cosrot)
+       enddo
+       do i=l+1,n
+        call EVAL_rotate(k,i,l,i,S,n,sinrot,cosrot)
+       enddo
+       do i=1,n
+        eik=evecs(i,k)
+        eil=evecs(i,l)
+        evecs(i,k)=cosrot*eik-sinrot*eil
+        evecs(i,l)=sinrot*eik+cosrot*eil
+       enddo
+       call maxind(k,S,n,ind(k))
+       call maxind(l,S,n,ind(l))
+      
+        ! AX=X Lambda
+        ! A=X Lambda X^{-1}=X Lambda X^T
+       do i=1,n
+       do j=1,n  
+        XL(i,j)=evecs(i,j)*evals(j)
+       enddo
+       enddo
+
+       max_S=zero
+       do i=1,n
+       do j=1,n  
+        if (abs(S_SAVE(i,j)).gt.max_S) then
+         max_S=abs(S_SAVE(i,j))
+        endif
+        XLXT(i,j)=zero
+        do k_in=1,n
+         XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
+        enddo
+       enddo
+       enddo
+
+       max_S=max(max_S,one)
+
+       sanity_err=zero
+       do i=1,n
+       do j=1,n  
+        if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err*max_S) then
+         sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))/max_S
+        endif
+       enddo
+       enddo
+       if (sanity_err.gt.1.0D-12) then
+        ! do nothing
+       else if (sanity_err.le.1.0D-12) then
+        state=0
+       else
+        print *,"sanity_err became corrupt"
+        stop
+       endif
+      enddo !do while (state.ne.0)
+
+      if (sanity_err.gt.1.0D-12) then
+       print *,"sanity_err too large"
+       stop
+      endif
+
+       ! restore S
+      do k=1,n-1
+       do l=k+1,n
+        S(k,l)=S(l,k)
+       enddo
+      enddo
+      do i=1,n
+      do j=1,n
+       if (abs(S(i,j)-S_SAVE(i,j)).eq.zero) then
+        ! do nothing
+       else
+        print *,"S not properly restored"
+        stop
+       endif
+      enddo
       enddo
 
       return
