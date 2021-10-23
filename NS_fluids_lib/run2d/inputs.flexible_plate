@@ -231,13 +231,19 @@ ns.elastic_regularization=0.0 0.0 0.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
-# elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
-# 0,1 => viscoelastic FENE-CR material (do not divide by lambda in
-#  viscoelastic source term if viscoelastic_model==1.
-# 2=> elastic material (e.g. Q ~ (grad X + grad X^T) )
-# 3=> incremental elastic material (Jaumann derivative)
-# 4=> elastic model handled in the coupler. (lagrangian)
+# viscoelastic_model=0 FENE-CR  f_R=(A-I)/(1-tr(A)/L^2) f_S=f_R
+# viscoelastic_model=1 Oldroyd-B  f_R=(A-I) f_S=f_R
+# viscoelastic_model=2 Q ~ (grad X + grad X^T) 
+# viscoelastic_model=3 incremental elastic material, Jaumann derivative
+# viscoelastic_model=4 pressure/velocity FSI coupling
+# viscoelastic_model=5 FENE-P  f_R=A/(1-tr(A)/L^2)-I  f_S=f_R
+#    f_R=(1/(1-tr(A)/L^2))*(A-I(1-tr(A)/L^2))=
+#        (1/(1-tr(A)/L^2))*(A-I+I tr(A)/L^2)
+#
+# viscoelastic_model=6 Linear PTT 
+#     f_R=(1+Tr(A-I)/L^2)(A-I)
+#     f_S=A-I
 ns.viscoelastic_model=0 0 4
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng

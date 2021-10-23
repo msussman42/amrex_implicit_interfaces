@@ -2181,15 +2181,17 @@ protected:
 
     static Vector<Real> elastic_time; // viscoelastic parameter
 
-     // 0,1 => viscoelastic FENE-CR material  
+     // 0 => viscoelastic FENE-CR material  
      //     updating Q:
      //       (i) CISL advection Q^advect=Q^n(x-V dt)
      //       (ii) A^advect=Q^advect+I
      //       (iii) X=I+dt gradu
      //       (iv)  Q^{n+1}=X A^adv X^T -I=
      //           Q^advect+dt (2D) + dt gradu Q + dt Q gradu^T+O(dt^2)
-     //       (v) Q^n+1=lambda Q^n+1/(lambda+dt)
-     //   
+     //       (v) lambda'=lambda * (1-tr(A)/L^2)
+     //       (vi) Q^n+1=lambda' Q^n+1/(lambda'+dt)
+     // 1 => Oldroyd-B
+     //       (i) lambda'=lambda
      // 2=> elastic material  Q=bulk_modulus*(grad X + grad X^{T}) (linear ex.)
      // 3=> incremental elastic model 
      //   (a) cell centered formulation
@@ -2206,7 +2208,20 @@ protected:
      //       (iv) S^{n+1}=X A^advect X^T-I=
      //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
      // 4=> elastic model handled in the coupler (Lagrangian).
-     //
+     // 5=> FENE-P 
+     //       (v) lambda'=lambda * (1-tr(A)/L^2)
+     //       (vi) Q_t = -(1/lambda')(Q+I * tr(A)/L^{2})  
+     //       (vii) Q^{n+1}-Q^star=-(dt/lambda')(Q^{n+1} + I * tr(A)/L^2)
+     //       (viii) (1+dt/lambda')Q^{n+1}=Q^star - dt * I * tr(A)/L^2
+     //       (viv) Q^{n+1}=(lambda'/(lambda'+dt))*(Q^star-dt*I*tr(A)/L^2)
+     //       (x) for incompressible flow, source term is equivalent to 
+     //           FENE-CR source term which is tau=Q/lambda'.
+     // 6=> Linear PTT
+     //       (v) lambda'=lambda
+     //       (vi) Q_t = -(1/lambda)(Q+Tr(Q)Q/L^2)
+     //       (vii) lambda''=lambda*(1/(1+Tr(Q)/L^2))
+     //       (vii) Q^{n+1}-Q^star=-(dt/lambda'')Q^{n+1}
+     //       (viii) Q^{n+1}=lambda'' Q^n+1/(lambda''+dt)
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
