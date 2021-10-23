@@ -2496,6 +2496,142 @@ contains
       return
       end subroutine get_crse_index
 
+      subroutine maxind(k,S,n,m_out)
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: n
+      INTEGER_T, intent(in) :: k
+      REAL_T, intent(in) :: S(n,n)
+      INTEGER_T, intent(out) :: m_out
+      INTEGER_T :: i
+
+      if (n.ge.2) then
+       ! do nothing
+      else
+       print *,"n out of range"
+       stop
+      endif
+      if ((k.ge.1).and.(k.le.n)) then
+       ! do nothing
+      else
+       print *,"k out of range"
+       stop
+      endif
+      m_out=k+1
+      do i=k+2,n
+       if (abs(S(k,i))>abs(S(k,m_out))) then
+        m_out=i
+       endif
+      enddo
+      
+      return
+      end subroutine maxind
+
+      subroutine EVAL_update(k,t,y,changed,evals,state,n)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: n
+      INTEGER_T, intent(in) :: k
+      REAL_T, intent(inout) :: y
+      INTEGER_T, intent(inout) :: state
+      INTEGER_T, intent(inout) :: changed(n)
+      REAL_T, intent(inout) :: evals(n)
+      REAL_T, intent(in) :: t
+
+      if (n.ge.2) then
+       ! do nothing
+      else
+       print *,"n out of range"
+       stop
+      endif
+      if ((k.ge.1).and.(k.le.n)) then
+       ! do nothing
+      else
+       print *,"k invalid"
+       stop
+      endif
+      y=evals(k) 
+      evals(k)=y+t
+      if ((changed(k).eq.1).and.(y.eq.evals(k))) then
+       changed(k)=0
+       state=state-1
+      else if ((changed(k).eq.0).and.(y.ne.evals(k))) then
+       changed(k)=1
+       state=state+1
+      else if ((changed(k).eq.1).and.(y.ne.evals(k))) then
+       ! do nothing
+      else if ((changed(k).eq.0).and.(y.eq.evals(k))) then
+       ! do nothing
+      else 
+       print *,"changed or evals invalid"
+       stop
+      endif
+
+      return
+      end subroutine EVAL_update
+
+      subroutine EVAL_rotate(k,l,i,j,S,n,sinrot,cosrot)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: n
+      REAL_T, intent(inout) :: S(n,n)
+      REAL_T, intent(in) :: sinrot,cosrot
+      INTEGER_T, intent(in) :: k,l,i,j
+      REAL_T skl,sij 
+
+      if (n.ge.2) then
+       ! do nothing
+      else
+       print *,"expecting n>=2"
+       stop
+      endif
+
+      skl=S(k,l)
+      sij=S(i,j)
+      S(k,l)=cosrot*skl-sinrot*sij
+      S(i,j)=sinrot*skl+cosrot*sij
+
+      return
+      end subroutine EVAL_rotate
+      
+       !columns of "evecs" are the eigenvectors.
+       !This routine will modify S.
+      subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: n
+      REAL_T, intent(in) :: S(n,n)
+      REAL_T, intent(out) :: evals(n)
+      REAL_T, intent(out) :: evecs(n,n)
+      REAL_T :: S_SAVE(n,n)
+      INTEGER_T :: i,j,k,l,m,state
+      REAL_T :: sinrot,cosrot,t,p,y,d,r
+      INTEGER_T :: ind(n)
+      INTEGER_T :: changed(n)
+
+      if (n.ge.2) then
+       ! do nothing
+      else
+       print *,"expecting n>=2"
+       stop
+      endif
+
+      do i=1,n
+      do j=1,n
+       evecs(i,j)=zero
+       S_SAVE(i,j)=S(i,j)
+      enddo
+      enddo
+      state=n
+      
+      do k=1,n
+       call maxind(k,S,n,ind(k))
+       evals(k)=S(k,k)
+       changed(k)=1
+      enddo
+
+      return
+      end subroutine fort_jacobi_eigenvalue
+
       subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
       IMPLICIT NONE
       INTEGER_T numelem
