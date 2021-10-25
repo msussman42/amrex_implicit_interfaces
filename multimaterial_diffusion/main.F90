@@ -225,7 +225,7 @@ real(kind=8) :: local_center(2)
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= September 14, 2021, 13:00pm"
+print *,"PROTOTYPE CODE DATE= October 25, 2021, 19:00pm"
 
 stefan_flag=1 ! VARIABLE TSAT
 
@@ -252,10 +252,10 @@ print *,"constant_K_test= ",constant_K_test
 !
 ! In order to rotate the dendrite:
 ! set dendrite_angle.
-!N_START=256
-!N_FINISH=256
-N_START=64
-N_FINISH=64
+N_START=256
+N_FINISH=256
+!N_START=64
+!N_FINISH=64
 M_START=1600
 M_FACTOR=2
 
@@ -346,9 +346,9 @@ VOFTOL_local=VOFTOL
 
 local_Pi=4.0d0*atan(1.0d0)
 
- dendrite_angle=pi/4.0d0  ! 45 degrees
+! dendrite_angle=pi/4.0d0  ! 45 degrees
 ! dendrite_angle=pi/6.0d0  ! 30 degrees
-! dendrite_angle=pi/3.0d0  ! 60 degrees
+ dendrite_angle=pi/3.0d0  ! 60 degrees
 ! dendrite_angle=0.0d0     ! 0 degrees
 
 ! pcurve_ls defined in vof_cisl.F90

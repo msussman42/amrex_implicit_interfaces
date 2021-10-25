@@ -223,7 +223,7 @@ real(kind=8) :: local_center(2)
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= September 14, 2021, 13:00pm"
+print *,"PROTOTYPE CODE DATE= October 25, 2021, 19:00pm"
 
 stefan_flag=1 ! VARIABLE TSAT
 
