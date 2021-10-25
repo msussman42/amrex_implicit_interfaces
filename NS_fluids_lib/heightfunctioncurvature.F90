@@ -57,8 +57,8 @@ INTEGER_T :: SIGN_VERTICAL(-1:1)
 REAL_T :: FHORIZONTAL(-1:1)
 INTEGER_T :: SIGN_HORIZONTAL(-1:1)
 REAL_T :: LSCOL(-3:3)
-REAL_T       :: diff1,diff2
-REAL_T       :: hprime,hdoubleprime
+REAL_T :: diff1,diff2
+REAL_T :: hprime,hdoubleprime
 REAL_T, intent(out) :: kappa(nmat+1)     ! curvature output
 REAL_T :: kappa_scale
 
