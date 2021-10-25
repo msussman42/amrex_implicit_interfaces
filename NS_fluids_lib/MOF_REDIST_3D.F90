@@ -1088,11 +1088,11 @@ stop
 
           curv_valid=0
 
-          if (ls_curv(1,0,0).ge.0.0d0) then
+          if (ls_curv(1,0,0).ge.0.0d0) then ! material 1 center cell
 
            if ((ls_curv(1,1,0).lt.0.0d0).and. &
                (ls_curv(1,-1,0).lt.0.0d0)) then
-            curv_valid=-1
+            curv_valid=1  ! allow for two changes of sign here
            else if ((ls_curv(1,1,0).ge.0.0d0).and. &
                     (ls_curv(1,-1,0).ge.0.0d0)) then
             ! do nothing
@@ -1111,7 +1111,7 @@ stop
 
             if ((ls_curv(1,0,1).lt.0.0d0).and. &
                 (ls_curv(1,0,-1).lt.0.0d0)) then
-             curv_valid=-1
+             curv_valid=1  ! allow for two changes of sign here.
             else if ((ls_curv(1,0,1).ge.0.0d0).and. &
                      (ls_curv(1,0,-1).ge.0.0d0)) then
              ! do nothing
@@ -1133,11 +1133,11 @@ stop
             stop
            endif
 
-          else if (ls_curv(1,0,0).lt.0.0d0) then
+          else if (ls_curv(1,0,0).lt.0.0d0) then ! material 2 occupies center.
 
            if ((ls_curv(1,1,0).ge.0.0d0).and. &
                (ls_curv(1,-1,0).ge.0.0d0)) then
-            curv_valid=-1
+            curv_valid=1 ! allow two changes of sign
            else if ((ls_curv(1,1,0).lt.0.0d0).and. &
                     (ls_curv(1,-1,0).lt.0.0d0)) then
             ! do nothing
@@ -1156,7 +1156,7 @@ stop
 
             if ((ls_curv(1,0,1).ge.0.0d0).and. &
                 (ls_curv(1,0,-1).ge.0.0d0)) then
-             curv_valid=-1
+             curv_valid=1 ! allow two changes of sign
             else if ((ls_curv(1,0,1).lt.0.0d0).and. &
                      (ls_curv(1,0,-1).lt.0.0d0)) then
              ! do nothing
