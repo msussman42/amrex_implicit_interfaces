@@ -2240,15 +2240,20 @@ stop
       return
       end subroutine boatdist
 
+       ! polymer_factor=1/maximum_extensibility=1/L
       subroutine get_mod_elastic_time(elastic_time,traceA, &
-          overL,modtime)
+          polymer_factor,modtime)
       IMPLICIT NONE
 
-      REAL_T elastic_time,traceA,overL,modtime
+      REAL_T, intent(in) :: elastic_time
+      REAL_T, intent(in) :: traceA
+      REAL_T, intent(in) :: polymer_factor ! 1/max_extend
+      REAL_T, intent(out) :: modtime
 
-
-      if (overL.lt.zero) then
-       print *,"over L invalid"
+      if (polymer_factor.ge.zero) then
+       ! do nothing
+      else
+       print *,"polymer_factor invalid"
        stop
       endif
       if (elastic_time.ge.zero) then
@@ -2257,15 +2262,21 @@ stop
        print *,"elastic_time invalid  elastic_time=",elastic_time
        stop
       endif
-      if (traceA.lt.zero) then
-       print *,"WARNING trace A invalid, traceA=",traceA
-       traceA=zero
-!       stop
+      if (traceA.gt.zero) then
+       ! do nothing
+      else
+       print *,"trace A must be postive since A is SPD, traceA=",traceA
+       stop
       endif
 
-      modtime=elastic_time*(one-traceA*(overL**2))
-      if (modtime.lt.zero) then
+      modtime=elastic_time*(one-traceA*(polymer_factor**2))
+      if (modtime.ge.zero) then
+       ! do nothing
+      else if (modtime.lt.zero) then
        modtime=zero
+      else
+       print *,"modtime invalid"
+       stop
       endif
 
       return

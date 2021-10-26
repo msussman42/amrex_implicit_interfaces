@@ -2764,21 +2764,32 @@ contains
       return
       end subroutine fort_jacobi_eigenvalue
 
-       ! called from fort_updatetensor which is declared in GODUNOV_3D.F90
+       ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
        ! A=Q+I must be symmetric and positive definite.
-      subroutine project_to_positive_definite(S,n)
+      subroutine project_to_positive_definite(S,n,min_eval)
       IMPLICIT NONE
 
+      REAL_T, intent(in)    :: min_eval
       INTEGER_T, intent(in) :: n
       REAL_T, intent(inout) :: S(n,n)
 
       REAL_T :: S_local(n,n)
       REAL_T :: STS(n,n)
+      REAL_T :: eval_matrix(n,n)
+      REAL_T :: XL(n,n)
       REAL_T :: evals_S(n)
       REAL_T :: evecs_S(n,n)
       REAL_T :: evals_STS(n)
       REAL_T :: evecs_STS(n,n)
       INTEGER_T :: i,j,k
+      REAL_T :: max_eval_sqr
+
+      if (min_eval.gt.zero) then
+       ! do nothing
+      else
+       print *,"min_eval invalid"
+       stop
+      endif
 
       if (n.ge.2) then
        ! do nothing
@@ -2793,6 +2804,78 @@ contains
        STS(i,j)=zero
        do k=1,n
         STS(i,j)=STS(i,j)+S(k,i)*S(k,j)
+       enddo
+      enddo
+      enddo
+
+      call fort_jacobi_eigenvalue(S_local,evals_S,evecs_S,n)
+      call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
+      
+      max_eval_sqr=-1.0D+20
+      do i=1,n
+       if (evals_STS(i).gt.max_eval_sqr) then
+        max_eval_sqr=evals_STS(i)
+       else if (evals_STS(i).le.max_eval_sqr) then
+        ! do nothing
+       else
+        print *,"evals_STS or max_eval_sqr invalid"
+        stop
+       endif
+
+       if (evals_STS(i).lt.zero) then
+        print *,"evals_STS(i) cannot be negative"
+        stop
+       else if (evals_STS(i).ge.zero) then
+        ! do nothing
+       else
+        print *,"evals_STS(i) is NaN"
+        stop
+       endif
+
+      enddo
+
+      if (max_eval_sqr.lt.zero) then
+       print *,"max_eval_sqr cannot be negative"
+       stop
+      else if (max_eval_sqr.ge.zero) then
+       ! do nothing
+      else
+       print *,"max_eval_sqr is NaN"
+       stop
+      endif
+
+      max_eval_sqr=max(max_eval_sqr,one)
+      do i=1,n
+       if (abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr) then
+        ! do nothing
+       else
+        print *,"evals_S and evals_STS inconsistent"
+        stop
+       endif
+      enddo
+      do i=1,n
+      do j=1,n
+       eval_matrix(i,j)=zero
+      enddo
+      enddo
+      do i=1,n
+       eval_matrix(i,i)=max(min_eval,evals_S(i))
+      enddo
+       ! AX=X Lambda
+       ! A=X Lambda X^T
+      do i=1,n
+      do j=1,n
+       XL(i,j)=zero
+       do k=1,n
+        XL(i,j)=XL(i,j)+evecs_STS(i,k)*eval_matrix(k,j)
+       enddo
+      enddo
+      enddo
+      do i=1,n
+      do j=1,n
+       S(i,j)=zero
+       do k=1,n
+        S(i,j)=S(i,j)+XL(i,k)*evecs_STS(j,k)
        enddo
       enddo
       enddo
