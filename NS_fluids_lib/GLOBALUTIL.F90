@@ -2760,7 +2760,9 @@ contains
        endif
       enddo
       enddo
-
+FIX ME 1. SORT THE EIGENVALUES FROM LARGEST MAGNITUDE TO SMALLEST MAGNITUDE,
+       2. SORT THE EIGENVECTORS
+       3. Make sure AX=X LAMBDA
       return
       end subroutine fort_jacobi_eigenvalue
 
