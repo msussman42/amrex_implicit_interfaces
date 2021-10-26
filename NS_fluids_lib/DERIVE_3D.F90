@@ -917,12 +917,15 @@ stop
 
            do ii=1,3
             traceA=traceA+Q(ii,ii)+one
-            if (Q(ii,ii)+one.le.zero) then
-             print *,"WARNING: A violates pos. def"
+            if (Q(ii,ii)+one.gt.zero) then
+             ! do nothing
+            else
+             print *,"diagonal entries of SPD matrix cannot be negative"
              print *,"ii,Q(ii,ii)= ",ii,Q(ii,ii)
              print *,"level,finest_level ",level,finest_level
              print *,"im_parm,ngrow,i,j,k = ",im_parm,ngrow,i,j,k
              print *,"dt= ",dt
+             stop
             endif
            enddo
 
@@ -963,7 +966,9 @@ stop
             stop
            endif
           endif
-          if (viscoelastic_coeff.lt.zero) then
+          if (viscoelastic_coeff.ge.zero) then
+           ! do nothing
+          else
            print *,"viscoelastic_coef invalid"
            stop
           endif
