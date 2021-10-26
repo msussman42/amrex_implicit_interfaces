@@ -2764,6 +2764,41 @@ contains
       return
       end subroutine fort_jacobi_eigenvalue
 
+       ! called from fort_updatetensor which is declared in GODUNOV_3D.F90
+       ! A=Q+I must be symmetric and positive definite.
+      subroutine project_to_positive_definite(S,n)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: n
+      REAL_T, intent(inout) :: S(n,n)
+
+      REAL_T :: S_local(n,n)
+      REAL_T :: STS(n,n)
+      REAL_T :: evals_S(n)
+      REAL_T :: evecs_S(n,n)
+      REAL_T :: evals_STS(n)
+      REAL_T :: evecs_STS(n,n)
+      INTEGER_T :: i,j,k
+
+      if (n.ge.2) then
+       ! do nothing
+      else
+       print *,"expecting n>=2"
+       stop
+      endif
+
+      do i=1,n
+      do j=1,n
+       S_local(i,j)=S(i,j)
+       STS(i,j)=zero
+       do k=1,n
+        STS(i,j)=STS(i,j)+S(k,i)*S(k,j)
+       enddo
+      enddo
+      enddo
+
+      end subroutine project_to_positive_definite
+
       subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
       IMPLICIT NONE
       INTEGER_T numelem
