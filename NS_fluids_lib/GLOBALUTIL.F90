@@ -10799,7 +10799,8 @@ contains
       end function is_rigid
 
       function fort_is_eulerian_elastic_model(elastic_visc_in, &
-        viscoelastic_model_in) 
+        viscoelastic_model_in) &
+      bind(c,name='fort_is_eulerian_elastic_model')
       use probcommon_module
       IMPLICIT NONE
 
@@ -10808,12 +10809,14 @@ contains
       INTEGER_T, intent(in) :: viscoelastic_model_in
 
       if (elastic_visc_in.gt.zero) then
-       if ((viscoelastic_model_in.eq.0).or. &
-           (viscoelastic_model_in.eq.1).or. &
-           (viscoelastic_model_in.eq.2).or. &
-           (viscoelastic_model_in.eq.3)) then
+       if ((viscoelastic_model_in.eq.0).or. & ! FENE-CR
+           (viscoelastic_model_in.eq.1).or. & ! Oldroyd B
+           (viscoelastic_model_in.eq.2).or. & ! purely elastic
+           (viscoelastic_model_in.eq.3).or. & ! incremental elastic model
+           (viscoelastic_model_in.eq.5).or. & ! FENE-P
+           (viscoelastic_model_in.eq.6)) then ! linear PTT
         fort_is_eulerian_elastic_model=1
-       else if (viscoelastic_model_in.eq.4) then
+       else if (viscoelastic_model_in.eq.4) then ! pressure velocity coupling
         fort_is_eulerian_elastic_model=0
        else
         print *,"viscoelastic_model_in invalid"
