@@ -564,10 +564,47 @@ Vector<Real> NavierStokes::elastic_time; // def=0
 // REAL_T function get_user_viscconst(im,density,temperature)
 // MITSUHIRO: viscosity_state_model=2
 Vector<int> NavierStokes::viscosity_state_model; // def=0
-// 0,1 => viscoelastic FENE-CR material (do not divide by lambda in
-//  viscoelastic source term if viscoelastic_model==1.
-// 2=> elastic material
-// 3=> incremental elastic material
+// 0 => viscoelastic FENE-CR material  
+//     updating Q:
+//       (i) CISL advection Q^advect=Q^n(x-V dt)
+//       (ii) A^advect=Q^advect+I
+//       (iii) X=I+dt gradu
+//       (iv)  Q^{n+1}=X A^adv X^T -I=
+//           Q^advect+dt (2D) + dt gradu Q + dt Q gradu^T+O(dt^2)
+//       (v) lambda'=lambda * (1-tr(A)/L^2)
+//       (vi) Q^n+1=lambda' Q^n+1/(lambda'+dt)
+// 1 => Oldroyd-B
+//       (i) lambda'=lambda
+// 2=> elastic material  Q=bulk_modulus*(grad X + grad X^{T}) (linear ex.)
+// 3=> incremental elastic model 
+//   (a) cell centered formulation
+//   (b) face centered formulation
+//   DS/DT=2 (D0-Dp) - (SW-WS)
+//     mu=Lame coefficient (bulk modulus?)
+//     D0=D-tr(D)Id/DIM 
+//       =D if incompressible
+//     W=(1/2)(grad V - grad V^T)    W^T=-W
+//     updating S:
+//       (i) CISL advection S^advect=S^n(x-V dt)
+//       (ii) A^advect=S^advect+I+dt 2D
+//       (iii) X=I+dt W
+//       (iv) S^{n+1}=X A^advect X^T-I=
+//         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
+// 4=> elastic model handled in the coupler (Lagrangian).
+// 5=> FENE-P 
+//       (v) lambda'=lambda * (1-tr(A)/L^2)
+//       (vi) Q_t = -(1/lambda')(Q+I * tr(A)/L^{2})  
+//       (vii) Q^{n+1}-Q^star=-(dt/lambda')(Q^{n+1} + I * tr(A)/L^2)
+//       (viii) (1+dt/lambda')Q^{n+1}=Q^star - dt * I * tr(A)/L^2
+//       (viv) Q^{n+1}=(lambda'/(lambda'+dt))*(Q^star-dt*I*tr(A)/L^2)
+//       (x) for incompressible flow, source term is equivalent to 
+//           FENE-CR source term which is tau=Q/lambda'.
+// 6=> Linear PTT
+//       (v) lambda'=lambda
+//       (vi) Q_t = -(1/lambda)(Q+Tr(Q)Q/L^2)
+//       (vii) lambda''=lambda*(1/(1+Tr(Q)/L^2))
+//       (vii) Q^{n+1}-Q^star=-(dt/lambda'')Q^{n+1}
+//       (viii) Q^{n+1}=lambda'' Q^n+1/(lambda''+dt)
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
 
@@ -5137,10 +5174,12 @@ int NavierStokes::is_eulerian_elastic_model(Real elastic_visc_in,
 		int viscoelastic_model_in) {
 
  if (elastic_visc_in>0.0) {
-  if ((viscoelastic_model_in==0)||
-      (viscoelastic_model_in==1)||
-      (viscoelastic_model_in==2)||
-      (viscoelastic_model_in==3)) {
+  if ((viscoelastic_model_in==0)|| //FENE-CR
+      (viscoelastic_model_in==1)|| //Oldroyd B
+      (viscoelastic_model_in==2)|| //purely linear elastic
+      (viscoelastic_model_in==3)|| //incremental elastic model
+      (viscoelastic_model_in==5)|| //FENE-P
+      (viscoelastic_model_in==6)) {//linear PTT
    return 1;
   } else if (viscoelastic_model_in==4) {
    return 0;
