@@ -649,11 +649,14 @@ stop
        stop
       endif
 
-      if ((viscoelastic_model.ge.0).and. &
-          (viscoelastic_model.le.3)) then
+      if (fort_is_eulerian_elastic_model(elastic_viscosity, &
+              viscoelastic_model).eq.1) then
+       ! do nothing
+      else if (fort_is_eulerian_elastic_model(elastic_viscosity, &
+                 viscoelastic_model).eq.0) then
        ! do nothing
       else
-       print *,"viscoelastic_model invalid"
+       print *,"fort_is_eulerian_elastic_model invalid"
        stop
       endif
 
@@ -743,10 +746,12 @@ stop
 
         mu=get_user_viscconst(im_parm,density,temperature)
 
-        if ((viscoelastic_model.eq.0).or. &
-            (Viscoelastic_model.eq.1)) then
+        if ((viscoelastic_model.eq.0).or. & !FENE-CR
+            (viscoelastic_model.eq.1).or. & ! Oldroyd B
+            (viscoelastic_model.eq.5).or. & ! FENE-P
+            (Viscoelastic_model.eq.6)) then ! linear PTT
          ! do nothing
-        else if (viscoelastic_model.eq.4) then
+        else if (viscoelastic_model.eq.4) then ! pressure velocity coupling
          ! do nothing
         else if ((viscoelastic_model.eq.2).or. & !displacement gradient
                  (viscoelastic_model.eq.3)) then !incremental
@@ -912,8 +917,10 @@ stop
            ! for elastic materials, Q does not need to be SPD.
           traceA=zero
 
-          if ((viscoelastic_model.eq.0).or. &
-              (viscoelastic_model.eq.1)) then
+          if ((viscoelastic_model.eq.0).or. & ! FENE-CR
+              (viscoelastic_model.eq.1).or. & ! Oldroyd B
+              (viscoelastic_model.eq.5).or. & ! FENE-P
+              (viscoelastic_model.eq.6)) then ! linear PTT
 
            do ii=1,3
             traceA=traceA+Q(ii,ii)+one
@@ -927,14 +934,31 @@ stop
              print *,"dt= ",dt
              stop
             endif
-           enddo
+           enddo ! ii=1..3
+
+           if ((viscoelastic_model.eq.0).or. & !FENE-CR
+               (viscoelastic_model.eq.5)) then ! FENE-P
 
             ! elastic_time*(1-Tr(A)/L^2)
-           call get_mod_elastic_time(elastic_time,traceA, &
-            polymer_factor,modtime)
+            call get_mod_elastic_time(elastic_time,traceA, &
+             polymer_factor,modtime)
 
-           ! modtime=elastic_time >> 1
+           else if (viscoelastic_model.eq.1) then ! Oldroyd B
+
+            modtime=elastic_time
+
+           else if (viscoelastic_model.eq.6) then ! linear PTT
+
+            modtime=elastic_time
+
+           else
+            print *,"viscoelastic_model invalid"
+            stop
+           endif
+
+           ! modtime=elastic_time >> 1 for 2,3
           else if ((viscoelastic_model.eq.2).or. & !displacement gradient
+                   (viscoelastic_model.eq.4).or. & !pressure velocity coupling
                    (viscoelastic_model.eq.3)) then !incremental
            modtime=elastic_time
           else
@@ -942,7 +966,9 @@ stop
            stop
           endif
 
-          if (modtime.lt.zero) then
+          if (modtime.ge.zero) then
+           ! do nothing
+          else
            print *,"modtime invalid"
            stop
           endif
@@ -951,15 +977,17 @@ stop
           if (modtime+dt.le.zero) then
            viscoelastic_coeff=zero
           else
-           if (viscoelastic_model.eq.0) then
+           if ((viscoelastic_model.eq.0).or. & ! FENE-CR
+               (viscoelastic_model.eq.1).or. & ! Oldroyd-B
+               (viscoelastic_model.eq.5).or. & ! FENE-P
+               (viscoelastic_model.eq.6)) then ! linear PTT
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
-           else if (viscoelastic_model.eq.1) then
-            viscoelastic_coeff= &
-             (visc(D_DECL(i,j,k),im_parm)-etaS)
            else if (viscoelastic_model.eq.2) then !displacement gradient
             viscoelastic_coeff=elastic_viscosity
            else if (viscoelastic_model.eq.3) then !incremental
+            viscoelastic_coeff=elastic_viscosity
+           else if (viscoelastic_model.eq.4) then !pressure velocity coupling
             viscoelastic_coeff=elastic_viscosity
            else
             print *,"viscoelastic_model invalid"
@@ -1262,11 +1290,14 @@ stop
        print *,"ncomp_visc invalid"
        stop
       endif  
-      if ((viscoelastic_model(im+1).ge.0).and. &
-          (viscoelastic_model(im+1).le.3)) then
+      if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+             viscoelastic_model(im+1)).eq.1) then 
+       ! do nothing
+      else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+             viscoelastic_model(im+1)).eq.0) then 
        ! do nothing
       else
-       print *,"viscoelastic_model(im+1) invalid"
+       print *,"fort_is_eulerian_elastic_model invalid"
        stop
       endif
       if (fort_elastic_viscosity(im+1).ne.elastic_viscosity(im+1)) then
@@ -1376,10 +1407,36 @@ stop
          stop
         endif
 
-        T11=tensor(D_DECL(i,j,k),1)
-        T22=tensor(D_DECL(i,j,k),3)
-        T33=tensor(D_DECL(i,j,k),4)
-        traceA=T11+T22+T33+three
+        T11=tensor(D_DECL(i,j,k),1)+one
+        T22=tensor(D_DECL(i,j,k),3)+one
+        T33=tensor(D_DECL(i,j,k),4)+one
+        traceA=T11+T22+T33
+
+        if ((T11.gt.zero).and. &
+            (T22.gt.zero).and. &
+            (T33.gt.zero)) then
+         ! do nothing
+        else if ((T11.le.zero).or. &
+                 (T22.le.zero).or. &
+                 (T33.le.zero)) then
+         if ((fort_viscoelastic_model(im+1).eq.0).or. & !FENE-CR
+             (fort_viscoelastic_model(im+1).eq.1).or. & !Oldroyd-B 
+             (fort_viscoelastic_model(im+1).eq.5).or. & !FENE-P 
+             (fort_viscoelastic_model(im+1).eq.6)) then !linear PTT
+          print *,"T11, T22, T33 must be positive"
+          stop
+         else if ((fort_viscoelastic_model(im+1).eq.2).or. & !displacement grad
+                  (fort_viscoelastic_model(im+1).eq.3).or. & !incremental
+                  (fort_viscoelastic_model(im+1).eq.4)) then !pres vel coupling
+          ! check nothing
+         else
+          print *,"fort_viscoelastic_model(im+1) invalid"
+          stop
+         endif
+        else
+         print *,"T11,T22, or T33 is NaN"
+         stop
+        endif
         dest(D_DECL(i,j,k),2)=traceA
 
         modtime=visc(D_DECL(i,j,k),2*nmat+im+1)

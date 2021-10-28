@@ -14,6 +14,7 @@
 #include <AMReX_ArrayLim.H>
 #include <AMReX_Utility.H>
 #include <NavierStokes.H>
+#include <GLOBALUTIL_F.H>
 #include <GODUNOV_F.H>
 #include <NAVIERSTOKES_F.H>
 #include <MACOPERATOR_F.H>
@@ -834,8 +835,8 @@ void NavierStokes::tensor_advection_updateALL() {
         ns_level.accumulate_info_no_particles(im);
        }
 
-      } else if (is_eulerian_elastic_model(elastic_viscosity[im],
-			                 viscoelastic_model[im])==1) {
+      } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+			                 &viscoelastic_model[im])==1) {
        // do nothing
       } else
        amrex::Error("viscoelastic_model[im] invalid");
@@ -11960,11 +11961,11 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        int interp_Q_to_flux=1;
        if (viscoelastic_model[im]==2) {
         interp_Q_to_flux=0;  // 1 is a possible option here
-       } else if (is_eulerian_elastic_model(elastic_viscosity[im],
-			                    viscoelastic_model[im])==1) {
+       } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+			                    &viscoelastic_model[im])==1) {
 	interp_Q_to_flux=1;
        } else
-        amrex::Error("is_eulerian_elastic_model invalid");
+        amrex::Error("fort_is_eulerian_elastic_model invalid");
 
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	// NavierStokes.cpp

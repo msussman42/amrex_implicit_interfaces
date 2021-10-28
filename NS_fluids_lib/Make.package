@@ -123,6 +123,7 @@ F90EXE_headers += PROB_CPP_PARMS_F.H
 FEXE_headers += \
   ShallowWater_F.H \
   DERIVE_F.H \
+  GLOBALUTIL_F.H \
   TECPLOTUTIL_F.H \
   MASS_TRANSFER_F.H \
   PLIC_F.H \
@@ -150,6 +151,7 @@ F90EXE_sources += MACOPERATOR_3D.F90
 F90EXE_sources += SOLIDFLUID.F90 
 
 F90EXE_headers += ShallowWater_F.H 
+F90EXE_headers += GLOBALUTIL_F.H 
 F90EXE_headers += TECPLOTUTIL_F.H 
 F90EXE_headers += MASS_TRANSFER_F.H 
 F90EXE_headers += PLIC_F.H 

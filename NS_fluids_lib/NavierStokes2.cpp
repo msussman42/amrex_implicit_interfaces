@@ -16,6 +16,7 @@
 #include <AMReX_Utility.H>
 
 #include <NavierStokes.H>
+#include <GLOBALUTIL_F.H>
 #include <TECPLOTUTIL_F.H>
 #include <MARCHING_TETRA_F.H>
 #include <NAVIERSTOKES_F.H>
