@@ -2612,6 +2612,7 @@ contains
       REAL_T :: XLXT(n,n)
       REAL_T :: max_S
       REAL_T :: sanity_err
+      REAL_T :: swap_hold
 
       if (n.ge.2) then
        ! do nothing
@@ -2633,6 +2634,16 @@ contains
        S_SAVE(i,j)=S(i,j)
       enddo
       enddo
+
+      max_S=zero
+      do i=1,n
+      do j=1,n  
+       if (abs(S_SAVE(i,j)).gt.max_S) then
+        max_S=abs(S_SAVE(i,j))
+       endif
+      enddo
+      enddo
+      max_S=max(max_S,one)
 
       state=n
       
@@ -2706,20 +2717,14 @@ contains
        enddo
        enddo
 
-       max_S=zero
        do i=1,n
        do j=1,n  
-        if (abs(S_SAVE(i,j)).gt.max_S) then
-         max_S=abs(S_SAVE(i,j))
-        endif
         XLXT(i,j)=zero
         do k_in=1,n
          XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
         enddo
        enddo
        enddo
-
-       max_S=max(max_S,one)
 
        sanity_err=zero
        do i=1,n
@@ -2737,10 +2742,11 @@ contains
         print *,"sanity_err became corrupt"
         stop
        endif
+
       enddo !do while (state.ne.0)
 
       if (sanity_err.gt.1.0D-12) then
-       print *,"sanity_err too large"
+       print *,"sanity_err too large(1)"
        stop
       endif
 
@@ -2760,9 +2766,67 @@ contains
        endif
       enddo
       enddo
-FIX ME 1. SORT THE EIGENVALUES FROM LARGEST MAGNITUDE TO SMALLEST MAGNITUDE,
-       2. SORT THE EIGENVECTORS
-       3. Make sure AX=X LAMBDA
+
+      do k=1,n-1
+       m=k 
+       do l=k+1,n
+        if (abs(evals(l)).gt.abs(evals(m))) then
+         m=l
+        else if (abs(evals(l)).le.abs(evals(m))) then
+         ! do nothing
+        else
+         print *,"evals NaN error"
+         stop
+        endif
+       enddo
+       if (k.ne.m) then
+        swap_hold=evals(m)
+        evals(m)=evals(k)
+        evals(k)=swap_hold
+        do i=1,n
+         swap_hold=evecs(i,m)
+         evecs(i,m)=evecs(i,k)
+         evecs(i,k)=swap_hold
+        enddo
+       endif
+      enddo
+
+       ! AX=X Lambda
+       ! A=X Lambda X^{-1}=X Lambda X^T
+      do i=1,n
+      do j=1,n  
+       XL(i,j)=evecs(i,j)*evals(j)
+      enddo
+      enddo
+
+      do i=1,n
+      do j=1,n  
+       XLXT(i,j)=zero
+       do k_in=1,n
+        XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
+       enddo
+      enddo
+      enddo
+
+      sanity_err=zero
+      do i=1,n
+      do j=1,n  
+       if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err*max_S) then
+        sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))/max_S
+       endif
+      enddo
+      enddo
+
+      if (sanity_err.gt.1.0D-11) then
+       print *,"sanity_err too large(2)"
+       stop
+      else if (sanity_err.le.1.0D-11) then
+       ! do nothing
+      else
+       print *,"sanity_err became corrupt"
+       stop
+      endif
+
       return
       end subroutine fort_jacobi_eigenvalue
 
@@ -2777,7 +2841,7 @@ FIX ME 1. SORT THE EIGENVALUES FROM LARGEST MAGNITUDE TO SMALLEST MAGNITUDE,
 
       REAL_T :: S_local(n,n)
       REAL_T :: STS(n,n)
-      REAL_T :: eval_matrix(n,n)
+      REAL_T :: evals_project(n)
       REAL_T :: XL(n,n)
       REAL_T :: evals_S(n)
       REAL_T :: evecs_S(n,n)
@@ -2856,21 +2920,13 @@ FIX ME 1. SORT THE EIGENVALUES FROM LARGEST MAGNITUDE TO SMALLEST MAGNITUDE,
        endif
       enddo
       do i=1,n
-      do j=1,n
-       eval_matrix(i,j)=zero
-      enddo
-      enddo
-      do i=1,n
-       eval_matrix(i,i)=max(min_eval,evals_S(i))
+       evals_project(i)=max(min_eval,evals_S(i))
       enddo
        ! AX=X Lambda
        ! A=X Lambda X^T
       do i=1,n
       do j=1,n
-       XL(i,j)=zero
-       do k=1,n
-        XL(i,j)=XL(i,j)+evecs_STS(i,k)*eval_matrix(k,j)
-       enddo
+       XL(i,j)=evecs_STS(i,j)*evals_project(j)
       enddo
       enddo
       do i=1,n
