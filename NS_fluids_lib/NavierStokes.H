@@ -1579,7 +1579,6 @@ void apply_pressure_grad(
     static int FSI_material_exists();
     static int FSI_material_exists_presvel();
     static int FSI_flag_valid(int im);
-    static int elastic_material_exists();
 
     void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
     void init_FSI_GHOST_MAC_MF(int dealloc_history);

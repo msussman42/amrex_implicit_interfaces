@@ -1277,6 +1277,33 @@ void read_geometry_raw(int& geometry_coord,
 
 } // end subroutine read_geometry_raw
 
+
+int fortran_is_eulerian_elastic_model(Real elastic_visc_in,
+		int viscoelastic_model_in) {
+
+ if (elastic_visc_in>0.0) {
+  if ((viscoelastic_model_in==0)|| //FENE-CR
+      (viscoelastic_model_in==1)|| //Oldroyd B
+      (viscoelastic_model_in==2)|| //purely elastic
+      (viscoelastic_model_in==3)|| //incremental elastic model
+      (viscoelastic_model_in==5)|| //FENE-P
+      (viscoelastic_model_in==6)) {//linear PTT
+   return 1;
+  } else if (viscoelastic_model_in==4) { //pressure-velocity coupling
+   return 0;
+  } else {
+   amrex::Error("viscoelastic_model_in invalid");
+   return 0;
+  }
+ } else if (elastic_visc_in==0.0) {
+  return 0;
+ } else {
+  amrex::Error("elastic_visc_in invalid");
+  return 0;
+ }
+
+} // end subroutine fortran_is_eulerian_elastic_model
+
 void fortran_parameters() {
 
  Real denfact;
@@ -1559,18 +1586,16 @@ void fortran_parameters() {
  pp.queryarr("shear_modulus",shear_modulus_temp,0,nmat);
  pp.query("particles_flag",particles_flag_temp);
 
-  //SEE "is_eulerian_elastic_model"
  for (int im=0;im<nmat;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
-   if ((viscoelastic_model_temp[im]==0)||
-       (viscoelastic_model_temp[im]==1)||
-       (viscoelastic_model_temp[im]==2)||
-       (viscoelastic_model_temp[im]==3)) {
+   if (fortran_is_eulerian_elastic_model(elastic_viscosity_temp[im],
+              		         viscoelastic_model_temp[im])==1) {
     store_elastic_data_temp[im]=1;
-   } else if (viscoelastic_model_temp[im]==4) {
+   } else if (fortran_is_eulerian_elastic_model(elastic_viscosity_temp[im],
+                                        viscoelastic_model_temp[im])==0) {
     // do nothing
    } else
-    amrex::Error("viscoelastic_model_temp[im] invalid");
+    amrex::Error("fortran_is_eulerian_elastic_model invalid");
   } else if (elastic_viscosity_temp[im]==0.0) {
    // do nothing
   } else
@@ -2863,18 +2888,14 @@ NavierStokes::read_params ()
     pp.queryarr("viscoelastic_model",viscoelastic_model,0,nmat);
 
     for (int i=0;i<nmat;i++) {
-     if (viscoelastic_model[i]==0) {
+     if (is_eulerian_elastic_model(elastic_viscosity[i],
+			           viscoelastic_model[i])==1) {
       // do nothing
-     } else if (viscoelastic_model[i]==1) {
-      // do nothing
-     } else if (viscoelastic_model[i]==2) {
-      // do nothing
-     } else if (viscoelastic_model[i]==3) {
-      // do nothing
-     } else if (viscoelastic_model[i]==4) {
+     } else if (is_eulerian_elastic_model(elastic_viscosity[i],
+                                          viscoelastic_model[i])==0) {
       // do nothing
      } else
-      amrex::Error("viscoelastic_model invalid");
+      amrex::Error("is_eulerian_elastic_model invalid");
     } // i=0..nmat-1
 
     pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
@@ -3995,23 +4016,28 @@ NavierStokes::read_params ()
 
     for (int i=0;i<nmat;i++) {
      if (elastic_viscosity[i]>=0.0) {
-      if (viscoelastic_model[i]==2) { // elastic model
-       if (elastic_time[i]>=1.0e+8) {
+      if (is_eulerian_elastic_model(elastic_viscosity[i],
+			            viscoelastic_model[i])==1) {
+       if (viscoelastic_model[i]==2) { // elastic model
+        if (elastic_time[i]>=1.0e+8) {
+         // do nothing
+        } else
+         amrex::Error("elastic time inconsistent with model");
+       } else if (viscoelastic_model[i]==3) { // incremental elastic model
+        if (elastic_time[i]>=1.0e+8) {
+         // do nothing
+        } else
+         amrex::Error("elastic time inconsistent with model");
+       } else if (is_eulerian_elastic_model(elastic_viscosity[i],
+	     		                    viscoelastic_model[i])==1) {
         // do nothing
        } else
-        amrex::Error("elastic time inconsistent with model");
-      } else if (viscoelastic_model[i]==3) { // incremental elastic model
-       if (elastic_time[i]>=1.0e+8) {
-        // do nothing
-       } else
-        amrex::Error("elastic time inconsistent with model");
-      } else if ((viscoelastic_model[i]==1)||
-   	         (viscoelastic_model[i]==0)) {
-       // do nothing
-      } else if (viscoelastic_model[i]==4) {
-       // do nothing
+        amrex::Error("is_eulerian_elastic_model invalid");
+      } else if (is_eulerian_elastic_model(elastic_viscosity[i],
+		 	                   viscoelastic_model[i])==0) {
+       //do nothing
       } else
-       amrex::Error("viscoelastic_model invalid");
+       amrex::Error("is_eulerian_elastic_model invalid");
      } else
       amrex::Error("elastic_viscosity invalid");
     } // i=0..nmat-1
@@ -4040,10 +4066,14 @@ NavierStokes::read_params ()
      } else
       amrex::Error("viscosity state model invalid");
 
-     if ((viscoelastic_model[i]>=0)&&(viscoelastic_model[i]<=3)) {
+     if (is_eulerian_elastic_model(elastic_viscosity[i],
+			           viscoelastic_model[i])==1) {
+      // do nothing
+     } else if (is_eulerian_elastic_model(elastic_viscosity[i],
+	 	                          viscoelastic_model[i])==0) {
       // do nothing
      } else
-      amrex::Error("viscoelastic_model invalid");
+      amrex::Error("is_eulerian_elastic_model invalid");
 
      if (les_model[i]<0)
       amrex::Error("les model invalid");
@@ -5176,12 +5206,12 @@ int NavierStokes::is_eulerian_elastic_model(Real elastic_visc_in,
  if (elastic_visc_in>0.0) {
   if ((viscoelastic_model_in==0)|| //FENE-CR
       (viscoelastic_model_in==1)|| //Oldroyd B
-      (viscoelastic_model_in==2)|| //purely linear elastic
+      (viscoelastic_model_in==2)|| //purely elastic
       (viscoelastic_model_in==3)|| //incremental elastic model
       (viscoelastic_model_in==5)|| //FENE-P
       (viscoelastic_model_in==6)) {//linear PTT
    return 1;
-  } else if (viscoelastic_model_in==4) {
+  } else if (viscoelastic_model_in==4) { //pressure-velocity coupling
    return 0;
   } else {
    amrex::Error("viscoelastic_model_in invalid");
@@ -5915,38 +5945,6 @@ int NavierStokes::is_ice_matC(int im) {
  return local_is_ice;
 
 }  // is_ice_matC()
-
-
-int NavierStokes::elastic_material_exists() {
-
- int nmat=num_materials;
- int local_flag=0;
- for (int im=0;im<nmat;im++) {
-  if (ns_is_rigid(im)==0) {
-   if ((elastic_time[im]>0.0)&&
-       (elastic_viscosity[im]>0.0)) {
-    if (viscoelastic_model[im]==2) {
-     local_flag=1;
-    } else if ((viscoelastic_model[im]==1)||
-    	       (viscoelastic_model[im]==0)) {
-     // do nothing
-    } else if (viscoelastic_model[im]==3) { // incremental model
-     // do nothing
-    } else
-     amrex::Error("viscoelastic_model[im] invalid");
-   } else if ((elastic_time[im]==0.0)||
-  	      (elastic_viscosity[im]==0.0)) {
-    // do nothing
-   } else
-    amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
-  } else if (ns_is_rigid(im)==1) {
-   // do nothing
-  } else
-   amrex::Error("ns_is_rigid invalid");
- } // im=0..nmat-1
- return local_flag;
-
-} // elastic_material_exists()
 
 int NavierStokes::FSI_material_exists() {
 
@@ -9873,35 +9871,43 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-       // in: GODUNOV_3D.F90
-       // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
-       // viscoelastic_model==2 => (eta)*visc_coef*Q
-       // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
-     fort_maketensor_mac(
-      &interp_Q_to_flux,
-      &flux_grid_type,
-      &partid,
-      &level,
-      &finest_level,
-      &ncomp_visc,
-      &im,  // 0..nmat-1
-      xlo,dx,
-      xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-      ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-      zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
-      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-      tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
-      tenMACfab.dataPtr(),
-      ARLIM(tenMACfab.loVect()),ARLIM(tenMACfab.hiVect()),
-      tilelo,tilehi,
-      fablo,fabhi,
-      &bfact,
-      &elastic_viscosity[im],
-      &etaS[im],
-      &elastic_time[im],
-      &viscoelastic_model[im],
-      &polymer_factor[im],
-      &rzflag,&nmat);
+       // declared in: GODUNOV_3D.F90
+       // viscoelastic_model==0 => FENE-CR
+       // viscoelastic_model==1 => Oldroyd B
+       // viscoelastic_model==2 => purely elastic
+       // viscoelastic_model==3 => incremental elastic model
+       // viscoelastic_model==4 => pressure velocity coupling (N/A here)
+       // viscoelastic_model==5 => FENE-P
+       // viscoelastic_model==6 => linear PTT
+     if (is_eulerian_elastic_model(elastic_viscosity[im],
+			           viscoelastic_model[im])==1) {
+      fort_maketensor_mac(
+       &interp_Q_to_flux,
+       &flux_grid_type,
+       &partid,
+       &level,
+       &finest_level,
+       &ncomp_visc,
+       &im,  // 0..nmat-1
+       xlo,dx,
+       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
+       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+       tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+       tenMACfab.dataPtr(),
+       ARLIM(tenMACfab.loVect()),ARLIM(tenMACfab.hiVect()),
+       tilelo,tilehi,
+       fablo,fabhi,
+       &bfact,
+       &elastic_viscosity[im],
+       &etaS[im],
+       &elastic_time[im],
+       &viscoelastic_model[im],
+       &polymer_factor[im],
+       &rzflag,&nmat);
+     } else
+      amrex::Error("is_eulerian_elastic_model invalid");
     }  // mfi  
 }//omp
     ns_reconcile_d_num(54);
@@ -10129,31 +10135,32 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-       // in: GODUNOV_3D.F90
-       // viscoelastic_model==0 => (eta/lambda_mod)*visc_coef*Q
-       // viscoelastic_model==2 => (eta)*visc_coef*Q
-       // viscoelastic_model==3 => (eta)*visc_coef*Q (incremental)
-     fort_maketensor(
-      &partid,
-      &level,
-      &finest_level,
-      &ncomp_visc,
-      &im,  // 0..nmat-1
-      xlo,dx,
-      xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-      ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-      zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
-      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-      tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
-      tilelo,tilehi,
-      fablo,fabhi,
-      &bfact,
-      &elastic_viscosity[im],
-      &etaS[im],
-      &elastic_time[im],
-      &viscoelastic_model[im],
-      &polymer_factor[im],
-      &rzflag,&nmat);
+     if (is_eulerian_elastic_model(elastic_viscosity[im],
+			           viscoelastic_model[im])==1) {
+       // declared in: GODUNOV_3D.F90
+      fort_maketensor(
+       &partid,
+       &level,
+       &finest_level,
+       &ncomp_visc,
+       &im,  // 0..nmat-1
+       xlo,dx,
+       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
+       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+       tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+       tilelo,tilehi,
+       fablo,fabhi,
+       &bfact,
+       &elastic_viscosity[im],
+       &etaS[im],
+       &elastic_time[im],
+       &viscoelastic_model[im],
+       &polymer_factor[im],
+       &rzflag,&nmat);
+     } else
+      amrex::Error("is_eulerian_elastic_model invalid");
     }  // mfi  
 }//omp
     ns_reconcile_d_num(54);
@@ -10340,30 +10347,34 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    if (is_eulerian_elastic_model(elastic_viscosity[im],
+		                  viscoelastic_model[im])==1) {
      // declared in: GODUNOV_3D.F90
-    fort_tensorheat(
-     &massface_index,
-     &vofface_index,
-     &ncphys,
-     &ntensor,
-     &nstate,
-     xlo,dx,
-     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()), 
-     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()), 
-     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-     DeDTinversefab.dataPtr(),
-     ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
-     heatfab.dataPtr(),
-     ARLIM(heatfab.loVect()),ARLIM(heatfab.hiVect()),
-     tenfab.dataPtr(),
-     ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
-     gradufab.dataPtr(),
-     ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
-     tilelo,tilehi,
-     fablo,fabhi,&bfact,&level,
-     &local_dt_slab,
-     &rzflag,&im,&nmat,&nden);
+     fort_tensorheat(
+      &massface_index,
+      &vofface_index,
+      &ncphys,
+      &ntensor,
+      &nstate,
+      xlo,dx,
+      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
+      yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()), 
+      zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()), 
+      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+      DeDTinversefab.dataPtr(),
+      ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
+      heatfab.dataPtr(),
+      ARLIM(heatfab.loVect()),ARLIM(heatfab.hiVect()),
+      tenfab.dataPtr(),
+      ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+      gradufab.dataPtr(),
+      ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
+      tilelo,tilehi,
+      fablo,fabhi,&bfact,&level,
+      &local_dt_slab,
+      &rzflag,&im,&nmat,&nden);
+    } else
+     amrex::Error("is_eulerian_elastic_model invalid");
    }  // mfi  
 }//omp
 
@@ -11454,39 +11465,40 @@ void NavierStokes::tensor_advection_update() {
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-        // in: GODUNOV_3D.F90
-	// last step in this routine: (Q^n+1-Q^n)/dt = -Q^n+1/lambda
-	// if viscoelastic_model==2, then modtime=elastic_time
-	// if viscoelastic_model==3, then modtime=elastic_time (incremental)
-      fort_updatetensor(
-       &level,
-       &finest_level,
-       &nmat,
-       &im,
-       &ncomp_visc,
-       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-       tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
-       dx,xlo,
-       velfab.dataPtr(),
-       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-       tensor_new_fab.dataPtr(scomp_tensor),
-       ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
-       tensor_source_mf_fab.dataPtr(),
-       ARLIM(tensor_source_mf_fab.loVect()),
-       ARLIM(tensor_source_mf_fab.hiVect()),
-       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
-       tilelo,tilehi,
-       fablo,fabhi,
-       &bfact, 
-       &local_dt_slab,
-       &elastic_time[im],
-       &viscoelastic_model[im],
-       &polymer_factor[im],
-       &rzflag,
-       velbc.dataPtr(),
-       &transposegradu);
+      if (is_eulerian_elastic_model(elastic_viscosity[im],
+ 			            viscoelastic_model[im])==1) {
+        // declared in: GODUNOV_3D.F90
+       fort_updatetensor(
+        &level,
+        &finest_level,
+        &nmat,
+        &im,
+        &ncomp_visc,
+        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+        tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
+        dx,xlo,
+        velfab.dataPtr(),
+        ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+        tensor_new_fab.dataPtr(scomp_tensor),
+        ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
+        tensor_source_mf_fab.dataPtr(),
+        ARLIM(tensor_source_mf_fab.loVect()),
+        ARLIM(tensor_source_mf_fab.hiVect()),
+        xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
+        ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
+        zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
+        tilelo,tilehi,
+        fablo,fabhi,
+        &bfact, 
+        &local_dt_slab,
+        &elastic_time[im],
+        &viscoelastic_model[im],
+        &polymer_factor[im],
+        &rzflag,
+        velbc.dataPtr(),
+        &transposegradu);
+      } else
+       amrex::Error("is_eulerian_elastic_model invalid");
      }  // mfi
 } // omp
      ns_reconcile_d_num(65);
@@ -21233,7 +21245,7 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
     } else
      amrex::Error("elastic_partid too large");
    } else
-    amrex::Error("iscoelastic_model[im_elastic] invalid");
+    amrex::Error("viscoelastic_model[im_elastic] invalid");
   } else
    amrex::Error("store_elastic_data invalid");
  } else
