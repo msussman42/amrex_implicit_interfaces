@@ -922,6 +922,7 @@ stop
               (viscoelastic_model.eq.5).or. & ! FENE-P
               (viscoelastic_model.eq.6)) then ! linear PTT
 
+           traceA=zero
            do ii=1,3
             traceA=traceA+Q(ii,ii)+one
             if (Q(ii,ii)+one.gt.zero) then
@@ -939,7 +940,8 @@ stop
            if ((viscoelastic_model.eq.0).or. & !FENE-CR
                (viscoelastic_model.eq.5)) then ! FENE-P
 
-            ! elastic_time*(1-Tr(A)/L^2)
+            ! declared in PROB.F90
+            ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
             call get_mod_elastic_time(elastic_time,traceA, &
              polymer_factor,modtime)
 
@@ -977,10 +979,10 @@ stop
           if (modtime+dt.le.zero) then
            viscoelastic_coeff=zero
           else
-           if ((viscoelastic_model.eq.0).or. & ! FENE-CR
-               (viscoelastic_model.eq.1).or. & ! Oldroyd-B
-               (viscoelastic_model.eq.5).or. & ! FENE-P
-               (viscoelastic_model.eq.6)) then ! linear PTT
+           if ((viscoelastic_model.eq.0).or. & !FENE-CR 
+               (viscoelastic_model.eq.1).or. & !Oldroyd-B(modtime=elastic_time)
+               (viscoelastic_model.eq.5).or. & !FENE-P
+               (viscoelastic_model.eq.6)) then !linearPTT(modtime=elastic_time)
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
            else if (viscoelastic_model.eq.2) then !displacement gradient
