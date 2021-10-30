@@ -14542,9 +14542,7 @@ stop
 
       REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
       REAL_T hoop_22
-       ! if use_A==0 then force is div(mu H Q)/rho
-       ! if use_A==1 then force is div(mu H A)/rho
-      INTEGER_T use_A  
+       ! Q=A-I
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -14576,20 +14574,6 @@ stop
       endif
       if (finest_level.ne.fort_finest_level) then
        print *,"finest_level invalid MAKETENSOR"
-       stop
-      endif
-
-      if ((viscoelastic_model.eq.0).or. & ! (visc-etaS)/lambda
-          (viscoelastic_model.eq.1)) then ! (visc-etaS)
-       ! For incompressible flow, the equations using Q or A are equivalent.
-       ! For compressible flow, one should probably set: use_A=1.
-       use_A=0
-      else if (viscoelastic_model.eq.2) then ! elastic model
-       use_A=0
-      else if (viscoelastic_model.eq.3) then ! incremental model
-       use_A=0
-      else
-       print *,"viscoelastic_model invalid"
        stop
       endif
 
