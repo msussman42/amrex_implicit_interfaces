@@ -2207,10 +2207,11 @@ protected:
      // 4=> elastic model handled in the coupler (Lagrangian).
      // 5=> FENE-P 
      //       (v) lambda'=lambda * (1-tr(A)/L^2)
-     //       (vi) Q_t = -(1/lambda')(Q+I * tr(A)/L^{2})  
-     //       (vii) Q^{n+1}-Q^star=-(dt/lambda')(Q^{n+1} + I * tr(A)/L^2)
-     //       (viii) (1+dt/lambda')Q^{n+1}=Q^star - dt * I * tr(A)/L^2
-     //       (viv) Q^{n+1}=(lambda'/(lambda'+dt))*(Q^star-dt*I*tr(A)/L^2)
+     //       (vi) ofs=I*tr(A)/L^2
+     //       (vi) Q_t = -(1/lambda')(Q+ofs)  
+     //       (vii) Q^{n+1}-Q^star=-(dt/lambda')(Q^{n+1} + ofs)
+     //       (viii) (1+dt/lambda')Q^{n+1}=Q^star - dt * ofs/lambda'
+     //       (viv) Q^{n+1}=(lambda'/(lambda'+dt))*(Q^star-dt*ofs/lambda')
      //       (x) for incompressible flow, source term is equivalent to 
      //           FENE-CR source term which is tau=Q/lambda'.
      // 6=> Linear PTT
@@ -2230,7 +2231,7 @@ protected:
     static Vector<Real> lame_coefficient; // elastic parameter
     static Vector<int> linear_elastic_model; // elastic parameter
     static Vector<Real> damping_coefficient; // dv/dt = -mu v
-    static Vector<Real> polymer_factor;
+    static Vector<Real> polymer_factor; // (1/L)
 
     static int adv_dir;
     static Real adv_vel;
