@@ -942,6 +942,7 @@ stop
 
             ! declared in PROB.F90
             ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+            ! polymer_factor=1/L
             call get_mod_elastic_time(elastic_time,traceA, &
              polymer_factor,modtime)
 

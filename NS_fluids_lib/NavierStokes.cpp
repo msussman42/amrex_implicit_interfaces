@@ -4054,7 +4054,9 @@ NavierStokes::read_params ()
 
      if ((elastic_time[i]<0.0)||(elastic_viscosity[i]<0.0))
       amrex::Error("elastic_time/elastic_viscosity invalid read_params");
-     if (polymer_factor[i]<0.0)
+     if (polymer_factor[i]>=0.0) {
+      // do nothing (1/L)
+     } else
       amrex::Error("polymer_factor invalid");
 
      if ((Carreau_beta[i]!=0.0)&&(visc_coef==0.0))
