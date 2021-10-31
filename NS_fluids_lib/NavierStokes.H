@@ -2231,6 +2231,12 @@ protected:
     static Vector<Real> lame_coefficient; // elastic parameter
     static Vector<int> linear_elastic_model; // elastic parameter
     static Vector<Real> damping_coefficient; // dv/dt = -mu v
+
+    // (1/L)   eps=0.01
+    // viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2
+    // viscoelastic_model=1  Oldroyd B trac(A)<inf lambda(A)>eps/L^2
+    // viscoelastic_model=5  FENE P    trac(A)<L^2 lambda(A)>eps/L^2
+    // viscoelastic_model=6  linearPTT trac(A)<inf lambda(A)>eps/L^2
     static Vector<Real> polymer_factor; // (1/L)
 
     static int adv_dir;
