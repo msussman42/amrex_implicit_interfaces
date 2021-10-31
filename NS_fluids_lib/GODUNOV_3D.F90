@@ -16070,7 +16070,7 @@ stop
             (viscoelastic_model.eq.5).or. & !FENE-P
             (viscoelastic_model.eq.6)) then !linear PTT
 
-         min_eval=VOFTOL
+         min_eval=0.01D0*(polymer_factor**2)
          A_dim=3
          call project_to_positive_definite(Aadvect,A_dim,min_eval)
 
@@ -16178,7 +16178,7 @@ stop
             (viscoelastic_model.eq.1).or. & !OLDROYD-B
             (viscoelastic_model.eq.5).or. & !FENE-P
             (viscoelastic_model.eq.6)) then !linear PTT
-         min_eval=VOFTOL
+         min_eval=0.01D0*(polymer_factor**2)
          A_dim=3
          call project_to_positive_definite(Q,A_dim,min_eval)
         else if (viscoelastic_model.eq.3) then !incremental
@@ -16223,7 +16223,7 @@ stop
             (viscoelastic_model.eq.1).or. & !OLDROYD-B
             (viscoelastic_model.eq.5).or. & !FENE-P
             (viscoelastic_model.eq.6)) then !linear PTT
-         min_eval=VOFTOL
+         min_eval=0.01D0*(polymer_factor**2)
          A_dim=3
          call project_to_positive_definite(Aadvect,A_dim,min_eval)
         else if (viscoelastic_model.eq.3) then ! incremental

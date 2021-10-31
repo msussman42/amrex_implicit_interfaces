@@ -626,6 +626,12 @@ Vector<Real> NavierStokes::concentration; // def=0
 Vector<Real> NavierStokes::etaL; // def=0 (etaL0)
 Vector<Real> NavierStokes::etaS; // def=0
 Vector<Real> NavierStokes::etaP; // def=0 (etaP0)
+
+// (1/L)   eps=0.01
+// viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2
+// viscoelastic_model=1  Oldroyd B trac(A)<inf lambda(A)>eps/L^2
+// viscoelastic_model=5  FENE P    trac(A)<L^2 lambda(A)>eps/L^2
+// viscoelastic_model=6  linearPTT trac(A)<inf lambda(A)>eps/L^2
 Vector<Real> NavierStokes::polymer_factor; // def=0
 
  // 0 - centroid furthest from uncaptured centroid
@@ -4054,8 +4060,38 @@ NavierStokes::read_params ()
 
      if ((elastic_time[i]<0.0)||(elastic_viscosity[i]<0.0))
       amrex::Error("elastic_time/elastic_viscosity invalid read_params");
+
+     // (1/L) eps=0.01
+     // viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2
+     // viscoelastic_model=1  Oldroyd B trac(A)<inf lambda(A)>eps/L^2
+     // viscoelastic_model=5  FENE P    trac(A)<L^2 lambda(A)>eps/L^2
+     // viscoelastic_model=6  linearPTT trac(A)<inf lambda(A)>eps/L^2
      if (polymer_factor[i]>=0.0) {
-      // do nothing (1/L)
+      if ((viscoelastic_model[i]==0)|| //FENE CR
+          (viscoelastic_model[i]==1)|| //Oldroyd B
+          (viscoelastic_model[i]==5)|| //FENE-P
+          (viscoelastic_model[i]==6)) {//linearPTT
+
+       if (elastic_viscosity[i]>0.0) {
+        if (polymer_factor[i]>0.0) {
+         // do nothing
+        } else {
+         std::cout << "need polymer_factor > 0 viscoelastic_model=0,1,5,6\n";
+         std::cout << "lambda(A)>0.01/L^2 \n";
+         amrex::Error("polymer_factor invalid");
+        }
+       } else if (elastic_viscosity[i]==0.0) {
+        // do nothing
+       } else
+        amrex::Error("elastic_viscosity invalid");
+
+      } else if ((viscoelastic_model[i]==2)|| //Q=grad X + grad X^T
+   	         (viscoelastic_model[i]==3)|| //incremental model
+   	         (viscoelastic_model[i]==4)) {//pres-vel coupling
+       // do nothing
+      } else
+       amrex::Error("viscoelastic_model invalid");
+	       
      } else
       amrex::Error("polymer_factor invalid");
 
