@@ -15990,7 +15990,7 @@ stop
         equilibrium_diagonal=zero
         if (trace_A.gt.zero) then
          if (SDIM*(polymer_factor**2).lt.one) then
-          modtime=modtime/(one+(polymer_factor**2)*(trace_A-SDIM))
+          modtime=modtime/(one+(polymer_factor**2)*(trace_A-three))
          else
           print *,"need eps * sdim < 1"
           stop
@@ -23174,7 +23174,9 @@ stop
 
          ! [n dot tau dot n] = - sigma kappa
          ! [n dot tau dot tj] = 0
-     
+    
+         ! the Heaviside function is biased "dx" units into the 
+         ! viscoelastic material. 
          ! declared in: GLOBALUTIL.F90 
         call tensor_Heaviside( &
           dxmin, &

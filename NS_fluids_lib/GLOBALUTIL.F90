@@ -2504,7 +2504,7 @@ contains
       INTEGER_T, intent(out) :: m_out
       INTEGER_T :: i
 
-      if (n.ge.2) then
+      if ((n.ge.2).and.(n.le.3)) then
        ! do nothing
       else
        print *,"n out of range"
@@ -2537,7 +2537,7 @@ contains
       REAL_T, intent(inout) :: evals(n)
       REAL_T, intent(in) :: t
 
-      if (n.ge.2) then
+      if ((n.ge.2).and.(n.le.3)) then
        ! do nothing
       else
        print *,"n out of range"
@@ -2578,10 +2578,10 @@ contains
       INTEGER_T, intent(in) :: k,l,i,j
       REAL_T skl,sij 
 
-      if (n.ge.2) then
+      if ((n.ge.2).and.(n.le.3)) then
        ! do nothing
       else
-       print *,"expecting n>=2"
+       print *,"expecting n=2,3"
        stop
       endif
 
@@ -2613,13 +2613,20 @@ contains
       REAL_T :: max_S
       REAL_T :: sanity_err
       REAL_T :: swap_hold
+      REAL_T :: sum_off_diag
 
-      if (n.ge.2) then
+      if (1.eq.1) then
+       print *,"begin of jacobi eval"
+      endif
+
+      if ((n.ge.2).and.(n.le.3)) then
        ! do nothing
       else
-       print *,"expecting n>=2"
+       print *,"expecting n=2,3"
        stop
       endif
+
+      sum_off_diag=zero
 
       do i=1,n
       do j=1,n
@@ -2627,6 +2634,7 @@ contains
         evecs(i,j)=one
        else if (i.ne.j) then
         evecs(i,j)=zero
+        sum_off_diag=sum_off_diag+abs(S(i,j))
        else
         print *,"i or j corrupt"
         stop
@@ -2653,15 +2661,41 @@ contains
        changed(k)=1
       enddo
 
+      if ((sum_off_diag.le.1.0D-13*max_S).and. &
+          (sum_off_diag.ge.zero)) then
+       state=0
+       sanity_err=zero
+      else if (sum_off_diag.gt.zero) then
+       ! do nothing
+      else
+       print *,"sum_off_diag invalid"
+       stop
+      endif
+
       do while (state.ne.0)
        m=1
        do k=2,n-1
-        if (abs(S(k,ind(k))).gt.abs(S(m,ind(m)))) then
-         m=k
+        if ((ind(k).ge.1).and.(ind(m).ge.1).and. &
+            (ind(k).le.n).and.(ind(m).le.n).and. &
+            (k.ge.1).and.(k.le.n).and.(m.ge.1).and.(m.le.n)) then
+         if (abs(S(k,ind(k))).gt.abs(S(m,ind(m)))) then
+          m=k
+         endif
+        else
+         print *,"k,m,ind(k),ind(m) bad ",k,m,ind(k),ind(m)
+         stop
         endif
        enddo
        k=m
        l=ind(m)
+       if ((l.ge.1).and.(l.le.n)) then
+        ! do nothing
+       else
+        print *,"l invalid ",l
+        print *,"m=",m
+        stop
+       endif
+
        p=S(k,l)
        y=(evals(l)-evals(k))/two
        d=abs(y)+sqrt(p**2+y**2)
@@ -2670,13 +2704,21 @@ contains
         cosrot=d/r
         sinrot=p/r
        else
-        print *,"expecting r>0"
+        print *,"expecting r>0 in fort_jacobi_eigenvalue"
+        print *,"k,l,p,y,d,r ",k,l,p,y,d,r
+        print *,"max_S=",max_S
+        do i=1,n
+        do j=1,n
+         print *,"i,j,S_SAVE(i,j) ",i,j,S_SAVE(i,j)
+        enddo
+        enddo
         stop
        endif
        if (d.gt.zero) then
         t=p**2/d
        else
-        print *,"expecting d>0"
+        print *,"expecting d>0 in fort_jacobi_eigenvalue"
+        print *,"max_S=",max_S
         stop
        endif
        if (y.lt.zero) then
@@ -2729,14 +2771,14 @@ contains
        sanity_err=zero
        do i=1,n
        do j=1,n  
-        if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err*max_S) then
-         sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))/max_S
+        if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
+         sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
         endif
        enddo
        enddo
-       if (sanity_err.gt.1.0D-12) then
+       if (sanity_err.ge.1.0D-12*max_S) then
         ! do nothing
-       else if (sanity_err.le.1.0D-12) then
+       else if (sanity_err.le.1.0D-12*max_S) then
         state=0
        else
         print *,"sanity_err became corrupt"
@@ -2745,8 +2787,13 @@ contains
 
       enddo !do while (state.ne.0)
 
-      if (sanity_err.gt.1.0D-12) then
+      if (sanity_err.ge.1.0D-11*max_S) then
        print *,"sanity_err too large(1)"
+       stop
+      else if (sanity_err.le.1.0D-11*max_S) then
+       ! do nothing
+      else
+       print *,"sanity_err is NaN"
        stop
       endif
 
@@ -2758,10 +2805,12 @@ contains
       enddo
       do i=1,n
       do j=1,n
-       if (abs(S(i,j)-S_SAVE(i,j)).eq.zero) then
+       if (abs(S(i,j)-S_SAVE(i,j)).le.1.0D-12*max_S) then
         ! do nothing
        else
         print *,"S not properly restored"
+        print *,"i,j,n,S(i,j),S_SAVE(i,j),abs(S-S_SAVE): ", &
+          i,j,n,S(i,j),S_SAVE(i,j),abs(S(i,j)-S_SAVE(i,j))
         stop
        endif
       enddo
@@ -2811,20 +2860,24 @@ contains
       sanity_err=zero
       do i=1,n
       do j=1,n  
-       if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err*max_S) then
-        sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))/max_S
+       if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
+        sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
        endif
       enddo
       enddo
 
-      if (sanity_err.gt.1.0D-11) then
+      if (sanity_err.ge.1.0D-11*max_S) then
        print *,"sanity_err too large(2)"
        stop
-      else if (sanity_err.le.1.0D-11) then
+      else if (sanity_err.le.1.0D-11*max_S) then
        ! do nothing
       else
        print *,"sanity_err became corrupt"
        stop
+      endif
+
+      if (1.eq.1) then
+       print *,"end of jacobi eval"
       endif
 
       return

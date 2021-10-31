@@ -1481,10 +1481,6 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 
 // input: XD at MAC locations, levelset function(s), normal(s)
 // output: get_new_data(Umac_Type+dir,slab_step+1)  dir=0..sdim-1
-// for viscosity:
-// the ghost Tau is (I-nn)T^interior (I-nn) + nn T^exterior nn
-//   (what about derivatives normal to the face for viscosity?)
-//   (jump condition aware extrapolation?)
 void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 
  int nmat=num_materials;
