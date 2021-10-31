@@ -2615,7 +2615,7 @@ contains
       REAL_T :: swap_hold
       REAL_T :: sum_off_diag
 
-      if (1.eq.1) then
+      if (1.eq.0) then
        print *,"begin of jacobi eval"
       endif
 
@@ -2876,7 +2876,7 @@ contains
        stop
       endif
 
-      if (1.eq.1) then
+      if (1.eq.0) then
        print *,"end of jacobi eval"
       endif
 
