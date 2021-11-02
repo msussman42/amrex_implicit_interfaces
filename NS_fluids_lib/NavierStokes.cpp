@@ -18157,6 +18157,22 @@ void NavierStokes::volWgtSum(
   // velocity and pressure
  MultiFab* vel=getState(1,0,(AMREX_SPACEDIM+1),upper_slab_time);
 
+ if (NUM_CELL_ELASTIC==num_materials_viscoelastic*NUM_TENSOR_TYPE) {
+  //do nothing
+ } else
+  amrex::Error("NUM_CELL_ELASTIC invalid");
+
+ MultiFab* viscoelastic_tensor=nullptr;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  viscoelastic_tensor=getStateTensor(1,0,NUM_CELL_ELASTIC,
+      upper_slab_time);
+ } else if (num_materials_viscoelastic==0) {
+  viscoelastic_tensor=vel;
+ } else
+  amrex::Error("num_materials_viscoelastic invalid"); 
+
  const Real* dx = geom.CellSize();
 
  int resultsize=result.size();
@@ -18225,6 +18241,7 @@ void NavierStokes::volWgtSum(
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& denfab=(*den_recon)[mfi];
    FArrayBox& velfab=(*vel)[mfi];
+   FArrayBox& viscofab=(*viscoelastic_tensor)[mfi];
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
    if (cellten.nComp()!=ntensor)
@@ -18258,14 +18275,20 @@ void NavierStokes::volWgtSum(
     problo,probhi, 
     xlo,dx,
     cellten.dataPtr(),ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+    lsfab.dataPtr(), //lsmf=getStateDist
+    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     maskSEMfab.dataPtr(),
     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
     mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
     dragfab.dataPtr(),ARLIM(dragfab.loVect()),ARLIM(dragfab.hiVect()),
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+    reconfab.dataPtr(), //localMF[SLOPE_RECON_MF])
+    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    denfab.dataPtr(), //den_recon=getStateDen
+    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+    velfab.dataPtr(), //vel=getState
+    ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+    viscofab.dataPtr(), //viscoelastic_tensor=getStateTensor
+    ARLIM(viscofab.loVect()),ARLIM(viscofab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,
     &bfact,
@@ -18426,6 +18449,15 @@ void NavierStokes::volWgtSum(
  delete lsmf;
  delete den_recon;
  delete vel;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  delete viscoelastic_tensor;
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid"); 
+
 }  // subroutine volWgtSum
 
 //put "ns.show_mem=1" in the inputs file to activate this.

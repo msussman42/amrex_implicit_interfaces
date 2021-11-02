@@ -742,12 +742,11 @@ INTERFACE
   END Function F_Tomas
 END INTERFACE    
   
-  REAL(KIND=8):: dx
   REAL(KIND=8):: a,b,c,d,e,eps
   REAL(KIND=8):: fa,fb,fc,tol1
   INTEGER:: kIter,i,i_min,itest,itestp,ntestpmax
 !  INTEGER:: method   ! =0 bisection; =1 linear; =2 inverse quadratic
-  REAL(KIND=8):: xm,p,q,r,s,dist,min_dist,s1,Ltotal,s1start,s1end,s_start,s_end
+  REAL(KIND=8):: xm,p,q,r,s,dist,min_dist,Ltotal,s1start,s1end,s_start,s_end
   REAL(KIND=8),PARAMETER:: ZERO=0.0, ONE=1.0, TWO=2.0, THREE=3.0, HALF=0.5, twosqrt = sqrt(2.)
 !----------------------------------------------------------------------------
   eps=EPSILON(x0)

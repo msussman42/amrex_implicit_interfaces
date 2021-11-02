@@ -21590,8 +21590,8 @@ contains
       end subroutine multi_get_volumePOINT
 
 
-       ! called from: get_mach_number, FORT_EOS_PRESSURE,
-       !        FORT_PRESSURE_INDICATOR, FORT_ADVECTIVE_PRESSURE
+       ! called from: get_mach_number, fort_eos_pressure,
+       !        FORT_PRESSURE_INDICATOR, fort_advective_pressure
       subroutine get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
       use probcommon_module
       use geometry_intersect_module

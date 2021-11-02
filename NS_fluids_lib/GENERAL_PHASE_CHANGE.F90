@@ -1435,9 +1435,17 @@ return
 end subroutine GENERAL_PHASE_CHANGE_nucleation
 
 
-! This routine is called from FORT_SUMMASS
+! This routine is called from fort_summass which is declared in
+! NAVIERSTOKES_3D.F90
 ! MITSUHIRO: modify this routine to get the Nusselt number
 ! set ns.ncomp_sum_int_user1=4
+! GRID_DATA_IN%cellten expected to have 0 ghost cells.
+! GRID_DATA_IN%lsfab expected to have 2 ghost cells.
+! GRID_DATA_IN%slopes expected to have 2 ghost cells.
+! GRID_DATA_IN%den expected to have 1 ghost cells.
+! GRID_DATA_IN%vel expected to have 1 ghost cells.
+! it is recommended to use "vel" if viscous force 
+! is needed in ghost cells.
 subroutine GENERAL_PHASE_CHANGE_SUMINT(GRID_DATA_IN,increment_out1, &
                 increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types

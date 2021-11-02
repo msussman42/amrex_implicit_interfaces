@@ -1157,622 +1157,734 @@ SUBROUTINE SIMP (N,H,FI,S)
      +H*(5.0*FI(N)+8.0*FI(N-1)-FI(N-2))/12.0
 END SUBROUTINE SIMP
 
+! 1. calculates p(rho^n+1,e_advect) and puts it in 2nd component
+!    of cell_sound.
+!    Equation of state to be used depends on cvof (tessellating vfracs)
+! 2. calculates 1/(rho c^2 dt^2)  and puts it in 1st component of cell_sound.
+!    Equation of state to be used depends on cvof (tessellating vfracs)
+! 3. pressure=0.0 in incompressible regions
+!
+! if project_option==11, mdot=0.0 (on input) (mdot corresponds
+! to localMF[DIFFUSIONRHS_MF])
+!
+! velocity scale: V
+! time scale is : 1/V
+! pressure scale: V^2
+! scale for "cell_sound" is 1
+! called from:
+! NavierStokes::init_advective_pressure
+!
+      subroutine fort_advective_pressure( &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        dt, &
+        maskcov,DIMS(maskcov), &
+        vol,DIMS(vol), &
+        lsnew,DIMS(lsnew), &
+        csnd,DIMS(csnd), &
+        cvof,DIMS(cvof), & ! tessellating
+        den,DIMS(den), &
+        mdot,DIMS(mdot), & ! passed from localMF[DIFFUSIONRHS_MF]
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        nmat,nden, &
+        compressible_dt_factor, &
+        pressure_select_criterion, &
+        project_option) &
+      bind(c,name='fort_advective_pressure')
 
-
-      end module navierstokesf90_module
-
-! ZZ are the x values
-! FF are the z values
-! 2 files:
-!   height_integral.txt
-!   jet_height.txt
-      subroutine FORT_COFLOW( &
-       time,js,je,NN,ZZ,FF,dirx,diry,cut_flag)
-
-      use navierstokesf90_module
+      use global_utility_module
+      use probf90_module
+      use MOF_routines_module
 
       IMPLICIT NONE
 
-      REAL_T time
-      INTEGER_T dirx,diry,cut_flag
-      INTEGER_T js,je,NN
-      REAL_T ZZ(0:NN)
-      REAL_T FF(0:NN)
-      REAL_T FFMASK(0:NN)
-      REAL_T major,minor,wavelength,amplitude,minrad
-      REAL_T masklo,maskhi,HH,SS
-      INTEGER_T j,jleft,jright
-      REAL_T dzz,theta
 
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: project_option
+      REAL_T, intent(in) :: compressible_dt_factor(nmat)
+      INTEGER_T, intent(in) :: pressure_select_criterion
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
 
-      if (NN.ne.je-js+1) then
-       print *,"NN invalid"
-       stop
-      endif
-      if (js.ne.0) then
-       print *,"js should be 0 in coflow (if 3d)"
-       stop
-      endif
-      if (NN.lt.1) then
-       print *,"NN invalid"
-       stop
-      endif
-      if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
-       print *,"dirx invalid"
-       stop
-      endif
-      if ((diry.lt.0).or.(diry.ge.SDIM).or.(diry.eq.dirx)) then
-       print *,"diry invalid"
-       stop
-      endif
-      if ((cut_flag.ne.0).and.(cut_flag.ne.1)) then
-       print *,"cut_flag invalid"
-       stop
-      endif
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      INTEGER_T, intent(in) :: DIMDEC(csnd)
+      INTEGER_T, intent(in) :: DIMDEC(cvof)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: csnd(DIMV(csnd),2) 
+      REAL_T, pointer :: csnd_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: cvof(DIMV(cvof),nmat) 
+      REAL_T, pointer :: cvof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: mdot(DIMV(mdot)) 
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
 
-      if ((cut_flag.eq.1).and.(SDIM.eq.2)) then
-       major=yblob
-       if (abs(major-ZZ(NN)).le.1.0D-10) then
-        call FINDAMPLITUDE_2D(NN,ZZ,FF,major,minor)
-        call FINDMINRAD(NN,ZZ,FF,minrad)
-        wavelength=major
-        amplitude=minor
-        print *,"TIME,wavelength (major)",time,wavelength
-        print *,"TIME,amplitude  (minor)",time,amplitude
-        print *,"TIME,minimum radius ",time,minrad
-        open(unit=19,file="growth.txt",access="append")
-        write(19,*) time, amplitude
-        close(19)
-        open(unit=29,file="minrad.txt",access="append")
-        write(29,*) time, minrad
-        close(29)
-       endif
-      else if ((cut_flag.eq.1).and.(SDIM.eq.3)) then
-       open(unit=19,file="height_integral.txt",access="append")
-       open(unit=20,file="jet_height.txt",access="append")
-       maskhi=one
-       masklo=half*(xblob+maskhi)
+      INTEGER_T i,j,k
+      INTEGER_T im,imcrit,im_weight
+      INTEGER_T ibase
+      REAL_T temperature,internal_energy,soundsqr
+      REAL_T pres(nmat)
+      REAL_T rho(nmat)
+      REAL_T one_over_c(nmat)
+      REAL_T one_over_c2(nmat)
+      REAL_T localLS(nmat)
+      REAL_T vfrac(nmat)
+      REAL_T vfrac_weight(nmat)
+      REAL_T vfrac_solid_sum
+      REAL_T vfrac_fluid_sum
+      INTEGER_T infinite_weight
+      INTEGER_T local_infinite_weight
+      REAL_T div_hold
+      REAL_T csound_hold
+      REAL_T DXMAXLS
+      REAL_T cutoff
+      REAL_T rmaskcov
+      INTEGER_T local_mask
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
+      REAL_T local_volume
 
-       ZZ(NN)=probhix-problox
-       dzz=(probhix-problox)/NN
-
-         ! fill in gaps in coarse regions
-       do j=js+1,je
-        if (ZZ(j).eq.zero) then  ! value not initialized in summass
-         ZZ(j)=j*dzz
-         jleft=j-1
-         jright=j+1
-         do while (ZZ(jright).eq.zero)
-          jright=jright+1
-         enddo  
-         theta=one/(jright-jleft)
-         FF(j)=FF(jleft)*(one-theta)+theta*FF(jright)
-        endif
-       enddo
-
-       do j=js,je+1 
-        if (ZZ(j).lt.masklo) then
-         FFMASK(j)=zero
-        else if (ZZ(j).gt.maskhi) then
-         FFMASK(j)=zero
-        else 
-         FFMASK(j)=FF(j)
-        endif
-       enddo
-       HH=ZZ(NN)-ZZ(0)
-       call SIMP(NN,HH,FFMASK,SS)
-       if ((SS.lt.zero).or.(HH.le.zero)) then
-        print *,"SS or HH invalid"
-        print *,"SS= ",SS
-        print *,"HH= ",HH
-        print *,"NN= ",NN
-        do j=js,je+1
-         print *,"j,ZZ ",j,ZZ(j)
-        enddo
-        stop
-       endif
-       SS=SS/HH
-       write(19,*) time,SS 
-       print *,"TIME,AVERAGE HEIGHT ",time,SS
-       do j=js,je+1 
-        write(20,*) ZZ(j),FF(j)
-       enddo
-       write(20,*) ' '
-
-       close(19) 
-       close(20) 
-      else if (cut_flag.eq.0) then
+      if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"cut_flag invalid"
+       print *,"bfact invalid164"
+       stop
+      endif
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid advective pressure"
+       stop
+      endif
+      if (num_state_base.eq.2) then
+       ! do nothing
+      else
+       print *,"num_state_base invalid"
        stop
       endif
 
-
-      return
-      end subroutine FORT_COFLOW
-
-      subroutine FORT_IO_COMPARE( &
-       nmat, &
-       nsteps, &
-       do_input, &
-       visual_compare, &
-       time, &
-       fabin,DIMS(fabin), &
-       fabout,DIMS(fabout), &
-       vislo,vishi, &
-       visual_ncomp)
-      use probcommon_module
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T nmat
-      INTEGER_T nsteps
-      INTEGER_T do_input
-      INTEGER_T visual_compare
-      REAL_T time
-      INTEGER_T visual_ncomp
-      INTEGER_T vislo(SDIM),vishi(SDIM) 
-      INTEGER_T visual_ncell(SDIM)
-      REAL_T visual_dx(SDIM)
-      INTEGER_T gridlo(3),gridhi(3) 
-      INTEGER_T DIMDEC(fabin)
-      INTEGER_T DIMDEC(fabout)
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      REAL_T fabout(DIMV(fabout),visual_ncomp) 
-      REAL_T fabin(DIMV(fabin),visual_ncomp)
-      REAL_T problo(SDIM),probhi(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T im
-      INTEGER_T dir
-      INTEGER_T n,n_data
-      INTEGER_T strandid
-      INTEGER_T gridsum(nmat)
-      INTEGER_T LSgridsum(nmat)
-      INTEGER_T gridsum_total
-      REAL_T xtest(SDIM)
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      REAL_T local_data(visual_ncomp+1) 
-      REAL_T local_data_in(visual_ncomp+1)
-      REAL_T local_data_out(visual_ncomp+1)
-      REAL_T L1norm_local(visual_ncomp+1)
-      REAL_T L2norm_local(visual_ncomp+1)
-      INTEGER_T icrit(nmat*(visual_ncomp+1))
-      INTEGER_T jcrit(nmat*(visual_ncomp+1))
-      INTEGER_T kcrit(nmat*(visual_ncomp+1))
-      REAL_T L1norm(nmat*(visual_ncomp+1))
-      REAL_T L2norm(nmat*(visual_ncomp+1))
-      REAL_T Linfnorm(nmat*(visual_ncomp+1))
-      REAL_T LSnorm(nmat)
-      REAL_T LS_in,LS_out
-      INTEGER_T LS_base,state_ncomp,ebase
-      character*2 im_str
-      character*6 stepstr
-      character*14 compfilename
-      character*17 uniformfilename
-      character*255 techeader_str1
-      character*255 techeader_str2
-      character*255 techeader_str3
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat.ne.num_materials"
-       stop
-      endif
-
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
-       print *,"visual_ncomp invalid" 
-       stop
-      endif
-
-      if (time.lt.zero) then
-       print *,"time invalid"
-       stop
-      endif
-      if (nsteps.lt.0) then
-       print *,"nsteps invalid"
-       stop
-      endif
-
-      problo(1)=problox
-      problo(2)=probloy
-
-      probhi(1)=probhix
-      probhi(2)=probhiy
-
-      if (SDIM.eq.3) then
-       problo(SDIM)=probloz
-       probhi(SDIM)=probhiz
-      endif
-
-      gridlo(3)=0
-      gridhi(3)=0
-
-      do dir=1,SDIM
-       if (vislo(dir).ne.0) then
-        print *,"vislo(dir).ne.0"
-        stop
-       endif
-       gridlo(dir)=vislo(dir)
-       gridhi(dir)=vishi(dir)+1
-
-       visual_ncell(dir)=vishi(dir)-vislo(dir)+1
-       if (visual_ncell(dir).ge.1) then
-        visual_dx(dir)=(probhi(dir)-problo(dir))/visual_ncell(dir)
-        if (visual_dx(dir).gt.zero) then
-         ! do nothing
-        else
-         print *,"visual_dx invalid"
-         stop
-        endif
-       else
-        print *,"visual_ncell invalid"
-        stop
-       endif
-      enddo ! dir=1..sdim
-
-      call checkbound(vislo,vishi,DIMS(fabout),0,0,411)
-      call checkbound(vislo,vishi,DIMS(fabout),0,1,411)
-      call checkbound(vislo,vishi,DIMS(fabout),0,SDIM-1,411)
-
-      call checkbound(vislo,vishi,DIMS(fabin),0,0,411)
-      call checkbound(vislo,vishi,DIMS(fabin),0,1,411)
-      call checkbound(vislo,vishi,DIMS(fabin),0,SDIM-1,411)
-
-      if (do_input.eq.1) then
-
-       if (visual_compare.eq.1) then
-
-        write(compfilename,'(A14)') 'COARSEDATA.tec'
-        print *,"compfilename ",compfilename
-        open(unit=11,file=compfilename)
-        read(11,*) techeader_str1  ! title
-        read(11,*) techeader_str2  ! variables
-        read(11,*) techeader_str3  ! zone map
-
-        do k=gridlo(3),gridhi(3)
-        do j=gridlo(2),gridhi(2)
-        do i=gridlo(1),gridhi(1)
-         dir=1
-         xtest(dir)=problo(dir)+i*visual_dx(dir)
-         dir=2
-         xtest(dir)=problo(dir)+j*visual_dx(dir)
-         if (SDIM.eq.3) then
-          dir=SDIM
-          xtest(dir)=problo(dir)+k*visual_dx(dir)
-         endif
-         do n=1,visual_ncomp
-          if ((n.ge.1).and.(n.lt.visual_ncomp)) then
-!          read(11,'(D25.16)',ADVANCE="NO") local_data(n)
-           read(11,'(E25.16)',ADVANCE="NO") local_data(n)
-          else if (n.eq.visual_ncomp) then
-!          read(11,'(D25.16)') local_data(n)
-           read(11,'(E25.16)') local_data(n)
-          else
-           print *,"n invalid"
-           stop
-          endif
-         enddo ! n=1..visual_ncomp
-
-         do dir=1,SDIM
-          if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
-           print *,"local_data(dir) invalid"
-           stop
-          endif
-         enddo
-         do n=1,visual_ncomp
-          if (abs(local_data(n)).le.1.0D+20) then
-           fabin(D_DECL(i,j,k),n)=local_data(n)
-          else
-           print *,"local_data(n) overflow"
-           stop
-          endif
-         enddo ! n=1..visual_ncomp
-        enddo !i
-        enddo !j
-        enddo !k
-
-        close(11)
-       else
-        print *,"visual_compare invalid"
-        stop
-       endif
-
-      else if (do_input.eq.0) then
-
-       write(stepstr,'(I6)') nsteps
-       do i=1,6
-        if (stepstr(i:i).eq.' ') then
-         stepstr(i:i)='0'
-        endif
-       enddo
-       write(uniformfilename,'(A7,A6,A4)') 'uniform',stepstr,'.tec'
-       print *,"uniformfilename ",uniformfilename
-       open(unit=11,file=uniformfilename)
-
-       strandid=1
-
-       write(11,*) '"uniform data"'
-
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
-       if (SDIM.eq.2) then
-         !61-11+1=51
-        write(11,'(A51)',ADVANCE="NO")  &
-         'VARIABLES="x_pos","y_pos","x_velocity","y_velocity"'
-       else if (SDIM.eq.3) then
-         !82-11+1=72
-        write(11,'(A72)',ADVANCE="NO") &
-         'VARIABLES="x_pos","y_pos","z_pos","x_velocity","y_velocity","z_velocity"'
-       else
-        print *,"dimension bust"
-        stop
-       endif
-       write(11,'(A20)',ADVANCE="NO") ',"PRES","DEN","TEMP"'
-
-       do im=1,num_species_var
-        write(im_str,'(I2)') im
-        do i=1,2
-         if (im_str(i:i).eq.' ') then
-          im_str(i:i)='0'
-         endif
-        enddo
-        write(11,'(A6)',ADVANCE="NO") ',"SPEC'
-        write(11,'(A2)',ADVANCE="NO") im_str
-        write(11,'(A1)',ADVANCE="NO") '"'
-       enddo ! im=1..num_species_var
-
-       write(11,'(A9)',ADVANCE="NO") ',"MGVORT"'
-
-       do im=1,nmat
-        write(im_str,'(I2)') im
-        do i=1,2
-         if (im_str(i:i).eq.' ') then
-          im_str(i:i)='0'
-         endif
-        enddo
-        write(11,'(A4)',ADVANCE="NO") ',"LS'
-        write(11,'(A2)',ADVANCE="NO") im_str
-        write(11,'(A1)',ADVANCE="NO") '"'
-        if (im.eq.nmat) then
-         write(11,*) ' '
-        endif
-       enddo ! im=1..nmat
-
-       if (SDIM.eq.2) then
-        write(11,*)'zone i=',visual_ncell(1)+1, &
-                   ' j=',visual_ncell(SDIM)+1, &
-                   ' f=point ', &
-                   ' SOLUTIONTIME=',time, &
-                   ' STRANDID=',strandid
-       else if (SDIM.eq.3) then
-        write(11,*)'zone i=',visual_ncell(1)+1, &
-                   ' j=',visual_ncell(2)+1, &
-                   ' k=',visual_ncell(SDIM)+1, &
-                   ' f=point ', &
-                   ' SOLUTIONTIME=',time, &
-                   ' STRANDID=',strandid
-       else
-        print *,"dimension bust"
-        stop
-       endif
-
-       do k=gridlo(3),gridhi(3)
-       do j=gridlo(2),gridhi(2)
-       do i=gridlo(1),gridhi(1)
-
-        dir=1
-        xtest(dir)=problo(dir)+i*visual_dx(dir)
-        dir=2
-        xtest(dir)=problo(dir)+j*visual_dx(dir)
-        if (SDIM.eq.3) then
-         dir=SDIM
-         xtest(dir)=problo(dir)+k*visual_dx(dir)
-        endif
-        do n=1,visual_ncomp
-         local_data(n)=fabout(D_DECL(i,j,k),n)
-        enddo
-        do dir=1,SDIM
-         if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
-          print *,"local_data(dir) invalid"
-          stop
-         endif
-        enddo
-        do n=1,visual_ncomp
-         if (abs(local_data(n)).le.1.0D+20) then
-          if ((n.ge.1).and.(n.lt.visual_ncomp)) then
-!          write(11,'(D25.16)',ADVANCE="NO") local_data(n)
-           write(11,'(E25.16)',ADVANCE="NO") local_data(n)
-          else if (n.eq.visual_ncomp) then
-!          write(11,'(D25.16)') local_data(n)
-           write(11,'(E25.16)') local_data(n)
-          else
-           print *,"n invalid"
-           stop
-          endif
-         else
-          print *,"local_data(n) overflow"
-          stop
-         endif
-        enddo ! n=1..visual_ncomp
- 
-       enddo ! i
-       enddo ! j
-       enddo ! k
-
-       close(11)
-
-       if (visual_compare.eq.1) then
-
-        LS_base=visual_ncomp-nmat
-        state_ncomp=visual_ncomp-nmat+1
-
-        do n=1,nmat*(visual_ncomp+1)
-         L1norm(n)=zero
-         L2norm(n)=zero
-         Linfnorm(n)=zero
-         icrit(n)=-1
-         jcrit(n)=-1
-         kcrit(n)=-1
-        enddo ! n=1..nmat*(visual_ncomp+1)
-
-        do im=1,nmat
-         gridsum(im)=0
-         LSgridsum(im)=0
-         LSnorm(im)=zero
-        enddo
-
-        gridsum_total=0
-
-        do k=gridlo(3),gridhi(3)
-        do j=gridlo(2),gridhi(2)
-        do i=gridlo(1),gridhi(1)
-          ! x,u,p,den,T,Y1..Yn,mag vort,LS
-         do n=1,visual_ncomp
-          local_data_in(n)=fabin(D_DECL(i,j,k),n)
-          local_data_out(n)=fabout(D_DECL(i,j,k),n)
-          if ((abs(local_data_in(n)).le.1.0D+20).and. &
-              (abs(local_data_out(n)).le.1.0D+20)) then
-
-           local_data(n)=local_data_in(n)-local_data_out(n)
-           
-           if (abs(local_data(n)).le.1.0D+20) then
-            L1norm_local(n)=abs(local_data(n))
-            L2norm_local(n)=abs(local_data(n))**2
-           else
-            print *,"abs(local_data(n)) overflow"
-            stop
-           endif
-          else
-           print *,"local_data_in or local_data_out corrupt"
-           stop
-          endif 
-         enddo ! n=1..visual_ncomp
-
-          ! x,u,p,den,T,Y1..Yn,mag vort,LS
-         n=visual_ncomp+1
-         local_data(n)=zero
-         do dir=1,SDIM
-          local_data(n)=local_data(n)+ &
-           abs(local_data(dir+SDIM))**2
-         enddo
-         local_data(n)=sqrt(local_data(n))
-
-         if (abs(local_data(n)).le.1.0D+20) then
-          L1norm_local(n)=abs(local_data(n))
-          L2norm_local(n)=abs(local_data(n))**2
-         else
-          print *,"abs(local_data(n)) overflow"
-          stop
-         endif
-
-         if ((LS_base.eq.visual_ncomp-nmat).and. &
-             (state_ncomp.eq.visual_ncomp-nmat+1)) then
-          do im=1,nmat
-           LS_in=local_data_in(LS_base+im)
-           LS_out=local_data_out(LS_base+im)
-           if ((LS_in.gt.zero).and.(LS_out.gt.zero)) then
-            ebase=(im-1)*state_ncomp
-            do n=1,state_ncomp
-             if (n.lt.state_ncomp) then
-              n_data=n
-             else
-              n_data=visual_ncomp+1
-             endif
-             L1norm(ebase+n)=L1norm(ebase+n)+L1norm_local(n_data)
-             L2norm(ebase+n)=L2norm(ebase+n)+L2norm_local(n_data)
-             if (abs(local_data(n_data)).gt.Linfnorm(ebase+n)) then
-              Linfnorm(ebase+n)=abs(local_data(n_data))
-              icrit(ebase+n)=i
-              jcrit(ebase+n)=j
-              kcrit(ebase+n)=k
-             endif
-            enddo ! n=1..state_ncomp
-            gridsum(im)=gridsum(im)+1
-            gridsum_total=gridsum_total+1
-           else if ((LS_in.le.zero).or.(LS_out.le.zero)) then
-            ! do nothing
-           else
-            print *,"LS_in or LS_out invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-          do im=1,nmat
-           LS_in=local_data_in(LS_base+im)
-           LS_out=local_data_out(LS_base+im)
-           if ((abs(LS_in).le.visual_dx(1)).or. &
-               (abs(LS_out).le.visual_dx(1))) then
-            LSnorm(im)=LSnorm(im)+abs(local_data(LS_base+im))
-            LSgridsum(im)=LSgridsum(im)+1
-           else if ((abs(LS_in).gt.visual_dx(1)).and. &
-                    (abs(LS_out).gt.visual_dx(1))) then
-            ! do nothing
-           else
-            print *,"LS_in or LS_out invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-         else
-          print *,"LS_base or state_ncomp became corrupt"
-          stop
-         endif
-          
-        enddo ! i
-        enddo ! j
-        enddo ! k
-
-        if (gridsum_total.ge.1) then
-         if ((LS_base.eq.visual_ncomp-nmat).and. &
-             (state_ncomp.eq.visual_ncomp-nmat+1)) then
-          do im=1,nmat
-           if (gridsum(im).gt.0) then
-            ebase=(im-1)*state_ncomp
-            do n=1,state_ncomp
-             L1norm(ebase+n)=L1norm(ebase+n)/gridsum(im)
-             L2norm(ebase+n)=sqrt(L2norm(ebase+n)/gridsum(im))
-             print *,"im,n,cells,L1,L2,Linf,ic,jc,kc ", &
-              im,n,gridsum(im), &
-              L1norm(ebase+n),L2norm(ebase+n),Linfnorm(ebase+n), &
-              icrit(ebase+n),jcrit(ebase+n),kcrit(ebase+n)
-            enddo ! n=1..state_ncomp
-           else if (gridsum(im).eq.0) then
-            ! do nothing
-           else
-            print *,"gridsum invalid"
-            stop
-           endif
-           if (LSgridsum(im).gt.0) then
-            LSnorm(im)=LSnorm(im)/LSgridsum(im)
-            print *,"im,cells,LSnorm ",im,LSgridsum(im),LSnorm(im)
-           else if (LSgridsum(im).eq.0) then
-            ! do nothing
-           else
-            print *,"LSgridsum invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-         else
-          print *,"LS_base or state_ncomp became corrupt"
-          stop
-         endif
-        else
-         print *,"gridsum_total invalid"
-         stop
-        endif
-            
-       else if (visual_compare.eq.0) then
+      do im=1,nmat
+       if ((compressible_dt_factor(im).ge.one).and. &
+           (compressible_dt_factor(im).le.1.0D+20)) then
         ! do nothing
        else
-        print *,"visual_compare invalid"
+        print *,"compressible_dt_factor invalid"
+        stop
+       endif
+      enddo
+
+      if (nden.eq.nmat*num_state_material) then
+       ! do nothing
+      else
+       print *,"nden invalid"
+       stop
+      endif
+      if ((pressure_select_criterion.ge.0).and. &
+          (pressure_select_criterion.le.2)) then
+       ! do nothing
+      else
+       print *,"pressure_select_criterion invalid"
+       stop
+      endif
+      if ((project_option.eq.0).or. &
+          (project_option.eq.11)) then !FSI_material_exists last project
+       ! do nothing
+      else
+       print *,"project_option invalid advective pressure"
+       stop
+      endif
+      if ((level.ge.0).and.(level.le.finest_level)) then
+       ! do nothing
+      else
+       print *,"level invalid"
+       stop
+      endif
+
+      maskcov_ptr=>maskcov
+      vol_ptr=>vol
+      lsnew_ptr=>lsnew
+      csnd_ptr=>csnd
+      cvof_ptr=>cvof
+      den_ptr=>den
+      mdot_ptr=>mdot
+
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,csnd_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,cvof_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
+
+      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      cutoff=two*DXMAXLS
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+
+       ! csound (cell_sound) initialized.
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       local_volume=vol(D_DECL(i,j,k))
+       if (local_volume.gt.zero) then
+        ! do nothing
+       else
+        print *,"local_volume must be positive"
         stop
        endif
 
-      else
-       print *,"do_input invalid"
+       rmaskcov=maskcov(D_DECL(i,j,k))
+       local_mask=NINT(rmaskcov)
+       if (((rmaskcov.eq.one).and.(local_mask.eq.1)).or. &
+           ((rmaskcov.eq.zero).and.(local_mask.eq.0))) then
+
+        imcrit=0
+        vfrac_solid_sum=zero
+        vfrac_fluid_sum=zero
+
+        do im=1,nmat
+         vfrac(im)=cvof(D_DECL(i,j,k),im)
+         if ((vfrac(im).ge.-VOFTOL).and.(vfrac(im).le.one+VOFTOL)) then
+          ! do nothing
+         else
+          print *,"vfrac invalid"
+          stop
+         endif
+         if (vfrac(im).lt.VOFTOL) then
+          vfrac(im)=zero
+         endif
+         if (is_rigid(nmat,im).eq.1) then
+          vfrac_solid_sum=vfrac_solid_sum+vfrac(im)
+         else if (is_rigid(nmat,im).eq.0) then
+          vfrac_fluid_sum=vfrac_fluid_sum+vfrac(im)
+         else
+          print *,"is_rigid(nmat,im) invalid"
+          stop
+         endif
+         if (imcrit.eq.0) then
+          imcrit=im
+         else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
+          if (vfrac(im).gt.vfrac(imcrit)) then
+           imcrit=im
+          endif
+         else
+          print *,"imcrit invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+
+        if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
+         ! do nothing
+        else
+         print *,"imcrit invalid"
+         stop
+        endif
+
+        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.1.0E-4) then
+         ! do nothing
+        else
+         print *,"vfrac_solid_sum+vfrac_fluid_sum invalid"
+         stop
+        endif
+
+        if ((vfrac_solid_sum.ge.vfrac_fluid_sum).or. &
+            (is_rigid(nmat,imcrit).eq.1)) then
+         imcrit=0
+        endif
+
+
+        if ((project_option.eq.0).or. &
+            (project_option.eq.11)) then !FSI_material_exists last project
+
+         if (project_option.eq.0) then
+          div_hold=zero
+         else if (project_option.eq.11) then !FSI_material_exists 2nd project
+           ! coeff_avg,p_avg
+           ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+          div_hold=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
+                                           ! of DIV_Type)
+           ! fort_advective_pressure called from 
+           !   NavierStokes::init_advective_pressure
+           ! init_advective_pressure called from
+           !   NavierStokes::multiphase_project
+           ! mdot passed from localMF[DIFFUSIONRHS_MF]
+           ! project_option==11 => FSI_material_exists (2nd project)
+          if (mdot(D_DECL(i,j,k)).eq.zero) then
+           ! do nothing
+          else
+           print *,"mdot(D_DECL(i,j,k)).ne.zero in advective_pressure"
+           print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k))
+           print *,"level,finest_level ",level,finest_level
+           print *,"div_hold ",div_hold
+           print *,"project_option ",project_option
+           print *,"dt=",dt
+           print *,"nmat,nden,bfact ",nmat,nden,bfact
+           print *,"pressure_select_criterion ",pressure_select_criterion
+           do im=1,nmat
+            localLS(im)=lsnew(D_DECL(i,j,k),im)
+            print *,"im,localLS(im) ",im,localLS(im)
+            print *,"im,vfrac(im) ",im,vfrac(im)
+            print *,"im, compressible_dt_factor ", &
+                    im,compressible_dt_factor(im)
+           enddo
+           print *,"imcrit ",imcrit
+           print *,"vfrac_solid_sum ",vfrac_solid_sum
+           print *,"vfrac_fluid_sum ",vfrac_fluid_sum
+           stop
+          endif
+         else
+          print *,"project_option invalid"
+          stop
+         endif
+
+         do im=1,nmat
+          localLS(im)=lsnew(D_DECL(i,j,k),im)
+         enddo
+
+         do im=1,nmat
+
+          vfrac_weight(im)=vfrac(im)
+
+          ibase=(im-1)*num_state_material
+
+          if (is_rigid(nmat,im).eq.0) then
+
+           rho(im)=den(D_DECL(i,j,k),ibase+1)  ! regular density
+   
+           if (rho(im).gt.zero) then
+            ! do nothing
+           else
+            print *,"cannot have non-pos density"
+            stop
+           endif
+
+            ! temperature after diffusion
+           temperature=den(D_DECL(i,j,k),ibase+2) 
+
+           call init_massfrac_parm(rho(im),massfrac_parm,im)
+           do ispec=1,num_species_var
+            massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
+           enddo
+          
+            ! returns e/scale 
+           call INTERNAL_material(rho(im),massfrac_parm, &
+             temperature, &
+             internal_energy,fort_material_type(im),im)
+          
+            ! compressible material ? 
+           if ((fort_material_type(im).ge.1).and. &
+               (fort_material_type(im).le.MAX_NUM_EOS).and. &
+               (vfrac(im).gt.zero)) then
+
+              ! returns p(e*scale)/scale
+            call EOS_material(rho(im),massfrac_parm, &
+               internal_energy, &
+               pres(im),fort_material_type(im),im)
+              ! returns c^2(e*scale)/scale
+            call SOUNDSQR_material(rho(im),massfrac_parm, &
+               internal_energy, &
+               soundsqr,fort_material_type(im),im)
+            if (soundsqr.gt.zero) then
+             ! do nothing
+            else
+             print *,"cannot have non-positive sound speed"
+             print *,"im= ",im
+             print *,"mattype= ",fort_material_type(im)
+             print *,"sound speed sqr ",soundsqr
+             print *,"vfrac= ",vfrac(im)
+             stop
+            endif
+
+            one_over_c2(im)=one/soundsqr
+            one_over_c(im)=sqrt(one_over_c2(im))
+
+           else if ((fort_material_type(im).eq.0).or. &
+                    (vfrac(im).eq.zero)) then
+            pres(im)=zero
+            one_over_c2(im)=zero
+            one_over_c(im)=zero
+           else
+            print *,"material type or vfrac invalid"
+            stop
+           endif
+   
+          else if (is_rigid(nmat,im).eq.1) then
+
+           rho(im)=fort_denconst(im)
+           if (rho(im).gt.zero) then
+            ! do nothing
+           else
+            print *,"rho(im)=0 ",im,rho(im)
+            stop
+           endif
+           pres(im)=zero
+           one_over_c(im)=zero
+           one_over_c2(im)=zero
+
+          else
+           print *,"is_rigid bust"
+           stop
+          endif
+
+         enddo ! im=1,nmat
+
+         infinite_weight=0
+         im_weight=0
+
+         if (imcrit.eq.0) then ! rigid material(s) dominate
+          im_weight=imcrit
+          infinite_weight=1
+
+          ! fluid material dominates
+         else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
+  
+          if (is_rigid(nmat,imcrit).eq.0) then
+
+           do im=1,nmat
+
+            local_infinite_weight=0
+
+            if (is_rigid(nmat,im).eq.1) then
+             ! do nothing
+            else if (is_rigid(nmat,im).eq.0) then
+             if ((vfrac(im).gt.zero).and. &
+                 (vfrac(im).le.one+VOFTOL)) then
+              if (pressure_select_criterion.eq.0) then ! vol. frac.
+               ! do nothing (vfrac_weight=vfrac)
+              else if (pressure_select_criterion.eq.1) then ! mass frac. 
+               vfrac_weight(im)=vfrac_weight(im)*rho(im)
+              else if (pressure_select_criterion.eq.2) then ! impedance weight
+               if (one_over_c(im).eq.zero) then
+                infinite_weight=1
+                local_infinite_weight=1
+               else
+                vfrac_weight(im)=vfrac_weight(im)*rho(im)/one_over_c(im)
+               endif
+              else
+               print *,"pressure_select_criterion invalid"
+               stop
+              endif
+             else if (vfrac(im).eq.zero) then
+              ! do nothing (vfrac_weight is 0)
+             else 
+              print *,"vfrac invalid"
+              stop
+             endif
+             if (im_weight.eq.0) then
+              im_weight=im
+             else if ((im_weight.ge.1).and.(im_weight.le.nmat)) then
+              if ((vfrac_weight(im).gt.vfrac_weight(im_weight)).or. &
+                  (local_infinite_weight.eq.1)) then
+               im_weight=im
+              endif
+             else
+              print *,"im_weight invalid"
+              stop
+             endif
+            else
+             print *,"is_rigid(nmat,im) invalid"
+             stop
+            endif
+
+           enddo ! im=1,nmat
+
+          else
+           print *,"is_rigid(nmat,imcrit) invalid"
+           stop
+          endif
+
+         else
+          print *,"imcrit invalid"
+          stop
+         endif
+       
+         if (imcrit.eq.0) then ! is_rigid material(s) dominate.
+
+          csnd(D_DECL(i,j,k),1)=zero  ! coeff
+          csnd(D_DECL(i,j,k),2)=zero  ! padvect
+
+          if (im_weight.eq.0) then
+           ! do nothing
+          else
+           print *,"expecting im_weight==0"
+           stop
+          endif
+
+         else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
+
+          if (is_rigid(nmat,imcrit).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,imcrit) invalid"
+           stop
+          endif
+
+          if (is_rigid(nmat,im_weight).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid(nmat,im_weight).ne.0"
+           stop
+          endif
+
+          if (infinite_weight.eq.1) then ! sound speed=infinity
+
+           csnd(D_DECL(i,j,k),1)=zero  ! coeff
+           csnd(D_DECL(i,j,k),2)=zero  ! padvect
+           if (project_option.eq.11) then ! FSI_material_exists (last project)
+            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+            ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
+            mdot(D_DECL(i,j,k))=local_volume*div_hold/dt
+           else if (project_option.eq.0) then
+            ! do nothing
+           else
+            print *,"project_option invalid"
+            stop
+           endif
+
+          else if (infinite_weight.eq.0) then
+
+           if ((im_weight.lt.1).or.(im_weight.gt.nmat)) then
+            print *,"im_weight invalid"
+            stop
+           endif
+           if (vfrac_weight(im_weight).gt.zero) then
+            ! do nothing
+           else
+            print *,"vfrac_weight(im_weight) invalid"
+            stop
+           endif
+
+            ! im_weight is a compressible material
+           if ((fort_material_type(im_weight).ge.1).and. &
+               (fort_material_type(im_weight).le.MAX_NUM_EOS)) then
+
+            if (rho(im_weight).gt.zero) then
+             ! do nothing
+            else
+             print *,"rho(im_weight) invalid"
+             stop
+            endif
+
+             ! padvect (zero for the incompressible materials)
+            csnd(D_DECL(i,j,k),2)=pres(im_weight)
+
+            csound_hold=one_over_c2(im_weight)/ &
+              (compressible_dt_factor(im_weight)*rho(im_weight)*dt*dt)
+
+             ! coeff
+            if (csound_hold.ge.zero) then
+             csnd(D_DECL(i,j,k),1)=csound_hold
+            else
+             print *,"csound_hold invalid"
+             stop
+            endif
+
+            if (project_option.eq.11) then !FSI_material_exists (2nd project)
+
+             if (csound_hold.eq.zero) then ! incomp
+              csnd(D_DECL(i,j,k),2)=zero ! padvect
+               ! localMF[DIFFUSIONRHS_MF]
+               ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+              mdot(D_DECL(i,j,k))=local_volume*div_hold/dt 
+             else if (csound_hold.gt.zero) then
+              ! "div" = -(pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
+              ! (1/(rho c^2 dt^2))p=div/dt
+              ! csound_hold p = div/dt
+              ! p=div/(dt csound_hold)
+              ! p = p * vol in MacProj.cpp
+              csnd(D_DECL(i,j,k),2)=div_hold/(csound_hold*dt)
+             else
+              print *,"csound_hold invalid"
+              stop
+             endif
+
+            else if (project_option.eq.0) then
+             ! do nothing
+            else
+             print *,"project_option invalid"
+             stop
+            endif
+
+            ! im_weight is an incompressible material
+           else if (fort_material_type(im_weight).eq.0) then
+
+            csnd(D_DECL(i,j,k),1)=zero ! coeff
+            csnd(D_DECL(i,j,k),2)=zero ! padvect
+            if (project_option.eq.11) then !FSI_material_exists last project
+              ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+              ! localMF[DIFFUSIONRHS_MF]
+             mdot(D_DECL(i,j,k))=div_hold*local_volume/dt 
+            else if (project_option.eq.0) then
+             ! do nothing
+            else
+             print *,"project_option invalid"
+             stop
+            endif
+
+           else
+            print *,"material type invalid"
+            stop
+           endif
+          else
+           print *,"infinite_weight invalid"
+           stop
+          endif
+
+         else
+          print *,"imcrit invalid"
+          stop
+         endif
+
+        else
+         print *,"project_option invalid advective pressure 2"
+         stop
+        endif
+
+       else
+        print *,"rmaskcov or local_mask invalid"
+        print *,"rmaskcov=",rmaskcov
+        print *,"local_mask=",local_mask
+        stop
+       endif
+         
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      return
+      end subroutine fort_advective_pressure
+
+       ! called from NavierStokes::ADVECT_DIV which is declared in MacProj.cpp
+      subroutine fort_update_div( &
+        xlo,dx, &
+        dt, &
+        vol,DIMS(vol), &
+        csound,DIMS(csound), &
+        mdot,DIMS(mdot), &
+        pnew,DIMS(pnew), &
+        divnew,DIMS(divnew), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        nmat) &
+      bind(c,name='fort_update_div')
+
+      use global_utility_module
+      use probf90_module
+
+      IMPLICIT NONE
+
+
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(csound)
+      INTEGER_T, intent(in) :: DIMDEC(mdot)
+      INTEGER_T, intent(in) :: DIMDEC(pnew)
+      INTEGER_T, intent(in) :: DIMDEC(divnew)
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: csound(DIMV(csound),2) 
+      REAL_T, pointer :: csound_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: mdot(DIMV(mdot)) 
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: pnew(DIMV(pnew)) 
+      REAL_T, pointer :: pnew_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: divnew(DIMV(divnew)) 
+      REAL_T, pointer :: divnew_ptr(D_DECL(:,:,:))
+
+      INTEGER_T i,j,k
+      REAL_T coeff_hold,compress_term,mdot_term
+      INTEGER_T sound_comp
+      REAL_T local_volume
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid165"
        stop
       endif
-     
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid advective pressure"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
+      csound_ptr=>csound
+      call checkbound_array(fablo,fabhi,csound_ptr,0,-1,44)
+      mdot_ptr=>mdot
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
+      pnew_ptr=>pnew
+      call checkbound_array1(fablo,fabhi,pnew_ptr,1,-1,44)
+      divnew_ptr=>divnew
+      call checkbound_array1(fablo,fabhi,divnew_ptr,1,-1,44)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       local_volume=vol(D_DECL(i,j,k))
+       if (local_volume.gt.zero) then
+        ! do nothing
+       else
+        print *,"local_volume must be positive"
+        stop
+       endif
+
+       sound_comp=1
+       coeff_hold=csound(D_DECL(i,j,k),sound_comp) ! 1/(rho c^2 dt^2)
+
+       if (coeff_hold.gt.zero) then ! compressible
+        compress_term=-dt*(pnew(D_DECL(i,j,k))- &
+          csound(D_DECL(i,j,k),sound_comp+1))*coeff_hold
+       else if (coeff_hold.eq.zero) then ! incompressible
+        compress_term=zero
+       else
+        print *,"coeff_hold invalid"
+        stop
+       endif
+
+       mdot_term=mdot(D_DECL(i,j,k))
+
+       divnew(D_DECL(i,j,k))=compress_term+mdot_term*dt/local_volume
+         
+      enddo
+      enddo
+      enddo  ! i,j,k
+
       return
-      end subroutine FORT_IO_COMPARE
+      end subroutine fort_update_div
 
        ! called from: NavierStokes2.cpp
       subroutine fort_cellgrid( &
@@ -3527,76 +3639,6 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_memstatus
 
-      subroutine FORT_OUTPUTSLICE( &
-       time,nsteps,sliceint,slice_data,nslice,nstate_slice)
-      IMPLICIT NONE
-
-      REAL_T time
-      INTEGER_T nsteps,nslice,nstate_slice,n,sliceint,strandid
-      REAL_T slice_data(nslice*nstate_slice)
-      INTEGER_T i
-      character*6 stepstr
-      character*11 sfilename
-
-        ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
-        ! (value of material with LS>0)
-      if (nstate_slice.ne.2*SDIM+6) then
-       print *,"nstate_slice invalid in outputslice"
-       print *,"nstate_slice= ",nstate_slice
-       stop
-      endif 
-      if (nslice.le.1) then
-       print *,"nslice invalid"
-       stop
-      endif
-
-      if (sliceint.le.0) then
-       strandid=1
-      else
-       strandid=(nsteps/sliceint)+1
-      endif
-
-      write(stepstr,'(I6)') nsteps
-      do i=1,6
-       if (stepstr(i:i).eq.' ') then
-        stepstr(i:i)='0'
-       endif
-      enddo
-
-      write(sfilename,'(A5,A6)') 'slice',stepstr
-
-      print *,"sfilename ",sfilename
-      open(unit=11,file=sfilename)
-
-      ! to use gnuplot, put # at beginning of comment lines.
-      write(11,*) '"CLSVOF data"'
-      if (SDIM.eq.2) then
-       write(11,*) 'VARIABLES="X","Y","U","V","PMG","PEOS","DIV","D","T","KE"'
-      else if (SDIM.eq.3) then
-       write(11,*) 'VARIABLES="X","Y","Z","U","V","W","PMG","PEOS","DIV","D","T","KE"'
-      else
-       print *,"dimension bust"
-       stop
-      endif
-      write(11,*)'zone i=',nslice-1,' SOLUTIONTIME=',time, &
-       ' STRANDID=',strandid
-
-      do i=-1,nslice-2
-       do n=1,nstate_slice-1
-!       write(11,'(D25.16)',ADVANCE="NO")  &
-        write(11,'(E25.16)',ADVANCE="NO")  &
-          slice_data((i+1)*nstate_slice+n)
-       enddo
-       n=nstate_slice
-!      write(11,'(D25.16)') slice_data((i+1)*nstate_slice+n)
-       write(11,'(E25.16)') slice_data((i+1)*nstate_slice+n)
-      enddo ! i
-
-
-      close(11)
-      return
-      end
-
       subroutine fort_combinezones( &
        total_number_grids, &
        grids_per_level_array, &
@@ -3618,7 +3660,6 @@ END SUBROUTINE SIMP
       bind(c,name='fort_combinezones')
 
       use global_utility_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -4139,450 +4180,6 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_combinezones
 
-
-      subroutine FORT_ZALESAK_CELL( &
-        xlo,dx, &
-        u,domlo,domhi, &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        level, &
-        DIMS(u), &
-        time)
-
-      use global_utility_module
-      use probf90_module
-
-      IMPLICIT NONE
-      INTEGER_T bfact,level
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T domlo(SDIM), domhi(SDIM)
-      INTEGER_T DIMDEC(u)
-      REAL_T u(DIMV(u),SDIM)
-      REAL_T time
-      REAL_T xlo(SDIM),dx(SDIM)
-
-      INTEGER_T i,j,k,dir
-      REAL_T xx(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=1
-
-      if (bfact.lt.1) then
-       print *,"bfact too small"
-       stop
-      endif
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-      call checkbound(fablo,fabhi,DIMS(u),1,-1,411) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       do dir=1,SDIM
-        xx(dir)=xsten(0,dir)
-       enddo
- 
-       if (probtype.eq.31) then
-        call circleuu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM))
-        call circlevv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM))
-        if (SDIM.eq.3) then
-         call circleww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM))
-        endif
-       else if (probtype.eq.29) then
-        if (SDIM.eq.3) then
-         call deform3duu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM),time,dx)
-         call deform3dvv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM),time,dx)
-         call deform3dww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
-        else if (SDIM.eq.2) then
-         call deformuu(u(D_DECL(i,j,k),1),xx(1),xx(2),time,dx)
-         call deformvv(u(D_DECL(i,j,k),2),xx(1),xx(2),time,dx)
-        else
-         print *,"dimension bust"
-         stop
-        endif
-       else if (probtype.eq.28) then
-        call zalesakuu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM),time,dx)
-        call zalesakvv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM),time,dx)
-        if (SDIM.eq.3) then
-         call zalesakww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
-        endif
-       else
-        print *,"invalid probtype for ZALESAK_CELL"
-       endif
-
-       do dir=1,SDIM
-        u(D_DECL(i,j,k),dir)=u(D_DECL(i,j,k),dir)/global_velocity_scale
-       enddo
-
-      enddo
-      enddo
-      enddo
-
-      return 
-      end subroutine FORT_ZALESAK_CELL
-
-       ! spectral_override==0 => always do low order
-      subroutine FORT_AVGDOWN( &
-       enable_spectral, &
-       finest_level, &
-       spectral_override, &
-       problo, &
-       dxf, &
-       level_c,level_f, &
-       bfact_c,bfact_f, &
-       xlo_fine,dx, &
-       ncomp, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       mask,DIMS(mask), &
-       lo,hi, &
-       lof,hif) 
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-      use navierstokesf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: spectral_override
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T mstenlo(3), mstenhi(3)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
-      INTEGER_T flochi(SDIM)
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ilocal,jlocal,klocal
-      INTEGER_T n
-      INTEGER_T dir2
-      INTEGER_T grid_type
-      REAL_T voltotal
-      REAL_T volall
-      REAL_T wt(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
-      INTEGER_T nhalf
-      REAL_T crse_value(ncomp)
-      REAL_T dxelem_f
-      REAL_T xcoarse(SDIM)
-      INTEGER_T finelo_index
-      REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: ffine
-      REAL_T INTERP_TOL
-      INTEGER_T testmask,testmask2
-      INTEGER_T nmat
-      INTEGER_T local_enable_spectral
-      INTEGER_T elem_test
-      INTEGER_T caller_id
-
-      caller_id=5
-      nhalf=1
-
-      INTERP_TOL=1.0E-4
-
-      nmat=num_materials
-
-      local_enable_spectral=enable_spectral
-
-      if ((spectral_override.ne.0).and.(spectral_override.ne.1)) then
-       print *,"spectral_override invalid"
-       stop
-      endif
-
-      if (ncomp.lt.1) then
-       print *,"ncomp invalid31"
-       stop
-      endif
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid4 ",bfact_f
-       stop
-      endif
-      if (bfact_c.lt.1) then
-       print *,"bfact_c invalid4 ",bfact_c
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((level_c.lt.0).or. &
-          (level_c.ne.level_f-1)) then
-       print *,"level_c or level_f invalid"
-       stop
-      endif
-      if (level_f.gt.finest_level) then
-       print *,"level_f invalid"
-       stop
-      endif
-
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-      call checkbound(lof,hif,DIMS(mask),1,-1,411)
-
-      grid_type=-1  ! ggg  (Gauss in all directions)
-
-      do dir2=1,SDIM
-       flochi(dir2)=bfact_f-1
-       if (2*lo(dir2).ne.lof(dir2)) then
-        print *,"2*lo(dir2).ne.lof(dir2)"
-        stop
-       endif
-       if (2*(hi(dir2)+1).ne.hif(dir2)+1) then
-        print *,"2*(hi(dir2)+1).ne.hif(dir2)+1"
-        stop
-       endif
-      enddo ! dir2=1..sdim
-
-      allocate(ffine(D_DECL(0:flochi(1),0:flochi(2),0:flochi(SDIM)),ncomp))
-
-      do dir2=1,SDIM
-       elem_test=lo(dir2)/bfact_c
-
-       if (elem_test*bfact_c.ne.lo(dir2)) then
-         print *,"elem_test invalid (loc) 1"
-         print *,"elem_test=",elem_test
-         print *,"bfact_c=",bfact_c
-         print *,"dir2=",dir2
-         print *,"lo(dir2)=",lo(dir2)
-         print *,"hi(dir2)=",hi(dir2)
-         print *,"lof(dir2)=",lof(dir2)
-         print *,"hif(dir2)=",hif(dir2)
-         stop
-       endif
-       elem_test=(hi(dir2)+1)/bfact_c
-       if (elem_test*bfact_c.ne.hi(dir2)+1) then
-         print *,"elem_test invalid (hic) 1"
-         print *,"elem_test=",elem_test
-         print *,"bfact_c=",bfact_c
-         print *,"dir2=",dir2
-         print *,"lo(dir2)=",lo(dir2)
-         print *,"hi(dir2)=",hi(dir2)
-         print *,"lof(dir2)=",lof(dir2)
-         print *,"hif(dir2)=",hif(dir2)
-         stop
-       endif
-       elem_test=lof(dir2)/bfact_f
-       if (elem_test*bfact_f.ne.lof(dir2)) then
-        print *,"elem_test invalid (lof) 1"
-        print *,"elem_test=",elem_test
-        print *,"bfact_f=",bfact_f
-        print *,"dir2=",dir2
-        print *,"lo(dir2)=",lo(dir2)
-        print *,"hi(dir2)=",hi(dir2)
-        print *,"lof(dir2)=",lof(dir2)
-        print *,"hif(dir2)=",hif(dir2)
-        stop
-       endif
-       elem_test=(hif(dir2)+1)/bfact_f
-       if (elem_test*bfact_f.ne.hif(dir2)+1) then
-        print *,"elem_test invalid (hif) 1"
-        print *,"elem_test=",elem_test
-        print *,"bfact_f=",bfact_f
-        print *,"dir2=",dir2
-        print *,"lo(dir2)=",lo(dir2)
-        print *,"hi(dir2)=",hi(dir2)
-        print *,"lof(dir2)=",lof(dir2)
-        print *,"hif(dir2)=",hif(dir2)
-        stop
-       endif
-      enddo ! dir2=1..sdim
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       call gridsten_level(xsten,ic,jc,kc,level_c,nhalf)
-
-        ! find stencil for surrounding fine level spectral element.
-       stenlo(3)=0
-       stenhi(3)=0
-       do dir2=1,SDIM
-        dxelem_f=dxf(dir2)*bfact_f
-        xcoarse(dir2)=xsten(0,dir2)
-        finelo_index=NINT( (xcoarse(dir2)-problo(dir2))/dxelem_f-half )
-        stenlo(dir2)=bfact_f*finelo_index
-        stenhi(dir2)=stenlo(dir2)+bfact_f-1
-        if ((stenlo(dir2).lt.lof(dir2)).or. &
-            (stenhi(dir2).gt.hif(dir2))) then
-         print *,"stenlo or stenhi invalid 1"
-         stop
-        endif
-       enddo ! dir2
-
-       mstenlo(3)=0
-       mstenhi(3)=0
-       do dir2=1,SDIM
-        mstenlo(dir2)=stenlo(dir2)
-        mstenhi(dir2)=stenhi(dir2)
-        if (stenhi(dir2).eq.stenlo(dir2)) then
-         mstenlo(dir2)=stenlo(dir2)-1
-         mstenhi(dir2)=stenhi(dir2)+1
-        endif
-       enddo ! dir2
-
-       ifine=stenlo(1) 
-       jfine=stenlo(2) 
-       kfine=stenlo(SDIM) 
-
-        ! lower left hand corner of element stencil.
-       call gridstenND_level(xstenND,ifine,jfine,kfine,level_f,nhalf)
-
-       do dir2=1,SDIM
-
-        xcoarse(dir2)=xcoarse(dir2)-xstenND(0,dir2)
-
-        if (stenhi(dir2).ne.stenlo(dir2)) then
-         if (abs(xcoarse(dir2)).lt.INTERP_TOL*dxf(dir2)) then
-          mstenlo(dir2)=stenlo(dir2)-1
-         endif
-         if (abs(xcoarse(dir2)-bfact_f*dxf(dir2)).lt. &
-             INTERP_TOL*dxf(dir2)) then
-          mstenhi(dir2)=stenhi(dir2)+1
-         endif
-        endif ! stenhi<>stenlo
-
-        if ((xcoarse(dir2).lt.-INTERP_TOL*dxf(dir2)).or. &
-            (xcoarse(dir2).gt.(INTERP_TOL+bfact_f)*dxf(dir2))) then
-         print *,"xcoarse out of bounds avgdown"
-         stop
-        endif
-
-       enddo ! dir2=1..sdim
-
-       ifine=mstenlo(1) 
-       jfine=mstenlo(2) 
-       kfine=mstenlo(SDIM) 
-       testmask=NINT(mask(D_DECL(ifine,jfine,kfine)))
-       do ifine=mstenlo(1),mstenhi(1) 
-       do jfine=mstenlo(2),mstenhi(2) 
-       do kfine=mstenlo(3),mstenhi(3) 
-        testmask2=NINT(mask(D_DECL(ifine,jfine,kfine)))
-        if (testmask2.ne.testmask) then
-         testmask=0
-        endif
-       enddo 
-       enddo 
-       enddo 
-
-       do n=1,ncomp
-        crse_value(n)=zero
-       enddo
-       voltotal=zero
-
-       if ((bfact_f.ge.2).and. &
-           ((local_enable_spectral.eq.1).or. &
-            (local_enable_spectral.eq.2)).and. &
-           (testmask.ge.1).and. &
-           (testmask.le.nmat).and. &
-           (spectral_override.eq.1)) then
-
-        do ifine=stenlo(1),stenhi(1)
-        do jfine=stenlo(2),stenhi(2)
-        do kfine=stenlo(3),stenhi(3)
-         ilocal=ifine-stenlo(1)
-         jlocal=jfine-stenlo(2)
-         klocal=kfine-stenlo(3)
-         do n=1,ncomp
-          ffine(D_DECL(ilocal,jlocal,klocal),n)= &
-            fine(D_DECL(ifine,jfine,kfine),n)
-         enddo
-        enddo
-        enddo
-        enddo
-
-        call SEM_INTERP_ELEMENT( &
-         ncomp,bfact_f,grid_type, &
-         flochi,dxf,xcoarse,ffine,crse_value,caller_id)
-
-        voltotal=one
-
-       else if ((bfact_f.eq.1).or. &
-                (local_enable_spectral.eq.0).or. &
-                (local_enable_spectral.eq.3).or. &
-                (testmask.eq.0).or. &
-                (spectral_override.eq.0)) then
-
-        call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-         bfact_c,bfact_f)
-
-        do ifine=stenlo(1),stenhi(1)
-         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-         if (wt(1).gt.zero) then
-          do jfine=stenlo(2),stenhi(2)
-           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-           if (wt(2).gt.zero) then
-            do kfine=stenlo(3),stenhi(3)
-             if (SDIM.eq.3) then
-              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-             endif
-             if (wt(SDIM).gt.zero) then
-              volall=wt(1)
-              do dir2=2,SDIM
-               volall=volall*wt(dir2)
-              enddo
-              do n = 1, ncomp
-               crse_value(n) = crse_value(n) +  &
-                volall*fine(D_DECL(ifine,jfine,kfine),n)
-              enddo
-              voltotal=voltotal+volall
-             endif ! wt(sdim).gt.0
-            enddo ! kfine
-           endif
-          enddo ! jfine
-         endif
-        enddo ! ifine
-
-       else
-        print *,"parameter bust in avgdown"
-        stop
-       endif
-
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
-        stop
-       endif
-
-       do n = 1,ncomp
-        crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
-       enddo
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      deallocate(ffine)
-
-      return
-      end subroutine FORT_AVGDOWN
-
-
       subroutine fort_avgdown_copy( &
        enable_spectral, &
        finest_level, &
@@ -4608,7 +4205,6 @@ END SUBROUTINE SIMP
 
       use global_utility_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -5351,7 +4947,6 @@ END SUBROUTINE SIMP
 
       use global_utility_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -6118,7 +5713,6 @@ END SUBROUTINE SIMP
       use geometry_intersect_module
       use MOF_routines_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -6887,1275 +6481,7 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_fillbdry_flux
 
-      subroutine FORT_AVGDOWN_LOW( &
-       problo, &
-       dxf, &
-       level_c,level_f, &
-       bfact_c,bfact_f, &
-       xlo_fine,dx, &
-       ncomp, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi, &
-       lof,hif) 
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-      use navierstokesf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T n
-      INTEGER_T dir2
-      REAL_T voltotal
-      REAL_T volall
-      REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp)
-
-      if (ncomp.lt.1) then
-       print *,"ncomp invalid32"
-       stop
-      endif
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid4 ",bfact_f
-       stop
-      endif
-      if (bfact_c.lt.1) then
-       print *,"bfact_c invalid4 ",bfact_c
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((level_c.lt.0).or. &
-          (level_c.ne.level_f-1)) then
-       print *,"level_c or level_f invalid"
-       stop
-      endif
-
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       do n=1,ncomp
-        crse_value(n)=zero
-       enddo
-       voltotal=zero
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-        bfact_c,bfact_f)
-
-       do ifine=stenlo(1),stenhi(1)
-        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-        if (wt(1).gt.zero) then
-         do jfine=stenlo(2),stenhi(2)
-          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-          if (wt(2).gt.zero) then
-           do kfine=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-            endif
-            if (wt(SDIM).gt.zero) then
-             volall=wt(1)
-             do dir2=2,SDIM
-              volall=volall*wt(dir2)
-             enddo
-             do n = 1, ncomp
-              crse_value(n) = crse_value(n) +  &
-               volall*fine(D_DECL(ifine,jfine,kfine),n)
-             enddo
-             voltotal=voltotal+volall
-            endif ! wt(sdim).gt.0
-           enddo ! kfine
-          endif
-         enddo ! jfine
-        endif
-       enddo ! ifine
-
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
-        stop
-       endif
-
-       do n = 1,ncomp
-        crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
-       enddo
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_AVGDOWN_LOW
-
-       ! NavierStokes::level_phase_change_redistribute
-       ! NavierStokes::avgDown_tag_localMF
-       ! NavierStokes::level_avgDown_tag
-      subroutine FORT_AVGDOWN_TAG( &
-       problo, &
-       dxf, &
-       level_c,level_f, &
-       bfact_c,bfact_f, &
-       xlo_fine,dx, &
-       ncomp, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi, &
-       lof,hif) 
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-      use navierstokesf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T n
-      INTEGER_T dir2
-      REAL_T voltotal
-      REAL_T volall
-      REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp)
-      INTEGER_T fine_test
-      INTEGER_T coarse_test
-      INTEGER_T init_flag
-
-      if (ncomp.ne.1) then
-       print *,"ncomp invalid33"
-       stop
-      endif
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid4 ",bfact_f
-       stop
-      endif
-      if (bfact_c.lt.1) then
-       print *,"bfact_c invalid4 ",bfact_c
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((level_c.lt.0).or. &
-          (level_c.ne.level_f-1)) then
-       print *,"level_c or level_f invalid"
-       stop
-      endif
-
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       do n=1,ncomp
-        crse_value(n)=zero
-       enddo
-       init_flag=0
-       voltotal=zero
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-        bfact_c,bfact_f)
-
-       do ifine=stenlo(1),stenhi(1)
-        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-        if (wt(1).gt.zero) then
-         do jfine=stenlo(2),stenhi(2)
-          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-          if (wt(2).gt.zero) then
-           do kfine=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-            endif
-            if (wt(SDIM).gt.zero) then
-             volall=wt(1)
-             do dir2=2,SDIM
-              volall=volall*wt(dir2)
-             enddo
-
-             do n = 1, ncomp
-              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),n))
-              coarse_test=NINT(crse_value(n))
-              if (init_flag.eq.0) then
-               crse_value(n)=fine_test
-              else if (init_flag.eq.1) then
-               if (fine_test.eq.0) then
-                crse_value(n)=zero
-               else if ((fine_test.eq.1).and.(coarse_test.ne.1)) then
-                crse_value(n)=zero
-               else if ((fine_test.eq.2).and.(coarse_test.ne.2)) then
-                crse_value(n)=zero
-               else if (fine_test.eq.coarse_test) then
-                ! do nothing
-               else
-                print *,"fine_test bad (avgdown tag):",fine_test 
-                stop
-               endif
-              else
-               print *,"init_flag invalid"
-               stop
-              endif
-
-             enddo ! n
-
-             if (init_flag.eq.0) then
-              init_flag=1
-             else if (init_flag.eq.1) then
-              ! do nothing
-             else
-              print *,"init_flag invalid"
-              stop
-             endif
-
-             voltotal=voltotal+volall
-            endif ! wt(sdim).gt.0
-           enddo ! kfine
-          endif
-         enddo ! jfine
-        endif
-       enddo ! ifine
-
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
-        stop
-       endif
-
-       do n = 1,ncomp
-        crse(D_DECL(ic,jc,kc),n)=crse_value(n)
-       enddo
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_AVGDOWN_TAG
-
-
-       ! do_the_advance -> level_phase_change_rate
-       ! avgDownBURNING_localMF 
-       ! level_avgDownBURNING
-       ! (note: after level_avgDownBURNING comes 
-       !  level_phase_change_rate_extend)
-      subroutine FORT_AVGDOWN_BURNING( &
-       velflag, &
-       problo, &
-       dxf, &
-       level_c,level_f, &
-       bfact_c,bfact_f, &
-       xlo_fine,dx, &
-       ncomp, &
-       nmat, &
-       nten, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi, &
-       lof,hif) 
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-      use navierstokesf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: velflag
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T dir2
-      INTEGER_T iten
-      INTEGER_T n
-      REAL_T voltotal
-      REAL_T volall
-      REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp)
-      INTEGER_T fine_test
-      INTEGER_T coarse_test
-      REAL_T velwt(nten)
-      INTEGER_T local_comp
-      INTEGER_T avgdown_sweep
-      INTEGER_T ncomp_expect
-      INTEGER_T ncomp_per_interface
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
-      if (nten.eq.( (nmat-1)*(nmat-1)+nmat-1)/2) then
-       ! do nothing
-      else
-       print *,"nten invalid"
-       stop
-      endif
-
-      if (velflag.eq.1) then  ! burning velocity
-       ncomp_per_interface=SDIM
-      else if (velflag.eq.0) then ! interface temperature, mass fraction
-       ncomp_per_interface=2
-      else
-       print *,"velflag invalid"
-       stop
-      endif
-      ncomp_expect=nten+nten*ncomp_per_interface
-
-      if (ncomp.eq.ncomp_expect) then
-       ! do nothing
-      else
-       print *,"ncomp invalid34"
-       stop
-      endif
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid4 ",bfact_f
-       stop
-      endif
-      if (bfact_c.lt.1) then
-       print *,"bfact_c invalid4 ",bfact_c
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((level_c.lt.0).or. &
-          (level_c.ne.level_f-1)) then
-       print *,"level_c or level_f invalid"
-       stop
-      endif
-
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       do n=1,ncomp
-        crse_value(n)=zero
-       enddo
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-        bfact_c,bfact_f)
-
-       do avgdown_sweep=0,1
-
-        do iten=1,nten
-         velwt(iten)=zero
-        enddo
-        voltotal=zero
-
-        do ifine=stenlo(1),stenhi(1)
-         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-         if (wt(1).gt.zero) then
-          do jfine=stenlo(2),stenhi(2)
-           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-           if (wt(2).gt.zero) then
-            do kfine=stenlo(3),stenhi(3)
-             if (SDIM.eq.3) then
-              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-             endif
-             if (wt(SDIM).gt.zero) then
-              volall=wt(1)
-              do dir2=2,SDIM
-               volall=volall*wt(dir2)
-              enddo
-              if (volall.le.zero) then
-               print *,"volall invalid"
-               stop
-              endif
-
-              do iten=1,nten
-               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
-               coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
-
-               if (avgdown_sweep.eq.0) then
-
-                if (coarse_test.eq.0) then 
-                 coarse_test=fine_test
-                else if (fine_test.eq.0) then
-                 ! do nothing
-                else if ((fine_test.eq.1).or.(fine_test.eq.-1)) then
-                 coarse_test=fine_test
-                else
-                 print *,"fine_test invalid"
-                 stop
-                endif
-
-                if ((coarse_test.eq.1).or. &
-                    (coarse_test.eq.-1)) then
-                 crse_value(iten)=coarse_test
-                else if (coarse_test.eq.0) then
-                 ! do nothing (crse_value init. to zero)
-                else
-                 print *,"coarse_test invalid"
-                 stop
-                endif
-
-               else if (avgdown_sweep.eq.1) then
-
-                if ((coarse_test.eq.0).or. &
-                    (coarse_test.eq.1).or. &
-                    (coarse_test.eq.-1)) then
-
-                 if (fine_test.eq.0) then
-                  ! do nothing
-                 else if (fine_test.eq.coarse_test) then
-                  velwt(iten)=velwt(iten)+volall
-                  do dir2=1,ncomp_per_interface
-                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-                  enddo
-                 else
-                  print *,"fine_test bad (avgdown burning): ",fine_test
-                  stop
-                 endif
-                else
-                 print *,"coarse_test invalid"
-                 stop
-                endif
-               else 
-                print *,"avgdown_sweep invalid"
-                stop
-               endif
-              enddo ! iten=1..nten
-
-              voltotal=voltotal+volall
-             endif ! wt(sdim).gt.0
-            enddo ! kfine
-           endif
-          enddo ! jfine
-         endif
-        enddo ! ifine
-
-        if (voltotal.le.zero) then
-         print *,"voltotal invalid"
-         stop
-        endif
-
-        if (avgdown_sweep.eq.0) then
-         ! do nothing
-        else if (avgdown_sweep.eq.1) then
-
-         do iten=1,nten
-
-          coarse_test=NINT(crse_value(iten))
-          if (coarse_test.eq.0) then
-           if (velwt(iten).eq.zero) then
-            ! do nothing
-           else
-            print *,"velwt invalid"
-            stop
-           endif
-           crse(D_DECL(ic,jc,kc),iten)=zero
-           do dir2=1,ncomp_per_interface
-            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
-           enddo
-          else if ((coarse_test.eq.1).or. &
-                   (coarse_test.eq.-1)) then
-           if (velwt(iten).gt.zero) then
-            crse(D_DECL(ic,jc,kc),iten)=coarse_test
-            do dir2=1,ncomp_per_interface
-             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
-              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
-            enddo
-           else
-            print *,"velwt invalid"
-            stop
-           endif
-          else
-           print *,"coarse_test invalid"
-           stop
-          endif
-
-         enddo ! iten=1..nten
-
-        else 
-         print *,"avgdown_sweep invalid"
-         stop
-        endif
-
-       enddo ! avgdown_sweep=0..1
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_AVGDOWN_BURNING
-
-        ! icurv=(iten-1)*(5+SDIM)
-        ! dir=1..sdim
-        ! side=-1 or 1
-        ! curvfab(D_DECL(i,j,k),icurv+4+SDIM)=dir*side
-      subroutine FORT_AVGDOWN_CURV( &
-       problo, &
-       dxf, &
-       level_c,level_f, &
-       bfact_c,bfact_f, &
-       xlo_fine,dx, &
-       ncomp,nmat,nten, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi, &
-       lof,hif) 
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-      use navierstokesf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp,nmat,nten
-      INTEGER_T nten_test
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T dir2
-      INTEGER_T iten
-      INTEGER_T n
-      REAL_T voltotal
-      REAL_T volall
-      REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp)
-      INTEGER_T fine_test
-      INTEGER_T coarse_test
-      REAL_T velwt(nten)
-      INTEGER_T icurv,istat
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
-      if (nten.ne.nten_test) then
-       print *,"nten invalid avgdown_curv nten nten_test ",nten,nten_test
-       stop
-      endif
-
-      if (ncomp.ne.nten*(SDIM+5)) then
-       print *,"ncomp invalid35"
-       stop
-      endif
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid4 ",bfact_f
-       stop
-      endif
-      if (bfact_c.lt.1) then
-       print *,"bfact_c invalid4 ",bfact_c
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((level_c.lt.0).or. &
-          (level_c.ne.level_f-1)) then
-       print *,"level_c or level_f invalid"
-       stop
-      endif
-
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       do n=1,ncomp
-        crse_value(n)=zero
-       enddo
-       do iten=1,nten
-        velwt(iten)=zero
-       enddo
-       voltotal=zero
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-        bfact_c,bfact_f)
-
-       do ifine=stenlo(1),stenhi(1)
-        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-        if (wt(1).gt.zero) then
-         do jfine=stenlo(2),stenhi(2)
-          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-          if (wt(2).gt.zero) then
-           do kfine=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-            endif
-            if (wt(SDIM).gt.zero) then
-             volall=wt(1)
-             do dir2=2,SDIM
-              volall=volall*wt(dir2)
-             enddo
-             if (volall.le.zero) then
-              print *,"volall invalid"
-              stop
-             endif
-
-             do iten=1,nten
-              icurv=(iten-1)*(5+SDIM)
-              istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
-              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),istat))
-              coarse_test=NINT(crse_value(istat))
-              if ((coarse_test.ne.0).and. &
-                  (coarse_test.ne.SDIM+1)) then
-               print *,"coarse_test invalid"
-               stop
-              endif
-              if (fine_test.eq.0) then
-               ! do nothing
-              else if ((abs(fine_test).ge.1).and. &
-                       (abs(fine_test).le.SDIM+1)) then
-               velwt(iten)=velwt(iten)+volall
-               crse_value(istat)=SDIM+1
-               crse_value(istat+1)=zero ! im3
-               do dir2=1,SDIM+3
-                crse_value(icurv+dir2)= &
-                  crse_value(icurv+dir2)+volall* &
-                  fine(D_DECL(ifine,jfine,kfine),icurv+dir2)
-               enddo
-              else
-               print *,"fine_test bad (avgdown curv): ",fine_test
-               stop
-              endif
-             enddo ! iten
-
-             voltotal=voltotal+volall
-            endif ! wt(sdim).gt.0
-           enddo ! kfine
-          endif
-         enddo ! jfine
-        endif
-       enddo ! ifine
-
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
-        stop
-       endif
-
-       do iten=1,nten
-        icurv=(iten-1)*(5+SDIM)
-        istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
-        coarse_test=NINT(crse_value(istat))
-        if (coarse_test.eq.0) then
-         if (velwt(iten).ne.zero) then
-          print *,"velwt invalid"
-          stop
-         endif
-         do dir2=1,5+SDIM
-          crse(D_DECL(ic,jc,kc),icurv+dir2)=zero
-         enddo
-        else if (coarse_test.eq.SDIM+1) then
-         if (velwt(iten).gt.zero) then
-          crse(D_DECL(ic,jc,kc),istat)=SDIM+1 ! dir x side
-          crse(D_DECL(ic,jc,kc),istat+1)=zero ! im3
-          do dir2=1,3+SDIM
-           crse(D_DECL(ic,jc,kc),icurv+dir2)= &
-            crse_value(icurv+dir2)/velwt(iten)
-          enddo
-         else
-          print *,"velwt invalid"
-          stop
-         endif
-        else
-         print *,"coarse_test invalid"
-         stop
-        endif
-
-       enddo ! iten=1..nten
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_AVGDOWN_CURV
-
-
-      subroutine FORT_MOFAVGDOWN ( &
-       time, &
-       problo, &
-       dxc, &
-       dxf, &
-       bfact_c,bfact_f, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi,nmat)
-
-      use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: bfact_c,bfact_f
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T  growlo(3),growhi(3)
-      INTEGER_T  stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),nmat*ngeom_raw)
-      REAL_T, intent(in) :: fine(DIMV(fine),nmat*ngeom_raw)
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ic,jc,kc
-      INTEGER_T dir
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxc(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      INTEGER_T domlo(SDIM)
-      INTEGER_T nhalf
-      INTEGER_T nhalfgrid
-      INTEGER_T n_overlap
- 
-      INTEGER_T im
-      INTEGER_T vofcomp_raw
-      INTEGER_T vofcomp_recon
-      REAL_T wt(SDIM)
-      REAL_T testwt
-
-      REAL_T temp_vfrac
-      REAL_T temp_cen(SDIM)
-
-      REAL_T xstencoarse(-3:3,SDIM)
-      REAL_T xstenfine(-3:3,SDIM)
-      REAL_T xstengrid(-1:1,SDIM)
-
-      REAL_T mofdatafine(nmat*ngeom_recon)
-      REAL_T mofdatacoarse(nmat*ngeom_recon)
-      REAL_T multi_centroidA(nmat,SDIM)
-
-      REAL_T volcoarse
-      REAL_T cencoarse(SDIM)
-      REAL_T volfine
-      REAL_T cenfine(SDIM)
-
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(SDIM,nmat)
-      INTEGER_T tessellate
-      INTEGER_T continuous_mof
-      INTEGER_T mof_verbose
-      INTEGER_T use_ls_data
-      INTEGER_T fine_covered
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
-      INTEGER_T nmax
-      INTEGER_T nhalf_box
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-
-      INTEGER_T tid
-#ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
-#endif
-
-      tid=0       
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
-       stop
-      endif 
-
-      nhalf_box=1
-
-      nmax=POLYGON_LIST_MAX ! in: MOFAVGDOWN
-
-      if (time.lt.zero) then
-       print *,"time invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid5 ",bfact_f
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-
-      do dir=1,SDIM
-       domlo(dir)=0
-      enddo
-      nhalf=3
-      nhalfgrid=1
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-        ! coarse centroids and volume fractions are initialized
-        ! to zero.
-       do dir=1,nmat*ngeom_raw
-        crse(D_DECL(ic,jc,kc),dir) = zero
-       enddo
-       do dir=1,nmat*ngeom_recon
-        mofdatacoarse(dir) = zero
-       enddo
-
-       volcoarse=zero
-       do dir=1,SDIM
-        cencoarse(dir)=zero
-       enddo
-
-       n_overlap=0
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-         bfact_c,bfact_f)
-
-       do ifine=stenlo(1),stenhi(1)
-        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-        if (1.eq.0) then
-         print *,"ic,ifine,wt(1) ",ic,ifine,wt(1)
-        endif
-        if (wt(1).gt.zero) then
-         do jfine=stenlo(2),stenhi(2)
-          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-          if (1.eq.0) then
-           print *,"jc,jfine,wt(2) ",jc,jfine,wt(2)
-          endif
-          if (wt(2).gt.zero) then
-           do kfine=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-            endif
-            if (wt(SDIM).gt.zero) then
-             if (SDIM.eq.2) then
-              testwt=wt(1)*wt(2)
-             else if (SDIM.eq.3) then
-              testwt=wt(1)*wt(2)*wt(SDIM)
-             else
-              print *,"dimension bust"
-              stop
-             endif
-
-             if (testwt.gt.zero) then
-
-              n_overlap=n_overlap+1
-
-              do im=1,nmat
-               vofcomp_raw=(im-1)*ngeom_raw+1
-               vofcomp_recon=(im-1)*ngeom_recon+1
-               do dir=1,SDIM+1
-                mofdatafine(vofcomp_recon+dir-1)= &
-                 fine(D_DECL(ifine,jfine,kfine),vofcomp_raw+dir-1)
-               enddo
-               do dir=SDIM+2,ngeom_recon
-                mofdatafine(vofcomp_recon+dir-1)=zero
-               enddo
-              enddo ! im
-
-              call gridsten(xstencoarse,problo,ic,jc,kc, &
-               domlo,bfact_c,dxc,nhalf)
-              call gridsten(xstenfine,problo,ifine,jfine,kfine, &
-               domlo,bfact_f,dxf,nhalf)
-
-              call Box_volumeFAST(bfact_f,dxf,xstenfine,nhalf, &
-               volfine,cenfine,SDIM)
-
-              fine_covered=1
-
-              do dir=1,SDIM
-               xstengrid(-1,dir)=max(xstencoarse(-1,dir),xstenfine(-1,dir))
-               xstengrid(1,dir)=min(xstencoarse(1,dir),xstenfine(1,dir))
-               xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
-
-               if (xstengrid(-1,dir).gt.xstenfine(-1,dir)+VOFTOL*dxf(dir)) then
-                fine_covered=0
-               endif
-               if (xstengrid(1,dir).lt.xstenfine(1,dir)-VOFTOL*dxf(dir)) then
-                fine_covered=0
-               endif
-
-               if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
-                 print *,"fine cell should be completely covered by coarse"
-                 stop
-                endif
-               endif
-              enddo ! dir
-
-              if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
-               if (fine_covered.ne.1) then
-                print *,"fine cell should be completely covered by coarse"
-                stop
-               endif
-              endif
-
-              if (fine_covered.eq.1) then
-
-               do im=1,nmat
-                vofcomp_raw=(im-1)*ngeom_raw+1
-                multi_volume(im)= &
-                 fine(D_DECL(ifine,jfine,kfine),vofcomp_raw)*volfine
-                do dir=1,SDIM
-                 multi_cen(dir,im)= &
-                  fine(D_DECL(ifine,jfine,kfine),vofcomp_raw+dir)+cenfine(dir)
-                enddo
-               enddo ! im
-
-              else if (fine_covered.eq.0) then
-               use_ls_data=0
-               mof_verbose=0
-               continuous_mof=0
-               tessellate=0
-
-                ! sum F_fluid=1  sum F_solid<=1
-               call make_vfrac_sum_ok_base( &
-                 cmofsten, &
-                 xstenfine,nhalf,nhalf_box, &
-                 bfact_f,dxf, &
-                 tessellate,mofdatafine,nmat,SDIM,304)
-
-               call multimaterial_MOF( &
-                bfact_f,dxf,xstenfine,nhalf, &
-                mof_verbose, &
-                use_ls_data, &
-                LS_stencil, &
-                geom_xtetlist(1,1,1,tid+1), &
-                geom_xtetlist(1,1,1,tid+1), &
-                nmax, &
-                nmax, &
-                mofdatafine, &
-                multi_centroidA, &
-                continuous_mof, &
-                cmofsten, &
-                nmat,SDIM,3)
-
-               call multi_get_volume_grid_simple( &
-                tessellate, &  !=0
-                bfact_f,dxf,xstenfine,nhalf, &
-                mofdatafine, &
-                xstengrid,nhalfgrid, &
-                multi_volume,multi_cen, &
-                geom_xtetlist(1,1,1,tid+1), &
-                nmax, &
-                nmax, &
-                nmat,SDIM,6)
-
-              else
-               print *,"fine_covered invalid"
-               stop
-              endif
-
-              do im=1,nmat
-               vofcomp_recon=(im-1)*ngeom_recon+1
-               mofdatacoarse(vofcomp_recon)=mofdatacoarse(vofcomp_recon)+ &
-                multi_volume(im)
-               do dir=1,SDIM
-                mofdatacoarse(vofcomp_recon+dir)= &
-                 mofdatacoarse(vofcomp_recon+dir)+ &
-                 multi_cen(dir,im)*multi_volume(im)
-               enddo
-               if (is_rigid(nmat,im).eq.0) then
-                volcoarse=volcoarse+multi_volume(im)
-                do dir=1,SDIM
-                 cencoarse(dir)=cencoarse(dir)+ &
-                  multi_cen(dir,im)*multi_volume(im)
-                enddo
-               else if (is_rigid(nmat,im).eq.1) then
-                ! do nothing
-               else
-                print *,"is_rigid(nmat,im) invalid"
-                stop
-               endif
-              enddo ! im=1..nmat
-  
-             else if (testwt.eq.zero) then
-              print *,"testwt should not be 0"
-              stop
-             else
-              print *,"testwt invalid"
-              stop
-             endif
-
-            endif ! wt(sdim)>0
-           enddo ! kfine
-          endif ! wt(2)>0
-         enddo ! jfine
-        endif ! wt(1)>0
-       enddo ! ifine
-
-       if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
-        if (n_overlap.ne.4*(SDIM-1)) then
-         print *,"n_overlap invalid"
-         stop
-        endif
-       else if (n_overlap.lt.1) then
-        print *,"n_overlap invalid"
-        stop
-       endif
-
-       if (volcoarse.le.zero) then
-        print *,"volcoarse invalid:",volcoarse
-        print *,"ic,jc,kc,bfact_c,bfact_f ",ic,jc,kc,bfact_c,bfact_f
-        do dir=1,SDIM
-         print *,"dir,stenlo,stenhi ",dir,stenlo(dir),stenhi(dir)
-        enddo
-        dir=3
-        print *,"dir=3,stenlo,stenhi ",dir,stenlo(dir),stenhi(dir)
-        stop
-       endif
-
-       do dir=1,SDIM
-        cencoarse(dir)=cencoarse(dir)/volcoarse
-       enddo
-
-       do im=1,nmat
-        vofcomp_recon=(im-1)*ngeom_recon+1
-        vofcomp_raw=(im-1)*ngeom_raw+1
-
-        temp_vfrac=mofdatacoarse(vofcomp_recon)/volcoarse
-        if ((temp_vfrac.lt.zero).or. &
-            (temp_vfrac.gt.one+VOFTOL)) then
-         print *,"temp_vfrac invalid"
-         stop
-        endif
-        if (temp_vfrac.le.VOFTOL) then
-         temp_vfrac=zero
-         do dir=1,SDIM
-          temp_cen(dir)=zero
-         enddo
-        else if (temp_vfrac.ge.one-VOFTOL) then
-         temp_vfrac=one
-         do dir=1,SDIM
-          temp_cen(dir)=zero
-         enddo
-        else if ((temp_vfrac.gt.zero).and.(temp_vfrac.lt.one)) then
-         do dir=1,SDIM
-          temp_cen(dir)= &
-            mofdatacoarse(vofcomp_recon+dir)/ &
-            mofdatacoarse(vofcomp_recon)-cencoarse(dir)
-         enddo
-        else
-         print *,"temp_vfrac invalid"
-         stop
-        endif
-
-        crse(D_DECL(ic,jc,kc),vofcomp_raw) = temp_vfrac
-        do dir=1,SDIM
-         crse(D_DECL(ic,jc,kc),vofcomp_raw+dir) = temp_cen(dir)
-        enddo
-       enddo ! im
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_MOFAVGDOWN
-
-
-      subroutine FORT_ERRORAVGDOWN ( &
-       problo, &
-       dxf, &
-       bfact_c,bfact_f, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi)
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: bfact_c,bfact_f
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse))
-      REAL_T, intent(in) :: fine(DIMV(fine))
-      INTEGER_T i,j,k,ic,jc,kc
-      REAL_T, intent(in) :: problo(SDIM),dxf(SDIM)
- 
-      REAL_T wt(SDIM)
-
-      INTEGER_T sanity_sum
-      REAL_T test_error,max_error
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid5 ",bfact_f
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       crse(D_DECL(ic,jc,kc)) = zero
-
-       max_error=zero
-       sanity_sum=0
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi,bfact_c,bfact_f)
-       do i=stenlo(1),stenhi(1)
-        call intersect_weight_avg(ic,i,bfact_c,bfact_f,wt(1))
-        if (1.eq.0) then
-         print *,"ic,i,wt(1) ",ic,i,wt(1)
-        endif
-        if (wt(1).gt.zero) then
-         do j=stenlo(2),stenhi(2)
-          call intersect_weight_avg(jc,j,bfact_c,bfact_f,wt(2))
-          if (1.eq.0) then
-           print *,"jc,j,wt(2) ",jc,j,wt(2)
-          endif
-          if (wt(2).gt.zero) then
-           do k=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             call intersect_weight_avg(kc,k,bfact_c,bfact_f,wt(SDIM))
-            endif
-            if (wt(SDIM).gt.zero) then
-
-             sanity_sum=sanity_sum+1
-
-             test_error=fine(D_DECL(i,j,k))
-             if (test_error.lt.zero) then
-              print *,"error should not be <0"
-              stop
-             endif
-             if (test_error.gt.max_error) then
-              max_error=test_error
-             endif
-            endif ! wt(sdim)>0
-           enddo ! k
-          endif ! wt(2)>0
-         enddo ! j
-        endif ! wt(1)>0
-       enddo ! i
-
-       if (sanity_sum.le.0) then
-        print *,"sanity_sum invalid"
-        stop
-       endif
-
-       crse(D_DECL(ic,jc,kc)) = max_error
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_ERRORAVGDOWN
-
-
-       subroutine fort_summass( &
+      subroutine fort_summass( &
         tid, &
         level, &
         finest_level, &
@@ -8173,6 +6499,7 @@ END SUBROUTINE SIMP
         slopes,DIMS(slopes), &
         den,DIMS(den), &
         vel,DIMS(vel), &
+        visco,DIMS(visco), &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -8188,362 +6515,456 @@ END SUBROUTINE SIMP
         ntensor,  &
         den_ncomp, &
         isweep) &  ! isweep=0 or 1
-       bind(c,name='fort_summass')
+      bind(c,name='fort_summass')
 
-       use LegendreNodes
-       use global_utility_module
-       use probf90_module
-       use geometry_intersect_module
-       use MOF_routines_module
+      use LegendreNodes
+      use global_utility_module
+      use probf90_module
+      use geometry_intersect_module
+      use MOF_routines_module
 
-       IMPLICIT NONE
+      IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: ncomp_sum_int_user1
-       INTEGER_T, intent(in) :: ncomp_sum_int_user2
-       INTEGER_T, intent(in) :: tid
-       INTEGER_T, intent(in) :: level
-       INTEGER_T, intent(in) :: finest_level
-       INTEGER_T, intent(in) :: adapt_quad_depth
-       INTEGER_T :: max_level_adapt
-       INTEGER_T, intent(in) :: slice_dir
-       REAL_T, intent(in) :: xslice(SDIM)
-       INTEGER_T, intent(in) :: resultsize
-       INTEGER_T, intent(in) :: den_ncomp
-       INTEGER_T, intent(in) :: nmat
-       INTEGER_T, intent(in) :: ntensor
-       INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
-       INTEGER_T, intent(in) :: NN,dirx,diry,cut_flag
-       REAL_T, intent(out) :: ZZ(0:NN)
-       REAL_T, intent(out) :: FF(0:NN)
+      INTEGER_T, intent(in) :: ncomp_sum_int_user1
+      INTEGER_T, intent(in) :: ncomp_sum_int_user2
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: adapt_quad_depth
+      INTEGER_T :: max_level_adapt
+      INTEGER_T, intent(in) :: slice_dir
+      REAL_T, intent(in) :: xslice(SDIM)
+      INTEGER_T, intent(in) :: resultsize
+      INTEGER_T, intent(in) :: den_ncomp
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ntensor
+      INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
+      INTEGER_T, intent(in) :: NN,dirx,diry,cut_flag
+      REAL_T, intent(out) :: ZZ(0:NN)
+      REAL_T, intent(out) :: FF(0:NN)
 
-       REAL_T, intent(in), target :: problo(SDIM)
-       REAL_T, intent(in), target :: probhi(SDIM)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: DIMDEC(cellten)
-       INTEGER_T, intent(in) :: DIMDEC(lsfab)
-       INTEGER_T, intent(in) :: DIMDEC(mask)
-       INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-       INTEGER_T, intent(in) :: DIMDEC(drag)
-       INTEGER_T, intent(in) :: DIMDEC(slopes)
-       INTEGER_T, intent(in) :: DIMDEC(den)
-       INTEGER_T, intent(in) :: DIMDEC(vel)
-       REAL_T, intent(inout) ::  local_result(resultsize)
-       REAL_T, intent(in) ::  resultALL(resultsize)
-       INTEGER_T, intent(in) :: sumdata_type(resultsize)
-       INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
-       REAL_T, intent(in) ::  time
-       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)  
-       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
-       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in), target ::  maskSEM(DIMV(maskSEM))
-       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in), target ::  mask(DIMV(mask))
-       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in), target ::  drag(DIMV(drag),4*SDIM+1)
-       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
-       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
-       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-       ! includes pressure 
-       REAL_T, intent(in), target :: vel(DIMV(vel),(SDIM+1)) 
-       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in), target :: problo(SDIM)
+      REAL_T, intent(in), target :: probhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: DIMDEC(cellten)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
+      INTEGER_T, intent(in) :: DIMDEC(drag)
+      INTEGER_T, intent(in) :: DIMDEC(slopes)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(visco)
+      REAL_T, intent(inout) ::  local_result(resultsize)
+      REAL_T, intent(in) ::  resultALL(resultsize)
+      INTEGER_T, intent(in) :: sumdata_type(resultsize)
+      INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
+      REAL_T, intent(in) ::  time
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)  
+      REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target ::  maskSEM(DIMV(maskSEM))
+      REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target ::  mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target ::  drag(DIMV(drag),4*SDIM+1)
+      REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
+      REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      ! includes pressure 
+      REAL_T, intent(in), target :: vel(DIMV(vel),(SDIM+1)) 
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-       INTEGER_T i,j,k
-       INTEGER_T ii,jj,kk
-       INTEGER_T dir
-       INTEGER_T im
-       INTEGER_T im_primary
-       INTEGER_T vofcomp
-       INTEGER_T dirMAC
-       REAL_T xcen,xcrit
-       REAL_T, target :: xsten(-3:3,SDIM)
-       REAL_T xstenMAC(-3:3,SDIM)
-       REAL_T mofdata(nmat*ngeom_recon)
-       REAL_T mofdata_tess(nmat*ngeom_recon)
-       INTEGER_T stack_error_level
-       INTEGER_T dir2,dir3
-       REAL_T errorparm(nmat*2) ! fi,ei
-       REAL_T xbottom,xtop,ls_above,ls_below,ZZgrid
-       REAL_T vof_below,vof_above,vof_face
-       REAL_T volgrid,distbound
-       REAL_T cengrid(SDIM)
-       REAL_T xboundary(SDIM)
+      REAL_T, intent(in), target :: visco(DIMV(visco), &
+        FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic) 
+      REAL_T, pointer :: visco_ptr(D_DECL(:,:,:),:)
 
-       INTEGER_T filler_comp,FE_sum_comp,drag_sum_comp
-       INTEGER_T minint_sum_comp,maxint_sum_comp
-       INTEGER_T pdrag_sum_comp,minden_sum_comp,maxden_sum_comp
-       INTEGER_T xnot_amp_sum_comp,cen_sum_comp
-       INTEGER_T mincen_sum_comp,maxcen_sum_comp
-       INTEGER_T mass_sum_comp,mom_sum_comp,energy_sum_comp
-       INTEGER_T left_pressure_comp
-       INTEGER_T kinetic_energy_comp
-       INTEGER_T LS_F_sum_comp,LS_cen_sum_comp
-       INTEGER_T torque_sum_comp,ptorque_sum_comp
-       INTEGER_T step_perim_sum_comp
-       INTEGER_T minint_slice
-       INTEGER_T maxint_slice
-       INTEGER_T vort_sum_comp
-       INTEGER_T vort_error
-       INTEGER_T vel_error
-       INTEGER_T energy_moment
-       INTEGER_T enstrophy
-       INTEGER_T user_comp
-       INTEGER_T species_mass_comp
-       INTEGER_T total_comp
+      REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
 
-       INTEGER_T isrc,idest
-       INTEGER_T iside
-       REAL_T dz_external
-       INTEGER_T j_external
+      INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
+      INTEGER_T dir
+      INTEGER_T im
+      INTEGER_T im_primary
+      INTEGER_T vofcomp
+      INTEGER_T dirMAC
+      REAL_T xcen,xcrit
+      REAL_T, target :: xsten(-3:3,SDIM)
+      REAL_T xstenMAC(-3:3,SDIM)
+      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata_tess(nmat*ngeom_recon)
+      INTEGER_T stack_error_level
+      INTEGER_T dir2,dir3
+      REAL_T errorparm(nmat*2) ! fi,ei
+      REAL_T xbottom,xtop,ls_above,ls_below,ZZgrid
+      REAL_T vof_below,vof_above,vof_face
+      REAL_T volgrid,distbound
+      REAL_T cengrid(SDIM)
+      REAL_T xboundary(SDIM)
 
-       REAL_T cen_material(SDIM)
-       INTEGER_T use_vof_height
+      INTEGER_T filler_comp,FE_sum_comp,drag_sum_comp
+      INTEGER_T minint_sum_comp,maxint_sum_comp
+      INTEGER_T pdrag_sum_comp,minden_sum_comp,maxden_sum_comp
+      INTEGER_T xnot_amp_sum_comp,cen_sum_comp
+      INTEGER_T mincen_sum_comp,maxcen_sum_comp
+      INTEGER_T mass_sum_comp,mom_sum_comp,energy_sum_comp
+      INTEGER_T left_pressure_comp
+      INTEGER_T kinetic_energy_comp
+      INTEGER_T LS_F_sum_comp,LS_cen_sum_comp
+      INTEGER_T torque_sum_comp,ptorque_sum_comp
+      INTEGER_T step_perim_sum_comp
+      INTEGER_T minint_slice
+      INTEGER_T maxint_slice
+      INTEGER_T vort_sum_comp
+      INTEGER_T vort_error
+      INTEGER_T vel_error
+      INTEGER_T energy_moment
+      INTEGER_T enstrophy
+      INTEGER_T user_comp
+      INTEGER_T species_mass_comp
+      INTEGER_T total_comp
 
-       REAL_T ldata(D_DECL(3,3,3))
-       REAL_T LSvolume,LSfacearea
-       REAL_T LScentroid(SDIM)
-       REAL_T LScen_material(SDIM)
-       REAL_T LSareacentroid(SDIM)
-       INTEGER_T i1,j1,k1,k1lo,k1hi
-       REAL_T KECELL,dencore,Tcore,ecore,totalE
-       INTEGER_T in_slice,nhalf
-       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase,veldir
-       REAL_T gradu(3,3)
-       REAL_T vort(3)
+      INTEGER_T isrc,idest
+      INTEGER_T iside
+      REAL_T dz_external
+      INTEGER_T j_external
 
-       REAL_T local_vort
-       REAL_T local_vort_error
-       REAL_T vort_expect
-       REAL_T local_vel_error
-       REAL_T local_energy_moment
-       REAL_T local_vel(SDIM)
-       REAL_T vel_expect(SDIM)
-       REAL_T local_xsten(SDIM)
+      REAL_T cen_material(SDIM)
+      INTEGER_T use_vof_height
 
-       REAL_T local_kinetic_energy(nmat)
+      REAL_T ldata(D_DECL(3,3,3))
+      REAL_T LSvolume,LSfacearea
+      REAL_T LScentroid(SDIM)
+      REAL_T LScen_material(SDIM)
+      REAL_T LSareacentroid(SDIM)
+      INTEGER_T i1,j1,k1,k1lo,k1hi
+      REAL_T KECELL,dencore,Tcore,ecore,totalE
+      INTEGER_T in_slice,nhalf
+      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase,veldir
+      REAL_T gradu(3,3)
+      REAL_T vort(3)
 
-       REAL_T rr
-       INTEGER_T mask_im
-       INTEGER_T cell_index,element_index,sub_index
-       INTEGER_T velcomp
-       INTEGER_T prescomp
-       INTEGER_T nmax
+      REAL_T local_vort
+      REAL_T local_vort_error
+      REAL_T vort_expect
+      REAL_T local_vel_error
+      REAL_T local_energy_moment
+      REAL_T local_vel(SDIM)
+      REAL_T vel_expect(SDIM)
+      REAL_T local_xsten(SDIM)
 
-       REAL_T LS_LOCAL(nmat)
+      REAL_T local_kinetic_energy(nmat)
 
-       REAL_T massfrac_parm(num_species_var+1)
-       INTEGER_T ispec
-       INTEGER_T local_tessellate
+      REAL_T rr
+      INTEGER_T mask_im
+      INTEGER_T cell_index,element_index,sub_index
+      INTEGER_T velcomp
+      INTEGER_T prescomp
+      INTEGER_T nmax
 
-       type(user_defined_sum_int_type) :: GRID_DATA_PARM
-       REAL_T local_user_out1(ncomp_sum_int_user1+1)
-       REAL_T local_user_out2(ncomp_sum_int_user2+1)
+      REAL_T LS_LOCAL(nmat)
 
-       nhalf=3
-       nmax=POLYGON_LIST_MAX  ! in: fort_summass
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
+      INTEGER_T local_tessellate
 
-       cellten_ptr=>cellten
-       lsfab_ptr=>lsfab
-       maskSEM_ptr=>maskSEM
-       mask_ptr=>mask
-       drag_ptr=>drag
-       slopes_ptr=>slopes
-       den_ptr=>den
-       vel_ptr=>vel
+      type(user_defined_sum_int_type) :: GRID_DATA_PARM
+      REAL_T local_user_out1(ncomp_sum_int_user1+1)
+      REAL_T local_user_out2(ncomp_sum_int_user2+1)
 
-       if ((adapt_quad_depth.lt.1).or.(adapt_quad_depth.gt.10)) then
-        print *,"adapt_quad_depth invalid"
+      nhalf=3
+      nmax=POLYGON_LIST_MAX  ! in: fort_summass
+
+      cellten_ptr=>cellten
+      lsfab_ptr=>lsfab
+      maskSEM_ptr=>maskSEM
+      mask_ptr=>mask
+      drag_ptr=>drag
+      slopes_ptr=>slopes
+      den_ptr=>den
+      vel_ptr=>vel
+      visco_ptr=>visco
+
+      if ((adapt_quad_depth.lt.1).or.(adapt_quad_depth.gt.10)) then
+       print *,"adapt_quad_depth invalid"
+       stop
+      endif
+      if ((slice_dir.lt.0).or.(slice_dir.ge.SDIM)) then
+       print *,"slice_dir invalid"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid sum mass ",ngeom_recon
+       stop
+      endif
+      if (den_ncomp.ne.nmat*num_state_material) then
+       print *,"den_ncomp invalid"
+       stop
+      endif
+      if (ntensor.ne.SDIM*SDIM) then
+       print *,"ntensor invalid"
+       stop
+      endif
+      if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
+       print *,"dirx invalid"
+       stop
+      endif
+      if ((diry.lt.0).or.(diry.ge.SDIM).or.(diry.eq.dirx)) then
+       print *,"diry invalid"
+       stop
+      endif
+      if ((cut_flag.ne.0).and.(cut_flag.ne.1)) then
+       print *,"cut_flag invalid"
+       stop
+      endif
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      filler_comp=0
+      FE_sum_comp=filler_comp+1
+      drag_sum_comp=FE_sum_comp+2*nmat
+      minint_sum_comp=drag_sum_comp+3
+      maxint_sum_comp=minint_sum_comp+3*nmat
+      pdrag_sum_comp=maxint_sum_comp+3*nmat
+      minden_sum_comp=pdrag_sum_comp+3
+      maxden_sum_comp=minden_sum_comp+2*nmat
+      xnot_amp_sum_comp=maxden_sum_comp+2*nmat
+      cen_sum_comp=xnot_amp_sum_comp+1
+      mincen_sum_comp=cen_sum_comp+3*nmat
+      maxcen_sum_comp=mincen_sum_comp+nmat
+      mass_sum_comp=maxcen_sum_comp+nmat
+      mom_sum_comp=mass_sum_comp+nmat
+      energy_sum_comp=mom_sum_comp+3*nmat
+      left_pressure_comp=energy_sum_comp+nmat
+      kinetic_energy_comp=left_pressure_comp+4
+      LS_F_sum_comp=kinetic_energy_comp+nmat
+      LS_cen_sum_comp=LS_F_sum_comp+nmat
+      torque_sum_comp=LS_cen_sum_comp+3*nmat
+      ptorque_sum_comp=torque_sum_comp+3
+      step_perim_sum_comp=ptorque_sum_comp+3
+      minint_slice=step_perim_sum_comp+1
+      maxint_slice=minint_slice+nmat
+      vort_sum_comp=maxint_slice+nmat
+      vort_error=vort_sum_comp+3
+      vel_error=vort_error+1
+      energy_moment=vel_error+1
+      enstrophy=energy_moment+1 ! integral of w dot w
+      user_comp=enstrophy+nmat
+      species_mass_comp=user_comp+ncomp_sum_int_user1+ &
+              ncomp_sum_int_user2
+      total_comp=species_mass_comp+num_species_var*nmat
+
+      if (resultsize.ne.total_comp) then
+       print *,"mismatch between resultsize and total_comp"
+       stop
+      endif
+      do idest=1,total_comp
+       if ((sumdata_type(idest).ne.1).and. &
+           (sumdata_type(idest).ne.2).and. &
+           (sumdata_type(idest).ne.3)) then
+        print *,"sumdata_type invalid"
         stop
        endif
-       if ((slice_dir.lt.0).or.(slice_dir.ge.SDIM)) then
-        print *,"slice_dir invalid"
+       if ((sumdata_sweep(idest).ne.0).and. &
+           (sumdata_sweep(idest).ne.1)) then
+        print *,"sumdata_sweep invalid"
         stop
        endif
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
-        stop
-       endif
-       if (ngeom_recon.ne.2*SDIM+3) then
-        print *,"ngeom_recon invalid sum mass ",ngeom_recon
-        stop
-       endif
-       if (den_ncomp.ne.nmat*num_state_material) then
-        print *,"den_ncomp invalid"
-        stop
-       endif
-       if (ntensor.ne.SDIM*SDIM) then
-        print *,"ntensor invalid"
-        stop
-       endif
-       if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
-        print *,"dirx invalid"
-        stop
-       endif
-       if ((diry.lt.0).or.(diry.ge.SDIM).or.(diry.eq.dirx)) then
-        print *,"diry invalid"
-        stop
-       endif
-       if ((cut_flag.ne.0).and.(cut_flag.ne.1)) then
-        print *,"cut_flag invalid"
-        stop
-       endif
-       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-        print *,"tid invalid"
-        stop
-       endif
+      enddo  ! idest
 
-       filler_comp=0
-       FE_sum_comp=filler_comp+1
-       drag_sum_comp=FE_sum_comp+2*nmat
-       minint_sum_comp=drag_sum_comp+3
-       maxint_sum_comp=minint_sum_comp+3*nmat
-       pdrag_sum_comp=maxint_sum_comp+3*nmat
-       minden_sum_comp=pdrag_sum_comp+3
-       maxden_sum_comp=minden_sum_comp+2*nmat
-       xnot_amp_sum_comp=maxden_sum_comp+2*nmat
-       cen_sum_comp=xnot_amp_sum_comp+1
-       mincen_sum_comp=cen_sum_comp+3*nmat
-       maxcen_sum_comp=mincen_sum_comp+nmat
-       mass_sum_comp=maxcen_sum_comp+nmat
-       mom_sum_comp=mass_sum_comp+nmat
-       energy_sum_comp=mom_sum_comp+3*nmat
-       left_pressure_comp=energy_sum_comp+nmat
-       kinetic_energy_comp=left_pressure_comp+4
-       LS_F_sum_comp=kinetic_energy_comp+nmat
-       LS_cen_sum_comp=LS_F_sum_comp+nmat
-       torque_sum_comp=LS_cen_sum_comp+3*nmat
-       ptorque_sum_comp=torque_sum_comp+3
-       step_perim_sum_comp=ptorque_sum_comp+3
-       minint_slice=step_perim_sum_comp+1
-       maxint_slice=minint_slice+nmat
-       vort_sum_comp=maxint_slice+nmat
-       vort_error=vort_sum_comp+3
-       vel_error=vort_error+1
-       energy_moment=vel_error+1
-       enstrophy=energy_moment+1 ! integral of w dot w
-       user_comp=enstrophy+nmat
-       species_mass_comp=user_comp+ncomp_sum_int_user1+ &
-               ncomp_sum_int_user2
-       total_comp=species_mass_comp+num_species_var*nmat
-
-       if (resultsize.ne.total_comp) then
-        print *,"mismatch between resultsize and total_comp"
-        stop
-       endif
-       do idest=1,total_comp
-        if ((sumdata_type(idest).ne.1).and. &
-            (sumdata_type(idest).ne.2).and. &
-            (sumdata_type(idest).ne.3)) then
-         print *,"sumdata_type invalid"
-         stop
-        endif
-        if ((sumdata_sweep(idest).ne.0).and. &
-            (sumdata_sweep(idest).ne.1)) then
-         print *,"sumdata_sweep invalid"
-         stop
-        endif
-       enddo  ! idest
-
-       if (isweep.eq.0) then
-        max_level_adapt=adapt_quad_depth
-       else if (isweep.eq.1) then
-        max_level_adapt=1
-       else
-        print *,"isweep invalid"
-        stop
-       endif
+      if (isweep.eq.0) then
+       max_level_adapt=adapt_quad_depth
+      else if (isweep.eq.1) then
+       max_level_adapt=1
+      else
+       print *,"isweep invalid"
+       stop
+      endif
       
 
-       if (SDIM.eq.3) then
-        k1lo=-1
-        k1hi=1
-       else if (SDIM.eq.2) then
-        k1lo=0
-        k1hi=0
-       else
-        print *,"dimension bust"
-        stop
-       endif
-       if (bfact.lt.1) then
-        print *,"bfact too small"
-        stop
-       endif
+      if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
+      else
+       print *,"dimension bust"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
 
-       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
+      ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
+      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
-       call checkbound_array(fablo,fabhi,cellten_ptr,0,-1,411) 
-       call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,411) 
-       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,411) 
-       call checkbound_array1(fablo,fabhi,mask_ptr,2,-1,411) 
-       call checkbound_array(fablo,fabhi,drag_ptr,0,-1,413) 
-       call checkbound_array(fablo,fabhi,slopes_ptr,2,-1,413) 
-       call checkbound_array(fablo,fabhi,den_ptr,1,-1,413) 
-       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,413) 
+      call checkbound_array(fablo,fabhi,cellten_ptr,0,-1,411) 
+      call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,411) 
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,411) 
+      call checkbound_array1(fablo,fabhi,mask_ptr,2,-1,411) 
+      call checkbound_array(fablo,fabhi,drag_ptr,0,-1,413) 
+      call checkbound_array(fablo,fabhi,slopes_ptr,2,-1,413) 
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,413) 
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,413) 
+      call checkbound_array(fablo,fabhi,visco_ptr,1,-1,413) 
 
-       GRID_DATA_PARM%ncomp_sum_int_user1=ncomp_sum_int_user1
-       GRID_DATA_PARM%ncomp_sum_int_user2=ncomp_sum_int_user2
-       GRID_DATA_PARM%time=time
-       GRID_DATA_PARM%problo=>problo
-       GRID_DATA_PARM%probhi=>probhi
-       GRID_DATA_PARM%nhalf=nhalf
-       GRID_DATA_PARM%nmat=nmat
-       GRID_DATA_PARM%bfact=bfact
-       GRID_DATA_PARM%ntensor=ntensor
-       GRID_DATA_PARM%den_ncomp=den_ncomp
-       GRID_DATA_PARM%level=level
-       GRID_DATA_PARM%finest_level=finest_level
-       GRID_DATA_PARM%tilelo=>tilelo
-       GRID_DATA_PARM%tilehi=>tilehi
-       GRID_DATA_PARM%fablo=>fablo
-       GRID_DATA_PARM%fabhi=>fabhi
-       GRID_DATA_PARM%xlo=>xlo
-       GRID_DATA_PARM%dx=>dx
-       GRID_DATA_PARM%cellten=>cellten
-       GRID_DATA_PARM%lsfab=>lsfab
-       GRID_DATA_PARM%slopes=>slopes
-       GRID_DATA_PARM%den=>den
-       GRID_DATA_PARM%vel=>vel
+      GRID_DATA_PARM%ncomp_sum_int_user1=ncomp_sum_int_user1
+      GRID_DATA_PARM%ncomp_sum_int_user2=ncomp_sum_int_user2
+      GRID_DATA_PARM%time=time
+      GRID_DATA_PARM%problo=>problo
+      GRID_DATA_PARM%probhi=>probhi
+      GRID_DATA_PARM%nhalf=nhalf
+      GRID_DATA_PARM%nmat=nmat
+      GRID_DATA_PARM%bfact=bfact
+      GRID_DATA_PARM%ntensor=ntensor
+      GRID_DATA_PARM%den_ncomp=den_ncomp
+      GRID_DATA_PARM%level=level
+      GRID_DATA_PARM%finest_level=finest_level
+      GRID_DATA_PARM%tilelo=>tilelo
+      GRID_DATA_PARM%tilehi=>tilehi
+      GRID_DATA_PARM%fablo=>fablo
+      GRID_DATA_PARM%fabhi=>fabhi
+      GRID_DATA_PARM%xlo=>xlo
+      GRID_DATA_PARM%dx=>dx
+      GRID_DATA_PARM%cellten=>cellten
+      GRID_DATA_PARM%lsfab=>lsfab
+      GRID_DATA_PARM%slopes=>slopes
+      GRID_DATA_PARM%den=>den
+      GRID_DATA_PARM%vel=>vel
+      GRID_DATA_PARM%visco=>visco
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-        if (mask(D_DECL(i,j,k)).gt.zero) then
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       if (mask(D_DECL(i,j,k)).gt.zero) then
 
-         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
-         do veldir=1,3
-         do dir=1,3
-          gradu(veldir,dir)=zero
+        do veldir=1,3
+        do dir=1,3
+         gradu(veldir,dir)=zero
+        enddo
+        enddo
+
+        do dir=1,SDIM
+         if (dir.eq.1) then
+          nbase=ux-1
+         else if (dir.eq.2) then
+          nbase=uy-1
+         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
+          nbase=uz-1
+         else
+          print *,"dir invalid summass"
+          stop
+         endif
+
+         do veldir=1,SDIM
+          gradu(veldir,dir)=cellten(D_DECL(i,j,k),nbase+veldir) 
          enddo
-         enddo
+        enddo ! dir
 
+        velcomp=1
+
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+         rr=xsten(0,1)
+         gradu(3,3)=vel(D_DECL(i,j,k),velcomp)/abs(rr)
+        else if (levelrz.eq.3) then
+         rr=xsten(0,1)
+         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
+         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
+        else
+         print *,"levelrz invalid summass"
+         stop
+        endif
+
+        vort(1)=gradu(3,2)-gradu(2,3)
+        vort(2)=gradu(1,3)-gradu(3,1)
+        vort(3)=gradu(2,1)-gradu(1,2)
+
+        do dir=1,nmat*ngeom_recon
+         mofdata(dir)=slopes(D_DECL(i,j,k),dir)
+         mofdata_tess(dir)=mofdata(dir)
+        enddo
+
+        stack_error_level=0
+
+        ! before (mofdata): fluids tessellate
+        ! after  (mofdata): fluids and solids tessellate
+        local_tessellate=1
+        call multi_get_volume_tessellate( &
+         local_tessellate, &
+         bfact, &
+         dx,xsten,nhalf, &
+         mofdata_tess, &
+         geom_xtetlist(1,1,1,tid+1), &
+         nmax, &
+         nmax, &
+         nmat, &
+         SDIM, &
+         101)
+
+         ! tessellate==1 (internal to stackerror)
+         ! in: fort_summass
+        call stackerror( &
+         geom_xtetlist(1,1,1,tid+1), &
+         xsten,nhalf,dx,bfact, &
+         xsten,nhalf, &
+         mofdata, &
+         mofdata_tess, &
+         errorparm, &
+         stack_error_level, &
+         max_level_adapt, &
+         nmat,time)
+
+         ! F1,E1,F2,E2,F3,E3,...
+        do dir=1,2*nmat
+         idest=FE_sum_comp+dir
+         local_result(idest)=local_result(idest)+errorparm(dir)
+        enddo
+
+        call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+         volgrid,cengrid,SDIM)
+
+        mask_im=NINT(maskSEM(D_DECL(i,j,k)))
+        if ((mask_im.ge.1).and.(mask_im.le.nmat)) then
+         volgrid=one
          do dir=1,SDIM
           if (dir.eq.1) then
-           nbase=ux-1
+           cell_index=i
           else if (dir.eq.2) then
-           nbase=uy-1
-          else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-           nbase=uz-1
+           cell_index=j
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           cell_index=k
           else
-           print *,"dir invalid summass"
+           print *,"dir invalid summass 2"
            stop
           endif
-
-          do veldir=1,SDIM
-           gradu(veldir,dir)=cellten(D_DECL(i,j,k),nbase+veldir) 
-          enddo
-         enddo ! dir
-
-         velcomp=1
+          call get_element_index(cell_index,element_index,sub_index,bfact)
+          volgrid=volgrid*cache_gauss_w(bfact,sub_index,SPTYPE)* &
+           bfact*dx(dir)/two
+         enddo ! dir=1..sdim
 
          if (levelrz.eq.0) then
           ! do nothing
@@ -8552,438 +6973,513 @@ END SUBROUTINE SIMP
            print *,"dimension bust"
            stop
           endif
-          rr=xsten(0,1)
-          gradu(3,3)=vel(D_DECL(i,j,k),velcomp)/abs(rr)
+          volgrid=volgrid*two*Pi*xsten(0,1)
          else if (levelrz.eq.3) then
-          rr=xsten(0,1)
-          gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
-          gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
+          volgrid=volgrid*xsten(0,1)
          else
-          print *,"levelrz invalid summass"
+          print *,"levelrz invalid"
           stop
          endif
+         
+        else if (mask_im.eq.0) then
+         ! do nothing
+        else
+         print *,"maskSEM invalid"
+         stop
+        endif
+      
+        GRID_DATA_PARM%volgrid=volgrid
+        GRID_DATA_PARM%igrid=i
+        GRID_DATA_PARM%jgrid=j
+        GRID_DATA_PARM%kgrid=k
+        GRID_DATA_PARM%xsten=>xsten
 
-         vort(1)=gradu(3,2)-gradu(2,3)
-         vort(2)=gradu(1,3)-gradu(3,1)
-         vort(3)=gradu(2,1)-gradu(1,2)
+        do im=1,nmat
 
-         do dir=1,nmat*ngeom_recon
-          mofdata(dir)=slopes(D_DECL(i,j,k),dir)
-          mofdata_tess(dir)=mofdata(dir)
+         LS_LOCAL(im)=lsfab(D_DECL(i,j,k),im)
+
+         do i1=-1,1
+         do j1=-1,1
+         do k1=k1lo,k1hi
+          ldata(D_DECL(i1+2,j1+2,k1+2))= &
+           lsfab(D_DECL(i+i1,j+j1,k+k1),im)
+         enddo
+         enddo
+         enddo
+          ! LSvolume is a volume fraction.
+          ! LScentroid is in an absolute coordinate system.
+         call getvolume(bfact,dx,xsten,nhalf, &
+          ldata,LSvolume,LSfacearea, &
+          LScentroid,LSareacentroid,VOFTOL,SDIM)
+
+         vofcomp=(im-1)*ngeom_recon+1
+         do dir=1,SDIM
+          cen_material(dir)=mofdata_tess(vofcomp+dir)+cengrid(dir)
+          LScen_material(dir)=LScentroid(dir)
          enddo
 
-         stack_error_level=0
-
-         ! before (mofdata): fluids tessellate
-         ! after  (mofdata): fluids and solids tessellate
-         local_tessellate=1
-         call multi_get_volume_tessellate( &
-          local_tessellate, &
-          bfact, &
-          dx,xsten,nhalf, &
-          mofdata_tess, &
-          geom_xtetlist(1,1,1,tid+1), &
-          nmax, &
-          nmax, &
-          nmat, &
-          SDIM, &
-          101)
-
-          ! tessellate==1 (internal to stackerror)
-          ! in: fort_summass
-         call stackerror( &
-          geom_xtetlist(1,1,1,tid+1), &
-          xsten,nhalf,dx,bfact, &
-          xsten,nhalf, &
-          mofdata, &
-          mofdata_tess, &
-          errorparm, &
-          stack_error_level, &
-          max_level_adapt, &
-          nmat,time)
-
-          ! F1,E1,F2,E2,F3,E3,...
-         do dir=1,2*nmat
-          idest=FE_sum_comp+dir
-          local_result(idest)=local_result(idest)+errorparm(dir)
-         enddo
-
-         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-          volgrid,cengrid,SDIM)
-
-         mask_im=NINT(maskSEM(D_DECL(i,j,k)))
-         if ((mask_im.ge.1).and.(mask_im.le.nmat)) then
-          volgrid=one
-          do dir=1,SDIM
-           if (dir.eq.1) then
-            cell_index=i
-           else if (dir.eq.2) then
-            cell_index=j
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then
-            cell_index=k
-           else
-            print *,"dir invalid summass 2"
-            stop
-           endif
-           call get_element_index(cell_index,element_index,sub_index,bfact)
-           volgrid=volgrid*cache_gauss_w(bfact,sub_index,SPTYPE)* &
-            bfact*dx(dir)/two
-          enddo ! dir=1..sdim
-
-          if (levelrz.eq.0) then
-           ! do nothing
-          else if (levelrz.eq.1) then
-           if (SDIM.ne.2) then
-            print *,"dimension bust"
-            stop
-           endif
-           volgrid=volgrid*two*Pi*xsten(0,1)
-          else if (levelrz.eq.3) then
-           volgrid=volgrid*xsten(0,1)
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
-          
-         else if (mask_im.eq.0) then
-          ! do nothing
-         else
-          print *,"maskSEM invalid"
-          stop
-         endif
-       
-         GRID_DATA_PARM%volgrid=volgrid
-         GRID_DATA_PARM%igrid=i
-         GRID_DATA_PARM%jgrid=j
-         GRID_DATA_PARM%kgrid=k
-         GRID_DATA_PARM%xsten=>xsten
-
-         do im=1,nmat
-
-          LS_LOCAL(im)=lsfab(D_DECL(i,j,k),im)
-
-          do i1=-1,1
-          do j1=-1,1
-          do k1=k1lo,k1hi
-           ldata(D_DECL(i1+2,j1+2,k1+2))= &
-            lsfab(D_DECL(i+i1,j+j1,k+k1),im)
-          enddo
-          enddo
-          enddo
-           ! LSvolume is a volume fraction.
-           ! LScentroid is in an absolute coordinate system.
-          call getvolume(bfact,dx,xsten,nhalf, &
-           ldata,LSvolume,LSfacearea, &
-           LScentroid,LSareacentroid,VOFTOL,SDIM)
-
-          vofcomp=(im-1)*ngeom_recon+1
-          do dir=1,SDIM
-           cen_material(dir)=mofdata_tess(vofcomp+dir)+cengrid(dir)
-           LScen_material(dir)=LScentroid(dir)
-          enddo
-
-          do dir=1,SDIM
-           idest=cen_sum_comp+dir+3*(im-1)
-           local_result(idest)=local_result(idest)+ &
-             volgrid*mofdata_tess(vofcomp)*cen_material(dir)
-           idest=LS_cen_sum_comp+dir+3*(im-1)
-           local_result(idest)=local_result(idest)+ &
-             volgrid*LSvolume*LScen_material(dir)
-          enddo
-          idest=LS_F_sum_comp+im
-          local_result(idest)=local_result(idest)+volgrid*LSvolume
-
-          dencore=den(D_DECL(i,j,k),1+num_state_material*(im-1))
-          Tcore=den(D_DECL(i,j,k),2+num_state_material*(im-1))
-
-          idest=mass_sum_comp+im
+         do dir=1,SDIM
+          idest=cen_sum_comp+dir+3*(im-1)
           local_result(idest)=local_result(idest)+ &
-            dencore*volgrid*mofdata_tess(vofcomp)
+            volgrid*mofdata_tess(vofcomp)*cen_material(dir)
+          idest=LS_cen_sum_comp+dir+3*(im-1)
+          local_result(idest)=local_result(idest)+ &
+            volgrid*LSvolume*LScen_material(dir)
+         enddo
+         idest=LS_F_sum_comp+im
+         local_result(idest)=local_result(idest)+volgrid*LSvolume
 
-          do ispec=1,num_species_var
-           idest=species_mass_comp+(ispec-1)*nmat+im
-           local_result(idest)=local_result(idest)+ &
-             dencore*volgrid*mofdata_tess(vofcomp)* &
-             den(D_DECL(i,j,k),2+ispec+num_state_material*(im-1))
-          enddo ! ispec=1..num_species_var
+         dencore=den(D_DECL(i,j,k),1+num_state_material*(im-1))
+         Tcore=den(D_DECL(i,j,k),2+num_state_material*(im-1))
 
-          KECELL=zero
+         idest=mass_sum_comp+im
+         local_result(idest)=local_result(idest)+ &
+           dencore*volgrid*mofdata_tess(vofcomp)
 
-          do dir=1,SDIM
-           velcomp=dir
-           idest=mom_sum_comp+3*(im-1)+dir
-           local_result(idest)=local_result(idest)+ &
-             vel(D_DECL(i,j,k),velcomp)*volgrid*mofdata_tess(vofcomp)*dencore
+         do ispec=1,num_species_var
+          idest=species_mass_comp+(ispec-1)*nmat+im
+          local_result(idest)=local_result(idest)+ &
+            dencore*volgrid*mofdata_tess(vofcomp)* &
+            den(D_DECL(i,j,k),2+ispec+num_state_material*(im-1))
+         enddo ! ispec=1..num_species_var
 
-           KECELL=KECELL+vel(D_DECL(i,j,k),velcomp)**2
-          enddo ! dir=1..sdim
+         KECELL=zero
 
-          KECELL=half*KECELL
+         do dir=1,SDIM
+          velcomp=dir
+          idest=mom_sum_comp+3*(im-1)+dir
+          local_result(idest)=local_result(idest)+ &
+            vel(D_DECL(i,j,k),velcomp)*volgrid*mofdata_tess(vofcomp)*dencore
 
-          idest=kinetic_energy_comp+im
+          KECELL=KECELL+vel(D_DECL(i,j,k),velcomp)**2
+         enddo ! dir=1..sdim
 
-          local_kinetic_energy(im)= &
-            KECELL*volgrid*mofdata_tess(vofcomp)*dencore
+         KECELL=half*KECELL
 
-          local_result(idest)=local_result(idest)+local_kinetic_energy(im)
+         idest=kinetic_energy_comp+im
 
-          idest=energy_sum_comp+im
+         local_kinetic_energy(im)= &
+           KECELL*volgrid*mofdata_tess(vofcomp)*dencore
 
-          call init_massfrac_parm(dencore,massfrac_parm,im)
-          do ispec=1,num_species_var
-           massfrac_parm(ispec)= &
-               den(D_DECL(i,j,k),(im-1)*num_state_material+2+ispec)
-          enddo
-          call INTERNAL_material(dencore,massfrac_parm, &
-            Tcore,ecore, &
-            fort_material_type(im),im)
+         local_result(idest)=local_result(idest)+local_kinetic_energy(im)
 
-          totalE=dencore*(KECELL+ecore)*volgrid*mofdata_tess(vofcomp)
-          local_result(idest)=local_result(idest)+totalE
+         idest=energy_sum_comp+im
 
-         enddo  ! im=1..nmat
+         call init_massfrac_parm(dencore,massfrac_parm,im)
+         do ispec=1,num_species_var
+          massfrac_parm(ispec)= &
+              den(D_DECL(i,j,k),(im-1)*num_state_material+2+ispec)
+         enddo
+         call INTERNAL_material(dencore,massfrac_parm, &
+           Tcore,ecore, &
+           fort_material_type(im),im)
 
-         call get_primary_material(LS_LOCAL,nmat,im_primary)
+         totalE=dencore*(KECELL+ecore)*volgrid*mofdata_tess(vofcomp)
+         local_result(idest)=local_result(idest)+totalE
 
-         do dir=1,3
-          idest=vort_sum_comp+dir
-          local_result(idest)=local_result(idest)+volgrid*vort(dir)
-          idest=enstrophy+1
-          if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
-           local_result(idest+im_primary-1)= &
-               local_result(idest+im_primary-1)+volgrid*(vort(dir)**2)
-          else
-           print *,"im_primary invalid"
-           stop
-          endif
-         enddo ! dir=1..3
-       
-         if ((ncomp_sum_int_user1.ge.1).or. &
-             (ncomp_sum_int_user2.ge.1)) then
+        enddo  ! im=1..nmat
 
-          if (is_in_probtype_list().eq.1) then
+        call get_primary_material(LS_LOCAL,nmat,im_primary)
 
-           do im=1,ncomp_sum_int_user1
-            idest=user_comp+im
-            if (sumdata_sweep(idest).eq.0) then
-             ! do nothing
-            else
-             print *,"sumdata_sweep invalid"
-             stop
-            endif
-            if (isweep.eq.0) then
-             local_user_out1(im)=zero
-            else if (isweep.eq.1) then
-             local_user_out1(im)=resultALL(idest)
-            else
-             print *,"isweep invalid"
-             stop
-            endif
-           enddo !im=1,ncomp_sum_int_user1
+        do dir=1,3
+         idest=vort_sum_comp+dir
+         local_result(idest)=local_result(idest)+volgrid*vort(dir)
+         idest=enstrophy+1
+         if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+          local_result(idest+im_primary-1)= &
+              local_result(idest+im_primary-1)+volgrid*(vort(dir)**2)
+         else
+          print *,"im_primary invalid"
+          stop
+         endif
+        enddo ! dir=1..3
+      
+        if ((ncomp_sum_int_user1.ge.1).or. &
+            (ncomp_sum_int_user2.ge.1)) then
 
-           do im=1,ncomp_sum_int_user2
-            idest=user_comp+ncomp_sum_int_user1+im
-            if (sumdata_sweep(idest).eq.1) then
-             ! do nothing
-            else
-             print *,"sumdata_sweep invalid"
-             stop
-            endif
-            local_user_out2(im)=zero
-           enddo !im=1,ncomp_sum_int_user2
+         if (is_in_probtype_list().eq.1) then
 
-           call SUB_SUMINT(GRID_DATA_PARM,local_user_out1, &
-            local_user_out2,ncomp_sum_int_user1, &
-            ncomp_sum_int_user2,isweep)
-
+          do im=1,ncomp_sum_int_user1
+           idest=user_comp+im
+           if (sumdata_sweep(idest).eq.0) then
+            ! do nothing
+           else
+            print *,"sumdata_sweep invalid"
+            stop
+           endif
            if (isweep.eq.0) then
-            do im=1,ncomp_sum_int_user1
-             idest=user_comp+im
-             local_result(idest)=local_result(idest)+local_user_out1(im)
-            enddo
+            local_user_out1(im)=zero
            else if (isweep.eq.1) then
-            do im=1,ncomp_sum_int_user2
-             idest=user_comp+ncomp_sum_int_user1+im
-             local_result(idest)=local_result(idest)+local_user_out2(im)
-            enddo
+            local_user_out1(im)=resultALL(idest)
            else
             print *,"isweep invalid"
             stop
            endif
+          enddo !im=1,ncomp_sum_int_user1
 
-          endif ! if (is_in_probtype_list().eq.1) then
+          do im=1,ncomp_sum_int_user2
+           idest=user_comp+ncomp_sum_int_user1+im
+           if (sumdata_sweep(idest).eq.1) then
+            ! do nothing
+           else
+            print *,"sumdata_sweep invalid"
+            stop
+           endif
+           local_user_out2(im)=zero
+          enddo !im=1,ncomp_sum_int_user2
 
-         else if ((ncomp_sum_int_user1.eq.0).and. &
-                  (ncomp_sum_int_user2.eq.0)) then
-          ! do nothing
-         else
-          print *,"ncomp_sum_int_user1 or ncomp_sum_int_user2 invalid"
-          stop
-         endif
+          call SUB_SUMINT(GRID_DATA_PARM,local_user_out1, &
+           local_user_out2,ncomp_sum_int_user1, &
+           ncomp_sum_int_user2,isweep)
+
+          if (isweep.eq.0) then
+           do im=1,ncomp_sum_int_user1
+            idest=user_comp+im
+            local_result(idest)=local_result(idest)+local_user_out1(im)
+           enddo
+          else if (isweep.eq.1) then
+           do im=1,ncomp_sum_int_user2
+            idest=user_comp+ncomp_sum_int_user1+im
+            local_result(idest)=local_result(idest)+local_user_out2(im)
+           enddo
+          else
+           print *,"isweep invalid"
+           stop
+          endif
+
+         endif ! if (is_in_probtype_list().eq.1) then
+
+        else if ((ncomp_sum_int_user1.eq.0).and. &
+                 (ncomp_sum_int_user2.eq.0)) then
+         ! do nothing
+        else
+         print *,"ncomp_sum_int_user1 or ncomp_sum_int_user2 invalid"
+         stop
+        endif
   
-         local_vort=sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
-         do dir=1,SDIM
-          local_vel(dir)=vel(D_DECL(i,j,k),dir)
-          local_xsten(dir)=xsten(0,dir)
-         enddo
-         call get_vort_vel_error(time,local_xsten,local_vort,local_vel, &
-          local_vort_error,local_vel_error,vort_expect,vel_expect, &
-          local_energy_moment)
-         
-         local_result(energy_moment+1)=local_result(energy_moment+1)+ &
-          local_energy_moment*local_kinetic_energy(1)
+        local_vort=sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
+        do dir=1,SDIM
+         local_vel(dir)=vel(D_DECL(i,j,k),dir)
+         local_xsten(dir)=xsten(0,dir)
+        enddo
+        call get_vort_vel_error(time,local_xsten,local_vort,local_vel, &
+         local_vort_error,local_vel_error,vort_expect,vel_expect, &
+         local_energy_moment)
+        
+        local_result(energy_moment+1)=local_result(energy_moment+1)+ &
+         local_energy_moment*local_kinetic_energy(1)
 
-         if (local_result(vort_error+1).lt.local_vort_error) then
-          local_result(vort_error+1)=local_vort_error
-         endif
-         if (local_result(vel_error+1).lt.local_vel_error) then
-          local_result(vel_error+1)=local_vel_error
-         endif
-         if (isweep.eq.0) then
+        if (local_result(vort_error+1).lt.local_vort_error) then
+         local_result(vort_error+1)=local_vort_error
+        endif
+        if (local_result(vel_error+1).lt.local_vel_error) then
+         local_result(vel_error+1)=local_vel_error
+        endif
+        if (isweep.eq.0) then
+         ! do nothing
+        else if (isweep.eq.1) then
+         if (local_vort_error.gt.zero) then
+          if (local_vort_error.gt.resultALL(vort_error+1)-VOFTOL) then
+           print *,"**** POSITION OF MAX VORT ERROR ****"
+           do dir=1,SDIM
+            print *,"dir,xpos ",dir,local_xsten(dir)
+           enddo
+           print *,"time ",time
+           print *,"local_vort_error ",local_vort_error
+           print *,"EXPECTED mag vort ",vort_expect
+           print *,"ACTUAL mag vort ",local_vort
+          endif
+         else if (local_vort_error.eq.zero) then
           ! do nothing
-         else if (isweep.eq.1) then
-          if (local_vort_error.gt.zero) then
-           if (local_vort_error.gt.resultALL(vort_error+1)-VOFTOL) then
-            print *,"**** POSITION OF MAX VORT ERROR ****"
-            do dir=1,SDIM
-             print *,"dir,xpos ",dir,local_xsten(dir)
-            enddo
-            print *,"time ",time
-            print *,"local_vort_error ",local_vort_error
-            print *,"EXPECTED mag vort ",vort_expect
-            print *,"ACTUAL mag vort ",local_vort
-           endif
-          else if (local_vort_error.eq.zero) then
-           ! do nothing
-          else
-           print *,"local_vort_error invalid"
-           stop
-          endif
-
-          if (local_vel_error.gt.zero) then
-           if (local_vel_error.gt.resultALL(vel_error+1)-VOFTOL) then
-            print *,"**** POSITION OF MAX VEL ERROR ****"
-            do dir=1,SDIM
-             print *,"dir,xpos ",dir,local_xsten(dir)
-            enddo
-            print *,"time ",time
-            print *,"local_vel_error ",local_vel_error
-            do dir=1,SDIM
-             print *,"dir, EXPECTED vel ",dir,vel_expect(dir)
-             print *,"dir, ACTUAL vel ",dir,local_vel(dir)
-            enddo
-           endif
-          else if (local_vel_error.eq.zero) then
-           ! do nothing
-          else
-           print *,"local_vel_error invalid"
-           stop
-          endif
-
          else
-          print *,"isweep invalid"
+          print *,"local_vort_error invalid"
           stop
          endif
 
-         prescomp=SDIM+1
-
-         idest=left_pressure_comp+1
-         if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
-          local_result(idest)=local_result(idest)+ &
-           volgrid*vel(D_DECL(i,j,k),prescomp) 
-          local_result(idest+2)=local_result(idest+2)+volgrid
+         if (local_vel_error.gt.zero) then
+          if (local_vel_error.gt.resultALL(vel_error+1)-VOFTOL) then
+           print *,"**** POSITION OF MAX VEL ERROR ****"
+           do dir=1,SDIM
+            print *,"dir,xpos ",dir,local_xsten(dir)
+           enddo
+           print *,"time ",time
+           print *,"local_vel_error ",local_vel_error
+           do dir=1,SDIM
+            print *,"dir, EXPECTED vel ",dir,vel_expect(dir)
+            print *,"dir, ACTUAL vel ",dir,local_vel(dir)
+           enddo
+          endif
+         else if (local_vel_error.eq.zero) then
+          ! do nothing
+         else
+          print *,"local_vel_error invalid"
+          stop
          endif
-         idest=left_pressure_comp+2
-         if (xsten(1,1).ge.probhix-VOFTOL*dx(1)) then
-          local_result(idest)=local_result(idest)+ &
-           volgrid*vel(D_DECL(i,j,k),prescomp) 
-          local_result(idest+2)=local_result(idest+2)+volgrid
-         endif
 
-         do dir=1,SDIM
-          idest=drag_sum_comp+dir
-          local_result(idest)=local_result(idest)+ &
-            drag(D_DECL(i,j,k),dir)
-          idest=pdrag_sum_comp+dir
-          local_result(idest)=local_result(idest)+ &
-            drag(D_DECL(i,j,k),SDIM+dir)
-          idest=torque_sum_comp+dir
-          local_result(idest)=local_result(idest)+ &
-            drag(D_DECL(i,j,k),2*SDIM+dir)
-          idest=ptorque_sum_comp+dir
-          local_result(idest)=local_result(idest)+ &
-            drag(D_DECL(i,j,k),3*SDIM+dir)
-         enddo ! dir
-         idest=step_perim_sum_comp+1
+        else
+         print *,"isweep invalid"
+         stop
+        endif
+
+        prescomp=SDIM+1
+
+        idest=left_pressure_comp+1
+        if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),4*SDIM+1)
+          volgrid*vel(D_DECL(i,j,k),prescomp) 
+         local_result(idest+2)=local_result(idest+2)+volgrid
+        endif
+        idest=left_pressure_comp+2
+        if (xsten(1,1).ge.probhix-VOFTOL*dx(1)) then
+         local_result(idest)=local_result(idest)+ &
+          volgrid*vel(D_DECL(i,j,k),prescomp) 
+         local_result(idest+2)=local_result(idest+2)+volgrid
+        endif
 
-         do im=1,nmat
+        do dir=1,SDIM
+         idest=drag_sum_comp+dir
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),dir)
+         idest=pdrag_sum_comp+dir
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),SDIM+dir)
+         idest=torque_sum_comp+dir
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),2*SDIM+dir)
+         idest=ptorque_sum_comp+dir
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),3*SDIM+dir)
+        enddo ! dir
+        idest=step_perim_sum_comp+1
+        local_result(idest)=local_result(idest)+ &
+          drag(D_DECL(i,j,k),4*SDIM+1)
 
-          idest=minden_sum_comp+2*(im-1)+1
-          isrc=num_state_material*(im-1)+1
-          if (local_result(idest).gt.den(D_DECL(i,j,k),isrc)) then
-           local_result(idest)=den(D_DECL(i,j,k),isrc)
-          endif
-          idest=idest+1
-          isrc=isrc+1
+        do im=1,nmat
 
-          if (local_result(idest).gt.den(D_DECL(i,j,k),isrc)) then
-           local_result(idest)=den(D_DECL(i,j,k),isrc)
-          endif
+         idest=minden_sum_comp+2*(im-1)+1
+         isrc=num_state_material*(im-1)+1
+         if (local_result(idest).gt.den(D_DECL(i,j,k),isrc)) then
+          local_result(idest)=den(D_DECL(i,j,k),isrc)
+         endif
+         idest=idest+1
+         isrc=isrc+1
 
-          idest=maxden_sum_comp+2*(im-1)+1
-          isrc=num_state_material*(im-1)+1
-          if (local_result(idest).lt.den(D_DECL(i,j,k),isrc)) then
-           local_result(idest)=den(D_DECL(i,j,k),isrc)
-          endif
-          idest=idest+1
-          isrc=isrc+1
+         if (local_result(idest).gt.den(D_DECL(i,j,k),isrc)) then
+          local_result(idest)=den(D_DECL(i,j,k),isrc)
+         endif
 
-          if (local_result(idest).lt.den(D_DECL(i,j,k),isrc)) then
-           local_result(idest)=den(D_DECL(i,j,k),isrc)
-          endif
+         idest=maxden_sum_comp+2*(im-1)+1
+         isrc=num_state_material*(im-1)+1
+         if (local_result(idest).lt.den(D_DECL(i,j,k),isrc)) then
+          local_result(idest)=den(D_DECL(i,j,k),isrc)
+         endif
+         idest=idest+1
+         isrc=isrc+1
 
-         enddo  ! im=1..nmat
+         if (local_result(idest).lt.den(D_DECL(i,j,k),isrc)) then
+          local_result(idest)=den(D_DECL(i,j,k),isrc)
+         endif
 
-         do dir=1,SDIM
-          ii=0
-          jj=0
-          kk=0
-          if (dir.eq.1) then
-           ii=1
-          else if (dir.eq.2) then
-           jj=1
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           kk=1
-          else
-           print *,"dir invalid summass 3"
-           stop
-          endif
-          xcen=xsten(0,dir)
+        enddo  ! im=1..nmat
 
-          do iside=0,1
+        do dir=1,SDIM
+         ii=0
+         jj=0
+         kk=0
+         if (dir.eq.1) then
+          ii=1
+         else if (dir.eq.2) then
+          jj=1
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          kk=1
+         else
+          print *,"dir invalid summass 3"
+          stop
+         endif
+         xcen=xsten(0,dir)
 
-           do im=1,nmat
+         do iside=0,1
+
+          do im=1,nmat
+
+           if (iside.eq.0) then
+            xbottom=xsten(-2,dir)
+            xtop=xcen
+            ls_below=lsfab(D_DECL(i-ii,j-jj,k-kk),im)
+            ls_above=lsfab(D_DECL(i,j,k),im)
+           else if (iside.eq.1) then
+            xbottom=xcen
+            xtop=xsten(2,dir)
+            ls_below=lsfab(D_DECL(i,j,k),im)
+            ls_above=lsfab(D_DECL(i+ii,j+jj,k+kk),im)
+           else
+            print *,"iside invalid"
+            stop
+           endif
+
+           if ((ls_below*ls_above.le.zero).and. &
+               (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
+ 
+            if (ls_below.eq.zero) then
+             xcrit=xbottom
+            else if (ls_above.eq.zero) then
+             xcrit=xtop
+            else  ! phi-phi0=slope(x-x0) x=-phi0/slope+x0
+             xcrit=xbottom-ls_below*(xtop-xbottom)/ &
+                (ls_above-ls_below)
+            endif
+
+            do dir3=1,SDIM
+             cen_material(dir3)=xsten(0,dir3)
+            enddo
+            cen_material(dir)=xcrit
+
+            idest=minint_sum_comp+3*(im-1)+dir
+            if (xcrit.lt.local_result(idest)) then
+             local_result(idest)=xcrit
+            endif
+            idest=maxint_sum_comp+3*(im-1)+dir
+            if (xcrit.gt.local_result(idest)) then
+             local_result(idest)=xcrit
+            endif
+        
+            if (slice_dir+1.eq.dir) then
+             in_slice=1
+             do dir3=1,SDIM
+              if (dir3.ne.dir) then
+               if (xslice(dir3).lt.xsten(-1,dir3)-VOFTOL*dx(dir3)) then
+                in_slice=0
+               else if (xslice(dir3).gt.xsten(1,dir3)+VOFTOL*dx(dir3)) then    
+                in_slice=0
+               endif
+              endif ! dir3<>dir ?
+             enddo ! dir3
+             if (in_slice.eq.1) then
+              idest=minint_slice+im
+              if (xcrit.lt.local_result(idest)) then
+               local_result(idest)=xcrit
+              endif
+              idest=maxint_slice+im
+              if (xcrit.gt.local_result(idest)) then
+               local_result(idest)=xcrit
+              endif
+             else if (in_slice.eq.0) then
+              ! do nothing
+             else
+              print *,"in_slice invalid"
+              stop
+             endif
+            endif ! slice_dir+1 == dir ?
+            
+            if ((dir.eq.SDIM).and.(im.eq.1).and.(i.eq.0)) then
+             idest=xnot_amp_sum_comp+1
+             if (xcrit.gt.local_result(idest)) then
+              local_result(idest)=xcrit
+             endif
+            endif
+
+            if (isweep.eq.0) then
+             ! do nothing
+            else if (isweep.eq.1) then
+
+             do dir2=1,SDIM
+              xboundary(dir2)=xsten(0,dir2)
+              cengrid(dir2)=resultALL(cen_sum_comp+dir2+3*(im-1))
+             enddo
+             xboundary(dir)=xcrit
+             distbound=zero
+             do dir2=1,SDIM
+              distbound=distbound+(xboundary(dir2)-cengrid(dir2))**2
+             enddo
+             distbound=sqrt(distbound)
+             idest=mincen_sum_comp+im
+             if (distbound.lt.local_result(idest)) then
+              local_result(idest)=distbound
+             endif
+             idest=maxcen_sum_comp+im
+             if (distbound.gt.local_result(idest)) then
+              local_result(idest)=distbound
+             endif 
+ 
+            else
+             print *,"isweep invalid"
+             stop
+            endif
+
+           endif  ! change of sign
+          enddo ! im
+         enddo ! iside
+        enddo ! dir
+
+       endif  ! mask>0
+
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+       ! cut_flag is a parameter
+      if (cut_flag.eq.1) then
+
+       if (SDIM.eq.2) then
+
+         ! r=h(z)
+        if ((dirx.eq.SDIM-1).and.(diry.eq.0)) then
+       
+         k=0 
+         do j = growlo(2),growhi(2)+1
+         do i = growlo(1),growhi(1)
+          if ((mask(D_DECL(i,j,k)).gt.zero).and. &
+              (mask(D_DECL(i,j-1,k)).gt.zero).and. &
+              (mask(D_DECL(i+1,j,k)).gt.zero).and. &
+              (mask(D_DECL(i+1,j-1,k)).gt.zero).and. &
+              (mask(D_DECL(i-1,j,k)).gt.zero).and. &
+              (mask(D_DECL(i-1,j-1,k)).gt.zero)) then
+           dir=diry+1  !diry=0 r=h(z)  dir=1
+           im=1
+
+           do iside=0,1
+            dirMAC=1 ! y direction
+            call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
+                    dirMAC,14)
+
+            xcen=xstenMAC(0,dir) ! diry=0  dir=diry+1=1
 
             if (iside.eq.0) then
-             xbottom=xsten(-2,dir)
+             xbottom=xstenMAC(-2,dir)
              xtop=xcen
-             ls_below=lsfab(D_DECL(i-ii,j-jj,k-kk),im)
-             ls_above=lsfab(D_DECL(i,j,k),im)
+             ls_below=half*(lsfab(D_DECL(i-1,j,k),im)+ &
+                lsfab(D_DECL(i-1,j-1,k),im))
+             ls_above=half*(lsfab(D_DECL(i,j,k),im)+ &
+                lsfab(D_DECL(i,j-1,k),im))
             else if (iside.eq.1) then
              xbottom=xcen
-             xtop=xsten(2,dir)
-             ls_below=lsfab(D_DECL(i,j,k),im)
-             ls_above=lsfab(D_DECL(i+ii,j+jj,k+kk),im)
+             xtop=xstenMAC(2,dir)
+             ls_below=half*(lsfab(D_DECL(i,j,k),im)+ &
+                lsfab(D_DECL(i,j-1,k),im))
+             ls_above=half*(lsfab(D_DECL(i+1,j,k),im)+ &
+                lsfab(D_DECL(i+1,j-1,k),im))
             else
              print *,"iside invalid"
              stop
             endif
 
+             ! coordinate along streamwise direction starts at 0
+             ! dirx=sdim-1
+             ! dirMAC=1
+             ! r=h(z)
+            ZZgrid=xstenMAC(0,dirx+1)-problo(dirx+1)
+            dz_external=(probhi(dirx+1)-problo(dirx+1))/NN
+             ! j_external * dz_external = ZZgrid
+            j_external=NINT(ZZgrid/dz_external)  ! round to nearest whole int. 
+            if ((j_external.lt.0).or.(j_external.gt.NN)) then
+             print *,"j_external invalid"
+             stop
+            endif
+            ZZ(j_external)=j_external*dz_external
+
             if ((ls_below*ls_above.le.zero).and. &
                 (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
- 
+
              if (ls_below.eq.zero) then
               xcrit=xbottom
              else if (ls_above.eq.zero) then
@@ -8993,144 +7489,78 @@ END SUBROUTINE SIMP
                  (ls_above-ls_below)
              endif
 
-             do dir3=1,SDIM
-              cen_material(dir3)=xsten(0,dir3)
-             enddo
-             cen_material(dir)=xcrit
+             FF(j_external)=xcrit
+            endif ! interface found
+           enddo ! iside
+          endif  ! mask>0
+         enddo
+         enddo
 
-             idest=minint_sum_comp+3*(im-1)+dir
-             if (xcrit.lt.local_result(idest)) then
-              local_result(idest)=xcrit
-             endif
-             idest=maxint_sum_comp+3*(im-1)+dir
-             if (xcrit.gt.local_result(idest)) then
-              local_result(idest)=xcrit
-             endif
-         
-             if (slice_dir+1.eq.dir) then
-              in_slice=1
-              do dir3=1,SDIM
-               if (dir3.ne.dir) then
-                if (xslice(dir3).lt.xsten(-1,dir3)-VOFTOL*dx(dir3)) then
-                 in_slice=0
-                else if (xslice(dir3).gt.xsten(1,dir3)+VOFTOL*dx(dir3)) then    
-                 in_slice=0
-                endif
-               endif ! dir3<>dir ?
-              enddo ! dir3
-              if (in_slice.eq.1) then
-               idest=minint_slice+im
-               if (xcrit.lt.local_result(idest)) then
-                local_result(idest)=xcrit
-               endif
-               idest=maxint_slice+im
-               if (xcrit.gt.local_result(idest)) then
-                local_result(idest)=xcrit
-               endif
-              else if (in_slice.eq.0) then
-               ! do nothing
-              else
-               print *,"in_slice invalid"
-               stop
-              endif
-             endif ! slice_dir+1 == dir ?
-             
-             if ((dir.eq.SDIM).and.(im.eq.1).and.(i.eq.0)) then
-              idest=xnot_amp_sum_comp+1
-              if (xcrit.gt.local_result(idest)) then
-               local_result(idest)=xcrit
-              endif
-             endif
+        else
+         print *,"dirx,diry option not supported"
+         stop
+        endif
 
-             if (isweep.eq.0) then
-              ! do nothing
-             else if (isweep.eq.1) then
+       endif ! 2D
 
-              do dir2=1,SDIM
-               xboundary(dir2)=xsten(0,dir2)
-               cengrid(dir2)=resultALL(cen_sum_comp+dir2+3*(im-1))
-              enddo
-              xboundary(dir)=xcrit
-              distbound=zero
-              do dir2=1,SDIM
-               distbound=distbound+(xboundary(dir2)-cengrid(dir2))**2
-              enddo
-              distbound=sqrt(distbound)
-              idest=mincen_sum_comp+im
-              if (distbound.lt.local_result(idest)) then
-               local_result(idest)=distbound
-              endif
-              idest=maxcen_sum_comp+im
-              if (distbound.gt.local_result(idest)) then
-               local_result(idest)=distbound
-              endif 
- 
-             else
-              print *,"isweep invalid"
-              stop
-             endif
+       if (SDIM.eq.3) then
 
-            endif  ! change of sign
-           enddo ! im
-          enddo ! iside
-         enddo ! dir
+         ! z=h(x)
+        if ((dirx.eq.0).and.(diry.eq.SDIM-1)) then
+       
+         j=0 
+         if ((j.ge.growlo(2)).and. &
+             (j.le.growhi(2))) then
 
-        endif  ! mask>0
-
-       enddo
-       enddo
-       enddo  ! i,j,k
-
-        ! cut_flag is a parameter
-       if (cut_flag.eq.1) then
-
-        if (SDIM.eq.2) then
-
-          ! r=h(z)
-         if ((dirx.eq.SDIM-1).and.(diry.eq.0)) then
-        
-          k=0 
-          do j = growlo(2),growhi(2)+1
-          do i = growlo(1),growhi(1)
+          do i = growlo(1),growhi(1)+1
+          do k = growlo(3),growhi(3) 
            if ((mask(D_DECL(i,j,k)).gt.zero).and. &
-               (mask(D_DECL(i,j-1,k)).gt.zero).and. &
-               (mask(D_DECL(i+1,j,k)).gt.zero).and. &
-               (mask(D_DECL(i+1,j-1,k)).gt.zero).and. &
                (mask(D_DECL(i-1,j,k)).gt.zero).and. &
-               (mask(D_DECL(i-1,j-1,k)).gt.zero)) then
-            dir=diry+1  !diry=0 r=h(z)  dir=1
-            im=1
+               (mask(D_DECL(i,j,k+1)).gt.zero).and. &
+               (mask(D_DECL(i-1,j,k+1)).gt.zero).and. &
+               (mask(D_DECL(i,j,k-1)).gt.zero).and. &
+               (mask(D_DECL(i-1,j,k-1)).gt.zero)) then
+            dir=diry+1  ! diry=sdim-1  dir=sdim  z=h(x)
+            im=1  ! check liquid height
+            vofcomp=(im-1)*ngeom_recon+1
 
             do iside=0,1
-             dirMAC=1 ! y direction
+             dirMAC=0 ! x direction
              call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
-                     dirMAC,14)
+                     dirMAC,15)
 
-             xcen=xstenMAC(0,dir) ! diry=0  dir=diry+1=1
+              ! diry=sdim-1  dir=sdim  z=h(x)
+             xcen=xstenMAC(0,dir)
 
              if (iside.eq.0) then
               xbottom=xstenMAC(-2,dir)
               xtop=xcen
-              ls_below=half*(lsfab(D_DECL(i-1,j,k),im)+ &
-                 lsfab(D_DECL(i-1,j-1,k),im))
-              ls_above=half*(lsfab(D_DECL(i,j,k),im)+ &
-                 lsfab(D_DECL(i,j-1,k),im))
+              ls_below=half*(lsfab(D_DECL(i-1,j,k-1),im)+ &
+                lsfab(D_DECL(i,j,k-1),im))
+              ls_above=half*(lsfab(D_DECL(i-1,j,k),im)+ &
+                lsfab(D_DECL(i,j,k),im))
+              vof_below=half*(slopes(D_DECL(i-1,j,k-1),vofcomp)+ &
+                slopes(D_DECL(i,j,k-1),vofcomp))
+              vof_above=half*(slopes(D_DECL(i-1,j,k),vofcomp)+ &
+                slopes(D_DECL(i,j,k),vofcomp))
              else if (iside.eq.1) then
               xbottom=xcen
               xtop=xstenMAC(2,dir)
-              ls_below=half*(lsfab(D_DECL(i,j,k),im)+ &
-                 lsfab(D_DECL(i,j-1,k),im))
-              ls_above=half*(lsfab(D_DECL(i+1,j,k),im)+ &
-                 lsfab(D_DECL(i+1,j-1,k),im))
+              ls_below=half*(lsfab(D_DECL(i-1,j,k),im)+ &
+                 lsfab(D_DECL(i,j,k),im))
+              ls_above=half*(lsfab(D_DECL(i-1,j,k+1),im)+ &
+                 lsfab(D_DECL(i,j,k+1),im))
+              vof_below=half*(slopes(D_DECL(i-1,j,k),vofcomp)+ &
+                slopes(D_DECL(i,j,k),vofcomp))
+              vof_above=half*(slopes(D_DECL(i-1,j,k+1),vofcomp)+ &
+                slopes(D_DECL(i,j,k+1),vofcomp))
              else
               print *,"iside invalid"
               stop
              endif
 
+              ! dirx=0 diry=sdim-1 dir=sdim  z=h(x) 
               ! coordinate along streamwise direction starts at 0
-              ! dirx=sdim-1
-              ! dirMAC=1
-              ! r=h(z)
              ZZgrid=xstenMAC(0,dirx+1)-problo(dirx+1)
              dz_external=(probhi(dirx+1)-problo(dirx+1))/NN
               ! j_external * dz_external = ZZgrid
@@ -9141,341 +7571,247 @@ END SUBROUTINE SIMP
              endif
              ZZ(j_external)=j_external*dz_external
 
-             if ((ls_below*ls_above.le.zero).and. &
-                 (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
+             use_vof_height=1
 
-              if (ls_below.eq.zero) then
-               xcrit=xbottom
-              else if (ls_above.eq.zero) then
-               xcrit=xtop
-              else  ! phi-phi0=slope(x-x0) x=-phi0/slope+x0
-               xcrit=xbottom-ls_below*(xtop-xbottom)/ &
+              ! diry=sdim-1  dir=sdim  z=h(x)
+             if (use_vof_height.eq.0) then
+
+              if ((ls_below*ls_above.le.zero).and. &
+                  (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
+
+               if (ls_below.eq.zero) then
+                xcrit=xbottom
+               else if (ls_above.eq.zero) then
+                xcrit=xtop
+               else  ! phi-phi0=slope(x-x0) x=-phi0/slope+x0
+                xcrit=xbottom-ls_below*(xtop-xbottom)/ &
                   (ls_above-ls_below)
-              endif
+               endif
+ 
+               FF(j_external)=xcrit
+              endif ! interface found
 
-              FF(j_external)=xcrit
-             endif ! interface found
+             else if (use_vof_height.eq.1) then
+              vof_face=half*(vof_below+vof_above)
+              if ((vof_face.ge.one/four).and. &
+                  (vof_face.le.three/four)) then
+               if (vof_below.gt.vof_above) then
+                xcrit=xstenMAC(-3,dir)+ &
+                 (xstenMAC(1,dir)-xstenMAC(-3,dir))*vof_face
+               else
+                xcrit=xstenMAC(3,dir)- &
+                 (xstenMAC(3,dir)-xstenMAC(-1,dir))*vof_face
+               endif
+               FF(j_external)=xcrit
+              endif
+             else
+              print *,"use_vof_height invalid"
+              stop
+             endif
+
             enddo ! iside
            endif  ! mask>0
           enddo
-          enddo
+          enddo ! i,j
 
-         else
-          print *,"dirx,diry option not supported"
-          stop
-         endif
+         endif ! j=0 in grid.
 
-        endif ! 2D
+        else
+         print *,"dirx,diry option not supported"
+         stop
+        endif
 
-        if (SDIM.eq.3) then
+       endif ! 3D
 
-          ! z=h(x)
-         if ((dirx.eq.0).and.(diry.eq.SDIM-1)) then
-        
-          j=0 
-          if ((j.ge.growlo(2)).and. &
-              (j.le.growhi(2))) then
+      else if (cut_flag.eq.0) then
+       ! do nothing
+      else
+       print *,"cut_flag invalid"
+       stop
+      endif
 
-           do i = growlo(1),growhi(1)+1
-           do k = growlo(3),growhi(3) 
-            if ((mask(D_DECL(i,j,k)).gt.zero).and. &
-                (mask(D_DECL(i-1,j,k)).gt.zero).and. &
-                (mask(D_DECL(i,j,k+1)).gt.zero).and. &
-                (mask(D_DECL(i-1,j,k+1)).gt.zero).and. &
-                (mask(D_DECL(i,j,k-1)).gt.zero).and. &
-                (mask(D_DECL(i-1,j,k-1)).gt.zero)) then
-             dir=diry+1  ! diry=sdim-1  dir=sdim  z=h(x)
-             im=1  ! check liquid height
-             vofcomp=(im-1)*ngeom_recon+1
+      return
+      end subroutine fort_summass
 
-             do iside=0,1
-              dirMAC=0 ! x direction
-              call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
-                      dirMAC,15)
+      subroutine fort_get_number_regions(cpp_number_regions) &
+      bind(c,name='fort_get_number_regions')
 
-               ! diry=sdim-1  dir=sdim  z=h(x)
-              xcen=xstenMAC(0,dir)
+      use probcommon_module
+      IMPLICIT NONE
+      INTEGER_T, intent(out) :: cpp_number_regions
 
-              if (iside.eq.0) then
-               xbottom=xstenMAC(-2,dir)
-               xtop=xcen
-               ls_below=half*(lsfab(D_DECL(i-1,j,k-1),im)+ &
-                 lsfab(D_DECL(i,j,k-1),im))
-               ls_above=half*(lsfab(D_DECL(i-1,j,k),im)+ &
-                 lsfab(D_DECL(i,j,k),im))
-               vof_below=half*(slopes(D_DECL(i-1,j,k-1),vofcomp)+ &
-                 slopes(D_DECL(i,j,k-1),vofcomp))
-               vof_above=half*(slopes(D_DECL(i-1,j,k),vofcomp)+ &
-                 slopes(D_DECL(i,j,k),vofcomp))
-              else if (iside.eq.1) then
-               xbottom=xcen
-               xtop=xstenMAC(2,dir)
-               ls_below=half*(lsfab(D_DECL(i-1,j,k),im)+ &
-                  lsfab(D_DECL(i,j,k),im))
-               ls_above=half*(lsfab(D_DECL(i-1,j,k+1),im)+ &
-                  lsfab(D_DECL(i,j,k+1),im))
-               vof_below=half*(slopes(D_DECL(i-1,j,k),vofcomp)+ &
-                 slopes(D_DECL(i,j,k),vofcomp))
-               vof_above=half*(slopes(D_DECL(i-1,j,k+1),vofcomp)+ &
-                 slopes(D_DECL(i,j,k+1),vofcomp))
-              else
-               print *,"iside invalid"
-               stop
-              endif
+      cpp_number_regions=number_of_source_regions
 
-               ! dirx=0 diry=sdim-1 dir=sdim  z=h(x) 
-               ! coordinate along streamwise direction starts at 0
-              ZZgrid=xstenMAC(0,dirx+1)-problo(dirx+1)
-              dz_external=(probhi(dirx+1)-problo(dirx+1))/NN
-               ! j_external * dz_external = ZZgrid
-              j_external=NINT(ZZgrid/dz_external)  ! round to nearest whole int. 
-              if ((j_external.lt.0).or.(j_external.gt.NN)) then
-               print *,"j_external invalid"
-               stop
-              endif
-              ZZ(j_external)=j_external*dz_external
+      return
+      end subroutine fort_get_number_regions
 
-              use_vof_height=1
+      subroutine fort_get_region_data(isweep, &
+        cpp_energy_per_kelvin, &
+        cpp_mass, &
+        cpp_energy, &
+        cpp_volume, &
+        cpp_volume_raster, & ! this and above, isweep==0
+        cpp_mass_after, &
+        cpp_energy_after, &
+        cpp_volume_after) &
+      bind(c,name='fort_get_region_data')
+      use probcommon_module
+      IMPLICIT NONE
 
-               ! diry=sdim-1  dir=sdim  z=h(x)
-              if (use_vof_height.eq.0) then
+      INTEGER_T, intent(in) :: isweep
+      REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
+      INTEGER_T iregions
 
-               if ((ls_below*ls_above.le.zero).and. &
-                   (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
-
-                if (ls_below.eq.zero) then
-                 xcrit=xbottom
-                else if (ls_above.eq.zero) then
-                 xcrit=xtop
-                else  ! phi-phi0=slope(x-x0) x=-phi0/slope+x0
-                 xcrit=xbottom-ls_below*(xtop-xbottom)/ &
-                   (ls_above-ls_below)
-                endif
- 
-                FF(j_external)=xcrit
-               endif ! interface found
-
-              else if (use_vof_height.eq.1) then
-               vof_face=half*(vof_below+vof_above)
-               if ((vof_face.ge.one/four).and. &
-                   (vof_face.le.three/four)) then
-                if (vof_below.gt.vof_above) then
-                 xcrit=xstenMAC(-3,dir)+ &
-                  (xstenMAC(1,dir)-xstenMAC(-3,dir))*vof_face
-                else
-                 xcrit=xstenMAC(3,dir)- &
-                  (xstenMAC(3,dir)-xstenMAC(-1,dir))*vof_face
-                endif
-                FF(j_external)=xcrit
-               endif
-              else
-               print *,"use_vof_height invalid"
-               stop
-              endif
-
-             enddo ! iside
-            endif  ! mask>0
-           enddo
-           enddo ! i,j
-
-          endif ! j=0 in grid.
-
-         else
-          print *,"dirx,diry option not supported"
-          stop
-         endif
-
-        endif ! 3D
-
-       else if (cut_flag.eq.0) then
-        ! do nothing
+      do iregions=1,number_of_source_regions
+       if (isweep.eq.0) then
+        cpp_energy_per_kelvin(iregions)= &
+              regions_list(iregions,0)%region_energy_per_kelvin
+        cpp_mass(iregions)= &
+              regions_list(iregions,0)%region_mass
+        cpp_energy(iregions)= &
+              regions_list(iregions,0)%region_energy
+        cpp_volume(iregions)= &
+              regions_list(iregions,0)%region_volume
+        cpp_volume_raster(iregions)= &
+              regions_list(iregions,0)%region_volume_raster
+       else if (isweep.eq.1) then
+        cpp_mass_after(iregions)= &
+              regions_list(iregions,0)%region_mass_after
+        cpp_energy_after(iregions)= &
+              regions_list(iregions,0)%region_energy_after
+        cpp_volume_after(iregions)= &
+              regions_list(iregions,0)%region_volume_after
        else
-        print *,"cut_flag invalid"
+        print *,"isweep invalid"
+        stop
+       endif
+      enddo ! iregions=1,number_source_regions
+        
+      end subroutine fort_get_region_data
+
+
+      subroutine fort_put_region_data(isweep, &
+        cpp_energy_per_kelvin, &
+        cpp_mass, &
+        cpp_energy, &
+        cpp_volume, &
+        cpp_volume_raster, & ! this and above, isweep==0
+        cpp_mass_after, &
+        cpp_energy_after, &
+        cpp_volume_after) &
+      bind(c,name='fort_put_region_data')
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: isweep
+      REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
+      REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
+      INTEGER_T iregions
+
+      do iregions=1,number_of_source_regions
+       if (isweep.eq.0) then
+        regions_list(iregions,0)%region_energy_per_kelvin= &
+         cpp_energy_per_kelvin(iregions)
+        regions_list(iregions,0)%region_mass= &
+         cpp_mass(iregions)
+        regions_list(iregions,0)%region_energy= &
+         cpp_energy(iregions)
+        regions_list(iregions,0)%region_volume= &
+         cpp_volume(iregions)
+        regions_list(iregions,0)%region_volume_raster= &
+         cpp_volume_raster(iregions)
+       else if (isweep.eq.1) then
+        regions_list(iregions,0)%region_mass_after= &
+         cpp_mass_after(iregions)
+        regions_list(iregions,0)%region_energy_after= &
+         cpp_energy_after(iregions)
+        regions_list(iregions,0)%region_volume_after= &
+         cpp_volume_after(iregions)
+       else
+        print *,"isweep invalid"
+        stop
+       endif
+      enddo ! iregions=1,number_source_regions
+        
+      end subroutine fort_put_region_data
+
+
+      subroutine fort_reduce_sum_regions(isweep) &
+      bind(c,name='fort_reduce_sum_regions')
+
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: isweep
+
+      INTEGER_T ithreads,iregions
+
+      do iregions=1,number_of_source_regions
+       if (isweep.eq.0) then
+
+        regions_list(iregions,0)%region_energy_per_kelvin=zero
+        regions_list(iregions,0)%region_mass=zero
+        regions_list(iregions,0)%region_energy=zero
+        regions_list(iregions,0)%region_volume=zero
+        regions_list(iregions,0)%region_volume_raster=zero
+
+        do ithreads=1,number_of_threads_regions
+         regions_list(iregions,0)%region_energy_per_kelvin= &
+          regions_list(iregions,0)%region_energy_per_kelvin+ &
+          regions_list(iregions,ithreads)%region_energy_per_kelvin
+         regions_list(iregions,0)%region_mass= &
+          regions_list(iregions,0)%region_mass+ &
+          regions_list(iregions,ithreads)%region_mass
+         regions_list(iregions,0)%region_energy= &
+          regions_list(iregions,0)%region_energy+ &
+          regions_list(iregions,ithreads)%region_energy
+         regions_list(iregions,0)%region_volume= &
+          regions_list(iregions,0)%region_volume+ &
+          regions_list(iregions,ithreads)%region_volume
+         regions_list(iregions,0)%region_volume_raster= &
+          regions_list(iregions,0)%region_volume_raster+ &
+          regions_list(iregions,ithreads)%region_volume_raster
+        enddo ! ithreads=1,number_of_threads_regions
+
+       else if (isweep.eq.1) then
+
+        regions_list(iregions,0)%region_mass_after=zero
+        regions_list(iregions,0)%region_energy_after=zero
+        regions_list(iregions,0)%region_volume_after=zero
+
+        do ithreads=1,number_of_threads_regions
+         regions_list(iregions,0)%region_mass_after= &
+          regions_list(iregions,0)%region_mass_after+ &
+          regions_list(iregions,ithreads)%region_mass_after
+         regions_list(iregions,0)%region_energy_after= &
+          regions_list(iregions,0)%region_energy_after+ &
+          regions_list(iregions,ithreads)%region_energy_after
+         regions_list(iregions,0)%region_volume_after= &
+          regions_list(iregions,0)%region_volume_after+ &
+          regions_list(iregions,ithreads)%region_volume_after
+        enddo ! ithreads=1,number_of_threads_regions
+
+       else
+        print *,"isweep invalid"
         stop
        endif
 
-       return
-       end subroutine fort_summass
-
-       subroutine fort_get_number_regions(cpp_number_regions) &
-       bind(c,name='fort_get_number_regions')
-
-       use probcommon_module
-       IMPLICIT NONE
-       INTEGER_T, intent(out) :: cpp_number_regions
-
-       cpp_number_regions=number_of_source_regions
-
-       return
-       end subroutine fort_get_number_regions
-
-       subroutine fort_get_region_data(isweep, &
-         cpp_energy_per_kelvin, &
-         cpp_mass, &
-         cpp_energy, &
-         cpp_volume, &
-         cpp_volume_raster, & ! this and above, isweep==0
-         cpp_mass_after, &
-         cpp_energy_after, &
-         cpp_volume_after) &
-       bind(c,name='fort_get_region_data')
-       use probcommon_module
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: isweep
-       REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
-       INTEGER_T iregions
-
-       do iregions=1,number_of_source_regions
-        if (isweep.eq.0) then
-         cpp_energy_per_kelvin(iregions)= &
-               regions_list(iregions,0)%region_energy_per_kelvin
-         cpp_mass(iregions)= &
-               regions_list(iregions,0)%region_mass
-         cpp_energy(iregions)= &
-               regions_list(iregions,0)%region_energy
-         cpp_volume(iregions)= &
-               regions_list(iregions,0)%region_volume
-         cpp_volume_raster(iregions)= &
-               regions_list(iregions,0)%region_volume_raster
-        else if (isweep.eq.1) then
-         cpp_mass_after(iregions)= &
-               regions_list(iregions,0)%region_mass_after
-         cpp_energy_after(iregions)= &
-               regions_list(iregions,0)%region_energy_after
-         cpp_volume_after(iregions)= &
-               regions_list(iregions,0)%region_volume_after
-        else
-         print *,"isweep invalid"
-         stop
-        endif
-       enddo ! iregions=1,number_source_regions
-         
-       end subroutine fort_get_region_data
-
-
-       subroutine fort_put_region_data(isweep, &
-         cpp_energy_per_kelvin, &
-         cpp_mass, &
-         cpp_energy, &
-         cpp_volume, &
-         cpp_volume_raster, & ! this and above, isweep==0
-         cpp_mass_after, &
-         cpp_energy_after, &
-         cpp_volume_after) &
-       bind(c,name='fort_put_region_data')
-       use probcommon_module
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: isweep
-       REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
-       REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
-       INTEGER_T iregions
-
-       do iregions=1,number_of_source_regions
-        if (isweep.eq.0) then
-         regions_list(iregions,0)%region_energy_per_kelvin= &
-          cpp_energy_per_kelvin(iregions)
-         regions_list(iregions,0)%region_mass= &
-          cpp_mass(iregions)
-         regions_list(iregions,0)%region_energy= &
-          cpp_energy(iregions)
-         regions_list(iregions,0)%region_volume= &
-          cpp_volume(iregions)
-         regions_list(iregions,0)%region_volume_raster= &
-          cpp_volume_raster(iregions)
-        else if (isweep.eq.1) then
-         regions_list(iregions,0)%region_mass_after= &
-          cpp_mass_after(iregions)
-         regions_list(iregions,0)%region_energy_after= &
-          cpp_energy_after(iregions)
-         regions_list(iregions,0)%region_volume_after= &
-          cpp_volume_after(iregions)
-        else
-         print *,"isweep invalid"
-         stop
-        endif
-       enddo ! iregions=1,number_source_regions
-         
-       end subroutine fort_put_region_data
-
-
-       subroutine fort_reduce_sum_regions(isweep) &
-       bind(c,name='fort_reduce_sum_regions')
-
-       use probcommon_module
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: isweep
-
-       INTEGER_T ithreads,iregions
-
-       do iregions=1,number_of_source_regions
-        if (isweep.eq.0) then
-
-         regions_list(iregions,0)%region_energy_per_kelvin=zero
-         regions_list(iregions,0)%region_mass=zero
-         regions_list(iregions,0)%region_energy=zero
-         regions_list(iregions,0)%region_volume=zero
-         regions_list(iregions,0)%region_volume_raster=zero
-
-         do ithreads=1,number_of_threads_regions
-          regions_list(iregions,0)%region_energy_per_kelvin= &
-           regions_list(iregions,0)%region_energy_per_kelvin+ &
-           regions_list(iregions,ithreads)%region_energy_per_kelvin
-          regions_list(iregions,0)%region_mass= &
-           regions_list(iregions,0)%region_mass+ &
-           regions_list(iregions,ithreads)%region_mass
-          regions_list(iregions,0)%region_energy= &
-           regions_list(iregions,0)%region_energy+ &
-           regions_list(iregions,ithreads)%region_energy
-          regions_list(iregions,0)%region_volume= &
-           regions_list(iregions,0)%region_volume+ &
-           regions_list(iregions,ithreads)%region_volume
-          regions_list(iregions,0)%region_volume_raster= &
-           regions_list(iregions,0)%region_volume_raster+ &
-           regions_list(iregions,ithreads)%region_volume_raster
-         enddo ! ithreads=1,number_of_threads_regions
-
-        else if (isweep.eq.1) then
-
-         regions_list(iregions,0)%region_mass_after=zero
-         regions_list(iregions,0)%region_energy_after=zero
-         regions_list(iregions,0)%region_volume_after=zero
-
-         do ithreads=1,number_of_threads_regions
-          regions_list(iregions,0)%region_mass_after= &
-           regions_list(iregions,0)%region_mass_after+ &
-           regions_list(iregions,ithreads)%region_mass_after
-          regions_list(iregions,0)%region_energy_after= &
-           regions_list(iregions,0)%region_energy_after+ &
-           regions_list(iregions,ithreads)%region_energy_after
-          regions_list(iregions,0)%region_volume_after= &
-           regions_list(iregions,0)%region_volume_after+ &
-           regions_list(iregions,ithreads)%region_volume_after
-         enddo ! ithreads=1,number_of_threads_regions
-
-        else
-         print *,"isweep invalid"
-         stop
-        endif
-
-       enddo ! iregions=1,number_source_regions
-         
-       end subroutine fort_reduce_sum_regions
+      enddo ! iregions=1,number_source_regions
+        
+      end subroutine fort_reduce_sum_regions
 
       subroutine fort_regionsum( &
        tid_current, &
@@ -10396,86 +8732,6 @@ END SUBROUTINE SIMP
 
        return
        end subroutine fort_fabcom
-
-       subroutine FORT_DIAGINV( &
-        diag_reg, &
-        DIMS(diag_reg), &
-        resid, DIMS(resid), &
-        xnew, DIMS(xnew), &
-        xold, DIMS(xold), &
-        mask, DIMS(mask), &
-        tilelo,tilehi, &
-        fablo,fabhi,bfact )
-
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       REAL_T :: local_diag
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: DIMDEC(diag_reg)
-       INTEGER_T, intent(in) :: DIMDEC(resid)
-       INTEGER_T, intent(in) :: DIMDEC(xnew)
-       INTEGER_T, intent(in) :: DIMDEC(xold)
-       INTEGER_T, intent(in) :: DIMDEC(mask)
-       REAL_T, intent(in) ::  diag_reg(DIMV(diag_reg))
-       REAL_T, intent(in) ::  resid(DIMV(resid))
-       REAL_T, intent(out) :: xnew(DIMV(xnew))
-       REAL_T, intent(in) ::  xold(DIMV(xold))
-       REAL_T, intent(in) ::  mask(DIMV(mask))
-
-       INTEGER_T i,j,k
-
-       if (bfact.lt.1) then
-        print *,"bfact invalid158"
-        stop
-       endif
-
-       call checkbound(fablo,fabhi,DIMS(mask),1,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(diag_reg),0,-1,415) 
-       call checkbound(fablo,fabhi,DIMS(xnew),1,-1,416) 
-       call checkbound(fablo,fabhi,DIMS(xold),1,-1,417) 
-       call checkbound(fablo,fabhi,DIMS(resid),0,-1,417) 
-
-       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-
-        ! mask=tag if not covered by level+1 or outside the domain.
-        if (mask(D_DECL(i,j,k)).eq.one) then
-
-         if (diag_reg(D_DECL(i,j,k)).eq.zero) then
-          print *,"diag_reg invalid 1"
-          stop
-         else if (diag_reg(D_DECL(i,j,k)).gt.zero) then
-          local_diag=diag_reg(D_DECL(i,j,k))
-         else
-          print *,"diag invalid 2"
-          stop
-         endif
-
-         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))+ &
-           resid(D_DECL(i,j,k))/local_diag
-
-        else if (mask(D_DECL(i,j,k)).eq.zero) then
-
-         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))
-
-        else 
-         print *,"mask invalid"
-         stop
-        endif
-
-       enddo
-       enddo
-       enddo
-
-       return
-       end subroutine FORT_DIAGINV
 
 
        subroutine fort_sumdot(mass1,  &
@@ -11813,6 +10069,2657 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_addgravity
 
+      subroutine fort_eos_pressure( &
+        level, &
+        finest_level, &
+        local_material_type, &
+        xlo,dx, &
+        pres,DIMS(pres), &
+        recon,DIMS(recon), &
+        levelpc,DIMS(levelpc), &
+        den,DIMS(den), &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        nmat, &
+        nden) &
+      bind(c,name='fort_eos_pressure')
+
+      use global_utility_module
+      use probf90_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nden
+      INTEGER_T, intent(in) :: local_material_type(nmat)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+    
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
+      INTEGER_T, intent(in) :: DIMDEC(levelpc)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      REAL_T, intent(inout), target :: pres(DIMV(pres))
+      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
+      REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp,Y
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T i,j,k
+      INTEGER_T im
+      INTEGER_T im_primary
+      INTEGER_T ibase
+      REAL_T rho,internal_energy,TEMP
+      REAL_T LS(nmat)
+      REAL_T vfrac(nmat)
+      INTEGER_T vofcomp
+      REAL_T massfrac_parm(num_species_var+1)
+      INTEGER_T ispec
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid162"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid eos pressure"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (nden.ne.nmat*num_state_material) then
+       print *,"nden invalid"
+       stop
+      endif
+
+      pres_ptr=>pres
+      recon_ptr=>recon
+      levelpc_ptr=>levelpc
+      den_ptr=>den
+
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       do im=1,nmat
+        LS(im)=levelpc(D_DECL(i,j,k),im)
+        vofcomp=(im-1)*ngeom_recon+1
+        vfrac(im)=recon(D_DECL(i,j,k),vofcomp)
+       enddo ! im
+
+       call get_primary_material_VFRAC(vfrac,nmat,im_primary,1)
+
+       if (vfrac(im_primary).le.VOFTOL) then
+        print *,"vfrac too small fort_eos_pressure"
+        print *,"i,j,k ",i,j,k
+        print *,"level,finest_level ",level,finest_level
+        print *,"im_primary= ",im_primary
+        do im=1,nmat
+         print *,"im,vfrac,LS ",im,vfrac(im),LS(im)
+        enddo
+        stop
+       endif
+
+       ibase=(im_primary-1)*num_state_material
+
+       if (is_rigid(nmat,im_primary).eq.0) then
+
+        ! compressible material
+        if ((local_material_type(im_primary).gt.0).and. &
+            (local_material_type(im_primary).le.MAX_NUM_EOS)) then
+
+         rho=den(D_DECL(i,j,k),ibase+1)
+         if (rho.gt.zero) then
+          ! do nothing
+         else
+          print *,"density has gone nonpos"
+          stop
+         endif
+         TEMP=den(D_DECL(i,j,k),ibase+2)
+         if (TEMP.gt.zero) then
+          ! do nothing
+         else
+          print *,"TEMP has gone nonpos"
+          stop
+         endif
+         call init_massfrac_parm(rho,massfrac_parm,im_primary)
+         do ispec=1,num_species_var
+          massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
+         enddo
+         ! returns energy/scale
+         call INTERNAL_material(rho,massfrac_parm,TEMP, &
+          internal_energy,local_material_type(im_primary),im_primary)
+         if (internal_energy.gt.zero) then
+          ! do nothing
+         else
+          print *,"internal_energy has gone nonpos"
+          stop
+         endif
+         ! p(energy*scale)/scale
+         call EOS_material(rho,massfrac_parm, &
+          internal_energy, &
+          pres(D_DECL(i,j,k)), &
+          local_material_type(im_primary),im_primary)
+        else if (local_material_type(im_primary).eq.0) then
+         ! do nothing
+        else
+         print *,"fort material type invalid"
+         stop
+        endif
+
+       else if (is_rigid(nmat,im_primary).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid bust"
+        stop
+       endif 
+
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      return
+      end subroutine fort_eos_pressure
+
+      end module navierstokesf90_module
+
+! ZZ are the x values
+! FF are the z values
+! 2 files:
+!   height_integral.txt
+!   jet_height.txt
+      subroutine FORT_COFLOW( &
+       time,js,je,NN,ZZ,FF,dirx,diry,cut_flag)
+
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      REAL_T time
+      INTEGER_T dirx,diry,cut_flag
+      INTEGER_T js,je,NN
+      REAL_T ZZ(0:NN)
+      REAL_T FF(0:NN)
+      REAL_T FFMASK(0:NN)
+      REAL_T major,minor,wavelength,amplitude,minrad
+      REAL_T masklo,maskhi,HH,SS
+      INTEGER_T j,jleft,jright
+      REAL_T dzz,theta
+
+
+      if (NN.ne.je-js+1) then
+       print *,"NN invalid"
+       stop
+      endif
+      if (js.ne.0) then
+       print *,"js should be 0 in coflow (if 3d)"
+       stop
+      endif
+      if (NN.lt.1) then
+       print *,"NN invalid"
+       stop
+      endif
+      if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
+       print *,"dirx invalid"
+       stop
+      endif
+      if ((diry.lt.0).or.(diry.ge.SDIM).or.(diry.eq.dirx)) then
+       print *,"diry invalid"
+       stop
+      endif
+      if ((cut_flag.ne.0).and.(cut_flag.ne.1)) then
+       print *,"cut_flag invalid"
+       stop
+      endif
+
+      if ((cut_flag.eq.1).and.(SDIM.eq.2)) then
+       major=yblob
+       if (abs(major-ZZ(NN)).le.1.0D-10) then
+        call FINDAMPLITUDE_2D(NN,ZZ,FF,major,minor)
+        call FINDMINRAD(NN,ZZ,FF,minrad)
+        wavelength=major
+        amplitude=minor
+        print *,"TIME,wavelength (major)",time,wavelength
+        print *,"TIME,amplitude  (minor)",time,amplitude
+        print *,"TIME,minimum radius ",time,minrad
+        open(unit=19,file="growth.txt",access="append")
+        write(19,*) time, amplitude
+        close(19)
+        open(unit=29,file="minrad.txt",access="append")
+        write(29,*) time, minrad
+        close(29)
+       endif
+      else if ((cut_flag.eq.1).and.(SDIM.eq.3)) then
+       open(unit=19,file="height_integral.txt",access="append")
+       open(unit=20,file="jet_height.txt",access="append")
+       maskhi=one
+       masklo=half*(xblob+maskhi)
+
+       ZZ(NN)=probhix-problox
+       dzz=(probhix-problox)/NN
+
+         ! fill in gaps in coarse regions
+       do j=js+1,je
+        if (ZZ(j).eq.zero) then  ! value not initialized in summass
+         ZZ(j)=j*dzz
+         jleft=j-1
+         jright=j+1
+         do while (ZZ(jright).eq.zero)
+          jright=jright+1
+         enddo  
+         theta=one/(jright-jleft)
+         FF(j)=FF(jleft)*(one-theta)+theta*FF(jright)
+        endif
+       enddo
+
+       do j=js,je+1 
+        if (ZZ(j).lt.masklo) then
+         FFMASK(j)=zero
+        else if (ZZ(j).gt.maskhi) then
+         FFMASK(j)=zero
+        else 
+         FFMASK(j)=FF(j)
+        endif
+       enddo
+       HH=ZZ(NN)-ZZ(0)
+       call SIMP(NN,HH,FFMASK,SS)
+       if ((SS.lt.zero).or.(HH.le.zero)) then
+        print *,"SS or HH invalid"
+        print *,"SS= ",SS
+        print *,"HH= ",HH
+        print *,"NN= ",NN
+        do j=js,je+1
+         print *,"j,ZZ ",j,ZZ(j)
+        enddo
+        stop
+       endif
+       SS=SS/HH
+       write(19,*) time,SS 
+       print *,"TIME,AVERAGE HEIGHT ",time,SS
+       do j=js,je+1 
+        write(20,*) ZZ(j),FF(j)
+       enddo
+       write(20,*) ' '
+
+       close(19) 
+       close(20) 
+      else if (cut_flag.eq.0) then
+       ! do nothing
+      else
+       print *,"cut_flag invalid"
+       stop
+      endif
+
+
+      return
+      end subroutine FORT_COFLOW
+
+      subroutine FORT_IO_COMPARE( &
+       nmat, &
+       nsteps, &
+       do_input, &
+       visual_compare, &
+       time, &
+       fabin,DIMS(fabin), &
+       fabout,DIMS(fabout), &
+       vislo,vishi, &
+       visual_ncomp)
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T nmat
+      INTEGER_T nsteps
+      INTEGER_T do_input
+      INTEGER_T visual_compare
+      REAL_T time
+      INTEGER_T visual_ncomp
+      INTEGER_T vislo(SDIM),vishi(SDIM) 
+      INTEGER_T visual_ncell(SDIM)
+      REAL_T visual_dx(SDIM)
+      INTEGER_T gridlo(3),gridhi(3) 
+      INTEGER_T DIMDEC(fabin)
+      INTEGER_T DIMDEC(fabout)
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      REAL_T fabout(DIMV(fabout),visual_ncomp) 
+      REAL_T fabin(DIMV(fabin),visual_ncomp)
+      REAL_T problo(SDIM),probhi(SDIM)
+      INTEGER_T i,j,k
+      INTEGER_T im
+      INTEGER_T dir
+      INTEGER_T n,n_data
+      INTEGER_T strandid
+      INTEGER_T gridsum(nmat)
+      INTEGER_T LSgridsum(nmat)
+      INTEGER_T gridsum_total
+      REAL_T xtest(SDIM)
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      REAL_T local_data(visual_ncomp+1) 
+      REAL_T local_data_in(visual_ncomp+1)
+      REAL_T local_data_out(visual_ncomp+1)
+      REAL_T L1norm_local(visual_ncomp+1)
+      REAL_T L2norm_local(visual_ncomp+1)
+      INTEGER_T icrit(nmat*(visual_ncomp+1))
+      INTEGER_T jcrit(nmat*(visual_ncomp+1))
+      INTEGER_T kcrit(nmat*(visual_ncomp+1))
+      REAL_T L1norm(nmat*(visual_ncomp+1))
+      REAL_T L2norm(nmat*(visual_ncomp+1))
+      REAL_T Linfnorm(nmat*(visual_ncomp+1))
+      REAL_T LSnorm(nmat)
+      REAL_T LS_in,LS_out
+      INTEGER_T LS_base,state_ncomp,ebase
+      character*2 im_str
+      character*6 stepstr
+      character*14 compfilename
+      character*17 uniformfilename
+      character*255 techeader_str1
+      character*255 techeader_str2
+      character*255 techeader_str3
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat.ne.num_materials"
+       stop
+      endif
+
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+       print *,"visual_ncomp invalid" 
+       stop
+      endif
+
+      if (time.lt.zero) then
+       print *,"time invalid"
+       stop
+      endif
+      if (nsteps.lt.0) then
+       print *,"nsteps invalid"
+       stop
+      endif
+
+      problo(1)=problox
+      problo(2)=probloy
+
+      probhi(1)=probhix
+      probhi(2)=probhiy
+
+      if (SDIM.eq.3) then
+       problo(SDIM)=probloz
+       probhi(SDIM)=probhiz
+      endif
+
+      gridlo(3)=0
+      gridhi(3)=0
+
+      do dir=1,SDIM
+       if (vislo(dir).ne.0) then
+        print *,"vislo(dir).ne.0"
+        stop
+       endif
+       gridlo(dir)=vislo(dir)
+       gridhi(dir)=vishi(dir)+1
+
+       visual_ncell(dir)=vishi(dir)-vislo(dir)+1
+       if (visual_ncell(dir).ge.1) then
+        visual_dx(dir)=(probhi(dir)-problo(dir))/visual_ncell(dir)
+        if (visual_dx(dir).gt.zero) then
+         ! do nothing
+        else
+         print *,"visual_dx invalid"
+         stop
+        endif
+       else
+        print *,"visual_ncell invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      call checkbound(vislo,vishi,DIMS(fabout),0,0,411)
+      call checkbound(vislo,vishi,DIMS(fabout),0,1,411)
+      call checkbound(vislo,vishi,DIMS(fabout),0,SDIM-1,411)
+
+      call checkbound(vislo,vishi,DIMS(fabin),0,0,411)
+      call checkbound(vislo,vishi,DIMS(fabin),0,1,411)
+      call checkbound(vislo,vishi,DIMS(fabin),0,SDIM-1,411)
+
+      if (do_input.eq.1) then
+
+       if (visual_compare.eq.1) then
+
+        write(compfilename,'(A14)') 'COARSEDATA.tec'
+        print *,"compfilename ",compfilename
+        open(unit=11,file=compfilename)
+        read(11,*) techeader_str1  ! title
+        read(11,*) techeader_str2  ! variables
+        read(11,*) techeader_str3  ! zone map
+
+        do k=gridlo(3),gridhi(3)
+        do j=gridlo(2),gridhi(2)
+        do i=gridlo(1),gridhi(1)
+         dir=1
+         xtest(dir)=problo(dir)+i*visual_dx(dir)
+         dir=2
+         xtest(dir)=problo(dir)+j*visual_dx(dir)
+         if (SDIM.eq.3) then
+          dir=SDIM
+          xtest(dir)=problo(dir)+k*visual_dx(dir)
+         endif
+         do n=1,visual_ncomp
+          if ((n.ge.1).and.(n.lt.visual_ncomp)) then
+!          read(11,'(D25.16)',ADVANCE="NO") local_data(n)
+           read(11,'(E25.16)',ADVANCE="NO") local_data(n)
+          else if (n.eq.visual_ncomp) then
+!          read(11,'(D25.16)') local_data(n)
+           read(11,'(E25.16)') local_data(n)
+          else
+           print *,"n invalid"
+           stop
+          endif
+         enddo ! n=1..visual_ncomp
+
+         do dir=1,SDIM
+          if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
+           print *,"local_data(dir) invalid"
+           stop
+          endif
+         enddo
+         do n=1,visual_ncomp
+          if (abs(local_data(n)).le.1.0D+20) then
+           fabin(D_DECL(i,j,k),n)=local_data(n)
+          else
+           print *,"local_data(n) overflow"
+           stop
+          endif
+         enddo ! n=1..visual_ncomp
+        enddo !i
+        enddo !j
+        enddo !k
+
+        close(11)
+       else
+        print *,"visual_compare invalid"
+        stop
+       endif
+
+      else if (do_input.eq.0) then
+
+       write(stepstr,'(I6)') nsteps
+       do i=1,6
+        if (stepstr(i:i).eq.' ') then
+         stepstr(i:i)='0'
+        endif
+       enddo
+       write(uniformfilename,'(A7,A6,A4)') 'uniform',stepstr,'.tec'
+       print *,"uniformfilename ",uniformfilename
+       open(unit=11,file=uniformfilename)
+
+       strandid=1
+
+       write(11,*) '"uniform data"'
+
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       if (SDIM.eq.2) then
+         !61-11+1=51
+        write(11,'(A51)',ADVANCE="NO")  &
+         'VARIABLES="x_pos","y_pos","x_velocity","y_velocity"'
+       else if (SDIM.eq.3) then
+         !82-11+1=72
+        write(11,'(A72)',ADVANCE="NO") &
+         'VARIABLES="x_pos","y_pos","z_pos","x_velocity","y_velocity","z_velocity"'
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       write(11,'(A20)',ADVANCE="NO") ',"PRES","DEN","TEMP"'
+
+       do im=1,num_species_var
+        write(im_str,'(I2)') im
+        do i=1,2
+         if (im_str(i:i).eq.' ') then
+          im_str(i:i)='0'
+         endif
+        enddo
+        write(11,'(A6)',ADVANCE="NO") ',"SPEC'
+        write(11,'(A2)',ADVANCE="NO") im_str
+        write(11,'(A1)',ADVANCE="NO") '"'
+       enddo ! im=1..num_species_var
+
+       write(11,'(A9)',ADVANCE="NO") ',"MGVORT"'
+
+       do im=1,nmat
+        write(im_str,'(I2)') im
+        do i=1,2
+         if (im_str(i:i).eq.' ') then
+          im_str(i:i)='0'
+         endif
+        enddo
+        write(11,'(A4)',ADVANCE="NO") ',"LS'
+        write(11,'(A2)',ADVANCE="NO") im_str
+        write(11,'(A1)',ADVANCE="NO") '"'
+        if (im.eq.nmat) then
+         write(11,*) ' '
+        endif
+       enddo ! im=1..nmat
+
+       if (SDIM.eq.2) then
+        write(11,*)'zone i=',visual_ncell(1)+1, &
+                   ' j=',visual_ncell(SDIM)+1, &
+                   ' f=point ', &
+                   ' SOLUTIONTIME=',time, &
+                   ' STRANDID=',strandid
+       else if (SDIM.eq.3) then
+        write(11,*)'zone i=',visual_ncell(1)+1, &
+                   ' j=',visual_ncell(2)+1, &
+                   ' k=',visual_ncell(SDIM)+1, &
+                   ' f=point ', &
+                   ' SOLUTIONTIME=',time, &
+                   ' STRANDID=',strandid
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+       do k=gridlo(3),gridhi(3)
+       do j=gridlo(2),gridhi(2)
+       do i=gridlo(1),gridhi(1)
+
+        dir=1
+        xtest(dir)=problo(dir)+i*visual_dx(dir)
+        dir=2
+        xtest(dir)=problo(dir)+j*visual_dx(dir)
+        if (SDIM.eq.3) then
+         dir=SDIM
+         xtest(dir)=problo(dir)+k*visual_dx(dir)
+        endif
+        do n=1,visual_ncomp
+         local_data(n)=fabout(D_DECL(i,j,k),n)
+        enddo
+        do dir=1,SDIM
+         if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
+          print *,"local_data(dir) invalid"
+          stop
+         endif
+        enddo
+        do n=1,visual_ncomp
+         if (abs(local_data(n)).le.1.0D+20) then
+          if ((n.ge.1).and.(n.lt.visual_ncomp)) then
+!          write(11,'(D25.16)',ADVANCE="NO") local_data(n)
+           write(11,'(E25.16)',ADVANCE="NO") local_data(n)
+          else if (n.eq.visual_ncomp) then
+!          write(11,'(D25.16)') local_data(n)
+           write(11,'(E25.16)') local_data(n)
+          else
+           print *,"n invalid"
+           stop
+          endif
+         else
+          print *,"local_data(n) overflow"
+          stop
+         endif
+        enddo ! n=1..visual_ncomp
+ 
+       enddo ! i
+       enddo ! j
+       enddo ! k
+
+       close(11)
+
+       if (visual_compare.eq.1) then
+
+        LS_base=visual_ncomp-nmat
+        state_ncomp=visual_ncomp-nmat+1
+
+        do n=1,nmat*(visual_ncomp+1)
+         L1norm(n)=zero
+         L2norm(n)=zero
+         Linfnorm(n)=zero
+         icrit(n)=-1
+         jcrit(n)=-1
+         kcrit(n)=-1
+        enddo ! n=1..nmat*(visual_ncomp+1)
+
+        do im=1,nmat
+         gridsum(im)=0
+         LSgridsum(im)=0
+         LSnorm(im)=zero
+        enddo
+
+        gridsum_total=0
+
+        do k=gridlo(3),gridhi(3)
+        do j=gridlo(2),gridhi(2)
+        do i=gridlo(1),gridhi(1)
+          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+         do n=1,visual_ncomp
+          local_data_in(n)=fabin(D_DECL(i,j,k),n)
+          local_data_out(n)=fabout(D_DECL(i,j,k),n)
+          if ((abs(local_data_in(n)).le.1.0D+20).and. &
+              (abs(local_data_out(n)).le.1.0D+20)) then
+
+           local_data(n)=local_data_in(n)-local_data_out(n)
+           
+           if (abs(local_data(n)).le.1.0D+20) then
+            L1norm_local(n)=abs(local_data(n))
+            L2norm_local(n)=abs(local_data(n))**2
+           else
+            print *,"abs(local_data(n)) overflow"
+            stop
+           endif
+          else
+           print *,"local_data_in or local_data_out corrupt"
+           stop
+          endif 
+         enddo ! n=1..visual_ncomp
+
+          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+         n=visual_ncomp+1
+         local_data(n)=zero
+         do dir=1,SDIM
+          local_data(n)=local_data(n)+ &
+           abs(local_data(dir+SDIM))**2
+         enddo
+         local_data(n)=sqrt(local_data(n))
+
+         if (abs(local_data(n)).le.1.0D+20) then
+          L1norm_local(n)=abs(local_data(n))
+          L2norm_local(n)=abs(local_data(n))**2
+         else
+          print *,"abs(local_data(n)) overflow"
+          stop
+         endif
+
+         if ((LS_base.eq.visual_ncomp-nmat).and. &
+             (state_ncomp.eq.visual_ncomp-nmat+1)) then
+          do im=1,nmat
+           LS_in=local_data_in(LS_base+im)
+           LS_out=local_data_out(LS_base+im)
+           if ((LS_in.gt.zero).and.(LS_out.gt.zero)) then
+            ebase=(im-1)*state_ncomp
+            do n=1,state_ncomp
+             if (n.lt.state_ncomp) then
+              n_data=n
+             else
+              n_data=visual_ncomp+1
+             endif
+             L1norm(ebase+n)=L1norm(ebase+n)+L1norm_local(n_data)
+             L2norm(ebase+n)=L2norm(ebase+n)+L2norm_local(n_data)
+             if (abs(local_data(n_data)).gt.Linfnorm(ebase+n)) then
+              Linfnorm(ebase+n)=abs(local_data(n_data))
+              icrit(ebase+n)=i
+              jcrit(ebase+n)=j
+              kcrit(ebase+n)=k
+             endif
+            enddo ! n=1..state_ncomp
+            gridsum(im)=gridsum(im)+1
+            gridsum_total=gridsum_total+1
+           else if ((LS_in.le.zero).or.(LS_out.le.zero)) then
+            ! do nothing
+           else
+            print *,"LS_in or LS_out invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+          do im=1,nmat
+           LS_in=local_data_in(LS_base+im)
+           LS_out=local_data_out(LS_base+im)
+           if ((abs(LS_in).le.visual_dx(1)).or. &
+               (abs(LS_out).le.visual_dx(1))) then
+            LSnorm(im)=LSnorm(im)+abs(local_data(LS_base+im))
+            LSgridsum(im)=LSgridsum(im)+1
+           else if ((abs(LS_in).gt.visual_dx(1)).and. &
+                    (abs(LS_out).gt.visual_dx(1))) then
+            ! do nothing
+           else
+            print *,"LS_in or LS_out invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+         else
+          print *,"LS_base or state_ncomp became corrupt"
+          stop
+         endif
+          
+        enddo ! i
+        enddo ! j
+        enddo ! k
+
+        if (gridsum_total.ge.1) then
+         if ((LS_base.eq.visual_ncomp-nmat).and. &
+             (state_ncomp.eq.visual_ncomp-nmat+1)) then
+          do im=1,nmat
+           if (gridsum(im).gt.0) then
+            ebase=(im-1)*state_ncomp
+            do n=1,state_ncomp
+             L1norm(ebase+n)=L1norm(ebase+n)/gridsum(im)
+             L2norm(ebase+n)=sqrt(L2norm(ebase+n)/gridsum(im))
+             print *,"im,n,cells,L1,L2,Linf,ic,jc,kc ", &
+              im,n,gridsum(im), &
+              L1norm(ebase+n),L2norm(ebase+n),Linfnorm(ebase+n), &
+              icrit(ebase+n),jcrit(ebase+n),kcrit(ebase+n)
+            enddo ! n=1..state_ncomp
+           else if (gridsum(im).eq.0) then
+            ! do nothing
+           else
+            print *,"gridsum invalid"
+            stop
+           endif
+           if (LSgridsum(im).gt.0) then
+            LSnorm(im)=LSnorm(im)/LSgridsum(im)
+            print *,"im,cells,LSnorm ",im,LSgridsum(im),LSnorm(im)
+           else if (LSgridsum(im).eq.0) then
+            ! do nothing
+           else
+            print *,"LSgridsum invalid"
+            stop
+           endif
+          enddo ! im=1..nmat
+         else
+          print *,"LS_base or state_ncomp became corrupt"
+          stop
+         endif
+        else
+         print *,"gridsum_total invalid"
+         stop
+        endif
+            
+       else if (visual_compare.eq.0) then
+        ! do nothing
+       else
+        print *,"visual_compare invalid"
+        stop
+       endif
+
+      else
+       print *,"do_input invalid"
+       stop
+      endif
+     
+      return
+      end subroutine FORT_IO_COMPARE
+
+      subroutine FORT_OUTPUTSLICE( &
+       time,nsteps,sliceint,slice_data,nslice,nstate_slice)
+      IMPLICIT NONE
+
+      REAL_T time
+      INTEGER_T nsteps,nslice,nstate_slice,n,sliceint,strandid
+      REAL_T slice_data(nslice*nstate_slice)
+      INTEGER_T i
+      character*6 stepstr
+      character*11 sfilename
+
+        ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
+        ! (value of material with LS>0)
+      if (nstate_slice.ne.2*SDIM+6) then
+       print *,"nstate_slice invalid in outputslice"
+       print *,"nstate_slice= ",nstate_slice
+       stop
+      endif 
+      if (nslice.le.1) then
+       print *,"nslice invalid"
+       stop
+      endif
+
+      if (sliceint.le.0) then
+       strandid=1
+      else
+       strandid=(nsteps/sliceint)+1
+      endif
+
+      write(stepstr,'(I6)') nsteps
+      do i=1,6
+       if (stepstr(i:i).eq.' ') then
+        stepstr(i:i)='0'
+       endif
+      enddo
+
+      write(sfilename,'(A5,A6)') 'slice',stepstr
+
+      print *,"sfilename ",sfilename
+      open(unit=11,file=sfilename)
+
+      ! to use gnuplot, put # at beginning of comment lines.
+      write(11,*) '"CLSVOF data"'
+      if (SDIM.eq.2) then
+       write(11,*) 'VARIABLES="X","Y","U","V","PMG","PEOS","DIV","D","T","KE"'
+      else if (SDIM.eq.3) then
+       write(11,*) 'VARIABLES="X","Y","Z","U","V","W","PMG","PEOS","DIV","D","T","KE"'
+      else
+       print *,"dimension bust"
+       stop
+      endif
+      write(11,*)'zone i=',nslice-1,' SOLUTIONTIME=',time, &
+       ' STRANDID=',strandid
+
+      do i=-1,nslice-2
+       do n=1,nstate_slice-1
+!       write(11,'(D25.16)',ADVANCE="NO")  &
+        write(11,'(E25.16)',ADVANCE="NO")  &
+          slice_data((i+1)*nstate_slice+n)
+       enddo
+       n=nstate_slice
+!      write(11,'(D25.16)') slice_data((i+1)*nstate_slice+n)
+       write(11,'(E25.16)') slice_data((i+1)*nstate_slice+n)
+      enddo ! i
+
+
+      close(11)
+      return
+      end
+
+      subroutine FORT_ZALESAK_CELL( &
+        xlo,dx, &
+        u,domlo,domhi, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        level, &
+        DIMS(u), &
+        time)
+
+      use global_utility_module
+      use probf90_module
+
+      IMPLICIT NONE
+      INTEGER_T bfact,level
+      INTEGER_T tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T domlo(SDIM), domhi(SDIM)
+      INTEGER_T DIMDEC(u)
+      REAL_T u(DIMV(u),SDIM)
+      REAL_T time
+      REAL_T xlo(SDIM),dx(SDIM)
+
+      INTEGER_T i,j,k,dir
+      REAL_T xx(SDIM)
+      REAL_T xsten(-1:1,SDIM)
+      INTEGER_T nhalf
+
+      nhalf=1
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
+      call checkbound(fablo,fabhi,DIMS(u),1,-1,411) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do dir=1,SDIM
+        xx(dir)=xsten(0,dir)
+       enddo
+ 
+       if (probtype.eq.31) then
+        call circleuu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM))
+        call circlevv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM))
+        if (SDIM.eq.3) then
+         call circleww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM))
+        endif
+       else if (probtype.eq.29) then
+        if (SDIM.eq.3) then
+         call deform3duu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM),time,dx)
+         call deform3dvv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM),time,dx)
+         call deform3dww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
+        else if (SDIM.eq.2) then
+         call deformuu(u(D_DECL(i,j,k),1),xx(1),xx(2),time,dx)
+         call deformvv(u(D_DECL(i,j,k),2),xx(1),xx(2),time,dx)
+        else
+         print *,"dimension bust"
+         stop
+        endif
+       else if (probtype.eq.28) then
+        call zalesakuu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM),time,dx)
+        call zalesakvv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM),time,dx)
+        if (SDIM.eq.3) then
+         call zalesakww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
+        endif
+       else
+        print *,"invalid probtype for ZALESAK_CELL"
+       endif
+
+       do dir=1,SDIM
+        u(D_DECL(i,j,k),dir)=u(D_DECL(i,j,k),dir)/global_velocity_scale
+       enddo
+
+      enddo
+      enddo
+      enddo
+
+      return 
+      end subroutine FORT_ZALESAK_CELL
+
+       ! spectral_override==0 => always do low order
+      subroutine FORT_AVGDOWN( &
+       enable_spectral, &
+       finest_level, &
+       spectral_override, &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       mask,DIMS(mask), &
+       lo,hi, &
+       lof,hif) 
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: enable_spectral
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: spectral_override
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      INTEGER_T mstenlo(3), mstenhi(3)
+      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      INTEGER_T flochi(SDIM)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T ilocal,jlocal,klocal
+      INTEGER_T n
+      INTEGER_T dir2
+      INTEGER_T grid_type
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T xsten(-1:1,SDIM)
+      REAL_T xstenND(-1:1,SDIM)
+      INTEGER_T nhalf
+      REAL_T crse_value(ncomp)
+      REAL_T dxelem_f
+      REAL_T xcoarse(SDIM)
+      INTEGER_T finelo_index
+      REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: ffine
+      REAL_T INTERP_TOL
+      INTEGER_T testmask,testmask2
+      INTEGER_T nmat
+      INTEGER_T local_enable_spectral
+      INTEGER_T elem_test
+      INTEGER_T caller_id
+
+      caller_id=5
+      nhalf=1
+
+      INTERP_TOL=1.0E-4
+
+      nmat=num_materials
+
+      local_enable_spectral=enable_spectral
+
+      if ((spectral_override.ne.0).and.(spectral_override.ne.1)) then
+       print *,"spectral_override invalid"
+       stop
+      endif
+
+      if (ncomp.lt.1) then
+       print *,"ncomp invalid31"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+      if (level_f.gt.finest_level) then
+       print *,"level_f invalid"
+       stop
+      endif
+
+      call checkbound(lo,hi,DIMS(crse),0,-1,411)
+      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+      call checkbound(lof,hif,DIMS(mask),1,-1,411)
+
+      grid_type=-1  ! ggg  (Gauss in all directions)
+
+      do dir2=1,SDIM
+       flochi(dir2)=bfact_f-1
+       if (2*lo(dir2).ne.lof(dir2)) then
+        print *,"2*lo(dir2).ne.lof(dir2)"
+        stop
+       endif
+       if (2*(hi(dir2)+1).ne.hif(dir2)+1) then
+        print *,"2*(hi(dir2)+1).ne.hif(dir2)+1"
+        stop
+       endif
+      enddo ! dir2=1..sdim
+
+      allocate(ffine(D_DECL(0:flochi(1),0:flochi(2),0:flochi(SDIM)),ncomp))
+
+      do dir2=1,SDIM
+       elem_test=lo(dir2)/bfact_c
+
+       if (elem_test*bfact_c.ne.lo(dir2)) then
+         print *,"elem_test invalid (loc) 1"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"lo(dir2)=",lo(dir2)
+         print *,"hi(dir2)=",hi(dir2)
+         print *,"lof(dir2)=",lof(dir2)
+         print *,"hif(dir2)=",hif(dir2)
+         stop
+       endif
+       elem_test=(hi(dir2)+1)/bfact_c
+       if (elem_test*bfact_c.ne.hi(dir2)+1) then
+         print *,"elem_test invalid (hic) 1"
+         print *,"elem_test=",elem_test
+         print *,"bfact_c=",bfact_c
+         print *,"dir2=",dir2
+         print *,"lo(dir2)=",lo(dir2)
+         print *,"hi(dir2)=",hi(dir2)
+         print *,"lof(dir2)=",lof(dir2)
+         print *,"hif(dir2)=",hif(dir2)
+         stop
+       endif
+       elem_test=lof(dir2)/bfact_f
+       if (elem_test*bfact_f.ne.lof(dir2)) then
+        print *,"elem_test invalid (lof) 1"
+        print *,"elem_test=",elem_test
+        print *,"bfact_f=",bfact_f
+        print *,"dir2=",dir2
+        print *,"lo(dir2)=",lo(dir2)
+        print *,"hi(dir2)=",hi(dir2)
+        print *,"lof(dir2)=",lof(dir2)
+        print *,"hif(dir2)=",hif(dir2)
+        stop
+       endif
+       elem_test=(hif(dir2)+1)/bfact_f
+       if (elem_test*bfact_f.ne.hif(dir2)+1) then
+        print *,"elem_test invalid (hif) 1"
+        print *,"elem_test=",elem_test
+        print *,"bfact_f=",bfact_f
+        print *,"dir2=",dir2
+        print *,"lo(dir2)=",lo(dir2)
+        print *,"hi(dir2)=",hi(dir2)
+        print *,"lof(dir2)=",lof(dir2)
+        print *,"hif(dir2)=",hif(dir2)
+        stop
+       endif
+      enddo ! dir2=1..sdim
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,ic,jc,kc,level_c,nhalf)
+
+        ! find stencil for surrounding fine level spectral element.
+       stenlo(3)=0
+       stenhi(3)=0
+       do dir2=1,SDIM
+        dxelem_f=dxf(dir2)*bfact_f
+        xcoarse(dir2)=xsten(0,dir2)
+        finelo_index=NINT( (xcoarse(dir2)-problo(dir2))/dxelem_f-half )
+        stenlo(dir2)=bfact_f*finelo_index
+        stenhi(dir2)=stenlo(dir2)+bfact_f-1
+        if ((stenlo(dir2).lt.lof(dir2)).or. &
+            (stenhi(dir2).gt.hif(dir2))) then
+         print *,"stenlo or stenhi invalid 1"
+         stop
+        endif
+       enddo ! dir2
+
+       mstenlo(3)=0
+       mstenhi(3)=0
+       do dir2=1,SDIM
+        mstenlo(dir2)=stenlo(dir2)
+        mstenhi(dir2)=stenhi(dir2)
+        if (stenhi(dir2).eq.stenlo(dir2)) then
+         mstenlo(dir2)=stenlo(dir2)-1
+         mstenhi(dir2)=stenhi(dir2)+1
+        endif
+       enddo ! dir2
+
+       ifine=stenlo(1) 
+       jfine=stenlo(2) 
+       kfine=stenlo(SDIM) 
+
+        ! lower left hand corner of element stencil.
+       call gridstenND_level(xstenND,ifine,jfine,kfine,level_f,nhalf)
+
+       do dir2=1,SDIM
+
+        xcoarse(dir2)=xcoarse(dir2)-xstenND(0,dir2)
+
+        if (stenhi(dir2).ne.stenlo(dir2)) then
+         if (abs(xcoarse(dir2)).lt.INTERP_TOL*dxf(dir2)) then
+          mstenlo(dir2)=stenlo(dir2)-1
+         endif
+         if (abs(xcoarse(dir2)-bfact_f*dxf(dir2)).lt. &
+             INTERP_TOL*dxf(dir2)) then
+          mstenhi(dir2)=stenhi(dir2)+1
+         endif
+        endif ! stenhi<>stenlo
+
+        if ((xcoarse(dir2).lt.-INTERP_TOL*dxf(dir2)).or. &
+            (xcoarse(dir2).gt.(INTERP_TOL+bfact_f)*dxf(dir2))) then
+         print *,"xcoarse out of bounds avgdown"
+         stop
+        endif
+
+       enddo ! dir2=1..sdim
+
+       ifine=mstenlo(1) 
+       jfine=mstenlo(2) 
+       kfine=mstenlo(SDIM) 
+       testmask=NINT(mask(D_DECL(ifine,jfine,kfine)))
+       do ifine=mstenlo(1),mstenhi(1) 
+       do jfine=mstenlo(2),mstenhi(2) 
+       do kfine=mstenlo(3),mstenhi(3) 
+        testmask2=NINT(mask(D_DECL(ifine,jfine,kfine)))
+        if (testmask2.ne.testmask) then
+         testmask=0
+        endif
+       enddo 
+       enddo 
+       enddo 
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+       voltotal=zero
+
+       if ((bfact_f.ge.2).and. &
+           ((local_enable_spectral.eq.1).or. &
+            (local_enable_spectral.eq.2)).and. &
+           (testmask.ge.1).and. &
+           (testmask.le.nmat).and. &
+           (spectral_override.eq.1)) then
+
+        do ifine=stenlo(1),stenhi(1)
+        do jfine=stenlo(2),stenhi(2)
+        do kfine=stenlo(3),stenhi(3)
+         ilocal=ifine-stenlo(1)
+         jlocal=jfine-stenlo(2)
+         klocal=kfine-stenlo(3)
+         do n=1,ncomp
+          ffine(D_DECL(ilocal,jlocal,klocal),n)= &
+            fine(D_DECL(ifine,jfine,kfine),n)
+         enddo
+        enddo
+        enddo
+        enddo
+
+        call SEM_INTERP_ELEMENT( &
+         ncomp,bfact_f,grid_type, &
+         flochi,dxf,xcoarse,ffine,crse_value,caller_id)
+
+        voltotal=one
+
+       else if ((bfact_f.eq.1).or. &
+                (local_enable_spectral.eq.0).or. &
+                (local_enable_spectral.eq.3).or. &
+                (testmask.eq.0).or. &
+                (spectral_override.eq.0)) then
+
+        call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+         bfact_c,bfact_f)
+
+        do ifine=stenlo(1),stenhi(1)
+         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+         if (wt(1).gt.zero) then
+          do jfine=stenlo(2),stenhi(2)
+           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+           if (wt(2).gt.zero) then
+            do kfine=stenlo(3),stenhi(3)
+             if (SDIM.eq.3) then
+              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+             endif
+             if (wt(SDIM).gt.zero) then
+              volall=wt(1)
+              do dir2=2,SDIM
+               volall=volall*wt(dir2)
+              enddo
+              do n = 1, ncomp
+               crse_value(n) = crse_value(n) +  &
+                volall*fine(D_DECL(ifine,jfine,kfine),n)
+              enddo
+              voltotal=voltotal+volall
+             endif ! wt(sdim).gt.0
+            enddo ! kfine
+           endif
+          enddo ! jfine
+         endif
+        enddo ! ifine
+
+       else
+        print *,"parameter bust in avgdown"
+        stop
+       endif
+
+       if (voltotal.le.zero) then
+        print *,"voltotal invalid"
+        stop
+       endif
+
+       do n = 1,ncomp
+        crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
+       enddo
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      deallocate(ffine)
+
+      return
+      end subroutine FORT_AVGDOWN
+
+
+      subroutine FORT_AVGDOWN_LOW( &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi, &
+       lof,hif) 
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T n
+      INTEGER_T dir2
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T crse_value(ncomp)
+
+      if (ncomp.lt.1) then
+       print *,"ncomp invalid32"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+
+      call checkbound(lo,hi,DIMS(crse),0,-1,411)
+      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+       voltotal=zero
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+        bfact_c,bfact_f)
+
+       do ifine=stenlo(1),stenhi(1)
+        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+        if (wt(1).gt.zero) then
+         do jfine=stenlo(2),stenhi(2)
+          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+          if (wt(2).gt.zero) then
+           do kfine=stenlo(3),stenhi(3)
+            if (SDIM.eq.3) then
+             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+            endif
+            if (wt(SDIM).gt.zero) then
+             volall=wt(1)
+             do dir2=2,SDIM
+              volall=volall*wt(dir2)
+             enddo
+             do n = 1, ncomp
+              crse_value(n) = crse_value(n) +  &
+               volall*fine(D_DECL(ifine,jfine,kfine),n)
+             enddo
+             voltotal=voltotal+volall
+            endif ! wt(sdim).gt.0
+           enddo ! kfine
+          endif
+         enddo ! jfine
+        endif
+       enddo ! ifine
+
+       if (voltotal.le.zero) then
+        print *,"voltotal invalid"
+        stop
+       endif
+
+       do n = 1,ncomp
+        crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
+       enddo
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine FORT_AVGDOWN_LOW
+
+       ! NavierStokes::level_phase_change_redistribute
+       ! NavierStokes::avgDown_tag_localMF
+       ! NavierStokes::level_avgDown_tag
+      subroutine FORT_AVGDOWN_TAG( &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi, &
+       lof,hif) 
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T n
+      INTEGER_T dir2
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T crse_value(ncomp)
+      INTEGER_T fine_test
+      INTEGER_T coarse_test
+      INTEGER_T init_flag
+
+      if (ncomp.ne.1) then
+       print *,"ncomp invalid33"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+
+      call checkbound(lo,hi,DIMS(crse),0,-1,411)
+      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+       init_flag=0
+       voltotal=zero
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+        bfact_c,bfact_f)
+
+       do ifine=stenlo(1),stenhi(1)
+        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+        if (wt(1).gt.zero) then
+         do jfine=stenlo(2),stenhi(2)
+          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+          if (wt(2).gt.zero) then
+           do kfine=stenlo(3),stenhi(3)
+            if (SDIM.eq.3) then
+             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+            endif
+            if (wt(SDIM).gt.zero) then
+             volall=wt(1)
+             do dir2=2,SDIM
+              volall=volall*wt(dir2)
+             enddo
+
+             do n = 1, ncomp
+              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),n))
+              coarse_test=NINT(crse_value(n))
+              if (init_flag.eq.0) then
+               crse_value(n)=fine_test
+              else if (init_flag.eq.1) then
+               if (fine_test.eq.0) then
+                crse_value(n)=zero
+               else if ((fine_test.eq.1).and.(coarse_test.ne.1)) then
+                crse_value(n)=zero
+               else if ((fine_test.eq.2).and.(coarse_test.ne.2)) then
+                crse_value(n)=zero
+               else if (fine_test.eq.coarse_test) then
+                ! do nothing
+               else
+                print *,"fine_test bad (avgdown tag):",fine_test 
+                stop
+               endif
+              else
+               print *,"init_flag invalid"
+               stop
+              endif
+
+             enddo ! n
+
+             if (init_flag.eq.0) then
+              init_flag=1
+             else if (init_flag.eq.1) then
+              ! do nothing
+             else
+              print *,"init_flag invalid"
+              stop
+             endif
+
+             voltotal=voltotal+volall
+            endif ! wt(sdim).gt.0
+           enddo ! kfine
+          endif
+         enddo ! jfine
+        endif
+       enddo ! ifine
+
+       if (voltotal.le.zero) then
+        print *,"voltotal invalid"
+        stop
+       endif
+
+       do n = 1,ncomp
+        crse(D_DECL(ic,jc,kc),n)=crse_value(n)
+       enddo
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine FORT_AVGDOWN_TAG
+
+
+       ! do_the_advance -> level_phase_change_rate
+       ! avgDownBURNING_localMF 
+       ! level_avgDownBURNING
+       ! (note: after level_avgDownBURNING comes 
+       !  level_phase_change_rate_extend)
+      subroutine FORT_AVGDOWN_BURNING( &
+       velflag, &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp, &
+       nmat, &
+       nten, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi, &
+       lof,hif) 
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: velflag
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T dir2
+      INTEGER_T iten
+      INTEGER_T n
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T crse_value(ncomp)
+      INTEGER_T fine_test
+      INTEGER_T coarse_test
+      REAL_T velwt(nten)
+      INTEGER_T local_comp
+      INTEGER_T avgdown_sweep
+      INTEGER_T ncomp_expect
+      INTEGER_T ncomp_per_interface
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+
+      if (nten.eq.( (nmat-1)*(nmat-1)+nmat-1)/2) then
+       ! do nothing
+      else
+       print *,"nten invalid"
+       stop
+      endif
+
+      if (velflag.eq.1) then  ! burning velocity
+       ncomp_per_interface=SDIM
+      else if (velflag.eq.0) then ! interface temperature, mass fraction
+       ncomp_per_interface=2
+      else
+       print *,"velflag invalid"
+       stop
+      endif
+      ncomp_expect=nten+nten*ncomp_per_interface
+
+      if (ncomp.eq.ncomp_expect) then
+       ! do nothing
+      else
+       print *,"ncomp invalid34"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+
+      call checkbound(lo,hi,DIMS(crse),0,-1,411)
+      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+        bfact_c,bfact_f)
+
+       do avgdown_sweep=0,1
+
+        do iten=1,nten
+         velwt(iten)=zero
+        enddo
+        voltotal=zero
+
+        do ifine=stenlo(1),stenhi(1)
+         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+         if (wt(1).gt.zero) then
+          do jfine=stenlo(2),stenhi(2)
+           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+           if (wt(2).gt.zero) then
+            do kfine=stenlo(3),stenhi(3)
+             if (SDIM.eq.3) then
+              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+             endif
+             if (wt(SDIM).gt.zero) then
+              volall=wt(1)
+              do dir2=2,SDIM
+               volall=volall*wt(dir2)
+              enddo
+              if (volall.le.zero) then
+               print *,"volall invalid"
+               stop
+              endif
+
+              do iten=1,nten
+               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
+               coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
+
+               if (avgdown_sweep.eq.0) then
+
+                if (coarse_test.eq.0) then 
+                 coarse_test=fine_test
+                else if (fine_test.eq.0) then
+                 ! do nothing
+                else if ((fine_test.eq.1).or.(fine_test.eq.-1)) then
+                 coarse_test=fine_test
+                else
+                 print *,"fine_test invalid"
+                 stop
+                endif
+
+                if ((coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+                 crse_value(iten)=coarse_test
+                else if (coarse_test.eq.0) then
+                 ! do nothing (crse_value init. to zero)
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+
+               else if (avgdown_sweep.eq.1) then
+
+                if ((coarse_test.eq.0).or. &
+                    (coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+
+                 if (fine_test.eq.0) then
+                  ! do nothing
+                 else if (fine_test.eq.coarse_test) then
+                  velwt(iten)=velwt(iten)+volall
+                  do dir2=1,ncomp_per_interface
+                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
+                   crse_value(local_comp)=crse_value(local_comp)+ &
+                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                  enddo
+                 else
+                  print *,"fine_test bad (avgdown burning): ",fine_test
+                  stop
+                 endif
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+               else 
+                print *,"avgdown_sweep invalid"
+                stop
+               endif
+              enddo ! iten=1..nten
+
+              voltotal=voltotal+volall
+             endif ! wt(sdim).gt.0
+            enddo ! kfine
+           endif
+          enddo ! jfine
+         endif
+        enddo ! ifine
+
+        if (voltotal.le.zero) then
+         print *,"voltotal invalid"
+         stop
+        endif
+
+        if (avgdown_sweep.eq.0) then
+         ! do nothing
+        else if (avgdown_sweep.eq.1) then
+
+         do iten=1,nten
+
+          coarse_test=NINT(crse_value(iten))
+          if (coarse_test.eq.0) then
+           if (velwt(iten).eq.zero) then
+            ! do nothing
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+           crse(D_DECL(ic,jc,kc),iten)=zero
+           do dir2=1,ncomp_per_interface
+            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
+           enddo
+          else if ((coarse_test.eq.1).or. &
+                   (coarse_test.eq.-1)) then
+           if (velwt(iten).gt.zero) then
+            crse(D_DECL(ic,jc,kc),iten)=coarse_test
+            do dir2=1,ncomp_per_interface
+             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
+              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
+            enddo
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+          else
+           print *,"coarse_test invalid"
+           stop
+          endif
+
+         enddo ! iten=1..nten
+
+        else 
+         print *,"avgdown_sweep invalid"
+         stop
+        endif
+
+       enddo ! avgdown_sweep=0..1
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine FORT_AVGDOWN_BURNING
+
+        ! icurv=(iten-1)*(5+SDIM)
+        ! dir=1..sdim
+        ! side=-1 or 1
+        ! curvfab(D_DECL(i,j,k),icurv+4+SDIM)=dir*side
+      subroutine FORT_AVGDOWN_CURV( &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp,nmat,nten, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi, &
+       lof,hif) 
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+      use navierstokesf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp,nmat,nten
+      INTEGER_T nten_test
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T dir2
+      INTEGER_T iten
+      INTEGER_T n
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T crse_value(ncomp)
+      INTEGER_T fine_test
+      INTEGER_T coarse_test
+      REAL_T velwt(nten)
+      INTEGER_T icurv,istat
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      if (nten.ne.nten_test) then
+       print *,"nten invalid avgdown_curv nten nten_test ",nten,nten_test
+       stop
+      endif
+
+      if (ncomp.ne.nten*(SDIM+5)) then
+       print *,"ncomp invalid35"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+
+      call checkbound(lo,hi,DIMS(crse),0,-1,411)
+      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+       do iten=1,nten
+        velwt(iten)=zero
+       enddo
+       voltotal=zero
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+        bfact_c,bfact_f)
+
+       do ifine=stenlo(1),stenhi(1)
+        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+        if (wt(1).gt.zero) then
+         do jfine=stenlo(2),stenhi(2)
+          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+          if (wt(2).gt.zero) then
+           do kfine=stenlo(3),stenhi(3)
+            if (SDIM.eq.3) then
+             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+            endif
+            if (wt(SDIM).gt.zero) then
+             volall=wt(1)
+             do dir2=2,SDIM
+              volall=volall*wt(dir2)
+             enddo
+             if (volall.le.zero) then
+              print *,"volall invalid"
+              stop
+             endif
+
+             do iten=1,nten
+              icurv=(iten-1)*(5+SDIM)
+              istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
+              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),istat))
+              coarse_test=NINT(crse_value(istat))
+              if ((coarse_test.ne.0).and. &
+                  (coarse_test.ne.SDIM+1)) then
+               print *,"coarse_test invalid"
+               stop
+              endif
+              if (fine_test.eq.0) then
+               ! do nothing
+              else if ((abs(fine_test).ge.1).and. &
+                       (abs(fine_test).le.SDIM+1)) then
+               velwt(iten)=velwt(iten)+volall
+               crse_value(istat)=SDIM+1
+               crse_value(istat+1)=zero ! im3
+               do dir2=1,SDIM+3
+                crse_value(icurv+dir2)= &
+                  crse_value(icurv+dir2)+volall* &
+                  fine(D_DECL(ifine,jfine,kfine),icurv+dir2)
+               enddo
+              else
+               print *,"fine_test bad (avgdown curv): ",fine_test
+               stop
+              endif
+             enddo ! iten
+
+             voltotal=voltotal+volall
+            endif ! wt(sdim).gt.0
+           enddo ! kfine
+          endif
+         enddo ! jfine
+        endif
+       enddo ! ifine
+
+       if (voltotal.le.zero) then
+        print *,"voltotal invalid"
+        stop
+       endif
+
+       do iten=1,nten
+        icurv=(iten-1)*(5+SDIM)
+        istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
+        coarse_test=NINT(crse_value(istat))
+        if (coarse_test.eq.0) then
+         if (velwt(iten).ne.zero) then
+          print *,"velwt invalid"
+          stop
+         endif
+         do dir2=1,5+SDIM
+          crse(D_DECL(ic,jc,kc),icurv+dir2)=zero
+         enddo
+        else if (coarse_test.eq.SDIM+1) then
+         if (velwt(iten).gt.zero) then
+          crse(D_DECL(ic,jc,kc),istat)=SDIM+1 ! dir x side
+          crse(D_DECL(ic,jc,kc),istat+1)=zero ! im3
+          do dir2=1,3+SDIM
+           crse(D_DECL(ic,jc,kc),icurv+dir2)= &
+            crse_value(icurv+dir2)/velwt(iten)
+          enddo
+         else
+          print *,"velwt invalid"
+          stop
+         endif
+        else
+         print *,"coarse_test invalid"
+         stop
+        endif
+
+       enddo ! iten=1..nten
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine FORT_AVGDOWN_CURV
+
+
+      subroutine FORT_MOFAVGDOWN ( &
+       time, &
+       problo, &
+       dxc, &
+       dxf, &
+       bfact_c,bfact_f, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi,nmat)
+
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T  growlo(3),growhi(3)
+      INTEGER_T  stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse),nmat*ngeom_raw)
+      REAL_T, intent(in) :: fine(DIMV(fine),nmat*ngeom_raw)
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T ic,jc,kc
+      INTEGER_T dir
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxc(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      INTEGER_T domlo(SDIM)
+      INTEGER_T nhalf
+      INTEGER_T nhalfgrid
+      INTEGER_T n_overlap
+ 
+      INTEGER_T im
+      INTEGER_T vofcomp_raw
+      INTEGER_T vofcomp_recon
+      REAL_T wt(SDIM)
+      REAL_T testwt
+
+      REAL_T temp_vfrac
+      REAL_T temp_cen(SDIM)
+
+      REAL_T xstencoarse(-3:3,SDIM)
+      REAL_T xstenfine(-3:3,SDIM)
+      REAL_T xstengrid(-1:1,SDIM)
+
+      REAL_T mofdatafine(nmat*ngeom_recon)
+      REAL_T mofdatacoarse(nmat*ngeom_recon)
+      REAL_T multi_centroidA(nmat,SDIM)
+
+      REAL_T volcoarse
+      REAL_T cencoarse(SDIM)
+      REAL_T volfine
+      REAL_T cenfine(SDIM)
+
+      REAL_T multi_volume(nmat)
+      REAL_T multi_cen(SDIM,nmat)
+      INTEGER_T tessellate
+      INTEGER_T continuous_mof
+      INTEGER_T mof_verbose
+      INTEGER_T use_ls_data
+      INTEGER_T fine_covered
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      INTEGER_T nmax
+      INTEGER_T nhalf_box
+      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      INTEGER_T tid
+#ifdef _OPENMP
+      INTEGER_T omp_get_thread_num
+#endif
+
+      tid=0       
+#ifdef _OPENMP
+      tid=omp_get_thread_num()
+#endif
+      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+       print *,"tid invalid"
+       stop
+      endif 
+
+      nhalf_box=1
+
+      nmax=POLYGON_LIST_MAX ! in: MOFAVGDOWN
+
+      if (time.lt.zero) then
+       print *,"time invalid"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid5 ",bfact_f
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+
+      do dir=1,SDIM
+       domlo(dir)=0
+      enddo
+      nhalf=3
+      nhalfgrid=1
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+        ! coarse centroids and volume fractions are initialized
+        ! to zero.
+       do dir=1,nmat*ngeom_raw
+        crse(D_DECL(ic,jc,kc),dir) = zero
+       enddo
+       do dir=1,nmat*ngeom_recon
+        mofdatacoarse(dir) = zero
+       enddo
+
+       volcoarse=zero
+       do dir=1,SDIM
+        cencoarse(dir)=zero
+       enddo
+
+       n_overlap=0
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+         bfact_c,bfact_f)
+
+       do ifine=stenlo(1),stenhi(1)
+        call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+        if (1.eq.0) then
+         print *,"ic,ifine,wt(1) ",ic,ifine,wt(1)
+        endif
+        if (wt(1).gt.zero) then
+         do jfine=stenlo(2),stenhi(2)
+          call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+          if (1.eq.0) then
+           print *,"jc,jfine,wt(2) ",jc,jfine,wt(2)
+          endif
+          if (wt(2).gt.zero) then
+           do kfine=stenlo(3),stenhi(3)
+            if (SDIM.eq.3) then
+             call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+            endif
+            if (wt(SDIM).gt.zero) then
+             if (SDIM.eq.2) then
+              testwt=wt(1)*wt(2)
+             else if (SDIM.eq.3) then
+              testwt=wt(1)*wt(2)*wt(SDIM)
+             else
+              print *,"dimension bust"
+              stop
+             endif
+
+             if (testwt.gt.zero) then
+
+              n_overlap=n_overlap+1
+
+              do im=1,nmat
+               vofcomp_raw=(im-1)*ngeom_raw+1
+               vofcomp_recon=(im-1)*ngeom_recon+1
+               do dir=1,SDIM+1
+                mofdatafine(vofcomp_recon+dir-1)= &
+                 fine(D_DECL(ifine,jfine,kfine),vofcomp_raw+dir-1)
+               enddo
+               do dir=SDIM+2,ngeom_recon
+                mofdatafine(vofcomp_recon+dir-1)=zero
+               enddo
+              enddo ! im
+
+              call gridsten(xstencoarse,problo,ic,jc,kc, &
+               domlo,bfact_c,dxc,nhalf)
+              call gridsten(xstenfine,problo,ifine,jfine,kfine, &
+               domlo,bfact_f,dxf,nhalf)
+
+              call Box_volumeFAST(bfact_f,dxf,xstenfine,nhalf, &
+               volfine,cenfine,SDIM)
+
+              fine_covered=1
+
+              do dir=1,SDIM
+               xstengrid(-1,dir)=max(xstencoarse(-1,dir),xstenfine(-1,dir))
+               xstengrid(1,dir)=min(xstencoarse(1,dir),xstenfine(1,dir))
+               xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
+
+               if (xstengrid(-1,dir).gt.xstenfine(-1,dir)+VOFTOL*dxf(dir)) then
+                fine_covered=0
+               endif
+               if (xstengrid(1,dir).lt.xstenfine(1,dir)-VOFTOL*dxf(dir)) then
+                fine_covered=0
+               endif
+
+               if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
+                     VOFTOL*dxf(dir)).or. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
+                     VOFTOL*dxf(dir))) then
+                 print *,"fine cell should be completely covered by coarse"
+                 stop
+                endif
+               endif
+              enddo ! dir
+
+              if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
+               if (fine_covered.ne.1) then
+                print *,"fine cell should be completely covered by coarse"
+                stop
+               endif
+              endif
+
+              if (fine_covered.eq.1) then
+
+               do im=1,nmat
+                vofcomp_raw=(im-1)*ngeom_raw+1
+                multi_volume(im)= &
+                 fine(D_DECL(ifine,jfine,kfine),vofcomp_raw)*volfine
+                do dir=1,SDIM
+                 multi_cen(dir,im)= &
+                  fine(D_DECL(ifine,jfine,kfine),vofcomp_raw+dir)+cenfine(dir)
+                enddo
+               enddo ! im
+
+              else if (fine_covered.eq.0) then
+               use_ls_data=0
+               mof_verbose=0
+               continuous_mof=0
+               tessellate=0
+
+                ! sum F_fluid=1  sum F_solid<=1
+               call make_vfrac_sum_ok_base( &
+                 cmofsten, &
+                 xstenfine,nhalf,nhalf_box, &
+                 bfact_f,dxf, &
+                 tessellate,mofdatafine,nmat,SDIM,304)
+
+               call multimaterial_MOF( &
+                bfact_f,dxf,xstenfine,nhalf, &
+                mof_verbose, &
+                use_ls_data, &
+                LS_stencil, &
+                geom_xtetlist(1,1,1,tid+1), &
+                geom_xtetlist(1,1,1,tid+1), &
+                nmax, &
+                nmax, &
+                mofdatafine, &
+                multi_centroidA, &
+                continuous_mof, &
+                cmofsten, &
+                nmat,SDIM,3)
+
+               call multi_get_volume_grid_simple( &
+                tessellate, &  !=0
+                bfact_f,dxf,xstenfine,nhalf, &
+                mofdatafine, &
+                xstengrid,nhalfgrid, &
+                multi_volume,multi_cen, &
+                geom_xtetlist(1,1,1,tid+1), &
+                nmax, &
+                nmax, &
+                nmat,SDIM,6)
+
+              else
+               print *,"fine_covered invalid"
+               stop
+              endif
+
+              do im=1,nmat
+               vofcomp_recon=(im-1)*ngeom_recon+1
+               mofdatacoarse(vofcomp_recon)=mofdatacoarse(vofcomp_recon)+ &
+                multi_volume(im)
+               do dir=1,SDIM
+                mofdatacoarse(vofcomp_recon+dir)= &
+                 mofdatacoarse(vofcomp_recon+dir)+ &
+                 multi_cen(dir,im)*multi_volume(im)
+               enddo
+               if (is_rigid(nmat,im).eq.0) then
+                volcoarse=volcoarse+multi_volume(im)
+                do dir=1,SDIM
+                 cencoarse(dir)=cencoarse(dir)+ &
+                  multi_cen(dir,im)*multi_volume(im)
+                enddo
+               else if (is_rigid(nmat,im).eq.1) then
+                ! do nothing
+               else
+                print *,"is_rigid(nmat,im) invalid"
+                stop
+               endif
+              enddo ! im=1..nmat
+  
+             else if (testwt.eq.zero) then
+              print *,"testwt should not be 0"
+              stop
+             else
+              print *,"testwt invalid"
+              stop
+             endif
+
+            endif ! wt(sdim)>0
+           enddo ! kfine
+          endif ! wt(2)>0
+         enddo ! jfine
+        endif ! wt(1)>0
+       enddo ! ifine
+
+       if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
+        if (n_overlap.ne.4*(SDIM-1)) then
+         print *,"n_overlap invalid"
+         stop
+        endif
+       else if (n_overlap.lt.1) then
+        print *,"n_overlap invalid"
+        stop
+       endif
+
+       if (volcoarse.le.zero) then
+        print *,"volcoarse invalid:",volcoarse
+        print *,"ic,jc,kc,bfact_c,bfact_f ",ic,jc,kc,bfact_c,bfact_f
+        do dir=1,SDIM
+         print *,"dir,stenlo,stenhi ",dir,stenlo(dir),stenhi(dir)
+        enddo
+        dir=3
+        print *,"dir=3,stenlo,stenhi ",dir,stenlo(dir),stenhi(dir)
+        stop
+       endif
+
+       do dir=1,SDIM
+        cencoarse(dir)=cencoarse(dir)/volcoarse
+       enddo
+
+       do im=1,nmat
+        vofcomp_recon=(im-1)*ngeom_recon+1
+        vofcomp_raw=(im-1)*ngeom_raw+1
+
+        temp_vfrac=mofdatacoarse(vofcomp_recon)/volcoarse
+        if ((temp_vfrac.lt.zero).or. &
+            (temp_vfrac.gt.one+VOFTOL)) then
+         print *,"temp_vfrac invalid"
+         stop
+        endif
+        if (temp_vfrac.le.VOFTOL) then
+         temp_vfrac=zero
+         do dir=1,SDIM
+          temp_cen(dir)=zero
+         enddo
+        else if (temp_vfrac.ge.one-VOFTOL) then
+         temp_vfrac=one
+         do dir=1,SDIM
+          temp_cen(dir)=zero
+         enddo
+        else if ((temp_vfrac.gt.zero).and.(temp_vfrac.lt.one)) then
+         do dir=1,SDIM
+          temp_cen(dir)= &
+            mofdatacoarse(vofcomp_recon+dir)/ &
+            mofdatacoarse(vofcomp_recon)-cencoarse(dir)
+         enddo
+        else
+         print *,"temp_vfrac invalid"
+         stop
+        endif
+
+        crse(D_DECL(ic,jc,kc),vofcomp_raw) = temp_vfrac
+        do dir=1,SDIM
+         crse(D_DECL(ic,jc,kc),vofcomp_raw+dir) = temp_cen(dir)
+        enddo
+       enddo ! im
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine FORT_MOFAVGDOWN
+
+
+      subroutine FORT_ERRORAVGDOWN ( &
+       problo, &
+       dxf, &
+       bfact_c,bfact_f, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi)
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: bfact_c,bfact_f
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, intent(out) :: crse(DIMV(crse))
+      REAL_T, intent(in) :: fine(DIMV(fine))
+      INTEGER_T i,j,k,ic,jc,kc
+      REAL_T, intent(in) :: problo(SDIM),dxf(SDIM)
+ 
+      REAL_T wt(SDIM)
+
+      INTEGER_T sanity_sum
+      REAL_T test_error,max_error
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid5 ",bfact_f
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       crse(D_DECL(ic,jc,kc)) = zero
+
+       max_error=zero
+       sanity_sum=0
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi,bfact_c,bfact_f)
+       do i=stenlo(1),stenhi(1)
+        call intersect_weight_avg(ic,i,bfact_c,bfact_f,wt(1))
+        if (1.eq.0) then
+         print *,"ic,i,wt(1) ",ic,i,wt(1)
+        endif
+        if (wt(1).gt.zero) then
+         do j=stenlo(2),stenhi(2)
+          call intersect_weight_avg(jc,j,bfact_c,bfact_f,wt(2))
+          if (1.eq.0) then
+           print *,"jc,j,wt(2) ",jc,j,wt(2)
+          endif
+          if (wt(2).gt.zero) then
+           do k=stenlo(3),stenhi(3)
+            if (SDIM.eq.3) then
+             call intersect_weight_avg(kc,k,bfact_c,bfact_f,wt(SDIM))
+            endif
+            if (wt(SDIM).gt.zero) then
+
+             sanity_sum=sanity_sum+1
+
+             test_error=fine(D_DECL(i,j,k))
+             if (test_error.lt.zero) then
+              print *,"error should not be <0"
+              stop
+             endif
+             if (test_error.gt.max_error) then
+              max_error=test_error
+             endif
+            endif ! wt(sdim)>0
+           enddo ! k
+          endif ! wt(2)>0
+         enddo ! j
+        endif ! wt(1)>0
+       enddo ! i
+
+       if (sanity_sum.le.0) then
+        print *,"sanity_sum invalid"
+        stop
+       endif
+
+       crse(D_DECL(ic,jc,kc)) = max_error
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine FORT_ERRORAVGDOWN
+
+       subroutine FORT_DIAGINV( &
+        diag_reg, &
+        DIMS(diag_reg), &
+        resid, DIMS(resid), &
+        xnew, DIMS(xnew), &
+        xold, DIMS(xold), &
+        mask, DIMS(mask), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact )
+
+       use global_utility_module
+
+       IMPLICIT NONE
+
+       REAL_T :: local_diag
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: DIMDEC(diag_reg)
+       INTEGER_T, intent(in) :: DIMDEC(resid)
+       INTEGER_T, intent(in) :: DIMDEC(xnew)
+       INTEGER_T, intent(in) :: DIMDEC(xold)
+       INTEGER_T, intent(in) :: DIMDEC(mask)
+       REAL_T, intent(in) ::  diag_reg(DIMV(diag_reg))
+       REAL_T, intent(in) ::  resid(DIMV(resid))
+       REAL_T, intent(out) :: xnew(DIMV(xnew))
+       REAL_T, intent(in) ::  xold(DIMV(xold))
+       REAL_T, intent(in) ::  mask(DIMV(mask))
+
+       INTEGER_T i,j,k
+
+       if (bfact.lt.1) then
+        print *,"bfact invalid158"
+        stop
+       endif
+
+       call checkbound(fablo,fabhi,DIMS(mask),1,-1,414) 
+       call checkbound(fablo,fabhi,DIMS(diag_reg),0,-1,415) 
+       call checkbound(fablo,fabhi,DIMS(xnew),1,-1,416) 
+       call checkbound(fablo,fabhi,DIMS(xold),1,-1,417) 
+       call checkbound(fablo,fabhi,DIMS(resid),0,-1,417) 
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+        ! mask=tag if not covered by level+1 or outside the domain.
+        if (mask(D_DECL(i,j,k)).eq.one) then
+
+         if (diag_reg(D_DECL(i,j,k)).eq.zero) then
+          print *,"diag_reg invalid 1"
+          stop
+         else if (diag_reg(D_DECL(i,j,k)).gt.zero) then
+          local_diag=diag_reg(D_DECL(i,j,k))
+         else
+          print *,"diag invalid 2"
+          stop
+         endif
+
+         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))+ &
+           resid(D_DECL(i,j,k))/local_diag
+
+        else if (mask(D_DECL(i,j,k)).eq.zero) then
+
+         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))
+
+        else 
+         print *,"mask invalid"
+         stop
+        endif
+
+       enddo
+       enddo
+       enddo
+
+       return
+       end subroutine FORT_DIAGINV
+
+
        ! updatevelALL called from: NavierStokes::multiphase_project
        ! mac_update is called from: NavierStokes::updatevelALL
        ! correct_velocity called from: NavierStokes::multiphase_project
@@ -12165,169 +13072,6 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_FLUIDSOLIDCOR
 
-      subroutine FORT_EOS_PRESSURE( &
-        level, &
-        finest_level, &
-        local_material_type, &
-        xlo,dx, &
-        pres,DIMS(pres), &
-        recon,DIMS(recon), &
-        levelpc,DIMS(levelpc), &
-        den,DIMS(den), &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        nmat, &
-        nden)
-
-      use global_utility_module
-      use probf90_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nden
-      INTEGER_T, intent(in) :: local_material_type(nmat)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-    
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-
-      INTEGER_T, intent(in) :: DIMDEC(pres)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      INTEGER_T, intent(in) :: DIMDEC(levelpc)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      REAL_T, intent(inout) :: pres(DIMV(pres))
-      REAL_T, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
-      REAL_T, intent(in) :: den(DIMV(den),nden) ! den,temp,Y
-
-      INTEGER_T i,j,k
-      INTEGER_T im
-      INTEGER_T im_primary
-      INTEGER_T ibase
-      REAL_T rho,internal_energy,TEMP
-      REAL_T LS(nmat)
-      REAL_T vfrac(nmat)
-      INTEGER_T vofcomp
-      REAL_T massfrac_parm(num_species_var+1)
-      INTEGER_T ispec
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid162"
-       stop
-      endif
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid eos pressure"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nden.ne.nmat*num_state_material) then
-       print *,"nden invalid"
-       stop
-      endif
-      call checkbound(fablo,fabhi,DIMS(recon),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(levelpc),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(pres),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,44)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       do im=1,nmat
-        LS(im)=levelpc(D_DECL(i,j,k),im)
-        vofcomp=(im-1)*ngeom_recon+1
-        vfrac(im)=recon(D_DECL(i,j,k),vofcomp)
-       enddo ! im
-
-       call get_primary_material_VFRAC(vfrac,nmat,im_primary,1)
-
-       if (vfrac(im_primary).le.VOFTOL) then
-        print *,"vfrac too small FORT_EOS_PRESSURE"
-        print *,"i,j,k ",i,j,k
-        print *,"level,finest_level ",level,finest_level
-        print *,"im_primary= ",im_primary
-        do im=1,nmat
-         print *,"im,vfrac,LS ",im,vfrac(im),LS(im)
-        enddo
-        stop
-       endif
-
-       ibase=(im_primary-1)*num_state_material
-
-       if (is_rigid(nmat,im_primary).eq.0) then
-
-        ! compressible material
-        if ((local_material_type(im_primary).gt.0).and. &
-            (local_material_type(im_primary).le.MAX_NUM_EOS)) then
-
-         rho=den(D_DECL(i,j,k),ibase+1)
-         if (rho.gt.zero) then
-          ! do nothing
-         else
-          print *,"density has gone nonpos"
-          stop
-         endif
-         TEMP=den(D_DECL(i,j,k),ibase+2)
-         if (TEMP.gt.zero) then
-          ! do nothing
-         else
-          print *,"TEMP has gone nonpos"
-          stop
-         endif
-         call init_massfrac_parm(rho,massfrac_parm,im_primary)
-         do ispec=1,num_species_var
-          massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
-         enddo
-         ! returns energy/scale
-         call INTERNAL_material(rho,massfrac_parm,TEMP, &
-          internal_energy,local_material_type(im_primary),im_primary)
-         if (internal_energy.gt.zero) then
-          ! do nothing
-         else
-          print *,"internal_energy has gone nonpos"
-          stop
-         endif
-         ! p(energy*scale)/scale
-         call EOS_material(rho,massfrac_parm, &
-          internal_energy, &
-          pres(D_DECL(i,j,k)), &
-          local_material_type(im_primary),im_primary)
-        else if (local_material_type(im_primary).eq.0) then
-         ! do nothing
-        else
-         print *,"fort material type invalid"
-         stop
-        endif
-
-       else if (is_rigid(nmat,im_primary).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid bust"
-        stop
-       endif 
-
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      return
-      end subroutine FORT_EOS_PRESSURE
 
 ! the error is set to zero in advection.  Then
 ! the error is updated when the slopes are recomputed.
@@ -12519,735 +13263,6 @@ END SUBROUTINE SIMP
       return
       end subroutine FORT_PRESSURE_INDICATOR
 
-
-! 1. calculates p(rho^n+1,e_advect) and puts it in 2nd component
-!    of cell_sound.
-!    Equation of state to be used depends on cvof (tessellating vfracs)
-! 2. calculates 1/(rho c^2 dt^2)  and puts it in 1st component of cell_sound.
-!    Equation of state to be used depends on cvof (tessellating vfracs)
-! 3. pressure=0.0 in incompressible regions
-!
-! if project_option==11, mdot=0.0 (on input) (mdot corresponds
-! to localMF[DIFFUSIONRHS_MF])
-!
-! velocity scale: V
-! time scale is : 1/V
-! pressure scale: V^2
-! scale for "cell_sound" is 1
-! called from:
-! NavierStokes::init_advective_pressure
-!
-      subroutine fort_advective_pressure( &
-        level, &
-        finest_level, &
-        xlo,dx, &
-        dt, &
-        maskcov,DIMS(maskcov), &
-        vol,DIMS(vol), &
-        lsnew,DIMS(lsnew), &
-        csnd,DIMS(csnd), &
-        cvof,DIMS(cvof), & ! tessellating
-        den,DIMS(den), &
-        mdot,DIMS(mdot), & ! passed from localMF[DIFFUSIONRHS_MF]
-        tilelo,tilehi, &
-        fablo,fabhi,bfact, &
-        nmat,nden, &
-        compressible_dt_factor, &
-        pressure_select_criterion, &
-        project_option) &
-      bind(c,name='fort_advective_pressure')
-
-      use global_utility_module
-      use probf90_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-
-
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nden
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: project_option
-      REAL_T, intent(in) :: compressible_dt_factor(nmat)
-      INTEGER_T, intent(in) :: pressure_select_criterion
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dt
-
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      INTEGER_T, intent(in) :: DIMDEC(csnd)
-      INTEGER_T, intent(in) :: DIMDEC(cvof)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
-      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
-      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vol(DIMV(vol))
-      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
-      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: csnd(DIMV(csnd),2) 
-      REAL_T, pointer :: csnd_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: cvof(DIMV(cvof),nmat) 
-      REAL_T, pointer :: cvof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp
-      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: mdot(DIMV(mdot)) 
-      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
-
-      INTEGER_T i,j,k
-      INTEGER_T im,imcrit,im_weight
-      INTEGER_T ibase
-      REAL_T temperature,internal_energy,soundsqr
-      REAL_T pres(nmat)
-      REAL_T rho(nmat)
-      REAL_T one_over_c(nmat)
-      REAL_T one_over_c2(nmat)
-      REAL_T localLS(nmat)
-      REAL_T vfrac(nmat)
-      REAL_T vfrac_weight(nmat)
-      REAL_T vfrac_solid_sum
-      REAL_T vfrac_fluid_sum
-      INTEGER_T infinite_weight
-      INTEGER_T local_infinite_weight
-      REAL_T div_hold
-      REAL_T csound_hold
-      REAL_T DXMAXLS
-      REAL_T cutoff
-      REAL_T rmaskcov
-      INTEGER_T local_mask
-      REAL_T massfrac_parm(num_species_var+1)
-      INTEGER_T ispec
-      REAL_T local_volume
-
-      if (bfact.ge.1) then
-       ! do nothing
-      else
-       print *,"bfact invalid164"
-       stop
-      endif
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid advective pressure"
-       stop
-      endif
-      if (num_state_base.eq.2) then
-       ! do nothing
-      else
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      do im=1,nmat
-       if ((compressible_dt_factor(im).ge.one).and. &
-           (compressible_dt_factor(im).le.1.0D+20)) then
-        ! do nothing
-       else
-        print *,"compressible_dt_factor invalid"
-        stop
-       endif
-      enddo
-
-      if (nden.eq.nmat*num_state_material) then
-       ! do nothing
-      else
-       print *,"nden invalid"
-       stop
-      endif
-      if ((pressure_select_criterion.ge.0).and. &
-          (pressure_select_criterion.le.2)) then
-       ! do nothing
-      else
-       print *,"pressure_select_criterion invalid"
-       stop
-      endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.11)) then !FSI_material_exists last project
-       ! do nothing
-      else
-       print *,"project_option invalid advective pressure"
-       stop
-      endif
-      if ((level.ge.0).and.(level.le.finest_level)) then
-       ! do nothing
-      else
-       print *,"level invalid"
-       stop
-      endif
-
-      maskcov_ptr=>maskcov
-      vol_ptr=>vol
-      lsnew_ptr=>lsnew
-      csnd_ptr=>csnd
-      cvof_ptr=>cvof
-      den_ptr=>den
-      mdot_ptr=>mdot
-
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,44)
-      call checkbound_array(fablo,fabhi,csnd_ptr,0,-1,44)
-      call checkbound_array(fablo,fabhi,cvof_ptr,0,-1,44)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
-
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=two*DXMAXLS
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-
-       ! csound (cell_sound) initialized.
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       local_volume=vol(D_DECL(i,j,k))
-       if (local_volume.gt.zero) then
-        ! do nothing
-       else
-        print *,"local_volume must be positive"
-        stop
-       endif
-
-       rmaskcov=maskcov(D_DECL(i,j,k))
-       local_mask=NINT(rmaskcov)
-       if (((rmaskcov.eq.one).and.(local_mask.eq.1)).or. &
-           ((rmaskcov.eq.zero).and.(local_mask.eq.0))) then
-
-        imcrit=0
-        vfrac_solid_sum=zero
-        vfrac_fluid_sum=zero
-
-        do im=1,nmat
-         vfrac(im)=cvof(D_DECL(i,j,k),im)
-         if ((vfrac(im).ge.-VOFTOL).and.(vfrac(im).le.one+VOFTOL)) then
-          ! do nothing
-         else
-          print *,"vfrac invalid"
-          stop
-         endif
-         if (vfrac(im).lt.VOFTOL) then
-          vfrac(im)=zero
-         endif
-         if (is_rigid(nmat,im).eq.1) then
-          vfrac_solid_sum=vfrac_solid_sum+vfrac(im)
-         else if (is_rigid(nmat,im).eq.0) then
-          vfrac_fluid_sum=vfrac_fluid_sum+vfrac(im)
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-         if (imcrit.eq.0) then
-          imcrit=im
-         else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
-          if (vfrac(im).gt.vfrac(imcrit)) then
-           imcrit=im
-          endif
-         else
-          print *,"imcrit invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-
-        if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
-         ! do nothing
-        else
-         print *,"imcrit invalid"
-         stop
-        endif
-
-        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.1.0E-4) then
-         ! do nothing
-        else
-         print *,"vfrac_solid_sum+vfrac_fluid_sum invalid"
-         stop
-        endif
-
-        if ((vfrac_solid_sum.ge.vfrac_fluid_sum).or. &
-            (is_rigid(nmat,imcrit).eq.1)) then
-         imcrit=0
-        endif
-
-
-        if ((project_option.eq.0).or. &
-            (project_option.eq.11)) then !FSI_material_exists last project
-
-         if (project_option.eq.0) then
-          div_hold=zero
-         else if (project_option.eq.11) then !FSI_material_exists 2nd project
-           ! coeff_avg,p_avg
-           ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-          div_hold=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
-                                           ! of DIV_Type)
-           ! fort_advective_pressure called from 
-           !   NavierStokes::init_advective_pressure
-           ! init_advective_pressure called from
-           !   NavierStokes::multiphase_project
-           ! mdot passed from localMF[DIFFUSIONRHS_MF]
-           ! project_option==11 => FSI_material_exists (2nd project)
-          if (mdot(D_DECL(i,j,k)).eq.zero) then
-           ! do nothing
-          else
-           print *,"mdot(D_DECL(i,j,k)).ne.zero in advective_pressure"
-           print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k))
-           print *,"level,finest_level ",level,finest_level
-           print *,"div_hold ",div_hold
-           print *,"project_option ",project_option
-           print *,"dt=",dt
-           print *,"nmat,nden,bfact ",nmat,nden,bfact
-           print *,"pressure_select_criterion ",pressure_select_criterion
-           do im=1,nmat
-            localLS(im)=lsnew(D_DECL(i,j,k),im)
-            print *,"im,localLS(im) ",im,localLS(im)
-            print *,"im,vfrac(im) ",im,vfrac(im)
-            print *,"im, compressible_dt_factor ", &
-                    im,compressible_dt_factor(im)
-           enddo
-           print *,"imcrit ",imcrit
-           print *,"vfrac_solid_sum ",vfrac_solid_sum
-           print *,"vfrac_fluid_sum ",vfrac_fluid_sum
-           stop
-          endif
-         else
-          print *,"project_option invalid"
-          stop
-         endif
-
-         do im=1,nmat
-          localLS(im)=lsnew(D_DECL(i,j,k),im)
-         enddo
-
-         do im=1,nmat
-
-          vfrac_weight(im)=vfrac(im)
-
-          ibase=(im-1)*num_state_material
-
-          if (is_rigid(nmat,im).eq.0) then
-
-           rho(im)=den(D_DECL(i,j,k),ibase+1)  ! regular density
-   
-           if (rho(im).gt.zero) then
-            ! do nothing
-           else
-            print *,"cannot have non-pos density"
-            stop
-           endif
-
-            ! temperature after diffusion
-           temperature=den(D_DECL(i,j,k),ibase+2) 
-
-           call init_massfrac_parm(rho(im),massfrac_parm,im)
-           do ispec=1,num_species_var
-            massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
-           enddo
-          
-            ! returns e/scale 
-           call INTERNAL_material(rho(im),massfrac_parm, &
-             temperature, &
-             internal_energy,fort_material_type(im),im)
-          
-            ! compressible material ? 
-           if ((fort_material_type(im).ge.1).and. &
-               (fort_material_type(im).le.MAX_NUM_EOS).and. &
-               (vfrac(im).gt.zero)) then
-
-              ! returns p(e*scale)/scale
-            call EOS_material(rho(im),massfrac_parm, &
-               internal_energy, &
-               pres(im),fort_material_type(im),im)
-              ! returns c^2(e*scale)/scale
-            call SOUNDSQR_material(rho(im),massfrac_parm, &
-               internal_energy, &
-               soundsqr,fort_material_type(im),im)
-            if (soundsqr.gt.zero) then
-             ! do nothing
-            else
-             print *,"cannot have non-positive sound speed"
-             print *,"im= ",im
-             print *,"mattype= ",fort_material_type(im)
-             print *,"sound speed sqr ",soundsqr
-             print *,"vfrac= ",vfrac(im)
-             stop
-            endif
-
-            one_over_c2(im)=one/soundsqr
-            one_over_c(im)=sqrt(one_over_c2(im))
-
-           else if ((fort_material_type(im).eq.0).or. &
-                    (vfrac(im).eq.zero)) then
-            pres(im)=zero
-            one_over_c2(im)=zero
-            one_over_c(im)=zero
-           else
-            print *,"material type or vfrac invalid"
-            stop
-           endif
-   
-          else if (is_rigid(nmat,im).eq.1) then
-
-           rho(im)=fort_denconst(im)
-           if (rho(im).gt.zero) then
-            ! do nothing
-           else
-            print *,"rho(im)=0 ",im,rho(im)
-            stop
-           endif
-           pres(im)=zero
-           one_over_c(im)=zero
-           one_over_c2(im)=zero
-
-          else
-           print *,"is_rigid bust"
-           stop
-          endif
-
-         enddo ! im=1,nmat
-
-         infinite_weight=0
-         im_weight=0
-
-         if (imcrit.eq.0) then ! rigid material(s) dominate
-          im_weight=imcrit
-          infinite_weight=1
-
-          ! fluid material dominates
-         else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
-  
-          if (is_rigid(nmat,imcrit).eq.0) then
-
-           do im=1,nmat
-
-            local_infinite_weight=0
-
-            if (is_rigid(nmat,im).eq.1) then
-             ! do nothing
-            else if (is_rigid(nmat,im).eq.0) then
-             if ((vfrac(im).gt.zero).and. &
-                 (vfrac(im).le.one+VOFTOL)) then
-              if (pressure_select_criterion.eq.0) then ! vol. frac.
-               ! do nothing (vfrac_weight=vfrac)
-              else if (pressure_select_criterion.eq.1) then ! mass frac. 
-               vfrac_weight(im)=vfrac_weight(im)*rho(im)
-              else if (pressure_select_criterion.eq.2) then ! impedance weight
-               if (one_over_c(im).eq.zero) then
-                infinite_weight=1
-                local_infinite_weight=1
-               else
-                vfrac_weight(im)=vfrac_weight(im)*rho(im)/one_over_c(im)
-               endif
-              else
-               print *,"pressure_select_criterion invalid"
-               stop
-              endif
-             else if (vfrac(im).eq.zero) then
-              ! do nothing (vfrac_weight is 0)
-             else 
-              print *,"vfrac invalid"
-              stop
-             endif
-             if (im_weight.eq.0) then
-              im_weight=im
-             else if ((im_weight.ge.1).and.(im_weight.le.nmat)) then
-              if ((vfrac_weight(im).gt.vfrac_weight(im_weight)).or. &
-                  (local_infinite_weight.eq.1)) then
-               im_weight=im
-              endif
-             else
-              print *,"im_weight invalid"
-              stop
-             endif
-            else
-             print *,"is_rigid(nmat,im) invalid"
-             stop
-            endif
-
-           enddo ! im=1,nmat
-
-          else
-           print *,"is_rigid(nmat,imcrit) invalid"
-           stop
-          endif
-
-         else
-          print *,"imcrit invalid"
-          stop
-         endif
-       
-         if (imcrit.eq.0) then ! is_rigid material(s) dominate.
-
-          csnd(D_DECL(i,j,k),1)=zero  ! coeff
-          csnd(D_DECL(i,j,k),2)=zero  ! padvect
-
-          if (im_weight.eq.0) then
-           ! do nothing
-          else
-           print *,"expecting im_weight==0"
-           stop
-          endif
-
-         else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
-
-          if (is_rigid(nmat,imcrit).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid(nmat,imcrit) invalid"
-           stop
-          endif
-
-          if (is_rigid(nmat,im_weight).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid(nmat,im_weight).ne.0"
-           stop
-          endif
-
-          if (infinite_weight.eq.1) then ! sound speed=infinity
-
-           csnd(D_DECL(i,j,k),1)=zero  ! coeff
-           csnd(D_DECL(i,j,k),2)=zero  ! padvect
-           if (project_option.eq.11) then ! FSI_material_exists (last project)
-            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-            ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
-            mdot(D_DECL(i,j,k))=local_volume*div_hold/dt
-           else if (project_option.eq.0) then
-            ! do nothing
-           else
-            print *,"project_option invalid"
-            stop
-           endif
-
-          else if (infinite_weight.eq.0) then
-
-           if ((im_weight.lt.1).or.(im_weight.gt.nmat)) then
-            print *,"im_weight invalid"
-            stop
-           endif
-           if (vfrac_weight(im_weight).gt.zero) then
-            ! do nothing
-           else
-            print *,"vfrac_weight(im_weight) invalid"
-            stop
-           endif
-
-            ! im_weight is a compressible material
-           if ((fort_material_type(im_weight).ge.1).and. &
-               (fort_material_type(im_weight).le.MAX_NUM_EOS)) then
-
-            if (rho(im_weight).gt.zero) then
-             ! do nothing
-            else
-             print *,"rho(im_weight) invalid"
-             stop
-            endif
-
-             ! padvect (zero for the incompressible materials)
-            csnd(D_DECL(i,j,k),2)=pres(im_weight)
-
-            csound_hold=one_over_c2(im_weight)/ &
-              (compressible_dt_factor(im_weight)*rho(im_weight)*dt*dt)
-
-             ! coeff
-            if (csound_hold.ge.zero) then
-             csnd(D_DECL(i,j,k),1)=csound_hold
-            else
-             print *,"csound_hold invalid"
-             stop
-            endif
-
-            if (project_option.eq.11) then !FSI_material_exists (2nd project)
-
-             if (csound_hold.eq.zero) then ! incomp
-              csnd(D_DECL(i,j,k),2)=zero ! padvect
-               ! localMF[DIFFUSIONRHS_MF]
-               ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-              mdot(D_DECL(i,j,k))=local_volume*div_hold/dt 
-             else if (csound_hold.gt.zero) then
-              ! "div" = -(pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
-              ! (1/(rho c^2 dt^2))p=div/dt
-              ! csound_hold p = div/dt
-              ! p=div/(dt csound_hold)
-              ! p = p * vol in MacProj.cpp
-              csnd(D_DECL(i,j,k),2)=div_hold/(csound_hold*dt)
-             else
-              print *,"csound_hold invalid"
-              stop
-             endif
-
-            else if (project_option.eq.0) then
-             ! do nothing
-            else
-             print *,"project_option invalid"
-             stop
-            endif
-
-            ! im_weight is an incompressible material
-           else if (fort_material_type(im_weight).eq.0) then
-
-            csnd(D_DECL(i,j,k),1)=zero ! coeff
-            csnd(D_DECL(i,j,k),2)=zero ! padvect
-            if (project_option.eq.11) then !FSI_material_exists last project
-              ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-              ! localMF[DIFFUSIONRHS_MF]
-             mdot(D_DECL(i,j,k))=div_hold*local_volume/dt 
-            else if (project_option.eq.0) then
-             ! do nothing
-            else
-             print *,"project_option invalid"
-             stop
-            endif
-
-           else
-            print *,"material type invalid"
-            stop
-           endif
-          else
-           print *,"infinite_weight invalid"
-           stop
-          endif
-
-         else
-          print *,"imcrit invalid"
-          stop
-         endif
-
-        else
-         print *,"project_option invalid advective pressure 2"
-         stop
-        endif
-
-       else
-        print *,"rmaskcov or local_mask invalid"
-        print *,"rmaskcov=",rmaskcov
-        print *,"local_mask=",local_mask
-        stop
-       endif
-         
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      return
-      end subroutine fort_advective_pressure
-
-       ! called from NavierStokes::ADVECT_DIV which is declared in MacProj.cpp
-      subroutine fort_update_div( &
-        xlo,dx, &
-        dt, &
-        vol,DIMS(vol), &
-        csound,DIMS(csound), &
-        mdot,DIMS(mdot), &
-        pnew,DIMS(pnew), &
-        divnew,DIMS(divnew), &
-        tilelo,tilehi, &
-        fablo,fabhi,bfact, &
-        nmat) &
-      bind(c,name='fort_update_div')
-
-      use global_utility_module
-      use probf90_module
-
-      IMPLICIT NONE
-
-
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dt
-
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(csound)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
-      INTEGER_T, intent(in) :: DIMDEC(pnew)
-      INTEGER_T, intent(in) :: DIMDEC(divnew)
-      REAL_T, intent(in),target :: vol(DIMV(vol))
-      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: csound(DIMV(csound),2) 
-      REAL_T, pointer :: csound_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: mdot(DIMV(mdot)) 
-      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: pnew(DIMV(pnew)) 
-      REAL_T, pointer :: pnew_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out),target :: divnew(DIMV(divnew)) 
-      REAL_T, pointer :: divnew_ptr(D_DECL(:,:,:))
-
-      INTEGER_T i,j,k
-      REAL_T coeff_hold,compress_term,mdot_term
-      INTEGER_T sound_comp
-      REAL_T local_volume
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid165"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid advective pressure"
-       stop
-      endif
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      vol_ptr=>vol
-      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
-      csound_ptr=>csound
-      call checkbound_array(fablo,fabhi,csound_ptr,0,-1,44)
-      mdot_ptr=>mdot
-      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
-      pnew_ptr=>pnew
-      call checkbound_array1(fablo,fabhi,pnew_ptr,1,-1,44)
-      divnew_ptr=>divnew
-      call checkbound_array1(fablo,fabhi,divnew_ptr,1,-1,44)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       local_volume=vol(D_DECL(i,j,k))
-       if (local_volume.gt.zero) then
-        ! do nothing
-       else
-        print *,"local_volume must be positive"
-        stop
-       endif
-
-       sound_comp=1
-       coeff_hold=csound(D_DECL(i,j,k),sound_comp) ! 1/(rho c^2 dt^2)
-
-       if (coeff_hold.gt.zero) then ! compressible
-        compress_term=-dt*(pnew(D_DECL(i,j,k))- &
-          csound(D_DECL(i,j,k),sound_comp+1))*coeff_hold
-       else if (coeff_hold.eq.zero) then ! incompressible
-        compress_term=zero
-       else
-        print *,"coeff_hold invalid"
-        stop
-       endif
-
-       mdot_term=mdot(D_DECL(i,j,k))
-
-       divnew(D_DECL(i,j,k))=compress_term+mdot_term*dt/local_volume
-         
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      return
-      end subroutine fort_update_div
 
 
        ! spectral_override==0 => always low order

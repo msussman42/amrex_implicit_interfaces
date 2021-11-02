@@ -14570,7 +14570,7 @@ stop
        stop
       endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-       print *,"level invalid MAKETENSOR"
+       print *,"level invalid fort_maketensor"
        stop
       endif
       if (finest_level.ne.fort_finest_level) then
