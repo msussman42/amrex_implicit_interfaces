@@ -7,7 +7,6 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_EOS_PRESSURE eos_pressure
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
@@ -26,7 +25,6 @@
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_PRESSURE_INDICATOR PRESSURE_INDICATOR
-#    define FORT_EOS_PRESSURE EOS_PRESSURE
 #    define FORT_COFLOW COFLOW
 #    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
@@ -46,7 +44,6 @@
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_EOS_PRESSURE eos_pressure
 #    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
@@ -64,7 +61,6 @@
 #    define FORT_METRICS metrics
 #  else
 #    define FORT_PRESSURE_INDICATOR pressure_indicator_
-#    define FORT_EOS_PRESSURE eos_pressure_
 #    define FORT_COFLOW coflow_
 #    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
@@ -123,7 +119,7 @@ extern "C" {
      int* nmat);
 
 
-    void FORT_EOS_PRESSURE(
+    void fort_eos_pressure(
      int* level,
      int* finest_level,
      int* local_material_type,
@@ -549,6 +545,7 @@ extern "C" {
      const Real* slopes,AMREX_ARLIM_P(slopeslo),AMREX_ARLIM_P(slopeshi),
      const Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
      const Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
+     const Real* visco,AMREX_ARLIM_P(viscolo),AMREX_ARLIM_P(viscohi),
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,

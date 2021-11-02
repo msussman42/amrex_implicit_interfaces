@@ -8651,7 +8651,7 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
   
    // declared in: NAVIERSTOKES_3D.F90 
-  FORT_EOS_PRESSURE(
+  fort_eos_pressure(
    &level,
    &finest_level,
    local_material_type.dataPtr(),

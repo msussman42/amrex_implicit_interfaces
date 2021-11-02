@@ -54,6 +54,7 @@ module probcommon_module_types
         ! density3,temperature3,species1_3,...,species_N_3
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: visco
       end type user_defined_sum_int_type
 
       type nucleation_parm_type_input
