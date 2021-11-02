@@ -1,0 +1,225 @@
+max_step  = 80000   # maximum timestep
+stop_time =  300  # maximum problem time
+
+#
+#  "calc_error_indicator", "EOS_error_ind", and "FORT_VFRACERROR" are the subroutines that tag cells for refinment. 
+# ------------------ Dimention version 08/02/18 ---------------
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for helix visco
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo=-3 -3 2.0
+geometry.prob_hi=3 3  8.85
+geometry.is_periodic = 0 0 0
+
+# -1=Weymouth Yue
+ns.EILE_flag=-1
+
+#ns.num_divu_outer_sweeps=0
+
+ns.minimum_relative_error=1.0e-22
+
+#ns.gmres_precond_iter_base=4
+ns.initial_project_cycles=3   # initial jacobi iterations
+ns.initial_cg_cycles=3
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+
+ns.projection_pressure_scale=1.0
+ns.num_materials=3 # 1: liquid ignore 2: viscoelastic fluid  3:solid helix
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+
+ns.MOFITERMAX=15
+#ns.MOF_TURN_OFF_LS=0
+#ns.MOF_DEBUG_RECON=0
+
+#continuous_mof=2 => CMOF
+ns.continuous_mof=2  
+
+#ns.mof_error_ordering=0
+#ns.mof_ordering=0 2 0 1 
+
+## multigrid class
+#mg.verbose = 2
+#cg.verbose = 2
+## set above to 2 for maximum verbosity
+#mg.nu_f = 40
+#mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+#cg.maxiter = 400
+#mg.bot_atol = 1.0e-12
+#mg.rtol_b = -0.01
+#Lp.v = 0
+
+# multigrid class
+mg.verbose = 2
+cg.verbose = 2
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+#mg.maxiter = 100
+cg.maxiter = 400
+#mg.usecg=1
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+Lp.v = 0
+#Lp.harmavg = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.output_drop_distribution=1
+ns.v = 1
+
+amr.n_cell    = 32 32 32    #64 64 64     
+
+amr.max_level = 3
+fabarray.mfiter_tile_size=16 16 16    #32 32 32  #NEW
+
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+ns.ns_tiling=false
+amr.n_proper=1  # default is 1 
+amr.blocking_factor = 8 8 8 8   # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.enable_spectral=0
+ns.viscous_enable_spectral=0
+
+
+amr.check_int       = 100
+amr.check_file      = chk     # root name of checkpoint file
+# blow up: ~ 84000 steps
+# Only tecplot format plot files are output; ViSit can read tecplot (there is
+# a ViSit bug for animation of grid based tecplot files that use AMR)
+amr.plot_int        = 50 # was 100  (plot_int=1 for testing)
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+amr.file_name_digits=7
+
+#amr.restart   =chk0000600
+amr.restart   =chk0001000
+#amr.trace2   =1
+#amr.trace3   =1
+#amr.trace4   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11 # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-8  # tolerence for mac projections
+ns.cfl            = 0.05      # cfl number for hyperbolic system
+ 
+ns.init_shrink    = 1.0   # scale back initial timestep
+ns.change_max     = 1.1 
+ns.visc_coef      = 1.0  # viscosity 1.0 or
+                         # (eta_solvent/eta_total)*(1/Re(based on eta_total))
+ns.visc_abs_tol   = 1.0e-8
+ns.gravity        =0.0   # gravity or 1/Fr
+
+ns.tension        = 50.0 50.0 50.0    # interfacial tension coefficient or 1/We
+ns.sum_interval   = 10         # timesteps between computing mass 
+ns.vorterr=0.0 0.0 0.0
+ns.axis_dir=0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0 # not used
+ns.advbot=0.0
+ns.adv_vel=-0.00354923    #-0.03325 # velocity  KSH3
+
+ns.fixed_dt=0.001
+ns.adv_dir=3
+
+# 2D
+#ns.adv_dir=2
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.include_viscous_heating=0
+
+ns.material_type=0 0 999
+ns.FSI_flag=0 0 1
+ns.viscconst=100.0 100.0 100.0 #visc
+ns.denconst=1.0 1.0 1.0
+ns.tempconst=273.0 273.0 273.0
+ns.heatviscconst=0.0 0.0 0.0
+ns.xblob=0.0 # D*2
+
+#3D Helix Parameters
+ns.yblob=0.0 # flag (keep 0)
+ns.yblob2=2.10000000   # r thickness  KSH1
+ns.yblob3=0.21727564     #1.308996939 # pitch angle  KSH2
+ns.yblob4=6.2832     # w rotation
+ns.yblob5=2.35 # R radius
+ns.yblob7=0.0        #0.00354923 # velocity  KSH3
+ns.yblob8=1.0 # flag (keep 1)
+ns.radblob2=37.0   #helix length
+ns.radblob3=20.0  #cylinder length
+ns.radblob4=20.0  #Lengthscale
+ns.radblob5=80.0  #Bodystart
+ns.yblob9=0.0
+ns.yblob10=0.0
+
+# Not relevant to helix dont change below
+ns.radblob7=1.0
+ns.zblob=-20.25 
+ns.radblob=0.05
+ns.denfact=1.0
+ns.velfact=0.0
+
+ns.probtype=36
+
+#ns.recalesce_flag=0 0 0 0
+
+# 1 Pascal = 1 N/m^2 = 1 kg/(m s^2)=10 g/(cm s^2)
+# liquid viscosity= visc_coef * (eta_S + 
+#   eta_P0(1+(beta gammadot)^alpha)^( (n-1)/alpha ) )
+# eta_S = viscconst - elastic_viscosity = 10 - 9.99000999 = 0.00999001
+# eta_S ~ 10^-2 g/(cm s) = 10^-3 PA s
+# eta_P0 = elastic_viscosity = 9.99000999 = c0 etaS  units=g/(cm s)
+# c0=elastic_viscosity/(viscconst-elastic_viscosity)=
+#    9.99000999/(0.00999001)=999.999999
+# since visc_coef==1,
+# the coefficient for the viscoelastic force is:
+# eta_P0 (1+(beta gammadot)^alpha)^((n-1)/alpha)
+# 0=FENE CL (FENE-CR?)
+# 1=Oldroyd B
+# 2=elastic model; for linear case: Q=bulk_modulus*(grad X + grad X^{T})
+# 3=incremental elastic model
+# 4=pressure/velocity coupling
+# 5=FENE-P
+# 6=Linear PTT
+ns.viscoelastic_model=0 5 0   
+ns.elastic_time=0.0 0.15000000 0.0 #Deborah    KSH4 
+ns.elastic_viscosity=0.0 11.11000000 0.0 #viscoelastic  11.11
+                                    # c*eta_solvent/(eta_total*Re)
+ns.polymer_factor=0.0 0.32790000 0.0       # parameter, 1/L
+
+#Carreau is ignored for now (FENE-CR)
+ns.Carreau_alpha=0.0 2.0 0.0
+ns.Carreau_beta=0.0 0.0 0.0
+ns.Carreau_n=1 1 0.0
+
+#ns.added_weight=1000.0 1.0 1.0
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+#3D
+ns.lo_bc          = 2 2 2
+ns.hi_bc          = 2 2 1
+#2D
+#ns.lo_bc          = 3 2
+#ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
