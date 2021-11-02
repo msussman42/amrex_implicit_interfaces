@@ -10083,11 +10083,12 @@ END SUBROUTINE Adist
       use marangoni
 
       IMPLICIT NONE
-      INTEGER_T bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xparm(SDIM)
-      REAL_T x,y,z,dist
-      REAL_T dx(SDIM)
+      REAL_T x,y,z
+      REAL_T, intent(out) :: dist
+      REAL_T, intent(in) :: dx(SDIM)
 
       REAL_T NPT,HSB,NID,NOD,CHH,scaleCHH,VRAD,dist1,dist2
       REAL_T xmin,xmax,ymin,ymax,zmin,zmax,zz,temprad
@@ -10493,6 +10494,7 @@ END SUBROUTINE Adist
         dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
        else if (probtype.eq.36) then ! vapordist 2D: bubble
 
+         !dist=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob
         call spheredist(x,y,z,dist)  ! dist<0 in the sphere
 
         if ((probtype.eq.36).and.(axis_dir.eq.100)) then
@@ -10805,7 +10807,16 @@ END SUBROUTINE Adist
               sqrt(one+radblob**2+radblob2**2)
         endif
 
-        if ((probtype.eq.36).and.(zblob10.gt.zblob)) then
+         ! for inputs3d.bubbleburst,
+         !  gas bubble submerged in liquid with a horizontal
+         !  gas/liquid interface above the bubble.
+         !  zblob=vertical coordinate of center of bubble
+         !  zblob10=vertical coordinate of the horizontal interface
+         !  be careful, zblob10 defaults to 0.
+        if ((probtype.eq.36).and. &
+            (zblob.gt.zero).and. &
+            (zblob10.gt.zblob).and. &
+            (probloz.ge.zero)) then
          dist2=zblob10-z
          if (dist2.lt.dist) then
           dist=dist2

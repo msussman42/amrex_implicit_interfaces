@@ -1465,6 +1465,17 @@ REAL_T temperature_minus
 REAL_T zplus,zminus,heat_flux,area_face
 INTEGER_T im_solid
 
+call checkbound_array(GRID_DATA_IN%fablo,GRID_DATA_IN%fabhi, &
+        GRID_DATA_IN%lsfab,2,-1,411) 
+call checkbound_array(GRID_DATA_IN%fablo,GRID_DATA_IN%fabhi, &
+        GRID_DATA_IN%slopes,2,-1,413) 
+call checkbound_array(GRID_DATA_IN%fablo,GRID_DATA_IN%fabhi, &
+        GRID_DATA_IN%den,1,-1,413) 
+call checkbound_array(GRID_DATA_IN%fablo,GRID_DATA_IN%fabhi, &
+        GRID_DATA_IN%vel,1,-1,413) 
+call checkbound_array(GRID_DATA_IN%fablo,GRID_DATA_IN%fabhi, &
+        GRID_DATA_IN%visco,1,-1,413) 
+
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
 k=GRID_DATA_IN%kgrid
