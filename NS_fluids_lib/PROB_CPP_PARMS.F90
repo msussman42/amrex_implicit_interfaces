@@ -531,7 +531,7 @@ stop
        SUB_STATE_BC=>MITSUHIRO_MELTING_STATE_BC
        SUB_HEATSOURCE=>MITSUHIRO_MELTING_HEATSOURCE
 
-      else if (probtype.eq.360) then
+      else if (probtype.eq.915) then
        ! see Tomas_module
 
       else if (probtype.eq.7001) then
