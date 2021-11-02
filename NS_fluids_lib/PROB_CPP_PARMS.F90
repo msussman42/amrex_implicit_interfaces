@@ -398,7 +398,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=14
+      probtype_list_size=15
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -413,6 +413,7 @@ stop
       used_probtypes(12)=2011 ! YAOHONG_INKJET 
       used_probtypes(13)=425  ! AHMED_ICE_RESISTANT
       used_probtypes(14)=7001 ! FABRIC_DROP
+      used_probtypes(15)=915 ! wavy channel or Tomas
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -532,7 +533,17 @@ stop
        SUB_HEATSOURCE=>MITSUHIRO_MELTING_HEATSOURCE
 
       else if (probtype.eq.915) then
-       ! see Tomas_module
+
+       SUB_INIT_MODULE=>INIT_WAVY_MODULE
+       SUB_LS=>WAVY_INIT_LS
+       SUB_VEL=>WAVY_INIT_VEL
+       SUB_PRES=>WAVY_INIT_PRES
+       SUB_STATE=>WAVY_INIT_STATE
+       SUB_LS_BC=>WAVY_LS_BC
+       SUB_VEL_BC=>WAVY_VEL_BC
+       SUB_PRES_BC=>WAVY_PRES_BC
+       SUB_STATE_BC=>WAVY_STATE_BC
+       SUB_HEATSOURCE=>WAVY_HEATSOURCE
 
       else if (probtype.eq.7001) then
 
@@ -1301,10 +1312,6 @@ stop
       else if (probtype.eq.311) then
       
        call INIT_USERDEF_MODULE()
-      
-      else if (probtype.eq.915) then
-      
-       call INIT_WAVY_MODULE()
       
       else if (probtype.eq.199) then ! hydrate
        if (num_materials.ne.3) then
