@@ -129,7 +129,7 @@ ns.saturation_temp=0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.sum_interval   = 10        # timesteps between computing mass 
 ns.viscosity_statemodel=0 0 0 0
 
-ns.axis_dir=0
+ns.axis_dir=0 #axis_dir=1 is ../run3d/inputs.viscoHelix
 # see subroutine outside_temperature in PROB.F90
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57 # not used
@@ -171,7 +171,7 @@ ns.outflow_velocity_buffer_size=0.0 0.0 0.0 0.0
 
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=915
+ns.probtype=915 #wavy_channel.F90
 
 #ns.mem_debug = 1
 ns.v = 1

@@ -7555,7 +7555,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
 
       IMPLICIT NONE
      
@@ -7627,11 +7626,6 @@ END SUBROUTINE Adist
         call USERDEF_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+2) 
-       else if (probtype.eq.915) then ! user defined
-        call WAVY_INIT_LS(xvec,time,LS)
-        call WAVY_INIT_STATE(xvec,time,LS,STATE)
-        ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2)
        else
         temp=fort_tempconst(im)
        endif
@@ -7797,7 +7791,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: im
@@ -7877,10 +7870,6 @@ END SUBROUTINE Adist
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_VEL(xvec,time,LS,vel,velsolid_flag)
-
-       else if (probtype.eq.915) then ! wavy channel
-        call WAVY_INIT_LS(xvec,time,LS)
-        call WAVY_INIT_VEL(xvec,time,LS,vel,velsolid_flag)
 
         ! cavitation
        else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
@@ -8560,7 +8549,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       use rigid_FSI_module
       use sinking_particle_module
 
@@ -8681,8 +8669,6 @@ END SUBROUTINE Adist
        call sinking_FSI_LS(x_in,time,dist)
       else if (probtype.eq.311) then ! user defined problem
        call USERDEF_LS(x_in,time,dist)
-      else if (probtype.eq.915) then ! wavy channel
-       call WAVY_INIT_LS(x_in,time,dist)
 
        ! HYDRATE (materialdist_batch)
       else if (probtype.eq.199) then
@@ -12487,7 +12473,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       use rigid_FSI_module
       use sinking_particle_module
 
@@ -12606,11 +12591,6 @@ END SUBROUTINE Adist
       else if (probtype.eq.311) then ! user defined problem
 
        call USERDEF_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
-
-      else if (probtype.eq.915) then ! wavy channel
-
-       call WAVY_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
 
        ! curvature sanity check (line in 2D, plane in 3D)
@@ -16976,7 +16956,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       use rigid_FSI_module
       use sinking_particle_module
 
@@ -17083,12 +17062,6 @@ END SUBROUTINE Adist
 
         call USERDEF_LS(xvec,time,local_LS)
         call USERDEF_VEL_BC(xwall,xvec,time,local_LS, &
-         velcell(veldir),vel,veldir,dir,side,dx)
-
-       else if (probtype.eq.915) then ! wavy channel
-
-        call WAVY_INIT_LS(xvec,time,local_LS)
-        call WAVY_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx)
 
         ! velbc_override
@@ -18309,7 +18282,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       use rigid_FSI_module
       use sinking_particle_module
 
@@ -18440,12 +18412,6 @@ END SUBROUTINE Adist
 
         call USERDEF_LS(xpos,time,local_LS)
         call USERDEF_PRES_BC(xwall,xpos,time,local_LS, &
-          ADV,ADVwall,dir,side,dx)
-
-       else if (probtype.eq.915) then ! wavy channel
-
-        call WAVY_INIT_LS(xpos,time,local_LS)
-        call WAVY_PRES_BC(xwall,xpos,time,local_LS, &
           ADV,ADVwall,dir,side,dx)
 
        else if (probtype.eq.199) then ! hydrates
@@ -19013,7 +18979,6 @@ END SUBROUTINE Adist
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       use rigid_FSI_module
       use sinking_particle_module
 
@@ -19204,12 +19169,6 @@ END SUBROUTINE Adist
         call USERDEF_LS(xvec,time,local_LS)
         call USERDEF_STATE_BC(xwall,xvec,time,local_LS, &
           ADV,ADV_merge,ADVwall,im,istate,dir,side,dx) 
-
-       else if (probtype.eq.915) then ! wavy channel
-
-        call WAVY_INIT_LS(xvec,time,local_LS)
-        call WAVY_STATE_BC(xwall,xvec,time,local_LS, &
-          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx)
 
        else if (species_flag.eq.0) then
 
@@ -29739,7 +29698,6 @@ end subroutine initialize2d
        use TSPRAY_module
        use CAV2Dstep_module
        use ZEYU_droplet_impact_module
-       use WAVY_Channel_module
        use rigid_FSI_module
        use sinking_particle_module
        use stackvolume_module
@@ -30161,24 +30119,6 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call USERDEF_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.915) then ! wavy channel
-
-         call WAVY_INIT_LS(xpos,time,distbatch)
-         call WAVY_INIT_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-          ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call WAVY_INIT_PRES(xpos,time,distbatch,p_hyd)
          scalc(ipresbase+impres)=p_hyd
 
         else
@@ -31551,7 +31491,6 @@ end subroutine initialize2d
       use TSPRAY_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use WAVY_Channel_module
       use rigid_FSI_module
       use sinking_particle_module
 
@@ -31970,13 +31909,6 @@ end subroutine initialize2d
         else if (probtype.eq.311) then ! user defined example
          call USERDEF_LS(xvec,time,distbatch)
          call USERDEF_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.915) then ! wavy channel
-         call WAVY_INIT_LS(xvec,time,distbatch)
-         call WAVY_INIT_VEL(xvec,time,distbatch,velcell,velsolid_flag)
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)

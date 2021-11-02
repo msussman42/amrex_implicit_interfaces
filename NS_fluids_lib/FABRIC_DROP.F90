@@ -7,7 +7,6 @@
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
-
 #include "AMReX_ArrayLim.H"
 
 ! #define DEBUG_FABRIC_DROP
@@ -528,10 +527,6 @@ return
 end subroutine FABRIC_DROP_VEL
 
 
-
-
-
-
 ! ! These next routines only used for compressible materials.
 ! !***********************************************
 ! ! compressible material functions for (ns.material_type = 24)
@@ -632,7 +627,6 @@ PRES=outflow_pressure
 
 return 
 end subroutine FABRIC_DROP_PRES
-
 
 subroutine FABRIC_DROP_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
