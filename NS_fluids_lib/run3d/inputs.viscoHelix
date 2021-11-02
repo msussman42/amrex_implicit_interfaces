@@ -118,7 +118,9 @@ ns.gravity        =0.0   # gravity or 1/Fr
 ns.tension        = 50.0 50.0 50.0    # interfacial tension coefficient or 1/We
 ns.sum_interval   = 10         # timesteps between computing mass 
 ns.vorterr=0.0 0.0 0.0
-ns.axis_dir=0
+#axis_dir=0 => inputs.wavy_channel
+#axis_dir=1 => inputs.viscoHelix
+ns.axis_dir=1
 ns.rgasinlet=1.57 # not used
 ns.vinletgas=0.0
 ns.twall=0.0 # not used
@@ -163,7 +165,7 @@ ns.radblob=0.05
 ns.denfact=1.0
 ns.velfact=0.0
 
-ns.probtype=36
+ns.probtype=915 #wavy_channel.F90
 
 #ns.recalesce_flag=0 0 0 0
 
