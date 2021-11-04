@@ -618,6 +618,83 @@ stop
        stop
       endif
 
+
+      if (shear_thinning_fluid.eq.fort_shear_thinning_fluid(im_parm)) then
+       ! do nothing
+      else
+       print *,"shear_thinning_fluid invalid"
+       stop
+      endif
+
+      if (Carreau_alpha.eq.fort_Carreau_alpha(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_Carreau_alpha(im_parm) invalid"
+       stop
+      endif
+
+      if (Carreau_beta.eq.fort_Carreau_beta(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_Carreau_beta(im_parm) invalid"
+       stop
+      endif
+
+      if (Carreau_n.eq.fort_Carreau_n(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_Carreau_n(im_parm) invalid"
+       stop
+      endif
+
+      if (Carreau_mu_inf.eq.fort_Carreau_mu_inf(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_Carreau_mu_inf(im_parm) invalid"
+       stop
+      endif
+
+      if (concentration.eq.fort_concentration(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_concentration(im_parm) invalid"
+       stop
+      endif
+      if (etaL.eq.fort_etaL(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_etaL(im_parm) invalid"
+       stop
+      endif
+
+      if (etaP.eq.fort_etaP(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_etaP(im_parm) invalid"
+       stop
+      endif
+
+      if (etaS.eq.fort_etaS(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_etaS(im_parm) invalid"
+       stop
+      endif
+
+      if (polymer_factor.eq.fort_polymer_factor(im_parm)) then
+       ! do nothing
+      else
+       print *,"fort_polymer_factor(im_parm) invalid"
+       stop
+      endif
+
+      if (visc_coef.eq.fort_visc_coef) then
+       ! do nothing
+      else
+       print *,"visc_coef invalid"
+       stop
+      endif
+
       if (elastic_viscosity.eq.fort_elastic_viscosity(im_parm)) then
        ! do nothing
       else

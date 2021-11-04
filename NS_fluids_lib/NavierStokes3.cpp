@@ -11968,7 +11968,9 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         amrex::Error("fort_is_eulerian_elastic_model invalid");
 
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
-	// NavierStokes.cpp
+	//   NavierStokes.cpp
+	// make_viscoelastic_tensorMACALL -> make_viscoelastic_tensorMAC
+	// -> fort_maketensor_mac
        int flux_grid_type=-1;
        make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
          MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
@@ -11990,7 +11992,9 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
          // find divergence of the CC,XY,XZ,YZ variables.
 	 // NavierStokes::MAC_GRID_ELASTIC_FORCE is declared in
-	 // NavierStokes2.cpp
+	 //    NavierStokes2.cpp
+	 // MAC_GRID_ELASTIC_FORCE -> fort_mac_elastic_force ->
+	 // tensor_Heaviside
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.MAC_GRID_ELASTIC_FORCE(im);

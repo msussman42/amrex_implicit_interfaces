@@ -1633,6 +1633,7 @@ void fortran_parameters() {
 
  int ZEYU_DCA_SELECT_temp=-1;  // -1=static angle
 
+ pp.get("visc_coef",visc_coef_temp);
 
  pp.getarr("material_type",material_type_temp,0,nmat);
 
@@ -1647,7 +1648,23 @@ void fortran_parameters() {
   tempcutofftemp[im]=1.0e-8;
   tempcutoffmaxtemp[im]=1.0e+99;
   FSI_flag_temp[im]=0;
- }
+
+  Carreau_alpha_temp[im]=1.0;
+  Carreau_beta_temp[im]=0.0;
+  Carreau_n_temp[im]=1.0;
+  Carreau_mu_inf_temp[im]=0.0;
+  shear_thinning_fluid_temp[im]=0;
+
+  polymer_factor_temp[im]=0.0;
+ } // im=0..nmat-1
+
+ pp.queryarr("polymer_factor",polymer_factor_temp,0,nmat);
+
+ pp.queryarr("Carreau_alpha",Carreau_alpha_temp,0,nmat);
+ pp.queryarr("Carreau_beta",Carreau_beta_temp,0,nmat);
+ pp.queryarr("Carreau_n",Carreau_n_temp,0,nmat);
+ pp.queryarr("Carreau_mu_inf",Carreau_mu_inf_temp,0,nmat);
+
  for (int im=0;im<(num_species_var+1)*nmat;im++) {
   speciesviscconst_temp[im]=0.0;
   speciesconst_temp[im]=0.0;
@@ -1803,7 +1820,36 @@ void fortran_parameters() {
   } else {
    amrex::Error("material type invalid");
   }
- }
+
+  int imp1=im+1;
+  if (fort_is_rigid_base(&FSI_flag_temp[im],&nmat,&imp1)==1) {
+   shear_thinning_fluid_temp[im]=0;
+  } else if (fort_is_rigid_base(&FSI_flag_temp[im],&nmat,&imp1)==0) {
+   shear_thinning_fluid_temp[im]=0;
+   if ((probtype==2)&&(axis_dir>0)&&(im==0))
+    shear_thinning_fluid_temp[im]=1;
+   if (Carreau_beta_temp[im]!=0.0)
+    shear_thinning_fluid_temp[im]=1;
+
+   if (shear_thinning_fluid_temp[im]==1) {
+    // do nothing
+   } else if (shear_thinning_fluid_temp[im]==0) {
+    // do nothing
+   } else
+    amrex::Error("shear_thinning_fluid invalid");
+  } else 
+   amrex::Error("fort_is_rigid_base invalid");
+
+  etaL_temp[im]=viscconst_temp[im];  
+  etaP_temp[im]=elastic_viscosity_temp[im]; //eta_P0
+  etaS_temp[im]=etaL_temp[im]-etaP_temp[im];  
+
+   // c0=etaP0/etaS=etaP0/(etaL0-etaP0)
+  concentration_temp[im]=0.0;
+  if (etaL_temp[im]-etaP_temp[im]>0.0)
+   concentration_temp[im]=etaP_temp[im]/(etaL_temp[im]-etaP_temp[im]);  
+
+ } //im=0..nmat-1
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid 9");
@@ -4126,9 +4172,10 @@ NavierStokes::read_params ()
      if ((Carreau_beta[i]!=0.0)&&(visc_coef==0.0))
       amrex::Error("Cannot have Carreau_beta!=0 and visc_coef==0 ");
 
-     if (ns_is_rigid(i)==1) {
+     int ip1=i+1;
+     if (fort_is_rigid_base(&FSI_flag[i],&nmat,&ip1)==1) {
       shear_thinning_fluid[i]=0;
-     } else if (ns_is_rigid(i)==0) {
+     } else if (fort_is_rigid_base(&FSI_flag[i],&nmat,&ip1)==0) {
       shear_thinning_fluid[i]=0;
       if ((probtype==2)&&(axis_dir>0)&&(i==0))
        shear_thinning_fluid[i]=1;
@@ -4142,7 +4189,7 @@ NavierStokes::read_params ()
       } else
        amrex::Error("shear_thinning_fluid invalid");
      } else 
-      amrex::Error("ns_is_rigid(i) invalid");
+      amrex::Error("fort_is_rigid_base invalid");
 
       // if first material and Carreau_beta==0 for first material,
       //  probtype==2, axis_dir>0, then 
@@ -5197,22 +5244,10 @@ NavierStokes::~NavierStokes ()
 int NavierStokes::ns_is_rigid(int im) {
 
  if ((im<0)|(im>=num_materials))
-  amrex::Error("im invalid50");
-
- int local_flag=-1;
-
- if ((FSI_flag[im]==0)|| // fluid, tessellating
-     (FSI_flag[im]==7)|| // fluid, tessellating
-     (is_FSI_rigid_matC(im)==1)|| // FSI PROB.F90 rigid solid, 5 tessellating
-     (is_ice_matC(im)==1)) { //3,6 tessellating
-  local_flag=0;
- } else if ((FSI_flag[im]==1)|| //prescribed PROB.F90 rigid solid,non-tess.
-            (FSI_flag[im]==2)|| //prescribed sci_clsvof.F90 rigid solid,non-tess
-            (FSI_flag[im]==4)|| //FSI CTML solid,non-tess.
-	    (FSI_flag[im]==8)) {//FSI CTML pres-vel coupling, non-tess.
-  local_flag=1;
- } else
-  amrex::Error("FSI_flag invalid");
+  amrex::Error("im invalid50 (ns_is_rigid)");
+ 
+ int imp1=im+1;
+ int local_flag=fort_is_rigid_base(&FSI_flag[im],&num_materials,&imp1);
 
  return local_flag;
 

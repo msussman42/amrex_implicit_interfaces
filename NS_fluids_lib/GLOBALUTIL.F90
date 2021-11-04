@@ -10802,7 +10802,51 @@ contains
       return
       end function is_lag_part
  
-      function is_rigid(nmat,im)
+      function fort_is_rigid_base(FSI_flag_local,nmat,im) &
+      bind(c,name='fort_is_rigid_base')
+
+      IMPLICIT NONE
+
+      INTEGER_T fort_is_rigid_base
+      INTEGER_T, intent(in) :: FSI_flag_local
+      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T dummy_input
+
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid17 in fort_is_rigid_base: im=",im
+       print *,"nmat=",nmat
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:10822"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
+      endif
+
+      if ((FSI_flag_local.eq.1).or. & ! prescribed rigid (PROB.F90)
+          (FSI_flag_local.eq.2).or. & ! prescribed rigid (sci_clsvof.F90)
+          (FSI_flag_local.eq.8).or. & ! FSI pres-vel, Kourosh Shoele
+          (FSI_flag_local.eq.4)) then ! FSI link w/Kourosh Shoele
+       fort_is_rigid_base=1  ! non-tessellating material
+      else if ((FSI_flag_local.eq.0).or. &
+               (FSI_flag_local.eq.7).or. & ! fluid
+               (FSI_flag_local.eq.3).or. & ! ice
+               (FSI_flag_local.eq.6).or. & ! ice
+               (FSI_flag_local.eq.5)) then ! FSI rigid
+       fort_is_rigid_base=0  ! tessellating material
+      else
+       print *,"FSI_flag_local invalid in fort_is_rigid_base"
+       stop
+      endif
+
+      return
+      end function fort_is_rigid_base
+
+      function is_rigid(nmat,im) 
       use probcommon_module
 
       IMPLICIT NONE
@@ -10811,13 +10855,18 @@ contains
       INTEGER_T, intent(in) :: nmat,im
       INTEGER_T dummy_input
 
+      if (nmat.ne.num_materials) then
+       print *,"nmat.ne.num_materials"
+       stop
+      endif
+
       if ((im.lt.1).or.(im.gt.nmat)) then
        print *,"im invalid17 in is_rigid: im=",im
        print *,"nmat=",nmat
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
-       print *,"(2) break GLOBALUTIL.F90:10214"
+       print *,"(2) break GLOBALUTIL.F90:10864"
        print *,"By pressing <CTRL C> during this read statement, the"
        print *,"gdb debugger will produce a stacktrace."
        print *,"type 0 then <enter> to exit the program"
@@ -10825,31 +10874,12 @@ contains
        read(*,*) dummy_input
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_rigid"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
 
-      if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
-          (FSI_flag(im).eq.2).or. & ! prescribed rigid solid (sci_clsvof.F90)
-          (FSI_flag(im).eq.8).or. & ! FSI pres-vel, Kourosh Shoele
-          (FSI_flag(im).eq.4)) then ! FSI link w/Kourosh Shoele
-       is_rigid=1  ! non-tessellating material
-      else if ((FSI_flag(im).eq.0).or. &
-               (FSI_flag(im).eq.7).or. & ! fluid
-               (FSI_flag(im).eq.3).or. & ! ice
-               (FSI_flag(im).eq.6).or. & ! ice
-               (FSI_flag(im).eq.5)) then ! FSI rigid
-       is_rigid=0  ! tessellating material
-      else
-       print *,"FSI_flag invalid in is_rigid"
-       stop
-      endif
+      is_rigid=fort_is_rigid_base(FSI_flag(im),nmat,im)
 
       return
       end function is_rigid
+
 
       function fort_is_eulerian_elastic_model(elastic_visc_in, &
         viscoelastic_model_in) &
@@ -20192,6 +20222,7 @@ REAL_T, intent(in) :: LS1(num_materials)
 REAL_T, intent(in) :: LS2(num_materials)
 INTEGER_T im1,im2
 REAL_T LS_avg
+REAL_T thickness_factor,shift_amount
 
 if ((im_parm.ge.0).and.(im_parm.lt.num_materials)) then
  ! do nothing
@@ -20200,14 +20231,17 @@ else
  stop
 endif
 
+thickness_factor=half
+shift_amount=thickness_factor*dxmin
+
 if ((mask1.eq.0).or.(mask2.eq.0)) then
  HVAL=zero
 else if ((mask1.eq.1).and.(mask2.eq.1)) then
  call get_primary_material(LS1,num_materials,im1)
  call get_primary_material(LS2,num_materials,im2)
  if ((im1.eq.im_parm+1).and.(im2.eq.im_parm+1)) then
-  LS_avg=half*(LS1(im_parm+1)+LS2(im_parm+1))-dxmin
-  HVAL=hs(LS_avg,dxmin)
+  LS_avg=half*(LS1(im_parm+1)+LS2(im_parm+1))-shift_amount
+  HVAL=hs(LS_avg,shift_amount)
  else
   print *,"im1 or im2 invalid"
   stop
