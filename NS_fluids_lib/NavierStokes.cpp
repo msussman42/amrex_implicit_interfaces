@@ -1629,7 +1629,7 @@ void fortran_parameters() {
  Vector<Real> etaS_temp(nmat);
  Vector<Real> etaP_temp(nmat);
 
- Vector<Real> visc_coef_temp(nmat);
+ Real visc_coef_temp=0.0;
 
  int ZEYU_DCA_SELECT_temp=-1;  // -1=static angle
 
@@ -1990,6 +1990,17 @@ void fortran_parameters() {
   &gravity_dir_temp,
   &invert_gravity_temp,
   &fort_stop_time,
+  Carreau_alpha_temp.dataPtr(),
+  Carreau_beta_temp.dataPtr(),
+  Carreau_n_temp.dataPtr(),
+  Carreau_mu_inf_temp.dataPtr(),
+  shear_thinning_fluid_temp.dataPtr(),
+  polymer_factor_temp.dataPtr(),
+  concentration_temp.dataPtr(),
+  etaL_temp.dataPtr(),
+  etaS_temp.dataPtr(),
+  etaP_temp.dataPtr(),
+  &visc_coef_temp,
   &ioproc);
 
  ParallelDescriptor::Barrier();

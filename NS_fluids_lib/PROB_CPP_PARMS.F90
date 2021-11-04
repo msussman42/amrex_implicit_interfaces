@@ -229,6 +229,17 @@ stop
         ccgravity_dir, &
         ccinvert_gravity, &
         ccstop_time, &
+        ccCarreau_alpha, &
+        ccCarreau_beta, &
+        ccCarreau_n, &
+        ccCarreau_mu_inf, &
+        ccshear_thinning_fluid, &
+        ccpolymer_factor, &
+        ccconcentration, &
+        ccetaL, &
+        ccetaS, &
+        ccetaP, &
+        ccvisc_coef, &
         ioproc) &
       bind(c,name='fort_override')
 
@@ -282,7 +293,8 @@ stop
       INTEGER_T, intent(in) :: ccinvert_solid_levelset
       INTEGER_T, intent(in) :: ccprescribe_temperature_outflow
       INTEGER_T, intent(in) :: ccsolidheat_flag
-      INTEGER_T, intent(in) :: rz_flag,ioproc
+      INTEGER_T, intent(in) :: rz_flag
+      INTEGER_T, intent(in) :: ioproc
       INTEGER_T, intent(in) :: ccprobtype,ccadv_dir,ccaxis_dir
       
       REAL_T, intent(in) :: ccdenfact,ccvelfact
@@ -366,7 +378,23 @@ stop
       INTEGER_T, intent(in) :: ccn_sites
       REAL_T, intent(in) :: ccnucleation_init_time
       REAL_T, intent(in) :: ccpos_sites(5000)
-      
+     
+      REAL_T, intent(in) :: ccCarreau_alpha(ccnum_materials)
+      REAL_T, intent(in) :: ccCarreau_beta(ccnum_materials)
+      REAL_T, intent(in) :: ccCarreau_n(ccnum_materials)
+      REAL_T, intent(in) :: ccCarreau_mu_inf(ccnum_materials)
+
+      INTEGER_T, intent(in) :: ccshear_thinning_fluid(ccnum_materials)
+
+      REAL_T, intent(in) :: ccpolymer_factor(ccnum_materials)
+      REAL_T, intent(in) :: ccconcentration(ccnum_materials)
+      REAL_T, intent(in) :: ccetaL(ccnum_materials)
+      REAL_T, intent(in) :: ccetaS(ccnum_materials)
+      REAL_T, intent(in) :: ccetaP(ccnum_materials)
+
+      REAL_T, intent(in) :: ccvisc_coef
+
+
       character*12 namestr1
       character*13 namestr2
       INTEGER_T i
@@ -1080,8 +1108,23 @@ stop
        fort_prerecalesce_stiffCV(im)=ccprerecalesce_stiffCV(im)
       
        fort_im_elastic_map(im)=-1
-      
+     
+       fort_Carreau_alpha(im)=ccCarreau_alpha(im)
+       fort_Carreau_beta(im)=ccCarreau_beta(im)
+       fort_Carreau_n(im)=ccCarreau_n(im)
+       fort_Carreau_mu_inf(im)=ccCarreau_mu_inf(im)
+
+       fort_shear_thinning_fluid(im)=ccshear_thinning_fluid(im)
+
+       fort_polymer_factor(im)=ccpolymer_factor(im)
+       fort_concentration(im)=ccconcentration(im)
+       fort_etaL(im)=ccetaL(im)
+       fort_etaS(im)=ccetaS(im)
+       fort_etaP(im)=ccetaP(im)
+
       enddo ! im=1..num_materials
+
+      fort_visc_coef=ccvisc_coef
       
       nelastic=0
       do im=1,num_materials
@@ -1195,6 +1238,22 @@ stop
         print *,"im,fort_shear_modulus ",im,fort_shear_modulus(im)
         print *,"im,fort_store_elastic_data ",im,fort_store_elastic_data(im)
         print *,"im,fort_im_elastic_map ",im,fort_im_elastic_map(im)
+
+        print *,"im,fort_Carreau_alpha ",im,fort_Carreau_alpha(im)
+        print *,"im,fort_Carreau_beta ",im,fort_Carreau_beta(im)
+        print *,"im,fort_Carreau_n ",im,fort_Carreau_n(im)
+        print *,"im,fort_Carreau_mu_inf ",im,fort_Carreau_mu_inf(im)
+
+        print *,"im,fort_shear_thinning_fluid ", &
+                im,fort_shear_thinning_fluid(im)
+      
+        print *,"im,fort_polymer_factor ",im,fort_polymer_factor(im)
+        print *,"im,fort_concentration ",im,fort_concentration(im)
+
+        print *,"im,fort_etaL ",im,fort_etaL(im)
+        print *,"im,fort_etaS ",im,fort_etaS(im)
+        print *,"im,fort_etaP ",im,fort_etaP(im)
+
         print *,"im,heatvisc ",im,fort_heatviscconst(im)
         print *,"im,prerecalesce_heatvisc ",im, &
          fort_prerecalesce_heatviscconst(im)
@@ -1212,7 +1271,9 @@ stop
        do im=1,num_species_var
         print *,"im,fort_species_molar_mass ",im,fort_species_molar_mass(im)
        enddo
-      
+     
+       print *,"fort_visc_coef= ",fort_visc_coef
+
        do iten=1,nten
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_slope ",iten,fort_tension_slope(iten)

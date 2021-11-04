@@ -142,6 +142,17 @@ namespace amrex{
        int* gravity_dir,
        int* invert_gravity,
        Real* fort_stop_time,
+       Real* fort_Carreau_alpha,
+       Real* fort_Carreau_beta,
+       Real* fort_Carreau_n,
+       Real* fort_Carreau_mu_inf,
+       int* fort_shear_thinning_fluid,
+       Real* fort_polymer_factor,
+       Real* fort_concentration,
+       Real* fort_etaL,
+       Real* fort_etaS,
+       Real* fort_etaP,
+       Real* fort_visc_coef,
        int* ioproc);
 
   }
