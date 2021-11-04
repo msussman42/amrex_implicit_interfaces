@@ -238,6 +238,19 @@ implicit none
 ! fort_reference_pressure added, July 8.
 ! fort_drhodz deleted, Aug 2.
 ! fort_drhodt renamed to fort_DrhoDT, Aug 2.
+!
+! Added November 4,2021:
+! fort_Carreau_alpha,
+! fort_Carreau_beta,
+! fort_Carreau_n,
+! fort_Carreau_mu_inf,
+! fort_shear_thinning_fluid,
+! fort_polymer_factor,
+! fort_concentration,
+! fort_etaL,
+! fort_etaS,
+! fort_etaP,
+! fort_visc_coef
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2

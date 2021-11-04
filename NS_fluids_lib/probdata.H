@@ -100,6 +100,20 @@
       INTEGER_T fort_linear_elastic_model(MAX_NUM_MATERIALS)
       REAL_T fort_shear_modulus(MAX_NUM_MATERIALS)
       INTEGER_T fort_store_elastic_data(MAX_NUM_MATERIALS)
+
+      REAL_T fort_Carreau_alpha(MAX_NUM_MATERIALS)
+      REAL_T fort_Carreau_beta(MAX_NUM_MATERIALS)
+      REAL_T fort_Carreau_n(MAX_NUM_MATERIALS)
+      REAL_T fort_Carreau_mu_inf(MAX_NUM_MATERIALS)
+      INTEGER_T fort_shear_thinning_fluid(MAX_NUM_MATERIALS)
+      REAL_T fort_polymer_factor(MAX_NUM_MATERIALS)
+      REAL_T fort_concentration(MAX_NUM_MATERIALS)
+      REAL_T fort_etaL(MAX_NUM_MATERIALS)
+      REAL_T fort_etaS(MAX_NUM_MATERIALS)
+      REAL_T fort_etaP(MAX_NUM_MATERIALS)
+
+      REAL_T fort_visc_coef
+
       INTEGER_T num_state_material
       INTEGER_T num_state_base
       INTEGER_T ngeom_raw
