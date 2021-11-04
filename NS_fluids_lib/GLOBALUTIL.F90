@@ -10841,6 +10841,7 @@ contains
       else
        print *,"FSI_flag_local invalid in fort_is_rigid_base"
        stop
+       fort_is_rigid_base=0  ! prevent compiler warnings
       endif
 
       return
