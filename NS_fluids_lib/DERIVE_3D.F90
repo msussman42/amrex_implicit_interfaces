@@ -1061,6 +1061,7 @@ stop
                (viscoelastic_model.eq.1).or. & !Oldroyd-B(modtime=elastic_time)
                (viscoelastic_model.eq.5).or. & !FENE-P
                (viscoelastic_model.eq.6)) then !linearPTT(modtime=elastic_time)
+             ! etaS=etaL-etaP=viscconst-elastic_viscosity 
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
            else if (viscoelastic_model.eq.2) then !displacement gradient

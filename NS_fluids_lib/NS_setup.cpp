@@ -2220,6 +2220,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     post_init_flag,
     sumdata,sumdata_type,sumdata_sweep,
     ZZ,FF,dirx,diry,cut_flag,isweep);
+
   if (isweep==0) {
    for (int im=0;im<nmat;im++) {
     Real volmat=sumdata[FE_sum_comp+2*im];
