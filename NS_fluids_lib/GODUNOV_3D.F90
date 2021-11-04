@@ -23175,7 +23175,7 @@ stop
          ! [n dot tau dot n] = - sigma kappa
          ! [n dot tau dot tj] = 0
     
-         ! the Heaviside function is biased "dx" units into the 
+         ! the Heaviside function is biased "alpha dx" units into the 
          ! viscoelastic material. 
          ! declared in: GLOBALUTIL.F90 
         call tensor_Heaviside( &

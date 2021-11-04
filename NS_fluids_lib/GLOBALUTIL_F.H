@@ -16,6 +16,11 @@ extern "C"
     Real* elastic_visc_in,
     int* viscoelastic_model_in);
 
+   int fort_is_rigid_base(
+        int* FSI_flag_local,
+	int* nmat,
+	int* im);  // 1<=im<=nmat
+
 }
 
 }/* namespace amrex */
