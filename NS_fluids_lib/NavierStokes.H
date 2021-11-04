@@ -2175,6 +2175,7 @@ protected:
     static Vector<Real> Carreau_beta; // def=0
     static Vector<Real> Carreau_n; // def=1
     static Vector<Real> Carreau_mu_inf; // def=0
+    static Vector<int> shear_thinning_fluid; // def=0
 
     static Vector<Real> elastic_time; // viscoelastic parameter
 
