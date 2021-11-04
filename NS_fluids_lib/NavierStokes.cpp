@@ -1285,6 +1285,8 @@ void read_geometry_raw(int& geometry_coord,
 
 } // end subroutine read_geometry_raw
 
+// this routine is called from main.cpp prior to:
+//  amrptr->init(strt_time,stop_time);
 void fortran_parameters() {
 
  Real denfact;
