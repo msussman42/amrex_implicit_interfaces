@@ -502,7 +502,7 @@ stop
         im_parm, &
         nmat, &
         dt, &
-        viscosity_coefficient, &
+        viscosity_coefficient, & ! viscconst
         shear_thinning_fluid, &
         Carreau_alpha, &
         Carreau_beta, &

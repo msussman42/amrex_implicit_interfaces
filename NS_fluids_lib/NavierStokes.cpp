@@ -621,6 +621,7 @@ Vector<Real> NavierStokes::Carreau_alpha; // def=1
 Vector<Real> NavierStokes::Carreau_beta; // def=0
 Vector<Real> NavierStokes::Carreau_n; // def=1
 Vector<Real> NavierStokes::Carreau_mu_inf; // def=0
+Vector<int> NavierStokes::shear_thinning_fluid; // def=0
 
 Vector<Real> NavierStokes::concentration; // def=0
 Vector<Real> NavierStokes::etaL; // def=0 (etaL0)
@@ -1615,6 +1616,20 @@ void fortran_parameters() {
  Vector<Real> speciesviscconst_temp((num_species_var+1)*nmat);
  Vector<int> material_type_temp(nmat);
  Vector<int> FSI_flag_temp(nmat);
+
+ Vector<Real> Carreau_alpha_temp(nmat);
+ Vector<Real> Carreau_beta_temp(nmat);
+ Vector<Real> Carreau_n_temp(nmat);
+ Vector<Real> Carreau_mu_inf_temp(nmat);
+ Vector<int> shear_thinning_fluid_temp(nmat);
+ Vector<Real> polymer_factor_temp(nmat);
+
+ Vector<Real> concentration_temp(nmat);
+ Vector<Real> etaL_temp(nmat);
+ Vector<Real> etaS_temp(nmat);
+ Vector<Real> etaP_temp(nmat);
+
+ Vector<Real> visc_coef_temp(nmat);
 
  int ZEYU_DCA_SELECT_temp=-1;  // -1=static angle
 
@@ -3948,6 +3963,7 @@ NavierStokes::read_params ()
     Carreau_beta.resize(nmat);
     Carreau_n.resize(nmat);
     Carreau_mu_inf.resize(nmat);
+    shear_thinning_fluid.resize(nmat);
 
     polymer_factor.resize(nmat);
 
@@ -3988,6 +4004,7 @@ NavierStokes::read_params ()
      Carreau_beta[i]=0.0;
      Carreau_n[i]=1.0;
      Carreau_mu_inf[i]=0.0;
+     shear_thinning_fluid[i]=0;
 
      polymer_factor[i]=0.0;
     }  // i=0..nmat-1
@@ -4098,6 +4115,24 @@ NavierStokes::read_params ()
      if ((Carreau_beta[i]!=0.0)&&(visc_coef==0.0))
       amrex::Error("Cannot have Carreau_beta!=0 and visc_coef==0 ");
 
+     if (ns_is_rigid(i)==1) {
+      shear_thinning_fluid[i]=0;
+     } else if (ns_is_rigid(i)==0) {
+      shear_thinning_fluid[i]=0;
+      if ((probtype==2)&&(axis_dir>0)&&(i==0))
+       shear_thinning_fluid[i]=1;
+      if (Carreau_beta[i]!=0.0)
+       shear_thinning_fluid[i]=1;
+
+      if (shear_thinning_fluid[i]==1) {
+       // do nothing
+      } else if (shear_thinning_fluid[i]==0) {
+       // do nothing
+      } else
+       amrex::Error("shear_thinning_fluid invalid");
+     } else 
+      amrex::Error("ns_is_rigid(i) invalid");
+
       // if first material and Carreau_beta==0 for first material,
       //  probtype==2, axis_dir>0, then 
       //  "call viscosity(axis_dir,visc(D_DECL(i,j,k)),shear)"
@@ -4154,6 +4189,7 @@ NavierStokes::read_params ()
       std::cout << "Carreau_beta=" << Carreau_beta[i] << '\n';
       std::cout << "Carreau_n=" << Carreau_n[i] << '\n';
       std::cout << "Carreau_mu_inf=" << Carreau_mu_inf[i] << '\n';
+      std::cout << "shear_thinning_fluid=" << shear_thinning_fluid[i] << '\n';
      } // io processor
 
      if ((num_materials_viscoelastic>=1)&&

@@ -9267,20 +9267,11 @@ void NavierStokes::getStateVISC() {
 
  int ncomp_visc=3*nmat;
 
- Vector<int> shear_thinning_fluid(nmat);
-
  for (int im=0;im<nmat;im++) {
-
-  shear_thinning_fluid[im]=0;
 
   if (ns_is_rigid(im)==1) {
    // do nothing
   } else if (ns_is_rigid(im)==0) {
-
-   if ((probtype==2)&&(axis_dir>0)&&(im==0))
-    shear_thinning_fluid[im]=1;
-   if (Carreau_beta[im]!=0.0)
-    shear_thinning_fluid[im]=1;
 
    if (shear_thinning_fluid[im]==1) {
     // do nothing
