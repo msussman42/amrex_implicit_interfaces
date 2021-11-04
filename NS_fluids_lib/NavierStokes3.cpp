@@ -11912,7 +11912,7 @@ void NavierStokes::avgDownALL_TENSOR() {
  } else
   amrex::Error("num_materials_viscoelastic invalid avgDownALL_TENSOR");
 
-} // subroutine avgDownALL_TENSOR
+} // end subroutine avgDownALL_TENSOR
 
 // VISCOELASTIC, CTML FORCE
 void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
@@ -11952,6 +11952,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 	// fort_maketensor called from ::make_viscoelastic_tensor
 	// if viscoelastic_model==2 then Q is built from the displacement
 	// vector field.
+	// We are currently in vel_elastic_ALL
        make_viscoelastic_tensorALL(im);
 
        //(a) interpolate Q to CC,XY,XZ,YZ locations, or
@@ -12678,6 +12679,7 @@ void NavierStokes::veldiffuseALL() {
       // initializes VISCOTEN_MF
       // if viscoelastic_model==2 then Q is built from the displacement
       // vector field.
+      // we are currently in "veldiffuseALL"
       make_viscoelastic_tensorALL(im);
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);

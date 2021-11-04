@@ -499,7 +499,6 @@ public:
     void init_gravity_potential();
 
     void GetDrag(Vector<Real>& integrated_quantities,int isweep);
-    void GetDragALL(Vector<Real>& integrated_quantities);
 
     void process_recalesce_dataALL(
      Vector<int> recalesce_material,
@@ -519,7 +518,7 @@ public:
      Vector<int>& sumdata_sweep,
      Vector<Real>& ZZ,Vector<Real>& FF,
      int dirx,int diry,int cut_flag,
-     MultiFab* dragmf,int isweep);
+     int isweep);
 
     void Number_CellsALL(Real& rcells);
 

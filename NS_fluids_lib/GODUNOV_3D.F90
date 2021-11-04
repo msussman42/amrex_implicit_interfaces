@@ -14835,6 +14835,12 @@ stop
         stop
        endif
 
+        ! in fort_derviscosity:
+        !  etaS=etaL-etaP=viscconst-elastic_viscosity 
+        !  viscoelastic_coeff= &
+        !   (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
+        !  visc(D_DECL(i,j,k),nmat+im_parm)=viscoelastic_coeff*visc_coef
+        !  visc(D_DECL(i,j,k),2*nmat+im_parm)=modtime
        do ii=1,3
        do jj=1,3
         TQ(ii,jj)=Q(ii,jj)*visc(D_DECL(i,j,k),nmat+im_parm+1)

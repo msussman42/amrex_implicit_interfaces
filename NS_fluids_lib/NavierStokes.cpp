@@ -10007,7 +10007,10 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
 
 }  // subroutine make_viscoelastic_tensorMAC
 
-
+// called from:
+//  NavierStokes::GetDragALL
+//  NavierStokes::veldiffuseALL
+//  NavierStokes::vel_elastic_ALL
 void NavierStokes::make_viscoelastic_tensorALL(int im) {
 
  int finest_level=parent->finestLevel();
@@ -16697,139 +16700,6 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  delete mf;
 } // subroutine errorEst
 
-// called from volWgtSumALL
-//
-// compute (-pI+2\mu D)dot n_solid for cut cells.
-//
-// F=mA  rho du/dt = div sigma + rho g
-// integral rho du/dt = integral (div sigma + rho g)
-// du/dt=(integral_boundary sigma dot n)/mass  + g
-// torque_axis=r_axis x F=r_axis x (m alpha_axis x r_axis)   
-// alpha=angular acceleration  (1/s^2)
-// torque_axis=I_axis alpha_axis  
-// I_axis=integral rho r_axis x (e_axis x r_axis)   I=moment of inertia
-// I_axis=integral rho r_axis^{2}
-// r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
-// torque_axis=integral r_axis x (div sigma + rho g)=
-//   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
-// integrated_quantities:
-//  1..3  : F=integral_boundary sigma dot n + integral rho g
-//  4..6  : torque=integral_boundary r x sigma dot n + integral r x rho g  
-//  7..9  : moments of inertia
-//  10..12: integral rho x
-//  13    : integral rho
-void 
-NavierStokes::GetDragALL(Vector<Real>& integrated_quantities) {
-
- int finest_level=parent->finestLevel();
- int nmat=num_materials;
-
- if ((SDC_outer_sweeps>=0)&&
-     (SDC_outer_sweeps<ns_time_order)) {
-  // do nothing
- } else
-  amrex::Error("SDC_outer_sweeps invalid");
-
- if (integrated_quantities.size()!=13)
-  amrex::Error("invalid size for integrated_quantities");
-
- for (int iq=0;iq<13;iq++)
-  integrated_quantities[iq]=0.0;
-
-  // in: NavierStokes::GetDragALL
- allocate_levelsetLO_ALL(2,LEVELPC_MF);
-
- int simple_AMR_BC_flag_viscosity=1;
- int do_alloc=1;
- init_gradu_tensorALL(
-  HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
-  do_alloc,
-  CELLTENSOR_MF,
-  FACETENSOR_MF,
-  simple_AMR_BC_flag_viscosity);
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=nmat)) {
-
-  //ngrow,ncomp,grid_type,mf id
-  //VISCOTEN_ALL_MAT_MF initialized to 0.0
-  allocate_array(1,num_materials_viscoelastic*NUM_TENSOR_TYPE,-1,
-	 VISCOTEN_ALL_MAT_MF);
-
-  for (int im=0;im<nmat;im++) {
-
-   if (ns_is_rigid(im)==0) {
-
-    if (store_elastic_data[im]==1) {
-
-     int partid=0;
-     while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
-      partid++;
-     }
-
-     if (partid<im_elastic_map.size()) {
-      // in: GetDragALL
-      make_viscoelastic_tensorALL(im);
-       //ngrow,ncomp,scomp,dcomp,dst,src
-      copyALL(1,NUM_TENSOR_TYPE,0,partid*NUM_TENSOR_TYPE,
-        VISCOTEN_ALL_MAT_MF,VISCOTEN_MF);
-      delete_array(VISCOTEN_MF);
-     } else
-      amrex::Error("partid could not be found: GetDragALL");
-    } else if (store_elastic_data[im]==0) {
-
-     if (viscoelastic_model[im]!=0)
-      amrex::Error("viscoelastic_model[im]!=0");
-
-    } else
-     amrex::Error("elastic_time/elastic_viscosity invalid");
-
-   } else if (ns_is_rigid(im)==1) {
-    // do nothing
-   } else
-    amrex::Error("ns_is_rigid invalid");
-
-  } // im=0..nmat-1
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
-
- for (int isweep=0;isweep<2;isweep++) {
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.GetDrag(integrated_quantities,isweep);
-  }
- }
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=nmat)) {
-  delete_array(VISCOTEN_ALL_MAT_MF);
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
-
- delete_array(CELLTENSOR_MF);
- delete_array(FACETENSOR_MF);
-
-  // isweep
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   for (int iq=0;iq<13;iq++)
-    std::cout << "GetDrag  iq= " << iq << " integrated_quantities= " <<
-     integrated_quantities[iq] << '\n';
-   Real mass=integrated_quantities[12];
-   if (mass>0.0) {
-    for (int iq=9;iq<9+AMREX_SPACEDIM;iq++)
-     std::cout << "COM iq= " << iq << " COM= " <<
-      integrated_quantities[iq]/mass << '\n';
-   }
-
-  }
- }
-
-} // end subroutine GetDragALL
 
 // sweep=0: integral (rho x), integral (rho) 
 // sweep=1: find force, torque, moments of inertia, center of mass,mass
@@ -18096,15 +17966,13 @@ void NavierStokes::levelCombine(
 
 } // subroutine levelCombine
 
-
-
 void NavierStokes::volWgtSum(
   Vector<Real>& result,
   Vector<int>& sumdata_type,
   Vector<int>& sumdata_sweep,
   Vector<Real>& ZZ,Vector<Real>& FF,
   int dirx,int diry,int cut_flag,
-  MultiFab* dragmf,int isweep) {
+  int isweep) {
 
  
  bool use_tiling=ns_tiling;
@@ -18331,7 +18199,7 @@ void NavierStokes::volWgtSum(
    if (cellten.nComp()!=ntensor)
     amrex::Error("cellten invalid ncomp");
 
-   FArrayBox& dragfab=(*dragmf)[mfi];
+   FArrayBox& dragfab=(*localMF[DRAG_MF])[mfi];
    Real problo[AMREX_SPACEDIM];
    Real probhi[AMREX_SPACEDIM];
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -20812,6 +20680,8 @@ NavierStokes::volWgtSumALL(
  int isweep) {
 
  int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+
  if (level!=0)
   amrex::Error("it is required that level=0 in volWgtSumALL");
 
@@ -20847,7 +20717,34 @@ NavierStokes::volWgtSumALL(
  allocate_array(0,4*AMREX_SPACEDIM+1,-1,DRAG_MF);
  Vector<Real> integrated_quantities;
  integrated_quantities.resize(13); 
- GetDragALL(integrated_quantities);
+
+// GetDragALL section------------------------------------------
+//
+// compute (-pI+2\mu D)dot n_solid for cut cells.
+//
+// F=mA  rho du/dt = div sigma + rho g
+// integral rho du/dt = integral (div sigma + rho g)
+// du/dt=(integral_boundary sigma dot n)/mass  + g
+// torque_axis=r_axis x F=r_axis x (m alpha_axis x r_axis)   
+// alpha=angular acceleration  (1/s^2)
+// torque_axis=I_axis alpha_axis  
+// I_axis=integral rho r_axis x (e_axis x r_axis)   I=moment of inertia
+// I_axis=integral rho r_axis^{2}
+// r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
+// torque_axis=integral r_axis x (div sigma + rho g)=
+//   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
+// integrated_quantities:
+//  1..3  : F=integral_boundary sigma dot n + integral rho g
+//  4..6  : torque=integral_boundary r x sigma dot n + integral r x rho g  
+//  7..9  : moments of inertia
+//  10..12: integral rho x
+//  13    : integral rho
+
+ for (int iq=0;iq<13;iq++) {
+  integrated_quantities[iq]=0.0;
+ }
+
+ allocate_levelsetLO_ALL(2,LEVELPC_MF);
 
  int do_alloc=1;
  int simple_AMR_BC_flag_viscosity=1;
@@ -20858,6 +20755,87 @@ NavierStokes::volWgtSumALL(
    FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
 
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("expecting NUM_TENSOR_TYPE==2*AMREX_SPACEDIM");
+
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+
+  //ngrow,ncomp,grid_type,mf id
+  //VISCOTEN_ALL_MAT_MF initialized to 0.0
+  allocate_array(1,num_materials_viscoelastic*NUM_TENSOR_TYPE,-1,
+	 VISCOTEN_ALL_MAT_MF);
+
+  for (int im=0;im<nmat;im++) {
+
+   if (ns_is_rigid(im)==0) {
+
+    if (store_elastic_data[im]==1) {
+     if (elastic_viscosity[im]>0.0) {
+
+      int partid=0;
+      while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+       partid++;
+      }
+
+      if (partid<im_elastic_map.size()) {
+       // we are currently in "GetDragALL"
+       make_viscoelastic_tensorALL(im);
+        //ngrow,ncomp,scomp,dcomp,dst,src
+       copyALL(1,NUM_TENSOR_TYPE,0,partid*NUM_TENSOR_TYPE,
+         VISCOTEN_ALL_MAT_MF,VISCOTEN_MF);
+       delete_array(VISCOTEN_MF);
+      } else
+       amrex::Error("partid could not be found: GetDragALL");
+     } else
+      amrex::Error("elastic_viscosity invalid");
+    } else if (store_elastic_data[im]==0) {
+
+     if (viscoelastic_model[im]!=0)
+      amrex::Error("viscoelastic_model[im]!=0");
+
+    } else
+     amrex::Error("elastic_time/elastic_viscosity invalid");
+
+   } else if (ns_is_rigid(im)==1) {
+    // do nothing
+   } else
+    amrex::Error("ns_is_rigid invalid");
+
+  } // im=0..nmat-1
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
+
+ for (int isweep_drag=0;isweep_drag<2;isweep_drag++) {
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.GetDrag(integrated_quantities,isweep_drag);
+  }
+ }
+
+  // isweep
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   for (int iq=0;iq<13;iq++)
+    std::cout << "GetDrag  iq= " << iq << " integrated_quantities= " <<
+     integrated_quantities[iq] << '\n';
+   Real mass=integrated_quantities[12];
+   if (mass>0.0) {
+    for (int iq=9;iq<9+AMREX_SPACEDIM;iq++)
+     std::cout << "COM iq= " << iq << " COM= " <<
+      integrated_quantities[iq]/mass << '\n';
+   }
+
+  }
+ }
+
+// END GetDragALL section------------------------------------------
+
  for (int ilev = 0; ilev <= finest_level; ilev++) {
 
   NavierStokes& ns_level = getLevel(ilev);
@@ -20867,9 +20845,17 @@ NavierStokes::volWgtSumALL(
     sumdata_sweep,
     ZZ,FF,
     dirx,diry,cut_flag,
-    ns_level.localMF[DRAG_MF],isweep);
+    isweep);
 
  }  // ilev 
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  delete_array(VISCOTEN_ALL_MAT_MF);
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
 
  delete_array(DRAG_MF);
  delete_array(CELLTENSOR_MF);
