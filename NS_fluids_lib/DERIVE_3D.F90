@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "DRAG_COMP.H"
 #include "DERIVE_F.H"
 #include "PROB_F.H"
 
@@ -1847,17 +1848,29 @@ stop
        print *,"bfact invalid5"
        stop
       endif
-      if (visc_coef.lt.zero) then
+      if (visc_coef.eq.fort_visc_coef) then
+       ! do nothing
+      else
+       print *,"fort_visc_coef invalid"
+       stop
+      endif
+      if (visc_coef.ge.zero) then
+       ! do nothing
+      else
        print *,"visc_coef invalid"
        stop
       endif
       do im=1,nmat
-       if (fort_denconst(im).le.zero) then
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"denconst invalid"
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.lt.zero) then
+       if (mu.ge.zero) then
+        ! do nothing
+       else
         print *,"viscconst invalid"
         stop
        endif
@@ -1891,6 +1904,10 @@ stop
       endif
       if ((gravdir.lt.1).or.(gravdir.gt.SDIM)) then
        print *,"gravdir invalid"
+       stop
+      endif
+      if (FORT_NUM_TENSOR_TYPE.ne.2*SDIM) then
+       print *,"FORT_NUM_TENSOR_TYPE invalid"
        stop
       endif
       if ((num_materials_viscoelastic.ge.1).and. &

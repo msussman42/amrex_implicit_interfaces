@@ -163,6 +163,7 @@
 */
 
 #include <NavierStokes.H>
+#include "DRAG_COMP.H"
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>
 #include <MARCHING_TETRA_F.H>
@@ -16784,7 +16785,6 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 // gear problem: probtype=563, axis_dir=2, 3D
 // scale torque by 2 pi vinletgas/60
 
-
  if (localMF[DRAG_MF]->nComp()!=4*AMREX_SPACEDIM+1)
   amrex::Error("drag ncomp invalid");
 
@@ -20715,6 +20715,7 @@ NavierStokes::volWgtSumALL(
 
   // force,torque,moment of inertia,COM,mass
  allocate_array(0,4*AMREX_SPACEDIM+1,-1,DRAG_MF);
+
  Vector<Real> integrated_quantities;
  integrated_quantities.resize(13); 
 
