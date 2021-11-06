@@ -17988,10 +17988,15 @@ void NavierStokes::volWgtSum(
 
   // 0 empty
   // F,E  2 x nmat
-  // drag (3 comp)
+  //
+  // drag (3 x nmat comp)
+  //
   // min interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
   // max interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
-  // pressure drag (3 comp)
+  //
+  // pressure drag (3 x nmat comp)
+  // viscoelastic drag (3 x nmat comp)
+  //
   // min den,denA 2 x nmat
   // max den,denA 2 x nmat
   // x=0 amplitude
@@ -18005,9 +18010,12 @@ void NavierStokes::volWgtSum(
   // kinetic energy derived  nmat
   // LS F  nmat
   // LS centroid 3 x nmat (x1,y1,z1  x2,y2,z2 ... )
-  // torque (3 comp)
-  // pressure torque (3 comp)
-  // perimeter (rasterized) (1 comp)
+  //
+  // torque (3 x nmat comp)
+  // pressure torque (3 x nmat comp)
+  // viscoelastic torque (3 x nmat comp)
+  // perimeter (rasterized) (nmat comp)
+  //
   // min interface extent on slice (nmat comp)
   // max interface extent on slice (nmat comp)
   // integral of vorticity (3 comp)
@@ -18020,11 +18028,16 @@ void NavierStokes::volWgtSum(
 
  int filler_comp=0;
  int FE_sum_comp=filler_comp+1;
+
  int drag_sum_comp=FE_sum_comp+2*nmat;
- int minint_sum_comp=drag_sum_comp+3;
+
+ int minint_sum_comp=drag_sum_comp+3*nmat;
  int maxint_sum_comp=minint_sum_comp+3*nmat;
+
  int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int minden_sum_comp=pdrag_sum_comp+3;
+ int visco_sum_comp=pdrag_sum_comp+3*nmat;
+
+ int minden_sum_comp=visco_sum_comp+3*nmat;
  int maxden_sum_comp=minden_sum_comp+2*nmat;
  int xnot_amp_sum_comp=maxden_sum_comp+2*nmat;
  int cen_sum_comp=xnot_amp_sum_comp+1;
@@ -18037,10 +18050,13 @@ void NavierStokes::volWgtSum(
  int kinetic_energy_sum_comp=left_pressure_sum+4;
  int LS_F_sum_comp=kinetic_energy_sum_comp+nmat;
  int LS_cen_sum_comp=LS_F_sum_comp+nmat;
+
  int torque_sum_comp=LS_cen_sum_comp+3*nmat;
- int ptorque_sum_comp=torque_sum_comp+3;
- int step_perim_sum_comp=ptorque_sum_comp+3;
- int minint_slice=step_perim_sum_comp+1;
+ int ptorque_sum_comp=torque_sum_comp+3*nmat;
+ int viscotorque_sum_comp=torque_sum_comp+3*nmat;
+ int step_perim_sum_comp=viscotorque_sum_comp+3*nmat;
+
+ int minint_slice=step_perim_sum_comp+nmat;
  int maxint_slice=minint_slice+nmat;
  int vort_sum_comp=maxint_slice+nmat;
  int vort_error=vort_sum_comp+3; 
@@ -18214,7 +18230,7 @@ void NavierStokes::volWgtSum(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: NAVIERSTOKES_3D.F90
+    // declared in: NAVIERSTOKES_3D.F90
    fort_summass(
     &tid_current,
     &level,
