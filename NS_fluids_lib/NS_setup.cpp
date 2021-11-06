@@ -2046,6 +2046,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int caller_id=3;
  MaxAdvectSpeedALL(dt_min,vel_max_estdt,vel_max_cap_wave,caller_id);
 
+ int local_counter=0;
+
   // 0 empty
   // F,E  2 x nmat
   //
@@ -2734,9 +2736,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   std::cout << "TIME= "<<upper_slab_time<<" ENERGY MOMENT= " << 
     r_moment << '\n';
 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " DRAG " << 
-     sumdata[drag_sum_comp+dir] << '\n';
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
+     " DIR= " << dir << " DRAG " << 
+     sumdata[drag_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
   }
 
   if ((probtype==55)&&(axis_dir==5)&&(AMREX_SPACEDIM==2)&&(nmat==4)) {
@@ -2852,25 +2859,51 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    }  // dcoef<>0
   } // probtype=32
 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " PDRAG " << 
-     sumdata[pdrag_sum_comp+dir] << '\n';
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " PDRAG " << 
+     sumdata[pdrag_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
   }
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " VDRAG " << 
-     sumdata[drag_sum_comp+dir]-sumdata[pdrag_sum_comp+dir] << '\n';
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " VDRAG " << 
+     sumdata[drag_sum_comp+local_counter]-
+     sumdata[pdrag_sum_comp+local_counter]-
+     sumdata[visco_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
   }
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " PTORQUE " <<
-     sumdata[ptorque_sum_comp+dir] << '\n';
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " PTORQUE " <<
+     sumdata[ptorque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
   }
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " VTORQUE " <<
-     sumdata[torque_sum_comp+dir]-sumdata[ptorque_sum_comp+dir] << '\n';
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " VTORQUE " <<
+     sumdata[torque_sum_comp+local_counter]-
+     sumdata[ptorque_sum_comp+local_counter]-
+     sumdata[viscotorque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
   }
-  std::cout << "TIME= "<<upper_slab_time<< " HEIGHT_PERIM " <<
-    sumdata[step_perim_sum_comp] << '\n';
-
+  for (int im=0;im<nmat;im++) {
+   std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+    " STEP_PERIM " <<
+    sumdata[step_perim_sum_comp+im] << '\n';
+  }
 
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
