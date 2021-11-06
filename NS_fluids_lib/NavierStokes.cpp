@@ -18053,7 +18053,7 @@ void NavierStokes::volWgtSum(
 
  int torque_sum_comp=LS_cen_sum_comp+3*nmat;
  int ptorque_sum_comp=torque_sum_comp+3*nmat;
- int viscotorque_sum_comp=torque_sum_comp+3*nmat;
+ int viscotorque_sum_comp=ptorque_sum_comp+3*nmat;
  int step_perim_sum_comp=viscotorque_sum_comp+3*nmat;
 
  int minint_slice=step_perim_sum_comp+nmat;

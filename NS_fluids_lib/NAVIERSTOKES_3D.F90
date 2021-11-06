@@ -11,6 +11,7 @@
 
 ! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
+#include "DRAG_COMP.H"
 #include "NAVIERSTOKES_F.H"
 
 #if (AMREX_SPACEDIM==3)
@@ -6571,7 +6572,7 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target ::  mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target ::  drag(DIMV(drag),4*SDIM+1)
+      REAL_T, intent(in), target ::  drag(DIMV(drag),N_DRAG)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: slopes(DIMV(slopes),nmat*ngeom_recon)  
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
@@ -6590,6 +6591,7 @@ END SUBROUTINE SIMP
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
       INTEGER_T dir
+      INTEGER_T local_comp
       INTEGER_T im
       INTEGER_T im_primary
       INTEGER_T vofcomp
@@ -6608,7 +6610,10 @@ END SUBROUTINE SIMP
       REAL_T cengrid(SDIM)
       REAL_T xboundary(SDIM)
 
-      INTEGER_T filler_comp,FE_sum_comp,drag_sum_comp
+      INTEGER_T filler_comp,FE_sum_comp
+
+      INTEGER_T drag_sum_comp
+
       INTEGER_T minint_sum_comp,maxint_sum_comp
 
       INTEGER_T pdrag_sum_comp
@@ -7252,23 +7257,35 @@ END SUBROUTINE SIMP
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
 
-        do dir=1,SDIM
-         idest=drag_sum_comp+dir
+        local_comp=1
+        do im=1,nmat
+        do dir=1,3
+         idest=drag_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),dir)
-         idest=pdrag_sum_comp+dir
+           drag(D_DECL(i,j,k),DRAGCOMP_FORCE+local_comp)
+         idest=pdrag_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),SDIM+dir)
-         idest=torque_sum_comp+dir
+           drag(D_DECL(i,j,k),DRAGCOMP_PFORCE+local_comp)
+         idest=viscodrag_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),2*SDIM+dir)
-         idest=ptorque_sum_comp+dir
+           drag(D_DECL(i,j,k),DRAGCOMP_VISCOFORCE+local_comp)
+         idest=torque_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),3*SDIM+dir)
-        enddo ! dir
-        idest=step_perim_sum_comp+1
-        local_result(idest)=local_result(idest)+ &
-          drag(D_DECL(i,j,k),4*SDIM+1)
+           drag(D_DECL(i,j,k),DRAGCOMP_TORQUE+local_comp)
+         idest=ptorque_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_PTORQUE+local_comp)
+         idest=viscotorque_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_VISCOTORQUE+local_comp)
+         local_comp=local_comp+1
+        enddo ! dir=1..3
+        enddo ! im=1..nmat
+        do im=1,nmat
+         idest=step_perim_sum_comp+im
+         local_result(idest)=local_result(idest)+ &
+          drag(D_DECL(i,j,k),DRAGCOMP_PERIM+im)
+        enddo
 
         do im=1,nmat
 

@@ -2765,10 +2765,20 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    std::cout << "thickness of gear is 3 cm \n";
    Real thick=probhi[1]-problo[1];
    std::cout << "comp thick of gear is " << thick << '\n';
-   Real power=sumdata[drag_sum_comp+1]*(3.0/thick)/1.0E7;
-   std::cout << "TIME= "<<upper_slab_time<<" predicted power loss " << power << '\n';
-   std::cout << "expected power loss 500 watts \n";
+
+   local_counter=0;
+   for (int im=0;im<nmat;im++) {
+    for (int dir=0;dir<3;dir++) {
+     Real power=sumdata[drag_sum_comp+local_counter]*(3.0/thick)/1.0E7;
+     std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
+      " DIR= " << dir << " predicted power loss " << 
+      sumdata[drag_sum_comp+local_counter] << '\n';
+     std::cout << "expected power loss 500 watts \n";
+     local_counter++;
+    }
+   }
   }
+
   if (probtype==32) {
    Real ff=0.0;
    Real UU=std::abs(adv_vel);
@@ -2786,80 +2796,38 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     amrex::Error("adv_dir invalid");
 
    Real dcoef=denconst[0]*UU*UU*radblob;
-     // pressure and viscous drag
-   Real dragcoeff=sumdata[drag_sum_comp+adv_dir-1];  
-     // pressure drag
-   Real pdragcoeff=sumdata[pdrag_sum_comp+adv_dir-1];  
 
-   if (dcoef!=0.0) {
-    dragcoeff/=dcoef;
-    pdragcoeff/=dcoef;
-    int symmetry_flag=0;
+   local_counter=0;
+   for (int im=0;im<nmat;im++) {
+    for (int dir=0;dir<3;dir++) {
+     Real dragcoeff=sumdata[drag_sum_comp+local_counter];
+     Real pdragcoeff=sumdata[pdrag_sum_comp+local_counter];  
+   
+     if (dcoef!=0.0) {
+      dragcoeff/=dcoef;
+      pdragcoeff/=dcoef;
 
-    if (AMREX_SPACEDIM==3) {
-     if (adv_dir==1) {
-      if (zblob==0.0) {
-       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
-        symmetry_flag=1;
-      } else if (yblob==0.0) {
-       if (phys_bc.lo(1)==Symmetry)
-        symmetry_flag=1;
-      } else
-       amrex::Error("always run with symmetric bc");
-     } else if (adv_dir==2) {
-      if (zblob==0.0) {
-       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
-        symmetry_flag=1;
-      } else if (xblob==0.0) {
-       if (phys_bc.lo(0)==Symmetry)
-        symmetry_flag=1;
-      } else
-       amrex::Error("always run with symmetric bc");
-     } else if (adv_dir==3) {
-      if (xblob==0.0) {
-       if (phys_bc.lo(0)==Symmetry)
-        symmetry_flag=1;
-      } else if (yblob==0.0) {
-       if (phys_bc.lo(1)==Symmetry)
-        symmetry_flag=1;
-      } else
-       amrex::Error("always run with symmetric bc");
-     } else
-      amrex::Error("adv_dir invalid");
-    } else if (AMREX_SPACEDIM==2) {
-     if (adv_dir==1) {
-      if (yblob==0.0) {
-       if (phys_bc.lo(AMREX_SPACEDIM-1)==Symmetry)
-        symmetry_flag=1;
-      } else
-       amrex::Error("always run with symmetric bc");
-     } else if (adv_dir==2) {
-      if (xblob==0.0) {
-       if (phys_bc.lo(0)==Symmetry)
-        symmetry_flag=1;
-      } else
-       amrex::Error("always run with symmetric bc");
-     } else
-      amrex::Error("adv_dir invalid");
-    } else
-     amrex::Error("dimension bust"); 
+      std::cout << "TIME= " << upper_slab_time << " im= " << im <<
+        " DIR= " << dir << " Cd " << dragcoeff << '\n';
+      std::cout << "TIME= " << upper_slab_time << " im= " << im <<
+        " DIR= " << dir << " PCd " << pdragcoeff << '\n';
 
-    if (symmetry_flag==1) {
-     dragcoeff*=2.0;
-     pdragcoeff*=2.0;
-    } else if (symmetry_flag!=0)
-     amrex::Error("symmetry_flag invalid");
+      std::cout << "TIME= " << upper_slab_time << " im= " << im <<
+        " DIR= " << dir << " Cdx2 " << dragcoeff*2 << '\n';
+      std::cout << "TIME= " << upper_slab_time << " im= " << im <<
+        " DIR= " << dir << " PCdx2 " << pdragcoeff*2 << '\n';
 
-    std::cout << "TIME= " << upper_slab_time << " Cd " << dragcoeff << '\n';
-    std::cout << "TIME= " << upper_slab_time << " PCd " << pdragcoeff << '\n';
-    std::cout << "Cd computed as F/(rho U^2 diam/2 ) \n";
-    std::cout << "(rho)denconst0=" << denconst[0] << '\n';
-    std::cout << "U=" << UU << '\n';
-    std::cout << "(A/2)radblob=" << radblob << '\n';
-   }  // dcoef<>0
-  } // probtype=32
+      std::cout << "Cd computed as F/(rho U^2 diam/2 ) \n";
+      std::cout << "(rho)denconst0=" << denconst[0] << '\n';
+      std::cout << "U=" << UU << '\n';
+      std::cout << "(A/2)radblob=" << radblob << '\n';
+     }  // dcoef<>0
 
-  local_counter=0;
+     local_counter++;
+    }
+   }
+  } //probtype==32
+
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
