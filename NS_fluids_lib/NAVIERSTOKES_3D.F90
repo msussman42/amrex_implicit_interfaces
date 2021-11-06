@@ -6610,15 +6610,23 @@ END SUBROUTINE SIMP
 
       INTEGER_T filler_comp,FE_sum_comp,drag_sum_comp
       INTEGER_T minint_sum_comp,maxint_sum_comp
-      INTEGER_T pdrag_sum_comp,minden_sum_comp,maxden_sum_comp
+
+      INTEGER_T pdrag_sum_comp
+      INTEGER_T visco_sum_comp
+
+      INTEGER_T minden_sum_comp,maxden_sum_comp
       INTEGER_T xnot_amp_sum_comp,cen_sum_comp
       INTEGER_T mincen_sum_comp,maxcen_sum_comp
       INTEGER_T mass_sum_comp,mom_sum_comp,energy_sum_comp
       INTEGER_T left_pressure_comp
       INTEGER_T kinetic_energy_comp
       INTEGER_T LS_F_sum_comp,LS_cen_sum_comp
-      INTEGER_T torque_sum_comp,ptorque_sum_comp
+
+      INTEGER_T torque_sum_comp
+      INTEGER_T ptorque_sum_comp
+      INTEGER_T viscotorque_sum_comp
       INTEGER_T step_perim_sum_comp
+
       INTEGER_T minint_slice
       INTEGER_T maxint_slice
       INTEGER_T vort_sum_comp
@@ -6734,11 +6742,16 @@ END SUBROUTINE SIMP
 
       filler_comp=0
       FE_sum_comp=filler_comp+1
+
       drag_sum_comp=FE_sum_comp+2*nmat
-      minint_sum_comp=drag_sum_comp+3
+
+      minint_sum_comp=drag_sum_comp+3*nmat
       maxint_sum_comp=minint_sum_comp+3*nmat
+
       pdrag_sum_comp=maxint_sum_comp+3*nmat
-      minden_sum_comp=pdrag_sum_comp+3
+      visco_sum_comp=pdrag_sum_comp+3*nmat
+
+      minden_sum_comp=visco_sum_comp+3*nmat
       maxden_sum_comp=minden_sum_comp+2*nmat
       xnot_amp_sum_comp=maxden_sum_comp+2*nmat
       cen_sum_comp=xnot_amp_sum_comp+1
@@ -6751,10 +6764,13 @@ END SUBROUTINE SIMP
       kinetic_energy_comp=left_pressure_comp+4
       LS_F_sum_comp=kinetic_energy_comp+nmat
       LS_cen_sum_comp=LS_F_sum_comp+nmat
+
       torque_sum_comp=LS_cen_sum_comp+3*nmat
-      ptorque_sum_comp=torque_sum_comp+3
-      step_perim_sum_comp=ptorque_sum_comp+3
-      minint_slice=step_perim_sum_comp+1
+      ptorque_sum_comp=torque_sum_comp+3*nmat
+      viscotorque_sum_comp=ptorque_sum_comp+3*nmat
+      step_perim_sum_comp=viscotorque_sum_comp+3*nmat
+
+      minint_slice=step_perim_sum_comp+nmat
       maxint_slice=minint_slice+nmat
       vort_sum_comp=maxint_slice+nmat
       vort_error=vort_sum_comp+3
