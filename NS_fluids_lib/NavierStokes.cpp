@@ -163,7 +163,7 @@
 */
 
 #include <NavierStokes.H>
-#include "DRAG_COMP.H"
+#include <DRAG_COMP.H>
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>
 #include <MARCHING_TETRA_F.H>
@@ -16770,22 +16770,22 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- if (integrated_quantities.size()!=13)
+ if (integrated_quantities.size()!=N_DRAG)
   amrex::Error("integrated_quantities invalid size");
  
  Vector< Vector<Real> > local_integrated_quantities;
  local_integrated_quantities.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  local_integrated_quantities[tid].resize(13);
-  for (int iq=0;iq<13;iq++)
+  local_integrated_quantities[tid].resize(N_DRAG);
+  for (int iq=0;iq<N_DRAG;iq++)
    local_integrated_quantities[tid][iq]=0.0;
  } // tid
 
 // gear problem: probtype=563, axis_dir=2, 3D
 // scale torque by 2 pi vinletgas/60
 
- if (localMF[DRAG_MF]->nComp()!=4*AMREX_SPACEDIM+1)
+ if (localMF[DRAG_MF]->nComp()!=N_DRAG)
   amrex::Error("drag ncomp invalid");
 
  const Real* dx = geom.CellSize();
@@ -16839,6 +16839,11 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
  }
+
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("NUM_TENSOR_TYPE invalid");
 
  int elastic_ntensor=num_materials_viscoelastic*NUM_TENSOR_TYPE;
  int VISCOTEN_ALL_MAT_MF_local=0;
@@ -16920,7 +16925,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 
    // hoop stress, centripetal force, coriolis effect still not
    // considered.
-   // in: DERIVE_3D.F90
+   // fort_getdrag is declared in: DERIVE_3D.F90
   fort_getdrag(
    &isweep,
    integrated_quantities.dataPtr(),
@@ -16973,13 +16978,13 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 } // omp
  ns_reconcile_d_num(100);
 
- int iqstart=0;
- int iqend=13;
- if (isweep==0) 
-  iqstart=9;
- else if (isweep==1)
-  iqend=9;
- else
+ int iqstart=DRAGCOMP_FORCE;
+ int iqend=N_DRAG;
+ if (isweep==0) {
+  iqstart=DRAGCOMP_COM;
+ } else if (isweep==1) {
+  iqend=DRAGCOMP_COM;
+ } else
   amrex::Error("isweep invalid");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
@@ -20729,11 +20734,11 @@ NavierStokes::volWgtSumALL(
 
  make_physics_varsALL(project_option,post_restart_flag,0);
 
-  // force,torque,moment of inertia,COM,mass
- allocate_array(0,4*AMREX_SPACEDIM+1,-1,DRAG_MF);
+  // see <DRAG_COMP.H>
+ allocate_array(0,N_DRAG,-1,DRAG_MF);
 
  Vector<Real> integrated_quantities;
- integrated_quantities.resize(13); 
+ integrated_quantities.resize(N_DRAG); 
 
 // GetDragALL section------------------------------------------
 //
@@ -20750,14 +20755,9 @@ NavierStokes::volWgtSumALL(
 // r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
 // torque_axis=integral r_axis x (div sigma + rho g)=
 //   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
-// integrated_quantities:
-//  1..3  : F=integral_boundary sigma dot n + integral rho g
-//  4..6  : torque=integral_boundary r x sigma dot n + integral r x rho g  
-//  7..9  : moments of inertia
-//  10..12: integral rho x
-//  13    : integral rho
+// integrated_quantities: see <DRAG_COMP.H>
 
- for (int iq=0;iq<13;iq++) {
+ for (int iq=0;iq<N_DRAG;iq++) {
   integrated_quantities[iq]=0.0;
  }
 
@@ -20835,21 +20835,24 @@ NavierStokes::volWgtSumALL(
   }
  }
 
-  // isweep
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   for (int iq=0;iq<13;iq++)
+   for (int iq=0;iq<N_DRAG;iq++) {
     std::cout << "GetDrag  iq= " << iq << " integrated_quantities= " <<
      integrated_quantities[iq] << '\n';
-   Real mass=integrated_quantities[12];
-   if (mass>0.0) {
-    for (int iq=9;iq<9+AMREX_SPACEDIM;iq++)
-     std::cout << "COM iq= " << iq << " COM= " <<
-      integrated_quantities[iq]/mass << '\n';
    }
+   for (int im=0;im<num_materials;im++) {
+    Real mass=integrated_quantities[DRAGCOMP_MASS+im];
+    if (mass>0.0) {
+     for (int idir=0;idir<3;idir++) {
+      std::cout << "COM im,idir= " << im << ' ' << idir << " COM= " <<
+        integrated_quantities[DRAGCOMP_COM+im*3+idir]/mass << '\n';
+     } //idir=0,1,2
+    } //mass>0.0
 
-  }
- }
+   } //im=0;im<nmat
+  } //IOproc
+ } //verbose>0
 
 // END GetDragALL section------------------------------------------
 
