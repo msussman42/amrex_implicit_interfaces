@@ -312,7 +312,7 @@ else if (axis_dir.eq.1) then ! Tomas Solano
  else if ((LS(im_solid_Tomas).lt.zero).and. &
           (velsolid_flag.eq.0)) then
 
-  if (1.eq.0) then
+  if (1.eq.1) then
    VEL(adv_dir) = adv_vel
   else
    VEL(adv_dir) = zero
