@@ -1732,8 +1732,6 @@ stop
       REAL_T ls_visc(nmat)
       REAL_T lsleft(nmat)
       REAL_T lsright(nmat)
-      REAL_T solid_dist_primary
-      INTEGER_T im_solid_crit
       REAL_T pressure_load(3)
       REAL_T viscous_stress_load(3)
       REAL_T visco_stress_load(3)
@@ -1752,7 +1750,6 @@ stop
       INTEGER_T im_primary
       INTEGER_T im_left
       INTEGER_T im_right
-      INTEGER_T FSI_exclude
       REAL_T volgrid,mass
       REAL_T cengrid(SDIM)
       REAL_T global_centroid(SDIM)

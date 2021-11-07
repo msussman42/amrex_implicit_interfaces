@@ -18040,9 +18040,9 @@ void NavierStokes::volWgtSum(
  int maxint_sum_comp=minint_sum_comp+3*nmat;
 
  int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int visco_sum_comp=pdrag_sum_comp+3*nmat;
+ int viscodrag_sum_comp=pdrag_sum_comp+3*nmat;
 
- int minden_sum_comp=visco_sum_comp+3*nmat;
+ int minden_sum_comp=viscodrag_sum_comp+3*nmat;
  int maxden_sum_comp=minden_sum_comp+2*nmat;
  int xnot_amp_sum_comp=maxden_sum_comp+2*nmat;
  int cen_sum_comp=xnot_amp_sum_comp+1;
@@ -18126,6 +18126,10 @@ void NavierStokes::volWgtSum(
  VOF_Recon_resize(2,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,2,54);
  debug_ngrow(CELLTENSOR_MF,1,54);
+
+ debug_ngrow(DRAG_MF,0,50);
+ if (localMF[DRAG_MF]->nComp()!=N_DRAG)
+  amrex::Error("drag ncomp invalid");
 
   // velocity and pressure
  MultiFab* vel=getState(1,0,(AMREX_SPACEDIM+1),upper_slab_time);

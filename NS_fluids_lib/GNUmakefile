@@ -83,7 +83,7 @@ FCOMP = gfortran
 # engineering_long
 # hpc-login.rcc.fsu.edu  "module load intel" or 
 #                        "module load gnu openmpi"(44 not 57)
-# sussman + old password
+# sussman + old password (44, repeat once lower, then upper)
 # bromwich or compute1 GNU MPI:
 #  "module load mpi/openmpi-4-gcc8"
 # csh: command >& out_and_err_file &

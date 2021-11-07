@@ -2097,9 +2097,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int maxint_sum_comp=minint_sum_comp+3*nmat;
 
  int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int visco_sum_comp=pdrag_sum_comp+3*nmat;
+ int viscodrag_sum_comp=pdrag_sum_comp+3*nmat;
 
- int minden_sum_comp=visco_sum_comp+3*nmat;
+ int minden_sum_comp=viscodrag_sum_comp+3*nmat;
  int maxden_sum_comp=minden_sum_comp+2*nmat;
  int xnot_amp_sum_comp=maxden_sum_comp+2*nmat;
  int cen_sum_comp=xnot_amp_sum_comp+1;
@@ -2772,7 +2772,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
      Real power=sumdata[drag_sum_comp+local_counter]*(3.0/thick)/1.0E7;
      std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
       " DIR= " << dir << " predicted power loss " << 
-      sumdata[drag_sum_comp+local_counter] << '\n';
+      power << '\n';
      std::cout << "expected power loss 500 watts \n";
      local_counter++;
     }
@@ -2843,7 +2843,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
      " DIR= " << dir << " VDRAG " << 
      sumdata[drag_sum_comp+local_counter]-
      sumdata[pdrag_sum_comp+local_counter]-
-     sumdata[visco_sum_comp+local_counter] << '\n';
+     sumdata[viscodrag_sum_comp+local_counter] << '\n';
     local_counter++;
    }
   }
