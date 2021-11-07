@@ -1725,7 +1725,7 @@ stop
       INTEGER_T side_visc
       INTEGER_T dirend
       INTEGER_T dir_visc
-      INTEGER_T i1,j1,n
+      INTEGER_T i1,j1
       INTEGER_T vofcomp,dencomp,viscbase
       INTEGER_T icell,jcell,kcell
       REAL_T vel6point(SDIM,2,SDIM)
@@ -1760,7 +1760,7 @@ stop
       REAL_T pres_rcross(3)
       REAL_T visc_rcross(3)
       REAL_T visco_rcross(3)
-      REAL_T localtorque(SDIM)
+      REAL_T grav_localtorque(SDIM)
       REAL_T pres_localtorque(SDIM)
       REAL_T visc_localtorque(SDIM)
       REAL_T visco_localtorque(SDIM)
@@ -1939,8 +1939,8 @@ stop
        do icell=growlo(1),growhi(1)
        do jcell=growlo(2),growhi(2)
        do kcell=growlo(3),growhi(3)
-        do n=1,N_DRAG
-         drag(D_DECL(icell,jcell,kcell),n)=zero
+        do dir=1,N_DRAG
+         drag(D_DECL(icell,jcell,kcell),dir)=zero
         enddo
         do im_test=1,nmat
          mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
@@ -2011,7 +2011,8 @@ stop
         endif
        enddo ! im_test=1..nmat
      
-        ! buoyancy force (body forces within the materials) 
+        ! buoyancy force (body forces within the materials).
+        ! Also, update the moment of inertia integral.
        do icell=growlo(1),growhi(1)
        do jcell=growlo(2),growhi(2)
        do kcell=growlo(3),growhi(3)
@@ -2050,12 +2051,12 @@ stop
           !       (a1 b2 - a2 b1) hat(k)
           call crossprod(rvec,gravvector,rcross)
           do dir=1,SDIM
-           localtorque(dir)=zero
+           grav_localtorque(dir)=zero
           enddo
-          localtorque(1)=rcross(3) ! x-y plane of rotation
+          grav_localtorque(1)=rcross(3) ! x-y plane of rotation
           if (SDIM.eq.3) then
-           localtorque(2)=rcross(1) ! y-z plane of rotation
-           localtorque(SDIM)=rcross(2) ! x-z plane of rotation
+           grav_localtorque(2)=rcross(1) ! y-z plane of rotation
+           grav_localtorque(SDIM)=rcross(2) ! x-z plane of rotation
           endif
 
           ibase=DRAGCOMP_MOMINERTIA+3*(im_test-1)
@@ -2072,9 +2073,9 @@ stop
  
           ibase=DRAGCOMP_TORQUE+3*(im_test-1)
           do dir=1,dirend
-           localsum(ibase+dir)=localsum(ibase+dir)+localtorque(dir)
+           localsum(ibase+dir)=localsum(ibase+dir)+grav_localtorque(dir)
            drag(D_DECL(icell,jcell,kcell),ibase+dir)= &
-             drag(D_DECL(icell,jcell,kcell),ibase+dir)+localtorque(dir)
+             drag(D_DECL(icell,jcell,kcell),ibase+dir)+grav_localtorque(dir)
           enddo
 
          else if (mask_cell.eq.0) then
@@ -2090,7 +2091,7 @@ stop
        enddo
        enddo  ! icell,jcell,kcell (cells - body forces and torques (buoancy) )
 
-        ! cells - pressure and viscosity
+        ! cells - pressure, viscosity, viscoelastic
        do icell=growlo(1),growhi(1)
        do jcell=growlo(2),growhi(2)
        do kcell=growlo(3),growhi(3)
@@ -2395,17 +2396,37 @@ stop
 ! w=2 pi vinletgas/60 radians/second
 ! so for gear problem, scale torque by 2 pi abs(vinletgas)/60
 
-              do n=1,SDIM
-               drag(D_DECL(icell,jcell,kcell),n)= &
-                drag(D_DECL(icell,jcell,kcell),n)+stress(n)
-               drag(D_DECL(icell,jcell,kcell),n)= &
-                drag(D_DECL(icell,jcell,kcell),n)+pressure_load(n)
+              do dir=1,SDIM
+               ibase=DRAGCOMP_FORCE+3*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                pressure_load(dir)+ &
+                viscous_stress_load(dir)+ &
+                visco_stress_load(dir)
 
-               localsum(n)=localsum(n)+stress(n)
-               localsum(n)=localsum(n)+pressure_load(n)
+               localsum(ibase)=localsum(ibase)+ &
+                pressure_load(dir)+ &
+                viscous_stress_load(dir)+ &
+                visco_stress_load(dir)
 
-               drag(D_DECL(icell,jcell,kcell),n+SDIM)= &
-                drag(D_DECL(icell,jcell,kcell),n+SDIM)+pressure_load(n)
+               ibase=DRAGCOMP_PFORCE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                pressure_load(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                pressure_load(dir)
+
+               ibase=DRAGCOMP_VISCOFORCE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                visco_stress_load(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                visco_stress_load(dir)
+
               enddo
 
               dirend=1
@@ -2414,44 +2435,57 @@ stop
               endif
 
               do dir=1,dirend
-               localsum(3+dir)=localsum(3+dir)+localtorque(dir)
-               localsum(3+dir)=localsum(3+dir)+plocaltorque(dir)
 
-               drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)= &
-                drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)+ &
-                localtorque(dir)
-               drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)= &
-                drag(D_DECL(icell,jcell,kcell),2*SDIM+dir)+ &
-                plocaltorque(dir)
-               drag(D_DECL(icell,jcell,kcell),3*SDIM+dir)= &
-                drag(D_DECL(icell,jcell,kcell),3*SDIM+dir)+ &
-                plocaltorque(dir)
+               ibase=DRAGCOMP_TORQUE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                pres_localtorque(dir)+ &
+                visc_localtorque(dir)+ &
+                visco_localtorque(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                pres_localtorque(dir)+ &
+                visc_localtorque(dir)+ &
+                visco_localtorque(dir)
+
+               ibase=DRAGCOMP_PTORQUE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                pres_localtorque(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                pres_localtorque(dir)
+
+               ibase=DRAGCOMP_VISCOTORQUE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                visco_localtorque(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                visco_localtorque(dir)
+
               enddo ! dir=1..dirend
 
-              drag(D_DECL(icell,jcell,kcell),4*SDIM+1)= &
-               drag(D_DECL(icell,jcell,kcell),4*SDIM+1)+facearea
+              ibase=DRAGCOMP_PERIM+im_test
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+               drag(D_DECL(icell,jcell,kcell),ibase)+facearea
 
-             else if (mask_cell.eq.0) then
-              ! do nothing
              else
-              print *,"mask_cell invalid"
+              print *,"im_left, im_right, im_test corruption"
               stop
              endif
 
-            else
-             print *,"is_rigid(nmat,im_left) or is_rigid(nmat,im_right) bad"
-             stop
-            endif
+            enddo ! side_cell=0,1
+           enddo ! facedir=1..sdim
+          else
+           print *,"im_primary or im_test corruption"
+           stop
+          endif
 
-           enddo ! side_cell=0,1
-          enddo ! facedir=1..sdim 
-
-         else if (is_rigid(nmat,im_primary).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid(nmat,im_primary) invalid"
-          stop
-         endif
+         enddo ! im_test=1..nmat
 
         else if (mask_cell.eq.0) then
          ! do nothing
