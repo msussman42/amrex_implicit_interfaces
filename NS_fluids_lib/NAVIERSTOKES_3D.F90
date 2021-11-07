@@ -6617,7 +6617,7 @@ END SUBROUTINE SIMP
       INTEGER_T minint_sum_comp,maxint_sum_comp
 
       INTEGER_T pdrag_sum_comp
-      INTEGER_T visco_sum_comp
+      INTEGER_T viscodrag_sum_comp
 
       INTEGER_T minden_sum_comp,maxden_sum_comp
       INTEGER_T xnot_amp_sum_comp,cen_sum_comp
@@ -6754,9 +6754,9 @@ END SUBROUTINE SIMP
       maxint_sum_comp=minint_sum_comp+3*nmat
 
       pdrag_sum_comp=maxint_sum_comp+3*nmat
-      visco_sum_comp=pdrag_sum_comp+3*nmat
+      viscodrag_sum_comp=pdrag_sum_comp+3*nmat
 
-      minden_sum_comp=visco_sum_comp+3*nmat
+      minden_sum_comp=viscodrag_sum_comp+3*nmat
       maxden_sum_comp=minden_sum_comp+2*nmat
       xnot_amp_sum_comp=maxden_sum_comp+2*nmat
       cen_sum_comp=xnot_amp_sum_comp+1
