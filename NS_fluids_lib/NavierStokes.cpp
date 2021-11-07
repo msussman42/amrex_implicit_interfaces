@@ -20841,7 +20841,32 @@ NavierStokes::volWgtSumALL(
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "DRAGCOMP nmat=" << num_materials << '\n';
    for (int iq=0;iq<N_DRAG;iq++) {
+    if (iq==DRAGCOMP_FORCE) {
+     std::cout << "DRAGCOMP_FORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_PFORCE) {
+     std::cout << "DRAGCOMP_PFORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_VISCOFORCE) {
+     std::cout << "DRAGCOMP_VISCOFORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_TORQUE) {
+     std::cout << "DRAGCOMP_TORQUE 3 nmat\n";
+    } else if (iq==DRAGCOMP_PTORQUE) {
+     std::cout << "DRAGCOMP_PTORQUE 3 nmat\n";
+    } else if (iq==DRAGCOMP_VISCOTORQUE) {
+     std::cout << "DRAGCOMP_VISCOTORQUE 3 nmat\n";
+    } else if (iq==DRAGCOMP_COM) {
+     std::cout << "DRAGCOMP_COM 3 nmat\n";
+    } else if (iq==DRAGCOMP_MOMINERTIA) {
+     std::cout << "DRAGCOMP_MOMINERTIA 3 nmat\n";
+    } else if (iq==DRAGCOMP_MASS) {
+     std::cout << "DRAGCOMP_MASS nmat\n";
+    } else if (iq==DRAGCOMP_PERIM) {
+     std::cout << "DRAGCOMP_PERIM nmat\n";
+    } else {
+     //do nothing
+    }
+     
     std::cout << "GetDrag  iq= " << iq << " integrated_quantities= " <<
      integrated_quantities[iq] << '\n';
    }

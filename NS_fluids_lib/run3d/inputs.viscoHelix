@@ -68,9 +68,11 @@ amr.plotfile_on_restart=1
 ns.output_drop_distribution=1
 ns.v = 1
 
-amr.n_cell    = 32 32 32    #64 64 64     
+amr.n_cell    = 32 32 32    #64 64 64 
+#amr.max_level = 3
+#amr.n_cell=16 16 16
+amr.max_level=0
 
-amr.max_level = 3
 fabarray.mfiter_tile_size=16 16 16    #32 32 32  #NEW
 
 amr.regrid_int      = 1       # how often to regrid
@@ -90,14 +92,15 @@ amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
 # Only tecplot format plot files are output; ViSit can read tecplot (there is
 # a ViSit bug for animation of grid based tecplot files that use AMR)
-amr.plot_int        = 50 # was 100  (plot_int=1 for testing)
+#amr.plot_int        = 50 # was 100  (plot_int=1 for testing)
+amr.plot_int=1
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
 amr.file_name_digits=7
 
 #amr.restart   =chk0000600
-amr.restart   =chk0001000
+#amr.restart   =chk0001000
 #amr.trace2   =1
 #amr.trace3   =1
 #amr.trace4   =1
