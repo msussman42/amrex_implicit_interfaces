@@ -1,5 +1,7 @@
 #undef BL_LANG_CC
+#ifndef BL_LANG_FORT
 #define BL_LANG_FORT
+#endif
 
 #include "AMReX_BC_TYPES.H"
 
@@ -37,7 +39,7 @@ IMPLICIT NONE
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
 INTEGER,PARAMETER          :: probtype_in=400
-INTEGER          :: stefan_flag   !VARIABLE TSAT
+INTEGER        :: stefan_flag ! VARIABLE TSAT
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3
@@ -94,21 +96,17 @@ integer,parameter          :: sdim_in = 2
 
 INTEGER :: nmax
 INTEGER :: nmat_in
-INTEGER :: precond_type_in
 INTEGER :: dir
 INTEGER :: side
 REAL(kind=8) :: xcen,ycen
 REAL(kind=8) :: xcen_vec(2)
-REAL(kind=8) :: time_init,xgrid,ygrid
+REAL(kind=8) :: time_init
 REAL(kind=8) :: deltat_in
 REAL(kind=8) :: deltat_polar
 INTEGER      :: subcycling_step
-REAL(kind=8) :: bicgstab_tol_in
-REAL(kind=8) :: current_time_in
 
-INTEGER                    :: i,j,tm
+INTEGER                    :: i,j
 REAL(KIND=8)               :: h_in
-REAL(KIND=8)               :: time_n,time_np1
 !REAL(KIND=8),dimension(-1:N+1) :: XLINE,YLINE 
 REAL(KIND=8),dimension(:), allocatable :: XLINE,YLINE ! nodes
 !real(kind=8),dimension(-1:N) :: xCC,yCC       
@@ -122,11 +120,9 @@ real(kind=8)               :: dx_coarse
 TYPE(POLYGON),dimension(:,:), allocatable :: CELL_FAB
 real(kind=8),external      :: exact_temperature
 real(kind=8)               :: max_front_vel
-real(kind=8)               :: test_vel
 real(kind=8)               :: lmSt
 real(kind=8)               :: rstefan
 real(kind=8)               :: T_FIELD
-real(kind=8)               :: stefan_time
 real(kind=8)               :: local_vof
 
 real(kind=8)                :: xsten_cache(-1:1)
@@ -134,10 +130,7 @@ integer                     :: nhalf
 integer                     :: imof
 integer                     :: im
 integer                     :: im1
-integer                     :: im_opp
-real(kind=8)                :: sumT,sumvf,sumvf2,voltotal,local_Pi
-real(kind=8)                :: eff_radius
-real(kind=8)                :: expect_radius
+real(kind=8)                :: sumT,sumvf,local_Pi
 real(kind=8)                :: test_radblob
 
 !---------------------------------------------------
@@ -155,26 +148,14 @@ real(kind=8) :: problo_arr(2)
 
 integer local_state_ncomp
 integer nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in
-integer hflag
 integer vofcomp
-integer vofcomp2
 integer scomp
-integer nsteps
-integer total_nsteps_parm
 integer inode
 real(kind=8) :: cc(2)
 real(kind=8) :: dtemp1,dtemp2
-real(kind=8) :: sum_alpha
 real(kind=8) :: flxavg1,flxavg2
-real(kind=8) :: flxtot1,flxtot2
-real(kind=8) :: xlo_fluxtest,xhi_fluxtest
 real(kind=8) :: y_fluxtest1
 real(kind=8) :: y_fluxtest2
-real(kind=8) :: LL
-real(kind=8) :: TSAT
-
-integer j_fluxtest,ilo_fluxtest,ihi_fluxtest,isum
-integer icen,jcen
 
 integer ireverse,isink
 
@@ -209,9 +190,9 @@ real(kind=8) :: iter_average
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= June 15, 2020, 14:00pm"
+print *,"PROTOTYPE CODE DATE= November 9, 2021, 7:00am"
 
-stefan_flag=1  ! VARIABLE TSAT
+stefan_flag=1 ! VARIABLE TSAT
 
 global_nparts=0
 
