@@ -20,6 +20,24 @@ CTML_ESH = FALSE
 CTML_FSH = FALSE
 CTML_FBC = FALSE
 
+# LAMMPS:
+# November 9, 8:00am, 2021
+# lammps-29Sep2021
+# cd src
+# cd MAKE
+# cd ..
+# make yes-molecule
+#  "Installing package molecule"
+# make yes-extra-dump
+#  "Installing package extra-dump"
+# make serial
+# files created: liblammps.a, liblammps_serial.a, lmp_serial
+# mkdir ~sussman/lammps_run
+# cp lmp_serial ~sussman/lammps_run/.
+# put rod.LAMMPS_script and rod.LAMMPS_read_data in ~sussman/lammps_run
+# cd ~sussman/lammps_run
+# ./lmp_serial -in rod.LAMMPS_script
+# VMD to visualize "rod_LAMMPS_atom.dcd"
 # CYGWIN:
 # CYGWIN=TRUE
 #  (causes: -Wl,--image-base -Wl,0x10000000)
