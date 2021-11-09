@@ -22,27 +22,6 @@ USE integrate_module
 
 IMPLICIT NONE
 
-! Dai and Scannapieco: no graph or table 
-!  discussing convergence characteristics
-!  of the gradient for multimaterial problems.
-! Garimella and Lipnikov: 2nd order, but rate of convergence not 
-!  investigated for filament problem?
-! Dawes: surrogate supermesh - filament problem?
-! Kinkinzon: filament over 1 cell thick
-! Zhiliakov et al: ???
-! Yang Liu
-! problem type
-! 13 = star with thin filament
-!      (vof_cisl.F90: pentaeps, dirichlet_pentafoil)
-! 14 = star for two material sanity check
-! 15 = hypocycloid with 2 materials
-! 16 = nucleate boiling diffusion with thin 
-!      filament between vapor bubble and substrate
-!      (vof_cisl.F90: thermal_delta, declared in vof_cisl but defined in main)
-! 17 = hypocycloid with 5 materials
-! 19 = annulus cvg test
-! 20 = hypocycloid with 6 materials
-!
 !
 ! 0=flat interface  
 ! 1=annulus  
@@ -59,25 +38,16 @@ IMPLICIT NONE
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
-! 401=ice melt (material 1 liquid, material 2 gas, material 3 ice)
-! 402=NASA boiling (material 1 liquid, material 2 gas, material 3 substrate)
-! 403=Dendrite problem From Tryggvason or Chen Merriman Osher Smereka 1997
-!  Figure 8.
-INTEGER,PARAMETER          :: probtype_in=403
+INTEGER,PARAMETER          :: probtype_in=400
 INTEGER        :: stefan_flag ! VARIABLE TSAT
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
-! buffer for probtype_in=3 (not used for shrinking circle w/T=TSAT outside)
+! buffer for probtype_in=3
 real(kind=8),PARAMETER     :: radblob2_in = 0.05d0  
-! adjust this for shrinking circle and maybe planar moving front.
-! for dendrite problem, center is (2,2)
-real(kind=8),PARAMETER     :: xblob_in = 2.0d0
-real(kind=8),PARAMETER     :: yblob_in = 2.0d0
+real(kind=8),PARAMETER     :: xblob_in = 0.2d0
+real(kind=8),PARAMETER     :: yblob_in = 0.5d0
 ! for probtype=16 , top and bot temperature profile
-! for dendrite problem: St=-0.5  Tinfinity=-0.5  T_ice=-1.0
-!   Tsat=0.0
-! bias temperature by 2 => Tinfinity=1.5  T_ice=1.0  Tsat=2.0
-real(kind=8),parameter     :: NB_top=1.5d0, NB_bot=1.5d0  
+real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0  
 ! 1.0d0 for probtype==3
 ! -4.0d0 for probtype==4 (TDIFF=T_DISK_CENTER - TSAT)
 ! 10.0d0 for probtype==16
@@ -90,8 +60,7 @@ real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
 ! 1.0d0 for probtype==400 (melting gingerbread)
-! -1.0d0 for probtype==403 (dendrite formation)
-real(kind=8),PARAMETER     :: latent_heat_in = -1.0d0
+real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 3
 INTEGER,PARAMETER          :: local_operator_external = 1
@@ -101,8 +70,8 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=1 non-deforming boundary tests
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
-INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 2000
-INTEGER,PARAMETER          :: plot_int = 20  ! 20
+INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 4000
+INTEGER,PARAMETER          :: plot_int = 1
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -114,17 +83,15 @@ INTEGER,PARAMETER          :: plot_int = 20  ! 20
 !
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
-! probtype_in==4: TSTOP=1.25D-3
-! probtype_in==400: TSTOP=0.5d0
-! probtype_in==403: TSTOP=0.8d0 (Chen, Merriman, Osher, Smereka)
-! probtype_in==403: TSTOP=0.4d0 (smooth test)
+! VALIDATION TSTOP:
+!real(kind=8),parameter     :: TSTOP = 0.5d0
 ! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.8D0
+real(kind=8),parameter     :: TSTOP = 0.02d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
 real(kind=8),parameter     :: CFL = 0.5d0
-real(kind=8),parameter     :: problo= 0.0d0, probhi= 4.0d0
+real(kind=8),parameter     :: problo= 0.0d0, probhi= 1.0d0
 integer,parameter          :: sdim_in = 2
 
 INTEGER :: nmax
@@ -190,7 +157,6 @@ real(kind=8) :: flxavg1,flxavg2
 real(kind=8) :: y_fluxtest1
 real(kind=8) :: y_fluxtest2
 
-
 integer ireverse,isink
 
 ! -1:N,-1:N,nmat
@@ -221,57 +187,32 @@ integer :: im_measure
 integer :: constant_K_test
 integer :: iter
 real(kind=8) :: iter_average
-real(kind=8) :: local_center(2)
 
 integer :: sci_max_level
 
-print *,"PROTOTYPE CODE DATE= October 25, 2021, 19:00pm"
+print *,"PROTOTYPE CODE DATE= November 9, 2021, 7:00am"
 
 stefan_flag=1 ! VARIABLE TSAT
 
-! material 1 is liquid (outer material)
-! material 2 is ice (seed)
 global_nparts=0
 
-im_measure=2  ! ice
+im_measure=2
 constant_K_test=0
 
 print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
-! dendrite probtype_in.eq.403
+! probtype_in=400 for gingerbread man problem
 ! N space
 ! M time
-! for dendrite growth test problem, time step is fixed
-! (fixed_dt_main==-1.0)
-! 64,128,256
-! VERIFICATION: M_START=1600, 1600, 1600 corresponding to 64,128,256
-! 
-! saturation_temp_vel(1)=0.002   (liquid to ice)
-! saturation_temp_curv(1)=0.002  (liquid to ice)
-!
-! In order to rotate the dendrite:
-! set dendrite_angle.
-N_START=256
-N_FINISH=256
-!N_START=64
-!N_FINISH=64
-M_START=1600
+N_START=64
+N_FINISH=64
+! VERIFICATION: M_START=50,100,200 corresponding to 64,128,256
+M_START=50
 M_FACTOR=2
+height_function_flag_global=0
 
-axis_dir=0 !standard dendrite problem non-circular seed probtype_in.eq.403
-!axis_dir=1 ! circular seed for probtype_in.eq.403
-!radblob10=1.0d0  ! 0.1d0 is from the earlier articles
-radblob10=0.1d0  ! 0.1d0 is from the earlier articles
-height_function_flag_global=1  ! =1 for height function
-                               ! =2 for sanity check
-! set transition_region=0.0d0 for seed problem from Chen and Smereka
-! or Juric and Tryggvason.
-!transition_region=0.25d0 ! initial circular seed (transition_region>0.0)
-transition_region=0.0d0 ! initial circular seed (transition_region>0.0)
-
-if (probtype_in.eq.4) then ! expanding or shrinking circle
-        ! time step hardwire for this test
+if (probtype_in.eq.4) then
  fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
 else if ((probtype_in.eq.13).or. & ! hypocycloid
          (probtype_in.eq.15).or. &
@@ -289,14 +230,18 @@ else if (probtype_in.eq.2) then ! vertical
  fixed_dt_main=-1.0d0 
 else if (probtype_in.eq.3) then ! expanding circle
  fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
+else if (probtype_in.eq.4) then ! expanding or shrinking circle
+ fixed_dt_main=-1.0d0  ! TSTOP=1.25D-3
 else if (probtype_in.eq.5) then ! phase change vertical planar interface
  fixed_dt_main=-1.0d0  ! TSTOP=0.5d0
 else if (probtype_in.eq.400) then ! gingerbread man
- fixed_dt_main=0.0d0
-else if (probtype_in.eq.403) then ! dendrite
- fixed_dt_main=0.0d0
+ ! fixed_dt=0.0d0 => use CFL condition
+ ! fixed_dt=-1.0d0 => use TSTOP/M
+ ! VALIDATION:
+ ! fixed_dt_main=0.0d0
  ! VERIFICATION:
  fixed_dt_main=-1.0d0
+ print *,"gingeroutline should be in run directory"
 else
  print *,"probtype_in invalid"
  stop
@@ -345,11 +290,6 @@ ERRTOL=0.01D0
 VOFTOL_local=VOFTOL
 
 local_Pi=4.0d0*atan(1.0d0)
-
-! dendrite_angle=pi/4.0d0  ! 45 degrees
-! dendrite_angle=pi/6.0d0  ! 30 degrees
- dendrite_angle=pi/3.0d0  ! 60 degrees
-! dendrite_angle=0.0d0     ! 0 degrees
 
 ! pcurve_ls defined in vof_cisl.F90
 pcurve_ls = 0.0d0
@@ -495,7 +435,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
- else if (probtype_in.eq.400) then
+ else if (probtype_in.eq.400) then ! gingerbread
 
    sci_max_level=2
    nmat_in=2
@@ -517,46 +457,11 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        (local_linear_exact.eq.1)) then
     ! do nothing
    else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==400"
+    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
     stop
    endif
 
    FSI_flag(1)=7 ! gingerbread (in the man)
-
- else if (probtype_in.eq.403) then  ! dendrite
-
-   print *,"dendrite_angle is ",dendrite_angle
-
-   sci_max_level=0
-   nmat_in=2
-   fort_heatviscconst(1)=1.0d0  ! outside dendrite (T0=1.5) 
-   fort_heatviscconst(2)=1.0d0  ! inside dendrite  (T0=1.0)
-   do dir=1,sdim_in
-   do side=1,2
-    physbc(dir,side)=REFLECT_EVEN
-    physbc_value(dir,side)=0.0
-   enddo
-   enddo
-   if (1.eq.0) then
-    physbc(2,1)=EXT_DIR
-    physbc_value(2,1)=0.5d0
-    physbc(2,2)=EXT_DIR
-    physbc_value(2,2)=0.5d0
-    physbc(1,1)=EXT_DIR
-    physbc_value(1,1)=0.5d0
-    physbc(1,2)=EXT_DIR
-    physbc_value(1,2)=0.5d0
-   endif
-   if ((stefan_flag.eq.1).and. &
-       (local_operator_internal.eq.3).and. &
-       (local_operator_external.eq.1).and. &
-       (local_linear_exact.eq.1)) then
-    ! do nothing
-   else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact bad prob==400"
-    stop
-   endif
-
  else if (probtype_in.eq.5) then
 
    nmat_in=2
@@ -917,7 +822,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
  else if (probtype_in.eq.4) then
 
-    ! material 1 is inside the circle
    saturation_temp(1)=273.0d0
    saturation_temp(2)=273.0d0
    fort_tempconst(1)=273.0
@@ -956,10 +860,10 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
     ! max_front_vel
    if ((abs(latent_heat_in).gt.0.0d0).and. &
-       (fort_tempconst(1).ge.0.0d0).and. &
-       (fort_tempconst(2).ge.0.0d0)) then
+       (fort_heatviscconst(1).gt.0.0d0).and. &
+       (fort_heatviscconst(2).ge.0.0d0)) then
     max_front_vel=abs(TDIFF_in)* &
-      (fort_tempconst(1)+fort_tempconst(2))/abs(latent_heat_in)
+      (fort_heatviscconst(1)+fort_heatviscconst(2))/abs(latent_heat_in)
     if (max_front_vel.gt.0.0d0) then
      ! do nothing
     else
@@ -985,101 +889,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    fort_alpha(2)=1.0d0
    fort_stefan_number(1)=TDIFF_in/abs(latent_heat_in)
    fort_stefan_number(2)=TDIFF_in/abs(latent_heat_in)
-   fort_jacob_number(1)=fort_stefan_number(1)
-   fort_jacob_number(2)=fort_stefan_number(2)
-
-   fort_beta(1)=0.0d0
-   fort_beta(2)=0.0d0
-   fort_time_radblob(1)=0.0d0
-   fort_time_radblob(2)=0.0d0
-
-   print *,"probtype_in=",probtype_in
-   print *,"max_front_vel=",max_front_vel
-
- else if (probtype_in.eq.403) then
-
-    ! ST=-.5
-    ! in dimensionless units:
-    ! Twater=-0.5
-    ! Tsolid=0.0
-    ! Tsat=0.0
-    ! add 1.0:
-    ! Twater=0.5
-    ! Tsolid=1.0
-    ! Tsat=1.0
-!   saturation_temp(1)=1.0 ! liquid -> solid
-   saturation_temp(1)=273.0 ! liquid -> solid
-   saturation_temp(2)=0.0
-    ! phi_{12}=(phi_1 - phi_2)/2  < 0 in the dendrite
-    ! phi_{12} > 0 in the liquid
-    ! div grad phi12/|grad phi12| > 0 everywhere if phi12=sqrt(x^2+y^2) - r
-    ! Tinterface=TSAT - 0.002/R=TSAT-0.002*K(phi12)  R=radius of curvature
-    ! curvature is positive when the center of curvature lies in the solid
-    ! (ice) phase.  In Juric and Tryggvason, 1996, they say that K is "twice
-    ! the mean curvature" but in Chen, Merriman, Osher, and Smereka, the
-    ! extra factor of 2 is not included.   Recommended to compare
-    ! with Chen et al since they observed less numerically induced 
-    ! instability, than what observed by Juric and Tryggvason.
-   saturation_temp_curv(1)=0.002d0  ! 0.002d0 in Chen et al (liquid to ice)
-   saturation_temp_curv(2)=0.0d0    ! ice to liquid
-   saturation_temp_vel(1)=0.002d0   ! 0.002d0 in Chen et al (liquid to ice)
-   saturation_temp_vel(2)=0.0d0     ! ice to liquid
-
-   print *,"saturation_temp_curv(1)=",saturation_temp_curv(1) 
-   print *,"saturation_temp_curv(2)=",saturation_temp_curv(2) 
-   print *,"saturation_temp_vel(1)=",saturation_temp_vel(1) 
-   print *,"saturation_temp_vel(2)=",saturation_temp_vel(2) 
-!   fort_tempconst(1)=0.5d0  ! liquid (outside dendrite)
-!   fort_tempconst(2)=1.0d0  ! solid  (inside dendrite)
-   fort_tempconst(1)=272.5d0  ! liquid (outside dendrite)
-   fort_tempconst(2)=273.0d0  ! solid  (inside dendrite)
-
-   if (transition_region.gt.0.0d0) then
-    fort_tempconst(1)=fort_tempconst(1)-saturation_temp_curv(1)/radblob10
-    fort_tempconst(2)=fort_tempconst(2)-saturation_temp_curv(1)/radblob10
-    
-    physbc(2,1)=EXT_DIR
-    physbc_value(2,1)=fort_tempconst(1)
-    physbc(2,2)=EXT_DIR
-    physbc_value(2,2)=fort_tempconst(1)
-    physbc(1,1)=EXT_DIR
-    physbc_value(1,1)=fort_tempconst(1)
-    physbc(1,2)=EXT_DIR
-    physbc_value(1,2)=fort_tempconst(1)
-   else if (transition_region.eq.0.0d0) then
-    ! do nothing
-   else
-    print *,"transition region invalid"
-    stop
-   endif
-
-    ! max_front_vel
-   if ((abs(latent_heat_in).gt.0.0d0).and. &
-       (fort_tempconst(1).gt.0.0d0).and. &
-       (fort_tempconst(2).gt.0.0d0)) then
-    max_front_vel=4.0d0 * 0.5d0/dx_in(1)
-    if (max_front_vel.gt.0.0d0) then
-     ! do nothing
-    else
-     print *,"max_front_vel invalid probtype_in=",probtype_in
-     stop
-    endif
-   else
-    print *,"latent_heat_in or fort_tempconst invalid"
-    stop
-   endif
-
-   fort_initial_temperature(1)=fort_tempconst(1)
-   fort_initial_temperature(2)=fort_tempconst(2)
-     ! material 1 converted to material 2 (freezing)
-   latent_heat(1)=-abs(latent_heat_in) 
-   latent_heat(2)=0.0d0 ! material 2 converted to material 1
-   ireverse=0
-   isink=0
-   fort_alpha(1)=1.0d0
-   fort_alpha(2)=1.0d0
-   fort_stefan_number(1)=1.0d0/abs(latent_heat_in)
-   fort_stefan_number(2)=1.0d0/abs(latent_heat_in)
    fort_jacob_number(1)=fort_stefan_number(1)
    fort_jacob_number(2)=fort_stefan_number(2)
 
@@ -1351,8 +1160,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      NINT(radblob/(max_front_vel*deltat_in))
  else if (probtype_in.eq.400) then
   ! do nothing
- else if (probtype_in.eq.403) then
-  ! do nothing
  else if (probtype_in.eq.5) then
   print *,"Velocity is 1"
   print *,"number of steps to move 1 unit: ", &
@@ -1495,7 +1302,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
         stop
        endif
       else
-       print *,"im invalid 114"
+       print *,"im invalid"
        stop
       endif
       T(i,j,im)=T_FIELD
@@ -1523,7 +1330,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
         stop
        endif
       else
-       print *,"im invalid 115"
+       print *,"im invalid"
        stop
       endif
       T(i,j,im)=T_FIELD
@@ -1541,29 +1348,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       T_FIELD=saturation_temp(1)
       T(i,j,im)=T_FIELD
 
-     else if (probtype_in.eq.403) then
-
-      if (im.eq.2) then ! seed (inside)
-       T_FIELD=fort_tempconst(im)
-      else if (im.eq.1) then ! melt (outside)
-       local_center(1)=xblob_in
-       local_center(2)=yblob_in
-       if (transition_region.gt.0.0d0) then
-         ! radblob10: radius of seed
-        call smooth_init(local_center,radblob10,fort_tempconst(2), &
-               fort_tempconst(1),xcen_vec,T_FIELD,transition_region)
-       else if (transition_region.eq.0.0d0) then
-        T_FIELD=fort_tempconst(im)
-       else
-        print *,"transition_region invalid"
-        stop
-       endif
-      else
-       print *,"im invalid"
-       stop
-      endif
-      T(i,j,im)=T_FIELD
-
      else if (probtype_in.eq.5) then
 
       if (im.eq.1) then
@@ -1572,7 +1356,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        ! (xcen,ycen)
        T_FIELD=272.0d0+exp(-(xcen-0.2d0))
       else
-       print *,"im invalid 116"
+       print *,"im invalid"
        stop
       endif
       T(i,j,im)=T_FIELD
@@ -1601,7 +1385,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
       else if ((im.eq.1).or.(im.eq.3)) then
        ! do nothing
       else
-       print *,"im invalid 117"
+       print *,"im invalid"
        stop
       endif
 
