@@ -20804,7 +20804,7 @@ NavierStokes::volWgtSumALL(
 
       if (partid<im_elastic_map.size()) {
        // we are currently in "GetDragALL"
-       make_viscoelastic_tensorALL(im);
+       make_viscoelastic_tensorALL(im); // (mu_p/lambda)(f(A)A-I) if FENE-P
         //ngrow,ncomp,scomp,dcomp,dst,src
        copyALL(1,NUM_TENSOR_TYPE,0,partid*NUM_TENSOR_TYPE,
          VISCOTEN_ALL_MAT_MF,VISCOTEN_MF);

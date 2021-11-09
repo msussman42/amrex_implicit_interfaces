@@ -1019,7 +1019,7 @@ stop
                (viscoelastic_model.eq.5)) then ! FENE-P
 
             ! declared in PROB.F90
-            ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+            ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))=max(0,lambda/f(A))
             ! polymer_factor=1/L
             call get_mod_elastic_time(elastic_time,traceA, &
              polymer_factor,modtime)
@@ -1058,10 +1058,10 @@ stop
           if (modtime+dt.le.zero) then
            viscoelastic_coeff=zero
           else
-           if ((viscoelastic_model.eq.0).or. & !FENE-CR 
-               (viscoelastic_model.eq.1).or. & !Oldroyd-B(modtime=elastic_time)
-               (viscoelastic_model.eq.5).or. & !FENE-P
-               (viscoelastic_model.eq.6)) then !linearPTT(modtime=elastic_time)
+           if ((viscoelastic_model.eq.0).or. &!FENE-CR(lambda_tilde=f(A)/lambda)
+               (viscoelastic_model.eq.1).or. &!Oldroyd-B(modtime=elastic_time)
+               (viscoelastic_model.eq.5).or. &!FENE-P (lambda_tilde=f(A)/lambda
+               (viscoelastic_model.eq.6)) then!linearPTT(modtime=elastic_time)
              ! etaS=etaL-etaP=viscconst-elastic_viscosity 
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
@@ -1564,6 +1564,10 @@ stop
       return
       end subroutine FORT_DERMAGTRACE
 
+       ! decompose: 2 (mu0-mu0+mu(grad U) D = 2 mu0 D + 2(mu(grad U)-mu0)D
+       ! NavierStokes::GetDrag is called from
+       !  NavierStokes::volWgtSumALL
+       ! fort_getdrag is called from NavierStokes::GetDrag
        ! gravity_normalized>0 if pointing downwards
        ! 1<=gravity_dir<=dim
        ! see DRAG_COMP.H
@@ -2007,7 +2011,9 @@ stop
          stop
         endif
        enddo ! im_test=1..nmat
-     
+    
+        ! force=integral body forces + integral_boundary tau dot n dA
+        !  tau=-pI + 2 mu D + mu_p f(A)/lambda  \tilde{Q} 
         ! buoyancy force (body forces within the materials).
         ! Also, update the moment of inertia integral.
        do icell=growlo(1),growhi(1)
