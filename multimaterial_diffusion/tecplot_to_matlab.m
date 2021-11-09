@@ -1,3 +1,4 @@
+hold off
 clc
 clear all
 close all
@@ -98,26 +99,110 @@ while (ok_to_continue==1)
   end
  end
 
- contour(yaxis,xaxis,A3D(:,:,answer),v)
+ if (mod(num_plotted,4)==0)
+  LineSpec='red';
+ elseif (mod(num_plotted,4)==1)
+  LineSpec='green';
+ elseif (mod(num_plotted,4)==2)
+  LineSpec='blue';
+ elseif (mod(num_plotted,4)==3)
+  LineSpec='black';
+ end
+ [M,c]=contour(yaxis,xaxis,A3D(:,:,answer),v,LineSpec);
+ c.LineWidth=2;
+ hold on
+
  num_plotted=num_plotted+1
  if (num_plotted>1)
   for dir=1:3
    box_old(1,dir)=box_new(1,dir);
   end
   A3D_old=zeros(box_old(1,2),box_old(1,1),box_old(1,3));
-  xaxis_old=zeros(1,box_old(1,1));
+  xaxis_old=zeros(1,box_old(1,1)); 
   yaxis_old=zeros(1,box_old(1,2));
   for ival=1:box_old(1,1)
   for jval=1:box_old(1,2)
   for idata=1:box_old(1,3)
-   A3D_old(jval,ival,idata)=A3D_new(jval,ival,idata)
+   A3D_old(jval,ival,idata)=A3D_new(jval,ival,idata);
   end
   end
   end
   for ival=1:box_old(1,1)
-   xaxis_old(1,ival)=xaxis_new(1,ival)
+   xaxis_old(1,ival)=xaxis_new(1,ival);
   end
   for jval=1:box_old(1,2)
-   yaxis_old(1,jval)=yaxis_new(1,jval)
+   yaxis_old(1,jval)=yaxis_new(1,jval);
   end
 
+  box_new(1,1)=imax;
+  box_new(1,2)=jmax;
+  box_new(1,3)=A_data_size(2);
+
+  A3D_new=zeros(box_new(1,2),box_new(1,1),box_new(1,3));
+  xaxis_new=zeros(1,box_new(1,1));
+  yaxis_new=zeros(1,box_new(1,2));
+  for ival=1:box_new(1,1)
+  for jval=1:box_new(1,2)
+  for idata=1:box_new(1,3)
+   A3D_new(jval,ival,idata)=A3D(jval,ival,idata);
+  end
+  end
+  end
+  for ival=1:box_new(1,1)
+   xaxis_new(1,ival)=xaxis(1,ival);
+  end
+  for jval=1:box_new(1,2)
+   yaxis_new(1,jval)=yaxis(1,jval);
+  end
+  error_counter=0;
+  L1norm=0.0;
+  dx=xaxis_old(1,2)-xaxis_old(1,1)
+
+  lq_array=zeros(box_old(1,2),box_old(1,1));
+
+  for ival=1:box_old(1,1)
+  for jval=1:box_old(1,2)
+   data_old=A3D_old(jval,ival,answer);
+   xq=xaxis_old(1,ival);
+   yq=yaxis_old(1,jval);
+   % interpolate from the new (fine) grid to the old (coarse) grid.
+   data_new=interp2(yaxis_new,xaxis_new,A3D_new(:,:,answer),xq,yq);
+   lq_array(jval,ival)=data_new;
+   if ((abs(data_old)<=dx)||(abs(data_new)<=dx))
+    error_counter=error_counter+1;
+    L1norm=L1norm+abs(data_old-data_new);
+   end
+  end
+  end
+%  [M,c]=contour(yaxis,xaxis,lq_array,v);
+%  c.LineWidth=3;
+
+  if (error_counter>0) 
+   L1norm=L1norm/error_counter;
+  end
+  error_counter
+  L1norm
+ elseif (num_plotted==1)
+  box_new(1,1)=imax;
+  box_new(1,2)=jmax;
+  box_new(1,3)=A_data_size(2);
+  A3D_new=zeros(box_new(1,2),box_new(1,1),box_new(1,3));
+  xaxis_new=zeros(1,box_new(1,1));
+  yaxis_new=zeros(1,box_new(1,2));
+  for ival=1:box_new(1,1)
+  for jval=1:box_new(1,2)
+  for idata=1:box_new(1,3)
+   A3D_new(jval,ival,idata)=A3D(jval,ival,idata);
+  end
+  end
+  end
+  for ival=1:box_new(1,1)
+   xaxis_new(1,ival)=xaxis(1,ival);
+  end
+  for jval=1:box_new(1,2)
+   yaxis_new(1,jval)=yaxis(1,jval);
+  end
+ end
+
+ ok_to_continue=input('enter "1" to compare another data set, "0" to end')
+end
